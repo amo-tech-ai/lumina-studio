@@ -1,5 +1,6 @@
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
+import EcommerceExtension from "@/components/EcommerceExtension";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Brain, BarChart3, TrendingUp, Eye, Sliders, ShoppingBag, Instagram, Megaphone, Building, CheckCircle, ArrowRight, Zap, Layers, Video } from "lucide-react";
 import ecommerceHero from "@/assets/ecommerce-hero.jpg";
@@ -262,6 +263,8 @@ const EcommercePhotography = () => {
             </div>
           </div>
         </section>
+
+        <EcommerceExtension />
 
         {/* ── CASE STUDY ── */}
         <section className="py-24 lg:py-32 bg-surface-white">
