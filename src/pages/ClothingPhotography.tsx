@@ -1,5 +1,6 @@
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
+import ClothingSlider from "@/components/ClothingSlider";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Brain, BarChart3, TrendingUp, Eye, ArrowRight, Sliders, ShoppingBag, Instagram, Megaphone, Mail, CheckCircle, Building, Upload, Cpu, SlidersHorizontal, FileText, Shirt, Scissors, Camera, Package, Video, Search } from "lucide-react";
 import clothingHero from "@/assets/clothing-hero.jpg";
@@ -89,6 +90,9 @@ const ClothingPhotography = () => {
             </div>
           </div>
         </section>
+
+        {/* ── IMAGE SLIDER ── */}
+        <ClothingSlider />
 
         {/* ── CONTENT TYPES WE PLAN ── */}
         <section id="content-types" className="py-24 lg:py-32 bg-surface-white">
