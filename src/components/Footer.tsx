@@ -22,6 +22,7 @@ const Footer = () => {
                 { label: "Fashion Photography", href: "/services/fashion-photography" },
                 { label: "eCommerce", href: "/services/ecommerce-photography" },
                 { label: "Clothing", href: "/services/clothing" },
+                { label: "Amazon", href: "/services/amazon" },
                 { label: "Jewellery", href: "#services" },
                 { label: "Video Production", href: "#services" },
                 { label: "Studio Hire", href: "#services" },
