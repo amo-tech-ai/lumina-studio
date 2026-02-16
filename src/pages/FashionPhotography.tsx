@@ -1,5 +1,6 @@
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
+import FashionPackages from "@/components/FashionPackages";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Brain, BarChart3, TrendingUp, Eye, Sparkles, Camera, Palette, Send, CheckCircle, ArrowRight, Sliders, ShoppingBag, Instagram, Megaphone, Building } from "lucide-react";
 import fashionHero from "@/assets/fashion-hero.jpg";
@@ -291,8 +292,11 @@ const FashionPhotography = () => {
           </div>
         </section>
 
+        {/* ── PACKAGES ── */}
+        <FashionPackages />
+
         {/* ── FAQ ── */}
-        <section className="py-24 lg:py-32 bg-background">
+        <section className="py-24 lg:py-32 bg-surface-white">
           <div className="container mx-auto px-6 lg:px-12">
             <div className="max-w-2xl mx-auto">
               <div className="text-center mb-16">
