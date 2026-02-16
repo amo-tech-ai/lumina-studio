@@ -7,6 +7,7 @@ import Index from "./pages/Index";
 import FashionPhotography from "./pages/FashionPhotography";
 import EcommercePhotography from "./pages/EcommercePhotography";
 import ClothingPhotography from "./pages/ClothingPhotography";
+import AmazonPhotography from "./pages/AmazonPhotography";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -22,6 +23,7 @@ const App = () => (
           <Route path="/services/fashion-photography" element={<FashionPhotography />} />
           <Route path="/services/ecommerce-photography" element={<EcommercePhotography />} />
           <Route path="/services/clothing" element={<ClothingPhotography />} />
+          <Route path="/services/amazon" element={<AmazonPhotography />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
