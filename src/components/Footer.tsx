@@ -17,10 +17,17 @@ const Footer = () => {
               Services
             </h4>
             <ul className="space-y-3">
-              {["Product Photography", "Fashion Photography", "eCommerce", "Jewellery", "Video Production", "Studio Hire"].map((s) => (
-                <li key={s}>
-                  <a href="#services" className="font-sans text-sm text-primary-foreground/70 hover:text-primary-foreground transition-colors">
-                    {s}
+              {[
+                { label: "Product Photography", href: "#services" },
+                { label: "Fashion Photography", href: "/services/fashion-photography" },
+                { label: "eCommerce", href: "#services" },
+                { label: "Jewellery", href: "#services" },
+                { label: "Video Production", href: "#services" },
+                { label: "Studio Hire", href: "#services" },
+              ].map((s) => (
+                <li key={s.label}>
+                  <a href={s.href} className="font-sans text-sm text-primary-foreground/70 hover:text-primary-foreground transition-colors">
+                    {s.label}
                   </a>
                 </li>
               ))}
