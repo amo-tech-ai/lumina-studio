@@ -45,6 +45,7 @@ const Footer = () => {
                 { label: "Clothing Photography", href: "/services/clothing" },
                 { label: "Amazon Photography", href: "/services/amazon" },
                 { label: "Jewellery Photography", href: "/services/jewellery" },
+                { label: "Instagram Campaigns", href: "/services/instagram" },
               ].map((s) => (
                 <li key={s.label}>
                   <a href={s.href} className="font-sans text-sm text-primary-foreground/70 hover:text-primary-foreground transition-colors">
