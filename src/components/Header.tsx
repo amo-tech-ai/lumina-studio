@@ -2,11 +2,11 @@ import { useState, useEffect } from "react";
 import { Menu, X } from "lucide-react";
 
 const navLinks = [
-  { label: "Services", href: "#services" },
-  { label: "Portfolio", href: "#portfolio" },
-  { label: "Process", href: "#process" },
-  { label: "About", href: "#about" },
-  { label: "Contact", href: "#contact" },
+  { label: "Services", href: "/#services" },
+  { label: "Portfolio", href: "/#portfolio" },
+  { label: "Process", href: "/#process" },
+  { label: "About", href: "/#about" },
+  { label: "Contact", href: "/#contact" },
 ];
 
 const Header = () => {
@@ -44,7 +44,7 @@ const Header = () => {
             </a>
           ))}
           <a
-            href="#contact"
+            href="/#contact"
             className="font-sans text-sm font-medium tracking-wide bg-foreground text-primary-foreground px-6 py-2.5 hover:opacity-90 transition-opacity duration-300 uppercase"
           >
             Get a Quote
@@ -76,7 +76,7 @@ const Header = () => {
               </a>
             ))}
             <a
-              href="#contact"
+              href="/#contact"
               className="font-sans text-sm font-medium tracking-wide bg-foreground text-primary-foreground px-6 py-3 text-center uppercase"
               onClick={() => setMobileOpen(false)}
             >
