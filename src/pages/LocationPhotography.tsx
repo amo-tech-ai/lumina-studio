@@ -283,18 +283,32 @@ const LocationPhotography = () => {
                 Typical range: $1,000 – $5,000+ per day. Bundled pricing available for multi-channel production.
               </p>
             </motion.div>
-            <motion.div variants={fadeUp} transition={{ duration: 0.5, delay: 0.15 }} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-px bg-divider max-w-4xl mx-auto">
-              {[
-                { title: "Location Complexity", desc: "Urban, rural, interior, or international." },
-                { title: "Crew Size", desc: "Photographer, director, assistants, stylists." },
-                { title: "Deliverables", desc: "Number of final images, formats, and channels." },
-                { title: "Licensing", desc: "Usage rights and distribution scope." },
-              ].map((item) => (
-                <div key={item.title} className="bg-background p-8 text-center">
-                  <h3 className="font-serif text-lg font-medium text-foreground mb-2">{item.title}</h3>
-                  <p className="font-sans text-sm text-text-secondary">{item.desc}</p>
-                </div>
-              ))}
+            {/* Location Story Grid */}
+            <motion.div variants={fadeUp} transition={{ duration: 0.6, delay: 0.15 }} className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl mx-auto">
+              {/* Wide landscape */}
+              <div className="overflow-hidden aspect-[4/3]">
+                <img
+                  src={locationCoastal}
+                  alt="Coastal location fashion photography"
+                  className="w-full h-full object-cover transition-transform duration-700 hover:scale-105"
+                />
+              </div>
+              {/* Tall vertical */}
+              <div className="overflow-hidden aspect-[3/4]">
+                <img
+                  src={locationStreets}
+                  alt="Full-body outdoor fashion shot on location"
+                  className="w-full h-full object-cover transition-transform duration-700 hover:scale-105"
+                />
+              </div>
+              {/* Square close-up */}
+              <div className="overflow-hidden aspect-square">
+                <img
+                  src={locationNature}
+                  alt="Close-up detail texture fashion photography"
+                  className="w-full h-full object-cover transition-transform duration-700 hover:scale-105"
+                />
+              </div>
             </motion.div>
             <motion.div variants={fadeIn} transition={{ duration: 0.5, delay: 0.3 }} className="text-center mt-12">
               <a href="#contact" className="font-sans text-sm font-medium tracking-wide bg-foreground text-primary-foreground px-8 py-4 hover:opacity-90 transition-opacity duration-300 uppercase inline-block">
