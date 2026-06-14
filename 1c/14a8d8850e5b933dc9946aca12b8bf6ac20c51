@@ -1,0 +1,160 @@
+docs/ecommerce/tasks/roadmap.md
+  s_06efa43fd64ec6::t_adaea73d8f7b16 1-879
+docs/ecommerce/evidence/2026-06-07/b2c-reference-storefront.md
+  s_06efa43fd64ec6::t_adaea73d8f7b16 1-184
+docs/ecommerce/docs/commerce-marketplace-master-plan.md
+  s_06efa43fd64ec6::t_adaea73d8f7b16 1-536
+docs/ecommerce/tasks/ECOM-C-004-stripe-test-checkout.md
+  s_06efa43fd64ec6::t_adaea73d8f7b16 1-131
+docs/ecommerce/tasks/ECOM-C-003-commerce-env-secrets.md
+  s_06efa43fd64ec6::t_adaea73d8f7b16 1-123
+docs/ecommerce/tasks/ECOM-C-022-seller-reviews-field-mask.md
+  s_06efa43fd64ec6::t_adaea73d8f7b16 1-102
+docs/ecommerce/plan/01-setup.md
+  s_06efa43fd64ec6::t_adaea73d8f7b16 1-344
+docs/ecommerce/adr/001-standalone-mercur.md
+  s_06efa43fd64ec6::t_adaea73d8f7b16 1-90
+docs/ecommerce/tasks/ECOM-C-008-commerce-api-proxy.md
+  s_06efa43fd64ec6::t_adaea73d8f7b16 1-69
+docs/ecommerce/tasks/ECOM-C-010-mastra-product-search.md
+  s_06efa43fd64ec6::t_adaea73d8f7b16 1-131
+docs/ecommerce/tasks/ECOM-C-011-mastra-product-detail.md
+  s_06efa43fd64ec6::t_adaea73d8f7b16 1-124
+docs/ecommerce/tasks/ECOM-C-019-ai-checkout-proof.md
+  s_06efa43fd64ec6::t_adaea73d8f7b16 1-133
+docs/ecommerce/tasks/ECOM-M-001-mercur-marketplace-foundation.md
+  s_06efa43fd64ec6::t_adaea73d8f7b16 1-70
+docs/ecommerce/tasks/ECOM-M-008-whatsapp-payment-link.md
+  s_06efa43fd64ec6::t_adaea73d8f7b16 1-126
+docs/ecommerce/tasks/PHASE-1-OVERVIEW.md
+  s_06efa43fd64ec6::t_adaea73d8f7b16 1-168
+docs/ecommerce/tasks/ECOM-C-013-mastra-checkout-link.md
+  s_06efa43fd64ec6::t_adaea73d8f7b16 1-130
+docs/ecommerce/tasks/ECOM-M-003-vendor-admin-invite.md
+  s_06efa43fd64ec6::t_adaea73d8f7b16 1-126
+docs/ecommerce/audit/2-linear-commerce-audit.md
+  s_06efa43fd64ec6::t_adaea73d8f7b16 1-143
+docs/ecommerce/tasks/ECOM-C-015-cart-state-ui.md
+  s_06efa43fd64ec6::t_adaea73d8f7b16 1-129
+docs/ecommerce/tasks/ECOM-C-001-commerce-adr.md
+  s_06efa43fd64ec6::t_adaea73d8f7b16 1-110
+docs/ecommerce/evidence/2026-06-08/ecom-c-007-medusa-client-wrapper.md
+  s_06efa43fd64ec6::t_adaea73d8f7b16 1-82
+docs/ecommerce/docs/02-audit-tasks.md
+  s_06efa43fd64ec6::t_adaea73d8f7b16 1-364
+docs/ecommerce/tasks/ECOM-M-002-vendor-application.md
+  s_06efa43fd64ec6::t_adaea73d8f7b16 1-128
+docs/ecommerce/docs/ecom-roadmap.md
+  s_06efa43fd64ec6::t_adaea73d8f7b16 1-506
+docs/ecommerce/notes/3-notes.md
+  s_06efa43fd64ec6::t_adaea73d8f7b16 1-82
+docs/ecommerce/docs/04-repos.md
+  s_06efa43fd64ec6::t_adaea73d8f7b16 1-543
+docs/ecommerce/tasks/ECOM-M-012-basic-commerce-analytics.md
+  s_06efa43fd64ec6::t_adaea73d8f7b16 1-123
+docs/ecommerce/tasks/ECOM-M-010-trip-product-links.md
+  s_06efa43fd64ec6::t_adaea73d8f7b16 1-126
+docs/ecommerce/tasks/ECOM-M-011-venue-product-links.md
+  s_06efa43fd64ec6::t_adaea73d8f7b16 1-129
+docs/ecommerce/docs/05-medusa-recipes-map.md
+  s_06efa43fd64ec6::t_adaea73d8f7b16 1-137
+docs/ecommerce/tasks/ECOM-M-009-event-product-links.md
+  s_06efa43fd64ec6::t_adaea73d8f7b16 1-129
+docs/ecommerce/tasks/ECOM-C-018-core-commerce-exit-gate.md
+  s_06efa43fd64ec6::t_adaea73d8f7b16 1-143
+docs/ecommerce/adr/002-ipix-commerce-ownership.md
+  s_06efa43fd64ec6::t_adaea73d8f7b16 1-106
+docs/ecommerce/evidence/2026-06-14/ipix-b2c-checkout-e2e.md
+  s_06efa43fd64ec6::t_adaea73d8f7b16 1-66
+docs/ecommerce/tasks/ECOM-C-017-manual-ops-refund-playbook.md
+  s_06efa43fd64ec6::t_adaea73d8f7b16 1-125
+docs/ecommerce/tasks/ECOM-M-005-stripe-connect-express.md
+  s_06efa43fd64ec6::t_adaea73d8f7b16 1-127
+docs/ecommerce/tasks/INDEX.md
+  s_06efa43fd64ec6::t_adaea73d8f7b16 1-146
+docs/ecommerce/notes/2-notes.md
+  s_06efa43fd64ec6::t_adaea73d8f7b16 1-144
+docs/ecommerce/tasks/ECOM-C-002-mercur-backend-spike.md
+  s_06efa43fd64ec6::t_adaea73d8f7b16 1-133
+docs/ecommerce/docs/commerce-store-api-fields.md
+  s_06efa43fd64ec6::t_adaea73d8f7b16 1-100
+docs/ecommerce/notes/1-notes.md
+  s_06efa43fd64ec6::t_adaea73d8f7b16 1-109
+docs/ecommerce/tasks/ECOM-M-006-multi-vendor-order-split.md
+  s_06efa43fd64ec6::t_adaea73d8f7b16 1-128
+docs/ecommerce/notes/4-notes.md
+  s_06efa43fd64ec6::t_adaea73d8f7b16 1-78
+docs/ecommerce/audit/3-audit.md
+  s_06efa43fd64ec6::t_adaea73d8f7b16 1-281
+docs/ecommerce/evidence/2026-06-07/commerce-core-exit-gate.md
+  s_06efa43fd64ec6::t_adaea73d8f7b16 1-21
+docs/ecommerce/tasks/ECOM-M-013-featured-listings-pilot.md
+  s_06efa43fd64ec6::t_adaea73d8f7b16 1-127
+docs/ecommerce/tasks/ECOM-M-007-vendor-payout-visibility.md
+  s_06efa43fd64ec6::t_adaea73d8f7b16 1-125
+docs/ecommerce/tasks/ECOM-C-005-demo-seller.md
+  s_06efa43fd64ec6::t_adaea73d8f7b16 1-113
+docs/ecommerce/docs/ecommerce-prd.md
+  s_06efa43fd64ec6::t_adaea73d8f7b16 1-950
+docs/ecommerce/evidence/2026-06-09/ecom-c-008-commerce-api-proxy.md
+  s_06efa43fd64ec6::t_adaea73d8f7b16 1-107
+docs/ecommerce/docs/ecommerce-implementation-task-plan.md
+  s_06efa43fd64ec6::t_adaea73d8f7b16 1-928
+docs/ecommerce/evidence/2026-06-08/ecom-c-022-seller-reviews-field-mask.md
+  s_06efa43fd64ec6::t_adaea73d8f7b16 1-72
+docs/ecommerce/tasks/ECOM-C-014-copilotkit-product-card.md
+  s_06efa43fd64ec6::t_adaea73d8f7b16 1-133
+docs/ecommerce/docs/env-commerce.md
+  s_06efa43fd64ec6::t_adaea73d8f7b16 1-82
+docs/ecommerce/docs/03-marketplace-starter-repo-review.md
+  s_06efa43fd64ec6::t_adaea73d8f7b16 1-239
+docs/ecommerce/tasks/ECOM-C-006-product-catalog-seed.md
+  s_06efa43fd64ec6::t_adaea73d8f7b16 1-133
+docs/ecommerce/ECOM-ROADMAP-001.md
+  s_06efa43fd64ec6::t_905411f28a7d95 1
+docs/ecommerce/tasks/ECOM-M-004-vendor-dashboard-v1.md
+  s_06efa43fd64ec6::t_adaea73d8f7b16 1-133
+docs/ecommerce/tasks/ECOM-C-020-production-readiness.md
+  s_06efa43fd64ec6::t_adaea73d8f7b16 1-133
+docs/ecommerce/docs/01-ecommerce-plan.md
+  s_06efa43fd64ec6::t_adaea73d8f7b16 1-465
+docs/ecommerce/tasks/ECOM-C-000-verification-floor.md
+  s_06efa43fd64ec6::t_adaea73d8f7b16 1-148
+docs/ecommerce/tasks/ECOM-C-007-medusa-client-wrapper.md
+  s_06efa43fd64ec6::t_adaea73d8f7b16 1-138
+docs/ecommerce/audit/1-tasks-audit.md
+  s_06efa43fd64ec6::t_adaea73d8f7b16 1-494
+docs/ecommerce/evidence/2026-06-07/b2c-products-field-mask.patch
+  s_06efa43fd64ec6::t_adaea73d8f7b16 1-26
+docs/ecommerce/tasks/ECOM-C-016-paid-order-proof.md
+  s_06efa43fd64ec6::t_adaea73d8f7b16 1-129
+docs/ecommerce/tasks/ECOM-C-021-b2c-reference-storefront.md
+  s_06efa43fd64ec6::t_adaea73d8f7b16 1-117
+docs/ecommerce/evidence/2026-06-09/ecom-c-000-verification-floor.md
+  s_06efa43fd64ec6::t_adaea73d8f7b16 1-43
+docs/ecommerce/tasks/ECOM-C-012-mastra-cart-tools.md
+  s_06efa43fd64ec6::t_adaea73d8f7b16 1-128
+docs/ecommerce/tasks/ECOM-C-009-product-embedding-sync.md
+  s_06efa43fd64ec6::t_adaea73d8f7b16 1-137
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "1c14a8d8850e5b933dc9946aca12b8bf6ac20c51",
+  "prompts": {},
+  "humans": {
+    "h_44d68aa2e2bd94": {
+      "author": "Sanjiv Khullar <ai@socialmediville.ca>"
+    }
+  },
+  "sessions": {
+    "s_06efa43fd64ec6": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "2fb91bdb-f860-4de4-a321-a9864bdece3b",
+        "model": "default"
+      },
+      "human_author": "Sanjiv Khullar <ai@socialmediville.ca>"
+    }
+  }
+}
