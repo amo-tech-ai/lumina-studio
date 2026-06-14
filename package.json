@@ -8,6 +8,7 @@
     "build": "vite build",
     "build:dev": "vite build --mode development",
     "lint": "eslint .",
+    "check:env": "node scripts/check-client-env.mjs",
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest"
