@@ -1,0 +1,29 @@
+.github/workflows/ci.yml
+  s_06efa43fd64ec6::t_630d4ac268b9c3 1-22
+src/main.tsx
+  s_06efa43fd64ec6::t_338bb545165446 2
+scripts/check-client-env.mjs
+  s_06efa43fd64ec6::t_217d7a5e368aaa 43
+  s_06efa43fd64ec6::t_35895fb79f067f 13-28,44-100,106,110-113,116-124
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "88199f5ab26c98f987f9b6a8a1d89dacf7a581cc",
+  "prompts": {},
+  "humans": {
+    "h_44d68aa2e2bd94": {
+      "author": "Sanjiv Khullar <ai@socialmediville.ca>"
+    }
+  },
+  "sessions": {
+    "s_06efa43fd64ec6": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "2fb91bdb-f860-4de4-a321-a9864bdece3b",
+        "model": "default"
+      },
+      "human_author": "Sanjiv Khullar <ai@socialmediville.ca>"
+    }
+  }
+}
