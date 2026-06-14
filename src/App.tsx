@@ -2,9 +2,10 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Navigate, Routes, Route } from "react-router-dom";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { OperatorLayout } from "@/layouts/OperatorLayout";
 import Index from "./pages/Index";
 import FashionPhotography from "./pages/FashionPhotography";
 import EcommercePhotography from "./pages/EcommercePhotography";
@@ -16,7 +17,10 @@ import InstagramCampaigns from "./pages/InstagramCampaigns";
 import VideoProduction from "./pages/VideoProduction";
 import ShopifyPhotography from "./pages/ShopifyPhotography";
 import Login from "./pages/Login";
-import Dashboard from "./pages/Dashboard";
+import AssetsPage from "./pages/dashboard/AssetsPage";
+import BrandPage from "./pages/dashboard/BrandPage";
+import HubPage from "./pages/dashboard/HubPage";
+import LinksPage from "./pages/dashboard/LinksPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -35,10 +39,16 @@ const App = () => (
               path="/dashboard"
               element={
                 <ProtectedRoute>
-                  <Dashboard />
+                  <OperatorLayout />
                 </ProtectedRoute>
               }
-            />
+            >
+              <Route index element={<HubPage />} />
+              <Route path="brand" element={<BrandPage />} />
+              <Route path="assets" element={<AssetsPage />} />
+              <Route path="links" element={<LinksPage />} />
+              <Route path="*" element={<Navigate to="/dashboard" replace />} />
+            </Route>
             <Route path="/services/fashion-photography" element={<FashionPhotography />} />
             <Route path="/services/ecommerce-photography" element={<EcommercePhotography />} />
             <Route path="/services/clothing" element={<ClothingPhotography />} />
