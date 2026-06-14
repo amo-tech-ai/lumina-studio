@@ -1,0 +1,19 @@
+docs/ecommerce/ECOM-ROADMAP-001.md
+  s_06efa43fd64ec6::t_9c31943e6865dd 1
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "a467068ea93e4c48a3d8996086a2e9c2452c7028",
+  "prompts": {},
+  "sessions": {
+    "s_06efa43fd64ec6": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "2fb91bdb-f860-4de4-a321-a9864bdece3b",
+        "model": "default"
+      },
+      "human_author": "Sanjiv Khullar <ai@socialmediville.ca>"
+    }
+  }
+}
