@@ -1,0 +1,169 @@
+#!/usr/bin/env node
+/**
+ * Smoke test brand-intelligence edge function (remote).
+ * Run: npm run supabase:verify-brand-intelligence
+ */
+import { readFileSync, existsSync } from "node:fs";
+import { resolve } from "node:path";
+import { createClient } from "@supabase/supabase-js";
+
+const root = resolve(import.meta.dirname, "..");
+const envPath = resolve(root, ".env.local");
+
+if (existsSync(envPath)) {
+  for (const line of readFileSync(envPath, "utf8").split("\n")) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith("#")) continue;
+    const eq = trimmed.indexOf("=");
+    if (eq === -1) continue;
+    const key = trimmed.slice(0, eq);
+    const val = trimmed.slice(eq + 1);
+    if (!process.env[key]) process.env[key] = val;
+  }
+}
+
+const url = process.env.VITE_SUPABASE_URL;
+const anonKey = process.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const testBrandUrl =
+  process.env.BRAND_INTEL_TEST_URL ?? "https://www.glossier.com";
+
+if (!url || !anonKey || !serviceKey) {
+  console.error("Missing Supabase env vars");
+  process.exit(1);
+}
+
+const functionsBase = `${url}/functions/v1`;
+let failures = 0;
+
+function fail(msg) {
+  console.error(`FAIL: ${msg}`);
+  failures += 1;
+}
+
+function pass(msg) {
+  console.log(`ok: ${msg}`);
+}
+
+async function fetchJson(path, init = {}) {
+  const res = await fetch(`${functionsBase}${path}`, init);
+  const text = await res.text();
+  let json;
+  try {
+    json = text ? JSON.parse(text) : null;
+  } catch {
+    json = null;
+  }
+  return { res, json, text };
+}
+
+async function main() {
+  console.log("brand-intelligence verification\n");
+
+  const stamp = Date.now();
+  const email = `brand-intel-${stamp}@example.com`;
+  const password = "BrandIntelTest123!";
+
+  const admin = createClient(url, serviceKey, {
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
+  const userClient = createClient(url, anonKey, {
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
+
+  const { error: createError } = await admin.auth.admin.createUser({
+    email,
+    password,
+    email_confirm: true,
+  });
+  if (createError) throw new Error(createError.message);
+
+  const { data: signIn, error: signInError } =
+    await userClient.auth.signInWithPassword({ email, password });
+  if (signInError || !signIn.session?.access_token) {
+    throw new Error(signInError?.message ?? "no session");
+  }
+
+  const token = signIn.session.access_token;
+  const userId = signIn.user.id;
+
+  const anon = await fetchJson("/brand-intelligence", {
+    method: "POST",
+    headers: { apikey: anonKey, "Content-Type": "application/json" },
+    body: JSON.stringify({ url: testBrandUrl }),
+  });
+  if (anon.res.status === 401) {
+    pass("brand-intelligence rejects anonymous call");
+  } else {
+    fail(`expected 401 without JWT, got ${anon.res.status}`);
+  }
+
+  const authed = await fetchJson("/brand-intelligence", {
+    method: "POST",
+    headers: {
+      apikey: anonKey,
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ url: testBrandUrl }),
+  });
+
+  if (
+    authed.res.status !== 200 ||
+    authed.json?.ok !== true ||
+    !authed.json?.data?.brandId
+  ) {
+    fail(
+      `brand-intelligence authed → ${authed.res.status} ${authed.text?.slice(0, 300)}`,
+    );
+  } else {
+    const { brandId, logId, scores } = authed.json.data;
+    pass(`brand-intelligence brandId=${brandId} logId=${logId} scores=${scores?.length ?? 0}`);
+  }
+
+  const brandId = authed.json?.data?.brandId;
+  if (brandId) {
+    const { data: brand, error: brandErr } = await admin
+      .from("brands")
+      .select("id, user_id, ai_profile")
+      .eq("id", brandId)
+      .single();
+    if (brandErr || !brand?.ai_profile?.name) {
+      fail("brands.ai_profile not populated");
+    } else {
+      pass(`brands.ai_profile.name=${brand.ai_profile.name}`);
+    }
+
+    const { count, error: scoreErr } = await admin
+      .from("brand_scores")
+      .select("*", { count: "exact", head: true })
+      .eq("brand_id", brandId);
+    if (scoreErr || (count ?? 0) < 3) {
+      fail(`brand_scores count expected >=3, got ${count}`);
+    } else {
+      pass(`brand_scores count=${count}`);
+    }
+
+    const { data: logRow, error: logErr } = await admin
+      .from("ai_agent_logs")
+      .select("id, duration_ms, agent_name")
+      .eq("id", authed.json.data.logId)
+      .single();
+    if (logErr || logRow?.agent_name !== "brand-intelligence" || logRow.duration_ms == null) {
+      fail("ai_agent_logs row missing duration_ms");
+    } else {
+      pass(`ai_agent_logs duration_ms=${logRow.duration_ms}`);
+    }
+  }
+
+  await admin.auth.admin.deleteUser(userId);
+  pass("cleaned up test user");
+
+  console.log(failures ? "\nBrand intelligence verification FAILED" : "\nBrand intelligence verification passed");
+  process.exit(failures ? 1 : 0);
+}
+
+main().catch((e) => {
+  console.error(e);
+  process.exit(1);
+});
