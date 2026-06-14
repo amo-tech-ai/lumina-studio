@@ -1,0 +1,738 @@
+b2c-storefront/src/app/[locale]/(auth)/forgot-password/page.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-16
+b2c-storefront/src/components/atoms/Badge/Badge.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-21
+b2c-storefront/src/components/sections/CartShippingMethodsSection/CartShippingMethodsSection.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-335
+b2c-storefront/src/components/atoms/Avatar/Avatar.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-55
+b2c-storefront/src/components/cells/ColorFilter/ColorFilter.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-99
+b2c-storefront/src/components/molecules/ParcelAccordion/ParcelAccordionItems.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-100
+b2c-storefront/src/app/[locale]/(main)/user/settings/page.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-23
+b2c-storefront/src/components/sections/SellerPageHeader/SellerPageHeader.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-19
+b2c-storefront/src/lib/data/collections.ts
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-59
+b2c-storefront/src/components/atoms/Spinner/Spinner.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-8
+b2c-storefront/public/images/placeholder.svg
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1
+b2c-storefront/src/components/atoms/StarRating/StarRating.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-28
+b2c-storefront/public/file.svg
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1
+b2c-storefront/src/components/cells/ProductCarousel/ProductCarousel.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-60
+b2c-storefront/src/components/sections/ProductListing/ProductListing.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-58
+b2c-storefront/src/components/organisms/Reviews/ReviewCard.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-59
+b2c-storefront/src/components/molecules/ProfileDetailsForm/ProfileDetailsForm.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-100
+b2c-storefront/src/lib/data/reviews.ts
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-61
+b2c-storefront/src/components/cells/OrderProductListItem/OrderProductListItem.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-73
+b2c-storefront/src/lib/helpers/order-error-formatter.ts
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-11
+b2c-storefront/src/components/organisms/BlogCard/BlogCard.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-46
+b2c-storefront/src/components/molecules/SellerReview/SellerReview.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-57
+b2c-storefront/src/components/organisms/Chat/Chat.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-89
+b2c-storefront/src/lib/helpers/get-precentage-diff.ts
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-6
+b2c-storefront/src/components/sections/OrderReturnSection/ReturnMethodsTab.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-63
+b2c-storefront/.prettierrc.js
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-41
+b2c-storefront/src/components/atoms/Alert/Alert.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-64
+b2c-storefront/src/components/molecules/ProductListingProductsView/ProductListingProductsView.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-26
+b2c-storefront/src/components/cells/OrderAddresses/OrderAddresses.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-67
+b2c-storefront/src/components/cells/OrderTimeline/OrderTimeline.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-68
+b2c-storefront/src/components/atoms/Label/Label.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-16
+b2c-storefront/src/components/organisms/ProductListingHeader/ProductListingHeader.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-38
+b2c-storefront/src/types/brands.ts
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-6
+b2c-storefront/src/components/molecules/ParcelAccordion/ParcelAccordion.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-87
+b2c-storefront/src/components/organisms/OrderItems/OrderItems.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-32
+b2c-storefront/src/app/[locale]/(auth)/register/page.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-14
+b2c-storefront/src/components/organisms/ProductSidebar/AlgoliaProductSidebar.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-242
+b2c-storefront/src/components/cells/HeadingCategories/HeadingCategories.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-30
+b2c-storefront/src/lib/helpers/isEmpty.ts
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-11
+b2c-storefront/src/components/organisms/CategoryCard/CategoryCard.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-30
+b2c-storefront/src/components/molecules/ReportListingForm/ReportListingForm.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-138
+b2c-storefront/src/components/cells/ProductDetailsFooter/ProductDetailsFooter.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-26
+b2c-storefront/src/components/molecules/CategoryNavbar/components/CategoryDropdownMenu.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-49
+b2c-storefront/src/components/cells/RefreshButton/RefreshButton.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-22
+b2c-storefront/src/components/organisms/ProductCard/ProductCard.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-101
+b2c-storefront/src/components/sections/HomeCategories/HomeCategories.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-45
+b2c-storefront/src/components/molecules/OrderParcelStatus/OrderParcelStatus.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-12
+b2c-storefront/src/components/organisms/CartSummary/CartSummary.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-71
+b2c-storefront/src/components/organisms/PromoCode/PromoCode.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-149
+b2c-storefront/src/app/[locale]/(checkout)/checkout/page.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-68
+b2c-storefront/src/components/cells/ActiveFilterElement/ActiveFilterElement.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-47
+b2c-storefront/src/components/cells/UserDropdown/UserDropdown.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-73
+b2c-storefront/src/components/molecules/CategoryNavbar/components/index.ts
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-5
+b2c-storefront/src/components/molecules/ErrorMessage/ErrorMessage.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-22
+b2c-storefront/src/components/molecules/PrimeCategoryNavbar/PrimeCategoryNavbar.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-26
+b2c-storefront/src/components/organisms/Reviews/ReviewsToWrite.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-74
+b2c-storefront/src/components/organisms/ProductsList/ProductsList.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-16
+b2c-storefront/src/components/cells/SellerAvatar/SellerAvatar.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-31
+b2c-storefront/.dockerignore
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-52
+b2c-storefront/src/components/sections/CartAddressSection/CartAddressSection.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-142
+b2c-storefront/src/components/molecules/CategoryNavbar/components/CategoryDropdownContent.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-40
+b2c-storefront/src/data/sellerMock.ts
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-16
+b2c-storefront/src/app/[locale]/(main)/user/wishlist/page.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-72
+b2c-storefront/src/app/layout.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-148
+b2c-storefront/src/lib/config.ts
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-61
+b2c-storefront/src/app/[locale]/(auth)/layout.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-27
+b2c-storefront/src/app/[locale]/(main)/order/[id]/confirmed/page.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-27
+b2c-storefront/src/components/atoms/Divider/Divider.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-42
+b2c-storefront/src/lib/helpers/toast.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-51
+b2c-storefront/src/app/providers.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-15
+b2c-storefront/src/components/molecules/DeleteCartItemButton/DeleteCartItemButton.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-42
+b2c-storefront/src/lib/helpers/category-utils.ts
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-103
+b2c-storefront/src/components/molecules/ProfileDetails/ProfileDetails.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-65
+b2c-storefront/package.json
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-71
+b2c-storefront/algolia-config.json
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-77
+b2c-storefront/src/app/[locale]/(main)/products/[handle]/page.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-34
+b2c-storefront/src/icons/index.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-2040
+b2c-storefront/src/components/atoms/Indicator/Indicator.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-79
+b2c-storefront/src/types/cart.ts
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-11
+b2c-storefront/README.md
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-208
+b2c-storefront/src/app/[locale]/(main)/sellers/[handle]/page.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-39
+b2c-storefront/src/components/cells/MobileNavbar/components/MobileCategoryDrawer.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-108
+b2c-storefront/src/components/sections/CartReview/CartItems.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-56
+b2c-storefront/src/components/molecules/CategoryNavbar/CategoryNavbar.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-149
+b2c-storefront/src/components/molecules/HeaderCategoryNavbar/HeaderCategoryNavbar.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-49
+b2c-storefront/src/components/cells/Navbar/Navbar.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-27
+b2c-storefront/src/components/molecules/UserNavigation/UserNavigation.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-70
+b2c-storefront/.storybook/main.ts
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-18
+b2c-storefront/src/components/sections/BlogSection/BlogSection.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-53
+b2c-storefront/src/components/molecules/ReviewForm/ReviewForm.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-152
+b2c-storefront/tailwind.config.ts
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-155
+b2c-storefront/.gitignore
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-42
+b2c-storefront/src/components/molecules/SellerReviewList/SellerReviewList.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-28
+b2c-storefront/src/components/organisms/Footer/Footer.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-71
+b2c-storefront/src/data/cartMock.ts
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-71
+b2c-storefront/src/components/atoms/HtmlLangSetter/HtmlLangSetter.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-25
+b2c-storefront/src/components/molecules/LocalizedLink/LocalizedLink.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-35
+b2c-storefront/src/components/molecules/UpdateCartItemButton/UpdateCartItemButton.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-95
+b2c-storefront/src/components/cells/CartItemsFooter/CartItemsFooter.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-21
+b2c-storefront/src/components/molecules/ProductListingNoResultsView/ProductListingNoResultsView.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-10
+b2c-storefront/src/components/molecules/CountrySelector/CountrySelector.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-153
+b2c-storefront/src/components/molecules/Accordion/Accordion.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-58
+b2c-storefront/src/app/[locale]/(auth)/login/page.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-14
+b2c-storefront/src/components/molecules/ParentCategoryLinks/ParentCategoryLinks.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-48
+b2c-storefront/src/app/[locale]/(main)/user/page.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-23
+b2c-storefront/src/components/molecules/TabsList/TabsList.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-24
+b2c-storefront/src/app/[locale]/(checkout)/layout.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-39
+b2c-storefront/src/app/colors.css
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-163
+b2c-storefront/src/lib/constants.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-70
+b2c-storefront/src/components/organisms/index.ts
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-55
+b2c-storefront/src/components/molecules/Modal/Modal.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-34
+b2c-storefront/src/components/sections/ProductDetailsPage/ProductDetailsPage.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-45
+b2c-storefront/src/components/molecules/ForgotPasswordForm/ForgotPasswordForm.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-105
+b2c-storefront/src/components/molecules/ProductTags/ProductTags.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-16
+b2c-storefront/src/components/sections/OrderReturnSection/ReturnSummaryTab.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-99
+b2c-storefront/src/components/molecules/RegisterForm/schema.ts
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-33
+b2c-storefront/src/components/molecules/CategoryNavbar/components/CategoryDropdownContainer.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-53
+b2c-storefront/src/components/sections/WishlistPage/WishlistPage.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-11
+b2c-storefront/src/components/organisms/OrderItems/Item.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-69
+b2c-storefront/src/lib/helpers/seo.ts
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-88
+b2c-storefront/public/window.svg
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1
+b2c-storefront/src/components/cells/SellerRatingFilter/SellerRatingFilter.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-60
+b2c-storefront/src/app/[locale]/(main)/user/orders/[id]/return/page.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-28
+b2c-storefront/src/middleware.ts
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-179
+b2c-storefront/src/app/[locale]/(main)/user/layout.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-7
+b2c-storefront/src/components/cells/SellNowButton/SellNowButton.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-19
+b2c-storefront/src/components/organisms/OrderDefails/OrderTotals.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-70
+b2c-storefront/src/components/atoms/LogoutButton/LogoutButton.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-32
+b2c-storefront/src/lib/data/cart.ts
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-573
+b2c-storefront/src/components/molecules/ForgotPasswordForm/schema.ts
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-7
+b2c-storefront/src/components/organisms/CartItems/EmptyCart.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-35
+b2c-storefront/src/components/atoms/NavigationItem/NavigationItem.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-29
+b2c-storefront/src/components/sections/ShopByStyle/ShopByStyleSection.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-65
+b2c-storefront/src/components/molecules/ProductPostedDate/ProductPostedDate.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-18
+b2c-storefront/src/components/molecules/SellerScore/SellerScore.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-19
+b2c-storefront/src/lib/helpers/parse-variant-error.ts
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-17
+b2c-storefront/src/const/index.ts
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-3
+b2c-storefront/src/components/organisms/BillingAddress/BillingAddress.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-113
+b2c-storefront/src/types/wishlist.ts
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-5
+b2c-storefront/src/components/atoms/Textarea/Textarea.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-54
+b2c-storefront/src/components/cells/WishlistButton/WishlistButton.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-79
+b2c-storefront/src/types/categories.ts
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-6
+b2c-storefront/.env.example
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-13
+b2c-storefront/src/components/sections/CartReview/PaymentButton.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-213
+b2c-storefront/.storybook/next-intl.ts
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-10
+b2c-storefront/Dockerfile
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-62
+b2c-storefront/src/components/cells/ProductDetailsSeller/ProductDetailsSeller.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-16
+b2c-storefront/src/components/molecules/ReviewForm/schema.ts
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-12
+b2c-storefront/src/components/organisms/ProductsPagination/ProductsPagination.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-24
+b2c-storefront/src/components/sections/Hero/Hero.stories.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-23
+b2c-storefront/src/components/sections/UserMessagesSection/UserMessagesSection.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-29
+b2c-storefront/src/components/sections/Hero/Hero.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-63
+b2c-storefront/src/components/sections/CartShippingMethodsSection/CartShippingMethodRow.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-42
+b2c-storefront/src/data/singleProductMock.ts
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-98
+b2c-storefront/src/lib/data/seller.ts
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-26
+b2c-storefront/src/components/organisms/PaymentContainer/PaymentWrapper.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-41
+b2c-storefront/.eslintrc.js
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-3
+b2c-storefront/src/components/sections/OrderConfirmedSection/OrderConfirmedSection.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-50
+b2c-storefront/src/components/sections/OrderDetailsSection/OrderDetailsSection.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-13
+b2c-storefront/src/components/cells/PriceFilter/PriceFilter.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-77
+b2c-storefront/src/components/organisms/PaymentContainer/PaymentContainer.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-126
+b2c-storefront/src/icons/spinner.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-40
+b2c-storefront/next.config.ts
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-58
+b2c-storefront/src/components/molecules/LoginForm/schema.ts
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-8
+b2c-storefront/src/components/cells/ProductDetailsShipping/ProductDetailsShipping.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-28
+b2c-storefront/src/components/organisms/Header/Header.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-82
+b2c-storefront/src/components/organisms/ShippingAddress/ShippingAddress.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-232
+b2c-storefront/src/lib/data/customer.ts
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-282
+b2c-storefront/src/components/cells/AddressSelect/AddressSelect.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-117
+b2c-storefront/src/components/cells/SellerReviewTab/SellerReviewTab.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-33
+b2c-storefront/src/components/molecules/RegisterForm/RegisterForm.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-161
+b2c-storefront/src/app/[locale]/(main)/categories/page.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-160
+b2c-storefront/src/components/providers/index.ts
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-5
+b2c-storefront/src/components/cells/OrderTrack/OrderTrack.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-24
+b2c-storefront/src/data/footerLinks.ts
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-22
+b2c-storefront/src/app/global-error.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-19
+b2c-storefront/src/components/organisms/PaymentContainer/StripeWrapper.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-54
+b2c-storefront/src/components/organisms/Reviews/ReviewsWritten.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-76
+b2c-storefront/src/components/molecules/ProfilePasswordForm/schema.ts
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-8
+b2c-storefront/src/components/molecules/ProductReportButton/ProductReportButton.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-31
+b2c-storefront/src/components/sections/HomePopularBrandsSection/HomePopularBrandsSection.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-48
+b2c-storefront/.yarnrc.yml
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-8
+b2c-storefront/src/app/[locale]/(main)/page.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-188
+b2c-storefront/src/components/providers/Cart/CartProvider.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-199
+b2c-storefront/src/components/providers/Cart/context.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-32
+b2c-storefront/src/components/sections/index.ts
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-29
+b2c-storefront/src/components/cells/SizeFilter/SizeFilter.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-67
+b2c-storefront/src/components/cells/ProductAdditionalAttributes/ProductAdditionalAttributes.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-28
+b2c-storefront/src/components/molecules/SelectField/SelectField.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-92
+b2c-storefront/src/components/molecules/ReportSellerForm/ReportSellerForm.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-138
+b2c-storefront/yarn.lock
+  s_06efa43fd64ec6::t_9475c18a6656b8 1-14069
+b2c-storefront/src/components/sections/Cart/Cart.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-38
+b2c-storefront/src/components/organisms/SellerHeading/SellerHeading.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-44
+b2c-storefront/src/app/globals.css
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-153
+b2c-storefront/src/components/atoms/PaginationButton/PaginationButton.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-36
+b2c-storefront/src/components/atoms/TabsTrigger/TabsTrigger.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-23
+b2c-storefront/src/lib/data/orders.ts
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-203
+b2c-storefront/src/app/[locale]/(main)/user/messages/page.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-21
+b2c-storefront/src/components/organisms/CartEmpty/CartEmpty.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-20
+b2c-storefront/src/components/sections/CartPaymentSection/CartPaymentSection.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-244
+b2c-storefront/src/components/cells/CountrySelect/CountrySelect.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-124
+b2c-storefront/src/components/cells/OrderCancel/OrderCancel.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-154
+b2c-storefront/src/components/organisms/ProductCard/SkeletonProductCard.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-5
+b2c-storefront/src/lib/data/regions.ts
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-68
+b2c-storefront/src/components/cells/index.ts
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-67
+b2c-storefront/src/components/atoms/Radio/Radio.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-31
+b2c-storefront/src/components/molecules/FilterCheckboxOption/FilterCheckboxOption.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-45
+b2c-storefront/src/lib/helpers/money.ts
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-26
+b2c-storefront/src/app/[locale]/(main)/user/addresses/page.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-23
+b2c-storefront/src/app/[locale]/(main)/user/reviews/written/page.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-27
+b2c-storefront/src/components/organisms/OrderDefails/OrderShipping.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-83
+b2c-storefront/src/components/organisms/SingleOrderReturn/SingleOrderReturn.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-189
+b2c-storefront/src/lib/data/cookies.ts
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-87
+b2c-storefront/src/components/cells/CartItemsProducts/CartItemsProducts.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-106
+b2c-storefront/src/types/blog.ts
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-8
+b2c-storefront/src/lib/helpers/sort-products.ts
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-53
+b2c-storefront/src/lib/helpers/parcel-statuses.ts
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-18
+b2c-storefront/src/components/organisms/HomeProductsCarousel/HomeProductsCarousel.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-46
+b2c-storefront/src/app/[locale]/(main)/categories/[category]/page.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-180
+b2c-storefront/src/components/atoms/index.ts
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-41
+b2c-storefront/src/components/molecules/AddressForm/schema.ts
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-21
+b2c-storefront/src/components/organisms/ProductDetails/ProductDetails.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-54
+b2c-storefront/public/Logo.svg
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-7
+b2c-storefront/src/components/molecules/TabsContent/TabsContent.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-15
+b2c-storefront/src/components/molecules/NavbarSearch/NavbarSearch.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-46
+b2c-storefront/src/lib/helpers/get-product-price.ts
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-126
+b2c-storefront/src/app/[locale]/(main)/user/orders/[id]/request-success/page.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-31
+b2c-storefront/src/components/cells/MobileNavbar/MobileNavbar.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-85
+b2c-storefront/src/app/[locale]/(reset-password)/layout.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-26
+b2c-storefront/src/components/molecules/ProfileDetailsForm/schema.ts
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-10
+b2c-storefront/postcss.config.mjs
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-8
+b2c-storefront/src/components/cells/ProductFilter/ProductFilter.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-42
+b2c-storefront/.env.template
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-11
+b2c-storefront/src/app/[locale]/(main)/cart/page.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-18
+b2c-storefront/src/lib/helpers/get-faced-filters.ts
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-85
+b2c-storefront/src/app/[locale]/(main)/user/orders/[id]/page.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-53
+b2c-storefront/src/components/organisms/Reviews/OrderCard.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-72
+b2c-storefront/src/lib/utils.ts
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-6
+b2c-storefront/src/components/atoms/Card/Card.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-21
+b2c-storefront/src/components/cells/ChatBox/ChatBox.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-101
+b2c-storefront/src/components/molecules/ProfileDetails/ProfilePassword.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-69
+b2c-storefront/src/components/atoms/Button/Button.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-57
+b2c-storefront/src/components/molecules/GalleryCarouselItem/GalleryCarouselItem.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-18
+b2c-storefront/src/app/[locale]/(main)/sellers/[handle]/reviews/page.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-34
+b2c-storefront/public/images/brands/Prada.svg
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-3
+b2c-storefront/src/components/cells/PasswordValidator/PasswordValidator.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-105
+b2c-storefront/src/components/cells/ProductPageDetails/ProductPageDetails.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-17
+b2c-storefront/src/components/molecules/LoginForm/LoginForm.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-168
+b2c-storefront/src/components/cells/ConditionFilter/ConditionFilter.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-39
+b2c-storefront/src/components/cells/WishlistItem/WishlistItem.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-86
+b2c-storefront/src/components/molecules/ProductPageAccordion/ProductPageAccordion.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-61
+b2c-storefront/src/components/sections/OrderReturnSection/OrderReturnSection.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-147
+b2c-storefront/src/components/organisms/OrdersPagination/OrdersPagination.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-20
+b2c-storefront/src/components/sections/OrderReturnRequests/OrderReturnRequests.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-60
+b2c-storefront/src/hooks/usePagination.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-17
+b2c-storefront/src/components/cells/ProductDetailsMeasurements/ProductDetailsMeasurements.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-25
+b2c-storefront/src/components/cells/MobileNavbar/components/index.ts
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-3
+b2c-storefront/src/app/[locale]/(main)/user/returns/page.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-39
+b2c-storefront/src/types.d.ts
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1
+b2c-storefront/src/components/molecules/ProductVariants/ProductVariants.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-55
+b2c-storefront/src/components/molecules/SellerInfo/SellerInfo.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-66
+b2c-storefront/src/components/organisms/ProductGallery/ProductGallery.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-16
+b2c-storefront/src/components/cells/ProductDetailsSellerReviews/ProductDetailsSellerReviews.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-29
+b2c-storefront/src/components/molecules/ProductCarouselIndicator/ProductCarouselIndicator.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-88
+b2c-storefront/src/components/molecules/ProductListingLoadingView/ProductListingLoadingView.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-12
+b2c-storefront/src/components/cells/MobileNavbar/components/MobileCategoryNavbar.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-122
+b2c-storefront/src/components/molecules/ProdutMeasurementRow/ProdutMeasurementRow.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-16
+b2c-storefront/src/components/atoms/InteractiveStarRating/InteractiveStarRating.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-53
+b2c-storefront/src/components/sections/OrderReturnSection/ReturnItemsTab.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-144
+b2c-storefront/src/components/sections/HomeProductSection/HomeProductSection.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-27
+b2c-storefront/src/hooks/usePrevious.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-9
+b2c-storefront/src/lib/data/payment.ts
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-33
+b2c-storefront/src/lib/helpers/check-region.ts
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-12
+b2c-storefront/src/app/[locale]/(main)/user/orders/page.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-111
+b2c-storefront/src/components/cells/Pagination/Pagination.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-98
+b2c-storefront/src/components/molecules/NativeSelect/NativeSelect.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-74
+b2c-storefront/.storybook/preview.ts
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-20
+b2c-storefront/src/components/organisms/OrderAddresses/OrderAddresses.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-5
+b2c-storefront/src/components/cells/OrderReturn/OrderReturn.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-27
+b2c-storefront/src/components/organisms/SellerTabs/SellerTabs.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-55
+b2c-storefront/src/lib/data/wishlist.ts
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-103
+b2c-storefront/public/vercel.svg
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-38
+b2c-storefront/src/lib/helpers/token.ts
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-18
+b2c-storefront/src/components/atoms/Checkbox/Checkbox.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-51
+b2c-storefront/src/components/atoms/IconButton/IconButton.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-48
+b2c-storefront/src/components/cells/BrandFilter/BrandFilter.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-74
+b2c-storefront/src/components/organisms/OrderParcels/OrderParcels.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-48
+b2c-storefront/src/lib/helpers/compare-addresses.ts
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-20
+b2c-storefront/src/components/molecules/index.ts
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-81
+b2c-storefront/src/components/organisms/SellerFooter/SellerFooter.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-41
+b2c-storefront/src/components/organisms/ProductSidebar/ProductSidebar.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-83
+b2c-storefront/public/next.svg
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1
+b2c-storefront/src/components/molecules/OrderParcelActions/OrderParcelActions.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-14
+b2c-storefront/src/components/organisms/OrderTotals/OrderTotals.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-43
+b2c-storefront/src/components/cells/Carousel/Carousel.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-83
+b2c-storefront/src/components/molecules/AddressForm/AddressForm.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-198
+b2c-storefront/src/app/[locale]/(main)/layout.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-48
+b2c-storefront/src/components/molecules/ProfilePasswordForm/ProfilePasswordForm.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-141
+b2c-storefront/src/types/styles.ts
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-5
+b2c-storefront/src/components/molecules/CategoryNavbar/components/ChildCategories.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-33
+b2c-storefront/src/app/[locale]/(main)/user/reviews/page.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-25
+b2c-storefront/src/components/molecules/CategoryNavbar/components/FeaturedCategory.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-39
+b2c-storefront/src/components/molecules/CategoryNavbar/hooks/useCategoryDropdown.ts
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-52
+b2c-storefront/src/components/organisms/Addressess/Addresses.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-182
+b2c-storefront/src/components/organisms/WishlistTabs/WishlistTabs.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-50
+b2c-storefront/src/components/organisms/BrandCard/BrandCard.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-22
+b2c-storefront/src/lib/helpers/hreflang.ts
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-32
+b2c-storefront/src/components/providers/TalkJs/TalkJsProvider.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-39
+b2c-storefront/src/lib/helpers/isBot.ts
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-3
+b2c-storefront/src/components/atoms/Input/Input.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-112
+b2c-storefront/src/app/[locale]/(reset-password)/reset-password/page.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-18
+b2c-storefront/src/components/organisms/OrderDefails/OrderDetails.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-53
+b2c-storefront/src/components/organisms/PaymentContainer/PaymentTest.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-12
+b2c-storefront/src/data/categories.ts
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-14
+b2c-storefront/src/lib/data/fulfillment.ts
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-69
+b2c-storefront/src/lib/helpers/filter-valid-cart-items.ts
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-24
+b2c-storefront/src/components/molecules/OrderParcelItems/OrderParcelItems.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-21
+b2c-storefront/public/images/brands/Miu-Miu.svg
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-3
+b2c-storefront/src/components/organisms/ProductListingActiveFilters/ProductListingActiveFilters.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-23
+b2c-storefront/src/app/[locale]/(main)/user/register/page.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-13
+b2c-storefront/src/components/cells/StepProgressBar/StepProgressBar.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-51
+b2c-storefront/tsconfig.json
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-41
+b2c-storefront/src/components/molecules/MessageButton/MessageButton.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-21
+b2c-storefront/src/components/organisms/PaymentContainer/SkeletonCardDetails.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-10
+b2c-storefront/public/images/brands/Balenciaga.svg
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-3
+b2c-storefront/src/lib/helpers/medusa-error.ts
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-22
+b2c-storefront/src/app/robots.ts
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-16
+b2c-storefront/src/app/not-found.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-26
+b2c-storefront/src/components/organisms/CartItems/CartItems.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-61
+b2c-storefront/src/hooks/useGetAllSearchParams.ts
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-22
+b2c-storefront/src/types/product.ts
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-93
+b2c-storefront/public/images/brands/Nike.svg
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-3
+b2c-storefront/src/components/cells/CartDropdown/CartDropdown.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-139
+b2c-storefront/src/hooks/useUpdateSearchParams.ts
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-24
+b2c-storefront/src/components/cells/LabeledInput/LabeledInput.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-22
+b2c-storefront/src/components/cells/CartItemsHeader/CartItemsHeader.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-31
+b2c-storefront/src/lib/helpers/sort-productsMock.ts
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-31
+b2c-storefront/src/lib/data/products.ts
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-294
+b2c-storefront/src/components/sections/CartReview/CartReview.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-48
+b2c-storefront/src/components/organisms/ProductListingSkeleton/ProductListingSkeleton.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-34
+b2c-storefront/src/components/sections/ProductListing/AlgoliaProductsListing.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-151
+b2c-storefront/src/lib/helpers/get-image-url.ts
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-6
+b2c-storefront/src/components/atoms/Breadcrumbs/Breadcrumbs.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-42
+b2c-storefront/src/lib/helpers/get-seller-product-price.ts
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-68
+b2c-storefront/src/components/molecules/Dropdown/Dropdown.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-20
+b2c-storefront/src/lib/data/categories.ts
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-62
+b2c-storefront/src/components/molecules/CartDropdownItem/CartDropdownItem.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-63
+b2c-storefront/public/globe.svg
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1
+b2c-storefront/src/components/cells/ProductDetailsHeader/ProductDetailsHeader.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-193
+b2c-storefront/src/components/molecules/SellerInfoHeader/SellerInfoHeader.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-39
+b2c-storefront/src/app/[locale]/(main)/collections/[handle]/page.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-57
+b2c-storefront/src/components/organisms/GalleryCarousel/GalleryCarousel.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-14
+b2c-storefront/src/types/seller.ts
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-22
+b2c-storefront/src/hooks/useFilters.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-64
+b2c-storefront/src/components/sections/BannerSection/BannerSection.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-43
+b2c-storefront/src/components/atoms/Chip/Chip.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-64
+b2c-storefront/src/hooks/useScreenSize.tsx
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-45
+b2c-storefront/src/components/organisms/Reviews/navigation.ts
+  s_06efa43fd64ec6::t_31fee41d33bc3a 1-10
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "ecaa0865ce4082d5d7ca4cbc63814fa794c7efaa",
+  "prompts": {},
+  "humans": {
+    "h_44d68aa2e2bd94": {
+      "author": "Sanjiv Khullar <ai@socialmediville.ca>"
+    }
+  },
+  "sessions": {
+    "s_06efa43fd64ec6": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "2fb91bdb-f860-4de4-a321-a9864bdece3b",
+        "model": "default"
+      },
+      "human_author": "Sanjiv Khullar <ai@socialmediville.ca>"
+    }
+  }
+}
