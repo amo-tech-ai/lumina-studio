@@ -40,6 +40,42 @@ function walk(dir, files = []) {
   return files;
 }
 
+/** Index of `needle` at or after `start`, ignoring matches inside strings. */
+function indexOutsideStrings(line, needle, start = 0) {
+  let inSingle = false;
+  let inDouble = false;
+  let inTemplate = false;
+  let escaped = false;
+
+  for (let i = start; i <= line.length - needle.length; i++) {
+    const c = line[i];
+    if (escaped) {
+      escaped = false;
+      continue;
+    }
+    if (c === "\\" && (inSingle || inDouble || inTemplate)) {
+      escaped = true;
+      continue;
+    }
+    if (!inDouble && !inTemplate && c === "'") {
+      inSingle = !inSingle;
+      continue;
+    }
+    if (!inSingle && !inTemplate && c === '"') {
+      inDouble = !inDouble;
+      continue;
+    }
+    if (!inSingle && !inDouble && c === "`") {
+      inTemplate = !inTemplate;
+      continue;
+    }
+    if (!inSingle && !inDouble && !inTemplate && line.startsWith(needle, i)) {
+      return i;
+    }
+  }
+  return -1;
+}
+
 /** Strip line and block comments; track multi-line block state. */
 function extractCodeSegments(line, state) {
   const segments = [];
@@ -54,8 +90,8 @@ function extractCodeSegments(line, state) {
       continue;
     }
 
-    const blockStart = line.indexOf("/*", i);
-    const lineStart = line.indexOf("//", i);
+    const blockStart = indexOutsideStrings(line, "/*", i);
+    const lineStart = indexOutsideStrings(line, "//", i);
 
     if (blockStart !== -1 && (lineStart === -1 || blockStart < lineStart)) {
       segments.push(line.slice(i, blockStart));
@@ -110,7 +146,10 @@ for (const file of walk(srcDir)) {
     if (!commentState.inBlockComment) {
       if (trimmed.startsWith("//")) return;
       if (trimmed.startsWith("/*") || trimmed.startsWith("/**")) {
-        if (!trimmed.includes("*/")) return;
+        if (!trimmed.includes("*/")) {
+          commentState.inBlockComment = true;
+          return;
+        }
       }
     }
 
