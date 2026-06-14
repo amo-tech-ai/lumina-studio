@@ -11,6 +11,22 @@ node_modules
 dist
 dist-ssr
 *.local
+.env
+.env.*
+!.env.example
+!**/.env.example
+!**/.env.template
+
+# Commerce — never commit runtime secrets
+my-marketplace/**/.env
+my-marketplace/.env
+b2c-storefront/.env.local
+
+# Commerce build artifacts
+my-marketplace/**/node_modules
+my-marketplace/**/.medusa
+b2c-storefront/node_modules
+b2c-storefront/.next
 
 # Editor directories and files
 .vscode/*
@@ -22,3 +38,9 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Local Supabase pg_dump outputs (may contain data / PII)
+supabase/old/dump.sql
+supabase/old/schema.sql
+supabase/old/data.sql
+supabase/old/live-public-schema-*.sql
