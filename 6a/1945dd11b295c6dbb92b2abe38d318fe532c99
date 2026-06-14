@@ -1,0 +1,92 @@
+docs/linear/issues/IPI-18-AI-001.md
+  s_06efa43fd64ec6::t_0def5a97365734 99-103
+  s_06efa43fd64ec6::t_ac6fad93e13e4f 66-85
+scripts/verify-supabase.mjs
+  s_06efa43fd64ec6::t_705bfc1850885c 1-49
+supabase/migrations/20260614000002_brand_scores_delete_rls.sql
+  s_06efa43fd64ec6::t_01d3df5c8da7ad 1-10
+supabase/functions/_shared/cors.ts
+  s_06efa43fd64ec6::t_705bfc1850885c 1-19
+src/components/auth/ProtectedRoute.tsx
+  s_06efa43fd64ec6::t_705bfc1850885c 1-27
+docs/linear/issues/IPI-16-PLT-003.md
+  s_06efa43fd64ec6::t_24344ec10c757a 19-20,22,36,38,43,64-65
+  s_06efa43fd64ec6::t_6561fb9f37747d 1-18,21,23-35,37,39-42,44-63
+src/types/brand-intelligence.ts
+  s_06efa43fd64ec6::t_03e6d2cb0245ce 1-20
+supabase/functions/_shared/env.ts
+  s_06efa43fd64ec6::t_705bfc1850885c 1-64
+supabase/functions/_shared/response.ts
+  s_06efa43fd64ec6::t_03e6d2cb0245ce 1-52
+src/contexts/AuthContext.tsx
+  s_06efa43fd64ec6::t_705bfc1850885c 1-97
+supabase/functions/_shared/supabase-client.ts
+  s_06efa43fd64ec6::t_705bfc1850885c 1-21
+docs/linear/issues/IPI-15-PLT-002.md
+  s_06efa43fd64ec6::t_24344ec10c757a 1-79
+docs/linear/issues/IPI-14-PLT-001.md
+  s_06efa43fd64ec6::t_705bfc1850885c 1-88
+src/App.tsx
+  s_06efa43fd64ec6::t_6ee5b033ba6315 6-7,18-19,29-55
+src/services/brandIntelligenceService.ts
+  s_06efa43fd64ec6::t_03e6d2cb0245ce 1-20
+supabase/functions/brand-intelligence/index.ts
+  s_06efa43fd64ec6::t_03e6d2cb0245ce 1-362
+package.json
+  s_06efa43fd64ec6::t_8e242420a4e1b6 52
+  s_06efa43fd64ec6::t_bb38dcd8bdd360 14-21
+package-lock.json
+  s_06efa43fd64ec6::t_705bfc1850885c 39,106-132,2538-2621,2903-2942,3001-3008,3118,3125,3136,3660-3671,4332-4342,5300-5308,6139-6149,6192-6203,6525-6527,6531,6708-6756,7048-7059,7736-7738
+scripts/verify-edge-functions.mjs
+  s_06efa43fd64ec6::t_705bfc1850885c 1-157
+src/types/supabase.ts
+  s_06efa43fd64ec6::t_705bfc1850885c 1-3329
+supabase/.gitignore
+  s_06efa43fd64ec6::t_705bfc1850885c 1-8
+scripts/verify-rls.mjs
+  s_06efa43fd64ec6::t_705bfc1850885c 1-247
+src/lib/supabase.ts
+  s_06efa43fd64ec6::t_96d7ce4108c2bd 3-8
+src/services/edgeFunctionService.ts
+  s_06efa43fd64ec6::t_705bfc1850885c 1-70
+supabase/functions/edge-test/index.ts
+  s_06efa43fd64ec6::t_705bfc1850885c 1-49
+supabase/migrations/20260614000001_plt002_profiles_rls_and_trigger.sql
+  s_06efa43fd64ec6::t_705bfc1850885c 1-45
+supabase/functions/_shared/agent-log.ts
+  s_06efa43fd64ec6::t_705bfc1850885c 1-41
+supabase/functions/health/index.ts
+  s_06efa43fd64ec6::t_705bfc1850885c 1-24
+src/pages/Login.tsx
+  s_06efa43fd64ec6::t_705bfc1850885c 1-193
+scripts/verify-brand-intelligence.mjs
+  s_06efa43fd64ec6::t_03e6d2cb0245ce 1-169
+supabase/config.toml
+  s_06efa43fd64ec6::t_705bfc1850885c 1-416
+supabase/README.md
+  s_06efa43fd64ec6::t_705bfc1850885c 1-284
+src/pages/Dashboard.tsx
+  s_06efa43fd64ec6::t_705bfc1850885c 1-55
+src/services/profileService.ts
+  s_06efa43fd64ec6::t_705bfc1850885c 1-57
+supabase/functions/_shared/auth.ts
+  s_06efa43fd64ec6::t_705bfc1850885c 1-65
+supabase/migrations/20260614000000_ipix_platform_mvp.sql
+  s_06efa43fd64ec6::t_705bfc1850885c 1-201
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "6a1945dd11b295c6dbb92b2abe38d318fe532c99",
+  "prompts": {},
+  "sessions": {
+    "s_06efa43fd64ec6": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "2fb91bdb-f860-4de4-a321-a9864bdece3b",
+        "model": "default"
+      },
+      "human_author": "Sanjiv Khullar <ai@socialmediville.ca>"
+    }
+  }
+}
