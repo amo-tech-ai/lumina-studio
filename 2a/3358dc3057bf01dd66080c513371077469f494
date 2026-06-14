@@ -1,0 +1,27 @@
+scripts/check-client-env.mjs
+  s_06efa43fd64ec6::t_e7213b65eae3e0 149-152
+  s_06efa43fd64ec6::t_6c306acfd9566e 43-78,93-94
+package-lock.json
+  s_06efa43fd64ec6::t_78e4239b406896 105-131,2818-2857,2916-2923,3033,3040,3051,3575-3586,4247-4257,6045-6055,6098-6109,6431-6433,6437,6614-6662,6954-6965
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "2a3358dc3057bf01dd66080c513371077469f494",
+  "prompts": {},
+  "humans": {
+    "h_44d68aa2e2bd94": {
+      "author": "Sanjiv Khullar <ai@socialmediville.ca>"
+    }
+  },
+  "sessions": {
+    "s_06efa43fd64ec6": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "2fb91bdb-f860-4de4-a321-a9864bdece3b",
+        "model": "default"
+      },
+      "human_author": "Sanjiv Khullar <ai@socialmediville.ca>"
+    }
+  }
+}
