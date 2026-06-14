@@ -16,7 +16,14 @@ jobs:
           node-version: "20"
           cache: npm
 
-      - run: npm ci
-      - run: npm run check:env
-      - run: npm run build
-      - run: npm run test
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Env guard (check:env)
+        run: npm run check:env
+
+      - name: Production build
+        run: npm run build
+
+      - name: Unit tests
+        run: npm run test
