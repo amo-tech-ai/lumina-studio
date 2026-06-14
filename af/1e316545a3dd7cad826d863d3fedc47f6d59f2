@@ -1,0 +1,31 @@
+scripts/check-client-env.mjs
+  s_06efa43fd64ec6::t_81786b8f62fde6 1-57
+package.json
+  s_06efa43fd64ec6::t_84be3be4a233ea 11
+src/main.tsx
+  s_06efa43fd64ec6::t_3ff8672bfea1c0 2-3
+.env.example
+  s_06efa43fd64ec6::t_b8c3e1157ac839 1-16
+src/lib/env.ts
+  s_06efa43fd64ec6::t_a2acfbcb902495 1-44
+src/vite-env.d.ts
+  s_06efa43fd64ec6::t_0de6928571cf45 2-20
+docs/linear/issues/IPI-17-PLT-004.md
+  s_06efa43fd64ec6::t_97d87ed423bc98 49-61
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "af1e316545a3dd7cad826d863d3fedc47f6d59f2",
+  "prompts": {},
+  "sessions": {
+    "s_06efa43fd64ec6": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "2fb91bdb-f860-4de4-a321-a9864bdece3b",
+        "model": "default"
+      },
+      "human_author": "Sanjiv Khullar <ai@socialmediville.ca>"
+    }
+  }
+}
