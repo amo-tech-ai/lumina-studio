@@ -1,0 +1,37 @@
+src/layouts/OperatorLayout.tsx
+  s_06efa43fd64ec6::t_98938436fa9bbc 1-3,5-6,8,10,12,14-15,18-20,22-44,48,59-72,74-75,77-83,86
+src/components/dashboard/LeftNav.tsx
+  s_06efa43fd64ec6::t_35c1df61eaea92 1-48
+src/components/dashboard/RightIntelligencePanel.tsx
+  s_06efa43fd64ec6::t_43366eda85e0eb 1-46
+src/pages/dashboard/LinksPage.tsx
+  s_06efa43fd64ec6::t_7dca38664af87a 1-18
+src/pages/dashboard/AssetsPage.tsx
+  s_06efa43fd64ec6::t_50f270c227f027 1-18
+src/components/dashboard/DashboardEmptyState.tsx
+  s_06efa43fd64ec6::t_48d1534ed7bcfa 1-18
+src/pages/dashboard/BrandPage.tsx
+  s_06efa43fd64ec6::t_53d0e935bd6085 1-18
+src/pages/dashboard/HubPage.tsx
+  s_06efa43fd64ec6::t_a781dcd1d2e49b 1-18
+docs/linear/issues/IPI-22-UI-001.md
+  s_06efa43fd64ec6::t_187c42910212c7 113-129
+src/App.tsx
+  s_06efa43fd64ec6::t_ce1d6a454515bc 5,8,20-23,42,45-51
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "43bdcebf8a856b8aaec8462b750fbe3730f9a268",
+  "prompts": {},
+  "sessions": {
+    "s_06efa43fd64ec6": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "2fb91bdb-f860-4de4-a321-a9864bdece3b",
+        "model": "default"
+      },
+      "human_author": "Sanjiv Khullar <ai@socialmediville.ca>"
+    }
+  }
+}
