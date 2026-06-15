@@ -1,0 +1,369 @@
+import { GoogleGenAI, Type } from "npm:@google/genai@2.8.0";
+
+import { insertAgentLog } from "../_shared/agent-log.ts";
+import { isAuthFailure, resolveAuth } from "../_shared/auth.ts";
+import { handleCors } from "../_shared/cors.ts";
+import { getOptionalSecret } from "../_shared/env.ts";
+import { createUserClient } from "../_shared/supabase-client.ts";
+import {
+  errorResponse,
+  jsonResponse,
+  safeErrorMessage,
+} from "../_shared/response.ts";
+
+const MODEL = "gemini-2.5-flash";
+
+const brandProfileSchema = {
+  type: Type.OBJECT,
+  properties: {
+    name: { type: Type.STRING, description: "Brand display name" },
+    tagline: { type: Type.STRING, description: "Short brand tagline" },
+    category: {
+      type: Type.STRING,
+      description: "Fashion or retail category, e.g. DTC apparel",
+    },
+    visualIdentity: {
+      type: Type.OBJECT,
+      properties: {
+        colors: {
+          type: Type.ARRAY,
+          items: { type: Type.STRING },
+          description: "Hex or descriptive color names",
+        },
+        mood: { type: Type.STRING, description: "Visual mood, e.g. minimal luxe" },
+      },
+      required: ["colors", "mood"],
+    },
+    targetAudience: { type: Type.STRING },
+    sourceUrl: { type: Type.STRING },
+    scores: {
+      type: Type.OBJECT,
+      properties: {
+        visual: {
+          type: Type.NUMBER,
+          description: "Visual identity clarity 0-100",
+        },
+        audience: {
+          type: Type.NUMBER,
+          description: "Audience clarity 0-100",
+        },
+        consistency: {
+          type: Type.NUMBER,
+          description: "Cross-page consistency 0-100",
+        },
+        commerce_readiness: {
+          type: Type.NUMBER,
+          description: "E-commerce readiness 0-100",
+        },
+      },
+      required: ["visual", "audience", "consistency", "commerce_readiness"],
+    },
+  },
+  required: [
+    "name",
+    "tagline",
+    "category",
+    "visualIdentity",
+    "targetAudience",
+    "sourceUrl",
+    "scores",
+  ],
+};
+
+type BrandProfilePayload = {
+  name: string;
+  tagline: string;
+  category: string;
+  visualIdentity: { colors: string[]; mood: string };
+  targetAudience: string;
+  sourceUrl: string;
+  scores: {
+    visual: number;
+    audience: number;
+    consistency: number;
+    commerce_readiness: number;
+  };
+};
+
+function isValidHttpUrl(value: string): boolean {
+  try {
+    const parsed = new URL(value);
+    return parsed.protocol === "https:" || parsed.protocol === "http:";
+  } catch {
+    return false;
+  }
+}
+
+function clampScore(n: number): number {
+  if (!Number.isFinite(n)) return 0;
+  return Math.min(100, Math.max(0, Math.round(n * 100) / 100));
+}
+
+console.info("brand-intelligence function started");
+
+Deno.serve(async (req: Request) => {
+  const cors = handleCors(req);
+  if (cors) return cors;
+
+  const started = performance.now();
+
+  try {
+    if (req.method !== "POST") {
+      return errorResponse("method_not_allowed", "Use POST", 405);
+    }
+
+    const auth = await resolveAuth(req, { required: true });
+    if (isAuthFailure(auth)) return auth.response;
+
+    const apiKey = getOptionalSecret("GEMINI_API_KEY");
+    if (!apiKey) {
+      return errorResponse(
+        "config_error",
+        "Brand intelligence is not configured",
+        503,
+      );
+    }
+
+    let body: { url?: string; brandId?: string };
+    try {
+      body = await req.json();
+    } catch {
+      return errorResponse("invalid_json", "Request body must be JSON", 422);
+    }
+
+    const url = typeof body.url === "string" ? body.url.trim() : "";
+    if (!url || !isValidHttpUrl(url)) {
+      return errorResponse(
+        "validation_error",
+        "A valid http(s) url is required",
+        422,
+      );
+    }
+
+    const brandIdInput =
+      typeof body.brandId === "string" && body.brandId.length > 0
+        ? body.brandId
+        : null;
+
+    const ai = new GoogleGenAI({ apiKey });
+
+    const prompt = `
+Analyze this fashion or DTC brand website and return structured brand intelligence for a creative production platform.
+
+Brand URL: ${url}
+
+Extract:
+- Brand name and tagline
+- Product category
+- Visual identity (colors and mood)
+- Target audience summary
+- Readiness scores (0-100) for visual clarity, audience clarity, brand consistency, and commerce readiness
+
+Use the URL content as primary evidence. Set sourceUrl to the analyzed URL.
+`.trim();
+
+    const geminiStarted = performance.now();
+
+    // urlContext cannot be combined with responseMimeType application/json (API 400).
+    const contextResponse = await ai.models.generateContent({
+      model: MODEL,
+      contents: prompt,
+      config: {
+        tools: [{ urlContext: {} }],
+        temperature: 0.2,
+      },
+    });
+
+    const contextText =
+      contextResponse.text?.trim() ||
+      "No textual analysis returned from URL context.";
+
+    const structurePrompt = `
+Based on this brand analysis, return ONLY valid JSON matching the required schema.
+
+Analysis:
+${contextText}
+
+Required JSON shape:
+{
+  "name": string,
+  "tagline": string,
+  "category": string,
+  "visualIdentity": { "colors": string[], "mood": string },
+  "targetAudience": string,
+  "sourceUrl": string (use ${JSON.stringify(url)}),
+  "scores": {
+    "visual": number 0-100,
+    "audience": number 0-100,
+    "consistency": number 0-100,
+    "commerce_readiness": number 0-100
+  }
+}
+`.trim();
+
+    const response = await ai.models.generateContent({
+      model: MODEL,
+      contents: structurePrompt,
+      config: {
+        responseMimeType: "application/json",
+        responseSchema: brandProfileSchema,
+        temperature: 0.1,
+      },
+    });
+
+    const geminiMs = Math.round(performance.now() - geminiStarted);
+    const responseText = response.text ?? "";
+    if (!responseText.trim()) {
+      throw new Error("Empty response from Gemini");
+    }
+
+    let profile: BrandProfilePayload;
+    try {
+      profile = JSON.parse(responseText) as BrandProfilePayload;
+    } catch {
+      throw new Error("Model returned invalid JSON");
+    }
+
+    if (!profile.name?.trim()) {
+      return errorResponse(
+        "validation_error",
+        "Could not extract a brand name from URL",
+        422,
+      );
+    }
+
+    const client = createUserClient(auth.accessToken);
+    const aiProfile = {
+      name: profile.name,
+      tagline: profile.tagline,
+      category: profile.category,
+      visualIdentity: profile.visualIdentity,
+      targetAudience: profile.targetAudience,
+      sourceUrl: profile.sourceUrl || url,
+      analyzedAt: new Date().toISOString(),
+    };
+
+    let brandId = brandIdInput;
+    let brandRow: { id: string; name: string } | null = null;
+
+    if (brandId) {
+      const { data: existing, error: fetchErr } = await client
+        .from("brands")
+        .select("id, name")
+        .eq("id", brandId)
+        .maybeSingle();
+
+      if (fetchErr || !existing) {
+        return errorResponse("not_found", "Brand not found", 404);
+      }
+
+      const { data: updated, error: updateErr } = await client
+        .from("brands")
+        .update({
+          name: profile.name,
+          brand_url: url,
+          ai_profile: aiProfile,
+        })
+        .eq("id", brandId)
+        .select("id, name")
+        .single();
+
+      if (updateErr || !updated) {
+        throw new Error(updateErr?.message ?? "Failed to update brand");
+      }
+      brandRow = updated;
+    } else {
+      const { data: inserted, error: insertErr } = await client
+        .from("brands")
+        .insert({
+          user_id: auth.user.id,
+          name: profile.name,
+          brand_url: url,
+          ai_profile: aiProfile,
+        })
+        .select("id, name")
+        .single();
+
+      if (insertErr || !inserted) {
+        throw new Error(insertErr?.message ?? "Failed to create brand");
+      }
+      brandRow = inserted;
+      brandId = inserted.id;
+    }
+
+    // Replace prior scores on re-analysis (delete RLS in 20260614000002).
+    const { error: deleteScoresErr } = await client
+      .from("brand_scores")
+      .delete()
+      .eq("brand_id", brandId);
+
+    if (deleteScoresErr) {
+      throw new Error(deleteScoresErr.message);
+    }
+
+    const scoreRows = [
+      { score_type: "visual", score: clampScore(profile.scores.visual) },
+      { score_type: "audience", score: clampScore(profile.scores.audience) },
+      {
+        score_type: "consistency",
+        score: clampScore(profile.scores.consistency),
+      },
+      {
+        score_type: "commerce_readiness",
+        score: clampScore(profile.scores.commerce_readiness),
+      },
+    ].map((row) => ({
+      brand_id: brandId,
+      score_type: row.score_type,
+      score: row.score,
+      details: { source: "brand-intelligence", url },
+    }));
+
+    const { data: scores, error: scoresErr } = await client
+      .from("brand_scores")
+      .insert(scoreRows)
+      .select("id, score_type, score");
+
+    if (scoresErr) {
+      throw new Error(scoresErr.message);
+    }
+
+    const usage = response.usageMetadata;
+    const contextUsage = contextResponse.usageMetadata;
+    const durationMs = Math.round(performance.now() - started);
+
+    const { id: logId } = await insertAgentLog(client, {
+      agentName: "brand-intelligence",
+      userId: auth.user.id,
+      brandId,
+      input: { url, brandId: brandIdInput },
+      output: {
+        brandId,
+        scoreCount: scores?.length ?? 0,
+        urlRetrieval:
+          contextResponse.candidates?.[0]?.urlContextMetadata ?? null,
+      },
+      model: MODEL,
+      tokensIn:
+        (usage?.promptTokenCount ?? 0) +
+        (contextUsage?.promptTokenCount ?? 0) || null,
+      tokensOut:
+        (usage?.candidatesTokenCount ?? 0) +
+        (contextUsage?.candidatesTokenCount ?? 0) || null,
+      durationMs,
+    });
+
+    return jsonResponse({
+      brandId,
+      brand: brandRow,
+      profile: aiProfile,
+      scores: scores ?? [],
+      logId,
+      durationMs,
+      geminiMs,
+    });
+  } catch (err) {
+    console.error("brand-intelligence error:", err);
+    return errorResponse("internal_error", safeErrorMessage(err), 500);
+  }
+});
