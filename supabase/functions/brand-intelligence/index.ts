@@ -291,8 +291,15 @@ Required JSON shape:
       brandId = inserted.id;
     }
 
-    // Re-analysis inserts fresh score rows (delete policy added in 20260614000001).
-    // Skip delete here so first-run works before that migration is applied remotely.
+    // Replace prior scores on re-analysis (delete RLS in 20260614000002).
+    const { error: deleteScoresErr } = await client
+      .from("brand_scores")
+      .delete()
+      .eq("brand_id", brandId);
+
+    if (deleteScoresErr) {
+      throw new Error(deleteScoresErr.message);
+    }
 
     const scoreRows = [
       { score_type: "visual", score: clampScore(profile.scores.visual) },
