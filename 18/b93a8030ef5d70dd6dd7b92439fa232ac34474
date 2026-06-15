@@ -1,0 +1,25 @@
+scripts/check-client-env.mjs
+  s_06efa43fd64ec6::t_bccf832ce9e44c 13-28,43-136,142,146-152,155-163
+supabase/functions/brand-intelligence/index.ts
+  s_06efa43fd64ec6::t_323d7155f8ad67 294-302
+.github/workflows/ci.yml
+  s_06efa43fd64ec6::t_bccf832ce9e44c 1-29
+src/pages/Login.tsx
+  s_06efa43fd64ec6::t_edaea408484f34 18-24,29
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.7",
+  "base_commit_sha": "18b93a8030ef5d70dd6dd7b92439fa232ac34474",
+  "prompts": {},
+  "sessions": {
+    "s_06efa43fd64ec6": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "2fb91bdb-f860-4de4-a321-a9864bdece3b",
+        "model": "default"
+      },
+      "human_author": "Sanjiv Khullar <ai@socialmediville.ca>"
+    }
+  }
+}
