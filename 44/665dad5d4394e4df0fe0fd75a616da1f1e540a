@@ -1,0 +1,71 @@
+.claude/skills/mercur/references/dashboard-tab-ui.md
+  s_cfb8706ed8da6f::t_b6db08ff78a2da 3-6,8,12,16,18,20,42,49,51,53,57-62,64,66-67,71-73
+my-marketplace/apps/admin/CLAUDE.md
+  s_cfb8706ed8da6f::t_583400c7c3c97b 34,36-41
+my-marketplace/packages/api/src/scripts/seed-ipix-checkout-prep.ts
+  s_cfb8706ed8da6f::t_55297241edf394 77-80
+  s_cfb8706ed8da6f::t_04c016e674446d 47,51-55
+my-marketplace/CLAUDE.md
+  s_cfb8706ed8da6f::t_d2e3c5195c3529 83-84
+  s_cfb8706ed8da6f::t_50efc5531920bf 58,60-62,65
+  s_cfb8706ed8da6f::t_9b08f657019398 21
+  s_cfb8706ed8da6f::t_8f85f756ea021e 82
+  s_cfb8706ed8da6f::t_b7488e41fed12f 89-94
+  s_cfb8706ed8da6f::t_078092c95b13fb 63
+.claude/skills/mercur/references/migration.md
+  s_cfb8706ed8da6f::t_192312f4887bfe 3,5,8-14,16,18,21,26,30-34,36,39,45,49,51-54,56,60-62,64,66-68,70,72-80,82,84,86,88,90-94,98-101,103
+.cursor/rules/mercur.mdc
+  s_cfb8706ed8da6f::t_e0f13864c16573 1,3-14,17-24,26-33,35,45,47-55
+  s_cfb8706ed8da6f::t_2f3e116ddf7204 2,15-16,25,34,36-44,46,56-57
+my-marketplace/AGENTS.md
+  s_cfb8706ed8da6f::t_609281383867f0 23-24
+my-marketplace/apps/vendor/CLAUDE.md
+  s_cfb8706ed8da6f::t_13170041409fe9 32
+.claude/skills/mercur/references/medusa-ui-conformance.md
+  s_cfb8706ed8da6f::t_e5be24284a0284 3,5-6,8,10-13,15,17-22,24,26-30,32,34-42,46-51,55-58,62-66
+my-marketplace/packages/api/src/scripts/seed-demo-seller.ts
+  s_cfb8706ed8da6f::t_31c7386b90a21f 32
+  s_cfb8706ed8da6f::t_006483b53552f6 59
+.claude/skills/mercur/references/blocks.md
+  s_cfb8706ed8da6f::t_d82126b2d3b06b 3-5,8,10-12,14,18-20,22-25,29-43,47-49,51,53,62
+.cursor/skills/mercur
+  s_cfb8706ed8da6f::t_13170041409fe9 1
+my-marketplace/.claude/skills/README.md
+  s_cfb8706ed8da6f::t_bed31988614edd 3,5,7,9-19
+.claude/skills/mercur/references/cli.md
+  s_cfb8706ed8da6f::t_1df9365f3d7f3d 3,7,20-22,26,39,49,51-56,60-62,66,68-69
+.claude/skills/mercur/SKILL.md
+  s_cfb8706ed8da6f::t_8977d40ca95027 3-9,14,16-17,20,22-35,37-45,48-49,51,53,55-59,65,69
+  s_cfb8706ed8da6f::t_cc9168362360ef 1-2,10-13,15,18-19,21,36,46-47,50,52,54,60-64,66-68
+.claude/skills/mercur/references/dashboard-form-ui.md
+  s_cfb8706ed8da6f::t_a87262a7163ba7 3-6,8,12,14,16,18,45,61,63,67-70,72,74,76,78-82,84,86-87,91-93
+my-marketplace/.claude/skills/mercur
+  s_cfb8706ed8da6f::t_13170041409fe9 1
+.claude/skills/mercur/references/dashboard-page-ui.md
+  s_cfb8706ed8da6f::t_c42545996f4db4 3-6,8,12-14,18-23,37,39,41,44-46,48,50,52-56,58,60,71,73,75,80,82,84-86,90-93
+my-marketplace/packages/api/src/scripts/seed.ts
+  s_cfb8706ed8da6f::t_1bc01a375c9fc4 71-77
+  s_cfb8706ed8da6f::t_0cf22d21b3d521 364-376,378-394,396-409,411-431
+  s_cfb8706ed8da6f::t_09a9f2f406f46f 338,340-363,432-435
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.7",
+  "base_commit_sha": "44665dad5d4394e4df0fe0fd75a616da1f1e540a",
+  "prompts": {},
+  "humans": {
+    "h_44d68aa2e2bd94": {
+      "author": "Sanjiv Khullar <ai@socialmediville.ca>"
+    }
+  },
+  "sessions": {
+    "s_cfb8706ed8da6f": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "ee4edfb0-2827-4e16-a921-681a397203e9",
+        "model": "default"
+      },
+      "human_author": "Sanjiv Khullar <ai@socialmediville.ca>"
+    }
+  }
+}
