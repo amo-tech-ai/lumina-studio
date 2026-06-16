@@ -20,7 +20,7 @@ export const listCartPaymentMethods = async (regionId: string) => {
       query: { region_id: regionId },
       headers,
       next,
-      cache: 'force-cache'
+      cache: 'no-cache'
     })
     .then(({ payment_providers }) =>
       payment_providers.sort((a, b) => {

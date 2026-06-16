@@ -33,6 +33,11 @@ type CartItem = {
 
 export type StoreCardShippingMethod = HttpTypes.StoreCartShippingOption & {
   seller_id?: string;
+  seller_name?: string;
+  seller?: {
+    id: string;
+    name?: string;
+  };
   service_zone?: {
     fulfillment_set: {
       type: string;
