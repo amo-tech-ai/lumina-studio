@@ -1,0 +1,30 @@
+my-marketplace/apps/vendor/package.json
+  s_cfb8706ed8da6f::t_c705d8169c1d16 7-8,10
+my-marketplace/packages/api/integration-tests/setup.js
+  s_cfb8706ed8da6f::t_89f95f9a9dda55 12
+  s_cfb8706ed8da6f::t_2c5ef6943605d7 3-8,10-11
+  s_cfb8706ed8da6f::t_a641288c7d8cce 9
+my-marketplace/apps/admin/package.json
+  s_cfb8706ed8da6f::t_8b7c51e2ee6559 7-8,10
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.7",
+  "base_commit_sha": "570fb629a7b73cd38704775c0891b24a9f6beb8a",
+  "prompts": {},
+  "humans": {
+    "h_44d68aa2e2bd94": {
+      "author": "Sanjiv Khullar <ai@socialmediville.ca>"
+    }
+  },
+  "sessions": {
+    "s_cfb8706ed8da6f": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "ee4edfb0-2827-4e16-a921-681a397203e9",
+        "model": "default"
+      },
+      "human_author": "Sanjiv Khullar <ai@socialmediville.ca>"
+    }
+  }
+}
