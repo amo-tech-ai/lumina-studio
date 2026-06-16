@@ -1,0 +1,247 @@
+import {
+  CreateInventoryLevelInput,
+  ExecArgs,
+} from "@medusajs/framework/types";
+import {
+  ContainerRegistrationKeys,
+  Modules,
+  ProductStatus,
+} from "@medusajs/framework/utils";
+import {
+  createInventoryLevelsWorkflow,
+  createProductsWorkflow,
+} from "@medusajs/medusa/core-flows";
+import { MercurModules } from "@mercurjs/types";
+import { ensureIpixSeller } from "./seed-demo-seller";
+import { IPIX_CATALOG } from "./ipix-catalog-data";
+
+const PLACEHOLDER_IMAGE = "https://placehold.co/600x600/png?text=ipix";
+
+const LEGACY_ORPHAN_HANDLES = ["t-shirt", "sweatshirt", "sweatpants", "shorts"];
+
+async function linkProductToSeller(
+  container: ExecArgs["container"],
+  productId: string,
+  sellerId: string
+) {
+  const link = container.resolve(ContainerRegistrationKeys.LINK);
+  const query = container.resolve(ContainerRegistrationKeys.QUERY);
+
+  const { data: existing } = await query.graph({
+    entity: "product_seller",
+    fields: ["product_id", "seller_id"],
+    filters: { product_id: productId, seller_id: sellerId },
+  });
+
+  if (existing.length) {
+    return false;
+  }
+
+  await link.create({
+    [Modules.PRODUCT]: { product_id: productId },
+    [MercurModules.SELLER]: { seller_id: sellerId },
+  });
+
+  const { data: variants } = await query.graph({
+    entity: "variant",
+    fields: ["id", "inventory_items.inventory_item_id"],
+    filters: { product_id: productId },
+  });
+
+  const inventoryLinks: {
+    [Modules.INVENTORY]: { inventory_item_id: string };
+    [MercurModules.SELLER]: { seller_id: string };
+  }[] = [];
+  for (const variant of variants) {
+    for (const item of variant.inventory_items || []) {
+      if (!item?.inventory_item_id) continue;
+      inventoryLinks.push({
+        [Modules.INVENTORY]: {
+          inventory_item_id: item.inventory_item_id,
+        },
+        [MercurModules.SELLER]: { seller_id: sellerId },
+      });
+    }
+  }
+
+  if (inventoryLinks.length) {
+    try {
+      await link.create(inventoryLinks);
+    } catch (error: unknown) {
+      if (!(error instanceof Error && error.message.includes("already"))) {
+        throw error;
+      }
+    }
+  }
+
+  return true;
+}
+
+export default async function seedIpixCatalog({ container }: ExecArgs) {
+  const logger = container.resolve(ContainerRegistrationKeys.LOGGER);
+  const query = container.resolve(ContainerRegistrationKeys.QUERY);
+
+  const seller = await ensureIpixSeller({ container });
+
+  const { data: salesChannels } = await query.graph({
+    entity: "sales_channel",
+    fields: ["id", "name"],
+    filters: { name: "Default Sales Channel" },
+  });
+
+  if (!salesChannels.length) {
+    throw new Error(
+      "Default Sales Channel missing — run `yarn seed` in packages/api first."
+    );
+  }
+  const salesChannelId = salesChannels[0].id;
+
+  const fulfillmentModule = container.resolve(Modules.FULFILLMENT);
+  const shippingProfiles = await fulfillmentModule.listShippingProfiles({
+    type: "default",
+  });
+  if (!shippingProfiles.length) {
+    throw new Error(
+      "Default shipping profile missing — run `yarn seed` in packages/api first."
+    );
+  }
+  const shippingProfileId = shippingProfiles[0].id;
+
+  const stockLocationModule = container.resolve(Modules.STOCK_LOCATION);
+  const stockLocations = await stockLocationModule.listStockLocations({
+    name: "European Warehouse",
+  });
+  if (!stockLocations.length) {
+    throw new Error(
+      "Stock location missing — run `yarn seed` in packages/api first."
+    );
+  }
+  const stockLocationId = stockLocations[0].id;
+
+  const { data: orphanProducts } = await query.graph({
+    entity: "product",
+    fields: ["id", "handle"],
+    filters: { handle: LEGACY_ORPHAN_HANDLES },
+  });
+
+  let linkedOrphans = 0;
+  for (const product of orphanProducts) {
+    const linked = await linkProductToSeller(
+      container,
+      product.id,
+      seller.id
+    );
+    if (linked) linkedOrphans++;
+  }
+  if (linkedOrphans) {
+    logger.info(`Linked ${linkedOrphans} legacy demo product(s) to ipix.`);
+  }
+
+  const handles = IPIX_CATALOG.map((p) => p.handle);
+  const { data: existingProducts } = await query.graph({
+    entity: "product",
+    fields: ["id", "handle"],
+    filters: { handle: handles },
+  });
+  const existingHandles = new Set(existingProducts.map((p) => p.handle));
+
+  const toCreate = IPIX_CATALOG.filter((p) => !existingHandles.has(p.handle));
+
+  if (toCreate.length) {
+    logger.info(`Creating ${toCreate.length} ipix catalog product(s)...`);
+    await createProductsWorkflow(container).run({
+      input: {
+        products: toCreate.map((item) => ({
+          title: item.title,
+          handle: item.handle,
+          description: item.description,
+          status: ProductStatus.PUBLISHED,
+          shipping_profile_id: shippingProfileId,
+          images: [{ url: PLACEHOLDER_IMAGE }],
+          options: [{ title: "Size", values: ["One Size"] }],
+          variants: [
+            {
+              title: "One Size",
+              sku: item.sku,
+              manage_inventory: true,
+              options: { Size: "One Size" },
+              prices: [
+                { amount: item.priceUsd, currency_code: "usd" },
+                { amount: item.priceEur, currency_code: "eur" },
+              ],
+            },
+          ],
+          sales_channels: [{ id: salesChannelId }],
+        })),
+        additional_data: { seller_id: seller.id },
+      },
+    });
+  } else {
+    logger.info("All 10 ipix catalog products already exist — skipping create.");
+  }
+
+  const { data: ipixProductsForInventory } = await query.graph({
+    entity: "product",
+    fields: ["id", "handle"],
+    filters: { handle: handles },
+  });
+
+  const ipixProductIds = ipixProductsForInventory.map((p) => p.id);
+  if (!ipixProductIds.length) {
+    logger.info("No ipix catalog products found — skipping inventory seed.");
+  } else {
+    const { data: ipixVariants } = await query.graph({
+      entity: "variant",
+      fields: ["id", "inventory_items.inventory_item_id"],
+      filters: { product_id: ipixProductIds },
+    });
+
+    const ipixInventoryItemIds = new Set<string>();
+    for (const variant of ipixVariants) {
+      for (const item of variant.inventory_items || []) {
+        if (!item?.inventory_item_id) continue;
+        ipixInventoryItemIds.add(item.inventory_item_id);
+      }
+    }
+
+    const inventoryModule = container.resolve(Modules.INVENTORY);
+    const existingLevels = await inventoryModule.listInventoryLevels({
+      location_id: stockLocationId,
+    });
+    const existingItemIds = new Set(
+      existingLevels.map((l) => l.inventory_item_id)
+    );
+
+    const inventoryLevels: CreateInventoryLevelInput[] = [];
+    for (const inventoryItemId of ipixInventoryItemIds) {
+      if (!existingItemIds.has(inventoryItemId)) {
+        inventoryLevels.push({
+          location_id: stockLocationId,
+          stocked_quantity: 1000,
+          inventory_item_id: inventoryItemId,
+        });
+      }
+    }
+
+    if (inventoryLevels.length) {
+      await createInventoryLevelsWorkflow(container).run({
+        input: { inventory_levels: inventoryLevels },
+      });
+      logger.info(
+        `Seeded ${inventoryLevels.length} ipix inventory level(s) at European Warehouse.`
+      );
+    } else {
+      logger.info("All ipix inventory levels already exist — skipping.");
+    }
+  }
+
+  const { data: ipixProducts } = await query.graph({
+    entity: "product",
+    fields: ["id", "handle", "title"],
+    filters: { handle: handles },
+  });
+
+  logger.info(
+    `IPIX-COM-008 complete — seller_id=${seller.id} ipix_products=${ipixProducts.length}`
+  );
+}

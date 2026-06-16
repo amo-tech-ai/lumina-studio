@@ -1,0 +1,19 @@
+{
+  "name": "@acme/admin",
+  "private": true,
+  "version": "2.1.6",
+  "type": "module",
+  "scripts": {
+    "dev": "../../node_modules/.bin/vite --port 7000",
+    "build": "tsc -b && ../../node_modules/.bin/vite build",
+    "lint": "eslint .",
+    "preview": "../../node_modules/.bin/vite preview --port 7000"
+  },
+  "dependencies": {
+    "@acme/api": "workspace:*",
+    "@mercurjs/admin": "2.1.6"
+  },
+  "devDependencies": {
+    "@types/node": "^24.10.1"
+  }
+}
