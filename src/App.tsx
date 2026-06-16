@@ -16,8 +16,15 @@ import InstagramCampaigns from "./pages/InstagramCampaigns";
 import VideoProduction from "./pages/VideoProduction";
 import ShopifyPhotography from "./pages/ShopifyPhotography";
 import Login from "./pages/Login";
-import Dashboard from "./pages/Dashboard";
 import NotFound from "./pages/NotFound";
+import { OperatorLayout } from "./layouts/OperatorLayout";
+import AnalyticsPage from "./pages/dashboard/AnalyticsPage";
+import AssetsPage from "./pages/dashboard/AssetsPage";
+import BrandHubPage from "./pages/dashboard/BrandHubPage";
+import BrandIntakePage from "./pages/dashboard/BrandIntakePage";
+import CommandCenterPage from "./pages/dashboard/CommandCenterPage";
+import ProductsPage from "./pages/dashboard/ProductsPage";
+import SettingsPage from "./pages/dashboard/SettingsPage";
 
 const queryClient = new QueryClient();
 
@@ -35,10 +42,18 @@ const App = () => (
               path="/dashboard"
               element={
                 <ProtectedRoute>
-                  <Dashboard />
+                  <OperatorLayout />
                 </ProtectedRoute>
               }
-            />
+            >
+              <Route index element={<CommandCenterPage />} />
+              <Route path="brand" element={<BrandHubPage />} />
+              <Route path="brand/intake" element={<BrandIntakePage />} />
+              <Route path="assets" element={<AssetsPage />} />
+              <Route path="products" element={<ProductsPage />} />
+              <Route path="analytics" element={<AnalyticsPage />} />
+              <Route path="settings" element={<SettingsPage />} />
+            </Route>
             <Route path="/services/fashion-photography" element={<FashionPhotography />} />
             <Route path="/services/ecommerce-photography" element={<EcommercePhotography />} />
             <Route path="/services/clothing" element={<ClothingPhotography />} />
