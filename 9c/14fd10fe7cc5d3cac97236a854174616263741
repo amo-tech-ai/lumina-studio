@@ -1,0 +1,31 @@
+docs/tasks/wireframes-ipix/new/00-index.md
+  s_cfb8706ed8da6f::t_8c7c755ed7cc36 64
+  s_cfb8706ed8da6f::t_92ff4053f74dce 18
+docs/intelligence/ai/02-ai-native-dashboards-plan.md
+  s_cfb8706ed8da6f::t_91128b6cc45b04 247
+  s_cfb8706ed8da6f::t_738f19cd654d2a 51
+docs/tasks/wireframes-ipix/new/W2-brand-setup.md
+  s_cfb8706ed8da6f::t_746f82272c714c 105-138
+  s_cfb8706ed8da6f::t_c132437f6f2a10 171-200
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.7",
+  "base_commit_sha": "9c14fd10fe7cc5d3cac97236a854174616263741",
+  "prompts": {},
+  "humans": {
+    "h_44d68aa2e2bd94": {
+      "author": "Sanjiv Khullar <ai@socialmediville.ca>"
+    }
+  },
+  "sessions": {
+    "s_cfb8706ed8da6f": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "ee4edfb0-2827-4e16-a921-681a397203e9",
+        "model": "default"
+      },
+      "human_author": "Sanjiv Khullar <ai@socialmediville.ca>"
+    }
+  }
+}
