@@ -1,0 +1,37 @@
+docs/ecommerce/evidence/2026-06-15/com-012-b2c-checkout-fixes.md
+  s_cfb8706ed8da6f::t_d51eb9ef0a7550 1-78
+b2c-storefront/src/lib/data/fulfillment.ts
+  s_cfb8706ed8da6f::t_185a11751a4b39 10-21,23-30,32-50,61,65,72
+  s_cfb8706ed8da6f::t_63d39dd2c26fc6 66
+  s_cfb8706ed8da6f::t_930e6e8971485a 31
+  s_cfb8706ed8da6f::t_6ba8232bbc48c6 22
+b2c-storefront/src/lib/data/payment.ts
+  s_cfb8706ed8da6f::t_f4cac398a92e71 23
+b2c-storefront/src/components/sections/CartShippingMethodsSection/CartShippingMethodsSection.tsx
+  s_cfb8706ed8da6f::t_5acf8f88262689 36-40
+b2c-storefront/.env.example
+  s_cfb8706ed8da6f::t_830bff5bf085cb 10
+b2c-storefront/src/lib/constants.tsx
+  s_cfb8706ed8da6f::t_0650cc90760384 36,38-41
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.7",
+  "base_commit_sha": "b55b611e74b42514a48fb19786fee420c6ed4373",
+  "prompts": {},
+  "humans": {
+    "h_44d68aa2e2bd94": {
+      "author": "Sanjiv Khullar <ai@socialmediville.ca>"
+    }
+  },
+  "sessions": {
+    "s_cfb8706ed8da6f": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "ee4edfb0-2827-4e16-a921-681a397203e9",
+        "model": "default"
+      },
+      "human_author": "Sanjiv Khullar <ai@socialmediville.ca>"
+    }
+  }
+}
