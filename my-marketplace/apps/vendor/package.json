@@ -4,10 +4,10 @@
   "version": "2.1.6",
   "type": "module",
   "scripts": {
-    "dev": "vite --port 7001",
-    "build": "tsc -b && vite build",
+    "dev": "../../node_modules/.bin/vite --port 7001",
+    "build": "tsc -b && ../../node_modules/.bin/vite build",
     "lint": "eslint .",
-    "preview": "vite preview --port 7001"
+    "preview": "../../node_modules/.bin/vite preview --port 7001"
   },
   "dependencies": {
     "@acme/api": "workspace:*",
