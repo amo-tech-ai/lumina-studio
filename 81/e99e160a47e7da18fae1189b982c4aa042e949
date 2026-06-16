@@ -1,0 +1,21 @@
+my-marketplace/apps/admin/src/lib/client.ts
+  s_cfb8706ed8da6f::t_1add07790de3b8 4-5,8
+my-marketplace/apps/vendor/src/lib/client.ts
+  s_cfb8706ed8da6f::t_a67d4089a0a600 4-5,8
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.7",
+  "base_commit_sha": "81e99e160a47e7da18fae1189b982c4aa042e949",
+  "prompts": {},
+  "sessions": {
+    "s_cfb8706ed8da6f": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "ee4edfb0-2827-4e16-a921-681a397203e9",
+        "model": "default"
+      },
+      "human_author": "Sanjiv Khullar <ai@socialmediville.ca>"
+    }
+  }
+}
