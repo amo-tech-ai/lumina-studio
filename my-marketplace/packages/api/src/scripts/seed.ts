@@ -503,46 +503,79 @@ export default async function seedDemoData({ container }: ExecArgs) {
 
   logger.info("Seeding product data...");
 
-  const productCategoryModule = container.resolve(Modules.PRODUCT);
   const categoryNames = ["Shirts", "Sweatshirts", "Pants", "Merch"];
-  const existingCategories = await productCategoryModule.listProductCategories({
-    name: categoryNames,
+
+  const { data: existingCategoriesFromGraph } = await query.graph({
+    entity: "product_category",
+    fields: ["id", "name"],
+    filters: { name: categoryNames },
   });
 
-  let categoryResult;
-  if (existingCategories.length === categoryNames.length) {
-    categoryResult = existingCategories;
-    logger.info("Product categories already exist, skipping.");
-  } else {
-    const categoriesToCreate = categoryNames.filter(
-      (name) => !existingCategories.find((c) => c.name === name)
-    );
+  const categoryByName = new Map<string, string>(
+    existingCategoriesFromGraph.map((cat: { id: string; name: string }) => [
+      cat.name,
+      cat.id,
+    ])
+  );
+
+  const missingCategoryNames = categoryNames.filter(
+    (name) => !categoryByName.has(name)
+  );
+
+  if (missingCategoryNames.length > 0) {
     const { result: newCategories } = await createProductCategoriesWorkflow(
       container
     ).run({
       input: {
-        product_categories: categoriesToCreate.map((name) => ({
+        product_categories: missingCategoryNames.map((name) => ({
           name,
           is_active: true,
         })),
       },
     });
-    categoryResult = [...existingCategories, ...newCategories];
+    for (const cat of newCategories) {
+      categoryByName.set(cat.name, cat.id);
+    }
+    logger.info(
+      `Created ${missingCategoryNames.length} product categor(ies): ${missingCategoryNames.join(", ")}.`
+    );
+  } else {
+    logger.info("Product categories already exist, skipping.");
   }
 
+  const requireCategoryId = (name: string): string => {
+    const id = categoryByName.get(name);
+    if (!id) {
+      throw new Error(`Missing product category after seed: ${name}`);
+    }
+    return id;
+  };
+
   const productHandles = ["t-shirt", "sweatshirt", "sweatpants", "shorts"];
-  const existingProducts = await productCategoryModule.listProducts({
-    handle: productHandles,
+  const { data: existingProductsFromGraph } = await query.graph({
+    entity: "product",
+    fields: ["id", "handle"],
+    filters: { handle: productHandles },
   });
   const existingHandleSet = new Set(
-    existingProducts.map((p: { handle: string }) => p.handle)
+    existingProductsFromGraph.map((p: { handle: string }) => p.handle)
   );
+  const missingHandles = productHandles.filter(
+    (handle) => !existingHandleSet.has(handle)
+  );
+
+  if (missingHandles.length === 0) {
+    logger.info("Demo products already exist, skipping.");
+  } else {
+    logger.info(
+      `Creating ${missingHandles.length} demo product(s): ${missingHandles.join(", ")}...`
+    );
 
   const demoProducts = [
           {
             title: "Medusa T-Shirt",
             category_ids: [
-              categoryResult.find((cat: { name: string }) => cat.name === "Shirts")!.id,
+              requireCategoryId("Shirts"),
             ],
             description:
               "Reimagine the feeling of a classic T-shirt. With our cotton T-shirts, everyday essentials no longer have to be ordinary.",
@@ -729,7 +762,7 @@ export default async function seedDemoData({ container }: ExecArgs) {
           {
             title: "Medusa Sweatshirt",
             category_ids: [
-              categoryResult.find((cat: { name: string }) => cat.name === "Sweatshirts")!.id,
+              requireCategoryId("Sweatshirts"),
             ],
             description:
               "Reimagine the feeling of a classic sweatshirt. With our cotton sweatshirt, everyday essentials no longer have to be ordinary.",
@@ -830,7 +863,7 @@ export default async function seedDemoData({ container }: ExecArgs) {
           {
             title: "Medusa Sweatpants",
             category_ids: [
-              categoryResult.find((cat: { name: string }) => cat.name === "Pants")!.id,
+              requireCategoryId("Pants"),
             ],
             description:
               "Reimagine the feeling of classic sweatpants. With our cotton sweatpants, everyday essentials no longer have to be ordinary.",
@@ -931,7 +964,7 @@ export default async function seedDemoData({ container }: ExecArgs) {
           {
             title: "Medusa Shorts",
             category_ids: [
-              categoryResult.find((cat: { name: string }) => cat.name === "Merch")!.id,
+              requireCategoryId("Merch"),
             ],
             description:
               "Reimagine the feeling of classic shorts. With our cotton shorts, everyday essentials no longer have to be ordinary.",
@@ -1029,17 +1062,26 @@ export default async function seedDemoData({ container }: ExecArgs) {
               },
             ],
           },
-        ].filter((product) => !existingHandleSet.has(product.handle));
+        ].filter((product) => missingHandles.includes(product.handle));
 
-  if (!demoProducts.length) {
-    logger.info("Products already exist, skipping.");
-  } else {
-    logger.info(`Creating ${demoProducts.length} demo product(s)...`);
-    await createProductsWorkflow(container).run({
-      input: {
-        products: demoProducts,
-      },
-    });
+    try {
+      await createProductsWorkflow(container).run({
+        input: {
+          products: demoProducts,
+        },
+      });
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : String(error);
+      if (
+        /already exists|duplicate|unique constraint/i.test(message)
+      ) {
+        logger.info(
+          "Demo products already exist (handle constraint), skipping."
+        );
+      } else {
+        throw error;
+      }
+    }
   }
   logger.info("Finished seeding product data.");
 
