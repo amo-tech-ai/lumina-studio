@@ -1,0 +1,37 @@
+my-marketplace/packages/api/src/scripts/seed-ipix-catalog.ts
+  s_cfb8706ed8da6f::t_7a3827ec648f51 202-203
+  s_cfb8706ed8da6f::t_1480466d270c29 57
+  s_cfb8706ed8da6f::t_2d60c1557630e4 183-186,189-197,199-201,204,207-209,211-235
+  s_cfb8706ed8da6f::t_fcc569061de2aa 51-54
+my-marketplace/packages/api/medusa-config.ts
+  s_cfb8706ed8da6f::t_aeabf6da074f6f 6-13,24-25
+my-marketplace/packages/api/src/scripts/seed.ts
+  s_cfb8706ed8da6f::t_47531067417f91 513-515,517
+  s_cfb8706ed8da6f::t_dff2c3c68ea85a 1008-1016
+my-marketplace/packages/api/.env.template
+  s_cfb8706ed8da6f::t_9c72b9b03bdb4e 6-7
+my-marketplace/packages/api/src/scripts/seed-demo-seller.ts
+  s_cfb8706ed8da6f::t_20499c3e3d7b54 25
+  s_cfb8706ed8da6f::t_3e06f6c0381aef 55
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.7",
+  "base_commit_sha": "38f90471107cdfc8922d863d2d67b29c29c995dc",
+  "prompts": {},
+  "humans": {
+    "h_44d68aa2e2bd94": {
+      "author": "Sanjiv Khullar <ai@socialmediville.ca>"
+    }
+  },
+  "sessions": {
+    "s_cfb8706ed8da6f": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "ee4edfb0-2827-4e16-a921-681a397203e9",
+        "model": "default"
+      },
+      "human_author": "Sanjiv Khullar <ai@socialmediville.ca>"
+    }
+  }
+}
