@@ -1064,34 +1064,33 @@ export default async function seedDemoData({ container }: ExecArgs) {
           },
         ].filter((product) => missingHandles.includes(product.handle));
 
-    try {
-      await createProductsWorkflow(container).run({
-        input: {
-          products: demoProducts,
-        },
-      });
-    } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : String(error);
-      if (
-        /already exists|duplicate|unique constraint/i.test(message)
-      ) {
-        logger.info(
-          "Demo products already exist (handle constraint), skipping."
-        );
-      } else {
-        throw error;
-      }
-    }
+    await createProductsWorkflow(container).run({
+      input: {
+        products: demoProducts,
+      },
+    });
   }
-  logger.info("Finished seeding product data.");
 
-  const { data: _seededProducts } = await query.graph({
+  const { data: seededProducts } = await query.graph({
     entity: "product",
-    fields: ["id"],
+    fields: ["id", "handle"],
     filters: {
       handle: productHandles,
     },
   });
+  const seededHandleSet = new Set(
+    seededProducts.map((p: { handle: string }) => p.handle)
+  );
+  const stillMissingHandles = productHandles.filter(
+    (handle) => !seededHandleSet.has(handle)
+  );
+  if (stillMissingHandles.length > 0) {
+    throw new Error(
+      `Demo products missing after seed: ${stillMissingHandles.join(", ")}`
+    );
+  }
+
+  logger.info("Finished seeding product data.");
 
   logger.info("Seeding inventory levels.");
 
