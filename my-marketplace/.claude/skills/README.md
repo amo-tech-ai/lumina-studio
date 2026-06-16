@@ -1,14 +1,19 @@
 # Mercur Basic Starter Skills
 
-This directory contains the canonical, starter-safe skills shipped with the `basic` Mercur template.
+Canonical Mercur agent skill: **`mercur/`** (hub with topic references).
 
-Use these skills for repeated workflows in a project created from this starter.
+At repo root: `.claude/skills/mercur/` — mirrored at `.cursor/skills/mercur/` and `my-marketplace/.claude/skills/mercur/`.
 
-## Available skills
+## Topics (load on demand from hub)
 
-- `mercur-cli`
-- `mercur-blocks`
-- `medusa-ui-conformance`
-- `dashboard-page-ui`
-- `dashboard-form-ui`
-- `dashboard-tab-ui`
+| Reference | Use when |
+|-----------|----------|
+| `references/cli.md` | create, init, search, view, add, diff |
+| `references/blocks.md` | registry blocks, `blocks.json` |
+| `references/dashboard-page-ui.md` | custom admin/vendor pages |
+| `references/dashboard-form-ui.md` | forms, validation |
+| `references/dashboard-tab-ui.md` | tabbed wizards |
+| `references/medusa-ui-conformance.md` | `@medusajs/ui` alignment |
+| `references/migration.md` | Mercur 1.x → 2.0 |
+
+Invoke hub: `/mercur` or load `.claude/skills/mercur/SKILL.md`.

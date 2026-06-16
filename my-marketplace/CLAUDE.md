@@ -18,7 +18,7 @@ Before implementing any new marketplace feature from scratch, always search the 
 npx @mercurjs/cli@latest search --query <keyword>
 ```
 
-Many common features (reviews, team management, wishlists, notifications, chat, CSV import/export, approval flows, Algolia search) are already available as registry blocks. Installing a block is always faster and safer than building from scratch. Use the `mercur-blocks` skill when a block looks like a match.
+Many common features (reviews, team management, wishlists, notifications, chat, CSV import/export, approval flows, Algolia search) are already available as registry blocks. Installing a block is always faster and safer than building from scratch. Load the **`mercur`** skill and read `references/blocks.md` when a block looks like a match.
 
 Only build custom code when the registry has no suitable block.
 
@@ -55,22 +55,14 @@ Treat these as public starter contracts. Do not change them silently:
 
 ## Shared Skills
 
-Canonical shared skills live in `.claude/skills/`.
+Single hub: **`mercur`** — `.claude/skills/mercur/SKILL.md` with topic references (`references/cli.md`, `blocks.md`, dashboard UI, migration, etc.).
 
-Focused core skills in this starter:
-- `mercur-cli`
-- `mercur-blocks`
-- `medusa-ui-conformance`
-- `admin-page-ui`
-- `admin-form-ui`
-- `admin-tab-ui`
-- `migration-guide`
+Runtime mirrors:
+- `my-marketplace/.claude/skills/mercur/` → repo `.claude/skills/mercur/`
+- `../../.cursor/skills/mercur/` — Cursor discovery
+- `../.codex/skills` → symlink to this directory
 
-Runtime mirrors exist in:
-- `.claude/skills/`
-- `.codex/skills/`
-
-Use `.claude/skills/` as the source of truth. The runtime folders are compatibility mirrors.
+**Repo root** (iPix monorepo): `.cursor/rules/mercur.mdc` · invoke `/mercur`
 
 ## Typical Verification
 
@@ -87,18 +79,19 @@ Typical checks:
 
 - Mercur CLI registry commands run from the project root where `blocks.json` lives.
 - Backend verification often runs from `packages/api`.
-- Admin and vendor custom routes are file-based under `src/pages`.
-- If a task is about blocks, always use `mercur-blocks`.
-- If a task is about CLI choice, initialization, or registry commands, use `mercur-cli`.
-- If a task adds custom admin or vendor UI, load `medusa-ui-conformance` before inventing new components.
+- Admin and vendor custom routes are file-based under `src/routes` (`page.tsx` per route).
+- Load **`mercur`** for any repeated workflow; pull the matching `references/*.md` topic.
+- Registry blocks → `references/blocks.md` · CLI → `references/cli.md` · custom UI → `references/medusa-ui-conformance.md` first.
 
 ## AI Resources
 
 - **Docs**: https://docs.mercurjs.com
-- **MCP Server**: https://docs.mercurjs.com/mcp — connect your AI agent for documentation search
-- **llms.txt**: https://docs.mercurjs.com/llms.txt — machine-readable project summary
-- **Skills**: `.claude/skills/` — domain-specific patterns auto-loaded by Claude Code
-- **AI Development Guide**: https://docs.mercurjs.com/v2/ai-development/mcp
+- **MCP Server**: https://docs.mercurjs.com/mcp — project `.cursor/mcp.json` + user Cursor config (`mercur`)
+- **llms.txt (index)**: `docs/mercur/llms.txt` — also https://docs.mercurjs.com/llms.txt
+- **llms-full.txt**: `docs/mercur/llms-full.txt` — also https://docs.mercurjs.com/llms-full.txt
+- **Refresh snapshots**: `bash scripts/fetch-mercur-docs.sh`
+- **Skills**: `.claude/skills/` — mirrored at repo root `.cursor/skills/` and `.codex/skills/`
+- **AI Development Guide**: https://docs.mercurjs.com/ai-development/mcp
 
 ## Lessons Learned
 

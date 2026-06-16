@@ -1,0 +1,57 @@
+---
+description: "Mercur marketplace — MCP docs search, llms snapshots, and mercur hub skill for my-marketplace/"
+globs:
+  - "my-marketplace/**"
+alwaysApply: false
+---
+
+# Mercur (my-marketplace)
+
+Commerce backend is **Mercur** on Medusa v2 — separate from Supabase. Work from `my-marketplace/` unless noted.
+
+## Before non-trivial Mercur changes
+
+1. Read `my-marketplace/CLAUDE.md` (task router + verification)
+2. Load **`.claude/skills/mercur/SKILL.md`** (or `/mercur`) and the matching `references/*.md` topic
+3. Search registry before building: `npx @mercurjs/cli@latest search --query <keyword>`
+4. Prefer **MCP** for live docs; use local **llms** when MCP is unavailable
+
+## MCP (live documentation)
+
+Project + user Cursor config: `mercur` → `https://docs.mercurjs.com/mcp`
+
+Tools: `search_mercur_js_documentation`, `query_docs_filesystem_mercur_js_documentation`
+
+## llms.txt (offline)
+
+| File | Purpose |
+|------|---------|
+| `my-marketplace/docs/mercur/llms.txt` | Doc index (~5KB) |
+| `my-marketplace/docs/mercur/llms-full.txt` | Full docs dump (~160KB) |
+
+Refresh: `bash my-marketplace/scripts/fetch-mercur-docs.sh`
+
+## Hub skill topics
+
+| Reference | Use when |
+|-----------|----------|
+| `references/cli.md` | create, init, search, view, add, diff |
+| `references/blocks.md` | install or update registry blocks |
+| `references/dashboard-page-ui.md` | admin/vendor custom pages (`src/routes`) |
+| `references/dashboard-form-ui.md` | dashboard forms |
+| `references/dashboard-tab-ui.md` | tabs / wizards |
+| `references/medusa-ui-conformance.md` | reusable UI, `@medusajs/ui` |
+| `references/migration.md` | Mercur 1.x → 2.0 |
+
+Path: `.claude/skills/mercur/` · Cursor mirror: `.cursor/skills/mercur/`
+
+## Secrets & dev
+
+- Infisical: `/mercur/api` (API), `/mercur` (shared)
+- API: `infisical run --path=/mercur/api -- sh -c 'cd my-marketplace/packages/api && yarn dev'`
+- Docker: `mercur-postgres`, `mercur-redis` on host
+
+## Do not confuse
+
+- **Supabase** (`supabase/`) — iPix platform, auth, brand intelligence
+- **Mercur** (`my-marketplace/`) — catalog, sellers, checkout, Stripe

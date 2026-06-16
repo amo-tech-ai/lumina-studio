@@ -29,7 +29,7 @@ Vendor pages are file-based:
 ## Preferred patterns
 
 - Keep route structure explicit and easy to trace.
-- Load `medusa-ui-conformance` before introducing custom reusable UI or new interaction primitives.
+- Load **`mercur`** → `references/medusa-ui-conformance.md` before introducing custom reusable UI or new interaction primitives.
 - Prefer existing local wrappers and `@medusajs/ui` before adding lower-level primitives.
 - Use i18n for user-facing strings.
 - Prefer typed client access over ad hoc request code.

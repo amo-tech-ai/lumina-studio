@@ -68,7 +68,13 @@ export default async function seedDemoData({ container }: ExecArgs) {
   const countries = ["gb", "de", "dk", "se", "fr", "es", "it"];
 
   logger.info("Seeding store data...");
-  const [store] = await storeModuleService.listStores();
+  const stores = await storeModuleService.listStores();
+  if (!stores.length) {
+    throw new Error(
+      "No store found — ensure Medusa bootstrap created a store before running seed."
+    );
+  }
+  const store = stores[0];
   let defaultSalesChannel = await salesChannelModuleService.listSalesChannels({
     name: "Default Sales Channel",
   });
@@ -329,86 +335,104 @@ export default async function seedDemoData({ container }: ExecArgs) {
         throw error;
       }
     }
+  }
 
+  let serviceZoneId = fulfillmentSet.service_zones?.[0]?.id;
+  if (!serviceZoneId) {
+    const { data: fsData } = await query.graph({
+      entity: "fulfillment_set",
+      fields: ["id", "service_zones.id"],
+      filters: { id: fulfillmentSet.id },
+    });
+    serviceZoneId = fsData[0]?.service_zones?.[0]?.id;
+  }
+  if (!serviceZoneId) {
+    throw new Error("Fulfillment service zone missing");
+  }
+
+  const { data: existingShippingOptions } = await query.graph({
+    entity: "shipping_option",
+    fields: ["id", "type.code"],
+    filters: { service_zone_id: serviceZoneId },
+  });
+  const existingOptionCodes = new Set(
+    existingShippingOptions
+      .map((option) => option.type?.code)
+      .filter((code): code is string => Boolean(code))
+  );
+
+  const shippingOptionsToCreate = [
+    ...(!existingOptionCodes.has("standard")
+      ? [
+          {
+            name: "Standard Shipping",
+            price_type: "flat" as const,
+            provider_id: "manual_manual",
+            service_zone_id: serviceZoneId,
+            shipping_profile_id: shippingProfile.id,
+            type: {
+              label: "Standard",
+              description: "Ship in 2-3 days.",
+              code: "standard",
+            },
+            prices: [
+              { currency_code: "usd", amount: 10 },
+              { currency_code: "eur", amount: 10 },
+              { region_id: region.id, amount: 10 },
+            ],
+            rules: [
+              {
+                attribute: "enabled_in_store",
+                value: "true",
+                operator: "eq" as const,
+              },
+              {
+                attribute: "is_return",
+                value: "false",
+                operator: "eq" as const,
+              },
+            ],
+          },
+        ]
+      : []),
+    ...(!existingOptionCodes.has("express")
+      ? [
+          {
+            name: "Express Shipping",
+            price_type: "flat" as const,
+            provider_id: "manual_manual",
+            service_zone_id: serviceZoneId,
+            shipping_profile_id: shippingProfile.id,
+            type: {
+              label: "Express",
+              description: "Ship in 24 hours.",
+              code: "express",
+            },
+            prices: [
+              { currency_code: "usd", amount: 10 },
+              { currency_code: "eur", amount: 10 },
+              { region_id: region.id, amount: 10 },
+            ],
+            rules: [
+              {
+                attribute: "enabled_in_store",
+                value: "true",
+                operator: "eq" as const,
+              },
+              {
+                attribute: "is_return",
+                value: "false",
+                operator: "eq" as const,
+              },
+            ],
+          },
+        ]
+      : []),
+  ];
+
+  if (shippingOptionsToCreate.length) {
     await createShippingOptionsWorkflow(container).run({
-      input: [
-        {
-          name: "Standard Shipping",
-          price_type: "flat",
-          provider_id: "manual_manual",
-          service_zone_id: fulfillmentSet.service_zones[0].id,
-          shipping_profile_id: shippingProfile.id,
-          type: {
-            label: "Standard",
-            description: "Ship in 2-3 days.",
-            code: "standard",
-          },
-          prices: [
-            {
-              currency_code: "usd",
-              amount: 10,
-            },
-            {
-              currency_code: "eur",
-              amount: 10,
-            },
-            {
-              region_id: region.id,
-              amount: 10,
-            },
-          ],
-          rules: [
-            {
-              attribute: "enabled_in_store",
-              value: "true",
-              operator: "eq",
-            },
-            {
-              attribute: "is_return",
-              value: "false",
-              operator: "eq",
-            },
-          ],
-        },
-        {
-          name: "Express Shipping",
-          price_type: "flat",
-          provider_id: "manual_manual",
-          service_zone_id: fulfillmentSet.service_zones[0].id,
-          shipping_profile_id: shippingProfile.id,
-          type: {
-            label: "Express",
-            description: "Ship in 24 hours.",
-            code: "express",
-          },
-          prices: [
-            {
-              currency_code: "usd",
-              amount: 10,
-            },
-            {
-              currency_code: "eur",
-              amount: 10,
-            },
-            {
-              region_id: region.id,
-              amount: 10,
-            },
-          ],
-          rules: [
-            {
-              attribute: "enabled_in_store",
-              value: "true",
-              operator: "eq",
-            },
-            {
-              attribute: "is_return",
-              value: "false",
-              operator: "eq",
-            },
-          ],
-        },
-      ],
+      input: shippingOptionsToCreate,
     });
   }
   logger.info("Finished seeding fulfillment data.");

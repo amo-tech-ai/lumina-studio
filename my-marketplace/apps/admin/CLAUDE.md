@@ -31,12 +31,14 @@ Use `templates/basic/apps/admin/src/README.md` as the starter routing reference.
 
 ## Which skill to use
 
-- Any custom UI or reusable interaction pattern -> `medusa-ui-conformance`
-- Page or section work -> `admin-page-ui`
-- Form work -> `admin-form-ui`
-- Tabbed wizard work -> `admin-tab-ui`
+Load **`mercur`** (`.claude/skills/mercur/SKILL.md`) and the matching reference:
 
-Load the matching skill before editing page, form, or tab-heavy UI.
+- Any custom UI or reusable interaction pattern → `references/medusa-ui-conformance.md`
+- Page or section work → `references/dashboard-page-ui.md`
+- Form work → `references/dashboard-form-ui.md`
+- Tabbed wizard work → `references/dashboard-tab-ui.md`
+
+Load the matching reference before editing page, form, or tab-heavy UI.
 
 ## Preferred patterns
 

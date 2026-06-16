@@ -44,11 +44,15 @@ export default async function seedIpixCheckoutPrep({ container }: ExecArgs) {
 
   const { data: existingShippingLinks } = await query.graph({
     entity: "shipping_option_seller",
-    fields: ["seller_id", "shipping_option_id"],
+    fields: ["seller_id", "shipping_option_id", "shipping_option.type.code"],
     filters: { seller_id: seller.id },
   });
 
-  if (!existingShippingLinks.length) {
+  const hasIpixStandard = existingShippingLinks.some(
+    (link) => link.shipping_option?.type?.code === "ipix_standard"
+  );
+
+  if (!hasIpixStandard) {
     const { data: fulfillmentSets } = await query.graph({
       entity: "fulfillment_set",
       fields: ["id", "name", "service_zones.id"],
@@ -70,7 +74,10 @@ export default async function seedIpixCheckoutPrep({ container }: ExecArgs) {
     }
 
     const regions = await regionModule.listRegions();
-    const europeRegion = regions.find((r) => r.name === "Europe") ?? regions[0];
+    const europeRegion = regions.find((r) => r.name === "Europe");
+    if (!europeRegion) {
+      throw new Error("Europe region missing — run `yarn seed` first");
+    }
 
     await createSellerShippingOptionsWorkflow(container).run({
       input: {

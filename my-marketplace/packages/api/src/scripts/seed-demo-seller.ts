@@ -29,7 +29,7 @@ export async function ensureIpixSeller({
   const { data: existing } = await query.graph({
     entity: "seller",
     fields: ["id", "name", "handle", "status", "email"],
-    filters: { name: IPIX_SELLER_NAME },
+    filters: { handle: IPIX_SELLER_HANDLE },
   });
 
   let seller = existing[0];
@@ -56,7 +56,7 @@ export async function ensureIpixSeller({
     created = true;
     logger.info(`Created seller ${seller.id} (${seller.name})`);
   } else {
-    logger.info(`Seller "${IPIX_SELLER_NAME}" already exists: ${seller.id}`);
+    logger.info(`Seller "${IPIX_SELLER_HANDLE}" already exists: ${seller.id}`);
   }
 
   if (seller.status !== SellerStatus.OPEN) {

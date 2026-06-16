@@ -20,8 +20,8 @@
 ## Documentation
 
 - **Docs**: https://docs.mercurjs.com
-- **MCP Server**: https://docs.mercurjs.com/mcp — connect your AI agent for documentation search
-- **llms.txt**: https://docs.mercurjs.com/llms.txt — machine-readable project summary
+- **MCP Server**: https://docs.mercurjs.com/mcp — `.cursor/mcp.json` (`mercur`)
+- **llms.txt**: `docs/mercur/llms.txt` — refresh via `scripts/fetch-mercur-docs.sh`
 
 ## CLI Commands
 
