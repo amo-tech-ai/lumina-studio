@@ -1,0 +1,60 @@
+src/components/operator/PlaceholderScreen.tsx
+  s_cfb8706ed8da6f::t_ac9a90f7c6560c 1-47
+src/components/operator/IntelligencePanel.tsx
+  s_cfb8706ed8da6f::t_5044a62d0cebb8 1-103
+src/pages/dashboard/AnalyticsPage.tsx
+  s_cfb8706ed8da6f::t_95dd0746cf2d29 1-11
+src/pages/dashboard/BrandHubPage.tsx
+  s_cfb8706ed8da6f::t_74b5455aef743f 1-11
+src/pages/dashboard/CommandCenterPage.tsx
+  s_cfb8706ed8da6f::t_f2f7ad162dbcba 1-32
+src/pages/dashboard/BrandIntakePage.tsx
+  s_cfb8706ed8da6f::t_561465475ac60c 1-11
+src/pages/dashboard/AssetsPage.tsx
+  s_cfb8706ed8da6f::t_56a37d61a29cc0 1-11
+docs/linear/issues/IPI-22-UI-001.md
+  s_cfb8706ed8da6f::t_ca956a939099b8 1-100
+src/App.tsx
+  s_cfb8706ed8da6f::t_10f59ab72a17d4 20-27
+  s_cfb8706ed8da6f::t_2b653a6456a30b 45,48-56
+docs/ecommerce/evidence/2026-06-15/ui-001-operator-shell.md
+  s_cfb8706ed8da6f::t_3acdc0bf4c0246 49-51,58-59
+  s_cfb8706ed8da6f::t_c9da9cfc1f4158 1-4,6-18,20-48,52-57,60-64,67-93
+  s_cfb8706ed8da6f::t_117d323fe05b63 5,19
+  s_cfb8706ed8da6f::t_8303a5d29bd54a 65-66
+src/pages/dashboard/ProductsPage.tsx
+  s_cfb8706ed8da6f::t_f0063c2b974280 1-11
+src/components/operator/OperatorNav.tsx
+  s_cfb8706ed8da6f::t_4bf4982a785e43 55
+  s_cfb8706ed8da6f::t_1f5d29a4d676b3 1-25,31-34,36-54,56-92
+  s_cfb8706ed8da6f::t_2377736a35dd8f 26-30
+  s_cfb8706ed8da6f::t_f724249f6d9709 35
+src/layouts/OperatorLayout.tsx
+  s_cfb8706ed8da6f::t_65aa8f2e22c6d0 1-2,8,13,15-19,28-38,40-41,43-50,57
+  s_cfb8706ed8da6f::t_450e0162498b75 3,5-6,11-12,14,22-27,54,60-68,70,73
+src/pages/dashboard/SettingsPage.tsx
+  s_cfb8706ed8da6f::t_97420c3331832c 1-10
+src/test/operator-routes.test.ts
+  s_cfb8706ed8da6f::t_533effd5c3be17 1-18
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.7",
+  "base_commit_sha": "42e3dc400cc96ca6d7097d51d789ef87879ae5b9",
+  "prompts": {},
+  "humans": {
+    "h_44d68aa2e2bd94": {
+      "author": "Sanjiv Khullar <ai@socialmediville.ca>"
+    }
+  },
+  "sessions": {
+    "s_cfb8706ed8da6f": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "ee4edfb0-2827-4e16-a921-681a397203e9",
+        "model": "default"
+      },
+      "human_author": "Sanjiv Khullar <ai@socialmediville.ca>"
+    }
+  }
+}
