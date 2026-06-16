@@ -48,7 +48,7 @@ relatedDocs:
 | D0 | **Command Center** | `/dashboard` | (derived) | IPI-22 · UI-001 — Operator Hub Shell | MVP | `brand-intelligence` (placeholder) |
 | D1 | **Brand** | `/dashboard/brand` | 08 | IPI-18 · AI-001 — Brand Intelligence Agent (edge) | MVP | `brand-intelligence` |
 | D1b | **Brand Intake** | `/dashboard/brand/intake` | W2 | IPI-23 · UI-002 — Brand Intake Screen | MVP | `brand-intelligence` |
-| D3 | **Assets + DNA** | `/dashboard/assets` | 04, 11 | IPI-24 · UI-003 — Asset Library Screen | MVP | `asset-dna` |
+| D3 | **Assets + DNA** | `/dashboard/assets` | 04 | IPI-24 · UI-003 — Asset Library Screen | MVP | `asset-dna` |
 | D3b | **Asset Detail** | `/dashboard/assets/:assetId` | 04 | (part of UI-003) | MVP | `asset-dna` |
 | D4 | **Products** | `/dashboard/products` | — | (commerce UI) | MVP | `product-linking` |
 | D4b | **Product Links** | `/dashboard/products/links` | — | IPI-25 · UI-004 — Product Links Screen | MVP | `product-linking` |
@@ -244,7 +244,7 @@ One default `agentId` per route (see inventory table). User can override in pane
 **Detail route:** `/dashboard/assets/:assetId`  
 **Linear:** IPI-24 · UI-003 — Asset Library Screen
 
-**Wireframe:** 04-media-library, 11-upload-triage
+**Wireframe:** 04-media-library (MVP). Upload triage flows in wireframe 11 are **deferred** to D15 (`/dashboard/triage`) — do not scope into UI-003.
 
 | Center | Right |
 |--------|-------|

@@ -15,7 +15,7 @@
 | `/dashboard` | Command Center | (derived) | IPI-22 · UI-001 — Operator Hub Shell |
 | `/dashboard/brand` | Brand hub / report | 08 | IPI-18 · AI-001 — Brand Intelligence Agent |
 | `/dashboard/brand/intake` | Brand intake wizard | W2 | IPI-23 · UI-002 — Brand Intake Screen |
-| `/dashboard/assets` | Assets + DNA | 04, 11 | IPI-24 · UI-003 — Asset Library Screen |
+| `/dashboard/assets` | Assets + DNA | 04 | IPI-24 · UI-003 — Asset Library Screen |
 | `/dashboard/assets/:assetId` | Asset detail | 04 | (UI-003) |
 | `/dashboard/products` | Products hub | — | — |
 | `/dashboard/products/links` | Product links | — | IPI-25 · UI-004 — Product Links Screen |
@@ -61,4 +61,4 @@ Legacy nested paths (`/dashboard/brands/:id/assets`) → `/dashboard/assets` unt
 | W3 | Canvas Onboarding | `W3-canvas-onboarding.md` | Deferred | P1 | `/dashboard/canvas` |
 | W4 | Event Wizard | `W4-event-wizard.md` | Post-MVP | P2 | — |
 
-**Compliance:** MVP dashboard wireframes (04, 06, 08, W2) include § AI-Native Dashboard Compliance per `02-ai-native-dashboards-plan.md` §11.
+**Compliance:** Dashboard wireframes that include § AI-Native Dashboard Compliance per `02-ai-native-dashboards-plan.md` §11: 04 (MVP), 06 (Advanced), 08 (MVP), 11 (Post-MVP), W2 (MVP).
