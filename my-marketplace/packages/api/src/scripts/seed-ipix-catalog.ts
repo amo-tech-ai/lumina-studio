@@ -48,10 +48,13 @@ async function linkProductToSeller(
     filters: { product_id: productId },
   });
 
-  const inventoryLinks = [];
+  const inventoryLinks: {
+    [Modules.INVENTORY]: { inventory_item_id: string };
+    [MercurModules.SELLER]: { seller_id: string };
+  }[] = [];
   for (const variant of variants) {
     for (const item of variant.inventory_items || []) {
-      if (!item.inventory_item_id) continue;
+      if (!item?.inventory_item_id) continue;
       inventoryLinks.push({
         [Modules.INVENTORY]: {
           inventory_item_id: item.inventory_item_id,
@@ -177,35 +180,59 @@ export default async function seedIpixCatalog({ container }: ExecArgs) {
     logger.info("All 10 ipix catalog products already exist — skipping create.");
   }
 
-  const { data: inventoryItems } = await query.graph({
-    entity: "inventory_item",
-    fields: ["id"],
+  const { data: ipixProductsForInventory } = await query.graph({
+    entity: "product",
+    fields: ["id", "handle"],
+    filters: { handle: handles },
   });
 
-  const inventoryModule = container.resolve(Modules.INVENTORY);
-  const existingLevels = await inventoryModule.listInventoryLevels({
-    location_id: stockLocationId,
-  });
-  const existingItemIds = new Set(
-    existingLevels.map((l) => l.inventory_item_id)
-  );
-
-  const inventoryLevels: CreateInventoryLevelInput[] = [];
-  for (const item of inventoryItems) {
-    if (!existingItemIds.has(item.id)) {
-      inventoryLevels.push({
-        location_id: stockLocationId,
-        stocked_quantity: 1000,
-        inventory_item_id: item.id,
-      });
-    }
-  }
-
-  if (inventoryLevels.length) {
-    await createInventoryLevelsWorkflow(container).run({
-      input: { inventory_levels: inventoryLevels },
+  const ipixProductIds = ipixProductsForInventory.map((p) => p.id);
+  if (!ipixProductIds.length) {
+    logger.info("No ipix catalog products found — skipping inventory seed.");
+  } else {
+    const { data: ipixVariants } = await query.graph({
+      entity: "variant",
+      fields: ["id", "inventory_items.inventory_item_id"],
+      filters: { product_id: ipixProductIds },
     });
-    logger.info(`Seeded ${inventoryLevels.length} inventory level(s).`);
+
+    const ipixInventoryItemIds = new Set<string>();
+    for (const variant of ipixVariants) {
+      for (const item of variant.inventory_items || []) {
+        if (!item?.inventory_item_id) continue;
+        ipixInventoryItemIds.add(item.inventory_item_id);
+      }
+    }
+
+    const inventoryModule = container.resolve(Modules.INVENTORY);
+    const existingLevels = await inventoryModule.listInventoryLevels({
+      location_id: stockLocationId,
+    });
+    const existingItemIds = new Set(
+      existingLevels.map((l) => l.inventory_item_id)
+    );
+
+    const inventoryLevels: CreateInventoryLevelInput[] = [];
+    for (const inventoryItemId of ipixInventoryItemIds) {
+      if (!existingItemIds.has(inventoryItemId)) {
+        inventoryLevels.push({
+          location_id: stockLocationId,
+          stocked_quantity: 1000,
+          inventory_item_id: inventoryItemId,
+        });
+      }
+    }
+
+    if (inventoryLevels.length) {
+      await createInventoryLevelsWorkflow(container).run({
+        input: { inventory_levels: inventoryLevels },
+      });
+      logger.info(
+        `Seeded ${inventoryLevels.length} ipix inventory level(s) at European Warehouse.`
+      );
+    } else {
+      logger.info("All ipix inventory levels already exist — skipping.");
+    }
   }
 
   const { data: ipixProducts } = await query.graph({

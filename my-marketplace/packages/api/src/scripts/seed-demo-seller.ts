@@ -22,7 +22,7 @@ export type IpixSellerResult = {
 
 export async function ensureIpixSeller({
   container,
-}: ExecArgs): Promise<IpixSellerResult> {
+}: Pick<ExecArgs, "container">): Promise<IpixSellerResult> {
   const logger = container.resolve(ContainerRegistrationKeys.LOGGER);
   const query = container.resolve(ContainerRegistrationKeys.QUERY);
 
@@ -52,7 +52,7 @@ export async function ensureIpixSeller({
         ],
       },
     });
-    seller = result[0];
+    seller = (result as typeof existing)[0];
     created = true;
     logger.info(`Created seller ${seller.id} (${seller.name})`);
   } else {

@@ -510,13 +510,11 @@ export default async function seedDemoData({ container }: ExecArgs) {
   const existingProducts = await productCategoryModule.listProducts({
     handle: productHandles,
   });
+  const existingHandleSet = new Set(
+    existingProducts.map((p: { handle: string }) => p.handle)
+  );
 
-  if (existingProducts.length === productHandles.length) {
-    logger.info("Products already exist, skipping.");
-  } else {
-    await createProductsWorkflow(container).run({
-      input: {
-        products: [
+  const demoProducts = [
           {
             title: "Medusa T-Shirt",
             category_ids: [
@@ -1007,7 +1005,15 @@ export default async function seedDemoData({ container }: ExecArgs) {
               },
             ],
           },
-        ],
+        ].filter((product) => !existingHandleSet.has(product.handle));
+
+  if (!demoProducts.length) {
+    logger.info("Products already exist, skipping.");
+  } else {
+    logger.info(`Creating ${demoProducts.length} demo product(s)...`);
+    await createProductsWorkflow(container).run({
+      input: {
+        products: demoProducts,
       },
     });
   }
