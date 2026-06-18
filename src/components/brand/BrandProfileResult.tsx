@@ -1,20 +1,25 @@
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { BrandScoreGrid } from "@/components/brand/BrandScoreGrid";
-import type { BrandIntelligenceResponse } from "@/types/brand-intelligence";
+import type { BrandIntelligenceAnalyzeResponse } from "@/types/brand-intelligence";
 
 type BrandProfileResultProps = {
-  response: BrandIntelligenceResponse;
+  response: BrandIntelligenceAnalyzeResponse;
 };
 
 export function BrandProfileResult({ response }: BrandProfileResultProps) {
-  const { profile, scores, durationMs } = response;
+  const { profile, scores, durationMs, status } = response;
 
   return (
     <div className="space-y-4">
       <Card>
         <CardHeader>
-          <CardTitle className="font-serif text-2xl">{profile.name}</CardTitle>
+          <div className="flex flex-wrap items-center gap-2">
+            <CardTitle className="font-serif text-2xl">{profile.name}</CardTitle>
+            <Badge variant="outline" className="font-sans capitalize">
+              {status} draft
+            </Badge>
+          </div>
           {profile.tagline ? (
             <CardDescription className="font-sans text-base">{profile.tagline}</CardDescription>
           ) : null}
@@ -64,7 +69,8 @@ export function BrandProfileResult({ response }: BrandProfileResultProps) {
           </div>
 
           <p className="text-xs text-muted-foreground">
-            Saved to Supabase · analyzed in {(durationMs / 1000).toFixed(1)}s
+            Draft preview · not saved until you approve · analyzed in{" "}
+            {(durationMs / 1000).toFixed(1)}s
           </p>
         </CardContent>
       </Card>
@@ -73,7 +79,7 @@ export function BrandProfileResult({ response }: BrandProfileResultProps) {
         <CardHeader>
           <CardTitle className="font-serif text-xl">Brand readiness</CardTitle>
           <CardDescription className="font-sans">
-            Scores from Gemini URL analysis — used for DNA and commerce workflows.
+            Proposed scores from Gemini URL analysis — committed only after approval.
           </CardDescription>
         </CardHeader>
         <CardContent>

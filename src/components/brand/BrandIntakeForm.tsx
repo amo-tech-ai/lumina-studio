@@ -8,12 +8,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { isValidBrandUrl } from "@/lib/brand-url";
 import { analyzeBrandFromUrl } from "@/services/brandIntelligenceService";
-import type { BrandIntelligenceResponse } from "@/types/brand-intelligence";
+import type { BrandIntelligenceAnalyzeResponse } from "@/types/brand-intelligence";
 
 type BrandIntakeFormProps = {
   brandId?: string;
   initialUrl?: string;
-  onSuccess: (response: BrandIntelligenceResponse) => void;
+  onSuccess: (response: BrandIntelligenceAnalyzeResponse) => void;
 };
 
 export function BrandIntakeForm({ brandId, initialUrl = "", onSuccess }: BrandIntakeFormProps) {

@@ -26,7 +26,7 @@ export function BrandScoreGrid({ scores }: BrandScoreGridProps) {
   return (
     <div className="grid gap-4 sm:grid-cols-2">
       {scores.map((row) => (
-        <div key={row.id} className="space-y-2">
+        <div key={row.id ?? row.score_type} className="space-y-2">
           <div className="flex items-center justify-between text-sm font-sans">
             <span className="font-medium">{scoreLabel(row.score_type)}</span>
             <span className="tabular-nums text-muted-foreground">{row.score}/100</span>

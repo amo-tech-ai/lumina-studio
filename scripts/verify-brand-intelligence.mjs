@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 /**
  * Smoke test brand-intelligence edge function (remote).
+ * HITL: analyze creates draft only; commit approve writes brands + scores.
  * Run: npm run supabase:verify-brand-intelligence
  */
 import { readFileSync, existsSync } from "node:fs";
@@ -58,7 +59,7 @@ async function fetchJson(path, init = {}) {
 }
 
 async function main() {
-  console.log("brand-intelligence verification\n");
+  console.log("brand-intelligence verification (HITL analyze + commit)\n");
 
   const stamp = Date.now();
   const email = `brand-intel-${stamp}@example.com`;
@@ -90,7 +91,7 @@ async function main() {
   const anon = await fetchJson("/brand-intelligence", {
     method: "POST",
     headers: { apikey: anonKey, "Content-Type": "application/json" },
-    body: JSON.stringify({ url: testBrandUrl }),
+    body: JSON.stringify({ action: "analyze", url: testBrandUrl }),
   });
   if (anon.res.status === 401) {
     pass("brand-intelligence rejects anonymous call");
@@ -105,43 +106,113 @@ async function main() {
       Authorization: `Bearer ${token}`,
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({ url: testBrandUrl }),
+    body: JSON.stringify({ action: "analyze", url: testBrandUrl }),
   });
 
   if (
     authed.res.status !== 200 ||
     authed.json?.ok !== true ||
-    !authed.json?.data?.brandId
+    !authed.json?.data?.draftId
   ) {
     fail(
-      `brand-intelligence authed → ${authed.res.status} ${authed.text?.slice(0, 300)}`,
+      `analyze → ${authed.res.status} ${authed.text?.slice(0, 300)}`,
     );
   } else {
-    const { brandId, logId, scores } = authed.json.data;
-    pass(`brand-intelligence brandId=${brandId} logId=${logId} scores=${scores?.length ?? 0}`);
+    const { draftId, logId, scores, status } = authed.json.data;
+    pass(`analyze draftId=${draftId} status=${status} scores=${scores?.length ?? 0} logId=${logId}`);
   }
 
-  const brandId = authed.json?.data?.brandId;
-  if (brandId) {
-    const { data: brand, error: brandErr } = await admin
-      .from("brands")
-      .select("id, user_id, ai_profile")
-      .eq("id", brandId)
+  const draftId = authed.json?.data?.draftId;
+
+  if (draftId) {
+    const { data: draft, error: draftErr } = await admin
+      .from("brand_intake_drafts")
+      .select("id, status, draft_profile")
+      .eq("id", draftId)
       .single();
-    if (brandErr || !brand?.ai_profile?.name) {
-      fail("brands.ai_profile not populated");
+    if (draftErr || draft?.status !== "pending" || !draft?.draft_profile?.name) {
+      fail("brand_intake_drafts row missing or not pending");
     } else {
-      pass(`brands.ai_profile.name=${brand.ai_profile.name}`);
+      pass(`brand_intake_drafts pending name=${draft.draft_profile.name}`);
     }
 
-    const { count, error: scoreErr } = await admin
-      .from("brand_scores")
+    const { count: brandCount } = await admin
+      .from("brands")
       .select("*", { count: "exact", head: true })
-      .eq("brand_id", brandId);
-    if (scoreErr || (count ?? 0) < 3) {
-      fail(`brand_scores count expected >=3, got ${count}`);
+      .eq("user_id", userId);
+    if ((brandCount ?? 0) > 0) {
+      fail(`expected no brands after analyze-only, got ${brandCount}`);
     } else {
-      pass(`brand_scores count=${count}`);
+      pass("no brands row after analyze-only");
+    }
+
+    const { data: userBrands } = await admin
+      .from("brands")
+      .select("id")
+      .eq("user_id", userId);
+    const userBrandIds = userBrands?.map((b) => b.id) ?? [];
+
+    let userScoreCount = 0;
+    if (userBrandIds.length > 0) {
+      const { count } = await admin
+        .from("brand_scores")
+        .select("*", { count: "exact", head: true })
+        .in("brand_id", userBrandIds);
+      userScoreCount = count ?? 0;
+    }
+
+    if (userScoreCount > 0) {
+      fail(`expected no brand_scores for user after analyze-only, got ${userScoreCount}`);
+    } else {
+      pass("no brand_scores for user after analyze-only");
+    }
+
+    const commit = await fetchJson("/brand-intelligence", {
+      method: "POST",
+      headers: {
+        apikey: anonKey,
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        action: "commit",
+        draftId,
+        decision: "approve",
+      }),
+    });
+
+    if (
+      commit.res.status !== 200 ||
+      commit.json?.ok !== true ||
+      !commit.json?.data?.brandId
+    ) {
+      fail(`commit approve → ${commit.res.status} ${commit.text?.slice(0, 300)}`);
+    } else {
+      pass(`commit approve brandId=${commit.json.data.brandId}`);
+    }
+
+    const brandId = commit.json?.data?.brandId;
+    if (brandId) {
+      const { data: brand, error: brandErr } = await admin
+        .from("brands")
+        .select("id, user_id, ai_profile, intake_status")
+        .eq("id", brandId)
+        .single();
+      if (brandErr || !brand?.ai_profile?.name || brand.intake_status !== "approved") {
+        fail("brands row not populated after approve");
+      } else {
+        pass(`brands.ai_profile.name=${brand.ai_profile.name} intake_status=approved`);
+      }
+
+      const { count, error: scoreErr } = await admin
+        .from("brand_scores")
+        .select("*", { count: "exact", head: true })
+        .eq("brand_id", brandId);
+      if (scoreErr || (count ?? 0) < 3) {
+        fail(`brand_scores count expected >=3 after approve, got ${count}`);
+      } else {
+        pass(`brand_scores count=${count} after approve`);
+      }
     }
 
     const { data: logRow, error: logErr } = await admin
@@ -159,7 +230,11 @@ async function main() {
   await admin.auth.admin.deleteUser(userId);
   pass("cleaned up test user");
 
-  console.log(failures ? "\nBrand intelligence verification FAILED" : "\nBrand intelligence verification passed");
+  console.log(
+    failures
+      ? "\nBrand intelligence verification FAILED"
+      : "\nBrand intelligence verification passed",
+  );
   process.exit(failures ? 1 : 0);
 }
 
