@@ -425,6 +425,65 @@ export type Database = {
           },
         ]
       }
+      brand_intake_drafts: {
+        Row: {
+          approved_at: string | null
+          brand_id: string | null
+          citations: Json
+          created_at: string
+          draft_profile: Json
+          draft_scores: Json
+          expires_at: string | null
+          id: string
+          rejected_at: string | null
+          source_url: string
+          status: string
+          updated_at: string
+          url_retrieval: Json
+          user_id: string
+        }
+        Insert: {
+          approved_at?: string | null
+          brand_id?: string | null
+          citations?: Json
+          created_at?: string
+          draft_profile?: Json
+          draft_scores?: Json
+          expires_at?: string | null
+          id?: string
+          rejected_at?: string | null
+          source_url: string
+          status?: string
+          updated_at?: string
+          url_retrieval?: Json
+          user_id: string
+        }
+        Update: {
+          approved_at?: string | null
+          brand_id?: string | null
+          citations?: Json
+          created_at?: string
+          draft_profile?: Json
+          draft_scores?: Json
+          expires_at?: string | null
+          id?: string
+          rejected_at?: string | null
+          source_url?: string
+          status?: string
+          updated_at?: string
+          url_retrieval?: Json
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "brand_intake_drafts_brand_id_fkey"
+            columns: ["brand_id"]
+            isOneToOne: false
+            referencedRelation: "brands"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       brand_scores: {
         Row: {
           brand_id: string
@@ -463,30 +522,36 @@ export type Database = {
       brands: {
         Row: {
           ai_profile: Json
+          approved_profile_at: string | null
           brand_url: string | null
           created_at: string
           creative_temperature_default: number
           id: string
+          intake_status: string
           name: string
           updated_at: string
           user_id: string
         }
         Insert: {
           ai_profile?: Json
+          approved_profile_at?: string | null
           brand_url?: string | null
           created_at?: string
           creative_temperature_default?: number
           id?: string
+          intake_status?: string
           name: string
           updated_at?: string
           user_id: string
         }
         Update: {
           ai_profile?: Json
+          approved_profile_at?: string | null
           brand_url?: string | null
           created_at?: string
           creative_temperature_default?: number
           id?: string
+          intake_status?: string
           name?: string
           updated_at?: string
           user_id?: string
@@ -1893,35 +1958,44 @@ export type Database = {
       }
       profiles: {
         Row: {
+          auth_provider: string | null
           avatar_url: string | null
           company_name: string | null
           created_at: string
           email: string
           full_name: string | null
           id: string
+          onboarding_status: string
           phone: string | null
+          provider_user_id: string | null
           role: Database["public"]["Enums"]["user_role"]
           updated_at: string
         }
         Insert: {
+          auth_provider?: string | null
           avatar_url?: string | null
           company_name?: string | null
           created_at?: string
           email: string
           full_name?: string | null
           id: string
+          onboarding_status?: string
           phone?: string | null
+          provider_user_id?: string | null
           role?: Database["public"]["Enums"]["user_role"]
           updated_at?: string
         }
         Update: {
+          auth_provider?: string | null
           avatar_url?: string | null
           company_name?: string | null
           created_at?: string
           email?: string
           full_name?: string | null
           id?: string
+          onboarding_status?: string
           phone?: string | null
+          provider_user_id?: string | null
           role?: Database["public"]["Enums"]["user_role"]
           updated_at?: string
         }

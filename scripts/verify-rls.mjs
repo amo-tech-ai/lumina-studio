@@ -226,6 +226,34 @@ try {
     .select("id")
     .eq("id", logA.id);
   assert((crossLogs ?? []).length === 0, "user B cannot read user A ai_agent_logs");
+
+  // brand_intake_drafts — owner-scoped HITL staging
+  const { data: draftA, error: draftInsertErr } = await userA.client
+    .from("brand_intake_drafts")
+    .insert({
+      user_id: userA.user.id,
+      source_url: "https://example-brand.test",
+      draft_profile: { name: "Draft Brand" },
+    })
+    .select("id")
+    .single();
+  assert(!draftInsertErr && draftA?.id, "user A inserts own brand_intake_draft");
+
+  const { data: crossDrafts } = await userB.client
+    .from("brand_intake_drafts")
+    .select("id")
+    .eq("id", draftA.id);
+  assert((crossDrafts ?? []).length === 0, "user B cannot read user A brand_intake_drafts");
+
+  const { data: hijackedDraft, error: crossDraftUpdateErr } = await userB.client
+    .from("brand_intake_drafts")
+    .update({ status: "approved" })
+    .eq("id", draftA.id)
+    .select("id");
+  assert(
+    !crossDraftUpdateErr && (hijackedDraft ?? []).length === 0,
+    "user B cannot update user A brand_intake_drafts",
+  );
 } catch (err) {
   fail(err instanceof Error ? err.message : String(err));
 } finally {
