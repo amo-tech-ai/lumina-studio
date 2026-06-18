@@ -1,0 +1,40 @@
+src/pages/dashboard/BrandHubPage.tsx
+  s_cfb8706ed8da6f::t_55648e55a61a7f 1-46,49-96,98-223
+src/lib/brand-url.ts
+  s_cfb8706ed8da6f::t_946323e50ea553 1-12
+src/components/brand/BrandProfileResult.tsx
+  s_cfb8706ed8da6f::t_1918fb0908e566 1-85
+src/components/brand/BrandScoreGrid.tsx
+  s_cfb8706ed8da6f::t_38ebc263c9c9e2 1-39
+src/test/brand-intake.test.ts
+  s_cfb8706ed8da6f::t_c219faa05c75af 1-65
+src/pages/dashboard/BrandIntakePage.tsx
+  s_cfb8706ed8da6f::t_5fc605cf2b302d 1-7,10-15,17-53
+src/components/brand/BrandIntakeForm.tsx
+  s_cfb8706ed8da6f::t_a9cb912312418e 1-99
+src/services/brandService.ts
+  s_cfb8706ed8da6f::t_5dea1d1824d459 1-37
+src/types/brand-intelligence.ts
+  s_cfb8706ed8da6f::t_fd4b6fe11b5147 6-11,14,18-30,34,40-45
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.8",
+  "base_commit_sha": "af9b49470998934d4f5757a40306819e187731be",
+  "prompts": {},
+  "humans": {
+    "h_44d68aa2e2bd94": {
+      "author": "Sanjiv Khullar <ai@socialmediville.ca>"
+    }
+  },
+  "sessions": {
+    "s_cfb8706ed8da6f": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "ee4edfb0-2827-4e16-a921-681a397203e9",
+        "model": "default"
+      },
+      "human_author": "Sanjiv Khullar <ai@socialmediville.ca>"
+    }
+  }
+}
