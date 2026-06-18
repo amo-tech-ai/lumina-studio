@@ -1,73 +1,116 @@
-# Welcome to your Lovable project
+# iPix (Lumina Studio)
 
-## Project info
+AI-powered content planning for fashion and DTC brands. Vite + React marketing site today; Supabase + Cloudinary + Mercur product stack in progress.
 
-**URL**: https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID
+**PRD:** [`prd.md`](./prd.md) · **Secrets:** [`docs/supabase/secrets-inventory.md`](./docs/supabase/secrets-inventory.md) · **Infisical:** [`docs/infisical/folder-structure.md`](./docs/infisical/folder-structure.md) · [migration report](./docs/infisical/migration-report.md)
 
-## How can I edit this code?
+## Stack
 
-There are several ways of editing your application.
+- **Frontend:** Vite, React 18, TypeScript, Tailwind, shadcn/ui
+- **Backend (planned):** Supabase (Postgres, Auth, Edge Functions)
+- **Media (MVP):** Cloudinary (not Supabase Storage for images)
+- **Commerce:** Mercur / Medusa (`my-marketplace/`, `b2c-storefront/`)
+- **Secrets:** [Infisical](https://infisical.com) — project `secret-management`
 
-**Use Lovable**
+## Prerequisites
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and start prompting.
+- Node.js 20+
+- [Infisical CLI](https://infisical.com/docs/cli/overview) (`brew install infisical/get-cli/infisical` or `npm i -g @infisical/cli`)
 
-Changes made via Lovable will be committed automatically to this repo.
+## Infisical setup (secrets)
 
-**Use your preferred IDE**
+Infisical is the **source of truth** for environment variables. Do not commit `.env` or `.env.local`.
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+### 1. Login
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
-
-Follow these steps:
-
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
+```bash
+infisical login
+# or non-browser: infisical login --interactive
+infisical login status
 ```
 
-**Edit a file directly in GitHub**
+### 2. Link project (once per clone)
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+The repo already includes `.infisical.json` for workspace `81f93e92-167a-4ae2-806e-4b5bee28cf12`. If missing:
 
-**Use GitHub Codespaces**
+```bash
+cd /path/to/ipix
+infisical init
+# select organization → secret-management project
+```
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+### 3. Run with injected secrets
 
-## What technologies are used for this project?
+```bash
+npm install
 
-This project is built with:
+# Development (port 8080)
+infisical run -- npm run dev
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+# Production build
+infisical run -- npm run build
 
-## How can I deploy this project?
+# Explicit environment
+infisical run --env=staging -- npm run dev
+```
 
-Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
+Branch → environment mapping is in `.infisical.json` (`main` → `prod`, `develop` → `dev`).
 
-## Can I connect a custom domain to my Lovable project?
+**Infisical paths:**
 
-Yes, you can!
+| Path | App |
+|------|-----|
+| `/` | iPix Vite (`npm run dev`) |
+| `/mercur/api` | Medusa API |
+| `/mercur` | Mercur shared (Stripe) |
+| `/storefront` | B2C Next.js |
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+```bash
+npm run mercur:dev          # Medusa API
+npm run storefront:dev      # B2C storefront
+```
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+### 4. Manage secrets
+
+```bash
+# List secret names in dev (no subcommand "list")
+infisical secrets --env=dev
+
+# Set / import (avoid echoing values in shared terminals)
+infisical secrets set KEY=placeholder --env=dev
+infisical secrets set --file=.env.local --env=dev --silent
+
+# Generate redacted template
+infisical secrets generate-example-env --env=dev > .env.example.generated
+```
+
+Placeholder template without values: [`.env.example`](./.env.example).
+
+### Fallback (temporary)
+
+If Infisical is unavailable: `cp .env.example .env.local` and fill from the Infisical dashboard. Do not commit `.env.local`.
+
+## Scripts
+
+| Command | Description |
+|---------|-------------|
+| `npm run dev` | Vite dev server (use via `infisical run --`) |
+| `npm run build` | Production build |
+| `npm run test` | Vitest |
+| `npm run supabase:verify` | Supabase connectivity |
+| `npm run supabase:verify-rls` | RLS smoke tests |
+| `npm run supabase:verify-edge` | Edge function health |
+
+## Project layout
+
+```
+src/                 Vite app (pages, components)
+supabase/            Migrations, edge functions
+my-marketplace/      Mercur API + vendor (separate env path)
+b2c-storefront/      Next.js storefront
+docs/                Architecture, Linear, Cloudinary, Infisical
+```
+
+## Deploy
+
+Vite SPA — configure SPA rewrites on Vercel/Netlify. Sync production secrets from Infisical (Vercel Secret Sync or `infisical run` in CI with machine identity).
