@@ -1,0 +1,28 @@
+src/types/supabase.ts
+  s_cfb8706ed8da6f::t_b507e9765579f1 428-486,525,530,537,542,549,554,1961,1968,1970,1975,1982,1984,1989,1996,1998
+supabase/migrations/20260618050000_aior003_brand_intake_drafts.sql
+  s_cfb8706ed8da6f::t_e4e472d4d8b427 1-182
+scripts/verify-rls.mjs
+  s_cfb8706ed8da6f::t_712d2e695953f4 229-256
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.8",
+  "base_commit_sha": "8bb234dceb000650d635ea9ca2c3a6339a6c5d01",
+  "prompts": {},
+  "humans": {
+    "h_44d68aa2e2bd94": {
+      "author": "Sanjiv Khullar <ai@socialmediville.ca>"
+    }
+  },
+  "sessions": {
+    "s_cfb8706ed8da6f": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "ee4edfb0-2827-4e16-a921-681a397203e9",
+        "model": "default"
+      },
+      "human_author": "Sanjiv Khullar <ai@socialmediville.ca>"
+    }
+  }
+}
