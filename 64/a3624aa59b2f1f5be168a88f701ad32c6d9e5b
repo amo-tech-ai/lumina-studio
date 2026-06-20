@@ -1,0 +1,103 @@
+docs/linear/issues/IPI-100-DASH-010.md
+  s_d55509fa16cedd::t_65d65600c3cd01 1,15,52-58
+  s_7a016cd7bb6b48::t_4dd6fd0bf49de0 2-14,16-51,59-76
+docs/linear/issues/IPI-99-DASH-009.md
+  s_7a016cd7bb6b48::t_4dd6fd0bf49de0 2-14,16-51,59-76
+  s_d55509fa16cedd::t_65d65600c3cd01 1,15,52-58
+docs/linear/issues/IPI-92-DASH-002.md
+  s_d55509fa16cedd::t_65d65600c3cd01 1,15,53-59
+  s_7a016cd7bb6b48::t_4dd6fd0bf49de0 2-14,16-52,60-77
+docs/linear/issues/IPI-24-UI-003.md
+  s_d55509fa16cedd::t_65d65600c3cd01 1-49,51-70
+  s_d55509fa16cedd::t_5fbecf0c0da93a 50
+docs/linear/issues/IPI-102-DASH-012.md
+  s_7a016cd7bb6b48::t_4dd6fd0bf49de0 2-4,6-14,16-57,65-82
+  s_d55509fa16cedd::t_65d65600c3cd01 1,5,15,58-64
+docs/linear/issues/IPI-96-DASH-006.md
+  s_d55509fa16cedd::t_65d65600c3cd01 1,5,15,56-63
+  s_7a016cd7bb6b48::t_4dd6fd0bf49de0 2-4,6-14,16-55,64-81
+docs/linear/issues/IPI-23-UI-002.md
+  s_d55509fa16cedd::t_c4bb1f846794b5 1-111
+docs/linear/issues/IPI-101-DASH-011.md
+  s_d55509fa16cedd::t_65d65600c3cd01 1,3,5,15,31,53-58
+  s_d55509fa16cedd::t_ab10667b92055b 40,59-60
+  s_7a016cd7bb6b48::t_4dd6fd0bf49de0 2,4,6-14,16-30,32-39,41-52,61-78
+docs/linear/issues/IPI-97-DASH-007.md
+  s_7a016cd7bb6b48::t_4dd6fd0bf49de0 2-14,16-53,61-78
+  s_d55509fa16cedd::t_65d65600c3cd01 1,15,54-60
+docs/linear/issues/IPI-93-DASH-003.md
+  s_d55509fa16cedd::t_5fbecf0c0da93a 63
+  s_06efa43fd64ec6::t_c80193ed34b5b5 33
+  s_d55509fa16cedd::t_65d65600c3cd01 1,3,5,15,44,57-62,64
+  s_7a016cd7bb6b48::t_4dd6fd0bf49de0 2,4,6-14,16-32,34-43,45-56,65-82
+docs/linear/issues/IPI-94-DASH-004.md
+  s_7a016cd7bb6b48::t_4dd6fd0bf49de0 2-14,16-53,61-78
+  s_d55509fa16cedd::t_65d65600c3cd01 1,15,54-60
+todo.md
+  s_eb11964a4aca93::t_9198d44aa88dfe 70-73,86-88
+  s_d55509fa16cedd::t_ff261d24084355 91,99,107,115,123,131,141,149,157,165,173,181,191,199,207,215,223,233,241,249,257,265
+  s_eb11964a4aca93::t_53af7bb6fd6521 1-2,4-9,89-90,92-98,100-106,108-114,116-122,124-130,132-140,142-148,150-156,158-164,166-172,174-180,182-190,192-198,200-206,208-214,216-222,224-232,234-240,242-248,250-256,258-264,266-271
+  s_d55509fa16cedd::t_e0193c03937996 3
+  s_d55509fa16cedd::t_12da309179e770 10-69,74-85
+docs/linear/issues/IPI-91-DASH-001.md
+  s_d55509fa16cedd::t_65d65600c3cd01 1,15,55-61
+  s_7a016cd7bb6b48::t_4dd6fd0bf49de0 2-14,16-54,62-79
+docs/linear/issues/IPI-98-DASH-008.md
+  s_7a016cd7bb6b48::t_4dd6fd0bf49de0 2-14,16-57,65-82
+  s_d55509fa16cedd::t_65d65600c3cd01 1,15,58-64
+docs/linear/issues/dashboard-ai-native-cleanup-report.md
+  s_d55509fa16cedd::t_ab10667b92055b 45,86
+  s_d55509fa16cedd::t_4ed88963f614eb 57,85
+  s_d55509fa16cedd::t_96b8c91f54da1f 1-44,46-56,58-84,87-102
+docs/linear/issues/IPI-95-DASH-005.md
+  s_d55509fa16cedd::t_65d65600c3cd01 1,15,53-59
+  s_7a016cd7bb6b48::t_4dd6fd0bf49de0 2-14,16-52,60-77
+docs/linear/issues/IPI-25-UI-004.md
+  s_d55509fa16cedd::t_5fbecf0c0da93a 58
+  s_d55509fa16cedd::t_65d65600c3cd01 1-57,59-78
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.9",
+  "base_commit_sha": "64a3624aa59b2f1f5be168a88f701ad32c6d9e5b",
+  "prompts": {},
+  "humans": {
+    "h_44d68aa2e2bd94": {
+      "author": "Sanjiv Khullar <ai@socialmediville.ca>"
+    }
+  },
+  "sessions": {
+    "s_06efa43fd64ec6": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "2fb91bdb-f860-4de4-a321-a9864bdece3b",
+        "model": "default"
+      },
+      "human_author": "Sanjiv Khullar <ai@socialmediville.ca>"
+    },
+    "s_7a016cd7bb6b48": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "16c1afb8-9d1a-4d81-83a0-2b889de3d92c",
+        "model": "default"
+      },
+      "human_author": "Sanjiv Khullar <ai@socialmediville.ca>"
+    },
+    "s_d55509fa16cedd": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019ee23f-85ad-7202-8d4f-71c155770594",
+        "model": "gpt-5.5"
+      },
+      "human_author": "Sanjiv Khullar <ai@socialmediville.ca>"
+    },
+    "s_eb11964a4aca93": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019edb9a-21fd-7671-b967-aeb5632ef757",
+        "model": "gpt-5.5"
+      },
+      "human_author": "Sanjiv Khullar <ai@socialmediville.ca>"
+    }
+  }
+}
