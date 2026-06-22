@@ -1,0 +1,26 @@
+app/src/mastra/tools/edge.ts
+  s_99ef85ddf80e97::t_f3186ed90af01c 19-20,33-34,39,51-58,60-80,90-95
+app/src/mastra/models.test.ts
+  s_99ef85ddf80e97::t_8da472acb51994 31-36
+app/src/mastra/tools/edge.test.ts
+  s_99ef85ddf80e97::t_64832c213172d2 110-112
+  s_99ef85ddf80e97::t_b1926974d1ef0f 1,18-34,41,52,54,57-109,113-119
+app/src/mastra/models.ts
+  s_99ef85ddf80e97::t_3fcb4e134a9812 10-13
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.9",
+  "base_commit_sha": "07da0e3cca021b655d0b6957db9583fb3ac270bd",
+  "prompts": {},
+  "sessions": {
+    "s_99ef85ddf80e97": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "4c088e51-0a96-4c26-9f0c-3f0a635e98c2",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Sanjiv Khullar <ai@socialmediville.ca>"
+    }
+  }
+}
