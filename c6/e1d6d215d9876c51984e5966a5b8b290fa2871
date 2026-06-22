@@ -1,0 +1,35 @@
+docs/pr-reviews/PR23-POST-MERGE-VERIFY-2026-06-22.md
+  s_99ef85ddf80e97::t_5dd2b79cbe049f 1-88
+docs/pr-reviews/PR-23_checklist.md
+  s_0f1212e43a548e::t_8cdd8dea5219a2 1-167,200
+  s_99ef85ddf80e97::t_4cdfbd21ae1c11 168-199
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.9",
+  "base_commit_sha": "c6e1d6d215d9876c51984e5966a5b8b290fa2871",
+  "prompts": {},
+  "humans": {
+    "h_44d68aa2e2bd94": {
+      "author": "Sanjiv Khullar <ai@socialmediville.ca>"
+    }
+  },
+  "sessions": {
+    "s_0f1212e43a548e": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "f468af01-e967-4d93-8efd-97b2af12d551",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Sanjiv Khullar <ai@socialmediville.ca>"
+    },
+    "s_99ef85ddf80e97": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "4c088e51-0a96-4c26-9f0c-3f0a635e98c2",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Sanjiv Khullar <ai@socialmediville.ca>"
+    }
+  }
+}
