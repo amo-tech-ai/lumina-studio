@@ -1,0 +1,23 @@
+app/src/app/layout.tsx
+  s_99ef85ddf80e97::t_905a23bc647458 4
+app/src/app/page.tsx
+  s_99ef85ddf80e97::t_3b4ce60344b482 3-7
+app/src/components/operator-panel/operator-panel.tsx
+  s_99ef85ddf80e97::t_33b21eb15f0191 1-104
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.9",
+  "base_commit_sha": "477686c704f7cadbba01377333676482a3e43b1a",
+  "prompts": {},
+  "sessions": {
+    "s_99ef85ddf80e97": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "4c088e51-0a96-4c26-9f0c-3f0a635e98c2",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Sanjiv Khullar <ai@socialmediville.ca>"
+    }
+  }
+}
