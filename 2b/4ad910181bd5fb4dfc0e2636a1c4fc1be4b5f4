@@ -1,0 +1,33 @@
+.gitignore
+  s_5812dc33d435b1::t_81d702a613200e 29
+  s_11e7c0e0155431::t_ad6e9d83e8dc04 25-28
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.9",
+  "base_commit_sha": "2b4ad910181bd5fb4dfc0e2636a1c4fc1be4b5f4",
+  "prompts": {},
+  "humans": {
+    "h_44d68aa2e2bd94": {
+      "author": "Sanjiv Khullar <ai@socialmediville.ca>"
+    }
+  },
+  "sessions": {
+    "s_11e7c0e0155431": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "ff81974c-7fd6-4cc8-8577-8bb8e2a59f95",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Sanjiv Khullar <ai@socialmediville.ca>"
+    },
+    "s_5812dc33d435b1": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "9fc9266d-ff49-43b9-aeec-8147794ef8ea",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Sanjiv Khullar <ai@socialmediville.ca>"
+    }
+  }
+}
