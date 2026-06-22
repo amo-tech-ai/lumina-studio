@@ -1,0 +1,19 @@
+.deepsource.toml
+  s_0f1212e43a548e::t_f17ba46a7ddfad 1-24
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.9",
+  "base_commit_sha": "445021946e511527cdfafd27f983730660f71c5d",
+  "prompts": {},
+  "sessions": {
+    "s_0f1212e43a548e": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "f468af01-e967-4d93-8efd-97b2af12d551",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Sanjiv Khullar <ai@socialmediville.ca>"
+    }
+  }
+}
