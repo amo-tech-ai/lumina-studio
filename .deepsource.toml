@@ -1,0 +1,24 @@
+version = 1
+
+# `app/` is a standalone Next.js operator app with its own ESLint flat config
+# (`app/eslint.config.mjs` — the CopilotKit v2 import guard) and its own CI build.
+# The root DeepSource JavaScript analyzer mis-parses its ESM files (`.mjs`/`.tsx`)
+# as scripts, raising false "import/export may appear only with sourceType: module"
+# errors. Exclude `app/**` here; its quality is enforced by its own lint + build.
+exclude_patterns = [
+  "app/**",
+  "**/node_modules/**",
+  "dist/**",
+]
+
+[[analyzers]]
+name = "javascript"
+enabled = true
+
+[[analyzers]]
+name = "sql"
+enabled = true
+
+[[analyzers]]
+name = "docker"
+enabled = true
