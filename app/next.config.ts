@@ -10,10 +10,6 @@ const nextConfig: NextConfig = {
       ? "true"
       : "false",
   },
-  typescript: {
-    // @mastra/memory beta packages have unstable types that break strict checking
-    ignoreBuildErrors: true,
-  },
 };
 
 export default nextConfig;

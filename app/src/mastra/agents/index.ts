@@ -23,6 +23,7 @@ export const productionPlannerAgent = new Agent({
   model: google("gemini-3-flash-preview"),
   instructions:
     "You are the iPix production planner. Help operators plan shoots: deliverables, shot lists, and budgets.",
+  // @ts-expect-error @mastra/memory beta: Memory.recall() return type mismatches MastraMemory (re-check on pkg bump)
   memory: new Memory({
     storage: new LibSQLStore({
       id: "production-planner-memory",
@@ -44,6 +45,7 @@ export const creativeDirectorAgent = new Agent({
   model: google("gemini-3-flash-preview"),
   instructions:
     "You are the iPix creative director. Turn brand DNA and campaigns into creative briefs and moodboards that feed the shoot brief.",
+  // @ts-expect-error @mastra/memory beta: Memory.recall() return type mismatches MastraMemory (re-check on pkg bump)
   memory: new Memory({
     storage: new LibSQLStore({
       id: "creative-director-memory",
