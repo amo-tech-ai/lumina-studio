@@ -35,7 +35,7 @@ export function WeatherCard({
         <div className="flex items-center justify-between">
           <div>
             <h3 className="text-xl font-bold text-white capitalize">
-              {location}
+              {location ?? "Weather"}
             </h3>
             <p className="text-white">Current Weather</p>
           </div>

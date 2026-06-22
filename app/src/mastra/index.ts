@@ -3,7 +3,11 @@ import { LibSQLStore } from "@mastra/libsql";
 import { productionPlannerAgent, creativeDirectorAgent } from "./agents";
 import { ConsoleLogger, LogLevel } from "@mastra/core/logger";
 
-const LOG_LEVEL = (process.env.LOG_LEVEL as LogLevel) || "info";
+const VALID_LOG_LEVELS: LogLevel[] = ["debug", "info", "warn", "error"];
+const rawLogLevel = process.env.LOG_LEVEL;
+const LOG_LEVEL: LogLevel = VALID_LOG_LEVELS.includes(rawLogLevel as LogLevel)
+  ? (rawLogLevel as LogLevel)
+  : "info";
 
 export const mastra = new Mastra({
   // Registry keys ARE the agent names the runtime exposes (via getLocalAgents) and

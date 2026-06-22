@@ -1,4 +1,5 @@
-// State of the agent, make sure this aligns with your agent's state.
-export type AgentState = {
-  proverbs: string[];
-};
+import { z } from "zod";
+import { AgentState as AgentStateSchema } from "@/mastra/agents";
+
+// Re-export inferred type from the single-source Zod schema in mastra/agents/index.ts
+export type AgentState = z.infer<typeof AgentStateSchema>;

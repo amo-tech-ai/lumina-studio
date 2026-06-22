@@ -1,6 +1,8 @@
-# CopilotKit <> Mastra Starter
+# Lumina Operator (iPix)
 
-This is a starter template for building AI agents using [Mastra](https://mastra.ai) and [CopilotKit](https://copilotkit.ai). It provides a modern Next.js application with integrated AI capabilities and a beautiful UI.
+Operator app for the [iPix](https://ipix.ai) fashion-content platform. Connects
+[Mastra](https://mastra.ai) agents to a [CopilotKit](https://copilotkit.ai) chat
+interface for shoot planning, creative direction, and brand intelligence.
 
 ## Prerequisites
 
@@ -13,12 +15,20 @@ This is a starter template for building AI agents using [Mastra](https://mastra.
 
 ## Getting Started
 
-1. Add your OpenAI API key
+1. Set up environment variables
 
 ```bash
-# you can use whatever model Mastra supports
-echo "OPENAI_API_KEY=your-key-here" >> .env
+cp .env.example .env
 ```
+
+Required variables — the app will not start without these:
+- `GEMINI_API_KEY` — Google Gemini API key (used by all agents)
+
+Optional variables:
+- `COPILOTKIT_LICENSE_TOKEN` — Enable CopilotKit Intelligence (threads, persistence, analytics)
+- `INTELLIGENCE_API_KEY` — Required if `COPILOTKIT_LICENSE_TOKEN` is set
+- `INTELLIGENCE_API_URL` — CopilotKit Intelligence API URL (default: `http://localhost:4201`)
+- `INTELLIGENCE_GATEWAY_WS_URL` — CopilotKit Intelligence WebSocket URL (default: `ws://localhost:4401`)
 
 2. Install dependencies using your preferred package manager:
 

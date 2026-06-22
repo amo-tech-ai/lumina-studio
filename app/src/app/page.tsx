@@ -118,9 +118,11 @@ function YourMainContent({ themeColor }: { themeColor: string }) {
   const state = (agent.state as AgentState | undefined) ?? { proverbs: [] };
   const setState = (next: AgentState) => agent.setState(next);
 
-  // Seed an initial proverb once (the V2 agent starts with empty state).
+  // Seed an initial proverb once (the V2 agent starts with proverbs:[] by default).
   useEffect(() => {
-    if ((agent.state as AgentState | undefined)?.proverbs === undefined) {
+    if (
+      ((agent.state as AgentState | undefined)?.proverbs?.length ?? 0) === 0
+    ) {
       agent.setState({
         proverbs: [
           "CopilotKit may be new, but it's the best thing since sliced bread.",
@@ -134,7 +136,7 @@ function YourMainContent({ themeColor }: { themeColor: string }) {
     {
       name: "weatherTool",
       description: "Get the weather for a given location.",
-      available: false,
+      available: true,
       parameters: z.object({
         location: z.string(),
       }),

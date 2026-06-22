@@ -513,6 +513,22 @@
   }
 }
 
+/* Toast-style error bar for thread action failures */
+.actionError {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  margin: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  background: #fee2e2;
+  border: 1px solid #fca5a5;
+  border-radius: var(--radius, 0.625rem);
+  color: #991b1b;
+  font-size: 0.8125rem;
+  line-height: 1.4;
+  text-align: center;
+}
+
 .emptyState {
   display: flex;
   flex: 1;

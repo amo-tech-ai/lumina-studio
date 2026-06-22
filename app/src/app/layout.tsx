@@ -15,8 +15,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Mastra + CopilotKit Starter",
-  description: "A starter demo connecting a Mastra agent to CopilotKit.",
+  title: "Lumina Operator — iPix",
+  description:
+    "AI-powered operator console for iPix fashion-content planning, shoot management, and brand intelligence.",
 };
 
 export default function RootLayout({

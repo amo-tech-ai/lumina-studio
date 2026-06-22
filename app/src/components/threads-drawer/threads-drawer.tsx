@@ -62,6 +62,10 @@ export default function ThreadsDrawer({
     id: string;
     title: string;
   } | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
+  const actionErrorTimerRef = useRef<ReturnType<typeof setTimeout> | null>(
+    null,
+  );
   const deleteTriggerRef = useRef<HTMLElement | null>(null);
 
   const {
@@ -127,6 +131,8 @@ export default function ThreadsDrawer({
       for (const timeoutId of titleTimeoutsRef.current.values()) {
         window.clearTimeout(timeoutId);
       }
+      if (actionErrorTimerRef.current)
+        clearTimeout(actionErrorTimerRef.current);
     };
   }, []);
 
@@ -213,6 +219,13 @@ export default function ThreadsDrawer({
     console.error("Unable to load threads", error);
   }
 
+  const showError = (message: string) => {
+    setActionError(message);
+    if (actionErrorTimerRef.current)
+      clearTimeout(actionErrorTimerRef.current);
+    actionErrorTimerRef.current = setTimeout(() => setActionError(null), 5000);
+  };
+
   if (!isOpen) {
     return (
       <aside
@@ -259,6 +272,14 @@ export default function ThreadsDrawer({
         className={cx(styles.drawer, styles.drawerOpen)}
       >
         <div className={styles.drawerSurface}>
+          {actionError && (
+            <div
+              role="alert"
+              className={styles.actionError}
+            >
+              {actionError}
+            </div>
+          )}
           <div className={styles.drawerHeader}>
             <div className={styles.drawerHeaderMain}>
               <h2 className={styles.drawerTitle}>Threads</h2>
@@ -420,9 +441,17 @@ export default function ThreadsDrawer({
                             data-tooltip="Restore thread"
                             type="button"
                             onClick={() => {
-                              restoreThread(thread.id).catch((err: unknown) => {
-                                console.error("Unable to restore thread", err);
-                              });
+                              restoreThread(thread.id).catch(
+                                (err: unknown) => {
+                                  console.error(
+                                    "Unable to restore thread",
+                                    err,
+                                  );
+                                  showError(
+                                    `Failed to restore "${title}". Please try again.`,
+                                  );
+                                },
+                              );
                             }}
                           >
                             <ArchiveRestore size={14} />
@@ -440,9 +469,17 @@ export default function ThreadsDrawer({
                             onClick={() => {
                               if (threadId === thread.id)
                                 onThreadChange(undefined);
-                              archiveThread(thread.id).catch((err: unknown) => {
-                                console.error("Unable to archive thread", err);
-                              });
+                              archiveThread(thread.id).catch(
+                                (err: unknown) => {
+                                  console.error(
+                                    "Unable to archive thread",
+                                    err,
+                                  );
+                                  showError(
+                                    `Failed to archive "${title}". Please try again.`,
+                                  );
+                                },
+                              );
                             }}
                           >
                             <Archive size={14} />
@@ -497,6 +534,9 @@ export default function ThreadsDrawer({
             if (threadId === id) onThreadChange(undefined);
             deleteThread(id).catch((err: unknown) => {
               console.error("Unable to delete thread", err);
+              showError(
+                `Failed to delete "${pendingDelete.title}". Please try again.`,
+              );
             });
           }}
         />

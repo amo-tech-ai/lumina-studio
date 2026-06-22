@@ -13,9 +13,15 @@ const runtime = new CopilotRuntime({
   agents: MastraAgent.getLocalAgents({ mastra }),
   // --- copilotkit:intelligence (remove this block to opt out) ---
   ...(process.env.COPILOTKIT_LICENSE_TOKEN
-    ? {
+    ? (() => {
+        if (!process.env.INTELLIGENCE_API_KEY) {
+          throw new Error(
+            "INTELLIGENCE_API_KEY is required when COPILOTKIT_LICENSE_TOKEN is set",
+          );
+        }
+        return {
         intelligence: new CopilotKitIntelligence({
-          apiKey: process.env.INTELLIGENCE_API_KEY ?? "",
+          apiKey: process.env.INTELLIGENCE_API_KEY,
           apiUrl: process.env.INTELLIGENCE_API_URL ?? "http://localhost:4201",
           wsUrl:
             process.env.INTELLIGENCE_GATEWAY_WS_URL ?? "ws://localhost:4401",
@@ -24,7 +30,8 @@ const runtime = new CopilotRuntime({
         // before any multi-user deployment, or all users share one thread history.
         identifyUser: () => ({ id: "demo-user", name: "Demo User" }),
         licenseToken: process.env.COPILOTKIT_LICENSE_TOKEN,
-      }
+      };
+      })()
     : { runner: new InMemoryAgentRunner() }),
   // --- /copilotkit:intelligence ---
 });

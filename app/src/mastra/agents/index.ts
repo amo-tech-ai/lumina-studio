@@ -26,7 +26,7 @@ export const productionPlannerAgent = new Agent({
   memory: new Memory({
     storage: new LibSQLStore({
       id: "production-planner-memory",
-      url: "file::memory:",
+      url: ":memory:",
     }),
     options: {
       workingMemory: {
@@ -47,7 +47,7 @@ export const creativeDirectorAgent = new Agent({
   memory: new Memory({
     storage: new LibSQLStore({
       id: "creative-director-memory",
-      url: "file::memory:",
+      url: ":memory:",
     }),
   }),
 });
