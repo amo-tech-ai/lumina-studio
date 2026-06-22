@@ -1,6 +1,6 @@
 import { createGoogleGenerativeAI } from "@ai-sdk/google";
 import { Agent } from "@mastra/core/agent";
-import { weatherTool } from "@/mastra/tools";
+import { agentTools } from "@/mastra/tools";
 import { LibSQLStore } from "@mastra/libsql";
 import { z } from "zod";
 import { Memory } from "@mastra/memory";
@@ -22,7 +22,7 @@ export const AgentState = z.object({
 export const productionPlannerAgent = new Agent({
   id: "production-planner",
   name: "Production Planner",
-  tools: { weatherTool },
+  tools: agentTools,
   model: google(GEMINI_MODEL),
   instructions:
     "You are the iPix production planner. Help operators plan shoots: deliverables, shot lists, and budgets.",
