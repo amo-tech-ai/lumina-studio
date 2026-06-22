@@ -9,18 +9,28 @@ afterEach(() => {
 
 describe("gemini model registry (IPI2-80)", () => {
   it("default is a stable GA id, never a preview", () => {
-    expect(GEMINI_MODELS.default).toBe("gemini-2.5-flash");
+    expect(GEMINI_MODELS.default).toBe("gemini-3.5-flash");
     expect(GEMINI_MODELS.default).not.toMatch(/preview|exp|latest/i);
   });
 
-  it("resolves to the default when no override is set", () => {
+  it("resolves to the default when env is undefined", () => {
     delete process.env.GEMINI_MODEL;
     expect(resolveGeminiModel()).toBe(GEMINI_MODELS.default);
   });
 
+  it("resolves to the default when env is empty string", () => {
+    process.env.GEMINI_MODEL = "";
+    expect(resolveGeminiModel()).toBe(GEMINI_MODELS.default);
+  });
+
+  it("resolves to the default when env is whitespace", () => {
+    process.env.GEMINI_MODEL = "  ";
+    expect(resolveGeminiModel()).toBe(GEMINI_MODELS.default);
+  });
+
   it("honors a known GEMINI_MODEL override", () => {
-    process.env.GEMINI_MODEL = GEMINI_MODELS.next;
-    expect(resolveGeminiModel()).toBe(GEMINI_MODELS.next);
+    process.env.GEMINI_MODEL = "gemini-3.5-flash";
+    expect(resolveGeminiModel()).toBe("gemini-3.5-flash");
   });
 
   it("throws on an unknown GEMINI_MODEL (typo guard)", () => {
