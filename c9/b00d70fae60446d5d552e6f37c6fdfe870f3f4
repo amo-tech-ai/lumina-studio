@@ -1,0 +1,19 @@
+app/.env.example
+  s_99ef85ddf80e97::t_69db71ba4721ff 4
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.9",
+  "base_commit_sha": "c9b00d70fae60446d5d552e6f37c6fdfe870f3f4",
+  "prompts": {},
+  "sessions": {
+    "s_99ef85ddf80e97": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "4c088e51-0a96-4c26-9f0c-3f0a635e98c2",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Sanjiv Khullar <ai@socialmediville.ca>"
+    }
+  }
+}
