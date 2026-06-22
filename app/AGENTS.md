@@ -7,7 +7,7 @@ This is a separate sub-project from the root Vite dashboard. It runs Next.js on 
 - Next.js App Router (port 3002)
 - CopilotKit v1.61.0 — v2 APIs imported from the `/v2` subpath (`CopilotRuntime`, `createCopilotEndpoint`, `CopilotKit`/`CopilotSidebar`/`useAgent`) over AG-UI SSE
 - Mastra — **2 distinct agents** (`production-planner`, `creative-director`) exposed under **3 registry keys** (`default` is a compatibility alias → `production-planner`; see gotcha below)
-- Gemini `gemini-3-flash-preview` via **`@ai-sdk/google`** (`createGoogleGenerativeAI`, reads `GEMINI_API_KEY`)
+- Gemini via **`@ai-sdk/google`** (`createGoogleGenerativeAI`, reads `GEMINI_API_KEY`); model id from the registry (`src/mastra/models.ts`, default `gemini-2.5-flash`, override via `GEMINI_MODEL`) — IPI2-80
 - In-memory LibSQL (Mastra memory + storage, `:memory:` — not persisted; ephemeral per process)
 
 ## Architecture
@@ -25,7 +25,7 @@ flowchart LR
     PP["productionPlannerAgent<br/>+ weatherTool"]
     CD["creativeDirectorAgent"]
   end
-  Gemini["Gemini gemini-3-flash-preview<br/>via @ai-sdk/google"]
+  Gemini["Gemini (registry default gemini-2.5-flash)<br/>via @ai-sdk/google"]
 
   Browser --> Provider --> Page
   Page -->|"AG-UI SSE /api/copilotkit"| Route
