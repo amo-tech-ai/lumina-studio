@@ -1,0 +1,38 @@
+app/src/components/section-placeholder.tsx
+  s_99ef85ddf80e97::t_b0629087cbea7c 1-28
+app/src/components/command-center/command-center.tsx
+  s_99ef85ddf80e97::t_fcb2ff5f6d1b15 1-98
+app/src/app/shoots/page.tsx
+  s_99ef85ddf80e97::t_8584bcb0b7047a 1-11
+app/src/app/assets/page.tsx
+  s_99ef85ddf80e97::t_2dc6d183ea7d86 1-11
+app/src/app/campaigns/page.tsx
+  s_99ef85ddf80e97::t_6b51b66d63bc63 1-11
+app/src/app/matching/page.tsx
+  s_99ef85ddf80e97::t_7ef39f2c2c68a2 1-11
+app/src/app/page.tsx
+  s_99ef85ddf80e97::t_ac54c88fe115c7 9-10,13,21-25,36-37,45,47,49-51,53-55,62-66,72-73,82-83,87-89
+app/src/app/brand/page.tsx
+  s_99ef85ddf80e97::t_33783173804485 1-11
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.9",
+  "base_commit_sha": "f6155e937fdeec6a9d4dfe3183064b0c471a80ec",
+  "prompts": {},
+  "humans": {
+    "h_44d68aa2e2bd94": {
+      "author": "Sanjiv Khullar <ai@socialmediville.ca>"
+    }
+  },
+  "sessions": {
+    "s_99ef85ddf80e97": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "4c088e51-0a96-4c26-9f0c-3f0a635e98c2",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Sanjiv Khullar <ai@socialmediville.ca>"
+    }
+  }
+}
