@@ -28,9 +28,12 @@ describe("gemini model registry (IPI2-80)", () => {
     expect(resolveGeminiModel()).toBe(GEMINI_MODELS.default);
   });
 
-  it("honors a known GEMINI_MODEL override", () => {
-    process.env.GEMINI_MODEL = "gemini-3.5-flash";
-    expect(resolveGeminiModel()).toBe("gemini-3.5-flash");
+  it("honors a known non-default GEMINI_MODEL override", () => {
+    // gemini-2.5-flash is a known id but not the default — proves override works,
+    // not just that it echoes the default back.
+    process.env.GEMINI_MODEL = "gemini-2.5-flash";
+    expect(resolveGeminiModel()).toBe("gemini-2.5-flash");
+    expect(resolveGeminiModel()).not.toBe(GEMINI_MODELS.default);
   });
 
   it("throws on an unknown GEMINI_MODEL (typo guard)", () => {
