@@ -13,6 +13,9 @@ export const mastra = new Mastra({
   // Registry keys ARE the agent names the runtime exposes (via getLocalAgents) and
   // the frontend useAgent({ agentId }) must match these exactly.
   agents: {
+    // default is a compatibility alias for CopilotKit prebuilt UI/runtime sync;
+    // real app code should use production-planner.
+    default: productionPlannerAgent,
     "production-planner": productionPlannerAgent,
     "creative-director": creativeDirectorAgent,
   },
