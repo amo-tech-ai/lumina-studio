@@ -22,3 +22,15 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Graphify knowledge-graph artifacts (build/query outputs + AST cache, can reach 50MB+)
+graphify-out/
+**/graphify-out/
+.firecrawl/
+
+# app/ sub-project (Next.js + Mastra)
+app/node_modules
+app/.next
+app/.mastra
+app/.env
+app/out
