@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { CopilotKit } from "@copilotkit/react-core/v2";
+import { OperatorPanel } from "@/components/operator-panel/operator-panel";
 import "./globals.css";
 import "@copilotkit/react-core/v2/styles.css";
 
@@ -40,7 +41,9 @@ export default function RootLayout({
       >
         {/* Force REST transport so runtime-info + threads both hit the multi-route endpoint (auto-detect races the lazily-compiled API route in next dev). */}
         <CopilotKit runtimeUrl="/api/copilotkit" useSingleEndpoint={false}>
-          {children}
+          {/* Reusable operator shell (IPI2-82): left threads · center workspace · right AI panel.
+              Wraps every /app route so each gets the context-aware CopilotSidebar. */}
+          <OperatorPanel>{children}</OperatorPanel>
         </CopilotKit>
       </body>
     </html>
