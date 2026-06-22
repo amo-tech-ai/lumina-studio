@@ -5,6 +5,11 @@ on:
     branches: [main, master]
   pull_request:
 
+# Cancel superseded runs for the same ref so rapid pushes don't pile up runners.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -50,11 +55,17 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Type-check (tsc --noEmit)
-        run: npx tsc --noEmit
-
       - name: Lint
         run: npm run lint
 
+      # Build first: `next build` generates next-env.d.ts + .next/types, so the
+      # subsequent tsc --noEmit is reliable on a clean checkout (and build itself
+      # type-checks app code since next.config.ts has no ignoreBuildErrors).
       - name: Production build
         run: npm run build
+
+      - name: Type-check (tsc --noEmit)
+        run: npx tsc --noEmit
+
+      - name: Unit tests
+        run: npm run test
