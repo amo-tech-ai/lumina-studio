@@ -4,9 +4,13 @@ import { weatherTool } from "@/mastra/tools";
 import { LibSQLStore } from "@mastra/libsql";
 import { z } from "zod";
 import { Memory } from "@mastra/memory";
+import { resolveGeminiModel } from "@/mastra/models";
 
 // @ai-sdk/google defaults to GOOGLE_GENERATIVE_AI_API_KEY; iPix uses GEMINI_API_KEY.
 const google = createGoogleGenerativeAI({ apiKey: process.env.GEMINI_API_KEY });
+
+// Model id comes from the registry (IPI2-80) — never hardcoded/preview here.
+const GEMINI_MODEL = resolveGeminiModel();
 
 export const AgentState = z.object({
   proverbs: z.array(z.string()).default([]),
@@ -19,8 +23,7 @@ export const productionPlannerAgent = new Agent({
   id: "production-planner",
   name: "Production Planner",
   tools: { weatherTool },
-  // ponytail: latest flash per CopilotKit LLM adapter; swap to "gemini-2.5-flash" for stable
-  model: google("gemini-3-flash-preview"),
+  model: google(GEMINI_MODEL),
   instructions:
     "You are the iPix production planner. Help operators plan shoots: deliverables, shot lists, and budgets.",
   // @ts-expect-error @mastra/memory beta: Memory.recall() return type mismatches MastraMemory (re-check on pkg bump)
@@ -42,7 +45,7 @@ export const productionPlannerAgent = new Agent({
 export const creativeDirectorAgent = new Agent({
   id: "creative-director",
   name: "Creative Director",
-  model: google("gemini-3-flash-preview"),
+  model: google(GEMINI_MODEL),
   instructions:
     "You are the iPix creative director. Turn brand DNA and campaigns into creative briefs and moodboards that feed the shoot brief.",
   // @ts-expect-error @mastra/memory beta: Memory.recall() return type mismatches MastraMemory (re-check on pkg bump)
