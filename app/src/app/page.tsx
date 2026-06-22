@@ -57,6 +57,7 @@ function PageBody({
         .string()
         .describe("The theme color to set. Make sure to pick nice colors."),
     }),
+    // async required: useFrontendTool's handler signature returns Promise<unknown>.
     handler: async ({ themeColor }) => {
       setThemeColor(themeColor);
       return `Changing theme color to ${themeColor}`;
@@ -117,7 +118,7 @@ function PageBody({
         >
           <YourMainContent themeColor={themeColor} />
           <CopilotSidebar
-            defaultOpen={true}
+            defaultOpen
             labels={{
               modalHeaderTitle: "Popup Assistant",
               welcomeMessageText: "👋 Hi, there! You're chatting with an agent.",

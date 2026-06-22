@@ -44,7 +44,7 @@ export const weatherTool = createTool({
   },
 });
 
-const getWeather = async (location: string) => {
+async function getWeather(location: string) {
   const geocodingUrl = `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(location)}&count=1`;
   const geocodingResponse = await fetch(geocodingUrl);
   if (!geocodingResponse.ok) {
@@ -79,7 +79,7 @@ const getWeather = async (location: string) => {
     conditions: getWeatherCondition(data.current.weather_code),
     location: name,
   };
-};
+}
 
 function getWeatherCondition(code: number): string {
   const conditions: Record<number, string> = {
