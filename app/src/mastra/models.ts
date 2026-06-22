@@ -7,7 +7,10 @@ export const GEMINI_MODELS = {
   default: "gemini-3.5-flash",
 } as const;
 
-const KNOWN_MODEL_IDS: string[] = Object.values(GEMINI_MODELS);
+// Model ids permitted as a GEMINI_MODEL override. The default is always allowed;
+// gemini-2.5-flash stays valid for edge-fn parity / fallback. Add new ids here so
+// the override isn't a single-entry list that throws on anything but the default.
+const KNOWN_MODEL_IDS: string[] = [GEMINI_MODELS.default, "gemini-2.5-flash"];
 
 // Env override so the live model swaps via one config, not code edits.
 // Treat empty/whitespace as unset and fall back to default.

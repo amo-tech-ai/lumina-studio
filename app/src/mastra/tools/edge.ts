@@ -16,6 +16,8 @@ export class EdgeFunctionError extends Error {
   }
 }
 
+const DEFAULT_TIMEOUT_MS = 30_000;
+
 /** Base URL for Supabase Edge Functions, or undefined if not configured. */
 export function resolveFunctionsUrl(): string | undefined {
   const explicit = process.env.SUPABASE_FUNCTIONS_URL;
@@ -28,12 +30,13 @@ export function resolveFunctionsUrl(): string | undefined {
  * POST to a Supabase Edge Function — the single durable-write path for agent tools.
  * Fails closed: throws if the functions URL is not configured, so a write can never
  * silently no-op. Pass the authenticated user's access token (IPI2-127); falls back
- * to the anon key only for unauthenticated/dev calls.
+ * to the anon key only for unauthenticated/dev calls. Aborts after `timeoutMs`
+ * (default 30s). Returns `undefined` for 204 / empty-body responses (no JSON crash).
  */
 export async function callEdgeFunction<T = unknown>(
   name: string,
   payload: unknown,
-  opts: { accessToken?: string } = {},
+  opts: { accessToken?: string; timeoutMs?: number } = {},
 ): Promise<T> {
   const baseUrl = resolveFunctionsUrl();
   if (!baseUrl) {
@@ -45,17 +48,36 @@ export async function callEdgeFunction<T = unknown>(
   }
 
   const anonKey = process.env.SUPABASE_ANON_KEY;
-  const token = opts.accessToken ?? anonKey;
+  // Treat an empty/whitespace token as absent so it falls back to the anon key.
+  const token = opts.accessToken?.trim() || anonKey;
 
-  const res = await fetch(`${baseUrl}/${name}`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      ...(anonKey ? { apikey: anonKey } : {}),
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    },
-    body: JSON.stringify(payload ?? {}),
-  });
+  const controller = new AbortController();
+  const timer = setTimeout(
+    () => controller.abort(),
+    opts.timeoutMs ?? DEFAULT_TIMEOUT_MS,
+  );
+
+  let res: Response;
+  try {
+    res = await fetch(`${baseUrl}/${name}`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(anonKey ? { apikey: anonKey } : {}),
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: JSON.stringify(payload ?? {}),
+      signal: controller.signal,
+    });
+  } catch (err) {
+    const aborted = err instanceof Error && err.name === "AbortError";
+    throw new EdgeFunctionError(
+      `Edge function "${name}" request ${aborted ? "timed out" : "failed"}: ` +
+        (err instanceof Error ? err.message : String(err)),
+    );
+  } finally {
+    clearTimeout(timer);
+  }
 
   if (!res.ok) {
     const detail = await res.text().catch(() => "");
@@ -65,5 +87,10 @@ export async function callEdgeFunction<T = unknown>(
       res.status,
     );
   }
-  return (await res.json()) as T;
+
+  // Handle empty / 204 No Content bodies — res.json() would throw on those.
+  if (res.status === 204) return undefined as T;
+  const text = await res.text();
+  if (!text) return undefined as T;
+  return JSON.parse(text) as T;
 }
