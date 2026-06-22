@@ -42,3 +42,6 @@ next-env.d.ts
 
 .mastra/
 
+
+# CopilotKit CLI / cloud project metadata (account-specific; contains org id)
+.copilotkit/
