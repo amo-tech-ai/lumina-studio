@@ -1,0 +1,26 @@
+app/.env.example
+  s_99ef85ddf80e97::t_c4ed36f112cf80 4,7-9
+app/src/mastra/agents/index.ts
+  s_99ef85ddf80e97::t_9673a3560ee1f7 3
+  s_99ef85ddf80e97::t_32d828a99016e3 25
+app/src/mastra/tools/edge.test.ts
+  s_99ef85ddf80e97::t_0cb5680e16b349 1-42
+app/src/mastra/tools/edge.ts
+  s_99ef85ddf80e97::t_b08863eb879049 1-69
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.9",
+  "base_commit_sha": "766d4a327e6188107a48f8cdfc7fcfc79afeb630",
+  "prompts": {},
+  "sessions": {
+    "s_99ef85ddf80e97": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "4c088e51-0a96-4c26-9f0c-3f0a635e98c2",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Sanjiv Khullar <ai@socialmediville.ca>"
+    }
+  }
+}
