@@ -1,0 +1,28 @@
+supabase/migrations/20251129080637_seed_organizer_team_members_fixed_20250128.sql
+  s_0f1212e43a548e::t_3776f7005054f4 1,3-40
+supabase/migrations/20251129080710_seed_event_rehearsals_fixed_enum_20250128.sql
+  s_0f1212e43a548e::t_1d6bd88daaa0cb 1,3-49
+supabase/migrations/20260117025226_fix_supabase_migrations_rls.sql
+  s_0f1212e43a548e::t_dc87360274baf5 3-28
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.9",
+  "base_commit_sha": "b9214015749ea39b10874a51858a83bf50e51bde",
+  "prompts": {},
+  "humans": {
+    "h_44d68aa2e2bd94": {
+      "author": "Sanjiv Khullar <ai@socialmediville.ca>"
+    }
+  },
+  "sessions": {
+    "s_0f1212e43a548e": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "f468af01-e967-4d93-8efd-97b2af12d551",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Sanjiv Khullar <ai@socialmediville.ca>"
+    }
+  }
+}
