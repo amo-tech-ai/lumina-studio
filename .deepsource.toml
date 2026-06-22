@@ -1,12 +1,17 @@
 version = 1
 
 # `app/` is a standalone Next.js operator app with its own ESLint flat config
-# (`app/eslint.config.mjs` — the CopilotKit v2 import guard) and its own CI build.
-# The root DeepSource JavaScript analyzer mis-parses its ESM files (`.mjs`/`.tsx`)
-# as scripts, raising false "import/export may appear only with sourceType: module"
-# errors. Exclude `app/**` here; its quality is enforced by its own lint + build.
+# (`app/eslint.config.mjs` — the CopilotKit v2 import guard) + its own CI `app-build`
+# job (tsc + lint + build + tests). The root DeepSource JS analyzer otherwise
+# mis-parses its ESM/TSX and flags style nits on it — false reds on every app/ PR.
+# Quality for app/ is enforced by its own CI, not DeepSource.
+#
+# Both globs are needed: `app/**/*` matches every nested file (the recursive form
+# DeepSource honors per-file), and `app/**` covers the directory entry. `app/` has
+# its own package.json, so the bare `app/**` alone did not exclude its sources.
 exclude_patterns = [
   "app/**",
+  "app/**/*",
   "**/node_modules/**",
   "dist/**",
 ]
