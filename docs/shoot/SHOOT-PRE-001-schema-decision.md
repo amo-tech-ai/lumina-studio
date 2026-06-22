@@ -40,7 +40,7 @@ All tables use `brand_id → brands.id` as the ownership anchor. RLS policies sc
 
 ### Option B — Extend FashionOS `shoots` table
 
-Add `brand_id uuid references brands(id)` to the existing table; make `designer_id` nullable; backfill where possible.
+Add `brand_id uuid references brands(id)` to the existing table; backfill where possible. (`designer_id` is **already nullable** in the live schema — `20251129061731_create_shoots_table_service_booking_fixed_20250128.sql:31` defines it `references public.profiles(id) on delete restrict` with no NOT NULL — so no change is needed there; only call out a `designer_id` constraint change separately if one is actually required.)
 
 **Pros:** Preserves any historical records.
 
@@ -66,7 +66,12 @@ Add `brand_id uuid references brands(id)` to the existing table; make `designer_
 
 ## If Option A is chosen
 
-Proceed to IPI2-111 with the schema in `docs/shoot/12-shoot-schema.md`. All new tables use `brand_id` FK. Legacy `shoots` table is left in place (read-only) and can be dropped in a future cleanup migration after confirming no active references.
+Proceed to IPI2-111 with the schema in `docs/shoot/12-shoot-schema.md`. All new tables use `brand_id` FK. The legacy `shoots` table is left in place (read-only) and may be dropped in a **future** cleanup migration — but only after the two known live dependencies on it are removed or migrated:
+
+1. **`commerce_product_links.shoot_id` foreign key** → `public.shoots(id)` (`20260614000000_ipix_platform_mvp.sql:58`, `on delete set null`). Repoint or drop this FK first, or the `DROP TABLE` fails.
+2. **Runtime smoke check** — `scripts/verify-rls.mjs:222` queries `public.shoots` (`npm run supabase:verify-rls`, PLT-002). Update or remove that check so the RLS smoke test doesn't break once the table is gone.
+
+Whoever executes the cleanup migration must clear both before dropping `shoots`.
 
 ## If Option B is chosen
 
