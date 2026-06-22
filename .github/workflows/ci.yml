@@ -27,3 +27,34 @@ jobs:
 
       - name: Unit tests
         run: npm run test
+
+  # Next.js operator app (app/) — vendored standalone project with its own
+  # package-lock + ESLint flat config. Validated independently so a Vite env
+  # error never blocks this job (or vice-versa). No real secrets required:
+  # the build is static + the Mastra registry guard only checks agent keys,
+  # not API key values.
+  app-build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: app
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Type-check (tsc --noEmit)
+        run: npx tsc --noEmit
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Production build
+        run: npm run build
