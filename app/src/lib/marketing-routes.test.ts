@@ -92,3 +92,74 @@ describe("route group isolation (no CopilotKit on marketing)", () => {
     expect(src).toMatch(/index:\s*false/);
   });
 });
+
+const HOME_SECTION_IDS = ["services", "portfolio", "process", "contact"] as const;
+
+const HOME_ANCHOR_REFS = [
+  "/#portfolio",
+  "/#process",
+  "/#contact",
+  "/#services",
+] as const;
+
+describe("home page anchor targets (header/footer/not-found)", () => {
+  it("defines section ids on home page components for in-page nav", () => {
+    const componentDir = resolve(
+      fileURLToPath(new URL(".", import.meta.url)),
+      "../components/marketing",
+    );
+    const found = new Set<string>();
+    for (const file of ["services-section.tsx", "portfolio-section.tsx", "process-section.tsx", "cta-section.tsx"]) {
+      const src = readFileSync(join(componentDir, file), "utf8");
+      for (const m of src.matchAll(/id="([^"]+)"/g)) found.add(m[1]);
+    }
+    for (const id of HOME_SECTION_IDS) {
+      expect(found.has(id), `missing #${id} section`).toBe(true);
+    }
+  });
+
+  it("keeps header/footer/not-found hash links aligned with home section ids", () => {
+    const files = [
+      join(APP_DIR, "not-found.tsx"),
+      resolve(
+        fileURLToPath(new URL(".", import.meta.url)),
+        "../components/marketing/header.tsx",
+      ),
+      resolve(
+        fileURLToPath(new URL(".", import.meta.url)),
+        "../components/marketing/footer.tsx",
+      ),
+    ];
+    const combined = files.map((f) => readFileSync(f, "utf8")).join("\n");
+    for (const href of HOME_ANCHOR_REFS) {
+      expect(combined, href).toContain(`href="${href}"`);
+      const id = href.replace("/#", "");
+      expect(HOME_SECTION_IDS).toContain(id);
+    }
+  });
+});
+
+describe("login page SEO guard (WEB-012)", () => {
+  it("marks /login as noindex so operator auth UI is not indexed", () => {
+    const src = readFileSync(join(APP_DIR, "(marketing)/login/page.tsx"), "utf8");
+    expect(src).toMatch(/robots:\s*\{[^}]*index:\s*false/s);
+  });
+});
+
+describe("service page metadata contract (WEB-014)", () => {
+  it("exports title, description, and openGraph on every service page", () => {
+    const serviceDir = join(APP_DIR, "(marketing)/services");
+    const pages = readdirSync(serviceDir, { withFileTypes: true })
+      .filter((e) => e.isDirectory())
+      .map((e) => join(serviceDir, e.name, "page.tsx"));
+
+    expect(pages.length).toBe(9);
+    for (const pagePath of pages) {
+      const src = readFileSync(pagePath, "utf8");
+      expect(src, pagePath).toMatch(/export const metadata:\s*Metadata/);
+      expect(src, pagePath).toMatch(/description:/);
+      expect(src, pagePath).toMatch(/openGraph:/);
+      expect(src, pagePath).toMatch(/images:\s*\["\/images\//);
+    }
+  });
+});

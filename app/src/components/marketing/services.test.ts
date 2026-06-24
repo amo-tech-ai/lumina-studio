@@ -26,4 +26,16 @@ describe("SERVICES nav registry (WEB-001…011)", () => {
       expect(existsSync(pagePath), `${label} → ${pagePath}`).toBe(true);
     }
   });
+
+  it("footer column slices partition all services (no orphan nav links)", () => {
+    const col1 = SERVICES.slice(0, 5);
+    const col2 = SERVICES.slice(5);
+    expect(col1.length + col2.length).toBe(SERVICES.length);
+    expect(col1.length).toBeGreaterThan(0);
+    expect(col2.length).toBeGreaterThan(0);
+    const covered = new Set([...col1, ...col2].map((s) => s.href));
+    for (const { href } of SERVICES) {
+      expect(covered.has(href), href).toBe(true);
+    }
+  });
 });

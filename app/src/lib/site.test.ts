@@ -23,4 +23,22 @@ describe("SITE_URL (WEB-014 SEO)", () => {
     const url = new URL(SITE_URL);
     expect(url.protocol).toBe("https:");
   });
+
+  it("prepends https:// when NEXT_PUBLIC_SITE_URL omits the scheme", async () => {
+    vi.stubEnv("NEXT_PUBLIC_SITE_URL", "staging.fashionos.co");
+    const { SITE_URL } = await import("./site");
+    expect(SITE_URL).toBe("https://staging.fashionos.co");
+  });
+
+  it("strips path/query so metadataBase stays origin-only", async () => {
+    vi.stubEnv("NEXT_PUBLIC_SITE_URL", "https://fashionos.co/preview?ref=test");
+    const { SITE_URL } = await import("./site");
+    expect(SITE_URL).toBe("https://fashionos.co");
+  });
+
+  it("falls back to production when NEXT_PUBLIC_SITE_URL is malformed", async () => {
+    vi.stubEnv("NEXT_PUBLIC_SITE_URL", "not a valid url!!!");
+    const { SITE_URL } = await import("./site");
+    expect(SITE_URL).toBe("https://fashionos.co");
+  });
 });
