@@ -1,0 +1,22 @@
+app/src/mastra/tools/weather.test.ts
+  s_9b5029d3685278::t_88b6096de892a1 130
+  s_9b5029d3685278::t_6ea1738d16bb92 61,80,90,105
+  s_9b5029d3685278::t_54436c72170c8b 2-6
+  s_9b5029d3685278::t_dd82e7a52ed6e4 129
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.11",
+  "base_commit_sha": "ff2969fd8c5f1c5012ed65339a425e552b2f63cc",
+  "prompts": {},
+  "sessions": {
+    "s_9b5029d3685278": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "890fea56-a29f-4ea1-93a3-e5947f4859b8",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": "Sanjiv Khullar <ai@socialmediville.ca>"
+    }
+  }
+}
