@@ -1,0 +1,30 @@
+supabase/tests/web015/run.sh
+  s_99ef85ddf80e97::t_d851e976133e0c 1-15,20-26
+  s_99ef85ddf80e97::t_9a2d7cbf7f6589 16-19
+supabase/tests/web015/bootstrap.sql
+  s_99ef85ddf80e97::t_53dbbf83a9c7f4 29-30
+  s_99ef85ddf80e97::t_e8e992d0e3d114 1-28
+supabase/tests/web015/rls_claim_test.sql
+  s_99ef85ddf80e97::t_569d448bc3bed1 1-27,29-88
+  s_99ef85ddf80e97::t_c20563dd9da935 28
+supabase/migrations/20260623000000_web015_chatbot_lead_drafts.sql
+  s_99ef85ddf80e97::t_dafdafc6330d83 1-66,75-147
+  s_99ef85ddf80e97::t_75766eefbbd137 148-149
+  s_99ef85ddf80e97::t_48a226a5588d39 67-74
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.11",
+  "base_commit_sha": "2f7be4c0ce976c8cd8f00273efa01b93e5060eb7",
+  "prompts": {},
+  "sessions": {
+    "s_99ef85ddf80e97": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "4c088e51-0a96-4c26-9f0c-3f0a635e98c2",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Sanjiv Khullar <ai@socialmediville.ca>"
+    }
+  }
+}
