@@ -1,0 +1,21 @@
+app/src/components/marketing/login-form.tsx
+  s_99ef85ddf80e97::t_e4a24a1f1b1a6c 56
+  s_99ef85ddf80e97::t_d1535f326333a2 3
+  s_99ef85ddf80e97::t_1bb70bdfd1a84c 22-24,28-29
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.11",
+  "base_commit_sha": "a9f7b5bb2ec2f8e29c377d93781e48a20315d448",
+  "prompts": {},
+  "sessions": {
+    "s_99ef85ddf80e97": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "4c088e51-0a96-4c26-9f0c-3f0a635e98c2",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Sanjiv Khullar <ai@socialmediville.ca>"
+    }
+  }
+}
