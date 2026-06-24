@@ -24,6 +24,7 @@
     "@mastra/core": "1.41.0",
     "@mastra/libsql": "1.1.0-alpha.2",
     "@mastra/memory": "1.0.1-alpha.1",
+    "@supabase/supabase-js": "^2.108.2",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "hono": "^4",
