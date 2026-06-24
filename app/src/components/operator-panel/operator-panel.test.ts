@@ -40,7 +40,7 @@ describe("OperatorPanel — navigateTo frontend tool (IPI2-82)", () => {
     );
     expect(match).not.toBeNull();
     const sections = JSON.parse(
-      match![1].replace(/"/g, '"'),
+      (match?.[1] ?? "[]").replace(/"/g, '"'),
     ) as string[];
     expect(sections).toEqual([...OPERATOR_SECTIONS]);
   });
