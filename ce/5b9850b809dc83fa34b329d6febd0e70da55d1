@@ -1,0 +1,21 @@
+changelog.md
+  s_99ef85ddf80e97::t_76a2bfbf91888d 11-23
+todo.md
+  s_99ef85ddf80e97::t_108799efea1e0e 10-35
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.11",
+  "base_commit_sha": "ce5b9850b809dc83fa34b329d6febd0e70da55d1",
+  "prompts": {},
+  "sessions": {
+    "s_99ef85ddf80e97": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "4c088e51-0a96-4c26-9f0c-3f0a635e98c2",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Sanjiv Khullar <ai@socialmediville.ca>"
+    }
+  }
+}
