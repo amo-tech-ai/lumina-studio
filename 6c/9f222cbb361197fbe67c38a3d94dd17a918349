@@ -1,0 +1,19 @@
+app/src/app/api/marketing-chat/[[...slug]]/route.ts
+  s_9b5029d3685278::t_22be70c96559bb 31
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.11",
+  "base_commit_sha": "6c9f222cbb361197fbe67c38a3d94dd17a918349",
+  "prompts": {},
+  "sessions": {
+    "s_9b5029d3685278": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "890fea56-a29f-4ea1-93a3-e5947f4859b8",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": "AMO Tech AI <it@socialmediaville.ca>"
+    }
+  }
+}
