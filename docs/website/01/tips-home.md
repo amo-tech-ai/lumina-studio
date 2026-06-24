@@ -1,0 +1,1 @@
+In the Home page, add a new section after the 'AI Workflow Diagram' that showcases the 'FashionOS AI Suite' with the following tools: Photo and video shoot builder , Creative Assistant, instagram Caption Generator, and Storyboard Builder. Use icons and brief descriptions for each tool.
