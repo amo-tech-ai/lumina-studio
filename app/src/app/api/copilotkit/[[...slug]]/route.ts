@@ -6,6 +6,7 @@ import {
 } from "@copilotkit/runtime/v2";
 import { MastraAgent } from "@ag-ui/mastra";
 import { mastra } from "@/mastra";
+import { resolveOperatorUser } from "@/lib/auth";
 import { handle } from "hono/vercel";
 
 const runtime = new CopilotRuntime({
@@ -26,9 +27,9 @@ const runtime = new CopilotRuntime({
           wsUrl:
             process.env.INTELLIGENCE_GATEWAY_WS_URL ?? "ws://localhost:4401",
         }),
-        // Demo stub — replace with your own auth-derived user identity (e.g. OIDC)
-        // before any multi-user deployment, or all users share one thread history.
-        identifyUser: () => ({ id: "demo-user", name: "Demo User" }),
+        // IPI2-127: real Supabase-derived identity (fail-closed in production).
+        // Replaces the demo-user stub so per-operator thread/memory stay isolated.
+        identifyUser: (request: Request) => resolveOperatorUser(request),
         licenseToken: process.env.COPILOTKIT_LICENSE_TOKEN,
       };
       })()
