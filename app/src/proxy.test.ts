@@ -77,6 +77,17 @@ describe("proxy — operator auth gate (IPI2-127)", () => {
     expect(res.headers.get("location")).toContain("/login");
   });
 
+  it("rejects a decoded token that is not JWT-shaped (3 segments)", () => {
+    vi.stubEnv("OPERATOR_AUTH_ENABLED", "true");
+    const res = proxy(
+      appRequest("/app/brand", [
+        { name: "sb-proj-auth-token", value: sessionCookieValue("only-two.parts") },
+      ]),
+    );
+    expect(res.status).toBe(307);
+    expect(res.headers.get("location")).toContain("/login");
+  });
+
   it("scopes the middleware matcher to /app/* routes", () => {
     expect(config.matcher).toEqual(["/app/:path*"]);
   });

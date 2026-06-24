@@ -42,6 +42,15 @@ describe("createSupabaseBrowserClient (IPI2-127)", () => {
     expect(() => createSupabaseBrowserClient()).toThrow(/not configured/);
   });
 
+  it("throws when only the Supabase URL is missing", async () => {
+    const { createSupabaseBrowserClient } = await loadClient({
+      NEXT_PUBLIC_SUPABASE_URL: undefined,
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: "public-anon-key",
+    });
+
+    expect(() => createSupabaseBrowserClient()).toThrow(/not configured/);
+  });
+
   it("creates a browser client with the public URL + anon key", async () => {
     const createBrowserClient = vi.fn().mockReturnValue({ auth: {} });
     vi.doMock("@supabase/ssr", () => ({ createBrowserClient }));
