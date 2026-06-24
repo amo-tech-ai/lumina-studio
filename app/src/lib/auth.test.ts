@@ -1,9 +1,30 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { extractAccessToken, resolveOperatorUser } from "./auth";
+import {
+  accessTokenFromCookieString,
+  extractAccessToken,
+  resolveOperatorUser,
+} from "./auth";
 
 function req(headers: Record<string, string>): Request {
   return new Request("http://localhost/api/copilotkit", { headers });
 }
+
+describe("accessTokenFromCookieString", () => {
+  it("sorts out-of-order numbered chunks before decoding", () => {
+    const jwt = "aaa.bbb.ccc";
+    const b64 = btoa(JSON.stringify([jwt]));
+    const mid = Math.floor(b64.length / 2);
+    const cookie = `sb-proj-auth-token.1=${b64.slice(mid)}; sb-proj-auth-token.0=base64-${b64.slice(0, mid)}`;
+    expect(accessTokenFromCookieString(cookie)).toBe(jwt);
+  });
+
+  it("decodes URL-encoded cookie values", () => {
+    const jwt = "header.payload.signature";
+    const raw = `base64-${btoa(JSON.stringify([jwt]))}`;
+    const cookie = `sb-proj-auth-token=${encodeURIComponent(raw)}`;
+    expect(accessTokenFromCookieString(cookie)).toBe(jwt);
+  });
+});
 
 describe("extractAccessToken", () => {
   it("reads a Bearer token", () => {

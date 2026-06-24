@@ -66,6 +66,32 @@ describe("proxy — operator auth gate (IPI2-127)", () => {
     expect(res.status).toBe(200);
   });
 
+  it("reconstructs a session split across multiple cookie chunks (.0 + .1)", () => {
+    vi.stubEnv("OPERATOR_AUTH_ENABLED", "true");
+    const jwt = `${"h".repeat(40)}.payload.signature`;
+    const b64 = btoa(JSON.stringify([jwt]));
+    const mid = Math.floor(b64.length / 2);
+    const res = proxy(
+      appRequest("/app/brand", [
+        { name: "sb-proj-auth-token.0", value: `base64-${b64.slice(0, mid)}` },
+        { name: "sb-proj-auth-token.1", value: b64.slice(mid) },
+      ]),
+    );
+    expect(res.status).toBe(200);
+    expect(res.headers.get("location")).toBeNull();
+  });
+
+  it("rejects a decoded cookie token that is not JWT-shaped (needs 3 parts)", () => {
+    vi.stubEnv("OPERATOR_AUTH_ENABLED", "true");
+    const res = proxy(
+      appRequest("/app/brand", [
+        { name: "sb-proj-auth-token", value: sessionCookieValue("only.two") },
+      ]),
+    );
+    expect(res.status).toBe(307);
+    expect(res.headers.get("location")).toContain("/login");
+  });
+
   it("rejects a spoofed cookie with the right name but junk value", () => {
     vi.stubEnv("OPERATOR_AUTH_ENABLED", "true");
     const res = proxy(
