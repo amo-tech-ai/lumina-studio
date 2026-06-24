@@ -1,0 +1,32 @@
+app/src/app/api/marketing-lead/route.ts
+  s_9b5029d3685278::t_1e0cbb054e4cb8 75-92
+app/src/app/api/marketing-lead/route.test.ts
+  s_9b5029d3685278::t_360a89b64c2587 190,195,205-238
+supabase/functions/capture-lead/index.ts
+  s_9b5029d3685278::t_a193c7a58f8e1d 275
+  s_9b5029d3685278::t_a6885d3556c872 293-298
+app/src/mastra/prompts/public-marketing.ts
+  s_9b5029d3685278::t_e54f0ac02fd49b 38
+  s_9b5029d3685278::t_f2a78a806dbafd 39-44
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.11",
+  "base_commit_sha": "2c8affbc1460f834d76734152f3fc1d7ad1b9b4f",
+  "prompts": {},
+  "humans": {
+    "h_d382fbec1d5b46": {
+      "author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  },
+  "sessions": {
+    "s_9b5029d3685278": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "890fea56-a29f-4ea1-93a3-e5947f4859b8",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
