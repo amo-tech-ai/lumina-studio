@@ -2,6 +2,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, render, screen } from "@testing-library/react";
 
+vi.mock("./threads-drawer.module.css", () => ({
+  default: new Proxy({}, { get: (_t, prop) => String(prop) }),
+}));
+
 import { ThreadsPanelGate } from "./locked-state";
 
 describe("ThreadsPanelGate — feature flag behavior", () => {
