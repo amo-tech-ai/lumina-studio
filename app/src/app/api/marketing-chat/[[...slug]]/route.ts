@@ -19,7 +19,7 @@ const publicMastra = new Mastra({
 
 const runtime = new CopilotRuntime({
   // ponytail: "public" resourceId — no user identity on this route.
-  agents: () => MastraAgent.getLocalAgents({ mastra: publicMastra, resourceId: "public" }),
+  agents: async () => MastraAgent.getLocalAgents({ mastra: publicMastra, resourceId: "public" }),
   runner: new InMemoryAgentRunner(),
 });
 

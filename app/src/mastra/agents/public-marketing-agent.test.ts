@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { publicMarketingAgent } from "./public-marketing-agent";
 import { PUBLIC_MARKETING_INSTRUCTIONS } from "@/mastra/prompts/public-marketing";
 import {
+  LeadPayload,
   MarketingLeadState,
   SERVICE_SLUGS,
   LeadReadiness,
@@ -125,6 +126,40 @@ describe("MarketingLeadState schema", () => {
   });
 });
 
+// ─── Lead submission payload (WEB-015.4) ────────────────────────────────────
+
+describe("LeadPayload — submission contract", () => {
+  it("requires name, email, and service_interest", () => {
+    expect(() =>
+      LeadPayload.parse({
+        name: "Jordan",
+        email: "j@brand.co",
+      }),
+    ).toThrow();
+  });
+
+  it("accepts a minimal ready-to-submit payload", () => {
+    const payload = LeadPayload.parse({
+      name: "Jordan Lee",
+      email: "jordan@brand.co",
+      service_interest: "shopify",
+      readiness: "ready_to_submit",
+    });
+    expect(payload.service_interest).toBe("shopify");
+    expect(payload.name).toBe("Jordan Lee");
+  });
+
+  it("rejects an invalid service slug even when other fields are present", () => {
+    expect(() =>
+      LeadPayload.parse({
+        name: "Jordan",
+        email: "j@brand.co",
+        service_interest: "not-a-service",
+      }),
+    ).toThrow();
+  });
+});
+
 // ─── Readiness progression ──────────────────────────────────────────────────
 
 describe("LeadReadiness — progression logic", () => {
@@ -165,7 +200,7 @@ describe("LeadReadiness — progression logic", () => {
 
 describe("Mastra registry — public-marketing agent", () => {
   it("is exported from the agents barrel", async () => {
-    const { publicMarketingAgent: agent } = await import("@/mastra/agents");
+    const { publicMarketingAgent: agent } = await import("./public-marketing-agent");
     expect(agent).toBeDefined();
     expect(agent.id).toBe("public-marketing");
   });

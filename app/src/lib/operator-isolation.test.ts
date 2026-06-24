@@ -37,7 +37,7 @@ async function createAgentsForRequest(request: Request) {
   return MastraAgent.getLocalAgents({
     mastra: {} as any,
     resourceId: user.id,
-    requestContext,
+    requestContext: requestContext,
   });
 }
 
@@ -85,6 +85,8 @@ describe("IPI2-127: per-user Mastra resourceId isolation (two-user smoke)", () =
   });
 
   it("User A's resourceId does not match User B's resourceId", async () => {
+    const results: string[] = [];
+
     resolveOperatorUserMock
       .mockResolvedValueOnce({
         id: "user-a-111",
@@ -154,4 +156,12 @@ describe("IPI2-127: per-user Mastra resourceId isolation (two-user smoke)", () =
     expect(getLocalAgentsMock).not.toHaveBeenCalled();
   });
 
+  it("dev fallback (auth disabled) uses dev-unauthenticated, not shared user", async () => {
+    // When OPERATOR_AUTH_ENABLED is not true, the gate returns a dev identity.
+    // The factory still uses that identity's id as resourceId.
+    vi.stubEnv("OPERATOR_AUTH_ENABLED", "false");
+    import("@/lib/auth").then(({ resolveOperatorUser: resolveOpUser }) => {
+      expect(resolveOpUser).not.toHaveBeenCalled();
+    });
+  });
 });

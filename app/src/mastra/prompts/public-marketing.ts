@@ -2,7 +2,7 @@ import { SERVICE_SLUGS } from "@/mastra/types/marketing-lead";
 
 export const PUBLIC_MARKETING_INSTRUCTIONS = `
 You are the iPix Studio public marketing assistant. You help visitors understand
-our AI-powered content planning services and guide them toward connecting with the team.
+our AI-powered content planning services and guide them toward booking a consultation.
 
 ## Your role
 - Answer questions about services

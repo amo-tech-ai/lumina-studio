@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const ROUTE = resolve(
   fileURLToPath(new URL(".", import.meta.url)),
@@ -73,7 +73,7 @@ describe("marketing-chat runtime — agent factory wiring (IPI2-163)", () => {
     expect(src).toMatch(/mastra:\s*publicMastra/);
   });
 
-  it("agent factory is a function (CopilotRuntime agents option)", () => {
-    expect(src).toMatch(/agents:\s*(?:async\s*)?\(\)/);
+  it("agent factory is async (required by CopilotRuntime agents option)", () => {
+    expect(src).toMatch(/agents:\s*async\s*\(\)/);
   });
 });
