@@ -20,13 +20,26 @@ export function extractAccessToken(request: Request): string | undefined {
   if (authHeader && /^Bearer\s+/i.test(authHeader)) {
     return authHeader.replace(/^Bearer\s+/i, "").trim() || undefined;
   }
-  const cookie = request.headers.get("cookie");
+  return accessTokenFromCookieString(request.headers.get("cookie"));
+}
+
+/**
+ * Extract the Supabase access token from a Cookie header string. Large sessions
+ * are split across numbered chunks (`sb-<ref>-auth-token.0` / `.1` / …); collect
+ * and concatenate every chunk in order before base64/JSON decoding.
+ */
+export function accessTokenFromCookieString(
+  cookie: string | null,
+): string | undefined {
   if (!cookie) return undefined;
-  // Supabase stores the session as base64 JSON in sb-<ref>-auth-token (may be chunked .0/.1).
-  const match = cookie.match(/sb-[^=;]*-auth-token(?:\.0)?=([^;]+)/);
-  if (!match) return undefined;
+  const chunks: Array<{ idx: number; value: string }> = [];
+  for (const m of cookie.matchAll(/sb-[^=;]*-auth-token(?:\.(\d+))?=([^;]+)/g)) {
+    chunks.push({ idx: m[1] === undefined ? 0 : Number(m[1]), value: m[2] });
+  }
+  if (chunks.length === 0) return undefined;
+  chunks.sort((a, b) => a.idx - b.idx);
   try {
-    let raw = decodeURIComponent(match[1]);
+    let raw = chunks.map((c) => decodeURIComponent(c.value)).join("");
     if (raw.startsWith("base64-")) raw = atob(raw.slice("base64-".length));
     const parsed = JSON.parse(raw);
     return Array.isArray(parsed) ? parsed[0] : parsed?.access_token;

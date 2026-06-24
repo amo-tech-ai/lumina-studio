@@ -34,6 +34,14 @@ describe("extractAccessToken", () => {
     expect(extractAccessToken(req({ cookie }))).toBe("chunked-jwt");
   });
 
+  it("reconstructs a session split across multiple chunks (.0 + .1)", () => {
+    const jwt = `${"h".repeat(40)}.payload.signature`;
+    const b64 = btoa(JSON.stringify([jwt]));
+    const mid = Math.floor(b64.length / 2);
+    const cookie = `sb-proj-auth-token.0=base64-${b64.slice(0, mid)}; sb-proj-auth-token.1=${b64.slice(mid)}`;
+    expect(extractAccessToken(req({ cookie }))).toBe(jwt);
+  });
+
   it("reads access_token from object-shaped session JSON", () => {
     const session = JSON.stringify({ access_token: "object-jwt", refresh_token: "r" });
     const cookie = `sb-proj-auth-token=base64-${btoa(session)}`;
