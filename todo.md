@@ -47,8 +47,16 @@ Branch `ipi/web-marketing-migration` · commit `8fd25f0` · **readiness 95/100**
 - [x] **Phase 0.1** — DB schema + RLS + `claim_lead_draft` RPC (**PR #48 open**, IPI2-160); 6 RLS/claim proofs green; **not yet `supabase:push`-ed**
 - [x] **Phase 0.3** — `public-marketing-agent` (Mastra + `gemini-3.5-flash`); stateless, no tools, public; DONE
 - [x] **Phase 1 — runtime** — `/api/marketing-chat` (IPI2-163) live on `www.ipix.co`; `single-route` + `LibSQLStore` + `default` alias; 13/13 tests; deployed `7e8f3a6`
-- [x] `capture-lead` edge fn (IPI2-161) — Done (built + deployed); agent has no tool to call it yet
-- [ ] **Next: IPI2-167** — wire `captureLeadDraft` tool to agent → edge fn → lead saved to Supabase
+- [x] `capture-lead` edge fn (IPI2-161) — Done (built + deployed)
+- [x] **IPI2-167** — Lead capture workflow: agent prompt → `capture_lead` tool → proxy → edge fn → `lead_intake_drafts`
+  - [x] B1: agent prompt calls `capture_lead` at `ready_to_submit`
+  - [x] B2: DB tables confirmed on remote (PR #48 migration applied)
+  - [x] B3: `claimToken` set as httpOnly cookie in `/api/marketing-lead`; never exposed to JS
+  - [x] Security hardening: proxy secret gate, idempotency, ownership check, SSRF guard, email normalize, payload size limit (v3 deployed)
+  - [x] 243/243 tests green
+  - ⚠️ **ACTION NEEDED:** Set `CAPTURE_LEAD_PROXY_SECRET` in Vercel env vars + Supabase edge secrets to activate cookie flow
+  - ⚠️ **Live e2e test pending** after env var is set
+- [ ] **Next: IPI2-168** — login → `claim_lead_draft()` RPC → Brand Intake prefill (blocked on `CAPTURE_LEAD_PROXY_SECRET`)
 - [ ] URL grounding — agent has no tools; add `useSearchGrounding` or `fetch_url` tool (IPI2-166 scope)
 - [ ] Phases 2–6 — intent classify · recommend service · login-claim-prefill (gated on IPI2-83/127) · analytics · rollout
 

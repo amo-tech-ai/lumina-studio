@@ -8,6 +8,40 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### 2026-06-24 — IPI2-167 complete: lead capture wired + edge fn hardened
+
+**WEB-015.8 Lead Capture Workflow — commits `2c8affb`, `f7f00b8`, `0e0f8c1`**
+
+**IPI2-167 — 3 blockers resolved:**
+- **B1 (prompt):** `public-marketing-agent` prompt now instructs agent to call `capture_lead` tool at `ready_to_submit` before responding to visitor.
+- **B2 (DB):** Confirmed via Supabase MCP — all 4 tables live on remote; migration `20260623000000_web015_chatbot_lead_drafts` applied. B2 was a stale claim.
+- **B3 (cookie):** `claimToken` returned server-to-server from edge fn to Next.js proxy; proxy sets `HttpOnly; Secure; SameSite=Strict; Max-Age=604800` cookie. Token never reaches browser JS.
+- **Bug fix:** `/api/marketing-lead` was accessing `data.draftId` but `jsonResponse()` wraps in `{ ok: true, data: {...} }` — `draftId` was always `undefined` in prod. Fixed by returning flat JSON from edge fn.
+- **`status="ready"`:** edge fn now inserts `status: "ready"` (was `"draft"`).
+
+**`capture-lead` v3 — security hardening (`f7f00b8`):**
+- Proxy secret gate: `claimToken` only returned when `x-ipix-proxy-secret` header matches `CAPTURE_LEAD_PROXY_SECRET` env var
+- Idempotency: updates existing draft for a conversation instead of creating duplicates
+- `conversation_id` ownership verified against `anon_id` (prevents cross-session attachment)
+- Email normalized: `trim().toLowerCase()` before storage
+- `brand_url` validated with `new URL()` guard
+- `lead_answers` values must be strings
+- Payload size enforced after body parse (fallback when `content-length` absent)
+
+**`brand-intelligence` v8 — security hardening (`0e0f8c1`):**
+- SSRF: 8 private IP/hostname patterns blocked (localhost, 127.x, 10.x, 172.16-31.x, 192.168.x, 169.254.x, ::1, fc00/fe80)
+- Ownership: brand fetch + update now filter by `user_id` (defense-in-depth vs RLS)
+- Scores: replaced `delete + insert` with `upsert` on `(brand_id, score_type)` — no data loss on insert failure
+- Migration: `brand_scores_brand_id_score_type_key` unique index applied to remote
+- `sourceUrl` always set to submitted URL; model-provided value ignored
+- Body size guard (8KB) before `req.json()`
+- 25s timeout on urlContext call, 20s on structured output call
+- All profile fields validated after Gemini parse; strings trimmed; colors capped at 12
+
+**Tests: 243/243 green** (+5 new assertions for cookie, proxy secret, token stripping).
+
+**⚠️ Action required:** Set `CAPTURE_LEAD_PROXY_SECRET` in Vercel env vars + Supabase edge secrets to activate the httpOnly cookie flow end-to-end.
+
 ### 2026-06-24 — Marketing chat live on www.ipix.co (IPI2-163 · WEB-015 Phase 0.3 + Phase 1)
 
 - **`/api/marketing-chat` runtime live (IPI2-163 · commits `6226ba1`, `7e8f3a6`):** CopilotKit v2 public chat endpoint shipped and working end-to-end at `https://www.ipix.co`. Three root-cause fixes:
