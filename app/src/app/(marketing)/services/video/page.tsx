@@ -103,8 +103,8 @@ export default function VideoProductionPage() {
         </div>
       </section>
 
-      {/* PRODUCT + SOCIAL GRID */}
-      <section className="py-24 lg:py-32" style={bg}>
+      {/* PRODUCT + SOCIAL GRID (hero "View Showreel" target) */}
+      <section id="portfolio" className="py-24 lg:py-32" style={bg}>
         <div className="mx-auto max-w-7xl px-6 lg:px-12">
           <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
             <AnimatedSection className="group relative h-[400px] overflow-hidden md:col-span-2 md:h-[500px]">

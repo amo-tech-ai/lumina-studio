@@ -140,7 +140,7 @@ export default function EcommercePhotographyPage() {
           </AnimatedSection>
           <div className="mb-12 flex flex-wrap justify-center gap-4">
             {["All", "Beauty", "Apparel", "Electronics", "Luxury", "Food", "Lifestyle"].map((f) => (
-              <button key={f} type="button" className="px-4 py-2 text-xs font-medium uppercase tracking-wide" style={{ ...caption, border: "1px solid var(--mk-border)" }}>{f}</button>
+              <span key={f} className="px-4 py-2 text-xs font-medium uppercase tracking-wide" style={{ ...caption, border: "1px solid var(--mk-border)" }}>{f}</span>
             ))}
           </div>
           <div className="grid grid-cols-2 gap-1 lg:grid-cols-3">
