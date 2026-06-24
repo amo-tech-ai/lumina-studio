@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { withOperatorAuth } from "./operator-gate";
+import { OperatorAuthError, withOperatorAuth } from "./operator-gate";
 
 vi.mock("./auth", () => ({
   resolveOperatorUser: vi.fn(),
@@ -15,41 +15,47 @@ describe("withOperatorAuth — CopilotKit HTTP boundary (IPI2-127)", () => {
     vi.clearAllMocks();
   });
 
-  it("delegates without auth when OPERATOR_AUTH_ENABLED is not true", async () => {
+  it("returns dev identity without auth when OPERATOR_AUTH_ENABLED is not true", async () => {
     vi.stubEnv("OPERATOR_AUTH_ENABLED", "false");
-    const handler = vi.fn().mockResolvedValue(new Response("ok", { status: 200 }));
 
-    const res = await withOperatorAuth(new Request("http://localhost/api/copilotkit"), handler);
+    const user = await withOperatorAuth(
+      new Request("http://localhost/api/copilotkit"),
+    );
 
-    expect(res.status).toBe(200);
-    expect(handler).toHaveBeenCalledOnce();
+    expect(user.id).toBe("dev-unauthenticated");
+    expect(user.name).toContain("Dev (auth disabled)");
     expect(resolveOperatorUserMock).not.toHaveBeenCalled();
   });
 
-  it("returns 401 when auth is enabled and resolveOperatorUser fails closed", async () => {
+  it("throws OperatorAuthError when auth is enabled and resolveOperatorUser fails", async () => {
     vi.stubEnv("OPERATOR_AUTH_ENABLED", "true");
     resolveOperatorUserMock.mockRejectedValue(new Error("failing closed"));
-    const handler = vi.fn();
 
-    const res = await withOperatorAuth(new Request("http://localhost/api/copilotkit"), handler);
-
-    expect(res.status).toBe(401);
-    await expect(res.text()).resolves.toBe("Unauthorized");
-    expect(handler).not.toHaveBeenCalled();
+    await expect(
+      withOperatorAuth(new Request("http://localhost/api/copilotkit")),
+    ).rejects.toThrow(OperatorAuthError);
   });
 
-  it("delegates when auth is enabled and the operator session validates", async () => {
+  it("returns the operator user when auth is enabled and session validates", async () => {
     vi.stubEnv("OPERATOR_AUTH_ENABLED", "true");
-    resolveOperatorUserMock.mockResolvedValue({ id: "user-abc", name: "Operator" });
-    const handler = vi.fn().mockResolvedValue(new Response("stream", { status: 200 }));
+    const expectedUser = { id: "user-abc", name: "Operator" };
+    resolveOperatorUserMock.mockResolvedValue(expectedUser);
     const request = new Request("http://localhost/api/copilotkit", {
       headers: { authorization: "Bearer valid.jwt" },
     });
 
-    const res = await withOperatorAuth(request, handler);
+    const user = await withOperatorAuth(request);
 
-    expect(res.status).toBe(200);
+    expect(user).toEqual(expectedUser);
     expect(resolveOperatorUserMock).toHaveBeenCalledWith(request);
-    expect(handler).toHaveBeenCalledWith(request);
+  });
+});
+
+describe("OperatorAuthError", () => {
+  it("has the correct name and message", () => {
+    const err = new OperatorAuthError("Unauthorized");
+    expect(err).toBeInstanceOf(Error);
+    expect(err.name).toBe("OperatorAuthError");
+    expect(err.message).toBe("Unauthorized");
   });
 });
