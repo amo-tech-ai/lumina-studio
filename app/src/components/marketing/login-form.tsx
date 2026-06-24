@@ -35,10 +35,8 @@ export function LoginForm() {
     try {
       const supabase = createSupabaseBrowserClient();
       if (mode === "login") {
-        // Supabase returns a generic "Invalid login credentials" here (no
-        // account enumeration), so surfacing it directly is safe.
         const { error } = await supabase.auth.signInWithPassword({ email, password });
-        if (error) return setMessage(error.message);
+        if (error) return setMessage("Invalid email or password.");
       } else {
         const { data: signUp, error } = await supabase.auth.signUp({ email, password });
         // Never surface "User already registered" — that enumerates accounts.
@@ -49,7 +47,6 @@ export function LoginForm() {
       }
       const target = safeRedirect(new URLSearchParams(window.location.search).get("redirect"));
       router.push(target);
-      router.refresh();
     } catch {
       setMessage("Sign-in is unavailable right now. Please try again.");
     } finally {

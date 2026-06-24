@@ -54,7 +54,6 @@ describe("LoginForm — Supabase auth wiring (IPI2-127)", () => {
 
     await waitFor(() => {
       expect(push).toHaveBeenCalledWith("/app");
-      expect(refresh).toHaveBeenCalled();
     });
     expect(signInWithPassword).toHaveBeenCalledWith({
       email: "op@example.com",
@@ -86,14 +85,14 @@ describe("LoginForm — Supabase auth wiring (IPI2-127)", () => {
     });
   });
 
-  it("surfaces Supabase sign-in errors without navigating away", async () => {
+  it("shows a neutral error message and stays on the login page", async () => {
     signInWithPassword.mockResolvedValue({ error: { message: "Invalid login credentials" } });
 
     render(<LoginForm />);
     await submitCredentials();
 
     expect((await screen.findByRole("status")).textContent).toMatch(
-      "Invalid login credentials",
+      /invalid.*email.*password/i,
     );
     expect(push).not.toHaveBeenCalled();
   });
