@@ -73,7 +73,7 @@ const makeSupabaseMock = ({
     insert: orgInsert,
     select: () => chainOrg,
     single: () => Promise.resolve(makeSingle(orgError ? null : { id: orgId }, orgError)),
-    delete: () => ({ eq: () => ({ then: () => undefined }) }),
+    delete: () => ({ eq: () => Promise.resolve({ error: null }) }),
   };
 
   const chainBrand = {

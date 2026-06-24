@@ -59,7 +59,7 @@ export const createOrgAndBrand = async (
 
   if (brandErr || !brand?.id) {
     // ponytail: best-effort orphan cleanup — org was committed, brand failed
-    void supabase.from("organizations").delete().eq("id", org.id);
+    await supabase.from("organizations").delete().eq("id", org.id);
     throw new Error(brandErr?.message ?? "Failed to create brand");
   }
 

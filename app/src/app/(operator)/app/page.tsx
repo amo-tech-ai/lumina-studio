@@ -4,7 +4,10 @@ import { CommandCenter } from "@/components/command-center/command-center";
 
 // IPI-11: first-time users (0 brands) are guided to /app/onboarding.
 // Returning users land on the Command Center as before.
-const CommandCenterPage = async () => {
+const CommandCenterPage = async ({ searchParams }: { searchParams: Promise<Record<string, string>> }) => {
+  const { skip } = await searchParams;
+  if (skip === "1") return <CommandCenter />;
+
   let zeroBrands = false;
   try {
     const supabase = await createSupabaseServerClient();

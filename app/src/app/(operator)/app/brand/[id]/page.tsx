@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { scoreColor, scoreLabel } from "@/lib/brand-utils";
 
 interface Props {
   params: Promise<{ id: string }>;
@@ -16,15 +17,6 @@ interface AiProfile {
   visualIdentity?: { colors?: string[]; mood?: string };
   score?: number;
 }
-
-const scoreColor = (score: number) => {
-  if (score >= 70) return "#059669";
-  if (score >= 40) return "#D97706";
-  return "#DC2626";
-};
-
-const scoreLabel = (type: string) =>
-  type.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 
 const BrandPage = async ({ params }: Props) => {
   const { id } = await params;
