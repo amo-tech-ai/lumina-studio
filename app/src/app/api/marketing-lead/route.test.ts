@@ -196,6 +196,23 @@ describe("marketing-lead — capture-lead integration", () => {
     expect(body.website).toBeUndefined();
   });
 
+  it("merges visitor name into lead_answers for capture-lead", async () => {
+    const mockFetch = vi.fn().mockResolvedValueOnce(
+      new Response(JSON.stringify({ draftId: "d-xyz" }), { status: 200 }),
+    );
+    vi.stubGlobal("fetch", mockFetch);
+
+    const { POST } = await importRoute();
+    await POST(makeRequest({ ...VALID_BODY, name: "Alex Rivera" }));
+
+    const [, opts] = mockFetch.mock.calls[0];
+    const body = JSON.parse((opts as RequestInit).body as string);
+    expect(body.lead_answers).toMatchObject({
+      company: "Cool Brand",
+      name: "Alex Rivera",
+    });
+  });
+
   it("returns draftId and status on success", async () => {
     vi.stubGlobal(
       "fetch",

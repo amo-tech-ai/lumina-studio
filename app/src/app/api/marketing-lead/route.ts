@@ -8,6 +8,7 @@ import { SERVICE_SLUGS } from "@/mastra/types/marketing-lead";
 const SubmitLeadSchema = z.object({
   anon_id: z.string().min(1),
   email: z.string().email(),
+  name: z.string().optional(),
   service_interest: z.enum(SERVICE_SLUGS),
   message_summary: z.string().min(1),
   lead_answers: z.record(z.string()).optional().default({}),
@@ -77,12 +78,16 @@ export async function POST(request: Request): Promise<Response> {
 }
 
 function buildCaptureLeadPayload(req: SubmitLeadRequest) {
+  const leadAnswers = {
+    ...(req.lead_answers ?? {}),
+    ...(req.name && { name: req.name }),
+  };
   return {
     anon_id: req.anon_id,
     email: req.email,
     service_interest: req.service_interest,
     message_summary: req.message_summary,
-    lead_answers: req.lead_answers ?? {},
+    lead_answers: leadAnswers,
     ...(req.budget && { budget: req.budget }),
     ...(req.timeline && { timeline: req.timeline }),
     ...(req.website && { brand_url: req.website }),
