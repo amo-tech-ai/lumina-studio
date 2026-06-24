@@ -44,6 +44,7 @@ export const createOrgAndBrand = async (
     .from("brands")
     .insert({
       name: form.brandName,
+      brand_url: form.websiteUrl.trim(),
       user_id: userId,
       org_id: org.id,
       ai_profile: {
