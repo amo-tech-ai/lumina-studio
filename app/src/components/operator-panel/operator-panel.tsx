@@ -61,7 +61,7 @@ function OperatorShell({
     parameters: z.object({ section: z.enum(SECTIONS) }),
     // async required: useFrontendTool's handler signature returns Promise<unknown>.
     handler: async ({ section }) => {
-      router.push(`/${section}`);
+      router.push(`/app/${section}`);
       return `Opening ${section}.`;
     },
   });

@@ -22,35 +22,35 @@ type Section = {
 // routes; real flows arrive per their Linear issues.
 const SECTIONS: Section[] = [
   {
-    href: "/brand",
+    href: "/app/brand",
     title: "Brands",
     description: "Analyze brands, score readiness, and run intake.",
     icon: Building2,
     status: "Brand Intake → IPI2-83",
   },
   {
-    href: "/shoots",
+    href: "/app/shoots",
     title: "Shoots",
     description: "Plan shoots: shot lists, deliverables, crew, schedule.",
     icon: Camera,
     status: "Shoot Planner → IPI2-116",
   },
   {
-    href: "/assets",
+    href: "/app/assets",
     title: "Assets",
     description: "Score Asset DNA and review brand compliance.",
     icon: Images,
     status: "Asset DNA → IPI2-72",
   },
   {
-    href: "/campaigns",
+    href: "/app/campaigns",
     title: "Campaigns",
     description: "Turn brand DNA into briefs, moodboards, and content.",
     icon: Megaphone,
     status: "Creative Director → IPI2-119",
   },
   {
-    href: "/matching",
+    href: "/app/matching",
     title: "Matching",
     description: "Match brands, sponsors, designers, models, and venues.",
     icon: Sparkles,
