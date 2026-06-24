@@ -1,0 +1,24 @@
+app/src/app/api/marketing-lead/route.ts
+  s_9b5029d3685278::t_e71c0e8ea82942 54
+app/src/lib/operator-isolation.test.ts
+  s_9b5029d3685278::t_6a5869ef7157a1 157,161-163
+app/src/components/marketing/marketing-chat.tsx
+  s_9b5029d3685278::t_3a54066b32fd17 66
+  s_9b5029d3685278::t_600f8a8a296353 57
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.11",
+  "base_commit_sha": "930735ea59353bcd9b51307862a59a1ee491bfdf",
+  "prompts": {},
+  "sessions": {
+    "s_9b5029d3685278": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "890fea56-a29f-4ea1-93a3-e5947f4859b8",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": "Sanjiv Khullar <ai@socialmediville.ca>"
+    }
+  }
+}
