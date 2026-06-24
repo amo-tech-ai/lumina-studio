@@ -1,0 +1,23 @@
+supabase/tests/web015/rls_claim_test.sql
+  s_99ef85ddf80e97::t_f234941c09e8ea 18-19,32,35,37-48,73-103,107,109-115,117-128,130,140-142
+.github/workflows/ci.yml
+  s_99ef85ddf80e97::t_89e0012080e6e6 36-50
+app/src/test/web015-migration.test.ts
+  s_99ef85ddf80e97::t_13f3de86f73ddf 1-65
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.11",
+  "base_commit_sha": "87ee6bf8479a732ec3ebc7b975e272e7aa91a8e0",
+  "prompts": {},
+  "sessions": {
+    "s_99ef85ddf80e97": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "4c088e51-0a96-4c26-9f0c-3f0a635e98c2",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Sanjiv Khullar <ai@socialmediville.ca>"
+    }
+  }
+}
