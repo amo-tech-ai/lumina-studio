@@ -213,4 +213,48 @@ describe("LoginForm — Supabase auth wiring (IPI2-127)", () => {
       expect(push).toHaveBeenCalledWith("/app/brand");
     });
   });
+
+  it("normalizes email (trim + lowercase) before sign-up", async () => {
+    const user = userEvent.setup();
+    signUp.mockResolvedValue({ data: { session: null }, error: null });
+
+    render(<LoginForm />);
+    await user.click(screen.getByRole("button", { name: /sign up/i }));
+    await user.type(screen.getByLabelText(/email/i), "  New@Example.COM  ");
+    await user.type(screen.getByLabelText(/password/i), "secret12");
+    await user.click(screen.getByRole("button", { name: /create account/i }));
+
+    await waitFor(() => {
+      expect(signUp).toHaveBeenCalledWith({
+        email: "new@example.com",
+        password: "secret12",
+      });
+    });
+  });
+
+  it("ignores a second submit while sign-up is in flight", async () => {
+    let resolveSignUp!: (value: { data: { session: null }; error: null }) => void;
+    signUp.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          resolveSignUp = resolve;
+        }),
+    );
+
+    const user = userEvent.setup();
+    render(<LoginForm />);
+    await user.click(screen.getByRole("button", { name: /sign up/i }));
+    await user.type(screen.getByLabelText(/email/i), "new@example.com");
+    await user.type(screen.getByLabelText(/password/i), "secret12");
+
+    const form = document.querySelector("form");
+    if (!form) throw new Error("form not found");
+    fireEvent.submit(form);
+    fireEvent.submit(form);
+
+    expect(signUp).toHaveBeenCalledTimes(1);
+
+    resolveSignUp({ data: { session: null }, error: null });
+    await screen.findByRole("status");
+  });
 });

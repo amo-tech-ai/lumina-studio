@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { extractAccessToken, resolveOperatorUser } from "./auth";
+import { accessTokenFromCookieString, extractAccessToken, resolveOperatorUser } from "./auth";
 
 function req(headers: Record<string, string>): Request {
   return new Request("http://localhost/api/copilotkit", { headers });
@@ -54,6 +54,33 @@ describe("extractAccessToken", () => {
 
   it("returns undefined when no token is present", () => {
     expect(extractAccessToken(req({}))).toBeUndefined();
+  });
+
+  it("returns undefined for an empty Bearer token", () => {
+    expect(extractAccessToken(req({ authorization: "Bearer   " }))).toBeUndefined();
+  });
+});
+
+describe("accessTokenFromCookieString", () => {
+  it("decodes URL-encoded cookie values before base64 parsing", () => {
+    const jwt = "header.payload.signature";
+    const encoded = encodeURIComponent(`base64-${btoa(JSON.stringify([jwt]))}`);
+    expect(accessTokenFromCookieString(`sb-proj-auth-token=${encoded}`)).toBe(jwt);
+  });
+
+  it("rejects session cookies missing the base64- prefix", () => {
+    const jwt = "header.payload.signature";
+    const raw = btoa(JSON.stringify([jwt]));
+    expect(accessTokenFromCookieString(`sb-proj-auth-token=${raw}`)).toBeUndefined();
+  });
+
+  it("returns undefined when chunk indices are out of order in the header", () => {
+    const jwt = `${"h".repeat(40)}.payload.signature`;
+    const b64 = btoa(JSON.stringify([jwt]));
+    const mid = Math.floor(b64.length / 2);
+    // Deliberately reversed chunk order in the cookie string
+    const cookie = `sb-proj-auth-token.1=${b64.slice(mid)}; sb-proj-auth-token.0=base64-${b64.slice(0, mid)}`;
+    expect(accessTokenFromCookieString(cookie)).toBe(jwt);
   });
 });
 
@@ -187,6 +214,22 @@ describe("resolveOperatorUser with Supabase validation", () => {
     });
 
     await expect(resolve(req({ authorization: "Bearer orphan.jwt" }))).rejects.toThrow(
+      /failing closed/,
+    );
+  });
+
+  it("fails closed in production when Supabase returns no user without an error", async () => {
+    const getUser = vi.fn().mockResolvedValue({
+      data: { user: null },
+      error: null,
+    });
+    const { resolveOperatorUser: resolve } = await loadAuthWithSupabase(getUser, {
+      NODE_ENV: "production",
+      NEXT_PUBLIC_SUPABASE_URL: "https://proj.supabase.co",
+      SUPABASE_ANON_KEY: "anon-key",
+    });
+
+    await expect(resolve(req({ authorization: "Bearer valid.jwt" }))).rejects.toThrow(
       /failing closed/,
     );
   });

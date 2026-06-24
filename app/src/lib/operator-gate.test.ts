@@ -26,6 +26,17 @@ describe("withOperatorAuth — CopilotKit HTTP boundary (IPI2-127)", () => {
     expect(resolveOperatorUserMock).not.toHaveBeenCalled();
   });
 
+  it("delegates without auth when OPERATOR_AUTH_ENABLED is unset (default off)", async () => {
+    delete process.env.OPERATOR_AUTH_ENABLED;
+    const handler = vi.fn().mockResolvedValue(new Response("ok", { status: 200 }));
+
+    const res = await withOperatorAuth(new Request("http://localhost/api/copilotkit"), handler);
+
+    expect(res.status).toBe(200);
+    expect(handler).toHaveBeenCalledOnce();
+    expect(resolveOperatorUserMock).not.toHaveBeenCalled();
+  });
+
   it("returns 401 when auth is enabled and resolveOperatorUser fails closed", async () => {
     vi.stubEnv("OPERATOR_AUTH_ENABLED", "true");
     resolveOperatorUserMock.mockRejectedValue(new Error("failing closed"));

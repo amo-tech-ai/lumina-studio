@@ -29,6 +29,13 @@ describe("proxy — operator auth gate (IPI2-127)", () => {
     expect(res.headers.get("location")).toBeNull();
   });
 
+  it("passes through when OPERATOR_AUTH_ENABLED is unset (default off)", () => {
+    delete process.env.OPERATOR_AUTH_ENABLED;
+    const res = proxy(appRequest("/app/brand"));
+    expect(res.status).toBe(200);
+    expect(res.headers.get("location")).toBeNull();
+  });
+
   it("redirects unauthenticated /app/* requests to /login with redirect param", () => {
     vi.stubEnv("OPERATOR_AUTH_ENABLED", "true");
     const res = proxy(appRequest("/app/shoots"));
@@ -52,6 +59,15 @@ describe("proxy — operator auth gate (IPI2-127)", () => {
         { name: "sb-proj-auth-token", value: sessionCookieValue() },
       ]),
     );
+    expect(res.status).toBe(200);
+    expect(res.headers.get("location")).toBeNull();
+  });
+
+  it("allows object-shaped session cookies with access_token", () => {
+    vi.stubEnv("OPERATOR_AUTH_ENABLED", "true");
+    const jwt = "header.payload.signature";
+    const value = `base64-${btoa(JSON.stringify({ access_token: jwt, refresh_token: "r" }))}`;
+    const res = proxy(appRequest("/app/brand", [{ name: "sb-proj-auth-token", value }]));
     expect(res.status).toBe(200);
     expect(res.headers.get("location")).toBeNull();
   });
