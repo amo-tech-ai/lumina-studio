@@ -1,0 +1,25 @@
+app/src/app/api/copilotkit/[[...slug]]/route.runtime.test.ts
+  s_9b5029d3685278::t_df4af7e519f11d 46,55-57,59-65,79-80,82,85,98-100
+app/src/app/api/copilotkit/[[...slug]]/route.test.ts
+  s_9b5029d3685278::t_d5bbef53176842 45,47-55
+  s_9b5029d3685278::t_3133f9d2936cac 67,70,72-73
+  s_9b5029d3685278::t_eb1ebc38d986f0 28,33,35-36
+app/src/app/api/copilotkit/[[...slug]]/route.ts
+  s_9b5029d3685278::t_2a9bb1d5dbbc23 1,15-22,25-28,35,47-55,69-71,73,75,82
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.11",
+  "base_commit_sha": "91060ca62cae5dd61fd1514ceecd3fea6c58bfbf",
+  "prompts": {},
+  "sessions": {
+    "s_9b5029d3685278": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "890fea56-a29f-4ea1-93a3-e5947f4859b8",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": "Sanjiv Khullar <ai@socialmediville.ca>"
+    }
+  }
+}
