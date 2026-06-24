@@ -4,6 +4,7 @@ import { safeRedirect } from "./safe-redirect";
 describe("safeRedirect", () => {
   it("keeps /app and /app/* paths (with query)", () => {
     expect(safeRedirect("/app")).toBe("/app");
+    expect(safeRedirect("/app?tab=overview")).toBe("/app?tab=overview");
     expect(safeRedirect("/app/brand")).toBe("/app/brand");
     expect(safeRedirect("/app/assets?tab=review")).toBe("/app/assets?tab=review");
   });
