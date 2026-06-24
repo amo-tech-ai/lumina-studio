@@ -1,0 +1,26 @@
+app/src/lib/onboarding.ts
+  s_9b5029d3685278::t_15acbbb855b0ab 47
+app/src/app/(operator)/app/brand/[id]/page.tsx
+  s_9b5029d3685278::t_38b83db9b242ef 178
+app/src/test/onboarding.test.ts
+  s_9b5029d3685278::t_fbee53b97bd0ec 122
+app/src/app/(operator)/app/onboarding/page.tsx
+  s_9b5029d3685278::t_0df813f5bfe576 5
+  s_9b5029d3685278::t_d468d43fe65dcb 45
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.11",
+  "base_commit_sha": "d984a462775d8066c8be4e3267dc63da5c0dd6c7",
+  "prompts": {},
+  "sessions": {
+    "s_9b5029d3685278": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "890fea56-a29f-4ea1-93a3-e5947f4859b8",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
