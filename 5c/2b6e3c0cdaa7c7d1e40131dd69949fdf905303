@@ -1,0 +1,21 @@
+app/src/components/marketing/login-form.test.tsx
+  s_273812f37cdb1c::t_c177099d27da0f 88,95
+app/src/components/marketing/login-form.tsx
+  s_273812f37cdb1c::t_328653b61bb349 39
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.11",
+  "base_commit_sha": "5c2b6e3c0cdaa7c7d1e40131dd69949fdf905303",
+  "prompts": {},
+  "sessions": {
+    "s_273812f37cdb1c": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_108a80a18ffe8nGN1kWvYWb3po",
+        "model": "deepseek-v4-flash-free"
+      },
+      "human_author": "Sanjiv Khullar <ai@socialmediville.ca>"
+    }
+  }
+}
