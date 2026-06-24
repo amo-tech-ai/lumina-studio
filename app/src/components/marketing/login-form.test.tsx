@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 const { push, refresh, signInWithPassword, signUp, createSupabaseBrowserClient } = vi.hoisted(() => {
@@ -136,6 +136,66 @@ describe("LoginForm — Supabase auth wiring (IPI2-127)", () => {
     await submitCredentials();
 
     expect((await screen.findByRole("status")).textContent).toMatch(/unavailable right now/i);
+    expect(push).not.toHaveBeenCalled();
+  });
+
+  it("normalizes email (trim + lowercase) before sign-in", async () => {
+    signInWithPassword.mockResolvedValue({ error: null });
+
+    render(<LoginForm />);
+    await submitCredentials("  Op@Example.COM  ", "secret12");
+
+    await waitFor(() => {
+      expect(signInWithPassword).toHaveBeenCalledWith({
+        email: "op@example.com",
+        password: "secret12",
+      });
+    });
+  });
+
+  it("ignores a second submit while the first sign-in is in flight", async () => {
+    let resolveSignIn!: (value: { error: null }) => void;
+    signInWithPassword.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          resolveSignIn = resolve;
+        }),
+    );
+
+    const user = userEvent.setup();
+    render(<LoginForm />);
+    await user.type(screen.getByLabelText(/email/i), "op@example.com");
+    await user.type(screen.getByLabelText(/password/i), "secret12");
+
+    const form = document.querySelector("form");
+    if (!form) throw new Error("form not found");
+    fireEvent.submit(form);
+    fireEvent.submit(form);
+
+    expect(signInWithPassword).toHaveBeenCalledTimes(1);
+
+    resolveSignIn({ error: null });
+    await waitFor(() => {
+      expect(push).toHaveBeenCalledWith("/app");
+    });
+  });
+
+  it("shows a generic sign-up error instead of enumerating accounts", async () => {
+    const user = userEvent.setup();
+    signUp.mockResolvedValue({
+      data: { session: null },
+      error: { message: "User already registered" },
+    });
+
+    render(<LoginForm />);
+    await user.click(screen.getByRole("button", { name: /sign up/i }));
+    await user.type(screen.getByLabelText(/email/i), "existing@example.com");
+    await user.type(screen.getByLabelText(/password/i), "secret12");
+    await user.click(screen.getByRole("button", { name: /create account/i }));
+
+    const status = await screen.findByRole("status");
+    expect(status.textContent).toMatch(/If this email is eligible/i);
+    expect(status.textContent).not.toMatch(/already registered/i);
     expect(push).not.toHaveBeenCalled();
   });
 });
