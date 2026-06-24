@@ -1,0 +1,39 @@
+docs/website/02/marketing-next-plan.md
+  s_99ef85ddf80e97::t_2205ae5b03c348 65,86,389,402
+app/src/app/(marketing)/services/amazon/page.tsx
+  s_99ef85ddf80e97::t_3571ff936f131e 284
+app/src/components/marketing/services-section.tsx
+  s_99ef85ddf80e97::t_3571ff936f131e 31
+app/src/app/(marketing)/services/video/page.tsx
+  s_99ef85ddf80e97::t_3571ff936f131e 212
+app/src/app/(marketing)/services/instagram/page.tsx
+  s_99ef85ddf80e97::t_3571ff936f131e 224
+app/src/components/marketing/portfolio-section.tsx
+  s_99ef85ddf80e97::t_3571ff936f131e 27
+app/src/app/(marketing)/services/shopify/page.tsx
+  s_99ef85ddf80e97::t_3571ff936f131e 265
+app/src/components/marketing/header.tsx
+  s_99ef85ddf80e97::t_31589a2155744a 42-43,45-51
+app/src/components/marketing/cta-section.tsx
+  s_99ef85ddf80e97::t_e96a0329f62823 40-41,43-44
+app/src/app/(marketing)/services/clothing/page.tsx
+  s_99ef85ddf80e97::t_3571ff936f131e 113
+app/src/lib/site.ts
+  s_99ef85ddf80e97::t_f78b6c4227cc4b 4-18
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.11",
+  "base_commit_sha": "29c9ab780c498032c7106900239d7d998a006a6f",
+  "prompts": {},
+  "sessions": {
+    "s_99ef85ddf80e97": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "4c088e51-0a96-4c26-9f0c-3f0a635e98c2",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Sanjiv Khullar <ai@socialmediville.ca>"
+    }
+  }
+}
