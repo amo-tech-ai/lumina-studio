@@ -165,4 +165,29 @@ describe("resolveOperatorUser with Supabase validation", () => {
       /failing closed/,
     );
   });
+
+  it("uses NEXT_PUBLIC_SUPABASE_ANON_KEY when SUPABASE_ANON_KEY is unset", async () => {
+    const getUser = vi.fn().mockResolvedValue({
+      data: { user: { id: "user-public-key", email: "op@example.com", user_metadata: {} } },
+      error: null,
+    });
+    const { resolveOperatorUser: resolve } = await loadAuthWithSupabase(getUser, {
+      NODE_ENV: "production",
+      NEXT_PUBLIC_SUPABASE_URL: "https://proj.supabase.co",
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: "public-anon-key",
+    });
+
+    await resolve(req({ authorization: "Bearer valid.jwt" }));
+    expect(getUser).toHaveBeenCalledWith("valid.jwt");
+  });
+
+  it("fails closed in production when a token is present but Supabase env is missing", async () => {
+    const { resolveOperatorUser: resolve } = await loadAuthWithSupabase(vi.fn(), {
+      NODE_ENV: "production",
+    });
+
+    await expect(resolve(req({ authorization: "Bearer orphan.jwt" }))).rejects.toThrow(
+      /failing closed/,
+    );
+  });
 });
