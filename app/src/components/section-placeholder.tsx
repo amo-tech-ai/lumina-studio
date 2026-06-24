@@ -13,7 +13,7 @@ export function SectionPlaceholder({
   return (
     <div className="min-h-screen p-8">
       <Link
-        href="/"
+        href="/app"
         className="text-sm text-[var(--muted-foreground)] hover:underline"
       >
         ← Command Center
