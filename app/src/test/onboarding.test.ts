@@ -1,4 +1,5 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi } from "vitest";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { validateUrl, slugify, createOrgAndBrand } from "@/lib/onboarding";
 
 // IPI-11 — onboarding wizard unit tests
@@ -25,35 +26,36 @@ describe("validateUrl", () => {
 
 describe("slugify", () => {
   it("lowercases and replaces spaces with hyphens", () => {
-    const s = slugify("My Brand Name");
-    expect(s).toMatch(/^my-brand-name-[a-z0-9]{5}$/);
+    const slug = slugify("My Brand Name");
+    expect(slug).toMatch(/^my-brand-name-[a-z0-9]{5}$/);
   });
 
   it("strips leading/trailing hyphens", () => {
-    const s = slugify("  Brand  ");
-    expect(s).toMatch(/^brand-/);
+    const slug = slugify("  Brand  ");
+    expect(slug).toMatch(/^brand-/);
   });
 
   it("appends 5-char random suffix for uniqueness", () => {
-    const a = slugify("test");
-    const b = slugify("test");
-    expect(a).not.toBe(b);
+    const slugA = slugify("test");
+    const slugB = slugify("test");
+    expect(slugA).not.toBe(slugB);
   });
 
   it("truncates to 50 chars before suffix", () => {
     const long = "a".repeat(80);
-    const s = slugify(long);
-    expect(s.length).toBeLessThanOrEqual(56); // 50 + '-' + 5
+    const slug = slugify(long);
+    expect(slug.length).toBeLessThanOrEqual(56); // 50 + '-' + 5
   });
 });
 
 // --- Supabase mock helpers ---
 
-function makeSingle(data: any, error: any = null) {
-  return { data, error };
-}
+type DbError = { message: string } | null;
 
-function makeSupabaseMock({
+const makeSingle = (data: { id: string } | null, error: DbError = null) =>
+  ({ data, error });
+
+const makeSupabaseMock = ({
   orgId = "org-123",
   brandId = "brand-456",
   orgError = null,
@@ -61,16 +63,9 @@ function makeSupabaseMock({
 }: {
   orgId?: string;
   brandId?: string;
-  orgError?: any;
-  brandError?: any;
-} = {}) {
-  const insertMock = vi.fn();
-  const selectMock = vi.fn();
-  const singleMock = vi.fn();
-  const eqMock = vi.fn();
-
-  let callCount = 0;
-
+  orgError?: DbError;
+  brandError?: DbError;
+} = {}) => {
   const chainOrg = {
     insert: () => chainOrg,
     select: () => chainOrg,
@@ -91,11 +86,10 @@ function makeSupabaseMock({
     from: vi.fn((table: string) => {
       if (table === "organizations") return chainOrg;
       if (table === "brands") return chainBrand;
-      if (table === "brand_scores") return chainScore;
       return chainScore;
     }),
   };
-}
+};
 
 const FORM = {
   brandName: "Test Brand",
@@ -108,14 +102,14 @@ const FORM = {
 describe("createOrgAndBrand", () => {
   it("creates org and brand, returns their IDs", async () => {
     const supabase = makeSupabaseMock({ orgId: "org-1", brandId: "brand-2" });
-    const result = await createOrgAndBrand(supabase, "user-123", FORM, null);
+    const result = await createOrgAndBrand(supabase as unknown as SupabaseClient, "user-123", FORM, null);
     expect(result.orgId).toBe("org-1");
     expect(result.brandId).toBe("brand-2");
   });
 
   it("calls organizations.insert with owner_id and org_id", async () => {
     const supabase = makeSupabaseMock();
-    await createOrgAndBrand(supabase, "user-abc", FORM, null);
+    await createOrgAndBrand(supabase as unknown as SupabaseClient, "user-abc", FORM, null);
     expect(supabase.from).toHaveBeenCalledWith("organizations");
     expect(supabase.from).toHaveBeenCalledWith("brands");
     expect(supabase.from).toHaveBeenCalledWith("brand_scores");
@@ -123,12 +117,16 @@ describe("createOrgAndBrand", () => {
 
   it("throws if org creation fails", async () => {
     const supabase = makeSupabaseMock({ orgError: { message: "unique violation" } });
-    await expect(createOrgAndBrand(supabase, "user-abc", FORM, null)).rejects.toThrow("unique violation");
+    await expect(
+      createOrgAndBrand(supabase as unknown as SupabaseClient, "user-abc", FORM, null),
+    ).rejects.toThrow("unique violation");
   });
 
   it("throws if brand creation fails", async () => {
     const supabase = makeSupabaseMock({ brandError: { message: "brand insert fail" } });
-    await expect(createOrgAndBrand(supabase, "user-abc", FORM, null)).rejects.toThrow("brand insert fail");
+    await expect(
+      createOrgAndBrand(supabase as unknown as SupabaseClient, "user-abc", FORM, null),
+    ).rejects.toThrow("brand insert fail");
   });
 
   it("passes aiProfile score to brand_scores", async () => {
@@ -145,7 +143,7 @@ describe("createOrgAndBrand", () => {
         return { insert: () => Promise.resolve({ error: null }) };
       },
     };
-    await createOrgAndBrand(supabase as any, "uid", FORM, { score: 85 });
+    await createOrgAndBrand(supabase as unknown as SupabaseClient, "uid", FORM, { score: 85 });
     expect(scoreSpy).toHaveBeenCalledWith(expect.objectContaining({ score: 85, brand_id: "brand-1" }));
   });
 });

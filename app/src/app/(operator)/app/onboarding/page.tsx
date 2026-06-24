@@ -3,17 +3,17 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@supabase/supabase-js";
-import { validateUrl, slugify, createOrgAndBrand, type OnboardingForm } from "@/lib/onboarding";
+import { validateUrl, createOrgAndBrand, type OnboardingForm } from "@/lib/onboarding";
 
-const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
+const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "";
 
 const INDUSTRIES = ["Fashion", "Jewellery", "Beauty", "Home & Living", "Other"] as const;
 const GOALS = ["Product Photography", "Campaign Planning", "Brand Intelligence", "All of the above"] as const;
 
 const DOTS = [1, 2, 3];
 
-export default function OnboardingPage() {
+const OnboardingPage = () => {
   const router = useRouter();
   const [step, setStep] = useState(1);
   const [form, setForm] = useState<OnboardingForm>({
@@ -27,19 +27,19 @@ export default function OnboardingPage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  function set(field: keyof OnboardingForm, value: string) {
+  const setField = (field: keyof OnboardingForm, value: string) => {
     setForm((f) => ({ ...f, [field]: value }));
     if (field === "websiteUrl") setUrlError(null);
-  }
+  };
 
-  function validateStep2(): boolean {
+  const validateStep2 = (): boolean => {
     if (!form.brandName.trim()) return false;
     const err = validateUrl(form.websiteUrl);
     if (err) { setUrlError(err); return false; }
     return true;
-  }
+  };
 
-  async function runAnalysis() {
+  const runAnalysis = async () => {
     setLoading(true);
     setError(null);
     try {
@@ -48,14 +48,12 @@ export default function OnboardingPage() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
-      // Call brand-intelligence edge function
       const { data: fnData, error: fnErr } = await supabase.functions.invoke("brand-intelligence", {
         body: { url: form.websiteUrl, brand_name: form.brandName },
       });
       if (fnErr) console.warn("brand-intelligence partial failure:", fnErr.message);
 
       const aiProfile = fnData ?? null;
-
       const { brandId } = await createOrgAndBrand(supabase, user.id, form, aiProfile);
 
       router.push(`/app/brand/${brandId}`);
@@ -63,7 +61,7 @@ export default function OnboardingPage() {
       setError(err instanceof Error ? err.message : "Something went wrong. Please try again.");
       setLoading(false);
     }
-  }
+  };
 
   return (
     <div className="min-h-screen flex items-center justify-center p-6" style={{ background: "#FBF8F5" }}>
@@ -83,9 +81,9 @@ export default function OnboardingPage() {
         {/* Step 1 — Welcome */}
         {step === 1 && (
           <div className="text-center space-y-6">
-            <h1 className="font-serif text-4xl text-[#1E293B]">Let's set up your brand</h1>
+            <h1 className="font-serif text-4xl text-[#1E293B]">Let&apos;s set up your brand</h1>
             <p className="font-sans text-[#64748B] text-lg leading-relaxed">
-              It takes about 2 minutes. We'll analyze your brand and get you ready to shoot.
+              It takes about 2 minutes. We&apos;ll analyze your brand and get you ready to shoot.
             </p>
             <button
               onClick={() => setStep(2)}
@@ -106,69 +104,63 @@ export default function OnboardingPage() {
             </div>
 
             <div className="space-y-4">
-              <div>
-                <label className="font-sans text-sm font-medium text-[#1E293B] block mb-1">
-                  Brand name <span className="text-[#E87C4D]">*</span>
-                </label>
+              <label className="font-sans text-sm font-medium text-[#1E293B] block">
+                Brand name <span className="text-[#E87C4D]">*</span>
                 <input
                   type="text"
                   value={form.brandName}
-                  onChange={(e) => set("brandName", e.target.value)}
+                  onChange={(e) => setField("brandName", e.target.value)}
                   placeholder="e.g. Maison Lumière"
-                  className="w-full px-4 py-2.5 rounded-lg border border-[#D1C9C0] bg-white font-sans text-[#1E293B] focus:outline-none focus:border-[#E87C4D]"
+                  className="mt-1 w-full px-4 py-2.5 rounded-lg border border-[#D1C9C0] bg-white font-sans font-normal text-[#1E293B] focus:outline-none focus:border-[#E87C4D]"
                 />
-              </div>
+              </label>
 
-              <div>
-                <label className="font-sans text-sm font-medium text-[#1E293B] block mb-1">
-                  Website URL <span className="text-[#E87C4D]">*</span>
-                </label>
+              <label className="font-sans text-sm font-medium text-[#1E293B] block">
+                Website URL <span className="text-[#E87C4D]">*</span>
                 <input
                   type="url"
                   value={form.websiteUrl}
-                  onChange={(e) => set("websiteUrl", e.target.value)}
+                  onChange={(e) => setField("websiteUrl", e.target.value)}
                   placeholder="https://yourbrand.com"
-                  className={`w-full px-4 py-2.5 rounded-lg border bg-white font-sans text-[#1E293B] focus:outline-none ${
+                  className={`mt-1 w-full px-4 py-2.5 rounded-lg border bg-white font-sans font-normal text-[#1E293B] focus:outline-none ${
                     urlError ? "border-red-400 focus:border-red-400" : "border-[#D1C9C0] focus:border-[#E87C4D]"
                   }`}
                 />
-                {urlError && <p className="font-sans text-sm text-red-500 mt-1">{urlError}</p>}
-              </div>
+                {urlError && <span className="font-sans font-normal text-sm text-red-500 mt-1 block">{urlError}</span>}
+              </label>
 
-              <div>
-                <label className="font-sans text-sm font-medium text-[#1E293B] block mb-1">
-                  Instagram handle <span className="text-[#94A3B8]">(optional)</span>
-                </label>
+              <label className="font-sans text-sm font-medium text-[#1E293B] block">
+                Instagram handle <span className="text-[#94A3B8] font-normal">(optional)</span>
                 <input
                   type="text"
                   value={form.instagramHandle}
-                  onChange={(e) => set("instagramHandle", e.target.value)}
+                  onChange={(e) => setField("instagramHandle", e.target.value)}
                   placeholder="@yourbrand"
-                  className="w-full px-4 py-2.5 rounded-lg border border-[#D1C9C0] bg-white font-sans text-[#1E293B] focus:outline-none focus:border-[#E87C4D]"
+                  className="mt-1 w-full px-4 py-2.5 rounded-lg border border-[#D1C9C0] bg-white font-sans font-normal text-[#1E293B] focus:outline-none focus:border-[#E87C4D]"
                 />
-              </div>
+              </label>
 
-              <div>
-                <label className="font-sans text-sm font-medium text-[#1E293B] block mb-1">Industry</label>
+              <label className="font-sans text-sm font-medium text-[#1E293B] block">
+                Industry
                 <select
                   value={form.industry}
-                  onChange={(e) => set("industry", e.target.value)}
-                  className="w-full px-4 py-2.5 rounded-lg border border-[#D1C9C0] bg-white font-sans text-[#1E293B] focus:outline-none focus:border-[#E87C4D]"
+                  onChange={(e) => setField("industry", e.target.value)}
+                  className="mt-1 w-full px-4 py-2.5 rounded-lg border border-[#D1C9C0] bg-white font-sans font-normal text-[#1E293B] focus:outline-none focus:border-[#E87C4D]"
                 >
-                  {INDUSTRIES.map((i) => <option key={i}>{i}</option>)}
+                  {INDUSTRIES.map((ind) => <option key={ind}>{ind}</option>)}
                 </select>
-              </div>
+              </label>
 
-              <div>
-                <label className="font-sans text-sm font-medium text-[#1E293B] block mb-1">Primary goal</label>
+              <label className="font-sans text-sm font-medium text-[#1E293B] block">
+                Primary goal
                 <select
                   value={form.goal}
-                  onChange={(e) => set("goal", e.target.value)}
-                  className="w-full px-4 py-2.5 rounded-lg border border-[#D1C9C0] bg-white font-sans text-[#1E293B] focus:outline-none focus:border-[#E87C4D]"
+                  onChange={(e) => setField("goal", e.target.value)}
+                  className="mt-1 w-full px-4 py-2.5 rounded-lg border border-[#D1C9C0] bg-white font-sans font-normal text-[#1E293B] focus:outline-none focus:border-[#E87C4D]"
                 >
                   {GOALS.map((g) => <option key={g}>{g}</option>)}
                 </select>
-              </div>
+              </label>
             </div>
 
             <div className="flex gap-3 pt-2">
@@ -204,9 +196,7 @@ export default function OnboardingPage() {
 
             {loading && !error && (
               <div className="space-y-4 py-6">
-                <div
-                  className="w-12 h-12 rounded-full border-4 border-t-[#E87C4D] border-[#F3E8E0] animate-spin mx-auto"
-                />
+                <div className="w-12 h-12 rounded-full border-4 border-t-[#E87C4D] border-[#F3E8E0] animate-spin mx-auto" />
                 <p className="font-sans text-[#64748B]">Analyzing your brand with AI…</p>
               </div>
             )}
@@ -251,4 +241,6 @@ export default function OnboardingPage() {
       </div>
     </div>
   );
-}
+};
+
+export default OnboardingPage;

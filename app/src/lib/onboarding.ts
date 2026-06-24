@@ -1,22 +1,15 @@
 // IPI-11 — shared onboarding logic (pure functions, testable in node)
+import type { SupabaseClient } from "@supabase/supabase-js";
 
-export function validateUrl(url: string): string | null {
+export const validateUrl = (url: string): string | null => {
   if (!url.trim()) return "Website URL is required";
-  if (!/^https?:\/\/.+\..+/.test(url.trim())) return "Enter a valid URL starting with http:// or https://";
+  if (!/^https?:\/\/.+\..+/.test(url.trim()))
+    return "Enter a valid URL starting with http:// or https://";
   return null;
-}
+};
 
-export function slugify(s: string): string {
-  return (
-    s
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, "-")
-      .replace(/^-|-$/g, "")
-      .slice(0, 50) +
-    "-" +
-    Math.random().toString(36).slice(2, 7)
-  );
-}
+export const slugify = (s: string): string =>
+  `${s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 50)}-${Math.random().toString(36).slice(2, 7)}`;
 
 export type OnboardingForm = {
   brandName: string;
@@ -28,12 +21,12 @@ export type OnboardingForm = {
 
 export type CreateBrandResult = { orgId: string; brandId: string };
 
-export async function createOrgAndBrand(
-  supabase: any,
+export const createOrgAndBrand = async (
+  supabase: SupabaseClient,
   userId: string,
   form: OnboardingForm,
   aiProfile: Record<string, unknown> | null,
-): Promise<CreateBrandResult> {
+): Promise<CreateBrandResult> => {
   const { data: org, error: orgErr } = await supabase
     .from("organizations")
     .insert({
@@ -60,7 +53,8 @@ export async function createOrgAndBrand(
 
   if (brandErr || !brand?.id) throw new Error(brandErr?.message ?? "Failed to create brand");
 
-  const score = (aiProfile as any)?.score ?? 0;
+  const rawScore = (aiProfile ?? {}).score;
+  const score = typeof rawScore === "number" ? rawScore : 0;
   await supabase.from("brand_scores").insert({
     brand_id: brand.id,
     score_type: "dna_readiness",
@@ -68,4 +62,4 @@ export async function createOrgAndBrand(
   });
 
   return { orgId: org.id, brandId: brand.id };
-}
+};
