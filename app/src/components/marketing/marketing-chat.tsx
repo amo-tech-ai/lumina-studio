@@ -54,7 +54,7 @@ function LeadResultView({
   result: unknown;
 }) {
   if (status !== ToolCallStatus.Complete) {
-    return <p className="px-3 py-2 text-sm text-gray-400">Submitting your inquiry…</p>;
+    return <p className="px-3 py-2 text-sm text-gray-400">Connecting you with the team…</p>;
   }
   if (typeof result === "string" && result.startsWith("submitted:")) {
     const draftId = result.replace("submitted:", "");
@@ -63,7 +63,7 @@ function LeadResultView({
         data-testid={`lead-draft-${draftId}`}
         className="mx-3 rounded-md border border-green-200 bg-green-50 px-3 py-2 text-sm text-green-800"
       >
-        ✅ Inquiry submitted!{" "}
+        ✅ Inquiry received!{" "}
         <span className="text-xs text-green-600">
           Ref: <code className="font-mono">{draftId}</code>
         </span>
