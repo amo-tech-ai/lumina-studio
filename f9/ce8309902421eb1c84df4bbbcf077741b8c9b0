@@ -1,0 +1,33 @@
+app/src/app/(operator)/app/brand/[id]/page.tsx
+  s_9b5029d3685278::t_00cb110caa923a 3
+app/src/app/(operator)/app/onboarding/page.tsx
+  s_9b5029d3685278::t_da381126a08bac 185
+app/src/test/onboarding.test.ts
+  s_9b5029d3685278::t_9af64c3c1e1e26 76
+app/src/lib/onboarding.ts
+  s_9b5029d3685278::t_38caa0e6b45b0b 62
+app/src/lib/brand-utils.ts
+  s_9b5029d3685278::t_3306030bc5abfc 1-8
+app/src/test/brand-hub.test.ts
+  s_9b5029d3685278::t_7a3fb76ac2be49 2
+supabase/migrations/20260624000000_brand_scores_rls_org_member.sql
+  s_9b5029d3685278::t_e7863443de9d31 1-11
+app/src/app/(operator)/app/page.tsx
+  s_9b5029d3685278::t_94cf2f4199dbcb 7-10
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.11",
+  "base_commit_sha": "f9ce8309902421eb1c84df4bbbcf077741b8c9b0",
+  "prompts": {},
+  "sessions": {
+    "s_9b5029d3685278": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "890fea56-a29f-4ea1-93a3-e5947f4859b8",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
