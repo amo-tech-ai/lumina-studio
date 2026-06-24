@@ -1,0 +1,33 @@
+app/src/components/marketing/marketing-chat.behavior.test.tsx
+  s_9b5029d3685278::t_8ec3e3963eb1e3 7-15,18-19,27
+  s_9b5029d3685278::t_e4ef56fa2ffc78 1-6,16-17,20-26,28-147
+app/src/components/marketing/marketing-chat.render.test.tsx
+  s_9b5029d3685278::t_e4ef56fa2ffc78 1-89
+app/src/components/threads-drawer/locked-state.test.tsx
+  s_9b5029d3685278::t_e4ef56fa2ffc78 1-63
+app/src/components/marketing/marketing-chat-lead.tsx
+  s_9b5029d3685278::t_b3f24c6633928b 15-16,19-28
+  s_9b5029d3685278::t_e4ef56fa2ffc78 1-14,17-18,29-85
+app/src/test/operator-middleware-contract.test.ts
+  s_9b5029d3685278::t_e4ef56fa2ffc78 1-27
+app/src/test/lead-pipeline-contract.test.ts
+  s_9b5029d3685278::t_da8e3a328c0ae5 91-92
+  s_9b5029d3685278::t_3c3f0ab61f5430 38,41-42
+  s_9b5029d3685278::t_e4ef56fa2ffc78 1-37,39-40,43-90,93-121
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.11",
+  "base_commit_sha": "0d538e8c6e05c4046fb0a11623b5c670faae5e58",
+  "prompts": {},
+  "sessions": {
+    "s_9b5029d3685278": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "890fea56-a29f-4ea1-93a3-e5947f4859b8",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": "Sanjiv Khullar <ai@socialmediville.ca>"
+    }
+  }
+}
