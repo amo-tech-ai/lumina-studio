@@ -1,0 +1,22 @@
+todo.md
+  s_9b5029d3685278::t_afbf8d75cd5413 49,52-59
+  s_9b5029d3685278::t_fe43605864260f 36,39-47
+app/CHANGELOG.md
+  s_9b5029d3685278::t_05ec5feac8e02e 1-91
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.11",
+  "base_commit_sha": "8fd7aa203ad1fd37c724315f8b16454db52daf67",
+  "prompts": {},
+  "sessions": {
+    "s_9b5029d3685278": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "890fea56-a29f-4ea1-93a3-e5947f4859b8",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": "Sanjiv Khullar <ai@socialmediville.ca>"
+    }
+  }
+}
