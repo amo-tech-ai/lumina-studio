@@ -16,7 +16,8 @@ insert into public.lead_intake_drafts
   ('aaaaaaaa-0000-0000-0000-000000000002','ready','{}','tok-2', now() - interval '1 hour', null),  -- expired
   ('aaaaaaaa-0000-0000-0000-000000000003','ready','{}','tok-3', now() + interval '1 hour', null),
   ('aaaaaaaa-0000-0000-0000-000000000004','claimed','{}', null, null, '22222222-2222-2222-2222-222222222222'), -- user B's
-  ('aaaaaaaa-0000-0000-0000-000000000005','ready','{}','tok-null', null, null);  -- no expiry
+  ('aaaaaaaa-0000-0000-0000-000000000005','ready','{}','tok-null', null, null),  -- no expiry
+  ('aaaaaaaa-0000-0000-0000-000000000006','ready','{}', null, now() + interval '1 hour', null);  -- null token, null user_id
 
 insert into public.chatbot_conversations (id, anon_id) values
   ('cccccccc-0000-0000-0000-000000000001','anon-xyz');
@@ -140,6 +141,75 @@ begin;
     '5b. user B sees exactly one draft (their own D4)');
   select test.assert((select id from public.lead_intake_drafts) = 'aaaaaaaa-0000-0000-0000-000000000004'::uuid,
     '5c. user B sees their own draft, never user A''s');
+rollback;
+
+-- 11-12. schema validation — CHECK constraints reject bad enum values (superuser path).
+do $$ declare ok boolean := false; begin
+  begin insert into public.chatbot_messages (conversation_id, role, content)
+    values ('cccccccc-0000-0000-0000-000000000001','bot','x');
+  exception when check_violation then ok := true; end;
+  perform test.assert(ok, '11. invalid chatbot message role rejected by CHECK');
+end $$;
+
+do $$ declare ok boolean := false; begin
+  begin insert into public.lead_intake_drafts (status, claim_token) values ('stolen','x');
+  exception when check_violation then ok := true; end;
+  perform test.assert(ok, '12. invalid lead draft status rejected by CHECK');
+end $$;
+
+-- 13. anon cannot execute claim_lead_draft (REVOKE, not just RLS).
+begin;
+  set local role anon;
+  do $$ declare ok boolean := false; begin
+    begin perform public.claim_lead_draft('aaaaaaaa-0000-0000-0000-000000000003','tok-3');
+    exception when insufficient_privilege then ok := true; end;
+    perform test.assert(ok, '13. anon cannot execute claim_lead_draft');
+  end $$;
+rollback;
+
+-- 14. non-existent draft id → same generic rejection as wrong token.
+begin;
+  select set_config('request.jwt.claim.sub','11111111-1111-1111-1111-111111111111', true);
+  set local role authenticated;
+  do $$ declare ok boolean := false; begin
+    begin perform public.claim_lead_draft('ffffffff-ffff-ffff-ffff-ffffffffffff','tok');
+    exception when sqlstate 'P0001' then ok := true; end;
+    perform test.assert(ok, '14. non-existent draft claim is rejected');
+  end $$;
+rollback;
+
+-- 15. draft with null claim_token cannot be claimed.
+begin;
+  select set_config('request.jwt.claim.sub','11111111-1111-1111-1111-111111111111', true);
+  set local role authenticated;
+  do $$ declare ok boolean := false; begin
+    begin perform public.claim_lead_draft('aaaaaaaa-0000-0000-0000-000000000006','guess');
+    exception when sqlstate 'P0001' then ok := true; end;
+    perform test.assert(ok, '15. null claim_token draft cannot be claimed');
+  end $$;
+rollback;
+
+-- 16. conversation delete cascades dependent messages (orphan cleanup).
+begin;
+  insert into public.chatbot_messages (conversation_id, role, content)
+    values ('cccccccc-0000-0000-0000-000000000001','assistant','bye');
+  select test.assert((select count(*) from public.chatbot_messages
+    where conversation_id = 'cccccccc-0000-0000-0000-000000000001') = 1,
+    '16a. message exists before cascade');
+  delete from public.chatbot_conversations where id = 'cccccccc-0000-0000-0000-000000000001';
+  select test.assert((select count(*) from public.chatbot_messages) = 0,
+    '16b. conversation delete cascades messages');
+rollback;
+
+-- 17. authenticated cannot insert into chatbot tables (no grant/policy).
+begin;
+  select set_config('request.jwt.claim.sub','11111111-1111-1111-1111-111111111111', true);
+  set local role authenticated;
+  do $$ declare ok boolean := false; begin
+    begin insert into public.chatbot_conversations (anon_id) values ('evil');
+    exception when insufficient_privilege then ok := true; end;
+    perform test.assert(ok, '17. authenticated cannot insert conversations');
+  end $$;
 rollback;
 
 \echo 'ALL WEB-015 RLS/claim assertions passed.'
