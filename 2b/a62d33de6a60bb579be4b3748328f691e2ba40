@@ -1,0 +1,29 @@
+app/src/app/(marketing)/services/ecommerce-photography/page.tsx
+  s_99ef85ddf80e97::t_5b861b6066c92b 143
+app/src/lib/marketing-assets.test.ts
+  s_99ef85ddf80e97::t_b6205fc4f34d68 1-100
+app/src/components/section-placeholder.tsx
+  s_99ef85ddf80e97::t_5b861b6066c92b 16
+app/src/app/(marketing)/services/instagram/page.tsx
+  s_99ef85ddf80e97::t_5b861b6066c92b 116-117
+app/src/app/(marketing)/services/fashion-photography/page.tsx
+  s_99ef85ddf80e97::t_5b861b6066c92b 141
+app/src/app/(marketing)/services/video/page.tsx
+  s_99ef85ddf80e97::t_5b861b6066c92b 106-107
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.11",
+  "base_commit_sha": "2ba62d33de6a60bb579be4b3748328f691e2ba40",
+  "prompts": {},
+  "sessions": {
+    "s_99ef85ddf80e97": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "4c088e51-0a96-4c26-9f0c-3f0a635e98c2",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Sanjiv Khullar <ai@socialmediville.ca>"
+    }
+  }
+}
