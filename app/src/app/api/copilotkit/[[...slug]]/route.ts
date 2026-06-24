@@ -7,6 +7,7 @@ import {
 import { MastraAgent } from "@ag-ui/mastra";
 import { mastra } from "@/mastra";
 import { resolveOperatorUser } from "@/lib/auth";
+import { withOperatorAuth } from "@/lib/operator-gate";
 import { handle } from "hono/vercel";
 
 const runtime = new CopilotRuntime({
@@ -47,20 +48,8 @@ const endpoint = handle(app);
 // IPI2-127: enforce auth at the HTTP boundary so the runtime is gated in BOTH
 // runtime modes. `identifyUser` only runs on the intelligence path (license token
 // set); the default SSE path has no identity hook, so without this guard the
-// CopilotKit API would be reachable unauthenticated. Active only when
-// OPERATOR_AUTH_ENABLED === "true"; fails closed (401) on no valid session.
-async function requireOperator(request: Request): Promise<Response> {
-  if (process.env.OPERATOR_AUTH_ENABLED === "true") {
-    try {
-      await resolveOperatorUser(request);
-    } catch {
-      return new Response("Unauthorized", { status: 401 });
-    }
-  }
-  return endpoint(request);
-}
-
-export const GET = requireOperator;
-export const POST = requireOperator;
-export const PATCH = requireOperator;
-export const DELETE = requireOperator;
+// CopilotKit API would be reachable unauthenticated.
+export const GET = (request: Request) => withOperatorAuth(request, endpoint);
+export const POST = (request: Request) => withOperatorAuth(request, endpoint);
+export const PATCH = (request: Request) => withOperatorAuth(request, endpoint);
+export const DELETE = (request: Request) => withOperatorAuth(request, endpoint);
