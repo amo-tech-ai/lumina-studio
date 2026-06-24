@@ -1,0 +1,29 @@
+app/.env.example
+  s_99ef85ddf80e97::t_c22e0667e178b5 19-23
+app/src/proxy.ts
+  s_99ef85ddf80e97::t_75ede08ea016f0 1-32
+app/src/lib/auth.test.ts
+  s_99ef85ddf80e97::t_7bb14a2ff4624e 25,28,35
+  s_99ef85ddf80e97::t_826e14515d3dfb 1
+  s_99ef85ddf80e97::t_146b506b71b30c 2-24,26-27,29-34,36-38
+app/src/lib/auth.ts
+  s_99ef85ddf80e97::t_ea68eb3897c1c9 8
+  s_99ef85ddf80e97::t_5c78852806ac0d 55
+  s_99ef85ddf80e97::t_a01433c89e235c 1-7,9-54,56-67
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.11",
+  "base_commit_sha": "175e123723d3317c766edc1642d1a133ccfbe713",
+  "prompts": {},
+  "sessions": {
+    "s_99ef85ddf80e97": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "4c088e51-0a96-4c26-9f0c-3f0a635e98c2",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Sanjiv Khullar <ai@socialmediville.ca>"
+    }
+  }
+}
