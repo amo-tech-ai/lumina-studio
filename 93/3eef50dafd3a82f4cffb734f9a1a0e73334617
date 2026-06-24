@@ -1,0 +1,19 @@
+app/src/components/operator-panel/operator-panel.test.ts
+  s_9b5029d3685278::t_ecb0d91f302368 43
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.11",
+  "base_commit_sha": "933eef50dafd3a82f4cffb734f9a1a0e73334617",
+  "prompts": {},
+  "sessions": {
+    "s_9b5029d3685278": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "890fea56-a29f-4ea1-93a3-e5947f4859b8",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": "Sanjiv Khullar <ai@socialmediville.ca>"
+    }
+  }
+}
