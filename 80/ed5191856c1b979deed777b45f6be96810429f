@@ -1,0 +1,21 @@
+app/src/app/api/copilotkit/[[...slug]]/route.ts
+  s_9b5029d3685278::t_63c4120d886373 37-39,41-45
+app/src/app/api/marketing-chat/[[...slug]]/route.ts
+  s_9b5029d3685278::t_0d250aea700b72 31-36
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.11",
+  "base_commit_sha": "80ed5191856c1b979deed777b45f6be96810429f",
+  "prompts": {},
+  "sessions": {
+    "s_9b5029d3685278": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "890fea56-a29f-4ea1-93a3-e5947f4859b8",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": "Sanjiv Khullar <ai@socialmediville.ca>"
+    }
+  }
+}
