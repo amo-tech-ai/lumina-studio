@@ -1,0 +1,35 @@
+app/src/app/api/marketing-lead/route.ts
+  s_9b5029d3685278::t_cf1721fcbc2e40 47-48,53,62,67-68,72-73,80-81
+app/src/mastra/agents/public-marketing-agent.test.ts
+  s_9b5029d3685278::t_a4ca6bc906f7c4 168
+app/src/app/api/marketing-lead/route.test.ts
+  s_9b5029d3685278::t_64562bb5df2e59 39
+docs/linear/issues/IPI-95-DASH-005.md
+  s_9b5029d3685278::t_2f0890014c4bc5 13
+app/src/components/marketing/marketing-chat.tsx
+  s_9b5029d3685278::t_13ca26099bfd09 96-110
+app/src/app/(marketing)/marketing.css
+  s_9b5029d3685278::t_5f25eeb6e9ccbe 73
+app/src/mastra/types/marketing-lead.ts
+  s_9b5029d3685278::t_2019ce5bdf64d0 46
+app/src/mastra/prompts/public-marketing.ts
+  s_9b5029d3685278::t_e4422e31a8e734 5
+app/src/proxy.test.ts
+  s_9b5029d3685278::t_721c82fc9fa53f 98,112-114
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.11",
+  "base_commit_sha": "36f8cb4b81873187f85aff6443ac04e0c73b0c26",
+  "prompts": {},
+  "sessions": {
+    "s_9b5029d3685278": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "890fea56-a29f-4ea1-93a3-e5947f4859b8",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": "Sanjiv Khullar <ai@socialmediville.ca>"
+    }
+  }
+}
