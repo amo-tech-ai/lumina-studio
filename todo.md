@@ -33,21 +33,30 @@ Branch `ipi/web-marketing-migration` · commit `8fd25f0` · **readiness 95/100**
 
 ---
 
-## CURRENT — Operator auth gate (IPI2-127) — 2026-06-23
+## CURRENT — Operator auth gate (IPI2-127) — 2026-06-24 ✅ Done in Linear
 
 - [x] Auth foundation — `auth.ts` / `operator-gate.ts` / `proxy.ts` + tests (**PR #37 merged**, `f90cea7`); closed CodeAnt SSE-bypass
-- [x] Login wired to Supabase — `@supabase/ssr` client, `safeRedirect` `/app*`, enumeration/trim hardening (**PR #46 open**, `53bf836`, 55 tests)
-- [ ] Client sends access token to the CopilotKit runtime
-- [ ] Scope Mastra threads/memory by `userId` (+ tenant) + two-user isolation smoke
-- [ ] Flip `OPERATOR_AUTH_ENABLED=true` once login + token propagation land
+- [x] Login wired to Supabase — `@supabase/ssr` client, `safeRedirect` `/app*`, enumeration/trim hardening (**PR #46 merged**)
+- [x] `middleware.ts` wired — re-exports `proxy` + `config`; Next.js gate confirmed active (**PR #62**)
+- [x] Security audit fixes C1/C2/C3/C5 — `name` data loss, `localStorage` crash, triple-auth, dual-registration (**PR #62 ready to merge**, `91060ca`, 237 tests)
+- [x] C3 hardened v2 — `AsyncLocalStorage` replaces WeakMap; Request-identity miss eliminated (**PR #62**)
+- [x] Two-user isolation verified — `route.runtime.test.ts` drives factory via ALS context (**PR #62**)
+- [ ] **Merge PR #62** → then rebase + merge PR #64 (companion tests, 92% audit score)
+- [ ] Provision Vercel env vars (`OPERATOR_AUTH_ENABLED`, `NEXT_PUBLIC_SUPABASE_*`, `GEMINI_API_KEY`, `COPILOTKIT_LICENSE_TOKEN`)
+- [ ] Flip `OPERATOR_AUTH_ENABLED=true` once Vercel env is live
+- [ ] Client sends access token to CopilotKit runtime (token propagation from browser session)
 
-## CURRENT — WEB-015 public homepage chatbot (IPI2-159 epic) — 2026-06-23
+## CURRENT — WEB-015 public homepage chatbot (IPI2-159 epic) — 2026-06-24
 
 - [x] Epic + 12 subissues planned (diagrams, build order, steps/criteria/skills, wireframes)
-- [x] **Phase 0.1** — DB schema + RLS + `claim_lead_draft` RPC (**PR #48 open**, IPI2-160); 6 RLS/claim proofs green; **not yet `supabase:push`-ed**
-- [ ] Phase 0.3 — `public-marketing-agent` (Mastra + Gemini 3.5 Flash) — startable now (no deps)
-- [ ] Phase 1 — `capture-lead` edge fn (IPI2-161) + public runtime `/api/marketing-chat` (IPI2-163)
-- [ ] Phases 2–6 — chat UI · intent · recommend · lead capture · login-claim-prefill (gated on IPI2-83/127) · analytics · tests · rollout
+- [x] **Phase 0.1** — DB schema + RLS + `claim_lead_draft` RPC (**PR #48 merged**, IPI2-160); 6 RLS/claim proofs green
+- [x] `publicMarketingAgent` registered in `publicMastra` (isolated from operator registry — C5 fix via PR #62)
+- [x] `marketing-chat.tsx` built — CopilotKit popup, `capture_lead` tool, `getAnonId`, `LeadResultView`, feature flag
+- [x] `marketing-lead` API route — `SubmitLeadSchema`, `buildCaptureLeadPayload`, `name` forwarded (C1 fix), `brand_url` mapping
+- [x] Lead pipeline contract tests — chat ↔ API field contract, runtime name-forwarding, middleware wiring (**PR #62**)
+- [x] `marketing-chat-lead.tsx` — extracted lead helpers with C2 localStorage fallback
+- [ ] Phase 1 — `capture-lead` edge fn (IPI2-161) + public runtime `/api/marketing-chat` (IPI2-163) — **next up**
+- [ ] Phases 2–6 — chat UI polish · intent scoring · service recommendations · login-claim-prefill (gated on IPI2-83/127) · analytics · rollout
 
 ## Tooling
 
