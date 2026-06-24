@@ -25,15 +25,15 @@ describe("CopilotKit route — operator auth boundary (IPI2-127)", () => {
 
   it("passes requestContext with userId and email via RequestContext.set()", () => {
     const src = readFileSync(ROUTE, "utf8");
-    expect(src).toMatch(/requestContext:/);
+    expect(src).toMatch(/new RequestContext\(\)/);
     expect(src).toMatch(/set\(["']userId["'],\s*user\.id\)/);
     expect(src).toMatch(/set\(["']email["'],\s*user\.email\)/);
   });
 
-  it("uses an AgentsFactory (per-request function), not static agents", () => {
+  it("uses an AgentsFactory (async function), not static agents", () => {
     const src = readFileSync(ROUTE, "utf8");
-    // The factory is an async function — the closure `({ request }) => ...`
-    expect(src).toMatch(/agents:\s*async\s*\(\s*\{ request \}\s*\)/);
+    // Factory reads from ALS — no Request parameter needed
+    expect(src).toMatch(/agents:\s*async\s*\(\s*\)/);
   });
 
   it("removes the @ts-expect-error for missing resourceId", () => {
@@ -42,12 +42,17 @@ describe("CopilotKit route — operator auth boundary (IPI2-127)", () => {
     expect(src).not.toMatch(/@ts-expect-error.*getLocalAgents/);
   });
 
-  it("reads the cached user identity from the per-request WeakMap in the agent factory", () => {
+  it("reads the user from AsyncLocalStorage in the agent factory — no re-auth (C3 fix)", () => {
     const src = readFileSync(ROUTE, "utf8");
-    // C3 fix: factory reads from _resolvedUsers (populated by the boundary handler)
-    // rather than calling resolveOperatorUser again.
-    expect(src).toMatch(/_resolvedUsers\.get\(request\)/);
-    expect(src).not.toMatch(/resolveOperatorUser\(request\)/);
+    // C3 fix v2: factory reads from AsyncLocalStorage set by the boundary handler.
+    // Must never call resolveOperatorUser or withOperatorAuth — those belong only
+    // at the HTTP boundary, not inside any CopilotKit callback.
+    const factoryStart = src.indexOf("agents: async");
+    const factoryEnd = src.indexOf("MastraAgent.getLocalAgents", factoryStart) + 200;
+    const factoryBlock = src.slice(factoryStart, factoryEnd);
+    expect(factoryBlock).toMatch(/_requestUser\.getStore\(\)/);
+    expect(factoryBlock).not.toMatch(/resolveOperatorUser/);
+    expect(factoryBlock).not.toMatch(/withOperatorAuth/);
   });
 });
 
@@ -59,13 +64,13 @@ describe("CopilotKit route — Mastra resourceId isolation (IPI2-127)", () => {
 
   it("no getLocalAgents call happens before identity resolution in the factory", () => {
     const src = readFileSync(ROUTE, "utf8");
-    // The only getLocalAgents call is inside the factory, after reading the cached user
+    // The only getLocalAgents call is inside the factory, after reading the ALS store
     const factoryStart = src.indexOf("agents: async");
     const factoryBlock = src.slice(factoryStart, factoryStart + 600);
-    const cacheReadPos = factoryBlock.indexOf("_resolvedUsers.get");
+    const alsReadPos = factoryBlock.indexOf("_requestUser.getStore");
     const agentsPos = factoryBlock.indexOf("getLocalAgents");
-    expect(cacheReadPos).toBeGreaterThan(-1);
-    expect(agentsPos).toBeGreaterThan(cacheReadPos);
+    expect(alsReadPos).toBeGreaterThan(-1);
+    expect(agentsPos).toBeGreaterThan(alsReadPos);
   });
 
   it("each request gets its own agent scope (no shared instances at module load)", () => {

@@ -1,3 +1,4 @@
+import { AsyncLocalStorage } from "node:async_hooks";
 import {
   CopilotRuntime,
   CopilotKitIntelligence,
@@ -11,23 +12,27 @@ import { type OperatorUser } from "@/lib/auth";
 import { OperatorAuthError, withOperatorAuth } from "@/lib/operator-gate";
 import { handle } from "hono/vercel";
 
-// Per-request user cache: withOperatorAuth resolves the user at the HTTP
-// boundary; the agent factory and identifyUser read from this cache so each
-// inbound request only calls resolveOperatorUser once (C3 fix — audit 2026-06-24).
-const _resolvedUsers = new WeakMap<Request, OperatorUser>();
+// AsyncLocalStorage propagates the resolved operator identity through the
+// entire async call-stack of a request — including agent factory callbacks that
+// CopilotKit may invoke with a wrapped copy of the original Request object.
+// This eliminates the Request-identity dependency that caused WeakMap misses
+// when CopilotKit internally wraps/re-creates the Request (C3 fix v2 — 2026-06-24).
+const _requestUser = new AsyncLocalStorage<OperatorUser>();
+
+const UNKNOWN_USER: OperatorUser = { id: "unknown", name: "unknown" };
 
 const runtime = new CopilotRuntime({
-  // Per-request agent factory (IPI2-127): reads the already-resolved operator
-  // identity from the cache set by the HTTP boundary handler.
-  agents: async ({ request }) => {
-    const user = _resolvedUsers.get(request) ?? { id: "unknown", name: "unknown" };
+  // Per-request agent factory (IPI2-127): reads the operator identity from
+  // AsyncLocalStorage — no Request-key lookup, no re-authentication.
+  agents: async () => {
+    const user = _requestUser.getStore() ?? UNKNOWN_USER;
     const requestContext = new RequestContext();
     requestContext.set("userId", user.id);
     if (user.email) requestContext.set("email", user.email);
     return MastraAgent.getLocalAgents({
       mastra,
       resourceId: user.id,
-      requestContext: requestContext,
+      requestContext,
     });
   },
   // --- copilotkit:intelligence (remove this block to opt out) ---
@@ -39,22 +44,15 @@ const runtime = new CopilotRuntime({
           );
         }
         return {
-        intelligence: new CopilotKitIntelligence({
-          apiKey: process.env.INTELLIGENCE_API_KEY,
-          apiUrl: process.env.INTELLIGENCE_API_URL ?? "http://localhost:4201",
-          wsUrl:
-            process.env.INTELLIGENCE_GATEWAY_WS_URL ?? "ws://localhost:4401",
-        }),
-        identifyUser: async (request: Request) => {
-          const cached = _resolvedUsers.get(request);
-          if (cached) return cached;
-          // Cache miss: CopilotKit may wrap the Request — re-resolve and cache.
-          const user = await withOperatorAuth(request).catch(() => ({ id: "unknown", name: "unknown" }));
-          _resolvedUsers.set(request, user as OperatorUser);
-          return user;
-        },
-        licenseToken: process.env.COPILOTKIT_LICENSE_TOKEN,
-      };
+          intelligence: new CopilotKitIntelligence({
+            apiKey: process.env.INTELLIGENCE_API_KEY,
+            apiUrl: process.env.INTELLIGENCE_API_URL ?? "http://localhost:4201",
+            wsUrl:
+              process.env.INTELLIGENCE_GATEWAY_WS_URL ?? "ws://localhost:4401",
+          }),
+          identifyUser: async () => _requestUser.getStore() ?? UNKNOWN_USER,
+          licenseToken: process.env.COPILOTKIT_LICENSE_TOKEN,
+        };
       })()
     : { runner: new InMemoryAgentRunner() }),
   // --- /copilotkit:intelligence ---
@@ -68,18 +66,20 @@ const app = createCopilotEndpoint({
 const endpoint = handle(app);
 
 // IPI2-127: enforce auth at the HTTP boundary. Resolves the operator identity
-// once per request and caches it for the agent factory and identifyUser above.
+// once, then runs the CopilotKit endpoint inside the ALS context so every
+// downstream callback (agent factory, identifyUser) reads the same user without
+// re-authenticating or holding a reference to the Request object.
 const handler = async (request: Request): Promise<Response> => {
+  let user: OperatorUser;
   try {
-    const user = await withOperatorAuth(request);
-    _resolvedUsers.set(request, user);
+    user = await withOperatorAuth(request);
   } catch (err) {
     if (err instanceof OperatorAuthError) {
       return new Response("Unauthorized", { status: 401 });
     }
     throw err;
   }
-  return endpoint(request);
+  return _requestUser.run(user, () => endpoint(request));
 };
 
 export const GET = handler;
