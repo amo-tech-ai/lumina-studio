@@ -1,30 +1,59 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useRef, useState, type FormEvent } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { createSupabaseBrowserClient } from "@/lib/supabase/client";
+import { safeRedirect } from "@/lib/safe-redirect";
 
-// WEB-012 — Login UI only. Auth is STUBBED (no Supabase / useAuth import) — real
-// auth wiring is IPI2-127. Submit just surfaces a placeholder message.
+// WEB-012 + IPI2-127 — Supabase email/password auth. On success the browser
+// client writes the sb-*-auth-token session cookie that the /app/* proxy gate +
+// CopilotKit runtime validate.
 type Mode = "login" | "signup";
 
 const field =
   "w-full rounded-[var(--mk-radius)] border bg-white px-3 py-2.5 text-sm focus:outline-none focus:ring-2";
 
 export function LoginForm() {
+  const router = useRouter();
   const [mode, setMode] = useState<Mode>("login");
   const [message, setMessage] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+  // Synchronous lock — `setSubmitting` is async, so the disabled button alone
+  // can't stop two clicks fired before the next render from both submitting.
+  const submitLock = useRef(false);
 
-  // TODO(IPI2-127): wire to Supabase auth (signInWithPassword / signUp) once the
-  // operator auth identity lands. Keep this component free of the supabase client
-  // and AuthContext until then.
-  const handleSubmit = (e: FormEvent) => {
+  async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    setMessage(
-      mode === "login"
-        ? "Sign-in is not connected yet — operator auth ships with IPI2-127."
-        : "Sign-up is not connected yet — operator auth ships with IPI2-127.",
-    );
-  };
+    if (submitLock.current) return;
+    submitLock.current = true;
+    setMessage(null);
+    setSubmitting(true);
+    const data = new FormData(e.currentTarget);
+    const email = String(data.get("email") ?? "").trim().toLowerCase();
+    const password = String(data.get("password") ?? "");
+    try {
+      const supabase = createSupabaseBrowserClient();
+      if (mode === "login") {
+        const { error } = await supabase.auth.signInWithPassword({ email, password });
+        if (error) return setMessage("Invalid email or password.");
+      } else {
+        const { data: signUp, error } = await supabase.auth.signUp({ email, password });
+        // Never surface "User already registered" — that enumerates accounts.
+        if (error) return setMessage("If this email is eligible, check your inbox or sign in.");
+        if (!signUp.session) {
+          return setMessage("Account created — check your email to confirm, then sign in.");
+        }
+      }
+      const target = safeRedirect(new URLSearchParams(window.location.search).get("redirect"));
+      router.push(target);
+    } catch {
+      setMessage("Sign-in is unavailable right now. Please try again.");
+    } finally {
+      submitLock.current = false;
+      setSubmitting(false);
+    }
+  }
 
   return (
     <div className="w-full max-w-md space-y-6">
@@ -67,8 +96,8 @@ export function LoginForm() {
           {message && (
             <p className="text-sm" role="status" style={{ color: "var(--mk-text-muted)" }}>{message}</p>
           )}
-          <button type="submit" className="w-full rounded-[var(--mk-radius)] px-4 py-2.5 text-sm font-medium text-white" style={{ background: "var(--mk-text)" }}>
-            {mode === "login" ? "Sign in" : "Create account"}
+          <button type="submit" disabled={submitting} className="w-full rounded-[var(--mk-radius)] px-4 py-2.5 text-sm font-medium text-white disabled:opacity-60" style={{ background: "var(--mk-text)" }}>
+            {submitting ? "Please wait…" : mode === "login" ? "Sign in" : "Create account"}
           </button>
         </form>
       </div>
