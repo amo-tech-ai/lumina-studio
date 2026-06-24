@@ -1,6 +1,6 @@
 # iPix TODO — Forensic Audit Roadmap
 
-**Updated:** 2026-06-19  
+**Updated:** 2026-06-24  
 **Auditor:** Codex  
 **Basis:** Current checkout on `/home/sk/ipix`, remote Supabase probes, local build/test/lint probes, local commerce endpoint probes, checked-in Linear snapshots.  
 **Live Linear status:** UNVERIFIED — direct Linear session returned `auth_revoked`; fallback search was pointed at another workspace.  
@@ -41,13 +41,16 @@ Branch `ipi/web-marketing-migration` · commit `8fd25f0` · **readiness 95/100**
 - [ ] Scope Mastra threads/memory by `userId` (+ tenant) + two-user isolation smoke
 - [ ] Flip `OPERATOR_AUTH_ENABLED=true` once login + token propagation land
 
-## CURRENT — WEB-015 public homepage chatbot (IPI2-159 epic) — 2026-06-23
+## CURRENT — WEB-015 public homepage chatbot (IPI2-159 epic) — 2026-06-24
 
 - [x] Epic + 12 subissues planned (diagrams, build order, steps/criteria/skills, wireframes)
 - [x] **Phase 0.1** — DB schema + RLS + `claim_lead_draft` RPC (**PR #48 open**, IPI2-160); 6 RLS/claim proofs green; **not yet `supabase:push`-ed**
-- [ ] Phase 0.3 — `public-marketing-agent` (Mastra + Gemini 3.5 Flash) — startable now (no deps)
-- [ ] Phase 1 — `capture-lead` edge fn (IPI2-161) + public runtime `/api/marketing-chat` (IPI2-163)
-- [ ] Phases 2–6 — chat UI · intent · recommend · lead capture · login-claim-prefill (gated on IPI2-83/127) · analytics · tests · rollout
+- [x] **Phase 0.3** — `public-marketing-agent` (Mastra + `gemini-3.5-flash`); stateless, no tools, public; DONE
+- [x] **Phase 1 — runtime** — `/api/marketing-chat` (IPI2-163) live on `www.ipix.co`; `single-route` + `LibSQLStore` + `default` alias; 13/13 tests; deployed `7e8f3a6`
+- [x] `capture-lead` edge fn (IPI2-161) — Done (built + deployed); agent has no tool to call it yet
+- [ ] **Next: IPI2-167** — wire `captureLeadDraft` tool to agent → edge fn → lead saved to Supabase
+- [ ] URL grounding — agent has no tools; add `useSearchGrounding` or `fetch_url` tool (IPI2-166 scope)
+- [ ] Phases 2–6 — intent classify · recommend service · login-claim-prefill (gated on IPI2-83/127) · analytics · rollout
 
 ## Tooling
 

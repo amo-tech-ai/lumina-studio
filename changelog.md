@@ -8,6 +8,18 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### 2026-06-24 — Marketing chat live on www.ipix.co (IPI2-163 · WEB-015 Phase 0.3 + Phase 1)
+
+- **`/api/marketing-chat` runtime live (IPI2-163 · commits `6226ba1`, `7e8f3a6`):** CopilotKit v2 public chat endpoint shipped and working end-to-end at `https://www.ipix.co`. Three root-cause fixes:
+  1. `mode: "single-route"` — CopilotKit v2 client POSTs to the root path with JSON body `{method:"info"|"agent/run"}`; `multi-route` mode's `matchRoute` returns null for root-path POST (no segments) → 404. Switched to `single-route` which reads JSON body to dispatch.
+  2. `LibSQLStore({ url: ":memory:" })` — Mastra requires explicit storage on Vercel serverless; without it defaults to broken FS adapter.
+  3. `default` agent alias — `CopilotPopup` without `agentId` prop resolves "default"; registered alias pointing to `publicMarketingAgent`.
+- **`public-marketing-agent` (WEB-015 Phase 0.3):** Mastra agent on `gemini-3.5-flash`, stateless, no tools (public/unauthenticated by design). Prompt collects leads conversationally (name, email, brand, service, budget, timeline). Recognizes brand URLs from Gemini training data — **not** live web grounding.
+- **Security isolation confirmed:** Isolated `publicMastra` instance; operator agents (`production-planner`, `creative-director`) unreachable; no auth gate (public route); no operator Mastra imported.
+- **Tests: 13/13 pass** (static security + agent isolation + factory wiring assertions).
+- **Audit report:** `docs/vercel/04-audit.md` — overall 🟢 79% B+; production route 100%; two 🟡 gaps: `ipix-v2-conventions.md` stale (still shows Hono pattern), lead data not yet saved to Supabase.
+- **Remaining for WEB-015:** `capture-lead` edge fn (IPI2-161) — leads collected conversationally but not persisted; URL grounding (agent has no tools); Phases 2–6.
+
 ### 2026-06-23 — Operator auth gate + public-chatbot schema (IPI2-127, IPI2-160 · WEB-015.1)
 
 - **Auth foundation merged (IPI2-127 · PR #37 → `main` `f90cea7`):** Supabase-backed operator identity replaces the hardcoded `demo-user`. `resolveOperatorUser` validates the Supabase JWT server-side (Bearer + chunked `sb-*-auth-token` cookie); `withOperatorAuth` HTTP guard gates the CopilotKit runtime in **both** modes (intelligence + default SSE) — closing a CodeAnt-flagged unauthenticated-SSE bypass; `proxy.ts` `/app/*` page gate requires a JWT-shaped session cookie and preserves the redirect query. Flag-gated by `OPERATOR_AUTH_ENABLED` (default **off**). 27 tests.
