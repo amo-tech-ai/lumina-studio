@@ -1,0 +1,23 @@
+app/src/components/marketing/services.test.ts
+  s_99ef85ddf80e97::t_44dd850bd16b52 1-29
+app/src/lib/marketing-routes.test.ts
+  s_99ef85ddf80e97::t_44dd850bd16b52 1-94
+app/src/lib/site.test.ts
+  s_99ef85ddf80e97::t_44dd850bd16b52 1-26
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.11",
+  "base_commit_sha": "db35f8226029f1dc7a62caecf41fc8ff62f24f8f",
+  "prompts": {},
+  "sessions": {
+    "s_99ef85ddf80e97": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "4c088e51-0a96-4c26-9f0c-3f0a635e98c2",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Sanjiv Khullar <ai@socialmediville.ca>"
+    }
+  }
+}
