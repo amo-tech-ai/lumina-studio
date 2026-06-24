@@ -137,4 +137,60 @@ describe("LoginForm — Supabase auth wiring (IPI2-127)", () => {
     expect((await screen.findByRole("status")).textContent).toMatch(/unavailable right now/i);
     expect(push).not.toHaveBeenCalled();
   });
+
+  it("normalizes email with trim and lowercase before sign-in", async () => {
+    signInWithPassword.mockResolvedValue({ error: null });
+
+    render(<LoginForm />);
+    await submitCredentials("  Op@Example.COM  ", "secret12");
+
+    expect(signInWithPassword).toHaveBeenCalledWith({
+      email: "op@example.com",
+      password: "secret12",
+    });
+  });
+
+  it("shows a neutral sign-up error that does not enumerate accounts", async () => {
+    const user = userEvent.setup();
+    signUp.mockResolvedValue({
+      data: { session: null },
+      error: { message: "User already registered" },
+    });
+
+    render(<LoginForm />);
+    await user.click(screen.getByRole("button", { name: /sign up/i }));
+    await user.type(screen.getByLabelText(/email/i), "taken@example.com");
+    await user.type(screen.getByLabelText(/password/i), "secret12");
+    await user.click(screen.getByRole("button", { name: /create account/i }));
+
+    expect((await screen.findByRole("status")).textContent).toMatch(
+      /if this email is eligible/i,
+    );
+    expect(push).not.toHaveBeenCalled();
+  });
+
+  it("ignores a second submit while the first is in flight", async () => {
+    let resolveSignIn!: (value: { error: null }) => void;
+    signInWithPassword.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          resolveSignIn = resolve;
+        }),
+    );
+
+    render(<LoginForm />);
+    const user = userEvent.setup();
+    await user.type(screen.getByLabelText(/email/i), "op@example.com");
+    await user.type(screen.getByLabelText(/password/i), "secret12");
+    const submit = document.querySelector<HTMLButtonElement>('form button[type="submit"]');
+    if (!submit) throw new Error("submit button not found");
+    await user.click(submit);
+    await user.click(submit);
+
+    expect(signInWithPassword).toHaveBeenCalledTimes(1);
+    resolveSignIn({ error: null });
+    await waitFor(() => {
+      expect(push).toHaveBeenCalledWith("/app");
+    });
+  });
 });

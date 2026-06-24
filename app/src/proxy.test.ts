@@ -80,4 +80,39 @@ describe("proxy — operator auth gate (IPI2-127)", () => {
   it("scopes the middleware matcher to /app/* routes", () => {
     expect(config.matcher).toEqual(["/app/:path*"]);
   });
+
+  it("reconstructs multi-chunk Supabase auth cookies (.0 + .1)", () => {
+    vi.stubEnv("OPERATOR_AUTH_ENABLED", "true");
+    const full = sessionCookieValue();
+    const mid = Math.ceil(full.length / 2);
+    const res = proxy(
+      appRequest("/app/brand", [
+        { name: "sb-proj-auth-token.0", value: full.slice(0, mid) },
+        { name: "sb-proj-auth-token.1", value: full.slice(mid) },
+      ]),
+    );
+    expect(res.status).toBe(200);
+    expect(res.headers.get("location")).toBeNull();
+  });
+
+  it("rejects a decoded token that is not JWT-shaped (2 parts)", () => {
+    vi.stubEnv("OPERATOR_AUTH_ENABLED", "true");
+    const res = proxy(
+      appRequest("/app/brand", [
+        { name: "sb-proj-auth-token", value: sessionCookieValue("header.payload") },
+      ]),
+    );
+    expect(res.status).toBe(307);
+    expect(res.headers.get("location")).toContain("/login");
+  });
+
+  it("rejects a cookie that decodes to an empty session array", () => {
+    vi.stubEnv("OPERATOR_AUTH_ENABLED", "true");
+    const empty = `base64-${btoa(JSON.stringify([]))}`;
+    const res = proxy(
+      appRequest("/app/brand", [{ name: "sb-proj-auth-token", value: empty }]),
+    );
+    expect(res.status).toBe(307);
+    expect(res.headers.get("location")).toContain("/login");
+  });
 });

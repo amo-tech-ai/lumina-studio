@@ -117,5 +117,64 @@ describe("callEdgeFunction — the durable-write surface", () => {
       const headers = init.headers as Record<string, string>;
       expect(headers.Authorization).toBe("Bearer user-jwt");
     });
+
+    it("falls back to the anon key when accessToken is whitespace-only", async () => {
+      vi.stubEnv("SUPABASE_ANON_KEY", "anon-key-123");
+      const fetchMock = vi.fn(
+        async (_url: string, _init?: RequestInit) =>
+          fakeResponse({ ok: true, status: 200, body: "{}" }),
+      );
+      vi.stubGlobal("fetch", fetchMock);
+      await callEdgeFunction("x", {}, { accessToken: "   " });
+      const init = fetchMock.mock.calls[0][1] as RequestInit;
+      const headers = init.headers as Record<string, string>;
+      expect(headers.Authorization).toBe("Bearer anon-key-123");
+      expect(headers.apikey).toBe("anon-key-123");
+    });
+
+    it("throws EdgeFunctionError when the request times out", async () => {
+      vi.stubGlobal(
+        "fetch",
+        vi.fn(
+          (_url: string, init?: RequestInit) =>
+            new Promise((_resolve, reject) => {
+              init?.signal?.addEventListener("abort", () => {
+                const err = new Error("The operation was aborted");
+                err.name = "AbortError";
+                reject(err);
+              });
+            }),
+        ),
+      );
+      await expect(
+        callEdgeFunction("slow-fn", {}, { timeoutMs: 10 }),
+      ).rejects.toMatchObject({
+        name: "EdgeFunctionError",
+        message: expect.stringMatching(/timed out/i),
+      });
+    });
+
+    it("throws EdgeFunctionError on network-level fetch failure", async () => {
+      vi.stubGlobal(
+        "fetch",
+        vi.fn(async () => {
+          throw new TypeError("fetch failed");
+        }),
+      );
+      await expect(callEdgeFunction("x", {})).rejects.toMatchObject({
+        name: "EdgeFunctionError",
+        message: expect.stringMatching(/failed/i),
+      });
+    });
+
+    it("throws when the response body is not valid JSON", async () => {
+      vi.stubGlobal(
+        "fetch",
+        vi.fn(async () =>
+          fakeResponse({ ok: true, status: 200, body: "not-json{{" }),
+        ),
+      );
+      await expect(callEdgeFunction("x", {})).rejects.toThrow();
+    });
   });
 });
