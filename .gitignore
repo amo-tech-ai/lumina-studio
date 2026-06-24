@@ -1,3 +1,8 @@
+# Worktree leak guard
+.claude/worktrees/
+.worktrees/
+github/
+
 # Logs
 logs
 *.log

@@ -1,4 +1,5 @@
 import { GoogleGenAI, Type } from "npm:@google/genai@2.8.0";
+import type { GenerateContentResponse } from "npm:@google/genai@2.8.0";
 
 import { insertAgentLog } from "../_shared/agent-log.ts";
 import { isAuthFailure, resolveAuth } from "../_shared/auth.ts";
@@ -36,6 +37,24 @@ const brandProfileSchema = {
     },
     targetAudience: { type: Type.STRING },
     sourceUrl: { type: Type.STRING },
+    contentPillars: {
+      type: Type.ARRAY,
+      items: { type: Type.STRING },
+      description: "3-5 recurring content themes e.g. sustainability, craftsmanship",
+    },
+    brandVoice: {
+      type: Type.STRING,
+      description: "Brand tone descriptors e.g. playful, minimal, editorial, bold",
+    },
+    recommendedServices: {
+      type: Type.ARRAY,
+      items: { type: Type.STRING },
+      description: "iPix service slugs relevant to this brand: fashion-photography, ecommerce, instagram, video, shopify, amazon, jewellery, location, clothing",
+    },
+    productionReadiness: {
+      type: Type.NUMBER,
+      description: "0-100 overall readiness for a professional content shoot",
+    },
     scores: {
       type: Type.OBJECT,
       properties: {
@@ -77,6 +96,10 @@ type BrandProfilePayload = {
   visualIdentity: { colors: string[]; mood: string };
   targetAudience: string;
   sourceUrl: string;
+  contentPillars?: string[];
+  brandVoice?: string;
+  recommendedServices?: string[];
+  productionReadiness?: number;
   scores: {
     visual: number;
     audience: number;
@@ -115,6 +138,11 @@ function withTimeout<T>(p: Promise<T>, ms: number): Promise<T> {
       setTimeout(() => reject(new Error(`Gemini timeout after ${ms}ms`)), ms)
     ),
   ]);
+}
+
+function buildUrlList(baseUrl: string): string[] {
+  const origin = new URL(baseUrl).origin;
+  return [baseUrl, `${origin}/about`, `${origin}/collections`, `${origin}/lookbook`].slice(0, 4);
 }
 
 function clampScore(n: number): number {
@@ -175,34 +203,42 @@ Deno.serve(async (req: Request) => {
 
     const ai = new GoogleGenAI({ apiKey });
 
+    const urlList = buildUrlList(url);
     const prompt = `
-Analyze this fashion or DTC brand website and return structured brand intelligence for a creative production platform.
+Analyze this fashion or DTC brand from these pages and return structured brand intelligence for a creative production platform.
 
-Brand URL: ${url}
+Pages to analyze:
+${urlList.map((u) => `- ${u}`).join("\n")}
 
 Extract:
 - Brand name and tagline
 - Product category
 - Visual identity (colors and mood)
 - Target audience summary
+- Content pillars (3-5 recurring themes)
+- Brand voice (tone descriptors)
+- Recommended iPix services (from: fashion-photography, ecommerce, instagram, video, shopify, amazon, jewellery, location, clothing)
+- Production readiness score (0-100)
 - Readiness scores (0-100) for visual clarity, audience clarity, brand consistency, and commerce readiness
 
-Use the URL content as primary evidence. Set sourceUrl to the analyzed URL.
+Use URL content AND web search for press coverage, social presence, and competitor signals.
+Set sourceUrl to ${JSON.stringify(url)}.
 `.trim();
 
     const geminiStarted = performance.now();
 
     // urlContext cannot be combined with responseMimeType application/json (API 400).
-    const contextResponse = await withTimeout(
+    // Combined with googleSearch for press/social/competitor signals.
+    const contextResponse: GenerateContentResponse = await withTimeout(
       ai.models.generateContent({
         model: MODEL,
         contents: prompt,
         config: {
-          tools: [{ urlContext: {} }],
+          tools: [{ urlContext: {} }, { googleSearch: {} }],
           temperature: 0.2,
         },
       }),
-      25_000,
+      30_000,
     );
 
     const contextText =
@@ -222,7 +258,11 @@ Required JSON shape:
   "category": string,
   "visualIdentity": { "colors": string[], "mood": string },
   "targetAudience": string,
-  "sourceUrl": string (use ${JSON.stringify(url)}),
+  "sourceUrl": ${JSON.stringify(url)},
+  "contentPillars": string[] (3-5 themes),
+  "brandVoice": string (tone descriptors),
+  "recommendedServices": string[] (iPix service slugs),
+  "productionReadiness": number 0-100,
   "scores": {
     "visual": number 0-100,
     "audience": number 0-100,
@@ -232,13 +272,14 @@ Required JSON shape:
 }
 `.trim();
 
-    const response = await withTimeout(
+    const response: GenerateContentResponse = await withTimeout(
       ai.models.generateContent({
         model: MODEL,
         contents: structurePrompt,
         config: {
           responseMimeType: "application/json",
           responseSchema: brandProfileSchema,
+          thinkingConfig: { thinkingBudget: 4096 },
           temperature: 0.1,
         },
       }),
@@ -288,6 +329,13 @@ Required JSON shape:
       targetAudience: profile.targetAudience.trim(),
       sourceUrl: url, // always use submitted URL, never trust model-provided value
       analyzedAt: new Date().toISOString(),
+      // v9: enriched fields (optional — gracefully absent if model omits)
+      ...(profile.contentPillars?.length ? { contentPillars: profile.contentPillars } : {}),
+      ...(profile.brandVoice?.trim() ? { brandVoice: profile.brandVoice.trim() } : {}),
+      ...(profile.recommendedServices?.length ? { recommendedServices: profile.recommendedServices } : {}),
+      ...(typeof profile.productionReadiness === "number"
+        ? { productionReadiness: clampScore(profile.productionReadiness) }
+        : {}),
     };
 
     let brandId = brandIdInput;
