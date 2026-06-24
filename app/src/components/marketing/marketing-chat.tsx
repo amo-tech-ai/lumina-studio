@@ -16,6 +16,10 @@ import { SERVICE_SLUGS } from "@/mastra/types/marketing-lead";
 // ponytail: build-time flag — false by default; set NEXT_PUBLIC_MARKETING_CHAT_ENABLED=true to launch
 const ENABLED = process.env.NEXT_PUBLIC_MARKETING_CHAT_ENABLED === "true";
 
+// In-memory fallback for Safari private browsing / storage-full conditions.
+// Module-scoped so the same UUID is reused for the page session lifetime.
+let _memoryAnonId: string | null = null;
+
 function getAnonId(): string {
   const key = "ipix_anon_id";
   try {
@@ -26,8 +30,8 @@ function getAnonId(): string {
     }
     return id;
   } catch {
-    // Safari private browsing and full-storage conditions throw DOMException
-    return `anon-${crypto.randomUUID()}`;
+    if (!_memoryAnonId) _memoryAnonId = `anon-${crypto.randomUUID()}`;
+    return _memoryAnonId;
   }
 }
 

@@ -45,9 +45,14 @@ const runtime = new CopilotRuntime({
           wsUrl:
             process.env.INTELLIGENCE_GATEWAY_WS_URL ?? "ws://localhost:4401",
         }),
-        identifyUser: (request: Request) => Promise.resolve(
-          _resolvedUsers.get(request) ?? { id: "unknown", name: "unknown" }
-        ),
+        identifyUser: async (request: Request) => {
+          const cached = _resolvedUsers.get(request);
+          if (cached) return cached;
+          // Cache miss: CopilotKit may wrap the Request — re-resolve and cache.
+          const user = await withOperatorAuth(request).catch(() => ({ id: "unknown", name: "unknown" }));
+          _resolvedUsers.set(request, user as OperatorUser);
+          return user;
+        },
         licenseToken: process.env.COPILOTKIT_LICENSE_TOKEN,
       };
       })()
