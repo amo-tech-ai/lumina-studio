@@ -2,7 +2,8 @@ import { describe, it, expect } from "vitest";
 import { safeRedirect } from "./safe-redirect";
 
 describe("safeRedirect", () => {
-  it("keeps same-origin absolute paths (with query)", () => {
+  it("keeps /app and /app/* paths (with query)", () => {
+    expect(safeRedirect("/app")).toBe("/app");
     expect(safeRedirect("/app/brand")).toBe("/app/brand");
     expect(safeRedirect("/app/assets?tab=review")).toBe("/app/assets?tab=review");
   });
@@ -17,5 +18,12 @@ describe("safeRedirect", () => {
     expect(safeRedirect("//evil.com")).toBe("/app");
     expect(safeRedirect("https://evil.com")).toBe("/app");
     expect(safeRedirect("javascript:alert(1)")).toBe("/app");
+  });
+
+  it("rejects same-origin paths outside /app", () => {
+    expect(safeRedirect("/")).toBe("/app");
+    expect(safeRedirect("/login")).toBe("/app");
+    expect(safeRedirect("/services/clothing")).toBe("/app");
+    expect(safeRedirect("/application")).toBe("/app"); // must not match the /app prefix
   });
 });

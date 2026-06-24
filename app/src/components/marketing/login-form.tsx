@@ -25,16 +25,19 @@ export function LoginForm() {
     setMessage(null);
     setSubmitting(true);
     const data = new FormData(e.currentTarget);
-    const email = String(data.get("email") ?? "");
+    const email = String(data.get("email") ?? "").trim().toLowerCase();
     const password = String(data.get("password") ?? "");
     try {
       const supabase = createSupabaseBrowserClient();
       if (mode === "login") {
+        // Supabase returns a generic "Invalid login credentials" here (no
+        // account enumeration), so surfacing it directly is safe.
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) return setMessage(error.message);
       } else {
         const { data: signUp, error } = await supabase.auth.signUp({ email, password });
-        if (error) return setMessage(error.message);
+        // Never surface "User already registered" — that enumerates accounts.
+        if (error) return setMessage("If this email is eligible, check your inbox or sign in.");
         if (!signUp.session) {
           return setMessage("Account created — check your email to confirm, then sign in.");
         }
