@@ -33,6 +33,28 @@ Branch `ipi/web-marketing-migration` · commit `8fd25f0` · **readiness 95/100**
 
 ---
 
+## CURRENT — Operator auth gate (IPI2-127) — 2026-06-23
+
+- [x] Auth foundation — `auth.ts` / `operator-gate.ts` / `proxy.ts` + tests (**PR #37 merged**, `f90cea7`); closed CodeAnt SSE-bypass
+- [x] Login wired to Supabase — `@supabase/ssr` client, `safeRedirect` `/app*`, enumeration/trim hardening (**PR #46 open**, `53bf836`, 55 tests)
+- [ ] Client sends access token to the CopilotKit runtime
+- [ ] Scope Mastra threads/memory by `userId` (+ tenant) + two-user isolation smoke
+- [ ] Flip `OPERATOR_AUTH_ENABLED=true` once login + token propagation land
+
+## CURRENT — WEB-015 public homepage chatbot (IPI2-159 epic) — 2026-06-23
+
+- [x] Epic + 12 subissues planned (diagrams, build order, steps/criteria/skills, wireframes)
+- [x] **Phase 0.1** — DB schema + RLS + `claim_lead_draft` RPC (**PR #48 open**, IPI2-160); 6 RLS/claim proofs green; **not yet `supabase:push`-ed**
+- [ ] Phase 0.3 — `public-marketing-agent` (Mastra + Gemini 3.5 Flash) — startable now (no deps)
+- [ ] Phase 1 — `capture-lead` edge fn (IPI2-161) + public runtime `/api/marketing-chat` (IPI2-163)
+- [ ] Phases 2–6 — chat UI · intent · recommend · lead capture · login-claim-prefill (gated on IPI2-83/127) · analytics · tests · rollout
+
+## Tooling
+
+- [ ] Disable/narrow the Cursor `missing-test-coverage` automation — 11 duplicate PRs closed (#34/35/36/38/40/41/42/43/44/45/47)
+
+---
+
 ## Implementation Order — Linear-linked
 
 ### Current MVP / Audit Roadmap

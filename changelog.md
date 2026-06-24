@@ -8,6 +8,14 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### 2026-06-23 — Operator auth gate + public-chatbot schema (IPI2-127, IPI2-160 · WEB-015.1)
+
+- **Auth foundation merged (IPI2-127 · PR #37 → `main` `f90cea7`):** Supabase-backed operator identity replaces the hardcoded `demo-user`. `resolveOperatorUser` validates the Supabase JWT server-side (Bearer + chunked `sb-*-auth-token` cookie); `withOperatorAuth` HTTP guard gates the CopilotKit runtime in **both** modes (intelligence + default SSE) — closing a CodeAnt-flagged unauthenticated-SSE bypass; `proxy.ts` `/app/*` page gate requires a JWT-shaped session cookie and preserves the redirect query. Flag-gated by `OPERATOR_AUTH_ENABLED` (default **off**). 27 tests.
+- **Login wired to Supabase (IPI2-127 · PR #46, open):** real email/password auth via `@supabase/ssr` browser client; `safeRedirect()` open-redirect guard scoped to `/app*`; sign-up error neutralized (no account enumeration); email trimmed + lowercased; `router.refresh()` kept (revalidates server components post-login). First jsdom component tests in `app/` (login-form + client factory). 55 tests.
+- **WEB-015 Phase 0 schema (IPI2-160 · PR #48, open):** migration `20260623000000_web015_chatbot_lead_drafts.sql` — `chatbot_conversations` / `chatbot_messages` / `chatbot_events` + `lead_intake_drafts` (uuid PKs so anon drafts are non-enumerable), **RLS default-deny**, and `claim_lead_draft()` `SECURITY DEFINER` + `search_path=''` single-use-token RPC. Ephemeral-Postgres harness proves 6 RLS/claim properties (anon-deny, user-ownership, wrong-token, expired, double-claim, safe search_path). Not yet pushed to the remote DB.
+- **WEB-015 epic planned (IPI2-159 + 12 subissues):** architecture / journey / build-order mermaid diagrams, per-task order + steps + success-criteria + skills, and lo-fi wireframes for the chat widget + prefilled-intake hand-off.
+- **Review hygiene:** absorbed the genuinely-unique tests from the Cursor auto-coverage PRs, then closed **11** duplicates (#34/35/36/38/40/41/42/43/44/45/47). The Cursor `missing-test-coverage` automation keeps regenerating these — recommend disabling/narrowing it.
+
 ### 2026-06-23 — Marketing site migrated Vite → Next.js (IPI2-135 · PLT-015 · WEB-001…014)
 
 Branch `ipi/web-marketing-migration` — commit **`8fd25f0`** (131 files, +13,874/−32). Built new in `app/`; Vite `src/` left untouched as visual reference.
