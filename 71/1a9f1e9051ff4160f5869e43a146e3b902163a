@@ -1,0 +1,26 @@
+app/src/app/api/copilotkit/[[...slug]]/route.ts
+  s_99ef85ddf80e97::t_fbc38b8f003d95 10
+  s_99ef85ddf80e97::t_c38d0e45098595 48-51,53-56
+app/src/lib/operator-gate.ts
+  s_99ef85ddf80e97::t_dc9e3c985a4a8c 1-21
+app/src/lib/auth.test.ts
+  s_99ef85ddf80e97::t_57d81f2338fecf 168-192
+app/src/lib/operator-gate.test.ts
+  s_99ef85ddf80e97::t_29dff680f8054c 1-55
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.11",
+  "base_commit_sha": "711a9f1e9051ff4160f5869e43a146e3b902163a",
+  "prompts": {},
+  "sessions": {
+    "s_99ef85ddf80e97": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "4c088e51-0a96-4c26-9f0c-3f0a635e98c2",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Sanjiv Khullar <ai@socialmediville.ca>"
+    }
+  }
+}
