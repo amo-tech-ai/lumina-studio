@@ -4,7 +4,7 @@ import { CommandCenter } from "@/components/command-center/command-center";
 
 // IPI-11: first-time users (0 brands) are guided to /app/onboarding.
 // Returning users land on the Command Center as before.
-export default async function CommandCenterPage() {
+const CommandCenterPage = async () => {
   let zeroBrands = false;
   try {
     const supabase = await createSupabaseServerClient();
@@ -22,4 +22,6 @@ export default async function CommandCenterPage() {
 
   if (zeroBrands) redirect("/app/onboarding");
   return <CommandCenter />;
-}
+};
+
+export default CommandCenterPage;
