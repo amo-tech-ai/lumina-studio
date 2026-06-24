@@ -1,0 +1,23 @@
+app/src/test/web015-migration.test.ts
+  s_273812f37cdb1c::t_3b9e2730c10cd4 65-97
+supabase/tests/web015/rls_claim_test.sql
+  s_273812f37cdb1c::t_953eeff0bb93a3 20
+  s_273812f37cdb1c::t_e559cde6a35c48 146-214
+  s_273812f37cdb1c::t_d9d98f258c8594 19
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.11",
+  "base_commit_sha": "4fd9543f79b92eab23297ce0a7188c43d0399978",
+  "prompts": {},
+  "sessions": {
+    "s_273812f37cdb1c": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_108a80a18ffe8nGN1kWvYWb3po",
+        "model": "deepseek-v4-flash-free"
+      },
+      "human_author": "Sanjiv Khullar <ai@socialmediville.ca>"
+    }
+  }
+}
