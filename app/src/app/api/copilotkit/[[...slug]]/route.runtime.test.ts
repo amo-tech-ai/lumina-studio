@@ -141,3 +141,32 @@ describe("IPI2-127 — anonymous → 401 when auth enabled (runtime)", () => {
     expect(await response.text()).toBe("ok");
   });
 });
+
+describe("C3 — single auth resolution per request (runtime)", () => {
+  beforeEach(async () => {
+    vi.stubEnv("NODE_ENV", "development");
+    await setupMocks();
+  });
+
+  it("calls withOperatorAuth once per request and never resolveOperatorUser", async () => {
+    const route = await import("@/app/api/copilotkit/[[...slug]]/route");
+    const withOperatorAuth = vi.mocked((await import("@/lib/operator-gate")).withOperatorAuth);
+    const resolveOperatorUser = vi.mocked((await import("@/lib/auth")).resolveOperatorUser);
+
+    withOperatorAuth.mockResolvedValue({ id: "cached-user", email: "cached@test.com", name: "Cached" });
+
+    const request = new Request("http://localhost/api/copilotkit");
+    await route.GET(request);
+
+    const factory = (globalThis as Record<string, unknown>).__capturedAgentFactory as (
+      ctx: { request: Request },
+    ) => unknown;
+    await factory({ request });
+    await factory({ request });
+
+    expect(withOperatorAuth).toHaveBeenCalledTimes(1);
+    expect(resolveOperatorUser).not.toHaveBeenCalled();
+    expect(getLocalAgentsCalls).toHaveLength(2);
+    expect(getLocalAgentsCalls.every((c) => c.resourceId === "cached-user")).toBe(true);
+  });
+});

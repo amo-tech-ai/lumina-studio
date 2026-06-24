@@ -54,6 +54,18 @@ describe("CopilotKit route — operator auth boundary (IPI2-127)", () => {
     expect(factoryBlock).not.toMatch(/resolveOperatorUser/);
     expect(factoryBlock).not.toMatch(/withOperatorAuth/);
   });
+
+  it("caches the resolved user at the HTTP boundary before the runtime runs (C3 fix)", () => {
+    const src = readFileSync(ROUTE, "utf8");
+    expect(src).toMatch(/const user = await withOperatorAuth\(request\)/);
+    expect(src).toMatch(/_resolvedUsers\.set\(request,\s*user\)/);
+  });
+
+  it("uses the same WeakMap cache for identifyUser in intelligence mode (C3 fix)", () => {
+    const src = readFileSync(ROUTE, "utf8");
+    expect(src).toMatch(/identifyUser:\s*\(request: Request\)\s*=>\s*Promise\.resolve\(\s*_resolvedUsers\.get\(request\)/);
+    expect(src).not.toMatch(/identifyUser:[\s\S]*resolveOperatorUser/);
+  });
 });
 
 describe("CopilotKit route — Mastra resourceId isolation (IPI2-127)", () => {
