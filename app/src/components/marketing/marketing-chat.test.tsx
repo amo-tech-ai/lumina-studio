@@ -106,9 +106,35 @@ describe("MarketingChat — lead capture", () => {
     expect(src).toMatch(/getAnonId/);
   });
 
+  it("forwards lead name via spread args into the POST body (C1 fix)", () => {
+    // LeadSchema requires name; handler spreads args so name reaches /api/marketing-lead
+    expect(src).toMatch(/name:\s*z\.string\(\)/);
+    expect(src).toMatch(/JSON\.stringify\(\{\s*\.\.\.args,\s*anon_id:\s*anonId\s*\}\)/);
+  });
+
   it("shows submitted draftId in the render view", () => {
     expect(src).toMatch(/submitted:/);
     expect(src).toMatch(/draftId/);
+  });
+});
+
+// ─── Contract: anon id resilience (C2 fix) ─────────────────────────────────
+
+describe("MarketingChat — anon id resilience (C2)", () => {
+  it("wraps localStorage access in try/catch so private browsing cannot crash the widget", () => {
+    expect(src).toMatch(/function getAnonId\(\)/);
+    expect(src).toMatch(/try\s*\{[\s\S]*localStorage\.getItem/);
+    expect(src).toMatch(/catch\s*\{[\s\S]*_memoryAnonId/);
+  });
+
+  it("falls back to persistent in-memory anon id when localStorage throws (C2 fix)", () => {
+    const getAnonBlock = src.slice(
+      src.indexOf("function getAnonId"),
+      src.indexOf("const LeadSchema"),
+    );
+    // _memoryAnonId persists the UUID for the full page session (vs re-generating each call)
+    expect(getAnonBlock).toMatch(/catch\s*\{[\s\S]*_memoryAnonId/);
+    expect(getAnonBlock).toMatch(/return _memoryAnonId/);
   });
 });
 

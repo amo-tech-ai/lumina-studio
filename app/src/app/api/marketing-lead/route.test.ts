@@ -205,18 +205,18 @@ describe("marketing-lead — capture-lead integration", () => {
     expect(body.name).toBe("Jordan Lee");
   });
 
-  it("omits name from payload when not provided", async () => {
+  it("omits name from capture-lead payload when absent or empty (C1 fix)", async () => {
     const mockFetch = vi.fn().mockResolvedValueOnce(
       new Response(JSON.stringify({ draftId: "d-xyz" }), { status: 200 }),
     );
     vi.stubGlobal("fetch", mockFetch);
 
     const { POST } = await importRoute();
-    await POST(makeRequest(VALID_BODY));
+    await POST(makeRequest({ ...VALID_BODY, name: "" }));
 
     const [, opts] = mockFetch.mock.calls[0];
     const body = JSON.parse((opts as RequestInit).body as string);
-    expect(body.name).toBeUndefined();
+    expect(body).not.toHaveProperty("name");
   });
 
   it("returns only draftId (claimToken stripped from response)", async () => {

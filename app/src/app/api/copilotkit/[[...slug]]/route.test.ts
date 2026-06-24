@@ -54,6 +54,20 @@ describe("CopilotKit route — operator auth boundary (IPI2-127)", () => {
     expect(factoryBlock).not.toMatch(/resolveOperatorUser/);
     expect(factoryBlock).not.toMatch(/withOperatorAuth/);
   });
+
+  it("runs the endpoint inside the ALS context set by the boundary handler (C3 fix v2)", () => {
+    const src = readFileSync(ROUTE, "utf8");
+    // Handler sets user once via _requestUser.run; no WeakMap, no re-auth downstream
+    expect(src).toMatch(/_requestUser\.run\(user,/);
+    expect(src).not.toMatch(/_resolvedUsers/);
+  });
+
+  it("identifyUser reads from ALS — no Request param needed (C3 fix v2)", () => {
+    const src = readFileSync(ROUTE, "utf8");
+    expect(src).toMatch(/identifyUser:\s*async\s*\(\s*\)\s*=>/);
+    expect(src).toMatch(/identifyUser[\s\S]*_requestUser\.getStore\(\)/);
+    expect(src).not.toMatch(/identifyUser:[\s\S]*resolveOperatorUser/);
+  });
 });
 
 describe("CopilotKit route — Mastra resourceId isolation (IPI2-127)", () => {
