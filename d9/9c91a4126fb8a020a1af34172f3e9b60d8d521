@@ -1,0 +1,27 @@
+app/src/app/(operator)/app/onboarding/page.tsx
+  s_9b5029d3685278::t_165b116fdfe276 1-254
+app/src/lib/marketing-routes.test.ts
+  s_9b5029d3685278::t_ba89bf8119e2a8 17
+app/src/lib/onboarding.ts
+  s_9b5029d3685278::t_a0661f4672fd2b 1-71
+app/src/app/(operator)/app/page.tsx
+  s_9b5029d3685278::t_b531cfe1cd338d 1-2,5-23
+app/src/test/onboarding.test.ts
+  s_9b5029d3685278::t_b12d954c4c18f7 1-166
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.11",
+  "base_commit_sha": "d99c91a4126fb8a020a1af34172f3e9b60d8d521",
+  "prompts": {},
+  "sessions": {
+    "s_9b5029d3685278": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "890fea56-a29f-4ea1-93a3-e5947f4859b8",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
