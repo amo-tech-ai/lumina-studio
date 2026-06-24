@@ -160,6 +160,59 @@ describe("marketing-lead — capture-lead integration", () => {
     expect(body.website).toBeUndefined();
   });
 
+  it("forwards optional lead fields (budget, timeline, lead_answers, conversation_id)", async () => {
+    const mockFetch = vi.fn().mockResolvedValueOnce(
+      new Response(JSON.stringify({ draftId: "d-xyz" }), { status: 200 }),
+    );
+    vi.stubGlobal("fetch", mockFetch);
+
+    const { POST } = await importRoute();
+    await POST(
+      makeRequest({
+        ...VALID_BODY,
+        conversation_id: "conv-uuid-99",
+      }),
+    );
+
+    const [, opts] = mockFetch.mock.calls[0];
+    const body = JSON.parse((opts as RequestInit).body as string);
+    expect(body).toMatchObject({
+      anon_id: "anon-abc-123",
+      email: "visitor@brand.co",
+      service_interest: "shopify",
+      message_summary: VALID_BODY.message_summary,
+      lead_answers: { company: "Cool Brand" },
+      budget: "$5k–$10k",
+      timeline: "Q3 2026",
+      conversation_id: "conv-uuid-99",
+    });
+  });
+
+  it("omits optional fields when not provided", async () => {
+    const mockFetch = vi.fn().mockResolvedValueOnce(
+      new Response(JSON.stringify({ draftId: "d-xyz" }), { status: 200 }),
+    );
+    vi.stubGlobal("fetch", mockFetch);
+
+    const { POST } = await importRoute();
+    await POST(
+      makeRequest({
+        anon_id: "anon-min",
+        email: "min@brand.co",
+        service_interest: "shopify",
+        message_summary: "Short summary",
+      }),
+    );
+
+    const [, opts] = mockFetch.mock.calls[0];
+    const body = JSON.parse((opts as RequestInit).body as string);
+    expect(body.budget).toBeUndefined();
+    expect(body.timeline).toBeUndefined();
+    expect(body.brand_url).toBeUndefined();
+    expect(body.conversation_id).toBeUndefined();
+    expect(body.lead_answers).toEqual({});
+  });
+
   it("returns draftId and status on success", async () => {
     vi.stubGlobal(
       "fetch",
@@ -192,6 +245,30 @@ describe("marketing-lead — error handling", () => {
     expect(res.status).toBe(503);
     const data = await res.json();
     expect(data.error).toMatch(/unavailable/i);
+  });
+
+  it("returns 503 when capture-lead exceeds the 10s timeout", async () => {
+    vi.useFakeTimers();
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((_url: string, opts?: RequestInit) => {
+        return new Promise((_resolve, reject) => {
+          opts?.signal?.addEventListener("abort", () => {
+            reject(new DOMException("The operation was aborted.", "AbortError"));
+          });
+        });
+      }),
+    );
+
+    const { POST } = await importRoute();
+    const responsePromise = POST(makeRequest(VALID_BODY));
+    await vi.advanceTimersByTimeAsync(10_001);
+    const res = await responsePromise;
+
+    expect(res.status).toBe(503);
+    const data = await res.json();
+    expect(data.error).toMatch(/unavailable/i);
+    vi.useRealTimers();
   });
 
   it("forwards capture-lead 422 back to caller", async () => {

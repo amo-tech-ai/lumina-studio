@@ -20,4 +20,15 @@ describe("mastra agent registry", () => {
     expect(agents["creative-director"]).toBeDefined();
     expect(agents["creative-director"]).not.toBe(agents["production-planner"]);
   });
+
+  it("registers public-marketing for the isolated marketing runtime", () => {
+    expect(agents["public-marketing"]).toBeDefined();
+  });
+
+  it("keeps public-marketing out of REQUIRED_AGENT_IDS (operator vs public isolation)", () => {
+    // public-marketing is served from a separate Mastra instance on /api/marketing-chat.
+    // Requiring it in the operator CopilotKit registry would blur that boundary.
+    expect(REQUIRED_AGENT_IDS).not.toContain("public-marketing");
+    expect(agents["public-marketing"]).toBeDefined();
+  });
 });

@@ -152,4 +152,52 @@ describe("IPI2-127 — anonymous → 401 when auth enabled (runtime)", () => {
     expect(response.status).toBe(200);
     expect(await response.text()).toBe("ok");
   });
+
+  it("rethrows non-OperatorAuthError from withOperatorAuth (not masked as 401)", async () => {
+    const withOperatorAuth = vi.mocked((await import("@/lib/operator-gate")).withOperatorAuth);
+    withOperatorAuth.mockRejectedValue(new Error("database unavailable"));
+
+    const route = await import("@/app/api/copilotkit/[[...slug]]/route");
+
+    await expect(route.GET(new Request("http://localhost/api/copilotkit"))).rejects.toThrow(
+      "database unavailable",
+    );
+  });
+});
+
+describe("IPI2-127 — CopilotKit intelligence bootstrap (runtime)", () => {
+  beforeEach(async () => {
+    vi.stubEnv("NODE_ENV", "development");
+    vi.stubEnv("COPILOTKIT_LICENSE_TOKEN", "test-license");
+    delete process.env.INTELLIGENCE_API_KEY;
+    await setupMocks();
+  });
+
+  it("throws at import when COPILOTKIT_LICENSE_TOKEN is set without INTELLIGENCE_API_KEY", async () => {
+    await expect(import("@/app/api/copilotkit/[[...slug]]/route")).rejects.toThrow(
+      /INTELLIGENCE_API_KEY is required/,
+    );
+  });
+
+  it("wires identifyUser when intelligence mode is fully configured", async () => {
+    vi.resetModules();
+    vi.stubEnv("INTELLIGENCE_API_KEY", "intel-key");
+
+    const capturedConfig: Record<string, unknown> = {};
+    vi.doMock("@copilotkit/runtime/v2", () => ({
+      CopilotRuntime: vi.fn((config: Record<string, unknown>) => {
+        Object.assign(capturedConfig, config);
+        return {};
+      }),
+      createCopilotEndpoint: vi.fn(() => ({})),
+      CopilotKitIntelligence: vi.fn(),
+      InMemoryAgentRunner: vi.fn(),
+    }));
+
+    await import("@/app/api/copilotkit/[[...slug]]/route");
+
+    expect(capturedConfig.identifyUser).toBeTypeOf("function");
+    expect(capturedConfig.licenseToken).toBe("test-license");
+    expect(capturedConfig.runner).toBeUndefined();
+  });
 });
