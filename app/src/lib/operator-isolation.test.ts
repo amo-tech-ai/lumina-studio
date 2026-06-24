@@ -44,6 +44,7 @@ async function createAgentsForRequest(request: Request) {
 describe("IPI2-127: per-user Mastra resourceId isolation (two-user smoke)", () => {
   afterEach(() => {
     vi.clearAllMocks();
+    vi.unstubAllEnvs();
   });
 
   it("User A gets agents with resourceId A", async () => {
@@ -157,11 +158,13 @@ describe("IPI2-127: per-user Mastra resourceId isolation (two-user smoke)", () =
   });
 
   it("dev fallback (auth disabled) uses dev-unauthenticated, not shared user", async () => {
-    // When OPERATOR_AUTH_ENABLED is not true, the gate returns a dev identity.
-    // The factory still uses that identity's id as resourceId.
     vi.stubEnv("OPERATOR_AUTH_ENABLED", "false");
-    import("@/lib/auth").then(({ resolveOperatorUser: resolveOpUser }) => {
-      expect(resolveOpUser).not.toHaveBeenCalled();
-    });
+    vi.resetModules();
+
+    const { withOperatorAuth } = await import("@/lib/operator-gate");
+    const user = await withOperatorAuth(new Request("http://localhost/api/copilotkit"));
+
+    expect(user.id).toBe("dev-unauthenticated");
+    expect(user.name).toMatch(/auth disabled/i);
   });
 });

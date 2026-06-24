@@ -10,6 +10,9 @@ const SubmitLeadSchema = z.object({
   email: z.string().email(),
   service_interest: z.enum(SERVICE_SLUGS),
   message_summary: z.string().min(1),
+  // `name` is collected by the chat widget's capture_lead tool; merged into
+  // lead_answers for capture-lead (WEB-015.4) so visitor identity is not lost.
+  name: z.string().min(1).optional(),
   lead_answers: z.record(z.string()).optional().default({}),
   budget: z.string().optional(),
   timeline: z.string().optional(),
@@ -76,12 +79,15 @@ export async function POST(request: Request): Promise<Response> {
 }
 
 function buildCaptureLeadPayload(req: SubmitLeadRequest) {
+  const leadAnswers = { ...(req.lead_answers ?? {}) };
+  if (req.name && !leadAnswers.name) leadAnswers.name = req.name;
+
   return {
     anon_id: req.anon_id,
     email: req.email,
     service_interest: req.service_interest,
     message_summary: req.message_summary,
-    lead_answers: req.lead_answers ?? {},
+    lead_answers: leadAnswers,
     ...(req.budget && { budget: req.budget }),
     ...(req.timeline && { timeline: req.timeline }),
     ...(req.website && { brand_url: req.website }),

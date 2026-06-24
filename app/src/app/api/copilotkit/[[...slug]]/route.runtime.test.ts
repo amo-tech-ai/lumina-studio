@@ -153,3 +153,24 @@ describe("IPI2-127 — anonymous → 401 when auth enabled (runtime)", () => {
     expect(await response.text()).toBe("ok");
   });
 });
+
+describe("CopilotKit Intelligence — env guard", () => {
+  beforeEach(async () => {
+    vi.resetModules();
+    await setupMocks();
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    vi.resetModules();
+  });
+
+  it("throws at module load when COPILOTKIT_LICENSE_TOKEN is set without INTELLIGENCE_API_KEY", async () => {
+    vi.stubEnv("NODE_ENV", "development");
+    vi.stubEnv("COPILOTKIT_LICENSE_TOKEN", "test-license");
+
+    await expect(import("@/app/api/copilotkit/[[...slug]]/route")).rejects.toThrow(
+      /INTELLIGENCE_API_KEY is required/,
+    );
+  });
+});
