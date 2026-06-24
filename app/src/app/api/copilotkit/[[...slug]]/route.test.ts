@@ -42,14 +42,12 @@ describe("CopilotKit route — operator auth boundary (IPI2-127)", () => {
     expect(src).not.toMatch(/@ts-expect-error.*getLocalAgents/);
   });
 
-  it("calls resolveOperatorUser inside the agent factory, not at module load", () => {
+  it("reads the cached user identity from the per-request WeakMap in the agent factory", () => {
     const src = readFileSync(ROUTE, "utf8");
-    // The call happens inside the async factory, not at the top level
-    const factoryMatch = src.match(/agents:\s*async\s*\(\s*\{ request \}\s*\)\s*=>\s*\{([^}]*)\}/);
-    expect(factoryMatch).toBeTruthy();
-    if (factoryMatch) {
-      expect(factoryMatch[1]).toContain("resolveOperatorUser");
-    }
+    // C3 fix: factory reads from _resolvedUsers (populated by the boundary handler)
+    // rather than calling resolveOperatorUser again.
+    expect(src).toMatch(/_resolvedUsers\.get\(request\)/);
+    expect(src).not.toMatch(/resolveOperatorUser\(request\)/);
   });
 });
 
@@ -59,15 +57,15 @@ describe("CopilotKit route — Mastra resourceId isolation (IPI2-127)", () => {
     vi.restoreAllMocks();
   });
 
-  it("no getLocalAgents call happens before user validation in the factory", () => {
+  it("no getLocalAgents call happens before identity resolution in the factory", () => {
     const src = readFileSync(ROUTE, "utf8");
-    // The only getLocalAgents call is inside the factory, after resolveOperatorUser
+    // The only getLocalAgents call is inside the factory, after reading the cached user
     const factoryStart = src.indexOf("agents: async");
     const factoryBlock = src.slice(factoryStart, factoryStart + 600);
-    const resolvePos = factoryBlock.indexOf("resolveOperatorUser");
+    const cacheReadPos = factoryBlock.indexOf("_resolvedUsers.get");
     const agentsPos = factoryBlock.indexOf("getLocalAgents");
-    expect(resolvePos).toBeGreaterThan(-1);
-    expect(agentsPos).toBeGreaterThan(resolvePos);
+    expect(cacheReadPos).toBeGreaterThan(-1);
+    expect(agentsPos).toBeGreaterThan(cacheReadPos);
   });
 
   it("each request gets its own agent scope (no shared instances at module load)", () => {

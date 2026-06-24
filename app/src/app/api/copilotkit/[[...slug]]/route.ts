@@ -7,17 +7,20 @@ import {
 import { MastraAgent } from "@ag-ui/mastra";
 import { RequestContext } from "@mastra/core/request-context";
 import { mastra } from "@/mastra";
-import { resolveOperatorUser } from "@/lib/auth";
+import { type OperatorUser } from "@/lib/auth";
 import { OperatorAuthError, withOperatorAuth } from "@/lib/operator-gate";
 import { handle } from "hono/vercel";
 
+// Per-request user cache: withOperatorAuth resolves the user at the HTTP
+// boundary; the agent factory and identifyUser read from this cache so each
+// inbound request only calls resolveOperatorUser once (C3 fix — audit 2026-06-24).
+const _resolvedUsers = new WeakMap<Request, OperatorUser>();
+
 const runtime = new CopilotRuntime({
-  // Per-request agent factory (IPI2-127): resolves the authenticated operator
-  // identity from the Supabase session and creates agents scoped to that user.
-  // Each request gets its own agents with resourceId = user.id, ensuring Mastra
-  // memory/threads are isolated per operator.
+  // Per-request agent factory (IPI2-127): reads the already-resolved operator
+  // identity from the cache set by the HTTP boundary handler.
   agents: async ({ request }) => {
-    const user = await resolveOperatorUser(request);
+    const user = _resolvedUsers.get(request) ?? { id: "unknown", name: "unknown" };
     const requestContext = new RequestContext();
     requestContext.set("userId", user.id);
     if (user.email) requestContext.set("email", user.email);
@@ -42,8 +45,9 @@ const runtime = new CopilotRuntime({
           wsUrl:
             process.env.INTELLIGENCE_GATEWAY_WS_URL ?? "ws://localhost:4401",
         }),
-        // IPI2-127: runtime-level user resolution for intelligence mode.
-        identifyUser: (request: Request) => resolveOperatorUser(request),
+        identifyUser: (request: Request) => Promise.resolve(
+          _resolvedUsers.get(request) ?? { id: "unknown", name: "unknown" }
+        ),
         licenseToken: process.env.COPILOTKIT_LICENSE_TOKEN,
       };
       })()
@@ -58,13 +62,12 @@ const app = createCopilotEndpoint({
 
 const endpoint = handle(app);
 
-// IPI2-127: enforce auth at the HTTP boundary (defense-in-depth). The agent
-// factory above also validates per-request, but this outer gate returns a clean
-// 401 before the runtime processes the request at all — covering both SSE and
-// intelligence modes.
+// IPI2-127: enforce auth at the HTTP boundary. Resolves the operator identity
+// once per request and caches it for the agent factory and identifyUser above.
 const handler = async (request: Request): Promise<Response> => {
   try {
-    await withOperatorAuth(request);
+    const user = await withOperatorAuth(request);
+    _resolvedUsers.set(request, user);
   } catch (err) {
     if (err instanceof OperatorAuthError) {
       return new Response("Unauthorized", { status: 401 });

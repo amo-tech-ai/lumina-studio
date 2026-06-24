@@ -7,6 +7,7 @@ import { SERVICE_SLUGS } from "@/mastra/types/marketing-lead";
 // readable recap of the conversation to store alongside the lead draft.
 const SubmitLeadSchema = z.object({
   anon_id: z.string().min(1),
+  name: z.string().optional(),
   email: z.string().email(),
   service_interest: z.enum(SERVICE_SLUGS),
   message_summary: z.string().min(1),
@@ -82,6 +83,7 @@ function buildCaptureLeadPayload(req: SubmitLeadRequest) {
     service_interest: req.service_interest,
     message_summary: req.message_summary,
     lead_answers: req.lead_answers ?? {},
+    ...(req.name && { name: req.name }),
     ...(req.budget && { budget: req.budget }),
     ...(req.timeline && { timeline: req.timeline }),
     ...(req.website && { brand_url: req.website }),

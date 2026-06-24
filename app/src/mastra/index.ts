@@ -1,6 +1,6 @@
 import { Mastra } from "@mastra/core/mastra";
 import { LibSQLStore } from "@mastra/libsql";
-import { productionPlannerAgent, creativeDirectorAgent, publicMarketingAgent } from "./agents";
+import { productionPlannerAgent, creativeDirectorAgent } from "./agents";
 import { ConsoleLogger, LogLevel } from "@mastra/core/logger";
 
 const VALID_LOG_LEVELS: LogLevel[] = ["debug", "info", "warn", "error"];
@@ -17,7 +17,6 @@ export const agents = {
   default: productionPlannerAgent,
   "production-planner": productionPlannerAgent,
   "creative-director": creativeDirectorAgent,
-  "public-marketing": publicMarketingAgent,
 };
 
 // Regression guard: fail fast at server start / build if a required agent id is

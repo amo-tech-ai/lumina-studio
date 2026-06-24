@@ -18,12 +18,17 @@ const ENABLED = process.env.NEXT_PUBLIC_MARKETING_CHAT_ENABLED === "true";
 
 function getAnonId(): string {
   const key = "ipix_anon_id";
-  let id = localStorage.getItem(key);
-  if (!id) {
-    id = `anon-${crypto.randomUUID()}`;
-    localStorage.setItem(key, id);
+  try {
+    let id = localStorage.getItem(key);
+    if (!id) {
+      id = `anon-${crypto.randomUUID()}`;
+      localStorage.setItem(key, id);
+    }
+    return id;
+  } catch {
+    // Safari private browsing and full-storage conditions throw DOMException
+    return `anon-${crypto.randomUUID()}`;
   }
-  return id;
 }
 
 const LeadSchema = z.object({

@@ -64,30 +64,26 @@ describe("IPI2-127 — two-user isolation (runtime)", () => {
   });
 
   it("produces different resourceId for User A vs User B in getLocalAgents", async () => {
-    await import("@/app/api/copilotkit/[[...slug]]/route");
+    const route = await import("@/app/api/copilotkit/[[...slug]]/route");
 
     const factory = (globalThis as Record<string, unknown>).__capturedAgentFactory as (
       ctx: { request: Request },
     ) => unknown;
     expect(factory).toBeDefined();
 
-    const resolveOperatorUser = vi.mocked((await import("@/lib/auth")).resolveOperatorUser);
+    const withOperatorAuth = vi.mocked((await import("@/lib/operator-gate")).withOperatorAuth);
 
-    // Request from User A
-    resolveOperatorUser.mockResolvedValueOnce({
-      id: "user-a-uuid",
-      email: "alice@example.com",
-      name: "Alice",
-    });
-    await factory({ request: new Request("http://localhost/api/copilotkit") });
+    // Run requests through the handler so the WeakMap is populated (C3 fix)
+    const requestA = new Request("http://localhost/api/copilotkit");
+    withOperatorAuth.mockResolvedValueOnce({ id: "user-a-uuid", email: "alice@example.com", name: "Alice" });
+    await route.GET(requestA);
 
-    // Request from User B
-    resolveOperatorUser.mockResolvedValueOnce({
-      id: "user-b-uuid",
-      email: "bob@example.com",
-      name: "Bob",
-    });
-    await factory({ request: new Request("http://localhost/api/copilotkit") });
+    const requestB = new Request("http://localhost/api/copilotkit");
+    withOperatorAuth.mockResolvedValueOnce({ id: "user-b-uuid", email: "bob@example.com", name: "Bob" });
+    await route.GET(requestB);
+
+    await factory({ request: requestA });
+    await factory({ request: requestB });
 
     expect(getLocalAgentsCalls).toHaveLength(2);
     expect(getLocalAgentsCalls[0].resourceId).toBe("user-a-uuid");
@@ -96,22 +92,26 @@ describe("IPI2-127 — two-user isolation (runtime)", () => {
   });
 
   it("isolates agent scopes: each request gets one getLocalAgents call", async () => {
-    await import("@/app/api/copilotkit/[[...slug]]/route");
+    const route = await import("@/app/api/copilotkit/[[...slug]]/route");
 
     const factory = (globalThis as Record<string, unknown>).__capturedAgentFactory as (
       ctx: { request: Request },
     ) => unknown;
 
-    const resolveOperatorUser = vi.mocked((await import("@/lib/auth")).resolveOperatorUser);
-    resolveOperatorUser.mockResolvedValue({ id: "user-x", email: "x@test.com", name: "X" });
+    const withOperatorAuth = vi.mocked((await import("@/lib/operator-gate")).withOperatorAuth);
+    withOperatorAuth.mockResolvedValue({ id: "user-x", email: "x@test.com", name: "X" });
 
-    await factory({ request: new Request("http://localhost") });
-    await factory({ request: new Request("http://localhost") });
-    await factory({ request: new Request("http://localhost") });
+    const requests = [
+      new Request("http://localhost"),
+      new Request("http://localhost"),
+      new Request("http://localhost"),
+    ];
+    for (const req of requests) await route.GET(req);
+    for (const req of requests) await factory({ request: req });
 
     expect(getLocalAgentsCalls).toHaveLength(3);
     const resourceIds = getLocalAgentsCalls.map((c) => c.resourceId);
-    expect(new Set(resourceIds).size).toBe(1); // same user → same id
+    expect(new Set(resourceIds).size).toBe(1);
   });
 });
 
@@ -137,9 +137,7 @@ describe("IPI2-127 — anonymous → 401 when auth enabled (runtime)", () => {
 
   it("passes through to CopilotRuntime when auth succeeds", async () => {
     const withOperatorAuth = vi.mocked((await import("@/lib/operator-gate")).withOperatorAuth);
-    const resolveOperatorUser = vi.mocked((await import("@/lib/auth")).resolveOperatorUser);
     withOperatorAuth.mockResolvedValue({ id: "real-user", email: "op@test.com", name: "Op" });
-    resolveOperatorUser.mockResolvedValue({ id: "real-user", email: "op@test.com", name: "Op" });
 
     const route = await import("@/app/api/copilotkit/[[...slug]]/route");
 
