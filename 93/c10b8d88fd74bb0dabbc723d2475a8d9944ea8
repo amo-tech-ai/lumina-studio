@@ -1,0 +1,30 @@
+app/src/lib/operator-isolation.test.ts
+  s_9b5029d3685278::t_a707fbf3c92d89 40
+app/src/app/api/copilotkit/[[...slug]]/route.ts
+  s_9b5029d3685278::t_cc69e99419f60f 27
+app/src/app/api/marketing-chat/[[...slug]]/route.ts
+  s_9b5029d3685278::t_0d77aa939d7f38 22
+app/src/app/api/copilotkit/[[...slug]]/route.runtime.test.ts
+  s_9b5029d3685278::t_b3e20b4c133ab5 17
+app/src/app/api/copilotkit/[[...slug]]/route.test.ts
+  s_9b5029d3685278::t_74c82182513ed1 28
+app/src/app/api/marketing-chat/[[...slug]]/route.test.ts
+  s_9b5029d3685278::t_0d4c302c80db2c 76-77
+  s_9b5029d3685278::t_0603544294f374 4
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.11",
+  "base_commit_sha": "93c10b8d88fd74bb0dabbc723d2475a8d9944ea8",
+  "prompts": {},
+  "sessions": {
+    "s_9b5029d3685278": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "890fea56-a29f-4ea1-93a3-e5947f4859b8",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": "Sanjiv Khullar <ai@socialmediville.ca>"
+    }
+  }
+}
