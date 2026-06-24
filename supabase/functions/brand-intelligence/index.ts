@@ -85,13 +85,36 @@ type BrandProfilePayload = {
   };
 };
 
+// Private/internal IP ranges — block to prevent SSRF
+const PRIVATE_HOST_PATTERNS = [
+  /^localhost$/i,
+  /^127\./,
+  /^10\./,
+  /^172\.(1[6-9]|2\d|3[01])\./,
+  /^192\.168\./,
+  /^169\.254\./, // AWS/GCP metadata
+  /^::1$/,
+  /^fc00:/i,
+  /^fe80:/i,
+];
+
 function isValidHttpUrl(value: string): boolean {
   try {
     const parsed = new URL(value);
-    return parsed.protocol === "https:" || parsed.protocol === "http:";
+    if (parsed.protocol !== "https:" && parsed.protocol !== "http:") return false;
+    return !PRIVATE_HOST_PATTERNS.some((p) => p.test(parsed.hostname));
   } catch {
     return false;
   }
+}
+
+function withTimeout<T>(p: Promise<T>, ms: number): Promise<T> {
+  return Promise.race([
+    p,
+    new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error(`Gemini timeout after ${ms}ms`)), ms)
+    ),
+  ]);
 }
 
 function clampScore(n: number): number {
@@ -122,6 +145,11 @@ Deno.serve(async (req: Request) => {
         "Brand intelligence is not configured",
         503,
       );
+    }
+
+    const contentLength = parseInt(req.headers.get("content-length") ?? "0", 10);
+    if (contentLength > 8192) {
+      return errorResponse("payload_too_large", "Payload too large", 413);
     }
 
     let body: { url?: string; brandId?: string };
@@ -165,14 +193,17 @@ Use the URL content as primary evidence. Set sourceUrl to the analyzed URL.
     const geminiStarted = performance.now();
 
     // urlContext cannot be combined with responseMimeType application/json (API 400).
-    const contextResponse = await ai.models.generateContent({
-      model: MODEL,
-      contents: prompt,
-      config: {
-        tools: [{ urlContext: {} }],
-        temperature: 0.2,
-      },
-    });
+    const contextResponse = await withTimeout(
+      ai.models.generateContent({
+        model: MODEL,
+        contents: prompt,
+        config: {
+          tools: [{ urlContext: {} }],
+          temperature: 0.2,
+        },
+      }),
+      25_000,
+    );
 
     const contextText =
       contextResponse.text?.trim() ||
@@ -201,15 +232,18 @@ Required JSON shape:
 }
 `.trim();
 
-    const response = await ai.models.generateContent({
-      model: MODEL,
-      contents: structurePrompt,
-      config: {
-        responseMimeType: "application/json",
-        responseSchema: brandProfileSchema,
-        temperature: 0.1,
-      },
-    });
+    const response = await withTimeout(
+      ai.models.generateContent({
+        model: MODEL,
+        contents: structurePrompt,
+        config: {
+          responseMimeType: "application/json",
+          responseSchema: brandProfileSchema,
+          temperature: 0.1,
+        },
+      }),
+      20_000,
+    );
 
     const geminiMs = Math.round(performance.now() - geminiStarted);
     const responseText = response.text ?? "";
@@ -231,15 +265,28 @@ Required JSON shape:
         422,
       );
     }
+    if (!profile.tagline || !profile.category || !profile.targetAudience ||
+        !profile.visualIdentity?.mood || !Array.isArray(profile.visualIdentity?.colors)) {
+      return errorResponse("validation_error", "Incomplete brand profile returned", 422);
+    }
+    if (!profile.scores || typeof profile.scores.visual !== "number" ||
+        typeof profile.scores.audience !== "number" ||
+        typeof profile.scores.consistency !== "number" ||
+        typeof profile.scores.commerce_readiness !== "number") {
+      return errorResponse("validation_error", "Incomplete scores returned", 422);
+    }
 
     const client = createUserClient(auth.accessToken);
     const aiProfile = {
-      name: profile.name,
-      tagline: profile.tagline,
-      category: profile.category,
-      visualIdentity: profile.visualIdentity,
-      targetAudience: profile.targetAudience,
-      sourceUrl: profile.sourceUrl || url,
+      name: profile.name.trim(),
+      tagline: profile.tagline.trim(),
+      category: profile.category.trim(),
+      visualIdentity: {
+        colors: profile.visualIdentity.colors.slice(0, 12),
+        mood: profile.visualIdentity.mood.trim(),
+      },
+      targetAudience: profile.targetAudience.trim(),
+      sourceUrl: url, // always use submitted URL, never trust model-provided value
       analyzedAt: new Date().toISOString(),
     };
 
@@ -251,6 +298,7 @@ Required JSON shape:
         .from("brands")
         .select("id, name")
         .eq("id", brandId)
+        .eq("user_id", auth.user.id)
         .maybeSingle();
 
       if (fetchErr || !existing) {
@@ -260,11 +308,12 @@ Required JSON shape:
       const { data: updated, error: updateErr } = await client
         .from("brands")
         .update({
-          name: profile.name,
+          name: aiProfile.name,
           brand_url: url,
           ai_profile: aiProfile,
         })
         .eq("id", brandId)
+        .eq("user_id", auth.user.id)
         .select("id, name")
         .single();
 
@@ -291,27 +340,11 @@ Required JSON shape:
       brandId = inserted.id;
     }
 
-    // Replace prior scores on re-analysis (delete RLS in 20260614000002).
-    const { error: deleteScoresErr } = await client
-      .from("brand_scores")
-      .delete()
-      .eq("brand_id", brandId);
-
-    if (deleteScoresErr) {
-      throw new Error(deleteScoresErr.message);
-    }
-
     const scoreRows = [
       { score_type: "visual", score: clampScore(profile.scores.visual) },
       { score_type: "audience", score: clampScore(profile.scores.audience) },
-      {
-        score_type: "consistency",
-        score: clampScore(profile.scores.consistency),
-      },
-      {
-        score_type: "commerce_readiness",
-        score: clampScore(profile.scores.commerce_readiness),
-      },
+      { score_type: "consistency", score: clampScore(profile.scores.consistency) },
+      { score_type: "commerce_readiness", score: clampScore(profile.scores.commerce_readiness) },
     ].map((row) => ({
       brand_id: brandId,
       score_type: row.score_type,
@@ -319,9 +352,10 @@ Required JSON shape:
       details: { source: "brand-intelligence", url },
     }));
 
+    // Upsert: idempotent re-analysis, no temporary data loss on insert failure
     const { data: scores, error: scoresErr } = await client
       .from("brand_scores")
-      .insert(scoreRows)
+      .upsert(scoreRows, { onConflict: "brand_id,score_type" })
       .select("id, score_type, score");
 
     if (scoresErr) {
