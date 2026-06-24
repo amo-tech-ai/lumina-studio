@@ -55,15 +55,17 @@ describe("CopilotKit route — operator auth boundary (IPI2-127)", () => {
     expect(factoryBlock).not.toMatch(/withOperatorAuth/);
   });
 
-  it("caches the resolved user at the HTTP boundary before the runtime runs (C3 fix)", () => {
+  it("runs the endpoint inside the ALS context set by the boundary handler (C3 fix v2)", () => {
     const src = readFileSync(ROUTE, "utf8");
-    expect(src).toMatch(/const user = await withOperatorAuth\(request\)/);
-    expect(src).toMatch(/_resolvedUsers\.set\(request,\s*user\)/);
+    // Handler sets user once via _requestUser.run; no WeakMap, no re-auth downstream
+    expect(src).toMatch(/_requestUser\.run\(user,/);
+    expect(src).not.toMatch(/_resolvedUsers/);
   });
 
-  it("uses the same WeakMap cache for identifyUser in intelligence mode (C3 fix)", () => {
+  it("identifyUser reads from ALS — no Request param needed (C3 fix v2)", () => {
     const src = readFileSync(ROUTE, "utf8");
-    expect(src).toMatch(/identifyUser:\s*\(request: Request\)\s*=>\s*Promise\.resolve\(\s*_resolvedUsers\.get\(request\)/);
+    expect(src).toMatch(/identifyUser:\s*async\s*\(\s*\)\s*=>/);
+    expect(src).toMatch(/identifyUser[\s\S]*_requestUser\.getStore\(\)/);
     expect(src).not.toMatch(/identifyUser:[\s\S]*resolveOperatorUser/);
   });
 });

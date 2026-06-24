@@ -155,16 +155,13 @@ describe("C3 — single auth resolution per request (runtime)", () => {
 
     withOperatorAuth.mockResolvedValue({ id: "cached-user", email: "cached@test.com", name: "Cached" });
 
-    const request = new Request("http://localhost/api/copilotkit");
-    await route.GET(request);
+    // Each route.GET call: withOperatorAuth once, then endpoint (mock) calls factory
+    // inside the ALS context set by _requestUser.run(). Two requests → two factory
+    // invocations, each reading the same "cached-user" from the store.
+    await route.GET(new Request("http://localhost/api/copilotkit"));
+    await route.GET(new Request("http://localhost/api/copilotkit"));
 
-    const factory = (globalThis as Record<string, unknown>).__capturedAgentFactory as (
-      ctx: { request: Request },
-    ) => unknown;
-    await factory({ request });
-    await factory({ request });
-
-    expect(withOperatorAuth).toHaveBeenCalledTimes(1);
+    expect(withOperatorAuth).toHaveBeenCalledTimes(2);
     expect(resolveOperatorUser).not.toHaveBeenCalled();
     expect(getLocalAgentsCalls).toHaveLength(2);
     expect(getLocalAgentsCalls.every((c) => c.resourceId === "cached-user")).toBe(true);

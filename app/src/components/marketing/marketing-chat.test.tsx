@@ -124,16 +124,17 @@ describe("MarketingChat — anon id resilience (C2)", () => {
   it("wraps localStorage access in try/catch so private browsing cannot crash the widget", () => {
     expect(src).toMatch(/function getAnonId\(\)/);
     expect(src).toMatch(/try\s*\{[\s\S]*localStorage\.getItem/);
-    expect(src).toMatch(/catch\s*\{[\s\S]*return `anon-\$\{crypto\.randomUUID\(\)\}`/);
+    expect(src).toMatch(/catch\s*\{[\s\S]*_memoryAnonId/);
   });
 
-  it("falls back to ephemeral anon id when localStorage throws", () => {
+  it("falls back to persistent in-memory anon id when localStorage throws (C2 fix)", () => {
     const getAnonBlock = src.slice(
       src.indexOf("function getAnonId"),
       src.indexOf("const LeadSchema"),
     );
-    expect(getAnonBlock).toMatch(/catch\s*\{[\s\S]*return `anon-\$\{crypto\.randomUUID\(\)\}`;/);
-    expect(getAnonBlock).toMatch(/Safari private browsing/);
+    // _memoryAnonId persists the UUID for the full page session (vs re-generating each call)
+    expect(getAnonBlock).toMatch(/catch\s*\{[\s\S]*_memoryAnonId/);
+    expect(getAnonBlock).toMatch(/return _memoryAnonId/);
   });
 });
 
