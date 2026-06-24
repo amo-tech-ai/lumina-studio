@@ -187,12 +187,12 @@ describe("marketing-lead — capture-lead integration", () => {
     expect(body.name).toBeUndefined();
   });
 
-  it("returns draftId and status on success", async () => {
+  it("returns only draftId (claimToken stripped from response)", async () => {
     vi.stubGlobal(
       "fetch",
       vi.fn().mockResolvedValueOnce(
         new Response(
-          JSON.stringify({ draftId: "d-99", status: "draft" }),
+          JSON.stringify({ draftId: "d-99", status: "ready", claimToken: "secret-uuid" }),
           { status: 200 },
         ),
       ),
@@ -202,7 +202,40 @@ describe("marketing-lead — capture-lead integration", () => {
     expect(res.status).toBe(200);
     const data = await res.json();
     expect(data.draftId).toBe("d-99");
-    expect(data.status).toBe("draft");
+    // claimToken must never reach the browser
+    expect(data.claimToken).toBeUndefined();
+    expect(data.status).toBeUndefined();
+  });
+
+  it("sets claim_token as httpOnly cookie when edge fn returns claimToken", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({ draftId: "d-99", status: "ready", claimToken: "tok-abc-123" }),
+          { status: 200 },
+        ),
+      ),
+    );
+    const { POST } = await importRoute();
+    const res = await POST(makeRequest(VALID_BODY));
+    const cookie = res.headers.get("set-cookie") ?? "";
+    expect(cookie).toContain("claim_token=tok-abc-123");
+    expect(cookie).toContain("HttpOnly");
+    expect(cookie).toContain("Secure");
+    expect(cookie).toContain("SameSite=Strict");
+  });
+
+  it("does not set cookie when edge fn omits claimToken", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValueOnce(
+        new Response(JSON.stringify({ draftId: "d-99", status: "ready" }), { status: 200 }),
+      ),
+    );
+    const { POST } = await importRoute();
+    const res = await POST(makeRequest(VALID_BODY));
+    expect(res.headers.get("set-cookie")).toBeNull();
   });
 });
 

@@ -72,8 +72,24 @@ export async function POST(request: Request): Promise<Response> {
     );
   }
 
-  const data = await captureRes.json();
-  return Response.json(data);
+  const data: { draftId: string; status: string; claimToken?: string } =
+    await captureRes.json();
+
+  // claimToken is set as httpOnly cookie only — never forwarded to browser JS.
+  // IPI2-168 reads it server-side to claim the draft after Supabase login.
+  const headers = new Headers({ "Content-Type": "application/json" });
+  if (data.claimToken) {
+    const maxAge = 7 * 24 * 60 * 60; // matches edge fn CLAIM_TOKEN_EXPIRY_DAYS
+    headers.set(
+      "Set-Cookie",
+      `claim_token=${data.claimToken}; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=${maxAge}`,
+    );
+  }
+
+  return new Response(JSON.stringify({ draftId: data.draftId }), {
+    status: 200,
+    headers,
+  });
 }
 
 function buildCaptureLeadPayload(req: SubmitLeadRequest) {
