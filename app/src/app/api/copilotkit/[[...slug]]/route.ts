@@ -6,6 +6,8 @@ import {
 } from "@copilotkit/runtime/v2";
 import { MastraAgent } from "@ag-ui/mastra";
 import { mastra } from "@/mastra";
+import { resolveOperatorUser } from "@/lib/auth";
+import { withOperatorAuth } from "@/lib/operator-gate";
 import { handle } from "hono/vercel";
 
 const runtime = new CopilotRuntime({
@@ -26,9 +28,9 @@ const runtime = new CopilotRuntime({
           wsUrl:
             process.env.INTELLIGENCE_GATEWAY_WS_URL ?? "ws://localhost:4401",
         }),
-        // Demo stub — replace with your own auth-derived user identity (e.g. OIDC)
-        // before any multi-user deployment, or all users share one thread history.
-        identifyUser: () => ({ id: "demo-user", name: "Demo User" }),
+        // IPI2-127: real Supabase-derived identity (fail-closed in production).
+        // Replaces the demo-user stub so per-operator thread/memory stay isolated.
+        identifyUser: (request: Request) => resolveOperatorUser(request),
         licenseToken: process.env.COPILOTKIT_LICENSE_TOKEN,
       };
       })()
@@ -41,7 +43,14 @@ const app = createCopilotEndpoint({
   basePath: "/api/copilotkit",
 });
 
-export const GET = handle(app);
-export const POST = handle(app);
-export const PATCH = handle(app);
-export const DELETE = handle(app);
+const endpoint = handle(app);
+
+// IPI2-127: enforce auth at the HTTP boundary (withOperatorAuth) so the runtime
+// is gated in BOTH modes — `identifyUser` only runs on the intelligence path,
+// so without this the default SSE path would be reachable unauthenticated.
+const handler = (request: Request) => withOperatorAuth(request, endpoint);
+
+export const GET = handler;
+export const POST = handler;
+export const PATCH = handler;
+export const DELETE = handler;
