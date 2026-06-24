@@ -25,9 +25,11 @@ describe("marketing-chat runtime — security (IPI2-163)", () => {
     expect(src).not.toMatch(/from "@\/mastra"(?!\/)/);
   });
 
-  it("uses a local publicMastra with only public-marketing", () => {
+  it("uses a local publicMastra with public-marketing (and default alias for prebuilt UI)", () => {
     expect(src).toMatch(/publicMastra/);
     expect(src).toMatch(/"public-marketing":\s*publicMarketingAgent/);
+    // "default" alias so CopilotKit prebuilt UI (CopilotPopup without agentId) resolves correctly
+    expect(src).toMatch(/default:\s*publicMarketingAgent/);
   });
 
   it("does NOT pass requestContext with userId/email (no operator identity)", () => {
@@ -44,10 +46,10 @@ describe("marketing-chat runtime — security (IPI2-163)", () => {
 });
 
 describe("marketing-chat runtime — agent isolation (IPI2-163)", () => {
-  it("only registers public-marketing in the local Mastra instance", () => {
-    // The publicMastra agents object must contain exactly one key.
-    // We check the object literal — the key string in the agents map.
+  it("only registers public agents (not operator agents) in the local Mastra instance", () => {
     expect(src).toMatch(/"public-marketing":\s*publicMarketingAgent/);
+    // "default" alias is allowed — it points to publicMarketingAgent, not an operator agent
+    expect(src).toMatch(/default:\s*publicMarketingAgent/);
     // Operator agent ids must not appear as object keys (string literals in code)
     expect(src).not.toMatch(/"production-planner"/);
     expect(src).not.toMatch(/"creative-director"/);
@@ -61,6 +63,18 @@ describe("marketing-chat runtime — agent isolation (IPI2-163)", () => {
 
   it("sets basePath to /api/marketing-chat", () => {
     expect(src).toMatch(/basePath:\s*["']\/api\/marketing-chat["']/);
+  });
+
+  it("uses createCopilotRuntimeHandler (ensures /info is served via matchRoute, not a custom path)", () => {
+    // createCopilotRuntimeHandler's matchRoute handles /info, /agent/:id/run, etc.
+    // Hono basePath wrapper was removed because it didn't match exact base path (/api/marketing-chat POST).
+    expect(src).toMatch(/createCopilotRuntimeHandler/);
+    expect(src).not.toMatch(/handle\(app\)/);
+  });
+
+  it("uses LibSQLStore :memory: to avoid native-binding failures on Vercel", () => {
+    expect(src).toMatch(/LibSQLStore/);
+    expect(src).toMatch(/url:\s*["']:memory:["']/);
   });
 });
 

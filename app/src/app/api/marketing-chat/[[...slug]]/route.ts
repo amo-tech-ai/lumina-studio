@@ -1,18 +1,23 @@
 import {
   CopilotRuntime,
-  createCopilotEndpoint,
+  createCopilotRuntimeHandler,
   InMemoryAgentRunner,
 } from "@copilotkit/runtime/v2";
 import { MastraAgent } from "@ag-ui/mastra";
 import { Mastra } from "@mastra/core/mastra";
+import { LibSQLStore } from "@mastra/libsql";
 import { publicMarketingAgent } from "@/mastra/agents/public-marketing-agent";
-import { handle } from "hono/vercel";
 
 // ponytail: isolated Mastra instance — only public-marketing exposed.
 // Operator agents are unreachable because they are not registered here.
 // No auth gate on this route (public).
+// "default" alias: CopilotKit prebuilt UI resolves "default" when no agentId prop is set.
 const publicMastra = new Mastra({
-  agents: { "public-marketing": publicMarketingAgent },
+  agents: {
+    default: publicMarketingAgent,
+    "public-marketing": publicMarketingAgent,
+  },
+  storage: new LibSQLStore({ id: "public-chat-storage", url: ":memory:" }),
 });
 
 const runtime = new CopilotRuntime({
@@ -21,16 +26,15 @@ const runtime = new CopilotRuntime({
   runner: new InMemoryAgentRunner(),
 });
 
-const app = createCopilotEndpoint({
+// createCopilotRuntimeHandler bypasses Hono; matchRoute handles /info and /agent/:id/run directly.
+const endpoint = createCopilotRuntimeHandler({
   runtime,
   basePath: "/api/marketing-chat",
+  mode: "multi-route",
+  cors: true,
 });
 
-const endpoint = handle(app);
-
-const handler = (request: Request) => endpoint(request);
-
-export const GET = handler;
-export const POST = handler;
-export const PATCH = handler;
-export const DELETE = handler;
+export const GET = endpoint;
+export const POST = endpoint;
+export const PATCH = endpoint;
+export const DELETE = endpoint;
