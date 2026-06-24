@@ -47,11 +47,13 @@ export async function POST(request: Request): Promise<Response> {
 
   let captureRes: Response;
   try {
+    const proxySecret = process.env.CAPTURE_LEAD_PROXY_SECRET;
     captureRes = await fetch(`${supabaseUrl}/functions/v1/capture-lead`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${anonKey}`,
+        ...(proxySecret ? { "x-ipix-proxy-secret": proxySecret } : {}),
       },
       body: JSON.stringify(body),
     });

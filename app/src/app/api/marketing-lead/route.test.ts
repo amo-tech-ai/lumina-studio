@@ -144,6 +144,38 @@ describe("marketing-lead — capture-lead integration", () => {
     });
   });
 
+  it("sends x-ipix-proxy-secret header when env var is set", async () => {
+    vi.stubEnv("CAPTURE_LEAD_PROXY_SECRET", "test-proxy-secret");
+    const mockFetch = vi.fn().mockResolvedValueOnce(
+      new Response(JSON.stringify({ draftId: "d-xyz" }), { status: 200 }),
+    );
+    vi.stubGlobal("fetch", mockFetch);
+
+    const { POST } = await importRoute();
+    await POST(makeRequest(VALID_BODY));
+
+    const [, opts] = mockFetch.mock.calls[0];
+    expect((opts as RequestInit).headers).toMatchObject({
+      "x-ipix-proxy-secret": "test-proxy-secret",
+    });
+  });
+
+  it("omits x-ipix-proxy-secret when env var is not set", async () => {
+    vi.stubEnv("CAPTURE_LEAD_PROXY_SECRET", "");
+    const mockFetch = vi.fn().mockResolvedValueOnce(
+      new Response(JSON.stringify({ draftId: "d-xyz" }), { status: 200 }),
+    );
+    vi.stubGlobal("fetch", mockFetch);
+
+    const { POST } = await importRoute();
+    await POST(makeRequest(VALID_BODY));
+
+    const [, opts] = mockFetch.mock.calls[0];
+    expect((opts as RequestInit).headers).not.toMatchObject({
+      "x-ipix-proxy-secret": expect.anything(),
+    });
+  });
+
   it("maps website → brand_url in the capture-lead payload", async () => {
     const mockFetch = vi.fn().mockResolvedValueOnce(
       new Response(JSON.stringify({ draftId: "d-xyz" }), { status: 200 }),

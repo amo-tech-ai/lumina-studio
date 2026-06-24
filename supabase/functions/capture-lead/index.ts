@@ -1,11 +1,7 @@
-import { handleCors } from "../_shared/cors.ts";
+import { corsHeaders, handleCors } from "../_shared/cors.ts";
 import { createServiceClient } from "../_shared/supabase-client.ts";
 import { getEdgeEnv } from "../_shared/env.ts";
-import {
-  errorResponse,
-  jsonResponse,
-  safeErrorMessage,
-} from "../_shared/response.ts";
+import { errorResponse, safeErrorMessage } from "../_shared/response.ts";
 
 const MAX_PAYLOAD_BYTES = 32_768;
 const RATE_LIMIT_WINDOW_MS = 60_000;
@@ -111,6 +107,11 @@ function validatePayload(data: Record<string, unknown>): ValidationResult {
     typeof data.lead_answers !== "object"
   ) {
     errors.push("lead_answers must be an object");
+  } else if (data.lead_answers !== undefined && data.lead_answers !== null) {
+    const vals = Object.values(data.lead_answers as Record<string, unknown>);
+    if (!vals.every((v) => typeof v === "string")) {
+      errors.push("lead_answers values must all be strings");
+    }
   }
 
   if (data.budget !== undefined && data.budget !== null && typeof data.budget !== "string") {
@@ -121,12 +122,16 @@ function validatePayload(data: Record<string, unknown>): ValidationResult {
     errors.push("timeline must be a string");
   }
 
-  if (
-    data.brand_url !== undefined &&
-    data.brand_url !== null &&
-    typeof data.brand_url !== "string"
-  ) {
-    errors.push("brand_url must be a string");
+  if (data.brand_url !== undefined && data.brand_url !== null) {
+    if (typeof data.brand_url !== "string") {
+      errors.push("brand_url must be a string");
+    } else {
+      try {
+        new URL(data.brand_url);
+      } catch {
+        errors.push("brand_url must be a valid URL");
+      }
+    }
   }
 
   if (
@@ -152,7 +157,7 @@ function validatePayload(data: Record<string, unknown>): ValidationResult {
       service_interest: data.service_interest as ServiceSlug,
       budget: data.budget as string | undefined,
       timeline: data.timeline as string | undefined,
-      email: data.email as string,
+      email: (data.email as string).trim().toLowerCase(),
       brand_url: data.brand_url as string | undefined,
     },
   };
@@ -175,6 +180,11 @@ Deno.serve(async (req: Request) => {
       return errorResponse("forbidden", "Origin not allowed", 403);
     }
 
+    // Proxy secret check — claimToken only returned to trusted internal proxy
+    const proxySecret = Deno.env.get("CAPTURE_LEAD_PROXY_SECRET");
+    const incomingSecret = req.headers.get("x-ipix-proxy-secret");
+    const isTrustedProxy = !!proxySecret && incomingSecret === proxySecret;
+
     const contentLength = parseInt(req.headers.get("content-length") ?? "0", 10);
     if (contentLength > MAX_PAYLOAD_BYTES) {
       return errorResponse("payload_too_large", "Payload exceeds 32KB limit", 413);
@@ -189,6 +199,11 @@ Deno.serve(async (req: Request) => {
       raw = await req.json();
     } catch {
       return errorResponse("invalid_json", "Request body must be valid JSON", 422);
+    }
+
+    // Fallback size check when content-length header is absent
+    if (JSON.stringify(raw).length > MAX_PAYLOAD_BYTES) {
+      return errorResponse("payload_too_large", "Payload exceeds 32KB limit", 413);
     }
 
     const validation = validatePayload(raw);
@@ -207,10 +222,12 @@ Deno.serve(async (req: Request) => {
     let conversationId = payload.conversation_id;
 
     if (conversationId) {
+      // Verify conversation belongs to this anon_id to prevent cross-session attachment
       const { count, error: convErr } = await supabase
         .from("chatbot_conversations")
         .select("*", { count: "exact", head: true })
-        .eq("id", conversationId);
+        .eq("id", conversationId)
+        .eq("anon_id", payload.anon_id);
 
       if (convErr || !count) {
         conversationId = undefined;
@@ -268,34 +285,56 @@ Deno.serve(async (req: Request) => {
     if (payload.timeline) answers.timeline = payload.timeline;
     if (payload.brand_url) answers.brand_url = payload.brand_url;
 
-    const { data: draft, error: draftErr } = await supabase
+    // Idempotency: update existing draft for this conversation rather than creating duplicates
+    const { data: existing } = await supabase
       .from("lead_intake_drafts")
-      .insert({
-        conversation_id: conversationId,
-        status: "ready",
-        answers,
-        claim_token: claimToken,
-        claim_token_expires_at: claimExpires,
-      })
-      .select("id, status")
-      .single();
+      .select("id")
+      .eq("conversation_id", conversationId)
+      .maybeSingle();
 
-    if (draftErr || !draft) {
-      throw new Error("Failed to create lead draft");
+    let draftId: string;
+    if (existing) {
+      const { error: updateErr } = await supabase
+        .from("lead_intake_drafts")
+        .update({
+          status: "ready",
+          answers,
+          claim_token: claimToken,
+          claim_token_expires_at: claimExpires,
+        })
+        .eq("id", existing.id);
+
+      if (updateErr) throw new Error("Failed to update lead draft");
+      draftId = existing.id;
+    } else {
+      const { data: draft, error: draftErr } = await supabase
+        .from("lead_intake_drafts")
+        .insert({
+          conversation_id: conversationId,
+          status: "ready",
+          answers,
+          claim_token: claimToken,
+          claim_token_expires_at: claimExpires,
+        })
+        .select("id")
+        .single();
+
+      if (draftErr || !draft) throw new Error("Failed to create lead draft");
+      draftId = draft.id;
     }
 
     const durationMs = Math.round(performance.now() - started);
-
     console.log(
-      `[capture-lead] draft=${draft.id} conv=${conversationId} service=${payload.service_interest} ms=${durationMs}`,
+      `[capture-lead] draft=${draftId} conv=${conversationId} service=${payload.service_interest} ms=${durationMs}`,
     );
 
-    // claimToken is returned for the Next.js proxy to set as an httpOnly cookie.
-    // It must never be forwarded to the browser — the proxy strips it before responding.
-    return jsonResponse({
-      draftId: draft.id,
-      status: draft.status,
-      claimToken,
+    // claimToken returned only to trusted proxy — public callers get draftId only
+    const responseBody: Record<string, string> = { draftId, status: "ready" };
+    if (isTrustedProxy) responseBody.claimToken = claimToken;
+
+    return new Response(JSON.stringify(responseBody), {
+      status: 200,
+      headers: { "Content-Type": "application/json", ...corsHeaders },
     });
   } catch (err) {
     console.error("capture-lead error:", err instanceof Error ? err.message : err);
