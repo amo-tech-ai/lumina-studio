@@ -20,4 +20,9 @@ describe("mastra agent registry", () => {
     expect(agents["creative-director"]).toBeDefined();
     expect(agents["creative-director"]).not.toBe(agents["production-planner"]);
   });
+
+  it("keeps public-marketing out of REQUIRED_AGENT_IDS (operator runtime only)", () => {
+    expect(agents).toHaveProperty("public-marketing");
+    expect(REQUIRED_AGENT_IDS).not.toContain("public-marketing");
+  });
 });

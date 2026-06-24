@@ -37,7 +37,12 @@ function setupMocks() {
     MastraAgent: {
       getLocalAgents: vi.fn((opts: { resourceId: string }) => {
         getLocalAgentsCalls.push({ resourceId: opts.resourceId });
-        return [];
+        return {
+          default: {},
+          "production-planner": {},
+          "creative-director": {},
+          "public-marketing": {},
+        };
       }),
     },
   }));
@@ -93,6 +98,28 @@ describe("IPI2-127 — two-user isolation (runtime)", () => {
     expect(getLocalAgentsCalls[0].resourceId).toBe("user-a-uuid");
     expect(getLocalAgentsCalls[1].resourceId).toBe("user-b-uuid");
     expect(getLocalAgentsCalls[0].resourceId).not.toBe(getLocalAgentsCalls[1].resourceId);
+  });
+
+  it("excludes public-marketing from operator runtime agents (IPI2-163)", async () => {
+    await import("@/app/api/copilotkit/[[...slug]]/route");
+
+    const factory = (globalThis as Record<string, unknown>).__capturedAgentFactory as (
+      ctx: { request: Request },
+    ) => Promise<Record<string, unknown>>;
+
+    const resolveOperatorUser = vi.mocked((await import("@/lib/auth")).resolveOperatorUser);
+    resolveOperatorUser.mockResolvedValue({
+      id: "user-a-uuid",
+      email: "alice@example.com",
+      name: "Alice",
+    });
+
+    const agents = await factory({ request: new Request("http://localhost/api/copilotkit") });
+
+    expect(agents).toHaveProperty("default");
+    expect(agents).toHaveProperty("production-planner");
+    expect(agents).toHaveProperty("creative-director");
+    expect(agents).not.toHaveProperty("public-marketing");
   });
 
   it("isolates agent scopes: each request gets one getLocalAgents call", async () => {

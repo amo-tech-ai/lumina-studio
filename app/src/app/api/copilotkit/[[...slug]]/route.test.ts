@@ -51,6 +51,12 @@ describe("CopilotKit route — operator auth boundary (IPI2-127)", () => {
       expect(factoryMatch[1]).toContain("resolveOperatorUser");
     }
   });
+
+  it("excludes public-marketing from the operator agent factory result", () => {
+    const src = readFileSync(ROUTE, "utf8");
+    expect(src).toMatch(/public-marketing/);
+    expect(src).toMatch(/filter\(\(\[id\]\) => id !== "public-marketing"\)/);
+  });
 });
 
 describe("CopilotKit route — Mastra resourceId isolation (IPI2-127)", () => {

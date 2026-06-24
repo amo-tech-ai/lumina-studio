@@ -21,11 +21,16 @@ const runtime = new CopilotRuntime({
     const requestContext = new RequestContext();
     requestContext.set("userId", user.id);
     if (user.email) requestContext.set("email", user.email);
-    return MastraAgent.getLocalAgents({
+    const agents = MastraAgent.getLocalAgents({
       mastra,
       resourceId: user.id,
       requestContext,
     });
+    // IPI2-163: public-marketing lives in the shared registry for reuse but must
+    // never be selectable on the authenticated operator runtime.
+    return Object.fromEntries(
+      Object.entries(agents).filter(([id]) => id !== "public-marketing"),
+    );
   },
   // --- copilotkit:intelligence (remove this block to opt out) ---
   ...(process.env.COPILOTKIT_LICENSE_TOKEN
