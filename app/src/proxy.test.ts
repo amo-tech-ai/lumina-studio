@@ -29,6 +29,13 @@ describe("proxy — operator auth gate (IPI2-127)", () => {
     expect(res.headers.get("location")).toBeNull();
   });
 
+  it("passes through when OPERATOR_AUTH_ENABLED is unset", () => {
+    vi.unstubAllEnvs();
+    const res = proxy(appRequest("/app/brand"));
+    expect(res.status).toBe(200);
+    expect(res.headers.get("location")).toBeNull();
+  });
+
   it("redirects unauthenticated /app/* requests to /login with redirect param", () => {
     vi.stubEnv("OPERATOR_AUTH_ENABLED", "true");
     const res = proxy(appRequest("/app/shoots"));
@@ -75,6 +82,32 @@ describe("proxy — operator auth gate (IPI2-127)", () => {
     );
     expect(res.status).toBe(307);
     expect(res.headers.get("location")).toContain("/login");
+  });
+
+  it("rejects a decoded session whose access token is not JWT-shaped", () => {
+    vi.stubEnv("OPERATOR_AUTH_ENABLED", "true");
+    const res = proxy(
+      appRequest("/app/brand", [
+        { name: "sb-proj-auth-token", value: sessionCookieValue("only-two.parts") },
+      ]),
+    );
+    expect(res.status).toBe(307);
+    expect(res.headers.get("location")).toContain("/login");
+  });
+
+  it("allows /app/* when a session is split across multiple cookie chunks", () => {
+    vi.stubEnv("OPERATOR_AUTH_ENABLED", "true");
+    const jwt = "header.payload.signature";
+    const b64 = btoa(JSON.stringify([jwt]));
+    const mid = Math.floor(b64.length / 2);
+    const res = proxy(
+      appRequest("/app/assets", [
+        { name: "sb-proj-auth-token.0", value: `base64-${b64.slice(0, mid)}` },
+        { name: "sb-proj-auth-token.1", value: b64.slice(mid) },
+      ]),
+    );
+    expect(res.status).toBe(200);
+    expect(res.headers.get("location")).toBeNull();
   });
 
   it("scopes the middleware matcher to /app/* routes", () => {

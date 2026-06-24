@@ -62,6 +62,20 @@ describe("LoginForm — Supabase auth wiring (IPI2-127)", () => {
     });
   });
 
+  it("normalizes email (trim + lowercase) before sign-in", async () => {
+    signInWithPassword.mockResolvedValue({ error: null });
+
+    render(<LoginForm />);
+    await submitCredentials("  Op@Example.COM  ", "secret12");
+
+    await waitFor(() => {
+      expect(signInWithPassword).toHaveBeenCalledWith({
+        email: "op@example.com",
+        password: "secret12",
+      });
+    });
+  });
+
   it("honors a safe redirect param after sign-in", async () => {
     window.history.replaceState({}, "", "/login?redirect=/app/assets?tab=review");
     signInWithPassword.mockResolvedValue({ error: null });
@@ -109,6 +123,25 @@ describe("LoginForm — Supabase auth wiring (IPI2-127)", () => {
     await user.click(screen.getByRole("button", { name: /create account/i }));
 
     expect((await screen.findByRole("status")).textContent).toMatch(/check your email/i);
+    expect(push).not.toHaveBeenCalled();
+  });
+
+  it("neutralizes sign-up errors to prevent account enumeration", async () => {
+    const user = userEvent.setup();
+    signUp.mockResolvedValue({
+      data: { session: null },
+      error: { message: "User already registered" },
+    });
+
+    render(<LoginForm />);
+    await user.click(screen.getByRole("button", { name: /sign up/i }));
+    await user.type(screen.getByLabelText(/email/i), "existing@example.com");
+    await user.type(screen.getByLabelText(/password/i), "secret12");
+    await user.click(screen.getByRole("button", { name: /create account/i }));
+
+    const status = await screen.findByRole("status");
+    expect(status.textContent).toMatch(/check your inbox or sign in/i);
+    expect(status.textContent).not.toMatch(/already registered/i);
     expect(push).not.toHaveBeenCalled();
   });
 

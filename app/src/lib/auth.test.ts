@@ -1,5 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { extractAccessToken, resolveOperatorUser } from "./auth";
+import {
+  accessTokenFromCookieString,
+  extractAccessToken,
+  resolveOperatorUser,
+} from "./auth";
 
 function req(headers: Record<string, string>): Request {
   return new Request("http://localhost/api/copilotkit", { headers });
@@ -54,6 +58,41 @@ describe("extractAccessToken", () => {
 
   it("returns undefined when no token is present", () => {
     expect(extractAccessToken(req({}))).toBeUndefined();
+  });
+
+  it("falls back to the session cookie when Bearer is present but empty", () => {
+    const session = JSON.stringify(["cookie-jwt"]);
+    const cookie = `sb-proj-auth-token=base64-${btoa(session)}`;
+    expect(extractAccessToken(req({ authorization: "Bearer   ", cookie }))).toBe(
+      "cookie-jwt",
+    );
+  });
+});
+
+describe("accessTokenFromCookieString", () => {
+  it("sorts out-of-order chunks before decoding", () => {
+    const jwt = "header.payload.signature";
+    const b64 = btoa(JSON.stringify([jwt]));
+    const mid = Math.floor(b64.length / 2);
+    const cookie = `sb-proj-auth-token.1=${b64.slice(mid)}; sb-proj-auth-token.0=base64-${b64.slice(0, mid)}`;
+    expect(accessTokenFromCookieString(cookie)).toBe(jwt);
+  });
+
+  it("reconstructs sessions split across three or more chunks", () => {
+    const jwt = `${"h".repeat(40)}.payload.signature`;
+    const b64 = btoa(JSON.stringify([jwt]));
+    const third = Math.floor(b64.length / 3);
+    const cookie = [
+      `sb-proj-auth-token.2=${b64.slice(2 * third)}`,
+      `sb-proj-auth-token.0=base64-${b64.slice(0, third)}`,
+      `sb-proj-auth-token.1=${b64.slice(third, 2 * third)}`,
+    ].join("; ");
+    expect(accessTokenFromCookieString(cookie)).toBe(jwt);
+  });
+
+  it("returns undefined for null or empty cookie strings", () => {
+    expect(accessTokenFromCookieString(null)).toBeUndefined();
+    expect(accessTokenFromCookieString("")).toBeUndefined();
   });
 });
 
@@ -189,5 +228,21 @@ describe("resolveOperatorUser with Supabase validation", () => {
     await expect(resolve(req({ authorization: "Bearer orphan.jwt" }))).rejects.toThrow(
       /failing closed/,
     );
+  });
+
+  it("falls back to demo identity in development when Supabase rejects the token", async () => {
+    const getUser = vi.fn().mockResolvedValue({
+      data: { user: null },
+      error: { message: "invalid JWT" },
+    });
+    const { resolveOperatorUser: resolve } = await loadAuthWithSupabase(getUser, {
+      NODE_ENV: "development",
+      NEXT_PUBLIC_SUPABASE_URL: "https://proj.supabase.co",
+      SUPABASE_ANON_KEY: "anon-key",
+    });
+
+    const user = await resolve(req({ authorization: "Bearer bad.jwt" }));
+    expect(user.id).toBe("demo-user");
+    expect(user.name).toContain("dev fallback");
   });
 });
