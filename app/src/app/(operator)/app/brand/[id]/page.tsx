@@ -26,7 +26,7 @@ const scoreColor = (score: number) => {
 const scoreLabel = (type: string) =>
   type.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 
-export default async function BrandPage({ params }: Props) {
+const BrandPage = async ({ params }: Props) => {
   const { id } = await params;
   const supabase = await createSupabaseServerClient();
 
@@ -206,7 +206,9 @@ export default async function BrandPage({ params }: Props) {
       </div>
     </div>
   );
-}
+};
+
+export default BrandPage;
 
 const ProfileField = ({ label, value }: { label: string; value: string }) => (
   <div>
