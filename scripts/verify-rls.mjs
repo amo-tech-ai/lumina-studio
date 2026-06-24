@@ -144,10 +144,19 @@ try {
     .eq("id", userB.user.id);
   assert((otherProfile ?? []).length === 0, "user A cannot read user B profile");
 
-  // brands — own CRUD, cross-user blocked
+  // org layer — create org for user A (trigger auto-adds owner to org_members)
+  const { data: orgA, error: orgInsertErr } = await userA.client
+    .from("organizations")
+    .insert({ name: `RLS Org A ${stamp}`, slug: `rls-org-a-${stamp}`, owner_id: userA.user.id, type: "brand" })
+    .select("id")
+    .single();
+  assert(!orgInsertErr && orgA?.id, "user A creates own org");
+  const orgAId = orgA?.id;
+
+  // brands — org-scoped CRUD, cross-org blocked
   const { data: brandA, error: brandInsertErr } = await userA.client
     .from("brands")
-    .insert({ name: `RLS Brand A ${stamp}`, user_id: userA.user.id })
+    .insert({ name: `RLS Brand A ${stamp}`, user_id: userA.user.id, org_id: orgAId })
     .select("id")
     .single();
   assert(!brandInsertErr && brandA?.id, "user A inserts own brand");

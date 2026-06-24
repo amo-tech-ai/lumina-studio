@@ -39,6 +39,115 @@ export type Database = {
   }
   public: {
     Tables: {
+      agent_context_snapshots: {
+        Row: {
+          agent_name: string
+          brand_id: string | null
+          content: Json
+          created_at: string
+          embedding: string | null
+          id: string
+          session_id: string
+          snapshot_type: string
+          summary: string | null
+          task_type: string
+          token_estimate: number | null
+          user_id: string
+        }
+        Insert: {
+          agent_name: string
+          brand_id?: string | null
+          content?: Json
+          created_at?: string
+          embedding?: string | null
+          id?: string
+          session_id: string
+          snapshot_type: string
+          summary?: string | null
+          task_type: string
+          token_estimate?: number | null
+          user_id: string
+        }
+        Update: {
+          agent_name?: string
+          brand_id?: string | null
+          content?: Json
+          created_at?: string
+          embedding?: string | null
+          id?: string
+          session_id?: string
+          snapshot_type?: string
+          summary?: string | null
+          task_type?: string
+          token_estimate?: number | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agent_context_snapshots_brand_id_fkey"
+            columns: ["brand_id"]
+            isOneToOne: false
+            referencedRelation: "brands"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      agent_decision_log: {
+        Row: {
+          agent_name: string | null
+          approver_id: string | null
+          brand_id: string | null
+          created_at: string
+          decision: string
+          decision_type: string
+          draft_id: string | null
+          id: string
+          payload: Json | null
+          rationale: string | null
+          session_id: string
+          task_type: string | null
+          user_id: string
+        }
+        Insert: {
+          agent_name?: string | null
+          approver_id?: string | null
+          brand_id?: string | null
+          created_at?: string
+          decision: string
+          decision_type: string
+          draft_id?: string | null
+          id?: string
+          payload?: Json | null
+          rationale?: string | null
+          session_id: string
+          task_type?: string | null
+          user_id: string
+        }
+        Update: {
+          agent_name?: string | null
+          approver_id?: string | null
+          brand_id?: string | null
+          created_at?: string
+          decision?: string
+          decision_type?: string
+          draft_id?: string | null
+          id?: string
+          payload?: Json | null
+          rationale?: string | null
+          session_id?: string
+          task_type?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agent_decision_log_brand_id_fkey"
+            columns: ["brand_id"]
+            isOneToOne: false
+            referencedRelation: "brands"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ai_agent_logs: {
         Row: {
           agent_name: string
@@ -425,6 +534,65 @@ export type Database = {
           },
         ]
       }
+      brand_intake_drafts: {
+        Row: {
+          approved_at: string | null
+          brand_id: string | null
+          citations: Json
+          created_at: string
+          draft_profile: Json
+          draft_scores: Json
+          expires_at: string | null
+          id: string
+          rejected_at: string | null
+          source_url: string
+          status: string
+          updated_at: string
+          url_retrieval: Json
+          user_id: string
+        }
+        Insert: {
+          approved_at?: string | null
+          brand_id?: string | null
+          citations?: Json
+          created_at?: string
+          draft_profile?: Json
+          draft_scores?: Json
+          expires_at?: string | null
+          id?: string
+          rejected_at?: string | null
+          source_url: string
+          status?: string
+          updated_at?: string
+          url_retrieval?: Json
+          user_id: string
+        }
+        Update: {
+          approved_at?: string | null
+          brand_id?: string | null
+          citations?: Json
+          created_at?: string
+          draft_profile?: Json
+          draft_scores?: Json
+          expires_at?: string | null
+          id?: string
+          rejected_at?: string | null
+          source_url?: string
+          status?: string
+          updated_at?: string
+          url_retrieval?: Json
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "brand_intake_drafts_brand_id_fkey"
+            columns: ["brand_id"]
+            isOneToOne: false
+            referencedRelation: "brands"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       brand_scores: {
         Row: {
           brand_id: string
@@ -463,35 +631,52 @@ export type Database = {
       brands: {
         Row: {
           ai_profile: Json
+          approved_profile_at: string | null
           brand_url: string | null
           created_at: string
           creative_temperature_default: number
           id: string
+          intake_status: string
           name: string
+          org_id: string
           updated_at: string
           user_id: string
         }
         Insert: {
           ai_profile?: Json
+          approved_profile_at?: string | null
           brand_url?: string | null
           created_at?: string
           creative_temperature_default?: number
           id?: string
+          intake_status?: string
           name: string
+          org_id: string
           updated_at?: string
           user_id: string
         }
         Update: {
           ai_profile?: Json
+          approved_profile_at?: string | null
           brand_url?: string | null
           created_at?: string
           creative_temperature_default?: number
           id?: string
+          intake_status?: string
           name?: string
+          org_id?: string
           updated_at?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "brands_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       call_times: {
         Row: {
@@ -570,6 +755,94 @@ export type Database = {
             columns: ["stakeholder_id"]
             isOneToOne: false
             referencedRelation: "stakeholders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      chatbot_conversations: {
+        Row: {
+          anon_id: string
+          created_at: string
+          id: string
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          anon_id: string
+          created_at?: string
+          id?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          anon_id?: string
+          created_at?: string
+          id?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      chatbot_events: {
+        Row: {
+          conversation_id: string | null
+          created_at: string
+          id: string
+          payload: Json
+          type: string
+        }
+        Insert: {
+          conversation_id?: string | null
+          created_at?: string
+          id?: string
+          payload?: Json
+          type: string
+        }
+        Update: {
+          conversation_id?: string | null
+          created_at?: string
+          id?: string
+          payload?: Json
+          type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chatbot_events_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "chatbot_conversations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      chatbot_messages: {
+        Row: {
+          content: string
+          conversation_id: string
+          created_at: string
+          id: string
+          role: string
+        }
+        Insert: {
+          content: string
+          conversation_id: string
+          created_at?: string
+          id?: string
+          role: string
+        }
+        Update: {
+          content?: string
+          conversation_id?: string
+          created_at?: string
+          id?: string
+          role?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chatbot_messages_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "chatbot_conversations"
             referencedColumns: ["id"]
           },
         ]
@@ -1530,6 +1803,53 @@ export type Database = {
           },
         ]
       }
+      lead_intake_drafts: {
+        Row: {
+          answers: Json
+          claim_token: string | null
+          claim_token_expires_at: string | null
+          claimed_at: string | null
+          conversation_id: string | null
+          created_at: string
+          id: string
+          status: string
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          answers?: Json
+          claim_token?: string | null
+          claim_token_expires_at?: string | null
+          claimed_at?: string | null
+          conversation_id?: string | null
+          created_at?: string
+          id?: string
+          status?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          answers?: Json
+          claim_token?: string | null
+          claim_token_expires_at?: string | null
+          claimed_at?: string | null
+          conversation_id?: string | null
+          created_at?: string
+          id?: string
+          status?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lead_intake_drafts_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "chatbot_conversations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       media_size_specs: {
         Row: {
           aspect_ratio: string | null
@@ -1727,6 +2047,35 @@ export type Database = {
           },
         ]
       }
+      org_members: {
+        Row: {
+          joined_at: string
+          org_id: string
+          role: string
+          user_id: string
+        }
+        Insert: {
+          joined_at?: string
+          org_id: string
+          role?: string
+          user_id: string
+        }
+        Update: {
+          joined_at?: string
+          org_id?: string
+          role?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "org_members_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       organizations: {
         Row: {
           created_at: string
@@ -1734,6 +2083,8 @@ export type Database = {
           id: string
           logo_url: string | null
           name: string
+          owner_id: string | null
+          plan: string
           slug: string
           type: string
           updated_at: string
@@ -1745,6 +2096,8 @@ export type Database = {
           id?: string
           logo_url?: string | null
           name: string
+          owner_id?: string | null
+          plan?: string
           slug: string
           type: string
           updated_at?: string
@@ -1756,6 +2109,8 @@ export type Database = {
           id?: string
           logo_url?: string | null
           name?: string
+          owner_id?: string | null
+          plan?: string
           slug?: string
           type?: string
           updated_at?: string
@@ -1893,35 +2248,44 @@ export type Database = {
       }
       profiles: {
         Row: {
+          auth_provider: string | null
           avatar_url: string | null
           company_name: string | null
           created_at: string
           email: string
           full_name: string | null
           id: string
+          onboarding_status: string
           phone: string | null
+          provider_user_id: string | null
           role: Database["public"]["Enums"]["user_role"]
           updated_at: string
         }
         Insert: {
+          auth_provider?: string | null
           avatar_url?: string | null
           company_name?: string | null
           created_at?: string
           email: string
           full_name?: string | null
           id: string
+          onboarding_status?: string
           phone?: string | null
+          provider_user_id?: string | null
           role?: Database["public"]["Enums"]["user_role"]
           updated_at?: string
         }
         Update: {
+          auth_provider?: string | null
           avatar_url?: string | null
           company_name?: string | null
           created_at?: string
           email?: string
           full_name?: string | null
           id?: string
+          onboarding_status?: string
           phone?: string | null
+          provider_user_id?: string | null
           role?: Database["public"]["Enums"]["user_role"]
           updated_at?: string
         }
@@ -2775,6 +3139,27 @@ export type Database = {
         }
         Returns: number
       }
+      claim_lead_draft: {
+        Args: { p_claim_token: string; p_draft_id: string }
+        Returns: {
+          answers: Json
+          claim_token: string | null
+          claim_token_expires_at: string | null
+          claimed_at: string | null
+          conversation_id: string | null
+          created_at: string
+          id: string
+          status: string
+          updated_at: string
+          user_id: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "lead_intake_drafts"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       get_event_registration_count: {
         Args: { p_event_id: string }
         Returns: number
@@ -2804,6 +3189,28 @@ export type Database = {
           recommendation: string
           schemaname: string
           tablename: string
+        }[]
+      }
+      is_org_member: { Args: { p_org_id: string }; Returns: boolean }
+      is_org_owner: { Args: { p_org_id: string }; Returns: boolean }
+      search_context_snapshots: {
+        Args: {
+          p_embedding: string
+          p_limit?: number
+          p_task_type?: string
+          p_user_id: string
+        }
+        Returns: {
+          agent_name: string
+          content: Json
+          created_at: string
+          id: string
+          session_id: string
+          similarity: number
+          snapshot_type: string
+          summary: string
+          task_type: string
+          token_estimate: number
         }[]
       }
       show_limit: { Args: never; Returns: number }
