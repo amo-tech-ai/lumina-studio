@@ -12,16 +12,14 @@ const MIDDLEWARE = resolve(APP_ROOT, "middleware.ts");
 const PROXY = resolve(APP_ROOT, "proxy.ts");
 
 describe("operator middleware — wiring contract (IPI2-127)", () => {
-  it("middleware.ts exists and re-exports proxy + config", () => {
-    expect(existsSync(MIDDLEWARE)).toBe(true);
-    const src = readFileSync(MIDDLEWARE, "utf8");
-    expect(src).toMatch(/proxy\s+as\s+middleware/);
-    expect(src).toMatch(/from\s+["']\.\/proxy["']/);
-    expect(src).toMatch(/config/);
+  it("proxy.ts exists as the Next.js 16 middleware entry (no middleware.ts — dual-file causes build error)", () => {
+    expect(existsSync(PROXY)).toBe(true);
+    expect(existsSync(MIDDLEWARE)).toBe(false);
   });
 
-  it("proxy.ts exports the /app/* matcher expected by middleware", () => {
+  it("proxy.ts exports the /app/* matcher and a handler", () => {
     const src = readFileSync(PROXY, "utf8");
+    expect(src).toMatch(/export function proxy/);
     expect(src).toMatch(/matcher:\s*\["\/app\/:path\*"\]/);
   });
 });
