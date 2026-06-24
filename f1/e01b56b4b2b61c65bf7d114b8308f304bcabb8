@@ -1,0 +1,35 @@
+docs/vercel/07-brand-intelligence.md
+  s_9b5029d3685278::t_f95bacf5c5615c 1-2
+  h_d382fbec1d5b46 3-123
+todo.md
+  s_9b5029d3685278::t_c94be27b326a28 50-59
+docs/vercel/06-edge-audit.md
+  s_9b5029d3685278::t_1dc0ffecf6f248 1-2
+  h_d382fbec1d5b46 3-59
+docs/vercel/05-167.md
+  s_9b5029d3685278::t_3934257bf92a05 1-4
+  h_d382fbec1d5b46 5-283
+changelog.md
+  s_9b5029d3685278::t_f58b52754c9bb5 11-44
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.11",
+  "base_commit_sha": "f1e01b56b4b2b61c65bf7d114b8308f304bcabb8",
+  "prompts": {},
+  "humans": {
+    "h_d382fbec1d5b46": {
+      "author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  },
+  "sessions": {
+    "s_9b5029d3685278": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "890fea56-a29f-4ea1-93a3-e5947f4859b8",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
