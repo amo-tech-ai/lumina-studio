@@ -33,6 +33,16 @@ jobs:
       - name: Unit tests
         run: npm run test
 
+  # WEB-015 chatbot schema — ephemeral Postgres + RLS/claim proofs (IPI2-160).
+  # Requires Docker on the runner; not `supabase start` (single migration on clean DB).
+  supabase-web015:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: WEB-015 RLS + claim_lead_draft tests
+        run: npm run test:web015
+
   # Next.js operator app (app/) — vendored standalone project with its own
   # package-lock + ESLint flat config. Validated independently so a Vite env
   # error never blocks this job (or vice-versa). No real secrets required:
