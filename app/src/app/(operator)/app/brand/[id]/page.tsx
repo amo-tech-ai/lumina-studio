@@ -175,12 +175,7 @@ const BrandPage = async ({ params }: Props) => {
           >
             ← Dashboard
           </a>
-          <a
-            href={`/app/onboarding`}
-            className="px-5 py-2.5 rounded-full font-sans text-sm font-medium text-[#1E293B] border border-[#D1C9C0] hover:border-[#94A3B8] transition-colors"
-          >
-            Re-analyze Brand
-          </a>
+
           <a
             href="/app/shoots"
             className="px-5 py-2.5 rounded-full font-sans text-sm font-medium text-white transition-opacity hover:opacity-90"

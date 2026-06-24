@@ -119,6 +119,7 @@ describe("createOrgAndBrand", () => {
     expect(supabase.orgInsert).toHaveBeenCalledWith(expect.objectContaining({ owner_id: "user-abc" }));
     expect(supabase.brandInsert).toHaveBeenCalledWith(expect.objectContaining({
       org_id: "org-abc",
+      brand_url: FORM.websiteUrl,
       ai_profile: expect.objectContaining({ industry: FORM.industry, goal: FORM.goal }),
     }));
     expect(supabase.from).toHaveBeenCalledWith("brand_scores");

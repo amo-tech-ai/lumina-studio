@@ -2,11 +2,8 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { createClient } from "@supabase/supabase-js";
+import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { validateUrl, createOrgAndBrand, type OnboardingForm } from "@/lib/onboarding";
-
-const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
-const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "";
 
 const INDUSTRIES = ["Fashion", "Jewellery", "Beauty", "Home & Living", "Other"] as const;
 const GOALS = ["Product Photography", "Campaign Planning", "Brand Intelligence", "All of the above"] as const;
@@ -45,8 +42,7 @@ const OnboardingPage = () => {
     setLoading(true);
     setError(null);
     try {
-      if (!SUPABASE_URL || !SUPABASE_ANON_KEY) throw new Error("Supabase is not configured");
-      const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+      const supabase = createSupabaseBrowserClient();
 
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
