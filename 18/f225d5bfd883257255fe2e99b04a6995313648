@@ -1,0 +1,29 @@
+app/src/app/auth/callback/route.ts
+  s_9b5029d3685278::t_b3195eeed3991f 1-17
+app/src/components/marketing/login-form.tsx
+  s_9b5029d3685278::t_7746dbf8af7de9 82-111
+  s_9b5029d3685278::t_a4f39e25f4b7de 22,27-35
+app/src/lib/supabase/server.ts
+  s_9b5029d3685278::t_40ecc0eeadc4f9 1-26
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.11",
+  "base_commit_sha": "18f225d5bfd883257255fe2e99b04a6995313648",
+  "prompts": {},
+  "humans": {
+    "h_d382fbec1d5b46": {
+      "author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  },
+  "sessions": {
+    "s_9b5029d3685278": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "890fea56-a29f-4ea1-93a3-e5947f4859b8",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
