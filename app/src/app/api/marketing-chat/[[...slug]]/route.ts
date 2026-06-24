@@ -28,7 +28,7 @@ const app = createCopilotEndpoint({
 
 const endpoint = handle(app);
 
-const handler = (request: Request): Promise<Response> => endpoint(request);
+const handler = (request: Request) => endpoint(request);
 
 export const GET = handler;
 export const POST = handler;
