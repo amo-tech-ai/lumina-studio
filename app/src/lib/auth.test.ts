@@ -1,5 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { extractAccessToken, resolveOperatorUser } from "./auth";
+import {
+  accessTokenFromCookieString,
+  extractAccessToken,
+  resolveOperatorUser,
+} from "./auth";
 
 function req(headers: Record<string, string>): Request {
   return new Request("http://localhost/api/copilotkit", { headers });
@@ -54,6 +58,20 @@ describe("extractAccessToken", () => {
 
   it("returns undefined when no token is present", () => {
     expect(extractAccessToken(req({}))).toBeUndefined();
+  });
+
+  it("reads raw (non-base64-prefixed) session JSON from cookies", () => {
+    const session = JSON.stringify({ access_token: "raw-json-jwt" });
+    const cookie = `sb-proj-auth-token=${encodeURIComponent(session)}`;
+    expect(accessTokenFromCookieString(cookie)).toBe("raw-json-jwt");
+  });
+
+  it("sorts out-of-order numbered chunks before decoding", () => {
+    const jwt = "aaa.bbb.ccc";
+    const b64 = btoa(JSON.stringify([jwt]));
+    const mid = Math.floor(b64.length / 2);
+    const cookie = `sb-proj-auth-token.1=${b64.slice(mid)}; sb-proj-auth-token.0=base64-${b64.slice(0, mid)}`;
+    expect(accessTokenFromCookieString(cookie)).toBe(jwt);
   });
 });
 
