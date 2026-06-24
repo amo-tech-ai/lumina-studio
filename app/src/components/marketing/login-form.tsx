@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useRef, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
@@ -19,9 +19,14 @@ export function LoginForm() {
   const [mode, setMode] = useState<Mode>("login");
   const [message, setMessage] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  // Synchronous lock — `setSubmitting` is async, so the disabled button alone
+  // can't stop two clicks fired before the next render from both submitting.
+  const submitLock = useRef(false);
 
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    if (submitLock.current) return;
+    submitLock.current = true;
     setMessage(null);
     setSubmitting(true);
     const data = new FormData(e.currentTarget);
@@ -48,6 +53,7 @@ export function LoginForm() {
     } catch {
       setMessage("Sign-in is unavailable right now. Please try again.");
     } finally {
+      submitLock.current = false;
       setSubmitting(false);
     }
   }
