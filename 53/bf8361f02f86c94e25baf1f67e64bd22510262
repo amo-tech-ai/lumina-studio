@@ -1,0 +1,30 @@
+app/package.json
+  s_99ef85ddf80e97::t_2cedeb1dc0ddf4 43-44,50
+app/src/lib/supabase/client.test.ts
+  s_99ef85ddf80e97::t_5da57f9ccf3036 1-62
+app/src/lib/safe-redirect.ts
+  s_99ef85ddf80e97::t_d266478928b54f 1-4,6-8
+app/src/lib/safe-redirect.test.ts
+  s_99ef85ddf80e97::t_b80367f76831d6 5-6
+  s_99ef85ddf80e97::t_3e9792991f2a2e 22-28
+app/src/components/marketing/login-form.test.tsx
+  s_99ef85ddf80e97::t_1d78282a7d97bf 1-141
+app/src/components/marketing/login-form.tsx
+  s_99ef85ddf80e97::t_3f41fe7fca05ab 28,33-34,39-40
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.11",
+  "base_commit_sha": "53bf8361f02f86c94e25baf1f67e64bd22510262",
+  "prompts": {},
+  "sessions": {
+    "s_99ef85ddf80e97": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "4c088e51-0a96-4c26-9f0c-3f0a635e98c2",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Sanjiv Khullar <ai@socialmediville.ca>"
+    }
+  }
+}
