@@ -12,6 +12,7 @@
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
+    "test:web015": "bash supabase/tests/web015/run.sh",
     "supabase:types": "supabase gen types typescript --linked > src/types/supabase.ts",
     "supabase:migrations": "supabase migration list --linked",
     "supabase:push": "supabase db push --linked",
