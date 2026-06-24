@@ -281,7 +281,7 @@ export default function AmazonPhotographyPage() {
             <h2 className="mb-6 text-4xl font-light md:text-5xl lg:text-6xl">Ready to Win<br /><span className="italic">Your Category?</span></h2>
             <p className="mx-auto mb-12 max-w-xl text-base leading-relaxed md:text-lg" style={caption}>Let AI define what Amazon actually needs before you produce content.</p>
             <div className="flex flex-col justify-center gap-4 sm:flex-row">
-              <Link href="#contact" className="px-10 py-4 text-sm font-medium uppercase tracking-wide text-white" style={ink}>Start My Amazon Plan</Link>
+              <Link href="/#contact" className="px-10 py-4 text-sm font-medium uppercase tracking-wide text-white" style={ink}>Start My Amazon Plan</Link>
               <Link href="/#contact" className="px-10 py-4 text-sm font-medium uppercase tracking-wide" style={{ border: "1px solid var(--mk-text)" }}>Book a Consultation</Link>
             </div>
           </AnimatedSection>

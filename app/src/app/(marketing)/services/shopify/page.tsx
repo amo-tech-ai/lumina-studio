@@ -262,7 +262,7 @@ export default function ShopifyPhotographyPage() {
             </p>
             <p className="mb-10 text-xs" style={{ color: "rgba(255,255,255,0.4)" }}>Limited productions per month to maintain exclusivity.</p>
             <div className="flex flex-col justify-center gap-4 sm:flex-row">
-              <Link href="#contact" className="px-10 py-4 text-sm font-medium uppercase tracking-wide" style={{ background: "#fff", color: "var(--mk-text)" }}>Book Your Shopify Shoot</Link>
+              <Link href="/#contact" className="px-10 py-4 text-sm font-medium uppercase tracking-wide" style={{ background: "#fff", color: "var(--mk-text)" }}>Book Your Shopify Shoot</Link>
               <Link href="/#contact" className="border px-10 py-4 text-sm font-medium uppercase tracking-wide text-white" style={{ borderColor: "rgba(255,255,255,0.3)" }}>Schedule a Consultation</Link>
             </div>
           </AnimatedSection>

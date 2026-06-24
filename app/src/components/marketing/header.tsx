@@ -39,8 +39,16 @@ export function MarketingHeader() {
             className="relative"
             onMouseEnter={() => setServicesOpen(true)}
             onMouseLeave={() => setServicesOpen(false)}
+            onKeyDown={(e) => { if (e.key === "Escape") setServicesOpen(false); }}
+            onBlur={(e) => { if (!e.currentTarget.contains(e.relatedTarget as Node)) setServicesOpen(false); }}
           >
-            <button type="button" className="flex items-center gap-1 text-sm" aria-expanded={servicesOpen}>
+            <button
+              type="button"
+              className="flex items-center gap-1 text-sm"
+              aria-haspopup="true"
+              aria-expanded={servicesOpen}
+              onClick={() => setServicesOpen((v) => !v)}
+            >
               Services <ChevronDown className="h-4 w-4" />
             </button>
             {servicesOpen && (

@@ -110,7 +110,7 @@ export default function ClothingPhotographyPage() {
               <p className="mb-4 text-xs font-medium uppercase tracking-[0.25em]" style={caption}>The Problem</p>
               <h2 className="mb-6 text-4xl font-light md:text-5xl">Stop Guessing<br /><span className="italic">What to Shoot.</span></h2>
               <p className="mb-8 max-w-md text-base leading-relaxed" style={caption}>
-                Most brands overshoot, reshoot, or create content that doesn&apos;t convert. ipix analyzes your brand and generates a complete clothing content plan.
+                Most brands overshoot, reshoot, or create content that doesn&apos;t convert. iPix analyzes your brand and generates a complete clothing content plan.
               </p>
               <ul className="space-y-3">
                 {problemPoints.map((item) => (

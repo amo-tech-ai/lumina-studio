@@ -24,7 +24,7 @@ export function PortfolioSection() {
 
         <div className="grid grid-cols-2 gap-1 lg:grid-cols-4">
           {items.map((item) => (
-            <div key={item.label} className={`group relative min-h-[250px] cursor-pointer overflow-hidden ${item.span}`}>
+            <div key={item.label} className={`group relative min-h-[250px] overflow-hidden ${item.span}`}>
               <Image
                 src={item.src}
                 alt={item.label}

@@ -37,11 +37,11 @@ export function CTASection() {
               }}
             >
               <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
-                <input type="text" required placeholder="Name" className={field} style={{ borderColor: "var(--mk-border)" }} />
-                <input type="email" required placeholder="Email" className={field} style={{ borderColor: "var(--mk-border)" }} />
+                <input type="text" required placeholder="Name" aria-label="Name" className={field} style={{ borderColor: "var(--mk-border)" }} />
+                <input type="email" required placeholder="Email" aria-label="Email" className={field} style={{ borderColor: "var(--mk-border)" }} />
               </div>
-              <input type="text" placeholder="Company" className={field} style={{ borderColor: "var(--mk-border)" }} />
-              <textarea placeholder="Tell us about your project" rows={4} className={`${field} resize-none`} style={{ borderColor: "var(--mk-border)" }} />
+              <input type="text" placeholder="Company" aria-label="Company" className={field} style={{ borderColor: "var(--mk-border)" }} />
+              <textarea placeholder="Tell us about your project" aria-label="Tell us about your project" rows={4} className={`${field} resize-none`} style={{ borderColor: "var(--mk-border)" }} />
               <button
                 type="submit"
                 className="px-10 py-4 text-sm font-medium uppercase tracking-wide text-white transition-opacity hover:opacity-90"

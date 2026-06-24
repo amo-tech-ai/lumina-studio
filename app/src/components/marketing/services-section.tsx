@@ -28,7 +28,7 @@ export function ServicesSection() {
           {services.map((s) => (
             <div
               key={s.title}
-              className="group cursor-pointer p-8 transition-colors lg:p-10"
+              className="group p-8 transition-colors lg:p-10"
               style={{ background: "var(--mk-surface)" }}
             >
               <s.icon size={28} strokeWidth={1.2} className="mb-6" style={{ color: "var(--mk-text-muted)" }} />

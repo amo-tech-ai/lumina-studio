@@ -62,7 +62,7 @@ Source: `src/App.tsx` + `src/pages/`
 
 ## 2. Next.js Route Map
 
-All marketing pages live under a `(web)` route group to keep them isolated from the operator routes.
+All marketing pages live under a `(marketing)` route group to keep them isolated from the operator routes.
 
 | # | Route | Next.js File Path | Status |
 |---|---|---|---|
@@ -83,7 +83,7 @@ All marketing pages live under a `(web)` route group to keep them isolated from 
 
 The existing root `layout.tsx` wraps ALL routes with `<CopilotKit>` + `<OperatorPanel>`. For marketing pages, this is wrong — they must NOT get the CopilotKit sidebar or threads drawer.
 
-**Solution:** A `(web)` route group with its own layout:
+**Solution:** A `(marketing)` route group with its own layout:
 
 ```
 app/src/app/
@@ -386,7 +386,7 @@ For decorative/background images, `next/image` with `fill` or plain `<img>` with
 
 | Risk | Impact | Mitigation |
 |---|---|---|
-| **CopilotKit/operator UX conflict** | Marketing layout must NOT get the CopilotSidebar. If route group layout is wrong, marketing pages render with the operator sidebar. | Test `(web)` isolation before building any content. The route group bypasses the root layout naturally — verify with a simple `<h1>test</h1>` first. |
+| **CopilotKit/operator UX conflict** | Marketing layout must NOT get the CopilotSidebar. If route group layout is wrong, marketing pages render with the operator sidebar. | Test `(marketing)` isolation before building any content. The route group bypasses the root layout naturally — verify with a simple `<h1>test</h1>` first. |
 | **Tailwind v3 → v4 syntax differences** | Vite uses Tailwind v3 (`tailwind.config.ts` with `@tailwind base`). Next.js uses Tailwind v4 (`@import "tailwindcss"` with `@theme` inline). CSS custom properties port directly, but some v3 utilities may not exist in v4. | Test each component after porting. Tailwind v4 is mostly backward-compatible for utility classes. |
 | **Font conflict with operator UI** | Geist (operator) vs Cormorant/Outfit (marketing) must not overlap. | Scope fonts to `.marketing` class. Operator root layout keeps Geist. |
 | **framer-motion dependency** | Vite uses framer-motion for 5 service pages + 3 sub-components. Next.js app does not have it. | Replace with lightweight IntersectionObserver-based `AnimatedSection` client component. Avoid adding framer-motion. |
@@ -399,7 +399,7 @@ For decorative/background images, `next/image` with `fill` or plain `<img>` with
 
 ## 9. Acceptance Criteria
 
-1. `(web)` route group confirmed isolated — no CopilotKit/OperatorPanel on marketing pages
+1. `(marketing)` route group confirmed isolated — no CopilotKit/OperatorPanel on marketing pages
 2. Existing operator routes (brand, shoots, assets, campaigns, matching) unchanged
 3. All 12 routes render correctly in Next.js dev server (`:3002`)
 2. Visual appearance matches Vite dev server (`:8080`) pixel comparison on:

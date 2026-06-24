@@ -209,7 +209,7 @@ export default function VideoProductionPage() {
             <h2 className="mb-6 text-4xl font-light md:text-5xl lg:text-6xl">Your Brand Deserves<br />More Than Footage.</h2>
             <p className="mb-4 text-xl italic" style={{ fontFamily: "var(--font-cormorant)", color: "var(--mk-text-muted)" }}>It deserves a film.</p>
             <p className="mb-12 text-sm" style={caption}>Limited productions per month to maintain cinematic standards.</p>
-            <Link href="#contact" className="inline-block px-10 py-4 text-sm font-medium uppercase tracking-wide text-white" style={ink}>Book Your Creative Consultation</Link>
+            <Link href="/#contact" className="inline-block px-10 py-4 text-sm font-medium uppercase tracking-wide text-white" style={ink}>Book Your Creative Consultation</Link>
           </AnimatedSection>
         </div>
       </section>
