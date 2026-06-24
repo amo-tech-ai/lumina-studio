@@ -1,0 +1,33 @@
+app/src/app/api/copilotkit/[[...slug]]/route.test.ts
+  s_9b5029d3685278::t_81f6599b810a24 60,62,65,67-68
+  s_9b5029d3685278::t_f22b0b3de33b65 45,47-50
+app/src/app/api/marketing-lead/route.ts
+  s_9b5029d3685278::t_b6a3a8aebcd087 10
+  s_9b5029d3685278::t_e4a39319014b68 92
+app/src/app/api/copilotkit/[[...slug]]/route.runtime.test.ts
+  s_9b5029d3685278::t_50c47f255818c1 67,74-79,81-83,85-86,95,101-102,104-110,114
+app/src/mastra/agents/public-marketing-agent.test.ts
+  s_9b5029d3685278::t_7d7eceb51c0aaf 173,175
+app/src/components/marketing/marketing-chat.tsx
+  s_9b5029d3685278::t_17330fe11e6f6e 21-30
+app/src/mastra/index.ts
+  s_9b5029d3685278::t_fff5435cf806a8 3
+app/src/app/api/copilotkit/[[...slug]]/route.ts
+  s_9b5029d3685278::t_d8c893ad48f3ef 10,14-18,20-21,23,48-50,65-66,69-70
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.11",
+  "base_commit_sha": "19aae795da6a4f9a51bf16bd911dab5de7066869",
+  "prompts": {},
+  "sessions": {
+    "s_9b5029d3685278": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "890fea56-a29f-4ea1-93a3-e5947f4859b8",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": "Sanjiv Khullar <ai@socialmediville.ca>"
+    }
+  }
+}
