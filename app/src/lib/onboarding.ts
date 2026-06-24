@@ -46,20 +46,31 @@ export const createOrgAndBrand = async (
       name: form.brandName,
       user_id: userId,
       org_id: org.id,
-      ai_profile: aiProfile ?? {},
+      ai_profile: {
+        ...(aiProfile ?? {}),
+        ...(form.instagramHandle ? { instagram_handle: form.instagramHandle } : {}),
+        industry: form.industry,
+        goal: form.goal,
+      },
     })
     .select("id")
     .single();
 
-  if (brandErr || !brand?.id) throw new Error(brandErr?.message ?? "Failed to create brand");
+  if (brandErr || !brand?.id) {
+    // ponytail: best-effort orphan cleanup — org was committed, brand failed
+    void supabase.from("organizations").delete().eq("id", org.id);
+    throw new Error(brandErr?.message ?? "Failed to create brand");
+  }
 
   const rawScore = (aiProfile ?? {}).score;
   const score = typeof rawScore === "number" ? rawScore : 0;
-  await supabase.from("brand_scores").insert({
+  const { error: scoreErr } = await supabase.from("brand_scores").insert({
     brand_id: brand.id,
     score_type: "dna_readiness",
     score,
   });
+  // ponytail: score write is intentionally non-blocking — brand is already created
+  if (scoreErr) console.warn("brand_scores insert failed (non-blocking):", scoreErr.message);
 
   return { orgId: org.id, brandId: brand.id };
 };

@@ -24,16 +24,18 @@ const OnboardingPage = () => {
     goal: "All of the above",
   });
   const [urlError, setUrlError] = useState<string | null>(null);
+  const [nameError, setNameError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
   const setField = (field: keyof OnboardingForm, value: string) => {
     setForm((f) => ({ ...f, [field]: value }));
     if (field === "websiteUrl") setUrlError(null);
+    if (field === "brandName") setNameError(null);
   };
 
   const validateStep2 = (): boolean => {
-    if (!form.brandName.trim()) return false;
+    if (!form.brandName.trim()) { setNameError("Brand name is required"); return false; }
     const err = validateUrl(form.websiteUrl);
     if (err) { setUrlError(err); return false; }
     return true;
@@ -43,6 +45,7 @@ const OnboardingPage = () => {
     setLoading(true);
     setError(null);
     try {
+      if (!SUPABASE_URL || !SUPABASE_ANON_KEY) throw new Error("Supabase is not configured");
       const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
       const { data: { user } } = await supabase.auth.getUser();
@@ -111,8 +114,11 @@ const OnboardingPage = () => {
                   value={form.brandName}
                   onChange={(e) => setField("brandName", e.target.value)}
                   placeholder="e.g. Maison Lumière"
-                  className="mt-1 w-full px-4 py-2.5 rounded-lg border border-[#D1C9C0] bg-white font-sans font-normal text-[#1E293B] focus:outline-none focus:border-[#E87C4D]"
+                  className={`mt-1 w-full px-4 py-2.5 rounded-lg border bg-white font-sans font-normal text-[#1E293B] focus:outline-none ${
+                    nameError ? "border-red-400 focus:border-red-400" : "border-[#D1C9C0] focus:border-[#E87C4D]"
+                  }`}
                 />
+                {nameError && <span className="font-sans font-normal text-sm text-red-500 mt-1 block">{nameError}</span>}
               </label>
 
               <label className="font-sans text-sm font-medium text-[#1E293B] block">

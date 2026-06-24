@@ -66,14 +66,18 @@ const makeSupabaseMock = ({
   orgError?: DbError;
   brandError?: DbError;
 } = {}) => {
+  const orgInsert = vi.fn(() => chainOrg);
+  const brandInsert = vi.fn(() => chainBrand);
+
   const chainOrg = {
-    insert: () => chainOrg,
+    insert: orgInsert,
     select: () => chainOrg,
     single: () => Promise.resolve(makeSingle(orgError ? null : { id: orgId }, orgError)),
+    delete: () => ({ eq: () => ({ then: () => undefined }) }),
   };
 
   const chainBrand = {
-    insert: () => chainBrand,
+    insert: brandInsert,
     select: () => chainBrand,
     single: () => Promise.resolve(makeSingle(brandError ? null : { id: brandId }, brandError)),
   };
@@ -88,6 +92,8 @@ const makeSupabaseMock = ({
       if (table === "brands") return chainBrand;
       return chainScore;
     }),
+    orgInsert,
+    brandInsert,
   };
 };
 
@@ -107,11 +113,14 @@ describe("createOrgAndBrand", () => {
     expect(result.brandId).toBe("brand-2");
   });
 
-  it("calls organizations.insert with owner_id and org_id", async () => {
-    const supabase = makeSupabaseMock();
+  it("inserts org with owner_id, brand with org_id and form fields", async () => {
+    const supabase = makeSupabaseMock({ orgId: "org-abc" });
     await createOrgAndBrand(supabase as unknown as SupabaseClient, "user-abc", FORM, null);
-    expect(supabase.from).toHaveBeenCalledWith("organizations");
-    expect(supabase.from).toHaveBeenCalledWith("brands");
+    expect(supabase.orgInsert).toHaveBeenCalledWith(expect.objectContaining({ owner_id: "user-abc" }));
+    expect(supabase.brandInsert).toHaveBeenCalledWith(expect.objectContaining({
+      org_id: "org-abc",
+      ai_profile: expect.objectContaining({ industry: FORM.industry, goal: FORM.goal }),
+    }));
     expect(supabase.from).toHaveBeenCalledWith("brand_scores");
   });
 
