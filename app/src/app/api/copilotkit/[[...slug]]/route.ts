@@ -24,7 +24,7 @@ const runtime = new CopilotRuntime({
     return MastraAgent.getLocalAgents({
       mastra,
       resourceId: user.id,
-      requestContext,
+      requestContext: requestContext,
     });
   },
   // --- copilotkit:intelligence (remove this block to opt out) ---

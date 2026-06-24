@@ -44,41 +44,35 @@ export async function POST(request: Request): Promise<Response> {
 
   const body = buildCaptureLeadPayload(parsed.data);
 
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 10_000);
   let captureRes: Response;
   try {
     captureRes = await fetch(`${supabaseUrl}/functions/v1/capture-lead`, {
       method: "POST",
-      signal: controller.signal,
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${anonKey}`,
-        apikey: anonKey,
       },
       body: JSON.stringify(body),
     });
   } catch (err) {
-    console.error("[marketing-lead] capture-lead unreachable:", err instanceof Error ? err.message : "network error");
+    console.error("[marketing-lead] capture-lead unreachable:", err);
     return Response.json(
       { error: "Lead capture service unavailable" },
       { status: 503 },
     );
-  } finally {
-    clearTimeout(timeout);
   }
 
   if (!captureRes.ok) {
-    const errData = await captureRes.json().catch(() => ({})) as Record<string, unknown>;
-    console.error("[marketing-lead] capture-lead returned", captureRes.status, { error: errData?.error ?? "unknown" });
+    const errData = await captureRes.json().catch(() => ({}));
+    console.error("[marketing-lead] capture-lead returned", captureRes.status, errData);
     return Response.json(
       { error: "Lead capture failed", detail: errData },
       { status: captureRes.status >= 400 && captureRes.status < 600 ? captureRes.status : 502 },
     );
   }
 
-  const data = await captureRes.json().catch(() => null);
-  return Response.json(data ?? { status: "ok" });
+  const data = await captureRes.json();
+  return Response.json(data);
 }
 
 function buildCaptureLeadPayload(req: SubmitLeadRequest) {

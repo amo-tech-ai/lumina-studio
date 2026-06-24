@@ -54,7 +54,7 @@ function LeadResultView({
   result: unknown;
 }) {
   if (status !== ToolCallStatus.Complete) {
-    return <p className="px-3 py-2 text-sm text-gray-400">Connecting you with the team…</p>;
+    return <p className="px-3 py-2 text-sm text-gray-400">Submitting your inquiry…</p>;
   }
   if (typeof result === "string" && result.startsWith("submitted:")) {
     const draftId = result.replace("submitted:", "");
@@ -63,7 +63,7 @@ function LeadResultView({
         data-testid={`lead-draft-${draftId}`}
         className="mx-3 rounded-md border border-green-200 bg-green-50 px-3 py-2 text-sm text-green-800"
       >
-        ✅ Inquiry received!{" "}
+        ✅ Inquiry submitted!{" "}
         <span className="text-xs text-green-600">
           Ref: <code className="font-mono">{draftId}</code>
         </span>
@@ -93,22 +93,18 @@ function MarketingChatInner() {
       description: "Submit a qualified visitor lead to the iPix team when they are ready to connect",
       parameters: LeadSchema,
       handler: async (args) => {
-        try {
-          const anonId = getAnonId();
-          const res = await fetch("/api/marketing-lead", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ ...args, anon_id: anonId }),
-          });
-          if (!res.ok) {
-            const err = await res.json().catch(() => ({}));
-            return `error:${(err as Record<string, unknown>).error ?? res.status}`;
-          }
-          const data: { draftId: string; status: string } = await res.json();
-          return `submitted:${data.draftId}`;
-        } catch {
-          return "error:network";
+        const anonId = getAnonId();
+        const res = await fetch("/api/marketing-lead", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ ...args, anon_id: anonId }),
+        });
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          return `error:${err.error ?? res.status}`;
         }
+        const data: { draftId: string; status: string } = await res.json();
+        return `submitted:${data.draftId}`;
       },
       render: LeadResultView,
     },
