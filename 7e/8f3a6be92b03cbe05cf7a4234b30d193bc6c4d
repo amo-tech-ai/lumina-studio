@@ -1,0 +1,26 @@
+app/src/app/api/marketing-chat/[[...slug]]/route.ts
+  s_9b5029d3685278::t_39f9834b34435f 29-31,35
+app/src/app/api/marketing-chat/[[...slug]]/route.test.ts
+  s_9b5029d3685278::t_4e0dfa3e8b6533 68-71,73
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.11",
+  "base_commit_sha": "7e8f3a6be92b03cbe05cf7a4234b30d193bc6c4d",
+  "prompts": {},
+  "humans": {
+    "h_d382fbec1d5b46": {
+      "author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  },
+  "sessions": {
+    "s_9b5029d3685278": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "890fea56-a29f-4ea1-93a3-e5947f4859b8",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
