@@ -5,7 +5,6 @@ import {
 } from "@copilotkit/runtime/v2";
 import { MastraAgent } from "@ag-ui/mastra";
 import { Mastra } from "@mastra/core/mastra";
-import { LibSQLStore } from "@mastra/libsql";
 import { publicMarketingAgent } from "@/mastra/agents/public-marketing-agent";
 import { handle } from "hono/vercel";
 
@@ -14,7 +13,6 @@ import { handle } from "hono/vercel";
 // No auth gate on this route (public).
 const publicMastra = new Mastra({
   agents: { "public-marketing": publicMarketingAgent },
-  storage: new LibSQLStore({ id: "public-marketing-storage", url: ":memory:" }),
 });
 
 const runtime = new CopilotRuntime({
@@ -30,7 +28,9 @@ const app = createCopilotEndpoint({
 
 const endpoint = handle(app);
 
-export const GET = endpoint;
-export const POST = endpoint;
-export const PATCH = endpoint;
-export const DELETE = endpoint;
+const handler = (request: Request): Promise<Response> => endpoint(request);
+
+export const GET = handler;
+export const POST = handler;
+export const PATCH = handler;
+export const DELETE = handler;

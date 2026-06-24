@@ -1,7 +1,6 @@
 import { AsyncLocalStorage } from "node:async_hooks";
 import {
   CopilotRuntime,
-  CopilotKitIntelligence,
   createCopilotEndpoint,
   InMemoryAgentRunner,
 } from "@copilotkit/runtime/v2";
@@ -35,27 +34,15 @@ const runtime = new CopilotRuntime({
       requestContext,
     });
   },
-  // --- copilotkit:intelligence (remove this block to opt out) ---
+  runner: new InMemoryAgentRunner(),
+  // ponytail: licenseToken enables thread persistence (free tier: 72h, 200 threads).
+  // Intelligence API is not included in the free tier — use InMemoryAgentRunner instead.
   ...(process.env.COPILOTKIT_LICENSE_TOKEN
-    ? (() => {
-        if (!process.env.INTELLIGENCE_API_KEY) {
-          throw new Error(
-            "INTELLIGENCE_API_KEY is required when COPILOTKIT_LICENSE_TOKEN is set",
-          );
-        }
-        return {
-          intelligence: new CopilotKitIntelligence({
-            apiKey: process.env.INTELLIGENCE_API_KEY,
-            apiUrl: process.env.INTELLIGENCE_API_URL ?? "http://localhost:4201",
-            wsUrl:
-              process.env.INTELLIGENCE_GATEWAY_WS_URL ?? "ws://localhost:4401",
-          }),
-          identifyUser: async () => _requestUser.getStore() ?? UNKNOWN_USER,
-          licenseToken: process.env.COPILOTKIT_LICENSE_TOKEN,
-        };
-      })()
-    : { runner: new InMemoryAgentRunner() }),
-  // --- /copilotkit:intelligence ---
+    ? {
+        licenseToken: process.env.COPILOTKIT_LICENSE_TOKEN,
+        identifyUser: async () => _requestUser.getStore() ?? UNKNOWN_USER,
+      }
+    : {}),
 });
 
 const app = createCopilotEndpoint({
