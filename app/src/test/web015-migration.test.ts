@@ -62,4 +62,37 @@ describe("WEB-015.1 migration contract (IPI2-160 / PR #48)", () => {
     expect(sql).toMatch(/grant select, insert, update, delete on public\.lead_intake_drafts\s+to service_role/);
     expect(sql).toContain("grant select on public.lead_intake_drafts to authenticated");
   });
+
+  it("enforces CHECK constraints on message roles and draft statuses", () => {
+    const sql = readMigration();
+    expect(sql).toContain("check (role in ('user', 'assistant', 'system'))");
+    expect(sql).toContain("check (status in ('draft', 'ready', 'claimed'))");
+  });
+
+  it("defines FK cascades so conversation deletion cleans up messages and events", () => {
+    const sql = readMigration();
+    expect(sql).toMatch(
+      /references public\.chatbot_conversations \(id\) on delete cascade/,
+    );
+    expect(sql).toContain(
+      "conversation_id  uuid references public.chatbot_conversations (id) on delete cascade",
+    );
+  });
+
+  it("does not grant table access to anon", () => {
+    const sql = readMigration();
+    expect(sql).not.toMatch(/grant .* to anon/i);
+  });
+
+  it("creates lookup indexes on foreign-key columns", () => {
+    const sql = readMigration();
+    for (const idx of [
+      "chatbot_messages_conversation_idx",
+      "chatbot_events_conversation_idx",
+      "lead_drafts_conversation_idx",
+      "lead_drafts_user_idx",
+    ]) {
+      expect(sql).toContain(idx);
+    }
+  });
 });
