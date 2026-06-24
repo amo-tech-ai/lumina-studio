@@ -1,0 +1,30 @@
+supabase/migrations/20260624000000_ipi16_org_layer.sql
+  s_9b5029d3685278::t_4af4cce3218530 25
+  s_9b5029d3685278::t_ad47e7b551a505 1-2,5,13-15,20,22-24,26-30,35-42,45-75,77-99,101-111,114-116,119-135,137-144,150-185,187-194,196-218
+  s_9b5029d3685278::t_5b8aad3b672ec1 3-4,6-12,16-19,21,31-34,43-44,76,100,112-113,117-118,136,145-149,186,195
+supabase/migrations/20260624000001_ipi16_org_auto_owner.sql
+  s_9b5029d3685278::t_02460d3c4695a1 1-23
+src/types/supabase.ts
+  s_9b5029d3685278::t_b3abb5afc2c52a 42-150,537-595,634,639,641,647,652,654,660,665,667,671-679,762-849,1806-1852,2050-2078,2086-2087,2099-2100,2112-2113,2251,2258,2260,2265,2272,2274,2279,2286,2288,3142-3162,3194-3213,3215
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.11",
+  "base_commit_sha": "782ada73ff66598901527eb013a0829b3cb7861a",
+  "prompts": {},
+  "humans": {
+    "h_d382fbec1d5b46": {
+      "author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  },
+  "sessions": {
+    "s_9b5029d3685278": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "890fea56-a29f-4ea1-93a3-e5947f4859b8",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
