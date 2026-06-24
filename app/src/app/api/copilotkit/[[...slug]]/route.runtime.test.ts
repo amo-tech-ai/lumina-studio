@@ -152,4 +152,49 @@ describe("IPI2-127 — anonymous → 401 when auth enabled (runtime)", () => {
     expect(response.status).toBe(200);
     expect(await response.text()).toBe("ok");
   });
+
+  it("rethrows non-auth errors instead of returning 401", async () => {
+    const withOperatorAuth = vi.mocked((await import("@/lib/operator-gate")).withOperatorAuth);
+    withOperatorAuth.mockRejectedValue(new Error("database unavailable"));
+
+    const route = await import("@/app/api/copilotkit/[[...slug]]/route");
+
+    await expect(route.GET(new Request("http://localhost/api/copilotkit"))).rejects.toThrow(
+      "database unavailable",
+    );
+  });
+});
+
+describe("copilotkit runtime — intelligence env guard", () => {
+  beforeEach(async () => {
+    vi.stubEnv("COPILOTKIT_LICENSE_TOKEN", "license-token");
+    await setupMocks();
+  });
+
+  it("throws at module load when INTELLIGENCE_API_KEY is missing", async () => {
+    vi.unstubAllEnvs();
+    vi.stubEnv("COPILOTKIT_LICENSE_TOKEN", "license-token");
+    vi.resetModules();
+    await setupMocks();
+
+    await expect(import("@/app/api/copilotkit/[[...slug]]/route")).rejects.toThrow(
+      /INTELLIGENCE_API_KEY/,
+    );
+  });
+
+  it("loads when both COPILOTKIT_LICENSE_TOKEN and INTELLIGENCE_API_KEY are set", async () => {
+    vi.unstubAllEnvs();
+    vi.stubEnv("COPILOTKIT_LICENSE_TOKEN", "license-token");
+    vi.stubEnv("INTELLIGENCE_API_KEY", "intel-key");
+    vi.resetModules();
+    await setupMocks();
+
+    const { CopilotKitIntelligence } = await import("@copilotkit/runtime/v2");
+    const route = await import("@/app/api/copilotkit/[[...slug]]/route");
+
+    expect(CopilotKitIntelligence).toHaveBeenCalledWith(
+      expect.objectContaining({ apiKey: "intel-key" }),
+    );
+    expect(route.GET).toBeDefined();
+  });
 });

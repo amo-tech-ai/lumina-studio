@@ -129,7 +129,7 @@ describe("marketing-lead — capture-lead integration", () => {
     expect(url).toBe("https://test.supabase.co/functions/v1/capture-lead");
   });
 
-  it("passes Authorization: Bearer anon-key", async () => {
+  it("passes Authorization and apikey headers (Supabase edge functions require both)", async () => {
     const mockFetch = vi.fn().mockResolvedValueOnce(
       new Response(JSON.stringify({ draftId: "d-xyz" }), { status: 200 }),
     );
@@ -141,7 +141,44 @@ describe("marketing-lead — capture-lead integration", () => {
     const [, opts] = mockFetch.mock.calls[0];
     expect((opts as RequestInit).headers).toMatchObject({
       Authorization: "Bearer test-anon-key",
+      apikey: "test-anon-key",
     });
+  });
+
+  it("forwards conversation_id when provided", async () => {
+    const mockFetch = vi.fn().mockResolvedValueOnce(
+      new Response(JSON.stringify({ draftId: "d-xyz" }), { status: 200 }),
+    );
+    vi.stubGlobal("fetch", mockFetch);
+
+    const { POST } = await importRoute();
+    await POST(makeRequest({ ...VALID_BODY, conversation_id: "conv-abc" }));
+
+    const [, opts] = mockFetch.mock.calls[0];
+    const body = JSON.parse((opts as RequestInit).body as string);
+    expect(body.conversation_id).toBe("conv-abc");
+  });
+
+  it("omits optional budget, timeline, and website when not provided", async () => {
+    const mockFetch = vi.fn().mockResolvedValueOnce(
+      new Response(JSON.stringify({ draftId: "d-xyz" }), { status: 200 }),
+    );
+    vi.stubGlobal("fetch", mockFetch);
+
+    const { POST } = await importRoute();
+    const minimal = {
+      anon_id: VALID_BODY.anon_id,
+      email: VALID_BODY.email,
+      service_interest: VALID_BODY.service_interest,
+      message_summary: VALID_BODY.message_summary,
+    };
+    await POST(makeRequest(minimal));
+
+    const [, opts] = mockFetch.mock.calls[0];
+    const body = JSON.parse((opts as RequestInit).body as string);
+    expect(body.budget).toBeUndefined();
+    expect(body.timeline).toBeUndefined();
+    expect(body.brand_url).toBeUndefined();
   });
 
   it("maps website → brand_url in the capture-lead payload", async () => {

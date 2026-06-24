@@ -5,6 +5,7 @@ import {
   MarketingLeadState,
   SERVICE_SLUGS,
   LeadReadiness,
+  LeadPayload,
 } from "@/mastra/types/marketing-lead";
 
 // ─── Agent structure ────────────────────────────────────────────────────────
@@ -121,6 +122,49 @@ describe("MarketingLeadState schema", () => {
   it("rejects a malformed email", () => {
     expect(() =>
       MarketingLeadState.parse({ email: "not-an-email" }),
+    ).toThrow();
+  });
+});
+
+// ─── LeadPayload (capture-lead boundary) ────────────────────────────────────
+
+describe("LeadPayload schema", () => {
+  it("accepts a complete lead with required fields", () => {
+    const payload = LeadPayload.parse({
+      name: "Jordan Lee",
+      email: "jordan@brand.co",
+      service_interest: "shopify",
+    });
+    expect(payload.name).toBe("Jordan Lee");
+    expect(payload.email).toBe("jordan@brand.co");
+    expect(payload.service_interest).toBe("shopify");
+  });
+
+  it("rejects when email is missing", () => {
+    expect(() =>
+      LeadPayload.parse({
+        name: "Jordan Lee",
+        service_interest: "shopify",
+      }),
+    ).toThrow();
+  });
+
+  it("rejects when service_interest is missing", () => {
+    expect(() =>
+      LeadPayload.parse({
+        name: "Jordan Lee",
+        email: "jordan@brand.co",
+      }),
+    ).toThrow();
+  });
+
+  it("rejects an invalid service slug", () => {
+    expect(() =>
+      LeadPayload.parse({
+        name: "Jordan Lee",
+        email: "jordan@brand.co",
+        service_interest: "operator-dashboard",
+      }),
     ).toThrow();
   });
 });

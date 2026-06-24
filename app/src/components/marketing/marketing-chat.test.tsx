@@ -90,25 +90,37 @@ describe("MarketingChat — quick prompts / chips", () => {
 
 // ─── Contract: lead capture ────────────────────────────────────────────────
 
+const LEAD_MODULE = resolve(
+  fileURLToPath(new URL(".", import.meta.url)),
+  "marketing-chat-lead.tsx",
+);
+const leadSrc = readFileSync(LEAD_MODULE, "utf8");
+
 describe("MarketingChat — lead capture", () => {
   it("registers capture_lead tool via useFrontendTool", () => {
     expect(src).toMatch(/useFrontendTool/);
     expect(src).toMatch(/capture_lead/);
   });
 
-  it("POSTs to /api/marketing-lead", () => {
-    expect(src).toMatch(/\/api\/marketing-lead/);
-    expect(src).toMatch(/method:\s*["']POST["']/);
+  it("delegates lead submission to marketing-chat-lead module", () => {
+    expect(src).toMatch(/submitMarketingLead/);
+    expect(src).toMatch(/getAnonId/);
+    expect(src).toMatch(/LeadResultView/);
+  });
+
+  it("POSTs to /api/marketing-lead from lead module", () => {
+    expect(leadSrc).toMatch(/\/api\/marketing-lead/);
+    expect(leadSrc).toMatch(/method:\s*["']POST["']/);
   });
 
   it("includes anon_id in the POST body", () => {
-    expect(src).toMatch(/anon_id/);
-    expect(src).toMatch(/getAnonId/);
+    expect(leadSrc).toMatch(/anon_id/);
+    expect(leadSrc).toMatch(/getAnonId/);
   });
 
   it("shows submitted draftId in the render view", () => {
-    expect(src).toMatch(/submitted:/);
-    expect(src).toMatch(/draftId/);
+    expect(leadSrc).toMatch(/submitted:/);
+    expect(leadSrc).toMatch(/draftId/);
   });
 });
 

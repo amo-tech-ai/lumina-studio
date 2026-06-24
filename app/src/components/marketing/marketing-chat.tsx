@@ -7,34 +7,18 @@ import {
   CopilotPopup,
   useFrontendTool,
   useConfigureSuggestions,
-  ToolCallStatus,
 } from "@copilotkit/react-core/v2";
 import "@copilotkit/react-core/v2/styles.css";
 import { z } from "zod";
-import { SERVICE_SLUGS } from "@/mastra/types/marketing-lead";
+import {
+  getAnonId,
+  LeadResultView,
+  LeadSchema,
+  submitMarketingLead,
+} from "./marketing-chat-lead";
 
 // ponytail: build-time flag — false by default; set NEXT_PUBLIC_MARKETING_CHAT_ENABLED=true to launch
 const ENABLED = process.env.NEXT_PUBLIC_MARKETING_CHAT_ENABLED === "true";
-
-function getAnonId(): string {
-  const key = "ipix_anon_id";
-  let id = localStorage.getItem(key);
-  if (!id) {
-    id = `anon-${crypto.randomUUID()}`;
-    localStorage.setItem(key, id);
-  }
-  return id;
-}
-
-const LeadSchema = z.object({
-  name: z.string(),
-  email: z.string().email(),
-  service_interest: z.enum(SERVICE_SLUGS),
-  message_summary: z.string(),
-  budget: z.string().optional(),
-  timeline: z.string().optional(),
-  website: z.string().optional(),
-});
 
 export const QUICK_PROMPTS = [
   { title: "Fashion photography", message: "Tell me about iPix fashion photography services." },
@@ -42,44 +26,6 @@ export const QUICK_PROMPTS = [
   { title: "Instagram content", message: "What Instagram content creation services do you offer?" },
   { title: "Pricing", message: "What are your pricing options?" },
 ] as const;
-
-function LeadResultView({
-  status,
-  result,
-}: {
-  name: string;
-  toolCallId: string;
-  args: Partial<z.infer<typeof LeadSchema>>;
-  status: ToolCallStatus;
-  result: unknown;
-}) {
-  if (status !== ToolCallStatus.Complete) {
-    return <p className="px-3 py-2 text-sm text-gray-400">Connecting you with the team…</p>;
-  }
-  if (typeof result === "string" && result.startsWith("submitted:")) {
-    const draftId = result.replace("submitted:", "");
-    return (
-      <div
-        data-testid={`lead-draft-${draftId}`}
-        className="mx-3 rounded-md border border-green-200 bg-green-50 px-3 py-2 text-sm text-green-800"
-      >
-        ✅ Inquiry received!{" "}
-        <span className="text-xs text-green-600">
-          Ref: <code className="font-mono">{draftId}</code>
-        </span>
-      </div>
-    );
-  }
-  return (
-    <p className="px-3 py-2 text-sm text-red-500">
-      Submission failed — please{" "}
-      <a href="mailto:hello@fashionos.co" className="underline">
-        email us
-      </a>
-      .
-    </p>
-  );
-}
 
 function MarketingChatInner() {
   useConfigureSuggestions({
@@ -92,20 +38,7 @@ function MarketingChatInner() {
       name: "capture_lead",
       description: "Submit a qualified visitor lead to the iPix team when they are ready to connect",
       parameters: LeadSchema,
-      handler: async (args) => {
-        const anonId = getAnonId();
-        const res = await fetch("/api/marketing-lead", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ ...args, anon_id: anonId }),
-        });
-        if (!res.ok) {
-          const err = await res.json().catch(() => ({}));
-          return `error:${err.error ?? res.status}`;
-        }
-        const data: { draftId: string; status: string } = await res.json();
-        return `submitted:${data.draftId}`;
-      },
+      handler: async (args) => submitMarketingLead(args, getAnonId()),
       render: LeadResultView,
     },
     [],
