@@ -14,7 +14,7 @@ afterEach(() => {
   vi.resetModules();
 });
 
-async function setupMocks() {
+function setupMocks() {
   vi.doMock("@/mastra", () => ({ mastra: {} }));
 
   vi.doMock("@/lib/auth", () => ({

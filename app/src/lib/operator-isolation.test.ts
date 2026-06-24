@@ -37,7 +37,7 @@ async function createAgentsForRequest(request: Request) {
   return MastraAgent.getLocalAgents({
     mastra: {} as any,
     resourceId: user.id,
-    requestContext: requestContext,
+    requestContext,
   });
 }
 
@@ -85,8 +85,6 @@ describe("IPI2-127: per-user Mastra resourceId isolation (two-user smoke)", () =
   });
 
   it("User A's resourceId does not match User B's resourceId", async () => {
-    const results: string[] = [];
-
     resolveOperatorUserMock
       .mockResolvedValueOnce({
         id: "user-a-111",

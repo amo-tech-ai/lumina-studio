@@ -25,7 +25,7 @@ describe("CopilotKit route — operator auth boundary (IPI2-127)", () => {
 
   it("passes requestContext with userId and email via RequestContext.set()", () => {
     const src = readFileSync(ROUTE, "utf8");
-    expect(src).toMatch(/requestContext:/);
+    expect(src).toMatch(/requestContext[,\s]/);
     expect(src).toMatch(/set\(["']userId["'],\s*user\.id\)/);
     expect(src).toMatch(/set\(["']email["'],\s*user\.email\)/);
   });
