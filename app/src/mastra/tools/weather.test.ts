@@ -1,5 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { weatherTool } from "./index";
+import { weatherTool, type WeatherToolResult } from "./index";
+
+// ponytail: Mastra execute() signature varies across versions — bypass with any
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const exec = (args: { location: string }): Promise<WeatherToolResult> => (weatherTool.execute as any)(args);
 
 function fakeResponse({
   ok,
@@ -54,7 +58,7 @@ describe("weatherTool — HTTP integration (mocked)", () => {
   });
 
   it("returns mapped weather fields on success", async () => {
-    const result = await weatherTool.execute!({ location: "Paris" });
+    const result = await exec({ location: "Paris" });
     expect(result).toEqual({
       temperature: 22,
       feelsLike: 24,
@@ -73,7 +77,7 @@ describe("weatherTool — HTTP integration (mocked)", () => {
         fakeResponse({ ok: true, status: 200, body: '{"results":[]}' }),
       ),
     );
-    await expect(weatherTool.execute!({ location: "Nowhere" })).rejects.toThrow(
+    await expect(exec({ location: "Nowhere" })).rejects.toThrow(
       /Location 'Nowhere' not found/,
     );
   });
@@ -83,7 +87,7 @@ describe("weatherTool — HTTP integration (mocked)", () => {
       "fetch",
       vi.fn(async () => fakeResponse({ ok: false, status: 503 })),
     );
-    await expect(weatherTool.execute!({ location: "Paris" })).rejects.toThrow(
+    await expect(exec({ location: "Paris" })).rejects.toThrow(
       /Geocoding API request failed/,
     );
   });
@@ -98,7 +102,7 @@ describe("weatherTool — HTTP integration (mocked)", () => {
         return fakeResponse({ ok: false, status: 502 });
       }),
     );
-    await expect(weatherTool.execute!({ location: "Paris" })).rejects.toThrow(
+    await expect(exec({ location: "Paris" })).rejects.toThrow(
       /Weather API request failed/,
     );
   });
@@ -122,7 +126,7 @@ describe("weatherTool — HTTP integration (mocked)", () => {
         });
       }),
     );
-    const result = await weatherTool.execute!({ location: "Paris" });
-    expect(result?.conditions).toBe("Unknown");
+    const result = await exec({ location: "Paris" });
+    expect(result.conditions).toBe("Unknown");
   });
 });
