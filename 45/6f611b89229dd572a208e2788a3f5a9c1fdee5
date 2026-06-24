@@ -1,0 +1,21 @@
+app/src/middleware.test.ts
+  s_9b5029d3685278::t_aa2fd0165780a7 2,4-5,7-8,11
+app/src/test/operator-middleware-contract.test.ts
+  s_9b5029d3685278::t_141a8e2f5de2d9 15-17,20,22
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.11",
+  "base_commit_sha": "456f611b89229dd572a208e2788a3f5a9c1fdee5",
+  "prompts": {},
+  "sessions": {
+    "s_9b5029d3685278": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "890fea56-a29f-4ea1-93a3-e5947f4859b8",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": "Sanjiv Khullar <ai@socialmediville.ca>"
+    }
+  }
+}
