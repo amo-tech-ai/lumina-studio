@@ -159,6 +159,34 @@ describe("marketing-lead — capture-lead integration", () => {
     expect(body.website).toBeUndefined();
   });
 
+  it("forwards name to capture-lead payload when provided (C1 regression guard)", async () => {
+    const mockFetch = vi.fn().mockResolvedValueOnce(
+      new Response(JSON.stringify({ draftId: "d-xyz" }), { status: 200 }),
+    );
+    vi.stubGlobal("fetch", mockFetch);
+
+    const { POST } = await importRoute();
+    await POST(makeRequest({ ...VALID_BODY, name: "Jordan Lee" }));
+
+    const [, opts] = mockFetch.mock.calls[0];
+    const body = JSON.parse((opts as RequestInit).body as string);
+    expect(body.name).toBe("Jordan Lee");
+  });
+
+  it("omits name from payload when not provided", async () => {
+    const mockFetch = vi.fn().mockResolvedValueOnce(
+      new Response(JSON.stringify({ draftId: "d-xyz" }), { status: 200 }),
+    );
+    vi.stubGlobal("fetch", mockFetch);
+
+    const { POST } = await importRoute();
+    await POST(makeRequest(VALID_BODY));
+
+    const [, opts] = mockFetch.mock.calls[0];
+    const body = JSON.parse((opts as RequestInit).body as string);
+    expect(body.name).toBeUndefined();
+  });
+
   it("returns draftId and status on success", async () => {
     vi.stubGlobal(
       "fetch",

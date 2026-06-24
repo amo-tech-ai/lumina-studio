@@ -205,8 +205,8 @@ describe("Mastra registry — public-marketing agent", () => {
     expect(agent.id).toBe("public-marketing");
   });
 
-  it("is registered in the Mastra instance", async () => {
+  it("is NOT in the shared operator registry (C5 fix — must stay in publicMastra only)", async () => {
     const { agents } = await import("@/mastra/index");
-    expect(agents).toHaveProperty("public-marketing");
+    expect(agents).not.toHaveProperty("public-marketing");
   });
 });
