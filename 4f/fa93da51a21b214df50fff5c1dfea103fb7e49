@@ -1,0 +1,21 @@
+app/src/mastra/tools/index.ts
+  s_9b5029d3685278::t_a785f3abb8b4cf 6-7,12
+app/src/mastra/tools/edge.test.ts
+  s_9b5029d3685278::t_8f216eb3f99140 36-37
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.11",
+  "base_commit_sha": "4ffa93da51a21b214df50fff5c1dfea103fb7e49",
+  "prompts": {},
+  "sessions": {
+    "s_9b5029d3685278": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "890fea56-a29f-4ea1-93a3-e5947f4859b8",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": "Sanjiv Khullar <ai@socialmediville.ca>"
+    }
+  }
+}
