@@ -43,5 +43,5 @@ export const LeadPayload = MarketingLeadState.required({
   name: true,
   email: true,
   service_interest: true,
-});
+}).omit({ readiness: true });
 export type LeadPayload = z.infer<typeof LeadPayload>;

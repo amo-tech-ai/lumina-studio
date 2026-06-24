@@ -165,7 +165,7 @@ describe("LeadReadiness — progression logic", () => {
 
 describe("Mastra registry — public-marketing agent", () => {
   it("is exported from the agents barrel", async () => {
-    const { publicMarketingAgent: agent } = await import("./public-marketing-agent");
+    const { publicMarketingAgent: agent } = await import("@/mastra/agents");
     expect(agent).toBeDefined();
     expect(agent.id).toBe("public-marketing");
   });

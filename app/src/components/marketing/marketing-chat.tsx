@@ -93,18 +93,22 @@ function MarketingChatInner() {
       description: "Submit a qualified visitor lead to the iPix team when they are ready to connect",
       parameters: LeadSchema,
       handler: async (args) => {
-        const anonId = getAnonId();
-        const res = await fetch("/api/marketing-lead", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ ...args, anon_id: anonId }),
-        });
-        if (!res.ok) {
-          const err = await res.json().catch(() => ({}));
-          return `error:${err.error ?? res.status}`;
+        try {
+          const anonId = getAnonId();
+          const res = await fetch("/api/marketing-lead", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ ...args, anon_id: anonId }),
+          });
+          if (!res.ok) {
+            const err = await res.json().catch(() => ({}));
+            return `error:${(err as Record<string, unknown>).error ?? res.status}`;
+          }
+          const data: { draftId: string; status: string } = await res.json();
+          return `submitted:${data.draftId}`;
+        } catch {
+          return "error:network";
         }
-        const data: { draftId: string; status: string } = await res.json();
-        return `submitted:${data.draftId}`;
       },
       render: LeadResultView,
     },

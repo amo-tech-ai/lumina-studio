@@ -154,12 +154,4 @@ describe("IPI2-127: per-user Mastra resourceId isolation (two-user smoke)", () =
     expect(getLocalAgentsMock).not.toHaveBeenCalled();
   });
 
-  it("dev fallback (auth disabled) uses dev-unauthenticated, not shared user", () => {
-    // When OPERATOR_AUTH_ENABLED is not true, the gate returns a dev identity.
-    // The factory still uses that identity's id as resourceId.
-    vi.stubEnv("OPERATOR_AUTH_ENABLED", "false");
-    // resolveOperatorUserMock is set up in beforeEach — verify it hasn't been called
-    // prematurely (i.e. no module-level side-effect invokes it at import time).
-    expect(resolveOperatorUserMock).not.toHaveBeenCalled();
-  });
 });

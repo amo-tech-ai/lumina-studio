@@ -10,7 +10,7 @@
 
 **MVP priority:** **P0 Must Have**
 
-**Estimate:** 1 points
+**Estimate:** 1 point
 
 **Source:** [docs/intelligence/02-ai-native-dashboards-plan.md](../../intelligence/02-ai-native-dashboards-plan.md) · [docs/intelligence/README.md](../../intelligence/README.md)
 
