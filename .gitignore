@@ -34,3 +34,6 @@ app/.next
 app/.mastra
 app/.env
 app/out
+
+# Local backups
+app/.backup-*/

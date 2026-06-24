@@ -42,6 +42,8 @@ export const productionPlannerAgent = new Agent({
   }),
 });
 
+export { publicMarketingAgent } from "./public-marketing-agent";
+
 export const creativeDirectorAgent = new Agent({
   id: "creative-director",
   name: "Creative Director",

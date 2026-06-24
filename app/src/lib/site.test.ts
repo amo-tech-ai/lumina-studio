@@ -23,4 +23,10 @@ describe("SITE_URL (WEB-014 SEO)", () => {
     const url = new URL(SITE_URL);
     expect(url.protocol).toBe("https:");
   });
+
+  it("falls back to the default domain when NEXT_PUBLIC_SITE_URL is malformed", async () => {
+    vi.stubEnv("NEXT_PUBLIC_SITE_URL", "not a valid url!!!");
+    const { SITE_URL } = await import("./site");
+    expect(SITE_URL).toBe("https://fashionos.co");
+  });
 });
