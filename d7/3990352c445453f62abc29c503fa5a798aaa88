@@ -1,0 +1,21 @@
+app/src/middleware.test.ts
+  s_9b5029d3685278::t_2e77940b4aeb32 1-14
+app/src/middleware.ts
+  s_9b5029d3685278::t_2e77940b4aeb32 1-2
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.11",
+  "base_commit_sha": "d73990352c445453f62abc29c503fa5a798aaa88",
+  "prompts": {},
+  "sessions": {
+    "s_9b5029d3685278": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "890fea56-a29f-4ea1-93a3-e5947f4859b8",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": "Sanjiv Khullar <ai@socialmediville.ca>"
+    }
+  }
+}
