@@ -26,11 +26,13 @@ const runtime = new CopilotRuntime({
   runner: new InMemoryAgentRunner(),
 });
 
-// createCopilotRuntimeHandler bypasses Hono; matchRoute handles /info and /agent/:id/run directly.
+// ponytail: single-route — CopilotKit v2 client POSTs to the root path with JSON body
+// {method: "info"} / {method: "agent/run", ...}. multi-route's matchRoute returns null
+// for root-path POST (no path segments) causing 404.
 const endpoint = createCopilotRuntimeHandler({
   runtime,
   basePath: "/api/marketing-chat",
-  mode: "multi-route",
+  mode: "single-route",
   cors: true,
 });
 

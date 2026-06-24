@@ -65,10 +65,12 @@ describe("marketing-chat runtime — agent isolation (IPI2-163)", () => {
     expect(src).toMatch(/basePath:\s*["']\/api\/marketing-chat["']/);
   });
 
-  it("uses createCopilotRuntimeHandler (ensures /info is served via matchRoute, not a custom path)", () => {
-    // createCopilotRuntimeHandler's matchRoute handles /info, /agent/:id/run, etc.
-    // Hono basePath wrapper was removed because it didn't match exact base path (/api/marketing-chat POST).
+  it("uses createCopilotRuntimeHandler in single-route mode (client POSTs to root path)", () => {
+    // CopilotKit v2 client sends POST /api/marketing-chat with JSON body {method:"info"|"agent/run"}.
+    // multi-route matchRoute returns null for root-path POST (no segments) → 404.
+    // single-route resolveSingleRoute parses JSON body → routes correctly.
     expect(src).toMatch(/createCopilotRuntimeHandler/);
+    expect(src).toMatch(/mode:\s*["']single-route["']/);
     expect(src).not.toMatch(/handle\(app\)/);
   });
 
