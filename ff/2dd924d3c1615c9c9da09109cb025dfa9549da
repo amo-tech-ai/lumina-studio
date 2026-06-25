@@ -1,0 +1,46 @@
+supabase/functions/firecrawl-webhook/index.ts
+  s_ea46f8c56d53f8::t_859cfc23150feb 1
+  s_ea46f8c56d53f8::t_e08ffccc47bbbe 170,173-190
+  s_ea46f8c56d53f8::t_ca45982c448d79 15-21
+  s_ea46f8c56d53f8::t_401bf97c20de12 156
+  s_ea46f8c56d53f8::t_ce16572e20f9d8 263-267,272-274,279,289-290
+.claude/skills/ipix-supabase/SKILL.md
+  s_ea46f8c56d53f8::t_f26420ac2b8bb7 13-14
+  s_ea46f8c56d53f8::t_d79b58e954fb69 166
+  s_ea46f8c56d53f8::t_6ddd40a8aaf419 167
+  s_ea46f8c56d53f8::t_5fc47fbcc78a3f 128
+  s_ea46f8c56d53f8::t_ba16a708e14023 164-165
+  s_ea46f8c56d53f8::t_1ac191ff6a333d 124-127,129-133
+  s_ea46f8c56d53f8::t_d70bc094590a19 9
+  s_ea46f8c56d53f8::t_88a78ab0ef69b9 243-247
+  s_ea46f8c56d53f8::t_50c1a83340b989 268
+  s_ea46f8c56d53f8::t_f15f9eb875d15e 217-218
+supabase/functions/start-brand-crawl/index.ts
+  s_ea46f8c56d53f8::t_d4a08f3c223e6c 1,13
+  s_ea46f8c56d53f8::t_8930225c8a459e 143-157,159-177,195-206
+  s_ea46f8c56d53f8::t_e5754ec4d58cb8 42-45,50-55
+  s_ea46f8c56d53f8::t_db3bfd2c14f6e0 80-96
+.claude/skills/ipix-supabase/references/edge-functions/edge-functions-inventory.md
+  s_ea46f8c56d53f8::t_096eaa1b3f83bb 6-39
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.13",
+  "base_commit_sha": "ff2dd924d3c1615c9c9da09109cb025dfa9549da",
+  "prompts": {},
+  "humans": {
+    "h_d382fbec1d5b46": {
+      "author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  },
+  "sessions": {
+    "s_ea46f8c56d53f8": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "dd9a0aea-4d97-4ca9-a270-775e1d8e9728",
+        "model": "default"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
