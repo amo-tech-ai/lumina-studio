@@ -29,13 +29,14 @@ const FORBIDDEN_PATTERNS = [
 ];
 
 const EXT = new Set([".ts", ".tsx", ".js", ".jsx"]);
+const TEST_RE = /\.(test|spec|int\.test)\.(ts|tsx|js|jsx)$/;
 
 function walk(dir, files = []) {
   for (const name of readdirSync(dir)) {
     const path = join(dir, name);
     const st = statSync(path);
     if (st.isDirectory()) walk(path, files);
-    else if (EXT.has(extname(name))) files.push(path);
+    else if (EXT.has(extname(name)) && !TEST_RE.test(name)) files.push(path);
   }
   return files;
 }

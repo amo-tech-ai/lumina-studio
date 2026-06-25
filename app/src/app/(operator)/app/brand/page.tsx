@@ -1,5 +1,7 @@
 import Link from "next/link";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+
+export const dynamic = "force-dynamic";
 import { intakeStatusColor, intakeStatusLabel } from "@/lib/brand-hub";
 import { computeDnaScore } from "@/lib/brand-scores";
 import { scoreColor } from "@/lib/brand-utils";

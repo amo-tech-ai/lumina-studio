@@ -1,5 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+
+export const dynamic = "force-dynamic";
 import { BrandHubClient } from "@/components/brand-hub/brand-hub-client";
 import {
   buildActivityTimeline,
