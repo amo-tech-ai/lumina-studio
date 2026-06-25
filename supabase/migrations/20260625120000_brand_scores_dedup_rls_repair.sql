@@ -1,6 +1,5 @@
--- IPI-46: idempotent score upserts + UPDATE RLS for brand-intelligence re-analysis
+-- Repair: dedup tie-break + org-scoped UPDATE (post IPI-46 deploy)
 
--- Keep newest row per (brand_id, score_type) before adding UNIQUE
 delete from public.brand_scores a
 using public.brand_scores b
 where a.brand_id = b.brand_id
@@ -10,8 +9,7 @@ where a.brand_id = b.brand_id
     or (a.created_at = b.created_at and a.id < b.id)
   );
 
-create unique index if not exists brand_scores_brand_id_score_type_uidx
-  on public.brand_scores (brand_id, score_type);
+drop policy if exists "brand_scores_update_via_brand" on public.brand_scores;
 
 create policy "brand_scores_update_via_brand"
   on public.brand_scores for update to authenticated

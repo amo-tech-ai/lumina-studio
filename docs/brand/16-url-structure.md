@@ -6,7 +6,7 @@
 
 ## Current state
 
-```
+```text
 /app/brand/00000000-0000-0000-0000-000000000000
 ```
 
@@ -19,7 +19,7 @@
 
 ### Option A — `/app/brands/[brandSlug]`
 
-```
+```text
 /app/brands/maison-lumiere-a3f2k
 ```
 
@@ -32,7 +32,7 @@
 
 ### Option B — `/app/brands/[brandId]-[slug]` (recommended)
 
-```
+```text
 /app/brands/b1a2c3d4-maison-lumiere
 ```
 
@@ -45,7 +45,7 @@
 
 ### Option C — `/app/orgs/[orgSlug]/brands/[brandSlug]`
 
-```
+```text
 /app/orgs/maison-group/brands/maison-lumiere
 ```
 
@@ -91,20 +91,24 @@ slug: slugify(form.brandName),  // already imported
 
 Rename `app/src/app/(operator)/app/brand/[id]/` → `app/src/app/(operator)/app/brands/[brandId]/`
 
-`params.brandId` splits on first `-` to extract the UUID:
+The dynamic segment holds the full cosmetic path `uuid-slug` (Option B). Parse the UUID prefix:
 
 ```ts
-const id = (await params).brandId.split("-")[0]; // UUID prefix
+const raw = (await params).brandId;
+const uuid =
+  raw.length >= 36 && raw[36] === "-"
+    ? raw.slice(0, 36)
+    : raw.length === 36
+      ? raw
+      : raw.split("-").slice(0, 5).join("-");
 ```
 
-Or — simpler — keep the full segment as the key, make it a UUID, keep slug separate:
+Interim redirect (before slug backfill) may use `/app/brands/${id}` only; canonical target is `/app/brands/${id}-${slug}`.
 
 ```ts
-// Route: /app/brands/[id]
-// URL displayed: /app/brands/b1a2c3d4-maison-lumiere
-// params.id = full segment; extract UUID:
-const rawId = (await params).id;
-const uuid = rawId.length === 36 ? rawId : rawId.slice(0, 36);
+// Route: /app/brands/[brandId]
+// URL displayed: /app/brands/b1a2c3d4-e5f6-7890-abcd-ef1234567890-maison-lumiere
+// params.brandId = full segment; extract UUID as above.
 ```
 
 ### 4. Redirect old route
@@ -114,6 +118,7 @@ const uuid = rawId.length === 36 ? rawId : rawId.slice(0, 36);
 import { redirect } from "next/navigation";
 const OldBrandRoute = async ({ params }: { params: Promise<{ id: string }> }) => {
   const { id } = await params;
+  // Interim: uuid-only; append slug when brands.slug is populated
   redirect(`/app/brands/${id}`);
 };
 export default OldBrandRoute;

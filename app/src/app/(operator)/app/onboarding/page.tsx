@@ -24,9 +24,11 @@ const OnboardingPage = () => {
   const [nameError, setNameError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [shell, setShell] = useState<{ orgId: string; brandId: string } | null>(null);
 
   const setField = (field: keyof OnboardingForm, value: string) => {
     setForm((f) => ({ ...f, [field]: value }));
+    setShell(null);
     if (field === "websiteUrl") setUrlError(null);
     if (field === "brandName") setNameError(null);
   };
@@ -47,7 +49,13 @@ const OnboardingPage = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
-      const { brandId } = await createOrgAndBrand(supabase, user.id, form);
+      let brandId = shell?.brandId;
+      if (!brandId) {
+        const created = await createOrgAndBrand(supabase, user.id, form);
+        brandId = created.brandId;
+        setShell(created);
+      }
+
       await invokeBrandIntelligence(supabase, brandId, form);
 
       router.push(`/app/brand/${brandId}`);

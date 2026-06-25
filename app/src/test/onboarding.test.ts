@@ -171,6 +171,17 @@ describe("invokeBrandIntelligence", () => {
     const result = await invokeBrandIntelligence(supabase, "brand-1", FORM);
     expect(result.brandId).toBe("brand-1");
   });
+
+  it("throws when edge returns mismatched brandId", async () => {
+    const invoke = vi.fn().mockResolvedValue({
+      data: { brandId: "other-brand", scores: [] },
+      error: null,
+    });
+    const supabase = { functions: { invoke } } as unknown as SupabaseClient;
+    await expect(invokeBrandIntelligence(supabase, "brand-1", FORM)).rejects.toThrow(
+      "mismatched brandId",
+    );
+  });
 });
 
 describe("routing contract — /app/page.tsx", () => {

@@ -31,12 +31,11 @@ export const buildShellAiProfile = (form: OnboardingForm): Record<string, unknow
   _lifecycle: "brand_created",
 });
 
-/** Step 1 of onboarding: org + brand shell only — no edge fn, no score rows. */
-export const createOrgAndBrand = async (
+const insertOrganization = async (
   supabase: SupabaseClient,
   userId: string,
   form: OnboardingForm,
-): Promise<CreateBrandResult> => {
+) => {
   const { data: org, error: orgErr } = await supabase
     .from("organizations")
     .insert({
@@ -48,26 +47,53 @@ export const createOrgAndBrand = async (
     .select("id")
     .single();
 
-  if (orgErr || !org?.id) throw new Error(orgErr?.message ?? "Failed to create organization");
+  if (orgErr || !org?.id) {
+    throw new Error(orgErr?.message ?? "Failed to create organization");
+  }
 
+  return org.id;
+};
+
+const insertBrandShell = async (
+  supabase: SupabaseClient,
+  userId: string,
+  orgId: string,
+  form: OnboardingForm,
+) => {
   const { data: brand, error: brandErr } = await supabase
     .from("brands")
     .insert({
       name: form.brandName,
       brand_url: form.websiteUrl.trim(),
       user_id: userId,
-      org_id: org.id,
+      org_id: orgId,
       ai_profile: buildShellAiProfile(form),
     })
     .select("id")
     .single();
 
   if (brandErr || !brand?.id) {
-    void supabase.from("organizations").delete().eq("id", org.id);
     throw new Error(brandErr?.message ?? "Failed to create brand");
   }
 
-  return { orgId: org.id, brandId: brand.id };
+  return brand.id;
+};
+
+/** Step 1 of onboarding: org + brand shell only — no edge fn, no score rows. */
+export const createOrgAndBrand = async (
+  supabase: SupabaseClient,
+  userId: string,
+  form: OnboardingForm,
+): Promise<CreateBrandResult> => {
+  const orgId = await insertOrganization(supabase, userId, form);
+
+  try {
+    const brandId = await insertBrandShell(supabase, userId, orgId, form);
+    return { orgId, brandId };
+  } catch (err) {
+    await supabase.from("organizations").delete().eq("id", orgId);
+    throw err;
+  }
 };
 
 export type BrandIntelligenceResponse = {
@@ -97,6 +123,9 @@ export const invokeBrandIntelligence = async (
   const payload = data as BrandIntelligenceResponse | null;
   if (!payload?.brandId) {
     throw new Error("Brand analysis returned no brandId");
+  }
+  if (payload.brandId !== brandId) {
+    throw new Error("Brand analysis returned mismatched brandId");
   }
 
   return payload;

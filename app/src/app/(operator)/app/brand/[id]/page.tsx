@@ -27,6 +27,13 @@ const scoreColor = (score: number) => {
 const scoreLabel = (type: string) =>
   type.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 
+const ProfileField = ({ label, value }: { label: string; value: string }) => (
+  <div>
+    <dt className="font-sans text-xs font-medium text-[#94A3B8] uppercase tracking-wide">{label}</dt>
+    <dd className="font-sans text-sm text-[#1E293B] mt-0.5">{value}</dd>
+  </div>
+);
+
 const BrandPage = async ({ params }: Props) => {
   const { id } = await params;
   const supabase = await createSupabaseServerClient();
@@ -208,10 +215,3 @@ const BrandPage = async ({ params }: Props) => {
 };
 
 export default BrandPage;
-
-const ProfileField = ({ label, value }: { label: string; value: string }) => (
-  <div>
-    <dt className="font-sans text-xs font-medium text-[#94A3B8] uppercase tracking-wide">{label}</dt>
-    <dd className="font-sans text-sm text-[#1E293B] mt-0.5">{value}</dd>
-  </div>
-);

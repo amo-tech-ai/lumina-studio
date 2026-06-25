@@ -20,9 +20,9 @@ describe("onboarding orchestration (IPI-46)", () => {
           return {
             insert: () => ({
               select: () => ({
-                single: async () => {
+                single: () => {
                   order.push("org");
-                  return { data: { id: "org-1" }, error: null };
+                  return Promise.resolve({ data: { id: "org-1" }, error: null });
                 },
               }),
             }),
@@ -33,9 +33,9 @@ describe("onboarding orchestration (IPI-46)", () => {
           return {
             insert: () => ({
               select: () => ({
-                single: async () => {
+                single: () => {
                   order.push("brand");
-                  return { data: { id: "brand-1" }, error: null };
+                  return Promise.resolve({ data: { id: "brand-1" }, error: null });
                 },
               }),
             }),
@@ -44,9 +44,9 @@ describe("onboarding orchestration (IPI-46)", () => {
         throw new Error(`unexpected table ${table}`);
       },
       functions: {
-        invoke: vi.fn(async () => {
+        invoke: vi.fn(() => {
           order.push("edge");
-          return { data: { brandId: "brand-1", scores: [] }, error: null };
+          return Promise.resolve({ data: { brandId: "brand-1", scores: [] }, error: null });
         }),
       },
     } as unknown as SupabaseClient;
@@ -72,12 +72,18 @@ describe("onboarding orchestration (IPI-46)", () => {
           return {
             insert: () => ({
               select: () => ({
-                single: async () => ({ data: null, error: { message: "org fail" } }),
+                single: () => Promise.resolve({ data: null, error: { message: "org fail" } }),
               }),
             }),
           };
         }
-        return { insert: () => ({ select: () => ({ single: async () => ({}) }) }) };
+        return {
+          insert: () => ({
+            select: () => ({
+              single: () => Promise.resolve({ data: null, error: null }),
+            }),
+          }),
+        };
       },
       functions: { invoke },
     } as unknown as SupabaseClient;
@@ -85,9 +91,7 @@ describe("onboarding orchestration (IPI-46)", () => {
     await expect(createOrgAndBrand(supabase, "user-1", FORM)).rejects.toThrow("org fail");
     expect(invoke).not.toHaveBeenCalled();
   });
-});
 
-describe("onboarding page orchestration contract", () => {
   it("page calls createOrgAndBrand before invokeBrandIntelligence", async () => {
     const { readFileSync } = await import("node:fs");
     const { resolve } = await import("node:path");
@@ -104,5 +108,6 @@ describe("onboarding page orchestration contract", () => {
     expect(shellIdx).toBeGreaterThan(-1);
     expect(edgeIdx).toBeGreaterThan(shellIdx);
     expect(src).not.toMatch(/invoke\("brand-intelligence"/);
+    expect(src).toMatch(/setShell/);
   });
 });
