@@ -1,0 +1,22 @@
+app/src/components/operator-panel/operator-panel.tsx
+  s_a8ff79a3fcfbf6::t_7ac8f7cca8af12 32-33
+  s_a8ff79a3fcfbf6::t_e22b542798ca00 11
+app/src/components/operator-panel/operator-panel.test.ts
+  s_a8ff79a3fcfbf6::t_3c78ae8da53cb1 23-27,31-42
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.13",
+  "base_commit_sha": "4b6bc33324decbbb1c30af5e7cd2869f73ac1ca8",
+  "prompts": {},
+  "sessions": {
+    "s_a8ff79a3fcfbf6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a23755b0-cfc9-4f93-ae6b-754247f21af5",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
