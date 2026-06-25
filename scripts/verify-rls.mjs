@@ -522,6 +522,28 @@ try {
     );
   assert(!!viewerUpsertErr, "org viewer cannot upsert brand_score on org brand");
 
+  const { data: dnaBeforeViewerDelete } = await userA.client
+    .from("brand_scores")
+    .select("id")
+    .eq("brand_id", brandAId)
+    .eq("score_type", "dna_readiness")
+    .maybeSingle();
+  assert(dnaBeforeViewerDelete?.id, "dna_readiness score exists for viewer delete probe");
+
+  await userB.client
+    .from("brand_scores")
+    .delete()
+    .eq("brand_id", brandAId)
+    .eq("score_type", "dna_readiness");
+
+  const { data: dnaAfterViewerDelete } = await userA.client
+    .from("brand_scores")
+    .select("id")
+    .eq("brand_id", brandAId)
+    .eq("score_type", "dna_readiness")
+    .maybeSingle();
+  assert(dnaAfterViewerDelete?.id, "org viewer cannot delete brand_score on org brand");
+
   const { error: promoteEditorErr } = await userA.client
     .from("org_members")
     .update({ role: "editor" })
@@ -549,6 +571,21 @@ try {
       editorUpsert[0].score === 72,
     "org editor upserts brand_score on org brand",
   );
+
+  const { error: editorDeleteErr } = await userB.client
+    .from("brand_scores")
+    .delete()
+    .eq("brand_id", brandAId)
+    .eq("score_type", "visual");
+  assert(!editorDeleteErr, "org editor deletes brand_score on org brand");
+
+  const { data: visualAfterEditorDelete } = await userA.client
+    .from("brand_scores")
+    .select("id")
+    .eq("brand_id", brandAId)
+    .eq("score_type", "visual")
+    .maybeSingle();
+  assert(!visualAfterEditorDelete?.id, "org editor delete removed visual score row");
 } catch (err) {
   fail(err instanceof Error ? err.message : String(err));
 } finally {
