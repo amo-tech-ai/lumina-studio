@@ -1,0 +1,21 @@
+docs/shoot/design-review.md
+  s_a8ff79a3fcfbf6::t_18a916534e08d5 148
+  s_a8ff79a3fcfbf6::t_81c3ac6c711660 160
+  s_a8ff79a3fcfbf6::t_79d87ad9077e2e 168-173,175,177
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.13",
+  "base_commit_sha": "bb943bb07e809251633c539e0dcb35afd23d92c7",
+  "prompts": {},
+  "sessions": {
+    "s_a8ff79a3fcfbf6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a23755b0-cfc9-4f93-ae6b-754247f21af5",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
