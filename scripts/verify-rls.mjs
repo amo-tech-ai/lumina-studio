@@ -498,6 +498,35 @@ try {
   } else {
     console.log("skip: brand_crawls RLS insert probes (no service role)");
   }
+
+  // org editor can insert/upsert brand_scores (brand-intelligence re-analysis)
+  const { error: editorMemberErr } = await userA.client.from("org_members").insert({
+    org_id: orgAId,
+    user_id: userB.user.id,
+    role: "editor",
+  });
+  assert(!editorMemberErr, "user A adds user B as org editor");
+
+  const { error: editorScoreInsertErr } = await userB.client.from("brand_scores").insert({
+    brand_id: brandAId,
+    score_type: "visual",
+    score: 70,
+  });
+  assert(!editorScoreInsertErr, "org editor inserts brand_score on org brand");
+
+  const { data: editorUpsert, error: editorUpsertErr } = await userB.client
+    .from("brand_scores")
+    .upsert(
+      { brand_id: brandAId, score_type: "visual", score: 72 },
+      { onConflict: "brand_id,score_type" },
+    )
+    .select("id, score");
+  assert(
+    !editorUpsertErr &&
+      (editorUpsert ?? []).length === 1 &&
+      editorUpsert[0].score === 72,
+    "org editor upserts brand_score on org brand",
+  );
 } catch (err) {
   fail(err instanceof Error ? err.message : String(err));
 } finally {
