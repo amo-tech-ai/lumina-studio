@@ -1,0 +1,32 @@
+supabase/migrations/20260626000004_brand_agent_results.sql
+  s_ea46f8c56d53f8::t_d0bff641a44909 1-40
+supabase/migrations/20260626000005_brand_intake_drafts_rls.sql
+  s_ea46f8c56d53f8::t_8ce185556a6376 1-22
+supabase/migrations/20260626000000_brand_intelligence_v2_foundation.sql
+  s_ea46f8c56d53f8::t_eb6ae7154dae30 1-94
+supabase/migrations/20260626000001_brand_social_channels.sql
+  s_ea46f8c56d53f8::t_104d41870e34a5 1-38
+supabase/migrations/20260626000002_brand_competitors.sql
+  s_ea46f8c56d53f8::t_da5b5ae8847f3b 1-36
+supabase/migrations/20260626000003_brand_crawl_results.sql
+  s_ea46f8c56d53f8::t_f57f57f62bcfcb 1-51
+scripts/verify-rls.mjs
+  s_ea46f8c56d53f8::t_dd999fd17dd7b4 326
+  s_ea46f8c56d53f8::t_2b3a6654a0fdc6 221-325,327-347
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.13",
+  "base_commit_sha": "bea8a03b8f39b1b3f6f20aa486cb7e5f4f27dca0",
+  "prompts": {},
+  "sessions": {
+    "s_ea46f8c56d53f8": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "dd9a0aea-4d97-4ca9-a270-775e1d8e9728",
+        "model": "default"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
