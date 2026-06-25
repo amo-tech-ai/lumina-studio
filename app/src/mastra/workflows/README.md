@@ -13,7 +13,7 @@ Every workflow follows a three-step pattern:
 ## Creating Runs
 
 ```ts
-const workflow = mastra.getWorkflow("brandApprovalWorkflow");
+const workflow = mastra.getWorkflowById("brand-approval");
 const run = await workflow.createRun({ runId: "my-run-id" });
 const result = await run.start({ inputData: { brandName: "...", industry: "..." } });
 ```

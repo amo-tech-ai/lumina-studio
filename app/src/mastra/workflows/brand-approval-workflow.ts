@@ -57,9 +57,10 @@ const commitBrandStep = createStep({
     status: z.string(),
   }),
   execute: async ({ context }) => {
+    const { brandId, approved, approver } = context.inputData;
     return {
-      brandId: context.brandId,
-      status: "committed",
+      brandId,
+      status: approved ? `committed by ${approver}` : "rejected",
     };
   },
 });
