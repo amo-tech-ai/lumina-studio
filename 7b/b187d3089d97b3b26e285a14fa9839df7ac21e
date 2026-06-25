@@ -1,0 +1,36 @@
+app/src/components/brand-hub/analysis-progress-banner.tsx
+  s_4ffc3bfca8d635::t_a8e46a73282815 102
+  s_4ffc3bfca8d635::t_80321825dc362c 29-42,44
+  s_4ffc3bfca8d635::t_498eec590032a6 14
+app/src/components/brand-hub/brand-hub-client.tsx
+  s_4ffc3bfca8d635::t_3fd39c1606df23 22
+  s_4ffc3bfca8d635::t_f484d871b1d5d6 39
+  s_4ffc3bfca8d635::t_4776e03e844fc1 58
+  s_4ffc3bfca8d635::t_0d9a407546c132 147-152
+app/src/app/(operator)/app/brand/[id]/page.tsx
+  s_4ffc3bfca8d635::t_8378e71fb037d0 94
+app/src/components/brand-hub/analysis-progress-banner.test.tsx
+  s_4ffc3bfca8d635::t_eb9f35bf1bee2f 107-120,122-123,125-156
+  s_4ffc3bfca8d635::t_427fad8e02c344 2-3
+  s_4ffc3bfca8d635::t_f5420e320cc173 121
+  s_4ffc3bfca8d635::t_bb696196f4897a 124
+  s_4ffc3bfca8d635::t_df82266985d2e3 4
+  s_4ffc3bfca8d635::t_c80eb5345466d9 6,10,13-16,20-23,35
+  s_4ffc3bfca8d635::t_989fc18793d3d7 38-39
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.13",
+  "base_commit_sha": "7bb187d3089d97b3b26e285a14fa9839df7ac21e",
+  "prompts": {},
+  "sessions": {
+    "s_4ffc3bfca8d635": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "d421b6b8-4307-4bc8-94d4-f836cb9e7997",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
