@@ -1,0 +1,38 @@
+app/src/test/brand-pipeline.int.test.ts
+  s_4ffc3bfca8d635::t_861a46afa38273 49
+  s_1ee6d41c106a00::t_8bd1d3240ca7c6 4
+  s_1ee6d41c106a00::t_cbfcdf55759578 8
+  s_1ee6d41c106a00::t_e1592ab34c1ba7 16
+  s_1ee6d41c106a00::t_25da3e15861f8b 35-44,47-48,50
+.gitignore
+  s_4ffc3bfca8d635::t_7ae557eeab6ded 2
+package.json
+  s_4ffc3bfca8d635::t_c7c0b4b9bbc1de 19
+CLAUDE.md
+  s_4ffc3bfca8d635::t_9635cf51b1e9d5 15-37,144-248
+  s_4ffc3bfca8d635::t_93f66f3ea49809 126-143
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.13",
+  "base_commit_sha": "e8ffd8a86e3e33b5d2554a24083270eee619dba7",
+  "prompts": {},
+  "sessions": {
+    "s_1ee6d41c106a00": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_1008d1b38ffeXKx1F8jeq6pBWL",
+        "model": "qwen/qwen3.5-plus-20260420"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    },
+    "s_4ffc3bfca8d635": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "d421b6b8-4307-4bc8-94d4-f836cb9e7997",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
