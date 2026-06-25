@@ -1,0 +1,81 @@
+;; IPI-33 — Test Report Wire
+;; Wire DSL for expected integration test output layout
+;; Reference: tasks/wireframes-ipix/README.md for spec
+
+[test-report]
+title: IPI-33 Integration Test Report
+
+[section "brand-intelligence.int.test.ts"]
+status: PASS
+file: src/test/brand-intelligence.int.test.ts
+
+  case "crawl → brand_crawl_results inserts"
+    expected: brand_crawl_results.row_count > 0
+    expected: brand_crawl_results[0].status = "completed"
+
+  case "edge fn rejects unauthenticated call"
+    expected: HTTP 401
+    expected: body.error = "unauthorized"
+
+  case "edge fn returns 10 score types"
+    expected: brand_scores.count = 10
+    expected: types = [visual, audience, consistency, commerce_readiness, brand_clarity, content_strength, social_presence, digital_experience, sustainability_signal, photography_readiness]
+
+  case "each score has score_version=1 + source=edge_fn"
+    expected: brand_scores.every(score_version === 1)
+    expected: brand_scores.every(source === "edge_fn")
+
+  case "details.confidence is 0-100 number"
+    expected: typeof details.confidence === "number"
+    expected: details.confidence >= 0 && details.confidence <= 100
+
+  case "details.evidence is string[] or absent"
+    expected: details.evidence === undefined || Array.isArray(details.evidence)
+    expected: details.evidence.every(e => typeof e === "string")
+
+  case "brands.ai_profile._lifecycle = scores_complete"
+    expected: ai_profile._lifecycle === "scores_complete"
+
+  case "brands.intake_status = scores_complete"
+    expected: intake_status === "scores_complete"
+
+  case "ai_agent_logs row created with duration_ms"
+    expected: ai_agent_logs.row_count > 0
+    expected: ai_agent_logs[0].duration_ms > 0
+
+  case "cleanup: test brand deleted"
+    expected: brands.where(delete).row_count === 0
+
+[section "brand-pipeline.int.test.ts"]
+status: PASS
+file: app/src/test/brand-pipeline.int.test.ts
+
+  case "Brand Hub fetches scores for analyzed brand"
+    expected: scores.length > 0
+    expected: HTTP 200
+
+  case "scores grouped as Core (4) + Extended (6)"
+    expected: core_count = 4
+    expected: extended_count = 6
+
+  case "computeDnaScore returns AVG of base 4 only"
+    expected: dna = AVG(visual, audience, consistency, commerce_readiness)
+    expected: dna !== AVG(all_10)
+
+  case "DNA badge is computed, not stored"
+    expected: brand_scores.where(score_type=dna_readiness).count = 0
+
+  case "Hub renders without 404 for /app/brand/[id]"
+    expected: HTTP 200
+    expected: body contains "Brand DNA"
+    expected: body contains "Core"
+    expected: body contains "Extended"
+
+[summary]
+files-passed: 2
+files-failed: 0
+tests-passed: 15
+tests-failed: 0
+duration: 4.2s
+
+;; EOF
