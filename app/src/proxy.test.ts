@@ -119,6 +119,13 @@ describe("proxy — operator auth gate (IPI2-127)", () => {
     expect(res.headers.get("location")).toBeNull();
   });
 
+  it("does not gate /application (prefix is not /app/)", async () => {
+    vi.stubEnv("OPERATOR_AUTH_ENABLED", "true");
+    const res = await proxy(appRequest("/application"));
+    expect(res.status).toBe(200);
+    expect(res.headers.get("location")).toBeNull();
+  });
+
   it("matches all app routes except static assets for session refresh", () => {
     expect(config.matcher).toEqual([
       "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",

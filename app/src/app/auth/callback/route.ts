@@ -1,5 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { SITE_URL } from "@/lib/site";
+import { copyResponseCookies } from "@/lib/supabase/session";
 
 export const dynamic = "force-dynamic";
 
@@ -10,12 +12,31 @@ function supabaseEnv() {
   };
 }
 
+function isTrustedForwardedHost(forwardedHost: string, requestOrigin: string): boolean {
+  const host = forwardedHost.toLowerCase();
+  try {
+    if (host === new URL(requestOrigin).host.toLowerCase()) return true;
+  } catch {
+    // ignore malformed request origin
+  }
+  try {
+    if (host === new URL(SITE_URL).host.toLowerCase()) return true;
+  } catch {
+    // ignore malformed SITE_URL
+  }
+  return host.endsWith(".vercel.app");
+}
+
 function redirectOrigin(request: Request): string {
   const { origin } = new URL(request.url);
-  const forwardedHost = request.headers.get("x-forwarded-host");
+  const forwardedHost = request.headers.get("x-forwarded-host")?.split(",")[0]?.trim();
   const forwardedProto = request.headers.get("x-forwarded-proto") ?? "https";
 
   if (process.env.NODE_ENV === "development" || !forwardedHost) {
+    return origin;
+  }
+
+  if (!isTrustedForwardedHost(forwardedHost, origin)) {
     return origin;
   }
 
@@ -58,7 +79,6 @@ export async function GET(request: NextRequest) {
       },
       setAll(cookiesToSet, headers) {
         cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
-        response = NextResponse.redirect(successUrl);
         cookiesToSet.forEach(({ name, value, options }) =>
           response.cookies.set(name, value, options),
         );
@@ -78,7 +98,9 @@ export async function GET(request: NextRequest) {
       status: error.status,
       name: error.name,
     });
-    return NextResponse.redirect(`${origin}/login?error=auth`);
+    const errorResponse = NextResponse.redirect(`${origin}/login?error=auth`);
+    copyResponseCookies(response, errorResponse);
+    return errorResponse;
   }
 
   return response;

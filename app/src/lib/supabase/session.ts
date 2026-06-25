@@ -47,7 +47,11 @@ export async function updateSession(request: NextRequest): Promise<NextResponse>
     },
   });
 
-  await supabase.auth.getClaims();
+  try {
+    await supabase.auth.getClaims();
+  } catch {
+    // Transient refresh failures must not break the request.
+  }
 
   return supabaseResponse;
 }

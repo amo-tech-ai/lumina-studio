@@ -21,7 +21,11 @@ export async function proxy(request: NextRequest) {
     return sessionResponse;
   }
 
-  if (!request.nextUrl.pathname.startsWith("/app")) {
+  const isOperatorRoute =
+    request.nextUrl.pathname === "/app" ||
+    request.nextUrl.pathname.startsWith("/app/");
+
+  if (!isOperatorRoute) {
     return sessionResponse;
   }
 

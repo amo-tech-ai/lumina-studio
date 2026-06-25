@@ -52,6 +52,20 @@ describe("GET /auth/callback", () => {
     expect(exchangeCodeForSession).toHaveBeenCalledWith("abc123");
   });
 
+  it("ignores spoofed x-forwarded-host and uses request origin", async () => {
+    exchangeCodeForSession.mockResolvedValue({ error: null });
+    const GET = await loadGet();
+
+    const res = await GET(
+      callbackRequest("code=abc123", {
+        "x-forwarded-host": "attacker.example.com",
+        "x-forwarded-proto": "https",
+      }),
+    );
+
+    expect(res.headers.get("location")).toBe("https://www.ipix.co/app");
+  });
+
   it("uses x-forwarded-host for the redirect origin in production", async () => {
     exchangeCodeForSession.mockResolvedValue({ error: null });
     const GET = await loadGet();
@@ -80,6 +94,29 @@ describe("GET /auth/callback", () => {
       "[auth/callback] exchangeCodeForSession failed",
       expect.objectContaining({ message: "invalid flow state" }),
     );
+    consoleSpy.mockRestore();
+  });
+
+  it("preserves cookies written during exchange when redirecting to login on error", async () => {
+    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    createServerClient.mockImplementation((_url, _key, options) => {
+      exchangeCodeForSession.mockImplementation(async () => {
+        options.cookies.setAll(
+          [{ name: "sb-cleanup", value: "cleared", options: { path: "/" } }],
+          undefined,
+        );
+        return {
+          error: { message: "invalid flow state", status: 400, name: "AuthApiError" },
+        };
+      });
+      return { auth: { exchangeCodeForSession } };
+    });
+    const GET = await loadGet();
+
+    const res = await GET(callbackRequest());
+
+    expect(res.headers.get("location")).toBe("https://www.ipix.co/login?error=auth");
+    expect(res.cookies.get("sb-cleanup")?.value).toBe("cleared");
     consoleSpy.mockRestore();
   });
 
