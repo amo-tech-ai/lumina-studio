@@ -1,0 +1,28 @@
+app/src/test/brand-scores.test.ts
+  s_ea46f8c56d53f8::t_afabfb4274f1c2 31,37
+docs/brand/16-url-structure.md
+  s_ea46f8c56d53f8::t_b3ef905cafb2e1 41
+app/src/lib/brand-scores.ts
+  s_ea46f8c56d53f8::t_0b82192af16571 13,17-19
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.13",
+  "base_commit_sha": "74e750a5aae5f685d8a428b1151ec6b18e1cd7f7",
+  "prompts": {},
+  "humans": {
+    "h_d382fbec1d5b46": {
+      "author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  },
+  "sessions": {
+    "s_ea46f8c56d53f8": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "dd9a0aea-4d97-4ca9-a270-775e1d8e9728",
+        "model": "default"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
