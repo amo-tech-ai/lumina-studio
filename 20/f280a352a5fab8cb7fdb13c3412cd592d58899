@@ -1,0 +1,27 @@
+scripts/verify-brand-intelligence.mjs
+  s_ea46f8c56d53f8::t_2b6741192ac1b2 82-83
+supabase/functions/_shared/gemini.ts
+  s_ea46f8c56d53f8::t_c20596b8f7a9c3 29-32
+  s_ea46f8c56d53f8::t_ed19c1e5407f5f 73-75
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.13",
+  "base_commit_sha": "20f280a352a5fab8cb7fdb13c3412cd592d58899",
+  "prompts": {},
+  "humans": {
+    "h_d382fbec1d5b46": {
+      "author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  },
+  "sessions": {
+    "s_ea46f8c56d53f8": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "dd9a0aea-4d97-4ca9-a270-775e1d8e9728",
+        "model": "default"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
