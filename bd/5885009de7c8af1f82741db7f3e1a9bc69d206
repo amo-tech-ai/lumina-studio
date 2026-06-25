@@ -1,0 +1,65 @@
+package.json
+  s_ea46f8c56d53f8::t_b9e950c4b1ea27 22-23
+app/src/components/brand-hub/profile-field.tsx
+  s_ea46f8c56d53f8::t_ee3494c41e04c4 24-25
+app/src/components/brand-hub/overview-tab.tsx
+  s_ea46f8c56d53f8::t_c6d25f222ba4c0 65,70-71,77-78,84-85,90
+  s_ea46f8c56d53f8::t_6112b8004b3b1c 1
+scripts/seed-sample-brand.mjs
+  s_ea46f8c56d53f8::t_68552ebc6b7392 42-46,48-50
+  s_ea46f8c56d53f8::t_b27e6b468e6aaa 1-41,47,51-226
+app/src/test/brand-hub.test.ts
+  s_ea46f8c56d53f8::t_9b703e5524fb98 6-7,12
+  s_ea46f8c56d53f8::t_fa4b4a0d976fed 139-159
+app/src/components/brand-hub/brand-hub-client.tsx
+  s_ea46f8c56d53f8::t_e8cc61427838a8 13-14
+  s_ea46f8c56d53f8::t_7d5ed78f25d8f5 3
+  s_ea46f8c56d53f8::t_41f9e423722f7e 144,150,152,160-162
+  s_ea46f8c56d53f8::t_1e46801c745291 179-184
+  s_ea46f8c56d53f8::t_4d9196167f1014 64-91
+app/src/app/(operator)/app/brand/page.tsx
+  s_ea46f8c56d53f8::t_aab8bd8f714760 1-89,92-154,156-158
+app/src/components/brand-hub/activity-tab.tsx
+  s_ea46f8c56d53f8::t_2f7ae9916543f0 17-19
+  s_ea46f8c56d53f8::t_c786f32f4588e1 2
+  s_ea46f8c56d53f8::t_39f4d112fca83d 28-29
+  s_ea46f8c56d53f8::t_5763314da11bdd 35-36
+app/src/components/brand-hub/profile-tab.tsx
+  s_ea46f8c56d53f8::t_749e35547e5def 93-94
+  s_ea46f8c56d53f8::t_fd2df9cdff89a6 42-45
+  s_ea46f8c56d53f8::t_f41f7bbeb163df 18-21
+  s_ea46f8c56d53f8::t_6672de0837c85e 2
+app/src/components/brand-hub/scores-tab.tsx
+  s_ea46f8c56d53f8::t_955795aca4eec5 56,58,64
+  s_ea46f8c56d53f8::t_3239380196df32 35-36
+  s_ea46f8c56d53f8::t_3a332801485201 2
+app/src/components/command-center/command-center.tsx
+  s_ea46f8c56d53f8::t_1a24c724960ac5 29
+app/src/app/(operator)/app/brand/[id]/page.tsx
+  s_ea46f8c56d53f8::t_e069f88478a6db 32,38
+  s_ea46f8c56d53f8::t_c14bba39d3d91b 22-31,33-37,39-42
+  s_ea46f8c56d53f8::t_85bbbc8bd3815d 1
+app/src/lib/brand-hub.ts
+  s_ea46f8c56d53f8::t_f94d1c826f3097 12-39
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.13",
+  "base_commit_sha": "bd5885009de7c8af1f82741db7f3e1a9bc69d206",
+  "prompts": {},
+  "humans": {
+    "h_d382fbec1d5b46": {
+      "author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  },
+  "sessions": {
+    "s_ea46f8c56d53f8": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "dd9a0aea-4d97-4ca9-a270-775e1d8e9728",
+        "model": "default"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
