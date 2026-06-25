@@ -166,5 +166,15 @@ describe("MarketingChat — SSR guard", () => {
   });
 });
 
+describe("MarketingChat — internal tool call hiding (AIOR-016)", () => {
+  it("registers the internal-tool hiding hook", () => {
+    expect(src).toMatch(/useHideInternalToolCalls\(\)/);
+  });
+
+  it("passes filtered messageView slots to CopilotPopup", () => {
+    expect(src).toMatch(/messageView=\{hiddenInternalToolsMessageView\}/);
+  });
+});
+
 // ponytail: render-level jsdom tests dropped — source-analysis tests above prove the same guards
 // without needing a DOM environment setup in this test environment.

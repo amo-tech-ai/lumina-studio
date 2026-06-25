@@ -64,3 +64,14 @@ describe("OperatorPanel — navigateTo frontend tool (IPI2-82)", () => {
     expect(PANEL_SRC).toMatch(/value:\s*pathname/);
   });
 });
+
+describe("OperatorPanel — internal tool call hiding (AIOR-016)", () => {
+  it("registers the internal-tool hiding hook", () => {
+    expect(PANEL_SRC).toMatch(/useHideInternalToolCalls\(\)/);
+  });
+
+  it("passes filtered messageView slots to CopilotSidebar", () => {
+    expect(PANEL_SRC).toMatch(/messageView=\{hiddenInternalToolsMessageView\}/);
+    expect(PANEL_SRC).toMatch(/hiddenInternalToolsMessageView/);
+  });
+});

@@ -14,6 +14,7 @@ vi.mock("@copilotkit/react-core/v2", () => ({
   CopilotPopup: () => <div data-testid="copilot-popup" />,
   useFrontendTool: vi.fn(),
   useConfigureSuggestions: vi.fn(),
+  useDefaultRenderTool: vi.fn(),
 }));
 
 describe("MarketingChat — feature flag behavior", () => {
