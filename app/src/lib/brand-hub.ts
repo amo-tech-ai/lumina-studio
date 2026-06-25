@@ -184,7 +184,7 @@ export const buildActivityTimeline = (input: {
 
   const statusIndex = statusOrder.indexOf(status);
   if (statusIndex >= 0) {
-    if (statusIndex >= 0) events.push({ id: "crawl_running", label: "Crawl started" });
+    events.push({ id: "crawl_running", label: "Crawl started" });
     if (statusIndex >= 1) events.push({ id: "crawl_complete", label: "Crawl completed" });
     if (statusIndex >= 2 || input.profile.analyzedAt) {
       events.push({

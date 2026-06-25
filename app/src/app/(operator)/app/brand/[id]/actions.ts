@@ -37,6 +37,21 @@ export async function reanalyzeBrand(brandId: string): Promise<ReanalyzeResult> 
     return { ok: false, error: "Analysis already in progress" };
   }
 
+  const { data: locked, error: lockErr } = await supabase
+    .from("brands")
+    .update({ intake_status: "analysis_running" })
+    .eq("id", brandId)
+    .not("intake_status", "in", '("crawl_running","analysis_running")')
+    .select("id")
+    .maybeSingle();
+
+  if (lockErr) {
+    return { ok: false, error: "Could not start analysis" };
+  }
+  if (!locked) {
+    return { ok: false, error: "Analysis already in progress" };
+  }
+
   try {
     await invokeBrandIntelligence(supabase, brandId, {
       brandName: brand.name,
@@ -46,14 +61,23 @@ export async function reanalyzeBrand(brandId: string): Promise<ReanalyzeResult> 
       goal: "",
     });
 
-    await supabase
+    const { error: readyErr } = await supabase
       .from("brands")
       .update({ intake_status: "ready" })
       .eq("id", brandId);
 
+    if (readyErr) {
+      return { ok: false, error: "Analysis finished but status update failed" };
+    }
+
     revalidatePath(`/app/brand/${brandId}`);
     return { ok: true };
   } catch (err) {
+    await supabase
+      .from("brands")
+      .update({ intake_status: "failed" })
+      .eq("id", brandId);
+
     const message = err instanceof Error ? err.message : "Re-analyze failed";
     return { ok: false, error: message };
   }
