@@ -112,8 +112,41 @@ async function createTestUser(email) {
 }
 
 async function deleteAuthUser(userId) {
+  if (!admin) return { error: null };
+  const { error } = await admin.auth.admin.deleteUser(userId);
+  return { error };
+}
+
+async function cleanupRlsTestData({ orgId, brandId, userAId, userBId }) {
   if (!admin) return;
-  await admin.auth.admin.deleteUser(userId);
+
+  if (brandId) {
+    const { error: brandDelErr } = await admin.from("brands").delete().eq("id", brandId);
+    if (brandDelErr) {
+      console.warn(`warn: cleanup brand ${brandId}: ${brandDelErr.message}`);
+    }
+  }
+
+  if (orgId) {
+    await admin.from("org_members").delete().eq("org_id", orgId);
+    const { error: orgDelErr } = await admin.from("organizations").delete().eq("id", orgId);
+    if (orgDelErr) {
+      console.warn(`warn: cleanup org ${orgId}: ${orgDelErr.message}`);
+    }
+  }
+
+  for (const [label, userId] of [
+    ["user A", userAId],
+    ["user B", userBId],
+  ]) {
+    if (!userId) continue;
+    const { error } = await deleteAuthUser(userId);
+    if (error) {
+      console.warn(`warn: cleanup ${label} (${userId}): ${error.message}`);
+    } else {
+      pass(`cleaned up ${label} (service role)`);
+    }
+  }
 }
 
 console.log("PLT-002 RLS verification\n");
@@ -138,6 +171,7 @@ assert(!!anonBrandInsertErr, "anon cannot insert brands");
 let userA;
 let userB;
 let brandAId;
+let orgAId;
 
 try {
   userA = await createTestUser(emailA);
@@ -170,7 +204,7 @@ try {
     .select("id")
     .single();
   assert(!orgInsertErr && orgA?.id, "user A creates own org");
-  const orgAId = orgA?.id;
+  orgAId = orgA?.id;
 
   // brands — org-scoped CRUD, cross-org blocked
   const { data: brandA, error: brandInsertErr } = await userA.client
@@ -589,14 +623,13 @@ try {
 } catch (err) {
   fail(err instanceof Error ? err.message : String(err));
 } finally {
-  if (serviceKey && userA?.user?.id) {
-    await deleteAuthUser(userA.user.id);
-    pass("cleaned up user A (service role)");
-  }
-  if (serviceKey && userB?.user?.id) {
-    await deleteAuthUser(userB.user.id);
-    pass("cleaned up user B (service role)");
-  } else if (!serviceKey) {
+  await cleanupRlsTestData({
+    orgId: orgAId,
+    brandId: brandAId,
+    userAId: userA?.user?.id,
+    userBId: userB?.user?.id,
+  });
+  if (!serviceKey) {
     console.warn(
       "warn: set SUPABASE_SERVICE_ROLE_KEY in .env.local to auto-delete test users",
     );
