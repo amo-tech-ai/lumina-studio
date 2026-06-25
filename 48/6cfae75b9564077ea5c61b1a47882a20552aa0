@@ -1,0 +1,25 @@
+app/src/mastra/durable.test.ts
+  s_a8ff79a3fcfbf6::t_5a18bf42c52893 2-4
+  s_a8ff79a3fcfbf6::t_37c9dc5f10f4ad 10,15,21,25,27-46,48,69
+app/src/mastra/index.ts
+  s_a8ff79a3fcfbf6::t_fa75a413a61765 3-4
+  s_a8ff79a3fcfbf6::t_a3291dac290b8e 17,19
+app/src/mastra/durable.ts
+  s_a8ff79a3fcfbf6::t_95f99607da8398 1-22
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.13",
+  "base_commit_sha": "486cfae75b9564077ea5c61b1a47882a20552aa0",
+  "prompts": {},
+  "sessions": {
+    "s_a8ff79a3fcfbf6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a23755b0-cfc9-4f93-ae6b-754247f21af5",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
