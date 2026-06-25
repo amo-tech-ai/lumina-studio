@@ -19,7 +19,7 @@ import {
 } from "@/lib/brand-hub";
 import { scoreColor } from "@/lib/brand-utils";
 import { ActivityTab } from "@/components/brand-hub/activity-tab";
-import { IntakeBanner } from "@/components/brand-hub/intake-banner";
+import { AnalysisProgressBanner } from "@/components/brand-hub/AnalysisProgressBanner";
 import { OverviewTab } from "@/components/brand-hub/overview-tab";
 import { ProfileTab } from "@/components/brand-hub/profile-tab";
 import { ReAnalyzeButton } from "@/components/brand-hub/re-analyze-button";
@@ -139,7 +139,7 @@ export const BrandHubClient = ({
           </div>
         </header>
 
-        <IntakeBanner status={status} errorMessage={profile._error} />
+        <AnalysisProgressBanner brandId={brandId} initialStatus={status} />
 
         <div className="-mx-1 flex gap-1 overflow-x-auto border-b border-[#E8E0D8] pb-px">
           <nav
