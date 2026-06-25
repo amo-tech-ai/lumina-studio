@@ -2,8 +2,47 @@ import type { BrandScoreDetail } from "@/lib/brand-hub";
 import { normalizeDisplayScore, parseScoreDetails } from "@/lib/brand-hub";
 import { scoreColor, scoreLabel } from "@/lib/brand-utils";
 
+// AC3 — extended scores coming soon
+const EXTENDED_SCORE_LABELS = ["Fashion DNA", "Runway Readiness", "Sponsor Fit", "Sustainability"];
+
+// AC2 — citations block: source URLs from AiProfile.evidenceSources
+// Only http/https URLs are linked — non-URL strings (page titles, javascript: etc.) render as plain text.
+const CitationsBlock = ({ sources }: { sources: string[] }) => {
+  const safeUrls = sources.filter((u) => u.startsWith("https://") || u.startsWith("http://"));
+  const plainText = sources.filter((u) => !u.startsWith("https://") && !u.startsWith("http://"));
+  const hasContent = safeUrls.length > 0 || plainText.length > 0;
+  if (!hasContent) return null;
+  return (
+    <details className="mt-4 rounded-xl border border-[#E8E0D8] p-3">
+      <summary className="cursor-pointer font-sans text-xs font-medium text-[#64748B] hover:text-[#1E293B]">
+        Sources ({sources.length})
+      </summary>
+      <ul className="mt-2 space-y-1">
+        {safeUrls.map((url, i) => (
+          <li key={`url-${i}`}>
+            <a
+              href={url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="block truncate font-sans text-[11px] text-[#E87C4D] hover:underline"
+            >
+              {url}
+            </a>
+          </li>
+        ))}
+        {plainText.map((text, i) => (
+          <li key={`text-${i}`} className="font-sans text-[11px] text-[#64748B]">
+            {text}
+          </li>
+        ))}
+      </ul>
+    </details>
+  );
+};
+
 type Props = {
   scores: BrandScoreDetail[];
+  citations?: string[];
 };
 
 const EvidenceHint = ({ evidence }: { evidence: string[] }) => (
@@ -19,7 +58,7 @@ const EvidenceHint = ({ evidence }: { evidence: string[] }) => (
   </details>
 );
 
-export const ScoresTab = ({ scores }: Props) => {
+export const ScoresTab = ({ scores, citations }: Props) => {
   if (scores.length === 0) {
     return (
       <p className="font-sans text-sm text-[#94A3B8]">
@@ -70,6 +109,24 @@ export const ScoresTab = ({ scores }: Props) => {
           </div>
         );
       })}
+
+      {/* AC3 — extended scores coming soon */}
+      <div className="rounded-xl border border-dashed border-[#E8E0D8] p-4">
+        <p className="mb-2 font-sans text-xs font-medium text-[#94A3B8]">More dimensions coming soon</p>
+        <div className="flex flex-wrap gap-2">
+          {EXTENDED_SCORE_LABELS.map((label) => (
+            <span
+              key={label}
+              className="rounded-full border border-[#E8E0D8] px-3 py-1 font-sans text-xs text-[#CBD5E1]"
+            >
+              {label}
+            </span>
+          ))}
+        </div>
+      </div>
+
+      {/* AC2 — citations */}
+      {citations && citations.length > 0 && <CitationsBlock sources={citations} />}
     </div>
   );
 };

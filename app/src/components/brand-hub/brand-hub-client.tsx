@@ -188,7 +188,7 @@ export const BrandHubClient = ({
             <OverviewTab profile={profile} baseScores={baseScores} />
           )}
           {tab === "profile" && <ProfileTab profile={profile} />}
-          {tab === "scores" && <ScoresTab scores={displayScores} />}
+          {tab === "scores" && <ScoresTab scores={displayScores} citations={profile.evidenceSources} />}
           {tab === "activity" && <ActivityTab events={activityEvents} />}
         </section>
       </div>
