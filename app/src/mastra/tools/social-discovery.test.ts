@@ -41,13 +41,13 @@ function makeMockSupabase() {
         }),
       };
     }
-    if (table === "brand_crawl_results") {
+    if (table === "brand_crawls") {
       return {
         select: vi.fn().mockReturnThis(),
         eq: vi.fn().mockReturnThis(),
         order: vi.fn().mockReturnThis(),
         limit: vi.fn().mockResolvedValue({
-          data: [{ raw_data: {}, status: "complete", pages_crawled: 12 }],
+          data: [{ raw_data: {}, job_status: "complete", pages_crawled: 12 }],
           error: null,
         }),
       };
@@ -123,6 +123,7 @@ describe("discoverSocialChannelsTool", () => {
           expect.objectContaining({ platform: "tiktok" }),
         ]),
       }),
+      expect.objectContaining({ accessToken: expect.any(String) }),
     );
   });
 
@@ -170,6 +171,7 @@ describe("discoverSocialChannelsTool", () => {
     expect(callEdgeFunction).toHaveBeenCalledWith(
       "social-discovery",
       expect.objectContaining({ brandId: BRAND_ID, channels: [] }),
+      expect.objectContaining({ accessToken: expect.any(String) }),
     );
   });
 
