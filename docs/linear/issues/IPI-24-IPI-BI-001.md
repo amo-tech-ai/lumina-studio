@@ -339,8 +339,8 @@ export function wordCountFromMarkdown(md: string): number;
 
 #### D. Operator app (unchanged scope)
 
-- [ ] **D1** Onboarding calls `start-brand-crawl` with `brandId` + `websiteUrl` + optional idempotency key
-- [ ] **D2** Failure UI — no Hub redirect on crawl error
+- [x] **D1** Onboarding calls `start-brand-crawl` with `brandId` + `websiteUrl` + optional idempotency key
+- [x] **D2** Failure UI — crawl start non-fatal; brand-intelligence still runs; Hub redirect only on intelligence failure
 
 #### E. Verify + ship
 
