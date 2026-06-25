@@ -1,0 +1,41 @@
+app/src/mastra/tools/explainShootDnaAlerts.ts
+  s_a8ff79a3fcfbf6::t_5d16c3d50a0989 50
+  s_a8ff79a3fcfbf6::t_fcbdc67ca4ed1b 42
+app/src/mastra/tools/recommendShootType.ts
+  s_a8ff79a3fcfbf6::t_7281728b2be9e8 44-56,60-62,72
+  s_a8ff79a3fcfbf6::t_cde9f6b6a33bbf 10
+app/src/mastra/durable.test.ts
+  s_a8ff79a3fcfbf6::t_0a047c629dc12c 61-66,68-75
+  s_a8ff79a3fcfbf6::t_1327c77eab5ebb 34-36,38-49
+app/src/mastra/tools/planDeliverables.ts
+  s_a8ff79a3fcfbf6::t_1288597e6d6bca 54-57,60-69
+  s_a8ff79a3fcfbf6::t_437970a81f0a3d 38-40
+app/src/components/operator-panel/operator-panel.tsx
+  s_a8ff79a3fcfbf6::t_f93efd0cfd022c 36-40
+e2e/04-durable-agent.spec.ts
+  s_a8ff79a3fcfbf6::t_ecaf77cb56675a 44-57
+app/src/mastra/tools/generateShotListDraft.ts
+  s_a8ff79a3fcfbf6::t_8e211eaee2645e 42,49
+e2e/02-api-copilotkit.spec.ts
+  s_a8ff79a3fcfbf6::t_2f3e23f9b1d912 6-7
+app/src/mastra/tools/approveShotList.ts
+  s_a8ff79a3fcfbf6::t_4abfd997917ac0 10
+e2e/03-shoot-tools-api.spec.ts
+  s_a8ff79a3fcfbf6::t_e8c400b7c9eb9b 12,14,17-24,28,30
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.13",
+  "base_commit_sha": "1d4ce9fe10fd8ce651a3cc0869162b235dcd7685",
+  "prompts": {},
+  "sessions": {
+    "s_a8ff79a3fcfbf6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a23755b0-cfc9-4f93-ae6b-754247f21af5",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}

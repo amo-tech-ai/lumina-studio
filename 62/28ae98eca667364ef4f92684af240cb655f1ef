@@ -1,0 +1,21 @@
+supabase/migrations/20260627170000_brands_rls_null_org_backfill.sql
+  s_a8ff79a3fcfbf6::t_fbc76ee4792439 26-47
+app/src/mastra/tools/generateShotListDraft.ts
+  s_a8ff79a3fcfbf6::t_f996d7e529a402 59
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.13",
+  "base_commit_sha": "6228ae98eca667364ef4f92684af240cb655f1ef",
+  "prompts": {},
+  "sessions": {
+    "s_a8ff79a3fcfbf6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a23755b0-cfc9-4f93-ae6b-754247f21af5",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}

@@ -1,0 +1,86 @@
+app/src/mastra/tools/explainShootDnaAlerts.ts
+  s_f122c956685f5d::t_598a94fff23251 39
+  s_a8ff79a3fcfbf6::t_a11845379de78b 1-38,40-55
+app/src/mastra/tools/recommendShootType.ts
+  s_f122c956685f5d::t_598a94fff23251 43
+  s_a8ff79a3fcfbf6::t_90e9a2a5bb7259 53
+  s_a8ff79a3fcfbf6::t_c9f3c1398b6279 1-42,44-52,54-61
+app/src/mastra/tools/estimateShootBudget.ts
+  s_a8ff79a3fcfbf6::t_1c6ddd8972d44c 1-33,35-53
+  s_f122c956685f5d::t_598a94fff23251 34
+app/src/mastra/tools/approveShotList.ts
+  s_f122c956685f5d::t_598a94fff23251 29
+  s_a8ff79a3fcfbf6::t_a4fec3cf5b5ecd 1-28,30-39
+docs/shoot/ipi-148-shoot-planner-agent.md
+  s_a8ff79a3fcfbf6::t_fdd970de3d5ac4 1-80
+app/src/mastra/tools/generateShotListDraft.ts
+  s_f122c956685f5d::t_598a94fff23251 38
+  s_a8ff79a3fcfbf6::t_b4b8b83b56e6e4 1-37,39-68
+app/src/mastra/tools/saveApprovedShootDraft.ts
+  s_f122c956685f5d::t_598a94fff23251 27
+  s_a8ff79a3fcfbf6::t_41f8a4b51347c6 1-26,28-37
+app/src/mastra/agents/index.ts
+  s_a8ff79a3fcfbf6::t_ab06aa6d4d52c1 27-39
+app/src/mastra/tools/planDeliverables.ts
+  s_f122c956685f5d::t_598a94fff23251 51
+  s_a8ff79a3fcfbf6::t_859c74c5b78572 1-50,52-63
+app/src/mastra/tools/index.ts
+  s_a8ff79a3fcfbf6::t_56c3c86e302272 12-29
+app/src/mastra/durable.test.ts
+  s_a8ff79a3fcfbf6::t_5a18bf42c52893 2-4
+  s_a8ff79a3fcfbf6::t_37c9dc5f10f4ad 10,15,21,25,27-46,48,69
+app/src/mastra/index.ts
+  s_a8ff79a3fcfbf6::t_fa75a413a61765 3-4
+  s_a8ff79a3fcfbf6::t_a3291dac290b8e 17,19
+app/src/mastra/durable.ts
+  s_a8ff79a3fcfbf6::t_95f99607da8398 1-22
+app/src/lib/supabase/session.ts
+  s_4ffc3bfca8d635::t_92303f6b4e3576 51
+app/src/components/marketing/login-form.tsx
+  s_4ffc3bfca8d635::t_c49d01d4796778 69
+supabase/migrations/20260627170000_brands_rls_null_org_backfill.sql
+  s_4ffc3bfca8d635::t_3fdc6861464d25 1-25
+playwright.config.ts
+  s_a8ff79a3fcfbf6::t_39d9ba405aa3d2 1-14
+e2e/04-durable-agent.spec.ts
+  s_a8ff79a3fcfbf6::t_97b5410ce3540d 1-49
+e2e/03-shoot-tools-api.spec.ts
+  s_a8ff79a3fcfbf6::t_14892680462449 1-42
+e2e/02-api-copilotkit.spec.ts
+  s_a8ff79a3fcfbf6::t_2b9822db858d79 24,26-28,30,32-34
+  s_a8ff79a3fcfbf6::t_bcd28856c5809a 1-23,25,29,31,35-36
+e2e/01-app-loads.spec.ts
+  s_a8ff79a3fcfbf6::t_0536239a3ab95c 1-28
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.13",
+  "base_commit_sha": "0a2f233651cd93441f98a637efa7355db7244e96",
+  "prompts": {},
+  "sessions": {
+    "s_4ffc3bfca8d635": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "d421b6b8-4307-4bc8-94d4-f836cb9e7997",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    },
+    "s_a8ff79a3fcfbf6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a23755b0-cfc9-4f93-ae6b-754247f21af5",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    },
+    "s_f122c956685f5d": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_0ffb23c8cffefU70iBoyjFpWs6",
+        "model": "deepseek-v4-flash-free"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
