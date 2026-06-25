@@ -6,7 +6,7 @@ import {
 } from "@copilotkit/runtime/v2";
 import { MastraAgent } from "@ag-ui/mastra";
 import { RequestContext } from "@mastra/core/request-context";
-import { mastra } from "@/mastra";
+import { getMastra } from "@/mastra";
 import { type OperatorUser } from "@/lib/auth";
 import { OperatorAuthError, withOperatorAuth } from "@/lib/operator-gate";
 import { handle } from "hono/vercel";
@@ -29,7 +29,7 @@ const runtime = new CopilotRuntime({
     requestContext.set("userId", user.id);
     if (user.email) requestContext.set("email", user.email);
     return MastraAgent.getLocalAgents({
-      mastra,
+      mastra: getMastra(),
       resourceId: user.id,
       requestContext,
     });
