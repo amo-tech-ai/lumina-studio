@@ -91,6 +91,7 @@ const BrandPage = async ({ params }: Props) => {
       createdDate={createdDate}
       intakeStatus={brand.intake_status}
       draftProfile={draftProfile}
+      crawlPages={crawls?.[0] ?? null}
       dnaScore={dnaScore}
       profile={profile}
       displayScores={displayScores}

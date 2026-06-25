@@ -11,6 +11,7 @@ export type AnalysisProgressBannerProps = {
   brandId: string;
   initialStatus: string | null;
   initialCrawlPages?: CrawlInfo;
+  errorMessage?: string;
 };
 
 const PROGRESS_MESSAGES: Record<string, string> = {
@@ -25,10 +26,20 @@ export const AnalysisProgressBanner = ({
   brandId,
   initialStatus,
   initialCrawlPages,
+  errorMessage,
 }: AnalysisProgressBannerProps) => {
   const [status, setStatus] = useState(initialStatus ?? "brand_created");
   const [crawl, setCrawl] = useState<CrawlInfo>(initialCrawlPages ?? null);
   const router = useRouter();
+
+  // Sync when server re-renders with updated props (e.g. after router.refresh())
+  useEffect(() => {
+    setStatus(initialStatus ?? "brand_created");
+  }, [initialStatus]);
+
+  useEffect(() => {
+    setCrawl(initialCrawlPages ?? null);
+  }, [initialCrawlPages]);
 
   useEffect(() => {
     const supabase = createSupabaseBrowserClient();
@@ -88,7 +99,7 @@ export const AnalysisProgressBanner = ({
       >
         <p className="font-sans text-sm font-medium text-[#DC2626]">Analysis failed</p>
         <p className="mt-1 font-sans text-xs text-[#991B1B]">
-          Use <strong>Re-analyze</strong> to retry. If this persists, contact support.
+          {errorMessage ?? "Use Re-analyze to retry. If this persists, contact support."}
         </p>
       </div>
     );

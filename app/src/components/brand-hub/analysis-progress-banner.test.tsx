@@ -1,19 +1,26 @@
 // @vitest-environment jsdom
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen } from "@testing-library/react";
-import { AnalysisProgressBanner } from "./AnalysisProgressBanner";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { render, screen, act, cleanup } from "@testing-library/react";
+import { AnalysisProgressBanner } from "./analysis-progress-banner";
+
+const mockRefresh = vi.fn();
 
 // Mock next/navigation
 vi.mock("next/navigation", () => ({
-  useRouter: () => ({ refresh: vi.fn() }),
+  useRouter: () => ({ refresh: mockRefresh }),
 }));
 
-// Mock Supabase browser client
+// Capture registered Realtime callbacks so tests can fire them
+type RealtimeCallback = (payload: { new: Record<string, unknown> | null }) => void;
+const capturedCallbacks: RealtimeCallback[] = [];
+
 const mockRemoveChannel = vi.fn();
 const mockSubscribe = vi.fn().mockReturnValue({ unsubscribe: vi.fn() });
-const mockOn = vi.fn();
 const mockChannel = {
-  on: (...args: unknown[]) => { mockOn(...args); return mockChannel; },
+  on: (_event: string, _filter: unknown, cb: RealtimeCallback) => {
+    capturedCallbacks.push(cb);
+    return mockChannel;
+  },
   subscribe: mockSubscribe,
 };
 vi.mock("@/lib/supabase/client", () => ({
@@ -25,6 +32,11 @@ vi.mock("@/lib/supabase/client", () => ({
 
 beforeEach(() => {
   vi.clearAllMocks();
+  capturedCallbacks.length = 0;
+});
+
+afterEach(() => {
+  cleanup();
 });
 
 describe("AnalysisProgressBanner", () => {
@@ -91,5 +103,55 @@ describe("AnalysisProgressBanner", () => {
   it("subscribes to realtime on mount", () => {
     render(<AnalysisProgressBanner brandId={brandId} initialStatus="crawl_running" />);
     expect(mockSubscribe).toHaveBeenCalled();
+  });
+
+  it("shows errorMessage in failed state", () => {
+    render(
+      <AnalysisProgressBanner
+        brandId={brandId}
+        initialStatus="failed"
+        errorMessage="Gemini timeout — API quota exceeded"
+      />,
+    );
+    expect(screen.getByText("Gemini timeout — API quota exceeded")).toBeTruthy();
+  });
+
+  it("falls back to default retry text when errorMessage is absent", () => {
+    render(<AnalysisProgressBanner brandId={brandId} initialStatus="failed" />);
+    expect(screen.getByRole("alert").textContent).toContain("Use Re-analyze to retry");
+  });
+
+
+  it("calls router.refresh() when Realtime fires scores_complete", () => {
+    render(<AnalysisProgressBanner brandId={brandId} initialStatus="crawl_running" />);
+    // First callback is the brands UPDATE listener
+    act(() => {
+      capturedCallbacks[0]?.({ new: { intake_status: "scores_complete" } });
+    });
+    expect(mockRefresh).toHaveBeenCalled();
+  });
+
+  it("calls router.refresh() when Realtime fires ready", () => {
+    render(<AnalysisProgressBanner brandId={brandId} initialStatus="analysis_running" />);
+    act(() => {
+      capturedCallbacks[0]?.({ new: { intake_status: "ready" } });
+    });
+    expect(mockRefresh).toHaveBeenCalled();
+  });
+
+  it("updates crawl page counts when brand_crawls Realtime event fires", () => {
+    render(
+      <AnalysisProgressBanner
+        brandId={brandId}
+        initialStatus="crawl_running"
+        initialCrawlPages={{ pages_crawled: 2, pages_found: 10 }}
+      />,
+    );
+    expect(screen.getByText(/2 \/ 10 pages/)).toBeTruthy();
+    // Second callback is the brand_crawls listener
+    act(() => {
+      capturedCallbacks[1]?.({ new: { pages_crawled: 7, pages_found: 10 } });
+    });
+    expect(screen.getByText(/7 \/ 10 pages/)).toBeTruthy();
   });
 });
