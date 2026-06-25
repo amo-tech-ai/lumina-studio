@@ -1,0 +1,74 @@
+app/src/lib/onboarding.ts
+  s_ea46f8c56d53f8::t_e80cdfa746bb25 131,136,141,143,164-176,179,183
+docs/linear/issues/IPI-26-IPI-BI-003.md
+  s_ea46f8c56d53f8::t_38b223df83af4d 116
+  s_ea46f8c56d53f8::t_0b804ddc9bea03 18-19
+  s_ea46f8c56d53f8::t_c45b4d3f2da0df 22,24-28,30-53,55-70,72-113,117-173,175,178-188
+  s_ea46f8c56d53f8::t_033499872f90a1 3,5,7,9,12-16,20,23,114,197-252,256,258-263,265,267,269-281,283,285-286,289-295,300-313,317-321,324-326,329,331-334,342-350
+  s_ea46f8c56d53f8::t_657ae9ed779da5 1-2,4,6,8,10-11,17,21,115,174,176-177,189-196,253-255,257,264,266,268,282,284,287-288,296-299,314-316,322-323,327-328,330,335-341,351-354
+  s_ea46f8c56d53f8::t_94211b7a8bf98e 29
+  s_ea46f8c56d53f8::t_425b45d9a40d9e 71
+  s_ea46f8c56d53f8::t_2f1d4ee65dc411 54
+.claude/skills/task-verifier/references/verifier-probes-ipix.md
+  s_ea46f8c56d53f8::t_39b6e06ed783cf 9-31
+  s_ea46f8c56d53f8::t_7a9ba3ef4f2b70 105-112
+  s_ea46f8c56d53f8::t_86025c0edf5b28 54-78
+  s_ea46f8c56d53f8::t_5f534c59bd2ed0 33-38,51,53
+  s_ea46f8c56d53f8::t_93d756763f8495 39-50,52
+docs/linear/issues/IPI-24-IPI-BI-001.md
+  s_ea46f8c56d53f8::t_af2ba3c5814d56 1-2,6,8,10,12,15,17-19,21,53-54,56-57,127,262-263,317-319,333,379-384,386,398
+  s_ea46f8c56d53f8::t_1b17631b1d0094 3-5,11,13,16,20,22-23,38-40,42-43,52,128-129,136-137,158-159,161,320,322-323,335,339,341,345-346,350-356,358,369,377-378,385,387,391,395,399-405,413
+  s_ea46f8c56d53f8::t_bfeb2051d4f75f 7,9,14,24-37,41,44-51,55,58-126,130-135,138-157,160,162-261,264-316,321,324-332,334,336-338,340,342-344,347-349,357,359-368,370-376,388-390,392-394,396-397,406-412
+app/src/test/onboarding-orchestration.test.ts
+  s_ea46f8c56d53f8::t_df8d0c7ef47c3f 3
+  s_ea46f8c56d53f8::t_4d03b675765555 64-66,69-78
+  s_ea46f8c56d53f8::t_610a3daf878530 130,133-134
+  s_ea46f8c56d53f8::t_3e31ab2992f529 47-58
+.env.example
+  s_ea46f8c56d53f8::t_06f8e0f70328d4 16-17
+supabase/functions/firecrawl-webhook/index.ts
+  s_ea46f8c56d53f8::t_91f8c6bda55bf8 1-77,90,103-266
+  s_ea46f8c56d53f8::t_3bdd556412ddeb 78-89,91-102
+supabase/functions/start-brand-crawl/index.ts
+  s_ea46f8c56d53f8::t_d2e8d0f4f5d6ff 10
+  s_ea46f8c56d53f8::t_8a6bc2bb557c97 1-9,11-182
+docs/plan/19-brand-lifecycle.md
+  s_ea46f8c56d53f8::t_a02697dbb2693b 140-142
+  s_ea46f8c56d53f8::t_2f2a03f1135fe4 198
+  s_ea46f8c56d53f8::t_48bb152a54e758 4
+  s_ea46f8c56d53f8::t_2ce33138299ff7 34
+  s_ea46f8c56d53f8::t_e940fcc75a9c44 179
+  s_ea46f8c56d53f8::t_703f994185f638 8
+  s_ea46f8c56d53f8::t_ca0b708728da40 128-133
+  s_ea46f8c56d53f8::t_1e0976c8c72931 62-69
+  s_ea46f8c56d53f8::t_8d0d9c512ba9bf 30
+supabase/migrations/20260627000000_brand_crawls_job_pages.sql
+  s_ea46f8c56d53f8::t_22e2f79ee333d5 1-69,94-105,115-116,127
+  s_ea46f8c56d53f8::t_9a09daad80070a 70-93,106-114,117-121,123-125,128-150
+  s_ea46f8c56d53f8::t_10203c6778a980 122,126
+scripts/verify-brand-intelligence.mjs
+  s_ea46f8c56d53f8::t_a86b10811de492 270
+supabase/functions/_shared/firecrawl.ts
+  s_ea46f8c56d53f8::t_12c70d71b8ea92 1-199
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.13",
+  "base_commit_sha": "8854241749b4b321298d076a4a0be595282a7b3d",
+  "prompts": {},
+  "humans": {
+    "h_d382fbec1d5b46": {
+      "author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  },
+  "sessions": {
+    "s_ea46f8c56d53f8": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "dd9a0aea-4d97-4ca9-a270-775e1d8e9728",
+        "model": "default"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
