@@ -58,7 +58,7 @@ function OperatorShell({
 
   // L1 context: tell the agent which route is active so answers stay relevant.
   useAgentContext({
-    description: "The operator's current route in the iPix app (e.g. /brand, /shoots)",
+    description: "The operator's current route in the iPix app (e.g. /app/brand, /app/shoots)",
     value: pathname,
   });
 
