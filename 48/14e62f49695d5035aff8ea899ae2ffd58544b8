@@ -1,0 +1,37 @@
+scripts/verify-rls.mjs
+  s_ea46f8c56d53f8::t_17e4ae3b47146e 445-497
+supabase/functions/start-brand-crawl/index.ts
+  s_ea46f8c56d53f8::t_15f73cd65df22b 28-30,37-55
+  s_ea46f8c56d53f8::t_d0efaac326d439 195
+  s_ea46f8c56d53f8::t_9b039c377b0a85 213,228
+  s_ea46f8c56d53f8::t_2f3c0eda49d57e 243,250
+  s_ea46f8c56d53f8::t_08ea170b9c621b 86-94
+  s_ea46f8c56d53f8::t_3c581460d5f163 114,118-120,133-162,164-173,175,177
+app/src/test/onboarding-orchestration.test.ts
+  s_ea46f8c56d53f8::t_a19077091ff87d 129-132
+supabase/functions/firecrawl-webhook/index.ts
+  s_ea46f8c56d53f8::t_6d8ee4e2141585 54,58,88-96
+  s_ea46f8c56d53f8::t_5f7b7549f2b974 179,187,196,200,202,210,233,246-248,250,254-256,269,278,280,284-286
+  s_ea46f8c56d53f8::t_4a023daf5a77f1 26,32
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.13",
+  "base_commit_sha": "4814e62f49695d5035aff8ea899ae2ffd58544b8",
+  "prompts": {},
+  "humans": {
+    "h_d382fbec1d5b46": {
+      "author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  },
+  "sessions": {
+    "s_ea46f8c56d53f8": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "dd9a0aea-4d97-4ca9-a270-775e1d8e9728",
+        "model": "default"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
