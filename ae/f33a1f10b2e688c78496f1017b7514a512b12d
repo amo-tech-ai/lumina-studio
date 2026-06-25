@@ -1,0 +1,26 @@
+docs/linear/issues/IPI-24-IPI-BI-001.md
+  s_ea46f8c56d53f8::t_bb4cab42efb722 347-348
+  s_ea46f8c56d53f8::t_27c5b2c3511db9 336-338
+  s_ea46f8c56d53f8::t_dac5c2c8c7373d 43-51
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.13",
+  "base_commit_sha": "aef33a1f10b2e688c78496f1017b7514a512b12d",
+  "prompts": {},
+  "humans": {
+    "h_d382fbec1d5b46": {
+      "author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  },
+  "sessions": {
+    "s_ea46f8c56d53f8": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "dd9a0aea-4d97-4ca9-a270-775e1d8e9728",
+        "model": "default"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
