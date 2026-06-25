@@ -40,15 +40,15 @@
 
 ### What “done” looks like (success criteria) — MVP unchanged
 
-- [ ] Operator submits onboarding → crawl starts on the **existing** `brand_id` (no new brand row)
-- [ ] `brand_crawls` job row: metrics, audit fields, `firecrawl_job_id` UNIQUE, idempotent start
-- [ ] `brand_crawl_results` **per-page** rows with metadata + `markdown` + `raw_json`
-- [ ] **Backward compat:** `brand_crawls.raw_data` denormalized aggregate (same shape IPI-25 reads today)
-- [ ] Webhook verifies HMAC; upserts by `firecrawl_job_id` + event idempotency
-- [ ] `brands.intake_status` → `crawl_running` → `crawl_complete`
-- [ ] Realtime on **`brand_crawls`** (job progress) — IPI-31 subscribes
-- [ ] All Firecrawl HTTP via `_shared/firecrawl.ts` only
-- [ ] `npm run supabase:verify-brand-intelligence` + `verify-rls` green
+- [x] Operator submits onboarding → crawl starts on the **existing** `brand_id` (no new brand row)
+- [x] `brand_crawls` job row: metrics, audit fields, `firecrawl_job_id` UNIQUE, idempotent start
+- [x] `brand_crawl_results` **per-page** rows with metadata + `markdown` + `raw_json`
+- [x] **Backward compat:** `brand_crawls.raw_data` denormalized aggregate (same shape IPI-25 reads today)
+- [x] Webhook verifies HMAC; upserts by `firecrawl_job_id` + event idempotency
+- [x] `brands.intake_status` → `crawl_running` → `crawl_complete`
+- [x] Realtime on **`brand_crawls`** (job progress) — IPI-31 subscribes
+- [x] All Firecrawl HTTP via `_shared/firecrawl.ts` only
+- [x] `npm run supabase:verify-rls` green · `verify-brand-intelligence` IPI-24 probes green (Gemini 503 on authed `brand-intelligence` smoke — transient)
 
 ---
 
@@ -333,9 +333,9 @@ export function wordCountFromMarkdown(md: string): number;
 
 #### C. Edge functions
 
-- [ ] **C1** `start-brand-crawl` — auth, idempotency_key, insert `brand_crawls`, call `firecrawlStartCrawl`, set audit fields (`started_by`, `request_id`, optional `workflow_id`)
-- [ ] **C2** `firecrawl-webhook` — HMAC verify, handle `crawl.started|page|completed`, upsert pages + job metrics, rebuild `raw_data`, set `duration_ms`
-- [ ] **C3** `_shared/firecrawl.ts` — only Firecrawl HTTP entrypoint
+- [x] **C1** `start-brand-crawl` — auth, idempotency_key, insert `brand_crawls`, call `firecrawlStartCrawl`, set audit fields (`started_by`, `request_id`, optional `workflow_id`)
+- [x] **C2** `firecrawl-webhook` — HMAC verify, handle `crawl.started|page|completed`, upsert pages + job metrics, rebuild `raw_data`, set `duration_ms`
+- [x] **C3** `_shared/firecrawl.ts` — only Firecrawl HTTP entrypoint
 
 #### D. Operator app (unchanged scope)
 
@@ -344,8 +344,8 @@ export function wordCountFromMarkdown(md: string): number;
 
 #### E. Verify + ship
 
-- [ ] **E1** `verify-rls.mjs` — `brand_crawls` + page-level `brand_crawl_results` probes
-- [ ] **E2** `verify-brand-intelligence.mjs` — crawl table existence + optional start smoke
+- [x] **E1** `verify-rls.mjs` — `brand_crawls` + page-level `brand_crawl_results` probes
+- [x] **E2** `verify-brand-intelligence.mjs` — crawl table existence + optional start smoke
 - [ ] **E3** Manual: 2 fashion URLs → job `pages_crawled > 0`, pages have `title` + `markdown`
 - [ ] **E4** `rg firecrawl app/src` → **0** client imports
 
