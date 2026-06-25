@@ -1,4 +1,5 @@
 import type { ActivityEvent } from "@/lib/brand-hub";
+import { formatBrandHubDateTime } from "@/lib/brand-hub";
 
 type Props = {
   events: ActivityEvent[];
@@ -13,7 +14,9 @@ export const ActivityTab = ({ events }: Props) => {
 
   return (
     <ol className="relative space-y-4 border-l border-[#E8E0D8] pl-6">
-      {events.map((event, index) => (
+      {events.map((event, index) => {
+        const atLabel = event.at ? formatBrandHubDateTime(event.at) : null;
+        return (
         <li key={event.id} className="relative">
           <span
             className="absolute -left-[1.6rem] top-1.5 h-2.5 w-2.5 rounded-full border-2 border-white"
@@ -22,16 +25,15 @@ export const ActivityTab = ({ events }: Props) => {
             }}
           />
           <p className="font-sans text-sm font-medium text-[#1E293B]">{event.label}</p>
-          {event.at && (
-            <p className="font-sans text-xs text-[#94A3B8]">
-              {new Date(event.at).toLocaleString()}
-            </p>
+          {atLabel && (
+            <p className="font-sans text-xs text-[#94A3B8]">{atLabel}</p>
           )}
           {event.detail && (
             <p className="mt-1 font-sans text-xs text-[#DC2626]">{event.detail}</p>
           )}
         </li>
-      ))}
+        );
+      })}
     </ol>
   );
 };

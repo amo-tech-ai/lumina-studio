@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { BrandHubClient } from "@/components/brand-hub/brand-hub-client";
 import {
@@ -17,6 +18,27 @@ interface Props {
 const BrandPage = async ({ params }: Props) => {
   const { id } = await params;
   const supabase = await createSupabaseServerClient();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return (
+      <div className="min-h-screen p-8" style={{ background: "#FBF8F5" }}>
+        <p className="font-sans text-sm text-[#64748B]">
+          Sign in to view this brand profile.
+        </p>
+        <Link
+          href={`/login?redirect=/app/brand/${id}`}
+          className="mt-4 inline-block rounded-full px-5 py-2.5 font-sans text-sm font-medium text-white"
+          style={{ background: "#E87C4D" }}
+        >
+          Sign in
+        </Link>
+      </div>
+    );
+  }
 
   const [{ data: brand }, { data: scores }] = await Promise.all([
     supabase

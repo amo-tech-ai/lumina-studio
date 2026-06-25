@@ -1,3 +1,4 @@
+import Link from "next/link";
 import type { AiProfile, BrandScoreDetail } from "@/lib/brand-hub";
 import { scoreColor, scoreLabel } from "@/lib/brand-utils";
 
@@ -61,31 +62,31 @@ export const OverviewTab = ({ profile, baseScores }: Props) => {
 
 export const BrandHubCTAs = () => (
   <section className="flex flex-wrap gap-3">
-    <a
+    <Link
       href="/app"
       className="rounded-full border border-[#D1C9C0] px-5 py-2.5 font-sans text-sm font-medium text-[#64748B] transition-colors hover:border-[#94A3B8]"
     >
       ← Dashboard
-    </a>
-    <a
+    </Link>
+    <Link
       href="/app/shoots"
       className="rounded-full px-5 py-2.5 font-sans text-sm font-medium text-white transition-opacity hover:opacity-90"
       style={{ background: "#E87C4D" }}
     >
       Plan Shoot
-    </a>
-    <a
+    </Link>
+    <Link
       href="/app/campaigns"
       className="rounded-full px-5 py-2.5 font-sans text-sm font-medium text-white transition-opacity hover:opacity-90"
       style={{ background: "#1E293B" }}
     >
       Create Campaign
-    </a>
-    <a
+    </Link>
+    <Link
       href="/app/assets"
       className="rounded-full border border-[#D1C9C0] px-5 py-2.5 font-sans text-sm font-medium text-[#64748B] transition-colors hover:border-[#94A3B8]"
     >
       Analyze Assets
-    </a>
+    </Link>
   </section>
 );

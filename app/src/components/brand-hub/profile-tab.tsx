@@ -1,5 +1,5 @@
 import type { AiProfile } from "@/lib/brand-hub";
-import { hasMeaningfulProfile } from "@/lib/brand-hub";
+import { formatBrandHubDateTime, formatInstagramHandle, hasMeaningfulProfile } from "@/lib/brand-hub";
 import { ChipList, ProfileField } from "@/components/brand-hub/profile-field";
 
 type Props = {
@@ -14,6 +14,10 @@ export const ProfileTab = ({ profile }: Props) => {
       </p>
     );
   }
+
+  const analyzedLabel = profile.analyzedAt
+    ? formatBrandHubDateTime(profile.analyzedAt)
+    : null;
 
   return (
     <dl className="space-y-4">
@@ -35,7 +39,10 @@ export const ProfileTab = ({ profile }: Props) => {
       )}
       {profile.brandVoice && <ProfileField label="Brand Voice" value={profile.brandVoice} />}
       {profile.instagram_handle && (
-        <ProfileField label="Instagram" value={`@${profile.instagram_handle}`} />
+        <ProfileField
+          label="Instagram"
+          value={formatInstagramHandle(profile.instagram_handle)}
+        />
       )}
       {profile.sourceUrl && <ProfileField label="Source URL" value={profile.sourceUrl} />}
       {typeof profile.productionReadiness === "number" && (
@@ -83,11 +90,8 @@ export const ProfileTab = ({ profile }: Props) => {
       {profile.competitorSignals && profile.competitorSignals.length > 0 && (
         <ChipList label="Competitor Signals" items={profile.competitorSignals} />
       )}
-      {profile.analyzedAt && (
-        <ProfileField
-          label="Last analyzed"
-          value={new Date(profile.analyzedAt).toLocaleString()}
-        />
+      {analyzedLabel && (
+        <ProfileField label="Last analyzed" value={analyzedLabel} />
       )}
     </dl>
   );

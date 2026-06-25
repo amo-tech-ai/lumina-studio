@@ -9,6 +9,34 @@ export const BRAND_HUB_TABS = [
 
 export type BrandHubTab = (typeof BRAND_HUB_TABS)[number];
 
+const BRAND_HUB_LOCALE = "en-CA";
+const BRAND_HUB_TIME_ZONE = "UTC";
+
+/** Deterministic date/time for SSR + client (avoids hydration mismatch). */
+export function formatBrandHubDateTime(value: string): string | null {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+  return date.toLocaleString(BRAND_HUB_LOCALE, { timeZone: BRAND_HUB_TIME_ZONE });
+}
+
+export function formatInstagramHandle(handle: string): string {
+  const trimmed = handle.trim();
+  return `@${trimmed.replace(/^@+/, "")}`;
+}
+
+/** Coerce DB-shaped scores; clamp 0–100; safe fallback for invalid input. */
+export function normalizeDisplayScore(score: unknown): number {
+  const n = typeof score === "number" ? score : Number(score);
+  if (!Number.isFinite(n)) return 0;
+  return Math.min(100, Math.max(0, n));
+}
+
+export function brandHubTabId(id: BrandHubTab): string {
+  return `brand-hub-tab-${id}`;
+}
+
+export const BRAND_HUB_TABPANEL_ID = "brand-hub-tabpanel";
+
 export type BrandIntakeStatus =
   | "brand_created"
   | "crawl_running"

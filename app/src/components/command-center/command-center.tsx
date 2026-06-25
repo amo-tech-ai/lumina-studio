@@ -26,7 +26,7 @@ const SECTIONS: Section[] = [
     title: "Brands",
     description: "Analyze brands, score readiness, and run intake.",
     icon: Building2,
-    status: "Brand Intake → IPI2-83",
+    status: "Brand Hub → IPI-30",
   },
   {
     href: "/app/shoots",

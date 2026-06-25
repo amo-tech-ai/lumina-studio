@@ -21,8 +21,8 @@ export const ChipList = ({
       {label}
     </dt>
     <dd className="mt-1 flex flex-wrap gap-2">
-      {items.map((item) => (
-        <span key={item} className={`rounded px-2 py-0.5 font-sans text-xs ${className}`}>
+      {items.map((item, index) => (
+        <span key={`${item}-${index}`} className={`rounded px-2 py-0.5 font-sans text-xs ${className}`}>
           {item}
         </span>
       ))}

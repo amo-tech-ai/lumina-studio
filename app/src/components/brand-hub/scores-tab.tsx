@@ -1,5 +1,5 @@
 import type { BrandScoreDetail } from "@/lib/brand-hub";
-import { parseScoreDetails } from "@/lib/brand-hub";
+import { normalizeDisplayScore, parseScoreDetails } from "@/lib/brand-hub";
 import { scoreColor, scoreLabel } from "@/lib/brand-utils";
 
 type Props = {
@@ -32,7 +32,8 @@ export const ScoresTab = ({ scores }: Props) => {
     <div className="space-y-4">
       {scores.map((s) => {
         const details = parseScoreDetails(s.details);
-        const pct = Math.min(100, Math.max(0, s.score));
+        const displayScore = normalizeDisplayScore(s.score);
+        const pct = displayScore;
 
         return (
           <div
@@ -52,15 +53,15 @@ export const ScoresTab = ({ scores }: Props) => {
               </div>
               <span
                 className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full font-sans text-sm font-semibold text-white"
-                style={{ background: scoreColor(s.score) }}
+                style={{ background: scoreColor(displayScore) }}
               >
-                {s.score}
+                {displayScore}
               </span>
             </div>
             <div className="h-2 overflow-hidden rounded-full bg-[#F1EDE8]">
               <div
                 className="h-full rounded-full transition-all"
-                style={{ width: `${pct}%`, background: scoreColor(s.score) }}
+                style={{ width: `${pct}%`, background: scoreColor(displayScore) }}
               />
             </div>
             {details?.evidence && details.evidence.length > 0 && (

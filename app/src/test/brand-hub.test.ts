@@ -3,10 +3,13 @@ import { computeDnaScore } from "@/lib/brand-scores";
 import {
   buildActivityTimeline,
   filterDisplayScores,
+  formatBrandHubDateTime,
+  formatInstagramHandle,
   hasMeaningfulProfile,
   hubTabLabel,
   intakeStatusLabel,
   isReAnalyzeDisabled,
+  normalizeDisplayScore,
   parseAiProfile,
 } from "@/lib/brand-hub";
 import { scoreColor, scoreLabel } from "@/lib/brand-utils";
@@ -132,6 +135,27 @@ describe("brand-hub helpers", () => {
     });
     expect(events.some((e) => e.id === "failed")).toBe(true);
     expect(events.find((e) => e.id === "failed")?.detail).toBe("Gemini timeout");
+  });
+
+  it("formatBrandHubDateTime uses fixed locale and rejects invalid input", () => {
+    expect(formatBrandHubDateTime("2026-06-24T12:00:00Z")).toBe(
+      "2026-06-24, 12:00:00 p.m.",
+    );
+    expect(formatBrandHubDateTime("not-a-date")).toBeNull();
+  });
+
+  it("formatInstagramHandle strips duplicate leading at-signs", () => {
+    expect(formatInstagramHandle("@maison")).toBe("@maison");
+    expect(formatInstagramHandle("maison")).toBe("@maison");
+    expect(formatInstagramHandle("@@maison")).toBe("@maison");
+  });
+
+  it("normalizeDisplayScore clamps and handles invalid values", () => {
+    expect(normalizeDisplayScore(150)).toBe(100);
+    expect(normalizeDisplayScore(-5)).toBe(0);
+    expect(normalizeDisplayScore("72.5")).toBe(72.5);
+    expect(normalizeDisplayScore("nope")).toBe(0);
+    expect(normalizeDisplayScore(Number.NaN)).toBe(0);
   });
 });
 

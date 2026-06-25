@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type KeyboardEvent } from "react";
 import type {
   ActivityEvent,
   AiProfile,
@@ -10,6 +10,8 @@ import type {
 } from "@/lib/brand-hub";
 import {
   BRAND_HUB_TABS,
+  BRAND_HUB_TABPANEL_ID,
+  brandHubTabId,
   hubTabLabel,
   intakeStatusColor,
   intakeStatusLabel,
@@ -58,6 +60,34 @@ export const BrandHubClient = ({
   const [tab, setTab] = useState<BrandHubTab>("overview");
   const status = (intakeStatus ?? "brand_created") as BrandIntakeStatus;
   const reanalyzeDisabled = isReAnalyzeDisabled(status);
+
+  const focusTab = (id: BrandHubTab) => {
+    setTab(id);
+    requestAnimationFrame(() => {
+      document.getElementById(brandHubTabId(id))?.focus();
+    });
+  };
+
+  const onTabKeyDown = (event: KeyboardEvent<HTMLButtonElement>, current: BrandHubTab) => {
+    const index = BRAND_HUB_TABS.indexOf(current);
+    if (index === -1) return;
+
+    let next: BrandHubTab | null = null;
+    if (event.key === "ArrowRight") {
+      next = BRAND_HUB_TABS[(index + 1) % BRAND_HUB_TABS.length];
+    } else if (event.key === "ArrowLeft") {
+      next = BRAND_HUB_TABS[(index - 1 + BRAND_HUB_TABS.length) % BRAND_HUB_TABS.length];
+    } else if (event.key === "Home") {
+      next = BRAND_HUB_TABS[0];
+    } else if (event.key === "End") {
+      next = BRAND_HUB_TABS[BRAND_HUB_TABS.length - 1];
+    }
+
+    if (next) {
+      event.preventDefault();
+      focusTab(next);
+    }
+  };
 
   return (
     <div className="min-h-screen p-4 sm:p-8" style={{ background: "#FBF8F5" }}>
@@ -111,20 +141,25 @@ export const BrandHubClient = ({
         <nav
           className="-mx-1 flex gap-1 overflow-x-auto border-b border-[#E8E0D8] pb-px"
           aria-label="Brand hub sections"
+          role="tablist"
         >
           {BRAND_HUB_TABS.map((id) => (
             <button
               key={id}
               type="button"
+              id={brandHubTabId(id)}
               onClick={() => setTab(id)}
+              onKeyDown={(event) => onTabKeyDown(event, id)}
               className={cn(
                 "shrink-0 rounded-t-lg px-4 py-2 font-sans text-sm transition-colors",
                 tab === id
                   ? "border-b-2 border-[#E87C4D] font-medium text-[#1E293B]"
                   : "text-[#64748B] hover:text-[#1E293B]",
               )}
-              aria-selected={tab === id}
               role="tab"
+              aria-selected={tab === id}
+              aria-controls={BRAND_HUB_TABPANEL_ID}
+              tabIndex={tab === id ? 0 : -1}
             >
               {hubTabLabel(id)}
             </button>
@@ -141,7 +176,12 @@ export const BrandHubClient = ({
           ))}
         </nav>
 
-        <section className="rounded-2xl border border-[#E8E0D8] bg-white p-6" role="tabpanel">
+        <section
+          id={BRAND_HUB_TABPANEL_ID}
+          className="rounded-2xl border border-[#E8E0D8] bg-white p-6"
+          role="tabpanel"
+          aria-labelledby={brandHubTabId(tab)}
+        >
           {tab === "overview" && (
             <OverviewTab profile={profile} baseScores={baseScores} />
           )}
