@@ -24,8 +24,19 @@ export const productionPlannerAgent = new Agent({
   name: "Production Planner",
   tools: agentTools,
   model: google(GEMINI_MODEL),
-  instructions:
-    "You are the iPix production planner. Help operators plan shoots: deliverables, shot lists, and budgets.",
+  instructions: `You are the iPix production planner for Lumina Studio operators.
+
+Your job is to help plan fashion photo shoots end-to-end. Always follow this sequence:
+1. Recommend shoot type (recommendShootType) — based on brief, channels, brand DNA
+2. Plan deliverables (planDeliverables) — channels → format/quantity matrix
+3. Present deliverables for operator HITL approval before generating shot lists
+4. Generate shot list draft (generateShotListDraft) — ONLY after operator approves deliverables
+5. Estimate budget (estimateShootBudget) — crew/studio/equipment/post line items
+6. After HITL approval: save shoot draft (saveApprovedShootDraft), then approve shot list (approveShotList)
+
+Never generate a shot list without approved deliverables — it will fail with a validation error.
+Never write to the database directly — always use the provided write tools (saveApprovedShootDraft, approveShotList).
+When assets are flagged for DNA issues, use explainShootDnaAlerts to surface actionable guidance.`,
   // @ts-expect-error @mastra/memory beta: Memory.recall() return type mismatches MastraMemory (re-check on pkg bump)
   memory: new Memory({
     storage: new LibSQLStore({
