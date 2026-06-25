@@ -113,6 +113,40 @@ describe("onboarding orchestration (IPI-46)", () => {
     expect(invoke).not.toHaveBeenCalled();
   });
 
+  it("continues to brand intelligence when crawl start fails", async () => {
+    const order: string[] = [];
+
+    const supabase = {
+      functions: {
+        invoke: vi.fn((name: string) => {
+          order.push(name);
+          if (name === "start-brand-crawl") {
+            return Promise.resolve({
+              data: { ok: false, error: { code: "config_error", message: "missing key" } },
+              error: null,
+            });
+          }
+          return Promise.resolve({
+            data: { ok: true, data: { brandId: "brand-1", scores: [] } },
+            error: null,
+          });
+        }),
+      },
+    } as unknown as SupabaseClient;
+
+    try {
+      await invokeStartBrandCrawl(supabase, "brand-1", FORM.websiteUrl, {
+        idempotencyKey: "onboarding-brand-1",
+      });
+    } catch {
+      // non-fatal in onboarding page
+    }
+
+    await invokeBrandIntelligence(supabase, "brand-1", FORM);
+
+    expect(order).toEqual(["start-brand-crawl", "brand-intelligence"]);
+  });
+
   it("page calls createOrgAndBrand before invokeBrandIntelligence", async () => {
     const { readFileSync } = await import("node:fs");
     const { resolve } = await import("node:path");
@@ -133,6 +167,7 @@ describe("onboarding orchestration (IPI-46)", () => {
     expect(shellIdx).toBeGreaterThan(-1);
     expect(crawlIdx).toBeGreaterThan(shellIdx);
     expect(edgeIdx).toBeGreaterThan(crawlIdx);
+    expect(runBlock).toMatch(/start-brand-crawl failed, continuing with brand intelligence/);
     expect(src).not.toMatch(/invoke\("brand-intelligence"/);
     expect(src).toMatch(/setShell/);
   });

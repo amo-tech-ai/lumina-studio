@@ -122,8 +122,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS brand_crawl_results_crawl_page_uidx
   ON public.brand_crawl_results (crawl_id, page_url);
 
 CREATE UNIQUE INDEX IF NOT EXISTS brand_crawl_results_crawl_scrape_uidx
-  ON public.brand_crawl_results (crawl_id, firecrawl_scrape_id)
-  WHERE firecrawl_scrape_id IS NOT NULL;
+  ON public.brand_crawl_results (crawl_id, firecrawl_scrape_id);
 
 ALTER TABLE public.brand_crawl_results ENABLE ROW LEVEL SECURITY;
 
