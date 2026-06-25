@@ -1,0 +1,45 @@
+docs/brand/16-url-structure.md
+  s_ea46f8c56d53f8::t_a60b1d8d9420ea 48
+  s_ea46f8c56d53f8::t_643219d790bb57 94,97-103,106,109-111
+  s_ea46f8c56d53f8::t_1c4719e0b12fa8 121
+  s_ea46f8c56d53f8::t_3f6b201b705e84 35
+  s_ea46f8c56d53f8::t_db6c06afd311e0 9
+  s_ea46f8c56d53f8::t_63a3f58ac1b8d8 22
+app/src/lib/onboarding.ts
+  s_ea46f8c56d53f8::t_02e00f4a5e257a 34,38,50-55,57-62,69,79-96,127-129
+supabase/migrations/20260625120000_brand_scores_dedup_rls_repair.sql
+  s_ea46f8c56d53f8::t_a47a30ac07ebd3 1-29
+supabase/migrations/20260625000000_brand_scores_unique_update_rls.sql
+  s_ea46f8c56d53f8::t_5697f62fdceb75 21-22,28-29
+  s_ea46f8c56d53f8::t_0ab6d58ef2873c 8-11
+app/src/test/onboarding.test.ts
+  s_ea46f8c56d53f8::t_352da777f17fce 174-184
+app/src/app/(operator)/app/brand/[id]/page.tsx
+  s_ea46f8c56d53f8::t_75c35ad0cd1f2b 30-36
+app/src/app/(operator)/app/onboarding/page.tsx
+  s_ea46f8c56d53f8::t_36d82c8b3bb67c 27,31
+  s_ea46f8c56d53f8::t_ef3b8eae593d66 52-58
+app/src/test/onboarding-orchestration.test.ts
+  s_ea46f8c56d53f8::t_5084e92149a07d 23,25,36,38,47,49,75,80-86,111
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.13",
+  "base_commit_sha": "a13e42cbef19f4f0175af15bd63841d0fa7d4db4",
+  "prompts": {},
+  "humans": {
+    "h_d382fbec1d5b46": {
+      "author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  },
+  "sessions": {
+    "s_ea46f8c56d53f8": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "dd9a0aea-4d97-4ca9-a270-775e1d8e9728",
+        "model": "default"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
