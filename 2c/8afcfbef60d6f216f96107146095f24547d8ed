@@ -1,5 +1,6 @@
 app/src/mastra/index.ts
   s_27aec730ee4023::t_d15daf6f6278e5 6,43-62
+  s_27aec730ee4023::t_dedceae73adb7f 3
 app/src/mastra/instance.ts
   s_27aec730ee4023::t_1a081e8883c1be 1-3
 app/src/app/api/copilotkit/[[...slug]]/route.runtime.test.ts
