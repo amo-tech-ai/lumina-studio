@@ -12,13 +12,13 @@ const OperatorLayout = async ({
   try {
     const supabase = await createSupabaseServerClient();
     const { data: { user } } = await supabase.auth.getUser();
-    authenticated = !!user;
+    authenticated = Boolean(user);
   } catch {
     // Supabase not configured — treat as unauthenticated, page will redirect
   }
 
   if (!authenticated) {
-    return <>{children}</>;
+    return children;
   }
 
   return (

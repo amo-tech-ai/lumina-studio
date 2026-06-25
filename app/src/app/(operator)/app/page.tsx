@@ -7,9 +7,10 @@ import { CommandCenter } from "@/components/command-center/command-center";
 const CommandCenterPage = async ({
   searchParams,
 }: {
-  searchParams: Promise<Record<string, string>>;
+  searchParams: Promise<{ skip?: string | string[] }>;
 }) => {
-  const { skip } = await searchParams;
+  const params = await searchParams;
+  const skip = Array.isArray(params.skip) ? params.skip[0] : params.skip;
   if (skip === "1") return <CommandCenter />;
 
   let zeroBrands = false;
