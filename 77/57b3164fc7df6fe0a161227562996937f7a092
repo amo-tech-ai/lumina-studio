@@ -1,0 +1,19 @@
+app/src/lib/brand-scores.ts
+  s_ea46f8c56d53f8::t_3cab9644061566 17-23
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.13",
+  "base_commit_sha": "7757b3164fc7df6fe0a161227562996937f7a092",
+  "prompts": {},
+  "sessions": {
+    "s_ea46f8c56d53f8": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "dd9a0aea-4d97-4ca9-a270-775e1d8e9728",
+        "model": "default"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
