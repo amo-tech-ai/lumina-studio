@@ -1,0 +1,23 @@
+app/src/app/(operator)/layout.tsx
+  s_ea46f8c56d53f8::t_f0d8fcc5118a6d 15,21
+app/src/app/(operator)/app/page.tsx
+  s_ea46f8c56d53f8::t_a964fec579d872 10,12-13
+app/src/test/onboarding.test.ts
+  s_ea46f8c56d53f8::t_4187f02336a16e 40-46
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.13",
+  "base_commit_sha": "95725b235ee71baeaa572adbd6034502b586a844",
+  "prompts": {},
+  "sessions": {
+    "s_ea46f8c56d53f8": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "dd9a0aea-4d97-4ca9-a270-775e1d8e9728",
+        "model": "default"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
