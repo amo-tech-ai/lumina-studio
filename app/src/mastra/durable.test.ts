@@ -42,8 +42,8 @@ describe("durable agents", () => {
       await result.output.text;
     } catch {
       // Gemini may be rate-limited; runId/cleanup contract is what matters
+    } finally {
+      result.cleanup();
     }
-
-    result.cleanup();
   });
 });
