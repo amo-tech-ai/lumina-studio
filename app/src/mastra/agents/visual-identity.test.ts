@@ -1,8 +1,8 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
-process.env.NEXT_PUBLIC_SUPABASE_URL = "https://test.supabase.co";
-process.env.SUPABASE_SERVICE_ROLE_KEY = "test-key";
-process.env.GEMINI_API_KEY = "test-gemini-key";
+vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://test.supabase.co");
+vi.stubEnv("SUPABASE_SERVICE_ROLE_KEY", "test-key");
+vi.stubEnv("GEMINI_API_KEY", "test-gemini-key");
 
 const MOCK_VISUAL = {
   primaryColors: ["#E87C4D"],
@@ -37,9 +37,16 @@ vi.mock("@supabase/supabase-js", () => ({
 const BRAND_ID = "00000000-0000-0000-0000-000000000001";
 
 describe("visual-identity agent", () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://test.supabase.co");
+    vi.stubEnv("SUPABASE_SERVICE_ROLE_KEY", "test-key");
+    vi.stubEnv("GEMINI_API_KEY", "test-gemini-key");
+  });
+
   beforeEach(async () => {
     vi.clearAllMocks();
-    delete process.env.FIRECRAWL_API_KEY;
+    vi.stubEnv("FIRECRAWL_API_KEY", "");
     // Re-wire mocks after clearAllMocks
     mockUpdateEq.mockResolvedValue({ error: null });
     mockUpdate.mockReturnValue({ eq: mockUpdateEq });
@@ -60,16 +67,16 @@ describe("visual-identity agent", () => {
   it("uses text-only prompt when no FIRECRAWL_API_KEY (no screenshot)", async () => {
     const { generateObject } = await import("ai");
     const { extractVisualIdentityTool } = await import("./visual-identity");
-    await extractVisualIdentityTool.execute({ brandId: BRAND_ID, homepageUrl: "https://example.com" }, {} as never);
+    await extractVisualIdentityTool.execute!({ brandId: BRAND_ID, homepageUrl: "https://example.com" }, {} as never);
     expect(generateObject).toHaveBeenCalled();
-    const call = vi.mocked(generateObject).mock.calls[0][0];
+    const call = vi.mocked(generateObject).mock.calls[0]![0];
     const content = (call.messages as { role: string; content: unknown }[])?.[0]?.content;
     expect(typeof content).toBe("string");
   });
 
   it("merges visualIdentity into existing ai_profile without overwriting other fields", async () => {
     const { extractVisualIdentityTool } = await import("./visual-identity");
-    await extractVisualIdentityTool.execute({ brandId: BRAND_ID, homepageUrl: "https://example.com" }, {} as never);
+    await extractVisualIdentityTool.execute!({ brandId: BRAND_ID, homepageUrl: "https://example.com" }, {} as never);
     expect(mockUpdate).toHaveBeenCalled();
     const updatedProfile = mockUpdate.mock.calls[0]?.[0]?.ai_profile as Record<string, unknown>;
     expect(updatedProfile.tagline).toBe("Existing");
@@ -79,7 +86,7 @@ describe("visual-identity agent", () => {
 
   it("returns merged: true on success", async () => {
     const { extractVisualIdentityTool } = await import("./visual-identity");
-    const result = await extractVisualIdentityTool.execute({ brandId: BRAND_ID, homepageUrl: "https://example.com" }, {} as never) as { merged: boolean };
+    const result = await extractVisualIdentityTool.execute!({ brandId: BRAND_ID, homepageUrl: "https://example.com" }, {} as never) as { merged: boolean };
     expect(result.merged).toBe(true);
   });
 
@@ -89,7 +96,7 @@ describe("visual-identity agent", () => {
     mockFrom.mockReturnValue({ select: mockSelect, update: mockUpdate });
     const { extractVisualIdentityTool } = await import("./visual-identity");
     await expect(
-      extractVisualIdentityTool.execute({ brandId: BRAND_ID, homepageUrl: "https://example.com" }, {} as never)
+      extractVisualIdentityTool.execute!({ brandId: BRAND_ID, homepageUrl: "https://example.com" }, {} as never)
     ).rejects.toThrow("Failed to merge visual identity: DB error");
   });
 });

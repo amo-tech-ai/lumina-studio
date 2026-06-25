@@ -10,9 +10,11 @@ import { resolveGeminiModel } from "@/mastra/models";
 const google = createGoogleGenerativeAI({ apiKey: process.env.GEMINI_API_KEY });
 const GEMINI_MODEL = resolveGeminiModel();
 
+const HexColor = z.string().regex(/^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/, "Expected hex color");
+
 const VisualIdentitySchema = z.object({
-  primaryColors: z.array(z.string()).describe("Primary hex colors"),
-  secondaryColors: z.array(z.string()).describe("Secondary/accent hex colors"),
+  primaryColors: z.array(HexColor).describe("Primary hex colors"),
+  secondaryColors: z.array(HexColor).describe("Secondary/accent hex colors"),
   typographyStyle: z.string().describe("e.g. serif, sans-serif, mixed, decorative"),
   logoDescription: z.string().describe("Brief logo description"),
   layoutStyle: z.string().describe("e.g. minimal, editorial, grid, asymmetric"),
@@ -25,14 +27,24 @@ const VisualIdentitySchema = z.object({
 
 type VisualIdentity = z.infer<typeof VisualIdentitySchema>;
 
+const FETCH_TIMEOUT_MS = 30_000;
+
+function withTimeout(ms: number): { signal: AbortSignal; cancel: () => void } {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), ms);
+  return { signal: controller.signal, cancel: () => clearTimeout(timer) };
+}
+
 async function captureScreenshot(homepageUrl: string): Promise<Uint8Array | null> {
   const apiKey = process.env.FIRECRAWL_API_KEY;
   if (!apiKey) return null;
+  const { signal, cancel } = withTimeout(FETCH_TIMEOUT_MS);
   try {
     const res = await fetch("https://api.firecrawl.dev/v1/scrape", {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
       body: JSON.stringify({ url: homepageUrl, formats: ["screenshot"] }),
+      signal,
     });
     if (!res.ok) return null;
     const data = (await res.json()) as { data?: { screenshot?: string } };
@@ -42,6 +54,8 @@ async function captureScreenshot(homepageUrl: string): Promise<Uint8Array | null
     return Uint8Array.from(atob(stripped), (c) => c.charCodeAt(0));
   } catch {
     return null;
+  } finally {
+    cancel();
   }
 }
 
@@ -53,13 +67,16 @@ async function uploadToCloudinary(image: Uint8Array, brandId: string): Promise<s
     console.warn("visual-identity: Cloudinary env vars absent, skipping upload");
     return null;
   }
+  const { signal, cancel } = withTimeout(FETCH_TIMEOUT_MS);
   try {
     const timestamp = Math.floor(Date.now() / 1000);
     const publicId = `brands/${brandId}/screenshots/homepage`;
     const crypto = await import("crypto");
+    // Fields signed in alphabetical order, excluding file and api_key per Cloudinary spec
+    const signatureParams = `overwrite=true&public_id=${publicId}&timestamp=${timestamp}`;
     const signature = crypto
       .createHash("sha1")
-      .update(`public_id=${publicId}&timestamp=${timestamp}${apiSecret}`)
+      .update(`${signatureParams}${apiSecret}`)
       .digest("hex");
 
     const form = new FormData();
@@ -73,12 +90,15 @@ async function uploadToCloudinary(image: Uint8Array, brandId: string): Promise<s
     const res = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/image/upload`, {
       method: "POST",
       body: form,
+      signal,
     });
     if (!res.ok) return null;
     const result = (await res.json()) as { secure_url?: string };
     return result.secure_url ?? null;
   } catch {
     return null;
+  } finally {
+    cancel();
   }
 }
 
@@ -102,6 +122,16 @@ const extractVisualIdentityTool = createTool({
       process.env.SUPABASE_SERVICE_ROLE_KEY!,
     );
 
+    // Verify brand exists before any service-role writes
+    const { data: brand, error: readError } = await supabase
+      .from("brands")
+      .select("ai_profile")
+      .eq("id", brandId)
+      .maybeSingle();
+
+    if (readError) throw new Error(`Failed to load brand: ${readError.message}`);
+    if (!brand) throw new Error(`Brand not found: ${brandId}`);
+
     const screenshot = await captureScreenshot(homepageUrl);
 
     let userContent: UserContent;
@@ -123,13 +153,7 @@ const extractVisualIdentityTool = createTool({
 
     const screenshotUrl = screenshot ? await uploadToCloudinary(screenshot, brandId) : null;
 
-    const { data: brand } = await supabase
-      .from("brands")
-      .select("ai_profile")
-      .eq("id", brandId)
-      .maybeSingle();
-
-    const existing = (brand?.ai_profile as Record<string, unknown>) ?? {};
+    const existing = (brand.ai_profile as Record<string, unknown>) ?? {};
     const merged: Record<string, unknown> = {
       ...existing,
       visualIdentity: visualIdentity as VisualIdentity,
