@@ -1,0 +1,20 @@
+app/src/app/api/copilotkit/[[...slug]]/route.ts
+  s_f122c956685f5d::t_8399cfdb58c0d8 32
+  s_f122c956685f5d::t_e058feea7607db 9
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.13",
+  "base_commit_sha": "479d88b6edc8973b6f3a7efd7057c955161a756b",
+  "prompts": {},
+  "sessions": {
+    "s_f122c956685f5d": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_0ffb23c8cffefU70iBoyjFpWs6",
+        "model": "deepseek-v4-flash-free"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
