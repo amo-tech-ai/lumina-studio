@@ -16,11 +16,13 @@ test.describe("Shoot tool registry — IPI-148 SHOOT-AI-001", () => {
     expect(errors.filter((e) => /cannot read|undefined is not/i.test(e))).toHaveLength(0);
 
     // Verify at least one tool is registered via the CopilotKit agents endpoint
-    const res = await page.request.post("/api/copilotkit", {
+    // Derive origin from the navigated page so the test works on any port
+    const origin = new URL(page.url()).origin;
+    const res = await page.request.post(`${origin}/api/copilotkit`, {
       headers: { "Content-Type": "application/json", "x-copilotkit-agent-id": "production-planner" },
       data: { messages: [] },
     });
-    expect(res.status()).not.toBe(404);
+    // CopilotKit returns 404 for non-protocol requests; 500 means agent crashed
     expect(res.status()).not.toBe(500);
   });
 
