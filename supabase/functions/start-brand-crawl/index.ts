@@ -1,3 +1,4 @@
+import { insertAgentLog } from "../_shared/agent-log.ts";
 import { isAuthFailure, resolveAuth } from "../_shared/auth.ts";
 import { handleCors } from "../_shared/cors.ts";
 import { getOptionalSecret } from "../_shared/env.ts";
@@ -8,6 +9,8 @@ import {
   safeErrorMessage,
 } from "../_shared/response.ts";
 import { createServiceClient, createUserClient } from "../_shared/supabase-client.ts";
+
+console.info("start-brand-crawl function started");
 
 const CRAWL_LIMIT = 50;
 
@@ -36,11 +39,20 @@ Deno.serve(async (req: Request) => {
     return errorResponse("method_not_allowed", "Use POST", 405);
   }
 
+  if (!getOptionalSecret("FIRECRAWL_API_KEY")) {
+    return errorResponse("config_error", "Firecrawl is not configured", 503);
+  }
+
   try {
     const auth = await resolveAuth(req, { required: true });
     if (isAuthFailure(auth)) return auth.response;
 
-    const body = (await req.json()) as StartBody;
+    let body: StartBody;
+    try {
+      body = (await req.json()) as StartBody;
+    } catch {
+      return errorResponse("invalid_request", "Invalid JSON body", 400);
+    }
     const brandId = body.brandId?.trim();
     const sourceUrl = normalizeUrl(body.url ?? body.websiteUrl ?? "");
 
@@ -65,25 +77,23 @@ Deno.serve(async (req: Request) => {
 
     const admin = createServiceClient();
 
-    if (body.idempotencyKey || idempotencyKey) {
-      const { data: existing } = await admin
-        .from("brand_crawls")
-        .select("id, firecrawl_job_id, job_status")
-        .eq("brand_id", brandId)
-        .eq("idempotency_key", idempotencyKey)
-        .maybeSingle();
+    const { data: existing } = await admin
+      .from("brand_crawls")
+      .select("id, firecrawl_job_id, job_status")
+      .eq("brand_id", brandId)
+      .eq("idempotency_key", idempotencyKey)
+      .maybeSingle();
 
-      if (
-        existing &&
-        existing.job_status !== "failed" &&
-        existing.job_status !== "cancelled"
-      ) {
-        return jsonResponse({
-          crawlId: existing.id,
-          firecrawlJobId: existing.firecrawl_job_id,
-          reused: true,
-        });
-      }
+    if (
+      existing &&
+      existing.job_status !== "failed" &&
+      existing.job_status !== "cancelled"
+    ) {
+      return jsonResponse({
+        crawlId: existing.id,
+        firecrawlJobId: existing.firecrawl_job_id,
+        reused: true,
+      });
     }
 
     const requestId =
@@ -130,21 +140,41 @@ Deno.serve(async (req: Request) => {
 
     const webhookUrl = `${supabaseUrl}/functions/v1/firecrawl-webhook`;
 
-    const { id: firecrawlJobId } = await firecrawlStartCrawl({
-      url: sourceUrl,
-      limit: CRAWL_LIMIT,
-      formats: ["markdown"],
-      webhook: {
-        url: webhookUrl,
-        metadata: {
-          brand_id: brandId,
-          crawl_id: crawlRow.id,
-          request_id: requestId,
-          ...(body.workflowId ? { workflow_id: body.workflowId } : {}),
+    let firecrawlJobId: string;
+    try {
+      ({ id: firecrawlJobId } = await firecrawlStartCrawl({
+        url: sourceUrl,
+        limit: CRAWL_LIMIT,
+        formats: ["markdown"],
+        webhook: {
+          url: webhookUrl,
+          metadata: {
+            brand_id: brandId,
+            crawl_id: crawlRow.id,
+            request_id: requestId,
+            ...(body.workflowId ? { workflow_id: body.workflowId } : {}),
+          },
+          events: ["started", "page", "completed", "failed"],
         },
-        events: ["started", "page", "completed", "failed"],
-      },
-    });
+      }));
+    } catch (firecrawlErr) {
+      const message = safeErrorMessage(firecrawlErr);
+      const failedAt = new Date().toISOString();
+      await admin
+        .from("brand_crawls")
+        .update({
+          job_status: "failed",
+          raw_payload: { error: message },
+          completed_at: failedAt,
+          updated_at: failedAt,
+        })
+        .eq("id", crawlRow.id);
+      await admin
+        .from("brands")
+        .update({ intake_status: "failed" })
+        .eq("id", brandId);
+      throw firecrawlErr;
+    }
 
     const { error: updateErr } = await admin
       .from("brand_crawls")
@@ -162,6 +192,18 @@ Deno.serve(async (req: Request) => {
       .update({ intake_status: "crawl_running" })
       .eq("id", brandId);
 
+    try {
+      await insertAgentLog(userClient, {
+        agentName: "start-brand-crawl",
+        userId: auth.user.id,
+        brandId,
+        input: { sourceUrl, idempotencyKey, requestId },
+        output: { crawlId: crawlRow.id, firecrawlJobId },
+      });
+    } catch (logErr) {
+      console.warn("start-brand-crawl: agent log insert failed", logErr);
+    }
+
     return jsonResponse({
       crawlId: crawlRow.id,
       firecrawlJobId,
@@ -170,13 +212,6 @@ Deno.serve(async (req: Request) => {
     });
   } catch (err) {
     console.error("start-brand-crawl error:", err);
-    if (!getOptionalSecret("FIRECRAWL_API_KEY")) {
-      return errorResponse(
-        "config_error",
-        "Firecrawl is not configured",
-        503,
-      );
-    }
     return errorResponse("internal_error", safeErrorMessage(err), 500);
   }
 });

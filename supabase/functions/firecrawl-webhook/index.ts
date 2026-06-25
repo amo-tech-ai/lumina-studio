@@ -1,3 +1,4 @@
+import { insertAgentLog } from "../_shared/agent-log.ts";
 import { getOptionalSecret } from "../_shared/env.ts";
 import {
   buildRawDataAggregate,
@@ -10,6 +11,13 @@ import {
 import { handleCors } from "../_shared/cors.ts";
 import { errorResponse, jsonResponse } from "../_shared/response.ts";
 import { createServiceClient } from "../_shared/supabase-client.ts";
+
+console.info("firecrawl-webhook function started");
+
+function normalizeEventType(type: string): string {
+  if (!type) return "";
+  return type.startsWith("crawl.") ? type : `crawl.${type}`;
+}
 
 async function loadPagesForCrawl(
   admin: ReturnType<typeof createServiceClient>,
@@ -145,7 +153,7 @@ Deno.serve(async (req: Request) => {
 
   const { data: job } = await admin
     .from("brand_crawls")
-    .select("id, brand_id, started_at")
+    .select("id, brand_id, started_at, started_by")
     .eq("firecrawl_job_id", firecrawlJobId)
     .maybeSingle();
 
@@ -159,8 +167,27 @@ Deno.serve(async (req: Request) => {
     return jsonResponse({ received: true, ignored: true });
   }
 
-  const eventType = payload.type ?? "";
+  const eventType = normalizeEventType(payload.type ?? "");
   const now = new Date().toISOString();
+
+  const logWebhook = async (
+    output: Record<string, unknown>,
+    durationMs?: number | null,
+  ) => {
+    if (!job?.started_by) return;
+    try {
+      await insertAgentLog(admin, {
+        agentName: "firecrawl-webhook",
+        userId: job.started_by,
+        brandId,
+        input: { eventType, firecrawlJobId, crawlId },
+        output,
+        durationMs: durationMs ?? null,
+      });
+    } catch (logErr) {
+      console.warn("firecrawl-webhook: agent log insert failed", logErr);
+    }
+  };
 
   const process = async () => {
     if (eventType === "crawl.started") {
@@ -233,15 +260,23 @@ Deno.serve(async (req: Request) => {
         .from("brands")
         .update({ intake_status: "crawl_complete" })
         .eq("id", brandId);
+
+      await logWebhook(
+        { job_status: "complete", pages_crawled: pages.length },
+        duration_ms,
+      );
       return;
     }
 
     if (eventType === "crawl.failed" || payload.success === false) {
+      const errorMessage =
+        payload.error ?? "Firecrawl reported crawl failure";
+
       await admin
         .from("brand_crawls")
         .update({
           job_status: "failed",
-          raw_payload: payload,
+          raw_payload: { ...payload, error: errorMessage },
           completed_at: now,
           updated_at: now,
         })
@@ -251,6 +286,8 @@ Deno.serve(async (req: Request) => {
         .from("brands")
         .update({ intake_status: "failed" })
         .eq("id", brandId);
+
+      await logWebhook({ job_status: "failed", error: errorMessage });
     }
   };
 
