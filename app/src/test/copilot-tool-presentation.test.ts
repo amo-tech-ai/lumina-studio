@@ -43,6 +43,12 @@ describe("copilot-tool-presentation", () => {
     ).toBe("get-weather");
   });
 
+  it("returns empty name for nullish tool call", () => {
+    expect(getToolCallName(null)).toBe("");
+    expect(getToolCallName(undefined)).toBe("");
+    expect(shouldHideToolCall(null)).toBe(true);
+  });
+
   it("hides tool calls with unknown shape (no name)", () => {
     expect(shouldHideToolCall({ id: "call_unknown" } as { id: string })).toBe(
       true,

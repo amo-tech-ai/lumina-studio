@@ -29,7 +29,8 @@ type ToolCallLike = {
   name?: string;
 };
 
-export function getToolCallName(toolCall: ToolCallLike): string {
+export function getToolCallName(toolCall: ToolCallLike | null | undefined): string {
+  if (!toolCall) return "";
   const fromFunction = toolCall.function?.name;
   if (typeof fromFunction === "string" && fromFunction.length > 0) {
     return fromFunction;
@@ -41,7 +42,7 @@ export function getToolCallName(toolCall: ToolCallLike): string {
 }
 
 /** Unknown or nameless tool calls are treated as internal (hidden). */
-export function shouldHideToolCall(toolCall: ToolCallLike): boolean {
+export function shouldHideToolCall(toolCall: ToolCallLike | null | undefined): boolean {
   const name = getToolCallName(toolCall);
   if (!name) return true;
   return shouldHideTool(name);
