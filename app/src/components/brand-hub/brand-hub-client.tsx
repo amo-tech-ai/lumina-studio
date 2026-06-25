@@ -25,6 +25,7 @@ import { ProfileTab } from "@/components/brand-hub/profile-tab";
 import { ReAnalyzeButton } from "@/components/brand-hub/re-analyze-button";
 import { ScoresTab } from "@/components/brand-hub/scores-tab";
 import { cn } from "@/lib/utils";
+import { useBrandContext } from "@/components/brand-hub/brand-context";
 
 export type BrandHubClientProps = {
   brandId: string;
@@ -60,6 +61,8 @@ export const BrandHubClient = ({
   const [tab, setTab] = useState<BrandHubTab>("overview");
   const status = (intakeStatus ?? "brand_created") as BrandIntakeStatus;
   const reanalyzeDisabled = isReAnalyzeDisabled(status);
+
+  useBrandContext({ brandName, profile, scores: displayScores });
 
   const focusTab = (id: BrandHubTab) => {
     setTab(id);

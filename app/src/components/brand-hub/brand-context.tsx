@@ -1,0 +1,44 @@
+"use client";
+
+import { useAgentContext } from "@copilotkit/react-core/v2";
+import type { AiProfile, BrandScoreDetail } from "@/lib/brand-hub";
+import { scoreLabel } from "@/lib/brand-utils";
+
+// AC6 — IPI-123 DASH-003 PR C
+// Injects brand identity + scores into the CopilotKit agent context so the
+// production-planner can answer "explain this score" without re-fetching.
+// v2 equivalent of useCopilotReadable — see .claude/skills/copilotkit/references/upgrade/ipix-v2-conventions.md
+export function useBrandContext({
+  brandName,
+  profile,
+  scores,
+}: {
+  brandName: string;
+  profile: AiProfile;
+  scores: BrandScoreDetail[];
+}) {
+  useAgentContext({
+    description: "Brand currently open in the Brand Hub",
+    value: {
+      name: brandName,
+      tagline: profile.tagline ?? null,
+      category: profile.category ?? null,
+      industry: profile.industry ?? null,
+      targetAudience: profile.targetAudience ?? null,
+      brandVoice: profile.brandVoice ?? null,
+      uvp: profile.uvp ?? null,
+      mission: profile.mission ?? null,
+      confidenceScore: profile.confidenceScore ?? null,
+      analyzedAt: profile.analyzedAt ?? null,
+    },
+  });
+
+  useAgentContext({
+    description: "Brand intelligence scores for the current brand",
+    value: scores.map((s) => ({
+      dimension: scoreLabel(s.score_type),
+      score: s.score,
+      confidence: s.details?.confidence ?? null,
+    })),
+  });
+}
