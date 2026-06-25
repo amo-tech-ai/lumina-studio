@@ -1,112 +1,32 @@
-import { GoogleGenAI, Type } from "npm:@google/genai@2.8.0";
 import type { GenerateContentResponse } from "npm:@google/genai@2.8.0";
 
 import { insertAgentLog } from "../_shared/agent-log.ts";
 import { isAuthFailure, resolveAuth } from "../_shared/auth.ts";
+import {
+  type CrawlRawData,
+  formatCrawlForPrompt,
+  isCrawlThin,
+} from "../_shared/crawl-context.ts";
 import { handleCors } from "../_shared/cors.ts";
 import { getOptionalSecret } from "../_shared/env.ts";
+import {
+  generateContextPass,
+  generateStructuredContent,
+  resolveGeminiModel,
+} from "../_shared/gemini.ts";
+import {
+  brandProfileResponseSchema,
+  buildAiProfileFromPayload,
+  clampScore,
+  type BrandProfilePayload,
+  validateBrandProfilePayload,
+} from "../_shared/schemas/brand-profile.ts";
 import { createUserClient } from "../_shared/supabase-client.ts";
 import {
   errorResponse,
   jsonResponse,
   safeErrorMessage,
 } from "../_shared/response.ts";
-
-const MODEL = "gemini-2.5-flash";
-
-const brandProfileSchema = {
-  type: Type.OBJECT,
-  properties: {
-    name: { type: Type.STRING, description: "Brand display name" },
-    tagline: { type: Type.STRING, description: "Short brand tagline" },
-    category: {
-      type: Type.STRING,
-      description: "Fashion or retail category, e.g. DTC apparel",
-    },
-    visualIdentity: {
-      type: Type.OBJECT,
-      properties: {
-        colors: {
-          type: Type.ARRAY,
-          items: { type: Type.STRING },
-          description: "Hex or descriptive color names",
-        },
-        mood: { type: Type.STRING, description: "Visual mood, e.g. minimal luxe" },
-      },
-      required: ["colors", "mood"],
-    },
-    targetAudience: { type: Type.STRING },
-    sourceUrl: { type: Type.STRING },
-    contentPillars: {
-      type: Type.ARRAY,
-      items: { type: Type.STRING },
-      description: "3-5 recurring content themes e.g. sustainability, craftsmanship",
-    },
-    brandVoice: {
-      type: Type.STRING,
-      description: "Brand tone descriptors e.g. playful, minimal, editorial, bold",
-    },
-    recommendedServices: {
-      type: Type.ARRAY,
-      items: { type: Type.STRING },
-      description: "iPix service slugs relevant to this brand: fashion-photography, ecommerce, instagram, video, shopify, amazon, jewellery, location, clothing",
-    },
-    productionReadiness: {
-      type: Type.NUMBER,
-      description: "0-100 overall readiness for a professional content shoot",
-    },
-    scores: {
-      type: Type.OBJECT,
-      properties: {
-        visual: {
-          type: Type.NUMBER,
-          description: "Visual identity clarity 0-100",
-        },
-        audience: {
-          type: Type.NUMBER,
-          description: "Audience clarity 0-100",
-        },
-        consistency: {
-          type: Type.NUMBER,
-          description: "Cross-page consistency 0-100",
-        },
-        commerce_readiness: {
-          type: Type.NUMBER,
-          description: "E-commerce readiness 0-100",
-        },
-      },
-      required: ["visual", "audience", "consistency", "commerce_readiness"],
-    },
-  },
-  required: [
-    "name",
-    "tagline",
-    "category",
-    "visualIdentity",
-    "targetAudience",
-    "sourceUrl",
-    "scores",
-  ],
-};
-
-type BrandProfilePayload = {
-  name: string;
-  tagline: string;
-  category: string;
-  visualIdentity: { colors: string[]; mood: string };
-  targetAudience: string;
-  sourceUrl: string;
-  contentPillars?: string[];
-  brandVoice?: string;
-  recommendedServices?: string[];
-  productionReadiness?: number;
-  scores: {
-    visual: number;
-    audience: number;
-    consistency: number;
-    commerce_readiness: number;
-  };
-};
 
 // Private/internal IP ranges — block to prevent SSRF
 const PRIVATE_HOST_PATTERNS = [
@@ -115,7 +35,7 @@ const PRIVATE_HOST_PATTERNS = [
   /^10\./,
   /^172\.(1[6-9]|2\d|3[01])\./,
   /^192\.168\./,
-  /^169\.254\./, // AWS/GCP metadata
+  /^169\.254\./,
   /^::1$/,
   /^fc00:/i,
   /^fe80:/i,
@@ -131,23 +51,98 @@ function isValidHttpUrl(value: string): boolean {
   }
 }
 
-function withTimeout<T>(p: Promise<T>, ms: number): Promise<T> {
-  return Promise.race([
-    p,
-    new Promise<never>((_, reject) =>
-      setTimeout(() => reject(new Error(`Gemini timeout after ${ms}ms`)), ms)
-    ),
-  ]);
-}
-
 function buildUrlList(baseUrl: string): string[] {
   const origin = new URL(baseUrl).origin;
   return [baseUrl, `${origin}/about`, `${origin}/collections`, `${origin}/lookbook`].slice(0, 4);
 }
 
-function clampScore(n: number): number {
-  if (!Number.isFinite(n)) return 0;
-  return Math.min(100, Math.max(0, Math.round(n * 100) / 100));
+function buildCrawlPrompt(params: {
+  url: string;
+  brandName?: string;
+  shellProfile: Record<string, unknown>;
+  crawlText: string;
+  pageCount: number;
+}): string {
+  const shell = JSON.stringify(params.shellProfile, null, 2);
+  return `
+You are a fashion brand intelligence analyst for iPix, a creative production platform.
+
+Analyze the brand using the Firecrawl website crawl below (${params.pageCount} pages). Extract a complete brand profile and four readiness scores (0-100).
+
+Brand URL: ${params.url}
+${params.brandName ? `Brand name hint: ${params.brandName}` : ""}
+
+Onboarding metadata (preserve industry, goal, instagram_handle when merging):
+${shell}
+
+Example 1 — DTC apparel:
+Input: Clean beauty site with minimal palette, sustainability copy, shop grid.
+Output: tagline "Skincare for real life", category "DTC beauty", contentPillars ["clean ingredients","inclusivity","education"], brandVoice "friendly, minimal, science-forward", scores visual 78 audience 82 consistency 75 commerce_readiness 88.
+
+Example 2 — Luxury fashion:
+Input: Editorial lookbook, heritage story, high-price catalog.
+Output: tagline "Modern heritage tailoring", category "Luxury apparel", brandPersonality "refined, confident", scores visual 90 audience 70 consistency 85 commerce_readiness 72.
+
+Crawl content:
+${params.crawlText}
+
+Return ONLY valid JSON matching the schema. Set sourceUrl to ${JSON.stringify(params.url)}.
+Use google search grounding for competitor and press signals when crawl is thin on those topics.
+`.trim();
+}
+
+function buildUrlFallbackPrompt(url: string, contextText: string): string {
+  return `
+Based on this brand analysis from live URLs, return ONLY valid JSON matching the required schema.
+
+Pages analyzed:
+${buildUrlList(url).map((u) => `- ${u}`).join("\n")}
+
+Analysis:
+${contextText}
+
+Set sourceUrl to ${JSON.stringify(url)}.
+`.trim();
+}
+
+async function loadCrawlRow(
+  client: ReturnType<typeof createUserClient>,
+  brandId: string,
+  crawlResultId: string | null,
+) {
+  if (crawlResultId) {
+    const { data, error } = await client
+      .from("brand_crawls")
+      .select("id, brand_id, raw_data, pages_crawled, job_status")
+      .eq("id", crawlResultId)
+      .maybeSingle();
+    if (error || !data || data.brand_id !== brandId) return null;
+    return data;
+  }
+
+  const { data, error } = await client
+    .from("brand_crawls")
+    .select("id, brand_id, raw_data, pages_crawled, job_status")
+    .eq("brand_id", brandId)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (error || !data) return null;
+  return data;
+}
+
+async function markIntakeStatus(
+  client: ReturnType<typeof createUserClient>,
+  brandId: string,
+  userId: string,
+  status: "analysis_running" | "scores_complete" | "failed",
+) {
+  await client
+    .from("brands")
+    .update({ intake_status: status })
+    .eq("id", brandId)
+    .eq("user_id", userId);
 }
 
 console.info("brand-intelligence function started");
@@ -157,6 +152,9 @@ Deno.serve(async (req: Request) => {
   if (cors) return cors;
 
   const started = performance.now();
+  let failureBrandId: string | null = null;
+  let failureUserId: string | null = null;
+  let failureClient: ReturnType<typeof createUserClient> | null = null;
 
   try {
     if (req.method !== "POST") {
@@ -176,16 +174,37 @@ Deno.serve(async (req: Request) => {
     }
 
     const contentLength = parseInt(req.headers.get("content-length") ?? "0", 10);
-    if (contentLength > 8192) {
+    if (contentLength > 16384) {
       return errorResponse("payload_too_large", "Payload too large", 413);
     }
 
-    let body: { url?: string; brandId?: string };
+    let body: {
+      url?: string;
+      brandId?: string;
+      brand_name?: string;
+      crawlResultId?: string;
+    };
     try {
       body = await req.json();
     } catch {
       return errorResponse("invalid_json", "Request body must be JSON", 422);
     }
+
+    const brandId =
+      typeof body.brandId === "string" && body.brandId.length > 0
+        ? body.brandId
+        : null;
+
+    if (!brandId) {
+      return errorResponse(
+        "validation_error",
+        "brandId is required",
+        422,
+      );
+    }
+
+    failureBrandId = brandId;
+    failureUserId = auth.user.id;
 
     const url = typeof body.url === "string" ? body.url.trim() : "";
     if (!url || !isValidHttpUrl(url)) {
@@ -196,101 +215,104 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    const brandIdInput =
-      typeof body.brandId === "string" && body.brandId.length > 0
-        ? body.brandId
+    const crawlResultId =
+      typeof body.crawlResultId === "string" && body.crawlResultId.length > 0
+        ? body.crawlResultId
         : null;
 
-    const ai = new GoogleGenAI({ apiKey });
+    const brandName =
+      typeof body.brand_name === "string" ? body.brand_name.trim() : undefined;
 
-    const urlList = buildUrlList(url);
-    const prompt = `
-Analyze this fashion or DTC brand from these pages and return structured brand intelligence for a creative production platform.
+    const client = createUserClient(auth.accessToken);
+    failureClient = client;
 
-Pages to analyze:
-${urlList.map((u) => `- ${u}`).join("\n")}
+    const { data: existing, error: fetchErr } = await client
+      .from("brands")
+      .select("id, name, ai_profile")
+      .eq("id", brandId)
+      .eq("user_id", auth.user.id)
+      .maybeSingle();
 
-Extract:
-- Brand name and tagline
-- Product category
-- Visual identity (colors and mood)
-- Target audience summary
-- Content pillars (3-5 recurring themes)
-- Brand voice (tone descriptors)
-- Recommended iPix services (from: fashion-photography, ecommerce, instagram, video, shopify, amazon, jewellery, location, clothing)
-- Production readiness score (0-100)
-- Readiness scores (0-100) for visual clarity, audience clarity, brand consistency, and commerce readiness
+    if (fetchErr || !existing) {
+      return errorResponse("not_found", "Brand not found", 404);
+    }
 
-Use URL content AND web search for press coverage, social presence, and competitor signals.
-Set sourceUrl to ${JSON.stringify(url)}.
-`.trim();
+    const priorProfile =
+      existing.ai_profile &&
+        typeof existing.ai_profile === "object" &&
+        !Array.isArray(existing.ai_profile)
+        ? (existing.ai_profile as Record<string, unknown>)
+        : {};
+
+    await markIntakeStatus(client, brandId, auth.user.id, "analysis_running");
+
+    const crawlRow = await loadCrawlRow(client, brandId, crawlResultId);
+    const rawData = (crawlRow?.raw_data ?? null) as CrawlRawData | null;
+    const crawlText = formatCrawlForPrompt(rawData);
+    const useCrawl = !isCrawlThin(rawData);
+    const model = resolveGeminiModel();
 
     const geminiStarted = performance.now();
+    let structuredResponse: GenerateContentResponse;
+    let contextResponse: GenerateContentResponse | null = null;
+    let responseText: string;
 
-    // urlContext cannot be combined with responseMimeType application/json (API 400).
-    // Combined with googleSearch for press/social/competitor signals.
-    const contextResponse: GenerateContentResponse = await withTimeout(
-      ai.models.generateContent({
-        model: MODEL,
+    if (useCrawl && crawlText) {
+      const prompt = buildCrawlPrompt({
+        url,
+        brandName,
+        shellProfile: priorProfile,
+        crawlText,
+        pageCount: rawData?.pages?.length ?? crawlRow?.pages_crawled ?? 0,
+      });
+
+      const result = await generateStructuredContent({
+        apiKey,
+        model,
         contents: prompt,
-        config: {
-          tools: [{ urlContext: {} }, { googleSearch: {} }],
-          temperature: 0.2,
-        },
-      }),
-      30_000,
-    );
+        responseSchema: brandProfileResponseSchema,
+        tools: [{ googleSearch: {} }],
+        thinkingLevel: "high",
+        temperature: 0.1,
+        timeoutMs: 60_000,
+      });
+      structuredResponse = result.response;
+      responseText = result.text;
+    } else {
+      const urlList = buildUrlList(url);
+      const contextPrompt = `
+Analyze this fashion or DTC brand from these pages for a creative production platform.
 
-    const contextText =
-      contextResponse.text?.trim() ||
-      "No textual analysis returned from URL context.";
+Pages:
+${urlList.map((u) => `- ${u}`).join("\n")}
 
-    const structurePrompt = `
-Based on this brand analysis, return ONLY valid JSON matching the required schema.
-
-Analysis:
-${contextText}
-
-Required JSON shape:
-{
-  "name": string,
-  "tagline": string,
-  "category": string,
-  "visualIdentity": { "colors": string[], "mood": string },
-  "targetAudience": string,
-  "sourceUrl": ${JSON.stringify(url)},
-  "contentPillars": string[] (3-5 themes),
-  "brandVoice": string (tone descriptors),
-  "recommendedServices": string[] (iPix service slugs),
-  "productionReadiness": number 0-100,
-  "scores": {
-    "visual": number 0-100,
-    "audience": number 0-100,
-    "consistency": number 0-100,
-    "commerce_readiness": number 0-100
-  }
-}
+Extract brand name, tagline, category, visual identity, audience, content themes, voice, and commerce signals.
+Use URL content AND web search for press, social, and competitor signals.
 `.trim();
 
-    const response: GenerateContentResponse = await withTimeout(
-      ai.models.generateContent({
-        model: MODEL,
+      const contextPass = await generateContextPass({
+        apiKey,
+        model,
+        contents: contextPrompt,
+        timeoutMs: 55_000,
+      });
+      contextResponse = contextPass.response;
+
+      const structurePrompt = buildUrlFallbackPrompt(url, contextPass.text);
+      const result = await generateStructuredContent({
+        apiKey,
+        model,
         contents: structurePrompt,
-        config: {
-          responseMimeType: "application/json",
-          responseSchema: brandProfileSchema,
-          thinkingConfig: { thinkingBudget: 4096 },
-          temperature: 0.1,
-        },
-      }),
-      20_000,
-    );
+        responseSchema: brandProfileResponseSchema,
+        thinkingLevel: "low",
+        temperature: 0.1,
+        timeoutMs: 50_000,
+      });
+      structuredResponse = result.response;
+      responseText = result.text;
+    }
 
     const geminiMs = Math.round(performance.now() - geminiStarted);
-    const responseText = response.text ?? "";
-    if (!responseText.trim()) {
-      throw new Error("Empty response from Gemini");
-    }
 
     let profile: BrandProfilePayload;
     try {
@@ -299,119 +321,58 @@ Required JSON shape:
       throw new Error("Model returned invalid JSON");
     }
 
-    if (!profile.name?.trim()) {
-      return errorResponse(
-        "validation_error",
-        "Could not extract a brand name from URL",
-        422,
-      );
-    }
-    if (!profile.tagline || !profile.category || !profile.targetAudience ||
-        !profile.visualIdentity?.mood || !Array.isArray(profile.visualIdentity?.colors)) {
-      return errorResponse("validation_error", "Incomplete brand profile returned", 422);
-    }
-    if (!profile.scores || typeof profile.scores.visual !== "number" ||
-        typeof profile.scores.audience !== "number" ||
-        typeof profile.scores.consistency !== "number" ||
-        typeof profile.scores.commerce_readiness !== "number") {
-      return errorResponse("validation_error", "Incomplete scores returned", 422);
+    const validationError = validateBrandProfilePayload(profile);
+    if (validationError) {
+      await markIntakeStatus(client, brandId, auth.user.id, "failed");
+      return errorResponse("validation_error", validationError, 422);
     }
 
-    const client = createUserClient(auth.accessToken);
-    const aiProfile = {
-      name: profile.name.trim(),
-      tagline: profile.tagline.trim(),
-      category: profile.category.trim(),
-      visualIdentity: {
-        colors: profile.visualIdentity.colors.slice(0, 12),
-        mood: profile.visualIdentity.mood.trim(),
-      },
-      targetAudience: profile.targetAudience.trim(),
-      sourceUrl: url, // always use submitted URL, never trust model-provided value
-      analyzedAt: new Date().toISOString(),
-      // v9: enriched fields (optional — gracefully absent if model omits)
-      ...(profile.contentPillars?.length ? { contentPillars: profile.contentPillars } : {}),
-      ...(profile.brandVoice?.trim() ? { brandVoice: profile.brandVoice.trim() } : {}),
-      ...(profile.recommendedServices?.length ? { recommendedServices: profile.recommendedServices } : {}),
-      ...(typeof profile.productionReadiness === "number"
-        ? { productionReadiness: clampScore(profile.productionReadiness) }
-        : {}),
+    const aiProfile = buildAiProfileFromPayload(profile, url);
+    const mergedProfile = {
+      ...priorProfile,
+      ...aiProfile,
+      _lifecycle: "scores_complete",
     };
 
-    let brandId = brandIdInput;
-    let brandRow: { id: string; name: string } | null = null;
+    const { data: updated, error: updateErr } = await client
+      .from("brands")
+      .update({
+        name: aiProfile.name as string,
+        brand_url: url,
+        ai_profile: mergedProfile,
+        intake_status: "scores_complete",
+      })
+      .eq("id", brandId)
+      .eq("user_id", auth.user.id)
+      .select("id, name")
+      .single();
 
-    if (brandId) {
-      const { data: existing, error: fetchErr } = await client
-        .from("brands")
-        .select("id, name, ai_profile")
-        .eq("id", brandId)
-        .eq("user_id", auth.user.id)
-        .maybeSingle();
-
-      if (fetchErr || !existing) {
-        return errorResponse("not_found", "Brand not found", 404);
-      }
-
-      const priorProfile =
-        existing.ai_profile && typeof existing.ai_profile === "object" && !Array.isArray(existing.ai_profile)
-          ? (existing.ai_profile as Record<string, unknown>)
-          : {};
-
-      const mergedProfile = {
-        ...priorProfile,
-        ...aiProfile,
-        _lifecycle: "scores_complete",
-      };
-
-      const { data: updated, error: updateErr } = await client
-        .from("brands")
-        .update({
-          name: aiProfile.name,
-          brand_url: url,
-          ai_profile: mergedProfile,
-        })
-        .eq("id", brandId)
-        .eq("user_id", auth.user.id)
-        .select("id, name")
-        .single();
-
-      if (updateErr || !updated) {
-        throw new Error(updateErr?.message ?? "Failed to update brand");
-      }
-      brandRow = updated;
-    } else {
-      const { data: inserted, error: insertErr } = await client
-        .from("brands")
-        .insert({
-          user_id: auth.user.id,
-          name: profile.name,
-          brand_url: url,
-          ai_profile: aiProfile,
-        })
-        .select("id, name")
-        .single();
-
-      if (insertErr || !inserted) {
-        throw new Error(insertErr?.message ?? "Failed to create brand");
-      }
-      brandRow = inserted;
-      brandId = inserted.id;
+    if (updateErr || !updated) {
+      throw new Error(updateErr?.message ?? "Failed to update brand");
     }
 
     const scoreRows = [
       { score_type: "visual", score: clampScore(profile.scores.visual) },
       { score_type: "audience", score: clampScore(profile.scores.audience) },
       { score_type: "consistency", score: clampScore(profile.scores.consistency) },
-      { score_type: "commerce_readiness", score: clampScore(profile.scores.commerce_readiness) },
+      {
+        score_type: "commerce_readiness",
+        score: clampScore(profile.scores.commerce_readiness),
+      },
     ].map((row) => ({
       brand_id: brandId,
       score_type: row.score_type,
       score: row.score,
-      details: { source: "brand-intelligence", url },
+      score_version: 1,
+      source: "edge_fn",
+      details: {
+        source: "brand-intelligence",
+        url,
+        crawlResultId: crawlRow?.id ?? null,
+        crawlPages: rawData?.pages?.length ?? 0,
+      },
     }));
 
-    // Upsert: idempotent re-analysis, no temporary data loss on insert failure
     const { data: scores, error: scoresErr } = await client
       .from("brand_scores")
       .upsert(scoreRows, { onConflict: "brand_id,score_type" })
@@ -421,42 +382,63 @@ Required JSON shape:
       throw new Error(scoresErr.message);
     }
 
-    const usage = response.usageMetadata;
-    const contextUsage = contextResponse.usageMetadata;
+    const usage = structuredResponse.usageMetadata;
+    const contextUsage = contextResponse?.usageMetadata;
     const durationMs = Math.round(performance.now() - started);
 
     const { id: logId } = await insertAgentLog(client, {
       agentName: "brand-intelligence",
       userId: auth.user.id,
       brandId,
-      input: { url, brandId: brandIdInput },
+      input: {
+        url,
+        brandId,
+        crawlResultId: crawlRow?.id ?? crawlResultId,
+        usedCrawl: useCrawl,
+      },
       output: {
         brandId,
         scoreCount: scores?.length ?? 0,
         urlRetrieval:
-          contextResponse.candidates?.[0]?.urlContextMetadata ?? null,
+          contextResponse?.candidates?.[0]?.urlContextMetadata ?? null,
+        grounding:
+          structuredResponse.candidates?.[0]?.groundingMetadata ?? null,
       },
-      model: MODEL,
+      model,
       tokensIn:
         (usage?.promptTokenCount ?? 0) +
-        (contextUsage?.promptTokenCount ?? 0) || null,
+          (contextUsage?.promptTokenCount ?? 0) || null,
       tokensOut:
         (usage?.candidatesTokenCount ?? 0) +
-        (contextUsage?.candidatesTokenCount ?? 0) || null,
+          (contextUsage?.candidatesTokenCount ?? 0) || null,
       durationMs,
     });
 
     return jsonResponse({
       brandId,
-      brand: brandRow,
+      brand: updated,
       profile: aiProfile,
       scores: scores ?? [],
       logId,
       durationMs,
       geminiMs,
+      usedCrawl: useCrawl,
+      crawlResultId: crawlRow?.id ?? null,
     });
   } catch (err) {
     console.error("brand-intelligence error:", err);
+    if (failureBrandId && failureUserId && failureClient) {
+      try {
+        await markIntakeStatus(
+          failureClient,
+          failureBrandId,
+          failureUserId,
+          "failed",
+        );
+      } catch (statusErr) {
+        console.error("failed to set intake_status=failed:", statusErr);
+      }
+    }
     return errorResponse("internal_error", safeErrorMessage(err), 500);
   }
 });

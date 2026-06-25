@@ -148,12 +148,14 @@ export const invokeBrandIntelligence = async (
   supabase: SupabaseClient,
   brandId: string,
   form: OnboardingForm,
+  options?: { crawlResultId?: string },
 ): Promise<BrandIntelligenceResponse> => {
   const { data, error } = await supabase.functions.invoke("brand-intelligence", {
     body: {
       url: form.websiteUrl.trim(),
       brandId,
       brand_name: form.brandName.trim(),
+      ...(options?.crawlResultId ? { crawlResultId: options.crawlResultId } : {}),
     },
   });
 
