@@ -138,10 +138,12 @@ Return URLs as full https:// URLs only.`;
       errorMessage = err instanceof Error ? err.message : String(err);
     }
 
-    // WRITE: delegate to edge function (IPI2-84 no-silent-writes contract)
-    if (channels.length > 0 || status === "failed") {
-      await callEdgeFunction("social-discovery", { brandId, channels, startedAt });
-    }
+    // WRITE: always call edge fn so every run is auditable (even 0-channel runs)
+    await callEdgeFunction(
+      "social-discovery",
+      { brandId, channels, startedAt, status, ...(errorMessage ? { error: errorMessage } : {}) },
+      { accessToken: process.env.SUPABASE_SERVICE_ROLE_KEY },
+    );
 
     return {
       brandId,

@@ -1,12 +1,13 @@
 // IPI-27 — social-discovery edge function
-// Accepts POST { brandId, channels[] } from the Mastra social-discovery tool,
+// Accepts POST { brandId, channels[], status?, error? } from the Mastra social-discovery tool,
 // upserts brand_social_channels, and logs the run to brand_agent_results.
-// Auth required: caller must supply a valid Bearer JWT.
+// Auth: user JWT or service-role key (server-to-server from Mastra tools).
 
 import { handleCors } from "../_shared/cors.ts";
 import { errorResponse, jsonResponse, safeErrorMessage } from "../_shared/response.ts";
 import { isAuthFailure, resolveAuth } from "../_shared/auth.ts";
 import { createServiceClient } from "../_shared/supabase-client.ts";
+import { getEdgeEnv } from "../_shared/env.ts";
 
 const SUPPORTED_PLATFORMS = new Set([
   "instagram", "tiktok", "youtube", "pinterest", "linkedin", "facebook", "x",
@@ -26,18 +27,30 @@ type RequestBody = {
   brandId: string;
   channels: Channel[];
   startedAt?: string;
+  status?: "complete" | "failed";
+  error?: string;
 };
+
+function isServiceRoleRequest(req: Request): boolean {
+  const token = req.headers.get("Authorization")?.slice(7)?.trim();
+  if (!token) return false;
+  const { serviceRoleKey } = getEdgeEnv();
+  return token === serviceRoleKey;
+}
 
 Deno.serve(async (req: Request) => {
   const cors = handleCors(req);
   if (cors) return cors;
 
-  const authResult = await resolveAuth(req, { required: true });
-  if (isAuthFailure(authResult)) return authResult.response;
+  // Service-role Bearer bypasses user-JWT validation (trusted server-to-server call)
+  if (!isServiceRoleRequest(req)) {
+    const authResult = await resolveAuth(req, { required: true });
+    if (isAuthFailure(authResult)) return authResult.response;
+  }
 
   try {
     const body: RequestBody = await req.json();
-    const { brandId, channels = [], startedAt } = body;
+    const { brandId, channels = [], startedAt, status: upstreamStatus, error: upstreamError } = body;
 
     if (!brandId || typeof brandId !== "string") {
       return errorResponse("invalid_input", "brandId is required", 400);
@@ -61,8 +74,9 @@ Deno.serve(async (req: Request) => {
         discovered_at: completedAt,
       }));
 
-    let status: "complete" | "failed" = "complete";
-    let errorMessage: string | undefined;
+    // Use upstream status when provided (e.g. Gemini failure with 0 rows)
+    let status: "complete" | "failed" = upstreamStatus ?? "complete";
+    let errorMessage: string | undefined = upstreamError;
 
     if (rows.length > 0) {
       const { error: upsertErr } = await admin
