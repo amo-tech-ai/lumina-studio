@@ -1,0 +1,21 @@
+app/src/mastra/tools/social-discovery.test.ts
+  s_4ffc3bfca8d635::t_e5f1c9cc726028 44,50
+  s_4ffc3bfca8d635::t_c7909896dd5ca3 126
+  s_4ffc3bfca8d635::t_8beeb6630f51d4 174
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.13",
+  "base_commit_sha": "76882b0afc4647876d4c60da8a788c90fc7d14c7",
+  "prompts": {},
+  "sessions": {
+    "s_4ffc3bfca8d635": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "d421b6b8-4307-4bc8-94d4-f836cb9e7997",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
