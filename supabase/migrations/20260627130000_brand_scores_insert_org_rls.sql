@@ -1,6 +1,6 @@
--- IPI-25 follow-up: org members (editor+) can INSERT brand_scores for org brands.
--- UPDATE/SELECT were org-scoped in IPI-46; INSERT still required brands.user_id = auth.uid(),
--- which breaks brand-intelligence upsert for non-creator org members.
+-- IPI-25 follow-up: org members can INSERT brand_scores for org brands.
+-- Uses is_org_member (owner, editor, viewer — no role filter), same as SELECT/UPDATE (IPI-46).
+-- Prior INSERT required brands.user_id = auth.uid(), breaking upsert for non-creator members.
 
 drop policy if exists "brand_scores_insert_via_brand" on public.brand_scores;
 
