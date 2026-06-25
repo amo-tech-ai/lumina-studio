@@ -1,0 +1,19 @@
+app/next.config.ts
+  s_f122c956685f5d::t_03e0fe538289f5 4
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.13",
+  "base_commit_sha": "f65259809266bf90035eea2d10feb60a8f122b28",
+  "prompts": {},
+  "sessions": {
+    "s_f122c956685f5d": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_0ffb23c8cffefU70iBoyjFpWs6",
+        "model": "deepseek-v4-flash-free"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
