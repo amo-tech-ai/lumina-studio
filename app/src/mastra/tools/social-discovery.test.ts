@@ -1,30 +1,30 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
-// Mock @supabase/supabase-js before importing the module
 vi.mock("@supabase/supabase-js", () => ({
   createClient: vi.fn(),
 }));
 
-// Mock ai generateObject
 vi.mock("ai", () => ({
   generateObject: vi.fn(),
 }));
 
-// Mock @ai-sdk/google
 vi.mock("@ai-sdk/google", () => ({
   createGoogleGenerativeAI: vi.fn(() => vi.fn(() => "mock-model")),
 }));
 
+vi.mock("./edge", () => ({
+  callEdgeFunction: vi.fn().mockResolvedValue({ success: true, count: 0 }),
+  EdgeFunctionError: class EdgeFunctionError extends Error {},
+}));
+
 import { createClient } from "@supabase/supabase-js";
 import { generateObject } from "ai";
-import { discoverSocialChannels } from "./social-discovery";
+import { callEdgeFunction } from "./edge";
+import { discoverSocialChannelsTool } from "./social-discovery";
 
 const BRAND_ID = "11111111-1111-1111-1111-111111111111";
 
-function makeMockSupabase(overrides: Record<string, unknown> = {}) {
-  const upsertMock = vi.fn().mockResolvedValue({ error: null });
-  const insertMock = vi.fn().mockResolvedValue({ error: null });
-
+function makeMockSupabase() {
   const fromMock = vi.fn((table: string) => {
     if (table === "brands") {
       return {
@@ -52,16 +52,9 @@ function makeMockSupabase(overrides: Record<string, unknown> = {}) {
         }),
       };
     }
-    if (table === "brand_social_channels") {
-      return { upsert: upsertMock };
-    }
-    if (table === "brand_agent_results") {
-      return { insert: insertMock };
-    }
     return {};
   });
-
-  return { from: fromMock, _upsertMock: upsertMock, _insertMock: insertMock, ...overrides };
+  return { from: fromMock };
 }
 
 const origEnv: Record<string, string | undefined> = {};
@@ -82,11 +75,12 @@ afterEach(() => {
   process.env.GEMINI_API_KEY = origEnv.GEMINI_API_KEY;
 });
 
-describe("discoverSocialChannels tool", () => {
-  it("upserts discovered channels and logs run", async () => {
-    const mockSupabase = makeMockSupabase();
-    vi.mocked(createClient).mockReturnValue(mockSupabase as unknown as ReturnType<typeof createClient>);
-
+describe("discoverSocialChannelsTool", () => {
+  it("calls edge function with discovered channels", async () => {
+    vi.mocked(createClient).mockReturnValue(
+      makeMockSupabase() as unknown as ReturnType<typeof createClient>,
+    );
+    vi.mocked(callEdgeFunction).mockResolvedValue({ success: true, count: 2 });
     vi.mocked(generateObject).mockResolvedValue({
       object: {
         channels: [
@@ -112,29 +106,31 @@ describe("discoverSocialChannels tool", () => {
       },
     } as unknown as Awaited<ReturnType<typeof generateObject>>);
 
-    // @ts-expect-error Mastra execute requires context arg at runtime; undefined is safe in unit tests
-    const result = await discoverSocialChannels.execute!({ brandId: BRAND_ID }) as { channelsFound: number; status: string; channels: unknown[] };
+    const result = await discoverSocialChannelsTool.execute!({ brandId: BRAND_ID }, {} as never) as {
+      channelsFound: number;
+      status: string;
+    };
 
     expect(result.channelsFound).toBe(2);
     expect(result.status).toBe("complete");
-    expect(mockSupabase._upsertMock).toHaveBeenCalledOnce();
-    expect(mockSupabase._upsertMock).toHaveBeenCalledWith(
-      expect.arrayContaining([
-        expect.objectContaining({ platform: "instagram", brand_id: BRAND_ID }),
-        expect.objectContaining({ platform: "tiktok", brand_id: BRAND_ID }),
-      ]),
-      { onConflict: "brand_id,platform" },
-    );
-    expect(mockSupabase._insertMock).toHaveBeenCalledOnce();
-    expect(mockSupabase._insertMock).toHaveBeenCalledWith(
-      expect.objectContaining({ agent_name: "social-discovery", status: "complete" }),
+    expect(callEdgeFunction).toHaveBeenCalledOnce();
+    expect(callEdgeFunction).toHaveBeenCalledWith(
+      "social-discovery",
+      expect.objectContaining({
+        brandId: BRAND_ID,
+        channels: expect.arrayContaining([
+          expect.objectContaining({ platform: "instagram" }),
+          expect.objectContaining({ platform: "tiktok" }),
+        ]),
+      }),
     );
   });
 
-  it("is idempotent — upsert on conflict, not insert", async () => {
-    const mockSupabase = makeMockSupabase();
-    vi.mocked(createClient).mockReturnValue(mockSupabase as unknown as ReturnType<typeof createClient>);
-
+  it("is idempotent — upsert on conflict handled by edge function", async () => {
+    vi.mocked(createClient).mockReturnValue(
+      makeMockSupabase() as unknown as ReturnType<typeof createClient>,
+    );
+    vi.mocked(callEdgeFunction).mockResolvedValue({ success: true, count: 1 });
     vi.mocked(generateObject).mockResolvedValue({
       object: {
         channels: [
@@ -151,34 +147,59 @@ describe("discoverSocialChannels tool", () => {
       },
     } as unknown as Awaited<ReturnType<typeof generateObject>>);
 
-    // Run twice — upsert should be called both times (not error on duplicate)
-    // @ts-expect-error Mastra execute requires context arg at runtime; undefined is safe in unit tests
-    await discoverSocialChannels.execute!({ brandId: BRAND_ID });
-    // @ts-expect-error Mastra execute requires context arg at runtime; undefined is safe in unit tests
-    await discoverSocialChannels.execute!({ brandId: BRAND_ID });
+    await discoverSocialChannelsTool.execute!({ brandId: BRAND_ID }, {} as never);
+    await discoverSocialChannelsTool.execute!({ brandId: BRAND_ID }, {} as never);
 
-    expect(mockSupabase._upsertMock).toHaveBeenCalledTimes(2);
-    // Both calls use onConflict — no duplicate rows created at DB level
-    for (const call of mockSupabase._upsertMock.mock.calls) {
-      expect(call[1]).toEqual({ onConflict: "brand_id,platform" });
-    }
+    expect(callEdgeFunction).toHaveBeenCalledTimes(2);
   });
 
-  it("logs failed status when Gemini throws", async () => {
-    const mockSupabase = makeMockSupabase();
-    vi.mocked(createClient).mockReturnValue(mockSupabase as unknown as ReturnType<typeof createClient>);
+  it("calls edge function with failed status when Gemini throws", async () => {
+    vi.mocked(createClient).mockReturnValue(
+      makeMockSupabase() as unknown as ReturnType<typeof createClient>,
+    );
+    vi.mocked(callEdgeFunction).mockResolvedValue({ success: true, count: 0 });
     vi.mocked(generateObject).mockRejectedValue(new Error("Gemini quota exceeded"));
 
-    // @ts-expect-error Mastra execute requires context arg at runtime; undefined is safe in unit tests
-    const result = await discoverSocialChannels.execute!({ brandId: BRAND_ID }) as { channelsFound: number; status: string };
+    const result = await discoverSocialChannelsTool.execute!({ brandId: BRAND_ID }, {} as never) as {
+      channelsFound: number;
+      status: string;
+    };
 
     expect(result.status).toBe("failed");
     expect(result.channelsFound).toBe(0);
-    // No upsert attempted on failure
-    expect(mockSupabase._upsertMock).not.toHaveBeenCalled();
-    // But run is still logged
-    expect(mockSupabase._insertMock).toHaveBeenCalledWith(
-      expect.objectContaining({ status: "failed" }),
+    expect(callEdgeFunction).toHaveBeenCalledWith(
+      "social-discovery",
+      expect.objectContaining({ brandId: BRAND_ID, channels: [] }),
     );
+  });
+
+  it("rejects non-https URLs via Zod schema", async () => {
+    vi.mocked(createClient).mockReturnValue(
+      makeMockSupabase() as unknown as ReturnType<typeof createClient>,
+    );
+    vi.mocked(callEdgeFunction).mockResolvedValue({ success: true, count: 0 });
+    vi.mocked(generateObject).mockResolvedValue({
+      object: {
+        channels: [
+          {
+            platform: "instagram",
+            url: "javascript:alert(1)",
+            handle: "@evil",
+            verified: true,
+            verification_reason: "test",
+            content_themes: [],
+            posting_frequency: "unknown",
+          },
+        ],
+      },
+    } as unknown as Awaited<ReturnType<typeof generateObject>>);
+
+    // generateObject with bad URL will fail schema parse — tool should catch and set failed
+    const result = await discoverSocialChannelsTool.execute!({ brandId: BRAND_ID }, {} as never) as {
+      status: string;
+      channelsFound: number;
+    };
+    // Either fails schema validation (status=failed) or filters out non-https channel
+    expect(result.channelsFound).toBe(0);
   });
 });
