@@ -1,20 +1,7 @@
--- IPI-25 follow-up: editor+ (or brand creator) can INSERT brand_scores.
--- SELECT/UPDATE remain is_org_member (IPI-46). INSERT was creator-only (user_id).
-
-create or replace function public.is_org_editor_or_above(p_org_id uuid)
-returns boolean
-language sql
-security definer
-set search_path = public
-stable
-as $$
-  select exists (
-    select 1 from public.org_members
-    where org_id = p_org_id
-      and user_id = (select auth.uid())
-      and role in ('owner', 'editor')
-  );
-$$;
+-- IPI-25 follow-up: org members can INSERT brand_scores for org brands.
+-- Uses is_org_member (owner, editor, viewer — no role filter), same as SELECT/UPDATE (IPI-46).
+-- Prior INSERT required brands.user_id = auth.uid(), breaking upsert for non-creator members.
+-- Superseded by 20260627140000 (editor+ or creator).
 
 drop policy if exists "brand_scores_insert_via_brand" on public.brand_scores;
 
@@ -24,9 +11,6 @@ create policy "brand_scores_insert_via_brand"
     exists (
       select 1 from public.brands b
       where b.id = brand_scores.brand_id
-        and (
-          b.user_id = (select auth.uid())
-          or public.is_org_editor_or_above(b.org_id)
-        )
+        and public.is_org_member(b.org_id)
     )
   );
