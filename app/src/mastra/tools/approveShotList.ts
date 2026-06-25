@@ -7,7 +7,7 @@ const ShotRowSchema = z.object({
   description: z.string(),
   angle: z.string().optional(),
   lighting: z.string().optional(),
-  deliverable_ids: z.array(z.string()),
+  deliverable_ids: z.array(z.string()).min(1),
   notes: z.string().optional(),
 });
 

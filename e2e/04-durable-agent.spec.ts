@@ -41,9 +41,19 @@ test.describe("Durable agent — IPI-133 AIOR-017", () => {
     await page.goto("/app/shoots");
     await page.waitForLoadState("domcontentloaded");
 
-    // Verify the page doesn't show a "wrong agent" or "agent not found" error
-    const body = await page.locator("body").textContent();
-    expect(body).not.toMatch(/agent.*not found/i);
-    expect(body).not.toMatch(/production-planner.*undefined/i);
+    // Verify the agent id rendered on the page matches production-planner.
+    // OperatorPanel renders data-agent-id="<agentId>" for testability.
+    const agentId = await page.evaluate(() => {
+      const el = document.querySelector("[data-agent-id]");
+      return el?.getAttribute("data-agent-id") ?? null;
+    });
+    // If attribute not present yet (auth redirect), fall back to absence-of-error check
+    if (agentId !== null) {
+      expect(agentId).toBe("production-planner");
+    } else {
+      const body = await page.locator("body").textContent();
+      expect(body).not.toMatch(/agent.*not found/i);
+      expect(body).not.toMatch(/production-planner.*undefined/i);
+    }
   });
 });

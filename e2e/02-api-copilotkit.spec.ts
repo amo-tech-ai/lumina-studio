@@ -3,9 +3,8 @@ import { expect, test } from "@playwright/test";
 test.describe("API — /api/copilotkit agent registry", () => {
   test("GET /api/copilotkit returns 200 or auth challenge (not 500)", async ({ request }) => {
     const res = await request.get("/api/copilotkit");
-    expect(res.status()).not.toBe(500);
-    expect(res.status()).not.toBe(502);
-    expect(res.status()).not.toBe(503);
+    const status = res.status();
+    expect([200, 400, 401, 404, 405]).toContain(status);
   });
 
   test("POST /api/copilotkit with agent header responds (not 500)", async ({ request }) => {

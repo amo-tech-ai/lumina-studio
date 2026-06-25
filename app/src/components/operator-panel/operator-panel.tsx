@@ -33,9 +33,11 @@ export function OperatorPanel({ children }: { children: React.ReactNode }) {
   useEffect(() => { setThreadId(undefined); }, [agentId]);
   return (
     <CopilotChatConfigurationProvider agentId={agentId} threadId={threadId}>
-      <OperatorShell agentId={agentId} threadId={threadId} onThreadChange={setThreadId}>
-        {children}
-      </OperatorShell>
+      <div data-agent-id={agentId} style={{ display: "contents" }}>
+        <OperatorShell agentId={agentId} threadId={threadId} onThreadChange={setThreadId}>
+          {children}
+        </OperatorShell>
+      </div>
     </CopilotChatConfigurationProvider>
   );
 }

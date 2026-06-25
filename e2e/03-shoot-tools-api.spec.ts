@@ -8,23 +8,28 @@ import { expect, test } from "@playwright/test";
 
 test.describe("Shoot tool registry — IPI-148 SHOOT-AI-001", () => {
   test("agentTools registry is non-empty (tools registered)", async ({ page }) => {
-    // Load the app, then use the browser to check window.__NEXT_DATA__ or call a debug endpoint
-    await page.goto("/app/shoots");
-    // Confirm no JS crash on the shoots route
     const errors: string[] = [];
+    // Register before navigation to catch early load/hydration errors
     page.on("pageerror", (e) => errors.push(e.message));
+    await page.goto("/app/shoots");
     await page.waitForLoadState("networkidle");
     expect(errors.filter((e) => /cannot read|undefined is not/i.test(e))).toHaveLength(0);
+
+    // Verify at least one tool is registered via the CopilotKit agents endpoint
+    const res = await page.request.post("/api/copilotkit", {
+      headers: { "Content-Type": "application/json", "x-copilotkit-agent-id": "production-planner" },
+      data: { messages: [] },
+    });
+    expect(res.status()).not.toBe(404);
+    expect(res.status()).not.toBe(500);
   });
 
   test("recommendShootType tool input schema is valid (Zod validation check)", async ({ request }) => {
-    // POST to a test helper endpoint if it exists, otherwise verify via API route
-    // The real test: Zod min(1) on channels means empty channels array → validation error
+    // CopilotKit protocol: agent id goes in header, not body
     const res = await request.post("/api/copilotkit", {
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", "x-copilotkit-agent-id": "production-planner" },
       data: {
         messages: [{ role: "user", content: "Recommend a shoot type for an Instagram campaign" }],
-        agentId: "production-planner",
       },
     });
     // 200 = AI responded, 401 = auth required — both valid; 500 = tool crashed

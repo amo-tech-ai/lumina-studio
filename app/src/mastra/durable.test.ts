@@ -31,17 +31,22 @@ describe("durable agents", () => {
       "Return the word PING and nothing else.",
       { maxSteps: 1 },
     );
-    // Drain the stream (simulates the run completing before reconnect)
-    try { await output.text; } catch { /* rate limit ok */ }
+    try {
+      // Drain the stream (simulates the run completing before reconnect)
+      try { await output.text; } catch { /* rate limit ok */ }
 
-    // Simulated reconnect: observe from offset 0 replays all cached events
-    const reconnect = await durablePlanner.observe(runId, { offset: 0 });
-    expect(reconnect).toHaveProperty("output");
-    expect(reconnect).toHaveProperty("runId");
-
-    try { await reconnect.output.text; } catch { /* rate limit ok */ }
-    reconnect.cleanup();
-    cleanup();
+      // Simulated reconnect: observe from offset 0 replays all cached events
+      const reconnect = await durablePlanner.observe(runId, { offset: 0 });
+      try {
+        expect(reconnect).toHaveProperty("output");
+        expect(reconnect).toHaveProperty("runId");
+        try { await reconnect.output.text; } catch { /* rate limit ok */ }
+      } finally {
+        reconnect.cleanup();
+      }
+    } finally {
+      cleanup();
+    }
   });
 
   it("stream() returns runId + cleanup even when execution errors", async () => {
@@ -52,19 +57,21 @@ describe("durable agents", () => {
       onChunk: () => {},
     });
 
-    expect(result).toHaveProperty("runId");
-    expect(typeof result.runId).toBe("string");
-    expect(result.runId.length).toBeGreaterThan(0);
-    expect(result).toHaveProperty("cleanup");
-    expect(typeof result.cleanup).toBe("function");
-    expect(result).toHaveProperty("output");
-
     try {
-      await result.output.text;
-    } catch {
-      // Gemini may be rate-limited; runId/cleanup contract is what matters
-    }
+      expect(result).toHaveProperty("runId");
+      expect(typeof result.runId).toBe("string");
+      expect(result.runId.length).toBeGreaterThan(0);
+      expect(result).toHaveProperty("cleanup");
+      expect(typeof result.cleanup).toBe("function");
+      expect(result).toHaveProperty("output");
 
-    result.cleanup();
+      try {
+        await result.output.text;
+      } catch {
+        // Gemini may be rate-limited; runId/cleanup contract is what matters
+      }
+    } finally {
+      result.cleanup();
+    }
   });
 });
