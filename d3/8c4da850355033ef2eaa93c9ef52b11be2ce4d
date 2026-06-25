@@ -1,0 +1,40 @@
+app/src/test/brand-hub.test.ts
+  s_ea46f8c56d53f8::t_633cca2f7f685e 128-140
+  s_ea46f8c56d53f8::t_a37994d8ff633d 164
+  s_ea46f8c56d53f8::t_ee68be0d31fe67 154-156
+app/src/components/brand-hub/profile-tab.tsx
+  s_ea46f8c56d53f8::t_98b2fb29e596c1 41
+app/src/components/brand-hub/re-analyze-button.tsx
+  s_ea46f8c56d53f8::t_1a7503dba43cbc 4,15,18-19,21-22,29-33,42,46
+app/src/components/brand-hub/brand-hub-client.tsx
+  s_ea46f8c56d53f8::t_58d61eaf0a7353 141-168,179
+scripts/seed-sample-brand.mjs
+  s_ea46f8c56d53f8::t_2ff5a99a069db6 38-40
+app/src/lib/brand-hub.ts
+  s_ea46f8c56d53f8::t_68304d8630e74a 147-148
+  s_ea46f8c56d53f8::t_fb630e95a175b9 201-207
+  s_ea46f8c56d53f8::t_3f4ce3fa677111 24,28-37
+app/src/components/brand-hub/scores-tab.tsx
+  s_ea46f8c56d53f8::t_119748044102bc 15-16
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.13",
+  "base_commit_sha": "d38c4da850355033ef2eaa93c9ef52b11be2ce4d",
+  "prompts": {},
+  "humans": {
+    "h_d382fbec1d5b46": {
+      "author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  },
+  "sessions": {
+    "s_ea46f8c56d53f8": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "dd9a0aea-4d97-4ca9-a270-775e1d8e9728",
+        "model": "default"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
