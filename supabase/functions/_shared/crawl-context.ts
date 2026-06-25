@@ -55,8 +55,9 @@ export function formatCrawlForPrompt(
     const remaining = maxChars - used - header.length;
     if (remaining <= 0) break;
 
+    const truncSuffix = "\n[truncated]";
     const slice = body.length > remaining
-      ? `${body.slice(0, remaining)}\n[truncated]`
+      ? `${body.slice(0, Math.max(0, remaining - truncSuffix.length))}${truncSuffix}`
       : body;
     chunks.push(`${header}${slice}`);
     used += header.length + slice.length;

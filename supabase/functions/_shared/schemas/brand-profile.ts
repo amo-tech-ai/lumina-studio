@@ -123,47 +123,81 @@ export function clampScore(n: number): number {
   return Math.min(100, Math.max(0, Math.round(n * 100) / 100));
 }
 
+function trimmedString(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : null;
+}
+
+function optionalTrim(value: unknown): string | undefined {
+  return trimmedString(value) ?? undefined;
+}
+
+function optionalStringArray(value: unknown, max: number): string[] | undefined {
+  if (!Array.isArray(value)) return undefined;
+  const items = value
+    .filter((entry): entry is string => typeof entry === "string")
+    .map((entry) => entry.trim())
+    .filter(Boolean);
+  return items.length > 0 ? items.slice(0, max) : undefined;
+}
+
 export function buildAiProfileFromPayload(
   profile: BrandProfilePayload,
   sourceUrl: string,
 ): Record<string, unknown> {
+  const name = trimmedString(profile.name)!;
+  const tagline = trimmedString(profile.tagline)!;
+  const category = trimmedString(profile.category)!;
+  const mood = trimmedString(profile.visualIdentity?.mood)!;
+  const colors = Array.isArray(profile.visualIdentity?.colors)
+    ? profile.visualIdentity.colors
+        .filter((c): c is string => typeof c === "string")
+        .map((c) => c.trim())
+        .filter(Boolean)
+        .slice(0, 12)
+    : [];
+
   return {
-    name: profile.name.trim(),
-    tagline: profile.tagline.trim(),
-    category: profile.category.trim(),
-    visualIdentity: {
-      colors: profile.visualIdentity.colors.slice(0, 12),
-      mood: profile.visualIdentity.mood.trim(),
-    },
-    targetAudience: profile.targetAudience.trim(),
+    name,
+    tagline,
+    category,
+    visualIdentity: { colors, mood },
+    targetAudience: trimmedString(profile.targetAudience)!,
     sourceUrl,
     analyzedAt: new Date().toISOString(),
-    ...(profile.contentPillars?.length
-      ? { contentPillars: profile.contentPillars.slice(0, 8) }
+    ...(optionalStringArray(profile.contentPillars, 8)
+      ? { contentPillars: optionalStringArray(profile.contentPillars, 8) }
       : {}),
-    ...(profile.brandVoice?.trim() ? { brandVoice: profile.brandVoice.trim() } : {}),
-    ...(profile.recommendedServices?.length
-      ? { recommendedServices: profile.recommendedServices.slice(0, 10) }
+    ...(optionalTrim(profile.brandVoice)
+      ? { brandVoice: optionalTrim(profile.brandVoice) }
+      : {}),
+    ...(optionalStringArray(profile.recommendedServices, 10)
+      ? { recommendedServices: optionalStringArray(profile.recommendedServices, 10) }
       : {}),
     ...(typeof profile.productionReadiness === "number"
       ? { productionReadiness: clampScore(profile.productionReadiness) }
       : {}),
-    ...(profile.mission?.trim() ? { mission: profile.mission.trim() } : {}),
-    ...(profile.vision?.trim() ? { vision: profile.vision.trim() } : {}),
-    ...(profile.values?.length ? { values: profile.values.slice(0, 12) } : {}),
-    ...(profile.uvp?.trim() ? { uvp: profile.uvp.trim() } : {}),
-    ...(profile.positioning?.trim() ? { positioning: profile.positioning.trim() } : {}),
-    ...(profile.brandPersonality?.trim()
-      ? { brandPersonality: profile.brandPersonality.trim() }
+    ...(optionalTrim(profile.mission) ? { mission: optionalTrim(profile.mission) } : {}),
+    ...(optionalTrim(profile.vision) ? { vision: optionalTrim(profile.vision) } : {}),
+    ...(optionalStringArray(profile.values, 12)
+      ? { values: optionalStringArray(profile.values, 12) }
+      : {}),
+    ...(optionalTrim(profile.uvp) ? { uvp: optionalTrim(profile.uvp) } : {}),
+    ...(optionalTrim(profile.positioning)
+      ? { positioning: optionalTrim(profile.positioning) }
+      : {}),
+    ...(optionalTrim(profile.brandPersonality)
+      ? { brandPersonality: optionalTrim(profile.brandPersonality) }
       : {}),
     ...(typeof profile.confidenceScore === "number"
       ? { confidenceScore: clampScore(profile.confidenceScore) }
       : {}),
-    ...(profile.evidenceSources?.length
-      ? { evidenceSources: profile.evidenceSources.slice(0, 20) }
+    ...(optionalStringArray(profile.evidenceSources, 20)
+      ? { evidenceSources: optionalStringArray(profile.evidenceSources, 20) }
       : {}),
-    ...(profile.competitorSignals?.length
-      ? { competitorSignals: profile.competitorSignals.slice(0, 12) }
+    ...(optionalStringArray(profile.competitorSignals, 12)
+      ? { competitorSignals: optionalStringArray(profile.competitorSignals, 12) }
       : {}),
   };
 }
@@ -171,12 +205,12 @@ export function buildAiProfileFromPayload(
 export function validateBrandProfilePayload(
   profile: BrandProfilePayload,
 ): string | null {
-  if (!profile.name?.trim()) return "Could not extract a brand name";
+  if (!trimmedString(profile.name)) return "Could not extract a brand name";
   if (
-    !profile.tagline ||
-    !profile.category ||
-    !profile.targetAudience ||
-    !profile.visualIdentity?.mood ||
+    !trimmedString(profile.tagline) ||
+    !trimmedString(profile.category) ||
+    !trimmedString(profile.targetAudience) ||
+    !trimmedString(profile.visualIdentity?.mood) ||
     !Array.isArray(profile.visualIdentity?.colors)
   ) {
     return "Incomplete brand profile returned";

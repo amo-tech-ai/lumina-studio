@@ -17,13 +17,15 @@ const KNOWN_MODEL_IDS: string[] = [
  */
 export function resolveGeminiModel(): string {
   const override = getOptionalSecret("GEMINI_MODEL")?.trim() ?? "";
-  if (override && !KNOWN_MODEL_IDS.includes(override)) {
-    console.warn(
-      `GEMINI_MODEL="${override}" not in registry; using ${DEFAULT_GEMINI_MODEL}`,
-    );
-    return DEFAULT_GEMINI_MODEL;
+  if (override) {
+    if (!KNOWN_MODEL_IDS.includes(override)) {
+      console.warn(
+        `GEMINI_MODEL="${override}" not in known registry; using override anyway`,
+      );
+    }
+    return override;
   }
-  return override || DEFAULT_GEMINI_MODEL;
+  return DEFAULT_GEMINI_MODEL;
 }
 
 function normalizeThinkingLevel(level: "high" | "low"): "HIGH" | "LOW" {
@@ -31,12 +33,16 @@ function normalizeThinkingLevel(level: "high" | "low"): "HIGH" | "LOW" {
 }
 
 export function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
-  return Promise.race([
-    promise,
-    new Promise<never>((_, reject) =>
-      setTimeout(() => reject(new Error(`Gemini timeout after ${ms}ms`)), ms)
-    ),
-  ]);
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const timeout = new Promise<never>((_, reject) => {
+    timer = setTimeout(
+      () => reject(new Error(`Gemini timeout after ${ms}ms`)),
+      ms,
+    );
+  });
+  return Promise.race([promise, timeout]).finally(() => {
+    if (timer !== undefined) clearTimeout(timer);
+  });
 }
 
 type GeminiTool =

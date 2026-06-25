@@ -116,8 +116,7 @@ async function loadCrawlRow(
       .select("id, brand_id, raw_data, pages_crawled, job_status")
       .eq("id", crawlResultId)
       .maybeSingle();
-    if (error || !data || data.brand_id !== brandId) return null;
-    return data;
+    if (!error && data && data.brand_id === brandId) return data;
   }
 
   const { data, error } = await client
@@ -135,14 +134,12 @@ async function loadCrawlRow(
 async function markIntakeStatus(
   client: ReturnType<typeof createUserClient>,
   brandId: string,
-  userId: string,
   status: "analysis_running" | "scores_complete" | "failed",
 ) {
   await client
     .from("brands")
     .update({ intake_status: status })
-    .eq("id", brandId)
-    .eq("user_id", userId);
+    .eq("id", brandId);
 }
 
 console.info("brand-intelligence function started");
@@ -153,7 +150,6 @@ Deno.serve(async (req: Request) => {
 
   const started = performance.now();
   let failureBrandId: string | null = null;
-  let failureUserId: string | null = null;
   let failureClient: ReturnType<typeof createUserClient> | null = null;
 
   try {
@@ -204,7 +200,6 @@ Deno.serve(async (req: Request) => {
     }
 
     failureBrandId = brandId;
-    failureUserId = auth.user.id;
 
     const url = typeof body.url === "string" ? body.url.trim() : "";
     if (!url || !isValidHttpUrl(url)) {
@@ -230,7 +225,6 @@ Deno.serve(async (req: Request) => {
       .from("brands")
       .select("id, name, ai_profile")
       .eq("id", brandId)
-      .eq("user_id", auth.user.id)
       .maybeSingle();
 
     if (fetchErr || !existing) {
@@ -244,7 +238,7 @@ Deno.serve(async (req: Request) => {
         ? (existing.ai_profile as Record<string, unknown>)
         : {};
 
-    await markIntakeStatus(client, brandId, auth.user.id, "analysis_running");
+    await markIntakeStatus(client, brandId, "analysis_running");
 
     const crawlRow = await loadCrawlRow(client, brandId, crawlResultId);
     const rawData = (crawlRow?.raw_data ?? null) as CrawlRawData | null;
@@ -323,7 +317,7 @@ Use URL content AND web search for press, social, and competitor signals.
 
     const validationError = validateBrandProfilePayload(profile);
     if (validationError) {
-      await markIntakeStatus(client, brandId, auth.user.id, "failed");
+      await markIntakeStatus(client, brandId, "failed");
       return errorResponse("validation_error", validationError, 422);
     }
 
@@ -343,7 +337,6 @@ Use URL content AND web search for press, social, and competitor signals.
         intake_status: "scores_complete",
       })
       .eq("id", brandId)
-      .eq("user_id", auth.user.id)
       .select("id, name")
       .single();
 
@@ -427,12 +420,11 @@ Use URL content AND web search for press, social, and competitor signals.
     });
   } catch (err) {
     console.error("brand-intelligence error:", err);
-    if (failureBrandId && failureUserId && failureClient) {
+    if (failureBrandId && failureClient) {
       try {
         await markIntakeStatus(
           failureClient,
           failureBrandId,
-          failureUserId,
           "failed",
         );
       } catch (statusErr) {
