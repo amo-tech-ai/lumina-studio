@@ -1,5 +1,5 @@
--- IPI-25 follow-up: editor+ (or brand creator) can INSERT brand_scores.
--- SELECT/UPDATE remain is_org_member (IPI-46). INSERT was creator-only (user_id).
+-- Repair remote: 20260627130000 may have applied is_org_member-only INSERT.
+-- Tighten to editor+ via is_org_editor_or_above, keep creator (user_id) fallback.
 
 create or replace function public.is_org_editor_or_above(p_org_id uuid)
 returns boolean

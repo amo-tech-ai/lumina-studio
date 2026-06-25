@@ -499,7 +499,7 @@ try {
     console.log("skip: brand_crawls RLS insert probes (no service role)");
   }
 
-  // org members (any role) can insert/upsert brand_scores — is_org_member has no role filter
+  // brand_scores INSERT: editor+ or brand creator; viewers denied
   const { error: viewerMemberErr } = await userA.client.from("org_members").insert({
     org_id: orgAId,
     user_id: userB.user.id,
@@ -512,9 +512,31 @@ try {
     score_type: "visual",
     score: 70,
   });
-  assert(!viewerScoreInsertErr, "org viewer inserts brand_score on org brand");
+  assert(!!viewerScoreInsertErr, "org viewer cannot insert brand_score on org brand");
 
-  const { data: memberUpsert, error: memberUpsertErr } = await userB.client
+  const { error: viewerUpsertErr } = await userB.client
+    .from("brand_scores")
+    .upsert(
+      { brand_id: brandAId, score_type: "messaging", score: 65 },
+      { onConflict: "brand_id,score_type" },
+    );
+  assert(!!viewerUpsertErr, "org viewer cannot upsert brand_score on org brand");
+
+  const { error: promoteEditorErr } = await userA.client
+    .from("org_members")
+    .update({ role: "editor" })
+    .eq("org_id", orgAId)
+    .eq("user_id", userB.user.id);
+  assert(!promoteEditorErr, "user A promotes user B to org editor");
+
+  const { error: editorScoreInsertErr } = await userB.client.from("brand_scores").insert({
+    brand_id: brandAId,
+    score_type: "visual",
+    score: 70,
+  });
+  assert(!editorScoreInsertErr, "org editor inserts brand_score on org brand");
+
+  const { data: editorUpsert, error: editorUpsertErr } = await userB.client
     .from("brand_scores")
     .upsert(
       { brand_id: brandAId, score_type: "visual", score: 72 },
@@ -522,10 +544,10 @@ try {
     )
     .select("id, score");
   assert(
-    !memberUpsertErr &&
-      (memberUpsert ?? []).length === 1 &&
-      memberUpsert[0].score === 72,
-    "org viewer upserts brand_score on org brand",
+    !editorUpsertErr &&
+      (editorUpsert ?? []).length === 1 &&
+      editorUpsert[0].score === 72,
+    "org editor upserts brand_score on org brand",
   );
 } catch (err) {
   fail(err instanceof Error ? err.message : String(err));
