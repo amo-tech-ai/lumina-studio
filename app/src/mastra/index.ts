@@ -3,6 +3,7 @@ import { visualIdentityAgent, socialDiscoveryAgent } from "./agents";
 import { durableAgents } from "./durable";
 import { ConsoleLogger, LogLevel } from "@mastra/core/logger";
 import { getMastraStorage } from "./storage";
+import { brandApprovalWorkflow } from "./workflows";
 
 const VALID_LOG_LEVELS: LogLevel[] = ["debug", "info", "warn", "error"];
 const rawLogLevel = process.env.LOG_LEVEL;
@@ -43,6 +44,9 @@ export function getMastra(): Mastra {
     _mastra = new Mastra({
       agents,
       storage: getMastraStorage(),
+      workflows: {
+        brandApprovalWorkflow,
+      },
       logger: new ConsoleLogger({
         level: LOG_LEVEL,
       }),
