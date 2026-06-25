@@ -46,6 +46,14 @@ describe("LoginForm — Supabase auth wiring (IPI2-127)", () => {
     await user.click(submit);
   }
 
+  it("shows a Google OAuth failure when ?error=auth is present", async () => {
+    window.history.replaceState({}, "", "/login?error=auth");
+
+    render(<LoginForm />);
+
+    expect((await screen.findByRole("alert")).textContent).toMatch(/google sign-in/i);
+  });
+
   it("redirects to /app after a successful sign-in", async () => {
     signInWithPassword.mockResolvedValue({ error: null });
 

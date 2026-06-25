@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { accessTokenFromCookieString } from "@/lib/auth";
+import { copyResponseCookies, updateSession } from "@/lib/supabase/session";
 
 // IPI2-127 (AIOR-002b) — operator page gate. Blocks unauthenticated access to
 // /app/* by requiring a Supabase session cookie that DECODES to a JWT-shaped
@@ -10,9 +11,22 @@ import { accessTokenFromCookieString } from "@/lib/auth";
 //
 // Flag-gated by OPERATOR_AUTH_ENABLED so it stays OFF until login creates a real
 // session — turning it on before that would lock every operator out.
-export function proxy(request: NextRequest) {
+//
+// All matched routes also run updateSession() so OAuth PKCE cookies refresh
+// correctly across marketing + operator surfaces.
+export async function proxy(request: NextRequest) {
+  const sessionResponse = await updateSession(request);
+
   if (process.env.OPERATOR_AUTH_ENABLED !== "true") {
-    return NextResponse.next();
+    return sessionResponse;
+  }
+
+  const isOperatorRoute =
+    request.nextUrl.pathname === "/app" ||
+    request.nextUrl.pathname.startsWith("/app/");
+
+  if (!isOperatorRoute) {
+    return sessionResponse;
   }
 
   const cookieString = request.cookies
@@ -25,18 +39,24 @@ export function proxy(request: NextRequest) {
   if (!hasValidSession) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
-    // Preserve the full original target (path + query) so the user lands back
-    // exactly where they were after login.
     url.searchParams.set(
       "redirect",
       request.nextUrl.pathname + request.nextUrl.search,
     );
-    return NextResponse.redirect(url);
+    const redirect = NextResponse.redirect(url);
+    copyResponseCookies(sessionResponse, redirect);
+    return redirect;
   }
 
-  return NextResponse.next();
+  return sessionResponse;
 }
 
 export const config = {
-  matcher: ["/app/:path*"],
+  matcher: [
+    /*
+     * Match all paths except static assets so Supabase session cookies refresh
+     * on /login, /auth/callback, /app/*, and API routes.
+     */
+    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+  ],
 };

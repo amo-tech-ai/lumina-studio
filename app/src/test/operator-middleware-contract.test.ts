@@ -2,6 +2,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
+import { config } from "../proxy";
 
 // IPI2-127 — proxy.ts is tested in isolation, but it only protects /app/* when
 // wired into Next.js middleware. This contract test fails if the gate is
@@ -17,9 +18,14 @@ describe("operator middleware — wiring contract (IPI2-127)", () => {
     expect(existsSync(MIDDLEWARE)).toBe(false);
   });
 
-  it("proxy.ts exports the /app/* matcher and a handler", () => {
+  it("proxy.ts exports a broad matcher and an async handler", () => {
     const src = readFileSync(PROXY, "utf8");
-    expect(src).toMatch(/export function proxy/);
-    expect(src).toMatch(/matcher:\s*\["\/app\/:path\*"\]/);
+    expect(src).toMatch(/export async function proxy/);
+    expect(src).toMatch(
+      /const\s+sessionResponse\s*=\s*await\s+updateSession\s*\(\s*request\s*\)/,
+    );
+    expect(config.matcher).toEqual([
+      "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+    ]);
   });
 });
