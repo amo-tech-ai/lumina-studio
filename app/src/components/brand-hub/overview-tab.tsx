@@ -48,11 +48,7 @@ const DEFAULT_ACTIONS = [
 const RecommendedActionsPanel = ({ services }: { services?: string[] }) => {
   const actions =
     services && services.length > 0
-      ? services.slice(0, 3).map((s) => {
-          const word = s.trim().split(/\s+/)[0].toLowerCase();
-          const match = word ? DEFAULT_ACTIONS.find((a) => a.label.toLowerCase().includes(word)) : undefined;
-          return match ?? { label: s.trim(), href: "/app", hint: `AI-recommended: ${s.trim()}` };
-        })
+      ? services.slice(0, 3).map((s) => ({ label: s.trim(), href: "/app", hint: `AI-recommended: ${s.trim()}` }))
       : DEFAULT_ACTIONS;
   return (
     <section className="rounded-2xl border border-[#E8E0D8] bg-white p-5">
