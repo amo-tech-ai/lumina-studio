@@ -1,0 +1,40 @@
+app/src/app/auth/callback/route.test.ts
+  s_ea46f8c56d53f8::t_686313c121f636 55-68
+  s_ea46f8c56d53f8::t_93fe904679ed5b 100-122
+app/src/proxy.ts
+  s_ea46f8c56d53f8::t_e5aad876504d58 24-28
+app/src/test/operator-middleware-contract.test.ts
+  s_ea46f8c56d53f8::t_eb025cd829a588 27-29
+  s_ea46f8c56d53f8::t_ea480403ef0b33 5
+  s_ea46f8c56d53f8::t_309045e5564dda 24-26
+app/src/proxy.test.ts
+  s_ea46f8c56d53f8::t_def0584692fad2 122-128
+app/src/app/auth/callback/route.ts
+  s_ea46f8c56d53f8::t_d3da31ea174435 15-29,32,39,41
+  s_ea46f8c56d53f8::t_4d6199c4c84a67 3
+  s_ea46f8c56d53f8::t_77d5b7673d2a64 101-103
+  s_ea46f8c56d53f8::t_6571ba65b34161 4
+app/src/lib/supabase/session.ts
+  s_ea46f8c56d53f8::t_456ecfd540e760 50-54
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.13",
+  "base_commit_sha": "38c981bb5533d659d1ff6ca60ab9aeb88bbdb5f9",
+  "prompts": {},
+  "humans": {
+    "h_d382fbec1d5b46": {
+      "author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  },
+  "sessions": {
+    "s_ea46f8c56d53f8": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "dd9a0aea-4d97-4ca9-a270-775e1d8e9728",
+        "model": "default"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
