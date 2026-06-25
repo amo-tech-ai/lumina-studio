@@ -1,0 +1,29 @@
+app/src/lib/copilot-tool-presentation.ts
+  s_ea46f8c56d53f8::t_0b61f4dac4b40e 26-47
+app/src/components/copilot/copilot-tool-presentation.tsx
+  s_ea46f8c56d53f8::t_3669eb7fd84aa1 12
+  s_ea46f8c56d53f8::t_f74d0d7ba6efdd 61
+app/src/test/copilot-tool-presentation.test.ts
+  s_ea46f8c56d53f8::t_46e2a8ed7d66ca 1,7,28,35-60,64-73,75,78-82
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.13",
+  "base_commit_sha": "9e062918af552518bc144df809f4069b56c6cd13",
+  "prompts": {},
+  "humans": {
+    "h_d382fbec1d5b46": {
+      "author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  },
+  "sessions": {
+    "s_ea46f8c56d53f8": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "dd9a0aea-4d97-4ca9-a270-775e1d8e9728",
+        "model": "default"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
