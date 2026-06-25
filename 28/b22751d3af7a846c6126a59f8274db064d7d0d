@@ -1,0 +1,28 @@
+tasks/wireframes-ipix/ipi-33-test-report.wire
+  s_1ee6d41c106a00::t_7ceae2993e2d08 1-81
+docs/linear/issues/IPI-33-IPI-BI-010.md
+  s_1ee6d41c106a00::t_6479ed052534be 1-219,227-229,234-280
+  s_1ee6d41c106a00::t_be338750ec40ea 220-226,230-233
+src/test/brand-intelligence.int.test.ts
+  s_1ee6d41c106a00::t_ab7897be2a57bc 1-215
+docs/linear/issues/ARCHIVE-IPI-33-PLT-007.md
+  s_1ee6d41c106a00::t_5dcca0a54344be 1-63
+app/src/test/brand-pipeline.int.test.ts
+  s_1ee6d41c106a00::t_b2950123c4756f 1-141
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.13",
+  "base_commit_sha": "28b22751d3af7a846c6126a59f8274db064d7d0d",
+  "prompts": {},
+  "sessions": {
+    "s_1ee6d41c106a00": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_1008d1b38ffeXKx1F8jeq6pBWL",
+        "model": "qwen/qwen3.5-plus-20260420"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
