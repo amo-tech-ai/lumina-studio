@@ -9,4 +9,6 @@ const ACRONYMS = new Set(["dna"]);
 export const scoreLabel = (type: string) =>
   type
     .replace(/_/g, " ")
-    .replace(/\b\w+\b/g, (w) => (ACRONYMS.has(w) ? w.toUpperCase() : w.charAt(0).toUpperCase() + w.slice(1)));
+    .replace(/\b\w+\b/g, (w) =>
+      ACRONYMS.has(w.toLowerCase()) ? w.toUpperCase() : w.charAt(0).toUpperCase() + w.slice(1),
+    );

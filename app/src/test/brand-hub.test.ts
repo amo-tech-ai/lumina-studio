@@ -22,6 +22,7 @@ describe("scoreColor", () => {
 describe("scoreLabel", () => {
   it("formats dna_readiness with DNA acronym", () => {
     expect(scoreLabel("dna_readiness")).toBe("DNA Readiness");
+    expect(scoreLabel("Dna_readiness")).toBe("DNA Readiness");
   });
 
   it("formats multi-word types", () => {
