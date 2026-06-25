@@ -1,0 +1,23 @@
+scripts/check-client-env.mjs
+  s_4ffc3bfca8d635::t_8f90148d0dce25 32,39
+app/src/app/(operator)/app/brand/page.tsx
+  s_4ffc3bfca8d635::t_9cdba67c3b90bf 3-4
+app/src/app/(operator)/app/brand/[id]/page.tsx
+  s_4ffc3bfca8d635::t_f181996208a3df 3-4
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.13",
+  "base_commit_sha": "9d530c9668de788a8c3424ec20a6d14e981e4c52",
+  "prompts": {},
+  "sessions": {
+    "s_4ffc3bfca8d635": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "d421b6b8-4307-4bc8-94d4-f836cb9e7997",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
