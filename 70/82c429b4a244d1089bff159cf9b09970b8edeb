@@ -1,0 +1,24 @@
+app/src/mastra/index.ts
+  s_3020ae9bbfd10a::t_a3b05923df1834 3
+  s_3020ae9bbfd10a::t_ad9873a41f194a 16
+app/src/mastra/durable.ts
+  s_3020ae9bbfd10a::t_eba8c99ebf04da 1-11
+app/src/mastra/durable.test.ts
+  s_3020ae9bbfd10a::t_91f52aa9edc4d3 1-49
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.13",
+  "base_commit_sha": "7082c429b4a244d1089bff159cf9b09970b8edeb",
+  "prompts": {},
+  "sessions": {
+    "s_3020ae9bbfd10a": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_0ff65c228ffeGEMsCp8aRXhsSZ",
+        "model": "deepseek-v4-flash-free"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
