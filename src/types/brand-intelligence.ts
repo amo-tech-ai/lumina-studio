@@ -7,6 +7,14 @@ export type BrandScoreRow = {
   id: string;
   score_type: string;
   score: number;
+  details?: {
+    confidence?: number;
+    evidence?: string[];
+    source?: string;
+    url?: string;
+  };
+  score_version?: number;
+  source?: string;
 };
 
 export type BrandIntelligenceResponse = {
