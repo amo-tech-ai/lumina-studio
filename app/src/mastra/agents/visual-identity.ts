@@ -35,7 +35,7 @@ function withTimeout(ms: number): { signal: AbortSignal; cancel: () => void } {
   return { signal: controller.signal, cancel: () => clearTimeout(timer) };
 }
 
-async function captureScreenshot(homepageUrl: string): Promise<Uint8Array | null> {
+async function captureScreenshot(homepageUrl: string): Promise<Buffer | null> {
   const apiKey = process.env.FIRECRAWL_API_KEY;
   if (!apiKey) return null;
   const { signal, cancel } = withTimeout(FETCH_TIMEOUT_MS);
@@ -51,7 +51,7 @@ async function captureScreenshot(homepageUrl: string): Promise<Uint8Array | null
     const b64 = data?.data?.screenshot;
     if (!b64) return null;
     const stripped = b64.replace(/^data:image\/\w+;base64,/, "");
-    return Uint8Array.from(atob(stripped), (c) => c.charCodeAt(0));
+    return Buffer.from(stripped, "base64");
   } catch {
     return null;
   } finally {
@@ -59,7 +59,7 @@ async function captureScreenshot(homepageUrl: string): Promise<Uint8Array | null
   }
 }
 
-async function uploadToCloudinary(image: Uint8Array, brandId: string): Promise<string | null> {
+async function uploadToCloudinary(image: Buffer, brandId: string): Promise<string | null> {
   const cloudName = process.env.CLOUDINARY_CLOUD_NAME;
   const apiKey = process.env.CLOUDINARY_API_KEY;
   const apiSecret = process.env.CLOUDINARY_API_SECRET;
@@ -80,7 +80,9 @@ async function uploadToCloudinary(image: Uint8Array, brandId: string): Promise<s
       .digest("hex");
 
     const form = new FormData();
-    form.append("file", new Blob([image.buffer as ArrayBuffer], { type: "image/png" }), "screenshot.png");
+    // Slice to get a standalone ArrayBuffer (avoids pooled-buffer aliasing and satisfies BlobPart types)
+    const ab = image.buffer.slice(image.byteOffset, image.byteOffset + image.byteLength) as ArrayBuffer;
+    form.append("file", new Blob([ab], { type: "image/png" }), "screenshot.png");
     form.append("public_id", publicId);
     form.append("timestamp", String(timestamp));
     form.append("api_key", apiKey);
@@ -122,15 +124,17 @@ const extractVisualIdentityTool = createTool({
       process.env.SUPABASE_SERVICE_ROLE_KEY!,
     );
 
-    // Verify brand exists before any service-role writes
+    // ponytail: service-role used here because this tool runs server-side in the Mastra
+    // runtime, gated by withOperatorAuth. Verify org_id presence as ownership sanity check.
     const { data: brand, error: readError } = await supabase
       .from("brands")
-      .select("ai_profile")
+      .select("ai_profile, org_id")
       .eq("id", brandId)
       .maybeSingle();
 
     if (readError) throw new Error(`Failed to load brand: ${readError.message}`);
     if (!brand) throw new Error(`Brand not found: ${brandId}`);
+    if (!brand.org_id) throw new Error(`Brand ${brandId} has no org — cannot verify ownership`);
 
     const screenshot = await captureScreenshot(homepageUrl);
 
@@ -138,7 +142,7 @@ const extractVisualIdentityTool = createTool({
     if (screenshot) {
       const parts: Array<TextPart | ImagePart> = [
         { type: "text", text: `Analyze the visual identity of this brand homepage (${homepageUrl}). Return structured visual identity data.` },
-        { type: "image", image: screenshot.buffer as ArrayBuffer, mediaType: "image/png" },
+        { type: "image", image: screenshot as unknown as Uint8Array, mediaType: "image/png" },
       ];
       userContent = parts;
     } else {
@@ -153,6 +157,8 @@ const extractVisualIdentityTool = createTool({
 
     const screenshotUrl = screenshot ? await uploadToCloudinary(screenshot, brandId) : null;
 
+    // ponytail: read-modify-write is not atomic. Concurrent agents for the same brand
+    // would race; acceptable at current scale. Atomic jsonb_set RPC deferred to IPI-32 workflow.
     const existing = (brand.ai_profile as Record<string, unknown>) ?? {};
     const merged: Record<string, unknown> = {
       ...existing,

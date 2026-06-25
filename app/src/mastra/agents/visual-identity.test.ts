@@ -24,7 +24,7 @@ vi.mock("ai", () => ({
 const mockUpdateEq = vi.fn().mockResolvedValue({ error: null });
 const mockUpdate = vi.fn().mockReturnValue({ eq: mockUpdateEq });
 const mockMaybeSingle = vi.fn().mockResolvedValue({
-  data: { ai_profile: { tagline: "Existing", _lifecycle: "scores_complete" } },
+  data: { ai_profile: { tagline: "Existing", _lifecycle: "scores_complete" }, org_id: "org-uuid-001" },
 });
 const mockSelectEq = vi.fn().mockReturnValue({ maybeSingle: mockMaybeSingle });
 const mockSelect = vi.fn().mockReturnValue({ eq: mockSelectEq });
@@ -50,7 +50,7 @@ describe("visual-identity agent", () => {
     // Re-wire mocks after clearAllMocks
     mockUpdateEq.mockResolvedValue({ error: null });
     mockUpdate.mockReturnValue({ eq: mockUpdateEq });
-    mockMaybeSingle.mockResolvedValue({ data: { ai_profile: { tagline: "Existing", _lifecycle: "scores_complete" } } });
+    mockMaybeSingle.mockResolvedValue({ data: { ai_profile: { tagline: "Existing", _lifecycle: "scores_complete" }, org_id: "org-uuid-001" } });
     mockSelectEq.mockReturnValue({ maybeSingle: mockMaybeSingle });
     mockSelect.mockReturnValue({ eq: mockSelectEq });
     mockFrom.mockReturnValue({ select: mockSelect, update: mockUpdate });
