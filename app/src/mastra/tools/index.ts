@@ -16,6 +16,7 @@ import { generateShotListDraft } from "./generateShotListDraft";
 import { planDeliverables } from "./planDeliverables";
 import { recommendShootType } from "./recommendShootType";
 import { saveApprovedShootDraft } from "./saveApprovedShootDraft";
+import { discoverSocialChannelsTool } from "./social-discovery";
 
 // IPI-148 — SHOOT-AI-001: 7 shoot planner tools for production-planner
 export const agentTools = {
@@ -26,6 +27,7 @@ export const agentTools = {
   approveShotList,
   estimateShootBudget,
   explainShootDnaAlerts,
+  discoverSocialChannels: discoverSocialChannelsTool,
 } as const;
 
 export type AgentToolName = keyof typeof agentTools;

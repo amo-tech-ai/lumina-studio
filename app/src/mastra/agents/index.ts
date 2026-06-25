@@ -54,6 +54,7 @@ When assets are flagged for DNA issues, use explainShootDnaAlerts to surface act
 });
 
 export { publicMarketingAgent } from "./public-marketing-agent";
+export { socialDiscoveryAgent } from "./social-discovery";
 
 export { visualIdentityAgent } from "./visual-identity";
 
