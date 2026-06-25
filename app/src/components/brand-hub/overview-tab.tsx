@@ -7,6 +7,74 @@ type Props = {
   baseScores: BrandScoreDetail[];
 };
 
+// AC1 — Gaps: derived from existing AiProfile fields, no new data needed
+const GapsSection = ({ profile }: { profile: AiProfile }) => {
+  const gaps: { label: string; hint: string }[] = [];
+  if (profile.confidenceScore !== undefined && profile.confidenceScore < 0.6)
+    gaps.push({ label: "Low analysis confidence", hint: `${Math.round(profile.confidenceScore * 100)}% — more web presence may improve accuracy` });
+  if (!profile.instagram_handle)
+    gaps.push({ label: "Weak social presence", hint: "No Instagram handle detected" });
+  if (!profile.evidenceSources || profile.evidenceSources.length < 2)
+    gaps.push({ label: "Limited source coverage", hint: "Fewer than 2 sources found during crawl" });
+  if (!profile.uvp)
+    gaps.push({ label: "UVP not identified", hint: "Unique value proposition missing from web content" });
+  if (gaps.length === 0) return null;
+  return (
+    <section className="rounded-2xl border border-[#FEE2E2] bg-[#FFF8F8] p-5">
+      <h3 className="mb-3 font-serif text-base text-[#1E293B]">Gaps to address</h3>
+      <ul className="space-y-2">
+        {gaps.map((g) => (
+          <li key={g.label} className="flex items-start gap-2">
+            <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-[#DC2626]" aria-hidden />
+            <span className="font-sans text-sm text-[#1E293B]">
+              <strong className="font-medium">{g.label}</strong>
+              <span className="text-[#64748B]"> — {g.hint}</span>
+            </span>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+};
+
+// AC4 — Recommended actions: uses profile.recommendedServices when available
+const DEFAULT_ACTIONS = [
+  { label: "Plan Shoot", href: "/app/shoots", hint: "Schedule a content shoot" },
+  { label: "Create Campaign", href: "/app/campaigns", hint: "Build a campaign brief" },
+  { label: "Analyze Assets", href: "/app/assets", hint: "Score content DNA compliance" },
+];
+
+const RecommendedActionsPanel = ({ services }: { services?: string[] }) => {
+  const actions =
+    services && services.length > 0
+      ? services.slice(0, 3).map((s) => {
+          const match = DEFAULT_ACTIONS.find((a) =>
+            a.label.toLowerCase().includes(s.toLowerCase().split(" ")[0]),
+          );
+          return match ?? { label: s, href: "/app", hint: `AI-recommended: ${s}` };
+        })
+      : DEFAULT_ACTIONS;
+  return (
+    <section className="rounded-2xl border border-[#E8E0D8] bg-white p-5">
+      <h3 className="mb-3 font-serif text-base text-[#1E293B]">Recommended next steps</h3>
+      <div className="grid gap-3 sm:grid-cols-3">
+        {actions.map((a) => (
+          <Link
+            key={a.label}
+            href={a.href}
+            className="group flex flex-col gap-1 rounded-xl border border-[#E8E0D8] p-4 transition-colors hover:border-[#E87C4D]"
+          >
+            <span className="font-sans text-sm font-medium text-[#1E293B] group-hover:text-[#E87C4D]">
+              {a.label}
+            </span>
+            <span className="font-sans text-xs text-[#64748B]">{a.hint}</span>
+          </Link>
+        ))}
+      </div>
+    </section>
+  );
+};
+
 export const OverviewTab = ({ profile, baseScores }: Props) => {
   const scores = baseScores;
 
@@ -54,6 +122,10 @@ export const OverviewTab = ({ profile, baseScores }: Props) => {
           </div>
         </section>
       )}
+
+      <GapsSection profile={profile} />
+
+      <RecommendedActionsPanel services={profile.recommendedServices} />
 
       <BrandHubCTAs />
     </div>
