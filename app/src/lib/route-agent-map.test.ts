@@ -28,5 +28,6 @@ describe("resolveAgentId", () => {
 
   it("does not match partial segment names", () => {
     expect(resolveAgentId("/app/shootsextra")).toBe("production-planner");
+    expect(resolveAgentId("/app/campaignsextra")).toBe("production-planner");
   });
 });
