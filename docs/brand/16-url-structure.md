@@ -130,7 +130,7 @@ Update any `href="/app/brand/${id}"` → `href="/app/brands/${brand.id}-${brand.
 
 ### 6. RLS impact
 
-None — route change is client-side. Supabase RLS still filters by `user_id`; `id` (UUID) remains the key.
+None — route change is client-side. Supabase RLS keys off `brands.id` (UUID); access is org-scoped via `public.is_org_member(org_id)` (IPI-16), not raw `user_id` ownership checks.
 
 ---
 

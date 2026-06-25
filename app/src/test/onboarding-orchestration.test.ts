@@ -103,8 +103,10 @@ describe("onboarding orchestration (IPI-46)", () => {
       ),
       "utf8",
     );
-    const shellIdx = src.indexOf("createOrgAndBrand");
-    const edgeIdx = src.indexOf("invokeBrandIntelligence");
+    const runBlock = src.match(/const runAnalysis = async \(\) => \{[\s\S]*?\n  \};/)?.[0];
+    expect(runBlock).toBeTruthy();
+    const shellIdx = runBlock!.indexOf("await createOrgAndBrand");
+    const edgeIdx = runBlock!.indexOf("await invokeBrandIntelligence");
     expect(shellIdx).toBeGreaterThan(-1);
     expect(edgeIdx).toBeGreaterThan(shellIdx);
     expect(src).not.toMatch(/invoke\("brand-intelligence"/);
