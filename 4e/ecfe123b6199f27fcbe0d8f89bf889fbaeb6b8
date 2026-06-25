@@ -1,0 +1,53 @@
+app/src/mastra/tools/explainShootDnaAlerts.ts
+  s_f122c956685f5d::t_598a94fff23251 39
+  s_a8ff79a3fcfbf6::t_a11845379de78b 1-38,40-55
+app/src/mastra/tools/recommendShootType.ts
+  s_f122c956685f5d::t_598a94fff23251 43
+  s_a8ff79a3fcfbf6::t_90e9a2a5bb7259 53
+  s_a8ff79a3fcfbf6::t_c9f3c1398b6279 1-42,44-52,54-61
+app/src/mastra/tools/estimateShootBudget.ts
+  s_a8ff79a3fcfbf6::t_1c6ddd8972d44c 1-33,35-53
+  s_f122c956685f5d::t_598a94fff23251 34
+app/src/mastra/tools/approveShotList.ts
+  s_f122c956685f5d::t_598a94fff23251 29
+  s_a8ff79a3fcfbf6::t_a4fec3cf5b5ecd 1-28,30-39
+docs/shoot/ipi-148-shoot-planner-agent.md
+  s_a8ff79a3fcfbf6::t_fdd970de3d5ac4 1-80
+app/src/mastra/tools/generateShotListDraft.ts
+  s_f122c956685f5d::t_598a94fff23251 38
+  s_a8ff79a3fcfbf6::t_b4b8b83b56e6e4 1-37,39-68
+app/src/mastra/tools/saveApprovedShootDraft.ts
+  s_f122c956685f5d::t_598a94fff23251 27
+  s_a8ff79a3fcfbf6::t_41f8a4b51347c6 1-26,28-37
+app/src/mastra/agents/index.ts
+  s_a8ff79a3fcfbf6::t_ab06aa6d4d52c1 27-39
+app/src/mastra/tools/planDeliverables.ts
+  s_f122c956685f5d::t_598a94fff23251 51
+  s_a8ff79a3fcfbf6::t_859c74c5b78572 1-50,52-63
+app/src/mastra/tools/index.ts
+  s_a8ff79a3fcfbf6::t_56c3c86e302272 12-29
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.13",
+  "base_commit_sha": "4eecfe123b6199f27fcbe0d8f89bf889fbaeb6b8",
+  "prompts": {},
+  "sessions": {
+    "s_a8ff79a3fcfbf6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a23755b0-cfc9-4f93-ae6b-754247f21af5",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    },
+    "s_f122c956685f5d": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_0ffb23c8cffefU70iBoyjFpWs6",
+        "model": "deepseek-v4-flash-free"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
