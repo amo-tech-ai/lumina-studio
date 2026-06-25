@@ -1,0 +1,53 @@
+app/src/test/copilot-tool-presentation.test.ts
+  s_ea46f8c56d53f8::t_37cc72dc3ad10b 1-40
+app/src/components/operator-panel/operator-panel.tsx
+  s_ea46f8c56d53f8::t_8e178c921fed9d 14-17
+  s_ea46f8c56d53f8::t_2f57351c35ade8 54-55
+  s_ea46f8c56d53f8::t_27182e4b9eab60 100
+app/src/components/operator-panel/operator-panel.test.ts
+  s_ea46f8c56d53f8::t_cb394fb9e28376 75
+  s_ea46f8c56d53f8::t_072fc489a50e02 67-74,76-77
+app/src/components/marketing/marketing-chat.tsx
+  s_ea46f8c56d53f8::t_b3db791822646c 14-17
+  s_ea46f8c56d53f8::t_7aa112642c88e2 131
+  s_ea46f8c56d53f8::t_0334cb9f5ec8be 98-99
+app/src/components/copilot/copilot-tool-presentation.tsx
+  s_ea46f8c56d53f8::t_3698753e0b2cd4 69-70
+  s_ea46f8c56d53f8::t_cbfeddaaf5814f 1-2,4-12,18-20,22-26,28-40,42-68,71-108
+  s_ea46f8c56d53f8::t_1f7931ef4da691 27
+  s_ea46f8c56d53f8::t_4f31fb50269c79 3
+  s_ea46f8c56d53f8::t_3f596027fd7ee1 13-17
+  s_ea46f8c56d53f8::t_ed0ece84673984 41
+  s_ea46f8c56d53f8::t_4f61b650c01482 21
+app/src/lib/copilot-tool-presentation.ts
+  s_ea46f8c56d53f8::t_d32dbc254532e8 1-38
+app/src/lib/copilot-debug.ts
+  s_ea46f8c56d53f8::t_81967c990ec5f8 1-4
+app/.env.example
+  s_ea46f8c56d53f8::t_09a127cbc5a38b 22-24
+app/src/components/marketing/marketing-chat.render.test.tsx
+  s_ea46f8c56d53f8::t_52375aa2e0e0fc 17
+app/src/components/marketing/marketing-chat.test.tsx
+  s_ea46f8c56d53f8::t_3efd58386e1bc4 169-178
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.13",
+  "base_commit_sha": "44ba2d32ddd33717848ba2f6d874b5207f0bd61f",
+  "prompts": {},
+  "humans": {
+    "h_d382fbec1d5b46": {
+      "author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  },
+  "sessions": {
+    "s_ea46f8c56d53f8": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "dd9a0aea-4d97-4ca9-a270-775e1d8e9728",
+        "model": "default"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
