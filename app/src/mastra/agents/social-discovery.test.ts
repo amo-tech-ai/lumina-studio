@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 // Mock @supabase/supabase-js before importing the module
 vi.mock("@supabase/supabase-js", () => ({
@@ -64,11 +64,22 @@ function makeMockSupabase(overrides: Record<string, unknown> = {}) {
   return { from: fromMock, _upsertMock: upsertMock, _insertMock: insertMock, ...overrides };
 }
 
+const origEnv: Record<string, string | undefined> = {};
+
 beforeEach(() => {
   vi.clearAllMocks();
+  origEnv.NEXT_PUBLIC_SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  origEnv.SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  origEnv.GEMINI_API_KEY = process.env.GEMINI_API_KEY;
   process.env.NEXT_PUBLIC_SUPABASE_URL = "https://test.supabase.co";
   process.env.SUPABASE_SERVICE_ROLE_KEY = "test-service-key";
   process.env.GEMINI_API_KEY = "test-gemini-key";
+});
+
+afterEach(() => {
+  process.env.NEXT_PUBLIC_SUPABASE_URL = origEnv.NEXT_PUBLIC_SUPABASE_URL;
+  process.env.SUPABASE_SERVICE_ROLE_KEY = origEnv.SUPABASE_SERVICE_ROLE_KEY;
+  process.env.GEMINI_API_KEY = origEnv.GEMINI_API_KEY;
 });
 
 describe("discoverSocialChannels tool", () => {
@@ -99,9 +110,10 @@ describe("discoverSocialChannels tool", () => {
           },
         ],
       },
-    } as unknown);
+    } as unknown as Awaited<ReturnType<typeof generateObject>>);
 
-    const result = await discoverSocialChannels.execute!({ brandId: BRAND_ID });
+    // @ts-expect-error Mastra execute requires context arg at runtime; undefined is safe in unit tests
+    const result = await discoverSocialChannels.execute!({ brandId: BRAND_ID }) as { channelsFound: number; status: string; channels: unknown[] };
 
     expect(result.channelsFound).toBe(2);
     expect(result.status).toBe("complete");
@@ -137,10 +149,12 @@ describe("discoverSocialChannels tool", () => {
           },
         ],
       },
-    } as unknown);
+    } as unknown as Awaited<ReturnType<typeof generateObject>>);
 
     // Run twice — upsert should be called both times (not error on duplicate)
+    // @ts-expect-error Mastra execute requires context arg at runtime; undefined is safe in unit tests
     await discoverSocialChannels.execute!({ brandId: BRAND_ID });
+    // @ts-expect-error Mastra execute requires context arg at runtime; undefined is safe in unit tests
     await discoverSocialChannels.execute!({ brandId: BRAND_ID });
 
     expect(mockSupabase._upsertMock).toHaveBeenCalledTimes(2);
@@ -155,7 +169,8 @@ describe("discoverSocialChannels tool", () => {
     vi.mocked(createClient).mockReturnValue(mockSupabase as unknown as ReturnType<typeof createClient>);
     vi.mocked(generateObject).mockRejectedValue(new Error("Gemini quota exceeded"));
 
-    const result = await discoverSocialChannels.execute!({ brandId: BRAND_ID });
+    // @ts-expect-error Mastra execute requires context arg at runtime; undefined is safe in unit tests
+    const result = await discoverSocialChannels.execute!({ brandId: BRAND_ID }) as { channelsFound: number; status: string };
 
     expect(result.status).toBe("failed");
     expect(result.channelsFound).toBe(0);

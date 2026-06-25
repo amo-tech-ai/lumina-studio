@@ -52,7 +52,7 @@ export const discoverSocialChannels = createTool({
     const startedAt = new Date().toISOString();
 
     // Load brand + latest crawl data
-    const [{ data: brand, error: brandErr }, { data: crawlRows }] =
+    const [{ data: brand, error: brandErr }, { data: crawlRows, error: crawlErr }] =
       await Promise.all([
         supabase
           .from("brands")
@@ -69,6 +69,10 @@ export const discoverSocialChannels = createTool({
 
     if (brandErr || !brand) {
       throw new Error(`Brand ${brandId} not found: ${brandErr?.message}`);
+    }
+
+    if (crawlErr) {
+      throw new Error(`Failed to load crawl data for brand ${brandId}: ${crawlErr.message}`);
     }
 
     const crawlSummary = crawlRows?.[0]
@@ -104,12 +108,19 @@ Return only platforms where you found a likely official account.`;
 
     try {
       const result = await generateObject({
-        // ponytail: useSearchGrounding enables Google Search for verification without paid APIs
-        model: google(GEMINI_MODEL, { useSearchGrounding: true }),
+        // ponytail: search grounding via providerOptions when @ai-sdk/google v3 API is confirmed
+        model: google(GEMINI_MODEL),
         schema: DiscoveryResultSchema,
         prompt,
       });
-      channels = result.object.channels;
+      // Deduplicate by platform, keep only verified entries with a URL or handle
+      channels = Array.from(
+        new Map(
+          result.object.channels
+            .filter((ch) => ch.verified && (ch.url || ch.handle))
+            .map((ch) => [ch.platform, ch] as [string, typeof ch]),
+        ).values(),
+      );
     } catch (err) {
       status = "failed";
       errorMessage = err instanceof Error ? err.message : String(err);
@@ -136,20 +147,24 @@ Return only platforms where you found a likely official account.`;
         .upsert(rows, { onConflict: "brand_id,platform" });
 
       if (upsertErr) {
-        console.error("brand_social_channels upsert failed:", upsertErr.message);
+        status = "failed";
+        errorMessage = `brand_social_channels upsert failed: ${upsertErr.message}`;
       }
     }
 
     // Log run to brand_agent_results
-    await supabase.from("brand_agent_results").insert({
+    const { error: resultErr } = await supabase.from("brand_agent_results").insert({
       brand_id: brandId,
       agent_name: "social-discovery",
       status,
-      output: { channels_found: channels.length, channels },
-      ...(errorMessage ? {} : {}),
+      output: { channels_found: channels.length, channels, ...(errorMessage ? { error: errorMessage } : {}) },
       started_at: startedAt,
       completed_at: completedAt,
     });
+
+    if (resultErr) {
+      throw new Error(`brand_agent_results insert failed: ${resultErr.message}`);
+    }
 
     return {
       brandId,
