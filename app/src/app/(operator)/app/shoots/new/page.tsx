@@ -495,9 +495,27 @@ export default function NewShootPage() {
                   {state.shots.map((s) => (
                     <tr key={s.shot_number} className="border-b border-[#E8E0D8] last:border-0">
                       <td className="px-4 py-2.5 font-sans text-xs text-[#94A3B8]">{String(s.shot_number).padStart(2, "0")}</td>
-                      <td className="px-4 py-2.5 font-sans text-sm text-[#1E293B]">{s.description}</td>
-                      <td className="px-4 py-2.5 font-sans text-xs text-[#64748B]">{s.angle}</td>
-                      <td className="px-4 py-2.5 font-sans text-xs text-[#64748B]">{s.lighting}</td>
+                      <td className="px-2 py-1.5">
+                        <input
+                          className="w-full rounded border border-transparent px-2 py-1 font-sans text-sm text-[#1E293B] hover:border-[#E8E0D8] focus:border-[#E87C4D] outline-none"
+                          value={s.description}
+                          onChange={(e) => update({ shots: state.shots.map((x) => x.shot_number === s.shot_number ? { ...x, description: e.target.value } : x) })}
+                        />
+                      </td>
+                      <td className="px-2 py-1.5">
+                        <input
+                          className="w-24 rounded border border-transparent px-2 py-1 font-sans text-xs text-[#64748B] hover:border-[#E8E0D8] focus:border-[#E87C4D] outline-none"
+                          value={s.angle}
+                          onChange={(e) => update({ shots: state.shots.map((x) => x.shot_number === s.shot_number ? { ...x, angle: e.target.value } : x) })}
+                        />
+                      </td>
+                      <td className="px-2 py-1.5">
+                        <input
+                          className="w-36 rounded border border-transparent px-2 py-1 font-sans text-xs text-[#64748B] hover:border-[#E8E0D8] focus:border-[#E87C4D] outline-none"
+                          value={s.lighting}
+                          onChange={(e) => update({ shots: state.shots.map((x) => x.shot_number === s.shot_number ? { ...x, lighting: e.target.value } : x) })}
+                        />
+                      </td>
                     </tr>
                   ))}
                 </tbody>
