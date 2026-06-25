@@ -1,5 +1,17 @@
 import { describe, it, expect } from "vitest";
 import { computeDnaScore } from "@/lib/brand-scores";
+import {
+  buildActivityTimeline,
+  filterDisplayScores,
+  formatBrandHubDateTime,
+  formatInstagramHandle,
+  hasMeaningfulProfile,
+  hubTabLabel,
+  intakeStatusLabel,
+  isReAnalyzeDisabled,
+  normalizeDisplayScore,
+  parseAiProfile,
+} from "@/lib/brand-hub";
 import { scoreColor, scoreLabel } from "@/lib/brand-utils";
 
 describe("scoreColor", () => {
@@ -71,6 +83,120 @@ describe("ai_profile field safety", () => {
     expect(computeDnaScore([])).toBe(0);
     expect(computeDnaScore(null)).toBe(0);
   });
+
+  it("DNA score ignores dna_readiness row", () => {
+    const dna = computeDnaScore([
+      { score_type: "visual", score: 80 },
+      { score_type: "audience", score: 80 },
+      { score_type: "consistency", score: 80 },
+      { score_type: "commerce_readiness", score: 80 },
+      { score_type: "dna_readiness", score: 10 },
+    ]);
+    expect(dna).toBe(80);
+  });
+});
+
+describe("brand-hub helpers", () => {
+  it("hubTabLabel returns human labels", () => {
+    expect(hubTabLabel("overview")).toBe("Overview");
+    expect(hubTabLabel("scores")).toBe("Scores");
+  });
+
+  it("intakeStatusLabel maps known statuses", () => {
+    expect(intakeStatusLabel("ready")).toBe("Ready");
+    expect(intakeStatusLabel("failed")).toBe("Failed");
+  });
+
+  it("isReAnalyzeDisabled during running states", () => {
+    expect(isReAnalyzeDisabled("analysis_running")).toBe(true);
+    expect(isReAnalyzeDisabled("ready")).toBe(false);
+  });
+
+  it("filterDisplayScores removes dna_readiness", () => {
+    const filtered = filterDisplayScores([
+      { score_type: "visual", score: 70 },
+      { score_type: "dna_readiness", score: 99 },
+    ]);
+    expect(filtered).toHaveLength(1);
+    expect(filtered[0].score_type).toBe("visual");
+  });
+
+  it("parseAiProfile and hasMeaningfulProfile", () => {
+    expect(hasMeaningfulProfile(parseAiProfile({}))).toBe(false);
+    expect(hasMeaningfulProfile(parseAiProfile({ tagline: "Hi" }))).toBe(true);
+    expect(hasMeaningfulProfile(parseAiProfile({ _error: "x" }))).toBe(false);
+    expect(hasMeaningfulProfile(parseAiProfile({ tagline: "" }))).toBe(false);
+    expect(hasMeaningfulProfile(parseAiProfile({ tagline: null }))).toBe(false);
+    expect(hasMeaningfulProfile(parseAiProfile({ visualIdentity: {} }))).toBe(false);
+  });
+
+  it("parseAiProfile drops non-array chip fields from malformed LLM output", () => {
+    const profile = parseAiProfile({
+      values: "Sustainability",
+      contentPillars: 42,
+      recommendedServices: { foo: "bar" },
+      evidenceSources: "https://example.com",
+      competitorSignals: null,
+      visualIdentity: { colors: "not-an-array" },
+    });
+    expect(profile.values).toBeUndefined();
+    expect(profile.contentPillars).toBeUndefined();
+    expect(profile.recommendedServices).toBeUndefined();
+    expect(profile.evidenceSources).toBeUndefined();
+    expect(profile.competitorSignals).toBeUndefined();
+    expect(profile.visualIdentity?.colors).toBeUndefined();
+  });
+
+  it("parseAiProfile keeps valid string arrays", () => {
+    const profile = parseAiProfile({
+      values: ["Craft", "Quality"],
+      visualIdentity: { colors: ["#111", "#eee"] },
+    });
+    expect(profile.values).toEqual(["Craft", "Quality"]);
+    expect(profile.visualIdentity?.colors).toEqual(["#111", "#eee"]);
+  });
+
+  it("buildActivityTimeline omits completed while analysis_running", () => {
+    const events = buildActivityTimeline({
+      createdAt: "2026-01-01T00:00:00Z",
+      intakeStatus: "analysis_running",
+      profile: { analyzedAt: "2026-01-02T00:00:00Z" },
+    });
+    expect(events.some((e) => e.label === "Analysis completed")).toBe(false);
+    expect(events.some((e) => e.label === "Analysis started")).toBe(true);
+  });
+
+  it("buildActivityTimeline includes failure detail", () => {
+    const events = buildActivityTimeline({
+      createdAt: "2026-01-01T00:00:00Z",
+      intakeStatus: "failed",
+      profile: { _error: "Gemini timeout" },
+    });
+    expect(events.some((e) => e.id === "failed")).toBe(true);
+    expect(events.find((e) => e.id === "failed")?.detail).toBe("Gemini timeout");
+  });
+
+  it("formatBrandHubDateTime uses fixed locale and rejects invalid input", () => {
+    const formatted = formatBrandHubDateTime("2026-06-24T12:00:00Z");
+    expect(formatted).toContain("2026-06-24");
+    expect(formatted).toMatch(/12:00/);
+    expect(formatBrandHubDateTime("not-a-date")).toBeNull();
+  });
+
+  it("formatInstagramHandle strips duplicate leading at-signs", () => {
+    expect(formatInstagramHandle("@maison")).toBe("@maison");
+    expect(formatInstagramHandle("maison")).toBe("@maison");
+    expect(formatInstagramHandle("@@maison")).toBe("@maison");
+    expect(formatInstagramHandle("   ")).toBe("");
+  });
+
+  it("normalizeDisplayScore clamps and handles invalid values", () => {
+    expect(normalizeDisplayScore(150)).toBe(100);
+    expect(normalizeDisplayScore(-5)).toBe(0);
+    expect(normalizeDisplayScore("72.5")).toBe(72.5);
+    expect(normalizeDisplayScore("nope")).toBe(0);
+    expect(normalizeDisplayScore(Number.NaN)).toBe(0);
+  });
 });
 
 // Route contract: page file must exist and use maybeSingle + notFound
@@ -91,5 +217,8 @@ describe("brand hub route contract", () => {
     expect(src).toMatch(/computeDnaScore/);
     expect(src).toMatch(/brand_scores/);
     expect(src).toMatch(/organizations/);
+    expect(src).toMatch(/intake_status/);
+    expect(src).toMatch(/BrandHubClient/);
+    expect(src).toMatch(/filterDisplayScores/);
   });
 });
