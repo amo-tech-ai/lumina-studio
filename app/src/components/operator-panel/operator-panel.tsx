@@ -22,7 +22,7 @@ import styles from "@/components/threads-drawer/threads-drawer.module.css";
 // gets the AI panel + route context — no per-page wiring.
 
 const AGENT_ID = "production-planner";
-const SECTIONS = ["brand", "shoots", "assets", "campaigns", "matching"] as const;
+const SECTIONS = ["brand", "shoots", "assets", "campaigns", "matching", "onboarding"] as const;
 
 export function OperatorPanel({ children }: { children: React.ReactNode }) {
   const [threadId, setThreadId] = useState<string | undefined>(undefined);

@@ -9,6 +9,7 @@ const OPERATOR_SECTIONS = [
   "assets",
   "campaigns",
   "matching",
+  "onboarding",
 ] as const;
 
 const PANEL_SRC = readFileSync(

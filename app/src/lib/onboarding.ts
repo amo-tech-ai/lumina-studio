@@ -49,7 +49,7 @@ export const createOrgAndBrand = async (
       org_id: org.id,
       ai_profile: {
         ...(aiProfile ?? {}),
-        ...(form.instagramHandle ? { instagram_handle: form.instagramHandle } : {}),
+        ...(form.instagramHandle.trim() ? { instagram_handle: form.instagramHandle.trim() } : {}),
         industry: form.industry,
         goal: form.goal,
       },

@@ -4,5 +4,9 @@ export const scoreColor = (score: number) => {
   return "#DC2626";
 };
 
+const ACRONYMS = new Set(["dna"]);
+
 export const scoreLabel = (type: string) =>
-  type.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+  type
+    .replace(/_/g, " ")
+    .replace(/\b\w+\b/g, (w) => (ACRONYMS.has(w) ? w.toUpperCase() : w.charAt(0).toUpperCase() + w.slice(1)));

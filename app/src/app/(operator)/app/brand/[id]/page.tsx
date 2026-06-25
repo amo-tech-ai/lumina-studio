@@ -54,7 +54,7 @@ const BrandPage = async ({ params }: Props) => {
                 {org.name}{org.plan ? ` · ${org.plan}` : ""}
               </p>
             )}
-            {brand.brand_url && (
+            {brand.brand_url && /^https?:\/\//.test(brand.brand_url) && (
               <a
                 href={brand.brand_url}
                 target="_blank"
