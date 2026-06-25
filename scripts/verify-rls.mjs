@@ -556,6 +556,31 @@ try {
     );
   assert(!!viewerUpsertErr, "org viewer cannot upsert brand_score on org brand");
 
+  const { data: dnaBeforeViewerUpdate } = await userA.client
+    .from("brand_scores")
+    .select("score")
+    .eq("brand_id", brandAId)
+    .eq("score_type", "dna_readiness")
+    .maybeSingle();
+  assert(dnaBeforeViewerUpdate?.score === 55, "dna_readiness score baseline for viewer update probe");
+
+  await userB.client
+    .from("brand_scores")
+    .update({ score: 1 })
+    .eq("brand_id", brandAId)
+    .eq("score_type", "dna_readiness");
+
+  const { data: dnaAfterViewerUpdate } = await userA.client
+    .from("brand_scores")
+    .select("score")
+    .eq("brand_id", brandAId)
+    .eq("score_type", "dna_readiness")
+    .maybeSingle();
+  assert(
+    dnaAfterViewerUpdate?.score === 55,
+    "org viewer cannot update brand_score on org brand",
+  );
+
   const { data: dnaBeforeViewerDelete } = await userA.client
     .from("brand_scores")
     .select("id")
@@ -584,6 +609,18 @@ try {
     .eq("org_id", orgAId)
     .eq("user_id", userB.user.id);
   assert(!promoteEditorErr, "user A promotes user B to org editor");
+
+  const { data: editorUpdate, error: editorUpdateErr } = await userB.client
+    .from("brand_scores")
+    .update({ score: 60 })
+    .eq("brand_id", brandAId)
+    .eq("score_type", "dna_readiness")
+    .select("score")
+    .maybeSingle();
+  assert(
+    !editorUpdateErr && editorUpdate?.score === 60,
+    "org editor updates brand_score on org brand",
+  );
 
   const { error: editorScoreInsertErr } = await userB.client.from("brand_scores").insert({
     brand_id: brandAId,
