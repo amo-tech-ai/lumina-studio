@@ -6,6 +6,13 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export type ReanalyzeResult = { ok: true } | { ok: false; error: string };
 
+async function markBrandFailed(
+  supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
+  brandId: string,
+) {
+  await supabase.from("brands").update({ intake_status: "failed" }).eq("id", brandId);
+}
+
 export async function reanalyzeBrand(brandId: string): Promise<ReanalyzeResult> {
   if (!brandId) return { ok: false, error: "Brand id is required" };
 
@@ -41,7 +48,7 @@ export async function reanalyzeBrand(brandId: string): Promise<ReanalyzeResult> 
     .from("brands")
     .update({ intake_status: "analysis_running" })
     .eq("id", brandId)
-    .not("intake_status", "in", '("crawl_running","analysis_running")')
+    .not("intake_status", "in", "(crawl_running,analysis_running)")
     .select("id")
     .maybeSingle();
 
@@ -67,16 +74,14 @@ export async function reanalyzeBrand(brandId: string): Promise<ReanalyzeResult> 
       .eq("id", brandId);
 
     if (readyErr) {
+      await markBrandFailed(supabase, brandId);
       return { ok: false, error: "Analysis finished but status update failed" };
     }
 
     revalidatePath(`/app/brand/${brandId}`);
     return { ok: true };
   } catch (err) {
-    await supabase
-      .from("brands")
-      .update({ intake_status: "failed" })
-      .eq("id", brandId);
+    await markBrandFailed(supabase, brandId);
 
     const message = err instanceof Error ? err.message : "Re-analyze failed";
     return { ok: false, error: message };

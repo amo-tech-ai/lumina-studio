@@ -138,9 +138,70 @@ export const intakeStatusLabel = (status: BrandIntakeStatus | string | null | un
 export const intakeStatusColor = (status: BrandIntakeStatus | string | null | undefined) =>
   INTAKE_COLORS[status as BrandIntakeStatus] ?? "#94A3B8";
 
+const coerceOptionalString = (value: unknown): string | undefined =>
+  typeof value === "string" && value.trim().length > 0 ? value : undefined;
+
+const coerceStringArray = (value: unknown): string[] | undefined => {
+  if (!Array.isArray(value)) return undefined;
+  const items = value.filter(
+    (item): item is string => typeof item === "string" && item.trim().length > 0,
+  );
+  return items.length > 0 ? items : undefined;
+};
+
+const coerceVisualIdentity = (value: unknown): VisualIdentity | undefined => {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return undefined;
+  const row = value as Record<string, unknown>;
+  const visualIdentity: VisualIdentity = {
+    colors: coerceStringArray(row.colors),
+    mood: coerceOptionalString(row.mood),
+    typography: coerceOptionalString(row.typography),
+  };
+  return visualIdentity.colors || visualIdentity.mood || visualIdentity.typography
+    ? visualIdentity
+    : undefined;
+};
+
+export const isNonEmptyStringArray = (value: unknown): value is string[] =>
+  Array.isArray(value) && value.length > 0 && value.every((item) => typeof item === "string");
+
 export const parseAiProfile = (raw: unknown): AiProfile => {
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) return {};
-  return raw as AiProfile;
+  const row = raw as Record<string, unknown>;
+
+  return {
+    name: coerceOptionalString(row.name),
+    tagline: coerceOptionalString(row.tagline),
+    category: coerceOptionalString(row.category),
+    visualIdentity: coerceVisualIdentity(row.visualIdentity),
+    targetAudience: coerceOptionalString(row.targetAudience),
+    sourceUrl: coerceOptionalString(row.sourceUrl),
+    contentPillars: coerceStringArray(row.contentPillars),
+    brandVoice: coerceOptionalString(row.brandVoice),
+    recommendedServices: coerceStringArray(row.recommendedServices),
+    productionReadiness:
+      typeof row.productionReadiness === "number" && Number.isFinite(row.productionReadiness)
+        ? row.productionReadiness
+        : undefined,
+    analyzedAt: coerceOptionalString(row.analyzedAt),
+    mission: coerceOptionalString(row.mission),
+    vision: coerceOptionalString(row.vision),
+    values: coerceStringArray(row.values),
+    uvp: coerceOptionalString(row.uvp),
+    positioning: coerceOptionalString(row.positioning),
+    brandPersonality: coerceOptionalString(row.brandPersonality),
+    confidenceScore:
+      typeof row.confidenceScore === "number" && Number.isFinite(row.confidenceScore)
+        ? row.confidenceScore
+        : undefined,
+    evidenceSources: coerceStringArray(row.evidenceSources),
+    competitorSignals: coerceStringArray(row.competitorSignals),
+    industry: coerceOptionalString(row.industry),
+    goal: coerceOptionalString(row.goal),
+    instagram_handle: coerceOptionalString(row.instagram_handle),
+    _error: coerceOptionalString(row._error),
+    _lifecycle: coerceOptionalString(row._lifecycle),
+  };
 };
 
 export const hasMeaningfulProfile = (profile: AiProfile): boolean =>

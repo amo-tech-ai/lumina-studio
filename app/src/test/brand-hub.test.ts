@@ -130,6 +130,32 @@ describe("brand-hub helpers", () => {
     expect(hasMeaningfulProfile(parseAiProfile({ visualIdentity: {} }))).toBe(false);
   });
 
+  it("parseAiProfile drops non-array chip fields from malformed LLM output", () => {
+    const profile = parseAiProfile({
+      values: "Sustainability",
+      contentPillars: 42,
+      recommendedServices: { foo: "bar" },
+      evidenceSources: "https://example.com",
+      competitorSignals: null,
+      visualIdentity: { colors: "not-an-array" },
+    });
+    expect(profile.values).toBeUndefined();
+    expect(profile.contentPillars).toBeUndefined();
+    expect(profile.recommendedServices).toBeUndefined();
+    expect(profile.evidenceSources).toBeUndefined();
+    expect(profile.competitorSignals).toBeUndefined();
+    expect(profile.visualIdentity?.colors).toBeUndefined();
+  });
+
+  it("parseAiProfile keeps valid string arrays", () => {
+    const profile = parseAiProfile({
+      values: ["Craft", "Quality"],
+      visualIdentity: { colors: ["#111", "#eee"] },
+    });
+    expect(profile.values).toEqual(["Craft", "Quality"]);
+    expect(profile.visualIdentity?.colors).toEqual(["#111", "#eee"]);
+  });
+
   it("buildActivityTimeline omits completed while analysis_running", () => {
     const events = buildActivityTimeline({
       createdAt: "2026-01-01T00:00:00Z",

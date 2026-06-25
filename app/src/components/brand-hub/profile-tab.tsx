@@ -1,5 +1,10 @@
 import type { AiProfile } from "@/lib/brand-hub";
-import { formatBrandHubDateTime, formatInstagramHandle, hasMeaningfulProfile } from "@/lib/brand-hub";
+import {
+  formatBrandHubDateTime,
+  formatInstagramHandle,
+  hasMeaningfulProfile,
+  isNonEmptyStringArray,
+} from "@/lib/brand-hub";
 import { ChipList, ProfileField } from "@/components/brand-hub/profile-field";
 
 type Props = {
@@ -60,34 +65,34 @@ export const ProfileTab = ({ profile }: Props) => {
       {profile.visualIdentity?.typography && (
         <ProfileField label="Typography" value={profile.visualIdentity.typography} />
       )}
-      {profile.visualIdentity?.colors && profile.visualIdentity.colors.length > 0 && (
+      {isNonEmptyStringArray(profile.visualIdentity?.colors) && (
         <ChipList label="Colors" items={profile.visualIdentity.colors} />
       )}
-      {profile.values && profile.values.length > 0 && (
+      {isNonEmptyStringArray(profile.values) && (
         <ChipList
           label="Values"
           items={profile.values}
           className="bg-[#FEF3E8] text-[#E87C4D]"
         />
       )}
-      {profile.contentPillars && profile.contentPillars.length > 0 && (
+      {isNonEmptyStringArray(profile.contentPillars) && (
         <ChipList
           label="Content Pillars"
           items={profile.contentPillars}
           className="bg-[#FEF3E8] text-[#E87C4D]"
         />
       )}
-      {profile.recommendedServices && profile.recommendedServices.length > 0 && (
+      {isNonEmptyStringArray(profile.recommendedServices) && (
         <ChipList
           label="Recommended Services"
           items={profile.recommendedServices}
           className="bg-[#F0FDF4] text-[#059669]"
         />
       )}
-      {profile.evidenceSources && profile.evidenceSources.length > 0 && (
+      {isNonEmptyStringArray(profile.evidenceSources) && (
         <ChipList label="Evidence Sources" items={profile.evidenceSources} />
       )}
-      {profile.competitorSignals && profile.competitorSignals.length > 0 && (
+      {isNonEmptyStringArray(profile.competitorSignals) && (
         <ChipList label="Competitor Signals" items={profile.competitorSignals} />
       )}
       {analyzedLabel && (
