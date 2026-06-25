@@ -1,0 +1,20 @@
+e2e/03-shoot-tools-api.spec.ts
+  s_a8ff79a3fcfbf6::t_312cf3d5dc84bc 19-21
+  s_a8ff79a3fcfbf6::t_dd5b6269b8d597 25
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.13",
+  "base_commit_sha": "443dcf06d98d67b5150be4bb546e6a6da3a7d804",
+  "prompts": {},
+  "sessions": {
+    "s_a8ff79a3fcfbf6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a23755b0-cfc9-4f93-ae6b-754247f21af5",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
