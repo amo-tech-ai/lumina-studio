@@ -1,15 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { computeDnaScore } from "@/lib/brand-scores";
-
-// scoreColor and scoreLabel helpers extracted for unit testing
-const scoreColor = (score: number) => {
-  if (score >= 70) return "#059669";
-  if (score >= 40) return "#D97706";
-  return "#DC2626";
-};
-
-const scoreLabel = (type: string) =>
-  type.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+import { scoreColor, scoreLabel } from "@/lib/brand-utils";
 
 describe("scoreColor", () => {
   it("returns green for score >= 70", () => {
@@ -29,8 +20,8 @@ describe("scoreColor", () => {
 });
 
 describe("scoreLabel", () => {
-  it("formats dna_readiness", () => {
-    expect(scoreLabel("dna_readiness")).toBe("Dna Readiness");
+  it("formats dna_readiness with DNA acronym", () => {
+    expect(scoreLabel("dna_readiness")).toBe("DNA Readiness");
   });
 
   it("formats multi-word types", () => {

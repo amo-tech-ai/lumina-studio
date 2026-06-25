@@ -185,7 +185,7 @@ const OnboardingPage = () => {
             </div>
 
             <button
-              onClick={() => router.push("/app")}
+              onClick={() => router.push("/app?skip=1")}
               className="w-full font-sans text-sm text-[#94A3B8] hover:text-[#64748B] transition-colors text-center pt-1"
             >
               Skip for now

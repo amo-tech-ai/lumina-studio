@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { computeDnaScore } from "@/lib/brand-scores";
+import { scoreColor, scoreLabel } from "@/lib/brand-utils";
 
 interface Props {
   params: Promise<{ id: string }>;
@@ -17,15 +18,6 @@ interface AiProfile {
   visualIdentity?: { colors?: string[]; mood?: string };
   score?: number;
 }
-
-const scoreColor = (score: number) => {
-  if (score >= 70) return "#059669";
-  if (score >= 40) return "#D97706";
-  return "#DC2626";
-};
-
-const scoreLabel = (type: string) =>
-  type.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 
 const ProfileField = ({ label, value }: { label: string; value: string }) => (
   <div>
@@ -70,7 +62,7 @@ const BrandPage = async ({ params }: Props) => {
                 {org.name}{org.plan ? ` · ${org.plan}` : ""}
               </p>
             )}
-            {brand.brand_url && (
+            {brand.brand_url && /^https?:\/\//.test(brand.brand_url) && (
               <a
                 href={brand.brand_url}
                 target="_blank"

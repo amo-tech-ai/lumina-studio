@@ -5,6 +5,7 @@ import { describe, expect, it } from "vitest";
 
 const OPERATOR_SECTIONS = [
   "brand",
+  "onboarding",
   "shoots",
   "assets",
   "campaigns",
