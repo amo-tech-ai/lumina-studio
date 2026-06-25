@@ -38,7 +38,7 @@
 
 **Pros:** UUID is the authoritative key (no slug-rename pain), slug is cosmetic only (ignored or used for display). Works immediately with existing IDs — just pad a `-slug` suffix. No global uniqueness constraint needed.  
 **Cons:** URL is longer; UUID still visible (acceptable — not a secret).  
-**Schema change:** Add `slug` column to `brands` (nullable, non-unique). Route reads `params.brandId` (first segment before `-`) and ignores the rest.  
+**Schema change:** Add `slug` column to `brands` (nullable, non-unique). Route param holds full `uuid-slug` segment; extract UUID via 36-char slice (see §3).  
 **Migration risk:** Very low — slug is purely cosmetic, existing `/app/brand/[id]` links redirect to `/app/brands/[id]-[slug]`.
 
 ---

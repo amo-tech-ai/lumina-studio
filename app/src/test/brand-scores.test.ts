@@ -28,12 +28,12 @@ describe("computeDnaScore", () => {
     expect(computeDnaScore([{ score_type: "dna_readiness", score: 99 }])).toBe(0);
   });
 
-  it("partial base scores use available values only", () => {
+  it("returns 0 when any base score is missing", () => {
     expect(
       computeDnaScore([
         { score_type: "visual", score: 60 },
         { score_type: "audience", score: 80 },
       ]),
-    ).toBe(70);
+    ).toBe(0);
   });
 });

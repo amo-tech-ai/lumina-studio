@@ -192,12 +192,18 @@ try {
   });
   assert(!scoreInsertErr, "user A inserts brand_score for own brand");
 
-  const { error: scoreUpdateErr } = await userA.client
+  const { data: scoreUpdateData, error: scoreUpdateErr } = await userA.client
     .from("brand_scores")
     .update({ score: 55 })
     .eq("brand_id", brandAId)
-    .eq("score_type", "dna_readiness");
-  assert(!scoreUpdateErr, "user A updates own brand_score (upsert path)");
+    .eq("score_type", "dna_readiness")
+    .select("id, score");
+  assert(
+    !scoreUpdateErr &&
+      (scoreUpdateData ?? []).length === 1 &&
+      scoreUpdateData[0].score === 55,
+    "user A updates own brand_score (upsert path)",
+  );
 
   const { data: crossScores } = await userB.client
     .from("brand_scores")
