@@ -1,8 +1,8 @@
 import { Mastra } from "@mastra/core/mastra";
-import { LibSQLStore } from "@mastra/libsql";
 import { visualIdentityAgent, socialDiscoveryAgent } from "./agents";
 import { durableAgents } from "./durable";
 import { ConsoleLogger, LogLevel } from "@mastra/core/logger";
+import { getMastraStorage } from "./storage";
 
 const VALID_LOG_LEVELS: LogLevel[] = ["debug", "info", "warn", "error"];
 const rawLogLevel = process.env.LOG_LEVEL;
@@ -21,10 +21,6 @@ export const agents = {
   "social-discovery": socialDiscoveryAgent,
 };
 
-// Regression guard: fail fast at server start / build if a required agent id is
-// ever renamed or dropped. Without this, a missing id only shows up as a cryptic
-// React "Agent '<id>' not found after runtime sync" overlay at runtime. "default"
-// is mandatory — CopilotKit's prebuilt UI resolves it when no agentId is selected.
 export const REQUIRED_AGENT_IDS = [
   "default",
   "production-planner",
@@ -40,13 +36,17 @@ for (const id of REQUIRED_AGENT_IDS) {
   }
 }
 
-export const mastra = new Mastra({
-  agents,
-  storage: new LibSQLStore({
-    id: "mastra-storage",
-    url: ":memory:",
-  }),
-  logger: new ConsoleLogger({
-    level: LOG_LEVEL,
-  }),
-});
+let _mastra: Mastra | undefined;
+
+export function getMastra(): Mastra {
+  if (!_mastra) {
+    _mastra = new Mastra({
+      agents,
+      storage: getMastraStorage(),
+      logger: new ConsoleLogger({
+        level: LOG_LEVEL,
+      }),
+    });
+  }
+  return _mastra;
+}
