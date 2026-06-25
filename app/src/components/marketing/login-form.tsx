@@ -66,6 +66,7 @@ export function LoginForm() {
         }
       }
       const target = safeRedirect(new URLSearchParams(window.location.search).get("redirect"));
+      router.refresh();
       router.push(target);
     } catch {
       setMessage("Sign-in is unavailable right now. Please try again.");

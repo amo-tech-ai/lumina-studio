@@ -48,7 +48,7 @@ export async function updateSession(request: NextRequest): Promise<NextResponse>
   });
 
   try {
-    await supabase.auth.getClaims();
+    await supabase.auth.getUser();
   } catch {
     // Transient refresh failures must not break the request.
   }
