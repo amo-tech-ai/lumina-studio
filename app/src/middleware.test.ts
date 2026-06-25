@@ -8,7 +8,9 @@ describe("middleware wiring (IPI2-127)", () => {
     expect(typeof proxy).toBe("function");
   });
 
-  it("proxy config matches /app/* routes", () => {
-    expect(config.matcher).toEqual(["/app/:path*"]);
+  it("proxy config matches all non-static routes for session refresh", () => {
+    expect(config.matcher).toEqual([
+      "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+    ]);
   });
 });

@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
@@ -23,6 +23,15 @@ export function LoginForm() {
   // Synchronous lock — `setSubmitting` is async, so the disabled button alone
   // can't stop two clicks fired before the next render from both submitting.
   const submitLock = useRef(false);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("error") === "auth") {
+      setOauthError(
+        "Google sign-in could not be completed. Try again once, or use email and password.",
+      );
+    }
+  }, []);
 
   async function handleGoogle() {
     setOauthError(null);

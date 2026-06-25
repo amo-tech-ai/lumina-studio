@@ -17,9 +17,10 @@ describe("operator middleware — wiring contract (IPI2-127)", () => {
     expect(existsSync(MIDDLEWARE)).toBe(false);
   });
 
-  it("proxy.ts exports the /app/* matcher and a handler", () => {
+  it("proxy.ts exports a broad matcher and an async handler", () => {
     const src = readFileSync(PROXY, "utf8");
-    expect(src).toMatch(/export function proxy/);
-    expect(src).toMatch(/matcher:\s*\["\/app\/:path\*"\]/);
+    expect(src).toMatch(/export async function proxy/);
+    expect(src).toMatch(/updateSession/);
+    expect(src).toMatch(/matcher:\s*\[/);
   });
 });
