@@ -60,6 +60,19 @@ function assert(condition, message) {
   else fail(message);
 }
 
+/** Cross-user SELECT deny: fail on query error, then assert zero rows. */
+function assertSelectDenied(error, data, message) {
+  if (error) {
+    fail(`${message} (query error: ${error.message})`);
+    return;
+  }
+  if ((data ?? []).length !== 0) {
+    fail(message);
+    return;
+  }
+  pass(message);
+}
+
 const anon = createClient(url, anonKey, {
   auth: { persistSession: false, autoRefreshToken: false },
 });
@@ -144,11 +157,11 @@ try {
     .single();
   assert(!ownProfileErr && ownProfile?.email === emailA, "user A reads own profile");
 
-  const { data: otherProfile } = await userA.client
+  const { data: otherProfile, error: otherProfileErr } = await userA.client
     .from("profiles")
     .select("id")
     .eq("id", userB.user.id);
-  assert((otherProfile ?? []).length === 0, "user A cannot read user B profile");
+  assertSelectDenied(otherProfileErr, otherProfile, "user A cannot read user B profile");
 
   // org layer — create org for user A (trigger auto-adds owner to org_members)
   const { data: orgA, error: orgInsertErr } = await userA.client
@@ -168,11 +181,11 @@ try {
   assert(!brandInsertErr && brandA?.id, "user A inserts own brand");
   brandAId = brandA.id;
 
-  const { data: crossBrandRead } = await userB.client
+  const { data: crossBrandRead, error: crossBrandReadErr } = await userB.client
     .from("brands")
     .select("id")
     .eq("id", brandAId);
-  assert((crossBrandRead ?? []).length === 0, "user B cannot read user A brand");
+  assertSelectDenied(crossBrandReadErr, crossBrandRead, "user B cannot read user A brand");
 
   const { data: updatedCrossBrand, error: crossBrandUpdateErr } = await userB.client
     .from("brands")
@@ -205,11 +218,11 @@ try {
     "user A updates own brand_score (upsert path)",
   );
 
-  const { data: crossScores } = await userB.client
+  const { data: crossScores, error: crossScoresErr } = await userB.client
     .from("brand_scores")
     .select("id")
     .eq("brand_id", brandAId);
-  assert((crossScores ?? []).length === 0, "user B cannot read user A brand_scores");
+  assertSelectDenied(crossScoresErr, crossScores, "user B cannot read user A brand_scores");
 
   const { error: crossScoreInsertErr } = await userB.client.from("brand_scores").insert({
     brand_id: brandAId,
@@ -217,6 +230,154 @@ try {
     score: 99,
   });
   assert(!!crossScoreInsertErr, "user B cannot insert brand_score on user A brand");
+
+  // IPI-26 — service-role writes; org-member SELECT only
+  if (!admin) {
+    console.warn("warn: skip IPI-26 table RLS probes (no SUPABASE_SERVICE_ROLE_KEY)");
+  } else {
+    const { data: socialRow, error: socialAdminErr } = await admin
+      .from("brand_social_channels")
+      .insert({
+        brand_id: brandAId,
+        platform: "instagram",
+        handle: `@rls-${stamp}`,
+      })
+      .select("id")
+      .single();
+    assert(!socialAdminErr && socialRow?.id, "service role inserts brand_social_channels");
+
+    const { data: socialReadA } = await userA.client
+      .from("brand_social_channels")
+      .select("id")
+      .eq("id", socialRow.id);
+    assert((socialReadA ?? []).length === 1, "user A reads own org brand_social_channels");
+
+    const { data: socialReadB, error: socialReadBErr } = await userB.client
+      .from("brand_social_channels")
+      .select("id")
+      .eq("id", socialRow.id);
+    assertSelectDenied(
+      socialReadBErr,
+      socialReadB,
+      "user B cannot read user A brand_social_channels",
+    );
+
+    const { error: socialInsertBErr } = await userB.client
+      .from("brand_social_channels")
+      .insert({ brand_id: brandAId, platform: "tiktok" });
+    assert(!!socialInsertBErr, "user B cannot insert brand_social_channels");
+
+    const { data: compRow, error: compAdminErr } = await admin
+      .from("brand_competitors")
+      .insert({ brand_id: brandAId, name: `Competitor ${stamp}` })
+      .select("id")
+      .single();
+    assert(!compAdminErr && compRow?.id, "service role inserts brand_competitors");
+
+    const { data: compReadA } = await userA.client
+      .from("brand_competitors")
+      .select("id")
+      .eq("id", compRow.id);
+    assert((compReadA ?? []).length === 1, "user A reads own org brand_competitors");
+
+    const { data: compReadB, error: compReadBErr } = await userB.client
+      .from("brand_competitors")
+      .select("id")
+      .eq("id", compRow.id);
+    assertSelectDenied(
+      compReadBErr,
+      compReadB,
+      "user B cannot read user A brand_competitors",
+    );
+
+    const { data: crawlRow, error: crawlAdminErr } = await admin
+      .from("brand_crawl_results")
+      .insert({
+        brand_id: brandAId,
+        firecrawl_job_id: `fc-${stamp}`,
+        status: "running",
+      })
+      .select("id")
+      .single();
+    assert(!crawlAdminErr && crawlRow?.id, "service role inserts brand_crawl_results");
+
+    const { data: crawlReadA } = await userA.client
+      .from("brand_crawl_results")
+      .select("id")
+      .eq("id", crawlRow.id);
+    assert((crawlReadA ?? []).length === 1, "user A reads own org brand_crawl_results");
+
+    const { data: crawlReadB, error: crawlReadBErr } = await userB.client
+      .from("brand_crawl_results")
+      .select("id")
+      .eq("id", crawlRow.id);
+    assertSelectDenied(
+      crawlReadBErr,
+      crawlReadB,
+      "user B cannot read user A brand_crawl_results",
+    );
+
+    const { data: agentRow, error: agentAdminErr } = await admin
+      .from("brand_agent_results")
+      .insert({
+        brand_id: brandAId,
+        agent_name: "rls-test-agent",
+        status: "complete",
+      })
+      .select("id")
+      .single();
+    assert(!agentAdminErr && agentRow?.id, "service role inserts brand_agent_results");
+
+    const { data: agentReadA } = await userA.client
+      .from("brand_agent_results")
+      .select("id")
+      .eq("id", agentRow.id);
+    assert((agentReadA ?? []).length === 1, "user A reads own org brand_agent_results");
+
+    const { data: agentReadB, error: agentReadBErr } = await userB.client
+      .from("brand_agent_results")
+      .select("id")
+      .eq("id", agentRow.id);
+    assertSelectDenied(
+      agentReadBErr,
+      agentReadB,
+      "user B cannot read user A brand_agent_results",
+    );
+  }
+
+  // brand_intake_drafts — owner or org member SELECT (seed via service role)
+  if (!admin) {
+    console.warn("warn: skip brand_intake_drafts RLS probes (no SUPABASE_SERVICE_ROLE_KEY)");
+  } else {
+    const { data: draftRow, error: draftAdminErr } = await admin
+      .from("brand_intake_drafts")
+      .insert({
+        user_id: userA.user.id,
+        brand_id: brandAId,
+        source_url: `https://example.com/${stamp}`,
+        status: "pending",
+      })
+      .select("id")
+      .single();
+    assert(!draftAdminErr && draftRow?.id, "service role inserts brand_intake_draft for RLS probe");
+
+    const { data: draftReadA, error: draftReadAErr } = await userA.client
+      .from("brand_intake_drafts")
+      .select("id")
+      .eq("id", draftRow.id);
+    assert(!draftReadAErr, `user A draft select failed: ${draftReadAErr?.message}`);
+    assert((draftReadA ?? []).length === 1, "user A reads own brand_intake_draft");
+
+    const { data: draftReadB, error: draftReadBErr } = await userB.client
+      .from("brand_intake_drafts")
+      .select("id")
+      .eq("id", draftRow.id);
+    assertSelectDenied(
+      draftReadBErr,
+      draftReadB,
+      "user B cannot read user A brand_intake_draft",
+    );
+  }
 
   // commerce_product_links
   const { data: linkA, error: linkInsertErr } = await userA.client
@@ -229,11 +390,11 @@ try {
     .single();
   assert(!linkInsertErr && linkA?.id, "user A inserts commerce_product_link");
 
-  const { data: crossLinks } = await userB.client
+  const { data: crossLinks, error: crossLinksErr } = await userB.client
     .from("commerce_product_links")
     .select("id")
     .eq("brand_id", brandAId);
-  assert((crossLinks ?? []).length === 0, "user B cannot read user A commerce links");
+  assertSelectDenied(crossLinksErr, crossLinks, "user B cannot read user A commerce links");
 
   // ai_agent_logs
   const { data: logA, error: logInsertErr } = await userA.client
@@ -249,11 +410,11 @@ try {
     .single();
   assert(!logInsertErr && logA?.id, "user A inserts ai_agent_log");
 
-  const { data: crossLogs } = await userB.client
+  const { data: crossLogs, error: crossLogsErr } = await userB.client
     .from("ai_agent_logs")
     .select("id")
     .eq("id", logA.id);
-  assert((crossLogs ?? []).length === 0, "user B cannot read user A ai_agent_logs");
+  assertSelectDenied(crossLogsErr, crossLogs, "user B cannot read user A ai_agent_logs");
 } catch (err) {
   fail(err instanceof Error ? err.message : String(err));
 } finally {
