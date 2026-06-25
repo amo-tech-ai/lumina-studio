@@ -117,11 +117,12 @@ export default function NewShootPage() {
     setLoading(true);
     setError(null);
     try {
+      if (!state.brandId) throw new Error("Select a brand before planning");
       const res = await fetch("/api/workflows/shoot-wizard", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          brand_id: state.brandId || "00000000-0000-0000-0000-000000000000",
+          brand_id: state.brandId,
           shoot_name: state.shootName,
           brief: state.brief,
           channels: state.channels,
@@ -168,7 +169,7 @@ export default function NewShootPage() {
     setError(null);
     try {
       if (!state.runId) throw new Error("No workflow run");
-      await fetch("/api/workflows/resume", {
+      const r1 = await fetch("/api/workflows/resume", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -178,6 +179,7 @@ export default function NewShootPage() {
           resumeData: { approved: true, approved_deliverables: state.deliverables },
         }),
       });
+      if (!r1.ok) throw new Error(await r1.text());
 
       // Generate shot list client-side (mirrors generateShotListDraft tool logic)
       let shotCounter = 0;
@@ -207,7 +209,7 @@ export default function NewShootPage() {
     setError(null);
     try {
       if (!state.runId) throw new Error("No workflow run");
-      await fetch("/api/workflows/resume", {
+      const r2 = await fetch("/api/workflows/resume", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -217,8 +219,10 @@ export default function NewShootPage() {
           resumeData: { approved: true, approved_shots: state.shots },
         }),
       });
+      if (!r2.ok) throw new Error(await r2.text());
 
-      const post = state.totalAssets * 45;
+      const totalAssets = state.deliverables.reduce((s, d) => s + d.quantity, 0);
+      const post = totalAssets * 45;
       const crew = Math.max(2, Math.ceil(state.shots.length / 8)) * 650;
       const budget: Budget = { crew, studio: 800, equipment: Math.round(crew * 0.28), post, total: crew + 800 + Math.round(crew * 0.28) + post };
       update({ budget });
@@ -236,17 +240,23 @@ export default function NewShootPage() {
     setError(null);
     try {
       if (!state.runId || !state.budget) throw new Error("No workflow run or budget");
-      const budgetTotal = state.budgetOverride ? Number(state.budgetOverride) : state.budget.total;
-      await fetch("/api/workflows/resume", {
+      let budgetOverrideUsd: number | undefined;
+      if (state.budgetOverride) {
+        const parsed = Number(state.budgetOverride);
+        if (!Number.isFinite(parsed) || parsed <= 0) throw new Error("Budget override must be a positive number");
+        budgetOverrideUsd = parsed;
+      }
+      const r3 = await fetch("/api/workflows/resume", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           workflowId: "shoot-wizard",
           runId: state.runId,
           stepId: "budget-gate",
-          resumeData: { approved: true, budget_override_usd: state.budgetOverride ? budgetTotal : undefined },
+          resumeData: { approved: true, budget_override_usd: budgetOverrideUsd },
         }),
       });
+      if (!r3.ok) throw new Error(await r3.text());
       // Commit via edge fn (save-approved-shoot-draft)
       update({ shootId: "draft-committed" });
       setStep(5);
@@ -293,6 +303,16 @@ export default function NewShootPage() {
             <h1 className="font-serif text-2xl text-[#1E293B]">Basics</h1>
 
             <div className="space-y-1">
+              <label className="font-sans text-sm font-medium text-[#475569]">Brand ID *</label>
+              <input
+                className="w-full rounded-xl border border-[#E8E0D8] bg-white px-4 py-3 font-sans text-sm text-[#1E293B] outline-none focus:border-[#E87C4D]"
+                placeholder="brand_xxxxxxxx"
+                value={state.brandId}
+                onChange={(e) => update({ brandId: e.target.value })}
+              />
+            </div>
+
+            <div className="space-y-1">
               <label className="font-sans text-sm font-medium text-[#475569]">Shoot name *</label>
               <input
                 className="w-full rounded-xl border border-[#E8E0D8] bg-white px-4 py-3 font-sans text-sm text-[#1E293B] outline-none focus:border-[#E87C4D]"
@@ -325,7 +345,7 @@ export default function NewShootPage() {
             <div className="flex justify-end">
               <button
                 onClick={() => setStep(1)}
-                disabled={!state.shootName || state.channels.length === 0}
+                disabled={!state.brandId || !state.shootName || state.channels.length === 0}
                 className="rounded-full px-6 py-2.5 font-sans text-sm font-medium text-white disabled:opacity-40"
                 style={{ background: "#E87C4D" }}
               >
@@ -377,7 +397,13 @@ export default function NewShootPage() {
                 <span className="font-sans text-sm font-medium text-[#1E293B]">
                   {state.deliverables.length} deliverables · {state.totalAssets} total assets
                 </span>
-                <button className="font-sans text-xs text-[#E87C4D] hover:underline">+ Add</button>
+                <button
+                  className="font-sans text-xs text-[#E87C4D] hover:underline"
+                  onClick={() => {
+                    const next = [...state.deliverables, { id: crypto.randomUUID(), channel: "", format: "JPG", quantity: 6 }];
+                    update({ deliverables: next, totalAssets: next.reduce((s, d) => s + d.quantity, 0) });
+                  }}
+                >+ Add</button>
               </div>
               <table className="w-full">
                 <thead>
@@ -399,15 +425,20 @@ export default function NewShootPage() {
                           min={1}
                           value={d.quantity}
                           onChange={(e) => {
-                            const qty = Number(e.target.value);
-                            update({ deliverables: state.deliverables.map((x) => x.id === d.id ? { ...x, quantity: qty } : x) });
+                            const qty = Math.max(1, Math.floor(Number(e.target.value)));
+                            if (!Number.isFinite(qty)) return;
+                            const next = state.deliverables.map((x) => x.id === d.id ? { ...x, quantity: qty } : x);
+                            update({ deliverables: next, totalAssets: next.reduce((s, x) => s + x.quantity, 0) });
                           }}
                           className="w-14 rounded border border-[#E8E0D8] px-2 py-1 font-sans text-sm text-[#1E293B]"
                         />
                       </td>
                       <td className="px-4 py-2.5">
                         <button
-                          onClick={() => update({ deliverables: state.deliverables.filter((x) => x.id !== d.id) })}
+                          onClick={() => {
+                            const next = state.deliverables.filter((x) => x.id !== d.id);
+                            update({ deliverables: next, totalAssets: next.reduce((s, x) => s + x.quantity, 0) });
+                          }}
                           className="font-sans text-xs text-[#94A3B8] hover:text-red-500"
                         >✕</button>
                       </td>
@@ -566,7 +597,7 @@ export default function NewShootPage() {
               </div>
               <div className="flex justify-between font-sans text-sm">
                 <span className="text-[#64748B]">Deliverables</span>
-                <span className="text-[#1E293B]">{state.deliverables.length} types · {state.totalAssets} assets</span>
+                <span className="text-[#1E293B]">{state.deliverables.length} types · {state.deliverables.reduce((s, d) => s + d.quantity, 0)} assets</span>
               </div>
               <div className="flex justify-between font-sans text-sm">
                 <span className="text-[#64748B]">Budget</span>
