@@ -11,6 +11,10 @@ import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
 import { z } from "zod";
 
+import {
+  hiddenInternalToolsMessageView,
+  useHideInternalToolCalls,
+} from "@/components/copilot/copilot-tool-presentation";
 import { ThreadsDrawer } from "@/components/threads-drawer";
 import { ThreadsPanelGate } from "@/components/threads-drawer/locked-state";
 import styles from "@/components/threads-drawer/threads-drawer.module.css";
@@ -46,6 +50,8 @@ function OperatorShell({
 }) {
   const router = useRouter();
   const pathname = usePathname();
+
+  useHideInternalToolCalls();
 
   // L1 context (v2 useAgentContext): tell the agent which operator route is
   // active so answers are relevant to the current workspace. Streamed, not polled.
@@ -91,6 +97,7 @@ function OperatorShell({
           {children}
           <CopilotSidebar
             defaultOpen
+            messageView={hiddenInternalToolsMessageView}
             labels={{
               modalHeaderTitle: "iPix Assistant",
               welcomeMessageText:

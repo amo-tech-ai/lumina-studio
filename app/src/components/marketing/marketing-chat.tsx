@@ -11,6 +11,10 @@ import {
 } from "@copilotkit/react-core/v2";
 import "@copilotkit/react-core/v2/styles.css";
 import { z } from "zod";
+import {
+  hiddenInternalToolsMessageView,
+  useHideInternalToolCalls,
+} from "@/components/copilot/copilot-tool-presentation";
 import { SERVICE_SLUGS } from "@/mastra/types/marketing-lead";
 
 // ponytail: build-time flag — false by default; set NEXT_PUBLIC_MARKETING_CHAT_ENABLED=true to launch
@@ -91,6 +95,8 @@ function LeadResultView({
 }
 
 function MarketingChatInner() {
+  useHideInternalToolCalls();
+
   useConfigureSuggestions({
     available: "before-first-message",
     suggestions: QUICK_PROMPTS.map(({ title, message }) => ({ title, message })),
@@ -122,6 +128,7 @@ function MarketingChatInner() {
 
   return (
     <CopilotPopup
+      messageView={hiddenInternalToolsMessageView}
       labels={{
         modalHeaderTitle: "iPix Studio",
         chatInputPlaceholder: "Ask about our photography services…",
