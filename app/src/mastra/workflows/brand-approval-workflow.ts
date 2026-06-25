@@ -57,7 +57,8 @@ const commitBrandStep = createStep({
     status: z.string(),
   }),
   execute: async ({ context }) => {
-    const { brandId, approved, approver } = context.inputData;
+    const { brandId } = context.stepsResults.researchBrand.output;
+    const { approved, approver } = context.stepsResults.approval.output;
     return {
       brandId,
       status: approved ? `committed by ${approver}` : "rejected",
