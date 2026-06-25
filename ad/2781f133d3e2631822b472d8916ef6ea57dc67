@@ -1,0 +1,188 @@
+docs/shoot/17-cloudinary-ai-enhancements.md
+  s_7802e5178f3040::t_fd3e99a01b7799 1-677
+docs/shoot/audit/01-audit-shoot.md
+  s_7802e5178f3040::t_fd3e99a01b7799 1-275
+docs/shoot/07-dna-compliance-auditor.md
+  s_7802e5178f3040::t_fd3e99a01b7799 1-482
+docs/shoot/25-infographic-generator.md
+  s_7802e5178f3040::t_fd3e99a01b7799 1-622
+docs/shoot/notes.md
+  s_7802e5178f3040::t_fd3e99a01b7799 1-384
+docs/shoot/11-shoot-agents.md
+  s_7802e5178f3040::t_fd3e99a01b7799 1-538
+docs/shoot/00-ai-native-shoot-system.md
+  s_7802e5178f3040::t_fd3e99a01b7799 1-230
+docs/shoot/05-content-calendar.md
+  s_7802e5178f3040::t_fd3e99a01b7799 1-416
+docs/shoot/18-cloudinary-overlays-branding.md
+  s_7802e5178f3040::t_fd3e99a01b7799 1-766
+CLAUDE.md
+  s_4ffc3bfca8d635::t_9635cf51b1e9d5 15,18,22,27,37,144-158,239,248
+  s_4ffc3bfca8d635::t_93f66f3ea49809 126-143
+docs/shoot/24-360-spin-videos.md
+  s_7802e5178f3040::t_fd3e99a01b7799 1-498
+docs/shoot/01-shoots-dashboard.md
+  s_7802e5178f3040::t_fd3e99a01b7799 1-447
+docs/plan/audit/pr-82-audit.md
+  s_1ee6d41c106a00::t_3163acfd212f9d 1-48,56-61,63-65,67-68,75-84,89-113,116,118-124,139-153
+  s_1ee6d41c106a00::t_00fe5daf6e391b 125-138
+  s_1ee6d41c106a00::t_423b020512a4dc 49-55,62,66,69-74,85-88
+  s_1ee6d41c106a00::t_e02477dc850d3a 114-115,117
+docs/plan/changelog.md
+  s_1ee6d41c106a00::t_8ac385e73a0cfb 119-120
+  s_1ee6d41c106a00::t_ca0151f2b31c14 69
+  s_1ee6d41c106a00::t_97bd557bf1e602 24
+docs/shoot/06-professional-network.md
+  s_7802e5178f3040::t_fd3e99a01b7799 1-473
+docs/shoot/27-short-form-video-packs.md
+  s_7802e5178f3040::t_fd3e99a01b7799 1-652
+docs/brand-intelligence/todo.md
+  s_1ee6d41c106a00::t_763d0ae675ea67 167
+docs/shoot/31-shopify-admin-api-integration.md
+  s_7802e5178f3040::t_fd3e99a01b7799 1-1075
+docs/shoot/02-shoot-detail-page.md
+  s_7802e5178f3040::t_fd3e99a01b7799 1-559
+src/test/brand-intelligence.int.test.ts
+  s_1ee6d41c106a00::t_798c6b5d806f8a 211
+  s_1ee6d41c106a00::t_32168d3f21cfbb 18
+  s_1ee6d41c106a00::t_d4d98007328186 4
+  s_1ee6d41c106a00::t_34b0801be5a4f2 9
+docs/plan/todo.md
+  s_a8ff79a3fcfbf6::t_ebf4aa0189f783 149
+  s_1ee6d41c106a00::t_6682c340e3f327 298
+  s_1ee6d41c106a00::t_1b5c959a4f984f 172-180
+  s_a8ff79a3fcfbf6::t_a198c3bcfbe90d 217
+  s_1ee6d41c106a00::t_4d659a4a8b4efd 296
+  s_a8ff79a3fcfbf6::t_9d994934cb1cf2 73
+  s_1ee6d41c106a00::t_071ab077464db7 345
+  s_1ee6d41c106a00::t_20dafbc420dff0 367
+  s_4ffc3bfca8d635::t_fcad669788ac5a 798
+  s_1ee6d41c106a00::t_e9e0b4eda5681e 107-111
+  s_1ee6d41c106a00::t_1dab12058537c0 72
+  s_1ee6d41c106a00::t_e4df06628fafe3 3
+  s_a8ff79a3fcfbf6::t_4c938e9446e8d5 52,262-263,273,401-402,413,584,846-888,951,957,965
+docs/shoot/prompt-plan.md
+  s_7802e5178f3040::t_fd3e99a01b7799 1-590
+.claude/settings.json
+  s_a8ff79a3fcfbf6::t_33b87eb310d0ef 15-58
+docs/shoot/21-listing-insights.md
+  s_7802e5178f3040::t_fd3e99a01b7799 1-613
+docs/shoot/09-cloudinary-integration.md
+  s_7802e5178f3040::t_fd3e99a01b7799 1-424
+docs/shoot/audits/SHOOT-LINEAR-AUDIT-2026-06-22.md
+  s_7802e5178f3040::t_fd3e99a01b7799 1-683
+docs/shoot/19-cloudinary-analytics.md
+  s_7802e5178f3040::t_fd3e99a01b7799 1-721
+docs/screenshots/squareshot/squareshot.md
+  s_a8ff79a3fcfbf6::t_c4c30d488cd784 1-547
+docs/shoot/26-vertical-shot-templates.md
+  s_7802e5178f3040::t_fd3e99a01b7799 1-513
+docs/shoot/29-ai-model-strategy.md
+  s_7802e5178f3040::t_fd3e99a01b7799 1-612
+docs/shoot/28-ghost-mannequin.md
+  s_7802e5178f3040::t_fd3e99a01b7799 1-502
+docs/shoot/20-platform-content-packs.md
+  s_7802e5178f3040::t_fd3e99a01b7799 1-660
+docs/shoot/32-ecommerce-integration-hub.md
+  s_7802e5178f3040::t_fd3e99a01b7799 1-684
+AGENTS.md
+  s_9d88731b51c17e::t_76373f2d615985 3-138
+docs/shoot/16-cloudinary-video.md
+  s_7802e5178f3040::t_fd3e99a01b7799 1-662
+package.json
+  s_4ffc3bfca8d635::t_c7c0b4b9bbc1de 19
+docs/shoot/04-media-library.md
+  s_7802e5178f3040::t_fd3e99a01b7799 1-435
+docs/shoot/23-ugc-video-creator.md
+  s_7802e5178f3040::t_fd3e99a01b7799 1-643
+docs/shoot/30-amazon-sp-api-integration.md
+  s_7802e5178f3040::t_fd3e99a01b7799 1-775
+"docs/shoot/02-AI-Powered Photo & Video Shoot System.md"
+  s_7802e5178f3040::t_fd3e99a01b7799 1-1213
+docs/shoot/10-postiz-integration.md
+  s_7802e5178f3040::t_fd3e99a01b7799 1-379
+app/src/test/brand-pipeline.int.test.ts
+  s_4ffc3bfca8d635::t_861a46afa38273 49
+  s_1ee6d41c106a00::t_8bd1d3240ca7c6 4
+  s_1ee6d41c106a00::t_cbfcdf55759578 8
+  s_1ee6d41c106a00::t_e1592ab34c1ba7 16
+  s_1ee6d41c106a00::t_25da3e15861f8b 35-44,47-48,50
+docs/shoot/12-shoot-schema.md
+  s_7802e5178f3040::t_fd3e99a01b7799 1-742
+docs/linear/issues/README.md
+  s_1ee6d41c106a00::t_16888afafc2a9c 102
+docs/shoot/22-product-catalog-sync.md
+  s_7802e5178f3040::t_fd3e99a01b7799 1-623
+docs/shoot/15-cloudinary-mediaflows.md
+  s_7802e5178f3040::t_fd3e99a01b7799 1-538
+docs/shoot/shoot-research.md
+  s_7802e5178f3040::t_fd3e99a01b7799 1-310
+docs/shoot/shoot-system-plan.md
+  s_7802e5178f3040::t_fd3e99a01b7799 1-385
+docs/shoot/AI-NATIVE-SHOOT-AUDIT-REPORT.md
+  s_7802e5178f3040::t_fd3e99a01b7799 1-108
+docs/plan/audit/pr81-tests.md
+  s_4ffc3bfca8d635::t_221295530cac64 1-55
+docs/plan/audit/pr80-tests.md
+  s_4ffc3bfca8d635::t_847dcedbe772dd 1-57
+docs/shoot/README.md
+  s_7802e5178f3040::t_fd3e99a01b7799 1-86
+docs/shoot/00-ai-model-reference.md
+  s_7802e5178f3040::t_fd3e99a01b7799 1-229
+docs/shoot/08-shot-list-generator.md
+  s_7802e5178f3040::t_fd3e99a01b7799 1-491
+docs/shoot/03-shoot-wizard.md
+  s_7802e5178f3040::t_fd3e99a01b7799 1-536
+docs/shoot/13-shoot-edge-functions.md
+  s_7802e5178f3040::t_fd3e99a01b7799 1-716
+docs/shoot/14-shoot-playbooks.md
+  s_7802e5178f3040::t_fd3e99a01b7799 1-562
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.13",
+  "base_commit_sha": "ad2781f133d3e2631822b472d8916ef6ea57dc67",
+  "prompts": {},
+  "sessions": {
+    "s_1ee6d41c106a00": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_1008d1b38ffeXKx1F8jeq6pBWL",
+        "model": "qwen/qwen3.5-plus-20260420"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    },
+    "s_4ffc3bfca8d635": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "d421b6b8-4307-4bc8-94d4-f836cb9e7997",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    },
+    "s_7802e5178f3040": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_10378ba55ffezxgGX9yJliRYUP",
+        "model": "deepseek-v4-flash-free"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    },
+    "s_9d88731b51c17e": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_0ffcd64e7ffev0OblIhmNPyzT4",
+        "model": "deepseek-v4-flash-free"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    },
+    "s_a8ff79a3fcfbf6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a23755b0-cfc9-4f93-ae6b-754247f21af5",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
