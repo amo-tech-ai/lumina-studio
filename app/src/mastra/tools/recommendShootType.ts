@@ -7,7 +7,7 @@ const SHOOT_TYPE_RULES: Record<string, string[]> = {
   ugc_style: ["instagram_reel", "tiktok"],
   lookbook: ["instagram_feed", "pinterest", "instagram_story"],
   campaign: ["instagram_feed", "instagram_reel", "facebook", "youtube"],
-  packshot: ["shopify", "amazon", "website"],
+  packshot: ["shopify", "amazon"],
 };
 
 export const recommendShootType = createTool({
@@ -41,10 +41,25 @@ export const recommendShootType = createTool({
     confidence: z.enum(["high", "medium", "low"]),
   }),
   execute: async (context) => {
-    const { channels } = context;
+    const { channels, brief = "", product_category = "", brand_dna_summary = "" } = context;
+    const contextText = `${brief} ${product_category} ${brand_dna_summary}`.toLowerCase();
+
+    // Brief/brand keyword boosters per shoot type
+    const BRIEF_BOOSTERS: Record<string, string[]> = {
+      ecommerce_pdp: ["pdp", "product detail", "listing", "ecommerce", "e-commerce"],
+      editorial: ["editorial", "story", "magazine", "fashion", "lifestyle"],
+      ugc_style: ["ugc", "user generated", "authentic", "organic", "creator"],
+      lookbook: ["lookbook", "collection", "seasonal", "catalog"],
+      campaign: ["campaign", "brand awareness", "hero", "launch"],
+      packshot: ["packshot", "pack shot", "packaging", "white background", "white bg"],
+    };
+
     const scores: Record<string, number> = {};
     for (const [type, matchChannels] of Object.entries(SHOOT_TYPE_RULES)) {
       scores[type] = channels.filter((c) => matchChannels.includes(c)).length;
+      // Add 1 for each keyword hit in brief/brand context
+      const boosters = BRIEF_BOOSTERS[type] ?? [];
+      if (boosters.some((kw) => contextText.includes(kw))) scores[type] += 1;
     }
     const shoot_type =
       Object.entries(scores).sort(([, a], [, b]) => b - a)[0]?.[0] ??
@@ -54,7 +69,7 @@ export const recommendShootType = createTool({
       matchCount >= 2 ? "high" : matchCount === 1 ? "medium" : "low";
     return {
       shoot_type,
-      rationale: `Best match for channels [${channels.join(", ")}] based on channel-type affinity matrix.`,
+      rationale: `Best match for channels [${channels.join(", ")}]${brief ? ` and brief context` : ""} based on channel-type affinity and brand context.`,
       confidence,
     };
   },

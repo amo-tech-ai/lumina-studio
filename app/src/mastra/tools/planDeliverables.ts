@@ -35,7 +35,9 @@ export const planDeliverables = createTool({
   description:
     "Generate a deliverables plan (counts per format) from target channels and optional brand DNA context.",
   inputSchema: z.object({
-    channels: z.array(z.string()).min(1),
+    channels: z
+      .array(z.enum(["instagram_feed", "instagram_story", "instagram_reel", "tiktok", "pinterest", "amazon", "shopify", "facebook", "youtube", "website"]))
+      .min(1),
     brand_dna: z
       .object({
         product_category: z.string().optional(),
@@ -49,11 +51,22 @@ export const planDeliverables = createTool({
     total_assets: z.number(),
   }),
   execute: async (context) => {
-    const { channels } = context;
+    const { channels, brand_dna, shoot_type } = context;
+    // Quantity multiplier: packshot/ecommerce shoots get +2 per format for white-bg channels
+    const isPackshot = shoot_type === "packshot" || shoot_type === "ecommerce_pdp";
+    const isVideoHeavy = brand_dna?.style_keywords?.some((k) => /video|motion|reel/i.test(k));
     const deliverables = channels.flatMap((channel) => {
       const defaults = CHANNEL_DEFAULTS[channel];
-      if (!defaults) return [{ channel, format: "JPG", quantity: 5 }];
-      return defaults.map((d) => ({ channel, ...d }));
+      return defaults.map((d) => ({
+        channel,
+        ...d,
+        quantity:
+          isPackshot && d.format.includes("white-bg")
+            ? d.quantity + 2
+            : isVideoHeavy && d.format.includes("MP4")
+              ? d.quantity + 1
+              : d.quantity,
+      }));
     });
     return {
       deliverables,

@@ -39,7 +39,7 @@ export const explainShootDnaAlerts = createTool({
   execute: async (context) => {
     const { flagged_asset_ids, dna_flags = {} } = context;
     const explanations = flagged_asset_ids.map((asset_id) => {
-      const flags: string[] = dna_flags[asset_id] ?? ["composition"];
+      const flags: string[] = (dna_flags[asset_id]?.length ? dna_flags[asset_id] : null) ?? ["composition"];
       const guidance = flags.map(
         (f) => FLAG_EXPLANATIONS[f] ?? `Review asset for ${f} compliance`,
       );
@@ -47,7 +47,7 @@ export const explainShootDnaAlerts = createTool({
         asset_id,
         flags,
         guidance,
-        summary: `Asset flagged for: ${flags.join(", ")}. ${guidance[0]}`,
+        summary: `Asset flagged for: ${flags.join(", ")}. ${guidance[0] ?? "Review asset against brand guidelines."}`,
       };
     });
     return { explanations };

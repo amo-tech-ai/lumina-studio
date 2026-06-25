@@ -39,13 +39,14 @@ export const generateShotListDraft = createTool({
     const { approved_deliverables, product_names = [] } = context;
 
     const coveredIds = new Set<string>();
+    let shotCounter = 0;
     const shots = approved_deliverables.flatMap((deliverable, di) => {
       const id = deliverable.id ?? `deliverable-${di}`;
       coveredIds.add(id);
       // Generate shots proportional to quantity (1 shot per 2-3 assets)
       const shotCount = Math.max(1, Math.ceil(deliverable.quantity / 3));
       return Array.from({ length: shotCount }, (_, si) => ({
-        shot_number: di * 10 + si + 1,
+        shot_number: ++shotCounter,
         description: `${deliverable.channel} ${deliverable.format ?? ""} — ${product_names[0] ?? "hero product"}`,
         angle: si === 0 ? "front" : si === 1 ? "3/4 angle" : "detail",
         lighting: deliverable.channel.includes("feed") ? "natural window light" : "studio strobe",
@@ -56,7 +57,7 @@ export const generateShotListDraft = createTool({
 
     // Flag any deliverable not mapped to a shot (shouldn't happen here, but defensive)
     const uncovered = approved_deliverables
-      .filter((_, i) => !coveredIds.has(`deliverable-${i}`) && !approved_deliverables[i].id)
+      .filter((d, i) => !coveredIds.has(d.id ?? `deliverable-${i}`))
       .map((d) => `Deliverable ${d.channel}/${d.format} has no shots`);
 
     return {
