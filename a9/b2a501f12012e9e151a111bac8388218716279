@@ -1,0 +1,55 @@
+app/src/middleware.test.ts
+  s_ea46f8c56d53f8::t_c68f1ff083188a 11-14
+app/src/components/marketing/login-form.tsx
+  s_ea46f8c56d53f8::t_c4ad3f00a9a329 27-35
+  s_ea46f8c56d53f8::t_e85ce51ff33009 3
+app/src/proxy.test.ts
+  s_ea46f8c56d53f8::t_e1f4fcaa7f5b8c 80,82
+  s_ea46f8c56d53f8::t_ff67503f70111e 25,27
+  s_ea46f8c56d53f8::t_85b856a72d20f2 69,71
+  s_ea46f8c56d53f8::t_ef378880872fee 91,95
+  s_ea46f8c56d53f8::t_113d00872d8285 32,34
+  s_ea46f8c56d53f8::t_a65ba09ae7dfc1 41,43
+  s_ea46f8c56d53f8::t_95f830b549188e 59,61
+  s_ea46f8c56d53f8::t_6e4af7a48ec9b4 105,108
+  s_ea46f8c56d53f8::t_c4b702ca579fb2 48,50
+  s_ea46f8c56d53f8::t_83af6407602557 115-125
+app/src/test/operator-middleware-contract.test.ts
+  s_ea46f8c56d53f8::t_95decdcaad76fd 20,22-24
+app/src/lib/supabase/session.ts
+  s_ea46f8c56d53f8::t_0ef13953a79110 1-8,16-24,26-53
+  s_ea46f8c56d53f8::t_c8ebb2642bd9df 9-15
+  s_ea46f8c56d53f8::t_b84e33f883e846 25
+app/src/components/marketing/login-form.test.tsx
+  s_ea46f8c56d53f8::t_5647db2a0be6b8 49-56
+app/src/app/auth/callback/route.test.ts
+  s_ea46f8c56d53f8::t_051899c266ee16 74
+  s_ea46f8c56d53f8::t_3dbd65f843cd15 101
+  s_ea46f8c56d53f8::t_161b9c70ef2ba5 17-18,29-33
+  s_ea46f8c56d53f8::t_d71bec74c11690 57
+  s_ea46f8c56d53f8::t_939c807771a33e 1-16,19-28,34-45,47-56,58-73,75-87,89-100,102-109
+  s_ea46f8c56d53f8::t_c70a525225a470 88
+  s_ea46f8c56d53f8::t_ba9b9112f7e6f8 46
+app/src/proxy.ts
+  s_ea46f8c56d53f8::t_5575b2f3340c59 3,14-19,21-25,42-44,47,51-57
+app/src/app/auth/callback/route.ts
+  s_ea46f8c56d53f8::t_7d4a3322ea66f8 1-2,4-5,12-27,29-44,46-72,74-81,84
+  s_ea46f8c56d53f8::t_737cda4b9d22a9 6-11
+  s_ea46f8c56d53f8::t_345470de59234a 45
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.13",
+  "base_commit_sha": "a9b2a501f12012e9e151a111bac8388218716279",
+  "prompts": {},
+  "sessions": {
+    "s_ea46f8c56d53f8": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "dd9a0aea-4d97-4ca9-a270-775e1d8e9728",
+        "model": "default"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
