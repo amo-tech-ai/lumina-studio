@@ -8,11 +8,12 @@ export type ReanalyzeResult =
   | { ok: true; hasDraft: true }
   | { ok: false; error: string };
 
-async function markBrandFailed(
+async function restoreBrandStatus(
   supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
   brandId: string,
+  status: string,
 ) {
-  await supabase.from("brands").update({ intake_status: "failed" }).eq("id", brandId);
+  await supabase.from("brands").update({ intake_status: status }).eq("id", brandId);
 }
 
 export async function reanalyzeBrand(brandId: string): Promise<ReanalyzeResult> {
@@ -50,6 +51,8 @@ export async function reanalyzeBrand(brandId: string): Promise<ReanalyzeResult> 
     return { ok: false, error: "Analysis already in progress" };
   }
 
+  const priorStatus = brand.intake_status ?? "ready";
+
   const { data: locked, error: lockErr } = await supabase
     .from("brands")
     .update({ intake_status: "analysis_running" })
@@ -66,7 +69,7 @@ export async function reanalyzeBrand(brandId: string): Promise<ReanalyzeResult> 
   }
 
   try {
-    // draft_mode: true → edge fn writes ai_profile_draft, not ai_profile
+    // draft_mode: true → edge fn writes ai_profile_draft, not ai_profile; skips scores upsert
     await invokeBrandIntelligence(
       supabase,
       brandId,
@@ -77,7 +80,8 @@ export async function reanalyzeBrand(brandId: string): Promise<ReanalyzeResult> 
     revalidatePath(`/app/brand/${brandId}`);
     return { ok: true, hasDraft: true };
   } catch (err) {
-    await markBrandFailed(supabase, brandId);
+    // Restore prior status so a failed re-analyze doesn't corrupt a healthy brand
+    await restoreBrandStatus(supabase, brandId, priorStatus);
     const message = err instanceof Error ? err.message : "Re-analyze failed";
     return { ok: false, error: message };
   }
@@ -90,12 +94,13 @@ export async function applyDraft(brandId: string): Promise<{ ok: boolean; error?
   const { data: { user }, error: authErr } = await supabase.auth.getUser();
   if (authErr || !user) return { ok: false, error: "Not signed in" };
 
-  const { data: brand } = await supabase
+  const { data: brand, error: selectErr } = await supabase
     .from("brands")
-    .select("id, ai_profile_draft")
+    .select("id, ai_profile_draft, intake_status")
     .eq("id", brandId)
     .maybeSingle();
 
+  if (selectErr) return { ok: false, error: selectErr.message };
   if (!brand?.ai_profile_draft) return { ok: false, error: "No draft to apply" };
 
   const draft = brand.ai_profile_draft as Record<string, unknown>;

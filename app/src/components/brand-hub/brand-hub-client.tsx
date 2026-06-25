@@ -38,6 +38,7 @@ export type BrandHubClientProps = {
   intakeStatus: BrandIntakeStatus | string | null;
   dnaScore: number;
   profile: AiProfile;
+  draftProfile: AiProfile | null;
   displayScores: BrandScoreDetail[];
   baseScores: BrandScoreDetail[];
   activityEvents: ActivityEvent[];
@@ -55,6 +56,7 @@ export const BrandHubClient = ({
   intakeStatus,
   dnaScore,
   profile,
+  draftProfile,
   displayScores,
   baseScores,
   activityEvents,
@@ -141,7 +143,9 @@ export const BrandHubClient = ({
         </header>
 
         <IntakeBanner status={status} errorMessage={profile._error} />
-        {intakeStatus === "draft_ready" && <DraftBanner brandId={brandId} />}
+        {intakeStatus === "draft_ready" && draftProfile && (
+          <DraftBanner brandId={brandId} draft={draftProfile} />
+        )}
 
         <div className="-mx-1 flex gap-1 overflow-x-auto border-b border-[#E8E0D8] pb-px">
           <nav

@@ -345,54 +345,58 @@ Use URL content AND web search for press, social, and competitor signals.
       throw new Error(updateErr?.message ?? "Failed to update brand");
     }
 
-    const v2ScoreEntries: { score_type: string; score: number }[] = [
-      { score_type: "visual", score: clampScore(profile.scores.visual) },
-      { score_type: "audience", score: clampScore(profile.scores.audience) },
-      { score_type: "consistency", score: clampScore(profile.scores.consistency) },
-      { score_type: "commerce_readiness", score: clampScore(profile.scores.commerce_readiness) },
-    ];
+    // In draft mode skip scores upsert — scores must not go live until draft is applied
+    let scores: { id: string; score_type: string; score: number }[] | null = null;
 
-    const extendedDimensions = [
-      "brand_clarity", "content_strength", "social_presence",
-      "digital_experience", "sustainability_signal", "photography_readiness",
-    ] as const;
-    for (const dim of extendedDimensions) {
-      const val = (profile.scores as Record<string, unknown>)[dim];
-      if (typeof val === "number") {
-        v2ScoreEntries.push({ score_type: dim, score: clampScore(val) });
+    if (!draftMode) {
+      const v2ScoreEntries: { score_type: string; score: number }[] = [
+        { score_type: "visual", score: clampScore(profile.scores.visual) },
+        { score_type: "audience", score: clampScore(profile.scores.audience) },
+        { score_type: "consistency", score: clampScore(profile.scores.consistency) },
+        { score_type: "commerce_readiness", score: clampScore(profile.scores.commerce_readiness) },
+      ];
+
+      const extendedDimensions = [
+        "brand_clarity", "content_strength", "social_presence",
+        "digital_experience", "sustainability_signal", "photography_readiness",
+      ] as const;
+      for (const dim of extendedDimensions) {
+        const val = (profile.scores as Record<string, unknown>)[dim];
+        if (typeof val === "number") {
+          v2ScoreEntries.push({ score_type: dim, score: clampScore(val) });
+        }
       }
-    }
 
-    const sharedEvidence = Array.isArray(profile.scores.evidence)
-      ? profile.scores.evidence.filter((e): e is string => typeof e === "string").slice(0, 10)
-      : [];
-    const overallConfidence = typeof profile.scores.confidence === "number"
-      ? clampScore(profile.scores.confidence)
-      : null;
+      const sharedEvidence = Array.isArray(profile.scores.evidence)
+        ? profile.scores.evidence.filter((e): e is string => typeof e === "string").slice(0, 10)
+        : [];
+      const overallConfidence = typeof profile.scores.confidence === "number"
+        ? clampScore(profile.scores.confidence)
+        : null;
 
-    const scoreRows = v2ScoreEntries.map((row) => ({
-      brand_id: brandId,
-      score_type: row.score_type,
-      score: row.score,
-      score_version: 1,
-      source: "edge_fn",
-      details: {
-        source: "brand-intelligence",
-        url,
-        crawlResultId: crawlRow?.id ?? null,
-        crawlPages: rawData?.pages?.length ?? 0,
-        ...(overallConfidence !== null && { confidence: overallConfidence }),
-        ...(sharedEvidence.length > 0 && { evidence: sharedEvidence }),
-      },
-    }));
+      const scoreRows = v2ScoreEntries.map((row) => ({
+        brand_id: brandId,
+        score_type: row.score_type,
+        score: row.score,
+        score_version: 1,
+        source: "edge_fn",
+        details: {
+          source: "brand-intelligence",
+          url,
+          crawlResultId: crawlRow?.id ?? null,
+          crawlPages: rawData?.pages?.length ?? 0,
+          ...(overallConfidence !== null && { confidence: overallConfidence }),
+          ...(sharedEvidence.length > 0 && { evidence: sharedEvidence }),
+        },
+      }));
 
-    const { data: scores, error: scoresErr } = await client
-      .from("brand_scores")
-      .upsert(scoreRows, { onConflict: "brand_id,score_type" })
-      .select("id, score_type, score");
+      const { data: scoresData, error: scoresErr } = await client
+        .from("brand_scores")
+        .upsert(scoreRows, { onConflict: "brand_id,score_type" })
+        .select("id, score_type, score");
 
-    if (scoresErr) {
-      throw new Error(scoresErr.message);
+      if (scoresErr) throw new Error(scoresErr.message);
+      scores = scoresData;
     }
 
     const usage = structuredResponse.usageMetadata;
