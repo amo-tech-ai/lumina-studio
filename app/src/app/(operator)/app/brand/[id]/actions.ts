@@ -130,9 +130,11 @@ export async function applyDraft(brandId: string): Promise<{ ok: boolean; error?
   // Upsert scores that were held in the draft
   if (draftScores.length > 0) {
     const scoreRows = draftScores.map((r) => ({ ...r, brand_id: brandId }));
-    await supabase
+    const { error: scoresErr } = await supabase
       .from("brand_scores")
       .upsert(scoreRows, { onConflict: "brand_id,score_type" });
+    // ponytail: promotion already committed; log and accept partial success rather than leaving brand stranded
+    if (scoresErr) console.error("brand_scores upsert failed after applyDraft:", scoresErr.message);
   }
 
   revalidatePath(`/app/brand/${brandId}`);
@@ -146,9 +148,22 @@ export async function discardDraft(brandId: string): Promise<{ ok: boolean; erro
   const { data: { user }, error: authErr } = await supabase.auth.getUser();
   if (authErr || !user) return { ok: false, error: "Not signed in" };
 
+  const { data: brand, error: selectErr } = await supabase
+    .from("brands")
+    .select("id, ai_profile, intake_status")
+    .eq("id", brandId)
+    .maybeSingle();
+
+  if (selectErr) return { ok: false, error: selectErr.message };
+  if (!brand) return { ok: false, error: "Brand not found" };
+
+  // Restore to ready only if a live analyzed profile exists; otherwise back to brand_created
+  const priorProfile = brand.ai_profile as Record<string, unknown> | null;
+  const restoreStatus = priorProfile?._lifecycle === "scores_complete" ? "ready" : "brand_created";
+
   const { data: updated, error } = await supabase
     .from("brands")
-    .update({ ai_profile_draft: null, intake_status: "ready" })
+    .update({ ai_profile_draft: null, intake_status: restoreStatus })
     .eq("id", brandId)
     .eq("intake_status", "draft_ready")
     .select("id")
