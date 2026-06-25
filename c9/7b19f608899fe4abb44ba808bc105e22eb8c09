@@ -1,0 +1,21 @@
+supabase/functions/social-discovery/index.ts
+  s_4ffc3bfca8d635::t_b3ca0ac9b1893c 2,4,10,30-31,34-40,45-49,53,77-79
+app/src/mastra/tools/social-discovery.ts
+  s_4ffc3bfca8d635::t_b19f6e4952fa37 141-146
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.13",
+  "base_commit_sha": "c97b19f608899fe4abb44ba808bc105e22eb8c09",
+  "prompts": {},
+  "sessions": {
+    "s_4ffc3bfca8d635": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "d421b6b8-4307-4bc8-94d4-f836cb9e7997",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
