@@ -414,3 +414,12 @@ verify_jwt = false
 
 [functions.edge-test]
 verify_jwt = true
+
+[functions.brand-intelligence]
+verify_jwt = true
+
+[functions.start-brand-crawl]
+verify_jwt = true
+
+[functions.firecrawl-webhook]
+verify_jwt = false

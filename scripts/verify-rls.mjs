@@ -415,6 +415,79 @@ try {
     .select("id")
     .eq("id", logA.id);
   assertSelectDenied(crossLogsErr, crossLogs, "user B cannot read user A ai_agent_logs");
+
+  // brand_crawls + page-level brand_crawl_results (IPI-24) — skip until migration pushed
+  const { error: crawlTableErr } = await userA.client
+    .from("brand_crawls")
+    .select("id")
+    .limit(0);
+  if (
+    crawlTableErr?.code === "42P01" ||
+    crawlTableErr?.message?.includes("does not exist")
+  ) {
+    console.log("skip: brand_crawls RLS probes (table not on remote yet)");
+  } else if (crawlTableErr) {
+    fail(`brand_crawls probe: ${crawlTableErr.message}`);
+  } else if (admin) {
+    const { data: crawlJob, error: crawlInsertErr } = await admin
+      .from("brand_crawls")
+      .insert({
+        brand_id: brandAId,
+        source_url: "https://example.com",
+        job_status: "queued",
+        started_by: userA.user.id,
+        request_id: `rls-${stamp}`,
+      })
+      .select("id")
+      .single();
+    assert(!crawlInsertErr && crawlJob?.id, "service role seeds brand_crawls job");
+
+    const { data: ownCrawls, error: ownCrawlReadErr } = await userA.client
+      .from("brand_crawls")
+      .select("id, pages_crawled")
+      .eq("id", crawlJob.id);
+    assert(
+      !ownCrawlReadErr && (ownCrawls ?? []).length === 1,
+      "user A reads own org brand_crawls job",
+    );
+
+    const { data: crossCrawls } = await userB.client
+      .from("brand_crawls")
+      .select("id")
+      .eq("id", crawlJob.id);
+    assert((crossCrawls ?? []).length === 0, "user B cannot read user A brand_crawls");
+
+    const { error: pageInsertErr } = await admin.from("brand_crawl_results").insert({
+      crawl_id: crawlJob.id,
+      brand_id: brandAId,
+      page_url: "https://example.com/",
+      title: "RLS test",
+      status_code: 200,
+      word_count: 3,
+      page_depth: 0,
+      markdown: "# test",
+      raw_json: { metadata: { scrapeId: `scrape-${stamp}` } },
+      firecrawl_scrape_id: `scrape-${stamp}`,
+    });
+    assert(!pageInsertErr, "service role seeds brand_crawl_results page row");
+
+    const { data: ownPages, error: ownPageErr } = await userA.client
+      .from("brand_crawl_results")
+      .select("id, page_url")
+      .eq("crawl_id", crawlJob.id);
+    assert(
+      !ownPageErr && (ownPages ?? []).length >= 1,
+      "user A reads page rows for own crawl",
+    );
+
+    const { data: crossPages } = await userB.client
+      .from("brand_crawl_results")
+      .select("id")
+      .eq("crawl_id", crawlJob.id);
+    assert((crossPages ?? []).length === 0, "user B cannot read user A crawl pages");
+  } else {
+    console.log("skip: brand_crawls RLS insert probes (no service role)");
+  }
 } catch (err) {
   fail(err instanceof Error ? err.message : String(err));
 } finally {

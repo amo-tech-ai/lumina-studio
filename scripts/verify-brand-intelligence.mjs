@@ -4,7 +4,7 @@
  * Run: npm run supabase:verify-brand-intelligence
  */
 import { readFileSync, existsSync } from "node:fs";
-import { resolve } from "node:path";
+import { resolve, join } from "node:path";
 import { createClient } from "@supabase/supabase-js";
 
 const root = resolve(import.meta.dirname, "..");
@@ -63,8 +63,61 @@ async function fetchJson(path, init = {}) {
   return { res, json, text };
 }
 
+function verifyFirecrawlArtifacts() {
+  const firecrawlShared = join(root, "supabase/functions/_shared/firecrawl.ts");
+  if (existsSync(firecrawlShared)) {
+    pass("_shared/firecrawl.ts present");
+  } else {
+    console.log("skip: _shared/firecrawl.ts (IPI-24 not implemented yet)");
+  }
+
+  for (const fn of ["start-brand-crawl", "firecrawl-webhook"]) {
+    const dir = join(root, "supabase/functions", fn, "index.ts");
+    if (existsSync(dir)) {
+      pass(`edge function ${fn} present`);
+    } else {
+      console.log(`skip: ${fn} (IPI-24 not deployed yet)`);
+    }
+  }
+
+  const migration = join(
+    root,
+    "supabase/migrations/20260627000000_brand_crawls_job_pages.sql",
+  );
+  if (existsSync(migration)) {
+    pass("brand_crawls migration file on disk");
+  } else {
+    fail("missing migration 20260627000000_brand_crawls_job_pages.sql");
+  }
+}
+
+async function verifyBrandCrawlsSchema(admin) {
+  const { error } = await admin.from("brand_crawls").select("id").limit(0);
+  if (error?.code === "42P01" || error?.message?.includes("does not exist")) {
+    console.log("skip: brand_crawls table (migration not pushed yet)");
+    return;
+  }
+  if (error) {
+    fail(`brand_crawls probe: ${error.message}`);
+    return;
+  }
+  pass("brand_crawls table exists on remote");
+
+  const { error: pageErr } = await admin
+    .from("brand_crawl_results")
+    .select("crawl_id, page_url, raw_json, firecrawl_scrape_id")
+    .limit(0);
+  if (pageErr) {
+    fail(`brand_crawl_results page columns: ${pageErr.message}`);
+  } else {
+    pass("brand_crawl_results page columns queryable");
+  }
+}
+
 async function main() {
   console.log("brand-intelligence verification\n");
+
+  verifyFirecrawlArtifacts();
 
   const stamp = Date.now();
   const email = `brand-intel-${stamp}@example.com`;
@@ -212,6 +265,8 @@ async function main() {
       pass(`ai_agent_logs duration_ms=${logRow.duration_ms}`);
     }
   }
+
+  await verifyBrandCrawlsSchema(admin);
 
   await admin.auth.admin.deleteUser(userId);
   pass("cleaned up test user");

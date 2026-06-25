@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from "vitest";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { createOrgAndBrand, invokeBrandIntelligence } from "@/lib/onboarding";
+import { createOrgAndBrand, invokeStartBrandCrawl, invokeBrandIntelligence } from "@/lib/onboarding";
 
 const FORM = {
   brandName: "Maison Test",
@@ -44,17 +44,38 @@ describe("onboarding orchestration (IPI-46)", () => {
         throw new Error(`unexpected table ${table}`);
       },
       functions: {
-        invoke: vi.fn(() => {
-          order.push("edge");
-          return Promise.resolve({ data: { brandId: "brand-1", scores: [] }, error: null });
+        invoke: vi.fn((name: string) => {
+          order.push(name === "start-brand-crawl" ? "crawl" : "edge");
+          if (name === "start-brand-crawl") {
+            return Promise.resolve({
+              data: { ok: true, data: { crawlId: "crawl-1" } },
+              error: null,
+            });
+          }
+          return Promise.resolve({
+            data: { ok: true, data: { brandId: "brand-1", scores: [] } },
+            error: null,
+          });
         }),
       },
     } as unknown as SupabaseClient;
 
     const { brandId } = await createOrgAndBrand(supabase, "user-1", FORM);
+    await invokeStartBrandCrawl(supabase, brandId, FORM.websiteUrl, {
+      idempotencyKey: `onboarding-${brandId}`,
+    });
     await invokeBrandIntelligence(supabase, brandId, FORM);
 
-    expect(order).toEqual(["org", "brand", "edge"]);
+    expect(order).toEqual(["org", "brand", "crawl", "edge"]);
+    expect(supabase.functions.invoke).toHaveBeenCalledWith("start-brand-crawl", {
+      body: {
+        brandId: "brand-1",
+        websiteUrl: FORM.websiteUrl,
+        idempotencyKey: "onboarding-brand-1",
+        workflowId: undefined,
+        requestId: undefined,
+      },
+    });
     expect(supabase.functions.invoke).toHaveBeenCalledWith("brand-intelligence", {
       body: {
         url: FORM.websiteUrl,
@@ -106,9 +127,11 @@ describe("onboarding orchestration (IPI-46)", () => {
     const runBlock = src.match(/const runAnalysis = async \(\) => \{[\s\S]*?\n  \};/)?.[0];
     expect(runBlock).toBeTruthy();
     const shellIdx = runBlock!.indexOf("await createOrgAndBrand");
+    const crawlIdx = runBlock!.indexOf("await invokeStartBrandCrawl");
     const edgeIdx = runBlock!.indexOf("await invokeBrandIntelligence");
     expect(shellIdx).toBeGreaterThan(-1);
-    expect(edgeIdx).toBeGreaterThan(shellIdx);
+    expect(crawlIdx).toBeGreaterThan(shellIdx);
+    expect(edgeIdx).toBeGreaterThan(crawlIdx);
     expect(src).not.toMatch(/invoke\("brand-intelligence"/);
     expect(src).toMatch(/setShell/);
   });

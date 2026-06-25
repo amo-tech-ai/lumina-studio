@@ -102,6 +102,47 @@ export type BrandIntelligenceResponse = {
   scores?: { score_type: string; score: number }[];
 };
 
+export type StartBrandCrawlResponse = {
+  crawlId: string;
+  firecrawlJobId?: string | null;
+  requestId?: string;
+  reused?: boolean;
+};
+
+/** Step 2a (IPI-24): start async Firecrawl crawl on existing brand shell. */
+export const invokeStartBrandCrawl = async (
+  supabase: SupabaseClient,
+  brandId: string,
+  websiteUrl: string,
+  options?: { idempotencyKey?: string; workflowId?: string; requestId?: string },
+): Promise<StartBrandCrawlResponse> => {
+  const { data, error } = await supabase.functions.invoke("start-brand-crawl", {
+    body: {
+      brandId,
+      websiteUrl: websiteUrl.trim(),
+      idempotencyKey: options?.idempotencyKey,
+      workflowId: options?.workflowId,
+      requestId: options?.requestId,
+    },
+  });
+
+  if (error) {
+    throw new Error(error.message || "Failed to start brand crawl");
+  }
+
+  const payload = data as { ok?: boolean; data?: StartBrandCrawlResponse; error?: { message?: string } } | null;
+  if (payload?.ok === false) {
+    throw new Error(payload.error?.message ?? "Failed to start brand crawl");
+  }
+
+  const inner = payload?.data ?? (data as StartBrandCrawlResponse | null);
+  if (!inner?.crawlId) {
+    throw new Error("start-brand-crawl returned no crawlId");
+  }
+
+  return inner;
+};
+
 /** Step 2: invoke edge fn with existing brandId (scores + profile persisted server-side). */
 export const invokeBrandIntelligence = async (
   supabase: SupabaseClient,
@@ -120,13 +161,24 @@ export const invokeBrandIntelligence = async (
     throw new Error(error.message || "Brand analysis failed");
   }
 
-  const payload = data as BrandIntelligenceResponse | null;
-  if (!payload?.brandId) {
+  const payload = data as
+    | { ok?: boolean; data?: BrandIntelligenceResponse; error?: { message?: string } }
+    | BrandIntelligenceResponse
+    | null;
+  if (payload && typeof payload === "object" && "ok" in payload && payload.ok === false) {
+    throw new Error(payload.error?.message ?? "Brand analysis failed");
+  }
+
+  const inner =
+    payload && typeof payload === "object" && "data" in payload && payload.data
+      ? payload.data
+      : (payload as BrandIntelligenceResponse | null);
+  if (!inner?.brandId) {
     throw new Error("Brand analysis returned no brandId");
   }
-  if (payload.brandId !== brandId) {
+  if (inner.brandId !== brandId) {
     throw new Error("Brand analysis returned mismatched brandId");
   }
 
-  return payload;
+  return inner;
 };
