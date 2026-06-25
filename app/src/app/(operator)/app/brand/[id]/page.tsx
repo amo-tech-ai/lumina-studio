@@ -54,7 +54,7 @@ const BrandPage = async ({ params }: Props) => {
       .eq("brand_id", id),
     supabase
       .from("brand_crawls")
-      .select("status, pages_crawled, pages_found")
+      .select("job_status, pages_crawled, pages_found")
       .eq("brand_id", id)
       .order("created_at", { ascending: false })
       .limit(1),
