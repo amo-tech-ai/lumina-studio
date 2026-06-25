@@ -8,7 +8,7 @@ import {
   CopilotChatConfigurationProvider,
 } from "@copilotkit/react-core/v2";
 import { usePathname, useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { z } from "zod";
 
 import {
@@ -18,21 +18,22 @@ import {
 import { ThreadsDrawer } from "@/components/threads-drawer";
 import { ThreadsPanelGate } from "@/components/threads-drawer/locked-state";
 import styles from "@/components/threads-drawer/threads-drawer.module.css";
+import { resolveAgentId } from "@/lib/route-agent-map";
 
-// IPI2-82 — the reusable operator shell: left threads drawer, center workspace
-// (`children`), right CopilotSidebar AI panel. One CopilotChatConfigurationProvider
-// scopes every hook to the production-planner agent (so page-level tools/suggestions
-// resolve, not the missing "default"). Used by the root layout so EVERY /app route
-// gets the AI panel + route context — no per-page wiring.
+// IPI-110 — 3-panel shell: left threads drawer, center workspace (`children`),
+// right CopilotSidebar. Agent ID resolves per-route via resolveAgentId (IPI-51).
 
-const AGENT_ID = "production-planner";
 const SECTIONS = ["brand", "onboarding", "shoots", "assets", "campaigns", "matching"] as const;
 
 export function OperatorPanel({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname();
+  const agentId = resolveAgentId(pathname);
   const [threadId, setThreadId] = useState<string | undefined>(undefined);
+  // Reset thread when agent changes — prevents cross-agent thread mismatch.
+  useEffect(() => { setThreadId(undefined); }, [agentId]);
   return (
-    <CopilotChatConfigurationProvider agentId={AGENT_ID} threadId={threadId}>
-      <OperatorShell threadId={threadId} onThreadChange={setThreadId}>
+    <CopilotChatConfigurationProvider agentId={agentId} threadId={threadId}>
+      <OperatorShell agentId={agentId} threadId={threadId} onThreadChange={setThreadId}>
         {children}
       </OperatorShell>
     </CopilotChatConfigurationProvider>
@@ -41,10 +42,12 @@ export function OperatorPanel({ children }: { children: React.ReactNode }) {
 
 function OperatorShell({
   children,
+  agentId,
   threadId,
   onThreadChange,
 }: {
   children: React.ReactNode;
+  agentId: string;
   threadId: string | undefined;
   onThreadChange: (id: string | undefined) => void;
 }) {
@@ -53,19 +56,16 @@ function OperatorShell({
 
   useHideInternalToolCalls();
 
-  // L1 context (v2 useAgentContext): tell the agent which operator route is
-  // active so answers are relevant to the current workspace. Streamed, not polled.
+  // L1 context: tell the agent which route is active so answers stay relevant.
   useAgentContext({
-    description: "The operator's current route in the iPix app (e.g. /brand, /shoots)",
+    description: "The operator's current route in the iPix app (e.g. /app/brand, /app/shoots)",
     value: pathname,
   });
 
-  // 🪁 Frontend tool: let the agent open an operator workspace.
   useFrontendTool({
     name: "navigateTo",
     description: "Open an operator workspace section.",
     parameters: z.object({ section: z.enum(SECTIONS) }),
-    // async required: useFrontendTool's handler signature returns Promise<unknown>.
     handler: async ({ section }) => {
       router.push(`/app/${section}`);
       return `Opening ${section}.`;
@@ -87,7 +87,7 @@ function OperatorShell({
     <div className={`${styles.layout} threadsLayout`}>
       <ThreadsPanelGate>
         <ThreadsDrawer
-          agentId={AGENT_ID}
+          agentId={agentId}
           threadId={threadId}
           onThreadChange={onThreadChange}
         />
