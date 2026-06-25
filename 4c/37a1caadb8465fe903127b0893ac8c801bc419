@@ -1,0 +1,48 @@
+supabase/functions/_shared/schemas/brand-profile.ts
+  s_ea46f8c56d53f8::t_6dbf2d4aaa5708 1-194
+app/src/test/crawl-fixture.test.ts
+  s_ea46f8c56d53f8::t_31516b2ac9ebf2 1-11
+app/src/test/fixtures/firecrawl-sample-raw_data.json
+  s_ea46f8c56d53f8::t_8ee1f859c10ce3 1-19
+supabase/functions/brand-intelligence/index.ts
+  s_ea46f8c56d53f8::t_1e2caed74e5ca2 297,307,309
+  s_ea46f8c56d53f8::t_8d29910b267c55 5-9,12-23,38,59-145,155-157,177,181-186,193-208,218-220,223-224,226-227,229-234,236-238,240-245,247,249-253,255-284,286-287,289-290,293-296,298-304,306,308,310-313,324-327,330-334,337-351,358-361,366-373,385-386,393-398,403-405,407,410,413,419,425-426,430-441
+src/types/supabase.ts
+  s_ea46f8c56d53f8::t_00010458897358 541,558,575,665,667,669,671-673,676,679-681,686,688,690,692-694,697,700-702,707,709,711,713-715,718,721-723,733-825,3592-3605,3931-3946
+supabase/functions/_shared/gemini.ts
+  s_ea46f8c56d53f8::t_70ac72fe427b6e 113
+  s_ea46f8c56d53f8::t_da9558ebb247ed 1-2,5,10,16,27-112,114-120
+  s_ea46f8c56d53f8::t_34f5ec81597527 3-4,6-9,11-15,17-26,121
+app/src/lib/onboarding.ts
+  s_ea46f8c56d53f8::t_5820c2570f58b8 151,158
+app/src/app/(operator)/app/onboarding/page.tsx
+  s_ea46f8c56d53f8::t_f9d635cc1b0a2d 59,61,64,72
+app/src/test/onboarding-orchestration.test.ts
+  s_ea46f8c56d53f8::t_6f327fccfce595 67,84
+supabase/functions/_shared/crawl-context.ts
+  s_ea46f8c56d53f8::t_e7185f5af96306 1-67
+scripts/verify-brand-intelligence.mjs
+  s_ea46f8c56d53f8::t_d21876825480e1 67-83
+  s_ea46f8c56d53f8::t_5407fb783207ed 264-274
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.13",
+  "base_commit_sha": "4c37a1caadb8465fe903127b0893ac8c801bc419",
+  "prompts": {},
+  "humans": {
+    "h_d382fbec1d5b46": {
+      "author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  },
+  "sessions": {
+    "s_ea46f8c56d53f8": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "dd9a0aea-4d97-4ca9-a270-775e1d8e9728",
+        "model": "default"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
