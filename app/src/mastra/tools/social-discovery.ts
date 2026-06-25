@@ -68,8 +68,8 @@ export const discoverSocialChannelsTool = createTool({
           .eq("id", brandId)
           .maybeSingle(),
         supabase
-          .from("brand_crawl_results")
-          .select("raw_data, status, pages_crawled")
+          .from("brand_crawls")
+          .select("job_status, pages_crawled, raw_data")
           .eq("brand_id", brandId)
           .order("created_at", { ascending: false })
           .limit(1),
@@ -83,7 +83,7 @@ export const discoverSocialChannelsTool = createTool({
     }
 
     const crawlSummary = crawlRows?.[0]
-      ? `Crawl status: ${crawlRows[0].status}, pages: ${crawlRows[0].pages_crawled}`
+      ? `Crawl status: ${crawlRows[0].job_status}, pages: ${crawlRows[0].pages_crawled}`
       : "No crawl data available";
 
     const aiProfile = brand.ai_profile as Record<string, unknown> | null;
@@ -138,12 +138,18 @@ Return URLs as full https:// URLs only.`;
       errorMessage = err instanceof Error ? err.message : String(err);
     }
 
-    // WRITE: always call edge fn so every run is auditable (even 0-channel runs)
-    await callEdgeFunction(
-      "social-discovery",
-      { brandId, channels, startedAt, status, ...(errorMessage ? { error: errorMessage } : {}) },
-      { accessToken: process.env.SUPABASE_SERVICE_ROLE_KEY },
-    );
+    // WRITE: always call edge fn so every run is auditable (even 0-channel runs).
+    // Edge fn returns 500 when status="failed" (upsert error path) — catch so a
+    // Gemini failure that already set status="failed" doesn't double-fault here.
+    try {
+      await callEdgeFunction(
+        "social-discovery",
+        { brandId, channels, startedAt, status, ...(errorMessage ? { error: errorMessage } : {}) },
+        { accessToken: process.env.SUPABASE_SERVICE_ROLE_KEY },
+      );
+    } catch (edgeErr) {
+      console.warn("social-discovery edge fn call failed:", edgeErr instanceof Error ? edgeErr.message : String(edgeErr));
+    }
 
     return {
       brandId,
