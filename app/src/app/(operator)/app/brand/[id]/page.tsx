@@ -44,7 +44,7 @@ const BrandPage = async ({ params }: Props) => {
     supabase
       .from("brands")
       .select(
-        "id, name, brand_url, ai_profile, org_id, created_at, intake_status, organizations(name, plan)",
+        "id, name, brand_url, ai_profile, ai_profile_draft, org_id, created_at, intake_status, organizations(name, plan)",
       )
       .eq("id", id)
       .maybeSingle(),
@@ -58,6 +58,7 @@ const BrandPage = async ({ params }: Props) => {
 
   const org = brand.organizations as { name?: string; plan?: string } | null;
   const profile = parseAiProfile(brand.ai_profile);
+  const draftProfile = brand.intake_status === "draft_ready" ? parseAiProfile(brand.ai_profile_draft) : null;
   const scoreRows = (scores ?? []) as BrandScoreDetail[];
   const displayScores = filterDisplayScores(scoreRows);
   const baseScores = getBaseScores(scoreRows);
@@ -83,6 +84,7 @@ const BrandPage = async ({ params }: Props) => {
       orgPlan={org?.plan}
       createdDate={createdDate}
       intakeStatus={brand.intake_status}
+      draftProfile={draftProfile}
       dnaScore={dnaScore}
       profile={profile}
       displayScores={displayScores}

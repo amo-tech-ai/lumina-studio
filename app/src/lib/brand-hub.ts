@@ -55,6 +55,7 @@ export type BrandIntakeStatus =
   | "crawl_complete"
   | "analysis_running"
   | "scores_complete"
+  | "draft_ready"
   | "ready"
   | "failed";
 
@@ -118,6 +119,7 @@ const INTAKE_LABELS: Record<BrandIntakeStatus, string> = {
   crawl_complete: "Crawl complete",
   analysis_running: "Analyzing",
   scores_complete: "Scores ready",
+  draft_ready: "Draft ready",
   ready: "Ready",
   failed: "Failed",
 };
@@ -128,6 +130,7 @@ const INTAKE_COLORS: Record<BrandIntakeStatus, string> = {
   crawl_complete: "#D97706",
   analysis_running: "#D97706",
   scores_complete: "#059669",
+  draft_ready: "#F3B93C",
   ready: "#059669",
   failed: "#DC2626",
 };
@@ -210,7 +213,7 @@ export const hasMeaningfulProfile = (profile: AiProfile): boolean =>
   );
 
 export const isReAnalyzeDisabled = (status: BrandIntakeStatus | string | null | undefined) =>
-  status === "crawl_running" || status === "analysis_running";
+  status === "crawl_running" || status === "analysis_running" || status === "draft_ready";
 
 export const parseScoreDetails = (details: unknown): ScoreDetails | null => {
   if (!details || typeof details !== "object" || Array.isArray(details)) return null;
@@ -252,6 +255,7 @@ export const buildActivityTimeline = (input: {
     "crawl_complete",
     "analysis_running",
     "scores_complete",
+    "draft_ready",
     "ready",
   ];
 
@@ -272,9 +276,13 @@ export const buildActivityTimeline = (input: {
         at: input.profile.analyzedAt,
       });
     }
-    if (statusIndex >= 3) events.push({ id: "scores", label: "Scores saved" });
-    if (statusIndex >= 4 || status === "ready") {
-      events.push({ id: "ready", label: "Brand Hub ready" });
+    if (status === "draft_ready") {
+      events.push({ id: "draft_ready", label: "Draft ready for review" });
+    } else {
+      if (statusIndex >= 3) events.push({ id: "scores", label: "Scores saved" });
+      if (statusIndex >= 5 || status === "ready") {
+        events.push({ id: "ready", label: "Brand Hub ready" });
+      }
     }
   }
 

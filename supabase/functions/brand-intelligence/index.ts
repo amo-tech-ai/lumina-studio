@@ -151,6 +151,7 @@ Deno.serve(async (req: Request) => {
   const started = performance.now();
   let failureBrandId: string | null = null;
   let failureClient: ReturnType<typeof createUserClient> | null = null;
+  let draftPersisted = false;
 
   try {
     if (req.method !== "POST") {
@@ -179,6 +180,7 @@ Deno.serve(async (req: Request) => {
       brandId?: string;
       brand_name?: string;
       crawlResultId?: string;
+      draft_mode?: boolean;
     };
     try {
       body = await req.json();
@@ -217,6 +219,7 @@ Deno.serve(async (req: Request) => {
 
     const brandName =
       typeof body.brand_name === "string" ? body.brand_name.trim() : undefined;
+    const draftMode = body.draft_mode === true;
 
     const client = createUserClient(auth.accessToken);
     failureClient = client;
@@ -322,28 +325,9 @@ Use URL content AND web search for press, social, and competitor signals.
     }
 
     const aiProfile = buildAiProfileFromPayload(profile, url);
-    const mergedProfile = {
-      ...priorProfile,
-      ...aiProfile,
-      _lifecycle: "scores_complete",
-    };
 
-    const { data: updated, error: updateErr } = await client
-      .from("brands")
-      .update({
-        name: aiProfile.name as string,
-        brand_url: url,
-        ai_profile: mergedProfile,
-        intake_status: "scores_complete",
-      })
-      .eq("id", brandId)
-      .select("id, name")
-      .single();
-
-    if (updateErr || !updated) {
-      throw new Error(updateErr?.message ?? "Failed to update brand");
-    }
-
+    // Build score rows unconditionally — in draft mode they're embedded in the draft JSONB;
+    // in live mode they're upserted directly to brand_scores.
     const v2ScoreEntries: { score_type: string; score: number }[] = [
       { score_type: "visual", score: clampScore(profile.scores.visual) },
       { score_type: "audience", score: clampScore(profile.scores.audience) },
@@ -370,11 +354,10 @@ Use URL content AND web search for press, social, and competitor signals.
       : null;
 
     const scoreRows = v2ScoreEntries.map((row) => ({
-      brand_id: brandId,
       score_type: row.score_type,
       score: row.score,
       score_version: 1,
-      source: "edge_fn",
+      source: "edge_fn" as const,
       details: {
         source: "brand-intelligence",
         url,
@@ -385,13 +368,43 @@ Use URL content AND web search for press, social, and competitor signals.
       },
     }));
 
-    const { data: scores, error: scoresErr } = await client
-      .from("brand_scores")
-      .upsert(scoreRows, { onConflict: "brand_id,score_type" })
-      .select("id, score_type, score");
+    const mergedProfile = {
+      ...priorProfile,
+      ...aiProfile,
+      _lifecycle: "scores_complete",
+      // In draft mode, embed scores so applyDraft can upsert them when the draft is approved
+      ...(draftMode && { _draft_scores: scoreRows }),
+    };
 
-    if (scoresErr) {
-      throw new Error(scoresErr.message);
+    const brandUpdate = draftMode
+      ? { ai_profile_draft: mergedProfile, intake_status: "draft_ready" as const }
+      : { name: aiProfile.name as string, brand_url: url, ai_profile: mergedProfile, intake_status: "scores_complete" as const };
+
+    const { data: updated, error: updateErr } = await client
+      .from("brands")
+      .update(brandUpdate)
+      .eq("id", brandId)
+      .select("id, name")
+      .single();
+
+    if (updateErr || !updated) {
+      throw new Error(updateErr?.message ?? "Failed to update brand");
+    }
+
+    // Track that draft was persisted so the catch block doesn't overwrite draft_ready → failed
+    if (draftMode) draftPersisted = true;
+
+    let scores: { id: string; score_type: string; score: number }[] | null = null;
+
+    if (!draftMode) {
+      const liveScoreRows = scoreRows.map((r) => ({ ...r, brand_id: brandId }));
+      const { data: scoresData, error: scoresErr } = await client
+        .from("brand_scores")
+        .upsert(liveScoreRows, { onConflict: "brand_id,score_type" })
+        .select("id, score_type, score");
+
+      if (scoresErr) throw new Error(scoresErr.message);
+      scores = scoresData;
     }
 
     const usage = structuredResponse.usageMetadata;
@@ -439,13 +452,11 @@ Use URL content AND web search for press, social, and competitor signals.
     });
   } catch (err) {
     console.error("brand-intelligence error:", err);
-    if (failureBrandId && failureClient) {
+    // If draft was already persisted successfully, don't overwrite draft_ready → failed.
+    // The operator can still apply or discard the draft; the error is in a later step (e.g. logging).
+    if (failureBrandId && failureClient && !draftPersisted) {
       try {
-        await markIntakeStatus(
-          failureClient,
-          failureBrandId,
-          "failed",
-        );
+        await markIntakeStatus(failureClient, failureBrandId, "failed");
       } catch (statusErr) {
         console.error("failed to set intake_status=failed:", statusErr);
       }
