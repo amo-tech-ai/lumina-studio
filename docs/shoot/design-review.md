@@ -145,7 +145,7 @@ Rationale: Deliverables before shot list is the non-negotiable invariant. Crew b
 
 | Column | Type | Source |
 |---|---|---|
-| Channel | Select (`instagram_feed`, `shopify_pdp`, `amazon`, `tiktok`, `pinterest`, `email`) | AI-generated from brand DNA |
+| Channel | Select (`instagram_feed`, `instagram_story`, `instagram_reel`, `tiktok`, `pinterest`, `amazon`, `shopify`, `facebook`, `youtube`, `website`) | AI-generated from brand DNA |
 | Format | Display (`4:5`, `1:1`, `9:16`, `16:9`, `white_bg`) | Derived from channel |
 | Quantity | Number input | AI-generated, operator-editable |
 | Aspect Ratio | Display (redundant with format but explicit) | Channel rule |
@@ -157,7 +157,7 @@ No additional columns for MVP. Add "Assigned Shots" count (read-only) after Gate
 
 **Confirmed:** Both — show deliverable count AND channel name.
 
-Format: `2 deliverables · Instagram Feed, Shopify PDP`
+Format: `2 deliverables · instagram_feed, shopify`
 
 Rationale: Deliverable count alone is opaque. Channel name provides context for operators reviewing shot list. Single compact cell; wrap on overflow.
 
@@ -165,15 +165,16 @@ Rationale: Deliverable count alone is opaque. Channel name provides context for 
 
 **Confirmed:** Three-tier, threshold-based.
 
-| Score | Label | Color | Hex |
-|---|---|---|---|
-| ≥ 80 | Approved | Green | `#059669` |
-| 60–79 | Review | Amber | `#D97706` |
-| < 60 | Blocked | Red | `#DC2626` |
+| Score | Label | DB status | Color | Hex |
+|---|---|---|---|---|
+| ≥ 80 | Approved | `approved` | Green | `#059669` |
+| 60–79 | Flagged | `flagged` | Amber | `#D97706` |
+| < 60 | Rejected | `rejected` | Red | `#DC2626` |
+| — | Pending | `pending` | Grey | `#6B7280` |
 
-These map to `shoot_assets.status` values: `approved`, `review`, `blocked`. (NOT `flagged` or `pending` — those are not valid status values in the schema.)
+These map to the `shoot.asset_status` enum: `pending`, `approved`, `flagged`, `rejected`. (`review` and `blocked` do not exist in the schema — do not use them.)
 
-Badge renders as a pill with score number + label: `✓ 84 Approved`. Blocked badge triggers `explainShootDnaAlerts` CTA.
+Badge renders as a pill with score number + label: `✓ 84 Approved`. Flagged/rejected badges trigger `explainShootDnaAlerts` CTA.
 
 ### Decision 5 — Tabs Order on Detail Page
 
