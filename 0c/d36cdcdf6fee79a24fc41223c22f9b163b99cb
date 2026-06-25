@@ -1,0 +1,22 @@
+src/components/brand/BrandScorePanel.tsx
+  s_1ee6d41c106a00::t_564516d5e72985 16-23
+  s_1ee6d41c106a00::t_ee7ee3562efd28 45
+src/lib/brand-scores.ts
+  s_1ee6d41c106a00::t_a53765c6a6102b 85
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.13",
+  "base_commit_sha": "0cd36cdcdf6fee79a24fc41223c22f9b163b99cb",
+  "prompts": {},
+  "sessions": {
+    "s_1ee6d41c106a00": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_1008d1b38ffeXKx1F8jeq6pBWL",
+        "model": "qwen/qwen3.5-plus-20260420"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
