@@ -26,6 +26,10 @@ export function resolveGeminiModel(): string {
   return override || DEFAULT_GEMINI_MODEL;
 }
 
+function normalizeThinkingLevel(level: "high" | "low"): "HIGH" | "LOW" {
+  return level === "high" ? "HIGH" : "LOW";
+}
+
 export function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
   return Promise.race([
     promise,
@@ -66,7 +70,9 @@ export async function generateStructuredContent(
     config.tools = options.tools;
   }
   if (options.thinkingLevel) {
-    config.thinkingLevel = options.thinkingLevel;
+    config.thinkingConfig = {
+      thinkingLevel: normalizeThinkingLevel(options.thinkingLevel),
+    };
   }
   if (options.temperature !== undefined) {
     config.temperature = options.temperature;

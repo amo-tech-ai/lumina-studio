@@ -79,6 +79,8 @@ function verifyFirecrawlArtifacts() {
     } else {
       fail("brand-intelligence missing crawlResultId/raw_data handling");
     }
+  } else {
+    fail("missing supabase/functions/brand-intelligence/index.ts");
   }
 
   const firecrawlShared = join(root, "supabase/functions/_shared/firecrawl.ts");
