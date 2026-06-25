@@ -45,7 +45,7 @@ export function useHideInternalToolCalls() {
       if (isCopilotDebugToolsEnabled()) {
         return <DebugToolCallCard name={name} status={status} />;
       }
-      return null;
+      return <></>;
     },
   });
 }
