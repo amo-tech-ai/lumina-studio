@@ -8,7 +8,7 @@ import {
   CopilotChatConfigurationProvider,
 } from "@copilotkit/react-core/v2";
 import { usePathname, useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { z } from "zod";
 
 import {
@@ -29,6 +29,8 @@ export function OperatorPanel({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const agentId = resolveAgentId(pathname);
   const [threadId, setThreadId] = useState<string | undefined>(undefined);
+  // Reset thread when agent changes — prevents cross-agent thread mismatch.
+  useEffect(() => { setThreadId(undefined); }, [agentId]);
   return (
     <CopilotChatConfigurationProvider agentId={agentId} threadId={threadId}>
       <OperatorShell agentId={agentId} threadId={threadId} onThreadChange={setThreadId}>

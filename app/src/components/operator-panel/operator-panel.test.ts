@@ -20,17 +20,26 @@ const PANEL_SRC = readFileSync(
   "utf8",
 );
 
-describe("OperatorPanel — agent wiring (IPI2-82)", () => {
-  it("scopes CopilotChatConfigurationProvider to production-planner (not default alias)", () => {
-    expect(PANEL_SRC).toMatch(/const AGENT_ID = "production-planner"/);
-    expect(PANEL_SRC).toMatch(
-      /<CopilotChatConfigurationProvider agentId={AGENT_ID}/,
-    );
+describe("OperatorPanel — agent wiring (IPI-110)", () => {
+  it("resolves agentId dynamically from pathname via resolveAgentId", () => {
+    expect(PANEL_SRC).toMatch(/resolveAgentId/);
+    expect(PANEL_SRC).toMatch(/const agentId = resolveAgentId\(pathname\)/);
+    expect(PANEL_SRC).not.toMatch(/const AGENT_ID = /);
     expect(PANEL_SRC).not.toMatch(/agentId=\{?"default"/);
   });
 
-  it("passes the same agent id to ThreadsDrawer", () => {
-    expect(PANEL_SRC).toMatch(/agentId={AGENT_ID}/);
+  it("passes dynamic agentId to CopilotChatConfigurationProvider", () => {
+    expect(PANEL_SRC).toMatch(/<CopilotChatConfigurationProvider agentId=\{agentId\}/);
+  });
+
+  it("passes dynamic agentId to ThreadsDrawer", () => {
+    expect(PANEL_SRC).toMatch(/agentId=\{agentId\}/);
+  });
+
+  it("resets threadId when agentId changes", () => {
+    expect(PANEL_SRC).toMatch(/useEffect\(/);
+    expect(PANEL_SRC).toMatch(/setThreadId\(undefined\)/);
+    expect(PANEL_SRC).toMatch(/\[agentId\]/);
   });
 });
 
