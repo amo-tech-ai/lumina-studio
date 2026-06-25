@@ -56,7 +56,7 @@ export const generateShotListDraft = createTool({
 
     // Flag any deliverable not mapped to a shot (shouldn't happen here, but defensive)
     const uncovered = approved_deliverables
-      .filter((_, i) => !coveredIds.has(`deliverable-${i}`) && !approved_deliverables[i].id)
+      .filter((d, i) => !coveredIds.has(d.id ?? `deliverable-${i}`))
       .map((d) => `Deliverable ${d.channel}/${d.format} has no shots`);
 
     return {

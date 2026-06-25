@@ -23,3 +23,25 @@ CREATE POLICY "brands_select_org"
     OR
     (org_id IS NOT NULL AND public.is_org_member(org_id))
   );
+
+-- Update UPDATE policy: NULL-org brands editable by creator; org brands require membership.
+DROP POLICY IF EXISTS "brands_update_org" ON public.brands;
+CREATE POLICY "brands_update_org"
+  ON public.brands FOR UPDATE TO authenticated
+  USING (
+    (org_id IS NULL AND user_id = (SELECT auth.uid()))
+    OR (org_id IS NOT NULL AND public.is_org_member(org_id))
+  )
+  WITH CHECK (
+    (org_id IS NULL AND user_id = (SELECT auth.uid()))
+    OR (org_id IS NOT NULL AND public.is_org_member(org_id))
+  );
+
+-- Update DELETE policy: NULL-org brands deletable by creator; org brands require ownership.
+DROP POLICY IF EXISTS "brands_delete_org" ON public.brands;
+CREATE POLICY "brands_delete_org"
+  ON public.brands FOR DELETE TO authenticated
+  USING (
+    (org_id IS NULL AND user_id = (SELECT auth.uid()))
+    OR (org_id IS NOT NULL AND public.is_org_owner(org_id))
+  );
