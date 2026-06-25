@@ -1,0 +1,37 @@
+app/src/app/(operator)/app/onboarding/page.tsx
+  s_ea46f8c56d53f8::t_2dcd1ac4c259f8 188
+app/src/components/operator-panel/operator-panel.test.ts
+  s_ea46f8c56d53f8::t_159bcb3f7c28e9 8
+app/src/lib/brand-utils.ts
+  s_ea46f8c56d53f8::t_4e32159f899f0a 1-12
+app/src/app/(operator)/app/brand/[id]/page.tsx
+  s_ea46f8c56d53f8::t_a2565f38460654 65
+  s_ea46f8c56d53f8::t_c64e235cd39cf7 4
+app/src/app/(operator)/layout.tsx
+  s_ea46f8c56d53f8::t_f1f98d489ca967 3,6-8,10-23,30-32
+app/src/test/onboarding.test.ts
+  s_ea46f8c56d53f8::t_2577188f1c5c57 39,43
+app/src/components/operator-panel/operator-panel.tsx
+  s_ea46f8c56d53f8::t_27a9a636af7ae7 25
+app/src/test/brand-hub.test.ts
+  s_ea46f8c56d53f8::t_debd21359c9c7f 23-24
+  s_ea46f8c56d53f8::t_8d3be0dd7d6eba 3
+app/src/app/(operator)/app/page.tsx
+  s_ea46f8c56d53f8::t_192806667add77 7-14
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.13",
+  "base_commit_sha": "f3b8bbdb5f3040d6c95ffa99a6b2446cf22ea813",
+  "prompts": {},
+  "sessions": {
+    "s_ea46f8c56d53f8": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "dd9a0aea-4d97-4ca9-a270-775e1d8e9728",
+        "model": "default"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
