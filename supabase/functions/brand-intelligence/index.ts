@@ -179,6 +179,7 @@ Deno.serve(async (req: Request) => {
       brandId?: string;
       brand_name?: string;
       crawlResultId?: string;
+      draft_mode?: boolean;
     };
     try {
       body = await req.json();
@@ -217,6 +218,7 @@ Deno.serve(async (req: Request) => {
 
     const brandName =
       typeof body.brand_name === "string" ? body.brand_name.trim() : undefined;
+    const draftMode = body.draft_mode === true;
 
     const client = createUserClient(auth.accessToken);
     failureClient = client;
@@ -328,14 +330,13 @@ Use URL content AND web search for press, social, and competitor signals.
       _lifecycle: "scores_complete",
     };
 
+    const brandUpdate = draftMode
+      ? { ai_profile_draft: mergedProfile, intake_status: "draft_ready" as const }
+      : { name: aiProfile.name as string, brand_url: url, ai_profile: mergedProfile, intake_status: "scores_complete" as const };
+
     const { data: updated, error: updateErr } = await client
       .from("brands")
-      .update({
-        name: aiProfile.name as string,
-        brand_url: url,
-        ai_profile: mergedProfile,
-        intake_status: "scores_complete",
-      })
+      .update(brandUpdate)
       .eq("id", brandId)
       .select("id, name")
       .single();

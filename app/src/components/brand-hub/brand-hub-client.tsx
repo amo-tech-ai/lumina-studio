@@ -26,6 +26,7 @@ import { ReAnalyzeButton } from "@/components/brand-hub/re-analyze-button";
 import { ScoresTab } from "@/components/brand-hub/scores-tab";
 import { cn } from "@/lib/utils";
 import { useBrandContext } from "@/components/brand-hub/brand-context";
+import { DraftBanner } from "@/components/brand-hub/draft-banner";
 
 export type BrandHubClientProps = {
   brandId: string;
@@ -140,6 +141,7 @@ export const BrandHubClient = ({
         </header>
 
         <IntakeBanner status={status} errorMessage={profile._error} />
+        {intakeStatus === "draft_ready" && <DraftBanner brandId={brandId} />}
 
         <div className="-mx-1 flex gap-1 overflow-x-auto border-b border-[#E8E0D8] pb-px">
           <nav
