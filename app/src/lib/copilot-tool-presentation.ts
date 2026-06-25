@@ -23,8 +23,28 @@ const INTERNAL_TOOL_PATTERNS: RegExp[] = [
   /^routeTo/i,
 ];
 
-export function getToolCallName(toolCall: { function: { name: string } }): string {
-  return toolCall.function.name;
+/** OpenAI/AG-UI shape or flat fixture shape (`{ name, arguments, id }`). */
+type ToolCallLike = {
+  function?: { name?: string };
+  name?: string;
+};
+
+export function getToolCallName(toolCall: ToolCallLike): string {
+  const fromFunction = toolCall.function?.name;
+  if (typeof fromFunction === "string" && fromFunction.length > 0) {
+    return fromFunction;
+  }
+  if (typeof toolCall.name === "string" && toolCall.name.length > 0) {
+    return toolCall.name;
+  }
+  return "";
+}
+
+/** Unknown or nameless tool calls are treated as internal (hidden). */
+export function shouldHideToolCall(toolCall: ToolCallLike): boolean {
+  const name = getToolCallName(toolCall);
+  if (!name) return true;
+  return shouldHideTool(name);
 }
 
 export function shouldHideTool(name: string): boolean {

@@ -1,9 +1,10 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 
 import { isCopilotDebugToolsEnabled } from "@/lib/copilot-debug";
 import {
   getToolCallName,
   shouldHideTool,
+  shouldHideToolCall,
   USER_VISIBLE_TOOL_NAMES,
 } from "@/lib/copilot-tool-presentation";
 
@@ -24,17 +25,59 @@ describe("copilot-tool-presentation", () => {
     expect(shouldHideTool("capture_lead")).toBe(false);
   });
 
-  it("extracts tool name from AG-UI tool call shape", () => {
+  it("extracts tool name from AG-UI function tool call shape", () => {
     expect(
       getToolCallName({
         function: { name: "navigateTo" },
       }),
     ).toBe("navigateTo");
   });
+
+  it("extracts tool name from flat fixture tool call shape", () => {
+    expect(
+      getToolCallName({
+        name: "get-weather",
+        arguments: '{"location":"New York"}',
+        id: "call_get_weather_001",
+      }),
+    ).toBe("get-weather");
+  });
+
+  it("hides tool calls with unknown shape (no name)", () => {
+    expect(shouldHideToolCall({ id: "call_unknown" } as { id: string })).toBe(
+      true,
+    );
+  });
+
+  it("hides internal tools via flat fixture shape", () => {
+    expect(
+      shouldHideToolCall({
+        name: "navigateTo",
+        arguments: '{"section":"assets"}',
+        id: "call_nav_001",
+      }),
+    ).toBe(true);
+  });
 });
 
 describe("copilot-debug", () => {
+  const originalDebugFlag = process.env.NEXT_PUBLIC_COPILOT_DEBUG_TOOLS;
+
+  afterEach(() => {
+    if (originalDebugFlag === undefined) {
+      delete process.env.NEXT_PUBLIC_COPILOT_DEBUG_TOOLS;
+    } else {
+      process.env.NEXT_PUBLIC_COPILOT_DEBUG_TOOLS = originalDebugFlag;
+    }
+  });
+
   it("defaults debug tools off", () => {
+    delete process.env.NEXT_PUBLIC_COPILOT_DEBUG_TOOLS;
     expect(isCopilotDebugToolsEnabled()).toBe(false);
+  });
+
+  it("enables debug tools when env is true", () => {
+    process.env.NEXT_PUBLIC_COPILOT_DEBUG_TOOLS = "true";
+    expect(isCopilotDebugToolsEnabled()).toBe(true);
   });
 });

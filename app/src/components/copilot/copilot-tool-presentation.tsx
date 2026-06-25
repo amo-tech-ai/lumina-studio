@@ -9,7 +9,7 @@ import {
 import { Fragment, type HTMLAttributes } from "react";
 
 import { isCopilotDebugToolsEnabled } from "@/lib/copilot-debug";
-import { getToolCallName, shouldHideTool } from "@/lib/copilot-tool-presentation";
+import { shouldHideTool, shouldHideToolCall } from "@/lib/copilot-tool-presentation";
 
 type ToolRenderProps = {
   name: string;
@@ -58,7 +58,7 @@ export function HiddenToolCallsView({ message, messages = [] }: ToolCallsViewPro
 
   const visible = isCopilotDebugToolsEnabled()
     ? toolCalls
-    : toolCalls.filter((tc) => !shouldHideTool(getToolCallName(tc)));
+    : toolCalls.filter((tc) => !shouldHideToolCall(tc));
 
   if (visible.length === 0) return null;
 
