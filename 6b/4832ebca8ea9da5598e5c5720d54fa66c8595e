@@ -1,0 +1,28 @@
+app/src/components/brand-hub/brand-hub-client.tsx
+  s_4ffc3bfca8d635::t_9669ee6fb37611 22
+  s_4ffc3bfca8d635::t_0b753c88c8f202 142
+app/src/components/brand-hub/AnalysisProgressBanner.tsx
+  s_4ffc3bfca8d635::t_ec977ac1679ba6 46-47,62-63
+  s_4ffc3bfca8d635::t_5979427e23cb2f 1-45,48-61,64-130
+app/src/components/brand-hub/analysis-progress-banner.test.tsx
+  s_4ffc3bfca8d635::t_1395817df3ae5d 2-95
+  s_4ffc3bfca8d635::t_b9246b94b220d5 1
+app/src/app/(operator)/app/brand/[id]/page.tsx
+  s_4ffc3bfca8d635::t_81187afa4e53d8 43,55-60
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.13",
+  "base_commit_sha": "6b4832ebca8ea9da5598e5c5720d54fa66c8595e",
+  "prompts": {},
+  "sessions": {
+    "s_4ffc3bfca8d635": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "d421b6b8-4307-4bc8-94d4-f836cb9e7997",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
