@@ -7,6 +7,7 @@ import { getMyBrand, type BrandWithScores } from "@/services/brandService";
 import { analyzeBrandFromUrl } from "@/services/brandIntelligenceService";
 import { BrandProfileCard } from "@/components/brand/BrandProfileCard";
 import { BrandScorePanel } from "@/components/brand/BrandScorePanel";
+import { filterScores } from "@/lib/brand-scores";
 import { Button } from "@/components/ui/button";
 
 function SkeletonCard() {
@@ -95,10 +96,12 @@ export default function BrandHubPage() {
         <>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <BrandProfileCard profile={profile} />
-            <BrandScorePanel
-              scores={brand!.brand_scores}
-              productionReadiness={profile.productionReadiness}
-            />
+            {filterScores(brand!.brand_scores).length >= 1 && (
+              <BrandScorePanel
+                scores={brand!.brand_scores}
+                productionReadiness={profile.productionReadiness}
+              />
+            )}
           </div>
           <div className="flex justify-end pt-2">
             <Button asChild size="lg">

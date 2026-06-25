@@ -75,6 +75,18 @@ export const brandProfileResponseSchema = {
           type: Type.NUMBER,
           description: "E-commerce readiness 0-100",
         },
+        brand_clarity: { type: Type.NUMBER, description: "Mission/values/UVP clarity 0-100" },
+        content_strength: { type: Type.NUMBER, description: "Content pillar depth 0-100" },
+        social_presence: { type: Type.NUMBER, description: "Social channels + follower signal 0-100" },
+        digital_experience: { type: Type.NUMBER, description: "Site UX/mobile/speed 0-100" },
+        sustainability_signal: { type: Type.NUMBER, description: "Eco/ethical indicators 0-100" },
+        photography_readiness: { type: Type.NUMBER, description: "Product imagery quality 0-100" },
+        confidence: { type: Type.NUMBER, description: "Overall confidence in scores 0-100" },
+        evidence: {
+          type: Type.ARRAY,
+          items: { type: Type.STRING },
+          description: "Supporting evidence snippets for scores",
+        },
       },
       required: ["visual", "audience", "consistency", "commerce_readiness"],
     },
@@ -115,6 +127,14 @@ export type BrandProfilePayload = {
     audience: number;
     consistency: number;
     commerce_readiness: number;
+    brand_clarity?: number;
+    content_strength?: number;
+    social_presence?: number;
+    digital_experience?: number;
+    sustainability_signal?: number;
+    photography_readiness?: number;
+    confidence?: number;
+    evidence?: string[];
   };
 };
 
