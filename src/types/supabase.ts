@@ -538,7 +538,7 @@ export type Database = {
         Row: {
           agent_name: string
           agent_version: string | null
-          brand_id: string | null
+          brand_id: string
           completed_at: string | null
           confidence: number | null
           created_at: string
@@ -555,7 +555,7 @@ export type Database = {
         Insert: {
           agent_name: string
           agent_version?: string | null
-          brand_id?: string | null
+          brand_id: string
           completed_at?: string | null
           confidence?: number | null
           created_at?: string
@@ -572,7 +572,7 @@ export type Database = {
         Update: {
           agent_name?: string
           agent_version?: string | null
-          brand_id?: string | null
+          brand_id?: string
           completed_at?: string | null
           confidence?: number | null
           created_at?: string
@@ -662,39 +662,162 @@ export type Database = {
         Row: {
           brand_id: string
           completed_at: string | null
+          crawl_id: string | null
           created_at: string
+          description: string | null
           firecrawl_job_id: string | null
+          firecrawl_scrape_id: string | null
           id: string
+          markdown: string | null
+          page_depth: number | null
+          page_url: string | null
           pages_crawled: number
           raw_data: Json
+          raw_json: Json
           started_at: string | null
           status: string
+          status_code: number | null
+          title: string | null
+          word_count: number | null
+        }
+        Insert: {
+          brand_id: string
+          completed_at?: string | null
+          crawl_id?: string | null
+          created_at?: string
+          description?: string | null
+          firecrawl_job_id?: string | null
+          firecrawl_scrape_id?: string | null
+          id?: string
+          markdown?: string | null
+          page_depth?: number | null
+          page_url?: string | null
+          pages_crawled?: number
+          raw_data?: Json
+          raw_json?: Json
+          started_at?: string | null
+          status?: string
+          status_code?: number | null
+          title?: string | null
+          word_count?: number | null
+        }
+        Update: {
+          brand_id?: string
+          completed_at?: string | null
+          crawl_id?: string | null
+          created_at?: string
+          description?: string | null
+          firecrawl_job_id?: string | null
+          firecrawl_scrape_id?: string | null
+          id?: string
+          markdown?: string | null
+          page_depth?: number | null
+          page_url?: string | null
+          pages_crawled?: number
+          raw_data?: Json
+          raw_json?: Json
+          started_at?: string | null
+          status?: string
+          status_code?: number | null
+          title?: string | null
+          word_count?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "brand_crawl_results_brand_id_fkey"
+            columns: ["brand_id"]
+            isOneToOne: false
+            referencedRelation: "brands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "brand_crawl_results_crawl_id_fkey"
+            columns: ["crawl_id"]
+            isOneToOne: false
+            referencedRelation: "brand_crawls"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      brand_crawls: {
+        Row: {
+          brand_id: string
+          completed_at: string | null
+          created_at: string
+          duration_ms: number | null
+          firecrawl_job_id: string | null
+          id: string
+          idempotency_key: string | null
+          job_status: Database["public"]["Enums"]["brand_crawl_job_status"]
+          pages_crawled: number
+          pages_failed: number
+          pages_found: number
+          pipeline_state:
+            | Database["public"]["Enums"]["brand_crawl_pipeline_state"]
+            | null
+          raw_data: Json
+          raw_payload: Json
+          request_id: string | null
+          retry_count: number
+          source_url: string
+          started_at: string | null
+          started_by: string | null
+          updated_at: string
+          workflow_id: string | null
         }
         Insert: {
           brand_id: string
           completed_at?: string | null
           created_at?: string
+          duration_ms?: number | null
           firecrawl_job_id?: string | null
           id?: string
+          idempotency_key?: string | null
+          job_status?: Database["public"]["Enums"]["brand_crawl_job_status"]
           pages_crawled?: number
+          pages_failed?: number
+          pages_found?: number
+          pipeline_state?:
+            | Database["public"]["Enums"]["brand_crawl_pipeline_state"]
+            | null
           raw_data?: Json
+          raw_payload?: Json
+          request_id?: string | null
+          retry_count?: number
+          source_url: string
           started_at?: string | null
-          status?: string
+          started_by?: string | null
+          updated_at?: string
+          workflow_id?: string | null
         }
         Update: {
           brand_id?: string
           completed_at?: string | null
           created_at?: string
+          duration_ms?: number | null
           firecrawl_job_id?: string | null
           id?: string
+          idempotency_key?: string | null
+          job_status?: Database["public"]["Enums"]["brand_crawl_job_status"]
           pages_crawled?: number
+          pages_failed?: number
+          pages_found?: number
+          pipeline_state?:
+            | Database["public"]["Enums"]["brand_crawl_pipeline_state"]
+            | null
           raw_data?: Json
+          raw_payload?: Json
+          request_id?: string | null
+          retry_count?: number
+          source_url?: string
           started_at?: string | null
-          status?: string
+          started_by?: string | null
+          updated_at?: string
+          workflow_id?: string | null
         }
         Relationships: [
           {
-            foreignKeyName: "brand_crawl_results_brand_id_fkey"
+            foreignKeyName: "brand_crawls_brand_id_fkey"
             columns: ["brand_id"]
             isOneToOne: false
             referencedRelation: "brands"
@@ -3466,6 +3589,20 @@ export type Database = {
         | "travel"
         | "maintenance"
         | "not_available"
+      brand_crawl_job_status:
+        | "queued"
+        | "running"
+        | "complete"
+        | "failed"
+        | "cancelled"
+      brand_crawl_pipeline_state:
+        | "crawl_only"
+        | "pending_analysis"
+        | "analysis_running"
+        | "analysis_complete"
+        | "scoring_running"
+        | "scoring_complete"
+        | "pipeline_failed"
       brand_intake_status:
         | "brand_created"
         | "crawl_running"
@@ -3790,6 +3927,22 @@ export const Constants = {
         "travel",
         "maintenance",
         "not_available",
+      ],
+      brand_crawl_job_status: [
+        "queued",
+        "running",
+        "complete",
+        "failed",
+        "cancelled",
+      ],
+      brand_crawl_pipeline_state: [
+        "crawl_only",
+        "pending_analysis",
+        "analysis_running",
+        "analysis_complete",
+        "scoring_running",
+        "scoring_complete",
+        "pipeline_failed",
       ],
       brand_intake_status: [
         "brand_created",

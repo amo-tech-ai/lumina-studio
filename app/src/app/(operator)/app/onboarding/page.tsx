@@ -56,10 +56,12 @@ const OnboardingPage = () => {
         setShell(created);
       }
 
+      let crawlResultId: string | undefined;
       try {
-        await invokeStartBrandCrawl(supabase, brandId, form.websiteUrl, {
+        const crawl = await invokeStartBrandCrawl(supabase, brandId, form.websiteUrl, {
           idempotencyKey: `onboarding-${brandId}`,
         });
+        crawlResultId = crawl.crawlId;
       } catch (crawlErr) {
         console.warn(
           "start-brand-crawl failed, continuing with brand intelligence:",
@@ -67,7 +69,7 @@ const OnboardingPage = () => {
         );
       }
 
-      await invokeBrandIntelligence(supabase, brandId, form);
+      await invokeBrandIntelligence(supabase, brandId, form, { crawlResultId });
 
       router.push(`/app/brand/${brandId}`);
     } catch (err) {

@@ -64,6 +64,25 @@ async function fetchJson(path, init = {}) {
 }
 
 function verifyFirecrawlArtifacts() {
+  const geminiShared = join(root, "supabase/functions/_shared/gemini.ts");
+  if (existsSync(geminiShared)) {
+    pass("_shared/gemini.ts present");
+  } else {
+    fail("missing _shared/gemini.ts");
+  }
+
+  const biPath = join(root, "supabase/functions/brand-intelligence/index.ts");
+  if (existsSync(biPath)) {
+    const src = readFileSync(biPath, "utf8");
+    if (src.includes("crawlResultId") && src.includes("raw_data")) {
+      pass("brand-intelligence loads crawl context");
+    } else {
+      fail("brand-intelligence missing crawlResultId/raw_data handling");
+    }
+  } else {
+    fail("missing supabase/functions/brand-intelligence/index.ts");
+  }
+
   const firecrawlShared = join(root, "supabase/functions/_shared/firecrawl.ts");
   if (existsSync(firecrawlShared)) {
     pass("_shared/firecrawl.ts present");
@@ -242,6 +261,17 @@ async function main() {
       fail(`expected _lifecycle scores_complete, got ${brand?.ai_profile?._lifecycle}`);
     } else {
       pass("brands.ai_profile._lifecycle=scores_complete");
+    }
+
+    const { data: intakeRow } = await admin
+      .from("brands")
+      .select("intake_status")
+      .eq("id", brandId)
+      .single();
+    if (intakeRow?.intake_status !== "scores_complete") {
+      fail(`expected intake_status scores_complete, got ${intakeRow?.intake_status}`);
+    } else {
+      pass("brands.intake_status=scores_complete");
     }
 
     const { count, error: scoreErr } = await admin

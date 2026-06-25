@@ -1,0 +1,19 @@
+{
+  "pages": [
+    {
+      "markdown": "# Everlane\n\nRadical transparency. Modern essentials.\n\nWe make the most beautiful essentials, at the best factories, without traditional markups.",
+      "metadata": {
+        "url": "https://www.everlane.com/",
+        "title": "Everlane",
+        "description": "Modern essentials for men and women."
+      }
+    },
+    {
+      "markdown": "## About\n\nOur mission is to make clothing ethically and sustainably.",
+      "metadata": {
+        "url": "https://www.everlane.com/pages/about",
+        "title": "About Everlane"
+      }
+    }
+  ]
+}

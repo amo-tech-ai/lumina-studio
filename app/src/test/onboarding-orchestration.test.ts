@@ -64,7 +64,7 @@ describe("onboarding orchestration (IPI-46)", () => {
     await invokeStartBrandCrawl(supabase, brandId, FORM.websiteUrl, {
       idempotencyKey: `onboarding-${brandId}`,
     });
-    await invokeBrandIntelligence(supabase, brandId, FORM);
+    await invokeBrandIntelligence(supabase, brandId, FORM, { crawlResultId: "crawl-1" });
 
     expect(order).toEqual(["org", "brand", "crawl", "edge"]);
     expect(supabase.functions.invoke).toHaveBeenCalledWith("start-brand-crawl", {
@@ -81,6 +81,7 @@ describe("onboarding orchestration (IPI-46)", () => {
         url: FORM.websiteUrl,
         brandId: "brand-1",
         brand_name: FORM.brandName,
+        crawlResultId: "crawl-1",
       },
     });
   });
