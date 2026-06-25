@@ -112,8 +112,41 @@ async function createTestUser(email) {
 }
 
 async function deleteAuthUser(userId) {
+  if (!admin) return { error: null };
+  const { error } = await admin.auth.admin.deleteUser(userId);
+  return { error };
+}
+
+async function cleanupRlsTestData({ orgId, brandId, userAId, userBId }) {
   if (!admin) return;
-  await admin.auth.admin.deleteUser(userId);
+
+  if (brandId) {
+    const { error: brandDelErr } = await admin.from("brands").delete().eq("id", brandId);
+    if (brandDelErr) {
+      console.warn(`warn: cleanup brand ${brandId}: ${brandDelErr.message}`);
+    }
+  }
+
+  if (orgId) {
+    await admin.from("org_members").delete().eq("org_id", orgId);
+    const { error: orgDelErr } = await admin.from("organizations").delete().eq("id", orgId);
+    if (orgDelErr) {
+      console.warn(`warn: cleanup org ${orgId}: ${orgDelErr.message}`);
+    }
+  }
+
+  for (const [label, userId] of [
+    ["user A", userAId],
+    ["user B", userBId],
+  ]) {
+    if (!userId) continue;
+    const { error } = await deleteAuthUser(userId);
+    if (error) {
+      console.warn(`warn: cleanup ${label} (${userId}): ${error.message}`);
+    } else {
+      pass(`cleaned up ${label} (service role)`);
+    }
+  }
 }
 
 console.log("PLT-002 RLS verification\n");
@@ -138,6 +171,7 @@ assert(!!anonBrandInsertErr, "anon cannot insert brands");
 let userA;
 let userB;
 let brandAId;
+let orgAId;
 
 try {
   userA = await createTestUser(emailA);
@@ -170,7 +204,7 @@ try {
     .select("id")
     .single();
   assert(!orgInsertErr && orgA?.id, "user A creates own org");
-  const orgAId = orgA?.id;
+  orgAId = orgA?.id;
 
   // brands — org-scoped CRUD, cross-org blocked
   const { data: brandA, error: brandInsertErr } = await userA.client
@@ -498,17 +532,141 @@ try {
   } else {
     console.log("skip: brand_crawls RLS insert probes (no service role)");
   }
+
+  // brand_scores INSERT: editor+ or brand creator; viewers denied
+  const { error: viewerMemberErr } = await userA.client.from("org_members").insert({
+    org_id: orgAId,
+    user_id: userB.user.id,
+    role: "viewer",
+  });
+  assert(!viewerMemberErr, "user A adds user B as org viewer");
+
+  const { error: viewerScoreInsertErr } = await userB.client.from("brand_scores").insert({
+    brand_id: brandAId,
+    score_type: "visual",
+    score: 70,
+  });
+  assert(!!viewerScoreInsertErr, "org viewer cannot insert brand_score on org brand");
+
+  const { error: viewerUpsertErr } = await userB.client
+    .from("brand_scores")
+    .upsert(
+      { brand_id: brandAId, score_type: "messaging", score: 65 },
+      { onConflict: "brand_id,score_type" },
+    );
+  assert(!!viewerUpsertErr, "org viewer cannot upsert brand_score on org brand");
+
+  const { data: dnaBeforeViewerUpdate } = await userA.client
+    .from("brand_scores")
+    .select("score")
+    .eq("brand_id", brandAId)
+    .eq("score_type", "dna_readiness")
+    .maybeSingle();
+  assert(dnaBeforeViewerUpdate?.score === 55, "dna_readiness score baseline for viewer update probe");
+
+  await userB.client
+    .from("brand_scores")
+    .update({ score: 1 })
+    .eq("brand_id", brandAId)
+    .eq("score_type", "dna_readiness");
+
+  const { data: dnaAfterViewerUpdate } = await userA.client
+    .from("brand_scores")
+    .select("score")
+    .eq("brand_id", brandAId)
+    .eq("score_type", "dna_readiness")
+    .maybeSingle();
+  assert(
+    dnaAfterViewerUpdate?.score === 55,
+    "org viewer cannot update brand_score on org brand",
+  );
+
+  const { data: dnaBeforeViewerDelete } = await userA.client
+    .from("brand_scores")
+    .select("id")
+    .eq("brand_id", brandAId)
+    .eq("score_type", "dna_readiness")
+    .maybeSingle();
+  assert(dnaBeforeViewerDelete?.id, "dna_readiness score exists for viewer delete probe");
+
+  await userB.client
+    .from("brand_scores")
+    .delete()
+    .eq("brand_id", brandAId)
+    .eq("score_type", "dna_readiness");
+
+  const { data: dnaAfterViewerDelete } = await userA.client
+    .from("brand_scores")
+    .select("id")
+    .eq("brand_id", brandAId)
+    .eq("score_type", "dna_readiness")
+    .maybeSingle();
+  assert(dnaAfterViewerDelete?.id, "org viewer cannot delete brand_score on org brand");
+
+  const { error: promoteEditorErr } = await userA.client
+    .from("org_members")
+    .update({ role: "editor" })
+    .eq("org_id", orgAId)
+    .eq("user_id", userB.user.id);
+  assert(!promoteEditorErr, "user A promotes user B to org editor");
+
+  const { data: editorUpdate, error: editorUpdateErr } = await userB.client
+    .from("brand_scores")
+    .update({ score: 60 })
+    .eq("brand_id", brandAId)
+    .eq("score_type", "dna_readiness")
+    .select("score")
+    .maybeSingle();
+  assert(
+    !editorUpdateErr && editorUpdate?.score === 60,
+    "org editor updates brand_score on org brand",
+  );
+
+  const { error: editorScoreInsertErr } = await userB.client.from("brand_scores").insert({
+    brand_id: brandAId,
+    score_type: "visual",
+    score: 70,
+  });
+  assert(!editorScoreInsertErr, "org editor inserts brand_score on org brand");
+
+  const { data: editorUpsert, error: editorUpsertErr } = await userB.client
+    .from("brand_scores")
+    .upsert(
+      { brand_id: brandAId, score_type: "visual", score: 72 },
+      { onConflict: "brand_id,score_type" },
+    )
+    .select("id, score");
+  assert(
+    !editorUpsertErr &&
+      (editorUpsert ?? []).length === 1 &&
+      editorUpsert[0].score === 72,
+    "org editor upserts brand_score on org brand",
+  );
+
+  const { error: editorDeleteErr } = await userB.client
+    .from("brand_scores")
+    .delete()
+    .eq("brand_id", brandAId)
+    .eq("score_type", "visual");
+  assert(!editorDeleteErr, "org editor deletes brand_score on org brand");
+
+  const { data: visualAfterEditorDelete } = await userA.client
+    .from("brand_scores")
+    .select("id")
+    .eq("brand_id", brandAId)
+    .eq("score_type", "visual")
+    .maybeSingle();
+  assert(!visualAfterEditorDelete?.id, "org editor delete removed visual score row");
 } catch (err) {
   fail(err instanceof Error ? err.message : String(err));
 } finally {
-  if (serviceKey && userA?.user?.id) {
-    await deleteAuthUser(userA.user.id);
-    pass("cleaned up user A (service role)");
-  }
-  if (serviceKey && userB?.user?.id) {
-    await deleteAuthUser(userB.user.id);
-    pass("cleaned up user B (service role)");
-  } else if (!serviceKey) {
+  await cleanupRlsTestData({
+    orgId: orgAId,
+    brandId: brandAId,
+    userAId: userA?.user?.id,
+    userBId: userB?.user?.id,
+  });
+  if (!serviceKey) {
     console.warn(
       "warn: set SUPABASE_SERVICE_ROLE_KEY in .env.local to auto-delete test users",
     );
