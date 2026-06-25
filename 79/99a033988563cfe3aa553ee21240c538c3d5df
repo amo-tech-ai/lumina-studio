@@ -1,5 +1,6 @@
 app/src/mastra/index.ts
   s_27aec730ee4023::t_d15daf6f6278e5 6,40-45,47-56
+  s_4ffc3bfca8d635::t_ccd995d583d458 5,46
 app/src/mastra/instance.ts
   s_27aec730ee4023::t_1a081e8883c1be 1-3
 app/src/app/api/copilotkit/[[...slug]]/route.runtime.test.ts
@@ -26,6 +27,14 @@ app/src/mastra/workflows/brand-approval-workflow.test.ts
         "tool": "opencode",
         "id": "ses_0ff65db91ffeCZ0kk3QVElfvNp",
         "model": "deepseek-v4-flash-free"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    },
+    "s_4ffc3bfca8d635": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "d421b6b8-4307-4bc8-94d4-f836cb9e7997",
+        "model": "claude-sonnet-4-6"
       },
       "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
     }
