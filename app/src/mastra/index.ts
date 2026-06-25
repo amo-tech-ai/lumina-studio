@@ -1,6 +1,6 @@
 import { Mastra } from "@mastra/core/mastra";
 import { LibSQLStore } from "@mastra/libsql";
-import { visualIdentityAgent } from "./agents";
+import { visualIdentityAgent, socialDiscoveryAgent } from "./agents";
 import { durableAgents } from "./durable";
 import { ConsoleLogger, LogLevel } from "@mastra/core/logger";
 
@@ -18,6 +18,7 @@ const LOG_LEVEL: LogLevel = VALID_LOG_LEVELS.includes(rawLogLevel as LogLevel)
 export const agents = {
   ...durableAgents,
   "visual-identity": visualIdentityAgent,
+  "social-discovery": socialDiscoveryAgent,
 };
 
 // Regression guard: fail fast at server start / build if a required agent id is
