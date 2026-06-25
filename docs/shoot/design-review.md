@@ -12,7 +12,7 @@ sources:
   - docs/screenshots/squareshot/shotlists.md
   - docs/prd/shoot-prd.md
   - docs/shoot/shoot-system-plan.md
-  - github/CopilotKit/examples/canvas/mastra-pm/src/app/page.tsx
+  - https://github.com/CopilotKit/CopilotKit/blob/main/examples/canvas/mastra-pm/src/app/page.tsx
 ---
 
 # Shoot System — Design Review & Direction Sign-off
@@ -39,7 +39,7 @@ which to skip, and where iPix's AI-native + commerce integration creates an unco
 | **Shoot creation wizard** | Multi-step: Build → Quantity → Scenes → Models → Upgrades → Payment (6 steps, 1 CTA per step) | Multi-step: Service Selection → Shot List → Details → Add-Ons → Submit (human-driven, no HITL) | 6-step AI-driven: Context → Brief → **Gate 1: Deliverables** → Crew → **Gate 2: Shot List** → **Gate 3: Budget/Review** — 3 explicit HITL suspend gates |
 | **Shot list generation** | Manual. User selects scene type, quantity, angle from gallery. Zero AI. | Manual. User adds items, picks angles from 527-image DISCOVER library. Zero AI. | AI-generated from `approved_deliverables`. `generateShotListDraft` cannot run without Gate 1 approval. References from `shot_type_references` table. |
 | **Deliverables planning** | Post-shoot mental model — user selects output type at creation but no channel-aware planning | No concept. User picks "product shoot" or "model shoot" without channel context. | **Pre-shoot and binding.** Deliverables (channel × format × quantity) are Gate 1. Shot list is DERIVED from approved deliverables — not invented first. |
-| **Asset delivery / gallery** | Gallery + DAM. No quality scoring. Listing Insights (Amazon score, Shopify score) at listing level, not asset level. | Delivered images + My Assets tab. No quality scoring, no feedback loop. | DNA-scored gallery on upload. Per-asset badge (approved `#059669` / review `#D97706` / blocked `#DC2626`). `explainShootDnaAlerts` tool. HITL override with justification. |
+| **Asset delivery / gallery** | Gallery + DAM. No quality scoring. Listing Insights (Amazon score, Shopify score) at listing level, not asset level. | Delivered images + My Assets tab. No quality scoring, no feedback loop. | DNA-scored gallery on upload. Per-asset badge (approved `#059669` / flagged `#D97706` / rejected `#DC2626`). `explainShootDnaAlerts` tool. HITL override with justification. |
 | **Commerce integration** | Shopify + Amazon catalog sync. Links products to assets. Manual. No AI gap detection. | None. Brief submission is decoupled from product catalog. | `commerce_product_links` table. `explainProductLinkingGaps` tool surfaces unlinked commerce assets in the right panel. |
 | **AI assistance** | AI Studio: background replacement, scene generation for existing product photos. Listing Insights uses AI scoring. No planning AI. | AI Services as a paid shoot type ($95/image). No brief AI, no planning AI, no quality AI. | AI throughout: Brand URL → `analyzeBrandDna` → deliverables → shot list → budget → DNA scoring → gap explanation. L1–L5 CopilotKit integration at every screen. |
 | **Visual concept / creative direction** | Not offered as distinct service. | $995/concept — premium paid add-on for art direction. | **Free.** Built into brand intelligence. iPix moat: what Squareshot charges $995 for, iPix gives every operator automatically from `brand_scores.style_profile`. |
@@ -64,7 +64,7 @@ which to skip, and where iPix's AI-native + commerce integration creates an unco
 
 ### 3-Panel Layout
 
-**Source reviewed:** `github/CopilotKit/examples/canvas/mastra-pm/src/app/page.tsx`
+**Source reviewed:** `https://github.com/CopilotKit/CopilotKit/blob/main/examples/canvas/mastra-pm/src/app/page.tsx`
 
 **Pattern confirmed:**
 ```tsx
@@ -118,7 +118,7 @@ Minimum 320px right panel is required for CopilotKit's HITL cards to render all 
 3. CopilotKit layout is confirmed above — no wireframe measurement needed.
 4. All 8 design decisions are answered below with written specs that serve as wireframe-equivalent intent.
 
-**Required action (IPI-84 open item):** `02-shoot-detail-page.*` and `03-shoot-wizard.*` wireframe files should be created post-sign-off using `/ipix-wireframe` skill. This is a documentation task, not a blocker for IPI-85/86/87 implementation.
+**Required action (IPI-84 open item):** `02-shoot-detail-page.*` and `03-shoot-wizard.*` wireframe files should be created post-sign-off using `.claude/skills/ipix-wireframe/SKILL.md` skill. This is a documentation task, not a blocker for IPI-85/86/87 implementation.
 
 ---
 
@@ -254,7 +254,7 @@ No competitor replicates this stack. The moat is the vertical integration: Brand
 
 | Feature | Decision | Reason |
 |---|---|---|
-| Vendor booking / availability marketplace | ❌ Deferred — separate track | `shoot-research.md` / `prompt-plan.md` |
+| Vendor booking / availability marketplace | ❌ Deferred — separate track | `docs/shoot/shoot-research.md` / `docs/shoot/prompt-plan.md` |
 | Stripe Connect for crew payments | ❌ Deferred | Booking marketplace track |
 | Autonomous brief refresh (no HITL) | ❌ Never in core | HITL invariant — humans approve |
 | Postiz/calendar publishing | ❌ Deferred | Content calendar track |
@@ -291,4 +291,4 @@ No competitor replicates this stack. The moat is the vertical integration: Brand
 2. `docs/prd/shoot-prd.md` §2–§5 (goals, current state, HITL invariant)
 3. `docs/shoot/shoot-system-plan.md` §2–§3 (runtime topology, deliverables-first)
 4. `docs/screenshots/squareshot/squareshot.md` §"Production Planner Agent Design" (wizard conversation flow)
-5. CLAUDE.md — `production-planner` in-process rule (never `:4111`)
+5. `app/AGENTS.md` — `production-planner` in-process rule (never `:4111`)
