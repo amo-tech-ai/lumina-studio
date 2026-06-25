@@ -36,9 +36,14 @@ describe("slugify", () => {
   });
 
   it("appends 5-char random suffix for uniqueness", () => {
-    const slugA = slugify("test");
-    const slugB = slugify("test");
-    expect(slugA).not.toBe(slugB);
+    const rand = vi.spyOn(Math, "random").mockReturnValueOnce(0.111111).mockReturnValueOnce(0.999999);
+    try {
+      const slugA = slugify("test");
+      const slugB = slugify("test");
+      expect(slugA).not.toBe(slugB);
+    } finally {
+      rand.mockRestore();
+    }
   });
 
   it("truncates to 50 chars before suffix", () => {
