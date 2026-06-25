@@ -1,0 +1,21 @@
+app/src/lib/route-agent-map.ts
+  s_a8ff79a3fcfbf6::t_47ca661c57d2ed 1-25
+app/src/components/operator-panel/operator-panel.tsx
+  s_a8ff79a3fcfbf6::t_11c5e84c080016 21,23-24,29-30,33-34,43,48,57,88
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.13",
+  "base_commit_sha": "1126853c23a4f112d03848214652567b63f5f172",
+  "prompts": {},
+  "sessions": {
+    "s_a8ff79a3fcfbf6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a23755b0-cfc9-4f93-ae6b-754247f21af5",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
