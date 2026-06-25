@@ -1,0 +1,28 @@
+app/src/test/onboarding-orchestration.test.ts
+  s_ea46f8c56d53f8::t_ba992f6f772484 106-109
+supabase/migrations/20260625000000_brand_scores_unique_update_rls.sql
+  s_ea46f8c56d53f8::t_9fa92422065048 4-5
+docs/brand/16-url-structure.md
+  s_ea46f8c56d53f8::t_02c759309a6630 133
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.13",
+  "base_commit_sha": "69663b7bd991eff744ffb4f119f4b180c5338ab5",
+  "prompts": {},
+  "humans": {
+    "h_d382fbec1d5b46": {
+      "author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  },
+  "sessions": {
+    "s_ea46f8c56d53f8": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "dd9a0aea-4d97-4ca9-a270-775e1d8e9728",
+        "model": "default"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
