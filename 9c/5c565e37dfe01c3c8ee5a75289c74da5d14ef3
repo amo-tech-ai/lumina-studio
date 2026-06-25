@@ -1,0 +1,21 @@
+app/src/app/(operator)/app/brand/[id]/actions.ts
+  s_4ffc3bfca8d635::t_8e0c3010550800 102,110-113,116
+  s_4ffc3bfca8d635::t_de31e799fcaf0b 45-49,57
+  s_4ffc3bfca8d635::t_05373e848db6d7 129,132-135,138
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.13",
+  "base_commit_sha": "9c5c565e37dfe01c3c8ee5a75289c74da5d14ef3",
+  "prompts": {},
+  "sessions": {
+    "s_4ffc3bfca8d635": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "d421b6b8-4307-4bc8-94d4-f836cb9e7997",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
