@@ -26,6 +26,7 @@ import { ReAnalyzeButton } from "@/components/brand-hub/re-analyze-button";
 import { ScoresTab } from "@/components/brand-hub/scores-tab";
 import { cn } from "@/lib/utils";
 import { useBrandContext } from "@/components/brand-hub/brand-context";
+import { DraftBanner } from "@/components/brand-hub/draft-banner";
 
 export type BrandHubClientProps = {
   brandId: string;
@@ -37,6 +38,8 @@ export type BrandHubClientProps = {
   intakeStatus: BrandIntakeStatus | string | null;
   dnaScore: number;
   profile: AiProfile;
+  draftProfile: AiProfile | null;
+  initialCrawlPages?: { pages_crawled: number | null; pages_found: number | null } | null;
   displayScores: BrandScoreDetail[];
   baseScores: BrandScoreDetail[];
   activityEvents: ActivityEvent[];
@@ -54,6 +57,8 @@ export const BrandHubClient = ({
   intakeStatus,
   dnaScore,
   profile,
+  draftProfile,
+  initialCrawlPages,
   displayScores,
   baseScores,
   activityEvents,
@@ -139,7 +144,10 @@ export const BrandHubClient = ({
           </div>
         </header>
 
-        <AnalysisProgressBanner brandId={brandId} initialStatus={status} />
+        <AnalysisProgressBanner brandId={brandId} initialStatus={status} initialCrawlPages={initialCrawlPages} />
+        {intakeStatus === "draft_ready" && draftProfile && (
+          <DraftBanner brandId={brandId} draft={draftProfile} />
+        )}
 
         <div className="-mx-1 flex gap-1 overflow-x-auto border-b border-[#E8E0D8] pb-px">
           <nav
