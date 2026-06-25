@@ -1,7 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  serverExternalPackages: ["@copilotkit/runtime", "@copilotkit/runtime/v2", "@mastra/libsql"],
+  serverExternalPackages: ["@copilotkit/runtime", "@copilotkit/runtime/v2", "@mastra/libsql", "@mastra/pg"],
   // Pin workspace root — repo has multiple lockfiles; otherwise Turbopack infers /home/sk.
   turbopack: { root: __dirname },
   env: {
