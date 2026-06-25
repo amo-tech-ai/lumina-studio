@@ -1,0 +1,32 @@
+src/lib/brand-scores.ts
+  s_1ee6d41c106a00::t_566a510a629d03 1-89
+supabase/functions/brand-intelligence/index.ts
+  s_1ee6d41c106a00::t_f5a95e06a269a6 347,351-352,363-372,383-384
+  s_1ee6d41c106a00::t_fe4dc50dfc40b6 353-362
+src/test/brand-scores.test.ts
+  s_1ee6d41c106a00::t_9d5cf8391c5e69 1-165
+supabase/functions/_shared/schemas/brand-profile.ts
+  s_1ee6d41c106a00::t_51b74f7949aa52 130-137
+  s_1ee6d41c106a00::t_0a2578fde93751 78-89
+src/pages/dashboard/BrandHubPage.tsx
+  s_1ee6d41c106a00::t_32e7ca5681ff3f 99-104
+  s_1ee6d41c106a00::t_0c4b3bed869d7e 10
+src/components/brand/BrandScorePanel.tsx
+  s_1ee6d41c106a00::t_aa811bf0ba8494 2-10,12-25,28,31-33,36-51,54-56,67-87,94-98,102-135
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.13",
+  "base_commit_sha": "3b678b5d32b13c0f24e643012bb145dfa4f6f4ab",
+  "prompts": {},
+  "sessions": {
+    "s_1ee6d41c106a00": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_1008d1b38ffeXKx1F8jeq6pBWL",
+        "model": "qwen/qwen3.5-plus-20260420"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
