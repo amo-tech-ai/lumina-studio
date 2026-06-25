@@ -40,7 +40,7 @@ const BrandPage = async ({ params }: Props) => {
     );
   }
 
-  const [{ data: brand }, { data: scores }] = await Promise.all([
+  const [{ data: brand }, { data: scores }, { data: crawls }] = await Promise.all([
     supabase
       .from("brands")
       .select(
@@ -52,6 +52,12 @@ const BrandPage = async ({ params }: Props) => {
       .from("brand_scores")
       .select("score_type, score, details, source, score_version")
       .eq("brand_id", id),
+    supabase
+      .from("brand_crawls")
+      .select("job_status, pages_crawled, pages_found")
+      .eq("brand_id", id)
+      .order("created_at", { ascending: false })
+      .limit(1),
   ]);
 
   if (!brand) notFound();
@@ -85,6 +91,7 @@ const BrandPage = async ({ params }: Props) => {
       createdDate={createdDate}
       intakeStatus={brand.intake_status}
       draftProfile={draftProfile}
+      crawlPages={crawls?.[0] ?? null}
       dnaScore={dnaScore}
       profile={profile}
       displayScores={displayScores}

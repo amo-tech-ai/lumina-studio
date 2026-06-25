@@ -19,7 +19,7 @@ import {
 } from "@/lib/brand-hub";
 import { scoreColor } from "@/lib/brand-utils";
 import { ActivityTab } from "@/components/brand-hub/activity-tab";
-import { IntakeBanner } from "@/components/brand-hub/intake-banner";
+import { AnalysisProgressBanner } from "@/components/brand-hub/analysis-progress-banner";
 import { OverviewTab } from "@/components/brand-hub/overview-tab";
 import { ProfileTab } from "@/components/brand-hub/profile-tab";
 import { ReAnalyzeButton } from "@/components/brand-hub/re-analyze-button";
@@ -36,6 +36,7 @@ export type BrandHubClientProps = {
   orgPlan?: string;
   createdDate: string;
   intakeStatus: BrandIntakeStatus | string | null;
+  crawlPages?: { pages_crawled: number | null; pages_found: number | null } | null;
   dnaScore: number;
   profile: AiProfile;
   draftProfile: AiProfile | null;
@@ -54,6 +55,7 @@ export const BrandHubClient = ({
   orgPlan,
   createdDate,
   intakeStatus,
+  crawlPages,
   dnaScore,
   profile,
   draftProfile,
@@ -142,7 +144,12 @@ export const BrandHubClient = ({
           </div>
         </header>
 
-        <IntakeBanner status={status} errorMessage={profile._error} />
+        <AnalysisProgressBanner
+          brandId={brandId}
+          initialStatus={status}
+          initialCrawlPages={crawlPages}
+          errorMessage={profile._error}
+        />
         {intakeStatus === "draft_ready" && draftProfile && (
           <DraftBanner brandId={brandId} draft={draftProfile} />
         )}
