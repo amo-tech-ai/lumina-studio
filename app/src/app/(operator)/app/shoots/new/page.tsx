@@ -179,22 +179,13 @@ export default function NewShootPage() {
           resumeData: { approved: true, approved_deliverables: state.deliverables },
         }),
       });
-      if (!r1.ok) throw new Error(await r1.text());
+      const d1 = await r1.json();
+      if (!r1.ok) throw new Error(d1.error ?? "Gate 1 resume failed");
+      // Use workflow-computed shot list from suspend payload (single source of truth)
+      const shots: Shot[] = d1.suspendPayload?.shots ?? [];
+      const uncoveredWarnings: string[] = d1.suspendPayload?.uncovered_warnings ?? [];
 
-      // Generate shot list client-side (mirrors generateShotListDraft tool logic)
-      let shotCounter = 0;
-      const shots: Shot[] = state.deliverables.flatMap((d) => {
-        const count = Math.max(1, Math.ceil(d.quantity / 3));
-        return Array.from({ length: count }, (_, si) => ({
-          shot_number: ++shotCounter,
-          description: `${d.channel} ${d.format} — hero product`,
-          angle: si === 0 ? "front" : si === 1 ? "3/4 angle" : "detail",
-          lighting: d.channel.includes("feed") ? "natural window light" : "studio strobe",
-          deliverable_ids: [d.id],
-        }));
-      });
-
-      update({ shots, uncoveredWarnings: [] });
+      update({ shots, uncoveredWarnings });
       setStep(3);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to generate shot list");
@@ -219,12 +210,11 @@ export default function NewShootPage() {
           resumeData: { approved: true, approved_shots: state.shots },
         }),
       });
-      if (!r2.ok) throw new Error(await r2.text());
-
-      const totalAssets = state.deliverables.reduce((s, d) => s + d.quantity, 0);
-      const post = totalAssets * 45;
-      const crew = Math.max(2, Math.ceil(state.shots.length / 8)) * 650;
-      const budget: Budget = { crew, studio: 800, equipment: Math.round(crew * 0.28), post, total: crew + 800 + Math.round(crew * 0.28) + post };
+      const d2 = await r2.json();
+      if (!r2.ok) throw new Error(d2.error ?? "Gate 2 resume failed");
+      // Use workflow-computed budget from suspend payload (single source of truth)
+      const budget: Budget = d2.suspendPayload?.budget ?? null;
+      if (!budget) throw new Error("Workflow did not return a budget estimate");
       update({ budget });
       setStep(4);
     } catch (e) {
