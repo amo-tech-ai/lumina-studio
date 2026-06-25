@@ -42,7 +42,11 @@ export async function reanalyzeBrand(brandId: string): Promise<ReanalyzeResult> 
     return { ok: false, error: "Brand has no website URL to analyze" };
   }
 
-  if (brand.intake_status === "crawl_running" || brand.intake_status === "analysis_running") {
+  if (
+    brand.intake_status === "crawl_running" ||
+    brand.intake_status === "analysis_running" ||
+    brand.intake_status === "draft_ready"
+  ) {
     return { ok: false, error: "Analysis already in progress" };
   }
 
@@ -50,7 +54,7 @@ export async function reanalyzeBrand(brandId: string): Promise<ReanalyzeResult> 
     .from("brands")
     .update({ intake_status: "analysis_running" })
     .eq("id", brandId)
-    .not("intake_status", "in", "(crawl_running,analysis_running)")
+    .not("intake_status", "in", "(crawl_running,analysis_running,draft_ready)")
     .select("id")
     .maybeSingle();
 
@@ -95,7 +99,7 @@ export async function applyDraft(brandId: string): Promise<{ ok: boolean; error?
   if (!brand?.ai_profile_draft) return { ok: false, error: "No draft to apply" };
 
   const draft = brand.ai_profile_draft as Record<string, unknown>;
-  const { error } = await supabase
+  const { data: updated, error } = await supabase
     .from("brands")
     .update({
       ai_profile: draft,
@@ -103,9 +107,13 @@ export async function applyDraft(brandId: string): Promise<{ ok: boolean; error?
       intake_status: "ready",
       ...(typeof draft.name === "string" ? { name: draft.name } : {}),
     })
-    .eq("id", brandId);
+    .eq("id", brandId)
+    .eq("intake_status", "draft_ready")
+    .select("id")
+    .maybeSingle();
 
   if (error) return { ok: false, error: error.message };
+  if (!updated) return { ok: false, error: "Brand is not in draft_ready state" };
 
   revalidatePath(`/app/brand/${brandId}`);
   return { ok: true };
@@ -118,12 +126,16 @@ export async function discardDraft(brandId: string): Promise<{ ok: boolean; erro
   const { data: { user }, error: authErr } = await supabase.auth.getUser();
   if (authErr || !user) return { ok: false, error: "Not signed in" };
 
-  const { error } = await supabase
+  const { data: updated, error } = await supabase
     .from("brands")
     .update({ ai_profile_draft: null, intake_status: "ready" })
-    .eq("id", brandId);
+    .eq("id", brandId)
+    .eq("intake_status", "draft_ready")
+    .select("id")
+    .maybeSingle();
 
   if (error) return { ok: false, error: error.message };
+  if (!updated) return { ok: false, error: "Brand is not in draft_ready state" };
 
   revalidatePath(`/app/brand/${brandId}`);
   return { ok: true };
