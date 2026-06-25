@@ -1,0 +1,31 @@
+app/src/mastra/agents/social-discovery.test.ts
+  s_4ffc3bfca8d635::t_deacde89581ad0 1-76,78-101,103,105-123,125-139,141-142,145-154,156-157,159-169
+  s_4ffc3bfca8d635::t_c05d7e9a8f904d 143-144
+  s_4ffc3bfca8d635::t_ed9597d32cdbb9 104
+  s_4ffc3bfca8d635::t_650343d2f5e53f 77,124,155
+  s_4ffc3bfca8d635::t_88472bbb152cb6 158
+  s_4ffc3bfca8d635::t_790580619f59ec 102,140
+app/src/mastra/agents/index.ts
+  s_4ffc3bfca8d635::t_883d4ca3987db0 57
+app/src/mastra/index.ts
+  s_4ffc3bfca8d635::t_db443e93f83abe 21
+app/src/mastra/agents/social-discovery.ts
+  s_4ffc3bfca8d635::t_395d01c533157d 1-49,51-171
+  s_4ffc3bfca8d635::t_de93a0143065ba 50
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.13",
+  "base_commit_sha": "45dcd450d190d57cdd8894e53d22484032925c15",
+  "prompts": {},
+  "sessions": {
+    "s_4ffc3bfca8d635": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "d421b6b8-4307-4bc8-94d4-f836cb9e7997",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
