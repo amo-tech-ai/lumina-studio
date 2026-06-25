@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from "vitest";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { createOrgAndBrand, invokeBrandIntelligence } from "@/lib/onboarding";
+import { createOrgAndBrand, invokeStartBrandCrawl, invokeBrandIntelligence } from "@/lib/onboarding";
 
 const FORM = {
   brandName: "Maison Test",
@@ -44,17 +44,38 @@ describe("onboarding orchestration (IPI-46)", () => {
         throw new Error(`unexpected table ${table}`);
       },
       functions: {
-        invoke: vi.fn(() => {
-          order.push("edge");
-          return Promise.resolve({ data: { brandId: "brand-1", scores: [] }, error: null });
+        invoke: vi.fn((name: string) => {
+          order.push(name === "start-brand-crawl" ? "crawl" : "edge");
+          if (name === "start-brand-crawl") {
+            return Promise.resolve({
+              data: { ok: true, data: { crawlId: "crawl-1" } },
+              error: null,
+            });
+          }
+          return Promise.resolve({
+            data: { ok: true, data: { brandId: "brand-1", scores: [] } },
+            error: null,
+          });
         }),
       },
     } as unknown as SupabaseClient;
 
     const { brandId } = await createOrgAndBrand(supabase, "user-1", FORM);
+    await invokeStartBrandCrawl(supabase, brandId, FORM.websiteUrl, {
+      idempotencyKey: `onboarding-${brandId}`,
+    });
     await invokeBrandIntelligence(supabase, brandId, FORM);
 
-    expect(order).toEqual(["org", "brand", "edge"]);
+    expect(order).toEqual(["org", "brand", "crawl", "edge"]);
+    expect(supabase.functions.invoke).toHaveBeenCalledWith("start-brand-crawl", {
+      body: {
+        brandId: "brand-1",
+        websiteUrl: FORM.websiteUrl,
+        idempotencyKey: "onboarding-brand-1",
+        workflowId: undefined,
+        requestId: undefined,
+      },
+    });
     expect(supabase.functions.invoke).toHaveBeenCalledWith("brand-intelligence", {
       body: {
         url: FORM.websiteUrl,
@@ -92,6 +113,40 @@ describe("onboarding orchestration (IPI-46)", () => {
     expect(invoke).not.toHaveBeenCalled();
   });
 
+  it("continues to brand intelligence when crawl start fails", async () => {
+    const order: string[] = [];
+
+    const supabase = {
+      functions: {
+        invoke: vi.fn((name: string) => {
+          order.push(name);
+          if (name === "start-brand-crawl") {
+            return Promise.resolve({
+              data: { ok: false, error: { code: "config_error", message: "missing key" } },
+              error: null,
+            });
+          }
+          return Promise.resolve({
+            data: { ok: true, data: { brandId: "brand-1", scores: [] } },
+            error: null,
+          });
+        }),
+      },
+    } as unknown as SupabaseClient;
+
+    try {
+      await invokeStartBrandCrawl(supabase, "brand-1", FORM.websiteUrl, {
+        idempotencyKey: "onboarding-brand-1",
+      });
+    } catch {
+      // non-fatal in onboarding page
+    }
+
+    await invokeBrandIntelligence(supabase, "brand-1", FORM);
+
+    expect(order).toEqual(["start-brand-crawl", "brand-intelligence"]);
+  });
+
   it("page calls createOrgAndBrand before invokeBrandIntelligence", async () => {
     const { readFileSync } = await import("node:fs");
     const { resolve } = await import("node:path");
@@ -105,10 +160,14 @@ describe("onboarding orchestration (IPI-46)", () => {
     );
     const runBlock = src.match(/const runAnalysis = async \(\) => \{[\s\S]*?\n  \};/)?.[0];
     expect(runBlock).toBeTruthy();
-    const shellIdx = runBlock!.indexOf("await createOrgAndBrand");
-    const edgeIdx = runBlock!.indexOf("await invokeBrandIntelligence");
+    if (!runBlock) return;
+    const shellIdx = runBlock.indexOf("await createOrgAndBrand");
+    const crawlIdx = runBlock.indexOf("await invokeStartBrandCrawl");
+    const edgeIdx = runBlock.indexOf("await invokeBrandIntelligence");
     expect(shellIdx).toBeGreaterThan(-1);
-    expect(edgeIdx).toBeGreaterThan(shellIdx);
+    expect(crawlIdx).toBeGreaterThan(shellIdx);
+    expect(edgeIdx).toBeGreaterThan(crawlIdx);
+    expect(runBlock).toMatch(/start-brand-crawl failed, continuing with brand intelligence/);
     expect(src).not.toMatch(/invoke\("brand-intelligence"/);
     expect(src).toMatch(/setShell/);
   });

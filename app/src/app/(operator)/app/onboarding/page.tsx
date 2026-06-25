@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
-import { validateUrl, createOrgAndBrand, invokeBrandIntelligence, type OnboardingForm } from "@/lib/onboarding";
+import { validateUrl, createOrgAndBrand, invokeStartBrandCrawl, invokeBrandIntelligence, type OnboardingForm } from "@/lib/onboarding";
 
 const INDUSTRIES = ["Fashion", "Jewellery", "Beauty", "Home & Living", "Other"] as const;
 const GOALS = ["Product Photography", "Campaign Planning", "Brand Intelligence", "All of the above"] as const;
@@ -54,6 +54,17 @@ const OnboardingPage = () => {
         const created = await createOrgAndBrand(supabase, user.id, form);
         brandId = created.brandId;
         setShell(created);
+      }
+
+      try {
+        await invokeStartBrandCrawl(supabase, brandId, form.websiteUrl, {
+          idempotencyKey: `onboarding-${brandId}`,
+        });
+      } catch (crawlErr) {
+        console.warn(
+          "start-brand-crawl failed, continuing with brand intelligence:",
+          crawlErr,
+        );
       }
 
       await invokeBrandIntelligence(supabase, brandId, form);
