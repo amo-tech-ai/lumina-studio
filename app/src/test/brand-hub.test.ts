@@ -1,5 +1,14 @@
 import { describe, it, expect } from "vitest";
 import { computeDnaScore } from "@/lib/brand-scores";
+import {
+  buildActivityTimeline,
+  filterDisplayScores,
+  hasMeaningfulProfile,
+  hubTabLabel,
+  intakeStatusLabel,
+  isReAnalyzeDisabled,
+  parseAiProfile,
+} from "@/lib/brand-hub";
 import { scoreColor, scoreLabel } from "@/lib/brand-utils";
 
 describe("scoreColor", () => {
@@ -71,6 +80,59 @@ describe("ai_profile field safety", () => {
     expect(computeDnaScore([])).toBe(0);
     expect(computeDnaScore(null)).toBe(0);
   });
+
+  it("DNA score ignores dna_readiness row", () => {
+    const dna = computeDnaScore([
+      { score_type: "visual", score: 80 },
+      { score_type: "audience", score: 80 },
+      { score_type: "consistency", score: 80 },
+      { score_type: "commerce_readiness", score: 80 },
+      { score_type: "dna_readiness", score: 10 },
+    ]);
+    expect(dna).toBe(80);
+  });
+});
+
+describe("brand-hub helpers", () => {
+  it("hubTabLabel returns human labels", () => {
+    expect(hubTabLabel("overview")).toBe("Overview");
+    expect(hubTabLabel("scores")).toBe("Scores");
+  });
+
+  it("intakeStatusLabel maps known statuses", () => {
+    expect(intakeStatusLabel("ready")).toBe("Ready");
+    expect(intakeStatusLabel("failed")).toBe("Failed");
+  });
+
+  it("isReAnalyzeDisabled during running states", () => {
+    expect(isReAnalyzeDisabled("analysis_running")).toBe(true);
+    expect(isReAnalyzeDisabled("ready")).toBe(false);
+  });
+
+  it("filterDisplayScores removes dna_readiness", () => {
+    const filtered = filterDisplayScores([
+      { score_type: "visual", score: 70 },
+      { score_type: "dna_readiness", score: 99 },
+    ]);
+    expect(filtered).toHaveLength(1);
+    expect(filtered[0].score_type).toBe("visual");
+  });
+
+  it("parseAiProfile and hasMeaningfulProfile", () => {
+    expect(hasMeaningfulProfile(parseAiProfile({}))).toBe(false);
+    expect(hasMeaningfulProfile(parseAiProfile({ tagline: "Hi" }))).toBe(true);
+    expect(hasMeaningfulProfile(parseAiProfile({ _error: "x" }))).toBe(false);
+  });
+
+  it("buildActivityTimeline includes failure detail", () => {
+    const events = buildActivityTimeline({
+      createdAt: "2026-01-01T00:00:00Z",
+      intakeStatus: "failed",
+      profile: { _error: "Gemini timeout" },
+    });
+    expect(events.some((e) => e.id === "failed")).toBe(true);
+    expect(events.find((e) => e.id === "failed")?.detail).toBe("Gemini timeout");
+  });
 });
 
 // Route contract: page file must exist and use maybeSingle + notFound
@@ -91,5 +153,8 @@ describe("brand hub route contract", () => {
     expect(src).toMatch(/computeDnaScore/);
     expect(src).toMatch(/brand_scores/);
     expect(src).toMatch(/organizations/);
+    expect(src).toMatch(/intake_status/);
+    expect(src).toMatch(/BrandHubClient/);
+    expect(src).toMatch(/filterDisplayScores/);
   });
 });
