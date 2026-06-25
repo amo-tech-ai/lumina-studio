@@ -1,0 +1,23 @@
+app/src/mastra/workflows/README.md
+  s_f122c956685f5d::t_da8782f42c953b 16
+app/src/mastra/workflows/brand-approval-workflow.ts
+  s_f122c956685f5d::t_e7a90f71dd3aca 60,62-63
+app/src/mastra/workflows/brand-approval-workflow.test.ts
+  s_f122c956685f5d::t_35f33f234a750b 12
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.13",
+  "base_commit_sha": "afd465fade9b6b1a3aee6c1d45338803531dc6dd",
+  "prompts": {},
+  "sessions": {
+    "s_f122c956685f5d": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_0ffb23c8cffefU70iBoyjFpWs6",
+        "model": "deepseek-v4-flash-free"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
