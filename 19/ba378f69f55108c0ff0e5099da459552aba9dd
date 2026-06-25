@@ -1,0 +1,31 @@
+app/src/test/onboarding-orchestration.test.ts
+  s_ea46f8c56d53f8::t_88e11f4cc91b64 116-149
+  s_ea46f8c56d53f8::t_6b86989859b675 170
+app/src/app/(operator)/app/onboarding/page.tsx
+  s_ea46f8c56d53f8::t_c3f9865be2376b 59-68
+supabase/migrations/20260627120000_fix_brand_crawl_results_scrape_uidx.sql
+  s_ea46f8c56d53f8::t_d2a413c0990d68 1-7
+supabase/migrations/20260627000000_brand_crawls_job_pages.sql
+  s_ea46f8c56d53f8::t_59425f9b88c0a4 125
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.13",
+  "base_commit_sha": "19ba378f69f55108c0ff0e5099da459552aba9dd",
+  "prompts": {},
+  "humans": {
+    "h_d382fbec1d5b46": {
+      "author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  },
+  "sessions": {
+    "s_ea46f8c56d53f8": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "dd9a0aea-4d97-4ca9-a270-775e1d8e9728",
+        "model": "default"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
