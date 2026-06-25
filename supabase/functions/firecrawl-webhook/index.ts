@@ -23,11 +23,13 @@ async function loadPagesForCrawl(
   admin: ReturnType<typeof createServiceClient>,
   crawlId: string,
 ) {
-  const { data } = await admin
+  const { data, error } = await admin
     .from("brand_crawl_results")
     .select("markdown, page_url, title, description, status_code, raw_json")
     .eq("crawl_id", crawlId)
     .order("created_at", { ascending: true });
+
+  if (error) throw new Error(`loadPagesForCrawl: ${error.message}`);
 
   return (data ?? []).map((row) => ({
     markdown: row.markdown ?? "",
@@ -49,10 +51,11 @@ async function rebuildJobRawData(
 ) {
   const pages = await loadPagesForCrawl(admin, crawlId);
   const raw_data = buildRawDataAggregate(pages);
-  await admin
+  const { error } = await admin
     .from("brand_crawls")
     .update({ raw_data, updated_at: new Date().toISOString() })
     .eq("id", crawlId);
+  if (error) throw new Error(`rebuildJobRawData: ${error.message}`);
 }
 
 async function upsertPage(
@@ -82,33 +85,15 @@ async function upsertPage(
     firecrawl_scrape_id: scrapeId,
   };
 
-  if (scrapeId) {
-    const { data: existing } = await admin
-      .from("brand_crawl_results")
-      .select("id")
-      .eq("crawl_id", crawlId)
-      .eq("firecrawl_scrape_id", scrapeId)
-      .maybeSingle();
+  const onConflict = scrapeId
+    ? "crawl_id,firecrawl_scrape_id"
+    : "crawl_id,page_url";
 
-    if (existing?.id) {
-      await admin.from("brand_crawl_results").update(row).eq("id", existing.id);
-    } else {
-      await admin.from("brand_crawl_results").insert(row);
-    }
-  } else {
-    const { data: existing } = await admin
-      .from("brand_crawl_results")
-      .select("id")
-      .eq("crawl_id", crawlId)
-      .eq("page_url", pageUrl)
-      .maybeSingle();
+  const { error } = await admin
+    .from("brand_crawl_results")
+    .upsert(row, { onConflict });
 
-    if (existing?.id) {
-      await admin.from("brand_crawl_results").update(row).eq("id", existing.id);
-    } else {
-      await admin.from("brand_crawl_results").insert(row);
-    }
-  }
+  if (error) throw new Error(`upsertPage: ${error.message}`);
 }
 
 Deno.serve(async (req: Request) => {
@@ -191,7 +176,7 @@ Deno.serve(async (req: Request) => {
 
   const process = async () => {
     if (eventType === "crawl.started") {
-      await admin
+      const { error } = await admin
         .from("brand_crawls")
         .update({
           job_status: "running",
@@ -199,6 +184,7 @@ Deno.serve(async (req: Request) => {
           updated_at: now,
         })
         .eq("id", crawlId);
+      if (error) throw new Error(`crawl.started update: ${error.message}`);
       return;
     }
 
@@ -207,12 +193,13 @@ Deno.serve(async (req: Request) => {
         await upsertPage(admin, crawlId, brandId, page);
       }
 
-      const { count } = await admin
+      const { count, error: countErr } = await admin
         .from("brand_crawl_results")
         .select("id", { count: "exact", head: true })
         .eq("crawl_id", crawlId);
+      if (countErr) throw new Error(`crawl.page count: ${countErr.message}`);
 
-      await admin
+      const { error: updateErr } = await admin
         .from("brand_crawls")
         .update({
           pages_crawled: count ?? payload.data.length,
@@ -220,6 +207,7 @@ Deno.serve(async (req: Request) => {
           updated_at: now,
         })
         .eq("id", crawlId);
+      if (updateErr) throw new Error(`crawl.page update: ${updateErr.message}`);
 
       await rebuildJobRawData(admin, crawlId);
       return;
@@ -242,7 +230,7 @@ Deno.serve(async (req: Request) => {
       const pages = await loadPagesForCrawl(admin, crawlId);
       const raw_data = buildRawDataAggregate(pages);
 
-      await admin
+      const { error: jobUpdateErr } = await admin
         .from("brand_crawls")
         .update({
           job_status: "complete",
@@ -255,11 +243,17 @@ Deno.serve(async (req: Request) => {
           updated_at: now,
         })
         .eq("id", crawlId);
+      if (jobUpdateErr) {
+        throw new Error(`crawl.completed job update: ${jobUpdateErr.message}`);
+      }
 
-      await admin
+      const { error: brandUpdateErr } = await admin
         .from("brands")
         .update({ intake_status: "crawl_complete" })
         .eq("id", brandId);
+      if (brandUpdateErr) {
+        throw new Error(`crawl.completed brand update: ${brandUpdateErr.message}`);
+      }
 
       await logWebhook(
         { job_status: "complete", pages_crawled: pages.length },
@@ -272,7 +266,7 @@ Deno.serve(async (req: Request) => {
       const errorMessage =
         payload.error ?? "Firecrawl reported crawl failure";
 
-      await admin
+      const { error: jobFailErr } = await admin
         .from("brand_crawls")
         .update({
           job_status: "failed",
@@ -281,11 +275,15 @@ Deno.serve(async (req: Request) => {
           updated_at: now,
         })
         .eq("id", crawlId);
+      if (jobFailErr) throw new Error(`crawl.failed job update: ${jobFailErr.message}`);
 
-      await admin
+      const { error: brandFailErr } = await admin
         .from("brands")
         .update({ intake_status: "failed" })
         .eq("id", brandId);
+      if (brandFailErr) {
+        throw new Error(`crawl.failed brand update: ${brandFailErr.message}`);
+      }
 
       await logWebhook({ job_status: "failed", error: errorMessage });
     }

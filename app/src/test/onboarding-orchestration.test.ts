@@ -126,9 +126,10 @@ describe("onboarding orchestration (IPI-46)", () => {
     );
     const runBlock = src.match(/const runAnalysis = async \(\) => \{[\s\S]*?\n  \};/)?.[0];
     expect(runBlock).toBeTruthy();
-    const shellIdx = runBlock!.indexOf("await createOrgAndBrand");
-    const crawlIdx = runBlock!.indexOf("await invokeStartBrandCrawl");
-    const edgeIdx = runBlock!.indexOf("await invokeBrandIntelligence");
+    if (!runBlock) return;
+    const shellIdx = runBlock.indexOf("await createOrgAndBrand");
+    const crawlIdx = runBlock.indexOf("await invokeStartBrandCrawl");
+    const edgeIdx = runBlock.indexOf("await invokeBrandIntelligence");
     expect(shellIdx).toBeGreaterThan(-1);
     expect(crawlIdx).toBeGreaterThan(shellIdx);
     expect(edgeIdx).toBeGreaterThan(crawlIdx);

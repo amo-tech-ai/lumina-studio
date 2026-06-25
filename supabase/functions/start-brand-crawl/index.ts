@@ -25,10 +25,34 @@ type StartBody = {
 
 function normalizeUrl(raw: string): string {
   const trimmed = raw.trim();
+  if (!trimmed) {
+    throw new Error("url or websiteUrl is required");
+  }
   if (!/^https?:\/\//i.test(trimmed)) {
     throw new Error("URL must start with http:// or https://");
   }
   return trimmed;
+}
+
+const ACTIVE_CRAWL_STATUSES = ["queued", "running", "complete"] as const;
+
+async function findActiveCrawl(
+  admin: ReturnType<typeof createServiceClient>,
+  brandId: string,
+  idempotencyKey: string,
+) {
+  const { data, error } = await admin
+    .from("brand_crawls")
+    .select("id, firecrawl_job_id, job_status")
+    .eq("brand_id", brandId)
+    .eq("idempotency_key", idempotencyKey)
+    .in("job_status", [...ACTIVE_CRAWL_STATUSES])
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (error) throw new Error(error.message);
+  return data;
 }
 
 Deno.serve(async (req: Request) => {
@@ -54,10 +78,20 @@ Deno.serve(async (req: Request) => {
       return errorResponse("invalid_request", "Invalid JSON body", 400);
     }
     const brandId = body.brandId?.trim();
-    const sourceUrl = normalizeUrl(body.url ?? body.websiteUrl ?? "");
 
     if (!brandId) {
       return errorResponse("invalid_request", "brandId is required", 400);
+    }
+
+    let sourceUrl: string;
+    try {
+      sourceUrl = normalizeUrl(body.url ?? body.websiteUrl ?? "");
+    } catch (urlErr) {
+      return errorResponse(
+        "invalid_request",
+        safeErrorMessage(urlErr),
+        400,
+      );
     }
 
     const userClient = createUserClient(auth.accessToken);
@@ -77,17 +111,13 @@ Deno.serve(async (req: Request) => {
 
     const admin = createServiceClient();
 
-    const { data: existing } = await admin
-      .from("brand_crawls")
-      .select("id, firecrawl_job_id, job_status")
-      .eq("brand_id", brandId)
-      .eq("idempotency_key", idempotencyKey)
-      .maybeSingle();
+    const existing = await findActiveCrawl(admin, brandId, idempotencyKey);
 
     if (
       existing &&
-      existing.job_status !== "failed" &&
-      existing.job_status !== "cancelled"
+      (existing.job_status === "running" ||
+        existing.job_status === "complete" ||
+        existing.firecrawl_job_id)
     ) {
       return jsonResponse({
         crawlId: existing.id,
@@ -100,39 +130,51 @@ Deno.serve(async (req: Request) => {
       body.requestId?.trim() ||
       crypto.randomUUID();
 
-    const { data: crawlRow, error: insertErr } = await admin
-      .from("brand_crawls")
-      .insert({
-        brand_id: brandId,
-        source_url: sourceUrl,
-        job_status: "queued",
-        pipeline_state: "crawl_only",
-        idempotency_key: idempotencyKey,
-        started_by: auth.user.id,
-        workflow_id: body.workflowId?.trim() || null,
-        request_id: requestId,
-        started_at: new Date().toISOString(),
-      })
-      .select("id")
-      .single();
+    let crawlRowId: string;
 
-    if (insertErr || !crawlRow?.id) {
-      if (insertErr?.code === "23505") {
-        const { data: dup } = await admin
-          .from("brand_crawls")
-          .select("id, firecrawl_job_id")
-          .eq("brand_id", brandId)
-          .eq("idempotency_key", idempotencyKey)
-          .maybeSingle();
-        if (dup) {
-          return jsonResponse({
-            crawlId: dup.id,
-            firecrawlJobId: dup.firecrawl_job_id,
-            reused: true,
-          });
+    if (existing?.job_status === "queued" && !existing.firecrawl_job_id) {
+      crawlRowId = existing.id;
+      const { error: resetErr } = await admin
+        .from("brand_crawls")
+        .update({
+          source_url: sourceUrl,
+          request_id: requestId,
+          started_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", crawlRowId);
+      if (resetErr) throw new Error(resetErr.message);
+    } else {
+      const { data: crawlRow, error: insertErr } = await admin
+        .from("brand_crawls")
+        .insert({
+          brand_id: brandId,
+          source_url: sourceUrl,
+          job_status: "queued",
+          pipeline_state: "crawl_only",
+          idempotency_key: idempotencyKey,
+          started_by: auth.user.id,
+          workflow_id: body.workflowId?.trim() || null,
+          request_id: requestId,
+          started_at: new Date().toISOString(),
+        })
+        .select("id")
+        .single();
+
+      if (insertErr || !crawlRow?.id) {
+        if (insertErr?.code === "23505") {
+          const dup = await findActiveCrawl(admin, brandId, idempotencyKey);
+          if (dup) {
+            return jsonResponse({
+              crawlId: dup.id,
+              firecrawlJobId: dup.firecrawl_job_id,
+              reused: true,
+            });
+          }
         }
+        throw new Error(insertErr?.message ?? "Failed to create crawl job");
       }
-      throw new Error(insertErr?.message ?? "Failed to create crawl job");
+      crawlRowId = crawlRow.id;
     }
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL");
@@ -150,7 +192,7 @@ Deno.serve(async (req: Request) => {
           url: webhookUrl,
           metadata: {
             brand_id: brandId,
-            crawl_id: crawlRow.id,
+            crawl_id: crawlRowId,
             request_id: requestId,
             ...(body.workflowId ? { workflow_id: body.workflowId } : {}),
           },
@@ -168,7 +210,7 @@ Deno.serve(async (req: Request) => {
           completed_at: failedAt,
           updated_at: failedAt,
         })
-        .eq("id", crawlRow.id);
+        .eq("id", crawlRowId);
       await admin
         .from("brands")
         .update({ intake_status: "failed" })
@@ -183,7 +225,7 @@ Deno.serve(async (req: Request) => {
         job_status: "running",
         updated_at: new Date().toISOString(),
       })
-      .eq("id", crawlRow.id);
+      .eq("id", crawlRowId);
 
     if (updateErr) throw new Error(updateErr.message);
 
@@ -198,14 +240,14 @@ Deno.serve(async (req: Request) => {
         userId: auth.user.id,
         brandId,
         input: { sourceUrl, idempotencyKey, requestId },
-        output: { crawlId: crawlRow.id, firecrawlJobId },
+        output: { crawlId: crawlRowId, firecrawlJobId },
       });
     } catch (logErr) {
       console.warn("start-brand-crawl: agent log insert failed", logErr);
     }
 
     return jsonResponse({
-      crawlId: crawlRow.id,
+      crawlId: crawlRowId,
       firecrawlJobId,
       requestId,
       reused: false,
