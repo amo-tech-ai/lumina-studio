@@ -1,6 +1,6 @@
 import { Mastra } from "@mastra/core/mastra";
 import { LibSQLStore } from "@mastra/libsql";
-import { productionPlannerAgent, creativeDirectorAgent, visualIdentityAgent } from "./agents";
+import { durableAgents } from "./durable";
 import { ConsoleLogger, LogLevel } from "@mastra/core/logger";
 
 const VALID_LOG_LEVELS: LogLevel[] = ["debug", "info", "warn", "error"];
@@ -13,12 +13,7 @@ const LOG_LEVEL: LogLevel = VALID_LOG_LEVELS.includes(rawLogLevel as LogLevel)
 // the frontend useAgent({ agentId }) must match these exactly.
 // default is a compatibility alias for CopilotKit prebuilt UI/runtime sync;
 // real app code should use production-planner.
-export const agents = {
-  default: productionPlannerAgent,
-  "production-planner": productionPlannerAgent,
-  "creative-director": creativeDirectorAgent,
-  "visual-identity": visualIdentityAgent,
-};
+export const agents = { ...durableAgents };
 
 // Regression guard: fail fast at server start / build if a required agent id is
 // ever renamed or dropped. Without this, a missing id only shows up as a cryptic
