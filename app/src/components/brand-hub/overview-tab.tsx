@@ -10,8 +10,9 @@ type Props = {
 // AC1 — Gaps: derived from existing AiProfile fields, no new data needed
 const GapsSection = ({ profile }: { profile: AiProfile }) => {
   const gaps: { label: string; hint: string }[] = [];
-  if (profile.confidenceScore !== undefined && profile.confidenceScore < 0.6)
-    gaps.push({ label: "Low analysis confidence", hint: `${Math.round(profile.confidenceScore * 100)}% — more web presence may improve accuracy` });
+  // confidenceScore is 0–100 (not 0–1)
+  if (profile.confidenceScore !== undefined && profile.confidenceScore < 60)
+    gaps.push({ label: "Low analysis confidence", hint: `${Math.round(profile.confidenceScore)}% — more web presence may improve accuracy` });
   if (!profile.instagram_handle)
     gaps.push({ label: "Weak social presence", hint: "No Instagram handle detected" });
   if (!profile.evidenceSources || profile.evidenceSources.length < 2)
@@ -48,19 +49,18 @@ const RecommendedActionsPanel = ({ services }: { services?: string[] }) => {
   const actions =
     services && services.length > 0
       ? services.slice(0, 3).map((s) => {
-          const match = DEFAULT_ACTIONS.find((a) =>
-            a.label.toLowerCase().includes(s.toLowerCase().split(" ")[0]),
-          );
-          return match ?? { label: s, href: "/app", hint: `AI-recommended: ${s}` };
+          const word = s.trim().split(/\s+/)[0].toLowerCase();
+          const match = word ? DEFAULT_ACTIONS.find((a) => a.label.toLowerCase().includes(word)) : undefined;
+          return match ?? { label: s.trim(), href: "/app", hint: `AI-recommended: ${s.trim()}` };
         })
       : DEFAULT_ACTIONS;
   return (
     <section className="rounded-2xl border border-[#E8E0D8] bg-white p-5">
       <h3 className="mb-3 font-serif text-base text-[#1E293B]">Recommended next steps</h3>
       <div className="grid gap-3 sm:grid-cols-3">
-        {actions.map((a) => (
+        {actions.map((a, i) => (
           <Link
-            key={a.label}
+            key={`${a.label}-${i}`}
             href={a.href}
             className="group flex flex-col gap-1 rounded-xl border border-[#E8E0D8] p-4 transition-colors hover:border-[#E87C4D]"
           >
