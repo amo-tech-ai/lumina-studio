@@ -48,7 +48,6 @@ const commitBrandStep = createStep({
   id: "commitBrand",
   description: "Commits the approved brand to the system",
   inputSchema: z.object({
-    brandId: z.string(),
     approved: z.boolean(),
     approver: z.string(),
   }),
