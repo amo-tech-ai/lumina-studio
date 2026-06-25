@@ -151,6 +151,7 @@ Deno.serve(async (req: Request) => {
   const started = performance.now();
   let failureBrandId: string | null = null;
   let failureClient: ReturnType<typeof createUserClient> | null = null;
+  let draftPersisted = false;
 
   try {
     if (req.method !== "POST") {
@@ -324,10 +325,55 @@ Use URL content AND web search for press, social, and competitor signals.
     }
 
     const aiProfile = buildAiProfileFromPayload(profile, url);
+
+    // Build score rows unconditionally — in draft mode they're embedded in the draft JSONB;
+    // in live mode they're upserted directly to brand_scores.
+    const v2ScoreEntries: { score_type: string; score: number }[] = [
+      { score_type: "visual", score: clampScore(profile.scores.visual) },
+      { score_type: "audience", score: clampScore(profile.scores.audience) },
+      { score_type: "consistency", score: clampScore(profile.scores.consistency) },
+      { score_type: "commerce_readiness", score: clampScore(profile.scores.commerce_readiness) },
+    ];
+
+    const extendedDimensions = [
+      "brand_clarity", "content_strength", "social_presence",
+      "digital_experience", "sustainability_signal", "photography_readiness",
+    ] as const;
+    for (const dim of extendedDimensions) {
+      const val = (profile.scores as Record<string, unknown>)[dim];
+      if (typeof val === "number") {
+        v2ScoreEntries.push({ score_type: dim, score: clampScore(val) });
+      }
+    }
+
+    const sharedEvidence = Array.isArray(profile.scores.evidence)
+      ? profile.scores.evidence.filter((e): e is string => typeof e === "string").slice(0, 10)
+      : [];
+    const overallConfidence = typeof profile.scores.confidence === "number"
+      ? clampScore(profile.scores.confidence)
+      : null;
+
+    const scoreRows = v2ScoreEntries.map((row) => ({
+      score_type: row.score_type,
+      score: row.score,
+      score_version: 1,
+      source: "edge_fn" as const,
+      details: {
+        source: "brand-intelligence",
+        url,
+        crawlResultId: crawlRow?.id ?? null,
+        crawlPages: rawData?.pages?.length ?? 0,
+        ...(overallConfidence !== null && { confidence: overallConfidence }),
+        ...(sharedEvidence.length > 0 && { evidence: sharedEvidence }),
+      },
+    }));
+
     const mergedProfile = {
       ...priorProfile,
       ...aiProfile,
       _lifecycle: "scores_complete",
+      // In draft mode, embed scores so applyDraft can upsert them when the draft is approved
+      ...(draftMode && { _draft_scores: scoreRows }),
     };
 
     const brandUpdate = draftMode
@@ -345,54 +391,16 @@ Use URL content AND web search for press, social, and competitor signals.
       throw new Error(updateErr?.message ?? "Failed to update brand");
     }
 
-    // In draft mode skip scores upsert — scores must not go live until draft is applied
+    // Track that draft was persisted so the catch block doesn't overwrite draft_ready → failed
+    if (draftMode) draftPersisted = true;
+
     let scores: { id: string; score_type: string; score: number }[] | null = null;
 
     if (!draftMode) {
-      const v2ScoreEntries: { score_type: string; score: number }[] = [
-        { score_type: "visual", score: clampScore(profile.scores.visual) },
-        { score_type: "audience", score: clampScore(profile.scores.audience) },
-        { score_type: "consistency", score: clampScore(profile.scores.consistency) },
-        { score_type: "commerce_readiness", score: clampScore(profile.scores.commerce_readiness) },
-      ];
-
-      const extendedDimensions = [
-        "brand_clarity", "content_strength", "social_presence",
-        "digital_experience", "sustainability_signal", "photography_readiness",
-      ] as const;
-      for (const dim of extendedDimensions) {
-        const val = (profile.scores as Record<string, unknown>)[dim];
-        if (typeof val === "number") {
-          v2ScoreEntries.push({ score_type: dim, score: clampScore(val) });
-        }
-      }
-
-      const sharedEvidence = Array.isArray(profile.scores.evidence)
-        ? profile.scores.evidence.filter((e): e is string => typeof e === "string").slice(0, 10)
-        : [];
-      const overallConfidence = typeof profile.scores.confidence === "number"
-        ? clampScore(profile.scores.confidence)
-        : null;
-
-      const scoreRows = v2ScoreEntries.map((row) => ({
-        brand_id: brandId,
-        score_type: row.score_type,
-        score: row.score,
-        score_version: 1,
-        source: "edge_fn",
-        details: {
-          source: "brand-intelligence",
-          url,
-          crawlResultId: crawlRow?.id ?? null,
-          crawlPages: rawData?.pages?.length ?? 0,
-          ...(overallConfidence !== null && { confidence: overallConfidence }),
-          ...(sharedEvidence.length > 0 && { evidence: sharedEvidence }),
-        },
-      }));
-
+      const liveScoreRows = scoreRows.map((r) => ({ ...r, brand_id: brandId }));
       const { data: scoresData, error: scoresErr } = await client
         .from("brand_scores")
-        .upsert(scoreRows, { onConflict: "brand_id,score_type" })
+        .upsert(liveScoreRows, { onConflict: "brand_id,score_type" })
         .select("id, score_type, score");
 
       if (scoresErr) throw new Error(scoresErr.message);
@@ -444,13 +452,11 @@ Use URL content AND web search for press, social, and competitor signals.
     });
   } catch (err) {
     console.error("brand-intelligence error:", err);
-    if (failureBrandId && failureClient) {
+    // If draft was already persisted successfully, don't overwrite draft_ready → failed.
+    // The operator can still apply or discard the draft; the error is in a later step (e.g. logging).
+    if (failureBrandId && failureClient && !draftPersisted) {
       try {
-        await markIntakeStatus(
-          failureClient,
-          failureBrandId,
-          "failed",
-        );
+        await markIntakeStatus(failureClient, failureBrandId, "failed");
       } catch (statusErr) {
         console.error("failed to set intake_status=failed:", statusErr);
       }

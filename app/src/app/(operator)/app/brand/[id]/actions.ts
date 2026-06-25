@@ -104,13 +104,20 @@ export async function applyDraft(brandId: string): Promise<{ ok: boolean; error?
   if (!brand?.ai_profile_draft) return { ok: false, error: "No draft to apply" };
 
   const draft = brand.ai_profile_draft as Record<string, unknown>;
+
+  // Extract draft scores before promoting; strip _draft_scores from the live profile
+  const draftScores = Array.isArray(draft._draft_scores)
+    ? (draft._draft_scores as Array<Record<string, unknown>>)
+    : [];
+  const { _draft_scores: _removed, ...cleanDraft } = draft;
+
   const { data: updated, error } = await supabase
     .from("brands")
     .update({
-      ai_profile: draft,
+      ai_profile: cleanDraft,
       ai_profile_draft: null,
       intake_status: "ready",
-      ...(typeof draft.name === "string" ? { name: draft.name } : {}),
+      ...(typeof cleanDraft.name === "string" ? { name: cleanDraft.name } : {}),
     })
     .eq("id", brandId)
     .eq("intake_status", "draft_ready")
@@ -119,6 +126,14 @@ export async function applyDraft(brandId: string): Promise<{ ok: boolean; error?
 
   if (error) return { ok: false, error: error.message };
   if (!updated) return { ok: false, error: "Brand is not in draft_ready state" };
+
+  // Upsert scores that were held in the draft
+  if (draftScores.length > 0) {
+    const scoreRows = draftScores.map((r) => ({ ...r, brand_id: brandId }));
+    await supabase
+      .from("brand_scores")
+      .upsert(scoreRows, { onConflict: "brand_id,score_type" });
+  }
 
   revalidatePath(`/app/brand/${brandId}`);
   return { ok: true };

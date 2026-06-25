@@ -276,9 +276,13 @@ export const buildActivityTimeline = (input: {
         at: input.profile.analyzedAt,
       });
     }
-    if (statusIndex >= 3) events.push({ id: "scores", label: "Scores saved" });
-    if (statusIndex >= 4 || status === "ready") {
-      events.push({ id: "ready", label: "Brand Hub ready" });
+    if (status === "draft_ready") {
+      events.push({ id: "draft_ready", label: "Draft ready for review" });
+    } else {
+      if (statusIndex >= 3) events.push({ id: "scores", label: "Scores saved" });
+      if (statusIndex >= 5 || status === "ready") {
+        events.push({ id: "ready", label: "Brand Hub ready" });
+      }
     }
   }
 
