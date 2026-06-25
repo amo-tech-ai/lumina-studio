@@ -534,6 +534,174 @@ export type Database = {
           },
         ]
       }
+      brand_agent_results: {
+        Row: {
+          agent_name: string
+          agent_version: string | null
+          brand_id: string | null
+          completed_at: string | null
+          confidence: number | null
+          created_at: string
+          duration_ms: number | null
+          id: string
+          model: string | null
+          output: Json
+          run_id: string | null
+          started_at: string | null
+          status: string | null
+          tokens_in: number | null
+          tokens_out: number | null
+        }
+        Insert: {
+          agent_name: string
+          agent_version?: string | null
+          brand_id?: string | null
+          completed_at?: string | null
+          confidence?: number | null
+          created_at?: string
+          duration_ms?: number | null
+          id?: string
+          model?: string | null
+          output?: Json
+          run_id?: string | null
+          started_at?: string | null
+          status?: string | null
+          tokens_in?: number | null
+          tokens_out?: number | null
+        }
+        Update: {
+          agent_name?: string
+          agent_version?: string | null
+          brand_id?: string | null
+          completed_at?: string | null
+          confidence?: number | null
+          created_at?: string
+          duration_ms?: number | null
+          id?: string
+          model?: string | null
+          output?: Json
+          run_id?: string | null
+          started_at?: string | null
+          status?: string | null
+          tokens_in?: number | null
+          tokens_out?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "brand_agent_results_brand_id_fkey"
+            columns: ["brand_id"]
+            isOneToOne: false
+            referencedRelation: "brands"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      brand_competitors: {
+        Row: {
+          brand_id: string
+          category: string | null
+          created_at: string
+          id: string
+          last_analyzed_at: string | null
+          name: string
+          price_point: string | null
+          profile_jsonb: Json
+          scores: Json
+          social_presence: Json
+          strengths: Json
+          threat_level: string | null
+          unique_angles: Json
+          url: string | null
+          weaknesses: Json
+        }
+        Insert: {
+          brand_id: string
+          category?: string | null
+          created_at?: string
+          id?: string
+          last_analyzed_at?: string | null
+          name: string
+          price_point?: string | null
+          profile_jsonb?: Json
+          scores?: Json
+          social_presence?: Json
+          strengths?: Json
+          threat_level?: string | null
+          unique_angles?: Json
+          url?: string | null
+          weaknesses?: Json
+        }
+        Update: {
+          brand_id?: string
+          category?: string | null
+          created_at?: string
+          id?: string
+          last_analyzed_at?: string | null
+          name?: string
+          price_point?: string | null
+          profile_jsonb?: Json
+          scores?: Json
+          social_presence?: Json
+          strengths?: Json
+          threat_level?: string | null
+          unique_angles?: Json
+          url?: string | null
+          weaknesses?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "brand_competitors_brand_id_fkey"
+            columns: ["brand_id"]
+            isOneToOne: false
+            referencedRelation: "brands"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      brand_crawl_results: {
+        Row: {
+          brand_id: string
+          completed_at: string | null
+          created_at: string
+          firecrawl_job_id: string | null
+          id: string
+          pages_crawled: number
+          raw_data: Json
+          started_at: string | null
+          status: string
+        }
+        Insert: {
+          brand_id: string
+          completed_at?: string | null
+          created_at?: string
+          firecrawl_job_id?: string | null
+          id?: string
+          pages_crawled?: number
+          raw_data?: Json
+          started_at?: string | null
+          status?: string
+        }
+        Update: {
+          brand_id?: string
+          completed_at?: string | null
+          created_at?: string
+          firecrawl_job_id?: string | null
+          id?: string
+          pages_crawled?: number
+          raw_data?: Json
+          started_at?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "brand_crawl_results_brand_id_fkey"
+            columns: ["brand_id"]
+            isOneToOne: false
+            referencedRelation: "brands"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       brand_intake_drafts: {
         Row: {
           approved_at: string | null
@@ -601,6 +769,8 @@ export type Database = {
           id: string
           score: number
           score_type: string
+          score_version: number
+          source: string
         }
         Insert: {
           brand_id: string
@@ -609,6 +779,8 @@ export type Database = {
           id?: string
           score: number
           score_type: string
+          score_version?: number
+          source?: string
         }
         Update: {
           brand_id?: string
@@ -617,10 +789,65 @@ export type Database = {
           id?: string
           score?: number
           score_type?: string
+          score_version?: number
+          source?: string
         }
         Relationships: [
           {
             foreignKeyName: "brand_scores_brand_id_fkey"
+            columns: ["brand_id"]
+            isOneToOne: false
+            referencedRelation: "brands"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      brand_social_channels: {
+        Row: {
+          bio: string | null
+          brand_id: string
+          content_themes: Json
+          created_at: string
+          discovered_at: string
+          follower_signal: string | null
+          handle: string | null
+          id: string
+          platform: string
+          posting_frequency: string | null
+          url: string | null
+          verified: boolean
+        }
+        Insert: {
+          bio?: string | null
+          brand_id: string
+          content_themes?: Json
+          created_at?: string
+          discovered_at?: string
+          follower_signal?: string | null
+          handle?: string | null
+          id?: string
+          platform: string
+          posting_frequency?: string | null
+          url?: string | null
+          verified?: boolean
+        }
+        Update: {
+          bio?: string | null
+          brand_id?: string
+          content_themes?: Json
+          created_at?: string
+          discovered_at?: string
+          follower_signal?: string | null
+          handle?: string | null
+          id?: string
+          platform?: string
+          posting_frequency?: string | null
+          url?: string | null
+          verified?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "brand_social_channels_brand_id_fkey"
             columns: ["brand_id"]
             isOneToOne: false
             referencedRelation: "brands"
@@ -636,7 +863,8 @@ export type Database = {
           created_at: string
           creative_temperature_default: number
           id: string
-          intake_status: string
+          instagram_handle: string | null
+          intake_status: Database["public"]["Enums"]["brand_intake_status"]
           name: string
           org_id: string
           updated_at: string
@@ -649,7 +877,8 @@ export type Database = {
           created_at?: string
           creative_temperature_default?: number
           id?: string
-          intake_status?: string
+          instagram_handle?: string | null
+          intake_status?: Database["public"]["Enums"]["brand_intake_status"]
           name: string
           org_id: string
           updated_at?: string
@@ -662,7 +891,8 @@ export type Database = {
           created_at?: string
           creative_temperature_default?: number
           id?: string
-          intake_status?: string
+          instagram_handle?: string | null
+          intake_status?: Database["public"]["Enums"]["brand_intake_status"]
           name?: string
           org_id?: string
           updated_at?: string
@@ -3236,6 +3466,14 @@ export type Database = {
         | "travel"
         | "maintenance"
         | "not_available"
+      brand_intake_status:
+        | "brand_created"
+        | "crawl_running"
+        | "crawl_complete"
+        | "analysis_running"
+        | "scores_complete"
+        | "ready"
+        | "failed"
       brand_type:
         | "couture"
         | "streetwear"
@@ -3552,6 +3790,15 @@ export const Constants = {
         "travel",
         "maintenance",
         "not_available",
+      ],
+      brand_intake_status: [
+        "brand_created",
+        "crawl_running",
+        "crawl_complete",
+        "analysis_running",
+        "scores_complete",
+        "ready",
+        "failed",
       ],
       brand_type: [
         "couture",

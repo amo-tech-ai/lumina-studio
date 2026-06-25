@@ -218,6 +218,133 @@ try {
   });
   assert(!!crossScoreInsertErr, "user B cannot insert brand_score on user A brand");
 
+  // IPI-26 — service-role writes; org-member SELECT only
+  if (!admin) {
+    console.warn("warn: skip IPI-26 table RLS probes (no SUPABASE_SERVICE_ROLE_KEY)");
+  } else {
+    const { data: socialRow, error: socialAdminErr } = await admin
+      .from("brand_social_channels")
+      .insert({
+        brand_id: brandAId,
+        platform: "instagram",
+        handle: `@rls-${stamp}`,
+      })
+      .select("id")
+      .single();
+    assert(!socialAdminErr && socialRow?.id, "service role inserts brand_social_channels");
+
+    const { data: socialReadA } = await userA.client
+      .from("brand_social_channels")
+      .select("id")
+      .eq("id", socialRow.id);
+    assert((socialReadA ?? []).length === 1, "user A reads own org brand_social_channels");
+
+    const { data: socialReadB } = await userB.client
+      .from("brand_social_channels")
+      .select("id")
+      .eq("id", socialRow.id);
+    assert((socialReadB ?? []).length === 0, "user B cannot read user A brand_social_channels");
+
+    const { error: socialInsertBErr } = await userB.client
+      .from("brand_social_channels")
+      .insert({ brand_id: brandAId, platform: "tiktok" });
+    assert(!!socialInsertBErr, "user B cannot insert brand_social_channels");
+
+    const { data: compRow, error: compAdminErr } = await admin
+      .from("brand_competitors")
+      .insert({ brand_id: brandAId, name: `Competitor ${stamp}` })
+      .select("id")
+      .single();
+    assert(!compAdminErr && compRow?.id, "service role inserts brand_competitors");
+
+    const { data: compReadA } = await userA.client
+      .from("brand_competitors")
+      .select("id")
+      .eq("id", compRow.id);
+    assert((compReadA ?? []).length === 1, "user A reads own org brand_competitors");
+
+    const { data: compReadB } = await userB.client
+      .from("brand_competitors")
+      .select("id")
+      .eq("id", compRow.id);
+    assert((compReadB ?? []).length === 0, "user B cannot read user A brand_competitors");
+
+    const { data: crawlRow, error: crawlAdminErr } = await admin
+      .from("brand_crawl_results")
+      .insert({
+        brand_id: brandAId,
+        firecrawl_job_id: `fc-${stamp}`,
+        status: "running",
+      })
+      .select("id")
+      .single();
+    assert(!crawlAdminErr && crawlRow?.id, "service role inserts brand_crawl_results");
+
+    const { data: crawlReadA } = await userA.client
+      .from("brand_crawl_results")
+      .select("id")
+      .eq("id", crawlRow.id);
+    assert((crawlReadA ?? []).length === 1, "user A reads own org brand_crawl_results");
+
+    const { data: crawlReadB } = await userB.client
+      .from("brand_crawl_results")
+      .select("id")
+      .eq("id", crawlRow.id);
+    assert((crawlReadB ?? []).length === 0, "user B cannot read user A brand_crawl_results");
+
+    const { data: agentRow, error: agentAdminErr } = await admin
+      .from("brand_agent_results")
+      .insert({
+        brand_id: brandAId,
+        agent_name: "rls-test-agent",
+        status: "complete",
+      })
+      .select("id")
+      .single();
+    assert(!agentAdminErr && agentRow?.id, "service role inserts brand_agent_results");
+
+    const { data: agentReadA } = await userA.client
+      .from("brand_agent_results")
+      .select("id")
+      .eq("id", agentRow.id);
+    assert((agentReadA ?? []).length === 1, "user A reads own org brand_agent_results");
+
+    const { data: agentReadB } = await userB.client
+      .from("brand_agent_results")
+      .select("id")
+      .eq("id", agentRow.id);
+    assert((agentReadB ?? []).length === 0, "user B cannot read user A brand_agent_results");
+  }
+
+  // brand_intake_drafts — owner or org member SELECT
+  const { data: draftA, error: draftInsertErr } = await userA.client
+    .from("brand_intake_drafts")
+    .insert({
+      user_id: userA.user.id,
+      brand_id: brandAId,
+      source_url: `https://example.com/${stamp}`,
+      status: "pending",
+    })
+    .select("id")
+    .single();
+  if (draftInsertErr) {
+    console.warn(`warn: brand_intake_drafts insert skipped (${draftInsertErr.message})`);
+  } else {
+    assert(draftA?.id, "user A inserts brand_intake_draft");
+
+    const { data: draftReadA } = await userA.client
+      .from("brand_intake_drafts")
+      .select("id")
+      .eq("id", draftA.id);
+    assert((draftReadA ?? []).length === 1, "user A reads own brand_intake_draft");
+
+    const { data: draftReadB } = await userB.client
+      .from("brand_intake_drafts")
+      .select("id")
+      .eq("id", draftA.id);
+    assert((draftReadB ?? []).length === 0, "user B cannot read user A brand_intake_draft");
+  }
+
   // commerce_product_links
   const { data: linkA, error: linkInsertErr } = await userA.client
     .from("commerce_product_links")
