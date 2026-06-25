@@ -24,8 +24,14 @@ if (existsSync(envPath)) {
   }
 }
 
-const url = process.env.VITE_SUPABASE_URL;
-const anonKey = process.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+const url =
+  process.env.VITE_SUPABASE_URL ??
+  process.env.NEXT_PUBLIC_SUPABASE_URL ??
+  process.env.NEXT_SUPABASE_URL;
+const anonKey =
+  process.env.VITE_SUPABASE_PUBLISHABLE_KEY ??
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ??
+  process.env.NEXT_SUPABASE_PUBLISHABLE_KEY;
 const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 if (!url || !anonKey) {
@@ -185,6 +191,13 @@ try {
     score: 42,
   });
   assert(!scoreInsertErr, "user A inserts brand_score for own brand");
+
+  const { error: scoreUpdateErr } = await userA.client
+    .from("brand_scores")
+    .update({ score: 55 })
+    .eq("brand_id", brandAId)
+    .eq("score_type", "dna_readiness");
+  assert(!scoreUpdateErr, "user A updates own brand_score (upsert path)");
 
   const { data: crossScores } = await userB.client
     .from("brand_scores")

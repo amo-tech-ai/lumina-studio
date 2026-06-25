@@ -1,4 +1,5 @@
 import { describe, it, expect } from "vitest";
+import { computeDnaScore } from "@/lib/brand-scores";
 
 // scoreColor and scoreLabel helpers extracted for unit testing
 const scoreColor = (score: number) => {
@@ -64,17 +65,19 @@ describe("ai_profile field safety", () => {
     expect(partial.contentPillars).toBeUndefined();
   });
 
-  it("score fallback from missing dna_readiness is 0", () => {
-    const scores: { score_type: string; score: number }[] = [];
-    const dna = scores.find((s) => s.score_type === "dna_readiness")?.score ?? 0;
-    expect(dna).toBe(0);
+  it("DNA score uses average of base four scores", () => {
+    const dna = computeDnaScore([
+      { score_type: "visual", score: 70 },
+      { score_type: "audience", score: 80 },
+      { score_type: "consistency", score: 90 },
+      { score_type: "commerce_readiness", score: 60 },
+    ]);
+    expect(dna).toBe(75);
   });
 
-  it("score fallback when scores is null is 0", () => {
-    const getScore = (rows: { score_type: string; score: number }[] | null) =>
-      rows?.find((s) => s.score_type === "dna_readiness")?.score ?? 0;
-    expect(getScore(null)).toBe(0);
-    expect(getScore([])).toBe(0);
+  it("DNA score is 0 when base scores missing", () => {
+    expect(computeDnaScore([])).toBe(0);
+    expect(computeDnaScore(null)).toBe(0);
   });
 });
 
@@ -93,6 +96,7 @@ describe("brand hub route contract", () => {
     );
     expect(src).toMatch(/maybeSingle/);
     expect(src).toMatch(/notFound/);
+    expect(src).toMatch(/computeDnaScore/);
     expect(src).toMatch(/brand_scores/);
     expect(src).toMatch(/organizations/);
   });

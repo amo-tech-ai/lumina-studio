@@ -1,8 +1,8 @@
 import { describe, it, expect, vi } from "vitest";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { validateUrl, slugify, createOrgAndBrand } from "@/lib/onboarding";
+import { validateUrl, slugify, createOrgAndBrand, buildShellAiProfile, invokeBrandIntelligence } from "@/lib/onboarding";
 
-// IPI-11 — onboarding wizard unit tests
+// IPI-46 — onboarding unit tests
 
 describe("validateUrl", () => {
   it("accepts https URLs", () => {
@@ -44,11 +44,27 @@ describe("slugify", () => {
   it("truncates to 50 chars before suffix", () => {
     const long = "a".repeat(80);
     const slug = slugify(long);
-    expect(slug.length).toBeLessThanOrEqual(56); // 50 + '-' + 5
+    expect(slug.length).toBeLessThanOrEqual(56);
   });
 });
 
-// --- Supabase mock helpers ---
+describe("buildShellAiProfile", () => {
+  it("includes form metadata and lifecycle", () => {
+    const profile = buildShellAiProfile({
+      brandName: "X",
+      websiteUrl: "https://x.com",
+      instagramHandle: "@x",
+      industry: "Fashion",
+      goal: "All of the above",
+    });
+    expect(profile).toMatchObject({
+      instagram_handle: "x",
+      industry: "Fashion",
+      goal: "All of the above",
+      _lifecycle: "brand_created",
+    });
+  });
+});
 
 type DbError = { message: string } | null;
 
@@ -73,7 +89,7 @@ const makeSupabaseMock = ({
     insert: orgInsert,
     select: () => chainOrg,
     single: () => Promise.resolve(makeSingle(orgError ? null : { id: orgId }, orgError)),
-    delete: () => ({ eq: () => ({ then: () => undefined }) }),
+    delete: () => ({ eq: () => Promise.resolve({ error: null }) }),
   };
 
   const chainBrand = {
@@ -82,15 +98,11 @@ const makeSupabaseMock = ({
     single: () => Promise.resolve(makeSingle(brandError ? null : { id: brandId }, brandError)),
   };
 
-  const chainScore = {
-    insert: () => Promise.resolve({ error: null }),
-  };
-
   return {
     from: vi.fn((table: string) => {
       if (table === "organizations") return chainOrg;
       if (table === "brands") return chainBrand;
-      return chainScore;
+      throw new Error(`unexpected table: ${table}`);
     }),
     orgInsert,
     brandInsert,
@@ -106,55 +118,58 @@ const FORM = {
 };
 
 describe("createOrgAndBrand", () => {
-  it("creates org and brand, returns their IDs", async () => {
+  it("creates org and brand shell, returns their IDs", async () => {
     const supabase = makeSupabaseMock({ orgId: "org-1", brandId: "brand-2" });
-    const result = await createOrgAndBrand(supabase as unknown as SupabaseClient, "user-123", FORM, null);
+    const result = await createOrgAndBrand(supabase as unknown as SupabaseClient, "user-123", FORM);
     expect(result.orgId).toBe("org-1");
     expect(result.brandId).toBe("brand-2");
   });
 
-  it("inserts org with owner_id, brand with org_id and form fields", async () => {
+  it("inserts org with owner_id, brand with org_id and shell ai_profile", async () => {
     const supabase = makeSupabaseMock({ orgId: "org-abc" });
-    await createOrgAndBrand(supabase as unknown as SupabaseClient, "user-abc", FORM, null);
+    await createOrgAndBrand(supabase as unknown as SupabaseClient, "user-abc", FORM);
     expect(supabase.orgInsert).toHaveBeenCalledWith(expect.objectContaining({ owner_id: "user-abc" }));
     expect(supabase.brandInsert).toHaveBeenCalledWith(expect.objectContaining({
       org_id: "org-abc",
       brand_url: FORM.websiteUrl,
-      ai_profile: expect.objectContaining({ industry: FORM.industry, goal: FORM.goal }),
+      ai_profile: expect.objectContaining({ industry: FORM.industry, goal: FORM.goal, _lifecycle: "brand_created" }),
     }));
-    expect(supabase.from).toHaveBeenCalledWith("brand_scores");
+    expect(supabase.from).not.toHaveBeenCalledWith("brand_scores");
   });
 
   it("throws if org creation fails", async () => {
     const supabase = makeSupabaseMock({ orgError: { message: "unique violation" } });
     await expect(
-      createOrgAndBrand(supabase as unknown as SupabaseClient, "user-abc", FORM, null),
+      createOrgAndBrand(supabase as unknown as SupabaseClient, "user-abc", FORM),
     ).rejects.toThrow("unique violation");
   });
 
   it("throws if brand creation fails", async () => {
     const supabase = makeSupabaseMock({ brandError: { message: "brand insert fail" } });
     await expect(
-      createOrgAndBrand(supabase as unknown as SupabaseClient, "user-abc", FORM, null),
+      createOrgAndBrand(supabase as unknown as SupabaseClient, "user-abc", FORM),
     ).rejects.toThrow("brand insert fail");
   });
+});
 
-  it("passes aiProfile score to brand_scores", async () => {
-    const scoreSpy = vi.fn(() => Promise.resolve({ error: null }));
-    const supabase = {
-      from: (table: string) => {
-        if (table === "organizations") return {
-          insert: () => ({ select: () => ({ single: () => Promise.resolve({ data: { id: "org-1" }, error: null }) }) }),
-        };
-        if (table === "brands") return {
-          insert: () => ({ select: () => ({ single: () => Promise.resolve({ data: { id: "brand-1" }, error: null }) }) }),
-        };
-        if (table === "brand_scores") return { insert: scoreSpy };
-        return { insert: () => Promise.resolve({ error: null }) };
-      },
-    };
-    await createOrgAndBrand(supabase as unknown as SupabaseClient, "uid", FORM, { score: 85 });
-    expect(scoreSpy).toHaveBeenCalledWith(expect.objectContaining({ score: 85, brand_id: "brand-1" }));
+describe("invokeBrandIntelligence", () => {
+  it("passes brandId and throws on edge error", async () => {
+    const invoke = vi.fn().mockResolvedValue({ data: null, error: { message: "timeout" } });
+    const supabase = { functions: { invoke } } as unknown as SupabaseClient;
+    await expect(invokeBrandIntelligence(supabase, "brand-1", FORM)).rejects.toThrow("timeout");
+    expect(invoke).toHaveBeenCalledWith("brand-intelligence", {
+      body: { url: FORM.websiteUrl, brandId: "brand-1", brand_name: FORM.brandName },
+    });
+  });
+
+  it("returns payload when brandId present", async () => {
+    const invoke = vi.fn().mockResolvedValue({
+      data: { brandId: "brand-1", scores: [{ score_type: "visual", score: 80 }] },
+      error: null,
+    });
+    const supabase = { functions: { invoke } } as unknown as SupabaseClient;
+    const result = await invokeBrandIntelligence(supabase, "brand-1", FORM);
+    expect(result.brandId).toBe("brand-1");
   });
 });
 

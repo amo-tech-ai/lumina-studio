@@ -1,4 +1,4 @@
-// IPI-11 — shared onboarding logic (pure functions, testable in node)
+// IPI-46 — onboarding shell + orchestration helpers (pure functions, testable in node)
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 export const validateUrl = (url: string): string | null => {
@@ -21,11 +21,21 @@ export type OnboardingForm = {
 
 export type CreateBrandResult = { orgId: string; brandId: string };
 
+/** Form metadata persisted before edge analysis (merged by edge fn on UPDATE). */
+export const buildShellAiProfile = (form: OnboardingForm): Record<string, unknown> => ({
+  ...(form.instagramHandle.trim()
+    ? { instagram_handle: form.instagramHandle.trim().replace(/^@/, "") }
+    : {}),
+  industry: form.industry,
+  goal: form.goal,
+  _lifecycle: "brand_created",
+});
+
+/** Step 1 of onboarding: org + brand shell only — no edge fn, no score rows. */
 export const createOrgAndBrand = async (
   supabase: SupabaseClient,
   userId: string,
   form: OnboardingForm,
-  aiProfile: Record<string, unknown> | null,
 ): Promise<CreateBrandResult> => {
   const { data: org, error: orgErr } = await supabase
     .from("organizations")
@@ -47,31 +57,47 @@ export const createOrgAndBrand = async (
       brand_url: form.websiteUrl.trim(),
       user_id: userId,
       org_id: org.id,
-      ai_profile: {
-        ...(aiProfile ?? {}),
-        ...(form.instagramHandle ? { instagram_handle: form.instagramHandle } : {}),
-        industry: form.industry,
-        goal: form.goal,
-      },
+      ai_profile: buildShellAiProfile(form),
     })
     .select("id")
     .single();
 
   if (brandErr || !brand?.id) {
-    // ponytail: best-effort orphan cleanup — org was committed, brand failed
     void supabase.from("organizations").delete().eq("id", org.id);
     throw new Error(brandErr?.message ?? "Failed to create brand");
   }
 
-  const rawScore = (aiProfile ?? {}).score;
-  const score = typeof rawScore === "number" ? rawScore : 0;
-  const { error: scoreErr } = await supabase.from("brand_scores").insert({
-    brand_id: brand.id,
-    score_type: "dna_readiness",
-    score,
-  });
-  // ponytail: score write is intentionally non-blocking — brand is already created
-  if (scoreErr) console.warn("brand_scores insert failed (non-blocking):", scoreErr.message);
-
   return { orgId: org.id, brandId: brand.id };
+};
+
+export type BrandIntelligenceResponse = {
+  brandId?: string;
+  profile?: Record<string, unknown>;
+  scores?: { score_type: string; score: number }[];
+};
+
+/** Step 2: invoke edge fn with existing brandId (scores + profile persisted server-side). */
+export const invokeBrandIntelligence = async (
+  supabase: SupabaseClient,
+  brandId: string,
+  form: OnboardingForm,
+): Promise<BrandIntelligenceResponse> => {
+  const { data, error } = await supabase.functions.invoke("brand-intelligence", {
+    body: {
+      url: form.websiteUrl.trim(),
+      brandId,
+      brand_name: form.brandName.trim(),
+    },
+  });
+
+  if (error) {
+    throw new Error(error.message || "Brand analysis failed");
+  }
+
+  const payload = data as BrandIntelligenceResponse | null;
+  if (!payload?.brandId) {
+    throw new Error("Brand analysis returned no brandId");
+  }
+
+  return payload;
 };

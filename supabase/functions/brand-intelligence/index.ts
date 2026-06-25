@@ -344,7 +344,7 @@ Required JSON shape:
     if (brandId) {
       const { data: existing, error: fetchErr } = await client
         .from("brands")
-        .select("id, name")
+        .select("id, name, ai_profile")
         .eq("id", brandId)
         .eq("user_id", auth.user.id)
         .maybeSingle();
@@ -353,12 +353,23 @@ Required JSON shape:
         return errorResponse("not_found", "Brand not found", 404);
       }
 
+      const priorProfile =
+        existing.ai_profile && typeof existing.ai_profile === "object" && !Array.isArray(existing.ai_profile)
+          ? (existing.ai_profile as Record<string, unknown>)
+          : {};
+
+      const mergedProfile = {
+        ...priorProfile,
+        ...aiProfile,
+        _lifecycle: "scores_complete",
+      };
+
       const { data: updated, error: updateErr } = await client
         .from("brands")
         .update({
           name: aiProfile.name,
           brand_url: url,
-          ai_profile: aiProfile,
+          ai_profile: mergedProfile,
         })
         .eq("id", brandId)
         .eq("user_id", auth.user.id)
