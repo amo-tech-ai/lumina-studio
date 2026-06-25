@@ -13,8 +13,14 @@ function EvidenceTooltip({ evidence }: { evidence?: string[] }) {
   if (!evidence || evidence.length === 0) return null;
   return (
     <div className="relative group">
-      <span className="text-xs text-muted-foreground cursor-help underline decoration-dotted ml-1">ⓘ</span>
-      <div className="absolute bottom-full left-0 mb-2 w-64 p-3 rounded-lg bg-popover border shadow-lg text-xs text-popover-foreground opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
+      <button
+        type="button"
+        aria-label="Show evidence"
+        className="text-xs text-muted-foreground cursor-help underline decoration-dotted ml-1 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-sm"
+      >
+        ⓘ
+      </button>
+      <div className="absolute bottom-full left-0 mb-2 w-64 p-3 rounded-lg bg-popover border shadow-lg text-xs text-popover-foreground opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity pointer-events-none z-10">
         <ul className="list-disc list-inside space-y-1">
           {evidence.map((e, i) => (
             <li key={i}>{e}</li>
@@ -36,7 +42,7 @@ function ScoreBar({ score_type, score, details }: BrandScoreRow) {
       <div className="flex justify-between text-sm items-center">
         <div className="flex items-center gap-1.5">
           <span className="font-outfit capitalize">{label}</span>
-          {confidence && (
+          {typeof confidence === "number" && (
             <span
               className="text-[10px] px-1.5 py-0.5 rounded-full font-medium"
               style={{

@@ -82,8 +82,6 @@ export function isBaseScoreType(scoreType: string): boolean {
 }
 
 /** Filter out legacy dna_readiness rows from a scores array */
-export function filterScores(
-  scores: { score_type: string }[],
-): { score_type: string }[] {
+export function filterScores<T extends { score_type: string }>(scores: T[]): T[] {
   return scores.filter((s) => s.score_type !== "dna_readiness");
 }
