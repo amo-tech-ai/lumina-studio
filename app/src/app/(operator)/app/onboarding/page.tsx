@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
-import { validateUrl, createOrgAndBrand, type OnboardingForm } from "@/lib/onboarding";
+import { validateUrl, createOrgAndBrand, invokeBrandIntelligence, type OnboardingForm } from "@/lib/onboarding";
 
 const INDUSTRIES = ["Fashion", "Jewellery", "Beauty", "Home & Living", "Other"] as const;
 const GOALS = ["Product Photography", "Campaign Planning", "Brand Intelligence", "All of the above"] as const;
@@ -24,9 +24,11 @@ const OnboardingPage = () => {
   const [nameError, setNameError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [shell, setShell] = useState<{ orgId: string; brandId: string } | null>(null);
 
   const setField = (field: keyof OnboardingForm, value: string) => {
     setForm((f) => ({ ...f, [field]: value }));
+    setShell(null);
     if (field === "websiteUrl") setUrlError(null);
     if (field === "brandName") setNameError(null);
   };
@@ -47,13 +49,14 @@ const OnboardingPage = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
-      const { data: fnData, error: fnErr } = await supabase.functions.invoke("brand-intelligence", {
-        body: { url: form.websiteUrl, brand_name: form.brandName },
-      });
-      if (fnErr) console.warn("brand-intelligence partial failure:", fnErr.message);
+      let brandId = shell?.brandId;
+      if (!brandId) {
+        const created = await createOrgAndBrand(supabase, user.id, form);
+        brandId = created.brandId;
+        setShell(created);
+      }
 
-      const aiProfile = fnData ?? null;
-      const { brandId } = await createOrgAndBrand(supabase, user.id, form, aiProfile);
+      await invokeBrandIntelligence(supabase, brandId, form);
 
       router.push(`/app/brand/${brandId}`);
     } catch (err) {

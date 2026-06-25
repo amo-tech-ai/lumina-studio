@@ -22,8 +22,14 @@ if (existsSync(envPath)) {
   }
 }
 
-const url = process.env.VITE_SUPABASE_URL;
-const anonKey = process.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+const url =
+  process.env.VITE_SUPABASE_URL ??
+  process.env.NEXT_PUBLIC_SUPABASE_URL ??
+  process.env.NEXT_SUPABASE_URL;
+const anonKey =
+  process.env.VITE_SUPABASE_PUBLISHABLE_KEY ??
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ??
+  process.env.NEXT_SUPABASE_PUBLISHABLE_KEY;
 const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const testBrandUrl =
   process.env.BRAND_INTEL_TEST_URL ?? "https://www.glossier.com";
@@ -98,6 +104,41 @@ async function main() {
     fail(`expected 401 without JWT, got ${anon.res.status}`);
   }
 
+  // IPI-46: edge fn expects an org-scoped brand shell (insert-without-brandId fails RLS)
+  const { data: org, error: orgErr } = await userClient
+    .from("organizations")
+    .insert({
+      name: `Brand Intel Org ${stamp}`,
+      slug: `brand-intel-org-${stamp}`,
+      owner_id: userId,
+      type: "brand",
+    })
+    .select("id")
+    .single();
+  if (orgErr || !org?.id) {
+    throw new Error(orgErr?.message ?? "failed to create test org");
+  }
+
+  const shellProfile = {
+    industry: "fashion",
+    goal: "ecommerce",
+    _lifecycle: "brand_created",
+  };
+  const { data: shellBrand, error: shellErr } = await userClient
+    .from("brands")
+    .insert({
+      name: "Brand Intel Shell",
+      brand_url: testBrandUrl,
+      user_id: userId,
+      org_id: org.id,
+      ai_profile: shellProfile,
+    })
+    .select("id")
+    .single();
+  if (shellErr || !shellBrand?.id) {
+    throw new Error(shellErr?.message ?? "failed to create test brand shell");
+  }
+
   const authed = await fetchJson("/brand-intelligence", {
     method: "POST",
     headers: {
@@ -105,7 +146,11 @@ async function main() {
       Authorization: `Bearer ${token}`,
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({ url: testBrandUrl }),
+    body: JSON.stringify({
+      url: testBrandUrl,
+      brandId: shellBrand.id,
+      brand_name: "Brand Intel Shell",
+    }),
   });
 
   if (
@@ -132,6 +177,18 @@ async function main() {
       fail("brands.ai_profile not populated");
     } else {
       pass(`brands.ai_profile.name=${brand.ai_profile.name}`);
+    }
+
+    if (brand?.ai_profile?.industry !== "fashion") {
+      fail("brands.ai_profile merge lost shell industry");
+    } else {
+      pass("brands.ai_profile merge preserved shell industry");
+    }
+
+    if (brand?.ai_profile?._lifecycle !== "scores_complete") {
+      fail(`expected _lifecycle scores_complete, got ${brand?.ai_profile?._lifecycle}`);
+    } else {
+      pass("brands.ai_profile._lifecycle=scores_complete");
     }
 
     const { count, error: scoreErr } = await admin

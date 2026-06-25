@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { computeDnaScore } from "@/lib/brand-scores";
 
 interface Props {
   params: Promise<{ id: string }>;
@@ -12,7 +13,7 @@ interface AiProfile {
   brandVoice?: string;
   contentPillars?: string[];
   recommendedServices?: string[];
-  productionReadiness?: string;
+  productionReadiness?: number;
   visualIdentity?: { colors?: string[]; mood?: string };
   score?: number;
 }
@@ -25,6 +26,13 @@ const scoreColor = (score: number) => {
 
 const scoreLabel = (type: string) =>
   type.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+
+const ProfileField = ({ label, value }: { label: string; value: string }) => (
+  <div>
+    <dt className="font-sans text-xs font-medium text-[#94A3B8] uppercase tracking-wide">{label}</dt>
+    <dd className="font-sans text-sm text-[#1E293B] mt-0.5">{value}</dd>
+  </div>
+);
 
 const BrandPage = async ({ params }: Props) => {
   const { id } = await params;
@@ -41,7 +49,7 @@ const BrandPage = async ({ params }: Props) => {
 
   if (!brand) notFound();
 
-  const dnaScore = scores?.find((s) => s.score_type === "dna_readiness")?.score ?? 0;
+  const dnaScore = computeDnaScore(scores);
   const org = brand.organizations as { name?: string; plan?: string } | null;
   const profile = (brand.ai_profile ?? {}) as AiProfile;
   const hasProfile = Object.keys(profile).length > 0;
@@ -88,7 +96,7 @@ const BrandPage = async ({ params }: Props) => {
         </div>
 
         {/* All scores */}
-        {scores && scores.length > 1 && (
+        {scores && scores.length >= 1 && (
           <section className="rounded-2xl border border-[#E8E0D8] bg-white p-6">
             <h2 className="font-serif text-xl text-[#1E293B] mb-4">Scores</h2>
             <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
@@ -127,8 +135,11 @@ const BrandPage = async ({ params }: Props) => {
               {profile.brandVoice && (
                 <ProfileField label="Brand Voice" value={profile.brandVoice} />
               )}
-              {profile.productionReadiness && (
-                <ProfileField label="Production Readiness" value={profile.productionReadiness} />
+              {typeof profile.productionReadiness === "number" && (
+                <ProfileField
+                  label="Production Readiness"
+                  value={String(profile.productionReadiness)}
+                />
               )}
               {profile.visualIdentity?.mood && (
                 <ProfileField label="Visual Mood" value={profile.visualIdentity.mood} />
@@ -204,10 +215,3 @@ const BrandPage = async ({ params }: Props) => {
 };
 
 export default BrandPage;
-
-const ProfileField = ({ label, value }: { label: string; value: string }) => (
-  <div>
-    <dt className="font-sans text-xs font-medium text-[#94A3B8] uppercase tracking-wide">{label}</dt>
-    <dd className="font-sans text-sm text-[#1E293B] mt-0.5">{value}</dd>
-  </div>
-);
