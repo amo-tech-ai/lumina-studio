@@ -1,0 +1,27 @@
+supabase/migrations/20260627160000_brand_scores_update_editor_rls.sql
+  s_ea46f8c56d53f8::t_46c4d76109d6eb 1-26
+scripts/verify-rls.mjs
+  s_ea46f8c56d53f8::t_724cc8f7ca3535 559-583
+  s_ea46f8c56d53f8::t_ea9a03ada14326 613-624
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.13",
+  "base_commit_sha": "93e5b86779d8f00d0870d46b85ecda892d2ee357",
+  "prompts": {},
+  "humans": {
+    "h_d382fbec1d5b46": {
+      "author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  },
+  "sessions": {
+    "s_ea46f8c56d53f8": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "dd9a0aea-4d97-4ca9-a270-775e1d8e9728",
+        "model": "default"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
