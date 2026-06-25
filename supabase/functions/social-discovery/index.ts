@@ -1,11 +1,10 @@
 // IPI-27 — social-discovery edge function
 // Accepts POST { brandId, channels[], status?, error? } from the Mastra social-discovery tool,
 // upserts brand_social_channels, and logs the run to brand_agent_results.
-// Auth: user JWT or service-role key (server-to-server from Mastra tools).
+// Auth: service-role key only (server-to-server from Mastra tools — no user-JWT path).
 
 import { handleCors } from "../_shared/cors.ts";
 import { errorResponse, jsonResponse, safeErrorMessage } from "../_shared/response.ts";
-import { isAuthFailure, resolveAuth } from "../_shared/auth.ts";
 import { createServiceClient } from "../_shared/supabase-client.ts";
 import { getEdgeEnv } from "../_shared/env.ts";
 
@@ -42,10 +41,10 @@ Deno.serve(async (req: Request) => {
   const cors = handleCors(req);
   if (cors) return cors;
 
-  // Service-role Bearer bypasses user-JWT validation (trusted server-to-server call)
+  // Service-role only: this endpoint is called by Mastra tools, never by end users.
+  // A user-JWT fallback would allow any authenticated user to write to any brandId.
   if (!isServiceRoleRequest(req)) {
-    const authResult = await resolveAuth(req, { required: true });
-    if (isAuthFailure(authResult)) return authResult.response;
+    return errorResponse("forbidden", "Service-role authentication required", 403);
   }
 
   try {
@@ -59,20 +58,22 @@ Deno.serve(async (req: Request) => {
     const admin = createServiceClient();
     const completedAt = new Date().toISOString();
 
-    // Validate platforms and build upsert rows
-    const rows = channels
-      .filter((ch) => SUPPORTED_PLATFORMS.has(ch.platform))
-      .map((ch) => ({
-        brand_id: brandId,
-        platform: ch.platform,
-        url: ch.url,
-        handle: ch.handle,
-        verified: ch.verified,
-        bio: ch.verification_reason,
-        content_themes: ch.content_themes ?? [],
-        posting_frequency: ch.posting_frequency,
-        discovered_at: completedAt,
-      }));
+    // Deduplicate by platform (last-one-wins) to prevent ON CONFLICT cardinality violations.
+    const dedupedChannels = Array.from(
+      new Map(channels.filter((ch) => SUPPORTED_PLATFORMS.has(ch.platform)).map((ch) => [ch.platform, ch])).values(),
+    );
+
+    const rows = dedupedChannels.map((ch) => ({
+      brand_id: brandId,
+      platform: ch.platform,
+      url: ch.url,
+      handle: ch.handle,
+      verified: ch.verified,
+      bio: ch.verification_reason,
+      content_themes: ch.content_themes ?? [],
+      posting_frequency: ch.posting_frequency,
+      discovered_at: completedAt,
+    }));
 
     // Use upstream status when provided (e.g. Gemini failure with 0 rows)
     let status: "complete" | "failed" = upstreamStatus ?? "complete";
@@ -90,7 +91,7 @@ Deno.serve(async (req: Request) => {
     }
 
     // Log run regardless of upsert outcome
-    await admin.from("brand_agent_results").insert({
+    const { error: logErr } = await admin.from("brand_agent_results").insert({
       brand_id: brandId,
       agent_name: "social-discovery",
       status,
@@ -101,6 +102,7 @@ Deno.serve(async (req: Request) => {
       started_at: startedAt ?? completedAt,
       completed_at: completedAt,
     });
+    if (logErr) console.warn("brand_agent_results insert failed:", logErr.message);
 
     if (status === "failed") {
       return errorResponse("upsert_failed", errorMessage ?? "upsert failed", 500);
