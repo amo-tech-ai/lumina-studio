@@ -38,7 +38,7 @@ export const ProfileTab = ({ profile }: Props) => {
         <ProfileField label="Target Audience" value={profile.targetAudience} />
       )}
       {profile.brandVoice && <ProfileField label="Brand Voice" value={profile.brandVoice} />}
-      {profile.instagram_handle && (
+      {profile.instagram_handle?.trim() && (
         <ProfileField
           label="Instagram"
           value={formatInstagramHandle(profile.instagram_handle)}

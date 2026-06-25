@@ -21,8 +21,20 @@ export function formatBrandHubDateTime(value: string): string | null {
 
 export function formatInstagramHandle(handle: string): string {
   const trimmed = handle.trim();
+  if (!trimmed) return "";
   return `@${trimmed.replace(/^@+/, "")}`;
 }
+
+const isMeaningfulProfileValue = (value: unknown): boolean => {
+  if (value === undefined || value === null) return false;
+  if (typeof value === "string") return value.trim().length > 0;
+  if (typeof value === "number") return Number.isFinite(value);
+  if (Array.isArray(value)) return value.some(isMeaningfulProfileValue);
+  if (typeof value === "object") {
+    return Object.values(value as Record<string, unknown>).some(isMeaningfulProfileValue);
+  }
+  return false;
+};
 
 /** Coerce DB-shaped scores; clamp 0–100; safe fallback for invalid input. */
 export function normalizeDisplayScore(score: unknown): number {
@@ -132,8 +144,8 @@ export const parseAiProfile = (raw: unknown): AiProfile => {
 };
 
 export const hasMeaningfulProfile = (profile: AiProfile): boolean =>
-  Object.keys(profile).some(
-    (key) => !key.startsWith("_") && profile[key as keyof AiProfile] !== undefined,
+  Object.entries(profile).some(
+    ([key, value]) => !key.startsWith("_") && isMeaningfulProfileValue(value),
   );
 
 export const isReAnalyzeDisabled = (status: BrandIntakeStatus | string | null | undefined) =>
@@ -186,7 +198,13 @@ export const buildActivityTimeline = (input: {
   if (statusIndex >= 0) {
     events.push({ id: "crawl_running", label: "Crawl started" });
     if (statusIndex >= 1) events.push({ id: "crawl_complete", label: "Crawl completed" });
-    if (statusIndex >= 2 || input.profile.analyzedAt) {
+    if (status === "analysis_running") {
+      events.push({ id: "analysis_running", label: "Analysis started" });
+    }
+    if (
+      statusIndex >= 3 ||
+      (input.profile.analyzedAt && status !== "analysis_running")
+    ) {
       events.push({
         id: "analysis",
         label: "Analysis completed",

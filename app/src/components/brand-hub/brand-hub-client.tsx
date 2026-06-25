@@ -138,32 +138,34 @@ export const BrandHubClient = ({
 
         <IntakeBanner status={status} errorMessage={profile._error} />
 
-        <nav
-          className="-mx-1 flex gap-1 overflow-x-auto border-b border-[#E8E0D8] pb-px"
-          aria-label="Brand hub sections"
-          role="tablist"
-        >
-          {BRAND_HUB_TABS.map((id) => (
-            <button
-              key={id}
-              type="button"
-              id={brandHubTabId(id)}
-              onClick={() => setTab(id)}
-              onKeyDown={(event) => onTabKeyDown(event, id)}
-              className={cn(
-                "shrink-0 rounded-t-lg px-4 py-2 font-sans text-sm transition-colors",
-                tab === id
-                  ? "border-b-2 border-[#E87C4D] font-medium text-[#1E293B]"
-                  : "text-[#64748B] hover:text-[#1E293B]",
-              )}
-              role="tab"
-              aria-selected={tab === id}
-              aria-controls={BRAND_HUB_TABPANEL_ID}
-              tabIndex={tab === id ? 0 : -1}
-            >
-              {hubTabLabel(id)}
-            </button>
-          ))}
+        <div className="-mx-1 flex gap-1 overflow-x-auto border-b border-[#E8E0D8] pb-px">
+          <nav
+            className="flex gap-1"
+            aria-label="Brand hub sections"
+            role="tablist"
+          >
+            {BRAND_HUB_TABS.map((id) => (
+              <button
+                key={id}
+                type="button"
+                id={brandHubTabId(id)}
+                onClick={() => setTab(id)}
+                onKeyDown={(event) => onTabKeyDown(event, id)}
+                className={cn(
+                  "shrink-0 rounded-t-lg px-4 py-2 font-sans text-sm transition-colors",
+                  tab === id
+                    ? "border-b-2 border-[#E87C4D] font-medium text-[#1E293B]"
+                    : "text-[#64748B] hover:text-[#1E293B]",
+                )}
+                role="tab"
+                aria-selected={tab === id}
+                aria-controls={BRAND_HUB_TABPANEL_ID}
+                tabIndex={tab === id ? 0 : -1}
+              >
+                {hubTabLabel(id)}
+              </button>
+            ))}
+          </nav>
           {SOON_TABS.map((label) => (
             <span
               key={label}
@@ -174,7 +176,7 @@ export const BrandHubClient = ({
               <span className="ml-1 text-[10px]">Soon</span>
             </span>
           ))}
-        </nav>
+        </div>
 
         <section
           id={BRAND_HUB_TABPANEL_ID}

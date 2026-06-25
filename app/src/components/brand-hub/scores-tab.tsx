@@ -12,8 +12,8 @@ const EvidenceHint = ({ evidence }: { evidence: string[] }) => (
       Evidence ({evidence.length})
     </summary>
     <ul className="mt-1 list-inside list-disc space-y-0.5 font-sans text-[10px] text-[#64748B]">
-      {evidence.map((line) => (
-        <li key={line}>{line}</li>
+      {evidence.map((line, index) => (
+        <li key={`${line}-${index}`}>{line}</li>
       ))}
     </ul>
   </details>

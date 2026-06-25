@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState, useTransition } from "react";
+import { useState } from "react";
 import { reanalyzeBrand } from "@/app/(operator)/app/brand/[id]/actions";
 import { Button } from "@/components/ui/button";
 
@@ -12,19 +12,25 @@ type Props = {
 
 export const ReAnalyzeButton = ({ brandId, disabled }: Props) => {
   const router = useRouter();
-  const [pending, startTransition] = useTransition();
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const handleClick = () => {
+  const handleClick = async () => {
+    if (loading || disabled) return;
     setError(null);
-    startTransition(async () => {
+    setLoading(true);
+    try {
       const result = await reanalyzeBrand(brandId);
       if (!result.ok) {
         setError(result.error);
         return;
       }
       router.refresh();
-    });
+    } catch {
+      setError("Re-analyze failed unexpectedly");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -33,11 +39,11 @@ export const ReAnalyzeButton = ({ brandId, disabled }: Props) => {
         type="button"
         variant="outline"
         size="sm"
-        disabled={disabled || pending}
+        disabled={disabled || loading}
         onClick={handleClick}
         className="rounded-full border-[#D1C9C0] font-sans text-xs"
       >
-        {pending ? "Analyzing…" : "Re-analyze"}
+        {loading ? "Analyzing…" : "Re-analyze"}
       </Button>
       {error && (
         <p className="max-w-[200px] text-right font-sans text-[10px] text-[#DC2626]">

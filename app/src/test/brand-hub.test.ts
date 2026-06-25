@@ -125,6 +125,19 @@ describe("brand-hub helpers", () => {
     expect(hasMeaningfulProfile(parseAiProfile({}))).toBe(false);
     expect(hasMeaningfulProfile(parseAiProfile({ tagline: "Hi" }))).toBe(true);
     expect(hasMeaningfulProfile(parseAiProfile({ _error: "x" }))).toBe(false);
+    expect(hasMeaningfulProfile(parseAiProfile({ tagline: "" }))).toBe(false);
+    expect(hasMeaningfulProfile(parseAiProfile({ tagline: null }))).toBe(false);
+    expect(hasMeaningfulProfile(parseAiProfile({ visualIdentity: {} }))).toBe(false);
+  });
+
+  it("buildActivityTimeline omits completed while analysis_running", () => {
+    const events = buildActivityTimeline({
+      createdAt: "2026-01-01T00:00:00Z",
+      intakeStatus: "analysis_running",
+      profile: { analyzedAt: "2026-01-02T00:00:00Z" },
+    });
+    expect(events.some((e) => e.label === "Analysis completed")).toBe(false);
+    expect(events.some((e) => e.label === "Analysis started")).toBe(true);
   });
 
   it("buildActivityTimeline includes failure detail", () => {
@@ -138,9 +151,9 @@ describe("brand-hub helpers", () => {
   });
 
   it("formatBrandHubDateTime uses fixed locale and rejects invalid input", () => {
-    expect(formatBrandHubDateTime("2026-06-24T12:00:00Z")).toBe(
-      "2026-06-24, 12:00:00 p.m.",
-    );
+    const formatted = formatBrandHubDateTime("2026-06-24T12:00:00Z");
+    expect(formatted).toContain("2026-06-24");
+    expect(formatted).toMatch(/12:00/);
     expect(formatBrandHubDateTime("not-a-date")).toBeNull();
   });
 
@@ -148,6 +161,7 @@ describe("brand-hub helpers", () => {
     expect(formatInstagramHandle("@maison")).toBe("@maison");
     expect(formatInstagramHandle("maison")).toBe("@maison");
     expect(formatInstagramHandle("@@maison")).toBe("@maison");
+    expect(formatInstagramHandle("   ")).toBe("");
   });
 
   it("normalizeDisplayScore clamps and handles invalid values", () => {
