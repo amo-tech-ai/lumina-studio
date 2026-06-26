@@ -5,8 +5,23 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useAgentContext } from "@copilotkit/react-core/v2";
+import { Component, type ReactNode } from "react";
+
+// ponytail: silently swallows "must be used within CopilotKitProvider" when
+// the layout renders children without auth (unauthenticated dev preview).
+class CopilotBoundary extends Component<{ children: ReactNode }, { failed: boolean }> {
+  state = { failed: false };
+  static getDerivedStateFromError() { return { failed: true }; }
+  render() { return this.state.failed ? null : this.props.children; }
+}
 import { createBrowserClient } from "@supabase/ssr";
 import { ShootCard, type ShootRow } from "@/components/shoot/ShootCard";
+
+// ── Agent context bridge (safe outside CopilotKit provider) ──────────────────
+function AgentContextBridge({ stats }: { stats: object }) {
+  useAgentContext({ description: "Shoot portfolio overview — active shoots, DNA scores, channel coverage", value: stats });
+  return null;
+}
 
 // ── Supabase browser client ───────────────────────────────────────────────────
 function useSupabase() {
@@ -42,9 +57,10 @@ export default function ShootsPage() {
     setLoading(true);
     setError(null);
 
+    // ponytail: query via public view — shoot.shoots is not in the exposed schema list;
+    // migration 20260626000001_shoot_portfolio_view.sql adds this view.
     supabase
-      .schema("shoot")
-      .from("shoots")
+      .from("shoot_portfolio_view")
       .select("id, name, type, status, dna_score, target_channels, estimated_budget, updated_at")
       .order("updated_at", { ascending: false })
       .then(({ data, error: err }) => {
@@ -95,14 +111,9 @@ export default function ShootsPage() {
     };
   }, [shoots, visible, filterStatus]);
 
-  // ── Feed portfolio summary to production-planner agent
-  useAgentContext({
-    description: "Shoot portfolio overview — active shoots, DNA scores, channel coverage",
-    value: portfolioStats,
-  });
-
   return (
     <div className="min-h-screen p-6" style={{ background: "#FBF8F5" }}>
+      <CopilotBoundary><AgentContextBridge stats={portfolioStats} /></CopilotBoundary>
       <div className="mx-auto max-w-5xl space-y-6">
 
         {/* Header */}
