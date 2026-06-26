@@ -17,11 +17,13 @@ import { planDeliverables } from "./planDeliverables";
 import { recommendShootType } from "./recommendShootType";
 import { saveApprovedShootDraft } from "./saveApprovedShootDraft";
 import { discoverSocialChannelsTool } from "./social-discovery";
+import { lookupShotReferences } from "./lookupShotReferences";
 
-// IPI-148 — SHOOT-AI-001: 7 shoot planner tools for production-planner
+// IPI-148 — SHOOT-AI-001 + IPI-184 SHOOT-DATA-002: shoot planner tools for production-planner
 export const agentTools = {
   recommendShootType,
   planDeliverables,
+  lookupShotReferences,   // DB-backed shot type suggestions — call before generateShotListDraft
   generateShotListDraft,
   saveApprovedShootDraft,
   approveShotList,
