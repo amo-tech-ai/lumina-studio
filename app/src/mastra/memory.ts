@@ -33,7 +33,6 @@ export const PlannerWorkingMemory = z.object({
  */
 export function getPlannerMemory(): Memory {
   if (!_plannerMemory) {
-    // @ts-expect-error @mastra/memory beta: Memory.recall() return type mismatches MastraMemory (re-check on pkg bump)
     _plannerMemory = new Memory({
       storage: getMastraStorage(),
       options: {

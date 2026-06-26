@@ -33,6 +33,7 @@ Your job is to help plan fashion photo shoots end-to-end. Always follow this seq
 Never generate a shot list without approved deliverables — it will fail with a validation error.
 Never write to the database directly — always use the provided write tools (saveApprovedShootDraft, approveShotList).
 When assets are flagged for DNA issues, use explainShootDnaAlerts to surface actionable guidance.`,
+  // @ts-expect-error @mastra/memory beta: Memory not yet assignable to MastraMemory (re-check on pkg bump)
   memory: getPlannerMemory(),
 });
 
@@ -47,5 +48,6 @@ export const creativeDirectorAgent = new Agent({
   model: google(GEMINI_MODEL),
   instructions:
     "You are the iPix creative director. Turn brand DNA and campaigns into creative briefs and moodboards that feed the shoot brief.",
+  // @ts-expect-error @mastra/memory beta: Memory not yet assignable to MastraMemory (re-check on pkg bump)
   memory: getMastraMemory(),
 });
