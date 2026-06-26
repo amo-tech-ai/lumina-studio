@@ -1,0 +1,20 @@
+scripts/verify-rls.mjs
+  s_efbb211f69e78b::t_eb8e18a68956fe 187-196
+  s_efbb211f69e78b::t_dd7575dcb4caa1 171-177
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.3",
+  "base_commit_sha": "2115d962c553b36ca4c407433469b591fdb83b61",
+  "prompts": {},
+  "sessions": {
+    "s_efbb211f69e78b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "0da0c962-e31a-4af4-9a64-4dc4be547fd1",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
