@@ -44,6 +44,12 @@ jobs:
           cache: npm
           cache-dependency-path: app/package-lock.json
 
+      # Fail fast if a server secret leaked into client code (app/src). Runs from
+      # repo root since the scanner lives there; pure Node stdlib, no install needed.
+      - name: Env guard (client secret scan)
+        working-directory: ${{ github.workspace }}
+        run: node scripts/check-client-env.mjs
+
       - name: Install dependencies
         run: npm ci
 
