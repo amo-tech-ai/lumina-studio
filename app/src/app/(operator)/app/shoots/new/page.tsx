@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { createBrowserClient } from "@supabase/ssr";
 import { DeliverableApprovalCard } from "@/components/shoot/hitl/DeliverableApprovalCard";
 import { ShotListApprovalCard } from "@/components/shoot/hitl/ShotListApprovalCard";
 import { BudgetApprovalCard } from "@/components/shoot/hitl/BudgetApprovalCard";
@@ -90,6 +91,23 @@ export default function NewShootPage() {
   const [step, setStep] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [brands, setBrands] = useState<{ id: string; name: string }[]>([]);
+
+  // ponytail: fetch brands once — user picks from their own brands, no UUID input
+  useEffect(() => {
+    const sb = createBrowserClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    );
+    sb.from("brands").select("id, name").order("name").then(({ data }) => {
+      if (data?.length) {
+        setBrands(data);
+        // Auto-select the only brand if there's just one
+        if (data.length === 1) setState((s) => ({ ...s, brandId: data[0].id }));
+      }
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const [state, setState] = useState<WizardState>({
     shootName: "",
     brandId: "",
@@ -329,13 +347,17 @@ export default function NewShootPage() {
             <h1 className="font-serif text-2xl text-[#1E293B]">Basics</h1>
 
             <div className="space-y-1">
-              <label className="font-sans text-sm font-medium text-[#475569]">Brand ID *</label>
-              <input
+              <label className="font-sans text-sm font-medium text-[#475569]">Brand *</label>
+              <select
                 className="w-full rounded-xl border border-[#E8E0D8] bg-white px-4 py-3 font-sans text-sm text-[#1E293B] outline-none focus:border-[#E87C4D]"
-                placeholder="brand_xxxxxxxx"
                 value={state.brandId}
                 onChange={(e) => update({ brandId: e.target.value })}
-              />
+              >
+                <option value="">Select a brand…</option>
+                {brands.map((b) => (
+                  <option key={b.id} value={b.id}>{b.name}</option>
+                ))}
+              </select>
             </div>
 
             <div className="space-y-1">
