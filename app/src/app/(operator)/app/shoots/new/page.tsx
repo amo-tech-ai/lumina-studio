@@ -1,7 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { createBrowserClient } from "@supabase/ssr";
+import { DeliverableApprovalCard } from "@/components/shoot/hitl/DeliverableApprovalCard";
+import { ShotListApprovalCard } from "@/components/shoot/hitl/ShotListApprovalCard";
+import { BudgetApprovalCard } from "@/components/shoot/hitl/BudgetApprovalCard";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -83,10 +87,29 @@ function Spinner() {
 
 // ── Main wizard ───────────────────────────────────────────────────────────────
 
+function makeSbClient() {
+  return createBrowserClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL ?? "",
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "",
+  );
+}
+
 export default function NewShootPage() {
   const [step, setStep] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [brands, setBrands] = useState<{ id: string; name: string }[]>([]);
+
+  // ponytail: fetch brands once — user picks from their own brands, no UUID input
+  useEffect(() => {
+    makeSbClient().from("brands").select("id, name").order("name").then(({ data }) => {
+      if (data?.length) {
+        setBrands(data);
+        // Auto-select the only brand if there's just one
+        if (data.length === 1) setState((s) => ({ ...s, brandId: data[0].id }));
+      }
+    });
+  }, []);
   const [state, setState] = useState<WizardState>({
     shootName: "",
     brandId: "",
@@ -117,7 +140,7 @@ export default function NewShootPage() {
     setLoading(true);
     setError(null);
     try {
-      if (!state.brandId) throw new Error("Select a brand before planning");
+      // ponytail: brand optional during testing — required before prod
       const res = await fetch("/api/workflows/shoot-wizard", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -227,7 +250,7 @@ export default function NewShootPage() {
     }
   };
 
-  // ── Gate 3 approve → commit (calls edge fn via saveApprovedShootDraft)
+  // ── Gate 3 approve → resume workflow then commit to DB via edge fn
   const approveBudget = async () => {
     setLoading(true);
     setError(null);
@@ -239,6 +262,9 @@ export default function NewShootPage() {
         if (!Number.isFinite(parsed) || parsed <= 0) throw new Error("Budget override must be a positive number");
         budgetOverrideUsd = parsed;
       }
+      const approvedBudget = budgetOverrideUsd ?? state.budget.total;
+
+      // Resume workflow at Gate 3
       const r3 = await fetch("/api/workflows/resume", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -250,8 +276,39 @@ export default function NewShootPage() {
         }),
       });
       if (!r3.ok) throw new Error(await r3.text());
-      // Commit via edge fn (save-approved-shoot-draft)
-      update({ shootId: "draft-committed" });
+
+      // Commit to durable DB via edge fn (no direct browser write)
+      const { data: sessionData } = await makeSbClient().auth.getSession();
+      const accessToken = sessionData.session?.access_token;
+      if (!accessToken) throw new Error("Not authenticated");
+
+      const commitRes = await fetch(
+        `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/save-approved-shoot-draft`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${accessToken}`,
+          },
+          body: JSON.stringify({
+            brand_id: state.brandId,
+            shoot_name: state.shootName,
+            brief: state.brief,
+            channels: state.channels,
+            deliverables: state.deliverables.filter((d) => d.channel.trim()),
+            shots: state.shots,
+            approved_budget: approvedBudget,
+            budget_breakdown: state.budget,
+            run_id: state.runId,
+          }),
+        },
+      );
+      if (!commitRes.ok) {
+        const errBody = await commitRes.json().catch(() => ({}));
+        throw new Error(errBody.error?.message ?? errBody.message ?? "Failed to commit shoot draft");
+      }
+      const { shoot_id } = await commitRes.json();
+      update({ shootId: shoot_id });
       setStep(5);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to commit shoot");
@@ -296,13 +353,17 @@ export default function NewShootPage() {
             <h1 className="font-serif text-2xl text-[#1E293B]">Basics</h1>
 
             <div className="space-y-1">
-              <label className="font-sans text-sm font-medium text-[#475569]">Brand ID *</label>
-              <input
+              <label className="font-sans text-sm font-medium text-[#475569]">Brand *</label>
+              <select
                 className="w-full rounded-xl border border-[#E8E0D8] bg-white px-4 py-3 font-sans text-sm text-[#1E293B] outline-none focus:border-[#E87C4D]"
-                placeholder="brand_xxxxxxxx"
                 value={state.brandId}
                 onChange={(e) => update({ brandId: e.target.value })}
-              />
+              >
+                <option value="">Select a brand…</option>
+                {brands.map((b) => (
+                  <option key={b.id} value={b.id}>{b.name}</option>
+                ))}
+              </select>
             </div>
 
             <div className="space-y-1">
@@ -338,7 +399,7 @@ export default function NewShootPage() {
             <div className="flex justify-end">
               <button
                 onClick={() => setStep(1)}
-                disabled={!state.brandId || !state.shootName || state.channels.length === 0}
+                disabled={!state.shootName || state.channels.length === 0}
                 className="rounded-full px-6 py-2.5 font-sans text-sm font-medium text-white disabled:opacity-40"
                 style={{ background: "#E87C4D" }}
               >
@@ -385,75 +446,20 @@ export default function NewShootPage() {
           <div className="space-y-5">
             <h1 className="font-serif text-2xl text-[#1E293B]">Deliverables</h1>
 
-            <div className="overflow-hidden rounded-2xl border border-[#E8E0D8] bg-white">
-              <div className="flex items-center justify-between border-b border-[#E8E0D8] px-4 py-3">
-                <span className="font-sans text-sm font-medium text-[#1E293B]">
-                  {state.deliverables.length} deliverables · {state.totalAssets} total assets
-                </span>
-                <button
-                  className="font-sans text-xs text-[#E87C4D] hover:underline"
-                  onClick={() => {
-                    const next = [...state.deliverables, { id: crypto.randomUUID(), channel: "", format: "JPG", quantity: 6 }];
-                    update({ deliverables: next, totalAssets: next.reduce((s, d) => s + d.quantity, 0) });
-                  }}
-                >+ Add</button>
-              </div>
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b border-[#E8E0D8]">
-                    {["#", "Channel", "Format", "Qty", ""].map((h) => (
-                      <th key={h} className="px-4 py-2 text-left font-sans text-xs font-medium text-[#94A3B8]">{h}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {state.deliverables.map((d, i) => (
-                    <tr key={d.id} className="border-b border-[#E8E0D8] last:border-0">
-                      <td className="px-4 py-2.5 font-sans text-xs text-[#94A3B8]">{i + 1}</td>
-                      <td className="px-2 py-1.5">
-                        <input
-                          className="w-28 rounded border border-transparent px-2 py-1 font-sans text-sm text-[#1E293B] hover:border-[#E8E0D8] focus:border-[#E87C4D] outline-none"
-                          placeholder="channel"
-                          value={d.channel}
-                          onChange={(e) => update({ deliverables: state.deliverables.map((x) => x.id === d.id ? { ...x, channel: e.target.value } : x) })}
-                        />
-                      </td>
-                      <td className="px-2 py-1.5">
-                        <input
-                          className="w-28 rounded border border-transparent px-2 py-1 font-sans text-sm text-[#64748B] hover:border-[#E8E0D8] focus:border-[#E87C4D] outline-none"
-                          placeholder="format"
-                          value={d.format}
-                          onChange={(e) => update({ deliverables: state.deliverables.map((x) => x.id === d.id ? { ...x, format: e.target.value } : x) })}
-                        />
-                      </td>
-                      <td className="px-4 py-2.5">
-                        <input
-                          type="number"
-                          min={1}
-                          value={d.quantity}
-                          onChange={(e) => {
-                            const qty = Math.max(1, Math.floor(Number(e.target.value)));
-                            if (!Number.isFinite(qty)) return;
-                            const next = state.deliverables.map((x) => x.id === d.id ? { ...x, quantity: qty } : x);
-                            update({ deliverables: next, totalAssets: next.reduce((s, x) => s + x.quantity, 0) });
-                          }}
-                          className="w-14 rounded border border-[#E8E0D8] px-2 py-1 font-sans text-sm text-[#1E293B]"
-                        />
-                      </td>
-                      <td className="px-4 py-2.5">
-                        <button
-                          onClick={() => {
-                            const next = state.deliverables.filter((x) => x.id !== d.id);
-                            update({ deliverables: next, totalAssets: next.reduce((s, x) => s + x.quantity, 0) });
-                          }}
-                          className="font-sans text-xs text-[#94A3B8] hover:text-red-500"
-                        >✕</button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            <DeliverableApprovalCard
+              deliverables={state.deliverables}
+              totalAssets={state.totalAssets}
+              uncoveredWarnings={state.uncoveredWarnings}
+              onChange={(next) => update({ deliverables: next, totalAssets: next.reduce((s, d) => s + d.quantity, 0) })}
+              onAdd={() => {
+                const next = [...state.deliverables, { id: crypto.randomUUID(), channel: "", format: "JPG", quantity: 6 }];
+                update({ deliverables: next, totalAssets: next.reduce((s, d) => s + d.quantity, 0) });
+              }}
+              onRemove={(id) => {
+                const next = state.deliverables.filter((d) => d.id !== id);
+                update({ deliverables: next, totalAssets: next.reduce((s, d) => s + d.quantity, 0) });
+              }}
+            />
 
             <HITLGate message="Review and approve these deliverables before the agent generates the shot list. Un-approved = no shot list." />
 
@@ -481,56 +487,12 @@ export default function NewShootPage() {
           <div className="space-y-5">
             <h1 className="font-serif text-2xl text-[#1E293B]">Shot List</h1>
 
-            {state.uncoveredWarnings.length > 0 && (
-              <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 font-sans text-sm text-amber-800">
-                ⚠ {state.uncoveredWarnings.join(" · ")}
-              </div>
-            )}
-
-            <div className="overflow-hidden rounded-2xl border border-[#E8E0D8] bg-white">
-              <div className="border-b border-[#E8E0D8] px-4 py-3">
-                <span className="font-sans text-sm font-medium text-[#1E293B]">
-                  {state.shots.length} shots across {state.deliverables.length} deliverables
-                </span>
-              </div>
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b border-[#E8E0D8]">
-                    {["#", "Description", "Angle", "Lighting"].map((h) => (
-                      <th key={h} className="px-4 py-2 text-left font-sans text-xs font-medium text-[#94A3B8]">{h}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {state.shots.map((s) => (
-                    <tr key={s.shot_number} className="border-b border-[#E8E0D8] last:border-0">
-                      <td className="px-4 py-2.5 font-sans text-xs text-[#94A3B8]">{String(s.shot_number).padStart(2, "0")}</td>
-                      <td className="px-2 py-1.5">
-                        <input
-                          className="w-full rounded border border-transparent px-2 py-1 font-sans text-sm text-[#1E293B] hover:border-[#E8E0D8] focus:border-[#E87C4D] outline-none"
-                          value={s.description}
-                          onChange={(e) => update({ shots: state.shots.map((x) => x.shot_number === s.shot_number ? { ...x, description: e.target.value } : x) })}
-                        />
-                      </td>
-                      <td className="px-2 py-1.5">
-                        <input
-                          className="w-24 rounded border border-transparent px-2 py-1 font-sans text-xs text-[#64748B] hover:border-[#E8E0D8] focus:border-[#E87C4D] outline-none"
-                          value={s.angle}
-                          onChange={(e) => update({ shots: state.shots.map((x) => x.shot_number === s.shot_number ? { ...x, angle: e.target.value } : x) })}
-                        />
-                      </td>
-                      <td className="px-2 py-1.5">
-                        <input
-                          className="w-36 rounded border border-transparent px-2 py-1 font-sans text-xs text-[#64748B] hover:border-[#E8E0D8] focus:border-[#E87C4D] outline-none"
-                          value={s.lighting}
-                          onChange={(e) => update({ shots: state.shots.map((x) => x.shot_number === s.shot_number ? { ...x, lighting: e.target.value } : x) })}
-                        />
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            <ShotListApprovalCard
+              shots={state.shots}
+              deliverableCount={state.deliverables.length}
+              uncoveredWarnings={state.uncoveredWarnings}
+              onChange={(shots) => update({ shots })}
+            />
 
             <HITLGate message="Approve shot list to proceed to budget estimate. All deliverables must be covered." />
 
@@ -558,42 +520,11 @@ export default function NewShootPage() {
           <div className="space-y-5">
             <h1 className="font-serif text-2xl text-[#1E293B]">Budget</h1>
 
-            <div className="overflow-hidden rounded-2xl border border-[#E8E0D8] bg-white">
-              <div className="border-b border-[#E8E0D8] px-4 py-3">
-                <span className="font-sans text-sm font-medium text-[#1E293B]">Estimate</span>
-              </div>
-              <div className="divide-y divide-[#E8E0D8]">
-                {[
-                  ["Crew", state.budget.crew],
-                  ["Studio / location", state.budget.studio],
-                  ["Equipment", state.budget.equipment],
-                  ["Post-production", state.budget.post],
-                ].map(([label, val]) => (
-                  <div key={String(label)} className="flex justify-between px-4 py-2.5">
-                    <span className="font-sans text-sm text-[#64748B]">{label}</span>
-                    <span className="font-sans text-sm text-[#1E293B]">${Number(val).toLocaleString()}</span>
-                  </div>
-                ))}
-                <div className="flex justify-between px-4 py-3">
-                  <span className="font-sans text-sm font-semibold text-[#1E293B]">Total</span>
-                  <span className="font-sans text-sm font-semibold text-[#1E293B]">${state.budget.total.toLocaleString()}</span>
-                </div>
-              </div>
-            </div>
-
-            <div className="space-y-1">
-              <label className="font-sans text-sm font-medium text-[#475569]">Override total (optional)</label>
-              <div className="flex items-center gap-2">
-                <span className="font-sans text-sm text-[#64748B]">$</span>
-                <input
-                  type="number"
-                  placeholder={String(state.budget.total)}
-                  value={state.budgetOverride}
-                  onChange={(e) => update({ budgetOverride: e.target.value })}
-                  className="w-40 rounded-xl border border-[#E8E0D8] bg-white px-4 py-2 font-sans text-sm text-[#1E293B] outline-none focus:border-[#E87C4D]"
-                />
-              </div>
-            </div>
+            <BudgetApprovalCard
+              budget={state.budget}
+              override={state.budgetOverride}
+              onOverrideChange={(val) => update({ budgetOverride: val })}
+            />
 
             <HITLGate message="Approve budget to commit the shoot. No DB rows exist until you approve here." />
 
@@ -637,8 +568,12 @@ export default function NewShootPage() {
                 </span>
               </div>
               <div className="flex justify-between font-sans text-sm">
-                <span className="text-[#64748B]">Draft status</span>
-                <span className="font-medium text-[#10B981]">approved</span>
+                <span className="text-[#64748B]">Shoot ID</span>
+                <span className="font-mono text-xs text-[#64748B] truncate max-w-[180px]">{state.shootId}</span>
+              </div>
+              <div className="flex justify-between font-sans text-sm">
+                <span className="text-[#64748B]">Status</span>
+                <span className="font-medium text-[#10B981]">planning</span>
               </div>
             </div>
             <div className="flex justify-center gap-3">

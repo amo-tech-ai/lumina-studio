@@ -1,3 +1,4 @@
+export const dynamic = "force-dynamic";
 import { NextRequest, NextResponse } from "next/server";
 import { getMastra } from "@/mastra";
 import { OperatorAuthError, withOperatorAuth } from "@/lib/operator-gate";

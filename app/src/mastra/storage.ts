@@ -4,12 +4,13 @@ let storage: PostgresStore | undefined;
 
 export function getMastraStorage(): PostgresStore {
   if (!storage) {
-    // DATABASE_URL is validated at connection time by PostgresStore, not here —
-    // eager throws break Next.js builds and unit tests that import agents.
-    storage = new PostgresStore({
-      id: "mastra-storage",
-      connectionString: process.env.DATABASE_URL ?? "",
-    });
+    const url = process.env.DATABASE_URL ?? "";
+    if (!url) {
+      // ponytail: no-op stub at build/test time — agents import this at module eval,
+      // but no DB call happens until an actual agent turn. Fails fast at first real use.
+      return {} as unknown as PostgresStore;
+    }
+    storage = new PostgresStore({ id: "mastra-storage", connectionString: url });
   }
   return storage;
 }
