@@ -10,4 +10,10 @@ describe("memory", () => {
       "org_abc/brand-intake/draft_1",
     );
   });
+
+  it("makeThreadId encodes slashes in segments to prevent collisions", () => {
+    const t1 = makeThreadId("org", "shoot", "shoot/foo");
+    const t2 = makeThreadId("org/shoot", "shoot", "foo");
+    expect(t1).not.toBe(t2);
+  });
 });

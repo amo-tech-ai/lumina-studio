@@ -1,17 +1,8 @@
 import { PostgresStore } from "@mastra/pg";
 
-const GLOBAL_KEY = "__mastra_storage__";
-
-function getGlobalStorage(): PostgresStore | undefined {
-  return (globalThis as unknown as Record<string, PostgresStore | undefined>)[GLOBAL_KEY];
-}
-
-function setGlobalStorage(store: PostgresStore): void {
-  (globalThis as unknown as Record<string, PostgresStore | undefined>)[GLOBAL_KEY] = store;
-}
+let storage: PostgresStore | undefined;
 
 export function getMastraStorage(): PostgresStore {
-  let storage = getGlobalStorage();
   if (!storage) {
     const url = process.env.DATABASE_URL;
     if (!url) {
@@ -23,7 +14,6 @@ export function getMastraStorage(): PostgresStore {
       id: "mastra-storage",
       connectionString: url,
     });
-    setGlobalStorage(storage);
   }
   return storage;
 }

@@ -17,12 +17,13 @@ export function getMastraMemory(): Memory {
 }
 
 /** Thread ID convention: {orgId}/{workspace}/{entityId}
- *  Example: org_abc123/shoot/brand_xyz
+ *  Segments are encoded to prevent slash collisions between tenants.
  */
 export function makeThreadId(
   orgId: string,
   workspace: "shoot" | "brand-intake" | "social-discovery",
   entityId: string,
 ): string {
-  return `${orgId}/${workspace}/${entityId}`;
+  const enc = (s: string) => encodeURIComponent(s);
+  return `${enc(orgId)}/${workspace}/${enc(entityId)}`;
 }
