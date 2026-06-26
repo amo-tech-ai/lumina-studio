@@ -4,18 +4,10 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { createBrowserClient } from "@supabase/ssr";
+import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { ShootCard, type ShootRow } from "@/components/shoot/ShootCard";
 
 // ponytail: useAgentContext deferred to IPI-128 (requires CopilotKit provider)
-
-// ── Supabase browser client ───────────────────────────────────────────────────
-function useSupabase() {
-  return createBrowserClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-  );
-}
 
 const STATUS_TABS = [
   { id: "", label: "All" },
@@ -29,7 +21,7 @@ const STATUS_TABS = [
 type SortKey = "updated_at" | "dna_asc" | "dna_desc";
 
 export default function ShootsPage() {
-  const supabase = useSupabase();
+  const supabase = useMemo(() => createSupabaseBrowserClient(), []);
 
   const [shoots, setShoots] = useState<ShootRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -54,9 +46,7 @@ export default function ShootsPage() {
         else setShoots((data as ShootRow[]) ?? []);
         setLoading(false);
       });
-  // ponytail: supabase instance is stable per render; omitting from deps is intentional
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [supabase]);
 
   // ── Client-side filter + sort
   const visible = useMemo(() => {

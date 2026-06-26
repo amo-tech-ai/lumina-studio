@@ -23,7 +23,7 @@
 
 import { corsHeaders } from "../_shared/cors.ts";
 import { resolveAuth, isAuthFailure } from "../_shared/auth.ts";
-import { createServiceClient } from "../_shared/supabase-client.ts";
+import { createServiceClient, createUserClient } from "../_shared/supabase-client.ts";
 import { insertAgentLog } from "../_shared/agent-log.ts";
 import { errorResponse } from "../_shared/response.ts";
 
@@ -72,6 +72,17 @@ Deno.serve(async (req: Request) => {
     return errorResponse("missing_fields", "brand_id, shoot_name, deliverables, and shots are required", 400);
   }
 
+  // Verify the authed user has access to this brand (RLS enforces org membership)
+  const userClient = createUserClient(auth.accessToken);
+  const { error: brandAccessErr } = await userClient
+    .from("brands")
+    .select("id")
+    .eq("id", brand_id)
+    .single();
+  if (brandAccessErr) {
+    return errorResponse("forbidden", "Brand not found or access denied", 403);
+  }
+
   const svc = createServiceClient();
 
   // -- Validate channel values (filter unknowns rather than reject — defensive)
@@ -115,7 +126,8 @@ Deno.serve(async (req: Request) => {
     );
     if (delivErr) {
       console.error("deliverables insert error", delivErr);
-      // Non-fatal: shoot is created; log and continue
+      await svc.schema("shoot").from("shoots").delete().eq("id", shoot_id);
+      return errorResponse("db_error", delivErr.message ?? "Failed to save deliverables", 500);
     }
   }
 
@@ -132,7 +144,8 @@ Deno.serve(async (req: Request) => {
   );
   if (shotErr) {
     console.error("shot_list insert error", shotErr);
-    // Non-fatal: continue
+    await svc.schema("shoot").from("shoots").delete().eq("id", shoot_id);
+    return errorResponse("db_error", shotErr.message ?? "Failed to save shot list", 500);
   }
 
   // -- 4. Audit log

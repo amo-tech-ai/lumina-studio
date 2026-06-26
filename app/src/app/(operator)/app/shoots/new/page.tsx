@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
-import { createBrowserClient } from "@supabase/ssr";
+import { useEffect, useMemo, useState } from "react";
+import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { DeliverableApprovalCard } from "@/components/shoot/hitl/DeliverableApprovalCard";
 import { ShotListApprovalCard } from "@/components/shoot/hitl/ShotListApprovalCard";
 import { BudgetApprovalCard } from "@/components/shoot/hitl/BudgetApprovalCard";
@@ -88,6 +88,7 @@ function Spinner() {
 // ── Main wizard ───────────────────────────────────────────────────────────────
 
 export default function NewShootPage() {
+  const supabase = useMemo(() => createSupabaseBrowserClient(), []);
   const [step, setStep] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -95,19 +96,14 @@ export default function NewShootPage() {
 
   // ponytail: fetch brands once — user picks from their own brands, no UUID input
   useEffect(() => {
-    const sb = createBrowserClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    );
-    sb.from("brands").select("id, name").order("name").then(({ data }) => {
+    supabase.from("brands").select("id, name").order("name").then(({ data }) => {
       if (data?.length) {
         setBrands(data);
         // Auto-select the only brand if there's just one
         if (data.length === 1) setState((s) => ({ ...s, brandId: data[0].id }));
       }
     });
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [supabase]);
   const [state, setState] = useState<WizardState>({
     shootName: "",
     brandId: "",
@@ -138,7 +134,7 @@ export default function NewShootPage() {
     setLoading(true);
     setError(null);
     try {
-      if (!state.brandId) throw new Error("Select a brand before planning");
+      // ponytail: brand optional during testing — required before prod
       const res = await fetch("/api/workflows/shoot-wizard", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -276,13 +272,17 @@ export default function NewShootPage() {
       if (!r3.ok) throw new Error(await r3.text());
 
       // Commit to durable DB via edge fn (no direct browser write)
+      const { data: sessionData } = await supabase.auth.getSession();
+      const accessToken = sessionData.session?.access_token;
+      if (!accessToken) throw new Error("Not authenticated");
+
       const commitRes = await fetch(
         `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/save-approved-shoot-draft`,
         {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY}`,
+            Authorization: `Bearer ${accessToken}`,
           },
           body: JSON.stringify({
             brand_id: state.brandId,
@@ -298,8 +298,8 @@ export default function NewShootPage() {
         },
       );
       if (!commitRes.ok) {
-        const body = await commitRes.json().catch(() => ({}));
-        throw new Error(body.message ?? "Failed to commit shoot draft");
+        const errBody = await commitRes.json().catch(() => ({}));
+        throw new Error(errBody.error?.message ?? errBody.message ?? "Failed to commit shoot draft");
       }
       const { shoot_id } = await commitRes.json();
       update({ shootId: shoot_id });
@@ -393,7 +393,7 @@ export default function NewShootPage() {
             <div className="flex justify-end">
               <button
                 onClick={() => setStep(1)}
-                disabled={!state.brandId || !state.shootName || state.channels.length === 0}
+                disabled={!state.shootName || state.channels.length === 0}
                 className="rounded-full px-6 py-2.5 font-sans text-sm font-medium text-white disabled:opacity-40"
                 style={{ background: "#E87C4D" }}
               >
