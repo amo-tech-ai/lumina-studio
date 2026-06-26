@@ -31,27 +31,40 @@ export async function getChannelSpec(
 ): Promise<ChannelSpec | null> {
   const supabase = await createSupabaseServerClient();
 
-  const { data: rule } = await supabase
+  const { data: rule, error: ruleError } = await supabase
     .from("recommendation_rules")
     .select("image_type_slugs, platform_slugs")
     .eq("rule_type", "channel_required")
     .eq("condition_value", channel)
     .maybeSingle();
 
+  // Distinguish a real DB failure from "no rule seeded" — both yield null data otherwise.
+  if (ruleError) {
+    console.error(`[channel-specs] rule fetch (${channel}):`, ruleError);
+    return null;
+  }
   if (!rule?.image_type_slugs?.length || !rule?.platform_slugs?.length) {
     return null;
   }
 
-  const { data: spec } = await supabase
+  const { data: spec, error: specError } = await supabase
     .from("image_specs")
     .select(
       "width_px, height_px, aspect_ratio_w, aspect_ratio_h, aspect_ratio_label, accepted_formats, max_file_size_mb, safe_zone_top_px, safe_zone_bottom_px, safe_zone_left_px, safe_zone_right_px, organic, paid, shopping_support, crop_notes, platforms!inner(slug, name), image_type_defs!inner(slug, name)",
     )
     .in("platforms.slug", rule.platform_slugs)
     .in("image_type_defs.slug", rule.image_type_slugs)
+    // Deterministic pick when multiple specs match: largest representative, id as final tiebreak.
+    .order("width_px", { ascending: false })
+    .order("height_px", { ascending: false })
+    .order("id", { ascending: true })
     .limit(1)
     .maybeSingle<SpecRow>();
 
+  if (specError) {
+    console.error(`[channel-specs] spec fetch (${channel}):`, specError);
+    return null;
+  }
   if (!spec?.platforms || !spec?.image_type_defs) return null;
 
   return {

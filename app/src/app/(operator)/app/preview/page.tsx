@@ -2,6 +2,9 @@ import Link from "next/link";
 import { ChannelPreviewStudio } from "@/components/media/channel-preview-studio";
 import { getAllChannelSpecs } from "@/lib/media/channel-specs.server";
 
+// Reads cookies + live image_specs at request time — never prerender (matches brand pages).
+export const dynamic = "force-dynamic";
+
 export default async function ChannelPreviewPage() {
   const specs = await getAllChannelSpecs();
 

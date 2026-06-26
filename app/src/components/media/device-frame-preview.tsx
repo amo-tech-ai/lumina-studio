@@ -29,6 +29,7 @@ import {
 } from "@/lib/media/channel-specs";
 
 const DEVICE_WIDTH = 300; // px — inner screen width
+const DEVICE_HEIGHT = 600; // px — feed-frame screen height (fullscreen derives from ratio)
 
 type Props = {
   channel: PreviewChannel;
@@ -58,9 +59,15 @@ export function DeviceFramePreview({
     return CHANNEL_FALLBACK_RATIO[channel];
   }, [spec, channel]);
 
+  // Fullscreen channels (story/reel) fill the screen, so the phone screen must
+  // match the channel ratio — otherwise a 9:16 asset and its safe-zone overlay
+  // get squashed into a fixed 1:2 box. Feed channels keep a tall scrollable frame.
+  const screenHeight =
+    layout === "fullscreen" ? Math.round(DEVICE_WIDTH / ratio) : DEVICE_HEIGHT;
+
   return (
     <div className="flex flex-col items-center gap-3">
-      <Phone>
+      <Phone screenHeight={screenHeight}>
         {layout === "fullscreen" ? (
           <FullscreenChrome
             channel={channel}
@@ -113,7 +120,13 @@ export function DeviceFramePreview({
   );
 }
 
-function Phone({ children }: { children: React.ReactNode }) {
+function Phone({
+  children,
+  screenHeight = DEVICE_HEIGHT,
+}: {
+  children: React.ReactNode;
+  screenHeight?: number;
+}) {
   return (
     <div
       className="relative rounded-[2.5rem] border-[10px] border-neutral-900 bg-black shadow-xl"
@@ -123,7 +136,7 @@ function Phone({ children }: { children: React.ReactNode }) {
       <div className="absolute left-1/2 top-0 z-20 h-5 w-28 -translate-x-1/2 rounded-b-2xl bg-neutral-900" />
       <div
         className="relative overflow-hidden rounded-[1.9rem] bg-white"
-        style={{ width: DEVICE_WIDTH, height: 600 }}
+        style={{ width: DEVICE_WIDTH, height: screenHeight }}
       >
         {children}
       </div>
