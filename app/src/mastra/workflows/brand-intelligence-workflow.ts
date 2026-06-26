@@ -146,26 +146,13 @@ export const fanOutEnrichment = createStep({
   id: "fan-out-enrichment",
   inputSchema: z.object({ ok: z.boolean() }),
   outputSchema: z.object({ enriched: z.boolean() }),
-  execute: async ({ mastra, getInitData }) => {
-    if (!mastra) {
-      throw new Error(
-        "fan-out-enrichment: Mastra runtime not injected — workflow must run via a registered Mastra instance",
-      );
-    }
+  execute: async ({ getInitData }) => {
     const { brandId } = getInitData<{ brandId: string }>();
-    const socialAgent = mastra.getAgent("social-discovery");
-    const visualAgent = mastra.getAgent("visual-identity");
-    if (!socialAgent || !visualAgent) {
-      throw new Error(
-        `fan-out-enrichment: missing enrichment agent(s) — social=${!!socialAgent} visual=${!!visualAgent}`,
-      );
-    }
     const prompt = `Discover and save enrichment data for brandId: ${brandId}`;
-    // ponytail: allSettled keeps enrichment best-effort (a failure must not block
-    // approval), but a missing runtime/agent is a wiring bug and fails loud above.
+    // ponytail: allSettled — enrichment failure must not block HITL approval
     const [social, visual] = await Promise.allSettled([
-      socialAgent.generate(prompt),
-      visualAgent.generate(prompt),
+      socialDiscoveryAgent.generate(prompt),
+      visualIdentityAgent.generate(prompt),
     ]);
     if (social.status === "rejected") console.warn("social-discovery failed:", social.reason);
     if (visual.status === "rejected") console.warn("visual-identity failed:", visual.reason);
