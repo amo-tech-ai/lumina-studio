@@ -1,9 +1,10 @@
 import { createGoogleGenerativeAI } from "@ai-sdk/google";
 import { Agent } from "@mastra/core/agent";
 import { agentTools } from "@/mastra/tools";
-import { z } from "zod";
-import { getMastraMemory } from "@/mastra/memory";
+import { getMastraMemory, getPlannerMemory, PlannerWorkingMemory } from "@/mastra/memory";
 import { resolveGeminiModel } from "@/mastra/models";
+
+export { PlannerWorkingMemory };
 
 // @ai-sdk/google defaults to GOOGLE_GENERATIVE_AI_API_KEY; iPix uses GEMINI_API_KEY.
 const google = createGoogleGenerativeAI({ apiKey: process.env.GEMINI_API_KEY });
@@ -11,6 +12,7 @@ const google = createGoogleGenerativeAI({ apiKey: process.env.GEMINI_API_KEY });
 // Model id comes from the registry (IPI2-80) — never hardcoded/preview here.
 const GEMINI_MODEL = resolveGeminiModel();
 
+<<<<<<< HEAD
 // Working memory schema for the production planner — persisted per thread in Postgres
 export const PlannerWorkingMemory = z.object({
   brandName: z.string().optional(),
@@ -20,6 +22,11 @@ export const PlannerWorkingMemory = z.object({
   lastUpdated: z.string().optional(),
 });
 
+=======
+// ponytail: foundation agents for IPI2-121. Tools/instructions are smoke-level here;
+// the real production-planner tool suite + HITL lands in IPI2-114. Names are production
+// and must match the Mastra registry keys in ./index.ts and the frontend agentId exactly.
+>>>>>>> e8eb76e (fix(ipi-135): correct workingMemory placement + defer DATABASE_URL validation)
 export const productionPlannerAgent = new Agent({
   id: "production-planner",
   name: "Production Planner",
@@ -38,13 +45,7 @@ Your job is to help plan fashion photo shoots end-to-end. Always follow this seq
 Never generate a shot list without approved deliverables — it will fail with a validation error.
 Never write to the database directly — always use the provided write tools (saveApprovedShootDraft, approveShotList).
 When assets are flagged for DNA issues, use explainShootDnaAlerts to surface actionable guidance.`,
-  // @ts-expect-error @mastra/memory beta: Memory.recall() return type mismatches MastraMemory (re-check on pkg bump)
-  memory: getMastraMemory(),
-  workingMemory: {
-    enabled: true,
-    schema: PlannerWorkingMemory,
-    scope: "thread",
-  },
+  memory: getPlannerMemory(),
 });
 
 export { publicMarketingAgent } from "./public-marketing-agent";
@@ -58,6 +59,5 @@ export const creativeDirectorAgent = new Agent({
   model: google(GEMINI_MODEL),
   instructions:
     "You are the iPix creative director. Turn brand DNA and campaigns into creative briefs and moodboards that feed the shoot brief.",
-  // @ts-expect-error @mastra/memory beta: Memory.recall() return type mismatches MastraMemory (re-check on pkg bump)
   memory: getMastraMemory(),
 });
