@@ -33,24 +33,23 @@ export async function POST(request: Request) {
   }
 
   const { runId, approved, brandId } = body;
-  if (!runId || approved === undefined) {
-    return NextResponse.json({ error: "runId and approved required" }, { status: 400 });
+  if (!runId || approved === undefined || !brandId) {
+    return NextResponse.json({ error: "runId, approved, and brandId required" }, { status: 400 });
   }
 
   try {
     // Update draft status before resuming so commit-or-reject step reads correct value
-    if (brandId) {
-      const sb = adminClient();
-      await sb
-        .from("brand_intake_drafts")
-        .update({
-          status: approved ? "approved" : "rejected",
-          approved_at: approved ? new Date().toISOString() : null,
-          rejected_at: approved ? null : new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        })
-        .eq("brand_id", brandId);
-    }
+    const sb = adminClient();
+    const { error: updateErr } = await sb
+      .from("brand_intake_drafts")
+      .update({
+        status: approved ? "approved" : "rejected",
+        approved_at: approved ? new Date().toISOString() : null,
+        rejected_at: approved ? null : new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      })
+      .eq("brand_id", brandId);
+    if (updateErr) throw new Error(`draft update: ${updateErr.message}`);
 
     const workflow = mastra.getWorkflow("brand-intelligence");
     const run = await workflow.createRun({ runId });

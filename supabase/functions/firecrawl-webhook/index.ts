@@ -270,7 +270,11 @@ Deno.serve(async (req: Request) => {
             method: "POST",
             headers: { "Content-Type": "application/json", "X-Internal-Secret": secret },
             body: JSON.stringify({ runId: workflowRunId, crawlId }),
-          }).catch((e: unknown) => console.warn("workflow resume call failed:", e));
+          })
+            .then(async (res) => {
+              if (!res.ok) console.warn(`workflow resume ${res.status}: ${await res.text().catch(() => res.statusText)}`);
+            })
+            .catch((e: unknown) => console.warn("workflow resume call failed:", e));
         }
       }
 
@@ -301,6 +305,24 @@ Deno.serve(async (req: Request) => {
       }
 
       await logWebhook({ job_status: "failed", error: errorMessage });
+
+      // Resume workflow with failure signal so it doesn't stay permanently suspended
+      const workflowRunId = job?.workflow_id ?? meta?.workflow_id;
+      if (workflowRunId) {
+        const appUrl = Deno.env.get("NEXT_PUBLIC_APP_URL") ?? Deno.env.get("APP_URL");
+        const secret = Deno.env.get("INTERNAL_WEBHOOK_SECRET");
+        if (appUrl && secret) {
+          fetch(`${appUrl}/api/workflows/brand-intelligence/resume`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "X-Internal-Secret": secret },
+            body: JSON.stringify({ runId: workflowRunId, crawlId, failed: true, error: errorMessage }),
+          })
+            .then(async (res) => {
+              if (!res.ok) console.warn(`workflow fail-resume ${res.status}: ${await res.text().catch(() => res.statusText)}`);
+            })
+            .catch((e: unknown) => console.warn("workflow fail-resume call failed:", e));
+        }
+      }
     }
   };
 

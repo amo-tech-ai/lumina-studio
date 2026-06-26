@@ -2,6 +2,7 @@
 // POST { brandId: string }
 import { NextResponse } from "next/server";
 import { withOperatorAuth, OperatorAuthError } from "@/lib/operator-gate";
+import { extractAccessToken } from "@/lib/auth";
 import { mastra } from "@/mastra";
 
 export const dynamic = "force-dynamic";
@@ -29,9 +30,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "brandId required" }, { status: 400 });
   }
 
-  // Extract access token from Authorization header for edge fn calls within workflow
-  const authHeader = request.headers.get("Authorization") ?? "";
-  const accessToken = authHeader.replace(/^Bearer\s+/i, "");
+  const accessToken = extractAccessToken(request) ?? "";
 
   try {
     const workflow = mastra.getWorkflow("brand-intelligence");

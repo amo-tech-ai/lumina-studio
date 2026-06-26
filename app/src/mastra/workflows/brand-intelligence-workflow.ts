@@ -124,7 +124,7 @@ const extractProfile = createStep({
     }
     await sb
       .from("brands")
-      .update({ intake_status: "scores_complete", updated_at: new Date().toISOString() })
+      .update({ intake_status: res.ok ? "scores_complete" : "scores_failed", updated_at: new Date().toISOString() })
       .eq("id", brandId);
     return { ok: res.ok };
   },
