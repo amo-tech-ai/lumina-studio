@@ -1,9 +1,9 @@
 import { Mastra } from "@mastra/core/mastra";
 import { visualIdentityAgent, socialDiscoveryAgent } from "./agents";
 import { durableAgents } from "./durable";
+import { brandApprovalWorkflow, shootWizardWorkflow } from "./workflows";
 import { ConsoleLogger, LogLevel } from "@mastra/core/logger";
 import { getMastraStorage } from "./storage";
-import { brandApprovalWorkflow } from "./workflows";
 
 const VALID_LOG_LEVELS: LogLevel[] = ["debug", "info", "warn", "error"];
 const rawLogLevel = process.env.LOG_LEVEL;
@@ -11,11 +11,6 @@ const LOG_LEVEL: LogLevel = VALID_LOG_LEVELS.includes(rawLogLevel as LogLevel)
   ? (rawLogLevel as LogLevel)
   : "info";
 
-// Registry keys ARE the agent names the runtime exposes (via getLocalAgents) and
-// the frontend useAgent({ agentId }) must match these exactly.
-// default is a compatibility alias for CopilotKit prebuilt UI/runtime sync;
-// real app code should use production-planner.
-// IPI-133: durable agents replace raw agents in the registry so streams are resumable.
 export const agents = {
   ...durableAgents,
   "visual-identity": visualIdentityAgent,
@@ -46,6 +41,7 @@ export function getMastra(): Mastra {
       storage: getMastraStorage(),
       workflows: {
         brandApprovalWorkflow,
+        "shoot-wizard": shootWizardWorkflow,
       },
       logger: new ConsoleLogger({
         level: LOG_LEVEL,
