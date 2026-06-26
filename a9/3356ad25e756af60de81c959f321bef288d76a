@@ -1,0 +1,76 @@
+docs/media/01-prompt-media.md
+  h_d382fbec1d5b46 1-185
+supabase/migrations/20260627180000_media_spec_tables.sql
+  s_efbb211f69e78b::t_af2094996441be 1-189
+docs/media/10-video-prompt.md
+  h_d382fbec1d5b46 1-278
+docs/media/40-media-intelligence-plan.md
+  s_efbb211f69e78b::t_94897c828635b2 1-143
+docs/media/02-image-types.md
+  s_a8ff79a3fcfbf6::t_5d3ad7c505cdd8 1-1409
+docs/media/ai-media-agent.md
+  h_d382fbec1d5b46 1-457
+docs/media/prompt-image-types.md
+  h_d382fbec1d5b46 1-1164
+docs/media/20-user-selection.md
+  h_d382fbec1d5b46 1-266
+docs/media/prd-media.md
+  s_efbb211f69e78b::t_76952bf593fa6a 1-216
+docs/media/tasks-media.md
+  s_efbb211f69e78b::t_75b593da19e75a 1-242
+docs/media/media-agent-plan.md
+  s_a8ff79a3fcfbf6::t_12915c421ef5cc 1-2,5-1519
+  s_efbb211f69e78b::t_32e34f04bc8597 3-4
+docs/media/51-media-system-plan.md
+  s_efbb211f69e78b::t_2906da2a40bc46 1-228
+docs/media/strategy.md
+  s_a8ff79a3fcfbf6::t_8307d9d3881c20 1-2,5-664
+  s_efbb211f69e78b::t_db601968686db8 3-4
+docs/media/roadmap-media.md
+  s_efbb211f69e78b::t_c3e8ce0736322d 1-112
+docs/media/11-video-plan.md
+  s_a8ff79a3fcfbf6::t_a424029cc8447d 1-1159
+docs/media/30-production-system.md
+  h_d382fbec1d5b46 1-641
+docs/media/todo.md
+  s_efbb211f69e78b::t_6bcfab871c5513 1-94
+docs/media/audit/01-audit.md
+  s_ffc2c0ed18a264::t_6ceac5cf530fe7 1-260
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.3",
+  "base_commit_sha": "a93356ad25e756af60de81c959f321bef288d76a",
+  "prompts": {},
+  "humans": {
+    "h_d382fbec1d5b46": {
+      "author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  },
+  "sessions": {
+    "s_a8ff79a3fcfbf6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a23755b0-cfc9-4f93-ae6b-754247f21af5",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    },
+    "s_efbb211f69e78b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "0da0c962-e31a-4af4-9a64-4dc4be547fd1",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    },
+    "s_ffc2c0ed18a264": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "24435d7f-d1b2-4ddd-bb4f-afdb9bbcd85d",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
