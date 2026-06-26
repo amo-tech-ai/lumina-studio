@@ -1,0 +1,32 @@
+app/src/lib/media/channel-specs.server.ts
+  s_efbb211f69e78b::t_d91c2daf08f03c 1-93
+app/src/lib/media/channel-specs.ts
+  s_efbb211f69e78b::t_b4b0773b5f3c14 1
+  s_efbb211f69e78b::t_2a7a33e2070fdc 2-29,38-57
+  s_efbb211f69e78b::t_a22d3b31a91b5e 30-37
+app/src/app/(operator)/app/preview/page.tsx
+  s_efbb211f69e78b::t_a922a51df219a8 1-2,4-29
+  s_efbb211f69e78b::t_ea9b6da1ccb509 3
+app/src/components/media/channel-preview-studio.tsx
+  s_efbb211f69e78b::t_5937d25be0bf44 1-99
+app/src/components/media/device-frame-preview.tsx
+  s_efbb211f69e78b::t_c0717cc83243ce 57-58
+  s_efbb211f69e78b::t_8751fa0932ab8d 23
+  s_efbb211f69e78b::t_8ccbcbafcbfe5a 1-22,24-56,59-470
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.3",
+  "base_commit_sha": "be4dc98f205feb0988c0647846ba4f31a763e0c8",
+  "prompts": {},
+  "sessions": {
+    "s_efbb211f69e78b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "0da0c962-e31a-4af4-9a64-4dc4be547fd1",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
