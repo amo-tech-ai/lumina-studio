@@ -12,21 +12,9 @@ const google = createGoogleGenerativeAI({ apiKey: process.env.GEMINI_API_KEY });
 // Model id comes from the registry (IPI2-80) — never hardcoded/preview here.
 const GEMINI_MODEL = resolveGeminiModel();
 
-<<<<<<< HEAD
-// Working memory schema for the production planner — persisted per thread in Postgres
-export const PlannerWorkingMemory = z.object({
-  brandName: z.string().optional(),
-  shootType: z.string().optional(),
-  approvedConcepts: z.array(z.string()).default([]),
-  pendingDecisions: z.array(z.string()).default([]),
-  lastUpdated: z.string().optional(),
-});
-
-=======
 // ponytail: foundation agents for IPI2-121. Tools/instructions are smoke-level here;
 // the real production-planner tool suite + HITL lands in IPI2-114. Names are production
 // and must match the Mastra registry keys in ./index.ts and the frontend agentId exactly.
->>>>>>> e8eb76e (fix(ipi-135): correct workingMemory placement + defer DATABASE_URL validation)
 export const productionPlannerAgent = new Agent({
   id: "production-planner",
   name: "Production Planner",
