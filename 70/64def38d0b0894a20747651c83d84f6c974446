@@ -1,0 +1,21 @@
+app/tsconfig.json
+  s_efbb211f69e78b::t_812ac5872eb378 32-36
+.github/workflows/ci.yml
+  s_efbb211f69e78b::t_de3c6c4c460a5f 47-52
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.3",
+  "base_commit_sha": "7064def38d0b0894a20747651c83d84f6c974446",
+  "prompts": {},
+  "sessions": {
+    "s_efbb211f69e78b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "0da0c962-e31a-4af4-9a64-4dc4be547fd1",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
