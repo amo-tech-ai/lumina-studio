@@ -1,0 +1,27 @@
+supabase/functions/firecrawl-webhook/index.ts
+  s_ffc2c0ed18a264::t_6a4bfda2198c6b 269-278
+  s_ffc2c0ed18a264::t_4abe23eaf3091d 316-325
+app/src/app/api/workflows/brand-intelligence/resume/route.ts
+  s_ffc2c0ed18a264::t_2b6437993d357c 15,17,22,32
+app/src/mastra/workflows/brand-intelligence-workflow.ts
+  s_ffc2c0ed18a264::t_2d5121996728cd 169,176,183
+  s_ffc2c0ed18a264::t_364e2bc30d0774 105,108-115,127
+  s_ffc2c0ed18a264::t_378747f9ebe074 219,226,231,235
+  s_ffc2c0ed18a264::t_5d8c6e6d9c01d9 87,95
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.3",
+  "base_commit_sha": "a399f54d62724313969c86760ea3d3c177484ade",
+  "prompts": {},
+  "sessions": {
+    "s_ffc2c0ed18a264": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "24435d7f-d1b2-4ddd-bb4f-afdb9bbcd85d",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
