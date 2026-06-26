@@ -1,0 +1,27 @@
+app/src/app/api/workflows/shoot-wizard/route.ts
+  s_a8ff79a3fcfbf6::t_ef984e74be8936 9
+  s_a8ff79a3fcfbf6::t_f3963eca4411dc 2,7
+app/src/mastra/index.ts
+  s_a8ff79a3fcfbf6::t_561cddf80f3674 44-57
+app/src/app/api/workflows/resume/route.ts
+  s_a8ff79a3fcfbf6::t_36fbb41f5678d6 2,12
+app/src/app/api/copilotkit/[[...slug]]/route.ts
+  s_a8ff79a3fcfbf6::t_22647b4e67bfd1 9
+  s_a8ff79a3fcfbf6::t_61091f26fd7bba 32
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.13",
+  "base_commit_sha": "50fd7c6f4a7d309d6d09a00cb0468dc309176455",
+  "prompts": {},
+  "sessions": {
+    "s_a8ff79a3fcfbf6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a23755b0-cfc9-4f93-ae6b-754247f21af5",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
