@@ -89,11 +89,7 @@ const waitForCrawl = createStep({
   resumeSchema: z.object({ crawlId: z.string(), failed: z.boolean().optional(), error: z.string().optional() }),
   suspendSchema: z.object({ crawlId: z.string() }),
   execute: async ({ inputData, suspend, resumeData }) => {
-    if (!resumeData) {
-      await suspend({ crawlId: inputData.crawlId });
-      // unreachable until resumed
-      return { crawlId: inputData.crawlId };
-    }
+    if (!resumeData) return await suspend({ crawlId: inputData.crawlId });
     if (resumeData.failed) throw new Error(`Crawl failed: ${resumeData.error ?? "unknown"}`);
     return { crawlId: resumeData.crawlId };
   },
@@ -169,7 +165,7 @@ const saveDraftAndWait = createStep({
   outputSchema: z.object({ draftId: z.string() }),
   resumeSchema: z.object({ approved: z.boolean() }),
   suspendSchema: z.object({ brandId: z.string(), draftId: z.string() }),
-  execute: async ({ suspend, resumeData, getInitData, runId }) => {
+  execute: async ({ suspend, resumeData, suspendData, getInitData, runId }) => {
     const { brandId, userId } = getInitData<{
       brandId: string;
       userId: string;
@@ -194,19 +190,10 @@ const saveDraftAndWait = createStep({
         .select("id")
         .single();
       if (error || !draft) throw new Error(`Failed to upsert brand_intake_drafts: ${error?.message}`);
-      await suspend({ brandId, draftId: draft.id });
-      return { draftId: draft.id };
+      return await suspend({ brandId, draftId: draft.id });
     }
-    // resumed — draftId is in suspend data, retrieve via brand_id
-    const sb = adminClient();
-    const { data: draft } = await sb
-      .from("brand_intake_drafts")
-      .select("id")
-      .eq("brand_id", brandId)
-      .order("updated_at", { ascending: false })
-      .limit(1)
-      .single();
-    return { draftId: draft?.id ?? "unknown" };
+    // suspendData carries the draftId from the original suspension
+    return { draftId: suspendData?.draftId ?? "unknown" };
   },
 });
 
