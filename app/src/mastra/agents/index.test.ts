@@ -3,23 +3,11 @@ import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it, vi } from "vitest";
 
-// Stub the entire memory module — vi.importActual pulls @mastra/pg which needs DATABASE_URL.
-// PlannerWorkingMemory is inlined here so schema tests work without a DB.
-vi.mock("@/mastra/memory", async () => {
-  const { z } = await import("zod");
-  return {
-    getMastraMemory: () => ({}),
-    getPlannerMemory: () => ({}),
-    makeThreadId: (o: string, w: string, e: string) =>
-      `${encodeURIComponent(o)}/${w}/${encodeURIComponent(e)}`,
-    PlannerWorkingMemory: z.object({
-      brandName: z.string().optional(),
-      shootType: z.string().optional(),
-      approvedConcepts: z.array(z.string()).default([]),
-      pendingDecisions: z.array(z.string()).default([]),
-      lastUpdated: z.string().optional(),
-    }),
-  };
+// Stub only the DB-dependent getters; importOriginal preserves real schema + makeThreadId
+// so schema tests validate production code, not a duplicate definition.
+vi.mock("@/mastra/memory", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/mastra/memory")>();
+  return { ...actual, getMastraMemory: () => ({}), getPlannerMemory: () => ({}) };
 });
 import {
   PlannerWorkingMemory,
