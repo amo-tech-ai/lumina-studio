@@ -42,7 +42,7 @@ const BrandPage = async ({ params }: Props) => {
     );
   }
 
-  const [{ data: brand }, { data: scores }, { data: crawls }] = await Promise.all([
+  const [{ data: brand }, { data: scores }, { data: crawls }, { data: intakeDraft }] = await Promise.all([
     supabase
       .from("brands")
       .select(
@@ -60,13 +60,25 @@ const BrandPage = async ({ params }: Props) => {
       .eq("brand_id", id)
       .order("created_at", { ascending: false })
       .limit(1),
+    supabase
+      .from("brand_intake_drafts")
+      .select("draft_profile")
+      .eq("brand_id", id)
+      .eq("status", "pending_approval")
+      .order("updated_at", { ascending: false })
+      .limit(1)
+      .maybeSingle(),
   ]);
 
   if (!brand) notFound();
 
   const org = brand.organizations as { name?: string; plan?: string } | null;
+  const rawDraft = brand.ai_profile_draft as Record<string, unknown> | null;
   const profile = parseAiProfile(brand.ai_profile);
   const draftProfile = brand.intake_status === "draft_ready" ? parseAiProfile(brand.ai_profile_draft) : null;
+  const draftScores = (Array.isArray(rawDraft?._draft_scores) ? rawDraft._draft_scores : []) as BrandScoreDetail[];
+  const dp = intakeDraft?.draft_profile as Record<string, unknown> | null;
+  const workflowRunId = (dp?._workflow_run_id as string) ?? null;
   const scoreRows = (scores ?? []) as BrandScoreDetail[];
   const displayScores = filterDisplayScores(scoreRows);
   const baseScores = getBaseScores(scoreRows);
@@ -93,6 +105,8 @@ const BrandPage = async ({ params }: Props) => {
       createdDate={createdDate}
       intakeStatus={brand.intake_status}
       draftProfile={draftProfile}
+      draftScores={draftScores}
+      workflowRunId={workflowRunId}
       crawlPages={crawls?.[0] ?? null}
       dnaScore={dnaScore}
       profile={profile}

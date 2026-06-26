@@ -1,8 +1,18 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { createClient } from "@supabase/supabase-js";
 import { invokeBrandIntelligence } from "@/lib/onboarding";
+import { getMastra } from "@/mastra";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+
+function adminClient() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    { auth: { persistSession: false } },
+  );
+}
 
 export type ReanalyzeResult =
   | { ok: true; hasDraft: true }
@@ -135,6 +145,91 @@ export async function applyDraft(brandId: string): Promise<{ ok: boolean; error?
       .upsert(scoreRows, { onConflict: "brand_id,score_type" });
     // ponytail: promotion already committed; log and accept partial success rather than leaving brand stranded
     if (scoresErr) console.error("brand_scores upsert failed after applyDraft:", scoresErr.message);
+  }
+
+  revalidatePath(`/app/brand/${brandId}`);
+  return { ok: true };
+}
+
+export async function approveWorkflowDraft(brandId: string, runId: string): Promise<{ ok: boolean; error?: string }> {
+  if (!brandId || !runId) return { ok: false, error: "brandId and runId required" };
+
+  const supabase = await createSupabaseServerClient();
+  const { data: { user }, error: authErr } = await supabase.auth.getUser();
+  if (authErr || !user) return { ok: false, error: "Not signed in" };
+
+  // TOCTOU guard runs first — prevents double-approve and scopes to this brand
+  const admin = adminClient();
+  const { data: claimed, error: claimErr } = await admin
+    .from("brand_intake_drafts")
+    .update({ status: "approved", approved_at: new Date().toISOString(), updated_at: new Date().toISOString() })
+    .eq("brand_id", brandId)
+    .eq("draft_profile->>_workflow_run_id", runId)
+    .eq("status", "pending_approval")
+    .select("id")
+    .single();
+  if (claimErr || !claimed) return { ok: false, error: "already_processed" };
+
+  // Promote draft profile → live; rollback the intake row if this fails so the operator can retry
+  const applyResult = await applyDraft(brandId);
+  if (!applyResult.ok && applyResult.error !== "Brand is not in draft_ready state") {
+    await admin
+      .from("brand_intake_drafts")
+      .update({ status: "pending_approval", approved_at: null, updated_at: new Date().toISOString() })
+      .eq("id", claimed.id);
+    return { ok: false, error: applyResult.error };
+  }
+
+  // Resume workflow (best-effort — profile already promoted above)
+  try {
+    const run = await getMastra().getWorkflow("brand-intelligence").createRun({ runId });
+    await run.resume({ step: "save-draft-and-wait", resumeData: { approved: true } });
+  } catch (e) {
+    console.error("[approveWorkflowDraft] resume failed:", e);
+  }
+
+  revalidatePath(`/app/brand/${brandId}`);
+  return { ok: true };
+}
+
+export async function rejectWorkflowDraft(brandId: string, runId: string): Promise<{ ok: boolean; error?: string }> {
+  if (!brandId || !runId) return { ok: false, error: "brandId and runId required" };
+
+  const supabase = await createSupabaseServerClient();
+  const { data: { user }, error: authErr } = await supabase.auth.getUser();
+  if (authErr || !user) return { ok: false, error: "Not signed in" };
+
+  // TOCTOU guard — scoped to this brand; fails if already processed
+  const admin = adminClient();
+  const { data: updated, error: updateErr } = await admin
+    .from("brand_intake_drafts")
+    .update({ status: "rejected", rejected_at: new Date().toISOString(), updated_at: new Date().toISOString() })
+    .eq("brand_id", brandId)
+    .eq("draft_profile->>_workflow_run_id", runId)
+    .eq("status", "pending_approval")
+    .select("id")
+    .single();
+  if (updateErr || !updated) return { ok: false, error: "already_processed" };
+
+  // Clear ai_profile_draft and restore intake_status; rollback intake row on failure so operator can retry
+  const discardResult = await discardDraft(brandId);
+  if (!discardResult.ok && discardResult.error !== "Brand is not in draft_ready state") {
+    console.error("[rejectWorkflowDraft] discardDraft failed:", discardResult.error);
+    await admin
+      .from("brand_intake_drafts")
+      .update({ status: "pending_approval", rejected_at: null, updated_at: new Date().toISOString() })
+      .eq("id", updated.id);
+    return { ok: false, error: discardResult.error };
+  }
+
+  // Best-effort: resume workflow so it doesn't stay permanently suspended.
+  // ponytail: commitOrReject sets intake_status="failed" for rejected runs — acceptable for MVP;
+  // will be fixed when commitOrReject is refactored to check for a prior valid live profile.
+  try {
+    const run = await getMastra().getWorkflow("brand-intelligence").createRun({ runId });
+    await run.resume({ step: "save-draft-and-wait", resumeData: { approved: false } });
+  } catch (e) {
+    console.error("[rejectWorkflowDraft] resume failed:", e);
   }
 
   revalidatePath(`/app/brand/${brandId}`);
