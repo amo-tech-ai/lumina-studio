@@ -8,7 +8,7 @@ import { join, extname } from "path";
 import { fileURLToPath } from "url";
 
 const root = join(fileURLToPath(new URL(".", import.meta.url)), "..");
-const srcDir = join(root, "src");
+const srcDir = join(root, "app", "src");
 
 /** Explicit forbidden literals — longer keys first for clearer labels. */
 const FORBIDDEN_LITERALS = [
@@ -31,11 +31,12 @@ const FORBIDDEN_PATTERNS = [
 const EXT = new Set([".ts", ".tsx", ".js", ".jsx"]);
 const TEST_RE = /\.(test|spec|int\.test)\.(ts|tsx|js|jsx)$/;
 
+const SERVER_DIRS = new Set(["mastra"]);
 function walk(dir, files = []) {
   for (const name of readdirSync(dir)) {
     const path = join(dir, name);
     const st = statSync(path);
-    if (st.isDirectory()) walk(path, files);
+    if (st.isDirectory() && !SERVER_DIRS.has(name)) walk(path, files);
     else if (EXT.has(extname(name)) && !TEST_RE.test(name)) files.push(path);
   }
   return files;

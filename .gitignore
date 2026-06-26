@@ -44,3 +44,17 @@ app/out
 app/.backup-*/
 .vercel
 pr9-storefront-test/
+
+# Claude Code local settings (may contain tokens)
+.claude/settings.local.json
+.claude/settings.local.json.backup
+.claude/launch.json
+
+# Claude Code local dirs — skills/docs have example keys that trip secret scanning
+.claude/docs/
+.claude/skills/
+.claude/agents/
+.claude/*.py
+
+.cursor/
+.codex/
