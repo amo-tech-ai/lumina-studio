@@ -3,6 +3,7 @@
 import { createStep, createWorkflow } from "@mastra/core/workflows";
 import { createClient } from "@supabase/supabase-js";
 import { z } from "zod";
+import { socialDiscoveryAgent, visualIdentityAgent } from "../agents";
 
 function adminClient() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -140,21 +141,35 @@ const extractProfile = createStep({
 });
 
 // Step 5: parallel social + visual enrichment (best-effort)
-const fanOutEnrichment = createStep({
+// Exported for unit tests (missing-runtime + enriched-result branches).
+export const fanOutEnrichment = createStep({
   id: "fan-out-enrichment",
   inputSchema: z.object({ ok: z.boolean() }),
   outputSchema: z.object({ enriched: z.boolean() }),
   execute: async ({ mastra, getInitData }) => {
+    if (!mastra) {
+      throw new Error(
+        "fan-out-enrichment: Mastra runtime not injected — workflow must run via a registered Mastra instance",
+      );
+    }
     const { brandId } = getInitData<{ brandId: string }>();
+    const socialAgent = mastra.getAgent("social-discovery");
+    const visualAgent = mastra.getAgent("visual-identity");
+    if (!socialAgent || !visualAgent) {
+      throw new Error(
+        `fan-out-enrichment: missing enrichment agent(s) — social=${!!socialAgent} visual=${!!visualAgent}`,
+      );
+    }
     const prompt = `Discover and save enrichment data for brandId: ${brandId}`;
-    // ponytail: allSettled — enrichment failure does not block approval
+    // ponytail: allSettled keeps enrichment best-effort (a failure must not block
+    // approval), but a missing runtime/agent is a wiring bug and fails loud above.
     const [social, visual] = await Promise.allSettled([
-      mastra?.getAgent("social-discovery")?.generate(prompt),
-      mastra?.getAgent("visual-identity")?.generate(prompt),
+      socialAgent.generate(prompt),
+      visualAgent.generate(prompt),
     ]);
     if (social.status === "rejected") console.warn("social-discovery failed:", social.reason);
     if (visual.status === "rejected") console.warn("visual-identity failed:", visual.reason);
-    return { enriched: true };
+    return { enriched: social.status === "fulfilled" || visual.status === "fulfilled" };
   },
 });
 
@@ -173,7 +188,15 @@ const saveDraftAndWait = createStep({
 
     if (!resumeData) {
       const sb = adminClient();
-      const { data: brandRow } = await sb.from("brands").select("brand_url").eq("id", brandId).single();
+      const { data: brandRow } = await sb
+        .from("brands")
+        .select("brand_url, ai_profile")
+        .eq("id", brandId)
+        .single();
+      const { data: scores } = await sb
+        .from("brand_scores")
+        .select("score_type, score, details")
+        .eq("brand_id", brandId);
       const { data: draft, error } = await sb
         .from("brand_intake_drafts")
         .upsert(
@@ -182,7 +205,13 @@ const saveDraftAndWait = createStep({
             user_id: userId,
             source_url: brandRow?.brand_url ?? null,
             status: "pending_approval",
-            draft_profile: { _workflow_run_id: runId },
+            // _workflow_run_id is how the approve route locates this draft; profile +
+            // scores are the actual intelligence the operator reviews before approving.
+            draft_profile: {
+              _workflow_run_id: runId,
+              profile: brandRow?.ai_profile ?? null,
+              scores: scores ?? [],
+            },
             updated_at: new Date().toISOString(),
           },
           { onConflict: "brand_id" },
