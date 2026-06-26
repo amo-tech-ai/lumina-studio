@@ -165,7 +165,7 @@ export async function approveWorkflowDraft(brandId: string, runId: string): Prom
     .update({ status: "approved", approved_at: new Date().toISOString(), updated_at: new Date().toISOString() })
     .eq("brand_id", brandId)
     .eq("draft_profile->>_workflow_run_id", runId)
-    .eq("status", "pending_approval")
+    .eq("status", "pending")
     .select("id")
     .single();
   if (claimErr || !claimed) return { ok: false, error: "already_processed" };
@@ -175,7 +175,7 @@ export async function approveWorkflowDraft(brandId: string, runId: string): Prom
   if (!applyResult.ok && applyResult.error !== "Brand is not in draft_ready state") {
     await admin
       .from("brand_intake_drafts")
-      .update({ status: "pending_approval", approved_at: null, updated_at: new Date().toISOString() })
+      .update({ status: "pending", approved_at: null, updated_at: new Date().toISOString() })
       .eq("id", claimed.id);
     return { ok: false, error: applyResult.error };
   }
@@ -206,7 +206,7 @@ export async function rejectWorkflowDraft(brandId: string, runId: string): Promi
     .update({ status: "rejected", rejected_at: new Date().toISOString(), updated_at: new Date().toISOString() })
     .eq("brand_id", brandId)
     .eq("draft_profile->>_workflow_run_id", runId)
-    .eq("status", "pending_approval")
+    .eq("status", "pending")
     .select("id")
     .single();
   if (updateErr || !updated) return { ok: false, error: "already_processed" };
@@ -217,7 +217,7 @@ export async function rejectWorkflowDraft(brandId: string, runId: string): Promi
     console.error("[rejectWorkflowDraft] discardDraft failed:", discardResult.error);
     await admin
       .from("brand_intake_drafts")
-      .update({ status: "pending_approval", rejected_at: null, updated_at: new Date().toISOString() })
+      .update({ status: "pending", rejected_at: null, updated_at: new Date().toISOString() })
       .eq("id", updated.id);
     return { ok: false, error: discardResult.error };
   }
