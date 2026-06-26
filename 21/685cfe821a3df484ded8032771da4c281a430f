@@ -1,0 +1,55 @@
+docs/media/prd-media.md
+  s_efbb211f69e78b::t_80c014a26b780e 167-179
+supabase/migrations/20260627180000_media_spec_tables.sql
+  s_efbb211f69e78b::t_17ec37954780e0 51-52
+  s_efbb211f69e78b::t_43c91d44e27a24 159,162
+docs/media/media-agent-plan.md
+  s_efbb211f69e78b::t_8fad6d919f0979 1236-1238,1241
+  s_efbb211f69e78b::t_42507f886962b1 3,1291-1297,1303-1308,1314-1319,1325-1329
+docs/media/51-media-system-plan.md
+  s_efbb211f69e78b::t_a6a61be102dec8 43
+  s_efbb211f69e78b::t_7e0bead5634ce7 208-222
+docs/media/strategy.md
+  s_efbb211f69e78b::t_7005383d294ba0 395
+  s_efbb211f69e78b::t_7413684764b8ea 142
+  s_efbb211f69e78b::t_725b9d042efcb9 68
+docs/media/02-image-types.md
+  s_efbb211f69e78b::t_0f66f96147b9a4 969
+  s_efbb211f69e78b::t_e871e1e117107c 1122
+  s_efbb211f69e78b::t_22694cfad83e43 580
+docs/media/11-video-plan.md
+  s_efbb211f69e78b::t_ab307aab8ab77f 803-805
+  s_efbb211f69e78b::t_d7b07bcbf6b007 808-810
+  s_efbb211f69e78b::t_be45d630911448 973-974
+  s_efbb211f69e78b::t_339ff2c75fbdb8 371
+docs/media/roadmap-media.md
+  s_efbb211f69e78b::t_99f950b3569c74 40
+  s_efbb211f69e78b::t_a388ee21af3c3e 47
+docs/media/50-media-system-prompt.md
+  s_efbb211f69e78b::t_0cd9906fd158a6 486-487
+  s_efbb211f69e78b::t_0cd7e9cebb0caa 3-7
+  s_efbb211f69e78b::t_bcbdf788a76092 97-98
+docs/media/todo.md
+  s_efbb211f69e78b::t_6fe46badb070f4 39
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.3",
+  "base_commit_sha": "21685cfe821a3df484ded8032771da4c281a430f",
+  "prompts": {},
+  "humans": {
+    "h_d382fbec1d5b46": {
+      "author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  },
+  "sessions": {
+    "s_efbb211f69e78b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "0da0c962-e31a-4af4-9a64-4dc4be547fd1",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
