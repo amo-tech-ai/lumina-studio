@@ -1,0 +1,25 @@
+app/src/app/(operator)/app/shoots/page.tsx
+  s_a8ff79a3fcfbf6::t_d7038b0090befc 60-61,63
+  s_a8ff79a3fcfbf6::t_13ff89bd2c1214 116
+  s_a8ff79a3fcfbf6::t_5478b6cc312db7 8-16
+  s_a8ff79a3fcfbf6::t_85fdce059ee5ad 20-25
+supabase/migrations/20260626000001_shoot_portfolio_view.sql
+  s_a8ff79a3fcfbf6::t_0c58b6675dc3fd 1-5,9-24
+  s_a8ff79a3fcfbf6::t_6676f7ea38da42 6-8
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.13",
+  "base_commit_sha": "49b18c600096aeecb76d58d0c738e6f8df16288c",
+  "prompts": {},
+  "sessions": {
+    "s_a8ff79a3fcfbf6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a23755b0-cfc9-4f93-ae6b-754247f21af5",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}

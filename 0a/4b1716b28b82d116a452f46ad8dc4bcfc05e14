@@ -1,0 +1,23 @@
+app/src/mastra/tools/index.ts
+  s_a8ff79a3fcfbf6::t_bad93be15719fa 20,22,26
+app/src/mastra/tools/lookupShotReferences.ts
+  s_a8ff79a3fcfbf6::t_eae18f71211e8d 1-100
+app/src/mastra/agents/index.ts
+  s_a8ff79a3fcfbf6::t_3b0982c250f08d 29-36,38-43
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.13",
+  "base_commit_sha": "0a4b1716b28b82d116a452f46ad8dc4bcfc05e14",
+  "prompts": {},
+  "sessions": {
+    "s_a8ff79a3fcfbf6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a23755b0-cfc9-4f93-ae6b-754247f21af5",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
