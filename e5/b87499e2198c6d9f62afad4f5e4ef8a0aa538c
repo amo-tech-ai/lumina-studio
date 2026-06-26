@@ -1,0 +1,39 @@
+app/tsconfig.json
+  s_ffc2c0ed18a264::t_485536004db3d8 32
+.github/workflows/ci.yml
+  s_ffc2c0ed18a264::t_2ea5f331060f48 29-30
+package.json
+  s_ffc2c0ed18a264::t_75e266d7ae3f9e 2,4,9
+scripts/check-client-env.mjs
+  s_ffc2c0ed18a264::t_29cd15c64f36f6 34,39
+  s_ffc2c0ed18a264::t_76156029a8567c 11
+app/package.json
+  s_ffc2c0ed18a264::t_ba5aff0d2cbcb1 10
+.gitignore
+  s_ffc2c0ed18a264::t_54e2145670ef7f 52-57
+  s_ffc2c0ed18a264::t_39d4f2cbeb421b 58-60
+  s_ffc2c0ed18a264::t_e4ccc7fde16b3d 47-51
+supabase/migrations/20260627180000_media_spec_tables.sql
+  s_ffc2c0ed18a264::t_39f622815548a5 159-160,163
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.3",
+  "base_commit_sha": "e5b87499e2198c6d9f62afad4f5e4ef8a0aa538c",
+  "prompts": {},
+  "humans": {
+    "h_d382fbec1d5b46": {
+      "author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  },
+  "sessions": {
+    "s_ffc2c0ed18a264": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "24435d7f-d1b2-4ddd-bb4f-afdb9bbcd85d",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
