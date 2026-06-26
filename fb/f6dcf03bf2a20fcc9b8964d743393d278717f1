@@ -1,0 +1,23 @@
+app/src/mastra/memory.ts
+  s_ffc2c0ed18a264::t_a399d5a80d5b9b 20,27-28
+app/src/mastra/memory.test.ts
+  s_ffc2c0ed18a264::t_702d7cc94b84c8 13-18
+app/src/lib/types.ts
+  s_ffc2c0ed18a264::t_4c54bd518ecdb0 2,4
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.13",
+  "base_commit_sha": "fbf6dcf03bf2a20fcc9b8964d743393d278717f1",
+  "prompts": {},
+  "sessions": {
+    "s_ffc2c0ed18a264": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "24435d7f-d1b2-4ddd-bb4f-afdb9bbcd85d",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
