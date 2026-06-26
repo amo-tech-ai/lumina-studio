@@ -19,6 +19,7 @@ import {
   BadgeCheck,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { PlatformIcon } from "@/components/media/platform-icons";
 import {
   CHANNEL_FALLBACK_RATIO,
   CHANNEL_LABELS,
@@ -453,7 +454,8 @@ function SpecCaption({
 }) {
   return (
     <div className="text-center text-xs text-[var(--muted-foreground)]">
-      <div className="font-semibold text-[var(--foreground)]">
+      <div className="flex items-center justify-center gap-1.5 font-semibold text-[var(--foreground)]">
+        <PlatformIcon channel={channel} className="h-4 w-4" />
         {CHANNEL_LABELS[channel]}
       </div>
       {spec ? (
