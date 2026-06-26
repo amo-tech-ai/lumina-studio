@@ -4,7 +4,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { createSupabaseBrowserClient } from "@/lib/supabase/client";
+import { createBrowserClient } from "@supabase/ssr";
 import { ShootCard, type ShootRow } from "@/components/shoot/ShootCard";
 
 // ponytail: useAgentContext deferred to IPI-128 (requires CopilotKit provider)
@@ -21,8 +21,6 @@ const STATUS_TABS = [
 type SortKey = "updated_at" | "dna_asc" | "dna_desc";
 
 export default function ShootsPage() {
-  const supabase = useMemo(() => createSupabaseBrowserClient(), []);
-
   const [shoots, setShoots] = useState<ShootRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -34,11 +32,13 @@ export default function ShootsPage() {
   useEffect(() => {
     setLoading(true);
     setError(null);
-
+    const sb = createBrowserClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL ?? "",
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "",
+    );
     // ponytail: query via public view — shoot.shoots is not in the exposed schema list;
     // migration 20260626000001_shoot_portfolio_view.sql adds this view.
-    supabase
-      .from("shoot_portfolio_view")
+    sb.from("shoot_portfolio_view")
       .select("id, name, type, status, dna_score, target_channels, estimated_budget, updated_at")
       .order("updated_at", { ascending: false })
       .then(({ data, error: err }) => {
@@ -46,7 +46,7 @@ export default function ShootsPage() {
         else setShoots((data as ShootRow[]) ?? []);
         setLoading(false);
       });
-  }, [supabase]);
+  }, []);
 
   // ── Client-side filter + sort
   const visible = useMemo(() => {

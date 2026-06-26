@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
-import { createSupabaseBrowserClient } from "@/lib/supabase/client";
+import { useEffect, useState } from "react";
+import { createBrowserClient } from "@supabase/ssr";
 import { DeliverableApprovalCard } from "@/components/shoot/hitl/DeliverableApprovalCard";
 import { ShotListApprovalCard } from "@/components/shoot/hitl/ShotListApprovalCard";
 import { BudgetApprovalCard } from "@/components/shoot/hitl/BudgetApprovalCard";
@@ -87,8 +87,14 @@ function Spinner() {
 
 // ── Main wizard ───────────────────────────────────────────────────────────────
 
+function makeSbClient() {
+  return createBrowserClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL ?? "",
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "",
+  );
+}
+
 export default function NewShootPage() {
-  const supabase = useMemo(() => createSupabaseBrowserClient(), []);
   const [step, setStep] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -96,14 +102,14 @@ export default function NewShootPage() {
 
   // ponytail: fetch brands once — user picks from their own brands, no UUID input
   useEffect(() => {
-    supabase.from("brands").select("id, name").order("name").then(({ data }) => {
+    makeSbClient().from("brands").select("id, name").order("name").then(({ data }) => {
       if (data?.length) {
         setBrands(data);
         // Auto-select the only brand if there's just one
         if (data.length === 1) setState((s) => ({ ...s, brandId: data[0].id }));
       }
     });
-  }, [supabase]);
+  }, []);
   const [state, setState] = useState<WizardState>({
     shootName: "",
     brandId: "",
@@ -272,7 +278,7 @@ export default function NewShootPage() {
       if (!r3.ok) throw new Error(await r3.text());
 
       // Commit to durable DB via edge fn (no direct browser write)
-      const { data: sessionData } = await supabase.auth.getSession();
+      const { data: sessionData } = await makeSbClient().auth.getSession();
       const accessToken = sessionData.session?.access_token;
       if (!accessToken) throw new Error("Not authenticated");
 
