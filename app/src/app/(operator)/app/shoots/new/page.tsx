@@ -169,6 +169,8 @@ export default function NewShootPage() {
     setError(null);
     try {
       if (!state.runId) throw new Error("No workflow run");
+      const validDeliverables = state.deliverables.filter((d) => d.channel.trim());
+      if (!validDeliverables.length) throw new Error("Add at least one deliverable with a channel before approving");
       const r1 = await fetch("/api/workflows/resume", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -176,13 +178,14 @@ export default function NewShootPage() {
           workflowId: "shoot-wizard",
           runId: state.runId,
           stepId: "deliverable-gate",
-          resumeData: { approved: true, approved_deliverables: state.deliverables },
+          resumeData: { approved: true, approved_deliverables: validDeliverables },
         }),
       });
       const d1 = await r1.json();
       if (!r1.ok) throw new Error(d1.error ?? "Gate 1 resume failed");
       // Use workflow-computed shot list from suspend payload (single source of truth)
-      const shots: Shot[] = d1.suspendPayload?.shots ?? [];
+      const shots: Shot[] = d1.suspendPayload?.shots;
+      if (!shots?.length) throw new Error("Workflow did not return a shot list");
       const uncoveredWarnings: string[] = d1.suspendPayload?.uncovered_warnings ?? [];
 
       update({ shots, uncoveredWarnings });
@@ -463,7 +466,7 @@ export default function NewShootPage() {
               </button>
               <button
                 onClick={approveDeliverables}
-                disabled={state.deliverables.length === 0 || loading}
+                disabled={!state.deliverables.some((d) => d.channel.trim()) || loading}
                 className="rounded-full px-6 py-2.5 font-sans text-sm font-medium text-white disabled:opacity-40"
                 style={{ background: "#10B981" }}
               >
