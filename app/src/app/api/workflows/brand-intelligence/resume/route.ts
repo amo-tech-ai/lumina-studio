@@ -12,14 +12,14 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  let body: { runId?: string; crawlId?: string };
+  let body: { runId?: string; crawlId?: string; failed?: boolean; error?: string };
   try {
-    body = (await request.json()) as { runId?: string; crawlId?: string };
+    body = (await request.json()) as { runId?: string; crawlId?: string; failed?: boolean; error?: string };
   } catch {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
 
-  const { runId, crawlId } = body;
+  const { runId, crawlId, failed, error } = body;
   if (!runId || !crawlId) {
     return NextResponse.json({ error: "runId and crawlId required" }, { status: 400 });
   }
@@ -29,7 +29,7 @@ export async function POST(request: Request) {
     const run = await workflow.createRun({ runId });
     await run.resume({
       step: "wait-for-crawl",
-      resumeData: { crawlId },
+      resumeData: { crawlId, ...(failed ? { failed: true, error } : {}) },
     });
     return NextResponse.json({ ok: true });
   } catch (e) {

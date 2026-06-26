@@ -84,7 +84,7 @@ const waitForCrawl = createStep({
   id: "wait-for-crawl",
   inputSchema: z.object({ crawlId: z.string() }),
   outputSchema: z.object({ crawlId: z.string() }),
-  resumeSchema: z.object({ crawlId: z.string() }),
+  resumeSchema: z.object({ crawlId: z.string(), failed: z.boolean().optional(), error: z.string().optional() }),
   suspendSchema: z.object({ crawlId: z.string() }),
   execute: async ({ inputData, suspend, resumeData }) => {
     if (!resumeData) {
@@ -92,6 +92,7 @@ const waitForCrawl = createStep({
       // unreachable until resumed
       return { crawlId: inputData.crawlId };
     }
+    if (resumeData.failed) throw new Error(`Crawl failed: ${resumeData.error ?? "unknown"}`);
     return { crawlId: resumeData.crawlId };
   },
 });
@@ -101,9 +102,17 @@ const extractProfile = createStep({
   id: "extract-profile",
   inputSchema: z.object({ crawlId: z.string() }),
   outputSchema: z.object({ ok: z.boolean() }),
-  execute: async ({ inputData: _input, getInitData }) => {
+  execute: async ({ inputData, getInitData }) => {
     const { brandId, accessToken } = getInitData<{ brandId: string; accessToken: string }>();
     const sb = adminClient();
+
+    const { data: brand, error: brandErr } = await sb
+      .from("brands")
+      .select("brand_url")
+      .eq("id", brandId)
+      .single();
+    if (brandErr || !brand?.brand_url) throw new Error(`Brand URL not found: ${brandErr?.message}`);
+
     await sb
       .from("brands")
       .update({ intake_status: "analysis_running", updated_at: new Date().toISOString() })
@@ -115,7 +124,7 @@ const extractProfile = createStep({
         "Content-Type": "application/json",
         Authorization: `Bearer ${accessToken}`,
       },
-      body: JSON.stringify({ brandId }),
+      body: JSON.stringify({ brandId, url: brand.brand_url, crawlResultId: inputData.crawlId }),
     });
     // ponytail: non-2xx logged but not fatal — brand might still be partially useful
     if (!res.ok) {
@@ -157,21 +166,21 @@ const saveDraftAndWait = createStep({
   resumeSchema: z.object({ approved: z.boolean() }),
   suspendSchema: z.object({ brandId: z.string(), draftId: z.string() }),
   execute: async ({ suspend, resumeData, getInitData, runId }) => {
-    const { brandId, userId, brandUrl } = getInitData<{
+    const { brandId, userId } = getInitData<{
       brandId: string;
       userId: string;
-      brandUrl: string;
     }>();
 
     if (!resumeData) {
       const sb = adminClient();
+      const { data: brandRow } = await sb.from("brands").select("brand_url").eq("id", brandId).single();
       const { data: draft, error } = await sb
         .from("brand_intake_drafts")
         .upsert(
           {
             brand_id: brandId,
             user_id: userId,
-            source_url: brandUrl,
+            source_url: brandRow?.brand_url ?? null,
             status: "pending_approval",
             draft_profile: { _workflow_run_id: runId },
             updated_at: new Date().toISOString(),
@@ -207,21 +216,23 @@ const commitOrReject = createStep({
     // resumeData lives on saveDraftAndWait; we read approved from workflow state
     // ponytail: read workflow state via brand_intake_drafts + approved flag passed from approve route
     const sb = adminClient();
-    const { data: draft } = await sb
+    const { data: draft, error: draftErr } = await sb
       .from("brand_intake_drafts")
       .select("status")
       .eq("brand_id", brandId)
       .order("updated_at", { ascending: false })
       .limit(1)
       .single();
+    if (draftErr) throw new Error(`Failed to read draft: ${draftErr.message}`);
 
     const approved = draft?.status === "approved";
     const finalStatus = approved ? "ready" : "failed";
 
-    await sb
+    const { error: updateErr } = await sb
       .from("brands")
       .update({ intake_status: finalStatus, updated_at: new Date().toISOString() })
       .eq("id", brandId);
+    if (updateErr) throw new Error(`Failed to update brand status: ${updateErr.message}`);
 
     console.info(`[brand-intelligence:${runId}] ${approved ? "committed" : "rejected"} brand ${brandId}`);
     return { status: finalStatus };
