@@ -24,7 +24,7 @@ import { NavSidebar } from "./nav-sidebar";
 import styles from "./operator-shell.module.css";
 import { resolveAgentId } from "@/lib/route-agent-map";
 
-const SECTIONS = ["brand", "onboarding", "shoots", "assets", "campaigns", "matching"] as const;
+const SECTIONS = ["brand", "onboarding", "shoots", "assets", "campaigns", "matching", "preview"] as const;
 
 export function OperatorPanel({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();

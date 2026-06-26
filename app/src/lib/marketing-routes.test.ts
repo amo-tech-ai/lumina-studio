@@ -15,6 +15,7 @@ const OPERATOR_SECTIONS = [
   "campaigns",
   "matching",
   "onboarding",
+  "preview",
 ] as const;
 
 function marketingPagePath(urlPath: string): string {
