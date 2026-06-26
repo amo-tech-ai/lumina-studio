@@ -156,10 +156,11 @@ insert into public.image_specs (
   platform_id, image_type_id, width_px, height_px,
   aspect_ratio_w, aspect_ratio_h, aspect_ratio_label,
   accepted_formats, max_file_size_mb, background_required, product_fill_min_pct,
-  safe_zone_top_px, safe_zone_bottom_px, spec_confidence, shopping_support, crop_notes, last_verified_at)
+  safe_zone_top_px, safe_zone_bottom_px, spec_confidence,
+  organic, paid, shopping_support, crop_notes, last_verified_at)
 select p.id, t.id, s.w, s.h, s.arw, s.arh, s.arlabel,
        s.formats, s.maxmb, s.bg, s.fill, s.safetop, s.safebottom,
-       s.conf::public.spec_confidence, t.is_shopping, s.src, now()
+       s.conf::public.spec_confidence, t.is_organic, t.is_paid, t.is_shopping, s.src, now()
 from (values
   ('instagram', 'feed_post',     1080, 1350, 4,  5,  '4:5',  array['JPG','PNG','BMP'], 8::numeric,  null::text,  null::int, null::int, null::int, 'official', '§2.3'),
   ('instagram', 'story',         1080, 1920, 9,  16, '9:16', array['JPG','PNG'],       30::numeric, null,        null,      250,       250,       'official', '§2.6'),
