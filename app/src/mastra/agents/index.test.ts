@@ -3,10 +3,23 @@ import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it, vi } from "vitest";
 
-// Stub memory constructors (require DATABASE_URL) while preserving real exports like PlannerWorkingMemory
+// Stub the entire memory module — vi.importActual pulls @mastra/pg which needs DATABASE_URL.
+// PlannerWorkingMemory is inlined here so schema tests work without a DB.
 vi.mock("@/mastra/memory", async () => {
-  const actual = await vi.importActual<typeof import("@/mastra/memory")>("@/mastra/memory");
-  return { ...actual, getMastraMemory: () => ({}), getPlannerMemory: () => ({}) };
+  const { z } = await import("zod");
+  return {
+    getMastraMemory: () => ({}),
+    getPlannerMemory: () => ({}),
+    makeThreadId: (o: string, w: string, e: string) =>
+      `${encodeURIComponent(o)}/${w}/${encodeURIComponent(e)}`,
+    PlannerWorkingMemory: z.object({
+      brandName: z.string().optional(),
+      shootType: z.string().optional(),
+      approvedConcepts: z.array(z.string()).default([]),
+      pendingDecisions: z.array(z.string()).default([]),
+      lastUpdated: z.string().optional(),
+    }),
+  };
 });
 import {
   PlannerWorkingMemory,
