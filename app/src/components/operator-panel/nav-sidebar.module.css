@@ -1,0 +1,113 @@
+/* Nav rail — matches the threads-drawer surface vocabulary:
+   white card, hairline right border, same radius/type ramp. */
+
+.nav {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  height: 100dvh;
+  background: var(--card);
+  border-right: 1px solid var(--border);
+  font-family: var(--font-body);
+  transition: width 180ms ease;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.navClosed { width: 3.5rem; }
+.navOpen   { width: 14rem;  }
+
+/* Toggle button — top of the rail */
+.toggleBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 3rem;
+  border: 0;
+  border-bottom: 1px solid var(--border);
+  background: transparent;
+  color: var(--muted-foreground);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 140ms ease, color 140ms ease;
+}
+
+.toggleBtn:hover { background: var(--muted); color: var(--foreground); }
+
+.toggleIcon {
+  font-size: 1rem;
+  line-height: 1;
+  font-weight: 600;
+  /* ponytail: CSS text chevron — no icon lib needed */
+}
+
+/* Nav list */
+.list {
+  list-style: none;
+  margin: 0;
+  padding: 0.5rem 0.375rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  flex: 1;
+  overflow: hidden;
+}
+
+/* Shared item style (Link + button) */
+.item {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  width: 100%;
+  padding: 0.5rem 0.625rem;
+  border: 0;
+  border-radius: var(--radius, 0.625rem);
+  background: transparent;
+  color: var(--muted-foreground);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  line-height: 1;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background 140ms ease, color 140ms ease;
+  white-space: nowrap;
+}
+
+.item:hover { background: var(--accent); color: var(--foreground); }
+
+.itemActive {
+  background: color-mix(in oklch, #E87C4D 12%, transparent);
+  color: #E87C4D;
+}
+
+.itemActive:hover {
+  background: color-mix(in oklch, #E87C4D 18%, transparent);
+  color: #E87C4D;
+}
+
+.icon {
+  flex-shrink: 0;
+  width: 1.25rem;
+  text-align: center;
+  font-size: 1rem;
+  line-height: 1;
+}
+
+.label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Footer area (threads button) */
+.footer {
+  padding: 0.375rem;
+  border-top: 1px solid var(--border);
+}
+
+.footer .item { width: 100%; }
+
+/* Mobile: hide the rail entirely — CopilotSidebar handles chat on small screens */
+@media (max-width: 768px) {
+  .nav { display: none; }
+}
