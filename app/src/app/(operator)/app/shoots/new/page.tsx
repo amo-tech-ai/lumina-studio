@@ -455,7 +455,10 @@ export default function NewShootPage() {
             <HITLGate message="Review and approve these deliverables before the agent generates the shot list. Un-approved = no shot list." />
 
             <div className="flex justify-between">
-              <button onClick={() => setStep(1)} className="font-sans text-sm text-[#64748B] hover:underline">
+              <button
+                onClick={() => { update({ runId: null, shots: [], uncoveredWarnings: [] }); setStep(1); }}
+                className="font-sans text-sm text-[#64748B] hover:underline"
+              >
                 ← Revise brief
               </button>
               <button
@@ -529,7 +532,10 @@ export default function NewShootPage() {
             <HITLGate message="Approve shot list to proceed to budget estimate. All deliverables must be covered." />
 
             <div className="flex justify-between">
-              <button onClick={() => setStep(2)} className="font-sans text-sm text-[#64748B] hover:underline">
+              <button
+                onClick={() => { update({ runId: null, shots: [], uncoveredWarnings: [] }); setStep(2); }}
+                className="font-sans text-sm text-[#64748B] hover:underline"
+              >
                 ← Edit deliverables
               </button>
               <button
