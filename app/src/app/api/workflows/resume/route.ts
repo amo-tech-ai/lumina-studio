@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { mastra } from "@/mastra";
+import { getMastra } from "@/mastra";
 
 // POST /api/workflows/resume
 // Body: { workflowId, runId, stepId, resumeData }
@@ -9,7 +9,7 @@ export async function POST(req: NextRequest) {
     if (!workflowId || !runId || !stepId) {
       return NextResponse.json({ error: "workflowId, runId, and stepId are required" }, { status: 400 });
     }
-    const run = await mastra.getWorkflow(workflowId).createRun({ runId });
+    const run = await getMastra().getWorkflow(workflowId).createRun({ runId });
     const result = await run.resume({ step: stepId, resumeData });
     // ponytail: return suspendPayload so the client reads workflow-computed data (shots, budget)
     // instead of recalculating locally — avoids DRY violation and state drift

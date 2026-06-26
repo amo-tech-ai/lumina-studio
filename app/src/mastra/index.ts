@@ -11,21 +11,12 @@ const LOG_LEVEL: LogLevel = VALID_LOG_LEVELS.includes(rawLogLevel as LogLevel)
   ? (rawLogLevel as LogLevel)
   : "info";
 
-// Registry keys ARE the agent names the runtime exposes (via getLocalAgents) and
-// the frontend useAgent({ agentId }) must match these exactly.
-// default is a compatibility alias for CopilotKit prebuilt UI/runtime sync;
-// real app code should use production-planner.
-// IPI-133: durable agents replace raw agents in the registry so streams are resumable.
 export const agents = {
   ...durableAgents,
   "visual-identity": visualIdentityAgent,
   "social-discovery": socialDiscoveryAgent,
 };
 
-// Regression guard: fail fast at server start / build if a required agent id is
-// ever renamed or dropped. Without this, a missing id only shows up as a cryptic
-// React "Agent '<id>' not found after runtime sync" overlay at runtime. "default"
-// is mandatory — CopilotKit's prebuilt UI resolves it when no agentId is selected.
 export const REQUIRED_AGENT_IDS = [
   "default",
   "production-planner",
