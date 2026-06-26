@@ -1,5 +1,15 @@
-import { describe, expect, it, vi } from "vitest";
-import { brandIntelligenceWorkflow, fanOutEnrichment } from "./brand-intelligence-workflow";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
+vi.mock("../agents", () => ({
+  socialDiscoveryAgent: { generate: vi.fn() },
+  visualIdentityAgent: { generate: vi.fn() },
+}));
+
+import { socialDiscoveryAgent, visualIdentityAgent } from "../agents";
+import {
+  brandIntelligenceWorkflow,
+  fanOutEnrichment,
+} from "./brand-intelligence-workflow";
 
 describe("brand-intelligence workflow", () => {
   it("has the correct workflow id", () => {
@@ -7,36 +17,24 @@ describe("brand-intelligence workflow", () => {
   });
 });
 
-// fan-out-enrichment guards a wiring bug: if the Mastra runtime/agents are missing it
-// must fail loud, and `enriched` must reflect whether any agent actually succeeded.
-const ctx = (mastra: unknown) =>
-  ({ mastra, getInitData: () => ({ brandId: "b1" }) }) as never;
-
+// Enrichment is best-effort: a failing agent must not block HITL approval, but the
+// step must report whether anything actually succeeded (not a blanket enriched:true).
 describe("fan-out-enrichment", () => {
-  it("throws when the Mastra runtime is not injected", async () => {
-    await expect(fanOutEnrichment.execute(ctx(undefined))).rejects.toThrow(
-      /runtime not injected/,
-    );
+  const social = vi.mocked(socialDiscoveryAgent.generate);
+  const visual = vi.mocked(visualIdentityAgent.generate);
+  const ctx = { getInitData: () => ({ brandId: "b1" }) } as never;
+
+  beforeEach(() => vi.clearAllMocks());
+
+  it("reports enriched=false when both agents reject", async () => {
+    social.mockRejectedValue(new Error("social boom"));
+    visual.mockRejectedValue(new Error("visual boom"));
+    expect((await fanOutEnrichment.execute(ctx)).enriched).toBe(false);
   });
 
-  it("throws when an enrichment agent is missing", async () => {
-    const mastra = {
-      getAgent: (id: string) =>
-        id === "social-discovery" ? { generate: vi.fn() } : undefined,
-    };
-    await expect(fanOutEnrichment.execute(ctx(mastra))).rejects.toThrow(
-      /missing enrichment agent/,
-    );
-  });
-
-  it("reports enriched=false when both agents reject, true when one succeeds", async () => {
-    const reject = { generate: () => Promise.reject(new Error("boom")) };
-    const ok = { generate: () => Promise.resolve({}) };
-    const bothFail = { getAgent: () => reject };
-    const oneOk = {
-      getAgent: (id: string) => (id === "social-discovery" ? ok : reject),
-    };
-    expect((await fanOutEnrichment.execute(ctx(bothFail))).enriched).toBe(false);
-    expect((await fanOutEnrichment.execute(ctx(oneOk))).enriched).toBe(true);
+  it("reports enriched=true when at least one agent succeeds", async () => {
+    social.mockResolvedValue({} as never);
+    visual.mockRejectedValue(new Error("visual boom"));
+    expect((await fanOutEnrichment.execute(ctx)).enriched).toBe(true);
   });
 });

@@ -141,7 +141,7 @@ const extractProfile = createStep({
 });
 
 // Step 5: parallel social + visual enrichment (best-effort)
-// Exported for unit tests (missing-runtime + enriched-result branches).
+// Exported for unit tests (enriched-result branches).
 export const fanOutEnrichment = createStep({
   id: "fan-out-enrichment",
   inputSchema: z.object({ ok: z.boolean() }),
