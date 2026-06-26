@@ -26,6 +26,7 @@ import { ReAnalyzeButton } from "@/components/brand-hub/re-analyze-button";
 import { ScoresTab } from "@/components/brand-hub/scores-tab";
 import { cn } from "@/lib/utils";
 import { useBrandContext } from "@/components/brand-hub/brand-context";
+import { ApprovalCard } from "@/components/brand-hub/approval-card";
 import { DraftBanner } from "@/components/brand-hub/draft-banner";
 
 export type BrandHubClientProps = {
@@ -40,6 +41,8 @@ export type BrandHubClientProps = {
   dnaScore: number;
   profile: AiProfile;
   draftProfile: AiProfile | null;
+  draftScores?: BrandScoreDetail[];
+  workflowRunId?: string | null;
   displayScores: BrandScoreDetail[];
   baseScores: BrandScoreDetail[];
   activityEvents: ActivityEvent[];
@@ -59,6 +62,8 @@ export const BrandHubClient = ({
   dnaScore,
   profile,
   draftProfile,
+  draftScores = [],
+  workflowRunId,
   displayScores,
   baseScores,
   activityEvents,
@@ -151,7 +156,9 @@ export const BrandHubClient = ({
           errorMessage={profile._error}
         />
         {intakeStatus === "draft_ready" && draftProfile && (
-          <DraftBanner brandId={brandId} draft={draftProfile} />
+          workflowRunId
+            ? <ApprovalCard brandId={brandId} runId={workflowRunId} draft={draftProfile} draftScores={draftScores} liveScores={displayScores} />
+            : <DraftBanner brandId={brandId} draft={draftProfile} />
         )}
 
         <div className="-mx-1 flex gap-1 overflow-x-auto border-b border-[#E8E0D8] pb-px">
