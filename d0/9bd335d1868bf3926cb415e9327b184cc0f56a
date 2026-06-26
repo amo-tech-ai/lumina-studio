@@ -1,0 +1,35 @@
+app/src/components/shoot/hitl/DeliverableApprovalCard.tsx
+  s_a8ff79a3fcfbf6::t_f5a4b4a04dd8a1 1-103
+supabase/functions/save-approved-shoot-draft/index.ts
+  s_a8ff79a3fcfbf6::t_36ac4777722924 107
+  s_a8ff79a3fcfbf6::t_9b854f7e3edb93 1-82,85-106,108-122,124-155
+  s_a8ff79a3fcfbf6::t_4bef600bcac1af 83-84
+  s_a8ff79a3fcfbf6::t_d42729809abf37 123
+app/src/components/shoot/hitl/BudgetApprovalCard.tsx
+  s_a8ff79a3fcfbf6::t_f66fd569978345 1-65
+app/src/components/shoot/hitl/ShotListApprovalCard.tsx
+  s_a8ff79a3fcfbf6::t_77ff79623621f4 1-74
+app/src/app/(operator)/app/shoots/new/page.tsx
+  s_a8ff79a3fcfbf6::t_c867e8978f45d7 495-499
+  s_a8ff79a3fcfbf6::t_3fea4a98f12b85 5-7
+  s_a8ff79a3fcfbf6::t_8d84789db4613f 421-434
+  s_a8ff79a3fcfbf6::t_8a1aa8fa6a042b 543-548
+  s_a8ff79a3fcfbf6::t_ea7c6e438ac946 462-467
+  s_a8ff79a3fcfbf6::t_8624050fd0bcf4 233,245-247,259-287
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.13",
+  "base_commit_sha": "d09bd335d1868bf3926cb415e9327b184cc0f56a",
+  "prompts": {},
+  "sessions": {
+    "s_a8ff79a3fcfbf6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a23755b0-cfc9-4f93-ae6b-754247f21af5",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
