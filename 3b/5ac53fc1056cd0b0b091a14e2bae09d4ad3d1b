@@ -1,0 +1,39 @@
+app/src/app/(operator)/app/shoots/page.tsx
+  s_ffc2c0ed18a264::t_e40effd673006b 7
+  s_ffc2c0ed18a264::t_721f0f5c4eaa13 24
+  s_ffc2c0ed18a264::t_c699281b094212 49
+supabase/functions/save-approved-shoot-draft/index.ts
+  s_ffc2c0ed18a264::t_4d34d3adc807f6 129-130,147-148
+  s_ffc2c0ed18a264::t_554f6e5f6ffa2a 75-85
+  s_ffc2c0ed18a264::t_9f41200890a46a 26
+app/src/app/(operator)/app/shoots/new/page.tsx
+  s_ffc2c0ed18a264::t_cf464fb58b3991 91,99,106
+  s_ffc2c0ed18a264::t_c7401fdb85076c 4-5
+  s_a8ff79a3fcfbf6::t_03e67e2eafe8d1 137
+  s_ffc2c0ed18a264::t_95f1b461f4e751 275-278,285,301-302
+  s_a8ff79a3fcfbf6::t_5ce6588fc0ac9f 396
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.3",
+  "base_commit_sha": "3b5ac53fc1056cd0b0b091a14e2bae09d4ad3d1b",
+  "prompts": {},
+  "sessions": {
+    "s_a8ff79a3fcfbf6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a23755b0-cfc9-4f93-ae6b-754247f21af5",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    },
+    "s_ffc2c0ed18a264": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "24435d7f-d1b2-4ddd-bb4f-afdb9bbcd85d",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
