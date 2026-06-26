@@ -138,7 +138,7 @@ Deno.serve(async (req: Request) => {
 
   const { data: job } = await admin
     .from("brand_crawls")
-    .select("id, brand_id, started_at, started_by")
+    .select("id, brand_id, started_at, started_by, workflow_id")
     .eq("firecrawl_job_id", firecrawlJobId)
     .maybeSingle();
 
@@ -259,6 +259,21 @@ Deno.serve(async (req: Request) => {
         { job_status: "complete", pages_crawled: pages.length },
         duration_ms,
       );
+
+      // IPI-32: resume Mastra brand-intelligence workflow if one is waiting
+      const workflowRunId = job?.workflow_id ?? meta?.workflow_id;
+      if (workflowRunId) {
+        const appUrl = Deno.env.get("NEXT_PUBLIC_APP_URL") ?? Deno.env.get("APP_URL");
+        const secret = Deno.env.get("INTERNAL_WEBHOOK_SECRET");
+        if (appUrl && secret) {
+          fetch(`${appUrl}/api/workflows/brand-intelligence/resume`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "X-Internal-Secret": secret },
+            body: JSON.stringify({ runId: workflowRunId, crawlId }),
+          }).catch((e: unknown) => console.warn("workflow resume call failed:", e));
+        }
+      }
+
       return;
     }
 

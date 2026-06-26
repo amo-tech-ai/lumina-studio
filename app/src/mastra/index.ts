@@ -2,6 +2,7 @@ import { Mastra } from "@mastra/core/mastra";
 import { LibSQLStore } from "@mastra/libsql";
 import { visualIdentityAgent, socialDiscoveryAgent } from "./agents";
 import { durableAgents } from "./durable";
+import { brandIntelligenceWorkflow } from "./workflows/brand-intelligence-workflow";
 import { ConsoleLogger, LogLevel } from "@mastra/core/logger";
 
 const VALID_LOG_LEVELS: LogLevel[] = ["debug", "info", "warn", "error"];
@@ -42,6 +43,8 @@ for (const id of REQUIRED_AGENT_IDS) {
 
 export const mastra = new Mastra({
   agents,
+  workflows: { "brand-intelligence": brandIntelligenceWorkflow },
+  // ponytail: in-memory store — workflow state lost on restart; durable on IPI-129
   storage: new LibSQLStore({
     id: "mastra-storage",
     url: ":memory:",
