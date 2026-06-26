@@ -48,8 +48,8 @@ create table if not exists public.image_type_defs (
 
 create table if not exists public.image_specs (
   id                     uuid primary key default gen_random_uuid(),
-  platform_id            uuid references public.platforms(id) on delete cascade,
-  image_type_id          uuid references public.image_type_defs(id) on delete cascade,
+  platform_id            uuid not null references public.platforms(id) on delete cascade,
+  image_type_id          uuid not null references public.image_type_defs(id) on delete cascade,
   width_px               integer not null,
   height_px              integer not null,
   min_width_px           integer,
@@ -156,10 +156,10 @@ insert into public.image_specs (
   platform_id, image_type_id, width_px, height_px,
   aspect_ratio_w, aspect_ratio_h, aspect_ratio_label,
   accepted_formats, max_file_size_mb, background_required, product_fill_min_pct,
-  safe_zone_top_px, safe_zone_bottom_px, spec_confidence, crop_notes, last_verified_at)
+  safe_zone_top_px, safe_zone_bottom_px, spec_confidence, shopping_support, crop_notes, last_verified_at)
 select p.id, t.id, s.w, s.h, s.arw, s.arh, s.arlabel,
        s.formats, s.maxmb, s.bg, s.fill, s.safetop, s.safebottom,
-       s.conf::public.spec_confidence, s.src, now()
+       s.conf::public.spec_confidence, t.is_shopping, s.src, now()
 from (values
   ('instagram', 'feed_post',     1080, 1350, 4,  5,  '4:5',  array['JPG','PNG','BMP'], 8::numeric,  null::text,  null::int, null::int, null::int, 'official', '§2.3'),
   ('instagram', 'story',         1080, 1920, 9,  16, '9:16', array['JPG','PNG'],       30::numeric, null,        null,      250,       250,       'official', '§2.6'),

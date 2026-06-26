@@ -164,19 +164,19 @@ Photographers · videographers · models (with measurements) · stylists · hair
 
 ## 9. Database — net-new only (existing tables in §2)
 
-Full DDL in [40-media-intelligence-plan.md](40-media-intelligence-plan.md) §2–3. New tables, all `public`, RLS via `org_members`:
+Full DDL in [40-media-intelligence-plan.md](40-media-intelligence-plan.md) §2–3. New tables, all `public`. RLS model differs by table purpose:
 
-| Table | Phase | Purpose |
-|---|---|---|
-| `platforms`, `image_type_defs`, `image_specs`, `recommendation_rules` | MVP | spec grounding (seed from image KB) |
-| `media_recommendations` | P2 | persisted agent output (priority/confidence/reasoning) |
-| `industry_playbooks` | P2 | buyer -> asset mix (5 verticals) |
-| `asset_coverage_scores` | P2 | gap score per brand |
-| `video_type_specs`, `video_recommendation_rules` | P2 | video grounding (seed from video KB) |
-| `publish_jobs` | P3 | publishing queue |
-| embeddings (pgvector) | P3 | RAG |
+| Table | Phase | RLS | Purpose |
+|---|---|---|---|
+| `platforms`, `image_type_defs`, `image_specs`, `recommendation_rules` | MVP | **Global reference** — no `brand_id`; one authenticated `SELECT` policy, writes seed-only | spec grounding (seed from image KB) |
+| `video_type_specs`, `video_recommendation_rules` | P2 | **Global reference** — authenticated `SELECT` only | video grounding (seed from video KB) |
+| `media_recommendations` | P2 | **Tenant-scoped** via `org_members`/`brand_id` | persisted agent output (priority/confidence/reasoning) |
+| `industry_playbooks` | P2 | **Tenant-scoped** via `org_members`/`brand_id` | buyer -> asset mix (5 verticals) |
+| `asset_coverage_scores` | P2 | **Tenant-scoped** via `org_members`/`brand_id` | gap score per brand |
+| `publish_jobs` | P3 | **Tenant-scoped** via `org_members`/`brand_id` | publishing queue |
+| embeddings (pgvector) | P3 | Tenant-scoped | RAG |
 
-**Best-practice gate (per `ipix-supabase` skill):** every table — RLS enabled, FKs + `brand_id`/`status` indexed, `timestamptz`/`jsonb` only, seeds via hand-written migration (diff can't capture DML), reviewed by `migration-reviewer`. Spec values seeded **verbatim** from the KB — zero invented numbers.
+**Best-practice gate (per `ipix-supabase` skill):** every table — RLS enabled, `timestamptz`/`jsonb` only, seeds via hand-written migration (diff can't capture DML), reviewed by `migration-reviewer`. Global reference tables: FK + lookup-column indexes, authenticated read-only. Tenant tables: `brand_id`/`status` indexed, `org_members`-scoped policies. Spec values seeded **verbatim** from the KB — zero invented numbers.
 
 ---
 

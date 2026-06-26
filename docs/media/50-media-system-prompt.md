@@ -1,5 +1,10 @@
 # Build the Complete AI-Native FashionOS System
 
+> ⚠️ **Scope is already decided — ground every answer in it, do not expand past it.** This brief enumerates the full ambition; the binding scope lives in [`prd-media.md`](prd-media.md) §10 and [`roadmap-media.md`](roadmap-media.md). Before generating any deliverable below, honour these cuts:
+> - **Agents:** 6 existing agents only (`production-planner`, `creative-director`, `social-discovery`, `public-marketing`, `visual-identity`, + 1 conditional `media-advisor`). The long role list below maps to those agents and to `industry_playbooks` seed rows — **do not design 18 agents.**
+> - **Integrations:** Cloudinary + Postiz + Stripe + Shopify/Amazon **export** only. Other channel publishing routes **through Postiz**, not direct integrations. WhatsApp/Chatwoot/Calendar are cut.
+> - **Phasing:** MVP = grounded image specs; everything else is Phase 2/3 per the roadmap. The "Challenge every feature" rule at the end applies to every section — reuse existing schema/agents before proposing new ones.
+
 ## Objective
 
 Using all available Claude Code skills, build a complete, production-ready plan for an AI-native FashionOS platform.
@@ -88,6 +93,8 @@ Design:
 ---
 
 # AI Agents
+
+> **Constraint (per [`prd-media.md`](prd-media.md) §10):** implement only the 6 existing agents. The roles below are capabilities of those agents or `industry_playbooks` seed rows — consultant-style roles (Jewelry/Beauty/Fashion Consultant, etc.) are playbook rows, **not** separate agents.
 
 Design specialized agents including:
 
@@ -475,6 +482,8 @@ Design:
 ---
 
 # Integrations
+
+> **Constraint (per [`prd-media.md`](prd-media.md) §10):** direct integrations are Cloudinary, Postiz, Stripe, and Shopify/Amazon **export** only. All social/channel publishing fans out **through Postiz** — do not design direct IG/TikTok/FB/Pinterest/YouTube integrations. WhatsApp/Chatwoot/Calendar are deferred.
 
 Design integrations for:
 

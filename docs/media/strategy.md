@@ -65,7 +65,7 @@ A fashion brand books a $5,000 shoot and walks out with 40 hero shots and nothin
 
 Today's workflow:
 
-```
+```text
 Brand manager Googles "Instagram image size 2026"
 → copies last season's shot list
 → emails freelancer
@@ -139,7 +139,7 @@ Agent-recommended deliverables become shoot wizard step 1. Operator reviews and 
 
 ### Full system flow (target state)
 
-```
+```text
 Brand URL
   ↓
 Brand DNA analysis (IPI-29, IPI-46)
@@ -392,7 +392,7 @@ erDiagram
 
 ### Data flow: recommendation → brief → validation
 
-```
+```text
 brands.active_channels
   ↓
 lookupChannelSpecs(channel_slugs)

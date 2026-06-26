@@ -40,7 +40,7 @@ If a feature doesn't move one of those three, it's Phase 3 or cut.
 
 ## 2. Architecture (modular monolith — no microservices)
 
-```
+```text
 React + Vite + TS + Tailwind + shadcn/ui
         │  CopilotKit (chat + generative UI, streaming)
         ▼
@@ -205,21 +205,21 @@ Full story set is generated per MI-NN issue at planning time, not pre-written he
 
 | # | Brief deliverable | Where |
 |---|---|---|
-| 1 Product architecture | §2 |
-| 2 PRD | §1 + per-MI Linear issues |
-| 3–6 Technical/Frontend/Backend/AI architecture | §2, §8 |
-| 7 Database design | [40-plan](40-media-intelligence-plan.md) §2–3 |
-| 8–9 User/stakeholder journeys | §9 |
-| 10 User stories | §9 + per-MI issues |
-| 11 Workflow diagrams | `shoot-wizard` + 40-plan; add mermaid per issue |
-| 12 Agent specs | §3 + [media-agent-plan.md](media-agent-plan.md) §2,§6–7 |
-| 13 Integration specs | §7 |
-| 14 API design | edge-fn + tool contracts (per MI) |
-| 15 AI prompt library | agent instructions in `agents/index.ts` + per-tool prompts |
-| 16 Implementation roadmap | §5–6 |
-| 17 MVP checklist | §5 |
-| 18–19 Phase 2/3 roadmap | §6 |
-| 20 Risks/assumptions/simplifications | §10 |
+| 1 | Product architecture | §2 |
+| 2 | PRD | §1 + per-MI Linear issues |
+| 3–6 | Technical/Frontend/Backend/AI architecture | §2, §8 |
+| 7 | Database design | [40-plan](40-media-intelligence-plan.md) §2–3 |
+| 8–9 | User/stakeholder journeys | §9 |
+| 10 | User stories | §9 + per-MI issues |
+| 11 | Workflow diagrams | `shoot-wizard` + 40-plan; add mermaid per issue |
+| 12 | Agent specs | §3 + [media-agent-plan.md](media-agent-plan.md) §2,§6–7 |
+| 13 | Integration specs | §7 |
+| 14 | API design | edge-fn + tool contracts (per MI) |
+| 15 | AI prompt library | agent instructions in `agents/index.ts` + per-tool prompts |
+| 16 | Implementation roadmap | §5–6 |
+| 17 | MVP checklist | §5 |
+| 18–19 | Phase 2/3 roadmap | §6 |
+| 20 | Risks/assumptions/simplifications | §10 |
 
 ---
 

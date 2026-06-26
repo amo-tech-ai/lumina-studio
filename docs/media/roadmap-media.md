@@ -37,14 +37,14 @@ gantt
 
 | MI ID | Work item | What | Builds on |
 |---|---|---|---|
-| MI-01 | Spec tables + seed | `platforms`+`image_type_defs`+`image_specs`+`recommendation_rules` in `public`, seeded verbatim from image KB, RLS via `org_members` | new |
+| MI-01 | Spec tables + seed | `platforms`+`image_type_defs`+`image_specs`+`recommendation_rules` in `public`, seeded verbatim from image KB — **global reference data**: no `brand_id`, authenticated read-only `SELECT` | new |
 | MI-02 | `lookupChannelSpecs` tool | `channels[] -> spec rows`; mirrors existing `lookupShotReferences` | `production-planner` |
 | MI-03 | Wizard step-1 surfacing | show required specs next to existing shot-type suggestions | `shoot-wizard` |
 
 **Exit criterion:** "what image specs for Instagram feed?" -> `1080×1350, 4:5, JPEG/PNG ≤8MB` from DB. Unknown channel -> empty, not a guess.
 
 **Checklist:**
-- [ ] MI-01 migration reviewed by `migration-reviewer`; RLS = `org_members`; FKs + `brand_id`/`status` indexed
+- [ ] MI-01 migration reviewed by `migration-reviewer`; RLS = authenticated read-only (global reference, no `brand_id`); FK + lookup-column indexes
 - [ ] Seed = image KB §13.2 verbatim
 - [ ] MI-02 registered on `production-planner`, returns only DB rows
 - [ ] MI-03 renders with loading/error/empty/success states

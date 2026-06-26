@@ -577,7 +577,7 @@ Instagram is the primary visual platform for fashion, beauty, and lifestyle bran
 
 | Spec | Value |
 |------|-------|
-| Recommended dimensions | 1200 × 627 px ✅ |
+| Recommended dimensions | 1200 × 628 px ✅ |
 | Minimum width | 200 px ✅ |
 | Aspect ratio | ~1.91:1 |
 | File formats | JPG, PNG, GIF |
@@ -966,7 +966,7 @@ These rules encode decision logic for the FashionOS production-planner agent.
 
 ### 12.1 Channel → Required Image Specs
 
-```
+```text
 given channels: string[] → required_specs: ImageSpec[]
 
 IF "instagram" IN channels:
@@ -1119,7 +1119,7 @@ IF organic_priority OR campaign_budget == 0:
     Pinterest pin:    1000×1500 (2:3)
     TikTok carousel:  1080×1920 (9:16)
     Facebook post:    1080×1080 (1:1)
-    LinkedIn post:    1200×627 (1.91:1)
+    LinkedIn post:    1200×628 (1.91:1)
 ```
 
 ---

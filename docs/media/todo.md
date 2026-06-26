@@ -36,7 +36,7 @@ Assets/pay/publish: **Cloudinary** · **Stripe** · **Postiz**
 
 | Seq | ID | Status | Task | Blocked by |
 |---|---|---|---|---|
-| 1 | MI-01 | ⚪ | Spec tables migration + seed: `platforms`, `image_type_defs`, `image_specs`, `recommendation_rules` (public, RLS via `org_members`, seed verbatim from image KB) | — |
+| 1 | MI-01 | ⚪ | Spec tables migration + seed: `platforms`, `image_type_defs`, `image_specs`, `recommendation_rules` (public, **global reference data** — no `brand_id`, authenticated read-only `SELECT`; seed verbatim from image KB) | — |
 | 2 | MI-01a | ⚪ | `migration-reviewer` pass: RLS predicate, FK + `brand_id`/`status` indexes, `timestamptz`/`jsonb` only | MI-01 |
 | 3 | MI-02 | ⚪ | `lookupChannelSpecs` tool (`channels[] → spec rows`), mirror `lookupShotReferences`; register on `production-planner` | MI-01 |
 | 4 | MI-03 | ⚪ | Shoot Wizard step-1: surface required specs next to shot-type suggestions (loading/error/empty/success) | MI-02 |

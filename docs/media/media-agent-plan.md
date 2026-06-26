@@ -1,6 +1,6 @@
 # iPix AI Media Advisor — Technical Build Plan
 
-> ⚠️ **SUPERSEDED for schema, tenancy, and issue numbers by [`40-media-intelligence-plan.md`](40-media-intelligence-plan.md).** Known wrong here: "four agents" (six exist), RLS via `brand_members` (no such table — use `org_members`), and `IPI-200…234` (invented, collide with real issues). Personas (§2), playbooks (§6–7), and Appendix A Zod types remain good — use them with the corrected schema.
+> ⚠️ **SUPERSEDED for schema, tenancy, and issue numbers by [`40-media-intelligence-plan.md`](40-media-intelligence-plan.md).** Known wrong here: "four agents" (six exist), RLS via `brand_members` (no such table — use `org_members`), and `IPI-XXX…234` (invented, collide with real issues). Personas (§2), playbooks (§6–7), and Appendix A Zod types remain good — use them with the corrected schema.
 
 **Version:** 1.0
 **Date:** 2026-06-27
@@ -1233,9 +1233,12 @@ CREATE POLICY "brand operators can view their own recommendations"
     )
   );
 
+-- Writes are service-role only (the service_role key bypasses RLS). No
+-- authenticated INSERT policy is granted, so the agent's edge function — using
+-- the service-role key — is the only path that can persist a recommendation.
 CREATE POLICY "service role can write recommendations"
   ON media_recommendations FOR INSERT
-  WITH CHECK (true);  -- restricted to service_role key in agent
+  WITH CHECK ((SELECT auth.jwt() ->> 'role') = 'service_role');
 ```
 
 ### 8.4 Key Queries
@@ -1285,45 +1288,45 @@ WHERE industry_slug = $1;
 
 | IPI Issue | Feature | File(s) | Notes |
 |-----------|---------|---------|-------|
-| IPI-200 | `media-advisor` agent definition | `agents/media-advisor.ts` | New agent; model + memory + tools wired |
-| IPI-201 | `MediaBrief` Zod schema + TypeScript types | `lib/types/media.ts` | Shared across agent + API |
-| IPI-202 | Discovery flow conversation (Steps 1-5) | `agents/media-advisor.ts` instructions | Operator-facing UX |
-| IPI-203 | `generateChannelRequirements` tool | `tools/media-advisor/channel-requirements.ts` | Queries `image_specs` table |
-| IPI-204 | `recommendMissingAssets` tool | `tools/media-advisor/missing-assets.ts` | Implements section 12.5 from 02-image-types.md |
-| IPI-205 | DB migration: `media_briefs` + `media_recommendations` + `asset_coverage_scores` | `supabase/migrations/` | See section 8.2 |
-| IPI-206 | DB migration: `industry_playbooks` seed data | `supabase/seeds/industry-playbooks.sql` | Section 6 data |
+| IPI-XXX | `media-advisor` agent definition | `agents/media-advisor.ts` | New agent; model + memory + tools wired |
+| IPI-XXX | `MediaBrief` Zod schema + TypeScript types | `lib/types/media.ts` | Shared across agent + API |
+| IPI-XXX | Discovery flow conversation (Steps 1-5) | `agents/media-advisor.ts` instructions | Operator-facing UX |
+| IPI-XXX | `generateChannelRequirements` tool | `tools/media-advisor/channel-requirements.ts` | Queries `image_specs` table |
+| IPI-XXX | `recommendMissingAssets` tool | `tools/media-advisor/missing-assets.ts` | Implements section 12.5 from 02-image-types.md |
+| IPI-XXX | DB migration: `media_briefs` + `media_recommendations` + `asset_coverage_scores` | `supabase/migrations/` | See section 8.2 |
+| IPI-XXX | DB migration: `industry_playbooks` seed data | `supabase/seeds/industry-playbooks.sql` | Section 6 data |
 
 ### Sprint 2 — Recommendation Engine
 
 | IPI Issue | Feature | File(s) | Notes |
 |-----------|---------|---------|-------|
-| IPI-210 | `recommendImageTypes` tool | `tools/media-advisor/recommend-image-types.ts` | Core recommendation logic |
-| IPI-211 | `recommendVideoTypes` tool | `tools/media-advisor/recommend-video-types.ts` | Platform video format matrix |
-| IPI-212 | `recommendCreativeMix` tool | `tools/media-advisor/recommend-creative-mix.ts` | Reads `industry_playbooks` |
-| IPI-213 | `scoreAssetCoverage` tool | `tools/media-advisor/score-asset-coverage.ts` | Writes to `asset_coverage_scores` |
-| IPI-214 | `MediaRecommendation` output builder | `tools/media-advisor/build-recommendation.ts` | Assembles all tool outputs |
-| IPI-215 | `confirmMediaRecommendation` tool | `tools/media-advisor/confirm-recommendation.ts` | HITL gate -> writes `shoot_briefs` for production-planner |
+| IPI-XXX | `recommendImageTypes` tool | `tools/media-advisor/recommend-image-types.ts` | Core recommendation logic |
+| IPI-XXX | `recommendVideoTypes` tool | `tools/media-advisor/recommend-video-types.ts` | Platform video format matrix |
+| IPI-XXX | `recommendCreativeMix` tool | `tools/media-advisor/recommend-creative-mix.ts` | Reads `industry_playbooks` |
+| IPI-XXX | `scoreAssetCoverage` tool | `tools/media-advisor/score-asset-coverage.ts` | Writes to `asset_coverage_scores` |
+| IPI-XXX | `MediaRecommendation` output builder | `tools/media-advisor/build-recommendation.ts` | Assembles all tool outputs |
+| IPI-XXX | `confirmMediaRecommendation` tool | `tools/media-advisor/confirm-recommendation.ts` | HITL gate -> writes `shoot_briefs` for production-planner |
 
 ### Sprint 3 — UI + Campaign Workflows
 
 | IPI Issue | Feature | File(s) | Notes |
 |-----------|---------|---------|-------|
-| IPI-220 | Media Advisor chat page | `app/brand/[id]/media-advisor/` | Frontend UI |
-| IPI-221 | Discovery flow UI (channel selector, budget tier, campaign type) | Component in media-advisor page | Wizard-style multi-step |
-| IPI-222 | Recommendation display UI (image type cards, coverage score) | `MediaRecommendationPanel` component | Shows rec output |
-| IPI-223 | Asset coverage score badge on brand dashboard | `BrandDashboard` component | Alert when score < 60 |
-| IPI-224 | 7 campaign workflow triggers | Agent instruction + tool routing | brand_launch, product_launch, collection_launch, seasonal, bfcm, influencer, retargeting |
-| IPI-225 | `image_specs` + `platforms` DB migration | `supabase/migrations/` | From section 13.2 of 02-image-types.md |
+| IPI-XXX | Media Advisor chat page | `app/brand/[id]/media-advisor/` | Frontend UI |
+| IPI-XXX | Discovery flow UI (channel selector, budget tier, campaign type) | Component in media-advisor page | Wizard-style multi-step |
+| IPI-XXX | Recommendation display UI (image type cards, coverage score) | `MediaRecommendationPanel` component | Shows rec output |
+| IPI-XXX | Asset coverage score badge on brand dashboard | `BrandDashboard` component | Alert when score < 60 |
+| IPI-XXX | 7 campaign workflow triggers | Agent instruction + tool routing | brand_launch, product_launch, collection_launch, seasonal, bfcm, influencer, retargeting |
+| IPI-XXX | `image_specs` + `platforms` DB migration | `supabase/migrations/` | From section 13.2 of 02-image-types.md |
 
 ### Sprint 4 — Industry Playbooks + Quality
 
 | IPI Issue | Feature | File(s) | Notes |
 |-----------|---------|---------|-------|
-| IPI-230 | Industry playbook seeds: Fashion, Luxury, Beauty, Jewelry, Accessories, Streetwear, Swimwear | `supabase/seeds/` | 7 playbooks from section 6 |
-| IPI-231 | `media-advisor` agent test suite | `agents/media-advisor.test.ts` | Mock brand profiles -> assert rec shape |
-| IPI-232 | Creative fatigue monitoring (ad asset age > 21 days alert) | `tools/media-advisor/creative-fatigue.ts` | Checks `media_recommendations.confirmed_at` |
-| IPI-233 | Seasonal campaign auto-detection | `tools/media-advisor/detect-season.ts` | Date-based + brand schedule |
-| IPI-234 | BFCM + holiday campaign workflow | Agent instruction + tool routing | See section 7.5 |
+| IPI-XXX | Industry playbook seeds: Fashion, Luxury, Beauty, Jewelry, Accessories, Streetwear, Swimwear | `supabase/seeds/` | 7 playbooks from section 6 |
+| IPI-XXX | `media-advisor` agent test suite | `agents/media-advisor.test.ts` | Mock brand profiles -> assert rec shape |
+| IPI-XXX | Creative fatigue monitoring (ad asset age > 21 days alert) | `tools/media-advisor/creative-fatigue.ts` | Checks `media_recommendations.confirmed_at` |
+| IPI-XXX | Seasonal campaign auto-detection | `tools/media-advisor/detect-season.ts` | Date-based + brand schedule |
+| IPI-XXX | BFCM + holiday campaign workflow | Agent instruction + tool routing | See section 7.5 |
 
 ---
 

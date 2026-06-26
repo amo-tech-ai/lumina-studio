@@ -368,7 +368,7 @@ The first 3 seconds determine whether a viewer watches or scrolls. For fashion a
 ### 4.2 Storytelling Structure by Video Type
 
 **Reels / TikTok (15–30s):**
-```
+```text
 0–3s:   Hook — product reveal or tension
 3–10s:  Story / demonstration
 10–20s: Payoff / outcome
@@ -800,10 +800,14 @@ CREATE TYPE video_category AS ENUM (
 CREATE TYPE production_approach AS ENUM ('ugc', 'semi_produced', 'produced', 'premium');
 
 -- Funnel stage (may already exist from image schema)
-CREATE TYPE funnel_stage AS ENUM ('awareness', 'consideration', 'conversion', 'retention');
+DO $$ BEGIN
+  CREATE TYPE funnel_stage AS ENUM ('awareness', 'consideration', 'conversion', 'retention');
+EXCEPTION WHEN duplicate_object THEN null; END $$;
 
 -- Spec confidence (may already exist from image schema)
--- CREATE TYPE spec_confidence AS ENUM ('official', 'community', 'estimated');
+DO $$ BEGIN
+  CREATE TYPE spec_confidence AS ENUM ('official', 'community', 'estimated');
+EXCEPTION WHEN duplicate_object THEN null; END $$;
 ```
 
 ### 8.2 Core Video Type Specs Table
@@ -966,8 +970,8 @@ CREATE TABLE shoot_video_deliverables (
   shoot_plan_id         uuid,     -- FK to shoot_plans table when that table exists
   video_type_slug       text NOT NULL,
   platform_slug         text NOT NULL,
-  quantity              integer DEFAULT 1,
-  priority              text CHECK (priority IN ('required', 'recommended', 'optional')),
+  quantity              integer NOT NULL DEFAULT 1,
+  priority              text NOT NULL CHECK (priority IN ('required', 'recommended', 'optional')),
   est_edit_hours        numeric,
   production_approach   production_approach,
   notes                 text,
