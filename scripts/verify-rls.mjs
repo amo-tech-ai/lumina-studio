@@ -168,6 +168,13 @@ const { error: anonBrandInsertErr } = await anon.from("brands").insert({
 });
 assert(!!anonBrandInsertErr, "anon cannot insert brands");
 
+// Global reference tables (MI-01): authenticated read-only, no anon policy.
+const refTables = ["platforms", "image_type_defs", "image_specs", "recommendation_rules"];
+for (const t of refTables) {
+  const { data } = await anon.from(t).select("id").limit(1);
+  assert((data ?? []).length === 0, `anon cannot read ${t} rows`);
+}
+
 let userA;
 let userB;
 let brandAId;
@@ -176,6 +183,16 @@ let orgAId;
 try {
   userA = await createTestUser(emailA);
   userB = await createTestUser(emailB);
+
+  // Global reference tables (MI-01): authenticated reads seeded rows, writes denied.
+  for (const t of refTables) {
+    const { data, error } = await userA.client.from(t).select("id").limit(1);
+    assert(!error && (data ?? []).length >= 1, `authenticated reads ${t} seed rows`);
+  }
+  const { error: refInsertErr } = await userA.client
+    .from("platforms")
+    .insert({ slug: "rls-probe", name: "RLS Probe", category: "social" });
+  assert(!!refInsertErr, "authenticated cannot insert platforms (no write policy)");
 
   // profiles — own read/write
   const { error: profileInsertErr } = await userA.client.from("profiles").insert({
