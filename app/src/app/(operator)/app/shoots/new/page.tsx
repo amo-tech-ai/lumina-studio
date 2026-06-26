@@ -407,8 +407,22 @@ export default function NewShootPage() {
                   {state.deliverables.map((d, i) => (
                     <tr key={d.id} className="border-b border-[#E8E0D8] last:border-0">
                       <td className="px-4 py-2.5 font-sans text-xs text-[#94A3B8]">{i + 1}</td>
-                      <td className="px-4 py-2.5 font-sans text-sm text-[#1E293B]">{d.channel}</td>
-                      <td className="px-4 py-2.5 font-sans text-sm text-[#64748B]">{d.format}</td>
+                      <td className="px-2 py-1.5">
+                        <input
+                          className="w-28 rounded border border-transparent px-2 py-1 font-sans text-sm text-[#1E293B] hover:border-[#E8E0D8] focus:border-[#E87C4D] outline-none"
+                          placeholder="channel"
+                          value={d.channel}
+                          onChange={(e) => update({ deliverables: state.deliverables.map((x) => x.id === d.id ? { ...x, channel: e.target.value } : x) })}
+                        />
+                      </td>
+                      <td className="px-2 py-1.5">
+                        <input
+                          className="w-28 rounded border border-transparent px-2 py-1 font-sans text-sm text-[#64748B] hover:border-[#E8E0D8] focus:border-[#E87C4D] outline-none"
+                          placeholder="format"
+                          value={d.format}
+                          onChange={(e) => update({ deliverables: state.deliverables.map((x) => x.id === d.id ? { ...x, format: e.target.value } : x) })}
+                        />
+                      </td>
                       <td className="px-4 py-2.5">
                         <input
                           type="number"
