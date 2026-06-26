@@ -158,22 +158,27 @@ export async function approveWorkflowDraft(brandId: string, runId: string): Prom
   const { data: { user }, error: authErr } = await supabase.auth.getUser();
   if (authErr || !user) return { ok: false, error: "Not signed in" };
 
-  // Promote draft profile → live before workflow.resume races on intake_status
-  const applyResult = await applyDraft(brandId);
-  if (!applyResult.ok && applyResult.error !== "Brand is not in draft_ready state") {
-    return { ok: false, error: applyResult.error };
-  }
-
-  // TOCTOU guard — atomically mark approved; fails if already processed
+  // TOCTOU guard runs first — prevents double-approve and scopes to this brand
   const admin = adminClient();
-  const { data: updated, error: updateErr } = await admin
+  const { data: claimed, error: claimErr } = await admin
     .from("brand_intake_drafts")
     .update({ status: "approved", approved_at: new Date().toISOString(), updated_at: new Date().toISOString() })
+    .eq("brand_id", brandId)
     .eq("draft_profile->>_workflow_run_id", runId)
     .eq("status", "pending_approval")
     .select("id")
     .single();
-  if (updateErr || !updated) return { ok: false, error: "already_processed" };
+  if (claimErr || !claimed) return { ok: false, error: "already_processed" };
+
+  // Promote draft profile → live; rollback the intake row if this fails so the operator can retry
+  const applyResult = await applyDraft(brandId);
+  if (!applyResult.ok && applyResult.error !== "Brand is not in draft_ready state") {
+    await admin
+      .from("brand_intake_drafts")
+      .update({ status: "pending_approval", approved_at: null, updated_at: new Date().toISOString() })
+      .eq("id", claimed.id);
+    return { ok: false, error: applyResult.error };
+  }
 
   // Resume workflow (best-effort — profile already promoted above)
   try {
@@ -194,19 +199,26 @@ export async function rejectWorkflowDraft(brandId: string, runId: string): Promi
   const { data: { user }, error: authErr } = await supabase.auth.getUser();
   if (authErr || !user) return { ok: false, error: "Not signed in" };
 
-  // TOCTOU guard — atomically mark rejected; fails if already processed
+  // TOCTOU guard — scoped to this brand; fails if already processed
   const admin = adminClient();
   const { data: updated, error: updateErr } = await admin
     .from("brand_intake_drafts")
     .update({ status: "rejected", rejected_at: new Date().toISOString(), updated_at: new Date().toISOString() })
+    .eq("brand_id", brandId)
     .eq("draft_profile->>_workflow_run_id", runId)
     .eq("status", "pending_approval")
     .select("id")
     .single();
   if (updateErr || !updated) return { ok: false, error: "already_processed" };
 
-  // Reuse discardDraft to clear ai_profile_draft and restore intake_status
-  return discardDraft(brandId);
+  // Clear ai_profile_draft and restore intake_status; surface failure (row is correctly rejected)
+  const discardResult = await discardDraft(brandId);
+  if (!discardResult.ok && discardResult.error !== "Brand is not in draft_ready state") {
+    console.error("[rejectWorkflowDraft] discardDraft failed:", discardResult.error);
+  }
+
+  revalidatePath(`/app/brand/${brandId}`);
+  return { ok: true };
 }
 
 export async function discardDraft(brandId: string): Promise<{ ok: boolean; error?: string }> {
