@@ -7,6 +7,7 @@ supabase/functions/firecrawl-webhook/index.ts
   s_ffc2c0ed18a264::t_621a6f4fee169a 262-276
 app/src/mastra/index.ts
   s_ffc2c0ed18a264::t_bc4f586d65c25e 5
+  s_efbb211f69e78b::t_fc53d3e751aac5 46
 app/src/mastra/workflows/brand-intelligence-workflow.ts
   s_ffc2c0ed18a264::t_e389bc3b721ffe 1-250
 app/src/app/api/workflows/brand-intelligence/approve/route.ts
@@ -18,6 +19,14 @@ app/src/app/api/workflows/brand-intelligence/approve/route.ts
   "base_commit_sha": "b01f41d59a2ef8c03d0584e21a35aac5e071983c",
   "prompts": {},
   "sessions": {
+    "s_efbb211f69e78b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "0da0c962-e31a-4af4-9a64-4dc4be547fd1",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    },
     "s_ffc2c0ed18a264": {
       "agent_id": {
         "tool": "claude",
