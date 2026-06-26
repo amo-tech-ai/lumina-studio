@@ -1,0 +1,26 @@
+app/src/app/(operator)/app/preview/page.tsx
+  s_efbb211f69e78b::t_0318e4f5aa3f3d 5-7
+app/src/components/media/device-frame-preview.tsx
+  s_efbb211f69e78b::t_9e1a60de82de5c 62-67,70
+  s_efbb211f69e78b::t_73dae6e3c2480a 32
+  s_efbb211f69e78b::t_2e2e0fda1446a2 123-129,139
+app/src/lib/media/channel-specs.server.ts
+  s_efbb211f69e78b::t_78a077e1e43449 34,41-45,50,64-67
+  s_efbb211f69e78b::t_3a04abdc03e251 57-60
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.3",
+  "base_commit_sha": "fce85e5d2372fb42c3468fa672aef5e37cc59fd3",
+  "prompts": {},
+  "sessions": {
+    "s_efbb211f69e78b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "0da0c962-e31a-4af4-9a64-4dc4be547fd1",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
