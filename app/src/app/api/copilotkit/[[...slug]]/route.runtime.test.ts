@@ -16,6 +16,7 @@ afterEach(() => {
 
 async function setupMocks() {
   vi.doMock("@/mastra/instance", () => ({ mastra: {} }));
+  vi.doMock("@/mastra", () => ({ getMastra: () => ({}) }));
 
   vi.doMock("@/lib/auth", () => ({
     resolveOperatorUser: vi.fn(),
