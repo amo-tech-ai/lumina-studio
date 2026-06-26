@@ -1,0 +1,21 @@
+docs/plan/01-foundation/06-brand-dashboards.md
+  s_efbb211f69e78b::t_7d147fafa60d16 1-474
+package-lock.json
+  s_efbb211f69e78b::t_33e0437cee4e9f 1-12
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.3",
+  "base_commit_sha": "0952ad44f19fa844a225227159ee868f3609b371",
+  "prompts": {},
+  "sessions": {
+    "s_efbb211f69e78b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "0da0c962-e31a-4af4-9a64-4dc4be547fd1",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
