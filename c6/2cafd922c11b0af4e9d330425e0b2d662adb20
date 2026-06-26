@@ -1,0 +1,20 @@
+scripts/verify-edge-functions.mjs
+  s_efbb211f69e78b::t_4857ada9665914 26,29
+  s_efbb211f69e78b::t_7d2de64b15b0e1 25,27-28,34-36
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.3",
+  "base_commit_sha": "c62cafd922c11b0af4e9d330425e0b2d662adb20",
+  "prompts": {},
+  "sessions": {
+    "s_efbb211f69e78b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "0da0c962-e31a-4af4-9a64-4dc4be547fd1",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
