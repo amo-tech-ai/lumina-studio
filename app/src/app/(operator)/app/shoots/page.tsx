@@ -4,24 +4,10 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { useAgentContext } from "@copilotkit/react-core/v2";
-import { Component, type ReactNode } from "react";
-
-// ponytail: silently swallows "must be used within CopilotKitProvider" when
-// the layout renders children without auth (unauthenticated dev preview).
-class CopilotBoundary extends Component<{ children: ReactNode }, { failed: boolean }> {
-  state = { failed: false };
-  static getDerivedStateFromError() { return { failed: true }; }
-  render() { return this.state.failed ? null : this.props.children; }
-}
 import { createBrowserClient } from "@supabase/ssr";
 import { ShootCard, type ShootRow } from "@/components/shoot/ShootCard";
 
-// ── Agent context bridge (safe outside CopilotKit provider) ──────────────────
-function AgentContextBridge({ stats }: { stats: object }) {
-  useAgentContext({ description: "Shoot portfolio overview — active shoots, DNA scores, channel coverage", value: stats });
-  return null;
-}
+// ponytail: useAgentContext deferred to IPI-128 (requires CopilotKit provider)
 
 // ── Supabase browser client ───────────────────────────────────────────────────
 function useSupabase() {
@@ -85,35 +71,8 @@ export default function ShootsPage() {
     return list;
   }, [shoots, filterStatus, search, sort]);
 
-  // ── Portfolio stats for CopilotKit context
-  const portfolioStats = useMemo(() => {
-    const active = shoots.filter((s) => s.status === "active").length;
-    const scored = shoots.filter((s) => s.dna_score !== null);
-    const avgDna = scored.length
-      ? Math.round(scored.reduce((s, x) => s + (x.dna_score ?? 0), 0) / scored.length)
-      : null;
-
-    // Channel coverage: count shoots per channel
-    const channelMap: Record<string, number> = {};
-    for (const s of shoots) {
-      for (const ch of s.target_channels ?? []) {
-        channelMap[ch] = (channelMap[ch] ?? 0) + 1;
-      }
-    }
-
-    return {
-      totalShoots: shoots.length,
-      activeShoots: active,
-      avgDnaScore: avgDna,
-      channelCoverage: channelMap,
-      filterStatus: filterStatus || "all",
-      visibleShoots: visible.length,
-    };
-  }, [shoots, visible, filterStatus]);
-
   return (
     <div className="min-h-screen p-6" style={{ background: "#FBF8F5" }}>
-      <CopilotBoundary><AgentContextBridge stats={portfolioStats} /></CopilotBoundary>
       <div className="mx-auto max-w-5xl space-y-6">
 
         {/* Header */}
