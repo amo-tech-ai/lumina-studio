@@ -25,21 +25,31 @@ export async function POST(request: Request) {
     throw e;
   }
 
-  let body: { runId?: string; approved?: boolean; brandId?: string };
+  let body: { runId?: string; approved?: boolean };
   try {
-    body = (await request.json()) as { runId?: string; approved?: boolean; brandId?: string };
+    body = (await request.json()) as { runId?: string; approved?: boolean };
   } catch {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
 
-  const { runId, approved, brandId } = body;
-  if (!runId || approved === undefined || !brandId) {
-    return NextResponse.json({ error: "runId, approved, and brandId required" }, { status: 400 });
+  const { runId, approved } = body;
+  if (!runId || typeof approved !== "boolean") {
+    return NextResponse.json({ error: "runId (string) and approved (boolean) required" }, { status: 400 });
   }
 
   try {
-    // Update draft status before resuming so commit-or-reject step reads correct value
     const sb = adminClient();
+    // Look up pending draft by workflow run ID — prevents cross-brand approval
+    const { data: draft, error: lookupErr } = await sb
+      .from("brand_intake_drafts")
+      .select("id, brand_id")
+      .eq("draft_profile->>_workflow_run_id", runId)
+      .eq("status", "pending_approval")
+      .single();
+    if (lookupErr || !draft) {
+      return NextResponse.json({ error: "No pending draft found for this workflow run" }, { status: 404 });
+    }
+
     const { error: updateErr } = await sb
       .from("brand_intake_drafts")
       .update({
@@ -48,7 +58,8 @@ export async function POST(request: Request) {
         rejected_at: approved ? null : new Date().toISOString(),
         updated_at: new Date().toISOString(),
       })
-      .eq("brand_id", brandId);
+      .eq("id", draft.id)
+      .eq("status", "pending_approval");
     if (updateErr) throw new Error(`draft update: ${updateErr.message}`);
 
     const workflow = getMastra().getWorkflow("brand-intelligence");

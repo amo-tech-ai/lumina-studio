@@ -265,7 +265,9 @@ Deno.serve(async (req: Request) => {
       if (workflowRunId) {
         const appUrl = Deno.env.get("NEXT_PUBLIC_APP_URL") ?? Deno.env.get("APP_URL");
         const secret = Deno.env.get("INTERNAL_WEBHOOK_SECRET");
-        if (appUrl && secret) {
+        if (!appUrl || !secret) {
+          console.error(`firecrawl-webhook: cannot resume workflow ${workflowRunId} — APP_URL or INTERNAL_WEBHOOK_SECRET not configured`);
+        } else {
           try {
             const res = await fetch(`${appUrl}/api/workflows/brand-intelligence/resume`, {
               method: "POST",
@@ -312,7 +314,9 @@ Deno.serve(async (req: Request) => {
       if (workflowRunId) {
         const appUrl = Deno.env.get("NEXT_PUBLIC_APP_URL") ?? Deno.env.get("APP_URL");
         const secret = Deno.env.get("INTERNAL_WEBHOOK_SECRET");
-        if (appUrl && secret) {
+        if (!appUrl || !secret) {
+          console.error(`firecrawl-webhook: cannot fail-resume workflow ${workflowRunId} — APP_URL or INTERNAL_WEBHOOK_SECRET not configured`);
+        } else {
           try {
             const res = await fetch(`${appUrl}/api/workflows/brand-intelligence/resume`, {
               method: "POST",

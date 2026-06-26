@@ -26,11 +26,15 @@ export async function POST(request: Request) {
   }
 
   const brandId = body.brandId?.trim();
-  if (!brandId) {
-    return NextResponse.json({ error: "brandId required" }, { status: 400 });
+  const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  if (!brandId || !UUID_RE.test(brandId)) {
+    return NextResponse.json({ error: "brandId must be a valid UUID" }, { status: 400 });
   }
 
-  const accessToken = extractAccessToken(request) ?? "";
+  const accessToken = extractAccessToken(request);
+  if (!accessToken) {
+    return NextResponse.json({ error: "Access token required" }, { status: 401 });
+  }
 
   try {
     const workflow = getMastra().getWorkflow("brand-intelligence");
@@ -40,7 +44,7 @@ export async function POST(request: Request) {
       inputData: {
         brandId,
         userId: user.id,
-        accessToken,
+        accessToken: accessToken,
       },
     });
     return NextResponse.json({ runId: run.runId });

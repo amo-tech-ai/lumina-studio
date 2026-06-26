@@ -38,10 +38,11 @@ const validateBrand = createStep({
       .single();
     if (error || !brand) throw new Error(`Brand not found: ${inputData.brandId}`);
     if (!brand.brand_url) throw new Error("Brand has no website URL");
-    await sb
+    const { error: statusErr } = await sb
       .from("brands")
       .update({ intake_status: "crawl_running", updated_at: new Date().toISOString() })
       .eq("id", inputData.brandId);
+    if (statusErr) throw new Error(`intake_status update: ${statusErr.message}`);
     return { brandId: brand.id, brandUrl: brand.brand_url, brandName: brand.name };
   },
 });
@@ -59,6 +60,7 @@ const startCrawl = createStep({
     const { accessToken } = getInitData<{ accessToken: string }>();
     const res = await fetch(edgeFnUrl("start-brand-crawl"), {
       method: "POST",
+      signal: AbortSignal.timeout(30_000),
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${accessToken}`,
@@ -113,13 +115,15 @@ const extractProfile = createStep({
       .single();
     if (brandErr || !brand?.brand_url) throw new Error(`Brand URL not found: ${brandErr?.message}`);
 
-    await sb
+    const { error: statusErr } = await sb
       .from("brands")
       .update({ intake_status: "analysis_running", updated_at: new Date().toISOString() })
       .eq("id", brandId);
+    if (statusErr) throw new Error(`intake_status update: ${statusErr.message}`);
 
     const res = await fetch(edgeFnUrl("brand-intelligence"), {
       method: "POST",
+      signal: AbortSignal.timeout(120_000),
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${accessToken}`,
