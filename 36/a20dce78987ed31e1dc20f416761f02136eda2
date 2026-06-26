@@ -1,0 +1,32 @@
+app/src/mastra/workflows/shoot-wizard.ts
+  s_a8ff79a3fcfbf6::t_67ccc7e62c92ca 232
+  s_a8ff79a3fcfbf6::t_ac478159aec5a9 1-6,34-48,55,76-83,85-87,94,101-102,135-144,146-149,151-153,169-170,207-215,243
+  s_a8ff79a3fcfbf6::t_e646ae9880ba75 26-33,145,185,217
+  s_a8ff79a3fcfbf6::t_c6dd3b1587f01f 7-25,49-54,56-75,84,88-93,95-100,103-134,150,154-168,171-184,186-206,216,218-231,233-242,244-260
+app/src/app/(operator)/app/shoots/new/page.tsx
+  s_a8ff79a3fcfbf6::t_b0eee44bec83f9 1-603
+app/src/app/(operator)/app/shoots/page.tsx
+  s_a8ff79a3fcfbf6::t_17e06bf8744650 1,5-40
+app/src/app/api/workflows/shoot-wizard/route.ts
+  s_a8ff79a3fcfbf6::t_a2886fed73f901 1-15
+app/src/app/api/workflows/resume/route.ts
+  s_a8ff79a3fcfbf6::t_b863c8ba9c19c2 1-19
+app/src/mastra/workflows/index.ts
+  s_a8ff79a3fcfbf6::t_74b620a0a19b01 2
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.13",
+  "base_commit_sha": "36a20dce78987ed31e1dc20f416761f02136eda2",
+  "prompts": {},
+  "sessions": {
+    "s_a8ff79a3fcfbf6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a23755b0-cfc9-4f93-ae6b-754247f21af5",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
