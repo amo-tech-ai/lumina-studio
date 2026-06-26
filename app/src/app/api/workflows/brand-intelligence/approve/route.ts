@@ -50,7 +50,9 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "No pending draft found for this workflow run" }, { status: 404 });
     }
 
-    const { error: updateErr } = await sb
+    // .select("id").single() makes the UPDATE fail (PGRST116) if 0 rows matched,
+    // preventing a second concurrent approve from silently succeeding and re-resuming.
+    const { data: updatedDraft, error: updateErr } = await sb
       .from("brand_intake_drafts")
       .update({
         status: approved ? "approved" : "rejected",
@@ -59,8 +61,12 @@ export async function POST(request: Request) {
         updated_at: new Date().toISOString(),
       })
       .eq("id", draft.id)
-      .eq("status", "pending_approval");
-    if (updateErr) throw new Error(`draft update: ${updateErr.message}`);
+      .eq("status", "pending_approval")
+      .select("id")
+      .single();
+    if (updateErr || !updatedDraft) {
+      return NextResponse.json({ error: "Draft already processed — possible duplicate approve request" }, { status: 409 });
+    }
 
     const workflow = getMastra().getWorkflow("brand-intelligence");
     const run = await workflow.createRun({ runId });

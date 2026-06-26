@@ -39,11 +39,16 @@ const validateBrand = createStep({
       .single();
     if (error || !brand) throw new Error(`Brand not found: ${inputData.brandId}`);
     if (!brand.brand_url) throw new Error("Brand has no website URL");
+    // Atomic guard: only proceed if brand is not already in a running/ready state.
+    // Mirrors the reanalyzeBrand action pattern to prevent concurrent run corruption.
     const { error: statusErr } = await sb
       .from("brands")
       .update({ intake_status: "crawl_running", updated_at: new Date().toISOString() })
-      .eq("id", inputData.brandId);
-    if (statusErr) throw new Error(`intake_status update: ${statusErr.message}`);
+      .eq("id", inputData.brandId)
+      .not("intake_status", "in", "(crawl_running,analysis_running,draft_ready)")
+      .select("id")
+      .single();
+    if (statusErr) throw new Error("Brand analysis already in progress or has an approved draft — duplicate run prevented");
     return { brandId: brand.id, brandUrl: brand.brand_url, brandName: brand.name };
   },
 });
@@ -125,17 +130,18 @@ const extractProfile = createStep({
         "Content-Type": "application/json",
         Authorization: `Bearer ${accessToken}`,
       },
-      body: JSON.stringify({ brandId, url: brand.brand_url, crawlResultId: inputData.crawlId }),
+      body: JSON.stringify({ brandId, url: brand.brand_url, crawlResultId: inputData.crawlId, draft_mode: true }),
     });
-    // ponytail: non-2xx logged but not fatal — brand might still be partially useful
+    // ponytail: non-2xx logged but not fatal — brand might still be partially useful.
+    // On success, the edge fn sets intake_status: "draft_ready" itself — don't overwrite.
     if (!res.ok) {
       const msg = await res.text().catch(() => res.statusText);
       console.warn(`brand-intelligence edge fn ${res.status}: ${msg}`);
+      await sb
+        .from("brands")
+        .update({ intake_status: "scores_failed", updated_at: new Date().toISOString() })
+        .eq("id", brandId);
     }
-    await sb
-      .from("brands")
-      .update({ intake_status: res.ok ? "scores_complete" : "scores_failed", updated_at: new Date().toISOString() })
-      .eq("id", brandId);
     return { ok: res.ok };
   },
 });
