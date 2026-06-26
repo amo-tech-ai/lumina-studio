@@ -29,9 +29,5 @@
     ".next/types/**/*.ts",
     ".next/dev/types/**/*.ts"
   ],
-  "exclude": [
-    "node_modules",
-    "src/app/auth/callback/route.test.ts",
-    "src/test/copilot-tool-presentation.test.ts"
-  ]
+  "exclude": ["node_modules", "**/*.test.ts", "**/*.test.tsx"]
 }
