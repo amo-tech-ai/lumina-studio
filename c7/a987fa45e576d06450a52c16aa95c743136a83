@@ -1,0 +1,20 @@
+app/src/mastra/workflows/brand-intelligence-workflow.ts
+  s_ffc2c0ed18a264::t_0775d7141ac9d1 92
+  s_ffc2c0ed18a264::t_fc1ffa274ca1dd 168,193,195-196
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.3",
+  "base_commit_sha": "c7a987fa45e576d06450a52c16aa95c743136a83",
+  "prompts": {},
+  "sessions": {
+    "s_ffc2c0ed18a264": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "24435d7f-d1b2-4ddd-bb4f-afdb9bbcd85d",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
