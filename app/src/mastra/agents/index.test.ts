@@ -1,9 +1,16 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+
+// Stub only the DB-dependent getters; importOriginal preserves real schema + makeThreadId
+// so schema tests validate production code, not a duplicate definition.
+vi.mock("@/mastra/memory", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/mastra/memory")>();
+  return { ...actual, getMastraMemory: () => ({}), getPlannerMemory: () => ({}) };
+});
 import {
-  AgentState,
+  PlannerWorkingMemory,
   creativeDirectorAgent,
   productionPlannerAgent,
 } from "./index";
@@ -41,19 +48,27 @@ describe("operator agents — structure (IPI2-121)", () => {
   });
 });
 
-describe("AgentState — working memory schema", () => {
-  it("defaults proverbs to an empty array", () => {
-    expect(AgentState.parse({}).proverbs).toEqual([]);
+describe("PlannerWorkingMemory — working memory schema", () => {
+  it("defaults arrays to empty", () => {
+    const state = PlannerWorkingMemory.parse({});
+    expect(state.approvedConcepts).toEqual([]);
+    expect(state.pendingDecisions).toEqual([]);
   });
 
-  it("accepts string proverbs", () => {
-    expect(AgentState.parse({ proverbs: ["a", "b"] }).proverbs).toEqual([
-      "a",
-      "b",
-    ]);
+  it("accepts valid planner state", () => {
+    const state = PlannerWorkingMemory.parse({
+      brandName: "Lumina",
+      shootType: "editorial",
+      approvedConcepts: ["concept-a"],
+      pendingDecisions: ["budget sign-off"],
+    });
+    expect(state.brandName).toBe("Lumina");
+    expect(state.approvedConcepts).toEqual(["concept-a"]);
   });
 
-  it("rejects non-string proverbs entries", () => {
-    expect(() => AgentState.parse({ proverbs: [1] })).toThrow();
+  it("rejects non-string concept entries", () => {
+    expect(() =>
+      PlannerWorkingMemory.parse({ approvedConcepts: [1] }),
+    ).toThrow();
   });
 });
