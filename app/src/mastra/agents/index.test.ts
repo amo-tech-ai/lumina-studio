@@ -3,8 +3,11 @@ import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it, vi } from "vitest";
 
-// getMastraMemory() requires DATABASE_URL — mock it since these tests don't test memory
-vi.mock("@/mastra/memory", () => ({ getMastraMemory: () => ({}) }));
+// Stub memory constructors (require DATABASE_URL) while preserving real exports like PlannerWorkingMemory
+vi.mock("@/mastra/memory", async () => {
+  const actual = await vi.importActual<typeof import("@/mastra/memory")>("@/mastra/memory");
+  return { ...actual, getMastraMemory: () => ({}), getPlannerMemory: () => ({}) };
+});
 import {
   PlannerWorkingMemory,
   creativeDirectorAgent,
