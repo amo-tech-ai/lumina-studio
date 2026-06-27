@@ -18,12 +18,15 @@ import { recommendShootType } from "./recommendShootType";
 import { saveApprovedShootDraft } from "./saveApprovedShootDraft";
 import { discoverSocialChannelsTool } from "./social-discovery";
 import { lookupShotReferences } from "./lookupShotReferences";
+import { lookupChannelSpecs } from "./lookupChannelSpecs";
 
 // IPI-148 — SHOOT-AI-001 + IPI-184 SHOOT-DATA-002: shoot planner tools for production-planner
+// IPI-187 — MI-02: media spec lookup
 export const agentTools = {
   recommendShootType,
   planDeliverables,
   lookupShotReferences,   // DB-backed shot type suggestions — call before generateShotListDraft
+  lookupChannelSpecs,     // exact image specs per platform channel (MI-02)
   generateShotListDraft,
   saveApprovedShootDraft,
   approveShotList,
