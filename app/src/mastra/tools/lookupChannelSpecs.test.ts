@@ -19,7 +19,8 @@ function makeRuleMock(data: unknown) {
 
 function makeSpecMock(data: unknown) {
   const maybeSingle = vi.fn().mockResolvedValue({ data, error: null });
-  const in2 = vi.fn(() => ({ maybeSingle }));
+  const limit = vi.fn(() => ({ maybeSingle }));
+  const in2 = vi.fn(() => ({ limit }));
   const in1 = vi.fn(() => ({ in: in2 }));
   const select = vi.fn(() => ({ in: in1 }));
   return { select, in1, in2 };

@@ -106,6 +106,7 @@ export const lookupChannelSpecs = createTool({
           )
           .in("platforms.slug", rule.platform_slugs)
           .in("image_type_defs.slug", rule.image_type_slugs)
+          .limit(1)
           .maybeSingle<SpecRow>();
 
         if (error) throw new Error(`lookupChannelSpecs DB error for "${channel}": ${error.message}`);
