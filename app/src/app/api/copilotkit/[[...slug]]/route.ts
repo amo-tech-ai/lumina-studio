@@ -20,6 +20,12 @@ const _requestUser = new AsyncLocalStorage<OperatorUser>();
 
 const UNKNOWN_USER: OperatorUser = { id: "unknown", name: "unknown" };
 
+if (!process.env.COPILOTKIT_LICENSE_TOKEN) {
+  console.warn(
+    "[copilotkit] COPILOTKIT_LICENSE_TOKEN not set — thread persistence disabled, each page load starts a fresh conversation",
+  );
+}
+
 const runtime = new CopilotRuntime({
   // Per-request agent factory (IPI2-127): reads the operator identity from
   // AsyncLocalStorage — no Request-key lookup, no re-authentication.
