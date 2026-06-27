@@ -1,0 +1,39 @@
+app/src/mastra/agents/index.ts
+  s_0fd313d5fcae59::t_b22d87298b862e 19
+  s_0fd313d5fcae59::t_32eb051bd788ea 53
+  s_0fd313d5fcae59::t_7034d861426950 4,8-10
+app/src/mastra/agents/social-discovery.ts
+  s_0fd313d5fcae59::t_35330b3998c8b8 3,8
+app/src/mastra/models.ts
+  s_0fd313d5fcae59::t_c0b2d9fe4ab0f2 43,47
+  s_0fd313d5fcae59::t_b4053fba6d14b0 1-2,31-35,37-41,44-46
+  s_0fd313d5fcae59::t_16497ff7381771 36
+  s_0fd313d5fcae59::t_3fedbe6429cf04 42
+  s_0fd313d5fcae59::t_6a193e271f143c 48
+app/src/mastra/agents/public-marketing-agent.ts
+  s_0fd313d5fcae59::t_1a7de61bf87d7b 3,10
+app/src/mastra/agents/visual-identity.ts
+  s_0fd313d5fcae59::t_63db6db2498ee9 151,187
+  s_0fd313d5fcae59::t_a492151ff786ba 7,9
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.3",
+  "base_commit_sha": "16986adb59993f0f9a2b0cbe39b8d16630e7b05c",
+  "prompts": {},
+  "humans": {
+    "h_d382fbec1d5b46": {
+      "author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  },
+  "sessions": {
+    "s_0fd313d5fcae59": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b6ee15c1-f864-4868-bb54-422fb6bdf80e",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
