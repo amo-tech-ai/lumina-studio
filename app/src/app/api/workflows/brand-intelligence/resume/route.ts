@@ -7,8 +7,13 @@ import { getMastra } from "@/mastra";
 export const dynamic = "force-dynamic";
 
 export async function POST(request: Request) {
+  const expectedSecret = process.env.INTERNAL_WEBHOOK_SECRET;
+  if (!expectedSecret) {
+    console.error("[brand-intelligence/resume] INTERNAL_WEBHOOK_SECRET not configured");
+    return NextResponse.json({ error: "Service misconfigured" }, { status: 500 });
+  }
   const secret = request.headers.get("X-Internal-Secret");
-  if (!secret || secret !== process.env.INTERNAL_WEBHOOK_SECRET) {
+  if (!secret || secret !== expectedSecret) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -19,17 +24,26 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
 
-  const { runId, crawlId, failed, error } = body;
+  const runId = typeof body.runId === "string" ? body.runId.trim() : "";
+  const crawlId = typeof body.crawlId === "string" ? body.crawlId.trim() : "";
   if (!runId || !crawlId) {
     return NextResponse.json({ error: "runId and crawlId required" }, { status: 400 });
   }
+  if (body.failed !== undefined && typeof body.failed !== "boolean") {
+    return NextResponse.json({ error: "failed must be a boolean" }, { status: 400 });
+  }
+  if (body.error !== undefined && typeof body.error !== "string") {
+    return NextResponse.json({ error: "error must be a string" }, { status: 400 });
+  }
+  const failed = body.failed === true;
+  const error = typeof body.error === "string" ? body.error : undefined;
 
   try {
     const workflow = getMastra().getWorkflow("brand-intelligence");
     const run = await workflow.createRun({ runId });
     await run.resume({
       step: "wait-for-crawl",
-      resumeData: { crawlId, ...(failed ? { failed: true, error } : {}) },
+      resumeData: { crawlId, ...(failed ? { failed: true, ...(error ? { error } : {}) } : {}) },
     });
     return NextResponse.json({ ok: true });
   } catch (e) {

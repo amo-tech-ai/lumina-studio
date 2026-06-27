@@ -260,23 +260,23 @@ Deno.serve(async (req: Request) => {
         duration_ms,
       );
 
-      // IPI-32: resume Mastra brand-intelligence workflow if one is waiting
-      const workflowRunId = job?.workflow_id ?? meta?.workflow_id;
+      // IPI-32: resume Mastra brand-intelligence workflow if one is waiting.
+      // Only use the DB-persisted workflow_id — never fall back to payload data.
+      const workflowRunId = job?.workflow_id;
       if (workflowRunId) {
         const appUrl = Deno.env.get("NEXT_PUBLIC_APP_URL") ?? Deno.env.get("APP_URL");
         const secret = Deno.env.get("INTERNAL_WEBHOOK_SECRET");
         if (!appUrl || !secret) {
           console.error(`firecrawl-webhook: cannot resume workflow ${workflowRunId} — APP_URL or INTERNAL_WEBHOOK_SECRET not configured`);
         } else {
-          try {
-            const res = await fetch(`${appUrl}/api/workflows/brand-intelligence/resume`, {
-              method: "POST",
-              headers: { "Content-Type": "application/json", "X-Internal-Secret": secret },
-              body: JSON.stringify({ runId: workflowRunId, crawlId }),
-            });
-            if (!res.ok) console.warn(`workflow resume ${res.status}: ${await res.text().catch(() => res.statusText)}`);
-          } catch (e: unknown) {
-            console.warn("workflow resume call failed:", e);
+          const res = await fetch(`${appUrl}/api/workflows/brand-intelligence/resume`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "X-Internal-Secret": secret },
+            body: JSON.stringify({ runId: workflowRunId, crawlId }),
+          });
+          if (!res.ok) {
+            const msg = await res.text().catch(() => res.statusText);
+            throw new Error(`workflow resume ${res.status}: ${msg}`);
           }
         }
       }
@@ -309,23 +309,23 @@ Deno.serve(async (req: Request) => {
 
       await logWebhook({ job_status: "failed", error: errorMessage });
 
-      // Resume workflow with failure signal so it doesn't stay permanently suspended
-      const workflowRunId = job?.workflow_id ?? meta?.workflow_id;
+      // Resume workflow with failure signal so it doesn't stay permanently suspended.
+      // Only use the DB-persisted workflow_id — never fall back to payload data.
+      const workflowRunId = job?.workflow_id;
       if (workflowRunId) {
         const appUrl = Deno.env.get("NEXT_PUBLIC_APP_URL") ?? Deno.env.get("APP_URL");
         const secret = Deno.env.get("INTERNAL_WEBHOOK_SECRET");
         if (!appUrl || !secret) {
           console.error(`firecrawl-webhook: cannot fail-resume workflow ${workflowRunId} — APP_URL or INTERNAL_WEBHOOK_SECRET not configured`);
         } else {
-          try {
-            const res = await fetch(`${appUrl}/api/workflows/brand-intelligence/resume`, {
-              method: "POST",
-              headers: { "Content-Type": "application/json", "X-Internal-Secret": secret },
-              body: JSON.stringify({ runId: workflowRunId, crawlId, failed: true, error: errorMessage }),
-            });
-            if (!res.ok) console.warn(`workflow fail-resume ${res.status}: ${await res.text().catch(() => res.statusText)}`);
-          } catch (e: unknown) {
-            console.warn("workflow fail-resume call failed:", e);
+          const res = await fetch(`${appUrl}/api/workflows/brand-intelligence/resume`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "X-Internal-Secret": secret },
+            body: JSON.stringify({ runId: workflowRunId, crawlId, failed: true, error: errorMessage }),
+          });
+          if (!res.ok) {
+            const msg = await res.text().catch(() => res.statusText);
+            throw new Error(`workflow fail-resume ${res.status}: ${msg}`);
           }
         }
       }

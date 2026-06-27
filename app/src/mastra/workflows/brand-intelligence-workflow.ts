@@ -30,14 +30,16 @@ const validateBrand = createStep({
     brandUrl: z.string(),
     brandName: z.string(),
   }),
-  execute: async ({ inputData }) => {
+  execute: async ({ inputData, getInitData }) => {
+    const { userId } = getInitData<{ userId: string }>();
     const sb = adminClient();
     const { data: brand, error } = await sb
       .from("brands")
       .select("id, brand_url, name")
       .eq("id", inputData.brandId)
+      .eq("user_id", userId)
       .single();
-    if (error || !brand) throw new Error(`Brand not found: ${inputData.brandId}`);
+    if (error || !brand) throw new Error(`Brand not found or not owned by this user: ${inputData.brandId}`);
     if (!brand.brand_url) throw new Error("Brand has no website URL");
     // Atomic guard: only proceed if brand is not already in a running/ready state.
     // Mirrors the reanalyzeBrand action pattern to prevent concurrent run corruption.
@@ -45,7 +47,7 @@ const validateBrand = createStep({
       .from("brands")
       .update({ intake_status: "crawl_running", updated_at: new Date().toISOString() })
       .eq("id", inputData.brandId)
-      .not("intake_status", "in", "(crawl_running,analysis_running,draft_ready)")
+      .not("intake_status", "in", "(crawl_running,crawl_complete,analysis_running,scores_complete,draft_ready)")
       .select("id")
       .single();
     if (statusErr) throw new Error("Brand analysis already in progress or has an approved draft — duplicate run prevented");
@@ -64,26 +66,35 @@ const startCrawl = createStep({
   outputSchema: z.object({ crawlId: z.string() }),
   execute: async ({ inputData, runId, getInitData }) => {
     const { accessToken } = getInitData<{ accessToken: string }>();
-    const res = await fetch(edgeFnUrl("start-brand-crawl"), {
-      method: "POST",
-      signal: AbortSignal.timeout(30_000),
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${accessToken}`,
-      },
-      body: JSON.stringify({
-        brandId: inputData.brandId,
-        url: inputData.brandUrl,
-        workflowId: runId,
-      }),
-    });
-    if (!res.ok) {
-      const msg = await res.text().catch(() => res.statusText);
-      throw new Error(`start-brand-crawl failed ${res.status}: ${msg}`);
+    try {
+      const res = await fetch(edgeFnUrl("start-brand-crawl"), {
+        method: "POST",
+        signal: AbortSignal.timeout(30_000),
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({
+          brandId: inputData.brandId,
+          url: inputData.brandUrl,
+          workflowId: runId,
+        }),
+      });
+      if (!res.ok) {
+        const msg = await res.text().catch(() => res.statusText);
+        throw new Error(`start-brand-crawl failed ${res.status}: ${msg}`);
+      }
+      const data = (await res.json()) as { crawlId: string };
+      if (!data.crawlId) throw new Error("start-brand-crawl returned no crawlId");
+      return { crawlId: data.crawlId };
+    } catch (err) {
+      // Reset status so the brand isn't permanently locked in crawl_running
+      await adminClient()
+        .from("brands")
+        .update({ intake_status: "failed", updated_at: new Date().toISOString() })
+        .eq("id", inputData.brandId);
+      throw err;
     }
-    const data = (await res.json()) as { crawlId: string };
-    if (!data.crawlId) throw new Error("start-brand-crawl returned no crawlId");
-    return { crawlId: data.crawlId };
   },
 });
 
@@ -97,6 +108,9 @@ const waitForCrawl = createStep({
   execute: async ({ inputData, suspend, resumeData }) => {
     if (!resumeData) return await suspend({ crawlId: inputData.crawlId });
     if (resumeData.failed) throw new Error(`Crawl failed: ${resumeData.error ?? "unknown"}`);
+    if (resumeData.crawlId !== inputData.crawlId) {
+      throw new Error(`Crawl ID mismatch: expected ${inputData.crawlId}, got ${resumeData.crawlId}`);
+    }
     return { crawlId: resumeData.crawlId };
   },
 });
@@ -107,7 +121,7 @@ const extractProfile = createStep({
   inputSchema: z.object({ crawlId: z.string() }),
   outputSchema: z.object({ ok: z.boolean() }),
   execute: async ({ inputData, getInitData }) => {
-    const { brandId, accessToken } = getInitData<{ brandId: string; accessToken: string }>();
+    const { brandId } = getInitData<{ brandId: string }>();
     const sb = adminClient();
 
     const { data: brand, error: brandErr } = await sb
@@ -123,12 +137,15 @@ const extractProfile = createStep({
       .eq("id", brandId);
     if (statusErr) throw new Error(`intake_status update: ${statusErr.message}`);
 
+    // Use service role key — user JWT may be expired after a long crawl (>1h)
+    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    if (!serviceKey) throw new Error("SUPABASE_SERVICE_ROLE_KEY not set");
     const res = await fetch(edgeFnUrl("brand-intelligence"), {
       method: "POST",
       signal: AbortSignal.timeout(120_000),
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${accessToken}`,
+        Authorization: `Bearer ${serviceKey}`,
       },
       body: JSON.stringify({ brandId, url: brand.brand_url, crawlResultId: inputData.crawlId, draft_mode: true }),
     });
@@ -139,7 +156,7 @@ const extractProfile = createStep({
       console.warn(`brand-intelligence edge fn ${res.status}: ${msg}`);
       await sb
         .from("brands")
-        .update({ intake_status: "scores_failed", updated_at: new Date().toISOString() })
+        .update({ intake_status: "failed", updated_at: new Date().toISOString() })
         .eq("id", brandId);
     }
     return { ok: res.ok };
@@ -181,29 +198,27 @@ const saveDraftAndWait = createStep({
 
     if (!resumeData) {
       const sb = adminClient();
-      const { data: brandRow } = await sb
+      const { data: brandRow, error: brandRowErr } = await sb
         .from("brands")
-        .select("brand_url, ai_profile")
+        .select("brand_url, ai_profile_draft")
         .eq("id", brandId)
         .single();
-      const { data: scores } = await sb
-        .from("brand_scores")
-        .select("score_type, score, details")
-        .eq("brand_id", brandId);
+      if (brandRowErr) throw new Error(`Failed to fetch brand for draft: ${brandRowErr.message}`);
+      // edge fn writes ai_profile_draft + embeds _draft_scores when draft_mode:true
+      const draftProfile = brandRow?.ai_profile_draft as Record<string, unknown> | null ?? null;
+      const scores = Array.isArray(draftProfile?._draft_scores) ? draftProfile._draft_scores : [];
       const { data: draft, error } = await sb
         .from("brand_intake_drafts")
         .upsert(
           {
             brand_id: brandId,
             user_id: userId,
-            source_url: brandRow?.brand_url ?? null,
+            source_url: brandRow?.brand_url ?? "",
             status: "pending_approval",
-            // _workflow_run_id is how the approve route locates this draft; profile +
-            // scores are the actual intelligence the operator reviews before approving.
             draft_profile: {
               _workflow_run_id: runId,
-              profile: brandRow?.ai_profile ?? null,
-              scores: scores ?? [],
+              profile: draftProfile,
+              scores,
             },
             updated_at: new Date().toISOString(),
           },
@@ -212,10 +227,17 @@ const saveDraftAndWait = createStep({
         .select("id")
         .single();
       if (error || !draft) throw new Error(`Failed to upsert brand_intake_drafts: ${error?.message}`);
+      // Mark draft_ready so the start guard blocks concurrent runs during HITL suspension
+      const { error: draftReadyErr } = await sb
+        .from("brands")
+        .update({ intake_status: "draft_ready", updated_at: new Date().toISOString() })
+        .eq("id", brandId);
+      if (draftReadyErr) throw new Error(`Failed to mark draft ready: ${draftReadyErr.message}`);
       return await suspend({ brandId, draftId: draft.id });
     }
-    // suspendData carries the draftId from the original suspension
-    return { draftId: suspendData?.draftId ?? "unknown" };
+    // suspendData is persisted by Mastra from the suspend() call above — no DB query needed.
+    if (!suspendData?.draftId) throw new Error(`Draft not found for run: ${runId}`);
+    return { draftId: suspendData.draftId };
   },
 });
 
@@ -224,17 +246,14 @@ const commitOrReject = createStep({
   id: "commit-or-reject",
   inputSchema: z.object({ draftId: z.string() }),
   outputSchema: z.object({ status: z.string() }),
-  execute: async ({ getInitData, runId }) => {
+  execute: async ({ inputData, getInitData, runId }) => {
+    const { draftId } = inputData;
     const { brandId } = getInitData<{ brandId: string }>();
-    // resumeData lives on saveDraftAndWait; we read approved from workflow state
-    // ponytail: read workflow state via brand_intake_drafts + approved flag passed from approve route
     const sb = adminClient();
     const { data: draft, error: draftErr } = await sb
       .from("brand_intake_drafts")
       .select("status")
-      .eq("brand_id", brandId)
-      .order("updated_at", { ascending: false })
-      .limit(1)
+      .eq("id", draftId)
       .single();
     if (draftErr) throw new Error(`Failed to read draft: ${draftErr.message}`);
 

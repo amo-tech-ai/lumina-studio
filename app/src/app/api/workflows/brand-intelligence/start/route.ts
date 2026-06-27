@@ -25,7 +25,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
 
-  const brandId = body.brandId?.trim();
+  const brandId = typeof body.brandId === "string" ? body.brandId.trim() : undefined;
   const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
   if (!brandId || !UUID_RE.test(brandId)) {
     return NextResponse.json({ error: "brandId must be a valid UUID" }, { status: 400 });
