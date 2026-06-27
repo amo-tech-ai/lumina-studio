@@ -51,6 +51,10 @@ export function getMastra(): Mastra {
   return _mastra;
 }
 
-// ponytail: `mastra dev` CLI template requires a named `mastra` export.
-// Proxy to the lazy singleton — no second instance created.
-export const mastra = getMastra();
+// ponytail: `mastra dev` CLI requires a named `mastra` export.
+// Proxy defers getMastra() until first property access — preserves lazy init.
+export const mastra = new Proxy({} as Mastra, {
+  get(_, prop) {
+    return Reflect.get(getMastra(), prop);
+  },
+});
