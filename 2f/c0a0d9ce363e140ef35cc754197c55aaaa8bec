@@ -1,0 +1,21 @@
+scripts/check-client-env.mjs
+  s_0fd313d5fcae59::t_0e6dca9035bdbf 34,45-47
+  s_0fd313d5fcae59::t_e9283be46359bd 147
+  s_0fd313d5fcae59::t_966e203367b00c 48-49
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.3",
+  "base_commit_sha": "2fc0a0d9ce363e140ef35cc754197c55aaaa8bec",
+  "prompts": {},
+  "sessions": {
+    "s_0fd313d5fcae59": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b6ee15c1-f864-4868-bb54-422fb6bdf80e",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
