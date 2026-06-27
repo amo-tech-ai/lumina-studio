@@ -16,8 +16,9 @@ function adminClient() {
 }
 
 export async function POST(request: Request) {
+  let operator: Awaited<ReturnType<typeof withOperatorAuth>>;
   try {
-    await withOperatorAuth(request);
+    operator = await withOperatorAuth(request);
   } catch (e) {
     if (e instanceof OperatorAuthError) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -42,12 +43,15 @@ export async function POST(request: Request) {
     // Look up pending draft by workflow run ID — prevents cross-brand approval
     const { data: draft, error: lookupErr } = await sb
       .from("brand_intake_drafts")
-      .select("id, brand_id")
+      .select("id, brand_id, user_id")
       .eq("draft_profile->>_workflow_run_id", runId)
       .eq("status", "pending_approval")
       .single();
     if (lookupErr || !draft) {
       return NextResponse.json({ error: "No pending draft found for this workflow run" }, { status: 404 });
+    }
+    if (draft.user_id !== operator.id) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
     // .select("id").single() makes the UPDATE fail (PGRST116) if 0 rows matched,
@@ -70,10 +74,20 @@ export async function POST(request: Request) {
 
     const workflow = getMastra().getWorkflow("brand-intelligence");
     const run = await workflow.createRun({ runId });
-    await run.resume({
-      step: "save-draft-and-wait",
-      resumeData: { approved },
-    });
+    try {
+      await run.resume({
+        step: "save-draft-and-wait",
+        resumeData: { approved },
+      });
+    } catch (resumeErr) {
+      // rollback so operators can retry — draft was updated before resume() was called
+      await adminClient()
+        .from("brand_intake_drafts")
+        .update({ status: "pending_approval", approved_at: null, rejected_at: null, updated_at: new Date().toISOString() })
+        .eq("id", draft.id)
+        .then(undefined, (rbErr) => { console.error("[brand-intelligence/approve] rollback failed — draft stuck:", rbErr); });
+      throw resumeErr;
+    }
 
     return NextResponse.json({ ok: true, approved });
   } catch (e) {

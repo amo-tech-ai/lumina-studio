@@ -7,8 +7,13 @@ import { getMastra } from "@/mastra";
 export const dynamic = "force-dynamic";
 
 export async function POST(request: Request) {
+  const expectedSecret = process.env.INTERNAL_WEBHOOK_SECRET;
+  if (!expectedSecret) {
+    console.error("[brand-intelligence/resume] INTERNAL_WEBHOOK_SECRET not configured");
+    return NextResponse.json({ error: "Service misconfigured" }, { status: 500 });
+  }
   const secret = request.headers.get("X-Internal-Secret");
-  if (!secret || secret !== process.env.INTERNAL_WEBHOOK_SECRET) {
+  if (!secret || secret !== expectedSecret) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
