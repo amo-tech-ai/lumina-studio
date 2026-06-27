@@ -50,3 +50,7 @@ export function getMastra(): Mastra {
   }
   return _mastra;
 }
+
+// ponytail: `mastra dev` CLI template requires a named `mastra` export.
+// Proxy to the lazy singleton — no second instance created.
+export const mastra = getMastra();
