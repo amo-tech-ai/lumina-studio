@@ -108,6 +108,9 @@ const waitForCrawl = createStep({
   execute: async ({ inputData, suspend, resumeData }) => {
     if (!resumeData) return await suspend({ crawlId: inputData.crawlId });
     if (resumeData.failed) throw new Error(`Crawl failed: ${resumeData.error ?? "unknown"}`);
+    if (resumeData.crawlId !== inputData.crawlId) {
+      throw new Error(`Crawl ID mismatch: expected ${inputData.crawlId}, got ${resumeData.crawlId}`);
+    }
     return { crawlId: resumeData.crawlId };
   },
 });
@@ -197,14 +200,13 @@ const saveDraftAndWait = createStep({
       const sb = adminClient();
       const { data: brandRow, error: brandRowErr } = await sb
         .from("brands")
-        .select("brand_url, ai_profile")
+        .select("brand_url, ai_profile_draft")
         .eq("id", brandId)
         .single();
       if (brandRowErr) throw new Error(`Failed to fetch brand for draft: ${brandRowErr.message}`);
-      const { data: scores } = await sb
-        .from("brand_scores")
-        .select("score_type, score, details")
-        .eq("brand_id", brandId);
+      // edge fn writes ai_profile_draft + embeds _draft_scores when draft_mode:true
+      const draftProfile = brandRow?.ai_profile_draft as Record<string, unknown> | null ?? null;
+      const scores = Array.isArray(draftProfile?._draft_scores) ? draftProfile._draft_scores : [];
       const { data: draft, error } = await sb
         .from("brand_intake_drafts")
         .upsert(
@@ -213,12 +215,10 @@ const saveDraftAndWait = createStep({
             user_id: userId,
             source_url: brandRow?.brand_url ?? "",
             status: "pending_approval",
-            // _workflow_run_id is how the approve route locates this draft; profile +
-            // scores are the actual intelligence the operator reviews before approving.
             draft_profile: {
               _workflow_run_id: runId,
-              profile: brandRow?.ai_profile ?? null,
-              scores: scores ?? [],
+              profile: draftProfile,
+              scores,
             },
             updated_at: new Date().toISOString(),
           },
@@ -227,6 +227,12 @@ const saveDraftAndWait = createStep({
         .select("id")
         .single();
       if (error || !draft) throw new Error(`Failed to upsert brand_intake_drafts: ${error?.message}`);
+      // Mark draft_ready so the start guard blocks concurrent runs during HITL suspension
+      const { error: draftReadyErr } = await sb
+        .from("brands")
+        .update({ intake_status: "draft_ready", updated_at: new Date().toISOString() })
+        .eq("id", brandId);
+      if (draftReadyErr) throw new Error(`Failed to mark draft ready: ${draftReadyErr.message}`);
       return await suspend({ brandId, draftId: draft.id });
     }
     // suspendData is persisted by Mastra from the suspend() call above — no DB query needed.
