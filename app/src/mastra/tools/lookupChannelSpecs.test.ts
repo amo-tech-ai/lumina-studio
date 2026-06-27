@@ -14,16 +14,15 @@ function makeRuleMock(data: unknown) {
   const eq2 = vi.fn(() => ({ maybeSingle }));
   const eq1 = vi.fn(() => ({ eq: eq2 }));
   const select = vi.fn(() => ({ eq: eq1 }));
-  return { select };
+  return { select, eq1, eq2 };
 }
 
 function makeSpecMock(data: unknown) {
   const maybeSingle = vi.fn().mockResolvedValue({ data, error: null });
-  const limit = vi.fn(() => ({ maybeSingle }));
-  const in2 = vi.fn(() => ({ limit }));
+  const in2 = vi.fn(() => ({ maybeSingle }));
   const in1 = vi.fn(() => ({ in: in2 }));
   const select = vi.fn(() => ({ in: in1 }));
-  return { select };
+  return { select, in1, in2 };
 }
 
 beforeEach(() => {
@@ -46,11 +45,17 @@ const STORY_SPEC_ROW = {
 
 describe("lookupChannelSpecs", () => {
   it("returns spec for a known seeded channel", async () => {
-    mockFrom
-      .mockReturnValueOnce(makeRuleMock({ image_type_slugs: ["story"], platform_slugs: ["instagram"] }))
-      .mockReturnValueOnce(makeSpecMock(STORY_SPEC_ROW));
+    const ruleMock = makeRuleMock({ image_type_slugs: ["story"], platform_slugs: ["instagram"] });
+    const specMock = makeSpecMock(STORY_SPEC_ROW);
+    mockFrom.mockReturnValueOnce(ruleMock).mockReturnValueOnce(specMock);
 
     const result = await lookupChannelSpecs.execute!({ channels: ["instagram_story"] }, {} as never);
+
+    // verify query contract
+    expect(ruleMock.eq1).toHaveBeenCalledWith("rule_type", "channel_required");
+    expect(ruleMock.eq2).toHaveBeenCalledWith("condition_value", "instagram_story");
+    expect(specMock.in1).toHaveBeenCalledWith("platforms.slug", ["instagram"]);
+    expect(specMock.in2).toHaveBeenCalledWith("image_type_defs.slug", ["story"]);
 
     expect(result.results).toHaveLength(1);
     const entry = result.results[0];

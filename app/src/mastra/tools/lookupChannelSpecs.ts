@@ -78,6 +78,8 @@ export const lookupChannelSpecs = createTool({
   }),
   execute: async ({ channels }) => {
     const NINETY_DAYS_MS = 90 * 24 * 60 * 60 * 1000;
+    // Instantiate once per execute call, and only when at least one known channel needs it.
+    const supabase = channels.some((c) => KNOWN_CHANNELS.has(c)) ? getAdminClient() : null;
 
     const results = await Promise.all(
       channels.map(async (channel) => {
@@ -85,9 +87,7 @@ export const lookupChannelSpecs = createTool({
           return { channel, spec: null, warning: `Unknown channel "${channel}" — not in seeded spec table` };
         }
 
-        const supabase = getAdminClient();
-
-        const { data: rule, error: ruleErr } = await supabase
+        const { data: rule, error: ruleErr } = await supabase!
           .from("recommendation_rules")
           .select("image_type_slugs, platform_slugs")
           .eq("rule_type", "channel_required")
@@ -99,14 +99,13 @@ export const lookupChannelSpecs = createTool({
           return { channel, spec: null, warning: `No recommendation rule found for "${channel}"` };
         }
 
-        const { data: row, error } = await supabase
+        const { data: row, error } = await supabase!
           .from("image_specs")
           .select(
             "width_px, height_px, aspect_ratio_w, aspect_ratio_h, aspect_ratio_label, accepted_formats, max_file_size_mb, safe_zone_top_px, safe_zone_bottom_px, safe_zone_left_px, safe_zone_right_px, organic, paid, shopping_support, crop_notes, last_verified_at, platforms!inner(slug, name), image_type_defs!inner(slug, name)",
           )
           .in("platforms.slug", rule.platform_slugs)
           .in("image_type_defs.slug", rule.image_type_slugs)
-          .limit(1)
           .maybeSingle<SpecRow>();
 
         if (error) throw new Error(`lookupChannelSpecs DB error for "${channel}": ${error.message}`);
