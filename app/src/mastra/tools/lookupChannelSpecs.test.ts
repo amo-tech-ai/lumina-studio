@@ -39,6 +39,7 @@ const STORY_SPEC_ROW = {
   accepted_formats: ["jpg", "mp4"], max_file_size_mb: 30,
   safe_zone_top_px: 250, safe_zone_bottom_px: 250, safe_zone_left_px: 0, safe_zone_right_px: 0,
   organic: true, paid: true, shopping_support: false, crop_notes: null,
+  last_verified_at: new Date().toISOString(),
   platforms: { slug: "instagram", name: "Instagram" },
   image_type_defs: { slug: "story", name: "Story" },
 };
@@ -81,6 +82,7 @@ describe("lookupChannelSpecs", () => {
         accepted_formats: ["jpg", "png"], max_file_size_mb: 10,
         safe_zone_top_px: 0, safe_zone_bottom_px: 0, safe_zone_left_px: 0, safe_zone_right_px: 0,
         organic: true, paid: true, shopping_support: true, crop_notes: null,
+        last_verified_at: new Date().toISOString(),
         platforms: { slug: "facebook", name: "Facebook" },
         image_type_defs: { slug: "feed", name: "Feed" },
       }));

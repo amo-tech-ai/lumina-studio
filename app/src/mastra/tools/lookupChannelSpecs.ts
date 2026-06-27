@@ -28,7 +28,12 @@ const SpecSchema = z.object({
   aspectRatioLabel: z.string().nullable(),
   acceptedFormats: z.array(z.string()),
   maxFileSizeMb: z.number().nullable(),
-  safeZone: z.object({ top: z.number(), bottom: z.number(), left: z.number(), right: z.number() }),
+  safeZone: z.object({
+    top: z.number().nullable(),
+    bottom: z.number().nullable(),
+    left: z.number().nullable(),
+    right: z.number().nullable(),
+  }),
   organic: z.boolean(),
   paid: z.boolean(),
   shoppingSupport: z.boolean(),
@@ -48,6 +53,7 @@ type SpecRow = {
   safe_zone_top_px: number | null; safe_zone_bottom_px: number | null;
   safe_zone_left_px: number | null; safe_zone_right_px: number | null;
   organic: boolean; paid: boolean; shopping_support: boolean; crop_notes: string | null;
+  last_verified_at: string | null;
   platforms: { slug: string; name: string } | null;
   image_type_defs: { slug: string; name: string } | null;
 };
@@ -71,7 +77,7 @@ export const lookupChannelSpecs = createTool({
     results: z.array(ResultSchema),
   }),
   execute: async ({ channels }) => {
-    const supabase = getAdminClient();
+    const NINETY_DAYS_MS = 90 * 24 * 60 * 60 * 1000;
 
     const results = await Promise.all(
       channels.map(async (channel) => {
@@ -79,13 +85,16 @@ export const lookupChannelSpecs = createTool({
           return { channel, spec: null, warning: `Unknown channel "${channel}" — not in seeded spec table` };
         }
 
-        const { data: rule } = await supabase
+        const supabase = getAdminClient();
+
+        const { data: rule, error: ruleErr } = await supabase
           .from("recommendation_rules")
           .select("image_type_slugs, platform_slugs")
           .eq("rule_type", "channel_required")
           .eq("condition_value", channel)
           .maybeSingle();
 
+        if (ruleErr) throw new Error(`lookupChannelSpecs rule error for "${channel}": ${ruleErr.message}`);
         if (!rule?.image_type_slugs?.length || !rule?.platform_slugs?.length) {
           return { channel, spec: null, warning: `No recommendation rule found for "${channel}"` };
         }
@@ -93,7 +102,7 @@ export const lookupChannelSpecs = createTool({
         const { data: row, error } = await supabase
           .from("image_specs")
           .select(
-            "width_px, height_px, aspect_ratio_w, aspect_ratio_h, aspect_ratio_label, accepted_formats, max_file_size_mb, safe_zone_top_px, safe_zone_bottom_px, safe_zone_left_px, safe_zone_right_px, organic, paid, shopping_support, crop_notes, platforms!inner(slug, name), image_type_defs!inner(slug, name)",
+            "width_px, height_px, aspect_ratio_w, aspect_ratio_h, aspect_ratio_label, accepted_formats, max_file_size_mb, safe_zone_top_px, safe_zone_bottom_px, safe_zone_left_px, safe_zone_right_px, organic, paid, shopping_support, crop_notes, last_verified_at, platforms!inner(slug, name), image_type_defs!inner(slug, name)",
           )
           .in("platforms.slug", rule.platform_slugs)
           .in("image_type_defs.slug", rule.image_type_slugs)
@@ -104,6 +113,13 @@ export const lookupChannelSpecs = createTool({
         if (!row?.platforms || !row?.image_type_defs) {
           return { channel, spec: null, warning: `Spec row not found for "${channel}"` };
         }
+
+        const stale =
+          !row.last_verified_at ||
+          Date.now() - new Date(row.last_verified_at).getTime() > NINETY_DAYS_MS;
+        const warning = stale
+          ? `Spec for "${channel}" may be outdated (last verified: ${row.last_verified_at ?? "never"})`
+          : undefined;
 
         return {
           channel,
@@ -121,16 +137,17 @@ export const lookupChannelSpecs = createTool({
             acceptedFormats: row.accepted_formats ?? [],
             maxFileSizeMb: row.max_file_size_mb,
             safeZone: {
-              top: row.safe_zone_top_px ?? 0,
-              bottom: row.safe_zone_bottom_px ?? 0,
-              left: row.safe_zone_left_px ?? 0,
-              right: row.safe_zone_right_px ?? 0,
+              top: row.safe_zone_top_px,
+              bottom: row.safe_zone_bottom_px,
+              left: row.safe_zone_left_px,
+              right: row.safe_zone_right_px,
             },
             organic: row.organic,
             paid: row.paid,
             shoppingSupport: row.shopping_support,
             cropNotes: row.crop_notes,
           },
+          ...(warning ? { warning } : {}),
         };
       }),
     );
