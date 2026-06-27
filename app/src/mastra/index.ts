@@ -50,3 +50,16 @@ export function getMastra(): Mastra {
   }
   return _mastra;
 }
+
+// ponytail: `mastra dev` CLI requires a named `mastra` export.
+// Proxy defers getMastra() until first access. Methods are bound to the real
+// instance so `this.#privateField` access inside Mastra methods works correctly.
+export const mastra = new Proxy({} as Mastra, {
+  get(_, prop) {
+    const instance = getMastra();
+    const value = Reflect.get(instance, prop, instance);
+    return typeof value === "function"
+      ? (value as (...a: unknown[]) => unknown).bind(instance)
+      : value;
+  },
+});
