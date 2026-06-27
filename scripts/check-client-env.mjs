@@ -31,7 +31,7 @@ const FORBIDDEN_PATTERNS = [
 const EXT = new Set([".ts", ".tsx", ".js", ".jsx"]);
 const TEST_RE = /\.(test|spec|int\.test)\.(ts|tsx|js|jsx)$/;
 
-const SERVER_DIRS = new Set(["mastra"]);
+const SERVER_DIRS = new Set(["mastra", "api"]);
 function walk(dir, files = []) {
   for (const name of readdirSync(dir)) {
     const path = join(dir, name);
@@ -40,6 +40,11 @@ function walk(dir, files = []) {
     else if (EXT.has(extname(name)) && !TEST_RE.test(name)) files.push(path);
   }
   return files;
+}
+
+function isServerOnlyFile(filePath) {
+  const first = readFileSync(filePath, "utf8").trimStart().slice(0, 20);
+  return first.startsWith('"use server"') || first.startsWith("'use server'");
 }
 
 /** Index of `needle` at or after `start`, ignoring matches inside strings. */
@@ -139,6 +144,7 @@ function findForbiddenInCode(code) {
 const violations = [];
 
 for (const file of walk(srcDir)) {
+  if (isServerOnlyFile(file)) continue;
   const rel = file.slice(root.length + 1);
   const lines = readFileSync(file, "utf8").split("\n");
   const commentState = { inBlockComment: false };
