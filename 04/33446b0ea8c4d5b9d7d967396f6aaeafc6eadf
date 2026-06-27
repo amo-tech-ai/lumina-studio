@@ -1,0 +1,21 @@
+app/src/mastra/tools/lookupChannelSpecs.ts
+  s_0fd313d5fcae59::t_f555286d50da5a 109
+app/src/mastra/tools/lookupChannelSpecs.test.ts
+  s_0fd313d5fcae59::t_4274479eaedcfc 22-23
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.3",
+  "base_commit_sha": "0433446b0ea8c4d5b9d7d967396f6aaeafc6eadf",
+  "prompts": {},
+  "sessions": {
+    "s_0fd313d5fcae59": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b6ee15c1-f864-4868-bb54-422fb6bdf80e",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
