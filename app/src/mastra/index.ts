@@ -1,8 +1,7 @@
 import { Mastra } from "@mastra/core/mastra";
 import { visualIdentityAgent, socialDiscoveryAgent } from "./agents";
 import { durableAgents } from "./durable";
-import { brandApprovalWorkflow, shootWizardWorkflow } from "./workflows";
-import { brandIntelligenceWorkflow } from "./workflows/brand-intelligence-workflow";
+import { shootWizardWorkflow, brandIntelligenceWorkflow } from "./workflows";
 import { ConsoleLogger, LogLevel } from "@mastra/core/logger";
 import { getMastraStorage } from "./storage";
 
@@ -41,7 +40,6 @@ export function getMastra(): Mastra {
       agents,
       storage: getMastraStorage(),
       workflows: {
-        brandApprovalWorkflow,
         "shoot-wizard": shootWizardWorkflow,
         "brand-intelligence": brandIntelligenceWorkflow,
       },

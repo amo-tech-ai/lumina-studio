@@ -7,9 +7,7 @@ describe("brand-approval workflow", () => {
   });
 
   it("can suspend for approval and resume", { skip: !process.env.DATABASE_URL }, async () => {
-    const { getMastra } = await import("@/mastra");
-    const mastra = getMastra();
-    const workflow = mastra.getWorkflowById("brand-approval");
+    const workflow = brandApprovalWorkflow;
 
     const run = await workflow.createRun();
     const startResult = await run.start({
