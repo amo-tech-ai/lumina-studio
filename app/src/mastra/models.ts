@@ -1,3 +1,5 @@
+import { createGoogleGenerativeAI } from "@ai-sdk/google";
+import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
 // Gemini model registry for the operator app (IPI2-80 / AI-018, app slice).
 // Single source of truth so agents never hardcode model ids and we never ship a
 // preview id by accident.
@@ -25,4 +27,22 @@ export function resolveGeminiModel(): string {
     );
   }
   return override || GEMINI_MODELS.default;
+}
+
+// ponytail: OpenRouter fallback for dev/test when Gemini free-tier quota is exhausted.
+// Set OPENROUTER_API_KEY in .env.local — production always uses Gemini.
+const OPENROUTER_FREE_MODEL = "google/gemma-4-26b-a4b-it:free";
+
+export function resolveModel() {
+  if (process.env.OPENROUTER_API_KEY && process.env.NODE_ENV !== "production") {
+    return createOpenAICompatible({
+      name: "openrouter",
+      baseURL: "https://openrouter.ai/api/v1",
+      apiKey: process.env.OPENROUTER_API_KEY,
+      headers: { "HTTP-Referer": "https://fashionos.co" },
+    })(OPENROUTER_FREE_MODEL);
+  }
+  return createGoogleGenerativeAI({
+    apiKey: process.env.GEMINI_API_KEY,
+  })(resolveGeminiModel());
 }

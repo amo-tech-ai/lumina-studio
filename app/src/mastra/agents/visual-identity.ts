@@ -1,14 +1,12 @@
-import { createGoogleGenerativeAI } from "@ai-sdk/google";
 import { Agent } from "@mastra/core/agent";
 import { createTool } from "@mastra/core/tools";
 import { generateObject } from "ai";
 import type { UserContent, ImagePart, TextPart } from "ai";
 import { createClient } from "@supabase/supabase-js";
 import { z } from "zod";
-import { resolveGeminiModel } from "@/mastra/models";
+import { resolveModel } from "@/mastra/models";
 
-const google = createGoogleGenerativeAI({ apiKey: process.env.GEMINI_API_KEY });
-const GEMINI_MODEL = resolveGeminiModel();
+const MODEL = resolveModel();
 
 const HexColor = z.string().regex(/^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/, "Expected hex color");
 
@@ -150,7 +148,7 @@ const extractVisualIdentityTool = createTool({
     }
 
     const { object: visualIdentity } = await generateObject({
-      model: google(GEMINI_MODEL),
+      model: MODEL,
       schema: VisualIdentitySchema,
       messages: [{ role: "user", content: userContent }],
     });
@@ -186,7 +184,7 @@ export { extractVisualIdentityTool };
 export const visualIdentityAgent = new Agent({
   id: "visual-identity",
   name: "Visual Identity",
-  model: google(GEMINI_MODEL),
+  model: MODEL,
   tools: { extractVisualIdentity: extractVisualIdentityTool },
   instructions:
     "You are the iPix visual identity agent. Extract visual design properties from brand homepages using screenshots and Gemini vision. Use the extractVisualIdentity tool when given a brandId and URL.",

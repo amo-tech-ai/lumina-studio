@@ -1,16 +1,13 @@
-import { createGoogleGenerativeAI } from "@ai-sdk/google";
 import { Agent } from "@mastra/core/agent";
 import { agentTools } from "@/mastra/tools";
 import { getMastraMemory, getPlannerMemory, PlannerWorkingMemory } from "@/mastra/memory";
-import { resolveGeminiModel } from "@/mastra/models";
+import { resolveModel } from "@/mastra/models";
 
 export { PlannerWorkingMemory };
 
-// @ai-sdk/google defaults to GOOGLE_GENERATIVE_AI_API_KEY; iPix uses GEMINI_API_KEY.
-const google = createGoogleGenerativeAI({ apiKey: process.env.GEMINI_API_KEY });
-
-// Model id comes from the registry (IPI2-80) — never hardcoded/preview here.
-const GEMINI_MODEL = resolveGeminiModel();
+// ponytail: resolveModel() picks OpenRouter (dev/test) when OPENROUTER_API_KEY is set,
+// otherwise falls back to Gemini. See app/src/mastra/models.ts.
+const MODEL = resolveModel();
 
 // ponytail: foundation agents for IPI2-121. Tools/instructions are smoke-level here;
 // the real production-planner tool suite + HITL lands in IPI2-114. Names are production
@@ -19,7 +16,7 @@ export const productionPlannerAgent = new Agent({
   id: "production-planner",
   name: "Production Planner",
   tools: agentTools,
-  model: google(GEMINI_MODEL),
+  model: MODEL,
   instructions: `You are the iPix production planner for Lumina Studio operators.
 
 Your job is to help plan fashion photo shoots end-to-end. Always follow this sequence:
@@ -53,7 +50,7 @@ export { visualIdentityAgent } from "./visual-identity";
 export const creativeDirectorAgent = new Agent({
   id: "creative-director",
   name: "Creative Director",
-  model: google(GEMINI_MODEL),
+  model: MODEL,
   instructions:
     "You are the iPix creative director. Turn brand DNA and campaigns into creative briefs and moodboards that feed the shoot brief.",
   // @ts-expect-error @mastra/memory beta: Memory not yet assignable to MastraMemory (re-check on pkg bump)
