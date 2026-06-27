@@ -1,0 +1,24 @@
+scripts/repo-hygiene.sh
+  s_0fd313d5fcae59::t_9d1a6f7f095a19 1-34
+.claudeignore
+  s_0fd313d5fcae59::t_afe605435a778a 14-24
+  s_0fd313d5fcae59::t_7b3c1228af4065 11-13
+  s_0fd313d5fcae59::t_5db4bc15940fd8 25-26
+  s_0fd313d5fcae59::t_a363b95656251c 1-10
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.3",
+  "base_commit_sha": "ca744e05cb33c8c70526a22866028406772199fe",
+  "prompts": {},
+  "sessions": {
+    "s_0fd313d5fcae59": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b6ee15c1-f864-4868-bb54-422fb6bdf80e",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
