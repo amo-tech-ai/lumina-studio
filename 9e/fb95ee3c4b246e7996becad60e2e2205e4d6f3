@@ -1,0 +1,25 @@
+app/src/app/api/workflows/brand-intelligence/approve/route.ts
+  s_0fd313d5fcae59::t_6e4064c0907637 19,21,46,53-55,77-90
+app/src/app/api/workflows/brand-intelligence/resume/route.ts
+  s_0fd313d5fcae59::t_84b460f963ea01 10-14,16
+app/src/app/api/workflows/brand-intelligence/start/route.ts
+  s_0fd313d5fcae59::t_cf13d68f418720 28
+app/src/mastra/workflows/brand-intelligence-workflow.ts
+  s_0fd313d5fcae59::t_92822ba94a6876 33-34,40,42,50,69-96,121,137-139,145,156,198,203,214,232-234,243-244,250
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.3",
+  "base_commit_sha": "9efb95ee3c4b246e7996becad60e2e2205e4d6f3",
+  "prompts": {},
+  "sessions": {
+    "s_0fd313d5fcae59": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b6ee15c1-f864-4868-bb54-422fb6bdf80e",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
