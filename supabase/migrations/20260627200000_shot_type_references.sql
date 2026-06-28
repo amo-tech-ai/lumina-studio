@@ -19,6 +19,7 @@ create table if not exists shoot.shot_type_references (
 
 -- RLS: read-only for authenticated users; no user can write (managed by service role)
 alter table shoot.shot_type_references enable row level security;
+drop policy if exists "authenticated can read shot references" on shoot.shot_type_references;
 create policy "authenticated can read shot references"
   on shoot.shot_type_references for select to authenticated using (true);
 
@@ -28,9 +29,16 @@ create or replace view public.shot_type_references_view as
   from shoot.shot_type_references;
 grant select on public.shot_type_references_view to authenticated;
 
--- ── Seed ─────────────────────────────────────────────────────────────────────
+-- ── Seed (skip if already populated — remote drift repair IPI-225) ─────────────
 
-insert into shoot.shot_type_references
+DO $$
+BEGIN
+  IF (SELECT count(*) FROM shoot.shot_type_references) > 0 THEN
+    RAISE NOTICE 'shot_type_references already seeded — skipping';
+    RETURN;
+  END IF;
+
+  INSERT INTO shoot.shot_type_references
   (category, subcategory, angle, description, channel_fit, model_type, background, tags)
 values
 
@@ -286,3 +294,4 @@ values
  'Full AI-generated product scene with environment and lighting',
  array['instagram_feed','website'], null, 'lifestyle',
  array['ai','scene','environment','generated']);
+END $$;
