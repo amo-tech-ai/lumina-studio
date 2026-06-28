@@ -25,7 +25,8 @@ export async function POST(req: NextRequest) {
         // Mastra may nest payload under the next step's name (same pattern as run.start()).
         // Unwrap so both paths return the same flat structure.
         const raw = (result.suspendPayload ?? null) as Record<string, unknown> | null;
-        const nextKey = raw ? Object.keys(raw).find((k) => k !== stepId) : null;
+        // Only unwrap when the key is a gate step-id (ends in "-gate"), not a data field.
+        const nextKey = raw ? Object.keys(raw).find((k) => k !== stepId && k.endsWith("-gate")) : null;
         suspendPayload = (nextKey ? raw![nextKey] : raw) ?? null;
       }
     } catch (resumeErr) {

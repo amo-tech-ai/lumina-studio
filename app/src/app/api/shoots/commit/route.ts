@@ -13,7 +13,7 @@ type Shot = { shot_number: number; description: string; angle?: string; lighting
 
 const VALID_CHANNELS = new Set([
   "instagram_feed", "instagram_story", "instagram_reel",
-  "tiktok", "tiktok_video", "pinterest", "amazon", "shopify",
+  "tiktok", "pinterest", "amazon", "shopify",
   "facebook", "youtube", "website",
 ]);
 
@@ -101,7 +101,7 @@ export async function POST(req: NextRequest) {
 
   // 4. Audit log (non-fatal)
   try {
-    await svc.from("agent_logs").insert({
+    await svc.from("ai_agent_logs").insert({
       agent_name: "shoot-wizard",
       user_id: /^[0-9a-f-]{36}$/i.test(operator.id) ? operator.id : null,
       brand_id,

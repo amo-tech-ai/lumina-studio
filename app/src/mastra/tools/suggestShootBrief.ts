@@ -42,9 +42,8 @@ Write 2–3 short paragraphs (150–220 words total):
 
 No headings, no bullet points, no deliverables list. Confident creative director voice. Output only the brief text.`,
       maxOutputTokens: 400,
-      // ponytail: undefined for OpenRouter (rejects google key); thinkingBudget:0 for Gemini
-      // so reasoning tokens don't eat the 400-token output budget.
-      ...(resolveProviderOptions() !== undefined ? { providerOptions: resolveProviderOptions() } : {}),
+      // thinkingBudget:0 prevents reasoning tokens from eating the 400-token output budget.
+      providerOptions: resolveProviderOptions(),
     });
 
     return { brief: text.trim() };
