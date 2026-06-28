@@ -19,7 +19,7 @@ const NAV = [
   { href: "/app/matching",  icon: "🤝", label: "Matching" },
 ] as const;
 
-interface Brand {
+export interface Brand {
   id: string;
   name: string;
   status: string;

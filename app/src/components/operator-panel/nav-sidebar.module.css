@@ -138,7 +138,7 @@
   transition: background 140ms ease, color 140ms ease;
 }
 
-.brandItem:hover { background: var(--accent); color: var(--foreground); }
+.brandItem:not(.brandItemActive):hover { background: var(--accent); color: var(--foreground); }
 
 .brandItemActive {
   background: color-mix(in oklch, #E87C4D 12%, transparent);
