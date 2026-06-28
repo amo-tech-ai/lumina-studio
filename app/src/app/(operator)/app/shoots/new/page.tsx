@@ -116,6 +116,7 @@ export default function NewShootPage() {
   const [expandOffer, setExpandOffer] = useState(false);
   const seedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const autoGenerateFired = useRef(false);
+  const briefGenRef = useRef(0);
   const [error, setError] = useState<string | null>(null);
   const [brands, setBrands] = useState<{ id: string; name: string }[]>([]);
   const [specs, setSpecs] = useState<SpecResult[]>([]);
@@ -150,6 +151,7 @@ export default function NewShootPage() {
   const update = (patch: Partial<WizardState>) => setState((s) => ({ ...s, ...patch }));
 
   const suggestBrief = async (opts: { briefSeed?: string; tone?: string } = {}) => {
+    const genId = ++briefGenRef.current;
     const briefSnapshot = state.brief;
     const ctxSnapshot = { brandId: state.brandId, shootName: state.shootName, channels: state.channels.join(",") };
     setError(null);
@@ -185,7 +187,7 @@ export default function NewShootPage() {
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to suggest brief");
     } finally {
-      setBriefLoading(false);
+      if (genId === briefGenRef.current) setBriefLoading(false);
     }
   };
 
@@ -539,6 +541,7 @@ export default function NewShootPage() {
                           </div>
                         );
                       }
+                      if (!spec.widthPx || !spec.heightPx) return null;
                       const scale = Math.min(40 / spec.widthPx, 56 / spec.heightPx);
                       const pw = Math.round(spec.widthPx * scale);
                       const ph = Math.round(spec.heightPx * scale);
