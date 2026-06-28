@@ -1,0 +1,32 @@
+app/src/mastra/workflows/brand-approval-workflow.test.ts
+  s_77658a3d1fe88a::t_ffb661209f94ab 2,6,13,23-24
+  s_77658a3d1fe88a::t_17f7c9784eb3ce 9-12
+  s_77658a3d1fe88a::t_4429e7c47b401e 28-29
+app/src/mastra/workflows/index.ts
+  s_77658a3d1fe88a::t_938592577b7846 3
+app/src/mastra/workflows/brand-approval-workflow.ts
+  s_77658a3d1fe88a::t_7d869b9164451d 36-50
+app/src/mastra/index.ts
+  s_77658a3d1fe88a::t_6862d775e2e6ce 47
+  s_77658a3d1fe88a::t_3c5f462eee88a3 5
+app/src/mastra/durable.test.ts
+  s_77658a3d1fe88a::t_25e31de8c169dc 27-31
+  s_77658a3d1fe88a::t_7654647bee10a5 79-80
+  s_77658a3d1fe88a::t_4a969c9e64d62a 51-52,54-58
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.3",
+  "base_commit_sha": "75de9ce894aceae85f9752fd0aa8f4b29ef3731b",
+  "prompts": {},
+  "sessions": {
+    "s_77658a3d1fe88a": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "dc6cc552-236b-4b1d-8f97-da0652703db3",
+        "model": "default"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
