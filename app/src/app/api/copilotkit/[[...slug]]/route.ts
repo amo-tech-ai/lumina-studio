@@ -43,8 +43,9 @@ const runtime = new CopilotRuntime({
   },
   runner: new InMemoryAgentRunner(),
   // ponytail: licenseToken enables thread persistence (free tier: 72h, 200 threads).
-  // Intelligence API is not included in the free tier — use InMemoryAgentRunner instead.
-  ...(process.env.COPILOTKIT_LICENSE_TOKEN
+  // Only enable when OPERATOR_AUTH_ENABLED=true — without real auth, identifyUser
+  // returns UNKNOWN_USER and the CopilotKit cloud rejects it with "User not found".
+  ...(process.env.COPILOTKIT_LICENSE_TOKEN && process.env.OPERATOR_AUTH_ENABLED === "true"
     ? {
         licenseToken: process.env.COPILOTKIT_LICENSE_TOKEN,
         identifyUser: async () => _requestUser.getStore() ?? UNKNOWN_USER,
