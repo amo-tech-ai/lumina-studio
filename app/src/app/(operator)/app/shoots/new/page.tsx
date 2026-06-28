@@ -145,6 +145,7 @@ export default function NewShootPage() {
   const update = (patch: Partial<WizardState>) => setState((s) => ({ ...s, ...patch }));
 
   const suggestBrief = async () => {
+    const briefSnapshot = state.brief;
     setBriefLoading(true);
     try {
       const res = await fetch("/api/shoots/suggest-brief", {
@@ -152,9 +153,10 @@ export default function NewShootPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ brandId: state.brandId || undefined, channels: state.channels, shootName: state.shootName }),
       });
-      const { brief, error: err } = await res.json();
-      if (err) throw new Error(err);
-      update({ brief });
+      if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error ?? "Failed to suggest brief");
+      const { brief } = await res.json();
+      // Only apply if user hasn't edited the field while the request was in-flight
+      setState((s) => s.brief === briefSnapshot ? { ...s, brief } : s);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to suggest brief");
     } finally {
