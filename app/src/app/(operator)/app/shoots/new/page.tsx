@@ -558,7 +558,7 @@ export default function NewShootPage() {
             <div className="flex justify-end">
               <button
                 onClick={() => setStep(1)}
-                disabled={!state.shootName || state.channels.length === 0}
+                disabled={!state.brandId || !state.shootName || state.channels.length === 0}
                 className="rounded-full px-6 py-2.5 font-sans text-sm font-medium text-white disabled:opacity-40"
                 style={{ background: "#E87C4D" }}
               >
