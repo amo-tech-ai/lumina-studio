@@ -2,15 +2,17 @@ import { createGoogleGenerativeAI } from "@ai-sdk/google";
 // Gemini model registry for the operator app (IPI2-80 / AI-018, app slice).
 // Single source of truth so agents never hardcode model ids and we never ship a
 // preview id by accident.
-// Default: gemini-3.5-flash (stable GA per https://ai.google.dev/gemini-api/docs/models).
+// Default: gemini-3.1-flash-lite (stable GA — low latency / cost, IPI-223).
+// https://ai.google.dev/gemini-api/docs/models/gemini-3.1-flash-lite
 // Override via GEMINI_MODEL env var (add new model IDs to KNOWN_MODEL_IDS).
 export const GEMINI_MODELS = {
   default: "gemini-3.1-flash-lite",
+  /** Heavier reasoning — set GEMINI_MODEL=gemini-3.5-flash on paid keys */
   pro: "gemini-3.5-flash",
-  legacy: "gemini-2.5-flash",
 } as const;
 
-const KNOWN_MODEL_IDS: string[] = [GEMINI_MODELS.default, GEMINI_MODELS.pro, GEMINI_MODELS.legacy];
+// Model ids permitted as a GEMINI_MODEL override. Default is always allowed.
+const KNOWN_MODEL_IDS: string[] = [GEMINI_MODELS.default, GEMINI_MODELS.pro];
 
 // Env override so the live model swaps via one config, not code edits.
 // Treat empty/whitespace as unset and fall back to default.

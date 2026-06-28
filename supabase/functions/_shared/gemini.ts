@@ -2,12 +2,12 @@ import { GoogleGenAI, type GenerateContentResponse } from "npm:@google/genai@2.8
 
 import { getOptionalSecret } from "./env.ts";
 
-/** Default text model for iPix edge functions (IPI-25 / AI-018). */
-export const DEFAULT_GEMINI_MODEL = "gemini-3.5-flash";
+/** Default text model for iPix edge functions (IPI-223 — aligned with app registry). */
+export const DEFAULT_GEMINI_MODEL = "gemini-3.1-flash-lite";
 
 const KNOWN_MODEL_IDS: string[] = [
   DEFAULT_GEMINI_MODEL,
-  "gemini-2.5-flash",
+  "gemini-3.5-flash",
   "gemini-3.1-pro-preview",
 ];
 
