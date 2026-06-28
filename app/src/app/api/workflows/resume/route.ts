@@ -32,7 +32,7 @@ export async function POST(req: NextRequest) {
     } catch (resumeErr) {
       // ponytail: String() handles non-Error throws from Mastra internals
       const msg = (resumeErr instanceof Error ? resumeErr.message : String(resumeErr)).toLowerCase();
-      if (!msg.includes("not suspended") && !msg.includes("step not found")) throw resumeErr;
+      if (!msg.includes("not suspended")) throw resumeErr;
       // step already resumed — fall through to snapshot to return current gate
     }
 
