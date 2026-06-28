@@ -1,0 +1,129 @@
+/* IPI-218 — Right context panel: brand profile + DNA scores */
+
+.panel {
+  width: 320px;
+  height: 100dvh;
+  overflow-y: auto;
+  border-left: 1px solid var(--border);
+  background: var(--card);
+  padding: 1.25rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.state {
+  color: var(--muted-foreground);
+  font-size: 0.875rem;
+  padding: 3rem 0;
+  text-align: center;
+}
+
+.header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.name {
+  font-size: 1rem;
+  font-weight: 600;
+  margin: 0;
+  line-height: 1.3;
+}
+
+.badge {
+  flex-shrink: 0;
+  font-size: 0.6875rem;
+  padding: 0.125rem 0.5rem;
+  border-radius: 9999px;
+  background: var(--muted);
+  color: var(--muted-foreground);
+  text-transform: capitalize;
+  letter-spacing: 0.03em;
+}
+
+.badge[data-status="active"] {
+  background: hsl(142 76% 36% / 0.12);
+  color: hsl(142 76% 36%);
+}
+
+.badge[data-status="draft"] {
+  background: hsl(38 92% 50% / 0.12);
+  color: hsl(38 72% 40%);
+}
+
+.divider {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 0;
+}
+
+.sectionTitle {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted-foreground);
+  margin: 0 0 0.625rem;
+}
+
+/* DNA score pillars */
+.pillars {
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+}
+
+.pillar {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.pillarRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  font-size: 0.8125rem;
+}
+
+.pillarName {
+  text-transform: capitalize;
+  color: var(--foreground);
+}
+
+.pillarScore {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--foreground);
+}
+
+.bar {
+  height: 5px;
+  background: var(--muted);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.barFill {
+  height: 100%;
+  background: #E87C4D;
+  border-radius: 3px;
+  transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Brand profile summary */
+.summary {
+  font-size: 0.875rem;
+  color: var(--muted-foreground);
+  line-height: 1.55;
+  margin: 0;
+}
+
+@media (max-width: 1024px) {
+  .panel {
+    display: none;
+  }
+}
