@@ -33,11 +33,21 @@ const approvalStep = createStep({
     approved: z.boolean(),
     approver: z.string(),
   }),
-  execute: async ({ suspend }) => {
-    const resumeData = (await suspend({
-      message: "Brand requires manual approval before committing",
-      step: "approval",
-    })) as { approved: boolean; approver: string };
+  resumeSchema: z.object({
+    approved: z.boolean(),
+    approver: z.string(),
+  }),
+  suspendSchema: z.object({
+    message: z.string(),
+    step: z.string(),
+  }),
+  execute: async ({ suspend, resumeData }) => {
+    if (!resumeData) {
+      return await suspend({
+        message: "Brand requires manual approval before committing",
+        step: "approval",
+      });
+    }
     return {
       approved: resumeData.approved,
       approver: resumeData.approver,

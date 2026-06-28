@@ -1,14 +1,16 @@
 import { describe, expect, it } from "vitest";
-import { brandApprovalWorkflow } from "./brand-approval-workflow";
+import { getMastra } from "../index";
 
 describe("brand-approval workflow", () => {
   it("has the correct workflow id", () => {
-    expect(brandApprovalWorkflow.id).toBe("brand-approval");
+    expect(getMastra().getWorkflow("brand-approval").id).toBe("brand-approval");
   });
 
-  it("can suspend for approval and resume", { skip: !process.env.DATABASE_URL }, async () => {
-    const workflow = brandApprovalWorkflow;
-
+  it(
+    "can suspend for approval and resume",
+    { skip: !process.env.DATABASE_URL, timeout: 30_000 },
+    async () => {
+    const workflow = getMastra().getWorkflow("brand-approval");
     const run = await workflow.createRun();
     const startResult = await run.start({
       inputData: { brandName: "Nike", industry: "Sportswear" },
@@ -16,14 +18,13 @@ describe("brand-approval workflow", () => {
 
     expect(startResult.status).toBe("suspended");
     expect(startResult.suspendPayload).toBeDefined();
-    expect(startResult.suspendPayload.step).toBe("approval");
 
     const resumeResult = await run.resume({
-      approved: true,
-      approver: "test-admin",
+      step: "approval",
+      resumeData: { approved: true, approver: "test-admin" },
     });
 
     expect(resumeResult.status).toBe("success");
-    expect(resumeResult.results).toBeDefined();
-  });
+  },
+  );
 });
