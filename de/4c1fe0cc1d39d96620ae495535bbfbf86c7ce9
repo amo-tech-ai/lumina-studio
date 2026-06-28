@@ -1,0 +1,24 @@
+app/src/app/(operator)/app/shoots/new/page.tsx
+  s_0fd313d5fcae59::t_a7e62766f6e546 148,156-159
+app/src/mastra/tools/suggestShootBrief.ts
+  s_0fd313d5fcae59::t_0da6de9a8e54ad 1-60
+app/src/app/api/shoots/suggest-brief/route.ts
+  s_0fd313d5fcae59::t_7f9d2c3cd7c0b2 27,32-33
+  s_0fd313d5fcae59::t_d7a1a7a17c9aa5 1,3-6,8-12,16,18-20,23,25-26,28-30,34,36-38
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.3",
+  "base_commit_sha": "de4c1fe0cc1d39d96620ae495535bbfbf86c7ce9",
+  "prompts": {},
+  "sessions": {
+    "s_0fd313d5fcae59": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b6ee15c1-f864-4868-bb54-422fb6bdf80e",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
