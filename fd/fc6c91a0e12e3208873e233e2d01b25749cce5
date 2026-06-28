@@ -1,0 +1,24 @@
+app/src/app/(operator)/app/shoots/new/page.tsx
+  s_0fd313d5fcae59::t_866beb3b02f814 113
+  s_0fd313d5fcae59::t_352a00fe43bb07 521-532,540-544
+  s_0fd313d5fcae59::t_5e9f33a6b499ab 147-164
+app/src/app/api/shoots/suggest-brief/route.ts
+  s_0fd313d5fcae59::t_a1d274c91de2da 52
+  s_0fd313d5fcae59::t_fb37a7a155e29b 1-51,53-60
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.3",
+  "base_commit_sha": "fdfc6c91a0e12e3208873e233e2d01b25749cce5",
+  "prompts": {},
+  "sessions": {
+    "s_0fd313d5fcae59": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b6ee15c1-f864-4868-bb54-422fb6bdf80e",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
