@@ -70,64 +70,34 @@ export async function POST(req: NextRequest) {
   const safeChannels = (channels ?? []).filter((c) => VALID_CHANNELS.has(c));
   const safeDeliverables = deliverables.filter((d) => VALID_CHANNELS.has(d.channel));
 
-  // 1. Insert shoot
-  const { data: shoot, error: shootErr } = await svc
-    .schema("shoot")
-    .from("shoots")
-    .insert({
-      brand_id,
-      name: shoot_name,
-      type: "studio_ecommerce",
-      brief: brief ?? null,
-      target_channels: safeChannels,
-      estimated_budget: approved_budget,
-      budget_breakdown: budget_breakdown ?? null,
-      created_by: operator.id,
-      status: "planning",
-    })
-    .select("id")
-    .single();
-
-  if (shootErr || !shoot?.id) {
-    console.error("[commit] shoot insert:", shootErr);
-    return NextResponse.json({ error: shootErr?.message ?? "Failed to create shoot" }, { status: 500 });
-  }
-  const shoot_id: string = shoot.id;
-
-  // 2. Insert deliverables
-  if (safeDeliverables.length > 0) {
-    const { error: delivErr } = await svc.schema("shoot").from("shoot_deliverables").insert(
-      safeDeliverables.map((d) => ({
-        shoot_id,
-        channel: d.channel,
-        format: d.format ?? null,
-        quantity: d.quantity,
-        origin: "ai_approved",
-      })),
-    );
-    if (delivErr) {
-      console.error("[commit] deliverables insert:", delivErr);
-      await svc.schema("shoot").from("shoots").delete().eq("id", shoot_id);
-      return NextResponse.json({ error: delivErr.message ?? "Failed to save deliverables" }, { status: 500 });
-    }
-  }
-
-  // 3. Insert shot list
-  const { error: shotErr } = await svc.schema("shoot").from("shot_list").insert(
-    shots.map((s) => ({
-      shoot_id,
+  // Insert shoot + deliverables + shot_list in one atomic RPC call.
+  // Uses a SECURITY DEFINER function to write into the shoot schema,
+  // which PostgREST doesn't expose directly.
+  const { data: rpcResult, error: rpcErr } = await svc.rpc("commit_shoot_draft", {
+    p_brand_id: brand_id,
+    p_name: shoot_name,
+    p_brief: brief ?? null,
+    p_target_channels: safeChannels,
+    p_estimated_budget: approved_budget,
+    p_budget_breakdown: budget_breakdown ?? null,
+    p_created_by: operator.id,
+    p_deliverables: safeDeliverables.map((d) => ({
+      channel: d.channel,
+      format: d.format ?? null,
+      quantity: d.quantity,
+    })),
+    p_shots: shots.map((s) => ({
       description: s.description,
       style_notes: [s.angle, s.lighting].filter(Boolean).join(" | ") || null,
       order: s.shot_number,
-      origin: "ai_approved",
-      status: "pending",
     })),
-  );
-  if (shotErr) {
-    console.error("[commit] shot_list insert:", shotErr);
-    await svc.schema("shoot").from("shoots").delete().eq("id", shoot_id);
-    return NextResponse.json({ error: shotErr.message ?? "Failed to save shot list" }, { status: 500 });
+  });
+
+  if (rpcErr || !rpcResult?.shoot_id) {
+    console.error("[commit] rpc commit_shoot_draft:", rpcErr);
+    return NextResponse.json({ error: rpcErr?.message ?? "Failed to commit shoot" }, { status: 500 });
   }
+  const shoot_id: string = rpcResult.shoot_id;
 
   // 4. Audit log (non-fatal)
   try {
