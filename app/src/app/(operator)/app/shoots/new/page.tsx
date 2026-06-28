@@ -169,8 +169,13 @@ export default function NewShootPage() {
       if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error ?? "Failed to suggest brief");
       const { brief } = await res.json();
       // Only apply if user hasn't edited the field while the request was in-flight
-      setState((s) => s.brief === briefSnapshot ? { ...s, brief } : s);
-      setBriefGenerated(true);
+      let applied = false;
+      setState((s) => {
+        if (s.brief !== briefSnapshot) return s;
+        applied = true;
+        return { ...s, brief };
+      });
+      if (applied) setBriefGenerated(true);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to suggest brief");
     } finally {
@@ -653,7 +658,7 @@ export default function NewShootPage() {
               </button>
               <button
                 onClick={planDeliverables}
-                disabled={!state.brief || loading}
+                disabled={!state.brief || loading || briefLoading}
                 className="rounded-full px-6 py-2.5 font-sans text-sm font-medium text-white disabled:opacity-40"
                 style={{ background: "#E87C4D" }}
               >

@@ -29,13 +29,37 @@ export async function POST(req: NextRequest) {
     const { brandId, channels, shootName, briefSeed, tone } = parsed.data;
 
     // If a brandId is supplied, verify the authenticated user can see it (RLS enforced)
+    // and fetch the profile here so the tool never does its own tenant lookup.
+    let brandContext: string | undefined;
     if (brandId) {
       const sb = await createSupabaseServerClient();
-      const { error } = await sb.from("brands").select("id").eq("id", brandId).single();
-      if (error) return NextResponse.json({ error: "Brand not found" }, { status: 404 });
+      const { data, error } = await sb
+        .from("brands")
+        .select("name, brand_url, ai_profile")
+        .eq("id", brandId)
+        .single();
+      if (error) {
+        // PGRST116 = no rows (brand not found / RLS denied)
+        if (error.code === "PGRST116") {
+          return NextResponse.json({ error: "Brand not found" }, { status: 404 });
+        }
+        throw new Error(`Brand lookup failed: ${error.message}`);
+      }
+      if (data) {
+        const profile = data.ai_profile as Record<string, unknown> | null;
+        brandContext = [
+          `Brand: ${data.name}`,
+          data.brand_url ? `URL: ${data.brand_url}` : "",
+          profile?.overview ? `Overview: ${profile.overview}` : "",
+          profile?.tagline ? `Tagline: ${profile.tagline}` : "",
+          profile?.targetAudience ? `Target audience: ${profile.targetAudience}` : "",
+          profile?.brandVoice ? `Brand voice: ${profile.brandVoice}` : "",
+          profile?.uvp ? `UVP: ${profile.uvp}` : "",
+        ].filter(Boolean).join("\n");
+      }
     }
 
-    const result = await suggestShootBriefTool.execute!({ brandId, channels, shootName, briefSeed, tone }, {} as never) as { brief: string } | undefined;
+    const result = await suggestShootBriefTool.execute!({ brandContext, channels, shootName, briefSeed, tone }, {} as never) as { brief: string } | undefined;
     if (!result) throw new Error("Tool returned no result");
     return NextResponse.json({ brief: result.brief });
   } catch (err) {
