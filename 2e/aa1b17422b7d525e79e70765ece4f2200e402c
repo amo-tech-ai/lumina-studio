@@ -1,0 +1,21 @@
+app/src/components/brand-hub/analysis-progress-banner.test.tsx
+  s_0fd313d5fcae59::t_f7a427ddf89313 98-100
+app/src/components/brand-hub/analysis-progress-banner.tsx
+  s_0fd313d5fcae59::t_81c8801ac0ad12 91
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.3",
+  "base_commit_sha": "2eaa1b17422b7d525e79e70765ece4f2200e402c",
+  "prompts": {},
+  "sessions": {
+    "s_0fd313d5fcae59": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b6ee15c1-f864-4868-bb54-422fb6bdf80e",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
