@@ -1,0 +1,27 @@
+app/src/mastra/tools/social-discovery.test.ts
+  s_77658a3d1fe88a::t_e298a8cf4783aa 185-216
+app/src/lib/brand/persist-social-discovery.ts
+  s_77658a3d1fe88a::t_2dab6133d95105 95-101
+app/src/lib/brand/persist-social-discovery.test.ts
+  s_77658a3d1fe88a::t_5faf3f477a909d 93
+  s_77658a3d1fe88a::t_a13c7c4251ff62 94-114
+  s_77658a3d1fe88a::t_138fd35fd65a77 115
+app/src/mastra/tools/social-discovery.ts
+  s_77658a3d1fe88a::t_d5df15b83d6293 136-145
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.3",
+  "base_commit_sha": "8ed28b2c792a8a8560bf425551f9790764a37828",
+  "prompts": {},
+  "sessions": {
+    "s_77658a3d1fe88a": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "dc6cc552-236b-4b1d-8f97-da0652703db3",
+        "model": "default"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
