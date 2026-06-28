@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { useShootWizardContext } from "@/components/shoot/shoot-wizard-context";
 import { createBrowserClient } from "@supabase/ssr";
 import { DeliverableApprovalCard } from "@/components/shoot/hitl/DeliverableApprovalCard";
 import { ShotListApprovalCard } from "@/components/shoot/hitl/ShotListApprovalCard";
@@ -111,6 +112,11 @@ export default function NewShootPage() {
   const [step, setStep] = useState(0);
   const [loading, setLoading] = useState(false);
   const [briefLoading, setBriefLoading] = useState(false);
+  const [briefGenerated, setBriefGenerated] = useState(false);
+  const [expandOffer, setExpandOffer] = useState(false);
+  const seedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const autoGenerateFired = useRef(false);
+  const briefGenRef = useRef(0);
   const [error, setError] = useState<string | null>(null);
   const [brands, setBrands] = useState<{ id: string; name: string }[]>([]);
   const [specs, setSpecs] = useState<SpecResult[]>([]);
@@ -144,26 +150,68 @@ export default function NewShootPage() {
 
   const update = (patch: Partial<WizardState>) => setState((s) => ({ ...s, ...patch }));
 
-  const suggestBrief = async () => {
+  const suggestBrief = async (opts: { briefSeed?: string; tone?: string } = {}) => {
+    const genId = ++briefGenRef.current;
     const briefSnapshot = state.brief;
+    const ctxSnapshot = { brandId: state.brandId, shootName: state.shootName, channels: state.channels.join(",") };
     setError(null);
+    setExpandOffer(false);
     setBriefLoading(true);
     try {
       const res = await fetch("/api/shoots/suggest-brief", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ brandId: state.brandId || undefined, channels: state.channels, shootName: state.shootName }),
+        body: JSON.stringify({
+          brandId: state.brandId || undefined,
+          channels: state.channels,
+          shootName: state.shootName,
+          briefSeed: opts.briefSeed,
+          tone: opts.tone,
+        }),
       });
       if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error ?? "Failed to suggest brief");
       const { brief } = await res.json();
-      // Only apply if user hasn't edited the field while the request was in-flight
-      setState((s) => s.brief === briefSnapshot ? { ...s, brief } : s);
+      // Discard if user edited the brief OR changed brand/channels/shoot name while in-flight
+      let applied = false;
+      setState((s) => {
+        if (
+          s.brief !== briefSnapshot ||
+          s.brandId !== ctxSnapshot.brandId ||
+          s.shootName !== ctxSnapshot.shootName ||
+          s.channels.join(",") !== ctxSnapshot.channels
+        ) return s;
+        applied = true;
+        return { ...s, brief };
+      });
+      if (applied) setBriefGenerated(true);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to suggest brief");
     } finally {
-      setBriefLoading(false);
+      if (genId === briefGenRef.current) setBriefLoading(false);
     }
   };
+
+  // Auto-generate brief when entering Step 1 with channels selected and brief empty.
+  // Once briefGenerated is true, don't reset the flag — user cleared the textarea
+  // intentionally; don't silently regenerate on re-entry.
+  useEffect(() => {
+    if (step !== 1) { if (!briefGenerated) autoGenerateFired.current = false; return; }
+    if (!autoGenerateFired.current && state.channels.length > 0 && state.brief.trim().length === 0) {
+      autoGenerateFired.current = true;
+      suggestBrief();
+    }
+  }, [step, state.channels.length, state.brief, briefGenerated]);
+
+  // Offer to expand when user has typed ≥10 chars and paused 1.5s
+  useEffect(() => {
+    if (seedTimerRef.current) clearTimeout(seedTimerRef.current);
+    if (state.brief.length >= 10 && state.brief.length < 150 && !briefLoading && !briefGenerated) {
+      seedTimerRef.current = setTimeout(() => setExpandOffer(true), 1500);
+    } else {
+      setExpandOffer(false);
+    }
+    return () => { if (seedTimerRef.current) clearTimeout(seedTimerRef.current); };
+  }, [state.brief, briefLoading, briefGenerated]);
 
   // IPI-189: fetch channel specs whenever channel selection changes (debounced 200ms)
   useEffect(() => {
@@ -375,6 +423,19 @@ export default function NewShootPage() {
 
   // ── Render ────────────────────────────────────────────────────────────────
 
+  const brandName = brands.find((b) => b.id === state.brandId)?.name ?? "";
+  useShootWizardContext({
+    step,
+    shootName: state.shootName,
+    brandId: state.brandId,
+    brandName,
+    channels: state.channels,
+    brief: state.brief,
+    deliverables: state.deliverables,
+    shots: state.shots,
+    budget: state.budget,
+  });
+
   return (
     <div className="min-h-screen p-8" style={{ background: "#FBF8F5" }}>
       <div className="mx-auto max-w-2xl space-y-6">
@@ -438,6 +499,7 @@ export default function NewShootPage() {
                 {CHANNELS.map((ch) => (
                   <button
                     key={ch.id}
+                    type="button"
                     onClick={() => toggleChannel(ch.id)}
                     className="rounded-full border px-3 py-1.5 font-sans text-sm transition-all"
                     style={{
@@ -480,20 +542,32 @@ export default function NewShootPage() {
                           </div>
                         );
                       }
+                      if (!spec.widthPx || !spec.heightPx) return null;
+                      const scale = Math.min(40 / spec.widthPx, 56 / spec.heightPx);
+                      const pw = Math.round(spec.widthPx * scale);
+                      const ph = Math.round(spec.heightPx * scale);
                       return (
                         <div
                           key={channel}
-                          className="rounded-xl border border-[#E8E0D8] bg-white px-4 py-3 font-sans text-sm"
+                          className="flex items-center gap-3 rounded-xl border border-[#E8E0D8] bg-white px-4 py-3 font-sans text-sm"
                         >
-                          <p className="font-medium text-[#1E293B]">{label}</p>
-                          <p className="mt-1 text-[#64748B]">{spec.widthPx} × {spec.heightPx} px</p>
-                          {spec.aspectRatioLabel && (
-                            <p className="text-[#64748B]">Ratio {spec.aspectRatioLabel}</p>
-                          )}
-                          <p className="text-[#64748B]">{spec.acceptedFormats.join(" · ")}</p>
-                          {spec.maxFileSizeMb && (
-                            <p className="text-[#64748B]">Max {spec.maxFileSizeMb} MB</p>
-                          )}
+                          <div className="flex-1">
+                            <p className="font-medium text-[#1E293B]">{label}</p>
+                            <p className="mt-1 text-[#64748B]">{spec.widthPx} × {spec.heightPx} px</p>
+                            {spec.aspectRatioLabel && (
+                              <p className="text-[#64748B]">Ratio {spec.aspectRatioLabel}</p>
+                            )}
+                            <p className="text-[#64748B]">{spec.acceptedFormats.join(" · ")}</p>
+                            {spec.maxFileSizeMb && (
+                              <p className="text-[#64748B]">Max {spec.maxFileSizeMb} MB</p>
+                            )}
+                          </div>
+                          <div className="flex shrink-0 items-center justify-center" style={{ width: 44, height: 60 }}>
+                            <div
+                              className="rounded border border-[#CBD5E1] bg-[#F1EDE8]"
+                              style={{ width: pw, height: ph }}
+                            />
+                          </div>
                         </div>
                       );
                     })}
@@ -505,7 +579,7 @@ export default function NewShootPage() {
             <div className="flex justify-end">
               <button
                 onClick={() => setStep(1)}
-                disabled={!state.shootName || state.channels.length === 0}
+                disabled={!state.brandId || !state.shootName || state.channels.length === 0}
                 className="rounded-full px-6 py-2.5 font-sans text-sm font-medium text-white disabled:opacity-40"
                 style={{ background: "#E87C4D" }}
               >
@@ -520,27 +594,82 @@ export default function NewShootPage() {
           <div className="space-y-5">
             <h1 className="font-serif text-2xl text-[#1E293B]">Brief</h1>
 
-            <div className="space-y-1">
+            <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <label className="font-sans text-sm font-medium text-[#475569]">Brief *</label>
+                {!briefGenerated && (
+                  <button
+                    type="button"
+                    onClick={() => suggestBrief()}
+                    disabled={briefLoading}
+                    className="flex items-center gap-1.5 rounded-full border border-[#E8E0D8] px-3 py-1 font-sans text-xs text-[#64748B] transition-colors hover:border-[#E87C4D] hover:text-[#E87C4D] disabled:opacity-40"
+                  >
+                    {briefLoading ? (
+                      <span className="h-3 w-3 animate-spin rounded-full border border-[#E8E0D8] border-t-[#E87C4D]" />
+                    ) : "✨"} AI suggest
+                  </button>
+                )}
+              </div>
+
+              <div className="relative">
+                <textarea
+                  rows={5}
+                  readOnly={briefLoading}
+                  className="w-full rounded-xl border border-[#E8E0D8] bg-white px-4 py-3 font-sans text-sm text-[#1E293B] outline-none focus:border-[#E87C4D] disabled:opacity-50"
+                  style={{ opacity: briefLoading ? 0.5 : 1 }}
+                  placeholder="Describe the shoot vision, tone, products, and campaign goals…"
+                  value={state.brief}
+                  onChange={(e) => {
+                    update({ brief: e.target.value });
+                    setBriefGenerated(false);
+                  }}
+                />
+                {briefLoading && (
+                  <div className="absolute inset-x-0 bottom-2 flex items-center justify-center gap-2">
+                    <span className="h-3 w-3 animate-spin rounded-full border border-[#E8E0D8] border-t-[#E87C4D]" />
+                    <p className="font-sans text-xs text-[#94A3B8]">Generating your creative brief…</p>
+                  </div>
+                )}
+              </div>
+
+              {/* Generated status + tone chips */}
+              {briefGenerated && !briefLoading && (
+                <p className="text-xs text-[#94A3B8]">✓ Brief generated — refine below</p>
+              )}
+              {briefGenerated && !briefLoading && (
+                <div className="flex flex-wrap gap-2">
+                  {[
+                    { label: "↺ Regenerate", tone: undefined as string | undefined, omitSeed: true },
+                    { label: "Shorter", tone: "shorter" },
+                    { label: "More luxury", tone: "more luxury" },
+                    { label: "More commercial", tone: "more commercial" },
+                    { label: "More social-first", tone: "more social-first" },
+                    { label: "More editorial", tone: "more editorial" },
+                  ].map(({ label, tone, omitSeed }) => (
+                    <button
+                      key={label}
+                      type="button"
+                      disabled={briefLoading}
+                      onClick={() => suggestBrief({ tone, briefSeed: omitSeed ? undefined : state.brief.substring(0, 4000) })}
+                      className="rounded-full border border-[#E8E0D8] px-3 py-1 font-sans text-xs text-[#64748B] transition-colors hover:border-[#E87C4D] hover:text-[#E87C4D] disabled:opacity-40"
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {/* Seed expansion offer */}
+              {expandOffer && !briefLoading && (
                 <button
                   type="button"
-                  onClick={suggestBrief}
-                  disabled={briefLoading}
-                  className="flex items-center gap-1.5 rounded-full border border-[#E8E0D8] px-3 py-1 font-sans text-xs text-[#64748B] transition-colors hover:border-[#E87C4D] hover:text-[#E87C4D] disabled:opacity-40"
+                  onClick={() => suggestBrief({ briefSeed: state.brief.substring(0, 4000) })}
+                  className="flex items-center gap-1.5 rounded-xl border border-[#F3B93C] bg-[#FFFBEB] px-3 py-2 font-sans text-xs text-[#92400E] transition-colors hover:bg-[#FEF9C3]"
                 >
-                  {briefLoading ? (
-                    <span className="h-3 w-3 animate-spin rounded-full border border-[#E8E0D8] border-t-[#E87C4D]" />
-                  ) : "✨"} AI suggest
+                  ✨ Expand this into a complete creative brief
                 </button>
-              </div>
-              <textarea
-                rows={5}
-                className="w-full rounded-xl border border-[#E8E0D8] bg-white px-4 py-3 font-sans text-sm text-[#1E293B] outline-none focus:border-[#E87C4D]"
-                placeholder="Describe the shoot vision, tone, products, and campaign goals…"
-                value={state.brief}
-                onChange={(e) => update({ brief: e.target.value })}
-              />
+              )}
+
               {!state.brief && !briefLoading && (
                 <p className="font-sans text-xs text-[#94A3B8]">
                   Tip: click "AI suggest" to generate a brief from your brand's profile.
@@ -554,7 +683,7 @@ export default function NewShootPage() {
               </button>
               <button
                 onClick={planDeliverables}
-                disabled={!state.brief || loading}
+                disabled={!state.brief || loading || briefLoading}
                 className="rounded-full px-6 py-2.5 font-sans text-sm font-medium text-white disabled:opacity-40"
                 style={{ background: "#E87C4D" }}
               >

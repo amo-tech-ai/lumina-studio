@@ -1,58 +1,54 @@
 import { createTool } from "@mastra/core/tools";
-import { createClient } from "@supabase/supabase-js";
 import { z } from "zod";
 import { generateText } from "ai";
 import { resolveModel } from "../models";
 
-function adminClient() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!url || !key) throw new Error("Supabase service-role env vars not set");
-  return createClient(url, key, { auth: { persistSession: false } });
-}
+export const ALLOWED_TONES = ["shorter", "more luxury", "more commercial", "more social-first", "more editorial"] as const;
+export type AllowedTone = (typeof ALLOWED_TONES)[number];
 
 export const suggestShootBriefTool = createTool({
   id: "suggestShootBrief",
-  description: "Generate a shoot brief from a brand's AI profile and target channels.",
+  description: "Generate a complete professional creative brief for a fashion photography shoot.",
   inputSchema: z.object({
-    brandId: z.string().uuid().optional(),
+    brandContext: z.string().optional(),
     channels: z.array(z.string()),
     shootName: z.string(),
+    briefSeed: z.string().max(8000).optional(),
+    tone: z.enum(ALLOWED_TONES).optional(),
   }),
   outputSchema: z.object({ brief: z.string() }),
-  execute: async ({ brandId, channels, shootName }) => {
-    let brandContext = "";
-    if (brandId) {
-      const { data, error } = await adminClient()
-        .from("brands")
-        .select("name, brand_url, ai_profile")
-        .eq("id", brandId)
-        .single();
-      if (error) throw new Error(`Brand lookup failed: ${error.message}`);
-      if (data) {
-        const profile = data.ai_profile as Record<string, unknown> | null;
-        brandContext = [
-          `Brand: ${data.name}`,
-          data.brand_url ? `URL: ${data.brand_url}` : "",
-          profile?.overview ? `Overview: ${profile.overview}` : "",
-          profile?.tagline ? `Tagline: ${profile.tagline}` : "",
-          profile?.targetAudience ? `Target audience: ${profile.targetAudience}` : "",
-          profile?.brandVoice ? `Brand voice: ${profile.brandVoice}` : "",
-          profile?.uvp ? `UVP: ${profile.uvp}` : "",
-        ].filter(Boolean).join("\n");
-      }
-    }
-
+  execute: async ({ brandContext, channels, shootName, briefSeed, tone }) => {
     const channelList = channels.join(", ") || "unspecified channels";
+
+    const seedSection = briefSeed
+      ? `\nOperator's creative direction (use as intent and inspiration — do not simply continue this sentence, rewrite it into a complete professional brief):\n"${briefSeed}"\n`
+      : "";
+
+    const toneSection = tone
+      ? `\nTone adjustment: rewrite the brief to feel ${tone}.\n`
+      : "";
+
     const { text } = await generateText({
       model: resolveModel(),
-      prompt: `You are a creative director writing a shoot brief. Write a concise, inspiring shoot brief (3–5 sentences) for a photography/video shoot.
+      prompt: `You are a Creative Director writing a professional fashion photography creative brief.
 
-${brandContext ? `Brand context:\n${brandContext}\n` : ""}Shoot name: ${shootName}
+${brandContext ? `Brand context:\n${brandContext}\n` : ""}Campaign: ${shootName}
 Target channels: ${channelList}
+${seedSection}${toneSection}
+Write a complete creative brief of 4–6 paragraphs. Cover:
+- Campaign vision and mood
+- Visual direction: lighting, location, setting, composition
+- Talent, styling, and art direction
+- Content mix suited to the target channels
+- Tone, brand alignment, and campaign goals
 
-Write the brief in first person from the brand's perspective. Focus on vision, tone, products/subject matter, and campaign goals. Be specific and actionable. Output only the brief text, no headings or labels.`,
-      maxOutputTokens: 300,
+Be specific, professional, and actionable. Write in a confident creative director voice, first person from the brand's perspective. Output only the brief text — no headings, no labels, no bullet points.`,
+      maxOutputTokens: 1200,
+      // ponytail: thinkingBudget:0 — gemini-3.5-flash is a thinking model; without this it
+      // burns ~760/800 tokens on reasoning and outputs only ~30 words of actual text.
+      providerOptions: {
+        google: { thinkingConfig: { thinkingBudget: 0 } },
+      },
     });
 
     return { brief: text.trim() };
