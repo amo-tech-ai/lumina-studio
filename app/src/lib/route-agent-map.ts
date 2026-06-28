@@ -8,8 +8,7 @@ const DEFAULT_AGENT = "production-planner";
 const ROUTE_MAP: [prefix: string, agentId: string][] = [
   ["/app/shoots", "production-planner"],
   ["/app/campaigns", "creative-director"],
-  // ponytail: brand-intelligence agent not yet registered (IPI-113); falls to default.
-  ["/app/brand", "production-planner"],
+  ["/app/brand", "brand-intelligence"],  // IPI-130
   ["/app/assets", "production-planner"],
   ["/app/matching", "production-planner"],
   ["/app/onboarding", "production-planner"],

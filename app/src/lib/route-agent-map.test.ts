@@ -14,7 +14,8 @@ describe("resolveAgentId", () => {
   });
 
   it("all mapped routes resolve correctly", () => {
-    expect(resolveAgentId("/app/brand")).toBe("production-planner");
+    expect(resolveAgentId("/app/brand")).toBe("brand-intelligence"); // IPI-130
+    expect(resolveAgentId("/app/brand/some-id")).toBe("brand-intelligence");
     expect(resolveAgentId("/app/assets")).toBe("production-planner");
     expect(resolveAgentId("/app/matching")).toBe("production-planner");
     expect(resolveAgentId("/app/onboarding")).toBe("production-planner");
