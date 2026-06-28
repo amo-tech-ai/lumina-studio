@@ -9,18 +9,27 @@ import { scoreLabel } from "@/lib/brand-utils";
 // production-planner can answer "explain this score" without re-fetching.
 // v2 equivalent of useCopilotReadable — see .claude/skills/copilotkit/references/upgrade/ipix-v2-conventions.md
 export function useBrandContext({
+  brandId,
   brandName,
+  dnaScore,
+  intakeStatus,
   profile,
   scores,
 }: {
+  brandId: string;
   brandName: string;
+  dnaScore: number;
+  intakeStatus: string | null;
   profile: AiProfile;
   scores: BrandScoreDetail[];
 }) {
   useAgentContext({
     description: "Brand currently open in the Brand Hub",
     value: {
+      brandId,
       name: brandName,
+      dna_score: dnaScore,
+      intake_status: intakeStatus ?? null,
       tagline: profile.tagline ?? null,
       category: profile.category ?? null,
       industry: profile.industry ?? null,

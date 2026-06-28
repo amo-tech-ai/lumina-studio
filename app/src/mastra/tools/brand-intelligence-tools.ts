@@ -5,6 +5,7 @@ import { createTool } from "@mastra/core/tools";
 import { createClient } from "@supabase/supabase-js";
 import { z } from "zod";
 import { callEdgeFunction } from "./edge";
+import { requestToken } from "@/lib/request-token";
 
 function adminClient() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -16,7 +17,7 @@ function adminClient() {
 export const getBrandProfile = createTool({
   id: "getBrandProfile",
   description:
-    "Read a brand's current profile, status, and AI analysis from the database. Call this at the start of every conversation to ground your context.",
+    "Read a brand's current profile, status, and AI analysis from the database. Use when you need fresher data than what is already in your injected context (e.g. after a re-analysis completes).",
   inputSchema: z.object({ brandId: z.string().uuid() }),
   outputSchema: z.object({
     id: z.string(),
@@ -88,10 +89,11 @@ export const startBrandAnalysis = createTool({
     "Trigger a fresh brand intelligence analysis (crawl → profile → HITL draft). Only call this when the operator explicitly requests a re-analysis. Returns the workflow run ID.",
   inputSchema: z.object({
     brandId: z.string().uuid(),
-    accessToken: z.string().describe("Operator's Supabase JWT — required to start the workflow"),
   }),
   outputSchema: z.object({ runId: z.string(), message: z.string() }),
-  execute: async ({ brandId, accessToken }) => {
+  execute: async ({ brandId }) => {
+    const accessToken = requestToken.getStore();
+    if (!accessToken) throw new Error("Access token not available in request context");
     const result = await callEdgeFunction<{ runId: string }>(
       "start-brand-crawl",
       { brandId },

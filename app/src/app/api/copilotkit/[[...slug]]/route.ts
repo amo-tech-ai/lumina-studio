@@ -7,8 +7,9 @@ import {
 import { MastraAgent } from "@ag-ui/mastra";
 import { RequestContext } from "@mastra/core/request-context";
 import { getMastra } from "@/mastra";
-import { type OperatorUser } from "@/lib/auth";
+import { type OperatorUser, extractAccessToken } from "@/lib/auth";
 import { OperatorAuthError, withOperatorAuth } from "@/lib/operator-gate";
+import { requestToken } from "@/lib/request-token";
 import { handle } from "hono/vercel";
 
 // AsyncLocalStorage propagates the resolved operator identity through the
@@ -72,7 +73,8 @@ const handler = async (request: Request): Promise<Response> => {
     }
     throw err;
   }
-  return _requestUser.run(user, () => endpoint(request));
+  const token = extractAccessToken(request) ?? "";
+  return _requestUser.run(user, () => requestToken.run(token, () => endpoint(request)));
 };
 
 export const GET = handler;

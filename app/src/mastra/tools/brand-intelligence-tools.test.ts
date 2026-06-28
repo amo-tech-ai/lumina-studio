@@ -6,6 +6,9 @@ vi.mock("./edge", () => ({
   callEdgeFunction: vi.fn().mockResolvedValue({ runId: "run-abc123" }),
   EdgeFunctionError: class EdgeFunctionError extends Error {},
 }));
+vi.mock("@/lib/request-token", () => ({
+  requestToken: { getStore: () => "tok" },
+}));
 vi.mock("@ai-sdk/openai-compatible", () => ({
   createOpenAICompatible: vi.fn(() => vi.fn(() => "mock-model")),
 }));
@@ -87,8 +90,8 @@ describe("getBrandScores", () => {
 });
 
 describe("startBrandAnalysis", () => {
-  it("calls start-brand-crawl edge function and returns runId", async () => {
-    const result = await startBrandAnalysis.execute!({ brandId: BRAND_ID, accessToken: "tok" }, {} as never);
+  it("calls start-brand-crawl edge function using token from ALS (not LLM input)", async () => {
+    const result = await startBrandAnalysis.execute!({ brandId: BRAND_ID }, {} as never);
     const r = result as Awaited<ReturnType<typeof startBrandAnalysis.execute>>;
     expect(r!.runId).toBe("run-abc123");
     expect(r!.message).toContain("analysis started");

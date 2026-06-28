@@ -1,48 +1,93 @@
-import { readFileSync } from "node:fs";
-import { resolve } from "node:path";
-import { fileURLToPath } from "node:url";
-import { describe, expect, it } from "vitest";
+// @vitest-environment jsdom
+import { describe, it, expect, vi, beforeEach } from "vitest";
+import { renderHook } from "@testing-library/react";
+import type { AiProfile, BrandScoreDetail } from "@/lib/brand-hub";
 
-const DIR = resolve(fileURLToPath(new URL(".", import.meta.url)));
+const mockUseAgentContext = vi.fn();
+vi.mock("@copilotkit/react-core/v2", () => ({
+  useAgentContext: (...args: unknown[]) => mockUseAgentContext(...args),
+}));
+vi.mock("@/lib/brand-utils", () => ({
+  scoreLabel: (t: string) => t,
+}));
 
-const CONTEXT_SRC = readFileSync(resolve(DIR, "brand-context.tsx"), "utf8");
-const CLIENT_SRC = readFileSync(resolve(DIR, "brand-hub-client.tsx"), "utf8");
+import { useBrandContext } from "./brand-context";
+
+const brandId = "aaaaaaaa-0000-0000-0000-000000000001";
+const profile: AiProfile = {
+  tagline: "Test tagline",
+  category: "Fashion",
+  industry: "Retail",
+  targetAudience: "Gen Z",
+  brandVoice: "Bold",
+  uvp: "Unique",
+  mission: "Inspire",
+  confidenceScore: 0.9,
+  analyzedAt: "2026-01-01T00:00:00Z",
+};
+const scores: BrandScoreDetail[] = [
+  { score_type: "visual", score: 72, details: { confidence: 0.8 } } as BrandScoreDetail,
+  { score_type: "audience", score: 58, details: { confidence: 0.7 } } as BrandScoreDetail,
+];
+
+beforeEach(() => mockUseAgentContext.mockClear());
 
 describe("useBrandContext — agent context wiring (IPI-123 DASH-003 AC6)", () => {
-  it("imports useAgentContext from CopilotKit v2 subpath", () => {
-    expect(CONTEXT_SRC).toMatch(
-      /from "@copilotkit\/react-core\/v2"/,
+  it("calls useAgentContext twice (identity + scores)", () => {
+    renderHook(() =>
+      useBrandContext({ brandId, brandName: "Lumina", dnaScore: 75, intakeStatus: "ready", profile, scores }),
     );
-    expect(CONTEXT_SRC).toMatch(/useAgentContext/);
+    expect(mockUseAgentContext).toHaveBeenCalledTimes(2);
   });
 
-  it("registers brand identity context", () => {
-    expect(CONTEXT_SRC).toMatch(/description:.*[Bb]rand.*open/);
-    expect(CONTEXT_SRC).toMatch(/name:\s*brandName/);
+  it("injects brandId, dna_score and intake_status into the identity context", () => {
+    renderHook(() =>
+      useBrandContext({ brandId, brandName: "Lumina", dnaScore: 75, intakeStatus: "draft_ready", profile, scores }),
+    );
+    const [identityCall] = mockUseAgentContext.mock.calls;
+    expect(identityCall[0].value).toMatchObject({
+      brandId,
+      dna_score: 75,
+      intake_status: "draft_ready",
+      name: "Lumina",
+    });
   });
 
-  it("registers brand scores context", () => {
-    expect(CONTEXT_SRC).toMatch(/description:.*[Ss]core/);
-    expect(CONTEXT_SRC).toMatch(/scores\.map/);
+  it("maps scores to dimension/score/confidence tuples", () => {
+    renderHook(() =>
+      useBrandContext({ brandId, brandName: "Lumina", dnaScore: 75, intakeStatus: null, profile, scores }),
+    );
+    const [, scoresCall] = mockUseAgentContext.mock.calls;
+    expect(scoresCall[0].value).toEqual([
+      { dimension: "visual", score: 72, confidence: 0.8 },
+      { dimension: "audience", score: 58, confidence: 0.7 },
+    ]);
   });
 
-  it("calls useAgentContext exactly twice (identity + scores)", () => {
-    const calls = CONTEXT_SRC.match(/useAgentContext\(/g) ?? [];
-    expect(calls).toHaveLength(2);
+  it("coerces null intakeStatus to null (not undefined)", () => {
+    renderHook(() =>
+      useBrandContext({ brandId, brandName: "Lumina", dnaScore: 75, intakeStatus: null, profile, scores }),
+    );
+    const [identityCall] = mockUseAgentContext.mock.calls;
+    expect(identityCall[0].value.intake_status).toBeNull();
   });
 });
 
 describe("BrandHubClient — useBrandContext integration (IPI-123 DASH-003 AC6)", () => {
-  it("imports useBrandContext from brand-context", () => {
-    expect(CLIENT_SRC).toMatch(
-      /import.*useBrandContext.*from.*brand-context/,
+  // Source-level smoke checks: ensure the call-site passes all required props.
+  // Runtime wiring is covered by the hook tests above.
+  it("client source passes brandId, dnaScore, intakeStatus, profile and scores to useBrandContext", async () => {
+    const { readFileSync } = await import("node:fs");
+    const { resolve } = await import("node:path");
+    const src = readFileSync(
+      resolve(process.cwd(), "src/components/brand-hub/brand-hub-client.tsx"),
+      "utf8",
     );
-  });
-
-  it("calls useBrandContext with brandName, profile, and scores", () => {
-    expect(CLIENT_SRC).toMatch(/useBrandContext\(/);
-    expect(CLIENT_SRC).toMatch(/brandName/);
-    expect(CLIENT_SRC).toMatch(/profile/);
-    expect(CLIENT_SRC).toMatch(/scores.*displayScores|displayScores.*scores/);
+    expect(src).toMatch(/useBrandContext\(/);
+    expect(src).toMatch(/brandId/);
+    expect(src).toMatch(/dnaScore/);
+    expect(src).toMatch(/intakeStatus/);
+    expect(src).toMatch(/profile/);
+    expect(src).toMatch(/displayScores/);
   });
 });
