@@ -191,7 +191,7 @@ export default function NewShootPage() {
   // Offer to expand when user has typed ≥10 chars and paused 1.5s
   useEffect(() => {
     if (seedTimerRef.current) clearTimeout(seedTimerRef.current);
-    if (state.brief.length >= 10 && !briefLoading && !briefGenerated) {
+    if (state.brief.length >= 10 && state.brief.length < 150 && !briefLoading && !briefGenerated) {
       seedTimerRef.current = setTimeout(() => setExpandOffer(true), 1500);
     } else {
       setExpandOffer(false);
