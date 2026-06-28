@@ -258,9 +258,11 @@ export default function NewShootPage() {
 
       // Workflow suspends at Gate 1 (deliverable-gate) and returns computed deliverables
       const { runId, suspendPayload } = await res.json();
-      const rawDeliverables: Omit<Deliverable, "id">[] = suspendPayload?.deliverables
-        ?? state.channels.flatMap((ch: string) => [{ channel: ch, format: "JPG", quantity: 6 }]);
-      const totalAssets: number = suspendPayload?.total_assets
+      if (!suspendPayload?.deliverables) {
+        throw new Error("Workflow did not return deliverables — please retry");
+      }
+      const rawDeliverables = suspendPayload.deliverables as Omit<Deliverable, "id">[];
+      const totalAssets: number = suspendPayload.total_assets
         ?? rawDeliverables.reduce((s: number, d: Omit<Deliverable, "id">) => s + d.quantity, 0);
 
       update({

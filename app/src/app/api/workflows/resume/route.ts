@@ -19,16 +19,21 @@ export async function POST(req: NextRequest) {
     let suspendPayload = result?.status === "suspended" ? result.suspendPayload : null;
 
     // Fallback: Mastra 1.41 may return before the next step suspends in a multi-gate workflow.
-    // Read the persisted snapshot from PostgresStore to find the current suspended step's payload.
+    // Retry up to 3× to handle async persistence lag; skip the just-resumed stepId so we
+    // read the *next* gate's payload, not the one we just resumed.
     if (!suspendPayload) {
-      // ponytail: WorkflowRunState.context[stepId].suspendPayload is the canonical payload location
       const workflowsStore = await mastra.getStorage()?.getStore("workflows");
-      const snapshot = await workflowsStore?.loadWorkflowSnapshot({ workflowName: workflowId, runId });
-      if (snapshot) {
-        const suspendedStepId = Object.keys(snapshot.suspendedPaths ?? {})[0];
-        if (suspendedStepId) {
-          const step = snapshot.context[suspendedStepId];
-          if (step?.status === "suspended") suspendPayload = step.suspendPayload ?? null;
+      if (workflowsStore) {
+        for (let attempt = 0; attempt < 3 && !suspendPayload; attempt++) {
+          if (attempt > 0) await new Promise((r) => setTimeout(r, 150));
+          const snapshot = await workflowsStore.loadWorkflowSnapshot({ workflowName: workflowId, runId });
+          if (snapshot) {
+            const nextStepId = Object.keys(snapshot.suspendedPaths ?? {}).find((id) => id !== stepId);
+            if (nextStepId) {
+              const step = snapshot.context[nextStepId];
+              if (step?.status === "suspended") suspendPayload = step.suspendPayload ?? null;
+            }
+          }
         }
       }
     }
