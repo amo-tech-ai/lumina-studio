@@ -1,0 +1,25 @@
+app/src/app/(operator)/app/shoots/new/page.tsx
+  s_0fd313d5fcae59::t_cd0db825f62092 259-264,268-269
+app/src/app/api/workflows/resume/route.ts
+  s_0fd313d5fcae59::t_aa8c66695e4b3d 24,26-32
+  s_0fd313d5fcae59::t_93f237f7748ac6 14-15,17-20,23,33-35
+  s_0fd313d5fcae59::t_7f6c6c09a9de04 21-22,25
+app/src/app/api/workflows/shoot-wizard/route.ts
+  s_0fd313d5fcae59::t_e9a6b957b0d518 11-14
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.3",
+  "base_commit_sha": "4c54a18b71b0218f625b2780f473d61c45eba3e1",
+  "prompts": {},
+  "sessions": {
+    "s_0fd313d5fcae59": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b6ee15c1-f864-4868-bb54-422fb6bdf80e",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
