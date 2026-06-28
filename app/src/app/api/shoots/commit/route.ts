@@ -70,6 +70,10 @@ export async function POST(req: NextRequest) {
   const safeChannels = (channels ?? []).filter((c) => VALID_CHANNELS.has(c));
   const safeDeliverables = deliverables.filter((d) => VALID_CHANNELS.has(d.channel));
 
+  if (safeDeliverables.length === 0) {
+    return NextResponse.json({ error: "No valid deliverables after channel filtering" }, { status: 400 });
+  }
+
   // Insert shoot + deliverables + shot_list in one atomic RPC call.
   // Uses a SECURITY DEFINER function to write into the shoot schema,
   // which PostgREST doesn't expose directly.
