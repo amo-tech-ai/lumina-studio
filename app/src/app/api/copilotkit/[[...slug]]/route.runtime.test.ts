@@ -19,6 +19,7 @@ async function setupMocks() {
 
   vi.doMock("@/lib/auth", () => ({
     resolveOperatorUser: vi.fn(),
+    extractAccessToken: vi.fn().mockReturnValue("test-token"),
   }));
 
   const OperatorAuthErrorClass = class extends Error {

@@ -5,6 +5,7 @@ import { createTool } from "@mastra/core/tools";
 import { createClient } from "@supabase/supabase-js";
 import { z } from "zod";
 import { callEdgeFunction } from "./edge";
+import { _requestToken } from "@/app/api/copilotkit/[[...slug]]/route";
 
 function adminClient() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -88,10 +89,10 @@ export const startBrandAnalysis = createTool({
     "Trigger a fresh brand intelligence analysis (crawl → profile → HITL draft). Only call this when the operator explicitly requests a re-analysis. Returns the workflow run ID.",
   inputSchema: z.object({
     brandId: z.string().uuid(),
-    accessToken: z.string().describe("Operator's Supabase JWT — required to start the workflow"),
   }),
   outputSchema: z.object({ runId: z.string(), message: z.string() }),
-  execute: async ({ brandId, accessToken }) => {
+  execute: async ({ brandId }) => {
+    const accessToken = _requestToken.getStore() ?? "";
     const result = await callEdgeFunction<{ runId: string }>(
       "start-brand-crawl",
       { brandId },

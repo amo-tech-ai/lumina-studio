@@ -7,7 +7,7 @@ import {
 import { MastraAgent } from "@ag-ui/mastra";
 import { RequestContext } from "@mastra/core/request-context";
 import { getMastra } from "@/mastra";
-import { type OperatorUser } from "@/lib/auth";
+import { type OperatorUser, extractAccessToken } from "@/lib/auth";
 import { OperatorAuthError, withOperatorAuth } from "@/lib/operator-gate";
 import { handle } from "hono/vercel";
 
@@ -17,6 +17,7 @@ import { handle } from "hono/vercel";
 // This eliminates the Request-identity dependency that caused WeakMap misses
 // when CopilotKit internally wraps/re-creates the Request (C3 fix v2 — 2026-06-24).
 const _requestUser = new AsyncLocalStorage<OperatorUser>();
+export const _requestToken = new AsyncLocalStorage<string>();
 
 const UNKNOWN_USER: OperatorUser = { id: "unknown", name: "unknown" };
 
@@ -72,7 +73,8 @@ const handler = async (request: Request): Promise<Response> => {
     }
     throw err;
   }
-  return _requestUser.run(user, () => endpoint(request));
+  const token = extractAccessToken(request) ?? "";
+  return _requestUser.run(user, () => _requestToken.run(token, () => endpoint(request)));
 };
 
 export const GET = handler;
