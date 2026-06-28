@@ -106,7 +106,7 @@ function OperatorShell({
 
   useFrontendTool({
     name: "setActiveBrand",
-    description: "Set the active brand context so the right panel shows that brand's profile and DNA scores.",
+    description: "Set the active brand context. Agents and the IntelligencePanel use the selected brand ID.",
     parameters: z.object({ brandId: z.string().uuid() }),
     handler: async ({ brandId }) => {
       if (!brandsRef.current.some((b) => b.id === brandId)) {

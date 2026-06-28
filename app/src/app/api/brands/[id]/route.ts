@@ -34,11 +34,16 @@ export async function GET(
 
   if (brandResult.error) {
     const status = brandResult.error.code === "PGRST116" ? 404 : 500;
-    return NextResponse.json({ error: brandResult.error.message }, { status });
+    if (status === 500) console.error("[brands/id] brand query failed:", brandResult.error.message);
+    return NextResponse.json(
+      { error: status === 404 ? "Brand not found" : "Internal error" },
+      { status },
+    );
   }
 
   if (scoresResult.error) {
-    return NextResponse.json({ error: scoresResult.error.message }, { status: 500 });
+    console.error("[brands/id] scores query failed:", scoresResult.error.message);
+    return NextResponse.json({ error: "Internal error" }, { status: 500 });
   }
 
   const b = brandResult.data;
