@@ -12,7 +12,7 @@ import {
   CopilotChatConfigurationProvider,
 } from "@copilotkit/react-core/v2";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { z } from "zod";
 
 import {
@@ -65,6 +65,8 @@ function OperatorShell({
   const [threadsOpen, setThreadsOpen] = useState(false);
   const { activeBrandId, setActiveBrandId } = useActiveBrand();
   const [brands, setBrands] = useState<Brand[]>([]);
+  const brandsRef = useRef<Brand[]>([]);
+  useEffect(() => { brandsRef.current = brands; }, [brands]);
 
   // Fetch brand list once on mount for the left panel switcher
   useEffect(() => {
@@ -108,7 +110,7 @@ function OperatorShell({
     description: "Set the active brand context so the right panel shows that brand's profile and DNA scores.",
     parameters: z.object({ brandId: z.string().uuid() }),
     handler: async ({ brandId }) => {
-      if (!brands.some((b) => b.id === brandId)) {
+      if (!brandsRef.current.some((b) => b.id === brandId)) {
         return `Brand ${brandId} is not accessible.`;
       }
       setActiveBrandId(brandId);
