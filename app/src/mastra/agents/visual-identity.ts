@@ -4,7 +4,7 @@ import { generateObject } from "ai";
 import type { UserContent, ImagePart, TextPart } from "ai";
 import { createClient } from "@supabase/supabase-js";
 import { z } from "zod";
-import { resolveModel } from "@/mastra/models";
+import { resolveModel, resolveProviderOptions } from "@/mastra/models";
 
 const MODEL = resolveModel();
 
@@ -151,6 +151,7 @@ const extractVisualIdentityTool = createTool({
       model: MODEL,
       schema: VisualIdentitySchema,
       messages: [{ role: "user", content: userContent }],
+      providerOptions: resolveProviderOptions(),
     });
 
     const screenshotUrl = screenshot ? await uploadToCloudinary(screenshot, brandId) : null;

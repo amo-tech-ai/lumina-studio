@@ -423,12 +423,6 @@ export default function NewShootPage() {
           <Link href="/app/shoots" className="font-sans text-sm text-[#64748B] hover:underline">
             ← Shoots
           </Link>
-          <button
-            className="font-sans text-sm text-[#64748B] hover:underline"
-            onClick={() => {}}
-          >
-            Save draft
-          </button>
         </div>
 
         <div className="space-y-1">

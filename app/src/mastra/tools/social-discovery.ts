@@ -6,7 +6,7 @@ import { generateObject } from "ai";
 import { createTool } from "@mastra/core/tools";
 import { createClient } from "@supabase/supabase-js";
 import { z } from "zod";
-import { resolveModel } from "@/mastra/models";
+import { resolveModel, resolveProviderOptions } from "@/mastra/models";
 import { callEdgeFunction } from "./edge";
 
 const MODEL = resolveModel();
@@ -113,10 +113,10 @@ Return URLs as full https:// URLs only.`;
 
     try {
       const result = await generateObject({
-        // ponytail: search grounding via providerOptions when @ai-sdk/google v3 API is confirmed
         model: MODEL,
         schema: DiscoveryResultSchema,
         prompt,
+        providerOptions: resolveProviderOptions(),
       });
       channels = Array.from(
         new Map(
