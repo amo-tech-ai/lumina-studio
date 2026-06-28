@@ -1,0 +1,23 @@
+app/src/context/active-brand-context.tsx
+  s_0fd313d5fcae59::t_d82fbe9ba56441 10,22-24
+app/src/app/api/brands/[id]/route.ts
+  s_0fd313d5fcae59::t_086fb14fd3b715 37-41,45-46
+app/src/components/operator-panel/operator-panel.tsx
+  s_0fd313d5fcae59::t_336dddbe41e375 109
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.3",
+  "base_commit_sha": "acfd539b12dda03ac95219d7228cc169da549f48",
+  "prompts": {},
+  "sessions": {
+    "s_0fd313d5fcae59": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b6ee15c1-f864-4868-bb54-422fb6bdf80e",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
