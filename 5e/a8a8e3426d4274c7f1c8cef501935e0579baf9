@@ -1,0 +1,19 @@
+app/src/app/api/shoots/commit/route.ts
+  s_0fd313d5fcae59::t_8ee493726a4151 73-89,94-98,100
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.3",
+  "base_commit_sha": "5ea8a8e3426d4274c7f1c8cef501935e0579baf9",
+  "prompts": {},
+  "sessions": {
+    "s_0fd313d5fcae59": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b6ee15c1-f864-4868-bb54-422fb6bdf80e",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
