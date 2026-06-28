@@ -30,20 +30,18 @@ export const suggestShootBriefTool = createTool({
 
     const { text } = await generateText({
       model: resolveModel(),
-      prompt: `You are a Creative Director writing a professional fashion photography creative brief.
+      prompt: `You are a Creative Director writing a concise shoot brief.
 
 ${brandContext ? `Brand context:\n${brandContext}\n` : ""}Campaign: ${shootName}
 Target channels: ${channelList}
 ${seedSection}${toneSection}
-Write a complete creative brief of 4–6 paragraphs. Cover:
-- Campaign vision and mood
-- Visual direction: lighting, location, setting, composition
-- Talent, styling, and art direction
-- Content mix suited to the target channels
-- Tone, brand alignment, and campaign goals
+Write 2–3 short paragraphs (150–220 words total):
+1. Vision and mood — what this shoot should feel like and why
+2. Visual direction — light, location, talent, styling in one tight paragraph
+3. One sentence on how the content serves ${channelList}
 
-Be specific, professional, and actionable. Write in a confident creative director voice, first person from the brand's perspective. Output only the brief text — no headings, no labels, no bullet points.`,
-      maxOutputTokens: 1200,
+No headings, no bullet points, no deliverables list. Confident creative director voice. Output only the brief text.`,
+      maxOutputTokens: 400,
       // ponytail: thinkingBudget:0 — gemini-3.5-flash is a thinking model; without this it
       // burns ~760/800 tokens on reasoning and outputs only ~30 words of actual text.
       providerOptions: {
