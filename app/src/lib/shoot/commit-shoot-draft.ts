@@ -238,12 +238,15 @@ export async function commitShootDraft(opts: {
 
 /** User-scoped client for Mastra tool commits (JWT from operator session). */
 export function createUserScopedClient(accessToken: string): SupabaseClient {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      auth: { persistSession: false },
-      global: { headers: { Authorization: `Bearer ${accessToken}` } },
-    },
-  );
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  if (!url || !anonKey) {
+    throw new Error(
+      "Supabase user client not configured: set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY.",
+    );
+  }
+  return createClient(url, anonKey, {
+    auth: { persistSession: false },
+    global: { headers: { Authorization: `Bearer ${accessToken}` } },
+  });
 }
