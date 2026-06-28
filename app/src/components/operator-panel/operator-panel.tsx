@@ -23,12 +23,11 @@ import { ThreadsDrawer } from "@/components/threads-drawer";
 import { ThreadsPanelGate } from "@/components/threads-drawer/locked-state";
 import { ActiveBrandProvider, useActiveBrand } from "@/context/active-brand-context";
 import { NavSidebar } from "./nav-sidebar";
+import type { Brand } from "./nav-sidebar";
 import styles from "./operator-shell.module.css";
 import { resolveAgentId } from "@/lib/route-agent-map";
 
 const SECTIONS = ["brand", "onboarding", "shoots", "assets", "campaigns", "matching", "preview"] as const;
-
-interface Brand { id: string; name: string; status: string; }
 
 export function OperatorPanel({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -109,6 +108,9 @@ function OperatorShell({
     description: "Set the active brand context. Agents and the IntelligencePanel use the selected brand ID.",
     parameters: z.object({ brandId: z.string().uuid() }),
     handler: async ({ brandId }) => {
+      if (brandsRef.current.length === 0) {
+        return "Brand list is still loading — please retry in a moment.";
+      }
       if (!brandsRef.current.some((b) => b.id === brandId)) {
         return `Brand ${brandId} is not accessible.`;
       }
