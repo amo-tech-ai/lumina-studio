@@ -97,11 +97,11 @@ git worktree remove ../wt-ipi-NNN
 
 A pre-push git hook runs automatically on every `git push`:
 
-```
+```bash
 typecheck (tsc --noEmit) → tests (vitest run)
 ```
 
-If it fails, fix the root cause — never skip with `--no-verify`.
+If it fails, fix the root cause. `--no-verify` is only acceptable for **docs-only commits** where there is no production code to typecheck (e.g. no `node_modules` in a fresh worktree). Never use it to bypass a real code failure.
 
 **Switch to full gate** (before merge): `cp .git/hooks/pre-push-full .git/hooks/pre-push`
 
@@ -148,6 +148,6 @@ For automated browser testing (`npm run dev` on port 3002):
 | Field | Value |
 |-------|-------|
 | Email | `qa@ipix.test` |
-| Password | `IPixQA2026!` |
+| Password | See `.env.local` (`QA_PASSWORD`) or ask the team lead |
 
 These are test-only accounts with no real data. Safe to use in browser automation, Playwright, and MCP browser tools.
