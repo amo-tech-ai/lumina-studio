@@ -1,0 +1,23 @@
+docs/audit/2028-06-28-fix-plan.md
+  s_77658a3d1fe88a::t_3418828757f505 1-559
+docs/audit/june-28-linear-audit.md
+  s_77658a3d1fe88a::t_56017e816cb26a 1-430
+docs/linear/issues/IPI-228-shoot-commit-rpc.md
+  s_77658a3d1fe88a::t_7e6ea9d9096e03 1-80
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.3",
+  "base_commit_sha": "7a91bed2ba2cf3627b09c4967350cd6c4b685fa4",
+  "prompts": {},
+  "sessions": {
+    "s_77658a3d1fe88a": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "dc6cc552-236b-4b1d-8f97-da0652703db3",
+        "model": "default"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
