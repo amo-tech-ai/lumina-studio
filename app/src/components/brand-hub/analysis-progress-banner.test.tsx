@@ -95,9 +95,9 @@ describe("AnalysisProgressBanner", () => {
     expect(screen.getByText(/Re-analyze/)).toBeTruthy();
   });
 
-  it("shows scores_complete message", () => {
-    render(<AnalysisProgressBanner brandId={brandId} initialStatus="scores_complete" />);
-    expect(screen.getByText(/Scores ready/)).toBeTruthy();
+  it("hides banner when scores_complete (terminal state)", () => {
+    const { container } = render(<AnalysisProgressBanner brandId={brandId} initialStatus="scores_complete" />);
+    expect(container.firstChild).toBeNull();
   });
 
   it("subscribes to realtime on mount", () => {
