@@ -610,17 +610,17 @@ export default function NewShootPage() {
               {briefGenerated && !briefLoading && (
                 <div className="flex flex-wrap gap-2">
                   {[
-                    { label: "↺ Regenerate", tone: undefined as string | undefined },
+                    { label: "↺ Regenerate", tone: undefined as string | undefined, omitSeed: true },
                     { label: "Shorter", tone: "shorter" },
                     { label: "More luxury", tone: "more luxury" },
                     { label: "More commercial", tone: "more commercial" },
                     { label: "More social-first", tone: "more social-first" },
-                  ].map(({ label, tone }) => (
+                  ].map(({ label, tone, omitSeed }) => (
                     <button
                       key={label}
                       type="button"
                       disabled={briefLoading}
-                      onClick={() => suggestBrief({ tone, briefSeed: state.brief })}
+                      onClick={() => suggestBrief({ tone, briefSeed: omitSeed ? undefined : state.brief })}
                       className="rounded-full border border-[#E8E0D8] px-3 py-1 font-sans text-xs text-[#64748B] transition-colors hover:border-[#E87C4D] hover:text-[#E87C4D] disabled:opacity-40"
                     >
                       {label}
