@@ -3,9 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { OperatorAuthError, withOperatorAuth } from "@/lib/operator-gate";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { suggestShootBriefTool } from "@/mastra/tools/suggestShootBrief";
-
-const ALLOWED_TONES = ["shorter", "more luxury", "more commercial", "more social-first", "more editorial"] as const;
+import { suggestShootBriefTool, ALLOWED_TONES } from "@/mastra/tools/suggestShootBrief";
 
 const BodySchema = z.object({
   brandId: z.string().uuid().optional(),

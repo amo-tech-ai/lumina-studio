@@ -3,6 +3,9 @@ import { z } from "zod";
 import { generateText } from "ai";
 import { resolveModel } from "../models";
 
+export const ALLOWED_TONES = ["shorter", "more luxury", "more commercial", "more social-first", "more editorial"] as const;
+export type AllowedTone = (typeof ALLOWED_TONES)[number];
+
 export const suggestShootBriefTool = createTool({
   id: "suggestShootBrief",
   description: "Generate a complete professional creative brief for a fashion photography shoot.",
@@ -10,8 +13,8 @@ export const suggestShootBriefTool = createTool({
     brandContext: z.string().optional(),
     channels: z.array(z.string()),
     shootName: z.string(),
-    briefSeed: z.string().optional(),
-    tone: z.string().optional(),
+    briefSeed: z.string().max(8000).optional(),
+    tone: z.enum(ALLOWED_TONES).optional(),
   }),
   outputSchema: z.object({ brief: z.string() }),
   execute: async ({ brandContext, channels, shootName, briefSeed, tone }) => {
