@@ -46,11 +46,13 @@ export async function GET(
   ]);
 
   if (rowsResult.error) {
-    return NextResponse.json({ error: rowsResult.error.message }, { status: 500 });
+    console.error("[brands/id/assets] rows query failed:", rowsResult.error.message);
+    return NextResponse.json({ error: "Internal error" }, { status: 500 });
   }
 
   if (countResult.error) {
-    return NextResponse.json({ error: countResult.error.message }, { status: 500 });
+    console.error("[brands/id/assets] count query failed:", countResult.error.message);
+    return NextResponse.json({ error: "Internal error" }, { status: 500 });
   }
 
   const assets = (rowsResult.data ?? []).map((row) => ({
