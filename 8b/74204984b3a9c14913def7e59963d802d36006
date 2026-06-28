@@ -1,0 +1,21 @@
+app/src/mastra/agents/public-marketing-agent.test.ts
+  s_77658a3d1fe88a::t_6e491e4f229915 18-21
+supabase/functions/_shared/gemini.ts
+  s_77658a3d1fe88a::t_c8f94c70d80417 16,22-23
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.3",
+  "base_commit_sha": "8b74204984b3a9c14913def7e59963d802d36006",
+  "prompts": {},
+  "sessions": {
+    "s_77658a3d1fe88a": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "dc6cc552-236b-4b1d-8f97-da0652703db3",
+        "model": "default"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
