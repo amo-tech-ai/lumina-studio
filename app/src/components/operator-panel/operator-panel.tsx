@@ -2,7 +2,7 @@
 
 // IPI-110 — 3-panel shell: left NavSidebar (collapsed) · center workspace · right CopilotSidebar chatbot.
 // IPI-218 — ActiveBrandContext wired: brand switcher in left nav, useAgentContext exposes activeBrandId
-//           so agents never ask "which brand?". BrandContextPanel lives inside right slot (IPI-242+).
+//           so agents never ask "which brand?". IntelligencePanel built in right slot — IPI-243.
 
 import {
   useAgentContext,
@@ -143,7 +143,7 @@ function OperatorShell({
         {children}
       </main>
 
-      {/* Right — AI chatbot panel (IntelligencePanel content to be added inside here, IPI-242+) */}
+      {/* Right — AI chatbot panel (IntelligencePanel to be built here in IPI-243) */}
       <div className={styles.chatPanel}>
         <CopilotSidebar
           defaultOpen
