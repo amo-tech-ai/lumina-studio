@@ -229,7 +229,12 @@ const budgetGateStep = createStep({
       approved_shots: inputData.approved_shots,
       total_assets: inputData.total_assets,
       total_shots: inputData.total_shots,
-      approved_budget_usd: resumeData.budget_override_usd ?? 0,
+      // ponytail: recompute estimate on resume so override ?? estimate is never 0
+      approved_budget_usd: resumeData.budget_override_usd ?? (() => {
+        const crew = Math.max(2, Math.ceil(inputData.total_shots / 8)) * 650;
+        const post = inputData.total_assets * 45;
+        return crew + 800 + Math.round(crew * 0.28) + post;
+      })(),
     };
   },
 });
