@@ -146,6 +146,7 @@ export default function NewShootPage() {
 
   const suggestBrief = async () => {
     const briefSnapshot = state.brief;
+    setError(null);
     setBriefLoading(true);
     try {
       const res = await fetch("/api/shoots/suggest-brief", {
