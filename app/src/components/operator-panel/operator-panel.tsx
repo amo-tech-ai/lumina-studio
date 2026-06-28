@@ -1,8 +1,8 @@
 "use client";
 
 // IPI-110 — 3-panel shell: left NavSidebar (collapsed) · center workspace · right CopilotSidebar chatbot.
-// IPI-218 — ActiveBrandContext wired: brand switcher in left, brand context panel on right,
-//           useAgentContext exposes activeBrandId so agents never ask "which brand?".
+// IPI-218 — ActiveBrandContext wired: brand switcher in left nav, useAgentContext exposes activeBrandId
+//           so agents never ask "which brand?". BrandContextPanel lives inside right slot (IPI-242+).
 
 import {
   useAgentContext,
@@ -21,7 +21,6 @@ import {
 } from "@/components/copilot/copilot-tool-presentation";
 import { ThreadsDrawer } from "@/components/threads-drawer";
 import { ThreadsPanelGate } from "@/components/threads-drawer/locked-state";
-import { BrandContextPanel } from "@/components/brand-context-panel/brand-context-panel";
 import { ActiveBrandProvider, useActiveBrand } from "@/context/active-brand-context";
 import { NavSidebar } from "./nav-sidebar";
 import styles from "./operator-shell.module.css";
@@ -144,7 +143,7 @@ function OperatorShell({
         {children}
       </main>
 
-      {/* Right col 1 — AI chatbot panel */}
+      {/* Right — AI chatbot panel (IntelligencePanel content to be added inside here, IPI-242+) */}
       <div className={styles.chatPanel}>
         <CopilotSidebar
           defaultOpen
@@ -156,13 +155,6 @@ function OperatorShell({
           }}
         />
       </div>
-
-      {/* Right col 2 — Brand context panel (renders only when a brand is active) */}
-      {activeBrandId && (
-        <div className={styles.contextPanel}>
-          <BrandContextPanel brandId={activeBrandId} />
-        </div>
-      )}
 
       {/* Threads side-sheet — toggled from NavSidebar */}
       {threadsOpen && (

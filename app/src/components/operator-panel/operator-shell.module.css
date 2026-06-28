@@ -1,9 +1,9 @@
-/* 4-panel operator shell: NavSidebar | content | CopilotSidebar | BrandContextPanel */
+/* 3-panel operator shell: NavSidebar | content | CopilotSidebar */
 
 .shell {
   display: grid;
-  /* nav rail | content | chat (CopilotSidebar manages width) | brand context (320px, or 0 when not rendered) */
-  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  /* nav rail (auto = collapsed 3.5rem / expanded 14rem) | content | chat (auto = CopilotSidebar manages its own width) */
+  grid-template-columns: auto minmax(0, 1fr) auto;
   height: 100dvh;
   width: 100%;
   overflow: hidden;
@@ -52,12 +52,6 @@
   to   { transform: translateX(0); }
 }
 
-/* Brand context panel — 4th column, rendered only when a brand is active */
-.contextPanel {
-  height: 100dvh;
-  overflow: hidden;
-}
-
 /* Tablet / mobile: collapse to single column, nav hidden, chat full-screen */
 @media (max-width: 1024px) {
   .shell {
@@ -66,8 +60,5 @@
   .chatPanel {
     display: none; /* CopilotSidebar has its own mobile full-screen mode */
     border-left: 0;
-  }
-  .contextPanel {
-    display: none;
   }
 }
