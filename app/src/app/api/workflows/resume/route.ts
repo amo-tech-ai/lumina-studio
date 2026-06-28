@@ -1,4 +1,5 @@
 export const dynamic = "force-dynamic";
+export const maxDuration = 60; // polling loop can take up to 30s for AI shot-list generation
 import { NextRequest, NextResponse } from "next/server";
 import { getMastra } from "@/mastra";
 import { OperatorAuthError, withOperatorAuth } from "@/lib/operator-gate";
@@ -20,11 +21,17 @@ export async function POST(req: NextRequest) {
     let suspendPayload: unknown = null;
     try {
       const result = await run.resume({ step: stepId, resumeData });
-      if (result?.status === "suspended") suspendPayload = result.suspendPayload ?? null;
+      if (result?.status === "suspended") {
+        // Mastra may nest payload under the next step's name (same pattern as run.start()).
+        // Unwrap so both paths return the same flat structure.
+        const raw = (result.suspendPayload ?? null) as Record<string, unknown> | null;
+        const nextKey = raw ? Object.keys(raw).find((k) => k !== stepId) : null;
+        suspendPayload = (nextKey ? raw![nextKey] : raw) ?? null;
+      }
     } catch (resumeErr) {
       // ponytail: String() handles non-Error throws from Mastra internals
       const msg = (resumeErr instanceof Error ? resumeErr.message : String(resumeErr)).toLowerCase();
-      if (!msg.includes("not suspended") && !msg.includes("not found")) throw resumeErr;
+      if (!msg.includes("not suspended") && !msg.includes("step not found")) throw resumeErr;
       // step already resumed — fall through to snapshot to return current gate
     }
 
