@@ -6,7 +6,7 @@ export function getMastraStorage(): PostgresStore {
   if (!storage) {
     const url = process.env.DATABASE_URL ?? "";
     if (!url) {
-      if (process.env.NODE_ENV === "production") {
+      if (process.env.NODE_ENV === "production" && !process.env.CI) {
         throw new Error(
           "DATABASE_URL is required in production. Set it to the Supabase pooler connection string (port 6543).",
         );
