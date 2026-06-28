@@ -12,7 +12,7 @@ import { createServiceClient, createUserClient } from "../_shared/supabase-clien
 
 console.info("start-brand-crawl function started");
 
-const CRAWL_LIMIT = 50;
+const CRAWL_LIMIT = 10;
 
 type StartBody = {
   brandId?: string;
@@ -187,6 +187,7 @@ Deno.serve(async (req: Request) => {
       ({ id: firecrawlJobId } = await firecrawlStartCrawl({
         url: sourceUrl,
         limit: CRAWL_LIMIT,
+        maxDiscoveryDepth: 1,
         formats: ["markdown"],
         webhook: {
           url: webhookUrl,
