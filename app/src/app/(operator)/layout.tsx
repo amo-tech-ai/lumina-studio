@@ -3,6 +3,10 @@ import { OperatorPanel } from "@/components/operator-panel/operator-panel";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import "@copilotkit/react-core/v2/styles.css";
 
+// ponytail: prevent static prerendering — auth check requires a live Supabase
+// connection; CopilotKit hooks in children throw without a provider at build time.
+export const dynamic = "force-dynamic";
+
 // Only mount CopilotKit for authenticated users — prevents 401 noise on /api/copilotkit/info
 // when unauthenticated users reach /app/* before the auth gate redirects them.
 const OperatorLayout = async ({
