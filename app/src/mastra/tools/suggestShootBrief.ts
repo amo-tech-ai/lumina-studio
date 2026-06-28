@@ -1,7 +1,7 @@
 import { createTool } from "@mastra/core/tools";
 import { z } from "zod";
 import { generateText } from "ai";
-import { resolveModel } from "../models";
+import { resolveModel, resolveProviderOptions } from "../models";
 
 export const ALLOWED_TONES = ["shorter", "more luxury", "more commercial", "more social-first", "more editorial"] as const;
 export type AllowedTone = (typeof ALLOWED_TONES)[number];
@@ -42,11 +42,8 @@ Write 2–3 short paragraphs (150–220 words total):
 
 No headings, no bullet points, no deliverables list. Confident creative director voice. Output only the brief text.`,
       maxOutputTokens: 400,
-      // ponytail: thinkingBudget:0 — gemini-3.5-flash is a thinking model; without this it
-      // burns ~760/800 tokens on reasoning and outputs only ~30 words of actual text.
-      providerOptions: {
-        google: { thinkingConfig: { thinkingBudget: 0 } },
-      },
+      // thinkingBudget:0 prevents reasoning tokens from eating the 400-token output budget.
+      providerOptions: resolveProviderOptions(),
     });
 
     return { brief: text.trim() };

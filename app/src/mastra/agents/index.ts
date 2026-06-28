@@ -5,8 +5,6 @@ import { resolveModel } from "@/mastra/models";
 
 export { PlannerWorkingMemory };
 
-// ponytail: resolveModel() picks OpenRouter (dev/test) when OPENROUTER_API_KEY is set,
-// otherwise falls back to Gemini. See app/src/mastra/models.ts.
 const MODEL = resolveModel();
 
 // ponytail: foundation agents for IPI2-121. Tools/instructions are smoke-level here;

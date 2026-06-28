@@ -9,7 +9,7 @@ afterEach(() => {
 
 describe("gemini model registry (IPI2-80)", () => {
   it("default is a stable GA id, never a preview", () => {
-    expect(GEMINI_MODELS.default).toBe("gemini-3.5-flash");
+    expect(GEMINI_MODELS.default).toBe("gemini-3.1-flash-lite");
     expect(GEMINI_MODELS.default).not.toMatch(/preview|exp|latest/i);
   });
 
@@ -29,10 +29,10 @@ describe("gemini model registry (IPI2-80)", () => {
   });
 
   it("honors a known non-default GEMINI_MODEL override", () => {
-    // gemini-2.5-flash is a known id but not the default — proves override works,
+    // gemini-3.5-flash is a known id but not the default — proves override works,
     // not just that it echoes the default back.
-    process.env.GEMINI_MODEL = "gemini-2.5-flash";
-    expect(resolveGeminiModel()).toBe("gemini-2.5-flash");
+    process.env.GEMINI_MODEL = "gemini-3.5-flash";
+    expect(resolveGeminiModel()).toBe("gemini-3.5-flash");
     expect(resolveGeminiModel()).not.toBe(GEMINI_MODELS.default);
   });
 
