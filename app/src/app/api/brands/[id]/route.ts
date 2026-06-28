@@ -27,13 +27,9 @@ export async function GET(
 
   const svc = await createSupabaseServerClient();
   const [brandResult, scoresResult] = await Promise.all([
-    svc.from("brands").select("id, name, status, profile").eq("id", id).single(),
-    svc
-      .from("brand_scores")
-      .select("scores, confidence, draft_status")
-      .eq("brand_id", id)
-      .eq("draft_status", "approved")
-      .maybeSingle(),
+    svc.from("brands").select("id, name, intake_status, ai_profile").eq("id", id).single(),
+    // brand_scores: one row per score_type — aggregate into Record<string, number>
+    svc.from("brand_scores").select("score_type, score").eq("brand_id", id),
   ]);
 
   if (brandResult.error) {
@@ -45,8 +41,16 @@ export async function GET(
     return NextResponse.json({ error: scoresResult.error.message }, { status: 500 });
   }
 
+  const b = brandResult.data;
+  const scoreRows = scoresResult.data ?? [];
+  const scoresMap: Record<string, number> = {};
+  for (const row of scoreRows) {
+    scoresMap[row.score_type] = Number(row.score);
+  }
+
   return NextResponse.json({
-    brand: brandResult.data,
-    scores: scoresResult.data ?? null,
+    // Map DB column names to stable frontend contract
+    brand: { id: b.id, name: b.name, status: b.intake_status, profile: b.ai_profile },
+    scores: scoreRows.length > 0 ? { scores: scoresMap, confidence: null } : null,
   });
 }

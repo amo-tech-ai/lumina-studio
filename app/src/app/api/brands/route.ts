@@ -17,8 +17,9 @@ export async function GET(request: Request) {
   const svc = await createSupabaseServerClient();
   const { data, error } = await svc
     .from("brands")
-    .select("id, name, status")
+    .select("id, name, intake_status")
     .order("name");
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-  return NextResponse.json(data);
+  // Map intake_status → status so the frontend Brand interface stays stable
+  return NextResponse.json((data ?? []).map((b) => ({ id: b.id, name: b.name, status: b.intake_status })));
 }
