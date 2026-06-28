@@ -5,12 +5,14 @@ import { OperatorAuthError, withOperatorAuth } from "@/lib/operator-gate";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { suggestShootBriefTool } from "@/mastra/tools/suggestShootBrief";
 
+const ALLOWED_TONES = ["shorter", "more luxury", "more commercial", "more social-first", "more editorial"] as const;
+
 const BodySchema = z.object({
   brandId: z.string().uuid().optional(),
   channels: z.array(z.string()),
   shootName: z.string().min(1, "shootName is required"),
-  briefSeed: z.string().optional(),
-  tone: z.string().optional(),
+  briefSeed: z.string().max(500).optional(),
+  tone: z.enum(ALLOWED_TONES).optional(),
 });
 
 export async function POST(req: NextRequest) {
