@@ -68,6 +68,7 @@ export type VisualIdentity = {
 export type AiProfile = {
   name?: string;
   tagline?: string;
+  overview?: string;
   category?: string;
   visualIdentity?: VisualIdentity;
   targetAudience?: string;
@@ -175,6 +176,7 @@ export const parseAiProfile = (raw: unknown): AiProfile => {
   return {
     name: coerceOptionalString(row.name),
     tagline: coerceOptionalString(row.tagline),
+    overview: coerceOptionalString(row.overview),
     category: coerceOptionalString(row.category),
     visualIdentity: coerceVisualIdentity(row.visualIdentity),
     targetAudience: coerceOptionalString(row.targetAudience),
