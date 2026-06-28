@@ -9,6 +9,8 @@ const BodySchema = z.object({
   brandId: z.string().uuid().optional(),
   channels: z.array(z.string()),
   shootName: z.string().min(1, "shootName is required"),
+  briefSeed: z.string().optional(),
+  tone: z.string().optional(),
 });
 
 export async function POST(req: NextRequest) {
@@ -20,7 +22,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: parsed.error.issues[0]?.message ?? "Invalid request" }, { status: 400 });
     }
 
-    const { brandId, channels, shootName } = parsed.data;
+    const { brandId, channels, shootName, briefSeed, tone } = parsed.data;
 
     // If a brandId is supplied, verify the authenticated user can see it (RLS enforced)
     if (brandId) {
@@ -29,7 +31,7 @@ export async function POST(req: NextRequest) {
       if (error) return NextResponse.json({ error: "Brand not found" }, { status: 404 });
     }
 
-    const result = await suggestShootBriefTool.execute!({ brandId, channels, shootName }, {} as never) as { brief: string } | undefined;
+    const result = await suggestShootBriefTool.execute!({ brandId, channels, shootName, briefSeed, tone }, {} as never) as { brief: string } | undefined;
     if (!result) throw new Error("Tool returned no result");
     return NextResponse.json({ brief: result.brief });
   } catch (err) {
