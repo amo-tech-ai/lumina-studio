@@ -37,6 +37,10 @@ vi.mock("@/lib/supabase/server", () => ({
   createSupabaseServerClient: () => mockCreateSupabaseServerClient(),
 }));
 
+vi.mock("@/lib/supabase/admin", () => ({
+  createSupabaseAdminClient: vi.fn(),
+}));
+
 vi.mock("@/lib/shoot/commit-shoot-draft", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/shoot/commit-shoot-draft")>();
   return {
@@ -107,12 +111,12 @@ describe("POST /api/shoots/commit", () => {
     mockCommitShootDraft.mockResolvedValueOnce({
       ok: false,
       status: 500,
-      error: "rpc failed",
+      error: "Failed to commit shoot",
     });
     const { POST } = await importRoute();
     const res = await POST(makeRequest(VALID_BODY));
     expect(res.status).toBe(500);
-    expect(await res.json()).toEqual({ error: "rpc failed" });
+    expect(await res.json()).toEqual({ error: "Failed to commit shoot" });
   });
 
   it("returns 201 with shoot_id on success", async () => {

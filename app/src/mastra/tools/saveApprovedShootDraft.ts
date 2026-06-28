@@ -1,5 +1,6 @@
 import { createTool } from "@mastra/core/tools";
 import { z } from "zod";
+import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import {
   commitShootDraft,
   createUserScopedClient,
@@ -82,6 +83,7 @@ export const saveApprovedShootDraft = createTool({
       input,
       operatorId: user.id,
       userSb,
+      serviceSb: createSupabaseAdminClient(),
     });
 
     if (!result.ok) {

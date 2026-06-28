@@ -37,43 +37,20 @@ export type CommitShootDraftResult =
   | { ok: true; shoot_id: string }
   | { ok: false; status: 400 | 403 | 500; error: string };
 
-function serviceClient(): SupabaseClient {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    { auth: { persistSession: false } },
-  );
-}
+const RPC_FAIL_MESSAGE = "Failed to commit shoot";
 
-export function parseCommitShootDraftBody(body: unknown):
-  | { ok: true; data: CommitShootDraftInput }
+function validateCommitShootDraftInput(input: CommitShootDraftInput):
+  | { ok: true; safeChannels: string[]; safeDeliverables: CommitDeliverable[] }
   | { ok: false; status: 400; error: string } {
-  if (!body || typeof body !== "object") {
-    return { ok: false, status: 400, error: "Invalid JSON" };
-  }
-
-  const b = body as Record<string, unknown>;
-  const {
-    brand_id,
-    shoot_name,
-    brief,
-    channels,
-    deliverables,
-    shots,
-    approved_budget,
-    budget_breakdown,
-    run_id,
-  } = b;
+  const { brand_id, shoot_name, deliverables, shots, approved_budget, channels } = input;
 
   if (
-    !Array.isArray(deliverables) ||
-    !Array.isArray(shots) ||
     typeof brand_id !== "string" ||
     typeof shoot_name !== "string" ||
+    !Array.isArray(deliverables) ||
+    !Array.isArray(shots) ||
     !deliverables.length ||
-    !shots.length ||
-    typeof approved_budget !== "number" ||
-    !approved_budget
+    !shots.length
   ) {
     return {
       ok: false,
@@ -82,23 +59,36 @@ export function parseCommitShootDraftBody(body: unknown):
     };
   }
 
-  const badDeliverable = (deliverables as CommitDeliverable[]).find(
+  if (
+    typeof approved_budget !== "number" ||
+    !Number.isFinite(approved_budget) ||
+    approved_budget <= 0
+  ) {
+    return {
+      ok: false,
+      status: 400,
+      error: "approved_budget must be a positive number",
+    };
+  }
+
+  const badDeliverable = deliverables.find(
     (d) =>
       !d ||
       typeof d.channel !== "string" ||
       !d.channel.trim() ||
       typeof d.quantity !== "number" ||
+      !Number.isInteger(d.quantity) ||
       d.quantity < 1,
   );
   if (badDeliverable) {
     return {
       ok: false,
       status: 400,
-      error: "Each deliverable must have a non-empty channel and a positive quantity",
+      error: "Each deliverable must have a valid channel and a positive integer quantity",
     };
   }
 
-  const badShot = (shots as CommitShot[]).find(
+  const badShot = shots.find(
     (s) =>
       !s ||
       !Number.isInteger(s.shot_number) ||
@@ -114,56 +104,84 @@ export function parseCommitShootDraftBody(body: unknown):
     };
   }
 
-  const safeChannels = Array.isArray(channels)
-    ? channels.filter((c): c is string => typeof c === "string" && VALID_SHOOT_CHANNELS.has(c))
-    : [];
+  const invalidChannel = (channels ?? []).find((c) => !VALID_SHOOT_CHANNELS.has(c));
+  if (invalidChannel) {
+    return { ok: false, status: 400, error: `Unsupported channel: ${invalidChannel}` };
+  }
 
-  const safeDeliverables = (deliverables as CommitDeliverable[]).filter((d) =>
-    VALID_SHOOT_CHANNELS.has(d.channel),
-  );
-
-  if (safeDeliverables.length === 0) {
-    return { ok: false, status: 400, error: "No valid deliverables after channel filtering" };
+  const invalidDeliverableChannel = deliverables.find((d) => !VALID_SHOOT_CHANNELS.has(d.channel));
+  if (invalidDeliverableChannel) {
+    return {
+      ok: false,
+      status: 400,
+      error: `Unsupported deliverable channel: ${invalidDeliverableChannel.channel}`,
+    };
   }
 
   return {
     ok: true,
-    data: {
-      brand_id,
-      shoot_name,
-      brief: typeof brief === "string" ? brief : undefined,
-      channels: safeChannels,
-      deliverables: safeDeliverables,
-      shots: shots as CommitShot[],
-      approved_budget,
-      budget_breakdown:
-        budget_breakdown && typeof budget_breakdown === "object"
-          ? (budget_breakdown as Record<string, number>)
-          : undefined,
-      run_id: typeof run_id === "string" ? run_id : undefined,
-    },
+    safeChannels: channels ?? [],
+    safeDeliverables: deliverables,
   };
+}
+
+export function parseCommitShootDraftBody(body: unknown):
+  | { ok: true; data: CommitShootDraftInput }
+  | { ok: false; status: 400; error: string } {
+  if (!body || typeof body !== "object") {
+    return { ok: false, status: 400, error: "Invalid JSON" };
+  }
+
+  const b = body as Record<string, unknown>;
+  const input: CommitShootDraftInput = {
+    brand_id: b.brand_id as string,
+    shoot_name: b.shoot_name as string,
+    brief: typeof b.brief === "string" ? b.brief : undefined,
+    channels: Array.isArray(b.channels)
+      ? b.channels.filter((c): c is string => typeof c === "string")
+      : undefined,
+    deliverables: b.deliverables as CommitDeliverable[],
+    shots: b.shots as CommitShot[],
+    approved_budget: b.approved_budget as number,
+    budget_breakdown:
+      b.budget_breakdown && typeof b.budget_breakdown === "object"
+        ? (b.budget_breakdown as Record<string, number>)
+        : undefined,
+    run_id: typeof b.run_id === "string" ? b.run_id : undefined,
+  };
+
+  const validated = validateCommitShootDraftInput(input);
+  if (!validated.ok) {
+    return validated;
+  }
+
+  return { ok: true, data: { ...input, channels: validated.safeChannels, deliverables: validated.safeDeliverables } };
 }
 
 export async function commitShootDraft(opts: {
   input: CommitShootDraftInput;
   operatorId: string;
   userSb: SupabaseClient;
+  serviceSb: SupabaseClient;
 }): Promise<CommitShootDraftResult> {
-  const { input, operatorId, userSb } = opts;
-  const { brand_id, shoot_name, brief, channels, deliverables, shots, approved_budget, budget_breakdown, run_id } =
-    input;
+  const { input, operatorId, userSb, serviceSb } = opts;
+
+  const validated = validateCommitShootDraftInput(input);
+  if (!validated.ok) {
+    return validated;
+  }
+
+  const { brand_id, shoot_name, brief, shots, approved_budget, budget_breakdown, run_id } = input;
+  const { safeChannels, safeDeliverables } = validated;
 
   const { error: brandErr } = await userSb.from("brands").select("id").eq("id", brand_id).single();
   if (brandErr) {
     return { ok: false, status: 403, error: "Brand not found or access denied" };
   }
 
-  const svc = serviceClient();
-  const safeChannels = channels ?? [];
   const createdBy = /^[0-9a-f-]{36}$/i.test(operatorId) ? operatorId : null;
 
-  const { data: rpcResult, error: rpcErr } = await svc.rpc("commit_shoot_draft", {
+  const { data: rpcResult, error: rpcErr } = await serviceSb.rpc("commit_shoot_draft", {
     p_brand_id: brand_id,
     p_name: shoot_name,
     p_brief: brief ?? null,
@@ -171,7 +189,7 @@ export async function commitShootDraft(opts: {
     p_estimated_budget: approved_budget,
     p_budget_breakdown: budget_breakdown ?? null,
     p_created_by: createdBy,
-    p_deliverables: deliverables.map((d) => ({
+    p_deliverables: safeDeliverables.map((d) => ({
       channel: d.channel,
       format: d.format ?? null,
       quantity: d.quantity,
@@ -190,22 +208,18 @@ export async function commitShootDraft(opts: {
 
   if (rpcErr || !shoot_id) {
     console.error("[commit] rpc commit_shoot_draft:", rpcErr);
-    return {
-      ok: false,
-      status: 500,
-      error: rpcErr?.message ?? "Failed to commit shoot",
-    };
+    return { ok: false, status: 500, error: RPC_FAIL_MESSAGE };
   }
 
   try {
-    const { error: logErr } = await svc.from("ai_agent_logs").insert({
+    const { error: logErr } = await serviceSb.from("ai_agent_logs").insert({
       agent_name: "shoot-wizard",
       user_id: createdBy,
       brand_id,
       input: { run_id: run_id ?? null, shoot_name, channels: safeChannels },
       output: {
         shoot_id,
-        deliverable_count: deliverables.length,
+        deliverable_count: safeDeliverables.length,
         shot_count: shots.length,
         approved_budget,
       },
