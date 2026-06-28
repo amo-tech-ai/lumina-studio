@@ -151,6 +151,7 @@ export default function NewShootPage() {
 
   const suggestBrief = async (opts: { briefSeed?: string; tone?: string } = {}) => {
     const briefSnapshot = state.brief;
+    const ctxSnapshot = { brandId: state.brandId, shootName: state.shootName, channels: state.channels.join(",") };
     setError(null);
     setExpandOffer(false);
     setBriefLoading(true);
@@ -168,10 +169,15 @@ export default function NewShootPage() {
       });
       if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error ?? "Failed to suggest brief");
       const { brief } = await res.json();
-      // Only apply if user hasn't edited the field while the request was in-flight
+      // Discard if user edited the brief OR changed brand/channels/shoot name while in-flight
       let applied = false;
       setState((s) => {
-        if (s.brief !== briefSnapshot) return s;
+        if (
+          s.brief !== briefSnapshot ||
+          s.brandId !== ctxSnapshot.brandId ||
+          s.shootName !== ctxSnapshot.shootName ||
+          s.channels.join(",") !== ctxSnapshot.channels
+        ) return s;
         applied = true;
         return { ...s, brief };
       });
