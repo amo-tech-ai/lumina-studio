@@ -191,15 +191,17 @@ export default function NewShootPage() {
     }
   };
 
-  // Auto-generate brief when entering Step 1 with channels selected and brief empty
+  // Auto-generate brief when entering Step 1 with channels selected and brief empty.
+  // Once briefGenerated is true, don't reset the flag — user cleared the textarea
+  // intentionally; don't silently regenerate on re-entry.
   useEffect(() => {
-    if (step !== 1) { autoGenerateFired.current = false; return; }
+    if (step !== 1) { if (!briefGenerated) autoGenerateFired.current = false; return; }
     if (!autoGenerateFired.current && state.channels.length > 0 && state.brief.trim().length === 0) {
       autoGenerateFired.current = true;
       suggestBrief();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [step, state.channels.length, state.brief]);
+  }, [step, state.channels.length, state.brief, briefGenerated]);
 
   // Offer to expand when user has typed ≥10 chars and paused 1.5s
   useEffect(() => {
