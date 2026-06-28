@@ -1,7 +1,7 @@
 "use client";
 
 // IPI-218 — Right panel: shows brand profile + DNA scores for the active brand.
-// Fetches on brandId change; handles loading / error / empty states.
+// IPI-219 — Asset thumbnail grid below DNA scores.
 
 import { useEffect, useState } from "react";
 import styles from "./brand-context-panel.module.css";
@@ -23,10 +23,29 @@ interface BrandDetail {
   scores: ScoresRow | null;
 }
 
+interface AssetRow {
+  id: string;
+  cloudinary_public_id: string | null;
+  thumb_url: string | null;
+  status: string;
+  dna_status: string | null;
+}
+
+interface AssetsPayload {
+  assets: AssetRow[];
+  total: number;
+}
+
+const DNA_BADGE: Record<string, string> = { approved: "✓", review: "!", blocked: "✗" };
+
 export function BrandContextPanel({ brandId }: { brandId: string }) {
   const [data, setData] = useState<BrandDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+
+  const [assetsPayload, setAssetsPayload] = useState<AssetsPayload | null>(null);
+  const [assetsLoading, setAssetsLoading] = useState(true);
+  const [assetsError, setAssetsError] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -43,18 +62,52 @@ export function BrandContextPanel({ brandId }: { brandId: string }) {
     return () => { cancelled = true; };
   }, [brandId]);
 
+  useEffect(() => {
+    const controller = new AbortController();
+    setAssetsLoading(true);
+    setAssetsError(false);
+    setAssetsPayload(null);
+    fetch(`/api/brands/${brandId}/assets`, { signal: controller.signal })
+      .then((r) => {
+        if (!r.ok) throw new Error(`${r.status}`);
+        return r.json() as Promise<AssetsPayload>;
+      })
+      .then((d) => { setAssetsPayload(d); setAssetsLoading(false); })
+      .catch((err) => {
+        if (err.name !== "AbortError") { setAssetsError(true); setAssetsLoading(false); }
+      });
+    return () => controller.abort();
+  }, [brandId]);
+
   return (
     <aside className={styles.panel} aria-label="Brand context">
       {loading && <p className={styles.state}>Loading…</p>}
       {!loading && (error || !data) && (
         <p className={styles.state}>Brand unavailable</p>
       )}
-      {!loading && data && <BrandView data={data} />}
+      {!loading && data && (
+        <BrandView
+          data={data}
+          assetsPayload={assetsPayload}
+          assetsLoading={assetsLoading}
+          assetsError={assetsError}
+        />
+      )}
     </aside>
   );
 }
 
-function BrandView({ data: { brand, scores } }: { data: BrandDetail }) {
+function BrandView({
+  data: { brand, scores },
+  assetsPayload,
+  assetsLoading,
+  assetsError,
+}: {
+  data: BrandDetail;
+  assetsPayload: AssetsPayload | null;
+  assetsLoading: boolean;
+  assetsError: boolean;
+}) {
   const pillars = scores?.scores
     ? Object.entries(scores.scores).filter(([, v]) => typeof v === "number")
     : [];
@@ -102,6 +155,78 @@ function BrandView({ data: { brand, scores } }: { data: BrandDetail }) {
           </section>
         </>
       )}
+
+      <hr className={styles.divider} />
+      <AssetGrid
+        payload={assetsPayload}
+        loading={assetsLoading}
+        error={assetsError}
+      />
     </>
+  );
+}
+
+function AssetGrid({
+  payload,
+  loading,
+  error,
+}: {
+  payload: AssetsPayload | null;
+  loading: boolean;
+  error: boolean;
+}) {
+  const total = payload?.total ?? 0;
+  const assets = payload?.assets ?? [];
+
+  return (
+    <section>
+      <h3 className={styles.sectionTitle}>
+        Assets{!loading ? ` (${total})` : ""}
+      </h3>
+      {total > 6 && !loading && (
+        <p className={styles.assetSubLabel}>showing latest 6 of {total}</p>
+      )}
+
+      {loading && (
+        <div className={styles.assetGrid}>
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div key={i} className={`${styles.assetThumb} ${styles.skeleton}`} />
+          ))}
+        </div>
+      )}
+
+      {!loading && error && <p className={styles.state}>Assets unavailable</p>}
+
+      {!loading && !error && assets.length === 0 && (
+        <p className={styles.state}>No assets yet</p>
+      )}
+
+      {!loading && !error && assets.length > 0 && (
+        <div className={styles.assetGrid}>
+          {assets.map((asset, i) => (
+            <div key={asset.id} className={styles.assetThumb}>
+              {asset.thumb_url ? (
+                <img
+                  src={asset.thumb_url}
+                  alt={`Brand asset ${i + 1}`}
+                  className={styles.assetImg}
+                />
+              ) : (
+                <div className={styles.assetPlaceholder} aria-hidden="true" />
+              )}
+              {asset.dna_status && (
+                <span
+                  className={styles.dnaBadge}
+                  data-status={asset.dna_status}
+                  aria-label={asset.dna_status}
+                >
+                  {DNA_BADGE[asset.dna_status] ?? ""}
+                </span>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+    </section>
   );
 }
