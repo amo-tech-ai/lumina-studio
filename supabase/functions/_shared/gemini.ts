@@ -13,14 +13,14 @@ const KNOWN_MODEL_IDS: string[] = [
 
 /**
  * Resolve Gemini model from GEMINI_MODEL secret, else default.
- * Unknown overrides log a warning and fall back to default.
+ * Unknown overrides throw (mirrors app/src/mastra/models.ts — IPI-223).
  */
 export function resolveGeminiModel(): string {
   const override = getOptionalSecret("GEMINI_MODEL")?.trim() ?? "";
   if (override) {
     if (!KNOWN_MODEL_IDS.includes(override)) {
-      console.warn(
-        `GEMINI_MODEL="${override}" not in known registry; using override anyway`,
+      throw new Error(
+        `GEMINI_MODEL="${override}" is not in the registry (${KNOWN_MODEL_IDS.join(", ")}).`,
       );
     }
     return override;
