@@ -200,7 +200,6 @@ export default function NewShootPage() {
       autoGenerateFired.current = true;
       suggestBrief();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [step, state.channels.length, state.brief, briefGenerated]);
 
   // Offer to expand when user has typed ≥10 chars and paused 1.5s
