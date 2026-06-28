@@ -1,0 +1,21 @@
+app/src/components/operator-panel/operator-panel.tsx
+  s_0fd313d5fcae59::t_3c75513c636f5f 68-69
+  s_0fd313d5fcae59::t_2432008109f607 113
+  s_0fd313d5fcae59::t_4dc4a536685e6c 15
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.3",
+  "base_commit_sha": "20e0250ae7358cb7f942135a881773ef7639aae5",
+  "prompts": {},
+  "sessions": {
+    "s_0fd313d5fcae59": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b6ee15c1-f864-4868-bb54-422fb6bdf80e",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
