@@ -53,6 +53,10 @@ export async function GET(
     scoresMap[row.score_type] = Number(row.score);
   }
 
+  if (scoresResult.error) {
+    return NextResponse.json({ error: scoresResult.error.message }, { status: 500 });
+  }
+
   return NextResponse.json({
     // Map DB column names to stable frontend contract
     brand: { id: b.id, name: b.name, status: b.intake_status, profile: b.ai_profile },
