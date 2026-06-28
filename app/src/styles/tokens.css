@@ -1,0 +1,355 @@
+/**
+ * iPix / FashionOS Design Tokens
+ *
+ * Layer hierarchy:
+ *   Primitive  — raw values, never use directly in components
+ *   Semantic   — purpose-based aliases of primitives
+ *   Component  — component-specific tokens (reference semantic layer)
+ *   Brand      — per-brand overrides (planned, requires ActiveBrandContext)
+ *
+ * Source of truth for Claude Design uploads.
+ * Import this file in globals.css: @import "../styles/tokens.css";
+ */
+
+/* ============================================================
+   PRIMITIVE TOKENS — raw values only
+   ============================================================ */
+
+:root {
+  /* Gray scale */
+  --primitive-white:    #ffffff;
+  --primitive-gray-50:  #f8fafc;
+  --primitive-gray-100: #f1f5f9;
+  --primitive-gray-200: #e2e8f0;
+  --primitive-gray-300: #cbd5e1;
+  --primitive-gray-400: #94a3b8;
+  --primitive-gray-500: #64748b;
+  --primitive-gray-600: #475569;
+  --primitive-gray-700: #334155;
+  --primitive-gray-800: #1e293b;
+  --primitive-gray-900: #0f172a;
+
+  /* Warm neutrals — fashion-inspired off-whites */
+  --primitive-warm-50:  #fbf8f5;
+  --primitive-warm-100: #f5f0eb;
+  --primitive-warm-200: #ede5dc;
+  --primitive-warm-border: #e8e0d8;
+
+  /* iPix orange — primary accent */
+  --primitive-orange-400: #f09460;
+  --primitive-orange-500: #e87c4d;
+  --primitive-orange-600: #d4673a;
+
+  /* Mustard — secondary accent / warning */
+  --primitive-amber-300: #fcd34d;
+  --primitive-amber-400: #f3b93c;
+  --primitive-amber-500: #d97706;
+  --primitive-amber-50:  #fffbf0;
+
+  /* Status — green */
+  --primitive-green-100: #d1fae5;
+  --primitive-green-500: #10b981;
+  --primitive-green-600: #059669;
+
+  /* Status — red */
+  --primitive-red-100: #fee2e2;
+  --primitive-red-500: #ef4444;
+  --primitive-red-600: #dc2626;
+
+  /* Status — blue (informational) */
+  --primitive-blue-100: #dbeafe;
+  --primitive-blue-500: #3b82f6;
+  --primitive-blue-600: #2563eb;
+
+  /* Purple — published/post status */
+  --primitive-purple-100: #ede9fe;
+  --primitive-purple-700: #7c3aed;
+
+  /* Amber light — planning/warning subtle bg */
+  --primitive-amber-100: #fef3c7;
+}
+
+/* ============================================================
+   SEMANTIC TOKENS — purpose-based aliases
+   Never use primitive tokens directly in components.
+   ============================================================ */
+
+:root {
+  /* --- Backgrounds --- */
+  --color-bg-page:        var(--primitive-warm-50);       /* #FBF8F5 — warm off-white */
+  --color-bg-card:        var(--primitive-white);         /* #FFFFFF — card surface */
+  --color-bg-subtle:      var(--primitive-gray-50);       /* #F8FAFC — subtle section bg */
+  --color-bg-muted:       var(--primitive-gray-100);      /* #F1F5F9 — muted inputs */
+
+  /* --- Borders --- */
+  --color-border:         var(--primitive-warm-border);   /* #E8E0D8 — warm border */
+  --color-border-subtle:  var(--primitive-gray-200);      /* #E2E8F0 — subtle dividers */
+  --color-border-focus:   var(--primitive-orange-500);    /* #E87C4D — focus ring */
+
+  /* --- Text --- */
+  --color-text-primary:   var(--primitive-gray-800);      /* #1E293B — body text */
+  --color-text-secondary: var(--primitive-gray-600);      /* #475569 — secondary text */
+  --color-text-muted:     var(--primitive-gray-500);      /* #64748B — placeholder/hint */
+  --color-text-disabled:  var(--primitive-gray-400);      /* #94A3B8 — disabled */
+  --color-text-inverse:   var(--primitive-white);         /* #FFFFFF — on dark bg */
+
+  /* --- Accent (iPix orange) --- */
+  --color-accent:         var(--primitive-orange-500);    /* #E87C4D — primary CTA */
+  --color-accent-hover:   var(--primitive-orange-600);    /* #D4673A — hovered CTA */
+  --color-accent-light:   var(--primitive-warm-100);      /* #F5F0EB — accent tint bg */
+
+  /* --- Warning / AI pending (mustard) --- */
+  --color-warning:        var(--primitive-amber-400);     /* #F3B93C — warning border */
+  --color-warning-bg:     var(--primitive-amber-50);      /* #FFFBF0 — warning bg */
+  --color-warning-text:   var(--primitive-amber-500);     /* #D97706 — warning text */
+
+  /* --- Status --- */
+  --color-approved:       var(--primitive-green-600);     /* #059669 */
+  --color-approved-bg:    var(--primitive-green-100);     /* #D1FAE5 */
+  --color-review:         var(--primitive-amber-500);     /* #D97706 */
+  --color-review-bg:      var(--primitive-amber-50);      /* #FFFBF0 */
+  --color-blocked:        var(--primitive-red-600);       /* #DC2626 */
+  --color-blocked-bg:     var(--primitive-red-100);       /* #FEE2E2 */
+  --color-info:           var(--primitive-blue-600);      /* #2563EB */
+  --color-info-bg:        var(--primitive-blue-100);      /* #DBEAFE */
+
+  /* --- Warning subtle bg --- */
+  --color-warning-subtle:   var(--primitive-amber-100);      /* #FEF3C7 — planning bg */
+
+  /* --- Published / post status (purple) --- */
+  --color-published:        var(--primitive-purple-700);     /* #7C3AED */
+  --color-published-bg:     var(--primitive-purple-100);     /* #EDE9FE */
+
+  /* --- DNA score thresholds --- */
+  --color-dna-high:       var(--primitive-green-600);     /* ≥ 80 */
+  --color-dna-mid:        var(--primitive-amber-500);     /* 60–79 */
+  --color-dna-low:        var(--primitive-red-600);       /* < 60 */
+
+  /* --- Shadows --- */
+  --shadow-card:   0 1px 3px 0 rgb(0 0 0 / 0.06), 0 1px 2px -1px rgb(0 0 0 / 0.04);
+  --shadow-panel:  0 4px 16px 0 rgb(0 0 0 / 0.08);
+  --shadow-modal:  0 20px 60px 0 rgb(0 0 0 / 0.16);
+  --shadow-focus:  0 0 0 2px var(--color-border-focus);
+
+  /* --- Motion --- */
+  --duration-instant: 50ms;
+  --duration-fast:    150ms;
+  --duration-normal:  250ms;
+  --duration-slow:    400ms;
+  --ease-default:     cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-spring:      cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-linear:      linear;
+}
+
+/* ============================================================
+   COMPONENT TOKENS — component-specific aliases
+   Reference semantic layer only — never primitive.
+   ============================================================ */
+
+:root {
+  /* ApprovalCard (HITL) */
+  --approval-border:      var(--color-warning);           /* amber when pending */
+  --approval-bg:          var(--color-warning-bg);
+  --approval-border-done: var(--color-approved);
+  --approval-bg-done:     var(--color-approved-bg);
+
+  /* DNAScoreBar */
+  --dna-bar-track:        var(--color-bg-subtle);
+  --dna-bar-high:         var(--color-dna-high);
+  --dna-bar-mid:          var(--color-dna-mid);
+  --dna-bar-low:          var(--color-dna-low);
+
+  /* NavSidebar */
+  --nav-bg:               var(--color-bg-card);
+  --nav-border:           var(--color-border);
+  --nav-item-hover:       var(--color-bg-subtle);
+  --nav-item-active:      var(--color-accent-light);
+  --nav-item-active-text: var(--color-accent);
+  --nav-width-collapsed:  3.5rem;
+  --nav-width-expanded:   14rem;
+
+  /* IntelligencePanel (CopilotSidebar) */
+  --intel-bg:             var(--color-bg-card);           /* always light-mode */
+  --intel-border:         var(--color-border);
+  --intel-header-bg:      var(--color-bg-subtle);
+
+  /* StatusChip */
+  --status-planning-text: var(--color-warning-text);
+  --status-planning-bg:   var(--color-warning-subtle);
+  --status-active-text:   var(--color-approved);
+  --status-active-bg:     var(--color-approved-bg);
+  --status-post-text:     var(--color-published);
+  --status-post-bg:       var(--color-published-bg);
+  --status-complete-text: var(--color-text-muted);
+  --status-complete-bg:   var(--color-bg-subtle);
+  --status-archived-text: var(--color-text-disabled);
+  --status-archived-bg:   var(--color-bg-subtle);
+
+  /* CommandPalette */
+  --palette-bg:           var(--color-bg-card);
+  --palette-border:       var(--color-border);
+  --palette-shadow:       var(--shadow-modal);
+  --palette-item-hover:   var(--color-bg-subtle);
+  --palette-item-active:  var(--color-accent-light);
+
+  /* Card (base) */
+  --card-bg:              var(--color-bg-card);
+  --card-border:          var(--color-border);
+  --card-shadow:          var(--shadow-card);
+  --card-radius:          var(--radius-lg);               /* 0.625rem */
+}
+
+/* ============================================================
+   BRAND TOKENS — per-brand theme overrides (PLANNED)
+   Injected at shell level when ActiveBrandContext is implemented.
+   Currently unused — these are placeholders.
+   ============================================================ */
+
+:root {
+  /* ponytail: brand tokens are no-ops until ActiveBrandContext ships */
+  --brand-primary:        var(--color-accent);
+  --brand-secondary:      var(--color-warning);
+  --brand-bg:             var(--color-bg-page);
+}
+
+/* ============================================================
+   SPACING — use these instead of arbitrary Tailwind values
+   Maps to Tailwind's default 4px base scale.
+   ============================================================ */
+
+:root {
+  --space-1:  0.25rem;   /*  4px */
+  --space-2:  0.5rem;    /*  8px */
+  --space-3:  0.75rem;   /* 12px */
+  --space-4:  1rem;      /* 16px */
+  --space-5:  1.25rem;   /* 20px */
+  --space-6:  1.5rem;    /* 24px */
+  --space-8:  2rem;      /* 32px */
+  --space-10: 2.5rem;    /* 40px */
+  --space-12: 3rem;      /* 48px */
+  --space-16: 4rem;      /* 64px */
+}
+
+/* ============================================================
+   TYPOGRAPHY — font sizes and weights
+   ============================================================ */
+
+:root {
+  --font-size-xs:      0.75rem;    /* 12px — captions, labels */
+  --font-size-sm:      0.875rem;   /* 14px — body small, table cells */
+  --font-size-base:    1rem;       /* 16px — body default */
+  --font-size-lg:      1.125rem;   /* 18px — section headers */
+  --font-size-xl:      1.25rem;    /* 20px — page titles */
+  --font-size-2xl:     1.5rem;     /* 24px — hero headers */
+  --font-size-display: 2rem;       /* 32px — dashboard KPIs */
+
+  --font-weight-normal:   400;
+  --font-weight-medium:   500;
+  --font-weight-semibold: 600;
+  --font-weight-bold:     700;
+
+  --line-height-tight:  1.25;
+  --line-height-normal: 1.5;
+  --line-height-loose:  1.75;
+}
+
+/* ============================================================
+   Z-INDEX — stacking order
+   ============================================================ */
+
+:root {
+  --z-base:       0;
+  --z-raised:     10;    /* cards on hover */
+  --z-dropdown:   100;   /* dropdowns, popovers */
+  --z-sidebar:    200;   /* NavSidebar */
+  --z-popover:    300;   /* Tooltip, Popover */
+  --z-dialog:     400;   /* Dialog, Sheet */
+  --z-modal:      500;   /* full-screen modal (mobile IntelligencePanel) */
+  --z-toast:      600;   /* Toast notifications — always on top */
+}
+
+/* ============================================================
+   BORDER WIDTH
+   ============================================================ */
+
+:root {
+  --border-default: 1px;
+  --border-focus:   2px;
+  --border-heavy:   2px;   /* HITL cards, active states */
+}
+
+/* ============================================================
+   OPACITY
+   ============================================================ */
+
+:root {
+  --opacity-disabled: 0.4;
+  --opacity-hover:    0.08;   /* bg overlay on hover */
+  --opacity-loading:  0.6;
+  --opacity-overlay:  0.5;    /* modal backdrop */
+}
+
+/* ============================================================
+   LAYOUT — structural dimensions
+   Used by OperatorShell, NavSidebar, IntelligencePanel.
+   ============================================================ */
+
+:root {
+  --sidebar-width:            3.5rem;   /* nav rail collapsed */
+  --sidebar-width-expanded:   14rem;    /* nav rail expanded */
+  --intelligence-panel-width: auto;     /* CopilotKit-managed */
+  --content-max-width:        1280px;   /* center workspace cap */
+  --page-padding:             var(--space-6);   /* 24px horizontal padding */
+  --card-gap:                 var(--space-4);   /* 16px gap between cards */
+  --section-gap:              var(--space-8);   /* 32px gap between sections */
+
+  /* Touch targets — minimum 44×44px on mobile */
+  --touch-target-min: 2.75rem;   /* 44px */
+}
+
+/* ============================================================
+   AI-SPECIFIC TOKENS — reinforce the AI-native identity
+   Every AI surface references these instead of raw semantics.
+   ============================================================ */
+
+:root {
+  /* Generic AI card */
+  --ai-card-bg:              var(--color-bg-card);
+  --ai-card-border:          var(--color-border);
+
+  /* Confidence levels */
+  --ai-confidence-high:      var(--color-approved);      /* ≥ 80% */
+  --ai-confidence-mid:       var(--color-review);        /* 60–79% */
+  --ai-confidence-low:       var(--color-blocked);       /* < 60% */
+
+  /* Approval / HITL — canonical tokens defined in Component block above:
+     --approval-border, --approval-bg, --approval-border-done, --approval-bg-done */
+
+  /* Evidence / citations */
+  --evidence-bg:             var(--color-bg-subtle);
+  --evidence-border:         var(--color-border-subtle);
+
+  /* AI draft — content pending operator approval */
+  --draft-bg:                var(--color-warning-bg);
+  --draft-border:            var(--color-warning);
+
+  /* Agent thinking / streaming state */
+  --thinking-bg:             var(--color-bg-subtle);
+  --thinking-dot:            var(--color-text-muted);
+
+  /* Agent streaming text cursor */
+  --streaming-cursor:        var(--color-accent);
+}
+
+/* ============================================================
+   REDUCED MOTION — override all animations
+   ============================================================ */
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --duration-instant: 0ms;
+    --duration-fast:    0ms;
+    --duration-normal:  0ms;
+    --duration-slow:    0ms;
+  }
+}
