@@ -146,15 +146,19 @@ export default function NewShootPage() {
   // IPI-189: fetch channel specs whenever channel selection changes (debounced 200ms)
   useEffect(() => {
     if (!state.channels.length) { setSpecs([]); return; }
+    const controller = new AbortController();
     setSpecsLoading(true);
     const t = setTimeout(() => {
-      fetch(`/api/media/specs?channels=${state.channels.join(",")}`)
-        .then((r) => r.json())
+      fetch(`/api/media/specs?channels=${state.channels.join(",")}`, { signal: controller.signal })
+        .then((r) => {
+          if (!r.ok) throw new Error(`specs fetch failed: ${r.status}`);
+          return r.json();
+        })
         .then((d: { results: SpecResult[] }) => setSpecs(d.results))
-        .catch(() => setSpecs(state.channels.map((c) => ({ channel: c, spec: null }))))
-        .finally(() => setSpecsLoading(false));
+        .catch((e) => { if (e.name !== "AbortError") setSpecs([]); })
+        .finally(() => { if (!controller.signal.aborted) setSpecsLoading(false); });
     }, 200);
-    return () => clearTimeout(t);
+    return () => { clearTimeout(t); controller.abort(); };
   }, [state.channels]);
 
   const toggleChannel = (id: string) =>
