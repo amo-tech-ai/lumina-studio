@@ -5,10 +5,11 @@ import { createGoogleGenerativeAI } from "@ai-sdk/google";
 // Default: gemini-3.5-flash (stable GA per https://ai.google.dev/gemini-api/docs/models).
 // Override via GEMINI_MODEL env var (add new model IDs to KNOWN_MODEL_IDS).
 export const GEMINI_MODELS = {
-  default: "gemini-2.5-flash",
+  default: "gemini-3.5-flash",
+  lite: "gemini-3.1-flash-lite",
 } as const;
 
-const KNOWN_MODEL_IDS: string[] = [GEMINI_MODELS.default, "gemini-2.5-flash-lite"];
+const KNOWN_MODEL_IDS: string[] = [GEMINI_MODELS.default, GEMINI_MODELS.lite, "gemini-2.5-flash"];
 
 // Env override so the live model swaps via one config, not code edits.
 // Treat empty/whitespace as unset and fall back to default.
