@@ -80,7 +80,7 @@ export async function POST(req: NextRequest) {
     p_target_channels: safeChannels,
     p_estimated_budget: approved_budget,
     p_budget_breakdown: budget_breakdown ?? null,
-    p_created_by: operator.id,
+    p_created_by: /^[0-9a-f-]{36}$/i.test(operator.id) ? operator.id : null,
     p_deliverables: safeDeliverables.map((d) => ({
       channel: d.channel,
       format: d.format ?? null,
@@ -103,7 +103,7 @@ export async function POST(req: NextRequest) {
   try {
     await svc.from("agent_logs").insert({
       agent_name: "shoot-wizard",
-      user_id: operator.id,
+      user_id: /^[0-9a-f-]{36}$/i.test(operator.id) ? operator.id : null,
       brand_id,
       input: { run_id: run_id ?? null, shoot_name, channels: safeChannels },
       output: { shoot_id, deliverable_count: safeDeliverables.length, shot_count: shots.length, approved_budget },
