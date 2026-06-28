@@ -244,7 +244,6 @@ export default function NewShootPage() {
     setLoading(true);
     setError(null);
     try {
-      // ponytail: brand optional during testing — required before prod
       const res = await fetch("/api/workflows/shoot-wizard", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -253,34 +252,21 @@ export default function NewShootPage() {
           shoot_name: state.shootName,
           brief: state.brief,
           channels: state.channels,
-          // Workflow input: pre-computed deliverables via the planner tool
-          // We call the planner inline here and pass results into the workflow start
-          deliverables: [],
-          total_assets: 0,
-          shots: [],
-          uncovered_warnings: [],
-          estimated_budget: { crew: 0, studio: 0, equipment: 0, post: 0, total: 0 },
         }),
       });
       if (!res.ok) throw new Error(await res.text());
 
-      // Call planDeliverables tool directly to get the plan
-      const planRes = await fetch("/api/tools/plan-deliverables", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ channels: state.channels }),
-      });
+      // Workflow suspends at Gate 1 (deliverable-gate) and returns computed deliverables
+      const { runId, suspendPayload } = await res.json();
+      const rawDeliverables: Omit<Deliverable, "id">[] = suspendPayload?.deliverables
+        ?? state.channels.flatMap((ch: string) => [{ channel: ch, format: "JPG", quantity: 6 }]);
+      const totalAssets: number = suspendPayload?.total_assets
+        ?? rawDeliverables.reduce((s: number, d: Omit<Deliverable, "id">) => s + d.quantity, 0);
 
-      // Fall back to client-side mock if tool API not yet wired
-      const plan = planRes.ok
-        ? await planRes.json()
-        : { deliverables: state.channels.flatMap(ch => [{ id: crypto.randomUUID(), channel: ch, format: "JPG", quantity: 6 }]), total_assets: state.channels.length * 6 };
-
-      const { runId } = await res.json();
       update({
         runId,
-        deliverables: plan.deliverables.map((d: Omit<Deliverable, "id">) => ({ id: crypto.randomUUID(), ...d })),
-        totalAssets: plan.total_assets,
+        deliverables: rawDeliverables.map((d) => ({ id: crypto.randomUUID(), ...d })),
+        totalAssets,
       });
       setStep(2);
     } catch (e) {
