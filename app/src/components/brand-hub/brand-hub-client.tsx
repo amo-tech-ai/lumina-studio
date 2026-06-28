@@ -72,7 +72,7 @@ export const BrandHubClient = ({
   const status = (intakeStatus ?? "brand_created") as BrandIntakeStatus;
   const reanalyzeDisabled = isReAnalyzeDisabled(status);
 
-  useBrandContext({ brandName, profile, scores: displayScores });
+  useBrandContext({ brandId, brandName, profile, scores: displayScores });
 
   const focusTab = (id: BrandHubTab) => {
     setTab(id);

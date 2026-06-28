@@ -9,10 +9,12 @@ import { scoreLabel } from "@/lib/brand-utils";
 // production-planner can answer "explain this score" without re-fetching.
 // v2 equivalent of useCopilotReadable — see .claude/skills/copilotkit/references/upgrade/ipix-v2-conventions.md
 export function useBrandContext({
+  brandId,
   brandName,
   profile,
   scores,
 }: {
+  brandId: string;
   brandName: string;
   profile: AiProfile;
   scores: BrandScoreDetail[];
@@ -20,6 +22,7 @@ export function useBrandContext({
   useAgentContext({
     description: "Brand currently open in the Brand Hub",
     value: {
+      brandId,
       name: brandName,
       tagline: profile.tagline ?? null,
       category: profile.category ?? null,
