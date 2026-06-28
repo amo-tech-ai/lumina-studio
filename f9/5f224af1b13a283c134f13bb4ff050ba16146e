@@ -1,0 +1,24 @@
+app/src/app/api/copilotkit/[[...slug]]/route.runtime.test.ts
+  s_0fd313d5fcae59::t_615bf2e3e7f2e7 25
+  s_0fd313d5fcae59::t_4e149205d980ca 147-148
+  s_0fd313d5fcae59::t_98e8b725132cc2 132,136
+app/src/components/brand-hub/brand-context.test.ts
+  s_0fd313d5fcae59::t_8c189e158d63c8 82-84
+  s_0fd313d5fcae59::t_963e4e45355e31 1-4,6-12,14-33,36-38,40,43-53,56-64,67-72,77-81,86-91
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.3",
+  "base_commit_sha": "f95f224af1b13a283c134f13bb4ff050ba16146e",
+  "prompts": {},
+  "sessions": {
+    "s_0fd313d5fcae59": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b6ee15c1-f864-4868-bb54-422fb6bdf80e",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
