@@ -22,7 +22,7 @@ async function setupMocks() {
     extractAccessToken: vi.fn().mockReturnValue("test-token"),
   }));
   vi.doMock("@/lib/request-token", () => ({
-    requestToken: { run: vi.fn((_v: string, fn: () => unknown) => fn()) },
+    requestToken: { run: vi.fn((_v: string, fn: () => unknown) => fn()), getStore: vi.fn() },
   }));
 
   const OperatorAuthErrorClass = class extends Error {
@@ -129,10 +129,11 @@ describe("IPI2-127 — anonymous → 401 when auth enabled (runtime)", () => {
     expect(await response.text()).toBe("Unauthorized");
   });
 
-  it("passes through to CopilotRuntime when auth succeeds", async () => {
+  it("passes through to CopilotRuntime when auth succeeds and propagates token via requestToken ALS", async () => {
     const withOperatorAuth = vi.mocked((await import("@/lib/operator-gate")).withOperatorAuth);
     withOperatorAuth.mockResolvedValue({ id: "real-user", email: "op@test.com", name: "Op" });
 
+    const { requestToken } = await import("@/lib/request-token");
     const route = await import("@/app/api/copilotkit/[[...slug]]/route");
 
     const response = await route.GET(
@@ -143,6 +144,8 @@ describe("IPI2-127 — anonymous → 401 when auth enabled (runtime)", () => {
 
     expect(response.status).toBe(200);
     expect(await response.text()).toBe("ok");
+    // extractAccessToken is mocked to return "test-token"; assert it reaches requestToken.run
+    expect(vi.mocked(requestToken.run)).toHaveBeenCalledWith("test-token", expect.any(Function));
   });
 });
 
