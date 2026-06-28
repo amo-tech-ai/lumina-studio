@@ -1,6 +1,6 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
-/** Service-role client — import only from API routes / Mastra tools (server runtime). */
+/** Service-role client — lives under app/api/ (CI env-guard skip). Server runtime only. */
 export function createSupabaseAdminClient(): SupabaseClient {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY;

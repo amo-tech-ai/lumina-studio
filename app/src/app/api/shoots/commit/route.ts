@@ -4,7 +4,7 @@ export const dynamic = "force-dynamic";
 
 import { NextRequest, NextResponse } from "next/server";
 import { withOperatorAuth, OperatorAuthError } from "@/lib/operator-gate";
-import { createSupabaseAdminClient } from "@/lib/supabase/admin";
+import { createSupabaseAdminClient } from "@/app/api/_lib/supabase-admin";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { commitShootDraft, parseCommitShootDraftBody } from "@/lib/shoot/commit-shoot-draft";
 
