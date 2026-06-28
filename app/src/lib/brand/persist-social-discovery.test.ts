@@ -90,4 +90,27 @@ describe("persistSocialDiscovery", () => {
     expect(admin.upsert).not.toHaveBeenCalled();
     expect(admin.insert).toHaveBeenCalledOnce();
   });
+
+  it("returns failed when agent log insert errors", async () => {
+    const admin = makeAdminMock({ logError: { message: "insert failed" } });
+    const result = await persistSocialDiscovery(admin as never, {
+      brandId: BRAND_ID,
+      channels: [
+        {
+          platform: "instagram",
+          url: "https://instagram.com/glossier",
+          handle: "@glossier",
+          verified: true,
+          verification_reason: "Official site link",
+          content_themes: ["beauty"],
+          posting_frequency: "daily",
+        },
+      ],
+    });
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.error).toContain("brand_agent_results insert failed");
+    }
+  });
 });

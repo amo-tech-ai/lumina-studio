@@ -92,7 +92,13 @@ export async function persistSocialDiscovery(
   });
 
   if (logErr) {
-    console.warn("brand_agent_results insert failed:", logErr.message);
+    return {
+      ok: false,
+      status: "failed",
+      error:
+        errorMessage ?? `brand_agent_results insert failed: ${logErr.message}`,
+      count: rows.length,
+    };
   }
 
   if (status === "failed") {

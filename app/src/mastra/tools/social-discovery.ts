@@ -133,20 +133,16 @@ Return URLs as full https:// URLs only.`;
       errorMessage = err instanceof Error ? err.message : String(err);
     }
 
-    // WRITE: persist via shared lib (service-role) — auditable even for 0-channel runs.
-    try {
-      await persistSocialDiscovery(supabase, {
-        brandId,
-        channels,
-        startedAt,
-        status,
-        ...(errorMessage ? { error: errorMessage } : {}),
-      });
-    } catch (persistErr) {
-      console.warn(
-        "social-discovery persist failed:",
-        persistErr instanceof Error ? persistErr.message : String(persistErr),
-      );
+    const persistResult = await persistSocialDiscovery(supabase, {
+      brandId,
+      channels,
+      startedAt,
+      status,
+      ...(errorMessage ? { error: errorMessage } : {}),
+    });
+    if (!persistResult.ok) {
+      status = "failed";
+      errorMessage = persistResult.error;
     }
 
     return {

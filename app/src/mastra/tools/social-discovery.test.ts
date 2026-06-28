@@ -182,6 +182,38 @@ describe("discoverSocialChannelsTool", () => {
     );
   });
 
+  it("propagates persist failure when upsert fails", async () => {
+    vi.mocked(persistSocialDiscovery).mockResolvedValue({
+      ok: false,
+      count: 2,
+      status: "failed",
+      error: "brand_social_channels upsert failed: RLS denied",
+    });
+    vi.mocked(generateObject).mockResolvedValue({
+      object: {
+        channels: [
+          {
+            platform: "instagram",
+            url: "https://instagram.com/glossier",
+            handle: "@glossier",
+            verified: true,
+            verification_reason: "Official",
+            content_themes: ["beauty"],
+            posting_frequency: "daily",
+          },
+        ],
+      },
+    } as unknown as Awaited<ReturnType<typeof generateObject>>);
+
+    const result = (await discoverSocialChannelsTool.execute!(
+      { brandId: BRAND_ID },
+      {} as never,
+    )) as { status: string; error?: string };
+
+    expect(result.status).toBe("failed");
+    expect(result.error).toContain("upsert failed");
+  });
+
   it("rejects non-https URLs via Zod schema", async () => {
     vi.mocked(generateObject).mockResolvedValue({
       object: {
