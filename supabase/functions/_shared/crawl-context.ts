@@ -12,8 +12,8 @@ export type CrawlRawData = {
   pages?: CrawlPage[];
 };
 
-const DEFAULT_MAX_CHARS = 120_000;
-const DEFAULT_MAX_PAGES = 40;
+const DEFAULT_MAX_CHARS = 40_000;
+const DEFAULT_MAX_PAGES = 10;
 
 export function isCrawlThin(
   raw: CrawlRawData | null | undefined,

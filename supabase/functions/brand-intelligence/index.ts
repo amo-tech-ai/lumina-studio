@@ -269,9 +269,9 @@ Deno.serve(async (req: Request) => {
         contents: prompt,
         responseSchema: brandProfileResponseSchema,
         tools: [{ googleSearch: {} }],
-        thinkingLevel: "high",
+        thinkingLevel: "low",
         temperature: 0.1,
-        timeoutMs: 60_000,
+        timeoutMs: 45_000,
       });
       structuredResponse = result.response;
       responseText = result.text;
