@@ -8,7 +8,7 @@
  *   Brand      — per-brand overrides (planned, requires ActiveBrandContext)
  *
  * Source of truth for Claude Design uploads.
- * Import this file in globals.css: @import "./styles/tokens.css";
+ * Import this file in globals.css: @import "../styles/tokens.css";
  */
 
 /* ============================================================
@@ -60,6 +60,13 @@
   --primitive-blue-100: #dbeafe;
   --primitive-blue-500: #3b82f6;
   --primitive-blue-600: #2563eb;
+
+  /* Purple — published/post status */
+  --primitive-purple-100: #ede9fe;
+  --primitive-purple-700: #7c3aed;
+
+  /* Amber light — planning/warning subtle bg */
+  --primitive-amber-100: #fef3c7;
 }
 
 /* ============================================================
@@ -105,6 +112,13 @@
   --color-blocked-bg:     var(--primitive-red-100);       /* #FEE2E2 */
   --color-info:           var(--primitive-blue-600);      /* #2563EB */
   --color-info-bg:        var(--primitive-blue-100);      /* #DBEAFE */
+
+  /* --- Warning subtle bg --- */
+  --color-warning-subtle:   var(--primitive-amber-100);      /* #FEF3C7 — planning bg */
+
+  /* --- Published / post status (purple) --- */
+  --color-published:        var(--primitive-purple-700);     /* #7C3AED */
+  --color-published-bg:     var(--primitive-purple-100);     /* #EDE9FE */
 
   /* --- DNA score thresholds --- */
   --color-dna-high:       var(--primitive-green-600);     /* ≥ 80 */
@@ -155,24 +169,24 @@
   --nav-width-expanded:   14rem;
 
   /* IntelligencePanel (CopilotSidebar) */
-  --intel-bg:             var(--primitive-white);         /* always light-mode */
+  --intel-bg:             var(--color-bg-card);           /* always light-mode */
   --intel-border:         var(--color-border);
   --intel-header-bg:      var(--color-bg-subtle);
 
   /* StatusChip */
-  --status-planning-text: var(--primitive-amber-500);
-  --status-planning-bg:   #fef3c7;
+  --status-planning-text: var(--color-warning-text);
+  --status-planning-bg:   var(--color-warning-subtle);
   --status-active-text:   var(--color-approved);
   --status-active-bg:     var(--color-approved-bg);
-  --status-post-text:     #7c3aed;
-  --status-post-bg:       #ede9fe;
+  --status-post-text:     var(--color-published);
+  --status-post-bg:       var(--color-published-bg);
   --status-complete-text: var(--color-text-muted);
   --status-complete-bg:   var(--color-bg-subtle);
   --status-archived-text: var(--color-text-disabled);
-  --status-archived-bg:   var(--primitive-gray-50);
+  --status-archived-bg:   var(--color-bg-subtle);
 
   /* CommandPalette */
-  --palette-bg:           var(--primitive-white);
+  --palette-bg:           var(--color-bg-card);
   --palette-border:       var(--color-border);
   --palette-shadow:       var(--shadow-modal);
   --palette-item-hover:   var(--color-bg-subtle);
@@ -308,11 +322,8 @@
   --ai-confidence-mid:       var(--color-review);        /* 60–79% */
   --ai-confidence-low:       var(--color-blocked);       /* < 60% */
 
-  /* Approval / HITL */
-  --approval-bg:             var(--color-warning-bg);    /* #FFFBF0 */
-  --approval-border:         var(--color-warning);       /* #F3B93C */
-  --approval-done-bg:        var(--color-approved-bg);
-  --approval-done-border:    var(--color-approved);
+  /* Approval / HITL — canonical tokens defined in Component block above:
+     --approval-border, --approval-bg, --approval-border-done, --approval-bg-done */
 
   /* Evidence / citations */
   --evidence-bg:             var(--color-bg-subtle);
