@@ -46,7 +46,9 @@ export async function POST(req: NextRequest) {
           if (attempt > 0) await new Promise((r) => setTimeout(r, 2000));
           const snapshot = await workflowsStore.loadWorkflowSnapshot({ workflowName: workflowId, runId });
           if (snapshot) {
-            const nextStepId = Object.keys(snapshot.suspendedPaths ?? {}).find((id) => id !== stepId);
+            const active = Object.keys(snapshot.suspendedPaths ?? {});
+            if (active.length === 0) break; // workflow complete, no more gates
+            const nextStepId = active.find((id) => id !== stepId);
             if (nextStepId) {
               const step = snapshot.context[nextStepId];
               // suspendPayload holds the shots/budget; payload is the gate *input* (brand, channels, etc.)
