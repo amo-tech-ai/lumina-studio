@@ -1,0 +1,23 @@
+app/src/mastra/models.test.ts
+  s_77658a3d1fe88a::t_a5c4bf9ef2099c 11-12,16-19,35-37,41-45
+app/src/mastra/models.ts
+  s_77658a3d1fe88a::t_648b0dc7cfbb80 6-7,10-12,15-16
+supabase/functions/_shared/gemini.ts
+  s_77658a3d1fe88a::t_c59fc6ffe9315b 5-6,10
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.3",
+  "base_commit_sha": "2fd3a4269aa8c54adfcfffc808d51fddc8d746ac",
+  "prompts": {},
+  "sessions": {
+    "s_77658a3d1fe88a": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "dc6cc552-236b-4b1d-8f97-da0652703db3",
+        "model": "default"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
