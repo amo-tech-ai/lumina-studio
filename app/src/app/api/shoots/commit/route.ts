@@ -60,6 +60,20 @@ export async function POST(req: NextRequest) {
     );
   }
 
+  const badDeliverable = deliverables.find(
+    (d) => !d || typeof d.channel !== "string" || !d.channel.trim() || typeof d.quantity !== "number" || d.quantity < 1,
+  );
+  if (badDeliverable) {
+    return NextResponse.json({ error: "Each deliverable must have a non-empty channel and a positive quantity" }, { status: 400 });
+  }
+
+  const badShot = shots.find(
+    (s) => !s || !Number.isInteger(s.shot_number) || s.shot_number < 1 || typeof s.description !== "string" || !s.description.trim(),
+  );
+  if (badShot) {
+    return NextResponse.json({ error: "Each shot must have a positive integer shot_number and a non-empty description" }, { status: 400 });
+  }
+
   // Verify operator has access to this brand (RLS enforces org membership)
   const userSb = await createSupabaseServerClient();
   const { error: brandErr } = await userSb.from("brands").select("id").eq("id", brand_id).single();
@@ -105,13 +119,14 @@ export async function POST(req: NextRequest) {
 
   // 4. Audit log (non-fatal)
   try {
-    await svc.from("ai_agent_logs").insert({
+    const { error: logErr } = await svc.from("ai_agent_logs").insert({
       agent_name: "shoot-wizard",
       user_id: /^[0-9a-f-]{36}$/i.test(operator.id) ? operator.id : null,
       brand_id,
       input: { run_id: run_id ?? null, shoot_name, channels: safeChannels },
       output: { shoot_id, deliverable_count: safeDeliverables.length, shot_count: shots.length, approved_budget },
     });
+    if (logErr) console.error("[commit] audit log (non-fatal):", logErr);
   } catch (e) {
     console.error("[commit] audit log (non-fatal):", e);
   }
