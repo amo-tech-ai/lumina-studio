@@ -523,6 +523,7 @@ export default function NewShootPage() {
               <div className="flex items-center justify-between">
                 <label className="font-sans text-sm font-medium text-[#475569]">Brief *</label>
                 <button
+                  type="button"
                   onClick={suggestBrief}
                   disabled={briefLoading}
                   className="flex items-center gap-1.5 rounded-full border border-[#E8E0D8] px-3 py-1 font-sans text-xs text-[#64748B] transition-colors hover:border-[#E87C4D] hover:text-[#E87C4D] disabled:opacity-40"
