@@ -1,0 +1,19 @@
+app/next.config.ts
+  s_0fd313d5fcae59::t_4e5e02c68e9a31 8-11
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.3",
+  "base_commit_sha": "07bde6949b5e393c71ca6147f68cc9795e15d83e",
+  "prompts": {},
+  "sessions": {
+    "s_0fd313d5fcae59": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b6ee15c1-f864-4868-bb54-422fb6bdf80e",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
