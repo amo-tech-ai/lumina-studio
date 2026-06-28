@@ -16,8 +16,10 @@ describe("useBrandContext — agent context wiring (IPI-123 DASH-003 AC6)", () =
     expect(CONTEXT_SRC).toMatch(/useAgentContext/);
   });
 
-  it("registers brand identity context", () => {
+  it("registers brand identity context with brandId and intake_status", () => {
     expect(CONTEXT_SRC).toMatch(/description:.*[Bb]rand.*open/);
+    expect(CONTEXT_SRC).toMatch(/brandId/);
+    expect(CONTEXT_SRC).toMatch(/intake_status/);
     expect(CONTEXT_SRC).toMatch(/name:\s*brandName/);
   });
 
@@ -39,9 +41,11 @@ describe("BrandHubClient — useBrandContext integration (IPI-123 DASH-003 AC6)"
     );
   });
 
-  it("calls useBrandContext with brandName, profile, and scores", () => {
+  it("calls useBrandContext with brandId, brandName, intakeStatus, profile, and scores", () => {
     expect(CLIENT_SRC).toMatch(/useBrandContext\(/);
+    expect(CLIENT_SRC).toMatch(/brandId/);
     expect(CLIENT_SRC).toMatch(/brandName/);
+    expect(CLIENT_SRC).toMatch(/intakeStatus/);
     expect(CLIENT_SRC).toMatch(/profile/);
     expect(CLIENT_SRC).toMatch(/scores.*displayScores|displayScores.*scores/);
   });
