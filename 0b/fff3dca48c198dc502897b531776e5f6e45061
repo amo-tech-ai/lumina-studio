@@ -1,0 +1,23 @@
+app/src/app/api/workflows/resume/route.ts
+  s_0fd313d5fcae59::t_977b378b169943 25-27,32,37-38
+  s_0fd313d5fcae59::t_4d8a6cdec59a36 44-45
+  s_0fd313d5fcae59::t_86c792f42dd748 33
+app/src/app/api/workflows/shoot-wizard/route.ts
+  s_0fd313d5fcae59::t_669e833598438a 13-17
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.3",
+  "base_commit_sha": "0bfff3dca48c198dc502897b531776e5f6e45061",
+  "prompts": {},
+  "sessions": {
+    "s_0fd313d5fcae59": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b6ee15c1-f864-4868-bb54-422fb6bdf80e",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
