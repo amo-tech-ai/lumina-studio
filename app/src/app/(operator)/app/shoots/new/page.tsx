@@ -387,7 +387,7 @@ export default function NewShootPage() {
       });
       if (!commitRes.ok) {
         const errBody = await commitRes.json().catch(() => ({}));
-        throw new Error(errBody.error?.message ?? errBody.message ?? "Failed to commit shoot draft");
+        throw new Error(errBody.error ?? errBody.message ?? "Failed to commit shoot draft");
       }
       const { shoot_id } = await commitRes.json();
       update({ shootId: shoot_id });

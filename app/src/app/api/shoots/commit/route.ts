@@ -53,7 +53,7 @@ export async function POST(req: NextRequest) {
 
   const { brand_id, shoot_name, brief, channels, deliverables, shots, approved_budget, budget_breakdown, run_id } = body;
 
-  if (!brand_id || !shoot_name || !deliverables?.length || !shots?.length || !approved_budget) {
+  if (!Array.isArray(deliverables) || !Array.isArray(shots) || !brand_id || !shoot_name || !deliverables.length || !shots.length || !approved_budget) {
     return NextResponse.json(
       { error: "brand_id, shoot_name, deliverables, shots, and approved_budget are required" },
       { status: 400 },
