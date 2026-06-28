@@ -10,7 +10,11 @@ export async function POST(req: NextRequest) {
     const run = await getMastra().getWorkflow("shoot-wizard").createRun();
     // Start the workflow — it suspends immediately at Gate 1 (deliverable-gate)
     const result = await run.start({ inputData: body });
-    const suspendPayload = result?.status === "suspended" ? result.suspendPayload : null;
+    // Mastra nests payload under the step name; unwrap so client gets flat {deliverables, ...}
+    const raw = result?.status === "suspended" ? result.suspendPayload : null;
+    const suspendPayload = raw
+      ? ((raw as Record<string, unknown>)["deliverable-gate"] ?? raw)
+      : null;
     return NextResponse.json({ runId: run.runId, suspendPayload }, { status: 202 });
   } catch (err) {
     if (err instanceof OperatorAuthError) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

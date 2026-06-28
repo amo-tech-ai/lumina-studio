@@ -22,25 +22,27 @@ export async function POST(req: NextRequest) {
       const result = await run.resume({ step: stepId, resumeData });
       if (result?.status === "suspended") suspendPayload = result.suspendPayload ?? null;
     } catch (resumeErr) {
-      const msg = resumeErr instanceof Error ? resumeErr.message : "";
-      if (!msg.toLowerCase().includes("not suspended") && !msg.toLowerCase().includes("not found")) throw resumeErr;
+      // ponytail: String() handles non-Error throws from Mastra internals
+      const msg = (resumeErr instanceof Error ? resumeErr.message : String(resumeErr)).toLowerCase();
+      if (!msg.includes("not suspended") && !msg.includes("not found")) throw resumeErr;
       // step already resumed — fall through to snapshot to return current gate
     }
 
     // Fallback: Mastra 1.41 may return before the next step suspends (race), or the step
-    // was already resumed. Retry up to 5× with backoff; skip the just-resumed stepId.
-    // Snapshot stores the suspend data under step.payload (not step.suspendPayload).
+    // was already resumed. Poll up to 30s — AI shot-list generation can take 15-20s.
+    // In the snapshot, step.suspendPayload = shots/budget; step.payload = gate input (brand/channels).
     if (!suspendPayload) {
       const workflowsStore = await mastra.getStorage()?.getStore("workflows");
       if (workflowsStore) {
-        for (let attempt = 0; attempt < 5 && !suspendPayload; attempt++) {
-          if (attempt > 0) await new Promise((r) => setTimeout(r, 200 * attempt));
+        for (let attempt = 0; attempt < 15 && !suspendPayload; attempt++) {
+          if (attempt > 0) await new Promise((r) => setTimeout(r, 2000));
           const snapshot = await workflowsStore.loadWorkflowSnapshot({ workflowName: workflowId, runId });
           if (snapshot) {
             const nextStepId = Object.keys(snapshot.suspendedPaths ?? {}).find((id) => id !== stepId);
             if (nextStepId) {
               const step = snapshot.context[nextStepId];
-              if (step?.status === "suspended") suspendPayload = step?.payload ?? step?.suspendPayload ?? null;
+              // suspendPayload holds the shots/budget; payload is the gate *input* (brand, channels, etc.)
+              if (step?.status === "suspended") suspendPayload = step?.suspendPayload ?? step?.payload ?? null;
             }
           }
         }
