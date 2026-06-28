@@ -181,12 +181,12 @@ export default function NewShootPage() {
   // Auto-generate brief when entering Step 1 with channels selected and brief empty
   useEffect(() => {
     if (step !== 1) { autoGenerateFired.current = false; return; }
-    if (!autoGenerateFired.current && state.channels.length > 0 && state.brief.length < 10) {
+    if (!autoGenerateFired.current && state.channels.length > 0 && state.brief.trim().length === 0) {
       autoGenerateFired.current = true;
       suggestBrief();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [step, state.channels.length, state.brief.length]);
+  }, [step, state.channels.length, state.brief]);
 
   // Offer to expand when user has typed ≥10 chars and paused 1.5s
   useEffect(() => {
