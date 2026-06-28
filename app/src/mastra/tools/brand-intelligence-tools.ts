@@ -16,7 +16,7 @@ function adminClient() {
 export const getBrandProfile = createTool({
   id: "getBrandProfile",
   description:
-    "Read a brand's current profile, status, and AI analysis from the database. Call this at the start of every conversation to ground your context.",
+    "Read a brand's current profile, status, and AI analysis from the database. Use when you need fresher data than what is already in your injected context (e.g. after a re-analysis completes).",
   inputSchema: z.object({ brandId: z.string().uuid() }),
   outputSchema: z.object({
     id: z.string(),
