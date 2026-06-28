@@ -2,16 +2,14 @@
 // READ: queries Supabase with service-role (server-side trusted context)
 // WRITE: delegates to social-discovery edge function via callEdgeFunction (IPI2-84/116)
 
-import { createGoogleGenerativeAI } from "@ai-sdk/google";
 import { generateObject } from "ai";
 import { createTool } from "@mastra/core/tools";
 import { createClient } from "@supabase/supabase-js";
 import { z } from "zod";
-import { resolveGeminiModel } from "@/mastra/models";
+import { resolveModel } from "@/mastra/models";
 import { callEdgeFunction } from "./edge";
 
-const google = createGoogleGenerativeAI({ apiKey: process.env.GEMINI_API_KEY });
-const GEMINI_MODEL = resolveGeminiModel();
+const MODEL = resolveModel();
 
 const SUPPORTED_PLATFORMS = [
   "instagram",
@@ -116,7 +114,7 @@ Return URLs as full https:// URLs only.`;
     try {
       const result = await generateObject({
         // ponytail: search grounding via providerOptions when @ai-sdk/google v3 API is confirmed
-        model: google(GEMINI_MODEL),
+        model: MODEL,
         schema: DiscoveryResultSchema,
         prompt,
       });
