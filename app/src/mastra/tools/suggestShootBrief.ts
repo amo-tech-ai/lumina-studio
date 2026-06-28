@@ -5,7 +5,7 @@ import { resolveModel } from "../models";
 
 export const suggestShootBriefTool = createTool({
   id: "suggestShootBrief",
-  description: "Generate a shoot brief from a pre-authorized brand context and target channels.",
+  description: "Generate a complete professional creative brief for a fashion photography shoot.",
   inputSchema: z.object({
     brandContext: z.string().optional(),
     channels: z.array(z.string()),
@@ -16,19 +16,31 @@ export const suggestShootBriefTool = createTool({
   outputSchema: z.object({ brief: z.string() }),
   execute: async ({ brandContext, channels, shootName, briefSeed, tone }) => {
     const channelList = channels.join(", ") || "unspecified channels";
-    const taskLine = briefSeed
-      ? `Expand and complete this partial brief into 3–5 polished sentences:\n"${briefSeed}"`
-      : `Write a concise, inspiring shoot brief (3–5 sentences) for a photography/video shoot.`;
-    const toneLine = tone ? `\nAdjust the tone to be: ${tone}.` : "";
+
+    const seedSection = briefSeed
+      ? `\nOperator's creative direction (use as intent and inspiration — do not simply continue this sentence, rewrite it into a complete professional brief):\n"${briefSeed}"\n`
+      : "";
+
+    const toneSection = tone
+      ? `\nTone adjustment: rewrite the brief to feel ${tone}.\n`
+      : "";
+
     const { text } = await generateText({
       model: resolveModel(),
-      prompt: `You are a creative director writing a shoot brief. ${taskLine}
+      prompt: `You are a Creative Director writing a professional fashion photography creative brief.
 
-${brandContext ? `Brand context:\n${brandContext}\n` : ""}Shoot name: ${shootName}
+${brandContext ? `Brand context:\n${brandContext}\n` : ""}Campaign: ${shootName}
 Target channels: ${channelList}
-${toneLine}
-Write in first person from the brand's perspective. Focus on vision, tone, products/subject matter, and campaign goals. Be specific and actionable. Output only the brief text, no headings or labels.`,
-      maxOutputTokens: 300,
+${seedSection}${toneSection}
+Write a complete creative brief of 4–6 paragraphs. Cover:
+- Campaign vision and mood
+- Visual direction: lighting, location, setting, composition
+- Talent, styling, and art direction
+- Content mix suited to the target channels
+- Tone, brand alignment, and campaign goals
+
+Be specific, professional, and actionable. Write in a confident creative director voice, first person from the brand's perspective. Output only the brief text — no headings, no labels, no bullet points.`,
+      maxOutputTokens: 800,
     });
 
     return { brief: text.trim() };

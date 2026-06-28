@@ -533,20 +533,31 @@ export default function NewShootPage() {
                           </div>
                         );
                       }
+                      const scale = Math.min(40 / spec.widthPx, 56 / spec.heightPx);
+                      const pw = Math.round(spec.widthPx * scale);
+                      const ph = Math.round(spec.heightPx * scale);
                       return (
                         <div
                           key={channel}
-                          className="rounded-xl border border-[#E8E0D8] bg-white px-4 py-3 font-sans text-sm"
+                          className="flex items-center gap-3 rounded-xl border border-[#E8E0D8] bg-white px-4 py-3 font-sans text-sm"
                         >
-                          <p className="font-medium text-[#1E293B]">{label}</p>
-                          <p className="mt-1 text-[#64748B]">{spec.widthPx} × {spec.heightPx} px</p>
-                          {spec.aspectRatioLabel && (
-                            <p className="text-[#64748B]">Ratio {spec.aspectRatioLabel}</p>
-                          )}
-                          <p className="text-[#64748B]">{spec.acceptedFormats.join(" · ")}</p>
-                          {spec.maxFileSizeMb && (
-                            <p className="text-[#64748B]">Max {spec.maxFileSizeMb} MB</p>
-                          )}
+                          <div className="flex-1">
+                            <p className="font-medium text-[#1E293B]">{label}</p>
+                            <p className="mt-1 text-[#64748B]">{spec.widthPx} × {spec.heightPx} px</p>
+                            {spec.aspectRatioLabel && (
+                              <p className="text-[#64748B]">Ratio {spec.aspectRatioLabel}</p>
+                            )}
+                            <p className="text-[#64748B]">{spec.acceptedFormats.join(" · ")}</p>
+                            {spec.maxFileSizeMb && (
+                              <p className="text-[#64748B]">Max {spec.maxFileSizeMb} MB</p>
+                            )}
+                          </div>
+                          <div className="flex shrink-0 items-center justify-center" style={{ width: 44, height: 60 }}>
+                            <div
+                              className="rounded border border-[#CBD5E1] bg-[#F1EDE8]"
+                              style={{ width: pw, height: ph }}
+                            />
+                          </div>
                         </div>
                       );
                     })}
@@ -611,7 +622,10 @@ export default function NewShootPage() {
                 )}
               </div>
 
-              {/* Tone buttons — shown after first AI generation */}
+              {/* Generated status + tone chips */}
+              {briefGenerated && !briefLoading && (
+                <p className="text-xs text-[#94A3B8]">✓ Brief generated — refine below</p>
+              )}
               {briefGenerated && !briefLoading && (
                 <div className="flex flex-wrap gap-2">
                   {[
@@ -620,6 +634,7 @@ export default function NewShootPage() {
                     { label: "More luxury", tone: "more luxury" },
                     { label: "More commercial", tone: "more commercial" },
                     { label: "More social-first", tone: "more social-first" },
+                    { label: "More editorial", tone: "more editorial" },
                   ].map(({ label, tone, omitSeed }) => (
                     <button
                       key={label}
