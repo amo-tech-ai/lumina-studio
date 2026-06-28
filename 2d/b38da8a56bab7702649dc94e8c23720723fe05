@@ -1,0 +1,24 @@
+app/src/components/brand-context-panel/brand-context-panel.module.css
+  s_0fd313d5fcae59::t_1947157fad42b0 125-188
+app/src/app/api/brands/[id]/assets/route.ts
+  s_0fd313d5fcae59::t_ef88b514b1b166 1-61
+app/src/components/brand-context-panel/brand-context-panel.tsx
+  s_0fd313d5fcae59::t_ccbf8ea5842831 4,26-40,46-49,65-81,88-95,100-110,158-164,168-230,232
+  s_0fd313d5fcae59::t_ff3c30c87f9e89 231
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.3",
+  "base_commit_sha": "2db38da8a56bab7702649dc94e8c23720723fe05",
+  "prompts": {},
+  "sessions": {
+    "s_0fd313d5fcae59": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b6ee15c1-f864-4868-bb54-422fb6bdf80e",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
