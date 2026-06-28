@@ -11,11 +11,13 @@ import { scoreLabel } from "@/lib/brand-utils";
 export function useBrandContext({
   brandId,
   brandName,
+  intakeStatus,
   profile,
   scores,
 }: {
   brandId: string;
   brandName: string;
+  intakeStatus: string | null;
   profile: AiProfile;
   scores: BrandScoreDetail[];
 }) {
@@ -24,6 +26,7 @@ export function useBrandContext({
     value: {
       brandId,
       name: brandName,
+      intake_status: intakeStatus ?? null,
       tagline: profile.tagline ?? null,
       category: profile.category ?? null,
       industry: profile.industry ?? null,
