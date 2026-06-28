@@ -9,6 +9,19 @@ import { BudgetApprovalCard } from "@/components/shoot/hitl/BudgetApprovalCard";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
+type ChannelSpec = {
+  channel: string;
+  platformName: string;
+  imageTypeName: string;
+  widthPx: number;
+  heightPx: number;
+  aspectRatioLabel: string | null;
+  acceptedFormats: string[];
+  maxFileSizeMb: number | null;
+};
+
+type SpecResult = { channel: string; spec: ChannelSpec | null };
+
 type Deliverable = { id: string; channel: string; format: string; quantity: number };
 type Shot = { shot_number: number; description: string; angle: string; lighting: string; deliverable_ids: string[]; notes?: string };
 type Budget = { crew: number; studio: number; equipment: number; post: number; total: number };
@@ -99,6 +112,8 @@ export default function NewShootPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [brands, setBrands] = useState<{ id: string; name: string }[]>([]);
+  const [specs, setSpecs] = useState<SpecResult[]>([]);
+  const [specsLoading, setSpecsLoading] = useState(false);
 
   // ponytail: fetch brands once — user picks from their own brands, no UUID input
   useEffect(() => {
@@ -110,6 +125,7 @@ export default function NewShootPage() {
       }
     });
   }, []);
+
   const [state, setState] = useState<WizardState>({
     shootName: "",
     brandId: "",
@@ -126,6 +142,20 @@ export default function NewShootPage() {
   });
 
   const update = (patch: Partial<WizardState>) => setState((s) => ({ ...s, ...patch }));
+
+  // IPI-189: fetch channel specs whenever channel selection changes (debounced 200ms)
+  useEffect(() => {
+    if (!state.channels.length) { setSpecs([]); return; }
+    setSpecsLoading(true);
+    const t = setTimeout(() => {
+      fetch(`/api/media/specs?channels=${state.channels.join(",")}`)
+        .then((r) => r.json())
+        .then((d: { results: SpecResult[] }) => setSpecs(d.results))
+        .catch(() => setSpecs(state.channels.map((c) => ({ channel: c, spec: null }))))
+        .finally(() => setSpecsLoading(false));
+    }, 200);
+    return () => clearTimeout(t);
+  }, [state.channels]);
 
   const toggleChannel = (id: string) =>
     update({
@@ -395,6 +425,56 @@ export default function NewShootPage() {
                 ))}
               </div>
             </div>
+
+            {/* ── Spec panel (IPI-189) ── */}
+            {state.channels.length > 0 && (
+              <div className="space-y-3">
+                <p className="font-sans text-xs font-medium uppercase tracking-wide text-[#94A3B8]">
+                  Specs for your selected channels
+                </p>
+                {specsLoading ? (
+                  <div className="grid grid-cols-2 gap-3">
+                    {state.channels.map((c) => (
+                      <div key={c} className="h-28 animate-pulse rounded-xl bg-[#E8E0D8]" />
+                    ))}
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-2 gap-3">
+                    {specs.map(({ channel, spec }) => {
+                      const label = CHANNELS.find((ch) => ch.id === channel)?.label ?? channel;
+                      if (!spec) {
+                        return (
+                          <div
+                            key={channel}
+                            className="rounded-xl border px-4 py-3 font-sans text-sm"
+                            style={{ borderColor: "#F3B93C", background: "#FFFBEB" }}
+                          >
+                            <p className="font-medium text-[#92400E]">{label}</p>
+                            <p className="mt-1 text-xs text-[#B45309]">⚠ No spec on file yet</p>
+                          </div>
+                        );
+                      }
+                      return (
+                        <div
+                          key={channel}
+                          className="rounded-xl border border-[#E8E0D8] bg-white px-4 py-3 font-sans text-sm"
+                        >
+                          <p className="font-medium text-[#1E293B]">{label}</p>
+                          <p className="mt-1 text-[#64748B]">{spec.widthPx} × {spec.heightPx} px</p>
+                          {spec.aspectRatioLabel && (
+                            <p className="text-[#64748B]">Ratio {spec.aspectRatioLabel}</p>
+                          )}
+                          <p className="text-[#64748B]">{spec.acceptedFormats.join(" · ")}</p>
+                          {spec.maxFileSizeMb && (
+                            <p className="text-[#64748B]">Max {spec.maxFileSizeMb} MB</p>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
 
             <div className="flex justify-end">
               <button
