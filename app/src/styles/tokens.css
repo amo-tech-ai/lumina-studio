@@ -199,6 +199,138 @@
 }
 
 /* ============================================================
+   SPACING — use these instead of arbitrary Tailwind values
+   Maps to Tailwind's default 4px base scale.
+   ============================================================ */
+
+:root {
+  --space-1:  0.25rem;   /*  4px */
+  --space-2:  0.5rem;    /*  8px */
+  --space-3:  0.75rem;   /* 12px */
+  --space-4:  1rem;      /* 16px */
+  --space-5:  1.25rem;   /* 20px */
+  --space-6:  1.5rem;    /* 24px */
+  --space-8:  2rem;      /* 32px */
+  --space-10: 2.5rem;    /* 40px */
+  --space-12: 3rem;      /* 48px */
+  --space-16: 4rem;      /* 64px */
+}
+
+/* ============================================================
+   TYPOGRAPHY — font sizes and weights
+   ============================================================ */
+
+:root {
+  --font-size-xs:      0.75rem;    /* 12px — captions, labels */
+  --font-size-sm:      0.875rem;   /* 14px — body small, table cells */
+  --font-size-base:    1rem;       /* 16px — body default */
+  --font-size-lg:      1.125rem;   /* 18px — section headers */
+  --font-size-xl:      1.25rem;    /* 20px — page titles */
+  --font-size-2xl:     1.5rem;     /* 24px — hero headers */
+  --font-size-display: 2rem;       /* 32px — dashboard KPIs */
+
+  --font-weight-normal:   400;
+  --font-weight-medium:   500;
+  --font-weight-semibold: 600;
+  --font-weight-bold:     700;
+
+  --line-height-tight:  1.25;
+  --line-height-normal: 1.5;
+  --line-height-loose:  1.75;
+}
+
+/* ============================================================
+   Z-INDEX — stacking order
+   ============================================================ */
+
+:root {
+  --z-base:       0;
+  --z-raised:     10;    /* cards on hover */
+  --z-dropdown:   100;   /* dropdowns, popovers */
+  --z-sidebar:    200;   /* NavSidebar */
+  --z-popover:    300;   /* Tooltip, Popover */
+  --z-dialog:     400;   /* Dialog, Sheet */
+  --z-modal:      500;   /* full-screen modal (mobile IntelligencePanel) */
+  --z-toast:      600;   /* Toast notifications — always on top */
+}
+
+/* ============================================================
+   BORDER WIDTH
+   ============================================================ */
+
+:root {
+  --border-default: 1px;
+  --border-focus:   2px;
+  --border-heavy:   2px;   /* HITL cards, active states */
+}
+
+/* ============================================================
+   OPACITY
+   ============================================================ */
+
+:root {
+  --opacity-disabled: 0.4;
+  --opacity-hover:    0.08;   /* bg overlay on hover */
+  --opacity-loading:  0.6;
+  --opacity-overlay:  0.5;    /* modal backdrop */
+}
+
+/* ============================================================
+   LAYOUT — structural dimensions
+   Used by OperatorShell, NavSidebar, IntelligencePanel.
+   ============================================================ */
+
+:root {
+  --sidebar-width:            3.5rem;   /* nav rail collapsed */
+  --sidebar-width-expanded:   14rem;    /* nav rail expanded */
+  --intelligence-panel-width: auto;     /* CopilotKit-managed */
+  --content-max-width:        1280px;   /* center workspace cap */
+  --page-padding:             var(--space-6);   /* 24px horizontal padding */
+  --card-gap:                 var(--space-4);   /* 16px gap between cards */
+  --section-gap:              var(--space-8);   /* 32px gap between sections */
+
+  /* Touch targets — minimum 44×44px on mobile */
+  --touch-target-min: 2.75rem;   /* 44px */
+}
+
+/* ============================================================
+   AI-SPECIFIC TOKENS — reinforce the AI-native identity
+   Every AI surface references these instead of raw semantics.
+   ============================================================ */
+
+:root {
+  /* Generic AI card */
+  --ai-card-bg:              var(--color-bg-card);
+  --ai-card-border:          var(--color-border);
+
+  /* Confidence levels */
+  --ai-confidence-high:      var(--color-approved);      /* ≥ 80% */
+  --ai-confidence-mid:       var(--color-review);        /* 60–79% */
+  --ai-confidence-low:       var(--color-blocked);       /* < 60% */
+
+  /* Approval / HITL */
+  --approval-bg:             var(--color-warning-bg);    /* #FFFBF0 */
+  --approval-border:         var(--color-warning);       /* #F3B93C */
+  --approval-done-bg:        var(--color-approved-bg);
+  --approval-done-border:    var(--color-approved);
+
+  /* Evidence / citations */
+  --evidence-bg:             var(--color-bg-subtle);
+  --evidence-border:         var(--color-border-subtle);
+
+  /* AI draft — content pending operator approval */
+  --draft-bg:                var(--color-warning-bg);
+  --draft-border:            var(--color-warning);
+
+  /* Agent thinking / streaming state */
+  --thinking-bg:             var(--color-bg-subtle);
+  --thinking-dot:            var(--color-text-muted);
+
+  /* Agent streaming text cursor */
+  --streaming-cursor:        var(--color-accent);
+}
+
+/* ============================================================
    REDUCED MOTION — override all animations
    ============================================================ */
 
