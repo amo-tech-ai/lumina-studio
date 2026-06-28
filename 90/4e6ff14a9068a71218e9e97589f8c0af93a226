@@ -1,0 +1,21 @@
+supabase/functions/_shared/crawl-context.ts
+  s_0fd313d5fcae59::t_971fba216272aa 15-16
+supabase/functions/brand-intelligence/index.ts
+  s_0fd313d5fcae59::t_1a489d2baa1892 272,274
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.3",
+  "base_commit_sha": "904e6ff14a9068a71218e9e97589f8c0af93a226",
+  "prompts": {},
+  "sessions": {
+    "s_0fd313d5fcae59": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b6ee15c1-f864-4868-bb54-422fb6bdf80e",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
