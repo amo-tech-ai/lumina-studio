@@ -1,0 +1,33 @@
+app/src/components/shoot/shoot-wizard-context.tsx
+  s_0fd313d5fcae59::t_b2d40dfa6e23e9 1-43
+app/src/app/api/shoots/suggest-brief/route.ts
+  s_0fd313d5fcae59::t_733e38e56515e4 25,34
+  s_0fd313d5fcae59::t_2571125fc784b0 12-13
+app/src/mastra/tools/suggestShootBrief.ts
+  s_0fd313d5fcae59::t_8f65f901a27c76 21-22,25
+  s_0fd313d5fcae59::t_3300db5d8a2049 49-52,55,59-60
+app/src/app/(operator)/app/shoots/new/page.tsx
+  s_0fd313d5fcae59::t_05997f5f4e7542 181-201
+  s_0fd313d5fcae59::t_a8f7b865bd3104 412-424
+  s_0fd313d5fcae59::t_577849f56e836c 115-118
+  s_0fd313d5fcae59::t_8964fc29a9efeb 4-5
+  s_0fd313d5fcae59::t_04f22eb0b4c8fc 488
+  s_0fd313d5fcae59::t_87934938d81e31 571,574-632,635-636,638,640-641
+  s_0fd313d5fcae59::t_b9638729518673 152,155,161-167,173
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.3",
+  "base_commit_sha": "2f71d267097f35da8898166586c8098c9a87943d",
+  "prompts": {},
+  "sessions": {
+    "s_0fd313d5fcae59": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b6ee15c1-f864-4868-bb54-422fb6bdf80e",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
