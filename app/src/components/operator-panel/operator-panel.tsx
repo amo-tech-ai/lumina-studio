@@ -69,9 +69,14 @@ function OperatorShell({
   // Fetch brand list once on mount for the left panel switcher
   useEffect(() => {
     fetch("/api/brands")
-      .then((r) => (r.ok ? (r.json() as Promise<Brand[]>) : Promise.resolve([])))
-      .then(setBrands)
-      .catch(() => {});
+      .then((r) => {
+        if (!r.ok) {
+          console.error(`[brands] fetch failed: ${r.status}`);
+          return;
+        }
+        return (r.json() as Promise<Brand[]>).then(setBrands);
+      })
+      .catch((err) => console.error("[brands] fetch error:", err));
   }, []);
 
   useHideInternalToolCalls();
@@ -103,6 +108,9 @@ function OperatorShell({
     description: "Set the active brand context so the right panel shows that brand's profile and DNA scores.",
     parameters: z.object({ brandId: z.string().uuid() }),
     handler: async ({ brandId }) => {
+      if (!brands.some((b) => b.id === brandId)) {
+        return `Brand ${brandId} is not accessible.`;
+      }
       setActiveBrandId(brandId);
       return `Active brand set to ${brandId}.`;
     },

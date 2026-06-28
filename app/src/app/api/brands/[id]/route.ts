@@ -41,6 +41,10 @@ export async function GET(
     return NextResponse.json({ error: brandResult.error.message }, { status });
   }
 
+  if (scoresResult.error) {
+    return NextResponse.json({ error: scoresResult.error.message }, { status: 500 });
+  }
+
   return NextResponse.json({
     brand: brandResult.data,
     scores: scoresResult.data ?? null,
