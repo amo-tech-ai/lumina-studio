@@ -1,0 +1,25 @@
+app/src/app/api/_lib/supabase-admin.ts
+  s_77658a3d1fe88a::t_dffcff8f72d20e 3
+app/src/app/api/shoots/commit/route.test.ts
+  s_77658a3d1fe88a::t_1fb22619b755dc 40
+app/src/mastra/tools/saveApprovedShootDraft.ts
+  s_77658a3d1fe88a::t_3de77f56b5ec8a 3
+app/src/app/api/shoots/commit/route.ts
+  s_77658a3d1fe88a::t_386e2a666118b0 7
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.3",
+  "base_commit_sha": "f8058b3a6fb47e33639a9f894b9f522cde8ac29b",
+  "prompts": {},
+  "sessions": {
+    "s_77658a3d1fe88a": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "dc6cc552-236b-4b1d-8f97-da0652703db3",
+        "model": "default"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
