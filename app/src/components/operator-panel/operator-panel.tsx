@@ -1,7 +1,8 @@
 "use client";
 
 // IPI-110 — 3-panel shell: left NavSidebar (collapsed) · center workspace · right CopilotSidebar chatbot.
-// ThreadsDrawer surfaces via NavSidebar "Threads" button as a side sheet.
+// IPI-218 — ActiveBrandContext wired: brand switcher in left, brand context panel on right,
+//           useAgentContext exposes activeBrandId so agents never ask "which brand?".
 
 import {
   useAgentContext,
@@ -20,11 +21,15 @@ import {
 } from "@/components/copilot/copilot-tool-presentation";
 import { ThreadsDrawer } from "@/components/threads-drawer";
 import { ThreadsPanelGate } from "@/components/threads-drawer/locked-state";
+import { BrandContextPanel } from "@/components/brand-context-panel/brand-context-panel";
+import { ActiveBrandProvider, useActiveBrand } from "@/context/active-brand-context";
 import { NavSidebar } from "./nav-sidebar";
 import styles from "./operator-shell.module.css";
 import { resolveAgentId } from "@/lib/route-agent-map";
 
 const SECTIONS = ["brand", "onboarding", "shoots", "assets", "campaigns", "matching", "preview"] as const;
+
+interface Brand { id: string; name: string; status: string; }
 
 export function OperatorPanel({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -32,13 +37,15 @@ export function OperatorPanel({ children }: { children: React.ReactNode }) {
   const [threadId, setThreadId] = useState<string | undefined>(undefined);
   useEffect(() => { setThreadId(undefined); }, [agentId]);
   return (
-    <CopilotChatConfigurationProvider agentId={agentId} threadId={threadId}>
-      <div data-agent-id={agentId} style={{ display: "contents" }}>
-        <OperatorShell agentId={agentId} threadId={threadId} onThreadChange={setThreadId}>
-          {children}
-        </OperatorShell>
-      </div>
-    </CopilotChatConfigurationProvider>
+    <ActiveBrandProvider>
+      <CopilotChatConfigurationProvider agentId={agentId} threadId={threadId}>
+        <div data-agent-id={agentId} style={{ display: "contents" }}>
+          <OperatorShell agentId={agentId} threadId={threadId} onThreadChange={setThreadId}>
+            {children}
+          </OperatorShell>
+        </div>
+      </CopilotChatConfigurationProvider>
+    </ActiveBrandProvider>
   );
 }
 
@@ -56,12 +63,29 @@ function OperatorShell({
   const router = useRouter();
   const pathname = usePathname();
   const [threadsOpen, setThreadsOpen] = useState(false);
+  const { activeBrandId, setActiveBrandId } = useActiveBrand();
+  const [brands, setBrands] = useState<Brand[]>([]);
+
+  // Fetch brand list once on mount for the left panel switcher
+  useEffect(() => {
+    fetch("/api/brands")
+      .then((r) => (r.ok ? (r.json() as Promise<Brand[]>) : Promise.resolve([])))
+      .then(setBrands)
+      .catch(() => {});
+  }, []);
 
   useHideInternalToolCalls();
 
+  // Expose current route to agents
   useAgentContext({
     description: "The operator's current route in the iPix app (e.g. /app/brand, /app/shoots)",
     value: pathname,
+  });
+
+  // Expose active brand to agents so they never ask "which brand?"
+  useAgentContext({
+    description: "The brand the operator is currently working on (UUID, or null if none selected)",
+    value: activeBrandId,
   });
 
   useFrontendTool({
@@ -71,6 +95,16 @@ function OperatorShell({
     handler: async ({ section }) => {
       router.push(`/app/${section}`);
       return `Opening ${section}.`;
+    },
+  });
+
+  useFrontendTool({
+    name: "setActiveBrand",
+    description: "Set the active brand context so the right panel shows that brand's profile and DNA scores.",
+    parameters: z.object({ brandId: z.string().uuid() }),
+    handler: async ({ brandId }) => {
+      setActiveBrandId(brandId);
+      return `Active brand set to ${brandId}.`;
     },
   });
 
@@ -87,15 +121,20 @@ function OperatorShell({
 
   return (
     <div className={styles.shell}>
-      {/* Left nav rail — collapsed by default */}
-      <NavSidebar onThreadsClick={() => setThreadsOpen((v) => !v)} />
+      {/* Left nav rail — brand switcher + section nav */}
+      <NavSidebar
+        onThreadsClick={() => setThreadsOpen((v) => !v)}
+        brands={brands}
+        activeBrandId={activeBrandId}
+        onBrandSelect={setActiveBrandId}
+      />
 
       {/* Center — page content */}
       <main className={styles.content}>
         {children}
       </main>
 
-      {/* Right — AI chatbot panel */}
+      {/* Right col 1 — AI chatbot panel */}
       <div className={styles.chatPanel}>
         <CopilotSidebar
           defaultOpen
@@ -107,6 +146,13 @@ function OperatorShell({
           }}
         />
       </div>
+
+      {/* Right col 2 — Brand context panel (renders only when a brand is active) */}
+      {activeBrandId && (
+        <div className={styles.contextPanel}>
+          <BrandContextPanel brandId={activeBrandId} />
+        </div>
+      )}
 
       {/* Threads side-sheet — toggled from NavSidebar */}
       {threadsOpen && (

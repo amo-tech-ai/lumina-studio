@@ -1,6 +1,7 @@
 "use client";
 
 // IPI-85 / IPI-110 — Left nav rail for the 3-panel operator shell.
+// IPI-218 — Brand switcher section added (visible when expanded).
 // Collapsed by default (icon-only, 3.5 rem). Click the toggle or any label
 // to expand (14 rem). Active section highlighted with brand accent.
 
@@ -18,10 +19,22 @@ const NAV = [
   { href: "/app/matching",  icon: "🤝", label: "Matching" },
 ] as const;
 
+interface Brand {
+  id: string;
+  name: string;
+  status: string;
+}
+
 export function NavSidebar({
   onThreadsClick,
+  brands = [],
+  activeBrandId,
+  onBrandSelect,
 }: {
   onThreadsClick?: () => void;
+  brands?: Brand[];
+  activeBrandId?: string | null;
+  onBrandSelect?: (id: string) => void;
 }) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
@@ -41,10 +54,30 @@ export function NavSidebar({
         <span className={styles.toggleIcon}>{open ? "‹" : "›"}</span>
       </button>
 
+      {/* Brand switcher — only when expanded and brands are loaded */}
+      {open && brands.length > 0 && (
+        <div className={styles.brands}>
+          <span className={styles.brandSectionLabel}>Brands</span>
+          {brands.map((brand) => {
+            const active = brand.id === activeBrandId;
+            return (
+              <button
+                key={brand.id}
+                className={`${styles.brandItem} ${active ? styles.brandItemActive : ""}`}
+                onClick={() => onBrandSelect?.(brand.id)}
+                title={brand.name}
+              >
+                <span className={styles.brandDot} />
+                <span className={styles.label}>{brand.name}</span>
+              </button>
+            );
+          })}
+        </div>
+      )}
+
       {/* Nav links */}
       <ul className={styles.list}>
         {NAV.map(({ href, icon, label }) => {
-          // exact match for home, prefix match for the rest
           const active = href === "/app" ? pathname === "/app" : pathname.startsWith(href);
           return (
             <li key={href}>
