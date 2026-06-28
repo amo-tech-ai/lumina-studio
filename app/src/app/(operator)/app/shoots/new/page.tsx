@@ -585,18 +585,12 @@ export default function NewShootPage() {
                 )}
               </div>
 
-              {briefLoading ? (
-                <div className="space-y-2 rounded-xl border border-[#E8E0D8] bg-white px-4 py-4">
-                  <div className="h-3 w-3/4 animate-pulse rounded bg-[#E8E0D8]" />
-                  <div className="h-3 w-full animate-pulse rounded bg-[#E8E0D8]" />
-                  <div className="h-3 w-5/6 animate-pulse rounded bg-[#E8E0D8]" />
-                  <div className="h-3 w-2/3 animate-pulse rounded bg-[#E8E0D8]" />
-                  <p className="mt-2 font-sans text-xs text-[#94A3B8]">Generating your creative brief…</p>
-                </div>
-              ) : (
+              <div className="relative">
                 <textarea
                   rows={5}
-                  className="w-full rounded-xl border border-[#E8E0D8] bg-white px-4 py-3 font-sans text-sm text-[#1E293B] outline-none focus:border-[#E87C4D]"
+                  readOnly={briefLoading}
+                  className="w-full rounded-xl border border-[#E8E0D8] bg-white px-4 py-3 font-sans text-sm text-[#1E293B] outline-none focus:border-[#E87C4D] disabled:opacity-50"
+                  style={{ opacity: briefLoading ? 0.5 : 1 }}
                   placeholder="Describe the shoot vision, tone, products, and campaign goals…"
                   value={state.brief}
                   onChange={(e) => {
@@ -604,7 +598,13 @@ export default function NewShootPage() {
                     setBriefGenerated(false);
                   }}
                 />
-              )}
+                {briefLoading && (
+                  <div className="absolute inset-x-0 bottom-2 flex items-center justify-center gap-2">
+                    <span className="h-3 w-3 animate-spin rounded-full border border-[#E8E0D8] border-t-[#E87C4D]" />
+                    <p className="font-sans text-xs text-[#94A3B8]">Generating your creative brief…</p>
+                  </div>
+                )}
+              </div>
 
               {/* Tone buttons — shown after first AI generation */}
               {briefGenerated && !briefLoading && (
@@ -619,8 +619,9 @@ export default function NewShootPage() {
                     <button
                       key={label}
                       type="button"
+                      disabled={briefLoading}
                       onClick={() => suggestBrief({ tone, briefSeed: state.brief })}
-                      className="rounded-full border border-[#E8E0D8] px-3 py-1 font-sans text-xs text-[#64748B] transition-colors hover:border-[#E87C4D] hover:text-[#E87C4D]"
+                      className="rounded-full border border-[#E8E0D8] px-3 py-1 font-sans text-xs text-[#64748B] transition-colors hover:border-[#E87C4D] hover:text-[#E87C4D] disabled:opacity-40"
                     >
                       {label}
                     </button>
