@@ -72,7 +72,9 @@ export function BrandContextPanel({ brandId }: { brandId: string }) {
         if (!r.ok) throw new Error(`${r.status}`);
         return r.json() as Promise<AssetsPayload>;
       })
-      .then((d) => { setAssetsPayload(d); setAssetsLoading(false); })
+      .then((d) => {
+        if (!controller.signal.aborted) { setAssetsPayload(d); setAssetsLoading(false); }
+      })
       .catch((err) => {
         if (err.name !== "AbortError") { setAssetsError(true); setAssetsLoading(false); }
       });
@@ -214,13 +216,13 @@ function AssetGrid({
               ) : (
                 <div className={styles.assetPlaceholder} aria-hidden="true" />
               )}
-              {asset.dna_status && (
+              {asset.dna_status && DNA_BADGE[asset.dna_status] && (
                 <span
                   className={styles.dnaBadge}
                   data-status={asset.dna_status}
                   aria-label={asset.dna_status}
                 >
-                  {DNA_BADGE[asset.dna_status] ?? ""}
+                  {DNA_BADGE[asset.dna_status]}
                 </span>
               )}
             </div>
