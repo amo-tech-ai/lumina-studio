@@ -6,9 +6,8 @@ vi.mock("./edge", () => ({
   callEdgeFunction: vi.fn().mockResolvedValue({ runId: "run-abc123" }),
   EdgeFunctionError: class EdgeFunctionError extends Error {},
 }));
-// Stub the ALS export from the CopilotKit route so the tool can read a token in tests
-vi.mock("@/app/api/copilotkit/[[...slug]]/route", () => ({
-  _requestToken: { getStore: () => "tok" },
+vi.mock("@/lib/request-token", () => ({
+  requestToken: { getStore: () => "tok" },
 }));
 vi.mock("@ai-sdk/openai-compatible", () => ({
   createOpenAICompatible: vi.fn(() => vi.fn(() => "mock-model")),

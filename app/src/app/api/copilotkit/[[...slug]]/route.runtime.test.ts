@@ -21,6 +21,9 @@ async function setupMocks() {
     resolveOperatorUser: vi.fn(),
     extractAccessToken: vi.fn().mockReturnValue("test-token"),
   }));
+  vi.doMock("@/lib/request-token", () => ({
+    requestToken: { run: vi.fn((_v: string, fn: () => unknown) => fn()) },
+  }));
 
   const OperatorAuthErrorClass = class extends Error {
     constructor(m: string) {

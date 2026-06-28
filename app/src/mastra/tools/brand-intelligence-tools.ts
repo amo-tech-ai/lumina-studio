@@ -5,7 +5,7 @@ import { createTool } from "@mastra/core/tools";
 import { createClient } from "@supabase/supabase-js";
 import { z } from "zod";
 import { callEdgeFunction } from "./edge";
-import { _requestToken } from "@/app/api/copilotkit/[[...slug]]/route";
+import { requestToken } from "@/lib/request-token";
 
 function adminClient() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -92,7 +92,8 @@ export const startBrandAnalysis = createTool({
   }),
   outputSchema: z.object({ runId: z.string(), message: z.string() }),
   execute: async ({ brandId }) => {
-    const accessToken = _requestToken.getStore() ?? "";
+    const accessToken = requestToken.getStore();
+    if (!accessToken) throw new Error("Access token not available in request context");
     const result = await callEdgeFunction<{ runId: string }>(
       "start-brand-crawl",
       { brandId },
