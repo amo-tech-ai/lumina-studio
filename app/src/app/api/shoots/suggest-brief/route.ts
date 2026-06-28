@@ -11,7 +11,7 @@ const BodySchema = z.object({
   brandId: z.string().uuid().optional(),
   channels: z.array(z.string()),
   shootName: z.string().min(1, "shootName is required"),
-  briefSeed: z.string().max(500).optional(),
+  briefSeed: z.string().max(8000).optional(),
   tone: z.enum(ALLOWED_TONES).optional(),
 });
 

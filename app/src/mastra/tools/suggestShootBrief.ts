@@ -40,7 +40,12 @@ Write a complete creative brief of 4–6 paragraphs. Cover:
 - Tone, brand alignment, and campaign goals
 
 Be specific, professional, and actionable. Write in a confident creative director voice, first person from the brand's perspective. Output only the brief text — no headings, no labels, no bullet points.`,
-      maxOutputTokens: 800,
+      maxOutputTokens: 1200,
+      // ponytail: thinkingBudget:0 — gemini-3.5-flash is a thinking model; without this it
+      // burns ~760/800 tokens on reasoning and outputs only ~30 words of actual text.
+      providerOptions: {
+        google: { thinkingConfig: { thinkingBudget: 0 } },
+      },
     });
 
     return { brief: text.trim() };

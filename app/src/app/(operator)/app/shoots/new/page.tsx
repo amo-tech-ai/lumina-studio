@@ -646,7 +646,7 @@ export default function NewShootPage() {
                       key={label}
                       type="button"
                       disabled={briefLoading}
-                      onClick={() => suggestBrief({ tone, briefSeed: omitSeed ? undefined : state.brief })}
+                      onClick={() => suggestBrief({ tone, briefSeed: omitSeed ? undefined : state.brief.substring(0, 4000) })}
                       className="rounded-full border border-[#E8E0D8] px-3 py-1 font-sans text-xs text-[#64748B] transition-colors hover:border-[#E87C4D] hover:text-[#E87C4D] disabled:opacity-40"
                     >
                       {label}
@@ -659,7 +659,7 @@ export default function NewShootPage() {
               {expandOffer && !briefLoading && (
                 <button
                   type="button"
-                  onClick={() => suggestBrief({ briefSeed: state.brief })}
+                  onClick={() => suggestBrief({ briefSeed: state.brief.substring(0, 4000) })}
                   className="flex items-center gap-1.5 rounded-xl border border-[#F3B93C] bg-[#FFFBEB] px-3 py-2 font-sans text-xs text-[#92400E] transition-colors hover:bg-[#FEF9C3]"
                 >
                   ✨ Expand this into a complete creative brief
