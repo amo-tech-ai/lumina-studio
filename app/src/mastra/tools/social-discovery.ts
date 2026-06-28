@@ -1,13 +1,13 @@
 // IPI-27 — Social Discovery tool (agentTools registry entry)
 // READ: queries Supabase with service-role (server-side trusted context)
-// WRITE: delegates to social-discovery edge function via callEdgeFunction (IPI2-84/116)
+// WRITE: persistSocialDiscovery lib (Path B — no edge fn; IPI-229)
 
 import { generateObject } from "ai";
 import { createTool } from "@mastra/core/tools";
-import { createClient } from "@supabase/supabase-js";
 import { z } from "zod";
+import { createSupabaseAdminClient } from "@/app/api/_lib/supabase-admin";
+import { persistSocialDiscovery } from "@/lib/brand/persist-social-discovery";
 import { resolveModel, resolveProviderOptions } from "@/mastra/models";
-import { callEdgeFunction } from "./edge";
 
 const MODEL = resolveModel();
 
@@ -42,10 +42,7 @@ const DiscoveryResultSchema = z.object({
 });
 
 function getAdminClient() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!url || !key) throw new Error("Supabase env vars not set");
-  return createClient(url, key, { auth: { persistSession: false } });
+  return createSupabaseAdminClient();
 }
 
 export const discoverSocialChannelsTool = createTool({
@@ -136,17 +133,20 @@ Return URLs as full https:// URLs only.`;
       errorMessage = err instanceof Error ? err.message : String(err);
     }
 
-    // WRITE: always call edge fn so every run is auditable (even 0-channel runs).
-    // Edge fn returns 500 when status="failed" (upsert error path) — catch so a
-    // Gemini failure that already set status="failed" doesn't double-fault here.
+    // WRITE: persist via shared lib (service-role) — auditable even for 0-channel runs.
     try {
-      await callEdgeFunction(
-        "social-discovery",
-        { brandId, channels, startedAt, status, ...(errorMessage ? { error: errorMessage } : {}) },
-        { accessToken: process.env.SUPABASE_SERVICE_ROLE_KEY },
+      await persistSocialDiscovery(supabase, {
+        brandId,
+        channels,
+        startedAt,
+        status,
+        ...(errorMessage ? { error: errorMessage } : {}),
+      });
+    } catch (persistErr) {
+      console.warn(
+        "social-discovery persist failed:",
+        persistErr instanceof Error ? persistErr.message : String(persistErr),
       );
-    } catch (edgeErr) {
-      console.warn("social-discovery edge fn call failed:", edgeErr instanceof Error ? edgeErr.message : String(edgeErr));
     }
 
     return {
