@@ -110,6 +110,7 @@ function makeSbClient() {
 export default function NewShootPage() {
   const [step, setStep] = useState(0);
   const [loading, setLoading] = useState(false);
+  const [briefLoading, setBriefLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [brands, setBrands] = useState<{ id: string; name: string }[]>([]);
   const [specs, setSpecs] = useState<SpecResult[]>([]);
@@ -142,6 +143,27 @@ export default function NewShootPage() {
   });
 
   const update = (patch: Partial<WizardState>) => setState((s) => ({ ...s, ...patch }));
+
+  const suggestBrief = async () => {
+    const briefSnapshot = state.brief;
+    setError(null);
+    setBriefLoading(true);
+    try {
+      const res = await fetch("/api/shoots/suggest-brief", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ brandId: state.brandId || undefined, channels: state.channels, shootName: state.shootName }),
+      });
+      if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error ?? "Failed to suggest brief");
+      const { brief } = await res.json();
+      // Only apply if user hasn't edited the field while the request was in-flight
+      setState((s) => s.brief === briefSnapshot ? { ...s, brief } : s);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to suggest brief");
+    } finally {
+      setBriefLoading(false);
+    }
+  };
 
   // IPI-189: fetch channel specs whenever channel selection changes (debounced 200ms)
   useEffect(() => {
@@ -499,7 +521,19 @@ export default function NewShootPage() {
             <h1 className="font-serif text-2xl text-[#1E293B]">Brief</h1>
 
             <div className="space-y-1">
-              <label className="font-sans text-sm font-medium text-[#475569]">Brief *</label>
+              <div className="flex items-center justify-between">
+                <label className="font-sans text-sm font-medium text-[#475569]">Brief *</label>
+                <button
+                  type="button"
+                  onClick={suggestBrief}
+                  disabled={briefLoading}
+                  className="flex items-center gap-1.5 rounded-full border border-[#E8E0D8] px-3 py-1 font-sans text-xs text-[#64748B] transition-colors hover:border-[#E87C4D] hover:text-[#E87C4D] disabled:opacity-40"
+                >
+                  {briefLoading ? (
+                    <span className="h-3 w-3 animate-spin rounded-full border border-[#E8E0D8] border-t-[#E87C4D]" />
+                  ) : "✨"} AI suggest
+                </button>
+              </div>
               <textarea
                 rows={5}
                 className="w-full rounded-xl border border-[#E8E0D8] bg-white px-4 py-3 font-sans text-sm text-[#1E293B] outline-none focus:border-[#E87C4D]"
@@ -507,6 +541,11 @@ export default function NewShootPage() {
                 value={state.brief}
                 onChange={(e) => update({ brief: e.target.value })}
               />
+              {!state.brief && !briefLoading && (
+                <p className="font-sans text-xs text-[#94A3B8]">
+                  Tip: click "AI suggest" to generate a brief from your brand's profile.
+                </p>
+              )}
             </div>
 
             <div className="flex justify-between">
