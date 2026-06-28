@@ -1,6 +1,6 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
-export const VALID_SHOOT_CHANNELS = new Set([
+export const SHOOT_CHANNEL_VALUES = [
   "instagram_feed",
   "instagram_story",
   "instagram_reel",
@@ -11,7 +11,11 @@ export const VALID_SHOOT_CHANNELS = new Set([
   "facebook",
   "youtube",
   "website",
-]);
+] as const;
+
+export type ShootChannel = (typeof SHOOT_CHANNEL_VALUES)[number];
+
+export const VALID_SHOOT_CHANNELS = new Set<string>(SHOOT_CHANNEL_VALUES);
 
 export type CommitDeliverable = { channel: string; format?: string; quantity: number };
 export type CommitShot = {

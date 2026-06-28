@@ -4,6 +4,7 @@ import { createSupabaseAdminClient } from "@/app/api/_lib/supabase-admin";
 import {
   commitShootDraft,
   createUserScopedClient,
+  SHOOT_CHANNEL_VALUES,
   type CommitShootDraftInput,
 } from "@/lib/shoot/commit-shoot-draft";
 
@@ -18,7 +19,7 @@ export const saveApprovedShootDraft = createTool({
     deliverables: z
       .array(
         z.object({
-          channel: z.string(),
+          channel: z.enum(SHOOT_CHANNEL_VALUES),
           format: z.string().optional(),
           quantity: z.number().int().positive(),
         }),
