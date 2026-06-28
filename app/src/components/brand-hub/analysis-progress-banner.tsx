@@ -88,7 +88,7 @@ export const AnalysisProgressBanner = ({
   }, [brandId, router]);
 
   // Terminal / handled-elsewhere states — no banner
-  if (status === "ready" || status === "draft_ready") return null;
+  if (status === "ready" || status === "draft_ready" || status === "scores_complete") return null;
 
   if (status === "failed") {
     return (
