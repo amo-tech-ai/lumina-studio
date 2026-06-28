@@ -1,0 +1,43 @@
+app/src/components/ui/input.tsx
+  s_0fd313d5fcae59::t_1e9d796be28939 1-22
+app/src/components/ui/separator.tsx
+  s_0fd313d5fcae59::t_1e9d796be28939 1-31
+app/src/components/ui/select.tsx
+  s_0fd313d5fcae59::t_1e9d796be28939 1-160
+app/src/components/ui/sheet.tsx
+  s_0fd313d5fcae59::t_1e9d796be28939 1-140
+app/src/components/ui/dialog.tsx
+  s_0fd313d5fcae59::t_1e9d796be28939 1-122
+app/src/components/ui/skeleton.tsx
+  s_0fd313d5fcae59::t_1e9d796be28939 1-15
+app/src/components/ui/tabs.tsx
+  s_0fd313d5fcae59::t_1e9d796be28939 1-55
+app/components.json
+  s_0fd313d5fcae59::t_429153916c670e 1-21
+app/package.json
+  s_0fd313d5fcae59::t_1e9d796be28939 29-34,44,47
+app/src/components/ui/badge.tsx
+  s_0fd313d5fcae59::t_1e9d796be28939 1-36
+app/src/components/ui/sonner.tsx
+  s_0fd313d5fcae59::t_1e9d796be28939 1-45
+app/src/components/ui/progress.tsx
+  s_0fd313d5fcae59::t_1e9d796be28939 1-28
+app/package-lock.json
+  s_0fd313d5fcae59::t_37fb3368338d17 22-27,37,40,4425-4430,4473-5640,5648-5651,5663,5665-5666,5668-5670,5681,5683-5684,5686-5688,5699-5702,5704-5706,5709-5711,5716-5718,5722-5731,5734,5751-5754,5757,5774-5792,5794-5795,5807-5810,5813-5820,5837-5846,5849-5852,5856-5858,5863-5865,5869-5872,5874-5876,5878-5888,5891,5896-5909,5914-5917,5920,5932-5935,5938,5955-5958,5961,5978-5981,5984-5992,6009-6012,6016,6024,6026-6027,6030-6031,6043-6046,6049,6053,6061-6064,6213-6227,15717-15726,18601-18610
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.3",
+  "base_commit_sha": "c00f81897d8539a2be5a0e7bdc1a2c2c62384a74",
+  "prompts": {},
+  "sessions": {
+    "s_0fd313d5fcae59": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b6ee15c1-f864-4868-bb54-422fb6bdf80e",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
