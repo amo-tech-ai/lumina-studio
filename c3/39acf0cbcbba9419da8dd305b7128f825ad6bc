@@ -1,0 +1,29 @@
+app/src/app/api/copilotkit/[[...slug]]/route.runtime.test.ts
+  s_0fd313d5fcae59::t_ce4f8727a7e16d 22
+app/src/mastra/tools/brand-intelligence-tools.ts
+  s_0fd313d5fcae59::t_d03efa52ebd6e7 94-95
+  s_0fd313d5fcae59::t_70c3fb5643489d 8
+app/src/app/api/copilotkit/[[...slug]]/route.ts
+  s_0fd313d5fcae59::t_e461028545accd 10
+  s_0fd313d5fcae59::t_e3865acdf9f504 20
+  s_0fd313d5fcae59::t_bf2f1fed3f24d9 76-77
+app/src/mastra/tools/brand-intelligence-tools.test.ts
+  s_0fd313d5fcae59::t_edfe2536e5395f 9-12
+  s_0fd313d5fcae59::t_712c149a23e0b7 94-95
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.3",
+  "base_commit_sha": "c339acf0cbcbba9419da8dd305b7128f825ad6bc",
+  "prompts": {},
+  "sessions": {
+    "s_0fd313d5fcae59": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b6ee15c1-f864-4868-bb54-422fb6bdf80e",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
