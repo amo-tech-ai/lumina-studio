@@ -1,0 +1,34 @@
+app/src/mastra/tools/saveApprovedShootDraft.ts
+  s_77658a3d1fe88a::t_5c959e72ae2087 3
+  s_77658a3d1fe88a::t_3dc86d599593f6 86
+app/src/lib/supabase/admin.ts
+  s_77658a3d1fe88a::t_f1f75c3b89ca35 3
+  s_77658a3d1fe88a::t_190fca060af102 1-2,4-13
+app/src/lib/shoot/commit-shoot-draft.ts
+  s_77658a3d1fe88a::t_7f95170c637b1b 40,42-43,45,50-51,53,62-74,80,87,91,107-110,112-118,123-124,128-160,165,167-175,184,192,211,215,222
+app/src/app/api/shoots/commit/route.ts
+  s_77658a3d1fe88a::t_4f79d8bc3bbbb6 39
+  s_77658a3d1fe88a::t_c55c9dc53897b7 7
+app/src/lib/shoot/commit-shoot-draft.test.ts
+  s_77658a3d1fe88a::t_7039ec3cef9d7c 2-67
+  s_77658a3d1fe88a::t_be363aed985dcc 1
+app/src/app/api/shoots/commit/route.test.ts
+  s_77658a3d1fe88a::t_4df488c48a8dd6 40-43
+  s_77658a3d1fe88a::t_b6a06b992ab12d 114,119
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.3",
+  "base_commit_sha": "62ec9135a42a351dfb453cfea2a5cb2b9341c554",
+  "prompts": {},
+  "sessions": {
+    "s_77658a3d1fe88a": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "dc6cc552-236b-4b1d-8f97-da0652703db3",
+        "model": "default"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
