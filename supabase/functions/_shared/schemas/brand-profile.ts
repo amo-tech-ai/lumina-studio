@@ -5,6 +5,7 @@ export const brandProfileResponseSchema = {
   properties: {
     name: { type: Type.STRING, description: "Brand display name" },
     tagline: { type: Type.STRING, description: "Short brand tagline" },
+    overview: { type: Type.STRING, description: "A brief overview of the brand" },
     category: {
       type: Type.STRING,
       description: "Fashion or retail category, e.g. DTC apparel",
@@ -105,6 +106,7 @@ export const brandProfileResponseSchema = {
 export type BrandProfilePayload = {
   name: string;
   tagline: string;
+  overview?: string;
   category: string;
   visualIdentity: { colors: string[]; mood: string };
   targetAudience: string;
@@ -189,6 +191,7 @@ export function buildAiProfileFromPayload(
     ...(optionalStringArray(profile.contentPillars, 8)
       ? { contentPillars: optionalStringArray(profile.contentPillars, 8) }
       : {}),
+    ...(optionalTrim(profile.overview) ? { overview: optionalTrim(profile.overview) } : {}),
     ...(optionalTrim(profile.brandVoice)
       ? { brandVoice: optionalTrim(profile.brandVoice) }
       : {}),
