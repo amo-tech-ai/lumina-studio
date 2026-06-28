@@ -1,0 +1,23 @@
+app/src/styles/tokens.css
+  s_0fd313d5fcae59::t_6acea65967a673 172,177-178,181-182,186,189
+  s_0fd313d5fcae59::t_8166dd668ba8c9 325-326
+  s_0fd313d5fcae59::t_d39e2407513b58 11
+  s_0fd313d5fcae59::t_5bfbe33d93d233 116-122
+  s_0fd313d5fcae59::t_bbc3d6f17bd7fd 63-69
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.3",
+  "base_commit_sha": "8a71d29933bc849f378bcb9e20ac1da7ea431c34",
+  "prompts": {},
+  "sessions": {
+    "s_0fd313d5fcae59": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b6ee15c1-f864-4868-bb54-422fb6bdf80e",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
