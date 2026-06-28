@@ -49,6 +49,10 @@ export async function GET(
     return NextResponse.json({ error: rowsResult.error.message }, { status: 500 });
   }
 
+  if (countResult.error) {
+    return NextResponse.json({ error: countResult.error.message }, { status: 500 });
+  }
+
   const assets = (rowsResult.data ?? []).map((row) => ({
     id: row.id,
     cloudinary_public_id: row.cloudinary_public_id ?? null,
