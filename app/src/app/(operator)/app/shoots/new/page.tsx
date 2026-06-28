@@ -369,32 +369,22 @@ export default function NewShootPage() {
       });
       if (!r3.ok) throw new Error(await r3.text());
 
-      // Commit to durable DB via edge fn (no direct browser write)
-      const { data: sessionData } = await makeSbClient().auth.getSession();
-      const accessToken = sessionData.session?.access_token;
-      if (!accessToken) throw new Error("Not authenticated");
-
-      const commitRes = await fetch(
-        `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/save-approved-shoot-draft`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${accessToken}`,
-          },
-          body: JSON.stringify({
-            brand_id: state.brandId,
-            shoot_name: state.shootName,
-            brief: state.brief,
-            channels: state.channels,
-            deliverables: state.deliverables.filter((d) => d.channel.trim()),
-            shots: state.shots,
-            approved_budget: approvedBudget,
-            budget_breakdown: state.budget,
-            run_id: state.runId,
-          }),
-        },
-      );
+      // Commit to durable DB via Next.js API route (server-side, no CORS issue)
+      const commitRes = await fetch("/api/shoots/commit", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          brand_id: state.brandId,
+          shoot_name: state.shootName,
+          brief: state.brief,
+          channels: state.channels,
+          deliverables: state.deliverables.filter((d) => d.channel.trim()),
+          shots: state.shots,
+          approved_budget: approvedBudget,
+          budget_breakdown: state.budget,
+          run_id: state.runId,
+        }),
+      });
       if (!commitRes.ok) {
         const errBody = await commitRes.json().catch(() => ({}));
         throw new Error(errBody.error?.message ?? errBody.message ?? "Failed to commit shoot draft");
