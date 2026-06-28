@@ -5,9 +5,10 @@ const nextConfig: NextConfig = {
   // Pin workspace root — repo has multiple lockfiles; otherwise Turbopack infers /home/sk.
   turbopack: { root: __dirname },
   env: {
-    NEXT_PUBLIC_COPILOTKIT_THREADS_ENABLED: process.env.COPILOTKIT_LICENSE_TOKEN
-      ? "true"
-      : "false",
+    NEXT_PUBLIC_COPILOTKIT_THREADS_ENABLED:
+      process.env.COPILOTKIT_LICENSE_TOKEN && process.env.OPERATOR_AUTH_ENABLED === "true"
+        ? "true"
+        : "false",
   },
 };
 
