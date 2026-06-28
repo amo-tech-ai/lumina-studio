@@ -2,25 +2,25 @@ import { GoogleGenAI, type GenerateContentResponse } from "npm:@google/genai@2.8
 
 import { getOptionalSecret } from "./env.ts";
 
-/** Default text model for iPix edge functions (IPI-25 / AI-018). */
-export const DEFAULT_GEMINI_MODEL = "gemini-3.5-flash";
+/** Default text model for iPix edge functions (IPI-223 — aligned with app registry). */
+export const DEFAULT_GEMINI_MODEL = "gemini-3.1-flash-lite";
 
 const KNOWN_MODEL_IDS: string[] = [
   DEFAULT_GEMINI_MODEL,
-  "gemini-2.5-flash",
+  "gemini-3.5-flash",
   "gemini-3.1-pro-preview",
 ];
 
 /**
  * Resolve Gemini model from GEMINI_MODEL secret, else default.
- * Unknown overrides log a warning and fall back to default.
+ * Unknown overrides throw (mirrors app/src/mastra/models.ts — IPI-223).
  */
 export function resolveGeminiModel(): string {
   const override = getOptionalSecret("GEMINI_MODEL")?.trim() ?? "";
   if (override) {
     if (!KNOWN_MODEL_IDS.includes(override)) {
-      console.warn(
-        `GEMINI_MODEL="${override}" not in known registry; using override anyway`,
+      throw new Error(
+        `GEMINI_MODEL="${override}" is not in the registry (${KNOWN_MODEL_IDS.join(", ")}).`,
       );
     }
     return override;

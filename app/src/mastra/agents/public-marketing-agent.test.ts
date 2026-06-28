@@ -15,11 +15,10 @@ describe("publicMarketingAgent — structure", () => {
     expect(publicMarketingAgent.id).toBe("public-marketing");
   });
 
-  it("uses gemini-3.5-flash (never preview)", () => {
-    // Agent model is set via google("gemini-3.5-flash"). We can't inspect the
-    // model id at runtime through the Agent interface, but we can verify the
-    // agent was constructed without throwing and that the instructions contain
-    // no legacy model references. (Avoid /exp/ — matches "experience".)
+  it("uses resolveModel() default (gemini-3.1-flash-lite, never preview ids in instructions)", () => {
+    // Model comes from resolveModel() → resolveGeminiModel(); default is lite (IPI-223).
+    // We can't inspect the model id through the Agent interface, but we verify
+    // instructions contain no legacy/preview model references.
     expect(PUBLIC_MARKETING_INSTRUCTIONS).not.toMatch(/\bpreview\b|\bexperimental\b|gemini-2\.0/i);
   });
 
