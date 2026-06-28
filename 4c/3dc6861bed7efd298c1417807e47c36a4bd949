@@ -1,0 +1,26 @@
+app/src/app/api/shoots/commit/route.ts
+  s_77658a3d1fe88a::t_64355dd9309fcf 2,8,11,15-17,21,28-30,34-37,40-41,44
+app/src/mastra/tools/saveApprovedShootDraft.ts
+  s_77658a3d1fe88a::t_55b15be23d8a16 3-7,17-25,27-38,45-91
+app/src/lib/shoot/commit-shoot-draft.ts
+  s_77658a3d1fe88a::t_97e013bcc2ced9 1-231
+app/src/app/api/shoots/commit/route.test.ts
+  s_77658a3d1fe88a::t_12ecb4c5080f19 68-69
+  s_77658a3d1fe88a::t_5415fe91403f90 1-67,70-135
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.3",
+  "base_commit_sha": "4c3dc6861bed7efd298c1417807e47c36a4bd949",
+  "prompts": {},
+  "sessions": {
+    "s_77658a3d1fe88a": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "dc6cc552-236b-4b1d-8f97-da0652703db3",
+        "model": "default"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
