@@ -1,0 +1,212 @@
+/**
+ * iPix / FashionOS Design Tokens
+ *
+ * Layer hierarchy:
+ *   Primitive  — raw values, never use directly in components
+ *   Semantic   — purpose-based aliases of primitives
+ *   Component  — component-specific tokens (reference semantic layer)
+ *   Brand      — per-brand overrides (planned, requires ActiveBrandContext)
+ *
+ * Source of truth for Claude Design uploads.
+ * Import this file in globals.css: @import "./styles/tokens.css";
+ */
+
+/* ============================================================
+   PRIMITIVE TOKENS — raw values only
+   ============================================================ */
+
+:root {
+  /* Gray scale */
+  --primitive-white:    #ffffff;
+  --primitive-gray-50:  #f8fafc;
+  --primitive-gray-100: #f1f5f9;
+  --primitive-gray-200: #e2e8f0;
+  --primitive-gray-300: #cbd5e1;
+  --primitive-gray-400: #94a3b8;
+  --primitive-gray-500: #64748b;
+  --primitive-gray-600: #475569;
+  --primitive-gray-700: #334155;
+  --primitive-gray-800: #1e293b;
+  --primitive-gray-900: #0f172a;
+
+  /* Warm neutrals — fashion-inspired off-whites */
+  --primitive-warm-50:  #fbf8f5;
+  --primitive-warm-100: #f5f0eb;
+  --primitive-warm-200: #ede5dc;
+  --primitive-warm-border: #e8e0d8;
+
+  /* iPix orange — primary accent */
+  --primitive-orange-400: #f09460;
+  --primitive-orange-500: #e87c4d;
+  --primitive-orange-600: #d4673a;
+
+  /* Mustard — secondary accent / warning */
+  --primitive-amber-300: #fcd34d;
+  --primitive-amber-400: #f3b93c;
+  --primitive-amber-500: #d97706;
+  --primitive-amber-50:  #fffbf0;
+
+  /* Status — green */
+  --primitive-green-100: #d1fae5;
+  --primitive-green-500: #10b981;
+  --primitive-green-600: #059669;
+
+  /* Status — red */
+  --primitive-red-100: #fee2e2;
+  --primitive-red-500: #ef4444;
+  --primitive-red-600: #dc2626;
+
+  /* Status — blue (informational) */
+  --primitive-blue-100: #dbeafe;
+  --primitive-blue-500: #3b82f6;
+  --primitive-blue-600: #2563eb;
+}
+
+/* ============================================================
+   SEMANTIC TOKENS — purpose-based aliases
+   Never use primitive tokens directly in components.
+   ============================================================ */
+
+:root {
+  /* --- Backgrounds --- */
+  --color-bg-page:        var(--primitive-warm-50);       /* #FBF8F5 — warm off-white */
+  --color-bg-card:        var(--primitive-white);         /* #FFFFFF — card surface */
+  --color-bg-subtle:      var(--primitive-gray-50);       /* #F8FAFC — subtle section bg */
+  --color-bg-muted:       var(--primitive-gray-100);      /* #F1F5F9 — muted inputs */
+
+  /* --- Borders --- */
+  --color-border:         var(--primitive-warm-border);   /* #E8E0D8 — warm border */
+  --color-border-subtle:  var(--primitive-gray-200);      /* #E2E8F0 — subtle dividers */
+  --color-border-focus:   var(--primitive-orange-500);    /* #E87C4D — focus ring */
+
+  /* --- Text --- */
+  --color-text-primary:   var(--primitive-gray-800);      /* #1E293B — body text */
+  --color-text-secondary: var(--primitive-gray-600);      /* #475569 — secondary text */
+  --color-text-muted:     var(--primitive-gray-500);      /* #64748B — placeholder/hint */
+  --color-text-disabled:  var(--primitive-gray-400);      /* #94A3B8 — disabled */
+  --color-text-inverse:   var(--primitive-white);         /* #FFFFFF — on dark bg */
+
+  /* --- Accent (iPix orange) --- */
+  --color-accent:         var(--primitive-orange-500);    /* #E87C4D — primary CTA */
+  --color-accent-hover:   var(--primitive-orange-600);    /* #D4673A — hovered CTA */
+  --color-accent-light:   var(--primitive-warm-100);      /* #F5F0EB — accent tint bg */
+
+  /* --- Warning / AI pending (mustard) --- */
+  --color-warning:        var(--primitive-amber-400);     /* #F3B93C — warning border */
+  --color-warning-bg:     var(--primitive-amber-50);      /* #FFFBF0 — warning bg */
+  --color-warning-text:   var(--primitive-amber-500);     /* #D97706 — warning text */
+
+  /* --- Status --- */
+  --color-approved:       var(--primitive-green-600);     /* #059669 */
+  --color-approved-bg:    var(--primitive-green-100);     /* #D1FAE5 */
+  --color-review:         var(--primitive-amber-500);     /* #D97706 */
+  --color-review-bg:      var(--primitive-amber-50);      /* #FFFBF0 */
+  --color-blocked:        var(--primitive-red-600);       /* #DC2626 */
+  --color-blocked-bg:     var(--primitive-red-100);       /* #FEE2E2 */
+  --color-info:           var(--primitive-blue-600);      /* #2563EB */
+  --color-info-bg:        var(--primitive-blue-100);      /* #DBEAFE */
+
+  /* --- DNA score thresholds --- */
+  --color-dna-high:       var(--primitive-green-600);     /* ≥ 80 */
+  --color-dna-mid:        var(--primitive-amber-500);     /* 60–79 */
+  --color-dna-low:        var(--primitive-red-600);       /* < 60 */
+
+  /* --- Shadows --- */
+  --shadow-card:   0 1px 3px 0 rgb(0 0 0 / 0.06), 0 1px 2px -1px rgb(0 0 0 / 0.04);
+  --shadow-panel:  0 4px 16px 0 rgb(0 0 0 / 0.08);
+  --shadow-modal:  0 20px 60px 0 rgb(0 0 0 / 0.16);
+  --shadow-focus:  0 0 0 2px var(--color-border-focus);
+
+  /* --- Motion --- */
+  --duration-instant: 50ms;
+  --duration-fast:    150ms;
+  --duration-normal:  250ms;
+  --duration-slow:    400ms;
+  --ease-default:     cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-spring:      cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-linear:      linear;
+}
+
+/* ============================================================
+   COMPONENT TOKENS — component-specific aliases
+   Reference semantic layer only — never primitive.
+   ============================================================ */
+
+:root {
+  /* ApprovalCard (HITL) */
+  --approval-border:      var(--color-warning);           /* amber when pending */
+  --approval-bg:          var(--color-warning-bg);
+  --approval-border-done: var(--color-approved);
+  --approval-bg-done:     var(--color-approved-bg);
+
+  /* DNAScoreBar */
+  --dna-bar-track:        var(--color-bg-subtle);
+  --dna-bar-high:         var(--color-dna-high);
+  --dna-bar-mid:          var(--color-dna-mid);
+  --dna-bar-low:          var(--color-dna-low);
+
+  /* NavSidebar */
+  --nav-bg:               var(--color-bg-card);
+  --nav-border:           var(--color-border);
+  --nav-item-hover:       var(--color-bg-subtle);
+  --nav-item-active:      var(--color-accent-light);
+  --nav-item-active-text: var(--color-accent);
+  --nav-width-collapsed:  3.5rem;
+  --nav-width-expanded:   14rem;
+
+  /* IntelligencePanel (CopilotSidebar) */
+  --intel-bg:             var(--primitive-white);         /* always light-mode */
+  --intel-border:         var(--color-border);
+  --intel-header-bg:      var(--color-bg-subtle);
+
+  /* StatusChip */
+  --status-planning-text: var(--primitive-amber-500);
+  --status-planning-bg:   #fef3c7;
+  --status-active-text:   var(--color-approved);
+  --status-active-bg:     var(--color-approved-bg);
+  --status-post-text:     #7c3aed;
+  --status-post-bg:       #ede9fe;
+  --status-complete-text: var(--color-text-muted);
+  --status-complete-bg:   var(--color-bg-subtle);
+  --status-archived-text: var(--color-text-disabled);
+  --status-archived-bg:   var(--primitive-gray-50);
+
+  /* CommandPalette */
+  --palette-bg:           var(--primitive-white);
+  --palette-border:       var(--color-border);
+  --palette-shadow:       var(--shadow-modal);
+  --palette-item-hover:   var(--color-bg-subtle);
+  --palette-item-active:  var(--color-accent-light);
+
+  /* Card (base) */
+  --card-bg:              var(--color-bg-card);
+  --card-border:          var(--color-border);
+  --card-shadow:          var(--shadow-card);
+  --card-radius:          var(--radius-lg);               /* 0.625rem */
+}
+
+/* ============================================================
+   BRAND TOKENS — per-brand theme overrides (PLANNED)
+   Injected at shell level when ActiveBrandContext is implemented.
+   Currently unused — these are placeholders.
+   ============================================================ */
+
+:root {
+  /* ponytail: brand tokens are no-ops until ActiveBrandContext ships */
+  --brand-primary:        var(--color-accent);
+  --brand-secondary:      var(--color-warning);
+  --brand-bg:             var(--color-bg-page);
+}
+
+/* ============================================================
+   REDUCED MOTION — override all animations
+   ============================================================ */
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --duration-instant: 0ms;
+    --duration-fast:    0ms;
+    --duration-normal:  0ms;
+    --duration-slow:    0ms;
+  }
+}
