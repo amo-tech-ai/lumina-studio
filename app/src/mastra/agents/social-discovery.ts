@@ -1,5 +1,4 @@
 import { Agent } from "@mastra/core/agent";
-import { mastraWorkflows } from "@/mastra/agent-workflows";
 import { agentTools } from "@/mastra/tools";
 import { resolveModel } from "@/mastra/models";
 
@@ -8,7 +7,6 @@ export const socialDiscoveryAgent = new Agent({
   name: "Social Discovery",
   model: resolveModel(),
   tools: { discoverSocialChannels: agentTools.discoverSocialChannels },
-  workflows: mastraWorkflows("brand-intelligence"),
   instructions:
     "You are the iPix social discovery agent. Given a brandId, call discoverSocialChannels to find the brand's official social media accounts and save them to the database.",
 });

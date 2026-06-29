@@ -22,12 +22,12 @@ describe("agent workflow bindings (Studio + chat discovery)", () => {
     expect(await workflowIds(agents["brand-intelligence"])).toEqual(["brand-intelligence"]);
   });
 
-  it("visual-identity agent exposes brand-intelligence workflow", async () => {
-    expect(await workflowIds(agents["visual-identity"])).toEqual(["brand-intelligence"]);
+  it("visual-identity agent exposes no domain workflows (worker agent, not workflow owner)", async () => {
+    expect(await workflowIds(agents["visual-identity"])).toEqual([]);
   });
 
-  it("social-discovery agent exposes brand-intelligence workflow", async () => {
-    expect(await workflowIds(agents["social-discovery"])).toEqual(["brand-intelligence"]);
+  it("social-discovery agent exposes no domain workflows (worker agent, not workflow owner)", async () => {
+    expect(await workflowIds(agents["social-discovery"])).toEqual([]);
   });
 
   it("Mastra registry resolves domain workflows without duplicate registration", () => {
