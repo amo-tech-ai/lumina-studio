@@ -1,7 +1,11 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
-vi.mock("@supabase/supabase-js", () => ({
-  createClient: vi.fn(),
+vi.mock("@/app/api/_lib/supabase-admin", () => ({
+  createSupabaseAdminClient: vi.fn(),
+}));
+
+vi.mock("@/lib/brand/persist-social-discovery", () => ({
+  persistSocialDiscovery: vi.fn().mockResolvedValue({ ok: true, count: 0, status: "complete" }),
 }));
 
 vi.mock("ai", () => ({
@@ -12,14 +16,9 @@ vi.mock("@ai-sdk/google", () => ({
   createGoogleGenerativeAI: vi.fn(() => vi.fn(() => "mock-model")),
 }));
 
-vi.mock("./edge", () => ({
-  callEdgeFunction: vi.fn().mockResolvedValue({ success: true, count: 0 }),
-  EdgeFunctionError: class EdgeFunctionError extends Error {},
-}));
-
-import { createClient } from "@supabase/supabase-js";
+import { createSupabaseAdminClient } from "@/app/api/_lib/supabase-admin";
+import { persistSocialDiscovery } from "@/lib/brand/persist-social-discovery";
 import { generateObject } from "ai";
-import { callEdgeFunction } from "./edge";
 import { discoverSocialChannelsTool } from "./social-discovery";
 
 const BRAND_ID = "11111111-1111-1111-1111-111111111111";
@@ -67,6 +66,14 @@ beforeEach(() => {
   process.env.NEXT_PUBLIC_SUPABASE_URL = "https://test.supabase.co";
   process.env.SUPABASE_SERVICE_ROLE_KEY = "test-service-key";
   process.env.GEMINI_API_KEY = "test-gemini-key";
+  vi.mocked(createSupabaseAdminClient).mockReturnValue(
+    makeMockSupabase() as ReturnType<typeof createSupabaseAdminClient>,
+  );
+  vi.mocked(persistSocialDiscovery).mockResolvedValue({
+    ok: true,
+    count: 0,
+    status: "complete",
+  });
 });
 
 afterEach(() => {
@@ -76,11 +83,12 @@ afterEach(() => {
 });
 
 describe("discoverSocialChannelsTool", () => {
-  it("calls edge function with discovered channels", async () => {
-    vi.mocked(createClient).mockReturnValue(
-      makeMockSupabase() as unknown as ReturnType<typeof createClient>,
-    );
-    vi.mocked(callEdgeFunction).mockResolvedValue({ success: true, count: 2 });
+  it("persists discovered channels via shared lib", async () => {
+    vi.mocked(persistSocialDiscovery).mockResolvedValue({
+      ok: true,
+      count: 2,
+      status: "complete",
+    });
     vi.mocked(generateObject).mockResolvedValue({
       object: {
         channels: [
@@ -106,16 +114,16 @@ describe("discoverSocialChannelsTool", () => {
       },
     } as unknown as Awaited<ReturnType<typeof generateObject>>);
 
-    const result = await discoverSocialChannelsTool.execute!({ brandId: BRAND_ID }, {} as never) as {
-      channelsFound: number;
-      status: string;
-    };
+    const result = (await discoverSocialChannelsTool.execute!(
+      { brandId: BRAND_ID },
+      {} as never,
+    )) as { channelsFound: number; status: string };
 
     expect(result.channelsFound).toBe(2);
     expect(result.status).toBe("complete");
-    expect(callEdgeFunction).toHaveBeenCalledOnce();
-    expect(callEdgeFunction).toHaveBeenCalledWith(
-      "social-discovery",
+    expect(persistSocialDiscovery).toHaveBeenCalledOnce();
+    expect(persistSocialDiscovery).toHaveBeenCalledWith(
+      expect.anything(),
       expect.objectContaining({
         brandId: BRAND_ID,
         channels: expect.arrayContaining([
@@ -123,15 +131,15 @@ describe("discoverSocialChannelsTool", () => {
           expect.objectContaining({ platform: "tiktok" }),
         ]),
       }),
-      expect.objectContaining({ accessToken: expect.any(String) }),
     );
   });
 
-  it("is idempotent — upsert on conflict handled by edge function", async () => {
-    vi.mocked(createClient).mockReturnValue(
-      makeMockSupabase() as unknown as ReturnType<typeof createClient>,
-    );
-    vi.mocked(callEdgeFunction).mockResolvedValue({ success: true, count: 1 });
+  it("is idempotent — persist called on each run (upsert in lib)", async () => {
+    vi.mocked(persistSocialDiscovery).mockResolvedValue({
+      ok: true,
+      count: 1,
+      status: "complete",
+    });
     vi.mocked(generateObject).mockResolvedValue({
       object: {
         channels: [
@@ -151,35 +159,62 @@ describe("discoverSocialChannelsTool", () => {
     await discoverSocialChannelsTool.execute!({ brandId: BRAND_ID }, {} as never);
     await discoverSocialChannelsTool.execute!({ brandId: BRAND_ID }, {} as never);
 
-    expect(callEdgeFunction).toHaveBeenCalledTimes(2);
+    expect(persistSocialDiscovery).toHaveBeenCalledTimes(2);
   });
 
-  it("calls edge function with failed status when Gemini throws", async () => {
-    vi.mocked(createClient).mockReturnValue(
-      makeMockSupabase() as unknown as ReturnType<typeof createClient>,
-    );
-    vi.mocked(callEdgeFunction).mockResolvedValue({ success: true, count: 0 });
+  it("persists failed status when Gemini throws", async () => {
     vi.mocked(generateObject).mockRejectedValue(new Error("Gemini quota exceeded"));
 
-    const result = await discoverSocialChannelsTool.execute!({ brandId: BRAND_ID }, {} as never) as {
-      channelsFound: number;
-      status: string;
-    };
+    const result = (await discoverSocialChannelsTool.execute!(
+      { brandId: BRAND_ID },
+      {} as never,
+    )) as { channelsFound: number; status: string };
 
     expect(result.status).toBe("failed");
     expect(result.channelsFound).toBe(0);
-    expect(callEdgeFunction).toHaveBeenCalledWith(
-      "social-discovery",
-      expect.objectContaining({ brandId: BRAND_ID, channels: [] }),
-      expect.objectContaining({ accessToken: expect.any(String) }),
+    expect(persistSocialDiscovery).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        brandId: BRAND_ID,
+        channels: [],
+        status: "failed",
+      }),
     );
   });
 
+  it("propagates persist failure when upsert fails", async () => {
+    vi.mocked(persistSocialDiscovery).mockResolvedValue({
+      ok: false,
+      count: 2,
+      status: "failed",
+      error: "brand_social_channels upsert failed: RLS denied",
+    });
+    vi.mocked(generateObject).mockResolvedValue({
+      object: {
+        channels: [
+          {
+            platform: "instagram",
+            url: "https://instagram.com/glossier",
+            handle: "@glossier",
+            verified: true,
+            verification_reason: "Official",
+            content_themes: ["beauty"],
+            posting_frequency: "daily",
+          },
+        ],
+      },
+    } as unknown as Awaited<ReturnType<typeof generateObject>>);
+
+    const result = (await discoverSocialChannelsTool.execute!(
+      { brandId: BRAND_ID },
+      {} as never,
+    )) as { status: string; error?: string };
+
+    expect(result.status).toBe("failed");
+    expect(result.error).toContain("upsert failed");
+  });
+
   it("rejects non-https URLs via Zod schema", async () => {
-    vi.mocked(createClient).mockReturnValue(
-      makeMockSupabase() as unknown as ReturnType<typeof createClient>,
-    );
-    vi.mocked(callEdgeFunction).mockResolvedValue({ success: true, count: 0 });
     vi.mocked(generateObject).mockResolvedValue({
       object: {
         channels: [
@@ -196,12 +231,11 @@ describe("discoverSocialChannelsTool", () => {
       },
     } as unknown as Awaited<ReturnType<typeof generateObject>>);
 
-    // generateObject with bad URL will fail schema parse — tool should catch and set failed
-    const result = await discoverSocialChannelsTool.execute!({ brandId: BRAND_ID }, {} as never) as {
-      status: string;
-      channelsFound: number;
-    };
-    // Either fails schema validation (status=failed) or filters out non-https channel
+    const result = (await discoverSocialChannelsTool.execute!(
+      { brandId: BRAND_ID },
+      {} as never,
+    )) as { status: string; channelsFound: number };
+
     expect(result.channelsFound).toBe(0);
   });
 });
