@@ -1,4 +1,5 @@
 import { Agent } from "@mastra/core/agent";
+import { mastraWorkflows } from "@/mastra/agent-workflows";
 import { agentTools } from "@/mastra/tools";
 import { getMastraMemory, getPlannerMemory, PlannerWorkingMemory } from "@/mastra/memory";
 import { resolveModel } from "@/mastra/models";
@@ -14,6 +15,7 @@ export const productionPlannerAgent = new Agent({
   id: "production-planner",
   name: "Production Planner",
   tools: agentTools,
+  workflows: mastraWorkflows("shoot-wizard"),
   model: MODEL,
   instructions: `You are the iPix production planner for Lumina Studio operators.
 

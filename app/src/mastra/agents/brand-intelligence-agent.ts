@@ -2,6 +2,7 @@
 // Loaded when operator is on /app/brand/* (route-agent-map.ts).
 // Page-context-aware: opens with brand profile + scores, guides HITL approval.
 import { Agent } from "@mastra/core/agent";
+import { mastraWorkflows } from "@/mastra/agent-workflows";
 import { getMastraMemory } from "@/mastra/memory";
 import { resolveModel } from "@/mastra/models";
 import { brandIntelligenceTools } from "@/mastra/tools/brand-intelligence-tools";
@@ -13,6 +14,7 @@ export const brandIntelligenceAgent = new Agent({
   name: "Brand Intelligence",
   model: MODEL,
   tools: brandIntelligenceTools,
+  workflows: mastraWorkflows("brand-intelligence"),
   instructions: `You are the iPix Brand Intelligence specialist for Lumina Studio operators.
 
 ## Context you always have

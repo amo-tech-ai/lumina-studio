@@ -24,10 +24,11 @@ describe("durable agents", () => {
     expect(durableAgents.default).toBe(durableAgents["production-planner"]);
   });
 
-  it("observe(runId, offset:0) replays cached events after simulated disconnect (IPI-133)", async () => {
-    if (!process.env.GEMINI_API_KEY) return;
-
-    const { runId, output, cleanup } = await durablePlanner.stream(
+  it(
+    "observe(runId, offset:0) replays cached events after simulated disconnect (IPI-133)",
+    { skip: !process.env.GEMINI_API_KEY, timeout: 30_000 },
+    async () => {
+      const { runId, output, cleanup } = await durablePlanner.stream(
       "Return the word PING and nothing else.",
       { maxSteps: 1 },
     );
@@ -47,12 +48,14 @@ describe("durable agents", () => {
     } finally {
       cleanup();
     }
-  });
+  },
+  );
 
-  it("stream() returns runId + cleanup even when execution errors", async () => {
-    if (!process.env.GEMINI_API_KEY) return;
-
-    const result = await durablePlanner.stream("Return the word HELLO and nothing else.", {
+  it(
+    "stream() returns runId + cleanup even when execution errors",
+    { skip: !process.env.GEMINI_API_KEY, timeout: 30_000 },
+    async () => {
+      const result = await durablePlanner.stream("Return the word HELLO and nothing else.", {
       maxSteps: 1,
       onChunk: () => {},
     });
@@ -73,5 +76,6 @@ describe("durable agents", () => {
     } finally {
       result.cleanup();
     }
-  });
+  },
+  );
 });

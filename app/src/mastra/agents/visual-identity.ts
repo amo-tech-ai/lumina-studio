@@ -1,4 +1,5 @@
 import { Agent } from "@mastra/core/agent";
+import { mastraWorkflows } from "@/mastra/agent-workflows";
 import { createTool } from "@mastra/core/tools";
 import { generateObject } from "ai";
 import type { UserContent, ImagePart, TextPart } from "ai";
@@ -187,6 +188,7 @@ export const visualIdentityAgent = new Agent({
   name: "Visual Identity",
   model: MODEL,
   tools: { extractVisualIdentity: extractVisualIdentityTool },
+  workflows: mastraWorkflows("brand-intelligence"),
   instructions:
     "You are the iPix visual identity agent. Extract visual design properties from brand homepages using screenshots and Gemini vision. Use the extractVisualIdentity tool when given a brandId and URL.",
 });

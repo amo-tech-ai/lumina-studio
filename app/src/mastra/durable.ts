@@ -17,16 +17,24 @@
  * Upgrade: when IPI-129 lands, wire a Postgres-backed cache here.
  */
 import { createDurableAgent } from "@mastra/core/agent/durable";
+import type { DurableAgent } from "@mastra/core/agent/durable";
 
 import { creativeDirectorAgent, productionPlannerAgent } from "./agents";
+
+/** DurableAgent does not forward listWorkflows — bind wrapped agent workflows for Studio + chat tools. */
+function bindWrappedWorkflows(durable: DurableAgent): void {
+  durable.listWorkflows = durable.agent.listWorkflows.bind(durable.agent);
+}
 
 export const durablePlanner = createDurableAgent({
   agent: productionPlannerAgent,
 });
+bindWrappedWorkflows(durablePlanner);
 
 export const durableCreativeDirector = createDurableAgent({
   agent: creativeDirectorAgent,
 });
+bindWrappedWorkflows(durableCreativeDirector);
 
 export const durableAgents = {
   default: durablePlanner,
