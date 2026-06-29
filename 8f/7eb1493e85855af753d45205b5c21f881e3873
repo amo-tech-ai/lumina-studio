@@ -1,0 +1,21 @@
+app/src/mastra/agent-workflow-bindings.test.ts
+  s_dbd599bb3c8240::t_e2a53ce9919d76 25-26,29-30
+app/src/mastra/agent-workflows.ts
+  s_dbd599bb3c8240::t_8c71f7e036e07b 6,12-20
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.4",
+  "base_commit_sha": "8f7eb1493e85855af753d45205b5c21f881e3873",
+  "prompts": {},
+  "sessions": {
+    "s_dbd599bb3c8240": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_0ead23f3cffecS7FqdeY1Bcold",
+        "model": "deepseek-v4-flash"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
