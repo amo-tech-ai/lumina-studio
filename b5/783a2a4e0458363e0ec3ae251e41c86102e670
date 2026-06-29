@@ -1,0 +1,41 @@
+app/src/mastra/agent-workflows.ts
+  s_77658a3d1fe88a::t_1f97621f398ed1 1-14
+app/src/mastra/agent-workflows.test.ts
+  s_77658a3d1fe88a::t_fa271251cf49d4 1-21
+app/src/mastra/agents/visual-identity.ts
+  s_77658a3d1fe88a::t_3545ddebdc7b59 2
+  s_77658a3d1fe88a::t_f9c446e11305c7 191
+app/src/mastra/durable.ts
+  s_77658a3d1fe88a::t_2b92795b0197f0 20,24-28,32,37
+app/src/mastra/agents/index.ts
+  s_77658a3d1fe88a::t_002e4dbd73cd40 18
+  s_77658a3d1fe88a::t_46893f1b904687 2
+app/src/mastra/durable.test.ts
+  s_77658a3d1fe88a::t_9fc139a0df7792 27-31
+  s_77658a3d1fe88a::t_27c30382ce696a 51-52,54-58
+  s_77658a3d1fe88a::t_2d7de2ee76fba7 79-80
+app/src/mastra/agent-workflow-bindings.test.ts
+  s_77658a3d1fe88a::t_0afa4a38aa1c8a 1-32,39-40
+  s_77658a3d1fe88a::t_e7ddec32468cec 33-38
+app/src/mastra/agents/social-discovery.ts
+  s_77658a3d1fe88a::t_7049603b182a14 2,11
+app/src/mastra/agents/brand-intelligence-agent.ts
+  s_77658a3d1fe88a::t_cda3d6a6ee62fc 5
+  s_77658a3d1fe88a::t_0ef9e29bb683ff 17
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.3",
+  "base_commit_sha": "b5783a2a4e0458363e0ec3ae251e41c86102e670",
+  "prompts": {},
+  "sessions": {
+    "s_77658a3d1fe88a": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "dc6cc552-236b-4b1d-8f97-da0652703db3",
+        "model": "composer-2.5"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
