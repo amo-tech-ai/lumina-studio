@@ -77,13 +77,13 @@
 .item:hover { background: var(--accent); color: var(--foreground); }
 
 .itemActive {
-  background: color-mix(in oklch, #E87C4D 12%, transparent);
-  color: #E87C4D;
+  background: var(--nav-item-active);
+  color: var(--nav-item-active-text);
 }
 
 .itemActive:hover {
-  background: color-mix(in oklch, #E87C4D 18%, transparent);
-  color: #E87C4D;
+  background: var(--nav-item-hover);
+  color: var(--nav-item-active-text);
 }
 
 .icon {
@@ -141,8 +141,8 @@
 .brandItem:not(.brandItemActive):hover { background: var(--accent); color: var(--foreground); }
 
 .brandItemActive {
-  background: color-mix(in oklch, #E87C4D 12%, transparent);
-  color: #E87C4D;
+  background: var(--nav-item-active);
+  color: var(--nav-item-active-text);
 }
 
 .brandDot {
