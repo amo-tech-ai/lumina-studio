@@ -49,7 +49,7 @@ export function useIntelligencePanel(activeBrandId: string | null) {
   useEffect(() => {
     let cancelled = false;
     void (async () => {
-      setState((s) => ({ ...s, loading: true, error: null }));
+      setState({ data: null, loading: true, error: null });
       try {
         const data = await fetchPanel();
         if (!cancelled) setState({ data, loading: false, error: null });
