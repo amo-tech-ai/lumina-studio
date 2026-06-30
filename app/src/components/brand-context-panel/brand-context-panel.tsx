@@ -23,6 +23,12 @@ interface BrandDetail {
   scores: ScoresRow | null;
 }
 
+function dnaBarTier(value: number): "high" | "mid" | "low" {
+  if (value >= 80) return "high";
+  if (value >= 60) return "mid";
+  return "low";
+}
+
 interface AssetRow {
   id: string;
   cloudinary_public_id: string | null;
@@ -138,6 +144,7 @@ function BrandView({
                   <div className={styles.bar}>
                     <div
                       className={styles.barFill}
+                      data-tier={dnaBarTier(value)}
                       style={{ width: `${Math.min(100, Math.max(0, value))}%` }}
                     />
                   </div>
