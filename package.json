@@ -14,5 +14,8 @@
     "supabase:verify-edge": "node scripts/verify-edge-functions.mjs",
     "supabase:verify-brand-intelligence": "node scripts/verify-brand-intelligence.mjs",
     "seed:sample-brand": "node scripts/seed-sample-brand.mjs"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.108.2"
   }
 }
