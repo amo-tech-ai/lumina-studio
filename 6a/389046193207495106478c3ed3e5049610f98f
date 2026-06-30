@@ -1,0 +1,20 @@
+app/src/components/operator-panel/nav-sidebar.module.css
+  s_ef4285d032a355::t_700477f51d6d9f 77
+  s_ef4285d032a355::t_2595f79e1ec36e 141
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.4",
+  "base_commit_sha": "6a389046193207495106478c3ed3e5049610f98f",
+  "prompts": {},
+  "sessions": {
+    "s_ef4285d032a355": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "26c1cfce-92ad-4c17-b2fb-f77878e7778d",
+        "model": "composer-2.5"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
