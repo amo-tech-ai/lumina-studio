@@ -1,6 +1,6 @@
-// IPI-51 · DASH-005 — maps /app/* pathnames to Mastra agent IDs.
+// IPI-51 · DASH-005 + IPI-247 · DESIGN-070 — maps /app/* pathnames to Mastra agent IDs.
+// SSOT: tasks/design-docs/handoff/07-navigation-map.md · AGENT-MAP.md
 // Keep agent ID strings in sync with app/src/mastra/index.ts agents registry.
-// ponytail: prefix-match only — no regex, no dynamic segments needed here.
 
 const DEFAULT_AGENT = "production-planner";
 
@@ -9,9 +9,10 @@ const ROUTE_MAP: [prefix: string, agentId: string][] = [
   ["/app/shoots", "production-planner"],
   ["/app/campaigns", "creative-director"],
   ["/app/brand", "brand-intelligence"],  // IPI-130
-  ["/app/assets", "production-planner"],
-  ["/app/matching", "production-planner"],
-  ["/app/onboarding", "production-planner"],
+  ["/app/assets", "creative-director"],  // IPI-247 · DESIGN-070
+  ["/app/matching", "social-discovery"],  // IPI-247
+  ["/app/preview", "visual-identity"],  // IPI-247
+  ["/app/onboarding", "brand-intelligence"],  // IPI-247
 ];
 
 export function resolveAgentId(pathname: string): string {
