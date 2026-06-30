@@ -1,0 +1,13 @@
+[
+  {"slug":"onboarding","file":"Onboarding.v2.zeely.dc.html","url":"http://127.0.0.1:8765/Onboarding.v2.zeely.dc.html","screenshot":"screenshots/onboarding-390.png","viewport":390,"status":"captured","imageWidth":390},
+  {"slug":"shoot-wizard","file":"Shoot Wizard.v2.image-first.dc.html","url":"http://127.0.0.1:8765/Shoot%20Wizard.v2.image-first.dc.html","screenshot":"screenshots/shoot-wizard-390.png","viewport":390,"status":"captured","imageWidth":390},
+  {"slug":"shoot-detail","file":"Shoot Detail.v2.image-first.dc.html","url":"http://127.0.0.1:8765/Shoot%20Detail.v2.image-first.dc.html","screenshot":"screenshots/shoot-detail-390.png","viewport":390,"status":"captured","imageWidth":390},
+  {"slug":"assets","file":"Assets.v2.image-first.dc.html","url":"http://127.0.0.1:8765/Assets.v2.image-first.dc.html","screenshot":"screenshots/assets-390.png","viewport":390,"status":"captured","imageWidth":390},
+  {"slug":"channel-preview","file":"Channel Preview.v2.image-first.dc.html","url":"http://127.0.0.1:8765/Channel%20Preview.v2.image-first.dc.html","screenshot":"screenshots/channel-preview-390.png","viewport":390,"status":"captured","imageWidth":390},
+  {"slug":"matching","file":"Matching.v2.image-first.dc.html","url":"http://127.0.0.1:8765/Matching.v2.image-first.dc.html","screenshot":"screenshots/matching-390.png","viewport":390,"status":"captured","imageWidth":390},
+  {"slug":"campaigns","file":"Campaigns.v2.image-first.dc.html","url":"http://127.0.0.1:8765/Campaigns.v2.image-first.dc.html","screenshot":"screenshots/campaigns-390.png","viewport":390,"status":"captured","imageWidth":390},
+  {"slug":"command-center","file":"Command Center.v2.image-first.dc.html","url":"http://127.0.0.1:8765/Command%20Center.v2.image-first.dc.html","screenshot":"screenshots/command-center-390.png","viewport":390,"status":"captured","imageWidth":390},
+  {"slug":"brand-detail","file":"Brand Detail.v2.image-first.dc.html?id=nike","url":"http://127.0.0.1:8765/Brand%20Detail.v2.image-first.dc.html?id=nike","screenshot":"screenshots/brand-detail-390.png","viewport":390,"status":"captured","imageWidth":390},
+  {"slug":"brand-list","file":"Brand List.v2.image-first.dc.html","url":"http://127.0.0.1:8765/Brand%20List.v2.image-first.dc.html","screenshot":"screenshots/brand-list-390.png","viewport":390,"status":"captured","imageWidth":390},
+  {"slug":"shoots-list","file":"Shoots List.v2.image-first.dc.html","url":"http://127.0.0.1:8765/Shoots%20List.v2.image-first.dc.html","screenshot":"screenshots/shoots-list-390.png","viewport":390,"status":"captured","imageWidth":390}
+]

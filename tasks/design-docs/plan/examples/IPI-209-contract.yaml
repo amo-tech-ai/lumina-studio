@@ -1,0 +1,67 @@
+# Example — IPI-209 / DESIGN-054 Shoot Detail
+# Copy pattern for other implementation tasks.
+
+id: IPI-209
+title: Shoot Detail page — fix /app/shoots/[id] 404
+type: ui-screen
+
+skills:
+  - ipix-task-lifecycle
+  - design-md
+  - fashion-production
+  - feature-dev
+  - copilotkit
+  - ipix-supabase
+  - task-verifier
+
+dependencies:
+  - DESIGN-010
+  - DESIGN-030
+  - DESIGN-040
+  - DESIGN-042
+
+components:
+  - OperatorShell
+  - PageHeader
+  - ShootCard
+  - ApprovalCard
+  - AssetCard
+  - StatusChip
+  - PersistentChatDock
+
+design:
+  source: design.md
+  handoff: docs/handoff/02-screen-map.md §6
+  tokens: required
+  spacing: required
+  typography: required
+  three_panel: required
+  hitl: required
+
+wireframe: docs/linear/issues/IPI-209-shoot-detail-page.md § Page layout
+mermaid: flowchart + sequence in IPI-209 spec
+
+linear: IPI-209
+acceptance:
+  A: /app/shoots/:id renders — no 404
+  B: GET /api/shoots/[id] auth + RLS + RPC
+  C: loading · error · empty states
+  D: CopilotKit shoot context
+  E: regression — shoots list unchanged
+
+verify:
+  build: cd app && npm run lint && npm test && npm run build
+  browser: npm run dev — open shoot from list · 375px sheet
+  design_review: DESIGN-REVIEW-CHECKLIST + 9-tab handoff §11
+  playwright: TBD specs/shoot-detail.spec.ts
+  done_gate: task-verifier
+
+evidence:
+  - build
+  - browser_screenshot_desktop
+  - browser_screenshot_mobile
+  - design_review
+  - playwright
+  - task_verifier
+
+done_gate: task-verifier
