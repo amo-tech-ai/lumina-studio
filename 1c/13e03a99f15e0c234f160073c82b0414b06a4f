@@ -1,0 +1,19 @@
+app/src/lib/intelligence/use-intelligence-panel.ts
+  s_496c3278139cd3::t_f1413e777c3082 50-69,72,75-77,80-83
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.4",
+  "base_commit_sha": "1c13e03a99f15e0c234f160073c82b0414b06a4f",
+  "prompts": {},
+  "sessions": {
+    "s_496c3278139cd3": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "55815c1f-c0e9-4277-98ba-8d4f4f591490",
+        "model": "composer-2.5"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
