@@ -9,6 +9,8 @@ import { resolveGeminiModel } from "../_shared/gemini.ts";
 import { createUserClient } from "../_shared/supabase-client.ts";
 
 const MODEL = resolveGeminiModel();
+const MAX_IMAGE_BYTES = 10 * 1024 * 1024; // 10 MB
+const GEMINI_TIMEOUT_MS = 30_000; // 30 s
 
 type DnaStatus = "approved" | "review" | "blocked";
 
@@ -65,7 +67,22 @@ const dnaSchema = {
 function isValidHttpUrl(value: string): boolean {
   try {
     const parsed = new URL(value);
-    return parsed.protocol === "http:" || parsed.protocol === "https:";
+    if (parsed.protocol !== "http:" && parsed.protocol !== "https:") return false;
+    const host = parsed.hostname.toLowerCase();
+    // Block private, link-local, and loopback ranges
+    if (
+      host === "localhost" ||
+      host === "127.0.0.1" ||
+      host === "0.0.0.0" ||
+      host === "[::1]" ||
+      host.startsWith("10.") ||
+      host.startsWith("172.") || // 172.16-31.x.x approximated
+      host.startsWith("192.168.") ||
+      host.startsWith("169.254.") ||
+      host.endsWith(".local") ||
+      host.endsWith(".internal")
+    ) return false;
+    return true;
   } catch {
     return false;
   }
@@ -98,6 +115,11 @@ async function fetchImagePart(assetUrl: string, fallbackMimeType: string | null)
     throw new Error(`Asset image fetch failed with status ${response.status}`);
   }
 
+  const contentLength = response.headers.get("content-length");
+  if (contentLength && parseInt(contentLength, 10) > MAX_IMAGE_BYTES) {
+    throw new Error(`Asset image exceeds size limit (${MAX_IMAGE_BYTES} bytes)`);
+  }
+
   const mimeType = response.headers.get("content-type")?.split(";")[0] ||
     fallbackMimeType ||
     "image/jpeg";
@@ -107,6 +129,10 @@ async function fetchImagePart(assetUrl: string, fallbackMimeType: string | null)
   }
 
   const bytes = new Uint8Array(await response.arrayBuffer());
+  if (bytes.length > MAX_IMAGE_BYTES) {
+    throw new Error(`Asset image exceeds size limit (${MAX_IMAGE_BYTES} bytes)`);
+  }
+
   return {
     inlineData: {
       mimeType,
@@ -176,14 +202,15 @@ Deno.serve(async (req: Request) => {
     const imagePart = await fetchImagePart(asset.url, asset.mime_type);
     const ai = new GoogleGenAI({ apiKey });
 
-    const response = await ai.models.generateContent({
-      model: MODEL,
-      contents: [
-        {
-          role: "user",
-          parts: [
-            {
-              text: `
+    const response = await Promise.race([
+      ai.models.generateContent({
+        model: MODEL,
+        contents: [
+          {
+            role: "user",
+            parts: [
+              {
+                text: `
 Score this fashion commerce asset for iPix brand DNA compliance.
 
 Return a 0-100 score and four pillar scores:
@@ -194,17 +221,21 @@ Return a 0-100 score and four pillar scores:
 
 Use the image only. Be strict with blurry, dark, cluttered, low-resolution, or off-brand assets.
 `.trim(),
-            },
-            imagePart,
-          ],
+              },
+              imagePart,
+            ],
+          },
+        ],
+        config: {
+          responseMimeType: "application/json",
+          responseSchema: dnaSchema,
+          temperature: 0.1,
         },
-      ],
-      config: {
-        responseMimeType: "application/json",
-        responseSchema: dnaSchema,
-        temperature: 0.1,
-      },
-    });
+      }),
+      new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error("Gemini request timed out")), GEMINI_TIMEOUT_MS)
+      ),
+    ]);
 
     const responseText = response.text ?? "";
     if (!responseText.trim()) {
@@ -216,6 +247,18 @@ Use the image only. Be strict with blurry, dark, cluttered, low-resolution, or o
       parsed = JSON.parse(responseText) as DnaResponse;
     } catch {
       throw new Error("Model returned invalid JSON");
+    }
+
+    if (
+      typeof parsed.score !== "number" ||
+      !parsed.pillars ||
+      typeof parsed.pillars.brandConsistency !== "number" ||
+      typeof parsed.pillars.compositionQuality !== "number" ||
+      typeof parsed.pillars.channelReadiness !== "number" ||
+      typeof parsed.pillars.productClarity !== "number" ||
+      typeof parsed.rationale !== "string"
+    ) {
+      throw new Error("Model response missing required fields");
     }
 
     const dnaScore = clampScore(parsed.score);
@@ -247,17 +290,23 @@ Use the image only. Be strict with blurry, dark, cluttered, low-resolution, or o
 
     const durationMs = Math.round(performance.now() - started);
     const usage = response.usageMetadata;
-    const { id: logId } = await insertAgentLog(client, {
-      agentName: "audit-asset-dna",
-      userId: auth.user.id,
-      brandId: asset.brand_id,
-      input: { assetId: asset.id, assetUrl: asset.url },
-      output: { dnaScore, dnaStatus },
-      model: MODEL,
-      tokensIn: usage?.promptTokenCount ?? null,
-      tokensOut: usage?.candidatesTokenCount ?? null,
-      durationMs,
-    });
+    let logId: string | undefined;
+    try {
+      const result = await insertAgentLog(client, {
+        agentName: "audit-asset-dna",
+        userId: auth.user.id,
+        brandId: asset.brand_id,
+        input: { assetId: asset.id, assetUrl: asset.url },
+        output: { dnaScore, dnaStatus },
+        model: MODEL,
+        tokensIn: usage?.promptTokenCount ?? null,
+        tokensOut: usage?.candidatesTokenCount ?? null,
+        durationMs,
+      });
+      logId = result.id;
+    } catch (logErr) {
+      console.warn("agent log insert failed (non-fatal):", logErr);
+    }
 
     return jsonResponse({
       assetId: updated.id,
@@ -266,7 +315,7 @@ Use the image only. Be strict with blurry, dark, cluttered, low-resolution, or o
       dnaScore: updated.dna_score,
       dnaStatus: updated.dna_status,
       dnaPillars: updated.dna_pillars,
-      logId,
+      ...(logId ? { logId } : {}),
       durationMs,
     });
   } catch (err) {
