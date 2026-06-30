@@ -44,7 +44,6 @@ export function useRouteSuggestions({
 }: UseRouteSuggestionsOptions): SuggestionChip[] {
   return useMemo(
     () => getSuggestionsForRoute(pathname, context),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     [pathname, context.hasBrands, context.hasSelection, context.brandLoaded, context.shootLoaded, context.campaignLoaded, context.creatorLoaded, context.channelLoaded]
   );
 }

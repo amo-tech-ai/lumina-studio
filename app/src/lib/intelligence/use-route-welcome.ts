@@ -47,7 +47,6 @@ export function useRouteWelcome({
 }: UseRouteWelcomeOptions): string {
   return useMemo(
     () => getWelcomeMessage(pathname, brandId, context),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     [pathname, brandId, context.brandName, context.brandDna, context.weakestPillar, context.brandCount, context.shootCount, context.shootName, context.selectionCount, context.campaignName, context.campaignHealth, context.creatorName, context.creatorFit, context.channelName, context.channelReadiness, context.kpiSummary, context.pendingApprovals, context.hasBrands]
   );
 }
