@@ -5,6 +5,9 @@ import { promoteBrandDraft } from "@/lib/brand/promote-draft";
 
 export const PENDING_DRAFT_STATUS = "pending_approval";
 
+/** Brand already promoted/discarded — safe to continue without rolling back draft row. */
+const IDEMPOTENT_DRAFT_STATE_ERROR = "Brand is not in draft_ready state";
+
 export type ProcessDraftApprovalResult =
   | { ok: true; approved: boolean; brandId: string }
   | { ok: false; error: string };
@@ -72,13 +75,13 @@ export async function processBrandIntelligenceDraftApproval(params: {
 
   if (approved) {
     const promoteResult = await promoteBrandDraft(sb, draft.brand_id);
-    if (!promoteResult.ok) {
+    if (!promoteResult.ok && promoteResult.error !== IDEMPOTENT_DRAFT_STATE_ERROR) {
       await rollbackDraftRow(draft.id);
       return { ok: false, error: promoteResult.error };
     }
   } else {
     const discardResult = await discardBrandDraft(sb, draft.brand_id);
-    if (!discardResult.ok) {
+    if (!discardResult.ok && discardResult.error !== IDEMPOTENT_DRAFT_STATE_ERROR) {
       await rollbackDraftRow(draft.id);
       return { ok: false, error: discardResult.error };
     }

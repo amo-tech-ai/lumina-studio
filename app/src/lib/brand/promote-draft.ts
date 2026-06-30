@@ -42,7 +42,9 @@ export async function promoteBrandDraft(
       .from("brand_scores")
       .upsert(scoreRows, { onConflict: "brand_id,score_type" });
     if (scoresErr) {
-      return { ok: false, error: `Failed to persist draft scores: ${scoresErr.message}` };
+      // Profile is already committed — do not fail the approval path (rollback would
+      // leave draft pending_approval while brand is ready). Scores can be re-synced.
+      console.error("[promoteBrandDraft] score upsert failed after profile commit:", scoresErr);
     }
   }
 
