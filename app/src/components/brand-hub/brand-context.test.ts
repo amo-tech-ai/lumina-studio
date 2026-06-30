@@ -42,13 +42,23 @@ describe("useBrandContext — agent context wiring (IPI-123 DASH-003 AC6)", () =
 
   it("injects brandId, dna_score and intake_status into the identity context", () => {
     renderHook(() =>
-      useBrandContext({ brandId, brandName: "Lumina", dnaScore: 75, intakeStatus: "draft_ready", profile, scores }),
+      useBrandContext({
+        brandId,
+        brandName: "Lumina",
+        dnaScore: 75,
+        intakeStatus: "draft_ready",
+        profile,
+        scores,
+        workflowRunId: "run-123",
+      }),
     );
     const [identityCall] = mockUseAgentContext.mock.calls;
     expect(identityCall[0].value).toMatchObject({
       brandId,
       dna_score: 75,
       intake_status: "draft_ready",
+      pending_draft_run_id: "run-123",
+      has_pending_draft: true,
       name: "Lumina",
     });
   });

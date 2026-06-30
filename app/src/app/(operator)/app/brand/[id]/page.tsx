@@ -64,7 +64,7 @@ const BrandPage = async ({ params }: Props) => {
       .from("brand_intake_drafts")
       .select("draft_profile")
       .eq("brand_id", id)
-      .eq("status", "pending")
+      .eq("status", "pending_approval")
       .order("updated_at", { ascending: false })
       .limit(1)
       .maybeSingle(),

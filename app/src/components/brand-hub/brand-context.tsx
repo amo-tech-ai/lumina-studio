@@ -15,6 +15,7 @@ export function useBrandContext({
   intakeStatus,
   profile,
   scores,
+  workflowRunId,
 }: {
   brandId: string;
   brandName: string;
@@ -22,6 +23,7 @@ export function useBrandContext({
   intakeStatus: string | null;
   profile: AiProfile;
   scores: BrandScoreDetail[];
+  workflowRunId?: string | null;
 }) {
   useAgentContext({
     description: "Brand currently open in the Brand Hub",
@@ -30,6 +32,8 @@ export function useBrandContext({
       name: brandName,
       dna_score: dnaScore,
       intake_status: intakeStatus ?? null,
+      pending_draft_run_id: workflowRunId ?? null,
+      has_pending_draft: intakeStatus === "draft_ready" && Boolean(workflowRunId),
       tagline: profile.tagline ?? null,
       category: profile.category ?? null,
       industry: profile.industry ?? null,
