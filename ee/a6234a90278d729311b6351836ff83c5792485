@@ -1,0 +1,30 @@
+app/src/components/marketing/marketing-chat-lead.tsx
+  s_dbd599bb3c8240::t_df415945a78aa3 79
+app/src/components/marketing/marketing-chat.tsx
+  s_dbd599bb3c8240::t_1bbe3fa1593c23 89,164
+app/src/components/marketing/marketing-chat.render.test.tsx
+  s_dbd599bb3c8240::t_4c08491a8a4d6c 88
+app/src/components/marketing/footer.tsx
+  s_dbd599bb3c8240::t_0ce1f817033c3d 21
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.4",
+  "base_commit_sha": "eea6234a90278d729311b6351836ff83c5792485",
+  "prompts": {},
+  "humans": {
+    "h_d382fbec1d5b46": {
+      "author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  },
+  "sessions": {
+    "s_dbd599bb3c8240": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_0ead23f3cffecS7FqdeY1Bcold",
+        "model": "deepseek-v4-flash"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
