@@ -1,0 +1,20 @@
+supabase/migrations/20260630052200_cloudinary_assets_extend_and_brand_rls.sql
+  s_496c3278139cd3::t_a9a9a4004f39ec 27
+  s_496c3278139cd3::t_f37684d245d423 1-26,28-152
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.4",
+  "base_commit_sha": "f341de2b2f0cb3b232e72baf9e67dc6db0ed3c4c",
+  "prompts": {},
+  "sessions": {
+    "s_496c3278139cd3": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "55815c1f-c0e9-4277-98ba-8d4f4f591490",
+        "model": "default"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
