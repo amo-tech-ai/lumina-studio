@@ -3,6 +3,7 @@
 // IPI-110 — 3-panel shell: left NavSidebar (collapsed) · center workspace · right IntelligencePanel.
 // IPI-218 — ActiveBrandContext wired: brand switcher in left nav, useAgentContext exposes activeBrandId
 //           so agents never ask "which brand?". IPI-243 — IntelligencePanel briefing + CopilotSidebar.
+// IPI-197 — Contextual copilot sidebar: dynamic welcome + route-specific suggestion chips.
 
 import {
   useAgentContext,
@@ -12,7 +13,7 @@ import {
   CopilotChatConfigurationProvider,
 } from "@copilotkit/react-core/v2";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { z } from "zod";
 
 import {
@@ -27,6 +28,9 @@ import { NavSidebar } from "./nav-sidebar";
 import type { Brand } from "./nav-sidebar";
 import styles from "./operator-shell.module.css";
 import { resolveAgentId } from "@/lib/route-agent-map";
+import { routeBrandId, routeShootId } from "@/lib/intelligence/normalize-route-path";
+import { useRouteWelcome } from "@/lib/intelligence/use-route-welcome";
+import { useRouteSuggestions } from "@/lib/intelligence/use-route-suggestions";
 
 const SECTIONS = ["brand", "onboarding", "shoots", "assets", "campaigns", "matching", "preview"] as const;
 
@@ -82,6 +86,16 @@ function OperatorShell({
 
   useHideInternalToolCalls();
 
+  const routeBrandIdFromPath = useMemo(() => routeBrandId(pathname), [pathname]);
+  const routeShootIdFromPath = useMemo(() => routeShootId(pathname), [pathname]);
+
+  // Keep active brand aligned with brand detail URLs
+  useEffect(() => {
+    if (routeBrandIdFromPath && routeBrandIdFromPath !== activeBrandId) {
+      setActiveBrandId(routeBrandIdFromPath);
+    }
+  }, [routeBrandIdFromPath, activeBrandId, setActiveBrandId]);
+
   // Expose current route to agents
   useAgentContext({
     description: "The operator's current route in the iPix app (e.g. /app/brand, /app/shoots)",
@@ -120,15 +134,29 @@ function OperatorShell({
     },
   });
 
+  // IPI-197 — Dynamic welcome message based on route + context
+  const welcomeText = useRouteWelcome({
+    pathname,
+    brandId: routeBrandIdFromPath ?? activeBrandId,
+    context: {
+      brandCount: brands.length,
+      hasBrands: brands.length > 0,
+    },
+  });
+
+  // IPI-197 — Dynamic suggestion chips based on route + context
+  const suggestions = useRouteSuggestions({
+    pathname,
+    context: {
+      hasBrands: brands.length > 0,
+      brandLoaded: Boolean(routeBrandIdFromPath),
+      shootLoaded: Boolean(routeShootIdFromPath),
+    },
+  });
+
   useConfigureSuggestions({
     available: "always",
-    suggestions: [
-      { title: "Brands",       message: "Open the Brands workspace." },
-      { title: "Plan a shoot", message: "Open Shoots and help me plan a shoot." },
-      { title: "Assets",       message: "Open Assets to review DNA compliance." },
-      { title: "Campaigns",    message: "Open Campaigns." },
-      { title: "Matching",     message: "Open Matching." },
-    ],
+    suggestions,
   });
 
   const activeBrandName =
@@ -161,8 +189,7 @@ function OperatorShell({
             messageView={hiddenInternalToolsMessageView}
             labels={{
               modalHeaderTitle: "iPix Assistant",
-              welcomeMessageText:
-                "👋 Ask about brands, shoots, assets, campaigns, or matching.",
+              welcomeMessageText: welcomeText,
             }}
           />
         </IntelligencePanel>
