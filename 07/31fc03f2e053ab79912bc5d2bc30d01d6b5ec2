@@ -1,0 +1,28 @@
+package.json
+  s_dbd599bb3c8240::t_666c6c9def09b6 17-19
+supabase/config.toml
+  s_dbd599bb3c8240::t_7864d0db95320d 426-431
+package-lock.json
+  s_dbd599bb3c8240::t_6d7e93f99d0f94 9-111
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.4",
+  "base_commit_sha": "0731fc03f2e053ab79912bc5d2bc30d01d6b5ec2",
+  "prompts": {},
+  "humans": {
+    "h_d382fbec1d5b46": {
+      "author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  },
+  "sessions": {
+    "s_dbd599bb3c8240": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_0ead23f3cffecS7FqdeY1Bcold",
+        "model": "deepseek-v4-flash"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
