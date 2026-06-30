@@ -1,0 +1,24 @@
+app/middleware.ts
+  s_ef4285d032a355::t_4cf01a122e6c9b 3-5
+app/src/proxy.ts
+  s_ef4285d032a355::t_6b9e3f8e85df66 59
+app/src/middleware.test.ts
+  s_ef4285d032a355::t_0f04742c27459c 2,10-11
+  s_ef4285d032a355::t_3996c3591405d9 12-13
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.4",
+  "base_commit_sha": "126681fc4b8871947c59e16a283a03c86de1d448",
+  "prompts": {},
+  "sessions": {
+    "s_ef4285d032a355": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "26c1cfce-92ad-4c17-b2fb-f77878e7778d",
+        "model": "composer-2.5"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
