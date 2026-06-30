@@ -1,0 +1,29 @@
+app/src/lib/shoot/get-shoot-detail.ts
+  s_496c3278139cd3::t_29e5adf93d5fe5 1-60
+supabase/migrations/20260630120000_get_shoot_detail_rpc.sql
+  s_496c3278139cd3::t_179903c031fb73 1-78
+app/src/app/api/shoots/[shootId]/route.ts
+  s_496c3278139cd3::t_e97072b7cb34e6 1-36
+app/src/app/(operator)/app/shoots/[shootId]/page.tsx
+  s_496c3278139cd3::t_fd285146d2875b 1-10
+app/src/components/shoot/shoot-detail-client.tsx
+  s_496c3278139cd3::t_cbf2d721fd80ee 1-209
+app/src/lib/shoot/get-shoot-detail.test.ts
+  s_496c3278139cd3::t_a9f8c885688426 1-27
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.4",
+  "base_commit_sha": "440b7f5b17759709896362775ed880e3af18d699",
+  "prompts": {},
+  "sessions": {
+    "s_496c3278139cd3": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "55815c1f-c0e9-4277-98ba-8d4f4f591490",
+        "model": "composer-2.5"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
