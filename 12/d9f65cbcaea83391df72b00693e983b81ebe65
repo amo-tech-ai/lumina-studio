@@ -1,0 +1,21 @@
+app/src/components/intelligence-panel/intelligence-panel.tsx
+  s_ef4285d032a355::t_68c8c6121dc632 45
+app/src/lib/intelligence/use-intelligence-panel.ts
+  s_ef4285d032a355::t_f879d2bffcdb33 36
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.4",
+  "base_commit_sha": "12d9f65cbcaea83391df72b00693e983b81ebe65",
+  "prompts": {},
+  "sessions": {
+    "s_ef4285d032a355": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "26c1cfce-92ad-4c17-b2fb-f77878e7778d",
+        "model": "composer-2.5"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
