@@ -2,6 +2,11 @@
 // Implements 06-ai-workflows.md greeting matrix for all 8 operator routes
 
 import { useMemo } from "react";
+import {
+  normalizeRoutePath,
+  routeBrandId,
+  routeShootId,
+} from "./normalize-route-path";
 
 interface WelcomeContext {
   brandName?: string;
@@ -30,15 +35,6 @@ interface UseRouteWelcomeOptions {
 
 /**
  * Generates contextual welcome messages for CopilotSidebar based on current route.
- *
- * @example
- * // Brand Detail
- * useRouteWelcome({
- *   pathname: "/app/brand/abc-123",
- *   brandId: "abc-123",
- *   context: { brandName: "Nike", brandDna: 87, weakestPillar: "Visual" }
- * })
- * // Returns: "Nike — DNA 87% — improve Visual score for maximum impact"
  */
 export function useRouteWelcome({
   pathname,
@@ -47,30 +43,58 @@ export function useRouteWelcome({
 }: UseRouteWelcomeOptions): string {
   return useMemo(
     () => getWelcomeMessage(pathname, brandId, context),
-    [pathname, brandId, context.brandName, context.brandDna, context.weakestPillar, context.brandCount, context.shootCount, context.shootName, context.selectionCount, context.campaignName, context.campaignHealth, context.creatorName, context.creatorFit, context.channelName, context.channelReadiness, context.kpiSummary, context.pendingApprovals, context.hasBrands]
+    [
+      pathname,
+      brandId,
+      context.brandName,
+      context.brandDna,
+      context.weakestPillar,
+      context.brandCount,
+      context.shootCount,
+      context.shootName,
+      context.selectionCount,
+      context.campaignName,
+      context.campaignHealth,
+      context.creatorName,
+      context.creatorFit,
+      context.channelName,
+      context.channelReadiness,
+      context.kpiSummary,
+      context.pendingApprovals,
+      context.hasBrands,
+    ],
   );
 }
 
 function getWelcomeMessage(
   pathname: string,
   brandId?: string | null,
-  context: WelcomeContext = {}
+  context: WelcomeContext = {},
 ): string {
-  // Normalize trailing slashes (except for root /app)
-  const normalizedPath = pathname === "/app" ? pathname : pathname.replace(/\/+$/, "");
+  const normalizedPath = normalizeRoutePath(pathname);
+  const effectiveBrandId = brandId ?? routeBrandId(pathname);
 
   // Command Center (/app)
   if (normalizedPath === "/app") {
     if (context.kpiSummary && context.pendingApprovals !== undefined) {
       return `${context.kpiSummary} · ${context.pendingApprovals} approval${context.pendingApprovals !== 1 ? "s" : ""} pending`;
     }
-    const brandCount = context.brandCount ?? 0;
-    const shootCount = context.shootCount ?? 0;
-    return `Portfolio: ${brandCount} brand${brandCount !== 1 ? "s" : ""} · ${shootCount} shoot${shootCount !== 1 ? "s" : ""} in progress`;
+    const hasBrandCount = context.brandCount !== undefined;
+    const hasShootCount = context.shootCount !== undefined;
+    if (hasBrandCount && hasShootCount) {
+      const brandCount = context.brandCount!;
+      const shootCount = context.shootCount!;
+      return `Portfolio: ${brandCount} brand${brandCount !== 1 ? "s" : ""} · ${shootCount} shoot${shootCount !== 1 ? "s" : ""} in progress`;
+    }
+    if (hasBrandCount) {
+      const brandCount = context.brandCount!;
+      return `Portfolio: ${brandCount} brand${brandCount !== 1 ? "s" : ""} — ask about shoots and approvals`;
+    }
+    return "Portfolio overview — ask about brands, shoots, and pending approvals";
   }
 
   // Brand Detail (/app/brand/[id])
-  if (normalizedPath.startsWith("/app/brand/") && brandId) {
+  if (normalizedPath.startsWith("/app/brand/") && effectiveBrandId) {
     if (context.brandName && context.brandDna !== undefined) {
       const pillarNote = context.weakestPillar
         ? ` — improve ${context.weakestPillar} score for maximum impact`
@@ -81,8 +105,11 @@ function getWelcomeMessage(
   }
 
   // Brand List (/app/brand)
-  if (normalizedPath === "/app/brand" || normalizedPath.startsWith("/app/brand?")) {
-    const count = context.brandCount ?? 0;
+  if (normalizedPath === "/app/brand") {
+    if (context.brandCount === undefined) {
+      return "Brand portfolio — add brands or review DNA scores";
+    }
+    const count = context.brandCount;
     if (count === 0) {
       return "No brands yet — add your first brand to get started";
     }
@@ -93,18 +120,23 @@ function getWelcomeMessage(
   }
 
   // Shoot Detail (/app/shoots/[id])
-  const shootId = normalizedPath.startsWith("/app/shoots/") ? normalizedPath.split("/")[3] : null;
-  if (shootId && shootId.length > 0) {
+  const shootId = routeShootId(pathname);
+  if (shootId) {
     if (context.shootName) {
-      const gap = context.shootCount ? ` — ${context.shootCount} deliverable${context.shootCount !== 1 ? "s" : ""} missing` : "";
+      const gap = context.shootCount
+        ? ` — ${context.shootCount} deliverable${context.shootCount !== 1 ? "s" : ""} missing`
+        : "";
       return `${context.shootName}${gap} — review coverage and assign resources`;
     }
     return "Loading shoot details...";
   }
 
   // Shoots List (/app/shoots)
-  if (normalizedPath === "/app/shoots" || normalizedPath.startsWith("/app/shoots?")) {
-    const count = context.shootCount ?? 0;
+  if (normalizedPath === "/app/shoots") {
+    if (context.shootCount === undefined) {
+      return "Review shoots — check for blockers and coverage gaps";
+    }
+    const count = context.shootCount;
     if (count === 0) {
       return "No shoots yet — plan your first production";
     }
@@ -112,7 +144,7 @@ function getWelcomeMessage(
   }
 
   // Assets (/app/assets)
-  if (normalizedPath === "/app/assets" || normalizedPath.startsWith("/app/assets?")) {
+  if (normalizedPath === "/app/assets") {
     const selected = context.selectionCount ?? 0;
     if (selected > 0) {
       return `${selected} asset${selected !== 1 ? "s" : ""} selected — review DNA match and suggest improvements`;
@@ -121,7 +153,7 @@ function getWelcomeMessage(
   }
 
   // Campaigns (/app/campaigns)
-  if (normalizedPath === "/app/campaigns" || normalizedPath.startsWith("/app/campaigns?")) {
+  if (normalizedPath === "/app/campaigns") {
     if (context.campaignName && context.campaignHealth !== undefined) {
       return `${context.campaignName} — Health ${context.campaignHealth}% — check deliverable coverage`;
     }
@@ -129,7 +161,7 @@ function getWelcomeMessage(
   }
 
   // Matching (/app/matching)
-  if (normalizedPath === "/app/matching" || normalizedPath.startsWith("/app/matching?")) {
+  if (normalizedPath === "/app/matching") {
     if (context.creatorName && context.creatorFit !== undefined) {
       return `${context.creatorName} — ${context.creatorFit}% fit — one of your strongest matches`;
     }
@@ -137,7 +169,7 @@ function getWelcomeMessage(
   }
 
   // Channel Preview (/app/preview)
-  if (normalizedPath === "/app/preview" || normalizedPath.startsWith("/app/preview?")) {
+  if (normalizedPath === "/app/preview") {
     if (context.channelName && context.channelReadiness !== undefined) {
       const status = context.channelReadiness >= 90 ? "ready to publish" : "needs review";
       return `${context.channelName} — Readiness ${context.channelReadiness}% — ${status}`;
@@ -146,7 +178,7 @@ function getWelcomeMessage(
   }
 
   // Onboarding (/app/onboarding)
-  if (normalizedPath === "/app/onboarding" || normalizedPath.startsWith("/app/onboarding?")) {
+  if (normalizedPath === "/app/onboarding") {
     return "Complete brand onboarding to unlock intelligence features";
   }
 

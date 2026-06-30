@@ -13,7 +13,7 @@ import {
   CopilotChatConfigurationProvider,
 } from "@copilotkit/react-core/v2";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { z } from "zod";
 
 import {
@@ -28,6 +28,7 @@ import { NavSidebar } from "./nav-sidebar";
 import type { Brand } from "./nav-sidebar";
 import styles from "./operator-shell.module.css";
 import { resolveAgentId } from "@/lib/route-agent-map";
+import { routeBrandId, routeShootId } from "@/lib/intelligence/normalize-route-path";
 import { useRouteWelcome } from "@/lib/intelligence/use-route-welcome";
 import { useRouteSuggestions } from "@/lib/intelligence/use-route-suggestions";
 
@@ -85,6 +86,16 @@ function OperatorShell({
 
   useHideInternalToolCalls();
 
+  const routeBrandIdFromPath = useMemo(() => routeBrandId(pathname), [pathname]);
+  const routeShootIdFromPath = useMemo(() => routeShootId(pathname), [pathname]);
+
+  // Keep active brand aligned with brand detail URLs
+  useEffect(() => {
+    if (routeBrandIdFromPath && routeBrandIdFromPath !== activeBrandId) {
+      setActiveBrandId(routeBrandIdFromPath);
+    }
+  }, [routeBrandIdFromPath, activeBrandId, setActiveBrandId]);
+
   // Expose current route to agents
   useAgentContext({
     description: "The operator's current route in the iPix app (e.g. /app/brand, /app/shoots)",
@@ -126,7 +137,7 @@ function OperatorShell({
   // IPI-197 — Dynamic welcome message based on route + context
   const welcomeText = useRouteWelcome({
     pathname,
-    brandId: activeBrandId,
+    brandId: routeBrandIdFromPath ?? activeBrandId,
     context: {
       brandCount: brands.length,
       hasBrands: brands.length > 0,
@@ -138,7 +149,8 @@ function OperatorShell({
     pathname,
     context: {
       hasBrands: brands.length > 0,
-      brandLoaded: !!activeBrandId,
+      brandLoaded: Boolean(routeBrandIdFromPath),
+      shootLoaded: Boolean(routeShootIdFromPath),
     },
   });
 

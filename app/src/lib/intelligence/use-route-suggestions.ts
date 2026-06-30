@@ -2,6 +2,11 @@
 // Maps to 06-ai-workflows.md quick-action matrix for all 8 operator routes
 
 import { useMemo } from "react";
+import {
+  normalizeRoutePath,
+  routeBrandId,
+  routeShootId,
+} from "./normalize-route-path";
 
 interface SuggestionChip {
   title: string;
@@ -25,18 +30,6 @@ interface UseRouteSuggestionsOptions {
 
 /**
  * Generates route-specific suggestion chips for CopilotSidebar.
- *
- * @example
- * // Brand Detail with brand loaded
- * useRouteSuggestions({
- *   pathname: "/app/brand/abc-123",
- *   context: { brandLoaded: true }
- * })
- * // Returns: [
- * //   { title: "Improve Visual score", message: "..." },
- * //   { title: "Plan a shoot", message: "..." },
- * //   { title: "Review assets", message: "..." }
- * // ]
  */
 export function useRouteSuggestions({
   pathname,
@@ -44,16 +37,24 @@ export function useRouteSuggestions({
 }: UseRouteSuggestionsOptions): SuggestionChip[] {
   return useMemo(
     () => getSuggestionsForRoute(pathname, context),
-    [pathname, context.hasBrands, context.hasSelection, context.brandLoaded, context.shootLoaded, context.campaignLoaded, context.creatorLoaded, context.channelLoaded]
+    [
+      pathname,
+      context.hasBrands,
+      context.hasSelection,
+      context.brandLoaded,
+      context.shootLoaded,
+      context.campaignLoaded,
+      context.creatorLoaded,
+      context.channelLoaded,
+    ],
   );
 }
 
 function getSuggestionsForRoute(
   pathname: string,
-  context: SuggestionsContext
+  context: SuggestionsContext,
 ): SuggestionChip[] {
-  // Normalize trailing slashes (except for root /app)
-  const normalizedPath = pathname === "/app" ? pathname : pathname.replace(/\/+$/, "");
+  const normalizedPath = normalizeRoutePath(pathname);
 
   // Command Center (/app)
   if (normalizedPath === "/app") {
@@ -65,8 +66,8 @@ function getSuggestionsForRoute(
   }
 
   // Brand Detail (/app/brand/[id])
-  const brandId = normalizedPath.startsWith("/app/brand/") ? normalizedPath.split("/")[3] : null;
-  if (brandId && brandId.length > 0) {
+  const brandId = routeBrandId(pathname);
+  if (brandId) {
     if (context.brandLoaded) {
       return [
         { title: "Improve Visual score", message: "Show me suggestions to improve this brand's Visual DNA score." },
@@ -81,7 +82,7 @@ function getSuggestionsForRoute(
   }
 
   // Brand List (/app/brand)
-  if (normalizedPath === "/app/brand" || normalizedPath.startsWith("/app/brand?")) {
+  if (normalizedPath === "/app/brand") {
     if (context.hasBrands) {
       return [
         { title: "Improve visuals", message: "Which brand has the weakest Visual score?" },
@@ -96,8 +97,8 @@ function getSuggestionsForRoute(
   }
 
   // Shoot Detail (/app/shoots/[id])
-  const shootId = normalizedPath.startsWith("/app/shoots/") ? normalizedPath.split("/")[3] : null;
-  if (shootId && shootId.length > 0) {
+  const shootId = routeShootId(pathname);
+  if (shootId) {
     if (context.shootLoaded) {
       return [
         { title: "Review Assets", message: "Open the Assets tab to review this shoot's coverage." },
@@ -111,7 +112,7 @@ function getSuggestionsForRoute(
   }
 
   // Shoots List (/app/shoots)
-  if (normalizedPath === "/app/shoots" || normalizedPath.startsWith("/app/shoots?")) {
+  if (normalizedPath === "/app/shoots") {
     return [
       { title: "Plan a shoot", message: "Open the shoot wizard to plan a new production." },
       { title: "Find blockers", message: "Which shoots have missing deliverables or blockers?" },
@@ -120,7 +121,7 @@ function getSuggestionsForRoute(
   }
 
   // Assets (/app/assets)
-  if (normalizedPath === "/app/assets" || normalizedPath.startsWith("/app/assets?")) {
+  if (normalizedPath === "/app/assets") {
     if (context.hasSelection) {
       return [
         { title: "Review low matches", message: "Show me assets with DNA match below 70%." },
@@ -136,7 +137,7 @@ function getSuggestionsForRoute(
   }
 
   // Campaigns (/app/campaigns)
-  if (normalizedPath === "/app/campaigns" || normalizedPath.startsWith("/app/campaigns?")) {
+  if (normalizedPath === "/app/campaigns") {
     if (context.campaignLoaded) {
       return [
         { title: "Campaign health", message: "Explain this campaign's health score and what impacts it." },
@@ -151,7 +152,7 @@ function getSuggestionsForRoute(
   }
 
   // Matching (/app/matching)
-  if (normalizedPath === "/app/matching" || normalizedPath.startsWith("/app/matching?")) {
+  if (normalizedPath === "/app/matching") {
     if (context.creatorLoaded) {
       return [
         { title: "Find 90%+ fits", message: "Show me creators with 90% or higher fit scores." },
@@ -166,7 +167,7 @@ function getSuggestionsForRoute(
   }
 
   // Channel Preview (/app/preview)
-  if (normalizedPath === "/app/preview" || normalizedPath.startsWith("/app/preview?")) {
+  if (normalizedPath === "/app/preview") {
     if (context.channelLoaded) {
       return [
         { title: "Check safe zones", message: "Highlight safe zone violations in the preview." },
@@ -180,7 +181,7 @@ function getSuggestionsForRoute(
   }
 
   // Onboarding (/app/onboarding)
-  if (normalizedPath === "/app/onboarding" || normalizedPath.startsWith("/app/onboarding?")) {
+  if (normalizedPath === "/app/onboarding") {
     return [
       { title: "Complete onboarding", message: "Help me complete the brand onboarding flow." },
       { title: "Skip for now", message: "Can I skip onboarding and explore first?" },

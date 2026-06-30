@@ -7,11 +7,21 @@ import { useRouteWelcome } from "./use-route-welcome";
 
 describe("useRouteWelcome", () => {
   describe("Command Center (/app)", () => {
-    it("shows portfolio summary when no context", () => {
+    it("shows neutral overview when counts unknown", () => {
       const { result } = renderHook(() =>
         useRouteWelcome({ pathname: "/app" })
       );
-      expect(result.current).toBe("Portfolio: 0 brands · 0 shoots in progress");
+      expect(result.current).toBe("Portfolio overview — ask about brands, shoots, and pending approvals");
+    });
+
+    it("shows portfolio summary when both counts provided", () => {
+      const { result } = renderHook(() =>
+        useRouteWelcome({
+          pathname: "/app",
+          context: { brandCount: 2, shootCount: 5 },
+        })
+      );
+      expect(result.current).toBe("Portfolio: 2 brands · 5 shoots in progress");
     });
 
     it("shows KPI summary when context available", () => {
@@ -118,6 +128,13 @@ describe("useRouteWelcome", () => {
   });
 
   describe("Shoots List (/app/shoots)", () => {
+    it("shows neutral message when shoot count unknown", () => {
+      const { result } = renderHook(() =>
+        useRouteWelcome({ pathname: "/app/shoots" })
+      );
+      expect(result.current).toBe("Review shoots — check for blockers and coverage gaps");
+    });
+
     it("shows empty state when no shoots", () => {
       const { result } = renderHook(() =>
         useRouteWelcome({
@@ -140,9 +157,11 @@ describe("useRouteWelcome", () => {
   });
 
   describe("Shoot Detail (/app/shoots/[id])", () => {
+    const SHOOT_ID = "11111111-1111-1111-1111-111111111111";
+
     it("shows loading state when shoot not loaded", () => {
       const { result } = renderHook(() =>
-        useRouteWelcome({ pathname: "/app/shoots/xyz-789" })
+        useRouteWelcome({ pathname: `/app/shoots/${SHOOT_ID}` })
       );
       expect(result.current).toBe("Loading shoot details...");
     });
@@ -150,7 +169,7 @@ describe("useRouteWelcome", () => {
     it("shows shoot name with gaps", () => {
       const { result } = renderHook(() =>
         useRouteWelcome({
-          pathname: "/app/shoots/xyz-789",
+          pathname: `/app/shoots/${SHOOT_ID}`,
           context: {
             shootName: "Nike Spring '26",
             shootCount: 3,
@@ -279,6 +298,31 @@ describe("useRouteWelcome", () => {
 
       // Should return list welcome, not detail welcome
       expect(result.current).toBe("3 shoots — check for blockers and coverage gaps");
+    });
+  });
+
+  describe("Query string edge cases", () => {
+    it("strips query params from shoot detail path", () => {
+      const { result } = renderHook(() =>
+        useRouteWelcome({
+          pathname: "/app/shoots/11111111-1111-1111-1111-111111111111?tab=assets",
+          context: { shootName: "Nike Spring '26" },
+        })
+      );
+      expect(result.current).toContain("Nike Spring '26");
+    });
+
+    it("strips query params from brand detail path", () => {
+      const { result } = renderHook(() =>
+        useRouteWelcome({
+          pathname: "/app/brand/22222222-2222-2222-2222-222222222222?tab=scores",
+          context: {
+            brandName: "Nike",
+            brandDna: 87,
+          },
+        })
+      );
+      expect(result.current).toBe("Nike — DNA 87%");
     });
   });
 

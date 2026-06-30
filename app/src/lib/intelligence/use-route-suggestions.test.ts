@@ -20,10 +20,12 @@ describe("useRouteSuggestions", () => {
   });
 
   describe("Brand Detail (/app/brand/[id])", () => {
+    const BRAND_ID = "22222222-2222-2222-2222-222222222222";
+
     it("shows analyze suggestions when brand not loaded", () => {
       const { result } = renderHook(() =>
         useRouteSuggestions({
-          pathname: "/app/brand/abc-123",
+          pathname: `/app/brand/${BRAND_ID}`,
           context: { brandLoaded: false },
         })
       );
@@ -36,7 +38,7 @@ describe("useRouteSuggestions", () => {
     it("shows improvement suggestions when brand loaded", () => {
       const { result } = renderHook(() =>
         useRouteSuggestions({
-          pathname: "/app/brand/abc-123",
+          pathname: `/app/brand/${BRAND_ID}`,
           context: { brandLoaded: true },
         })
       );
@@ -91,10 +93,12 @@ describe("useRouteSuggestions", () => {
   });
 
   describe("Shoot Detail (/app/shoots/[id])", () => {
+    const SHOOT_ID = "11111111-1111-1111-1111-111111111111";
+
     it("shows view all when shoot not loaded", () => {
       const { result } = renderHook(() =>
         useRouteSuggestions({
-          pathname: "/app/shoots/xyz-789",
+          pathname: `/app/shoots/${SHOOT_ID}`,
           context: { shootLoaded: false },
         })
       );
@@ -106,7 +110,7 @@ describe("useRouteSuggestions", () => {
     it("shows shoot detail suggestions when loaded", () => {
       const { result } = renderHook(() =>
         useRouteSuggestions({
-          pathname: "/app/shoots/xyz-789",
+          pathname: `/app/shoots/${SHOOT_ID}`,
           context: { shootLoaded: true },
         })
       );
@@ -243,6 +247,30 @@ describe("useRouteSuggestions", () => {
       expect(result.current).toHaveLength(2);
       expect(result.current[0].title).toBe("Complete onboarding");
       expect(result.current[1].title).toBe("Skip for now");
+    });
+  });
+
+  describe("Query string edge cases", () => {
+    it("strips query params from shoot detail path", () => {
+      const { result } = renderHook(() =>
+        useRouteSuggestions({
+          pathname: "/app/shoots/11111111-1111-1111-1111-111111111111?tab=assets",
+          context: { shootLoaded: true },
+        })
+      );
+
+      expect(result.current[0].title).toBe("Review Assets");
+    });
+
+    it("strips query params from brand detail path", () => {
+      const { result } = renderHook(() =>
+        useRouteSuggestions({
+          pathname: "/app/brand/11111111-1111-1111-1111-111111111111?tab=scores",
+          context: { brandLoaded: true },
+        })
+      );
+
+      expect(result.current[0].title).toBe("Improve Visual score");
     });
   });
 
