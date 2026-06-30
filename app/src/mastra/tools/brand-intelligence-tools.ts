@@ -1,11 +1,13 @@
-// IPI-130 — brand-intelligence agent tools
+// IPI-130 · IPI-260 — brand-intelligence agent tools
 // READ tools query Supabase direct (service-role, server-only Mastra runtime).
-// WRITE tool routes through callEdgeFunction — no direct DB writes.
+// WRITE tools: startBrandAnalysis → edge fn; approveDraft → HITL approve route.
 import { createTool } from "@mastra/core/tools";
 import { createClient } from "@supabase/supabase-js";
 import { z } from "zod";
-import { callEdgeFunction } from "./edge";
+import { parseScoreDetails } from "@/lib/brand-hub";
+import { scoreLabel } from "@/lib/brand-utils";
 import { requestToken } from "@/lib/request-token";
+import { callEdgeFunction } from "./edge";
 
 function adminClient() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -13,6 +15,85 @@ function adminClient() {
   if (!url || !key) throw new Error("Supabase service-role env vars not set");
   return createClient(url, key, { auth: { persistSession: false } });
 }
+
+function resolveAppOrigin(): string {
+  const explicit = process.env.NEXT_PUBLIC_APP_URL;
+  if (explicit) return explicit.replace(/\/$/, "");
+  const vercel = process.env.VERCEL_URL;
+  if (vercel) return `https://${vercel.replace(/\/$/, "")}`;
+  return "http://localhost:3002";
+}
+
+const PILLAR_ALIASES: Record<string, string> = {
+  visual: "visual",
+  "visual identity": "visual",
+  visual_identity: "visual",
+  audience: "audience",
+  consistency: "consistency",
+  commerce: "commerce_readiness",
+  commerce_readiness: "commerce_readiness",
+  "commerce readiness": "commerce_readiness",
+  social: "social_presence",
+  social_presence: "social_presence",
+  "social presence": "social_presence",
+  content: "content_strength",
+  content_strength: "content_strength",
+  "content strength": "content_strength",
+  brand_clarity: "brand_clarity",
+  "brand clarity": "brand_clarity",
+  digital_experience: "digital_experience",
+  "digital experience": "digital_experience",
+  photography_readiness: "photography_readiness",
+  "photography readiness": "photography_readiness",
+};
+
+export function normalizePillar(input: string): string {
+  const key = input.trim().toLowerCase().replace(/\s+/g, " ");
+  if (PILLAR_ALIASES[key]) return PILLAR_ALIASES[key];
+  const underscored = key.replace(/\s+/g, "_");
+  return PILLAR_ALIASES[underscored] ?? underscored;
+}
+
+function toConfidencePercent(raw: number | undefined, score: number): number {
+  if (raw === undefined) return Math.min(95, Math.max(45, score));
+  if (raw <= 1) return Math.round(raw * 100);
+  return Math.round(raw);
+}
+
+function estimatePotential(score: number): number {
+  return Math.min(100, Math.round(score + (100 - score) * 0.35));
+}
+
+function defaultSuggestions(
+  score: number,
+  pillarLabel: string,
+): { text: string; gain: number }[] {
+  if (score >= 85) {
+    return [{ text: `Maintain ${pillarLabel} standards in new content`, gain: 2 }];
+  }
+  if (score >= 70) {
+    return [
+      { text: `Audit top-performing assets against ${pillarLabel} criteria`, gain: 5 },
+      { text: `Align upcoming shoot brief to ${pillarLabel} guidelines`, gain: 4 },
+    ];
+  }
+  return [
+    { text: `Run a focused ${pillarLabel} content audit`, gain: 8 },
+    { text: `Update brand guidelines for ${pillarLabel}`, gain: 6 },
+    { text: `Schedule a reshoot for off-brand hero assets`, gain: 5 },
+  ];
+}
+
+const evidenceBlockSchema = z.object({
+  title: z.string(),
+  score: z.number(),
+  potential: z.number(),
+  confidence: z.number(),
+  why: z.string(),
+  reasoning: z.string().optional(),
+  evidence: z.array(z.object({ text: z.string() })).optional(),
+  suggestions: z.array(z.object({ text: z.string(), gain: z.number() })).optional(),
+});
 
 export const getBrandProfile = createTool({
   id: "getBrandProfile",
@@ -83,6 +164,111 @@ export const getBrandScores = createTool({
   },
 });
 
+export const explainPillarTool = createTool({
+  id: "explainPillar",
+  description:
+    "Return a structured EvidenceBlock-compatible explanation for one brand intelligence pillar (e.g. visual, audience, consistency, commerce_readiness). Use when the operator asks why a score is what it is.",
+  inputSchema: z.object({
+    brandId: z.string().uuid(),
+    pillar: z.string().min(1),
+  }),
+  outputSchema: evidenceBlockSchema,
+  execute: async ({ brandId, pillar }) => {
+    const scoreType = normalizePillar(pillar);
+    const sb = adminClient();
+    const { data, error } = await sb
+      .from("brand_scores")
+      .select("score_type, score, details, source")
+      .eq("brand_id", brandId)
+      .eq("score_type", scoreType)
+      .maybeSingle();
+    if (error) throw new Error(`Failed to fetch pillar score: ${error.message}`);
+    if (!data) {
+      throw new Error(`No score found for pillar "${pillar}" (${scoreType}) on this brand`);
+    }
+
+    const score = Number(data.score);
+    const parsed = parseScoreDetails(data.details);
+    const title = scoreLabel(scoreType);
+    const why =
+      parsed?.evidence?.[0] ??
+      `${title} scored ${score}/100 based on brand intelligence analysis${data.source ? ` (${data.source})` : ""}.`;
+    const reasoning =
+      parsed?.evidence && parsed.evidence.length > 1
+        ? `Weighted ${parsed.evidence.length} signals from crawl and profile analysis for ${title.toLowerCase()}.`
+        : undefined;
+    const evidence = parsed?.evidence?.map((text) => ({ text }));
+    const confidence = toConfidencePercent(parsed?.confidence, score);
+    const potential = estimatePotential(score);
+
+    return {
+      title,
+      score,
+      potential,
+      confidence,
+      why,
+      reasoning,
+      evidence: evidence?.length ? evidence : undefined,
+      suggestions: defaultSuggestions(score, title),
+    };
+  },
+});
+
+export const approveDraftTool = createTool({
+  id: "approveDraft",
+  description:
+    "Approve or reject the pending brand intelligence draft after explicit operator confirmation (HITL). Only call when the operator clearly says to approve or reject the draft on the brand page.",
+  inputSchema: z.object({
+    brandId: z.string().uuid(),
+    approved: z.boolean(),
+  }),
+  outputSchema: z.object({
+    ok: z.boolean(),
+    approved: z.boolean(),
+    message: z.string(),
+  }),
+  execute: async ({ brandId, approved }) => {
+    const accessToken = requestToken.getStore();
+    if (!accessToken) throw new Error("Access token not available in request context");
+
+    const sb = adminClient();
+    const { data: draft, error: lookupErr } = await sb
+      .from("brand_intake_drafts")
+      .select("draft_profile")
+      .eq("brand_id", brandId)
+      .eq("status", "pending_approval")
+      .maybeSingle();
+    if (lookupErr) throw new Error(`Failed to look up pending draft: ${lookupErr.message}`);
+
+    const runId = (draft?.draft_profile as Record<string, unknown> | null)?._workflow_run_id;
+    if (typeof runId !== "string" || !runId) {
+      throw new Error("No pending draft awaiting approval for this brand");
+    }
+
+    const res = await fetch(`${resolveAppOrigin()}/api/workflows/brand-intelligence/approve`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${accessToken}`,
+      },
+      body: JSON.stringify({ runId, approved }),
+    });
+
+    const body = (await res.json().catch(() => ({}))) as { error?: string };
+    if (!res.ok) {
+      throw new Error(body.error ?? `Approve request failed (${res.status})`);
+    }
+
+    return {
+      ok: true,
+      approved,
+      message: approved
+        ? "Draft approved. Brand profile will update shortly."
+        : "Draft rejected. You can trigger a new analysis when ready.",
+    };
+  },
+});
+
 export const startBrandAnalysis = createTool({
   id: "startBrandAnalysis",
   description:
@@ -109,5 +295,7 @@ export const startBrandAnalysis = createTool({
 export const brandIntelligenceTools = {
   getBrandProfile,
   getBrandScores,
+  explainPillar: explainPillarTool,
+  approveDraft: approveDraftTool,
   startBrandAnalysis,
 } as const;

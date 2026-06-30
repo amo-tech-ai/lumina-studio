@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { BrandListContext } from "@/components/brand-hub/brand-list-context";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -92,6 +93,14 @@ const BrandsPage = async () => {
 
   return (
     <div className="min-h-screen p-8" style={{ background: "#FBF8F5" }}>
+      <BrandListContext
+        brands={rows.map((brand) => ({
+          id: brand.id,
+          name: brand.name,
+          dnaScore: computeDnaScore(scoresByBrand.get(brand.id)),
+          intakeStatus: brand.intake_status,
+        }))}
+      />
       <div className="mx-auto max-w-3xl space-y-6">
         <header className="flex flex-wrap items-end justify-between gap-4">
           <div>

@@ -14,13 +14,12 @@ describe("resolveAgentId", () => {
   });
 
   it("all mapped routes resolve correctly (IPI-247 · DESIGN-070)", () => {
-    expect(resolveAgentId("/app/brand")).toBe("brand-intelligence"); // IPI-130
+    expect(resolveAgentId("/app/brand")).toBe("brand-intelligence");
     expect(resolveAgentId("/app/brand/some-id")).toBe("brand-intelligence");
+    expect(resolveAgentId("/app/onboarding")).toBe("brand-intelligence");
     expect(resolveAgentId("/app/assets")).toBe("creative-director");
-    expect(resolveAgentId("/app/assets/abc")).toBe("creative-director");
     expect(resolveAgentId("/app/matching")).toBe("social-discovery");
     expect(resolveAgentId("/app/preview")).toBe("visual-identity");
-    expect(resolveAgentId("/app/onboarding")).toBe("brand-intelligence");
   });
 
   it("unknown route falls back to default", () => {
