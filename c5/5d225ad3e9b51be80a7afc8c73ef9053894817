@@ -1,0 +1,38 @@
+app/src/lib/intelligence/use-route-welcome.ts
+  s_496c3278139cd3::t_85e36ecb5bab1d 5-9,46-65,72,74-75,82-93,97,108-112,123-124,126-128,135-139,147,156,164,172,181
+app/src/lib/intelligence/use-route-welcome.test.ts
+  s_496c3278139cd3::t_5c0be1ccf7ae1c 10,14-24
+  s_496c3278139cd3::t_81730ba39d6875 131-137
+  s_496c3278139cd3::t_f9bb020ec54350 308,318
+  s_496c3278139cd3::t_4a4122d7108eb7 304-307,309-317,319-328
+  s_496c3278139cd3::t_f82a88db465023 160-161,164,172
+app/src/lib/intelligence/normalize-route-path.ts
+  s_496c3278139cd3::t_f6bf44cb953949 1-31
+app/src/components/operator-panel/operator-panel.tsx
+  s_496c3278139cd3::t_3b13f710846c28 140,152-153
+  s_496c3278139cd3::t_8afc9f90c7e2be 89-98
+  s_496c3278139cd3::t_4787948977a1e9 16
+  s_496c3278139cd3::t_62585d18446817 31
+app/src/lib/intelligence/use-route-suggestions.ts
+  s_496c3278139cd3::t_d1d9e01f65dcde 5-9,40-49,55,57,69-70,85,100-101,115,124,140,155,170,184
+app/src/lib/intelligence/use-route-suggestions.test.ts
+  s_496c3278139cd3::t_22788489e668db 253-276
+  s_496c3278139cd3::t_e501f2d7a36bab 23-24,28,41
+  s_496c3278139cd3::t_5f64f7cceeb67d 96-97,101,113
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.4",
+  "base_commit_sha": "c55d225ad3e9b51be80a7afc8c73ef9053894817",
+  "prompts": {},
+  "sessions": {
+    "s_496c3278139cd3": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "55815c1f-c0e9-4277-98ba-8d4f4f591490",
+        "model": "composer-2.5"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
