@@ -268,6 +268,20 @@ describe("useRouteWelcome", () => {
     });
   });
 
+  describe("Trailing slash edge cases", () => {
+    it("treats /app/shoots/ as shoots list, not detail", () => {
+      const { result } = renderHook(() =>
+        useRouteWelcome({
+          pathname: "/app/shoots/",
+          context: { shootCount: 3 },
+        })
+      );
+
+      // Should return list welcome, not detail welcome
+      expect(result.current).toBe("3 shoots — check for blockers and coverage gaps");
+    });
+  });
+
   describe("Unknown routes", () => {
     it("shows fallback message", () => {
       const { result } = renderHook(() =>

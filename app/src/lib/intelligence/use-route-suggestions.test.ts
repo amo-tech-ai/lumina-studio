@@ -259,6 +259,31 @@ describe("useRouteSuggestions", () => {
     });
   });
 
+  describe("Trailing slash edge cases", () => {
+    it("treats /app/brand/ as brand list, not detail", () => {
+      const { result } = renderHook(() =>
+        useRouteSuggestions({
+          pathname: "/app/brand/",
+          context: { hasBrands: true },
+        })
+      );
+
+      // Should return list suggestions, not detail suggestions
+      expect(result.current[0].title).toBe("Improve visuals");
+    });
+
+    it("treats /app/shoots/ as shoots list, not detail", () => {
+      const { result } = renderHook(() =>
+        useRouteSuggestions({
+          pathname: "/app/shoots/",
+        })
+      );
+
+      // Should return list suggestions, not detail suggestions
+      expect(result.current[0].title).toBe("Plan a shoot");
+    });
+  });
+
   describe("Dynamic updates", () => {
     it("updates suggestions when pathname changes", () => {
       const { result, rerender } = renderHook(

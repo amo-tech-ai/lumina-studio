@@ -2,7 +2,6 @@
 
 // IPI-110 — 3-panel shell: left NavSidebar (collapsed) · center workspace · right IntelligencePanel.
 // IPI-218 — ActiveBrandContext wired: brand switcher in left nav, useAgentContext exposes activeBrandId
-<<<<<<< HEAD
 //           so agents never ask "which brand?". IPI-243 — IntelligencePanel briefing + CopilotSidebar.
 // IPI-197 — Contextual copilot sidebar: dynamic welcome + route-specific suggestion chips.
 
