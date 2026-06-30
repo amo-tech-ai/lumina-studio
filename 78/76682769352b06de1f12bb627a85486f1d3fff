@@ -1,0 +1,32 @@
+supabase/functions/audit-asset-dna/index.ts
+  s_dbd599bb3c8240::t_24bdd3ff3745da 1-276
+supabase/config.toml
+  s_dbd599bb3c8240::t_24bdd3ff3745da 426-431
+docs/ops/IPI-230-production-auth-copilotkit-config.md
+  s_dbd599bb3c8240::t_24bdd3ff3745da 13-15,69-74
+package.json
+  s_dbd599bb3c8240::t_24bdd3ff3745da 17-19
+package-lock.json
+  s_dbd599bb3c8240::t_c8fb22f3e9a46b 9-111
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.4",
+  "base_commit_sha": "7876682769352b06de1f12bb627a85486f1d3fff",
+  "prompts": {},
+  "humans": {
+    "h_d382fbec1d5b46": {
+      "author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  },
+  "sessions": {
+    "s_dbd599bb3c8240": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_0ead23f3cffecS7FqdeY1Bcold",
+        "model": "deepseek-v4-flash"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
