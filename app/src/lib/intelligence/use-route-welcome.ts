@@ -94,7 +94,7 @@ function getWelcomeMessage(
   }
 
   // Shoot Detail (/app/shoots/[id])
-  const shootId = normalizedPath.startsWith("/app/shoots/") ? pathname.split("/")[3] : null;
+  const shootId = normalizedPath.startsWith("/app/shoots/") ? normalizedPath.split("/")[3] : null;
   if (shootId && shootId.length > 0) {
     if (context.shootName) {
       const gap = context.shootCount ? ` — ${context.shootCount} deliverable${context.shootCount !== 1 ? "s" : ""} missing` : "";
