@@ -1,0 +1,29 @@
+supabase/functions/audit-asset-dna/index.ts
+  s_dbd599bb3c8240::t_07fea87f89466d 293-309,318
+  s_dbd599bb3c8240::t_a92d069c14c265 252-263
+  s_dbd599bb3c8240::t_db16fd3dd25e31 70-85
+  s_dbd599bb3c8240::t_31f5dc2034050d 118-122,132-135
+  s_dbd599bb3c8240::t_ef9c7fc7341dec 205-213,224-232,234-238
+  s_dbd599bb3c8240::t_364fa9b977e6ba 12-13
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.4",
+  "base_commit_sha": "b46789b85842e81c66a9250dd0cb1b898529557a",
+  "prompts": {},
+  "humans": {
+    "h_d382fbec1d5b46": {
+      "author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  },
+  "sessions": {
+    "s_dbd599bb3c8240": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_0ead23f3cffecS7FqdeY1Bcold",
+        "model": "deepseek-v4-flash"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
