@@ -1,0 +1,23 @@
+.panel {
+  display: flex;
+  flex-direction: column;
+  height: 100dvh;
+  min-width: 0;
+  background: var(--card);
+}
+
+.briefing {
+  flex-shrink: 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.insightsPlaceholder {
+  padding: 0.75rem 1rem 1rem;
+  background: #fafafa;
+}
+
+.chat {
+  flex: 1;
+  min-height: 0;
+  position: relative;
+}

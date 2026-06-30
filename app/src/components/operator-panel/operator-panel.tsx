@@ -1,8 +1,8 @@
 "use client";
 
-// IPI-110 — 3-panel shell: left NavSidebar (collapsed) · center workspace · right CopilotSidebar chatbot.
+// IPI-110 — 3-panel shell: left NavSidebar (collapsed) · center workspace · right IntelligencePanel.
 // IPI-218 — ActiveBrandContext wired: brand switcher in left nav, useAgentContext exposes activeBrandId
-//           so agents never ask "which brand?". IntelligencePanel built in right slot — IPI-243.
+//           so agents never ask "which brand?". IPI-243 — IntelligencePanel briefing + CopilotSidebar.
 
 import {
   useAgentContext,
@@ -19,6 +19,7 @@ import {
   hiddenInternalToolsMessageView,
   useHideInternalToolCalls,
 } from "@/components/copilot/copilot-tool-presentation";
+import { IntelligencePanel } from "@/components/intelligence-panel";
 import { ThreadsDrawer } from "@/components/threads-drawer";
 import { ThreadsPanelGate } from "@/components/threads-drawer/locked-state";
 import { ActiveBrandProvider, useActiveBrand } from "@/context/active-brand-context";
@@ -130,6 +131,9 @@ function OperatorShell({
     ],
   });
 
+  const activeBrandName =
+    brands.find((b) => b.id === activeBrandId)?.name ?? null;
+
   return (
     <div className={styles.shell}>
       {/* Left nav rail — brand switcher + section nav */}
@@ -145,17 +149,23 @@ function OperatorShell({
         {children}
       </main>
 
-      {/* Right — AI chatbot panel (IntelligencePanel to be built here in IPI-243) */}
+      {/* Right — IntelligencePanel (IPI-243) + CopilotSidebar conversation */}
       <div className={styles.chatPanel}>
-        <CopilotSidebar
-          defaultOpen
-          messageView={hiddenInternalToolsMessageView}
-          labels={{
-            modalHeaderTitle: "iPix Assistant",
-            welcomeMessageText:
-              "👋 Ask about brands, shoots, assets, campaigns, or matching.",
-          }}
-        />
+        <IntelligencePanel
+          pathname={pathname}
+          activeBrandId={activeBrandId}
+          brandName={activeBrandName}
+        >
+          <CopilotSidebar
+            defaultOpen
+            messageView={hiddenInternalToolsMessageView}
+            labels={{
+              modalHeaderTitle: "iPix Assistant",
+              welcomeMessageText:
+                "👋 Ask about brands, shoots, assets, campaigns, or matching.",
+            }}
+          />
+        </IntelligencePanel>
       </div>
 
       {/* Threads side-sheet — toggled from NavSidebar */}
