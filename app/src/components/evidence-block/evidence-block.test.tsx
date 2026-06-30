@@ -44,6 +44,56 @@ describe("EvidenceBlock", () => {
     expect(screen.queryByText("Suggested improvements")).toBeNull();
   });
 
+  it("rounds confidence for dot color and label", () => {
+    const { container } = render(
+      <EvidenceBlock
+        title="Rounding"
+        score={70}
+        confidence={84.6}
+        why="Test"
+      />,
+    );
+    expect(screen.getByText("85% confidence")).toBeTruthy();
+    const dot = container.querySelector('[aria-hidden="true"].rounded-full');
+    expect(dot?.className).toContain("bg-[#059669]");
+  });
+
+  it("quotes image URLs in background-image", () => {
+    const { container } = render(
+      <EvidenceBlock
+        title="URL"
+        score={70}
+        confidence={80}
+        why="Test"
+        evidenceImgs={['https://example.com/a b.jpg)']}
+      />,
+    );
+    const thumb = container.querySelector('[role="img"][aria-label="Evidence source"]');
+    expect(thumb?.getAttribute("style")).toContain('url("https://example.com/a b.jpg)"');
+  });
+
+  it("uses score semantics for after label when potential is absent", () => {
+    render(
+      <EvidenceBlock
+        title="Before after"
+        score={72}
+        confidence={80}
+        why="Test"
+        beforeImg="https://example.com/before.jpg"
+        afterImg="https://example.com/after.jpg"
+      />,
+    );
+    expect(screen.getByRole("img", { name: "After · score 72" })).toBeTruthy();
+  });
+
+  it("announces score updates to screen readers", () => {
+    const { container } = render(<EvidenceBlock {...baseProps} />);
+    const live = container.querySelector('[aria-live="polite"]');
+    expect(live?.textContent).toContain("score 72");
+    expect(live?.textContent).toContain("88% confidence");
+    expect(live?.textContent).toContain("potential 84");
+  });
+
   it("fires action callbacks", () => {
     const onApprove = vi.fn();
     const onImprove = vi.fn();

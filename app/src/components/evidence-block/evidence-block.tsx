@@ -5,9 +5,14 @@ import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import type { EvidenceBlockProps } from "./types";
 
+function cssBackgroundImage(url: string): string {
+  return `url("${url.replace(/\\/g, "\\\\").replace(/"/g, '\\"')}")`;
+}
+
 function confidenceDotClass(confidence: number): string {
-  if (confidence >= 85) return "bg-[#059669]";
-  if (confidence >= 70) return "bg-[#D97706]";
+  const rounded = Math.round(confidence);
+  if (rounded >= 85) return "bg-[#059669]";
+  if (rounded >= 70) return "bg-[#D97706]";
   return "bg-[#94A3B8]";
 }
 
@@ -78,6 +83,11 @@ export function EvidenceBlock({
         className,
       )}
     >
+      <p className="sr-only" aria-live="polite" aria-atomic="true">
+        {`${title}: score ${score}, ${Math.round(confidence)}% confidence${
+          hasPotential ? `, potential ${potential}` : ""
+        }`}
+      </p>
       <div className="border-b border-[#F0F0F1] px-[18px] py-4">
         <div className="flex items-center justify-between gap-3">
           <div className="min-w-0">
@@ -155,7 +165,7 @@ export function EvidenceBlock({
                 <div
                   key={src}
                   className="h-[54px] w-[54px] rounded-xl border border-[#E5E7EB] bg-cover bg-center bg-[#FAFAFA]"
-                  style={{ backgroundImage: `url(${src})` }}
+                  style={{ backgroundImage: cssBackgroundImage(src) }}
                   role="img"
                   aria-label="Evidence source"
                 />
@@ -202,7 +212,7 @@ export function EvidenceBlock({
             <div>
               <div
                 className="aspect-square rounded-xl border border-[#E5E7EB] bg-cover bg-center bg-[#FAFAFA]"
-                style={{ backgroundImage: `url(${beforeImg})` }}
+                style={{ backgroundImage: cssBackgroundImage(beforeImg!) }}
                 role="img"
                 aria-label={`Before · score ${score}`}
               />
@@ -213,9 +223,13 @@ export function EvidenceBlock({
             <div>
               <div
                 className="aspect-square rounded-xl border border-[#E5E7EB] bg-cover bg-center bg-[#FAFAFA]"
-                style={{ backgroundImage: `url(${afterImg})` }}
+                style={{ backgroundImage: cssBackgroundImage(afterImg!) }}
                 role="img"
-                aria-label={`After · potential ${potential ?? score}`}
+                aria-label={
+                  hasPotential
+                    ? `After · potential ${potential}`
+                    : `After · score ${score}`
+                }
               />
               <p className="mt-1.5 text-center font-sans text-[10px] text-[#059669]">
                 After · {potential ?? score}
@@ -228,7 +242,7 @@ export function EvidenceBlock({
       {(onApprove || onImprove || onRegenerate) && (
         <div className="flex flex-wrap gap-2 px-[18px] py-4">
           {onApprove ? (
-            <Button type="button" onClick={onApprove} className="bg-[#111] text-white hover:bg-black">
+            <Button type="button" variant="default" onClick={onApprove}>
               Approve fixes
             </Button>
           ) : null}
