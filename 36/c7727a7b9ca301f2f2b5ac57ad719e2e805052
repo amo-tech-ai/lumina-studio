@@ -1,0 +1,25 @@
+app/src/lib/intelligence/use-route-suggestions.test.ts
+  s_118fd3beda84f7::t_c1d6ace7e4cac1 262-286
+app/src/lib/intelligence/use-route-suggestions.ts
+  s_118fd3beda84f7::t_2fc2e5a0bc36ed 56-58,60,69-70,85,100-101,115,124,140,155,170,184
+app/src/lib/intelligence/use-route-welcome.test.ts
+  s_118fd3beda84f7::t_9024bd37621f86 271-284
+app/src/lib/intelligence/use-route-welcome.ts
+  s_118fd3beda84f7::t_589a505b8fc391 60-62,64,74,85,97-98,107,116,125,133,141,150
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.4",
+  "base_commit_sha": "36c7727a7b9ca301f2f2b5ac57ad719e2e805052",
+  "prompts": {},
+  "sessions": {
+    "s_118fd3beda84f7": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "418d7d78-c4df-454c-9efe-9c9bcb747a8b",
+        "model": "unknown"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}

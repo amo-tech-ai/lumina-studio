@@ -1,0 +1,21 @@
+app/src/lib/intelligence/use-route-suggestions.ts
+  s_118fd3beda84f7::t_ac6159781421ee 4,45-48
+app/src/lib/intelligence/use-route-welcome.ts
+  s_118fd3beda84f7::t_9478abf0b219f4 4,48-52
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.4",
+  "base_commit_sha": "6e467e451e80fb4ca07ca4eed82d53fee0ac2502",
+  "prompts": {},
+  "sessions": {
+    "s_118fd3beda84f7": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "418d7d78-c4df-454c-9efe-9c9bcb747a8b",
+        "model": "unknown"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
