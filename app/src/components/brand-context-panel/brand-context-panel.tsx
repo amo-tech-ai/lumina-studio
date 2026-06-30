@@ -23,9 +23,9 @@ interface BrandDetail {
   scores: ScoresRow | null;
 }
 
-function dnaBarTier(value: number): "high" | "mid" | "low" {
-  if (value >= 80) return "high";
-  if (value >= 60) return "mid";
+function dnaBarTier(score: number): "high" | "mid" | "low" {
+  if (score >= 80) return "high";
+  if (score >= 60) return "mid";
   return "low";
 }
 
@@ -135,21 +135,24 @@ function BrandView({
           <section>
             <h3 className={styles.sectionTitle}>DNA Scores</h3>
             <div className={styles.pillars}>
-              {pillars.map(([key, value]) => (
+              {pillars.map(([key, value]) => {
+                const score = Math.round(value);
+                return (
                 <div key={key} className={styles.pillar}>
                   <div className={styles.pillarRow}>
                     <span className={styles.pillarName}>{key}</span>
-                    <span className={styles.pillarScore}>{Math.round(value)}</span>
+                    <span className={styles.pillarScore}>{score}</span>
                   </div>
                   <div className={styles.bar}>
                     <div
                       className={styles.barFill}
-                      data-tier={dnaBarTier(value)}
+                      data-tier={dnaBarTier(score)}
                       style={{ width: `${Math.min(100, Math.max(0, value))}%` }}
                     />
                   </div>
                 </div>
-              ))}
+                );
+              })}
             </div>
           </section>
         </>
