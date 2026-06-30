@@ -1,0 +1,31 @@
+docs/ecommerce/evidence/2026-06-30/mobile-verification/report.md
+  s_496c3278139cd3::t_98766c29a6c5bc 28
+tasks/audit/01-audit-prompt.md
+  s_118fd3beda84f7::t_8c0be4d616d6fa 265
+tasks/audit/02-tasks-audit.md
+  s_118fd3beda84f7::t_1bebe6879373a0 31-33,36-37,41
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.4",
+  "base_commit_sha": "1a2aa364f1dc5c07a7d25866d6ce6c624f2fd337",
+  "prompts": {},
+  "sessions": {
+    "s_118fd3beda84f7": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "418d7d78-c4df-454c-9efe-9c9bcb747a8b",
+        "model": "unknown"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    },
+    "s_496c3278139cd3": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "55815c1f-c0e9-4277-98ba-8d4f4f591490",
+        "model": "composer-2.5"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
