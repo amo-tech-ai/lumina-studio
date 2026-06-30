@@ -1,5 +1,5 @@
 // IPI-130 · IPI-260 — brand-intelligence tools unit tests
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 vi.mock("@supabase/supabase-js", () => ({ createClient: vi.fn() }));
 vi.mock("./edge", () => ({
@@ -37,11 +37,17 @@ import {
   startBrandAnalysis,
 } from "./brand-intelligence-tools";
 
-process.env.NEXT_PUBLIC_SUPABASE_URL = "https://test.supabase.co";
-process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = "test-anon-key";
-process.env.SUPABASE_SERVICE_ROLE_KEY = "test-key";
-
 const BRAND_ID = "11111111-1111-1111-1111-111111111111";
+
+beforeEach(() => {
+  vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://test.supabase.co");
+  vi.stubEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY", "test-anon-key");
+  vi.stubEnv("SUPABASE_SERVICE_ROLE_KEY", "test-key");
+});
+
+afterEach(() => {
+  vi.unstubAllEnvs();
+});
 
 const MOCK_BRAND = {
   id: BRAND_ID,
@@ -219,6 +225,7 @@ describe("approveDraftTool", () => {
       runId: "run-draft-1",
       approved: true,
       operatorId: "user-1",
+      expectedBrandId: BRAND_ID,
     });
   });
 
@@ -231,18 +238,30 @@ describe("approveDraftTool", () => {
   });
 
   it("throws when no pending draft exists", async () => {
-    vi.mocked(createClient).mockReturnValue({
-      from: vi.fn((table: string) => {
-        if (table === "brand_intake_drafts") {
-          return {
-            select: vi.fn().mockReturnThis(),
-            eq: vi.fn().mockReturnThis(),
-            maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
-          };
-        }
-        return makeMockClient().from(table);
-      }),
-    } as never);
+    vi.mocked(createClient).mockImplementation(((url: string, key: string) => {
+      if (key === "test-anon-key") {
+        return {
+          auth: {
+            getUser: vi.fn().mockResolvedValue({
+              data: { user: { id: "user-1" } },
+              error: null,
+            }),
+          },
+        };
+      }
+      return {
+        from: vi.fn((table: string) => {
+          if (table === "brand_intake_drafts") {
+            return {
+              select: vi.fn().mockReturnThis(),
+              eq: vi.fn().mockReturnThis(),
+              maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
+            };
+          }
+          return makeMockClient().from(table);
+        }),
+      };
+    }) as never);
 
     await expect(
       approveDraftTool.execute!({ brandId: BRAND_ID, approved: false }, {} as never),

@@ -115,6 +115,7 @@ export async function approveWorkflowDraft(brandId: string, runId: string): Prom
     runId,
     approved: true,
     operatorId: user.id,
+    expectedBrandId: brandId,
   });
   if (!result.ok) {
     return {
@@ -122,7 +123,6 @@ export async function approveWorkflowDraft(brandId: string, runId: string): Prom
       error: result.error.includes("already processed") ? "already_processed" : result.error,
     };
   }
-  if (result.brandId !== brandId) return { ok: false, error: "Draft does not belong to this brand" };
 
   revalidatePath(`/app/brand/${brandId}`);
   return { ok: true };
@@ -139,6 +139,7 @@ export async function rejectWorkflowDraft(brandId: string, runId: string): Promi
     runId,
     approved: false,
     operatorId: user.id,
+    expectedBrandId: brandId,
   });
   if (!result.ok) {
     return {
@@ -146,7 +147,6 @@ export async function rejectWorkflowDraft(brandId: string, runId: string): Promi
       error: result.error.includes("already processed") ? "already_processed" : result.error,
     };
   }
-  if (result.brandId !== brandId) return { ok: false, error: "Draft does not belong to this brand" };
 
   revalidatePath(`/app/brand/${brandId}`);
   return { ok: true };

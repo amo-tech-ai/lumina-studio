@@ -57,6 +57,7 @@ const BrandsPage = async () => {
   if (rows.length === 0) {
     return (
       <div className="min-h-screen p-8" style={{ background: "#FBF8F5" }}>
+        <BrandListContext brands={[]} />
         <Link
           href="/app"
           className="font-sans text-sm text-[#64748B] hover:underline"

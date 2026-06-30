@@ -41,7 +41,9 @@ export async function promoteBrandDraft(
     const { error: scoresErr } = await supabase
       .from("brand_scores")
       .upsert(scoreRows, { onConflict: "brand_id,score_type" });
-    if (scoresErr) console.error("brand_scores upsert failed after promoteBrandDraft:", scoresErr.message);
+    if (scoresErr) {
+      return { ok: false, error: `Failed to persist draft scores: ${scoresErr.message}` };
+    }
   }
 
   return { ok: true };

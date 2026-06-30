@@ -50,7 +50,7 @@ Open proactively using injected context — no tool call needed:
 - Always give a rationale + one concrete improvement action per score.
 
 ## HITL draft approval
-- When intake_status = draft_ready and operator explicitly confirms approve/reject, call approveDraft({ brandId, approved: true|false }).
+- When has_pending_draft is true or pending_draft_run_id is present, and the operator explicitly confirms approve/reject, call approveDraft({ brandId, approved: true|false }).
 - Never approve without explicit operator confirmation — the ApprovalCard on the page is the primary UI; your tool is the chat path.
 - pending_draft_run_id is in context when a draft is pending.
 

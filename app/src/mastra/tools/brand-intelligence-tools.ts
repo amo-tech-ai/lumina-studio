@@ -58,9 +58,9 @@ export function normalizePillar(input: string): string {
 }
 
 function toConfidencePercent(raw: number | undefined, score: number): number {
-  if (raw === undefined) return Math.min(95, Math.max(45, score));
-  if (raw <= 1) return Math.round(raw * 100);
-  return Math.round(raw);
+  const confidence =
+    raw === undefined ? Math.min(95, Math.max(45, score)) : raw <= 1 ? raw * 100 : raw;
+  return Math.min(100, Math.max(0, Math.round(confidence)));
 }
 
 function estimatePotential(score: number): number {
@@ -234,11 +234,14 @@ export const approveDraftTool = createTool({
     const accessToken = requestToken.getStore();
     if (!accessToken) throw new Error("Access token not available in request context");
 
+    const operatorId = await resolveOperatorId(accessToken);
+
     const sb = adminClient();
     const { data: draft, error: lookupErr } = await sb
       .from("brand_intake_drafts")
       .select("draft_profile")
       .eq("brand_id", brandId)
+      .eq("user_id", operatorId)
       .eq("status", PENDING_DRAFT_STATUS)
       .maybeSingle();
     if (lookupErr) throw new Error(`Failed to look up pending draft: ${lookupErr.message}`);
@@ -248,17 +251,13 @@ export const approveDraftTool = createTool({
       throw new Error("No pending draft awaiting approval for this brand");
     }
 
-    const operatorId = await resolveOperatorId(accessToken);
-
     const result = await processBrandIntelligenceDraftApproval({
       runId,
       approved,
       operatorId,
+      expectedBrandId: brandId,
     });
     if (!result.ok) throw new Error(result.error);
-    if (result.brandId !== brandId) {
-      throw new Error("Draft does not belong to this brand");
-    }
 
     return {
       ok: true,

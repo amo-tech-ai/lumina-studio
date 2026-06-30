@@ -10,7 +10,7 @@ export type ProcessDraftApprovalResult =
   | { ok: false; error: string };
 
 async function rollbackDraftRow(draftId: string) {
-  await createSupabaseAdminClient()
+  const { error } = await createSupabaseAdminClient()
     .from("brand_intake_drafts")
     .update({
       status: PENDING_DRAFT_STATUS,
@@ -18,10 +18,11 @@ async function rollbackDraftRow(draftId: string) {
       rejected_at: null,
       updated_at: new Date().toISOString(),
     })
-    .eq("id", draftId)
-    .then(undefined, (rbErr) => {
-      console.error("[process-draft-approval] rollback failed — draft stuck:", rbErr);
-    });
+    .eq("id", draftId);
+
+  if (error) {
+    console.error("[process-draft-approval] rollback failed — draft stuck:", error);
+  }
 }
 
 /** Shared HITL approve/reject — used by API route, server actions, and Mastra tool. */
@@ -29,21 +30,28 @@ export async function processBrandIntelligenceDraftApproval(params: {
   runId: string;
   approved: boolean;
   operatorId: string;
+  expectedBrandId?: string;
 }): Promise<ProcessDraftApprovalResult> {
-  const { runId, approved, operatorId } = params;
+  const { runId, approved, operatorId, expectedBrandId } = params;
   const sb = createSupabaseAdminClient();
 
-  const { data: draft, error: lookupErr } = await sb
+  let draftQuery = sb
     .from("brand_intake_drafts")
     .select("id, brand_id, user_id")
     .eq("draft_profile->>_workflow_run_id", runId)
-    .eq("status", PENDING_DRAFT_STATUS)
-    .single();
+    .eq("status", PENDING_DRAFT_STATUS);
+  if (expectedBrandId) {
+    draftQuery = draftQuery.eq("brand_id", expectedBrandId);
+  }
+  const { data: draft, error: lookupErr } = await draftQuery.single();
   if (lookupErr || !draft) {
     return { ok: false, error: "No pending draft found for this workflow run" };
   }
   if (draft.user_id !== operatorId) {
     return { ok: false, error: "Forbidden" };
+  }
+  if (expectedBrandId && draft.brand_id !== expectedBrandId) {
+    return { ok: false, error: "Draft does not belong to this brand" };
   }
 
   const { data: updatedDraft, error: updateErr } = await sb
