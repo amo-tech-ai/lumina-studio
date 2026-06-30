@@ -411,40 +411,46 @@ Use URL content AND web search for press, social, and competitor signals.
     const contextUsage = contextResponse?.usageMetadata;
     const durationMs = Math.round(performance.now() - started);
 
-    const { id: logId } = await insertAgentLog(client, {
-      agentName: "brand-intelligence",
-      userId: auth.user.id,
-      brandId,
-      input: {
-        url,
+    let logId: string | undefined;
+    try {
+      const result = await insertAgentLog(client, {
+        agentName: "brand-intelligence",
+        userId: auth.user.id,
         brandId,
-        crawlResultId: crawlRow?.id ?? crawlResultId,
-        usedCrawl: useCrawl,
-      },
-      output: {
-        brandId,
-        scoreCount: scores?.length ?? 0,
-        urlRetrieval:
-          contextResponse?.candidates?.[0]?.urlContextMetadata ?? null,
-        grounding:
-          structuredResponse.candidates?.[0]?.groundingMetadata ?? null,
-      },
-      model,
-      tokensIn:
-        (usage?.promptTokenCount ?? 0) +
-          (contextUsage?.promptTokenCount ?? 0) || null,
-      tokensOut:
-        (usage?.candidatesTokenCount ?? 0) +
-          (contextUsage?.candidatesTokenCount ?? 0) || null,
-      durationMs,
-    });
+        input: {
+          url,
+          brandId,
+          crawlResultId: crawlRow?.id ?? crawlResultId,
+          usedCrawl: useCrawl,
+        },
+        output: {
+          brandId,
+          scoreCount: scores?.length ?? 0,
+          urlRetrieval:
+            contextResponse?.candidates?.[0]?.urlContextMetadata ?? null,
+          grounding:
+            structuredResponse.candidates?.[0]?.groundingMetadata ?? null,
+        },
+        model,
+        tokensIn:
+          (usage?.promptTokenCount ?? 0) +
+            (contextUsage?.promptTokenCount ?? 0) || null,
+        tokensOut:
+          (usage?.candidatesTokenCount ?? 0) +
+            (contextUsage?.candidatesTokenCount ?? 0) || null,
+        durationMs,
+      });
+      logId = result.id;
+    } catch (logErr) {
+      console.warn("brand-intelligence agent log insert failed (non-fatal):", logErr);
+    }
 
     return jsonResponse({
       brandId,
       brand: updated,
       profile: aiProfile,
       scores: scores ?? [],
-      logId,
+      ...(logId ? { logId } : {}),
       durationMs,
       geminiMs,
       usedCrawl: useCrawl,

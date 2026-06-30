@@ -70,13 +70,18 @@ function isValidHttpUrl(value: string): boolean {
     if (parsed.protocol !== "http:" && parsed.protocol !== "https:") return false;
     const host = parsed.hostname.toLowerCase();
     // Block private, link-local, and loopback ranges
+    const isPrivate172 = (): boolean => {
+      if (!host.startsWith("172.")) return false;
+      const octet = parseInt(host.split(".")[1], 10);
+      return octet >= 16 && octet <= 31;
+    };
     if (
       host === "localhost" ||
       host === "127.0.0.1" ||
       host === "0.0.0.0" ||
       host === "[::1]" ||
       host.startsWith("10.") ||
-      host.startsWith("172.") || // 172.16-31.x.x approximated
+      isPrivate172() ||
       host.startsWith("192.168.") ||
       host.startsWith("169.254.") ||
       host.endsWith(".local") ||
@@ -197,6 +202,10 @@ Deno.serve(async (req: Request) => {
     }
     if (!asset) {
       return errorResponse("not_found", "Registered asset not found", 404);
+    }
+
+    if (!isValidHttpUrl(asset.url)) {
+      return errorResponse("validation_error", "Asset URL is not a valid external URL", 422);
     }
 
     const imagePart = await fetchImagePart(asset.url, asset.mime_type);
