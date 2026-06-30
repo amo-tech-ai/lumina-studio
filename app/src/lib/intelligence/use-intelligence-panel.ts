@@ -47,16 +47,40 @@ export function useIntelligencePanel(activeBrandId: string | null) {
   }, [fetchPanel]);
 
   useEffect(() => {
-    void reload();
-  }, [reload]);
+    let cancelled = false;
+    void (async () => {
+      setState((s) => ({ ...s, loading: true, error: null }));
+      try {
+        const data = await fetchPanel();
+        if (!cancelled) setState({ data, loading: false, error: null });
+      } catch (e) {
+        if (!cancelled) {
+          setState({
+            data: EMPTY,
+            loading: false,
+            error: e instanceof Error ? e.message : "Failed to load intelligence data",
+          });
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [fetchPanel]);
 
   useEffect(() => {
+    let cancelled = false;
     const id = window.setInterval(() => {
       void fetchPanel()
-        .then((data) => setState({ data, loading: false, error: null }))
+        .then((data) => {
+          if (!cancelled) setState({ data, loading: false, error: null });
+        })
         .catch(() => undefined);
     }, 30_000);
-    return () => window.clearInterval(id);
+    return () => {
+      cancelled = true;
+      window.clearInterval(id);
+    };
   }, [fetchPanel]);
 
   return { ...state, reload };
