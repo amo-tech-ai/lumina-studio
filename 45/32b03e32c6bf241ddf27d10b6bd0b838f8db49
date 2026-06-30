@@ -1,0 +1,22 @@
+app/src/lib/brand/promote-draft.ts
+  s_ef4285d032a355::t_6e15606672931a 45-47
+app/src/app/api/_lib/process-draft-approval.ts
+  s_ef4285d032a355::t_9d483af7fe1e3c 78,84
+  s_ef4285d032a355::t_55d9d93fcd6b08 8-10
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.4",
+  "base_commit_sha": "4532b03e32c6bf241ddf27d10b6bd0b838f8db49",
+  "prompts": {},
+  "sessions": {
+    "s_ef4285d032a355": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "26c1cfce-92ad-4c17-b2fb-f77878e7778d",
+        "model": "composer-2.5"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
