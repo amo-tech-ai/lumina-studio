@@ -1,0 +1,27 @@
+supabase/functions/audit-asset-dna/index.ts
+  s_dbd599bb3c8240::t_fa59662e24dde1 207-210
+  s_dbd599bb3c8240::t_d86dadb7b9d57e 73-77,84
+supabase/functions/brand-intelligence/index.ts
+  s_dbd599bb3c8240::t_a043f5d2039832 414-418,420-446,453
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.4",
+  "base_commit_sha": "60173ef635984acd7bf6dc0de9b43716cd1d52cf",
+  "prompts": {},
+  "humans": {
+    "h_d382fbec1d5b46": {
+      "author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  },
+  "sessions": {
+    "s_dbd599bb3c8240": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_0ead23f3cffecS7FqdeY1Bcold",
+        "model": "deepseek-v4-flash"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
