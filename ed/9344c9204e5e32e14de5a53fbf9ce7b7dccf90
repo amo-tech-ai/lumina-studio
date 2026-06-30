@@ -1,0 +1,27 @@
+app/src/components/evidence-block/evidence-block.tsx
+  s_496c3278139cd3::t_7693fc301062c6 86-90
+  s_496c3278139cd3::t_7dd76177c29c8b 215
+  s_496c3278139cd3::t_11dd333e70972f 245
+  s_496c3278139cd3::t_54f5f98656b00d 168
+  s_496c3278139cd3::t_bd799e82da5d09 8-11,13-15
+  s_496c3278139cd3::t_84a021e0a1755d 226,228-232
+app/src/components/evidence-block/evidence-block.test.tsx
+  s_496c3278139cd3::t_87f8b2a59ebae2 89-96
+  s_496c3278139cd3::t_a07f63e10c1cb0 47-88
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.4",
+  "base_commit_sha": "ed9344c9204e5e32e14de5a53fbf9ce7b7dccf90",
+  "prompts": {},
+  "sessions": {
+    "s_496c3278139cd3": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "55815c1f-c0e9-4277-98ba-8d4f4f591490",
+        "model": "composer-2.5"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
