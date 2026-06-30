@@ -1,0 +1,21 @@
+app/src/styles/tokens.css
+  s_ef4285d032a355::t_a3360ca3651877 149
+app/src/app/globals.css
+  s_ef4285d032a355::t_82aba520899716 64-70
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.4",
+  "base_commit_sha": "39dfb786958dd87b7de410099629c4c14db032aa",
+  "prompts": {},
+  "sessions": {
+    "s_ef4285d032a355": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "26c1cfce-92ad-4c17-b2fb-f77878e7778d",
+        "model": "composer-2.5"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
