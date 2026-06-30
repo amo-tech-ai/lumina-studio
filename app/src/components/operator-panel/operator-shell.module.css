@@ -13,6 +13,7 @@
   min-width: 0;
   height: 100dvh;
   overflow: auto;
+  overflow-x: clip;
 }
 
 /* CopilotSidebar controls its own width; this just anchors it in the grid */
@@ -56,9 +57,14 @@
 @media (max-width: 1024px) {
   .shell {
     grid-template-columns: minmax(0, 1fr);
+    padding-bottom: env(safe-area-inset-bottom, 0);
   }
   .chatPanel {
     display: none; /* CopilotSidebar has its own mobile full-screen mode */
     border-left: 0;
+  }
+  .content {
+    min-height: 100dvh;
+    height: auto;
   }
 }
