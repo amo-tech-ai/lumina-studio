@@ -1,7 +1,7 @@
 // IPI-197 — Dynamic suggestion chips based on route + context
 // Maps to 06-ai-workflows.md quick-action matrix for all 8 operator routes
 
-import { useEffect, useState } from "react";
+import { useMemo } from "react";
 
 interface SuggestionChip {
   title: string;
@@ -42,15 +42,11 @@ export function useRouteSuggestions({
   pathname,
   context = {},
 }: UseRouteSuggestionsOptions): SuggestionChip[] {
-  const [suggestions, setSuggestions] = useState<SuggestionChip[]>(
-    getSuggestionsForRoute(pathname, context)
+  return useMemo(
+    () => getSuggestionsForRoute(pathname, context),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [pathname, context.hasBrands, context.hasSelection, context.brandLoaded, context.shootLoaded, context.campaignLoaded, context.creatorLoaded, context.channelLoaded]
   );
-
-  useEffect(() => {
-    setSuggestions(getSuggestionsForRoute(pathname, context));
-  }, [pathname, context]);
-
-  return suggestions;
 }
 
 function getSuggestionsForRoute(

@@ -1,7 +1,7 @@
 // IPI-197 — Dynamic welcome messages based on route + context
 // Implements 06-ai-workflows.md greeting matrix for all 8 operator routes
 
-import { useEffect, useState } from "react";
+import { useMemo } from "react";
 
 interface WelcomeContext {
   brandName?: string;
@@ -45,13 +45,11 @@ export function useRouteWelcome({
   brandId,
   context = {},
 }: UseRouteWelcomeOptions): string {
-  const [welcome, setWelcome] = useState<string>(getWelcomeMessage(pathname, brandId, context));
-
-  useEffect(() => {
-    setWelcome(getWelcomeMessage(pathname, brandId, context));
-  }, [pathname, brandId, context]);
-
-  return welcome;
+  return useMemo(
+    () => getWelcomeMessage(pathname, brandId, context),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [pathname, brandId, context.brandName, context.brandDna, context.weakestPillar, context.brandCount, context.shootCount, context.shootName, context.selectionCount, context.campaignName, context.campaignHealth, context.creatorName, context.creatorFit, context.channelName, context.channelReadiness, context.kpiSummary, context.pendingApprovals, context.hasBrands]
+  );
 }
 
 function getWelcomeMessage(
