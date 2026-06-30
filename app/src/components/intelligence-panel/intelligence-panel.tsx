@@ -1,9 +1,12 @@
 "use client";
 
 import type { ReactNode } from "react";
+import { ApprovalsSection } from "./approvals-section";
 import { AIContextCard } from "./ai-context-card";
+import { DnaScoresSection } from "./dna-scores-section";
 import styles from "./intelligence-panel.module.css";
 import { resolveRouteBriefing } from "./route-briefing";
+import { useIntelligencePanel } from "@/lib/intelligence/use-intelligence-panel";
 
 type Props = {
   pathname: string;
@@ -19,19 +22,27 @@ export function IntelligencePanel({
   children,
 }: Props) {
   const briefing = resolveRouteBriefing(pathname);
+  const { data, loading, error } = useIntelligencePanel(activeBrandId);
 
   return (
     <div className={styles.panel} data-testid="intelligence-panel">
       <div className={styles.briefing}>
         <AIContextCard brandName={brandName} briefing={briefing} />
-        <div className={styles.insightsPlaceholder} aria-live="polite">
-          <p className="font-sans text-[11px] font-medium text-[#6B7280]">
-            Intelligence insights
-          </p>
-          <p className="mt-1 font-sans text-xs text-[#9CA3AF]">
-            Live DNA scores and approvals load in Phase B (
-            {activeBrandId ? "brand context ready" : "select a brand"} · IPI-255).
-          </p>
+        <div className={styles.insights} aria-live="polite">
+          {loading && !data ? (
+            <p className="px-4 py-3 font-sans text-xs text-[#9CA3AF]">Loading intelligence…</p>
+          ) : error ? (
+            <p className="px-4 py-3 font-sans text-xs text-[#DC2626]">{error}</p>
+          ) : data?.scores ? (
+            <DnaScoresSection scores={data.scores} />
+          ) : (
+            <p className="px-4 py-3 font-sans text-xs text-[#9CA3AF]">
+              {activeBrandId
+                ? "DNA scores appear after brand analysis completes."
+                : "Select a brand to view DNA scores."}
+            </p>
+          )}
+          {data?.approvals ? <ApprovalsSection approvals={data.approvals} /> : null}
         </div>
       </div>
       <div className={styles.chat}>{children}</div>
