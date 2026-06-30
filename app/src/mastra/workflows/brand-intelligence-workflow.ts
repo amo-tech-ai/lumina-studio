@@ -8,10 +8,6 @@ import { discardBrandDraft } from "@/lib/brand/discard-draft";
 import { promoteBrandDraft } from "@/lib/brand/promote-draft";
 
 const IDEMPOTENT_DRAFT_STATE_ERROR = "Brand is not in draft_ready state";
-const IDEMPOTENT_PROMOTE_ERRORS: readonly string[] = [
-  IDEMPOTENT_DRAFT_STATE_ERROR,
-  "No draft to apply",
-];
 
 function adminClient() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -269,7 +265,7 @@ const commitOrReject = createStep({
 
     if (approved) {
       const promoteResult = await promoteBrandDraft(sb, brandId);
-      if (!promoteResult.ok && !IDEMPOTENT_PROMOTE_ERRORS.includes(promoteResult.error)) {
+      if (!promoteResult.ok && promoteResult.error !== IDEMPOTENT_DRAFT_STATE_ERROR) {
         throw new Error(`Failed to promote draft: ${promoteResult.error}`);
       }
     } else {
