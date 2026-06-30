@@ -1,0 +1,38 @@
+app/src/mastra/tools/brand-intelligence-tools.ts
+  s_ef4285d032a355::t_20b85d488730e0 61-63
+  s_ef4285d032a355::t_4874b4a14acb13 237-238,244,258
+app/src/app/(operator)/app/brand/page.tsx
+  s_ef4285d032a355::t_09d6b6cac68712 60
+app/src/mastra/agents/brand-intelligence-agent.ts
+  s_ef4285d032a355::t_6b4c40f4f5f510 53
+app/src/mastra/tools/brand-intelligence-tools.test.ts
+  s_ef4285d032a355::t_28ea55cc6b595e 241-264
+  s_ef4285d032a355::t_a36067c1fbde7e 42-50
+  s_ef4285d032a355::t_f7a0639ee0dd65 228
+  s_ef4285d032a355::t_605c4bcb0aaa74 2
+  s_ef4285d032a355::t_a090c8f2265fff 51
+app/src/app/(operator)/app/brand/[id]/actions.ts
+  s_ef4285d032a355::t_cd873fb19f7e75 142
+  s_ef4285d032a355::t_8f3e7fe6d5f145 118
+app/src/app/api/_lib/process-draft-approval.ts
+  s_ef4285d032a355::t_9867da1b92b91f 13,21-25
+  s_ef4285d032a355::t_612ff049ba0e42 33,35,38,42-46,53-55
+app/src/lib/brand/promote-draft.ts
+  s_ef4285d032a355::t_1b7d13da7d510a 44-46
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.4",
+  "base_commit_sha": "54a5bb1451075b5fa5fe9436df41eafe71ab5005",
+  "prompts": {},
+  "sessions": {
+    "s_ef4285d032a355": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "26c1cfce-92ad-4c17-b2fb-f77878e7778d",
+        "model": "composer-2.5"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
