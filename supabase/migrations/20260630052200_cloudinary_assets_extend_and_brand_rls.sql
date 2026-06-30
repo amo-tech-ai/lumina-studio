@@ -12,7 +12,7 @@
 
 -- 1. Columns ----------------------------------------------------------------
 alter table public.cloudinary_assets
-  add column if not exists brand_id          uuid references public.brands(id) on delete cascade,
+  add column if not exists brand_id          uuid references public.brands(id) on delete set null,
   add column if not exists delivery_type     text not null default 'authenticated',   -- upload | authenticated | private
   add column if not exists version           bigint,
   add column if not exists format            text,
