@@ -10,9 +10,9 @@
 | Variable | Value | Prod ready? |
 |---|---|---|
 | `OPERATOR_AUTH_ENABLED` | `false` | ❌ Must be `true` |
-| `COPILOTKIT_LICENSE_TOKEN` | `ck_pub_88e3269838fb61176853d6c40a328417` | ✅ Set |
-| `INTELLIGENCE_API_KEY` | `cpk-127_GquMU2KT_EJXFK5HpMvmjpZvtGqggEfKW` | ✅ Set (required w/ license) |
-| `DATABASE_URL` | `postgresql://postgres.nvdlhrodvevgwdsneplk:...@aws-1-us-east-2.pooler.supabase.com:6543/postgres` | ✅ Pooler `:6543` |
+| `COPILOTKIT_LICENSE_TOKEN` | `<redacted — see Infisical>` | ✅ Set |
+| `INTELLIGENCE_API_KEY` | `<redacted — see Infisical>` | ✅ Set (required w/ license) |
+| `DATABASE_URL` | `postgresql://postgres.nvdlhrodvevgwdsneplk:***@aws-1-us-east-2.pooler.supabase.com:6543/postgres` | ✅ Pooler `:6543` |
 | `NEXT_PUBLIC_SUPABASE_URL` | `https://nvdlhrodvevgwdsneplk.supabase.co` | ✅ |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Set | ✅ |
 | `GEMINI_API_KEY` | Set | ✅ |
@@ -66,12 +66,12 @@ Set these in Vercel project `ipix-operator` (or root deploy project):
 |---|---|---|
 | `OPERATOR_AUTH_ENABLED` | `true` | Infisical |
 | `NEXT_PUBLIC_SITE_URL` | `https://www.ipix.co` | Infisical |
-| `COPILOTKIT_LICENSE_TOKEN` | `ck_pub_88e3269838fb61176853d6c40a328417` | Infisical |
-| `INTELLIGENCE_API_KEY` | `cpk-127_...` | Infisical |
-| `DATABASE_URL` | `postgresql://...pooler.supabase.com:6543/...` | Infisical |
-| `GEMINI_API_KEY` | `AQ.Ab8RN6Jk_...` | Infisical |
-| `NEXT_PUBLIC_SUPABASE_URL` | `https://nvdlhrodvevgwdsneplk.supabase.co` | Infisical |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | `eyJhbGciOiJ...` | Infisical |
+| `COPILOTKIT_LICENSE_TOKEN` | `<redacted — see Infisical>` | Infisical |
+| `INTELLIGENCE_API_KEY` | `<redacted — see Infisical>` | Infisical |
+| `DATABASE_URL` | `<redacted — see Infisical>` | Infisical |
+| `GEMINI_API_KEY` | `<redacted — see Infisical>` | Infisical |
+| `NEXT_PUBLIC_SUPABASE_URL` | `<redacted — see Infisical>` | Infisical |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | `<redacted — see Infisical>` | Infisical |
 
 ### 2. Supabase OAuth redirect URLs
 
