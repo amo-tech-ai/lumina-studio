@@ -42,7 +42,7 @@ export function IntelligencePanel({
                 : "Select a brand to view DNA scores."}
             </p>
           )}
-          {data?.approvals ? <ApprovalsSection approvals={data.approvals} /> : null}
+          {!error && data?.approvals ? <ApprovalsSection approvals={data.approvals} /> : null}
         </div>
       </div>
       <div className={styles.chat}>{children}</div>
