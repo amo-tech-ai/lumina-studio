@@ -11,8 +11,7 @@
   border-bottom: 1px solid var(--border);
 }
 
-.insightsPlaceholder {
-  padding: 0.75rem 1rem 1rem;
+.insights {
   background: #fafafa;
 }
 
