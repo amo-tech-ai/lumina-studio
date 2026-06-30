@@ -1,0 +1,32 @@
+app/src/components/brand-hub/brand-context.tsx
+  s_496c3278139cd3::t_4390b8f497cd2f 18,26,35-36
+app/src/mastra/tools/brand-intelligence-tools.test.ts
+  s_496c3278139cd3::t_452a216a153785 1,21-28,49-60,63-86,88,90,92,97-111,129-132,145-220,230-249
+app/src/components/brand-hub/brand-context.test.ts
+  s_496c3278139cd3::t_50576a548535e0 45-53,60-61
+app/src/app/(operator)/app/brand/page.tsx
+  s_496c3278139cd3::t_05fe9db4b1b80b 96-103
+  s_496c3278139cd3::t_924f361746d105 2
+app/src/lib/route-agent-map.test.ts
+  s_496c3278139cd3::t_5512a84798f793 17,19
+app/src/mastra/agents/brand-intelligence-agent.ts
+  s_496c3278139cd3::t_1880bfdcc2c434 47,52-56,60
+app/src/components/brand-hub/brand-list-context.test.tsx
+  s_496c3278139cd3::t_a4886699c84380 1-35
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.4",
+  "base_commit_sha": "46d96085c000b30a681e4d59378478dd5c4a4e17",
+  "prompts": {},
+  "sessions": {
+    "s_496c3278139cd3": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "55815c1f-c0e9-4277-98ba-8d4f4f591490",
+        "model": "composer-2.5"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
