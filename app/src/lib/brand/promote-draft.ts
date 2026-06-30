@@ -12,7 +12,11 @@ export async function promoteBrandDraft(
     .maybeSingle();
 
   if (selectErr) return { ok: false, error: selectErr.message };
-  if (!brand?.ai_profile_draft) return { ok: false, error: "No draft to apply" };
+  if (!brand?.ai_profile_draft) {
+    // HITL handler (processBrandIntelligenceDraftApproval) may promote before workflow resume.
+    if (brand?.intake_status === "ready") return { ok: true };
+    return { ok: false, error: "No draft to apply" };
+  }
 
   const draft = brand.ai_profile_draft as Record<string, unknown>;
   const draftScores = Array.isArray(draft._draft_scores)
