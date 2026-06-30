@@ -16,7 +16,7 @@
 | `NEXT_PUBLIC_SUPABASE_URL` | `https://nvdlhrodvevgwdsneplk.supabase.co` | ✅ |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Set | ✅ |
 | `GEMINI_API_KEY` | Set | ✅ |
-| `SITE_URL` default | `https://fashionos.co` | Needs `NEXT_PUBLIC_SITE_URL` override |
+| `SITE_URL` default | `https://www.ipix.co` | Needs `NEXT_PUBLIC_SITE_URL` override |
 
 ---
 
@@ -37,9 +37,9 @@ npm test → 404 passed | 7 skipped | 0 failed
 ### Auth callback
 
 - File: `app/src/app/auth/callback/route.ts`
-- Uses `SITE_URL` (= `https://fashionos.co` or `NEXT_PUBLIC_SITE_URL`)
+- Uses `SITE_URL` (= `https://www.ipix.co` or `NEXT_PUBLIC_SITE_URL`)
 - Callback path: `/auth/callback`
-- OAuth redirect URL: `https://fashionos.co/auth/callback`
+- OAuth redirect URL: `https://www.ipix.co/auth/callback`
 
 ### Operator gate
 
@@ -65,7 +65,7 @@ Set these in Vercel project `ipix-operator` (or root deploy project):
 | Variable | Value | Source |
 |---|---|---|
 | `OPERATOR_AUTH_ENABLED` | `true` | Infisical |
-| `NEXT_PUBLIC_SITE_URL` | `https://fashionos.co` | Infisical |
+| `NEXT_PUBLIC_SITE_URL` | `https://www.ipix.co` | Infisical |
 | `COPILOTKIT_LICENSE_TOKEN` | `ck_pub_88e3269838fb61176853d6c40a328417` | Infisical |
 | `INTELLIGENCE_API_KEY` | `cpk-127_...` | Infisical |
 | `DATABASE_URL` | `postgresql://...pooler.supabase.com:6543/...` | Infisical |
@@ -79,12 +79,12 @@ Configure in Supabase Dashboard → Authentication → URL Configuration:
 
 | Field | Value |
 |---|---|
-| Site URL | `https://fashionos.co` |
-| Redirect URLs | `https://fashionos.co/auth/callback` |
+| Site URL | `https://www.ipix.co` |
+| Redirect URLs | `https://www.ipix.co/auth/callback` |
 
 ### 3. Vercel production domain
 
-- Production URL: `https://fashionos.co`
+- Production URL: `https://www.ipix.co`
 - Custom domain should be configured in Vercel project settings
 
 ---
