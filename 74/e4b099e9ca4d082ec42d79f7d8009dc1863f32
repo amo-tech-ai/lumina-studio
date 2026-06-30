@@ -1,0 +1,22 @@
+app/src/lib/route-agent-map.test.ts
+  s_496c3278139cd3::t_dbde2e0b99a684 16,19-23
+app/src/lib/route-agent-map.ts
+  s_496c3278139cd3::t_683b4c290295a0 12-15
+  s_496c3278139cd3::t_e4457a0f7433fb 1-2
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.4",
+  "base_commit_sha": "74e4b099e9ca4d082ec42d79f7d8009dc1863f32",
+  "prompts": {},
+  "sessions": {
+    "s_496c3278139cd3": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "55815c1f-c0e9-4277-98ba-8d4f4f591490",
+        "model": "composer-2.5"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
