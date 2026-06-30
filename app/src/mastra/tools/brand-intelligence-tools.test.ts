@@ -6,8 +6,17 @@ vi.mock("./edge", () => ({
   callEdgeFunction: vi.fn().mockResolvedValue({ runId: "run-abc123" }),
   EdgeFunctionError: class EdgeFunctionError extends Error {},
 }));
+const mockGetStore = vi.fn(() => "tok");
 vi.mock("@/lib/request-token", () => ({
-  requestToken: { getStore: () => "tok" },
+  requestToken: { getStore: (...args: unknown[]) => mockGetStore(...args) },
+}));
+vi.mock("@/lib/brand/process-draft-approval", () => ({
+  PENDING_DRAFT_STATUS: "pending_approval",
+  processBrandIntelligenceDraftApproval: vi.fn().mockResolvedValue({
+    ok: true,
+    approved: true,
+    brandId: "11111111-1111-1111-1111-111111111111",
+  }),
 }));
 vi.mock("@ai-sdk/openai-compatible", () => ({
   createOpenAICompatible: vi.fn(() => vi.fn(() => "mock-model")),
@@ -18,6 +27,7 @@ vi.mock("@ai-sdk/google", () => ({
 
 import { createClient } from "@supabase/supabase-js";
 import { callEdgeFunction } from "./edge";
+import { processBrandIntelligenceDraftApproval } from "@/lib/brand/process-draft-approval";
 import {
   approveDraftTool,
   explainPillarTool,
@@ -28,6 +38,7 @@ import {
 } from "./brand-intelligence-tools";
 
 process.env.NEXT_PUBLIC_SUPABASE_URL = "https://test.supabase.co";
+process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = "test-anon-key";
 process.env.SUPABASE_SERVICE_ROLE_KEY = "test-key";
 
 const BRAND_ID = "11111111-1111-1111-1111-111111111111";
@@ -93,14 +104,13 @@ function makeMockClient(overrides: Partial<ReturnType<typeof makeMockClient>> = 
 }
 
 beforeEach(() => {
+  mockGetStore.mockReturnValue("tok");
   vi.mocked(createClient).mockReturnValue(makeMockClient() as never);
-  vi.stubGlobal(
-    "fetch",
-    vi.fn().mockResolvedValue({
-      ok: true,
-      json: async () => ({ ok: true, approved: true }),
-    }),
-  );
+  vi.mocked(processBrandIntelligenceDraftApproval).mockResolvedValue({
+    ok: true,
+    approved: true,
+    brandId: BRAND_ID,
+  });
 });
 
 describe("normalizePillar", () => {
@@ -183,7 +193,21 @@ describe("explainPillarTool", () => {
 });
 
 describe("approveDraftTool", () => {
-  it("POSTs to approve route with workflow run id from pending draft", async () => {
+  it("calls shared draft approval with workflow run id from pending draft", async () => {
+    vi.mocked(createClient).mockImplementation(((url: string, key: string) => {
+      if (key === "test-anon-key") {
+        return {
+          auth: {
+            getUser: vi.fn().mockResolvedValue({
+              data: { user: { id: "user-1" } },
+              error: null,
+            }),
+          },
+        };
+      }
+      return makeMockClient();
+    }) as never);
+
     const result = await approveDraftTool.execute!(
       { brandId: BRAND_ID, approved: true },
       {} as never,
@@ -191,14 +215,19 @@ describe("approveDraftTool", () => {
     const r = result as Awaited<ReturnType<typeof approveDraftTool.execute>>;
     expect(r!.ok).toBe(true);
     expect(r!.approved).toBe(true);
-    expect(vi.mocked(fetch)).toHaveBeenCalledWith(
-      "http://localhost:3002/api/workflows/brand-intelligence/approve",
-      expect.objectContaining({
-        method: "POST",
-        headers: expect.objectContaining({ Authorization: "Bearer tok" }),
-        body: JSON.stringify({ runId: "run-draft-1", approved: true }),
-      }),
-    );
+    expect(vi.mocked(processBrandIntelligenceDraftApproval)).toHaveBeenCalledWith({
+      runId: "run-draft-1",
+      approved: true,
+      operatorId: "user-1",
+    });
+  });
+
+  it("throws when access token is missing", async () => {
+    mockGetStore.mockReturnValueOnce(undefined as never);
+
+    await expect(
+      approveDraftTool.execute!({ brandId: BRAND_ID, approved: true }, {} as never),
+    ).rejects.toThrow(/Access token not available/);
   });
 
   it("throws when no pending draft exists", async () => {

@@ -5,6 +5,7 @@ import { createTool } from "@mastra/core/tools";
 import { createClient } from "@supabase/supabase-js";
 import { z } from "zod";
 import { parseScoreDetails } from "@/lib/brand-hub";
+import { processBrandIntelligenceDraftApproval, PENDING_DRAFT_STATUS } from "@/lib/brand/process-draft-approval";
 import { scoreLabel } from "@/lib/brand-utils";
 import { requestToken } from "@/lib/request-token";
 import { callEdgeFunction } from "./edge";
@@ -16,12 +17,14 @@ function adminClient() {
   return createClient(url, key, { auth: { persistSession: false } });
 }
 
-function resolveAppOrigin(): string {
-  const explicit = process.env.NEXT_PUBLIC_APP_URL;
-  if (explicit) return explicit.replace(/\/$/, "");
-  const vercel = process.env.VERCEL_URL;
-  if (vercel) return `https://${vercel.replace(/\/$/, "")}`;
-  return "http://localhost:3002";
+async function resolveOperatorId(accessToken: string): Promise<string> {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const anon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  if (!url || !anon) throw new Error("Supabase client env vars not set");
+  const sb = createClient(url, anon, { auth: { persistSession: false } });
+  const { data: { user }, error } = await sb.auth.getUser(accessToken);
+  if (error || !user) throw new Error("Access token not available in request context");
+  return user.id;
 }
 
 const PILLAR_ALIASES: Record<string, string> = {
@@ -236,7 +239,7 @@ export const approveDraftTool = createTool({
       .from("brand_intake_drafts")
       .select("draft_profile")
       .eq("brand_id", brandId)
-      .eq("status", "pending_approval")
+      .eq("status", PENDING_DRAFT_STATUS)
       .maybeSingle();
     if (lookupErr) throw new Error(`Failed to look up pending draft: ${lookupErr.message}`);
 
@@ -245,18 +248,16 @@ export const approveDraftTool = createTool({
       throw new Error("No pending draft awaiting approval for this brand");
     }
 
-    const res = await fetch(`${resolveAppOrigin()}/api/workflows/brand-intelligence/approve`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${accessToken}`,
-      },
-      body: JSON.stringify({ runId, approved }),
-    });
+    const operatorId = await resolveOperatorId(accessToken);
 
-    const body = (await res.json().catch(() => ({}))) as { error?: string };
-    if (!res.ok) {
-      throw new Error(body.error ?? `Approve request failed (${res.status})`);
+    const result = await processBrandIntelligenceDraftApproval({
+      runId,
+      approved,
+      operatorId,
+    });
+    if (!result.ok) throw new Error(result.error);
+    if (result.brandId !== brandId) {
+      throw new Error("Draft does not belong to this brand");
     }
 
     return {
