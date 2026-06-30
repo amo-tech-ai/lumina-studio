@@ -5,7 +5,7 @@ import { createTool } from "@mastra/core/tools";
 import { createClient } from "@supabase/supabase-js";
 import { z } from "zod";
 import { parseScoreDetails } from "@/lib/brand-hub";
-import { processBrandIntelligenceDraftApproval, PENDING_DRAFT_STATUS } from "@/lib/brand/process-draft-approval";
+import { processBrandIntelligenceDraftApproval, PENDING_DRAFT_STATUS } from "@/app/api/_lib/process-draft-approval";
 import { scoreLabel } from "@/lib/brand-utils";
 import { requestToken } from "@/lib/request-token";
 import { callEdgeFunction } from "./edge";

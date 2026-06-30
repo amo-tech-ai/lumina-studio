@@ -1,24 +1,16 @@
-import { createClient } from "@supabase/supabase-js";
 import { getMastra } from "@/mastra";
+import { createSupabaseAdminClient } from "@/app/api/_lib/supabase-admin";
 import { discardBrandDraft } from "@/lib/brand/discard-draft";
 import { promoteBrandDraft } from "@/lib/brand/promote-draft";
 
 export const PENDING_DRAFT_STATUS = "pending_approval";
-
-function adminClient() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    { auth: { persistSession: false } },
-  );
-}
 
 export type ProcessDraftApprovalResult =
   | { ok: true; approved: boolean; brandId: string }
   | { ok: false; error: string };
 
 async function rollbackDraftRow(draftId: string) {
-  await adminClient()
+  await createSupabaseAdminClient()
     .from("brand_intake_drafts")
     .update({
       status: PENDING_DRAFT_STATUS,
@@ -39,7 +31,7 @@ export async function processBrandIntelligenceDraftApproval(params: {
   operatorId: string;
 }): Promise<ProcessDraftApprovalResult> {
   const { runId, approved, operatorId } = params;
-  const sb = adminClient();
+  const sb = createSupabaseAdminClient();
 
   const { data: draft, error: lookupErr } = await sb
     .from("brand_intake_drafts")
@@ -88,9 +80,8 @@ export async function processBrandIntelligenceDraftApproval(params: {
     const run = await getMastra().getWorkflow("brand-intelligence").createRun({ runId });
     await run.resume({ step: "save-draft-and-wait", resumeData: { approved } });
   } catch (resumeErr) {
-    await rollbackDraftRow(draft.id);
-    const message = resumeErr instanceof Error ? resumeErr.message : "Workflow resume failed";
-    return { ok: false, error: message };
+    // Best-effort: profile already promoted/discarded — do not rollback draft row.
+    console.error("[process-draft-approval] resume failed (profile already applied):", resumeErr);
   }
 
   return { ok: true, approved, brandId: draft.brand_id };

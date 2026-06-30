@@ -2,7 +2,7 @@
 // POST { runId: string, approved: boolean }
 import { NextResponse } from "next/server";
 import { withOperatorAuth, OperatorAuthError } from "@/lib/operator-gate";
-import { processBrandIntelligenceDraftApproval } from "@/lib/brand/process-draft-approval";
+import { processBrandIntelligenceDraftApproval } from "@/app/api/_lib/process-draft-approval";
 
 export const dynamic = "force-dynamic";
 

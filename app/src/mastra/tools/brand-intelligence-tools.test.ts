@@ -10,7 +10,7 @@ const mockGetStore = vi.fn(() => "tok");
 vi.mock("@/lib/request-token", () => ({
   requestToken: { getStore: (...args: unknown[]) => mockGetStore(...args) },
 }));
-vi.mock("@/lib/brand/process-draft-approval", () => ({
+vi.mock("@/app/api/_lib/process-draft-approval", () => ({
   PENDING_DRAFT_STATUS: "pending_approval",
   processBrandIntelligenceDraftApproval: vi.fn().mockResolvedValue({
     ok: true,
@@ -27,7 +27,7 @@ vi.mock("@ai-sdk/google", () => ({
 
 import { createClient } from "@supabase/supabase-js";
 import { callEdgeFunction } from "./edge";
-import { processBrandIntelligenceDraftApproval } from "@/lib/brand/process-draft-approval";
+import { processBrandIntelligenceDraftApproval } from "@/app/api/_lib/process-draft-approval";
 import {
   approveDraftTool,
   explainPillarTool,
