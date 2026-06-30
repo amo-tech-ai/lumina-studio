@@ -1,0 +1,40 @@
+app/src/lib/intelligence/use-intelligence-panel.ts
+  s_496c3278139cd3::t_503eaf9a8c701c 1-63
+app/src/components/intelligence-panel/intelligence-panel.tsx
+  s_496c3278139cd3::t_2383d97ace9469 4,6,9,25,31-45
+app/src/components/intelligence-panel/approvals-section.tsx
+  s_496c3278139cd3::t_8acab18a972c40 1-37
+app/src/components/intelligence-panel/intelligence-panel.module.css
+  s_496c3278139cd3::t_798a03fd9f4f23 14
+app/src/app/api/intelligence/panel/route.ts
+  s_496c3278139cd3::t_c719eee18f08a4 1-82
+app/src/lib/intelligence/build-panel-data.ts
+  s_496c3278139cd3::t_beed8cae420dd6 4,20
+  s_496c3278139cd3::t_7e5d5dad0ac456 21-25
+  s_496c3278139cd3::t_56ea60ac2b341e 1-3,5-19,26-53
+app/src/components/intelligence-panel/dna-scores-section.tsx
+  s_496c3278139cd3::t_ef0c1c6664b3b8 1-44
+app/src/lib/intelligence/build-panel-data.test.ts
+  s_496c3278139cd3::t_9f166ca4634c70 1-48
+app/src/app/api/intelligence/panel/route.test.ts
+  s_496c3278139cd3::t_7d29a115d4259a 55-93
+  s_496c3278139cd3::t_352dae625b76ab 1-54,94-106
+app/src/lib/intelligence/panel-contract.ts
+  s_496c3278139cd3::t_4e0785f7cbae1c 1-24
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.4",
+  "base_commit_sha": "2cde0fe1cbff6cf5fcb0195e44400730a20b107b",
+  "prompts": {},
+  "sessions": {
+    "s_496c3278139cd3": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "55815c1f-c0e9-4277-98ba-8d4f4f591490",
+        "model": "composer-2.5"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
