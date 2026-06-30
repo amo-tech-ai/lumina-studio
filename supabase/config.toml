@@ -423,3 +423,9 @@ verify_jwt = true
 
 [functions.firecrawl-webhook]
 verify_jwt = false
+
+[functions.capture-lead]
+verify_jwt = false
+
+[functions.audit-asset-dna]
+verify_jwt = true
