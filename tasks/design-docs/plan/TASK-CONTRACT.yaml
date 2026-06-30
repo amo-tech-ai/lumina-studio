@@ -1,0 +1,66 @@
+# Task execution contract — copy into Linear issue + docs/linear/issues/IPI-*.md
+# Mandatory for all implementation tasks (UI · API · DB · refactor).
+# Docs-only tasks: skills + acceptance + verify only.
+
+id: DESIGN-XXX | IPI-XXX
+title: ""
+type: ui-screen | wizard | api | database | refactor | docs  # see artifact matrix in TASK-EXECUTION-GUIDE.md
+
+skills:
+  - design-md
+  - ipix-task-lifecycle
+  # + domain: mastra | copilotkit | ipix-supabase | fashion-production
+
+dependencies:
+  - DESIGN-010
+  - DESIGN-030
+
+components:
+  - OperatorShell
+  - ApprovalCard
+  # from COMPONENT-LIBRARY.md — no one-offs without DESIGN-* task
+
+design:
+  source: design.md
+  handoff: docs/handoff/02-screen-map.md §N
+  tokens: required
+  spacing: required
+  typography: required
+  three_panel: required
+  hitl: required | n/a
+
+wireframe: handoff/02 §N | ASCII in Linear | n/a
+mermaid: sequenceDiagram | flowchart | n/a
+
+linear: IPI-XXX
+acceptance:
+  A: ""
+  B: ""
+  C: ""
+  D: ""
+  E: ""
+
+steps:
+  A: scaffold
+  B: core
+  C: states
+  D: tests
+  E: verify-ship
+
+verify:
+  build: cd app && npm run lint && npm test && npm run build
+  rls: infisical run -- npm run supabase:verify-rls  # if DB
+  browser: manual npm run dev :3002 — desktop + 375px  # before Playwright
+  design_review: DESIGN-REVIEW-CHECKLIST.md + design.md §4  # before Playwright
+  playwright: path/to/spec or n/a
+  done_gate: task-verifier
+
+evidence:
+  - build          # CI URL or local exit 0
+  - browser_screenshot_desktop
+  - browser_screenshot_mobile
+  - design_review  # checklist pasted or PR comment
+  - playwright     # file path or n/a
+  - task_verifier  # report in PR
+
+done_gate: task-verifier  # mandatory — no Done without report

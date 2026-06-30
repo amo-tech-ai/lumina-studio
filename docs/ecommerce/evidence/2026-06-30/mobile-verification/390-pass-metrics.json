@@ -1,0 +1,104 @@
+import puppeteer from "puppeteer-core";
+import { writeFileSync } from "node:fs";
+
+const BASE = "http://127.0.0.1:8765/";
+const SCREENS = [
+  ["onboarding", "Onboarding.v2.zeely.dc.html", false],
+  ["shoot-wizard", "Shoot Wizard.v2.image-first.dc.html", false],
+  ["shoot-detail", "Shoot Detail.v2.image-first.dc.html", true],
+  ["assets", "Assets.v2.image-first.dc.html", true],
+  ["channel-preview", "Channel Preview.v2.image-first.dc.html", true],
+  ["matching", "Matching.v2.image-first.dc.html", true],
+  ["campaigns", "Campaigns.v2.image-first.dc.html", true],
+  ["command-center", "Command Center.v2.image-first.dc.html", true],
+  ["brand-detail", "Brand Detail.v2.image-first.dc.html?id=nike", true],
+  ["brand-list", "Brand List.v2.image-first.dc.html", true],
+  ["shoots-list", "Shoots List.v2.image-first.dc.html", true],
+];
+
+const browser = await puppeteer.launch({
+  executablePath: "/usr/bin/chromium-browser",
+  headless: true,
+  args: ["--no-sandbox"],
+});
+
+const context = await browser.createBrowserContext();
+const page = await context.newPage();
+await page.setViewport({ width: 390, height: 844, deviceScaleFactor: 2, isMobile: true });
+
+const results = [];
+
+for (const [slug, file, expectsShell] of SCREENS) {
+  const errors = [];
+  page.removeAllListeners("pageerror");
+  page.removeAllListeners("console");
+  page.on("pageerror", (e) => errors.push(e.message));
+  page.on("console", (m) => {
+    if (m.type() === "error") errors.push(m.text());
+  });
+
+  await page.goto(BASE + encodeURI(file), { waitUntil: "networkidle2", timeout: 45000 }).catch((e) =>
+    errors.push(String(e.message)),
+  );
+  await new Promise((r) => setTimeout(r, 2000));
+
+  const m = await page.evaluate((expectsShell) => {
+    const doc = document.documentElement;
+    const moreLabel = document.querySelector('label[for="m-more"]');
+    const tabTexts = Array.from(document.querySelectorAll("button, a")).map((n) =>
+      (n.textContent || "").trim(),
+    );
+    const hasTabs =
+      !!moreLabel ||
+      ["Home", "Shoots", "Assets", "Brands"].every((t) => tabTexts.some((x) => x.includes(t)));
+    const chatInput = Array.from(document.querySelectorAll("input, textarea")).find((el) =>
+      /ask|message|chat/i.test(el.getAttribute("placeholder") || ""),
+    );
+    const smallTargets = Array.from(document.querySelectorAll("button, a, [role=button]")).filter(
+      (el) => {
+        const r = el.getBoundingClientRect();
+        return r.width > 0 && r.height > 0 && (r.width < 44 || r.height < 44);
+      },
+    ).length;
+
+    return {
+      overflow: doc.scrollWidth > doc.clientWidth + 1,
+      scrollW: doc.scrollWidth,
+      clientW: doc.clientWidth,
+      hasBottomNav: hasTabs,
+      hasChatDock: !!chatInput || tabTexts.some((t) => /ask/i.test(t)),
+      smallTouchTargets: smallTargets,
+      expectsShell,
+    };
+  }, expectsShell);
+
+  const findings = [];
+  if (m.overflow) findings.push({ sev: "critical", note: "Horizontal overflow" });
+  if (expectsShell && !m.hasBottomNav)
+    findings.push({ sev: "major", note: "Bottom nav / More sheet not detected at 390px" });
+  if (expectsShell && !m.hasChatDock)
+    findings.push({ sev: "minor", note: "Chat dock input not detected (may be collapsed)" });
+  if (m.smallTouchTargets > 8)
+    findings.push({ sev: "minor", note: `${m.smallTouchTargets} controls <44px touch target` });
+  if (errors.length) findings.push({ sev: "major", note: `Console: ${errors[0]}` });
+
+  let overall = "pass";
+  if (findings.some((f) => f.sev === "critical")) overall = "critical";
+  else if (findings.some((f) => f.sev === "major")) overall = "major";
+  else if (findings.findings?.length) overall = "minor";
+
+  results.push({
+    slug,
+    file,
+    viewport: 390,
+    ...m,
+    consoleErrors: [...new Set(errors)].slice(0, 5),
+    findings,
+    overall: findings.length === 0 ? "pass" : findings.some((f) => f.sev === "critical") ? "critical" : findings.some((f) => f.sev === "major") ? "major" : "minor",
+  });
+}
+
+await browser.close();
+const out = "/home/sk/ipix/docs/ecommerce/evidence/2026-06-30/mobile-verification/390-pass-metrics.json";
+writeFileSync(out, JSON.stringify(results, null, 2));
+console.log(JSON.stringify(results, null, 2));
