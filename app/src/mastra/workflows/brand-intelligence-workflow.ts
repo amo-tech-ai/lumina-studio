@@ -4,6 +4,10 @@ import { createStep, createWorkflow } from "@mastra/core/workflows";
 import { createClient } from "@supabase/supabase-js";
 import { z } from "zod";
 import { socialDiscoveryAgent, visualIdentityAgent } from "../agents";
+import { discardBrandDraft } from "@/lib/brand/discard-draft";
+import { promoteBrandDraft } from "@/lib/brand/promote-draft";
+
+const IDEMPOTENT_DRAFT_STATE_ERROR = "Brand is not in draft_ready state";
 
 function adminClient() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -241,7 +245,7 @@ const saveDraftAndWait = createStep({
   },
 });
 
-// Step 7: commit (approved → ready) or reject (failed)
+// Step 7: commit (approved → promote) or reject (discard) — idempotent with HITL handlers
 const commitOrReject = createStep({
   id: "commit-or-reject",
   inputSchema: z.object({ draftId: z.string() }),
@@ -258,16 +262,31 @@ const commitOrReject = createStep({
     if (draftErr) throw new Error(`Failed to read draft: ${draftErr.message}`);
 
     const approved = draft?.status === "approved";
-    const finalStatus = approved ? "ready" : "failed";
 
-    const { error: updateErr } = await sb
+    if (approved) {
+      const promoteResult = await promoteBrandDraft(sb, brandId);
+      if (!promoteResult.ok && promoteResult.error !== IDEMPOTENT_DRAFT_STATE_ERROR) {
+        throw new Error(`Failed to promote draft: ${promoteResult.error}`);
+      }
+    } else {
+      const discardResult = await discardBrandDraft(sb, brandId);
+      if (!discardResult.ok && discardResult.error !== IDEMPOTENT_DRAFT_STATE_ERROR) {
+        throw new Error(`Failed to discard draft: ${discardResult.error}`);
+      }
+    }
+
+    const { data: brand, error: brandErr } = await sb
       .from("brands")
-      .update({ intake_status: finalStatus, updated_at: new Date().toISOString() })
-      .eq("id", brandId);
-    if (updateErr) throw new Error(`Failed to update brand status: ${updateErr.message}`);
+      .select("intake_status")
+      .eq("id", brandId)
+      .single();
+    if (brandErr) throw new Error(`Failed to read brand status: ${brandErr.message}`);
 
-    console.info(`[brand-intelligence:${runId}] ${approved ? "committed" : "rejected"} brand ${brandId}`);
-    return { status: finalStatus };
+    const status = brand?.intake_status ?? (approved ? "ready" : "brand_created");
+    console.info(
+      `[brand-intelligence:${runId}] ${approved ? "committed" : "rejected"} brand ${brandId} → ${status}`,
+    );
+    return { status };
   },
 });
 
