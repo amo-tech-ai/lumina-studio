@@ -146,6 +146,7 @@
   /* --- Radius --- */
   --radius-sm:   0.375rem;   /* 6px  — chips, small controls */
   --radius-md:   0.625rem;   /* 10px — buttons, small thumbnails */
+  --radius:      var(--radius-md); /* shadcn / legacy alias */
   --radius-lg:   1rem;       /* 16px — inner surfaces */
   --radius-xl:   1.25rem;    /* 20px — cards, images, feature panels (v3 default) */
   --radius-pill: 9999px;     /* hero CTAs, pill chips */
