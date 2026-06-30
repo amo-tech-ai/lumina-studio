@@ -26,7 +26,7 @@
 
 ```bash
 cd app
-npx vitest run src/app/api/copilotkit/[[...slug]]/route.runtime.test.ts  → 5/5
+npx vitest run "src/app/api/copilotkit/[[...slug]]/route.runtime.test.ts"  → 5/5
 npm run typecheck                                                      → exit 0
 npm run build                                                          → exit 0
 
