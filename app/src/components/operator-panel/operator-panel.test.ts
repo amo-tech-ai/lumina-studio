@@ -84,4 +84,9 @@ describe("OperatorPanel — internal tool call hiding (AIOR-016)", () => {
     expect(PANEL_SRC).toMatch(/messageView=\{hiddenInternalToolsMessageView\}/);
     expect(PANEL_SRC).toMatch(/hiddenInternalToolsMessageView/);
   });
+
+  it("wraps CopilotSidebar in IntelligencePanel (IPI-243)", () => {
+    expect(PANEL_SRC).toMatch(/<IntelligencePanel/);
+    expect(PANEL_SRC).toMatch(/brandName=\{activeBrandName\}/);
+  });
 });
