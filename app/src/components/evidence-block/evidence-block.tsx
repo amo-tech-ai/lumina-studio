@@ -2,6 +2,7 @@
 
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { scoreColor } from "@/lib/brand-utils";
 import { cn } from "@/lib/utils";
 import type { EvidenceBlockProps } from "./types";
 
@@ -16,10 +17,8 @@ function confidenceDotClass(confidence: number): string {
   return "bg-[#94A3B8]";
 }
 
-function scoreColor(score: number): string {
-  if (score >= 85) return "#059669";
-  if (score >= 70) return "#D97706";
-  return "#DC2626";
+function formatGain(gain: number): string {
+  return gain >= 0 ? `+${gain}` : `${gain}`;
 }
 
 function Section({
@@ -61,6 +60,7 @@ export function EvidenceBlock({
   onApprove,
   onImprove,
   onRegenerate,
+  loading = false,
   className,
 }: EvidenceBlockProps) {
   const hasPotential = potential !== undefined && potential > score;
@@ -198,7 +198,7 @@ export function EvidenceBlock({
               >
                 <span>{s.text}</span>
                 <span className="shrink-0 font-semibold tabular-nums text-[#059669]">
-                  +{s.gain}
+                  {formatGain(s.gain)}
                 </span>
               </div>
             ))}
@@ -242,17 +242,17 @@ export function EvidenceBlock({
       {(onApprove || onImprove || onRegenerate) && (
         <div className="flex flex-wrap gap-2 px-[18px] py-4">
           {onApprove ? (
-            <Button type="button" variant="default" onClick={onApprove}>
+            <Button type="button" variant="default" onClick={onApprove} disabled={loading}>
               Approve fixes
             </Button>
           ) : null}
           {onImprove ? (
-            <Button type="button" variant="outline" onClick={onImprove}>
+            <Button type="button" variant="outline" onClick={onImprove} disabled={loading}>
               Improve
             </Button>
           ) : null}
           {onRegenerate ? (
-            <Button type="button" variant="ghost" onClick={onRegenerate}>
+            <Button type="button" variant="ghost" onClick={onRegenerate} disabled={loading}>
               Regenerate
             </Button>
           ) : null}

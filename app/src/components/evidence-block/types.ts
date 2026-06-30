@@ -22,5 +22,6 @@ export type EvidenceBlockProps = {
   onApprove?: () => void;
   onImprove?: () => void;
   onRegenerate?: () => void;
+  loading?: boolean;
   className?: string;
 };

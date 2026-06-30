@@ -94,6 +94,43 @@ describe("EvidenceBlock", () => {
     expect(live?.textContent).toContain("potential 84");
   });
 
+  it("uses shared brand-utils scoreColor thresholds", () => {
+    render(
+      <EvidenceBlock title="Score color" score={75} confidence={80} why="Test" />,
+    );
+    const scoreEl = screen.getByText("75");
+    expect(scoreEl.getAttribute("style")).toMatch(/059669|rgb\(5,\s*150,\s*105\)/);
+  });
+
+  it("formats negative suggestion gain without double sign", () => {
+    render(
+      <EvidenceBlock
+        title="Gain"
+        score={70}
+        confidence={80}
+        why="Test"
+        suggestions={[{ text: "Reduce saturation", gain: -3 }]}
+      />,
+    );
+    expect(screen.getByText("-3")).toBeTruthy();
+    expect(screen.queryByText("+-3")).toBeNull();
+  });
+
+  it("disables action buttons while loading", () => {
+    render(
+      <EvidenceBlock
+        {...baseProps}
+        loading
+        onApprove={() => undefined}
+        onImprove={() => undefined}
+        onRegenerate={() => undefined}
+      />,
+    );
+    expect(screen.getByRole("button", { name: "Approve fixes" }).hasAttribute("disabled")).toBe(true);
+    expect(screen.getByRole("button", { name: "Improve" }).hasAttribute("disabled")).toBe(true);
+    expect(screen.getByRole("button", { name: "Regenerate" }).hasAttribute("disabled")).toBe(true);
+  });
+
   it("fires action callbacks", () => {
     const onApprove = vi.fn();
     const onImprove = vi.fn();
