@@ -1,0 +1,19 @@
+app/src/mastra/index.ts
+  s_118fd3beda84f7::t_b7a104755c97e6 5
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.4",
+  "base_commit_sha": "705e18552d915086aef07c7e91b25f8183332e67",
+  "prompts": {},
+  "sessions": {
+    "s_118fd3beda84f7": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "418d7d78-c4df-454c-9efe-9c9bcb747a8b",
+        "model": "unknown"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
