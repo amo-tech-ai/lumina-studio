@@ -1,0 +1,32 @@
+e2e/helpers/mobile-audit.ts
+  s_496c3278139cd3::t_d628e2349617c8 1-40
+playwright.config.ts
+  s_496c3278139cd3::t_5d3182a76ebf9e 3-9,12,20-31
+e2e/05-mobile-operator-matrix.spec.ts
+  s_496c3278139cd3::t_8ccd08929f7ecf 1-33
+package.json
+  s_496c3278139cd3::t_7b833ced6db964 8-9
+  s_496c3278139cd3::t_d9707025cdfce6 22-24
+app/src/components/operator-panel/operator-shell.module.css
+  s_496c3278139cd3::t_8e204a91ff1420 60,66-68
+  s_496c3278139cd3::t_b153d02fe76368 16
+  s_496c3278139cd3::t_26a2f0e5cb6f04 69
+package-lock.json
+  s_496c3278139cd3::t_f916d0de071746 12-30,117-131,141-172
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.4",
+  "base_commit_sha": "bceefe6562c9a3e0eb036d800367cbd591121997",
+  "prompts": {},
+  "sessions": {
+    "s_496c3278139cd3": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "55815c1f-c0e9-4277-98ba-8d4f4f591490",
+        "model": "composer-2.5"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
