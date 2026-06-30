@@ -18,7 +18,7 @@ export function MarketingFooter() {
           <div className="mt-4 flex gap-4">
             <a href="https://instagram.com" aria-label="Instagram"><Instagram className="h-5 w-5" /></a>
             <a href="https://linkedin.com" aria-label="LinkedIn"><Linkedin className="h-5 w-5" /></a>
-            <a href="mailto:hello@fashionos.co" aria-label="Email"><Mail className="h-5 w-5" /></a>
+            <a href="mailto:sk@ipix.co" aria-label="Email"><Mail className="h-5 w-5" /></a>
           </div>
         </div>
 

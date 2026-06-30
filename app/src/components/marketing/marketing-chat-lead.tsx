@@ -76,7 +76,7 @@ export function LeadResultView({
   return (
     <p className="px-3 py-2 text-sm text-red-500">
       Submission failed — please{" "}
-      <a href="mailto:hello@fashionos.co" className="underline">
+      <a href="mailto:sk@ipix.co" className="underline">
         email us
       </a>
       .

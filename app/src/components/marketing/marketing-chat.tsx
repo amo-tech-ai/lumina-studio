@@ -86,7 +86,7 @@ function LeadResultView({
   return (
     <p className="px-3 py-2 text-sm text-red-500">
       Submission failed — please{" "}
-      <a href="mailto:hello@fashionos.co" className="underline">
+      <a href="mailto:sk@ipix.co" className="underline">
         email us
       </a>
       .
@@ -161,7 +161,7 @@ class ChatErrorBoundary extends Component<{ children: ReactNode }, { error: bool
           className="fixed bottom-4 right-4 z-50 max-w-xs rounded-lg border bg-white p-4 shadow-lg text-sm text-gray-600"
         >
           Chat is temporarily unavailable.{" "}
-          <a href="mailto:hello@fashionos.co" className="underline text-orange-600">
+          <a href="mailto:sk@ipix.co" className="underline text-orange-600">
             Email us
           </a>{" "}
           instead.

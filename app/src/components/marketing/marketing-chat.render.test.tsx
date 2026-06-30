@@ -85,6 +85,6 @@ describe("MarketingChat — error boundary behavior", () => {
     });
     expect(screen.getByText(/Chat is temporarily unavailable/i)).toBeTruthy();
     const mailto = screen.getByRole("link", { name: /email us/i });
-    expect(mailto.getAttribute("href")).toBe("mailto:hello@fashionos.co");
+    expect(mailto.getAttribute("href")).toBe("mailto:sk@ipix.co");
   });
 });
