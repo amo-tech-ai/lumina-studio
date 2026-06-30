@@ -1,0 +1,45 @@
+tasks/intelligence/audits/01-supabase-audit-2026-06-30.md
+  s_496c3278139cd3::t_f06cb3e0b10623 105
+  s_496c3278139cd3::t_8ed803b1e55a2a 106
+  s_496c3278139cd3::t_b6f36409a21dec 108
+  s_496c3278139cd3::t_3e0b643066f299 138-140
+  s_496c3278139cd3::t_34168c43291cdc 294-300
+  s_496c3278139cd3::t_f29d24e980d97d 23
+  s_496c3278139cd3::t_7c03395ade0756 20-21,24,26
+  s_496c3278139cd3::t_8fd024039bcbab 144
+  s_496c3278139cd3::t_238333a3b7ae25 116
+  s_496c3278139cd3::t_ad221e4551e2fa 76
+  s_496c3278139cd3::t_dfdb923c9300a5 8
+  s_496c3278139cd3::t_fa01e434fdef2e 1-7,9-13,15-19,22,25,27-49,51-54,56-75,77-82,84-104,107,109-115,117-137,141-143,145-293,301-305,360-378
+  s_496c3278139cd3::t_03ad2c9fda8630 14
+  s_496c3278139cd3::t_bb63afaf7f9e87 55
+  s_496c3278139cd3::t_65aeea3fde0402 83
+  s_496c3278139cd3::t_25eb33461b2a06 306-326,328-359
+  s_496c3278139cd3::t_71a70bfe6f5f95 50
+  s_496c3278139cd3::t_0bb33048f3add2 327
+tasks/intelligence/audits/notes-supa.md
+  s_496c3278139cd3::t_5fed4d4f6e3dd8 3
+  h_d382fbec1d5b46 1-2,4-57,59-60
+  s_496c3278139cd3::t_cc53c9dd3485f6 58
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.4",
+  "base_commit_sha": "cf9b07cab9d5c559a166dea14f7944a9fdadb42a",
+  "prompts": {},
+  "humans": {
+    "h_d382fbec1d5b46": {
+      "author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  },
+  "sessions": {
+    "s_496c3278139cd3": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "55815c1f-c0e9-4277-98ba-8d4f4f591490",
+        "model": "composer-2.5"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
