@@ -1,0 +1,26 @@
+.claude/commands/pr-fix.md
+  s_2e2ca317dec1f8::t_ac7e70b63c28c6 38-102
+  s_2e2ca317dec1f8::t_1350f11f61e311 297,299-300
+  s_2e2ca317dec1f8::t_3ce0f5b18dbb38 314-315
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.6",
+  "base_commit_sha": "479f151ab99fe4f241c34bdac8e8a69a3cda6950",
+  "prompts": {},
+  "humans": {
+    "h_d382fbec1d5b46": {
+      "author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  },
+  "sessions": {
+    "s_2e2ca317dec1f8": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "354d6759-8d40-497b-94f4-4ed07c5f2ab7",
+        "model": "composer-2.5"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
