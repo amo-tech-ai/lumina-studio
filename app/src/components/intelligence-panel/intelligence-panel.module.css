@@ -1,14 +1,23 @@
 .panel {
   display: flex;
   flex-direction: column;
+  width: 20rem;
   height: 100dvh;
   min-width: 0;
   background: var(--card);
+  border-left: 1px solid var(--border);
+  overflow: hidden;
 }
 
 .briefing {
   flex-shrink: 0;
   border-bottom: 1px solid var(--border);
+}
+
+.briefingOnly {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
 }
 
 .insights {

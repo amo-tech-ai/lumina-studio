@@ -2,30 +2,28 @@
 
 // IPI-110 — 3-panel shell: left NavSidebar (collapsed) · center workspace · right IntelligencePanel.
 // IPI-218 — ActiveBrandContext wired: brand switcher in left nav, useAgentContext exposes activeBrandId
-//           so agents never ask "which brand?". IPI-243 — IntelligencePanel briefing + CopilotSidebar.
-// IPI-197 — Contextual copilot sidebar: dynamic welcome + route-specific suggestion chips.
+//           so agents never ask "which brand?". IPI-243 — IntelligencePanel briefing (no chat in right column).
+// IPI-197 — Contextual copilot dock: dynamic welcome + route-specific suggestion chips in center column.
 
 import {
   useAgentContext,
   useConfigureSuggestions,
   useFrontendTool,
-  CopilotSidebar,
   CopilotChatConfigurationProvider,
 } from "@copilotkit/react-core/v2";
-import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import { z } from "zod";
 
-import {
-  hiddenInternalToolsMessageView,
-  useHideInternalToolCalls,
-} from "@/components/copilot/copilot-tool-presentation";
+import { useHideInternalToolCalls } from "@/components/copilot/copilot-tool-presentation";
 import { IntelligencePanel } from "@/components/intelligence-panel";
 import { ThreadsDrawer } from "@/components/threads-drawer";
 import { ThreadsPanelGate } from "@/components/threads-drawer/locked-state";
 import { ActiveBrandProvider, useActiveBrand } from "@/context/active-brand-context";
+import { DEV_PREVIEW_HERO_BRAND_ID, isDevPreviewBrandId, isDevSkipMode } from "./dev-skip-fixture";
 import { NavSidebar } from "./nav-sidebar";
-import type { Brand } from "./nav-sidebar";
+import { OperatorChatDock } from "./operator-chat-dock";
+import { useOperatorBrands } from "./use-operator-brands";
 import styles from "./operator-shell.module.css";
 import { resolveAgentId } from "@/lib/route-agent-map";
 import { routeBrandId, routeShootId } from "@/lib/intelligence/normalize-route-path";
@@ -43,12 +41,26 @@ export function OperatorPanel({ children }: { children: React.ReactNode }) {
     <ActiveBrandProvider>
       <CopilotChatConfigurationProvider agentId={agentId} threadId={threadId}>
         <div data-agent-id={agentId} style={{ display: "contents" }}>
-          <OperatorShell agentId={agentId} threadId={threadId} onThreadChange={setThreadId}>
-            {children}
-          </OperatorShell>
+          <Suspense fallback={<OperatorShellFallback agentId={agentId} />}>
+            <OperatorShell agentId={agentId} threadId={threadId} onThreadChange={setThreadId}>
+              {children}
+            </OperatorShell>
+          </Suspense>
         </div>
       </CopilotChatConfigurationProvider>
     </ActiveBrandProvider>
+  );
+}
+
+function OperatorShellFallback({ agentId }: { agentId: string }) {
+  return (
+    <div className={styles.shell} data-agent-id={agentId} aria-busy="true" aria-label="Loading operator workspace">
+      <div aria-hidden className={styles.fallbackNav} />
+      <main className={styles.content}>
+        <div className={styles.contentScroll} />
+      </main>
+      <div aria-hidden className={styles.intelligencePanel} />
+    </div>
   );
 }
 
@@ -65,24 +77,25 @@ function OperatorShell({
 }) {
   const router = useRouter();
   const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const skip = searchParams.get("skip");
+  const devSkip = isDevSkipMode(skip);
   const [threadsOpen, setThreadsOpen] = useState(false);
   const { activeBrandId, setActiveBrandId } = useActiveBrand();
-  const [brands, setBrands] = useState<Brand[]>([]);
-  const brandsRef = useRef<Brand[]>([]);
-  useEffect(() => { brandsRef.current = brands; }, [brands]);
+  const { brands, brandsRef, brandsLoadingRef } = useOperatorBrands(devSkip);
 
-  // Fetch brand list once on mount for the left panel switcher
+  // Dev layout QA — align active brand with fixture; clear fixture IDs when leaving skip mode
   useEffect(() => {
-    fetch("/api/brands")
-      .then((r) => {
-        if (!r.ok) {
-          console.error(`[brands] fetch failed: ${r.status}`);
-          return;
-        }
-        return (r.json() as Promise<Brand[]>).then(setBrands);
-      })
-      .catch((err) => console.error("[brands] fetch error:", err));
-  }, []);
+    if (devSkip) {
+      if (activeBrandId !== DEV_PREVIEW_HERO_BRAND_ID) {
+        setActiveBrandId(DEV_PREVIEW_HERO_BRAND_ID);
+      }
+      return;
+    }
+    if (activeBrandId && isDevPreviewBrandId(activeBrandId)) {
+      setActiveBrandId(null);
+    }
+  }, [devSkip, activeBrandId, setActiveBrandId]);
 
   useHideInternalToolCalls();
 
@@ -123,8 +136,11 @@ function OperatorShell({
     description: "Set the active brand context. Agents and the IntelligencePanel use the selected brand ID.",
     parameters: z.object({ brandId: z.string().uuid() }),
     handler: async ({ brandId }) => {
-      if (brandsRef.current.length === 0) {
+      if (brandsLoadingRef.current) {
         return "Brand list is still loading — please retry in a moment.";
+      }
+      if (brandsRef.current.length === 0) {
+        return "No brands in your organization yet — create one in Brand Hub first.";
       }
       if (!brandsRef.current.some((b) => b.id === brandId)) {
         return `Brand ${brandId} is not accessible.`;
@@ -160,7 +176,7 @@ function OperatorShell({
   });
 
   const activeBrandName =
-    brands.find((b) => b.id === activeBrandId)?.name ?? null;
+    brands.find((b) => b.id === activeBrandId)?.name ?? (devSkip ? "Nike" : null);
 
   return (
     <div className={styles.shell}>
@@ -172,27 +188,19 @@ function OperatorShell({
         onBrandSelect={setActiveBrandId}
       />
 
-      {/* Center — page content */}
+      {/* Center — page content + bottom chat dock (DC PersistentChatDock) */}
       <main className={styles.content}>
-        {children}
+        <div className={styles.contentScroll}>{children}</div>
+        <OperatorChatDock welcomeText={welcomeText} />
       </main>
 
-      {/* Right — IntelligencePanel (IPI-243) + CopilotSidebar conversation */}
-      <div className={styles.chatPanel}>
+      {/* Right — IntelligencePanel only (320px) — no CopilotSidebar */}
+      <div className={styles.intelligencePanel}>
         <IntelligencePanel
           pathname={pathname}
           activeBrandId={activeBrandId}
           brandName={activeBrandName}
-        >
-          <CopilotSidebar
-            defaultOpen
-            messageView={hiddenInternalToolsMessageView}
-            labels={{
-              modalHeaderTitle: "iPix Assistant",
-              welcomeMessageText: welcomeText,
-            }}
-          />
-        </IntelligencePanel>
+        />
       </div>
 
       {/* Threads side-sheet — toggled from NavSidebar */}

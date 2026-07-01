@@ -80,13 +80,36 @@ describe("OperatorPanel — internal tool call hiding (AIOR-016)", () => {
     expect(PANEL_SRC).toMatch(/useHideInternalToolCalls\(\)/);
   });
 
-  it("passes filtered messageView slots to CopilotSidebar", () => {
-    expect(PANEL_SRC).toMatch(/messageView=\{hiddenInternalToolsMessageView\}/);
-    expect(PANEL_SRC).toMatch(/hiddenInternalToolsMessageView/);
+  it("mounts center chat dock with welcomeText (not right-panel CopilotSidebar)", () => {
+    expect(PANEL_SRC).toMatch(/<OperatorChatDock welcomeText=\{welcomeText\}/);
+    expect(PANEL_SRC).not.toMatch(/<CopilotSidebar/);
   });
 
-  it("wraps CopilotSidebar in IntelligencePanel (IPI-243)", () => {
+  it("renders IntelligencePanel in the right column without chat children (IPI-243)", () => {
     expect(PANEL_SRC).toMatch(/<IntelligencePanel/);
     expect(PANEL_SRC).toMatch(/brandName=\{activeBrandName\}/);
+    expect(PANEL_SRC).toMatch(/className=\{styles\.intelligencePanel\}/);
+  });
+});
+
+describe("OperatorPanel — dev skip + brand list (PR #170 review)", () => {
+  it("uses isDevSkipMode helper instead of hardcoded skip strings", () => {
+    expect(PANEL_SRC).toMatch(/const devSkip = isDevSkipMode\(skip\)/);
+    expect(PANEL_SRC).not.toMatch(/skip === "1" \|\| skip === "approval"/);
+  });
+
+  it("distinguishes brand list loading from empty org in setActiveBrand", () => {
+    expect(PANEL_SRC).toMatch(/brandsLoadingRef\.current/);
+    expect(PANEL_SRC).toMatch(/No brands in your organization yet/);
+  });
+
+  it("wraps OperatorShell in Suspense for useSearchParams", () => {
+    expect(PANEL_SRC).toMatch(/<Suspense fallback=\{<OperatorShellFallback/);
+    expect(PANEL_SRC).toMatch(/useOperatorBrands\(devSkip\)/);
+  });
+
+  it("clears dev preview brand when devSkip toggles off", () => {
+    expect(PANEL_SRC).toMatch(/isDevPreviewBrandId\(activeBrandId\)/);
+    expect(PANEL_SRC).toMatch(/setActiveBrandId\(null\)/);
   });
 });

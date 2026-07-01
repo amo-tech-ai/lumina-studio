@@ -12,7 +12,8 @@ type Props = {
   pathname: string;
   activeBrandId: string | null;
   brandName: string | null;
-  children: ReactNode;
+  /** @deprecated Chat moved to center OperatorChatDock — slot kept for transition only */
+  children?: ReactNode;
 };
 
 export function IntelligencePanel({
@@ -23,10 +24,15 @@ export function IntelligencePanel({
 }: Props) {
   const briefing = resolveRouteBriefing(pathname);
   const { data, loading, error } = useIntelligencePanel(activeBrandId);
+  const hasChatSlot = Boolean(children);
 
   return (
-    <div className={styles.panel} data-testid="intelligence-panel">
-      <div className={styles.briefing}>
+    <aside
+      className={styles.panel}
+      data-testid="intelligence-panel"
+      aria-label="Intelligence panel"
+    >
+      <div className={hasChatSlot ? styles.briefing : styles.briefingOnly}>
         <AIContextCard brandName={brandName} briefing={briefing} />
         <div className={styles.insights} aria-live="polite">
           {loading && !data ? (
@@ -45,7 +51,7 @@ export function IntelligencePanel({
           {!error && data?.approvals ? <ApprovalsSection approvals={data.approvals} /> : null}
         </div>
       </div>
-      <div className={styles.chat}>{children}</div>
-    </div>
+      {hasChatSlot ? <div className={styles.chat}>{children}</div> : null}
+    </aside>
   );
 }
