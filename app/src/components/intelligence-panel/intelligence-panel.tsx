@@ -62,6 +62,8 @@ export function IntelligencePanel({ activeBrandId, brandName }: Props) {
             <p className={styles.mutedCopy}>Loading intelligence…</p>
           ) : error ? (
             <p className={styles.errorCopy}>{error}</p>
+          ) : !data ? (
+            <p className={styles.mutedCopy}>Select a brand to view intelligence.</p>
           ) : null}
 
           {!error && data ? (

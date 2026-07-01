@@ -181,6 +181,22 @@ describe("IntelligencePanel", () => {
     );
 
     expect(screen.getByText(/Beta Brand/i)).toBeTruthy();
+    expect(screen.queryByText(/Select a brand to view intelligence/i)).toBeNull();
+  });
+
+  it("shows select-brand copy when no brand is selected and panel data is null", () => {
+    vi.mocked(useIntelligencePanel).mockReturnValue({
+      data: null,
+      loading: false,
+      error: null,
+      reload: vi.fn(),
+    });
+
+    render(
+      <IntelligencePanel activeBrandId={null} brandName={null} />,
+    );
+
+    expect(screen.getByText(/Select a brand to view intelligence/i)).toBeTruthy();
   });
 
   it("shows loading copy while fetching", () => {

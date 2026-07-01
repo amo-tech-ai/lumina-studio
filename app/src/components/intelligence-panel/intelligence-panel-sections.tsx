@@ -52,7 +52,11 @@ export function IntelligencePanelSections({
         <RecentActivitySection groups={data.activity} />
       ) : null}
 
-      {!loading && !data.scores && !data.insights?.length ? (
+      {!loading &&
+      showOverview &&
+      !data.scores &&
+      !data.insights?.length &&
+      !data.approvals?.items.length ? (
         <p className={styles.mutedCopy}>
           {activeBrandId
             ? "DNA scores appear after brand analysis completes."
