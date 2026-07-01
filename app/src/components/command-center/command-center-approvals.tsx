@@ -52,10 +52,12 @@ export function CommandCenterApprovals({ pendingCount, featured }: Props) {
             />
           </div>
           <div>
-            <AlertCircle className={styles.approvalFallbackIcon} aria-hidden />
-            <p id="cc-approval-fallback-title" className={styles.approvalFallbackTitle}>
-              {pendingCount} draft{pendingCount === 1 ? "" : "s"} pending review
-            </p>
+            <div className={styles.approvalFallbackTitleRow}>
+              <AlertCircle className={styles.approvalFallbackIcon} aria-hidden />
+              <p id="cc-approval-fallback-title" className={styles.approvalFallbackTitle}>
+                {pendingCount} draft{pendingCount === 1 ? "" : "s"} pending review
+              </p>
+            </div>
             <p className={styles.approvalFallbackCopy}>
               Generated from moodboard + DNA — open Brand Hub to approve AI-generated profiles.
             </p>

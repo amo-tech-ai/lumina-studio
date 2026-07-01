@@ -445,6 +445,12 @@
   object-fit: cover;
 }
 
+.approvalFallbackTitleRow {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.375rem;
+}
+
 .approvalFallbackIcon {
   width: 1.25rem;
   height: 1.25rem;
