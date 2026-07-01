@@ -1,0 +1,26 @@
+.claude/commands/pr-ready.md
+  s_2e2ca317dec1f8::t_8f6e540c26c2fa 1-161
+.claude/commands/pr-fix-ship.md
+  s_2e2ca317dec1f8::t_a2d8941f7f803c 106-107
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.6",
+  "base_commit_sha": "75a6368ef0c8511eeffa9ce9875fdfab64f3fb9e",
+  "prompts": {},
+  "humans": {
+    "h_d382fbec1d5b46": {
+      "author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  },
+  "sessions": {
+    "s_2e2ca317dec1f8": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "354d6759-8d40-497b-94f4-4ed07c5f2ab7",
+        "model": "composer-2.5"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
