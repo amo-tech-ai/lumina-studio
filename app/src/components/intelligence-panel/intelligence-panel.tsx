@@ -27,6 +27,7 @@ export function IntelligencePanel({ activeBrandId, brandName }: Props) {
   const displayName = data?.brand?.name ?? brandName;
   const brandStatus = data?.brand?.status ?? null;
   const dnaScore = data?.scores?.dna;
+  const approvalCount = data?.approvals?.pendingCount ?? 0;
 
   return (
     <aside className={styles.panel} data-testid="intelligence-panel" aria-label="Intelligence panel">
@@ -90,8 +91,8 @@ export function IntelligencePanel({ activeBrandId, brandName }: Props) {
               onClick={() => setTab(item.id)}
             >
               {item.label}
-              {item.id === "approvals" && data?.approvals.items.length ? (
-                <span className={styles.tabBadge}>{data.approvals.items.length}</span>
+              {item.id === "approvals" && approvalCount > 0 ? (
+                <span className={styles.tabBadge}>{approvalCount}</span>
               ) : null}
             </button>
           );

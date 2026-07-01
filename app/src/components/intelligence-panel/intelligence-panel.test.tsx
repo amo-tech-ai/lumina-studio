@@ -97,6 +97,40 @@ describe("IntelligencePanel", () => {
     const approvalsTab = screen.getByRole("tab", { name: /Approvals/i });
     expect(approvalsTab.getAttribute("aria-selected")).toBe("false");
     expect(approvalsTab.textContent).toContain("3");
+  });
+
+  it("tab badge uses pendingCount when it exceeds loaded items", () => {
+    vi.mocked(useIntelligencePanel).mockReturnValue({
+      data: {
+        ...DEV_INTELLIGENCE_PANEL_DATA,
+        approvals: {
+          pendingCount: 7,
+          items: DEV_INTELLIGENCE_PANEL_DATA.approvals.items.slice(0, 2),
+        },
+      },
+      loading: false,
+      error: null,
+      reload: vi.fn(),
+    });
+
+    render(
+      <IntelligencePanel activeBrandId={BRAND_ID} brandName="Nike" />,
+    );
+
+    expect(screen.getByRole("tab", { name: /Approvals/i }).textContent).toContain("7");
+  });
+
+  it("switches to activity tab", () => {
+    vi.mocked(useIntelligencePanel).mockReturnValue({
+      data: DEV_INTELLIGENCE_PANEL_DATA,
+      loading: false,
+      error: null,
+      reload: vi.fn(),
+    });
+
+    render(
+      <IntelligencePanel activeBrandId={BRAND_ID} brandName="Nike" />,
+    );
 
     fireEvent.click(screen.getByRole("tab", { name: /Activity/i }));
     expect(screen.getByRole("tab", { name: /Activity/i }).getAttribute("aria-selected")).toBe(

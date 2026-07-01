@@ -21,17 +21,23 @@ export function useIntelligencePanel(activeBrandId: string | null) {
   const searchParams = useSearchParams();
   const skip = searchParams.get("skip");
   const devFixture = isDevSkipMode(skip);
+  const canFetch = devFixture || Boolean(activeBrandId);
 
-  const [state, setState] = useState<State>({
-    data: devFixture ? DEV_INTELLIGENCE_PANEL_DATA : null,
-    loading: !devFixture,
-    error: null,
+  const [state, setState] = useState<State>(() => {
+    if (devFixture) {
+      return { data: DEV_INTELLIGENCE_PANEL_DATA, loading: false, error: null };
+    }
+    if (!activeBrandId) {
+      return { data: null, loading: false, error: null };
+    }
+    return { data: null, loading: true, error: null };
   });
 
   const fetchPanel = useCallback(async () => {
     if (devFixture) return DEV_INTELLIGENCE_PANEL_DATA;
+    if (!activeBrandId) return EMPTY;
 
-    const qs = activeBrandId ? `?brandId=${encodeURIComponent(activeBrandId)}` : "";
+    const qs = `?brandId=${encodeURIComponent(activeBrandId)}`;
     const res = await fetch(`/api/intelligence/panel${qs}`, { cache: "no-store" });
     if (!res.ok) {
       const body = (await res.json().catch(() => ({}))) as { error?: string };
@@ -41,6 +47,10 @@ export function useIntelligencePanel(activeBrandId: string | null) {
   }, [activeBrandId, devFixture]);
 
   const reload = useCallback(async () => {
+    if (!canFetch) {
+      setState({ data: null, loading: false, error: null });
+      return;
+    }
     setState({ data: null, loading: true, error: null });
     try {
       const data = await fetchPanel();
@@ -52,11 +62,15 @@ export function useIntelligencePanel(activeBrandId: string | null) {
         error: e instanceof Error ? e.message : "Failed to load intelligence data",
       });
     }
-  }, [fetchPanel]);
+  }, [canFetch, fetchPanel]);
 
   useEffect(() => {
     if (devFixture) {
       setState({ data: DEV_INTELLIGENCE_PANEL_DATA, loading: false, error: null });
+      return;
+    }
+    if (!activeBrandId) {
+      setState({ data: null, loading: false, error: null });
       return;
     }
 
@@ -79,10 +93,10 @@ export function useIntelligencePanel(activeBrandId: string | null) {
     return () => {
       cancelled = true;
     };
-  }, [fetchPanel, devFixture]);
+  }, [fetchPanel, devFixture, activeBrandId]);
 
   useEffect(() => {
-    if (devFixture) return;
+    if (!canFetch || devFixture) return;
 
     let cancelled = false;
     let timeoutId = 0;
@@ -105,7 +119,7 @@ export function useIntelligencePanel(activeBrandId: string | null) {
       cancelled = true;
       window.clearTimeout(timeoutId);
     };
-  }, [fetchPanel, devFixture]);
+  }, [fetchPanel, devFixture, canFetch]);
 
   return { ...state, reload };
 }
