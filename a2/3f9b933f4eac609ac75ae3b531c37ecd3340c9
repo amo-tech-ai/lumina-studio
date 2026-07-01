@@ -1,0 +1,33 @@
+app/src/components/intelligence-panel/intelligence-panel.test.tsx
+  s_2e2ca317dec1f8::t_57d2ef70fafaaf 146
+  s_2e2ca317dec1f8::t_63d0d7857afbb1 161
+  s_2e2ca317dec1f8::t_a6c8f04d42823b 94,117
+app/src/components/intelligence-panel/intel-approval-queue-section.tsx
+  s_2e2ca317dec1f8::t_9d5e43fa32ebe0 37
+  s_2e2ca317dec1f8::t_d5240b52424890 22-24
+app/src/components/intelligence-panel/evidence-dialog.tsx
+  s_2e2ca317dec1f8::t_84011474c0e31a 34-37
+app/src/lib/intelligence/panel-helpers.ts
+  s_2e2ca317dec1f8::t_8a15b86d6dba74 10,14
+app/src/lib/intelligence/panel-helpers.test.ts
+  s_2e2ca317dec1f8::t_2c5862e9b85add 28-40
+app/src/components/intelligence-panel/intelligence-panel.tsx
+  s_2e2ca317dec1f8::t_ab475de96d1fe3 93-94
+  s_2e2ca317dec1f8::t_a4765dd38f5b59 23
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.6",
+  "base_commit_sha": "a23f9b933f4eac609ac75ae3b531c37ecd3340c9",
+  "prompts": {},
+  "sessions": {
+    "s_2e2ca317dec1f8": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "354d6759-8d40-497b-94f4-4ed07c5f2ab7",
+        "model": "composer-2.5"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
