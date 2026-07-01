@@ -85,16 +85,25 @@ export function useIntelligencePanel(activeBrandId: string | null) {
     if (devFixture) return;
 
     let cancelled = false;
-    const id = window.setInterval(() => {
-      void fetchPanel()
-        .then((data) => {
-          if (!cancelled) setState({ data, loading: false, error: null });
-        })
-        .catch(() => undefined);
-    }, 30_000);
+    let timeoutId = 0;
+
+    const poll = async () => {
+      if (cancelled) return;
+      try {
+        const data = await fetchPanel();
+        if (!cancelled) setState({ data, loading: false, error: null });
+      } catch {
+        // ignore transient poll errors
+      }
+      if (!cancelled) {
+        timeoutId = window.setTimeout(() => void poll(), 30_000);
+      }
+    };
+
+    timeoutId = window.setTimeout(() => void poll(), 30_000);
     return () => {
       cancelled = true;
-      window.clearInterval(id);
+      window.clearTimeout(timeoutId);
     };
   }, [fetchPanel, devFixture]);
 

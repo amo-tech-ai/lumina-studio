@@ -63,6 +63,8 @@ export type IntelligencePanelData = {
     dna: number;
     pillars: Record<BaseScoreType, number | null>;
   } | null;
+  /** Optional DNA explain payload — fixture/API only; never client-derived. */
+  dnaEvidence?: Omit<EvidenceBlockProps, "className" | "loading">;
   health?: IntelligenceHealthPillar[];
   insights?: IntelligenceInsight[];
   approvals: {

@@ -1,0 +1,16 @@
+import type { IntelligenceHealthPillar, IntelligencePanelData } from "./panel-contract";
+
+export function resolveHealthPillars(
+  data: IntelligencePanelData,
+): IntelligenceHealthPillar[] | null {
+  if (data.health?.length) return data.health;
+  if (!data.scores) return null;
+
+  const { dna, pillars } = data.scores;
+  return [
+    { key: "brand", label: "Brand", score: dna },
+    { key: "visual", label: "Visual", score: pillars.visual ?? 0 },
+    { key: "voice", label: "Voice", score: pillars.audience ?? pillars.consistency ?? 0 },
+    { key: "commerce", label: "Commerce", score: pillars.commerce_readiness ?? 0 },
+  ];
+}

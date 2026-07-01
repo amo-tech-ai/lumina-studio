@@ -2,7 +2,7 @@
  * @vitest-environment jsdom
  */
 import { describe, expect, it, vi, afterEach } from "vitest";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { IntelligencePanel } from "./intelligence-panel";
 import { DEV_INTELLIGENCE_PANEL_DATA } from "@/lib/intelligence/dev-panel-fixture";
 
@@ -81,6 +81,44 @@ describe("IntelligencePanel", () => {
     expect(screen.getByText("Brand profile draft")).toBeTruthy();
     expect(screen.getByText("Review approvals")).toBeTruthy();
     expect(screen.getByText("Yesterday")).toBeTruthy();
+  });
+
+  it("switches tabs and shows approvals badge count", () => {
+    vi.mocked(useIntelligencePanel).mockReturnValue({
+      data: DEV_INTELLIGENCE_PANEL_DATA,
+      loading: false,
+      error: null,
+      reload: vi.fn(),
+    });
+
+    render(
+      <IntelligencePanel pathname="/app" activeBrandId={BRAND_ID} brandName="Nike" />,
+    );
+
+    const approvalsTab = screen.getByRole("tab", { name: /Approvals/i });
+    expect(approvalsTab.getAttribute("aria-selected")).toBe("false");
+    expect(approvalsTab.textContent).toContain("3");
+
+    fireEvent.click(screen.getByRole("tab", { name: /Activity/i }));
+    expect(screen.getByRole("tab", { name: /Activity/i }).getAttribute("aria-selected")).toBe(
+      "true",
+    );
+    expect(screen.getByLabelText("Recent activity")).toBeTruthy();
+  });
+
+  it("renders Explain DNA when fixture provides dnaEvidence", () => {
+    vi.mocked(useIntelligencePanel).mockReturnValue({
+      data: DEV_INTELLIGENCE_PANEL_DATA,
+      loading: false,
+      error: null,
+      reload: vi.fn(),
+    });
+
+    render(
+      <IntelligencePanel pathname="/app" activeBrandId={BRAND_ID} brandName="Nike" />,
+    );
+
+    expect(screen.getByRole("button", { name: "Explain DNA" })).toBeTruthy();
   });
 
   it("renders pending approval drafts from live API shape", () => {

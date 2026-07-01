@@ -1,17 +1,11 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 
-import type { IntelligenceHealthPillar, IntelligencePanelData } from "@/lib/intelligence/panel-contract";
-
-import { AiInsightsSection } from "./ai-insights-section";
-import { HealthSection } from "./health-section";
-import { IntelApprovalQueueSection } from "./intel-approval-queue-section";
-import { RecentActivitySection } from "./recent-activity-section";
-import { RecommendedActionsSection } from "./recommended-actions-section";
-import styles from "./intelligence-panel.module.css";
-import { DnaScoresSection } from "./dna-scores-section";
 import { useIntelligencePanel } from "@/lib/intelligence/use-intelligence-panel";
+
+import { IntelligencePanelSections } from "./intelligence-panel-sections";
+import styles from "./intelligence-panel.module.css";
 
 type Props = {
   pathname: string;
@@ -27,29 +21,6 @@ const TABS: { id: PanelTab; label: string }[] = [
   { id: "activity", label: "Activity" },
 ];
 
-function defaultHealthFromScores(data: IntelligencePanelData): IntelligenceHealthPillar[] | null {
-  if (!data.scores) return null;
-  const { dna, pillars } = data.scores;
-  return [
-    { key: "brand", label: "Brand", score: dna },
-    { key: "visual", label: "Visual", score: pillars.visual ?? 0 },
-    { key: "voice", label: "Voice", score: pillars.audience ?? pillars.consistency ?? 0 },
-    { key: "commerce", label: "Commerce", score: pillars.commerce_readiness ?? 0 },
-  ];
-}
-
-function dnaEvidence(data: IntelligencePanelData) {
-  if (!data.scores || !data.brand) return null;
-  return {
-    title: `${data.brand.name} DNA`,
-    score: data.scores.dna,
-    potential: Math.min(100, data.scores.dna + 5),
-    confidence: 88,
-    why: "Composite of visual, voice, and commerce readiness pillars.",
-    evidence: [{ text: "Scores derived from brand intelligence analysis." }],
-  };
-}
-
 export function IntelligencePanel({
   pathname: _pathname,
   activeBrandId,
@@ -61,12 +32,6 @@ export function IntelligencePanel({
   const displayName = data?.brand?.name ?? brandName;
   const brandStatus = data?.brand?.status ?? null;
   const dnaScore = data?.scores?.dna;
-  const health = data?.health ?? (data ? defaultHealthFromScores(data) : null);
-  const dnaExplain = useMemo(() => (data ? dnaEvidence(data) : null), [data]);
-
-  const showOverview = tab === "overview";
-  const showApprovals = tab === "approvals" || showOverview;
-  const showActivity = tab === "activity" || showOverview;
 
   return (
     <aside className={styles.panel} data-testid="intelligence-panel" aria-label="Intelligence panel">
@@ -90,7 +55,12 @@ export function IntelligencePanel({
         </div>
       </header>
 
-      <div className={styles.briefing}>
+      <div
+        className={styles.briefing}
+        role="tabpanel"
+        id="intel-panel-tabpanel"
+        aria-labelledby={`intel-tab-${tab}`}
+      >
         <div className={styles.insights} aria-live="polite">
           {loading && !data ? (
             <p className={styles.mutedCopy}>Loading intelligence…</p>
@@ -98,61 +68,39 @@ export function IntelligencePanel({
             <p className={styles.errorCopy}>{error}</p>
           ) : null}
 
-          {!error && data && showOverview && (
-            <>
-              {health && data.scores ? (
-                <HealthSection
-                  dna={data.scores.dna}
-                  pillars={health}
-                  dnaEvidence={dnaExplain ?? undefined}
-                />
-              ) : data.scores ? (
-                <DnaScoresSection scores={data.scores} />
-              ) : null}
-
-              {data.insights?.length ? (
-                <AiInsightsSection insights={data.insights} />
-              ) : null}
-            </>
-          )}
-
-          {!error && data && showApprovals && data.approvals ? (
-            <IntelApprovalQueueSection approvals={data.approvals} />
+          {!error && data ? (
+            <IntelligencePanelSections
+              data={data}
+              tab={tab}
+              activeBrandId={activeBrandId}
+              loading={loading}
+            />
           ) : null}
-
-          {!error && data && showOverview && data.recommendedActions?.length ? (
-            <RecommendedActionsSection actions={data.recommendedActions} />
-          ) : null}
-
-          {!error && data && showActivity && data.activity?.length ? (
-            <RecentActivitySection groups={data.activity} />
-          ) : null}
-
-          {!error && !loading && data && !data.scores && !data.insights?.length && (
-            <p className={styles.mutedCopy}>
-              {activeBrandId
-                ? "DNA scores appear after brand analysis completes."
-                : "Select a brand to view intelligence."}
-            </p>
-          )}
         </div>
       </div>
 
-      <nav className={styles.tabs} aria-label="Intelligence panel sections">
-        {TABS.map((item) => (
-          <button
-            key={item.id}
-            type="button"
-            className={tab === item.id ? styles.tabActive : styles.tab}
-            aria-current={tab === item.id ? "page" : undefined}
-            onClick={() => setTab(item.id)}
-          >
-            {item.label}
-            {item.id === "approvals" && data?.approvals.pendingCount ? (
-              <span className={styles.tabBadge}>{data.approvals.pendingCount}</span>
-            ) : null}
-          </button>
-        ))}
+      <nav className={styles.tabs} aria-label="Intelligence panel sections" role="tablist">
+        {TABS.map((item) => {
+          const selected = tab === item.id;
+          return (
+            <button
+              key={item.id}
+              type="button"
+              id={`intel-tab-${item.id}`}
+              role="tab"
+              aria-selected={selected}
+              aria-controls="intel-panel-tabpanel"
+              tabIndex={selected ? 0 : -1}
+              className={selected ? styles.tabActive : styles.tab}
+              onClick={() => setTab(item.id)}
+            >
+              {item.label}
+              {item.id === "approvals" && data?.approvals.pendingCount ? (
+                <span className={styles.tabBadge}>{data.approvals.pendingCount}</span>
+              ) : null}
+            </button>
+          );
+        })}
       </nav>
     </aside>
   );

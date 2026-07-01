@@ -1,22 +1,15 @@
+import {
+  DEV_PREVIEW_HERO_BRAND_ID,
+  isDevSkipMode,
+} from "@/components/operator-panel/dev-skip-fixture";
 import type { IntelligencePanelData } from "./panel-contract";
+
+export { DEV_PREVIEW_HERO_BRAND_ID, isDevSkipMode };
 
 const CLOUDINARY_CLOUD = "dza2bjwwp";
 
 function cloudinaryImageUrl(publicId: string, { w, h }: { w: number; h: number }): string {
   return `https://res.cloudinary.com/${CLOUDINARY_CLOUD}/image/upload/c_fill,w_${w},h_${h},g_auto,q_auto,f_auto/${publicId}`;
-}
-
-/** Matches DEV_PREVIEW hero brand — used for `?skip=1` / `?skip=approval` layout QA. */
-export const DEV_PREVIEW_HERO_BRAND_ID = "00000000-0000-4000-8000-000000000001";
-
-export const DEV_PREVIEW_BRANDS = [
-  { id: DEV_PREVIEW_HERO_BRAND_ID, name: "Nike", status: "active" },
-  { id: "00000000-0000-4000-8000-000000000002", name: "Adidas", status: "active" },
-  { id: "00000000-0000-4000-8000-000000000003", name: "Puma", status: "draft" },
-] as const;
-
-export function isDevSkipMode(skip: string | null): boolean {
-  return skip === "1" || skip === "approval";
 }
 
 const THUMB_VISUAL = cloudinaryImageUrl("39-fashionos_koxmek", { w: 120, h: 150 });
@@ -48,6 +41,14 @@ export const DEV_INTELLIGENCE_PANEL_DATA: IntelligencePanelData = {
     { key: "voice", label: "Voice", score: 85 },
     { key: "commerce", label: "Commerce", score: 81, trendDelta: 2 },
   ],
+  dnaEvidence: {
+    title: "Nike DNA",
+    score: 87,
+    potential: 91,
+    confidence: 89,
+    why: "Composite of visual, voice, and commerce readiness pillars.",
+    evidence: [{ text: "Scores derived from brand intelligence analysis." }],
+  },
   insights: [
     {
       id: "insight-priority",
