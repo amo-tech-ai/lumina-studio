@@ -181,6 +181,8 @@ describe("IntelligencePanel", () => {
     );
 
     expect(screen.getByText(/Beta Brand/i)).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Approve" })).toBeNull();
+    expect(screen.getByRole("link", { name: "Review draft" })).toBeTruthy();
     expect(screen.queryByText(/Select a brand to view intelligence/i)).toBeNull();
   });
 

@@ -67,26 +67,32 @@ export function IntelApprovalQueueSection({ approvals }: Props) {
               ) : null}
               <div className={styles.approvalActions}>
                 {item.evidence ? (
-                  <EvidenceDialog
-                    triggerLabel="Explain"
-                    evidence={item.evidence}
-                    triggerClassName={styles.approvalGhostBtn}
-                  />
-                ) : null}
-                <button
-                  type="button"
-                  className={styles.approvalGhostBtn}
-                  onClick={() => toast.success(`Approved: ${item.label} (fixture)`)}
-                >
-                  Approve
-                </button>
-                <button
-                  type="button"
-                  className={styles.approvalGhostBtn}
-                  onClick={() => toast.message(`Edit: ${item.label} (fixture)`)}
-                >
-                  Edit
-                </button>
+                  <>
+                    <EvidenceDialog
+                      triggerLabel="Explain"
+                      evidence={item.evidence}
+                      triggerClassName={styles.approvalGhostBtn}
+                    />
+                    <button
+                      type="button"
+                      className={styles.approvalGhostBtn}
+                      onClick={() => toast.success(`Approved: ${item.label} (fixture)`)}
+                    >
+                      Approve
+                    </button>
+                    <button
+                      type="button"
+                      className={styles.approvalGhostBtn}
+                      onClick={() => toast.message(`Edit: ${item.label} (fixture)`)}
+                    >
+                      Edit
+                    </button>
+                  </>
+                ) : (
+                  <Link href={item.href} className={styles.approvalGhostBtn}>
+                    Review draft
+                  </Link>
+                )}
               </div>
             </div>
           </li>
