@@ -10,13 +10,30 @@ type Props = {
   shoots: RecentShoot[];
 };
 
-function formatMeta(shoot: RecentShoot): string {
-  if (shoot.channel) return `${shoot.channel} · 4:5`;
+const CHANNEL_ASPECT: Record<string, string> = {
+  IG: "4:5",
+  TikTok: "9:16",
+  Amazon: "1:1",
+  Shopify: "1:1",
+};
 
+function formatMeta(shoot: RecentShoot): string {
   const date = new Date(shoot.updatedAt);
   const when = Number.isNaN(date.getTime())
     ? ""
     : date.toLocaleDateString("en-CA", { month: "short", day: "numeric" });
+
+  const parts: string[] = [];
+  if (shoot.channel) {
+    parts.push(shoot.channel);
+    const aspect = CHANNEL_ASPECT[shoot.channel];
+    if (aspect) parts.push(aspect);
+  }
+  parts.push(shoot.status);
+  if (when) parts.push(when);
+
+  if (parts.length > 0) return parts.join(" · ");
+
   const dna =
     typeof shoot.dnaScore === "number" && shoot.dnaScore > 0
       ? ` · DNA ${Math.round(shoot.dnaScore)}%`

@@ -121,6 +121,15 @@
   .heroCard {
     flex-direction: column;
   }
+
+  .approvalFallback {
+    flex-direction: column;
+  }
+
+  .approvalPreviewWrap {
+    width: 100%;
+    max-width: 14.75rem;
+  }
 }
 
 .heroMediaLink {
