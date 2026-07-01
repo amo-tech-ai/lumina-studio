@@ -23,8 +23,11 @@ export function useOperatorBrands(devSkip: boolean) {
 
   useEffect(() => {
     if (devSkip) {
-      setBrands([...DEV_PREVIEW_BRANDS]);
-      setBrandsLoading(false);
+      const hasFixture =
+        brandsRef.current.length === DEV_PREVIEW_BRANDS.length &&
+        brandsRef.current.every((b, i) => b.id === DEV_PREVIEW_BRANDS[i]?.id);
+      if (!hasFixture) setBrands([...DEV_PREVIEW_BRANDS]);
+      if (brandsLoadingRef.current) setBrandsLoading(false);
       return;
     }
 
