@@ -71,27 +71,34 @@ function OperatorShell({
   const [brands, setBrands] = useState<Brand[]>(() =>
     devSkip ? [...DEV_PREVIEW_BRANDS] : [],
   );
+  const [brandsLoading, setBrandsLoading] = useState(() => !devSkip);
   const brandsRef = useRef<Brand[]>([]);
-  useEffect(() => { brandsRef.current = brands; }, [brands]);
+  const brandsLoadingRef = useRef(brandsLoading);
+  useEffect(() => {
+    brandsRef.current = brands;
+  }, [brands]);
+  useEffect(() => {
+    brandsLoadingRef.current = brandsLoading;
+  }, [brandsLoading]);
 
   // Fetch brand list once on mount for the left panel switcher (skip on dev layout QA)
   useEffect(() => {
     if (devSkip) return;
 
+    setBrandsLoading(true);
     fetch("/api/brands")
-      .then((r) => {
-        if (!r.ok) return;
-        return (r.json() as Promise<Brand[]>).then(setBrands);
-      })
-      .catch(() => undefined);
+      .then((r) => (r.ok ? (r.json() as Promise<Brand[]>) : Promise.resolve([])))
+      .then((list) => setBrands(Array.isArray(list) ? list : []))
+      .catch(() => setBrands([]))
+      .finally(() => setBrandsLoading(false));
   }, [devSkip]);
 
   // Dev layout QA — align active brand with Command Center Nike fixture
   useEffect(() => {
-    if ((skip === "1" || skip === "approval") && activeBrandId !== DEV_PREVIEW_HERO_BRAND_ID) {
+    if (devSkip && activeBrandId !== DEV_PREVIEW_HERO_BRAND_ID) {
       setActiveBrandId(DEV_PREVIEW_HERO_BRAND_ID);
     }
-  }, [skip, activeBrandId, setActiveBrandId]);
+  }, [devSkip, activeBrandId, setActiveBrandId]);
 
   useHideInternalToolCalls();
 
@@ -132,8 +139,11 @@ function OperatorShell({
     description: "Set the active brand context. Agents and the IntelligencePanel use the selected brand ID.",
     parameters: z.object({ brandId: z.string().uuid() }),
     handler: async ({ brandId }) => {
-      if (brandsRef.current.length === 0) {
+      if (brandsLoadingRef.current) {
         return "Brand list is still loading — please retry in a moment.";
+      }
+      if (brandsRef.current.length === 0) {
+        return "No brands in your organization yet — create one in Brand Hub first.";
       }
       if (!brandsRef.current.some((b) => b.id === brandId)) {
         return `Brand ${brandId} is not accessible.`;
@@ -169,7 +179,7 @@ function OperatorShell({
   });
 
   const activeBrandName =
-    brands.find((b) => b.id === activeBrandId)?.name ?? (skip === "1" || skip === "approval" ? "Nike" : null);
+    brands.find((b) => b.id === activeBrandId)?.name ?? (devSkip ? "Nike" : null);
 
   return (
     <div className={styles.shell}>
