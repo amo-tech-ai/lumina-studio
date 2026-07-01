@@ -1,0 +1,21 @@
+app/src/components/command-center/command-center-approvals.tsx
+  s_2e2ca317dec1f8::t_b6dd4c2d22a530 55-60
+app/src/components/command-center/command-center.module.css
+  s_2e2ca317dec1f8::t_950ea37c9973a0 448-453
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.6",
+  "base_commit_sha": "5812223551db74940a2d257bfb04e7c4345d51ab",
+  "prompts": {},
+  "sessions": {
+    "s_2e2ca317dec1f8": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "354d6759-8d40-497b-94f4-4ed07c5f2ab7",
+        "model": "composer-2.5"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
