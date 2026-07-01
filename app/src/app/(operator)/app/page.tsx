@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { CommandCenter } from "@/components/command-center/command-center";
 import { fetchCommandCenterKpis } from "@/lib/command-center/queries";
 import {
+  DEV_APPROVAL_PREVIEW_COMMAND_CENTER_DATA,
   DEV_PREVIEW_COMMAND_CENTER_DATA,
   EMPTY_COMMAND_CENTER_DATA,
 } from "@/lib/command-center/types";
@@ -16,6 +17,14 @@ const CommandCenterPage = async ({
 }) => {
   const params = await searchParams;
   const skip = Array.isArray(params.skip) ? params.skip[0] : params.skip;
+  if (skip === "approval") {
+    return (
+      <CommandCenter
+        {...DEV_APPROVAL_PREVIEW_COMMAND_CENTER_DATA}
+        devPreviewApproval
+      />
+    );
+  }
   if (skip === "1") return <CommandCenter {...DEV_PREVIEW_COMMAND_CENTER_DATA} devPreview />;
 
   let zeroBrands = false;

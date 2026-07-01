@@ -1,5 +1,7 @@
+import Image from "next/image";
 import Link from "next/link";
 
+import { recentFallbackForShoot } from "@/lib/command-center/sample-images";
 import type { RecentShoot } from "@/lib/command-center/types";
 
 import styles from "./command-center.module.css";
@@ -9,6 +11,8 @@ type Props = {
 };
 
 function formatMeta(shoot: RecentShoot): string {
+  if (shoot.channel) return `${shoot.channel} · 4:5`;
+
   const date = new Date(shoot.updatedAt);
   const when = Number.isNaN(date.getTime())
     ? ""
@@ -35,18 +39,30 @@ export function RecentWorkRow({ shoots }: Props) {
       </div>
 
       <div className={styles.recentScroll}>
-        {shoots.map((shoot) => (
-          <Link key={shoot.id} href={`/app/shoots/${shoot.id}`} className={styles.recentTile}>
-            <div className={styles.recentThumb}>
-              <span className={styles.recentThumbScrim} />
-              {typeof shoot.dnaScore === "number" && shoot.dnaScore > 0 && (
-                <span className={styles.recentMatch}>{Math.round(shoot.dnaScore)}%</span>
-              )}
-              <span className={styles.recentLabel}>{shoot.name}</span>
-            </div>
-            <p className={styles.recentMeta}>{formatMeta(shoot)}</p>
-          </Link>
-        ))}
+        {shoots.map((shoot, index) => {
+          const imageSrc = shoot.imageUrl ?? recentFallbackForShoot(shoot.id, index);
+
+          return (
+            <Link key={shoot.id} href={`/app/shoots/${shoot.id}`} className={styles.recentTile}>
+              <div className={styles.recentThumb}>
+                <Image
+                  src={imageSrc}
+                  alt={`${shoot.name} preview`}
+                  fill
+                  loading="lazy"
+                  sizes="138px"
+                  className={styles.recentImage}
+                />
+                <span className={styles.recentThumbScrim} />
+                {typeof shoot.dnaScore === "number" && shoot.dnaScore > 0 && (
+                  <span className={styles.recentMatch}>{Math.round(shoot.dnaScore)}%</span>
+                )}
+                <span className={styles.recentLabel}>{shoot.name}</span>
+              </div>
+              <p className={styles.recentMeta}>{formatMeta(shoot)}</p>
+            </Link>
+          );
+        })}
       </div>
     </section>
   );

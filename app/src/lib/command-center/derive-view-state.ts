@@ -3,6 +3,7 @@ import type { CommandCenterData, WorkspaceView } from "./types";
 type DeriveOptions = {
   loading?: boolean;
   devPreview?: boolean;
+  devPreviewApproval?: boolean;
 };
 
 /**
@@ -14,6 +15,7 @@ export function deriveWorkspaceView(
   options: DeriveOptions = {},
 ): WorkspaceView {
   if (options.loading) return "loading";
+  if (options.devPreviewApproval) return "approval";
   if (options.devPreview) return "populated";
 
   if (data.fetchError) return "error";

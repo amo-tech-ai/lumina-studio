@@ -138,6 +138,10 @@
   overflow: hidden;
 }
 
+.heroImage {
+  object-fit: cover;
+}
+
 .heroMediaScrim {
   position: absolute;
   inset: 0;
@@ -313,6 +317,10 @@
   box-shadow: var(--shadow-card);
 }
 
+.recentImage {
+  object-fit: cover;
+}
+
 .recentThumbScrim {
   position: absolute;
   inset: 0;
@@ -414,6 +422,20 @@
   background: var(--approval-bg);
 }
 
+.approvalPreviewWrap {
+  position: relative;
+  flex-shrink: 0;
+  width: 14.75rem;
+  aspect-ratio: 4 / 5;
+  border-radius: var(--image-radius);
+  overflow: hidden;
+  border: 1px solid var(--image-border, var(--color-border));
+}
+
+.approvalPreviewImage {
+  object-fit: cover;
+}
+
 .approvalFallbackIcon {
   width: 1.25rem;
   height: 1.25rem;
@@ -478,13 +500,20 @@
 }
 
 .emptyHeroPlaceholder {
+  position: relative;
   width: 12.5rem;
   height: 9.375rem;
   border-radius: var(--image-radius);
   border: 1px solid var(--color-border);
   background: var(--color-bg-subtle);
   margin-bottom: 1.125rem;
-  opacity: 0.5;
+  overflow: hidden;
+  opacity: 0.85;
+}
+
+.emptyHeroImage {
+  object-fit: cover;
+  opacity: 0.55;
 }
 
 .emptyTitle {
