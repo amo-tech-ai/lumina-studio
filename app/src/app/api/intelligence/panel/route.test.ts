@@ -19,9 +19,68 @@ vi.mock("@/lib/supabase/server", () => ({
 
 const BRAND_ID = "11111111-1111-1111-1111-111111111111";
 
+const SCORE_ROWS = [
+  { score_type: "visual", score: 80 },
+  { score_type: "audience", score: 70 },
+  { score_type: "consistency", score: 90 },
+  { score_type: "commerce_readiness", score: 60 },
+];
+
+function mockSupabase() {
+  mockCreateSupabaseServerClient.mockResolvedValue({
+    from: vi.fn((table: string) => {
+      if (table === "brand_scores") {
+        return {
+          select: vi.fn().mockReturnValue({
+            eq: vi.fn().mockReturnValue({
+              eq: vi.fn().mockResolvedValue({ data: SCORE_ROWS, error: null }),
+            }),
+          }),
+        };
+      }
+      if (table === "assets") {
+        return {
+          select: vi.fn().mockReturnValue({
+            eq: vi.fn().mockReturnValue({
+              order: vi.fn().mockReturnValue({
+                limit: vi.fn().mockResolvedValue({ data: [], error: null }),
+              }),
+            }),
+          }),
+        };
+      }
+      return {
+        select: vi.fn().mockReturnValue({
+          eq: vi.fn().mockImplementation((_col: string, val: string) => {
+            if (val === BRAND_ID) {
+              return {
+                single: vi.fn().mockResolvedValue({
+                  data: {
+                    id: BRAND_ID,
+                    name: "Acme",
+                    intake_status: "scores_complete",
+                  },
+                  error: null,
+                }),
+              };
+            }
+            if (val === "draft_ready") {
+              return {
+                order: vi.fn().mockResolvedValue({ data: [], error: null }),
+              };
+            }
+            return { order: vi.fn().mockResolvedValue({ data: [], error: null }) };
+          }),
+        }),
+      };
+    }),
+  });
+}
+
 beforeEach(() => {
   vi.resetModules();
   mockWithOperatorAuth.mockResolvedValue({ id: "user-1" });
+  mockSupabase();
 });
 
 afterEach(() => {
@@ -50,50 +109,6 @@ describe("GET /api/intelligence/panel", () => {
   });
 
   it("returns panel payload for valid brandId", async () => {
-    mockCreateSupabaseServerClient.mockResolvedValue({
-      from: vi.fn((table: string) => {
-        if (table === "brand_scores") {
-          return {
-            select: vi.fn().mockReturnValue({
-              eq: vi.fn().mockResolvedValue({
-                data: [
-                  { score_type: "visual", score: 80 },
-                  { score_type: "audience", score: 70 },
-                  { score_type: "consistency", score: 90 },
-                  { score_type: "commerce_readiness", score: 60 },
-                ],
-                error: null,
-              }),
-            }),
-          };
-        }
-        return {
-          select: vi.fn().mockReturnValue({
-            eq: vi.fn().mockImplementation((_col: string, val: string) => {
-              if (val === BRAND_ID) {
-                return {
-                  single: vi.fn().mockResolvedValue({
-                    data: {
-                      id: BRAND_ID,
-                      name: "Acme",
-                      intake_status: "scores_complete",
-                    },
-                    error: null,
-                  }),
-                };
-              }
-              if (val === "draft_ready") {
-                return {
-                  order: vi.fn().mockResolvedValue({ data: [], error: null }),
-                };
-              }
-              return { order: vi.fn().mockResolvedValue({ data: [], error: null }) };
-            }),
-          }),
-        };
-      }),
-    });
-
     const { GET } = await importRoute();
     const res = await GET(
       new Request(`http://localhost/api/intelligence/panel?brandId=${BRAND_ID}`),
@@ -102,5 +117,8 @@ describe("GET /api/intelligence/panel", () => {
     const body = await res.json();
     expect(body.brand.name).toBe("Acme");
     expect(body.scores.dna).toBe(75);
+    expect(body.assets).toEqual([]);
+    expect(body.suggestions).toHaveLength(2);
+    expect(body.suggestions[0].title).toContain("Commerce");
   });
 });

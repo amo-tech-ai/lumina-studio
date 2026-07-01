@@ -1,16 +1,12 @@
 // IPI-219 — Latest 6 brand assets for the right context panel
 import { NextResponse } from "next/server";
 import { withOperatorAuth, OperatorAuthError } from "@/lib/operator-gate";
+import { buildThumbUrl } from "@/lib/intelligence/build-thumb-url";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
-function buildThumbUrl(publicId: string): string {
-  const cloud = process.env.CLOUDINARY_CLOUD_NAME ?? "demo";
-  return `https://res.cloudinary.com/${cloud}/image/upload/c_thumb,w_120,h_120,g_auto/${publicId}`;
-}
 
 export async function GET(
   request: Request,
@@ -55,13 +51,17 @@ export async function GET(
     return NextResponse.json({ error: "Internal error" }, { status: 500 });
   }
 
-  const assets = (rowsResult.data ?? []).map((row) => ({
-    id: row.id,
-    cloudinary_public_id: row.cloudinary_public_id ?? null,
-    thumb_url: row.cloudinary_public_id ? buildThumbUrl(row.cloudinary_public_id) : null,
-    status: row.status,
-    dna_status: row.dna_status ?? null,
-  }));
+  const assets = (rowsResult.data ?? []).map((row) => {
+    const thumb = row.cloudinary_public_id ? buildThumbUrl(row.cloudinary_public_id) : null;
+    return {
+      id: row.id,
+      cloudinary_public_id: row.cloudinary_public_id ?? null,
+      thumbnail_url: thumb,
+      thumb_url: thumb,
+      status: row.status,
+      dna_status: row.dna_status ?? null,
+    };
+  });
 
   return NextResponse.json({ assets, total: countResult.count ?? 0 });
 }
