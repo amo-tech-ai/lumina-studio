@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 import type { IntelligenceSuggestion } from "@/lib/intelligence/panel-contract";
 
 type Props = { suggestions: IntelligenceSuggestion[] };
@@ -28,12 +30,12 @@ export function SuggestionRail({ suggestions }: Props) {
                 <div className="font-semibold text-[#E5E7EB]">{s.title}</div>
                 <div className="mt-1 text-[#9CA3AF]">{s.description}</div>
                 {s.action && (
-                  <a
+                  <Link
                     href={s.action.href}
                     className="mt-2 inline-block text-[#60A5FA] hover:underline"
                   >
                     {s.action.label}
-                  </a>
+                  </Link>
                 )}
               </div>
               <div className="text-xs text-[#6B7280]">

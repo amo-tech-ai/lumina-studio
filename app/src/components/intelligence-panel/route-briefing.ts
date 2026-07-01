@@ -15,6 +15,7 @@ export function resolveRouteBriefing(pathname: string): RouteBriefing {
       section: "Command Center",
       headline: "Portfolio overview — pending approvals and weakest brands surface here.",
       nextActions: ["Plan a shoot", "Review approvals", "Improve a brand"],
+      panelSections: ["dna-scores", "approvals"],
     };
   }
   if (pathname.startsWith("/app/brand")) {
