@@ -1,0 +1,244 @@
+.agents/skills/copilotkit-develop/sources.md
+  s_118fd3beda84f7::t_73c22e8045f4ce 1-66
+.agents/skills/a2ui-renderer/SKILL.md
+  s_118fd3beda84f7::t_73c22e8045f4ce 1-308
+.agents/skills/copilotkit-agui/references/event-flow-diagrams.md
+  s_118fd3beda84f7::t_73c22e8045f4ce 1-424
+.agents/skills/copilotkit-upgrade/references/deprecation-map.md
+  s_118fd3beda84f7::t_73c22e8045f4ce 1-114
+.agents/skills/runtime/references/built-in-agent.md
+  s_118fd3beda84f7::t_73c22e8045f4ce 1-523
+.agents/skills/runtime/references/wiring-aws-strands.md
+  s_118fd3beda84f7::t_73c22e8045f4ce 1-59
+app/src/app/api/intelligence/panel/route.ts
+  s_2e2ca317dec1f8::t_a158f0bac9d5d2 4-5,36,42-46,48-53,77-81,87-90,95,99,102
+.agents/skills/copilotkit-integrations/references/integrations/a2a.md
+  s_118fd3beda84f7::t_73c22e8045f4ce 1-194
+skills-lock.json
+  s_118fd3beda84f7::t_73c22e8045f4ce 1-71
+.agents/skills/copilotkit-setup/sources.md
+  s_118fd3beda84f7::t_73c22e8045f4ce 1-37
+.agents/skills/copilotkit-integrations/references/integrations/agno.md
+  s_118fd3beda84f7::t_73c22e8045f4ce 1-120
+.agents/skills/react-core/references/custom-message-renderers.md
+  s_118fd3beda84f7::t_73c22e8045f4ce 1-223
+.agents/skills/copilotkit-agui/references/building-agents.md
+  s_118fd3beda84f7::t_73c22e8045f4ce 1-438
+.agents/skills/copilotkit-integrations/references/integrations/ms-agent-framework.md
+  s_118fd3beda84f7::t_73c22e8045f4ce 1-253
+app/src/lib/intelligence/generate-suggestions.test.ts
+  s_2e2ca317dec1f8::t_7e975ca558068a 1-15
+.agents/skills/runtime/references/agent-runners-in-memory.md
+  s_118fd3beda84f7::t_73c22e8045f4ce 1-64
+.agents/skills/runtime/references/wiring-ms-agent-framework.md
+  s_118fd3beda84f7::t_73c22e8045f4ce 1-41
+.agents/skills/runtime/references/wiring-ag2.md
+  s_118fd3beda84f7::t_73c22e8045f4ce 1-41
+app/src/app/api/brands/[id]/suggestions/route.ts
+  s_2e2ca317dec1f8::t_45e675b22a64e9 4,13,30,36-40,46
+.agents/skills/copilotkit-debug/references/agent-debugging.md
+  s_118fd3beda84f7::t_73c22e8045f4ce 1-299
+.env
+  s_118fd3beda84f7::t_3324ec6f124f0f 1-5
+.agents/skills/react-core/references/rendering-activity-messages.md
+  s_118fd3beda84f7::t_73c22e8045f4ce 1-201
+app/src/lib/intelligence/generate-suggestions.ts
+  s_2e2ca317dec1f8::t_ee7f1f0c903856 1-47
+.agents/skills/runtime/references/built-in-agent-model-identifiers.md
+  s_118fd3beda84f7::t_73c22e8045f4ce 1-59
+.agents/skills/runtime/references/wiring-external-agents.md
+  s_118fd3beda84f7::t_73c22e8045f4ce 1-348
+.agents/skills/copilotkit-setup/references/telemetry-setup.md
+  s_118fd3beda84f7::t_73c22e8045f4ce 1-68
+.agents/skills/copilotkit-upgrade/SKILL.md
+  s_118fd3beda84f7::t_73c22e8045f4ce 1-144
+.agents/skills/runtime/references/wiring-mastra.md
+  s_118fd3beda84f7::t_73c22e8045f4ce 1-70
+.agents/skills/react-core/references/provider-setup.md
+  s_118fd3beda84f7::t_73c22e8045f4ce 1-337
+.agents/skills/copilotkit-debug/references/error-patterns.md
+  s_118fd3beda84f7::t_73c22e8045f4ce 1-306
+.agents/skills/copilotkit-debug/references/runtime-debugging.md
+  s_118fd3beda84f7::t_73c22e8045f4ce 1-243
+.agents/skills/react-core/references/human-in-the-loop.md
+  s_118fd3beda84f7::t_73c22e8045f4ce 1-312
+.agents/skills/runtime/references/wiring-a2a.md
+  s_118fd3beda84f7::t_73c22e8045f4ce 1-40
+app/src/lib/intelligence/build-thumb-url.ts
+  s_2e2ca317dec1f8::t_30ad37182e067c 1-5
+app/src/app/api/intelligence/panel/route.test.ts
+  s_2e2ca317dec1f8::t_f7ea1104721d53 22-79,83,120
+  s_2e2ca317dec1f8::t_1297239479e643 121-122
+.agents/skills/copilotkit-develop/eval.yaml
+  s_118fd3beda84f7::t_73c22e8045f4ce 1-199
+.agents/skills/copilotkit-agui/SKILL.md
+  s_118fd3beda84f7::t_73c22e8045f4ce 1-91
+.agents/skills/react-core/references/threads.md
+  s_118fd3beda84f7::t_73c22e8045f4ce 1-226
+.mcp.json
+  s_118fd3beda84f7::t_d63a54867f22a2 1-13
+.agents/skills/copilotkit-setup/assets/nextjs-app-router-route.ts
+  s_118fd3beda84f7::t_73c22e8045f4ce 1-40
+.agents/skills/runtime/SKILL.md
+  s_118fd3beda84f7::t_73c22e8045f4ce 1-98
+.agents/skills/copilotkit-integrations/references/integrations/mastra.md
+  s_118fd3beda84f7::t_73c22e8045f4ce 1-157
+.agents/skills/react-core/references/capabilities.md
+  s_118fd3beda84f7::t_73c22e8045f4ce 1-138
+.agents/skills/copilotkit-debug/sources.md
+  s_118fd3beda84f7::t_73c22e8045f4ce 1-39
+.agents/skills/copilotkit-upgrade/references/breaking-changes.md
+  s_118fd3beda84f7::t_73c22e8045f4ce 1-355
+.agents/skills/runtime/references/setup-endpoint.md
+  s_118fd3beda84f7::t_73c22e8045f4ce 1-503
+.agents/skills/runtime/references/wiring-crewai-crews.md
+  s_118fd3beda84f7::t_73c22e8045f4ce 1-51
+.agents/skills/copilotkit-upgrade/references/v1-to-v2-migration.md
+  s_118fd3beda84f7::t_73c22e8045f4ce 1-638
+.agents/skills/runtime/references/built-in-agent-factory-modes.md
+  s_118fd3beda84f7::t_73c22e8045f4ce 1-232
+.agents/skills/copilotkit-setup/references/runtime-architecture.md
+  s_118fd3beda84f7::t_73c22e8045f4ce 1-257
+.agents/skills/copilotkit-contribute/references/testing-guide.md
+  s_118fd3beda84f7::t_73c22e8045f4ce 1-194
+.agents/skills/react-core/references/debug-mode.md
+  s_118fd3beda84f7::t_73c22e8045f4ce 1-153
+.agents/skills/copilotkit-contribute/references/repo-structure.md
+  s_118fd3beda84f7::t_73c22e8045f4ce 1-125
+.agents/skills/copilotkit-integrations/references/integrations/adk.md
+  s_118fd3beda84f7::t_73c22e8045f4ce 1-161
+.agents/skills/copilotkit-develop/references/chat-customization.md
+  s_118fd3beda84f7::t_73c22e8045f4ce 1-242
+.agents/skills/copilotkit-debug/SKILL.md
+  s_118fd3beda84f7::t_73c22e8045f4ce 1-121
+.agents/skills/copilotkit-self-update/SKILL.md
+  s_118fd3beda84f7::t_73c22e8045f4ce 1-28
+.agents/skills/react-core/references/attachments.md
+  s_118fd3beda84f7::t_73c22e8045f4ce 1-291
+.agents/skills/react-core/references/suggestions.md
+  s_118fd3beda84f7::t_73c22e8045f4ce 1-211
+.agents/skills/copilotkit-develop/SKILL.md
+  s_118fd3beda84f7::t_73c22e8045f4ce 1-206
+.agents/skills/copilotkit-setup/references/framework-detection.md
+  s_118fd3beda84f7::t_73c22e8045f4ce 1-101
+.agents/skills/runtime/references/wiring-mcp-apps-middleware.md
+  s_118fd3beda84f7::t_73c22e8045f4ce 1-68
+app/src/components/intelligence-panel/intelligence-panel.tsx
+  s_2e2ca317dec1f8::t_6518cd53e5744f 10,20-23,38-60
+.agents/skills/runtime/references/server-side-tools.md
+  s_118fd3beda84f7::t_73c22e8045f4ce 1-414
+.agents/skills/runtime/references/agent-runners-custom.md
+  s_118fd3beda84f7::t_73c22e8045f4ce 1-161
+.agents/skills/copilotkit-setup/SKILL.md
+  s_118fd3beda84f7::t_73c22e8045f4ce 1-424
+.agents/skills/copilotkit-integrations/references/integrations/langgraph.md
+  s_118fd3beda84f7::t_73c22e8045f4ce 1-305
+.agents/skills/react-core/references/agent-access.md
+  s_118fd3beda84f7::t_73c22e8045f4ce 1-288
+.agents/skills/react-core/references/rendering-tool-calls.md
+  s_118fd3beda84f7::t_73c22e8045f4ce 1-319
+app/src/components/intelligence-panel/route-briefing.ts
+  s_2e2ca317dec1f8::t_2bf75a139aeb43 18
+.agents/skills/copilotkit-setup/eval.yaml
+  s_118fd3beda84f7::t_73c22e8045f4ce 1-191
+.agents/skills/copilotkit-contribute/references/contribution-guide.md
+  s_118fd3beda84f7::t_73c22e8045f4ce 1-141
+.agents/skills/react-core/references/client-side-tools.md
+  s_118fd3beda84f7::t_73c22e8045f4ce 1-358
+.agents/skills/copilotkit-contribute/references/pr-guidelines.md
+  s_118fd3beda84f7::t_73c22e8045f4ce 1-103
+.agents/skills/react-core/references/switching-agents.md
+  s_118fd3beda84f7::t_73c22e8045f4ce 1-231
+.agents/skills/copilotkit-integrations/references/integrations/pydantic-ai.md
+  s_118fd3beda84f7::t_73c22e8045f4ce 1-143
+.agents/skills/copilotkit-upgrade/sources.md
+  s_118fd3beda84f7::t_73c22e8045f4ce 1-51
+.agents/skills/runtime/references/wiring-adk.md
+  s_118fd3beda84f7::t_73c22e8045f4ce 1-45
+.agents/skills/runtime/references/wiring-agno.md
+  s_118fd3beda84f7::t_73c22e8045f4ce 1-40
+app/src/app/api/brands/[id]/assets/route.ts
+  s_2e2ca317dec1f8::t_a31787ce381588 4,54-64
+.agents/skills/copilotkit-integrations/SKILL.md
+  s_118fd3beda84f7::t_73c22e8045f4ce 1-201
+.agents/skills/copilotkit-debug/references/quick-workflows.md
+  s_118fd3beda84f7::t_73c22e8045f4ce 1-301
+.agents/skills/runtime/references/transcription.md
+  s_118fd3beda84f7::t_73c22e8045f4ce 1-287
+.agents/skills/copilotkit-integrations/references/integrations/strands.md
+  s_118fd3beda84f7::t_73c22e8045f4ce 1-160
+.agents/skills/copilotkit-integrations/references/integrations/llamaindex.md
+  s_118fd3beda84f7::t_73c22e8045f4ce 1-133
+.agents/skills/copilotkit-integrations/references/integrations/crewai.md
+  s_118fd3beda84f7::t_73c22e8045f4ce 1-248
+.agents/skills/react-core/references/chat-components.md
+  s_118fd3beda84f7::t_73c22e8045f4ce 1-229
+.agents/skills/copilotkit-agui/sources.md
+  s_118fd3beda84f7::t_73c22e8045f4ce 1-49
+.agents/skills/runtime/references/agent-runners.md
+  s_118fd3beda84f7::t_73c22e8045f4ce 1-304
+.agents/skills/copilotkit-contribute/SKILL.md
+  s_118fd3beda84f7::t_73c22e8045f4ce 1-72
+.agents/skills/runtime/references/built-in-agent-helper-utilities.md
+  s_118fd3beda84f7::t_73c22e8045f4ce 1-123
+.agents/skills/runtime/references/wiring-crewai-flows.md
+  s_118fd3beda84f7::t_73c22e8045f4ce 1-45
+.agents/skills/copilotkit-setup/assets/express-runtime.ts
+  s_118fd3beda84f7::t_73c22e8045f4ce 1-81
+.agents/skills/runtime/references/intelligence-mode.md
+  s_118fd3beda84f7::t_73c22e8045f4ce 1-332
+.agents/skills/react-core/references/switching-agents-recipes.md
+  s_118fd3beda84f7::t_73c22e8045f4ce 1-160
+.agents/skills/runtime/references/wiring-llamaindex.md
+  s_118fd3beda84f7::t_73c22e8045f4ce 1-39
+.agents/skills/runtime/references/wiring-pydantic-ai.md
+  s_118fd3beda84f7::t_73c22e8045f4ce 1-45
+.agents/skills/copilotkit-develop/references/api-surface.md
+  s_118fd3beda84f7::t_73c22e8045f4ce 1-533
+.agents/skills/runtime/references/agent-runners-sqlite.md
+  s_118fd3beda84f7::t_73c22e8045f4ce 1-90
+.agents/skills/runtime/references/wiring-langgraph.md
+  s_118fd3beda84f7::t_73c22e8045f4ce 1-49
+.agents/skills/copilotkit-contribute/sources.md
+  s_118fd3beda84f7::t_73c22e8045f4ce 1-40
+.agents/skills/react-core/SKILL.md
+  s_118fd3beda84f7::t_73c22e8045f4ce 1-108
+.agents/skills/copilotkit-develop/references/runtime-api.md
+  s_118fd3beda84f7::t_73c22e8045f4ce 1-370
+.agents/skills/copilotkit-agui/references/protocol-spec.md
+  s_118fd3beda84f7::t_73c22e8045f4ce 1-688
+.agents/skills/copilotkit-agui/references/client-sdk.md
+  s_118fd3beda84f7::t_73c22e8045f4ce 1-606
+.agents/skills/runtime/references/middleware.md
+  s_118fd3beda84f7::t_73c22e8045f4ce 1-376
+app/src/components/intelligence-panel/suggestion-rail.tsx
+  s_2e2ca317dec1f8::t_26c4f5d212c77f 1-2,33,38
+.agents/skills/copilotkit-integrations/sources.md
+  s_118fd3beda84f7::t_73c22e8045f4ce 1-50
+.agents/skills/copilotkit-setup/assets/nextjs-app-router-page.tsx
+  s_118fd3beda84f7::t_73c22e8045f4ce 1-27
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.6",
+  "base_commit_sha": "28c5ab681aefb6d777775b0d846ad91466126715",
+  "prompts": {},
+  "sessions": {
+    "s_118fd3beda84f7": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "418d7d78-c4df-454c-9efe-9c9bcb747a8b",
+        "model": "claude-sonnet-4-5-20250929"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    },
+    "s_2e2ca317dec1f8": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "354d6759-8d40-497b-94f4-4ed07c5f2ab7",
+        "model": "composer-2.5"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
