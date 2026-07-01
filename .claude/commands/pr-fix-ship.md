@@ -103,3 +103,5 @@ gh pr ready <N>
 ```
 
 Then re-trigger Bugbot/CodeRabbit after push.
+
+**When merge-ready:** run `/pr-ready PR#N` — undraft, CI inventory, trigger bots, summarize threads.
