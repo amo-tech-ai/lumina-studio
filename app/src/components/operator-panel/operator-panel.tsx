@@ -20,7 +20,7 @@ import { IntelligencePanel } from "@/components/intelligence-panel";
 import { ThreadsDrawer } from "@/components/threads-drawer";
 import { ThreadsPanelGate } from "@/components/threads-drawer/locked-state";
 import { ActiveBrandProvider, useActiveBrand } from "@/context/active-brand-context";
-import { DEV_PREVIEW_HERO_BRAND_ID, isDevSkipMode } from "./dev-skip-fixture";
+import { DEV_PREVIEW_HERO_BRAND_ID, isDevPreviewBrandId, isDevSkipMode } from "./dev-skip-fixture";
 import { NavSidebar } from "./nav-sidebar";
 import { OperatorChatDock } from "./operator-chat-dock";
 import { useOperatorBrands } from "./use-operator-brands";
@@ -84,10 +84,16 @@ function OperatorShell({
   const { activeBrandId, setActiveBrandId } = useActiveBrand();
   const { brands, brandsRef, brandsLoadingRef } = useOperatorBrands(devSkip);
 
-  // Dev layout QA — align active brand with Command Center Nike fixture
+  // Dev layout QA — align active brand with fixture; clear fixture IDs when leaving skip mode
   useEffect(() => {
-    if (devSkip && activeBrandId !== DEV_PREVIEW_HERO_BRAND_ID) {
-      setActiveBrandId(DEV_PREVIEW_HERO_BRAND_ID);
+    if (devSkip) {
+      if (activeBrandId !== DEV_PREVIEW_HERO_BRAND_ID) {
+        setActiveBrandId(DEV_PREVIEW_HERO_BRAND_ID);
+      }
+      return;
+    }
+    if (activeBrandId && isDevPreviewBrandId(activeBrandId)) {
+      setActiveBrandId(null);
     }
   }, [devSkip, activeBrandId, setActiveBrandId]);
 

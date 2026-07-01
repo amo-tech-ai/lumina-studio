@@ -80,7 +80,7 @@ describe("OperatorPanel — internal tool call hiding (AIOR-016)", () => {
     expect(PANEL_SRC).toMatch(/useHideInternalToolCalls\(\)/);
   });
 
-  it("mounts center chat dock with filtered messageView (not right-panel sidebar)", () => {
+  it("mounts center chat dock with welcomeText (not right-panel CopilotSidebar)", () => {
     expect(PANEL_SRC).toMatch(/<OperatorChatDock welcomeText=\{welcomeText\}/);
     expect(PANEL_SRC).not.toMatch(/<CopilotSidebar/);
   });
@@ -106,5 +106,10 @@ describe("OperatorPanel — dev skip + brand list (PR #170 review)", () => {
   it("wraps OperatorShell in Suspense for useSearchParams", () => {
     expect(PANEL_SRC).toMatch(/<Suspense fallback=\{<OperatorShellFallback/);
     expect(PANEL_SRC).toMatch(/useOperatorBrands\(devSkip\)/);
+  });
+
+  it("clears dev preview brand when devSkip toggles off", () => {
+    expect(PANEL_SRC).toMatch(/isDevPreviewBrandId\(activeBrandId\)/);
+    expect(PANEL_SRC).toMatch(/setActiveBrandId\(null\)/);
   });
 });

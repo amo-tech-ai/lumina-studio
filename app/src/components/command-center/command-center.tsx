@@ -16,6 +16,8 @@ import { RecentWorkRow } from "./recent-work-row";
 type Props = Partial<CommandCenterData> & {
   /** Dev bypass — render shell without KPI data (`?skip=1`) */
   devPreview?: boolean;
+  /** Dev bypass — approval stub layout (`?skip=approval`) */
+  devPreviewApproval?: boolean;
 };
 
 export function CommandCenter(props: Props = {}) {
@@ -24,7 +26,10 @@ export function CommandCenter(props: Props = {}) {
     ...props,
   };
 
-  const view = deriveWorkspaceView(data, { devPreview: props.devPreview });
+  const view = deriveWorkspaceView(data, {
+    devPreview: props.devPreview,
+    devPreviewApproval: props.devPreviewApproval,
+  });
   const recentShootName = data.recentShoots[0]?.name ?? null;
   const showMain =
     (view === "normal" || view === "populated" || view === "approval") &&

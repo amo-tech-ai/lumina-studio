@@ -1,11 +1,23 @@
+import Image from "next/image";
 import Link from "next/link";
+
+import { emptyStatePreviewUrl } from "@/lib/command-center/sample-images";
 
 import styles from "./command-center.module.css";
 
 export function CommandCenterEmpty() {
   return (
     <div className={styles.emptyCard}>
-      <div className={styles.emptyHeroPlaceholder} aria-hidden />
+      <div className={styles.emptyHeroPlaceholder} aria-hidden>
+        <Image
+          src={emptyStatePreviewUrl()}
+          alt=""
+          fill
+          loading="lazy"
+          sizes="200px"
+          className={styles.emptyHeroImage}
+        />
+      </div>
       <h2 className={styles.emptyTitle}>Welcome to iPix</h2>
       <p className={styles.emptyCopy}>
         Add your first brand and we&apos;ll crawl your site to build Brand DNA — palette,

@@ -12,3 +12,8 @@ export function isDevSkipMode(skip: string | null): boolean {
   if (process.env.NODE_ENV === "production") return false;
   return skip === "1" || skip === "approval";
 }
+
+export function isDevPreviewBrandId(brandId: string | null): boolean {
+  if (!brandId) return false;
+  return DEV_PREVIEW_BRANDS.some((b) => b.id === brandId);
+}

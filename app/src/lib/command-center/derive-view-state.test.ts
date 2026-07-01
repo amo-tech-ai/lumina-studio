@@ -29,6 +29,10 @@ describe("deriveWorkspaceView", () => {
     expect(deriveWorkspaceView(data(), { devPreview: true })).toBe("populated");
   });
 
+  it("returns approval for dev preview approval fixture", () => {
+    expect(deriveWorkspaceView(data(), { devPreviewApproval: true })).toBe("approval");
+  });
+
   it("returns error when fetchError set", () => {
     expect(deriveWorkspaceView(data({ fetchError: "boom" }))).toBe("error");
   });
