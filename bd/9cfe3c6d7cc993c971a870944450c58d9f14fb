@@ -1,0 +1,23 @@
+app/src/proxy.ts
+  s_8018398c1d787c::t_bc16482db84fb9 59
+app/src/middleware.test.ts
+  s_8018398c1d787c::t_eae8b99bc2feef 4
+app/src/test/operator-middleware-contract.test.ts
+  s_8018398c1d787c::t_f2732051fa84b7 5,7-8,19,21,24-25,28
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.6",
+  "base_commit_sha": "bd9cfe3c6d7cc993c971a870944450c58d9f14fb",
+  "prompts": {},
+  "sessions": {
+    "s_8018398c1d787c": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "3898118e-faf5-4ea8-8b0d-feb32f3839bc",
+        "model": "composer-2.5"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
