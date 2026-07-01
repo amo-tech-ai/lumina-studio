@@ -98,11 +98,11 @@
   --color-action-hover:   var(--primitive-ink-800);      /* #2A2A2A — primary hover */
   --color-action-text:    var(--primitive-white);        /* #FFFFFF — on black */
 
-  /* --- Accent — RETIRED. Maps to black so legacy refs stay neutral.
-         Only override to orange for a project-approved AI action. --- */
-  --color-accent:         var(--primitive-ink-900);      /* black — orange retired */
-  --color-accent-hover:   var(--primitive-ink-800);
-  --color-accent-light:   var(--primitive-grey-100);     /* neutral subtle tint */
+  /* --- Brand accent — RETIRED from orange; maps to black for legacy refs.
+         Prefixed --ipix-* to avoid Tailwind v4 --color-accent collision with shadcn hover states. */
+  --ipix-accent:          var(--primitive-ink-900);      /* black — orange retired */
+  --ipix-accent-hover:    var(--primitive-ink-800);
+  --ipix-accent-light:    var(--primitive-grey-100);     /* neutral subtle tint */
 
   /* --- Warning / AI pending (mustard) --- */
   --color-warning:        var(--primitive-amber-400);    /* #F3B93C — HITL hairline + dot */

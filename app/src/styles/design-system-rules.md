@@ -8,7 +8,7 @@ Upload both files to Claude Design as Tier 1 assets.
 
 ## Token rules
 
-- Always use semantic tokens (`--color-accent`, `--color-bg-page`). Never use primitive tokens (`--primitive-orange-500`) in components.
+- Always use semantic tokens (`--color-action`, `--color-bg-page`, `--ipix-accent`). Never use primitive tokens (`--primitive-orange-500`) in components. Do not use `--color-*` names that collide with shadcn/Tailwind theme keys (`accent`, `primary`, etc.).
 - Never hardcode hex values. If a color is not in `tokens.css`, add a new semantic token first, then use it.
 - If a required token is missing, recommend a new semantic token name — do not invent a raw value.
 - All spacing uses `--space-*` vars or Tailwind's default scale. No arbitrary `px` values in components.
