@@ -17,6 +17,9 @@ Task → required Claude/Cursor skill → MCP tool → verification method.
 | copilotkit | `.claude/skills/copilotkit/SKILL.md` | CK v2 runtime/UI |
 | mastra | `.claude/skills/mastra/SKILL.md` | Agents, workflows, tools |
 | ipix-supabase | `.claude/skills/ipix-supabase/SKILL.md` | RLS, migrations, edge |
+| **nextjs-16** | `.claude/skills/nextjs-16/SKILL.md` | proxy.ts, next.config, async APIs, Turbopack |
+| **nextjs-supabase-auth** | `.claude/skills/nextjs-supabase-auth/SKILL.md` | Supabase Auth + App Router, proxy gate |
+| **nextjs-best-practices** | `.claude/skills/nextjs-best-practices/SKILL.md` | Server/Client components, data fetching |
 | gemini | `.claude/skills/gemini/SKILL.md` | Prompts, structured output |
 | cloudinary | `.claude/skills/cloudinary/SKILL.md` | Media pipeline |
 | frontend-design | `.claude/skills/frontend-design/SKILL.md` | Operator UI |
