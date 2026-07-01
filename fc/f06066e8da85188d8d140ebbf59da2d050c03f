@@ -1,0 +1,31 @@
+app/src/components/operator-panel/use-operator-brands.ts
+  s_2e2ca317dec1f8::t_10a08f7e5a142b 1-52
+app/src/components/operator-panel/operator-panel.tsx
+  s_2e2ca317dec1f8::t_98d6f4af0f5cb6 23
+  s_2e2ca317dec1f8::t_20e2b7701b8163 26
+  s_2e2ca317dec1f8::t_35e58603fdd108 15
+  s_2e2ca317dec1f8::t_d1aea44f0bc667 44-48
+  s_2e2ca317dec1f8::t_1a80508bde72b7 55-64
+  s_2e2ca317dec1f8::t_0cb4f5ca495a15 83
+app/src/components/operator-panel/use-operator-brands.test.ts
+  s_2e2ca317dec1f8::t_1a2e1515486a4e 1-3
+  s_2e2ca317dec1f8::t_cf7db58bfbbdd8 4-44
+app/src/components/operator-panel/operator-panel.test.ts
+  s_2e2ca317dec1f8::t_bbc714bfc0d948 105-109
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.6",
+  "base_commit_sha": "fcf06066e8da85188d8d140ebbf59da2d050c03f",
+  "prompts": {},
+  "sessions": {
+    "s_2e2ca317dec1f8": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "354d6759-8d40-497b-94f4-4ed07c5f2ab7",
+        "model": "composer-2.5"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
