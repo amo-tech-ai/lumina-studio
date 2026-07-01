@@ -1,0 +1,23 @@
+app/src/lib/intelligence/generate-suggestions.ts
+  s_2e2ca317dec1f8::t_1ce8a086095bdf 25
+  s_2e2ca317dec1f8::t_8fa02b8d7b1c10 10-12,14
+  s_2e2ca317dec1f8::t_5ee534c39d7036 36
+app/src/lib/intelligence/generate-suggestions.test.ts
+  s_2e2ca317dec1f8::t_12e67024db2f87 15-25
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.6",
+  "base_commit_sha": "fadd0c5b9f199d1fc5700ff52c231eb13a59adea",
+  "prompts": {},
+  "sessions": {
+    "s_2e2ca317dec1f8": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "354d6759-8d40-497b-94f4-4ed07c5f2ab7",
+        "model": "composer-2.5"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
