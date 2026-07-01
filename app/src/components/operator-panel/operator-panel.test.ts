@@ -91,3 +91,15 @@ describe("OperatorPanel — internal tool call hiding (AIOR-016)", () => {
     expect(PANEL_SRC).toMatch(/className=\{styles\.intelligencePanel\}/);
   });
 });
+
+describe("OperatorPanel — dev skip + brand list (PR #170 review)", () => {
+  it("uses isDevSkipMode helper instead of hardcoded skip strings", () => {
+    expect(PANEL_SRC).toMatch(/const devSkip = isDevSkipMode\(skip\)/);
+    expect(PANEL_SRC).not.toMatch(/skip === "1" \|\| skip === "approval"/);
+  });
+
+  it("distinguishes brand list loading from empty org in setActiveBrand", () => {
+    expect(PANEL_SRC).toMatch(/brandsLoadingRef\.current/);
+    expect(PANEL_SRC).toMatch(/No brands in your organization yet/);
+  });
+});

@@ -9,5 +9,6 @@ export const DEV_PREVIEW_BRANDS = [
 ] as const;
 
 export function isDevSkipMode(skip: string | null): boolean {
+  if (process.env.NODE_ENV === "production") return false;
   return skip === "1" || skip === "approval";
 }
