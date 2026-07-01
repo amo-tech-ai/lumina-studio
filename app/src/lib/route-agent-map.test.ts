@@ -18,7 +18,7 @@ describe("resolveAgentId", () => {
     expect(resolveAgentId("/app/brand/some-id")).toBe("brand-intelligence");
     expect(resolveAgentId("/app/onboarding")).toBe("brand-intelligence");
     expect(resolveAgentId("/app/assets")).toBe("creative-director");
-    expect(resolveAgentId("/app/matching")).toBe("social-discovery");
+    expect(resolveAgentId("/app/matching")).toBe("model-match"); // IPI-308 · MODEL-P2
     expect(resolveAgentId("/app/preview")).toBe("visual-identity");
   });
 

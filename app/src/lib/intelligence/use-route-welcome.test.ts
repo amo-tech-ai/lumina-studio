@@ -226,7 +226,9 @@ describe("useRouteWelcome", () => {
       const { result } = renderHook(() =>
         useRouteWelcome({ pathname: "/app/matching" })
       );
-      expect(result.current).toBe("Find high-fit creators and flag brand safety risks");
+      expect(result.current).toBe(
+        "Find talent that fits your shoot brief — filter by shoot type, budget, and availability",
+      );
     });
 
     it("shows creator with fit score", () => {

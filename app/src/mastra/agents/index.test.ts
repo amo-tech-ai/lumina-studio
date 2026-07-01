@@ -13,6 +13,7 @@ import {
   PlannerWorkingMemory,
   creativeDirectorAgent,
   productionPlannerAgent,
+  modelMatchAgent,
 } from "./index";
 
 const AGENTS_SRC = readFileSync(
@@ -45,6 +46,18 @@ describe("operator agents — structure (IPI2-121)", () => {
     )?.[1];
     expect(creativeBlock).toBeDefined();
     expect(creativeBlock).not.toMatch(/\btools:/);
+  });
+
+  it("model-match id matches Mastra registry key (IPI-308)", () => {
+    expect(modelMatchAgent.id).toBe("model-match");
+  });
+
+  it("model-match carries exactly its 3 own tools, not the full shoot tool registry", async () => {
+    const tools = await modelMatchAgent.listTools();
+    const toolNames = Object.keys(tools ?? {});
+    expect(toolNames.sort()).toEqual(
+      ["computeTalentMatchScore", "manageShortlist", "searchTalentByFilters"].sort(),
+    );
   });
 });
 

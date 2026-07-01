@@ -21,6 +21,7 @@ import { ThreadsDrawer } from "@/components/threads-drawer";
 import { ThreadsPanelGate } from "@/components/threads-drawer/locked-state";
 import { ActiveBrandProvider, useActiveBrand } from "@/context/active-brand-context";
 import { DEV_PREVIEW_HERO_BRAND_ID, isDevPreviewBrandId, isDevSkipMode } from "./dev-skip-fixture";
+import { IntelligenceDetailProvider } from "@/context/intelligence-detail-context";
 import { NavSidebar } from "./nav-sidebar";
 import { OperatorChatDock } from "./operator-chat-dock";
 import { useOperatorBrands } from "./use-operator-brands";
@@ -39,15 +40,17 @@ export function OperatorPanel({ children }: { children: React.ReactNode }) {
   useEffect(() => { setThreadId(undefined); }, [agentId]);
   return (
     <ActiveBrandProvider>
-      <CopilotChatConfigurationProvider agentId={agentId} threadId={threadId}>
-        <div data-agent-id={agentId} style={{ display: "contents" }}>
-          <Suspense fallback={<OperatorShellFallback agentId={agentId} />}>
-            <OperatorShell agentId={agentId} threadId={threadId} onThreadChange={setThreadId}>
-              {children}
-            </OperatorShell>
-          </Suspense>
-        </div>
-      </CopilotChatConfigurationProvider>
+      <IntelligenceDetailProvider>
+        <CopilotChatConfigurationProvider agentId={agentId} threadId={threadId}>
+          <div data-agent-id={agentId} style={{ display: "contents" }}>
+            <Suspense fallback={<OperatorShellFallback agentId={agentId} />}>
+              <OperatorShell agentId={agentId} threadId={threadId} onThreadChange={setThreadId}>
+                {children}
+              </OperatorShell>
+            </Suspense>
+          </div>
+        </CopilotChatConfigurationProvider>
+      </IntelligenceDetailProvider>
     </ActiveBrandProvider>
   );
 }

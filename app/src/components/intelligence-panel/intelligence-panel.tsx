@@ -3,6 +3,7 @@
 import { useState } from "react";
 
 import { useIntelligencePanel } from "@/lib/intelligence/use-intelligence-panel";
+import { useIntelligenceDetail } from "@/context/intelligence-detail-context";
 
 import { IntelligencePanelSections } from "./intelligence-panel-sections";
 import styles from "./intelligence-panel.module.css";
@@ -22,6 +23,7 @@ const TABS: { id: PanelTab; label: string }[] = [
 
 export function IntelligencePanel({ activeBrandId, brandName }: Props) {
   const { data, loading, error } = useIntelligencePanel(activeBrandId);
+  const { detail } = useIntelligenceDetail();
   const [tab, setTab] = useState<PanelTab>("overview");
 
   const displayName = data?.brand?.name ?? brandName;
@@ -57,24 +59,28 @@ export function IntelligencePanel({ activeBrandId, brandName }: Props) {
         id="intel-panel-tabpanel"
         aria-labelledby={`intel-tab-${tab}`}
       >
-        <div className={styles.insights} aria-live="polite">
-          {loading && !data ? (
-            <p className={styles.mutedCopy}>Loading intelligence…</p>
-          ) : error ? (
-            <p className={styles.errorCopy}>{error}</p>
-          ) : !data ? (
-            <p className={styles.mutedCopy}>Select a brand to view intelligence.</p>
-          ) : null}
+        {detail ? (
+          detail
+        ) : (
+          <div className={styles.insights} aria-live="polite">
+            {loading && !data ? (
+              <p className={styles.mutedCopy}>Loading intelligence…</p>
+            ) : error ? (
+              <p className={styles.errorCopy}>{error}</p>
+            ) : !data ? (
+              <p className={styles.mutedCopy}>Select a brand to view intelligence.</p>
+            ) : null}
 
-          {!error && data ? (
-            <IntelligencePanelSections
-              data={data}
-              tab={tab}
-              activeBrandId={activeBrandId}
-              loading={loading}
-            />
-          ) : null}
-        </div>
+            {!error && data ? (
+              <IntelligencePanelSections
+                data={data}
+                tab={tab}
+                activeBrandId={activeBrandId}
+                loading={loading}
+              />
+            ) : null}
+          </div>
+        )}
       </div>
 
       <nav className={styles.tabs} aria-label="Intelligence panel sections" role="tablist">

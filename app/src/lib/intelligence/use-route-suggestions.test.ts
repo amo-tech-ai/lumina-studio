@@ -192,7 +192,7 @@ describe("useRouteSuggestions", () => {
 
       expect(result.current).toHaveLength(2);
       expect(result.current[0].title).toBe("Start matching");
-      expect(result.current[1].title).toBe("View all creators");
+      expect(result.current[1].title).toBe("View all talent");
     });
 
     it("shows creator matching suggestions when loaded", () => {
@@ -205,8 +205,8 @@ describe("useRouteSuggestions", () => {
 
       expect(result.current).toHaveLength(3);
       expect(result.current[0].title).toBe("Find 90%+ fits");
-      expect(result.current[1].title).toBe("More TikTok");
-      expect(result.current[2].title).toBe("Flag risks");
+      expect(result.current[1].title).toBe("Available now");
+      expect(result.current[2].title).toBe("Check budget fit");
     });
   });
 

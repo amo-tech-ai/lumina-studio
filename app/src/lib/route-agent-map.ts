@@ -10,7 +10,7 @@ const ROUTE_MAP: [prefix: string, agentId: string][] = [
   ["/app/campaigns", "creative-director"],
   ["/app/brand", "brand-intelligence"],  // IPI-130
   ["/app/assets", "creative-director"],  // IPI-247 · DESIGN-070
-  ["/app/matching", "social-discovery"],  // IPI-247
+  ["/app/matching", "model-match"],  // IPI-308 · MODEL-P2 (was social-discovery — a placeholder route, never functionally exercised)
   ["/app/preview", "visual-identity"],  // IPI-247
   ["/app/onboarding", "brand-intelligence"],  // IPI-247
 ];
