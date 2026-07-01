@@ -31,7 +31,10 @@ export const SAMPLE_IMAGE_KEYS: readonly SampleImageKey[] = [
   "sage",
 ] as const;
 
-const CLOUDINARY_CLOUD = process.env.CLOUDINARY_CLOUD_NAME ?? "dzqy2ixl0";
+export const CLOUDINARY_CLOUD_NAME =
+  process.env.CLOUDINARY_CLOUD_NAME ?? "dzqy2ixl0";
+
+const CLOUDINARY_CLOUD = CLOUDINARY_CLOUD_NAME;
 
 export function cloudinaryImageUrl(
   publicId: string,

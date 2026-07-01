@@ -28,11 +28,7 @@ function formatMeta(shoot: RecentShoot): string {
     parts.push(shoot.channel);
     const aspect = CHANNEL_ASPECT[shoot.channel];
     if (aspect) parts.push(aspect);
-    parts.push(shoot.status);
-    if (when) parts.push(when);
-    return parts.join(" · ");
   }
-
   parts.push(shoot.status);
   if (when) parts.push(when);
   if (typeof shoot.dnaScore === "number" && shoot.dnaScore > 0) {
