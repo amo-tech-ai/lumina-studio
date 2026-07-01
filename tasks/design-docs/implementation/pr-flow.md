@@ -83,6 +83,45 @@ Mismatch → `cd` to correct path before `/pr fix`.
 
 ---
 
+## Fix efficiency tiers
+
+**Default to Tier A.** Escalate only when confidence drops below 80% or the issue touches auth, RLS, agents, migrations, CI, or runtime UI.
+
+| Tier | When | Skills / MCP | Verify |
+|------|------|--------------|--------|
+| **A — Thread-only** | Clear inline comment with exact file/line | None unless confidence < 80% | Targeted test + lint |
+| **B — Domain** | UI architecture, Supabase/RLS, auth, agents, migrations, shared components | Max 1–2 skills; MCP only if external truth needed | `npm test` on affected glob |
+| **C — Forensic** | CI red, runtime disputed, AC drift, stacked PR unclear | `task-verifier` + MCP + browser | Full `@pr-workflow` matrix |
+
+### Tier A — Thread-only
+
+Use for clear inline comments with exact file/line.  
+No skills or MCP unless confidence is below 80%.  
+Verify with targeted test + lint.
+
+Examples: null-guard logic (#164), single a11y role fix (#169).
+
+### Tier B — Domain
+
+Use when the fix touches UI architecture, Supabase/RLS, auth, agents, migrations, or shared components.  
+Load max 1–2 relevant skills (see `.claude/commands/pr-fix.md` path matrix).  
+Use MCP only if external truth is needed.
+
+### Tier C — Forensic
+
+Use when CI is red, runtime behavior is disputed, AC drift exists, or stacked PR state is unclear.  
+Use `task-verifier`, MCP probes, browser snapshot, and full verify matrix.
+
+Run Tier C on **`/pr ready`**, not every thread fix.
+
+**Efficient loop:**
+
+```text
+npm run worktree:audit → classify A|B|C → fix → verify by tier → /pr ship → resolve
+```
+
+---
+
 ## Per-PR playbooks
 
 ### #164 — score defaults thread

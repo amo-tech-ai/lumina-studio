@@ -49,6 +49,49 @@ Act as a senior GitHub PR reviewer and fixer for the iPix / Lumina Studio codeba
 Before triage: `headRefOid` from `gh pr view` must match `git rev-parse HEAD`.  
 If not on PR branch/worktree → stop.
 
+Run `npm run worktree:audit` before every fix (see #173).
+
+---
+
+## Fix efficiency tiers
+
+**Default to Tier A.** Escalate only when confidence drops below 80% or the issue touches auth, RLS, agents, migrations, CI, or runtime UI.
+
+| Tier | When | Skills / MCP | Verify |
+|------|------|--------------|--------|
+| **A — Thread-only** | Clear inline comment with exact file/line | None unless confidence < 80% | Targeted test + lint |
+| **B — Domain** | UI architecture, Supabase/RLS, auth, agents, migrations, shared components | Max 1–2 skills from matrix below; MCP only if external truth needed | `npm test` on affected glob |
+| **C — Forensic** | CI red, runtime disputed, AC drift, stacked PR state unclear | `task-verifier` + MCP probes + browser snapshot | Full `@pr-workflow` matrix |
+
+### Tier A — Thread-only
+
+Use for clear inline comments with exact file/line.  
+No skills or MCP unless confidence is below 80%.  
+Verify with targeted test + lint.
+
+### Tier B — Domain
+
+Use when the fix touches UI architecture, Supabase/RLS, auth, agents, migrations, or shared components.  
+Load max 1–2 relevant skills.  
+Use MCP only if external truth is needed (DB state, build logs, live runtime).
+
+### Tier C — Forensic
+
+Use when CI is red, runtime behavior is disputed, AC drift exists, or stacked PR state is unclear.  
+Use `task-verifier`, MCP probes, browser snapshot, and full verify matrix.
+
+**Efficient `/pr fix` loop:**
+
+```text
+0. npm run worktree:audit
+1. gh pr view N --json files → unresolved threads (GraphQL)
+2. Classify each thread: A | B | C (show in triage table)
+3. IF any B/C: graphify query → load 1 skill → optional 1 MCP probe
+4. Smallest diff → verify by tier → reply (SHA + commands) → resolve
+```
+
+This keeps `/pr fix` fast for simple threads and powerful for risky PRs.
+
 ---
 
 ## Git safety (before commit)
@@ -67,6 +110,8 @@ git log -5 --oneline
 ---
 
 ## Phase 0 — Pre-flight (Skills & MCP audit)
+
+**Tier gate:** Skip heavy Phase 0 for Tier A threads. Run full Phase 0 only for Tier B/C (or when confidence < 80%).
 
 Before triage or code:
 
@@ -130,7 +175,8 @@ gh pr view <N> --json number,title,body,headRefName,files
 1. Extract PR number from `$ARGUMENTS`.
 2. HEAD gate + fetch unresolved threads (GraphQL) — see `.cursor/rules/pr-fix.mdc`.
 3. Bucket: **Fix** · **Already fixed** · **Out of scope** · **Dismiss**
-4. Show triage table before coding.
+4. Assign tier **A | B | C** per thread (see Fix efficiency tiers).
+5. Show triage table before coding.
 
 ---
 
@@ -139,7 +185,7 @@ gh pr view <N> --json number,title,body,headRefName,files
 Order: Bug → Refactor → Tech debt → Style
 
 1. Checkout PR branch (worktree required if not already there).
-2. `graphify query` → read flagged lines.
+2. Tier A: read flagged lines only. Tier B/C: `graphify query` → read flagged lines.
 3. Smallest safe diff; >3 files → confirm with user.
 4. One concern per commit.
 
@@ -158,6 +204,8 @@ Order: Bug → Refactor → Tech debt → Style
 
 ## Phase 3 — Verify
 
+Verify depth matches tier (see Fix efficiency tiers).
+
 ### 3a. Static
 
 ```bash
@@ -169,11 +217,11 @@ Also: lint, build, `supabase:verify-rls`, edge/BI/DNA scripts as applicable.
 
 ### 3b. Domain (skills + MCP)
 
-Run Phase 0 probes. DB claims → Supabase MCP.
+Tier B/C only. Run Phase 0 probes. DB claims → Supabase MCP.
 
 ### 3c. Spec compliance
 
-If closes IPI-###: each AC → probe → result. Run `@task-verifier` before merge-ready.
+Tier C, or `/pr ready` gate. If closes IPI-###: each AC → probe → result. Run `@task-verifier` before merge-ready.
 
 ### 3d. CI
 
