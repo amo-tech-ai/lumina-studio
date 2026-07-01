@@ -2,6 +2,7 @@
 import { NextResponse } from "next/server";
 import { withOperatorAuth, OperatorAuthError } from "@/lib/operator-gate";
 import { generateSuggestions } from "@/lib/intelligence/generate-suggestions";
+import { parseBrandScore } from "@/lib/brand-scores";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -38,10 +39,11 @@ export async function GET(
     return NextResponse.json({ error: "Internal error" }, { status: 500 });
   }
 
-  const scoreMap: Record<string, number | null> = {};
-  scores?.forEach((row) => {
-    scoreMap[row.score_type] = row.score;
-  });
+  const scoreMap: Record<string, number> = {};
+  for (const row of scores ?? []) {
+    const score = parseBrandScore(row.score);
+    if (score != null) scoreMap[row.score_type] = score;
+  }
 
   return NextResponse.json({ suggestions: generateSuggestions(scoreMap) });
 }
