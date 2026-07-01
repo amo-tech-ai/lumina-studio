@@ -1,0 +1,21 @@
+app/src/lib/command-center/sample-images.ts
+  s_2e2ca317dec1f8::t_afa9560412bbad 34-37
+app/next.config.ts
+  s_2e2ca317dec1f8::t_3579e0f43e5fc5 3-4,8-14
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.6",
+  "base_commit_sha": "0a3507ee79ac630715fdcf9b5c841f019535d94b",
+  "prompts": {},
+  "sessions": {
+    "s_2e2ca317dec1f8": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "354d6759-8d40-497b-94f4-4ed07c5f2ab7",
+        "model": "composer-2.5"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
