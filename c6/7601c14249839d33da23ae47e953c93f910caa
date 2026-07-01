@@ -1,0 +1,43 @@
+app/next.config.ts
+  s_34eb7d3f1209d9::t_425d3b6dd39f73 3-4,7-15
+app/src/app/(operator)/app/page.tsx
+  s_34eb7d3f1209d9::t_d9d1a6d25ea38f 5,20-30
+app/src/components/command-center/command-center-approvals.tsx
+  s_34eb7d3f1209d9::t_a6d2f4a6e9cf4b 1,6,39-53,55-60,62
+app/src/components/command-center/command-center-empty.tsx
+  s_34eb7d3f1209d9::t_2083c86c79770e 1,4-5,11-20
+app/src/components/command-center/command-center.module.css
+  s_34eb7d3f1209d9::t_ee7b55cfbd494a 124-132,150-153,329-332,434-453,518,525-531
+app/src/components/command-center/command-center.tsx
+  s_34eb7d3f1209d9::t_12d1ea89f1cf55 19-20,29-32
+app/src/components/command-center/portfolio-hero-card.tsx
+  s_34eb7d3f1209d9::t_afa83b56fdcac2 1,5,31-32,37-44
+app/src/components/command-center/recent-work-row.tsx
+  s_34eb7d3f1209d9::t_827a0e8aac9141 1,4,13-19,25-37,55-78
+app/src/lib/command-center/derive-view-state.test.ts
+  s_34eb7d3f1209d9::t_93fcb0bfabfd11 32-35
+app/src/lib/command-center/derive-view-state.ts
+  s_34eb7d3f1209d9::t_bb6cc6b609791d 6,18
+app/src/lib/command-center/sample-images.test.ts
+  s_34eb7d3f1209d9::t_9b8a55169c7719 1-33
+app/src/lib/command-center/sample-images.ts
+  s_34eb7d3f1209d9::t_d374eee6d7e169 1-71
+app/src/lib/command-center/types.ts
+  s_34eb7d3f1209d9::t_2271c50baf538f 3-4,21,30-31,65-105,109,114,117,120-124,128-134
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.6",
+  "base_commit_sha": "c67601c14249839d33da23ae47e953c93f910caa",
+  "prompts": {},
+  "sessions": {
+    "s_34eb7d3f1209d9": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "5f2bb499-4181-4424-be0c-f98a1fef1295",
+        "model": "composer-2.5"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
