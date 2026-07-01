@@ -3,6 +3,7 @@ import { withOperatorAuth, OperatorAuthError } from "@/lib/operator-gate";
 import { buildPanelData } from "@/lib/intelligence/build-panel-data";
 import { buildThumbUrl } from "@/lib/intelligence/build-thumb-url";
 import { generateSuggestions } from "@/lib/intelligence/generate-suggestions";
+import { parseBrandScore } from "@/lib/brand-scores";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -81,23 +82,27 @@ export async function GET(request: Request) {
 
     const scoreRows = (scoresResult.data ?? []).map((row) => ({
       score_type: row.score_type,
-      score: Number(row.score),
+      score: row.score,
     }));
 
     const scoreMap: Record<string, number> = {};
     for (const row of scoreRows) {
-      scoreMap[row.score_type] = row.score;
+      const score = parseBrandScore(row.score);
+      if (score != null) scoreMap[row.score_type] = score;
     }
 
-    const assets = (assetsResult.data ?? []).map((a) => ({
-      id: a.id,
-      url: a.cloudinary_public_id ?? "",
-      thumbnail_url: a.cloudinary_public_id ? buildThumbUrl(a.cloudinary_public_id) : null,
-      asset_type: "image" as const,
-      width: null,
-      height: null,
-      created_at: a.created_at ?? new Date().toISOString(),
-    }));
+    const assets = (assetsResult.data ?? []).map((a) => {
+      const thumb = a.cloudinary_public_id ? buildThumbUrl(a.cloudinary_public_id) : null;
+      return {
+        id: a.id,
+        url: thumb ?? "",
+        thumbnail_url: thumb,
+        asset_type: "image" as const,
+        width: null,
+        height: null,
+        created_at: a.created_at ?? new Date().toISOString(),
+      };
+    });
 
     const suggestions = generateSuggestions(scoreMap);
 

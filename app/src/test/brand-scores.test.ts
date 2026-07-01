@@ -1,5 +1,17 @@
 import { describe, it, expect } from "vitest";
-import { computeDnaScore, BASE_SCORE_TYPES } from "@/lib/brand-scores";
+import { computeDnaScore, parseBrandScore, BASE_SCORE_TYPES } from "@/lib/brand-scores";
+
+describe("parseBrandScore", () => {
+  it("returns null for null/undefined without coercing to 0", () => {
+    expect(parseBrandScore(null)).toBe(null);
+    expect(parseBrandScore(undefined)).toBe(null);
+  });
+
+  it("parses finite numbers", () => {
+    expect(parseBrandScore(0)).toBe(0);
+    expect(parseBrandScore("72")).toBe(72);
+  });
+});
 
 describe("computeDnaScore", () => {
   it("averages the four base score types", () => {

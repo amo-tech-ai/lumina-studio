@@ -10,6 +10,13 @@ export type BaseScoreType = (typeof BASE_SCORE_TYPES)[number];
 
 export type BrandScoreRow = { score_type: string; score: number };
 
+/** Preserve null from DB; never coerce null → 0 (IPI-284 panel route). */
+export function parseBrandScore(value: unknown): number | null {
+  if (value == null) return null;
+  const n = Number(value);
+  return Number.isFinite(n) ? n : null;
+}
+
 /** DNA badge = average of all four base scores; 0 until profile is complete. */
 export const computeDnaScore = (scores: BrandScoreRow[] | null | undefined): number => {
   if (!scores?.length) return 0;

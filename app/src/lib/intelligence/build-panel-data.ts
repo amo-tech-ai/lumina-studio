@@ -1,6 +1,7 @@
 import {
   BASE_SCORE_TYPES,
   computeDnaScore,
+  parseBrandScore,
   type BaseScoreType,
   type BrandScoreRow,
 } from "@/lib/brand-scores";
@@ -26,12 +27,16 @@ export function buildPanelData(
 
   for (const scoreType of BASE_SCORE_TYPES) {
     const row = scoreRows?.find((r) => r.score_type === scoreType);
-    pillars[scoreType] =
-      row && Number.isFinite(Number(row.score)) ? Number(row.score) : null;
+    pillars[scoreType] = row ? parseBrandScore(row.score) : null;
   }
 
+  const numericScoreRows: BrandScoreRow[] = (scoreRows ?? []).flatMap((row) => {
+    const score = parseBrandScore(row.score);
+    return score != null ? [{ score_type: row.score_type, score }] : [];
+  });
+
   const hasPillar = BASE_SCORE_TYPES.some((t) => pillars[t] != null);
-  const dna = hasPillar ? computeDnaScore(scoreRows ?? []) : 0;
+  const dna = hasPillar ? computeDnaScore(numericScoreRows) : 0;
 
   const approvalItems = pendingDraftBrands.map((b) => ({
     id: b.id,
