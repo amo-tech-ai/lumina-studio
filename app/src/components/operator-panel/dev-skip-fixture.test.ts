@@ -1,6 +1,10 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { isDevSkipMode } from "./dev-skip-fixture";
+import {
+  DEV_PREVIEW_HERO_BRAND_ID,
+  isDevPreviewBrandId,
+  isDevSkipMode,
+} from "./dev-skip-fixture";
 
 describe("isDevSkipMode", () => {
   afterEach(() => {
@@ -19,5 +23,17 @@ describe("isDevSkipMode", () => {
     expect(isDevSkipMode("approval")).toBe(true);
     expect(isDevSkipMode(null)).toBe(false);
     expect(isDevSkipMode("true")).toBe(false);
+  });
+});
+
+describe("isDevPreviewBrandId", () => {
+  it("identifies fixture brand IDs", () => {
+    expect(isDevPreviewBrandId(DEV_PREVIEW_HERO_BRAND_ID)).toBe(true);
+    expect(isDevPreviewBrandId("00000000-0000-4000-8000-000000000002")).toBe(true);
+  });
+
+  it("returns false for null and non-fixture IDs", () => {
+    expect(isDevPreviewBrandId(null)).toBe(false);
+    expect(isDevPreviewBrandId("00000000-0000-4000-8000-000000009999")).toBe(false);
   });
 });
