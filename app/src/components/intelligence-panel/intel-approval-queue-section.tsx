@@ -40,7 +40,7 @@ export function IntelApprovalQueueSection({ approvals }: Props) {
           <li key={item.id} className={styles.approvalCard}>
             {item.thumbnailUrl ? (
               <div className={styles.approvalThumb}>
-                <Image
+                <img
                   src={item.thumbnailUrl}
                   alt=""
                   width={48}
