@@ -1,0 +1,19 @@
+supabase/migrations/20260701070100_fix_security_definer_views.sql
+  s_42a955007cfc96::t_80fd697f92b8fc 8-9
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.6",
+  "base_commit_sha": "1de7c71e05124c2f90e49157732de244d1830260",
+  "prompts": {},
+  "sessions": {
+    "s_42a955007cfc96": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "cbb02baf-4b7a-4b47-a529-c13fb4fbe58e",
+        "model": "unknown"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
