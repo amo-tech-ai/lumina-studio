@@ -145,6 +145,11 @@
   color: var(--nav-item-active-text);
 }
 
+.brandItemActive:hover {
+  background: var(--nav-item-hover);
+  color: var(--nav-item-active-text);
+}
+
 .brandDot {
   flex-shrink: 0;
   width: 0.5rem;
