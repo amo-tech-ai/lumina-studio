@@ -80,13 +80,14 @@ describe("OperatorPanel — internal tool call hiding (AIOR-016)", () => {
     expect(PANEL_SRC).toMatch(/useHideInternalToolCalls\(\)/);
   });
 
-  it("passes filtered messageView slots to CopilotSidebar", () => {
-    expect(PANEL_SRC).toMatch(/messageView=\{hiddenInternalToolsMessageView\}/);
-    expect(PANEL_SRC).toMatch(/hiddenInternalToolsMessageView/);
+  it("mounts center chat dock with filtered messageView (not right-panel sidebar)", () => {
+    expect(PANEL_SRC).toMatch(/<OperatorChatDock welcomeText=\{welcomeText\}/);
+    expect(PANEL_SRC).not.toMatch(/<CopilotSidebar/);
   });
 
-  it("wraps CopilotSidebar in IntelligencePanel (IPI-243)", () => {
+  it("renders IntelligencePanel in the right column without chat children (IPI-243)", () => {
     expect(PANEL_SRC).toMatch(/<IntelligencePanel/);
     expect(PANEL_SRC).toMatch(/brandName=\{activeBrandName\}/);
+    expect(PANEL_SRC).toMatch(/className=\{styles\.intelligencePanel\}/);
   });
 });
