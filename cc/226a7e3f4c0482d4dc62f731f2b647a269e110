@@ -1,0 +1,72 @@
+.claude/skills/nextjs-16/SKILL.md
+  s_8018398c1d787c::t_e62f807751e5d0 1-103
+.cursor/rules/pr-fix.mdc
+  s_8018398c1d787c::t_7aa8f314956813 1-39,42-51,54-71,73-74,77-262,267,272-276
+  s_8018398c1d787c::t_aa543e1e1bc331 52-53
+  s_8018398c1d787c::t_f337ada47d393f 263-265
+  s_8018398c1d787c::t_f4d5138d788a21 40-41
+  s_8018398c1d787c::t_185f5b64c46fef 72,75-76
+  s_8018398c1d787c::t_b9d80f055456da 266
+  s_8018398c1d787c::t_5c5f4c10fe60b8 268-271
+.claude/skills/task-verifier/references/mcp-cadence-ipix.md
+  s_8018398c1d787c::t_f4acaa6710543a 14
+  s_8018398c1d787c::t_ff4a353acbe098 11-13
+  s_8018398c1d787c::t_e16d2e1bc4c571 15-17
+  s_118fd3beda84f7::t_53142e11ae992c 1-10,18-37
+tasks/intelligence/ai/skill-map.md
+  s_8018398c1d787c::t_099787192c8156 20
+  s_8018398c1d787c::t_5be64344e9b1ae 21-22
+.mcp.json
+  s_8018398c1d787c::t_dee7beab7c4665 1-11
+.claude/commands/pr-fix.md
+  s_8018398c1d787c::t_084a9cebe37e08 38-39
+  s_8018398c1d787c::t_0047d9b10f4cd1 158
+  s_8018398c1d787c::t_d4b84d0918476f 50-51
+  s_8018398c1d787c::t_f270822f07dae1 159-160
+  s_8018398c1d787c::t_d46a2e29315ccf 5,7-37,40-49,52-68,73-81,83-117,119,121,124-126,128,130,132,134,136,138,140,142,144,146-156,162-164,167-184
+  s_118fd3beda84f7::t_7ef72924c4ef10 6,118,120,122-123,127,129,131,133,135,137,139,141,143,145
+  s_8018398c1d787c::t_a51ab4916b1bbc 166
+  s_8018398c1d787c::t_9a6ecca4b39c8d 82
+  s_8018398c1d787c::t_ff7a1c575d63a5 69-72
+  s_8018398c1d787c::t_7b37ef75da3f48 2-4
+  s_8018398c1d787c::t_971fdb9c2e2594 157
+  s_8018398c1d787c::t_9c40727786f671 161
+  s_8018398c1d787c::t_efa12a168b42fa 165
+.claude/skills/README.md
+  s_8018398c1d787c::t_9ba049dc58fdc9 39
+  s_8018398c1d787c::t_6f18bfb8224c5c 36-38
+  s_8018398c1d787c::t_1175267b8af148 40-42
+.claude/skills/nextjs-best-practices/SKILL.md
+  s_118fd3beda84f7::t_024cdeeed1f7aa 1-213
+.claude/skills/nextjs-supabase-auth/SKILL.md
+  s_118fd3beda84f7::t_725b509c4fd5f1 1-313
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.6",
+  "base_commit_sha": "cc226a7e3f4c0482d4dc62f731f2b647a269e110",
+  "prompts": {},
+  "humans": {
+    "h_d382fbec1d5b46": {
+      "author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  },
+  "sessions": {
+    "s_118fd3beda84f7": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "418d7d78-c4df-454c-9efe-9c9bcb747a8b",
+        "model": "claude-sonnet-4-5-20250929"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    },
+    "s_8018398c1d787c": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "3898118e-faf5-4ea8-8b0d-feb32f3839bc",
+        "model": "composer-2.5"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
