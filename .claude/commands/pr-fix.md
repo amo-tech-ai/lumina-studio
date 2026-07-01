@@ -35,12 +35,71 @@ Act as a senior GitHub PR reviewer and fixer for the iPix / Lumina Studio codeba
 
 ## Comment taxonomy (classify first)
 
-| Source | Action |
-|--------|--------|
-| Inline review thread | Fix → GraphQL reply → resolve |
-| Bot summary (not inline) | Fix → PR comment only |
-| Codacy/CI | Fix or external UI |
-| Draft PR | `gh pr ready <N>` before full bot review |
+| Source | Blocks merge? | Action |
+|--------|---------------|--------|
+| **Inline review thread** (`isResolved = false`) | **Yes** | Fix → GraphQL reply → resolve |
+| Bot summary review (“Needs Changes 🔧”, Conversation tab) | **No** | Track in PR comment; do not treat as open thread |
+| Bot summary-only nit (Codacy, CodeRabbit body) | **No** | Fix, dismiss, or PR comment — not GraphQL resolve |
+| Codacy/CI check failure | **Yes** (if required check) | Fix or waiver in PR body |
+| Draft PR | — | `gh pr ready <N>` before full bot review |
+
+### Merge blockers — source of truth
+
+**Only unresolved inline review threads block merge.**
+
+Top-level bot reviews like “Needs Changes” may remain visible after fixes.  
+They are **not** the source of truth.
+
+**Source of truth:**
+
+```text
+GraphQL reviewThreads where isResolved = false
++
+CI status (required checks)
++
+latest HEAD SHA (fix verified on headRefOid)
+```
+
+Count unresolved threads:
+
+```bash
+gh api graphql -f query='
+query { repository(owner:"amo-tech-ai", name:"lumina-studio") {
+  pullRequest(number:<N>) {
+    reviewThreads(first:100) {
+      nodes { isResolved path line }
+    }
+  }
+}}' --jq '[.data.repository.pullRequest.reviewThreads.nodes[] | select(.isResolved==false)] | length'
+```
+
+If count > 0 → `/pr fix` continues.  
+If count = 0 but Conversation still shows “Needs Changes” → stale summary; proceed when CI green.
+
+### Post-push thread re-fetch (mandatory)
+
+After **every push**, re-fetch unresolved threads.
+
+Bots may create **new threads on sibling files** after the first fix (e.g. fix `panel/route.ts` → new thread on `suggestions/route.ts`).
+
+**Do not sign off until unresolved thread count stays 0 on latest HEAD.**
+
+```text
+push → wait ~10s → re-fetch GraphQL count
+→ if new threads: fix siblings/shared callers → push again → repeat
+→ sign off only when count = 0 at headRefOid
+```
+
+**Example (#164):** `parseBrandScore` had to land in both `intelligence/panel/route.ts` and `brands/[id]/suggestions/route.ts`. Fixing only one triggered a follow-up optibot thread.
+
+### Sign-off gate (merge-ready)
+
+```text
+Wait for bot re-review on latest HEAD
+→ confirm unresolved threads = 0
+→ confirm CI green (required checks)
+→ merge or /pr ready
+```
 
 ---
 
@@ -235,9 +294,10 @@ gh pr view <N> --json statusCheckRollup
 ## Phase 4 — Push & resolve
 
 Use GraphQL `addPullRequestReviewThreadReply` + `resolveReviewThread`.  
-Gate: unresolved thread count = 0. See `.cursor/rules/pr-fix.mdc` for full protocol.
+Gate: unresolved thread count = 0 **on latest `headRefOid`** (see Comment taxonomy).
 
-Re-fetch threads after ~10s. Re-trigger Bugbot if material diff.
+After every push: re-fetch unresolved threads (~10s). Do not sign off until count stays 0 on HEAD.  
+Re-trigger Bugbot if material diff.
 
 **Resolve-only path:** use `/pr-fix-resolve` when no local code changes needed.
 
@@ -251,6 +311,8 @@ Output the report template from `.cursor/rules/pr-fix.mdc`.
 
 ## Rules
 
+- **Only unresolved inline threads block merge** — ignore stale “Needs Changes” summaries when GraphQL count = 0
+- Re-fetch thread count after every push; fix sibling files before sign-off
 - Never resolve unread threads
 - Verify "already fixed" at HEAD (+ MCP for DB)
 - Load domain skill before pattern arguments
