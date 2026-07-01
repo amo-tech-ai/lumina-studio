@@ -189,7 +189,6 @@ function OperatorShell({
       {/* Right — IntelligencePanel only (320px) — no CopilotSidebar */}
       <div className={styles.intelligencePanel}>
         <IntelligencePanel
-          pathname={pathname}
           activeBrandId={activeBrandId}
           brandName={activeBrandName}
         />

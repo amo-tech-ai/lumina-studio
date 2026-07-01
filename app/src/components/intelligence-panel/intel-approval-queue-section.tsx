@@ -19,7 +19,9 @@ function confidenceClass(confidence: number): string {
 }
 
 export function IntelApprovalQueueSection({ approvals }: Props) {
-  if (approvals.pendingCount === 0) {
+  const displayCount = approvals.items.length || approvals.pendingCount;
+
+  if (approvals.items.length === 0) {
     return (
       <section className={styles.section} aria-label="Approval queue">
         <h3 className={styles.sectionTitle}>Approvals</h3>
@@ -32,7 +34,7 @@ export function IntelApprovalQueueSection({ approvals }: Props) {
     <section className={styles.section} aria-label="Approval queue">
       <div className={styles.sectionHeader}>
         <h3 className={styles.sectionTitle}>Approvals</h3>
-        <span className={styles.pendingBadge}>{approvals.pendingCount}</span>
+        <span className={styles.pendingBadge}>{displayCount}</span>
       </div>
 
       <ul className={styles.approvalList}>

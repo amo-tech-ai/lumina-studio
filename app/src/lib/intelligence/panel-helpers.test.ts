@@ -25,6 +25,19 @@ describe("resolveHealthPillars", () => {
     expect(pillars?.[0]).toMatchObject({ key: "brand", score: 87 });
   });
 
+  it("maps voice pillar from audience score only", () => {
+    const data: IntelligencePanelData = {
+      brand: null,
+      scores: {
+        dna: 80,
+        pillars: { visual: 90, audience: 85, consistency: 99, commerce_readiness: 60 },
+      },
+      approvals: { pendingCount: 0, items: [] },
+    };
+    const pillars = resolveHealthPillars(data);
+    expect(pillars?.find((p) => p.key === "voice")).toMatchObject({ score: 85 });
+  });
+
   it("returns null when scores are missing", () => {
     const data: IntelligencePanelData = {
       brand: null,

@@ -63,7 +63,6 @@ describe("IntelligencePanel", () => {
 
     render(
       <IntelligencePanel
-        pathname="/app"
         activeBrandId={BRAND_ID}
         brandName="Nike"
       />,
@@ -92,7 +91,7 @@ describe("IntelligencePanel", () => {
     });
 
     render(
-      <IntelligencePanel pathname="/app" activeBrandId={BRAND_ID} brandName="Nike" />,
+      <IntelligencePanel activeBrandId={BRAND_ID} brandName="Nike" />,
     );
 
     const approvalsTab = screen.getByRole("tab", { name: /Approvals/i });
@@ -115,7 +114,7 @@ describe("IntelligencePanel", () => {
     });
 
     render(
-      <IntelligencePanel pathname="/app" activeBrandId={BRAND_ID} brandName="Nike" />,
+      <IntelligencePanel activeBrandId={BRAND_ID} brandName="Nike" />,
     );
 
     expect(screen.getByRole("button", { name: "Explain DNA" })).toBeTruthy();
@@ -144,7 +143,7 @@ describe("IntelligencePanel", () => {
     });
 
     render(
-      <IntelligencePanel pathname="/app/portfolio" activeBrandId={null} brandName={null} />,
+      <IntelligencePanel activeBrandId={null} brandName={null} />,
     );
 
     expect(screen.getByText(/Beta Brand/i)).toBeTruthy();
@@ -159,7 +158,7 @@ describe("IntelligencePanel", () => {
     });
 
     render(
-      <IntelligencePanel pathname="/app/brand" activeBrandId={BRAND_ID} brandName="Acme" />,
+      <IntelligencePanel activeBrandId={BRAND_ID} brandName="Acme" />,
     );
 
     expect(screen.getByText(/Loading intelligence/i)).toBeTruthy();

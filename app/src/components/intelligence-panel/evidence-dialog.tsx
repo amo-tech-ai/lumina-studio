@@ -31,7 +31,10 @@ export function EvidenceDialog({ triggerLabel, evidence, triggerClassName }: Pro
         {triggerLabel}
       </button>
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-h-[90vh] max-w-md overflow-y-auto p-0 sm:max-w-lg">
+        <DialogContent
+          className="max-h-[90vh] max-w-md overflow-y-auto p-0 sm:max-w-lg"
+          aria-describedby={undefined}
+        >
           <DialogHeader className="sr-only">
             <DialogTitle>{evidence.title}</DialogTitle>
           </DialogHeader>

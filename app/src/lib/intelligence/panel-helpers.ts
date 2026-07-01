@@ -7,10 +7,11 @@ export function resolveHealthPillars(
   if (!data.scores) return null;
 
   const { dna, pillars } = data.scores;
+  // DC health strip: Brand · Visual · Voice · Commerce — voice maps to audience score only.
   return [
     { key: "brand", label: "Brand", score: dna },
     { key: "visual", label: "Visual", score: pillars.visual ?? 0 },
-    { key: "voice", label: "Voice", score: pillars.audience ?? pillars.consistency ?? 0 },
+    { key: "voice", label: "Voice", score: pillars.audience ?? 0 },
     { key: "commerce", label: "Commerce", score: pillars.commerce_readiness ?? 0 },
   ];
 }

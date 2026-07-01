@@ -8,7 +8,6 @@ import { IntelligencePanelSections } from "./intelligence-panel-sections";
 import styles from "./intelligence-panel.module.css";
 
 type Props = {
-  pathname: string;
   activeBrandId: string | null;
   brandName: string | null;
 };
@@ -21,11 +20,7 @@ const TABS: { id: PanelTab; label: string }[] = [
   { id: "activity", label: "Activity" },
 ];
 
-export function IntelligencePanel({
-  pathname: _pathname,
-  activeBrandId,
-  brandName,
-}: Props) {
+export function IntelligencePanel({ activeBrandId, brandName }: Props) {
   const { data, loading, error } = useIntelligencePanel(activeBrandId);
   const [tab, setTab] = useState<PanelTab>("overview");
 
@@ -95,8 +90,8 @@ export function IntelligencePanel({
               onClick={() => setTab(item.id)}
             >
               {item.label}
-              {item.id === "approvals" && data?.approvals.pendingCount ? (
-                <span className={styles.tabBadge}>{data.approvals.pendingCount}</span>
+              {item.id === "approvals" && data?.approvals.items.length ? (
+                <span className={styles.tabBadge}>{data.approvals.items.length}</span>
               ) : null}
             </button>
           );
