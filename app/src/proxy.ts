@@ -56,7 +56,7 @@ export const config = {
     /*
      * Match all paths except static assets so Supabase session cookies refresh
      * on /login, /auth/callback, /app/*, and API routes.
-     * Keep in sync with app/middleware.ts (literal copy — Next.js requires static matcher).
+     * Keep in sync with tests in src/test/operator-middleware-contract.test.ts.
      */
     "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
   ],
