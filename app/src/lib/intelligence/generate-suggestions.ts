@@ -7,11 +7,11 @@ export function generateSuggestions(scores: ScoreMap): IntelligenceSuggestion[] 
   const suggestions: IntelligenceSuggestion[] = [];
   let id = 0;
 
-  const visual = scores.visual ?? 0;
-  const commerce = scores.commerce_readiness ?? 0;
-  const consistency = scores.consistency ?? 0;
+  const visual = scores.visual;
+  const commerce = scores.commerce_readiness;
+  const consistency = scores.consistency;
 
-  if (visual < 70) {
+  if (visual != null && visual < 70) {
     suggestions.push({
       id: `sugg-${++id}`,
       type: "warning",
@@ -22,7 +22,7 @@ export function generateSuggestions(scores: ScoreMap): IntelligenceSuggestion[] 
     });
   }
 
-  if (commerce < 70) {
+  if (commerce != null && commerce < 70) {
     suggestions.push({
       id: `sugg-${++id}`,
       type: "action",
@@ -33,7 +33,7 @@ export function generateSuggestions(scores: ScoreMap): IntelligenceSuggestion[] 
     });
   }
 
-  if (consistency >= 85) {
+  if (consistency != null && consistency >= 85) {
     suggestions.push({
       id: `sugg-${++id}`,
       type: "insight",
