@@ -1,0 +1,21 @@
+app/src/components/command-center/command-center.module.css
+  s_2e2ca317dec1f8::t_a72d54068a07c1 124-132
+app/src/components/command-center/recent-work-row.tsx
+  s_2e2ca317dec1f8::t_59f7cbc6fba66f 13-18,20,25-36
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.6",
+  "base_commit_sha": "6303d3ba494e57baa55a267b06759d3921e95175",
+  "prompts": {},
+  "sessions": {
+    "s_2e2ca317dec1f8": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "354d6759-8d40-497b-94f4-4ed07c5f2ab7",
+        "model": "composer-2.5"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
