@@ -19,6 +19,29 @@ describe("useOperatorBrands", () => {
     expect(result.current.brandsLoading).toBe(false);
   });
 
+  it("refetches when devSkip toggles from false to true", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => [],
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { result, rerender } = renderHook(({ devSkip }) => useOperatorBrands(devSkip), {
+      initialProps: { devSkip: false },
+    });
+
+    await waitFor(() => {
+      expect(result.current.brandsLoading).toBe(false);
+    });
+
+    fetchMock.mockClear();
+    rerender({ devSkip: true });
+
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(result.current.brands).toEqual([...DEV_PREVIEW_BRANDS]);
+    expect(result.current.brandsLoading).toBe(false);
+  });
+
   it("refetches when devSkip toggles from true to false", async () => {
     const fetchMock = vi.fn().mockResolvedValue({
       ok: true,
