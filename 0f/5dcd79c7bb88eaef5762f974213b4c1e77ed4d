@@ -1,0 +1,27 @@
+app/src/test/brand-scores.test.ts
+  s_2e2ca317dec1f8::t_26229f2015788c 2-14
+app/src/lib/brand-scores.ts
+  s_2e2ca317dec1f8::t_ef2a7d0c5aec9a 13-19
+app/src/lib/intelligence/build-panel-data.ts
+  s_2e2ca317dec1f8::t_c420192d3f75b8 30,33-37,39
+  s_2e2ca317dec1f8::t_889fbfe49a2427 4
+app/src/app/api/intelligence/panel/route.ts
+  s_2e2ca317dec1f8::t_c776378d4a372b 85,90-91,94-105
+  s_2e2ca317dec1f8::t_853e3aba333b91 6
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.6",
+  "base_commit_sha": "0f5dcd79c7bb88eaef5762f974213b4c1e77ed4d",
+  "prompts": {},
+  "sessions": {
+    "s_2e2ca317dec1f8": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "354d6759-8d40-497b-94f4-4ed07c5f2ab7",
+        "model": "composer-2.5"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
