@@ -67,9 +67,61 @@ export async function GET(request: Request) {
       score: Number(row.score),
     }));
 
-    return NextResponse.json(
-      buildPanelData(brandResult.data, scoreRows, pendingResult.data ?? []),
-    );
+    const [assetsResult, suggestionsResult] = await Promise.all([
+      svc
+        .from("assets")
+        .select("id, cloudinary_public_id, status")
+        .eq("brand_id", brandId)
+        .order("created_at", { ascending: false })
+        .limit(6),
+      svc
+        .from("brand_scores")
+        .select("score_type, score")
+        .eq("brand_id", brandId)
+        .eq("is_latest", true),
+    ]);
+
+    const assets = (assetsResult.data ?? []).map((a) => ({
+      id: a.id,
+      url: a.cloudinary_public_id ?? "",
+      thumbnail_url: a.cloudinary_public_id
+        ? `https://res.cloudinary.com/${process.env.CLOUDINARY_CLOUD_NAME ?? "demo"}/image/upload/c_thumb,w_120,h_120,g_auto/${a.cloudinary_public_id}`
+        : null,
+      asset_type: "image" as const,
+      width: null,
+      height: null,
+      created_at: new Date().toISOString(),
+    }));
+
+    const scoreMap: Record<string, number> = {};
+    suggestionsResult.data?.forEach((row) => {
+      scoreMap[row.score_type] = Number(row.score);
+    });
+
+    const suggestions = [];
+    if (scoreMap.visual && scoreMap.visual < 70) {
+      suggestions.push({
+        id: "s1",
+        type: "warning" as const,
+        title: "Visual inconsistency detected",
+        description: "Audit logo usage across assets",
+        action: { label: "Review assets →", href: "/app/assets" },
+        confidence: 0.85,
+      });
+    }
+    if (scoreMap.commerce_readiness && scoreMap.commerce_readiness < 70) {
+      suggestions.push({
+        id: "s2",
+        type: "action" as const,
+        title: "Commerce readiness low",
+        description: "Add product shots",
+        action: { label: "Plan shoot →", href: "/app/shoots/new" },
+        confidence: 0.6,
+      });
+    }
+
+    const panelData = buildPanelData(brandResult.data, scoreRows, pendingResult.data ?? []);
+    return NextResponse.json({ ...panelData, assets, suggestions });
   }
 
   const { data, error } = await pendingQuery;

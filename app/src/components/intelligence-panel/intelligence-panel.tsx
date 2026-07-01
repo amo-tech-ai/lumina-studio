@@ -4,6 +4,8 @@ import type { ReactNode } from "react";
 import { ApprovalsSection } from "./approvals-section";
 import { AIContextCard } from "./ai-context-card";
 import { DnaScoresSection } from "./dna-scores-section";
+import { AssetsGrid } from "./assets-grid";
+import { SuggestionRail } from "./suggestion-rail";
 import styles from "./intelligence-panel.module.css";
 import { resolveRouteBriefing } from "./route-briefing";
 import { useIntelligencePanel } from "@/lib/intelligence/use-intelligence-panel";
@@ -42,6 +44,8 @@ export function IntelligencePanel({
                 : "Select a brand to view DNA scores."}
             </p>
           )}
+          {!error && data?.suggestions ? <SuggestionRail suggestions={data.suggestions} /> : null}
+          {!error && data?.assets ? <AssetsGrid assets={data.assets} /> : null}
           {!error && data?.approvals ? <ApprovalsSection approvals={data.approvals} /> : null}
         </div>
       </div>

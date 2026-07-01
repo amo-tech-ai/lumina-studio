@@ -1,7 +1,10 @@
+export type PanelSectionType = "dna-scores" | "suggestions" | "assets" | "approvals";
+
 export type RouteBriefing = {
   section: string;
   headline: string;
   nextActions: string[];
+  panelSections?: PanelSectionType[];
 };
 
 const DEFAULT_ACTIONS = ["Plan a shoot", "Review brands", "Open Assets"];
@@ -19,6 +22,7 @@ export function resolveRouteBriefing(pathname: string): RouteBriefing {
       section: "Brand Hub",
       headline: "Brand DNA, scores, and approvals for the active brand.",
       nextActions: ["Explain DNA scores", "Re-analyze brand", "View assets"],
+      panelSections: ["dna-scores", "suggestions", "assets", "approvals"],
     };
   }
   if (pathname.startsWith("/app/shoots/new")) {

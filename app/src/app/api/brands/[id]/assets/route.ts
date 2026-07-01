@@ -58,7 +58,7 @@ export async function GET(
   const assets = (rowsResult.data ?? []).map((row) => ({
     id: row.id,
     cloudinary_public_id: row.cloudinary_public_id ?? null,
-    thumb_url: row.cloudinary_public_id ? buildThumbUrl(row.cloudinary_public_id) : null,
+    thumbnail_url: row.cloudinary_public_id ? buildThumbUrl(row.cloudinary_public_id) : null,
     status: row.status,
     dna_status: row.dna_status ?? null,
   }));
