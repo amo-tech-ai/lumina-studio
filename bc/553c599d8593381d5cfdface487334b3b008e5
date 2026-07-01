@@ -1,0 +1,27 @@
+.claude/agents/api-documenter.md
+  s_e761f6addb7969::t_6a24d30d775f37 1-25
+.claude/agents/copilotkit-v1-guard.md
+  s_e761f6addb7969::t_de275c08fbaaf9 1-25
+.claude/agents/mastra-agent-reviewer.md
+  s_e761f6addb7969::t_0b88414f58120d 1-30
+.claude/agents/rls-policy-auditor.md
+  s_e761f6addb7969::t_6f18df70fa4697 1-27
+.claude/agents/vite-drift-auditor.md
+  s_e761f6addb7969::t_39f198336895a8 1-27
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.6",
+  "base_commit_sha": "bc553c599d8593381d5cfdface487334b3b008e5",
+  "prompts": {},
+  "sessions": {
+    "s_e761f6addb7969": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "06cdbaf8-e290-477e-a9c6-e5ca4cddefd6",
+        "model": "unknown"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
