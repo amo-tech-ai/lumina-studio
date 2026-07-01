@@ -1,0 +1,34 @@
+tasks/design-docs/implementation/pr-flow.md
+  s_2e2ca317dec1f8::t_55245389e152d6 86-91,93-124
+  s_2e2ca317dec1f8::t_76f725848698cc 92
+.claude/commands/pr-fix.md
+  s_2e2ca317dec1f8::t_43c5a443769655 178-179
+  s_2e2ca317dec1f8::t_becd398c4fb508 114-115
+  s_2e2ca317dec1f8::t_654c681d9751ae 52-61,63-94
+  s_2e2ca317dec1f8::t_2ff6875ff6aabc 62
+  s_2e2ca317dec1f8::t_eabd3ba30d7410 188
+  s_2e2ca317dec1f8::t_88d809f60e0072 224
+  s_2e2ca317dec1f8::t_0a8df377ff1042 220
+  s_2e2ca317dec1f8::t_7939002359bccf 207-208
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.6",
+  "base_commit_sha": "85f3bb208c1f1c2779c9654d65a562ce42a30714",
+  "prompts": {},
+  "humans": {
+    "h_d382fbec1d5b46": {
+      "author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  },
+  "sessions": {
+    "s_2e2ca317dec1f8": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "354d6759-8d40-497b-94f4-4ed07c5f2ab7",
+        "model": "composer-2.5"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
