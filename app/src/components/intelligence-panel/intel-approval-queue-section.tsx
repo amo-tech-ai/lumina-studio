@@ -19,7 +19,7 @@ function confidenceClass(confidence: number): string {
 }
 
 export function IntelApprovalQueueSection({ approvals }: Props) {
-  const displayCount = approvals.items.length || approvals.pendingCount;
+  const displayCount = approvals.pendingCount;
 
   if (approvals.items.length === 0) {
     return (
