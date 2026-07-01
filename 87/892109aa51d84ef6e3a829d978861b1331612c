@@ -1,0 +1,21 @@
+app/src/components/ui/sonner.tsx
+  s_053537fe19449c::t_1717b35b5d5907 3,14-34,43-44
+app/src/app/globals.css
+  s_053537fe19449c::t_de7efa687ae83d 90-91
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.6",
+  "base_commit_sha": "87892109aa51d84ef6e3a829d978861b1331612c",
+  "prompts": {},
+  "sessions": {
+    "s_053537fe19449c": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "ab9b0696-a941-41f1-8a1d-9172e5f84d3c",
+        "model": "composer-2.5"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
