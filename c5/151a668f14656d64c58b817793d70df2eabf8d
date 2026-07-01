@@ -1,0 +1,71 @@
+app/src/components/command-center/command-center-skeleton.tsx
+  s_2e2ca317dec1f8::t_1fb647c3001ff2 1-17
+app/src/app/(operator)/app/page.tsx
+  s_2e2ca317dec1f8::t_c031e1e2ab24ec 19
+  s_2e2ca317dec1f8::t_108c5803e499de 3,8,11,22-23,26-29,36,39-43,47-48
+  s_2e2ca317dec1f8::t_dca04d7383f0af 4-7
+app/src/app/(operator)/app/loading.tsx
+  s_2e2ca317dec1f8::t_69e865f5e84ac6 1-10
+app/src/components/command-center/realtime-status-strip.tsx
+  s_2e2ca317dec1f8::t_cd9ed038bb001e 12-55
+  s_2e2ca317dec1f8::t_c32ec3ef5f6f85 9-11
+  s_2e2ca317dec1f8::t_2369a050dbba6a 56-58
+app/src/lib/command-center/derive-view-state.test.ts
+  s_2e2ca317dec1f8::t_952a995d8cc9e4 1-112
+app/src/components/command-center/command-center-error-banner.tsx
+  s_2e2ca317dec1f8::t_fe791173362719 1-18
+app/src/lib/command-center/queries.ts
+  s_2e2ca317dec1f8::t_bcc3a41aeaab07 85-96
+  s_2e2ca317dec1f8::t_5a62b08905cd0a 153-155
+  s_2e2ca317dec1f8::t_cf55eaba236136 1-84,97-152,156-189
+app/src/lib/command-center/types.ts
+  s_2e2ca317dec1f8::t_66697a737048f4 5-52
+  s_2e2ca317dec1f8::t_3732eaa764265b 53-54,56-91
+  s_2e2ca317dec1f8::t_1108d1b2729076 2-4
+  s_2e2ca317dec1f8::t_dcb00639c5c6ca 55
+  s_42a955007cfc96::t_0b72e36adb99f9 1
+app/src/components/command-center/command-center.module.css
+  s_2e2ca317dec1f8::t_fe9d42318f7cf6 1-604
+app/src/lib/command-center/derive-view-state.ts
+  s_2e2ca317dec1f8::t_c0e50a9f20adbe 1-43
+docs/ecommerce/evidence/2026-07-01/ipi-17-command-center/report.md
+  s_2e2ca317dec1f8::t_e259e47976f30a 1-25,27,35,37,39,41-48
+  s_2e2ca317dec1f8::t_ffd277e7ffb9f6 26,28-34,36,38,40
+app/src/components/command-center/quick-action-chips.tsx
+  s_2e2ca317dec1f8::t_e2fa8a43d0e68a 1-34
+app/src/components/command-center/command-center-empty.tsx
+  s_2e2ca317dec1f8::t_b47bd12c17872c 1-22
+app/src/components/command-center/portfolio-hero-card.tsx
+  s_2e2ca317dec1f8::t_eed7364a0b5323 1-55
+app/src/components/command-center/command-center.tsx
+  s_2e2ca317dec1f8::t_8867dec6a6577b 2-6,8-18,21-28,44-47,53-55,66
+  s_2e2ca317dec1f8::t_a8750ddbd1a268 29-31,34-42,50-52,59-63,65
+  s_2e2ca317dec1f8::t_61635404b76599 43
+  s_2e2ca317dec1f8::t_ac4927cdf81a28 48-49
+  s_2e2ca317dec1f8::t_9826ecb3d28d84 56-58
+  s_2e2ca317dec1f8::t_2d6cc46d817358 67-69
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.6",
+  "base_commit_sha": "c5151a668f14656d64c58b817793d70df2eabf8d",
+  "prompts": {},
+  "sessions": {
+    "s_2e2ca317dec1f8": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "354d6759-8d40-497b-94f4-4ed07c5f2ab7",
+        "model": "default"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    },
+    "s_42a955007cfc96": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "cbb02baf-4b7a-4b47-a529-c13fb4fbe58e",
+        "model": "unknown"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
