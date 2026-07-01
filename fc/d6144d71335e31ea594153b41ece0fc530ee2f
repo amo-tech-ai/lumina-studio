@@ -1,0 +1,19 @@
+.claudeignore
+  s_e761f6addb7969::t_aa6b8bf32efcb4 27-32
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.6",
+  "base_commit_sha": "fcd6144d71335e31ea594153b41ece0fc530ee2f",
+  "prompts": {},
+  "sessions": {
+    "s_e761f6addb7969": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "06cdbaf8-e290-477e-a9c6-e5ca4cddefd6",
+        "model": "unknown"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
