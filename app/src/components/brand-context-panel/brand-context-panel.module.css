@@ -109,9 +109,20 @@
 
 .barFill {
   height: 100%;
-  background: #E87C4D;
   border-radius: 3px;
   transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.barFill[data-tier="high"] {
+  background: var(--dna-bar-high);
+}
+
+.barFill[data-tier="mid"] {
+  background: var(--dna-bar-mid);
+}
+
+.barFill[data-tier="low"] {
+  background: var(--dna-bar-low);
 }
 
 /* Brand profile summary */

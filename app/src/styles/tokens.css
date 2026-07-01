@@ -1,11 +1,18 @@
 /**
- * iPix / FashionOS Design Tokens
+ * iPix / FashionOS Design Tokens — v3 "Zeely Editorial" (pure / image-first / magazine-grade)
  *
  * Layer hierarchy:
  *   Primitive  — raw values, never use directly in components
  *   Semantic   — purpose-based aliases of primitives
  *   Component  — component-specific tokens (reference semantic layer)
  *   Brand      — per-brand overrides (planned, requires ActiveBrandContext)
+ *
+ * v3 visual language: pure white / light-grey / charcoal / black. Inter is the
+ * primary UI font (Geist Mono for numbers only). Black primary actions; orange
+ * is RETIRED as general chrome (opt-in only for a named AI action). Hairline
+ * borders instead of shadows, 20px radii, large editorial fashion photography
+ * carries the visual interest. AI workflows, HITL, and the 3-panel shell are
+ * unchanged. Supersedes v2 "Atelier" (warm beige + orange accent).
  *
  * Source of truth for Claude Design uploads.
  * Import this file in globals.css: @import "../styles/tokens.css";
@@ -16,34 +23,24 @@
    ============================================================ */
 
 :root {
-  /* Gray scale */
-  --primitive-white:    #ffffff;
-  --primitive-gray-50:  #f8fafc;
-  --primitive-gray-100: #f1f5f9;
-  --primitive-gray-200: #e2e8f0;
-  --primitive-gray-300: #cbd5e1;
-  --primitive-gray-400: #94a3b8;
-  --primitive-gray-500: #64748b;
-  --primitive-gray-600: #475569;
-  --primitive-gray-700: #334155;
-  --primitive-gray-800: #1e293b;
-  --primitive-gray-900: #0f172a;
+  /* Pure neutral scale — the backbone of v3 (no warm tint) */
+  --primitive-white:     #ffffff;
+  --primitive-grey-50:   #fafafa;   /* subtle section bg */
+  --primitive-grey-100:  #f5f5f5;   /* muted bg / hover */
+  --primitive-grey-150:  #ededed;   /* subtle dividers */
+  --primitive-grey-200:  #e5e7eb;   /* hairline border */
+  --primitive-grey-300:  #d1d5db;   /* strong / hover border / disabled */
+  --primitive-grey-400:  #9ca3af;   /* muted text / placeholder */
+  --primitive-grey-500:  #6b7280;   /* utility grey */
+  --primitive-grey-600:  #4b5563;   /* secondary text */
+  --primitive-ink-800:   #2a2a2a;   /* black hover */
+  --primitive-ink-900:   #111111;   /* near-black — body text + primary action */
 
-  /* Warm neutrals — fashion-inspired off-whites */
-  --primitive-warm-50:  #fbf8f5;
-  --primitive-warm-100: #f5f0eb;
-  --primitive-warm-200: #ede5dc;
-  --primitive-warm-border: #e8e0d8;
-
-  /* iPix orange — primary accent */
-  --primitive-orange-400: #f09460;
-  --primitive-orange-500: #e87c4d;
-  --primitive-orange-600: #d4673a;
-
-  /* Mustard — secondary accent / warning */
+  /* Mustard — HITL pending / warning (status only) */
   --primitive-amber-300: #fcd34d;
   --primitive-amber-400: #f3b93c;
   --primitive-amber-500: #d97706;
+  --primitive-amber-100: #fef3c7;
   --primitive-amber-50:  #fffbf0;
 
   /* Status — green */
@@ -58,15 +55,17 @@
 
   /* Status — blue (informational) */
   --primitive-blue-100: #dbeafe;
-  --primitive-blue-500: #3b82f6;
   --primitive-blue-600: #2563eb;
 
   /* Purple — published/post status */
   --primitive-purple-100: #ede9fe;
   --primitive-purple-700: #7c3aed;
 
-  /* Amber light — planning/warning subtle bg */
-  --primitive-amber-100: #fef3c7;
+  /* iPix orange — RETIRED in v3. Kept only for an opt-in, project-approved
+     AI action; never general UI chrome, never a primary button or panel. */
+  --primitive-orange-500: #e87c4d;
+  --primitive-orange-600: #d4673a;
+  --primitive-orange-50:  #fbf1eb;
 }
 
 /* ============================================================
@@ -75,61 +74,65 @@
    ============================================================ */
 
 :root {
-  /* --- Backgrounds --- */
-  --color-bg-page:        var(--primitive-warm-50);       /* #FBF8F5 — warm off-white */
-  --color-bg-card:        var(--primitive-white);         /* #FFFFFF — card surface */
-  --color-bg-subtle:      var(--primitive-gray-50);       /* #F8FAFC — subtle section bg */
-  --color-bg-muted:       var(--primitive-gray-100);      /* #F1F5F9 — muted inputs */
+  /* --- Backgrounds (pure white-forward; no beige) --- */
+  --color-bg-page:        var(--primitive-white);        /* #FFFFFF — pure white page */
+  --color-bg-card:        var(--primitive-white);        /* #FFFFFF — card surface */
+  --color-bg-subtle:      var(--primitive-grey-50);      /* #FAFAFA — subtle section bg */
+  --color-bg-muted:       var(--primitive-grey-100);     /* #F5F5F5 — muted inputs / hover */
 
-  /* --- Borders --- */
-  --color-border:         var(--primitive-warm-border);   /* #E8E0D8 — warm border */
-  --color-border-subtle:  var(--primitive-gray-200);      /* #E2E8F0 — subtle dividers */
-  --color-border-focus:   var(--primitive-orange-500);    /* #E87C4D — focus ring */
+  /* --- Borders (hairlines do the structural work) --- */
+  --color-border:         var(--primitive-grey-200);     /* #E5E7EB — hairline */
+  --color-border-strong:  var(--primitive-grey-300);     /* #D1D5DB — hover/active border */
+  --color-border-subtle:  var(--primitive-grey-150);     /* #EDEDED — soft dividers */
+  --color-border-focus:   var(--primitive-ink-900);      /* #111111 — charcoal focus ring (no orange) */
 
   /* --- Text --- */
-  --color-text-primary:   var(--primitive-gray-800);      /* #1E293B — body text */
-  --color-text-secondary: var(--primitive-gray-600);      /* #475569 — secondary text */
-  --color-text-muted:     var(--primitive-gray-500);      /* #64748B — placeholder/hint */
-  --color-text-disabled:  var(--primitive-gray-400);      /* #94A3B8 — disabled */
-  --color-text-inverse:   var(--primitive-white);         /* #FFFFFF — on dark bg */
+  --color-text-primary:   var(--primitive-ink-900);      /* #111111 — near-black body text */
+  --color-text-secondary: var(--primitive-grey-600);     /* #4B5563 — secondary text */
+  --color-text-muted:     var(--primitive-grey-400);     /* #9CA3AF — placeholder/hint */
+  --color-text-disabled:  var(--primitive-grey-300);     /* #D1D5DB — disabled */
+  --color-text-inverse:   var(--primitive-white);        /* #FFFFFF — on dark bg */
 
-  /* --- Accent (iPix orange) --- */
-  --color-accent:         var(--primitive-orange-500);    /* #E87C4D — primary CTA */
-  --color-accent-hover:   var(--primitive-orange-600);    /* #D4673A — hovered CTA */
-  --color-accent-light:   var(--primitive-warm-100);      /* #F5F0EB — accent tint bg */
+  /* --- Primary action (black — the default button) --- */
+  --color-action:         var(--primitive-ink-900);      /* #111111 — primary fill */
+  --color-action-hover:   var(--primitive-ink-800);      /* #2A2A2A — primary hover */
+  --color-action-text:    var(--primitive-white);        /* #FFFFFF — on black */
+
+  /* --- Accent — RETIRED. Maps to black so legacy refs stay neutral.
+         Only override to orange for a project-approved AI action. --- */
+  --color-accent:         var(--primitive-ink-900);      /* black — orange retired */
+  --color-accent-hover:   var(--primitive-ink-800);
+  --color-accent-light:   var(--primitive-grey-100);     /* neutral subtle tint */
 
   /* --- Warning / AI pending (mustard) --- */
-  --color-warning:        var(--primitive-amber-400);     /* #F3B93C — warning border */
-  --color-warning-bg:     var(--primitive-amber-50);      /* #FFFBF0 — warning bg */
-  --color-warning-text:   var(--primitive-amber-500);     /* #D97706 — warning text */
+  --color-warning:        var(--primitive-amber-400);    /* #F3B93C — HITL hairline + dot */
+  --color-warning-bg:     var(--primitive-amber-50);     /* #FFFBF0 — inline warnings only */
+  --color-warning-text:   var(--primitive-amber-500);    /* #D97706 */
+  --color-warning-subtle: var(--primitive-amber-100);    /* #FEF3C7 */
 
   /* --- Status --- */
-  --color-approved:       var(--primitive-green-600);     /* #059669 */
-  --color-approved-bg:    var(--primitive-green-100);     /* #D1FAE5 */
-  --color-review:         var(--primitive-amber-500);     /* #D97706 */
-  --color-review-bg:      var(--primitive-amber-50);      /* #FFFBF0 */
-  --color-blocked:        var(--primitive-red-600);       /* #DC2626 */
-  --color-blocked-bg:     var(--primitive-red-100);       /* #FEE2E2 */
-  --color-info:           var(--primitive-blue-600);      /* #2563EB */
-  --color-info-bg:        var(--primitive-blue-100);      /* #DBEAFE */
+  --color-approved:       var(--primitive-green-600);    /* #059669 */
+  --color-approved-bg:    var(--primitive-green-100);    /* #D1FAE5 — light tint, sparingly */
+  --color-review:         var(--primitive-amber-500);    /* #D97706 */
+  --color-blocked:        var(--primitive-red-600);      /* #DC2626 */
+  --color-blocked-bg:     var(--primitive-red-100);      /* #FEE2E2 */
+  --color-blocked-light:  var(--primitive-red-100);      /* #FEE2E2 — light destructive tint */
+  --color-info:           var(--primitive-blue-600);     /* #2563EB */
+  --color-info-bg:        var(--primitive-blue-100);     /* #DBEAFE */
+  --color-published:      var(--primitive-purple-700);   /* #7C3AED */
+  --color-published-bg:   var(--primitive-purple-100);   /* #EDE9FE */
 
-  /* --- Warning subtle bg --- */
-  --color-warning-subtle:   var(--primitive-amber-100);      /* #FEF3C7 — planning bg */
+  /* --- DNA score thresholds (data viz — unchanged hues) --- */
+  --color-dna-high:       var(--primitive-green-600);    /* ≥ 80 */
+  --color-dna-mid:        var(--primitive-amber-500);    /* 60–79 */
+  --color-dna-low:        var(--primitive-red-600);      /* < 60 */
 
-  /* --- Published / post status (purple) --- */
-  --color-published:        var(--primitive-purple-700);     /* #7C3AED */
-  --color-published-bg:     var(--primitive-purple-100);     /* #EDE9FE */
-
-  /* --- DNA score thresholds --- */
-  --color-dna-high:       var(--primitive-green-600);     /* ≥ 80 */
-  --color-dna-mid:        var(--primitive-amber-500);     /* 60–79 */
-  --color-dna-low:        var(--primitive-red-600);       /* < 60 */
-
-  /* --- Shadows --- */
-  --shadow-card:   0 1px 3px 0 rgb(0 0 0 / 0.06), 0 1px 2px -1px rgb(0 0 0 / 0.04);
-  --shadow-panel:  0 4px 16px 0 rgb(0 0 0 / 0.08);
-  --shadow-modal:  0 20px 60px 0 rgb(0 0 0 / 0.16);
-  --shadow-focus:  0 0 0 2px var(--color-border-focus);
+  /* --- Shadows — near-invisible; reserve real elevation for overlays --- */
+  --shadow-none:   none;
+  --shadow-card:   0 1px 2px 0 rgb(17 17 17 / 0.03);
+  --shadow-panel:  0 8px 24px -8px rgb(17 17 17 / 0.10);
+  --shadow-modal:  0 24px 64px -16px rgb(17 17 17 / 0.18);
+  --shadow-focus: 0 0 0 2px var(--primitive-white), 0 0 0 4px var(--color-border-focus);
 
   /* --- Motion --- */
   --duration-instant: 50ms;
@@ -139,6 +142,14 @@
   --ease-default:     cubic-bezier(0.16, 1, 0.3, 1);
   --ease-spring:      cubic-bezier(0.34, 1.56, 0.64, 1);
   --ease-linear:      linear;
+
+  /* --- Radius --- */
+  --radius-sm:   0.375rem;   /* 6px  — chips, small controls */
+  --radius-md:   0.625rem;   /* 10px — buttons, small thumbnails */
+  --radius:      var(--radius-md); /* shadcn / legacy alias */
+  --radius-lg:   1rem;       /* 16px — inner surfaces */
+  --radius-xl:   1.25rem;    /* 20px — cards, images, feature panels (v3 default) */
+  --radius-pill: 9999px;     /* hero CTAs, pill chips */
 }
 
 /* ============================================================
@@ -147,11 +158,12 @@
    ============================================================ */
 
 :root {
-  /* ApprovalCard (HITL) */
-  --approval-border:      var(--color-warning);           /* amber when pending */
-  --approval-bg:          var(--color-warning-bg);
-  --approval-border-done: var(--color-approved);
-  --approval-bg-done:     var(--color-approved-bg);
+  /* ApprovalCard (HITL) — premium low-colour: white card + amber hairline + amber dot */
+  --approval-bg:          var(--color-bg-card);          /* white — no orange fill */
+  --approval-border:      var(--color-warning);          /* amber 1px hairline */
+  --approval-accent:      var(--color-warning);          /* amber status dot / label */
+  --approval-bg-done:     var(--color-bg-card);          /* white — green border signals done */
+  --approval-border-done: var(--color-approved);         /* green hairline + check */
 
   /* DNAScoreBar */
   --dna-bar-track:        var(--color-bg-subtle);
@@ -159,62 +171,83 @@
   --dna-bar-mid:          var(--color-dna-mid);
   --dna-bar-low:          var(--color-dna-low);
 
-  /* NavSidebar */
+  /* NavSidebar — calm thin-grey active state (no orange) */
   --nav-bg:               var(--color-bg-card);
   --nav-border:           var(--color-border);
-  --nav-item-hover:       var(--color-bg-subtle);
-  --nav-item-active:      var(--color-accent-light);
-  --nav-item-active-text: var(--color-accent);
+  --nav-item-hover:       var(--primitive-grey-100);     /* #F5F5F5 */
+  --nav-item-active:      var(--primitive-grey-100);     /* #F5F5F5 grey fill */
+  --nav-item-active-text: var(--color-text-primary);     /* charcoal label + icon */
   --nav-width-collapsed:  3.5rem;
   --nav-width-expanded:   14rem;
 
-  /* IntelligencePanel (CopilotSidebar) */
-  --intel-bg:             var(--color-bg-card);           /* always light-mode */
+  /* IntelligencePanel — always light-mode */
+  --intel-bg:             var(--color-bg-card);
   --intel-border:         var(--color-border);
-  --intel-header-bg:      var(--color-bg-subtle);
+  --intel-header-bg:      var(--color-bg-card);
 
-  /* StatusChip */
+  /* AIChatDock — persistent context-aware chat at the base of the workspace */
+  --chatdock-bg:          var(--color-bg-card);          /* white */
+  --chatdock-border:      var(--color-border);           /* hairline top border */
+  --chatdock-chip-bg:     var(--color-bg-card);          /* white chip + hairline */
+  --chatdock-chip-border: var(--color-border);
+  --chatdock-send-bg:     var(--color-action);           /* black send button */
+  --chatdock-send-text:   var(--color-action-text);
+
+  /* StatusChip — render as border + dot + label (no heavy fill) */
   --status-planning-text: var(--color-warning-text);
-  --status-planning-bg:   var(--color-warning-subtle);
+  --status-planning-bg:   var(--color-bg-card);
   --status-active-text:   var(--color-approved);
   --status-active-bg:     var(--color-approved-bg);
   --status-post-text:     var(--color-published);
-  --status-post-bg:       var(--color-published-bg);
+  --status-post-bg:       var(--color-bg-card);
   --status-complete-text: var(--color-text-muted);
   --status-complete-bg:   var(--color-bg-subtle);
   --status-archived-text: var(--color-text-disabled);
   --status-archived-bg:   var(--color-bg-subtle);
+
+  /* Button */
+  --btn-primary-bg:       var(--color-action);           /* black */
+  --btn-primary-text:     var(--color-action-text);
+  --btn-primary-hover:    var(--color-action-hover);
+  --btn-secondary-bg:     var(--color-bg-card);          /* white + hairline */
+  --btn-secondary-border: var(--color-border);
+  --btn-secondary-text:   var(--color-text-primary);
 
   /* CommandPalette */
   --palette-bg:           var(--color-bg-card);
   --palette-border:       var(--color-border);
   --palette-shadow:       var(--shadow-modal);
   --palette-item-hover:   var(--color-bg-subtle);
-  --palette-item-active:  var(--color-accent-light);
+  --palette-item-active:  var(--primitive-grey-100);
 
   /* Card (base) */
   --card-bg:              var(--color-bg-card);
   --card-border:          var(--color-border);
-  --card-shadow:          var(--shadow-card);
-  --card-radius:          var(--radius-lg);               /* 0.625rem */
+  --card-shadow:          var(--shadow-card);             /* near-invisible */
+  --card-radius:          var(--radius-xl);               /* 1.25rem / 20px */
+
+  /* Imagery — image-first cards, thumbnails, previews, galleries.
+     Subject: editorial fashion photography of female models in apparel.
+     Source: prefer the project's uploaded images; never random stock. */
+  --image-radius:         var(--radius-xl);              /* 20px — large thumbnails / preview cards */
+  --image-radius-sm:      var(--radius-md);              /* 10px — small inline thumbnails */
+  --image-border:         var(--color-border);           /* 1px hairline around images on white */
+  --image-placeholder-bg: var(--color-bg-subtle);        /* #FAFAFA — missing-image fill */
+  --image-scrim:          linear-gradient(to top, rgb(17 17 17 / 0.55), rgb(17 17 17 / 0) 60%); /* text-on-image legibility */
 }
 
 /* ============================================================
    BRAND TOKENS — per-brand theme overrides (PLANNED)
-   Injected at shell level when ActiveBrandContext is implemented.
-   Currently unused — these are placeholders.
    ============================================================ */
 
 :root {
-  /* ponytail: brand tokens are no-ops until ActiveBrandContext ships */
-  --brand-primary:        var(--color-accent);
-  --brand-secondary:      var(--color-warning);
+  --brand-primary:        var(--color-action);
+  --brand-secondary:      var(--color-text-secondary);
   --brand-bg:             var(--color-bg-page);
 }
 
 /* ============================================================
-   SPACING — use these instead of arbitrary Tailwind values
-   Maps to Tailwind's default 4px base scale.
+   SPACING
    ============================================================ */
 
 :root {
@@ -231,17 +264,21 @@
 }
 
 /* ============================================================
-   TYPOGRAPHY — font sizes and weights
+   TYPOGRAPHY
+   Primary UI font: Inter. Numeric data only: Geist Mono.
    ============================================================ */
 
 :root {
-  --font-size-xs:      0.75rem;    /* 12px — captions, labels */
-  --font-size-sm:      0.875rem;   /* 14px — body small, table cells */
-  --font-size-base:    1rem;       /* 16px — body default */
+  --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-mono: "Geist Mono", ui-monospace, "SF Mono", Menlo, monospace;
+
+  --font-size-xs:      0.75rem;    /* 12px */
+  --font-size-sm:      0.875rem;   /* 14px */
+  --font-size-base:    1rem;       /* 16px */
   --font-size-lg:      1.125rem;   /* 18px — section headers */
-  --font-size-xl:      1.25rem;    /* 20px — page titles */
-  --font-size-2xl:     1.5rem;     /* 24px — hero headers */
-  --font-size-display: 2rem;       /* 32px — dashboard KPIs */
+  --font-size-xl:      1.25rem;    /* 20px */
+  --font-size-2xl:     1.5rem;     /* 24px — page titles */
+  --font-size-display: 2rem;       /* 32px — hero KPIs / titles */
 
   --font-weight-normal:   400;
   --font-weight-medium:   500;
@@ -254,18 +291,18 @@
 }
 
 /* ============================================================
-   Z-INDEX — stacking order
+   Z-INDEX
    ============================================================ */
 
 :root {
-  --z-base:       0;
-  --z-raised:     10;    /* cards on hover */
-  --z-dropdown:   100;   /* dropdowns, popovers */
-  --z-sidebar:    200;   /* NavSidebar */
-  --z-popover:    300;   /* Tooltip, Popover */
-  --z-dialog:     400;   /* Dialog, Sheet */
-  --z-modal:      500;   /* full-screen modal (mobile IntelligencePanel) */
-  --z-toast:      600;   /* Toast notifications — always on top */
+  --z-base:     0;
+  --z-raised:   10;
+  --z-dropdown: 100;
+  --z-sidebar:  200;
+  --z-popover:  300;
+  --z-dialog:   400;
+  --z-modal:    500;
+  --z-toast:    600;
 }
 
 /* ============================================================
@@ -275,7 +312,7 @@
 :root {
   --border-default: 1px;
   --border-focus:   2px;
-  --border-heavy:   2px;   /* HITL cards, active states */
+  --border-heavy:   1px;   /* v3: HITL/active use hairline + colour, not heavy strokes */
 }
 
 /* ============================================================
@@ -284,65 +321,57 @@
 
 :root {
   --opacity-disabled: 0.4;
-  --opacity-hover:    0.08;   /* bg overlay on hover */
+  --opacity-hover:    0.06;
   --opacity-loading:  0.6;
-  --opacity-overlay:  0.5;    /* modal backdrop */
+  --opacity-overlay:  0.4;
 }
 
 /* ============================================================
    LAYOUT — structural dimensions
-   Used by OperatorShell, NavSidebar, IntelligencePanel.
    ============================================================ */
 
 :root {
-  --sidebar-width:            3.5rem;   /* nav rail collapsed */
-  --sidebar-width-expanded:   14rem;    /* nav rail expanded */
-  --intelligence-panel-width: auto;     /* CopilotKit-managed */
-  --content-max-width:        1280px;   /* center workspace cap */
-  --page-padding:             var(--space-6);   /* 24px horizontal padding */
-  --card-gap:                 var(--space-4);   /* 16px gap between cards */
-  --section-gap:              var(--space-8);   /* 32px gap between sections */
-
-  /* Touch targets — minimum 44×44px on mobile */
-  --touch-target-min: 2.75rem;   /* 44px */
+  --sidebar-width:            3.5rem;
+  --sidebar-width-expanded:   14rem;
+  --intelligence-panel-width: auto;
+  --content-max-width:        1280px;
+  --page-padding:             var(--space-8);   /* 32px — editorial breathing room */
+  --card-gap:                 var(--space-5);   /* 20px */
+  --section-gap:              var(--space-10);  /* 40px */
+  --touch-target-min:         2.75rem;          /* 44px */
 }
 
 /* ============================================================
-   AI-SPECIFIC TOKENS — reinforce the AI-native identity
-   Every AI surface references these instead of raw semantics.
+   AI-SPECIFIC TOKENS
    ============================================================ */
 
 :root {
-  /* Generic AI card */
   --ai-card-bg:              var(--color-bg-card);
   --ai-card-border:          var(--color-border);
 
-  /* Confidence levels */
-  --ai-confidence-high:      var(--color-approved);      /* ≥ 80% */
-  --ai-confidence-mid:       var(--color-review);        /* 60–79% */
-  --ai-confidence-low:       var(--color-blocked);       /* < 60% */
+  --ai-confidence-high:      var(--color-approved);   /* ≥ 80% */
+  --ai-confidence-mid:       var(--color-review);     /* 60–79% */
+  --ai-confidence-low:       var(--color-blocked);    /* < 60% */
 
-  /* Approval / HITL — canonical tokens defined in Component block above:
-     --approval-border, --approval-bg, --approval-border-done, --approval-bg-done */
-
-  /* Evidence / citations */
   --evidence-bg:             var(--color-bg-subtle);
   --evidence-border:         var(--color-border-subtle);
 
-  /* AI draft — content pending operator approval */
-  --draft-bg:                var(--color-warning-bg);
+  /* AI draft — white card, amber hairline (no fill) */
+  --draft-bg:                var(--color-bg-card);
   --draft-border:            var(--color-warning);
 
-  /* Agent thinking / streaming state */
+  /* AI badge — quiet grey, never a coloured pill */
+  --ai-badge-bg:             var(--color-bg-subtle);
+  --ai-badge-text:           var(--color-text-secondary);
+  --ai-badge-border:         var(--color-border);
+
   --thinking-bg:             var(--color-bg-subtle);
   --thinking-dot:            var(--color-text-muted);
-
-  /* Agent streaming text cursor */
-  --streaming-cursor:        var(--color-accent);
+  --streaming-cursor:        var(--color-text-primary);   /* charcoal (orange retired) */
 }
 
 /* ============================================================
-   REDUCED MOTION — override all animations
+   REDUCED MOTION
    ============================================================ */
 
 @media (prefers-reduced-motion: reduce) {
