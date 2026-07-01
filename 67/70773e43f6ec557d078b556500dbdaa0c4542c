@@ -1,0 +1,25 @@
+.claude/hooks/guard-protected-writes.sh
+  s_e761f6addb7969::t_9655884d57bd78 1-18
+.claude/hooks/shared-fn-advisory.sh
+  s_e761f6addb7969::t_536225489c81e8 1-13
+.claude/hooks/verify-before-stop.sh
+  s_e761f6addb7969::t_2a75ad47c2e37e 1-39
+.claude/settings.json
+  s_e761f6addb7969::t_941e5def483918 1-60
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.6",
+  "base_commit_sha": "6770773e43f6ec557d078b556500dbdaa0c4542c",
+  "prompts": {},
+  "sessions": {
+    "s_e761f6addb7969": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "06cdbaf8-e290-477e-a9c6-e5ca4cddefd6",
+        "model": "unknown"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
