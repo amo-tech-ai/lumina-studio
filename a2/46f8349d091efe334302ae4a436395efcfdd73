@@ -1,0 +1,40 @@
+.claude/commands/pr-fix-ship.md
+  s_2e2ca317dec1f8::t_a4e4fe5696ee40 1-105
+CLAUDE.md
+  s_2e2ca317dec1f8::t_7899ed84dfca73 51-56
+  s_2e2ca317dec1f8::t_7e1632846b2aef 48-50
+  s_2e2ca317dec1f8::t_9568f7ad9ea942 57-59
+.claude/commands/pr-fix.md
+  s_2e2ca317dec1f8::t_51ce97bd5e1218 7-200,202
+  s_2e2ca317dec1f8::t_62bd6916995ac1 4-6
+  s_2e2ca317dec1f8::t_5277b5f4f2e803 201
+  s_2e2ca317dec1f8::t_91abad7e1a6f01 203-205
+.claude/commands/pr-fix-resolve.md
+  s_2e2ca317dec1f8::t_701161eb93891e 24
+  s_2e2ca317dec1f8::t_22d274d715cb93 1-23,25-79
+.claude/commands/clean-gone.md
+  s_2e2ca317dec1f8::t_bf1e66f37c0bf0 1-50
+.claude/commands/review-pr.md
+  s_2e2ca317dec1f8::t_deb4a77a8f2e83 1-98
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.6",
+  "base_commit_sha": "a246f8349d091efe334302ae4a436395efcfdd73",
+  "prompts": {},
+  "humans": {
+    "h_d382fbec1d5b46": {
+      "author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  },
+  "sessions": {
+    "s_2e2ca317dec1f8": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "354d6759-8d40-497b-94f4-4ed07c5f2ab7",
+        "model": "composer-2.5"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
