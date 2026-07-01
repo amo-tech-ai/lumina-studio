@@ -1,0 +1,48 @@
+app/src/lib/intelligence/dev-panel-fixture.ts
+  s_2e2ca317dec1f8::t_f72dccd43eecdf 2-7,20
+  s_2e2ca317dec1f8::t_ad72c59eed6e21 24-25
+  s_2e2ca317dec1f8::t_86219e56a18f0d 101
+  s_2e2ca317dec1f8::t_6e6c583799ffe3 1
+  s_2e2ca317dec1f8::t_ba039f845c04b0 8-10,17-19
+  s_2e2ca317dec1f8::t_d11c1c3e540348 21-23
+  s_2e2ca317dec1f8::t_e137f03bdf2a70 26-28,98-100
+  s_2e2ca317dec1f8::t_fc42c5bfbefe28 102-104
+app/src/components/intelligence-panel/ai-insights-section.tsx
+  s_2e2ca317dec1f8::t_5d2847fbb3dd8c 1-28
+app/src/components/intelligence-panel/evidence-dialog.tsx
+  s_2e2ca317dec1f8::t_8acb65a33723be 1-50
+app/src/components/intelligence-panel/health-section.tsx
+  s_2e2ca317dec1f8::t_f8790d4ebab222 1-67
+app/src/components/intelligence-panel/intel-approval-queue-section.tsx
+  s_2e2ca317dec1f8::t_1557f11e82b46e 1-96
+app/src/components/intelligence-panel/intelligence-panel.module.css
+  s_2e2ca317dec1f8::t_dd084f945fc82e 12-14,18-28,31-62,72-96,98-504
+app/src/components/intelligence-panel/intelligence-panel.test.tsx
+  s_2e2ca317dec1f8::t_526f2dc0171c28 1-129
+app/src/components/intelligence-panel/intelligence-panel.tsx
+  s_2e2ca317dec1f8::t_460ea510a9b12f 3-11,13,22-52,54,59-69,72-93,96,98-132,135,140-156
+app/src/components/intelligence-panel/recent-activity-section.tsx
+  s_2e2ca317dec1f8::t_61288537e8f28f 1-32
+app/src/components/intelligence-panel/recommended-actions-section.tsx
+  s_2e2ca317dec1f8::t_ef686a601518eb 1-32
+app/src/lib/intelligence/panel-contract.ts
+  s_2e2ca317dec1f8::t_3c9080a0d1bcb1 2-16,23-51,59-60,66-67,72-73
+app/src/lib/intelligence/use-intelligence-panel.ts
+  s_2e2ca317dec1f8::t_3933ae87ec25cb 3,5,21-24,26-27,32-33,41,58-62,82,85-86,99
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.6",
+  "base_commit_sha": "3b77e3ec0a022902db9bea91d8f5f83a87e7a895",
+  "prompts": {},
+  "sessions": {
+    "s_2e2ca317dec1f8": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "354d6759-8d40-497b-94f4-4ed07c5f2ab7",
+        "model": "composer-2.5"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
