@@ -36,7 +36,11 @@ export function CommandCenterApprovals({ pendingCount, featured }: Props) {
           liveScores={featured.liveScores}
         />
       ) : (
-        <div className={styles.approvalFallback} role="alert">
+        <div
+          className={styles.approvalFallback}
+          role="region"
+          aria-labelledby="cc-approval-fallback-title"
+        >
           <div className={styles.approvalPreviewWrap}>
             <Image
               src={approvalPreviewUrl()}
@@ -49,7 +53,7 @@ export function CommandCenterApprovals({ pendingCount, featured }: Props) {
           </div>
           <div>
             <AlertCircle className={styles.approvalFallbackIcon} aria-hidden />
-            <p className={styles.approvalFallbackTitle}>
+            <p id="cc-approval-fallback-title" className={styles.approvalFallbackTitle}>
               {pendingCount} draft{pendingCount === 1 ? "" : "s"} pending review
             </p>
             <p className={styles.approvalFallbackCopy}>
