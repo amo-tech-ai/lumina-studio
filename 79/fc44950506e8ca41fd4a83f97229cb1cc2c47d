@@ -1,0 +1,19 @@
+app/src/components/operator-panel/use-operator-brands.test.ts
+  s_2e2ca317dec1f8::t_4574811e6037be 22
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.6",
+  "base_commit_sha": "79fc44950506e8ca41fd4a83f97229cb1cc2c47d",
+  "prompts": {},
+  "sessions": {
+    "s_2e2ca317dec1f8": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "354d6759-8d40-497b-94f4-4ed07c5f2ab7",
+        "model": "composer-2.5"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
