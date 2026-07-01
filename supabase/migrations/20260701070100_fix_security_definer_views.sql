@@ -5,5 +5,5 @@
 -- access (owner-only shoots; open read for shot type references), and
 -- `authenticated` already holds direct SELECT grants on them, so switching
 -- to security_invoker is a drop-in fix with no access-pattern change.
-alter view public.shoot_portfolio_view set (security_invoker = true);
-alter view public.shot_type_references_view set (security_invoker = true);
+ALTER VIEW public.shoot_portfolio_view SET (security_invoker = TRUE);
+ALTER VIEW public.shot_type_references_view SET (security_invoker = TRUE);
