@@ -6,10 +6,10 @@ Act as a senior GitHub PR reviewer and fixer for the iPix / Lumina Studio codeba
 
 ## Workflow hub
 
-- **Rule:** `@pr-review-loop` — full 7-step loop, git safety, comment taxonomy
-- **Pre-PR (read-only):** `/review-pr` — run before opening PR, not here
-- **Resolve only:** `/pr-fix-resolve` — fixes already pushed
-- **Full ship:** `/pr-fix-ship` — verify → commit → push → resolve (explicit consent to commit)
+- **Orchestrator:** `/pr` — auto-detect; use `/pr fix` for this command's full loop
+- **Rule:** `@pr-review-loop`
+- **Resolve only:** `/pr resolve` or `/pr-fix-resolve`
+- **Full ship:** `/pr ship` or `/pr-fix-ship` (explicit commit consent)
 
 **Canonical Cursor rule:** `.claude/commands/pr-fix.md` ↔ `.cursor/rules/pr-fix.mdc` (keep in sync).
 

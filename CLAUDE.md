@@ -49,8 +49,9 @@ Shift from **Create → Check → Fix** to **Guide → Prevent → Confirm** —
 ### Overlaps — pick one, don't run all
 
 - **PR/code review — repo commands + plugins:**
-  - **Before PR (author):** repo `/review-pr` (`.claude/commands/review-pr.md`) + `@pr-review-loop` — read-only diff review, iPix agent routing
-  - **After PR feedback:** `@pr-fix` · `/pr-fix-resolve` · `/pr-fix-ship` — see `.cursor/rules/pr-review-loop.mdc`
+  - **Orchestrator:** `/pr` (`.claude/commands/pr.md`) — auto-detect; ask before commit
+  - **Before PR (author):** `/pr new` or `/review-pr` + `@pr-review-loop`
+  - **After PR feedback:** `/pr fix` → `/pr ship` · `/pr resolve` · `/pr ready`
   - **Plugin breadth:** `pr-review-toolkit`'s `/review-pr` (6 subagents) — use for comprehensive pre-merge pass; repo command adds iPix path→agent matrix
   - **Bot findings:** Cursor Bugbot on PR — not a substitute for pre-PR `/review-pr`
   - Default: repo `/review-pr` before `gh pr create`; plugin `/review-pr all` before marking ready; `@pr-fix` after bots comment
