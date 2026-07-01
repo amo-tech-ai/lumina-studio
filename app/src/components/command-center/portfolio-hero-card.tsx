@@ -1,6 +1,8 @@
+import Image from "next/image";
 import Link from "next/link";
 
 import { buildHeroGreeting } from "@/lib/command-center/greeting";
+import { heroFallbackForBrand } from "@/lib/command-center/sample-images";
 import type { HeroBrand } from "@/lib/command-center/types";
 
 import styles from "./command-center.module.css";
@@ -26,10 +28,20 @@ export function PortfolioHeroCard({
   const dnaLabel =
     heroBrand.dnaScore > 0 ? `${Math.round(heroBrand.dnaScore)}% DNA` : "DNA pending";
 
+  const coverSrc = heroBrand.coverUrl ?? heroFallbackForBrand(heroBrand.id);
+
   return (
     <section className={styles.heroCard} aria-labelledby="cc-hero-title">
       <Link href={`/app/brand/${heroBrand.id}`} className={styles.heroMediaLink}>
         <div className={styles.heroMedia} aria-hidden>
+          <Image
+            src={coverSrc}
+            alt={`${heroBrand.name} cover`}
+            fill
+            priority
+            sizes="104px"
+            className={styles.heroImage}
+          />
           <div className={styles.heroMediaScrim} />
           <span className={styles.heroBrandLabel}>{heroBrand.name}</span>
           <span className={styles.heroDnaBadge}>{dnaLabel}</span>
