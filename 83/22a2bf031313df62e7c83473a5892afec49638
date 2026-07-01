@@ -1,0 +1,19 @@
+app/src/test/operator-middleware-contract.test.ts
+  s_193093a77a4ec0::t_93a71c9b8739d3 5-6,8-9,11-17,20-21,23-39,48
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.6",
+  "base_commit_sha": "8322a2bf031313df62e7c83473a5892afec49638",
+  "prompts": {},
+  "sessions": {
+    "s_193093a77a4ec0": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "9376a7cb-398c-435f-a683-c92089111436",
+        "model": "composer-2.5"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
