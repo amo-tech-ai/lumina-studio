@@ -1,0 +1,75 @@
+app/src/app/api/org/current/route.ts
+  s_2e2ca317dec1f8::t_296f8558c9e8c5 1-38
+app/src/components/matching/talent-card.tsx
+  s_34eb7d3f1209d9::t_0ec44c0c983c7b 1-154
+app/src/components/matching/talent-match-tabs.tsx
+  s_34eb7d3f1209d9::t_52229b8d3b48f6 1-42
+app/src/mastra/agents/index.test.ts
+  s_2e2ca317dec1f8::t_1c7d8604e82860 16,50-61
+app/src/app/(operator)/app/matching/page.tsx
+  s_924d5421a89c0c::t_b2f6df5b948f4a 1-6,10-18
+app/src/components/intelligence-panel/intelligence-panel.tsx
+  s_924d5421a89c0c::t_78a906ff09c974 10,27,32-54
+app/src/components/matching/shortlist-drawer.tsx
+  s_924d5421a89c0c::t_c146060394762f 1-52
+app/src/components/operator-panel/operator-panel.tsx
+  s_924d5421a89c0c::t_afa3d71fff3eed 27,45-53
+app/src/context/intelligence-detail-context.tsx
+  s_924d5421a89c0c::t_8c0d58fccedcb0 1-46
+app/src/lib/intelligence/use-route-suggestions.test.ts
+  s_34eb7d3f1209d9::t_298295e5763481 195,208-209
+app/src/lib/route-agent-map.test.ts
+  s_924d5421a89c0c::t_0c9b79e9315b69 21
+app/src/lib/route-agent-map.ts
+  s_924d5421a89c0c::t_07b50c0a3e625e 13
+app/src/lib/talent/match-score.test.ts
+  s_924d5421a89c0c::t_a45b696089908b 1-47
+app/src/lib/talent/match-score.ts
+  s_924d5421a89c0c::t_e8c38d1337730c 1-60
+app/src/lib/talent/types.ts
+  s_924d5421a89c0c::t_63cd48bb6df653 1-28
+app/src/mastra/agents/index.ts
+  s_924d5421a89c0c::t_18019f29b430f8 47
+app/src/mastra/agents/model-match-agent.ts
+  s_924d5421a89c0c::t_23bcdbb314fb6f 1-33
+app/src/mastra/index.ts
+  s_924d5421a89c0c::t_d05cea72cf831d 2,20
+app/src/mastra/tools/index.ts
+  s_924d5421a89c0c::t_4e94d787a14f32 22,26,38-40
+app/src/mastra/tools/talent-match-tools.ts
+  s_924d5421a89c0c::t_d6f496e58122f1 1-98
+supabase/migrations/20260701141200_talent_public_rpc_bridge.sql
+  s_924d5421a89c0c::t_b631400b0a851a 1-185
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.6",
+  "base_commit_sha": "f1b18376151dcccd4cafc6eebb899f99f17f2a19",
+  "prompts": {},
+  "sessions": {
+    "s_2e2ca317dec1f8": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "354d6759-8d40-497b-94f4-4ed07c5f2ab7",
+        "model": "composer-2.5"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    },
+    "s_34eb7d3f1209d9": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "5f2bb499-4181-4424-be0c-f98a1fef1295",
+        "model": "composer-2.5"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    },
+    "s_924d5421a89c0c": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "06313eef-b30e-4fc5-8c4e-8ee444168116",
+        "model": "unknown"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
