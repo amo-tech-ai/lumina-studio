@@ -19,7 +19,7 @@ describe("useOperatorBrands", () => {
     expect(result.current.brandsLoading).toBe(false);
   });
 
-  it("refetches when devSkip toggles from false to true", async () => {
+  it("uses dev fixture without fetch when devSkip toggles from false to true", async () => {
     const fetchMock = vi.fn().mockResolvedValue({
       ok: true,
       json: async () => [],

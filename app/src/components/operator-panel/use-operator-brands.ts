@@ -5,6 +5,20 @@ import { useEffect, useRef, useState } from "react";
 import { DEV_PREVIEW_BRANDS } from "./dev-skip-fixture";
 import type { Brand } from "./nav-sidebar";
 
+function hasDevFixture(brands: Brand[]): boolean {
+  return (
+    brands.length === DEV_PREVIEW_BRANDS.length &&
+    brands.every((b, i) => b.id === DEV_PREVIEW_BRANDS[i]?.id)
+  );
+}
+
+async function fetchBrands(): Promise<Brand[]> {
+  const res = await fetch("/api/brands");
+  if (!res.ok) return [];
+  const list = (await res.json()) as Brand[];
+  return Array.isArray(list) ? list : [];
+}
+
 export function useOperatorBrands(devSkip: boolean) {
   const [brands, setBrands] = useState<Brand[]>(() =>
     devSkip ? [...DEV_PREVIEW_BRANDS] : [],
@@ -22,22 +36,24 @@ export function useOperatorBrands(devSkip: boolean) {
   }, [brandsLoading]);
 
   useEffect(() => {
-    if (devSkip) {
-      const hasFixture =
-        brandsRef.current.length === DEV_PREVIEW_BRANDS.length &&
-        brandsRef.current.every((b, i) => b.id === DEV_PREVIEW_BRANDS[i]?.id);
-      if (!hasFixture) setBrands([...DEV_PREVIEW_BRANDS]);
-      if (brandsLoadingRef.current) setBrandsLoading(false);
-      return;
+    if (!devSkip) return;
+    if (!hasDevFixture(brandsRef.current)) {
+      setBrands([...DEV_PREVIEW_BRANDS]);
     }
+    if (brandsLoadingRef.current) {
+      setBrandsLoading(false);
+    }
+  }, [devSkip]);
+
+  useEffect(() => {
+    if (devSkip) return;
 
     let cancelled = false;
     setBrandsLoading(true);
 
-    fetch("/api/brands")
-      .then((r) => (r.ok ? (r.json() as Promise<Brand[]>) : Promise.resolve([])))
+    fetchBrands()
       .then((list) => {
-        if (!cancelled) setBrands(Array.isArray(list) ? list : []);
+        if (!cancelled) setBrands(list);
       })
       .catch(() => {
         if (!cancelled) setBrands([]);
