@@ -28,12 +28,21 @@ const CommandCenterPage = async ({
     } = await supabase.auth.getUser();
 
     if (user) {
-      const { count } = await supabase
+      const { count, error: brandCountError } = await supabase
         .from("brands")
         .select("id", { count: "exact", head: true })
         .eq("user_id", user.id);
-      if (count === 0) zeroBrands = true;
-      else kpiData = await fetchCommandCenterKpis(supabase, user.id);
+      if (brandCountError) {
+        kpiData = {
+          ...EMPTY_COMMAND_CENTER_DATA,
+          fetchError: "Unable to load dashboard data",
+          realtimeStatus: "stale",
+        };
+      } else if (count === 0) {
+        zeroBrands = true;
+      } else {
+        kpiData = await fetchCommandCenterKpis(supabase, user.id);
+      }
     }
   } catch {
     kpiData = {

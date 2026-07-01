@@ -20,6 +20,37 @@ type Db = SupabaseClient<Database>;
 
 const PENDING_DRAFT_STATUSES = ["pending_approval", "pending"] as const;
 
+type BrandRow = {
+  id: string;
+  name: string;
+  brand_url: string | null;
+  intake_status: string | null;
+  created_at: string;
+};
+
+type ShootRow = {
+  id: string | null;
+  name: string | null;
+  status: string | null;
+  dna_score: number | null;
+  updated_at: string | null;
+};
+
+/** Unique brands with pending intake drafts or draft_ready status. */
+export function countPendingApprovalBrands(
+  pendingDrafts: { brand_id: string | null }[],
+  draftReadyBrands: { id: string }[],
+): number {
+  const ids = new Set<string>();
+  for (const draft of pendingDrafts) {
+    if (draft.brand_id) ids.add(draft.brand_id);
+  }
+  for (const brand of draftReadyBrands) {
+    ids.add(brand.id);
+  }
+  return ids.size;
+}
+
 /** Server-side KPI reads for Command Center (RLS-scoped). */
 export async function fetchCommandCenterKpis(
   supabase: Db,
@@ -37,23 +68,15 @@ export async function fetchCommandCenterKpis(
     }
 
     const brandRows = brands ?? [];
+    const brandIds = brandRows.map((b) => b.id);
     const brandCount = brandRows.length;
     const heroRow = brandRows[0] ?? null;
-    const heroBrandId = heroRow?.id ?? null;
 
-    const [scoresResult, shootsResult, pendingDraftsResult, draftReadyResult] =
+    const [scoresResult, shootsResult, shootCountResult, pendingDraftsResult, draftReadyResult] =
       await Promise.all([
-        heroBrandId
-          ? supabase
-              .from("brand_scores")
-              .select("score_type, score")
-              .eq("brand_id", heroBrandId)
-          : Promise.resolve({ data: [], error: null }),
-        supabase
-          .from("shoot_portfolio_view")
-          .select("id, name, status, dna_score, updated_at")
-          .order("updated_at", { ascending: false })
-          .limit(8),
+        fetchHeroScores(supabase, heroRow),
+        fetchRecentShoots(supabase, brandIds),
+        fetchShootCount(supabase, brandIds),
         supabase
           .from("brand_intake_drafts")
           .select("id, brand_id, draft_profile, draft_scores, status, updated_at")
@@ -69,38 +92,15 @@ export async function fetchCommandCenterKpis(
 
     if (scoresResult.error) return errorPayload(scoresResult.error.message);
     if (shootsResult.error) return errorPayload(shootsResult.error.message);
+    if (shootCountResult.error) return errorPayload(shootCountResult.error.message);
     if (pendingDraftsResult.error) return errorPayload(pendingDraftsResult.error.message);
     if (draftReadyResult.error) return errorPayload(draftReadyResult.error.message);
 
-    const heroBrand: HeroBrand | null = heroRow
-      ? {
-          id: heroRow.id,
-          name: heroRow.name,
-          brandUrl: heroRow.brand_url,
-          intakeStatus: heroRow.intake_status,
-          dnaScore: computeDnaScore(scoresResult.data ?? []),
-        }
-      : null;
-
-    const recentShoots: RecentShoot[] = (shootsResult.data ?? [])
-      .filter(
-        (row): row is typeof row & { id: string; name: string; status: string; updated_at: string } =>
-          Boolean(row.id && row.name && row.status && row.updated_at),
-      )
-      .map((row) => ({
-        id: row.id,
-        name: row.name,
-        status: row.status,
-        dnaScore: row.dna_score,
-        updatedAt: row.updated_at,
-      }));
-
+    const heroBrand = buildHeroBrand(heroRow, scoresResult.data ?? []);
+    const recentShoots = mapRecentShoots(shootsResult.data ?? []);
     const pendingDrafts = pendingDraftsResult.data ?? [];
     const draftReadyBrands = draftReadyResult.data ?? [];
-    const pendingApprovalCount = Math.max(
-      pendingDrafts.length,
-      draftReadyBrands.length,
-    );
+    const pendingApprovalCount = countPendingApprovalBrands(pendingDrafts, draftReadyBrands);
 
     const brandNameById = new Map(brandRows.map((b) => [b.id, b.name]));
     const featuredApproval = await resolveFeaturedApproval(
@@ -112,7 +112,7 @@ export async function fetchCommandCenterKpis(
     return {
       heroBrand,
       brandCount,
-      shootCount: recentShoots.length,
+      shootCount: shootCountResult.count ?? 0,
       pendingApprovalCount,
       featuredApproval,
       recentShoots,
@@ -123,6 +123,66 @@ export async function fetchCommandCenterKpis(
     const message = err instanceof Error ? err.message : "Failed to load dashboard";
     return errorPayload(message);
   }
+}
+
+async function fetchHeroScores(supabase: Db, heroRow: BrandRow | null) {
+  if (!heroRow) return { data: [], error: null };
+  return supabase
+    .from("brand_scores")
+    .select("score_type, score")
+    .eq("brand_id", heroRow.id);
+}
+
+async function fetchRecentShoots(supabase: Db, brandIds: string[]) {
+  if (brandIds.length === 0) {
+    return { data: [] as ShootRow[], error: null };
+  }
+  // Defense-in-depth: view filters auth.uid(); explicit brand_id scopes to user's brands.
+  return supabase
+    .from("shoot_portfolio_view")
+    .select("id, name, status, dna_score, updated_at")
+    .in("brand_id", brandIds)
+    .order("updated_at", { ascending: false })
+    .limit(8);
+}
+
+async function fetchShootCount(supabase: Db, brandIds: string[]) {
+  if (brandIds.length === 0) {
+    return { count: 0, error: null };
+  }
+  return supabase
+    .from("shoot_portfolio_view")
+    .select("id", { count: "exact", head: true })
+    .in("brand_id", brandIds);
+}
+
+function buildHeroBrand(
+  heroRow: BrandRow | null,
+  scoreRows: { score_type: string; score: number }[],
+): HeroBrand | null {
+  if (!heroRow) return null;
+  return {
+    id: heroRow.id,
+    name: heroRow.name,
+    brandUrl: heroRow.brand_url,
+    intakeStatus: heroRow.intake_status,
+    dnaScore: computeDnaScore(scoreRows),
+  };
+}
+
+function mapRecentShoots(rows: ShootRow[]): RecentShoot[] {
+  return rows
+    .filter(
+      (row): row is ShootRow & { id: string; name: string; status: string; updated_at: string } =>
+        Boolean(row.id && row.name && row.status && row.updated_at),
+    )
+    .map((row) => ({
+      id: row.id,
+      name: row.name,
+      status: row.status,
+      dnaScore: row.dna_score,
+      updatedAt: row.updated_at,
+    }));
 }
 
 async function resolveFeaturedApproval(
@@ -145,10 +205,12 @@ async function resolveFeaturedApproval(
   const brandName = brandNameById.get(draft.brand_id) ?? "Brand";
   const draftScores = normalizeDraftScores(draft.draft_scores);
 
-  const { data: liveRows } = await supabase
+  const { data: liveRows, error: liveScoresError } = await supabase
     .from("brand_scores")
     .select("score_type, score, details, source, score_version")
     .eq("brand_id", draft.brand_id);
+
+  if (liveScoresError) return null;
 
   const liveScores = filterDisplayScores(
     getBaseScores((liveRows ?? []) as BrandScoreDetail[]),
