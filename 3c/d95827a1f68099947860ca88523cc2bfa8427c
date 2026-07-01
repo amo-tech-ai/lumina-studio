@@ -1,0 +1,23 @@
+app/src/components/brand-context-panel/brand-context-panel.module.css
+  s_ef4285d032a355::t_9da639c0d7aadf 116-126
+  s_ef4285d032a355::t_3883a5ffc32669 127
+app/src/components/brand-context-panel/brand-context-panel.tsx
+  s_ef4285d032a355::t_2a80c9f6594798 26-31
+  s_ef4285d032a355::t_cc587831e65344 147
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.4",
+  "base_commit_sha": "3cd95827a1f68099947860ca88523cc2bfa8427c",
+  "prompts": {},
+  "sessions": {
+    "s_ef4285d032a355": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "26c1cfce-92ad-4c17-b2fb-f77878e7778d",
+        "model": "composer-2.5"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}

@@ -1,0 +1,24 @@
+app/src/components/operator-panel/nav-sidebar.module.css
+  s_ef4285d032a355::t_11220604e8d6c6 144-145
+  s_ef4285d032a355::t_7844474ad79b85 80-81,85-86
+app/src/components/brand-context-panel/brand-context-panel.module.css
+  s_ef4285d032a355::t_4cb8f5c2013e50 112
+app/src/styles/tokens.css
+  s_ef4285d032a355::t_29f49dc05fb1c5 2,10-16,26-39,43,64-68,77-87,90-105,108-111,114-134,145-151,160-165,173,176-178,182-183,185,187-195,197,201,207-214,220,225-235,243-244,249,266-267,271-276,278-280,293,297-304,314,323,325,333-340,344,351-353,358-359,362-366,369,373
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.4",
+  "base_commit_sha": "3168b3cdfd9b54623b1e81164046aa107c475396",
+  "prompts": {},
+  "sessions": {
+    "s_ef4285d032a355": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "26c1cfce-92ad-4c17-b2fb-f77878e7778d",
+        "model": "composer-2.5"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
