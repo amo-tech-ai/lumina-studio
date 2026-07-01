@@ -1,6 +1,8 @@
 "use client";
 
+import { useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
+import { DEV_INTELLIGENCE_PANEL_DATA, isDevSkipMode } from "./dev-panel-fixture";
 import type { IntelligencePanelData } from "./panel-contract";
 
 type State = {
@@ -16,13 +18,19 @@ const EMPTY: IntelligencePanelData = {
 };
 
 export function useIntelligencePanel(activeBrandId: string | null) {
+  const searchParams = useSearchParams();
+  const skip = searchParams.get("skip");
+  const devFixture = isDevSkipMode(skip);
+
   const [state, setState] = useState<State>({
-    data: null,
-    loading: true,
+    data: devFixture ? DEV_INTELLIGENCE_PANEL_DATA : null,
+    loading: !devFixture,
     error: null,
   });
 
   const fetchPanel = useCallback(async () => {
+    if (devFixture) return DEV_INTELLIGENCE_PANEL_DATA;
+
     const qs = activeBrandId ? `?brandId=${encodeURIComponent(activeBrandId)}` : "";
     const res = await fetch(`/api/intelligence/panel${qs}`, { cache: "no-store" });
     if (!res.ok) {
@@ -30,7 +38,7 @@ export function useIntelligencePanel(activeBrandId: string | null) {
       throw new Error(body.error ?? `Request failed (${res.status})`);
     }
     return (await res.json()) as IntelligencePanelData;
-  }, [activeBrandId]);
+  }, [activeBrandId, devFixture]);
 
   const reload = useCallback(async () => {
     setState({ data: null, loading: true, error: null });
@@ -47,6 +55,11 @@ export function useIntelligencePanel(activeBrandId: string | null) {
   }, [fetchPanel]);
 
   useEffect(() => {
+    if (devFixture) {
+      setState({ data: DEV_INTELLIGENCE_PANEL_DATA, loading: false, error: null });
+      return;
+    }
+
     let cancelled = false;
     void (async () => {
       setState({ data: null, loading: true, error: null });
@@ -66,9 +79,11 @@ export function useIntelligencePanel(activeBrandId: string | null) {
     return () => {
       cancelled = true;
     };
-  }, [fetchPanel]);
+  }, [fetchPanel, devFixture]);
 
   useEffect(() => {
+    if (devFixture) return;
+
     let cancelled = false;
     const id = window.setInterval(() => {
       void fetchPanel()
@@ -81,7 +96,7 @@ export function useIntelligencePanel(activeBrandId: string | null) {
       cancelled = true;
       window.clearInterval(id);
     };
-  }, [fetchPanel]);
+  }, [fetchPanel, devFixture]);
 
   return { ...state, reload };
 }
