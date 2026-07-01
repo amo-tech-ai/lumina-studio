@@ -55,9 +55,11 @@ export function OperatorPanel({ children }: { children: React.ReactNode }) {
 function OperatorShellFallback({ agentId }: { agentId: string }) {
   return (
     <div className={styles.shell} data-agent-id={agentId} aria-busy="true" aria-label="Loading operator workspace">
-      <div className={styles.content}>
+      <div aria-hidden className={styles.fallbackNav} />
+      <main className={styles.content}>
         <div className={styles.contentScroll} />
-      </div>
+      </main>
+      <div aria-hidden className={styles.intelligencePanel} />
     </div>
   );
 }
