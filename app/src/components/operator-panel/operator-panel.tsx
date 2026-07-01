@@ -12,7 +12,7 @@ import {
   CopilotChatConfigurationProvider,
 } from "@copilotkit/react-core/v2";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import { z } from "zod";
 
 import { useHideInternalToolCalls } from "@/components/copilot/copilot-tool-presentation";
@@ -20,10 +20,10 @@ import { IntelligencePanel } from "@/components/intelligence-panel";
 import { ThreadsDrawer } from "@/components/threads-drawer";
 import { ThreadsPanelGate } from "@/components/threads-drawer/locked-state";
 import { ActiveBrandProvider, useActiveBrand } from "@/context/active-brand-context";
-import { DEV_PREVIEW_HERO_BRAND_ID, DEV_PREVIEW_BRANDS, isDevSkipMode } from "./dev-skip-fixture";
+import { DEV_PREVIEW_HERO_BRAND_ID, isDevSkipMode } from "./dev-skip-fixture";
 import { NavSidebar } from "./nav-sidebar";
-import type { Brand } from "./nav-sidebar";
 import { OperatorChatDock } from "./operator-chat-dock";
+import { useOperatorBrands } from "./use-operator-brands";
 import styles from "./operator-shell.module.css";
 import { resolveAgentId } from "@/lib/route-agent-map";
 import { routeBrandId, routeShootId } from "@/lib/intelligence/normalize-route-path";
@@ -41,12 +41,24 @@ export function OperatorPanel({ children }: { children: React.ReactNode }) {
     <ActiveBrandProvider>
       <CopilotChatConfigurationProvider agentId={agentId} threadId={threadId}>
         <div data-agent-id={agentId} style={{ display: "contents" }}>
-          <OperatorShell agentId={agentId} threadId={threadId} onThreadChange={setThreadId}>
-            {children}
-          </OperatorShell>
+          <Suspense fallback={<OperatorShellFallback agentId={agentId} />}>
+            <OperatorShell agentId={agentId} threadId={threadId} onThreadChange={setThreadId}>
+              {children}
+            </OperatorShell>
+          </Suspense>
         </div>
       </CopilotChatConfigurationProvider>
     </ActiveBrandProvider>
+  );
+}
+
+function OperatorShellFallback({ agentId }: { agentId: string }) {
+  return (
+    <div className={styles.shell} data-agent-id={agentId} aria-busy="true" aria-label="Loading operator workspace">
+      <div className={styles.content}>
+        <div className={styles.contentScroll} />
+      </div>
+    </div>
   );
 }
 
@@ -68,30 +80,7 @@ function OperatorShell({
   const devSkip = isDevSkipMode(skip);
   const [threadsOpen, setThreadsOpen] = useState(false);
   const { activeBrandId, setActiveBrandId } = useActiveBrand();
-  const [brands, setBrands] = useState<Brand[]>(() =>
-    devSkip ? [...DEV_PREVIEW_BRANDS] : [],
-  );
-  const [brandsLoading, setBrandsLoading] = useState(() => !devSkip);
-  const brandsRef = useRef<Brand[]>([]);
-  const brandsLoadingRef = useRef(brandsLoading);
-  useEffect(() => {
-    brandsRef.current = brands;
-  }, [brands]);
-  useEffect(() => {
-    brandsLoadingRef.current = brandsLoading;
-  }, [brandsLoading]);
-
-  // Fetch brand list once on mount for the left panel switcher (skip on dev layout QA)
-  useEffect(() => {
-    if (devSkip) return;
-
-    setBrandsLoading(true);
-    fetch("/api/brands")
-      .then((r) => (r.ok ? (r.json() as Promise<Brand[]>) : Promise.resolve([])))
-      .then((list) => setBrands(Array.isArray(list) ? list : []))
-      .catch(() => setBrands([]))
-      .finally(() => setBrandsLoading(false));
-  }, [devSkip]);
+  const { brands, brandsRef, brandsLoadingRef } = useOperatorBrands(devSkip);
 
   // Dev layout QA — align active brand with Command Center Nike fixture
   useEffect(() => {
