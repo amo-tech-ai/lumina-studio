@@ -1,0 +1,23 @@
+.claude/skills/architecture-brief/SKILL.md
+  s_e761f6addb7969::t_b82691d2b84d7d 1-108
+.claude/skills/architecture-brief/references/output-template.md
+  s_e761f6addb7969::t_d9bf19f3e8770b 1-68
+.claude/skills/release-notes/SKILL.md
+  s_e761f6addb7969::t_211e570197da83 1-36
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.6",
+  "base_commit_sha": "650d165607504d43562d0e4c43151a2954c5a739",
+  "prompts": {},
+  "sessions": {
+    "s_e761f6addb7969": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "06cdbaf8-e290-477e-a9c6-e5ca4cddefd6",
+        "model": "unknown"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
