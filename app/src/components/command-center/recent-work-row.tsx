@@ -28,17 +28,17 @@ function formatMeta(shoot: RecentShoot): string {
     parts.push(shoot.channel);
     const aspect = CHANNEL_ASPECT[shoot.channel];
     if (aspect) parts.push(aspect);
+    parts.push(shoot.status);
+    if (when) parts.push(when);
+    return parts.join(" · ");
   }
+
   parts.push(shoot.status);
   if (when) parts.push(when);
-
-  if (parts.length > 0) return parts.join(" · ");
-
-  const dna =
-    typeof shoot.dnaScore === "number" && shoot.dnaScore > 0
-      ? ` · DNA ${Math.round(shoot.dnaScore)}%`
-      : "";
-  return `${shoot.status}${when ? ` · ${when}` : ""}${dna}`;
+  if (typeof shoot.dnaScore === "number" && shoot.dnaScore > 0) {
+    parts.push(`DNA ${Math.round(shoot.dnaScore)}%`);
+  }
+  return parts.join(" · ");
 }
 
 export function RecentWorkRow({ shoots }: Props) {

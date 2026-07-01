@@ -114,7 +114,7 @@ export const DEV_PREVIEW_COMMAND_CENTER_DATA: CommandCenterData = {
     coverUrl: DEV_COVER_URL,
   },
   brandCount: 3,
-  shootCount: 5,
+  shootCount: DEV_SHOOT_DEFS.length,
   pendingApprovalCount: 0,
   featuredApproval: null,
   recentShoots: DEV_SHOOT_DEFS.map((shoot, index) => ({

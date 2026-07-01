@@ -17,7 +17,9 @@ const CommandCenterPage = async ({
 }) => {
   const params = await searchParams;
   const skip = Array.isArray(params.skip) ? params.skip[0] : params.skip;
-  if (skip === "approval") {
+  const devFixturesEnabled = process.env.NODE_ENV !== "production";
+
+  if (devFixturesEnabled && skip === "approval") {
     return (
       <CommandCenter
         {...DEV_APPROVAL_PREVIEW_COMMAND_CENTER_DATA}
@@ -25,7 +27,7 @@ const CommandCenterPage = async ({
       />
     );
   }
-  if (skip === "1") return <CommandCenter {...DEV_PREVIEW_COMMAND_CENTER_DATA} devPreview />;
+  if (devFixturesEnabled && skip === "1") return <CommandCenter {...DEV_PREVIEW_COMMAND_CENTER_DATA} devPreview />;
 
   let zeroBrands = false;
   let kpiData = EMPTY_COMMAND_CENTER_DATA;
