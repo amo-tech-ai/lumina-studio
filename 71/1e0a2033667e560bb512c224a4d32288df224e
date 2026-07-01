@@ -1,0 +1,19 @@
+CLAUDE.md
+  s_e761f6addb7969::t_312edb85397437 32-54
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.6",
+  "base_commit_sha": "711e0a2033667e560bb512c224a4d32288df224e",
+  "prompts": {},
+  "sessions": {
+    "s_e761f6addb7969": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "06cdbaf8-e290-477e-a9c6-e5ca4cddefd6",
+        "model": "unknown"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
