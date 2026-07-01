@@ -102,4 +102,9 @@ describe("OperatorPanel — dev skip + brand list (PR #170 review)", () => {
     expect(PANEL_SRC).toMatch(/brandsLoadingRef\.current/);
     expect(PANEL_SRC).toMatch(/No brands in your organization yet/);
   });
+
+  it("wraps OperatorShell in Suspense for useSearchParams", () => {
+    expect(PANEL_SRC).toMatch(/<Suspense fallback=\{<OperatorShellFallback/);
+    expect(PANEL_SRC).toMatch(/useOperatorBrands\(devSkip\)/);
+  });
 });
