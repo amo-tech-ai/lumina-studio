@@ -1,0 +1,28 @@
+app/src/components/operator-panel/operator-panel.test.ts
+  s_2e2ca317dec1f8::t_14a647bb0a9a16 94-105
+app/src/components/operator-panel/dev-skip-fixture.ts
+  s_2e2ca317dec1f8::t_aab81cd2bf3c29 12
+app/src/components/operator-panel/operator-panel.tsx
+  s_2e2ca317dec1f8::t_da6ba5d2597493 74,76-82,88,90-93,98,101
+  s_2e2ca317dec1f8::t_84612e01daa973 182
+  s_2e2ca317dec1f8::t_94418413ddccdd 142,145-146
+  s_2e2ca317dec1f8::t_6bbb4e834cdfcb 147
+app/src/components/operator-panel/dev-skip-fixture.test.ts
+  s_2e2ca317dec1f8::t_033aca7861214b 1-23
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.6",
+  "base_commit_sha": "ee58ff03082933b26968284a6d39c68816bf36ec",
+  "prompts": {},
+  "sessions": {
+    "s_2e2ca317dec1f8": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "354d6759-8d40-497b-94f4-4ed07c5f2ab7",
+        "model": "composer-2.5"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
