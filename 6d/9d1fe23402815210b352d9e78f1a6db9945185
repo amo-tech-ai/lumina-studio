@@ -1,0 +1,38 @@
+app/src/lib/intelligence/generate-suggestions.ts
+  s_2e2ca317dec1f8::t_ee7f1f0c903856 1-47
+app/src/components/intelligence-panel/suggestion-rail.tsx
+  s_2e2ca317dec1f8::t_26c4f5d212c77f 1-2,33,38
+app/src/app/api/brands/[id]/assets/route.ts
+  s_2e2ca317dec1f8::t_a31787ce381588 4,54-64
+app/src/components/intelligence-panel/intelligence-panel.tsx
+  s_2e2ca317dec1f8::t_6518cd53e5744f 10,20-23,38-60
+app/src/app/api/intelligence/panel/route.test.ts
+  s_2e2ca317dec1f8::t_1297239479e643 121-122
+  s_2e2ca317dec1f8::t_f7ea1104721d53 22-79,83,120
+app/src/lib/intelligence/build-thumb-url.ts
+  s_2e2ca317dec1f8::t_30ad37182e067c 1-5
+app/src/app/api/intelligence/panel/route.ts
+  s_2e2ca317dec1f8::t_a158f0bac9d5d2 4-5,36,42-46,48-53,77-81,87-90,95,99,102
+app/src/components/intelligence-panel/route-briefing.ts
+  s_2e2ca317dec1f8::t_2bf75a139aeb43 18
+app/src/app/api/brands/[id]/suggestions/route.ts
+  s_2e2ca317dec1f8::t_45e675b22a64e9 4,13,30,36-40,46
+app/src/lib/intelligence/generate-suggestions.test.ts
+  s_2e2ca317dec1f8::t_7e975ca558068a 1-15
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.6",
+  "base_commit_sha": "6d9d1fe23402815210b352d9e78f1a6db9945185",
+  "prompts": {},
+  "sessions": {
+    "s_2e2ca317dec1f8": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "354d6759-8d40-497b-94f4-4ed07c5f2ab7",
+        "model": "composer-2.5"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
