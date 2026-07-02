@@ -1,0 +1,19 @@
+supabase/migrations/20260702170000_booking_trigger_reschedule_notification_fix.sql
+  s_c07e656bb1b48e::t_def1d6b3dd88b9 1-126
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.9",
+  "base_commit_sha": "ebec8fd0d945ddf90ed055eb7b072d0fce21ad54",
+  "prompts": {},
+  "sessions": {
+    "s_c07e656bb1b48e": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b8a1a548-66d1-4c73-b468-84dd619829ae",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
