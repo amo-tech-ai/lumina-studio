@@ -22,10 +22,12 @@ cp .env.example .env.local
 ```
 
 Required variables — agents need Gemini (default model `gemini-3.1-flash-lite` via `src/mastra/models.ts`):
+
 - `GEMINI_API_KEY` — Google Gemini API key (used by all Mastra agents)
 - `DATABASE_URL` — Mastra Postgres storage
 
 Optional variables:
+
 - `AI_PROVIDER` — `gemini` (default) or `openai` (only if you explicitly wire OpenAI)
 - `GEMINI_MODEL` — override registry default (`gemini-3.1-flash-lite`)
 - `COPILOTKIT_LICENSE_TOKEN` — Enable CopilotKit Intelligence (threads, persistence, analytics)

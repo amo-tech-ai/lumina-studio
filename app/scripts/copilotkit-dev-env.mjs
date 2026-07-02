@@ -26,6 +26,16 @@ export const INTELLIGENCE_KEYS = [
   { key: "INTELLIGENCE_API_KEY" },
 ];
 
+/** Checked for every provider before `npm run dev`. */
+export const COMMON_DEV_KEYS = [
+  {
+    key: "DATABASE_URL",
+    note: "Required by Mastra Postgres storage (agent checkpoints).",
+    url: "https://supabase.com/docs/guides/database/connecting-to-postgres",
+    example: "postgresql://...",
+  },
+];
+
 export function readDotenvValue(envFileContent, key) {
   const re = new RegExp("^\\s*(?:export\\s+)?" + key + "=(.*)$", "gm");
   let match;
@@ -101,11 +111,10 @@ export function shouldRequireIntelligence(processEnv, envFileContent) {
 
 export function collectDevEnvWarnings(processEnv, envFileContent) {
   const provider = resolveAiProvider(processEnv, envFileContent);
-  const vendorFailures = findUnsatisfiedVendorKeys(
-    processEnv,
-    envFileContent,
-    requirementsForProvider(provider),
-  );
+  const vendorFailures = findUnsatisfiedVendorKeys(processEnv, envFileContent, [
+    ...requirementsForProvider(provider),
+    ...COMMON_DEV_KEYS,
+  ]);
   const intelligenceFailures = shouldRequireIntelligence(processEnv, envFileContent)
     ? findUnsatisfiedVendorKeys(processEnv, envFileContent, INTELLIGENCE_KEYS).map(
         ({ requirement }) => requirement,

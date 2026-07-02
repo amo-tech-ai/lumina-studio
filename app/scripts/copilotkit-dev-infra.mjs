@@ -41,9 +41,10 @@ if (vendorFailures.length > 0) {
   console.warn(
     `Starting the dev server anyway — set the key(s) above and restart to enable chat (AI_PROVIDER=${provider}, default model: ${GEMINI_DEFAULT_MODEL}).`,
   );
-} else if (provider === "gemini") {
+} else {
+  const label = provider === "gemini" ? "Gemini" : "OpenAI";
   console.log(
-    `✓ Gemini configured (AI_PROVIDER=gemini, registry default: ${GEMINI_DEFAULT_MODEL}).`,
+    `✓ ${label} configured (AI_PROVIDER=${provider}, registry default: ${GEMINI_DEFAULT_MODEL}).`,
   );
 }
 
