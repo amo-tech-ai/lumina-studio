@@ -24,3 +24,9 @@ build/
 __pycache__/
 *.log
 *.lock
+.agents/
+.design-sync/
+.obsidian/
+.opencode/
+Universal design prompt/
+tasks/screenshots/
