@@ -16,7 +16,7 @@ description: >
 
 **Workflow:** `HTML design file → audit current React → minimal production files → verify visual parity`
 
-**Design SSOT:** `/home/sk/ipix/Universal design prompt/` — **must use the actual `.dc.html` files**; production must match them for layout, spacing, cards, panels, typography, image ratios, buttons, and responsive behavior.
+**Design SSOT:** `./Universal design prompt/` (repo root) — **must use the actual `.dc.html` files**; production must match them for layout, spacing, cards, panels, typography, image ratios, buttons, and responsive behavior.
 
 **Production app:** `app/` (Next.js 16) · routes under `/app/*` · legacy Vite `src/` is retired — do not port there.
 

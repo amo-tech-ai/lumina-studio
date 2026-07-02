@@ -1,6 +1,6 @@
 # Design HTML → React route map
 
-**Design SSOT folder:** `/home/sk/ipix/Universal design prompt/`
+**Design SSOT folder:** `./Universal design prompt/`
 
 ## P0 MVP screens (current skill scope)
 
