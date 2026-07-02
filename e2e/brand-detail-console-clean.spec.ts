@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 
+import { isBenignAppNoise, isExtensionOnlyNoise } from "./helpers/console-noise";
 import { loginOperatorIfConfigured } from "./helpers/mobile-audit";
 
 async function gotoFirstBrandDetail(page: import("@playwright/test").Page) {
@@ -12,25 +13,6 @@ async function gotoFirstBrandDetail(page: import("@playwright/test").Page) {
   expect(res?.status()).toBeLessThan(500);
   await expect(page.getByTestId("brand-detail-workspace")).toBeVisible({ timeout: 20_000 });
   return href!;
-}
-
-/** Extension-only noise — Playwright Chromium has no extensions; these should never appear. */
-function isExtensionOnlyNoise(text: string): boolean {
-  return (
-    /chrome-extension:\/\//i.test(text) ||
-    /installHook\.js/i.test(text) ||
-    /react-devtools/i.test(text) ||
-    /download the react devtools/i.test(text) ||
-    /useCopilotKit must be used within CopilotKitProvider/i.test(text)
-  );
-}
-
-function isBenignAppNoise(text: string): boolean {
-  return (
-    /Failed to load resource: the server responded with a status of 404/i.test(text) ||
-    /favicon\.ico/i.test(text) ||
-    /useCopilotKit must be used within CopilotKitProvider/i.test(text)
-  );
 }
 
 test.describe("Brand detail — console forensics (clean Chromium)", () => {
