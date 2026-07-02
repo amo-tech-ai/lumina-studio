@@ -1,0 +1,118 @@
+tasks/design-docs/implementation/todo.md
+  s_34eb7d3f1209d9::t_9ff228c07a23cc 1-3,5
+  s_34eb7d3f1209d9::t_033ee262a43402 4
+tasks/changelog.md
+  s_34eb7d3f1209d9::t_95673aba341351 3-17
+  s_34eb7d3f1209d9::t_6a95c0156a1d8d 1-2
+  s_34eb7d3f1209d9::t_f8a34ae48f1d8c 18-20
+  s_34eb7d3f1209d9::t_e14bf8accf92e8 21-24
+tasks/todo.md
+  s_34eb7d3f1209d9::t_d7c93d239f3dad 293
+  s_34eb7d3f1209d9::t_458489864651c8 349,351
+  s_34eb7d3f1209d9::t_eff008e84ec62e 382
+  s_34eb7d3f1209d9::t_14deaf6e4f9ae7 6
+  s_34eb7d3f1209d9::t_79c9bcf83ad486 3-4,7,13-24
+  s_34eb7d3f1209d9::t_1be7d42d973350 359-360
+  s_34eb7d3f1209d9::t_b2560ab558f642 43-81
+  s_34eb7d3f1209d9::t_23d982bf51da45 215
+  s_34eb7d3f1209d9::t_2173ce2fc33635 112
+  s_34eb7d3f1209d9::t_759e4ba66048bc 279-282
+  s_34eb7d3f1209d9::t_07f8f810527e67 343
+  s_34eb7d3f1209d9::t_09a59dcb098880 344
+  s_34eb7d3f1209d9::t_7e67f0999e6131 191
+tasks/plan/todo.md
+  s_496c3278139cd3::t_0c84fb1112e015 141
+  s_34eb7d3f1209d9::t_3e1a81ea092eab 3-11
+  s_34eb7d3f1209d9::t_2ebe780486c2f7 232-234
+  s_496c3278139cd3::t_0f79ba6d94ff2c 237
+  s_34eb7d3f1209d9::t_c5127110481a2e 385
+  s_34eb7d3f1209d9::t_3294ccd3c60af7 105
+  s_496c3278139cd3::t_462bcaa6991487 389
+  s_34eb7d3f1209d9::t_63e61ac5fd30f0 29-34
+  s_34eb7d3f1209d9::t_d9ce50f4e67cef 186
+  s_496c3278139cd3::t_9973e71b5d3723 42
+  s_496c3278139cd3::t_252cbae40718f0 153-154
+  s_34eb7d3f1209d9::t_c180fc29b14b69 471
+  s_34eb7d3f1209d9::t_d8d5f3e5cf4bc9 167
+  s_34eb7d3f1209d9::t_4cd6293f77960d 247-249
+  s_496c3278139cd3::t_b1dded98c09e30 110
+  s_34eb7d3f1209d9::t_801d937c985ff8 378-380
+  s_496c3278139cd3::t_63896b05dadc58 92
+  s_34eb7d3f1209d9::t_14eba85ed36c06 236
+  s_496c3278139cd3::t_c061e962aa09b3 109
+  s_496c3278139cd3::t_8d70d8c8a7e877 382-383
+  s_34eb7d3f1209d9::t_63b65739fdfc96 41
+  s_496c3278139cd3::t_d4a62783642fbc 181
+  s_34eb7d3f1209d9::t_7a3b72f8edd3d6 108
+  s_34eb7d3f1209d9::t_2dda8571e59794 218-220
+  s_496c3278139cd3::t_4aa5f82035912e 113
+  s_496c3278139cd3::t_378c5a401bfb1e 235
+  s_34eb7d3f1209d9::t_e8104cfe2baa64 151-152,155-156
+  s_34eb7d3f1209d9::t_cb1af72d3d45eb 163
+  s_34eb7d3f1209d9::t_f77ec766367361 462
+  s_34eb7d3f1209d9::t_3dad4a173c736a 567-568
+  s_496c3278139cd3::t_1da5ac57e35b50 189
+  s_496c3278139cd3::t_449a8c6cd7b961 386
+  s_34eb7d3f1209d9::t_db8acb634978c1 203-204
+  s_34eb7d3f1209d9::t_8106911b537d58 62
+  s_34eb7d3f1209d9::t_bdcfe35e5cd221 97-100
+  s_34eb7d3f1209d9::t_114b17a021a230 177-178
+  s_34eb7d3f1209d9::t_5f6288039306e9 263
+  s_34eb7d3f1209d9::t_a6d2d5ce41104d 366-370
+  s_34eb7d3f1209d9::t_c470ae9c97c284 1-2
+  s_34eb7d3f1209d9::t_b54d3425194121 12-14,26-28
+  s_34eb7d3f1209d9::t_bc01d51e3b88b6 35-40
+  s_34eb7d3f1209d9::t_a073e658c7cf0a 101-104
+  s_34eb7d3f1209d9::t_9b14b75a4c9e02 106-107
+  s_496c3278139cd3::t_de7c4786f1a649 111-112
+  s_496c3278139cd3::t_38c2ed31458ddf 114-116,138-140
+  s_34eb7d3f1209d9::t_14988aaf03e5d3 157-162
+  s_34eb7d3f1209d9::t_8993717e786a64 164-166
+  s_34eb7d3f1209d9::t_a2069cfcccbcf9 168-170,174-176
+  s_34eb7d3f1209d9::t_fcbf32205a2bce 205-207,215-217
+  s_34eb7d3f1209d9::t_c10aba9851c1a0 221-223,229-231
+  s_34eb7d3f1209d9::t_a269c380b3a804 250-252,260-262
+  s_34eb7d3f1209d9::t_1af97e0cfb2a68 264-266,363-365
+  s_34eb7d3f1209d9::t_31c7df79363868 371-373,375-377
+  s_496c3278139cd3::t_1a6967f52587c6 387-388
+  s_34eb7d3f1209d9::t_6a2f351f7604a0 463-465,468-470
+  s_34eb7d3f1209d9::t_7243119b384d86 472-474,564-566
+  s_c07e656bb1b48e::t_2e340446cca492 15-25,43-61,63-91,93-96,117-137,142-150,171-173,179-180,182-185,187-188,190-202,208-214,224-228,238-246,253-259,267-362,374,381,384,390-461,466-467,475-563
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.9",
+  "base_commit_sha": "dbba34d1786557c0d83a4f92b22213f9c7510b5d",
+  "prompts": {},
+  "humans": {
+    "h_d382fbec1d5b46": {
+      "author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  },
+  "sessions": {
+    "s_34eb7d3f1209d9": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "5f2bb499-4181-4424-be0c-f98a1fef1295",
+        "model": "composer-2.5"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    },
+    "s_496c3278139cd3": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "55815c1f-c0e9-4277-98ba-8d4f4f591490",
+        "model": "composer-2.5"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    },
+    "s_c07e656bb1b48e": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b8a1a548-66d1-4c73-b468-84dd619829ae",
+        "model": "unknown"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
