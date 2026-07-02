@@ -49,6 +49,7 @@ app/src/components/intelligence-panel/intelligence-panel.tsx
   s_34eb7d3f1209d9::t_a249eeee068e98 86
   s_34eb7d3f1209d9::t_cf019c37175045 124
   s_34eb7d3f1209d9::t_1c369ee6ce4350 3,7,49,89-93,147-148
+  s_34eb7d3f1209d9::t_32d1585a10bf58 55,106,110-123,125,128-146,149-196
 app/src/app/(operator)/app/brand/page.tsx
   s_34eb7d3f1209d9::t_455099b1b19003 3
   s_34eb7d3f1209d9::t_00571263cb45eb 1,22,25,30-39,43,59-64,66-74,76
@@ -108,6 +109,7 @@ app/src/components/intelligence-panel/intelligence-panel.test.tsx
   s_34eb7d3f1209d9::t_511ca9fb26dc97 82
   s_34eb7d3f1209d9::t_6c0cc129385aa5 216-225,227-229,231-234,236
   s_34eb7d3f1209d9::t_f331f58e6eca90 15-16,18-19,85,153,156-160,180-183,186-188
+  s_34eb7d3f1209d9::t_f14cce9f7ac9d2 6,17,43,46-47,50-51,58-61,75,97,118,131,148,179,199,212,226
 app/src/test/brand-hub.test.ts
   s_34eb7d3f1209d9::t_7ce23e340990dd 221
 app/src/components/brand-hub/brand-detail.module.css
