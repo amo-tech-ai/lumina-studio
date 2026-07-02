@@ -40,60 +40,58 @@ export function BrandDetailPanelExtras({
   return (
     <>
       {dnaHistory?.length ? (
-        <>
-          <div className={styles.dnaHistoryBlock}>
-            <div className={styles.dnaHistoryHeader}>
-              <span className={styles.portfolioSectionLabel}>DNA history</span>
-              {dnaDelta ? (
-                <span className={styles.dnaHistoryDelta}>{dnaDelta}</span>
-              ) : null}
-            </div>
-            <div className={styles.dnaHistoryBars} aria-hidden>
-              {dnaHistory.map((point) => (
-                <span
-                  key={point.date}
-                  className={styles.dnaHistoryBar}
-                  style={{ height: point.barHeight }}
-                />
-              ))}
-            </div>
-            <ul className={styles.dnaHistoryList}>
-              {dnaHistory.map((point) => (
-                <li key={`${point.date}-${point.score}`} className={styles.dnaHistoryItem}>
-                  <span className={styles.dnaHistoryDate}>{point.date}</span>
-                  <span className={styles.dnaHistoryScore}>{point.score}</span>
-                  <span className={styles.dnaHistoryNote}>{point.note}</span>
-                </li>
-              ))}
-            </ul>
+        <div className={styles.dnaHistoryBlock}>
+          <div className={styles.dnaHistoryHeader}>
+            <span className={styles.portfolioSectionLabel}>DNA history</span>
+            {dnaDelta ? (
+              <span className={styles.dnaHistoryDelta}>{dnaDelta}</span>
+            ) : null}
           </div>
+          <div className={styles.dnaHistoryBars} aria-hidden>
+            {dnaHistory.map((point) => (
+              <span
+                key={point.date}
+                className={styles.dnaHistoryBar}
+                style={{ height: point.barHeight }}
+              />
+            ))}
+          </div>
+          <ul className={styles.dnaHistoryList}>
+            {dnaHistory.map((point) => (
+              <li key={`${point.date}-${point.score}`} className={styles.dnaHistoryItem}>
+                <span className={styles.dnaHistoryDate}>{point.date}</span>
+                <span className={styles.dnaHistoryScore}>{point.score}</span>
+                <span className={styles.dnaHistoryNote}>{point.note}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
 
-          {visualIdentity ? (
-            <div className={styles.visualIdentityBlock}>
-              <div className={styles.visualIdentityHeader}>
-                <span className={styles.visualIdentityDot} aria-hidden />
-                <span className={styles.visualIdentityTitle}>Visual identity</span>
-                <span className={styles.visualIdentityScore}>{visualIdentity.visualScore}</span>
+      {visualIdentity ? (
+        <div className={styles.visualIdentityBlock}>
+          <div className={styles.visualIdentityHeader}>
+            <span className={styles.visualIdentityDot} aria-hidden />
+            <span className={styles.visualIdentityTitle}>Visual identity</span>
+            <span className={styles.visualIdentityScore}>{visualIdentity.visualScore}</span>
+          </div>
+          <div className={styles.visualPalette} aria-hidden>
+            {visualIdentity.palette.map((color) => (
+              <span
+                key={color}
+                className={styles.visualPaletteSwatch}
+                style={{ background: color }}
+              />
+            ))}
+          </div>
+          <div className={styles.visualSamples}>
+            {visualIdentity.sampleUrls.map((src) => (
+              <div key={src} className={styles.visualSample}>
+                <Image src={src} alt="" fill sizes="64px" className={styles.visualSampleImg} />
               </div>
-              <div className={styles.visualPalette} aria-hidden>
-                {visualIdentity.palette.map((color) => (
-                  <span
-                    key={color}
-                    className={styles.visualPaletteSwatch}
-                    style={{ background: color }}
-                  />
-                ))}
-              </div>
-              <div className={styles.visualSamples}>
-                {visualIdentity.sampleUrls.map((src) => (
-                  <div key={src} className={styles.visualSample}>
-                    <Image src={src} alt="" fill sizes="64px" className={styles.visualSampleImg} />
-                  </div>
-                ))}
-              </div>
-            </div>
-          ) : null}
-        </>
+            ))}
+          </div>
+        </div>
       ) : null}
 
       <div className={styles.sectionDivider} aria-hidden />

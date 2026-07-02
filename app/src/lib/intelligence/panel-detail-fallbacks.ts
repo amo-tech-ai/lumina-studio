@@ -6,39 +6,15 @@ const DEFAULT_PALETTE = ["#111111", "#E87C4D", "#F3B93C", "#FBF8F5", "#1E293B"];
 const DEFAULT_PROFILE =
   "Brand profile summary will appear here after intake and analysis complete.";
 
-const DEFAULT_DNA_HISTORY = [
-  {
-    date: "May 12",
-    score: 78,
-    note: "Initial crawl — baseline from homepage + PDP samples",
-    barHeight: "62%",
-  },
-  {
-    date: "Jun 3",
-    score: 84,
-    note: "Visual refresh after Spring hero audit",
-    barHeight: "78%",
-  },
-  {
-    date: "Jul 1",
-    score: 87,
-    note: "Voice guidelines tightened; commerce gap flagged",
-    barHeight: "87%",
-  },
-];
-
 function resolveProfileSnippet(data: IntelligencePanelData): string {
   return data.brand?.summary ?? data.profileSnippet ?? DEFAULT_PROFILE;
 }
 
 function resolveDnaHistory(
   data: IntelligencePanelData,
-  dna: number,
 ): IntelligencePanelData["dnaHistory"] {
   if (data.dnaHistory?.length) return data.dnaHistory;
-  return DEFAULT_DNA_HISTORY.map((point, index, list) =>
-    index === list.length - 1 ? { ...point, score: Math.round(dna) } : point,
-  );
+  return undefined;
 }
 
 function resolveVisualIdentity(
@@ -94,11 +70,10 @@ export function resolveBrandDetailExtras(
   "profileSnippet" | "dnaHistory" | "visualIdentity" | "assetPreview"
 > {
   const visualScore = data.scores?.pillars.visual ?? 72;
-  const dna = data.scores?.dna ?? 87;
 
   return {
     profileSnippet: resolveProfileSnippet(data),
-    dnaHistory: resolveDnaHistory(data, dna),
+    dnaHistory: resolveDnaHistory(data),
     visualIdentity: resolveVisualIdentity(data, brandId, visualScore),
     assetPreview: resolveAssetPreview(data, brandId),
   };

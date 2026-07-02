@@ -60,7 +60,10 @@ export function IntelligencePanel({ activeBrandId, brandName }: Props) {
   const [tab, setTab] = useState<PanelTab>("overview");
 
   const onCommandCenter = normalizedPath === "/app";
-  const commandCenterPopulated = onCommandCenter && Boolean(activeBrandId ?? data?.brand);
+  const commandCenterPopulated =
+    onCommandCenter &&
+    Boolean(activeBrandId ?? data?.brand) &&
+    Boolean(data?.scores?.dna && data.scores.dna > 0);
   const tabs = brandListMode ? PORTFOLIO_TABS : COMMAND_TABS;
 
   const displayName = data?.brand?.name ?? brandName;

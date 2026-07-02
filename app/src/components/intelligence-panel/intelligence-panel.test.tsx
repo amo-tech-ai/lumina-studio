@@ -149,7 +149,10 @@ describe("IntelligencePanel", () => {
           name: "Beta Brand",
           status: "draft_ready",
         },
-        scores: null,
+        scores: {
+          dna: 82,
+          pillars: { visual: 70, audience: 85, consistency: 88, commerce_readiness: 75 },
+        },
         approvals: {
           pendingCount: 1,
           items: [
@@ -223,6 +226,25 @@ describe("IntelligencePanel", () => {
     expect(screen.getByRole("button", { name: "Analyse brand" })).toBeTruthy();
     expect(screen.getByText(/Run Brand Intelligence to build Acme Co/i)).toBeTruthy();
     expect(screen.queryByLabelText("Brand health scores")).toBeNull();
+  });
+
+  it("does not show fake DNA scores on command center when brand is not analyzed", () => {
+    vi.mocked(usePathname).mockReturnValue("/app");
+    vi.mocked(useIntelligencePanel).mockReturnValue({
+      data: {
+        brand: { id: BRAND_ID, name: "New Brand", status: "brand_created" },
+        scores: null,
+        approvals: { pendingCount: 0, items: [] },
+      },
+      loading: false,
+      error: null,
+      reload: vi.fn(),
+    });
+
+    renderPanel(<IntelligencePanel activeBrandId={BRAND_ID} brandName="New Brand" />);
+
+    expect(screen.queryByLabelText("Brand health scores")).toBeNull();
+    expect(screen.queryByText("active")).toBeNull();
   });
 
   it("renders portfolio panel on brand list route", () => {
