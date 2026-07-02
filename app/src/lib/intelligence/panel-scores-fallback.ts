@@ -13,11 +13,12 @@ export const COMMAND_CENTER_SCORES_FALLBACK: NonNullable<
   },
 };
 
+/** Only use DC placeholder scores when Command Center hero is populated (design parity). */
 export function resolvePanelScores(
   scores: IntelligencePanelData["scores"],
-  commandCenterMode: boolean,
+  useCommandCenterFallback: boolean,
 ): IntelligencePanelData["scores"] {
   if (scores) return scores;
-  if (!commandCenterMode) return null;
+  if (!useCommandCenterFallback) return null;
   return COMMAND_CENTER_SCORES_FALLBACK;
 }

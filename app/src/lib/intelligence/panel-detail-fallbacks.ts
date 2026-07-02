@@ -4,7 +4,7 @@ import type { IntelligencePanelData } from "./panel-contract";
 const DEFAULT_PALETTE = ["#111111", "#E87C4D", "#F3B93C", "#FBF8F5", "#1E293B"];
 
 const DEFAULT_PROFILE =
-  "Bold, motivational and irreverent. Speaks to athletes of every level with imperative, momentum-driven language and an uncompromising visual identity.";
+  "Brand profile summary will appear here after intake and analysis complete.";
 
 const DEFAULT_DNA_HISTORY = [
   {
@@ -47,7 +47,14 @@ function resolveVisualIdentity(
   visualScore: number,
 ): IntelligencePanelData["visualIdentity"] {
   if (data.visualIdentity && data.visualIdentity.sampleUrls.length) {
-    return data.visualIdentity;
+    const palette =
+      data.visualIdentity.palette.length > 0
+        ? data.visualIdentity.palette
+        : DEFAULT_PALETTE;
+    if (palette === data.visualIdentity.palette) {
+      return data.visualIdentity;
+    }
+    return { ...data.visualIdentity, palette };
   }
   if (data.visualIdentity) {
     return {

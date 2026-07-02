@@ -16,8 +16,10 @@ type BrandRow = {
 
 export type { BrandRow };
 
-function profileSnippetFromBrand(brand: BrandRow): string | undefined {
-  const profile = parseAiProfile(brand.ai_profile);
+function profileSnippetFromProfile(
+  profile: ReturnType<typeof parseAiProfile> | null,
+): string | undefined {
+  if (!profile) return undefined;
   return profile.overview ?? profile.tagline ?? profile.brandVoice ?? undefined;
 }
 
@@ -50,6 +52,7 @@ export function buildPanelData(
   }));
 
   const profile = brand ? parseAiProfile(brand.ai_profile) : null;
+  const profileSnippet = profileSnippetFromProfile(profile);
   const visualScore = pillars.visual;
 
   return {
@@ -58,11 +61,11 @@ export function buildPanelData(
           id: brand.id,
           name: brand.name,
           status: brand.intake_status,
-          summary: profileSnippetFromBrand(brand),
+          summary: profileSnippet,
         }
       : null,
     scores: brand && hasPillar ? { dna, pillars } : null,
-    profileSnippet: brand ? profileSnippetFromBrand(brand) : undefined,
+    profileSnippet,
     visualIdentity:
       brand && visualScore != null
         ? {

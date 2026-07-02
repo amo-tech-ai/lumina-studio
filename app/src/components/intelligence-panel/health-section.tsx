@@ -1,5 +1,5 @@
-import type { EvidenceBlockProps } from "@/components/evidence-block/types";
 import type { IntelligenceHealthPillar } from "@/lib/intelligence/panel-contract";
+import { scoreThresholdColor } from "@/lib/intelligence/score-threshold-color";
 import { ChevronRight } from "lucide-react";
 
 import styles from "./intelligence-panel.module.css";
@@ -7,14 +7,17 @@ import styles from "./intelligence-panel.module.css";
 type Props = {
   dna: number;
   pillars: IntelligenceHealthPillar[];
-  dnaEvidence?: Omit<EvidenceBlockProps, "className" | "loading">;
   variant?: "command" | "detail";
 };
 
+const DNA_BAR_COLORS = {
+  high: "var(--dna-bar-high, #059669)",
+  mid: "var(--dna-bar-mid, #d97706)",
+  low: "var(--dna-bar-low, #dc2626)",
+} as const;
+
 function scoreBarColor(score: number): string {
-  if (score >= 80) return "var(--dna-bar-high, #059669)";
-  if (score >= 60) return "var(--dna-bar-mid, #d97706)";
-  return "var(--dna-bar-low, #dc2626)";
+  return scoreThresholdColor(score, DNA_BAR_COLORS);
 }
 
 /** DC populated panel — command center uses 3 pillars; brand detail uses four. */

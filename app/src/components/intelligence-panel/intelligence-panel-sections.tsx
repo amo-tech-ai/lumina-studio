@@ -29,31 +29,44 @@ type Props = {
 
 type ResolvedContext = {
   brandId: string | null;
-  scores: NonNullable<ReturnType<typeof resolvePanelScores>>;
-  health: ReturnType<typeof resolveHealthPillars> | ReturnType<typeof resolveDetailPillars>;
+  scores: ReturnType<typeof resolvePanelScores>;
+  health:
+    | ReturnType<typeof resolveHealthPillars>
+    | ReturnType<typeof resolveDetailPillars>
+    | null;
   approvals: IntelligencePanelData["approvals"];
   detailExtras: ReturnType<typeof resolveBrandDetailExtras> | null;
 };
 
 function resolvePanelContext(props: Props): ResolvedContext | null {
-  const { data, activeBrandId, commandCenterMode, brandDetailMode, showOverview } = {
-    ...props,
-    showOverview: props.tab === "overview",
-  };
+  const {
+    data,
+    activeBrandId,
+    commandCenterMode,
+    commandCenterPopulated,
+    brandDetailMode,
+    tab,
+  } = props;
+  const showOverview = tab === "overview";
   const brandId = activeBrandId ?? data.brand?.id ?? null;
-  const scores = resolvePanelScores(data.scores, commandCenterMode);
-  if (!scores) return null;
+  const scores = resolvePanelScores(
+    data.scores,
+    commandCenterMode && commandCenterPopulated,
+  );
+  if (!scores && !brandDetailMode) return null;
 
-  const health = brandDetailMode
-    ? resolveDetailPillars({ ...data, scores })
-    : resolveHealthPillars({ ...data, scores });
+  const health = scores
+    ? brandDetailMode
+      ? resolveDetailPillars({ ...data, scores })
+      : resolveHealthPillars({ ...data, scores })
+    : null;
   const approvals = resolvePanelApprovals(
     data.approvals,
     brandId,
-    commandCenterMode && showOverview,
+    commandCenterMode && commandCenterPopulated && showOverview,
   );
   const detailExtras =
-    brandDetailMode && brandId && showOverview
+    brandDetailMode && brandId && showOverview && scores
       ? resolveBrandDetailExtras(data, brandId)
       : null;
 
@@ -63,29 +76,19 @@ function resolvePanelContext(props: Props): ResolvedContext | null {
 function PortfolioOverviewSections({
   data,
   approvals,
-  showActivity,
   onReviewApprovals,
 }: {
   data: IntelligencePanelData;
   approvals: IntelligencePanelData["approvals"];
-  showActivity: boolean;
   onReviewApprovals: () => void;
 }) {
   if (!data.portfolio) return null;
   return (
-    <>
-      <PortfolioPanelSection
-        portfolio={data.portfolio}
-        approvals={approvals}
-        onReviewApprovals={onReviewApprovals}
-      />
-      {showActivity && data.activity?.length ? (
-        <>
-          <div className={styles.sectionDivider} aria-hidden />
-          <RecentActivitySection groups={data.activity} />
-        </>
-      ) : null}
-    </>
+    <PortfolioPanelSection
+      portfolio={data.portfolio}
+      approvals={approvals}
+      onReviewApprovals={onReviewApprovals}
+    />
   );
 }
 
@@ -102,12 +105,7 @@ function BrandListTabSections({
 }) {
   if (tab === "approvals") {
     return (
-      <>
-        <IntelApprovalQueueSection approvals={approvals} onApproved={onApprovalAction} />
-        {!approvals.items.length ? (
-          <p className={styles.mutedCopyInline}>No pending brand drafts.</p>
-        ) : null}
-      </>
+      <IntelApprovalQueueSection approvals={approvals} onApproved={onApprovalAction} />
     );
   }
   if (tab === "activity") {
@@ -154,7 +152,6 @@ function CommandCenterAndDetailSections({
         <HealthSection
           dna={scores.dna}
           pillars={health}
-          dnaEvidence={data.dnaEvidence}
           variant={brandDetailMode ? "detail" : "command"}
         />
       ) : null}
@@ -188,10 +185,6 @@ function CommandCenterAndDetailSections({
         <RecentActivitySection groups={data.activity} />
       ) : null}
 
-      {tab === "approvals" && !approvals.items.length ? (
-        <p className={styles.mutedCopyInline}>No pending brand drafts.</p>
-      ) : null}
-
       {!loading &&
       showOverview &&
       !scores &&
@@ -211,7 +204,6 @@ function CommandCenterAndDetailSections({
 export function IntelligencePanelSections(props: Props) {
   const { data, tab, brandListMode, activeBrandId, onReviewApprovals, onApprovalAction } = props;
   const showOverview = tab === "overview";
-  const showActivity = tab === "activity";
   const brandId = activeBrandId ?? data.brand?.id ?? null;
 
   if (brandListMode && showOverview && data.portfolio) {
@@ -220,7 +212,6 @@ export function IntelligencePanelSections(props: Props) {
       <PortfolioOverviewSections
         data={data}
         approvals={approvals}
-        showActivity={showActivity}
         onReviewApprovals={onReviewApprovals}
       />
     );

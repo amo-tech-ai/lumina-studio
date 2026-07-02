@@ -112,7 +112,13 @@ export function BrandDetailDraftCard({ brandId, runId, draft }: Props) {
         >
           {state === "approving" ? "Approving…" : "Approve"}
         </button>
-        <button type="button" className={styles.btnSecondary} disabled={state !== "idle"}>
+        <button
+          type="button"
+          className={styles.btnSecondary}
+          disabled
+          title="Edit draft — coming soon"
+          aria-disabled="true"
+        >
           Edit
         </button>
         <button

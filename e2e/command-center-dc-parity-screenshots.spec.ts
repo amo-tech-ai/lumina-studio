@@ -11,7 +11,8 @@ test.describe("Command Center DC parity screenshots", () => {
     const mobile = await browser.newContext({ viewport: { width: 390, height: 844 } });
 
     const dcPage = await desktop.newPage();
-    await dcPage.goto(DC_URL, { waitUntil: "networkidle" });
+    await dcPage.goto(DC_URL, { waitUntil: "domcontentloaded" });
+    await expect(dcPage.getByText("DNA Score")).toBeVisible({ timeout: 20_000 });
     await dcPage.screenshot({
       path: `${OUT}/commandCenter-dc-desktop-v2.png`,
       fullPage: true,
@@ -20,7 +21,7 @@ test.describe("Command Center DC parity screenshots", () => {
     const reactDesktop = await desktop.newPage();
     const loggedIn = await loginOperatorIfConfigured(reactDesktop);
     test.skip(!loggedIn, "QA credentials required");
-    await reactDesktop.goto("/app", { waitUntil: "networkidle" });
+    await reactDesktop.goto("/app", { waitUntil: "domcontentloaded" });
     await expect(reactDesktop.getByText("Recent work")).toBeVisible({ timeout: 20_000 });
     await reactDesktop.screenshot({
       path: `${OUT}/commandCenter-react-desktop-v2.png`,
@@ -28,9 +29,10 @@ test.describe("Command Center DC parity screenshots", () => {
     });
 
     const reactMobile = await mobile.newPage();
-    await loginOperatorIfConfigured(reactMobile);
-    await reactMobile.goto("/app", { waitUntil: "networkidle" });
-    await reactMobile.waitForTimeout(1500);
+    const mobileLoggedIn = await loginOperatorIfConfigured(reactMobile);
+    test.skip(!mobileLoggedIn, "QA credentials required");
+    await reactMobile.goto("/app", { waitUntil: "domcontentloaded" });
+    await expect(reactMobile.getByText("Recent work")).toBeVisible({ timeout: 20_000 });
     await reactMobile.screenshot({
       path: `${OUT}/commandCenter-react-mobile-v2.png`,
       fullPage: true,

@@ -8,6 +8,18 @@ import type { IntelligencePanelData } from "@/lib/intelligence/panel-contract";
 
 import styles from "./intelligence-panel.module.css";
 
+function dnaHistoryDeltaLabel(
+  history: NonNullable<IntelligencePanelData["dnaHistory"]>,
+): string | null {
+  if (history.length < 2) return null;
+  const first = history[0];
+  const last = history[history.length - 1];
+  const delta = last.score - first.score;
+  const month = first.date.replace(/\s+\d+$/, "").trim() || first.date;
+  const sign = delta >= 0 ? "+" : "";
+  return `${sign}${delta} since ${month}`;
+}
+
 type Props = {
   extras: Pick<
     IntelligencePanelData,
@@ -23,6 +35,7 @@ export function BrandDetailPanelExtras({
   pendingCount,
 }: Props) {
   const { profileSnippet, dnaHistory, visualIdentity, assetPreview } = extras;
+  const dnaDelta = dnaHistory?.length ? dnaHistoryDeltaLabel(dnaHistory) : null;
 
   return (
     <>
@@ -31,7 +44,9 @@ export function BrandDetailPanelExtras({
           <div className={styles.dnaHistoryBlock}>
             <div className={styles.dnaHistoryHeader}>
               <span className={styles.portfolioSectionLabel}>DNA history</span>
-              <span className={styles.dnaHistoryDelta}>+9 since May</span>
+              {dnaDelta ? (
+                <span className={styles.dnaHistoryDelta}>{dnaDelta}</span>
+              ) : null}
             </div>
             <div className={styles.dnaHistoryBars} aria-hidden>
               {dnaHistory.map((point) => (

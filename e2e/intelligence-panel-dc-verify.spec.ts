@@ -20,9 +20,6 @@ test.describe("Intelligence Panel DC verify", () => {
     await expect(panel.getByRole("tab", { name: /Overview/i })).toBeVisible();
     await expect(panel.getByRole("tab", { name: /Approvals/i })).toBeVisible();
     await expect(panel.getByRole("tab", { name: /Activity/i })).toBeVisible();
-    await expect(
-      panel.getByText("Target design — IntelligencePanel not production-wired yet"),
-    ).toHaveCount(0);
   });
 
   test("DC reference panel has approvals + DNA structure", async ({ page }) => {

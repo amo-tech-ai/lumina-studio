@@ -10,7 +10,7 @@ type Props = {
 export function QuickActionChips({ heroBrandId, pendingApprovalCount }: Props) {
   return (
     <div className={styles.quickActions}>
-      <Link href="/app/shoots/new" className={styles.quickPrimary}>
+      <Link href={`/app/assets?brand=${heroBrandId}`} className={styles.quickPrimary}>
         Generate deliverables
       </Link>
       <Link

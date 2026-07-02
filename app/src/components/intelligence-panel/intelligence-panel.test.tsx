@@ -205,6 +205,26 @@ describe("IntelligencePanel", () => {
     expect(screen.getByText(/Loading intelligence/i)).toBeTruthy();
   });
 
+  it("shows brand detail no-DNA block when scores are missing", () => {
+    vi.mocked(usePathname).mockReturnValue(`/app/brand/${BRAND_ID}`);
+    vi.mocked(useIntelligencePanel).mockReturnValue({
+      data: {
+        brand: { id: BRAND_ID, name: "Acme Co", status: "analyzing" },
+        scores: null,
+        approvals: { pendingCount: 0, items: [] },
+      },
+      loading: false,
+      error: null,
+      reload: vi.fn(),
+    });
+
+    renderPanel(<IntelligencePanel activeBrandId={BRAND_ID} brandName="Acme Co" />);
+
+    expect(screen.getByRole("button", { name: "Analyse brand" })).toBeTruthy();
+    expect(screen.getByText(/Run Brand Intelligence to build Acme Co/i)).toBeTruthy();
+    expect(screen.queryByLabelText("Brand health scores")).toBeNull();
+  });
+
   it("renders portfolio panel on brand list route", () => {
     vi.mocked(usePathname).mockReturnValue("/app/brand");
     vi.mocked(useIntelligencePanel).mockReturnValue({

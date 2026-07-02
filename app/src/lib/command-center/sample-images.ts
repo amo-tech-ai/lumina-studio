@@ -43,7 +43,7 @@ export function cloudinaryImageUrl(
   return `https://res.cloudinary.com/${CLOUDINARY_CLOUD}/image/upload/c_fill,w_${w},h_${h},g_auto,q_auto,f_auto/${publicId}`;
 }
 
-function hashIndex(id: string, mod: number): number {
+export function hashIndex(id: string, mod: number): number {
   let hash = 0;
   for (let i = 0; i < id.length; i += 1) {
     hash = (hash * 31 + id.charCodeAt(i)) >>> 0;

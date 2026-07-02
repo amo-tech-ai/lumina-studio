@@ -26,7 +26,7 @@ describe("panel-approval-fallbacks", () => {
     expect(result.pendingCount).toBe(3);
   });
 
-  it("enriches live API rows with thumbs and confidence", () => {
+  it("enriches live API rows with thumbs without inventing confidence", () => {
     const result = resolvePanelApprovals(
       {
         pendingCount: 1,
@@ -43,7 +43,9 @@ describe("panel-approval-fallbacks", () => {
       true,
     );
     expect(result.items[0].thumbnailUrl).toBeTruthy();
-    expect(result.items[0].confidence).toBe(91);
+    expect(result.items[0].confidence).toBeUndefined();
+    expect(result.items[0].label).toBe("Acme");
     expect(result.items.length).toBe(3);
+    expect(result.items[1].confidence).toBe(91);
   });
 });

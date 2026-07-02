@@ -184,7 +184,7 @@
   height: 1.125rem;
   padding: 0 0.3125rem;
   border-radius: 999px;
-  background: var(--color-warning, #d97706);
+  background: var(--color-warning-strong, #92400e);
   color: #fff;
   font-size: 0.6875rem;
   font-weight: var(--font-weight-semibold, 600);
@@ -305,7 +305,7 @@
   height: 1.125rem;
   padding: 0 0.3125rem;
   border-radius: 999px;
-  background: var(--color-warning, #d97706);
+  background: var(--color-warning-strong, #92400e);
   color: #fff;
   font-size: 0.6875rem;
   font-weight: var(--font-weight-semibold, 600);

@@ -73,16 +73,15 @@ export async function GET(request: Request) {
     );
   }
 
-  const { data, error } = await pendingQuery;
-  if (error) {
-    console.error("[intelligence/panel] portfolio pending query failed:", error.message);
+  const [pendingResult, brandsResult] = await Promise.all([
+    pendingQuery,
+    svc.from("brands").select("id, name, intake_status").order("name"),
+  ]);
+
+  if (pendingResult.error) {
+    console.error("[intelligence/panel] portfolio pending query failed:", pendingResult.error.message);
     return NextResponse.json({ error: "Internal error" }, { status: 500 });
   }
-
-  const brandsResult = await svc
-    .from("brands")
-    .select("id, name, intake_status")
-    .order("name");
 
   if (brandsResult.error) {
     console.error("[intelligence/panel] portfolio brands query failed:", brandsResult.error.message);
@@ -91,6 +90,7 @@ export async function GET(request: Request) {
 
   const brands = brandsResult.data ?? [];
   const brandIds = brands.map((b) => b.id);
+  const data = pendingResult.data;
 
   let scoreRows: Array<{ brand_id: string; score_type: string; score: number }> = [];
   if (brandIds.length) {

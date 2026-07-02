@@ -17,6 +17,12 @@ const DC = {
   commandCenter: "http://localhost:8765/Command%20Center.v2.image-first.dc.html",
 } as const;
 
+const DC_READY: Record<keyof typeof DC, RegExp | string> = {
+  brandList: /Brand portfolio|Your brands/i,
+  brandDetail: /Brand DNA|Visual identity/i,
+  commandCenter: "DNA Score",
+};
+
 test.describe("Brand DC parity — screenshot capture", () => {
   test.beforeAll(() => {
     mkdirSync(OUT_DIR, { recursive: true });
@@ -27,7 +33,10 @@ test.describe("Brand DC parity — screenshot capture", () => {
     const page = await context.newPage();
 
     for (const [name, url] of Object.entries(DC)) {
-      await page.goto(url, { waitUntil: "networkidle" });
+      await page.goto(url, { waitUntil: "domcontentloaded" });
+      await expect(page.getByText(DC_READY[name as keyof typeof DC])).toBeVisible({
+        timeout: 20_000,
+      });
       await page.screenshot({ path: resolve(OUT_DIR, `${name}-dc-desktop.png`), fullPage: true });
     }
 
@@ -44,13 +53,14 @@ test.describe("Brand DC parity — screenshot capture", () => {
     const loggedIn = await loginOperatorIfConfigured(page);
     expect(loggedIn).toBe(true);
 
-    await page.goto("/app", { waitUntil: "networkidle" });
+    await page.goto("/app", { waitUntil: "domcontentloaded" });
+    await expect(page.getByText("Recent work")).toBeVisible({ timeout: 20_000 });
     await page.screenshot({
       path: resolve(OUT_DIR, "commandCenter-react-desktop.png"),
       fullPage: true,
     });
 
-    await page.goto("/app/brand", { waitUntil: "networkidle" });
+    await page.goto("/app/brand", { waitUntil: "domcontentloaded" });
     await expect(page.getByTestId("brand-list-workspace")).toBeVisible({ timeout: 15_000 });
     await page.screenshot({
       path: resolve(OUT_DIR, "brandList-react-desktop.png"),
@@ -61,7 +71,7 @@ test.describe("Brand DC parity — screenshot capture", () => {
     const href = await detailLink.getAttribute("href");
     expect(href).toBeTruthy();
 
-    await page.goto(href!, { waitUntil: "networkidle" });
+    await page.goto(href!, { waitUntil: "domcontentloaded" });
     await expect(page.getByTestId("brand-detail-workspace")).toBeVisible({ timeout: 15_000 });
     await page.screenshot({
       path: resolve(OUT_DIR, "brandDetail-react-desktop.png"),

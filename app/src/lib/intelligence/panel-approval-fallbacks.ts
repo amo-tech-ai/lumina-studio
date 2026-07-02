@@ -1,17 +1,13 @@
-import { cloudinaryImageUrl, SAMPLE_IMAGE_POOL } from "@/lib/command-center/sample-images";
+import {
+  cloudinaryImageUrl,
+  hashIndex,
+  SAMPLE_IMAGE_POOL,
+} from "@/lib/command-center/sample-images";
 import type { IntelligenceApprovalItem } from "./panel-contract";
 
 export const DC_PANEL_APPROVAL_COUNT = 3;
 
-function hashIndex(id: string, mod: number): number {
-  let hash = 0;
-  for (let i = 0; i < id.length; i += 1) {
-    hash = (hash * 31 + id.charCodeAt(i)) >>> 0;
-  }
-  return hash % mod;
-}
-
-function approvalThumb(brandId: string, index: number): string {
+export function panelApprovalThumb(brandId: string, index: number): string {
   const poolIdx = hashIndex(`${brandId}-approval-${index}`, SAMPLE_IMAGE_POOL.length);
   return cloudinaryImageUrl(SAMPLE_IMAGE_POOL[poolIdx], { w: 92, h: 92 });
 }
@@ -47,7 +43,7 @@ export function commandCenterApprovalFallbacks(
     kind: "brand_draft" as const,
     label: item.label,
     href: `/app/brand/${brandId}`,
-    thumbnailUrl: approvalThumb(brandId, index),
+    thumbnailUrl: panelApprovalThumb(brandId, index),
     confidence: item.confidence,
     explanation: item.explanation,
     source: item.source,

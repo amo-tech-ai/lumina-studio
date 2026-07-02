@@ -7,8 +7,9 @@ import { useState } from "react";
 import { toast } from "sonner";
 
 import { applyDraft } from "@/app/(operator)/app/brand/[id]/actions";
-import { isPanelApprovalFallback } from "@/lib/intelligence/panel-approval-fallbacks";
+import { isPanelApprovalFallback, panelApprovalThumb } from "@/lib/intelligence/panel-approval-fallbacks";
 import type { IntelligenceApprovalItem } from "@/lib/intelligence/panel-contract";
+import { scoreThresholdColor } from "@/lib/intelligence/score-threshold-color";
 
 import styles from "./intelligence-panel.module.css";
 
@@ -17,16 +18,19 @@ type Props = {
   onApproved?: () => void;
 };
 
+const CONFIDENCE_COLORS = {
+  high: "var(--color-approved, #059669)",
+  mid: "var(--color-warning-text, #d97706)",
+  low: "var(--color-dna-low, #dc2626)",
+} as const;
+
 function confidenceColor(confidence: number): string {
-  if (confidence >= 80) return "var(--color-approved, #059669)";
-  if (confidence >= 60) return "var(--color-warning-text, #d97706)";
-  return "var(--color-dna-low, #dc2626)";
+  return scoreThresholdColor(confidence, CONFIDENCE_COLORS);
 }
 
 export function IntelApprovalCard({ item, onApproved }: Props) {
   const router = useRouter();
   const [approving, setApproving] = useState(false);
-  const confidence = item.confidence ?? 87;
   const preview = item.explanation ?? "AI draft ready for your review.";
   const source = item.source ?? "brand-match";
   const isFallback = isPanelApprovalFallback(item.id);
@@ -78,13 +82,20 @@ export function IntelApprovalCard({ item, onApproved }: Props) {
       </div>
 
       <div className={styles.approvalCardMeta}>
-        <span
-          className={styles.approvalCardConf}
-          style={{ color: confidenceColor(confidence) }}
-        >
-          {confidence}% confidence
-        </span>
-        <span className={styles.approvalCardSource}>· {source}</span>
+        {item.confidence != null ? (
+          <span
+            className={styles.approvalCardConf}
+            style={{ color: confidenceColor(item.confidence) }}
+          >
+            {item.confidence}% confidence
+          </span>
+        ) : null}
+        {source ? (
+          <span className={styles.approvalCardSource}>
+            {item.confidence != null ? "· " : ""}
+            {source}
+          </span>
+        ) : null}
       </div>
 
       <div className={styles.approvalCardActions}>

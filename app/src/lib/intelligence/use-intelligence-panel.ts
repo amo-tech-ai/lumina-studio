@@ -81,7 +81,7 @@ export function useIntelligencePanel(
       setState({ data, loading: false, error: null });
     } catch (e) {
       setState({
-        data: portfolioMode ? EMPTY : EMPTY,
+        data: EMPTY,
         loading: false,
         error: e instanceof Error ? e.message : "Failed to load intelligence data",
       });
