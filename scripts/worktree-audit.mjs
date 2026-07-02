@@ -185,6 +185,21 @@ function buildReport() {
   };
 }
 
+function belongsToThisRepo(full) {
+  const gitPath = path.join(full, ".git");
+  try {
+    const stat = fs.statSync(gitPath);
+    if (stat.isDirectory()) return false; // a separate full clone, not a worktree of this repo
+    const content = fs.readFileSync(gitPath, "utf8");
+    const m = content.match(/^gitdir:\s*(.+)$/m);
+    if (!m) return false;
+    const gitDir = path.resolve(full, m[1].trim());
+    return gitDir.startsWith(path.resolve(REPO_ROOT, ".git", "worktrees") + path.sep);
+  } catch {
+    return false;
+  }
+}
+
 function findOrphanDirs(registeredPaths) {
   const registered = new Set(registeredPaths.map((p) => path.resolve(p)));
   const orphans = [];
@@ -205,6 +220,7 @@ function findOrphanDirs(registeredPaths) {
         continue;
       }
       if (registered.has(path.resolve(full))) continue;
+      if (!belongsToThisRepo(full)) continue;
       orphans.push({
         path: full,
         size: dirSizeHuman(full),
