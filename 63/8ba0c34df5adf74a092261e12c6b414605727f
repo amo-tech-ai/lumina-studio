@@ -1,0 +1,47 @@
+app/src/types/supabase.ts
+  s_c07e656bb1b48e::t_c306c6d38bdf20 1313,1315-1316,1318-1322,1324,1327-1328,1332,1334,1338,1340-1341,1343-1347,1349,1352-1353,1357,1359,1363,1365-1366,1368-1372,1374,1377-1378,1382,1384,1395-1401,4474-4524,5774-5775,5780
+supabase/migrations/20260701125600_expire_stale_bookings_cron.sql
+  s_2e2ca317dec1f8::t_1a4bc28986e073 1-43
+scripts/verify-rls.mjs
+  s_924d5421a89c0c::t_ca6643b913e72b 120,123-132,192,564-620,751
+supabase/migrations/20260701125300_talent_booking_core_schema.sql
+  s_924d5421a89c0c::t_a39106af70c841 1-473
+supabase/migrations/20260701125400_notifications_table.sql
+  s_924d5421a89c0c::t_4d93c897ab5220 1-54
+supabase/migrations/20260701125500_confirm_booking_rpc.sql
+  s_924d5421a89c0c::t_698c74ce76121c 1-173
+supabase/migrations/20260701135900_notifications_rls_tighten.sql
+  s_924d5421a89c0c::t_1bfb28e237a8ca 1-65
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.9",
+  "base_commit_sha": "638ba0c34df5adf74a092261e12c6b414605727f",
+  "prompts": {},
+  "sessions": {
+    "s_2e2ca317dec1f8": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "354d6759-8d40-497b-94f4-4ed07c5f2ab7",
+        "model": "composer-2.5"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    },
+    "s_924d5421a89c0c": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "06313eef-b30e-4fc5-8c4e-8ee444168116",
+        "model": "unknown"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    },
+    "s_c07e656bb1b48e": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b8a1a548-66d1-4c73-b468-84dd619829ae",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
