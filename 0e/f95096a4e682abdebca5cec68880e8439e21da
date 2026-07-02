@@ -1,0 +1,26 @@
+e2e/suspense-console-forensics.spec.ts
+  s_34eb7d3f1209d9::t_46c91b75beeaf7 1-65
+e2e/suspense-console-forensics.md
+  s_34eb7d3f1209d9::t_7a4f782b1601be 1-36
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.9",
+  "base_commit_sha": "0ef95096a4e682abdebca5cec68880e8439e21da",
+  "prompts": {},
+  "humans": {
+    "h_d382fbec1d5b46": {
+      "author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  },
+  "sessions": {
+    "s_34eb7d3f1209d9": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "5f2bb499-4181-4424-be0c-f98a1fef1295",
+        "model": "composer-2.5"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
