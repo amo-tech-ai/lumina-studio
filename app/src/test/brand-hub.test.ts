@@ -221,4 +221,20 @@ describe("brand hub route contract", () => {
     expect(src).toMatch(/BrandDetailWorkspace/);
     expect(src).toMatch(/getBaseScores/);
   });
+
+  it("brand list page surfaces brand_scores errors instead of zeroing DNA", async () => {
+    const { readFileSync } = await import("node:fs");
+    const { resolve } = await import("node:path");
+    const { fileURLToPath } = await import("node:url");
+    const src = readFileSync(
+      resolve(
+        fileURLToPath(new URL(".", import.meta.url)),
+        "../app/(operator)/app/brand/page.tsx",
+      ),
+      "utf8",
+    );
+    expect(src).toMatch(/scoresError/);
+    expect(src).toMatch(/Unable to load brand scores/);
+    expect(src).toMatch(/fetchError/);
+  });
 });

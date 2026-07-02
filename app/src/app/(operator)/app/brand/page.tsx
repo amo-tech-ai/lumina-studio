@@ -44,10 +44,20 @@ const BrandsPage = async () => {
   }
 
   const brandIds = rows.map((b) => b.id);
-  const { data: scoreRows } = await supabase
+  const { data: scoreRows, error: scoresError } = await supabase
     .from("brand_scores")
     .select("brand_id, score_type, score")
     .in("brand_id", brandIds);
+
+  if (scoresError) {
+    return (
+      <BrandListWorkspace
+        brands={[]}
+        isAuthenticated
+        fetchError="Unable to load brand scores. Try again in a moment."
+      />
+    );
+  }
 
   const scoresByBrand = new Map<string, { score_type: string; score: number }[]>();
   for (const row of scoreRows ?? []) {
