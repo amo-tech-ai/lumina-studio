@@ -64,7 +64,18 @@ try {
   defaultBranch = runOut("git symbolic-ref refs/remotes/origin/HEAD --short").replace("origin/", "");
 } catch {}
 run(`git fetch origin ${defaultBranch}`);
-run(`git worktree add "${wtPath}" -b "${branch}" origin/${defaultBranch}`);
+let branchExists = true;
+try {
+  execSync(`git show-ref --verify --quiet "refs/heads/${branch}"`, { cwd: REPO_ROOT });
+} catch {
+  branchExists = false;
+}
+if (branchExists) {
+  console.log(`Branch ${branch} already exists locally — checking it out instead of creating.`);
+  run(`git worktree add "${wtPath}" "${branch}"`);
+} else {
+  run(`git worktree add "${wtPath}" -b "${branch}" origin/${defaultBranch}`);
+}
 
 // Copy .worktreeinclude patterns
 const includePath = path.join(REPO_ROOT, ".worktreeinclude");
