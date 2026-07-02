@@ -299,6 +299,7 @@ Workflow:
 Works well with: `nextjs-app-router`, `supabase-backend`
 
 ## When to Use
+
 - User mentions or implies: supabase auth next
 - User mentions or implies: authentication next.js
 - User mentions or implies: login supabase
