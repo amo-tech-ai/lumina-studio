@@ -38,7 +38,7 @@ function runOut(cmd, cwd = REPO_ROOT) {
   return execSync(cmd, { cwd, encoding: "utf8" }).trim();
 }
 
-const issueRaw = args[0].replace(/^IPI-/i, "");
+const issueRaw = args[0].replace(/^IPI-/i, "").toLowerCase().replace(/[^a-z0-9-]/g, "-");
 const slug = args[1].toLowerCase().replace(/[^a-z0-9-]/g, "-");
 const branch = `ipi/${issueRaw}-${slug}`;
 const wtName = `wt-ipi-${issueRaw}-${slug}`;
