@@ -1,0 +1,23 @@
+app/src/components/matching/talent-tab.tsx
+  s_c07e656bb1b48e::t_9ab800f8f4b11f 88,97
+  s_c07e656bb1b48e::t_f06a507114c768 44-47
+  s_c07e656bb1b48e::t_d8d6e74eb8434b 332,355
+supabase/migrations/20260701141200_talent_public_rpc_bridge.sql
+  s_c07e656bb1b48e::t_031f62d797b85b 83-90
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.9",
+  "base_commit_sha": "3eea8931147d6140c297cc0fa6379a4a9dff3ce1",
+  "prompts": {},
+  "sessions": {
+    "s_c07e656bb1b48e": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b8a1a548-66d1-4c73-b468-84dd619829ae",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
