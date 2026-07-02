@@ -114,9 +114,18 @@ function classify(entry, pr, tracking, age, isMain, dirty) {
   return { status: "active", emoji: "🟢", safeToDelete: false, score: dirty ? 80 : 75 };
 }
 
+function repoFromGitRemote() {
+  const url = run("git remote get-url origin", { allowFail: true });
+  const m = url.match(/[:/]([^/]+\/[^/]+?)(\.git)?$/);
+  return m ? m[1] : "";
+}
+
 function buildReport() {
   run("git fetch -p 2>/dev/null", { allowFail: true });
-  const repoName = run("gh repo view --json nameWithOwner --jq .nameWithOwner 2>/dev/null", { allowFail: true }) || "amo-tech-ai/lumina-studio";
+  const repoName =
+    run("gh repo view --json nameWithOwner --jq .nameWithOwner 2>/dev/null", { allowFail: true }) ||
+    repoFromGitRemote() ||
+    "amo-tech-ai/lumina-studio";
   const allPrs = runJson(`gh pr list --repo "${repoName}" --limit 100 --state all --json number,state,url,isDraft,headRefName`) || [];
   const prLookup = new Map(allPrs.filter(Boolean).map((p) => [p.headRefName, p]));
   const entries = parseWorktreeList();

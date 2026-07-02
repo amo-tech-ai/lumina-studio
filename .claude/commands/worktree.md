@@ -21,7 +21,7 @@ allowed-tools: ["Bash", "Read"]
 - Worktrees: !`git worktree list 2>/dev/null`
 - Current branch: !`git branch --show-current`
 - Repo root: !`git rev-parse --show-toplevel`
-- Sibling wt dirs: !`ls -d ../*/wt-ipi-* ../*/wt-* 2>/dev/null | head -15 || ls -d ../wt-* 2>/dev/null | head -15 || echo "none"`
+- Sibling wt dirs: !`ls -d ../wt-ipi-* ../wt-* 2>/dev/null | sort -u | head -15 || echo "none"`
 
 ---
 
