@@ -30,8 +30,9 @@ fi
 
 if [ "$TYPECHECK_STATUS" -ne 0 ] || [ "$LINT_STATUS" -ne 0 ]; then
   REASON="Pre-stop verification failed on changed app/src files."
-  [ "$TYPECHECK_STATUS" -ne 0 ] && REASON="$REASON\n\ntypecheck:\n$TYPECHECK_OUT"
-  [ "$LINT_STATUS" -ne 0 ] && REASON="$REASON\n\nlint:\n$LINT_OUT"
+  NL=$'\n'
+  [ "$TYPECHECK_STATUS" -ne 0 ] && REASON="$REASON${NL}${NL}typecheck:${NL}$TYPECHECK_OUT"
+  [ "$LINT_STATUS" -ne 0 ] && REASON="$REASON${NL}${NL}lint:${NL}$LINT_OUT"
   jq -n --arg reason "$REASON" '{"decision":"block","reason":$reason}'
   exit 0
 fi
