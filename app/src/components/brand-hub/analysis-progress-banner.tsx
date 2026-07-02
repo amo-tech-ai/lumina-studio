@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
+import { formatCrawlProgressShort } from "@/lib/brand-hub/format-crawl-progress";
 
 type CrawlInfo = { pages_crawled: number | null; pages_found: number | null } | null;
 
@@ -124,7 +125,7 @@ export const AnalysisProgressBanner = ({
           {message}
           {showCrawlCount && (
             <span className="ml-1 text-[#D97706]">
-              ({crawl!.pages_crawled} / {crawl!.pages_found ?? "?"} pages)
+              ({formatCrawlProgressShort(crawl!.pages_crawled!, crawl!.pages_found)})
             </span>
           )}
         </p>

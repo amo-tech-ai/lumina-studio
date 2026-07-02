@@ -15,3 +15,17 @@ export function resolveHealthPillars(
     { key: "commerce", label: "Commerce", score: pillars.commerce_readiness ?? 0 },
   ];
 }
+
+/** Brand detail DC panel — Visual · Voice · Consistency · Commerce. */
+export function resolveDetailPillars(
+  data: IntelligencePanelData,
+): IntelligenceHealthPillar[] | null {
+  if (!data.scores) return null;
+  const { pillars } = data.scores;
+  return [
+    { key: "visual", label: "Visual", score: pillars.visual ?? 0 },
+    { key: "voice", label: "Voice", score: pillars.audience ?? 0 },
+    { key: "consistency", label: "Consistency", score: pillars.consistency ?? 0 },
+    { key: "commerce", label: "Commerce", score: pillars.commerce_readiness ?? 0 },
+  ];
+}

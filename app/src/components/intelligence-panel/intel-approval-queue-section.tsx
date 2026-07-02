@@ -1,100 +1,46 @@
-"use client";
-
-import Link from "next/link";
-import { toast } from "sonner";
-
 import type { IntelligencePanelData } from "@/lib/intelligence/panel-contract";
 
-import { EvidenceDialog } from "./evidence-dialog";
+import { IntelApprovalCard } from "./intel-approval-card";
 import styles from "./intelligence-panel.module.css";
 
 type Props = {
   approvals: IntelligencePanelData["approvals"];
+  /** Hide empty copy on Command Center populated overview (DC pads with placeholders). */
+  hideEmpty?: boolean;
+  onApproved?: () => void;
 };
 
-function confidenceClass(confidence: number): string {
-  if (confidence >= 85) return styles.confHigh;
-  if (confidence >= 70) return styles.confMid;
-  return styles.confLow;
-}
-
-export function IntelApprovalQueueSection({ approvals }: Props) {
+export function IntelApprovalQueueSection({
+  approvals,
+  hideEmpty = false,
+  onApproved,
+}: Props) {
   const displayCount = approvals.pendingCount;
+  const hasItems = approvals.items.length > 0;
 
-  if (approvals.items.length === 0) {
+  if (!hasItems) {
+    if (hideEmpty) return null;
     return (
-      <section className={styles.section} aria-label="Approval queue">
-        <h3 className={styles.sectionTitle}>Approvals</h3>
+      <section className={styles.approvalSection} aria-label="Approval queue">
+        <div className={styles.sectionHeader}>
+          <h3 className={styles.panelSectionTitle}>Approvals</h3>
+        </div>
         <p className={styles.mutedCopyInline}>No pending brand drafts.</p>
       </section>
     );
   }
 
   return (
-    <section className={styles.section} aria-label="Approval queue">
+    <section className={styles.approvalSection} aria-label="Approval queue">
       <div className={styles.sectionHeader}>
-        <h3 className={styles.sectionTitle}>Approvals</h3>
+        <h3 className={styles.panelSectionTitle}>Approvals</h3>
         <span className={styles.pendingBadge}>{displayCount}</span>
       </div>
 
       <ul className={styles.approvalList}>
         {approvals.items.map((item) => (
-          <li key={item.id} className={styles.approvalCard}>
-            {item.thumbnailUrl ? (
-              <div className={styles.approvalThumb}>
-                <img
-                  src={item.thumbnailUrl}
-                  alt=""
-                  width={48}
-                  height={60}
-                  className={styles.approvalThumbImg}
-                />
-              </div>
-            ) : null}
-            <div className={styles.approvalBody}>
-              <div className={styles.approvalTitleRow}>
-                <Link href={item.href} className={styles.approvalTitle}>
-                  {item.label}
-                </Link>
-                {item.confidence != null ? (
-                  <span className={confidenceClass(item.confidence)}>
-                    {item.confidence}%
-                  </span>
-                ) : null}
-              </div>
-              {item.explanation ? (
-                <p className={styles.approvalExplain}>{item.explanation}</p>
-              ) : null}
-              <div className={styles.approvalActions}>
-                {item.evidence ? (
-                  <>
-                    <EvidenceDialog
-                      triggerLabel="Explain"
-                      evidence={item.evidence}
-                      triggerClassName={styles.approvalGhostBtn}
-                    />
-                    <button
-                      type="button"
-                      className={styles.approvalGhostBtn}
-                      onClick={() => toast.success(`Approved: ${item.label} (fixture)`)}
-                    >
-                      Approve
-                    </button>
-                    <button
-                      type="button"
-                      className={styles.approvalGhostBtn}
-                      onClick={() => toast.message(`Edit: ${item.label} (fixture)`)}
-                    >
-                      Edit
-                    </button>
-                  </>
-                ) : (
-                  <Link href={item.href} className={styles.approvalGhostBtn}>
-                    Review draft
-                  </Link>
-                )}
-              </div>
-            </div>
+          <li key={item.id}>
+            <IntelApprovalCard item={item} onApproved={onApproved} />
           </li>
         ))}
       </ul>

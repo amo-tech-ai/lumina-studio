@@ -2,6 +2,7 @@ import {
   deriveWorkspaceView,
   showRecentWorkRow,
 } from "@/lib/command-center/derive-view-state";
+import { resolveRecentWorkItems } from "@/lib/command-center/recent-work-fallbacks";
 import type { CommandCenterData } from "@/lib/command-center/types";
 import { EMPTY_COMMAND_CENTER_DATA } from "@/lib/command-center/types";
 
@@ -10,6 +11,7 @@ import { CommandCenterEmpty } from "./command-center-empty";
 import { CommandCenterErrorBanner } from "./command-center-error-banner";
 import styles from "./command-center.module.css";
 import { PortfolioHeroCard } from "./portfolio-hero-card";
+import { QuickActionChips } from "./quick-action-chips";
 import { RealtimeStatusStrip } from "./realtime-status-strip";
 import { RecentWorkRow } from "./recent-work-row";
 
@@ -35,6 +37,11 @@ export function CommandCenter(props: Props = {}) {
     (view === "normal" || view === "populated" || view === "approval") &&
     data.heroBrand;
 
+  const recentWork = resolveRecentWorkItems(
+    data.recentShoots,
+    data.heroBrand?.id,
+  );
+
   return (
     <div className={styles.commandCenter}>
       <RealtimeStatusStrip
@@ -42,7 +49,7 @@ export function CommandCenter(props: Props = {}) {
         detail={
           data.fetchError
             ? "Dashboard data could not be refreshed."
-            : "All portfolio data synced from Supabase."
+            : undefined
         }
       />
 
@@ -54,21 +61,26 @@ export function CommandCenter(props: Props = {}) {
 
       {showMain && data.heroBrand && (
         <>
-          {view === "approval" && (
-            <CommandCenterApprovals
-              pendingCount={data.pendingApprovalCount}
-              featured={data.featuredApproval}
-            />
-          )}
-
           <PortfolioHeroCard
             heroBrand={data.heroBrand}
             pendingApprovalCount={data.pendingApprovalCount}
             recentShootName={recentShootName}
           />
 
+          <QuickActionChips
+            heroBrandId={data.heroBrand.id}
+            pendingApprovalCount={data.pendingApprovalCount}
+          />
+
           {showRecentWorkRow(view, data) && (
-            <RecentWorkRow shoots={data.recentShoots} />
+            <RecentWorkRow shoots={recentWork} />
+          )}
+
+          {view === "approval" && (
+            <CommandCenterApprovals
+              pendingCount={data.pendingApprovalCount}
+              featured={data.featuredApproval}
+            />
           )}
         </>
       )}

@@ -101,6 +101,9 @@ function getWelcomeMessage(
         : "";
       return `${context.brandName} — DNA ${context.brandDna}%${pillarNote}`;
     }
+    if (context.brandName) {
+      return `${context.brandName} — review DNA pillars, assets, and suggested improvements`;
+    }
     return "Loading brand details...";
   }
 

@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { CommandCenter } from "@/components/command-center/command-center";
+import { CommandCenterBrandSync } from "@/components/command-center/command-center-brand-sync";
 import { fetchCommandCenterKpis } from "@/lib/command-center/queries";
 import {
   DEV_APPROVAL_PREVIEW_COMMAND_CENTER_DATA,
@@ -19,15 +20,28 @@ const CommandCenterPage = async ({
   const skip = Array.isArray(params.skip) ? params.skip[0] : params.skip;
   const devFixturesEnabled = process.env.NODE_ENV !== "production";
 
-  if (devFixturesEnabled && skip === "approval") {
+  if (devFixturesEnabled && skip === "1") {
     return (
-      <CommandCenter
-        {...DEV_APPROVAL_PREVIEW_COMMAND_CENTER_DATA}
-        devPreviewApproval
-      />
+      <>
+        <CommandCenterBrandSync heroBrandId={DEV_PREVIEW_COMMAND_CENTER_DATA.heroBrand?.id ?? null} />
+        <CommandCenter {...DEV_PREVIEW_COMMAND_CENTER_DATA} devPreview />
+      </>
     );
   }
-  if (devFixturesEnabled && skip === "1") return <CommandCenter {...DEV_PREVIEW_COMMAND_CENTER_DATA} devPreview />;
+
+  if (devFixturesEnabled && skip === "approval") {
+    return (
+      <>
+        <CommandCenterBrandSync
+          heroBrandId={DEV_APPROVAL_PREVIEW_COMMAND_CENTER_DATA.heroBrand?.id ?? null}
+        />
+        <CommandCenter
+          {...DEV_APPROVAL_PREVIEW_COMMAND_CENTER_DATA}
+          devPreviewApproval
+        />
+      </>
+    );
+  }
 
   let zeroBrands = false;
   let kpiData = EMPTY_COMMAND_CENTER_DATA;
@@ -65,7 +79,12 @@ const CommandCenterPage = async ({
 
   if (zeroBrands) redirect("/app/onboarding");
 
-  return <CommandCenter {...kpiData} />;
+  return (
+    <>
+      <CommandCenterBrandSync heroBrandId={kpiData.heroBrand?.id ?? null} />
+      <CommandCenter {...kpiData} />
+    </>
+  );
 };
 
 export default CommandCenterPage;

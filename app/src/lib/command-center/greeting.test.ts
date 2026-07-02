@@ -19,7 +19,7 @@ describe("buildHeroGreeting", () => {
     expect(subline).toContain("1 approval needs");
   });
 
-  it("falls back to recent shoot when no approvals", () => {
+  it("falls back to campaign next-step when no approvals", () => {
     const { subline } = buildHeroGreeting({
       brandName: "Nike",
       pendingApprovalCount: 0,

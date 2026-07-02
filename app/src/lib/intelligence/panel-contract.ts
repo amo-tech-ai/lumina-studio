@@ -23,6 +23,8 @@ export type IntelligenceApprovalItem = {
   thumbnailUrl?: string;
   confidence?: number;
   explanation?: string;
+  /** Display label for DC compact card meta row (client-enriched). */
+  source?: string;
   evidence?: Omit<EvidenceBlockProps, "className" | "loading">;
 };
 
@@ -51,6 +53,40 @@ export type IntelligenceRecommendedAction = {
   href?: string;
 };
 
+export type PortfolioBrandHealthRow = {
+  brandId: string;
+  name: string;
+  score: number;
+};
+
+export type PortfolioNeedsAttention = {
+  brandId: string;
+  brandName: string;
+  pillarLabel: string;
+  score: number;
+  href: string;
+};
+
+export type IntelligencePortfolio = {
+  brandCount: number;
+  avgDna: number;
+  healthRows: PortfolioBrandHealthRow[];
+  needsAttention: PortfolioNeedsAttention | null;
+};
+
+export type DnaHistoryPoint = {
+  date: string;
+  score: number;
+  note: string;
+  barHeight: string;
+};
+
+export type IntelligenceVisualIdentity = {
+  visualScore: number;
+  palette: string[];
+  sampleUrls: string[];
+};
+
 export type IntelligencePanelData = {
   brand: {
     id: string;
@@ -73,4 +109,11 @@ export type IntelligencePanelData = {
   };
   recommendedActions?: IntelligenceRecommendedAction[];
   activity?: IntelligenceActivityGroup[];
+  /** Brand list route — portfolio health across all brands. */
+  portfolio?: IntelligencePortfolio;
+  /** Brand detail route — truncated profile copy. */
+  profileSnippet?: string;
+  dnaHistory?: DnaHistoryPoint[];
+  visualIdentity?: IntelligenceVisualIdentity;
+  assetPreview?: { count: number; urls: string[]; href: string };
 };

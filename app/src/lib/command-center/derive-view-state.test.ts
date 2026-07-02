@@ -41,12 +41,12 @@ describe("deriveWorkspaceView", () => {
     expect(deriveWorkspaceView(data({ brandCount: 0 }))).toBe("empty");
   });
 
-  it("returns approval when pending approvals exist", () => {
+  it("returns normal when pending approvals exist (approvals live in right rail)", () => {
     expect(
       deriveWorkspaceView(
         data({ brandCount: 2, heroBrand: baseBrand, pendingApprovalCount: 3 }),
       ),
-    ).toBe("approval");
+    ).toBe("normal");
   });
 
   it("returns populated when recent shoots exist and no pending approvals", () => {
@@ -77,7 +77,13 @@ describe("deriveWorkspaceView", () => {
 });
 
 describe("section visibility helpers", () => {
-  it("shows recent row only when shoots exist and view allows content", () => {
+  it("shows recent row for normal view when hero exists (fallback tiles)", () => {
+    expect(showRecentWorkRow("normal", data({ brandCount: 1, heroBrand: baseBrand }))).toBe(
+      true,
+    );
+  });
+
+  it("shows recent row when shoots exist in populated view", () => {
     const populated = data({
       brandCount: 1,
       heroBrand: baseBrand,
@@ -92,9 +98,6 @@ describe("section visibility helpers", () => {
       ],
     });
     expect(showRecentWorkRow("populated", populated)).toBe(true);
-    expect(showRecentWorkRow("normal", data({ brandCount: 1, heroBrand: baseBrand }))).toBe(
-      false,
-    );
     expect(showRecentWorkRow("loading", populated)).toBe(false);
   });
 
