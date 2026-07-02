@@ -34,6 +34,7 @@ yarn-error.log*
 .env*
 # ...but track the placeholder template the README points at (no real secrets)
 !.env.example
+!.env.local.example
 
 # vercel
 .vercel

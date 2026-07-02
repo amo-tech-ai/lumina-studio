@@ -18,15 +18,20 @@ interface for shoot planning, creative direction, and brand intelligence.
 1. Set up environment variables
 
 ```bash
-cp .env.example .env
+cp .env.example .env.local
 ```
 
-Required variables — the app will not start without these:
-- `GEMINI_API_KEY` — Google Gemini API key (used by all agents)
+Required variables — agents need Gemini (default model `gemini-3.1-flash-lite` via `src/mastra/models.ts`):
+
+- `GEMINI_API_KEY` — Google Gemini API key (used by all Mastra agents)
+- `DATABASE_URL` — Mastra Postgres storage
 
 Optional variables:
+
+- `AI_PROVIDER` — `gemini` (default) or `openai` (only if you explicitly wire OpenAI)
+- `GEMINI_MODEL` — override registry default (`gemini-3.1-flash-lite`)
 - `COPILOTKIT_LICENSE_TOKEN` — Enable CopilotKit Intelligence (threads, persistence, analytics)
-- `INTELLIGENCE_API_KEY` — Required if `COPILOTKIT_LICENSE_TOKEN` is set
+- `INTELLIGENCE_API_KEY` — Required **only if** `COPILOTKIT_LICENSE_TOKEN` is set
 - `INTELLIGENCE_API_URL` — CopilotKit Intelligence API URL (default: `http://localhost:4201`)
 - `INTELLIGENCE_GATEWAY_WS_URL` — CopilotKit Intelligence WebSocket URL (default: `ws://localhost:4401`)
 
