@@ -74,6 +74,7 @@ export function TalentTab() {
 
   useEffect(() => {
     runSearch(filters);
+    setPassedIds(new Set());
   }, [filters, runSearch]);
 
   // Rehydrates shortlist state from the DB (not just this session's local

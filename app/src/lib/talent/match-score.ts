@@ -41,7 +41,9 @@ export function computeMatchScore({
   if (
     shootType &&
     Array.isArray(talent.ai_tags?.shoot_types) &&
-    (talent.ai_tags.shoot_types as unknown[]).includes(shootType)
+    (talent.ai_tags.shoot_types as unknown[]).some(
+      (t) => typeof t === "string" && t.toLowerCase() === shootType.toLowerCase(),
+    )
   ) {
     score += 10;
     reasons.push(`tagged for ${shootType} work`);

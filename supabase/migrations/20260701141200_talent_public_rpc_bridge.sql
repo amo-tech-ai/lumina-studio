@@ -26,7 +26,7 @@ returns text
 language plpgsql
 stable
 set search_path = talent
-as $$
+as $func$
 declare
   v_half_day numeric;
 begin
@@ -41,7 +41,7 @@ begin
 exception
   when others then return null; -- malformed rates jsonb never breaks search
 end;
-$$;
+$func$;
 
 -- ---------------------------------------------------------------------------
 -- search_talent — filtered browse for the Talent tab. Any authenticated brand
@@ -83,14 +83,22 @@ begin
   return query
   select to_jsonb(t) || jsonb_build_object(
     'rate_tier', talent.compute_rate_tier(t.id),
-    'is_available', not exists (
-      select 1 from talent.talent_availability a
-      where a.talent_profile_id = t.id
-        and a.status in ('blocked', 'tentative', 'booked')
-        and (
-          p_date_start is null or p_date_end is null
-          or a.date_range && daterange(p_date_start, p_date_end, '[]')
-        )
+    -- No date filter at all -> no opinion, default to available (was
+    -- previously checked *inside* the NOT EXISTS, which only bypassed the
+    -- date check but still matched on status alone — any blocked/tentative/
+    -- booked row EVER, past or future, incorrectly flagged every such talent
+    -- unavailable on the default no-filter browse). `and` (not `or`) so a
+    -- single provided date still runs a real open-ended-range overlap check
+    -- instead of also bypassing — daterange() treats a null bound as
+    -- unbounded on that side, no special-casing needed here.
+    'is_available', (
+      (p_date_start is null and p_date_end is null)
+      or not exists (
+        select 1 from talent.talent_availability a
+        where a.talent_profile_id = t.id
+          and a.status in ('blocked', 'tentative', 'booked')
+          and a.date_range && daterange(p_date_start, p_date_end, '[]')
+      )
     )
   )
   from talent.talent_profiles_public t
@@ -102,11 +110,16 @@ begin
     and (p_budget_tier is null or talent.compute_rate_tier(t.id) = p_budget_tier)
     and (
       -- ai_tags.shoot_types is the same shape lib/talent/match-score.ts already
-      -- reads client-side (Array.isArray(...) && .includes(shootType)) — mirror
-      -- that contract here with jsonb containment instead of leaving the filter
-      -- as a declared-but-unused parameter.
+      -- reads client-side — mirror that contract here. Case-insensitive:
+      -- UI SelectItems pass capitalized values ("Editorial") while stored/
+      -- tested data uses lowercase ("editorial") — @> containment can't do
+      -- case-insensitive matching, so unnest + lower() compare per element
+      -- instead of leaving the filter silently returning zero rows.
       p_shoot_type is null
-      or t.ai_tags -> 'shoot_types' @> to_jsonb(p_shoot_type::text)
+      or exists (
+        select 1 from jsonb_array_elements_text(coalesce(t.ai_tags -> 'shoot_types', '[]'::jsonb)) st
+        where lower(st) = lower(p_shoot_type)
+      )
     )
     and (
       p_only_shortlist_id is null
@@ -127,7 +140,16 @@ grant execute on function public.search_talent(text, text, date, date, text, uui
 -- get_or_create_shortlist — one shortlist per org for MVP (per-brand-org
 -- default list, matching the "minimal list, not a board" scope). Enforces
 -- org membership before any read/write.
+--
+-- CodeRabbit: the select-then-insert here was race-prone with only a
+-- non-unique index on owner_org_id — two concurrent first-calls for the same
+-- org could each pass the select-finds-nothing check and insert a duplicate
+-- shortlist. A unique constraint + `insert ... on conflict do nothing`
+-- (falling back to a select only if the insert lost the race) closes it.
 -- ---------------------------------------------------------------------------
+alter table talent.talent_shortlists
+  add constraint talent_shortlists_owner_org_id_key unique (owner_org_id);
+
 create or replace function public.get_or_create_shortlist(p_org_id uuid)
 returns uuid
 language plpgsql
@@ -141,16 +163,15 @@ begin
     raise exception 'not a member of this organization';
   end if;
 
-  select id into v_id
-  from talent.talent_shortlists
-  where owner_org_id = p_org_id
-  order by created_at asc
-  limit 1;
+  insert into talent.talent_shortlists (owner_org_id, name)
+  values (p_org_id, 'Shortlist')
+  on conflict (owner_org_id) do nothing
+  returning id into v_id;
 
   if v_id is null then
-    insert into talent.talent_shortlists (owner_org_id, name)
-    values (p_org_id, 'Shortlist')
-    returning id into v_id;
+    select id into v_id
+    from talent.talent_shortlists
+    where owner_org_id = p_org_id;
   end if;
 
   return v_id;
