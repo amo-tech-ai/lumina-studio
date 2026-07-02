@@ -2,8 +2,14 @@
 
 import { useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
-import { DEV_INTELLIGENCE_PANEL_DATA, isDevSkipMode } from "./dev-panel-fixture";
+import {
+  DEV_INTELLIGENCE_PANEL_DATA,
+  DEV_PORTFOLIO_PANEL_DATA,
+  isDevSkipMode,
+} from "./dev-panel-fixture";
 import type { IntelligencePanelData } from "./panel-contract";
+
+export type PanelFetchMode = "single" | "portfolio";
 
 type State = {
   data: IntelligencePanelData | null;
@@ -15,36 +21,54 @@ const EMPTY: IntelligencePanelData = {
   brand: null,
   scores: null,
   approvals: { pendingCount: 0, items: [] },
+  portfolio: { brandCount: 0, avgDna: 0, healthRows: [], needsAttention: null },
 };
 
-export function useIntelligencePanel(activeBrandId: string | null) {
+export function useIntelligencePanel(
+  activeBrandId: string | null,
+  mode: PanelFetchMode = "single",
+) {
   const searchParams = useSearchParams();
   const skip = searchParams.get("skip");
   const devFixture = isDevSkipMode(skip);
-  const canFetch = devFixture || Boolean(activeBrandId);
+  const portfolioMode = mode === "portfolio";
+  const canFetch = devFixture || portfolioMode || Boolean(activeBrandId);
+
+  const devData = portfolioMode ? DEV_PORTFOLIO_PANEL_DATA : DEV_INTELLIGENCE_PANEL_DATA;
 
   const [state, setState] = useState<State>(() => {
     if (devFixture) {
-      return { data: DEV_INTELLIGENCE_PANEL_DATA, loading: false, error: null };
+      return { data: devData, loading: false, error: null };
     }
-    if (!activeBrandId) {
+    if (!canFetch) {
       return { data: null, loading: false, error: null };
     }
     return { data: null, loading: true, error: null };
   });
 
   const fetchPanel = useCallback(async () => {
-    if (devFixture) return DEV_INTELLIGENCE_PANEL_DATA;
+    if (devFixture) return devData;
+    if (portfolioMode) {
+      const res = await fetch("/api/intelligence/panel", { cache: "no-store", credentials: "same-origin" });
+      if (!res.ok) {
+        const body = (await res.json().catch(() => ({}))) as { error?: string };
+        throw new Error(body.error ?? `Request failed (${res.status})`);
+      }
+      return (await res.json()) as IntelligencePanelData;
+    }
     if (!activeBrandId) return EMPTY;
 
     const qs = `?brandId=${encodeURIComponent(activeBrandId)}`;
-    const res = await fetch(`/api/intelligence/panel${qs}`, { cache: "no-store" });
+    const res = await fetch(`/api/intelligence/panel${qs}`, {
+      cache: "no-store",
+      credentials: "same-origin",
+    });
     if (!res.ok) {
       const body = (await res.json().catch(() => ({}))) as { error?: string };
       throw new Error(body.error ?? `Request failed (${res.status})`);
     }
     return (await res.json()) as IntelligencePanelData;
-  }, [activeBrandId, devFixture]);
+  }, [activeBrandId, devData, devFixture, portfolioMode]);
 
   const reload = useCallback(async () => {
     if (!canFetch) {
@@ -57,19 +81,19 @@ export function useIntelligencePanel(activeBrandId: string | null) {
       setState({ data, loading: false, error: null });
     } catch (e) {
       setState({
-        data: EMPTY,
+        data: portfolioMode ? EMPTY : EMPTY,
         loading: false,
         error: e instanceof Error ? e.message : "Failed to load intelligence data",
       });
     }
-  }, [canFetch, fetchPanel]);
+  }, [canFetch, fetchPanel, portfolioMode]);
 
   useEffect(() => {
     if (devFixture) {
-      setState({ data: DEV_INTELLIGENCE_PANEL_DATA, loading: false, error: null });
+      setState({ data: devData, loading: false, error: null });
       return;
     }
-    if (!activeBrandId) {
+    if (!canFetch) {
       setState({ data: null, loading: false, error: null });
       return;
     }
@@ -93,7 +117,7 @@ export function useIntelligencePanel(activeBrandId: string | null) {
     return () => {
       cancelled = true;
     };
-  }, [fetchPanel, devFixture, activeBrandId]);
+  }, [fetchPanel, devFixture, devData, canFetch]);
 
   useEffect(() => {
     if (!canFetch || devFixture) return;

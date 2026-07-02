@@ -172,3 +172,31 @@ export const DEV_INTELLIGENCE_PANEL_DATA: IntelligencePanelData = {
     },
   ],
 };
+
+const DEV_ADIDAS_ID = "22222222-2222-2222-2222-222222222222";
+const DEV_ZARA_ID = "33333333-3333-3333-3333-333333333333";
+
+/** Brand list DC populated portfolio panel (?skip=1). */
+export const DEV_PORTFOLIO_PANEL_DATA: IntelligencePanelData = {
+  brand: null,
+  scores: null,
+  portfolio: {
+    brandCount: 3,
+    avgDna: 89,
+    healthRows: [
+      { brandId: DEV_PREVIEW_HERO_BRAND_ID, name: "Nike", score: 87 },
+      { brandId: DEV_ADIDAS_ID, name: "Adidas", score: 91 },
+      { brandId: DEV_ZARA_ID, name: "Zara", score: 88 },
+    ],
+    needsAttention: {
+      brandId: DEV_PREVIEW_HERO_BRAND_ID,
+      brandName: "Nike",
+      pillarLabel: "Visual DNA",
+      score: 72,
+      href: `/app/brand/${DEV_PREVIEW_HERO_BRAND_ID}`,
+    },
+  },
+  approvals: DEV_INTELLIGENCE_PANEL_DATA.approvals,
+  activity: DEV_INTELLIGENCE_PANEL_DATA.activity,
+};
+

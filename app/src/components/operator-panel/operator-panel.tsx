@@ -105,6 +105,10 @@ function OperatorShell({
 
   const routeBrandIdFromPath = useMemo(() => routeBrandId(pathname), [pathname]);
   const routeShootIdFromPath = useMemo(() => routeShootId(pathname), [pathname]);
+  const routeBrandName = useMemo(
+    () => brands.find((b) => b.id === routeBrandIdFromPath)?.name,
+    [brands, routeBrandIdFromPath],
+  );
 
   // Keep active brand aligned with brand detail URLs
   useEffect(() => {
@@ -159,6 +163,7 @@ function OperatorShell({
     pathname,
     brandId: routeBrandIdFromPath ?? activeBrandId,
     context: {
+      brandName: routeBrandName,
       brandCount: brands.length,
       hasBrands: brands.length > 0,
     },

@@ -3,13 +3,21 @@
  */
 import { describe, expect, it, vi, afterEach } from "vitest";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import type { ReactElement } from "react";
 import { IntelligencePanel } from "./intelligence-panel";
 import { IntelligenceDetailProvider } from "@/context/intelligence-detail-context";
-import { DEV_INTELLIGENCE_PANEL_DATA } from "@/lib/intelligence/dev-panel-fixture";
+import { DEV_INTELLIGENCE_PANEL_DATA, DEV_PORTFOLIO_PANEL_DATA } from "@/lib/intelligence/dev-panel-fixture";
 
 vi.mock("./intelligence-panel.module.css", () => ({
   default: new Proxy({}, { get: (_t, key) => String(key) }),
 }));
+
+vi.mock("next/navigation", () => ({
+  usePathname: vi.fn(() => "/app"),
+  useRouter: vi.fn(() => ({ refresh: vi.fn() })),
+}));
+
+const { usePathname } = await import("next/navigation");
 
 vi.mock("next/image", () => ({
   default: ({ alt, ...props }: { alt: string }) => <img alt={alt} {...props} />,
@@ -32,29 +40,31 @@ vi.mock("next/link", () => ({
 }));
 
 vi.mock("sonner", () => ({
-  toast: { success: vi.fn(), message: vi.fn() },
+  toast: { success: vi.fn(), message: vi.fn(), error: vi.fn() },
+}));
+
+vi.mock("@/app/(operator)/app/brand/[id]/actions", () => ({
+  applyDraft: vi.fn(),
 }));
 
 vi.mock("@/lib/intelligence/use-intelligence-panel", () => ({
   useIntelligencePanel: vi.fn(),
 }));
 
-vi.mock("./evidence-dialog", () => ({
-  EvidenceDialog: ({ triggerLabel }: { triggerLabel: string }) => (
-    <button type="button">{triggerLabel}</button>
-  ),
-}));
-
 const { useIntelligencePanel } = await import("@/lib/intelligence/use-intelligence-panel");
 
 const BRAND_ID = "11111111-1111-1111-1111-111111111111";
+
+function renderPanel(ui: ReactElement) {
+  return render(<IntelligenceDetailProvider>{ui}</IntelligenceDetailProvider>);
+}
 
 afterEach(() => {
   cleanup();
 });
 
 describe("IntelligencePanel", () => {
-  it("renders six overview sections from fixture-shaped API data", () => {
+  it("renders DC overview sections from fixture-shaped API data", () => {
     vi.mocked(useIntelligencePanel).mockReturnValue({
       data: DEV_INTELLIGENCE_PANEL_DATA,
       loading: false,
@@ -62,27 +72,18 @@ describe("IntelligencePanel", () => {
       reload: vi.fn(),
     });
 
-    render(
-      <IntelligenceDetailProvider>
-        <IntelligencePanel
-          activeBrandId={BRAND_ID}
-          brandName="Nike"
-        />
-      </IntelligenceDetailProvider>,
-    );
+    renderPanel(<IntelligencePanel activeBrandId={BRAND_ID} brandName="Nike" />);
 
-    expect(useIntelligencePanel).toHaveBeenCalledWith(BRAND_ID);
+    expect(useIntelligencePanel).toHaveBeenCalledWith(BRAND_ID, "single");
     expect(screen.getByText("Nike")).toBeTruthy();
     expect(screen.getByText("active")).toBeTruthy();
-    expect(screen.getByText(/DNA 87/)).toBeTruthy();
+    expect(screen.queryByText(/not production-wired/i)).toBeNull();
     expect(screen.getByLabelText("Brand health scores")).toBeTruthy();
-    expect(screen.getByLabelText("AI insights")).toBeTruthy();
+    expect(screen.getByLabelText("Brand health scores").textContent).toContain("87");
     expect(screen.getByLabelText("Approval queue")).toBeTruthy();
-    expect(screen.getByLabelText("Recommended actions")).toBeTruthy();
-    expect(screen.getByLabelText("Recent activity")).toBeTruthy();
     expect(screen.getByText("Brand profile draft")).toBeTruthy();
-    expect(screen.getByText("Review approvals")).toBeTruthy();
-    expect(screen.getByText("Yesterday")).toBeTruthy();
+    expect(screen.getAllByRole("button", { name: "Approve" }).length).toBeGreaterThan(0);
+    expect(screen.queryByLabelText("AI insights")).toBeNull();
   });
 
   it("switches tabs and shows approvals badge count", () => {
@@ -93,11 +94,7 @@ describe("IntelligencePanel", () => {
       reload: vi.fn(),
     });
 
-    render(
-      <IntelligenceDetailProvider>
-        <IntelligencePanel activeBrandId={BRAND_ID} brandName="Nike" />
-      </IntelligenceDetailProvider>,
-    );
+    renderPanel(<IntelligencePanel activeBrandId={BRAND_ID} brandName="Nike" />);
 
     const approvalsTab = screen.getByRole("tab", { name: /Approvals/i });
     expect(approvalsTab.getAttribute("aria-selected")).toBe("false");
@@ -118,11 +115,7 @@ describe("IntelligencePanel", () => {
       reload: vi.fn(),
     });
 
-    render(
-      <IntelligenceDetailProvider>
-        <IntelligencePanel activeBrandId={BRAND_ID} brandName="Nike" />
-      </IntelligenceDetailProvider>,
-    );
+    renderPanel(<IntelligencePanel activeBrandId={BRAND_ID} brandName="Nike" />);
 
     expect(screen.getByRole("tab", { name: /Approvals/i }).textContent).toContain("7");
   });
@@ -135,11 +128,7 @@ describe("IntelligencePanel", () => {
       reload: vi.fn(),
     });
 
-    render(
-      <IntelligenceDetailProvider>
-        <IntelligencePanel activeBrandId={BRAND_ID} brandName="Nike" />
-      </IntelligenceDetailProvider>,
-    );
+    renderPanel(<IntelligencePanel activeBrandId={BRAND_ID} brandName="Nike" />);
 
     fireEvent.click(screen.getByRole("tab", { name: /Activity/i }));
     expect(screen.getByRole("tab", { name: /Activity/i }).getAttribute("aria-selected")).toBe(
@@ -156,19 +145,19 @@ describe("IntelligencePanel", () => {
       reload: vi.fn(),
     });
 
-    render(
-      <IntelligenceDetailProvider>
-        <IntelligencePanel activeBrandId={BRAND_ID} brandName="Nike" />
-      </IntelligenceDetailProvider>,
-    );
+    renderPanel(<IntelligencePanel activeBrandId={BRAND_ID} brandName="Nike" />);
 
     expect(screen.getByRole("button", { name: "Explain DNA" })).toBeTruthy();
   });
 
-  it("renders pending approval drafts from live API shape", () => {
+  it("renders enriched approval cards from live API shape on command center", () => {
     vi.mocked(useIntelligencePanel).mockReturnValue({
       data: {
-        brand: null,
+        brand: {
+          id: "22222222-2222-2222-2222-222222222222",
+          name: "Beta Brand",
+          status: "draft_ready",
+        },
         scores: null,
         approvals: {
           pendingCount: 1,
@@ -187,16 +176,16 @@ describe("IntelligencePanel", () => {
       reload: vi.fn(),
     });
 
-    render(
-      <IntelligenceDetailProvider>
-        <IntelligencePanel activeBrandId={null} brandName={null} />
-      </IntelligenceDetailProvider>,
+    renderPanel(
+      <IntelligencePanel
+        activeBrandId="22222222-2222-2222-2222-222222222222"
+        brandName="Beta Brand"
+      />,
     );
 
-    expect(screen.getByText(/Beta Brand/i)).toBeTruthy();
-    expect(screen.queryByRole("button", { name: "Approve" })).toBeNull();
-    expect(screen.getByRole("link", { name: "Review draft" })).toBeTruthy();
-    expect(screen.queryByText(/Select a brand to view intelligence/i)).toBeNull();
+    expect(screen.getAllByText(/Beta Brand/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByRole("button", { name: "Approve" }).length).toBeGreaterThan(0);
+    expect(screen.queryByText(/No pending brand drafts/i)).toBeNull();
   });
 
   it("shows select-brand copy when no brand is selected and panel data is null", () => {
@@ -207,11 +196,7 @@ describe("IntelligencePanel", () => {
       reload: vi.fn(),
     });
 
-    render(
-      <IntelligenceDetailProvider>
-        <IntelligencePanel activeBrandId={null} brandName={null} />
-      </IntelligenceDetailProvider>,
-    );
+    renderPanel(<IntelligencePanel activeBrandId={null} brandName={null} />);
 
     expect(screen.getByText(/Select a brand to view intelligence/i)).toBeTruthy();
   });
@@ -224,12 +209,29 @@ describe("IntelligencePanel", () => {
       reload: vi.fn(),
     });
 
-    render(
-      <IntelligenceDetailProvider>
-        <IntelligencePanel activeBrandId={BRAND_ID} brandName="Acme" />
-      </IntelligenceDetailProvider>,
-    );
+    renderPanel(<IntelligencePanel activeBrandId={BRAND_ID} brandName="Acme" />);
 
     expect(screen.getByText(/Loading intelligence/i)).toBeTruthy();
+  });
+
+  it("renders portfolio panel on brand list route", () => {
+    vi.mocked(usePathname).mockReturnValue("/app/brand");
+    vi.mocked(useIntelligencePanel).mockReturnValue({
+      data: DEV_PORTFOLIO_PANEL_DATA,
+      loading: false,
+      error: null,
+      reload: vi.fn(),
+    });
+
+    renderPanel(<IntelligencePanel activeBrandId={BRAND_ID} brandName="Nike" />);
+
+    expect(useIntelligencePanel).toHaveBeenCalledWith(null, "portfolio");
+    expect(screen.getByLabelText("Portfolio intelligence")).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "Portfolio" })).toBeTruthy();
+    expect(screen.getByText("Avg DNA")).toBeTruthy();
+    expect(screen.getByText("89")).toBeTruthy();
+    expect(screen.getByText("Needs attention")).toBeTruthy();
+    expect(screen.getByRole("tab", { name: /Portfolio/i })).toBeTruthy();
+    expect(screen.queryByText("active")).toBeNull();
   });
 });

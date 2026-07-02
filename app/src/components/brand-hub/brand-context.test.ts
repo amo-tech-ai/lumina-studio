@@ -83,14 +83,12 @@ describe("useBrandContext — agent context wiring (IPI-123 DASH-003 AC6)", () =
   });
 });
 
-describe("BrandHubClient — useBrandContext integration (IPI-123 DASH-003 AC6)", () => {
-  // Source-level smoke checks: ensure the call-site passes all required props.
-  // Runtime wiring is covered by the hook tests above.
-  it("client source passes brandId, dnaScore, intakeStatus, profile and scores to useBrandContext", async () => {
+describe("BrandDetailWorkspace — useBrandContext integration (IPI-123 DASH-003 AC6)", () => {
+  it("workspace source passes brandId, dnaScore, intakeStatus, profile and scores to useBrandContext", async () => {
     const { readFileSync } = await import("node:fs");
     const { resolve } = await import("node:path");
     const src = readFileSync(
-      resolve(process.cwd(), "src/components/brand-hub/brand-hub-client.tsx"),
+      resolve(process.cwd(), "src/components/brand-hub/brand-detail-workspace.tsx"),
       "utf8",
     );
     expect(src).toMatch(/useBrandContext\(/);
@@ -98,6 +96,6 @@ describe("BrandHubClient — useBrandContext integration (IPI-123 DASH-003 AC6)"
     expect(src).toMatch(/dnaScore/);
     expect(src).toMatch(/intakeStatus/);
     expect(src).toMatch(/profile/);
-    expect(src).toMatch(/displayScores/);
+    expect(src).toMatch(/baseScores/);
   });
 });

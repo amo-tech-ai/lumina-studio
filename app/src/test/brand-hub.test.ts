@@ -218,7 +218,7 @@ describe("brand hub route contract", () => {
     expect(src).toMatch(/brand_scores/);
     expect(src).toMatch(/organizations/);
     expect(src).toMatch(/intake_status/);
-    expect(src).toMatch(/BrandHubClient/);
+    expect(src).toMatch(/BrandDetailWorkspace/);
     expect(src).toMatch(/filterDisplayScores/);
   });
 });

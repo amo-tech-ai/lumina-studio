@@ -6,7 +6,6 @@ import { heroFallbackForBrand } from "@/lib/command-center/sample-images";
 import type { HeroBrand } from "@/lib/command-center/types";
 
 import styles from "./command-center.module.css";
-import { QuickActionChips } from "./quick-action-chips";
 
 type Props = {
   heroBrand: HeroBrand;
@@ -25,9 +24,6 @@ export function PortfolioHeroCard({
     recentShootName,
   });
 
-  const dnaLabel =
-    heroBrand.dnaScore > 0 ? `${Math.round(heroBrand.dnaScore)}% DNA` : "DNA pending";
-
   const coverSrc = heroBrand.coverUrl ?? heroFallbackForBrand(heroBrand.id);
 
   return (
@@ -44,7 +40,6 @@ export function PortfolioHeroCard({
           />
           <div className={styles.heroMediaScrim} />
           <span className={styles.heroBrandLabel}>{heroBrand.name}</span>
-          <span className={styles.heroDnaBadge}>{dnaLabel}</span>
         </div>
       </Link>
 
@@ -57,10 +52,6 @@ export function PortfolioHeroCard({
           {headline}
         </h2>
         <p className={styles.heroSubline}>{subline}</p>
-        <QuickActionChips
-          heroBrandId={heroBrand.id}
-          pendingApprovalCount={pendingApprovalCount}
-        />
       </div>
     </section>
   );

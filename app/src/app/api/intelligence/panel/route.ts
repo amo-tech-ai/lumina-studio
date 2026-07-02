@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { withOperatorAuth, OperatorAuthError } from "@/lib/operator-gate";
 import { buildPanelData } from "@/lib/intelligence/build-panel-data";
+import { buildPortfolioPanelData } from "@/lib/intelligence/build-portfolio-panel-data";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -34,7 +35,7 @@ export async function GET(request: Request) {
     const [brandResult, scoresResult, pendingResult] = await Promise.all([
       svc
         .from("brands")
-        .select("id, name, intake_status")
+        .select("id, name, intake_status, ai_profile")
         .eq("id", brandId)
         .single(),
       svc.from("brand_scores").select("score_type, score").eq("brand_id", brandId),
@@ -78,5 +79,34 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Internal error" }, { status: 500 });
   }
 
-  return NextResponse.json(buildPanelData(null, null, data ?? []));
+  const brandsResult = await svc
+    .from("brands")
+    .select("id, name, intake_status")
+    .order("name");
+
+  if (brandsResult.error) {
+    console.error("[intelligence/panel] portfolio brands query failed:", brandsResult.error.message);
+    return NextResponse.json({ error: "Internal error" }, { status: 500 });
+  }
+
+  const brands = brandsResult.data ?? [];
+  const brandIds = brands.map((b) => b.id);
+
+  let scoreRows: Array<{ brand_id: string; score_type: string; score: number }> = [];
+  if (brandIds.length) {
+    const scoresResult = await svc
+      .from("brand_scores")
+      .select("brand_id, score_type, score")
+      .in("brand_id", brandIds);
+
+    if (scoresResult.error) {
+      console.error("[intelligence/panel] portfolio scores query failed:", scoresResult.error.message);
+      return NextResponse.json({ error: "Internal error" }, { status: 500 });
+    }
+    scoreRows = scoresResult.data ?? [];
+  }
+
+  return NextResponse.json(
+    buildPortfolioPanelData(brands, scoreRows, data ?? []),
+  );
 }

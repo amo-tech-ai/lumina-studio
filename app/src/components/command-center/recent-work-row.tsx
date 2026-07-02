@@ -1,8 +1,10 @@
 import Image from "next/image";
 import Link from "next/link";
 
+import { isRecentWorkFallback } from "@/lib/command-center/recent-work-fallbacks";
 import { recentFallbackForShoot } from "@/lib/command-center/sample-images";
 import type { RecentShoot } from "@/lib/command-center/types";
+import { cn } from "@/lib/utils";
 
 import styles from "./command-center.module.css";
 
@@ -13,28 +15,66 @@ type Props = {
 const CHANNEL_ASPECT: Record<string, string> = {
   IG: "4:5",
   TikTok: "9:16",
+  Reel: "9:16",
   Amazon: "1:1",
   Shopify: "1:1",
+  Asset: "4:5",
+  Video: "4:5",
 };
 
 function formatMeta(shoot: RecentShoot): string {
-  const date = new Date(shoot.updatedAt);
-  const when = Number.isNaN(date.getTime())
-    ? ""
-    : date.toLocaleDateString("en-CA", { month: "short", day: "numeric" });
-
-  const parts: string[] = [];
   if (shoot.channel) {
-    parts.push(shoot.channel);
     const aspect = CHANNEL_ASPECT[shoot.channel];
-    if (aspect) parts.push(aspect);
+    if (aspect) return `${shoot.channel} · ${aspect}`;
   }
-  parts.push(shoot.status);
-  if (when) parts.push(when);
-  if (typeof shoot.dnaScore === "number" && shoot.dnaScore > 0) {
-    parts.push(`DNA ${Math.round(shoot.dnaScore)}%`);
+  return "IG · 4:5";
+}
+
+function matchClass(score: number): string {
+  if (score >= 80) return styles.recentMatch;
+  if (score >= 60) return cn(styles.recentMatch, styles.recentMatchMid);
+  return cn(styles.recentMatch, styles.recentMatchLow);
+}
+
+function RecentWorkTile({ shoot, index }: { shoot: RecentShoot; index: number }) {
+  const imageSrc = shoot.imageUrl ?? recentFallbackForShoot(shoot.id, index);
+  const fallback = isRecentWorkFallback(shoot.id);
+
+  const thumb = (
+    <div className={styles.recentThumb}>
+      <Image
+        src={imageSrc}
+        alt={`${shoot.name} preview`}
+        fill
+        loading="lazy"
+        sizes="138px"
+        className={styles.recentImage}
+      />
+      <span className={styles.recentThumbScrim} />
+      {typeof shoot.dnaScore === "number" && shoot.dnaScore > 0 && (
+        <span className={matchClass(shoot.dnaScore)}>{Math.round(shoot.dnaScore)}</span>
+      )}
+      <span className={styles.recentLabel}>{shoot.name}</span>
+    </div>
+  );
+
+  const meta = <p className={styles.recentMeta}>{formatMeta(shoot)}</p>;
+
+  if (fallback) {
+    return (
+      <div className={styles.recentTile}>
+        {thumb}
+        {meta}
+      </div>
+    );
   }
-  return parts.join(" · ");
+
+  return (
+    <Link href={`/app/shoots/${shoot.id}`} className={styles.recentTile}>
+      {thumb}
+      {meta}
+    </Link>
+  );
 }
 
 export function RecentWorkRow({ shoots }: Props) {
@@ -52,30 +92,9 @@ export function RecentWorkRow({ shoots }: Props) {
       </div>
 
       <div className={styles.recentScroll}>
-        {shoots.map((shoot, index) => {
-          const imageSrc = shoot.imageUrl ?? recentFallbackForShoot(shoot.id, index);
-
-          return (
-            <Link key={shoot.id} href={`/app/shoots/${shoot.id}`} className={styles.recentTile}>
-              <div className={styles.recentThumb}>
-                <Image
-                  src={imageSrc}
-                  alt={`${shoot.name} preview`}
-                  fill
-                  loading="lazy"
-                  sizes="138px"
-                  className={styles.recentImage}
-                />
-                <span className={styles.recentThumbScrim} />
-                {typeof shoot.dnaScore === "number" && shoot.dnaScore > 0 && (
-                  <span className={styles.recentMatch}>{Math.round(shoot.dnaScore)}%</span>
-                )}
-                <span className={styles.recentLabel}>{shoot.name}</span>
-              </div>
-              <p className={styles.recentMeta}>{formatMeta(shoot)}</p>
-            </Link>
-          );
-        })}
+        {shoots.map((shoot, index) => (
+          <RecentWorkTile key={shoot.id} shoot={shoot} index={index} />
+        ))}
       </div>
     </section>
   );
