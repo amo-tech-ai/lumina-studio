@@ -1,0 +1,25 @@
+supabase/migrations/20260701141200_talent_public_rpc_bridge.sql
+  s_c07e656bb1b48e::t_3970174f6ad419 86-101,113-117,119-122
+  s_c07e656bb1b48e::t_2fc6d6cacfa6f3 29,44
+  s_c07e656bb1b48e::t_f9c5eede1092c0 143-148,150-152,166-169,172-174
+app/src/components/matching/talent-tab.tsx
+  s_c07e656bb1b48e::t_64484daa68ba05 77
+app/src/lib/talent/match-score.ts
+  s_c07e656bb1b48e::t_b06fefade27107 44-46
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.9",
+  "base_commit_sha": "1423b6511096f594d851c65266d3a74c1cc00404",
+  "prompts": {},
+  "sessions": {
+    "s_c07e656bb1b48e": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b8a1a548-66d1-4c73-b468-84dd619829ae",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
