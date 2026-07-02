@@ -152,19 +152,22 @@ Scoring: layout · spacing · cards · images · typography · right panel · st
 
 ## Production readiness verdict
 
-**🟡 Needs improvement — not merge-ready as a “design parity complete” PR**
+**🟢 Merge-ready after review fixes (`be017bd`)**
 
 **Shippable today:**
+
 - Command Center layout + Recent Work + Intelligence Panel (no debug UI)
 - Brand List image-first workspace + portfolio panel
 - Brand Detail hero, pillars, CTAs, enriched detail panel
+- Brand detail no-DNA path + review-thread fixes (PR `be017bd`)
 
-**Hold merge for:**
-- Stale/failing parity e2e updated
-- Crawl progress display bug
-- AI draft card verified on a `draft_ready` brand (component exists; data-gated)
+**Follow-up (non-blocking):**
 
-**Suggested PR strategy:** Open draft PR `ipi/design-command-brand-parity` with screenshots + this checklist; either complete B1 in same PR or document waiver + follow-up Linear issue (IPI-271 scope).
+- `displayHost`/pillar sort dedup across brand cards
+- Intelligence panel shell complexity refactor
+- AI draft card E2E on a live `draft_ready` brand (data-gated)
+
+**Suggested PR strategy:** Merge `ipi/design-command-brand-parity` after CI green; track follow-ups in Linear.
 
 ---
 
