@@ -1,0 +1,56 @@
+app/src/components/intelligence-panel/health-section.tsx
+  s_34eb7d3f1209d9::t_18e952295eb46b 88
+  s_34eb7d3f1209d9::t_8400e7d143bba4 61
+  s_34eb7d3f1209d9::t_e404cd7af3384d 14
+app/src/test/brand-hub.test.ts
+  s_34eb7d3f1209d9::t_d6b6741e0de48d 222
+app/src/components/intelligence-panel/intelligence-panel-sections.tsx
+  s_34eb7d3f1209d9::t_e75b4d502319c3 38
+  s_34eb7d3f1209d9::t_5ea83298053606 106,184
+  s_34eb7d3f1209d9::t_7522c5c9057971 30-37,39-42,45-49,56,60-90,92-103,107,113,120-145,210-211,213-214,216,219-221,223-228,231-234,236-240,242-244
+  s_34eb7d3f1209d9::t_b60c0733c9dc2c 178
+  s_34eb7d3f1209d9::t_bbc2223ea42327 212,215,217-218,222,229-230,235,241
+  s_34eb7d3f1209d9::t_c582369b53f01d 27
+app/src/components/brand-hub/brand-detail-analysing-card.tsx
+  s_34eb7d3f1209d9::t_f749e30bc8b90e 1-5,8-11,14-19,21-40,42
+app/src/app/(operator)/app/brand/[id]/page.tsx
+  s_34eb7d3f1209d9::t_d58b6e792b09eb 5
+app/src/components/brand-hub/analysis-progress-banner.tsx
+  s_34eb7d3f1209d9::t_4f0ab7811b4a84 128
+  s_34eb7d3f1209d9::t_6d4e677395936c 7
+app/src/components/intelligence-panel/intel-approval-queue-section.tsx
+  s_34eb7d3f1209d9::t_550358f0691db4 10,13-17
+  s_34eb7d3f1209d9::t_ddad0e787f3ac2 43
+app/src/lib/intelligence/panel-detail-fallbacks.ts
+  s_34eb7d3f1209d9::t_899bc354f9fb77 30-81,93-96
+app/src/lib/brand-hub/format-crawl-progress.ts
+  s_34eb7d3f1209d9::t_b3772083716187 1-21
+app/src/components/brand-hub/brand-detail-workspace.tsx
+  s_34eb7d3f1209d9::t_d057aa404d278a 180-185
+  s_34eb7d3f1209d9::t_b33a9d5fec0ec9 9
+app/src/components/intelligence-panel/intel-approval-card.tsx
+  s_34eb7d3f1209d9::t_ff4754171475e8 5-6,9,17
+  s_34eb7d3f1209d9::t_809b6d18c428b5 26-28,34-55
+  s_34eb7d3f1209d9::t_6988310967cbeb 94-95,97
+  s_34eb7d3f1209d9::t_94ff882f183288 56
+app/src/lib/brand-hub/format-crawl-progress.test.ts
+  s_34eb7d3f1209d9::t_1e96903e7edfbc 1-18
+app/src/components/intelligence-panel/intelligence-panel.test.tsx
+  s_34eb7d3f1209d9::t_65c1ac5803f3ce 50-53
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.9",
+  "base_commit_sha": "5e2dff41612ac145d8403d0b2cc73b1538dcde2f",
+  "prompts": {},
+  "sessions": {
+    "s_34eb7d3f1209d9": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "5f2bb499-4181-4424-be0c-f98a1fef1295",
+        "model": "composer-2.5"
+      },
+      "human_author": null
+    }
+  }
+}
