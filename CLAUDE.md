@@ -35,15 +35,15 @@ Shift from **Create → Check → Fix** to **Guide → Prevent → Confirm** —
 
 | Plugin | Provides | Use when |
 |---|---|---|
-| `ponytail` | `/ponytail`, `/ponytail-review`, `/ponytail-audit`, `/ponytail-debt`, `/ponytail-gain` | Every coding task (write/refactor/fix) — YAGNI, shortest working solution. `-review` for a diff, `-audit` for a whole-repo sweep, `-debt` to collect deferred `ponytail:` shortcut comments |
+| `ponytail` | `/ponytail`, `/ponytail-review`, `/ponytail-audit`, `/ponytail-debt`, `/ponytail-gain` | Every coding task (write/refactor/fix) — YAGNI ("You Aren't Gonna Need It"), shortest working solution. `-review` for a diff, `-audit` for a whole-repo sweep, `-debt` to collect deferred `ponytail:` shortcut comments |
 | `pr-review-toolkit` | `/review-pr` + 6 subagents (code-reviewer, code-simplifier, comment-analyzer, pr-test-analyzer, silent-failure-hunter, type-design-analyzer) | Comprehensive pre-merge PR review — style, error-handling, test coverage, type design, comment rot, in one pass |
 | `code-review` | `/code-review` (plugin's own) | See "Overlaps" below before reaching for this one |
 | `supabase` | `supabase` + `supabase-postgres-best-practices` skills | Generic Postgres/Supabase patterns *not* already covered by this repo's own `ipix-supabase` skill — see "Overlaps" |
 | `cloudinary` | `cloudinary-docs`, `cloudinary-transformations` | Narrow doc lookups / debugging a transformation URL — the project's own `cloudinary` skill is still the primary hub for asset/photography work here |
 | `codspeed` | `codspeed-optimize`, `codspeed-setup-harness` | Only after benchmarks exist — repo has no `codspeed.yml` yet, so `-setup-harness` comes first, `-optimize` has nothing to act on until then |
-| `github` | GitHub Copilot MCP server (issues/PRs as structured tool calls) | Prefer over shell `gh` output-parsing when you need structured JSON back. **Needs `GITHUB_PERSONAL_ACCESS_TOKEN` set + reload before it does anything** |
-| `playwright` | Raw browser-automation MCP tools (navigate/click/snapshot/network/etc.) | Scripted end-to-end flows / QA runs — see "Overlaps" below |
-| `chrome-devtools-mcp` | Guided skills: `a11y-debugging`, `debug-optimize-lcp`, `memory-leak-debugging`, `troubleshooting`, general `chrome-devtools` | Diagnosing a *specific* problem (accessibility, LCP/Core Web Vitals, memory leak) — these are playbooks, not just tool access |
+| `github` | GitHub Copilot MCP (Model Context Protocol) server (issues/PRs as structured tool calls) | Prefer over shell `gh` output-parsing when you need structured JSON back. **Needs `GITHUB_PERSONAL_ACCESS_TOKEN` set + reload before it does anything** |
+| `playwright` | Raw browser-automation MCP tools (navigate, click, snapshot, network requests) | Scripted end-to-end flows / QA runs — see "Overlaps" below |
+| `chrome-devtools-mcp` | Guided skills: `a11y-debugging`, `debug-optimize-lcp`, `memory-leak-debugging`, `troubleshooting`, general `chrome-devtools` | Diagnosing a *specific* problem (accessibility, LCP (Largest Contentful Paint)/Core Web Vitals, memory leak) — these are playbooks, not just tool access |
 | `claude-code-setup` | `claude-automation-recommender` | "What Claude Code tooling should this repo have" — periodic setup audits, not day-to-day work |
 
 ### Overlaps — pick one, don't run all
@@ -54,9 +54,21 @@ Shift from **Create → Check → Fix** to **Guide → Prevent → Confirm** —
   - **After PR feedback:** `/pr fix` → `/pr ship` · `/pr resolve` · `/pr ready`
   - **Plugin breadth:** `pr-review-toolkit`'s `/review-pr` (6 subagents) — use for comprehensive pre-merge pass; repo command adds iPix path→agent matrix
   - **Bot findings:** Cursor Bugbot on PR — not a substitute for pre-PR `/review-pr`
-  - Default: repo `/review-pr` before `gh pr create`; plugin `/review-pr all` before marking ready; `@pr-fix` after bots comment
-- **Supabase guidance — repo-specific skill wins:** use `ipix-supabase` first — it knows this project's actual schema, RLS conventions, and remote-only policy. The `supabase` plugin's two skills are generic Postgres/Supabase knowledge; fall back to them only for patterns `ipix-supabase` doesn't cover.
-- **Browser automation — 3 surfaces now exist:** the already-connected `chrome-devtools` MCP server, `chrome-devtools-mcp`'s guided skills, and `playwright`'s raw MCP tools. Use `chrome-devtools-mcp` skills when diagnosing a named problem (a11y/LCP/memory); use `playwright` for scripted multi-step QA flows; don't invoke more than one for the same task.
+  - **Default workflow:**
+    1. Run repo `/review-pr` before `gh pr create`
+    2. Run plugin `/review-pr all` before marking ready
+    3. Use `@pr-fix` after bots comment
+- **Supabase guidance — repo-specific skill wins:**
+  Use `ipix-supabase` first. It knows this project's actual schema, RLS (Row-Level Security) conventions, and remote-only policy.
+  The `supabase` plugin's two skills are generic Postgres/Supabase knowledge.
+  Fall back to them only for patterns `ipix-supabase` doesn't cover.
+- **Browser automation — 3 surfaces now exist:**
+  The already-connected `chrome-devtools` MCP server.
+  `chrome-devtools-mcp`'s guided skills.
+  `playwright`'s raw MCP tools.
+  Use `chrome-devtools-mcp` skills when diagnosing a named problem (a11y, LCP/memory leaks).
+  Use `playwright` for scripted multi-step QA flows.
+  Do not invoke more than one for the same task.
 
 ## Guiding principle — continuous improvement
 
