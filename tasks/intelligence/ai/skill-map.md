@@ -1,7 +1,7 @@
 ---
 title: Skill Map
-version: "1.0"
-lastUpdated: "2026-06-29"
+version: "1.1"
+lastUpdated: "2026-07-02"
 ---
 
 # Skill Map
@@ -30,6 +30,7 @@ Task → required Claude/Cursor skill → MCP tool → verification method.
 | create-migration | `.claude/skills/create-migration/SKILL.md` | New SQL migration |
 | linear | `.claude/skills/linear/SKILL.md` | Issue updates |
 | **design-md** | `.claude/skills/design-md/SKILL.md` | Read `design.md` first — all DESIGN-* UI |
+| **design-to-production** | `.claude/skills/design-to-production/SKILL.md` | DC `.dc.html` → React parity (execute + verify) |
 | **task-verifier** | `.claude/skills/task-verifier/SKILL.md` | Done gate — disk probes |
 | **mermaid-diagrams** | `.claude/skills/mermaid-diagrams/SKILL.md` | Linear flow diagrams |
 | **ipix-wireframe** | `.claude/skills/ipix-wireframe/SKILL.md` | Lo-fi wireframes before UI code |
@@ -88,6 +89,24 @@ Task → required Claude/Cursor skill → MCP tool → verification method.
 | DESIGN-083 CI gate | ipix-task-lifecycle | — | GitHub Actions green |
 | DESIGN-086 a11y | accessibility | browser | axe + 44px manual |
 | migration-reviewer | (subagent) | Supabase MCP | Before supabase:push |
+
+---
+
+## DV2-M3 Workspace Parity (HTML audit 2026-07-02)
+
+From [`tasks/design-docs/audit/04-HTML-LINEARAUDIT.MD`](../../design-docs/audit/04-HTML-LINEARAUDIT.MD). Load **`ipix-task-lifecycle`** + **`task-verifier`** on every row.
+
+| Task | Skills | Wireframe / Mermaid | MCP / tools | Verification |
+|------|--------|---------------------|-------------|--------------|
+| IPI-257 Cloudinary 074a–f | cloudinary, ipix-supabase, gemini, mermaid-diagrams, task-verifier | upload sequence · data flow | Supabase MCP, Cloudinary MCP | supabase:verify-rls · verify-edge · secret grep |
+| IPI-268 Campaigns schema | ipix-supabase, mermaid-diagrams, migration-reviewer, task-verifier | ER diagram | Supabase MCP | supabase:push · verify-rls · supabase:types |
+| IPI-336 Onboarding 13-screen | design-md, **design-to-production**, frontend-design, ipix-wireframe, copilotkit, mermaid-diagrams, task-verifier | Zeely funnel flowchart | browser | lint · test · build · onboarding screenshots |
+| IPI-337 Shoot Detail 6 tabs | design-md, **design-to-production**, fashion-production, feature-dev, frontend-design, task-verifier | 9-tab nav | Supabase | lint · test · Playwright per tab |
+| IPI-274 Shoot Wizard | design-md, **design-to-production**, frontend-design, mastra, copilotkit, fashion-production, ipix-wireframe, mermaid-diagrams, task-verifier | 6-step + HITL sequence | Mastra MCP | lint · test · wizard E2E |
+| IPI-273 Shoots List | design-md, **design-to-production**, frontend-design, copilotkit, mastra, ipix-wireframe, mermaid-diagrams, task-verifier | list states diagram | browser | lint · test · hex guard · 5 states |
+| IPI-248 Asset Library | design-md, **design-to-production**, frontend-design, cloudinary, copilotkit, ipix-wireframe, mermaid-diagrams, task-verifier | masonry + selection states | Supabase MCP | GET /api/assets · lint · test · E2E |
+
+**Note:** Per-screen **design** Playwright coverage is **IPI-258**; root `e2e/*.spec.ts` has API/smoke specs only.
 
 ---
 
