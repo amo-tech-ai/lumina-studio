@@ -1,0 +1,23 @@
+e2e/helpers/console-noise.ts
+  s_34eb7d3f1209d9::t_aa97e00266dee1 1-19
+e2e/brand-detail-console-clean.spec.ts
+  s_34eb7d3f1209d9::t_d26e9ab63f3f3a 3
+e2e/suspense-console-forensics.spec.ts
+  s_34eb7d3f1209d9::t_cdce396a3a48b2 4
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.9",
+  "base_commit_sha": "e153ebf3a39a43d7f844cc45d41954cc32c2617c",
+  "prompts": {},
+  "sessions": {
+    "s_34eb7d3f1209d9": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "5f2bb499-4181-4424-be0c-f98a1fef1295",
+        "model": "composer-2.5"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
