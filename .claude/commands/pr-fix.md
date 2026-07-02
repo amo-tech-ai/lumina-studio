@@ -78,7 +78,7 @@ gh api graphql -f query='
 query { repository(owner:"'$OWNER'", name:"'$NAME'") {
   pullRequest(number:<N>) {
     reviewThreads(first:100) {
-      nodes { isResolved path line }
+      nodes { id isResolved path line }
     }
   }
 }}' --jq '[.data.repository.pullRequest.reviewThreads.nodes[] | select(.isResolved==false)] | length'

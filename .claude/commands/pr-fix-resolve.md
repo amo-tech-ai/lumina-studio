@@ -48,17 +48,17 @@ allowed-tools: ["Bash"]
    - If fixed → reply via GraphQL, then resolve:
 
    ```bash
-   # Reply:
-   REPO="$(gh repo view --json nameWithOwner --jq '.nameWithOwner')"
+   # Reply — pullRequestReviewThreadId takes the thread's own node ID (PRRT_...),
+   # NOT the PR's node ID. No repo/PR lookup needed for either mutation below.
    gh api graphql -f query='
    mutation {
      addPullRequestReviewThreadReply(input: {
-       pullRequestId: "'$PULL_REQUEST_ID'"
+       pullRequestReviewThreadId: "'$THREAD_ID'"
        body: "Fixed in <SHA>. Verified: <commands>."
      }) { comment { id } }
    }'
 
-   # Then resolve:
+   # Then resolve — resolveReviewThread takes threadId (same PRRT_... value), not pullRequestReviewThreadId:
    gh api graphql -f query='
    mutation {
      resolveReviewThread(input: {

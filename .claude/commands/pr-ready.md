@@ -65,8 +65,11 @@ gh pr view <N> --json statusCheckRollup,mergeable
 Unresolved inline threads:
 
 ```bash
+REPO="$(gh repo view --json nameWithOwner --jq '.nameWithOwner' 2>/dev/null || echo 'amo-tech-ai/lumina-studio')"
+OWNER="${REPO%%/*}"
+NAME="${REPO#*/}"
 gh api graphql -f query='
-query { repository(owner:"amo-tech-ai", name:"lumina-studio") {
+query { repository(owner:"'$OWNER'", name:"'$NAME'") {
   pullRequest(number:<N>) {
     reviewThreads(first:100) {
       nodes { id isResolved path line
