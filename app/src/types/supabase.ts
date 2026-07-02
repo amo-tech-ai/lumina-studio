@@ -1310,39 +1310,78 @@ export type Database = {
       }
       cloudinary_assets: {
         Row: {
+          approval: string
           asset_id: string
+          brand_id: string | null
+          bytes: number | null
           created_at: string
+          created_by: string | null
+          delivery_type: string
+          dna_score: number | null
+          dna_status: string | null
+          duration: number | null
           folder: string | null
+          format: string | null
           height: number | null
           id: string
+          metadata: Json
+          moderation_status: string
           public_id: string
           resource_type: string
           secure_url: string
+          status: string
           updated_at: string
+          version: number | null
           width: number | null
         }
         Insert: {
+          approval?: string
           asset_id: string
+          brand_id?: string | null
+          bytes?: number | null
           created_at?: string
+          created_by?: string | null
+          delivery_type?: string
+          dna_score?: number | null
+          dna_status?: string | null
+          duration?: number | null
           folder?: string | null
+          format?: string | null
           height?: number | null
           id?: string
+          metadata?: Json
+          moderation_status?: string
           public_id: string
           resource_type: string
           secure_url: string
+          status?: string
           updated_at?: string
+          version?: number | null
           width?: number | null
         }
         Update: {
+          approval?: string
           asset_id?: string
+          brand_id?: string | null
+          bytes?: number | null
           created_at?: string
+          created_by?: string | null
+          delivery_type?: string
+          dna_score?: number | null
+          dna_status?: string | null
+          duration?: number | null
           folder?: string | null
+          format?: string | null
           height?: number | null
           id?: string
+          metadata?: Json
+          moderation_status?: string
           public_id?: string
           resource_type?: string
           secure_url?: string
+          status?: string
           updated_at?: string
+          version?: number | null
           width?: number | null
         }
         Relationships: [
@@ -1351,6 +1390,13 @@ export type Database = {
             columns: ["asset_id"]
             isOneToOne: true
             referencedRelation: "assets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cloudinary_assets_brand_id_fkey"
+            columns: ["brand_id"]
+            isOneToOne: false
+            referencedRelation: "brands"
             referencedColumns: ["id"]
           },
         ]
@@ -4425,6 +4471,57 @@ export type Database = {
           },
         ]
       }
+      notifications: {
+        Row: {
+          agency_org_id: string | null
+          brand_org_id: string | null
+          channel: string
+          created_at: string
+          id: string
+          kind: string
+          payload: Json
+          read: boolean
+          talent_profile_id: string | null
+        }
+        Insert: {
+          agency_org_id?: string | null
+          brand_org_id?: string | null
+          channel?: string
+          created_at?: string
+          id?: string
+          kind: string
+          payload?: Json
+          read?: boolean
+          talent_profile_id?: string | null
+        }
+        Update: {
+          agency_org_id?: string | null
+          brand_org_id?: string | null
+          channel?: string
+          created_at?: string
+          id?: string
+          kind?: string
+          payload?: Json
+          read?: boolean
+          talent_profile_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notifications_agency_org_id_fkey"
+            columns: ["agency_org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notifications_brand_org_id_fkey"
+            columns: ["brand_org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       org_members: {
         Row: {
           joined_at: string
@@ -5674,10 +5771,13 @@ export type Database = {
         }
         Returns: Json
       }
+      confirm_booking: { Args: { p_booking_id: string }; Returns: Json }
+      expire_stale_bookings: { Args: never; Returns: number }
       get_event_registration_count: {
         Args: { p_event_id: string }
         Returns: number
       }
+      get_shoot_detail: { Args: { p_shoot_id: string }; Returns: Json }
       get_user_shoots: {
         Args: {
           status_filter?: Database["public"]["Enums"]["shoot_status_v2"]
