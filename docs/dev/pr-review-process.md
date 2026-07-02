@@ -64,6 +64,8 @@ Triggers whenever a PR touches migrations, RPCs, RLS policies, auth, or anything
 - `SECURITY DEFINER` functions set an explicit `search_path`.
 - Grants are scoped (`revoke ... from public, anon` then a narrow `grant ... to
   authenticated`), not left at the default broad grant.
+- Migrations avoid heavy locks — new indexes use `CREATE INDEX CONCURRENTLY`, and column
+  additions or backfills on large tables don't hold an exclusive lock for the write duration.
 - `infisical run -- npm run supabase:verify-rls` actually passes — not assumed.
 
 **The rule that matters most here:** never call an `auth.uid()`-dependent RPC using a
@@ -80,8 +82,8 @@ of this repo's CI jobs applies exactly one specific migration in isolation, not 
 set. A genuinely broken migration (a SQL syntax error) shipped past that check undetected
 and was only caught by an independent code review. If a migration hasn't been proven against
 a real database, verify it directly (a rollback-safe `BEGIN; ...; ROLLBACK;` transaction, or
-an actual `supabase db push`) rather than inferring correctness from an unrelated CI job
-passing.
+an actual `supabase db push` against a local or preview instance — never production) rather
+than inferring correctness from an unrelated CI job passing.
 
 ## Review-thread workflow
 
@@ -93,7 +95,7 @@ Every unresolved thread gets bucketed before any code changes — never resolve 
 | Already fixed | Looks handled | Confirm against the current code at that exact line before claiming this |
 | Out of scope | Real, but not this PR's job | Reply, note a follow-up, do not resolve |
 | Dismiss (false positive) | Bot/reviewer got it wrong | Reply with concrete evidence (a file/line, a passing check) before resolving |
-| Waiver | Valid, high severity, but safe to defer | Document the reason in the PR body, then resolve |
+| Waiver | Valid, but safe to defer (high-severity waivers need explicit lead/stakeholder sign-off — they don't self-waive) | Document the reason — and stakeholder approval if high-severity — in the PR body, then resolve |
 
 Rules that apply regardless of bucket: read the full comment body, not just the summary line.
 Never claim "already fixed" from memory — read the current code. Every thread gets inventoried,
