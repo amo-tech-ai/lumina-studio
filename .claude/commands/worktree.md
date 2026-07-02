@@ -50,6 +50,7 @@ Parse `$ARGUMENTS` — default subcommand: **audit**.
 | Env | copy via `.worktreeinclude` |
 
 **Never:**
+
 - Create worktree on `main` branch checkout for feature work
 - `rm -rf` a worktree directory — use `git worktree remove`
 - `git worktree remove --force` without stash/backup
@@ -68,6 +69,7 @@ node scripts/worktree-audit.mjs --json
 ```
 
 Report includes:
+
 - 🟢 active · 🟡 waiting/idle · ⚪ merged · 🔴 stale
 - PR linkage (via `gh`)
 - Disk size per worktree
@@ -85,6 +87,7 @@ cd ../wt-ipi-286-route-aware-sections
 ```
 
 Then:
+
 1. Implement task
 2. `/pr-process new` → verify → commit
 3. `/pr-process open`
