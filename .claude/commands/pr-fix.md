@@ -1,3 +1,11 @@
+---
+description: "Triage and fix PR review comments — inline threads, bot summaries, CI failures"
+argument-hint: "PR number or URL"
+allowed-tools: ["Bash", "Edit", "Write", "Read", "Grep", "Glob", "Task"]
+---
+
+# /pr-fix — PR review fix orchestrator
+
 Act as a senior GitHub PR reviewer and fixer for the iPix / Lumina Studio codebase.
 
 ## Arguments
@@ -63,8 +71,11 @@ latest HEAD SHA (fix verified on headRefOid)
 Count unresolved threads:
 
 ```bash
+REPO="$(gh repo view --json nameWithOwner --jq '.nameWithOwner' 2>/dev/null || echo 'amo-tech-ai/lumina-studio')"
+OWNER="${REPO%%/*}"
+NAME="${REPO#*/}"
 gh api graphql -f query='
-query { repository(owner:"amo-tech-ai", name:"lumina-studio") {
+query { repository(owner:"'$OWNER'", name:"'$NAME'") {
   pullRequest(number:<N>) {
     reviewThreads(first:100) {
       nodes { isResolved path line }
@@ -322,6 +333,6 @@ Output the report template from `.cursor/rules/pr-fix.mdc`.
 
 ## Project context
 
-- Repo: `amo-tech-ai/lumina-studio`
+- Repo: resolved dynamically via `gh repo view --json nameWithOwner`
 - Stack: Next.js (`app/`), Mastra, Supabase, CopilotKit v2
 - Test baseline: compare `npm test` vs main — new failures = blocker

@@ -27,17 +27,17 @@ allowed-tools: ["Bash"]
    git fetch --prune
    ```
 
-2. **List `[gone]` branches:**
+2. **List `[gone]` branches, excluding protected:**
 
    ```bash
-   git branch -vv | grep ': gone]'
+   git branch -vv | grep ': gone]' | grep -vE '^\*|main|master'
    ```
 
 3. **For each gone branch:**
    - If associated worktree exists (`git worktree list`) → `git worktree remove <path>` first
    - Delete branch: `git branch -D <branch>`
 
-4. **Never delete** current branch or `main`.
+4. **Never delete** current branch or `main`/`master`.
 
 5. **Report:** branches removed, worktrees removed, or "nothing to clean".
 

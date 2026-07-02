@@ -45,8 +45,27 @@ allowed-tools: ["Bash"]
    - Read full comment body
    - Verify fix exists at current `headRefOid` (read file at path/line; MCP if DB claim)
    - If **not fixed** → skip; report as "needs /pr-fix"
-   - If fixed → `addPullRequestReviewThreadReply` citing `<sha>` + verify command
-   - → `resolveReviewThread`
+   - If fixed → reply via GraphQL, then resolve:
+
+   ```bash
+   # Reply:
+   REPO="$(gh repo view --json nameWithOwner --jq '.nameWithOwner')"
+   gh api graphql -f query='
+   mutation {
+     addPullRequestReviewThreadReply(input: {
+       pullRequestId: "'$PULL_REQUEST_ID'"
+       body: "Fixed in <SHA>. Verified: <commands>."
+     }) { comment { id } }
+   }'
+
+   # Then resolve:
+   gh api graphql -f query='
+   mutation {
+     resolveReviewThread(input: {
+       threadId: "'$THREAD_ID'"
+     }) { thread { isResolved } }
+   }'
+   ```
 
 5. **Re-count unresolved** — must be `0`:
 
