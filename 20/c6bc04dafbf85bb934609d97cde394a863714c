@@ -1,0 +1,36 @@
+tasks/todo.md
+  s_34eb7d3f1209d9::t_dce6f603633393 6
+tasks/plan/todo.md
+  s_34eb7d3f1209d9::t_381daa3281d8da 104
+  s_34eb7d3f1209d9::t_584908c876c735 157
+  s_34eb7d3f1209d9::t_c0189357785d88 195-196
+  s_34eb7d3f1209d9::t_2dc49c1fa29462 29,31,33-57
+  s_34eb7d3f1209d9::t_05a951cc271dda 242-264
+  s_34eb7d3f1209d9::t_172ed03e61ad87 65
+  s_34eb7d3f1209d9::t_fa6f796066bee7 3
+tasks/design-docs/implementation/todo.md
+  s_34eb7d3f1209d9::t_43afcfc8ab89e9 3-28
+tasks/changelog.md
+  s_34eb7d3f1209d9::t_055564e4520fa5 11
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.9",
+  "base_commit_sha": "20c6bc04dafbf85bb934609d97cde394a863714c",
+  "prompts": {},
+  "humans": {
+    "h_d382fbec1d5b46": {
+      "author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  },
+  "sessions": {
+    "s_34eb7d3f1209d9": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "5f2bb499-4181-4424-be0c-f98a1fef1295",
+        "model": "composer-2.5"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
