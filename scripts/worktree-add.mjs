@@ -59,8 +59,12 @@ if (path.resolve(gitDir) !== path.resolve(gitCommon)) {
 
 console.log(`Creating worktree:\n  path:   ${wtPath}\n  branch: ${branch}\n  base:   origin/main\n`);
 
-run("git fetch origin main");
-run(`git worktree add "${wtPath}" -b "${branch}" origin/main`);
+let defaultBranch = "main";
+try {
+  defaultBranch = runOut("git symbolic-ref refs/remotes/origin/HEAD --short").replace("origin/", "");
+} catch {}
+run(`git fetch origin ${defaultBranch}`);
+run(`git worktree add "${wtPath}" -b "${branch}" origin/${defaultBranch}`);
 
 // Copy .worktreeinclude patterns
 const includePath = path.join(REPO_ROOT, ".worktreeinclude");
@@ -75,8 +79,13 @@ if (fs.existsSync(includePath)) {
     const src = path.join(REPO_ROOT, pattern);
     const dest = path.join(wtPath, pattern);
     if (!fs.existsSync(src)) continue;
-    fs.mkdirSync(path.dirname(dest), { recursive: true });
-    fs.copyFileSync(src, dest);
+    const stat = fs.statSync(src);
+    if (stat.isDirectory()) {
+      fs.cpSync(src, dest, { recursive: true });
+    } else {
+      fs.mkdirSync(path.dirname(dest), { recursive: true });
+      fs.copyFileSync(src, dest);
+    }
     console.log(`  copied ${pattern}`);
   }
 }

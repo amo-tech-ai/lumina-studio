@@ -73,12 +73,9 @@ function branchTracking(branch) {
   return { gone: /\[gone\]/.test(vv) };
 }
 
-function prForBranch(branch) {
+function prForBranch(branch, prLookup) {
   if (!branch) return null;
-  const prs = runJson(
-    `gh pr list --repo amo-tech-ai/lumina-studio --head "${branch}" --state all --json number,state,url,isDraft`,
-  );
-  return prs?.[0] ?? null;
+  return prLookup?.get(branch) ?? null;
 }
 
 function lastCommitAge(wtPath) {
@@ -93,10 +90,8 @@ function dirtyCount(wtPath) {
   return status ? status.split("\n").filter(Boolean).length : 0;
 }
 
-function classify(entry, pr, tracking, age, isMain) {
+function classify(entry, pr, tracking, age, isMain, dirty) {
   if (isMain) return { status: "main", emoji: "🏠", safeToDelete: false, score: 100 };
-
-  const dirty = dirtyCount(entry.path);
 
   if (pr?.state === "MERGED" || (tracking.gone && dirty === 0)) {
     return { status: "merged", emoji: "⚪", safeToDelete: true, score: 90 };
@@ -117,6 +112,68 @@ function classify(entry, pr, tracking, age, isMain) {
     return { status: "idle", emoji: "🟡", safeToDelete: false, score: 55 };
   }
   return { status: "active", emoji: "🟢", safeToDelete: false, score: dirty ? 80 : 75 };
+}
+
+function buildReport() {
+  run("git fetch -p 2>/dev/null", { allowFail: true });
+  const repoName = run("gh repo view --json nameWithOwner --jq .nameWithOwner 2>/dev/null", { allowFail: true }) || "amo-tech-ai/lumina-studio";
+  const allPrs = runJson(`gh pr list --repo "${repoName}" --limit 100 --state all --json number,state,url,isDraft,headRefName`) || [];
+  const prLookup = new Map(allPrs.filter(Boolean).map((p) => [p.headRefName, p]));
+  const entries = parseWorktreeList();
+  const mainPath = path.resolve(REPO_ROOT);
+
+  const rows = entries.map((entry) => {
+    const isMain = path.resolve(entry.path) === mainPath;
+    const branch = entry.branch;
+    const tracking = branchTracking(branch);
+    const pr = prForBranch(branch, prLookup);
+    const age = lastCommitAge(entry.path);
+    const dirty = dirtyCount(entry.path);
+    const cls = classify(entry, pr, tracking, age, isMain, dirty);
+    const notes = [
+      tracking.gone ? "remote gone" : "",
+      dirty ? `${dirty} uncommitted` : "",
+    ]
+      .filter(Boolean)
+      .join("; ");
+
+    return {
+      path: entry.path,
+      branch: branch || "(detached)",
+      head: entry.head?.slice(0, 7) || "",
+      linear: linearFromBranch(branch),
+      pr: pr ? `#${pr.number} ${pr.state}${pr.isDraft ? " draft" : ""}` : "—",
+      prUrl: pr?.url || "",
+      status: cls.status,
+      emoji: cls.emoji,
+      safeToDelete: cls.safeToDelete,
+      score: cls.score,
+      size: dirSizeHuman(entry.path),
+      dirty,
+      lastActivity: age ? `${age.days}d ago` : "—",
+      notes,
+    };
+  });
+
+  const orphans = findOrphanDirs(entries.map((e) => e.path));
+  const deletable = rows.filter((r) => r.safeToDelete && r.emoji !== "🏠");
+  const healthScore = Math.max(
+    0,
+    Math.min(
+      100,
+      Math.round(rows.reduce((s, r) => s + r.score, 0) / Math.max(rows.length, 1)) -
+        orphans.length * 5,
+    ),
+  );
+
+  return {
+    generatedAt: new Date().toISOString(),
+    repoRoot: REPO_ROOT,
+    healthScore,
+    rows,
+    orphans,
+    deletable,
+  };
 }
 
 function findOrphanDirs(registeredPaths) {
@@ -162,65 +219,6 @@ function shortPath(full) {
   if (full.startsWith(PARENT)) return ".." + full.slice(PARENT.length);
   if (full.startsWith(REPO_ROOT)) return "." + full.slice(REPO_ROOT.length);
   return full;
-}
-
-function buildReport() {
-  run("git fetch -p 2>/dev/null", { allowFail: true });
-  const entries = parseWorktreeList();
-  const mainPath = path.resolve(REPO_ROOT);
-
-  const rows = entries.map((entry) => {
-    const isMain = path.resolve(entry.path) === mainPath;
-    const branch = entry.branch;
-    const tracking = branchTracking(branch);
-    const pr = prForBranch(branch);
-    const age = lastCommitAge(entry.path);
-    const dirty = dirtyCount(entry.path);
-    const cls = classify(entry, pr, tracking, age, isMain);
-    const notes = [
-      tracking.gone ? "remote gone" : "",
-      dirty ? `${dirty} uncommitted` : "",
-    ]
-      .filter(Boolean)
-      .join("; ");
-
-    return {
-      path: entry.path,
-      branch: branch || "(detached)",
-      head: entry.head?.slice(0, 7) || "",
-      linear: linearFromBranch(branch),
-      pr: pr ? `#${pr.number} ${pr.state}${pr.isDraft ? " draft" : ""}` : "—",
-      prUrl: pr?.url || "",
-      status: cls.status,
-      emoji: cls.emoji,
-      safeToDelete: cls.safeToDelete,
-      score: cls.score,
-      size: dirSizeHuman(entry.path),
-      dirty,
-      lastActivity: age ? `${age.days}d ago` : "—",
-      notes,
-    };
-  });
-
-  const orphans = findOrphanDirs(entries.map((e) => e.path));
-  const deletable = rows.filter((r) => r.safeToDelete && r.emoji !== "🏠");
-  const healthScore = Math.max(
-    0,
-    Math.min(
-      100,
-      Math.round(rows.reduce((s, r) => s + r.score, 0) / Math.max(rows.length, 1)) -
-        orphans.length * 5,
-    ),
-  );
-
-  return {
-    generatedAt: new Date().toISOString(),
-    repoRoot: REPO_ROOT,
-    healthScore,
-    rows,
-    orphans,
-    deletable,
-  };
 }
 
 function toMarkdown(report) {
