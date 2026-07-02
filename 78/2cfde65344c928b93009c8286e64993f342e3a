@@ -1,0 +1,40 @@
+app/README.md
+  s_34eb7d3f1209d9::t_d9e7bfba88e0ff 25,30
+app/scripts/copilotkit-dev-env.mjs
+  s_34eb7d3f1209d9::t_b5b41c00c1d180 114-117
+  s_34eb7d3f1209d9::t_bbb5a55fe31584 29-38
+app/scripts/copilotkit-dev-infra.mjs
+  s_34eb7d3f1209d9::t_0720cd674f6e6d 44-45,47
+app/scripts/copilotkit-dev-env.test.mjs
+  s_34eb7d3f1209d9::t_a28c26f6f12eec 63,68-102
+  s_c07e656bb1b48e::t_97db3ee883146b 1-4,9-11
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.9",
+  "base_commit_sha": "782cfde65344c928b93009c8286e64993f342e3a",
+  "prompts": {},
+  "humans": {
+    "h_d382fbec1d5b46": {
+      "author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  },
+  "sessions": {
+    "s_34eb7d3f1209d9": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "5f2bb499-4181-4424-be0c-f98a1fef1295",
+        "model": "composer-2.5"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    },
+    "s_c07e656bb1b48e": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b8a1a548-66d1-4c73-b468-84dd619829ae",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
