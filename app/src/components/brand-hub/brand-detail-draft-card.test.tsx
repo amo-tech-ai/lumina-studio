@@ -64,4 +64,20 @@ describe("BrandDetailDraftCard", () => {
     });
     expect(screen.queryByText(/Approved — profile updated/i)).toBeNull();
   });
+
+  it("shows friendly copy when draft was already processed", async () => {
+    vi.mocked(approveWorkflowDraft).mockResolvedValue({
+      ok: false,
+      error: "already_processed",
+    });
+
+    render(<BrandDetailDraftCard brandId="brand-1" runId="run-1" draft={draft} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Approve" }));
+
+    await waitFor(() => {
+      expect(screen.getByText(/This draft has already been processed/i)).toBeTruthy();
+    });
+    expect(screen.queryByText(/already_processed/i)).toBeNull();
+  });
 });

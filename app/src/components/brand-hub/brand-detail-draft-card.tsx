@@ -27,6 +27,7 @@ export function BrandDetailDraftCard({ brandId, runId, draft }: Props) {
   const [state, setState] = useState<"idle" | "approving" | "rejecting">("idle");
   const [error, setError] = useState<string | null>(null);
   const [outcome, setOutcome] = useState<"approved" | "discarded" | null>(null);
+  const [alreadyProcessed, setAlreadyProcessed] = useState(false);
 
   const beforeSrc = brandListCoverForBrand(`${brandId}-before`);
   const afterSrc = heroFallbackForBrand(`${brandId}-after`);
@@ -39,7 +40,11 @@ export function BrandDetailDraftCard({ brandId, runId, draft }: Props) {
         ? approveWorkflowDraft(brandId, runId)
         : rejectWorkflowDraft(brandId, runId));
       if (!result.ok) {
-        setError(result.error ?? "Action failed");
+        if (result.error === "already_processed") {
+          setAlreadyProcessed(true);
+        } else {
+          setError(result.error ?? "Action failed");
+        }
         setState("idle");
         return;
       }
@@ -50,6 +55,16 @@ export function BrandDetailDraftCard({ brandId, runId, draft }: Props) {
       setState("idle");
     }
   };
+
+  if (alreadyProcessed) {
+    return (
+      <div className={styles.hitl} role="status">
+        <p className={styles.hitlCopy} style={{ color: "var(--color-text-muted)", margin: 0 }}>
+          This draft has already been processed.
+        </p>
+      </div>
+    );
+  }
 
   if (outcome === "approved") {
     return (
