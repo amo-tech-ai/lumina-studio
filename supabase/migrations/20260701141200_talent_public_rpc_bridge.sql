@@ -80,6 +80,14 @@ begin
     end if;
   end if;
 
+  -- daterange() raises a raw, unfriendly 'range lower bound must be less
+  -- than or equal to range upper bound' error if start > end. Catch it here
+  -- with a clear message rather than let the client's error UI show
+  -- Postgres internals for a normal date-picker mistake.
+  if p_date_start is not null and p_date_end is not null and p_date_start > p_date_end then
+    raise exception 'invalid date range: start date must be on or before end date';
+  end if;
+
   return query
   select to_jsonb(t) || jsonb_build_object(
     'rate_tier', talent.compute_rate_tier(t.id),

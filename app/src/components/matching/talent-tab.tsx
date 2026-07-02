@@ -41,6 +41,10 @@ export function TalentTab() {
   // matching the latest request is applied, so a slow older request can't
   // overwrite a newer filter's results.
   const searchRequestId = useRef(0);
+  // Same guard for shortlist refreshes — rapid toggles fire refreshShortlist
+  // repeatedly, and without this an older in-flight response can overwrite
+  // the shortlist with stale state.
+  const shortlistRequestId = useRef(0);
 
   useEffect(() => {
     fetch("/api/org/current")
@@ -81,6 +85,7 @@ export function TalentTab() {
   // toggles) so a page refresh doesn't make the shortlist appear empty.
   const refreshShortlist = useCallback(
     async (currentShortlistId: string) => {
+      const requestId = ++shortlistRequestId.current;
       const { data, error: rpcError } = await supabase.rpc("search_talent", {
         p_shoot_type: null,
         p_budget_tier: null,
@@ -89,6 +94,7 @@ export function TalentTab() {
         p_representation: null,
         p_only_shortlist_id: currentShortlistId,
       });
+      if (requestId !== shortlistRequestId.current) return; // a newer refresh has since started
       if (rpcError) {
         console.error("[matching] shortlist refresh failed:", rpcError.message);
         return;
@@ -323,7 +329,7 @@ export function TalentTab() {
                   match={match}
                   selected={t.id === selectedId}
                   shortlisted={shortlistedIds.has(t.id)}
-                  pending={pendingToggleIds.has(t.id)}
+                  pending={pendingToggleIds.has(t.id) || !orgId}
                   onSelect={() => setSelectedId(t.id)}
                   onPass={() => setPassedIds((prev) => new Set(prev).add(t.id))}
                   onShortlist={() => toggleShortlist(t.id)}
@@ -346,7 +352,7 @@ export function TalentTab() {
                   match={match}
                   selected={t.id === selectedId}
                   shortlisted={shortlistedIds.has(t.id)}
-                  pending={pendingToggleIds.has(t.id)}
+                  pending={pendingToggleIds.has(t.id) || !orgId}
                   onSelect={() => setSelectedId(t.id)}
                   onShortlist={() => toggleShortlist(t.id)}
                 />
