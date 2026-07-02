@@ -21,6 +21,12 @@ allowed-tools: ["Bash"]
 
 ## Workflow
 
+0. **Audit first** — get the full worktree health picture before touching anything:
+
+   ```bash
+   npm run worktree:audit
+   ```
+
 1. **Update remote tracking:**
 
    ```bash
