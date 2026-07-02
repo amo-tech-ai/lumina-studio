@@ -10,10 +10,12 @@ app/src/app/(operator)/app/matching/page.tsx
   s_924d5421a89c0c::t_b2f6df5b948f4a 1-6,10-18
 app/src/components/intelligence-panel/intelligence-panel.tsx
   s_924d5421a89c0c::t_78a906ff09c974 6,26,62-64,83
+  s_c07e656bb1b48e::t_88e32cf7f14ccc 65-72,74-82
 app/src/components/matching/shortlist-drawer.tsx
   s_924d5421a89c0c::t_c146060394762f 1-52
 app/src/components/operator-panel/operator-panel.tsx
   s_924d5421a89c0c::t_afa3d71fff3eed 24,43-45,51-53
+  s_c07e656bb1b48e::t_f23aa6327e8d33 46-50
 app/src/context/intelligence-detail-context.tsx
   s_924d5421a89c0c::t_8c0d58fccedcb0 1-46
 app/src/lib/intelligence/use-route-suggestions.test.ts
@@ -73,6 +75,14 @@ supabase/migrations/20260701141200_talent_public_rpc_bridge.sql
         "tool": "claude",
         "id": "06313eef-b30e-4fc5-8c4e-8ee444168116",
         "model": "unknown"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    },
+    "s_c07e656bb1b48e": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b8a1a548-66d1-4c73-b468-84dd619829ae",
+        "model": "claude-sonnet-5"
       },
       "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
     }
