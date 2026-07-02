@@ -2,18 +2,26 @@
 // READ/write via public.search_talent / get_or_create_shortlist / toggle_shortlist_item
 // RPCs (IPI-308 migration) — talent.* tables aren't exposed via PostgREST directly
 // (same isolation as shoot schema), so every access goes through these RPCs.
+//
+// search_talent/get_or_create_shortlist/toggle_shortlist_item all require
+// auth.uid() (directly, or via is_org_member()) — a service-role client has
+// no user JWT and would fail every call. Use the operator's real token via
+// requestToken (AsyncLocalStorage, populated per-request in the CopilotKit
+// route — see brand-intelligence-tools.ts for the same pattern) + a
+// user-scoped Supabase client, so auth.uid() resolves inside the RPCs
+// without the LLM ever seeing or supplying the token.
 
 import { createTool } from "@mastra/core/tools";
-import { createClient } from "@supabase/supabase-js";
 import { z } from "zod";
 import { TalentResultSchema } from "@/lib/talent/types";
 import { computeMatchScore } from "@/lib/talent/match-score";
+import { createUserScopedClient } from "@/lib/shoot/commit-shoot-draft";
+import { requestToken } from "@/lib/request-token";
 
-function getAdminClient() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!url || !key) throw new Error("Supabase env vars missing");
-  return createClient(url, key, { auth: { persistSession: false } });
+function getUserScopedClient() {
+  const accessToken = requestToken.getStore();
+  if (!accessToken) throw new Error("Access token not available in request context");
+  return createUserScopedClient(accessToken);
 }
 
 export const searchTalentByFilters = createTool({
@@ -31,7 +39,7 @@ export const searchTalentByFilters = createTool({
   }),
   outputSchema: z.object({ results: z.array(TalentResultSchema) }),
   execute: async ({ shootType, budgetTier, dateStart, dateEnd, representation, onlyShortlistId }) => {
-    const supabase = getAdminClient();
+    const supabase = getUserScopedClient();
     const { data, error } = await supabase.rpc("search_talent", {
       p_shoot_type: shootType ?? null,
       p_budget_tier: budgetTier ?? null,
@@ -76,7 +84,7 @@ export const manageShortlist = createTool({
   }),
   outputSchema: z.object({ shortlistId: z.string(), added: z.boolean() }),
   execute: async ({ orgId, talentProfileId, add }) => {
-    const supabase = getAdminClient();
+    const supabase = getUserScopedClient();
 
     const { data: shortlistId, error: shortlistErr } = await supabase.rpc(
       "get_or_create_shortlist",

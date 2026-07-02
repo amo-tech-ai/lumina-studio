@@ -68,6 +68,18 @@ begin
     raise exception 'authentication required';
   end if;
 
+  -- p_only_shortlist_id: mirror toggle_shortlist_item's ownership check —
+  -- re-derive the shortlist's real owner org and require membership, rather
+  -- than trusting that any authenticated caller may read any shortlist_id.
+  if p_only_shortlist_id is not null then
+    if not exists (
+      select 1 from talent.talent_shortlists s
+      where s.id = p_only_shortlist_id and public.is_org_member(s.owner_org_id)
+    ) then
+      raise exception 'not a member of this shortlist''s organization';
+    end if;
+  end if;
+
   return query
   select to_jsonb(t) || jsonb_build_object(
     'rate_tier', talent.compute_rate_tier(t.id),
@@ -88,6 +100,14 @@ begin
       or (p_representation = 'agency' and t.is_agency_represented)
     )
     and (p_budget_tier is null or talent.compute_rate_tier(t.id) = p_budget_tier)
+    and (
+      -- ai_tags.shoot_types is the same shape lib/talent/match-score.ts already
+      -- reads client-side (Array.isArray(...) && .includes(shootType)) — mirror
+      -- that contract here with jsonb containment instead of leaving the filter
+      -- as a declared-but-unused parameter.
+      p_shoot_type is null
+      or t.ai_tags -> 'shoot_types' @> to_jsonb(p_shoot_type::text)
+    )
     and (
       p_only_shortlist_id is null
       or exists (
