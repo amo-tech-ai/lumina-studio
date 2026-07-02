@@ -68,7 +68,7 @@ function dirSizeHuman(dir) {
 
 function branchTracking(branch) {
   if (!branch) return { gone: false };
-  run("git fetch -p 2>/dev/null", { allowFail: true });
+  // git fetch -p already runs once in buildReport() before this is called per-worktree.
   const vv = run(`git branch -vv --list "${branch}" 2>/dev/null`, { allowFail: true });
   return { gone: /\[gone\]/.test(vv) };
 }
@@ -93,7 +93,7 @@ function dirtyCount(wtPath) {
 function classify(entry, pr, tracking, age, isMain, dirty) {
   if (isMain) return { status: "main", emoji: "🏠", safeToDelete: false, score: 100 };
 
-  if (pr?.state === "MERGED" || (tracking.gone && dirty === 0)) {
+  if ((pr?.state === "MERGED" || tracking.gone) && dirty === 0) {
     return { status: "merged", emoji: "⚪", safeToDelete: true, score: 90 };
   }
   if (tracking.gone && dirty > 0) {
