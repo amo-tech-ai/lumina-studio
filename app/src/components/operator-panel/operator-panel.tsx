@@ -12,14 +12,15 @@ import {
   CopilotChatConfigurationProvider,
 } from "@copilotkit/react-core/v2";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { Suspense, useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useLayoutEffect, useMemo, useState } from "react";
 import { z } from "zod";
 
 import { useHideInternalToolCalls } from "@/components/copilot/copilot-tool-presentation";
 import { IntelligencePanel } from "@/components/intelligence-panel";
 import { ThreadsDrawer } from "@/components/threads-drawer";
 import { ThreadsPanelGate } from "@/components/threads-drawer/locked-state";
-import { ActiveBrandProvider, useActiveBrand } from "@/context/active-brand-context";
+import { useActiveBrand } from "@/context/active-brand-context";
+import { registerCommandCenterHeroBrandSync } from "@/lib/active-brand/command-center-hero-sync";
 import { DEV_PREVIEW_HERO_BRAND_ID, isDevPreviewBrandId, isDevSkipMode } from "./dev-skip-fixture";
 import { NavSidebar } from "./nav-sidebar";
 import { OperatorChatDock } from "./operator-chat-dock";
@@ -38,17 +39,15 @@ export function OperatorPanel({ children }: { children: React.ReactNode }) {
   const [threadId, setThreadId] = useState<string | undefined>(undefined);
   useEffect(() => { setThreadId(undefined); }, [agentId]);
   return (
-    <ActiveBrandProvider>
-      <CopilotChatConfigurationProvider agentId={agentId} threadId={threadId}>
-        <div data-agent-id={agentId} style={{ display: "contents" }}>
-          <Suspense fallback={<OperatorShellFallback agentId={agentId} />}>
-            <OperatorShell agentId={agentId} threadId={threadId} onThreadChange={setThreadId}>
-              {children}
-            </OperatorShell>
-          </Suspense>
-        </div>
-      </CopilotChatConfigurationProvider>
-    </ActiveBrandProvider>
+    <CopilotChatConfigurationProvider agentId={agentId} threadId={threadId}>
+      <div data-agent-id={agentId} style={{ display: "contents" }}>
+        <Suspense fallback={<OperatorShellFallback agentId={agentId} />}>
+          <OperatorShell agentId={agentId} threadId={threadId} onThreadChange={setThreadId}>
+            {children}
+          </OperatorShell>
+        </Suspense>
+      </div>
+    </CopilotChatConfigurationProvider>
   );
 }
 
@@ -83,6 +82,14 @@ function OperatorShell({
   const [threadsOpen, setThreadsOpen] = useState(false);
   const { activeBrandId, setActiveBrandId } = useActiveBrand();
   const { brands, brandsRef, brandsLoadingRef } = useOperatorBrands(devSkip);
+
+  useLayoutEffect(() => {
+    registerCommandCenterHeroBrandSync((heroBrandId) => {
+      if (!heroBrandId || activeBrandId === heroBrandId) return;
+      setActiveBrandId(heroBrandId);
+    });
+    return () => registerCommandCenterHeroBrandSync(null);
+  }, [activeBrandId, setActiveBrandId]);
 
   // Dev layout QA — align active brand with fixture; clear fixture IDs when leaving skip mode
   useEffect(() => {

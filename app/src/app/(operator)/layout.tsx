@@ -1,5 +1,6 @@
 import { CopilotKit } from "@copilotkit/react-core/v2";
 import { OperatorPanel } from "@/components/operator-panel/operator-panel";
+import { ActiveBrandProvider } from "@/context/active-brand-context";
 import "@copilotkit/react-core/v2/styles.css";
 
 // ponytail: prevent static prerendering — CopilotKit hooks in children
@@ -15,7 +16,9 @@ const OperatorLayout = ({
   return (
     // Force REST transport so runtime-info + threads both hit the multi-route endpoint.
     <CopilotKit runtimeUrl="/api/copilotkit" useSingleEndpoint={false}>
-      <OperatorPanel>{children}</OperatorPanel>
+      <ActiveBrandProvider>
+        <OperatorPanel>{children}</OperatorPanel>
+      </ActiveBrandProvider>
     </CopilotKit>
   );
 };
