@@ -185,6 +185,17 @@ function buildReport() {
   };
 }
 
+let gitCommonWorktreesDir = null;
+function getGitCommonWorktreesDir() {
+  // git rev-parse --git-common-dir returns the true shared .git dir whether REPO_ROOT
+  // is the main checkout (.git is a directory) or itself a worktree (.git is a file).
+  if (gitCommonWorktreesDir === null) {
+    const common = run("git rev-parse --git-common-dir", { allowFail: true }) || ".git";
+    gitCommonWorktreesDir = path.resolve(REPO_ROOT, common, "worktrees");
+  }
+  return gitCommonWorktreesDir;
+}
+
 function belongsToThisRepo(full) {
   const gitPath = path.join(full, ".git");
   try {
@@ -194,7 +205,7 @@ function belongsToThisRepo(full) {
     const m = content.match(/^gitdir:\s*(.+)$/m);
     if (!m) return false;
     const gitDir = path.resolve(full, m[1].trim());
-    return gitDir.startsWith(path.resolve(REPO_ROOT, ".git", "worktrees") + path.sep);
+    return gitDir.startsWith(getGitCommonWorktreesDir() + path.sep);
   } catch {
     return false;
   }
