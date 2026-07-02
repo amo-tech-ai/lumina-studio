@@ -1,0 +1,25 @@
+.claude/commands/pr-fix-resolve.md
+  s_ed6e0f17e0845f::t_5eac26db0d70e8 48-68
+.claude/commands/clean-gone.md
+  s_ed6e0f17e0845f::t_b10eb05fed75ad 30,33,40
+.claude/commands/pr-fix.md
+  s_ed6e0f17e0845f::t_dafe94be2dbd13 336
+  s_ed6e0f17e0845f::t_c8d26b6e8d0314 74-76,78
+  s_ed6e0f17e0845f::t_3fd64bd2d0c460 1-8
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.9",
+  "base_commit_sha": "e1f7c41d9d36f4d53644a640a733b30daee1807c",
+  "prompts": {},
+  "sessions": {
+    "s_ed6e0f17e0845f": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_0e1b40439ffermGw7FFZcItlPR",
+        "model": "deepseek-v4-flash"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
