@@ -5,11 +5,14 @@ import { render, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { CommandCenterBrandSync } from "@/components/command-center/command-center-brand-sync";
-import { registerCommandCenterHeroBrandSync } from "@/lib/active-brand/command-center-hero-sync";
+import {
+  __resetCommandCenterHeroBrandSyncForTests,
+  registerCommandCenterHeroBrandSync,
+} from "@/lib/active-brand/command-center-hero-sync";
 
 describe("CommandCenterBrandSync", () => {
   afterEach(() => {
-    registerCommandCenterHeroBrandSync(null);
+    __resetCommandCenterHeroBrandSyncForTests();
   });
 
   it("syncs hero brand id after mount without useActiveBrand", async () => {

@@ -12,7 +12,7 @@ import {
   CopilotChatConfigurationProvider,
 } from "@copilotkit/react-core/v2";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { Suspense, useEffect, useLayoutEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import { z } from "zod";
 
 import { useHideInternalToolCalls } from "@/components/copilot/copilot-tool-presentation";
@@ -83,13 +83,13 @@ function OperatorShell({
   const { activeBrandId, setActiveBrandId } = useActiveBrand();
   const { brands, brandsRef, brandsLoadingRef } = useOperatorBrands(devSkip);
 
-  useLayoutEffect(() => {
+  useEffect(() => {
     registerCommandCenterHeroBrandSync((heroBrandId) => {
-      if (!heroBrandId || activeBrandId === heroBrandId) return;
+      if (!heroBrandId) return;
       setActiveBrandId(heroBrandId);
     });
     return () => registerCommandCenterHeroBrandSync(null);
-  }, [activeBrandId, setActiveBrandId]);
+  }, [setActiveBrandId]);
 
   // Dev layout QA — align active brand with fixture; clear fixture IDs when leaving skip mode
   useEffect(() => {
