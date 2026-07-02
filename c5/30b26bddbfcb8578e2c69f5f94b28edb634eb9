@@ -1,0 +1,70 @@
+docs/linear/issues/IPI-268-campaigns-matching-schema.md
+  s_34eb7d3f1209d9::t_faa2fbf81a4bd9 9-12
+  s_34eb7d3f1209d9::t_38097c460d9b44 1-8,13-274
+tasks/design-docs/audit/04-HTML-LINEARAUDIT.MD
+  s_34eb7d3f1209d9::t_6354b60fd963b7 11,32,36,99,153,214,273,333,391,451,492,524-542,544,568,582,602,621
+  s_34eb7d3f1209d9::t_7a389490980562 594
+  s_34eb7d3f1209d9::t_6ba0a098bc51a6 416
+  s_34eb7d3f1209d9::t_5fe57fd71bfe1b 513
+  s_34eb7d3f1209d9::t_c7381cd6df5779 474-475
+  s_34eb7d3f1209d9::t_be38e5164de9e8 628-633
+  s_34eb7d3f1209d9::t_cc89989c92d80d 3-9
+  s_34eb7d3f1209d9::t_4d7afefb18327e 1-2
+  s_34eb7d3f1209d9::t_f109d27a535882 10
+  s_34eb7d3f1209d9::t_1b51c1cd0d6455 12-14,29-31
+  s_34eb7d3f1209d9::t_217699be1891bc 33-35
+  s_34eb7d3f1209d9::t_e2cc891fb3e95e 37-39,96-98
+  s_34eb7d3f1209d9::t_3c956d498ca64b 100-102,150-152
+  s_34eb7d3f1209d9::t_e59e8ab7ff57d5 154-156,211-213
+  s_34eb7d3f1209d9::t_5e094aacd967e1 215-217,270-272
+  s_34eb7d3f1209d9::t_491d11c11dfc9c 274-276,330-332
+  s_34eb7d3f1209d9::t_f54725d7047b95 334-336,388-390
+  s_34eb7d3f1209d9::t_a2e2188d5c7271 392-394,413-415
+  s_34eb7d3f1209d9::t_e211d75039f223 417-419,448-450
+  s_34eb7d3f1209d9::t_2561f8dbc0a8c3 452-454,471-473
+  s_34eb7d3f1209d9::t_468f405fb9e201 476-478,489-491
+  s_34eb7d3f1209d9::t_c2c890e9503994 493-495,510-512
+  s_34eb7d3f1209d9::t_acf0feb5259415 514-516,521-523
+  s_34eb7d3f1209d9::t_0ea6996da49dad 543
+  s_34eb7d3f1209d9::t_a94b5514e712c5 545-547,565-567
+  s_34eb7d3f1209d9::t_c1e4d946024bde 569-571,579-581
+  s_34eb7d3f1209d9::t_9d24376bda6e99 583-585,591-593
+  s_34eb7d3f1209d9::t_5a9e5658d2c900 595-597,599-601
+  s_34eb7d3f1209d9::t_87799c453c911d 603-605,618-620
+  s_34eb7d3f1209d9::t_b091f9acf17fc5 622-627
+  s_34eb7d3f1209d9::t_7f676d9757496d 15-28,40-95,103-149,157-210,218-269,277-329,337-387,395-412,420-447,455-470,479-488,496-509,517-520,548-564,572-578,586-590,598,606-617
+docs/linear/issues/IPI-336-design-053-onboarding-react-parity.md
+  s_34eb7d3f1209d9::t_55a17022cd5651 1-98
+tasks/intelligence/ai/skill-map.md
+  s_34eb7d3f1209d9::t_3489b4cffd1313 95-112
+  s_34eb7d3f1209d9::t_e5c552825e1ad5 33
+  s_34eb7d3f1209d9::t_3d9b3a8709218b 3-4
+docs/linear/issues/IPI-337-design-054b-shoot-detail-tabs.md
+  s_34eb7d3f1209d9::t_18c9379da400c6 1-80
+docs/linear/issues/IPI-257-cloudinary-pipeline.md
+  s_34eb7d3f1209d9::t_ccf8c09050d554 4-21,23,50,207
+  s_34eb7d3f1209d9::t_3c724446639da1 33
+  s_34eb7d3f1209d9::t_9b313fbff35651 1-3
+  s_34eb7d3f1209d9::t_8f06a2e08cb198 22
+  s_34eb7d3f1209d9::t_00e08e05908631 24-26,30-32
+  s_34eb7d3f1209d9::t_ba17eb4737017f 34-36,47-49
+  s_34eb7d3f1209d9::t_bbe900f2b0ea3f 51-53,204-206
+  s_34eb7d3f1209d9::t_b82a3f60a4cc05 208-210
+  s_34eb7d3f1209d9::t_7d43dadd70ab04 27-29,37-46,54-203,211-415
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.9",
+  "base_commit_sha": "c530b26bddbfcb8578e2c69f5f94b28edb634eb9",
+  "prompts": {},
+  "sessions": {
+    "s_34eb7d3f1209d9": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "5f2bb499-4181-4424-be0c-f98a1fef1295",
+        "model": "composer-2.5"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
