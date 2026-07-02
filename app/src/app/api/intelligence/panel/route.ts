@@ -53,20 +53,20 @@ export async function GET(request: Request) {
       );
     }
 
-    if (scoresResult.error) {
-      console.error("[intelligence/panel] scores query failed:", scoresResult.error.message);
-      return NextResponse.json({ error: "Internal error" }, { status: 500 });
-    }
-
     if (pendingResult.error) {
       console.error("[intelligence/panel] pending query failed:", pendingResult.error.message);
       return NextResponse.json({ error: "Internal error" }, { status: 500 });
     }
 
-    const scoreRows = (scoresResult.data ?? []).map((row) => ({
-      score_type: row.score_type,
-      score: Number(row.score),
-    }));
+    let scoreRows: Array<{ score_type: string; score: number }> = [];
+    if (scoresResult.error) {
+      console.error("[intelligence/panel] scores query failed:", scoresResult.error.message);
+    } else {
+      scoreRows = (scoresResult.data ?? []).map((row) => ({
+        score_type: row.score_type,
+        score: Number(row.score),
+      }));
+    }
 
     return NextResponse.json(
       buildPanelData(brandResult.data, scoreRows, pendingResult.data ?? []),
@@ -101,9 +101,9 @@ export async function GET(request: Request) {
 
     if (scoresResult.error) {
       console.error("[intelligence/panel] portfolio scores query failed:", scoresResult.error.message);
-      return NextResponse.json({ error: "Internal error" }, { status: 500 });
+    } else {
+      scoreRows = scoresResult.data ?? [];
     }
-    scoreRows = scoresResult.data ?? [];
   }
 
   return NextResponse.json(

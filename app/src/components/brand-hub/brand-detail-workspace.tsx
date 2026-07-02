@@ -212,7 +212,7 @@ export function BrandDetailWorkspace({
               <Calendar size={14} aria-hidden />
               Plan a Shoot
             </Link>
-            <Link href="/app/assets" className={styles.chip}>
+            <Link href={`/app/assets?brand=${brandId}`} className={styles.chip}>
               Review assets
             </Link>
           </div>
@@ -271,7 +271,7 @@ export function BrandDetailWorkspace({
           <section className={styles.assetSection} aria-label="Brand assets">
             <div className={styles.assetHeader}>
               <span className={styles.assetTitle}>Assets ({assetUrls.length})</span>
-              <Link href="/app/assets" className={styles.assetLink}>
+              <Link href={`/app/assets?brand=${brandId}`} className={styles.assetLink}>
                 Review →
               </Link>
             </div>

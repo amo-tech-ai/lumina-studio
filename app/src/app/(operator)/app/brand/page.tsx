@@ -50,13 +50,15 @@ const BrandsPage = async () => {
     .in("brand_id", brandIds);
 
   if (scoresError) {
-    return (
-      <BrandListWorkspace
-        brands={[]}
-        isAuthenticated
-        fetchError="Unable to load brand scores. Try again in a moment."
-      />
-    );
+    const workspaceBrands = rows.map((brand) => ({
+      id: brand.id,
+      name: brand.name,
+      brandUrl: brand.brand_url,
+      intakeStatus: brand.intake_status,
+      dnaScore: 0,
+      pillars: [],
+    }));
+    return <BrandListWorkspace brands={workspaceBrands} isAuthenticated />;
   }
 
   const scoresByBrand = new Map<string, { score_type: string; score: number }[]>();

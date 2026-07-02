@@ -32,4 +32,9 @@ describe("resolveBrandDetailExtras", () => {
     expect(extras.visualIdentity?.visualScore).toBe(72);
     expect(extras.visualIdentity?.sampleUrls.length).toBeGreaterThan(0);
   });
+
+  it("asset preview count matches generated URL list", () => {
+    const extras = resolveBrandDetailExtras(baseData, BRAND_ID);
+    expect(extras.assetPreview?.count).toBe(extras.assetPreview?.urls.length);
+  });
 });

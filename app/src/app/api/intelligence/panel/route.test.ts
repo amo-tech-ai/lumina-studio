@@ -103,4 +103,54 @@ describe("GET /api/intelligence/panel", () => {
     expect(body.brand.name).toBe("Acme");
     expect(body.scores.dna).toBe(75);
   });
+
+  it("returns 200 with empty scores when brand_scores query fails", async () => {
+    mockCreateSupabaseServerClient.mockResolvedValue({
+      from: vi.fn((table: string) => {
+        if (table === "brand_scores") {
+          return {
+            select: vi.fn().mockReturnValue({
+              eq: vi.fn().mockResolvedValue({
+                data: null,
+                error: { message: "timeout" },
+              }),
+            }),
+          };
+        }
+        return {
+          select: vi.fn().mockReturnValue({
+            eq: vi.fn().mockImplementation((_col: string, val: string) => {
+              if (val === BRAND_ID) {
+                return {
+                  single: vi.fn().mockResolvedValue({
+                    data: {
+                      id: BRAND_ID,
+                      name: "Acme",
+                      intake_status: "scores_complete",
+                    },
+                    error: null,
+                  }),
+                };
+              }
+              if (val === "draft_ready") {
+                return {
+                  order: vi.fn().mockResolvedValue({ data: [], error: null }),
+                };
+              }
+              return { order: vi.fn().mockResolvedValue({ data: [], error: null }) };
+            }),
+          }),
+        };
+      }),
+    });
+
+    const { GET } = await importRoute();
+    const res = await GET(
+      new Request(`http://localhost/api/intelligence/panel?brandId=${BRAND_ID}`),
+    );
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.brand.name).toBe("Acme");
+    expect(body.scores).toBeNull();
+  });
 });

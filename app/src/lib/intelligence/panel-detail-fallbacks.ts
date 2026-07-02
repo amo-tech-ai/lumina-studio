@@ -53,13 +53,13 @@ function resolveAssetPreview(
   data: IntelligencePanelData,
   brandId: string,
 ): IntelligencePanelData["assetPreview"] {
-  return (
-    data.assetPreview ?? {
-      count: 12,
-      urls: brandDetailAssetUrls(brandId, 8),
-      href: `/app/assets?brand=${brandId}`,
-    }
-  );
+  if (data.assetPreview) return data.assetPreview;
+  const urls = brandDetailAssetUrls(brandId, 8);
+  return {
+    count: urls.length,
+    urls,
+    href: `/app/assets?brand=${brandId}`,
+  };
 }
 
 export function resolveBrandDetailExtras(
