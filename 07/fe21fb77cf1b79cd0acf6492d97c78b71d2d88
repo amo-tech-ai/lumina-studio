@@ -1,0 +1,20 @@
+scripts/worktree-audit.mjs
+  s_3d352fa6a7a7a5::t_d571ccccc190c1 71
+  s_3d352fa6a7a7a5::t_19cc909c8ee05c 96
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.9",
+  "base_commit_sha": "07fe21fb77cf1b79cd0acf6492d97c78b71d2d88",
+  "prompts": {},
+  "sessions": {
+    "s_3d352fa6a7a7a5": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "fa8cc742-9319-4654-bbfb-046787ee9f5f",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
