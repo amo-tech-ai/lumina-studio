@@ -117,8 +117,18 @@ async function deleteAuthUser(userId) {
   return { error };
 }
 
-async function cleanupRlsTestData({ orgId, brandId, userAId, userBId }) {
+async function cleanupRlsTestData({ orgId, brandId, notificationId, userAId, userBId }) {
   if (!admin) return;
+
+  if (notificationId) {
+    const { error: notifDelErr } = await admin
+      .from("notifications")
+      .delete()
+      .eq("id", notificationId);
+    if (notifDelErr) {
+      console.warn(`warn: cleanup notification ${notificationId}: ${notifDelErr.message}`);
+    }
+  }
 
   if (brandId) {
     const { error: brandDelErr } = await admin.from("brands").delete().eq("id", brandId);
@@ -179,6 +189,7 @@ let userA;
 let userB;
 let brandAId;
 let orgAId;
+let notificationId;
 
 try {
   userA = await createTestUser(emailA);
@@ -550,6 +561,63 @@ try {
     console.log("skip: brand_crawls RLS insert probes (no service role)");
   }
 
+  // IPI-335 · MODEL-FIX — notifications RLS: mark-own-read only, no column
+  // reassignment. Must run before user B joins orgA below (org_members insert) —
+  // otherwise "cross-user" checks are testing a legitimate member, not an outsider.
+  // Uses brand_org_id ownership only (talent/agency-owner paths live in the
+  // `talent` schema, not exposed via PostgREST — see IPI-307 notes).
+  if (!admin) {
+    console.warn("warn: skip notifications RLS probes (no SUPABASE_SERVICE_ROLE_KEY)");
+  } else {
+    const { data: notifRow, error: notifInsertErr } = await admin
+      .from("notifications")
+      .insert({ kind: "booking_requested", brand_org_id: orgAId, payload: { test: true } })
+      .select("id")
+      .single();
+    assert(!notifInsertErr && notifRow?.id, "service role inserts notifications row");
+    notificationId = notifRow?.id;
+
+    const { data: readUpdate, error: readUpdateErr } = await userA.client
+      .from("notifications")
+      .update({ read: true })
+      .eq("id", notificationId)
+      .select("id, read");
+    assert(
+      !readUpdateErr && readUpdate?.[0]?.read === true,
+      "org member marks own notification read",
+    );
+
+    const { data: hijackAttempt, error: hijackErr } = await userA.client
+      .from("notifications")
+      .update({ brand_org_id: "00000000-0000-0000-0000-000000000099" })
+      .eq("id", notificationId)
+      .select("id");
+    assert(
+      !!hijackErr || (hijackAttempt ?? []).length === 0,
+      "org member cannot reassign notification brand_org_id",
+    );
+
+    const { data: kindTamper, error: kindTamperErr } = await userA.client
+      .from("notifications")
+      .update({ kind: "tampered" })
+      .eq("id", notificationId)
+      .select("id");
+    assert(
+      !!kindTamperErr || (kindTamper ?? []).length === 0,
+      "org member cannot rewrite notification kind",
+    );
+
+    const { data: crossReadUpdate, error: crossReadUpdateErr } = await userB.client
+      .from("notifications")
+      .update({ read: true })
+      .eq("id", notificationId)
+      .select("id");
+    assert(
+      !crossReadUpdateErr && (crossReadUpdate ?? []).length === 0,
+      "user B (not yet an org member) cannot mark user A's notification read",
+    );
+  }
+
   // brand_scores INSERT: editor+ or brand creator; viewers denied
   const { error: viewerMemberErr } = await userA.client.from("org_members").insert({
     org_id: orgAId,
@@ -680,6 +748,7 @@ try {
   await cleanupRlsTestData({
     orgId: orgAId,
     brandId: brandAId,
+    notificationId,
     userAId: userA?.user?.id,
     userBId: userB?.user?.id,
   });
