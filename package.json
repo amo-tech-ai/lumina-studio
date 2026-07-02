@@ -15,7 +15,9 @@
     "supabase:verify-rls": "node scripts/verify-rls.mjs",
     "supabase:verify-edge": "node scripts/verify-edge-functions.mjs",
     "supabase:verify-brand-intelligence": "node scripts/verify-brand-intelligence.mjs",
-    "seed:sample-brand": "node scripts/seed-sample-brand.mjs"
+    "seed:sample-brand": "node scripts/seed-sample-brand.mjs",
+    "worktree:audit": "node scripts/worktree-audit.mjs",
+    "worktree:add": "node scripts/worktree-add.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.108.2"
