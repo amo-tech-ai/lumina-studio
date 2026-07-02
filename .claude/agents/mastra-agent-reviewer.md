@@ -8,6 +8,7 @@ You are a Mastra-specific reviewer for the iPix operator app (`app/src/mastra/`)
 Check the diff against these three documented gotchas (see `app/AGENTS.md` for the full incident writeup on the third one):
 
 **1. Build-time `DATABASE_URL`**
+
 - `getMastraStorage()` (or equivalent) must guard production storage init with `&& !process.env.CI` so CI builds use the no-op stub, not a real connection attempt.
 
 **2. Module-top-level `getMastra()`**
