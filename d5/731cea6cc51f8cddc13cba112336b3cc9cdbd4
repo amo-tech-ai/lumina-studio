@@ -1,0 +1,36 @@
+app/src/test/brand-hub.test.ts
+  s_34eb7d3f1209d9::t_d4f0d51da5707a 225,237-238
+app/src/components/brand-hub/brand-detail-workspace.tsx
+  s_34eb7d3f1209d9::t_55d1e12b3e3abe 274
+  s_34eb7d3f1209d9::t_059ea1f2dfac45 215
+app/src/lib/intelligence/panel-detail-fallbacks.ts
+  s_34eb7d3f1209d9::t_df593edb28e52b 56-62
+app/src/app/api/intelligence/panel/route.ts
+  s_34eb7d3f1209d9::t_a78791fca69deb 61
+  s_34eb7d3f1209d9::t_01d259e10d29f4 104-105
+  s_34eb7d3f1209d9::t_96980689e59b8b 64-68
+  s_34eb7d3f1209d9::t_a16c41d25a52eb 62-63
+  s_34eb7d3f1209d9::t_3cde8777933b05 69
+app/src/lib/intelligence/panel-detail-fallbacks.test.ts
+  s_34eb7d3f1209d9::t_887e86a91b1d59 35-39
+app/src/app/api/intelligence/panel/route.test.ts
+  s_34eb7d3f1209d9::t_689ae7ddc72d14 106-155
+app/src/app/(operator)/app/brand/page.tsx
+  s_34eb7d3f1209d9::t_39bf705355b206 53-61
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.9",
+  "base_commit_sha": "d5731cea6cc51f8cddc13cba112336b3cc9cdbd4",
+  "prompts": {},
+  "sessions": {
+    "s_34eb7d3f1209d9": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "5f2bb499-4181-4424-be0c-f98a1fef1295",
+        "model": "composer-2.5"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
