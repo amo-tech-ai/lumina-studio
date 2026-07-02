@@ -73,7 +73,6 @@ graphify affected "brand-intelligence" \
 
 Only code AST extraction (free, no API cost). No LLM-based doc extraction.
 
-
 The `.graphifyignore` file at the project root controls what gets excluded. Currently excludes: `github/`, `claude-code-templates/`, `node_modules/`, `.git/`, archived docs, and sub-project repos.
 
 ## Graph health

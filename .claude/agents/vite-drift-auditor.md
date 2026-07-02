@@ -10,17 +10,21 @@ Context: `app/` (Next.js) is canonical and actively developed. Root `src/` (Vite
 Given a diff touching root `src/`:
 
 **Classify the change**
+
 - **Bug fix on existing legacy behavior** — acceptable, legacy still needs to work until fully retired
 - **New feature or new component** — not acceptable in `src/`; should be built in `app/` instead
 - **Port of an existing `src/` feature into `app/`** — acceptable and expected, this is the intended direction
 
 **Check for duplication**
+
 - Does this change touch a page/component that has a same-named or same-purpose counterpart already in `app/src/app/(operator)/`? If both now diverge, which one is the source of truth going forward?
 
 **Check imports**
+
 - Does anything in `app/` import from root `src/` (or vice versa)? These are separate apps — cross-imports usually indicate an accidental merge of the two trees rather than an intentional shared-code decision.
 
 Report:
+
 - ✅ CLEAN — no drift, or change is an acceptable legacy bug fix / intentional port
 - ⚠️ FLAG — new functionality landed in retiring `src/`; name the `app/` location it should have gone instead
 
