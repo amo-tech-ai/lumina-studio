@@ -1,0 +1,31 @@
+app/src/components/intelligence-panel/intelligence-panel.test.tsx
+  s_c07e656bb1b48e::t_6707a214dfa855 97-99,122-124,139-141,160-162
+  s_c07e656bb1b48e::t_08a26961a90ebf 191-193,211-213
+  s_c07e656bb1b48e::t_b45adcf1a0bc51 228-230
+  s_c07e656bb1b48e::t_09ce6aef5241da 7
+  s_c07e656bb1b48e::t_3a0081c8d89b5e 66-71
+app/src/mastra/tools/talent-match-tools.ts
+  s_c07e656bb1b48e::t_956435399e2357 5-12,18-19,21-24
+  s_c07e656bb1b48e::t_c5a7065b25764a 87
+  s_c07e656bb1b48e::t_959385ff074726 42
+supabase/migrations/20260701141200_talent_public_rpc_bridge.sql
+  s_c07e656bb1b48e::t_80624f006d37ce 71-82
+  s_c07e656bb1b48e::t_b3a86d33b88d79 104-110
+  s_c07e656bb1b48e::t_65bd737393f3b7 103
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.9",
+  "base_commit_sha": "4440e2d4ccbb3e3d9a75aa23b77668f3fc2346e4",
+  "prompts": {},
+  "sessions": {
+    "s_c07e656bb1b48e": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b8a1a548-66d1-4c73-b468-84dd619829ae",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
