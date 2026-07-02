@@ -155,14 +155,14 @@ function getSuggestionsForRoute(
   if (normalizedPath === "/app/matching") {
     if (context.creatorLoaded) {
       return [
-        { title: "Find 90%+ fits", message: "Show me creators with 90% or higher fit scores." },
-        { title: "More TikTok", message: "Find TikTok creators with high engagement rates." },
-        { title: "Flag risks", message: "Which creators have brand safety concerns?" },
+        { title: "Find 90%+ fits", message: "Show me talent with 90% or higher fit scores." },
+        { title: "Available now", message: "Find talent available for my shoot dates." },
+        { title: "Check budget fit", message: "Which talent fits my budget tier?" },
       ];
     }
     return [
-      { title: "Start matching", message: "How does creator matching work?" },
-      { title: "View all creators", message: "Show me all creators in the network." },
+      { title: "Start matching", message: "How does talent matching work?" },
+      { title: "View all talent", message: "Show me all talent in the marketplace." },
     ];
   }
 

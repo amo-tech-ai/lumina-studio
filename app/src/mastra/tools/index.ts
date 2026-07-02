@@ -19,9 +19,11 @@ import { saveApprovedShootDraft } from "./saveApprovedShootDraft";
 import { discoverSocialChannelsTool } from "./social-discovery";
 import { lookupShotReferences } from "./lookupShotReferences";
 import { lookupChannelSpecs } from "./lookupChannelSpecs";
+import { searchTalentByFilters, computeTalentMatchScore, manageShortlist } from "./talent-match-tools";
 
 // IPI-148 — SHOOT-AI-001 + IPI-184 SHOOT-DATA-002: shoot planner tools for production-planner
 // IPI-187 — MI-02: media spec lookup
+// IPI-308 — MODEL-P2: Model Match Agent tools (Talent tab, shortlist)
 export const agentTools = {
   recommendShootType,
   planDeliverables,
@@ -33,6 +35,9 @@ export const agentTools = {
   estimateShootBudget,
   explainShootDnaAlerts,
   discoverSocialChannels: discoverSocialChannelsTool,
+  searchTalentByFilters,
+  computeTalentMatchScore,
+  manageShortlist,
 } as const;
 
 export type AgentToolName = keyof typeof agentTools;

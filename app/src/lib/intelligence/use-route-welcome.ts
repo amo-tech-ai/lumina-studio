@@ -165,7 +165,7 @@ function getWelcomeMessage(
     if (context.creatorName && context.creatorFit !== undefined) {
       return `${context.creatorName} — ${context.creatorFit}% fit — one of your strongest matches`;
     }
-    return "Find high-fit creators and flag brand safety risks";
+    return "Find talent that fits your shoot brief — filter by shoot type, budget, and availability";
   }
 
   // Channel Preview (/app/preview)

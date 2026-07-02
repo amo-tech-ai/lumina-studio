@@ -59,8 +59,8 @@ export function resolveRouteBriefing(pathname: string): RouteBriefing {
   if (pathname.startsWith("/app/matching")) {
     return {
       section: "Matching",
-      headline: "Creator fit scores and shortlist actions.",
-      nextActions: ["Explain creator fit", "Refresh matches", "Add to shortlist"],
+      headline: "Talent fit scores and shortlist actions.",
+      nextActions: ["Explain talent fit", "Refresh matches", "Add to shortlist"],
     };
   }
   if (pathname.startsWith("/app/preview")) {

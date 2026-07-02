@@ -4,6 +4,7 @@
 import { describe, expect, it, vi, afterEach } from "vitest";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { IntelligencePanel } from "./intelligence-panel";
+import { IntelligenceDetailProvider } from "@/context/intelligence-detail-context";
 import { DEV_INTELLIGENCE_PANEL_DATA } from "@/lib/intelligence/dev-panel-fixture";
 
 vi.mock("./intelligence-panel.module.css", () => ({
@@ -62,10 +63,12 @@ describe("IntelligencePanel", () => {
     });
 
     render(
-      <IntelligencePanel
-        activeBrandId={BRAND_ID}
-        brandName="Nike"
-      />,
+      <IntelligenceDetailProvider>
+        <IntelligencePanel
+          activeBrandId={BRAND_ID}
+          brandName="Nike"
+        />
+      </IntelligenceDetailProvider>,
     );
 
     expect(useIntelligencePanel).toHaveBeenCalledWith(BRAND_ID);
@@ -91,7 +94,9 @@ describe("IntelligencePanel", () => {
     });
 
     render(
-      <IntelligencePanel activeBrandId={BRAND_ID} brandName="Nike" />,
+      <IntelligenceDetailProvider>
+        <IntelligencePanel activeBrandId={BRAND_ID} brandName="Nike" />
+      </IntelligenceDetailProvider>,
     );
 
     const approvalsTab = screen.getByRole("tab", { name: /Approvals/i });
@@ -114,7 +119,9 @@ describe("IntelligencePanel", () => {
     });
 
     render(
-      <IntelligencePanel activeBrandId={BRAND_ID} brandName="Nike" />,
+      <IntelligenceDetailProvider>
+        <IntelligencePanel activeBrandId={BRAND_ID} brandName="Nike" />
+      </IntelligenceDetailProvider>,
     );
 
     expect(screen.getByRole("tab", { name: /Approvals/i }).textContent).toContain("7");
@@ -129,7 +136,9 @@ describe("IntelligencePanel", () => {
     });
 
     render(
-      <IntelligencePanel activeBrandId={BRAND_ID} brandName="Nike" />,
+      <IntelligenceDetailProvider>
+        <IntelligencePanel activeBrandId={BRAND_ID} brandName="Nike" />
+      </IntelligenceDetailProvider>,
     );
 
     fireEvent.click(screen.getByRole("tab", { name: /Activity/i }));
@@ -148,7 +157,9 @@ describe("IntelligencePanel", () => {
     });
 
     render(
-      <IntelligencePanel activeBrandId={BRAND_ID} brandName="Nike" />,
+      <IntelligenceDetailProvider>
+        <IntelligencePanel activeBrandId={BRAND_ID} brandName="Nike" />
+      </IntelligenceDetailProvider>,
     );
 
     expect(screen.getByRole("button", { name: "Explain DNA" })).toBeTruthy();
@@ -177,7 +188,9 @@ describe("IntelligencePanel", () => {
     });
 
     render(
-      <IntelligencePanel activeBrandId={null} brandName={null} />,
+      <IntelligenceDetailProvider>
+        <IntelligencePanel activeBrandId={null} brandName={null} />
+      </IntelligenceDetailProvider>,
     );
 
     expect(screen.getByText(/Beta Brand/i)).toBeTruthy();
@@ -195,7 +208,9 @@ describe("IntelligencePanel", () => {
     });
 
     render(
-      <IntelligencePanel activeBrandId={null} brandName={null} />,
+      <IntelligenceDetailProvider>
+        <IntelligencePanel activeBrandId={null} brandName={null} />
+      </IntelligenceDetailProvider>,
     );
 
     expect(screen.getByText(/Select a brand to view intelligence/i)).toBeTruthy();
@@ -210,7 +225,9 @@ describe("IntelligencePanel", () => {
     });
 
     render(
-      <IntelligencePanel activeBrandId={BRAND_ID} brandName="Acme" />,
+      <IntelligenceDetailProvider>
+        <IntelligencePanel activeBrandId={BRAND_ID} brandName="Acme" />
+      </IntelligenceDetailProvider>,
     );
 
     expect(screen.getByText(/Loading intelligence/i)).toBeTruthy();
