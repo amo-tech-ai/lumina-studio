@@ -1,0 +1,32 @@
+scripts/worktree-audit.mjs
+  s_2e2ca317dec1f8::t_fc6623f904c601 11,30,32,56,66,70,73,79,81,84-88,91-92,98-99,101,104,116,119,126-133,135-139,141-146,148,150-151,161-166,178,180-185,199,201,207-214,219,240,244-245,247,253,256,265-267,282,284,286
+  s_2e2ca317dec1f8::t_829edf7fb7a9a4 1-10,12-29,31,33-55,57-65,67-69,71-72,74-78,80,82-83,89-90,93-97,100,102-103,105-115,117-118,120-125,134,140,147,149,152-160,167-177,179,186-198,200,202-206,215-218,220-239,241-243,246,248-252,254-255,257-264,268-281,283,285,287
+package.json
+  s_2e2ca317dec1f8::t_a80551405410e0 18-20
+.claude/commands/worktree.md
+  s_2e2ca317dec1f8::t_cdff854815b92c 1-186
+scripts/worktree-add.mjs
+  s_2e2ca317dec1f8::t_ca4b5d762fb122 99
+  s_2e2ca317dec1f8::t_061e864de66328 1-98,100
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.6",
+  "base_commit_sha": "023dcaf1f2f4bd5dbdd2c458c6afc95049aed090",
+  "prompts": {},
+  "humans": {
+    "h_d382fbec1d5b46": {
+      "author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  },
+  "sessions": {
+    "s_2e2ca317dec1f8": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "354d6759-8d40-497b-94f4-4ed07c5f2ab7",
+        "model": "composer-2.5"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}

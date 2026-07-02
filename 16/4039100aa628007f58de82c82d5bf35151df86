@@ -1,0 +1,23 @@
+scripts/worktree-audit.mjs
+  s_ed6e0f17e0845f::t_a63add887cbf6e 76,78
+  s_ed6e0f17e0845f::t_6d3dded809c60e 93,119-121,129,132
+scripts/worktree-add.mjs
+  s_ed6e0f17e0845f::t_f50247addb5607 66-67,82-88
+  s_ed6e0f17e0845f::t_2a649061b3bf74 62-65
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.9",
+  "base_commit_sha": "164039100aa628007f58de82c82d5bf35151df86",
+  "prompts": {},
+  "sessions": {
+    "s_ed6e0f17e0845f": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_0e1b40439ffermGw7FFZcItlPR",
+        "model": "deepseek-v4-flash"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}

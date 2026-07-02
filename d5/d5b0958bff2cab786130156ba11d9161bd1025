@@ -1,0 +1,21 @@
+.claude/commands/worktree.md
+  s_ed6e0f17e0845f::t_03eb44ef59013a 72
+  s_ed6e0f17e0845f::t_07960b3ff8705a 90
+  s_ed6e0f17e0845f::t_e2b90021c61c15 53
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.9",
+  "base_commit_sha": "d5d5b0958bff2cab786130156ba11d9161bd1025",
+  "prompts": {},
+  "sessions": {
+    "s_ed6e0f17e0845f": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_0e1b40439ffermGw7FFZcItlPR",
+        "model": "deepseek-v4-flash"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
