@@ -9,6 +9,7 @@ import { Calendar, ChevronRight, Zap } from "lucide-react";
 import { BrandDetailAnalysingCard } from "@/components/brand-hub/brand-detail-analysing-card";
 import { AnalysisProgressBanner } from "@/components/brand-hub/analysis-progress-banner";
 import { BrandDetailDraftCard } from "@/components/brand-hub/brand-detail-draft-card";
+import { DraftBanner } from "@/components/brand-hub/draft-banner";
 import { useBrandContext } from "@/components/brand-hub/brand-context";
 import { EvidenceDialog } from "@/components/intelligence-panel/evidence-dialog";
 import type { EvidenceBlockProps } from "@/components/evidence-block/types";
@@ -229,8 +230,16 @@ export function BrandDetailWorkspace({
           </button>
         ) : null}
 
-        {status === "draft_ready" && draftProfile && workflowRunId ? (
-          <BrandDetailDraftCard brandId={brandId} runId={workflowRunId} draft={draftProfile} />
+        {status === "draft_ready" && draftProfile ? (
+          workflowRunId ? (
+            <BrandDetailDraftCard
+              brandId={brandId}
+              runId={workflowRunId}
+              draft={draftProfile}
+            />
+          ) : (
+            <DraftBanner brandId={brandId} draft={draftProfile} />
+          )
         ) : null}
 
         {hasDna && baseScores.length > 0 ? (

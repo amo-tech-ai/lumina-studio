@@ -26,7 +26,7 @@ export function BrandDetailDraftCard({ brandId, runId, draft }: Props) {
   const router = useRouter();
   const [state, setState] = useState<"idle" | "approving" | "rejecting">("idle");
   const [error, setError] = useState<string | null>(null);
-  const [done, setDone] = useState(false);
+  const [outcome, setOutcome] = useState<"approved" | "discarded" | null>(null);
 
   const beforeSrc = brandListCoverForBrand(`${brandId}-before`);
   const afterSrc = heroFallbackForBrand(`${brandId}-after`);
@@ -43,7 +43,7 @@ export function BrandDetailDraftCard({ brandId, runId, draft }: Props) {
         setState("idle");
         return;
       }
-      setDone(true);
+      setOutcome(approved ? "approved" : "discarded");
       router.refresh();
     } catch {
       setError("Unexpected error — please try again");
@@ -51,11 +51,21 @@ export function BrandDetailDraftCard({ brandId, runId, draft }: Props) {
     }
   };
 
-  if (done) {
+  if (outcome === "approved") {
     return (
       <div className={styles.hitl} role="status">
         <p className={styles.hitlCopy} style={{ color: "var(--color-approved)", margin: 0 }}>
           Approved — profile updated. Publishing to Brand DNA…
+        </p>
+      </div>
+    );
+  }
+
+  if (outcome === "discarded") {
+    return (
+      <div className={styles.hitl} role="status">
+        <p className={styles.hitlCopy} style={{ color: "var(--color-text-muted)", margin: 0 }}>
+          Discarded — draft removed. Re-run analysis when you&apos;re ready for a new draft.
         </p>
       </div>
     );

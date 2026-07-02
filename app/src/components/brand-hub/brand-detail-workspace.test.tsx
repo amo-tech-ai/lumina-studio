@@ -15,7 +15,10 @@ vi.mock("@/components/brand-hub/analysis-progress-banner", () => ({
   AnalysisProgressBanner: () => null,
 }));
 vi.mock("@/components/brand-hub/brand-detail-draft-card", () => ({
-  BrandDetailDraftCard: () => null,
+  BrandDetailDraftCard: () => <div data-testid="workflow-draft-card" />,
+}));
+vi.mock("@/components/brand-hub/draft-banner", () => ({
+  DraftBanner: () => <div data-testid="draft-banner-fallback">Draft banner</div>,
 }));
 vi.mock("@/app/(operator)/app/brand/[id]/actions", () => ({
   reanalyzeBrand: vi.fn(),
@@ -56,5 +59,25 @@ describe("BrandDetailWorkspace", () => {
     expect(screen.getByText(/Nike DNA: 87/i)).toBeTruthy();
     expect(screen.getByRole("link", { name: /Plan a Shoot/i })).toBeTruthy();
     expect(screen.getByText(/Assets \(\d+\)/)).toBeTruthy();
+  });
+
+  it("renders DraftBanner when draft_ready but workflowRunId is missing", () => {
+    render(
+      <BrandDetailWorkspace
+        brandId="acme-id"
+        brandName="Acme"
+        brandUrl="https://acme.test"
+        intakeStatus="draft_ready"
+        dnaScore={0}
+        profile={{}}
+        draftProfile={{ tagline: "Draft tagline" }}
+        workflowRunId={null}
+        baseScores={[]}
+        isAuthenticated
+      />,
+    );
+
+    expect(screen.getByTestId("draft-banner-fallback")).toBeTruthy();
+    expect(screen.queryByTestId("workflow-draft-card")).toBeNull();
   });
 });
