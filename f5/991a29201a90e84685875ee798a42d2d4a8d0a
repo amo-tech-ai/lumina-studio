@@ -1,0 +1,26 @@
+.gitignore
+  s_3d352fa6a7a7a5::t_d74d7f5c977113 56
+  s_3d352fa6a7a7a5::t_ccbd057e81c339 55
+.claude/skills/design-to-production/SKILL.md
+  s_3d352fa6a7a7a5::t_a5b3e62e1208eb 1-245
+.claude/skills/design-to-production/references/report-template.md
+  s_3d352fa6a7a7a5::t_9393db143f40c5 1-76
+.claude/skills/design-to-production/references/route-map.md
+  s_3d352fa6a7a7a5::t_1e92d250408a3d 1-57
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.9",
+  "base_commit_sha": "f5991a29201a90e84685875ee798a42d2d4a8d0a",
+  "prompts": {},
+  "sessions": {
+    "s_3d352fa6a7a7a5": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "fa8cc742-9319-4654-bbfb-046787ee9f5f",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
