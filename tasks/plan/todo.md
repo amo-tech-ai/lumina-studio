@@ -1,6 +1,6 @@
 ---
 title: iPix Platform — Master Task Tracker
-version: "3.9"
+version: "3.9.1"
 lastUpdated: "2026-07-02"
 status: Active
 purpose: **Canonical master todo** — all IPI-* · STR-* · DESIGN-* priority, sprint, blockers. Linear sync mapping.
@@ -26,11 +26,35 @@ Operator UI   →  useAgent({ agentId })  →  agent id === Mastra registry key
 Routes        →  /app/*   (NOT /dashboard/*, NOT Vite :8080 proxy)
 ```
 
-**Verified 2026-07-02:** `main` @ `0479aba` · CI 🟢 · `cd app && npm test` → **547 passed**, 6 skipped · detail: [`tasks/todo.md`](../todo.md) § Progress Task Tracker.
+**Verified 2026-07-02:** `main` @ `0479aba` · CI 🟢 · `cd app && npm test` → **547 passed**, 6 skipped · detail: [`tasks/todo.md`](../todo.md) § Progress Task Tracker · [`tasks/changelog.md`](../changelog.md).
 
-**Recent merges:** [#168–#171](https://github.com/amo-tech-ai/lumina-studio/pull/168) CC workspace · [#177](https://github.com/amo-tech-ai/lumina-studio/pull/177) Gemini-first dev · [#178](https://github.com/amo-tech-ai/lumina-studio/pull/178) Suspense audit · [#180](https://github.com/amo-tech-ai/lumina-studio/pull/180) ActiveBrandProvider.
+### Merged PRs (on main)
 
-**Draft — not on main:** [#181](https://github.com/amo-tech-ai/lumina-studio/pull/181) Brand List + Detail parity (~80% / ~75%) · 577 tests on branch · Codacy 🔴.
+| PR | Scope | Status |
+|----|-------|--------|
+| [#168](https://github.com/amo-tech-ai/lumina-studio/pull/168) | IPI-17 · DESIGN-050 Command Center workspace | 🟢 merged |
+| [#169](https://github.com/amo-tech-ai/lumina-studio/pull/169) | IPI-290 · DESIGN-050b CC visual polish | 🟢 merged |
+| [#170](https://github.com/amo-tech-ai/lumina-studio/pull/170) | IPI-295 · CC-OP-001 3-panel layout + chat dock | 🟢 merged |
+| [#171](https://github.com/amo-tech-ai/lumina-studio/pull/171) | IPI-306 · CC-INT-001 Intelligence Panel parity | 🟢 merged |
+| [#177](https://github.com/amo-tech-ai/lumina-studio/pull/177) | Gemini-first CopilotKit dev env | 🟢 merged |
+| [#178](https://github.com/amo-tech-ai/lumina-studio/pull/178) | Suspense forensics e2e audit | 🟢 merged |
+| [#180](https://github.com/amo-tech-ai/lumina-studio/pull/180) | ActiveBrandProvider SSR + `useHeroBrandSync` | 🟢 merged |
+
+### Draft PR — PR only, not yet merged into main
+
+**[#181](https://github.com/amo-tech-ai/lumina-studio/pull/181) — Command Center + Brand Design Parity**
+
+| Check | Result |
+|-------|--------|
+| State | Draft |
+| Lint | 🟢 pass |
+| Tests | 🟢 577 passed (branch) |
+| Build | 🟢 pass |
+| TypeScript | 🟢 pass |
+| Browser | 🟢 smoke verified (`/app`, `/app/brand`, `/app/brand/[id]`) |
+| Codacy | 🔴 needs fixes |
+
+> **PR only — not yet merged into main.** Brand List (~80%) and Brand Detail (~75%) parity exist on branch only. Command Center polish also in this bundle; **85% CC parity is on main** via #168–#171.
 
 ---
 
@@ -38,6 +62,7 @@ Routes        →  /app/*   (NOT /dashboard/*, NOT Vite :8080 proxy)
 
 | Date | Version | What changed |
 |---|---|---|
+| 2026-07-02 | 3.9.1 | **Verify pass:** individual merged PR table (#168–#171, #177–#180) · PR #181 verification matrix · verified progress table · numbered blockers |
 | 2026-07-02 | 3.9 | **July 2 verify sync:** main `0479aba` · P4 Command Center 85% (#168–#171) · Brand List/Detail **PR #181 only** · MVP gate ~67% · infra #177/#178/#180 merged · blockers on #181 |
 | 2026-06-30 | 3.8 | **IPI-17 reprioritized:** DESIGN-050 Command Center → P0 **Urgent** — main operator dashboard (`/app`) |
 | 2026-06-29 | 3.7 | **Master todo consolidation:** tracker hierarchy, unified registry (IPI+DESIGN+STR), Design track §; fixed broken `plan/` paths; DESIGN-016–018 → 🟢 stub; P1 queue → DESIGN-070 |
@@ -76,6 +101,7 @@ Routes        →  /app/*   (NOT /dashboard/*, NOT Vite :8080 proxy)
 | **Master execution (this file)** | **`tasks/plan/todo.md`** | All IPI-* · STR-* · DESIGN-* — priority, sprint, blockers |
 | Stack per task | [`ai/task-stack-map.md`](../ai/task-stack-map.md) | CopilotKit · Mastra · Supabase · Gemini · Cloudinary |
 | Design build order (view) | [`tasks/todo.md`](../todo.md) | Handoff stage order — **mirror of [Design track §](#design-track)** |
+| Design implementation view | [`tasks/design-docs/implementation/todo.md`](../design-docs/implementation/todo.md) | Parity QA pointers · links to plan + mirror |
 | Design task specs | [`tasks/design-docs/plan/TASKS.md`](../design-docs/plan/TASKS.md) | Dependencies, acceptance, handoff links |
 | Tasks hub | [`tasks/README.md`](../README.md) · [`tasks/index.md`](../index.md) | Full document index |
 | Architecture maps | [`API-MAP`](../design-docs/plan/API-MAP.md) · [`AGENT-MAP`](../design-docs/plan/AGENT-MAP.md) · [`MEDIA-MAP`](../design-docs/plan/MEDIA-MAP.md) | DESIGN-016–018 stubs v0.1 |
@@ -128,7 +154,7 @@ Stack detail: [`ai/task-stack-map.md`](../ai/task-stack-map.md) v1.1 · skills: 
 
 | Task | Required stack | Skills | MCP / tools | Verification | Risk |
 |------|----------------|--------|-------------|--------------|------|
-| **IPI-209** Shoot Detail | Supabase reads/RPC · React · ◐ CopilotKit context | feature-dev, ipix-supabase, fashion-production | Supabase MCP, browser | `cd app && lint && test && build` | 404 blocks DNA + edit chain |
+| **IPI-209** Shoot Detail | Supabase reads/RPC · React · ◐ CopilotKit context | feature-dev, ipix-supabase, fashion-production | Supabase MCP, browser | `cd app && lint && test && build` | Tab-fill blocks DNA + edit chain |
 | **IPI-210–217** Shoot actions | Mastra HITL · Supabase RPC · Gemini | mastra, copilotkit, ipix-supabase | Supabase MCP | shoot API tests + manual HITL | Must not break IPI-209 read path |
 | **IPI-89** Vite retirement | — (repo hygiene) | ipix, worktrees | — | root + app build | Duplicate runtime confusion |
 | **STR-001–003** Stripe | Supabase tables · webhooks · — | ipix-supabase, create-migration | Supabase MCP | verify-rls + payment smoke | No Linear issues yet |
@@ -165,6 +191,8 @@ Per-stack plans: [copilotkit](../ai/copilotkit-plan.md) · [mastra](../ai/mastra
 | 7 | **STR-004–006** | Refunds · invoices · customer portal | Post-checkout ops | STR-* | ⚪ |
 
 > **Parallel OK:** IPI-189 wizard step-1 specs can run beside Shoot Detail tab-fill. IPI-209 shell merged — tab-fill is next shoot work.
+
+See also: [Current blockers (2026-07-02)](#current-blockers-2026-07-02).
 
 ---
 
@@ -210,6 +238,29 @@ Claude Design prototype ([`checklist.md`](../../Universal design prompt/checklis
 | P10 | **Platform advanced** (RAG/MCP) | Search past work, external tools, deep tracing | 0% | ⚪ | Post-MVP |
 
 **MVP gate (8 proofs):** 5/5 commerce 🟢 · intelligence proofs 6–8 partial (brand 85% · DNA 35% · product-link 20%) → **~67%** toward 8/8.
+
+### Verified progress (2026-07-02)
+
+| Area | Progress | On main? | Notes |
+|------|----------|----------|-------|
+| Command Center | **85%** | 🟢 yes | #168–#171 merged |
+| Brand List | **80%** | ⚪ **PR #181 only** | Not on main until merge |
+| Brand Detail | **75%** | ⚪ **PR #181 only** | Not on main until merge |
+| Intelligence Panel | **70%** | 🟡 partial | #171 merged · #164 Phase B open |
+| MVP overall (8 proofs) | **~67%** | — | 5/5 commerce 🟢 + partial 6–8 |
+| Shoot Detail shell | **45%** | 🟢 yes | IPI-209 merged · tab-fill backlog |
+
+---
+
+## Current blockers (2026-07-02)
+
+| # | Blocker | Severity | Owner action |
+|---|---------|----------|--------------|
+| 1 | **PR #181 Codacy findings** | 🔴 | Resolve before merge |
+| 2 | **Stale E2E test** — `intelligence-panel-dc-verify.spec.ts` | 🔴 | Update assertions to production panel structure |
+| 3 | **Crawl progress** — **"50 of 0 pages"** denominator bug | 🟡 | Fix total-pages in analysing state |
+| 4 | **AI Draft Card** — verify with `draft_ready` brand | 🟡 | QA with correct brand state before merge |
+| 5 | **Local `source` typing** — `IntelligenceApprovalItem.source` uncommitted | 🔴 | Separate PR or fold into #164/#181 |
 
 ---
 

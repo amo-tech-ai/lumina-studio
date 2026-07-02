@@ -8,6 +8,7 @@ lastUpdated: "2026-07-02"
 
 | Date | Change |
 |------|--------|
+| 2026-07-02 | **plan/todo.md v3.9.1** — verified progress table · numbered blockers · merged PR matrix · PR #181 status · on `main` via docs PR |
 | 2026-07-02 | **Progress Task Tracker verify** — `tasks/todo.md` v2.1 · main `0479aba` · 547 tests · CI green · PR [#181](https://github.com/amo-tech-ai/lumina-studio/pull/181) draft parity ~80% |
 | 2026-07-02 | **Merged [#180](https://github.com/amo-tech-ai/lumina-studio/pull/180)** — ActiveBrandProvider SSR fix · `useHeroBrandSync` · 547 tests |
 | 2026-07-02 | **Merged [#177](https://github.com/amo-tech-ai/lumina-studio/pull/177)** — Gemini-first CopilotKit dev env · `DATABASE_URL` in COMMON_DEV_KEYS |

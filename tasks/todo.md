@@ -3,7 +3,7 @@ title: Design Handoff — Implementation Tracker (mirror)
 version: "2.1"
 lastUpdated: "2026-07-02"
 ssot: ./plan/todo.md
-mirrorSyncedFrom: plan/todo.md v3.9 · 2026-07-02 bidirectional verify
+mirrorSyncedFrom: plan/todo.md v3.9.1 · 2026-07-02
 verifiedAgainst: plan/todo.md · DESIGN-TASKS §0 · app/src · docs/qa/design-parity-checklist.md (PR #181)
 accuracyNote: "Mirror only — update plan/todo.md first. Code ≠ Design."
 source_version:
