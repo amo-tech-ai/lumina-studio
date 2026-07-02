@@ -1,0 +1,39 @@
+app/src/components/operator-panel/operator-panel.tsx
+  s_34eb7d3f1209d9::t_6569445d9f3020 15
+  s_34eb7d3f1209d9::t_c455ae98a9c3a8 86,88,92
+app/src/lib/active-brand/command-center-hero-sync.ts
+  s_34eb7d3f1209d9::t_660bfeabf55312 27
+  s_34eb7d3f1209d9::t_7f57d119d4b727 6-7,12-14,19,22-26
+app/src/components/command-center/command-center-brand-sync.test.tsx
+  s_34eb7d3f1209d9::t_1ff4c9b685a780 8-11
+  s_34eb7d3f1209d9::t_f20df11926c53e 15
+app/src/lib/active-brand/command-center-hero-sync.test.ts
+  s_34eb7d3f1209d9::t_48bee37f1c3936 4,11,24-39
+app/src/test/active-brand-provider-boundary.test.tsx
+  s_34eb7d3f1209d9::t_264eb127e7dde6 39,49,54
+  s_34eb7d3f1209d9::t_6e5b9f1886b5b6 68
+  s_34eb7d3f1209d9::t_2c0520390ed658 4
+  s_34eb7d3f1209d9::t_b7ae8ef21c8043 1-3,5-28,30-35,38,40-48,52-53,57-67,69
+  s_34eb7d3f1209d9::t_61b6078c18be7d 29
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.9",
+  "base_commit_sha": "4203e93a52c0788dc40b5f55498ee36b4b8b7125",
+  "prompts": {},
+  "humans": {
+    "h_d382fbec1d5b46": {
+      "author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  },
+  "sessions": {
+    "s_34eb7d3f1209d9": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "5f2bb499-4181-4424-be0c-f98a1fef1295",
+        "model": "composer-2.5"
+      },
+      "human_author": null
+    }
+  }
+}
