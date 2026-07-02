@@ -12,6 +12,7 @@ export function CommandCenterBrandSync({
 }) {
   useEffect(() => {
     syncCommandCenterHeroBrand(heroBrandId);
+    return () => syncCommandCenterHeroBrand(null);
   }, [heroBrandId]);
 
   return null;

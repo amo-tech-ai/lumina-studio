@@ -20,7 +20,7 @@ import { IntelligencePanel } from "@/components/intelligence-panel";
 import { ThreadsDrawer } from "@/components/threads-drawer";
 import { ThreadsPanelGate } from "@/components/threads-drawer/locked-state";
 import { useActiveBrand } from "@/context/active-brand-context";
-import { registerCommandCenterHeroBrandSync } from "@/lib/active-brand/command-center-hero-sync";
+import { useHeroBrandSync } from "@/lib/active-brand/use-hero-brand-sync";
 import { DEV_PREVIEW_HERO_BRAND_ID, isDevPreviewBrandId, isDevSkipMode } from "./dev-skip-fixture";
 import { NavSidebar } from "./nav-sidebar";
 import { OperatorChatDock } from "./operator-chat-dock";
@@ -83,13 +83,7 @@ function OperatorShell({
   const { activeBrandId, setActiveBrandId } = useActiveBrand();
   const { brands, brandsRef, brandsLoadingRef } = useOperatorBrands(devSkip);
 
-  useEffect(() => {
-    registerCommandCenterHeroBrandSync((heroBrandId) => {
-      if (!heroBrandId) return;
-      setActiveBrandId(heroBrandId);
-    });
-    return () => registerCommandCenterHeroBrandSync(null);
-  }, [setActiveBrandId]);
+  useHeroBrandSync();
 
   // Dev layout QA — align active brand with fixture; clear fixture IDs when leaving skip mode
   useEffect(() => {

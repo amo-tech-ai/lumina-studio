@@ -2,15 +2,12 @@
  * @vitest-environment jsdom
  */
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
-import { useEffect } from "react";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { CommandCenterBrandSync } from "@/components/command-center/command-center-brand-sync";
 import { ActiveBrandProvider, useActiveBrand } from "@/context/active-brand-context";
-import {
-  __resetCommandCenterHeroBrandSyncForTests,
-  registerCommandCenterHeroBrandSync,
-} from "@/lib/active-brand/command-center-hero-sync";
+import { useHeroBrandSync } from "@/lib/active-brand/use-hero-brand-sync";
+import { __resetCommandCenterHeroBrandSyncForTests } from "@/lib/active-brand/command-center-hero-sync";
 
 const HERO_ID = "942ed871-932f-44a2-a377-9c404cb82400";
 
@@ -19,18 +16,8 @@ function BrandIdProbe() {
   return <span data-testid="active-brand-id">{activeBrandId ?? "none"}</span>;
 }
 
-/** Minimal OperatorShell stand-in — registers hero sync like production. */
 function ShellWithHeroRegistry({ children }: { children: React.ReactNode }) {
-  const { setActiveBrandId } = useActiveBrand();
-
-  useEffect(() => {
-    registerCommandCenterHeroBrandSync((heroBrandId) => {
-      if (!heroBrandId) return;
-      setActiveBrandId(heroBrandId);
-    });
-    return () => registerCommandCenterHeroBrandSync(null);
-  }, [setActiveBrandId]);
-
+  useHeroBrandSync();
   return children;
 }
 
@@ -50,7 +37,9 @@ describe("ActiveBrandProvider boundary", () => {
   });
 
   it("throws when useActiveBrand is used outside provider", () => {
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
     expect(() => render(<BrandIdProbe />)).toThrow(/ActiveBrandProvider/);
+    errorSpy.mockRestore();
     cleanup();
   });
 

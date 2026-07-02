@@ -18,6 +18,24 @@ describe("command-center-hero-sync registry", () => {
     expect(handler).toHaveBeenCalledWith("brand-uuid");
   });
 
+  it("notifies all registered listeners", () => {
+    const first = vi.fn();
+    const second = vi.fn();
+    registerCommandCenterHeroBrandSync(first);
+    registerCommandCenterHeroBrandSync(second);
+    syncCommandCenterHeroBrand("brand-uuid");
+    expect(first).toHaveBeenCalledWith("brand-uuid");
+    expect(second).toHaveBeenCalledWith("brand-uuid");
+  });
+
+  it("unsubscribes a listener via returned cleanup", () => {
+    const handler = vi.fn();
+    const unsubscribe = registerCommandCenterHeroBrandSync(handler);
+    unsubscribe();
+    syncCommandCenterHeroBrand("brand-uuid");
+    expect(handler).not.toHaveBeenCalled();
+  });
+
   it("no-ops when no handler is registered", () => {
     expect(() => syncCommandCenterHeroBrand("brand-uuid")).not.toThrow();
   });
