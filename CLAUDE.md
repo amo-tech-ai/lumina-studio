@@ -50,7 +50,7 @@ Shift from **Create → Check → Fix** to **Guide → Prevent → Confirm** —
 
 - **PR/code review — 3 mechanisms exist:** built-in `/code-review` (diff-scoped, tunable effort low→ultra) → `pr-review-toolkit`'s `/review-pr` (broadest, 6 specialized angles) → `code-review` plugin's own `/code-review` (newest, least battle-tested here). Default to the built-in `/code-review` for routine changes; reach for `pr-review-toolkit` before a real PR/merge; treat the `code-review` plugin as redundant until it's shown to catch something the other two miss.
 - **Supabase guidance — repo-specific skill wins:** use `ipix-supabase` first — it knows this project's actual schema, RLS conventions, and remote-only policy. The `supabase` plugin's two skills are generic Postgres/Supabase knowledge; fall back to them only for patterns `ipix-supabase` doesn't cover.
-- **Browser automation — 3 surfaces now exist:** the already-connected `chrome-devtools` MCP server, `chrome-devtools-mcp`'s guided skills, and `playwright`'s raw MCP tools. Use `chrome-devtools-mcp` skills when diagnosing a named problem (a11y/LCP/memory); use `playwright` for scripted multi-step QA flows; don't invoke more than one for the same task.
+Split into multiple lines. Config files should read like command lists, not paragraphs.
 
 ## Guiding principle — continuous improvement
 
