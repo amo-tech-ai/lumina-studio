@@ -1,0 +1,21 @@
+CLAUDE.md
+  s_ed6e0f17e0845f::t_f9ebaec4f1eb12 38
+  s_ed6e0f17e0845f::t_fc8a02d0f770ec 57-71
+  s_ed6e0f17e0845f::t_ec0635eb3bc8b4 44-46
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.9",
+  "base_commit_sha": "2e01c2ffe8ad3acf632c3f84c05018913841064a",
+  "prompts": {},
+  "sessions": {
+    "s_ed6e0f17e0845f": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_0e1b40439ffermGw7FFZcItlPR",
+        "model": "deepseek-v4-flash"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
