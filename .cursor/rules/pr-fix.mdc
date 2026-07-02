@@ -1,0 +1,276 @@
+---
+description: "PR review fix loop — triage GitHub threads, minimal fixes, verify with skills + MCP, reply, resolve. Invoke with @pr-fix or when user says pr-fix PR#."
+globs: ["**/*"]
+alwaysApply: false
+---
+
+# @pr-fix — GitHub PR review fixer
+
+**Invoke:** `@pr-fix` · user says `pr-fix PR#129` or pastes a PR URL.
+
+**Canonical command:** `.claude/commands/pr-fix.md` (keep in sync).
+
+**Repo:** `amo-tech-ai/lumina-studio` · stack: Next.js `app/`, Mastra, Supabase edge, CopilotKit v2.
+
+**Skill map SSOT:** `tasks/intelligence/ai/skill-map.md` · inventory: `.claude/skills/README.md`
+
+---
+
+## Phase 0 — Pre-flight (Skills & MCP audit)
+
+Before triage or code, orient on PR domain:
+
+```bash
+gh pr view <N> --json number,title,body,headRefName,files
+```
+
+1. **Read changed paths** → load domain skills (read `SKILL.md`, not memory).
+2. **If PR closes IPI-###** → read `docs/linear/issues/IPI-<N>-*.md` + run `@task-verifier` before marking merge-ready.
+3. **Run `graphify query "<concept>"`** before reading flagged source files.
+4. **Output:** one paragraph — PR intent, skills loaded, MCP probes planned.
+
+### Path → skill matrix (`app/` + backend)
+
+| Changed paths | Skills to load | MCP / subagent |
+|---------------|----------------|----------------|
+| `app/src/styles/**`, `tokens.css`, `design-system*` | `design-md`, `frontend-design`, `claude-design-handoff` | — |
+| `app/src/components/**`, `app/src/app/(operator)/**` UI | `design-md`, `frontend-design`, `shadcn`, `accessibility` | `cursor-ide-browser` (visual) |
+| `app/src/app/api/copilotkit/**`, CopilotKit hooks | `copilotkit` | — |
+| `app/src/mastra/**` | `mastra`, `gemini` | `user-mastra` (`searchMastraDocs`) |
+| `app/src/lib/supabase/**`, auth, onboarding, `proxy.ts` | `ipix-supabase`, **`nextjs-supabase-auth`**, `nextjs-16` | `project-0-ipix-supabase` |
+| App Router pages/layouts (non-auth) | **`nextjs-best-practices`**, `nextjs-16` | `next-devtools-mcp` |
+| `supabase/migrations/**`, `*.sql` | `ipix-supabase`, `create-migration` | Supabase MCP + **migration-reviewer** subagent |
+| `supabase/functions/**` | `ipix-supabase`, `gemini` | Supabase MCP (`list_edge_functions`, `get_edge_function`) |
+| Edge AI / prompts / structured output | `gemini`, `senior-prompt-engineer` | `user-gemini-api-docs-mcp` |
+| Cloudinary / media pipeline | `cloudinary` | Cloudinary MCP plugins |
+| Firecrawl / brand crawl | `firecrawl`, `ipix-supabase` | `user-firecrawl` |
+| Commerce / Mercur | `mercur` (in `my-marketplace/`) | Mercur MCP |
+| Multi-file feature / >3 paths | `feature-dev`, `graphify` | — |
+| Tests added/broken | `gen-test` | — |
+| UI E2E / manual smoke | `agent-browser` | `cursor-ide-browser` |
+| Env / secrets / Infisical | `infisical` | — |
+| `proxy.ts`, `middleware.ts`, `next.config.*`, App Router pages/layouts | **`nextjs-16`**, `ipix-task-lifecycle` | **`next-devtools-mcp`** (dev running) · Vercel MCP (CI/deploy) |
+| `ai` package, `@ai-sdk/*`, token params | **`nextjs-16`** → upstream `ai-sdk-6-skills` | Context7 / Vercel AI SDK docs |
+| Linear issue state / spec drift | `linear`, `ipix-task-lifecycle` | `project-0-ipix-linear-ipix` |
+| Branch / worktree setup | `worktrees` | — |
+| Scope creep / bundle risk | `lean` | — |
+| Any PR before merge-ready | **`task-verifier`** | probes in `task-verifier/references/verifier-probes-ipix.md` |
+
+**Hub router:** load `ipix/SKILL.md` first when domain is unclear — it maps workflow chains (Brand Intelligence, Operator Hub, Commerce, etc.).
+
+### MCP servers (evidence for fix / dismiss)
+
+| Server | When | Key tools |
+|--------|------|-----------|
+| `project-0-ipix-supabase` | Schema, RLS, migrations, edge fn claims | `execute_sql`, `list_migrations`, `get_advisors`, `list_edge_functions`, `get_edge_function` |
+| `user-mastra` | Agent/tool/workflow API disputes | `searchMastraDocs`, `readMastraDocs`, `mastraDocs` |
+| `user-gemini-api-docs-mcp` | Model params, structured output, token limits | docs fetch |
+| `user-firecrawl` | Crawl/webhook PRs | scrape/search tools |
+| `project-0-ipix-linear-ipix` | Issue AC vs PR scope | issue fetch/update |
+| `plugin-vercel-plugin-vercel` | Build/deploy/runtime failures | `get_deployment_build_logs`, `get_runtime_errors` |
+| `cursor-ide-browser` | UI regressions, token visual diff | snapshot, screenshot |
+| **`next-devtools-mcp`** | Next 16 route/cache/build/runtime disputes | `nextjs_index`, `nextjs_call` (needs `cd app && npm run dev`) |
+| Cloudinary plugins | Upload/transform/DNA media | asset-mgmt, analysis |
+| Context7 MCP (if enabled) | Generic SDK disputes (`ai@6.x` → `maxOutputTokens`) | `resolve-library-id`, `query-docs` |
+
+**Next.js 16 skills:** load `.claude/skills/nextjs-16/SKILL.md`; upstream [gocallum/nextjs16-agent-skills](https://github.com/gocallum/nextjs16-agent-skills) (`nextjs16-skills`, `ai-sdk-6-skills`). Official MCP: [Next.js 16 DevTools MCP](https://nextjs.org/blog/next-16#nextjs-devtools-mcp).
+
+**Evidence over memory** for dismissals — cite tsc, tests, skill/MCP probe, or file line.
+
+**MCP cadence SSOT:** `task-verifier/references/mcp-cadence-ipix.md`
+
+---
+
+## Phase 1 — Fetch & triage
+
+```bash
+gh pr view <N> --json number,title,headRefName,baseRefName,url
+
+gh api graphql -f query='
+query { repository(owner:"amo-tech-ai", name:"lumina-studio") {
+  pullRequest(number:<N>) {
+    reviewThreads(first:100) {
+      nodes { id isResolved path line
+        comments(first:1) { nodes { databaseId body author { login } } }
+      }
+    }
+  }
+}}'
+
+gh api repos/amo-tech-ai/lumina-studio/pulls/<N>/comments \
+  --jq '.[] | {id,path,line,user:.user.login,body}'
+```
+
+**Bucket every unresolved thread:**
+
+| Bucket | Action |
+|--------|--------|
+| **Fix** | Valid, in scope, not in HEAD |
+| **Already fixed** | Verify at current line on PR branch (+ MCP if DB claim) |
+| **Out of scope** | Reply + follow-up Linear title; **do not resolve** |
+| **Dismiss** | Wrong assumption — reply with skill/MCP/tsc evidence, then resolve |
+
+Show triage table before coding.
+
+---
+
+## Phase 2 — Fix
+
+Order: **Bug → Refactor → Tech debt → Style**
+
+1. Checkout PR branch (worktree preferred — `worktrees` skill): `ipi/<task>-<slug>`
+2. `graphify query "<concept>"` → read flagged lines only
+3. Re-read loaded domain skill if comment touches patterns (auth, CK v2, Mastra tools)
+4. **Smallest safe diff** — match file patterns; no drive-by refactors
+5. **>3 files** for one finding → confirm with user first
+6. **One concern per commit** — never mix unrelated fixes
+
+### iPix defaults
+
+- Auth: `withOperatorAuth(req)` → `OperatorAuthError` → 401
+- Brand RLS: `createSupabaseServerClient()` (async)
+- CopilotKit: `@copilotkit/react-core/v2` only — no v1 hooks
+- Mastra tools: `tool.execute!()` from routes — no raw `generateText` in routes
+- Gemini: server-only; default `gemini-3.1-flash-lite` per `gemini` skill
+- AI SDK `ai@6.x`: `maxOutputTokens`, not `maxTokens`
+- Never `--no-verify` on push
+- **Stop** if fix needs a migration — report, don't push (use `create-migration` + migration-reviewer)
+
+---
+
+## Phase 3 — Verify
+
+### 3a. Static
+
+```bash
+cd app && npm run typecheck    # must be 0 errors
+cd app && npm test             # no new failures vs main
+```
+
+| Area | Also run |
+|------|----------|
+| `app/**` | `npm run lint` |
+| routes/config/env/middleware | `npm run build` (needs `DATABASE_URL`) |
+| migrations | `infisical run -- npm run supabase:verify-rls` |
+| edge fn | `npm run supabase:verify-edge` |
+| AI / BI pipeline | `npm run supabase:verify-brand-intelligence` |
+| DNA scoring | `npm run supabase:verify-dna` |
+
+Fail → stop, do not push.
+
+### 3b. Domain (skills + MCP)
+
+Run probes from Phase 0 matrix. Examples:
+
+- **Supabase:** `execute_sql` on live schema; `npm run supabase:verify-rls`
+- **Mastra:** grep agent registry + `searchMastraDocs "<API>"`
+- **CopilotKit:** grep v2 imports; check `references/ipix-production.md` for prod 401s
+- **Gemini:** confirm model in `app/src/mastra/models.ts` or `_shared/gemini.ts`
+- **DESIGN-*** PRs:** `design-md` checklist + token/visual diff vs `tokens.css`
+- **UI:** `accessibility` keyboard/contrast spot-check; browser snapshot if visual
+
+### 3c. Spec compliance
+
+If PR closes IPI-###: check each AC in issue md → probe → result. Any 🔴 = blocker.
+
+Run `@task-verifier` before final merge-ready sign-off.
+
+---
+
+## Phase 4 — Push & resolve
+
+```bash
+git add <only fix files>
+git commit -m "fix(pr-<N>): address review — <summary>"
+git push
+```
+
+**Reply** (REST):
+
+```bash
+gh api repos/amo-tech-ai/lumina-studio/pulls/<N>/comments/<id>/replies \
+  -X POST -f body="Fixed in <sha>: … Verified: <cmd> + <skill/MCP probe>."
+```
+
+**Resolve thread** (GraphQL):
+
+```bash
+gh api graphql -f query='
+mutation { resolveReviewThread(input:{threadId:"PRRT_..."}) {
+  thread { isResolved }
+}}'
+```
+
+Confirm zero unresolved; re-trigger `cursor review` / `bugbot run` if diff >50 LOC or sensitive paths.
+
+---
+
+## Phase 5 — Final report
+
+```text
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  PR #<N> — REVIEW FIX REPORT
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+PR link:        <url>
+Branch:         <branch>
+Closes:         IPI-### (or N/A)
+
+Comments reviewed:   <total>
+  Fixed:             <n>
+  Already fixed:     <n>
+  Out of scope:      <n>
+  Dismissed:         <n>
+
+Tests:          typecheck ✅ | tests <n> passed ✅ | build <skipped|✅>
+
+Skills verified:
+  - <skill> → <result>
+
+MCP verified:
+  - <server> → <result>
+
+Spec compliance (if closes issue):
+  - AC #1: ✅ | 🔴
+
+Remaining blockers:  <none | list>
+
+Suggested improvements (out of scope):
+  - <title> — <one-line rationale>
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+```
+
+---
+
+## Skills audit — recommended additions for @pr-fix
+
+**Already wired above (load on path match):** `ipix`, `ipix-task-lifecycle`, `ipix-supabase`, `mastra`, `copilotkit`, `gemini`, `frontend-design`, `design-md`, `task-verifier`, `graphify`, `worktrees`, `feature-dev`, `create-migration`, `cloudinary`, `firecrawl`, `infisical`, `linear`, `gen-test`, `agent-browser`, `accessibility`, `shadcn`, `lean`, `claude-design-handoff`, `mercur`.
+
+**High-value adds not in old rule:**
+
+| Skill | Why for pr-fix |
+|-------|----------------|
+| `design-md` | All DESIGN-* / operator UI PRs — HITL + 3-panel contract |
+| `claude-design-handoff` | Token/CSS sync PRs (e.g. PR #162 DESIGN-010) |
+| `accessibility` | Bugbot a11y findings — WCAG checklist |
+| `senior-prompt-engineer` | Edge fn / Mastra prompt review comments |
+| `gen-test` | Review asks for missing Vitest coverage |
+| `agent-browser` | UI regression proof after fix |
+| `mvp` | Out-of-scope findings — cite MVP proof # |
+| `mermaid-diagrams` | Spec/flow comments on async workflows |
+
+**Subagents (not skills — invoke via Task tool):** `migration-reviewer`, `security-reviewer`, `qa-reviewer`, `bugbot`.
+
+**Installed:** `nextjs-16` (`.claude/skills/nextjs-16/`) — iPix proxy/turbopack/async-API patterns + DevTools MCP wiring.
+
+**Gap candidates:** `pr-fix` meta-skill, `review-bugbot` (`~/.cursor/skills-cursor/review-bugbot`). **Optional upstream install:** `npx skills add gocallum/nextjs16-agent-skills`.
+
+---
+
+## Hard rules
+
+- Never resolve without reading full comment body
+- Never claim "already fixed" without reading HEAD at that line (+ MCP for DB)
+- Load domain skill before arguing patterns — don't cite training data
+- Align with `@pr-workflow` — all threads resolved or waived before merge
+- Docs-only fixes (rules, audit) → **separate PR** from code fixes
+- One concern per PR/commit — never mix unrelated review fixes with feature work
