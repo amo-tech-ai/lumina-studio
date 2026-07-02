@@ -1,0 +1,19 @@
+supabase/migrations/20260702150000_bookings_identity_lock_allow_fk_cascade.sql
+  s_c07e656bb1b48e::t_c74c85343d4925 1-45
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.9",
+  "base_commit_sha": "14ce6237aadf3d8d3c9641da7c69e320aa914243",
+  "prompts": {},
+  "sessions": {
+    "s_c07e656bb1b48e": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b8a1a548-66d1-4c73-b468-84dd619829ae",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
