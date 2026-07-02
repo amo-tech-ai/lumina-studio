@@ -1,0 +1,60 @@
+app/src/components/operator-panel/operator-panel.tsx
+  s_c07e656bb1b48e::t_9020706faab1e8 43-53
+  s_c07e656bb1b48e::t_db4e0e832dfc85 22-23,89-90
+app/.env.example
+  s_c07e656bb1b48e::t_cda5ae60e7e79c 5,8-12,21
+app/.env.local.example
+  s_c07e656bb1b48e::t_23f6aaa52b2387 1-13
+app/.gitignore
+  s_c07e656bb1b48e::t_4764e88fa2df95 37
+app/README.md
+  s_c07e656bb1b48e::t_c7825f938bc518 21,24-27,30-32,34
+app/fixtures/default.json
+  s_c07e656bb1b48e::t_b8b53aa8750e5d 30
+app/scripts/copilotkit-dev-env.mjs
+  s_c07e656bb1b48e::t_0205ceae3f1950 1-125
+app/scripts/copilotkit-dev-env.test.mjs
+  s_c07e656bb1b48e::t_7b5a9b40ef385d 1-103
+app/scripts/copilotkit-dev-infra.mjs
+  s_c07e656bb1b48e::t_f1e21e828d80f4 2-10,12-13,15-18,20-22,33-34,38,42-47,53,59,62
+app/src/app/(operator)/layout.tsx
+  s_c07e656bb1b48e::t_4151174c5b1260 3,19-21
+app/src/components/command-center/command-center-brand-sync.test.tsx
+  s_c07e656bb1b48e::t_62c088dcc9c923 1-50
+app/src/components/command-center/command-center-brand-sync.tsx
+  s_c07e656bb1b48e::t_e649a0acf7aad4 1-19
+app/src/lib/active-brand/command-center-hero-sync.test.ts
+  s_c07e656bb1b48e::t_45a4fb95b490b1 1-58
+app/src/lib/active-brand/command-center-hero-sync.ts
+  s_c07e656bb1b48e::t_95c0b9e2bd55ed 1-35
+app/src/lib/active-brand/use-hero-brand-sync.ts
+  s_c07e656bb1b48e::t_60901b53c60a2a 1-18
+app/src/test/active-brand-provider-boundary.test.tsx
+  s_c07e656bb1b48e::t_b404b28375c431 1-60
+app/vitest.config.ts
+  s_c07e656bb1b48e::t_9556e8a86a3af3 12
+e2e/suspense-console-forensics.md
+  s_c07e656bb1b48e::t_d5e39cc97c2254 1-36
+e2e/suspense-console-forensics.spec.ts
+  s_c07e656bb1b48e::t_7845812ececd66 1-65
+supabase/migrations/20260702160000_booking_trigger_reschedule_and_delete_fix.sql
+  s_c07e656bb1b48e::t_a87ca365ab9c5a 1-145
+supabase/migrations/20260702170000_booking_trigger_reschedule_notification_fix.sql
+  s_c07e656bb1b48e::t_63da285d116986 1-126
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.9",
+  "base_commit_sha": "ae87bfc87c67d5560f220445613a3df0b07fc6e7",
+  "prompts": {},
+  "sessions": {
+    "s_c07e656bb1b48e": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b8a1a548-66d1-4c73-b468-84dd619829ae",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
