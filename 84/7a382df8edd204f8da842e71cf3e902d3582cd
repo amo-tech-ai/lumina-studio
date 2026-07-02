@@ -1,0 +1,22 @@
+app/src/app/(operator)/app/brand/page.tsx
+  s_34eb7d3f1209d9::t_ae86998b749194 47,52-60
+  s_34eb7d3f1209d9::t_36cc5e83ddb781 61
+app/src/test/brand-hub.test.ts
+  s_34eb7d3f1209d9::t_9bb465f9c6594b 224-239
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.9",
+  "base_commit_sha": "847a382df8edd204f8da842e71cf3e902d3582cd",
+  "prompts": {},
+  "sessions": {
+    "s_34eb7d3f1209d9": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "5f2bb499-4181-4424-be0c-f98a1fef1295",
+        "model": "composer-2.5"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
