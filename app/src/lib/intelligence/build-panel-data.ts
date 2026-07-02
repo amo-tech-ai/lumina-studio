@@ -4,13 +4,24 @@ import {
   type BaseScoreType,
   type BrandScoreRow,
 } from "@/lib/brand-scores";
+import { parseAiProfile } from "@/lib/brand-hub";
 import type { IntelligencePanelData } from "./panel-contract";
 
 type BrandRow = {
   id: string;
   name: string;
   intake_status: string;
+  ai_profile?: unknown;
 };
+
+export type { BrandRow };
+
+function profileSnippetFromProfile(
+  profile: ReturnType<typeof parseAiProfile> | null,
+): string | undefined {
+  if (!profile) return undefined;
+  return profile.overview ?? profile.tagline ?? profile.brandVoice ?? undefined;
+}
 
 export function buildPanelData(
   brand: BrandRow | null,
@@ -40,11 +51,29 @@ export function buildPanelData(
     href: `/app/brand/${b.id}`,
   }));
 
+  const profile = brand ? parseAiProfile(brand.ai_profile) : null;
+  const profileSnippet = profileSnippetFromProfile(profile);
+  const visualScore = pillars.visual;
+
   return {
     brand: brand
-      ? { id: brand.id, name: brand.name, status: brand.intake_status }
+      ? {
+          id: brand.id,
+          name: brand.name,
+          status: brand.intake_status,
+          summary: profileSnippet,
+        }
       : null,
     scores: brand && hasPillar ? { dna, pillars } : null,
+    profileSnippet,
+    visualIdentity:
+      brand && visualScore != null
+        ? {
+            visualScore: Math.round(visualScore),
+            palette: profile?.visualIdentity?.colors ?? [],
+            sampleUrls: [],
+          }
+        : undefined,
     approvals: {
       pendingCount: approvalItems.length,
       items: approvalItems,

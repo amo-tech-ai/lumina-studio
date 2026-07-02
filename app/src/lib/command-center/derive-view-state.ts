@@ -21,17 +21,18 @@ export function deriveWorkspaceView(
   if (data.fetchError) return "error";
   if (data.brandCount === 0) return "empty";
 
-  if (data.pendingApprovalCount > 0) return "approval";
   if (data.recentShoots.length > 0) return "populated";
   if (data.heroBrand) return "normal";
 
   return "empty";
 }
 
-/** Whether the recent-work row should render (DC wsPopulated). */
+/** Whether the recent-work row should render (DC wsPopulated / normal with fallbacks). */
 export function showRecentWorkRow(view: WorkspaceView, data: CommandCenterData): boolean {
-  if (view === "loading" || view === "empty" || view === "error") return false;
-  return data.recentShoots.length > 0;
+  if (view === "loading" || view === "empty" || view === "error" || view === "approval") {
+    return false;
+  }
+  return Boolean(data.heroBrand);
 }
 
 /** Whether hero + chips render (DC wsNormal). */

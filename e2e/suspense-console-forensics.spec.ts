@@ -1,6 +1,7 @@
 import { expect, test } from "@playwright/test";
 
 import { loginOperatorIfConfigured } from "./helpers/mobile-audit";
+import { isBenignAppNoise, isExtensionOnlyNoise } from "./helpers/console-noise";
 
 const TARGETS = [
   "/app",
@@ -10,22 +11,6 @@ const TARGETS = [
 
 const SUSPENSE_RE =
   /cleaning up async info that was not on the parent Suspense boundary|This is a bug in React/i;
-
-function isExtensionOnlyNoise(text: string): boolean {
-  return (
-    /chrome-extension:\/\//i.test(text) ||
-    /installHook\.js/i.test(text) ||
-    /react-devtools/i.test(text) ||
-    /download the react devtools/i.test(text)
-  );
-}
-
-function isBenignAppNoise(text: string): boolean {
-  return (
-    /Failed to load resource: the server responded with a status of 404/i.test(text) ||
-    /favicon\.ico/i.test(text)
-  );
-}
 
 test.describe("Suspense console forensics — clean Chromium", () => {
   test.beforeEach(async ({ page }) => {

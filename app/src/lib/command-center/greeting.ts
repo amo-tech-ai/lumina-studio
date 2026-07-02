@@ -9,16 +9,19 @@ export function buildHeroGreeting(input: {
 
   if (pendingApprovalCount > 0) {
     const noun = pendingApprovalCount === 1 ? "approval needs" : "approvals need";
+    const next = recentShootName
+      ? `Next: generate deliverables for ${recentShootName}.`
+      : "Next: generate IG deliverables for your active campaign.";
     return {
       headline,
-      subline: `${pendingApprovalCount} ${noun} your review. Next: open Brand Hub to approve or refine AI drafts.`,
+      subline: `${pendingApprovalCount} ${noun} your review. ${next}`,
     };
   }
 
   if (recentShootName) {
     return {
       headline,
-      subline: `Latest shoot: ${recentShootName}. Next: plan deliverables or open Shoots to continue production.`,
+      subline: `Next: generate deliverables for ${recentShootName}.`,
     };
   }
 

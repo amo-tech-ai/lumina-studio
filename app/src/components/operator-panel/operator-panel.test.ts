@@ -103,9 +103,11 @@ describe("OperatorPanel — dev skip + brand list (PR #170 review)", () => {
     expect(PANEL_SRC).toMatch(/No brands in your organization yet/);
   });
 
-  it("wraps OperatorShell in Suspense for useSearchParams", () => {
+  it("wraps OperatorShell in Suspense and wires hero brand sync from main", () => {
     expect(PANEL_SRC).toMatch(/<Suspense fallback=\{<OperatorShellFallback/);
+    expect(PANEL_SRC).toMatch(/useSearchParams\(\)/);
     expect(PANEL_SRC).toMatch(/useOperatorBrands\(devSkip\)/);
+    expect(PANEL_SRC).toMatch(/useHeroBrandSync\(\)/);
   });
 
   it("clears dev preview brand when devSkip toggles off", () => {

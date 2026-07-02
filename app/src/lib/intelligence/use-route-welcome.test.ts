@@ -62,6 +62,19 @@ describe("useRouteWelcome", () => {
       expect(result.current).toBe("Loading brand details...");
     });
 
+    it("shows brand name before DNA score is available", () => {
+      const { result } = renderHook(() =>
+        useRouteWelcome({
+          pathname: "/app/brand/abc-123",
+          brandId: "abc-123",
+          context: { brandName: "Maaji" },
+        })
+      );
+      expect(result.current).toBe(
+        "Maaji — review DNA pillars, assets, and suggested improvements",
+      );
+    });
+
     it("shows brand DNA with weakest pillar", () => {
       const { result } = renderHook(() =>
         useRouteWelcome({
