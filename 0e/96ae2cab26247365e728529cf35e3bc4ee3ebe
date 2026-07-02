@@ -1,0 +1,21 @@
+supabase/migrations/20260702140000_talent_booking_review_fixes.sql
+  s_c07e656bb1b48e::t_7d3c7fe66a3e97 1-13,15-154,241-299
+  s_c07e656bb1b48e::t_f0b3d7c9b6bf01 14
+  s_c07e656bb1b48e::t_c972b854ce27b4 155-240
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.9",
+  "base_commit_sha": "0e96ae2cab26247365e728529cf35e3bc4ee3ebe",
+  "prompts": {},
+  "sessions": {
+    "s_c07e656bb1b48e": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b8a1a548-66d1-4c73-b468-84dd619829ae",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
