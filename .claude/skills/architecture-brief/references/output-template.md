@@ -38,7 +38,7 @@ Owned by `frontend-design` (production surfaces) or `ipix-wireframe` (early/lo-f
 existing components in `app/src/components/` are reused vs. net-new.
 
 ## Backend / APIs
-Existing `app/src/app/api/` conventions and `AGENTS.md`'s backend section. New routes should match
+Existing `app/src/app/api/` conventions and `app/AGENTS.md`'s backend section. New routes should match
 an existing route's shape unless there's a stated reason not to.
 
 ## AI Agents / Workflows

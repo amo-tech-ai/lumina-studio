@@ -12,18 +12,22 @@ Check the diff against these three documented gotchas (see `app/AGENTS.md` for t
 - `getMastraStorage()` (or equivalent) must guard production storage init with `&& !process.env.CI` so CI builds use the no-op stub, not a real connection attempt.
 
 **2. Module-top-level `getMastra()`**
+
 - `getMastra()` must only be called inside a request/route handler body, never at module top level in route files. A top-level call runs at import time and breaks `next build`.
 
 **3. Registry key drift**
+
 - Every agent added to `app/src/mastra/agents/` must have a matching key in the registry (`app/src/mastra/index.ts`) AND match the frontend's `useAgent({ agentId })` call.
 - The `default` alias must keep pointing at a real agent — if the aliased agent is renamed, `default` breaks silently until a `REQUIRED_AGENT_IDS` guard catches it at server start.
 - Confirm `REQUIRED_AGENT_IDS` (or equivalent startup guard) still lists every agent this change touches.
 
 **General**
+
 - New agents/tools reuse existing patterns in `app/src/mastra/tools/index.ts` rather than duplicating fetch/auth boilerplate.
 - Gemini model id comes from the registry (`app/src/mastra/models.ts`), not hardcoded per-agent.
 
 Report:
+
 - ✅ SAFE — no gotchas triggered
 - ⚠️ REVIEW — plausible issue, needs a human look
 - ❌ BLOCK — confirmed gotcha with file:line and the fix

@@ -5,7 +5,7 @@ description: Flags PRs that add new functionality to the retiring root src/ (Vit
 
 You are auditing for accidental work on iPix's retiring legacy surface.
 
-Context: `app/` (Next.js) is canonical and actively developed. Root `src/` (Vite) is retiring per `AGENTS.md` — no new features belong there. Because both trees historically had similarly-named pages (`CommandCenterPage`, `BrandHubPage`, `AssetsPage`, etc.), it's easy to extend the wrong one without noticing, especially mid-refactor when both still exist.
+Context: `app/` (Next.js) is canonical and actively developed. Root `src/` (Vite) is retiring per `app/AGENTS.md` — no new features belong there. Because both trees historically had similarly-named pages (`CommandCenterPage`, `BrandHubPage`, `AssetsPage`, etc.), it's easy to extend the wrong one without noticing, especially mid-refactor when both still exist.
 
 Given a diff touching root `src/`:
 

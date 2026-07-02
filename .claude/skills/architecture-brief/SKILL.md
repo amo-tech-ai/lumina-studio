@@ -67,7 +67,7 @@ would, using that skill's process:
 | Frontend / UI | `frontend-design` (production) or `ipix-wireframe` (early / lo-fi) |
 | AI agents / workflows | `mastra` |
 | API routes | Existing `app/src/app/api/` conventions — reuse the pattern, don't invent one |
-| Backend / Supabase surface | `AGENTS.md` architecture section + `ipix-supabase` |
+| Backend / Supabase surface | `app/AGENTS.md` architecture section + `ipix-supabase` |
 
 ## Step 4 — MVP discipline
 
