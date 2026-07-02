@@ -146,6 +146,7 @@ export function TalentRow({
           e.stopPropagation();
           onShortlist();
         }}
+        onKeyDown={(e) => e.stopPropagation()}
       >
         {shortlisted ? "★" : "☆"}
       </Button>
