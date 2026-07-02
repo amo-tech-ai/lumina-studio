@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { Calendar, ChevronRight, Zap } from "lucide-react";
 
+import { BrandDetailAnalysingCard } from "@/components/brand-hub/brand-detail-analysing-card";
 import { AnalysisProgressBanner } from "@/components/brand-hub/analysis-progress-banner";
 import { BrandDetailDraftCard } from "@/components/brand-hub/brand-detail-draft-card";
 import { useBrandContext } from "@/components/brand-hub/brand-context";
@@ -176,26 +177,12 @@ export function BrandDetailWorkspace({
         ) : null}
 
         {analysing ? (
-          <div className={styles.card}>
-            <div className={styles.cardEyebrow}>
-              <span className={styles.cardEyebrowLabel}>Brand Intelligence</span>
-            </div>
-            <p className={styles.cardBody} style={{ color: "var(--color-text-primary)" }}>
-              Crawling {host ?? brandName} — extracting brand voice, palette, and imagery…
-            </p>
-            <div className={styles.analysingThumbs}>
-              {thumbUrls.map((src) => (
-                <div key={src} className={styles.analysingThumb}>
-                  <Image src={src} alt="" fill sizes="54px" className={styles.assetImage} />
-                </div>
-              ))}
-            </div>
-            {crawlPages?.pages_crawled != null ? (
-              <p className={styles.cardBody} style={{ marginTop: "0.625rem" }}>
-                {crawlPages.pages_crawled} of {crawlPages.pages_found ?? 47} pages crawled
-              </p>
-            ) : null}
-          </div>
+          <BrandDetailAnalysingCard
+            host={host}
+            brandName={brandName}
+            thumbUrls={thumbUrls}
+            crawlPages={crawlPages}
+          />
         ) : null}
 
         {status === "failed" ? (

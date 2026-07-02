@@ -2,8 +2,11 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
 import { toast } from "sonner";
 
+import { applyDraft } from "@/app/(operator)/app/brand/[id]/actions";
 import { isPanelApprovalFallback } from "@/lib/intelligence/panel-approval-fallbacks";
 import type { IntelligenceApprovalItem } from "@/lib/intelligence/panel-contract";
 
@@ -11,6 +14,7 @@ import styles from "./intelligence-panel.module.css";
 
 type Props = {
   item: IntelligenceApprovalItem;
+  onApproved?: () => void;
 };
 
 function confidenceColor(confidence: number): string {
@@ -19,11 +23,36 @@ function confidenceColor(confidence: number): string {
   return "var(--color-dna-low, #dc2626)";
 }
 
-export function IntelApprovalCard({ item }: Props) {
+export function IntelApprovalCard({ item, onApproved }: Props) {
+  const router = useRouter();
+  const [approving, setApproving] = useState(false);
   const confidence = item.confidence ?? 87;
   const preview = item.explanation ?? "AI draft ready for your review.";
   const source = item.source ?? "brand-match";
   const isFallback = isPanelApprovalFallback(item.id);
+
+  const handleApprove = async () => {
+    if (isFallback) {
+      toast.success(`Approved: ${item.label} (preview)`);
+      return;
+    }
+
+    setApproving(true);
+    try {
+      const result = await applyDraft(item.id);
+      if (!result.ok) {
+        toast.error(result.error ?? "Could not approve draft");
+        return;
+      }
+      toast.success(`Approved: ${item.label}`);
+      onApproved?.();
+      router.refresh();
+    } catch {
+      toast.error("Unexpected error — please try again");
+    } finally {
+      setApproving(false);
+    }
+  };
 
   return (
     <article className={styles.approvalCardDc} aria-label={`Approval: ${item.label}`}>
@@ -62,15 +91,10 @@ export function IntelApprovalCard({ item }: Props) {
         <button
           type="button"
           className={styles.approvalCardApprove}
-          onClick={() =>
-            toast.success(
-              isFallback
-                ? `Approved: ${item.label} (preview)`
-                : `Approved: ${item.label}`,
-            )
-          }
+          disabled={approving}
+          onClick={() => void handleApprove()}
         >
-          Approve
+          {approving ? "Approving…" : "Approve"}
         </button>
         {isFallback ? (
           <button

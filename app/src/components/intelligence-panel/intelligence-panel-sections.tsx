@@ -24,75 +24,125 @@ type Props = {
   brandListMode: boolean;
   brandDetailMode: boolean;
   onReviewApprovals: () => void;
+  onApprovalAction?: () => void;
 };
 
-export function IntelligencePanelSections({
-  data,
-  tab,
-  activeBrandId,
-  loading,
-  commandCenterMode,
-  commandCenterPopulated,
-  brandListMode,
-  brandDetailMode,
-  onReviewApprovals,
-}: Props) {
-  const showOverview = tab === "overview";
-  const showApprovals = tab === "approvals" || (showOverview && !brandListMode && !brandDetailMode);
-  const showActivity = tab === "activity";
+type ResolvedContext = {
+  brandId: string | null;
+  scores: NonNullable<ReturnType<typeof resolvePanelScores>>;
+  health: ReturnType<typeof resolveHealthPillars> | ReturnType<typeof resolveDetailPillars>;
+  approvals: IntelligencePanelData["approvals"];
+  detailExtras: ReturnType<typeof resolveBrandDetailExtras> | null;
+};
+
+function resolvePanelContext(props: Props): ResolvedContext | null {
+  const { data, activeBrandId, commandCenterMode, brandDetailMode, showOverview } = {
+    ...props,
+    showOverview: props.tab === "overview",
+  };
   const brandId = activeBrandId ?? data.brand?.id ?? null;
   const scores = resolvePanelScores(data.scores, commandCenterMode);
-  const health = scores
-    ? brandDetailMode
-      ? resolveDetailPillars({ ...data, scores })
-      : resolveHealthPillars({ ...data, scores })
-    : null;
+  if (!scores) return null;
+
+  const health = brandDetailMode
+    ? resolveDetailPillars({ ...data, scores })
+    : resolveHealthPillars({ ...data, scores });
   const approvals = resolvePanelApprovals(
     data.approvals,
     brandId,
     commandCenterMode && showOverview,
   );
   const detailExtras =
-    brandDetailMode && brandId && showOverview && scores
+    brandDetailMode && brandId && showOverview
       ? resolveBrandDetailExtras(data, brandId)
       : null;
 
-  if (brandListMode && showOverview && data.portfolio) {
-    return (
-      <>
-        <PortfolioPanelSection
-          portfolio={data.portfolio}
-          approvals={approvals}
-          onReviewApprovals={onReviewApprovals}
-        />
-        {showActivity && data.activity?.length ? (
-          <>
-            <div className={styles.sectionDivider} aria-hidden />
-            <RecentActivitySection groups={data.activity} />
-          </>
-        ) : null}
-      </>
-    );
-  }
+  return { brandId, scores, health, approvals, detailExtras };
+}
 
-  if (brandListMode && showApprovals) {
+function PortfolioOverviewSections({
+  data,
+  approvals,
+  showActivity,
+  onReviewApprovals,
+}: {
+  data: IntelligencePanelData;
+  approvals: IntelligencePanelData["approvals"];
+  showActivity: boolean;
+  onReviewApprovals: () => void;
+}) {
+  if (!data.portfolio) return null;
+  return (
+    <>
+      <PortfolioPanelSection
+        portfolio={data.portfolio}
+        approvals={approvals}
+        onReviewApprovals={onReviewApprovals}
+      />
+      {showActivity && data.activity?.length ? (
+        <>
+          <div className={styles.sectionDivider} aria-hidden />
+          <RecentActivitySection groups={data.activity} />
+        </>
+      ) : null}
+    </>
+  );
+}
+
+function BrandListTabSections({
+  tab,
+  data,
+  approvals,
+  onApprovalAction,
+}: {
+  tab: Props["tab"];
+  data: IntelligencePanelData;
+  approvals: IntelligencePanelData["approvals"];
+  onApprovalAction?: () => void;
+}) {
+  if (tab === "approvals") {
     return (
       <>
-        <IntelApprovalQueueSection approvals={approvals} />
-        {tab === "approvals" && !approvals.items.length ? (
+        <IntelApprovalQueueSection approvals={approvals} onApproved={onApprovalAction} />
+        {!approvals.items.length ? (
           <p className={styles.mutedCopyInline}>No pending brand drafts.</p>
         ) : null}
       </>
     );
   }
-
-  if (brandListMode && showActivity) {
+  if (tab === "activity") {
     return data.activity?.length ? (
       <RecentActivitySection groups={data.activity} />
     ) : (
       <p className={styles.mutedCopyInline}>No recent portfolio activity.</p>
     );
   }
+  return null;
+}
+
+function CommandCenterAndDetailSections({
+  props,
+  ctx,
+}: {
+  props: Props;
+  ctx: ResolvedContext;
+}) {
+  const {
+    data,
+    tab,
+    activeBrandId,
+    loading,
+    commandCenterMode,
+    commandCenterPopulated,
+    brandDetailMode,
+    onReviewApprovals,
+    onApprovalAction,
+  } = props;
+  const showOverview = tab === "overview";
+  const showApprovals =
+    tab === "approvals" || (showOverview && !brandDetailMode);
+  const showActivity = tab === "activity";
+  const { scores, health, approvals, detailExtras } = ctx;
 
   return (
     <>
@@ -125,12 +175,13 @@ export function IntelligencePanelSections({
           <IntelApprovalQueueSection
             approvals={approvals}
             hideEmpty={commandCenterMode && showOverview}
+            onApproved={onApprovalAction}
           />
         </>
       ) : null}
 
       {showApprovals && brandDetailMode ? (
-        <IntelApprovalQueueSection approvals={approvals} />
+        <IntelApprovalQueueSection approvals={approvals} onApproved={onApprovalAction} />
       ) : null}
 
       {showActivity && data.activity?.length ? (
@@ -146,7 +197,6 @@ export function IntelligencePanelSections({
       !scores &&
       !approvals.items.length &&
       !commandCenterPopulated &&
-      !brandListMode &&
       !brandDetailMode ? (
         <p className={styles.mutedCopyInline}>
           {activeBrandId
@@ -156,4 +206,39 @@ export function IntelligencePanelSections({
       ) : null}
     </>
   );
+}
+
+export function IntelligencePanelSections(props: Props) {
+  const { data, tab, brandListMode, activeBrandId, onReviewApprovals, onApprovalAction } = props;
+  const showOverview = tab === "overview";
+  const showActivity = tab === "activity";
+  const brandId = activeBrandId ?? data.brand?.id ?? null;
+
+  if (brandListMode && showOverview && data.portfolio) {
+    const approvals = resolvePanelApprovals(data.approvals, brandId, false);
+    return (
+      <PortfolioOverviewSections
+        data={data}
+        approvals={approvals}
+        showActivity={showActivity}
+        onReviewApprovals={onReviewApprovals}
+      />
+    );
+  }
+
+  if (brandListMode && (tab === "approvals" || tab === "activity")) {
+    const approvals = resolvePanelApprovals(data.approvals, brandId, false);
+    return (
+      <BrandListTabSections
+        tab={tab}
+        data={data}
+        approvals={approvals}
+        onApprovalAction={onApprovalAction}
+      />
+    );
+  }
+
+  const ctx = resolvePanelContext(props);
+  if (!ctx) return null;
+  return <CommandCenterAndDetailSections props={props} ctx={ctx} />;
 }

@@ -11,13 +11,7 @@ type Props = {
   variant?: "command" | "detail";
 };
 
-function pillarBarColor(score: number): string {
-  if (score >= 80) return "var(--dna-bar-high, #059669)";
-  if (score >= 60) return "var(--dna-bar-mid, #d97706)";
-  return "var(--dna-bar-low, #dc2626)";
-}
-
-function dnaBarColor(score: number): string {
+function scoreBarColor(score: number): string {
   if (score >= 80) return "var(--dna-bar-high, #059669)";
   if (score >= 60) return "var(--dna-bar-mid, #d97706)";
   return "var(--dna-bar-low, #dc2626)";
@@ -64,7 +58,7 @@ export function HealthSection({ dna, pillars, variant = "command" }: Props) {
       <div className={styles.scoreTrack} aria-hidden>
         <div
           className={styles.scoreFill}
-          style={{ width: `${displayDna}%`, background: dnaBarColor(displayDna) }}
+          style={{ width: `${displayDna}%`, background: scoreBarColor(displayDna) }}
         />
       </div>
 
@@ -91,7 +85,7 @@ export function HealthSection({ dna, pillars, variant = "command" }: Props) {
                   className={styles.scoreFillThin}
                   style={{
                     width: `${score}%`,
-                    background: pillarBarColor(score),
+                    background: scoreBarColor(score),
                   }}
                 />
               </div>

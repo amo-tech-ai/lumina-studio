@@ -7,9 +7,14 @@ type Props = {
   approvals: IntelligencePanelData["approvals"];
   /** Hide empty copy on Command Center populated overview (DC pads with placeholders). */
   hideEmpty?: boolean;
+  onApproved?: () => void;
 };
 
-export function IntelApprovalQueueSection({ approvals, hideEmpty = false }: Props) {
+export function IntelApprovalQueueSection({
+  approvals,
+  hideEmpty = false,
+  onApproved,
+}: Props) {
   const displayCount = approvals.pendingCount;
   const hasItems = approvals.items.length > 0;
 
@@ -35,7 +40,7 @@ export function IntelApprovalQueueSection({ approvals, hideEmpty = false }: Prop
       <ul className={styles.approvalList}>
         {approvals.items.map((item) => (
           <li key={item.id}>
-            <IntelApprovalCard item={item} />
+            <IntelApprovalCard item={item} onApproved={onApproved} />
           </li>
         ))}
       </ul>

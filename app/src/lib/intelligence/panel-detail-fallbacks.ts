@@ -27,6 +27,58 @@ const DEFAULT_DNA_HISTORY = [
   },
 ];
 
+function resolveProfileSnippet(data: IntelligencePanelData): string {
+  return data.brand?.summary ?? data.profileSnippet ?? DEFAULT_PROFILE;
+}
+
+function resolveDnaHistory(
+  data: IntelligencePanelData,
+  dna: number,
+): IntelligencePanelData["dnaHistory"] {
+  if (data.dnaHistory?.length) return data.dnaHistory;
+  return DEFAULT_DNA_HISTORY.map((point, index, list) =>
+    index === list.length - 1 ? { ...point, score: Math.round(dna) } : point,
+  );
+}
+
+function resolveVisualIdentity(
+  data: IntelligencePanelData,
+  brandId: string,
+  visualScore: number,
+): IntelligencePanelData["visualIdentity"] {
+  if (data.visualIdentity && data.visualIdentity.sampleUrls.length) {
+    return data.visualIdentity;
+  }
+  if (data.visualIdentity) {
+    return {
+      ...data.visualIdentity,
+      sampleUrls: brandDetailAssetUrls(brandId, 3),
+      palette:
+        data.visualIdentity.palette.length > 0
+          ? data.visualIdentity.palette
+          : DEFAULT_PALETTE,
+    };
+  }
+  return {
+    visualScore: Math.round(visualScore),
+    palette: DEFAULT_PALETTE,
+    sampleUrls: brandDetailAssetUrls(brandId, 3),
+  };
+}
+
+function resolveAssetPreview(
+  data: IntelligencePanelData,
+  brandId: string,
+): IntelligencePanelData["assetPreview"] {
+  return (
+    data.assetPreview ?? {
+      count: 12,
+      urls: brandDetailAssetUrls(brandId, 8),
+      href: `/app/assets?brand=${brandId}`,
+    }
+  );
+}
+
 export function resolveBrandDetailExtras(
   data: IntelligencePanelData,
   brandId: string,
@@ -38,33 +90,9 @@ export function resolveBrandDetailExtras(
   const dna = data.scores?.dna ?? 87;
 
   return {
-    profileSnippet: data.brand?.summary ?? data.profileSnippet ?? DEFAULT_PROFILE,
-    dnaHistory: data.dnaHistory?.length
-      ? data.dnaHistory
-      : DEFAULT_DNA_HISTORY.map((point, index, list) =>
-          index === list.length - 1 ? { ...point, score: Math.round(dna) } : point,
-        ),
-    visualIdentity:
-      data.visualIdentity && data.visualIdentity.sampleUrls.length
-        ? data.visualIdentity
-        : data.visualIdentity
-          ? {
-              ...data.visualIdentity,
-              sampleUrls: brandDetailAssetUrls(brandId, 3),
-              palette:
-                data.visualIdentity.palette.length > 0
-                  ? data.visualIdentity.palette
-                  : DEFAULT_PALETTE,
-            }
-          : {
-              visualScore: Math.round(visualScore),
-              palette: DEFAULT_PALETTE,
-              sampleUrls: brandDetailAssetUrls(brandId, 3),
-            },
-    assetPreview: data.assetPreview ?? {
-      count: 12,
-      urls: brandDetailAssetUrls(brandId, 8),
-      href: `/app/assets?brand=${brandId}`,
-    },
+    profileSnippet: resolveProfileSnippet(data),
+    dnaHistory: resolveDnaHistory(data, dna),
+    visualIdentity: resolveVisualIdentity(data, brandId, visualScore),
+    assetPreview: resolveAssetPreview(data, brandId),
   };
 }

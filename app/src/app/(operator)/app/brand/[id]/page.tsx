@@ -2,12 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { BrandDetailWorkspace } from "@/components/brand-hub/brand-detail-workspace";
-import {
-  filterDisplayScores,
-  getBaseScores,
-  parseAiProfile,
-  type BrandScoreDetail,
-} from "@/lib/brand-hub";
+import { getBaseScores, parseAiProfile, type BrandScoreDetail } from "@/lib/brand-hub";
 import { computeDnaScore } from "@/lib/brand-scores";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
@@ -80,7 +75,6 @@ const BrandPage = async ({ params }: Props) => {
   const scoreRows = (scores ?? []) as BrandScoreDetail[];
   const baseScores = getBaseScores(scoreRows);
   const dnaScore = computeDnaScore(scores);
-  void filterDisplayScores(scoreRows);
 
   return (
     <BrandDetailWorkspace

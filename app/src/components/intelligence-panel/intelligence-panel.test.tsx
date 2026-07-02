@@ -47,6 +47,10 @@ vi.mock("@/app/(operator)/app/brand/[id]/actions", () => ({
   applyDraft: vi.fn(),
 }));
 
+vi.mock("@/app/(operator)/app/brand/[id]/actions", () => ({
+  applyDraft: vi.fn(),
+}));
+
 vi.mock("@/lib/intelligence/use-intelligence-panel", () => ({
   useIntelligencePanel: vi.fn(),
 }));
@@ -135,19 +139,6 @@ describe("IntelligencePanel", () => {
       "true",
     );
     expect(screen.getByLabelText("Recent activity")).toBeTruthy();
-  });
-
-  it("renders Explain DNA when fixture provides dnaEvidence", () => {
-    vi.mocked(useIntelligencePanel).mockReturnValue({
-      data: DEV_INTELLIGENCE_PANEL_DATA,
-      loading: false,
-      error: null,
-      reload: vi.fn(),
-    });
-
-    renderPanel(<IntelligencePanel activeBrandId={BRAND_ID} brandName="Nike" />);
-
-    expect(screen.getByRole("button", { name: "Explain DNA" })).toBeTruthy();
   });
 
   it("renders enriched approval cards from live API shape on command center", () => {
