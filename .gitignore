@@ -52,7 +52,8 @@ pr9-storefront-test/
 
 # Claude Code local dirs — skills/docs have example keys that trip secret scanning
 .claude/docs/
-.claude/skills/
+.claude/skills/*
+!.claude/skills/design-to-production/
 .claude/agents/
 .claude/*.py
 
