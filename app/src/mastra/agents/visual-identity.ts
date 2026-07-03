@@ -3,6 +3,7 @@ import { createTool } from "@mastra/core/tools";
 import { generateObject } from "ai";
 import type { UserContent, ImagePart, TextPart } from "ai";
 import { createClient } from "@supabase/supabase-js";
+import { v2 as cloudinary } from "cloudinary";
 import { z } from "zod";
 import { resolveModel, resolveProviderOptions } from "@/mastra/models";
 
@@ -57,48 +58,36 @@ async function captureScreenshot(homepageUrl: string): Promise<Buffer | null> {
   }
 }
 
+let cloudinaryConfigured = false;
+
+function ensureCloudinaryConfigured(): boolean {
+  if (cloudinaryConfigured) return true;
+  const cloud_name = process.env.CLOUDINARY_CLOUD_NAME;
+  const api_key = process.env.CLOUDINARY_API_KEY;
+  const api_secret = process.env.CLOUDINARY_API_SECRET;
+  if (!cloud_name || !api_key || !api_secret) return false;
+  cloudinary.config({ cloud_name, api_key, api_secret });
+  cloudinaryConfigured = true;
+  return true;
+}
+
 async function uploadToCloudinary(image: Buffer, brandId: string): Promise<string | null> {
-  const cloudName = process.env.CLOUDINARY_CLOUD_NAME;
-  const apiKey = process.env.CLOUDINARY_API_KEY;
-  const apiSecret = process.env.CLOUDINARY_API_SECRET;
-  if (!cloudName || !apiKey || !apiSecret) {
+  if (!ensureCloudinaryConfigured()) {
     console.warn("visual-identity: Cloudinary env vars absent, skipping upload");
     return null;
   }
-  const { signal, cancel } = withTimeout(FETCH_TIMEOUT_MS);
   try {
-    const timestamp = Math.floor(Date.now() / 1000);
-    const publicId = `brands/${brandId}/screenshots/homepage`;
-    const crypto = await import("crypto");
-    // Fields signed in alphabetical order, excluding file and api_key per Cloudinary spec
-    const signatureParams = `overwrite=true&public_id=${publicId}&timestamp=${timestamp}`;
-    const signature = crypto
-      .createHash("sha1")
-      .update(`${signatureParams}${apiSecret}`)
-      .digest("hex");
-
-    const form = new FormData();
-    // Slice to get a standalone ArrayBuffer (avoids pooled-buffer aliasing and satisfies BlobPart types)
-    const ab = image.buffer.slice(image.byteOffset, image.byteOffset + image.byteLength) as ArrayBuffer;
-    form.append("file", new Blob([ab], { type: "image/png" }), "screenshot.png");
-    form.append("public_id", publicId);
-    form.append("timestamp", String(timestamp));
-    form.append("api_key", apiKey);
-    form.append("signature", signature);
-    form.append("overwrite", "true");
-
-    const res = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/image/upload`, {
-      method: "POST",
-      body: form,
-      signal,
-    });
-    if (!res.ok) return null;
-    const result = (await res.json()) as { secure_url?: string };
+    const result = await cloudinary.uploader.upload(
+      `data:image/png;base64,${image.toString("base64")}`,
+      {
+        public_id: `brands/${brandId}/screenshots/homepage`,
+        overwrite: true,
+        timeout: FETCH_TIMEOUT_MS,
+      },
+    );
     return result.secure_url ?? null;
   } catch {
     return null;
-  } finally {
-    cancel();
   }
 }
 
