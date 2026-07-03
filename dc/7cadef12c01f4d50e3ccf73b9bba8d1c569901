@@ -1,0 +1,21 @@
+app/src/app/api/assets/route.ts
+  s_5c9f2a2ec2b3af::t_4856c0233c3999 22,28,33
+app/src/app/api/assets/route.test.ts
+  s_5c9f2a2ec2b3af::t_d0c68ee4c9d42e 1-62
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.9",
+  "base_commit_sha": "dc7cadef12c01f4d50e3ccf73b9bba8d1c569901",
+  "prompts": {},
+  "sessions": {
+    "s_5c9f2a2ec2b3af": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "4c146179-d0c4-4f21-910e-cebd5c5ba751",
+        "model": "composer-2.5"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
