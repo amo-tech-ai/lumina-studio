@@ -6,7 +6,7 @@ import type { IntelligencePanelData } from "./panel-contract";
 
 export { DEV_PREVIEW_HERO_BRAND_ID, isDevSkipMode };
 
-const CLOUDINARY_CLOUD = "dza2bjwwp";
+const CLOUDINARY_CLOUD = "dzqy2ixl0";
 
 function cloudinaryImageUrl(publicId: string, { w, h }: { w: number; h: number }): string {
   return `https://res.cloudinary.com/${CLOUDINARY_CLOUD}/image/upload/c_fill,w_${w},h_${h},g_auto,q_auto,f_auto/${publicId}`;

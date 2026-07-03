@@ -8,8 +8,8 @@ export const dynamic = "force-dynamic";
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 function buildThumbUrl(publicId: string): string {
-  const cloud = process.env.CLOUDINARY_CLOUD_NAME ?? "demo";
-  return `https://res.cloudinary.com/${cloud}/image/upload/c_thumb,w_120,h_120,g_auto/${publicId}`;
+  const cloud = process.env.CLOUDINARY_CLOUD_NAME ?? "dzqy2ixl0";
+  return `https://res.cloudinary.com/${cloud}/image/upload/c_thumb,w_120,h_120,g_auto,q_auto,f_auto/${publicId}`;
 }
 
 export async function GET(
