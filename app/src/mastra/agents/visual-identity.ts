@@ -77,16 +77,23 @@ async function uploadToCloudinary(image: Buffer, brandId: string): Promise<strin
     return null;
   }
   try {
-    const result = await cloudinary.uploader.upload(
-      `data:image/png;base64,${image.toString("base64")}`,
-      {
-        public_id: `brands/${brandId}/screenshots/homepage`,
-        overwrite: true,
-        timeout: FETCH_TIMEOUT_MS,
-      },
-    );
-    return result.secure_url ?? null;
-  } catch {
+    return await new Promise<string | null>((resolve, reject) => {
+      const uploadStream = cloudinary.uploader.upload_stream(
+        {
+          public_id: `brands/${brandId}/screenshots/homepage`,
+          overwrite: true,
+          timeout: FETCH_TIMEOUT_MS,
+        },
+        (error, result) => {
+          if (error) reject(error);
+          else resolve(result?.secure_url ?? null);
+        },
+      );
+      uploadStream.on("error", reject);
+      uploadStream.end(image);
+    });
+  } catch (error) {
+    console.error("visual-identity: Cloudinary upload failed:", error);
     return null;
   }
 }
@@ -169,7 +176,7 @@ const extractVisualIdentityTool = createTool({
   },
 });
 
-export { extractVisualIdentityTool };
+export { extractVisualIdentityTool, uploadToCloudinary };
 
 export const visualIdentityAgent = new Agent({
   id: "visual-identity",
