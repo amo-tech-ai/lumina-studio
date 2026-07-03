@@ -19,18 +19,18 @@ export async function GET(request: Request) {
 
   const { searchParams } = new URL(request.url);
   const brandId = searchParams.get("brand_id");
-  const shootId = searchParams.get("shoot_id");
+  const shootIdRaw = searchParams.get("shoot_id")?.trim() || null;
 
   if (!brandId || !UUID_RE.test(brandId)) {
     return NextResponse.json({ error: "brand_id is required" }, { status: 400 });
   }
 
-  if (shootId && !UUID_RE.test(shootId)) {
+  if (shootIdRaw && !UUID_RE.test(shootIdRaw)) {
     return NextResponse.json({ error: "Invalid shoot_id" }, { status: 400 });
   }
 
   const userSb = await createSupabaseServerClient();
-  const result = await getBrandAssets(userSb, brandId, shootId);
+  const result = await getBrandAssets(userSb, brandId, shootIdRaw);
 
   if (!result.ok) {
     return NextResponse.json({ error: result.error }, { status: result.status });
