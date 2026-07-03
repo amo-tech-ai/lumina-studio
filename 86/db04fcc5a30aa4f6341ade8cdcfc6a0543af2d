@@ -1,0 +1,35 @@
+app/src/lib/shoot/rpc-errors.ts
+  s_5c9f2a2ec2b3af::t_9033c8b34796df 1-4
+app/src/lib/shoot/get-brand-assets.ts
+  s_5c9f2a2ec2b3af::t_79c3fdd1975907 2
+  s_5c9f2a2ec2b3af::t_5d2a2e5b594b35 32
+app/src/lib/shoot/get-shoot-detail.ts
+  s_5c9f2a2ec2b3af::t_c91cf2a4debf83 2
+  s_5c9f2a2ec2b3af::t_550cc257d062be 49
+app/src/lib/shoot/rpc-errors.test.ts
+  s_5c9f2a2ec2b3af::t_3327e6836b61d5 1-12
+app/src/app/api/assets/upload-sign/route.test.ts
+  s_5c9f2a2ec2b3af::t_1febb184fff1d4 1-216
+app/src/app/api/assets/upload-sign/route.ts
+  s_5c9f2a2ec2b3af::t_dd2a38ab58431b 1-137
+app/src/mastra/agents/visual-identity.test.ts
+  s_5c9f2a2ec2b3af::t_f9b6599708fb22 2,8-17,114-158
+app/src/mastra/agents/visual-identity.ts
+  s_5c9f2a2ec2b3af::t_78ffcae4be19a7 80-96,179
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.9",
+  "base_commit_sha": "86db04fcc5a30aa4f6341ade8cdcfc6a0543af2d",
+  "prompts": {},
+  "sessions": {
+    "s_5c9f2a2ec2b3af": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "4c146179-d0c4-4f21-910e-cebd5c5ba751",
+        "model": "composer-2.5"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
