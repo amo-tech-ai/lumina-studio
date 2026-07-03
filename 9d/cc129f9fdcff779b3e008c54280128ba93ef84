@@ -1,0 +1,26 @@
+app/src/lib/shoot/get-brand-assets.ts
+  s_34eb7d3f1209d9::t_c8c93f7fe70ada 1-43
+app/src/lib/shoot/get-brand-assets.test.ts
+  s_34eb7d3f1209d9::t_904ac6f63fc458 14
+  s_34eb7d3f1209d9::t_a34d0e20f5d2d1 1-13,15-24
+app/src/app/api/assets/route.ts
+  s_34eb7d3f1209d9::t_caf17befccb77b 1-40
+app/src/app/(operator)/app/assets/page.tsx
+  s_34eb7d3f1209d9::t_a72fa9b2eac1e0 3-7,12-13
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.9",
+  "base_commit_sha": "9dcc129f9fdcff779b3e008c54280128ba93ef84",
+  "prompts": {},
+  "sessions": {
+    "s_34eb7d3f1209d9": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "5f2bb499-4181-4424-be0c-f98a1fef1295",
+        "model": "composer-2.5"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
