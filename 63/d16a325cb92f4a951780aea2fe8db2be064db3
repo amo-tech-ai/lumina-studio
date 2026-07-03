@@ -1,0 +1,25 @@
+app/src/mastra/agents/visual-identity.test.ts
+  s_12404fa554d700::t_73951ea055222c 2,8-16
+  s_12404fa554d700::t_8c4cdbad74297c 114-158
+  s_12404fa554d700::t_538ee689c57e69 17
+app/src/mastra/agents/visual-identity.ts
+  s_12404fa554d700::t_e3eeec36c20e1b 81-96
+  s_12404fa554d700::t_0a06b24ff0473b 179
+  s_12404fa554d700::t_0dfe3e619669e5 7
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.9",
+  "base_commit_sha": "63d16a325cb92f4a951780aea2fe8db2be064db3",
+  "prompts": {},
+  "sessions": {
+    "s_12404fa554d700": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "c51c9d5f-0f8a-4434-b966-5de005a41aad",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
