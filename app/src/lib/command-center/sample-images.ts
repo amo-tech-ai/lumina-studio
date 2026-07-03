@@ -31,17 +31,8 @@ export const SAMPLE_IMAGE_KEYS: readonly SampleImageKey[] = [
   "sage",
 ] as const;
 
-export const CLOUDINARY_CLOUD_NAME =
-  process.env.CLOUDINARY_CLOUD_NAME ?? "dzqy2ixl0";
-
-const CLOUDINARY_CLOUD = CLOUDINARY_CLOUD_NAME;
-
-export function cloudinaryImageUrl(
-  publicId: string,
-  { w, h }: { w: number; h: number },
-): string {
-  return `https://res.cloudinary.com/${CLOUDINARY_CLOUD}/image/upload/c_fill,w_${w},h_${h},g_auto,q_auto,f_auto/${publicId}`;
-}
+import { cloudinaryImageUrl } from "@/lib/cloudinary/url";
+export { cloudinaryImageUrl };
 
 export function hashIndex(id: string, mod: number): number {
   let hash = 0;

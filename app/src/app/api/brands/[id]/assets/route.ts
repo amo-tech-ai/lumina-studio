@@ -2,14 +2,14 @@
 import { NextResponse } from "next/server";
 import { withOperatorAuth, OperatorAuthError } from "@/lib/operator-gate";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { cloudinaryImageUrl } from "@/lib/cloudinary/url";
 
 export const dynamic = "force-dynamic";
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 function buildThumbUrl(publicId: string): string {
-  const cloud = process.env.CLOUDINARY_CLOUD_NAME ?? "demo";
-  return `https://res.cloudinary.com/${cloud}/image/upload/c_thumb,w_120,h_120,g_auto/${publicId}`;
+  return cloudinaryImageUrl(publicId, { w: 120, h: 120, crop: "thumb" });
 }
 
 export async function GET(

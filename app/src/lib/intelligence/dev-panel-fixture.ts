@@ -2,15 +2,10 @@ import {
   DEV_PREVIEW_HERO_BRAND_ID,
   isDevSkipMode,
 } from "@/components/operator-panel/dev-skip-fixture";
+import { cloudinaryImageUrl } from "@/lib/cloudinary/url";
 import type { IntelligencePanelData } from "./panel-contract";
 
 export { DEV_PREVIEW_HERO_BRAND_ID, isDevSkipMode };
-
-const CLOUDINARY_CLOUD = "dza2bjwwp";
-
-function cloudinaryImageUrl(publicId: string, { w, h }: { w: number; h: number }): string {
-  return `https://res.cloudinary.com/${CLOUDINARY_CLOUD}/image/upload/c_fill,w_${w},h_${h},g_auto,q_auto,f_auto/${publicId}`;
-}
 
 const THUMB_VISUAL = cloudinaryImageUrl("39-fashionos_koxmek", { w: 120, h: 150 });
 const THUMB_VOICE = cloudinaryImageUrl("8-fashionos_o0m6yc", { w: 120, h: 150 });
