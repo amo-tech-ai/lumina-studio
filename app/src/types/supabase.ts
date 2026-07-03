@@ -5676,12 +5676,18 @@ export type Database = {
     Views: {
       shoot_portfolio_view: {
         Row: {
+          asset_count: number | null
           brand_id: string | null
+          cover_url: string | null
           created_by: string | null
           dna_score: number | null
+          end_date: string | null
           estimated_budget: number | null
           id: string | null
+          location: string | null
           name: string | null
+          shot_count: number | null
+          start_date: string | null
           status: string | null
           target_channels: string[] | null
           type: string | null
@@ -5773,10 +5779,15 @@ export type Database = {
       }
       confirm_booking: { Args: { p_booking_id: string }; Returns: Json }
       expire_stale_bookings: { Args: never; Returns: number }
+      get_brand_assets: {
+        Args: { p_brand_id: string; p_shoot_id?: string }
+        Returns: Json
+      }
       get_event_registration_count: {
         Args: { p_event_id: string }
         Returns: number
       }
+      get_or_create_shortlist: { Args: { p_org_id: string }; Returns: string }
       get_shoot_detail: { Args: { p_shoot_id: string }; Returns: Json }
       get_user_shoots: {
         Args: {
@@ -5841,8 +5852,27 @@ export type Database = {
           token_estimate: number
         }[]
       }
+      search_talent: {
+        Args: {
+          p_budget_tier?: string
+          p_date_end?: string
+          p_date_start?: string
+          p_only_shortlist_id?: string
+          p_representation?: string
+          p_shoot_type?: string
+        }
+        Returns: Json[]
+      }
       show_limit: { Args: never; Returns: number }
       show_trgm: { Args: { "": string }; Returns: string[] }
+      toggle_shortlist_item: {
+        Args: {
+          p_add: boolean
+          p_shortlist_id: string
+          p_talent_profile_id: string
+        }
+        Returns: undefined
+      }
       traverse_brand_graph: {
         Args: {
           p_edge_types?: string[]
