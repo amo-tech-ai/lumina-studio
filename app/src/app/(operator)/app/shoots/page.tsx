@@ -5,7 +5,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 export const dynamic = "force-dynamic";
 
 const PORTFOLIO_SELECT =
-  "id, name, type, status, dna_score, target_channels, estimated_budget, updated_at, start_date, end_date, location, shot_count, asset_count, cover_image, brand_id";
+  "id, name, type, status, dna_score, target_channels, estimated_budget, updated_at, start_date, end_date, location, shot_count, asset_count, cover_url, brand_id";
 
 type PortfolioRow = {
   id: string;
@@ -15,7 +15,7 @@ type PortfolioRow = {
   updated_at: string;
   start_date: string | null;
   end_date: string | null;
-  cover_image: string | null;
+  cover_url: string | null;
   brand_id: string | null;
   shot_count?: number | null;
 };
@@ -66,7 +66,7 @@ async function loadShoots(): Promise<{
     updated_at: row.updated_at,
     start_date: row.start_date,
     end_date: row.end_date,
-    cover_image: row.cover_image,
+    cover_url: row.cover_url,
     brandName: row.brand_id ? brandNameById.get(row.brand_id) ?? null : null,
     shot_count: row.shot_count ?? null,
   }));

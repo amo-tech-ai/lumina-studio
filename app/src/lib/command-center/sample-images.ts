@@ -82,11 +82,12 @@ export function brandDetailAssetUrls(brandId: string, count = 8): string[] {
   });
 }
 
-/** 4:3 card cover for shoots list grid (IPI-273). */
-export function shootListCoverForShoot(shootId: string, coverUrl?: string | null): string {
-  if (coverUrl) return coverUrl;
-  const idx = hashIndex(shootId, SAMPLE_IMAGE_POOL.length);
-  return cloudinaryImageUrl(SAMPLE_IMAGE_POOL[idx], { w: 640, h: 480 });
+/** 4:3 card cover for shoots list grid (IPI-273). Returns null when no mood-board cover. */
+export function shootListCoverForShoot(
+  _shootId: string,
+  coverUrl?: string | null,
+): string | null {
+  return coverUrl ?? null;
 }
 
 /** DC empty-state fan — two tilted portrait previews (Shoots List.v2.image-first.dc.html). */

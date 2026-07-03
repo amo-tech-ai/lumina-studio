@@ -13,13 +13,6 @@ import type { ShootListItem } from "@/components/shoot/ShootCard";
 
 import styles from "./shoots-list-intel.module.css";
 
-const SHOT_PREVIEW_LABELS = [
-  { name: "Hero — full look", meta: "4:5 · 3 frames" },
-  { name: "Motion — runway", meta: "9:16 · 2 frames" },
-  { name: "Detail — fabric", meta: "1:1 · 4 frames" },
-  { name: "Lifestyle — street", meta: "4:5 · 3 frames" },
-];
-
 function ShootIntelPrompt() {
   return (
     <div className={styles.prompt} data-testid="shoots-intel-prompt">
@@ -33,16 +26,15 @@ function ShootIntelPrompt() {
 
 function ShootIntelSelected({ shoot }: { shoot: ShootListItem }) {
   const { label, dot } = shootStatusDisplay(shoot.status);
-  const coverUrl = shootListCoverForShoot(shoot.id, shoot.cover_image);
+  const coverUrl = shootListCoverForShoot(shoot.id, shoot.cover_url);
   const dateLabel = formatShootCardDate(shoot.start_date) ?? "—";
   const shotCount = shoot.shot_count ?? 0;
-  const previewCount = Math.min(SHOT_PREVIEW_LABELS.length, Math.max(shotCount, 2));
 
   return (
     <div className={styles.selected} data-testid="shoots-intel-selected">
       <div
         className={styles.heroCover}
-        style={{ backgroundImage: `url("${coverUrl}")` }}
+        style={coverUrl ? { backgroundImage: `url("${coverUrl}")` } : undefined}
         role="img"
         aria-label={`${shoot.name} cover`}
       >
@@ -90,22 +82,13 @@ function ShootIntelSelected({ shoot }: { shoot: ShootListItem }) {
           </span>
         </div>
         <div className={styles.shotList}>
-          {SHOT_PREVIEW_LABELS.slice(0, previewCount).map((shotLabel, index) => {
-            const thumb = shootListCoverForShoot(`${shoot.id}-preview-${index}`, null);
-            return (
-              <div key={shotLabel.name} className={styles.shotRow}>
-                <div
-                  className={styles.shotThumb}
-                  style={{ backgroundImage: `url("${thumb}")` }}
-                  aria-hidden
-                />
-                <div className={styles.shotCopy}>
-                  <div className={styles.shotName}>{shotLabel.name}</div>
-                  <div className={styles.shotMeta}>{shotLabel.meta}</div>
-                </div>
-              </div>
-            );
-          })}
+          {shotCount > 0 ? (
+            <p className={styles.shotMeta}>
+              {shotCount} shot{shotCount === 1 ? "" : "s"} — open shoot for the full list.
+            </p>
+          ) : (
+            <p className={styles.shotMeta}>No shots yet.</p>
+          )}
         </div>
       </div>
     </div>

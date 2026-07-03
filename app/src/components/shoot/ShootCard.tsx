@@ -14,7 +14,7 @@ export type ShootListItem = {
   updated_at: string;
   start_date?: string | null;
   end_date?: string | null;
-  cover_image?: string | null;
+  cover_url?: string | null;
   brandName?: string | null;
   shot_count?: number | null;
 };
@@ -27,7 +27,7 @@ type Props = {
 
 export function ShootCard({ shoot, selected = false, onSelect }: Props) {
   const { label, dot } = shootStatusDisplay(shoot.status);
-  const coverUrl = shootListCoverForShoot(shoot.id, shoot.cover_image);
+  const coverUrl = shootListCoverForShoot(shoot.id, shoot.cover_url);
   const dateLabel = formatShootCardDate(shoot.start_date) ?? "—";
 
   return (
@@ -44,7 +44,7 @@ export function ShootCard({ shoot, selected = false, onSelect }: Props) {
     >
       <div
         className="relative aspect-[4/3] w-full bg-[var(--color-bg-muted)] bg-cover bg-center bg-no-repeat"
-        style={{ backgroundImage: `url("${coverUrl}")` }}
+        style={coverUrl ? { backgroundImage: `url("${coverUrl}")` } : undefined}
         aria-hidden
       >
         <span className="absolute inset-0 [background:linear-gradient(to_bottom,transparent_45%,rgb(0_0_0_/_0.5))]" />
