@@ -4,10 +4,14 @@ import { getShootDetail } from "./get-shoot-detail";
 describe("getShootDetail", () => {
   it("returns payload on success", async () => {
     const payload = {
-      shoot: { id: "s1", name: "Spring" },
+      shoot: { id: "s1", name: "Spring", currency: "USD" },
       brand: { id: "b1", name: "Acme" },
       deliverables: [],
       shots: [],
+      assets: [],
+      crew: [],
+      approvals: [],
+      activity: [],
     };
     const userSb = {
       rpc: vi.fn().mockResolvedValue({ data: payload, error: null }),

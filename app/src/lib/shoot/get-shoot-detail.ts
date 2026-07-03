@@ -5,6 +5,7 @@ export type ShootDetailDeliverable = {
   channel: string;
   format: string | null;
   quantity: number;
+  status?: string;
 };
 
 export type ShootDetailShot = {
@@ -12,6 +13,44 @@ export type ShootDetailShot = {
   shot_number: number;
   description: string;
   style_notes: string | null;
+  status?: string;
+};
+
+export type ShootDetailAsset = {
+  id: string;
+  url: string;
+  cloudinary_id: string;
+  format: string | null;
+  width: number | null;
+  height: number | null;
+  dna_score: number | null;
+  status: string;
+  created_at: string;
+};
+
+export type ShootDetailCrewMember = {
+  id: string;
+  role: string;
+  confirmed: boolean;
+  notes: string | null;
+  internal_contact_id: string | null;
+  marketplace_vendor_id: string | null;
+};
+
+export type ShootDetailApproval = {
+  id: string;
+  status: string;
+  created_at: string;
+  approved_at: string | null;
+  rejected_at: string | null;
+  agent_run_id: string | null;
+};
+
+export type ShootDetailActivity = {
+  id: string;
+  agent_name: string;
+  created_at: string;
+  model: string | null;
 };
 
 export type ShootDetailPayload = {
@@ -22,7 +61,15 @@ export type ShootDetailPayload = {
     brief: string | null;
     target_channels: string[];
     estimated_budget: number | null;
+    actual_cost: number | null;
+    currency: string;
     budget_breakdown: Record<string, number> | null;
+    start_date: string | null;
+    end_date: string | null;
+    location: string | null;
+    dna_score: number | null;
+    mood_board_urls: string[];
+    cover_url: string | null;
     created_at: string;
     updated_at: string;
     brand_id: string;
@@ -30,6 +77,10 @@ export type ShootDetailPayload = {
   brand: { id: string; name: string };
   deliverables: ShootDetailDeliverable[];
   shots: ShootDetailShot[];
+  assets: ShootDetailAsset[];
+  crew: ShootDetailCrewMember[];
+  approvals: ShootDetailApproval[];
+  activity: ShootDetailActivity[];
 };
 
 export type GetShootDetailResult =
@@ -56,5 +107,15 @@ export async function getShootDetail(
     return { ok: false, status: 404, error: "Shoot not found" };
   }
 
-  return { ok: true, data: data as ShootDetailPayload };
+  const payload = data as ShootDetailPayload;
+  return {
+    ok: true,
+    data: {
+      ...payload,
+      assets: payload.assets ?? [],
+      crew: payload.crew ?? [],
+      approvals: payload.approvals ?? [],
+      activity: payload.activity ?? [],
+    },
+  };
 }
