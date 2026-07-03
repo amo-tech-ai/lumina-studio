@@ -3,8 +3,8 @@
 import { shootListCoverForShoot } from "@/lib/command-center/sample-images";
 import { formatShootCardDate } from "@/lib/shoot/shoot-list-format";
 import { shootStatusDisplay } from "@/lib/shoot/shoot-list-filters";
-
-import styles from "./shoots-list.module.css";
+import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
 
 export type ShootListItem = {
   id: string;
@@ -33,31 +33,46 @@ export function ShootCard({ shoot, selected = false, onSelect }: Props) {
   return (
     <button
       type="button"
-      className={selected ? styles.cardSelected : styles.card}
+      className={cn(
+        "block w-full overflow-hidden rounded-[var(--card-radius)] border border-[var(--color-border)] bg-[var(--color-bg-card)] text-left shadow-[var(--shadow-card)] transition-colors duration-200 ease-out hover:border-[var(--color-border-strong)]",
+        selected && "border-[var(--color-text-primary)] hover:border-[var(--color-text-primary)]",
+      )}
       data-testid="shoot-list-card"
       data-selected={selected ? "true" : undefined}
       aria-pressed={selected}
       onClick={() => onSelect?.(shoot.id)}
     >
       <div
-        className={styles.coverWrap}
+        className="relative aspect-[4/3] w-full bg-[var(--color-bg-muted)] bg-cover bg-center bg-no-repeat"
         style={{ backgroundImage: `url("${coverUrl}")` }}
         aria-hidden
       >
-        <span className={styles.coverScrim} />
+        <span className="absolute inset-0 [background:linear-gradient(to_bottom,transparent_45%,rgb(0_0_0_/_0.5))]" />
         {shoot.dna_score != null ? (
-          <span className={styles.dnaBadge}>DNA {Math.round(shoot.dna_score)}</span>
+          <Badge className="absolute right-[9px] top-[9px] z-[1] border-transparent bg-black/55 px-[7px] py-[2px] text-[10px] font-semibold tabular-nums leading-tight text-white backdrop-blur-[3px]">
+            DNA {Math.round(shoot.dna_score)}
+          </Badge>
         ) : null}
-        <span className={styles.statusPill}>
-          <span className={styles.statusDot} style={{ background: dot }} aria-hidden />
+        <Badge className="absolute bottom-[10px] left-[11px] z-[1] gap-1.5 border-transparent bg-black/50 px-[9px] py-[3px] text-[11px] font-semibold leading-tight text-white backdrop-blur-[3px]">
+          <span
+            className="h-1.5 w-1.5 shrink-0 rounded-full"
+            style={{ background: dot }}
+            aria-hidden
+          />
           {label}
-        </span>
+        </Badge>
       </div>
-      <div className={styles.cardBody}>
-        <div className={styles.cardTitle}>{shoot.name}</div>
-        <div className={styles.cardMeta}>
-          <span className={styles.cardBrand}>{shoot.brandName ?? "—"}</span>
-          <span className={styles.cardDate}>{dateLabel}</span>
+      <div className="px-[14px] pb-[15px] pt-[13px]">
+        <div className="truncate text-sm font-semibold text-[var(--color-text-primary)]">
+          {shoot.name}
+        </div>
+        <div className="mt-[5px] flex items-center justify-between gap-2">
+          <span className="truncate text-xs text-[var(--color-text-muted)]">
+            {shoot.brandName ?? "—"}
+          </span>
+          <span className="shrink-0 text-xs tabular-nums text-[var(--color-text-muted)]">
+            {dateLabel}
+          </span>
         </div>
       </div>
     </button>

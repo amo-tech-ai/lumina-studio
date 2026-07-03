@@ -2,9 +2,6 @@
 import { describe, expect, it, vi, afterEach } from "vitest";
 import { render, screen, fireEvent, cleanup } from "@testing-library/react";
 
-vi.mock("./shoots-list.module.css", () => ({
-  default: new Proxy({}, { get: (_, key) => String(key) }),
-}));
 vi.mock("./shoots-list-intel.module.css", () => ({
   default: new Proxy({}, { get: (_, key) => String(key) }),
 }));

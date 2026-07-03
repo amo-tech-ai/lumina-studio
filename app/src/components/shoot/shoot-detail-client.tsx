@@ -80,7 +80,7 @@ export function ShootDetailClient({ shootId }: { shootId: string }) {
   const { shoot, brand, deliverables, shots } = data;
 
   return (
-    <div className="min-h-screen p-6" style={{ background: "#FBF8F5" }}>
+    <div className="min-h-screen bg-[#FBF8F5] p-6">
       <div className="mx-auto max-w-5xl space-y-6">
         <div>
           <Link href="/app/shoots" className="font-sans text-sm text-[#64748B] hover:underline">
