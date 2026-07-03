@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { isRpcNotFoundError } from "./rpc-errors";
 
 export type ShootDetailDeliverable = {
   id: string;
@@ -45,7 +46,7 @@ export async function getShootDetail(
   });
 
   if (error) {
-    if (error.code === "P0002" || error.message?.includes("not_found")) {
+    if (isRpcNotFoundError(error)) {
       return { ok: false, status: 404, error: "Shoot not found" };
     }
     console.error("[get_shoot_detail]", error.message);
