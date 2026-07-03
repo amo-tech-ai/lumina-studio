@@ -1,0 +1,45 @@
+app/src/components/shoot/shoots-list-intel-detail.tsx
+  s_5c9f2a2ec2b3af::t_343693dc12b413 85-91
+  s_5c9f2a2ec2b3af::t_ddc3ae2cea43ea 29
+  s_5c9f2a2ec2b3af::t_2c4dcdfbcf6c13 37
+app/src/components/shoot/ShootCard.tsx
+  s_5c9f2a2ec2b3af::t_f195a57e9df162 17
+  s_5c9f2a2ec2b3af::t_b77a55acdd7e9f 30
+  s_5c9f2a2ec2b3af::t_cdc5ad0217d2b1 47
+app/src/lib/command-center/sample-images.ts
+  s_5c9f2a2ec2b3af::t_4906e92eee7fd9 85-90
+app/src/lib/shoot/shoot-list-format.ts
+  s_5c9f2a2ec2b3af::t_fbc8f3245d7971 4
+app/src/app/(operator)/app/shoots/page.tsx
+  s_5c9f2a2ec2b3af::t_4ed9e71f1df028 69
+  s_5c9f2a2ec2b3af::t_c26ece46cb9f43 18
+  s_5c9f2a2ec2b3af::t_646d2bad427a63 8
+.env
+  s_a0787d8d42c219::t_b81aef2aee4d61 1-5
+supabase/migrations/20260703030208_shoot_data_contract_fixes.sql
+  s_5c9f2a2ec2b3af::t_ed3dd83581abd7 1-41
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.9",
+  "base_commit_sha": "858421316a47dbc43b550863aef7dc4191f3b25d",
+  "prompts": {},
+  "sessions": {
+    "s_5c9f2a2ec2b3af": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "4c146179-d0c4-4f21-910e-cebd5c5ba751",
+        "model": "composer-2.5"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    },
+    "s_a0787d8d42c219": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "10761cb2-236d-47b4-a251-f8a52f3e7a26",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
