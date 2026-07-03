@@ -1,0 +1,23 @@
+supabase/migrations/20260703030208_shoot_data_contract_fixes.sql
+  s_5c9f2a2ec2b3af::t_1fe46e4efb614e 6-7
+supabase/migrations/20260703030218_get_brand_assets_rpc.sql
+  s_5c9f2a2ec2b3af::t_76ae89f5ddd6d8 20-26
+supabase/migrations/20260703230000_shoot_data_review_fixes.sql
+  s_5c9f2a2ec2b3af::t_37e68ef7b00e91 1-87
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.9",
+  "base_commit_sha": "8530a3a624f039d69ec6835b440d29a96d4928d2",
+  "prompts": {},
+  "sessions": {
+    "s_5c9f2a2ec2b3af": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "4c146179-d0c4-4f21-910e-cebd5c5ba751",
+        "model": "composer-2.5"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
