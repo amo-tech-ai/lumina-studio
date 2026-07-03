@@ -4,7 +4,6 @@ import { generateObject } from "ai";
 import type { UserContent, ImagePart, TextPart } from "ai";
 import { createClient } from "@supabase/supabase-js";
 import { v2 as cloudinary } from "cloudinary";
-import { Readable } from "node:stream";
 import { z } from "zod";
 import { resolveModel, resolveProviderOptions } from "@/mastra/models";
 
@@ -90,7 +89,8 @@ async function uploadToCloudinary(image: Buffer, brandId: string): Promise<strin
           else resolve(result?.secure_url ?? null);
         },
       );
-      Readable.from(image).pipe(uploadStream);
+      uploadStream.on("error", reject);
+      uploadStream.end(image);
     });
   } catch (error) {
     console.error("visual-identity: Cloudinary upload failed:", error);
