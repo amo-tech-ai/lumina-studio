@@ -1,6 +1,6 @@
 import type { NextConfig } from "next";
 
-import { CLOUDINARY_CLOUD_NAME } from "./src/lib/command-center/sample-images";
+import { CLOUDINARY_CLOUD_NAME } from "./src/lib/cloudinary/url";
 
 const nextConfig: NextConfig = {
   serverExternalPackages: ["@copilotkit/runtime", "@copilotkit/runtime/v2", "@mastra/libsql", "@mastra/pg"],

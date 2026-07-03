@@ -2,14 +2,14 @@
 
 import { useState } from "react";
 import { DeviceFramePreview } from "@/components/media/device-frame-preview";
+import { cloudinaryImageUrl } from "@/lib/cloudinary/url";
 import {
   PREVIEW_CHANNELS,
   type ChannelSpec,
   type PreviewChannel,
 } from "@/lib/media/channel-specs";
 
-const SAMPLE_IMAGE =
-  "https://res.cloudinary.com/demo/image/upload/w_1080,h_1350,c_fill/sample.jpg";
+const SAMPLE_IMAGE = cloudinaryImageUrl("5-fashionos_wc2p1c", { w: 1080, h: 1350 });
 
 export function ChannelPreviewStudio({
   specs,
