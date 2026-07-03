@@ -92,6 +92,14 @@ describe("POST /api/assets/upload-sign", () => {
     expect(res.status).toBe(400);
   });
 
+  it("returns 400 when the JSON body parses to null or a non-object", async () => {
+    const { POST } = await importRoute();
+    const nullRes = await POST(makeRequest(null));
+    expect(nullRes.status).toBe(400);
+    const arrayRes = await POST(makeRequest([VALID_BODY]));
+    expect(arrayRes.status).toBe(400);
+  });
+
   it("returns 400 for missing/invalid brandId", async () => {
     const { POST } = await importRoute();
     const res = await POST(makeRequest({ ...VALID_BODY, brandId: "not-a-uuid" }));
@@ -154,6 +162,8 @@ describe("POST /api/assets/upload-sign", () => {
     expect(data.params.type).toBe("authenticated");
     expect(data.params).not.toHaveProperty("eager");
     expect(data.params.context).toBe(`brand_id=${VALID_BRAND_ID}`);
+    expect(data.params.use_filename).toBe("true");
+    expect(data.params.filename).toBe("hero-shot.jpg");
 
     const serialized = JSON.stringify(data);
     expect(serialized).not.toContain("test-api-secret");
@@ -192,5 +202,15 @@ describe("POST /api/assets/upload-sign", () => {
     );
     const data = await res.json();
     expect(data.assetFolder).toBe(`ipix/brands/${VALID_BRAND_ID}/products`);
+  });
+
+  it("never serializes an invalid context id into the Cloudinary context metadata (delimiter-injection guard)", async () => {
+    const { POST } = await importRoute();
+    const res = await POST(
+      makeRequest({ ...VALID_BODY, context: { shootId: `${VALID_SHOOT_ID}|role=admin` } }),
+    );
+    const data = await res.json();
+    expect(data.params.context).toBe(`brand_id=${VALID_BRAND_ID}`);
+    expect(data.params.context).not.toContain("role=admin");
   });
 });

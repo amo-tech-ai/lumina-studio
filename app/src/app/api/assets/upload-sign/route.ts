@@ -9,6 +9,10 @@ export const dynamic = "force-dynamic";
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const RESOURCE_TYPES = new Set(["image", "video"]);
 const ALLOWED_FORMATS = "jpg,png,webp,mp4,mov";
+// Advisory only — this is when we'd ask the client to re-request a signature,
+// not an enforced window. Cloudinary itself accepts the signed `timestamp` for
+// ~1hr regardless of this value (there's no separate server-side TTL to check
+// against, since the timestamp is minted fresh on every call to this route).
 const SIGNATURE_TTL_SECONDS = 300;
 
 type UploadSignBody = {
@@ -18,13 +22,16 @@ type UploadSignBody = {
   context?: { shootId?: string; campaignId?: string };
 };
 
-function assetFolderFor(brandId: string, context: UploadSignBody["context"]): string {
-  if (context?.shootId && UUID_RE.test(context.shootId)) {
-    return `ipix/shoots/${context.shootId}/raw`;
-  }
-  if (context?.campaignId && UUID_RE.test(context.campaignId)) {
-    return `ipix/campaigns/${context.campaignId}`;
-  }
+function validContextIds(context: UploadSignBody["context"]) {
+  const shootId = context?.shootId && UUID_RE.test(context.shootId) ? context.shootId : undefined;
+  const campaignId =
+    context?.campaignId && UUID_RE.test(context.campaignId) ? context.campaignId : undefined;
+  return { shootId, campaignId };
+}
+
+function assetFolderFor(brandId: string, shootId?: string, campaignId?: string): string {
+  if (shootId) return `ipix/shoots/${shootId}/raw`;
+  if (campaignId) return `ipix/campaigns/${campaignId}`;
   return `ipix/brands/${brandId}/products`;
 }
 
@@ -51,12 +58,16 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Internal error" }, { status: 500 });
   }
 
-  let body: UploadSignBody;
+  let parsed: unknown;
   try {
-    body = (await request.json()) as UploadSignBody;
+    parsed = await request.json();
   } catch {
     return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
   }
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+    return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
+  }
+  const body = parsed as UploadSignBody;
 
   const { brandId, resourceType, filename } = body;
   if (!brandId || !UUID_RE.test(brandId)) {
@@ -89,10 +100,11 @@ export async function POST(request: Request) {
   }
 
   const timestamp = Math.floor(Date.now() / 1000);
-  const assetFolder = assetFolderFor(brandId, body.context);
+  const { shootId, campaignId } = validContextIds(body.context);
+  const assetFolder = assetFolderFor(brandId, shootId, campaignId);
   const contextParts = [`brand_id=${brandId}`];
-  if (body.context?.shootId) contextParts.push(`shoot_id=${body.context.shootId}`);
-  if (body.context?.campaignId) contextParts.push(`campaign_id=${body.context.campaignId}`);
+  if (shootId) contextParts.push(`shoot_id=${shootId}`);
+  if (campaignId) contextParts.push(`campaign_id=${campaignId}`);
 
   const paramsToSign: Record<string, string | number> = {
     timestamp,
@@ -102,6 +114,8 @@ export async function POST(request: Request) {
     type: "authenticated",
     allowed_formats: ALLOWED_FORMATS,
     unique_filename: "true",
+    use_filename: "true",
+    filename: sanitizeFilename(filename),
     context: contextParts.join("|"),
     // ponytail: named eager presets (asset-tile/asset-masonry) don't exist in
     // the Cloudinary account yet (074e) — add `eager` once those are created,
