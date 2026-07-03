@@ -1,4 +1,7 @@
--- IPI-248 enabler — unified read for public.assets + shoot.shoot_assets
+-- IPI-337 review fixes — remote already applied 20260703030208/30218 without these guards.
+-- Rollback: restore prior view options; restore get_brand_assets owner-only check.
+
+alter view public.shoot_portfolio_view set (security_invoker = true);
 
 create or replace function public.get_brand_assets(
   p_brand_id uuid,

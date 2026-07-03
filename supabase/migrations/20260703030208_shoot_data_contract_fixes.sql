@@ -3,7 +3,8 @@
 
 drop view if exists public.shoot_portfolio_view;
 
-create view public.shoot_portfolio_view as
+create view public.shoot_portfolio_view
+  with (security_invoker = true) as
 select
   s.id,
   s.name,
