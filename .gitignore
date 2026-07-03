@@ -50,10 +50,8 @@ pr9-storefront-test/
 .claude/settings.local.json.backup
 .claude/launch.json
 
-# Claude Code local dirs — skills/docs have example keys that trip secret scanning
+# Claude Code local dirs — docs may contain example keys that trip secret scanning
 .claude/docs/
-.claude/skills/*
-!.claude/skills/design-to-production/
 .claude/agents/
 .claude/*.py
 
