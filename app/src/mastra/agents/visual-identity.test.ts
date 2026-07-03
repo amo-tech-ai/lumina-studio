@@ -1,8 +1,19 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { Writable } from "node:stream";
 
 vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://test.supabase.co");
 vi.stubEnv("SUPABASE_SERVICE_ROLE_KEY", "test-key");
 vi.stubEnv("GEMINI_API_KEY", "test-gemini-key");
+
+type UploadStreamCallback = (error: unknown, result: { secure_url?: string } | undefined) => void;
+const mockUploadStream = vi.fn<(options: unknown, callback: UploadStreamCallback) => Writable>();
+
+vi.mock("cloudinary", () => ({
+  v2: {
+    config: vi.fn(),
+    uploader: { upload_stream: (...args: Parameters<typeof mockUploadStream>) => mockUploadStream(...args) },
+  },
+}));
 
 const MOCK_VISUAL = {
   primaryColors: ["#E87C4D"],
@@ -98,5 +109,50 @@ describe("visual-identity agent", () => {
     await expect(
       extractVisualIdentityTool.execute!({ brandId: BRAND_ID, homepageUrl: "https://example.com" }, {} as never)
     ).rejects.toThrow("Failed to merge visual identity: DB error");
+  });
+});
+
+describe("uploadToCloudinary", () => {
+  function sink(): Writable {
+    return new Writable({ write(_chunk, _enc, cb) { cb(); } });
+  }
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.stubEnv("CLOUDINARY_CLOUD_NAME", "test-cloud");
+    vi.stubEnv("CLOUDINARY_API_KEY", "test-key");
+    vi.stubEnv("CLOUDINARY_API_SECRET", "test-secret");
+  });
+
+  it("streams the buffer and resolves with secure_url on success", async () => {
+    mockUploadStream.mockImplementation((_options, callback) => {
+      const stream = sink();
+      stream.on("finish", () => callback(null, { secure_url: "https://res.cloudinary.com/x/homepage.png" }));
+      return stream;
+    });
+    const { uploadToCloudinary } = await import("./visual-identity");
+    const url = await uploadToCloudinary(Buffer.from("fake-image-bytes"), BRAND_ID);
+    expect(url).toBe("https://res.cloudinary.com/x/homepage.png");
+    expect(mockUploadStream).toHaveBeenCalledWith(
+      expect.objectContaining({ public_id: `brands/${BRAND_ID}/screenshots/homepage` }),
+      expect.any(Function),
+    );
+  });
+
+  it("logs and returns null when the upload errors", async () => {
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    mockUploadStream.mockImplementation((_options, callback) => {
+      const stream = sink();
+      stream.on("finish", () => callback(new Error("cloudinary boom"), undefined));
+      return stream;
+    });
+    const { uploadToCloudinary } = await import("./visual-identity");
+    const url = await uploadToCloudinary(Buffer.from("fake-image-bytes"), BRAND_ID);
+    expect(url).toBeNull();
+    expect(errorSpy).toHaveBeenCalledWith(
+      "visual-identity: Cloudinary upload failed:",
+      expect.any(Error),
+    );
+    errorSpy.mockRestore();
   });
 });

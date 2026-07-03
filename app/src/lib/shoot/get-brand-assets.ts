@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { isRpcNotFoundError } from "./rpc-errors";
 
 /** Normalized row from get_brand_assets — platform vs shoot schema unified. */
 export type BrandAssetRow = {
@@ -28,7 +29,7 @@ export async function getBrandAssets(
   });
 
   if (error) {
-    if (error.code === "P0002" || error.message?.includes("not_found")) {
+    if (isRpcNotFoundError(error)) {
       return { ok: false, status: 404, error: "Brand or shoot not found" };
     }
     console.error("[get_brand_assets]", error.message);
