@@ -14,6 +14,7 @@ interface WelcomeContext {
   weakestPillar?: string;
   brandCount?: number;
   shootCount?: number;
+  shootsInProduction?: number;
   shootName?: string;
   selectionCount?: number;
   campaignName?: string;
@@ -51,6 +52,7 @@ export function useRouteWelcome({
       context.weakestPillar,
       context.brandCount,
       context.shootCount,
+      context.shootsInProduction,
       context.shootName,
       context.selectionCount,
       context.campaignName,
@@ -101,9 +103,6 @@ function getWelcomeMessage(
         : "";
       return `${context.brandName} — DNA ${context.brandDna}%${pillarNote}`;
     }
-    if (context.brandName) {
-      return `${context.brandName} — review DNA pillars, assets, and suggested improvements`;
-    }
     return "Loading brand details...";
   }
 
@@ -136,6 +135,10 @@ function getWelcomeMessage(
 
   // Shoots List (/app/shoots)
   if (normalizedPath === "/app/shoots") {
+    if (context.shootName) {
+      const brandPrefix = context.brandName ? `${context.brandName} – ` : "";
+      return `You're reviewing ${brandPrefix}${context.shootName}. Ask about coverage, shot list, or deliverables.`;
+    }
     if (context.shootCount === undefined) {
       return "Review shoots — check for blockers and coverage gaps";
     }
@@ -143,7 +146,8 @@ function getWelcomeMessage(
     if (count === 0) {
       return "No shoots yet — plan your first production";
     }
-    return `${count} shoot${count !== 1 ? "s" : ""} — check for blockers and coverage gaps`;
+    const inProduction = context.shootsInProduction ?? 0;
+    return `${count} shoot${count !== 1 ? "s" : ""} in your pipeline — ${inProduction} in production. Pick a shoot, or ask me to plan one.`;
   }
 
   // Assets (/app/assets)

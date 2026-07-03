@@ -23,6 +23,7 @@ import { useActiveBrand } from "@/context/active-brand-context";
 import { useHeroBrandSync } from "@/lib/active-brand/use-hero-brand-sync";
 import { DEV_PREVIEW_HERO_BRAND_ID, isDevPreviewBrandId, isDevSkipMode } from "./dev-skip-fixture";
 import { IntelligenceDetailProvider } from "@/context/intelligence-detail-context";
+import { ShootsListUiProvider, useShootsListUiState } from "@/context/shoots-list-ui-context";
 import { NavSidebar } from "./nav-sidebar";
 import { OperatorChatDock } from "./operator-chat-dock";
 import { useOperatorBrands } from "./use-operator-brands";
@@ -41,15 +42,17 @@ export function OperatorPanel({ children }: { children: React.ReactNode }) {
   useEffect(() => { setThreadId(undefined); }, [agentId]);
   return (
     <IntelligenceDetailProvider>
-      <CopilotChatConfigurationProvider agentId={agentId} threadId={threadId}>
-        <div data-agent-id={agentId} style={{ display: "contents" }}>
-          <Suspense fallback={<OperatorShellFallback agentId={agentId} />}>
-            <OperatorShell agentId={agentId} threadId={threadId} onThreadChange={setThreadId}>
-              {children}
-            </OperatorShell>
-          </Suspense>
-        </div>
-      </CopilotChatConfigurationProvider>
+      <ShootsListUiProvider>
+        <CopilotChatConfigurationProvider agentId={agentId} threadId={threadId}>
+          <div data-agent-id={agentId} style={{ display: "contents" }}>
+            <Suspense fallback={<OperatorShellFallback agentId={agentId} />}>
+              <OperatorShell agentId={agentId} threadId={threadId} onThreadChange={setThreadId}>
+                {children}
+              </OperatorShell>
+            </Suspense>
+          </div>
+        </CopilotChatConfigurationProvider>
+      </ShootsListUiProvider>
     </IntelligenceDetailProvider>
   );
 }
@@ -105,10 +108,6 @@ function OperatorShell({
 
   const routeBrandIdFromPath = useMemo(() => routeBrandId(pathname), [pathname]);
   const routeShootIdFromPath = useMemo(() => routeShootId(pathname), [pathname]);
-  const routeBrandName = useMemo(
-    () => brands.find((b) => b.id === routeBrandIdFromPath)?.name,
-    [brands, routeBrandIdFromPath],
-  );
 
   // Keep active brand aligned with brand detail URLs
   useEffect(() => {
@@ -158,14 +157,19 @@ function OperatorShell({
     },
   });
 
+  const shootsListUi = useShootsListUiState();
+
   // IPI-197 — Dynamic welcome message based on route + context
   const welcomeText = useRouteWelcome({
     pathname,
     brandId: routeBrandIdFromPath ?? activeBrandId,
     context: {
-      brandName: routeBrandName,
       brandCount: brands.length,
       hasBrands: brands.length > 0,
+      shootCount: shootsListUi?.total,
+      shootsInProduction: shootsListUi?.inProduction,
+      shootName: shootsListUi?.selected?.name,
+      brandName: shootsListUi?.selected?.brandName ?? undefined,
     },
   });
 

@@ -81,3 +81,17 @@ export function brandDetailAssetUrls(brandId: string, count = 8): string[] {
     return cloudinaryImageUrl(SAMPLE_IMAGE_POOL[idx], { w: 160, h: 160 });
   });
 }
+
+/** 4:3 card cover for shoots list grid (IPI-273). */
+export function shootListCoverForShoot(shootId: string, coverUrl?: string | null): string {
+  if (coverUrl) return coverUrl;
+  const idx = hashIndex(shootId, SAMPLE_IMAGE_POOL.length);
+  return cloudinaryImageUrl(SAMPLE_IMAGE_POOL[idx], { w: 640, h: 480 });
+}
+
+/** DC empty-state fan — two tilted portrait previews (Shoots List.v2.image-first.dc.html). */
+export function shootListEmptyPreviewUrls(): string[] {
+  return [SAMPLE_IMAGE_POOL[3], SAMPLE_IMAGE_POOL[4]].map((id) =>
+    cloudinaryImageUrl(id, { w: 240, h: 300 }),
+  );
+}

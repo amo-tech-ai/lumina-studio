@@ -62,19 +62,6 @@ describe("useRouteWelcome", () => {
       expect(result.current).toBe("Loading brand details...");
     });
 
-    it("shows brand name before DNA score is available", () => {
-      const { result } = renderHook(() =>
-        useRouteWelcome({
-          pathname: "/app/brand/abc-123",
-          brandId: "abc-123",
-          context: { brandName: "Maaji" },
-        })
-      );
-      expect(result.current).toBe(
-        "Maaji — review DNA pillars, assets, and suggested improvements",
-      );
-    });
-
     it("shows brand DNA with weakest pillar", () => {
       const { result } = renderHook(() =>
         useRouteWelcome({
@@ -162,10 +149,24 @@ describe("useRouteWelcome", () => {
       const { result } = renderHook(() =>
         useRouteWelcome({
           pathname: "/app/shoots",
-          context: { shootCount: 47 },
+          context: { shootCount: 47, shootsInProduction: 2 },
         })
       );
-      expect(result.current).toBe("47 shoots — check for blockers and coverage gaps");
+      expect(result.current).toBe(
+        "47 shoots in your pipeline — 2 in production. Pick a shoot, or ask me to plan one.",
+      );
+    });
+
+    it("shows selected shoot summary", () => {
+      const { result } = renderHook(() =>
+        useRouteWelcome({
+          pathname: "/app/shoots",
+          context: { shootCount: 8, shootName: "Spring Campaign", brandName: "Nike" },
+        })
+      );
+      expect(result.current).toBe(
+        "You're reviewing Nike – Spring Campaign. Ask about coverage, shot list, or deliverables.",
+      );
     });
   });
 
@@ -312,7 +313,9 @@ describe("useRouteWelcome", () => {
       );
 
       // Should return list welcome, not detail welcome
-      expect(result.current).toBe("3 shoots — check for blockers and coverage gaps");
+      expect(result.current).toBe(
+        "3 shoots in your pipeline — 0 in production. Pick a shoot, or ask me to plan one.",
+      );
     });
   });
 
