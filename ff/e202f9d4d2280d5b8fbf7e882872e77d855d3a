@@ -1,0 +1,21 @@
+app/src/app/api/assets/upload-sign/route.ts
+  s_12404fa554d700::t_dd553dbe155171 1-123
+app/src/app/api/assets/upload-sign/route.test.ts
+  s_12404fa554d700::t_1a7c68f8a7594e 1-196
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.9",
+  "base_commit_sha": "ffe202f9d4d2280d5b8fbf7e882872e77d855d3a",
+  "prompts": {},
+  "sessions": {
+    "s_12404fa554d700": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "c51c9d5f-0f8a-4434-b966-5de005a41aad",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
