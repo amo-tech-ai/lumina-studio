@@ -5678,7 +5678,7 @@ export type Database = {
         Row: {
           asset_count: number | null
           brand_id: string | null
-          cover_image: string | null
+          cover_url: string | null
           created_by: string | null
           dna_score: number | null
           end_date: string | null

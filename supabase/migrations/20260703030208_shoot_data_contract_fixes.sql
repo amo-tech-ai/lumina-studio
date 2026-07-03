@@ -1,4 +1,4 @@
--- IPI-273 — extend shoot_portfolio_view (start_date, counts, cover_image)
+-- IPI-273 — extend shoot_portfolio_view (start_date, counts, cover_url)
 -- Rollback: restore 20260626000007_shoot_portfolio_view.sql
 
 drop view if exists public.shoot_portfolio_view;
@@ -33,7 +33,7 @@ select
     when s.mood_board_urls is not null and cardinality(s.mood_board_urls) > 0
     then s.mood_board_urls[1]
     else null
-  end as cover_image
+  end as cover_url
 from shoot.shoots s
 inner join public.brands b on b.id = s.brand_id
 where b.user_id = (select auth.uid());
