@@ -1,0 +1,23 @@
+app/src/test/create-booking-request-migration.test.ts
+  s_5c9f2a2ec2b3af::t_bcde751b5d52a0 22-23
+scripts/test-create-booking-request.mjs
+  s_5c9f2a2ec2b3af::t_423008d1e6cb5c 196-197,204-206,209,211-212,219,222,224-225,231-232,234-235,241-263,265-266,273,276,278-279,287,292-312,317-321,323-324,327-328
+supabase/migrations/20260703194500_ipi340_create_booking_request_rpc.sql
+  s_5c9f2a2ec2b3af::t_177539d62a5e41 48-55
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.9",
+  "base_commit_sha": "e71b5618439a834adff082eab46d3f59f0e53fa6",
+  "prompts": {},
+  "sessions": {
+    "s_5c9f2a2ec2b3af": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "4c146179-d0c4-4f21-910e-cebd5c5ba751",
+        "model": "composer-2.5"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
