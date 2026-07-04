@@ -1,0 +1,32 @@
+app/src/app/api/notifications/route.test.ts
+  s_687804c6496d5c::t_67812bdb0d1ed8 1-3,5-133
+  s_687804c6496d5c::t_1255e7143c4a48 4
+app/src/app/api/notifications/read/route.test.ts
+  s_687804c6496d5c::t_645106caa85d4b 87-89
+  s_687804c6496d5c::t_c6fee70d0575b8 4-5
+  s_687804c6496d5c::t_a95e899c705d03 1-3,6-86,90-143
+app/src/app/api/notifications/read/route.ts
+  s_687804c6496d5c::t_9fd2bfe7dbc2a1 1-48
+app/src/lib/notifications/validation.ts
+  s_687804c6496d5c::t_fa40bfc99b3ba0 1-115
+app/src/app/api/notifications/route.ts
+  s_687804c6496d5c::t_b9df6673fdde22 1-41
+app/src/lib/notifications/notification-service.ts
+  s_687804c6496d5c::t_304b4a00ca835b 1-111
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.9",
+  "base_commit_sha": "527daf7ed6cf0affa5c92069b1445b9eff300015",
+  "prompts": {},
+  "sessions": {
+    "s_687804c6496d5c": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "9c0f1f80-6acc-4f80-8b62-e92c0e4a396c",
+        "model": "composer-2.5-fast"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
