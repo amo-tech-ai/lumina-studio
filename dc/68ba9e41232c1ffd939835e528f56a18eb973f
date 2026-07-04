@@ -1,0 +1,19 @@
+app/src/types/supabase.ts
+  s_5c9f2a2ec2b3af::t_64eb0a5cc85054 4474-4499,5807-5818,5820,5861-5887,5942-5953
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.9",
+  "base_commit_sha": "dc68ba9e41232c1ffd939835e528f56a18eb973f",
+  "prompts": {},
+  "sessions": {
+    "s_5c9f2a2ec2b3af": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "4c146179-d0c4-4f21-910e-cebd5c5ba751",
+        "model": "composer-2.5"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
