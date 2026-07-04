@@ -7,7 +7,7 @@ export const dynamic = "force-dynamic";
 
 // Spec: SDK default valid_for is 7200s (2h); IPI-257 §3 tightens the replay window to 300s.
 const REPLAY_WINDOW_SECONDS = 300;
-const BRAND_FOLDER_RE = /ipix\/brands\/([0-9a-f-]{36})\//i;
+const BRAND_FOLDER_RE = /ipix\/brands\/([0-9a-f-]{36})(?:\/|$)/i;
 
 type CloudinaryNotification = {
   notification_type?: string;
@@ -56,15 +56,11 @@ async function logNonFatal(
   }
 }
 
-async function handleUpload(db: ReturnType<typeof createSupabaseAdminClient>, payload: CloudinaryNotification) {
-  const { public_id: publicId, secure_url: secureUrl, resource_type: resourceType } = payload;
-  if (!publicId || !secureUrl || !resourceType) {
-    console.error("[cloudinary/webhook] upload notification missing required fields", payload);
-    return;
-  }
-
-  const folder = payload.folder ?? payload.asset_folder ?? publicId;
-  const brandId = brandIdFromFolder(folder) ?? brandIdFromFolder(publicId);
+async function upsertAssetRecord(
+  db: ReturnType<typeof createSupabaseAdminClient>,
+  fields: { publicId: string; secureUrl: string; resourceType: string; brandId: string | null },
+): Promise<string | undefined> {
+  const { publicId, secureUrl, resourceType, brandId } = fields;
 
   const { data: existingAsset, error: findErr } = await db
     .from("assets")
@@ -73,34 +69,48 @@ async function handleUpload(db: ReturnType<typeof createSupabaseAdminClient>, pa
     .maybeSingle();
   if (findErr) {
     console.error("[cloudinary/webhook] assets lookup failed:", findErr.message);
-    return;
+    return undefined;
   }
 
-  let assetId: string | undefined = existingAsset?.id;
-  if (!assetId) {
-    const { data: inserted, error: insertErr } = await db
-      .from("assets")
-      .insert({
-        url: secureUrl,
-        asset_type: resourceTypeToAssetType(resourceType),
-        cloudinary_public_id: publicId,
-        brand_id: brandId,
-      })
-      .select("id")
-      .single();
-    if (insertErr || !inserted) {
-      console.error("[cloudinary/webhook] assets insert failed:", insertErr?.message);
-      return;
-    }
-    assetId = inserted.id;
-  } else {
+  if (existingAsset?.id) {
     const update: Record<string, unknown> = { url: secureUrl };
     if (brandId) update.brand_id = brandId;
-    const { error: updateErr } = await db.from("assets").update(update).eq("id", assetId);
+    const { error: updateErr } = await db.from("assets").update(update).eq("id", existingAsset.id);
     if (updateErr) console.error("[cloudinary/webhook] assets update failed:", updateErr.message);
+    return existingAsset.id;
   }
 
-  const { error: upsertErr } = await db.from("cloudinary_assets").upsert(
+  const { data: inserted, error: insertErr } = await db
+    .from("assets")
+    .insert({
+      url: secureUrl,
+      asset_type: resourceTypeToAssetType(resourceType),
+      cloudinary_public_id: publicId,
+      brand_id: brandId,
+    })
+    .select("id")
+    .single();
+  if (insertErr || !inserted) {
+    console.error("[cloudinary/webhook] assets insert failed:", insertErr?.message);
+    return undefined;
+  }
+  return inserted.id;
+}
+
+async function upsertCloudinaryAssetRecord(
+  db: ReturnType<typeof createSupabaseAdminClient>,
+  assetId: string,
+  fields: {
+    publicId: string;
+    secureUrl: string;
+    resourceType: string;
+    folder: string | null;
+    brandId: string | null;
+    payload: CloudinaryNotification;
+  },
+): Promise<boolean> {
+  const { publicId, secureUrl, resourceType, folder, brandId, payload } = fields;
+  const { error } = await db.from("cloudinary_assets").upsert(
     {
       asset_id: assetId,
       public_id: publicId,
@@ -118,10 +128,35 @@ async function handleUpload(db: ReturnType<typeof createSupabaseAdminClient>, pa
     },
     { onConflict: "public_id" },
   );
-  if (upsertErr) {
-    console.error("[cloudinary/webhook] cloudinary_assets upsert failed:", upsertErr.message);
+  if (error) {
+    console.error("[cloudinary/webhook] cloudinary_assets upsert failed:", error.message);
+    return false;
+  }
+  return true;
+}
+
+async function handleUpload(db: ReturnType<typeof createSupabaseAdminClient>, payload: CloudinaryNotification) {
+  const { public_id: publicId, secure_url: secureUrl, resource_type: resourceType } = payload;
+  if (!publicId || !secureUrl || !resourceType) {
+    console.error("[cloudinary/webhook] upload notification missing required fields", payload);
     return;
   }
+
+  const folder = payload.folder ?? payload.asset_folder ?? publicId;
+  const brandId = brandIdFromFolder(folder) ?? brandIdFromFolder(publicId);
+
+  const assetId = await upsertAssetRecord(db, { publicId, secureUrl, resourceType, brandId });
+  if (!assetId) return;
+
+  const persisted = await upsertCloudinaryAssetRecord(db, assetId, {
+    publicId,
+    secureUrl,
+    resourceType,
+    folder,
+    brandId,
+    payload,
+  });
+  if (!persisted) return;
 
   await logNonFatal(db, {
     brandId,
@@ -137,13 +172,15 @@ async function handleDelete(db: ReturnType<typeof createSupabaseAdminClient>, pa
   if (error) console.error("[cloudinary/webhook] delete->archive failed:", error.message);
 }
 
-export async function POST(request: Request) {
+type SignatureVerification = { ok: true; rawBody: string } | { ok: false; response: NextResponse };
+
+async function verifyWebhookSignature(request: Request): Promise<SignatureVerification> {
   const cloudName = process.env.CLOUDINARY_CLOUD_NAME;
   const apiKey = process.env.CLOUDINARY_API_KEY;
   const apiSecret = process.env.CLOUDINARY_API_SECRET;
   if (!cloudName || !apiKey || !apiSecret) {
     console.error("[cloudinary/webhook] Cloudinary env vars missing");
-    return NextResponse.json({ error: "Internal error" }, { status: 500 });
+    return { ok: false, response: NextResponse.json({ error: "Internal error" }, { status: 500 }) };
   }
 
   const timestampHeader = request.headers.get("x-cld-timestamp");
@@ -151,12 +188,12 @@ export async function POST(request: Request) {
   const rawBody = await request.text();
 
   if (!timestampHeader || !signatureHeader) {
-    return NextResponse.json({ error: "Missing signature headers" }, { status: 401 });
+    return { ok: false, response: NextResponse.json({ error: "Missing signature headers" }, { status: 401 }) };
   }
 
   const timestamp = Number(timestampHeader);
   if (!Number.isFinite(timestamp) || Date.now() / 1000 - timestamp > REPLAY_WINDOW_SECONDS) {
-    return NextResponse.json({ error: "Signature expired" }, { status: 401 });
+    return { ok: false, response: NextResponse.json({ error: "Signature expired" }, { status: 401 }) };
   }
 
   // verifyNotificationSignature reads api_secret from global config, not a param —
@@ -169,12 +206,19 @@ export async function POST(request: Request) {
     REPLAY_WINDOW_SECONDS,
   );
   if (!isValid) {
-    return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
+    return { ok: false, response: NextResponse.json({ error: "Invalid signature" }, { status: 401 }) };
   }
+
+  return { ok: true, rawBody };
+}
+
+export async function POST(request: Request) {
+  const verification = await verifyWebhookSignature(request);
+  if (!verification.ok) return verification.response;
 
   let payload: CloudinaryNotification;
   try {
-    payload = JSON.parse(rawBody);
+    payload = JSON.parse(verification.rawBody);
   } catch {
     return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
   }
