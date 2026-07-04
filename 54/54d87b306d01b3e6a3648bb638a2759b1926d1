@@ -1,0 +1,34 @@
+app/src/app/api/assets/cloudinary/webhook/route.test.ts
+  s_12404fa554d700::t_979068fe302a93 18-24
+  s_12404fa554d700::t_7ebec6c5b22550 236-265
+  s_12404fa554d700::t_e3e44874445f14 77-78,84-85,93-95
+supabase/functions/_shared/agent-log.ts
+  s_12404fa554d700::t_09344d5c9acd05 5
+supabase/functions/audit-asset-dna/index.ts
+  s_12404fa554d700::t_c073c6ea660c6c 187-188
+  s_12404fa554d700::t_5225ff42064ff6 3-4,8,11
+  s_12404fa554d700::t_52f8b6a2ab7324 220
+  s_12404fa554d700::t_597b181124fa75 151-173
+  s_12404fa554d700::t_f80ca575782944 331
+app/src/app/api/assets/cloudinary/webhook/route.ts
+  s_12404fa554d700::t_1756c045fdc30e 172-198
+  s_12404fa554d700::t_5b7b0f71dfbca7 2
+  s_12404fa554d700::t_83001ce5aeddad 166-169
+  s_12404fa554d700::t_915fccab0e4e0a 170-171
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.9",
+  "base_commit_sha": "5454d87b306d01b3e6a3648bb638a2759b1926d1",
+  "prompts": {},
+  "sessions": {
+    "s_12404fa554d700": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "c51c9d5f-0f8a-4434-b966-5de005a41aad",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
