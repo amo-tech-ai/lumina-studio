@@ -2,10 +2,12 @@
 // Assets uploaded via /api/assets/upload-sign are always signed `type: authenticated`
 // (see upload-sign/route.ts) until a future approval flow flips them public, so any
 // preset/channel delivery URL for a real (non-fixture) asset must be signed or Cloudinary
-// returns 401/404. Server-only: the `cloudinary` v2 SDK needs the API secret and pulls in
-// Node built-ins, so this stays out of ./url.ts, which client components also import.
+// returns 401/404. Server-only, and lives under api/_lib (not lib/cloudinary) so
+// scripts/check-client-env.mjs's directory-based exemption covers the raw
+// CLOUDINARY_API_SECRET read — lib/cloudinary/url.ts stays importable from client
+// components and must never pull in the secret-reading `cloudinary` v2 SDK.
 import { v2 as cloudinary } from "cloudinary";
-import { CLOUDINARY_PRESETS, cropTransformString, type CloudinaryPresetName } from "./url";
+import { CLOUDINARY_PRESETS, cropTransformString, type CloudinaryPresetName } from "@/lib/cloudinary/url";
 
 function signedUrl(publicId: string, raw_transformation: string): string {
   const cloud_name = process.env.CLOUDINARY_CLOUD_NAME;

@@ -45,7 +45,7 @@ function sanitizeFilename(filename: string): string {
 // `eager` param accepts literal transformation strings, so no server-side named
 // transformation needs to be registered in the account — presetTransformString (in
 // lib/cloudinary/url.ts) is the single source of truth these strings are derived from,
-// shared with the signed delivery URLs in lib/cloudinary/signed-url.ts.
+// shared with the signed delivery URLs in api/_lib/cloudinary-signed-url.ts.
 const EAGER_IMAGE_PRESETS = ["asset-tile", "asset-masonry"] as const;
 
 export async function POST(request: Request) {

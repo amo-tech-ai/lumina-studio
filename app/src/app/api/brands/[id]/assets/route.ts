@@ -2,7 +2,7 @@
 import { NextResponse } from "next/server";
 import { withOperatorAuth, OperatorAuthError } from "@/lib/operator-gate";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { cloudinarySignedPresetUrl } from "@/lib/cloudinary/signed-url";
+import { cloudinarySignedPresetUrl } from "@/app/api/_lib/cloudinary-signed-url";
 
 export const dynamic = "force-dynamic";
 

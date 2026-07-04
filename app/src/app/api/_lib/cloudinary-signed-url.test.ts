@@ -14,7 +14,7 @@ afterEach(() => {
 });
 
 async function importSignedUrl() {
-  return import("./signed-url");
+  return import("./cloudinary-signed-url");
 }
 
 describe("cloudinarySignedPresetUrl", () => {

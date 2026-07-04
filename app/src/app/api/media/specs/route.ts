@@ -4,7 +4,7 @@
 import { NextResponse } from "next/server";
 import { withOperatorAuth, OperatorAuthError } from "@/lib/operator-gate";
 import { getChannelSpec } from "@/lib/media/channel-specs.server";
-import { cloudinarySignedChannelUrl } from "@/lib/cloudinary/signed-url";
+import { cloudinarySignedChannelUrl } from "@/app/api/_lib/cloudinary-signed-url";
 
 export const dynamic = "force-dynamic";
 
@@ -37,7 +37,16 @@ export async function GET(request: Request) {
   const results = await Promise.all(
     channels.map(async (channel) => {
       const spec = await getChannelSpec(channel as never);
-      const previewUrl = publicId && spec ? cloudinarySignedChannelUrl(publicId, spec) : null;
+      // Isolate signing failures (e.g. missing Cloudinary env vars) per-channel so one
+      // bad preview doesn't 500 the whole batch — the numeric spec is still useful on its own.
+      let previewUrl: string | null = null;
+      if (publicId && spec) {
+        try {
+          previewUrl = cloudinarySignedChannelUrl(publicId, spec);
+        } catch (e) {
+          console.error(`[media/specs] preview URL signing failed for ${channel}:`, e);
+        }
+      }
       return { channel, spec, previewUrl };
     }),
   );
