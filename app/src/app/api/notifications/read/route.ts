@@ -1,20 +1,16 @@
 export const dynamic = "force-dynamic";
 
 import { NextRequest, NextResponse } from "next/server";
-import { withOperatorAuth, OperatorAuthError } from "@/lib/operator-gate";
+import { withOperatorAuthOrResponse } from "@/lib/operator-gate";
 import { apiErrorResponse, serviceFailureResponse } from "@/lib/api/error-envelope";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { markNotificationsRead } from "@/lib/notifications/notification-service";
 import { parseMarkReadBody } from "@/lib/notifications/validation";
 
 export async function POST(req: NextRequest) {
-  try {
-    await withOperatorAuth(req);
-  } catch (e) {
-    if (e instanceof OperatorAuthError) {
-      return apiErrorResponse("UNAUTHORIZED", 401);
-    }
-    throw e;
+  const authError = await withOperatorAuthOrResponse(req);
+  if (authError) {
+    return authError;
   }
 
   let body: unknown;

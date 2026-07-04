@@ -1,20 +1,16 @@
 export const dynamic = "force-dynamic";
 
 import { NextRequest, NextResponse } from "next/server";
-import { withOperatorAuth, OperatorAuthError } from "@/lib/operator-gate";
-import { apiErrorResponse, serviceFailureResponse } from "@/lib/api/error-envelope";
+import { withOperatorAuthOrResponse } from "@/lib/operator-gate";
+import { serviceFailureResponse } from "@/lib/api/error-envelope";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { listNotifications } from "@/lib/notifications/notification-service";
 import { parseListNotificationsQuery } from "@/lib/notifications/validation";
 
 export async function GET(req: NextRequest) {
-  try {
-    await withOperatorAuth(req);
-  } catch (e) {
-    if (e instanceof OperatorAuthError) {
-      return apiErrorResponse("UNAUTHORIZED", 401);
-    }
-    throw e;
+  const authError = await withOperatorAuthOrResponse(req);
+  if (authError) {
+    return authError;
   }
 
   const parsed = parseListNotificationsQuery(new URL(req.url).searchParams);

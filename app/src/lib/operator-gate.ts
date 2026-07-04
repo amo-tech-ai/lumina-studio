@@ -1,4 +1,6 @@
 import { resolveOperatorUser, type OperatorUser } from "@/lib/auth";
+import { apiErrorResponse } from "@/lib/api/error-envelope";
+import type { NextResponse } from "next/server";
 
 /**
  * HTTP boundary guard for operator-only routes (IPI2-127). When
@@ -25,5 +27,20 @@ export class OperatorAuthError extends Error {
   constructor(message: string) {
     super(message);
     this.name = "OperatorAuthError";
+  }
+}
+
+/** Returns an error response envelope, or null when auth succeeded. */
+export async function withOperatorAuthOrResponse(
+  request: Request,
+): Promise<NextResponse | null> {
+  try {
+    await withOperatorAuth(request);
+    return null;
+  } catch (e) {
+    if (e instanceof OperatorAuthError) {
+      return apiErrorResponse("UNAUTHORIZED", 401);
+    }
+    return apiErrorResponse("INTERNAL_ERROR", 500);
   }
 }

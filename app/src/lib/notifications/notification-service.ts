@@ -1,29 +1,46 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type { ApiErrorCode } from "@/lib/api/error-envelope";
+import type { ServiceFailure, ServiceResult } from "@/lib/booking/booking-service";
 import { mapSupabaseRpcError } from "@/lib/booking/rpc-errors";
+
 import type { ListNotificationsQuery, MarkReadBody } from "@/lib/notifications/validation";
-
-export type ServiceFailure = {
-  ok: false;
-  status: number;
-  code: ApiErrorCode;
-  message: string;
-  details?: Record<string, unknown>;
-};
-
-export type ServiceSuccess<T> = { ok: true; data: T };
-
-export type ServiceResult<T> = ServiceSuccess<T> | ServiceFailure;
 
 function rpcFailure(error: { message?: string; code?: string | null }): ServiceFailure {
   const mapped = mapSupabaseRpcError(error.message ?? "Unknown error", error.code);
   return { ok: false, ...mapped };
 }
 
-function asRecord(value: unknown): Record<string, unknown> | null {
-  return value && typeof value === "object" && !Array.isArray(value)
-    ? (value as Record<string, unknown>)
-    : null;
+function internalError(): ServiceFailure {
+  return {
+    ok: false,
+    status: 500,
+    code: "INTERNAL_ERROR",
+    message: "Something went wrong. Please try again.",
+  };
+}
+
+function parseListNotificationsPayload(data: unknown): ListNotificationsResponse | null {
+  if (data == null || typeof data !== "object" || Array.isArray(data)) {
+    return null;
+  }
+  const row = data as Record<string, unknown>;
+  if (!Array.isArray(row.items)) {
+    return null;
+  }
+  return {
+    items: row.items as NotificationItem[],
+    next_cursor: row.next_cursor != null ? String(row.next_cursor) : null,
+  };
+}
+
+function parseMarkReadPayload(data: unknown): MarkReadResponse | null {
+  if (data == null || typeof data !== "object" || Array.isArray(data)) {
+    return null;
+  }
+  const row = data as Record<string, unknown>;
+  if (row.updated_count == null) {
+    return null;
+  }
+  return { updated_count: Number(row.updated_count) };
 }
 
 export type NotificationItem = {
@@ -55,23 +72,12 @@ export async function listNotifications(
     return rpcFailure(error);
   }
 
-  const row = asRecord(data);
-  if (!row || !Array.isArray(row.items)) {
-    return {
-      ok: false,
-      status: 500,
-      code: "INTERNAL_ERROR",
-      message: "Something went wrong. Please try again.",
-    };
+  const parsed = parseListNotificationsPayload(data);
+  if (!parsed) {
+    return internalError();
   }
 
-  return {
-    ok: true,
-    data: {
-      items: row.items as NotificationItem[],
-      next_cursor: row.next_cursor != null ? String(row.next_cursor) : null,
-    },
-  };
+  return { ok: true, data: parsed };
 }
 
 export type MarkReadResponse = {
@@ -92,20 +98,10 @@ export async function markNotificationsRead(
     return rpcFailure(error);
   }
 
-  const row = asRecord(data);
-  if (!row || row.updated_count == null) {
-    return {
-      ok: false,
-      status: 500,
-      code: "INTERNAL_ERROR",
-      message: "Something went wrong. Please try again.",
-    };
+  const parsed = parseMarkReadPayload(data);
+  if (!parsed) {
+    return internalError();
   }
 
-  return {
-    ok: true,
-    data: {
-      updated_count: Number(row.updated_count),
-    },
-  };
+  return { ok: true, data: parsed };
 }

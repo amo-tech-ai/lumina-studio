@@ -26,6 +26,19 @@ function parseBooleanParam(value: string | null, defaultValue: boolean): boolean
   return null;
 }
 
+function parseLimit(searchParams: URLSearchParams): { ok: true; limit: number } | ParseFailure {
+  const limitRaw = searchParams.get("limit");
+  let limit = 25;
+  if (limitRaw != null && limitRaw !== "") {
+    const parsed = Number(limitRaw);
+    if (!Number.isInteger(parsed) || parsed < 1 || parsed > 50) {
+      return validationFail("limit must be an integer between 1 and 50.");
+    }
+    limit = parsed;
+  }
+  return { ok: true, limit };
+}
+
 export function parseListNotificationsQuery(searchParams: URLSearchParams):
   | { ok: true; data: ListNotificationsQuery }
   | ParseFailure {
@@ -35,14 +48,9 @@ export function parseListNotificationsQuery(searchParams: URLSearchParams):
     return validationFail("unread_only must be a boolean.");
   }
 
-  const limitRaw = searchParams.get("limit");
-  let limit = 25;
-  if (limitRaw != null && limitRaw !== "") {
-    const parsed = Number(limitRaw);
-    if (!Number.isInteger(parsed) || parsed < 1 || parsed > 50) {
-      return validationFail("limit must be an integer between 1 and 50.");
-    }
-    limit = parsed;
+  const limitResult = parseLimit(searchParams);
+  if (!limitResult.ok) {
+    return limitResult;
   }
 
   const cursorRaw = searchParams.get("cursor");
@@ -54,7 +62,7 @@ export function parseListNotificationsQuery(searchParams: URLSearchParams):
     data: {
       unread_only,
       cursor,
-      limit,
+      limit: limitResult.limit,
     },
   };
 }

@@ -1,20 +1,15 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
+import { apiErrorResponse } from "@/lib/api/error-envelope";
 
 const NOTIFICATION_ID = "11111111-1111-4111-8111-111111111111";
 
 const mockListNotifications = vi.fn();
 const mockCreateSupabaseServerClient = vi.fn();
-const mockWithOperatorAuth = vi.fn();
+const mockWithOperatorAuthOrResponse = vi.fn();
 
 vi.mock("@/lib/operator-gate", () => ({
-  withOperatorAuth: (...args: unknown[]) => mockWithOperatorAuth(...args),
-  OperatorAuthError: class OperatorAuthError extends Error {
-    constructor(m: string) {
-      super(m);
-      this.name = "OperatorAuthError";
-    }
-  },
+  withOperatorAuthOrResponse: (...args: unknown[]) => mockWithOperatorAuthOrResponse(...args),
 }));
 
 vi.mock("@/lib/supabase/server", () => ({
@@ -27,7 +22,7 @@ vi.mock("@/lib/notifications/notification-service", () => ({
 
 beforeEach(() => {
   vi.resetModules();
-  mockWithOperatorAuth.mockResolvedValue({ id: "22222222-2222-2222-2222-222222222222", name: "QA" });
+  mockWithOperatorAuthOrResponse.mockResolvedValue(null);
   mockCreateSupabaseServerClient.mockResolvedValue({ rpc: vi.fn() });
   mockListNotifications.mockResolvedValue({
     ok: true,
@@ -50,13 +45,22 @@ describe("GET /api/notifications", () => {
   }
 
   it("returns 401 with error envelope when auth fails", async () => {
-    const { OperatorAuthError } = await import("@/lib/operator-gate");
-    mockWithOperatorAuth.mockRejectedValueOnce(new OperatorAuthError("Unauthorized"));
+    mockWithOperatorAuthOrResponse.mockResolvedValueOnce(apiErrorResponse("UNAUTHORIZED", 401));
     const { GET } = await importRoute();
     const res = await GET(makeGet());
     expect(res.status).toBe(401);
     expect(await res.json()).toEqual({
       error: { code: "UNAUTHORIZED", message: "Sign in to continue." },
+    });
+  });
+
+  it("returns 500 when auth throws a non-operator error", async () => {
+    mockWithOperatorAuthOrResponse.mockResolvedValueOnce(apiErrorResponse("INTERNAL_ERROR", 500));
+    const { GET } = await importRoute();
+    const res = await GET(makeGet());
+    expect(res.status).toBe(500);
+    expect(await res.json()).toEqual({
+      error: { code: "INTERNAL_ERROR", message: "Something went wrong. Please try again." },
     });
   });
 
