@@ -193,62 +193,90 @@ async function runSuccessTests(client, ctx) {
   assert(notifCount >= 1, "insert trigger fires booking_requested notification");
 }
 
-async function runRejectionTests(client, ctx) {
-  const { orgId, talentId, foreignShootId } = ctx;
-
-  const anonClient = makeAnonClient();
-  const { error: anonErr } = await anonClient.rpc("create_booking_request", {
+async function rejectAnonymousCaller(orgId, talentId) {
+  const { error } = await makeAnonClient().rpc("create_booking_request", {
     p_brand_org_id: orgId,
     p_talent_profile_id: talentId,
     p_date_start: "2026-08-01",
     p_date_end: "2026-08-02",
   });
   assert(
-    !!anonErr &&
-      (/authentication required/i.test(anonErr.message) ||
-        /permission denied for function create_booking_request/i.test(anonErr.message)),
+    !!error &&
+      (/authentication required/i.test(error.message) ||
+        /permission denied for function create_booking_request/i.test(error.message)),
     "rejects anonymous callers",
   );
+}
 
-  const { error: nullOrgErr } = await client.rpc("create_booking_request", {
+async function rejectNullOrg(client, talentId) {
+  const { error } = await client.rpc("create_booking_request", {
     p_brand_org_id: null,
     p_talent_profile_id: talentId,
     p_date_start: "2026-08-01",
     p_date_end: "2026-08-02",
   });
   assert(
-    !!nullOrgErr && /not a member of this organization/i.test(nullOrgErr.message),
+    !!error && /not a member of this organization/i.test(error.message),
     "rejects null brand org id",
   );
+}
 
-  const { error: denyErr } = await client.rpc("create_booking_request", {
+async function rejectNonMemberOrg(client, talentId) {
+  const { error } = await client.rpc("create_booking_request", {
     p_brand_org_id: "00000000-0000-0000-0000-000000000099",
     p_talent_profile_id: talentId,
     p_date_start: "2026-08-01",
     p_date_end: "2026-08-02",
   });
-  assert(!!denyErr && /not a member/i.test(denyErr.message), "rejects non-member org");
+  assert(!!error && /not a member/i.test(error.message), "rejects non-member org");
+}
 
-  const { error: badDateErr } = await client.rpc("create_booking_request", {
+async function rejectInvertedDateRange(client, orgId, talentId) {
+  const { error } = await client.rpc("create_booking_request", {
     p_brand_org_id: orgId,
     p_talent_profile_id: talentId,
     p_date_start: "2026-08-05",
     p_date_end: "2026-08-01",
   });
-  assert(!!badDateErr && /invalid date range/i.test(badDateErr.message), "rejects inverted dates");
+  assert(!!error && /invalid date range/i.test(error.message), "rejects inverted dates");
+}
 
-  const { error: missingTalentErr } = await client.rpc("create_booking_request", {
+async function rejectPastStartDate(client, orgId, talentId) {
+  const { error } = await client.rpc("create_booking_request", {
+    p_brand_org_id: orgId,
+    p_talent_profile_id: talentId,
+    p_date_start: "2020-01-01",
+    p_date_end: "2020-01-02",
+  });
+  assert(!!error && /start date cannot be in the past/i.test(error.message), "rejects past start date");
+}
+
+async function rejectNegativeRate(client, orgId, talentId) {
+  const { error } = await client.rpc("create_booking_request", {
+    p_brand_org_id: orgId,
+    p_talent_profile_id: talentId,
+    p_date_start: "2026-08-01",
+    p_date_end: "2026-08-02",
+    p_rate_quoted: -1,
+  });
+  assert(!!error && /rate_quoted must be non-negative/i.test(error.message), "rejects negative rate");
+}
+
+async function rejectMissingTalent(client, orgId) {
+  const { error } = await client.rpc("create_booking_request", {
     p_brand_org_id: orgId,
     p_talent_profile_id: "00000000-0000-0000-0000-000000000099",
     p_date_start: "2026-08-01",
     p_date_end: "2026-08-02",
   });
   assert(
-    !!missingTalentErr && /talent profile not found/i.test(missingTalentErr.message),
+    !!error && /talent profile not found/i.test(error.message),
     "rejects missing talent",
   );
+}
 
-  const { error: foreignShootErr } = await client.rpc("create_booking_request", {
+async function rejectForeignShoot(client, orgId, talentId, foreignShootId) {
+  const { error } = await client.rpc("create_booking_request", {
     p_brand_org_id: orgId,
     p_talent_profile_id: talentId,
     p_date_start: "2026-08-01",
@@ -256,65 +284,48 @@ async function runRejectionTests(client, ctx) {
     p_shoot_id: foreignShootId,
   });
   assert(
-    !!foreignShootErr && /shoot not found/i.test(foreignShootErr.message),
+    !!error && /shoot not found/i.test(error.message),
     "rejects shoot from another organization",
   );
+}
+
+async function runRejectionTests(client, ctx) {
+  const { orgId, talentId, foreignShootId } = ctx;
+
+  await rejectAnonymousCaller(orgId, talentId);
+  await rejectNullOrg(client, talentId);
+  await rejectNonMemberOrg(client, talentId);
+  await rejectInvertedDateRange(client, orgId, talentId);
+  await rejectPastStartDate(client, orgId, talentId);
+  await rejectNegativeRate(client, orgId, talentId);
+  await rejectMissingTalent(client, orgId);
+  await rejectForeignShoot(client, orgId, talentId, foreignShootId);
+}
+
+function safeDelete(sql) {
+  try {
+    sqlExec(sql);
+  } catch {
+    /* ignore */
+  }
 }
 
 async function cleanupResources(ctx) {
   const { bookingId, talentId, brandId, orgId, foreignShootId, foreignBrandId, foreignOrgId, userId } =
     ctx;
 
-  if (bookingId) {
-    try {
-      sqlExec(`delete from talent.bookings where id = ${sqlLiteral(bookingId)}`);
-    } catch {
-      /* ignore */
-    }
-  }
-  if (talentId) {
-    try {
-      sqlExec(`delete from talent.talent_profiles where id = ${sqlLiteral(talentId)}`);
-    } catch {
-      /* ignore */
-    }
-  }
-  if (foreignShootId) {
-    try {
-      sqlExec(`delete from shoot.shoots where id = ${sqlLiteral(foreignShootId)}`);
-    } catch {
-      /* ignore */
-    }
-  }
-  if (brandId) {
-    try {
-      sqlExec(`delete from public.brands where id = ${sqlLiteral(brandId)}`);
-    } catch {
-      /* ignore */
-    }
-  }
-  if (foreignBrandId) {
-    try {
-      sqlExec(`delete from public.brands where id = ${sqlLiteral(foreignBrandId)}`);
-    } catch {
-      /* ignore */
-    }
-  }
+  if (bookingId) safeDelete(`delete from talent.bookings where id = ${sqlLiteral(bookingId)}`);
+  if (talentId) safeDelete(`delete from talent.talent_profiles where id = ${sqlLiteral(talentId)}`);
+  if (foreignShootId) safeDelete(`delete from shoot.shoots where id = ${sqlLiteral(foreignShootId)}`);
+  if (brandId) safeDelete(`delete from public.brands where id = ${sqlLiteral(brandId)}`);
+  if (foreignBrandId) safeDelete(`delete from public.brands where id = ${sqlLiteral(foreignBrandId)}`);
   if (orgId) {
-    try {
-      sqlExec(`delete from public.org_members where org_id = ${sqlLiteral(orgId)}`);
-      sqlExec(`delete from public.organizations where id = ${sqlLiteral(orgId)}`);
-    } catch {
-      /* ignore */
-    }
+    safeDelete(`delete from public.org_members where org_id = ${sqlLiteral(orgId)}`);
+    safeDelete(`delete from public.organizations where id = ${sqlLiteral(orgId)}`);
   }
   if (foreignOrgId) {
-    try {
-      sqlExec(`delete from public.org_members where org_id = ${sqlLiteral(foreignOrgId)}`);
-      sqlExec(`delete from public.organizations where id = ${sqlLiteral(foreignOrgId)}`);
-    } catch {
-      /* ignore */
-    }
+    safeDelete(`delete from public.org_members where org_id = ${sqlLiteral(foreignOrgId)}`);
+    safeDelete(`delete from public.organizations where id = ${sqlLiteral(foreignOrgId)}`);
   }
   if (userId) {
     await admin.auth.admin.deleteUser(userId).catch(() => {});

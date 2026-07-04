@@ -19,6 +19,8 @@ describe("IPI-340 create_booking_request migration contract", () => {
     expect(sql).toContain("p_brand_org_id is null");
     expect(sql).toContain("not a member of this organization");
     expect(sql).toContain("invalid date range: start date must be on or before end date");
+    expect(sql).toContain("start date cannot be in the past");
+    expect(sql).toContain("rate_quoted must be non-negative");
     expect(sql).toContain("talent profile not found");
     expect(sql).toContain("shoot not found");
   });

@@ -45,6 +45,14 @@ begin
     raise exception 'invalid date range: start date must be on or before end date';
   end if;
 
+  if p_date_start < current_date then
+    raise exception 'start date cannot be in the past';
+  end if;
+
+  if p_rate_quoted is not null and p_rate_quoted < 0 then
+    raise exception 'rate_quoted must be non-negative';
+  end if;
+
   if not exists (
     select 1 from talent.talent_profiles tp where tp.id = p_talent_profile_id
   ) then
