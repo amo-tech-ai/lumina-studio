@@ -1,0 +1,40 @@
+app/src/app/api/notifications/route.ts
+  s_5c9f2a2ec2b3af::t_9e6369863233b2 4-5
+  s_5c9f2a2ec2b3af::t_b768987e38688d 11-13
+app/src/lib/notifications/validation.ts
+  s_5c9f2a2ec2b3af::t_d1839eac7f8339 29-41,51-53,65
+app/src/lib/operator-gate.ts
+  s_5c9f2a2ec2b3af::t_79c15c7f956805 2-3
+  s_5c9f2a2ec2b3af::t_718e0f132803e3 32-46
+app/src/app/api/notifications/read/route.ts
+  s_5c9f2a2ec2b3af::t_f73be930cc595a 4
+  s_5c9f2a2ec2b3af::t_f60cd5cc0a4077 11-13
+app/src/app/api/notifications/read/route.test.ts
+  s_5c9f2a2ec2b3af::t_cb310e72173cbc 52,61-67
+  s_5c9f2a2ec2b3af::t_eab10e2545bce4 3,10,13
+  s_5c9f2a2ec2b3af::t_694be12b314dd9 26
+  s_5c9f2a2ec2b3af::t_4c184fb662d02f 68-70
+app/src/app/api/notifications/route.test.ts
+  s_5c9f2a2ec2b3af::t_814d129f4043d1 25
+  s_5c9f2a2ec2b3af::t_53314df4089b66 48,57-63
+  s_5c9f2a2ec2b3af::t_9b662d1ed4a35c 3,9,12
+  s_5c9f2a2ec2b3af::t_75ae9dcdfa8b8e 64-66
+app/src/lib/notifications/notification-service.ts
+  s_5c9f2a2ec2b3af::t_ea905a6426a5f5 2,5,12-43,75-77,80,101-103,106
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.9",
+  "base_commit_sha": "b04b4f0b3c654e28fc078272ac007f56ba1e8696",
+  "prompts": {},
+  "sessions": {
+    "s_5c9f2a2ec2b3af": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "4c146179-d0c4-4f21-910e-cebd5c5ba751",
+        "model": "composer-2.5"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
