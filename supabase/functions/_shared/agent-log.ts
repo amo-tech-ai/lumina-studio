@@ -2,7 +2,7 @@ import type { SupabaseClient } from "npm:@supabase/supabase-js@2";
 
 export type AgentLogInput = {
   agentName: string;
-  userId: string;
+  userId: string | null;
   brandId?: string | null;
   input?: Record<string, unknown>;
   output?: Record<string, unknown>;

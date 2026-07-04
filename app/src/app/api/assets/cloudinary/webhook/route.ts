@@ -1,5 +1,5 @@
 // IPI-257 074c — Cloudinary webhook: verify signature, persist assets + cloudinary_assets
-import { NextResponse } from "next/server";
+import { NextResponse, after } from "next/server";
 import { v2 as cloudinary } from "cloudinary";
 import { createSupabaseAdminClient } from "@/app/api/_lib/supabase-admin";
 
@@ -162,6 +162,47 @@ async function handleUpload(db: ReturnType<typeof createSupabaseAdminClient>, pa
     brandId,
     input: { notification_type: payload.notification_type, public_id: publicId },
     output: { asset_id: assetId },
+  });
+
+  if (resourceTypeToAssetType(resourceType) === "image") {
+    triggerDnaAudit(assetId);
+  }
+}
+
+// 074d — fire the DNA audit after linking; runs post-response via after() so the
+// webhook still acks within spec §3's ~3s window even though Gemini can take ~30s.
+function triggerDnaAudit(assetId: string) {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!supabaseUrl || !serviceRoleKey) {
+    console.error("[cloudinary/webhook] DNA audit trigger skipped: Supabase env vars missing");
+    return;
+  }
+
+  after(async () => {
+    // 35s: a hair past the edge function's own 30s Gemini timeout, so it always
+    // resolves the response before we'd abort the request out from under it.
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 35_000);
+    try {
+      const url = new URL("/functions/v1/audit-asset-dna", supabaseUrl).toString();
+      const res = await fetch(url, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${serviceRoleKey}`,
+        },
+        body: JSON.stringify({ assetId }),
+        signal: controller.signal,
+      });
+      if (!res.ok) {
+        console.error("[cloudinary/webhook] DNA audit trigger failed:", res.status, await res.text());
+      }
+    } catch (e) {
+      console.error("[cloudinary/webhook] DNA audit trigger failed (non-fatal):", e);
+    } finally {
+      clearTimeout(timeoutId);
+    }
   });
 }
 

@@ -15,6 +15,13 @@ vi.mock("cloudinary", () => ({
   },
 }));
 
+// after() requires a real Next.js request scope, which direct POST() invocation
+// in tests doesn't provide — run the callback inline instead.
+vi.mock("next/server", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("next/server")>();
+  return { ...actual, after: (fn: () => unknown) => fn() };
+});
+
 const assetsSelectMaybeSingle = vi.fn();
 const assetsInsertSingle = vi.fn();
 const assetsUpdateEq = vi.fn();
@@ -67,11 +74,15 @@ function makeRequest(body: unknown, headers?: Record<string, string | null>): Re
   });
 }
 
+const mockFetch = vi.fn();
+
 beforeEach(() => {
   vi.resetModules();
   vi.stubEnv("CLOUDINARY_CLOUD_NAME", "dzqy2ixl0");
   vi.stubEnv("CLOUDINARY_API_KEY", "test-api-key");
   vi.stubEnv("CLOUDINARY_API_SECRET", "test-api-secret");
+  vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://test.supabase.co");
+  vi.stubEnv("SUPABASE_SERVICE_ROLE_KEY", "test-service-role-key");
   mockVerify.mockReturnValue(true);
   assetsSelectMaybeSingle.mockResolvedValue({ data: null, error: null });
   assetsInsertSingle.mockResolvedValue({ data: { id: "asset-1" }, error: null });
@@ -79,6 +90,9 @@ beforeEach(() => {
   cloudinaryAssetsUpsert.mockResolvedValue({ data: null, error: null });
   cloudinaryAssetsUpdateEq.mockResolvedValue({ data: null, error: null });
   aiAgentLogsInsert.mockResolvedValue({ data: null, error: null });
+  mockFetch.mockReset();
+  mockFetch.mockResolvedValue({ ok: true, text: () => Promise.resolve("") });
+  vi.stubGlobal("fetch", mockFetch);
 });
 
 afterEach(() => {
@@ -215,6 +229,36 @@ describe("POST /api/assets/cloudinary/webhook", () => {
 
   it("still acks 2xx when the upsert fails (never blocks the webhook ack)", async () => {
     cloudinaryAssetsUpsert.mockResolvedValue({ data: null, error: { message: "boom" } });
+    const { POST } = await importRoute();
+    const res = await POST(makeRequest(UPLOAD_PAYLOAD));
+    expect(res.status).toBe(200);
+  });
+
+  it("triggers audit-asset-dna for an image upload", async () => {
+    const { POST } = await importRoute();
+    const res = await POST(makeRequest(UPLOAD_PAYLOAD));
+    expect(res.status).toBe(200);
+    expect(mockFetch).toHaveBeenCalledWith(
+      "https://test.supabase.co/functions/v1/audit-asset-dna",
+      expect.objectContaining({
+        method: "POST",
+        headers: expect.objectContaining({
+          Authorization: "Bearer test-service-role-key",
+        }),
+        body: JSON.stringify({ assetId: "asset-1" }),
+      }),
+    );
+  });
+
+  it("does not trigger audit-asset-dna for a non-image (video) upload", async () => {
+    const { POST } = await importRoute();
+    const res = await POST(makeRequest({ ...UPLOAD_PAYLOAD, resource_type: "video" }));
+    expect(res.status).toBe(200);
+    expect(mockFetch).not.toHaveBeenCalled();
+  });
+
+  it("still acks 2xx when the DNA audit trigger fetch fails (non-fatal)", async () => {
+    mockFetch.mockRejectedValue(new Error("network error"));
     const { POST } = await importRoute();
     const res = await POST(makeRequest(UPLOAD_PAYLOAD));
     expect(res.status).toBe(200);
