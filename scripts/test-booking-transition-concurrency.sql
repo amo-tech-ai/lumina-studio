@@ -1,8 +1,7 @@
 -- IPI-341 · MG-4 — optimistic-lock / stale_booking tests for transition_booking.
--- Run: psql "$DATABASE_URL" -f scripts/test-booking-transition-concurrency.sql
+-- Run: psql -v ON_ERROR_STOP=1 "$DATABASE_URL" -f scripts/test-booking-transition-concurrency.sql
 --
 -- Proves version gate: first transition wins; retry with stale expected_version fails.
-\set ON_ERROR_STOP on
 
 drop table if exists ipi341_ctx;
 create temp table ipi341_ctx (

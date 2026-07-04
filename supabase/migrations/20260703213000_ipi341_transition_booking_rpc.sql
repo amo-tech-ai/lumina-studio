@@ -23,9 +23,9 @@
 --
 -- Verify:
 --   infisical run -- npm run supabase:verify-rls
---   psql "$DATABASE_URL" -f scripts/test-booking-transition-fsm.sql
---   psql "$DATABASE_URL" -f scripts/test-booking-transition-concurrency.sql
---   psql "$DATABASE_URL" -f scripts/test-booking-rls-bypass.sql
+--   psql -v ON_ERROR_STOP=1 "$DATABASE_URL" -f scripts/test-booking-transition-fsm.sql
+--   psql -v ON_ERROR_STOP=1 "$DATABASE_URL" -f scripts/test-booking-transition-concurrency.sql
+--   psql -v ON_ERROR_STOP=1 "$DATABASE_URL" -f scripts/test-booking-rls-bypass.sql
 --   cd app && npm run typecheck
 --
 -- Rollback:
@@ -44,7 +44,7 @@ create or replace function public.transition_booking(
 returns jsonb
 language plpgsql
 security definer
-set search_path = public, talent, shoot
+set search_path = pg_catalog, public, talent, shoot
 as $func$
 declare
   v_booking talent.bookings%rowtype;
@@ -137,7 +137,11 @@ begin
       'from_status', v_from_status,
       'to_status', v_booking.status,
       'date_start', v_booking.date_start,
-      'date_end', v_booking.date_end
+      'date_end', v_booking.date_end,
+      'rate_quoted', v_booking.rate_quoted,
+      'approved_by', v_booking.approved_by,
+      'cancelled_by', v_booking.cancelled_by,
+      'cancellation_reason', v_booking.cancellation_reason
     );
   end if;
 

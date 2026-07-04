@@ -1,8 +1,7 @@
 -- IPI-341 · MG-4 — RLS bypass lockdown tests for talent.bookings.
--- Run: psql "$DATABASE_URL" -f scripts/test-booking-rls-bypass.sql
+-- Run: psql -v ON_ERROR_STOP=1 "$DATABASE_URL" -f scripts/test-booking-rls-bypass.sql
 --
 -- Proves authenticated party cannot UPDATE bookings directly; transition_booking still works.
-\set ON_ERROR_STOP on
 
 drop table if exists ipi341_ctx;
 create temp table ipi341_ctx (

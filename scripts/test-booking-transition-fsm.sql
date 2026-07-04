@@ -1,6 +1,5 @@
 -- IPI-341 · MG-4 — FSM integration tests for transition_booking.
--- Run: psql "$DATABASE_URL" -f scripts/test-booking-transition-fsm.sql
-\set ON_ERROR_STOP on
+-- Run: psql -v ON_ERROR_STOP=1 "$DATABASE_URL" -f scripts/test-booking-transition-fsm.sql
 
 drop table if exists ipi341_ctx;
 create temp table ipi341_ctx (
