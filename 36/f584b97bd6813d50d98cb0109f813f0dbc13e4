@@ -1,0 +1,55 @@
+app/src/types/supabase.ts
+  s_5c9f2a2ec2b3af::t_64eb0a5cc85054 4474-4499,5807-5818,5820,5861-5887,5942-5953
+app/src/lib/booking/rpc-errors.ts
+  s_308eb8b6991fc0::t_1f728b9713039b 1-136
+app/src/app/api/bookings/[id]/approve/route.ts
+  s_308eb8b6991fc0::t_03f0f21bc8c5c9 1-45
+app/src/lib/api/error-envelope.ts
+  s_308eb8b6991fc0::t_613e4d379b5bd8 1-83
+app/src/app/api/bookings/[id]/route.ts
+  s_308eb8b6991fc0::t_2925d3e1ab762d 1-81
+app/src/app/api/bookings/route.ts
+  s_308eb8b6991fc0::t_e5b588761adeed 1-72
+app/src/app/api/bookings/[id]/approve/route.test.ts
+  s_308eb8b6991fc0::t_12d213e9e3bce3 4-5
+  s_308eb8b6991fc0::t_e78f15ef1cd5b0 36
+  s_308eb8b6991fc0::t_291908ece3baec 1-3,6-35,37-173
+app/src/lib/booking/validation.ts
+  s_308eb8b6991fc0::t_94554cd2891b36 1-249,252-315
+  s_308eb8b6991fc0::t_97dda537fe4783 250-251
+app/src/app/api/bookings/[id]/route.test.ts
+  s_308eb8b6991fc0::t_eba1cfd4a326e7 32
+  s_308eb8b6991fc0::t_25fd4591adb6db 1-3,5-31,33-37,39-93,95-158
+  s_308eb8b6991fc0::t_944d32755bc962 4
+  s_308eb8b6991fc0::t_50451663edaf99 38,94
+app/src/lib/booking/booking-service.ts
+  s_308eb8b6991fc0::t_08d7910b76a7ad 1-291
+app/src/app/api/bookings/route.test.ts
+  s_308eb8b6991fc0::t_ecd9ec7b134c2d 1-3,7-42,44-175
+  s_308eb8b6991fc0::t_7a2c8071b4daa1 4-6
+  s_308eb8b6991fc0::t_7afd1543bc885d 43
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.9",
+  "base_commit_sha": "36f584b97bd6813d50d98cb0109f813f0dbc13e4",
+  "prompts": {},
+  "sessions": {
+    "s_308eb8b6991fc0": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "e08a64f8-9393-41bb-ab93-8eb26b837901",
+        "model": "composer-2.5-fast"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    },
+    "s_5c9f2a2ec2b3af": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "4c146179-d0c4-4f21-910e-cebd5c5ba751",
+        "model": "composer-2.5"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}

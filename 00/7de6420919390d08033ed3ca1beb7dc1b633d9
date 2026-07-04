@@ -1,0 +1,39 @@
+app/src/lib/booking/rpc-errors.test.ts
+  s_5c9f2a2ec2b3af::t_36e8b6a9b631b9 1-31
+app/src/lib/api/error-envelope.ts
+  s_5c9f2a2ec2b3af::t_21ee550db79d39 63-74
+app/src/app/api/bookings/[id]/approve/route.ts
+  s_5c9f2a2ec2b3af::t_23ab08c535e124 5
+app/src/lib/booking/booking-service.ts
+  s_5c9f2a2ec2b3af::t_4975148a162c52 3
+  s_5c9f2a2ec2b3af::t_a7436be2bd62c3 83-97,99
+  s_5c9f2a2ec2b3af::t_c16b9abbe6b8f7 228-238
+  s_5c9f2a2ec2b3af::t_2d94f662a89ad2 134
+  s_5c9f2a2ec2b3af::t_19f3ee0e19c1b3 24
+app/src/lib/booking/booking-service.test.ts
+  s_5c9f2a2ec2b3af::t_4393516214d71b 1-46
+app/src/lib/booking/rpc-errors.ts
+  s_5c9f2a2ec2b3af::t_e720cca674d6a1 39,44-45
+  s_5c9f2a2ec2b3af::t_3f94c963c438cb 14-23,27
+  s_5c9f2a2ec2b3af::t_c4e2b3d4b4bdf1 46
+app/src/app/api/bookings/[id]/route.ts
+  s_5c9f2a2ec2b3af::t_43b01893a84028 5
+app/src/app/api/bookings/route.ts
+  s_5c9f2a2ec2b3af::t_56ee03db1a486c 5
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.9",
+  "base_commit_sha": "007de6420919390d08033ed3ca1beb7dc1b633d9",
+  "prompts": {},
+  "sessions": {
+    "s_5c9f2a2ec2b3af": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "4c146179-d0c4-4f21-910e-cebd5c5ba751",
+        "model": "composer-2.5"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
