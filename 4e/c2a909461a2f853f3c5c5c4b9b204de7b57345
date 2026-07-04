@@ -1,0 +1,29 @@
+supabase/migrations/20260704090000_crm_core_schema.sql
+  s_5c9f2a2ec2b3af::t_71b81799dd70af 93-124
+  s_5c9f2a2ec2b3af::t_d37604da2cfbb4 90-92
+  s_5c9f2a2ec2b3af::t_5ac5806edc5738 125-127
+  s_5c9f2a2ec2b3af::t_7123e40528fe85 1-89,128-182
+scripts/verify-rls.mjs
+  s_5c9f2a2ec2b3af::t_e014bb2c68c933 268-359
+  s_5c9f2a2ec2b3af::t_9794b6207843fc 141-146
+supabase/migrations/20260704100000_crm_schema_hardening.sql
+  s_5c9f2a2ec2b3af::t_57ecf85e3b8043 1-39
+app/src/types/supabase.ts
+  s_5c9f2a2ec2b3af::t_b5c89b6811d0ce 1456-1738,4789,4801,4813,4835-4841
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.9",
+  "base_commit_sha": "4ec2a909461a2f853f3c5c5c4b9b204de7b57345",
+  "prompts": {},
+  "sessions": {
+    "s_5c9f2a2ec2b3af": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "4c146179-d0c4-4f21-910e-cebd5c5ba751",
+        "model": "composer-2.5"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
