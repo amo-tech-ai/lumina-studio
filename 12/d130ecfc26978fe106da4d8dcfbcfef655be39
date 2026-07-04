@@ -1,0 +1,50 @@
+app/src/app/(operator)/app/crm/page.tsx
+  s_e3bc490716abde::t_87504c7c4a3a32 1-7
+app/src/components/operator-panel/nav-sidebar.tsx
+  s_e3bc490716abde::t_ab8a2855998bef 17
+app/src/lib/crm/activity-state.ts
+  s_e3bc490716abde::t_25145790e16caa 1-12
+app/src/lib/crm/activity-state.test.ts
+  s_e3bc490716abde::t_7a96a4710ea718 1-23
+app/src/components/crm/company-card.tsx
+  s_e3bc490716abde::t_df87039dac74e7 1-55
+app/src/components/crm/activity-timeline.test.tsx
+  s_e3bc490716abde::t_cb929c2696a161 1-39
+app/src/lib/marketing-routes.test.ts
+  s_e3bc490716abde::t_2ad7dedb2fcb36 13
+app/src/app/(operator)/app/crm/companies/[id]/page.tsx
+  s_e3bc490716abde::t_e459ac016fac14 1-81
+app/src/components/crm/activity-timeline.tsx
+  s_e3bc490716abde::t_2c512fd38da95e 1-68
+app/src/lib/crm/queries.ts
+  s_e3bc490716abde::t_8c66d334541377 9-20
+  s_e3bc490716abde::t_4afb6f57bcfbd0 1-8,21-45
+app/src/components/crm/company-card.test.tsx
+  s_e3bc490716abde::t_a64483056223a0 1-3,6-7
+  s_e3bc490716abde::t_bb64444dae8cb1 13-14,22
+  s_e3bc490716abde::t_9fb9be66939605 4-5,8-12,15-21,23-24
+app/src/lib/crm/queries.test.ts
+  s_e3bc490716abde::t_08738c174b0f67 1-47
+app/src/app/(operator)/app/crm/companies/page.tsx
+  s_e3bc490716abde::t_d8ff22fe4b2ef2 1-105
+app/src/components/crm/company-detail-tabs.test.tsx
+  s_e3bc490716abde::t_46fe493b91f6ce 1-49
+app/src/components/crm/company-detail-tabs.tsx
+  s_e3bc490716abde::t_cf6738d367e529 1-98
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.9",
+  "base_commit_sha": "12d130ecfc26978fe106da4d8dcfbcfef655be39",
+  "prompts": {},
+  "sessions": {
+    "s_e3bc490716abde": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "27142e80-cf4d-4c53-b598-103370c66824",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
