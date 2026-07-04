@@ -1,0 +1,25 @@
+app/src/components/crm/activity-timeline.test.tsx
+  s_e3bc490716abde::t_18f158405f4ed9 1-39
+app/src/components/crm/activity-timeline.tsx
+  s_e3bc490716abde::t_d724993dd87a5d 1-68
+app/src/lib/crm/activity-state.test.ts
+  s_e3bc490716abde::t_d8902fa368f21f 1-23
+app/src/lib/crm/activity-state.ts
+  s_e3bc490716abde::t_c3b7b1bf63abf6 1-12
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.9",
+  "base_commit_sha": "1221ae323ad170268f680fb2d6cc8b488731e684",
+  "prompts": {},
+  "sessions": {
+    "s_e3bc490716abde": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "27142e80-cf4d-4c53-b598-103370c66824",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
