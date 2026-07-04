@@ -172,4 +172,14 @@ describe("GET /api/bookings", () => {
       next_cursor: "2026-07-01T00:00:00Z|" + BOOKING_ID,
     });
   });
+
+  it("passes comma-separated status filters to listBookings", async () => {
+    const { GET } = await importRoute();
+    const res = await GET(makeGet(`role=brand&org_id=${ORG_ID}&status=requested,quoted`));
+    expect(res.status).toBe(200);
+    expect(mockListBookings).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ status: ["requested", "quoted"] }),
+    );
+  });
 });

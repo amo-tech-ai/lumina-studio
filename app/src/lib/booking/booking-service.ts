@@ -33,6 +33,7 @@ function asRecord(value: unknown): Record<string, unknown> | null {
     : null;
 }
 
+/** POST create + approve use `booking_id` per api-contracts.md; list/get use `id`. */
 export type CreateBookingResponse = {
   booking_id: string;
   status: string;

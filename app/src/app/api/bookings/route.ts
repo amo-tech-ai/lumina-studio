@@ -48,7 +48,7 @@ export async function GET(req: NextRequest) {
     throw e;
   }
 
-  const parsed = parseListBookingsQuery(new URL(req.url).searchParams);
+  const parsed = parseListBookingsQuery(req.nextUrl.searchParams);
   if (!parsed.ok) {
     return serviceFailureResponse(parsed);
   }

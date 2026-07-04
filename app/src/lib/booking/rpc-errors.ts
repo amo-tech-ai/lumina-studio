@@ -21,6 +21,129 @@ export function isStaleBookingMessage(message: string): boolean {
   return msg === "stale_booking" || msg.toLowerCase().includes("stale_booking");
 }
 
+type RpcErrorMatcher = {
+  match: (msg: string, pgCode?: string | null) => boolean;
+  map: (msg: string, ctx?: StaleBookingContext) => MappedRpcError;
+};
+
+function staleBookingError(ctx?: StaleBookingContext): MappedRpcError {
+  const details: Record<string, unknown> = {};
+  if (ctx?.expectedVersion != null) {
+    details.expected_version = ctx.expectedVersion;
+  }
+  if (ctx?.currentVersion != null) {
+    details.current_version = ctx.currentVersion;
+  }
+  return {
+    status: 409,
+    code: "STALE_BOOKING",
+    message: "This booking was updated elsewhere. Refresh and try again.",
+    ...(Object.keys(details).length > 0 ? { details } : {}),
+  };
+}
+
+const RPC_ERROR_MATCHERS: RpcErrorMatcher[] = [
+  {
+    match: (msg, pgCode) => pgCode === "23P01" || includes(msg, "overlapping date"),
+    map: () => ({
+      status: 409,
+      code: "BOOKING_CONFLICT",
+      message: "Talent already confirmed for overlapping dates.",
+    }),
+  },
+  {
+    match: (msg) => isStaleBookingMessage(msg),
+    map: (_msg, ctx) => staleBookingError(ctx),
+  },
+  {
+    match: (msg) => includes(msg, "invalid_transition"),
+    map: () => ({
+      status: 409,
+      code: "INVALID_TRANSITION",
+      message: "This status change is not allowed for this booking.",
+    }),
+  },
+  {
+    match: (msg) =>
+      includes(msg, "not in approved state") ||
+      includes(msg, "not in approved") ||
+      includes(msg, "confirm not approved"),
+    map: () => ({
+      status: 409,
+      code: "BOOKING_NOT_APPROVED",
+      message: "This booking must be approved before it can be confirmed.",
+    }),
+  },
+  {
+    match: (msg) => includes(msg, "cancellation_reason_required"),
+    map: () => ({
+      status: 400,
+      code: "VALIDATION_ERROR",
+      message: "A cancellation reason is required.",
+    }),
+  },
+  {
+    match: (msg) => includes(msg, "authentication required"),
+    map: () => ({ status: 401, code: "UNAUTHORIZED", message: "Sign in to continue." }),
+  },
+  {
+    match: (msg) =>
+      includes(msg, "not authorized for this booking") ||
+      includes(msg, "not authorized") ||
+      includes(msg, "not authorized for this talent profile"),
+    map: () => ({
+      status: 403,
+      code: "FORBIDDEN",
+      message: "You do not have permission to perform this action.",
+    }),
+  },
+  {
+    match: (msg) => includes(msg, "not a member of this organization") || includes(msg, "not a member"),
+    map: () => ({
+      status: 403,
+      code: "FORBIDDEN",
+      message: "You are not a member of this organization.",
+    }),
+  },
+  {
+    match: (msg) =>
+      includes(msg, "booking not found") ||
+      includes(msg, "booking % not found") ||
+      includes(msg, "talent profile not found") ||
+      includes(msg, "shoot not found"),
+    map: (msg) => {
+      const notFoundMessage = includes(msg, "talent profile")
+        ? "Talent profile not found."
+        : includes(msg, "shoot")
+          ? "Shoot not found."
+          : "Booking not found.";
+      return { status: 404, code: "NOT_FOUND", message: notFoundMessage };
+    },
+  },
+  {
+    match: (msg) => /booking .* not found/i.test(msg),
+    map: () => ({ status: 404, code: "NOT_FOUND", message: "Booking not found." }),
+  },
+  {
+    match: (msg) =>
+      includes(msg, "invalid date range") ||
+      includes(msg, "date_start and date_end") ||
+      includes(msg, "start date cannot be in the past") ||
+      includes(msg, "rate_quoted") ||
+      includes(msg, "invalid role") ||
+      includes(msg, "org_id is required") ||
+      includes(msg, "talent_profile_id is required") ||
+      includes(msg, "invalid cursor") ||
+      includes(msg, "expected_version is required") ||
+      includes(msg, "booking_id is required"),
+    map: (msg) => ({
+      status: 400,
+      code: "VALIDATION_ERROR",
+      message: msg || "Invalid request.",
+    }),
+  },
+];
+
 export function mapSupabaseRpcError(
   message: string,
   pgCode?: string | null,
@@ -28,117 +151,10 @@ export function mapSupabaseRpcError(
 ): MappedRpcError {
   const msg = message ?? "";
 
-  if (pgCode === "23P01" || includes(msg, "overlapping date")) {
-    return {
-      status: 409,
-      code: "BOOKING_CONFLICT",
-      message: "Talent already confirmed for overlapping dates.",
-    };
-  }
-
-  if (isStaleBookingMessage(msg)) {
-    const details: Record<string, unknown> = {};
-    if (ctx?.expectedVersion != null) {
-      details.expected_version = ctx.expectedVersion;
+  for (const rule of RPC_ERROR_MATCHERS) {
+    if (rule.match(msg, pgCode)) {
+      return rule.map(msg, ctx);
     }
-    if (ctx?.currentVersion != null) {
-      details.current_version = ctx.currentVersion;
-    }
-    return {
-      status: 409,
-      code: "STALE_BOOKING",
-      message: "This booking was updated elsewhere. Refresh and try again.",
-      ...(Object.keys(details).length > 0 ? { details } : {}),
-    };
-  }
-
-  if (includes(msg, "invalid_transition")) {
-    return {
-      status: 409,
-      code: "INVALID_TRANSITION",
-      message: "This status change is not allowed for this booking.",
-    };
-  }
-
-  if (
-    includes(msg, "not in approved state") ||
-    includes(msg, "not in approved") ||
-    includes(msg, "confirm not approved")
-  ) {
-    return {
-      status: 409,
-      code: "BOOKING_NOT_APPROVED",
-      message: "This booking must be approved before it can be confirmed.",
-    };
-  }
-
-  if (includes(msg, "cancellation_reason_required")) {
-    return {
-      status: 400,
-      code: "VALIDATION_ERROR",
-      message: "A cancellation reason is required.",
-    };
-  }
-
-  if (includes(msg, "authentication required")) {
-    return { status: 401, code: "UNAUTHORIZED", message: "Sign in to continue." };
-  }
-
-  if (
-    includes(msg, "not authorized for this booking") ||
-    includes(msg, "not authorized") ||
-    includes(msg, "not authorized for this talent profile")
-  ) {
-    return {
-      status: 403,
-      code: "FORBIDDEN",
-      message: "You do not have permission to perform this action.",
-    };
-  }
-
-  if (includes(msg, "not a member of this organization") || includes(msg, "not a member")) {
-    return {
-      status: 403,
-      code: "FORBIDDEN",
-      message: "You are not a member of this organization.",
-    };
-  }
-
-  if (
-    includes(msg, "booking not found") ||
-    includes(msg, "booking % not found") ||
-    includes(msg, "talent profile not found") ||
-    includes(msg, "shoot not found")
-  ) {
-    const notFoundMessage = includes(msg, "talent profile")
-      ? "Talent profile not found."
-      : includes(msg, "shoot")
-        ? "Shoot not found."
-        : "Booking not found.";
-    return { status: 404, code: "NOT_FOUND", message: notFoundMessage };
-  }
-
-  if (/booking .* not found/i.test(msg)) {
-    return { status: 404, code: "NOT_FOUND", message: "Booking not found." };
-  }
-
-  if (
-    includes(msg, "invalid date range") ||
-    includes(msg, "date_start and date_end") ||
-    includes(msg, "start date cannot be in the past") ||
-    includes(msg, "rate_quoted") ||
-    includes(msg, "invalid role") ||
-    includes(msg, "org_id is required") ||
-    includes(msg, "talent_profile_id is required") ||
-    includes(msg, "invalid cursor") ||
-    includes(msg, "expected_version is required") ||
-    includes(msg, "booking_id is required")
-  ) {
-    return {
-      status: 400,
-      code: "VALIDATION_ERROR",
-      message: msg || "Invalid request.",
-    };
   }
 
   return {

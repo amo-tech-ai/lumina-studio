@@ -136,10 +136,16 @@ export type ListBookingsQuery = {
   limit: number;
 };
 
+function parseStatusTokens(params: URLSearchParams): string[] {
+  return params
+    .getAll("status")
+    .flatMap((value) => value.split(","))
+    .map((s) => s.trim())
+    .filter(Boolean);
+}
+
 function parseStatusFilter(params: URLSearchParams): BookingStatus[] | undefined {
-  const raw = params.getAll("status");
-  const fromComma = params.get("status")?.split(",").filter(Boolean) ?? [];
-  const combined = raw.length > 0 ? raw : fromComma;
+  const combined = parseStatusTokens(params);
   if (combined.length === 0) return undefined;
 
   const invalid = combined.find((s) => !BOOKING_STATUS_VALUES.includes(s as BookingStatus));
@@ -159,9 +165,7 @@ export function parseListBookingsQuery(searchParams: URLSearchParams):
 
   const status = parseStatusFilter(searchParams);
   if (searchParams.has("status") && status === undefined) {
-    const values = searchParams.getAll("status").length
-      ? searchParams.getAll("status")
-      : (searchParams.get("status")?.split(",") ?? []);
+    const values = parseStatusTokens(searchParams);
     if (values.length > 0) {
       return validationFail(`Invalid status filter: ${values.join(", ")}`);
     }
@@ -222,6 +226,67 @@ export type TransitionBody = {
   cancellation_reason?: string;
 };
 
+function validateTransitionRateQuoted(
+  b: Record<string, unknown>,
+  toStatus: unknown,
+): ParseFailure | null {
+  if (toStatus === "quoted") {
+    if (!isRateQuoted(b.rate_quoted)) {
+      return validationFail("rate_quoted is required when transitioning to quoted.");
+    }
+    return null;
+  }
+
+  if (b.rate_quoted !== undefined && b.rate_quoted !== null && !isRateQuoted(b.rate_quoted)) {
+    return validationFail("rate_quoted must be a number between 0 and 999999.99.");
+  }
+  return null;
+}
+
+function validateTransitionCancellation(
+  b: Record<string, unknown>,
+  toStatus: unknown,
+): ParseFailure | null {
+  if (toStatus === "cancelled") {
+    if (typeof b.cancellation_reason !== "string" || b.cancellation_reason.trim().length < 1) {
+      return validationFail("cancellation_reason is required when cancelling a booking.");
+    }
+    if (b.cancellation_reason.trim().length > 500) {
+      return validationFail("cancellation_reason must be at most 500 characters.");
+    }
+    return null;
+  }
+
+  if (b.cancellation_reason !== undefined && b.cancellation_reason !== null) {
+    if (typeof b.cancellation_reason !== "string" || b.cancellation_reason.trim().length < 1) {
+      return validationFail("cancellation_reason must be a non-empty string.");
+    }
+    if (b.cancellation_reason.trim().length > 500) {
+      return validationFail("cancellation_reason must be at most 500 characters.");
+    }
+  }
+  return null;
+}
+
+function validateTransitionReschedule(b: Record<string, unknown>): ParseFailure | null {
+  const hasStart = b.date_start !== undefined && b.date_start !== null;
+  const hasEnd = b.date_end !== undefined && b.date_end !== null;
+  if (hasStart !== hasEnd) {
+    return validationFail("date_start and date_end must both be provided for reschedule.");
+  }
+  if (!hasStart) {
+    return null;
+  }
+
+  if (!isIsoDate(b.date_start) || !isIsoDate(b.date_end)) {
+    return validationFail("date_start and date_end must be valid YYYY-MM-DD dates.");
+  }
+  if (!isValidDateRange(b.date_start as string, b.date_end as string)) {
+    return validationFail("date_end must be on or after date_start.");
+  }
+  return null;
+}
+
 export function parseTransitionBody(body: unknown):
   | { ok: true; data: TransitionBody }
   | ParseFailure {
@@ -253,43 +318,16 @@ export function parseTransitionBody(body: unknown):
     }
   }
 
-  if (b.to_status === "quoted") {
-    if (!isRateQuoted(b.rate_quoted)) {
-      return validationFail("rate_quoted is required when transitioning to quoted.");
-    }
-  } else if (b.rate_quoted !== undefined && b.rate_quoted !== null && !isRateQuoted(b.rate_quoted)) {
-    return validationFail("rate_quoted must be a number between 0 and 999999.99.");
-  }
+  const rateError = validateTransitionRateQuoted(b, b.to_status);
+  if (rateError) return rateError;
 
-  if (b.to_status === "cancelled") {
-    if (typeof b.cancellation_reason !== "string" || b.cancellation_reason.trim().length < 1) {
-      return validationFail("cancellation_reason is required when cancelling a booking.");
-    }
-    if (b.cancellation_reason.trim().length > 500) {
-      return validationFail("cancellation_reason must be at most 500 characters.");
-    }
-  } else if (b.cancellation_reason !== undefined && b.cancellation_reason !== null) {
-    if (typeof b.cancellation_reason !== "string" || b.cancellation_reason.trim().length < 1) {
-      return validationFail("cancellation_reason must be a non-empty string.");
-    }
-    if (b.cancellation_reason.trim().length > 500) {
-      return validationFail("cancellation_reason must be at most 500 characters.");
-    }
-  }
+  const cancelError = validateTransitionCancellation(b, b.to_status);
+  if (cancelError) return cancelError;
+
+  const rescheduleError = validateTransitionReschedule(b);
+  if (rescheduleError) return rescheduleError;
 
   const hasStart = b.date_start !== undefined && b.date_start !== null;
-  const hasEnd = b.date_end !== undefined && b.date_end !== null;
-  if (hasStart !== hasEnd) {
-    return validationFail("date_start and date_end must both be provided for reschedule.");
-  }
-  if (hasStart) {
-    if (!isIsoDate(b.date_start) || !isIsoDate(b.date_end)) {
-      return validationFail("date_start and date_end must be valid YYYY-MM-DD dates.");
-    }
-    if (!isValidDateRange(b.date_start as string, b.date_end as string)) {
-      return validationFail("date_end must be on or after date_start.");
-    }
-  }
 
   return {
     ok: true,
@@ -298,7 +336,7 @@ export function parseTransitionBody(body: unknown):
       to_status: b.to_status as BookingStatus | undefined,
       rate_quoted: b.rate_quoted != null ? (b.rate_quoted as number) : undefined,
       date_start: hasStart ? (b.date_start as string) : undefined,
-      date_end: hasEnd ? (b.date_end as string) : undefined,
+      date_end: hasStart ? (b.date_end as string) : undefined,
       cancellation_reason:
         typeof b.cancellation_reason === "string"
           ? b.cancellation_reason.trim()
