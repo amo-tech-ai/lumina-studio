@@ -40,12 +40,15 @@ describe("CLOUDINARY_CLOUD_NAME", () => {
   });
 
   it("falls back to CLOUDINARY_CLOUD_NAME when the public var is unset", async () => {
+    vi.stubEnv("NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME", undefined);
     vi.stubEnv("CLOUDINARY_CLOUD_NAME", "server-cloud");
     const { CLOUDINARY_CLOUD_NAME } = await importUrl();
     expect(CLOUDINARY_CLOUD_NAME).toBe("server-cloud");
   });
 
   it("falls back to the dzqy2ixl0 default when neither var is set", async () => {
+    vi.stubEnv("NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME", undefined);
+    vi.stubEnv("CLOUDINARY_CLOUD_NAME", undefined);
     const { CLOUDINARY_CLOUD_NAME } = await importUrl();
     expect(CLOUDINARY_CLOUD_NAME).toBe("dzqy2ixl0");
   });
