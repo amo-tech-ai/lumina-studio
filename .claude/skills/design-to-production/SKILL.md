@@ -59,6 +59,7 @@ Read full map: [`references/route-map.md`](references/route-map.md)
 | `Command Center.v2.image-first.dc.html` | `/app` |
 | `Brand List.v2.image-first.dc.html` | `/app/brand` |
 | `Brand Detail.v2.image-first.dc.html` | `/app/brand/[id]` |
+| `Shoots List.v2.image-first.dc.html` | `/app/shoots` |
 
 **Page entrypoints:**
 
@@ -66,6 +67,7 @@ Read full map: [`references/route-map.md`](references/route-map.md)
 app/src/app/(operator)/app/page.tsx
 app/src/app/(operator)/app/brand/page.tsx
 app/src/app/(operator)/app/brand/[id]/page.tsx
+app/src/app/(operator)/app/shoots/page.tsx
 ```
 
 **Shell is already wired** via `(operator)/layout.tsx` + `OperatorPanel`. Parity = **center workspace column** only.
@@ -80,9 +82,10 @@ app/src/app/(operator)/app/brand/[id]/page.tsx
 2. List **dc-import** components referenced; open matching files under `Universal design prompt/components/*.dc.html` only when the screen imports them.
 3. Read production **page.tsx** + workspace components (grep `app/src/components/` for route name).
 4. Read [`design.md`](../../../design.md) § layout + [`tasks/plan/todo.md`](../../../tasks/plan/todo.md) for tracker status.
-5. Check **current verified parity %** for this screen in [`tasks/design-docs/progess.md`](../../../tasks/design-docs/progess.md) — don't assume "shell already wired, workspace column only" is the actual starting point; some screens (e.g. Brand List) are still a plain list, not a grid, and score well under 50% (wrong-layout-paradigm territory per the scoring guide below).
+5. Check **current verified parity %** for this screen in [`tasks/design-docs/progess.md`](../../../tasks/design-docs/progess.md) — don't assume "shell already wired, workspace column only" is the actual starting point; some screens (e.g. Brand List) are still a plain list, not a grid, and score well under 50% (wrong-layout-paradigm territory per the scoring guide below). **Caveat:** most of `tasks/design-docs/` is untracked/uncommitted on `main` — run `git status --short tasks/design-docs/` first; a fresh worktree from `origin/main` may not have this file at all. Don't block on a doc that was never committed.
 6. Note existing QA: `tasks/design-docs/implementation/brand/parity-audit.md`, PR #181 checklist if present.
 7. Check for collisions: `git worktree list` and `gh pr list --state open` for branches/PRs already targeting this route (this repo regularly has parallel in-flight work, e.g. `ipi/272-brand-list-dc-parity`, draft PR #181). Flag overlap to the user before starting rather than duplicating or conflicting with it.
+8. Check for **stale/canceled plan docs** tied to abandoned branches (e.g. a `*-dc-conversion.md` left over from a canceled Linear issue/closed PR) — a plan doc existing doesn't mean it's current; cross-check its branch/PR is still open before trusting it.
 
 **Output:** file list (HTML sources, React targets, reusable components) + any collision warning.
 
@@ -117,6 +120,8 @@ Before coding:
 
 One PR scope — e.g. "Brand List workspace only" not List + Detail + infra.
 
+**DESIGN.md vs. shipped code:** if `/home/sk/ipix/Universal design prompt/DESIGN.md`'s component rules (e.g. "every card extends `ui/card.tsx`") conflict with the nearest merged sibling component (e.g. `brand-list-card.tsx` uses plain elements + CSS Modules, no shadcn imports), trust the shipped sibling — DESIGN.md can be aspirational/stale for a given layer. Match the established pattern; don't rewrite working siblings to satisfy the doc.
+
 Link Linear: IPI-17 / IPI-271 / IPI-272 / DESIGN-050–052 as applicable.
 
 **Output:** 3–8 file touch list + explicit out-of-scope list.
@@ -130,6 +135,7 @@ Link Linear: IPI-17 / IPI-271 / IPI-272 / DESIGN-050–052 as applicable.
 5. Use **`heroFallbackForBrand`** / `sample-images.ts` when schema has no cover URL.
 6. Remove debug UI (DC state switchers, "target banner" placeholders).
 7. Do **not** move `ActiveBrandProvider`, CopilotKit layout, or auth unless separate infra PR.
+8. Add a route-level `loading.tsx` that renders the workspace's exported Skeleton component (e.g. `export function ShootsListSkeleton()` from the workspace file, rendered by `app/(operator)/app/<route>/loading.tsx`) — don't skip the loading state just because the DC file doesn't have one; Next.js streams it automatically once present.
 
 **CSS:** tokens + modules; match DC spacing from HTML inspect (padding, gap, grid columns, 16:9 covers).
 
@@ -176,21 +182,6 @@ Include:
 - Production readiness: 🟢 / 🟡 / 🔴
 
 Attach report to PR body or `docs/qa/design-parity-checklist.md` on branch.
-
----
-
-## Verification commands (copy-paste)
-
-```bash
-cd app
-npm run lint
-npm test
-npx tsc --noEmit
-CI=true npm run build
-npx playwright test --project=chromium-desktop   # when e2e exists for screen
-```
-
-Repo policy: `cd app && npm run lint && npm run build && npm test` before PR.
 
 ---
 
