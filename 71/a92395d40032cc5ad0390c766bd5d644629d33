@@ -1,0 +1,50 @@
+app/src/app/(operator)/app/shoots/page.tsx
+  s_12404fa554d700::t_fd4a71e685cdcd 1-33,35,37-38,40
+app/src/components/shoot/ShootCard.tsx
+  s_12404fa554d700::t_29e29c63f1ffb5 3,6-10,22-25,29-30,35-36,39-54,57-61
+  s_12404fa554d700::t_4dcc29261dd175 37
+app/src/app/(operator)/app/shoots/loading.tsx
+  s_12404fa554d700::t_3fa8232868565a 1-5
+app/src/components/shoot/shoots-list-workspace.tsx
+  s_12404fa554d700::t_70a61de62e30d9 20
+  s_12404fa554d700::t_14444be8747e1d 1-19,21-35,37-38,66-202
+  s_12404fa554d700::t_71853c558d1935 36,39,49-65
+  s_12404fa554d700::t_2b42b2bc6f8f2c 40-48
+app/src/components/shoot/shoots-list.module.css
+  s_12404fa554d700::t_99e86451cdd52f 1-355
+app/src/lib/shoot-list-filters.test.ts
+  s_12404fa554d700::t_a3293c7e5aa7be 1-18,22-40,43-44
+  s_12404fa554d700::t_a5a00d3fb83657 19-21
+  s_12404fa554d700::t_941b92678844e7 41-42
+app/src/lib/command-center/sample-images.ts
+  s_12404fa554d700::t_e73bf9b336c325 62-67
+app/src/lib/shoot-list-filters.ts
+  s_12404fa554d700::t_6fad54d03f1cc6 1-68
+app/src/components/shoot/shoots-list-workspace.test.tsx
+  s_12404fa554d700::t_77ce52a416187e 1,3-93
+  s_e3bc490716abde::t_7cfcbf31d997f7 2
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.9",
+  "base_commit_sha": "71a92395d40032cc5ad0390c766bd5d644629d33",
+  "prompts": {},
+  "sessions": {
+    "s_12404fa554d700": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "c51c9d5f-0f8a-4434-b966-5de005a41aad",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    },
+    "s_e3bc490716abde": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "27142e80-cf4d-4c53-b598-103370c66824",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
