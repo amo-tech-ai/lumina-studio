@@ -138,6 +138,12 @@ async function cleanupRlsTestData({ orgId, brandId, notificationId, userAId, use
   }
 
   if (orgId) {
+    for (const table of ["crm_activities", "crm_deals", "crm_contacts", "crm_companies"]) {
+      const { error } = await admin.from(table).delete().eq("org_id", orgId);
+      if (error) {
+        console.warn(`warn: cleanup ${table} for org ${orgId}: ${error.message}`);
+      }
+    }
     await admin.from("org_members").delete().eq("org_id", orgId);
     const { error: orgDelErr } = await admin.from("organizations").delete().eq("id", orgId);
     if (orgDelErr) {
@@ -257,6 +263,98 @@ try {
   assert(
     !crossBrandUpdateErr && (updatedCrossBrand ?? []).length === 0,
     "user B cannot update user A brand",
+  );
+
+  // crm_* — org-scoped CRUD, cross-org blocked, terminal stage guard (IPI-362)
+  const { data: crmCompany, error: crmCompanyErr } = await userA.client
+    .from("crm_companies")
+    .insert({ org_id: orgAId, name: `RLS CRM Co ${stamp}` })
+    .select("id")
+    .single();
+  assert(!crmCompanyErr && crmCompany?.id, "user A inserts crm_company in own org");
+
+  const { data: crossCrmCompany, error: crossCrmCompanyErr } = await userB.client
+    .from("crm_companies")
+    .select("id")
+    .eq("id", crmCompany.id);
+  assertSelectDenied(
+    crossCrmCompanyErr,
+    crossCrmCompany,
+    "user B cannot read user A crm_company",
+  );
+
+  const { data: crmContact, error: crmContactErr } = await userA.client
+    .from("crm_contacts")
+    .insert({
+      org_id: orgAId,
+      company_id: crmCompany.id,
+      name: `RLS Contact ${stamp}`,
+    })
+    .select("id")
+    .single();
+  assert(!crmContactErr && crmContact?.id, "user A inserts crm_contact in own org");
+
+  const { data: crmDeal, error: crmDealErr } = await userA.client
+    .from("crm_deals")
+    .insert({
+      org_id: orgAId,
+      company_id: crmCompany.id,
+      stage: "lead",
+    })
+    .select("id")
+    .single();
+  assert(!crmDealErr && crmDeal?.id, "user A inserts crm_deal (lead stage)");
+
+  const { error: crmDealWonInsertErr } = await userA.client.from("crm_deals").insert({
+    org_id: orgAId,
+    company_id: crmCompany.id,
+    stage: "won",
+  });
+  assert(!!crmDealWonInsertErr, "user A cannot insert crm_deal with stage=won without convert flag");
+
+  const { data: crmDealWonUpdate, error: crmDealWonUpdateErr } = await userA.client
+    .from("crm_deals")
+    .update({ stage: "won" })
+    .eq("id", crmDeal.id)
+    .select("id");
+  assert(
+    !!crmDealWonUpdateErr || (crmDealWonUpdate ?? []).length === 0,
+    "user A cannot update crm_deal to won without convert flag",
+  );
+
+  const { error: crmActivityErr } = await userA.client.from("crm_activities").insert({
+    org_id: orgAId,
+    deal_id: crmDeal.id,
+    type: "note",
+    body: "RLS probe",
+  });
+  assert(!crmActivityErr, "user A inserts crm_activity anchored to deal");
+
+  const { data: crossCrmDeal, error: crossCrmDealErr } = await userB.client
+    .from("crm_deals")
+    .select("id")
+    .eq("id", crmDeal.id);
+  assertSelectDenied(crossCrmDealErr, crossCrmDeal, "user B cannot read user A crm_deal");
+
+  const { data: crossCrmDealUpdate, error: crossCrmDealUpdateErr } = await userB.client
+    .from("crm_deals")
+    .update({ stage: "qualified" })
+    .eq("id", crmDeal.id)
+    .select("id");
+  assert(
+    !crossCrmDealUpdateErr && (crossCrmDealUpdate ?? []).length === 0,
+    "user B cannot update user A crm_deal",
+  );
+
+  const { data: crossCrmActivity, error: crossCrmActivityErr } = await userB.client
+    .from("crm_activities")
+    .select("id")
+    .eq("deal_id", crmDeal.id)
+    .limit(1);
+  assertSelectDenied(
+    crossCrmActivityErr,
+    crossCrmActivity,
+    "user B cannot read user A crm_activity",
   );
 
   // brand_scores — scoped via brand ownership
