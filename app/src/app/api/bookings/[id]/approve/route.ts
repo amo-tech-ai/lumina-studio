@@ -26,8 +26,21 @@ export async function POST(req: NextRequest, context: RouteContext) {
     return serviceFailureResponse(parsedId);
   }
 
-  const userSb = await createSupabaseServerClient();
-  const result = await approveBooking(userSb, createSupabaseAdminClient(), parsedId.id);
+  let userSb;
+  try {
+    userSb = await createSupabaseServerClient();
+  } catch {
+    return apiErrorResponse("INTERNAL_ERROR", 500);
+  }
+
+  let serviceSb;
+  try {
+    serviceSb = createSupabaseAdminClient();
+  } catch {
+    return apiErrorResponse("INTERNAL_ERROR", 500);
+  }
+
+  const result = await approveBooking(userSb, serviceSb, parsedId.id);
   if (!result.ok) {
     return serviceFailureResponse(result);
   }

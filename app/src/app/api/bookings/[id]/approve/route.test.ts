@@ -69,6 +69,48 @@ describe("POST /api/bookings/[id]/approve", () => {
     expect(res.status).toBe(401);
   });
 
+  it("returns 500 envelope when admin client is not configured", async () => {
+    mockCreateSupabaseAdminClient.mockImplementationOnce(() => {
+      throw new Error(
+        "Supabase admin client not configured: set NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY.",
+      );
+    });
+    const { POST } = await importRoute();
+    const res = await POST(
+      new NextRequest("http://localhost/api/bookings/" + BOOKING_ID + "/approve", { method: "POST" }),
+      routeContext,
+    );
+    expect(res.status).toBe(500);
+    expect(await res.json()).toEqual({
+      error: {
+        code: "INTERNAL_ERROR",
+        message: "Something went wrong. Please try again.",
+      },
+    });
+    expect(mockApproveBooking).not.toHaveBeenCalled();
+  });
+
+  it("returns 500 envelope when server client is not configured", async () => {
+    mockCreateSupabaseServerClient.mockRejectedValueOnce(
+      new Error(
+        "Supabase is not configured: set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY.",
+      ),
+    );
+    const { POST } = await importRoute();
+    const res = await POST(
+      new NextRequest("http://localhost/api/bookings/" + BOOKING_ID + "/approve", { method: "POST" }),
+      routeContext,
+    );
+    expect(res.status).toBe(500);
+    expect(await res.json()).toEqual({
+      error: {
+        code: "INTERNAL_ERROR",
+        message: "Something went wrong. Please try again.",
+      },
+    });
+    expect(mockApproveBooking).not.toHaveBeenCalled();
+  });
+
   it("returns 403 when caller is not brand", async () => {
     mockApproveBooking.mockResolvedValueOnce({
       ok: false,
