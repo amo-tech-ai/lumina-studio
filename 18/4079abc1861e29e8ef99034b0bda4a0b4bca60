@@ -1,0 +1,40 @@
+scripts/test-booking-transition-fsm.sql
+  s_5c9f2a2ec2b3af::t_088914459e0e3b 13
+  s_5c9f2a2ec2b3af::t_525c9b914256db 35-36,40
+  s_5c9f2a2ec2b3af::t_e2dbd136531137 222-223
+  s_5c9f2a2ec2b3af::t_87abaa3f101181 5-6
+  s_5c9f2a2ec2b3af::t_59f2392fdc8d88 1-4,16-28,30-34,37,70-71,73-74,76-78,83-85,90-96,98-100,108-110,113-119,121-124,127-133,135-137,145-148,151-157,159-161,169-170,178-183,185-188,190,192,194-200,202-204,206,209-210,213,225
+  s_5c9f2a2ec2b3af::t_a0437d9e3d29e6 7-12,14-15,29,38-39,41-69,72,75,79-82,86-89,97,101-107,111-112,120,125-126,134,138-144,149-150,158,162-168,171-177,184,189,191,193,201,205,207-208,211-212,214-221,224,226-228
+supabase/migrations/20260703213000_ipi341_transition_booking_rpc.sql
+  s_5c9f2a2ec2b3af::t_c9c36e754fd8cc 255-256
+  s_5c9f2a2ec2b3af::t_9e0b2675c935b2 1-254
+scripts/test-booking-transition-concurrency.sql
+  s_5c9f2a2ec2b3af::t_0f74403cd2d442 7-8
+  s_5c9f2a2ec2b3af::t_10b63d09346cb9 15
+  s_5c9f2a2ec2b3af::t_9dbc9517700d55 37-38,42
+  s_5c9f2a2ec2b3af::t_c5ba8ec154bc8c 1-6,9-14,16-36,39-41,43-126,129-133
+  s_5c9f2a2ec2b3af::t_b2b7cbca1a8b3e 127-128
+scripts/test-booking-rls-bypass.sql
+  s_5c9f2a2ec2b3af::t_5f8e46f022d53e 16
+  s_5c9f2a2ec2b3af::t_8d2cd168896713 52
+  s_5c9f2a2ec2b3af::t_31cdcdee808a03 1-6,9-15,17-38,41-51,53-119,122-126
+  s_5c9f2a2ec2b3af::t_2b9aaf99ff0e1f 39-40
+  s_5c9f2a2ec2b3af::t_f9c29277e34d70 7-8
+  s_5c9f2a2ec2b3af::t_5240fe7fe8efb0 120-121
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.9",
+  "base_commit_sha": "184079abc1861e29e8ef99034b0bda4a0b4bca60",
+  "prompts": {},
+  "sessions": {
+    "s_5c9f2a2ec2b3af": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "4c146179-d0c4-4f21-910e-cebd5c5ba751",
+        "model": "composer-2.5"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
