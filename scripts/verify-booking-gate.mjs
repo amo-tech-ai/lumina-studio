@@ -2,6 +2,8 @@
 /**
  * IPI-347 · Model Gate backend QA — single entry for RPC/RLS/API verification.
  * Run: infisical run -- node scripts/verify-booking-gate.mjs
+ * CI (remote SQL): set DATABASE_URL + REQUIRE_BOOKING_SQL=1 repo secrets.
+ * Local without DB: SQL scripts skipped unless REQUIRE_BOOKING_SQL=1.
  */
 import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
@@ -46,13 +48,21 @@ const sqlTests = [
   "scripts/test-booking-notifications-trigger.sql",
 ];
 
+const skipSql = process.argv.includes("--skip-sql");
+const requireSql = process.env.REQUIRE_BOOKING_SQL === "1";
+const dbUrl = process.env.DATABASE_URL;
+
 run("supabase:verify-rls", "node", ["scripts/verify-rls.mjs"]);
 
-const dbUrl = process.env.DATABASE_URL;
-if (dbUrl) {
+if (skipSql) {
+  console.log("\n▶ SQL integration skipped (--skip-sql)");
+} else if (dbUrl) {
   for (const file of sqlTests) {
     run(`psql ${file}`, "psql", ["-v", "ON_ERROR_STOP=1", dbUrl, "-f", file]);
   }
+} else if (requireSql) {
+  console.error("\n✗ DATABASE_URL required when REQUIRE_BOOKING_SQL=1");
+  process.exit(1);
 } else {
   console.warn("\n⚠ DATABASE_URL unset — skipping SQL integration scripts");
 }
