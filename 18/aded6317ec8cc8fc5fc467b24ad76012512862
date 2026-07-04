@@ -1,0 +1,41 @@
+app/src/lib/route-agent-map.ts
+  s_5c9f2a2ec2b3af::t_f557f2ea3e6852 7-8,15-17,24-27
+app/src/mastra/registry.test.ts
+  s_5c9f2a2ec2b3af::t_2dfc23e3f3c4fd 23-27
+app/src/mastra/tools/index.ts
+  s_5c9f2a2ec2b3af::t_ecabe88ad8b520 23
+  s_5c9f2a2ec2b3af::t_e72d9a750fdd19 28
+  s_5c9f2a2ec2b3af::t_29d64af7d94316 43-45
+app/src/lib/route-agent-map.test.ts
+  s_5c9f2a2ec2b3af::t_c4f6a342ffd9fb 25-35
+app/src/mastra/index.ts
+  s_5c9f2a2ec2b3af::t_3ff6f20bdd9fc0 2
+  s_5c9f2a2ec2b3af::t_ddc20adb8191e3 21
+app/src/mastra/agents/index.test.ts
+  s_5c9f2a2ec2b3af::t_352ccf05d4e9f0 63-75
+  s_5c9f2a2ec2b3af::t_2e26a2bcea2fba 17
+app/src/mastra/tools/booking-tools.ts
+  s_5c9f2a2ec2b3af::t_883913b352b2e2 1-191
+app/src/mastra/agents/booking-agent.ts
+  s_5c9f2a2ec2b3af::t_62cca0fe39a464 1-36
+app/src/mastra/tools/booking-tools.test.ts
+  s_5c9f2a2ec2b3af::t_299d4f614d99b6 1-184
+app/src/mastra/agents/index.ts
+  s_5c9f2a2ec2b3af::t_dcd39a7cedb761 48
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.9",
+  "base_commit_sha": "18aded6317ec8cc8fc5fc467b24ad76012512862",
+  "prompts": {},
+  "sessions": {
+    "s_5c9f2a2ec2b3af": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "4c146179-d0c4-4f21-910e-cebd5c5ba751",
+        "model": "composer-2.5"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
