@@ -20,4 +20,9 @@ describe("mastra agent registry", () => {
     expect(agents["creative-director"]).toBeDefined();
     expect(agents["creative-director"]).not.toBe(agents["production-planner"]);
   });
+
+  it("registers booking agent for model booking flows (IPI-348)", () => {
+    expect(agents.booking).toBeDefined();
+    expect(agents.booking.id).toBe("booking");
+  });
 });

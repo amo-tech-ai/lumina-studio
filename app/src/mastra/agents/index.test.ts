@@ -14,6 +14,7 @@ import {
   creativeDirectorAgent,
   productionPlannerAgent,
   modelMatchAgent,
+  bookingAgent,
 } from "./index";
 
 const AGENTS_SRC = readFileSync(
@@ -58,6 +59,19 @@ describe("operator agents — structure (IPI2-121)", () => {
     expect(toolNames.sort()).toEqual(
       ["computeTalentMatchScore", "manageShortlist", "searchTalentByFilters"].sort(),
     );
+  });
+
+  it("booking id matches Mastra registry key (IPI-348)", () => {
+    expect(bookingAgent.id).toBe("booking");
+  });
+
+  it("booking carries exactly its 3 own tools, not confirm_booking", async () => {
+    const tools = await bookingAgent.listTools();
+    const toolNames = Object.keys(tools ?? {});
+    expect(toolNames.sort()).toEqual(
+      ["checkTalentAvailability", "createBookingDraft", "draftBookingQuote"].sort(),
+    );
+    expect(toolNames).not.toContain("confirmBooking");
   });
 });
 

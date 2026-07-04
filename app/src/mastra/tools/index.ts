@@ -26,10 +26,12 @@ import {
   logActivity,
   moveDealStage,
 } from "./crm";
+import { checkTalentAvailability, draftBookingQuote, createBookingDraft } from "./booking-tools";
 
 // IPI-148 — SHOOT-AI-001 + IPI-184 SHOOT-DATA-002: shoot planner tools for production-planner
 // IPI-187 — MI-02: media spec lookup
 // IPI-308 — MODEL-P2: Model Match Agent tools (Talent tab, shortlist)
+// IPI-348 — MODELGATE-10: Booking Agent tools (wizard, inbox, roster)
 export const agentTools = {
   recommendShootType,
   planDeliverables,
@@ -48,6 +50,9 @@ export const agentTools = {
   searchContacts,
   logActivity,
   moveDealStage,
+  checkTalentAvailability,
+  draftBookingQuote,
+  createBookingDraft,
 } as const;
 
 export type AgentToolName = keyof typeof agentTools;

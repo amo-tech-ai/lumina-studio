@@ -1,5 +1,5 @@
 import { Mastra } from "@mastra/core/mastra";
-import { visualIdentityAgent, socialDiscoveryAgent, modelMatchAgent } from "./agents";
+import { visualIdentityAgent, socialDiscoveryAgent, modelMatchAgent, bookingAgent } from "./agents";
 import { crmAssistantAgent } from "./agents/crm-assistant-agent";
 import { brandIntelligenceAgent } from "./agents/brand-intelligence-agent";
 import { durableAgents } from "./durable";
@@ -20,6 +20,7 @@ export const agents = {
   "brand-intelligence": brandIntelligenceAgent,
   "model-match": modelMatchAgent,
   "crm-assistant": crmAssistantAgent,
+  booking: bookingAgent,
 };
 
 export const REQUIRED_AGENT_IDS = [
