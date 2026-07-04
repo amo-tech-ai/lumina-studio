@@ -1,0 +1,23 @@
+supabase/migrations/20260703223000_ipi343_notification_reads_and_rpcs.sql
+  s_5c9f2a2ec2b3af::t_b0efc29caf6c69 213-214,224
+  s_5c9f2a2ec2b3af::t_5d052075123a57 246-248,250-266,268
+  s_5c9f2a2ec2b3af::t_e70aa4657378b0 163
+  s_5c9f2a2ec2b3af::t_dc2921399d26f4 54,74-91
+  s_5c9f2a2ec2b3af::t_ba8201c0ff6061 92-93
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.9",
+  "base_commit_sha": "5e529d272a63d737815d7575b689f4420d47af85",
+  "prompts": {},
+  "sessions": {
+    "s_5c9f2a2ec2b3af": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "4c146179-d0c4-4f21-910e-cebd5c5ba751",
+        "model": "composer-2.5"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
