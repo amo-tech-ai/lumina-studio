@@ -1,0 +1,50 @@
+app/src/app/(operator)/app/crm/contacts/[id]/page.tsx
+  s_e3bc490716abde::t_c279141f1c0dbd 1-88
+app/src/components/crm/contact-field-list.test.tsx
+  s_e3bc490716abde::t_6655212cdda726 1-28
+app/src/app/(operator)/app/crm/contacts/page.tsx
+  s_e3bc490716abde::t_24404141051664 1-95
+app/src/components/crm/contact-card.test.tsx
+  s_e3bc490716abde::t_37e066a2b4d719 1-40
+app/src/lib/crm/jsonb-contact-fields.test.ts
+  s_e3bc490716abde::t_e0d248a68fa8a0 1-16
+app/src/lib/crm/queries.test.ts
+  s_e3bc490716abde::t_4675f23f90c203 1-60
+app/src/lib/crm/jsonb-contact-fields.ts
+  s_e3bc490716abde::t_7e2dc97e124ed9 1-11
+app/src/components/crm/contact-card.tsx
+  s_e3bc490716abde::t_6419cdf955f4ff 1-64
+app/src/app/(operator)/app/crm/page.tsx
+  s_e3bc490716abde::t_cb0b1241b229b0 1-7
+app/src/lib/marketing-routes.test.ts
+  s_e3bc490716abde::t_59234b49ab74c0 13
+app/src/components/crm/contact-field-list.tsx
+  s_e3bc490716abde::t_9b5cae3a0be456 1-31
+app/src/lib/crm/queries.ts
+  s_e3bc490716abde::t_f48baa48f86571 1-66,68-72
+  s_5c9f2a2ec2b3af::t_45aecd3b12c5e3 67
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.9",
+  "base_commit_sha": "ca08b20931b3aaab38ecd83e1194cb971bc8c5bc",
+  "prompts": {},
+  "sessions": {
+    "s_5c9f2a2ec2b3af": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "4c146179-d0c4-4f21-910e-cebd5c5ba751",
+        "model": "composer-2.5"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    },
+    "s_e3bc490716abde": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "27142e80-cf4d-4c53-b598-103370c66824",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
