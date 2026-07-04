@@ -29,6 +29,17 @@ describe("resolveAgentId", () => {
     expect(resolveAgentId("/app/preview")).toBe("visual-identity");
   });
 
+  it("booking routes resolve to booking agent (IPI-348 · MODELGATE-10)", () => {
+    expect(resolveAgentId("/app/bookings")).toBe("booking");
+    expect(resolveAgentId("/app/bookings/abc-123")).toBe("booking");
+    expect(resolveAgentId("/app/model")).toBe("booking");
+    expect(resolveAgentId("/app/model/settings")).toBe("booking");
+    expect(resolveAgentId("/app/roster")).toBe("booking");
+    expect(resolveAgentId("/app/matching/talent/t1/book")).toBe("booking");
+    expect(resolveAgentId("/app/matching/talent/t1/book/review")).toBe("booking");
+    expect(resolveAgentId("/app/matching/talent/t1")).toBe("model-match");
+  });
+
   it("unknown route falls back to default", () => {
     expect(resolveAgentId("/app/unknown")).toBe("production-planner");
     expect(resolveAgentId("/")).toBe("production-planner");

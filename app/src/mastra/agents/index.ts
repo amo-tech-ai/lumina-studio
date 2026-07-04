@@ -45,6 +45,7 @@ Key rules:
 export { publicMarketingAgent } from "./public-marketing-agent";
 export { socialDiscoveryAgent } from "./social-discovery";
 export { modelMatchAgent } from "./model-match-agent";
+export { bookingAgent } from "./booking-agent";
 
 export { visualIdentityAgent } from "./visual-identity";
 
