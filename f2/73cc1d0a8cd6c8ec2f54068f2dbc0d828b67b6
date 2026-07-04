@@ -1,0 +1,28 @@
+app/src/mastra/agents/booking-agent.ts
+  s_5c9f2a2ec2b3af::t_2782db26c3bfd4 6,14-16
+app/src/mastra/tools/booking-tools.test.ts
+  s_5c9f2a2ec2b3af::t_81bd0238afe81a 48-60,72-73
+app/src/mastra/tools/booking-tools.ts
+  s_5c9f2a2ec2b3af::t_977bb389a2d6de 23,27,29-30,34-35
+  s_5c9f2a2ec2b3af::t_ad48e8422782f0 77
+  s_5c9f2a2ec2b3af::t_36bc5aa010eb57 2
+  s_5c9f2a2ec2b3af::t_f8bee06813a14d 92
+supabase/migrations/20260704150000_check_talent_availability_rpc.sql
+  s_5c9f2a2ec2b3af::t_f2f0bf466b052e 1-58
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.9",
+  "base_commit_sha": "f273cc1d0a8cd6c8ec2f54068f2dbc0d828b67b6",
+  "prompts": {},
+  "sessions": {
+    "s_5c9f2a2ec2b3af": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "4c146179-d0c4-4f21-910e-cebd5c5ba751",
+        "model": "composer-2.5"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
