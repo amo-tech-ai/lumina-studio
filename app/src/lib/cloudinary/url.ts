@@ -15,3 +15,34 @@ export function cloudinaryImageUrl(
     { cloud: { cloudName: CLOUDINARY_CLOUD_NAME } },
   );
 }
+
+// IPI-257 074e — named transform presets (single source of truth per MEDIA-MAP §5).
+// `hitl-diff` is intentionally not modeled here: its spec is "side-by-side derivative
+// URLs" (not a crop transform) and its only consumer (Approval/EvidenceBlock UI) is
+// out of scope for IPI-257.
+export type CropTransform = { width: number; height?: number; crop: "fill" | "thumb" | "limit" };
+
+export const CLOUDINARY_PRESETS: Record<"brand-cover" | "asset-tile" | "asset-masonry", CropTransform> = {
+  "brand-cover": { width: 400, height: 300, crop: "fill" },
+  "asset-tile": { width: 120, height: 120, crop: "thumb" },
+  "asset-masonry": { width: 600, crop: "limit" },
+};
+
+export type CloudinaryPresetName = keyof typeof CLOUDINARY_PRESETS;
+
+/**
+ * Raw Cloudinary transformation string (e.g. "c_thumb,w_120,h_120,g_auto,f_auto,q_auto").
+ * Single source of truth for both eager upload pregeneration (upload-sign/route.ts) and
+ * signed delivery URLs (signed-url.ts) so the two can never drift out of sync.
+ */
+export function cropTransformString({ width, height, crop }: CropTransform): string {
+  const parts = [`c_${crop}`, `w_${width}`];
+  if (height) parts.push(`h_${height}`);
+  if (crop !== "limit") parts.push("g_auto");
+  parts.push("f_auto", "q_auto");
+  return parts.join(",");
+}
+
+export function presetTransformString(preset: CloudinaryPresetName): string {
+  return cropTransformString(CLOUDINARY_PRESETS[preset]);
+}

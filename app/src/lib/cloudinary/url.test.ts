@@ -30,6 +30,30 @@ describe("cloudinaryImageUrl", () => {
   });
 });
 
+describe("presetTransformString / cropTransformString", () => {
+  it("builds the asset-tile preset (thumb crop, gravity included)", async () => {
+    const { presetTransformString } = await importUrl();
+    expect(presetTransformString("asset-tile")).toBe("c_thumb,w_120,h_120,g_auto,f_auto,q_auto");
+  });
+
+  it("builds the brand-cover preset", async () => {
+    const { presetTransformString } = await importUrl();
+    expect(presetTransformString("brand-cover")).toBe("c_fill,w_400,h_300,g_auto,f_auto,q_auto");
+  });
+
+  it("builds the asset-masonry preset (limit crop, width only, no gravity)", async () => {
+    const { presetTransformString } = await importUrl();
+    expect(presetTransformString("asset-masonry")).toBe("c_limit,w_600,f_auto,q_auto");
+  });
+
+  it("builds an arbitrary fill crop from raw dimensions (channel-spec use case)", async () => {
+    const { cropTransformString } = await importUrl();
+    expect(cropTransformString({ width: 1080, height: 1350, crop: "fill" })).toBe(
+      "c_fill,w_1080,h_1350,g_auto,f_auto,q_auto",
+    );
+  });
+});
+
 describe("CLOUDINARY_CLOUD_NAME", () => {
   it("prefers NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME over the server-only var and the default", async () => {
     vi.stubEnv("NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME", "public-cloud");

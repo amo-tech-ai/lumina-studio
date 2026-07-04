@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { v2 as cloudinary } from "cloudinary";
 import { withOperatorAuth, OperatorAuthError } from "@/lib/operator-gate";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { presetTransformString } from "@/lib/cloudinary/url";
 
 export const dynamic = "force-dynamic";
 
@@ -38,6 +39,14 @@ function assetFolderFor(brandId: string, shootId?: string, campaignId?: string):
 function sanitizeFilename(filename: string): string {
   return filename.replace(/[^a-zA-Z0-9._-]/g, "_").slice(0, 200);
 }
+
+// 074e — eager pregeneration for the two image presets consumed off the upload path
+// (asset-tile in the brand asset panel, asset-masonry in the library grid). Cloudinary's
+// `eager` param accepts literal transformation strings, so no server-side named
+// transformation needs to be registered in the account — presetTransformString (in
+// lib/cloudinary/url.ts) is the single source of truth these strings are derived from,
+// shared with the signed delivery URLs in api/_lib/cloudinary-signed-url.ts.
+const EAGER_IMAGE_PRESETS = ["asset-tile", "asset-masonry"] as const;
 
 export async function POST(request: Request) {
   let operator;
@@ -117,10 +126,10 @@ export async function POST(request: Request) {
     use_filename: "true",
     filename: sanitizeFilename(filename),
     context: contextParts.join("|"),
-    // ponytail: named eager presets (asset-tile/asset-masonry) don't exist in
-    // the Cloudinary account yet (074e) — add `eager` once those are created,
-    // an undefined named transform would fail the upload today.
   };
+  if (resourceType === "image") {
+    paramsToSign.eager = EAGER_IMAGE_PRESETS.map(presetTransformString).join("|");
+  }
 
   const signature = cloudinary.utils.api_sign_request(paramsToSign, apiSecret);
 
