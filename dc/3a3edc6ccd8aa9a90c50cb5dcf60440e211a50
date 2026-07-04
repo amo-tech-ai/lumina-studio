@@ -1,0 +1,21 @@
+app/src/app/api/bookings/[id]/approve/route.ts
+  s_5c9f2a2ec2b3af::t_3fda71c807d55a 29-43
+app/src/app/api/bookings/[id]/approve/route.test.ts
+  s_5c9f2a2ec2b3af::t_96b86ce363e1b6 72-113
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.9",
+  "base_commit_sha": "dc3a3edc6ccd8aa9a90c50cb5dcf60440e211a50",
+  "prompts": {},
+  "sessions": {
+    "s_5c9f2a2ec2b3af": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "4c146179-d0c4-4f21-910e-cebd5c5ba751",
+        "model": "composer-2.5"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
