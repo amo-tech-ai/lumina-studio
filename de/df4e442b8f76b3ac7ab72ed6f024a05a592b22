@@ -1,0 +1,21 @@
+supabase/migrations/20260704090000_crm_core_schema.sql
+  s_e3bc490716abde::t_c826570097d6f9 1-163
+app/src/types/supabase.ts
+  s_e3bc490716abde::t_bfb83fdefa2906 1456-1738,4757-4782,4789,4801,4813,4835-4841,5998,6000,6003,6006,6008-6009,6100-6111,6113-6117,6122,6154-6180,6214-6224,6227-6246
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.9",
+  "base_commit_sha": "dedf4e442b8f76b3ac7ab72ed6f024a05a592b22",
+  "prompts": {},
+  "sessions": {
+    "s_e3bc490716abde": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "27142e80-cf4d-4c53-b598-103370c66824",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
