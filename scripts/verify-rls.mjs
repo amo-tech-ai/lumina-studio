@@ -577,14 +577,23 @@ try {
     assert(!notifInsertErr && notifRow?.id, "service role inserts notifications row");
     notificationId = notifRow?.id;
 
+    const { data: markRead, error: markReadErr } = await userA.client.rpc(
+      "mark_notifications_read",
+      { p_notification_ids: [notificationId], p_mark_all: false },
+    );
+    assert(
+      !markReadErr && markRead?.updated_count === 1,
+      "org member marks own notification read via RPC",
+    );
+
     const { data: readUpdate, error: readUpdateErr } = await userA.client
       .from("notifications")
       .update({ read: true })
       .eq("id", notificationId)
       .select("id, read");
     assert(
-      !readUpdateErr && readUpdate?.[0]?.read === true,
-      "org member marks own notification read",
+      !!readUpdateErr || (readUpdate ?? []).length === 0,
+      "direct notifications.read UPDATE is blocked",
     );
 
     const { data: hijackAttempt, error: hijackErr } = await userA.client
@@ -607,14 +616,13 @@ try {
       "org member cannot rewrite notification kind",
     );
 
-    const { data: crossReadUpdate, error: crossReadUpdateErr } = await userB.client
-      .from("notifications")
-      .update({ read: true })
-      .eq("id", notificationId)
-      .select("id");
+    const { error: crossMarkErr } = await userB.client.rpc("mark_notifications_read", {
+      p_notification_ids: [notificationId],
+      p_mark_all: false,
+    });
     assert(
-      !crossReadUpdateErr && (crossReadUpdate ?? []).length === 0,
-      "user B (not yet an org member) cannot mark user A's notification read",
+      !!crossMarkErr,
+      "user B (not yet an org member) cannot mark user A's notification read via RPC",
     );
   }
 
