@@ -4471,6 +4471,32 @@ export type Database = {
           },
         ]
       }
+      notification_reads: {
+        Row: {
+          notification_id: string
+          read_at: string
+          user_id: string
+        }
+        Insert: {
+          notification_id: string
+          read_at?: string
+          user_id: string
+        }
+        Update: {
+          notification_id?: string
+          read_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notification_reads_notification_id_fkey"
+            columns: ["notification_id"]
+            isOneToOne: false
+            referencedRelation: "notifications"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       notifications: {
         Row: {
           agency_org_id: string | null
@@ -5778,7 +5804,20 @@ export type Database = {
         Returns: Json
       }
       confirm_booking: { Args: { p_booking_id: string }; Returns: Json }
+      create_booking_request: {
+        Args: {
+          p_brand_org_id: string
+          p_date_end: string
+          p_date_start: string
+          p_message?: string
+          p_rate_quoted?: number
+          p_shoot_id?: string
+          p_talent_profile_id: string
+        }
+        Returns: Json
+      }
       expire_stale_bookings: { Args: never; Returns: number }
+      get_booking: { Args: { p_booking_id: string }; Returns: Json }
       get_brand_assets: {
         Args: { p_brand_id: string; p_shoot_id?: string }
         Returns: Json
@@ -5819,6 +5858,33 @@ export type Database = {
       is_org_editor_or_above: { Args: { p_org_id: string }; Returns: boolean }
       is_org_member: { Args: { p_org_id: string }; Returns: boolean }
       is_org_owner: { Args: { p_org_id: string }; Returns: boolean }
+      list_bookings: {
+        Args: {
+          p_cursor?: string
+          p_limit?: number
+          p_org_id?: string
+          p_role: string
+          p_status?: string[]
+          p_talent_profile_id?: string
+        }
+        Returns: Json
+      }
+      list_notifications: {
+        Args: { p_cursor?: string; p_limit?: number; p_unread_only?: boolean }
+        Returns: Json
+      }
+      mark_notifications_read: {
+        Args: { p_mark_all?: boolean; p_notification_ids?: string[] }
+        Returns: Json
+      }
+      notification_row_to_jsonb: {
+        Args: { n: Database["public"]["Tables"]["notifications"]["Row"] }
+        Returns: Json
+      }
+      notification_visible_to_caller: {
+        Args: { n: Database["public"]["Tables"]["notifications"]["Row"] }
+        Returns: boolean
+      }
       search_brands: {
         Args: {
           p_embedding: string
@@ -5872,6 +5938,18 @@ export type Database = {
           p_talent_profile_id: string
         }
         Returns: undefined
+      }
+      transition_booking: {
+        Args: {
+          p_booking_id: string
+          p_cancellation_reason?: string
+          p_date_end?: string
+          p_date_start?: string
+          p_expected_version: number
+          p_rate_quoted?: number
+          p_to_status?: string
+        }
+        Returns: Json
       }
       traverse_brand_graph: {
         Args: {
