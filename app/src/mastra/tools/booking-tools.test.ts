@@ -45,21 +45,19 @@ describe("buildQuoteDraft", () => {
 describe("checkTalentAvailability", () => {
   it("returns unavailable when talent has calendar conflict", async () => {
     mockRpc.mockResolvedValueOnce({
-      data: [
-        {
-          id: TALENT_ID,
-          display_name: "Alex",
-          bio: null,
-          measurements: {},
-          languages: [],
-          travel_ready: true,
-          verification_status: "verified",
-          ai_tags: {},
-          is_agency_represented: false,
-          rate_tier: "$$",
-          is_available: false,
-        },
-      ],
+      data: {
+        id: TALENT_ID,
+        display_name: "Alex",
+        bio: null,
+        measurements: {},
+        languages: [],
+        travel_ready: true,
+        verification_status: "verified",
+        ai_tags: {},
+        is_agency_represented: false,
+        rate_tier: "$$",
+        is_available: false,
+      },
       error: null,
     });
 
@@ -71,7 +69,8 @@ describe("checkTalentAvailability", () => {
     expect(result!.isAvailable).toBe(false);
     expect(result!.displayName).toBe("Alex");
     expect(result!.reason).toMatch(/blocked, tentative, or booked/i);
-    expect(mockRpc).toHaveBeenCalledWith("search_talent", {
+    expect(mockRpc).toHaveBeenCalledWith("check_talent_availability", {
+      p_talent_profile_id: TALENT_ID,
       p_date_start: "2026-08-01",
       p_date_end: "2026-08-03",
     });
