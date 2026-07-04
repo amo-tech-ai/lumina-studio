@@ -57,3 +57,7 @@ pr9-storefront-test/
 
 .cursor/
 .codex/
+
+# Design source files — not committed, copied into worktrees via .worktreeinclude
+Universal design prompt/
+Universal design prompt.zip
