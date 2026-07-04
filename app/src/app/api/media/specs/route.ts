@@ -4,7 +4,7 @@
 import { NextResponse } from "next/server";
 import { withOperatorAuth, OperatorAuthError } from "@/lib/operator-gate";
 import { getChannelSpec } from "@/lib/media/channel-specs.server";
-import { cloudinaryChannelUrl } from "@/lib/cloudinary/url";
+import { cloudinarySignedChannelUrl } from "@/lib/cloudinary/signed-url";
 
 export const dynamic = "force-dynamic";
 
@@ -37,7 +37,7 @@ export async function GET(request: Request) {
   const results = await Promise.all(
     channels.map(async (channel) => {
       const spec = await getChannelSpec(channel as never);
-      const previewUrl = publicId && spec ? cloudinaryChannelUrl(publicId, spec) : null;
+      const previewUrl = publicId && spec ? cloudinarySignedChannelUrl(publicId, spec) : null;
       return { channel, spec, previewUrl };
     }),
   );

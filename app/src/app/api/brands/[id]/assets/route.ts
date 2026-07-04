@@ -2,14 +2,14 @@
 import { NextResponse } from "next/server";
 import { withOperatorAuth, OperatorAuthError } from "@/lib/operator-gate";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { cloudinaryPresetUrl } from "@/lib/cloudinary/url";
+import { cloudinarySignedPresetUrl } from "@/lib/cloudinary/signed-url";
 
 export const dynamic = "force-dynamic";
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 function buildThumbUrl(publicId: string): string {
-  return cloudinaryPresetUrl(publicId, "asset-tile");
+  return cloudinarySignedPresetUrl(publicId, "asset-tile");
 }
 
 export async function GET(

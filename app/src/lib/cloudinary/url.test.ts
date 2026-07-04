@@ -30,40 +30,27 @@ describe("cloudinaryImageUrl", () => {
   });
 });
 
-describe("cloudinaryPresetUrl", () => {
-  it("builds the asset-tile preset (thumb crop, no explicit gravity override)", async () => {
-    const { cloudinaryPresetUrl } = await importUrl();
-    const url = cloudinaryPresetUrl("some-public-id", "asset-tile");
-    expect(url).toContain("c_thumb,w_120,h_120,g_auto");
-    expect(url).toContain("f_auto");
-    expect(url).toContain("q_auto");
+describe("presetTransformString / cropTransformString", () => {
+  it("builds the asset-tile preset (thumb crop, gravity included)", async () => {
+    const { presetTransformString } = await importUrl();
+    expect(presetTransformString("asset-tile")).toBe("c_thumb,w_120,h_120,g_auto,f_auto,q_auto");
   });
 
   it("builds the brand-cover preset", async () => {
-    const { cloudinaryPresetUrl } = await importUrl();
-    const url = cloudinaryPresetUrl("some-public-id", "brand-cover");
-    expect(url).toContain("c_fill,w_400,h_300,g_auto");
-    expect(url).toContain("f_auto");
-    expect(url).toContain("q_auto");
+    const { presetTransformString } = await importUrl();
+    expect(presetTransformString("brand-cover")).toBe("c_fill,w_400,h_300,g_auto,f_auto,q_auto");
   });
 
   it("builds the asset-masonry preset (limit crop, width only, no gravity)", async () => {
-    const { cloudinaryPresetUrl } = await importUrl();
-    const url = cloudinaryPresetUrl("some-public-id", "asset-masonry");
-    expect(url).toContain("c_limit,w_600");
-    expect(url).not.toContain("g_auto");
-    expect(url).toContain("f_auto");
-    expect(url).toContain("q_auto");
+    const { presetTransformString } = await importUrl();
+    expect(presetTransformString("asset-masonry")).toBe("c_limit,w_600,f_auto,q_auto");
   });
-});
 
-describe("cloudinaryChannelUrl", () => {
-  it("builds a fill crop from an arbitrary channel spec's dimensions", async () => {
-    const { cloudinaryChannelUrl } = await importUrl();
-    const url = cloudinaryChannelUrl("some-public-id", { widthPx: 1080, heightPx: 1350 });
-    expect(url).toContain("c_fill,w_1080,h_1350,g_auto");
-    expect(url).toContain("f_auto");
-    expect(url).toContain("q_auto");
+  it("builds an arbitrary fill crop from raw dimensions (channel-spec use case)", async () => {
+    const { cropTransformString } = await importUrl();
+    expect(cropTransformString({ width: 1080, height: 1350, crop: "fill" })).toBe(
+      "c_fill,w_1080,h_1350,g_auto,f_auto,q_auto",
+    );
   });
 });
 

@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import { v2 as cloudinary } from "cloudinary";
 import { withOperatorAuth, OperatorAuthError } from "@/lib/operator-gate";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { CLOUDINARY_PRESETS } from "@/lib/cloudinary/url";
+import { presetTransformString } from "@/lib/cloudinary/url";
 
 export const dynamic = "force-dynamic";
 
@@ -43,18 +43,10 @@ function sanitizeFilename(filename: string): string {
 // 074e — eager pregeneration for the two image presets consumed off the upload path
 // (asset-tile in the brand asset panel, asset-masonry in the library grid). Cloudinary's
 // `eager` param accepts literal transformation strings, so no server-side named
-// transformation needs to be registered in the account — CLOUDINARY_PRESETS is the
-// single source of truth these strings are derived from.
+// transformation needs to be registered in the account — presetTransformString (in
+// lib/cloudinary/url.ts) is the single source of truth these strings are derived from,
+// shared with the signed delivery URLs in lib/cloudinary/signed-url.ts.
 const EAGER_IMAGE_PRESETS = ["asset-tile", "asset-masonry"] as const;
-
-function presetToEagerString(preset: (typeof EAGER_IMAGE_PRESETS)[number]): string {
-  const { width, height, crop } = CLOUDINARY_PRESETS[preset];
-  const parts = [`c_${crop}`, `w_${width}`];
-  if (height) parts.push(`h_${height}`);
-  if (crop !== "limit") parts.push("g_auto");
-  parts.push("f_auto", "q_auto");
-  return parts.join(",");
-}
 
 export async function POST(request: Request) {
   let operator;
@@ -136,7 +128,7 @@ export async function POST(request: Request) {
     context: contextParts.join("|"),
   };
   if (resourceType === "image") {
-    paramsToSign.eager = EAGER_IMAGE_PRESETS.map(presetToEagerString).join("|");
+    paramsToSign.eager = EAGER_IMAGE_PRESETS.map(presetTransformString).join("|");
   }
 
   const signature = cloudinary.utils.api_sign_request(paramsToSign, apiSecret);
