@@ -30,6 +30,43 @@ describe("cloudinaryImageUrl", () => {
   });
 });
 
+describe("cloudinaryPresetUrl", () => {
+  it("builds the asset-tile preset (thumb crop, no explicit gravity override)", async () => {
+    const { cloudinaryPresetUrl } = await importUrl();
+    const url = cloudinaryPresetUrl("some-public-id", "asset-tile");
+    expect(url).toContain("c_thumb,w_120,h_120,g_auto");
+    expect(url).toContain("f_auto");
+    expect(url).toContain("q_auto");
+  });
+
+  it("builds the brand-cover preset", async () => {
+    const { cloudinaryPresetUrl } = await importUrl();
+    const url = cloudinaryPresetUrl("some-public-id", "brand-cover");
+    expect(url).toContain("c_fill,w_400,h_300,g_auto");
+    expect(url).toContain("f_auto");
+    expect(url).toContain("q_auto");
+  });
+
+  it("builds the asset-masonry preset (limit crop, width only, no gravity)", async () => {
+    const { cloudinaryPresetUrl } = await importUrl();
+    const url = cloudinaryPresetUrl("some-public-id", "asset-masonry");
+    expect(url).toContain("c_limit,w_600");
+    expect(url).not.toContain("g_auto");
+    expect(url).toContain("f_auto");
+    expect(url).toContain("q_auto");
+  });
+});
+
+describe("cloudinaryChannelUrl", () => {
+  it("builds a fill crop from an arbitrary channel spec's dimensions", async () => {
+    const { cloudinaryChannelUrl } = await importUrl();
+    const url = cloudinaryChannelUrl("some-public-id", { widthPx: 1080, heightPx: 1350 });
+    expect(url).toContain("c_fill,w_1080,h_1350,g_auto");
+    expect(url).toContain("f_auto");
+    expect(url).toContain("q_auto");
+  });
+});
+
 describe("CLOUDINARY_CLOUD_NAME", () => {
   it("prefers NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME over the server-only var and the default", async () => {
     vi.stubEnv("NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME", "public-cloud");

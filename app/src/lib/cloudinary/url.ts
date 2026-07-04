@@ -15,3 +15,53 @@ export function cloudinaryImageUrl(
     { cloud: { cloudName: CLOUDINARY_CLOUD_NAME } },
   );
 }
+
+// IPI-257 074e — named transform presets (single source of truth per MEDIA-MAP §5).
+// `hitl-diff` is intentionally not modeled here: its spec is "side-by-side derivative
+// URLs" (not a crop transform) and its only consumer (Approval/EvidenceBlock UI) is
+// out of scope for IPI-257.
+type CloudinaryPreset = { width: number; height?: number; crop: "fill" | "thumb" | "limit" };
+
+export const CLOUDINARY_PRESETS: Record<"brand-cover" | "asset-tile" | "asset-masonry", CloudinaryPreset> = {
+  "brand-cover": { width: 400, height: 300, crop: "fill" },
+  "asset-tile": { width: 120, height: 120, crop: "thumb" },
+  "asset-masonry": { width: 600, crop: "limit" },
+};
+
+export type CloudinaryPresetName = keyof typeof CLOUDINARY_PRESETS;
+
+/** Named-preset delivery URL — components pass a preset name, never inline transform params. */
+export function cloudinaryPresetUrl(publicId: string, preset: CloudinaryPresetName): string {
+  const { width, height, crop } = CLOUDINARY_PRESETS[preset];
+  return getCldImageUrl(
+    {
+      src: publicId,
+      width,
+      height,
+      crop,
+      gravity: crop === "limit" ? undefined : "auto",
+      format: "auto",
+      quality: "auto",
+    },
+    { cloud: { cloudName: CLOUDINARY_CLOUD_NAME } },
+  );
+}
+
+/** Channel-readiness crop, data-driven from the resolved ChannelSpec (no per-platform preset). */
+export function cloudinaryChannelUrl(
+  publicId: string,
+  spec: { widthPx: number; heightPx: number },
+): string {
+  return getCldImageUrl(
+    {
+      src: publicId,
+      width: spec.widthPx,
+      height: spec.heightPx,
+      crop: "fill",
+      gravity: "auto",
+      format: "auto",
+      quality: "auto",
+    },
+    { cloud: { cloudName: CLOUDINARY_CLOUD_NAME } },
+  );
+}
