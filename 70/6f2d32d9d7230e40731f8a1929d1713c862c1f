@@ -1,0 +1,21 @@
+scripts/verify-booking-gate.mjs
+  s_5c9f2a2ec2b3af::t_05ce1d721ec165 5-6,51-54,57-59,63-65
+.github/workflows/ci.yml
+  s_5c9f2a2ec2b3af::t_7fc44df7a3aae8 70-98
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.9",
+  "base_commit_sha": "706f2d32d9d7230e40731f8a1929d1713c862c1f",
+  "prompts": {},
+  "sessions": {
+    "s_5c9f2a2ec2b3af": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "4c146179-d0c4-4f21-910e-cebd5c5ba751",
+        "model": "composer-2.5"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
