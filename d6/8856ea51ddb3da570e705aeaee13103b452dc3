@@ -1,0 +1,42 @@
+app/src/lib/cloudinary/url.test.ts
+  s_12404fa554d700::t_c80793714ad35d 38-39,46-47,55-56,65-66
+  s_12404fa554d700::t_7b7339b300fcd8 33-37,40-45,48-54,57-64,67-69
+app/src/lib/cloudinary/url.ts
+  s_12404fa554d700::t_de36dcf19ef15b 18-22,30-67
+  s_12404fa554d700::t_5293fb339b8fab 23-29
+app/src/app/api/brands/[id]/assets/route.ts
+  s_12404fa554d700::t_cdfa79e9f76fa8 5,12
+app/src/app/api/assets/upload-sign/route.test.ts
+  s_12404fa554d700::t_b86ceddfd53894 149,163-166,175-179
+  s_5c9f2a2ec2b3af::t_33ae0d857751dd 180-181
+app/src/app/api/media/specs/route.ts
+  s_12404fa554d700::t_57300b4ce0f88c 2-3,7,27-29,38-42
+app/src/app/api/assets/upload-sign/route.ts
+  s_12404fa554d700::t_18c2c481db0e07 138-140
+  s_12404fa554d700::t_2964ee130324e2 43-58
+  s_12404fa554d700::t_388c6730af898e 6
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.9",
+  "base_commit_sha": "d68856ea51ddb3da570e705aeaee13103b452dc3",
+  "prompts": {},
+  "sessions": {
+    "s_12404fa554d700": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "c51c9d5f-0f8a-4434-b966-5de005a41aad",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    },
+    "s_5c9f2a2ec2b3af": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "4c146179-d0c4-4f21-910e-cebd5c5ba751",
+        "model": "composer-2.5"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
