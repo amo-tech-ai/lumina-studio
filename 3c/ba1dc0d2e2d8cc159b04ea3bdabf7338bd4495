@@ -1,0 +1,21 @@
+app/src/app/api/notifications/route.ts
+  s_5c9f2a2ec2b3af::t_bf96264370a346 5
+app/src/app/api/notifications/read/route.ts
+  s_5c9f2a2ec2b3af::t_87131180e8211c 5
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.9",
+  "base_commit_sha": "3cba1dc0d2e2d8cc159b04ea3bdabf7338bd4495",
+  "prompts": {},
+  "sessions": {
+    "s_5c9f2a2ec2b3af": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "4c146179-d0c4-4f21-910e-cebd5c5ba751",
+        "model": "composer-2.5"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
