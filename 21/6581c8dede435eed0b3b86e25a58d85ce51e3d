@@ -1,0 +1,23 @@
+scripts/test-get-list-bookings.sql
+  s_5c9f2a2ec2b3af::t_33cf2177b7bcf6 1-76,80-81,89-154
+  s_5c9f2a2ec2b3af::t_b8d9f5b486b80d 77-79,82-88
+supabase/migrations/20260703220000_ipi342_get_list_booking_rpcs.sql
+  s_5c9f2a2ec2b3af::t_09c0881f5e0437 117,120,168-173,198,200,202-214,216
+  s_5c9f2a2ec2b3af::t_dee99644a5ce22 1-116,118-119,121-167,174-197,199,201,215,217-233
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.9",
+  "base_commit_sha": "216581c8dede435eed0b3b86e25a58d85ce51e3d",
+  "prompts": {},
+  "sessions": {
+    "s_5c9f2a2ec2b3af": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "4c146179-d0c4-4f21-910e-cebd5c5ba751",
+        "model": "composer-2.5"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
