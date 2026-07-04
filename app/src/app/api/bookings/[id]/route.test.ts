@@ -70,6 +70,15 @@ describe("GET /api/bookings/[id]", () => {
     expect(res.status).toBe(401);
   });
 
+  it("returns 400 when booking id is not a valid UUID", async () => {
+    const badContext = { params: Promise.resolve({ id: "not-a-uuid" }) };
+    const { GET } = await importRoute();
+    const res = await GET(new NextRequest("http://localhost/api/bookings/not-a-uuid"), badContext);
+    expect(res.status).toBe(400);
+    expect((await res.json()).error.code).toBe("VALIDATION_ERROR");
+    expect(mockGetBooking).not.toHaveBeenCalled();
+  });
+
   it("returns 404 envelope when booking missing", async () => {
     mockGetBooking.mockResolvedValueOnce({
       ok: false,
@@ -106,6 +115,19 @@ describe("PATCH /api/bookings/[id]", () => {
       body: JSON.stringify(body),
     });
   }
+
+  it("returns 400 for invalid JSON body", async () => {
+    const { PATCH } = await importRoute();
+    const req = new NextRequest("http://localhost/api/bookings/" + BOOKING_ID, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: "not-json",
+    });
+    const res = await PATCH(req, routeContext);
+    expect(res.status).toBe(400);
+    expect((await res.json()).error.code).toBe("VALIDATION_ERROR");
+    expect(mockTransitionBooking).not.toHaveBeenCalled();
+  });
 
   it("rejects to_status=confirmed at validation", async () => {
     const { PATCH } = await importRoute();

@@ -155,6 +155,45 @@ function parseStatusFilter(params: URLSearchParams): BookingStatus[] | undefined
   return combined as BookingStatus[];
 }
 
+function validateRoleScopedFilters(
+  role: BookingListRole,
+  org_id: string | undefined,
+  talent_profile_id: string | undefined,
+): ParseFailure | null {
+  if (role === "brand" || role === "agency") {
+    if (!org_id) {
+      return validationFail("org_id is required for brand and agency roles.");
+    }
+    if (!isUuid(org_id)) {
+      return validationFail("org_id must be a valid UUID.");
+    }
+  }
+
+  if (role === "talent") {
+    if (!talent_profile_id) {
+      return validationFail("talent_profile_id is required for talent role.");
+    }
+    if (!isUuid(talent_profile_id)) {
+      return validationFail("talent_profile_id must be a valid UUID.");
+    }
+  }
+
+  return null;
+}
+
+function parseLimit(searchParams: URLSearchParams): { ok: true; limit: number } | ParseFailure {
+  const limitRaw = searchParams.get("limit");
+  let limit = 25;
+  if (limitRaw != null) {
+    const parsed = Number(limitRaw);
+    if (!Number.isInteger(parsed) || parsed < 1 || parsed > 50) {
+      return validationFail("limit must be an integer between 1 and 50.");
+    }
+    limit = parsed;
+  }
+  return { ok: true, limit };
+}
+
 export function parseListBookingsQuery(searchParams: URLSearchParams):
   | { ok: true; data: ListBookingsQuery }
   | ParseFailure {
@@ -174,32 +213,18 @@ export function parseListBookingsQuery(searchParams: URLSearchParams):
   const org_id = searchParams.get("org_id") ?? undefined;
   const talent_profile_id = searchParams.get("talent_profile_id") ?? undefined;
 
-  if (role === "brand" || role === "agency") {
-    if (!org_id) {
-      return validationFail("org_id is required for brand and agency roles.");
-    }
-    if (!isUuid(org_id)) {
-      return validationFail("org_id must be a valid UUID.");
-    }
+  const roleScopeError = validateRoleScopedFilters(
+    role as BookingListRole,
+    org_id,
+    talent_profile_id,
+  );
+  if (roleScopeError) {
+    return roleScopeError;
   }
 
-  if (role === "talent") {
-    if (!talent_profile_id) {
-      return validationFail("talent_profile_id is required for talent role.");
-    }
-    if (!isUuid(talent_profile_id)) {
-      return validationFail("talent_profile_id must be a valid UUID.");
-    }
-  }
-
-  const limitRaw = searchParams.get("limit");
-  let limit = 25;
-  if (limitRaw != null) {
-    const parsed = Number(limitRaw);
-    if (!Number.isInteger(parsed) || parsed < 1 || parsed > 50) {
-      return validationFail("limit must be an integer between 1 and 50.");
-    }
-    limit = parsed;
+  const limitResult = parseLimit(searchParams);
+  if (!limitResult.ok) {
+    return limitResult;
   }
 
   const cursor = searchParams.get("cursor") ?? undefined;
@@ -212,7 +237,7 @@ export function parseListBookingsQuery(searchParams: URLSearchParams):
       talent_profile_id,
       status,
       cursor,
-      limit,
+      limit: limitResult.limit,
     },
   };
 }

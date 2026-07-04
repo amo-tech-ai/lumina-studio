@@ -85,6 +85,16 @@ describe("POST /api/bookings", () => {
     });
   });
 
+  it("returns 500 envelope when auth throws unexpectedly", async () => {
+    mockWithOperatorAuth.mockRejectedValueOnce(new Error("auth subsystem down"));
+    const { POST } = await importRoute();
+    const res = await POST(makePost(VALID_CREATE_BODY));
+    expect(res.status).toBe(500);
+    expect(await res.json()).toEqual({
+      error: { code: "INTERNAL_ERROR", message: "Something went wrong. Please try again." },
+    });
+  });
+
   it("returns 400 for invalid JSON", async () => {
     const { POST } = await importRoute();
     const req = new NextRequest("http://localhost/api/bookings", {

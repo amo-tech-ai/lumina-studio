@@ -14,7 +14,7 @@ export async function POST(req: NextRequest) {
     if (e instanceof OperatorAuthError) {
       return apiErrorResponse("UNAUTHORIZED", 401);
     }
-    throw e;
+    return apiErrorResponse("INTERNAL_ERROR", 500);
   }
 
   let body: unknown;
@@ -45,7 +45,7 @@ export async function GET(req: NextRequest) {
     if (e instanceof OperatorAuthError) {
       return apiErrorResponse("UNAUTHORIZED", 401);
     }
-    throw e;
+    return apiErrorResponse("INTERNAL_ERROR", 500);
   }
 
   const parsed = parseListBookingsQuery(req.nextUrl.searchParams);
