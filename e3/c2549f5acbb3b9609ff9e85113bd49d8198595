@@ -1,0 +1,27 @@
+supabase/migrations/20260703213000_ipi341_transition_booking_rpc.sql
+  s_5c9f2a2ec2b3af::t_2abe0e311242fa 47
+  s_5c9f2a2ec2b3af::t_fb94f49c2f0d4f 26-28
+  s_5c9f2a2ec2b3af::t_bca0cb7985c409 140-144
+scripts/test-booking-transition-fsm.sql
+  s_5c9f2a2ec2b3af::t_6c91524a438e45 2
+scripts/test-booking-rls-bypass.sql
+  s_5c9f2a2ec2b3af::t_12c955ad6cb577 2
+scripts/test-booking-transition-concurrency.sql
+  s_5c9f2a2ec2b3af::t_83b0c7b5cf215d 2
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.9",
+  "base_commit_sha": "e3c2549f5acbb3b9609ff9e85113bd49d8198595",
+  "prompts": {},
+  "sessions": {
+    "s_5c9f2a2ec2b3af": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "4c146179-d0c4-4f21-910e-cebd5c5ba751",
+        "model": "composer-2.5"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
