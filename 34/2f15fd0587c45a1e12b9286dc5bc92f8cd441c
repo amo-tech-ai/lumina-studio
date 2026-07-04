@@ -1,0 +1,24 @@
+app/src/lib/booking/booking-service.ts
+  s_5c9f2a2ec2b3af::t_f96340df9a8fbc 30-38,45-66,79,93-95,101,133,148,158,167-199,204,213-215,221,236-247,255,267,274,314,322-324,332
+app/src/lib/booking/validation.ts
+  s_5c9f2a2ec2b3af::t_d3fdcc1630bf6c 290-334,352-354,357-359
+app/src/lib/booking/booking-service.test.ts
+  s_5c9f2a2ec2b3af::t_74b29b75111c11 2,6-30
+  s_5c9f2a2ec2b3af::t_9490229547cfcd 31
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.9",
+  "base_commit_sha": "342f15fd0587c45a1e12b9286dc5bc92f8cd441c",
+  "prompts": {},
+  "sessions": {
+    "s_5c9f2a2ec2b3af": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "4c146179-d0c4-4f21-910e-cebd5c5ba751",
+        "model": "composer-2.5"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
