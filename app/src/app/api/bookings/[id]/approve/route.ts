@@ -2,22 +2,13 @@ export const dynamic = "force-dynamic";
 
 import { NextRequest, NextResponse } from "next/server";
 import { withOperatorAuth, OperatorAuthError } from "@/lib/operator-gate";
-import { apiErrorResponse } from "@/lib/api/error-envelope";
+import { apiErrorResponse, serviceFailureResponse } from "@/lib/api/error-envelope";
 import { createSupabaseAdminClient } from "@/app/api/_lib/supabase-admin";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { approveBooking } from "@/lib/booking/booking-service";
 import { parseBookingIdParam } from "@/lib/booking/validation";
 
 type RouteContext = { params: Promise<{ id: string }> };
-
-function serviceFailureResponse(result: {
-  status: number;
-  code: Parameters<typeof apiErrorResponse>[0];
-  message: string;
-  details?: Record<string, unknown>;
-}) {
-  return apiErrorResponse(result.code, result.status, result.message, result.details);
-}
 
 export async function POST(req: NextRequest, context: RouteContext) {
   try {

@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { ApiErrorCode } from "@/lib/api/error-envelope";
-import { mapSupabaseRpcError } from "@/lib/booking/rpc-errors";
+import { isStaleBookingMessage, mapSupabaseRpcError } from "@/lib/booking/rpc-errors";
 import type {
   CreateBookingBody,
   ListBookingsQuery,
@@ -21,7 +21,7 @@ export type ServiceResult<T> = ServiceSuccess<T> | ServiceFailure;
 
 function rpcFailure(
   error: { message?: string; code?: string | null },
-  ctx?: { expectedVersion?: number },
+  ctx?: { expectedVersion?: number; currentVersion?: number },
 ): ServiceFailure {
   const mapped = mapSupabaseRpcError(error.message ?? "Unknown error", error.code, ctx);
   return { ok: false, ...mapped };
@@ -80,8 +80,23 @@ export async function createBookingRequest(
   };
 }
 
+export type BookingSummary = {
+  id: string;
+  status: string;
+  version: number;
+  date_start: string;
+  date_end: string;
+  brand_org_id: string;
+  talent_profile_id: string;
+  shoot_id: string | null;
+  rate_quoted: number | null;
+  expires_at: string | null;
+  created_at: string | null;
+  updated_at: string | null;
+};
+
 export type ListBookingsResponse = {
-  items: unknown[];
+  items: BookingSummary[];
   next_cursor: string | null;
 };
 
@@ -116,7 +131,7 @@ export async function listBookings(
   return {
     ok: true,
     data: {
-      items: row.items,
+      items: row.items as BookingSummary[],
       next_cursor: row.next_cursor != null ? String(row.next_cursor) : null,
     },
   };
@@ -210,6 +225,17 @@ export async function transitionBooking(
 
   if (error) {
     console.error("[booking] transition_booking:", error.message);
+    if (isStaleBookingMessage(error.message ?? "")) {
+      const fresh = await getBooking(userSb, bookingId);
+      const currentVersion =
+        fresh.ok && fresh.data.booking.version != null
+          ? Number(fresh.data.booking.version)
+          : undefined;
+      return rpcFailure(error, {
+        expectedVersion: input.expected_version,
+        currentVersion,
+      });
+    }
     return rpcFailure(error, { expectedVersion: input.expected_version });
   }
 

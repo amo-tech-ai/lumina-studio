@@ -60,6 +60,18 @@ export function apiErrorResponse(
   return NextResponse.json(apiErrorBody(code, message, details), { status });
 }
 
+/** Maps service-layer failures (validation + RPC) to HTTP error responses. */
+export type ServiceFailurePayload = {
+  status: number;
+  code: ApiErrorCode;
+  message: string;
+  details?: Record<string, unknown>;
+};
+
+export function serviceFailureResponse(result: ServiceFailurePayload) {
+  return apiErrorResponse(result.code, result.status, result.message, result.details);
+}
+
 export function httpStatusForCode(code: ApiErrorCode): number {
   switch (code) {
     case "UNAUTHORIZED":

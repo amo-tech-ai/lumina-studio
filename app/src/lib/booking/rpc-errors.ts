@@ -11,10 +11,20 @@ function includes(haystack: string, needle: string): boolean {
   return haystack.toLowerCase().includes(needle.toLowerCase());
 }
 
+export type StaleBookingContext = {
+  expectedVersion?: number;
+  currentVersion?: number;
+};
+
+export function isStaleBookingMessage(message: string): boolean {
+  const msg = message ?? "";
+  return msg === "stale_booking" || msg.toLowerCase().includes("stale_booking");
+}
+
 export function mapSupabaseRpcError(
   message: string,
   pgCode?: string | null,
-  ctx?: { expectedVersion?: number },
+  ctx?: StaleBookingContext,
 ): MappedRpcError {
   const msg = message ?? "";
 
@@ -26,10 +36,13 @@ export function mapSupabaseRpcError(
     };
   }
 
-  if (msg === "stale_booking" || includes(msg, "stale_booking")) {
+  if (isStaleBookingMessage(msg)) {
     const details: Record<string, unknown> = {};
     if (ctx?.expectedVersion != null) {
       details.expected_version = ctx.expectedVersion;
+    }
+    if (ctx?.currentVersion != null) {
+      details.current_version = ctx.currentVersion;
     }
     return {
       status: 409,
