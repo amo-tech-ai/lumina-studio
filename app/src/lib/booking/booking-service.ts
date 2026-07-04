@@ -27,10 +27,41 @@ function rpcFailure(
   return { ok: false, ...mapped };
 }
 
+function internalError(): ServiceFailure {
+  return {
+    ok: false,
+    status: 500,
+    code: "INTERNAL_ERROR",
+    message: "Something went wrong. Please try again.",
+  };
+}
+
 function asRecord(value: unknown): Record<string, unknown> | null {
   return value && typeof value === "object" && !Array.isArray(value)
     ? (value as Record<string, unknown>)
     : null;
+}
+
+type RpcError = { message?: string; code?: string | null };
+
+async function callBookingRpc(
+  userSb: SupabaseClient,
+  rpcName: string,
+  args: Record<string, unknown>,
+): Promise<{ data: unknown; error: RpcError | null }> {
+  const { data, error } = await userSb.rpc(rpcName, args);
+  if (error) {
+    console.error(`[booking] ${rpcName}:`, error.message);
+  }
+  return { data, error };
+}
+
+function requireBookingIdRow(data: unknown): Record<string, unknown> | null {
+  const row = asRecord(data);
+  if (!row || typeof row.booking_id !== "string") {
+    return null;
+  }
+  return row;
 }
 
 /** POST create + approve use `booking_id` per api-contracts.md; list/get use `id`. */
@@ -45,7 +76,7 @@ export async function createBookingRequest(
   userSb: SupabaseClient,
   input: CreateBookingBody,
 ): Promise<ServiceResult<CreateBookingResponse>> {
-  const { data, error } = await userSb.rpc("create_booking_request", {
+  const { data, error } = await callBookingRpc(userSb, "create_booking_request", {
     p_brand_org_id: input.brand_org_id,
     p_talent_profile_id: input.talent_profile_id,
     p_date_start: input.date_start,
@@ -56,24 +87,18 @@ export async function createBookingRequest(
   });
 
   if (error) {
-    console.error("[booking] create_booking_request:", error.message);
     return rpcFailure(error);
   }
 
-  const row = asRecord(data);
-  if (!row || typeof row.booking_id !== "string") {
-    return {
-      ok: false,
-      status: 500,
-      code: "INTERNAL_ERROR",
-      message: "Something went wrong. Please try again.",
-    };
+  const row = requireBookingIdRow(data);
+  if (!row) {
+    return internalError();
   }
 
   return {
     ok: true,
     data: {
-      booking_id: row.booking_id,
+      booking_id: row.booking_id as string,
       status: String(row.status ?? "requested"),
       version: Number(row.version ?? 1),
       expires_at: String(row.expires_at ?? ""),
@@ -105,7 +130,7 @@ export async function listBookings(
   userSb: SupabaseClient,
   query: ListBookingsQuery,
 ): Promise<ServiceResult<ListBookingsResponse>> {
-  const { data, error } = await userSb.rpc("list_bookings", {
+  const { data, error } = await callBookingRpc(userSb, "list_bookings", {
     p_role: query.role,
     p_org_id: query.org_id ?? undefined,
     p_talent_profile_id: query.talent_profile_id ?? undefined,
@@ -115,18 +140,12 @@ export async function listBookings(
   });
 
   if (error) {
-    console.error("[booking] list_bookings:", error.message);
     return rpcFailure(error);
   }
 
   const row = asRecord(data);
   if (!row || !Array.isArray(row.items)) {
-    return {
-      ok: false,
-      status: 500,
-      code: "INTERNAL_ERROR",
-      message: "Something went wrong. Please try again.",
-    };
+    return internalError();
   }
 
   return {
@@ -136,7 +155,7 @@ export async function listBookings(
       next_cursor: row.next_cursor != null ? String(row.next_cursor) : null,
     },
   };
-}
+};
 
 export type GetBookingResponse = {
   booking: Record<string, unknown>;
@@ -145,34 +164,61 @@ export type GetBookingResponse = {
   viewer_role: string;
 };
 
+const RPC_BOOKING_FIELD_MAP: Array<{
+  out: string;
+  sources: string[];
+  defaultValue?: unknown;
+}> = [
+  { out: "id", sources: ["booking_id", "id"] },
+  { out: "brand_org_id", sources: ["brand_org_id"] },
+  { out: "talent_profile_id", sources: ["talent_profile_id"] },
+  { out: "shoot_id", sources: ["shoot_id"], defaultValue: null },
+  { out: "status", sources: ["status"] },
+  { out: "date_start", sources: ["date_start"] },
+  { out: "date_end", sources: ["date_end"] },
+  { out: "rate_quoted", sources: ["rate_quoted"], defaultValue: null },
+  { out: "message", sources: ["message"], defaultValue: null },
+  { out: "requested_by", sources: ["requested_by"], defaultValue: null },
+  { out: "approved_by", sources: ["approved_by"], defaultValue: null },
+  { out: "cancelled_by", sources: ["cancelled_by"], defaultValue: null },
+  { out: "cancellation_reason", sources: ["cancellation_reason"], defaultValue: null },
+  { out: "expires_at", sources: ["expires_at"], defaultValue: null },
+  { out: "created_at", sources: ["created_at"], defaultValue: null },
+  { out: "updated_at", sources: ["updated_at"], defaultValue: null },
+  { out: "version", sources: ["version"] },
+];
+
+function rpcRowToBooking(row: Record<string, unknown>): Record<string, unknown> {
+  return Object.fromEntries(
+    RPC_BOOKING_FIELD_MAP.map(({ out, sources, defaultValue }) => {
+      const value = sources.map((source) => row[source]).find((entry) => entry !== undefined);
+      return [out, value !== undefined ? value : defaultValue];
+    }),
+  );
+}
+
 export async function getBooking(
   userSb: SupabaseClient,
   bookingId: string,
 ): Promise<ServiceResult<GetBookingResponse>> {
-  const { data, error } = await userSb.rpc("get_booking", {
+  const { data, error } = await callBookingRpc(userSb, "get_booking", {
     p_booking_id: bookingId,
   });
 
   if (error) {
-    console.error("[booking] get_booking:", error.message);
     return rpcFailure(error);
   }
 
   const row = asRecord(data);
-  const booking = row?.booking;
-  if (!row || !booking || typeof booking !== "object") {
-    return {
-      ok: false,
-      status: 500,
-      code: "INTERNAL_ERROR",
-      message: "Something went wrong. Please try again.",
-    };
+  const rawBooking = asRecord(row?.booking);
+  if (!row || !rawBooking) {
+    return internalError();
   }
 
   return {
     ok: true,
     data: {
-      booking: booking as Record<string, unknown>,
+      booking: rpcRowToBooking(rawBooking),
       talent: row.talent ?? null,
       history: Array.isArray(row.history) ? row.history : [],
       viewer_role: String(row.viewer_role ?? ""),
@@ -187,26 +233,18 @@ export type TransitionBookingResponse = {
   version: number;
 };
 
-function rpcRowToBooking(row: Record<string, unknown>): Record<string, unknown> {
-  return {
-    id: row.booking_id ?? row.id,
-    brand_org_id: row.brand_org_id,
-    talent_profile_id: row.talent_profile_id,
-    shoot_id: row.shoot_id ?? null,
-    status: row.status,
-    date_start: row.date_start,
-    date_end: row.date_end,
-    rate_quoted: row.rate_quoted ?? null,
-    message: row.message ?? null,
-    requested_by: row.requested_by ?? null,
-    approved_by: row.approved_by ?? null,
-    cancelled_by: row.cancelled_by ?? null,
-    cancellation_reason: row.cancellation_reason ?? null,
-    expires_at: row.expires_at ?? null,
-    created_at: row.created_at ?? null,
-    updated_at: row.updated_at ?? null,
-    version: row.version,
-  };
+async function staleTransitionFailure(
+  userSb: SupabaseClient,
+  bookingId: string,
+  expectedVersion: number,
+  error: RpcError,
+): Promise<ServiceFailure> {
+  const fresh = await getBooking(userSb, bookingId);
+  const currentVersion =
+    fresh.ok && fresh.data.booking.version != null
+      ? Number(fresh.data.booking.version)
+      : undefined;
+  return rpcFailure(error, { expectedVersion, currentVersion });
 }
 
 export async function transitionBooking(
@@ -214,7 +252,7 @@ export async function transitionBooking(
   bookingId: string,
   input: TransitionBody,
 ): Promise<ServiceResult<TransitionBookingResponse>> {
-  const { data, error } = await userSb.rpc("transition_booking", {
+  const { data, error } = await callBookingRpc(userSb, "transition_booking", {
     p_booking_id: bookingId,
     p_expected_version: input.expected_version,
     p_to_status: input.to_status ?? undefined,
@@ -225,29 +263,15 @@ export async function transitionBooking(
   });
 
   if (error) {
-    console.error("[booking] transition_booking:", error.message);
     if (isStaleBookingMessage(error.message ?? "")) {
-      const fresh = await getBooking(userSb, bookingId);
-      const currentVersion =
-        fresh.ok && fresh.data.booking.version != null
-          ? Number(fresh.data.booking.version)
-          : undefined;
-      return rpcFailure(error, {
-        expectedVersion: input.expected_version,
-        currentVersion,
-      });
+      return staleTransitionFailure(userSb, bookingId, input.expected_version, error);
     }
     return rpcFailure(error, { expectedVersion: input.expected_version });
   }
 
   const row = asRecord(data);
   if (!row || row.version == null) {
-    return {
-      ok: false,
-      status: 500,
-      code: "INTERNAL_ERROR",
-      message: "Something went wrong. Please try again.",
-    };
+    return internalError();
   }
 
   return {
@@ -287,23 +311,17 @@ export async function approveBooking(
     };
   }
 
-  const { data, error } = await serviceSb.rpc("confirm_booking", {
+  const { data, error } = await callBookingRpc(serviceSb, "confirm_booking", {
     p_booking_id: bookingId,
   });
 
   if (error) {
-    console.error("[booking] confirm_booking:", error.message);
     return rpcFailure(error);
   }
 
-  const row = asRecord(data);
-  if (!row || typeof row.booking_id !== "string") {
-    return {
-      ok: false,
-      status: 500,
-      code: "INTERNAL_ERROR",
-      message: "Something went wrong. Please try again.",
-    };
+  const row = requireBookingIdRow(data);
+  if (!row) {
+    return internalError();
   }
 
   return {
@@ -311,7 +329,7 @@ export async function approveBooking(
     data: {
       status: String(row.status ?? "confirmed"),
       already_confirmed: Boolean(row.already_confirmed),
-      booking_id: row.booking_id,
+      booking_id: row.booking_id as string,
       crew_id: row.crew_id != null ? String(row.crew_id) : null,
     },
   };

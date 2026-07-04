@@ -71,25 +71,3 @@ export type ServiceFailurePayload = {
 export function serviceFailureResponse(result: ServiceFailurePayload) {
   return apiErrorResponse(result.code, result.status, result.message, result.details);
 }
-
-export function httpStatusForCode(code: ApiErrorCode): number {
-  switch (code) {
-    case "UNAUTHORIZED":
-      return 401;
-    case "FORBIDDEN":
-      return 403;
-    case "NOT_FOUND":
-      return 404;
-    case "VALIDATION_ERROR":
-      return 400;
-    case "INVALID_TRANSITION":
-    case "STALE_BOOKING":
-    case "BOOKING_NOT_APPROVED":
-    case "BOOKING_CONFLICT":
-      return 409;
-    case "RATE_LIMITED":
-      return 429;
-    default:
-      return 500;
-  }
-}

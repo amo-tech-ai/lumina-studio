@@ -287,6 +287,51 @@ function validateTransitionReschedule(b: Record<string, unknown>): ParseFailure 
   return null;
 }
 
+type TransitionFieldValidator = (
+  body: Record<string, unknown>,
+  toStatus: unknown,
+) => ParseFailure | null;
+
+const TRANSITION_FIELD_VALIDATORS: TransitionFieldValidator[] = [
+  validateTransitionRateQuoted,
+  validateTransitionCancellation,
+  (body) => validateTransitionReschedule(body),
+];
+
+function validateTransitionToStatus(toStatus: unknown): ParseFailure | null {
+  if (toStatus === "confirmed") {
+    return validationFail("Use POST /api/bookings/{id}/approve to confirm a booking.");
+  }
+
+  if (toStatus === undefined || toStatus === null) {
+    return null;
+  }
+
+  if (typeof toStatus !== "string") {
+    return validationFail("to_status must be a string.");
+  }
+
+  const allowedWithoutConfirmed = BOOKING_STATUS_VALUES.filter((s) => s !== "confirmed");
+  if (!allowedWithoutConfirmed.includes(toStatus as (typeof allowedWithoutConfirmed)[number])) {
+    return validationFail(`Invalid to_status: ${String(toStatus)}`);
+  }
+
+  return null;
+}
+
+function runTransitionFieldValidators(
+  body: Record<string, unknown>,
+  toStatus: unknown,
+): ParseFailure | null {
+  for (const validate of TRANSITION_FIELD_VALIDATORS) {
+    const error = validate(body, toStatus);
+    if (error) {
+      return error;
+    }
+  }
+  return null;
+}
+
 export function parseTransitionBody(body: unknown):
   | { ok: true; data: TransitionBody }
   | ParseFailure {
@@ -304,28 +349,15 @@ export function parseTransitionBody(body: unknown):
     return validationFail("expected_version must be a positive integer.");
   }
 
-  if (b.to_status === "confirmed") {
-    return validationFail("Use POST /api/bookings/{id}/approve to confirm a booking.");
+  const toStatusError = validateTransitionToStatus(b.to_status);
+  if (toStatusError) {
+    return toStatusError;
   }
 
-  if (b.to_status !== undefined && b.to_status !== null) {
-    if (typeof b.to_status !== "string") {
-      return validationFail("to_status must be a string.");
-    }
-    const allowedWithoutConfirmed = BOOKING_STATUS_VALUES.filter((s) => s !== "confirmed");
-    if (!allowedWithoutConfirmed.includes(b.to_status as (typeof allowedWithoutConfirmed)[number])) {
-      return validationFail(`Invalid to_status: ${String(b.to_status)}`);
-    }
+  const fieldError = runTransitionFieldValidators(b, b.to_status);
+  if (fieldError) {
+    return fieldError;
   }
-
-  const rateError = validateTransitionRateQuoted(b, b.to_status);
-  if (rateError) return rateError;
-
-  const cancelError = validateTransitionCancellation(b, b.to_status);
-  if (cancelError) return cancelError;
-
-  const rescheduleError = validateTransitionReschedule(b);
-  if (rescheduleError) return rescheduleError;
 
   const hasStart = b.date_start !== undefined && b.date_start !== null;
 

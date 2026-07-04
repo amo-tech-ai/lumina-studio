@@ -1,7 +1,33 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { transitionBooking } from "./booking-service";
+import { getBooking, transitionBooking } from "./booking-service";
 
 const BOOKING_ID = "11111111-1111-4111-8111-111111111111";
+
+describe("getBooking", () => {
+  it("normalizes booking_id to id in the response", async () => {
+    const rpc = vi.fn().mockResolvedValueOnce({
+      data: {
+        booking: { booking_id: BOOKING_ID, status: "requested", version: 1 },
+        talent: null,
+        history: [],
+        viewer_role: "brand",
+      },
+      error: null,
+    });
+
+    const result = await getBooking({ rpc } as never, BOOKING_ID);
+
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.data.booking).toMatchObject({
+        id: BOOKING_ID,
+        status: "requested",
+        version: 1,
+      });
+      expect(result.data.booking).not.toHaveProperty("booking_id");
+    }
+  });
+});
 
 describe("transitionBooking stale enrichment", () => {
   const rpc = vi.fn();
