@@ -1,0 +1,19 @@
+.github/workflows/ci.yml
+  s_5c9f2a2ec2b3af::t_6040d82386ca9d 72-86,88-89
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.9",
+  "base_commit_sha": "790d35124d62c0e6f9c454395a343ff03e45117a",
+  "prompts": {},
+  "sessions": {
+    "s_5c9f2a2ec2b3af": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "4c146179-d0c4-4f21-910e-cebd5c5ba751",
+        "model": "composer-2.5"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
