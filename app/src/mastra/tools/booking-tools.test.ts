@@ -43,6 +43,40 @@ describe("buildQuoteDraft", () => {
 });
 
 describe("checkTalentAvailability", () => {
+  it("returns available when RPC reports no calendar conflict", async () => {
+    mockRpc.mockResolvedValueOnce({
+      data: {
+        id: TALENT_ID,
+        display_name: "Alex",
+        bio: null,
+        measurements: {},
+        languages: [],
+        travel_ready: true,
+        verification_status: "verified",
+        ai_tags: {},
+        is_agency_represented: false,
+        rate_tier: "$$",
+        is_available: true,
+      },
+      error: null,
+    });
+
+    const result = await checkTalentAvailability.execute!(
+      { talentProfileId: TALENT_ID, dateStart: "2026-08-01", dateEnd: "2026-08-03" },
+      {} as never,
+    );
+
+    expect(result!.isAvailable).toBe(true);
+    expect(result!.displayName).toBe("Alex");
+    expect(result!.rateTier).toBe("$$");
+    expect(result!.reason).toMatch(/No blocked, tentative, or booked availability conflicts/i);
+    expect(mockRpc).toHaveBeenCalledWith("check_talent_availability", {
+      p_talent_profile_id: TALENT_ID,
+      p_date_start: "2026-08-01",
+      p_date_end: "2026-08-03",
+    });
+  });
+
   it("returns unavailable when talent has calendar conflict", async () => {
     mockRpc.mockResolvedValueOnce({
       data: {

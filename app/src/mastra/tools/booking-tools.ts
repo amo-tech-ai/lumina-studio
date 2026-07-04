@@ -8,9 +8,22 @@
 import { createTool } from "@mastra/core/tools";
 import { z } from "zod";
 import { createBookingRequest } from "@/lib/booking/booking-service";
+import { isIsoDate } from "@/lib/booking/validation";
 import { TalentResultSchema } from "@/lib/talent/types";
 import { createUserScopedClient } from "@/lib/shoot/commit-shoot-draft";
 import { requestToken } from "@/lib/request-token";
+
+const isoDateField = z
+  .string()
+  .refine(isIsoDate, { message: "Must be a valid date in YYYY-MM-DD format" });
+
+const optionalRateQuoted = z
+  .number()
+  .finite()
+  .positive()
+  .max(999999.99)
+  .optional()
+  .describe("Day rate in USD; must be greater than zero when provided");
 
 function getUserScopedClient() {
   const accessToken = requestToken.getStore();
@@ -78,8 +91,8 @@ export const checkTalentAvailability = createTool({
     "UX feedback only; confirmed overlap is enforced at approve time by the DB EXCLUDE constraint.",
   inputSchema: z.object({
     talentProfileId: z.string().uuid(),
-    dateStart: z.string().describe("YYYY-MM-DD"),
-    dateEnd: z.string().describe("YYYY-MM-DD"),
+    dateStart: isoDateField.describe("YYYY-MM-DD"),
+    dateEnd: isoDateField.describe("YYYY-MM-DD"),
   }),
   outputSchema: z.object({
     talentProfileId: z.string(),
@@ -109,11 +122,11 @@ export const draftBookingQuote = createTool({
     "Draft a suggested day rate and outreach message for a booking request. Read-only — does not write to the database.",
   inputSchema: z.object({
     displayName: z.string(),
-    dateStart: z.string().describe("YYYY-MM-DD"),
-    dateEnd: z.string().describe("YYYY-MM-DD"),
+    dateStart: isoDateField.describe("YYYY-MM-DD"),
+    dateEnd: isoDateField.describe("YYYY-MM-DD"),
     rateTier: z.enum(["$", "$$", "$$$"]).optional(),
     shootType: z.string().optional(),
-    rateQuoted: z.number().optional().describe("Override suggested rate when operator already set one"),
+    rateQuoted: optionalRateQuoted.describe("Override suggested rate when operator already set one"),
   }),
   outputSchema: z.object({
     suggestedRate: z.number().nullable(),
@@ -130,10 +143,10 @@ export const createBookingDraft = createTool({
   inputSchema: z.object({
     brandOrgId: z.string().uuid(),
     talentProfileId: z.string().uuid(),
-    dateStart: z.string().describe("YYYY-MM-DD"),
-    dateEnd: z.string().describe("YYYY-MM-DD"),
+    dateStart: isoDateField.describe("YYYY-MM-DD"),
+    dateEnd: isoDateField.describe("YYYY-MM-DD"),
     shootId: z.string().uuid().optional(),
-    rateQuoted: z.number().optional(),
+    rateQuoted: optionalRateQuoted,
     message: z.string().max(2000).optional(),
     operatorConfirmed: z
       .boolean()

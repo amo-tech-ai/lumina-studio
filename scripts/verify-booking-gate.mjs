@@ -40,6 +40,7 @@ function run(label, cmd, args, opts = {}) {
 
 const sqlTests = [
   "scripts/test-create-booking-request.sql",
+  "scripts/test-check-talent-availability.sql",
   "scripts/test-booking-transition-fsm.sql",
   "scripts/test-booking-transition-concurrency.sql",
   "scripts/test-booking-exclude-constraint.sql",
