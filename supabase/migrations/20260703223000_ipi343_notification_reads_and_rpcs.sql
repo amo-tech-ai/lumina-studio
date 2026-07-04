@@ -51,6 +51,7 @@ create policy notifications_update_read_state on public.notifications
 
 revoke update on public.notifications from authenticated;
 
+-- Replaces body only; trigger trg_notifications_lock_immutable_columns (20260701135900) remains attached.
 create or replace function public.notifications_lock_immutable_columns()
 returns trigger
 language plpgsql
@@ -68,6 +69,26 @@ begin
   end if;
   return new;
 end;
+$$;
+
+create or replace function public.notification_visible_to_caller(n public.notifications)
+returns boolean
+language sql
+stable
+set search_path = pg_catalog, public, talent
+as $$
+  select (
+    (n.brand_org_id is not null and public.is_org_member(n.brand_org_id))
+    or (n.agency_org_id is not null and public.is_org_member(n.agency_org_id))
+    or (
+      n.talent_profile_id is not null
+      and n.talent_profile_id in (
+        select tp.id
+        from talent.talent_profiles tp
+        where tp.profile_id = (select auth.uid())
+      )
+    )
+  );
 $$;
 
 create or replace function public.notification_row_to_jsonb(n public.notifications)
@@ -139,18 +160,7 @@ begin
       n.created_at,
       n.id
     from public.notifications n
-    where (
-      (n.brand_org_id is not null and public.is_org_member(n.brand_org_id))
-      or (n.agency_org_id is not null and public.is_org_member(n.agency_org_id))
-      or (
-        n.talent_profile_id is not null
-        and n.talent_profile_id in (
-          select tp.id
-          from talent.talent_profiles tp
-          where tp.profile_id = auth.uid()
-        )
-      )
-    )
+    where public.notification_visible_to_caller(n)
     and (
       not coalesce(p_unread_only, false)
       or not exists (
@@ -200,7 +210,8 @@ as $func$
 declare
   v_uid uuid := auth.uid();
   v_updated integer := 0;
-  v_id uuid;
+  v_distinct_ids integer;
+  v_visible_ids integer;
 begin
   if v_uid is null then
     raise exception 'authentication required';
@@ -210,18 +221,7 @@ begin
     insert into public.notification_reads (user_id, notification_id, read_at)
     select v_uid, n.id, now()
     from public.notifications n
-    where (
-      (n.brand_org_id is not null and public.is_org_member(n.brand_org_id))
-      or (n.agency_org_id is not null and public.is_org_member(n.agency_org_id))
-      or (
-        n.talent_profile_id is not null
-        and n.talent_profile_id in (
-          select tp.id
-          from talent.talent_profiles tp
-          where tp.profile_id = v_uid
-        )
-      )
-    )
+    where public.notification_visible_to_caller(n)
     and not exists (
       select 1
       from public.notification_reads nr
@@ -243,34 +243,29 @@ begin
     raise exception 'too many notification ids';
   end if;
 
-  foreach v_id in array p_notification_ids loop
-    if not exists (
-      select 1
-      from public.notifications n
-      where n.id = v_id
-        and (
-          (n.brand_org_id is not null and public.is_org_member(n.brand_org_id))
-          or (n.agency_org_id is not null and public.is_org_member(n.agency_org_id))
-          or (
-            n.talent_profile_id is not null
-            and n.talent_profile_id in (
-              select tp.id
-              from talent.talent_profiles tp
-              where tp.profile_id = v_uid
-            )
-          )
-        )
-    ) then
-      raise exception 'not authorized for notification';
-    end if;
+  select count(distinct req.id)
+  into v_distinct_ids
+  from unnest(p_notification_ids) as req(id);
 
-    insert into public.notification_reads (user_id, notification_id, read_at)
-    values (v_uid, v_id, now())
-    on conflict (user_id, notification_id) do update
-      set read_at = excluded.read_at;
+  select count(distinct n.id)
+  into v_visible_ids
+  from unnest(p_notification_ids) as req(id)
+  join public.notifications n on n.id = req.id
+  where public.notification_visible_to_caller(n);
 
-    v_updated := v_updated + 1;
-  end loop;
+  if v_visible_ids <> v_distinct_ids then
+    raise exception 'not authorized for notification';
+  end if;
+
+  insert into public.notification_reads (user_id, notification_id, read_at)
+  select v_uid, n.id, now()
+  from unnest(p_notification_ids) as req(id)
+  join public.notifications n on n.id = req.id
+  where public.notification_visible_to_caller(n)
+  on conflict (user_id, notification_id) do update
+    set read_at = excluded.read_at;
+
+  get diagnostics v_updated = row_count;
 
   return jsonb_build_object('updated_count', v_updated);
 end;
