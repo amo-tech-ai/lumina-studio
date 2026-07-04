@@ -1,0 +1,23 @@
+scripts/test-booking-exclude-constraint.sql
+  s_5c9f2a2ec2b3af::t_bf3c2e8b9609fd 1-100
+scripts/verify-booking-gate.mjs
+  s_5c9f2a2ec2b3af::t_2eb5577a148462 1-66
+package.json
+  s_5c9f2a2ec2b3af::t_856202fa44e7d2 16
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.9",
+  "base_commit_sha": "3a733a41722675b2424773b10c23c02ac8e5323c",
+  "prompts": {},
+  "sessions": {
+    "s_5c9f2a2ec2b3af": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "4c146179-d0c4-4f21-910e-cebd5c5ba751",
+        "model": "composer-2.5"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
