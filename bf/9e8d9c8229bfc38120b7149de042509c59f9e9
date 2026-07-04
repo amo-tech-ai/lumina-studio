@@ -1,0 +1,31 @@
+.claude/skills/infisical/references/secret-syncs/references/aws-gcp-azure.md
+  s_5c9f2a2ec2b3af::t_c012ffb0c34697 6
+.claude/skills/infisical/references/dynamic-secrets/references/nosql-and-cache.md
+  s_5c9f2a2ec2b3af::t_2e38bd4e5ad6ba 43
+.claude/skills/gemini/references/thinking.md
+  s_5c9f2a2ec2b3af::t_57167082feef23 730
+.claude/skills/infisical/references/secret-syncs/references/vault-and-others.md
+  s_5c9f2a2ec2b3af::t_88329fecd24a8c 57
+.claude/skills/worktrees/references/compare-merge.md
+  s_5c9f2a2ec2b3af::t_845b49399e5440 75
+.claude/skills/infisical/references/secret-syncs/references/github-vercel-cloudflare.md
+  s_5c9f2a2ec2b3af::t_fbf0872fb57729 71
+.claude/skills/infisical/references/dynamic-secrets/references/sql-databases.md
+  s_5c9f2a2ec2b3af::t_3b04c5b76c1ec4 23
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.9",
+  "base_commit_sha": "bf9e8d9c8229bfc38120b7149de042509c59f9e9",
+  "prompts": {},
+  "sessions": {
+    "s_5c9f2a2ec2b3af": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "4c146179-d0c4-4f21-910e-cebd5c5ba751",
+        "model": "composer-2.5"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
