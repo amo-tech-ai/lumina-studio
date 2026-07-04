@@ -1,0 +1,21 @@
+.worktreeinclude
+  s_4db44adbb46466::t_47a334dddfcea7 1-5
+.gitignore
+  s_4db44adbb46466::t_e794be41400efb 60-63
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.9",
+  "base_commit_sha": "1a101434674e1daf07313cd9a6ac06953d9a1877",
+  "prompts": {},
+  "sessions": {
+    "s_4db44adbb46466": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "7ff54a20-527c-460b-85c1-507c6e04c2a2",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
