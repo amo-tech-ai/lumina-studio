@@ -9,6 +9,35 @@
 -- Rollback:
 --   drop function if exists public.get_booking(uuid);
 --   drop function if exists public.list_bookings(text, uuid, uuid, text[], text, integer);
+--   drop function if exists talent.booking_row_to_jsonb(talent.bookings);
+
+-- Explicit party-visible booking shape (matches api-contracts I.2/I.3; not SELECT *).
+create or replace function talent.booking_row_to_jsonb(b talent.bookings)
+returns jsonb
+language sql
+stable
+set search_path = pg_catalog, talent
+as $helper$
+  select jsonb_build_object(
+    'id', b.id,
+    'brand_org_id', b.brand_org_id,
+    'talent_profile_id', b.talent_profile_id,
+    'shoot_id', b.shoot_id,
+    'status', b.status,
+    'date_start', b.date_start,
+    'date_end', b.date_end,
+    'rate_quoted', b.rate_quoted,
+    'message', b.message,
+    'requested_by', b.requested_by,
+    'approved_by', b.approved_by,
+    'cancelled_by', b.cancelled_by,
+    'cancellation_reason', b.cancellation_reason,
+    'expires_at', b.expires_at,
+    'created_at', b.created_at,
+    'updated_at', b.updated_at,
+    'version', b.version
+  );
+$helper$;
 
 create or replace function public.get_booking(p_booking_id uuid)
 returns jsonb
@@ -89,7 +118,7 @@ begin
   ) into v_history;
 
   return jsonb_build_object(
-    'booking', to_jsonb(v_booking),
+    'booking', talent.booking_row_to_jsonb(v_booking),
     'talent', coalesce(v_talent, 'null'::jsonb),
     'history', v_history,
     'viewer_role', v_viewer_role
@@ -166,48 +195,44 @@ begin
   end if;
 
   select coalesce(
-    jsonb_agg(to_jsonb(b) order by b.created_at desc, b.id desc),
+    jsonb_agg(page.item order by page.created_at desc, page.id desc),
     '[]'::jsonb
   )
   into v_all
   from (
-    select b.*
-    from talent.bookings b
+    select
+      talent.booking_row_to_jsonb(bk) as item,
+      bk.created_at,
+      bk.id
+    from talent.bookings bk
     where (
-      (p_role = 'brand' and b.brand_org_id = p_org_id)
+      (p_role = 'brand' and bk.brand_org_id = p_org_id)
       or (
         p_role = 'talent'
-        and b.talent_profile_id = p_talent_profile_id
+        and bk.talent_profile_id = p_talent_profile_id
       )
       or (
         p_role = 'agency'
-        and b.talent_profile_id in (
+        and bk.talent_profile_id in (
           select tp.id
           from talent.talent_profiles tp
           where tp.agency_org_id = p_org_id
         )
       )
     )
-    and (p_status is null or b.status = any (p_status))
+    and (p_status is null or bk.status = any (p_status))
     and (
       p_cursor is null
-      or (b.created_at, b.id) < (v_cursor_ts, v_cursor_id)
+      or (bk.created_at, bk.id) < (v_cursor_ts, v_cursor_id)
     )
-    order by b.created_at desc, b.id desc
+    order by bk.created_at desc, bk.id desc
     limit v_limit + 1
-  ) b;
+  ) page;
 
   v_len := jsonb_array_length(v_all);
 
   if v_len > v_limit then
-    v_items := (
-      select coalesce(jsonb_agg(elem order by (elem->>'created_at') desc, (elem->>'id') desc), '[]'::jsonb)
-      from (
-        select value as elem
-        from jsonb_array_elements(v_all) with ordinality
-        where ordinality <= v_limit
-      ) page
-    );
+    v_items := v_all - v_limit;
     v_next_cursor :=
       (v_all->(v_limit - 1)->>'created_at')
       || '|'
