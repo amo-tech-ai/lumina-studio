@@ -1,5 +1,5 @@
 // IPI-348 · MODELGATE-10 — Booking Agent tools.
-// READ via public.search_talent; WRITE via create_booking_request RPC only.
+// READ via public.check_talent_availability; WRITE via create_booking_request RPC only.
 // Never expose confirm_booking — confirmation is human-only via POST .../approve.
 //
 // Same auth pattern as talent-match-tools.ts: requestToken (AsyncLocalStorage)
@@ -20,19 +20,19 @@ function getUserScopedClient() {
 
 type TalentRow = z.infer<typeof TalentResultSchema>;
 
-async function findTalentInSearch(
+async function fetchTalentAvailability(
   talentProfileId: string,
   dateStart: string,
   dateEnd: string,
-): Promise<TalentRow | null> {
+): Promise<TalentRow> {
   const supabase = getUserScopedClient();
-  const { data, error } = await supabase.rpc("search_talent", {
+  const { data, error } = await supabase.rpc("check_talent_availability", {
+    p_talent_profile_id: talentProfileId,
     p_date_start: dateStart,
     p_date_end: dateEnd,
   });
-  if (error) throw new Error(`search_talent failed: ${error.message}`);
-  const rows = (data ?? []) as TalentRow[];
-  return rows.find((row) => row.id === talentProfileId) ?? null;
+  if (error) throw new Error(`check_talent_availability failed: ${error.message}`);
+  return TalentResultSchema.parse(data);
 }
 
 /** Tier midpoints from talent.compute_rate_tier boundaries — not raw rates from DB. */
@@ -74,7 +74,7 @@ export const checkTalentAvailability = createTool({
   id: "checkTalentAvailability",
   description:
     "Pre-check whether a talent profile appears available for a date range. " +
-    "Uses search_talent availability flags (blocked/tentative/booked calendar rows) — " +
+    "Uses check_talent_availability RPC (same calendar rules as search_talent, point lookup by id) — " +
     "UX feedback only; confirmed overlap is enforced at approve time by the DB EXCLUDE constraint.",
   inputSchema: z.object({
     talentProfileId: z.string().uuid(),
@@ -89,17 +89,7 @@ export const checkTalentAvailability = createTool({
     reason: z.string(),
   }),
   execute: async ({ talentProfileId, dateStart, dateEnd }) => {
-    const match = await findTalentInSearch(talentProfileId, dateStart, dateEnd);
-    if (!match) {
-      return {
-        talentProfileId,
-        isAvailable: false,
-        displayName: null,
-        rateTier: null,
-        reason:
-          "Talent profile was not returned by search_talent for these dates (may be outside browse limit).",
-      };
-    }
+    const match = await fetchTalentAvailability(talentProfileId, dateStart, dateEnd);
 
     return {
       talentProfileId,

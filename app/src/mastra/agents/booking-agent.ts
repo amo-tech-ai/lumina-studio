@@ -3,11 +3,7 @@
 // Never confirms — approve/confirm is human-only via POST /api/bookings/{id}/approve.
 
 import { Agent } from "@mastra/core/agent";
-import {
-  checkTalentAvailability,
-  createBookingDraft,
-  draftBookingQuote,
-} from "@/mastra/tools/booking-tools";
+import { agentTools } from "@/mastra/tools";
 import { resolveModel } from "@/mastra/models";
 
 export const bookingAgent = new Agent({
@@ -15,9 +11,9 @@ export const bookingAgent = new Agent({
   name: "Booking",
   model: resolveModel(),
   tools: {
-    checkTalentAvailability,
-    draftBookingQuote,
-    createBookingDraft,
+    checkTalentAvailability: agentTools.checkTalentAvailability,
+    draftBookingQuote: agentTools.draftBookingQuote,
+    createBookingDraft: agentTools.createBookingDraft,
   },
   instructions: `You are the iPix Booking agent for model booking flows (wizard, bookings inbox, model hub, roster).
 
