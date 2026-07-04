@@ -1,14 +1,11 @@
 import { GoogleGenAI, Type } from "npm:@google/genai@2.8.0";
 
-import type { SupabaseClient } from "npm:@supabase/supabase-js@2";
-
 import { insertAgentLog } from "../_shared/agent-log.ts";
-import { isAuthFailure, resolveAuth } from "../_shared/auth.ts";
 import { handleCors } from "../_shared/cors.ts";
-import { getEdgeEnv, getOptionalSecret } from "../_shared/env.ts";
+import { getOptionalSecret } from "../_shared/env.ts";
 import { errorResponse, jsonResponse, safeErrorMessage } from "../_shared/response.ts";
 import { resolveGeminiModel } from "../_shared/gemini.ts";
-import { createServiceClient, createUserClient } from "../_shared/supabase-client.ts";
+import { isCallerFailure, resolveCaller } from "../_shared/resolve-caller.ts";
 
 const MODEL = resolveGeminiModel();
 const MAX_IMAGE_BYTES = 10 * 1024 * 1024; // 10 MB
@@ -146,29 +143,6 @@ async function fetchImagePart(assetUrl: string, fallbackMimeType: string | null)
       data: bytesToBase64(bytes),
     },
   };
-}
-
-type CallerResult = { client: SupabaseClient; userId: string | null } | { response: Response };
-
-function isCallerFailure(result: CallerResult): result is { response: Response } {
-  return "response" in result;
-}
-
-/**
- * Trusted internal callers (e.g. the Cloudinary webhook, already signature-verified)
- * authenticate with the service-role key instead of a user JWT — bypass RLS via
- * createServiceClient() rather than trying resolveAuth's getUser() on a non-JWT token.
- */
-async function resolveCaller(req: Request): Promise<CallerResult> {
-  const header = req.headers.get("Authorization");
-  const token = header?.startsWith("Bearer ") ? header.slice(7).trim() : "";
-  if (token && token === getEdgeEnv().serviceRoleKey) {
-    return { client: createServiceClient(), userId: null };
-  }
-
-  const auth = await resolveAuth(req, { required: true });
-  if (isAuthFailure(auth)) return auth;
-  return { client: createUserClient(auth.accessToken), userId: auth.user.id };
 }
 
 console.info("audit-asset-dna function started");

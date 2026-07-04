@@ -180,20 +180,28 @@ function triggerDnaAudit(assetId: string) {
   }
 
   after(async () => {
+    // 35s: a hair past the edge function's own 30s Gemini timeout, so it always
+    // resolves the response before we'd abort the request out from under it.
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 35_000);
     try {
-      const res = await fetch(`${supabaseUrl}/functions/v1/audit-asset-dna`, {
+      const url = new URL("/functions/v1/audit-asset-dna", supabaseUrl).toString();
+      const res = await fetch(url, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${serviceRoleKey}`,
         },
         body: JSON.stringify({ assetId }),
+        signal: controller.signal,
       });
       if (!res.ok) {
         console.error("[cloudinary/webhook] DNA audit trigger failed:", res.status, await res.text());
       }
     } catch (e) {
       console.error("[cloudinary/webhook] DNA audit trigger failed (non-fatal):", e);
+    } finally {
+      clearTimeout(timeoutId);
     }
   });
 }
