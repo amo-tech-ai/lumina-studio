@@ -13,6 +13,7 @@
     "supabase:push": "supabase db push --linked",
     "supabase:verify": "node scripts/verify-supabase.mjs",
     "supabase:verify-rls": "node scripts/verify-rls.mjs",
+    "supabase:verify-booking-gate": "node scripts/verify-booking-gate.mjs",
     "supabase:verify-edge": "node scripts/verify-edge-functions.mjs",
     "supabase:verify-brand-intelligence": "node scripts/verify-brand-intelligence.mjs",
     "seed:sample-brand": "node scripts/seed-sample-brand.mjs",

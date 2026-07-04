@@ -67,3 +67,48 @@ jobs:
 
       - name: Unit tests
         run: npm run test
+
+  # IPI-347 · Model Gate capstone — remote SQL + RLS when DATABASE_URL secret is set.
+  # secrets.* cannot gate job-level if: — use a probe job (actions/runner#520).
+  booking-gate-check:
+    runs-on: ubuntu-latest
+    outputs:
+      db_configured: ${{ steps.check.outputs.configured }}
+    steps:
+      - id: check
+        shell: bash
+        run: |
+          if [ -n "${{ secrets.DATABASE_URL }}" ]; then
+            echo "configured=true" >> $GITHUB_OUTPUT
+          else
+            echo "configured=false" >> $GITHUB_OUTPUT
+          fi
+
+  booking-gate:
+    needs: booking-gate-check
+    if: needs.booking-gate-check.outputs.db_configured == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+
+      - name: Install psql client
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+
+      - name: Install app dependencies (typecheck + API tests in gate script)
+        working-directory: app
+        run: npm ci
+
+      - name: Model Gate verification
+        env:
+          REQUIRE_BOOKING_SQL: "1"
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: npm run supabase:verify-booking-gate
