@@ -61,3 +61,7 @@ pr9-storefront-test/
 
 # Deprecated skills staging — canonical skills live in .claude/skills/
 .agents/
+
+# Design source files — not committed, copied into worktrees via .worktreeinclude
+Universal design prompt/
+Universal design prompt.zip
