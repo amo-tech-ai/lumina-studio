@@ -16,6 +16,7 @@ describe("IPI-340 create_booking_request migration contract", () => {
     expect(sql).toContain("security definer");
     expect(sql).toContain("set search_path = public, talent, shoot");
     expect(sql).toContain("authentication required");
+    expect(sql).toContain("p_brand_org_id is null");
     expect(sql).toContain("not a member of this organization");
     expect(sql).toContain("invalid date range: start date must be on or before end date");
     expect(sql).toContain("talent profile not found");

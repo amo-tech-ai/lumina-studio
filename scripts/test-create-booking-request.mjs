@@ -7,6 +7,7 @@
  *
  * Requires SUPABASE_DB_URL or DATABASE_URL (direct Postgres) + service role for seed.
  */
+import { randomBytes } from "node:crypto";
 import { readFileSync, existsSync } from "node:fs";
 import { resolve } from "node:path";
 import { execFileSync } from "node:child_process";
@@ -44,7 +45,10 @@ if (!dbUrl || !url || !anonKey || !serviceKey) {
 }
 
 const stamp = Date.now();
-const password = "BookingTestPass123!";
+const password =
+  process.env.QA_PASSWORD ??
+  process.env.TEST_USER_PASSWORD ??
+  `Ipi340-${randomBytes(16).toString("hex")}!`;
 const email = `ipi340-booking-${stamp}@example.com`;
 
 let failures = 0;
@@ -61,6 +65,10 @@ function pass(msg) {
 function assert(cond, msg) {
   if (cond) pass(msg);
   else fail(msg);
+}
+
+function sqlLiteral(value) {
+  return `'${String(value).replace(/'/g, "''")}'`;
 }
 
 function sqlQuery(text) {
@@ -80,140 +88,252 @@ const admin = createClient(url, serviceKey, {
   auth: { persistSession: false, autoRefreshToken: false },
 });
 
+function makeAnonClient() {
+  return createClient(url, anonKey, {
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
+}
+
+async function createTestUser() {
+  const { data, error } = await admin.auth.admin.createUser({
+    email,
+    password,
+    email_confirm: true,
+  });
+  if (error) throw new Error(`createUser: ${error.message}`);
+  return data.user.id;
+}
+
+async function signInClient() {
+  const client = makeAnonClient();
+  const { error } = await client.auth.signInWithPassword({ email, password });
+  if (error) throw new Error(`signIn: ${error.message}`);
+  return client;
+}
+
+function seedOrgBrandTalent(userId) {
+  const orgId = sqlQuery(`
+    insert into public.organizations (name, slug, owner_id, type)
+    values (${sqlLiteral(`IPI340 Org ${stamp}`)}, ${sqlLiteral(`ipi340-org-${stamp}`)}, ${sqlLiteral(userId)}, 'brand')
+    returning id
+  `);
+
+  const brandId = sqlQuery(`
+    insert into public.brands (name, user_id, org_id)
+    values (${sqlLiteral(`IPI340 Brand ${stamp}`)}, ${sqlLiteral(userId)}, ${sqlLiteral(orgId)})
+    returning id
+  `);
+
+  const talentId = sqlQuery(`
+    insert into talent.talent_profiles (agency_org_id, display_name)
+    values (${sqlLiteral(orgId)}, ${sqlLiteral(`Test Talent ${stamp}`)})
+    returning id
+  `);
+
+  return { orgId, brandId, talentId };
+}
+
+function seedForeignShoot(userId) {
+  const foreignOrgId = sqlQuery(`
+    insert into public.organizations (name, slug, owner_id, type)
+    values (${sqlLiteral(`IPI340 Foreign Org ${stamp}`)}, ${sqlLiteral(`ipi340-foreign-${stamp}`)}, ${sqlLiteral(userId)}, 'brand')
+    returning id
+  `);
+
+  const foreignBrandId = sqlQuery(`
+    insert into public.brands (name, user_id, org_id)
+    values (${sqlLiteral(`IPI340 Foreign Brand ${stamp}`)}, ${sqlLiteral(userId)}, ${sqlLiteral(foreignOrgId)})
+    returning id
+  `);
+
+  const foreignShootId = sqlQuery(`
+    insert into shoot.shoots (brand_id, name, type, created_by)
+    values (${sqlLiteral(foreignBrandId)}, ${sqlLiteral(`Foreign Shoot ${stamp}`)}, 'studio_ecommerce', ${sqlLiteral(userId)})
+    returning id
+  `);
+
+  return { foreignOrgId, foreignBrandId, foreignShootId };
+}
+
+async function runSuccessTests(client, ctx) {
+  const { orgId, talentId, userId } = ctx;
+  const { data: created, error: createErr } = await client.rpc("create_booking_request", {
+    p_brand_org_id: orgId,
+    p_talent_profile_id: talentId,
+    p_date_start: "2026-08-01",
+    p_date_end: "2026-08-02",
+    p_message: "MG-3 integration test",
+  });
+
+  assert(!createErr, `create_booking_request succeeds (${createErr?.message ?? "ok"})`);
+  assert(created?.status === "requested", "returns status requested");
+  assert(created?.version === 1, "returns version 1");
+  assert(!!created?.booking_id, "returns booking_id");
+  assert(!!created?.expires_at, "returns expires_at");
+  ctx.bookingId = created?.booking_id;
+
+  const rowParts = sqlQuery(`
+    select status || '|' || requested_by || '|' || version || '|' || coalesce(message, '')
+    from talent.bookings
+    where id = ${sqlLiteral(ctx.bookingId)}
+  `).split("|");
+  assert(rowParts[0] === "requested", "booking row status is requested");
+  assert(rowParts[1] === userId, "requested_by is auth.uid()");
+  assert(rowParts[2] === "1", "booking row version is 1");
+  assert(rowParts[3] === "MG-3 integration test", "message persisted");
+
+  const notifCount = Number(
+    sqlQuery(`
+      select count(*)::text
+      from public.notifications
+      where kind = 'booking_requested'
+        and payload->>'booking_id' = ${sqlLiteral(ctx.bookingId)}
+    `),
+  );
+  assert(notifCount >= 1, "insert trigger fires booking_requested notification");
+}
+
+async function runRejectionTests(client, ctx) {
+  const { orgId, talentId, foreignShootId } = ctx;
+
+  const anonClient = makeAnonClient();
+  const { error: anonErr } = await anonClient.rpc("create_booking_request", {
+    p_brand_org_id: orgId,
+    p_talent_profile_id: talentId,
+    p_date_start: "2026-08-01",
+    p_date_end: "2026-08-02",
+  });
+  assert(
+    !!anonErr &&
+      (/authentication required/i.test(anonErr.message) ||
+        /permission denied for function create_booking_request/i.test(anonErr.message)),
+    "rejects anonymous callers",
+  );
+
+  const { error: nullOrgErr } = await client.rpc("create_booking_request", {
+    p_brand_org_id: null,
+    p_talent_profile_id: talentId,
+    p_date_start: "2026-08-01",
+    p_date_end: "2026-08-02",
+  });
+  assert(
+    !!nullOrgErr && /not a member of this organization/i.test(nullOrgErr.message),
+    "rejects null brand org id",
+  );
+
+  const { error: denyErr } = await client.rpc("create_booking_request", {
+    p_brand_org_id: "00000000-0000-0000-0000-000000000099",
+    p_talent_profile_id: talentId,
+    p_date_start: "2026-08-01",
+    p_date_end: "2026-08-02",
+  });
+  assert(!!denyErr && /not a member/i.test(denyErr.message), "rejects non-member org");
+
+  const { error: badDateErr } = await client.rpc("create_booking_request", {
+    p_brand_org_id: orgId,
+    p_talent_profile_id: talentId,
+    p_date_start: "2026-08-05",
+    p_date_end: "2026-08-01",
+  });
+  assert(!!badDateErr && /invalid date range/i.test(badDateErr.message), "rejects inverted dates");
+
+  const { error: missingTalentErr } = await client.rpc("create_booking_request", {
+    p_brand_org_id: orgId,
+    p_talent_profile_id: "00000000-0000-0000-0000-000000000099",
+    p_date_start: "2026-08-01",
+    p_date_end: "2026-08-02",
+  });
+  assert(
+    !!missingTalentErr && /talent profile not found/i.test(missingTalentErr.message),
+    "rejects missing talent",
+  );
+
+  const { error: foreignShootErr } = await client.rpc("create_booking_request", {
+    p_brand_org_id: orgId,
+    p_talent_profile_id: talentId,
+    p_date_start: "2026-08-01",
+    p_date_end: "2026-08-02",
+    p_shoot_id: foreignShootId,
+  });
+  assert(
+    !!foreignShootErr && /shoot not found/i.test(foreignShootErr.message),
+    "rejects shoot from another organization",
+  );
+}
+
+async function cleanupResources(ctx) {
+  const { bookingId, talentId, brandId, orgId, foreignShootId, foreignBrandId, foreignOrgId, userId } =
+    ctx;
+
+  if (bookingId) {
+    try {
+      sqlExec(`delete from talent.bookings where id = ${sqlLiteral(bookingId)}`);
+    } catch {
+      /* ignore */
+    }
+  }
+  if (talentId) {
+    try {
+      sqlExec(`delete from talent.talent_profiles where id = ${sqlLiteral(talentId)}`);
+    } catch {
+      /* ignore */
+    }
+  }
+  if (foreignShootId) {
+    try {
+      sqlExec(`delete from shoot.shoots where id = ${sqlLiteral(foreignShootId)}`);
+    } catch {
+      /* ignore */
+    }
+  }
+  if (brandId) {
+    try {
+      sqlExec(`delete from public.brands where id = ${sqlLiteral(brandId)}`);
+    } catch {
+      /* ignore */
+    }
+  }
+  if (foreignBrandId) {
+    try {
+      sqlExec(`delete from public.brands where id = ${sqlLiteral(foreignBrandId)}`);
+    } catch {
+      /* ignore */
+    }
+  }
+  if (orgId) {
+    try {
+      sqlExec(`delete from public.org_members where org_id = ${sqlLiteral(orgId)}`);
+      sqlExec(`delete from public.organizations where id = ${sqlLiteral(orgId)}`);
+    } catch {
+      /* ignore */
+    }
+  }
+  if (foreignOrgId) {
+    try {
+      sqlExec(`delete from public.org_members where org_id = ${sqlLiteral(foreignOrgId)}`);
+      sqlExec(`delete from public.organizations where id = ${sqlLiteral(foreignOrgId)}`);
+    } catch {
+      /* ignore */
+    }
+  }
+  if (userId) {
+    await admin.auth.admin.deleteUser(userId).catch(() => {});
+  }
+}
+
 async function main() {
-  let userId;
-  let orgId;
-  let brandId;
-  let talentId;
-  let bookingId;
+  const ctx = {};
 
   try {
-    const { data: authData, error: authErr } = await admin.auth.admin.createUser({
-      email,
-      password,
-      email_confirm: true,
-    });
-    if (authErr) throw new Error(`createUser: ${authErr.message}`);
-    userId = authData.user.id;
+    ctx.userId = await createTestUser();
+    const client = await signInClient();
+    Object.assign(ctx, seedOrgBrandTalent(ctx.userId));
+    Object.assign(ctx, seedForeignShoot(ctx.userId));
 
-    const client = createClient(url, anonKey, {
-      auth: { persistSession: false, autoRefreshToken: false },
-    });
-    const { error: signInErr } = await client.auth.signInWithPassword({ email, password });
-    if (signInErr) throw new Error(`signIn: ${signInErr.message}`);
-
-    orgId = sqlQuery(`
-      insert into public.organizations (name, slug, owner_id, type)
-      values ('IPI340 Org ${stamp}', 'ipi340-org-${stamp}', '${userId}', 'brand')
-      returning id
-    `);
-
-    brandId = sqlQuery(`
-      insert into public.brands (name, user_id, org_id)
-      values ('IPI340 Brand ${stamp}', '${userId}', '${orgId}')
-      returning id
-    `);
-
-    talentId = sqlQuery(`
-      insert into talent.talent_profiles (agency_org_id, display_name)
-      values ('${orgId}', 'Test Talent ${stamp}')
-      returning id
-    `);
-
-    const { data: created, error: createErr } = await client.rpc("create_booking_request", {
-      p_brand_org_id: orgId,
-      p_talent_profile_id: talentId,
-      p_date_start: "2026-08-01",
-      p_date_end: "2026-08-02",
-      p_message: "MG-3 integration test",
-    });
-
-    assert(!createErr, `create_booking_request succeeds (${createErr?.message ?? "ok"})`);
-    assert(created?.status === "requested", "returns status requested");
-    assert(created?.version === 1, "returns version 1");
-    assert(!!created?.booking_id, "returns booking_id");
-    assert(!!created?.expires_at, "returns expires_at");
-    bookingId = created?.booking_id;
-
-    const rowParts = sqlQuery(`
-      select status || '|' || requested_by || '|' || version || '|' || coalesce(message, '')
-      from talent.bookings
-      where id = '${bookingId}'
-    `).split("|");
-    assert(rowParts[0] === "requested", "booking row status is requested");
-    assert(rowParts[1] === userId, "requested_by is auth.uid()");
-    assert(rowParts[2] === "1", "booking row version is 1");
-    assert(rowParts[3] === "MG-3 integration test", "message persisted");
-
-    const notifCount = Number(
-      sqlQuery(`
-        select count(*)::text
-        from public.notifications
-        where kind = 'booking_requested'
-          and payload->>'booking_id' = '${bookingId}'
-      `),
-    );
-    assert(notifCount >= 1, "insert trigger fires booking_requested notification");
-
-    const { error: denyErr } = await client.rpc("create_booking_request", {
-      p_brand_org_id: "00000000-0000-0000-0000-000000000099",
-      p_talent_profile_id: talentId,
-      p_date_start: "2026-08-01",
-      p_date_end: "2026-08-02",
-    });
-    assert(!!denyErr && /not a member/i.test(denyErr.message), "rejects non-member org");
-
-    const { error: badDateErr } = await client.rpc("create_booking_request", {
-      p_brand_org_id: orgId,
-      p_talent_profile_id: talentId,
-      p_date_start: "2026-08-05",
-      p_date_end: "2026-08-01",
-    });
-    assert(!!badDateErr && /invalid date range/i.test(badDateErr.message), "rejects inverted dates");
-
-    const { error: missingTalentErr } = await client.rpc("create_booking_request", {
-      p_brand_org_id: orgId,
-      p_talent_profile_id: "00000000-0000-0000-0000-000000000099",
-      p_date_start: "2026-08-01",
-      p_date_end: "2026-08-02",
-    });
-    assert(
-      !!missingTalentErr && /talent profile not found/i.test(missingTalentErr.message),
-      "rejects missing talent",
-    );
+    await runSuccessTests(client, ctx);
+    await runRejectionTests(client, ctx);
   } finally {
-    if (bookingId) {
-      try {
-        sqlExec(`delete from talent.bookings where id = '${bookingId}'`);
-      } catch {
-        /* ignore */
-      }
-    }
-    if (talentId) {
-      try {
-        sqlExec(`delete from talent.talent_profiles where id = '${talentId}'`);
-      } catch {
-        /* ignore */
-      }
-    }
-    if (brandId) {
-      try {
-        sqlExec(`delete from public.brands where id = '${brandId}'`);
-      } catch {
-        /* ignore */
-      }
-    }
-    if (orgId) {
-      try {
-        sqlExec(`delete from public.org_members where org_id = '${orgId}'`);
-        sqlExec(`delete from public.organizations where id = '${orgId}'`);
-      } catch {
-        /* ignore */
-      }
-    }
-    if (userId) {
-      await admin.auth.admin.deleteUser(userId).catch(() => {});
-    }
+    await cleanupResources(ctx);
   }
 
   console.log(failures === 0 ? "\n✓ create_booking_request tests passed" : `\n✗ ${failures} failure(s)`);

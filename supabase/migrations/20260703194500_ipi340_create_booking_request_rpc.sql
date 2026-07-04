@@ -33,7 +33,7 @@ begin
     raise exception 'authentication required';
   end if;
 
-  if not public.is_org_member(p_brand_org_id) then
+  if p_brand_org_id is null or not public.is_org_member(p_brand_org_id) then
     raise exception 'not a member of this organization';
   end if;
 

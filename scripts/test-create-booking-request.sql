@@ -3,8 +3,7 @@
 --
 -- This file documents expected RPC behavior for psql-based CI. The Node harness
 -- seeds auth users, sets org membership, and calls create_booking_request via PostgREST.
-
-\echo 'IPI-340: use scripts/test-create-booking-request.mjs for remote verification'
+-- Run the Node harness: infisical run -- node scripts/test-create-booking-request.mjs
 
 select pg_catalog.pg_get_function_identity_arguments(p.oid) as args
 from pg_proc p
