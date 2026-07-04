@@ -69,9 +69,25 @@ jobs:
         run: npm run test
 
   # IPI-347 · Model Gate capstone — remote SQL + RLS when DATABASE_URL secret is set.
-  booking-gate:
+  # secrets.* cannot gate job-level if: — use a probe job (actions/runner#520).
+  booking-gate-check:
     runs-on: ubuntu-latest
-    if: ${{ secrets.DATABASE_URL != '' }}
+    outputs:
+      db_configured: ${{ steps.check.outputs.configured }}
+    steps:
+      - id: check
+        shell: bash
+        run: |
+          if [ -n "${{ secrets.DATABASE_URL }}" ]; then
+            echo "configured=true" >> $GITHUB_OUTPUT
+          else
+            echo "configured=false" >> $GITHUB_OUTPUT
+          fi
+
+  booking-gate:
+    needs: booking-gate-check
+    if: needs.booking-gate-check.outputs.db_configured == 'true'
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
