@@ -1,12 +1,14 @@
 import { GoogleGenAI, Type } from "npm:@google/genai@2.8.0";
 
+import type { SupabaseClient } from "npm:@supabase/supabase-js@2";
+
 import { insertAgentLog } from "../_shared/agent-log.ts";
 import { isAuthFailure, resolveAuth } from "../_shared/auth.ts";
 import { handleCors } from "../_shared/cors.ts";
-import { getOptionalSecret } from "../_shared/env.ts";
+import { getEdgeEnv, getOptionalSecret } from "../_shared/env.ts";
 import { errorResponse, jsonResponse, safeErrorMessage } from "../_shared/response.ts";
 import { resolveGeminiModel } from "../_shared/gemini.ts";
-import { createUserClient } from "../_shared/supabase-client.ts";
+import { createServiceClient, createUserClient } from "../_shared/supabase-client.ts";
 
 const MODEL = resolveGeminiModel();
 const MAX_IMAGE_BYTES = 10 * 1024 * 1024; // 10 MB
@@ -146,6 +148,29 @@ async function fetchImagePart(assetUrl: string, fallbackMimeType: string | null)
   };
 }
 
+type CallerResult = { client: SupabaseClient; userId: string | null } | { response: Response };
+
+function isCallerFailure(result: CallerResult): result is { response: Response } {
+  return "response" in result;
+}
+
+/**
+ * Trusted internal callers (e.g. the Cloudinary webhook, already signature-verified)
+ * authenticate with the service-role key instead of a user JWT — bypass RLS via
+ * createServiceClient() rather than trying resolveAuth's getUser() on a non-JWT token.
+ */
+async function resolveCaller(req: Request): Promise<CallerResult> {
+  const header = req.headers.get("Authorization");
+  const token = header?.startsWith("Bearer ") ? header.slice(7).trim() : "";
+  if (token && token === getEdgeEnv().serviceRoleKey) {
+    return { client: createServiceClient(), userId: null };
+  }
+
+  const auth = await resolveAuth(req, { required: true });
+  if (isAuthFailure(auth)) return auth;
+  return { client: createUserClient(auth.accessToken), userId: auth.user.id };
+}
+
 console.info("audit-asset-dna function started");
 
 Deno.serve(async (req: Request) => {
@@ -159,8 +184,8 @@ Deno.serve(async (req: Request) => {
       return errorResponse("method_not_allowed", "Use POST", 405);
     }
 
-    const auth = await resolveAuth(req, { required: true });
-    if (isAuthFailure(auth)) return auth.response;
+    const caller = await resolveCaller(req);
+    if (isCallerFailure(caller)) return caller.response;
 
     let body: RequestBody;
     try {
@@ -192,7 +217,7 @@ Deno.serve(async (req: Request) => {
       return errorResponse("config_error", "DNA audit is not configured", 503);
     }
 
-    const client = createUserClient(auth.accessToken);
+    const client = caller.client;
     let query = client.from("assets").select("id, brand_id, url, mime_type");
     query = assetId ? query.eq("id", assetId) : query.eq("url", assetUrl);
 
@@ -303,7 +328,7 @@ Use the image only. Be strict with blurry, dark, cluttered, low-resolution, or o
     try {
       const result = await insertAgentLog(client, {
         agentName: "audit-asset-dna",
-        userId: auth.user.id,
+        userId: caller.userId,
         brandId: asset.brand_id,
         input: { assetId: asset.id, assetUrl: asset.url },
         output: { dnaScore, dnaStatus },
