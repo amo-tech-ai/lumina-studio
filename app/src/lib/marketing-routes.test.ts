@@ -13,6 +13,7 @@ const OPERATOR_SECTIONS = [
   "shoots",
   "assets",
   "campaigns",
+  "crm",
   "matching",
   "onboarding",
   "preview",

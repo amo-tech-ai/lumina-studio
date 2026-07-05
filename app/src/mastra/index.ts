@@ -1,5 +1,6 @@
 import { Mastra } from "@mastra/core/mastra";
 import { visualIdentityAgent, socialDiscoveryAgent, modelMatchAgent } from "./agents";
+import { crmAssistantAgent } from "./agents/crm-assistant-agent";
 import { brandIntelligenceAgent } from "./agents/brand-intelligence-agent";
 import { durableAgents } from "./durable";
 import { shootWizardWorkflow, brandIntelligenceWorkflow } from "./workflows";
@@ -18,6 +19,7 @@ export const agents = {
   "social-discovery": socialDiscoveryAgent,
   "brand-intelligence": brandIntelligenceAgent,
   "model-match": modelMatchAgent,
+  "crm-assistant": crmAssistantAgent,
 };
 
 export const REQUIRED_AGENT_IDS = [

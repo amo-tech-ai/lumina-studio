@@ -350,6 +350,22 @@ describe("useRouteWelcome", () => {
     });
   });
 
+  describe("CRM routes (IPI-368)", () => {
+    it("welcomes on companies list", () => {
+      const { result } = renderHook(() =>
+        useRouteWelcome({ pathname: "/app/crm/companies" }),
+      );
+      expect(result.current).toContain("Companies");
+    });
+
+    it("welcomes on pipeline detail", () => {
+      const { result } = renderHook(() =>
+        useRouteWelcome({ pathname: "/app/crm/pipeline/" + "550e8400-e29b-41d4-a716-446655440000" }),
+      );
+      expect(result.current).toContain("Deal detail");
+    });
+  });
+
   describe("Dynamic updates", () => {
     it("updates welcome when pathname changes", () => {
       const { result, rerender } = renderHook(
