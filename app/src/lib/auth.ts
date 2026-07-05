@@ -7,9 +7,15 @@ import { createClient } from "@supabase/supabase-js";
 
 export type OperatorUser = { id: string; email?: string; name: string };
 
-const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const SUPABASE_ANON_KEY =
-  process.env.SUPABASE_ANON_KEY ?? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+function readSupabaseEnv() {
+  return {
+    url: process.env.NEXT_PUBLIC_SUPABASE_URL || undefined,
+    anonKey:
+      process.env.SUPABASE_ANON_KEY ||
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
+      undefined,
+  };
+}
 
 /**
  * Extract a Supabase access token from a request: `Authorization: Bearer <jwt>`
@@ -54,9 +60,10 @@ export function accessTokenFromCookieString(
  */
 export async function resolveOperatorUser(request: Request): Promise<OperatorUser> {
   const token = extractAccessToken(request);
+  const { url: supabaseUrl, anonKey: supabaseAnonKey } = readSupabaseEnv();
 
-  if (token && SUPABASE_URL && SUPABASE_ANON_KEY) {
-    const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+  if (token && supabaseUrl && supabaseAnonKey) {
+    const supabase = createClient(supabaseUrl, supabaseAnonKey, {
       auth: { persistSession: false, autoRefreshToken: false },
     });
     const { data, error } = await supabase.auth.getUser(token);
