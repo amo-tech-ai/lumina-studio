@@ -49,25 +49,35 @@ export async function groqStructuredCompletion(
   );
 
   const rateLimits = parseGroqRateLimitHeaders(response.headers);
+  const payload = await readGroqJsonPayload(response);
 
-  const payload = await response.json();
   if (!response.ok) {
+    const err = payload.error as { message?: string } | undefined;
     const message =
-      typeof payload?.error?.message === "string"
-        ? payload.error.message
+      typeof err?.message === "string"
+        ? err.message
         : `Groq HTTP ${response.status}`;
     throw new Error(message);
   }
 
-  const text = payload?.choices?.[0]?.message?.content?.trim() ?? "";
+  const choices = payload.choices as
+    | Array<{ message?: { content?: string } }>
+    | undefined;
+  const text = choices?.[0]?.message?.content?.trim() ?? "";
   if (!text) {
     throw new Error("Empty structured response from Groq");
   }
 
-  const usage = payload?.usage;
+  const usage = payload.usage as
+    | {
+      prompt_tokens?: number;
+      completion_tokens?: number;
+      total_tokens?: number;
+    }
+    | undefined;
   return {
     text,
-    model: payload?.model ?? body.model,
+    model: (payload.model as string | undefined) ?? body.model,
     xGroqRequestId: response.headers.get("x-groq-id") ??
       response.headers.get("x-request-id") ?? undefined,
     usage: usage
@@ -79,6 +89,38 @@ export async function groqStructuredCompletion(
       : undefined,
     rateLimits,
   };
+}
+
+async function readGroqJsonPayload(
+  response: Response,
+): Promise<Record<string, unknown>> {
+  const rawBody = await response.text();
+  if (!rawBody) {
+    return {};
+  }
+
+  const contentType = response.headers.get("content-type") ?? "";
+  const looksJson =
+    contentType.includes("json") || rawBody.trimStart().startsWith("{");
+
+  if (!looksJson) {
+    if (!response.ok) {
+      throw new Error(rawBody.slice(0, 200) || `Groq HTTP ${response.status}`);
+    }
+    throw new Error("Groq response was not JSON");
+  }
+
+  try {
+    const parsed = JSON.parse(rawBody);
+    return typeof parsed === "object" && parsed !== null
+      ? (parsed as Record<string, unknown>)
+      : {};
+  } catch {
+    if (!response.ok) {
+      throw new Error(rawBody.slice(0, 200) || `Groq HTTP ${response.status}`);
+    }
+    throw new Error("Groq response was not valid JSON");
+  }
 }
 
 export function buildStrictJsonRequest(
