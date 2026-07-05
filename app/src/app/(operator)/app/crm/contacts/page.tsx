@@ -17,6 +17,9 @@ export default async function CrmContactsPage() {
       <div className="p-8" style={{ background: "#FBF8F5" }}>
         <h1 className="font-serif text-3xl text-[#1E293B]">Contacts</h1>
         <p className="mt-2 font-sans text-[#64748B]">Sign in to view CRM contacts.</p>
+        <Link href="/login?redirect=/app/crm/contacts" className="mt-4 inline-block text-sm text-[#E87C4D]">
+          Sign in
+        </Link>
       </div>
     );
   }

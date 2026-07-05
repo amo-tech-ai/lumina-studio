@@ -1,24 +1,11 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
+import { companyNameFromDeal, dealHeading, type DealWithCompany } from "@/lib/crm/deal-display";
 import { getCurrentOrgId } from "@/lib/crm/queries";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
-
-type DealDetail = {
-  id: string;
-  stage: string;
-  value: number | null;
-  company_id: string;
-  crm_companies: { name: string } | { name: string }[] | null;
-};
-
-function companyName(deal: DealDetail): string | undefined {
-  const c = deal.crm_companies;
-  if (!c) return undefined;
-  return Array.isArray(c) ? c[0]?.name : c.name;
-}
 
 export default async function CrmDealDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -40,11 +27,9 @@ export default async function CrmDealDetailPage({ params }: { params: Promise<{ 
 
   if (!deal) notFound();
 
-  const row = deal as unknown as DealDetail;
-  const company = companyName(row);
-  const heading =
-    company ??
-    (row.value != null ? `Deal · $${row.value}` : `Deal ${row.id.slice(0, 8)}`);
+  const row = deal as unknown as DealWithCompany;
+  const company = companyNameFromDeal(row);
+  const heading = dealHeading(row);
 
   return (
     <div className="p-8" style={{ background: "#FBF8F5" }}>

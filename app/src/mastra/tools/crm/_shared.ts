@@ -23,3 +23,38 @@ export async function getCrmUserClient(): Promise<CrmUserContext> {
 }
 
 export const NON_TERMINAL_DEAL_STAGES = ["lead", "qualified", "proposal", "negotiation"] as const;
+
+export async function verifyCrmAnchors(
+  client: SupabaseClient,
+  orgId: string,
+  anchors: { companyId?: string; contactId?: string; dealId?: string },
+): Promise<string | null> {
+  if (anchors.companyId) {
+    const { data } = await client
+      .from("crm_companies")
+      .select("id")
+      .eq("id", anchors.companyId)
+      .eq("org_id", orgId)
+      .maybeSingle();
+    if (!data) return "Company not found in your organization";
+  }
+  if (anchors.contactId) {
+    const { data } = await client
+      .from("crm_contacts")
+      .select("id")
+      .eq("id", anchors.contactId)
+      .eq("org_id", orgId)
+      .maybeSingle();
+    if (!data) return "Contact not found in your organization";
+  }
+  if (anchors.dealId) {
+    const { data } = await client
+      .from("crm_deals")
+      .select("id")
+      .eq("id", anchors.dealId)
+      .eq("org_id", orgId)
+      .maybeSingle();
+    if (!data) return "Deal not found in your organization";
+  }
+  return null;
+}
