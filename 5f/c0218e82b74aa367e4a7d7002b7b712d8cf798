@@ -1,0 +1,19 @@
+docs/plan/tasks/2026-07-04-crm-assistant-wave1.md
+  s_5c9f2a2ec2b3af::t_f601d9e2632860 9
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "5fc0218e82b74aa367e4a7d7002b7b712d8cf798",
+  "prompts": {},
+  "sessions": {
+    "s_5c9f2a2ec2b3af": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "4c146179-d0c4-4f21-910e-cebd5c5ba751",
+        "model": "composer-2.5"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
