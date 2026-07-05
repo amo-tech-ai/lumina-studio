@@ -1,0 +1,21 @@
+app/src/lib/crm/activity-state.test.ts
+  s_5c9f2a2ec2b3af::t_2747eba4a5ca1c 1-27
+app/src/lib/crm/activity-state.ts
+  s_5c9f2a2ec2b3af::t_4592d20c571525 1-12
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "5e59446df942741c72210011d35f8789d394cebd",
+  "prompts": {},
+  "sessions": {
+    "s_5c9f2a2ec2b3af": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "4c146179-d0c4-4f21-910e-cebd5c5ba751",
+        "model": "composer-2.5"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
