@@ -1,0 +1,20 @@
+scripts/verify-rls.mjs
+  s_5c9f2a2ec2b3af::t_5b7b12edd4bf23 381-448
+  s_5c9f2a2ec2b3af::t_c5d91b189ec022 342-352
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "aefdeb14c6d4e135b83fae3c27ed67d5a8a19bc9",
+  "prompts": {},
+  "sessions": {
+    "s_5c9f2a2ec2b3af": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "4c146179-d0c4-4f21-910e-cebd5c5ba751",
+        "model": "composer-2.5"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
