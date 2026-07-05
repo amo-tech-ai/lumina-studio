@@ -1,0 +1,25 @@
+app/src/components/shoot/shoots-list-workspace.test.tsx
+  s_12404fa554d700::t_5a0b1f87ef730d 126
+  s_12404fa554d700::t_5dfad967adce4e 113,131
+  s_12404fa554d700::t_8de7f5765be203 16-18
+app/src/components/shoot/ShootCard.tsx
+  s_12404fa554d700::t_7795a8cbe29004 45
+app/src/components/shoot/shoots-list-states.tsx
+  s_12404fa554d700::t_06d0bd7885efa3 1-2,4,12-14,20,22
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "3800f27e8c9e05cab17b72d8c79f23432718cc2a",
+  "prompts": {},
+  "sessions": {
+    "s_12404fa554d700": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "c51c9d5f-0f8a-4434-b966-5de005a41aad",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
