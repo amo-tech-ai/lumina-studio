@@ -1,0 +1,33 @@
+supabase/functions/_shared/llm/structured.ts
+  s_250922caeff5ac::t_3984325331cbcb 25-38
+  s_250922caeff5ac::t_f66bc28238d7e0 53-63
+  s_250922caeff5ac::t_88bf5b67fb21d0 88,100
+  s_250922caeff5ac::t_8cff4c37183dd8 176
+  s_250922caeff5ac::t_c893d4fddcee2b 139,155
+supabase/functions/_shared/llm/groq-client.ts
+  s_250922caeff5ac::t_2127acc6c201d3 52,55,57-58,63-66
+  s_250922caeff5ac::t_77d606d83cdf14 71-77,80
+  s_250922caeff5ac::t_07a6b5a5ba9e18 94-125
+app/src/lib/ai/provider.ts
+  s_250922caeff5ac::t_5c48596638d168 7
+  s_250922caeff5ac::t_0d46c0d6c4bedb 94
+  s_250922caeff5ac::t_186d60ef611a46 74
+  s_250922caeff5ac::t_2347344c1cb58b 75
+  s_250922caeff5ac::t_5e2c797fb558eb 8
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "715e04692d43a49d24a9bdb8cd0c283814bb6d2b",
+  "prompts": {},
+  "sessions": {
+    "s_250922caeff5ac": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "d615a929-53ba-4467-b380-aff6877ff353",
+        "model": "composer-2.5"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
