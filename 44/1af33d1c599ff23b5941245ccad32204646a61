@@ -1,0 +1,118 @@
+app/src/mastra/tools/crm/log-activity.ts
+  s_5c9f2a2ec2b3af::t_e383d64c39718f 11,21,32-33
+  s_5c9f2a2ec2b3af::t_b92f70cfa88f52 1-10,12-20,22-31,34-47
+app/src/mastra/agents/crm-assistant-agent.ts
+  s_5c9f2a2ec2b3af::t_28675bd0c82cca 1-39
+app/src/mastra/tools/crm/index.ts
+  s_5c9f2a2ec2b3af::t_0ec48b796f0b4e 1-4
+app/src/mastra/agents/crm-assistant-agent.test.ts
+  s_5c9f2a2ec2b3af::t_670d25d0c3a5dd 1-27
+app/src/lib/intelligence/use-route-suggestions.test.ts
+  s_5c9f2a2ec2b3af::t_dd888e18a7afd5 315-332
+app/src/components/operator-panel/operator-panel.tsx
+  s_5c9f2a2ec2b3af::t_deba65a6016f97 35-37
+  s_5c9f2a2ec2b3af::t_159fbef4ace6c5 139,144-154
+  s_5c9f2a2ec2b3af::t_da1c58ae5cfebd 155-157
+app/src/mastra/index.ts
+  s_5c9f2a2ec2b3af::t_7881b296a2e7a0 22
+  s_5c9f2a2ec2b3af::t_680ab0b3d3b161 3
+app/src/mastra/tools/crm/search-companies.ts
+  s_5c9f2a2ec2b3af::t_8b3c46a767ca49 1-33
+app/src/components/crm/crm-record-context.tsx
+  s_5c9f2a2ec2b3af::t_d875290731348e 1-43
+app/src/mastra/tools/crm/search-contacts.ts
+  s_5c9f2a2ec2b3af::t_dcab3f5cd9f817 1-32
+app/src/app/(operator)/app/crm/contacts/[id]/page.tsx
+  s_5c9f2a2ec2b3af::t_2e9cc78a122a9e 1-54
+app/src/lib/marketing-routes.test.ts
+  s_5c9f2a2ec2b3af::t_50696299fba2e7 16
+app/src/lib/crm/queries.ts
+  s_5c9f2a2ec2b3af::t_b3893c60910fd7 10
+  s_5c9f2a2ec2b3af::t_85d1d2fbb4686f 20,22,25-26,30-32,36-38,44-45,47-79
+  s_5c9f2a2ec2b3af::t_c3c11bcfe40a6e 7-9
+  s_5c9f2a2ec2b3af::t_cd9caeb58493ac 11-13,17-19
+  s_5c9f2a2ec2b3af::t_2ef25a13ca426f 21
+  s_5c9f2a2ec2b3af::t_2f566dd0268edb 23-24
+  s_5c9f2a2ec2b3af::t_d74e452882e550 27-29
+  s_5c9f2a2ec2b3af::t_c9eb18fa10582a 33-35
+  s_5c9f2a2ec2b3af::t_e863b78da93a6c 39-43
+  s_5c9f2a2ec2b3af::t_057d02e65c4f88 46
+  s_5c9f2a2ec2b3af::t_a2e41b0a1fa0f8 1-6,14-16
+app/src/lib/intelligence/use-route-suggestions.ts
+  s_5c9f2a2ec2b3af::t_13656c1727c183 191-230
+app/src/lib/intelligence/normalize-route-path.test.ts
+  s_5c9f2a2ec2b3af::t_20cabe50fc6248 1-30
+app/src/components/operator-panel/nav-sidebar.tsx
+  s_5c9f2a2ec2b3af::t_8ed84b07ab6ec1 16
+app/src/mastra/tools/index.ts
+  s_5c9f2a2ec2b3af::t_bf7425868d0553 23-28
+  s_5c9f2a2ec2b3af::t_8fc96f210772a9 47-50
+app/src/components/operator-panel/operator-panel.test.ts
+  s_5c9f2a2ec2b3af::t_75c527ce3c1620 14
+  s_5c9f2a2ec2b3af::t_b4ae94006f4ff0 67,73-76
+  s_5c9f2a2ec2b3af::t_b40f5aedf148c9 77-78
+app/src/lib/intelligence/use-route-welcome.test.ts
+  s_5c9f2a2ec2b3af::t_8cf75b3d57adf7 353-368
+app/src/app/(operator)/app/crm/contacts/page.tsx
+  s_5c9f2a2ec2b3af::t_c56105203cdec0 1-72
+app/src/app/(operator)/app/crm/layout.tsx
+  s_5c9f2a2ec2b3af::t_b1fdaa2ed4dd6f 1-10
+app/src/mastra/tools/crm/move-deal-stage.test.ts
+  s_5c9f2a2ec2b3af::t_ce309dce70a33b 1-10
+app/src/lib/intelligence/use-route-welcome.ts
+  s_5c9f2a2ec2b3af::t_8c7308cc8c1432 188-207
+app/src/app/(operator)/app/crm/page.tsx
+  s_5c9f2a2ec2b3af::t_c638d0c914c037 1-5
+app/src/mastra/tools/crm/_shared.ts
+  s_5c9f2a2ec2b3af::t_49a2182b446cf1 2-9,15,17-18,20,22-25
+  s_5c9f2a2ec2b3af::t_7840c4efc00bf4 1,10-14,16,19,21
+app/src/app/(operator)/app/crm/pipeline/page.tsx
+  s_5c9f2a2ec2b3af::t_074505b9dda474 15,18-23,25
+  s_5c9f2a2ec2b3af::t_77a62a64633837 1-9,31-57,59-61,63-92,94-104
+  s_5c9f2a2ec2b3af::t_687c2649380664 62
+  s_5c9f2a2ec2b3af::t_1b93f7ecdae0e6 10-14,16-17,24,26-30,58,93
+app/src/mastra/tools/crm/move-deal-stage.ts
+  s_5c9f2a2ec2b3af::t_18759288ab2bbb 1-36
+app/src/lib/route-agent-map.ts
+  s_5c9f2a2ec2b3af::t_194a7a9d8b122e 9
+app/src/app/(operator)/app/crm/companies/[id]/page.tsx
+  s_5c9f2a2ec2b3af::t_7d229d0294e0ef 1-51
+app/src/lib/route-agent-map.test.ts
+  s_5c9f2a2ec2b3af::t_bda502416bd8b9 16-22
+app/src/app/(operator)/app/crm/pipeline/[id]/page.tsx
+  s_5c9f2a2ec2b3af::t_2103f8898a39e0 14,16-21
+  s_5c9f2a2ec2b3af::t_ae0ed3b3a726ff 43-44,46
+  s_5c9f2a2ec2b3af::t_c2683e339899f7 58,62
+  s_5c9f2a2ec2b3af::t_cd77e5c8b27b1a 9-13,15,22,36,42,45,47,54,56,59-61,63-66
+  s_5c9f2a2ec2b3af::t_335ea60c24566a 1-8,23-35,37-41,48-53,55,57,67-73
+app/src/app/(operator)/app/crm/companies/page.tsx
+  s_5c9f2a2ec2b3af::t_2e274b6dd4a14c 1-81
+app/src/lib/intelligence/normalize-route-path.ts
+  s_5c9f2a2ec2b3af::t_05ffec2a4b121c 32-49
+app/src/lib/crm/jsonb-contact-fields.test.ts
+  s_5c9f2a2ec2b3af::t_3136aa6c39c1a2 1-16
+app/src/lib/crm/jsonb-contact-fields.ts
+  s_5c9f2a2ec2b3af::t_709eb0dd873e3a 1-11
+app/src/lib/crm/queries.test.ts
+  s_5c9f2a2ec2b3af::t_98782ba2872278 1-55
+app/src/lib/crm/search.test.ts
+  s_5c9f2a2ec2b3af::t_cee7801bf3e066 1-9
+app/src/lib/crm/search.ts
+  s_5c9f2a2ec2b3af::t_e2cdbb3dd418de 1-7
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "441af33d1c599ff23b5941245ccad32204646a61",
+  "prompts": {},
+  "sessions": {
+    "s_5c9f2a2ec2b3af": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "4c146179-d0c4-4f21-910e-cebd5c5ba751",
+        "model": "composer-2.5"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
