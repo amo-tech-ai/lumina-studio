@@ -6,8 +6,6 @@ baseline: origin/main
 audit: tasks/crm/03-crm-existing-state-audit.md
 ---
 
-# CRM Mastra Plan
-
 ## Purpose
 
 One new agent, `crm-assistant`, built on `brand-intelligence-agent.ts`'s proven shape (page-context injection, `navigateTo` frontend tool, HITL via `applyDraft`) — not a new agent pattern.
@@ -17,7 +15,7 @@ One new agent, `crm-assistant`, built on `brand-intelligence-agent.ts`'s proven 
 ## Current setup
 
 | Component | Status | Notes |
-|-----------|:------:|-------|
+| ----------- | :------: | ------- |
 | `crm-assistant` agent | 🔴 | New entry in `app/src/mastra/agents/index.ts` — wire tools via `agentTools` like `booking-agent.ts` / `model-match-agent.ts`, not ad-hoc inline tool arrays |
 | CRM tool registry | 🔴 | Register wave-1 tools in `app/src/mastra/tools/index.ts` (or `tools/crm/*` barrel exported through `agentTools`) — same SSOT as booking/model-match |
 | Tools: `searchContacts`, `searchCompanies` | 🔴 | New under `app/src/mastra/tools/crm/` |
@@ -47,7 +45,7 @@ app/src/mastra/index.ts  →  agents map includes crm-assistant (id must NOT be 
 ## Existing registry (for reference — do not duplicate)
 
 | Key | Agent | Routes | CRM relevance |
-|-----|-------|--------|----------------|
+| ----- | ------- | -------- | ---------------- |
 | `production-planner` (default) | Shoot planning | `/app`, `/app/shoots/*` | Owns the shoot a won deal hands off to |
 | `brand-intelligence` | Page-context brand assistant | `/app/brand/*` | **Direct template for `crm-assistant`** |
 | `model-match` | Talent search/score | `/app/matching` | Same defer-the-gated-transition pattern for `moveDealStage` |
@@ -59,7 +57,7 @@ Full agent audit: [`../03-crm-existing-state-audit.md`](../03-crm-existing-state
 ## Related work
 
 | Item | Scope | Issue |
-|------|-------|-------|
+| ------ | ------- | ------- |
 | Deal `won`/`lost` HITL gate | `ApprovalCard` + convert API | IPI-367 |
 | `crm-assistant` route mapping | `/app/crm/*` → `crm-assistant` | **IPI-368** (wave 1) |
 | CopilotKit context + `navigateTo` | `useAgentContext` providers, frontend tool safety | **IPI-368** (wave 1) |
@@ -71,7 +69,7 @@ Full agent audit: [`../03-crm-existing-state-audit.md`](../03-crm-existing-state
 **Tool-count phasing:** 7 Mastra tools across two waves; wave 1 also ships minimal CopilotKit wiring so the agent is usable on `/app/crm/*` before IntelligencePanel sections land.
 
 | Phase | Wave | Deliverable | Issue |
-|-------|------|-------------|-------|
+| ------- | ------ | ------------- | ------- |
 | 1 | 1 | `crm-assistant` registered; tools via `agentTools`; page-context + `useAgentContext` | IPI-368 |
 | 2 | 1 | `route-agent-map.ts`: `/app/crm/*` → `crm-assistant` | IPI-368 |
 | 3 | 1 | `navigateTo` for CRM (extend `operator-panel` or CRM-specific frontend tool) | IPI-368 |

@@ -10,10 +10,8 @@ designSsot: ./design/README.md
 issueCount: 9
 ---
 
-# CRM MVP — Task Tracker
-
 | Link | Use for |
-|------|---------|
+| ------ | --------- |
 | [Linear project](https://linear.app/amo100/project/crm-relationship-layer-6eaf40894535) | 9 issues · source of truth |
 | [`05-crm-prd.md`](./05-crm-prd.md) | What we're building and why |
 | [`02-crm-architecture-brief.md`](./02-crm-architecture-brief.md) | Architecture decisions |
@@ -31,7 +29,7 @@ issueCount: 9
 ## Dashboard
 
 | | |
-|--|--|
+| -- | -- |
 | **Verified** | 2026-07-04 — nothing built yet, this is a fresh project |
 | **Status** | 🔵 **1 issue ready to start** (schema) · 8 blocked behind it |
 | **Ship-ready?** | 🔴 No — nothing merged yet |
@@ -44,7 +42,7 @@ issueCount: 9
 Plain-English description of each piece of work, in build order. Every task is 1–3 days of work.
 
 | # | Linear | What it does | Status | Depends on | Implementation plan |
-|---|--------|---------------|--------|------------|---------------------|
+| --- | -------- | --------------- | -------- | ------------ | --------------------- |
 | 1 | [IPI-362](https://linear.app/amo100/issue/IPI-362) | Build the 4 database tables (companies, contacts, deals, activity log) with security rules so one company's data can never leak to another | 🟡 In Review — [PR #212](https://github.com/amo-tech-ai/lumina-studio/pull/212), migration applied to remote + verified, pending `rls-policy-auditor` review | — | [`2026-07-04-crm-schema-rls.md`](../../docs/plan/tasks/2026-07-04-crm-schema-rls.md) |
 | 2 | [IPI-363](https://linear.app/amo100/issue/IPI-363) | Companies **data layer** done ([PR #216](https://github.com/amo-tech-ai/lumina-studio/pull/216) `deriveTaskState` + [PR #215](https://github.com/amo-tech-ai/lumina-studio/pull/215) `listCompanies`/`getCurrentOrgId`, stacked #212 → #216 → #215). Screens still need a Claude Design pass on `tasks/crm/design/02a`/`02b` before UI is built | 🟡 In Review (data layer only) | #1 | [`2026-07-04-crm-companies-screens.md`](../../docs/plan/tasks/2026-07-04-crm-companies-screens.md) |
 | 3 | [IPI-364](https://linear.app/amo100/issue/IPI-364) | Contacts **data layer** done ([PR #218](https://github.com/amo-tech-ai/lumina-studio/pull/218) `listContacts`/`getPrimaryEntry`, stacked on #212). Screens still need a Claude Design pass on `tasks/crm/design/02c`/`02d` before UI is built | 🟡 In Review (data layer only) | #1 | [`2026-07-04-crm-contacts-screens.md`](../../docs/plan/tasks/2026-07-04-crm-contacts-screens.md) |
@@ -60,7 +58,7 @@ Plain-English description of each piece of work, in build order. Every task is 1
 ## Now / Next / Later
 
 | Now | Next | Later |
-|-----|------|-------|
+| --- | --- | --- |
 | **#1** Schema + RLS (IPI-362) — nothing else can start until this merges | **#2–#5** Companies, Contacts, Pipeline, Deal Detail (IPI-363–366) — can be built in parallel once #1 lands | **#6–#9** Won/Lost gate, AI assistant (both waves), final verification |
 
 ---
@@ -79,7 +77,7 @@ Dashboard. None of these are missing by accident.
 ## Milestones (Linear)
 
 | Milestone | Covers | Tasks |
-|---|---|---|
+| --- | --- | --- |
 | CRM-M1 · Schema & Core Screens | Database + the 4 main screens | #1–#5 |
 | CRM-M2 · HITL Gate & Brand Conversion | The Won/Lost safety gate | #6 |
 | CRM-M3 · crm-assistant Agent | The AI assistant, both waves | #7–#8 |

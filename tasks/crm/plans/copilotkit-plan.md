@@ -6,8 +6,6 @@ baseline: origin/main
 audit: tasks/crm/03-crm-existing-state-audit.md
 ---
 
-# CRM CopilotKit Plan
-
 ## Purpose
 
 Wire `crm-assistant` into the existing IntelligencePanel/chat-dock — no new runtime, no new route, no new approval-UI pattern.
@@ -17,7 +15,7 @@ Wire `crm-assistant` into the existing IntelligencePanel/chat-dock — no new ru
 ## Current setup
 
 | Component | Status | Notes |
-|-----------|:------:|-------|
+| ----------- | :------: | ------- |
 | Runtime | 🟢 (reused) | `app/src/app/api/copilotkit/[[...slug]]/route.ts` — adding `crm-assistant` only needs a new entry in the `agents` map in `mastra/index.ts`, no new route |
 | Route → agent map | 🔴 | Add `/app/crm/*` → `crm-assistant` in `app/src/lib/route-agent-map.ts` |
 | Context injection | 🔴 | Follow `brand-intelligence`'s pattern: current company/contact/deal id auto-injected, used before tool calls |
@@ -43,7 +41,7 @@ Full audit: [`../03-crm-existing-state-audit.md`](../03-crm-existing-state-audit
 ## Implementation phases
 
 | Phase | Deliverable | Issue |
-|-------|-------------|-------|
+| ------- | ------------- | ------- |
 | 1 | `crm-assistant` in `route-agent-map.ts` for `/app/crm/*` | IPI-368 |
 | 2 | `useAgentContext` on CRM list/detail routes + `navigateTo` (extend operator-panel or CRM frontend tool) + audited frontend-tool error returns | IPI-368 |
 | 3 | IntelligencePanel sections: deal health, next-best-action, activity feed | IPI-369 |
@@ -59,7 +57,7 @@ Full audit: [`../03-crm-existing-state-audit.md`](../03-crm-existing-state-audit
 ## Risks
 
 | Risk | Mitigation |
-|------|------------|
+| ------ | ------------ |
 | New panel section order breaks the existing `context → approvals → tabs → evidence → activity` convention | Follow `panel-contract.ts` ordering exactly, don't reorder for CRM |
 | `crm-assistant` missing from `REQUIRED_AGENT_IDS`-adjacent checks causes a runtime 401/404 | Verify against `mastra-plan.md`'s registry guard before wiring the route map |
 
