@@ -29,24 +29,29 @@ flowchart TD
 ### Completion steps
 
 #### A. Scope and setup
+
 - [ ] **A1** Confirm IPI-368 merged — proof: `crm-assistant` responds in dev on `/app/crm/*`
 - [ ] **A2** Confirm IPI-365 merged before Pipeline at-risk wiring (C1) — proof: board route exists
 
 #### B. Implement
+
 - [ ] **B1** `scoreDealHealth` as a pure, unit-testable formula — proof: unit test with no LLM call in the scoring path
 - [ ] **B2** `summarizeRelationship`, `draftFollowUp` via `resolveModel()` — proof: code review, no raw Gemini client
 - [ ] **B3** `draftFollowUp` output routed through existing `intel-approval-card`/`applyDraft` — proof: manual test
 - [ ] **B4** IntelligencePanel sections in `panel-contract.ts`'s existing order (`context → approvals → tabs → evidence → activity`) — proof: screenshot
 
 #### C. Integrate
+
 - [ ] **C1** Pipeline board's "at risk" filter (IPI-365) wired to `scoreDealHealth(focus: at_risk)` — proof: manual test
 - [ ] **C2** No tool loops per-deal to build a list — batched via `focus` param — proof: code review
 
 #### D. Verify
+
 - [ ] **D1** `cd app && npm test src/mastra` — proof: green
 - [ ] **D2** `cd app && npx vitest run src/app/api/copilotkit` — proof: green
 
 #### E. Ship
+
 - [ ] **E1** Update `tasks/crm/todo.md` row #8 — proof: diff
 
 ---

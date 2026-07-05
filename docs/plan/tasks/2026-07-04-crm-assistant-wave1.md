@@ -22,6 +22,7 @@ cd app && npx vitest run src/app/api/copilotkit/[[...slug]]/route.test.ts
 **Maps to AC:** "`crm-assistant` id does not collide with `REQUIRED_AGENT_IDS`" · tools via `agentTools` · "`getMastra()` is not called at module top-level"
 
 **Files:**
+
 - Create: `app/src/mastra/tools/crm/index.ts` (barrel) + wave-1 tool modules
 - Modify: `app/src/mastra/tools/index.ts` — export CRM tools through `agentTools`
 - Create: `app/src/mastra/agents/crm-assistant-agent.ts` — `tools: { … }` subset from `agentTools` (like `booking-agent.ts`)
@@ -29,6 +30,7 @@ cd app && npx vitest run src/app/api/copilotkit/[[...slug]]/route.test.ts
 - Test: `app/src/mastra/agents/crm-assistant-agent.test.ts`
 
 **Test:**
+
 - Type: vitest
 - Command: `cd app && npx vitest run src/mastra/agents/crm-assistant-agent.test.ts`
 - Pass when: `crm-assistant` ∉ `REQUIRED_AGENT_IDS`; agent module imports from `agentTools`; no top-level `getMastra()`
@@ -42,6 +44,7 @@ cd app && npx vitest run src/app/api/copilotkit/[[...slug]]/route.test.ts
 **Maps to AC:** "`moveDealStage` cannot set `won`/`lost`" · **Mastra** tools return `{ ok: false, error }` on failure — never re-throw
 
 **Files:**
+
 - Create: `app/src/mastra/tools/crm/search-contacts.ts`
 - Create: `app/src/mastra/tools/crm/search-companies.ts`
 - Create: `app/src/mastra/tools/crm/log-activity.ts`
@@ -57,6 +60,7 @@ cd app && npx vitest run src/app/api/copilotkit/[[...slug]]/route.test.ts
 **Maps to AC:** `/app/crm/*` resolves to `crm-assistant` · `useAgentContext` injects current record id on CRM list/detail routes
 
 **Files:**
+
 - Modify: `app/src/lib/route-agent-map.ts`
 - Create or modify: CRM context provider(s) — e.g. `app/src/components/crm/crm-record-context.tsx` calling `useAgentContext` (pattern: `brand-context.tsx`)
 - Test: `app/src/lib/route-agent-map.test.ts`
@@ -70,6 +74,7 @@ cd app && npx vitest run src/app/api/copilotkit/[[...slug]]/route.test.ts
 **Maps to AC:** CRM navigation via frontend tool · frontend handlers never re-throw
 
 **Files:**
+
 - Modify: `app/src/components/operator-panel/operator-panel.tsx` — extend `navigateTo` sections for CRM routes (`companies`, `contacts`, `pipeline`, `deals`), **or** add CRM-scoped `useFrontendTool` with the same audited wrapper pattern
 - Reference: `tasks/crm/04-reference-implementations-analysis.md` (atomic-crm `useAuditedFrontendTool.ts`)
 
