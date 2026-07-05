@@ -1453,6 +1453,289 @@ export type Database = {
           },
         ]
       }
+      crm_activities: {
+        Row: {
+          body: string | null
+          company_id: string | null
+          completed_at: string | null
+          contact_id: string | null
+          created_at: string
+          created_by: string | null
+          deal_id: string | null
+          due_at: string | null
+          id: string
+          org_id: string
+          type: string
+          updated_at: string
+        }
+        Insert: {
+          body?: string | null
+          company_id?: string | null
+          completed_at?: string | null
+          contact_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          deal_id?: string | null
+          due_at?: string | null
+          id?: string
+          org_id: string
+          type: string
+          updated_at?: string
+        }
+        Update: {
+          body?: string | null
+          company_id?: string | null
+          completed_at?: string | null
+          contact_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          deal_id?: string | null
+          due_at?: string | null
+          id?: string
+          org_id?: string
+          type?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_activities_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "crm_companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_activities_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "crm_contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_activities_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_activities_deal_id_fkey"
+            columns: ["deal_id"]
+            isOneToOne: false
+            referencedRelation: "crm_deals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_activities_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      crm_companies: {
+        Row: {
+          brand_id: string | null
+          created_at: string
+          domain: string | null
+          id: string
+          industry: string | null
+          name: string
+          org_id: string
+          owner: string | null
+          source: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          brand_id?: string | null
+          created_at?: string
+          domain?: string | null
+          id?: string
+          industry?: string | null
+          name: string
+          org_id: string
+          owner?: string | null
+          source?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          brand_id?: string | null
+          created_at?: string
+          domain?: string | null
+          id?: string
+          industry?: string | null
+          name?: string
+          org_id?: string
+          owner?: string | null
+          source?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_companies_brand_id_fkey"
+            columns: ["brand_id"]
+            isOneToOne: false
+            referencedRelation: "brands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_companies_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_companies_owner_fkey"
+            columns: ["owner"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      crm_contacts: {
+        Row: {
+          company_id: string | null
+          created_at: string
+          email: Json
+          id: string
+          name: string
+          org_id: string
+          phone: Json
+          profile_id: string | null
+          role_title: string | null
+          updated_at: string
+        }
+        Insert: {
+          company_id?: string | null
+          created_at?: string
+          email?: Json
+          id?: string
+          name: string
+          org_id: string
+          phone?: Json
+          profile_id?: string | null
+          role_title?: string | null
+          updated_at?: string
+        }
+        Update: {
+          company_id?: string | null
+          created_at?: string
+          email?: Json
+          id?: string
+          name?: string
+          org_id?: string
+          phone?: Json
+          profile_id?: string | null
+          role_title?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_contacts_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "crm_companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_contacts_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_contacts_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      crm_deals: {
+        Row: {
+          campaign_id: string | null
+          closed_at: string | null
+          company_id: string
+          created_at: string
+          currency: string
+          expected_close_date: string | null
+          id: string
+          org_id: string
+          owner: string | null
+          shoot_id: string | null
+          stage: string
+          updated_at: string
+          value: number | null
+        }
+        Insert: {
+          campaign_id?: string | null
+          closed_at?: string | null
+          company_id: string
+          created_at?: string
+          currency?: string
+          expected_close_date?: string | null
+          id?: string
+          org_id: string
+          owner?: string | null
+          shoot_id?: string | null
+          stage?: string
+          updated_at?: string
+          value?: number | null
+        }
+        Update: {
+          campaign_id?: string | null
+          closed_at?: string | null
+          company_id?: string
+          created_at?: string
+          currency?: string
+          expected_close_date?: string | null
+          id?: string
+          org_id?: string
+          owner?: string | null
+          shoot_id?: string | null
+          stage?: string
+          updated_at?: string
+          value?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_deals_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "crm_companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_deals_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_deals_owner_fkey"
+            columns: ["owner"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_deals_shoot_id_fkey"
+            columns: ["shoot_id"]
+            isOneToOne: false
+            referencedRelation: "shoots"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       designer_availability: {
         Row: {
           brand_id: string
@@ -4503,6 +4786,7 @@ export type Database = {
           brand_org_id: string | null
           channel: string
           created_at: string
+          crm_deal_id: string | null
           id: string
           kind: string
           payload: Json
@@ -4514,6 +4798,7 @@ export type Database = {
           brand_org_id?: string | null
           channel?: string
           created_at?: string
+          crm_deal_id?: string | null
           id?: string
           kind: string
           payload?: Json
@@ -4525,6 +4810,7 @@ export type Database = {
           brand_org_id?: string | null
           channel?: string
           created_at?: string
+          crm_deal_id?: string | null
           id?: string
           kind?: string
           payload?: Json
@@ -4544,6 +4830,13 @@ export type Database = {
             columns: ["brand_org_id"]
             isOneToOne: false
             referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notifications_crm_deal_id_fkey"
+            columns: ["crm_deal_id"]
+            isOneToOne: false
+            referencedRelation: "crm_deals"
             referencedColumns: ["id"]
           },
         ]
