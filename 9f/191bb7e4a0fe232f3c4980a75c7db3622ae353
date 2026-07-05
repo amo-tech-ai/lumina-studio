@@ -1,0 +1,29 @@
+app/src/app/(operator)/app/shoots/new/page.tsx
+  s_12404fa554d700::t_39a064a36dd655 5,11
+  s_12404fa554d700::t_fd1272a3cb69fd 67,71-73,75-94,101-102,109-110,112
+  s_12404fa554d700::t_98d05a40b03696 431,433-441,443-449,451,453-454,456-459,463-469,471-472,474,485-486,488,495-512,518-519,521,523,527,532-536,545-548,550,552,554,557-558,568,572,574,577,582-592,594-596,602,604-605,610,614,624-626,633,636,650,663,665-666,671-672,677-679,684,686,689,694-700,719,722,724,729,731,734,739-745,756,759,761,766,768,771,776-782,792-794,796-797,800,805-815,817-821,823-825,829-831,833-835,838-840,843-844
+app/src/components/shoot/hitl/ShotListApprovalCard.tsx
+  s_12404fa554d700::t_9cd35af1b2f103 4-6,22,24,29-31,35,37,39-41,47-49,51,56,58,63,65
+app/src/components/shoot/hitl/BudgetApprovalCard.tsx
+  s_12404fa554d700::t_725b66903d43d9 4-6,24-25,28-31,34-37,39-43,46-49,55
+app/src/components/shoot/shoot-wizard.module.css
+  s_12404fa554d700::t_0be9ea265e0918 1-911
+app/src/components/shoot/hitl/DeliverableApprovalCard.tsx
+  s_12404fa554d700::t_d756d3e24cdd49 4-6,33,35,38-40,43,48,50-54,60-62,64,70,72,78,87,90-93
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "9f191bb7e4a0fe232f3c4980a75c7db3622ae353",
+  "prompts": {},
+  "sessions": {
+    "s_12404fa554d700": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "c51c9d5f-0f8a-4434-b966-5de005a41aad",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
