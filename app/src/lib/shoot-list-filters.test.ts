@@ -16,9 +16,11 @@ describe("shoot-list-filters", () => {
     expect(shootStatusLabel("archived")).toBe("Archived");
   });
 
-  it("falls back to 'planning' for an unknown status", () => {
-    expect(shootStatusLabel("weird")).toBe("Planning");
-    expect(shootStatusLabel(null)).toBe("Planning");
+  it("labels missing/invalid statuses as 'Unknown' instead of a real status", () => {
+    expect(shootStatusLabel("weird")).toBe("Unknown");
+    expect(shootStatusLabel(null)).toBe("Unknown");
+    expect(shootStatusLabel(undefined)).toBe("Unknown");
+    expect(shootStatusDotToken("weird")).toBe("var(--color-text-muted)");
   });
 
   it("maps every known status to a token reference", () => {

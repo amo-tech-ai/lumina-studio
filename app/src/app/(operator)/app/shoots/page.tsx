@@ -25,6 +25,8 @@ const ShootsPage = async () => {
     .order("updated_at", { ascending: false });
 
   if (error) {
+    // Don't swallow the failure — the user sees a generic message, the server keeps the cause.
+    console.error("[shoots] shoot_portfolio_view query failed", error);
     return (
       <ShootsListWorkspace
         shoots={[]}

@@ -41,16 +41,23 @@ export const SHOOT_STATUS_DOT_TOKEN: Record<ShootStatus, string> = {
 
 const KNOWN_STATUSES = new Set<string>(Object.keys(SHOOT_STATUS_LABELS));
 
-function normalizeStatus(status: string | null | undefined): ShootStatus {
-  return status && KNOWN_STATUSES.has(status) ? (status as ShootStatus) : "planning";
+/** Missing/invalid statuses get a distinct token so they don't masquerade as "planning". */
+type NormalizedStatus = ShootStatus | "unknown";
+
+function normalizeStatus(status: string | null | undefined): NormalizedStatus {
+  return status && KNOWN_STATUSES.has(status) ? (status as ShootStatus) : "unknown";
 }
 
 export function shootStatusLabel(status: string | null | undefined): string {
-  return SHOOT_STATUS_LABELS[normalizeStatus(status)];
+  const normalized = normalizeStatus(status);
+  return normalized === "unknown" ? "Unknown" : SHOOT_STATUS_LABELS[normalized];
 }
 
 export function shootStatusDotToken(status: string | null | undefined): string {
-  return SHOOT_STATUS_DOT_TOKEN[normalizeStatus(status)];
+  const normalized = normalizeStatus(status);
+  return normalized === "unknown"
+    ? "var(--color-text-muted)"
+    : SHOOT_STATUS_DOT_TOKEN[normalized];
 }
 
 export function matchesShootListFilter(
