@@ -1,0 +1,25 @@
+tasks/crm/todo.md
+  s_5c9f2a2ec2b3af::t_64b05bd8e04a3d 61,80
+  s_5c9f2a2ec2b3af::t_7164d9ba97b18a 14,32,45
+tasks/crm/plans/copilotkit-plan.md
+  s_5c9f2a2ec2b3af::t_9a00f0fbd6f188 60
+  s_5c9f2a2ec2b3af::t_769a5354b113fb 18,44
+tasks/crm/plans/mastra-plan.md
+  s_5c9f2a2ec2b3af::t_101a5cd04f16bb 18,48,60,72
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "ee4974746ff60dfaba4509450d230a20ab5a4311",
+  "prompts": {},
+  "sessions": {
+    "s_5c9f2a2ec2b3af": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "4c146179-d0c4-4f21-910e-cebd5c5ba751",
+        "model": "composer-2.5"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
