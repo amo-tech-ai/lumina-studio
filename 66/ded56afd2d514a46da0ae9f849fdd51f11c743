@@ -1,0 +1,42 @@
+app/src/components/shoot/shoots-list-intel.module.css
+  s_12404fa554d700::t_dd7663db3128de 1-196
+app/src/components/shoot/shoots-list-workspace.test.tsx
+  s_12404fa554d700::t_dfca2ddedf597e 21,30-31,38
+  s_12404fa554d700::t_9c103daaf4dc90 110
+  s_12404fa554d700::t_e15d3e8824a009 10-12
+  s_12404fa554d700::t_fc8da02597f9cd 17-20,24-29,32-37
+  s_12404fa554d700::t_4d19166dc3f1ce 101,107,114,120,123-136
+  s_12404fa554d700::t_f1409884c043ee 39
+  s_12404fa554d700::t_938c290ed1d635 77,82,88,94
+app/src/components/shoot/shoots-list.module.css
+  s_12404fa554d700::t_8e34809e4516ed 185-187,203-206
+  s_12404fa554d700::t_0e977eda6187c7 207-208
+app/src/components/shoot/shoots-list-workspace.tsx
+  s_12404fa554d700::t_3dc79030be4e20 126-131
+  s_12404fa554d700::t_1d5b965772b557 8
+  s_12404fa554d700::t_34e546a83b6a87 43,54-62
+  s_12404fa554d700::t_e09a23f216a475 63
+app/src/components/shoot/shoots-list-intel-detail.test.tsx
+  s_12404fa554d700::t_0fec15b0a5bbad 10-13
+  s_12404fa554d700::t_fedf27b806311d 1-9,14-46
+app/src/components/shoot/shoots-list-intel-detail.tsx
+  s_12404fa554d700::t_bb5fa42180225a 1-88
+app/src/components/shoot/ShootCard.tsx
+  s_12404fa554d700::t_84f5269d0a4cf5 21,27-35,40-45,47,58,72
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "66ded56afd2d514a46da0ae9f849fdd51f11c743",
+  "prompts": {},
+  "sessions": {
+    "s_12404fa554d700": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "c51c9d5f-0f8a-4434-b966-5de005a41aad",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
