@@ -33,7 +33,7 @@ function resolveHelloModel(allowlist) {
   const fromEnv =
     process.env.GROQ_MODEL_DEFAULT?.trim() ||
     allowlist.defaults?.default?.trim();
-  return fromEnv || "llama-3.3-70b-versatile";
+  return fromEnv || "openai/gpt-oss-120b";
 }
 
 async function groqFetch(path, init = {}) {
@@ -81,8 +81,11 @@ async function helloWorld(model) {
   });
   const latencyMs = Date.now() - started;
   const content = completion?.choices?.[0]?.message?.content?.trim() ?? "";
-  if (!content) {
-    throw new Error("Hello-world completion returned empty content");
+  const expected = "GROQ_OK";
+  if (content !== expected) {
+    throw new Error(
+      `Hello-world expected "${expected}" but got "${content.slice(0, 80)}"`,
+    );
   }
   return { model, latencyMs, content: content.slice(0, 80) };
 }
