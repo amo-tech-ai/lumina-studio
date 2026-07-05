@@ -1,0 +1,196 @@
+/* Shoots List — IntelligencePanel preview (IPI-383). Tokens only, no raw hex. */
+
+/* --- Prompt (no selection) --- */
+.prompt {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: var(--space-3);
+  padding: var(--space-10) var(--space-5);
+  color: var(--color-text-muted);
+}
+
+.promptIcon {
+  color: var(--color-text-muted);
+  opacity: 0.7;
+}
+
+.promptCopy {
+  margin: 0;
+  max-width: 22ch;
+  font-family: var(--font-sans);
+  font-size: var(--font-size-sm);
+  line-height: 1.45;
+}
+
+/* --- Selected preview --- */
+.selected {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.heroCover {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border-radius: var(--image-radius);
+  overflow: hidden;
+  background: var(--image-placeholder-bg);
+}
+
+.heroImage {
+  object-fit: cover;
+}
+
+.heroScrim {
+  position: absolute;
+  inset: 0;
+  background: var(--image-scrim);
+  pointer-events: none;
+}
+
+.heroStatus {
+  position: absolute;
+  left: 11px;
+  bottom: 10px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-sans);
+  font-size: 11px;
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-inverse);
+  background: rgb(17 17 17 / 0.5);
+  backdrop-filter: blur(3px);
+  padding: 3px 9px;
+  border-radius: var(--radius-pill);
+}
+
+.heroStatusDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+}
+
+.heroDna {
+  position: absolute;
+  top: 9px;
+  right: 9px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-inverse);
+  background: rgb(17 17 17 / 0.55);
+  backdrop-filter: blur(3px);
+  padding: 2px 7px;
+  border-radius: 7px;
+}
+
+.selectedTitle {
+  margin: 0;
+  font-family: var(--font-sans);
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
+}
+
+.selectedMeta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-top: var(--space-1);
+  font-family: var(--font-sans);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+}
+
+.metaSep {
+  color: var(--color-border-strong);
+}
+
+.mono {
+  font-family: var(--font-mono);
+}
+
+/* --- Actions --- */
+.actions {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.openBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 38px;
+  padding: 0 18px;
+  border-radius: var(--radius-md);
+  background: var(--btn-primary-bg);
+  color: var(--btn-primary-text);
+  font-family: var(--font-sans);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  text-decoration: none;
+  border: none;
+  cursor: pointer;
+  transition: background var(--duration-fast) var(--ease-default);
+}
+
+.openBtn:hover {
+  background: var(--btn-primary-hover);
+}
+
+.secondaryBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 38px;
+  padding: 0 16px;
+  border-radius: var(--radius-md);
+  border: var(--border-default) solid var(--color-border);
+  background: var(--color-bg-card);
+  color: var(--color-text-secondary);
+  font-family: var(--font-sans);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+/* --- Shot list --- */
+.divider {
+  height: var(--border-default);
+  background: var(--color-border);
+}
+
+.shotListHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-2);
+}
+
+.shotListTitle {
+  font-family: var(--font-sans);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
+}
+
+.shotListCount {
+  font-family: var(--font-mono);
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+}
+
+.shotMeta {
+  margin: 0;
+  font-family: var(--font-sans);
+  font-size: var(--font-size-sm);
+  line-height: 1.45;
+  color: var(--color-text-muted);
+}

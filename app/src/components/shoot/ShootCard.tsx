@@ -1,7 +1,6 @@
 "use client";
 
 import Image from "next/image";
-import Link from "next/link";
 
 import { shootListCoverForShoot } from "@/lib/command-center/sample-images";
 import { shootStatusDotToken, shootStatusLabel } from "@/lib/shoot-list-filters";
@@ -19,22 +18,33 @@ export type ShootRow = {
   updated_at: string;
 };
 
-function formatShootDate(iso: string): string {
+export function formatShootDate(iso: string): string {
   const date = new Date(iso);
   if (Number.isNaN(date.getTime())) return "—";
   return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
-export function ShootCard({ shoot }: { shoot: ShootRow }) {
+type Props = {
+  shoot: ShootRow;
+  selected?: boolean;
+  onSelect?: (shootId: string) => void;
+};
+
+/** DC parity: card SELECTS (previews in the IntelligencePanel) — it does not navigate.
+ *  Only the panel's "Open shoot" action routes to the detail page (IPI-383). */
+export function ShootCard({ shoot, selected = false, onSelect }: Props) {
   const coverSrc = shootListCoverForShoot(shoot.id);
   const statusDot = shootStatusDotToken(shoot.status);
 
   return (
-    <Link
-      href={`/app/shoots/${shoot.id}`}
-      className={styles.card}
-      aria-label={`Open ${shoot.name}`}
+    <button
+      type="button"
+      className={selected ? `${styles.card} ${styles.cardSelected}` : styles.card}
+      aria-label={`Select ${shoot.name}`}
+      aria-pressed={selected}
+      data-selected={selected ? "true" : undefined}
       data-testid="shoot-card"
+      onClick={() => onSelect?.(shoot.id)}
     >
       <div className={styles.coverWrap}>
         <Image
@@ -45,9 +55,7 @@ export function ShootCard({ shoot }: { shoot: ShootRow }) {
           className={styles.coverImage}
         />
         <span className={styles.coverScrim} aria-hidden />
-        <span className={styles.dnaBadge}>
-          DNA {shoot.dna_score ?? "—"}
-        </span>
+        <span className={styles.dnaBadge}>DNA {shoot.dna_score ?? "—"}</span>
         <span className={styles.statusPill}>
           <span className={styles.statusDot} style={{ background: statusDot }} aria-hidden />
           {shootStatusLabel(shoot.status)}
@@ -61,6 +69,6 @@ export function ShootCard({ shoot }: { shoot: ShootRow }) {
           <span className={styles.cardDate}>{formatShootDate(shoot.updated_at)}</span>
         </div>
       </div>
-    </Link>
+    </button>
   );
 }
