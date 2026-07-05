@@ -1,0 +1,35 @@
+app/src/app/(operator)/app/crm/pipeline/[id]/page.tsx
+  s_5c9f2a2ec2b3af::t_cf41651b4f4389 4,30-32
+app/src/lib/crm/queries.ts
+  s_5c9f2a2ec2b3af::t_d368f6030fbc6a 18
+  s_5c9f2a2ec2b3af::t_36a4b45d90ef42 73-74
+app/src/mastra/tools/crm/_shared.ts
+  s_5c9f2a2ec2b3af::t_f59ab99ebe08b7 26-60
+app/src/lib/intelligence/use-route-welcome.ts
+  s_5c9f2a2ec2b3af::t_849a25b592c68a 202
+app/src/app/(operator)/app/crm/contacts/page.tsx
+  s_5c9f2a2ec2b3af::t_3f294bfc7bc5d8 20-22
+app/src/app/(operator)/app/crm/pipeline/page.tsx
+  s_5c9f2a2ec2b3af::t_32c5aac3076a01 3,10,23-25,40,44-54,56
+app/src/lib/crm/deal-display.ts
+  s_5c9f2a2ec2b3af::t_a01687be2b5763 1-25
+app/src/mastra/tools/crm/log-activity.ts
+  s_5c9f2a2ec2b3af::t_095e4b5d05dcb5 3
+  s_5c9f2a2ec2b3af::t_4fed2bc950e48d 28-33
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "24a0d7cf3465ce1f185744d056eaa0b1fe483c90",
+  "prompts": {},
+  "sessions": {
+    "s_5c9f2a2ec2b3af": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "4c146179-d0c4-4f21-910e-cebd5c5ba751",
+        "model": "composer-2.5"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
