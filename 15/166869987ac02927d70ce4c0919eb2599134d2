@@ -1,0 +1,31 @@
+app/src/lib/crm/queries.ts
+  s_5c9f2a2ec2b3af::t_a1e47e75eb53e8 5-44
+  s_5c9f2a2ec2b3af::t_0a3185900bf7c4 1-4,45-49
+app/src/lib/crm/queries.test.ts
+  s_5c9f2a2ec2b3af::t_11c615349411af 37,39-40,42-49,56,62,67
+  s_5c9f2a2ec2b3af::t_10be6ce474ef40 1-36,38,41,50-55,57-61,63-66,68
+app/src/lib/crm/jsonb-contact-fields.test.ts
+  s_5c9f2a2ec2b3af::t_504cb83b1ba946 1-16
+app/src/lib/crm/jsonb-contact-fields.ts
+  s_5c9f2a2ec2b3af::t_6912f5243bc51c 1-11
+app/src/lib/crm/search.test.ts
+  s_5c9f2a2ec2b3af::t_903977773c4084 1-9
+app/src/lib/crm/search.ts
+  s_5c9f2a2ec2b3af::t_04ecbd50e6854a 1-7
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "15166869987ac02927d70ce4c0919eb2599134d2",
+  "prompts": {},
+  "sessions": {
+    "s_5c9f2a2ec2b3af": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "4c146179-d0c4-4f21-910e-cebd5c5ba751",
+        "model": "composer-2.5"
+      },
+      "human_author": null
+    }
+  }
+}
