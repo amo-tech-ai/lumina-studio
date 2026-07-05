@@ -59,6 +59,12 @@ export function recentFallbackForShoot(shootId: string, index: number): string {
   return cloudinaryImageUrl(SAMPLE_IMAGE_POOL[idx], { w: 276, h: 345 });
 }
 
+/** 4:3 card cover for shoots list grid (IPI-372). TODO: replace with real shoot cover when schema adds cover_url. */
+export function shootListCoverForShoot(shootId: string): string {
+  const idx = hashIndex(shootId, SAMPLE_IMAGE_POOL.length);
+  return cloudinaryImageUrl(SAMPLE_IMAGE_POOL[idx], { w: 480, h: 360 });
+}
+
 export function approvalPreviewUrl(): string {
   return cloudinaryImageUrl(SAMPLE_IMAGE_POOL[6], { w: 472, h: 590 });
 }
@@ -71,6 +77,13 @@ export function emptyStatePreviewUrl(): string {
 export function brandListEmptyPreviewUrls(): string[] {
   return [SAMPLE_IMAGE_POOL[0], SAMPLE_IMAGE_POOL[1], SAMPLE_IMAGE_POOL[2]].map((id) =>
     cloudinaryImageUrl(id, { w: 300, h: 192 }),
+  );
+}
+
+/** DC empty-state stacked pair — two tilted 120x150 previews (Shoots List.v2.image-first.dc.html). */
+export function shootsListEmptyPreviewUrls(): string[] {
+  return [SAMPLE_IMAGE_POOL[3], SAMPLE_IMAGE_POOL[4]].map((id) =>
+    cloudinaryImageUrl(id, { w: 240, h: 300 }),
   );
 }
 

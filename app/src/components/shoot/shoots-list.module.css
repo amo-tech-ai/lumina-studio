@@ -1,0 +1,470 @@
+/* Shoots List workspace — DC parity (Shoots List.v2.image-first.dc.html, IPI-372) */
+
+.workspace {
+  width: 100%;
+  min-height: 100%;
+  background: var(--color-bg-page);
+}
+
+.workspaceInner {
+  max-width: 920px;
+  margin: 0 auto;
+  /* DC parity: header 28px 40px 0, scroll-body 20px 40px 24px, merged into one non-scrolling
+     column since OperatorPanel already owns the outer scroll (dc.html L102, L134). */
+  padding: 28px var(--space-10) 24px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+.workspaceHeader {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+}
+
+.title {
+  margin: 0;
+  font-family: var(--font-sans);
+  font-size: var(--font-size-2xl);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
+}
+
+.subtitle {
+  margin: var(--space-1) 0 0;
+  font-family: var(--font-sans);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+}
+
+.primaryBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  height: 40px;
+  padding: 0 18px;
+  border-radius: var(--radius-md);
+  background: var(--btn-primary-bg);
+  color: var(--btn-primary-text);
+  font-family: var(--font-sans);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  border: none;
+  cursor: pointer;
+  transition: background var(--duration-fast) var(--ease-default);
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.primaryBtn:hover {
+  background: var(--btn-primary-hover);
+}
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.searchWrap {
+  flex: 1;
+  min-width: 200px;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  height: 40px;
+  padding: 0 13px;
+  border: var(--border-default) solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-bg-card);
+}
+
+.sortBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 40px;
+  padding: 0 14px;
+  border-radius: var(--radius-md);
+  border: var(--border-default) solid var(--color-border);
+  background: var(--color-bg-card);
+  color: var(--color-text-secondary);
+  font-family: var(--font-sans);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: border-color var(--duration-fast) var(--ease-default);
+}
+
+.sortBtn:hover {
+  border-color: var(--color-border-strong);
+}
+
+.searchInput {
+  flex: 1;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-family: var(--font-sans);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-primary);
+}
+
+.searchInput::placeholder {
+  color: var(--color-text-muted);
+}
+
+.filterRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.filterChip,
+.filterChipActive {
+  display: inline-flex;
+  align-items: center;
+  height: 32px;
+  padding: 0 14px;
+  border-radius: var(--radius-pill);
+  font-family: var(--font-sans);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  border: var(--border-default) solid var(--color-border);
+  background: var(--color-bg-card);
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  transition: border-color var(--duration-fast) var(--ease-default);
+}
+
+.filterChipActive {
+  /* DC parity: active chip is solid black fill with light text (dc.html L126). */
+  border-color: var(--color-action);
+  color: var(--color-action-text);
+  background: var(--color-action);
+}
+
+.workspaceBody {
+  min-height: 200px;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--card-gap);
+}
+
+@media (max-width: 1280px) {
+  .grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 720px) {
+  .grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* --- Card (ShootCard.dc.html parity) --- */
+
+.card {
+  display: block;
+  width: 100%;
+  text-align: left;
+  border: var(--border-default) solid var(--color-border);
+  background: var(--card-bg);
+  border-radius: var(--card-radius);
+  overflow: hidden;
+  padding: 0;
+  box-shadow: var(--card-shadow);
+  transition: border-color var(--duration-normal) var(--ease-default);
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.card:hover {
+  border-color: var(--color-border-strong);
+}
+
+.coverWrap {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  background: var(--image-placeholder-bg);
+}
+
+.coverImage {
+  object-fit: cover;
+}
+
+.coverScrim {
+  position: absolute;
+  inset: 0;
+  background: var(--image-scrim);
+  pointer-events: none;
+}
+
+.dnaBadge {
+  position: absolute;
+  top: 9px;
+  right: 9px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-inverse);
+  background: rgb(17 17 17 / 0.55);
+  backdrop-filter: blur(3px);
+  padding: 2px 7px;
+  border-radius: 7px;
+}
+
+.statusPill {
+  position: absolute;
+  left: 11px;
+  bottom: 10px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-sans);
+  font-size: 11px;
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-inverse);
+  background: rgb(17 17 17 / 0.5);
+  backdrop-filter: blur(3px);
+  padding: 3px 9px;
+  border-radius: var(--radius-pill);
+}
+
+.statusDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+}
+
+.cardBody {
+  padding: 13px 14px 15px;
+}
+
+.cardName {
+  margin: 0;
+  font-family: var(--font-sans);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cardMetaRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 5px;
+}
+
+.cardType {
+  font-family: var(--font-sans);
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+}
+
+.cardDate {
+  font-family: var(--font-mono);
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+}
+
+/* --- Empty / error / no-match states --- */
+
+/* DC parity: no border box; per-state padding matches dc.html (empty 36 24 56, error 64 24). */
+.emptyState,
+.errorState,
+.noMatchState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+.emptyState {
+  padding: 36px var(--space-6) 56px;
+}
+
+.errorState,
+.noMatchState {
+  gap: 10px;
+  padding: var(--space-16) var(--space-6);
+}
+
+.emptyArt {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 22px;
+  opacity: 0.5;
+  filter: grayscale(0.3);
+}
+
+.emptyPhoto {
+  width: 120px;
+  height: 150px;
+  border-radius: var(--image-radius);
+  border: var(--border-default) solid var(--color-border);
+  background-size: cover;
+  background-position: center;
+  box-shadow: var(--card-shadow);
+}
+
+.emptyHint {
+  margin: 12px 0 0;
+  font-family: var(--font-sans);
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+}
+
+.emptyTitle {
+  margin: 0;
+  font-family: var(--font-sans);
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
+}
+
+.noMatchTitle {
+  margin: 0;
+  font-family: var(--font-sans);
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
+}
+
+.errorTitle {
+  margin: 0;
+  font-family: var(--font-sans);
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
+}
+
+.emptyCopy {
+  margin: 8px 0 0;
+  font-family: var(--font-sans);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  max-width: 420px;
+  line-height: 1.55;
+}
+
+.errorCopy,
+.noMatchCopy {
+  margin: 0;
+  font-family: var(--font-sans);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  max-width: 32rem;
+}
+
+/* DC empty CTA: taller than header button — height 42, padding 0 22, margin-top 18 (dc.html L155). */
+.emptyCta {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-top: 18px;
+  height: 42px;
+  padding: 0 22px;
+  border-radius: var(--radius-md);
+  background: var(--btn-primary-bg);
+  color: var(--btn-primary-text);
+  font-family: var(--font-sans);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  border: none;
+  cursor: pointer;
+  text-decoration: none;
+  transition: background var(--duration-fast) var(--ease-default);
+}
+
+.emptyCta:hover {
+  background: var(--btn-primary-hover);
+}
+
+.retryBtn {
+  margin-top: 6px;
+  height: 38px;
+  padding: 0 16px;
+  border-radius: var(--radius-md);
+  border: var(--border-default) solid var(--color-border);
+  background: var(--color-bg-card);
+  color: var(--color-text-primary);
+  font-family: var(--font-sans);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+}
+
+.retryBtn:hover {
+  background: var(--color-bg-muted);
+}
+
+/* --- Skeleton --- */
+
+.skeletonGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--card-gap);
+}
+
+.skeletonCard {
+  border: var(--border-default) solid var(--color-border);
+  border-radius: var(--card-radius);
+  overflow: hidden;
+  background: var(--card-bg);
+}
+
+.skeletonCover {
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  background: var(--color-bg-muted);
+  animation: shimmer 1.4s ease-in-out infinite;
+}
+
+.skeletonLine {
+  height: 14px;
+  margin: 13px 14px 0;
+  border-radius: var(--radius-sm);
+  background: var(--color-bg-muted);
+  animation: shimmer 1.4s ease-in-out infinite;
+}
+
+.skeletonLineSm {
+  height: 10px;
+  width: 60%;
+  margin: 8px 14px 15px;
+  border-radius: var(--radius-sm);
+  background: var(--color-bg-muted);
+  animation: shimmer 1.4s ease-in-out infinite;
+}
+
+@keyframes shimmer {
+  0%,
+  100% {
+    opacity: var(--opacity-loading);
+  }
+  50% {
+    opacity: 1;
+  }
+}
