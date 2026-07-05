@@ -199,7 +199,7 @@ function getWelcomeMessage(
     return "Contacts — find people and review communication history";
   }
   if (normalizedPath.startsWith("/app/crm/pipeline/")) {
-    return "Deal detail — review stage; use Approve Won/Lost for terminal conversion";
+    return "Deal detail — review stage and move non-terminal stages via the assistant";
   }
   if (normalizedPath === "/app/crm/pipeline") {
     return "Pipeline — review deals by stage and move non-terminal stages";

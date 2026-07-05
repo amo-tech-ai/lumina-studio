@@ -1,32 +1,13 @@
 import Link from "next/link";
 
+import { dealLabel, type DealWithCompany } from "@/lib/crm/deal-display";
 import { getCurrentOrgId } from "@/lib/crm/queries";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
 const STAGES = ["lead", "qualified", "proposal", "negotiation", "won", "lost"] as const;
-
-type DealRow = {
-  id: string;
-  stage: string;
-  value: number | null;
-  company_id: string;
-  crm_companies: { name: string } | { name: string }[] | null;
-};
-
-function companyName(deal: DealRow): string | undefined {
-  const c = deal.crm_companies;
-  if (!c) return undefined;
-  return Array.isArray(c) ? c[0]?.name : c.name;
-}
-
-function dealLabel(deal: DealRow): string {
-  const name = companyName(deal);
-  if (name && deal.value != null) return `${name} · $${deal.value}`;
-  if (name) return name;
-  return `Deal ${deal.id.slice(0, 8)}`;
-}
+const DEAL_LIST_LIMIT = 200;
 
 export default async function CrmPipelinePage() {
   const supabase = await createSupabaseServerClient();
@@ -39,6 +20,9 @@ export default async function CrmPipelinePage() {
       <div className="p-8" style={{ background: "#FBF8F5" }}>
         <h1 className="font-serif text-3xl text-[#1E293B]">Pipeline</h1>
         <p className="mt-2 font-sans text-[#64748B]">Sign in to view the deal pipeline.</p>
+        <Link href="/login?redirect=/app/crm/pipeline" className="mt-4 inline-block text-sm text-[#E87C4D]">
+          Sign in
+        </Link>
       </div>
     );
   }
@@ -53,13 +37,23 @@ export default async function CrmPipelinePage() {
     );
   }
 
-  const { data: deals } = await supabase
+  const { data: deals, error } = await supabase
     .from("crm_deals")
     .select("id, stage, value, company_id, crm_companies(name)")
     .eq("org_id", orgId)
-    .order("updated_at", { ascending: false });
+    .order("updated_at", { ascending: false })
+    .limit(DEAL_LIST_LIMIT);
 
-  const rows = (deals ?? []) as unknown as DealRow[];
+  if (error) {
+    return (
+      <div className="p-8" style={{ background: "#FBF8F5" }}>
+        <h1 className="font-serif text-3xl text-[#1E293B]">Pipeline</h1>
+        <p className="mt-2 font-sans text-[#64748B]">Could not load deals. Try again shortly.</p>
+      </div>
+    );
+  }
+
+  const rows = (deals ?? []) as unknown as DealWithCompany[];
 
   return (
     <div className="p-8" style={{ background: "#FBF8F5" }}>

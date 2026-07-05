@@ -1,6 +1,6 @@
 import { createTool } from "@mastra/core/tools";
 import { z } from "zod";
-import { crmToolError, getCrmUserClient } from "./_shared";
+import { crmToolError, getCrmUserClient, verifyCrmAnchors } from "./_shared";
 
 export const logActivity = createTool({
   id: "logActivity",
@@ -25,6 +25,12 @@ export const logActivity = createTool({
     try {
       const ctx = await getCrmUserClient();
       if (!ctx.client) return crmToolError(ctx.error);
+      const anchorError = await verifyCrmAnchors(ctx.client, ctx.orgId, {
+        companyId,
+        contactId,
+        dealId,
+      });
+      if (anchorError) return crmToolError(anchorError);
       const { data, error } = await ctx.client
         .from("crm_activities")
         .insert({
