@@ -11,7 +11,7 @@ parity_validated: 0
 last_verified: "2026-07-05"
 ---
 
-# Shoot Wizard — wireframe + conversion map
+## Shoot Wizard — wireframe + conversion map
 
 > **Scope contract (read first, obey literally):**
 > **IPI-274 is a visual reskin of the existing 6-step shoot wizard only.** Preserve all existing
@@ -134,6 +134,7 @@ only the state and endpoints already present in `/app/shoots/new`.
 | Basics: brand/campaign/season | URL params `?brand=&campaign=&season=` → else user's brands query | prompt to pick brand | inline field error | none |
 | Basics: "Suggested plan" rows | `suggestShootBrief` draft | hide card until generated | AI error banner + retry | none |
 | Brief rows | `suggestShootBrief` (AI draft, HITL) | "Generate brief" CTA | AI error + retry | before/after: **decorative** direction thumbs |
+| Deliverables (Gate 1) | `planDeliverables` (HITL) | "Plan deliverables" CTA | AI error + retry | per-deliverable thumb: **decorative** until asset exists |
 | Shot list | `generateShotListDraft` (HITL) | "Generate shots" CTA | AI error + retry | per-shot thumb: **decorative** until asset exists |
 | Budget bars | `estimateShootBudget` (HITL) | hide until generated | AI error + retry | none |
 | Review summary | assembled draft state | n/a (always after prior steps) | commit error + retry | none |
@@ -241,7 +242,7 @@ DC preview is 1440×900, workspace fixed 1000px. Lock the collapse so mobile isn
 | Width | Layout |
 |-------|--------|
 | ≥1025 desktop | Left rail `266px` + step panel `1fr` (DC exact) |
-| 1024 tablet | Compact left rail (icons + short labels) + panel |
+| 721–1024 tablet | Compact left rail (icons + short labels) + panel |
 | ≤720 mobile | **Stepper becomes a horizontal top rail; single-column step form below.** No left rail, no right-side custom panel inside the wizard. |
 
 The horizontal-top-stepper collapse is **not literally in the DC** (DC is desktop-only at 1440) →
@@ -301,7 +302,7 @@ Never rebuild `OperatorShell`, `NavSidebar`, `IntelligencePanel`, `OperatorChatD
 ```mermaid
 sequenceDiagram
   participant U as URL params
-  participant P as new/page.tsx (RSC)
+  participant P as new/page.tsx ("use client")
   participant W as shoot-wizard-workspace
   participant M as Mastra shoot-wizard workflow
   participant A as /api/shoots/commit
@@ -358,7 +359,7 @@ Manually re-run after styling — same account, real flow, not fixtures:
 | # | Commit | Files | Verify |
 |---|--------|-------|--------|
 | 1 | Workspace shell + stepper CSS (6 steps, no data) | `shoot-wizard-workspace.tsx`, `*.module.css` | static vs DC `:8765` @1440 |
-| 2 | AI draft row + Why panel (fixture) | `AiDraftRow.tsx` | side-by-side row parity |
+| 2 | AI draft row + Why panel (restyle, fixture) | `hitl/*ApprovalCard.tsx` | side-by-side row parity |
 | 3 | Per-step bodies wired to existing Mastra tools | step components | each gate blocks continue |
 | 4 | Modals (edit/confirm/exit) + dirty guard | reuse dialog | manual toggle |
 | 5 | States (pre-gen, error+retry, commit error) | workspace | toggle each |
