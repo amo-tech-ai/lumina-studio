@@ -21,7 +21,9 @@ export type ShootRow = {
 export function formatShootDate(iso: string): string {
   const date = new Date(iso);
   if (Number.isNaN(date.getTime())) return "—";
-  return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  // ponytail: pin to UTC so SSR (server TZ) and hydration (browser TZ) render the
+  // same day — otherwise a near-midnight updated_at mismatches and React warns.
+  return date.toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
 }
 
 type Props = {
