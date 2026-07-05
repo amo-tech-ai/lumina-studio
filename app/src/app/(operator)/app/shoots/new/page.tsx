@@ -7,6 +7,7 @@ import { createBrowserClient } from "@supabase/ssr";
 import { DeliverableApprovalCard } from "@/components/shoot/hitl/DeliverableApprovalCard";
 import { ShotListApprovalCard } from "@/components/shoot/hitl/ShotListApprovalCard";
 import { BudgetApprovalCard } from "@/components/shoot/hitl/BudgetApprovalCard";
+import styles from "@/components/shoot/shoot-wizard.module.css";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -61,30 +62,50 @@ const CHANNELS = [
   { id: "website", label: "Website" },
 ];
 
-const TOTAL_STEPS = 6;
+// 6-step frame. Steps 2-4 (Deliverables / Shot List / Budget) are HITL gates.
+const STEPS: { label: string; gate?: boolean }[] = [
+  { label: "Basics" },
+  { label: "Brief" },
+  { label: "Deliverables", gate: true },
+  { label: "Shot List", gate: true },
+  { label: "Budget", gate: true },
+  { label: "Confirmation" },
+];
+const TOTAL_STEPS = STEPS.length;
 
 // ── Shared primitives ─────────────────────────────────────────────────────────
 
-function StepProgress({ current }: { current: number }) {
+// Vertical step rail (desktop) → horizontal stepper (≤720px, via CSS).
+function StepRail({ current }: { current: number }) {
   return (
-    <div className="flex items-center gap-1.5">
-      {Array.from({ length: TOTAL_STEPS }, (_, i) => (
-        <div
-          key={i}
-          className="h-2 w-8 rounded-full transition-all"
-          style={{ background: i < current ? "#E87C4D" : i === current ? "#F3B93C" : "#E8E0D8" }}
-        />
-      ))}
-    </div>
+    <nav className={styles.rail} aria-label="Wizard steps">
+      <Link href="/app/shoots" className={styles.railBack}>← Shoots</Link>
+      <ol style={{ display: "contents" }}>
+        {STEPS.map((s, i) => {
+          const stateName = i < current ? "completed" : i === current ? "active" : "future";
+          return (
+            <li
+              key={s.label}
+              className={styles.railStep}
+              data-state={stateName}
+              aria-current={i === current ? "step" : undefined}
+            >
+              <span className={styles.railMarker} aria-hidden>
+                {i < current ? "✓" : i + 1}
+              </span>
+              <span className={styles.railLabel}>{s.label}</span>
+              {s.gate && <span className={styles.railGate} aria-hidden title="Approval gate" />}
+            </li>
+          );
+        })}
+      </ol>
+    </nav>
   );
 }
 
 function HITLGate({ message }: { message: string }) {
   return (
-    <div
-      className="rounded-xl border px-4 py-3 font-sans text-sm"
-      style={{ borderColor: "#F3B93C", background: "#FFFBEB", color: "#92400E" }}
-    >
+    <div className={styles.hitlGate}>
       ⚠ <strong>HITL Gate</strong> — {message}
     </div>
   );
@@ -92,10 +113,10 @@ function HITLGate({ message }: { message: string }) {
 
 function Spinner() {
   return (
-    <div className="flex items-center gap-2 font-sans text-sm text-[#64748B]">
-      <div className="h-4 w-4 animate-spin rounded-full border-2 border-[#E8E0D8] border-t-[#E87C4D]" />
+    <span className={styles.spinnerRow}>
+      <span className={styles.spinner} aria-hidden />
       AI planning…
-    </div>
+    </span>
   );
 }
 
@@ -415,408 +436,364 @@ export default function NewShootPage() {
   });
 
   return (
-    <div className="min-h-screen p-8" style={{ background: "#FBF8F5" }}>
-      <div className="mx-auto max-w-2xl space-y-6">
+    <div className={styles.page}>
+      <div className={styles.workspace}>
 
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <Link href="/app/shoots" className="font-sans text-sm text-[#64748B] hover:underline">
-            ← Shoots
-          </Link>
-        </div>
+        <StepRail current={step} />
 
-        <div className="space-y-1">
-          <StepProgress current={step} />
-          <p className="font-sans text-xs text-[#94A3B8]">Step {step + 1} of {TOTAL_STEPS}</p>
-        </div>
+        <div className={styles.content}>
+          <p className={styles.stepMeta}>Step {step + 1} of {TOTAL_STEPS} · {STEPS[step].label}</p>
 
-        {error && (
-          <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 font-sans text-sm text-red-700">
-            {error}
-          </div>
-        )}
+          {error && <div className={styles.errorBanner} role="alert">{error}</div>}
 
-        {/* ── Step 0: Basics ─────────────────────────────── */}
-        {step === 0 && (
-          <div className="space-y-5">
-            <h1 className="font-serif text-2xl text-[#1E293B]">Basics</h1>
+          {/* ── Step 0: Basics ─────────────────────────────── */}
+          {step === 0 && (
+            <div className={styles.section}>
+              <h1 className={styles.title}>Basics</h1>
 
-            <div className="space-y-1">
-              <label className="font-sans text-sm font-medium text-[#475569]">Brand *</label>
-              <select
-                className="w-full rounded-xl border border-[#E8E0D8] bg-white px-4 py-3 font-sans text-sm text-[#1E293B] outline-none focus:border-[#E87C4D]"
-                value={state.brandId}
-                onChange={(e) => update({ brandId: e.target.value })}
-              >
-                <option value="">Select a brand…</option>
-                {brands.map((b) => (
-                  <option key={b.id} value={b.id}>{b.name}</option>
-                ))}
-              </select>
-            </div>
-
-            <div className="space-y-1">
-              <label className="font-sans text-sm font-medium text-[#475569]">Shoot name *</label>
-              <input
-                className="w-full rounded-xl border border-[#E8E0D8] bg-white px-4 py-3 font-sans text-sm text-[#1E293B] outline-none focus:border-[#E87C4D]"
-                placeholder="SS26 Campaign — Everlane"
-                value={state.shootName}
-                onChange={(e) => update({ shootName: e.target.value })}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <label className="font-sans text-sm font-medium text-[#475569]">Target channels *</label>
-              <div className="flex flex-wrap gap-2">
-                {CHANNELS.map((ch) => (
-                  <button
-                    key={ch.id}
-                    type="button"
-                    onClick={() => toggleChannel(ch.id)}
-                    className="rounded-full border px-3 py-1.5 font-sans text-sm transition-all"
-                    style={{
-                      borderColor: state.channels.includes(ch.id) ? "#E87C4D" : "#E8E0D8",
-                      background: state.channels.includes(ch.id) ? "#FEF3ED" : "white",
-                      color: state.channels.includes(ch.id) ? "#E87C4D" : "#64748B",
-                    }}
-                  >
-                    {state.channels.includes(ch.id) ? "✓ " : ""}{ch.label}
-                  </button>
-                ))}
+              <div className={styles.field}>
+                <label className={styles.label} htmlFor="brand-select">Brand *</label>
+                <select
+                  id="brand-select"
+                  className={styles.select}
+                  value={state.brandId}
+                  onChange={(e) => update({ brandId: e.target.value })}
+                >
+                  <option value="">Select a brand…</option>
+                  {brands.map((b) => (
+                    <option key={b.id} value={b.id}>{b.name}</option>
+                  ))}
+                </select>
               </div>
-            </div>
 
-            {/* ── Spec panel (IPI-189) ── */}
-            {state.channels.length > 0 && (
-              <div className="space-y-3">
-                <p className="font-sans text-xs font-medium uppercase tracking-wide text-[#94A3B8]">
-                  Specs for your selected channels
-                </p>
-                {specsLoading ? (
-                  <div className="grid grid-cols-2 gap-3">
-                    {state.channels.map((c) => (
-                      <div key={c} className="h-28 animate-pulse rounded-xl bg-[#E8E0D8]" />
-                    ))}
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-2 gap-3">
-                    {specs.map(({ channel, spec }) => {
-                      const label = CHANNELS.find((ch) => ch.id === channel)?.label ?? channel;
-                      if (!spec) {
+              <div className={styles.field}>
+                <label className={styles.label} htmlFor="shoot-name">Shoot name *</label>
+                <input
+                  id="shoot-name"
+                  className={styles.input}
+                  placeholder="SS26 Campaign — Everlane"
+                  value={state.shootName}
+                  onChange={(e) => update({ shootName: e.target.value })}
+                />
+              </div>
+
+              <div className={styles.field}>
+                <label className={styles.label}>Target channels *</label>
+                <div className={styles.chipRow} role="group" aria-label="Target channels">
+                  {CHANNELS.map((ch) => {
+                    const selected = state.channels.includes(ch.id);
+                    return (
+                      <button
+                        key={ch.id}
+                        type="button"
+                        onClick={() => toggleChannel(ch.id)}
+                        className={styles.chip}
+                        data-selected={selected}
+                        aria-pressed={selected}
+                      >
+                        {selected ? "✓ " : ""}{ch.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* ── Spec panel (IPI-189) ── */}
+              {state.channels.length > 0 && (
+                <div className={styles.field}>
+                  <p className={styles.specHeading}>Specs for your selected channels</p>
+                  {specsLoading ? (
+                    <div className={styles.specGrid}>
+                      {state.channels.map((c) => (
+                        <div key={c} className={styles.specSkeleton} />
+                      ))}
+                    </div>
+                  ) : (
+                    <div className={styles.specGrid}>
+                      {specs.map(({ channel, spec }) => {
+                        const label = CHANNELS.find((ch) => ch.id === channel)?.label ?? channel;
+                        if (!spec) {
+                          return (
+                            <div key={channel} className={styles.specWarn}>
+                              <p className={styles.specWarnName}>{label}</p>
+                              <p className={styles.specWarnMeta}>⚠ No spec on file yet</p>
+                            </div>
+                          );
+                        }
+                        if (!spec.widthPx || !spec.heightPx) return null;
+                        const scale = Math.min(40 / spec.widthPx, 56 / spec.heightPx);
+                        const pw = Math.round(spec.widthPx * scale);
+                        const ph = Math.round(spec.heightPx * scale);
                         return (
-                          <div
-                            key={channel}
-                            className="rounded-xl border px-4 py-3 font-sans text-sm"
-                            style={{ borderColor: "#F3B93C", background: "#FFFBEB" }}
-                          >
-                            <p className="font-medium text-[#92400E]">{label}</p>
-                            <p className="mt-1 text-xs text-[#B45309]">⚠ No spec on file yet</p>
+                          <div key={channel} className={styles.specCard}>
+                            <div className={styles.specCardMain}>
+                              <p className={styles.specName}>{label}</p>
+                              <p className={styles.specMeta}>{spec.widthPx} × {spec.heightPx} px</p>
+                              {spec.aspectRatioLabel && (
+                                <p className={styles.specMeta}>Ratio {spec.aspectRatioLabel}</p>
+                              )}
+                              <p className={styles.specMeta}>{spec.acceptedFormats.join(" · ")}</p>
+                              {spec.maxFileSizeMb && (
+                                <p className={styles.specMeta}>Max {spec.maxFileSizeMb} MB</p>
+                              )}
+                            </div>
+                            <div className={styles.specThumbWrap}>
+                              <div className={styles.specThumb} style={{ width: pw, height: ph }} />
+                            </div>
                           </div>
                         );
-                      }
-                      if (!spec.widthPx || !spec.heightPx) return null;
-                      const scale = Math.min(40 / spec.widthPx, 56 / spec.heightPx);
-                      const pw = Math.round(spec.widthPx * scale);
-                      const ph = Math.round(spec.heightPx * scale);
-                      return (
-                        <div
-                          key={channel}
-                          className="flex items-center gap-3 rounded-xl border border-[#E8E0D8] bg-white px-4 py-3 font-sans text-sm"
-                        >
-                          <div className="flex-1">
-                            <p className="font-medium text-[#1E293B]">{label}</p>
-                            <p className="mt-1 text-[#64748B]">{spec.widthPx} × {spec.heightPx} px</p>
-                            {spec.aspectRatioLabel && (
-                              <p className="text-[#64748B]">Ratio {spec.aspectRatioLabel}</p>
-                            )}
-                            <p className="text-[#64748B]">{spec.acceptedFormats.join(" · ")}</p>
-                            {spec.maxFileSizeMb && (
-                              <p className="text-[#64748B]">Max {spec.maxFileSizeMb} MB</p>
-                            )}
-                          </div>
-                          <div className="flex shrink-0 items-center justify-center" style={{ width: 44, height: 60 }}>
-                            <div
-                              className="rounded border border-[#CBD5E1] bg-[#F1EDE8]"
-                              style={{ width: pw, height: ph }}
-                            />
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-            )}
-
-            <div className="flex justify-end">
-              <button
-                onClick={() => setStep(1)}
-                disabled={!state.brandId || !state.shootName || state.channels.length === 0}
-                className="rounded-full px-6 py-2.5 font-sans text-sm font-medium text-white disabled:opacity-40"
-                style={{ background: "#E87C4D" }}
-              >
-                Continue →
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* ── Step 1: Brief ──────────────────────────────── */}
-        {step === 1 && (
-          <div className="space-y-5">
-            <h1 className="font-serif text-2xl text-[#1E293B]">Brief</h1>
-
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <label className="font-sans text-sm font-medium text-[#475569]">Brief *</label>
-                {!briefGenerated && (
-                  <button
-                    type="button"
-                    onClick={() => suggestBrief()}
-                    disabled={briefLoading}
-                    className="flex items-center gap-1.5 rounded-full border border-[#E8E0D8] px-3 py-1 font-sans text-xs text-[#64748B] transition-colors hover:border-[#E87C4D] hover:text-[#E87C4D] disabled:opacity-40"
-                  >
-                    {briefLoading ? (
-                      <span className="h-3 w-3 animate-spin rounded-full border border-[#E8E0D8] border-t-[#E87C4D]" />
-                    ) : "✨"} AI suggest
-                  </button>
-                )}
-              </div>
-
-              <div className="relative">
-                <textarea
-                  rows={5}
-                  readOnly={briefLoading}
-                  className="w-full rounded-xl border border-[#E8E0D8] bg-white px-4 py-3 font-sans text-sm text-[#1E293B] outline-none focus:border-[#E87C4D] disabled:opacity-50"
-                  style={{ opacity: briefLoading ? 0.5 : 1 }}
-                  placeholder="Describe the shoot vision, tone, products, and campaign goals…"
-                  value={state.brief}
-                  onChange={(e) => {
-                    update({ brief: e.target.value });
-                    setBriefGenerated(false);
-                  }}
-                />
-                {briefLoading && (
-                  <div className="absolute inset-x-0 bottom-2 flex items-center justify-center gap-2">
-                    <span className="h-3 w-3 animate-spin rounded-full border border-[#E8E0D8] border-t-[#E87C4D]" />
-                    <p className="font-sans text-xs text-[#94A3B8]">Generating your creative brief…</p>
-                  </div>
-                )}
-              </div>
-
-              {/* Generated status + tone chips */}
-              {briefGenerated && !briefLoading && (
-                <p className="text-xs text-[#94A3B8]">✓ Brief generated — refine below</p>
-              )}
-              {briefGenerated && !briefLoading && (
-                <div className="flex flex-wrap gap-2">
-                  {[
-                    { label: "↺ Regenerate", tone: undefined as string | undefined, omitSeed: true },
-                    { label: "Shorter", tone: "shorter" },
-                    { label: "More luxury", tone: "more luxury" },
-                    { label: "More commercial", tone: "more commercial" },
-                    { label: "More social-first", tone: "more social-first" },
-                    { label: "More editorial", tone: "more editorial" },
-                  ].map(({ label, tone, omitSeed }) => (
-                    <button
-                      key={label}
-                      type="button"
-                      disabled={briefLoading}
-                      onClick={() => suggestBrief({ tone, briefSeed: omitSeed ? undefined : state.brief.substring(0, 4000) })}
-                      className="rounded-full border border-[#E8E0D8] px-3 py-1 font-sans text-xs text-[#64748B] transition-colors hover:border-[#E87C4D] hover:text-[#E87C4D] disabled:opacity-40"
-                    >
-                      {label}
-                    </button>
-                  ))}
+                      })}
+                    </div>
+                  )}
                 </div>
               )}
 
-              {/* Seed expansion offer */}
-              {expandOffer && !briefLoading && (
+              <div className={`${styles.footer} ${styles.footerEnd}`}>
                 <button
-                  type="button"
-                  onClick={() => suggestBrief({ briefSeed: state.brief.substring(0, 4000) })}
-                  className="flex items-center gap-1.5 rounded-xl border border-[#F3B93C] bg-[#FFFBEB] px-3 py-2 font-sans text-xs text-[#92400E] transition-colors hover:bg-[#FEF9C3]"
+                  onClick={() => setStep(1)}
+                  disabled={!state.brandId || !state.shootName || state.channels.length === 0}
+                  className={styles.btnPrimary}
                 >
-                  ✨ Expand this into a complete creative brief
+                  Continue →
                 </button>
-              )}
-
-              {!state.brief && !briefLoading && (
-                <p className="font-sans text-xs text-[#94A3B8]">
-                  Tip: click "AI suggest" to generate a brief from your brand's profile.
-                </p>
-              )}
-            </div>
-
-            <div className="flex justify-between">
-              <button onClick={() => setStep(0)} className="font-sans text-sm text-[#64748B] hover:underline">
-                ← Back
-              </button>
-              <button
-                onClick={planDeliverables}
-                disabled={!state.brief || loading || briefLoading}
-                className="rounded-full px-6 py-2.5 font-sans text-sm font-medium text-white disabled:opacity-40"
-                style={{ background: "#E87C4D" }}
-              >
-                {loading ? <Spinner /> : "Plan deliverables →"}
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* ── Step 2: Deliverables (HITL Gate 1) ─────────── */}
-        {step === 2 && (
-          <div className="space-y-5">
-            <h1 className="font-serif text-2xl text-[#1E293B]">Deliverables</h1>
-
-            <DeliverableApprovalCard
-              deliverables={state.deliverables}
-              totalAssets={state.totalAssets}
-              uncoveredWarnings={state.uncoveredWarnings}
-              onChange={(next) => update({ deliverables: next, totalAssets: next.reduce((s, d) => s + d.quantity, 0) })}
-              onAdd={() => {
-                const next = [...state.deliverables, { id: crypto.randomUUID(), channel: "", format: "JPG", quantity: 6 }];
-                update({ deliverables: next, totalAssets: next.reduce((s, d) => s + d.quantity, 0) });
-              }}
-              onRemove={(id) => {
-                const next = state.deliverables.filter((d) => d.id !== id);
-                update({ deliverables: next, totalAssets: next.reduce((s, d) => s + d.quantity, 0) });
-              }}
-            />
-
-            <HITLGate message="Review and approve these deliverables before the agent generates the shot list. Un-approved = no shot list." />
-
-            <div className="flex justify-between">
-              <button
-                onClick={() => { update({ runId: null, shots: [], uncoveredWarnings: [] }); setStep(1); }}
-                className="font-sans text-sm text-[#64748B] hover:underline"
-              >
-                ← Revise brief
-              </button>
-              <button
-                onClick={approveDeliverables}
-                disabled={!state.deliverables.some((d) => d.channel.trim()) || loading}
-                className="rounded-full px-6 py-2.5 font-sans text-sm font-medium text-white disabled:opacity-40"
-                style={{ background: "#10B981" }}
-              >
-                {loading ? <Spinner /> : "✓ Approve deliverables"}
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* ── Step 3: Shot list (HITL Gate 2) ────────────── */}
-        {step === 3 && (
-          <div className="space-y-5">
-            <h1 className="font-serif text-2xl text-[#1E293B]">Shot List</h1>
-
-            <ShotListApprovalCard
-              shots={state.shots}
-              deliverableCount={state.deliverables.length}
-              uncoveredWarnings={state.uncoveredWarnings}
-              onChange={(shots) => update({ shots })}
-            />
-
-            <HITLGate message="Approve shot list to proceed to budget estimate. All deliverables must be covered." />
-
-            <div className="flex justify-between">
-              <button
-                onClick={() => { update({ runId: null, shots: [], uncoveredWarnings: [] }); setStep(2); }}
-                className="font-sans text-sm text-[#64748B] hover:underline"
-              >
-                ← Edit deliverables
-              </button>
-              <button
-                onClick={approveShotList}
-                disabled={state.shots.length === 0 || loading}
-                className="rounded-full px-6 py-2.5 font-sans text-sm font-medium text-white disabled:opacity-40"
-                style={{ background: "#10B981" }}
-              >
-                {loading ? <Spinner /> : "✓ Approve shot list"}
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* ── Step 4: Budget (HITL Gate 3) ────────────────── */}
-        {step === 4 && state.budget && (
-          <div className="space-y-5">
-            <h1 className="font-serif text-2xl text-[#1E293B]">Budget</h1>
-
-            <BudgetApprovalCard
-              budget={state.budget}
-              override={state.budgetOverride}
-              onOverrideChange={(val) => update({ budgetOverride: val })}
-            />
-
-            <HITLGate message="Approve budget to commit the shoot. No DB rows exist until you approve here." />
-
-            <div className="flex justify-between">
-              <button onClick={() => setStep(3)} className="font-sans text-sm text-[#64748B] hover:underline">
-                ← Edit shot list
-              </button>
-              <button
-                onClick={approveBudget}
-                disabled={loading}
-                className="rounded-full px-6 py-2.5 font-sans text-sm font-medium text-white disabled:opacity-40"
-                style={{ background: "#10B981" }}
-              >
-                {loading ? <Spinner /> : "✓ Approve & commit"}
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* ── Step 5: Confirmation ─────────────────────────── */}
-        {step === 5 && (
-          <div className="space-y-6 text-center">
-            <div className="text-5xl">✅</div>
-            <h1 className="font-serif text-2xl text-[#1E293B]">Shoot committed</h1>
-            <p className="font-sans text-sm text-[#64748B]">
-              {state.shootName}
-            </p>
-            <div className="rounded-2xl border border-[#E8E0D8] bg-white p-4 text-left space-y-2">
-              <div className="flex justify-between font-sans text-sm">
-                <span className="text-[#64748B]">Shot list</span>
-                <span className="text-[#1E293B]">{state.shots.length} shots</span>
-              </div>
-              <div className="flex justify-between font-sans text-sm">
-                <span className="text-[#64748B]">Deliverables</span>
-                <span className="text-[#1E293B]">{state.deliverables.length} types · {state.deliverables.reduce((s, d) => s + d.quantity, 0)} assets</span>
-              </div>
-              <div className="flex justify-between font-sans text-sm">
-                <span className="text-[#64748B]">Budget</span>
-                <span className="text-[#1E293B]">
-                  ${(state.budgetOverride ? Number(state.budgetOverride) : state.budget?.total ?? 0).toLocaleString()}
-                </span>
-              </div>
-              <div className="flex justify-between font-sans text-sm">
-                <span className="text-[#64748B]">Shoot ID</span>
-                <span className="font-mono text-xs text-[#64748B] truncate max-w-[180px]">{state.shootId}</span>
-              </div>
-              <div className="flex justify-between font-sans text-sm">
-                <span className="text-[#64748B]">Status</span>
-                <span className="font-medium text-[#10B981]">planning</span>
               </div>
             </div>
-            <div className="flex justify-center gap-3">
-              <Link
-                href="/app/shoots"
-                className="rounded-full border border-[#E8E0D8] px-5 py-2.5 font-sans text-sm text-[#64748B] hover:border-[#94A3B8]"
-              >
-                View all shoots
-              </Link>
-              <Link
-                href="/app/shoots/new"
-                className="rounded-full px-5 py-2.5 font-sans text-sm font-medium text-white"
-                style={{ background: "#E87C4D" }}
-              >
-                Plan another shoot
-              </Link>
+          )}
+
+          {/* ── Step 1: Brief ──────────────────────────────── */}
+          {step === 1 && (
+            <div className={styles.section}>
+              <h1 className={styles.title}>Brief</h1>
+
+              <div className={styles.field}>
+                <div className={styles.footer}>
+                  <label className={styles.label} htmlFor="brief-text">Brief *</label>
+                  {!briefGenerated && (
+                    <button
+                      type="button"
+                      onClick={() => suggestBrief()}
+                      disabled={briefLoading}
+                      className={styles.pill}
+                    >
+                      {briefLoading ? <span className={`${styles.spinner} ${styles.spinnerSm}`} aria-hidden /> : "✨"} AI suggest
+                    </button>
+                  )}
+                </div>
+
+                <div className={styles.textareaWrap}>
+                  <textarea
+                    id="brief-text"
+                    rows={5}
+                    readOnly={briefLoading}
+                    className={`${styles.textarea} ${briefLoading ? styles.textareaLoading : ""}`}
+                    placeholder="Describe the shoot vision, tone, products, and campaign goals…"
+                    value={state.brief}
+                    onChange={(e) => {
+                      update({ brief: e.target.value });
+                      setBriefGenerated(false);
+                    }}
+                  />
+                  {briefLoading && (
+                    <div className={styles.briefLoadingOverlay}>
+                      <span className={`${styles.spinner} ${styles.spinnerSm}`} aria-hidden />
+                      <p className={styles.hint}>Generating your creative brief…</p>
+                    </div>
+                  )}
+                </div>
+
+                {/* Generated status + tone chips */}
+                {briefGenerated && !briefLoading && (
+                  <p className={`${styles.hint} ${styles.hintOk}`}>✓ Brief generated — refine below</p>
+                )}
+                {briefGenerated && !briefLoading && (
+                  <div className={styles.chipRow}>
+                    {[
+                      { label: "↺ Regenerate", tone: undefined as string | undefined, omitSeed: true },
+                      { label: "Shorter", tone: "shorter" },
+                      { label: "More luxury", tone: "more luxury" },
+                      { label: "More commercial", tone: "more commercial" },
+                      { label: "More social-first", tone: "more social-first" },
+                      { label: "More editorial", tone: "more editorial" },
+                    ].map(({ label, tone, omitSeed }) => (
+                      <button
+                        key={label}
+                        type="button"
+                        disabled={briefLoading}
+                        onClick={() => suggestBrief({ tone, briefSeed: omitSeed ? undefined : state.brief.substring(0, 4000) })}
+                        className={styles.pill}
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                {/* Seed expansion offer */}
+                {expandOffer && !briefLoading && (
+                  <button
+                    type="button"
+                    onClick={() => suggestBrief({ briefSeed: state.brief.substring(0, 4000) })}
+                    className={styles.expandOffer}
+                  >
+                    ✨ Expand this into a complete creative brief
+                  </button>
+                )}
+
+                {!state.brief && !briefLoading && (
+                  <p className={styles.hint}>
+                    Tip: click "AI suggest" to generate a brief from your brand's profile.
+                  </p>
+                )}
+              </div>
+
+              <div className={styles.footer}>
+                <button onClick={() => setStep(0)} className={styles.btnGhost}>← Back</button>
+                <button
+                  onClick={planDeliverables}
+                  disabled={!state.brief || loading || briefLoading}
+                  className={styles.btnPrimary}
+                >
+                  {loading ? <Spinner /> : "Plan deliverables →"}
+                </button>
+              </div>
             </div>
-          </div>
-        )}
+          )}
+
+          {/* ── Step 2: Deliverables (HITL Gate 1) ─────────── */}
+          {step === 2 && (
+            <div className={styles.section}>
+              <h1 className={styles.title}>Deliverables</h1>
+
+              <DeliverableApprovalCard
+                deliverables={state.deliverables}
+                totalAssets={state.totalAssets}
+                uncoveredWarnings={state.uncoveredWarnings}
+                onChange={(next) => update({ deliverables: next, totalAssets: next.reduce((s, d) => s + d.quantity, 0) })}
+                onAdd={() => {
+                  const next = [...state.deliverables, { id: crypto.randomUUID(), channel: "", format: "JPG", quantity: 6 }];
+                  update({ deliverables: next, totalAssets: next.reduce((s, d) => s + d.quantity, 0) });
+                }}
+                onRemove={(id) => {
+                  const next = state.deliverables.filter((d) => d.id !== id);
+                  update({ deliverables: next, totalAssets: next.reduce((s, d) => s + d.quantity, 0) });
+                }}
+              />
+
+              <HITLGate message="Review and approve these deliverables before the agent generates the shot list. Un-approved = no shot list." />
+
+              <div className={styles.footer}>
+                <button
+                  onClick={() => { update({ runId: null, shots: [], uncoveredWarnings: [] }); setStep(1); }}
+                  className={styles.btnGhost}
+                >
+                  ← Revise brief
+                </button>
+                <button
+                  onClick={approveDeliverables}
+                  disabled={!state.deliverables.some((d) => d.channel.trim()) || loading}
+                  className={styles.btnApprove}
+                >
+                  {loading ? <Spinner /> : "✓ Approve deliverables"}
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* ── Step 3: Shot list (HITL Gate 2) ────────────── */}
+          {step === 3 && (
+            <div className={styles.section}>
+              <h1 className={styles.title}>Shot List</h1>
+
+              <ShotListApprovalCard
+                shots={state.shots}
+                deliverableCount={state.deliverables.length}
+                uncoveredWarnings={state.uncoveredWarnings}
+                onChange={(shots) => update({ shots })}
+              />
+
+              <HITLGate message="Approve shot list to proceed to budget estimate. All deliverables must be covered." />
+
+              <div className={styles.footer}>
+                <button
+                  onClick={() => { update({ runId: null, shots: [], uncoveredWarnings: [] }); setStep(2); }}
+                  className={styles.btnGhost}
+                >
+                  ← Edit deliverables
+                </button>
+                <button
+                  onClick={approveShotList}
+                  disabled={state.shots.length === 0 || loading}
+                  className={styles.btnApprove}
+                >
+                  {loading ? <Spinner /> : "✓ Approve shot list"}
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* ── Step 4: Budget (HITL Gate 3) ────────────────── */}
+          {step === 4 && state.budget && (
+            <div className={styles.section}>
+              <h1 className={styles.title}>Budget</h1>
+
+              <BudgetApprovalCard
+                budget={state.budget}
+                override={state.budgetOverride}
+                onOverrideChange={(val) => update({ budgetOverride: val })}
+              />
+
+              <HITLGate message="Approve budget to commit the shoot. No DB rows exist until you approve here." />
+
+              <div className={styles.footer}>
+                <button onClick={() => setStep(3)} className={styles.btnGhost}>← Edit shot list</button>
+                <button
+                  onClick={approveBudget}
+                  disabled={loading}
+                  className={styles.btnApprove}
+                >
+                  {loading ? <Spinner /> : "✓ Approve & commit"}
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* ── Step 5: Confirmation ─────────────────────────── */}
+          {step === 5 && (
+            <div className={styles.confirm}>
+              <div className={styles.confirmIcon} aria-hidden>✅</div>
+              <h1 className={styles.title}>Shoot committed</h1>
+              <p className={styles.hint}>{state.shootName}</p>
+              <div className={styles.summaryCard}>
+                <div className={styles.summaryRow}>
+                  <span className={styles.summaryKey}>Shot list</span>
+                  <span className={styles.summaryVal}>{state.shots.length} shots</span>
+                </div>
+                <div className={styles.summaryRow}>
+                  <span className={styles.summaryKey}>Deliverables</span>
+                  <span className={styles.summaryVal}>{state.deliverables.length} types · {state.deliverables.reduce((s, d) => s + d.quantity, 0)} assets</span>
+                </div>
+                <div className={styles.summaryRow}>
+                  <span className={styles.summaryKey}>Budget</span>
+                  <span className={styles.summaryVal}>
+                    ${(state.budgetOverride ? Number(state.budgetOverride) : state.budget?.total ?? 0).toLocaleString()}
+                  </span>
+                </div>
+                <div className={styles.summaryRow}>
+                  <span className={styles.summaryKey}>Shoot ID</span>
+                  <span className={styles.summaryMono}>{state.shootId}</span>
+                </div>
+                <div className={styles.summaryRow}>
+                  <span className={styles.summaryKey}>Status</span>
+                  <span className={styles.summaryStatus}>planning</span>
+                </div>
+              </div>
+              <div className={styles.confirmActions}>
+                <Link href="/app/shoots" className={styles.btnSecondary}>View all shoots</Link>
+                <Link href="/app/shoots/new" className={styles.btnPrimary}>Plan another shoot</Link>
+              </div>
+            </div>
+          )}
+        </div>
 
       </div>
     </div>
