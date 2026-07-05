@@ -2,12 +2,15 @@
 
 import Link from "next/link";
 import { useMemo, useState, type ReactNode } from "react";
-import { Plus, Search } from "lucide-react";
 
 import { ShootCard, type ShootRow } from "@/components/shoot/ShootCard";
+import { ShootsListHeader } from "@/components/shoot/shoots-list-header";
 import {
-  SHOOT_LIST_FILTERS,
-  SHOOT_LIST_FILTER_LABELS,
+  ShootsListEmptyState,
+  ShootsListErrorState,
+  ShootsListNoMatchState,
+} from "@/components/shoot/shoots-list-states";
+import {
   matchesShootListFilter,
   shootListCountLabel,
   type ShootListFilter,
@@ -65,49 +68,13 @@ export function ShootsListWorkspace({ shoots, isAuthenticated, fetchError }: Pro
   }
 
   const header = (
-    <div className={styles.workspaceHeader}>
-      <header className={styles.header}>
-        <div>
-          <h1 className={styles.title}>Shoots</h1>
-          <p className={styles.subtitle}>{shootListCountLabel(shoots)}</p>
-        </div>
-        <Link href="/app/shoots/new" className={styles.primaryBtn}>
-          <Plus size={16} aria-hidden />
-          New shoot
-        </Link>
-      </header>
-
-      <div className={styles.toolbar}>
-        <div className={styles.searchWrap}>
-          <Search size={16} aria-hidden className={styles.searchInput} />
-          <input
-            type="search"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search shoots…"
-            className={styles.searchInput}
-            aria-label="Search shoots"
-          />
-        </div>
-      </div>
-
-      <div className={styles.filterRow} role="group" aria-label="Filter shoots">
-        {SHOOT_LIST_FILTERS.map((chip) => {
-          const active = filter === chip;
-          return (
-            <button
-              key={chip}
-              type="button"
-              className={active ? styles.filterChipActive : styles.filterChip}
-              aria-pressed={active}
-              onClick={() => setFilter(chip)}
-            >
-              {SHOOT_LIST_FILTER_LABELS[chip]}
-            </button>
-          );
-        })}
-      </div>
-    </div>
+    <ShootsListHeader
+      countLabel={shootListCountLabel(shoots)}
+      query={query}
+      onQueryChange={setQuery}
+      filter={filter}
+      onFilterChange={setFilter}
+    />
   );
 
   if (fetchError) {
@@ -115,13 +82,7 @@ export function ShootsListWorkspace({ shoots, isAuthenticated, fetchError }: Pro
       <WorkspaceFrame>
         {header}
         <div className={styles.workspaceBody}>
-          <div className={styles.errorState} data-testid="shoots-list-error">
-            <h2 className={styles.emptyTitle}>Couldn&apos;t load shoots</h2>
-            <p className={styles.errorCopy}>{fetchError}</p>
-            <Link href="/app/shoots" className={styles.retryBtn}>
-              Retry
-            </Link>
-          </div>
+          <ShootsListErrorState message={fetchError} />
         </div>
       </WorkspaceFrame>
     );
@@ -132,16 +93,7 @@ export function ShootsListWorkspace({ shoots, isAuthenticated, fetchError }: Pro
       <WorkspaceFrame>
         {header}
         <div className={styles.workspaceBody}>
-          <div className={styles.emptyState} data-testid="shoots-list-empty">
-            <h2 className={styles.emptyTitle}>No shoots yet</h2>
-            <p className={styles.emptyCopy}>
-              Create your first shoot and start planning production.
-            </p>
-            <Link href="/app/shoots/new" className={styles.primaryBtn}>
-              <Plus size={16} aria-hidden />
-              New shoot
-            </Link>
-          </div>
+          <ShootsListEmptyState />
         </div>
       </WorkspaceFrame>
     );
@@ -154,13 +106,7 @@ export function ShootsListWorkspace({ shoots, isAuthenticated, fetchError }: Pro
       {header}
       <div className={styles.workspaceBody}>
         {showNoMatch ? (
-          <div className={styles.noMatchState} data-testid="shoots-list-no-match">
-            <Search size={30} aria-hidden />
-            <h2 className={styles.noMatchTitle}>
-              {query.trim() ? `No matches for "${query.trim()}"` : "No matches for this filter"}
-            </h2>
-            <p className={styles.noMatchCopy}>Try a different shoot name or status.</p>
-          </div>
+          <ShootsListNoMatchState query={query} />
         ) : (
           <div className={styles.grid} data-testid="shoots-list-grid">
             {filteredShoots.map((shoot) => (
