@@ -1,0 +1,21 @@
+scripts/verify-rls.mjs
+  s_5c9f2a2ec2b3af::t_fe81f88474499c 320,325-340
+supabase/migrations/20260704120000_crm_fk_cascade_indexes.sql
+  s_5c9f2a2ec2b3af::t_a150bab8a5b8ef 1-100
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "3d26589d1490225712681b12443d30ca5be764b6",
+  "prompts": {},
+  "sessions": {
+    "s_5c9f2a2ec2b3af": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "4c146179-d0c4-4f21-910e-cebd5c5ba751",
+        "model": "composer-2.5"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
