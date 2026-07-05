@@ -34,7 +34,21 @@
         "additionalProperties": false,
         "properties": {
           "id": { "type": "string", "minLength": 1 },
-          "tier": { "type": "string" },
+          "tier": {
+            "type": "string",
+            "enum": [
+              "default",
+              "fast",
+              "structured",
+              "structuredHeavy",
+              "vision",
+              "visionExperimental",
+              "compound",
+              "compoundMini",
+              "stt",
+              "safety"
+            ]
+          },
           "strictStructured": { "type": "boolean" },
           "parallelTools": { "type": "boolean" },
           "promptCaching": { "type": "boolean" },
