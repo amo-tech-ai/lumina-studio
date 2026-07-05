@@ -80,7 +80,7 @@ function StepRail({ current }: { current: number }) {
   return (
     <nav className={styles.rail} aria-label="Wizard steps">
       <Link href="/app/shoots" className={styles.railBack}>← Shoots</Link>
-      <ol style={{ display: "contents" }}>
+      <ol className={styles.railList}>
         {STEPS.map((s, i) => {
           const stateName = i < current ? "completed" : i === current ? "active" : "future";
           return (

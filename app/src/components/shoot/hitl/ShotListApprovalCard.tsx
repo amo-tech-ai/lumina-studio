@@ -44,6 +44,7 @@ export function ShotListApprovalCard({ shots, deliverableCount, uncoveredWarning
                 <td>
                   <input
                     className={styles.cellInput}
+                    aria-label={`Description for shot ${s.shot_number}`}
                     value={s.description}
                     onChange={(e) => update(s.shot_number, { description: e.target.value })}
                   />
@@ -51,6 +52,7 @@ export function ShotListApprovalCard({ shots, deliverableCount, uncoveredWarning
                 <td>
                   <input
                     className={`${styles.cellInput} ${styles.cellInputMuted}`}
+                    aria-label={`Angle for shot ${s.shot_number}`}
                     value={s.angle}
                     onChange={(e) => update(s.shot_number, { angle: e.target.value })}
                   />
@@ -58,6 +60,7 @@ export function ShotListApprovalCard({ shots, deliverableCount, uncoveredWarning
                 <td>
                   <input
                     className={`${styles.cellInput} ${styles.cellInputMuted}`}
+                    aria-label={`Lighting for shot ${s.shot_number}`}
                     value={s.lighting}
                     onChange={(e) => update(s.shot_number, { lighting: e.target.value })}
                   />

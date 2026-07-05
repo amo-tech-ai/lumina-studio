@@ -58,6 +58,7 @@ export function DeliverableApprovalCard({
                   <input
                     className={styles.cellInput}
                     placeholder="channel"
+                    aria-label={`Channel for deliverable ${i + 1}`}
                     value={d.channel}
                     onChange={(e) => update(d.id, { channel: e.target.value })}
                   />
@@ -66,6 +67,7 @@ export function DeliverableApprovalCard({
                   <input
                     className={`${styles.cellInput} ${styles.cellInputMuted}`}
                     placeholder="format"
+                    aria-label={`Format for deliverable ${i + 1}`}
                     value={d.format}
                     onChange={(e) => update(d.id, { format: e.target.value })}
                   />
@@ -74,6 +76,7 @@ export function DeliverableApprovalCard({
                   <input
                     type="number"
                     min={1}
+                    aria-label={`Quantity for deliverable ${i + 1}`}
                     value={d.quantity}
                     onChange={(e) => {
                       const qty = Math.max(1, Math.floor(Number(e.target.value)));
