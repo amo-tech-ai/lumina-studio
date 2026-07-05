@@ -59,15 +59,21 @@ function ShootIntelSelected({ shoot }: { shoot: ShootRow }) {
 
       <div className={styles.divider} aria-hidden />
 
-      <div>
-        <div className={styles.shotListHeader}>
-          <span className={styles.shotListTitle}>Shot list</span>
-          <span className={styles.shotListCount}>Preview</span>
-        </div>
-        {/* ponytail: shoot_portfolio_view has no shot rows; open the shoot for the full list.
-            Upgrade path: fetch shots for the selected id if inline preview is needed. */}
-        <p className={styles.shotMeta}>Open the shoot to see and edit its full shot list.</p>
+      <ShotListPreview />
+    </div>
+  );
+}
+
+function ShotListPreview() {
+  return (
+    <div>
+      <div className={styles.shotListHeader}>
+        <span className={styles.shotListTitle}>Shot list</span>
+        <span className={styles.shotListCount}>Preview</span>
       </div>
+      {/* ponytail: shoot_portfolio_view has no shot rows; open the shoot for the full list.
+          Upgrade path: fetch shots for the selected id if inline preview is needed. */}
+      <p className={styles.shotMeta}>Open the shoot to see and edit its full shot list.</p>
     </div>
   );
 }
