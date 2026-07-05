@@ -1,0 +1,78 @@
+app/src/mastra/models.ts
+  s_250922caeff5ac::t_e6049e71da008a 1-4,6-12
+  s_250922caeff5ac::t_adc3e472a4c426 5
+app/src/lib/ai/provider.test.ts
+  s_250922caeff5ac::t_60b3a27d5fdd92 1,11
+  s_250922caeff5ac::t_b42a7dc5bd8d83 2-10,12-88
+supabase/functions/_shared/llm/groq-client.ts
+  s_250922caeff5ac::t_b4d126ee029791 1-8,10-34,39-43,45-50,52-70,73-109
+  s_250922caeff5ac::t_84fafc6f0ce4d3 9
+  s_250922caeff5ac::t_ffccff1aab0f71 35-38,44,51
+  s_250922caeff5ac::t_0650b774b2cf0b 71-72
+supabase/functions/_shared/llm/retry.ts
+  s_250922caeff5ac::t_b9a0bf69d41655 1-63
+supabase/functions/_shared/llm/types.ts
+  s_250922caeff5ac::t_73cf6270c6eca6 58,60-61
+  s_250922caeff5ac::t_cde8ac773e8bca 1-57,59,62-73
+supabase/functions/_shared/llm/constraints.ts
+  s_250922caeff5ac::t_1fee465e98c833 1-65
+app/src/lib/ai/gemini-registry.ts
+  s_250922caeff5ac::t_d4a83c0597eacf 1-29
+app/tsconfig.json
+  s_250922caeff5ac::t_e801c3ae0bcc14 30-31
+app/src/lib/ai/types.ts
+  s_250922caeff5ac::t_afcf5087e306df 1-33
+supabase/functions/_shared/schemas/brand-profile.ts
+  s_250922caeff5ac::t_c31845e2f74853 3
+  s_250922caeff5ac::t_f9322b584f0441 4-7
+  s_250922caeff5ac::t_4c10f4474dc1e2 111,113
+  s_250922caeff5ac::t_22f5896bd492ed 112
+supabase/functions/_shared/llm/structured.ts
+  s_250922caeff5ac::t_b8b5b616f453f2 58
+  s_250922caeff5ac::t_c5bb1f90e4e59e 1-57,59-72,74-170
+  s_250922caeff5ac::t_672d760845907e 73
+supabase/functions/_shared/llm/llm.test.ts
+  s_250922caeff5ac::t_662467def0b267 1-9,13-111
+  s_250922caeff5ac::t_052744b59b15fc 10-12
+supabase/functions/_shared/schemas/brand-profile.schema.json
+  s_250922caeff5ac::t_47c2c166d74e80 1-133
+supabase/functions/_shared/llm/gemini-client.ts
+  s_250922caeff5ac::t_3d935669245f4f 1-7
+supabase/functions/_shared/llm/allowlist.ts
+  s_250922caeff5ac::t_6a85b3c5fd8107 1-41
+app/package.json
+  s_250922caeff5ac::t_a00b1a5ca4d24c 21
+app/src/lib/ai/provider.ts
+  s_250922caeff5ac::t_5d124b25f46155 72-74,80,82,93-95
+  s_250922caeff5ac::t_b19291626c226f 28-30
+  s_250922caeff5ac::t_a98e32a43e4e04 75-79,81,83-92,101
+  s_250922caeff5ac::t_0f499dce024a0c 1-27,31-71,96-100,102-106
+app/package-lock.json
+  s_250922caeff5ac::t_2fefa90332dd33 14,430-474
+app/src/types/ai-sdk-groq.d.ts
+  s_12404fa554d700::t_1a98fb2ae9de13 1-8
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "100254ff15ae76e5aeb7226a3526f07fd2dae8d2",
+  "prompts": {},
+  "sessions": {
+    "s_12404fa554d700": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "c51c9d5f-0f8a-4434-b966-5de005a41aad",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    },
+    "s_250922caeff5ac": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "d615a929-53ba-4467-b380-aff6877ff353",
+        "model": "composer-2.5"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
