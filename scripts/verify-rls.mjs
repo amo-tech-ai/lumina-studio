@@ -317,15 +317,27 @@ try {
   });
   assert(!!crmDealWonInsertErr, "user A cannot insert crm_deal with stage=won without convert flag");
 
-  const { data: crmDealWonUpdate, error: crmDealWonUpdateErr } = await userA.client
+  const { error: crmDealWonUpdateErr } = await userA.client
     .from("crm_deals")
     .update({ stage: "won" })
     .eq("id", crmDeal.id)
     .select("id");
-  assert(
-    !!crmDealWonUpdateErr || (crmDealWonUpdate ?? []).length === 0,
-    "user A cannot update crm_deal to won without convert flag",
-  );
+  assert(!!crmDealWonUpdateErr, "user A cannot update crm_deal to won without convert flag");
+
+  if (admin && crmDeal?.id) {
+    const { error: convertProbeErr } = await admin.rpc("crm_deals_verify_convert_stage", {
+      p_deal_id: crmDeal.id,
+      p_stage: "won",
+    });
+    assert(!convertProbeErr, "crm_deal stage=won succeeds with app.crm_convert flag");
+
+    const { data: wonDeal, error: wonDealErr } = await userA.client
+      .from("crm_deals")
+      .select("stage")
+      .eq("id", crmDeal.id)
+      .single();
+    assert(!wonDealErr && wonDeal?.stage === "won", "user A reads crm_deal after convert probe");
+  }
 
   const { error: crmActivityErr } = await userA.client.from("crm_activities").insert({
     org_id: orgAId,
