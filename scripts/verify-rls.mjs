@@ -339,13 +339,17 @@ try {
     assert(!wonDealErr && wonDeal?.stage === "won", "user A reads crm_deal after convert probe");
   }
 
-  const { error: crmActivityErr } = await userA.client.from("crm_activities").insert({
-    org_id: orgAId,
-    deal_id: crmDeal.id,
-    type: "note",
-    body: "RLS probe",
-  });
-  assert(!crmActivityErr, "user A inserts crm_activity anchored to deal");
+  const { data: crmActivity, error: crmActivityErr } = await userA.client
+    .from("crm_activities")
+    .insert({
+      org_id: orgAId,
+      deal_id: crmDeal.id,
+      type: "note",
+      body: "RLS probe",
+    })
+    .select("id")
+    .single();
+  assert(!crmActivityErr && crmActivity?.id, "user A inserts crm_activity anchored to deal");
 
   const { data: crossCrmDeal, error: crossCrmDealErr } = await userB.client
     .from("crm_deals")
@@ -372,6 +376,74 @@ try {
     crossCrmActivityErr,
     crossCrmActivity,
     "user B cannot read user A crm_activity",
+  );
+
+  const { error: crossCrmCompanyInsertErr } = await userB.client.from("crm_companies").insert({
+    org_id: orgAId,
+    name: `RLS hijack co ${stamp}`,
+  });
+  assert(!!crossCrmCompanyInsertErr, "user B cannot insert crm_company into user A org");
+
+  const { error: crossCrmContactInsertErr } = await userB.client.from("crm_contacts").insert({
+    org_id: orgAId,
+    company_id: crmCompany.id,
+    name: `RLS hijack contact ${stamp}`,
+  });
+  assert(!!crossCrmContactInsertErr, "user B cannot insert crm_contact into user A org");
+
+  const { error: crossCrmDealInsertErr } = await userB.client.from("crm_deals").insert({
+    org_id: orgAId,
+    company_id: crmCompany.id,
+    stage: "lead",
+  });
+  assert(!!crossCrmDealInsertErr, "user B cannot insert crm_deal into user A org");
+
+  const { error: crossCrmActivityInsertErr } = await userB.client.from("crm_activities").insert({
+    org_id: orgAId,
+    deal_id: crmDeal.id,
+    type: "note",
+    body: "hijack",
+  });
+  assert(!!crossCrmActivityInsertErr, "user B cannot insert crm_activity into user A org");
+
+  const { data: crossCrmActivityDelete, error: crossCrmActivityDeleteErr } = await userB.client
+    .from("crm_activities")
+    .delete()
+    .eq("id", crmActivity.id)
+    .select("id");
+  assert(
+    !crossCrmActivityDeleteErr && (crossCrmActivityDelete ?? []).length === 0,
+    "user B cannot delete user A crm_activity",
+  );
+
+  const { data: crossCrmDealDelete, error: crossCrmDealDeleteErr } = await userB.client
+    .from("crm_deals")
+    .delete()
+    .eq("id", crmDeal.id)
+    .select("id");
+  assert(
+    !crossCrmDealDeleteErr && (crossCrmDealDelete ?? []).length === 0,
+    "user B cannot delete user A crm_deal",
+  );
+
+  const { data: crossCrmContactDelete, error: crossCrmContactDeleteErr } = await userB.client
+    .from("crm_contacts")
+    .delete()
+    .eq("id", crmContact.id)
+    .select("id");
+  assert(
+    !crossCrmContactDeleteErr && (crossCrmContactDelete ?? []).length === 0,
+    "user B cannot delete user A crm_contact",
+  );
+
+  const { data: crossCrmCompanyDelete, error: crossCrmCompanyDeleteErr } = await userB.client
+    .from("crm_companies")
+    .delete()
+    .eq("id", crmCompany.id)
+    .select("id");
+  assert(
+    !crossCrmCompanyDeleteErr && (crossCrmCompanyDelete ?? []).length === 0,
+    "user B cannot delete user A crm_company",
   );
 
   // IPI-362 Task 4 — deal-only notification recipient (crm_deal_id RLS)
