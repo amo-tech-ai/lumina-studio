@@ -88,6 +88,15 @@ describe("resolveOperatorUser with Supabase validation", () => {
     getUser: ReturnType<typeof vi.fn>,
     env: Record<string, string>,
   ) {
+    for (const key of [
+      "NEXT_PUBLIC_SUPABASE_URL",
+      "SUPABASE_ANON_KEY",
+      "NEXT_PUBLIC_SUPABASE_ANON_KEY",
+    ]) {
+      if (!(key in env)) {
+        vi.stubEnv(key, "");
+      }
+    }
     for (const [key, value] of Object.entries(env)) {
       vi.stubEnv(key, value);
     }

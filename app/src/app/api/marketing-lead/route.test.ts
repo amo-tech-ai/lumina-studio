@@ -315,6 +315,8 @@ describe("marketing-lead — error handling", () => {
 
   it("returns 500 when SUPABASE env vars are missing", async () => {
     vi.unstubAllEnvs();
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "");
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY", "");
     vi.resetModules();
     const { POST } = await importRoute();
     const res = await POST(makeRequest(VALID_BODY));
