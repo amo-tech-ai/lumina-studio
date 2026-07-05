@@ -148,9 +148,10 @@
 }
 
 .filterChipActive {
-  border-color: var(--color-text-primary);
-  color: var(--color-text-primary);
-  background: var(--color-bg-muted);
+  /* DC parity: active chip is solid black fill with light text (dc.html L126). */
+  border-color: var(--color-action);
+  color: var(--color-action-text);
+  background: var(--color-action);
 }
 
 .workspaceBody {
