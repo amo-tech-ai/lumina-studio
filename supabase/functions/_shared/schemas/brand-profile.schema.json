@@ -1,0 +1,133 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "BrandProfile",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "name": { "type": "string", "description": "Brand display name" },
+    "tagline": { "type": "string", "description": "Short brand tagline" },
+    "overview": { "type": "string", "description": "A brief overview of the brand" },
+    "category": {
+      "type": "string",
+      "description": "Fashion or retail category, e.g. DTC apparel"
+    },
+    "visualIdentity": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "colors": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Hex or descriptive color names"
+        },
+        "mood": { "type": "string", "description": "Visual mood, e.g. minimal luxe" }
+      },
+      "required": ["colors", "mood"]
+    },
+    "targetAudience": { "type": "string" },
+    "sourceUrl": { "type": "string" },
+    "contentPillars": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "3-5 recurring content themes"
+    },
+    "brandVoice": {
+      "type": "string",
+      "description": "Tone descriptors e.g. playful, minimal, editorial"
+    },
+    "recommendedServices": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "iPix service slugs"
+    },
+    "productionReadiness": {
+      "type": "number",
+      "description": "0-100 readiness for professional content shoot"
+    },
+    "mission": { "type": "string" },
+    "vision": { "type": "string" },
+    "values": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "uvp": { "type": "string", "description": "Unique value proposition" },
+    "positioning": { "type": "string" },
+    "brandPersonality": { "type": "string" },
+    "confidenceScore": {
+      "type": "number",
+      "description": "0-100 confidence in extracted profile"
+    },
+    "evidenceSources": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Page titles or URLs supporting key claims"
+    },
+    "competitorSignals": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Named competitors or adjacent brands mentioned"
+    },
+    "scores": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "visual": { "type": "number", "description": "Visual identity clarity 0-100" },
+        "audience": { "type": "number", "description": "Audience clarity 0-100" },
+        "consistency": { "type": "number", "description": "Cross-page consistency 0-100" },
+        "commerce_readiness": {
+          "type": "number",
+          "description": "E-commerce readiness 0-100"
+        },
+        "brand_clarity": { "type": "number", "description": "Mission/values/UVP clarity 0-100" },
+        "content_strength": { "type": "number", "description": "Content pillar depth 0-100" },
+        "social_presence": { "type": "number", "description": "Social channels + follower signal 0-100" },
+        "digital_experience": { "type": "number", "description": "Site UX/mobile/speed 0-100" },
+        "sustainability_signal": { "type": "number", "description": "Eco/ethical indicators 0-100" },
+        "photography_readiness": { "type": "number", "description": "Product imagery quality 0-100" },
+        "confidence": { "type": "number", "description": "Overall confidence in scores 0-100" },
+        "evidence": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Supporting evidence snippets for scores"
+        }
+      },
+      "required": [
+        "visual",
+        "audience",
+        "consistency",
+        "commerce_readiness",
+        "brand_clarity",
+        "content_strength",
+        "social_presence",
+        "digital_experience",
+        "sustainability_signal",
+        "photography_readiness",
+        "confidence",
+        "evidence"
+      ]
+    }
+  },
+  "required": [
+    "name",
+    "tagline",
+    "overview",
+    "category",
+    "visualIdentity",
+    "targetAudience",
+    "sourceUrl",
+    "contentPillars",
+    "brandVoice",
+    "recommendedServices",
+    "productionReadiness",
+    "mission",
+    "vision",
+    "values",
+    "uvp",
+    "positioning",
+    "brandPersonality",
+    "confidenceScore",
+    "evidenceSources",
+    "competitorSignals",
+    "scores"
+  ]
+}
