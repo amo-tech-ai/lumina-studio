@@ -1,0 +1,29 @@
+docs/linear/issues/IPI-368-crm-assistant-wave1.md
+  s_5c9f2a2ec2b3af::t_8d751931a8d5c0 1-75
+docs/linear/issues/IPI-369-crm-assistant-wave2.md
+  s_5c9f2a2ec2b3af::t_77c95ce72f2574 1-64
+docs/plan/tasks/2026-07-04-crm-assistant-wave1.md
+  s_5c9f2a2ec2b3af::t_a7ab7a49c4ca8b 1-96
+tasks/crm/plans/copilotkit-plan.md
+  s_5c9f2a2ec2b3af::t_e8d15aeadc1f55 1-72
+tasks/crm/plans/mastra-plan.md
+  s_5c9f2a2ec2b3af::t_fe9e6f629f523b 1-107
+tasks/crm/todo.md
+  s_5c9f2a2ec2b3af::t_ebc6dcbf69671d 1-86
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.9",
+  "base_commit_sha": "eb4668c744a807b9fc4b1714a74a30ff30fbf496",
+  "prompts": {},
+  "sessions": {
+    "s_5c9f2a2ec2b3af": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "4c146179-d0c4-4f21-910e-cebd5c5ba751",
+        "model": "composer-2.5"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}

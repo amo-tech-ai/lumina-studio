@@ -1,0 +1,25 @@
+docs/linear/issues/IPI-368-crm-assistant-wave1.md
+  s_5c9f2a2ec2b3af::t_7215c69f54f3a3 36,41,47,54,59,66
+docs/linear/issues/IPI-369-crm-assistant-wave2.md
+  s_5c9f2a2ec2b3af::t_1258758427b175 32,37,44,49,54
+docs/plan/tasks/2026-07-04-crm-assistant-wave1.md
+  s_5c9f2a2ec2b3af::t_828d47090fe5ae 25,33,47,63,77
+tasks/crm/todo.md
+  s_5c9f2a2ec2b3af::t_c03039f7c7ee2a 55
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "a05df4e76e54a9ebfcd5ae5a063c9aa160291092",
+  "prompts": {},
+  "sessions": {
+    "s_5c9f2a2ec2b3af": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "4c146179-d0c4-4f21-910e-cebd5c5ba751",
+        "model": "composer-2.5"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
