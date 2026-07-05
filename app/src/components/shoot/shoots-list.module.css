@@ -182,6 +182,9 @@
   display: block;
   width: 100%;
   text-align: left;
+  /* card is a <button> (selects, does not navigate) — reset native button chrome */
+  font: inherit;
+  appearance: none;
   border: var(--border-default) solid var(--color-border);
   background: var(--card-bg);
   border-radius: var(--card-radius);
@@ -195,6 +198,12 @@
 
 .card:hover {
   border-color: var(--color-border-strong);
+}
+
+/* DC parity: selected card takes the primary-text border ring (dc.html cardBorder). */
+.cardSelected,
+.cardSelected:hover {
+  border-color: var(--color-text-primary);
 }
 
 .coverWrap {

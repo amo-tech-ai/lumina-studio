@@ -5,6 +5,7 @@ import { useMemo, useState, type ReactNode } from "react";
 
 import { ShootCard, type ShootRow } from "@/components/shoot/ShootCard";
 import { ShootsListHeader } from "@/components/shoot/shoots-list-header";
+import { useShootsListIntelDetail } from "@/components/shoot/shoots-list-intel-detail";
 import {
   ShootsListEmptyState,
   ShootsListErrorState,
@@ -39,6 +40,7 @@ function WorkspaceFrame({ children }: { children: ReactNode }) {
 export function ShootsListWorkspace({ shoots, isAuthenticated, fetchError }: Props) {
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<ShootListFilter>("all");
+  const [selectedId, setSelectedId] = useState<string | null>(null);
 
   const filteredShoots = useMemo(() => {
     const q = normalizeSearch(query);
@@ -48,6 +50,16 @@ export function ShootsListWorkspace({ shoots, isAuthenticated, fetchError }: Pro
       return `${shoot.name} ${shoot.type}`.toLowerCase().includes(q);
     });
   }, [shoots, filter, query]);
+
+  // Selected row must survive filtering; drops to prompt when filtered out.
+  const selected = useMemo(
+    () => filteredShoots.find((s) => s.id === selectedId) ?? null,
+    [filteredShoots, selectedId],
+  );
+
+  // Preview only publishes in the populated state; empty/error/unauth keep the panel default.
+  const populated = isAuthenticated && !fetchError && shoots.length > 0;
+  useShootsListIntelDetail(selected, populated);
 
   if (!isAuthenticated) {
     return (
@@ -111,7 +123,12 @@ export function ShootsListWorkspace({ shoots, isAuthenticated, fetchError }: Pro
         ) : (
           <div className={styles.grid} data-testid="shoots-list-grid">
             {filteredShoots.map((shoot) => (
-              <ShootCard key={shoot.id} shoot={shoot} />
+              <ShootCard
+                key={shoot.id}
+                shoot={shoot}
+                selected={shoot.id === selectedId}
+                onSelect={setSelectedId}
+              />
             ))}
           </div>
         )}
