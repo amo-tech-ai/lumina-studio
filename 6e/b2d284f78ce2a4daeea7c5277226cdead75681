@@ -1,0 +1,24 @@
+scripts/groq-smoke.mjs
+  s_250922caeff5ac::t_af6b349975686b 84-88
+  s_250922caeff5ac::t_6d1df8de1dab7c 36
+config/groq-models.schema.json
+  s_250922caeff5ac::t_0a6ece3a015e79 37-51
+app/.env.example
+  s_250922caeff5ac::t_733edc21665505 15-17
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "6eb2d284f78ce2a4daeea7c5277226cdead75681",
+  "prompts": {},
+  "sessions": {
+    "s_250922caeff5ac": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "d615a929-53ba-4467-b380-aff6877ff353",
+        "model": "composer-2.5"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
