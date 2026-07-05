@@ -10,7 +10,9 @@
     "vision": "GROQ_MODEL_VISION",
     "visionExperimental": "GROQ_MODEL_VISION_EXPERIMENTAL",
     "compound": "GROQ_MODEL_COMPOUND",
-    "compoundMini": "GROQ_MODEL_COMPOUND_MINI"
+    "compoundMini": "GROQ_MODEL_COMPOUND_MINI",
+    "stt": "GROQ_MODEL_STT",
+    "safety": "GROQ_MODEL_SAFETY"
   },
   "defaults": {
     "default": "llama-3.3-70b-versatile",
@@ -20,7 +22,9 @@
     "vision": "",
     "visionExperimental": "meta-llama/llama-4-scout-17b-16e-instruct",
     "compound": "groq/compound",
-    "compoundMini": "groq/compound-mini"
+    "compoundMini": "groq/compound-mini",
+    "stt": "whisper-large-v3-turbo",
+    "safety": "openai/gpt-oss-safeguard-20b"
   },
   "models": [
     {
@@ -30,7 +34,9 @@
       "parallelTools": true,
       "promptCaching": false,
       "evaluationOnly": false,
-      "productionDefault": false
+      "productionDefault": false,
+      "deprecatedAfter": "2026-08-16",
+      "replacementModel": "openai/gpt-oss-20b"
     },
     {
       "id": "llama-3.3-70b-versatile",
@@ -39,7 +45,9 @@
       "parallelTools": true,
       "promptCaching": false,
       "evaluationOnly": false,
-      "productionDefault": true
+      "productionDefault": true,
+      "deprecatedAfter": "2026-08-16",
+      "replacementModel": "openai/gpt-oss-120b"
     },
     {
       "id": "openai/gpt-oss-20b",
