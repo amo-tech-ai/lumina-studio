@@ -1,0 +1,36 @@
+package.json
+  s_250922caeff5ac::t_d490051bda2945 9
+scripts/lib/groq-allowlist-sync.mjs
+  s_250922caeff5ac::t_6e548d88942550 1-16
+scripts/capture-gemini-baseline.mjs
+  s_250922caeff5ac::t_2b33a44ce45bb7 26-33
+  s_250922caeff5ac::t_bff6b9b49dbc19 77-83
+  s_250922caeff5ac::t_71ac323450b61c 10
+scripts/groq-smoke.mjs
+  s_250922caeff5ac::t_76d1bf64c93400 47
+  s_250922caeff5ac::t_03c9e8f92a1993 120
+  s_250922caeff5ac::t_21443d5dadaa5a 9-14
+config/groq-models.json
+  s_250922caeff5ac::t_b085cadb374776 37-39,48-50
+  s_250922caeff5ac::t_aa139d9c7652b1 13-15,25-27
+scripts/lib/groq-allowlist-sync.test.mjs
+  s_250922caeff5ac::t_331808894f81cc 1-29
+app/.env.example
+  s_250922caeff5ac::t_7587a4cd8f343a 15,24-25
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "d57057d1511d110213b0e1cd77b9afc6a6f4f6a2",
+  "prompts": {},
+  "sessions": {
+    "s_250922caeff5ac": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "d615a929-53ba-4467-b380-aff6877ff353",
+        "model": "composer-2.5"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
