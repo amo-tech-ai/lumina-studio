@@ -1,0 +1,23 @@
+app/src/app/(operator)/app/shoots/page.tsx
+  s_12404fa554d700::t_ea0820ecd9d596 28-29
+app/src/lib/shoot-list-filters.test.ts
+  s_12404fa554d700::t_e5f6e099094d79 19-23
+app/src/lib/shoot-list-filters.ts
+  s_12404fa554d700::t_7ddfbe96c32378 44-48,52-53,57-60
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "9f889257779f1451cb01f2f932b0ce2e40e35302",
+  "prompts": {},
+  "sessions": {
+    "s_12404fa554d700": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "c51c9d5f-0f8a-4434-b966-5de005a41aad",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
