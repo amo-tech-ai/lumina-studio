@@ -63,6 +63,6 @@ export function matchesShootListFilter(
 
 export function shootListCountLabel(shoots: { status: string | null }[]): string {
   const total = shoots.length;
-  if (total === 0) return "0 shoots";
+  if (total === 0) return "No shoots planned";
   return `${total} shoot${total === 1 ? "" : "s"}`;
 }
