@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Plus, Search } from "lucide-react";
+import { Plus, Search, WifiOff } from "lucide-react";
 
 import { shootsListEmptyPreviewUrls } from "@/lib/command-center/sample-images";
 
@@ -8,7 +8,8 @@ import styles from "./shoots-list.module.css";
 export function ShootsListErrorState({ message }: { message: string }) {
   return (
     <div className={styles.errorState} data-testid="shoots-list-error">
-      <h2 className={styles.emptyTitle}>Couldn&apos;t load shoots</h2>
+      <WifiOff size={28} strokeWidth={1.7} aria-hidden />
+      <p className={styles.errorTitle}>Couldn&apos;t load shoots</p>
       <p className={styles.errorCopy}>{message}</p>
       <Link href="/app/shoots" className={styles.retryBtn}>
         Try again
@@ -36,7 +37,7 @@ export function ShootsListEmptyState() {
         Plan your first shoot and I&apos;ll build the shot list, deliverables, and schedule from
         your brand DNA.
       </p>
-      <Link href="/app/shoots/new" className={styles.primaryBtn}>
+      <Link href="/app/shoots/new" className={styles.emptyCta}>
         <Plus size={16} aria-hidden />
         Plan shoot
       </Link>

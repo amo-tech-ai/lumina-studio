@@ -287,6 +287,7 @@
 
 /* --- Empty / error / no-match states --- */
 
+/* DC parity: no border box; per-state padding matches dc.html (empty 36 24 56, error 64 24). */
 .emptyState,
 .errorState,
 .noMatchState {
@@ -295,16 +296,22 @@
   align-items: center;
   justify-content: center;
   text-align: center;
-  gap: var(--space-3);
+}
+
+.emptyState {
+  padding: 36px var(--space-6) 56px;
+}
+
+.errorState,
+.noMatchState {
+  gap: 10px;
   padding: var(--space-16) var(--space-6);
-  border: var(--border-default) dashed var(--color-border);
-  border-radius: var(--radius-xl);
 }
 
 .emptyArt {
   display: flex;
-  gap: var(--space-3);
-  margin-bottom: var(--space-2);
+  gap: 12px;
+  margin-bottom: 22px;
   opacity: 0.5;
   filter: grayscale(0.3);
 }
@@ -320,13 +327,20 @@
 }
 
 .emptyHint {
-  margin: var(--space-2) 0 0;
+  margin: 12px 0 0;
   font-family: var(--font-sans);
   font-size: var(--font-size-xs);
   color: var(--color-text-muted);
 }
 
-.emptyTitle,
+.emptyTitle {
+  margin: 0;
+  font-family: var(--font-sans);
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
+}
+
 .noMatchTitle {
   margin: 0;
   font-family: var(--font-sans);
@@ -335,7 +349,23 @@
   color: var(--color-text-primary);
 }
 
-.emptyCopy,
+.errorTitle {
+  margin: 0;
+  font-family: var(--font-sans);
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
+}
+
+.emptyCopy {
+  margin: 8px 0 0;
+  font-family: var(--font-sans);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  max-width: 420px;
+  line-height: 1.55;
+}
+
 .errorCopy,
 .noMatchCopy {
   margin: 0;
@@ -345,9 +375,35 @@
   max-width: 32rem;
 }
 
+/* DC empty CTA: taller than header button — height 42, padding 0 22, margin-top 18 (dc.html L155). */
+.emptyCta {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-top: 18px;
+  height: 42px;
+  padding: 0 22px;
+  border-radius: var(--radius-md);
+  background: var(--btn-primary-bg);
+  color: var(--btn-primary-text);
+  font-family: var(--font-sans);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  border: none;
+  cursor: pointer;
+  text-decoration: none;
+  transition: background var(--duration-fast) var(--ease-default);
+}
+
+.emptyCta:hover {
+  background: var(--btn-primary-hover);
+}
+
 .retryBtn {
-  padding: var(--space-2) var(--space-5);
-  border-radius: var(--radius-pill);
+  margin-top: 6px;
+  height: 38px;
+  padding: 0 16px;
+  border-radius: var(--radius-md);
   border: var(--border-default) solid var(--color-border);
   background: var(--color-bg-card);
   color: var(--color-text-primary);
@@ -355,6 +411,8 @@
   font-size: var(--font-size-sm);
   font-weight: var(--font-weight-medium);
   cursor: pointer;
+  display: inline-flex;
+  align-items: center;
 }
 
 .retryBtn:hover {
