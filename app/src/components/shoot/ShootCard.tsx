@@ -37,17 +37,26 @@ type Props = {
 export function ShootCard({ shoot, selected = false, onSelect }: Props) {
   const coverSrc = shootListCoverForShoot(shoot.id);
   const statusDot = shootStatusDotToken(shoot.status);
+  const descId = `shoot-card-desc-${shoot.id}`;
 
   return (
     <button
       type="button"
       className={selected ? `${styles.card} ${styles.cardSelected}` : styles.card}
-      aria-label={`Select ${shoot.name} — ${shootStatusLabel(shoot.status)}, ${shoot.type}, updated ${formatShootDate(shoot.updated_at)}, DNA ${shoot.dna_score ?? "not scored"}`}
+      aria-label={`Select ${shoot.name}`}
+      aria-describedby={descId}
       aria-pressed={selected}
       data-selected={selected ? "true" : undefined}
       data-testid="shoot-card"
       onClick={() => onSelect?.(shoot.id)}
     >
+      {/* Concise label names the shoot; describedby exposes the visible details
+          (status/type/date/DNA) to screen readers without bloating the name. */}
+      <span id={descId} className="sr-only">
+        {`${shootStatusLabel(shoot.status)}, ${shoot.type}, updated ${formatShootDate(
+          shoot.updated_at,
+        )}, DNA ${shoot.dna_score ?? "not scored"}`}
+      </span>
       <div className={styles.coverWrap}>
         <Image
           src={coverSrc}

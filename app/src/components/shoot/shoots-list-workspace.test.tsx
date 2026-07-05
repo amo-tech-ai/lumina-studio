@@ -131,6 +131,10 @@ describe("ShootsListWorkspace", () => {
     const card = screen.getByRole("button", { name: /^Select Spring Campaign/ });
     expect(card.getAttribute("aria-pressed")).toBe("false");
 
+    // aria-describedby resolves to the visually-hidden detail summary (a11y review fix).
+    const desc = document.getElementById(card.getAttribute("aria-describedby") ?? "");
+    expect(desc?.textContent).toContain("DNA 87");
+
     fireEvent.click(card);
     expect(card.getAttribute("aria-pressed")).toBe("true");
 
