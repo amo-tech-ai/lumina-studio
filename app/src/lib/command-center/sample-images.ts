@@ -80,6 +80,13 @@ export function brandListEmptyPreviewUrls(): string[] {
   );
 }
 
+/** DC empty-state stacked pair — two tilted 120x150 previews (Shoots List.v2.image-first.dc.html). */
+export function shootsListEmptyPreviewUrls(): string[] {
+  return [SAMPLE_IMAGE_POOL[3], SAMPLE_IMAGE_POOL[4]].map((id) =>
+    cloudinaryImageUrl(id, { w: 240, h: 300 }),
+  );
+}
+
 /** DC asset moodboard strip (Brand Detail workspace). */
 export function brandDetailAssetUrls(brandId: string, count = 8): string[] {
   return Array.from({ length: count }, (_, index) => {

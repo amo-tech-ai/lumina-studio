@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { Plus, Search } from "lucide-react";
 
+import { shootsListEmptyPreviewUrls } from "@/lib/command-center/sample-images";
+
 import styles from "./shoots-list.module.css";
 
 export function ShootsListErrorState({ message }: { message: string }) {
@@ -9,21 +11,38 @@ export function ShootsListErrorState({ message }: { message: string }) {
       <h2 className={styles.emptyTitle}>Couldn&apos;t load shoots</h2>
       <p className={styles.errorCopy}>{message}</p>
       <Link href="/app/shoots" className={styles.retryBtn}>
-        Retry
+        Try again
       </Link>
     </div>
   );
 }
 
 export function ShootsListEmptyState() {
+  const [photoA, photoB] = shootsListEmptyPreviewUrls();
   return (
     <div className={styles.emptyState} data-testid="shoots-list-empty">
+      <div className={styles.emptyArt} aria-hidden>
+        <div
+          className={styles.emptyPhoto}
+          style={{ backgroundImage: `url(${photoA})`, transform: "rotate(-4deg)" }}
+        />
+        <div
+          className={styles.emptyPhoto}
+          style={{ backgroundImage: `url(${photoB})`, transform: "rotate(4deg)" }}
+        />
+      </div>
       <h2 className={styles.emptyTitle}>No shoots yet</h2>
-      <p className={styles.emptyCopy}>Create your first shoot and start planning production.</p>
+      <p className={styles.emptyCopy}>
+        Plan your first shoot and I&apos;ll build the shot list, deliverables, and schedule from
+        your brand DNA.
+      </p>
       <Link href="/app/shoots/new" className={styles.primaryBtn}>
         <Plus size={16} aria-hidden />
-        New shoot
+        Plan shoot
       </Link>
+      <p className={styles.emptyHint}>
+        Production Planner can turn a brief into a shot list, deliverables, and schedule.
+      </p>
     </div>
   );
 }

@@ -74,6 +74,7 @@ export function ShootsListWorkspace({ shoots, isAuthenticated, fetchError }: Pro
       onQueryChange={setQuery}
       filter={filter}
       onFilterChange={setFilter}
+      showControls={!fetchError && shoots.length > 0}
     />
   );
 

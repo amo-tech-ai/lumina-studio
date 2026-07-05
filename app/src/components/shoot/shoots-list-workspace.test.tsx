@@ -57,12 +57,20 @@ describe("ShootsListWorkspace", () => {
   it("renders the empty state when there are no shoots", () => {
     render(<ShootsListWorkspace shoots={[]} isAuthenticated />);
     expect(screen.getByTestId("shoots-list-empty")).toBeTruthy();
+    expect(screen.getByRole("link", { name: /Plan shoot/ })).toBeTruthy();
+  });
+
+  it("hides search + filter controls in the empty state (DC parity)", () => {
+    render(<ShootsListWorkspace shoots={[]} isAuthenticated />);
+    expect(screen.queryByRole("searchbox")).toBeNull();
+    expect(screen.queryByRole("group", { name: "Filter shoots" })).toBeNull();
   });
 
   it("renders the error state when fetchError is set", () => {
     render(<ShootsListWorkspace shoots={[]} isAuthenticated fetchError="Unable to load shoots." />);
     expect(screen.getByTestId("shoots-list-error")).toBeTruthy();
     expect(screen.getByText("Unable to load shoots.")).toBeTruthy();
+    expect(screen.queryByRole("searchbox")).toBeNull();
   });
 
   it("renders a grid card per shoot when populated", () => {

@@ -270,6 +270,31 @@
   border-radius: var(--radius-xl);
 }
 
+.emptyArt {
+  display: flex;
+  gap: var(--space-3);
+  margin-bottom: var(--space-2);
+  opacity: 0.5;
+  filter: grayscale(0.3);
+}
+
+.emptyPhoto {
+  width: 120px;
+  height: 150px;
+  border-radius: var(--image-radius);
+  border: var(--border-default) solid var(--color-border);
+  background-size: cover;
+  background-position: center;
+  box-shadow: var(--card-shadow);
+}
+
+.emptyHint {
+  margin: var(--space-2) 0 0;
+  font-family: var(--font-sans);
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+}
+
 .emptyTitle,
 .noMatchTitle {
   margin: 0;
