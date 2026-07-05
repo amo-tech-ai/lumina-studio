@@ -1,4 +1,7 @@
+"use client";
+
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Plus, Search, WifiOff } from "lucide-react";
 
 import { shootsListEmptyPreviewUrls } from "@/lib/command-center/sample-images";
@@ -6,14 +9,17 @@ import { shootsListEmptyPreviewUrls } from "@/lib/command-center/sample-images";
 import styles from "./shoots-list.module.css";
 
 export function ShootsListErrorState({ message }: { message: string }) {
+  // ponytail: router.refresh() re-runs the server fetch in page.tsx; a <Link> to
+  // the same URL is a no-op and wouldn't actually retry the failed load.
+  const router = useRouter();
   return (
     <div className={styles.errorState} data-testid="shoots-list-error">
       <WifiOff size={28} strokeWidth={1.7} aria-hidden />
       <p className={styles.errorTitle}>Couldn&apos;t load shoots</p>
       <p className={styles.errorCopy}>{message}</p>
-      <Link href="/app/shoots" className={styles.retryBtn}>
+      <button type="button" onClick={() => router.refresh()} className={styles.retryBtn}>
         Try again
-      </Link>
+      </button>
     </div>
   );
 }

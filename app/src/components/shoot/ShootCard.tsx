@@ -42,7 +42,7 @@ export function ShootCard({ shoot, selected = false, onSelect }: Props) {
     <button
       type="button"
       className={selected ? `${styles.card} ${styles.cardSelected}` : styles.card}
-      aria-label={`Select ${shoot.name}`}
+      aria-label={`Select ${shoot.name} — ${shootStatusLabel(shoot.status)}, ${shoot.type}, updated ${formatShootDate(shoot.updated_at)}, DNA ${shoot.dna_score ?? "not scored"}`}
       aria-pressed={selected}
       data-selected={selected ? "true" : undefined}
       data-testid="shoot-card"

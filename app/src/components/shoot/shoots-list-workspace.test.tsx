@@ -13,6 +13,9 @@ vi.mock("./shoots-list-intel.module.css", () => ({
 vi.mock("next/image", () => ({
   default: () => null,
 }));
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ refresh: vi.fn() }),
+}));
 
 import {
   IntelligenceDetailProvider,
@@ -107,7 +110,7 @@ describe("ShootsListWorkspace", () => {
     renderWorkspace(<ShootsListWorkspace shoots={SAMPLE_SHOOTS} isAuthenticated />);
     fireEvent.change(screen.getByRole("searchbox"), { target: { value: "spring" } });
     expect(screen.getAllByTestId("shoot-card")).toHaveLength(1);
-    expect(screen.getByRole("button", { name: "Select Spring Campaign" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: /^Select Spring Campaign/ })).toBeTruthy();
   });
 
   it("shows no-match when search has no results", () => {
@@ -120,12 +123,12 @@ describe("ShootsListWorkspace", () => {
     renderWorkspace(<ShootsListWorkspace shoots={SAMPLE_SHOOTS} isAuthenticated />);
     fireEvent.click(screen.getByRole("button", { name: "Archived" }));
     expect(screen.getAllByTestId("shoot-card")).toHaveLength(1);
-    expect(screen.getByRole("button", { name: "Select Archive Shoot" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: /^Select Archive Shoot/ })).toBeTruthy();
   });
 
   it("selects a card on click and shows the panel preview (no navigation)", () => {
     renderWorkspace(<ShootsListWorkspace shoots={SAMPLE_SHOOTS} isAuthenticated />);
-    const card = screen.getByRole("button", { name: "Select Spring Campaign" });
+    const card = screen.getByRole("button", { name: /^Select Spring Campaign/ });
     expect(card.getAttribute("aria-pressed")).toBe("false");
 
     fireEvent.click(card);
