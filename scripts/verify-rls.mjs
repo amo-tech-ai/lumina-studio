@@ -117,16 +117,20 @@ async function deleteAuthUser(userId) {
   return { error };
 }
 
-async function cleanupRlsTestData({ orgId, brandId, notificationId, userAId, userBId }) {
+async function cleanupRlsTestData({
+  orgId,
+  brandId,
+  notificationId,
+  crmNotificationId,
+  userAId,
+  userBId,
+}) {
   if (!admin) return;
 
-  if (notificationId) {
-    const { error: notifDelErr } = await admin
-      .from("notifications")
-      .delete()
-      .eq("id", notificationId);
+  for (const id of [notificationId, crmNotificationId].filter(Boolean)) {
+    const { error: notifDelErr } = await admin.from("notifications").delete().eq("id", id);
     if (notifDelErr) {
-      console.warn(`warn: cleanup notification ${notificationId}: ${notifDelErr.message}`);
+      console.warn(`warn: cleanup notification ${id}: ${notifDelErr.message}`);
     }
   }
 
@@ -196,6 +200,7 @@ let userB;
 let brandAId;
 let orgAId;
 let notificationId;
+let crmNotificationId;
 
 try {
   userA = await createTestUser(emailA);
@@ -356,6 +361,51 @@ try {
     crossCrmActivity,
     "user B cannot read user A crm_activity",
   );
+
+  // IPI-362 Task 4 — deal-only notification recipient (crm_deal_id RLS)
+  if (admin && crmDeal?.id) {
+    const { data: crmNotif, error: crmNotifInsertErr } = await admin
+      .from("notifications")
+      .insert({
+        kind: "deal_stage_changed",
+        crm_deal_id: crmDeal.id,
+        payload: { deal_id: crmDeal.id, test: true },
+      })
+      .select("id")
+      .single();
+    assert(!crmNotifInsertErr && crmNotif?.id, "service role inserts crm_deal notification");
+    crmNotificationId = crmNotif.id;
+
+    const { data: ownCrmNotif, error: ownCrmNotifErr } = await userA.client
+      .from("notifications")
+      .select("id, kind")
+      .eq("id", crmNotif.id)
+      .single();
+    assert(
+      !ownCrmNotifErr && ownCrmNotif?.kind === "deal_stage_changed",
+      "org member reads notification anchored on own crm_deal",
+    );
+
+    const { data: crossCrmNotif, error: crossCrmNotifErr } = await userB.client
+      .from("notifications")
+      .select("id")
+      .eq("id", crmNotif.id);
+    assertSelectDenied(
+      crossCrmNotifErr,
+      crossCrmNotif,
+      "user B cannot read user A crm_deal notification",
+    );
+
+    const { data: crmDealHijack, error: crmDealHijackErr } = await userA.client
+      .from("notifications")
+      .update({ crm_deal_id: "00000000-0000-0000-0000-000000000099" })
+      .eq("id", crmNotif.id)
+      .select("id");
+    assert(
+      !!crmDealHijackErr || (crmDealHijack ?? []).length === 0,
+      "org member cannot reassign notification crm_deal_id",
+    );
+  }
 
   // brand_scores — scoped via brand ownership
   const { error: scoreInsertErr } = await userA.client.from("brand_scores").insert({
@@ -855,6 +905,7 @@ try {
     orgId: orgAId,
     brandId: brandAId,
     notificationId,
+    crmNotificationId,
     userAId: userA?.user?.id,
     userBId: userB?.user?.id,
   });
