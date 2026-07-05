@@ -1,0 +1,38 @@
+app/scripts/copilotkit-dev-env.mjs
+  s_250922caeff5ac::t_7b70b556fe042c 104
+  s_250922caeff5ac::t_14f5cf4afd357b 21-26
+config/groq-models.schema.json
+  s_250922caeff5ac::t_60f31d235c4bb9 1-49
+scripts/check-client-env.mjs
+  s_250922caeff5ac::t_7c76f4c1e7275c 16-17,21,26,31
+app/scripts/copilotkit-dev-env.test.mjs
+  s_250922caeff5ac::t_32344d96db015e 40-50
+package.json
+  s_250922caeff5ac::t_7c439b8bc523b6 8-9
+config/groq-models.json
+  s_250922caeff5ac::t_8f4e0e3ef292a9 1-117
+scripts/groq-smoke.mjs
+  s_250922caeff5ac::t_8ffbf3eda74899 1-136
+scripts/capture-gemini-baseline.mjs
+  s_250922caeff5ac::t_920f4627b858cb 1-80
+app/.env.example
+  s_250922caeff5ac::t_5fe71419fa1482 8-9,12-27
+docs/ecommerce/evidence/2026-07-05/groq-baseline.json
+  s_250922caeff5ac::t_5e52690d8664d2 1-33
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "e9a6b614e908f69d024218fbab7aeb99f0dd1af3",
+  "prompts": {},
+  "sessions": {
+    "s_250922caeff5ac": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "d615a929-53ba-4467-b380-aff6877ff353",
+        "model": "composer-2.5"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
