@@ -42,7 +42,7 @@ last_verified: "2026-07-05"
 | 1 | Edited/wrote a file before `Read`-ing its exact path | `Read` every file before Edit/Write. Never assume a path — `graphify query` then Read. |
 | 2 | Ran `tsc`/tests before `npm ci` in a fresh worktree | First command in the worktree is `npm ci` (or `npm install`). Baseline-green before writing code. |
 | 3 | Selection test asserted on a node the workspace **publishes** to the panel, not one it renders → needed `DetailSink` | Any test for panel/dock preview must render the provider + a sink that renders `detail` (copy `shoots-list-workspace.test.tsx`). |
-| 4 | Test mocked only the component's own CSS module, not the shared base module | Mock **every** CSS module the tree imports (`*.module.css` + shared `shoots-list-intel.module.css` etc.) with the Proxy stub. |
+| 4 | Test mocked only the component's own CSS module, not the shared base module | Prefer a **global** vitest setup (`identity-obj-proxy` alias or one `*.module.css` Proxy stub in `setup.ts`) so all CSS modules resolve without per-file mocks. If mocking locally, mock **every** module the tree imports (`*.module.css` + shared `shoots-list-intel.module.css` etc.). |
 | 5 | Bash cwd silently resets to `/home/sk/ipix` between calls | Use absolute paths or `cd <worktree> && …` in one command. Never assume cwd persisted. |
 | 6 | Stale worktree regression — local branch was behind remote; a commit would have reverted a shipped feature | Before editing: `git fetch && git status` vs `origin/<branch>`; check open PRs (`gh pr list`). Rebase/reset to remote first. |
 | 7 | Crammed everything into `aria-label`, overriding visible detail (reviewer pushback) | Concise `aria-label` for the accessible **name** + `aria-describedby` → `className="sr-only"` summary for detail. Never one giant label. |
@@ -68,6 +68,12 @@ last_verified: "2026-07-05"
 | 3 | Shot list | Gate 2 | `generateShotListDraft` | STEP 5 Shot List |
 | 4 | Budget | Gate 3 | `estimateShootBudget` | STEP 7 Budget |
 | 5 | Review / create | commit | `saveApprovedShootDraft` → `/api/shoots/commit` | STEP 10 Review & Create |
+
+**Gate count = 3, not 4.** Brief (step 1) has **no** HITL gate: its Continue button
+(`Plan deliverables →`) is disabled only until the brief textarea is non-empty
+(`disabled={!state.brief …}` in `new/page.tsx`) — the AI brief is editable free text you accept by
+continuing, with no workflow-resume. Only Deliverables / Shot list / Budget are workflow-resuming HITL
+gates. "Every AI field approved/edited" (§0.3b, §0.5) refers to those **3** gates.
 
 **➖ Deferred DC steps (build only under IPI-252, not now):** STEP 1 Welcome (3-card launcher),
 STEP 4 Moodboard (8-image lock/regen grid), STEP 6 Production Plan (crew/resources),
@@ -188,9 +194,9 @@ stateDiagram-v2
   review --> creating: confirmCreate
   creating --> done: /api/shoots/commit 200 → /app/shoots/[id]
   creating --> review: commit error → retry
-  basics --> exitGuard: back to Shoots while dirty
+  basics --> exitGuard: back to Shoots while dirty (any step)
   brief --> exitGuard: dirty
-  exitGuard --> basics: Stay
+  exitGuard --> currentStep: Stay (returns to the step in progress)
   exitGuard --> [*]: Discard & leave / Save & leave
   note right of deliverables
     HITL gates 1–3: every AI field
