@@ -1,0 +1,24 @@
+app/src/components/shoot/shoots-list-states.tsx
+  s_12404fa554d700::t_8c3cfd2ee34fc8 1-41
+app/src/components/shoot/shoots-list-header.tsx
+  s_12404fa554d700::t_dbeca0645d23e0 1-68
+app/src/components/shoot/shoots-list-workspace.tsx
+  s_12404fa554d700::t_178b8db2966fa6 71-77,85,96,109
+  s_12404fa554d700::t_78285ee5474500 7-12
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "e8f8078fcd52e59ee12b7511fadec125e0c4d917",
+  "prompts": {},
+  "sessions": {
+    "s_12404fa554d700": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "c51c9d5f-0f8a-4434-b966-5de005a41aad",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
