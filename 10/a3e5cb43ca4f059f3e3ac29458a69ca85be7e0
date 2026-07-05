@@ -1,0 +1,29 @@
+app/src/components/shoot/hitl/DeliverableApprovalCard.tsx
+  s_12404fa554d700::t_8ab37786cef788 5-6,32,34,37-39,42,45,47,49,55-57,59,65,67,73,82,85,88-89
+app/src/components/shoot/shoot-wizard.module.css
+  s_12404fa554d700::t_f21b6cf270887d 1-572
+app/src/components/shoot/hitl/ShotListApprovalCard.tsx
+  s_12404fa554d700::t_c310082470c5af 5-6,21,23,26-28,32,34,36,42-44,46,51,53,58,60
+app/src/app/(operator)/app/shoots/new/page.tsx
+  s_12404fa554d700::t_fbb2d34089af70 439-440,442,444-445,447,449-466,469-526,528-542,545-558,561,563-566,568-571,574,576,578,580,583-650,652-654,656,658,660-680,682-697,699-729,731-755,757-788,790-792,795-796
+  s_12404fa554d700::t_d54f05711b993d 65-74,78-79,81-102,108,116-117,119
+  s_12404fa554d700::t_950389940af2b7 10
+app/src/components/shoot/hitl/BudgetApprovalCard.tsx
+  s_12404fa554d700::t_e4a314dbe2ecad 5-6,23-24,27-30,33,35-37,41-43,47-50,52,57
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "10a3e5cb43ca4f059f3e3ac29458a69ca85be7e0",
+  "prompts": {},
+  "sessions": {
+    "s_12404fa554d700": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "c51c9d5f-0f8a-4434-b966-5de005a41aad",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
