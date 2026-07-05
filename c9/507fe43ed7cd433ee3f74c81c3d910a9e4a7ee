@@ -1,0 +1,29 @@
+app/src/components/shoot/shoots-list-workspace.test.tsx
+  s_12404fa554d700::t_9ef4170e43d37e 60-66,73
+app/src/components/shoot/shoots-list.module.css
+  s_12404fa554d700::t_8c643681d08aef 273-297
+app/src/components/shoot/shoots-list-states.tsx
+  s_12404fa554d700::t_ef8f5162e50f27 4-5,14,21,24-33,35-38,41,43-45
+app/src/lib/command-center/sample-images.ts
+  s_12404fa554d700::t_589d07bd0e81d4 83-89
+app/src/components/shoot/shoots-list-header.tsx
+  s_12404fa554d700::t_f79baab770930c 20-21,24-31,45-59,61-78
+app/src/components/shoot/shoots-list-workspace.tsx
+  s_12404fa554d700::t_820f9acb15f9d2 77
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "c9507fe43ed7cd433ee3f74c81c3d910a9e4a7ee",
+  "prompts": {},
+  "sessions": {
+    "s_12404fa554d700": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "c51c9d5f-0f8a-4434-b966-5de005a41aad",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
