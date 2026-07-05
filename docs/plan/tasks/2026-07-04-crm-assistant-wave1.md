@@ -6,6 +6,7 @@
 **Tech stack:** Mastra (`app/src/mastra/`) · CopilotKit v2 (`route-agent-map.ts`, `useAgentContext`, `useFrontendTool`).
 
 **Verify (app changes):**
+
 ```bash
 cd app && npm run lint
 cd app && npm test src/mastra
