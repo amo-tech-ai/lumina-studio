@@ -38,7 +38,9 @@ describe("shoot-list-filters", () => {
 
   it("formats the count label for 0, 1, and many shoots", () => {
     expect(shootListCountLabel([])).toBe("No shoots planned");
-    expect(shootListCountLabel([{ status: "active" }])).toBe("1 shoot");
-    expect(shootListCountLabel([{ status: "active" }, { status: "planning" }])).toBe("2 shoots");
+    expect(shootListCountLabel([{ status: "active" }])).toBe("1 shoot · 1 in production");
+    expect(shootListCountLabel([{ status: "active" }, { status: "planning" }])).toBe(
+      "2 shoots · 1 in production",
+    );
   });
 });

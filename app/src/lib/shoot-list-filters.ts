@@ -64,5 +64,7 @@ export function matchesShootListFilter(
 export function shootListCountLabel(shoots: { status: string | null }[]): string {
   const total = shoots.length;
   if (total === 0) return "No shoots planned";
-  return `${total} shoot${total === 1 ? "" : "s"}`;
+  // DC parity: "in production" counts shoots actively being shot (dc.html renderVals countLabel).
+  const inProduction = shoots.filter((s) => normalizeStatus(s.status) === "active").length;
+  return `${total} shoot${total === 1 ? "" : "s"} · ${inProduction} in production`;
 }

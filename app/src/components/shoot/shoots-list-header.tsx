@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Plus, Search } from "lucide-react";
+import { Plus, Search, SlidersHorizontal } from "lucide-react";
 
 import {
   SHOOT_LIST_FILTERS,
@@ -56,6 +56,11 @@ export function ShootsListHeader({
                 aria-label="Search shoots"
               />
             </div>
+            {/* ponytail: decorative only, DC's own mockup has no sort behavior wired either (dc.html L120-122) */}
+            <button type="button" className={styles.sortBtn}>
+              <SlidersHorizontal size={15} aria-hidden />
+              Brand · Date
+            </button>
           </div>
 
           <div className={styles.filterRow} role="group" aria-label="Filter shoots">
