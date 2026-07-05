@@ -1,0 +1,25 @@
+app/src/app/api/marketing-lead/route.test.ts
+  s_250922caeff5ac::t_61f562baf156a6 318-319
+app/src/lib/auth.test.ts
+  s_250922caeff5ac::t_4cb193ea3502d2 91-99
+app/src/lib/auth.ts
+  s_250922caeff5ac::t_a326ad1b536ff0 12,14-16
+  s_250922caeff5ac::t_6af0b1d9f4424f 63,65-66
+  s_250922caeff5ac::t_86f6dd988844d2 10-11,13,17-18
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "423c40e0ed86f1430d0a699f39c865459c758e60",
+  "prompts": {},
+  "sessions": {
+    "s_250922caeff5ac": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "d615a929-53ba-4467-b380-aff6877ff353",
+        "model": "composer-2.5"
+      },
+      "human_author": null
+    }
+  }
+}
