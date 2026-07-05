@@ -6,6 +6,7 @@
   "scripts": {
     "check:env": "node scripts/check-client-env.mjs",
     "groq:smoke": "node scripts/groq-smoke.mjs",
+    "groq:smoke:test": "node --test scripts/lib/groq-allowlist-sync.test.mjs",
     "groq:baseline": "node scripts/capture-gemini-baseline.mjs",
     "test:e2e": "playwright test",
     "test:e2e:mobile": "playwright test e2e/05-mobile-operator-matrix.spec.ts",

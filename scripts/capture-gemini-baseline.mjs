@@ -7,7 +7,7 @@
  *   node scripts/capture-gemini-baseline.mjs
  *   node scripts/capture-gemini-baseline.mjs --out docs/ecommerce/evidence/2026-07-05/groq-baseline.json
  */
-import { mkdirSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -23,10 +23,14 @@ function defaultOutPath() {
 
 function parseArgs(argv) {
   const outIdx = argv.indexOf("--out");
-  if (outIdx !== -1 && argv[outIdx + 1]) {
-    return join(root, argv[outIdx + 1]);
-  }
-  return defaultOutPath();
+  const outPath =
+    outIdx !== -1 && argv[outIdx + 1]
+      ? join(root, argv[outIdx + 1])
+      : defaultOutPath();
+  return {
+    outPath,
+    force: argv.includes("--force"),
+  };
 }
 
 function buildBaseline() {
@@ -70,7 +74,13 @@ function buildBaseline() {
 }
 
 function main() {
-  const outPath = parseArgs(process.argv.slice(2));
+  const { outPath, force } = parseArgs(process.argv.slice(2));
+  if (existsSync(outPath) && !force) {
+    console.error(
+      `capture-gemini-baseline: ${outPath} already exists — pass --force to overwrite`,
+    );
+    process.exit(1);
+  }
   const baseline = buildBaseline();
   mkdirSync(dirname(outPath), { recursive: true });
   writeFileSync(outPath, `${JSON.stringify(baseline, null, 2)}\n`, "utf8");

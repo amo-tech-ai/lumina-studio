@@ -6,6 +6,12 @@
 import { readFileSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
+import {
+  filterInformationalExtras,
+  syncAllowlist,
+} from "./lib/groq-allowlist-sync.mjs";
+
+const FETCH_TIMEOUT_MS = 30_000;
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const allowlistPath = join(root, "config", "groq-models.json");
@@ -38,6 +44,7 @@ async function groqFetch(path, init = {}) {
   const base = resolveBaseUrl();
   const res = await fetch(`${base}${path}`, {
     ...init,
+    signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
     headers: {
       Authorization: `Bearer ${apiKey}`,
       "Content-Type": "application/json",
@@ -89,12 +96,6 @@ async function listRemoteModelIds() {
   return new Set(data.map((m) => m.id).filter(Boolean));
 }
 
-function syncAllowlist(localIds, remoteIds) {
-  const missingOnGroq = [...localIds].filter((id) => !remoteIds.has(id));
-  const extraOnGroq = [...remoteIds].filter((id) => !localIds.has(id));
-  return { missingOnGroq, extraOnGroq };
-}
-
 async function main() {
   const allowlist = loadAllowlist();
   const localIds = new Set(allowlist.models.map((m) => m.id));
@@ -116,9 +117,7 @@ async function main() {
     process.exit(1);
   }
 
-  const previewExtras = extraOnGroq.filter(
-    (id) => !id.includes("whisper") && !id.includes("playai"),
-  );
+  const previewExtras = filterInformationalExtras(extraOnGroq);
   if (previewExtras.length) {
     console.log(
       `  note: ${previewExtras.length} Groq models not in allowlist (informational)`,
