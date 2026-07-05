@@ -1,0 +1,29 @@
+app/src/lib/crm/queries.ts
+  s_5c9f2a2ec2b3af::t_585a0d436c47cc 5-6
+  s_5c9f2a2ec2b3af::t_04000dd09afd89 43-46
+  s_5c9f2a2ec2b3af::t_fa8e6822360b88 1-4,7-42,47-50
+app/src/lib/crm/queries.test.ts
+  s_5c9f2a2ec2b3af::t_c42436a81f26d1 29,37-40,42,44
+  s_5c9f2a2ec2b3af::t_b4ec1c810dfd9f 35,41,43,49,54
+  s_5c9f2a2ec2b3af::t_1cbef592d560e7 1-28,30-34,36,45-48,50-53,55
+app/src/lib/crm/search.test.ts
+  s_5c9f2a2ec2b3af::t_4cea206ca3651d 1-9
+app/src/lib/crm/search.ts
+  s_5c9f2a2ec2b3af::t_9bac3dacad933d 1-7
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "6d2c7c35a55de9d919ef359bdbec58d30cda1817",
+  "prompts": {},
+  "sessions": {
+    "s_5c9f2a2ec2b3af": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "4c146179-d0c4-4f21-910e-cebd5c5ba751",
+        "model": "composer-2.5"
+      },
+      "human_author": null
+    }
+  }
+}
