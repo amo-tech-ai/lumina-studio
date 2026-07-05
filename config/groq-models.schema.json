@@ -1,0 +1,49 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ipix.local/config/groq-models.schema.json",
+  "title": "Groq model allowlist (iPix SSOT)",
+  "type": "object",
+  "required": ["version", "defaults", "models"],
+  "additionalProperties": false,
+  "properties": {
+    "$schema": { "type": "string" },
+    "version": { "type": "integer", "minimum": 1 },
+    "updatedAt": { "type": "string" },
+    "envMapping": {
+      "type": "object",
+      "additionalProperties": { "type": "string" }
+    },
+    "defaults": {
+      "type": "object",
+      "additionalProperties": { "type": "string" }
+    },
+    "models": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "tier",
+          "strictStructured",
+          "parallelTools",
+          "promptCaching",
+          "evaluationOnly",
+          "productionDefault"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "id": { "type": "string", "minLength": 1 },
+          "tier": { "type": "string" },
+          "strictStructured": { "type": "boolean" },
+          "parallelTools": { "type": "boolean" },
+          "promptCaching": { "type": "boolean" },
+          "evaluationOnly": { "type": "boolean" },
+          "productionDefault": { "type": "boolean" },
+          "deprecatedAfter": { "type": "string" },
+          "replacementModel": { "type": "string" }
+        }
+      }
+    }
+  }
+}

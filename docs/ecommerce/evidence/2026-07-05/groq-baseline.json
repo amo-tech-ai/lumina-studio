@@ -1,0 +1,33 @@
+{
+  "schemaVersion": 1,
+  "capturedAt": "2026-07-05T19:49:59.061Z",
+  "phase": "pre-groq-migration",
+  "provider": "gemini",
+  "aiProviderEnv": "gemini",
+  "geminiModel": "gemini-3.1-flash-lite",
+  "workloads": {
+    "brandIntelligence": {
+      "description": "Edge brand-intelligence structured profile pass",
+      "p50LatencyMs": null,
+      "p95LatencyMs": null,
+      "schemaFailRate": null,
+      "sampleSize": 0,
+      "verifyScript": "npm run supabase:verify-brand-intelligence"
+    },
+    "dnaAudit": {
+      "description": "audit-asset-dna vision + scoring",
+      "falsePositiveRate": null,
+      "sampleSize": 0,
+      "verifyScript": "npm run supabase:verify-dna"
+    },
+    "operatorChat": {
+      "description": "Mastra / CopilotKit default agent tier",
+      "p50LatencyMs": null,
+      "sampleSize": 0
+    }
+  },
+  "notes": [
+    "Populate latency and fail rates before IPI-356 (run verify scripts + golden fixtures).",
+    "Compare against Groq path after IPI-360 golden eval."
+  ]
+}
