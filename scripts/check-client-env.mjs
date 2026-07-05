@@ -13,17 +13,22 @@ const srcDir = join(root, "app", "src");
 /** Explicit forbidden literals — longer keys first for clearer labels. */
 const FORBIDDEN_LITERALS = [
   "VITE_GEMINI_API_KEY",
+  "NEXT_PUBLIC_GROQ_API_KEY",
+  "VITE_GROQ_API_KEY",
   "SUPABASE_SERVICE_ROLE_KEY",
   "CLOUDINARY_API_SECRET",
   "STRIPE_SECRET_KEY",
+  "GROQ_API_KEY",
   "GEMINI_API_KEY",
   "INFISICAL_TOKEN",
   "LINEAR_API_KEY",
   "VITE_GEMINI",
+  "VITE_GROQ",
 ];
 
 const FORBIDDEN_PATTERNS = [
   { pattern: /SERVICE_ROLE/, label: "SERVICE_ROLE" },
+  { pattern: /NEXT_PUBLIC_GROQ/i, label: "NEXT_PUBLIC_GROQ" },
   { pattern: /VITE_[A-Z0-9_]*SECRET/i, label: "VITE_*SECRET" },
   { pattern: /VITE_[A-Z0-9_]*SERVICE_ROLE/i, label: "VITE_*SERVICE_ROLE" },
 ];

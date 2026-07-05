@@ -18,6 +18,12 @@ export const PROVIDER_VENDOR_KEYS = {
     url: "https://platform.openai.com/api-keys",
     example: "sk-...",
   },
+  groq: {
+    key: "GROQ_API_KEY",
+    note: "Required when AI_PROVIDER=groq (server-only; Mastra/Edge in later phases).",
+    url: "https://console.groq.com/keys",
+    example: "gsk_...",
+  },
 };
 
 export const INTELLIGENCE_KEYS = [
@@ -95,6 +101,7 @@ export function resolveAiProvider(processEnv, envFileContent) {
     readDotenvValue(envFileContent, "AI_PROVIDER").trim();
   const normalized = raw.toLowerCase();
   if (normalized === "openai") return "openai";
+  if (normalized === "groq") return "groq";
   return "gemini";
 }
 

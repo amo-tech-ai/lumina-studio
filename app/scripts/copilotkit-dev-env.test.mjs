@@ -37,6 +37,17 @@ describe("copilotkit-dev-env", () => {
     expect(vendorFailures[0].requirement.key).toBe("OPENAI_API_KEY");
   });
 
+  it("requires GROQ_API_KEY when AI_PROVIDER=groq", () => {
+    const reqs = requirementsForProvider("groq");
+    expect(reqs[0].key).toBe("GROQ_API_KEY");
+    const { vendorFailures, provider } = collectDevEnvWarnings(
+      { AI_PROVIDER: "groq" },
+      "",
+    );
+    expect(provider).toBe("groq");
+    expect(vendorFailures[0].requirement.key).toBe("GROQ_API_KEY");
+  });
+
   it("does not require Intelligence vars without license token", () => {
     expect(shouldRequireIntelligence({}, "")).toBe(false);
     const { intelligenceFailures } = collectDevEnvWarnings({}, "");
