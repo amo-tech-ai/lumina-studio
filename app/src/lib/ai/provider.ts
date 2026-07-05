@@ -4,6 +4,8 @@ import {
 } from "./gemini-registry";
 import type { AiProvider, GroqModelEntry, GroqModelTier, GroqModelsConfig } from "./types";
 
+type ResolvedLanguageModel = ReturnType<typeof createGeminiLanguageModel>;
+
 export type { AiProvider, GroqModelTier } from "./types";
 export {
   GEMINI_MODELS,
@@ -69,9 +71,8 @@ export function assertGroqTierCapabilities(
   return entry;
 }
 
-function createGroqLanguageModel(
-  tier: GroqModelTier,
-): ReturnType<typeof createGeminiLanguageModel> {
+// Lazy require keeps Gemini-only deploys from failing when @ai-sdk/groq is unused.
+function createGroqLanguageModel(tier: GroqModelTier): ResolvedLanguageModel {
   const apiKey = process.env.GROQ_API_KEY?.trim();
   if (!apiKey) {
     throw new Error("GROQ_API_KEY is required when AI_PROVIDER=groq.");
@@ -90,9 +91,7 @@ function createGroqLanguageModel(
   return groq(resolveGroqModelId(tier));
 }
 
-export function resolveModel(
-  tier: GroqModelTier = "default",
-): ReturnType<typeof createGeminiLanguageModel> {
+export function resolveModel(tier: GroqModelTier = "default"): ResolvedLanguageModel {
   const provider = resolveAiProvider();
   if (provider === "gemini") {
     return createGeminiLanguageModel();

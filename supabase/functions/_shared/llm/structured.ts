@@ -22,8 +22,20 @@ import type {
 const REPAIR_SUFFIX =
   "\n\nReturn valid JSON only. Include every required field from the schema.";
 
-function parseJson(text: string): unknown {
-  return JSON.parse(text);
+type ParseJsonResult =
+  | { ok: true; value: unknown }
+  | { ok: false; error: string };
+
+function parseJson(text: string): ParseJsonResult {
+  try {
+    return { ok: true, value: JSON.parse(text) };
+  } catch (error) {
+    const message =
+      error instanceof SyntaxError
+        ? `Invalid JSON: ${error.message}`
+        : "Invalid JSON";
+    return { ok: false, error: message };
+  }
 }
 
 function validatePayload(data: unknown): {
@@ -36,6 +48,17 @@ function validatePayload(data: unknown): {
   const payload = data as BrandProfilePayload;
   const error = validateBrandProfilePayload(payload);
   return { payload: error ? null : payload, error };
+}
+
+function validateParsedText(text: string): {
+  payload: BrandProfilePayload | null;
+  error: string | null;
+} {
+  const parsed = parseJson(text);
+  if (!parsed.ok) {
+    return { payload: null, error: parsed.error };
+  }
+  return validatePayload(parsed.value);
 }
 
 async function generateGeminiStructured<T>(
@@ -62,8 +85,7 @@ async function generateGeminiStructured<T>(
   });
 
   let schemaRepairCount = 0;
-  let parsed = parseJson(result.text);
-  let validation = validatePayload(parsed);
+  let validation = validateParsedText(result.text);
 
   if (validation.error) {
     schemaRepairCount += 1;
@@ -75,8 +97,7 @@ async function generateGeminiStructured<T>(
       temperature: 0,
       timeoutMs: options.timeoutMs ?? 45_000,
     });
-    parsed = parseJson(repair.text);
-    validation = validatePayload(parsed);
+    validation = validateParsedText(repair.text);
     if (validation.error) {
       throw new Error(validation.error);
     }
@@ -115,8 +136,7 @@ async function generateGroqStructured<T>(
     temperature: options.temperature ?? 0.2,
   });
 
-  let parsed = parseJson(result.text);
-  let validation = validatePayload(parsed);
+  let validation = validateParsedText(result.text);
 
   if (validation.error) {
     schemaRepairCount += 1;
@@ -132,8 +152,7 @@ async function generateGroqStructured<T>(
       ...repairRequest,
       temperature: 0,
     });
-    parsed = parseJson(result.text);
-    validation = validatePayload(parsed);
+    validation = validateParsedText(result.text);
     if (validation.error) {
       throw new Error(validation.error);
     }
@@ -154,6 +173,7 @@ async function generateGroqStructured<T>(
   };
 }
 
+/** Brand-profile validation today; GROQ-003 wires schema selection by caller. */
 export async function generateStructuredContent<T>(
   options: StructuredGenerationOptions,
 ): Promise<StructuredGenerationResult<T>> {
