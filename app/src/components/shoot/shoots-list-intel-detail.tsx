@@ -21,23 +21,29 @@ function ShootIntelPrompt() {
   );
 }
 
-function ShootIntelSelected({ shoot }: { shoot: ShootRow }) {
+function ShootIntelHero({ shoot }: { shoot: ShootRow }) {
   const coverSrc = shootListCoverForShoot(shoot.id);
   const statusDot = shootStatusDotToken(shoot.status);
 
   return (
+    <div className={styles.heroCover}>
+      <Image src={coverSrc} alt="" fill sizes="360px" className={styles.heroImage} />
+      <span className={styles.heroScrim} aria-hidden />
+      <span className={styles.heroStatus}>
+        <span className={styles.heroStatusDot} style={{ background: statusDot }} aria-hidden />
+        {shootStatusLabel(shoot.status)}
+      </span>
+      {shoot.dna_score != null ? (
+        <span className={styles.heroDna}>DNA {shoot.dna_score}</span>
+      ) : null}
+    </div>
+  );
+}
+
+function ShootIntelSelected({ shoot }: { shoot: ShootRow }) {
+  return (
     <div className={styles.selected} data-testid="shoots-intel-selected">
-      <div className={styles.heroCover}>
-        <Image src={coverSrc} alt="" fill sizes="360px" className={styles.heroImage} />
-        <span className={styles.heroScrim} aria-hidden />
-        <span className={styles.heroStatus}>
-          <span className={styles.heroStatusDot} style={{ background: statusDot }} aria-hidden />
-          {shootStatusLabel(shoot.status)}
-        </span>
-        {shoot.dna_score != null ? (
-          <span className={styles.heroDna}>DNA {shoot.dna_score}</span>
-        ) : null}
-      </div>
+      <ShootIntelHero shoot={shoot} />
 
       <div>
         <h3 className={styles.selectedTitle}>{shoot.name}</h3>
