@@ -1,5 +1,10 @@
 import { Type } from "npm:@google/genai@2.8.0";
 
+import brandProfileStrictJsonSchemaDoc from "./brand-profile.schema.json" with {
+  type: "json",
+};
+
+/** Gemini `@google/genai` responseSchema (existing BI path). */
 export const brandProfileResponseSchema = {
   type: Type.OBJECT,
   properties: {
@@ -102,6 +107,9 @@ export const brandProfileResponseSchema = {
     "scores",
   ],
 };
+
+/** Groq strict JSON Schema (`additionalProperties: false`, all fields required). */
+export const brandProfileStrictJsonSchema = brandProfileStrictJsonSchemaDoc;
 
 export type BrandProfilePayload = {
   name: string;
