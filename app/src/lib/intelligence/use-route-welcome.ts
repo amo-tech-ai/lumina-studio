@@ -185,6 +185,26 @@ function getWelcomeMessage(
     return "Complete brand onboarding to unlock intelligence features";
   }
 
+  // CRM — Relationship Hub (IPI-368)
+  if (normalizedPath.startsWith("/app/crm/companies/")) {
+    return "Company record — log activities, review contacts, and track deals";
+  }
+  if (normalizedPath === "/app/crm/companies" || normalizedPath === "/app/crm") {
+    return "Companies — search prospects and review relationship status";
+  }
+  if (normalizedPath.startsWith("/app/crm/contacts/")) {
+    return "Contact record — log touchpoints and link to companies";
+  }
+  if (normalizedPath === "/app/crm/contacts") {
+    return "Contacts — find people and review communication history";
+  }
+  if (normalizedPath.startsWith("/app/crm/pipeline/")) {
+    return "Deal detail — review stage; use Approve Won/Lost for terminal conversion";
+  }
+  if (normalizedPath === "/app/crm/pipeline") {
+    return "Pipeline — review deals by stage and move non-terminal stages";
+  }
+
   // Fallback for unknown routes
   return "Ask about your portfolio, shoots, assets, or campaigns";
 }

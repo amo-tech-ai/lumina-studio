@@ -20,6 +20,12 @@ import { discoverSocialChannelsTool } from "./social-discovery";
 import { lookupShotReferences } from "./lookupShotReferences";
 import { lookupChannelSpecs } from "./lookupChannelSpecs";
 import { searchTalentByFilters, computeTalentMatchScore, manageShortlist } from "./talent-match-tools";
+import {
+  searchCompanies,
+  searchContacts,
+  logActivity,
+  moveDealStage,
+} from "./crm";
 
 // IPI-148 — SHOOT-AI-001 + IPI-184 SHOOT-DATA-002: shoot planner tools for production-planner
 // IPI-187 — MI-02: media spec lookup
@@ -38,6 +44,10 @@ export const agentTools = {
   searchTalentByFilters,
   computeTalentMatchScore,
   manageShortlist,
+  searchCompanies,
+  searchContacts,
+  logActivity,
+  moveDealStage,
 } as const;
 
 export type AgentToolName = keyof typeof agentTools;

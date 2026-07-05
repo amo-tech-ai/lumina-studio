@@ -11,6 +11,7 @@ const OPERATOR_SECTIONS = [
   "campaigns",
   "matching",
   "preview",
+  "crm",
 ] as const;
 
 const PANEL_SRC = readFileSync(
@@ -63,10 +64,16 @@ describe("OperatorPanel — navigateTo frontend tool (IPI2-82)", () => {
   });
 
   it("navigates to /app/{section} for each valid workspace", () => {
-    expect(PANEL_SRC).toMatch(/router\.push\(`\/app\/\$\{section\}`\)/);
+    expect(PANEL_SRC).toMatch(/section === "crm" \? "\/app\/crm\/companies" : `\/app\/\$\{section\}`/);
     for (const section of OPERATOR_SECTIONS) {
       expect(PANEL_SRC).toContain(`"${section}"`);
     }
+  });
+
+  it("defines navigateToCrm frontend tool for CRM record navigation (IPI-368)", () => {
+    expect(PANEL_SRC).toMatch(/name: "navigateToCrm"/);
+    expect(PANEL_SRC).toMatch(/page: z\.enum\(CRM_PAGES\)/);
+    expect(PANEL_SRC).toMatch(/\/app\/crm\/\$\{page\}/);
   });
 
   it("streams pathname into agent context (route-aware answers)", () => {

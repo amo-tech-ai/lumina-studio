@@ -13,6 +13,13 @@ describe("resolveAgentId", () => {
     expect(resolveAgentId("/app/campaigns/abc")).toBe("creative-director");
   });
 
+  it("CRM routes resolve to crm-assistant (IPI-368)", () => {
+    expect(resolveAgentId("/app/crm")).toBe("crm-assistant");
+    expect(resolveAgentId("/app/crm/companies")).toBe("crm-assistant");
+    expect(resolveAgentId("/app/crm/contacts/abc")).toBe("crm-assistant");
+    expect(resolveAgentId("/app/crm/pipeline/deal-id")).toBe("crm-assistant");
+  });
+
   it("all mapped routes resolve correctly (IPI-247 · DESIGN-070)", () => {
     expect(resolveAgentId("/app/brand")).toBe("brand-intelligence");
     expect(resolveAgentId("/app/brand/some-id")).toBe("brand-intelligence");

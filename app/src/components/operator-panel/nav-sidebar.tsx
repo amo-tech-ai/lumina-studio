@@ -13,6 +13,7 @@ import styles from "./nav-sidebar.module.css";
 const NAV = [
   { href: "/app",           icon: "⌂",  label: "Home" },
   { href: "/app/shoots",    icon: "📷", label: "Shoots" },
+  { href: "/app/crm",       icon: "◎",  label: "CRM" },
   { href: "/app/brand",     icon: "◈",  label: "Brand" },
   { href: "/app/assets",    icon: "🖼", label: "Assets" },
   { href: "/app/campaigns", icon: "📣", label: "Campaigns" },

@@ -188,6 +188,46 @@ function getSuggestionsForRoute(
     ];
   }
 
+  // CRM — Relationship Hub (IPI-368)
+  if (normalizedPath.startsWith("/app/crm/companies/")) {
+    return [
+      { title: "Log a note", message: "Log a note on this company." },
+      { title: "Find contacts", message: "Search contacts linked to this company." },
+      { title: "View pipeline", message: "Show deals for this company." },
+    ];
+  }
+  if (normalizedPath === "/app/crm/companies" || normalizedPath === "/app/crm") {
+    return [
+      { title: "Search companies", message: "Search companies in our CRM." },
+      { title: "Open contacts", message: "Open the contacts list." },
+      { title: "View pipeline", message: "Open the deal pipeline." },
+    ];
+  }
+  if (normalizedPath.startsWith("/app/crm/contacts/")) {
+    return [
+      { title: "Log a call", message: "Log a call with this contact." },
+      { title: "Find company", message: "Which company is this contact linked to?" },
+    ];
+  }
+  if (normalizedPath === "/app/crm/contacts") {
+    return [
+      { title: "Search contacts", message: "Search contacts by name or email." },
+      { title: "Open companies", message: "Open the companies list." },
+    ];
+  }
+  if (normalizedPath.startsWith("/app/crm/pipeline/")) {
+    return [
+      { title: "Move stage", message: "Move this deal to the next non-terminal stage." },
+      { title: "Log activity", message: "Log an activity on this deal." },
+    ];
+  }
+  if (normalizedPath === "/app/crm/pipeline") {
+    return [
+      { title: "Summarize pipeline", message: "Summarize deals by stage." },
+      { title: "Find stale deals", message: "Which deals have been stuck the longest?" },
+    ];
+  }
+
   // Fallback for unknown routes
   return [
     { title: "Brands", message: "Open the Brands workspace." },

@@ -312,6 +312,24 @@ describe("useRouteSuggestions", () => {
     });
   });
 
+  describe("CRM routes (IPI-368)", () => {
+    it("suggests search on companies list", () => {
+      const { result } = renderHook(() =>
+        useRouteSuggestions({ pathname: "/app/crm/companies" }),
+      );
+      expect(result.current[0].title).toBe("Search companies");
+    });
+
+    it("suggests stage moves on pipeline detail", () => {
+      const { result } = renderHook(() =>
+        useRouteSuggestions({
+          pathname: "/app/crm/pipeline/550e8400-e29b-41d4-a716-446655440000",
+        }),
+      );
+      expect(result.current[0].title).toBe("Move stage");
+    });
+  });
+
   describe("Dynamic updates", () => {
     it("updates suggestions when pathname changes", () => {
       const { result, rerender } = renderHook(

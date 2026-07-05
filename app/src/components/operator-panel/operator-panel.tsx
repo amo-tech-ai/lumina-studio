@@ -32,7 +32,9 @@ import { routeBrandId, routeShootId } from "@/lib/intelligence/normalize-route-p
 import { useRouteWelcome } from "@/lib/intelligence/use-route-welcome";
 import { useRouteSuggestions } from "@/lib/intelligence/use-route-suggestions";
 
-const SECTIONS = ["brand", "onboarding", "shoots", "assets", "campaigns", "matching", "preview"] as const;
+const SECTIONS = ["brand", "onboarding", "shoots", "assets", "campaigns", "matching", "preview", "crm"] as const;
+
+const CRM_PAGES = ["companies", "contacts", "pipeline"] as const;
 
 export function OperatorPanel({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -134,8 +136,22 @@ function OperatorShell({
     description: "Open an operator workspace section.",
     parameters: z.object({ section: z.enum(SECTIONS) }),
     handler: async ({ section }) => {
-      router.push(`/app/${section}`);
+      router.push(section === "crm" ? "/app/crm/companies" : `/app/${section}`);
       return `Opening ${section}.`;
+    },
+  });
+
+  useFrontendTool({
+    name: "navigateToCrm",
+    description: "Open a CRM list or record detail page in the Relationship Hub.",
+    parameters: z.object({
+      page: z.enum(CRM_PAGES),
+      recordId: z.string().uuid().optional(),
+    }),
+    handler: async ({ page, recordId }) => {
+      const path = recordId ? `/app/crm/${page}/${recordId}` : `/app/crm/${page}`;
+      router.push(path);
+      return recordId ? `Opening CRM ${page} record ${recordId}.` : `Opening CRM ${page}.`;
     },
   });
 

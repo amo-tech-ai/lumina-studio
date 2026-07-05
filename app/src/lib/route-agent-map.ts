@@ -6,6 +6,7 @@ const DEFAULT_AGENT = "production-planner";
 
 // Ordered: most specific first so /app/shoots/new beats /app/shoots.
 const ROUTE_MAP: [prefix: string, agentId: string][] = [
+  ["/app/crm", "crm-assistant"], // IPI-368 · CRM-AI-002
   ["/app/shoots", "production-planner"],
   ["/app/campaigns", "creative-director"],
   ["/app/brand", "brand-intelligence"],  // IPI-130

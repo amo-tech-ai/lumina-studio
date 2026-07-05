@@ -29,3 +29,21 @@ export function routeShootId(pathname: string): string | null {
   if (!id || id === "new" || !isUuid(id)) return null;
   return id;
 }
+
+export function routeCrmCompanyId(pathname: string): string | null {
+  if (!normalizeRoutePath(pathname).startsWith("/app/crm/companies/")) return null;
+  const id = extractRouteSegment(pathname, 4);
+  return id && isUuid(id) ? id : null;
+}
+
+export function routeCrmContactId(pathname: string): string | null {
+  if (!normalizeRoutePath(pathname).startsWith("/app/crm/contacts/")) return null;
+  const id = extractRouteSegment(pathname, 4);
+  return id && isUuid(id) ? id : null;
+}
+
+export function routeCrmDealId(pathname: string): string | null {
+  if (!normalizeRoutePath(pathname).startsWith("/app/crm/pipeline/")) return null;
+  const id = extractRouteSegment(pathname, 4);
+  return id && isUuid(id) ? id : null;
+}
