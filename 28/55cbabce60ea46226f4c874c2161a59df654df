@@ -1,0 +1,21 @@
+tasks/design-docs/shoot/PLAN/shoot-wizard-dc-conversion.md
+  s_12404fa554d700::t_803f4c0b475d35 72-77
+  s_12404fa554d700::t_6b17fdb74ef8a4 197,199
+  s_12404fa554d700::t_60d03f989b3a14 45
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "2855cbabce60ea46226f4c874c2161a59df654df",
+  "prompts": {},
+  "sessions": {
+    "s_12404fa554d700": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "c51c9d5f-0f8a-4434-b966-5de005a41aad",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
