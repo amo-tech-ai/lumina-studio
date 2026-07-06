@@ -1,0 +1,81 @@
+supabase/functions/_shared/llm/structured.ts
+  s_250922caeff5ac::t_7fc12d34c5d343 9,11
+  s_250922caeff5ac::t_f01fd2ce55bc4f 184-204,208-221
+scripts/verify-brand-intelligence.mjs
+  s_250922caeff5ac::t_aab5723a6785b0 111-124
+  s_250922caeff5ac::t_57433247a70560 270-301
+supabase/functions/brand-intelligence/handler.ts
+  s_250922caeff5ac::t_c47915ba80e35b 65,70,105,119,157,183,194,586
+  s_250922caeff5ac::t_c0efaf2f7f518d 213
+  s_250922caeff5ac::t_4df12ad7b11d5d 196-206,209,211-212
+  s_250922caeff5ac::t_084002acb707c0 24-28
+  s_250922caeff5ac::t_172ad6288bcb02 402
+  s_250922caeff5ac::t_da6a3242a5aa26 5,12,18,29,38
+  s_250922caeff5ac::t_d9c085bea81471 207-208,210
+  s_250922caeff5ac::t_ff598e6af633cb 2-4
+  s_250922caeff5ac::t_d74f54a4b8662b 6-11
+  s_250922caeff5ac::t_d42dd7337c460b 13-17
+  s_250922caeff5ac::t_237a2ea88bb934 19-23
+  s_250922caeff5ac::t_745298a4878054 30-32,35-37
+  s_250922caeff5ac::t_7c678d00c7fe55 39-41,62-64
+  s_250922caeff5ac::t_dc9b8f8c264a6c 66-69
+  s_250922caeff5ac::t_5b25346f91dad1 71-73,102-104
+  s_250922caeff5ac::t_e56662a4f57660 106-108,116-118
+  s_250922caeff5ac::t_425cf27f10e313 120-122,154-156
+  s_250922caeff5ac::t_2e0052bab80645 158-160,180-182
+  s_250922caeff5ac::t_6f10df91c917a4 184-186,191-193
+  s_250922caeff5ac::t_f683bdf75158d2 195
+  s_250922caeff5ac::t_4ffaf397c35349 214-216,399-401
+  s_250922caeff5ac::t_e26e65ffd9c283 403-405,583-585
+  s_250922caeff5ac::t_8dc0174da2003b 1,33-34,42-61,74-101,109-115,123-153,161-179,187-190,217-398,406-582
+supabase/functions/_shared/test/mock-fetch.ts
+  s_250922caeff5ac::t_b04fa07797c5cd 72
+  s_250922caeff5ac::t_73bb92461c4b02 1-71,73-113
+package.json
+  s_250922caeff5ac::t_0a732904e619ab 22
+supabase/functions/audit-asset-dna/index.ts
+  s_250922caeff5ac::t_f65f7700eb2048 1,5
+supabase/functions/audit-asset-dna/handler.test.ts
+  s_250922caeff5ac::t_73f1e4502440de 1-57
+supabase/functions/_shared/llm/llm.test.ts
+  s_250922caeff5ac::t_ddc0fb409900b8 16-19
+  s_250922caeff5ac::t_e3b567884a8f58 156-167
+supabase/functions/brand-intelligence/index.ts
+  s_250922caeff5ac::t_e0fc2e8e2fdd76 1,5
+supabase/functions/_shared/llm/structured.test.ts
+  s_250922caeff5ac::t_dbefc9d198a91f 1-111
+supabase/functions/brand-intelligence/handler.test.ts
+  s_250922caeff5ac::t_ccd73a00602024 202,211
+  s_250922caeff5ac::t_93c2b8192d92fe 146-147,149-160,162-177,200-201,203-210,212-222
+  s_250922caeff5ac::t_4dd3d209f65d91 148,161
+  s_250922caeff5ac::t_03e0814fa5e782 1-145,178-199,223-225
+supabase/functions/audit-asset-dna/handler.ts
+  s_250922caeff5ac::t_6686126a7d45db 95,100,106,116,148,342
+  s_250922caeff5ac::t_81185b63fc9044 150
+  s_250922caeff5ac::t_156b366d6e2ad8 92-94
+  s_250922caeff5ac::t_f61e2d54b9c4a4 96-99
+  s_250922caeff5ac::t_b1747dcc3068de 101-105
+  s_250922caeff5ac::t_c1645dbf4ee84c 107-109,113-115
+  s_250922caeff5ac::t_d0bb50636a705d 117-119,145-147
+  s_250922caeff5ac::t_9bda89982373d5 149
+  s_250922caeff5ac::t_e2b13f026c009b 151-153,339-341
+  s_250922caeff5ac::t_fb047cd556ac07 1-91,110-112,120-144,154-338
+supabase/functions/deno.lock
+  s_250922caeff5ac::t_2252c45407eda4 300-301
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "4dd00d2456ca26bc9f34d0a1d200295c1d737cb2",
+  "prompts": {},
+  "sessions": {
+    "s_250922caeff5ac": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "d615a929-53ba-4467-b380-aff6877ff353",
+        "model": "composer-2.5"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
