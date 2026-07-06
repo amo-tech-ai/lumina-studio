@@ -3,7 +3,10 @@ import {
   assertThrows,
 } from "https://deno.land/std@0.224.0/assert/mod.ts";
 
-import { resolveStructuredProviderFromEnv } from "./structured.ts";
+import {
+  mergeGroqUsage,
+  resolveStructuredProviderFromEnv,
+} from "./structured.ts";
 
 Deno.test("resolveStructuredProviderFromEnv routes bi scope to Groq", () => {
   assertEquals(
@@ -108,4 +111,25 @@ Deno.test("resolveStructuredProviderFromEnv rejects openai on default scope", ()
     Error,
     "openai",
   );
+});
+
+Deno.test("mergeGroqUsage sums prompt and completion tokens across repair passes", () => {
+  assertEquals(
+    mergeGroqUsage(
+      { promptTokens: 100, completionTokens: 50, totalTokens: 150 },
+      { promptTokens: 80, completionTokens: 40, totalTokens: 120 },
+    ),
+    { promptTokens: 180, completionTokens: 90, totalTokens: 270 },
+  );
+});
+
+Deno.test("mergeGroqUsage derives total from parts when totalTokens absent", () => {
+  assertEquals(
+    mergeGroqUsage({ promptTokens: 10, completionTokens: 5 }, { promptTokens: 3 }),
+    { promptTokens: 13, completionTokens: 5, totalTokens: 18 },
+  );
+});
+
+Deno.test("mergeGroqUsage returns undefined when both passes lack usage", () => {
+  assertEquals(mergeGroqUsage(undefined, undefined), undefined);
 });

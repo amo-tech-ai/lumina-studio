@@ -69,6 +69,23 @@ function validateParsedText(text: string): {
   return validatePayload(parsed.value);
 }
 
+/** Sum token usage across Groq strict JSON attempts (initial + schema repair). */
+export function mergeGroqUsage(
+  primary?: StructuredGenerationLog["usage"],
+  secondary?: StructuredGenerationLog["usage"],
+): StructuredGenerationLog["usage"] | undefined {
+  if (!primary && !secondary) return undefined;
+  const promptTokens = (primary?.promptTokens ?? 0) + (secondary?.promptTokens ?? 0);
+  const completionTokens =
+    (primary?.completionTokens ?? 0) + (secondary?.completionTokens ?? 0);
+  const explicitTotal = (primary?.totalTokens ?? 0) + (secondary?.totalTokens ?? 0);
+  return {
+    promptTokens,
+    completionTokens,
+    totalTokens: explicitTotal > 0 ? explicitTotal : promptTokens + completionTokens,
+  };
+}
+
 async function generateGeminiStructured<T>(
   options: StructuredGenerationOptions,
 ): Promise<StructuredGenerationResult<T>> {
@@ -143,6 +160,7 @@ async function generateGroqStructured<T>(
     ...request,
     temperature: options.temperature ?? 0.2,
   });
+  let aggregatedUsage = result.usage;
 
   let validation = validateParsedText(result.text);
 
@@ -156,10 +174,12 @@ async function generateGroqStructured<T>(
       options.schemaName ?? "response",
       options.maxCompletionTokens ?? 4096,
     );
-    result = await groqStructuredCompletion({
+    const repairResult = await groqStructuredCompletion({
       ...repairRequest,
       temperature: 0,
     });
+    aggregatedUsage = mergeGroqUsage(result.usage, repairResult.usage);
+    result = repairResult;
     validation = validateParsedText(result.text);
     if (validation.error) {
       throw new Error(validation.error);
@@ -171,7 +191,7 @@ async function generateGroqStructured<T>(
     model: result.model,
     xGroqRequestId: result.xGroqRequestId,
     schemaRepairCount,
-    usage: result.usage,
+    usage: aggregatedUsage,
   };
 
   return {
