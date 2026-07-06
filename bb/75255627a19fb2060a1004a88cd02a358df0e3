@@ -1,0 +1,47 @@
+supabase/functions/_shared/llm/allowlist.ts
+  s_250922caeff5ac::t_9bd0bd7a51b197 42,47-49,60-63,77-81,86
+  s_250922caeff5ac::t_b48b052238f876 43-46,50-59,64-76,82-85
+supabase/functions/_shared/llm/types.ts
+  s_250922caeff5ac::t_51a58e256890a7 55-56,58-59
+supabase/functions/_shared/llm/structured.ts
+  s_250922caeff5ac::t_9685893589e0ac 182-193,198,205,208-213
+  s_250922caeff5ac::t_aac24dc2e3cc50 6-12
+scripts/verify-brand-intelligence.mjs
+  s_250922caeff5ac::t_279284ca18c200 90,93
+  s_250922caeff5ac::t_3105bd3425c49b 82-89,91-92,94
+supabase/functions/_shared/llm/llm.test.ts
+  s_250922caeff5ac::t_1970a3fcc4a185 116,130-131,141
+  s_250922caeff5ac::t_a51e8b9d8cb624 117-129,132-140
+  s_250922caeff5ac::t_4a942250901446 10-11
+  s_250922caeff5ac::t_0e6b3dd2abd271 9,12
+supabase/functions/audit-asset-dna/index.ts
+  s_250922caeff5ac::t_82de0cd3d8454f 8
+  s_250922caeff5ac::t_b7ba464ee75063 162-169
+supabase/functions/brand-intelligence/index.ts
+  s_250922caeff5ac::t_998ad6d4e0f2b2 14,17-20,23
+  s_250922caeff5ac::t_0310a7754cd817 113-162
+  s_250922caeff5ac::t_8be446e70c18ed 219-220,227-230
+  s_250922caeff5ac::t_6786e80b554253 313-317,320-322,324-347,357-422,425
+  s_250922caeff5ac::t_88185daeb1420d 516,531,536-539,543,547-550,552-555
+  s_250922caeff5ac::t_9907728dd8bf68 571
+  s_250922caeff5ac::t_7ca8b686b6ef6e 231-233
+supabase/functions/_shared/llm/groq-client.ts
+  s_250922caeff5ac::t_1f6b577ab41dd9 127-147
+  s_250922caeff5ac::t_9f8299d03f563d 2
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "bb75255627a19fb2060a1004a88cd02a358df0e3",
+  "prompts": {},
+  "sessions": {
+    "s_250922caeff5ac": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "d615a929-53ba-4467-b380-aff6877ff353",
+        "model": "composer-2.5"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
