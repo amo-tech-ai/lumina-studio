@@ -1,4 +1,7 @@
-import { assertEquals, assertThrows } from "https://deno.land/std@0.224.0/assert/mod.ts";
+import {
+  assertEquals,
+  assertThrows,
+} from "https://deno.land/std@0.224.0/assert/mod.ts";
 
 import {
   assertNoDeprecatedToolApi,
@@ -137,5 +140,18 @@ Deno.test("resolveDnaProviderFromEnv defaults to gemini until golden eval", () =
   assertEquals(
     resolveDnaProviderFromEnv({ aiProvider: "groq", dnaUseGemini: "0" }),
     "groq",
+  );
+});
+
+Deno.test("resolveBiProviderFromEnv throws on invalid AI_PROVIDER", () => {
+  assertThrows(
+    () => resolveBiProviderFromEnv({ aiProvider: "openai" }),
+    Error,
+    "openai",
+  );
+  assertThrows(
+    () => resolveBiProviderFromEnv({ aiProvider: "bogus" }),
+    Error,
+    "bogus",
   );
 });

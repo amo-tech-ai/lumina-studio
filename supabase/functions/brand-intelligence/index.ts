@@ -15,7 +15,6 @@ import {
   resolveGeminiModel,
 } from "../_shared/gemini.ts";
 import { resolveBiProvider } from "../_shared/llm/allowlist.ts";
-import { groqChatCompletion } from "../_shared/llm/groq-client.ts";
 import { generateStructuredContent as generateLlmStructuredContent } from "../_shared/llm/structured.ts";
 import type { StructuredGenerationLog } from "../_shared/llm/types.ts";
 import {
@@ -145,18 +144,6 @@ Crawl content (${params.pageCount} pages):
 ${params.crawlText}
 
 Set sourceUrl to ${JSON.stringify(params.url)}.
-`.trim();
-}
-
-function buildGroqUrlContextUserContent(url: string): string {
-  const urlList = buildUrlList(url);
-  return `
-Analyze this fashion or DTC brand from these pages for a creative production platform.
-
-Pages:
-${urlList.map((u) => `- ${u}`).join("\n")}
-
-Extract brand name, tagline, category, visual identity, audience, content themes, voice, and commerce signals from the page content.
 `.trim();
 }
 
@@ -376,50 +363,35 @@ Use URL content AND web search for press, social, and competitor signals.
         profile = JSON.parse(result.text) as BrandProfilePayload;
       }
     } else {
-      if (useCrawl && crawlText) {
-        const structured = await generateLlmStructuredContent<BrandProfilePayload>({
-          scope: "bi",
-          systemPrompt: GROQ_BI_SYSTEM_PROMPT,
-          userContent: buildGroqCrawlUserContent({
-            url,
-            brandName,
-            shellProfile: priorProfile,
-            crawlText,
-            pageCount: rawData?.pages?.length ?? crawlRow?.pages_crawled ?? 0,
-          }),
-          jsonSchema: brandProfileStrictJsonSchema as Record<string, unknown>,
-          geminiResponseSchema: brandProfileResponseSchema,
-          schemaName: "brand_profile",
-          tier: "structured",
-          temperature: 0.1,
-          timeoutMs: 45_000,
-        });
-        profile = structured.data;
-        llmLog = structured.log;
-        model = structured.log.model;
-      } else {
-        const contextPass = await groqChatCompletion({
-          systemPrompt: GROQ_BI_SYSTEM_PROMPT,
-          userContent: buildGroqUrlContextUserContent(url),
-          temperature: 0.2,
-          maxCompletionTokens: 4096,
-        });
-
-        const structured = await generateLlmStructuredContent<BrandProfilePayload>({
-          scope: "bi",
-          systemPrompt: GROQ_BI_SYSTEM_PROMPT,
-          userContent: buildUrlFallbackPrompt(url, contextPass.text),
-          jsonSchema: brandProfileStrictJsonSchema as Record<string, unknown>,
-          geminiResponseSchema: brandProfileResponseSchema,
-          schemaName: "brand_profile",
-          tier: "structured",
-          temperature: 0.1,
-          timeoutMs: 50_000,
-        });
-        profile = structured.data;
-        llmLog = structured.log;
-        model = structured.log.model;
+      if (!crawlText.trim()) {
+        await markIntakeStatus(client, brandId, "failed");
+        return errorResponse(
+          "validation_error",
+          "Groq brand analysis requires Firecrawl page content. Run a brand crawl first or set BI_USE_GEMINI=1.",
+          422,
+        );
       }
+
+      const structured = await generateLlmStructuredContent<BrandProfilePayload>({
+        scope: "bi",
+        systemPrompt: GROQ_BI_SYSTEM_PROMPT,
+        userContent: buildGroqCrawlUserContent({
+          url,
+          brandName,
+          shellProfile: priorProfile,
+          crawlText,
+          pageCount: rawData?.pages?.length ?? crawlRow?.pages_crawled ?? 0,
+        }),
+        jsonSchema: brandProfileStrictJsonSchema as Record<string, unknown>,
+        geminiResponseSchema: brandProfileResponseSchema,
+        schemaName: "brand_profile",
+        tier: "structured",
+        temperature: 0.1,
+        timeoutMs: 45_000,
+      });
+      profile = structured.data;
+      llmLog = structured.log;
+      model = structured.log.model;
     }
 
     const geminiMs = Math.round(performance.now() - llmStarted);
@@ -544,13 +516,12 @@ Use URL content AND web search for press, social, and competitor signals.
         },
         model,
         tokensIn:
-          llmLog?.usage?.promptTokens ??
-            ((usage?.promptTokenCount ?? 0) +
-              (contextUsage?.promptTokenCount ?? 0)) ||
+          (llmLog?.usage?.promptTokens ??
+            (usage?.promptTokenCount ?? 0) + (contextUsage?.promptTokenCount ?? 0)) ||
           null,
         tokensOut:
-          llmLog?.usage?.completionTokens ??
-            ((usage?.candidatesTokenCount ?? 0) +
+          (llmLog?.usage?.completionTokens ??
+            (usage?.candidatesTokenCount ?? 0) +
               (contextUsage?.candidatesTokenCount ?? 0)) ||
           null,
         durationMs,
