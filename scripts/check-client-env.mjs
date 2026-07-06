@@ -37,6 +37,12 @@ const EXT = new Set([".ts", ".tsx", ".js", ".jsx"]);
 const TEST_RE = /\.(test|spec|int\.test)\.(ts|tsx|js|jsx)$/;
 
 const SERVER_DIRS = new Set(["mastra", "api"]);
+
+// Server-only module paths the client bundle never imports, so referencing
+// GROQ/GEMINI keys there is legitimate server config, not a client leak.
+// `lib/ai` (the AI provider layer) is consumed only by app/src/mastra (a SERVER_DIR).
+const SERVER_ONLY_PREFIXES = ["app/src/lib/ai/"];
+
 function walk(dir, files = []) {
   for (const name of readdirSync(dir)) {
     const path = join(dir, name);
@@ -149,8 +155,9 @@ function findForbiddenInCode(code) {
 const violations = [];
 
 for (const file of walk(srcDir)) {
-  if (isServerOnlyFile(file)) continue;
   const rel = file.slice(root.length + 1);
+  if (SERVER_ONLY_PREFIXES.some((prefix) => rel.startsWith(prefix))) continue;
+  if (isServerOnlyFile(file)) continue;
   const lines = readFileSync(file, "utf8").split("\n");
   const commentState = { inBlockComment: false };
 
