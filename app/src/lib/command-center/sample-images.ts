@@ -59,7 +59,8 @@ export function recentFallbackForShoot(shootId: string, index: number): string {
   return cloudinaryImageUrl(SAMPLE_IMAGE_POOL[idx], { w: 276, h: 345 });
 }
 
-/** 4:3 card cover for shoots list grid (IPI-372). TODO: replace with real shoot cover when schema adds cover_url. */
+/** 4:3 decorative fallback for shoots-list cards with no `cover_url` (IPI-372/IPI-426).
+ *  Real moodboard covers now come from `shoot_portfolio_view.cover_url`; this is fallback-only. */
 export function shootListCoverForShoot(shootId: string): string {
   const idx = hashIndex(shootId, SAMPLE_IMAGE_POOL.length);
   return cloudinaryImageUrl(SAMPLE_IMAGE_POOL[idx], { w: 480, h: 360 });

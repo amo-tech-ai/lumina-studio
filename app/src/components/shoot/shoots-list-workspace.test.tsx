@@ -50,6 +50,7 @@ const SAMPLE_SHOOTS: ShootRow[] = [
     target_channels: ["instagram"],
     estimated_budget: 12000,
     updated_at: "2026-05-01T00:00:00.000Z",
+    cover_url: null,
   },
   {
     id: "2",
@@ -60,6 +61,7 @@ const SAMPLE_SHOOTS: ShootRow[] = [
     target_channels: null,
     estimated_budget: null,
     updated_at: "2026-05-02T00:00:00.000Z",
+    cover_url: null,
   },
   {
     id: "3",
@@ -70,6 +72,7 @@ const SAMPLE_SHOOTS: ShootRow[] = [
     target_channels: [],
     estimated_budget: 0,
     updated_at: "2026-04-01T00:00:00.000Z",
+    cover_url: null,
   },
 ];
 

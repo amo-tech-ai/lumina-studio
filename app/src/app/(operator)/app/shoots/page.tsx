@@ -21,7 +21,7 @@ const ShootsPage = async () => {
   // migration 20260626000001_shoot_portfolio_view.sql adds this view.
   const { data, error } = await supabase
     .from("shoot_portfolio_view")
-    .select("id, name, type, status, dna_score, target_channels, estimated_budget, updated_at")
+    .select("id, name, type, status, dna_score, target_channels, estimated_budget, updated_at, cover_url")
     .order("updated_at", { ascending: false });
 
   if (error) {

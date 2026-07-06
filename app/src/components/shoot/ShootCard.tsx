@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 
+import { isDeliverableCover } from "@/lib/cloudinary/url";
 import { shootListCoverForShoot } from "@/lib/command-center/sample-images";
 import { shootStatusDotToken, shootStatusLabel } from "@/lib/shoot-list-filters";
 
@@ -16,6 +17,7 @@ export type ShootRow = {
   target_channels: string[] | null;
   estimated_budget: number | null;
   updated_at: string;
+  cover_url: string | null;
 };
 
 export function formatShootDate(iso: string): string {
@@ -35,7 +37,10 @@ type Props = {
 /** DC parity: card SELECTS (previews in the IntelligencePanel) — it does not navigate.
  *  Only the panel's "Open shoot" action routes to the detail page (IPI-383). */
 export function ShootCard({ shoot, selected = false, onSelect }: Props) {
-  const coverSrc = shootListCoverForShoot(shoot.id);
+  // Real moodboard cover when present + deliverable; decorative fallback otherwise.
+  const coverSrc = isDeliverableCover(shoot.cover_url)
+    ? shoot.cover_url
+    : shootListCoverForShoot(shoot.id);
   const statusDot = shootStatusDotToken(shoot.status);
   const descId = `shoot-card-desc-${shoot.id}`;
 

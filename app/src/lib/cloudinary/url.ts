@@ -5,6 +5,17 @@ export const CLOUDINARY_CLOUD_NAME =
   process.env.CLOUDINARY_CLOUD_NAME ??
   "dzqy2ixl0";
 
+/** True when `url` is a delivery URL under our configured cloud — i.e. next/image's
+ *  remotePatterns will allow it. Cover URLs come from free-form `mood_board_urls`;
+ *  one pointing at another host must fall back, since next/image THROWS (not degrades)
+ *  on an un-allowed host. */
+export function isDeliverableCover(url: string | null | undefined): url is string {
+  return (
+    typeof url === "string" &&
+    url.startsWith(`https://res.cloudinary.com/${CLOUDINARY_CLOUD_NAME}/image/upload/`)
+  );
+}
+
 /** Shared Cloudinary delivery URL builder — wraps next-cloudinary's getCldImageUrl. */
 export function cloudinaryImageUrl(
   publicId: string,
