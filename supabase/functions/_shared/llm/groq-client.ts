@@ -1,4 +1,5 @@
 import { getOptionalSecret } from "../env.ts";
+import { resolveGroqModelId } from "./allowlist.ts";
 import {
   assertNoDeprecatedToolApi,
   assertStructuredRequestOptions,
@@ -121,6 +122,27 @@ async function readGroqJsonPayload(
     }
     throw new Error("Groq response was not valid JSON");
   }
+}
+
+export async function groqChatCompletion(options: {
+  model?: string;
+  systemPrompt: string;
+  userContent: string;
+  temperature?: number;
+  maxCompletionTokens?: number;
+}): Promise<GroqStructuredCallResult> {
+  const model = options.model ?? resolveGroqModelId("default");
+  const request = normalizeCompletionTokenLimit(
+    {
+      model,
+      messages: [...orderPromptMessages(options.systemPrompt, options.userContent)],
+      stream: false,
+      temperature: options.temperature ?? 0.2,
+    },
+    options.maxCompletionTokens ?? 4096,
+  );
+
+  return groqStructuredCompletion(request);
 }
 
 export function buildStrictJsonRequest(

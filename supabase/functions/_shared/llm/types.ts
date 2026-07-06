@@ -52,7 +52,11 @@ export type StructuredGenerationLog = {
   };
 };
 
+export type StructuredGenerationScope = "bi" | "dna" | "default";
+
 export type StructuredGenerationOptions = {
+  /** Per-function provider override (BI / DNA env flags). */
+  scope?: StructuredGenerationScope;
   systemPrompt: string;
   userContent: string;
   /** Groq strict JSON Schema object. */
