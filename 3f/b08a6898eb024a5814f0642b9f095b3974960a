@@ -1,0 +1,33 @@
+supabase/functions/audit-asset-dna/handler.test.ts
+  s_250922caeff5ac::t_a3a66c5d7336a5 54-61
+supabase/functions/_shared/test/mock-fetch.ts
+  s_250922caeff5ac::t_08cbb65e0bfbb6 5,10-16
+  s_250922caeff5ac::t_37e8cc5a36061a 51,53,57,61,66
+  s_250922caeff5ac::t_36829ac8e0483e 17
+supabase/functions/audit-asset-dna/handler.ts
+  s_250922caeff5ac::t_d1bdefe1128a00 115,138-164,166-174,192
+  s_250922caeff5ac::t_4d45659ed1424b 68-101,106,112-114
+  s_250922caeff5ac::t_b4d7715ae6a820 116
+scripts/verify-brand-intelligence.mjs
+  s_250922caeff5ac::t_b3d9b18ea2241e 67-69,73-83,85
+supabase/functions/brand-intelligence/handler.ts
+  s_250922caeff5ac::t_fd9a995de42ca9 261-269
+  s_250922caeff5ac::t_d0b090cf9df66e 499,526-527
+  s_250922caeff5ac::t_8562eeb6be551d 52-53,56-59
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "3fb08a6898eb024a5814f0642b9f095b3974960a",
+  "prompts": {},
+  "sessions": {
+    "s_250922caeff5ac": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "d615a929-53ba-4467-b380-aff6877ff353",
+        "model": "composer-2.5"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
