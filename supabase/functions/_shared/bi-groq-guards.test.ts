@@ -42,6 +42,16 @@ Deno.test("missingBiProviderConfigError passes when required key present", () =>
   );
 });
 
+Deno.test("groqEmptyCrawlError accepts raw pages when formatter returned empty", () => {
+  const raw = {
+    pages: [
+      { markdown: "   " },
+      { markdown: "B".repeat(120), metadata: { url: "https://example.com/about" } },
+    ],
+  };
+  assertEquals(groqEmptyCrawlError("", raw), null);
+});
+
 Deno.test("groqEmptyCrawlError returns 422 only for empty formatted crawl text", () => {
   assertEquals(groqEmptyCrawlError(""), { code: "validation_error", message: "Groq brand analysis requires Firecrawl page content. Run a brand crawl first or set BI_USE_GEMINI=1.", status: 422 });
   assertEquals(groqEmptyCrawlError("   "), { code: "validation_error", message: "Groq brand analysis requires Firecrawl page content. Run a brand crawl first or set BI_USE_GEMINI=1.", status: 422 });
