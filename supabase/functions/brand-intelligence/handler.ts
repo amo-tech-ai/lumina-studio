@@ -59,11 +59,20 @@ const PRIVATE_HOST_PATTERNS = [
   /\.internal$/i,
 ];
 
+function normalizeHostname(host: string): string {
+  const h = host.toLowerCase();
+  if (h.startsWith("[") && h.endsWith("]")) {
+    return h.slice(1, -1);
+  }
+  return h;
+}
+
 function isValidHttpUrl(value: string): boolean {
   try {
     const parsed = new URL(value);
     if (parsed.protocol !== "https:" && parsed.protocol !== "http:") return false;
-    return !PRIVATE_HOST_PATTERNS.some((p) => p.test(parsed.hostname));
+    const hostname = normalizeHostname(parsed.hostname);
+    return !PRIVATE_HOST_PATTERNS.some((p) => p.test(hostname));
   } catch {
     return false;
   }
@@ -486,7 +495,7 @@ Use URL content AND web search for press, social, and competitor signals.
       },
     }));
 
-    const mergedProfile = {
+    const mergedProfileComplete = {
       ...priorProfile,
       ...aiProfile,
       _lifecycle: "scores_complete",
@@ -494,27 +503,26 @@ Use URL content AND web search for press, social, and competitor signals.
       ...(draftMode && { _draft_scores: scoreRows }),
     };
 
-    const brandUpdate = draftMode
-      ? { ai_profile_draft: mergedProfile, intake_status: "draft_ready" as const }
-      : { name: aiProfile.name as string, brand_url: url, ai_profile: mergedProfile };
-
-    const { data: updated, error: updateErr } = await client
-      .from("brands")
-      .update(brandUpdate)
-      .eq("id", brandId)
-      .select("id, name")
-      .single();
-
-    if (updateErr || !updated) {
-      throw new Error(updateErr?.message ?? "Failed to update brand");
-    }
-
-    // Track that draft was persisted so the catch block doesn't overwrite draft_ready → failed
-    if (draftMode) draftPersisted = true;
-
     let scores: { id: string; score_type: string; score: number }[] | null = null;
+    let updated: { id: string; name: string };
 
-    if (!draftMode) {
+    if (draftMode) {
+      const { data: draftUpdated, error: updateErr } = await client
+        .from("brands")
+        .update({
+          ai_profile_draft: mergedProfileComplete,
+          intake_status: "draft_ready" as const,
+        })
+        .eq("id", brandId)
+        .select("id, name")
+        .single();
+
+      if (updateErr || !draftUpdated) {
+        throw new Error(updateErr?.message ?? "Failed to update brand");
+      }
+      updated = draftUpdated;
+      draftPersisted = true;
+    } else {
       const liveScoreRows = scoreRows.map((r) => ({ ...r, brand_id: brandId }));
       const { data: scoresData, error: scoresErr } = await client
         .from("brand_scores")
@@ -524,7 +532,22 @@ Use URL content AND web search for press, social, and competitor signals.
       if (scoresErr) throw new Error(scoresErr.message);
       scores = scoresData;
 
-      await markIntakeStatus(client, brandId, "scores_complete");
+      const { data: liveUpdated, error: updateErr } = await client
+        .from("brands")
+        .update({
+          name: aiProfile.name as string,
+          brand_url: url,
+          ai_profile: mergedProfileComplete,
+          intake_status: "scores_complete" as const,
+        })
+        .eq("id", brandId)
+        .select("id, name")
+        .single();
+
+      if (updateErr || !liveUpdated) {
+        throw new Error(updateErr?.message ?? "Failed to update brand");
+      }
+      updated = liveUpdated;
     }
 
     const usage = structuredResponse?.usageMetadata;
