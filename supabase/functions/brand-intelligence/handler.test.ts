@@ -32,7 +32,7 @@ const crawlWithText = {
   id: "crawl-test-1",
   brand_id: BRAND_ID,
   pages_crawled: 2,
-  job_status: "completed",
+  job_status: "complete",
   raw_data: {
     pages: [
       {
@@ -68,6 +68,39 @@ async function parseSuccess(res: Response) {
   const json = await res.json();
   return json as { ok: true; data: Record<string, unknown> };
 }
+
+Deno.test("brand-intelligence accepts service-role bearer for workflow calls", async () => {
+  await withEnv({
+    ...BASE_EDGE_ENV,
+    SUPABASE_SERVICE_ROLE_KEY: "test-service-role-key",
+    AI_PROVIDER: "groq",
+    BI_USE_GEMINI: "0",
+    GROQ_API_KEY: undefined,
+  }, async () => {
+    await withMockFetch({}, async () => {
+      const { handleBrandIntelligenceRequest } = await import("./handler.ts");
+      const res = await handleBrandIntelligenceRequest(new Request(
+        "https://localhost/functions/v1/brand-intelligence",
+        {
+          method: "POST",
+          headers: {
+            Authorization: "Bearer test-service-role-key",
+            "Content-Type": "application/json",
+            apikey: BASE_EDGE_ENV.SUPABASE_ANON_KEY,
+          },
+          body: JSON.stringify({
+            brandId: BRAND_ID,
+            url: TEST_URL,
+            draft_mode: true,
+          }),
+        },
+      ));
+      assertEquals(res.status, 503);
+      const body = await parseError(res);
+      assertEquals(body.error.code, "config_error");
+    });
+  });
+});
 
 Deno.test("brand-intelligence returns 503 when Groq key missing", async () => {
   await withEnv({
