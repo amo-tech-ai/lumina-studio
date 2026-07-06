@@ -49,14 +49,25 @@ function isEnvTruthyValue(
   return value === "1" || value === "true" || value === "yes";
 }
 
+function parseBiDnaAiProvider(raw: string | undefined): "gemini" | "groq" {
+  const provider = (raw ?? "gemini").trim().toLowerCase();
+  if (provider === "gemini" || provider === "groq") return provider;
+  if (provider === "openai") {
+    throw new Error(
+      'AI_PROVIDER="openai" is not wired for edge BI/DNA structured paths.',
+    );
+  }
+  throw new Error(
+    `AI_PROVIDER="${provider}" is invalid (expected gemini | groq).`,
+  );
+}
+
 export function resolveBiProviderFromEnv(env: {
   aiProvider?: string;
   biUseGemini?: string;
 }): "gemini" | "groq" {
   if (isEnvTruthyValue(env.biUseGemini)) return "gemini";
-  const provider = (env.aiProvider ?? "gemini").trim().toLowerCase();
-  if (provider === "groq") return "groq";
-  return "gemini";
+  return parseBiDnaAiProvider(env.aiProvider);
 }
 
 /** Brand intelligence: BI_USE_GEMINI=1 forces Gemini regardless of AI_PROVIDER. */
@@ -72,9 +83,7 @@ export function resolveDnaProviderFromEnv(env: {
   dnaUseGemini?: string;
 }): "gemini" | "groq" {
   if (isEnvTruthyValue(env.dnaUseGemini, true)) return "gemini";
-  const provider = (env.aiProvider ?? "gemini").trim().toLowerCase();
-  if (provider === "groq") return "groq";
-  return "gemini";
+  return parseBiDnaAiProvider(env.aiProvider);
 }
 
 /** DNA vision: defaults to Gemini until golden eval (DNA_USE_GEMINI=1). */
