@@ -1,5 +1,5 @@
 ---
-name: Mercur Marketplace
+name: mercur
 description: >
   Mercur/Medusa marketplace hub for my-marketplace/. Use whenever working on MercurJS,
   COM-010, registry blocks, Mercur CLI (search/view/add/diff), seller seeds, medusa-config,

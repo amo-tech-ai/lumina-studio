@@ -1,0 +1,565 @@
+{
+  "exit_reason": "max_iterations (2)",
+  "original_description": "CopilotKit v2 hub \u2014 operator chat runtime, AG-UI protocol, A2UI surfaces, Mastra/LangGraph integrations, setup, develop, debug, upgrade, and OSS contribute. Use whenever the user mentions CopilotKit, CopilotChat, CopilotSidebar, /api/copilotkit, useAgent, useFrontendTool, AG-UI, A2UI createSurface, agent streaming, runtime 401, license token, v1\u2192v2 migration, or wiring Mastra agents to the operator app \u2014 even if they do not say \"CopilotKit\" explicitly. Load references/ on demand; do NOT load the whole tree. For iPix prod ops start with references/ipix-production.md.",
+  "best_description": "CopilotKit v2 hub \u2014 operator chat runtime, AG-UI protocol, A2UI surfaces, Mastra/LangGraph integrations, setup, develop, debug, upgrade, and OSS contribute. Use whenever the user mentions CopilotKit, CopilotChat, CopilotSidebar, /api/copilotkit, useAgent, useFrontendTool, AG-UI, A2UI createSurface, agent streaming, runtime 401, license token, v1\u2192v2 migration, or wiring Mastra agents to the operator app \u2014 even if they do not say \"CopilotKit\" explicitly. Load references/ on demand; do NOT load the whole tree. For iPix prod ops start with references/ipix-production.md.",
+  "best_score": "4/8",
+  "best_train_score": "6/12",
+  "best_test_score": "4/8",
+  "final_description": "Use for ANY operator chat / agent-runtime bug, symptom, or build task \u2014 even when the user never says \"CopilotKit\". Trigger on symptom descriptions, not just product names: chat streams text but a frontend tool never fires; useAgent/useFrontendTool/useCopilotAction misbehaves; 401 or connection failures hitting /api/copilotkit or /agent/*/run; an SSE stream hangs and never emits RunFinished; a tool call fails mid-stream; \"agent not found\" or registry-key mismatches; license token / env var issues; questions about AG-UI or A2UI event order and protocol; wiring a Mastra or LangGraph agent into the operator's copilotkit runtime route; CopilotChat/Sidebar/Popup UI work, HITL interrupts; v1\u2192v2 migration; or contributing to the CopilotKit OSS repo. Covers setup, feature development, debugging, upgrades. Load references/ on demand \u2014 never load the whole tree. For iPix production incidents (Vercel, license, prod 401s) start at references/ipix-production.md.",
+  "iterations_run": 2,
+  "holdout": 0.4,
+  "train_size": 12,
+  "test_size": 8,
+  "history": [
+    {
+      "iteration": 1,
+      "description": "CopilotKit v2 hub \u2014 operator chat runtime, AG-UI protocol, A2UI surfaces, Mastra/LangGraph integrations, setup, develop, debug, upgrade, and OSS contribute. Use whenever the user mentions CopilotKit, CopilotChat, CopilotSidebar, /api/copilotkit, useAgent, useFrontendTool, AG-UI, A2UI createSurface, agent streaming, runtime 401, license token, v1\u2192v2 migration, or wiring Mastra agents to the operator app \u2014 even if they do not say \"CopilotKit\" explicitly. Load references/ on demand; do NOT load the whole tree. For iPix prod ops start with references/ipix-production.md.",
+      "train_passed": 6,
+      "train_failed": 6,
+      "train_total": 12,
+      "train_results": [
+        {
+          "query": "CopilotChat streams text but frontend tools from useFrontendTool never execute",
+          "should_trigger": true,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 1,
+          "pass": false
+        },
+        {
+          "query": "the operator sidebar on /app/shoots throws 401 on GET /api/copilotkit/info \u2014 license token is set in vercel but chat won't connect",
+          "should_trigger": true,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 1,
+          "pass": false
+        },
+        {
+          "query": "cloudinary f_auto q_auto transform for product hero images in the operator assets page",
+          "should_trigger": false,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 1,
+          "pass": true
+        },
+        {
+          "query": "useAgent says agent not found \u2014 mastra registry key is production-planner but frontend uses default",
+          "should_trigger": true,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 1,
+          "pass": false
+        },
+        {
+          "query": "wire our mastra agent into the copilotkit runtime route at app/src/app/api/copilotkit",
+          "should_trigger": true,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 1,
+          "pass": false
+        },
+        {
+          "query": "infisical run -- npm run dev injects secrets but vite app on 8080 won't start",
+          "should_trigger": false,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 1,
+          "pass": true
+        },
+        {
+          "query": "sse run never finishes \u2014 seeing RunStarted but no RunFinished in network tab for /agent/default/run",
+          "should_trigger": true,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 1,
+          "pass": false
+        },
+        {
+          "query": "what's the AG-UI event order when a tool call fails mid-stream?",
+          "should_trigger": true,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 1,
+          "pass": false
+        },
+        {
+          "query": "add a new supabase migration for brand_scores RLS on nvdlhrodvevgwdsneplk",
+          "should_trigger": false,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 1,
+          "pass": true
+        },
+        {
+          "query": "medusa checkout webhook in my-marketplace isn't firing stripe events",
+          "should_trigger": false,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 1,
+          "pass": true
+        },
+        {
+          "query": "mastra workflow in app/src/mastra/workflows needs a new step for shoot planning \u2014 no chat UI",
+          "should_trigger": false,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 1,
+          "pass": true
+        },
+        {
+          "query": "explain what react server components are \u2014 general next.js question no operator chat",
+          "should_trigger": false,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 1,
+          "pass": true
+        }
+      ],
+      "test_passed": 4,
+      "test_failed": 4,
+      "test_total": 8,
+      "test_results": [
+        {
+          "query": "agent is emitting A2UI createSurface ops but nothing renders \u2014 do i need runtime.a2ui on CopilotRuntime?",
+          "should_trigger": true,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 1,
+          "pass": false
+        },
+        {
+          "query": "rewrite the gemini structured output schema in supabase/functions/brand-intelligence for DNA scoring",
+          "should_trigger": false,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 1,
+          "pass": true
+        },
+        {
+          "query": "make the dashboard card use shadcn Button variant outline \u2014 pure UI tweak in app/components",
+          "should_trigger": false,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 1,
+          "pass": true
+        },
+        {
+          "query": "add CopilotSidebar to the next.js operator layout with useSingleEndpoint false for hono multi-route",
+          "should_trigger": true,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 1,
+          "pass": false
+        },
+        {
+          "query": "need to migrate off useCopilotAction and CopilotKit v1 imports in app/ to v2 /react-core/v2",
+          "should_trigger": true,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 1,
+          "pass": false
+        },
+        {
+          "query": "implement IPI-46 onboarding orchestration \u2014 full wiring plan PR workflow verify matrix",
+          "should_trigger": false,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 1,
+          "pass": true
+        },
+        {
+          "query": "node scripts/linear-set-issue-state.mjs IPI-46 Done and update docs/linear/issues checkbox",
+          "should_trigger": false,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 1,
+          "pass": true
+        },
+        {
+          "query": "COPILOTKIT_LICENSE_KEY missing in prod \u2014 where does publicLicenseKey go on the provider?",
+          "should_trigger": true,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 1,
+          "pass": false
+        }
+      ],
+      "passed": 6,
+      "failed": 6,
+      "total": 12,
+      "results": [
+        {
+          "query": "CopilotChat streams text but frontend tools from useFrontendTool never execute",
+          "should_trigger": true,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 1,
+          "pass": false
+        },
+        {
+          "query": "the operator sidebar on /app/shoots throws 401 on GET /api/copilotkit/info \u2014 license token is set in vercel but chat won't connect",
+          "should_trigger": true,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 1,
+          "pass": false
+        },
+        {
+          "query": "cloudinary f_auto q_auto transform for product hero images in the operator assets page",
+          "should_trigger": false,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 1,
+          "pass": true
+        },
+        {
+          "query": "useAgent says agent not found \u2014 mastra registry key is production-planner but frontend uses default",
+          "should_trigger": true,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 1,
+          "pass": false
+        },
+        {
+          "query": "wire our mastra agent into the copilotkit runtime route at app/src/app/api/copilotkit",
+          "should_trigger": true,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 1,
+          "pass": false
+        },
+        {
+          "query": "infisical run -- npm run dev injects secrets but vite app on 8080 won't start",
+          "should_trigger": false,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 1,
+          "pass": true
+        },
+        {
+          "query": "sse run never finishes \u2014 seeing RunStarted but no RunFinished in network tab for /agent/default/run",
+          "should_trigger": true,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 1,
+          "pass": false
+        },
+        {
+          "query": "what's the AG-UI event order when a tool call fails mid-stream?",
+          "should_trigger": true,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 1,
+          "pass": false
+        },
+        {
+          "query": "add a new supabase migration for brand_scores RLS on nvdlhrodvevgwdsneplk",
+          "should_trigger": false,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 1,
+          "pass": true
+        },
+        {
+          "query": "medusa checkout webhook in my-marketplace isn't firing stripe events",
+          "should_trigger": false,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 1,
+          "pass": true
+        },
+        {
+          "query": "mastra workflow in app/src/mastra/workflows needs a new step for shoot planning \u2014 no chat UI",
+          "should_trigger": false,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 1,
+          "pass": true
+        },
+        {
+          "query": "explain what react server components are \u2014 general next.js question no operator chat",
+          "should_trigger": false,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 1,
+          "pass": true
+        }
+      ]
+    },
+    {
+      "iteration": 2,
+      "description": "Use for ANY operator chat / agent-runtime bug, symptom, or build task \u2014 even when the user never says \"CopilotKit\". Trigger on symptom descriptions, not just product names: chat streams text but a frontend tool never fires; useAgent/useFrontendTool/useCopilotAction misbehaves; 401 or connection failures hitting /api/copilotkit or /agent/*/run; an SSE stream hangs and never emits RunFinished; a tool call fails mid-stream; \"agent not found\" or registry-key mismatches; license token / env var issues; questions about AG-UI or A2UI event order and protocol; wiring a Mastra or LangGraph agent into the operator's copilotkit runtime route; CopilotChat/Sidebar/Popup UI work, HITL interrupts; v1\u2192v2 migration; or contributing to the CopilotKit OSS repo. Covers setup, feature development, debugging, upgrades. Load references/ on demand \u2014 never load the whole tree. For iPix production incidents (Vercel, license, prod 401s) start at references/ipix-production.md.",
+      "train_passed": 6,
+      "train_failed": 6,
+      "train_total": 12,
+      "train_results": [
+        {
+          "query": "cloudinary f_auto q_auto transform for product hero images in the operator assets page",
+          "should_trigger": false,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 1,
+          "pass": true
+        },
+        {
+          "query": "what's the AG-UI event order when a tool call fails mid-stream?",
+          "should_trigger": true,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 1,
+          "pass": false
+        },
+        {
+          "query": "useAgent says agent not found \u2014 mastra registry key is production-planner but frontend uses default",
+          "should_trigger": true,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 1,
+          "pass": false
+        },
+        {
+          "query": "infisical run -- npm run dev injects secrets but vite app on 8080 won't start",
+          "should_trigger": false,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 1,
+          "pass": true
+        },
+        {
+          "query": "medusa checkout webhook in my-marketplace isn't firing stripe events",
+          "should_trigger": false,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 1,
+          "pass": true
+        },
+        {
+          "query": "the operator sidebar on /app/shoots throws 401 on GET /api/copilotkit/info \u2014 license token is set in vercel but chat won't connect",
+          "should_trigger": true,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 1,
+          "pass": false
+        },
+        {
+          "query": "CopilotChat streams text but frontend tools from useFrontendTool never execute",
+          "should_trigger": true,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 1,
+          "pass": false
+        },
+        {
+          "query": "wire our mastra agent into the copilotkit runtime route at app/src/app/api/copilotkit",
+          "should_trigger": true,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 1,
+          "pass": false
+        },
+        {
+          "query": "sse run never finishes \u2014 seeing RunStarted but no RunFinished in network tab for /agent/default/run",
+          "should_trigger": true,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 1,
+          "pass": false
+        },
+        {
+          "query": "add a new supabase migration for brand_scores RLS on nvdlhrodvevgwdsneplk",
+          "should_trigger": false,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 1,
+          "pass": true
+        },
+        {
+          "query": "mastra workflow in app/src/mastra/workflows needs a new step for shoot planning \u2014 no chat UI",
+          "should_trigger": false,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 1,
+          "pass": true
+        },
+        {
+          "query": "explain what react server components are \u2014 general next.js question no operator chat",
+          "should_trigger": false,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 1,
+          "pass": true
+        }
+      ],
+      "test_passed": 4,
+      "test_failed": 4,
+      "test_total": 8,
+      "test_results": [
+        {
+          "query": "need to migrate off useCopilotAction and CopilotKit v1 imports in app/ to v2 /react-core/v2",
+          "should_trigger": true,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 1,
+          "pass": false
+        },
+        {
+          "query": "COPILOTKIT_LICENSE_KEY missing in prod \u2014 where does publicLicenseKey go on the provider?",
+          "should_trigger": true,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 1,
+          "pass": false
+        },
+        {
+          "query": "add CopilotSidebar to the next.js operator layout with useSingleEndpoint false for hono multi-route",
+          "should_trigger": true,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 1,
+          "pass": false
+        },
+        {
+          "query": "make the dashboard card use shadcn Button variant outline \u2014 pure UI tweak in app/components",
+          "should_trigger": false,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 1,
+          "pass": true
+        },
+        {
+          "query": "agent is emitting A2UI createSurface ops but nothing renders \u2014 do i need runtime.a2ui on CopilotRuntime?",
+          "should_trigger": true,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 1,
+          "pass": false
+        },
+        {
+          "query": "rewrite the gemini structured output schema in supabase/functions/brand-intelligence for DNA scoring",
+          "should_trigger": false,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 1,
+          "pass": true
+        },
+        {
+          "query": "implement IPI-46 onboarding orchestration \u2014 full wiring plan PR workflow verify matrix",
+          "should_trigger": false,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 1,
+          "pass": true
+        },
+        {
+          "query": "node scripts/linear-set-issue-state.mjs IPI-46 Done and update docs/linear/issues checkbox",
+          "should_trigger": false,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 1,
+          "pass": true
+        }
+      ],
+      "passed": 6,
+      "failed": 6,
+      "total": 12,
+      "results": [
+        {
+          "query": "cloudinary f_auto q_auto transform for product hero images in the operator assets page",
+          "should_trigger": false,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 1,
+          "pass": true
+        },
+        {
+          "query": "what's the AG-UI event order when a tool call fails mid-stream?",
+          "should_trigger": true,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 1,
+          "pass": false
+        },
+        {
+          "query": "useAgent says agent not found \u2014 mastra registry key is production-planner but frontend uses default",
+          "should_trigger": true,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 1,
+          "pass": false
+        },
+        {
+          "query": "infisical run -- npm run dev injects secrets but vite app on 8080 won't start",
+          "should_trigger": false,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 1,
+          "pass": true
+        },
+        {
+          "query": "medusa checkout webhook in my-marketplace isn't firing stripe events",
+          "should_trigger": false,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 1,
+          "pass": true
+        },
+        {
+          "query": "the operator sidebar on /app/shoots throws 401 on GET /api/copilotkit/info \u2014 license token is set in vercel but chat won't connect",
+          "should_trigger": true,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 1,
+          "pass": false
+        },
+        {
+          "query": "CopilotChat streams text but frontend tools from useFrontendTool never execute",
+          "should_trigger": true,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 1,
+          "pass": false
+        },
+        {
+          "query": "wire our mastra agent into the copilotkit runtime route at app/src/app/api/copilotkit",
+          "should_trigger": true,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 1,
+          "pass": false
+        },
+        {
+          "query": "sse run never finishes \u2014 seeing RunStarted but no RunFinished in network tab for /agent/default/run",
+          "should_trigger": true,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 1,
+          "pass": false
+        },
+        {
+          "query": "add a new supabase migration for brand_scores RLS on nvdlhrodvevgwdsneplk",
+          "should_trigger": false,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 1,
+          "pass": true
+        },
+        {
+          "query": "mastra workflow in app/src/mastra/workflows needs a new step for shoot planning \u2014 no chat UI",
+          "should_trigger": false,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 1,
+          "pass": true
+        },
+        {
+          "query": "explain what react server components are \u2014 general next.js question no operator chat",
+          "should_trigger": false,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 1,
+          "pass": true
+        }
+      ]
+    }
+  ]
+}
