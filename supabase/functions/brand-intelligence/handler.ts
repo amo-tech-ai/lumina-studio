@@ -1,7 +1,7 @@
 import type { GenerateContentResponse } from "npm:@google/genai@2.8.0";
+import type { SupabaseClient } from "npm:@supabase/supabase-js@2";
 
 import { insertAgentLog } from "../_shared/agent-log.ts";
-import { isAuthFailure, resolveAuth } from "../_shared/auth.ts";
 import {
   type CrawlRawData,
   formatCrawlForPrompt,
@@ -34,7 +34,7 @@ import {
   type BrandProfilePayload,
   validateBrandProfilePayload,
 } from "../_shared/schemas/brand-profile.ts";
-import { createUserClient } from "../_shared/supabase-client.ts";
+import { isCallerFailure, resolveCaller } from "../_shared/resolve-caller.ts";
 import {
   errorResponse,
   jsonResponse,
@@ -171,7 +171,7 @@ Set sourceUrl to ${JSON.stringify(params.url)}.
 }
 
 async function loadCrawlRow(
-  client: ReturnType<typeof createUserClient>,
+  client: SupabaseClient,
   brandId: string,
   crawlResultId: string | null,
 ) {
@@ -188,6 +188,7 @@ async function loadCrawlRow(
     .from("brand_crawls")
     .select("id, brand_id, raw_data, pages_crawled, job_status")
     .eq("brand_id", brandId)
+    .eq("job_status", "complete")
     .order("created_at", { ascending: false })
     .limit(1)
     .maybeSingle();
@@ -197,7 +198,7 @@ async function loadCrawlRow(
 }
 
 async function markIntakeStatus(
-  client: ReturnType<typeof createUserClient>,
+  client: SupabaseClient,
   brandId: string,
   status: "analysis_running" | "scores_complete" | "failed",
 ) {
@@ -230,7 +231,7 @@ export async function handleBrandIntelligenceRequest(req: Request): Promise<Resp
 
   const started = performance.now();
   let failureBrandId: string | null = null;
-  let failureClient: ReturnType<typeof createUserClient> | null = null;
+  let failureClient: SupabaseClient | null = null;
   let draftPersisted = false;
 
   try {
@@ -238,8 +239,8 @@ export async function handleBrandIntelligenceRequest(req: Request): Promise<Resp
       return errorResponse("method_not_allowed", "Use POST", 405);
     }
 
-    const auth = await resolveAuth(req, { required: true });
-    if (isAuthFailure(auth)) return auth.response;
+    const caller = await resolveCaller(req);
+    if (isCallerFailure(caller)) return caller.response;
 
     const biProvider = resolveBiProvider();
     const configError = missingBiProviderConfigError(biProvider, {
@@ -313,7 +314,7 @@ export async function handleBrandIntelligenceRequest(req: Request): Promise<Resp
       typeof body.brand_name === "string" ? body.brand_name.trim() : undefined;
     const draftMode = body.draft_mode === true;
 
-    const client = createUserClient(auth.accessToken);
+    const client = caller.client;
     failureClient = client;
 
     const { data: existing, error: fetchErr } = await client
@@ -558,7 +559,7 @@ Use URL content AND web search for press, social, and competitor signals.
     try {
       const result = await insertAgentLog(client, {
         agentName: "brand-intelligence",
-        userId: auth.user.id,
+        userId: caller.userId,
         brandId,
         input: {
           url,

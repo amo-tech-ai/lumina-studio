@@ -286,9 +286,11 @@ async function main() {
     );
 
   // Groq BI requires non-empty crawl text; seed a minimal row for live verify.
+  let crawlSeedOk = false;
   const { error: crawlSeedErr } = await admin.from("brand_crawls").insert({
     brand_id: shellBrand.id,
-    job_status: "completed",
+    source_url: testBrandUrl,
+    job_status: "complete",
     pages_crawled: 2,
     raw_data: {
       pages: [
@@ -308,9 +310,13 @@ async function main() {
   } else if (crawlSeedErr) {
     fail(`brand_crawls seed: ${crawlSeedErr.message}`);
   } else {
+    crawlSeedOk = true;
     pass("seeded brand_crawls fixture for BI verify");
   }
 
+  if (!crawlSeedOk) {
+    console.log("skip: brand-intelligence authed call (no crawl fixture)");
+  } else {
   const authed = await fetchJson("/brand-intelligence", {
     method: "POST",
     headers: {
@@ -404,6 +410,7 @@ async function main() {
     } else {
       pass(`ai_agent_logs duration_ms=${logRow.duration_ms}`);
     }
+  }
   }
 
   await verifyBrandCrawlsSchema(admin);
