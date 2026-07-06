@@ -1,0 +1,26 @@
+supabase/functions/_shared/llm/allowlist.ts
+  s_250922caeff5ac::t_8a0bf8f2065e1c 86
+  s_250922caeff5ac::t_08c7c219962d44 52-64,70
+supabase/functions/_shared/llm/llm.test.ts
+  s_250922caeff5ac::t_1790383d64a79a 1-4
+  s_250922caeff5ac::t_cb53afc33ac441 145-157
+supabase/functions/brand-intelligence/index.ts
+  s_250922caeff5ac::t_f52eaf9a860b0d 366-372,374-394
+  s_250922caeff5ac::t_d5de5771715f6a 519-520,523-524
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "b3760905776143b8f68c528dfa3c1f3dbd8bb760",
+  "prompts": {},
+  "sessions": {
+    "s_250922caeff5ac": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "d615a929-53ba-4467-b380-aff6877ff353",
+        "model": "composer-2.5"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
