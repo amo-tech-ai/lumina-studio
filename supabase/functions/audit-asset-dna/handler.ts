@@ -65,8 +65,16 @@ const dnaSchema = {
   required: ["score", "pillars", "rationale"],
 };
 
-function isPrivateOrSpecialUseHost(host: string): boolean {
+function normalizeHostname(host: string): string {
   const h = host.toLowerCase();
+  if (h.startsWith("[") && h.endsWith("]")) {
+    return h.slice(1, -1);
+  }
+  return h;
+}
+
+function isPrivateOrSpecialUseHost(host: string): boolean {
+  const h = normalizeHostname(host);
   const isPrivate172 = (): boolean => {
     if (!h.startsWith("172.")) return false;
     const octet = parseInt(h.split(".")[1], 10);
@@ -103,14 +111,14 @@ function isValidHttpUrl(value: string): boolean {
   try {
     const parsed = new URL(value);
     if (parsed.protocol !== "http:" && parsed.protocol !== "https:") return false;
-    return !isPrivateOrSpecialUseHost(parsed.hostname);
+    return !isPrivateOrSpecialUseHost(normalizeHostname(parsed.hostname));
   } catch {
     return false;
   }
 }
 
 function isTrustedAssetHost(hostname: string): boolean {
-  const host = hostname.toLowerCase();
+  const host = normalizeHostname(hostname);
   return host === "res.cloudinary.com" || host.endsWith(".cloudinary.com");
 }
 
