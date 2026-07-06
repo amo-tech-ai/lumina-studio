@@ -3,7 +3,13 @@ import {
   validateBrandProfilePayload,
 } from "../schemas/brand-profile.ts";
 import { getOptionalSecret } from "../env.ts";
-import { resolveAiProvider, resolveGroqModelId } from "./allowlist.ts";
+import {
+  resolveAiProvider,
+  resolveBiProvider,
+  resolveDnaProvider,
+  resolveGroqModelId,
+} from "./allowlist.ts";
+import type { AiProvider, StructuredGenerationScope } from "./types.ts";
 import { orderPromptMessages } from "./constraints.ts";
 import {
   buildStrictJsonRequest,
@@ -173,18 +179,35 @@ async function generateGroqStructured<T>(
   };
 }
 
+function resolveStructuredProvider(
+  scope: StructuredGenerationScope = "default",
+): AiProvider {
+  if (scope === "bi") return resolveBiProvider();
+  if (scope === "dna") return resolveDnaProvider();
+  const provider = resolveAiProvider();
+  if (provider === "openai") {
+    throw new Error('AI_PROVIDER="openai" is not wired in edge LLM module.');
+  }
+  return provider;
+}
+
 /** Brand-profile validation today; GROQ-003 wires schema selection by caller. */
 export async function generateStructuredContent<T>(
   options: StructuredGenerationOptions,
 ): Promise<StructuredGenerationResult<T>> {
-  const provider = resolveAiProvider();
+  const provider = resolveStructuredProvider(options.scope);
   if (provider === "gemini") {
     return generateGeminiStructured<T>(options);
   }
   if (provider === "groq") {
     return generateGroqStructured<T>(options);
   }
-  throw new Error(`AI_PROVIDER="${provider}" is not wired in GROQ-002.`);
+  throw new Error(`Structured provider "${provider}" is not wired.`);
 }
 
-export { resolveAiProvider, resolveGroqModelId } from "./allowlist.ts";
+export {
+  resolveAiProvider,
+  resolveBiProvider,
+  resolveDnaProvider,
+  resolveGroqModelId,
+} from "./allowlist.ts";

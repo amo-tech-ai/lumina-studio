@@ -79,6 +79,19 @@ function verifyFirecrawlArtifacts() {
     } else {
       fail("brand-intelligence missing crawlResultId/raw_data handling");
     }
+    if (
+      src.includes("_shared/llm/structured.ts") ||
+      src.includes("generateLlmStructuredContent")
+    ) {
+      pass("brand-intelligence wired to shared LLM module");
+    } else {
+      fail("brand-intelligence missing shared LLM wiring");
+    }
+    if (src.includes("resolveBiProvider")) {
+      pass("brand-intelligence has BI_USE_GEMINI fallback path");
+    } else {
+      fail("brand-intelligence missing BI_USE_GEMINI fallback (resolveBiProvider)");
+    }
   } else {
     fail("missing supabase/functions/brand-intelligence/index.ts");
   }

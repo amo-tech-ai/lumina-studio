@@ -39,3 +39,48 @@ export function resolveAiProvider(): "gemini" | "groq" | "openai" {
     `AI_PROVIDER="${raw}" is invalid (expected gemini | groq | openai).`,
   );
 }
+
+function isEnvTruthyValue(
+  raw: string | undefined,
+  defaultValue = false,
+): boolean {
+  if (raw === undefined || raw.trim() === "") return defaultValue;
+  const value = raw.trim().toLowerCase();
+  return value === "1" || value === "true" || value === "yes";
+}
+
+export function resolveBiProviderFromEnv(env: {
+  aiProvider?: string;
+  biUseGemini?: string;
+}): "gemini" | "groq" {
+  if (isEnvTruthyValue(env.biUseGemini)) return "gemini";
+  const provider = (env.aiProvider ?? "gemini").trim().toLowerCase();
+  if (provider === "groq") return "groq";
+  return "gemini";
+}
+
+/** Brand intelligence: BI_USE_GEMINI=1 forces Gemini regardless of AI_PROVIDER. */
+export function resolveBiProvider(): "gemini" | "groq" {
+  return resolveBiProviderFromEnv({
+    aiProvider: Deno.env.get("AI_PROVIDER"),
+    biUseGemini: Deno.env.get("BI_USE_GEMINI"),
+  });
+}
+
+export function resolveDnaProviderFromEnv(env: {
+  aiProvider?: string;
+  dnaUseGemini?: string;
+}): "gemini" | "groq" {
+  if (isEnvTruthyValue(env.dnaUseGemini, true)) return "gemini";
+  const provider = (env.aiProvider ?? "gemini").trim().toLowerCase();
+  if (provider === "groq") return "groq";
+  return "gemini";
+}
+
+/** DNA vision: defaults to Gemini until golden eval (DNA_USE_GEMINI=1). */
+export function resolveDnaProvider(): "gemini" | "groq" {
+  return resolveDnaProviderFromEnv({
+    aiProvider: Deno.env.get("AI_PROVIDER"),
+    dnaUseGemini: Deno.env.get("DNA_USE_GEMINI"),
+  });
+}

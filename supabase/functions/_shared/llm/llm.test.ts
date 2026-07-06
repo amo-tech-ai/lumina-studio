@@ -6,6 +6,10 @@ import {
   normalizeCompletionTokenLimit,
   orderPromptMessages,
 } from "./constraints.ts";
+import {
+  resolveBiProviderFromEnv,
+  resolveDnaProviderFromEnv,
+} from "./allowlist.ts";
 import { computeRetryDelayMs, isRetryableStatus, parseGroqRateLimitHeaders } from "./retry.ts";
 import brandProfileStrictJsonSchema from "../schemas/brand-profile.schema.json" with {
   type: "json",
@@ -107,5 +111,31 @@ Deno.test("brandProfileStrictJsonSchema is strict object schema", () => {
   assertEquals(
     brandProfileStrictJsonSchema.required.includes("scores"),
     true,
+  );
+});
+
+Deno.test("resolveBiProviderFromEnv honors BI_USE_GEMINI override", () => {
+  assertEquals(
+    resolveBiProviderFromEnv({ aiProvider: "groq", biUseGemini: "1" }),
+    "gemini",
+  );
+  assertEquals(
+    resolveBiProviderFromEnv({ aiProvider: "groq" }),
+    "groq",
+  );
+  assertEquals(
+    resolveBiProviderFromEnv({ aiProvider: "gemini" }),
+    "gemini",
+  );
+});
+
+Deno.test("resolveDnaProviderFromEnv defaults to gemini until golden eval", () => {
+  assertEquals(
+    resolveDnaProviderFromEnv({ aiProvider: "groq" }),
+    "gemini",
+  );
+  assertEquals(
+    resolveDnaProviderFromEnv({ aiProvider: "groq", dnaUseGemini: "0" }),
+    "groq",
   );
 });

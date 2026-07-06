@@ -11,11 +11,16 @@ import { handleCors } from "../_shared/cors.ts";
 import { getOptionalSecret } from "../_shared/env.ts";
 import {
   generateContextPass,
-  generateStructuredContent,
+  generateStructuredContent as generateGeminiStructuredContent,
   resolveGeminiModel,
 } from "../_shared/gemini.ts";
+import { resolveBiProvider } from "../_shared/llm/allowlist.ts";
+import { groqChatCompletion } from "../_shared/llm/groq-client.ts";
+import { generateStructuredContent as generateLlmStructuredContent } from "../_shared/llm/structured.ts";
+import type { StructuredGenerationLog } from "../_shared/llm/types.ts";
 import {
   brandProfileResponseSchema,
+  brandProfileStrictJsonSchema,
   buildAiProfileFromPayload,
   clampScore,
   type BrandProfilePayload,
@@ -105,6 +110,56 @@ Set sourceUrl to ${JSON.stringify(url)}.
 `.trim();
 }
 
+const GROQ_BI_SYSTEM_PROMPT = `
+You are a fashion brand intelligence analyst for iPix, a creative production platform.
+
+Analyze brand website content and extract a complete brand profile with readiness scores (0-100).
+
+Example 1 — DTC apparel:
+Input: Clean beauty site with minimal palette, sustainability copy, shop grid.
+Output: tagline "Skincare for real life", category "DTC beauty", contentPillars ["clean ingredients","inclusivity","education"], brandVoice "friendly, minimal, science-forward", scores visual 78 audience 82 consistency 75 commerce_readiness 88.
+
+Example 2 — Luxury fashion:
+Input: Editorial lookbook, heritage story, high-price catalog.
+Output: tagline "Modern heritage tailoring", category "Luxury apparel", brandPersonality "refined, confident", scores visual 90 audience 70 consistency 85 commerce_readiness 72.
+
+Return ONLY valid JSON matching the schema.
+`.trim();
+
+function buildGroqCrawlUserContent(params: {
+  url: string;
+  brandName?: string;
+  shellProfile: Record<string, unknown>;
+  crawlText: string;
+  pageCount: number;
+}): string {
+  const shell = JSON.stringify(params.shellProfile, null, 2);
+  return `
+Brand URL: ${params.url}
+${params.brandName ? `Brand name hint: ${params.brandName}` : ""}
+
+Onboarding metadata (preserve industry, goal, instagram_handle when merging):
+${shell}
+
+Crawl content (${params.pageCount} pages):
+${params.crawlText}
+
+Set sourceUrl to ${JSON.stringify(params.url)}.
+`.trim();
+}
+
+function buildGroqUrlContextUserContent(url: string): string {
+  const urlList = buildUrlList(url);
+  return `
+Analyze this fashion or DTC brand from these pages for a creative production platform.
+
+Pages:
+${urlList.map((u) => `- ${u}`).join("\n")}
+
+Extract brand name, tagline, category, visual identity, audience, content themes, voice, and commerce signals from the page content.
+`.trim();
+}
+
 async function loadCrawlRow(
   client: ReturnType<typeof createUserClient>,
   brandId: string,
@@ -161,11 +216,18 @@ Deno.serve(async (req: Request) => {
     const auth = await resolveAuth(req, { required: true });
     if (isAuthFailure(auth)) return auth.response;
 
-    const apiKey = getOptionalSecret("GEMINI_API_KEY");
-    if (!apiKey) {
+    const biProvider = resolveBiProvider();
+    if (biProvider === "gemini" && !getOptionalSecret("GEMINI_API_KEY")) {
       return errorResponse(
         "config_error",
         "Brand intelligence is not configured",
+        503,
+      );
+    }
+    if (biProvider === "groq" && !getOptionalSecret("GROQ_API_KEY")) {
+      return errorResponse(
+        "config_error",
+        "Brand intelligence Groq is not configured",
         503,
       );
     }
@@ -247,37 +309,42 @@ Deno.serve(async (req: Request) => {
     const rawData = (crawlRow?.raw_data ?? null) as CrawlRawData | null;
     const crawlText = formatCrawlForPrompt(rawData);
     const useCrawl = !isCrawlThin(rawData);
-    const model = resolveGeminiModel();
 
-    const geminiStarted = performance.now();
-    let structuredResponse: GenerateContentResponse;
+    const llmStarted = performance.now();
+    let profile: BrandProfilePayload;
+    let model: string;
+    let llmLog: StructuredGenerationLog | null = null;
+    let structuredResponse: GenerateContentResponse | null = null;
     let contextResponse: GenerateContentResponse | null = null;
-    let responseText: string;
 
-    if (useCrawl && crawlText) {
-      const prompt = buildCrawlPrompt({
-        url,
-        brandName,
-        shellProfile: priorProfile,
-        crawlText,
-        pageCount: rawData?.pages?.length ?? crawlRow?.pages_crawled ?? 0,
-      });
+    if (biProvider === "gemini") {
+      const apiKey = getOptionalSecret("GEMINI_API_KEY")!;
+      model = resolveGeminiModel();
 
-      const result = await generateStructuredContent({
-        apiKey,
-        model,
-        contents: prompt,
-        responseSchema: brandProfileResponseSchema,
-        tools: [{ googleSearch: {} }],
-        thinkingLevel: "low",
-        temperature: 0.1,
-        timeoutMs: 45_000,
-      });
-      structuredResponse = result.response;
-      responseText = result.text;
-    } else {
-      const urlList = buildUrlList(url);
-      const contextPrompt = `
+      if (useCrawl && crawlText) {
+        const prompt = buildCrawlPrompt({
+          url,
+          brandName,
+          shellProfile: priorProfile,
+          crawlText,
+          pageCount: rawData?.pages?.length ?? crawlRow?.pages_crawled ?? 0,
+        });
+
+        const result = await generateGeminiStructuredContent({
+          apiKey,
+          model,
+          contents: prompt,
+          responseSchema: brandProfileResponseSchema,
+          tools: [{ googleSearch: {} }],
+          thinkingLevel: "low",
+          temperature: 0.1,
+          timeoutMs: 45_000,
+        });
+        structuredResponse = result.response;
+        profile = JSON.parse(result.text) as BrandProfilePayload;
+      } else {
+        const urlList = buildUrlList(url);
+        const contextPrompt = `
 Analyze this fashion or DTC brand from these pages for a creative production platform.
 
 Pages:
@@ -287,36 +354,75 @@ Extract brand name, tagline, category, visual identity, audience, content themes
 Use URL content AND web search for press, social, and competitor signals.
 `.trim();
 
-      const contextPass = await generateContextPass({
-        apiKey,
-        model,
-        contents: contextPrompt,
-        timeoutMs: 55_000,
-      });
-      contextResponse = contextPass.response;
+        const contextPass = await generateContextPass({
+          apiKey,
+          model,
+          contents: contextPrompt,
+          timeoutMs: 55_000,
+        });
+        contextResponse = contextPass.response;
 
-      const structurePrompt = buildUrlFallbackPrompt(url, contextPass.text);
-      const result = await generateStructuredContent({
-        apiKey,
-        model,
-        contents: structurePrompt,
-        responseSchema: brandProfileResponseSchema,
-        thinkingLevel: "low",
-        temperature: 0.1,
-        timeoutMs: 50_000,
-      });
-      structuredResponse = result.response;
-      responseText = result.text;
+        const structurePrompt = buildUrlFallbackPrompt(url, contextPass.text);
+        const result = await generateGeminiStructuredContent({
+          apiKey,
+          model,
+          contents: structurePrompt,
+          responseSchema: brandProfileResponseSchema,
+          thinkingLevel: "low",
+          temperature: 0.1,
+          timeoutMs: 50_000,
+        });
+        structuredResponse = result.response;
+        profile = JSON.parse(result.text) as BrandProfilePayload;
+      }
+    } else {
+      if (useCrawl && crawlText) {
+        const structured = await generateLlmStructuredContent<BrandProfilePayload>({
+          scope: "bi",
+          systemPrompt: GROQ_BI_SYSTEM_PROMPT,
+          userContent: buildGroqCrawlUserContent({
+            url,
+            brandName,
+            shellProfile: priorProfile,
+            crawlText,
+            pageCount: rawData?.pages?.length ?? crawlRow?.pages_crawled ?? 0,
+          }),
+          jsonSchema: brandProfileStrictJsonSchema as Record<string, unknown>,
+          geminiResponseSchema: brandProfileResponseSchema,
+          schemaName: "brand_profile",
+          tier: "structured",
+          temperature: 0.1,
+          timeoutMs: 45_000,
+        });
+        profile = structured.data;
+        llmLog = structured.log;
+        model = structured.log.model;
+      } else {
+        const contextPass = await groqChatCompletion({
+          systemPrompt: GROQ_BI_SYSTEM_PROMPT,
+          userContent: buildGroqUrlContextUserContent(url),
+          temperature: 0.2,
+          maxCompletionTokens: 4096,
+        });
+
+        const structured = await generateLlmStructuredContent<BrandProfilePayload>({
+          scope: "bi",
+          systemPrompt: GROQ_BI_SYSTEM_PROMPT,
+          userContent: buildUrlFallbackPrompt(url, contextPass.text),
+          jsonSchema: brandProfileStrictJsonSchema as Record<string, unknown>,
+          geminiResponseSchema: brandProfileResponseSchema,
+          schemaName: "brand_profile",
+          tier: "structured",
+          temperature: 0.1,
+          timeoutMs: 50_000,
+        });
+        profile = structured.data;
+        llmLog = structured.log;
+        model = structured.log.model;
+      }
     }
 
-    const geminiMs = Math.round(performance.now() - geminiStarted);
-
-    let profile: BrandProfilePayload;
-    try {
-      profile = JSON.parse(responseText) as BrandProfilePayload;
-    } catch {
-      throw new Error("Model returned invalid JSON");
-    }
+    const geminiMs = Math.round(performance.now() - llmStarted);
 
     const validationError = validateBrandProfilePayload(profile);
     if (validationError) {
@@ -407,7 +513,7 @@ Use URL content AND web search for press, social, and competitor signals.
       scores = scoresData;
     }
 
-    const usage = structuredResponse.usageMetadata;
+    const usage = structuredResponse?.usageMetadata;
     const contextUsage = contextResponse?.usageMetadata;
     const durationMs = Math.round(performance.now() - started);
 
@@ -422,22 +528,31 @@ Use URL content AND web search for press, social, and competitor signals.
           brandId,
           crawlResultId: crawlRow?.id ?? crawlResultId,
           usedCrawl: useCrawl,
+          provider: llmLog?.provider ?? biProvider,
         },
         output: {
           brandId,
           scoreCount: scores?.length ?? 0,
+          provider: llmLog?.provider ?? biProvider,
+          model,
+          xGroqRequestId: llmLog?.xGroqRequestId ?? null,
+          schemaRepairCount: llmLog?.schemaRepairCount ?? 0,
           urlRetrieval:
             contextResponse?.candidates?.[0]?.urlContextMetadata ?? null,
           grounding:
-            structuredResponse.candidates?.[0]?.groundingMetadata ?? null,
+            structuredResponse?.candidates?.[0]?.groundingMetadata ?? null,
         },
         model,
         tokensIn:
-          (usage?.promptTokenCount ?? 0) +
-            (contextUsage?.promptTokenCount ?? 0) || null,
+          llmLog?.usage?.promptTokens ??
+            ((usage?.promptTokenCount ?? 0) +
+              (contextUsage?.promptTokenCount ?? 0)) ||
+          null,
         tokensOut:
-          (usage?.candidatesTokenCount ?? 0) +
-            (contextUsage?.candidatesTokenCount ?? 0) || null,
+          llmLog?.usage?.completionTokens ??
+            ((usage?.candidatesTokenCount ?? 0) +
+              (contextUsage?.candidatesTokenCount ?? 0)) ||
+          null,
         durationMs,
       });
       logId = result.id;
@@ -453,6 +568,7 @@ Use URL content AND web search for press, social, and competitor signals.
       ...(logId ? { logId } : {}),
       durationMs,
       geminiMs,
+      provider: llmLog?.provider ?? biProvider,
       usedCrawl: useCrawl,
       crawlResultId: crawlRow?.id ?? null,
     });
