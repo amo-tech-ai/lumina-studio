@@ -78,11 +78,18 @@ export function mergeGroqUsage(
   const promptTokens = (primary?.promptTokens ?? 0) + (secondary?.promptTokens ?? 0);
   const completionTokens =
     (primary?.completionTokens ?? 0) + (secondary?.completionTokens ?? 0);
-  const explicitTotal = (primary?.totalTokens ?? 0) + (secondary?.totalTokens ?? 0);
+  // Each side contributes its explicit total when it reports one, else its
+  // prompt+completion. This uses the explicit sum only when both sides truly
+  // provide totals; mixing an explicit total with a total-less side no longer
+  // drops the other side's tokens.
+  const sideTotal = (usage?: StructuredGenerationLog["usage"]) =>
+    typeof usage?.totalTokens === "number"
+      ? usage.totalTokens
+      : (usage?.promptTokens ?? 0) + (usage?.completionTokens ?? 0);
   return {
     promptTokens,
     completionTokens,
-    totalTokens: explicitTotal > 0 ? explicitTotal : promptTokens + completionTokens,
+    totalTokens: sideTotal(primary) + sideTotal(secondary),
   };
 }
 
