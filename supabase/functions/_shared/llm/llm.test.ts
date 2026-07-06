@@ -13,6 +13,7 @@ import {
   resolveBiProviderFromEnv,
   resolveDnaProviderFromEnv,
 } from "./allowlist.ts";
+import { resolveStructuredProvider } from "./structured.ts";
 import { computeRetryDelayMs, isRetryableStatus, parseGroqRateLimitHeaders } from "./retry.ts";
 import brandProfileStrictJsonSchema from "../schemas/brand-profile.schema.json" with {
   type: "json",
@@ -123,6 +124,14 @@ Deno.test("resolveBiProviderFromEnv honors BI_USE_GEMINI override", () => {
     "gemini",
   );
   assertEquals(
+    resolveBiProviderFromEnv({ aiProvider: "groq", biUseGemini: "true" }),
+    "gemini",
+  );
+  assertEquals(
+    resolveBiProviderFromEnv({ aiProvider: "groq", biUseGemini: "yes" }),
+    "gemini",
+  );
+  assertEquals(
     resolveBiProviderFromEnv({ aiProvider: "groq" }),
     "groq",
   );
@@ -154,4 +163,40 @@ Deno.test("resolveBiProviderFromEnv throws on invalid AI_PROVIDER", () => {
     Error,
     "bogus",
   );
+});
+
+Deno.test("resolveDnaProviderFromEnv throws on invalid AI_PROVIDER", () => {
+  assertThrows(
+    () => resolveDnaProviderFromEnv({ aiProvider: "openai", dnaUseGemini: "0" }),
+    Error,
+    "openai",
+  );
+  assertThrows(
+    () => resolveDnaProviderFromEnv({ aiProvider: "bogus", dnaUseGemini: "0" }),
+    Error,
+    "bogus",
+  );
+});
+
+Deno.test("resolveStructuredProvider routes scope to BI/DNA env resolvers", () => {
+  const priorAi = Deno.env.get("AI_PROVIDER");
+  const priorBi = Deno.env.get("BI_USE_GEMINI");
+  const priorDna = Deno.env.get("DNA_USE_GEMINI");
+  try {
+    Deno.env.set("AI_PROVIDER", "groq");
+    Deno.env.delete("BI_USE_GEMINI");
+    Deno.env.delete("DNA_USE_GEMINI");
+    assertEquals(resolveStructuredProvider("bi"), "groq");
+    assertEquals(resolveStructuredProvider("dna"), "gemini");
+
+    Deno.env.set("BI_USE_GEMINI", "1");
+    assertEquals(resolveStructuredProvider("bi"), "gemini");
+  } finally {
+    if (priorAi === undefined) Deno.env.delete("AI_PROVIDER");
+    else Deno.env.set("AI_PROVIDER", priorAi);
+    if (priorBi === undefined) Deno.env.delete("BI_USE_GEMINI");
+    else Deno.env.set("BI_USE_GEMINI", priorBi);
+    if (priorDna === undefined) Deno.env.delete("DNA_USE_GEMINI");
+    else Deno.env.set("DNA_USE_GEMINI", priorDna);
+  }
 });
