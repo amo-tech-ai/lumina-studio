@@ -64,13 +64,25 @@ async function fetchJson(path, init = {}) {
 }
 
 function verifyBrandIntelligenceArtifacts() {
-  const biPath = join(root, "supabase/functions/brand-intelligence/index.ts");
-  if (!existsSync(biPath)) {
+  const indexPath = join(root, "supabase/functions/brand-intelligence/index.ts");
+  const handlerPath = join(root, "supabase/functions/brand-intelligence/handler.ts");
+  if (!existsSync(indexPath)) {
     fail("missing supabase/functions/brand-intelligence/index.ts");
     return;
   }
+  if (!existsSync(handlerPath)) {
+    fail("missing supabase/functions/brand-intelligence/handler.ts");
+    return;
+  }
 
-  const src = readFileSync(biPath, "utf8");
+  const indexSrc = readFileSync(indexPath, "utf8");
+  if (indexSrc.includes("handleBrandIntelligenceRequest")) {
+    pass("brand-intelligence index delegates to handler");
+  } else {
+    fail("brand-intelligence index missing handleBrandIntelligenceRequest delegate");
+  }
+
+  const src = readFileSync(handlerPath, "utf8");
   const guardsPath = join(root, "supabase/functions/_shared/bi-groq-guards.ts");
   if (!existsSync(guardsPath)) {
     fail("missing _shared/bi-groq-guards.ts");

@@ -51,7 +51,13 @@ Deno.test("audit-asset-dna allows Gemini path when DNA_USE_GEMINI default", asyn
       },
     ));
 
-    // Past Groq guard — fails later on auth/config, not 501.
-    assertEquals(res.status !== 501, true);
+    // Past Groq guard — Gemini branch fails on missing GEMINI_API_KEY.
+    assertEquals(res.status, 503);
+    const body = await res.json() as {
+      ok: false;
+      error: { code: string; message: string };
+    };
+    assertEquals(body.error.code, "config_error");
+    assertEquals(body.error.message, "DNA audit is not configured");
   });
 });

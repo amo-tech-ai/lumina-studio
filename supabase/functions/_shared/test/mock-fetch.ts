@@ -2,9 +2,18 @@ export type MockFetchOptions = {
   supabaseUrl?: string;
   user?: { id: string; email?: string };
   brand?: Record<string, unknown> | null;
+  brandId?: string;
   crawl?: Record<string, unknown> | null;
   intakeStatusUpdates?: string[];
 };
+
+function brandIdFromRequest(url: string, options: MockFetchOptions): string {
+  const idMatch = url.match(/[?&]id=eq\.([^&]+)/);
+  if (idMatch) return decodeURIComponent(idMatch[1]);
+  if (typeof options.brand?.id === "string") return options.brand.id;
+  if (options.brandId) return options.brandId;
+  return "brand-test-1";
+}
 
 function json(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {
@@ -39,20 +48,22 @@ export async function withMockFetch(
       if (options.brand === null) {
         return Promise.resolve(json([]));
       }
+      const brandId = brandIdFromRequest(url, options);
       const row = options.brand ?? {
-        id: "brand-test-1",
+        id: brandId,
         name: "Shell Brand",
         ai_profile: { industry: "fashion" },
       };
-      return Promise.resolve(json([row]));
+      return Promise.resolve(json([{ ...row, id: brandId }]));
     }
 
     if (url.includes("/rest/v1/brands") && method === "PATCH") {
+      const brandId = brandIdFromRequest(url, options);
       const patch = JSON.parse(String(init?.body ?? "{}")) as Record<string, unknown>;
       if (typeof patch.intake_status === "string") {
         options.intakeStatusUpdates?.push(patch.intake_status);
       }
-      return Promise.resolve(json([{ id: "brand-test-1", name: "Test Brand" }]));
+      return Promise.resolve(json([{ id: brandId, name: "Test Brand" }]));
     }
 
     if (url.includes("/rest/v1/brand_crawls") && method === "GET") {

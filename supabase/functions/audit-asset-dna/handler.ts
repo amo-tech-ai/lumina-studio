@@ -65,33 +65,53 @@ const dnaSchema = {
   required: ["score", "pillars", "rationale"],
 };
 
+function isPrivateOrSpecialUseHost(host: string): boolean {
+  const h = host.toLowerCase();
+  const isPrivate172 = (): boolean => {
+    if (!h.startsWith("172.")) return false;
+    const octet = parseInt(h.split(".")[1], 10);
+    return octet >= 16 && octet <= 31;
+  };
+
+  if (
+    h === "localhost" ||
+    h === "127.0.0.1" ||
+    h === "0.0.0.0" ||
+    h === "::1" ||
+    h.startsWith("127.") ||
+    h.startsWith("10.") ||
+    isPrivate172() ||
+    h.startsWith("192.168.") ||
+    h.startsWith("169.254.") ||
+    h.startsWith("0.") ||
+    h.endsWith(".local") ||
+    h.endsWith(".internal")
+  ) {
+    return true;
+  }
+
+  if (h.includes(":")) {
+    if (h.startsWith("fc") || /^fd[0-9a-f]{2}:/i.test(h) || /^fe[89ab][0-9a-f]:/i.test(h)) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
 function isValidHttpUrl(value: string): boolean {
   try {
     const parsed = new URL(value);
     if (parsed.protocol !== "http:" && parsed.protocol !== "https:") return false;
-    const host = parsed.hostname.toLowerCase();
-    // Block private, link-local, and loopback ranges
-    const isPrivate172 = (): boolean => {
-      if (!host.startsWith("172.")) return false;
-      const octet = parseInt(host.split(".")[1], 10);
-      return octet >= 16 && octet <= 31;
-    };
-    if (
-      host === "localhost" ||
-      host === "127.0.0.1" ||
-      host === "0.0.0.0" ||
-      host === "[::1]" ||
-      host.startsWith("10.") ||
-      isPrivate172() ||
-      host.startsWith("192.168.") ||
-      host.startsWith("169.254.") ||
-      host.endsWith(".local") ||
-      host.endsWith(".internal")
-    ) return false;
-    return true;
+    return !isPrivateOrSpecialUseHost(parsed.hostname);
   } catch {
     return false;
   }
+}
+
+function isTrustedAssetHost(hostname: string): boolean {
+  const host = hostname.toLowerCase();
+  return host === "res.cloudinary.com" || host.endsWith(".cloudinary.com");
 }
 
 function clampScore(value: number): number {
@@ -115,8 +135,43 @@ function bytesToBase64(bytes: Uint8Array): string {
   return btoa(binary);
 }
 
+async function readResponseBytes(response: Response): Promise<Uint8Array> {
+  const reader = response.body?.getReader();
+  if (!reader) {
+    throw new Error("Asset image response has no body");
+  }
+
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    total += value.length;
+    if (total > MAX_IMAGE_BYTES) {
+      throw new Error(`Asset image exceeds size limit (${MAX_IMAGE_BYTES} bytes)`);
+    }
+    chunks.push(value);
+  }
+
+  const bytes = new Uint8Array(total);
+  let offset = 0;
+  for (const chunk of chunks) {
+    bytes.set(chunk, offset);
+    offset += chunk.length;
+  }
+  return bytes;
+}
+
 async function fetchImagePart(assetUrl: string, fallbackMimeType: string | null) {
-  const response = await fetch(assetUrl);
+  const parsed = new URL(assetUrl);
+  if (!isTrustedAssetHost(parsed.hostname)) {
+    throw new Error("Asset URL must be hosted on Cloudinary");
+  }
+
+  const response = await fetch(assetUrl, { redirect: "manual" });
+  if (response.status >= 300 && response.status < 400) {
+    throw new Error("Asset image fetch redirects are not allowed");
+  }
   if (!response.ok) {
     throw new Error(`Asset image fetch failed with status ${response.status}`);
   }
@@ -134,7 +189,7 @@ async function fetchImagePart(assetUrl: string, fallbackMimeType: string | null)
     throw new Error("DNA audit requires an image asset");
   }
 
-  const bytes = new Uint8Array(await response.arrayBuffer());
+  const bytes = await readResponseBytes(response);
   if (bytes.length > MAX_IMAGE_BYTES) {
     throw new Error(`Asset image exceeds size limit (${MAX_IMAGE_BYTES} bytes)`);
   }
