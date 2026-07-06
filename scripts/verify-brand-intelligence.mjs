@@ -108,6 +108,20 @@ function verifyBrandIntelligenceArtifacts() {
     fail("brand-intelligence missing BI_USE_GEMINI fallback (resolveBiProvider)");
   }
 
+  const handlerTest = join(root, "supabase/functions/brand-intelligence/handler.test.ts");
+  if (existsSync(handlerTest)) {
+    pass("brand-intelligence handler tests present");
+  } else {
+    fail("missing brand-intelligence/handler.test.ts");
+  }
+
+  const dnaHandlerTest = join(root, "supabase/functions/audit-asset-dna/handler.test.ts");
+  if (existsSync(dnaHandlerTest)) {
+    pass("audit-asset-dna handler tests present");
+  } else {
+    fail("missing audit-asset-dna/handler.test.ts");
+  }
+
   if (!src.includes("groqChatCompletion")) {
     pass("brand-intelligence does not use removed groqChatCompletion URL fallback");
   } else {
@@ -253,6 +267,38 @@ async function main() {
     throw new Error(shellErr?.message ?? "failed to create test brand shell");
   }
 
+  const expectGroq =
+    (process.env.AI_PROVIDER ?? "").trim().toLowerCase() === "groq" &&
+    !["1", "true", "yes"].includes(
+      (process.env.BI_USE_GEMINI ?? "").trim().toLowerCase(),
+    );
+
+  // Groq BI requires non-empty crawl text; seed a minimal row for live verify.
+  const { error: crawlSeedErr } = await admin.from("brand_crawls").insert({
+    brand_id: shellBrand.id,
+    job_status: "completed",
+    pages_crawled: 2,
+    raw_data: {
+      pages: [
+        {
+          markdown: "A".repeat(120),
+          metadata: { url: testBrandUrl },
+        },
+        {
+          markdown: "B".repeat(120),
+          metadata: { url: `${new URL(testBrandUrl).origin}/about` },
+        },
+      ],
+    },
+  });
+  if (crawlSeedErr?.code === "42P01") {
+    console.log("skip: brand_crawls crawl seed (table not pushed yet)");
+  } else if (crawlSeedErr) {
+    fail(`brand_crawls seed: ${crawlSeedErr.message}`);
+  } else {
+    pass("seeded brand_crawls fixture for BI verify");
+  }
+
   const authed = await fetchJson("/brand-intelligence", {
     method: "POST",
     headers: {
@@ -279,11 +325,6 @@ async function main() {
     const { brandId, logId, scores, provider } = authed.json.data;
     pass(`brand-intelligence brandId=${brandId} logId=${logId} scores=${scores?.length ?? 0}`);
 
-    const expectGroq =
-      (process.env.AI_PROVIDER ?? "").trim().toLowerCase() === "groq" &&
-      !["1", "true", "yes"].includes(
-        (process.env.BI_USE_GEMINI ?? "").trim().toLowerCase(),
-      );
     if (expectGroq) {
       if (provider !== "groq") {
         fail(`expected provider groq post-deploy, got ${provider ?? "undefined"}`);

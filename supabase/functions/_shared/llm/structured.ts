@@ -6,7 +6,9 @@ import { getOptionalSecret } from "../env.ts";
 import {
   resolveAiProvider,
   resolveBiProvider,
+  resolveBiProviderFromEnv,
   resolveDnaProvider,
+  resolveDnaProviderFromEnv,
   resolveGroqModelId,
 } from "./allowlist.ts";
 import type { AiProvider, StructuredGenerationScope } from "./types.ts";
@@ -179,16 +181,44 @@ async function generateGroqStructured<T>(
   };
 }
 
-export function resolveStructuredProvider(
-  scope: StructuredGenerationScope = "default",
-): AiProvider {
-  if (scope === "bi") return resolveBiProvider();
-  if (scope === "dna") return resolveDnaProvider();
-  const provider = resolveAiProvider();
+export function resolveStructuredProviderFromEnv(env: {
+  scope?: StructuredGenerationScope;
+  aiProvider?: string;
+  biUseGemini?: string;
+  dnaUseGemini?: string;
+}): AiProvider {
+  const scope = env.scope ?? "default";
+  if (scope === "bi") {
+    return resolveBiProviderFromEnv({
+      aiProvider: env.aiProvider,
+      biUseGemini: env.biUseGemini,
+    });
+  }
+  if (scope === "dna") {
+    return resolveDnaProviderFromEnv({
+      aiProvider: env.aiProvider,
+      dnaUseGemini: env.dnaUseGemini,
+    });
+  }
+  const provider = (env.aiProvider ?? "gemini").trim().toLowerCase();
+  if (provider === "gemini" || provider === "groq") return provider;
   if (provider === "openai") {
     throw new Error('AI_PROVIDER="openai" is not wired in edge LLM module.');
   }
-  return provider;
+  throw new Error(
+    `AI_PROVIDER="${provider}" is invalid (expected gemini | groq | openai).`,
+  );
+}
+
+export function resolveStructuredProvider(
+  scope: StructuredGenerationScope = "default",
+): AiProvider {
+  return resolveStructuredProviderFromEnv({
+    scope,
+    aiProvider: Deno.env.get("AI_PROVIDER"),
+    biUseGemini: Deno.env.get("BI_USE_GEMINI"),
+    dnaUseGemini: Deno.env.get("DNA_USE_GEMINI"),
+  });
 }
 
 /** Brand-profile validation today; GROQ-003 wires schema selection by caller. */

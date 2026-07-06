@@ -13,7 +13,10 @@ import {
   resolveBiProviderFromEnv,
   resolveDnaProviderFromEnv,
 } from "./allowlist.ts";
-import { resolveStructuredProvider } from "./structured.ts";
+import {
+  resolveStructuredProvider,
+  resolveStructuredProviderFromEnv,
+} from "./structured.ts";
 import { computeRetryDelayMs, isRetryableStatus, parseGroqRateLimitHeaders } from "./retry.ts";
 import brandProfileStrictJsonSchema from "../schemas/brand-profile.schema.json" with {
   type: "json",
@@ -149,6 +152,18 @@ Deno.test("resolveDnaProviderFromEnv defaults to gemini until golden eval", () =
   assertEquals(
     resolveDnaProviderFromEnv({ aiProvider: "groq", dnaUseGemini: "0" }),
     "groq",
+  );
+  assertEquals(
+    resolveDnaProviderFromEnv({ aiProvider: "groq", dnaUseGemini: "1" }),
+    "gemini",
+  );
+  assertEquals(
+    resolveDnaProviderFromEnv({ aiProvider: "groq", dnaUseGemini: "true" }),
+    "gemini",
+  );
+  assertEquals(
+    resolveDnaProviderFromEnv({ aiProvider: "groq", dnaUseGemini: "yes" }),
+    "gemini",
   );
 });
 
