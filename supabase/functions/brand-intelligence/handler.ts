@@ -49,9 +49,14 @@ const PRIVATE_HOST_PATTERNS = [
   /^172\.(1[6-9]|2\d|3[01])\./,
   /^192\.168\./,
   /^169\.254\./,
+  /^0\.0\.0\.0$/i,
+  /^0\./,
   /^::1$/,
   /^fc00:/i,
-  /^fe80:/i,
+  /^fd[0-9a-f]{2}:/i,
+  /^fe[89ab][0-9a-f]:/i,
+  /\.local$/i,
+  /\.internal$/i,
 ];
 
 function isValidHttpUrl(value: string): boolean {
@@ -253,7 +258,15 @@ export async function handleBrandIntelligenceRequest(req: Request): Promise<Resp
       draft_mode?: boolean;
     };
     try {
-      body = await req.json();
+      const parsed: unknown = await req.json();
+      if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+        return errorResponse(
+          "invalid_json",
+          "Request body must be a JSON object",
+          422,
+        );
+      }
+      body = parsed as typeof body;
     } catch {
       return errorResponse("invalid_json", "Request body must be JSON", 422);
     }
@@ -483,7 +496,7 @@ Use URL content AND web search for press, social, and competitor signals.
 
     const brandUpdate = draftMode
       ? { ai_profile_draft: mergedProfile, intake_status: "draft_ready" as const }
-      : { name: aiProfile.name as string, brand_url: url, ai_profile: mergedProfile, intake_status: "scores_complete" as const };
+      : { name: aiProfile.name as string, brand_url: url, ai_profile: mergedProfile };
 
     const { data: updated, error: updateErr } = await client
       .from("brands")
@@ -510,6 +523,8 @@ Use URL content AND web search for press, social, and competitor signals.
 
       if (scoresErr) throw new Error(scoresErr.message);
       scores = scoresData;
+
+      await markIntakeStatus(client, brandId, "scores_complete");
     }
 
     const usage = structuredResponse?.usageMetadata;
