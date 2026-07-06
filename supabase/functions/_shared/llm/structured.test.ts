@@ -130,6 +130,16 @@ Deno.test("mergeGroqUsage derives total from parts when totalTokens absent", () 
   );
 });
 
+Deno.test("mergeGroqUsage derives total when only one side reports totalTokens", () => {
+  assertEquals(
+    mergeGroqUsage(
+      { promptTokens: 100, completionTokens: 50, totalTokens: 150 },
+      { promptTokens: 80, completionTokens: 40 },
+    ),
+    { promptTokens: 180, completionTokens: 90, totalTokens: 270 },
+  );
+});
+
 Deno.test("mergeGroqUsage returns undefined when both passes lack usage", () => {
   assertEquals(mergeGroqUsage(undefined, undefined), undefined);
 });
