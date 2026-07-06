@@ -54,6 +54,22 @@ describe("presetTransformString / cropTransformString", () => {
   });
 });
 
+describe("isDeliverableCover", () => {
+  it("accepts a delivery URL under the configured cloud", async () => {
+    const { isDeliverableCover } = await importUrl();
+    expect(
+      isDeliverableCover("https://res.cloudinary.com/dzqy2ixl0/image/upload/v1/5-fashionos_wc2p1c"),
+    ).toBe(true);
+  });
+
+  it("rejects null, a foreign host, and a different cloud (next/image would throw)", async () => {
+    const { isDeliverableCover } = await importUrl();
+    expect(isDeliverableCover(null)).toBe(false);
+    expect(isDeliverableCover("https://evil.example.com/x.jpg")).toBe(false);
+    expect(isDeliverableCover("https://res.cloudinary.com/other-cloud/image/upload/x")).toBe(false);
+  });
+});
+
 describe("CLOUDINARY_CLOUD_NAME", () => {
   it("prefers NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME over the server-only var and the default", async () => {
     vi.stubEnv("NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME", "public-cloud");

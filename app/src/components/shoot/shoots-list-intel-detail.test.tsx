@@ -26,6 +26,7 @@ const SHOOT: ShootRow = {
   target_channels: ["instagram"],
   estimated_budget: 12000,
   updated_at: "2026-05-01T00:00:00.000Z",
+  cover_url: null,
 };
 
 afterEach(() => cleanup());
