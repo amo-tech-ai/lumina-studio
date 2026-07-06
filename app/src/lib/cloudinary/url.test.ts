@@ -71,19 +71,20 @@ describe("isDeliverableCover", () => {
 });
 
 describe("CLOUDINARY_CLOUD_NAME", () => {
-  it("prefers NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME over the server-only var and the default", async () => {
+  it("resolves from NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME", async () => {
     vi.stubEnv("NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME", "public-cloud");
-    vi.stubEnv("CLOUDINARY_CLOUD_NAME", "server-cloud");
     const { CLOUDINARY_CLOUD_NAME, cloudinaryImageUrl } = await importUrl();
     expect(CLOUDINARY_CLOUD_NAME).toBe("public-cloud");
     expect(cloudinaryImageUrl("x", { w: 10, h: 10 })).toContain("res.cloudinary.com/public-cloud/");
   });
 
-  it("falls back to CLOUDINARY_CLOUD_NAME when the public var is unset", async () => {
+  it("ignores the server-only CLOUDINARY_CLOUD_NAME so client and server agree", async () => {
+    // The client bundle can't see a non-public var; honoring it here would make the
+    // client guard disagree with next/image remotePatterns. Falls back to the default.
     vi.stubEnv("NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME", undefined);
     vi.stubEnv("CLOUDINARY_CLOUD_NAME", "server-cloud");
     const { CLOUDINARY_CLOUD_NAME } = await importUrl();
-    expect(CLOUDINARY_CLOUD_NAME).toBe("server-cloud");
+    expect(CLOUDINARY_CLOUD_NAME).toBe("dzqy2ixl0");
   });
 
   it("falls back to the dzqy2ixl0 default when neither var is set", async () => {

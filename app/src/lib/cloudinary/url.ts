@@ -1,9 +1,11 @@
 import { getCldImageUrl } from "next-cloudinary";
 
+// Resolve from the PUBLIC var only. The cloud name is inherently public (it's in
+// every browser image URL), and `isDeliverableCover` runs client-side where a
+// server-only `CLOUDINARY_CLOUD_NAME` is undefined — mixing the two would let the
+// client guard and next/image remotePatterns disagree and silently reject covers.
 export const CLOUDINARY_CLOUD_NAME =
-  process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME ??
-  process.env.CLOUDINARY_CLOUD_NAME ??
-  "dzqy2ixl0";
+  process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME ?? "dzqy2ixl0";
 
 /** True when `url` is a delivery URL under our configured cloud — i.e. next/image's
  *  remotePatterns will allow it. Cover URLs come from free-form `mood_board_urls`;
