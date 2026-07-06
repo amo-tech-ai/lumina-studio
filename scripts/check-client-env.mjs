@@ -53,8 +53,8 @@ function walk(dir, files = []) {
   return files;
 }
 
-function isServerOnlyFile(filePath) {
-  const first = readFileSync(filePath, "utf8").trimStart().slice(0, 20);
+function isServerOnlyFile(content) {
+  const first = content.trimStart().slice(0, 20);
   return first.startsWith('"use server"') || first.startsWith("'use server'");
 }
 
@@ -155,10 +155,11 @@ function findForbiddenInCode(code) {
 const violations = [];
 
 for (const file of walk(srcDir)) {
-  const rel = file.slice(root.length + 1);
+  const rel = file.slice(root.length + 1).replace(/\\/g, "/");
   if (SERVER_ONLY_PREFIXES.some((prefix) => rel.startsWith(prefix))) continue;
-  if (isServerOnlyFile(file)) continue;
-  const lines = readFileSync(file, "utf8").split("\n");
+  const content = readFileSync(file, "utf8");
+  if (isServerOnlyFile(content)) continue;
+  const lines = content.split("\n");
   const commentState = { inBlockComment: false };
 
   lines.forEach((line, index) => {
