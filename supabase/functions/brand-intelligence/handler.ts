@@ -52,6 +52,7 @@ const PRIVATE_HOST_PATTERNS = [
   /^0\.0\.0\.0$/i,
   /^0\./,
   /^::1$/,
+  /^::ffff:/i,
   /^fc00:/i,
   /^fd[0-9a-f]{2}:/i,
   /^fe[89ab][0-9a-f]:/i,
@@ -208,6 +209,17 @@ async function markIntakeStatus(
     .eq("id", brandId);
 }
 
+async function markIntakeFailedIfRunning(
+  client: SupabaseClient,
+  brandId: string,
+) {
+  await client
+    .from("brands")
+    .update({ intake_status: "failed" })
+    .eq("id", brandId)
+    .eq("intake_status", "analysis_running");
+}
+
 type LlmStructuredGenerate = typeof generateLlmStructuredContent;
 let llmStructuredGenerateForTests: LlmStructuredGenerate | null = null;
 
@@ -338,7 +350,15 @@ export async function handleBrandIntelligenceRequest(req: Request): Promise<Resp
 
     const crawlRow = await loadCrawlRow(client, brandId, crawlResultId);
     const rawData = (crawlRow?.raw_data ?? null) as CrawlRawData | null;
-    const crawlText = formatCrawlForPrompt(rawData);
+    let crawlText = formatCrawlForPrompt(rawData);
+    if (biProvider === "groq" && !crawlText.trim() && rawData?.pages?.length) {
+      const pagesWithMarkdown = rawData.pages.filter(
+        (page) => (page.markdown?.trim().length ?? 0) > 0,
+      );
+      if (pagesWithMarkdown.length > 0) {
+        crawlText = formatCrawlForPrompt({ pages: pagesWithMarkdown });
+      }
+    }
     const useCrawl = !isCrawlThin(rawData);
     const usedCrawlInRequest = biUsedCrawlInRequest(
       biProvider,
@@ -412,9 +432,9 @@ Use URL content AND web search for press, social, and competitor signals.
         profile = JSON.parse(result.text) as BrandProfilePayload;
       }
     } else {
-      const crawlError = groqEmptyCrawlError(crawlText);
+      const crawlError = groqEmptyCrawlError(crawlText, rawData);
       if (crawlError) {
-        await markIntakeStatus(client, brandId, "failed");
+        await markIntakeFailedIfRunning(client, brandId);
         return errorResponse(
           crawlError.code,
           crawlError.message,
@@ -615,7 +635,7 @@ Use URL content AND web search for press, social, and competitor signals.
     // The operator can still apply or discard the draft; the error is in a later step (e.g. logging).
     if (failureBrandId && failureClient && !draftPersisted) {
       try {
-        await markIntakeStatus(failureClient, failureBrandId, "failed");
+        await markIntakeFailedIfRunning(failureClient, failureBrandId);
       } catch (statusErr) {
         console.error("failed to set intake_status=failed:", statusErr);
       }

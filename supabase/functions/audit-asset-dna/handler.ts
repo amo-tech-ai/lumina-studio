@@ -86,6 +86,7 @@ function isPrivateOrSpecialUseHost(host: string): boolean {
     h === "127.0.0.1" ||
     h === "0.0.0.0" ||
     h === "::1" ||
+    h.startsWith("::ffff:") ||
     h.startsWith("127.") ||
     h.startsWith("10.") ||
     isPrivate172() ||

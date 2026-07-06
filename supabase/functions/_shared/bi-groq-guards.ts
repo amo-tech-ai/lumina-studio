@@ -29,9 +29,16 @@ export function missingBiProviderConfigError(
   return null;
 }
 
-/** Groq BI rejects only when formatted crawl text is empty (trim), not when isCrawlThin. */
-export function groqEmptyCrawlError(crawlText: string): GuardedError | null {
+/** Groq BI rejects when no crawl markdown exists in raw_data or formatted text. */
+export function groqEmptyCrawlError(
+  crawlText: string,
+  raw?: CrawlRawData | null,
+): GuardedError | null {
   if (crawlText.trim()) return null;
+  const hasMarkdown = (raw?.pages ?? []).some(
+    (page) => (page.markdown?.trim().length ?? 0) > 0,
+  );
+  if (hasMarkdown) return null;
   return {
     code: "validation_error",
     message:
