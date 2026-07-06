@@ -124,27 +124,6 @@ async function readGroqJsonPayload(
   }
 }
 
-export async function groqChatCompletion(options: {
-  model?: string;
-  systemPrompt: string;
-  userContent: string;
-  temperature?: number;
-  maxCompletionTokens?: number;
-}): Promise<GroqStructuredCallResult> {
-  const model = options.model ?? resolveGroqModelId("default");
-  const request = normalizeCompletionTokenLimit(
-    {
-      model,
-      messages: [...orderPromptMessages(options.systemPrompt, options.userContent)],
-      stream: false,
-      temperature: options.temperature ?? 0.2,
-    },
-    options.maxCompletionTokens ?? 4096,
-  );
-
-  return groqStructuredCompletion(request);
-}
-
 export function buildStrictJsonRequest(
   model: string,
   systemPrompt: string,

@@ -6,6 +6,7 @@ import { getOptionalSecret } from "../_shared/env.ts";
 import { errorResponse, jsonResponse, safeErrorMessage } from "../_shared/response.ts";
 import { resolveGeminiModel } from "../_shared/gemini.ts";
 import { resolveDnaProvider } from "../_shared/llm/allowlist.ts";
+import { dnaVisionDeferredError } from "../_shared/bi-groq-guards.ts";
 import { isCallerFailure, resolveCaller } from "../_shared/resolve-caller.ts";
 
 const MODEL = resolveGeminiModel();
@@ -159,11 +160,12 @@ Deno.serve(async (req: Request) => {
       return errorResponse("method_not_allowed", "Use POST", 405);
     }
 
-    if (resolveDnaProvider() !== "gemini") {
+    const dnaDeferred = dnaVisionDeferredError(resolveDnaProvider());
+    if (dnaDeferred) {
       return errorResponse(
-        "not_implemented",
-        "Groq vision DNA is deferred until golden eval (DNA_USE_GEMINI=1)",
-        501,
+        dnaDeferred.code,
+        dnaDeferred.message,
+        dnaDeferred.status,
       );
     }
 

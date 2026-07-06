@@ -15,6 +15,10 @@ import {
   resolveGeminiModel,
 } from "../_shared/gemini.ts";
 import { resolveBiProvider } from "../_shared/llm/allowlist.ts";
+import {
+  groqEmptyCrawlError,
+  missingBiProviderConfigError,
+} from "../_shared/bi-groq-guards.ts";
 import { generateStructuredContent as generateLlmStructuredContent } from "../_shared/llm/structured.ts";
 import type { StructuredGenerationLog } from "../_shared/llm/types.ts";
 import {
@@ -204,18 +208,15 @@ Deno.serve(async (req: Request) => {
     if (isAuthFailure(auth)) return auth.response;
 
     const biProvider = resolveBiProvider();
-    if (biProvider === "gemini" && !getOptionalSecret("GEMINI_API_KEY")) {
+    const configError = missingBiProviderConfigError(biProvider, {
+      geminiApiKey: getOptionalSecret("GEMINI_API_KEY"),
+      groqApiKey: getOptionalSecret("GROQ_API_KEY"),
+    });
+    if (configError) {
       return errorResponse(
-        "config_error",
-        "Brand intelligence is not configured",
-        503,
-      );
-    }
-    if (biProvider === "groq" && !getOptionalSecret("GROQ_API_KEY")) {
-      return errorResponse(
-        "config_error",
-        "Brand intelligence Groq is not configured",
-        503,
+        configError.code,
+        configError.message,
+        configError.status,
       );
     }
 
@@ -363,12 +364,13 @@ Use URL content AND web search for press, social, and competitor signals.
         profile = JSON.parse(result.text) as BrandProfilePayload;
       }
     } else {
-      if (!crawlText.trim()) {
+      const crawlError = groqEmptyCrawlError(crawlText);
+      if (crawlError) {
         await markIntakeStatus(client, brandId, "failed");
         return errorResponse(
-          "validation_error",
-          "Groq brand analysis requires Firecrawl page content. Run a brand crawl first or set BI_USE_GEMINI=1.",
-          422,
+          crawlError.code,
+          crawlError.message,
+          crawlError.status,
         );
       }
 

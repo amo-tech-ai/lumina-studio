@@ -63,6 +63,58 @@ async function fetchJson(path, init = {}) {
   return { res, json, text };
 }
 
+function verifyBrandIntelligenceArtifacts() {
+  const biPath = join(root, "supabase/functions/brand-intelligence/index.ts");
+  if (!existsSync(biPath)) {
+    fail("missing supabase/functions/brand-intelligence/index.ts");
+    return;
+  }
+
+  const src = readFileSync(biPath, "utf8");
+  const guardsPath = join(root, "supabase/functions/_shared/bi-groq-guards.ts");
+  if (!existsSync(guardsPath)) {
+    fail("missing _shared/bi-groq-guards.ts");
+  } else {
+    pass("_shared/bi-groq-guards.ts present");
+  }
+
+  if (src.includes("crawlResultId") && src.includes("raw_data")) {
+    pass("brand-intelligence loads crawl context");
+  } else {
+    fail("brand-intelligence missing crawlResultId/raw_data handling");
+  }
+
+  if (
+    src.includes("generateLlmStructuredContent") &&
+    src.includes('scope: "bi"')
+  ) {
+    pass("brand-intelligence Groq path calls shared LLM with scope bi");
+  } else {
+    fail("brand-intelligence missing Groq shared LLM scope:bi wiring");
+  }
+
+  if (
+    src.includes("missingBiProviderConfigError") &&
+    src.includes("groqEmptyCrawlError")
+  ) {
+    pass("brand-intelligence uses shared BI/Groq guard helpers");
+  } else {
+    fail("brand-intelligence missing bi-groq-guards integration");
+  }
+
+  if (src.includes("resolveBiProvider")) {
+    pass("brand-intelligence has BI_USE_GEMINI fallback path");
+  } else {
+    fail("brand-intelligence missing BI_USE_GEMINI fallback (resolveBiProvider)");
+  }
+
+  if (!src.includes("groqChatCompletion")) {
+    pass("brand-intelligence does not use removed groqChatCompletion URL fallback");
+  } else {
+    fail("brand-intelligence still references unused groqChatCompletion");
+  }
+}
+
 function verifyFirecrawlArtifacts() {
   const geminiShared = join(root, "supabase/functions/_shared/gemini.ts");
   if (existsSync(geminiShared)) {
@@ -71,30 +123,7 @@ function verifyFirecrawlArtifacts() {
     fail("missing _shared/gemini.ts");
   }
 
-  const biPath = join(root, "supabase/functions/brand-intelligence/index.ts");
-  if (existsSync(biPath)) {
-    const src = readFileSync(biPath, "utf8");
-    if (src.includes("crawlResultId") && src.includes("raw_data")) {
-      pass("brand-intelligence loads crawl context");
-    } else {
-      fail("brand-intelligence missing crawlResultId/raw_data handling");
-    }
-    if (
-      src.includes("_shared/llm/structured.ts") ||
-      src.includes("generateLlmStructuredContent")
-    ) {
-      pass("brand-intelligence wired to shared LLM module");
-    } else {
-      fail("brand-intelligence missing shared LLM wiring");
-    }
-    if (src.includes("resolveBiProvider")) {
-      pass("brand-intelligence has BI_USE_GEMINI fallback path");
-    } else {
-      fail("brand-intelligence missing BI_USE_GEMINI fallback (resolveBiProvider)");
-    }
-  } else {
-    fail("missing supabase/functions/brand-intelligence/index.ts");
-  }
+  verifyBrandIntelligenceArtifacts();
 
   const firecrawlShared = join(root, "supabase/functions/_shared/firecrawl.ts");
   if (existsSync(firecrawlShared)) {
@@ -247,8 +276,23 @@ async function main() {
       `brand-intelligence authed → ${authed.res.status} ${authed.text?.slice(0, 300)}`,
     );
   } else {
-    const { brandId, logId, scores } = authed.json.data;
+    const { brandId, logId, scores, provider } = authed.json.data;
     pass(`brand-intelligence brandId=${brandId} logId=${logId} scores=${scores?.length ?? 0}`);
+
+    const expectGroq =
+      (process.env.AI_PROVIDER ?? "").trim().toLowerCase() === "groq" &&
+      !["1", "true", "yes"].includes(
+        (process.env.BI_USE_GEMINI ?? "").trim().toLowerCase(),
+      );
+    if (expectGroq) {
+      if (provider !== "groq") {
+        fail(`expected provider groq post-deploy, got ${provider ?? "undefined"}`);
+      } else {
+        pass(`brand-intelligence provider=${provider}`);
+      }
+    } else if (provider) {
+      pass(`brand-intelligence provider=${provider}`);
+    }
   }
 
   const brandId = authed.json?.data?.brandId;

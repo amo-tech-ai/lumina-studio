@@ -179,7 +179,7 @@ async function generateGroqStructured<T>(
   };
 }
 
-function resolveStructuredProvider(
+export function resolveStructuredProvider(
   scope: StructuredGenerationScope = "default",
 ): AiProvider {
   if (scope === "bi") return resolveBiProvider();
