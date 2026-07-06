@@ -23,7 +23,7 @@ describe("StatusChip", () => {
     render(<StatusChip dot="var(--color-approved)" label="Active" />);
     expect(screen.getByText("Active")).toBeDefined();
     const dot = document.querySelector("[aria-hidden]") as HTMLElement;
-    expect(dot.style.background).toBe("var(--color-approved)");
+    expect(dot.style.backgroundColor).toBe("var(--color-approved)");
   });
 
   it("defaults to the pill variant", () => {

@@ -17,7 +17,7 @@ export function StatusChip({ dot, label, bare = false, onImage = false }: Props)
   const modeClass = bare ? styles.bare : onImage ? styles.onImage : styles.pill;
   return (
     <span className={`${styles.wrap} ${modeClass}`}>
-      <span className={styles.dot} style={{ background: dot }} aria-hidden />
+      <span className={styles.dot} style={{ backgroundColor: dot }} aria-hidden />
       {label}
     </span>
   );
