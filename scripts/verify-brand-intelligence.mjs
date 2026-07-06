@@ -35,9 +35,10 @@ const testBrandUrl =
   process.env.BRAND_INTEL_TEST_URL ?? "https://www.glossier.com";
 
 const groqModelsPath = join(root, "config/groq-models.json");
-const expectedGroqStructuredModel = existsSync(groqModelsPath)
-  ? JSON.parse(readFileSync(groqModelsPath, "utf8")).defaults?.structured
-  : "openai/gpt-oss-20b";
+const expectedGroqStructuredModel =
+  (existsSync(groqModelsPath)
+    ? JSON.parse(readFileSync(groqModelsPath, "utf8")).defaults?.structured
+    : undefined) ?? "openai/gpt-oss-20b";
 
 if (!url || !anonKey || !serviceKey) {
   console.error("Missing Supabase env vars");
@@ -251,7 +252,9 @@ async function verifyAuditAssetDnaLive(token) {
   } else if (authedMissingAsset.res.status === 501) {
     fail("audit-asset-dna returned 501 — DNA_USE_GEMINI should keep Gemini path live");
   } else {
-    pass(`audit-asset-dna missing asset status=${authedMissingAsset.res.status}`);
+    fail(
+      `audit-asset-dna missing asset expected 404, got ${authedMissingAsset.res.status}`,
+    );
   }
 }
 
