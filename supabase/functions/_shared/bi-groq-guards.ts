@@ -67,3 +67,15 @@ export function geminiUsesCrawlAnalysis(
 export function groqHasRequiredCrawlContent(crawlText: string): boolean {
   return crawlText.trim().length > 0;
 }
+
+/** Whether crawl text was included in the BI LLM request (telemetry + API metadata). */
+export function biUsedCrawlInRequest(
+  provider: "gemini" | "groq",
+  raw: CrawlRawData | null | undefined,
+  crawlText: string,
+): boolean {
+  if (provider === "groq") {
+    return groqHasRequiredCrawlContent(crawlText);
+  }
+  return geminiUsesCrawlAnalysis(raw, crawlText);
+}

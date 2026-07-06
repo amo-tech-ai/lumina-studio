@@ -16,6 +16,7 @@ import {
 } from "../_shared/gemini.ts";
 import { resolveBiProvider } from "../_shared/llm/allowlist.ts";
 import {
+  biUsedCrawlInRequest,
   groqEmptyCrawlError,
   missingBiProviderConfigError,
 } from "../_shared/bi-groq-guards.ts";
@@ -297,6 +298,11 @@ Deno.serve(async (req: Request) => {
     const rawData = (crawlRow?.raw_data ?? null) as CrawlRawData | null;
     const crawlText = formatCrawlForPrompt(rawData);
     const useCrawl = !isCrawlThin(rawData);
+    const usedCrawlInRequest = biUsedCrawlInRequest(
+      biProvider,
+      rawData,
+      crawlText,
+    );
 
     const llmStarted = performance.now();
     let profile: BrandProfilePayload;
@@ -501,7 +507,7 @@ Use URL content AND web search for press, social, and competitor signals.
           url,
           brandId,
           crawlResultId: crawlRow?.id ?? crawlResultId,
-          usedCrawl: useCrawl,
+          usedCrawl: usedCrawlInRequest,
           provider: llmLog?.provider ?? biProvider,
         },
         output: {
@@ -542,7 +548,7 @@ Use URL content AND web search for press, social, and competitor signals.
       durationMs,
       geminiMs,
       provider: llmLog?.provider ?? biProvider,
-      usedCrawl: useCrawl,
+      usedCrawl: usedCrawlInRequest,
       crawlResultId: crawlRow?.id ?? null,
     });
   } catch (err) {
