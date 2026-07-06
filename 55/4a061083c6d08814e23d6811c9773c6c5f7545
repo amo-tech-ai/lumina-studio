@@ -1,0 +1,25 @@
+app/src/lib/ai/provider.ts
+  s_250922caeff5ac::t_8c77c33c6b5951 1-3,9-14
+  s_250922caeff5ac::t_642731ca1a63f9 25
+  s_250922caeff5ac::t_94f45b2bf5feed 15
+app/src/lib/ai/provider.test.ts
+  s_250922caeff5ac::t_e63e4b0271076d 78-80
+  s_250922caeff5ac::t_a97faae44244fc 14-18
+  s_250922caeff5ac::t_62790b3ccca714 46,48
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "554a061083c6d08814e23d6811c9773c6c5f7545",
+  "prompts": {},
+  "sessions": {
+    "s_250922caeff5ac": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "d615a929-53ba-4467-b380-aff6877ff353",
+        "model": "composer-2.5"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
