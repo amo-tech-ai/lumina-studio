@@ -31,6 +31,7 @@ const mockProfile: BrandProfilePayload = {
 const crawlWithText = {
   id: "crawl-test-1",
   brand_id: BRAND_ID,
+  source_url: TEST_URL,
   pages_crawled: 2,
   job_status: "complete",
   raw_data: {

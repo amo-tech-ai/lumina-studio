@@ -79,6 +79,14 @@ function isValidHttpUrl(value: string): boolean {
   }
 }
 
+function normalizeBrandUrl(value: string): string {
+  try {
+    return new URL(value.trim()).origin.toLowerCase();
+  } catch {
+    return value.trim().toLowerCase();
+  }
+}
+
 function buildUrlList(baseUrl: string): string[] {
   const origin = new URL(baseUrl).origin;
   return [baseUrl, `${origin}/about`, `${origin}/collections`, `${origin}/lookbook`].slice(0, 4);
@@ -175,27 +183,40 @@ async function loadCrawlRow(
   client: SupabaseClient,
   brandId: string,
   crawlResultId: string | null,
+  requestUrl: string,
 ) {
+  const requestOrigin = normalizeBrandUrl(requestUrl);
+  const crawlSelect =
+    "id, brand_id, raw_data, pages_crawled, job_status, source_url";
+
   if (crawlResultId) {
     const { data, error } = await client
       .from("brand_crawls")
-      .select("id, brand_id, raw_data, pages_crawled, job_status")
+      .select(crawlSelect)
       .eq("id", crawlResultId)
       .maybeSingle();
-    if (!error && data && data.brand_id === brandId) return data;
+    if (
+      !error &&
+      data &&
+      data.brand_id === brandId &&
+      normalizeBrandUrl(data.source_url) === requestOrigin
+    ) {
+      return data;
+    }
   }
 
-  const { data, error } = await client
+  const { data: rows, error } = await client
     .from("brand_crawls")
-    .select("id, brand_id, raw_data, pages_crawled, job_status")
+    .select(crawlSelect)
     .eq("brand_id", brandId)
     .eq("job_status", "complete")
     .order("created_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
+    .limit(10);
 
-  if (error || !data) return null;
-  return data;
+  if (error || !rows?.length) return null;
+  return rows.find(
+    (row) => normalizeBrandUrl(row.source_url) === requestOrigin,
+  ) ?? null;
 }
 
 async function markIntakeStatus(
@@ -348,7 +369,7 @@ export async function handleBrandIntelligenceRequest(req: Request): Promise<Resp
 
     await markIntakeStatus(client, brandId, "analysis_running");
 
-    const crawlRow = await loadCrawlRow(client, brandId, crawlResultId);
+    const crawlRow = await loadCrawlRow(client, brandId, crawlResultId, url);
     const rawData = (crawlRow?.raw_data ?? null) as CrawlRawData | null;
     let crawlText = formatCrawlForPrompt(rawData);
     if (biProvider === "groq" && !crawlText.trim() && rawData?.pages?.length) {
