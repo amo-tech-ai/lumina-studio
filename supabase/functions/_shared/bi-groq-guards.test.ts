@@ -4,6 +4,7 @@ import {
 } from "https://deno.land/std@0.224.0/assert/mod.ts";
 
 import {
+  biUsedCrawlInRequest,
   dnaVisionDeferredError,
   geminiUsesCrawlAnalysis,
   groqEmptyCrawlError,
@@ -57,6 +58,8 @@ Deno.test("thin crawl: Gemini URL-fallback vs Groq crawl acceptance diverge", ()
   assertEquals(geminiUsesCrawlAnalysis(thinRaw, crawlText), false);
   assertEquals(groqHasRequiredCrawlContent(crawlText), true);
   assertEquals(groqEmptyCrawlError(crawlText), null);
+  assertEquals(biUsedCrawlInRequest("gemini", thinRaw, crawlText), false);
+  assertEquals(biUsedCrawlInRequest("groq", thinRaw, crawlText), true);
 });
 
 Deno.test("empty crawl: both Gemini and Groq lack crawl content", () => {
