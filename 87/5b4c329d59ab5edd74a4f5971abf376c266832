@@ -1,0 +1,23 @@
+supabase/functions/brand-intelligence/handler.test.ts
+  s_250922caeff5ac::t_21063253c1936d 34
+supabase/functions/brand-intelligence/handler.ts
+  s_250922caeff5ac::t_83762f0a1dd380 82-89
+  s_250922caeff5ac::t_9169c5b5ff0e6d 372
+  s_250922caeff5ac::t_356412f5633a8a 186,188-191,195,198-205,208,210,214,216-219
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "875b4c329d59ab5edd74a4f5971abf376c266832",
+  "prompts": {},
+  "sessions": {
+    "s_250922caeff5ac": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "d615a929-53ba-4467-b380-aff6877ff353",
+        "model": "composer-2.5"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
