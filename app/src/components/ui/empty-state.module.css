@@ -1,0 +1,58 @@
+/* EmptyState — ported from Universal-design-prompt-new/components/EmptyState.dc.html (RF-A7b).
+   Measurements 1:1 with the DC; colors reference tokens.css. */
+
+.root {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 30px 24px 56px;
+}
+
+/* Preview-fan variant — caller passes the tilted photo nodes; this just lays them out. */
+.previewFan {
+  display: flex;
+  gap: 14px;
+  margin-bottom: 24px;
+  opacity: 0.5;
+  filter: grayscale(0.3);
+}
+
+/* Icon variant — 64px muted circle around the caller's icon. */
+.iconCircle {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: var(--color-bg-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 20px;
+  color: var(--color-text-muted);
+}
+
+.heading {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.body {
+  margin: 8px 0 0;
+  max-width: 430px;
+  font-size: 0.875rem;
+  color: var(--color-text-secondary);
+  line-height: 1.55;
+}
+
+/* Wrapper around the CTA slot. */
+.action {
+  margin-top: 18px;
+}
+
+.hint {
+  margin: 12px 0 0;
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+}
