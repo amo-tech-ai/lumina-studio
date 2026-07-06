@@ -1,0 +1,39 @@
+supabase/functions/_shared/bi-groq-guards.ts
+  s_7c75c5c4b66c49::t_cd870e90accc83 1-69
+scripts/verify-brand-intelligence.mjs
+  s_7c75c5c4b66c49::t_7e27e47b06bf00 66-117,126
+  s_7c75c5c4b66c49::t_b20150a5af3c13 279,281-295
+supabase/functions/audit-asset-dna/index.ts
+  s_7c75c5c4b66c49::t_d57dda7aba325d 9
+  s_7c75c5c4b66c49::t_4e67468b20c25b 163-164,166-168
+supabase/functions/brand-intelligence/index.ts
+  s_7c75c5c4b66c49::t_093454b32e483d 211-215,217-219
+  s_7c75c5c4b66c49::t_f18547590b6ab0 18-21
+  s_7c75c5c4b66c49::t_80b8f12cc4154b 367-368,371-373
+supabase/functions/_shared/llm/llm.test.ts
+  s_7c75c5c4b66c49::t_aa6776fafbfe74 126-133
+  s_7c75c5c4b66c49::t_ff269f2db741e0 167-202
+  s_7c75c5c4b66c49::t_31af000e4c3f69 16
+supabase/functions/_shared/bi-groq-guards.test.ts
+  s_7c75c5c4b66c49::t_0b3111dc2f9e83 1-75
+supabase/functions/_shared/llm/structured.ts
+  s_7c75c5c4b66c49::t_bf0fe90adca1c9 182
+supabase/functions/deno.lock
+  s_7c75c5c4b66c49::t_eac0872635d2d3 4,8-47,93-181,185-253,256-264
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "7d7eda3b46dd0a1453c14fa25cbbf7f65e5eadeb",
+  "prompts": {},
+  "sessions": {
+    "s_7c75c5c4b66c49": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "908846dc-abd0-4195-8c8c-6c4dffe1b02d",
+        "model": "composer-2.5"
+      },
+      "human_author": "AMO Tech AI <it@socialmediaville.ca>"
+    }
+  }
+}
