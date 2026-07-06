@@ -25,6 +25,8 @@ build/
 __pycache__/
 *.log
 *.lock
+package-lock.json
+pnpm-lock.yaml
 .agents/
 .design-sync/
 .obsidian/

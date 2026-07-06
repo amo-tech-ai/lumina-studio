@@ -36,7 +36,7 @@ const FORBIDDEN_PATTERNS = [
 const EXT = new Set([".ts", ".tsx", ".js", ".jsx"]);
 const TEST_RE = /\.(test|spec|int\.test)\.(ts|tsx|js|jsx)$/;
 
-const SERVER_DIRS = new Set(["mastra", "api"]);
+const SERVER_DIRS = new Set(["mastra", "api", "ai"]);
 function walk(dir, files = []) {
   for (const name of readdirSync(dir)) {
     const path = join(dir, name);
