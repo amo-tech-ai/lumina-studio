@@ -1,8 +1,17 @@
-import groqModelsJson from "../../../../config/groq-models.json";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+
 import {
   createGeminiLanguageModel,
 } from "./gemini-registry";
 import type { AiProvider, GroqModelEntry, GroqModelTier, GroqModelsConfig } from "./types";
+
+/** Repo SSOT at config/groq-models.json — runtime load avoids Turbopack app/ root boundary. */
+function loadGroqModelsConfig(): GroqModelsConfig {
+  return JSON.parse(
+    readFileSync(join(process.cwd(), "..", "config", "groq-models.json"), "utf8"),
+  ) as GroqModelsConfig;
+}
 
 type ResolvedLanguageModel = ReturnType<typeof createGeminiLanguageModel>;
 
@@ -13,7 +22,7 @@ export {
   resolveProviderOptions,
 } from "./gemini-registry";
 
-const groqModels = groqModelsJson as GroqModelsConfig;
+const groqModels = loadGroqModelsConfig();
 
 const MODEL_BY_ID = new Map(
   groqModels.models.map((entry) => [entry.id, entry] as const),
