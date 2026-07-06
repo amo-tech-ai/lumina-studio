@@ -1,21 +1,13 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
 
 import {
   assertGroqTierCapabilities,
   getGroqModelEntry,
+  loadGroqModelsConfig,
   resolveAiProvider,
   resolveGroqModelId,
   resolveModel,
 } from "./provider";
-import type { GroqModelsConfig } from "./types";
-
-function readGroqModelsFromDisk(): GroqModelsConfig {
-  return JSON.parse(
-    readFileSync(join(process.cwd(), "..", "config", "groq-models.json"), "utf8"),
-  ) as GroqModelsConfig;
-}
 
 describe("AI provider (GROQ-002)", () => {
   const original = {
@@ -43,7 +35,7 @@ describe("AI provider (GROQ-002)", () => {
   });
 
   it("resolveGroqModelId reads env override then defaults", () => {
-    const disk = readGroqModelsFromDisk();
+    const disk = loadGroqModelsConfig();
     delete process.env.GROQ_MODEL_DEFAULT;
     expect(resolveGroqModelId("default")).toBe(disk.defaults.default);
     process.env.GROQ_MODEL_DEFAULT = "qwen/qwen3-32b";
@@ -75,7 +67,7 @@ describe("AI provider (GROQ-002)", () => {
   });
 
   it("loads SSOT allowlist from repo config/groq-models.json", () => {
-    const disk = readGroqModelsFromDisk();
+    const disk = loadGroqModelsConfig();
     expect(getGroqModelEntry(disk.defaults.default)).toBeDefined();
     expect(disk.models.length).toBeGreaterThan(0);
   });

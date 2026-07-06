@@ -1,16 +1,31 @@
 import { readFileSync } from "node:fs";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 
 import {
   createGeminiLanguageModel,
 } from "./gemini-registry";
 import type { AiProvider, GroqModelEntry, GroqModelTier, GroqModelsConfig } from "./types";
 
-/** Repo SSOT at config/groq-models.json — runtime load avoids Turbopack app/ root boundary. */
-function loadGroqModelsConfig(): GroqModelsConfig {
-  return JSON.parse(
-    readFileSync(join(process.cwd(), "..", "config", "groq-models.json"), "utf8"),
-  ) as GroqModelsConfig;
+const MODULE_DIR = dirname(fileURLToPath(import.meta.url));
+
+/**
+ * Repo SSOT at config/groq-models.json — loaded at runtime (not a static import)
+ * to stay outside Turbopack's app/ root boundary. Resolved relative to this
+ * module's own location (not process.cwd()) so it's correct regardless of the
+ * directory the process was launched from.
+ */
+export function loadGroqModelsConfig(): GroqModelsConfig {
+  const path = join(MODULE_DIR, "..", "..", "..", "..", "config", "groq-models.json");
+  try {
+    return JSON.parse(readFileSync(path, "utf8")) as GroqModelsConfig;
+  } catch (error) {
+    throw new Error(
+      `Failed to load Groq models SSOT allowlist from "${path}" (expected config/groq-models.json at repo root): ${
+        error instanceof Error ? error.message : String(error)
+      }`,
+    );
+  }
 }
 
 type ResolvedLanguageModel = ReturnType<typeof createGeminiLanguageModel>;
