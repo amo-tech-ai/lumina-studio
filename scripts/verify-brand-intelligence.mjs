@@ -34,6 +34,11 @@ const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const testBrandUrl =
   process.env.BRAND_INTEL_TEST_URL ?? "https://www.glossier.com";
 
+const groqModelsPath = join(root, "config/groq-models.json");
+const expectedGroqStructuredModel = existsSync(groqModelsPath)
+  ? JSON.parse(readFileSync(groqModelsPath, "utf8")).defaults?.structured
+  : "openai/gpt-oss-20b";
+
 if (!url || !anonKey || !serviceKey) {
   console.error("Missing Supabase env vars");
   process.exit(1);
@@ -201,6 +206,116 @@ async function verifyBrandCrawlsSchema(admin) {
   }
 }
 
+async function verifyAuditAssetDnaLive(token) {
+  const anon = await fetchJson("/audit-asset-dna", {
+    method: "POST",
+    headers: { apikey: anonKey, "Content-Type": "application/json" },
+    body: JSON.stringify({ assetId: "00000000-0000-0000-0000-000000000001" }),
+  });
+  if (anon.res.status === 401) {
+    pass("audit-asset-dna rejects anonymous call");
+  } else {
+    fail(`audit-asset-dna expected 401 without JWT, got ${anon.res.status}`);
+  }
+
+  const authedMissing = await fetchJson("/audit-asset-dna", {
+    method: "POST",
+    headers: {
+      apikey: anonKey,
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({}),
+  });
+  if (authedMissing.res.status === 422) {
+    pass("audit-asset-dna rejects empty body with 422");
+  } else {
+    fail(
+      `audit-asset-dna empty body expected 422, got ${authedMissing.res.status}`,
+    );
+  }
+
+  const authedMissingAsset = await fetchJson("/audit-asset-dna", {
+    method: "POST",
+    headers: {
+      apikey: anonKey,
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      assetId: "00000000-0000-0000-0000-000000000099",
+    }),
+  });
+  if (authedMissingAsset.res.status === 404) {
+    pass("audit-asset-dna live Gemini path reachable (404 not 501 for missing asset)");
+  } else if (authedMissingAsset.res.status === 501) {
+    fail("audit-asset-dna returned 501 — DNA_USE_GEMINI should keep Gemini path live");
+  } else {
+    pass(`audit-asset-dna missing asset status=${authedMissingAsset.res.status}`);
+  }
+}
+
+function assertGroqLiveTelemetry({ authedData, logRow }) {
+  const { provider, durationMs, logId } = authedData;
+  if (provider !== "groq") return;
+
+  if (typeof durationMs !== "number" || durationMs <= 0) {
+    fail(`brand-intelligence missing durationMs in response, got ${durationMs}`);
+  } else {
+    pass(`brand-intelligence durationMs=${durationMs}`);
+  }
+
+  if (!logId) {
+    fail("brand-intelligence Groq path missing logId");
+    return;
+  }
+  if (!logRow) {
+    fail("brand-intelligence Groq path missing ai_agent_logs row");
+    return;
+  }
+
+  if (logRow.model !== expectedGroqStructuredModel) {
+    fail(
+      `expected model ${expectedGroqStructuredModel}, got ${logRow.model ?? "undefined"}`,
+    );
+  } else {
+    pass(`brand-intelligence model=${logRow.model}`);
+  }
+
+  if (!(logRow.tokens_in > 0) || !(logRow.tokens_out > 0)) {
+    fail(
+      `expected positive token usage, got in=${logRow.tokens_in} out=${logRow.tokens_out}`,
+    );
+  } else {
+    pass(`brand-intelligence tokens in=${logRow.tokens_in} out=${logRow.tokens_out}`);
+  }
+
+  const output = logRow.output ?? {};
+  if (output.provider !== "groq") {
+    fail(`ai_agent_logs.output.provider expected groq, got ${output.provider}`);
+  } else {
+    pass("ai_agent_logs.output.provider=groq");
+  }
+
+  if (typeof output.xGroqRequestId !== "string" || !output.xGroqRequestId) {
+    fail("ai_agent_logs.output missing xGroqRequestId");
+  } else {
+    pass(`ai_agent_logs xGroqRequestId=${output.xGroqRequestId.slice(0, 12)}…`);
+  }
+
+  if (typeof output.schemaRepairCount !== "number") {
+    fail("ai_agent_logs.output missing schemaRepairCount");
+  } else {
+    pass(`ai_agent_logs schemaRepairCount=${output.schemaRepairCount}`);
+  }
+
+  if (logRow.input?.usedCrawl !== true) {
+    fail(`expected input.usedCrawl true, got ${logRow.input?.usedCrawl}`);
+  } else {
+    pass("ai_agent_logs input.usedCrawl=true");
+  }
+}
+
 async function main() {
   console.log("brand-intelligence verification\n");
 
@@ -285,6 +400,8 @@ async function main() {
       (process.env.BI_USE_GEMINI ?? "").trim().toLowerCase(),
     );
 
+  await verifyAuditAssetDnaLive(token);
+
   // Groq BI requires non-empty crawl text; seed a minimal row for live verify.
   let crawlSeedOk = false;
   const { error: crawlSeedErr } = await admin.from("brand_crawls").insert({
@@ -343,14 +460,14 @@ async function main() {
     const { brandId, logId, scores, provider } = authed.json.data;
     pass(`brand-intelligence brandId=${brandId} logId=${logId} scores=${scores?.length ?? 0}`);
 
-    if (expectGroq) {
-      if (provider !== "groq") {
-        fail(`expected provider groq post-deploy, got ${provider ?? "undefined"}`);
-      } else {
-        pass(`brand-intelligence provider=${provider}`);
-      }
+    if (provider === "groq") {
+      pass(`brand-intelligence provider=${provider}`);
+    } else if (expectGroq) {
+      fail(`expected provider groq post-deploy, got ${provider ?? "undefined"}`);
     } else if (provider) {
       pass(`brand-intelligence provider=${provider}`);
+    } else {
+      fail("brand-intelligence missing provider in response");
     }
   }
 
@@ -402,7 +519,9 @@ async function main() {
 
     const { data: logRow, error: logErr } = await admin
       .from("ai_agent_logs")
-      .select("id, duration_ms, agent_name")
+      .select(
+        "id, duration_ms, agent_name, model, tokens_in, tokens_out, input, output",
+      )
       .eq("id", authed.json.data.logId)
       .single();
     if (logErr || logRow?.agent_name !== "brand-intelligence" || logRow.duration_ms == null) {
@@ -410,6 +529,8 @@ async function main() {
     } else {
       pass(`ai_agent_logs duration_ms=${logRow.duration_ms}`);
     }
+
+    assertGroqLiveTelemetry({ authedData: authed.json.data, logRow });
   }
   }
 
