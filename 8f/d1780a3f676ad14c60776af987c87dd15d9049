@@ -1,0 +1,35 @@
+app/src/components/shoot/ShootCard.tsx
+  s_fb6d75e0972fb7::t_9ed57cdc7f19cc 20
+  s_fb6d75e0972fb7::t_bd2b314c747323 40-43
+  s_fb6d75e0972fb7::t_767d1ed4e18e06 5
+app/src/lib/cloudinary/url.test.ts
+  s_fb6d75e0972fb7::t_3989e9cc8b8b2d 57-72
+app/src/components/shoot/shoots-list-workspace.test.tsx
+  s_fb6d75e0972fb7::t_d905846e527055 75
+  s_fb6d75e0972fb7::t_0023c035fc6b89 53
+  s_fb6d75e0972fb7::t_4c4cb18a6be077 64
+app/src/lib/command-center/sample-images.ts
+  s_fb6d75e0972fb7::t_9f8824b669da6c 62-63
+app/src/components/shoot/shoots-list-intel-detail.test.tsx
+  s_fb6d75e0972fb7::t_7e9ea1cf016db8 29
+app/src/app/(operator)/app/shoots/page.tsx
+  s_fb6d75e0972fb7::t_60e9d8b8edbade 24
+app/src/lib/cloudinary/url.ts
+  s_fb6d75e0972fb7::t_2d9a9718d08105 8-18
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "8fd1780a3f676ad14c60776af987c87dd15d9049",
+  "prompts": {},
+  "sessions": {
+    "s_fb6d75e0972fb7": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "482ba906-0d79-473d-87a7-390cf354e015",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
