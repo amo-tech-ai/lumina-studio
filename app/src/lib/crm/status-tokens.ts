@@ -54,27 +54,31 @@ const DEAL_STAGES = new Set<string>(Object.keys(DEAL_STAGE_LABEL));
 // Unknown/missing values get a distinct muted token so they never masquerade as
 // a real status (same guard as shoot-list-filters `normalizeStatus`).
 const UNKNOWN_DOT = "var(--color-text-muted)";
+const UNKNOWN_LABEL = "Unknown";
+
+/** Shared guarded lookup — returns the mapped value, or `fallback` for a
+ *  missing/invalid key, so a bad value never masquerades as the first enum. */
+function lookup(
+  key: string | null | undefined,
+  known: Set<string>,
+  map: Record<string, string>,
+  fallback: string,
+): string {
+  return key && known.has(key) ? map[key] : fallback;
+}
 
 export function crmStatusLabel(status: string | null | undefined): string {
-  return status && COMPANY_STATUSES.has(status)
-    ? COMPANY_STATUS_LABEL[status as CrmCompanyStatus]
-    : "Unknown";
+  return lookup(status, COMPANY_STATUSES, COMPANY_STATUS_LABEL, UNKNOWN_LABEL);
 }
 
 export function crmStatusDotToken(status: string | null | undefined): string {
-  return status && COMPANY_STATUSES.has(status)
-    ? COMPANY_STATUS_DOT[status as CrmCompanyStatus]
-    : UNKNOWN_DOT;
+  return lookup(status, COMPANY_STATUSES, COMPANY_STATUS_DOT, UNKNOWN_DOT);
 }
 
 export function crmDealStageLabel(stage: string | null | undefined): string {
-  return stage && DEAL_STAGES.has(stage)
-    ? DEAL_STAGE_LABEL[stage as CrmDealStage]
-    : "Unknown";
+  return lookup(stage, DEAL_STAGES, DEAL_STAGE_LABEL, UNKNOWN_LABEL);
 }
 
 export function crmDealStageDotToken(stage: string | null | undefined): string {
-  return stage && DEAL_STAGES.has(stage)
-    ? DEAL_STAGE_DOT[stage as CrmDealStage]
-    : UNKNOWN_DOT;
+  return lookup(stage, DEAL_STAGES, DEAL_STAGE_DOT, UNKNOWN_DOT);
 }

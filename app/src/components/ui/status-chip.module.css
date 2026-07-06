@@ -14,7 +14,8 @@
   height: 6px;
   border-radius: 50%;
   flex-shrink: 0;
-  /* background is the passed token var, set inline */
+
+  /* background color is the passed token var, set inline */
 }
 
 /* Default pill */
@@ -42,6 +43,6 @@
   padding: 4px 10px;
   border-radius: var(--radius-pill);
   color: var(--color-text-inverse);
-  background: rgb(17 17 17 / 0.5);
+  background: rgb(17 17 17 / 50%);
   backdrop-filter: blur(3px);
 }
