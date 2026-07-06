@@ -1,0 +1,19 @@
+app/src/test/brand-pipeline.int.test.ts
+  s_250922caeff5ac::t_8786337da23566 35,40-49
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "58755ab2e4cc845ab91b7b86ed7020b61c9d7278",
+  "prompts": {},
+  "sessions": {
+    "s_250922caeff5ac": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "d615a929-53ba-4467-b380-aff6877ff353",
+        "model": "unknown"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
