@@ -1,0 +1,47 @@
+/* StatusChip — ported from Universal-design-prompt-new/components/StatusChip.dc.html (RF-01).
+   Measurements are 1:1 with the DC inline styles; colors reference tokens.css. */
+
+.wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  /* background is the passed token var, set inline */
+}
+
+/* Default pill */
+.pill {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: var(--radius-pill);
+  color: var(--color-text-secondary);
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border);
+}
+
+/* Bare — no pill chrome, slightly larger muted text */
+.bare {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--color-text-secondary);
+}
+
+/* OnImage — glassmorphism over photography */
+.onImage {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: var(--radius-pill);
+  color: var(--color-text-inverse);
+  background: rgb(17 17 17 / 0.5);
+  backdrop-filter: blur(3px);
+}
