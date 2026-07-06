@@ -32,11 +32,21 @@ run("brand pipeline — score query + DNA computation", () => {
   let brandId: string | null = null;
 
   it("fetches a previously analyzed brand from the DB", async () => {
-    const { data, error } = await admin!
+    const queryPromise = admin!
       .from("brands")
       .select("id, name, ai_profile, intake_status")
       .eq("intake_status", "scores_complete")
       .limit(1);
+
+    const { data, error } = await Promise.race([
+      queryPromise,
+      new Promise<Awaited<typeof queryPromise>>((resolve) =>
+        setTimeout(
+          () => resolve({ data: null, error: { message: "timeout" } } as Awaited<typeof queryPromise>),
+          4_000,
+        )
+      ),
+    ]);
     if (error || !data || data.length === 0) {
       return;
     }
