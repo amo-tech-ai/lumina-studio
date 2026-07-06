@@ -1,0 +1,26 @@
+app/src/components/ui/status-chip.test.tsx
+  s_fb6d75e0972fb7::t_3ae0f1c668dfd2 26
+app/src/lib/crm/status-tokens.ts
+  s_fb6d75e0972fb7::t_f84bb2211617c7 57-68,71,75,79,83
+app/src/components/ui/status-chip.tsx
+  s_fb6d75e0972fb7::t_c1c68f63234b73 20
+app/src/components/ui/status-chip.module.css
+  s_fb6d75e0972fb7::t_60946f6d8c6df0 17-18
+  s_fb6d75e0972fb7::t_ca59e4d6ebfca8 46
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "9e0c3a637c48d1c7ef253506b5cd9fe68639c733",
+  "prompts": {},
+  "sessions": {
+    "s_fb6d75e0972fb7": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "482ba906-0d79-473d-87a7-390cf354e015",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
