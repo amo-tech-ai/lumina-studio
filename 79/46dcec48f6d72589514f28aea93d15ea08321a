@@ -1,0 +1,27 @@
+supabase/functions/_shared/bi-groq-guards.ts
+  s_250922caeff5ac::t_5d0b7e81994b9b 70-81
+supabase/functions/brand-intelligence/index.ts
+  s_250922caeff5ac::t_e84b6e2608fee2 551
+  s_250922caeff5ac::t_9d16fdee3115d4 19
+  s_250922caeff5ac::t_b936e42d258005 510
+  s_250922caeff5ac::t_a4e6e4785b0368 301-305
+supabase/functions/_shared/bi-groq-guards.test.ts
+  s_250922caeff5ac::t_6f517f3c99b113 61-62
+  s_250922caeff5ac::t_d2aa9d085e5bee 7
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "7946dcec48f6d72589514f28aea93d15ea08321a",
+  "prompts": {},
+  "sessions": {
+    "s_250922caeff5ac": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "d615a929-53ba-4467-b380-aff6877ff353",
+        "model": "composer-2.5"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
