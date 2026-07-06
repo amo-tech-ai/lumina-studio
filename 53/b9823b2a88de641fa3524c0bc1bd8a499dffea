@@ -1,0 +1,2171 @@
+.claude/commands/pr-fix.md
+  s_d9d0c7c4cf3ac2::t_a35b07ab0570b3 205-206
+.claude/skills/README.md
+  s_d9d0c7c4cf3ac2::t_cc9e13517e789c 1-58
+.claude/skills/accessibility
+  s_d9d0c7c4cf3ac2::t_d52b9eef6afff0 1
+.claude/skills/architecture-brief/SKILL.md
+  s_d9d0c7c4cf3ac2::t_70414a54fb4ad4 70
+.claude/skills/architecture-brief/references/output-template.md
+  s_d9d0c7c4cf3ac2::t_65ab0f6ce9e139 41
+.claude/skills/archive/README.md
+  s_d9d0c7c4cf3ac2::t_42e1899d392d35 1-48
+.claude/skills/archive/accessibility/SKILL.md
+  s_d9d0c7c4cf3ac2::t_7ae5b15e5af35e 1-79
+.claude/skills/archive/agent-browser/SKILL.md
+  s_d9d0c7c4cf3ac2::t_7e3c3b3f3b9645 1-227
+.claude/skills/archive/agent-browser/agents/openai.yaml
+  s_d9d0c7c4cf3ac2::t_ea4fc5a3937a71 1-3
+.claude/skills/archive/apify-ecommerce/SKILL.md
+  s_d9d0c7c4cf3ac2::t_046dc165e19f9a 1-263
+.claude/skills/archive/apify-ecommerce/reference/scripts/package.json
+  s_d9d0c7c4cf3ac2::t_10845c9da57255 1-3
+.claude/skills/archive/apify-ecommerce/reference/scripts/run_actor.js
+  s_d9d0c7c4cf3ac2::t_e0c0fc9504d70b 1-369
+.claude/skills/archive/brainstorming/SKILL.md
+  s_d9d0c7c4cf3ac2::t_7cc1d39e6a142d 1-103
+.claude/skills/archive/brainstorming/agents/openai.yaml
+  s_d9d0c7c4cf3ac2::t_bcedbf8ba96d8e 1-3
+.claude/skills/archive/brainstorming/breakdown-feature-prd/SKILL.md
+  s_d9d0c7c4cf3ac2::t_24c33d568b8d59 1-61
+.claude/skills/archive/brainstorming/scripts/frame-template.html
+  s_d9d0c7c4cf3ac2::t_97c7cb1f35eb80 1-214
+.claude/skills/archive/brainstorming/scripts/helper.js
+  s_d9d0c7c4cf3ac2::t_25d864b8fecba8 1-88
+.claude/skills/archive/brainstorming/scripts/server.cjs
+  s_d9d0c7c4cf3ac2::t_7f71db518d56e0 1-354
+.claude/skills/archive/brainstorming/scripts/start-server.sh
+  s_d9d0c7c4cf3ac2::t_c4890a028022fe 1-148
+.claude/skills/archive/brainstorming/scripts/stop-server.sh
+  s_d9d0c7c4cf3ac2::t_36eb5190c021fc 1-56
+.claude/skills/archive/brainstorming/spec-document-reviewer-prompt.md
+  s_d9d0c7c4cf3ac2::t_999de49218133e 1-49
+.claude/skills/archive/brainstorming/visual-companion.md
+  s_d9d0c7c4cf3ac2::t_002e4ce4e5e56c 1-287
+.claude/skills/archive/claude-chrome/SKILL.md
+  s_d9d0c7c4cf3ac2::t_dbb0acc4399682 1-180
+.claude/skills/archive/claude-chrome/examples.md
+  s_d9d0c7c4cf3ac2::t_2655a8529c8e7f 1-312
+.claude/skills/archive/claude-code-docs/SKILL.md
+  s_d9d0c7c4cf3ac2::t_56c95b09548b09 1-56
+.claude/skills/archive/claude-code-docs/agents/openai.yaml
+  s_d9d0c7c4cf3ac2::t_cbd346effa1ab9 1-5
+.claude/skills/archive/claude-code-docs/references/INDEX.md
+  s_d9d0c7c4cf3ac2::t_113c917c94fd2e 1-157
+.claude/skills/archive/claude-code-docs/references/admin-setup.md
+  s_d9d0c7c4cf3ac2::t_992882a97fa396 1-138
+.claude/skills/archive/claude-code-docs/references/advisor.md
+  s_d9d0c7c4cf3ac2::t_7957a2ae77dd94 1-162
+.claude/skills/archive/claude-code-docs/references/agent-sdk__agent-loop.md
+  s_d9d0c7c4cf3ac2::t_37257c035c36a2 1-390
+.claude/skills/archive/claude-code-docs/references/agent-sdk__claude-code-features.md
+  s_d9d0c7c4cf3ac2::t_93a7e726971360 1-276
+.claude/skills/archive/claude-code-docs/references/agent-sdk__cost-tracking.md
+  s_d9d0c7c4cf3ac2::t_63338cf9da016f 1-260
+.claude/skills/archive/claude-code-docs/references/agent-sdk__custom-tools.md
+  s_d9d0c7c4cf3ac2::t_326585111c39b4 1-782
+.claude/skills/archive/claude-code-docs/references/agent-sdk__file-checkpointing.md
+  s_d9d0c7c4cf3ac2::t_4dae7018aa8e77 1-734
+.claude/skills/archive/claude-code-docs/references/agent-sdk__hooks.md
+  s_d9d0c7c4cf3ac2::t_08661830cd758b 1-781
+.claude/skills/archive/claude-code-docs/references/agent-sdk__hosting.md
+  s_d9d0c7c4cf3ac2::t_ea6843a00e9dbb 1-292
+.claude/skills/archive/claude-code-docs/references/agent-sdk__mcp.md
+  s_d9d0c7c4cf3ac2::t_eb799859f1d6a5 1-722
+.claude/skills/archive/claude-code-docs/references/agent-sdk__migration-guide.md
+  s_d9d0c7c4cf3ac2::t_22b33861dfbb5e 1-273
+.claude/skills/archive/claude-code-docs/references/agent-sdk__modifying-system-prompts.md
+  s_d9d0c7c4cf3ac2::t_a9ed1a70b46381 1-413
+.claude/skills/archive/claude-code-docs/references/agent-sdk__observability.md
+  s_d9d0c7c4cf3ac2::t_4bd3e1400932cf 1-227
+.claude/skills/archive/claude-code-docs/references/agent-sdk__overview.md
+  s_d9d0c7c4cf3ac2::t_135c5c5a18843c 1-585
+.claude/skills/archive/claude-code-docs/references/agent-sdk__permissions.md
+  s_d9d0c7c4cf3ac2::t_69e7b4cffcad8b 1-245
+.claude/skills/archive/claude-code-docs/references/agent-sdk__plugins.md
+  s_d9d0c7c4cf3ac2::t_2135e4f7bd4086 1-326
+.claude/skills/archive/claude-code-docs/references/agent-sdk__python.md
+  s_d9d0c7c4cf3ac2::t_08f58504b3ebea 1-3221
+.claude/skills/archive/claude-code-docs/references/agent-sdk__quickstart.md
+  s_d9d0c7c4cf3ac2::t_63b366e032a6a0 1-339
+.claude/skills/archive/claude-code-docs/references/agent-sdk__secure-deployment.md
+  s_d9d0c7c4cf3ac2::t_c75ae1b86ca506 1-338
+.claude/skills/archive/claude-code-docs/references/agent-sdk__session-storage.md
+  s_d9d0c7c4cf3ac2::t_8cee336402598c 1-250
+.claude/skills/archive/claude-code-docs/references/agent-sdk__sessions.md
+  s_d9d0c7c4cf3ac2::t_f7aa35132b4600 1-313
+.claude/skills/archive/claude-code-docs/references/agent-sdk__skills.md
+  s_d9d0c7c4cf3ac2::t_bf95b2e9d8ee80 1-278
+.claude/skills/archive/claude-code-docs/references/agent-sdk__slash-commands.md
+  s_d9d0c7c4cf3ac2::t_b2faf3f62f3430 1-404
+.claude/skills/archive/claude-code-docs/references/agent-sdk__streaming-output.md
+  s_d9d0c7c4cf3ac2::t_5b5f85167c41c4 1-365
+.claude/skills/archive/claude-code-docs/references/agent-sdk__streaming-vs-single-mode.md
+  s_d9d0c7c4cf3ac2::t_a193457eb1be71 1-293
+.claude/skills/archive/claude-code-docs/references/agent-sdk__structured-outputs.md
+  s_d9d0c7c4cf3ac2::t_ae99c0684fd641 1-388
+.claude/skills/archive/claude-code-docs/references/agent-sdk__subagents.md
+  s_d9d0c7c4cf3ac2::t_9403feb68ba921 1-579
+.claude/skills/archive/claude-code-docs/references/agent-sdk__todo-tracking.md
+  s_d9d0c7c4cf3ac2::t_8af9f5c7e38241 1-254
+.claude/skills/archive/claude-code-docs/references/agent-sdk__tool-search.md
+  s_d9d0c7c4cf3ac2::t_eedadeb5306ed5 1-122
+.claude/skills/archive/claude-code-docs/references/agent-sdk__typescript-v2-preview.md
+  s_d9d0c7c4cf3ac2::t_c22467b6b11c91 1-377
+.claude/skills/archive/claude-code-docs/references/agent-sdk__typescript.md
+  s_d9d0c7c4cf3ac2::t_5164d56e5ea85a 1-2083
+.claude/skills/archive/claude-code-docs/references/agent-sdk__user-input.md
+  s_d9d0c7c4cf3ac2::t_f10beeca03d257 1-813
+.claude/skills/archive/claude-code-docs/references/agent-teams.md
+  s_d9d0c7c4cf3ac2::t_f9d6a52798a122 1-400
+.claude/skills/archive/claude-code-docs/references/agent-view.md
+  s_d9d0c7c4cf3ac2::t_6592d66c002cbb 1-559
+.claude/skills/archive/claude-code-docs/references/agents.md
+  s_d9d0c7c4cf3ac2::t_3dcbf2bd56fa85 1-66
+.claude/skills/archive/claude-code-docs/references/amazon-bedrock.md
+  s_d9d0c7c4cf3ac2::t_a92b580f1a36b2 1-419
+.claude/skills/archive/claude-code-docs/references/analytics.md
+  s_d9d0c7c4cf3ac2::t_e5b0c01b789960 1-224
+.claude/skills/archive/claude-code-docs/references/artifacts.md
+  s_d9d0c7c4cf3ac2::t_daad307e6a1a5b 1-215
+.claude/skills/archive/claude-code-docs/references/authentication.md
+  s_d9d0c7c4cf3ac2::t_681a638d02eaa9 1-174
+.claude/skills/archive/claude-code-docs/references/auto-mode-config.md
+  s_d9d0c7c4cf3ac2::t_3a426963e586ad 1-175
+.claude/skills/archive/claude-code-docs/references/best-practices.md
+  s_d9d0c7c4cf3ac2::t_f98dc0648fd848 1-551
+.claude/skills/archive/claude-code-docs/references/champion-kit.md
+  s_d9d0c7c4cf3ac2::t_34779310b1b03f 1-197
+.claude/skills/archive/claude-code-docs/references/changelog.md
+  s_d9d0c7c4cf3ac2::t_9a08388da55c91 1-4502
+.claude/skills/archive/claude-code-docs/references/channels-reference.md
+  s_d9d0c7c4cf3ac2::t_5120cc0d020c04 1-748
+.claude/skills/archive/claude-code-docs/references/channels.md
+  s_d9d0c7c4cf3ac2::t_7f8c72b126fbae 1-389
+.claude/skills/archive/claude-code-docs/references/checkpointing.md
+  s_d9d0c7c4cf3ac2::t_4ad929b4c5b5e7 1-93
+.claude/skills/archive/claude-code-docs/references/chrome.md
+  s_d9d0c7c4cf3ac2::t_afe9d510d3c877 1-221
+.claude/skills/archive/claude-code-docs/references/claude-code-on-the-web.md
+  s_d9d0c7c4cf3ac2::t_00e3473b17f7e6 1-823
+.claude/skills/archive/claude-code-docs/references/claude-directory.md
+  s_d9d0c7c4cf3ac2::t_5d0a3ba6a0a032 1-182
+.claude/skills/archive/claude-code-docs/references/claude-platform-on-aws.md
+  s_d9d0c7c4cf3ac2::t_1d5a0b5a56a280 1-150
+.claude/skills/archive/claude-code-docs/references/cli-reference.md
+  s_d9d0c7c4cf3ac2::t_541bdad8c61208 1-147
+.claude/skills/archive/claude-code-docs/references/code-review.md
+  s_d9d0c7c4cf3ac2::t_bf8c33a8931dc0 1-300
+.claude/skills/archive/claude-code-docs/references/commands.md
+  s_d9d0c7c4cf3ac2::t_7fe1863248bce8 1-155
+.claude/skills/archive/claude-code-docs/references/common-workflows.md
+  s_d9d0c7c4cf3ac2::t_6d1625a1c6abb9 1-511
+.claude/skills/archive/claude-code-docs/references/communications-kit.md
+  s_d9d0c7c4cf3ac2::t_4b4202b865b977 1-511
+.claude/skills/archive/claude-code-docs/references/computer-use.md
+  s_d9d0c7c4cf3ac2::t_6b8c390c60e89c 1-211
+.claude/skills/archive/claude-code-docs/references/context-window.md
+  s_d9d0c7c4cf3ac2::t_f6ec74aa6b07ca 1-65
+.claude/skills/archive/claude-code-docs/references/costs.md
+  s_d9d0c7c4cf3ac2::t_1a3c1f0ad4ccd9 1-203
+.claude/skills/archive/claude-code-docs/references/data-usage.md
+  s_d9d0c7c4cf3ac2::t_9edc857b73cfdd 1-128
+.claude/skills/archive/claude-code-docs/references/debug-your-config.md
+  s_d9d0c7c4cf3ac2::t_a434c3ddb60dfe 1-118
+.claude/skills/archive/claude-code-docs/references/deep-links.md
+  s_d9d0c7c4cf3ac2::t_41defc5fdaf2ca 1-186
+.claude/skills/archive/claude-code-docs/references/desktop-quickstart.md
+  s_d9d0c7c4cf3ac2::t_fe489fcce1c66d 1-139
+.claude/skills/archive/claude-code-docs/references/desktop-scheduled-tasks.md
+  s_d9d0c7c4cf3ac2::t_2fe9a8c9abce33 1-104
+.claude/skills/archive/claude-code-docs/references/desktop.md
+  s_d9d0c7c4cf3ac2::t_4b615e53a6869b 1-774
+.claude/skills/archive/claude-code-docs/references/devcontainer.md
+  s_d9d0c7c4cf3ac2::t_7d04f66ea11b78 1-199
+.claude/skills/archive/claude-code-docs/references/discover-plugins.md
+  s_d9d0c7c4cf3ac2::t_d3eef4dc1f62ea 1-443
+.claude/skills/archive/claude-code-docs/references/docs_manifest.json
+  s_d9d0c7c4cf3ac2::t_4098fc8b34615e 1-1229
+.claude/skills/archive/claude-code-docs/references/env-vars.md
+  s_d9d0c7c4cf3ac2::t_2c1f4351fccc93 1-374
+.claude/skills/archive/claude-code-docs/references/errors.md
+  s_d9d0c7c4cf3ac2::t_c95411628bdafd 1-691
+.claude/skills/archive/claude-code-docs/references/fast-mode.md
+  s_d9d0c7c4cf3ac2::t_917ba2d0787c6e 1-148
+.claude/skills/archive/claude-code-docs/references/features-overview.md
+  s_d9d0c7c4cf3ac2::t_c49ad719728bc5 1-377
+.claude/skills/archive/claude-code-docs/references/fullscreen.md
+  s_d9d0c7c4cf3ac2::t_84266d9aaab278 1-185
+.claude/skills/archive/claude-code-docs/references/github-actions.md
+  s_d9d0c7c4cf3ac2::t_0e9b1e541e8c36 1-673
+.claude/skills/archive/claude-code-docs/references/github-enterprise-server.md
+  s_d9d0c7c4cf3ac2::t_f9212e17464ba7 1-191
+.claude/skills/archive/claude-code-docs/references/gitlab-ci-cd.md
+  s_d9d0c7c4cf3ac2::t_9fe2804150aa51 1-449
+.claude/skills/archive/claude-code-docs/references/glossary.md
+  s_d9d0c7c4cf3ac2::t_9d2e6e3fc6aa2e 1-329
+.claude/skills/archive/claude-code-docs/references/goal.md
+  s_d9d0c7c4cf3ac2::t_803b2cbcf7929a 1-132
+.claude/skills/archive/claude-code-docs/references/google-vertex-ai.md
+  s_d9d0c7c4cf3ac2::t_cfc32472f388ac 1-219
+.claude/skills/archive/claude-code-docs/references/headless.md
+  s_d9d0c7c4cf3ac2::t_eb5dfb1b4f030b 1-237
+.claude/skills/archive/claude-code-docs/references/hooks-guide.md
+  s_d9d0c7c4cf3ac2::t_180a36590c0730 1-950
+.claude/skills/archive/claude-code-docs/references/hooks.md
+  s_d9d0c7c4cf3ac2::t_99e3db1661289c 1-2916
+.claude/skills/archive/claude-code-docs/references/how-claude-code-works.md
+  s_d9d0c7c4cf3ac2::t_ef884e2611169e 1-257
+.claude/skills/archive/claude-code-docs/references/interactive-mode.md
+  s_d9d0c7c4cf3ac2::t_36fa0f150c155a 1-366
+.claude/skills/archive/claude-code-docs/references/jetbrains.md
+  s_d9d0c7c4cf3ac2::t_4b1344d6860526 1-199
+.claude/skills/archive/claude-code-docs/references/keybindings.md
+  s_d9d0c7c4cf3ac2::t_97f9b5f38e419a 1-472
+.claude/skills/archive/claude-code-docs/references/large-codebases.md
+  s_d9d0c7c4cf3ac2::t_d5c7357565dfc8 1-453
+.claude/skills/archive/claude-code-docs/references/legal-and-compliance.md
+  s_d9d0c7c4cf3ac2::t_bfd1c351d95ff2 1-59
+.claude/skills/archive/claude-code-docs/references/llm-gateway.md
+  s_d9d0c7c4cf3ac2::t_106a08de623cd1 1-202
+.claude/skills/archive/claude-code-docs/references/managed-mcp.md
+  s_d9d0c7c4cf3ac2::t_ec80d4e422f518 1-341
+.claude/skills/archive/claude-code-docs/references/mcp-quickstart.md
+  s_d9d0c7c4cf3ac2::t_b5b817755f6375 1-384
+.claude/skills/archive/claude-code-docs/references/mcp.md
+  s_d9d0c7c4cf3ac2::t_b67616b8991afb 1-1036
+.claude/skills/archive/claude-code-docs/references/memory.md
+  s_d9d0c7c4cf3ac2::t_c035bd90a9d887 1-417
+.claude/skills/archive/claude-code-docs/references/microsoft-foundry.md
+  s_d9d0c7c4cf3ac2::t_c59778cf232ae6 1-133
+.claude/skills/archive/claude-code-docs/references/model-config.md
+  s_d9d0c7c4cf3ac2::t_03623ab0028450 1-515
+.claude/skills/archive/claude-code-docs/references/monitoring-usage.md
+  s_d9d0c7c4cf3ac2::t_6ed9b88c6c8c9d 1-1172
+.claude/skills/archive/claude-code-docs/references/network-config.md
+  s_d9d0c7c4cf3ac2::t_96d333288f685f 1-116
+.claude/skills/archive/claude-code-docs/references/output-styles.md
+  s_d9d0c7c4cf3ac2::t_2344ce3fa0275b 1-127
+.claude/skills/archive/claude-code-docs/references/overview.md
+  s_d9d0c7c4cf3ac2::t_3a637fdbaa7f26 1-264
+.claude/skills/archive/claude-code-docs/references/permission-modes.md
+  s_d9d0c7c4cf3ac2::t_3faefdae063f10 1-366
+.claude/skills/archive/claude-code-docs/references/permissions.md
+  s_d9d0c7c4cf3ac2::t_2bd47aa50a4bc7 1-425
+.claude/skills/archive/claude-code-docs/references/platforms.md
+  s_d9d0c7c4cf3ac2::t_2a263688652c06 1-83
+.claude/skills/archive/claude-code-docs/references/plugin-dependencies.md
+  s_d9d0c7c4cf3ac2::t_4522b2ec5854d2 1-171
+.claude/skills/archive/claude-code-docs/references/plugin-hints.md
+  s_d9d0c7c4cf3ac2::t_3bc704b76e73aa 1-145
+.claude/skills/archive/claude-code-docs/references/plugin-marketplaces.md
+  s_d9d0c7c4cf3ac2::t_975d146c46efea 1-1026
+.claude/skills/archive/claude-code-docs/references/plugins-reference.md
+  s_d9d0c7c4cf3ac2::t_161869800a7f28 1-1186
+.claude/skills/archive/claude-code-docs/references/plugins.md
+  s_d9d0c7c4cf3ac2::t_edbae79aab47a6 1-473
+.claude/skills/archive/claude-code-docs/references/prompt-caching.md
+  s_d9d0c7c4cf3ac2::t_02eaabd8a129b0 1-245
+.claude/skills/archive/claude-code-docs/references/prompt-library.md
+  s_d9d0c7c4cf3ac2::t_4ee88aa53a0cc1 1-66
+.claude/skills/archive/claude-code-docs/references/quickstart.md
+  s_d9d0c7c4cf3ac2::t_2e058cfc820f91 1-328
+.claude/skills/archive/claude-code-docs/references/remote-control.md
+  s_d9d0c7c4cf3ac2::t_1d59cc863d145b 1-273
+.claude/skills/archive/claude-code-docs/references/routines.md
+  s_d9d0c7c4cf3ac2::t_8e50337cbc2625 1-418
+.claude/skills/archive/claude-code-docs/references/sandbox-environments.md
+  s_d9d0c7c4cf3ac2::t_35eb60a041ccb9 1-136
+.claude/skills/archive/claude-code-docs/references/sandboxing.md
+  s_d9d0c7c4cf3ac2::t_648796e1aa6065 1-382
+.claude/skills/archive/claude-code-docs/references/scheduled-tasks.md
+  s_d9d0c7c4cf3ac2::t_b0937549026dc0 1-203
+.claude/skills/archive/claude-code-docs/references/security-guidance.md
+  s_d9d0c7c4cf3ac2::t_ecdad38143f058 1-234
+.claude/skills/archive/claude-code-docs/references/security.md
+  s_d9d0c7c4cf3ac2::t_cc00df3b465c5d 1-144
+.claude/skills/archive/claude-code-docs/references/server-managed-settings.md
+  s_d9d0c7c4cf3ac2::t_ed98bc1f4f26f3 1-237
+.claude/skills/archive/claude-code-docs/references/sessions.md
+  s_d9d0c7c4cf3ac2::t_e9cb8306e5e3e5 1-125
+.claude/skills/archive/claude-code-docs/references/settings.md
+  s_d9d0c7c4cf3ac2::t_5017d341368f4c 1-1074
+.claude/skills/archive/claude-code-docs/references/setup.md
+  s_d9d0c7c4cf3ac2::t_5a130a4b6eba66 1-622
+.claude/skills/archive/claude-code-docs/references/skills.md
+  s_d9d0c7c4cf3ac2::t_feb14a53892741 1-809
+.claude/skills/archive/claude-code-docs/references/slack.md
+  s_d9d0c7c4cf3ac2::t_8788e2fd317853 1-246
+.claude/skills/archive/claude-code-docs/references/statusline.md
+  s_d9d0c7c4cf3ac2::t_a4374af10220c7 1-1035
+.claude/skills/archive/claude-code-docs/references/sub-agents.md
+  s_d9d0c7c4cf3ac2::t_cc1a20447b4768 1-1074
+.claude/skills/archive/claude-code-docs/references/terminal-config.md
+  s_d9d0c7c4cf3ac2::t_1b081c782663a6 1-306
+.claude/skills/archive/claude-code-docs/references/third-party-integrations.md
+  s_d9d0c7c4cf3ac2::t_ade5464957ae2d 1-187
+.claude/skills/archive/claude-code-docs/references/tools-reference.md
+  s_d9d0c7c4cf3ac2::t_0cb3d62d983fa0 1-321
+.claude/skills/archive/claude-code-docs/references/troubleshoot-install.md
+  s_d9d0c7c4cf3ac2::t_c5222e49c2dcf2 1-776
+.claude/skills/archive/claude-code-docs/references/troubleshooting.md
+  s_d9d0c7c4cf3ac2::t_bb06a89be6bc6f 1-129
+.claude/skills/archive/claude-code-docs/references/ultraplan.md
+  s_d9d0c7c4cf3ac2::t_37427c2ea07d4f 1-83
+.claude/skills/archive/claude-code-docs/references/ultrareview.md
+  s_d9d0c7c4cf3ac2::t_460a95f510ff18 1-105
+.claude/skills/archive/claude-code-docs/references/voice-dictation.md
+  s_d9d0c7c4cf3ac2::t_0e0c41dcfa828e 1-192
+.claude/skills/archive/claude-code-docs/references/vs-code.md
+  s_d9d0c7c4cf3ac2::t_92316ce00dce3c 1-546
+.claude/skills/archive/claude-code-docs/references/web-quickstart.md
+  s_d9d0c7c4cf3ac2::t_ac5512a4723450 1-243
+.claude/skills/archive/claude-code-docs/references/whats-new.md
+  s_d9d0c7c4cf3ac2::t_5bfb1dc1433eae 1-83
+.claude/skills/archive/claude-code-docs/references/whats-new__2026-w13.md
+  s_d9d0c7c4cf3ac2::t_e6b8c9fc4744ca 1-143
+.claude/skills/archive/claude-code-docs/references/whats-new__2026-w14.md
+  s_d9d0c7c4cf3ac2::t_5dddbcbe96a1b5 1-120
+.claude/skills/archive/claude-code-docs/references/whats-new__2026-w15.md
+  s_d9d0c7c4cf3ac2::t_842eef2d67f983 1-104
+.claude/skills/archive/claude-code-docs/references/whats-new__2026-w16.md
+  s_d9d0c7c4cf3ac2::t_59b04580b4df2a 1-115
+.claude/skills/archive/claude-code-docs/references/whats-new__2026-w17.md
+  s_d9d0c7c4cf3ac2::t_40c579dd8cb206 1-99
+.claude/skills/archive/claude-code-docs/references/whats-new__2026-w18.md
+  s_d9d0c7c4cf3ac2::t_cce34b2c8dd4c7 1-91
+.claude/skills/archive/claude-code-docs/references/whats-new__2026-w19.md
+  s_d9d0c7c4cf3ac2::t_b1d597c6b20931 1-49
+.claude/skills/archive/claude-code-docs/references/whats-new__2026-w20.md
+  s_d9d0c7c4cf3ac2::t_7ac9f0e2821367 1-85
+.claude/skills/archive/claude-code-docs/references/whats-new__2026-w21.md
+  s_d9d0c7c4cf3ac2::t_e7371936f7c81f 1-42
+.claude/skills/archive/claude-code-docs/references/whats-new__2026-w22.md
+  s_d9d0c7c4cf3ac2::t_8780861fc17dc2 1-104
+.claude/skills/archive/claude-code-docs/references/whats-new__2026-w23.md
+  s_d9d0c7c4cf3ac2::t_f1afb75cffd243 1-80
+.claude/skills/archive/claude-code-docs/references/whats-new__2026-w24.md
+  s_d9d0c7c4cf3ac2::t_d5f8c3be387c96 1-68
+.claude/skills/archive/claude-code-docs/references/workflows.md
+  s_d9d0c7c4cf3ac2::t_5af822ee885e7c 1-257
+.claude/skills/archive/claude-code-docs/references/worktrees.md
+  s_d9d0c7c4cf3ac2::t_03f5d698834633 1-153
+.claude/skills/archive/claude-code-docs/references/zero-data-retention.md
+  s_d9d0c7c4cf3ac2::t_d35196f724ba11 1-75
+.claude/skills/archive/claude-md-improver/SKILL.md
+  s_d9d0c7c4cf3ac2::t_f7811f9c5b33ae 1-179
+.claude/skills/archive/claude-md-improver/references/glossary.md
+  s_d9d0c7c4cf3ac2::t_a0006271c235b1 1-37
+.claude/skills/archive/claude-md-improver/references/quality-criteria.md
+  s_d9d0c7c4cf3ac2::t_0b373022731aa3 1-109
+.claude/skills/archive/claude-md-improver/references/templates.md
+  s_d9d0c7c4cf3ac2::t_44a1c8820b59e5 1-253
+.claude/skills/archive/claude-md-improver/references/update-guidelines.md
+  s_d9d0c7c4cf3ac2::t_ebff651d9004db 1-150
+.claude/skills/archive/design-md/SKILL.md
+  s_d9d0c7c4cf3ac2::t_3eb6d4e24249b7 1-52
+.claude/skills/archive/ecommerce-competitor-analyzer/.env.example
+  s_d9d0c7c4cf3ac2::t_e12cbbac6c9994 1-73
+.claude/skills/archive/ecommerce-competitor-analyzer/.gitignore
+  s_d9d0c7c4cf3ac2::t_d9bcae4f9fc9a7 1-54
+.claude/skills/archive/ecommerce-competitor-analyzer/LICENSE
+  s_d9d0c7c4cf3ac2::t_d2531530197110 1-21
+.claude/skills/archive/ecommerce-competitor-analyzer/SKILL.md
+  s_d9d0c7c4cf3ac2::t_c855056d5643e3 1-347
+.claude/skills/archive/ecommerce-competitor-analyzer/docs/INSTALLATION.md
+  s_d9d0c7c4cf3ac2::t_9e4abb874d2c31 1-202
+.claude/skills/archive/ecommerce-competitor-analyzer/docs/SETUP.md
+  s_d9d0c7c4cf3ac2::t_0796b74cb95257 1-178
+.claude/skills/archive/ecommerce-competitor-analyzer/platforms.yaml
+  s_d9d0c7c4cf3ac2::t_ad94cd0773e68b 1-95
+.claude/skills/archive/ecommerce-competitor-analyzer/prompts/analysis-prompt-base.md
+  s_d9d0c7c4cf3ac2::t_565014c7e92df1 1-81
+.claude/skills/archive/ecommerce-competitor-analyzer/references/n8n-workflow-analysis.md
+  s_d9d0c7c4cf3ac2::t_a672173faa64ab 1-311
+.claude/skills/archive/ecommerce-competitor-analyzer/references/upstream-readme.md
+  s_d9d0c7c4cf3ac2::t_a8de5f3b9ed735 1-349
+.claude/skills/archive/ecommerce-competitor-analyzer/scripts/auth-google-sheets-manual.js
+  s_d9d0c7c4cf3ac2::t_9536ea0ee07e77 1-158
+.claude/skills/archive/ecommerce-competitor-analyzer/scripts/auth-google-sheets-service-account.js
+  s_d9d0c7c4cf3ac2::t_7941f8d2aa498e 1-64
+.claude/skills/archive/ecommerce-competitor-analyzer/scripts/auth-google-sheets.js
+  s_d9d0c7c4cf3ac2::t_7e41f2aff3a5cc 1-188
+.claude/skills/archive/ecommerce-competitor-analyzer/scripts/auth-guide.sh
+  s_d9d0c7c4cf3ac2::t_956fb75e53acf4 1-50
+.claude/skills/archive/ecommerce-competitor-analyzer/scripts/auth-manual.js
+  s_d9d0c7c4cf3ac2::t_972475eea87396 1-200
+.claude/skills/archive/ecommerce-competitor-analyzer/scripts/auth-oob.js
+  s_d9d0c7c4cf3ac2::t_cf279e3d059e10 1-175
+.claude/skills/archive/ecommerce-competitor-analyzer/scripts/auth-simple.js
+  s_d9d0c7c4cf3ac2::t_7f417e72bc85d7 1-141
+.claude/skills/archive/ecommerce-competitor-analyzer/scripts/batch-processor.js
+  s_d9d0c7c4cf3ac2::t_2b42f46688aede 1-425
+.claude/skills/archive/ecommerce-competitor-analyzer/scripts/create-release.sh
+  s_d9d0c7c4cf3ac2::t_54e87129926c6a 1-28
+.claude/skills/archive/ecommerce-competitor-analyzer/scripts/exchange-token.js
+  s_d9d0c7c4cf3ac2::t_d24c59cd199948 1-120
+.claude/skills/archive/ecommerce-competitor-analyzer/scripts/google-sheets-writer.js
+  s_d9d0c7c4cf3ac2::t_9498e8c7d21320 1-519
+.claude/skills/archive/ecommerce-competitor-analyzer/scripts/olostep-client.js
+  s_d9d0c7c4cf3ac2::t_f3e73ffd3354fd 1-139
+.claude/skills/archive/ecommerce-competitor-analyzer/scripts/scrape-amazon.js
+  s_d9d0c7c4cf3ac2::t_9d9a4b99ca8f75 1-196
+.claude/skills/archive/ecommerce-competitor-analyzer/scripts/test-skill.js
+  s_d9d0c7c4cf3ac2::t_f245aaa15f4b5b 1-424
+.claude/skills/archive/ecommerce-competitor-analyzer/scripts/verify-env.js
+  s_d9d0c7c4cf3ac2::t_7500bf9b6c75ef 1-153
+.claude/skills/archive/fashion-styling/SKILL.md
+  s_d9d0c7c4cf3ac2::t_7a9737d5d57a37 1-41
+.claude/skills/archive/feature-dev/SKILL.md
+  s_d9d0c7c4cf3ac2::t_87b1abd2f60997 1-90
+.claude/skills/archive/feature-dev/references/code-architect.md
+  s_d9d0c7c4cf3ac2::t_52574ac6d65c12 1-34
+.claude/skills/archive/feature-dev/references/code-explorer.md
+  s_d9d0c7c4cf3ac2::t_9b4fbbf554a8fd 1-51
+.claude/skills/archive/feature-dev/references/code-reviewer.md
+  s_d9d0c7c4cf3ac2::t_64dcfc96f2d732 1-46
+.claude/skills/archive/feature-dev/references/feature-development.md
+  s_d9d0c7c4cf3ac2::t_f4969394ba21a6 1-125
+.claude/skills/archive/file-organizer/SKILL.md
+  s_d9d0c7c4cf3ac2::t_06ca1b429387ea 1-250
+.claude/skills/archive/init_skill.py
+  s_d9d0c7c4cf3ac2::t_fcb3ca9927de44 1-303
+.claude/skills/archive/medusa/SKILL.md
+  s_d9d0c7c4cf3ac2::t_6dd400306c51d1 1-106
+.claude/skills/archive/medusa/references/admin/admin.md
+  s_d9d0c7c4cf3ac2::t_36c615f53aadd8 1-462
+.claude/skills/archive/medusa/references/admin/references/data-loading.md
+  s_d9d0c7c4cf3ac2::t_8e1f78aef293f9 1-530
+.claude/skills/archive/medusa/references/admin/references/display-patterns.md
+  s_d9d0c7c4cf3ac2::t_9a4659f3eaedf0 1-436
+.claude/skills/archive/medusa/references/admin/references/forms.md
+  s_d9d0c7c4cf3ac2::t_b8360778ebd83d 1-400
+.claude/skills/archive/medusa/references/admin/references/navigation.md
+  s_d9d0c7c4cf3ac2::t_14835afbeaa2f4 1-496
+.claude/skills/archive/medusa/references/admin/references/table-selection.md
+  s_d9d0c7c4cf3ac2::t_d68bf5bb57a18a 1-407
+.claude/skills/archive/medusa/references/admin/references/typography.md
+  s_d9d0c7c4cf3ac2::t_29b4596679e5b0 1-210
+.claude/skills/archive/medusa/references/backend/backend.md
+  s_d9d0c7c4cf3ac2::t_a38288a54d20dc 1-376
+.claude/skills/archive/medusa/references/backend/reference/api-routes.md
+  s_d9d0c7c4cf3ac2::t_c9c20ea4f80f68 1-873
+.claude/skills/archive/medusa/references/backend/reference/authentication.md
+  s_d9d0c7c4cf3ac2::t_d0bb45121985a7 1-556
+.claude/skills/archive/medusa/references/backend/reference/custom-modules.md
+  s_d9d0c7c4cf3ac2::t_b4d49e45c46224 1-240
+.claude/skills/archive/medusa/references/backend/reference/data-models.md
+  s_d9d0c7c4cf3ac2::t_bface837551fe7 1-103
+.claude/skills/archive/medusa/references/backend/reference/error-handling.md
+  s_d9d0c7c4cf3ac2::t_a866fdeacf197a 1-254
+.claude/skills/archive/medusa/references/backend/reference/frontend-integration.md
+  s_d9d0c7c4cf3ac2::t_91125a0a7d5702 1-229
+.claude/skills/archive/medusa/references/backend/reference/module-links.md
+  s_d9d0c7c4cf3ac2::t_af32b45799f466 1-384
+.claude/skills/archive/medusa/references/backend/reference/querying-data.md
+  s_d9d0c7c4cf3ac2::t_ff29d15ea72ce2 1-1014
+.claude/skills/archive/medusa/references/backend/reference/scheduled-jobs.md
+  s_d9d0c7c4cf3ac2::t_d6033a78fb658b 1-417
+.claude/skills/archive/medusa/references/backend/reference/subscribers-and-events.md
+  s_d9d0c7c4cf3ac2::t_0b91d740737781 1-544
+.claude/skills/archive/medusa/references/backend/reference/troubleshooting.md
+  s_d9d0c7c4cf3ac2::t_c1407bee01126e 1-225
+.claude/skills/archive/medusa/references/backend/reference/workflow-hooks.md
+  s_d9d0c7c4cf3ac2::t_e786e81c897584 1-63
+.claude/skills/archive/medusa/references/backend/reference/workflows.md
+  s_d9d0c7c4cf3ac2::t_179d89cad81d68 1-516
+.claude/skills/archive/medusa/references/db-generate/db-generate.md
+  s_d9d0c7c4cf3ac2::t_fe08084e608b69 1-23
+.claude/skills/archive/medusa/references/db-migrate.md
+  s_d9d0c7c4cf3ac2::t_77b7a21d021140 1-17
+.claude/skills/archive/medusa/references/learning/architecture/admin-integration.md
+  s_d9d0c7c4cf3ac2::t_3535a4de40deac 1-680
+.claude/skills/archive/medusa/references/learning/architecture/module-isolation.md
+  s_d9d0c7c4cf3ac2::t_139cb2a4461d5a 1-460
+.claude/skills/archive/medusa/references/learning/architecture/module-workflow-route.md
+  s_d9d0c7c4cf3ac2::t_7882b295c5d512 1-409
+.claude/skills/archive/medusa/references/learning/architecture/workflow-orchestration.md
+  s_d9d0c7c4cf3ac2::t_227be801b41117 1-629
+.claude/skills/archive/medusa/references/learning/checkpoints/checkpoint-api-route.md
+  s_d9d0c7c4cf3ac2::t_bba4f9f2d6a357 1-240
+.claude/skills/archive/medusa/references/learning/checkpoints/checkpoint-module-links.md
+  s_d9d0c7c4cf3ac2::t_8c392bc0520257 1-162
+.claude/skills/archive/medusa/references/learning/checkpoints/checkpoint-module.md
+  s_d9d0c7c4cf3ac2::t_9a1560db4e7a6d 1-167
+.claude/skills/archive/medusa/references/learning/checkpoints/checkpoint-querying.md
+  s_d9d0c7c4cf3ac2::t_4e8a317da034dc 1-267
+.claude/skills/archive/medusa/references/learning/checkpoints/checkpoint-ui-route.md
+  s_d9d0c7c4cf3ac2::t_752b192e543d58 1-429
+.claude/skills/archive/medusa/references/learning/checkpoints/checkpoint-widget.md
+  s_d9d0c7c4cf3ac2::t_3a9871da545cd9 1-301
+.claude/skills/archive/medusa/references/learning/checkpoints/checkpoint-workflow-hooks.md
+  s_d9d0c7c4cf3ac2::t_fb57c6c84fc5cf 1-203
+.claude/skills/archive/medusa/references/learning/checkpoints/checkpoint-workflow.md
+  s_d9d0c7c4cf3ac2::t_2d7b7e73e7f406 1-173
+.claude/skills/archive/medusa/references/learning/learning.md
+  s_d9d0c7c4cf3ac2::t_a24f9f312e0e1e 1-493
+.claude/skills/archive/medusa/references/learning/lessons/lesson-1-custom-features.md
+  s_d9d0c7c4cf3ac2::t_7cbd4fb3b3dddb 1-1098
+.claude/skills/archive/medusa/references/learning/lessons/lesson-2-extend-medusa.md
+  s_d9d0c7c4cf3ac2::t_f76bafe2f01592 1-815
+.claude/skills/archive/medusa/references/learning/lessons/lesson-3-admin-dashboard.md
+  s_d9d0c7c4cf3ac2::t_3c094b6002cba8 1-514
+.claude/skills/archive/medusa/references/learning/troubleshooting/common-errors.md
+  s_d9d0c7c4cf3ac2::t_31b16dfcd89b6b 1-390
+.claude/skills/archive/medusa/references/learning/troubleshooting/verification-guide.md
+  s_d9d0c7c4cf3ac2::t_e9ebcaccf32fda 1-775
+.claude/skills/archive/medusa/references/mercur/mercur.md
+  s_d9d0c7c4cf3ac2::t_3b308479a351c1 1-69
+.claude/skills/archive/medusa/references/mercur/references/blocks.md
+  s_d9d0c7c4cf3ac2::t_50ecd2087e500b 1-62
+.claude/skills/archive/medusa/references/mercur/references/cli.md
+  s_d9d0c7c4cf3ac2::t_bfc23a8c3f7bce 1-69
+.claude/skills/archive/medusa/references/mercur/references/dashboard-form-ui.md
+  s_d9d0c7c4cf3ac2::t_32041f5f93042c 1-93
+.claude/skills/archive/medusa/references/mercur/references/dashboard-page-ui.md
+  s_d9d0c7c4cf3ac2::t_f072bc015c5aec 1-93
+.claude/skills/archive/medusa/references/mercur/references/dashboard-tab-ui.md
+  s_d9d0c7c4cf3ac2::t_f5491352b4983e 1-73
+.claude/skills/archive/medusa/references/mercur/references/medusa-ui-conformance.md
+  s_d9d0c7c4cf3ac2::t_a46dd44b5cc078 1-66
+.claude/skills/archive/medusa/references/mercur/references/migration.md
+  s_d9d0c7c4cf3ac2::t_bb878dcbfd948d 1-103
+.claude/skills/archive/medusa/references/new-user.md
+  s_d9d0c7c4cf3ac2::t_f57ad45944cbb3 1-25
+.claude/skills/archive/medusa/references/storefront/references/frontend-integration.md
+  s_d9d0c7c4cf3ac2::t_6ece46bc5049b9 1-229
+.claude/skills/archive/medusa/references/storefront/storefront.md
+  s_d9d0c7c4cf3ac2::t_1f73499713df10 1-178
+.claude/skills/archive/memory-management/SKILL.md
+  s_d9d0c7c4cf3ac2::t_2bea3b15a508a4 1-39
+.claude/skills/archive/nextjs-app-router-patterns/SKILL.md
+  s_d9d0c7c4cf3ac2::t_31109d89548dc3 1-114
+.claude/skills/archive/nextjs-app-router-patterns/references/details.md
+  s_d9d0c7c4cf3ac2::t_b24a79ada994d4 1-428
+.claude/skills/archive/nextjs-best-practices/SKILL.md
+  s_d9d0c7c4cf3ac2::t_8fc863a1a473d9 1-213
+.claude/skills/archive/nextjs-react-typescript/SKILL.md
+  s_d9d0c7c4cf3ac2::t_3bdc28c6676d19 1-52
+.claude/skills/archive/nextjs-supabase-auth/SKILL.md
+  s_d9d0c7c4cf3ac2::t_165fc1dabd862f 1-313
+.claude/skills/archive/package_skill.py
+  s_d9d0c7c4cf3ac2::t_9b52c83acf54f4 1-110
+.claude/skills/archive/post-production-guide/SKILL.md
+  s_d9d0c7c4cf3ac2::t_cb923ed4df323a 1-325
+.claude/skills/archive/product-designer/SKILL.md
+  s_d9d0c7c4cf3ac2::t_99fc58d95ac219 1-422
+.claude/skills/archive/remotion/SKILL.md
+  s_d9d0c7c4cf3ac2::t_990d6ddcc99847 1-142
+.claude/skills/archive/remotion/references/3d.md
+  s_d9d0c7c4cf3ac2::t_831e1bde49f1df 1-86
+.claude/skills/archive/remotion/references/animations.md
+  s_d9d0c7c4cf3ac2::t_365e21cdf7beb6 1-29
+.claude/skills/archive/remotion/references/assets.md
+  s_d9d0c7c4cf3ac2::t_d2c35586a5b2d9 1-78
+.claude/skills/archive/remotion/references/assets/charts/bar-chart.tsx
+  s_d9d0c7c4cf3ac2::t_9343bf4e8ebaca 1-173
+.claude/skills/archive/remotion/references/assets/text-animations-typewriter.tsx
+  s_d9d0c7c4cf3ac2::t_fc141337e0db59 1-100
+.claude/skills/archive/remotion/references/assets/text-animations-word-highlight.tsx
+  s_d9d0c7c4cf3ac2::t_f535ba42d0a160 1-108
+.claude/skills/archive/remotion/references/audio.md
+  s_d9d0c7c4cf3ac2::t_001f027459ec9f 1-172
+.claude/skills/archive/remotion/references/calculate-metadata.md
+  s_d9d0c7c4cf3ac2::t_27e4eef111e4bf 1-104
+.claude/skills/archive/remotion/references/can-decode.md
+  s_d9d0c7c4cf3ac2::t_748b3368c9e4ba 1-75
+.claude/skills/archive/remotion/references/charts.md
+  s_d9d0c7c4cf3ac2::t_f4d50b12258a37 1-58
+.claude/skills/archive/remotion/references/compositions.md
+  s_d9d0c7c4cf3ac2::t_089b5f506e0b03 1-146
+.claude/skills/archive/remotion/references/display-captions.md
+  s_d9d0c7c4cf3ac2::t_74914ce46bd4a2 1-126
+.claude/skills/archive/remotion/references/extract-frames.md
+  s_d9d0c7c4cf3ac2::t_3883ce4320a068 1-229
+.claude/skills/archive/remotion/references/fonts.md
+  s_d9d0c7c4cf3ac2::t_a7780f73e5edbd 1-152
+.claude/skills/archive/remotion/references/get-audio-duration.md
+  s_d9d0c7c4cf3ac2::t_ea7405815fcbc8 1-58
+.claude/skills/archive/remotion/references/get-video-dimensions.md
+  s_d9d0c7c4cf3ac2::t_9de7e993cee2a8 1-68
+.claude/skills/archive/remotion/references/get-video-duration.md
+  s_d9d0c7c4cf3ac2::t_a7bfa67e2b2180 1-58
+.claude/skills/archive/remotion/references/gifs.md
+  s_d9d0c7c4cf3ac2::t_d9bd912243e0ef 1-138
+.claude/skills/archive/remotion/references/images.md
+  s_d9d0c7c4cf3ac2::t_56e1172ab2e4d1 1-130
+.claude/skills/archive/remotion/references/import-srt-captions.md
+  s_d9d0c7c4cf3ac2::t_c7c114bbaec1d3 1-67
+.claude/skills/archive/remotion/references/light-leaks.md
+  s_d9d0c7c4cf3ac2::t_914b5c460f034d 1-73
+.claude/skills/archive/remotion/references/lottie.md
+  s_d9d0c7c4cf3ac2::t_c62bfb4397632c 1-68
+.claude/skills/archive/remotion/references/maps.md
+  s_d9d0c7c4cf3ac2::t_ba12f62b694797 1-401
+.claude/skills/archive/remotion/references/measuring-dom-nodes.md
+  s_d9d0c7c4cf3ac2::t_6686bf7ca68104 1-35
+.claude/skills/archive/remotion/references/measuring-text.md
+  s_d9d0c7c4cf3ac2::t_e6afddb2c617a0 1-143
+.claude/skills/archive/remotion/references/parameters.md
+  s_d9d0c7c4cf3ac2::t_29e6e421d80e45 1-98
+.claude/skills/archive/remotion/references/sequencing.md
+  s_d9d0c7c4cf3ac2::t_697a8351ce1841 1-106
+.claude/skills/archive/remotion/references/subtitles.md
+  s_d9d0c7c4cf3ac2::t_f4d310962fa1f3 1-36
+.claude/skills/archive/remotion/references/tailwind.md
+  s_d9d0c7c4cf3ac2::t_f20addc8277ffa 1-11
+.claude/skills/archive/remotion/references/text-animations.md
+  s_d9d0c7c4cf3ac2::t_a6c32023759168 1-20
+.claude/skills/archive/remotion/references/timing.md
+  s_d9d0c7c4cf3ac2::t_a521b405b43f45 1-179
+.claude/skills/archive/remotion/references/transcribe-captions.md
+  s_d9d0c7c4cf3ac2::t_5f3cf315f9c79d 1-19
+.claude/skills/archive/remotion/references/transitions.md
+  s_d9d0c7c4cf3ac2::t_9eb558ce451436 1-122
+.claude/skills/archive/remotion/references/transparent-videos.md
+  s_d9d0c7c4cf3ac2::t_259ee0bdd686c9 1-106
+.claude/skills/archive/remotion/references/trimming.md
+  s_d9d0c7c4cf3ac2::t_6f6937dcb5081c 1-53
+.claude/skills/archive/remotion/references/videos.md
+  s_d9d0c7c4cf3ac2::t_b4a89e578d98ad 1-171
+.claude/skills/archive/senior-prompt-engineer/SKILL.md
+  s_d9d0c7c4cf3ac2::t_27f910e081491b 1-226
+.claude/skills/archive/senior-prompt-engineer/references/agentic_system_design.md
+  s_d9d0c7c4cf3ac2::t_e7e15394fe3f96 1-80
+.claude/skills/archive/senior-prompt-engineer/references/llm_evaluation_frameworks.md
+  s_d9d0c7c4cf3ac2::t_408e256be6da20 1-80
+.claude/skills/archive/senior-prompt-engineer/references/prompt_engineering_patterns.md
+  s_d9d0c7c4cf3ac2::t_734833a2fa8612 1-80
+.claude/skills/archive/senior-prompt-engineer/scripts/agent_orchestrator.py
+  s_d9d0c7c4cf3ac2::t_3f167616fffd03 1-100
+.claude/skills/archive/senior-prompt-engineer/scripts/prompt_optimizer.py
+  s_d9d0c7c4cf3ac2::t_3ffb6b102132f0 1-100
+.claude/skills/archive/senior-prompt-engineer/scripts/rag_evaluator.py
+  s_d9d0c7c4cf3ac2::t_04d539fb36caf9 1-100
+.claude/skills/archive/social-media/SKILL.md
+  s_d9d0c7c4cf3ac2::t_c392a4260b9a5d 1-195
+.claude/skills/archive/social-media/social-media-analyzer/HOW_TO_USE.md
+  s_d9d0c7c4cf3ac2::t_66b75012a9afe5 1-39
+.claude/skills/archive/social-media/social-media-analyzer/SKILL.md
+  s_d9d0c7c4cf3ac2::t_34b8aff802c105 1-280
+.claude/skills/archive/social-media/social-media-analyzer/assets/expected_output.json
+  s_d9d0c7c4cf3ac2::t_082add24b394c4 1-61
+.claude/skills/archive/social-media/social-media-analyzer/assets/sample_input.json
+  s_d9d0c7c4cf3ac2::t_fd929b68412226 1-42
+.claude/skills/archive/social-media/social-media-analyzer/references/platform-benchmarks.md
+  s_d9d0c7c4cf3ac2::t_3b72782c08a040 1-226
+.claude/skills/archive/social-media/social-media-analyzer/scripts/analyze_performance.py
+  s_d9d0c7c4cf3ac2::t_27eafbc9d202ae 1-180
+.claude/skills/archive/social-media/social-media-analyzer/scripts/calculate_metrics.py
+  s_d9d0c7c4cf3ac2::t_c362fe802d87ba 1-147
+.claude/skills/archive/social-media/social-writer/README.md
+  s_d9d0c7c4cf3ac2::t_ee16a3714568bd 1-135
+.claude/skills/archive/social-media/social-writer/SKILL.md
+  s_d9d0c7c4cf3ac2::t_79bd3e533c46ba 1-196
+.claude/skills/archive/social-media/social-writer/assets/platform-templates.md
+  s_d9d0c7c4cf3ac2::t_a40f0436448e26 1-201
+.claude/skills/archive/social-media/social-writer/references/ai-avoidance.md
+  s_d9d0c7c4cf3ac2::t_ed43335ea16fe5 1-289
+.claude/skills/archive/social-media/social-writer/references/facebook.md
+  s_d9d0c7c4cf3ac2::t_857b50dbd00fce 1-107
+.claude/skills/archive/social-media/social-writer/references/hooks.md
+  s_d9d0c7c4cf3ac2::t_95318399bdf107 1-185
+.claude/skills/archive/social-media/social-writer/references/linkedin.md
+  s_d9d0c7c4cf3ac2::t_a9f5a886d3fea3 1-123
+.claude/skills/archive/social-media/social-writer/references/style-guide.md
+  s_d9d0c7c4cf3ac2::t_5532d0f33b8df6 1-211
+.claude/skills/archive/social-media/social-writer/references/technical-styles.md
+  s_d9d0c7c4cf3ac2::t_7791c2ced35502 1-207
+.claude/skills/archive/social-media/social-writer/references/threads-instagram.md
+  s_d9d0c7c4cf3ac2::t_fa8100f1dd1803 1-139
+.claude/skills/archive/social-media/social-writer/references/x-posts.md
+  s_d9d0c7c4cf3ac2::t_3e96c3c7168dfe 1-230
+.claude/skills/archive/social-media/social-writer/references/x-strategy.md
+  s_d9d0c7c4cf3ac2::t_3b94e7fc5c4b0d 1-178
+.claude/skills/archive/social-media/social-writer/references/x-threads.md
+  s_d9d0c7c4cf3ac2::t_9a8bf6f8963234 1-251
+.claude/skills/archive/social-media/social-writer/scripts/tweet_validator.py
+  s_d9d0c7c4cf3ac2::t_9eb0aebd384279 1-132
+.claude/skills/archive/storefront-best-practices/SKILL.md
+  s_d9d0c7c4cf3ac2::t_d4473c9c375da7 1-421
+.claude/skills/archive/storefront-best-practices/reference/components/breadcrumbs.md
+  s_d9d0c7c4cf3ac2::t_32c161bdcc9ddd 1-123
+.claude/skills/archive/storefront-best-practices/reference/components/cart-popup.md
+  s_d9d0c7c4cf3ac2::t_c8365dd1de3f16 1-189
+.claude/skills/archive/storefront-best-practices/reference/components/country-selector.md
+  s_d9d0c7c4cf3ac2::t_6c6e970c175f09 1-298
+.claude/skills/archive/storefront-best-practices/reference/components/footer.md
+  s_d9d0c7c4cf3ac2::t_dfad7f4eddaea9 1-112
+.claude/skills/archive/storefront-best-practices/reference/components/hero.md
+  s_d9d0c7c4cf3ac2::t_dbab5a5c985ee0 1-241
+.claude/skills/archive/storefront-best-practices/reference/components/megamenu.md
+  s_d9d0c7c4cf3ac2::t_591c11690380d0 1-239
+.claude/skills/archive/storefront-best-practices/reference/components/navbar.md
+  s_d9d0c7c4cf3ac2::t_1f22ff4e633e5d 1-397
+.claude/skills/archive/storefront-best-practices/reference/components/popups.md
+  s_d9d0c7c4cf3ac2::t_83e276bad80e7d 1-221
+.claude/skills/archive/storefront-best-practices/reference/components/product-card.md
+  s_d9d0c7c4cf3ac2::t_d45fa7ad908faa 1-125
+.claude/skills/archive/storefront-best-practices/reference/components/product-reviews.md
+  s_d9d0c7c4cf3ac2::t_1ec2aa77e66e56 1-217
+.claude/skills/archive/storefront-best-practices/reference/components/product-slider.md
+  s_d9d0c7c4cf3ac2::t_fc0c0bc24dfc1c 1-174
+.claude/skills/archive/storefront-best-practices/reference/components/search.md
+  s_d9d0c7c4cf3ac2::t_e4826d0712666f 1-101
+.claude/skills/archive/storefront-best-practices/reference/connecting-to-backend.md
+  s_d9d0c7c4cf3ac2::t_4cc8e422cdccb0 1-391
+.claude/skills/archive/storefront-best-practices/reference/design.md
+  s_d9d0c7c4cf3ac2::t_960e8243e16cc0 1-388
+.claude/skills/archive/storefront-best-practices/reference/features/promotions.md
+  s_d9d0c7c4cf3ac2::t_bc6b1a9607410b 1-307
+.claude/skills/archive/storefront-best-practices/reference/features/wishlist.md
+  s_d9d0c7c4cf3ac2::t_de50eb6c83649d 1-230
+.claude/skills/archive/storefront-best-practices/reference/layouts/account.md
+  s_d9d0c7c4cf3ac2::t_6609984d63240e 1-380
+.claude/skills/archive/storefront-best-practices/reference/layouts/cart.md
+  s_d9d0c7c4cf3ac2::t_0223551d55b98f 1-316
+.claude/skills/archive/storefront-best-practices/reference/layouts/checkout.md
+  s_d9d0c7c4cf3ac2::t_e66452be297753 1-486
+.claude/skills/archive/storefront-best-practices/reference/layouts/home-page.md
+  s_d9d0c7c4cf3ac2::t_56815b7442776c 1-264
+.claude/skills/archive/storefront-best-practices/reference/layouts/order-confirmation.md
+  s_d9d0c7c4cf3ac2::t_3c1c12d064b1ed 1-231
+.claude/skills/archive/storefront-best-practices/reference/layouts/product-details.md
+  s_d9d0c7c4cf3ac2::t_7127e7f5ae885d 1-527
+.claude/skills/archive/storefront-best-practices/reference/layouts/product-listing.md
+  s_d9d0c7c4cf3ac2::t_9880aa2b2d0f77 1-520
+.claude/skills/archive/storefront-best-practices/reference/layouts/static-pages.md
+  s_d9d0c7c4cf3ac2::t_a87bdf06b3666c 1-356
+.claude/skills/archive/storefront-best-practices/reference/medusa.md
+  s_d9d0c7c4cf3ac2::t_456616a00042e6 1-307
+.claude/skills/archive/storefront-best-practices/reference/mobile-responsiveness.md
+  s_d9d0c7c4cf3ac2::t_872b7d88043215 1-183
+.claude/skills/archive/storefront-best-practices/reference/seo.md
+  s_d9d0c7c4cf3ac2::t_2c35cdc7e4af3b 1-195
+.claude/skills/archive/vercel-react-best-practices/AGENTS.md
+  s_d9d0c7c4cf3ac2::t_26b107ca5c860a 1-2934
+.claude/skills/archive/vercel-react-best-practices/SKILL.md
+  s_d9d0c7c4cf3ac2::t_8e4ef31278a4d4 1-136
+.claude/skills/archive/vercel-react-best-practices/rules/advanced-event-handler-refs.md
+  s_d9d0c7c4cf3ac2::t_ce75fd642c9c3d 1-55
+.claude/skills/archive/vercel-react-best-practices/rules/advanced-init-once.md
+  s_d9d0c7c4cf3ac2::t_9769e446c3b2a8 1-42
+.claude/skills/archive/vercel-react-best-practices/rules/advanced-use-latest.md
+  s_d9d0c7c4cf3ac2::t_4e9e828bdc5ac2 1-39
+.claude/skills/archive/vercel-react-best-practices/rules/async-api-routes.md
+  s_d9d0c7c4cf3ac2::t_109aa5aa30d576 1-38
+.claude/skills/archive/vercel-react-best-practices/rules/async-defer-await.md
+  s_d9d0c7c4cf3ac2::t_c5ce87d975b7c3 1-80
+.claude/skills/archive/vercel-react-best-practices/rules/async-dependencies.md
+  s_d9d0c7c4cf3ac2::t_30b582b6769cf3 1-51
+.claude/skills/archive/vercel-react-best-practices/rules/async-parallel.md
+  s_d9d0c7c4cf3ac2::t_477102353251f0 1-28
+.claude/skills/archive/vercel-react-best-practices/rules/async-suspense-boundaries.md
+  s_d9d0c7c4cf3ac2::t_02f224fa82f93c 1-99
+.claude/skills/archive/vercel-react-best-practices/rules/bundle-barrel-imports.md
+  s_d9d0c7c4cf3ac2::t_ed1076adac35c8 1-59
+.claude/skills/archive/vercel-react-best-practices/rules/bundle-conditional.md
+  s_d9d0c7c4cf3ac2::t_e36cf154ead770 1-31
+.claude/skills/archive/vercel-react-best-practices/rules/bundle-defer-third-party.md
+  s_d9d0c7c4cf3ac2::t_29b96b171253c4 1-49
+.claude/skills/archive/vercel-react-best-practices/rules/bundle-dynamic-imports.md
+  s_d9d0c7c4cf3ac2::t_58c191186b1a8a 1-35
+.claude/skills/archive/vercel-react-best-practices/rules/bundle-preload.md
+  s_d9d0c7c4cf3ac2::t_1852f8079a6249 1-50
+.claude/skills/archive/vercel-react-best-practices/rules/client-event-listeners.md
+  s_d9d0c7c4cf3ac2::t_3e5c2c7d13cf44 1-74
+.claude/skills/archive/vercel-react-best-practices/rules/client-localstorage-schema.md
+  s_d9d0c7c4cf3ac2::t_50659834c2f1f3 1-71
+.claude/skills/archive/vercel-react-best-practices/rules/client-passive-event-listeners.md
+  s_d9d0c7c4cf3ac2::t_9422b78132d8ea 1-48
+.claude/skills/archive/vercel-react-best-practices/rules/client-swr-dedup.md
+  s_d9d0c7c4cf3ac2::t_18e2f94e8c7ecb 1-56
+.claude/skills/archive/vercel-react-best-practices/rules/js-batch-dom-css.md
+  s_d9d0c7c4cf3ac2::t_0151f0011a6ec5 1-107
+.claude/skills/archive/vercel-react-best-practices/rules/js-cache-function-results.md
+  s_d9d0c7c4cf3ac2::t_964c3072011f4d 1-80
+.claude/skills/archive/vercel-react-best-practices/rules/js-cache-property-access.md
+  s_d9d0c7c4cf3ac2::t_11c367c72c65c0 1-28
+.claude/skills/archive/vercel-react-best-practices/rules/js-cache-storage.md
+  s_d9d0c7c4cf3ac2::t_be6541b97d6e02 1-70
+.claude/skills/archive/vercel-react-best-practices/rules/js-combine-iterations.md
+  s_d9d0c7c4cf3ac2::t_7e15aa3584a0e3 1-32
+.claude/skills/archive/vercel-react-best-practices/rules/js-early-exit.md
+  s_d9d0c7c4cf3ac2::t_6eb792b81d72c1 1-50
+.claude/skills/archive/vercel-react-best-practices/rules/js-hoist-regexp.md
+  s_d9d0c7c4cf3ac2::t_ae3d33f12f575f 1-45
+.claude/skills/archive/vercel-react-best-practices/rules/js-index-maps.md
+  s_d9d0c7c4cf3ac2::t_0be4cd34dc16c1 1-37
+.claude/skills/archive/vercel-react-best-practices/rules/js-length-check-first.md
+  s_d9d0c7c4cf3ac2::t_3e148ae9d1385d 1-49
+.claude/skills/archive/vercel-react-best-practices/rules/js-min-max-loop.md
+  s_d9d0c7c4cf3ac2::t_d894154ecfedab 1-82
+.claude/skills/archive/vercel-react-best-practices/rules/js-set-map-lookups.md
+  s_d9d0c7c4cf3ac2::t_142a5f8cc79a69 1-24
+.claude/skills/archive/vercel-react-best-practices/rules/js-tosorted-immutable.md
+  s_d9d0c7c4cf3ac2::t_dc51720b6a48d8 1-57
+.claude/skills/archive/vercel-react-best-practices/rules/rendering-activity.md
+  s_d9d0c7c4cf3ac2::t_60944f4ca90628 1-26
+.claude/skills/archive/vercel-react-best-practices/rules/rendering-animate-svg-wrapper.md
+  s_d9d0c7c4cf3ac2::t_f0e31677db2be6 1-47
+.claude/skills/archive/vercel-react-best-practices/rules/rendering-conditional-render.md
+  s_d9d0c7c4cf3ac2::t_c27dc0c1e53f5e 1-40
+.claude/skills/archive/vercel-react-best-practices/rules/rendering-content-visibility.md
+  s_d9d0c7c4cf3ac2::t_74c461b8ccd0f9 1-38
+.claude/skills/archive/vercel-react-best-practices/rules/rendering-hoist-jsx.md
+  s_d9d0c7c4cf3ac2::t_e1fa15890effb0 1-46
+.claude/skills/archive/vercel-react-best-practices/rules/rendering-hydration-no-flicker.md
+  s_d9d0c7c4cf3ac2::t_73e5287991d4b8 1-82
+.claude/skills/archive/vercel-react-best-practices/rules/rendering-hydration-suppress-warning.md
+  s_d9d0c7c4cf3ac2::t_3acef185d77278 1-30
+.claude/skills/archive/vercel-react-best-practices/rules/rendering-svg-precision.md
+  s_d9d0c7c4cf3ac2::t_649d7da1cd8ae1 1-28
+.claude/skills/archive/vercel-react-best-practices/rules/rendering-usetransition-loading.md
+  s_d9d0c7c4cf3ac2::t_98cbd84228fcd0 1-75
+.claude/skills/archive/vercel-react-best-practices/rules/rerender-defer-reads.md
+  s_d9d0c7c4cf3ac2::t_8dbe06e9ffd95f 1-39
+.claude/skills/archive/vercel-react-best-practices/rules/rerender-dependencies.md
+  s_d9d0c7c4cf3ac2::t_ae4c9582181dea 1-45
+.claude/skills/archive/vercel-react-best-practices/rules/rerender-derived-state-no-effect.md
+  s_d9d0c7c4cf3ac2::t_5fb2927e1075e8 1-40
+.claude/skills/archive/vercel-react-best-practices/rules/rerender-derived-state.md
+  s_d9d0c7c4cf3ac2::t_e46e9664a67cd3 1-29
+.claude/skills/archive/vercel-react-best-practices/rules/rerender-functional-setstate.md
+  s_d9d0c7c4cf3ac2::t_02c485c0843f01 1-74
+.claude/skills/archive/vercel-react-best-practices/rules/rerender-lazy-state-init.md
+  s_d9d0c7c4cf3ac2::t_961e063b396cc3 1-58
+.claude/skills/archive/vercel-react-best-practices/rules/rerender-memo-with-default-value.md
+  s_d9d0c7c4cf3ac2::t_865d4384593ab4 1-38
+.claude/skills/archive/vercel-react-best-practices/rules/rerender-memo.md
+  s_d9d0c7c4cf3ac2::t_5892c2fb974138 1-44
+.claude/skills/archive/vercel-react-best-practices/rules/rerender-move-effect-to-event.md
+  s_d9d0c7c4cf3ac2::t_c599f6ef9bbfbb 1-45
+.claude/skills/archive/vercel-react-best-practices/rules/rerender-simple-expression-in-memo.md
+  s_d9d0c7c4cf3ac2::t_638e41c46a997a 1-35
+.claude/skills/archive/vercel-react-best-practices/rules/rerender-transitions.md
+  s_d9d0c7c4cf3ac2::t_3b3833829fe120 1-40
+.claude/skills/archive/vercel-react-best-practices/rules/rerender-use-ref-transient-values.md
+  s_d9d0c7c4cf3ac2::t_856ac1c42337ea 1-73
+.claude/skills/archive/vercel-react-best-practices/rules/server-after-nonblocking.md
+  s_d9d0c7c4cf3ac2::t_1eac9dafedf4a0 1-73
+.claude/skills/archive/vercel-react-best-practices/rules/server-auth-actions.md
+  s_d9d0c7c4cf3ac2::t_975fc4d258fe1c 1-96
+.claude/skills/archive/vercel-react-best-practices/rules/server-cache-lru.md
+  s_d9d0c7c4cf3ac2::t_2097a3670b30a8 1-41
+.claude/skills/archive/vercel-react-best-practices/rules/server-cache-react.md
+  s_d9d0c7c4cf3ac2::t_146b59e94a3663 1-76
+.claude/skills/archive/vercel-react-best-practices/rules/server-dedup-props.md
+  s_d9d0c7c4cf3ac2::t_5e9da67470bcc6 1-65
+.claude/skills/archive/vercel-react-best-practices/rules/server-parallel-fetching.md
+  s_d9d0c7c4cf3ac2::t_5832403bc4553f 1-83
+.claude/skills/archive/vercel-react-best-practices/rules/server-serialization.md
+  s_d9d0c7c4cf3ac2::t_316a5a63cb4254 1-38
+.claude/skills/archive/video-storyboard/SKILL.md
+  s_d9d0c7c4cf3ac2::t_436bdc6a8272c3 1-236
+.claude/skills/claude-design-handoff/SKILL.md
+  s_d9d0c7c4cf3ac2::t_034e23608d016f 1-249
+.claude/skills/claude-design-handoff/checklists/design-system-validation.md
+  s_d9d0c7c4cf3ac2::t_42644ea22118e3 1-192
+.claude/skills/claude-design-handoff/checklists/visual-qa.md
+  s_d9d0c7c4cf3ac2::t_9f6688ead1350a 1-118
+.claude/skills/claude-design-handoff/notes.md
+  s_d9d0c7c4cf3ac2::t_38a48caeaed759 1-48
+.claude/skills/claude-design-handoff/prompts/design-intake-prompts.md
+  s_d9d0c7c4cf3ac2::t_6ad2cb4e0bcf07 1-199
+.claude/skills/claude-design-handoff/references/code-generation.md
+  s_d9d0c7c4cf3ac2::t_49e9c1d57f89bb 1-213
+.claude/skills/claude-design-handoff/references/component-mapping.md
+  s_d9d0c7c4cf3ac2::t_c14af32eb9f6b1 1-124
+.claude/skills/claude-design-handoff/references/design-intake.md
+  s_d9d0c7c4cf3ac2::t_e6d076c4d421e6 1-145
+.claude/skills/claude-design-handoff/references/implementation-plan.md
+  s_d9d0c7c4cf3ac2::t_ae0cfb213ac70c 1-122
+.claude/skills/claude-design-handoff/references/ipix-context.md
+  s_d9d0c7c4cf3ac2::t_47bc1cd292bd1a 1-223
+.claude/skills/claude-design-handoff/references/zeely-v3-dc-library.md
+  s_d9d0c7c4cf3ac2::t_7c1354d4147a1a 1-173
+.claude/skills/claude-design-handoff/templates/design-analysis.md
+  s_d9d0c7c4cf3ac2::t_edd64712b88aa0 1-143
+.claude/skills/claude-design-handoff/templates/task-template.md
+  s_d9d0c7c4cf3ac2::t_18e5f7ef4c92f0 1-248
+.claude/skills/cloudinary/SKILL.md
+  s_d9d0c7c4cf3ac2::t_72b4c0cff68c22 1-94
+.claude/skills/cloudinary/references/docs/docs.md
+  s_d9d0c7c4cf3ac2::t_2f1c91a3dedaf9 1-88
+.claude/skills/cloudinary/references/nextjs/nextjs.md
+  s_d9d0c7c4cf3ac2::t_8d6975beb5b10b 1-69
+.claude/skills/cloudinary/references/nextjs/nextjs_image_and_video_upload.md
+  s_d9d0c7c4cf3ac2::t_0d3afd16677362 1-733
+.claude/skills/cloudinary/references/nextjs/nextjs_image_transformations.md
+  s_d9d0c7c4cf3ac2::t_92d6da74545666 1-2918
+.claude/skills/cloudinary/references/nextjs/nextjs_integration.md
+  s_d9d0c7c4cf3ac2::t_d29160400f8b88 1-434
+.claude/skills/cloudinary/references/nextjs/nextjs_quick_start.md
+  s_d9d0c7c4cf3ac2::t_bfd20ef8cbd84b 1-319
+.claude/skills/cloudinary/references/nextjs/nextjs_sample_projects.md
+  s_d9d0c7c4cf3ac2::t_a57d52f688570d 1-48
+.claude/skills/cloudinary/references/nextjs/nextjs_video_transformations.md
+  s_d9d0c7c4cf3ac2::t_7532b34d2e07d6 1-860
+.claude/skills/cloudinary/references/node/node.md
+  s_d9d0c7c4cf3ac2::t_61e53ce50d6278 1-72
+.claude/skills/cloudinary/references/node/node_asset_administration.md
+  s_d9d0c7c4cf3ac2::t_06cddebe92cf6c 1-125
+.claude/skills/cloudinary/references/node/node_image_and_video_upload.md
+  s_d9d0c7c4cf3ac2::t_900c478513db6c 1-497
+.claude/skills/cloudinary/references/node/node_image_manipulation.md
+  s_d9d0c7c4cf3ac2::t_a9f67ff91e45fe 1-282
+.claude/skills/cloudinary/references/node/node_integration.md
+  s_d9d0c7c4cf3ac2::t_ede40f530741ef 1-316
+.claude/skills/cloudinary/references/node/node_quickstart.md
+  s_d9d0c7c4cf3ac2::t_4a5491d7dfbfa3 1-365
+.claude/skills/cloudinary/references/node/node_sample_projects.md
+  s_d9d0c7c4cf3ac2::t_d3c867661ed0c1 1-86
+.claude/skills/cloudinary/references/node/node_video_manipulation.md
+  s_d9d0c7c4cf3ac2::t_9f482b4be7ff5a 1-393
+.claude/skills/cloudinary/references/react/react.md
+  s_d9d0c7c4cf3ac2::t_de907f0c404ef0 1-486
+.claude/skills/cloudinary/references/react/references/signed-uploads.md
+  s_d9d0c7c4cf3ac2::t_a3ff3c44e4a79d 1-130
+.claude/skills/cloudinary/references/react/references/troubleshooting.md
+  s_d9d0c7c4cf3ac2::t_46b659772c999b 1-131
+.claude/skills/cloudinary/references/react/references/typescript-patterns.md
+  s_d9d0c7c4cf3ac2::t_2ae7805060aca0 1-133
+.claude/skills/cloudinary/references/react/references/video-player.md
+  s_d9d0c7c4cf3ac2::t_defda8f292f218 1-165
+.claude/skills/cloudinary/references/transformations/references/advanced-features.md
+  s_d9d0c7c4cf3ac2::t_62e5eca875c3c7 1-727
+.claude/skills/cloudinary/references/transformations/references/ai-transformations.md
+  s_d9d0c7c4cf3ac2::t_ff6532316cdcf2 1-133
+.claude/skills/cloudinary/references/transformations/references/debugging.md
+  s_d9d0c7c4cf3ac2::t_9f1fd972c6ae9f 1-528
+.claude/skills/cloudinary/references/transformations/references/examples.md
+  s_d9d0c7c4cf3ac2::t_5579d76afcbddc 1-712
+.claude/skills/cloudinary/references/transformations/references/named-transformations.md
+  s_d9d0c7c4cf3ac2::t_b90ac19ca86d59 1-145
+.claude/skills/cloudinary/references/transformations/references/responsive-images.md
+  s_d9d0c7c4cf3ac2::t_58ba8bd4f35174 1-717
+.claude/skills/cloudinary/references/transformations/references/transformation-costs.md
+  s_d9d0c7c4cf3ac2::t_7557c7b47ec0a1 1-26
+.claude/skills/cloudinary/references/transformations/references/video-transformations.md
+  s_d9d0c7c4cf3ac2::t_5b91833bd6395d 1-69
+.claude/skills/cloudinary/references/transformations/transformations.md
+  s_d9d0c7c4cf3ac2::t_aa27ff27d65c25 1-546
+.claude/skills/copilotkit/.mcp.json
+  s_d9d0c7c4cf3ac2::t_98a7e744497a69 1-8
+.claude/skills/copilotkit/SKILL.md
+  s_d9d0c7c4cf3ac2::t_0a90120d93b385 1-116
+.claude/skills/copilotkit/evals/optimization/2026-07-01_063945/results.json
+  s_d9d0c7c4cf3ac2::t_e2c80bb3a07c5d 1-565
+.claude/skills/copilotkit/evals/optimization/README.md
+  s_d9d0c7c4cf3ac2::t_84c873f87adffd 1-27
+.claude/skills/copilotkit/evals/trigger-eval.json
+  s_d9d0c7c4cf3ac2::t_84e8625838575e 1-22
+.claude/skills/copilotkit/references/a2ui-renderer.md
+  s_d9d0c7c4cf3ac2::t_2a8a317f8dd965 1-308
+.claude/skills/copilotkit/references/agui/agui.md
+  s_d9d0c7c4cf3ac2::t_f17a3bad95446a 1-91
+.claude/skills/copilotkit/references/agui/references/building-agents.md
+  s_d9d0c7c4cf3ac2::t_68203754c69f02 1-438
+.claude/skills/copilotkit/references/agui/references/client-sdk.md
+  s_d9d0c7c4cf3ac2::t_f5a9b4651c4c02 1-606
+.claude/skills/copilotkit/references/agui/references/event-flow-diagrams.md
+  s_d9d0c7c4cf3ac2::t_807d1ffbaa0731 1-424
+.claude/skills/copilotkit/references/agui/references/protocol-spec.md
+  s_d9d0c7c4cf3ac2::t_5ac731a06bf59c 1-688
+.claude/skills/copilotkit/references/agui/sources.md
+  s_d9d0c7c4cf3ac2::t_dc5f31a97e53cc 1-49
+.claude/skills/copilotkit/references/contribute/contribute.md
+  s_d9d0c7c4cf3ac2::t_300dfa850f51e6 1-72
+.claude/skills/copilotkit/references/contribute/references/contribution-guide.md
+  s_d9d0c7c4cf3ac2::t_286d997e04ab6a 1-141
+.claude/skills/copilotkit/references/contribute/references/pr-guidelines.md
+  s_d9d0c7c4cf3ac2::t_878b5f070b4831 1-103
+.claude/skills/copilotkit/references/contribute/references/repo-structure.md
+  s_d9d0c7c4cf3ac2::t_7358316193ac21 1-125
+.claude/skills/copilotkit/references/contribute/references/testing-guide.md
+  s_d9d0c7c4cf3ac2::t_aef8f176e51021 1-194
+.claude/skills/copilotkit/references/contribute/sources.md
+  s_d9d0c7c4cf3ac2::t_c51f33a11dc392 1-40
+.claude/skills/copilotkit/references/debug/debug.md
+  s_d9d0c7c4cf3ac2::t_5572895df10f49 1-121
+.claude/skills/copilotkit/references/debug/references/agent-debugging.md
+  s_d9d0c7c4cf3ac2::t_0487e28695750c 1-299
+.claude/skills/copilotkit/references/debug/references/error-patterns.md
+  s_d9d0c7c4cf3ac2::t_0cec1bec050128 1-306
+.claude/skills/copilotkit/references/debug/references/quick-workflows.md
+  s_d9d0c7c4cf3ac2::t_960588b0db5474 1-301
+.claude/skills/copilotkit/references/debug/references/runtime-debugging.md
+  s_d9d0c7c4cf3ac2::t_554a0d1b0b967e 1-243
+.claude/skills/copilotkit/references/debug/sources.md
+  s_d9d0c7c4cf3ac2::t_facecab5f27ab1 1-39
+.claude/skills/copilotkit/references/develop/develop.md
+  s_d9d0c7c4cf3ac2::t_a511de9440ca06 1-206
+.claude/skills/copilotkit/references/develop/references/api-surface.md
+  s_d9d0c7c4cf3ac2::t_4d0c0bdba89857 1-533
+.claude/skills/copilotkit/references/develop/references/chat-customization.md
+  s_d9d0c7c4cf3ac2::t_210e413fbd5419 1-242
+.claude/skills/copilotkit/references/develop/references/runtime-api.md
+  s_d9d0c7c4cf3ac2::t_9ce4b574a4ff21 1-370
+.claude/skills/copilotkit/references/develop/sources.md
+  s_d9d0c7c4cf3ac2::t_ac4d64eefa966f 1-66
+.claude/skills/copilotkit/references/integrations/integrations.md
+  s_d9d0c7c4cf3ac2::t_6072efab7a84e6 1-201
+.claude/skills/copilotkit/references/integrations/references/integrations/a2a.md
+  s_d9d0c7c4cf3ac2::t_0036ce8a558049 1-194
+.claude/skills/copilotkit/references/integrations/references/integrations/adk.md
+  s_d9d0c7c4cf3ac2::t_a909979ffe6fcf 1-161
+.claude/skills/copilotkit/references/integrations/references/integrations/agno.md
+  s_d9d0c7c4cf3ac2::t_effb43f99b6874 1-120
+.claude/skills/copilotkit/references/integrations/references/integrations/crewai.md
+  s_d9d0c7c4cf3ac2::t_3d928ca6029f91 1-248
+.claude/skills/copilotkit/references/integrations/references/integrations/langgraph.md
+  s_d9d0c7c4cf3ac2::t_f0456dc56b674a 1-305
+.claude/skills/copilotkit/references/integrations/references/integrations/llamaindex.md
+  s_d9d0c7c4cf3ac2::t_7733c8e9e8e647 1-133
+.claude/skills/copilotkit/references/integrations/references/integrations/mastra.md
+  s_d9d0c7c4cf3ac2::t_ec5cf77df17b00 1-157
+.claude/skills/copilotkit/references/integrations/references/integrations/ms-agent-framework.md
+  s_d9d0c7c4cf3ac2::t_573e665728ec7f 1-253
+.claude/skills/copilotkit/references/integrations/references/integrations/pydantic-ai.md
+  s_d9d0c7c4cf3ac2::t_9f2737a0282aff 1-143
+.claude/skills/copilotkit/references/integrations/references/integrations/strands.md
+  s_d9d0c7c4cf3ac2::t_4e0b14a5117961 1-160
+.claude/skills/copilotkit/references/integrations/sources.md
+  s_d9d0c7c4cf3ac2::t_1f5c5a218620a5 1-50
+.claude/skills/copilotkit/references/ipix-production.md
+  s_d9d0c7c4cf3ac2::t_c9c3695a71deb6 1-73
+.claude/skills/copilotkit/references/react-core/react-core.md
+  s_d9d0c7c4cf3ac2::t_d731c24d759665 1-108
+.claude/skills/copilotkit/references/react-core/references/agent-access.md
+  s_d9d0c7c4cf3ac2::t_fb0ff6e812e57a 1-288
+.claude/skills/copilotkit/references/react-core/references/attachments.md
+  s_d9d0c7c4cf3ac2::t_122d038759fc24 1-291
+.claude/skills/copilotkit/references/react-core/references/capabilities.md
+  s_d9d0c7c4cf3ac2::t_cd3f222f30b794 1-138
+.claude/skills/copilotkit/references/react-core/references/chat-components.md
+  s_d9d0c7c4cf3ac2::t_76823c709d5285 1-229
+.claude/skills/copilotkit/references/react-core/references/client-side-tools.md
+  s_d9d0c7c4cf3ac2::t_e48b3f56525e6e 1-358
+.claude/skills/copilotkit/references/react-core/references/custom-message-renderers.md
+  s_d9d0c7c4cf3ac2::t_34d568cdc1f256 1-223
+.claude/skills/copilotkit/references/react-core/references/debug-mode.md
+  s_d9d0c7c4cf3ac2::t_2fa52e9d076585 1-153
+.claude/skills/copilotkit/references/react-core/references/human-in-the-loop.md
+  s_d9d0c7c4cf3ac2::t_508baffafce5bb 1-312
+.claude/skills/copilotkit/references/react-core/references/provider-setup.md
+  s_d9d0c7c4cf3ac2::t_094807811ab97a 1-337
+.claude/skills/copilotkit/references/react-core/references/rendering-activity-messages.md
+  s_d9d0c7c4cf3ac2::t_3d02546cc4a1ee 1-201
+.claude/skills/copilotkit/references/react-core/references/rendering-tool-calls.md
+  s_d9d0c7c4cf3ac2::t_26db76bfceebd2 1-319
+.claude/skills/copilotkit/references/react-core/references/suggestions.md
+  s_d9d0c7c4cf3ac2::t_4e5bf1cf9ed1af 1-211
+.claude/skills/copilotkit/references/react-core/references/switching-agents-recipes.md
+  s_d9d0c7c4cf3ac2::t_de06f19f9c79f8 1-160
+.claude/skills/copilotkit/references/react-core/references/switching-agents.md
+  s_d9d0c7c4cf3ac2::t_25772299e88378 1-231
+.claude/skills/copilotkit/references/react-core/references/threads.md
+  s_d9d0c7c4cf3ac2::t_0deb55b77ed352 1-226
+.claude/skills/copilotkit/references/runtime/references/agent-runners-custom.md
+  s_d9d0c7c4cf3ac2::t_301f6321526828 1-161
+.claude/skills/copilotkit/references/runtime/references/agent-runners-in-memory.md
+  s_d9d0c7c4cf3ac2::t_3a3b6db6239cd3 1-64
+.claude/skills/copilotkit/references/runtime/references/agent-runners-sqlite.md
+  s_d9d0c7c4cf3ac2::t_d39eadb2f5a208 1-90
+.claude/skills/copilotkit/references/runtime/references/agent-runners.md
+  s_d9d0c7c4cf3ac2::t_80b0e9ea9f1246 1-304
+.claude/skills/copilotkit/references/runtime/references/built-in-agent-factory-modes.md
+  s_d9d0c7c4cf3ac2::t_5e3666ac82eed3 1-232
+.claude/skills/copilotkit/references/runtime/references/built-in-agent-helper-utilities.md
+  s_d9d0c7c4cf3ac2::t_6af6d9e375feb3 1-123
+.claude/skills/copilotkit/references/runtime/references/built-in-agent-model-identifiers.md
+  s_d9d0c7c4cf3ac2::t_b8eb2f5f6107f1 1-59
+.claude/skills/copilotkit/references/runtime/references/built-in-agent.md
+  s_d9d0c7c4cf3ac2::t_09405dfd3dfcc7 1-523
+.claude/skills/copilotkit/references/runtime/references/intelligence-mode.md
+  s_d9d0c7c4cf3ac2::t_30df6d1e78f067 1-332
+.claude/skills/copilotkit/references/runtime/references/middleware.md
+  s_d9d0c7c4cf3ac2::t_8cde679e56e61e 1-376
+.claude/skills/copilotkit/references/runtime/references/server-side-tools.md
+  s_d9d0c7c4cf3ac2::t_defe01ea8e5996 1-414
+.claude/skills/copilotkit/references/runtime/references/setup-endpoint.md
+  s_d9d0c7c4cf3ac2::t_bf457ed43b8964 1-503
+.claude/skills/copilotkit/references/runtime/references/transcription.md
+  s_d9d0c7c4cf3ac2::t_975fb2ab3c2c30 1-287
+.claude/skills/copilotkit/references/runtime/references/wiring-a2a.md
+  s_d9d0c7c4cf3ac2::t_c3585c6bfc6eda 1-40
+.claude/skills/copilotkit/references/runtime/references/wiring-adk.md
+  s_d9d0c7c4cf3ac2::t_364e4944753cdf 1-45
+.claude/skills/copilotkit/references/runtime/references/wiring-ag2.md
+  s_d9d0c7c4cf3ac2::t_ea8ddef55e1e2f 1-41
+.claude/skills/copilotkit/references/runtime/references/wiring-agno.md
+  s_d9d0c7c4cf3ac2::t_f2b0062ac991df 1-40
+.claude/skills/copilotkit/references/runtime/references/wiring-aws-strands.md
+  s_d9d0c7c4cf3ac2::t_01e2ef28a0d166 1-59
+.claude/skills/copilotkit/references/runtime/references/wiring-crewai-crews.md
+  s_d9d0c7c4cf3ac2::t_956020cfab540d 1-51
+.claude/skills/copilotkit/references/runtime/references/wiring-crewai-flows.md
+  s_d9d0c7c4cf3ac2::t_bd44b6bc52a7e6 1-45
+.claude/skills/copilotkit/references/runtime/references/wiring-external-agents.md
+  s_d9d0c7c4cf3ac2::t_cd7cf2cf8d5180 1-348
+.claude/skills/copilotkit/references/runtime/references/wiring-langgraph.md
+  s_d9d0c7c4cf3ac2::t_8056c099bc7f31 1-49
+.claude/skills/copilotkit/references/runtime/references/wiring-llamaindex.md
+  s_d9d0c7c4cf3ac2::t_7ff62e8a0c43ca 1-39
+.claude/skills/copilotkit/references/runtime/references/wiring-mastra.md
+  s_d9d0c7c4cf3ac2::t_c774bae36ebe7a 1-70
+.claude/skills/copilotkit/references/runtime/references/wiring-mcp-apps-middleware.md
+  s_d9d0c7c4cf3ac2::t_67fe47a1d0ce17 1-68
+.claude/skills/copilotkit/references/runtime/references/wiring-ms-agent-framework.md
+  s_d9d0c7c4cf3ac2::t_61ba74022c8765 1-41
+.claude/skills/copilotkit/references/runtime/references/wiring-pydantic-ai.md
+  s_d9d0c7c4cf3ac2::t_bddce3388a7d2e 1-45
+.claude/skills/copilotkit/references/runtime/runtime.md
+  s_d9d0c7c4cf3ac2::t_6a7b79925388eb 1-98
+.claude/skills/copilotkit/references/self-update.md
+  s_d9d0c7c4cf3ac2::t_2fc8c1fca25b52 1-46
+.claude/skills/copilotkit/references/setup/assets/express-runtime.ts
+  s_d9d0c7c4cf3ac2::t_661fab39e2168d 1-81
+.claude/skills/copilotkit/references/setup/assets/nextjs-app-router-page.tsx
+  s_d9d0c7c4cf3ac2::t_aefe021700606e 1-27
+.claude/skills/copilotkit/references/setup/assets/nextjs-app-router-route.ts
+  s_d9d0c7c4cf3ac2::t_6da4db8e40c6f5 1-40
+.claude/skills/copilotkit/references/setup/references/framework-detection.md
+  s_d9d0c7c4cf3ac2::t_5a00eea2c66001 1-101
+.claude/skills/copilotkit/references/setup/references/runtime-architecture.md
+  s_d9d0c7c4cf3ac2::t_94a7098a6153b7 1-257
+.claude/skills/copilotkit/references/setup/references/telemetry-setup.md
+  s_d9d0c7c4cf3ac2::t_8f3f45488df8fe 1-68
+.claude/skills/copilotkit/references/setup/setup.md
+  s_d9d0c7c4cf3ac2::t_3592d2aa59c5db 1-424
+.claude/skills/copilotkit/references/setup/sources.md
+  s_d9d0c7c4cf3ac2::t_05ac755a08656b 1-37
+.claude/skills/copilotkit/references/upgrade/ipix-v2-conventions.md
+  s_d9d0c7c4cf3ac2::t_fed2f1746d6bb9 1-60
+.claude/skills/copilotkit/references/upgrade/references/breaking-changes.md
+  s_d9d0c7c4cf3ac2::t_a6617d8530a69a 1-353
+.claude/skills/copilotkit/references/upgrade/references/deprecation-map.md
+  s_d9d0c7c4cf3ac2::t_688d5a286b5d9a 1-114
+.claude/skills/copilotkit/references/upgrade/references/v1-to-v2-migration.md
+  s_d9d0c7c4cf3ac2::t_15218f5501c88c 1-615
+.claude/skills/copilotkit/references/upgrade/sources.md
+  s_d9d0c7c4cf3ac2::t_cadbdaa09e6144 1-41
+.claude/skills/copilotkit/references/upgrade/upgrade.md
+  s_d9d0c7c4cf3ac2::t_a575344d100dd2 1-138
+.claude/skills/design-md
+  s_d9d0c7c4cf3ac2::t_482cf9de0a3264 1
+.claude/skills/design-to-production/SKILL.md
+  s_d9d0c7c4cf3ac2::t_7a5dd1800b23c0 7-10,13,18,20,22,24-38,46,51-56,60-65,69,71,73-84,86-90,93-97,100,104,106,108-112,114-116,118,120,122,124-128,130,132,134,136-143,145,147,149-152,154,158,160-165,168-169,172,175-177,180,182-184,186,188,190,192,196,200-203,205,212-213,217-218,223,227-230,236-256
+.claude/skills/design-to-production/references/dc-html-anatomy.md
+  s_d9d0c7c4cf3ac2::t_25b1b10b3e0db9 1-111
+.claude/skills/design-to-production/references/react-next-parity-rules.md
+  s_d9d0c7c4cf3ac2::t_a304ce679fd6f2 1-147
+.claude/skills/design-to-production/references/report-template.md
+  s_d9d0c7c4cf3ac2::t_b2b65e6186504e 3,8-9,15-16,18-33,39,41-46,48,50-58,60-68,71-75,82-87,89-93,95-99,101,103-105,107
+.claude/skills/design-to-production/references/route-map.md
+  s_d9d0c7c4cf3ac2::t_78a8567a1c956a 3,5,7-8,10-11,13,15-19,21-34,46,50-51,57-59
+.claude/skills/design-to-production/references/screen-checklists.md
+  s_d9d0c7c4cf3ac2::t_5fdd02e7ad9ec2 1-65
+.claude/skills/fashion-production/SKILL.md
+  s_d9d0c7c4cf3ac2::t_709bfeb65f00d2 1-77
+.claude/skills/fashion-production/references/ai-generation/morpheus-fashion-design/morpheus-fashion-design.md
+  s_d9d0c7c4cf3ac2::t_71f6272cea35ed 1-252
+.claude/skills/fashion-production/references/ai-generation/morpheus-fashion-design/scripts/generate.py
+  s_d9d0c7c4cf3ac2::t_78b67f5bca8451 1-275
+.claude/skills/fashion-production/references/capture/amazon-product-photography/amazon-product-photography.md
+  s_d9d0c7c4cf3ac2::t_f7dd0baf556efb 1-64
+.claude/skills/fashion-production/references/capture/lighting-plan-generator/lighting-plan-generator.md
+  s_d9d0c7c4cf3ac2::t_1087b2f80ffa03 1-187
+.claude/skills/fashion-production/references/capture/macro-product-photography/macro-product-photography.md
+  s_d9d0c7c4cf3ac2::t_7ca3ed058852fd 1-271
+.claude/skills/fashion-production/references/capture/product-photography/product-photography.md
+  s_d9d0c7c4cf3ac2::t_86a386c5bd4eb8 1-330
+.claude/skills/fashion-production/references/capture/shopify-product-photography-guide/shopify-product-photography-guide.md
+  s_d9d0c7c4cf3ac2::t_ce7ce2bb2e868c 1-56
+.claude/skills/fashion-production/references/direction/call-sheet-generator/call-sheet-generator.md
+  s_d9d0c7c4cf3ac2::t_8df8dc89d205b4 1-207
+.claude/skills/fashion-production/references/direction/creative-director/creative-director.md
+  s_d9d0c7c4cf3ac2::t_f3b093fba6f2a5 1-34
+.claude/skills/fashion-production/references/direction/shot-list-generator/shot-list-generator.md
+  s_d9d0c7c4cf3ac2::t_ee15cdbf7bf9b7 1-228
+.claude/skills/fashion-production/references/post/asset-triage/asset-triage.md
+  s_d9d0c7c4cf3ac2::t_f2fd03a13591da 1-233
+.claude/skills/fashion-production/references/post/retake-flagging/retake-flagging.md
+  s_d9d0c7c4cf3ac2::t_31229a02d49af3 1-215
+.claude/skills/fashion-production/references/shoot-day/shoot-day-coordinator/shoot-day-coordinator.md
+  s_d9d0c7c4cf3ac2::t_bc935e7d90ab11 1-275
+.claude/skills/fashion-production/references/styling/fashion-model-photography/fashion-model-photography.md
+  s_d9d0c7c4cf3ac2::t_8f9b00ab3cb0b9 1-313
+.claude/skills/fashion-production/references/styling/garment-lifestyle-photography/garment-lifestyle-photography.md
+  s_d9d0c7c4cf3ac2::t_baefee30410477 1-302
+.claude/skills/firecrawl/SKILL.md
+  s_d9d0c7c4cf3ac2::t_6cf668526cca70 1-100
+.claude/skills/firecrawl/references/interact.md
+  s_d9d0c7c4cf3ac2::t_8a59569bec6308 1-32
+.claude/skills/firecrawl/references/onboarding.md
+  s_d9d0c7c4cf3ac2::t_819f161fa02cbd 1-87
+.claude/skills/firecrawl/references/research-index.md
+  s_d9d0c7c4cf3ac2::t_41c292f53a5c9d 1-40
+.claude/skills/firecrawl/references/scrape.md
+  s_d9d0c7c4cf3ac2::t_4d455001b9b702 1-33
+.claude/skills/firecrawl/references/search.md
+  s_d9d0c7c4cf3ac2::t_357f9aa0959a86 1-33
+.claude/skills/frontend-design/SKILL.md
+  s_d9d0c7c4cf3ac2::t_101524544bb83c 1-60
+.claude/skills/frontend-design/references/color/.claude-plugin/plugin.json
+  s_d9d0c7c4cf3ac2::t_c14e6c36db45ac 1-13
+.claude/skills/frontend-design/references/color/agents/palette-generator.md
+  s_d9d0c7c4cf3ac2::t_471d1795ecf4ab 1-198
+.claude/skills/frontend-design/references/color/color-palette.md
+  s_d9d0c7c4cf3ac2::t_1cca64e5ad24c1 1-274
+.claude/skills/frontend-design/references/color/references/contrast-checking.md
+  s_d9d0c7c4cf3ac2::t_cfa80c7807cd97 1-339
+.claude/skills/frontend-design/references/color/references/dark-mode-palette.md
+  s_d9d0c7c4cf3ac2::t_cb7d10b5305f55 1-365
+.claude/skills/frontend-design/references/color/references/semantic-mapping.md
+  s_d9d0c7c4cf3ac2::t_1319229d5a6786 1-304
+.claude/skills/frontend-design/references/color/references/shade-generation.md
+  s_d9d0c7c4cf3ac2::t_e1011b410e16ab 1-239
+.claude/skills/frontend-design/references/color/rules/color-palette.md
+  s_d9d0c7c4cf3ac2::t_192f263d17d013 1-308
+.claude/skills/frontend-design/references/color/templates/tailwind-colors.css
+  s_d9d0c7c4cf3ac2::t_08a919e48cc11f 1-172
+.claude/skills/frontend-design/references/tailwind/tailwind-design-system.md
+  s_d9d0c7c4cf3ac2::t_c860e0f433e591 1-874
+.claude/skills/frontend-design/references/ui-catalog/ui-ux-pro-max.md
+  s_d9d0c7c4cf3ac2::t_5b3eaf8484257d 1-40
+.claude/skills/gemini/SKILL.md
+  s_d9d0c7c4cf3ac2::t_5f306cdd6fb18a 1-237
+.claude/skills/gemini/references/agents.md
+  s_d9d0c7c4cf3ac2::t_fe13cf204ba2a1 1-88
+.claude/skills/gemini/references/batch-api.md
+  s_d9d0c7c4cf3ac2::t_cadfffc67459b4 1-1489
+.claude/skills/gemini/references/caching.md
+  s_d9d0c7c4cf3ac2::t_0599711de96481 1-635
+.claude/skills/gemini/references/code-execution.md
+  s_d9d0c7c4cf3ac2::t_5d958e12345fb8 1-699
+.claude/skills/gemini/references/deep-research.md
+  s_d9d0c7c4cf3ac2::t_1d6c0377b8eaa3 1-1164
+.claude/skills/gemini/references/flex-inference.md
+  s_d9d0c7c4cf3ac2::t_e7ee959c822873 1-642
+.claude/skills/gemini/references/function-calling.md
+  s_d9d0c7c4cf3ac2::t_dc44c02b3e2e92 1-2139
+.claude/skills/gemini/references/gemini-3.md
+  s_d9d0c7c4cf3ac2::t_e70682fb80b8b1 1-996
+.claude/skills/gemini/references/google-search.md
+  s_d9d0c7c4cf3ac2::t_9188c49d9bbbf1 1-254
+.claude/skills/gemini/references/live-api.md
+  s_d9d0c7c4cf3ac2::t_52661236079112 1-105
+.claude/skills/gemini/references/maps-grounding.md
+  s_d9d0c7c4cf3ac2::t_6226d52943b2a8 1-452
+.claude/skills/gemini/references/optimization.md
+  s_d9d0c7c4cf3ac2::t_8f17900a59a198 1-85
+.claude/skills/gemini/references/streaming.md
+  s_d9d0c7c4cf3ac2::t_2ef4220ca0d787 1-1000
+.claude/skills/gemini/references/structured-output.md
+  s_d9d0c7c4cf3ac2::t_08fb67d0333bad 1-967
+.claude/skills/gemini/references/thinking.md
+  s_d9d0c7c4cf3ac2::t_06362af4d2fb85 1-730
+.claude/skills/gemini/references/thought-signatures.md
+  s_d9d0c7c4cf3ac2::t_ded9b780d889be 1-881
+.claude/skills/gemini/references/tool-combination.md
+  s_d9d0c7c4cf3ac2::t_864b322e67bc9d 1-551
+.claude/skills/gemini/references/tools.md
+  s_d9d0c7c4cf3ac2::t_7d6566315afcc2 1-497
+.claude/skills/gemini/references/url-context.md
+  s_d9d0c7c4cf3ac2::t_6f4ec42f565dbe 1-315
+.claude/skills/gemini/references/webhooks.md
+  s_d9d0c7c4cf3ac2::t_5a0d21d942a60b 1-611
+.claude/skills/gen-test/SKILL.md
+  s_d9d0c7c4cf3ac2::t_b6d41b628a5d87 2,4-8,11,13-16,18,20-23,25-31,33,35-39,41,43-50
+.claude/skills/graphify/SKILL.md
+  s_d9d0c7c4cf3ac2::t_6eb2003b1d3b8f 76-80
+.claude/skills/graphify/references/tree.txt
+  s_d9d0c7c4cf3ac2::t_5c1458290fec8d 1-212
+.claude/skills/groq-inference/SKILL.md
+  s_d9d0c7c4cf3ac2::t_34b6e2c8d306e3 1-201
+.claude/skills/groq-inference/config.json
+  s_d9d0c7c4cf3ac2::t_7f56d282455423 1-19
+.claude/skills/groq-inference/reference/api-advanced.md
+  s_d9d0c7c4cf3ac2::t_e5944ee70b2a28 1-106
+.claude/skills/groq-inference/reference/api-reference.md
+  s_d9d0c7c4cf3ac2::t_6cbb5524724e7b 1-2095
+.claude/skills/groq-inference/reference/audio-speech.md
+  s_d9d0c7c4cf3ac2::t_d8d53d60400a04 1-262
+.claude/skills/groq-inference/reference/cost-optimization.md
+  s_d9d0c7c4cf3ac2::t_abc05a55abdf9c 1-208
+.claude/skills/groq-inference/reference/libraries.md
+  s_d9d0c7c4cf3ac2::t_682b16b04de810 1-195
+.claude/skills/groq-inference/reference/mastra.md
+  s_d9d0c7c4cf3ac2::t_a7ddcdadeec017 1-117
+.claude/skills/groq-inference/reference/models-catalog.md
+  s_d9d0c7c4cf3ac2::t_0b39e0f813557c 1-138
+.claude/skills/groq-inference/reference/models.md
+  s_d9d0c7c4cf3ac2::t_ef7d403bd3dc39 1-102
+.claude/skills/groq-inference/reference/production-ready-checklist.md
+  s_d9d0c7c4cf3ac2::t_547d655864f7bb 1-150
+.claude/skills/groq-inference/reference/reasoning-models.md
+  s_d9d0c7c4cf3ac2::t_13edd253575c41 1-144
+.claude/skills/groq-inference/reference/structured-outputs.md
+  s_d9d0c7c4cf3ac2::t_5efd70efaed62d 1-77
+.claude/skills/groq-inference/reference/tool-use-patterns.md
+  s_d9d0c7c4cf3ac2::t_f3de49cd51fbb1 1-211
+.claude/skills/groq-inference/reference/vision-multimodal.md
+  s_d9d0c7c4cf3ac2::t_1987af93b17ea9 1-269
+.claude/skills/groq-inference/templates/groq-client.py
+  s_d9d0c7c4cf3ac2::t_647cd7f88ec8c4 1-226
+.claude/skills/index-skills.md
+  s_d9d0c7c4cf3ac2::t_4af03ce535fcf8 1-227
+.claude/skills/infisical/SKILL.md
+  s_d9d0c7c4cf3ac2::t_fc3fc727f771ae 1-79
+.claude/skills/infisical/references/agent/agent.md
+  s_d9d0c7c4cf3ac2::t_d34f04ccf9e2b6 1-38
+.claude/skills/infisical/references/agent/references/agent-config.md
+  s_d9d0c7c4cf3ac2::t_2442f3d18ed1ca 1-159
+.claude/skills/infisical/references/agent/references/deployment-examples.md
+  s_d9d0c7c4cf3ac2::t_54499cf98a9c36 1-297
+.claude/skills/infisical/references/agent/references/template-functions.md
+  s_d9d0c7c4cf3ac2::t_195452fd3b2679 1-200
+.claude/skills/infisical/references/api/api.md
+  s_d9d0c7c4cf3ac2::t_cd5bf9323ae557 1-136
+.claude/skills/infisical/references/api/references/authentication.md
+  s_d9d0c7c4cf3ac2::t_6fb491c7951257 1-180
+.claude/skills/infisical/references/api/references/pagination-and-rate-limits.md
+  s_d9d0c7c4cf3ac2::t_24fccc0989fc73 1-287
+.claude/skills/infisical/references/api/references/projects-and-identities.md
+  s_d9d0c7c4cf3ac2::t_545a04c81e5d37 1-496
+.claude/skills/infisical/references/api/references/secrets-endpoints.md
+  s_d9d0c7c4cf3ac2::t_22ccc1e7d0ee19 1-338
+.claude/skills/infisical/references/dynamic-secrets/dynamic-secrets.md
+  s_d9d0c7c4cf3ac2::t_e4ccfb1c44601f 1-40
+.claude/skills/infisical/references/dynamic-secrets/references/cloud-iam.md
+  s_d9d0c7c4cf3ac2::t_b90324c51d753a 1-139
+.claude/skills/infisical/references/dynamic-secrets/references/nosql-and-cache.md
+  s_d9d0c7c4cf3ac2::t_b36230848a6c3e 1-123
+.claude/skills/infisical/references/dynamic-secrets/references/overview.md
+  s_d9d0c7c4cf3ac2::t_a2550e02b8b276 1-83
+.claude/skills/infisical/references/dynamic-secrets/references/sql-databases.md
+  s_d9d0c7c4cf3ac2::t_8f554ab31916d8 1-132
+.claude/skills/infisical/references/dynamic-secrets/references/ssh-and-kubernetes.md
+  s_d9d0c7c4cf3ac2::t_964cb397c03c28 1-162
+.claude/skills/infisical/references/secret-syncs/references/aws-gcp-azure.md
+  s_d9d0c7c4cf3ac2::t_86bce72c6820de 1-88
+.claude/skills/infisical/references/secret-syncs/references/github-vercel-cloudflare.md
+  s_d9d0c7c4cf3ac2::t_b8ffa005f5c58f 1-98
+.claude/skills/infisical/references/secret-syncs/references/sync-overview.md
+  s_d9d0c7c4cf3ac2::t_03af6a4489e72c 1-78
+.claude/skills/infisical/references/secret-syncs/references/vault-and-others.md
+  s_d9d0c7c4cf3ac2::t_9a02bbd5e026d5 1-96
+.claude/skills/infisical/references/secret-syncs/secret-syncs.md
+  s_d9d0c7c4cf3ac2::t_3b76736e781019 1-37
+.claude/skills/infisical/references/user-setup-guide/references/cicd-integration.md
+  s_d9d0c7c4cf3ac2::t_35477012de30e4 1-112
+.claude/skills/infisical/references/user-setup-guide/references/cli-setup.md
+  s_d9d0c7c4cf3ac2::t_add77f85b5bdbf 1-177
+.claude/skills/infisical/references/user-setup-guide/references/docker-integration.md
+  s_d9d0c7c4cf3ac2::t_a28dc406297cf8 1-130
+.claude/skills/infisical/references/user-setup-guide/references/kubernetes-operator.md
+  s_d9d0c7c4cf3ac2::t_ba0b009a1e4429 1-238
+.claude/skills/infisical/references/user-setup-guide/references/machine-identity-auth.md
+  s_d9d0c7c4cf3ac2::t_5dc3fd96f858f0 1-150
+.claude/skills/infisical/references/user-setup-guide/references/sdks.md
+  s_d9d0c7c4cf3ac2::t_2606ebc9c3654a 1-242
+.claude/skills/infisical/references/user-setup-guide/user-setup-guide.md
+  s_d9d0c7c4cf3ac2::t_77065c072498d7 1-41
+.claude/skills/ipix-supabase/SKILL.md
+  s_d9d0c7c4cf3ac2::t_7c90b58d71a91d 36,91,114,164,201-202,223
+.claude/skills/ipix-supabase/better-auth.md
+  s_d9d0c7c4cf3ac2::t_7c54413a098671 1-141
+.claude/skills/ipix-supabase/client-and-auth.md
+  s_d9d0c7c4cf3ac2::t_46ed1c34dd5a7c 1-113
+.claude/skills/ipix-supabase/edge-functions.md
+  s_d9d0c7c4cf3ac2::t_6a5e3de12a7678 1-1151
+.claude/skills/ipix-supabase/postgres.md
+  s_d9d0c7c4cf3ac2::t_78bb09803858ef 1-65
+.claude/skills/ipix-supabase/realtime.md
+  s_d9d0c7c4cf3ac2::t_a1b7771ff88b02 1-269
+.claude/skills/ipix-supabase/references/auth/Identities.md
+  s_d9d0c7c4cf3ac2::t_c504987b1a29a2 1-34
+.claude/skills/ipix-supabase/references/auth/architecture.md
+  s_d9d0c7c4cf3ac2::t_67437dfa3322b2 1-67
+.claude/skills/ipix-supabase/references/auth/facebook.md
+  s_d9d0c7c4cf3ac2::t_b2c9c934162327 1-597
+.claude/skills/ipix-supabase/references/auth/google.md
+  s_d9d0c7c4cf3ac2::t_dac7cedc4eb41b 1-993
+.claude/skills/ipix-supabase/references/auth/nextjs.md
+  s_d9d0c7c4cf3ac2::t_002fa6a2f645a0 1-63
+.claude/skills/ipix-supabase/references/auth/sessions.md
+  s_d9d0c7c4cf3ac2::t_85c987b5e72604 1-151
+.claude/skills/ipix-supabase/references/auth/users.md
+  s_d9d0c7c4cf3ac2::t_49a3b1a6d18e06 1-78
+.claude/skills/ipix-supabase/references/cli/cli.md
+  s_d9d0c7c4cf3ac2::t_00c89e80e556b2 1-181
+.claude/skills/ipix-supabase/references/docs/rls-row-level-security.md
+  s_d9d0c7c4cf3ac2::t_517ba4bfc181ad 1-416
+.claude/skills/ipix-supabase/references/docs/testing.md
+  s_d9d0c7c4cf3ac2::t_961703d99a619d 1-57
+".claude/skills/ipix-supabase/references/edge-functions/ routing.md"
+  s_d9d0c7c4cf3ac2::t_8228d55d3ee4c2 1-378
+.claude/skills/ipix-supabase/references/edge-functions/Configuration.md
+  s_d9d0c7c4cf3ac2::t_7985fbda6a7063 1-79
+.claude/skills/ipix-supabase/references/edge-functions/ai-edge-functions.md
+  s_d9d0c7c4cf3ac2::t_831dda4b42ab57 1-47
+.claude/skills/ipix-supabase/references/edge-functions/ai-models.md
+  s_d9d0c7c4cf3ac2::t_a4aac85c355ed3 1-394
+.claude/skills/ipix-supabase/references/edge-functions/architecture.md
+  s_d9d0c7c4cf3ac2::t_1c2b272aec4f2e 1-104
+.claude/skills/ipix-supabase/references/edge-functions/cli.md
+  s_d9d0c7c4cf3ac2::t_ff354cec9aad3d 1-215
+.claude/skills/ipix-supabase/references/edge-functions/custom-routing.md
+  s_d9d0c7c4cf3ac2::t_78f8eb1b89c5a3 1-384
+.claude/skills/ipix-supabase/references/edge-functions/dependencies.md
+  s_d9d0c7c4cf3ac2::t_6ff0761a53886c 1-169
+.claude/skills/ipix-supabase/references/edge-functions/development.md
+  s_d9d0c7c4cf3ac2::t_6fc2b61b38d36b 1-114
+.claude/skills/ipix-supabase/references/edge-functions/edge-functions.md
+  s_d9d0c7c4cf3ac2::t_8adcadfa9b553a 1-422
+.claude/skills/ipix-supabase/references/edge-functions/secrets.md
+  s_d9d0c7c4cf3ac2::t_8fbe60d9359e2d 1-147
+.claude/skills/ipix-supabase/references/edge-functions/testing.md
+  s_d9d0c7c4cf3ac2::t_21650b2e07d49c 1-171
+.claude/skills/ipix-supabase/references/known-issues.md
+  s_d9d0c7c4cf3ac2::t_31217b415ed36b 1-35
+.claude/skills/ipix-supabase/references/migrations/README.md
+  s_d9d0c7c4cf3ac2::t_75aaf1e56753a4 1-11
+.claude/skills/ipix-supabase/references/migrations/scaffold.md
+  s_d9d0c7c4cf3ac2::t_18c16cd1430cbb 1-66
+.claude/skills/ipix-supabase/references/postgres-best-practices.md
+  s_d9d0c7c4cf3ac2::t_d54941ab107f24 1-64
+.claude/skills/ipix-supabase/references/postgres/_contributing.md
+  s_d9d0c7c4cf3ac2::t_5752b8d7da617c 1-177
+.claude/skills/ipix-supabase/references/postgres/_sections.md
+  s_d9d0c7c4cf3ac2::t_fed3ef935796a0 1-46
+.claude/skills/ipix-supabase/references/postgres/_template.md
+  s_d9d0c7c4cf3ac2::t_fc4f15fe440458 1-34
+.claude/skills/ipix-supabase/references/postgres/advanced-full-text-search.md
+  s_d9d0c7c4cf3ac2::t_27ab9cd497739b 1-55
+.claude/skills/ipix-supabase/references/postgres/advanced-jsonb-indexing.md
+  s_d9d0c7c4cf3ac2::t_551919e85683fb 1-49
+.claude/skills/ipix-supabase/references/postgres/conn-idle-timeout.md
+  s_d9d0c7c4cf3ac2::t_20e0903930a9c2 1-46
+.claude/skills/ipix-supabase/references/postgres/conn-limits.md
+  s_d9d0c7c4cf3ac2::t_64a16b912b226f 1-44
+.claude/skills/ipix-supabase/references/postgres/conn-pooling.md
+  s_d9d0c7c4cf3ac2::t_dee5fb1129cb67 1-41
+.claude/skills/ipix-supabase/references/postgres/conn-prepared-statements.md
+  s_d9d0c7c4cf3ac2::t_ce84ec769e9e32 1-46
+.claude/skills/ipix-supabase/references/postgres/data-batch-inserts.md
+  s_d9d0c7c4cf3ac2::t_a223cbc22a4ced 1-54
+.claude/skills/ipix-supabase/references/postgres/data-n-plus-one.md
+  s_d9d0c7c4cf3ac2::t_c7e1121b147dca 1-53
+.claude/skills/ipix-supabase/references/postgres/data-pagination.md
+  s_d9d0c7c4cf3ac2::t_7017a4212e0688 1-50
+.claude/skills/ipix-supabase/references/postgres/data-upsert.md
+  s_d9d0c7c4cf3ac2::t_8f12583ef1a119 1-50
+.claude/skills/ipix-supabase/references/postgres/lock-advisory.md
+  s_d9d0c7c4cf3ac2::t_2dbaf5caae259a 1-56
+.claude/skills/ipix-supabase/references/postgres/lock-deadlock-prevention.md
+  s_d9d0c7c4cf3ac2::t_88478c51e88fe6 1-68
+.claude/skills/ipix-supabase/references/postgres/lock-short-transactions.md
+  s_d9d0c7c4cf3ac2::t_a057673a06a71c 1-50
+.claude/skills/ipix-supabase/references/postgres/lock-skip-locked.md
+  s_d9d0c7c4cf3ac2::t_49c2d88184170b 1-54
+.claude/skills/ipix-supabase/references/postgres/monitor-explain-analyze.md
+  s_d9d0c7c4cf3ac2::t_8def8e04cb5849 1-45
+.claude/skills/ipix-supabase/references/postgres/monitor-pg-stat-statements.md
+  s_d9d0c7c4cf3ac2::t_c4766896b3c463 1-55
+.claude/skills/ipix-supabase/references/postgres/monitor-vacuum-analyze.md
+  s_d9d0c7c4cf3ac2::t_9afba42a5e7b27 1-55
+.claude/skills/ipix-supabase/references/postgres/query-composite-indexes.md
+  s_d9d0c7c4cf3ac2::t_ebe8e8e5568410 1-44
+.claude/skills/ipix-supabase/references/postgres/query-covering-indexes.md
+  s_d9d0c7c4cf3ac2::t_cc3f716f971abc 1-40
+.claude/skills/ipix-supabase/references/postgres/query-index-types.md
+  s_d9d0c7c4cf3ac2::t_5311b9ebe26118 1-48
+.claude/skills/ipix-supabase/references/postgres/query-missing-indexes.md
+  s_d9d0c7c4cf3ac2::t_4492d32ab6a659 1-43
+.claude/skills/ipix-supabase/references/postgres/query-partial-indexes.md
+  s_d9d0c7c4cf3ac2::t_68b2224c20a433 1-45
+.claude/skills/ipix-supabase/references/postgres/schema-constraints.md
+  s_d9d0c7c4cf3ac2::t_31117683b43a7f 1-80
+.claude/skills/ipix-supabase/references/postgres/schema-data-types.md
+  s_d9d0c7c4cf3ac2::t_a85629b8b06e8c 1-46
+.claude/skills/ipix-supabase/references/postgres/schema-foreign-key-indexes.md
+  s_d9d0c7c4cf3ac2::t_41799cd113abe6 1-59
+.claude/skills/ipix-supabase/references/postgres/schema-lowercase-identifiers.md
+  s_d9d0c7c4cf3ac2::t_08e4476882ad3a 1-55
+.claude/skills/ipix-supabase/references/postgres/schema-partitioning.md
+  s_d9d0c7c4cf3ac2::t_e5ec06a0e86b5c 1-55
+.claude/skills/ipix-supabase/references/postgres/schema-primary-keys.md
+  s_d9d0c7c4cf3ac2::t_530b27ec46ec90 1-61
+.claude/skills/ipix-supabase/references/postgres/security-privileges.md
+  s_d9d0c7c4cf3ac2::t_5ae64fb156dd00 1-54
+.claude/skills/ipix-supabase/references/postgres/security-rls-basics.md
+  s_d9d0c7c4cf3ac2::t_b6507afcc4c858 1-50
+.claude/skills/ipix-supabase/references/postgres/security-rls-performance.md
+  s_d9d0c7c4cf3ac2::t_341ff8ee89ee4a 1-57
+.claude/skills/ipix-supabase/references/project-rules/supabase-database-functions.md
+  s_d9d0c7c4cf3ac2::t_65412d5055e73c 1-130
+.claude/skills/ipix-supabase/references/project-rules/supabase-declarative-schema.md
+  s_d9d0c7c4cf3ac2::t_2addf9b5097a6c 1-78
+.claude/skills/ipix-supabase/references/project-rules/supabase-edge-functions.md
+  s_d9d0c7c4cf3ac2::t_ea157b1c31a255 1-110
+.claude/skills/ipix-supabase/references/project-rules/supabase-migrations.md
+  s_d9d0c7c4cf3ac2::t_cedad1cdab1a2b 1-49
+.claude/skills/ipix-supabase/references/project-rules/supabase-patterns.md
+  s_d9d0c7c4cf3ac2::t_c8a254a6243f61 1-50
+.claude/skills/ipix-supabase/references/project-rules/supabase-realtime.md
+  s_d9d0c7c4cf3ac2::t_ad41199ea2d7b2 1-463
+.claude/skills/ipix-supabase/references/project-rules/supabase-rls-policies.md
+  s_d9d0c7c4cf3ac2::t_95b7b558604b78 1-251
+.claude/skills/ipix-supabase/references/project-rules/supabase-sql-style.md
+  s_d9d0c7c4cf3ac2::t_032a6402c6a4a5 1-133
+.claude/skills/ipix-supabase/references/realtime/migration-from-postgres-changes.md
+  s_d9d0c7c4cf3ac2::t_17385a2a407f5f 1-154
+.claude/skills/ipix-supabase/references/realtime/rls-policy-cookbook.md
+  s_d9d0c7c4cf3ac2::t_5c5a1a2bdd9840 1-199
+.claude/skills/ipix-supabase/references/storage/api-cheatsheet.md
+  s_d9d0c7c4cf3ac2::t_8861950ccc6ddb 1-120
+.claude/skills/ipix-supabase/references/storage/rls-policies.md
+  s_d9d0c7c4cf3ac2::t_f9b25b2fd43837 1-138
+.claude/skills/ipix-supabase/references/supabase-core/BEST-PRACTICES.md
+  s_d9d0c7c4cf3ac2::t_216e1a9dbe34ee 1-294
+.claude/skills/ipix-supabase/references/supabase-core/FUNCTIONS.md
+  s_d9d0c7c4cf3ac2::t_ae8e2bf337dec3 1-345
+.claude/skills/ipix-supabase/references/supabase-core/MIGRATIONS.md
+  s_d9d0c7c4cf3ac2::t_c900b1ce29bea2 1-188
+.claude/skills/ipix-supabase/references/supabase-core/RLS-POLICIES.md
+  s_d9d0c7c4cf3ac2::t_e92b4805fbd9c2 1-309
+.claude/skills/ipix-supabase/references/supabase-core/SCHEMA.md
+  s_d9d0c7c4cf3ac2::t_bc2aa7e5945393 1-304
+.claude/skills/ipix-supabase/references/supabase-core/SQL-STYLE.md
+  s_d9d0c7c4cf3ac2::t_9bc3b4912d6d76 1-258
+.claude/skills/ipix-supabase/references/supabase-core/supabase-core.md
+  s_d9d0c7c4cf3ac2::t_26d9d730d8ced6 1-119
+.claude/skills/ipix-supabase/references/supabase/assets/feedback-issue-template.md
+  s_d9d0c7c4cf3ac2::t_8984997db2b145 1-24
+.claude/skills/ipix-supabase/references/supabase/skill-feedback.md
+  s_d9d0c7c4cf3ac2::t_8ef278f3ed9a8f 1-25
+.claude/skills/ipix-supabase/references/tables-overview.md
+  s_d9d0c7c4cf3ac2::t_3b465259a11c94 1-58
+.claude/skills/ipix-supabase/scripts/verify-edge-inventory.sh
+  s_d9d0c7c4cf3ac2::t_6b42ee91cd0492 1-50
+.claude/skills/ipix-supabase/storage.md
+  s_d9d0c7c4cf3ac2::t_a971c30d98d70d 1-308
+.claude/skills/ipix-task-lifecycle/README.md
+  s_d9d0c7c4cf3ac2::t_f4d430e0d722de 1-41
+.claude/skills/ipix-task-lifecycle/SKILL.md
+  s_d9d0c7c4cf3ac2::t_7e73f215463602 1-270
+.claude/skills/ipix-task-lifecycle/evals/optimization/2026-07-01_064105/results.json
+  s_d9d0c7c4cf3ac2::t_7e18b15b1c45f3 1-565
+.claude/skills/ipix-task-lifecycle/evals/optimization/README.md
+  s_d9d0c7c4cf3ac2::t_542d22fecb9611 1-8
+.claude/skills/ipix-task-lifecycle/evals/trigger-eval.json
+  s_d9d0c7c4cf3ac2::t_cdadef5aab60a2 1-22
+.claude/skills/ipix-task-lifecycle/implementation.md
+  s_d9d0c7c4cf3ac2::t_4757064b189166 1-139
+.claude/skills/ipix-task-lifecycle/planning.md
+  s_d9d0c7c4cf3ac2::t_13ccaf178593d3 1-173
+.claude/skills/ipix-task-lifecycle/references/audit-checklist.md
+  s_d9d0c7c4cf3ac2::t_3e9eefb53ff98e 1-203
+.claude/skills/ipix-task-lifecycle/references/feature-design-assistant.md
+  s_d9d0c7c4cf3ac2::t_975ff632363346 1-368
+.claude/skills/ipix-task-lifecycle/references/linear-issue-steps.md
+  s_d9d0c7c4cf3ac2::t_b49bfa1946f274 1-289
+.claude/skills/ipix-task-lifecycle/references/linear-prompt-engineering.md
+  s_d9d0c7c4cf3ac2::t_0afe91b2c357d2 1-220
+.claude/skills/ipix-task-lifecycle/references/linear-spec-template.md
+  s_d9d0c7c4cf3ac2::t_dff374df3924e8 1-210
+.claude/skills/ipix-task-lifecycle/references/mcp-cadence-ipix.md
+  s_d9d0c7c4cf3ac2::t_7d9c124202f445 1-18
+.claude/skills/ipix-task-lifecycle/references/migration-safety.md
+  s_d9d0c7c4cf3ac2::t_1f07a8c1fd1a8e 1-76
+.claude/skills/ipix-task-lifecycle/references/overview.md
+  s_d9d0c7c4cf3ac2::t_5072230e1fcb41 1-62
+.claude/skills/ipix-task-lifecycle/references/per-task-testing.md
+  s_d9d0c7c4cf3ac2::t_a2cf8586bda804 1-122
+.claude/skills/ipix-task-lifecycle/references/prd-template.md
+  s_d9d0c7c4cf3ac2::t_8fdd44d028889d 1-55
+.claude/skills/ipix-task-lifecycle/references/shipping-templates.md
+  s_d9d0c7c4cf3ac2::t_44ba0c2695ed13 1-64
+.claude/skills/ipix-task-lifecycle/references/testing-matrix.md
+  s_d9d0c7c4cf3ac2::t_8f58c3ac161d4c 1-97
+.claude/skills/ipix-task-lifecycle/references/verifier-probes-ipix.md
+  s_d9d0c7c4cf3ac2::t_ba560e7640ade8 1-41
+.claude/skills/ipix-task-lifecycle/research.md
+  s_d9d0c7c4cf3ac2::t_a6b80dc7f57dad 1-111
+.claude/skills/ipix-task-lifecycle/shipping.md
+  s_d9d0c7c4cf3ac2::t_21f5f4a074e8a0 1-124
+.claude/skills/ipix-task-lifecycle/testing.md
+  s_d9d0c7c4cf3ac2::t_1c2092a8ba0405 1-107
+.claude/skills/ipix-wireframe/SKILL.md
+  s_d9d0c7c4cf3ac2::t_23f756b4bfe004 1-53
+.claude/skills/ipix/SKILL.md
+  s_d9d0c7c4cf3ac2::t_ae42abe507d12c 1-68
+.claude/skills/lean/SKILL.md
+  s_d9d0c7c4cf3ac2::t_2d31ede131cae1 1-322
+.claude/skills/lean/references/ci-cache.md
+  s_d9d0c7c4cf3ac2::t_0fd5c3cc414f53 1-128
+.claude/skills/lean/references/claudeignore-patterns.md
+  s_d9d0c7c4cf3ac2::t_406c7bad8ba25f 1-95
+.claude/skills/lean/references/git-fsmonitor.md
+  s_d9d0c7c4cf3ac2::t_76f950e12f992a 1-72
+.claude/skills/lean/references/linux-perf.md
+  s_d9d0c7c4cf3ac2::t_f0492fac6c4903 1-99
+.claude/skills/lean/references/report-template.md
+  s_d9d0c7c4cf3ac2::t_ccb69eccefc473 1-103
+.claude/skills/lean/scripts/audit.sh
+  s_d9d0c7c4cf3ac2::t_a546df2f846c06 1-126
+.claude/skills/linear/SKILL.md
+  s_d9d0c7c4cf3ac2::t_4b039e888db49d 1-153
+.claude/skills/linear/references/README.md
+  s_d9d0c7c4cf3ac2::t_da245cd4d37e1e 1-25
+.claude/skills/linear/references/automation.md
+  s_d9d0c7c4cf3ac2::t_77469f250fbf5f 1-69
+.claude/skills/linear/references/cycles.md
+  s_d9d0c7c4cf3ac2::t_77269b7dd0068b 1-23
+.claude/skills/linear/references/documents.md
+  s_d9d0c7c4cf3ac2::t_f8f213d99cd1bb 1-17
+.claude/skills/linear/references/implementation-workflow.md
+  s_d9d0c7c4cf3ac2::t_4bd6206579cd97 1-96
+.claude/skills/linear/references/ipix.md
+  s_d9d0c7c4cf3ac2::t_f2740f01a98b6e 1-154
+.claude/skills/linear/references/issue-generator.md
+  s_d9d0c7c4cf3ac2::t_574d172d8c7492 1-108
+.claude/skills/linear/references/labels.md
+  s_d9d0c7c4cf3ac2::t_2f802f4c2df772 1-18
+.claude/skills/linear/references/methodology.md
+  s_d9d0c7c4cf3ac2::t_163c52fb207529 1-116
+.claude/skills/linear/references/milestones.md
+  s_d9d0c7c4cf3ac2::t_72df7fac1d06f6 1-20
+.claude/skills/linear/references/operations.md
+  s_d9d0c7c4cf3ac2::t_d680162f57ffdf 1-107
+.claude/skills/linear/references/pm/SKILL.md
+  s_d9d0c7c4cf3ac2::t_4645c3d7a9b622 1-177
+.claude/skills/linear/references/pm/commands/linear-pm.md
+  s_d9d0c7c4cf3ac2::t_e79839e22e0d80 1-5
+.claude/skills/linear/references/pm/hooks/post-execute.cjs
+  s_d9d0c7c4cf3ac2::t_e78008faf912e2 1-14
+.claude/skills/linear/references/pm/hooks/pre-execute.cjs
+  s_d9d0c7c4cf3ac2::t_7211662c8d8cac 1-17
+.claude/skills/linear/references/pm/references/research-requirements.md
+  s_d9d0c7c4cf3ac2::t_7b8f3a88f8baa9 1-17
+.claude/skills/linear/references/pm/rules/linear-pm.md
+  s_d9d0c7c4cf3ac2::t_7297dd2580c51d 1-15
+.claude/skills/linear/references/pm/schemas/input.schema.json
+  s_d9d0c7c4cf3ac2::t_32a888479c038c 1-18
+.claude/skills/linear/references/pm/schemas/output.schema.json
+  s_d9d0c7c4cf3ac2::t_fadb557f595e09 1-14
+.claude/skills/linear/references/pm/scripts/main.cjs
+  s_d9d0c7c4cf3ac2::t_7158a7841a560a 1-43
+.claude/skills/linear/references/pm/templates/implementation-template.md
+  s_d9d0c7c4cf3ac2::t_6e541d028bebc9 1-17
+.claude/skills/linear/references/pr.md
+  s_d9d0c7c4cf3ac2::t_bdbe09b82b5797 1-31
+.claude/skills/linear/references/project-management.md
+  s_d9d0c7c4cf3ac2::t_343bed22e51bfc 1-123
+.claude/skills/linear/references/project-updates.md
+  s_d9d0c7c4cf3ac2::t_06dab5110cfa25 1-29
+.claude/skills/linear/references/projects.md
+  s_d9d0c7c4cf3ac2::t_747d4f9fc0399d 1-30
+.claude/skills/linear/references/roadmaps.md
+  s_d9d0c7c4cf3ac2::t_67ed91a5b1b2cf 1-15
+.claude/skills/linear/references/search.md
+  s_d9d0c7c4cf3ac2::t_ca49ed2edd8a37 1-89
+.claude/skills/linear/references/security.md
+  s_d9d0c7c4cf3ac2::t_9cffd6ec2b2186 1-83
+.claude/skills/linear/references/skill-maintenance.md
+  s_d9d0c7c4cf3ac2::t_65d67e5fbf1109 1-63
+.claude/skills/linear/references/source-map.md
+  s_d9d0c7c4cf3ac2::t_e218d4a7721dcf 1-28
+.claude/skills/linear/references/sprint.md
+  s_d9d0c7c4cf3ac2::t_ead8a15c782177 1-34
+.claude/skills/linear/references/templates.md
+  s_d9d0c7c4cf3ac2::t_ff13a76c011266 1-192
+.claude/skills/linear/references/triage.md
+  s_d9d0c7c4cf3ac2::t_0a6a1fac4f4027 1-14
+.claude/skills/linear/references/workflow.md
+  s_d9d0c7c4cf3ac2::t_bf16d953df7933 1-20
+.claude/skills/mastra/SKILL.md
+  s_d9d0c7c4cf3ac2::t_b087272bf599a3 1-79
+.claude/skills/mastra/evals/evals.json
+  s_d9d0c7c4cf3ac2::t_8e309b7eb43bfe 1-56
+.claude/skills/mastra/links.md
+  s_d9d0c7c4cf3ac2::t_10bbc6e6e54da7 1-800
+.claude/skills/mastra/references/README.md
+  s_d9d0c7c4cf3ac2::t_9d795e75762408 1-50
+.claude/skills/mastra/references/agents-supervisor.md
+  s_d9d0c7c4cf3ac2::t_99d306a9ce06dc 1-385
+.claude/skills/mastra/references/ai-sdk.md
+  s_d9d0c7c4cf3ac2::t_2ccd8747c0b41e 1-149
+.claude/skills/mastra/references/browser.md
+  s_d9d0c7c4cf3ac2::t_1c8d3a0982f39a 1-123
+.claude/skills/mastra/references/common-errors.md
+  s_d9d0c7c4cf3ac2::t_a83dba4876407e 1-560
+.claude/skills/mastra/references/copilotkit.md
+  s_d9d0c7c4cf3ac2::t_a50f7da8ec8155 1-299
+.claude/skills/mastra/references/create-mastra.md
+  s_d9d0c7c4cf3ac2::t_8298101f375b10 1-231
+.claude/skills/mastra/references/display-only.md
+  s_d9d0c7c4cf3ac2::t_b83c64f827535f 1-99
+.claude/skills/mastra/references/embedded-docs.md
+  s_d9d0c7c4cf3ac2::t_c511f3d1cc50d6 1-112
+.claude/skills/mastra/references/examples-v0.md
+  s_d9d0c7c4cf3ac2::t_ec8f7783373f14 1-85
+.claude/skills/mastra/references/full-guide.md
+  s_d9d0c7c4cf3ac2::t_86144044ba3f4c 1-66
+.claude/skills/mastra/references/gemini.md
+  s_d9d0c7c4cf3ac2::t_d428040f92b70f 1-184
+.claude/skills/mastra/references/groq.md
+  s_d9d0c7c4cf3ac2::t_eb637546415080 1-176
+.claude/skills/mastra/references/headless-ui.md
+  s_d9d0c7c4cf3ac2::t_371fe59cc17015 1-176
+.claude/skills/mastra/references/mcp-apps.md
+  s_d9d0c7c4cf3ac2::t_18bd72547c24b3 1-314
+.claude/skills/mastra/references/mcp-docs-lookup.md
+  s_d9d0c7c4cf3ac2::t_eb2fae45148174 1-71
+.claude/skills/mastra/references/mcp.md
+  s_d9d0c7c4cf3ac2::t_f673d7819f99b5 1-432
+.claude/skills/mastra/references/mdeai-concierge.md
+  s_d9d0c7c4cf3ac2::t_ae7b25536d4989 1-86
+.claude/skills/mastra/references/memory.md
+  s_d9d0c7c4cf3ac2::t_e2d95a05fb87b8 1-86
+.claude/skills/mastra/references/migration-guide.md
+  s_d9d0c7c4cf3ac2::t_a8ee105fffeb34 1-189
+.claude/skills/mastra/references/model-providers.md
+  s_d9d0c7c4cf3ac2::t_1aab43e8246abc 1-350
+.claude/skills/mastra/references/multi-agent.md
+  s_d9d0c7c4cf3ac2::t_e57457a008f87b 1-85
+.claude/skills/mastra/references/openai.md
+  s_d9d0c7c4cf3ac2::t_652bcbb552af7f 1-216
+.claude/skills/mastra/references/rag-mastra.md
+  s_d9d0c7c4cf3ac2::t_7a0348bea36bcd 1-82
+.claude/skills/mastra/references/rag-pgvector.md
+  s_d9d0c7c4cf3ac2::t_3f0b11f300d6f9 1-419
+.claude/skills/mastra/references/react.md
+  s_d9d0c7c4cf3ac2::t_455f1d2595c904 1-434
+.claude/skills/mastra/references/remote-docs.md
+  s_d9d0c7c4cf3ac2::t_94a50e8d564bd4 1-202
+.claude/skills/mastra/references/slots.md
+  s_d9d0c7c4cf3ac2::t_aacdbd410f64e2 1-324
+.claude/skills/mastra/references/streaming.md
+  s_d9d0c7c4cf3ac2::t_e4145deab13efb 1-106
+.claude/skills/mastra/references/supabase-auth.md
+  s_d9d0c7c4cf3ac2::t_d90489b4f3d8fc 1-178
+.claude/skills/mastra/references/tools.md
+  s_d9d0c7c4cf3ac2::t_f715e43146e7d5 1-316
+.claude/skills/mastra/references/topic-routing.md
+  s_d9d0c7c4cf3ac2::t_97c6d41916734c 1-92
+.claude/skills/mastra/references/workflows.md
+  s_d9d0c7c4cf3ac2::t_832c9d8dbb4490 1-105
+.claude/skills/mastra/references/workspace-skills.md
+  s_d9d0c7c4cf3ac2::t_848644c4b1b72f 1-206
+.claude/skills/mastra/references/workspace.md
+  s_d9d0c7c4cf3ac2::t_a5f7f31d006660 1-372
+.claude/skills/mastra/scripts/provider-registry.mjs
+  s_d9d0c7c4cf3ac2::t_667a79615a2114 1-180
+.claude/skills/mercur/SKILL.md
+  s_d9d0c7c4cf3ac2::t_73262925b6b934 2
+.claude/skills/mermaid-diagrams/SKILL.md
+  s_d9d0c7c4cf3ac2::t_06e7188051432a 1-55
+.claude/skills/mermaid-diagrams/references/advanced-features.md
+  s_d9d0c7c4cf3ac2::t_ec8d998dcf5836 1-556
+.claude/skills/mermaid-diagrams/references/architecture-diagrams.md
+  s_d9d0c7c4cf3ac2::t_cc0a2e1f163653 1-192
+.claude/skills/mermaid-diagrams/references/block-diagrams.md
+  s_d9d0c7c4cf3ac2::t_e27b3f51e3d72f 1-273
+.claude/skills/mermaid-diagrams/references/c4-diagrams.md
+  s_d9d0c7c4cf3ac2::t_b573b1fc620bb7 1-410
+.claude/skills/mermaid-diagrams/references/class-diagrams.md
+  s_d9d0c7c4cf3ac2::t_f751a1c61ef9ca 1-361
+.claude/skills/mermaid-diagrams/references/erd-diagrams.md
+  s_d9d0c7c4cf3ac2::t_6ea3c5f36ed1f5 1-510
+.claude/skills/mermaid-diagrams/references/fashionos-domain.md
+  s_d9d0c7c4cf3ac2::t_2e22e9abbc498f 1-244
+.claude/skills/mermaid-diagrams/references/flowcharts.md
+  s_d9d0c7c4cf3ac2::t_00e330716f06a6 1-450
+.claude/skills/mermaid-diagrams/references/gantt-charts.md
+  s_d9d0c7c4cf3ac2::t_128579c18676c5 1-242
+.claude/skills/mermaid-diagrams/references/quadrant-charts.md
+  s_d9d0c7c4cf3ac2::t_994340e012d425 1-183
+.claude/skills/mermaid-diagrams/references/requirement-diagrams.md
+  s_d9d0c7c4cf3ac2::t_58f75beaf44711 1-239
+.claude/skills/mermaid-diagrams/references/sequence-diagrams.md
+  s_d9d0c7c4cf3ac2::t_61720a87424dc6 1-394
+.claude/skills/mermaid-diagrams/references/state-diagrams.md
+  s_d9d0c7c4cf3ac2::t_46f39043a1a722 1-230
+.claude/skills/mermaid-diagrams/references/treemap-diagrams.md
+  s_d9d0c7c4cf3ac2::t_ea71adf041edc1 1-171
+.claude/skills/mermaid-diagrams/references/user-journey-diagrams.md
+  s_d9d0c7c4cf3ac2::t_9a3a819b540c03 1-119
+.claude/skills/mermaid-diagrams/references/zenuml-diagrams.md
+  s_d9d0c7c4cf3ac2::t_951a391ce44591 1-210
+.claude/skills/migrate-radix-to-base/SKILL.md
+  s_d9d0c7c4cf3ac2::t_f03b52fc19edd8 1-173
+.claude/skills/migrate-radix-to-base/class-mapping.md
+  s_d9d0c7c4cf3ac2::t_24fc5ed4461059 1-62
+.claude/skills/migrate-radix-to-base/consumer-props.md
+  s_d9d0c7c4cf3ac2::t_e0d3c242d8f192 1-58
+.claude/skills/migrate-radix-to-base/disclosure.md
+  s_d9d0c7c4cf3ac2::t_f8310ce31820e3 1-353
+.claude/skills/migrate-radix-to-base/display-misc.md
+  s_d9d0c7c4cf3ac2::t_1112fde661ea35 1-410
+.claude/skills/migrate-radix-to-base/form-controls.md
+  s_d9d0c7c4cf3ac2::t_e1aa8d428e0247 1-390
+.claude/skills/migrate-radix-to-base/menus.md
+  s_d9d0c7c4cf3ac2::t_2ac25690e48c65 1-409
+.claude/skills/migrate-radix-to-base/overlays.md
+  s_d9d0c7c4cf3ac2::t_92d7c233f076a4 1-459
+.claude/skills/migrate-radix-to-base/universal-patterns.md
+  s_d9d0c7c4cf3ac2::t_7aa0f05e372ba4 1-286
+.claude/skills/migrate-radix-to-base/wrapper-shapes.md
+  s_d9d0c7c4cf3ac2::t_1b1286e12d4c82 1-110
+.claude/skills/mvp/SKILL.md
+  s_d9d0c7c4cf3ac2::t_074058994c0c11 1-24
+.claude/skills/mvp/references/execution.md
+  s_d9d0c7c4cf3ac2::t_9a94cc494d68f2 1-529
+.claude/skills/mvp/references/solopreneur-steps.md
+  s_d9d0c7c4cf3ac2::t_16177338ccc19c 1-196
+.claude/skills/nextjs-16/SKILL.md
+  s_d9d0c7c4cf3ac2::t_5a13d76813b6a3 1-29
+.claude/skills/nextjs-developer/SKILL.md
+  s_d9d0c7c4cf3ac2::t_af269414d03b9b 1-102
+.claude/skills/nextjs-developer/references/app-router.md
+  s_d9d0c7c4cf3ac2::t_7fe16834896746 1-311
+.claude/skills/nextjs-developer/references/data-fetching.md
+  s_d9d0c7c4cf3ac2::t_1d050596bbf1a9 1-482
+.claude/skills/nextjs-developer/references/deployment.md
+  s_d9d0c7c4cf3ac2::t_38b3d57d879ee8 1-545
+.claude/skills/nextjs-developer/references/ipix-16.md
+  s_d9d0c7c4cf3ac2::t_577e7ecae2707c 1-82
+.claude/skills/nextjs-developer/references/server-actions.md
+  s_d9d0c7c4cf3ac2::t_5ff1c0e94c7d1d 1-462
+.claude/skills/nextjs-developer/references/server-components.md
+  s_d9d0c7c4cf3ac2::t_a69c16118edf35 1-384
+.claude/skills/pr-workflow/SKILL.md
+  s_d9d0c7c4cf3ac2::t_76ec7f28a80d86 1-244
+.claude/skills/pr-workflow/evals/evals.json
+  s_d9d0c7c4cf3ac2::t_bc1823a99ecf34 1-120
+.claude/skills/pr-workflow/references/failure-patterns.md
+  s_d9d0c7c4cf3ac2::t_bd71deb8a7ec77 1-31
+.claude/skills/pr-workflow/references/forensic-audit.md
+  s_d9d0c7c4cf3ac2::t_459302f4235419 1-111
+.claude/skills/pr-workflow/references/lessons-learned.md
+  s_d9d0c7c4cf3ac2::t_01e1fe909d65ab 1-58
+.claude/skills/pr-workflow/references/pr-fix-triage.md
+  s_d9d0c7c4cf3ac2::t_79a438c03ac4e6 1-141
+.claude/skills/pr-workflow/references/pr-review-resolve.md
+  s_d9d0c7c4cf3ac2::t_0fa50a912197c1 1-158
+.claude/skills/pr-workflow/references/pr-template.md
+  s_d9d0c7c4cf3ac2::t_734c0b078a585f 1-89
+.claude/skills/pr-workflow/references/pr-triage-checklist.md
+  s_d9d0c7c4cf3ac2::t_140d7c72dc99f0 1-106
+.claude/skills/pr-workflow/references/verify-matrix.md
+  s_d9d0c7c4cf3ac2::t_cc1959b6da1cee 1-57
+.claude/skills/react-patterns/SKILL.md
+  s_d9d0c7c4cf3ac2::t_9ca9c314ebec4b 1-271
+.claude/skills/react-patterns/references/component-patterns.md
+  s_d9d0c7c4cf3ac2::t_84708b65c78942 1-273
+.claude/skills/react-patterns/references/hooks-patterns.md
+  s_d9d0c7c4cf3ac2::t_75b7d9e30b32f4 1-331
+.claude/skills/react-patterns/references/learn.md
+  s_d9d0c7c4cf3ac2::t_86ae93e3ca80cf 1-794
+.claude/skills/react-patterns/references/performance-patterns.md
+  s_d9d0c7c4cf3ac2::t_ecc9811ab1ee88 1-318
+.claude/skills/react-patterns/references/react19-features.md
+  s_d9d0c7c4cf3ac2::t_65095cd4ef5659 1-340
+.claude/skills/react-patterns/references/reference.md
+  s_d9d0c7c4cf3ac2::t_1b8a44b1766142 1-775
+.claude/skills/react-patterns/references/typescript-patterns.md
+  s_d9d0c7c4cf3ac2::t_c452cbc6197d06 1-306
+.claude/skills/refactor-plan/SKILL.md
+  s_d9d0c7c4cf3ac2::t_335cfb3569351c 1-66
+.claude/skills/shadcn/SKILL.md
+  s_d9d0c7c4cf3ac2::t_53884e3d6c9679 1-275
+.claude/skills/shadcn/agents/openai.yml
+  s_d9d0c7c4cf3ac2::t_0ea7c8dd0c47b5 1-5
+.claude/skills/shadcn/cli.md
+  s_d9d0c7c4cf3ac2::t_70649ce08a1dfa 1-290
+.claude/skills/shadcn/customization.md
+  s_d9d0c7c4cf3ac2::t_3aa102603cb551 1-209
+.claude/skills/shadcn/evals/evals.json
+  s_d9d0c7c4cf3ac2::t_de4904408b8835 1-77
+.claude/skills/shadcn/mcp.md
+  s_d9d0c7c4cf3ac2::t_1232f07ecc22bd 1-105
+.claude/skills/shadcn/registry.md
+  s_d9d0c7c4cf3ac2::t_67c9b67d95cff2 1-277
+.claude/skills/shadcn/rules/base-vs-radix.md
+  s_d9d0c7c4cf3ac2::t_5fe10333c9c414 1-306
+.claude/skills/shadcn/rules/chat.md
+  s_d9d0c7c4cf3ac2::t_7487e2e2a89dee 1-224
+.claude/skills/shadcn/rules/composition.md
+  s_d9d0c7c4cf3ac2::t_b517eba9787197 1-201
+.claude/skills/shadcn/rules/forms.md
+  s_d9d0c7c4cf3ac2::t_85a94c0e0da991 1-192
+.claude/skills/shadcn/rules/icons.md
+  s_d9d0c7c4cf3ac2::t_c253ce764ecec0 1-101
+.claude/skills/shadcn/rules/styling.md
+  s_d9d0c7c4cf3ac2::t_17b1440bcfd34b 1-185
+.claude/skills/skill-creator/LICENSE.txt
+  s_d9d0c7c4cf3ac2::t_317f994c3c3f7d 1-202
+.claude/skills/skill-creator/SKILL.md
+  s_d9d0c7c4cf3ac2::t_9f42f1dc1bc001 1-200
+.claude/skills/skill-creator/agents/analyzer.md
+  s_d9d0c7c4cf3ac2::t_b95b19d436604f 1-274
+.claude/skills/skill-creator/agents/comparator.md
+  s_d9d0c7c4cf3ac2::t_e7ce37c13fe092 1-202
+.claude/skills/skill-creator/agents/grader.md
+  s_d9d0c7c4cf3ac2::t_db1856f740d80b 1-223
+.claude/skills/skill-creator/assets/eval_review.html
+  s_d9d0c7c4cf3ac2::t_d55fa4c36e6257 1-146
+.claude/skills/skill-creator/eval-viewer/generate_review.py
+  s_d9d0c7c4cf3ac2::t_d0e75a7a115348 1-471
+.claude/skills/skill-creator/eval-viewer/viewer.html
+  s_d9d0c7c4cf3ac2::t_006ad5bfe3bb36 1-1325
+.claude/skills/skill-creator/references/description-optimization.md
+  s_d9d0c7c4cf3ac2::t_16c9bcebfd7559 1-86
+.claude/skills/skill-creator/references/eval-workflow.md
+  s_d9d0c7c4cf3ac2::t_8d02d8066d362c 1-171
+.claude/skills/skill-creator/references/platform-notes.md
+  s_d9d0c7c4cf3ac2::t_14b3250f81a094 1-39
+.claude/skills/skill-creator/references/schemas.md
+  s_d9d0c7c4cf3ac2::t_3e071b1a75cbae 1-430
+.claude/skills/skill-creator/scripts/aggregate_benchmark.py
+  s_d9d0c7c4cf3ac2::t_10f5b68a87a3a1 1-401
+.claude/skills/skill-creator/scripts/generate_report.py
+  s_d9d0c7c4cf3ac2::t_1d2dcc55d44f61 1-326
+.claude/skills/skill-creator/scripts/improve_description.py
+  s_d9d0c7c4cf3ac2::t_587bf49730b532 1-247
+.claude/skills/skill-creator/scripts/package_skill.py
+  s_d9d0c7c4cf3ac2::t_63adc41e9171a2 1-136
+.claude/skills/skill-creator/scripts/quick_validate.py
+  s_d9d0c7c4cf3ac2::t_39fb0cfc9a2810 1-103
+.claude/skills/skill-creator/scripts/run_eval.py
+  s_d9d0c7c4cf3ac2::t_d8af747fdef4bf 1-310
+.claude/skills/skill-creator/scripts/run_loop.py
+  s_d9d0c7c4cf3ac2::t_98c4e4cb5eb150 1-328
+.claude/skills/skill-creator/scripts/utils.py
+  s_d9d0c7c4cf3ac2::t_5e57c0180747aa 1-47
+.claude/skills/task-verifier/SKILL.md
+  s_d9d0c7c4cf3ac2::t_d8b8404373c7f4 1-212
+.claude/skills/task-verifier/references/agent-cti.md
+  s_d9d0c7c4cf3ac2::t_cc39b3c2b29562 1-45
+.claude/skills/task-verifier/references/agent-events.md
+  s_d9d0c7c4cf3ac2::t_9882e57787b579 1-33
+.claude/skills/task-verifier/references/anti-fake-done-checklist.md
+  s_d9d0c7c4cf3ac2::t_2c7c46b73c4711 1-90
+.claude/skills/task-verifier/references/legacy-mdeai.md
+  s_d9d0c7c4cf3ac2::t_d5d36bc503fe1a 1-38
+.claude/skills/task-verifier/references/mcp-cadence-ipix.md
+  s_d9d0c7c4cf3ac2::t_b81a90b6e51352 1-37
+.claude/skills/task-verifier/references/mcp-cadence.md
+  s_d9d0c7c4cf3ac2::t_4a1105fff97653 1-40
+.claude/skills/task-verifier/references/openclaw-ocl.md
+  s_d9d0c7c4cf3ac2::t_1d00cad99f82e9 1-37
+.claude/skills/task-verifier/references/skills-compliance-ipix.md
+  s_d9d0c7c4cf3ac2::t_675bdb302afd83 1-133
+.claude/skills/task-verifier/references/task-spec-rubric.md
+  s_d9d0c7c4cf3ac2::t_77fcf55b34e0e6 1-95
+.claude/skills/task-verifier/references/task-type-router-ipix.md
+  s_d9d0c7c4cf3ac2::t_07e5eb9893a341 1-61
+.claude/skills/task-verifier/references/verifier-probes-ipix.md
+  s_d9d0c7c4cf3ac2::t_dce742caabd6ae 3-5,18,22,104
+.claude/skills/task-verifier/scripts/probe-disk-ipix.sh
+  s_d9d0c7c4cf3ac2::t_823666f7550446 1-119
+.claude/skills/task-verifier/scripts/probe-disk.sh
+  s_d9d0c7c4cf3ac2::t_0d438e3004d295 1-253
+.claude/skills/vercel-react-best-practices/AGENTS.md
+  s_d9d0c7c4cf3ac2::t_6577528c4a2c9c 1-3810
+.claude/skills/vercel-react-best-practices/README.md
+  s_d9d0c7c4cf3ac2::t_1a36035df55d71 1-123
+.claude/skills/vercel-react-best-practices/SKILL.md
+  s_d9d0c7c4cf3ac2::t_98576d8050bf44 1-153
+.claude/skills/vercel-react-best-practices/metadata.json
+  s_d9d0c7c4cf3ac2::t_d8d51612d5ac51 1-15
+.claude/skills/vercel-react-best-practices/rules/_sections.md
+  s_d9d0c7c4cf3ac2::t_e78b514252a00c 1-46
+.claude/skills/vercel-react-best-practices/rules/_template.md
+  s_d9d0c7c4cf3ac2::t_2929808f63ab97 1-28
+.claude/skills/vercel-react-best-practices/rules/advanced-effect-event-deps.md
+  s_d9d0c7c4cf3ac2::t_bb4921b2d9811d 1-56
+.claude/skills/vercel-react-best-practices/rules/advanced-event-handler-refs.md
+  s_d9d0c7c4cf3ac2::t_bc072f37ab4db3 1-55
+.claude/skills/vercel-react-best-practices/rules/advanced-init-once.md
+  s_d9d0c7c4cf3ac2::t_9f2781bc683084 1-42
+.claude/skills/vercel-react-best-practices/rules/advanced-use-latest.md
+  s_d9d0c7c4cf3ac2::t_44b6ea5ff76ecf 1-39
+.claude/skills/vercel-react-best-practices/rules/async-api-routes.md
+  s_d9d0c7c4cf3ac2::t_91b67c8de9549e 1-38
+.claude/skills/vercel-react-best-practices/rules/async-cheap-condition-before-await.md
+  s_d9d0c7c4cf3ac2::t_8208ac6ed9bf2f 1-37
+.claude/skills/vercel-react-best-practices/rules/async-defer-await.md
+  s_d9d0c7c4cf3ac2::t_fa0ee2812a8cb5 1-82
+.claude/skills/vercel-react-best-practices/rules/async-dependencies.md
+  s_d9d0c7c4cf3ac2::t_3ff57054d098ca 1-51
+.claude/skills/vercel-react-best-practices/rules/async-parallel.md
+  s_d9d0c7c4cf3ac2::t_a4d28a6d9fcceb 1-28
+.claude/skills/vercel-react-best-practices/rules/async-suspense-boundaries.md
+  s_d9d0c7c4cf3ac2::t_8eea187730542f 1-99
+.claude/skills/vercel-react-best-practices/rules/bundle-analyzable-paths.md
+  s_d9d0c7c4cf3ac2::t_fd7fa1121c1d52 1-63
+.claude/skills/vercel-react-best-practices/rules/bundle-barrel-imports.md
+  s_d9d0c7c4cf3ac2::t_caba484d24f81e 1-60
+.claude/skills/vercel-react-best-practices/rules/bundle-conditional.md
+  s_d9d0c7c4cf3ac2::t_785cd38852496d 1-31
+.claude/skills/vercel-react-best-practices/rules/bundle-defer-third-party.md
+  s_d9d0c7c4cf3ac2::t_9f06eb660d3f74 1-49
+.claude/skills/vercel-react-best-practices/rules/bundle-dynamic-imports.md
+  s_d9d0c7c4cf3ac2::t_be3b236a2f1066 1-35
+.claude/skills/vercel-react-best-practices/rules/bundle-preload.md
+  s_d9d0c7c4cf3ac2::t_c7b9cb52600f06 1-50
+.claude/skills/vercel-react-best-practices/rules/client-event-listeners.md
+  s_d9d0c7c4cf3ac2::t_4bf9736f45024e 1-74
+.claude/skills/vercel-react-best-practices/rules/client-localstorage-schema.md
+  s_d9d0c7c4cf3ac2::t_5b4dc98ed32781 1-71
+.claude/skills/vercel-react-best-practices/rules/client-passive-event-listeners.md
+  s_d9d0c7c4cf3ac2::t_59f9a60b5de407 1-48
+.claude/skills/vercel-react-best-practices/rules/client-swr-dedup.md
+  s_d9d0c7c4cf3ac2::t_705ad0b0e7a4dd 1-56
+.claude/skills/vercel-react-best-practices/rules/js-batch-dom-css.md
+  s_d9d0c7c4cf3ac2::t_03290020e95eea 1-107
+.claude/skills/vercel-react-best-practices/rules/js-cache-function-results.md
+  s_d9d0c7c4cf3ac2::t_2dfed22722865b 1-80
+.claude/skills/vercel-react-best-practices/rules/js-cache-property-access.md
+  s_d9d0c7c4cf3ac2::t_22fa7cd70eb01b 1-28
+.claude/skills/vercel-react-best-practices/rules/js-cache-storage.md
+  s_d9d0c7c4cf3ac2::t_93584adfa37867 1-70
+.claude/skills/vercel-react-best-practices/rules/js-combine-iterations.md
+  s_d9d0c7c4cf3ac2::t_f5f3c0f6c3a812 1-32
+.claude/skills/vercel-react-best-practices/rules/js-early-exit.md
+  s_d9d0c7c4cf3ac2::t_e8ce34be190bec 1-50
+.claude/skills/vercel-react-best-practices/rules/js-flatmap-filter.md
+  s_d9d0c7c4cf3ac2::t_679ca37604b115 1-60
+.claude/skills/vercel-react-best-practices/rules/js-hoist-regexp.md
+  s_d9d0c7c4cf3ac2::t_4a46babbc7953a 1-45
+.claude/skills/vercel-react-best-practices/rules/js-index-maps.md
+  s_d9d0c7c4cf3ac2::t_fc021d736c4137 1-37
+.claude/skills/vercel-react-best-practices/rules/js-length-check-first.md
+  s_d9d0c7c4cf3ac2::t_e64d6189b58229 1-49
+.claude/skills/vercel-react-best-practices/rules/js-min-max-loop.md
+  s_d9d0c7c4cf3ac2::t_c521397b022352 1-82
+.claude/skills/vercel-react-best-practices/rules/js-request-idle-callback.md
+  s_d9d0c7c4cf3ac2::t_c2db63ebb14d00 1-105
+.claude/skills/vercel-react-best-practices/rules/js-set-map-lookups.md
+  s_d9d0c7c4cf3ac2::t_ea3434d22cf913 1-24
+.claude/skills/vercel-react-best-practices/rules/js-tosorted-immutable.md
+  s_d9d0c7c4cf3ac2::t_598347524c377c 1-57
+.claude/skills/vercel-react-best-practices/rules/rendering-activity.md
+  s_d9d0c7c4cf3ac2::t_d66563e20cb171 1-26
+.claude/skills/vercel-react-best-practices/rules/rendering-animate-svg-wrapper.md
+  s_d9d0c7c4cf3ac2::t_00c71c55e165e4 1-47
+.claude/skills/vercel-react-best-practices/rules/rendering-conditional-render.md
+  s_d9d0c7c4cf3ac2::t_29b30c084b093d 1-40
+.claude/skills/vercel-react-best-practices/rules/rendering-content-visibility.md
+  s_d9d0c7c4cf3ac2::t_5f33c8fc8c51df 1-38
+.claude/skills/vercel-react-best-practices/rules/rendering-hoist-jsx.md
+  s_d9d0c7c4cf3ac2::t_039dde622a9537 1-46
+.claude/skills/vercel-react-best-practices/rules/rendering-hydration-no-flicker.md
+  s_d9d0c7c4cf3ac2::t_2b3e76b4b8afd3 1-82
+.claude/skills/vercel-react-best-practices/rules/rendering-hydration-suppress-warning.md
+  s_d9d0c7c4cf3ac2::t_8c45e6f0ed4261 1-30
+.claude/skills/vercel-react-best-practices/rules/rendering-resource-hints.md
+  s_d9d0c7c4cf3ac2::t_199178f7ed542f 1-85
+.claude/skills/vercel-react-best-practices/rules/rendering-script-defer-async.md
+  s_d9d0c7c4cf3ac2::t_52bdd442b7419b 1-68
+.claude/skills/vercel-react-best-practices/rules/rendering-svg-precision.md
+  s_d9d0c7c4cf3ac2::t_4f039e689f54e5 1-28
+.claude/skills/vercel-react-best-practices/rules/rendering-usetransition-loading.md
+  s_d9d0c7c4cf3ac2::t_550774c5fbe005 1-75
+.claude/skills/vercel-react-best-practices/rules/rerender-defer-reads.md
+  s_d9d0c7c4cf3ac2::t_0cc12c38db7117 1-39
+.claude/skills/vercel-react-best-practices/rules/rerender-dependencies.md
+  s_d9d0c7c4cf3ac2::t_d37537970b8dea 1-45
+.claude/skills/vercel-react-best-practices/rules/rerender-derived-state-no-effect.md
+  s_d9d0c7c4cf3ac2::t_8b7d932db82f6a 1-40
+.claude/skills/vercel-react-best-practices/rules/rerender-derived-state.md
+  s_d9d0c7c4cf3ac2::t_6b5b6f5bb0ea40 1-29
+.claude/skills/vercel-react-best-practices/rules/rerender-functional-setstate.md
+  s_d9d0c7c4cf3ac2::t_5242d3e3fe7d25 1-74
+.claude/skills/vercel-react-best-practices/rules/rerender-lazy-state-init.md
+  s_d9d0c7c4cf3ac2::t_668098206e2385 1-58
+.claude/skills/vercel-react-best-practices/rules/rerender-memo-with-default-value.md
+  s_d9d0c7c4cf3ac2::t_9d1ac4fc7b26c6 1-38
+.claude/skills/vercel-react-best-practices/rules/rerender-memo.md
+  s_d9d0c7c4cf3ac2::t_bbd3c45cdcce67 1-44
+.claude/skills/vercel-react-best-practices/rules/rerender-move-effect-to-event.md
+  s_d9d0c7c4cf3ac2::t_d54c44d4eb840f 1-45
+.claude/skills/vercel-react-best-practices/rules/rerender-no-inline-components.md
+  s_d9d0c7c4cf3ac2::t_7bc6ae8a238de9 1-82
+.claude/skills/vercel-react-best-practices/rules/rerender-simple-expression-in-memo.md
+  s_d9d0c7c4cf3ac2::t_9f54015de90632 1-35
+.claude/skills/vercel-react-best-practices/rules/rerender-split-combined-hooks.md
+  s_d9d0c7c4cf3ac2::t_546c44527c4d27 1-64
+.claude/skills/vercel-react-best-practices/rules/rerender-transitions.md
+  s_d9d0c7c4cf3ac2::t_a48a9f27a5b15c 1-40
+.claude/skills/vercel-react-best-practices/rules/rerender-use-deferred-value.md
+  s_d9d0c7c4cf3ac2::t_1f7dff6b101327 1-59
+.claude/skills/vercel-react-best-practices/rules/rerender-use-ref-transient-values.md
+  s_d9d0c7c4cf3ac2::t_abd5a390fc5c5f 1-73
+.claude/skills/vercel-react-best-practices/rules/server-after-nonblocking.md
+  s_d9d0c7c4cf3ac2::t_f19a69d7bc5791 1-73
+.claude/skills/vercel-react-best-practices/rules/server-auth-actions.md
+  s_d9d0c7c4cf3ac2::t_54adcd2a9c6f71 1-96
+.claude/skills/vercel-react-best-practices/rules/server-cache-lru.md
+  s_d9d0c7c4cf3ac2::t_af1cf8103bc9da 1-41
+.claude/skills/vercel-react-best-practices/rules/server-cache-react.md
+  s_d9d0c7c4cf3ac2::t_552c7f138b9be1 1-76
+.claude/skills/vercel-react-best-practices/rules/server-dedup-props.md
+  s_d9d0c7c4cf3ac2::t_a409564df14963 1-65
+.claude/skills/vercel-react-best-practices/rules/server-hoist-static-io.md
+  s_d9d0c7c4cf3ac2::t_0cfcc4fc4a1945 1-149
+.claude/skills/vercel-react-best-practices/rules/server-no-shared-module-state.md
+  s_d9d0c7c4cf3ac2::t_196dcc1e94e0d6 1-50
+.claude/skills/vercel-react-best-practices/rules/server-parallel-fetching.md
+  s_d9d0c7c4cf3ac2::t_0480af00498bf5 1-83
+.claude/skills/vercel-react-best-practices/rules/server-parallel-nested-fetching.md
+  s_d9d0c7c4cf3ac2::t_4b1d02a0621299 1-34
+.claude/skills/vercel-react-best-practices/rules/server-serialization.md
+  s_d9d0c7c4cf3ac2::t_4d3fde6cdf5f70 1-38
+.claude/skills/worktrees/SKILL.md
+  s_d9d0c7c4cf3ac2::t_eb6e6a6362b431 1-254
+.claude/skills/worktrees/references/compare-merge.md
+  s_d9d0c7c4cf3ac2::t_18b1f1d4b769d0 1-108
+.claude/skills/worktrees/references/git-commands.md
+  s_d9d0c7c4cf3ac2::t_d322762a1da5cf 1-156
+.claude/skills/worktrees/references/ipix-ops.md
+  s_d9d0c7c4cf3ac2::t_ec63338bd63c49 1-86
+.claude/skills/writing-plans/SKILL.md
+  s_d9d0c7c4cf3ac2::t_a2dd7516e17abf 1-121
+.claude/skills/writing-plans/references/spec-rules.md
+  s_d9d0c7c4cf3ac2::t_dae8a71edf8cc1 1-82
+.gitignore
+  s_d9d0c7c4cf3ac2::t_c67bcd8a1d9039 53,56
+.worktreeinclude
+  s_d9d0c7c4cf3ac2::t_57b8f260e47978 1-4
+index-skills.md
+  s_d9d0c7c4cf3ac2::t_5bfacd3fd3b1ff 1-227
+tasks/intelligence/ai/skill-map.md
+  s_d9d0c7c4cf3ac2::t_956122a46d2c03 3-4,24-29,33,41,58-64,106-122
+tasks/skills/jul-6-task-verifier.md
+  s_d9d0c7c4cf3ac2::t_3a9fc7886ded10 1-176
+tasks/skills/jul6-audit.md
+  s_d9d0c7c4cf3ac2::t_25799a0faee08b 1-76
+tasks/skills/jul6-worktrees-audit.md
+  s_d9d0c7c4cf3ac2::t_7b60716ae715e1 1-136
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "53b9823b2a88de641fa3524c0bc1bd8a499dffea",
+  "prompts": {},
+  "sessions": {
+    "s_d9d0c7c4cf3ac2": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "eeffd79c-d406-494a-9897-946a382da6fc",
+        "model": "composer-2.5"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
