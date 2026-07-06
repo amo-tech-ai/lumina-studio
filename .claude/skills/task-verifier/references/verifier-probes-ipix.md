@@ -1,6 +1,8 @@
 # iPix verifier probes
 
-**Companion:** [mcp-cadence-ipix.md](./mcp-cadence-ipix.md) · `.claude/skills/task-verifier/SKILL.md`
+**Companion:** [mcp-cadence-ipix.md](./mcp-cadence-ipix.md) · [skills-compliance-ipix.md](./skills-compliance-ipix.md) · `.claude/skills/task-verifier/SKILL.md`
+
+**Script:** `bash .claude/skills/task-verifier/scripts/probe-disk-ipix.sh [app|supabase|skills|git]`
 
 ## Universal (every ship)
 
@@ -13,11 +15,11 @@
 | RLS | `infisical run -- npm run supabase:verify-rls` | all checks when DB touched |
 | Client env | `npm run check:env` | exit 0 (Vite `src/` only) |
 | No Gemini in client | `rg 'GEMINI_API_KEY|VITE_GEMINI' app/ src/` | no matches |
-| Edge inventory | `ls supabase/functions/*/index.ts` | matches [edge-functions-inventory.md](../../ipix-supabase/references/edge-functions-inventory.md) |
+| Edge inventory | `ls supabase/functions/*/index.ts` | matches [edge-functions-inventory.md](../../ipix-supabase/references/edge-functions/edge-functions-inventory.md) |
 
 ## IPI-126 / BI-OPS-002 (migration push gate)
 
-Linear [IPI-126](https://linear.app/amo100/issue/IPI-126) · spec [`IPI-49-IPI-BI-OPS-002.md`](../../../docs/linear/issues/IPI-49-IPI-BI-OPS-002.md)
+Linear [IPI-126](https://linear.app/amo100/issue/IPI-126) · tracker [`docs/linear/issues/README.md`](../../../docs/linear/issues/README.md)
 
 | Probe | Command / check | Pass |
 |-------|-----------------|------|
@@ -99,7 +101,7 @@ Linear [IPI-24](https://linear.app/amo100/issue/IPI-24) · spec [`IPI-24-IPI-BI-
 | Layer | Default | Notes |
 |-------|---------|-------|
 | **As-built edge** | `gemini-2.5-flash` | `brand-intelligence/index.ts` |
-| **Target (AI-018)** | `gemini-3.5-flash` | `docs/gemeni/gemeni-plan.md` |
+| **Target (AI-018)** | `gemini-3.5-flash` | [`tasks/intelligence/plans/gemini-plan.md`](../../../tasks/intelligence/plans/gemini-plan.md) |
 | **Mastra agent server** | `google/gemini-3.5-flash` | Verify provider registry at AIOR-001 |
 
 ## Dashboard / UI probes (operator app)

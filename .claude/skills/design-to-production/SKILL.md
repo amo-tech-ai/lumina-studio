@@ -4,23 +4,38 @@ description: >
   Convert Claude Design HTML (*.v2.image-first.dc.html) into production Next.js React
   screens with verified visual parity. Use whenever the user says "design to production",
   "DC parity", "convert HTML to React", "match the design file", "image-first parity",
-  references Universal design prompt/*.dc.html, or asks to port Command Center / Brand List /
-  Brand Detail (or any *.dc.html screen) into app/. Also use before merging design parity PRs,
-  when comparing prototype HTML to /app/* routes, or when creating workspace components from
-  Claude Design exports. HTML design wins for layout; React wins for data/auth/shell. Does NOT
+  references Universal design prompt/*.dc.html (including Shoots List), or asks to port
+  Command Center / Brand List / Brand Detail / Shoots List into app/. Load before line 1
+  on any DESIGN-* UI task. HTML design wins for layout; React wins for data/auth/shell.
+  Enforces RSC + CSS modules + tokens + state parity + side-by-side verification. Does NOT
   replace claude-design-handoff for full program planning — use this skill for execute-and-verify
   on a single screen or small route bundle.
+version: "2.0.0"
 ---
 
 # design-to-production — HTML design → React parity
 
-**Workflow:** `HTML design file → audit current React → minimal production files → verify visual parity`
+**Workflow:** `Phase 0 gates → read DC HTML → audit React → minimal files → side-by-side verify → report`
 
-**Design SSOT:** `/home/sk/ipix/Universal design prompt/` — **must use the actual `.dc.html` files**; production must match them for layout, spacing, cards, panels, typography, image ratios, buttons, and responsive behavior.
+**Design SSOT:** `Universal design prompt/*.v2.image-first.dc.html` — layout, spacing, cards, image ratios, states, responsive behavior.
 
-**Production app:** `app/` (Next.js 16) · routes under `/app/*` · legacy Vite `src/` is retired — do not port there.
+**Production:** `app/` (Next.js 16) · `/app/*` · legacy Vite `src/` retired.
 
-**Related skills:** `claude-design-handoff` (full handoff program) · `frontend-design` · `task-verifier` (gate before Done) · `pr-workflow` (one concern per PR)
+---
+
+## Load before line 1 (mandatory stack)
+
+| Order | Skill / doc | Purpose |
+|-------|-------------|---------|
+| 1 | **`design-md`** | Tokens, 3-panel contract, HITL |
+| 2 | **This skill** | DC → React execution |
+| 3 | [`dc-html-anatomy.md`](references/dc-html-anatomy.md) | Parse Workspace zones + states |
+| 4 | [`react-next-parity-rules.md`](references/react-next-parity-rules.md) | RSC, CSS modules, no hex |
+| 5 | [`screen-checklists.md`](references/screen-checklists.md) | Per-screen dimensions |
+| 6 | **`vercel-react-best-practices`** | Search/filter performance |
+| 7 | **`task-verifier`** | Phase 2 readiness + Done gate |
+
+Shoot domain: also [`shoot/lessons-from-brand-parity.md`](../../../tasks/design-docs/shoot/lessons-from-brand-parity.md) · [`production-readiness.md`](../../../tasks/design-docs/shoot/production-readiness.md).
 
 ---
 
@@ -28,49 +43,77 @@ description: >
 
 | Layer | Wins for |
 |-------|----------|
-| **HTML `.dc.html`** | Visual layout, spacing, card structure, image-first ratios, chip rows, workspace column width, empty/loading/error **presentation** |
+| **HTML `.dc.html`** | Visual layout, spacing, card structure, image-first ratios, chip rows, workspace width, empty/loading/error **presentation** |
 | **React `app/`** | Live data, routing, auth, Supabase, CopilotKit, Mastra, APIs, business logic |
 
 **Do not:**
 
-- Rebuild **OperatorPanel**, **NavSidebar**, **IntelligencePanel**, **PersistentChatDock**, CopilotKit provider, or Supabase clients
-- Invent new architecture, routes, or agent wiring
-- Copy prototype-only JS (DC `STATE` switchers, demo fixtures, bulk-select demos unless product asks)
-- Mix design parity with infra fixes, migrations, or unrelated refactors in one PR
-- Ship without lint · test · typecheck · build · browser evidence
+- Rebuild **OperatorPanel**, **NavSidebar**, **IntelligencePanel**, **PersistentChatDock**
+- Use `min-h-screen`, `#FBF8F5`, `#E87C4D`, or other legacy Vite hex in workspace
+- Whole-page `'use client'` + `useEffect` fetch when RSC + `loading.tsx` suffices
+- Invent fake DNA scores, history, or counts when API null
+- Copy DC `Inter` font or `:root` wholesale — map to `tokens.css`
+- Mix parity with migrations/infra in one PR
 
 **Do:**
 
-- Prefer **existing** production components; extend before creating
-- Create **local** workspace components under `app/src/components/<feature>/`
-- Use **`app/src/styles/tokens.css`** + **CSS modules** (`*.module.css`) — no hardcoded legacy orange hex
-- Keep PRs **small** (target ≤500 LOC); one screen bundle or one concern per PR
-- Capture **before/after screenshots**; mark unmatched items as **known gaps**
-- Work on branch `ipi/<issue>-<slug>` via worktree per `CLAUDE.md`
+- Parity = **`main[data-screen-label="Workspace"]`** column only
+- **RSC page** + **client workspace** + **`loading.tsx`** skeleton matching DC
+- **CSS modules** + **`app/src/styles/tokens.css`**
+- **Production state table** + **data-source table** in issue md before code
+- Side-by-side screenshots DC `:8765` vs React `:3002`
+- Branch `ipi/<issue>-<slug>` via worktree
 
 ---
 
-## Route mapping (P0)
+## Regression guardrails (IPI-383/372 lessons — do not repeat)
 
-Read full map: [`references/route-map.md`](references/route-map.md)
+Folded from `tasks/design-docs/audit/checklist.md`. These are the exact mistakes that cost review cycles — each is now a hard step, not advice.
 
-| HTML file | React route |
-|-----------|-------------|
-| `Command Center.v2.image-first.dc.html` | `/app` |
-| `Brand List.v2.image-first.dc.html` | `/app/brand` |
-| `Brand Detail.v2.image-first.dc.html` | `/app/brand/[id]` |
-| `Shoots List.v2.image-first.dc.html` | `/app/shoots` |
+| # | Trap | Guardrail |
+|---|------|-----------|
+| 1 | Edit/Write before reading the file's exact path | `Read` (after `graphify query`) every file before editing. Never assume a path. |
+| 2 | Ran `tsc`/tests before deps installed in a fresh worktree | First worktree command is `npm ci`. Baseline-green before writing code. |
+| 3 | Stale worktree — local branch behind remote; a commit would revert shipped work | Before editing: `git fetch && git status` vs `origin/<branch>` + `gh pr list --head <branch>`. Reset/rebase to remote first. |
+| 4 | Crammed all detail into `aria-label`, overriding visible text | Concise `aria-label` (accessible name) + `aria-describedby` → `className="sr-only"` summary. Never one giant label. |
+| 5 | Brittle exact-string name assertions broke on copy tweaks | Assert accessible names by prefix regex (`/^Select …/`), not `===`. |
+| 6 | `<Link>` to current route as "retry" — silent no-op | Retry re-runs the server fetch: `"use client"` + `useRouter().refresh()`. Mock `next/navigation` in tests. |
+| 7 | Test mocked only own CSS module, not shared base module | Mock **every** `*.module.css` the tree imports with the Proxy stub. |
+| 8 | Panel/dock preview test asserted on a published node never rendered | Render provider + a `DetailSink` that renders `detail` (copy `shoots-list-workspace.test.tsx`). |
+| 9 | Read exit code `0` from a piped test run that had failed | Read actual test output, not just tail/exit-code notification. |
+| 10 | Over-scoped to the whole DC file (extra steps/flows) | Honor the decision of record (e.g. IPI-252: 6 steps ship, not 10). Build only in-scope nodes; mark the rest ➖ deferred with its issue. |
 
-**Page entrypoints:**
+---
+
+## Phase 0 — gates (before Discover)
+
+Run from [`improve.md`](../../../tasks/design-docs/improve.md) + brand parity lessons:
 
 ```text
-app/src/app/(operator)/app/page.tsx
-app/src/app/(operator)/app/brand/page.tsx
-app/src/app/(operator)/app/brand/[id]/page.tsx
-app/src/app/(operator)/app/shoots/page.tsx
+[ ] Read target *.dc.html + screen checklist row
+[ ] Production state table — shell/route/API exists on disk?
+[ ] Data-source table — Supabase MCP probe for list/tab columns
+[ ] Negative AC — no fake fallbacks documented
+[ ] @task-verifier readiness — fix 🔴 spec gaps before coding
 ```
 
-**Shell is already wired** via `(operator)/layout.tsx` + `OperatorPanel`. Parity = **center workspace column** only.
+**Shoots List example:** `Shoots List.v2.image-first.dc.html` requires 920px workspace, 3-col grid, 5 distinct states — current `/app/shoots/page.tsx` fails layout + tokens + architecture (see audit `tasks/design-docs/audit/05-skills-improve.md`).
+
+---
+
+## Route mapping
+
+Full map: [`references/route-map.md`](references/route-map.md)
+
+| Priority | HTML | Route | Linear |
+|----------|------|-------|--------|
+| P0 | Command Center · Brand List · Brand Detail | `/app` · `/app/brand` · `/app/brand/[id]` | IPI-271/272 |
+| **P1** | **`Shoots List.v2.image-first.dc.html`** | **`/app/shoots`** | **IPI-273** |
+| P1+ | Shoot Detail · Wizard · Assets · … | `/app/shoots/[id]` · `/app/shoots/new` · … | IPI-274+ |
+
+**Conversion plans (shoot family):**
+- Shoots List → `tasks/design-docs/shoot/PLAN/shoots-list-dc-conversion.md` — 14 parity dimensions; Phase 7 must be >0% before Done.
+- Shoot Wizard → `tasks/design-docs/shoot/PLAN/shoot-wizard-dc-conversion.md` — **scope-locked to 6 steps (IPI-274)**; DC's extra 4 steps + booking flow are deferred (IPI-252 / IPI-340-342). Folds the IPI-383 regression guardrails into §0.1.
 
 ---
 
@@ -78,159 +121,136 @@ app/src/app/(operator)/app/shoots/page.tsx
 
 ### 1. Discover
 
-1. Read the target **`*.v2.image-first.dc.html`** in full (inline CSS + structure + dc-imports).
-2. List **dc-import** components referenced; open matching files under `Universal design prompt/components/*.dc.html` only when the screen imports them.
-3. Read production **page.tsx** + workspace components (grep `app/src/components/` for route name).
-4. Read [`design.md`](../../../design.md) § layout + [`tasks/plan/todo.md`](../../../tasks/plan/todo.md) for tracker status.
-5. Check **current verified parity %** for this screen in [`tasks/design-docs/progess.md`](../../../tasks/design-docs/progess.md) — don't assume "shell already wired, workspace column only" is the actual starting point; some screens (e.g. Brand List) are still a plain list, not a grid, and score well under 50% (wrong-layout-paradigm territory per the scoring guide below). **Caveat:** most of `tasks/design-docs/` is untracked/uncommitted on `main` — run `git status --short tasks/design-docs/` first; a fresh worktree from `origin/main` may not have this file at all. Don't block on a doc that was never committed.
-6. Note existing QA: `tasks/design-docs/implementation/brand/parity-audit.md`, PR #181 checklist if present.
-7. Check for collisions: `git worktree list` and `gh pr list --state open` for branches/PRs already targeting this route (this repo regularly has parallel in-flight work, e.g. `ipi/272-brand-list-dc-parity`, draft PR #181). Flag overlap to the user before starting rather than duplicating or conflicting with it.
-8. Check for **stale/canceled plan docs** tied to abandoned branches (e.g. a `*-dc-conversion.md` left over from a canceled Linear issue/closed PR) — a plan doc existing doesn't mean it's current; cross-check its branch/PR is still open before trusting it.
+1. Read target **`*.v2.image-first.dc.html`** — grep `data-screen-label`, `max-width`, `grid-template-columns`, `sc-if` state flags ([dc-html-anatomy.md](references/dc-html-anatomy.md)).
+2. Open `dc-import` components under `Universal design prompt/components/`.
+3. Grep production route + `app/src/components/<feature>/`.
+4. Fill **production state table** — what exists vs what this PR changes.
+5. Read screen row in [`screen-checklists.md`](references/screen-checklists.md).
 
-**Output:** file list (HTML sources, React targets, reusable components) + any collision warning.
+**Output:** HTML zones table + file touch list (3–8 paths).
 
 ### 2. Audit
 
-Open HTML and React **side by side** (DC server `:8765` optional — see route-map).
+Side-by-side: DC server optional `:8765` vs `:3002`.
 
-Build a **mismatch table**:
+| Area | DC | React | Action |
+|------|----|----|--------|
+| Workspace width | e.g. 920px | | fix module |
+| Grid cols / gap | e.g. 3 × 20px | | |
+| States | loading/empty/error/no-match/grid | | each distinct |
+| Tokens | `#111` action | legacy orange? | 🟢/🔴 |
+| Architecture | N/A | RSC vs client page | |
+| Mobile @1024 | tab bar / sheet | shell OK? | |
 
-| Area | DC (HTML) | React (today) | Action |
-|------|-----------|---------------|--------|
-| Workspace width / padding | | | reuse / fix CSS |
-| Header / greeting | | | |
-| Card grid vs list | | | |
-| Image aspect ratios | | | |
-| Filter / search chips | | | |
-| Intel panel tabs | | | usually OK — shell |
-| States | | | |
-| Mobile | | | |
-
-Score each row: 🟢 match · 🟡 partial · 🔴 missing · ➖ defer (product call).
-
-**Output:** audit table + recommended reuse vs create vs defer.
+Score: 🟢 match · 🟡 partial · 🔴 missing · ➖ defer.
 
 ### 3. Plan
 
-Before coding:
+- **Reuse:** `ShootCard`, `BrandCard`, panel hooks
+- **Create:** `*-workspace.tsx` + `*.module.css` only
+- **Defer:** DC STATE switcher, bulk select demos
+- **Out of scope:** explicit list in PR
 
-- **Reuse:** existing components (e.g. `ShootCard`, `EvidenceBlock`, `IntelligencePanel` data hooks)
-- **Create:** new workspace-only components (e.g. `brand-list-workspace.tsx` + `.module.css`)
-- **Defer:** DC-only affordances (Sort button stub OK if layout-only), bulk select, demo STATE switcher
-
-One PR scope — e.g. "Brand List workspace only" not List + Detail + infra.
-
-**DESIGN.md vs. shipped code:** if `/home/sk/ipix/Universal design prompt/DESIGN.md`'s component rules (e.g. "every card extends `ui/card.tsx`") conflict with the nearest merged sibling component (e.g. `brand-list-card.tsx` uses plain elements + CSS Modules, no shadcn imports), trust the shipped sibling — DESIGN.md can be aspirational/stale for a given layer. Match the established pattern; don't rewrite working siblings to satisfy the doc.
-
-Link Linear: IPI-17 / IPI-271 / IPI-272 / DESIGN-050–052 as applicable.
-
-**Output:** 3–8 file touch list + explicit out-of-scope list.
+Link Linear · one concern per PR · ≤500 LOC target.
 
 ### 4. Implement
 
-1. Create worktree branch: `git worktree add ../wt-ipi-XXX -b ipi/XXX-slug`
-2. **Minimal diff** in workspace components + page composition only.
-3. Wire **live data** via existing lib hooks (`brand-hub`, `command-center/queries`, panel API).
-4. Map DC labels to production schema when names differ (e.g. pillars: Visual/Audience/Consistency/Commerce ↔ `brand_scores` keys).
-5. Use **`heroFallbackForBrand`** / `sample-images.ts` when schema has no cover URL.
-6. Remove debug UI (DC state switchers, "target banner" placeholders).
-7. Do **not** move `ActiveBrandProvider`, CopilotKit layout, or auth unless separate infra PR.
-8. Add a route-level `loading.tsx` that renders the workspace's exported Skeleton component (e.g. `export function ShootsListSkeleton()` from the workspace file, rendered by `app/(operator)/app/<route>/loading.tsx`) — don't skip the loading state just because the DC file doesn't have one; Next.js streams it automatically once present.
+Follow [`react-next-parity-rules.md`](references/react-next-parity-rules.md):
 
-**CSS:** tokens + modules; match DC spacing from HTML inspect (padding, gap, grid columns, 16:9 covers).
+1. Worktree branch
+2. RSC `page.tsx` fetch → pass props to client workspace
+3. `loading.tsx` = DC skeleton (shimmer, correct aspect ratio)
+4. CSS module measurements from DC inline styles
+5. Wire live data — honest empty/error; `onRetry` on error
+6. Map DC labels to schema (`shoot_portfolio_view`, etc.)
+
+```bash
+# Style gate on changed paths
+rg '#FBF8F5|#E87C4D|min-h-screen' app/src/components/shoot app/src/app/\(operator\)/app/shoots
+```
 
 ### 5. Verify
 
-Run in worktree:
-
 ```bash
-cd app
-npm run lint
-npm test
-npx tsc --noEmit
-CI=true npm run build
+cd app && npm run lint && npm test && npx tsc --noEmit && CI=true npm run build
+npx playwright test e2e/shoots-list.spec.ts   # when Shoots List touched
+npx playwright test e2e/brand-dc-parity-screenshots.spec.ts  # brand screens
 ```
 
-Browser (QA account `qa@ipix.test`, app on `:3002`):
+Browser QA (`qa@ipix.test`, `:3002`):
 
-- Navigate target route(s)
-- Check console (no app errors)
-- Check network (panel API 200 where applicable)
-- Desktop **1280** + mobile **390** at minimum
+- 1280 desktop + 390 mobile (+ 1024 if shell mobile in scope)
+- Console clean · network 200 on data routes
+- Screenshot **each state** vs DC toggle
 
-Playwright (no dc-parity screenshot specs exist yet as of 2026-07 — don't assume the two below are real; `e2e/` uses `NN-name.spec.ts` numbering, see `e2e/01-app-loads.spec.ts`):
-
-```bash
-# If automated screenshot diffing is worth it for this screen, create one following
-# the existing e2e/ naming convention, e.g. e2e/06-brand-list-dc-parity.spec.ts.
-# Otherwise browser smoke + manual screenshots (below) are sufficient for the report.
-npx playwright test e2e/<NN-name>-dc-parity.spec.ts   # only if you created one
-```
-
-Save screenshots to `docs/qa/screenshots/YYYY-MM-DD/` (create the `docs/qa/` tree if it doesn't exist yet — `mkdir -p docs/qa/screenshots/$(date +%F)`).
+Save: `docs/qa/screenshots/YYYY-MM-DD/<screen>/`
 
 ### 6. Report
 
-**Always** produce the report using [`references/report-template.md`](references/report-template.md).
+Use [`references/report-template.md`](references/report-template.md) — include 14-dimension table for Shoots List.
 
-Include:
-
-- Files changed
-- Visual parity score (overall + per dimension)
-- Screenshot paths
-- Known gaps (honest — do not overstate)
-- Production readiness: 🟢 / 🟡 / 🔴
-
-Attach report to PR body or `docs/qa/design-parity-checklist.md` on branch.
+**@task-verifier** before merge · Bugbot threads resolved.
 
 ---
 
-## Parity scoring guide
+## Parity scoring
 
 | Score | Meaning |
 |-------|---------|
-| **90–100%** | Layout, cards, typography, states match; live data OK |
-| **75–89%** | Structure match; minor label/fixture/mobile gaps documented |
-| **50–74%** | Core grid/hero present; major affordances or states missing |
-| **<50%** | Wrong layout paradigm (list vs grid, missing shell integration) |
+| **90–100%** | Layout, cards, typography, all states match; live data honest |
+| **75–89%** | Structure match; documented minor gaps |
+| **50–74%** | Grid present; major states or mobile gaps |
+| **<50%** | Wrong paradigm (legacy hex, wrong cols, client-only fetch) |
 
-Dimensions: layout · spacing · cards/images · typography · right panel · states · responsive.
+Dimensions: layout · spacing · cards/images · typography · states (×5) · responsive · data honesty.
 
 ---
 
 ## Example prompts
 
 ```text
-Use design-to-production to convert Brand Detail.v2.image-first.dc.html into production React for /app/brand/[id].
+@design-to-production — audit Shoots List.v2.image-first.dc.html vs /app/shoots.
+Phase 0 tables only; cite dc-html-anatomy zones + 14-dimension checklist.
 ```
 
 ```text
-@design-to-production audit Command Center HTML vs /app — mismatch table only, no code.
-```
-
-```text
-Run design-to-production verify pass on PR #181 — report template + parity score.
+@design-to-production implement IPI-273 workspace only — RSC page + shoots-list.module.css.
+Match 920px / 3-col / DC empty state. No shell rebuild.
 ```
 
 ---
 
-## Overlap with claude-design-handoff
+## Overlap
 
 | Need | Skill |
 |------|-------|
-| Single screen / route parity, PR-sized execution | **design-to-production** (this) |
-| Full program: Linear tasks, Phase A/B/C, component library import | `claude-design-handoff` |
-| Tracker / priority | `tasks/plan/todo.md` |
-| Forensic gate before Done | `task-verifier` |
+| Single screen parity | **design-to-production** |
+| Full program / Linear phases | `claude-design-handoff` |
+| Linear steps + proof | `ipix-task-lifecycle` |
+| Forensic Done | `task-verifier` |
 
 ---
 
 ## Checklist before merge
 
-- [ ] HTML source file read and cited
-- [ ] Only workspace column changed (unless infra PR split)
-- [ ] No secrets in diff · no `src/` Vite changes
-- [ ] lint + test + tsc + build green
-- [ ] Browser smoke + screenshots
-- [ ] Report filled · gaps listed
-- [ ] One concern per PR · Bugbot threads resolved
+- [ ] Phase 0 tables in issue md
+- [ ] DC HTML file read; Workspace-only diff
+- [ ] No legacy hex / min-h-screen in changed files
+- [ ] RSC + loading.tsx where list screen
+- [ ] All DC states implemented (not collapsed)
+- [ ] lint · test · tsc · build green
+- [ ] Side-by-side screenshots per checklist dimension
+- [ ] Report + known gaps honest
+- [ ] One concern per PR
+
+---
+
+## References
+
+| File | Contents |
+|------|----------|
+| [dc-html-anatomy.md](references/dc-html-anatomy.md) | Parse DC HTML structure |
+| [react-next-parity-rules.md](references/react-next-parity-rules.md) | Next.js + React patterns |
+| [screen-checklists.md](references/screen-checklists.md) | Shoots List 14 dims + index |
+| [route-map.md](references/route-map.md) | HTML → route |
+| [report-template.md](references/report-template.md) | PR / QA report |

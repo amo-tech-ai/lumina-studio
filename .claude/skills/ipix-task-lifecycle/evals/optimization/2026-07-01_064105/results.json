@@ -1,0 +1,565 @@
+{
+  "exit_reason": "max_iterations (2)",
+  "original_description": "Five-phase orchestrator for iPix / FashionOS (linear.app/amo100, team IPI) \u2014 plan, research, implement, test, ship. Routes to child skills and slash commands. Use whenever the user works IPI issues, greenfield modules, wiring plans, forensic verify, sync Linear, scopes features, writes PRDs, ships platform work, says \"implement IPI-NNN\", \"next task\", or \"close out Linear\". Always use for multi-step iPix work. Do NOT use for one-off questions, trivial single-file edits, or non-iPix repos.",
+  "best_description": "Five-phase orchestrator for iPix / FashionOS (linear.app/amo100, team IPI) \u2014 plan, research, implement, test, ship. Routes to child skills and slash commands. Use whenever the user works IPI issues, greenfield modules, wiring plans, forensic verify, sync Linear, scopes features, writes PRDs, ships platform work, says \"implement IPI-NNN\", \"next task\", or \"close out Linear\". Always use for multi-step iPix work. Do NOT use for one-off questions, trivial single-file edits, or non-iPix repos.",
+  "best_score": "4/8",
+  "best_train_score": "6/12",
+  "best_test_score": "4/8",
+  "final_description": "Master lifecycle orchestrator for any iPix/FashionOS task tied to a Linear issue ID (IPI-NNN, PLT-NNN, UI-NNN, AI-NNN, DNA-NNN, COM-NNN) \u2014 owns plan \u2192 research \u2192 implement \u2192 test \u2192 ship end-to-end, plus the Linear \u2194 spec \u2194 code \u2194 PR bookkeeping contract. Trigger on ANY issue ID paired with a work verb or lifecycle action: implement, start work on, write an execution/wiring plan for, open/ship/merge a PR for, resolve bugbot threads, update acceptance criteria, mark In Progress/Done, close out Linear, or \"/task\". Route here even when the ask only touches one phase \u2014 just a PR, just a plan, just a status update \u2014 because this skill is the front door that dispatches to the right phase and child skill. Also use for greenfield module scoping, forensic Done-verification, and Linear sync/backlog triage. Do NOT use for questions with no issue/ticket reference, trivial single-file edits unrelated to a tracked task, or non-iPix repos.",
+  "iterations_run": 2,
+  "holdout": 0.4,
+  "train_size": 12,
+  "test_size": 8,
+  "history": [
+    {
+      "iteration": 1,
+      "description": "Five-phase orchestrator for iPix / FashionOS (linear.app/amo100, team IPI) \u2014 plan, research, implement, test, ship. Routes to child skills and slash commands. Use whenever the user works IPI issues, greenfield modules, wiring plans, forensic verify, sync Linear, scopes features, writes PRDs, ships platform work, says \"implement IPI-NNN\", \"next task\", or \"close out Linear\". Always use for multi-step iPix work. Do NOT use for one-off questions, trivial single-file edits, or non-iPix repos.",
+      "train_passed": 6,
+      "train_failed": 6,
+      "train_total": 12,
+      "train_results": [
+        {
+          "query": "generate mermaid diagram for campaign matching schema doc",
+          "should_trigger": false,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 1,
+          "pass": true
+        },
+        {
+          "query": "fix typo in README.md \u2014 one word change",
+          "should_trigger": false,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 1,
+          "pass": true
+        },
+        {
+          "query": "implement IPI-46 \u2014 onboarding orchestration, branch ipi/ipi-46-onboarding, wiring plan in docs/linear/issues",
+          "should_trigger": true,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 1,
+          "pass": false
+        },
+        {
+          "query": "close out Linear IPI-89 PLT-015 \u2014 merge PR, set Done, update acceptance criteria checkboxes",
+          "should_trigger": true,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 1,
+          "pass": false
+        },
+        {
+          "query": "npm run supabase:verify-rls failed on docker test \u2014 debug SQL policy",
+          "should_trigger": false,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 1,
+          "pass": true
+        },
+        {
+          "query": "what does CopilotKit useAgent do?",
+          "should_trigger": false,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 1,
+          "pass": true
+        },
+        {
+          "query": "write execution plan for UI-002 brand hub intake \u2014 worktree, files, tests, rollback",
+          "should_trigger": true,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 1,
+          "pass": false
+        },
+        {
+          "query": "ship the PR for IPI-127 copilotkit license token \u2014 verify matrix, resolve bugbot threads, update todo.md",
+          "should_trigger": true,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 1,
+          "pass": false
+        },
+        {
+          "query": "open PR ipi/plt-004-env-validation with one-concern commit and paste verify output in body",
+          "should_trigger": true,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 1,
+          "pass": false
+        },
+        {
+          "query": "/task IPI-23 start work \u2014 mark In Progress and run phase 2 research",
+          "should_trigger": true,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 1,
+          "pass": false
+        },
+        {
+          "query": "how do i install node on ubuntu \u2014 not ipix specific",
+          "should_trigger": false,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 1,
+          "pass": true
+        },
+        {
+          "query": "explain RLS policy on brands table \u2014 supabase question only",
+          "should_trigger": false,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 1,
+          "pass": true
+        }
+      ],
+      "test_passed": 4,
+      "test_failed": 4,
+      "test_total": 8,
+      "test_results": [
+        {
+          "query": "what's the next P0 task in tasks/plan/todo.md MVP queue?",
+          "should_trigger": true,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 1,
+          "pass": false
+        },
+        {
+          "query": "scope MVP proof #6 for operator onboarding \u2014 cut features, link to mvp skill",
+          "should_trigger": true,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 1,
+          "pass": false
+        },
+        {
+          "query": "draft changelog entry from git log since last release \u2014 release-notes skill",
+          "should_trigger": false,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 1,
+          "pass": true
+        },
+        {
+          "query": "forensic verify IPI-268 campaigns schema before marking Done \u2014 task-verifier probes",
+          "should_trigger": true,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 1,
+          "pass": false
+        },
+        {
+          "query": "add CopilotKit provider to app layout \u2014 copilotkit skill not full IPI lifecycle",
+          "should_trigger": false,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 1,
+          "pass": true
+        },
+        {
+          "query": "run /lean audit \u2014 repo is slow, CI takes 15min",
+          "should_trigger": false,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 1,
+          "pass": true
+        },
+        {
+          "query": "multi-step platform work: migration + edge fn + app UI for brand crawl \u2014 needs full lifecycle",
+          "should_trigger": true,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 1,
+          "pass": false
+        },
+        {
+          "query": "create supabase migration 20260701120000_add_foo.sql with RLS for new table",
+          "should_trigger": false,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 1,
+          "pass": true
+        }
+      ],
+      "passed": 6,
+      "failed": 6,
+      "total": 12,
+      "results": [
+        {
+          "query": "generate mermaid diagram for campaign matching schema doc",
+          "should_trigger": false,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 1,
+          "pass": true
+        },
+        {
+          "query": "fix typo in README.md \u2014 one word change",
+          "should_trigger": false,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 1,
+          "pass": true
+        },
+        {
+          "query": "implement IPI-46 \u2014 onboarding orchestration, branch ipi/ipi-46-onboarding, wiring plan in docs/linear/issues",
+          "should_trigger": true,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 1,
+          "pass": false
+        },
+        {
+          "query": "close out Linear IPI-89 PLT-015 \u2014 merge PR, set Done, update acceptance criteria checkboxes",
+          "should_trigger": true,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 1,
+          "pass": false
+        },
+        {
+          "query": "npm run supabase:verify-rls failed on docker test \u2014 debug SQL policy",
+          "should_trigger": false,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 1,
+          "pass": true
+        },
+        {
+          "query": "what does CopilotKit useAgent do?",
+          "should_trigger": false,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 1,
+          "pass": true
+        },
+        {
+          "query": "write execution plan for UI-002 brand hub intake \u2014 worktree, files, tests, rollback",
+          "should_trigger": true,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 1,
+          "pass": false
+        },
+        {
+          "query": "ship the PR for IPI-127 copilotkit license token \u2014 verify matrix, resolve bugbot threads, update todo.md",
+          "should_trigger": true,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 1,
+          "pass": false
+        },
+        {
+          "query": "open PR ipi/plt-004-env-validation with one-concern commit and paste verify output in body",
+          "should_trigger": true,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 1,
+          "pass": false
+        },
+        {
+          "query": "/task IPI-23 start work \u2014 mark In Progress and run phase 2 research",
+          "should_trigger": true,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 1,
+          "pass": false
+        },
+        {
+          "query": "how do i install node on ubuntu \u2014 not ipix specific",
+          "should_trigger": false,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 1,
+          "pass": true
+        },
+        {
+          "query": "explain RLS policy on brands table \u2014 supabase question only",
+          "should_trigger": false,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 1,
+          "pass": true
+        }
+      ]
+    },
+    {
+      "iteration": 2,
+      "description": "Master lifecycle orchestrator for any iPix/FashionOS task tied to a Linear issue ID (IPI-NNN, PLT-NNN, UI-NNN, AI-NNN, DNA-NNN, COM-NNN) \u2014 owns plan \u2192 research \u2192 implement \u2192 test \u2192 ship end-to-end, plus the Linear \u2194 spec \u2194 code \u2194 PR bookkeeping contract. Trigger on ANY issue ID paired with a work verb or lifecycle action: implement, start work on, write an execution/wiring plan for, open/ship/merge a PR for, resolve bugbot threads, update acceptance criteria, mark In Progress/Done, close out Linear, or \"/task\". Route here even when the ask only touches one phase \u2014 just a PR, just a plan, just a status update \u2014 because this skill is the front door that dispatches to the right phase and child skill. Also use for greenfield module scoping, forensic Done-verification, and Linear sync/backlog triage. Do NOT use for questions with no issue/ticket reference, trivial single-file edits unrelated to a tracked task, or non-iPix repos.",
+      "train_passed": 6,
+      "train_failed": 6,
+      "train_total": 12,
+      "train_results": [
+        {
+          "query": "generate mermaid diagram for campaign matching schema doc",
+          "should_trigger": false,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 1,
+          "pass": true
+        },
+        {
+          "query": "fix typo in README.md \u2014 one word change",
+          "should_trigger": false,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 1,
+          "pass": true
+        },
+        {
+          "query": "close out Linear IPI-89 PLT-015 \u2014 merge PR, set Done, update acceptance criteria checkboxes",
+          "should_trigger": true,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 1,
+          "pass": false
+        },
+        {
+          "query": "what does CopilotKit useAgent do?",
+          "should_trigger": false,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 1,
+          "pass": true
+        },
+        {
+          "query": "npm run supabase:verify-rls failed on docker test \u2014 debug SQL policy",
+          "should_trigger": false,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 1,
+          "pass": true
+        },
+        {
+          "query": "implement IPI-46 \u2014 onboarding orchestration, branch ipi/ipi-46-onboarding, wiring plan in docs/linear/issues",
+          "should_trigger": true,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 1,
+          "pass": false
+        },
+        {
+          "query": "write execution plan for UI-002 brand hub intake \u2014 worktree, files, tests, rollback",
+          "should_trigger": true,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 1,
+          "pass": false
+        },
+        {
+          "query": "ship the PR for IPI-127 copilotkit license token \u2014 verify matrix, resolve bugbot threads, update todo.md",
+          "should_trigger": true,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 1,
+          "pass": false
+        },
+        {
+          "query": "open PR ipi/plt-004-env-validation with one-concern commit and paste verify output in body",
+          "should_trigger": true,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 1,
+          "pass": false
+        },
+        {
+          "query": "/task IPI-23 start work \u2014 mark In Progress and run phase 2 research",
+          "should_trigger": true,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 1,
+          "pass": false
+        },
+        {
+          "query": "explain RLS policy on brands table \u2014 supabase question only",
+          "should_trigger": false,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 1,
+          "pass": true
+        },
+        {
+          "query": "how do i install node on ubuntu \u2014 not ipix specific",
+          "should_trigger": false,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 1,
+          "pass": true
+        }
+      ],
+      "test_passed": 4,
+      "test_failed": 4,
+      "test_total": 8,
+      "test_results": [
+        {
+          "query": "what's the next P0 task in tasks/plan/todo.md MVP queue?",
+          "should_trigger": true,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 1,
+          "pass": false
+        },
+        {
+          "query": "scope MVP proof #6 for operator onboarding \u2014 cut features, link to mvp skill",
+          "should_trigger": true,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 1,
+          "pass": false
+        },
+        {
+          "query": "forensic verify IPI-268 campaigns schema before marking Done \u2014 task-verifier probes",
+          "should_trigger": true,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 1,
+          "pass": false
+        },
+        {
+          "query": "draft changelog entry from git log since last release \u2014 release-notes skill",
+          "should_trigger": false,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 1,
+          "pass": true
+        },
+        {
+          "query": "run /lean audit \u2014 repo is slow, CI takes 15min",
+          "should_trigger": false,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 1,
+          "pass": true
+        },
+        {
+          "query": "add CopilotKit provider to app layout \u2014 copilotkit skill not full IPI lifecycle",
+          "should_trigger": false,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 1,
+          "pass": true
+        },
+        {
+          "query": "create supabase migration 20260701120000_add_foo.sql with RLS for new table",
+          "should_trigger": false,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 1,
+          "pass": true
+        },
+        {
+          "query": "multi-step platform work: migration + edge fn + app UI for brand crawl \u2014 needs full lifecycle",
+          "should_trigger": true,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 1,
+          "pass": false
+        }
+      ],
+      "passed": 6,
+      "failed": 6,
+      "total": 12,
+      "results": [
+        {
+          "query": "generate mermaid diagram for campaign matching schema doc",
+          "should_trigger": false,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 1,
+          "pass": true
+        },
+        {
+          "query": "fix typo in README.md \u2014 one word change",
+          "should_trigger": false,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 1,
+          "pass": true
+        },
+        {
+          "query": "close out Linear IPI-89 PLT-015 \u2014 merge PR, set Done, update acceptance criteria checkboxes",
+          "should_trigger": true,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 1,
+          "pass": false
+        },
+        {
+          "query": "what does CopilotKit useAgent do?",
+          "should_trigger": false,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 1,
+          "pass": true
+        },
+        {
+          "query": "npm run supabase:verify-rls failed on docker test \u2014 debug SQL policy",
+          "should_trigger": false,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 1,
+          "pass": true
+        },
+        {
+          "query": "implement IPI-46 \u2014 onboarding orchestration, branch ipi/ipi-46-onboarding, wiring plan in docs/linear/issues",
+          "should_trigger": true,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 1,
+          "pass": false
+        },
+        {
+          "query": "write execution plan for UI-002 brand hub intake \u2014 worktree, files, tests, rollback",
+          "should_trigger": true,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 1,
+          "pass": false
+        },
+        {
+          "query": "ship the PR for IPI-127 copilotkit license token \u2014 verify matrix, resolve bugbot threads, update todo.md",
+          "should_trigger": true,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 1,
+          "pass": false
+        },
+        {
+          "query": "open PR ipi/plt-004-env-validation with one-concern commit and paste verify output in body",
+          "should_trigger": true,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 1,
+          "pass": false
+        },
+        {
+          "query": "/task IPI-23 start work \u2014 mark In Progress and run phase 2 research",
+          "should_trigger": true,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 1,
+          "pass": false
+        },
+        {
+          "query": "explain RLS policy on brands table \u2014 supabase question only",
+          "should_trigger": false,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 1,
+          "pass": true
+        },
+        {
+          "query": "how do i install node on ubuntu \u2014 not ipix specific",
+          "should_trigger": false,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 1,
+          "pass": true
+        }
+      ]
+    }
+  ]
+}

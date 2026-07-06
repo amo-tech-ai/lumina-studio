@@ -33,7 +33,7 @@ Single entry point for all Supabase work on **iPix / Lumina Studio**. Combines i
 | User intent | Reference |
 |-------------|-----------|
 | **Start here** — iPix project, PLT tables, remote-only, verify-rls | *(this hub)* `SKILL.md` + topic files (`postgres.md`, `realtime.md`, `storage.md`, …) |
-| Deno edge functions, JWT, Gemini in functions | [`references/edge-functions/edge-functions.md`](references/edge-functions/edge-functions.md) + `edge-functions.md` + `references/edge-functions-inventory.md` — see **Edge Functions reference index** below |
+| Deno edge functions, JWT, Gemini in functions | [`references/edge-functions/edge-functions.md`](references/edge-functions/edge-functions.md) + [`edge-functions.md`](edge-functions.md) + [`references/edge-functions/edge-functions-inventory.md`](references/edge-functions/edge-functions-inventory.md) — see **Edge Functions reference index** below |
 | Generic migrations, RLS SQL, DB functions, schema, SQL style | [`references/supabase-core/supabase-core.md`](references/supabase-core/supabase-core.md) (+ `MIGRATIONS/RLS-POLICIES/FUNCTIONS/SCHEMA/SQL-STYLE.md`) + `references/project-rules/` |
 | Supabase **CLI** workflows (`supabase` CLI, local/remote) | [`references/cli/cli.md`](references/cli/cli.md) |
 | Query perf, indexes, connection pooling, EXPLAIN | [`references/postgres-best-practices.md`](references/postgres-best-practices.md) → detail in [`references/postgres/`](references/postgres/) (already mirrored) |
@@ -88,7 +88,7 @@ supabase, RLS, auth.uid, edge function, Deno.serve, verify_jwt, storage bucket, 
 | **Commerce** | **Mercur** — never duplicate product/order tables in Supabase |
 
 Canonical ops: [`supabase/README.md`](../../../supabase/README.md)  
-Roadmap: [`docs/linear/supabase-roadmap.md`](../../../docs/linear/supabase-roadmap.md)
+Roadmap & issue index: [`docs/linear/issues/README.md`](../../../docs/linear/issues/README.md)
 
 ### MCP / CLI trust
 
@@ -111,7 +111,7 @@ Roadmap: [`docs/linear/supabase-roadmap.md`](../../../docs/linear/supabase-roadm
 | `profiles` | PLT-002 sync with `auth.users` |
 | `shoots` | Shoot metadata (legacy, still used) |
 
-Legacy FashionOS tables coexist on the shared project — do not extend them for iPix MVP without audit ([SEC-001](../../../docs/linear/supabase-roadmap.md)).
+Legacy FashionOS tables coexist on the shared project — do not extend them for iPix MVP without audit ([SEC-001 / IPI-52](https://linear.app/amo100/issue/IPI-52) · [issues README](../../../docs/linear/issues/README.md)).
 
 Full orientation: [references/tables-overview.md](references/tables-overview.md)
 
@@ -161,7 +161,7 @@ npm run supabase:types
 npm run supabase:verify-rls
 ```
 
-**IPI-126 / BI-OPS-002 gate ([IPI-49 spec](../../../docs/linear/issues/IPI-49-IPI-BI-OPS-002.md)):** push `20260625000000_brand_scores_unique_update_rls.sql` → `verify-rls` (includes `brand_scores` UPDATE probe) → onboarding smoke on `/app/onboarding` → marks [IPI-46](https://linear.app/amo100/issue/IPI-46) Done. Run after IPI-46 code is on `main`; this is the **remote apply** slice of IPI-46 B3–B4.
+**IPI-126 / BI-OPS-002 gate:** push `20260625000000_brand_scores_unique_update_rls.sql` → `verify-rls` (includes `brand_scores` UPDATE probe) → onboarding smoke on `/app/onboarding` → marks [IPI-46](https://linear.app/amo100/issue/IPI-46) Done. Run after IPI-46 code is on `main`; this is the **remote apply** slice of IPI-46 B3–B4. Tracker: [IPI-126](https://linear.app/amo100/issue/IPI-126) · [issues README](../../../docs/linear/issues/README.md).
 
 **IPI-26 / IPI-BI-003 ([spec](../../../docs/linear/issues/IPI-26-IPI-BI-003.md)):** After IPI-46 + IPI-126 Done — Postgres enum `brand_intake_status` (7 states on `brands`; HITL on `brand_intake_drafts.status`); 4 new tables + indexes; `score_version`/`source` on `brand_scores`; **alter** `brand_intake_drafts` RLS; extend `verify-rls.mjs` for all 5 tables; explicit Realtime publication + `pg_publication_tables` verify. Do not duplicate IPI-126 migration.
 
@@ -198,8 +198,8 @@ Do **not** rewrite applied remote history. **PLT-010** (squash / local Docker) i
 | User intent | Read |
 |-------------|------|
 | Auth, profiles, GoTrue, session | [client-and-auth.md](client-and-auth.md) + [`references/auth/`](references/auth/) |
-| Edge functions, Gemini, deploy | [edge-functions.md](edge-functions.md) + [references/edge-functions/edge-functions.md](references/edge-functions/edge-functions.md) + [references/edge-functions-inventory.md](references/edge-functions-inventory.md) |
-| AI edge patterns | [references/ai-edge-functions.md](references/ai-edge-functions.md) |
+| Edge functions, Gemini, deploy | [edge-functions.md](edge-functions.md) + [references/edge-functions/edge-functions.md](references/edge-functions/edge-functions.md) + [references/edge-functions/edge-functions-inventory.md](references/edge-functions/edge-functions-inventory.md) |
+| AI edge patterns | [references/edge-functions/ai-edge-functions.md](references/edge-functions/ai-edge-functions.md) |
 | Schema / table groups | [references/tables-overview.md](references/tables-overview.md) |
 | Query perf, indexes, advisors | [postgres.md](postgres.md) + [references/postgres-best-practices.md](references/postgres-best-practices.md) + [references/postgres/](references/postgres/) |
 | Realtime channels | [realtime.md](realtime.md) |
@@ -220,7 +220,7 @@ Do **not** rewrite applied remote history. **PLT-010** (squash / local Docker) i
 
 **Do not** copy Medellín/mde edge functions from MCP inventory — different product.
 
-After adding functions: update `supabase/config.toml` + [references/edge-functions-inventory.md](references/edge-functions-inventory.md) → run [scripts/verify-edge-inventory.sh](scripts/verify-edge-inventory.sh).
+After adding functions: update `supabase/config.toml` + [references/edge-functions/edge-functions-inventory.md](references/edge-functions/edge-functions-inventory.md) → run [scripts/verify-edge-inventory.sh](scripts/verify-edge-inventory.sh).
 
 ---
 

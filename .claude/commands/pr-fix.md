@@ -202,8 +202,8 @@ gh pr view <N> --json number,title,body,headRefName,files
 | `app/src/components/**`, operator UI | `design-md`, `frontend-design`, `shadcn`, `accessibility` | `cursor-ide-browser` |
 | `app/src/app/api/copilotkit/**` | `copilotkit` | — |
 | `app/src/mastra/**` | `mastra`, `gemini` | `user-mastra` (`searchMastraDocs`) |
-| `app/src/lib/supabase/**`, auth, `proxy.ts` | `ipix-supabase`, **`nextjs-supabase-auth`**, `nextjs-16` | Supabase MCP |
-| App Router (data fetching, RSC) | **`nextjs-best-practices`**, `nextjs-16` | `next-devtools-mcp` |
+| `app/src/lib/supabase/**`, auth, `proxy.ts` | `ipix-supabase`, `nextjs-developer`, `nextjs-16` | Supabase MCP |
+| App Router (data fetching, RSC) | **`nextjs-developer`**, `nextjs-16` | `next-devtools-mcp` |
 | `supabase/migrations/**`, `*.sql` | `ipix-supabase`, `create-migration` | Supabase MCP + **migration-reviewer** |
 | `supabase/functions/**` | `ipix-supabase`, `gemini` | `list_edge_functions`, `get_edge_function` |
 | AI / prompts | `gemini`, `senior-prompt-engineer` | `user-gemini-api-docs-mcp` |
