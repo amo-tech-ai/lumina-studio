@@ -1,0 +1,22 @@
+.claude/skills/mastra/references/groq.md
+  s_88536c5a6fce9b::t_78a339680cf8f2 146-153
+  s_88536c5a6fce9b::t_481fab8175a49b 143-145
+  s_88536c5a6fce9b::t_98a994d391350d 154-156
+  s_88536c5a6fce9b::t_81f3672e61d0c6 1-142,157-179
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "548756c9bc3283bf0f9a1472a820eeceb2f28a9f",
+  "prompts": {},
+  "sessions": {
+    "s_88536c5a6fce9b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "9affed21-8515-433a-b4d9-f7506bb6c652",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
