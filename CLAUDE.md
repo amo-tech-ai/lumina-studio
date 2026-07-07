@@ -142,10 +142,12 @@ Before writing code in a worktree that already existed (i.e. not one you just cr
 node scripts/worktree-health.mjs
 ```
 
+IPI (Internal Project Issue) is this repo's Linear issue-ID prefix — e.g. IPI-428 below.
+
 This fails (non-zero exit) if either is true:
 
-- **`app/src/lib/ai/provider.ts` still has the pre-IPI-428 static JSON import** (`"../../../../config/groq-models.json"`) — a real bug that breaks `next build`/`next dev`. IPI (Internal Project Issue) is this repo's Linear issue-ID prefix. Never re-patch this locally; rebase onto `origin/main`, where it's already fixed.
-- **The worktree is more than 30 commits behind `origin/main`** (`--max-behind=N` to override) — local state is too stale to trust; `git fetch origin && git rebase origin/main` first.
+- **`app/src/lib/ai/provider.ts` still has the pre-IPI-428 static JSON import** (`"../../../../config/groq-models.json"`). This breaks `next build`/`next dev`. Never re-patch it locally — rebase onto `origin/main`, where it's already fixed.
+- **The worktree is more than 30 commits behind `origin/main`** (`--max-behind=N` to override). Local state is too stale to trust. Run `git fetch origin && git rebase origin/main` first.
 
 Two related commands, two different purposes:
 
