@@ -13,7 +13,7 @@ import styles from "./entity-list.module.css";
  *  caller-rendered row. Domain-free: no filtering, sorting, or entity knowledge
  *  lives here; the consumer passes already-resolved `items` + `renderRow`.
  *  First consumer is CRM Companies/Contacts — do not add Brand/Shoots options. */
-export type Props<T> = {
+type BaseProps<T> = {
   items: T[];
   renderRow: (item: T) => ReactNode;
   /** EmptyState heading when there is genuinely no data. */
@@ -24,11 +24,16 @@ export type Props<T> = {
   loading?: boolean;
   error?: string | null;
   onRetry?: () => void;
-  /** Render the search row when set. Controlled by the caller (it owns filtering). */
-  searchPlaceholder?: string;
-  searchValue?: string;
-  onSearchChange?: (value: string) => void;
 };
+
+/** The search row is controlled by the caller (it owns filtering) — all three
+ *  props are required together so it's impossible to render a search box that
+ *  silently does nothing because a caller forgot `onSearchChange`. */
+type SearchProps =
+  | { searchPlaceholder?: undefined; searchValue?: undefined; onSearchChange?: undefined }
+  | { searchPlaceholder: string; searchValue: string; onSearchChange: (value: string) => void };
+
+export type Props<T> = BaseProps<T> & SearchProps;
 
 const SKELETON_ROWS = 5;
 
