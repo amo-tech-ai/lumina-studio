@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { getCurrentOrgId, getProfileNames, listCompanies } from "./queries";
+import { getCompanyNames, getCurrentOrgId, getProfileNames, listCompanies } from "./queries";
 
 function mockSupabase(rows: Record<string, unknown>[] | null, error: { message: string } | null = null) {
   const builder: {
@@ -110,6 +110,29 @@ describe("getProfileNames", () => {
   it("dedupes ids and short-circuits without a query for an empty list", async () => {
     const sb = mockProfiles([]);
     expect(await getProfileNames([], sb as never)).toEqual({});
+    expect(sb.from).not.toHaveBeenCalled();
+  });
+});
+
+function mockCompanies(rows: Array<{ id: string; name: string }>) {
+  const builder = {
+    select: vi.fn().mockReturnThis(),
+    in: vi.fn().mockResolvedValue({ data: rows, error: null }),
+  };
+  return { from: vi.fn(() => builder), _builder: builder };
+}
+
+describe("getCompanyNames", () => {
+  it("maps id to name for only the requested ids", async () => {
+    const sb = mockCompanies([{ id: "c1", name: "Acme Athletic" }]);
+    const names = await getCompanyNames(["c1"], sb as never);
+    expect(names).toEqual({ c1: "Acme Athletic" });
+    expect(sb._builder.in).toHaveBeenCalledWith("id", ["c1"]);
+  });
+
+  it("dedupes ids and short-circuits without a query for an empty list", async () => {
+    const sb = mockCompanies([]);
+    expect(await getCompanyNames([], sb as never)).toEqual({});
     expect(sb.from).not.toHaveBeenCalled();
   });
 });

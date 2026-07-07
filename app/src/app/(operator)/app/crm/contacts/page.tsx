@@ -1,5 +1,5 @@
 import { ContactsWorkspace } from "@/components/crm/contacts-workspace";
-import { getCurrentOrgId, listCompanies, listContacts, type ContactRow } from "@/lib/crm/queries";
+import { getCurrentOrgId, getCompanyNames, listContacts, type ContactRow } from "@/lib/crm/queries";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -27,8 +27,8 @@ export default async function CrmContactsPage() {
         // transient failure there shouldn't wipe out the whole contacts list.
         contacts = await listContacts({ orgId }, supabase);
         try {
-          const companyRows = await listCompanies({ orgId }, supabase);
-          companyNames = Object.fromEntries(companyRows.map((c) => [c.id, c.name]));
+          const companyIds = contacts.map((c) => c.company_id).filter((id): id is string => id != null);
+          companyNames = await getCompanyNames(companyIds, supabase);
         } catch {
           companyNames = {};
         }
