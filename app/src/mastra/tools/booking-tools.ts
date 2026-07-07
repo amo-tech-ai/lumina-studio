@@ -8,7 +8,7 @@
 import { createTool } from "@mastra/core/tools";
 import { z } from "zod";
 import { createBookingRequest } from "@/lib/booking/booking-service";
-import { isIsoDate } from "@/lib/booking/validation";
+import { isIsoDate, isValidDateRange } from "@/lib/booking/validation";
 import { TalentResultSchema } from "@/lib/talent/types";
 import { createUserScopedClient } from "@/lib/shoot/commit-shoot-draft";
 import { requestToken } from "@/lib/request-token";
@@ -20,10 +20,10 @@ const isoDateField = z
 const optionalRateQuoted = z
   .number()
   .finite()
-  .positive()
+  .nonnegative()
   .max(999999.99)
   .optional()
-  .describe("Day rate in USD; must be greater than zero when provided");
+  .describe("Day rate in USD; must be greater than or equal to zero when provided");
 
 function getUserScopedClient() {
   const accessToken = requestToken.getStore();
@@ -63,6 +63,10 @@ export function buildQuoteDraft(input: {
   shootType?: string;
   rateQuoted?: number;
 }): { suggestedRate: number | null; messageDraft: string } {
+  if (!isValidDateRange(input.dateStart, input.dateEnd)) {
+    throw new Error("dateStart must be on or before dateEnd");
+  }
+
   const suggestedRate =
     input.rateQuoted ??
     (input.rateTier ? (TIER_SUGGESTED_DAILY[input.rateTier] ?? null) : null);
@@ -70,8 +74,8 @@ export function buildQuoteDraft(input: {
   const shootLine = input.shootType ? ` for your ${input.shootType} shoot` : "";
   const rateLine =
     suggestedRate != null
-      ? `We're offering $${suggestedRate.toLocaleString()} for ${input.dateStart}–${input.dateEnd}.`
-      : `We'd like to book you ${input.dateStart}–${input.dateEnd}.`;
+      ? `We're offering $${suggestedRate.toLocaleString()} for ${input.dateStart}–${input.dateEnd}`
+      : `We'd like to book you ${input.dateStart}–${input.dateEnd}`;
 
   return {
     suggestedRate,

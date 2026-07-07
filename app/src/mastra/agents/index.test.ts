@@ -32,10 +32,18 @@ describe("operator agents — structure (IPI2-121)", () => {
     expect(creativeDirectorAgent).not.toBe(productionPlannerAgent);
   });
 
-  it("production-planner wires the shared agent tool registry at construction", () => {
-    expect(AGENTS_SRC).toMatch(
-      /export const productionPlannerAgent = new Agent\(\{[\s\S]*tools:\s*agentTools/,
-    );
+  it("production-planner wires the shared agent tool registry, minus other agents' booking tools", async () => {
+    const tools = await productionPlannerAgent.listTools();
+    const toolNames = Object.keys(tools ?? {});
+    // Broad shoot-planning access (still "smoke-level" pending IPI2-114) —
+    // but never the booking agent's durable write/read tools, which its own
+    // instructions never mention and shouldn't be reachable from a
+    // shoot-planning chat.
+    expect(toolNames).toContain("recommendShootType");
+    expect(toolNames).toContain("planDeliverables");
+    expect(toolNames).not.toContain("checkTalentAvailability");
+    expect(toolNames).not.toContain("draftBookingQuote");
+    expect(toolNames).not.toContain("createBookingDraft");
   });
 
   it("creative-director carries no tools (brief-only agent)", () => {

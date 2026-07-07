@@ -40,6 +40,38 @@ describe("buildQuoteDraft", () => {
     expect(draft.messageDraft).toContain("Alex");
     expect(draft.messageDraft).toContain("editorial");
   });
+
+  it("does not double the closing period, with or without shootType", () => {
+    const withShoot = buildQuoteDraft({
+      displayName: "Alex",
+      dateStart: "2026-08-01",
+      dateEnd: "2026-08-03",
+      rateTier: "$$",
+      shootType: "editorial",
+    });
+    expect(withShoot.messageDraft).not.toMatch(/\.\./);
+    expect(withShoot.messageDraft).toContain("for your editorial shoot. Please");
+
+    const withoutShoot = buildQuoteDraft({
+      displayName: "Jordan",
+      dateStart: "2026-08-01",
+      dateEnd: "2026-08-03",
+      rateTier: "$$",
+    });
+    expect(withoutShoot.messageDraft).not.toMatch(/\.\./);
+    expect(withoutShoot.messageDraft).toContain("2026-08-03. Please");
+  });
+
+  it("rejects a reversed date range", () => {
+    expect(() =>
+      buildQuoteDraft({
+        displayName: "Alex",
+        dateStart: "2026-08-05",
+        dateEnd: "2026-08-01",
+        rateTier: "$$",
+      }),
+    ).toThrow(/dateStart must be on or before dateEnd/);
+  });
 });
 
 describe("checkTalentAvailability", () => {
