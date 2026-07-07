@@ -76,7 +76,7 @@ create table if not exists public.campaign_deliverables (
   label       text not null,
   status      public.deliverable_status not null default 'pending',
   due_date    date,
-  assigned_to uuid references public.profiles(id),
+  assigned_to uuid references public.profiles(id) on delete set null,
   created_at  timestamptz not null default now(),
   updated_at  timestamptz not null default now(),
   constraint uq_campaign_deliverables_phase unique (campaign_id, phase)
@@ -86,7 +86,6 @@ create table if not exists public.campaign_deliverables (
 create index if not exists idx_campaigns_org_id on public.campaigns(org_id);
 create index if not exists idx_campaigns_brand_id on public.campaigns(brand_id);
 create index if not exists idx_campaigns_status on public.campaigns(status) where status in ('planning', 'active');
-create index if not exists idx_campaign_deliverables_campaign on public.campaign_deliverables(campaign_id, phase);
 create index if not exists idx_campaign_deliverables_assigned_to on public.campaign_deliverables(assigned_to);
 
 -- 5. Triggers
