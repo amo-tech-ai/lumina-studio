@@ -1,0 +1,19 @@
+supabase/migrations/20260625000001_add_ai_profile_draft.sql
+  s_0fa4a96deb3173::t_d26ac123abc3e9 11,19-20
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "bfa8f5fa89618a49ebe5d508dfc0d2dd2abc1f24",
+  "prompts": {},
+  "sessions": {
+    "s_0fa4a96deb3173": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "1d5eb381-9ec0-43bc-897b-05f40b38cebf",
+        "model": "unknown"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
