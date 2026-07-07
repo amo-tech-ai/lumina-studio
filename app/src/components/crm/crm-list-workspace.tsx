@@ -20,6 +20,7 @@ export function CrmListWorkspace<T extends { id: string }>({
   filterItems,
   emptyLabel,
   emptyBody,
+  emptyAction,
   fetchError,
   renderRow,
 }: {
@@ -32,6 +33,7 @@ export function CrmListWorkspace<T extends { id: string }>({
   filterItems: (items: T[], term: string) => T[];
   emptyLabel: string;
   emptyBody: string;
+  emptyAction?: ReactNode;
   fetchError: string | null;
   renderRow: (item: T) => ReactNode;
 }) {
@@ -72,6 +74,7 @@ export function CrmListWorkspace<T extends { id: string }>({
             items={filtered}
             emptyLabel={emptyLabel}
             emptyBody={emptyBody}
+            emptyAction={emptyAction}
             searchPlaceholder={searchPlaceholder}
             searchValue={search}
             onSearchChange={setSearch}
