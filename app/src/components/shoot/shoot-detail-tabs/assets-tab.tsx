@@ -1,6 +1,6 @@
 import Link from "next/link";
 import Image from "next/image";
-import { ArrowUpRight, Image as ImageIcon, Video } from "lucide-react";
+import { ArrowUpRight, File, Image as ImageIcon, Video } from "lucide-react";
 
 import { EmptyState } from "@/components/ui/empty-state";
 import { isDeliverableCover } from "@/lib/cloudinary/url";
@@ -37,6 +37,10 @@ export function AssetsTab({ assets }: Props) {
         {assets.map((a) => {
           const ratio = a.width && a.height ? a.width / a.height : 1;
           const isVideo = a.resource_type === "video";
+          // Cloudinary's resource_type is "image" | "video" | "raw" (PDFs, zips,
+          // etc. get uploaded as "raw") — only render an <img>/<Image> for actual
+          // images, not whatever a raw file's URL happens to return.
+          const isRaw = a.resource_type === "raw";
           return (
             <div key={a.id} className={styles.masonryItem} style={{ aspectRatio: ratio }}>
               {isVideo ? (
@@ -46,6 +50,13 @@ export function AssetsTab({ assets }: Props) {
                   aria-hidden
                 >
                   <Video size={22} color="var(--color-text-muted)" />
+                </div>
+              ) : isRaw ? (
+                <div
+                  style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center" }}
+                  aria-hidden
+                >
+                  <File size={22} color="var(--color-text-muted)" />
                 </div>
               ) : isDeliverableCover(a.url) ? (
                 <Image src={a.url} alt="" fill sizes="25vw" className={styles.heroImage} />
