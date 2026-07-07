@@ -97,19 +97,26 @@ function checkAheadBehind(wtPath) {
   return { ahead: ahead || 0, behind: behind || 0 };
 }
 
-/** Commits on this branch not present on its own remote-tracking ref (never pushed anywhere). */
+/**
+ * Commits on this branch not present on its configured upstream (never pushed
+ * anywhere). Uses `@{upstream}` rather than assuming `origin/<branch>` — a
+ * branch can be pushed to a non-origin remote, or tracked under a different
+ * name than its local one, and would falsely look entirely unpushed otherwise.
+ */
 function checkUnpushedCommits(wtPath, branch, aheadOfMain) {
   if (!branch) return 0; // detached HEAD — no branch to compare
-  const hasRemote = tryGit(["rev-parse", "--verify", `origin/${branch}`], wtPath);
-  if (!hasRemote) return aheadOfMain; // branch never pushed at all — everything ahead of main is at risk
-  const count = tryGit(["rev-list", "--count", `origin/${branch}..HEAD`], wtPath);
+  const upstream = tryGit(["rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{upstream}"], wtPath);
+  if (!upstream) return aheadOfMain; // no upstream configured at all — everything ahead of main is at risk
+  const count = tryGit(["rev-list", "--count", `${upstream}..HEAD`], wtPath);
   return count ? Number(count) : 0;
 }
 
-function checkWorktree(wtPath, branch) {
+function checkWorktree(wtPath, branch, fetchFailed) {
   let ahead = 0;
   let behind = 0;
-  let checkError = null;
+  let checkError = fetchFailed
+    ? "git fetch origin failed — can't trust ahead/behind vs origin/main from a potentially stale cached ref"
+    : null;
   const groqImport = checkGroqStaleImport(wtPath);
 
   try {
@@ -144,7 +151,7 @@ function checkWorktree(wtPath, branch) {
 function main() {
   const fetchFailed = tryGit(["fetch", "origin", "--quiet"], process.cwd()) === null;
   if (fetchFailed && !JSON_OUT) {
-    console.error("⚠️  git fetch origin failed (offline?) — ahead/behind counts below may be stale.");
+    console.error("⚠️  git fetch origin failed (offline?) — treating every checked worktree as unsafe.");
   }
 
   const targets = ALL
@@ -156,7 +163,7 @@ function main() {
         },
       ];
 
-  const results = targets.map((t) => checkWorktree(t.path, t.branch));
+  const results = targets.map((t) => checkWorktree(t.path, t.branch, fetchFailed));
   const anyBlocked = results.some((r) => !r.safe);
 
   if (JSON_OUT) {

@@ -152,7 +152,7 @@ This fails (non-zero exit) if either is true:
 Two related commands, two different purposes:
 
 - `npm run worktree:health:all` — audit every registered worktree at once. For cleanup, not for gating a single task.
-- `npm run worktree:audit -- --write` — full human-facing inventory (merged/stale/orphan classification, safe-to-delete list).
+- `npm run worktree:audit -- --write` — full human-facing inventory of every worktree, with a safe-to-delete list.
 
 `worktree-health` is the fast machine-facing gate. `worktree-audit` is the periodic cleanup report.
 
