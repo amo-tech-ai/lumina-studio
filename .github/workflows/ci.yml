@@ -98,7 +98,9 @@ jobs:
         with:
           node-version: "22"
           cache: npm
-          cache-dependency-path: app/package-lock.json
+          cache-dependency-path: |
+            package-lock.json
+            app/package-lock.json
 
       - name: Install psql client
         run: sudo apt-get update && sudo apt-get install -y postgresql-client
