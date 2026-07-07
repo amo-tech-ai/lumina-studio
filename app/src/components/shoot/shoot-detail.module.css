@@ -1,0 +1,870 @@
+/* Shoot Detail — ported from Universal-design-prompt-new/Pages/Shoot Detail.v2.image-first.dc.html
+   (flow=shoot only; booking flow is out of scope). Workspace column only — shell/nav/
+   IntelligencePanel untouched. Measurements 1:1 with DC inline styles; colors via tokens.css. */
+
+.mono {
+  font-variant-numeric: tabular-nums;
+}
+
+/* ───────────────────────── Loading (loading.tsx) ───────────────────────── */
+
+.loadingRoot {
+  flex: 1;
+  overflow-y: auto;
+  padding: 28px 40px;
+}
+
+.loadingInner {
+  max-width: 960px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.loadingLabel {
+  width: 90px;
+  height: 14px;
+}
+
+.loadingHero {
+  width: 100%;
+  aspect-ratio: 21 / 9;
+  border-radius: var(--radius-xl);
+}
+
+.loadingTitle {
+  width: 50%;
+  height: 24px;
+}
+
+.loadingPillRow {
+  display: flex;
+  gap: 10px;
+}
+
+.loadingPill {
+  width: 120px;
+  height: 34px;
+  border-radius: var(--radius-pill);
+}
+
+.loadingStatGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+
+.loadingStat {
+  height: 96px;
+  border-radius: 14px;
+}
+
+/* ───────────────────────── Error / not-found ───────────────────────── */
+
+.stateRoot {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 64px 24px;
+  gap: 10px;
+}
+
+/* ───────────────────────── Root + header (breadcrumb, hero, tabs) ───────────────────────── */
+
+.root {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  height: 100%;
+}
+
+.header {
+  flex-shrink: 0;
+  padding: 18px 40px 0;
+}
+
+.headerInner {
+  max-width: 960px;
+  margin: 0 auto;
+}
+
+.breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: var(--fs-sm);
+  color: var(--color-text-muted);
+  margin-bottom: 14px;
+  text-decoration: none;
+}
+
+.breadcrumbLink {
+  color: var(--color-text-secondary);
+  text-decoration: none;
+}
+
+.breadcrumbLink:hover {
+  color: var(--color-text-primary);
+}
+
+.breadcrumbCurrent {
+  color: var(--color-text-primary);
+  font-weight: 500;
+}
+
+.hero {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 24 / 9;
+  border-radius: var(--radius-xl);
+  border: 1px solid var(--color-border);
+  overflow: hidden;
+  background-color: var(--color-bg-subtle);
+}
+
+.heroImage {
+  object-fit: cover;
+}
+
+.heroScrim {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to top, rgb(17 17 17 / 0.72), rgb(17 17 17 / 0) 60%);
+}
+
+.heroContent {
+  position: absolute;
+  left: 20px;
+  right: 20px;
+  bottom: 16px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.heroBadgeRow {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin-bottom: 7px;
+}
+
+.heroBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #fff;
+  background: rgb(17 17 17 / 0.5);
+  backdrop-filter: blur(3px);
+  padding: 3px 9px;
+  border-radius: var(--radius-pill);
+}
+
+.heroBadgeDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+}
+
+.heroTitle {
+  margin: 0;
+  font-size: var(--fs-2xl);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: #fff;
+  text-shadow: 0 1px 12px rgb(0 0 0 / 0.3);
+}
+
+.heroMeta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 5px;
+  font-size: var(--fs-sm);
+  color: rgb(255 255 255 / 0.86);
+}
+
+.heroMetaDivider {
+  opacity: 0.6;
+}
+
+.heroTeam {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.heroTeamAvatar {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  color: #fff;
+  border: 2px solid rgb(255 255 255 / 0.85);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 600;
+  margin-left: -8px;
+}
+
+/* Title row: progress + actions */
+
+.titleRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  margin-top: 16px;
+  flex-wrap: wrap;
+}
+
+.progress {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 180px;
+}
+
+.progressLabelRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.progressLabel {
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+.progressValue {
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.progressTrack {
+  height: 6px;
+  border-radius: 6px;
+  background: var(--color-bg-muted);
+  overflow: hidden;
+}
+
+.progressFill {
+  display: block;
+  height: 100%;
+  background: var(--color-action);
+  border-radius: 6px;
+}
+
+.actions {
+  display: flex;
+  gap: 8px;
+}
+
+.actionIconBtn {
+  width: 38px;
+  height: 38px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-bg-card);
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.actionIconBtn:hover {
+  background: var(--color-bg-subtle);
+}
+
+/* Tabs */
+
+.tabRow {
+  display: flex;
+  gap: 4px;
+  margin-top: 14px;
+  border-bottom: 1px solid var(--color-border);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.tabRow::-webkit-scrollbar {
+  height: 0;
+}
+
+.tab {
+  flex-shrink: 0;
+  position: relative;
+  height: 40px;
+  padding: 0 13px;
+  border: none;
+  background: transparent;
+  font-size: var(--fs-sm);
+  font-weight: 500;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  font-family: inherit;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+}
+
+.tab:hover {
+  color: var(--color-text-primary);
+}
+
+.tabActive {
+  font-weight: 600;
+  color: var(--color-text-primary);
+  border-bottom-color: var(--color-action);
+}
+
+.tabCount {
+  margin-left: 6px;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  background: var(--color-bg-muted);
+  padding: 1px 6px;
+  border-radius: 8px;
+}
+
+/* ───────────────────────── Scroll body + shared section primitives ───────────────────────── */
+
+.body {
+  flex: 1;
+  overflow-y: auto;
+}
+
+.bodyInner {
+  padding: 22px 40px 26px;
+}
+
+.bodyMax {
+  max-width: 960px;
+  margin: 0 auto;
+}
+
+.sectionHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+
+.sectionTitle {
+  margin: 0;
+  font-size: var(--fs-base);
+  font-weight: 600;
+}
+
+.sectionTitleCount {
+  font-weight: 500;
+  color: var(--color-text-muted);
+}
+
+.card {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  padding: 15px 16px;
+  background: var(--color-bg-card);
+  box-shadow: var(--shadow-card);
+}
+
+.secondaryBtn {
+  height: 34px;
+  padding: 0 13px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-bg-card);
+  color: var(--color-text-primary);
+  font-size: var(--fs-sm);
+  font-weight: 500;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  text-decoration: none;
+}
+
+.secondaryBtn:hover {
+  border-color: var(--color-border-strong);
+}
+
+.link {
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  color: var(--color-text-primary);
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  padding: 9px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: 14px;
+  background: var(--color-bg-card);
+}
+
+.rowMain {
+  flex: 1;
+  min-width: 0;
+}
+
+.rowLabel {
+  font-size: var(--fs-sm);
+  font-weight: 500;
+}
+
+.rowSub {
+  font-size: var(--fs-xs);
+  color: var(--color-text-muted);
+  margin-top: 2px;
+}
+
+/* ───────────────────────── Overview tab ───────────────────────── */
+
+.overview {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.statGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+}
+
+.statLabel {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+.statValue {
+  margin-top: 9px;
+  font-size: var(--fs-xl);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.statSub {
+  margin-top: 3px;
+  font-size: var(--fs-xs);
+  color: var(--color-text-secondary);
+}
+
+.moodboardGrid {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 8px;
+}
+
+.moodboardTile {
+  position: relative;
+  aspect-ratio: 1;
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+  background-color: var(--color-bg-subtle);
+}
+
+.overviewGrid {
+  display: grid;
+  grid-template-columns: 1.1fr 1fr;
+  gap: 20px;
+}
+
+.checklist {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+/* ───────────────────────── Shot list tab ───────────────────────── */
+
+.shotList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.shotRow {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  padding: 9px 12px 9px 9px;
+  border: 1px solid var(--color-border);
+  border-radius: 14px;
+  background: var(--color-bg-card);
+}
+
+.shotNum {
+  font-size: var(--fs-xs);
+  color: var(--color-text-muted);
+  width: 18px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.shotIcon {
+  width: 54px;
+  height: 54px;
+  border-radius: 10px;
+  border: 1px solid var(--color-border);
+  background: var(--color-bg-muted);
+  color: var(--color-text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.shotDesc {
+  font-size: var(--fs-sm);
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ───────────────────────── Assets tab (masonry) ───────────────────────── */
+
+.masonry {
+  columns: 4;
+  column-gap: 12px;
+}
+
+.masonryItem {
+  break-inside: avoid;
+  margin-bottom: 12px;
+  position: relative;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+  background-color: var(--color-bg-subtle);
+}
+
+/* ───────────────────────── Team tab ───────────────────────── */
+
+.crewGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.crewRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 11px 13px;
+  border: 1px solid var(--color-border);
+  border-radius: 14px;
+  background: var(--color-bg-card);
+}
+
+.crewAvatar {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 600;
+  flex-shrink: 0;
+  background: var(--color-text-muted);
+}
+
+.crewName {
+  font-size: var(--fs-sm);
+  font-weight: 600;
+}
+
+.crewMeta {
+  font-size: var(--fs-xs);
+  color: var(--color-text-muted);
+}
+
+/* ───────────────────────── Schedule tab ───────────────────────── */
+
+.timeline {
+  display: flex;
+  flex-direction: column;
+}
+
+.timelineRow {
+  display: flex;
+  gap: 16px;
+}
+
+.timelineTime {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex-shrink: 0;
+  width: 62px;
+}
+
+.timelineTimeLabel {
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  padding-top: 1px;
+}
+
+.timelineLine {
+  flex: 1;
+  width: 2px;
+  background: var(--color-border);
+  margin-top: 5px;
+}
+
+.timelineBody {
+  flex: 1;
+  padding-bottom: 16px;
+}
+
+.timelineCard {
+  border: 1px solid var(--color-border);
+  border-left: 3px solid var(--color-action);
+  border-radius: 12px;
+  padding: 11px 14px;
+  background: var(--color-bg-card);
+}
+
+.timelineTitle {
+  font-size: var(--fs-sm);
+  font-weight: 600;
+}
+
+.timelineDetail {
+  font-size: var(--fs-xs);
+  color: var(--color-text-muted);
+  margin-top: 2px;
+}
+
+/* ───────────────────────── Budget tab ───────────────────────── */
+
+.budgetCard {
+  margin-bottom: 18px;
+}
+
+.budgetTop {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.budgetUsedLabel {
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+.budgetAmount {
+  margin-top: 4px;
+  font-size: var(--fs-2xl);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.budgetTotal {
+  font-size: var(--fs-base);
+  font-weight: 500;
+  color: var(--color-text-muted);
+}
+
+.budgetPct {
+  font-size: var(--fs-sm);
+  font-weight: 600;
+}
+
+.budgetTrack {
+  height: 8px;
+  border-radius: 8px;
+  background: var(--color-bg-muted);
+  overflow: hidden;
+}
+
+.budgetFill {
+  display: block;
+  height: 100%;
+  border-radius: 8px;
+}
+
+.budgetLines {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.budgetLine {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 11px 4px;
+  border-bottom: 1px solid var(--color-border-subtle);
+}
+
+.budgetLineLabel {
+  font-size: var(--fs-sm);
+  color: var(--color-text-primary);
+}
+
+.budgetLineAmount {
+  font-size: var(--fs-sm);
+  font-weight: 500;
+  color: var(--color-text-secondary);
+}
+
+/* ───────────────────────── Approvals tab ───────────────────────── */
+
+.approvalGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.approvalCard {
+  composes: card;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+/* ───────────────────────── Deliverables tab ───────────────────────── */
+
+.delivGrid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+}
+
+.delivCard {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  overflow: hidden;
+  background: var(--color-bg-card);
+  box-shadow: var(--shadow-card);
+}
+
+.delivBody {
+  padding: 10px 11px;
+}
+
+.delivLabel {
+  font-size: var(--fs-sm);
+  font-weight: 500;
+}
+
+.delivSpec {
+  font-size: var(--fs-xs);
+  color: var(--color-text-muted);
+  margin-top: 2px;
+}
+
+.delivChip {
+  margin-top: 6px;
+}
+
+/* ───────────────────────── Activity tab ───────────────────────── */
+
+.activityRow {
+  display: flex;
+  gap: 13px;
+}
+
+.activityDotCol {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.activityDot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--color-info);
+  margin-top: 4px;
+}
+
+.activityLine {
+  flex: 1;
+  width: 2px;
+  background: var(--color-border-subtle);
+  margin: 4px 0;
+}
+
+.activityBody {
+  padding-bottom: 16px;
+}
+
+.activityText {
+  font-size: var(--fs-sm);
+  color: var(--color-text-primary);
+  line-height: 1.45;
+}
+
+.activityTime {
+  font-size: var(--fs-xs);
+  color: var(--color-text-muted);
+  margin-top: 2px;
+}
+
+/* ───────────────────────── Mobile (≤1024px) — shell already handles nav/tabbar; ─────────────────────────
+   this only ensures the workspace content itself doesn't overflow. */
+@media (max-width: 1024px) {
+  .header,
+  .bodyInner {
+    padding-left: 18px;
+    padding-right: 18px;
+  }
+
+  .statGrid,
+  .overviewGrid,
+  .crewGrid,
+  .approvalGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .moodboardGrid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  .masonry {
+    columns: 2;
+  }
+
+  .delivGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
