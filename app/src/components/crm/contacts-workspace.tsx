@@ -1,12 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { Plus } from "lucide-react";
 
 import { getPrimaryEntry, type ContactFieldEntry } from "@/lib/crm/jsonb-contact-fields";
 import type { ContactRow } from "@/lib/crm/queries";
 import { CrmAvatar } from "./crm-avatar";
-import { CrmListWorkspace } from "./crm-list-workspace";
+import { ComingSoonButton, CrmListWorkspace } from "./crm-list-workspace";
 import styles from "./crm-list-workspace.module.css";
 
 const FILTER_LABELS = ["Organization", "Role"];
@@ -56,12 +55,7 @@ export function ContactsWorkspace({
       filterItems={filterContacts}
       emptyLabel="No contacts yet"
       emptyBody="Add your first person to start tracking relationships."
-      emptyAction={
-        <button type="button" disabled title="Coming soon" className={styles.newBtn}>
-          <Plus size={15} aria-hidden />
-          New person
-        </button>
-      }
+      emptyAction={<ComingSoonButton label="New person" />}
       fetchError={fetchError}
       renderRow={(contact) => {
         const email = primaryEmail(contact.email);
