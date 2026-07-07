@@ -54,8 +54,6 @@
    inside its own compact box instead of spilling onto whatever's next. */
 .chatDockInner :global(.copilotKitMessages) {
   max-height: 8rem;
-  overflow-y: auto;
-  overflow-x: hidden;
 }
 
 .intelligencePanel {
