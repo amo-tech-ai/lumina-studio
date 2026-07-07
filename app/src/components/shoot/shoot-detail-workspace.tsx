@@ -194,9 +194,11 @@ export function ShootDetailWorkspace({ data, fetchError }: Props) {
             {TAB_IDS.map((id) => (
               <button
                 key={id}
+                id={`shoot-detail-tab-${id}`}
                 type="button"
                 role="tab"
                 aria-selected={tab === id}
+                aria-controls="shoot-detail-tabpanel"
                 onClick={() => setTab(id)}
                 className={tab === id ? `${styles.tab} ${styles.tabActive}` : styles.tab}
               >
@@ -209,7 +211,12 @@ export function ShootDetailWorkspace({ data, fetchError }: Props) {
 
       <div className={styles.body}>
         <div className={styles.bodyInner}>
-          <div className={styles.bodyMax}>
+          <div
+            id="shoot-detail-tabpanel"
+            role="tabpanel"
+            aria-labelledby={`shoot-detail-tab-${tab}`}
+            className={styles.bodyMax}
+          >
             {tab === "overview" ? <OverviewTab data={data} /> : null}
             {tab === "shots" ? <ShotsTab shots={shots} /> : null}
             {tab === "assets" ? <AssetsTab assets={assets} /> : null}

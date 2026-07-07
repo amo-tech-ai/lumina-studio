@@ -19,7 +19,7 @@ export function BudgetTab({ shoot }: Props) {
   const { estimated_budget, actual_cost, currency, budget_breakdown } = shoot;
   const lines = budget_breakdown ? Object.entries(budget_breakdown) : [];
 
-  if (estimated_budget == null && lines.length === 0) {
+  if (estimated_budget == null && actual_cost == null && lines.length === 0) {
     return (
       <EmptyState heading="No budget set yet" body="Estimated budget and line items will appear here." icon={<DollarSign />} />
     );
@@ -33,14 +33,16 @@ export function BudgetTab({ shoot }: Props) {
 
   return (
     <div>
-      {estimated_budget != null ? (
+      {estimated_budget != null || actual_cost != null ? (
         <div className={`${styles.card} ${styles.budgetCard}`}>
           <div className={styles.budgetTop}>
             <div>
               <div className={styles.budgetUsedLabel}>Budget used</div>
               <div className={styles.budgetAmount}>
-                {formatMoney(actual_cost, currency)}{" "}
-                <span className={styles.budgetTotal}>/ {formatMoney(estimated_budget, currency)}</span>
+                {formatMoney(actual_cost, currency)}
+                {estimated_budget != null ? (
+                  <span className={styles.budgetTotal}> / {formatMoney(estimated_budget, currency)}</span>
+                ) : null}
               </div>
             </div>
             {pct != null ? (

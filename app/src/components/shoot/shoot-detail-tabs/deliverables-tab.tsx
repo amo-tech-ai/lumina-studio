@@ -3,7 +3,7 @@ import { FileText } from "lucide-react";
 import { EmptyState } from "@/components/ui/empty-state";
 import { StatusChip } from "@/components/ui/status-chip";
 import type { ShootDetailDeliverable } from "@/lib/shoot/get-shoot-detail";
-import { deliverableDot } from "../shoot-detail-format";
+import { deliverableDot, isDeliverableReady } from "../shoot-detail-format";
 import styles from "../shoot-detail.module.css";
 
 type Props = {
@@ -13,7 +13,7 @@ type Props = {
 /** shoot.shoot_deliverables has no linked-asset column — DC's cover-photo card
  *  is swapped for a neutral icon box rather than a fabricated preview. */
 export function DeliverablesTab({ deliverables }: Props) {
-  const ready = deliverables.filter((d) => d.status === "delivered" || d.status === "ready").length;
+  const ready = deliverables.filter((d) => isDeliverableReady(d.status)).length;
 
   if (deliverables.length === 0) {
     return (
