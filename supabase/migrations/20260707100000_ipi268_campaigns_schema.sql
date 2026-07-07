@@ -23,7 +23,10 @@ end;
 $$ language plpgsql;
 
 create or replace function public.check_campaign_org_consistency()
-returns trigger as $$
+returns trigger
+security definer
+set search_path = public
+as $$
 begin
   if new.org_id != (select org_id from public.brands where id = new.brand_id) then
     raise exception 'campaign.org_id (%) must match brand.org_id (%)', new.org_id, (select org_id from public.brands where id = new.brand_id);
@@ -118,10 +121,9 @@ create policy "campaign_deliverables_select_org_member" on public.campaign_deliv
   );
 
 drop policy if exists "campaign_deliverables_insert_owner" on public.campaign_deliverables;
-create policy "campaign_deliverables_insert_owner" on public.campaign_deliverables
+create policy "campaign_deliverables_insert_org_member" on public.campaign_deliverables
   for insert with check (
     is_org_member((select org_id from public.campaigns where id = campaign_id))
-    and (select auth.uid()) = (select user_id from public.brands where id = (select brand_id from public.campaigns where id = campaign_id))
   );
 
 drop policy if exists "campaign_deliverables_update_assigned_or_owner" on public.campaign_deliverables;
@@ -131,17 +133,13 @@ create policy "campaign_deliverables_update_assigned_or_owner" on public.campaig
   )
   with check (
     is_org_member((select org_id from public.campaigns where id = campaign_id))
-    and (
-      (select auth.uid()) = assigned_to
-      or (select auth.uid()) = (select user_id from public.brands where id = (select brand_id from public.campaigns where id = campaign_id))
-    )
+    and ((select auth.uid()) = assigned_to or is_org_member((select org_id from public.campaigns where id = campaign_id)))
   );
 
-drop policy if exists "campaign_deliverables_delete_owner" on public.campaign_deliverables;
-create policy "campaign_deliverables_delete_owner" on public.campaign_deliverables
+drop policy if exists "campaign_deliverables_delete_org_member" on public.campaign_deliverables;
+create policy "campaign_deliverables_delete_org_member" on public.campaign_deliverables
   for delete using (
     is_org_member((select org_id from public.campaigns where id = campaign_id))
-    and (select auth.uid()) = (select user_id from public.brands where id = (select brand_id from public.campaigns where id = campaign_id))
   );
 
 -- 7. FK repair: crm_deals.campaign_id
