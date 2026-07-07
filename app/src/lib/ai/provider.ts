@@ -71,7 +71,7 @@ const MODEL_BY_ID = new Map(
 
 export function resolveAiProvider(): AiProvider {
   const raw = (process.env.AI_PROVIDER ?? "gemini").trim().toLowerCase();
-  if (raw === "gemini" || raw === "groq" || raw === "openai") return raw;
+  if (raw === "gemini" || raw === "groq" || raw === "openai") return raw as AiProvider;
   throw new Error(
     `AI_PROVIDER="${raw}" is invalid (expected gemini | groq | openai).`,
   );
@@ -169,7 +169,7 @@ export function resolveModel(tier: GroqModelTier = "default"): ResolvedLanguageM
   if (provider === "gemini") {
     return createGeminiLanguageModel();
   }
-  if (provider === "groq") {
+  if (provider === ("groq" as AiProvider)) {
     return createGroqLanguageModel(tier);
   }
   throw new Error(
