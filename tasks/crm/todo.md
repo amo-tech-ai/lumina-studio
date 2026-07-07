@@ -54,9 +54,9 @@ issueCount: 16
 | | |
 | -- | -- |
 | **Verified** | 2026-07-07, live against Linear + `origin/main` |
-| **Status** | 🟡 Schema, AI wave 1, shared atoms (StatusChip/EntityList/EmptyState/ErrorState/ApprovalCard), CRM lists, and CRM Wave 1 foundation (ActivityTimeline + getCompany/getContact/getDeal/listDeals/listActivities) are done. Company/Contact detail, Pipeline, Deal detail pages are in progress (still `<CrmScreenGate>` stubs — foundation is unblocked, pages aren't built yet). Won/Lost gate, AI wave 2, final verification not started. |
-| **Ship-ready?** | 🔴 No — 4 of 6 MVP screens are still `<CrmScreenGate>` stubs |
-| **Overall** | ~40% (schema + lists + shared atoms + AI wave 1 + Wave 1 foundation done; 4 screen pages + gate + wave 2 + verification remain) |
+| **Status** | 🟡 Schema, AI wave 1, shared atoms (StatusChip/EntityList/EmptyState/ErrorState/ApprovalCard), CRM lists, CRM Wave 1 foundation (ActivityTimeline + getCompany/getContact/getDeal/listDeals/listActivities), and Company Detail (IPI-391) are done. Contact detail, Pipeline, Deal detail pages are still in progress (`<CrmScreenGate>` stubs — foundation is unblocked, pages aren't built yet). Won/Lost gate, AI wave 2, final verification not started. |
+| **Ship-ready?** | 🔴 No — 3 of 6 MVP screens are still `<CrmScreenGate>` stubs |
+| **Overall** | ~45% (schema + lists + shared atoms + AI wave 1 + Wave 1 foundation + Company Detail done; 3 screen pages + gate + wave 2 + verification remain) |
 
 ---
 
@@ -108,7 +108,7 @@ Wave 1       DONE (2026-07-07). ActivityTimeline (presentational, app/src/compon
              per the status table above — Wave 1 only unblocks them, it doesn't wire them.
 
 In progress: IPI-389/390  — verify DC parity on the already-shipped lists, close out
-             IPI-391      — Company Detail: page + 4 tabs — still needs getCompany/listActivities wired in, ActivityTimeline rendered
+             IPI-391      — DONE (PR pending merge). Company Detail: page + 4 tabs, getCompany/listActivities wired in, ActivityTimeline rendered
              IPI-392      — Contact Detail: page — still needs getContact wired in, then extract <Profile360> from 391+392
              IPI-395      — Pipeline: still needs PATCH route + Realtime + kanban board (listDeals already built, not yet consumed)
              IPI-396      — Deal Detail: page — still needs deal-stage-control (shares write path with 395)
