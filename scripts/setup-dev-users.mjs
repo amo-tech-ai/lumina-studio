@@ -211,6 +211,11 @@ const A = DEV_USERS.find((u) => u.email === "alice@acme.com").id;
 const B = DEV_USERS.find((u) => u.email === "bob@acme.com").id;
 const C = DEV_USERS.find((u) => u.email === "carol@acme.com").id;
 
+if (!A || !B || !C) {
+  console.error("Missing dev user IDs — aborting seed. Check Step 1 output above.");
+  process.exit(1);
+}
+
 const ORG_1 = "00000000-0000-0000-0000-000000000001";
 const ORG_2 = "00000000-0000-0000-0000-000000000002";
 const BRAND_1 = "00000000-0000-0000-0000-000000000201";
@@ -227,6 +232,7 @@ const SEED_DATA = [
     { org_id: ORG_1, user_id: A, role: "owner" },
     { org_id: ORG_1, user_id: B, role: "editor" },
     { org_id: ORG_1, user_id: C, role: "viewer" },
+    { org_id: ORG_2, user_id: B, role: "owner" },
   ]},
   // Brands
   { table: "brands", rows: [
@@ -241,16 +247,19 @@ const SEED_DATA = [
     { id: "00000000-0000-0000-0000-000000000304", org_id: ORG_1, brand_id: BRAND_2, name: "Balenciaga", domain: "balenciaga.com", industry: "luxury", status: "inactive", owner: B },
     { id: "00000000-0000-0000-0000-000000000305", org_id: ORG_1, brand_id: null, name: "Uniqlo", domain: "uniqlo.com", industry: "retail", status: "lost", owner: A },
   ]},
-  // CRM Contacts
+  // CRM Contacts — id range 310-317, distinct from crm_companies' 301-305
+  // (they were previously colliding on the same 00000000-...-0003xx ids, a
+  // different table so no PK error, but confusing and unsafe for any future
+  // cross-table id lookup).
   { table: "crm_contacts", rows: [
-    { id: "00000000-0000-0000-0000-000000000302", org_id: ORG_1, company_id: "00000000-0000-0000-0000-000000000301", name: "Maria Lopez", email: [{ value: "maria.lopez@zara.com", type: "work", primary: true }], phone: [{ value: "+34-91-123-4567", type: "work", primary: true }], role_title: "Procurement Manager" },
-    { id: "00000000-0000-0000-0000-000000000303", org_id: ORG_1, company_id: "00000000-0000-0000-0000-000000000301", name: "James Chen", email: [{ value: "james.chen@zara.com", type: "work", primary: true }], phone: [{ value: "+34-91-123-4568", type: "work", primary: true }], role_title: "Creative Director" },
-    { id: "00000000-0000-0000-0000-000000000304", org_id: ORG_1, company_id: "00000000-0000-0000-0000-000000000302", name: "Elena Ruiz", email: [{ value: "elena.ruiz@hm.com", type: "work", primary: true }], phone: [{ value: "+46-8-555-0100", type: "work", primary: true }], role_title: "Brand Manager" },
-    { id: "00000000-0000-0000-0000-000000000305", org_id: ORG_1, company_id: "00000000-0000-0000-0000-000000000302", name: "David Kim", email: [{ value: "david.kim@hm.se", type: "work", primary: true }], phone: [{ value: "+46-8-555-0101", type: "work", primary: true }], role_title: "Production Lead" },
-    { id: "00000000-0000-0000-0000-000000000306", org_id: ORG_1, company_id: "00000000-0000-0000-0000-000000000303", name: "Sophie Dubois", email: [{ value: "sophie.dubois@gucci.com", type: "work", primary: true }, { value: "sophie.dubois@personal.it", type: "personal", primary: false }], phone: [{ value: "+39-055-123-4567", type: "work", primary: true }, { value: "+39-335-987-6543", type: "mobile", primary: false }], role_title: "Senior Buyer" },
-    { id: "00000000-0000-0000-0000-000000000307", org_id: ORG_1, company_id: "00000000-0000-0000-0000-000000000303", name: "Marco Rossi", email: [{ value: "marco.rossi@gucci.com", type: "work", primary: true }], phone: [], role_title: "Photographer" },
-    { id: "00000000-0000-0000-0000-000000000308", org_id: ORG_1, company_id: "00000000-0000-0000-0000-000000000304", name: "Yuki Tanaka", email: [{ value: "yuki.tanaka@balenciaga.com", type: "work", primary: true }], phone: [{ value: "+33-1-234-5678", type: "work", primary: true }], role_title: "Marketing Director" },
-    { id: "00000000-0000-0000-0000-000000000309", org_id: ORG_1, company_id: "00000000-0000-0000-0000-000000000305", name: "Anna Svensson", email: [{ value: "anna.s@uniqlo.com", type: "work", primary: true }], phone: [{ value: "+81-3-5555-0100", type: "work", primary: true }], role_title: "Merchandiser" },
+    { id: "00000000-0000-0000-0000-000000000310", org_id: ORG_1, company_id: "00000000-0000-0000-0000-000000000301", name: "Maria Lopez", email: [{ value: "maria.lopez@zara.com", type: "work", primary: true }], phone: [{ value: "+34-91-123-4567", type: "work", primary: true }], role_title: "Procurement Manager" },
+    { id: "00000000-0000-0000-0000-000000000311", org_id: ORG_1, company_id: "00000000-0000-0000-0000-000000000301", name: "James Chen", email: [{ value: "james.chen@zara.com", type: "work", primary: true }], phone: [{ value: "+34-91-123-4568", type: "work", primary: true }], role_title: "Creative Director" },
+    { id: "00000000-0000-0000-0000-000000000312", org_id: ORG_1, company_id: "00000000-0000-0000-0000-000000000302", name: "Elena Ruiz", email: [{ value: "elena.ruiz@hm.com", type: "work", primary: true }], phone: [{ value: "+46-8-555-0100", type: "work", primary: true }], role_title: "Brand Manager" },
+    { id: "00000000-0000-0000-0000-000000000313", org_id: ORG_1, company_id: "00000000-0000-0000-0000-000000000302", name: "David Kim", email: [{ value: "david.kim@hm.se", type: "work", primary: true }], phone: [{ value: "+46-8-555-0101", type: "work", primary: true }], role_title: "Production Lead" },
+    { id: "00000000-0000-0000-0000-000000000314", org_id: ORG_1, company_id: "00000000-0000-0000-0000-000000000303", name: "Sophie Dubois", email: [{ value: "sophie.dubois@gucci.com", type: "work", primary: true }, { value: "sophie.dubois@personal.it", type: "personal", primary: false }], phone: [{ value: "+39-055-123-4567", type: "work", primary: true }, { value: "+39-335-987-6543", type: "mobile", primary: false }], role_title: "Senior Buyer" },
+    { id: "00000000-0000-0000-0000-000000000315", org_id: ORG_1, company_id: "00000000-0000-0000-0000-000000000303", name: "Marco Rossi", email: [{ value: "marco.rossi@gucci.com", type: "work", primary: true }], phone: [], role_title: "Photographer" },
+    { id: "00000000-0000-0000-0000-000000000316", org_id: ORG_1, company_id: "00000000-0000-0000-0000-000000000304", name: "Yuki Tanaka", email: [{ value: "yuki.tanaka@balenciaga.com", type: "work", primary: true }], phone: [{ value: "+33-1-234-5678", type: "work", primary: true }], role_title: "Marketing Director" },
+    { id: "00000000-0000-0000-0000-000000000317", org_id: ORG_1, company_id: "00000000-0000-0000-0000-000000000305", name: "Anna Svensson", email: [{ value: "anna.s@uniqlo.com", type: "work", primary: true }], phone: [{ value: "+81-3-5555-0100", type: "work", primary: true }], role_title: "Merchandiser" },
   ]},
   // Campaigns
   { table: "campaigns", rows: [
@@ -276,15 +285,15 @@ const SEED_DATA = [
   ]},
   // CRM Activities
   { table: "crm_activities", rows: [
-    { id: "00000000-0000-0000-0000-000000000501", org_id: ORG_1, company_id: "00000000-0000-0000-0000-000000000301", contact_id: "00000000-0000-0000-0000-000000000302", type: "meeting", body: "Initial pitch — presented Spring collection moodboards.", completed_at: "2026-06-15T10:00:00Z", created_by: A },
+    { id: "00000000-0000-0000-0000-000000000501", org_id: ORG_1, company_id: "00000000-0000-0000-0000-000000000301", contact_id: "00000000-0000-0000-0000-000000000310", type: "meeting", body: "Initial pitch — presented Spring collection moodboards.", completed_at: "2026-06-15T10:00:00Z", created_by: A },
     { id: "00000000-0000-0000-0000-000000000502", org_id: ORG_1, company_id: "00000000-0000-0000-0000-000000000301", type: "note", body: "Zara requested updated pricing for SS26.", created_by: B },
-    { id: "00000000-0000-0000-0000-000000000503", org_id: ORG_1, company_id: "00000000-0000-0000-0000-000000000302", contact_id: "00000000-0000-0000-0000-000000000304", type: "email", body: "Follow-up on H&M brief — sent lookbook references.", due_at: "2026-07-10T14:00:00Z", created_by: A },
+    { id: "00000000-0000-0000-0000-000000000503", org_id: ORG_1, company_id: "00000000-0000-0000-0000-000000000302", contact_id: "00000000-0000-0000-0000-000000000312", type: "email", body: "Follow-up on H&M brief — sent lookbook references.", due_at: "2026-07-10T14:00:00Z", created_by: A },
     { id: "00000000-0000-0000-0000-000000000504", org_id: ORG_1, company_id: null, contact_id: null, deal_id: "00000000-0000-0000-0000-000000000601", type: "task", body: "Draft contract terms for Spring deal.", due_at: "2026-07-15T17:00:00Z", created_by: A },
-    { id: "00000000-0000-0000-0000-000000000505", org_id: ORG_1, company_id: "00000000-0000-0000-0000-000000000303", contact_id: "00000000-0000-0000-0000-000000000306", deal_id: "00000000-0000-0000-0000-000000000603", type: "call", body: "Discussed shoot dates for AW26. Sophie prefers late August.", due_at: "2026-07-08T11:00:00Z", created_by: B },
-    { id: "00000000-0000-0000-0000-000000000506", org_id: ORG_1, company_id: "00000000-0000-0000-0000-000000000304", contact_id: "00000000-0000-0000-0000-000000000308", type: "note", body: "Balenciaga scouting — discussed potential AW26 collab.", completed_at: "2026-06-20T14:30:00Z", created_by: A },
+    { id: "00000000-0000-0000-0000-000000000505", org_id: ORG_1, company_id: "00000000-0000-0000-0000-000000000303", contact_id: "00000000-0000-0000-0000-000000000314", deal_id: "00000000-0000-0000-0000-000000000603", type: "call", body: "Discussed shoot dates for AW26. Sophie prefers late August.", due_at: "2026-07-08T11:00:00Z", created_by: B },
+    { id: "00000000-0000-0000-0000-000000000506", org_id: ORG_1, company_id: "00000000-0000-0000-0000-000000000304", contact_id: "00000000-0000-0000-0000-000000000316", type: "note", body: "Balenciaga scouting — discussed potential AW26 collab.", completed_at: "2026-06-20T14:30:00Z", created_by: A },
     { id: "00000000-0000-0000-0000-000000000507", org_id: ORG_1, company_id: "00000000-0000-0000-0000-000000000305", type: "email", body: "Re-engagement outreach to Uniqlo. No response yet.", due_at: "2026-07-20T09:00:00Z", created_by: B },
     { id: "00000000-0000-0000-0000-000000000508", org_id: ORG_1, company_id: null, contact_id: null, deal_id: "00000000-0000-0000-0000-000000000601", type: "ai_summary", body: "Deal qualified — budget confirmed at $50k. Next: proposal.", created_by: A },
-    { id: "00000000-0000-0000-0000-000000000509", org_id: ORG_1, company_id: "00000000-0000-0000-0000-000000000301", contact_id: "00000000-0000-0000-0000-000000000303", type: "meeting", body: "James Chen reviewed moodboards. Requested 3 alternates for hero shot.", due_at: "2026-06-25T15:00:00Z", created_by: B },
+    { id: "00000000-0000-0000-0000-000000000509", org_id: ORG_1, company_id: "00000000-0000-0000-0000-000000000301", contact_id: "00000000-0000-0000-0000-000000000311", type: "meeting", body: "James Chen reviewed moodboards. Requested 3 alternates for hero shot.", due_at: "2026-06-25T15:00:00Z", created_by: B },
     { id: "00000000-0000-0000-0000-000000000510", org_id: ORG_1, company_id: null, contact_id: null, deal_id: "00000000-0000-0000-0000-000000000604", type: "task", body: "Finalize negotiation terms — $28k SS26 production.", due_at: "2026-07-05T12:00:00Z", created_by: A },
   ]},
   // Notifications
