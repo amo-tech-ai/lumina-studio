@@ -137,7 +137,7 @@ create policy "campaign_deliverables_update_assigned_or_owner" on public.campaig
     is_org_member((select org_id from public.campaigns where id = campaign_id))
   )
   with check (
-    assigned_to is null or (select auth.uid()) = assigned_to
+    (select auth.uid()) = assigned_to
     or (select auth.uid()) = (select user_id from public.brands where id = (select brand_id from public.campaigns where id = campaign_id))
   );
 
