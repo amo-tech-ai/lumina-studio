@@ -101,7 +101,10 @@ create policy "campaigns_insert_org_member" on public.campaigns
 
 drop policy if exists "campaigns_update_org_member" on public.campaigns;
 create policy "campaigns_update_org_member" on public.campaigns
-  for update using (is_org_member(org_id))
+  for update using (
+    is_org_member(org_id)
+    and (select auth.uid()) = (select user_id from public.brands where id = campaigns.brand_id)
+  )
   with check (
     is_org_member(org_id)
     and (select auth.uid()) = (select user_id from public.brands where id = brand_id)
