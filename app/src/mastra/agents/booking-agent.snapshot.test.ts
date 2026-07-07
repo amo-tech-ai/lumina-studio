@@ -1,6 +1,3 @@
-import { readFileSync } from "node:fs";
-import { resolve } from "node:path";
-import { fileURLToPath } from "node:url";
 import { describe, expect, it, vi } from "vitest";
 
 vi.mock("@/mastra/memory", async (importOriginal) => {
@@ -9,22 +6,15 @@ vi.mock("@/mastra/memory", async (importOriginal) => {
 });
 import { bookingAgent } from "./booking-agent";
 
-const AGENT_SRC = readFileSync(
-  resolve(fileURLToPath(new URL(".", import.meta.url)), "booking-agent.ts"),
-  "utf8",
-);
-
 describe("booking-agent snapshot (IPI-397 AC-G)", () => {
-  it("instructions enforce draft-only behavior", () => {
-    const block = AGENT_SRC.match(
-      /instructions: `([\s\S]*?)`/,
-    )?.[1];
+  it("instructions enforce draft-only behavior", async () => {
+    const instructions = await bookingAgent.getInstructions();
 
-    expect(block).toBeDefined();
-    expect(block).toContain("NEVER confirm or approve a booking");
-    expect(block).toContain("operatorConfirmed");
-    expect(block).toContain("no confirm_booking tool exists");
-    expect(block).not.toContain("transition_booking");
+    expect(instructions).toBeDefined();
+    expect(instructions).toContain("NEVER confirm or approve a booking");
+    expect(instructions).toContain("operatorConfirmed");
+    expect(instructions).toContain("no confirm_booking tool exists");
+    expect(instructions).not.toContain("transition_booking");
   });
 
   it("tools list matches expected set", async () => {
