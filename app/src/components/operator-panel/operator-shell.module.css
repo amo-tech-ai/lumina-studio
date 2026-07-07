@@ -88,10 +88,18 @@
   to   { transform: translateX(0); }
 }
 
-/* Tablet / mobile: collapse to single column — do not change mobile shell behavior */
+/* Tablet / mobile: drop the 3rd (IntelligencePanel) column only — do not change
+   mobile shell behavior further. NAV + content still need 2 explicit columns:
+   collapsing to a single column left NAV and content as two auto-placed grid
+   children in a 1-column grid, which stacks them into separate ROWS instead of
+   side by side. Since NAV renders at a fixed 100dvh height, content was pushed
+   a full viewport-height below the fold — the page looked completely blank
+   until scrolled. Confirmed live on every route below 1024px, not one screen's
+   bug. Real bottom-nav/mobile-shell redesign is still MOB-01/02/04 — this only
+   stops the page from being blank. */
 @media (max-width: 1024px) {
   .shell {
-    grid-template-columns: minmax(0, 1fr);
+    grid-template-columns: auto minmax(0, 1fr);
     padding-bottom: env(safe-area-inset-bottom, 0);
   }
   .intelligencePanel {
