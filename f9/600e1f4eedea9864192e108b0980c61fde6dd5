@@ -1,0 +1,29 @@
+app/src/components/ui/error-state.test.tsx
+  s_fb6d75e0972fb7::t_5fb54e5f6a0686 1-33
+app/src/components/ui/empty-state.module.css
+  s_fb6d75e0972fb7::t_437fd4eb9f2f0c 1-58
+app/src/components/ui/empty-state.tsx
+  s_fb6d75e0972fb7::t_b6e3d8de0782e7 1-42
+app/src/components/ui/empty-state.test.tsx
+  s_fb6d75e0972fb7::t_212696225021c9 1-51
+app/src/components/ui/error-state.module.css
+  s_fb6d75e0972fb7::t_b9df066c019106 1-48
+app/src/components/ui/error-state.tsx
+  s_fb6d75e0972fb7::t_16c10c642bff17 1-37
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "f9600e1f4eedea9864192e108b0980c61fde6dd5",
+  "prompts": {},
+  "sessions": {
+    "s_fb6d75e0972fb7": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "482ba906-0d79-473d-87a7-390cf354e015",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
