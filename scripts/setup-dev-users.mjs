@@ -220,7 +220,7 @@ const SEED_DATA = [
   // Organizations
   { table: "organizations", rows: [
     { id: ORG_1, name: "Acme Corp", slug: "acme", type: "agency", owner_id: A },
-    { id: ORG_2, name: "Globex Inc", slug: "globex", type: "brand", owner_id: A },
+    { id: ORG_2, name: "Globex Inc", slug: "globex", type: "brand", owner_id: B },
   ]},
   // Org members (RLS membership) — composite PK (org_id, user_id), no id column
   { table: "org_members", rows: [
@@ -243,14 +243,14 @@ const SEED_DATA = [
   ]},
   // CRM Contacts
   { table: "crm_contacts", rows: [
-    { id: "00000000-0000-0000-0000-000000000302", org_id: ORG_1, company_id: "00000000-0000-0000-0000-000000000301", name: "Maria Lopez", email: ["maria.lopez@zara.com"], phone: ["+34-91-123-4567"], role_title: "Procurement Manager" },
-    { id: "00000000-0000-0000-0000-000000000303", org_id: ORG_1, company_id: "00000000-0000-0000-0000-000000000301", name: "James Chen", email: ["james.chen@zara.com"], phone: ["+34-91-123-4568"], role_title: "Creative Director" },
-    { id: "00000000-0000-0000-0000-000000000304", org_id: ORG_1, company_id: "00000000-0000-0000-0000-000000000302", name: "Elena Ruiz", email: ["elena.ruiz@hm.com"], phone: ["+46-8-555-0100"], role_title: "Brand Manager" },
-    { id: "00000000-0000-0000-0000-000000000305", org_id: ORG_1, company_id: "00000000-0000-0000-0000-000000000302", name: "David Kim", email: ["david.kim@hm.se"], phone: ["+46-8-555-0101"], role_title: "Production Lead" },
-    { id: "00000000-0000-0000-0000-000000000306", org_id: ORG_1, company_id: "00000000-0000-0000-0000-000000000303", name: "Sophie Dubois", email: ["sophie.dubois@gucci.com", "sophie.dubois@personal.it"], phone: ["+39-055-123-4567", "+39-335-987-6543"], role_title: "Senior Buyer" },
-    { id: "00000000-0000-0000-0000-000000000307", org_id: ORG_1, company_id: "00000000-0000-0000-0000-000000000303", name: "Marco Rossi", email: ["marco.rossi@gucci.com"], phone: [], role_title: "Photographer" },
-    { id: "00000000-0000-0000-0000-000000000308", org_id: ORG_1, company_id: "00000000-0000-0000-0000-000000000304", name: "Yuki Tanaka", email: ["yuki.tanaka@balenciaga.com"], phone: ["+33-1-234-5678"], role_title: "Marketing Director" },
-    { id: "00000000-0000-0000-0000-000000000309", org_id: ORG_1, company_id: "00000000-0000-0000-0000-000000000305", name: "Anna Svensson", email: ["anna.s@uniqlo.com"], phone: ["+81-3-5555-0100"], role_title: "Merchandiser" },
+    { id: "00000000-0000-0000-0000-000000000302", org_id: ORG_1, company_id: "00000000-0000-0000-0000-000000000301", name: "Maria Lopez", email: [{ value: "maria.lopez@zara.com", type: "work", primary: true }], phone: [{ value: "+34-91-123-4567", type: "work", primary: true }], role_title: "Procurement Manager" },
+    { id: "00000000-0000-0000-0000-000000000303", org_id: ORG_1, company_id: "00000000-0000-0000-0000-000000000301", name: "James Chen", email: [{ value: "james.chen@zara.com", type: "work", primary: true }], phone: [{ value: "+34-91-123-4568", type: "work", primary: true }], role_title: "Creative Director" },
+    { id: "00000000-0000-0000-0000-000000000304", org_id: ORG_1, company_id: "00000000-0000-0000-0000-000000000302", name: "Elena Ruiz", email: [{ value: "elena.ruiz@hm.com", type: "work", primary: true }], phone: [{ value: "+46-8-555-0100", type: "work", primary: true }], role_title: "Brand Manager" },
+    { id: "00000000-0000-0000-0000-000000000305", org_id: ORG_1, company_id: "00000000-0000-0000-0000-000000000302", name: "David Kim", email: [{ value: "david.kim@hm.se", type: "work", primary: true }], phone: [{ value: "+46-8-555-0101", type: "work", primary: true }], role_title: "Production Lead" },
+    { id: "00000000-0000-0000-0000-000000000306", org_id: ORG_1, company_id: "00000000-0000-0000-0000-000000000303", name: "Sophie Dubois", email: [{ value: "sophie.dubois@gucci.com", type: "work", primary: true }, { value: "sophie.dubois@personal.it", type: "personal", primary: false }], phone: [{ value: "+39-055-123-4567", type: "work", primary: true }, { value: "+39-335-987-6543", type: "mobile", primary: false }], role_title: "Senior Buyer" },
+    { id: "00000000-0000-0000-0000-000000000307", org_id: ORG_1, company_id: "00000000-0000-0000-0000-000000000303", name: "Marco Rossi", email: [{ value: "marco.rossi@gucci.com", type: "work", primary: true }], phone: [], role_title: "Photographer" },
+    { id: "00000000-0000-0000-0000-000000000308", org_id: ORG_1, company_id: "00000000-0000-0000-0000-000000000304", name: "Yuki Tanaka", email: [{ value: "yuki.tanaka@balenciaga.com", type: "work", primary: true }], phone: [{ value: "+33-1-234-5678", type: "work", primary: true }], role_title: "Marketing Director" },
+    { id: "00000000-0000-0000-0000-000000000309", org_id: ORG_1, company_id: "00000000-0000-0000-0000-000000000305", name: "Anna Svensson", email: [{ value: "anna.s@uniqlo.com", type: "work", primary: true }], phone: [{ value: "+81-3-5555-0100", type: "work", primary: true }], role_title: "Merchandiser" },
   ]},
   // Campaigns
   { table: "campaigns", rows: [
