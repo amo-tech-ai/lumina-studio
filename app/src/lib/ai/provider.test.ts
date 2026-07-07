@@ -127,7 +127,7 @@ describe("AI provider (GROQ-002 / GROQ-004)", () => {
     process.env.AI_PROVIDER = "gemini";
     process.env.GEMINI_API_KEY = "test-key";
     const model = resolveModel();
-    expect(model).toBeDefined();
+    expect(model.provider).toBe("google.generative-ai");
     expect(getGroqModelEntry("llama-3.3-70b-versatile")?.parallelTools).toBe(true);
   });
 
@@ -135,7 +135,8 @@ describe("AI provider (GROQ-002 / GROQ-004)", () => {
     process.env.AI_PROVIDER = "groq";
     process.env.GROQ_API_KEY = "test-groq-key";
     const model = resolveModel("default");
-    expect(model).toBeDefined();
+    expect(model.provider).toBe("groq.chat");
+    expect(model.modelId).toBe("llama-3.3-70b-versatile");
   });
 
   it("resolveModel throws without GROQ_API_KEY when AI_PROVIDER=groq", () => {
@@ -150,10 +151,8 @@ describe("AI provider (GROQ-002 / GROQ-004)", () => {
       process.env.GROQ_API_KEY = "test-groq-key";
       process.env.GEMINI_API_KEY = "test-gemini-key";
       delete process.env.GROQ_MODEL_VISION;
-      // Would throw "GROQ_API_KEY is required" or similar if it tried the Groq path —
-      // succeeding here proves it took the Gemini fallback instead.
       const model = resolveModel("vision");
-      expect(model).toBeDefined();
+      expect(model.provider).toBe("google.generative-ai");
     });
 
     it("uses Groq for vision tier once GROQ_MODEL_VISION is explicitly configured", () => {
@@ -161,7 +160,8 @@ describe("AI provider (GROQ-002 / GROQ-004)", () => {
       process.env.GROQ_API_KEY = "test-groq-key";
       process.env.GROQ_MODEL_VISION = "meta-llama/llama-4-scout-17b-16e-instruct";
       const model = resolveModel("vision");
-      expect(model).toBeDefined();
+      expect(model.provider).toBe("groq.chat");
+      expect(model.modelId).toBe("meta-llama/llama-4-scout-17b-16e-instruct");
     });
 
     it("still uses Gemini for vision tier when AI_PROVIDER=gemini regardless of GROQ_MODEL_VISION", () => {
@@ -169,7 +169,7 @@ describe("AI provider (GROQ-002 / GROQ-004)", () => {
       process.env.GEMINI_API_KEY = "test-gemini-key";
       delete process.env.GROQ_MODEL_VISION;
       const model = resolveModel("vision");
-      expect(model).toBeDefined();
+      expect(model.provider).toBe("google.generative-ai");
     });
   });
 
