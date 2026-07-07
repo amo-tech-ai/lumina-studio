@@ -109,6 +109,18 @@ describe("AI provider (GROQ-002 / GROQ-004)", () => {
         rmSync(root, { recursive: true, force: true });
       }
     });
+
+    it("throws a clear, diagnostic error instead of silently falling back to a hardcoded guess when no config exists", () => {
+      const root = mkdtempSync(join(tmpdir(), "groq-path-missing-test-"));
+      try {
+        // No config/groq-models.json anywhere under `root` — every ancestor hop should fail.
+        expect(() => findGroqModelsConfigPath(root)).toThrow(
+          /Could not find config\/groq-models\.json within \d+ ancestor directories/,
+        );
+      } finally {
+        rmSync(root, { recursive: true, force: true });
+      }
+    });
   });
 
   it("resolveModel uses Gemini when AI_PROVIDER=gemini", () => {

@@ -30,7 +30,9 @@ export function findGroqModelsConfigPath(startDir: string): string {
     if (parent === dir) break; // reached filesystem root
     dir = parent;
   }
-  return join(startDir, "..", "..", "..", "..", "config", "groq-models.json");
+  throw new Error(
+    `Could not find config/groq-models.json within ${MAX_ANCESTOR_HOPS} ancestor directories of "${startDir}"`,
+  );
 }
 
 /**
@@ -41,12 +43,12 @@ export function findGroqModelsConfigPath(startDir: string): string {
  * that contains this module happens to be nested.
  */
 export function loadGroqModelsConfig(): GroqModelsConfig {
-  const path = findGroqModelsConfigPath(MODULE_DIR);
   try {
+    const path = findGroqModelsConfigPath(MODULE_DIR);
     return JSON.parse(readFileSync(path, "utf8")) as GroqModelsConfig;
   } catch (error) {
     throw new Error(
-      `Failed to load Groq models SSOT allowlist from "${path}" (expected config/groq-models.json at repo root): ${
+      `Failed to load Groq models SSOT allowlist (expected config/groq-models.json at repo root, searched up from "${MODULE_DIR}"): ${
         error instanceof Error ? error.message : String(error)
       }`,
     );
