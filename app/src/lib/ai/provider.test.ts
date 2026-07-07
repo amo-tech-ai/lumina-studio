@@ -1,18 +1,13 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
 
-import groqModelsJson from "../../../../config/groq-models.json";
 import {
   assertGroqTierCapabilities,
   getGroqModelEntry,
+  loadGroqModelsConfig,
   resolveAiProvider,
   resolveGroqModelId,
   resolveModel,
 } from "./provider";
-import type { GroqModelsConfig } from "./types";
-
-const groqModels = groqModelsJson as GroqModelsConfig;
 
 describe("AI provider (GROQ-002)", () => {
   const original = {
@@ -40,8 +35,9 @@ describe("AI provider (GROQ-002)", () => {
   });
 
   it("resolveGroqModelId reads env override then defaults", () => {
+    const disk = loadGroqModelsConfig();
     delete process.env.GROQ_MODEL_DEFAULT;
-    expect(resolveGroqModelId("default")).toBe(groqModels.defaults.default);
+    expect(resolveGroqModelId("default")).toBe(disk.defaults.default);
     process.env.GROQ_MODEL_DEFAULT = "qwen/qwen3-32b";
     expect(resolveGroqModelId("default")).toBe("qwen/qwen3-32b");
   });
@@ -71,11 +67,9 @@ describe("AI provider (GROQ-002)", () => {
   });
 
   it("loads SSOT allowlist from repo config/groq-models.json", () => {
-    const disk = JSON.parse(
-      readFileSync(join(process.cwd(), "..", "config", "groq-models.json"), "utf8"),
-    ) as GroqModelsConfig;
-    expect(groqModels.version).toBe(disk.version);
-    expect(groqModels.models.length).toBeGreaterThan(0);
+    const disk = loadGroqModelsConfig();
+    expect(getGroqModelEntry(disk.defaults.default)).toBeDefined();
+    expect(disk.models.length).toBeGreaterThan(0);
   });
 
   it("resolveModel uses Gemini when AI_PROVIDER=gemini", () => {
