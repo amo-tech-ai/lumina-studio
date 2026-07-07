@@ -7,8 +7,16 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
+// crm_companies.id is a Postgres uuid column — a non-UUID string makes the query
+// throw "invalid input syntax for type uuid" (a real error), not return an empty
+// row. Reject it here so a malformed id in the URL 404s instead of landing in the
+// catch below and showing a misleading "try again" (retrying won't ever help).
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 export default async function CrmCompanyDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
+  if (!UUID_RE.test(id)) notFound();
+
   const supabase = await createSupabaseServerClient();
   const {
     data: { user },
