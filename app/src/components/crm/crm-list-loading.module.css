@@ -1,0 +1,31 @@
+.root {
+  padding: var(--space-5) var(--page-padding);
+}
+
+.title {
+  height: 1.75rem;
+  width: 11rem;
+  margin-bottom: var(--space-2);
+}
+
+.count {
+  height: 0.875rem;
+  width: 8rem;
+  margin-bottom: var(--space-5);
+}
+
+.search {
+  height: 2.5rem;
+  margin-bottom: var(--space-3);
+}
+
+.rows {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.row {
+  height: 3.5rem;
+  border-radius: var(--radius-md);
+}

@@ -1,0 +1,178 @@
+/* Shared by CompaniesWorkspace + ContactsWorkspace (RF-03) — header/filter chrome
+   is identical across both screens; only the row grid-template differs per screen. */
+
+.root {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.header {
+  flex-shrink: 0;
+  padding: var(--space-5) var(--page-padding) 0;
+}
+
+.titleRow {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-4);
+}
+
+.title {
+  margin: 0;
+  font-size: var(--font-size-2xl);
+  font-weight: var(--font-weight-bold);
+  letter-spacing: -0.02em;
+}
+
+.count {
+  margin: var(--space-1) 0 0;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+}
+
+.newBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  flex-shrink: 0;
+  min-height: 2.75rem; /* >= 44px touch target */
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-md);
+  border: none;
+  background: var(--color-action);
+  color: var(--color-action-text);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  cursor: pointer;
+}
+
+.newBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.filterRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-top: var(--space-4);
+  flex-wrap: wrap;
+}
+
+.filterBtn {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-height: 2.75rem; /* >= 44px touch target */
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border-strong);
+  background: var(--color-bg-card);
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: var(--space-4) var(--page-padding) var(--space-5);
+}
+
+/* Wraps the EntityList output (search box + rows) in one bordered card.
+   No separate spreadsheet column-header row — EntityList (RF-02) is a
+   generic list template with no header-row slot, and each row is
+   self-labeling (avatar+name, StatusChip, plain secondary text). */
+.listCard {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+
+.listCard ul {
+  gap: 0;
+}
+
+.row {
+  display: grid;
+  gap: var(--space-3);
+  align-items: center;
+  min-height: 2.75rem; /* >= 44px touch target */
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--color-border-subtle);
+  text-decoration: none;
+  color: inherit;
+}
+
+.listCard li:last-child .row {
+  border-bottom: none;
+}
+
+.row:hover,
+.row:focus-visible {
+  background: var(--color-bg-subtle);
+}
+
+.rowMain {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+.rowMainText {
+  min-width: 0;
+}
+
+.rowName {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.rowSub {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.rowCell {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Companies: Company | Status | Industry | Owner */
+.companiesGrid {
+  grid-template-columns: 1.8fr 1fr 1fr 0.9fr;
+}
+
+/* Contacts: Name | Organization | Role | Email */
+.contactsGrid {
+  grid-template-columns: 1.6fr 1.1fr 1fr 1.3fr;
+}
+
+@media (max-width: 640px) {
+  .companiesGrid,
+  .contactsGrid {
+    grid-template-columns: 1fr;
+  }
+  .rowCell {
+    display: none;
+  }
+}
