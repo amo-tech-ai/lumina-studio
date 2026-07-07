@@ -1,0 +1,45 @@
+app/src/components/shoot/shoot-detail-tabs/overview-tab.tsx
+  s_fb6d75e0972fb7::t_104a93fa5d2f19 68-70,72-74,76-78
+  s_fb6d75e0972fb7::t_9fd0cc0ff252cb 75
+app/src/components/shoot/shoot-detail-workspace.test.tsx
+  s_fb6d75e0972fb7::t_82d7902db00b4f 150
+  s_fb6d75e0972fb7::t_c9161e54b86a95 116-139,141-149,151-152
+  s_fb6d75e0972fb7::t_173e89c7d2e327 140
+app/src/components/shoot/shoot-detail-tabs/assets-tab.tsx
+  s_fb6d75e0972fb7::t_b627d5ff84c022 3,8
+  s_fb6d75e0972fb7::t_164241a96c83e7 40,43-53,55-59
+app/src/components/shoot/shoot-detail.module.css
+  s_fb6d75e0972fb7::t_2f278fdcf596e7 32-34
+  s_fb6d75e0972fb7::t_ef9fac84439711 135-145
+  s_fb6d75e0972fb7::t_9317ea1be6e421 149-151
+  s_fb6d75e0972fb7::t_4b3bd8eb8dee86 197-198,207
+  s_fb6d75e0972fb7::t_9edc32ec7198d8 224-225
+  s_fb6d75e0972fb7::t_503b425c8ba282 179-180
+  s_fb6d75e0972fb7::t_41a4e63187574c 608
+app/src/components/shoot/shoot-detail-tabs/deliverables-tab.tsx
+  s_fb6d75e0972fb7::t_1e02f2b5a30cff 6,16
+app/src/components/shoot/shoot-detail-workspace.tsx
+  s_fb6d75e0972fb7::t_298b321aa3a047 197,201,214-219
+app/src/components/shoot/shoot-detail-format.ts
+  s_fb6d75e0972fb7::t_d1e8d8460c1876 63-74,76-79
+  s_fb6d75e0972fb7::t_b91ecaba66ac89 12
+  s_fb6d75e0972fb7::t_2ec2e76c191652 80-88
+app/src/components/shoot/shoot-detail-tabs/budget-tab.tsx
+  s_fb6d75e0972fb7::t_2060606cbe4092 22,36,42-45
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "08ec1d8729d71bb4a247f6074fea022ccbb3d86c",
+  "prompts": {},
+  "sessions": {
+    "s_fb6d75e0972fb7": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "482ba906-0d79-473d-87a7-390cf354e015",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
