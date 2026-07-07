@@ -68,13 +68,21 @@ export function crewInitials(role: CrewRole): string {
 const DELIVERABLE_READY = new Set(["delivered", "covered", "ready", "approved"]);
 const DELIVERABLE_IN_PROGRESS = new Set(["planned", "pending", "in_progress"]);
 
+/** Normalizes case/whitespace — status is free text with no DB constraint, so
+ *  "Delivered"/"READY"/"delivered " from another writer should still match. */
+function normalizeDeliverableStatus(status: string | null): string | null {
+  return status ? status.trim().toLowerCase() : null;
+}
+
 export function isDeliverableReady(status: string | null): boolean {
-  return !!status && DELIVERABLE_READY.has(status);
+  const normalized = normalizeDeliverableStatus(status);
+  return !!normalized && DELIVERABLE_READY.has(normalized);
 }
 
 export function deliverableDot(status: string | null): string {
   if (isDeliverableReady(status)) return "var(--color-approved)";
-  if (status && DELIVERABLE_IN_PROGRESS.has(status)) return "var(--color-warning-text)";
+  const normalized = normalizeDeliverableStatus(status);
+  if (normalized && DELIVERABLE_IN_PROGRESS.has(normalized)) return "var(--color-warning-text)";
   return "var(--color-text-muted)"; // "draft" / unrecognized
 }
 
