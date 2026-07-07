@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { listCompanies } from "./queries";
+import { getCurrentOrgId, listCompanies } from "./queries";
 
 function mockSupabase(rows: Record<string, unknown>[] | null, error: { message: string } | null = null) {
   const builder: {
@@ -17,6 +17,29 @@ function mockSupabase(rows: Record<string, unknown>[] | null, error: { message: 
   builder.select.mockReturnValue(builder);
   builder.eq.mockReturnValue(builder);
   builder.or.mockReturnValue(builder);
+  return { from: vi.fn(() => builder), _builder: builder };
+}
+
+/** org_members query chain is select→eq→order→limit→maybeSingle — a different
+ *  shape from listCompanies/listContacts (no maybeSingle there). */
+function mockOrgMembers(row: { org_id: string } | null, error: { message: string } | null = null) {
+  const builder: {
+    select: ReturnType<typeof vi.fn>;
+    eq: ReturnType<typeof vi.fn>;
+    order: ReturnType<typeof vi.fn>;
+    limit: ReturnType<typeof vi.fn>;
+    maybeSingle: ReturnType<typeof vi.fn>;
+  } = {
+    select: vi.fn(),
+    eq: vi.fn(),
+    order: vi.fn(),
+    limit: vi.fn(),
+    maybeSingle: vi.fn(async () => ({ data: row, error })),
+  };
+  builder.select.mockReturnValue(builder);
+  builder.eq.mockReturnValue(builder);
+  builder.order.mockReturnValue(builder);
+  builder.limit.mockReturnValue(builder);
   return { from: vi.fn(() => builder), _builder: builder };
 }
 
@@ -51,5 +74,26 @@ describe("listCompanies", () => {
   it("throws when the query errors", async () => {
     const sb = mockSupabase(null, { message: "boom" });
     await expect(listCompanies({ orgId: "org-1" }, sb as never)).rejects.toThrow("boom");
+  });
+});
+
+describe("getCurrentOrgId", () => {
+  it("orders by joined_at (not created_at — org_members has no created_at column)", async () => {
+    const sb = mockOrgMembers({ org_id: "org-1" });
+    const orgId = await getCurrentOrgId("user-1", sb as never);
+    expect(orgId).toBe("org-1");
+    expect(sb._builder.eq).toHaveBeenCalledWith("user_id", "user-1");
+    expect(sb._builder.order).toHaveBeenCalledWith("joined_at", { ascending: true });
+    expect(sb._builder.limit).toHaveBeenCalledWith(1);
+  });
+
+  it("returns null when the user belongs to no org", async () => {
+    const sb = mockOrgMembers(null);
+    expect(await getCurrentOrgId("user-1", sb as never)).toBeNull();
+  });
+
+  it("throws when the query errors — 42703 undefined-column is the regression this guards", async () => {
+    const sb = mockOrgMembers(null, { message: "column org_members.created_at does not exist" });
+    await expect(getCurrentOrgId("user-1", sb as never)).rejects.toThrow("does not exist");
   });
 });

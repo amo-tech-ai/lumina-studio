@@ -9,13 +9,15 @@ type Db = SupabaseClient<Database>;
 export type CompanyRow = Database["public"]["Tables"]["crm_companies"]["Row"];
 export type ContactRow = Database["public"]["Tables"]["crm_contacts"]["Row"];
 
-/** First org the user belongs to. CRM is single-org-per-user for MVP — no org switcher yet. */
+/** First org the user belongs to. CRM is single-org-per-user for MVP — no org switcher yet.
+ *  org_members has no created_at column (it has joined_at) — every caller of this
+ *  function was throwing a 42703 undefined-column error before this fix. */
 export async function getCurrentOrgId(userId: string, client: Db): Promise<string | null> {
   const { data, error } = await client
     .from("org_members")
     .select("org_id")
     .eq("user_id", userId)
-    .order("created_at", { ascending: true })
+    .order("joined_at", { ascending: true })
     .limit(1)
     .maybeSingle();
   if (error) throw error;
