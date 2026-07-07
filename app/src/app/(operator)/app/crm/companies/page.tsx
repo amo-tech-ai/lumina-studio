@@ -33,6 +33,13 @@ export default async function CrmCompaniesPage() {
         } catch {
           ownerNames = {};
         }
+      } else {
+        // Distinct from "org has zero companies" — no org membership at all is
+        // an access/setup problem, not an empty CRM. Same signal the CRM detail
+        // page stubs give via notFound(); here we use the list's own ErrorState
+        // since the route itself is valid and a retry can genuinely resolve
+        // this (e.g. an admin just added the user to an org).
+        fetchError = "Your account isn't linked to an organization yet.";
       }
     } catch {
       fetchError = "Unable to load companies.";
