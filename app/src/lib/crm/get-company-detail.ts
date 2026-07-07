@@ -40,7 +40,7 @@ export async function getCompanyDetail(
   const [contacts, deals, activities, ownerNames] = await Promise.all([
     listContacts({ orgId, companyId }, client),
     listDeals({ orgId, companyId }, client),
-    listActivities({ companyId }, client),
+    listActivities({ orgId, companyId }, client),
     company.owner ? getProfileNames([company.owner], client) : Promise.resolve<Record<string, string>>({}),
   ]);
 

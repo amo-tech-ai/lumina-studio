@@ -46,7 +46,7 @@ describe("getCompanyDetail", () => {
     expect(result?.activities).toHaveLength(1);
     expect(listContacts).toHaveBeenCalledWith({ orgId: "org-1", companyId: "c1" }, client);
     expect(listDeals).toHaveBeenCalledWith({ orgId: "org-1", companyId: "c1" }, client);
-    expect(listActivities).toHaveBeenCalledWith({ companyId: "c1" }, client);
+    expect(listActivities).toHaveBeenCalledWith({ orgId: "org-1", companyId: "c1" }, client);
   });
 
   it("skips owner-name resolution when the company has no owner, without a query", async () => {
