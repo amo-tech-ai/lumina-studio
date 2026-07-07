@@ -105,7 +105,7 @@ console.log(`\nUsers: ${createdCount} created, ${foundCount} found\n`);
 
 console.log("=== Step 2: Profiles ===\n");
 
-const { default: { createClient } } = await import("@supabase/supabase-js");
+const { createClient } = await import("@supabase/supabase-js");
 const sb = createClient(supabaseUrl, serviceRoleKey);
 
 for (const user of DEV_USERS) {
@@ -143,6 +143,12 @@ const SEED_DATA = [
   { table: "organizations", rows: [
     { id: ORG_1, name: "Acme Corp", slug: "acme", type: "agency", owner_id: A },
     { id: ORG_2, name: "Globex Inc", slug: "globex", type: "brand", owner_id: A },
+  ]},
+  // Org members (RLS membership)
+  { table: "org_members", rows: [
+    { id: "00000000-0000-0000-0000-000000000801", org_id: ORG_1, user_id: A, role: "admin" },
+    { id: "00000000-0000-0000-0000-000000000802", org_id: ORG_1, user_id: B, role: "member" },
+    { id: "00000000-0000-0000-0000-000000000803", org_id: ORG_1, user_id: C, role: "member" },
   ]},
   // Brands
   { table: "brands", rows: [

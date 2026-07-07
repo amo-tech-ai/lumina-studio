@@ -1,11 +1,13 @@
--- Dev seed reference — run `node scripts/setup-dev-users.mjs` instead of this file.
+-- Dev seed reference — run `node scripts/setup-dev-users.mjs` instead.
+-- supabase/config.toml has [db.seed] enabled = false since this file is not
+-- executed directly by `supabase db reset` (seed.sql is documentation only).
 --
 -- The setup script creates auth users via the Auth Admin API (never INSERT into
 -- auth.users directly), syncs profiles, and inserts all seed data automatically.
--- This file is kept as documentation of the seed data shape, not for direct execution.
+-- This file is kept as documentation of the seed data shape, not for execution.
 --
 -- Usage: node scripts/setup-dev-users.mjs
 --
 -- Tables seeded by the setup script:
---   profiles, organizations, brands, crm_companies, crm_contacts,
+--   profiles, organizations, org_members, brands, crm_companies, crm_contacts,
 --   campaigns, campaign_deliverables, crm_deals, crm_activities, notifications
