@@ -65,10 +65,7 @@ export function CrmListWorkspace<T extends { id: string }>({
             <h1 className={styles.title}>{title}</h1>
             <p className={styles.count}>{countLabel(items.length)}</p>
           </div>
-          <button type="button" disabled title="Coming soon" className={styles.newBtn}>
-            <Plus size={15} aria-hidden />
-            {newLabel}
-          </button>
+          <ComingSoonButton label={newLabel} />
         </div>
         <div className={styles.filterRow}>
           {filterLabels.map((label) => (
