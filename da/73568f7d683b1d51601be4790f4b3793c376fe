@@ -1,0 +1,19 @@
+app/src/components/operator-panel/operator-shell.module.css
+  s_fb6d75e0972fb7::t_fd36c73bd9d111 50-54,57
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "da73568f7d683b1d51601be4790f4b3793c376fe",
+  "prompts": {},
+  "sessions": {
+    "s_fb6d75e0972fb7": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "482ba906-0d79-473d-87a7-390cf354e015",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
