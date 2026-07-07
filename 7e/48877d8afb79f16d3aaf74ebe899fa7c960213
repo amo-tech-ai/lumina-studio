@@ -1,0 +1,21 @@
+scripts/setup-dev-users.mjs
+  s_88536c5a6fce9b::t_e132893508743b 1-143
+supabase/seed.sql
+  s_88536c5a6fce9b::t_6f7de2a7ff5b80 1-94
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "7e48877d8afb79f16d3aaf74ebe899fa7c960213",
+  "prompts": {},
+  "sessions": {
+    "s_88536c5a6fce9b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "9affed21-8515-433a-b4d9-f7506bb6c652",
+        "model": "unknown"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
