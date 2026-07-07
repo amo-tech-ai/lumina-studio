@@ -1,0 +1,21 @@
+app/src/components/shoot/ShootCard.test.tsx
+  s_fb6d75e0972fb7::t_278bc8c430fa22 30-34
+  s_fb6d75e0972fb7::t_699f155ec051f1 44,50,57-59
+  s_fb6d75e0972fb7::t_512dde6fed5b6d 60-61
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "63f48c563bc98371d897e83fe7c476a758282059",
+  "prompts": {},
+  "sessions": {
+    "s_fb6d75e0972fb7": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "482ba906-0d79-473d-87a7-390cf354e015",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
