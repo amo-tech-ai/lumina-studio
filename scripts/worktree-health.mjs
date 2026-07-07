@@ -22,6 +22,11 @@
  * commits are only one `git branch -D` away from being unrecoverable. Run
  * this before removing any worktree you didn't just finish pushing.
  *
+ * Fails safe: if a git command that should always succeed (ahead/behind,
+ * fetch) errors out instead, the worktree is reported UNKNOWN/unsafe rather
+ * than silently defaulting to "0 behind = safe". A gate that can be made to
+ * say "safe" by breaking its own inputs isn't a gate.
+ *
  * Usage:
  *   node scripts/worktree-health.mjs                  # check current worktree (start-work gate)
  *   node scripts/worktree-health.mjs --all             # check every registered worktree
@@ -30,10 +35,15 @@
  *   node scripts/worktree-health.mjs --json             # machine-readable
  */
 
-import { execSync } from "node:child_process";
+import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
-import { classifyBlockers, hasStaleGroqImport } from "./lib/worktree-health-checks.mjs";
+import {
+  classifyBlockers,
+  hasStaleGroqImport,
+  parseWorktreeListPorcelain,
+  resolveMaxBehind,
+} from "./lib/worktree-health-checks.mjs";
 
 const PROVIDER_TS_RELATIVE = "app/src/lib/ai/provider.ts";
 
@@ -42,28 +52,47 @@ const ALL = args.includes("--all");
 const JSON_OUT = args.includes("--json");
 const PRE_DELETE = args.includes("--pre-delete");
 const maxBehindArg = args.find((a) => a.startsWith("--max-behind="));
-const MAX_BEHIND = maxBehindArg ? Number(maxBehindArg.split("=")[1]) : 30;
+const maxBehindRaw = maxBehindArg ? maxBehindArg.split("=")[1] : undefined;
+const { value: MAX_BEHIND, error: maxBehindError } = resolveMaxBehind(maxBehindRaw, 30);
 
-function run(cmd, cwd) {
+if (maxBehindError) {
+  console.error(`❌ ${maxBehindError}`);
+  process.exit(2);
+}
+
+/**
+ * Runs `git <args>` with no shell involved (execFileSync + an argv array),
+ * so branch/ref names can never be interpreted as shell syntax. Throws on
+ * failure — use this for commands where a non-zero exit means something is
+ * actually broken (network unreachable, corrupt repo), not an expected "no".
+ */
+function git(gitArgs, cwd) {
+  return execFileSync("git", gitArgs, { cwd, encoding: "utf8", stdio: ["pipe", "pipe", "pipe"] }).trim();
+}
+
+/** Same as `git()`, but for checks where a non-zero exit is an expected, meaningful "no". */
+function tryGit(gitArgs, cwd) {
   try {
-    return execSync(cmd, { cwd, encoding: "utf8", stdio: ["pipe", "pipe", "pipe"] }).trim();
+    return git(gitArgs, cwd);
   } catch {
-    return "";
+    return null;
   }
 }
 
 /** The one check that's always fatal, regardless of --max-behind. */
 function checkGroqStaleImport(wtPath) {
   const file = path.join(wtPath, PROVIDER_TS_RELATIVE);
-  if (!fs.existsSync(file)) {
-    return { present: false, fileExists: false };
+  try {
+    if (!fs.existsSync(file)) return { present: false, fileExists: false };
+    const content = fs.readFileSync(file, "utf8");
+    return { present: hasStaleGroqImport(content), fileExists: true };
+  } catch (err) {
+    return { present: false, fileExists: false, error: `couldn't read ${PROVIDER_TS_RELATIVE}: ${err.message}` };
   }
-  const content = fs.readFileSync(file, "utf8");
-  return { present: hasStaleGroqImport(content), fileExists: true };
 }
 
 function checkAheadBehind(wtPath) {
-  const raw = run("git rev-list --left-right --count HEAD...origin/main", wtPath);
+  const raw = git(["rev-list", "--left-right", "--count", "HEAD...origin/main"], wtPath);
   const [ahead, behind] = raw.split(/\s+/).map(Number);
   return { ahead: ahead || 0, behind: behind || 0 };
 }
@@ -71,22 +100,32 @@ function checkAheadBehind(wtPath) {
 /** Commits on this branch not present on its own remote-tracking ref (never pushed anywhere). */
 function checkUnpushedCommits(wtPath, branch, aheadOfMain) {
   if (!branch) return 0; // detached HEAD — no branch to compare
-  const hasRemote = run(`git rev-parse --verify origin/${branch}`, wtPath);
+  const hasRemote = tryGit(["rev-parse", "--verify", `origin/${branch}`], wtPath);
   if (!hasRemote) return aheadOfMain; // branch never pushed at all — everything ahead of main is at risk
-  const count = run(`git rev-list --count origin/${branch}..HEAD`, wtPath);
+  const count = tryGit(["rev-list", "--count", `origin/${branch}..HEAD`], wtPath);
   return count ? Number(count) : 0;
 }
 
 function checkWorktree(wtPath, branch) {
+  let ahead = 0;
+  let behind = 0;
+  let checkError = null;
   const groqImport = checkGroqStaleImport(wtPath);
-  const { ahead, behind } = checkAheadBehind(wtPath);
-  const unpushedCommits = PRE_DELETE ? checkUnpushedCommits(wtPath, branch, ahead) : 0;
+
+  try {
+    ({ ahead, behind } = checkAheadBehind(wtPath));
+  } catch (err) {
+    checkError = `couldn't compute ahead/behind vs origin/main: ${err.message}`;
+  }
+
+  const unpushedCommits = PRE_DELETE && !checkError ? checkUnpushedCommits(wtPath, branch, ahead) : 0;
   const blockers = classifyBlockers({
     groqStaleImport: groqImport.present,
     behind,
     maxBehind: MAX_BEHIND,
     unpushedCommits,
     mode: PRE_DELETE ? "delete" : "start",
+    checkError: checkError || groqImport.error || null,
   });
 
   return {
@@ -102,33 +141,26 @@ function checkWorktree(wtPath, branch) {
   };
 }
 
-function listAllWorktrees() {
-  const raw = run("git worktree list --porcelain", process.cwd());
-  const entries = [];
-  let current = null;
-  for (const line of raw.split("\n")) {
-    if (line.startsWith("worktree ")) {
-      if (current) entries.push(current);
-      current = { path: line.slice(9), branch: null };
-    } else if (!current) continue;
-    else if (line.startsWith("branch ")) current.branch = line.slice(7).replace(/^refs\/heads\//, "");
-  }
-  if (current) entries.push(current);
-  return entries;
-}
-
 function main() {
-  run("git fetch origin --quiet", process.cwd());
+  const fetchFailed = tryGit(["fetch", "origin", "--quiet"], process.cwd()) === null;
+  if (fetchFailed && !JSON_OUT) {
+    console.error("⚠️  git fetch origin failed (offline?) — ahead/behind counts below may be stale.");
+  }
 
   const targets = ALL
-    ? listAllWorktrees()
-    : [{ path: run("git rev-parse --show-toplevel", process.cwd()), branch: run("git branch --show-current", process.cwd()) }];
+    ? parseWorktreeListPorcelain(git(["worktree", "list", "--porcelain"], process.cwd()))
+    : [
+        {
+          path: git(["rev-parse", "--show-toplevel"], process.cwd()),
+          branch: tryGit(["branch", "--show-current"], process.cwd()),
+        },
+      ];
 
   const results = targets.map((t) => checkWorktree(t.path, t.branch));
   const anyBlocked = results.some((r) => !r.safe);
 
   if (JSON_OUT) {
-    console.log(JSON.stringify({ maxBehind: MAX_BEHIND, results }, null, 2));
+    console.log(JSON.stringify({ maxBehind: MAX_BEHIND, fetchFailed, results }, null, 2));
   } else {
     for (const r of results) {
       const icon = r.safe ? "🟢" : "🔴";
