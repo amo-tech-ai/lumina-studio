@@ -31,10 +31,15 @@ export default async function CrmCompanyDetailPage({ params }: { params: Promise
     data = await getCompanyDetail(supabase, orgId, id);
   } catch {
     // A real query failure gets a retryable ErrorState — an invalid/missing id (below) is a 404, not this.
-    return <CompanyDetailWorkspace data={null} fetchError="Unable to load this company. Try again in a moment." />;
+    // key={id}: the App Router keeps this client component's instance (and its
+    // tab state) alive across a companies/[id] -> companies/[otherId] navigation
+    // since it's the same position in the tree — key forces a remount per id.
+    return (
+      <CompanyDetailWorkspace key={id} data={null} fetchError="Unable to load this company. Try again in a moment." />
+    );
   }
 
   if (!data) notFound();
 
-  return <CompanyDetailWorkspace data={data} fetchError={null} />;
+  return <CompanyDetailWorkspace key={id} data={data} fetchError={null} />;
 }
