@@ -1,6 +1,16 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { getCompanyNames, getCurrentOrgId, getProfileNames, listCompanies } from "./queries";
+import {
+  getCompany,
+  getCompanyNames,
+  getContact,
+  getCurrentOrgId,
+  getDeal,
+  getProfileNames,
+  listActivities,
+  listCompanies,
+  listDeals,
+} from "./queries";
 
 function mockSupabase(rows: Record<string, unknown>[] | null, error: { message: string } | null = null) {
   const builder: {
@@ -121,6 +131,131 @@ function mockCompanies(rows: Array<{ id: string; name: string }>) {
   };
   return { from: vi.fn(() => builder), _builder: builder };
 }
+
+function mockSingleTable(row: Record<string, unknown> | null, error: { message: string } | null = null) {
+  const builder = {
+    select: vi.fn().mockReturnThis(),
+    eq: vi.fn().mockReturnThis(),
+    maybeSingle: vi.fn().mockResolvedValue({ data: row, error }),
+  };
+  return { from: vi.fn(() => builder), _builder: builder };
+}
+
+describe("getCompany", () => {
+  it("scopes the lookup by id and org", async () => {
+    const sb = mockSingleTable({ id: "c1", name: "Acme Co." });
+    const row = await getCompany({ id: "c1", orgId: "org-1" }, sb as never);
+    expect(row?.name).toBe("Acme Co.");
+    expect(sb._builder.eq).toHaveBeenCalledWith("id", "c1");
+    expect(sb._builder.eq).toHaveBeenCalledWith("org_id", "org-1");
+  });
+
+  it("returns null when no row matches", async () => {
+    const sb = mockSingleTable(null);
+    expect(await getCompany({ id: "missing", orgId: "org-1" }, sb as never)).toBeNull();
+  });
+
+  it("throws when the query errors", async () => {
+    const sb = mockSingleTable(null, { message: "boom" });
+    await expect(getCompany({ id: "c1", orgId: "org-1" }, sb as never)).rejects.toThrow("boom");
+  });
+});
+
+describe("getContact", () => {
+  it("scopes the lookup by id and org", async () => {
+    const sb = mockSingleTable({ id: "p1", name: "Sarah Lee" });
+    const row = await getContact({ id: "p1", orgId: "org-1" }, sb as never);
+    expect(row?.name).toBe("Sarah Lee");
+    expect(sb._builder.eq).toHaveBeenCalledWith("id", "p1");
+    expect(sb._builder.eq).toHaveBeenCalledWith("org_id", "org-1");
+  });
+
+  it("returns null when no row matches", async () => {
+    const sb = mockSingleTable(null);
+    expect(await getContact({ id: "missing", orgId: "org-1" }, sb as never)).toBeNull();
+  });
+
+  it("throws when the query errors", async () => {
+    const sb = mockSingleTable(null, { message: "boom" });
+    await expect(getContact({ id: "p1", orgId: "org-1" }, sb as never)).rejects.toThrow("boom");
+  });
+});
+
+describe("getDeal", () => {
+  it("scopes the lookup by id and org", async () => {
+    const sb = mockSingleTable({ id: "d1", stage: "negotiation" });
+    const row = await getDeal({ id: "d1", orgId: "org-1" }, sb as never);
+    expect(row?.stage).toBe("negotiation");
+    expect(sb._builder.eq).toHaveBeenCalledWith("id", "d1");
+    expect(sb._builder.eq).toHaveBeenCalledWith("org_id", "org-1");
+  });
+
+  it("returns null when no row matches", async () => {
+    const sb = mockSingleTable(null);
+    expect(await getDeal({ id: "missing", orgId: "org-1" }, sb as never)).toBeNull();
+  });
+
+  it("throws when the query errors", async () => {
+    const sb = mockSingleTable(null, { message: "boom" });
+    await expect(getDeal({ id: "d1", orgId: "org-1" }, sb as never)).rejects.toThrow("boom");
+  });
+});
+
+function mockListTable(rows: Record<string, unknown>[] | null, error: { message: string } | null = null) {
+  const builder = {
+    select: vi.fn().mockReturnThis(),
+    eq: vi.fn().mockReturnThis(),
+    order: vi.fn(async () => ({ data: rows, error })),
+  };
+  return { from: vi.fn(() => builder), _builder: builder };
+}
+
+describe("listDeals", () => {
+  it("filters by org, stage, and companyId when given", async () => {
+    const sb = mockListTable([{ id: "d1", stage: "lead" }]);
+    const rows = await listDeals({ orgId: "org-1", stage: "lead", companyId: "c1" }, sb as never);
+    expect(rows).toHaveLength(1);
+    expect(sb._builder.eq).toHaveBeenCalledWith("org_id", "org-1");
+    expect(sb._builder.eq).toHaveBeenCalledWith("stage", "lead");
+    expect(sb._builder.eq).toHaveBeenCalledWith("company_id", "c1");
+  });
+
+  it("returns an empty array when there are no rows", async () => {
+    const sb = mockListTable(null);
+    expect(await listDeals({ orgId: "org-1" }, sb as never)).toEqual([]);
+  });
+
+  it("throws when the query errors", async () => {
+    const sb = mockListTable(null, { message: "boom" });
+    await expect(listDeals({ orgId: "org-1" }, sb as never)).rejects.toThrow("boom");
+  });
+});
+
+describe("listActivities", () => {
+  it("filters by whichever anchor is set", async () => {
+    const sb = mockListTable([{ id: "a1", type: "note" }]);
+    const rows = await listActivities({ dealId: "d1" }, sb as never);
+    expect(rows).toHaveLength(1);
+    expect(sb._builder.eq).toHaveBeenCalledWith("deal_id", "d1");
+    expect(sb._builder.eq).not.toHaveBeenCalledWith("company_id", expect.anything());
+  });
+
+  it("throws when no anchor is provided — mirrors the DB's own check constraint", async () => {
+    const sb = mockListTable([]);
+    await expect(listActivities({}, sb as never)).rejects.toThrow(/at least one/);
+    expect(sb.from).not.toHaveBeenCalled();
+  });
+
+  it("returns an empty array when there are no rows", async () => {
+    const sb = mockListTable(null);
+    expect(await listActivities({ companyId: "c1" }, sb as never)).toEqual([]);
+  });
+
+  it("throws when the query errors", async () => {
+    const sb = mockListTable(null, { message: "boom" });
+    await expect(listActivities({ contactId: "p1" }, sb as never)).rejects.toThrow("boom");
+  });
+});
 
 describe("getCompanyNames", () => {
   it("maps id to name for only the requested ids", async () => {
