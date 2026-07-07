@@ -1,0 +1,19 @@
+supabase/migrations/20260707100000_ipi268_campaigns_schema.sql
+  s_88536c5a6fce9b::t_948751f95d7801 149,153
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "d4a7226611bc9d368efe7bebd5fe662554e5dad1",
+  "prompts": {},
+  "sessions": {
+    "s_88536c5a6fce9b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "9affed21-8515-433a-b4d9-f7506bb6c652",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
