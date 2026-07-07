@@ -1,4 +1,3 @@
-WARN: config section [inbucket] is deprecated. Please use [local_smtp] instead.
 export type Json =
   | string
   | number
