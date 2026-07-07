@@ -78,7 +78,7 @@ for (const user of DEV_USERS) {
     continue;
   }
 
-  const errBody = await res.json();
+  const errBody = await res.json().catch(() => ({}));
   if (res.status === 409 || errBody?.msg?.includes("already exists")) {
     const listRes = await fetch(`${supabaseUrl}/auth/v1/admin/users`, {
       headers: AUTH_HEADERS,
