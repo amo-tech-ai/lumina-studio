@@ -41,7 +41,7 @@ Detect task type (Phase 0), then run only the relevant dimensions. Score all 10 
 | 7 | **CI / GitHub** | 10% | `gh pr checks <N>` all required green; `gh pr view --json mergeable,mergeStateStatus`; branch protection; **PR merged?** | any PR-backed task |
 | 8 | **Documentation** | 5% | AGENTS.md / route docs updated if API changed; evidence path recorded | code |
 | 9 | **Dependencies** | 5% | the 5-step chain below | any blocked task |
-| 10 | **Security** | 5% | no client AI keys (`rg 'NEXT_PUBLIC_.*_API_KEY\|GEMINI_API_KEY\|GROQ_API_KEY' app/src` → server-only); RLS on new tables; auth guard on new routes | code touching auth/data |
+| 10 | **Security** | 5% | no client AI keys (`rg 'NEXT_PUBLIC_.*_(API_KEY|SECRET|TOKEN)|GEMINI_API_KEY|GROQ_API_KEY|OPENAI_API_KEY|ANTHROPIC_API_KEY|SERVICE_ROLE[:_]?KEY' app/src` → server-only); RLS on new tables; auth guard on new routes | code touching auth/data |
 
 ### Design parity (folds into #1 + #6 for DESIGN-* / SCR)
 
