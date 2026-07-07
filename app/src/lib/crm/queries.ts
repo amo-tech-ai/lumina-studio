@@ -144,16 +144,21 @@ export async function listDeals(
 /** Anchor-based fetch backing the shared ActivityTimeline component — same
  *  anchor shape as crm_activities' own check constraint
  *  (num_nonnulls(company_id, contact_id, deal_id) >= 1). At least one anchor
- *  is required; RLS handles org scoping, so no orgId param here. */
+ *  is required. Explicit orgId filter is defense-in-depth on top of RLS,
+ *  matching listCompanies/listContacts/listDeals's own explicit org_id scoping. */
 export async function listActivities(
-  anchor: { companyId?: string; contactId?: string; dealId?: string },
+  {
+    orgId,
+    companyId,
+    contactId,
+    dealId,
+  }: { orgId: string; companyId?: string; contactId?: string; dealId?: string },
   client: Db,
 ): Promise<ActivityRow[]> {
-  const { companyId, contactId, dealId } = anchor;
   if (!companyId && !contactId && !dealId) {
     throw new Error("listActivities requires at least one of companyId, contactId, dealId");
   }
-  let q = client.from("crm_activities").select("*");
+  let q = client.from("crm_activities").select("*").eq("org_id", orgId);
   if (companyId) q = q.eq("company_id", companyId);
   if (contactId) q = q.eq("contact_id", contactId);
   if (dealId) q = q.eq("deal_id", dealId);

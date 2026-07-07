@@ -232,28 +232,29 @@ describe("listDeals", () => {
 });
 
 describe("listActivities", () => {
-  it("filters by whichever anchor is set", async () => {
+  it("filters by org (defense-in-depth on top of RLS) and whichever anchor is set", async () => {
     const sb = mockListTable([{ id: "a1", type: "note" }]);
-    const rows = await listActivities({ dealId: "d1" }, sb as never);
+    const rows = await listActivities({ orgId: "org-1", dealId: "d1" }, sb as never);
     expect(rows).toHaveLength(1);
+    expect(sb._builder.eq).toHaveBeenCalledWith("org_id", "org-1");
     expect(sb._builder.eq).toHaveBeenCalledWith("deal_id", "d1");
     expect(sb._builder.eq).not.toHaveBeenCalledWith("company_id", expect.anything());
   });
 
   it("throws when no anchor is provided — mirrors the DB's own check constraint", async () => {
     const sb = mockListTable([]);
-    await expect(listActivities({}, sb as never)).rejects.toThrow(/at least one/);
+    await expect(listActivities({ orgId: "org-1" }, sb as never)).rejects.toThrow(/at least one/);
     expect(sb.from).not.toHaveBeenCalled();
   });
 
   it("returns an empty array when there are no rows", async () => {
     const sb = mockListTable(null);
-    expect(await listActivities({ companyId: "c1" }, sb as never)).toEqual([]);
+    expect(await listActivities({ orgId: "org-1", companyId: "c1" }, sb as never)).toEqual([]);
   });
 
   it("throws when the query errors", async () => {
     const sb = mockListTable(null, { message: "boom" });
-    await expect(listActivities({ contactId: "p1" }, sb as never)).rejects.toThrow("boom");
+    await expect(listActivities({ orgId: "org-1", contactId: "p1" }, sb as never)).rejects.toThrow("boom");
   });
 });
 
