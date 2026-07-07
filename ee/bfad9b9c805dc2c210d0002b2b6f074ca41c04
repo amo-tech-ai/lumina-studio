@@ -1,0 +1,19 @@
+.claude/commands/verify-task.md
+  s_05b6f033399815::t_87cafd36919f48 80
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "eebfad9b9c805dc2c210d0002b2b6f074ca41c04",
+  "prompts": {},
+  "sessions": {
+    "s_05b6f033399815": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_0c59ed3f9ffefKcJr2ofrdKS9Z",
+        "model": "deepseek-v4-flash"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
