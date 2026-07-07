@@ -1,0 +1,27 @@
+app/src/mastra/agents/index.ts
+  s_88536c5a6fce9b::t_4960aef0a3e217 11-20,27
+app/src/mastra/tools/booking-tools.test.ts
+  s_88536c5a6fce9b::t_7b8ce0512b614d 43-74
+app/src/mastra/agents/index.test.ts
+  s_88536c5a6fce9b::t_e6f126a8f930e5 35-46
+app/src/mastra/tools/booking-tools.ts
+  s_88536c5a6fce9b::t_98f6c787f6a97b 23,26
+  s_88536c5a6fce9b::t_4ba59eaec69c2a 66-69,77-78
+  s_88536c5a6fce9b::t_3abcb52491ebe1 11
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "72f5f9252d38e118d52eb87081849c2c8f3543b6",
+  "prompts": {},
+  "sessions": {
+    "s_88536c5a6fce9b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "9affed21-8515-433a-b4d9-f7506bb6c652",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
