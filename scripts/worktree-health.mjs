@@ -102,11 +102,17 @@ function checkAheadBehind(wtPath) {
  * anywhere). Uses `@{upstream}` rather than assuming `origin/<branch>` — a
  * branch can be pushed to a non-origin remote, or tracked under a different
  * name than its local one, and would falsely look entirely unpushed otherwise.
+ *
+ * Detached HEAD has no upstream by definition, but its commits are exactly as
+ * at-risk as an unpushed branch's — they're reachable only from this one ref
+ * and `git worktree remove` won't protect them — so it's treated the same as
+ * "no upstream configured" rather than hardcoded to 0.
  */
 function checkUnpushedCommits(wtPath, branch, aheadOfMain) {
-  if (!branch) return 0; // detached HEAD — no branch to compare
-  const upstream = tryGit(["rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{upstream}"], wtPath);
-  if (!upstream) return aheadOfMain; // no upstream configured at all — everything ahead of main is at risk
+  const upstream = branch
+    ? tryGit(["rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{upstream}"], wtPath)
+    : null;
+  if (!upstream) return aheadOfMain; // no upstream (or detached HEAD) — everything ahead of main is at risk
   const count = tryGit(["rev-list", "--count", `${upstream}..HEAD`], wtPath);
   return count ? Number(count) : 0;
 }
