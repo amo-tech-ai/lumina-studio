@@ -1,0 +1,23 @@
+app/src/lib/ai/provider.test.ts
+  s_88536c5a6fce9b::t_a44306cf53a5d8 23
+  s_88536c5a6fce9b::t_264a8de6b1dea2 177,180
+  s_88536c5a6fce9b::t_378f228c4a1e3f 158,161
+  s_88536c5a6fce9b::t_30710e646aa3de 9
+  s_88536c5a6fce9b::t_8b0bb5f97c9420 131,134
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "be2194392b6f496dc88c81d570859dc6de6449ea",
+  "prompts": {},
+  "sessions": {
+    "s_88536c5a6fce9b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "9affed21-8515-433a-b4d9-f7506bb6c652",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
