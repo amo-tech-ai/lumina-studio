@@ -8,7 +8,7 @@
 -- so this is a no-op.
 do $$
 begin
-  if not exists (select 1 from pg_type where typname = 'brand_intake_status') then
+  if to_regtype('public.brand_intake_status') is null then
     create type public.brand_intake_status as enum (
       'brand_created',
       'crawl_running',
@@ -16,7 +16,8 @@ begin
       'analysis_running',
       'scores_complete',
       'ready',
-      'failed'
+      'failed',
+      'draft_ready'
     );
   end if;
 end $$;
