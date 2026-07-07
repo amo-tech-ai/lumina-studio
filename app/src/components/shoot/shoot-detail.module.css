@@ -324,6 +324,7 @@
   flex-shrink: 0;
   position: relative;
   height: 44px;
+  min-width: 44px;
   padding: 0 13px;
   border: none;
   background: transparent;
