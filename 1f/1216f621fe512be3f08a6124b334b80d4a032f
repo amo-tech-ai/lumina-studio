@@ -1,0 +1,46 @@
+app/src/mastra/agents/social-discovery.ts
+  s_88536c5a6fce9b::t_3b24f5985a3407 8
+app/src/mastra/agents/brand-intelligence-agent.ts
+  s_88536c5a6fce9b::t_f0b81f7573b84e 10
+app/src/mastra/agents/visual-identity.ts
+  s_88536c5a6fce9b::t_7722d79d444cbd 10-12
+app/src/lib/ai/provider.ts
+  s_88536c5a6fce9b::t_4c17d0788a04b5 7
+  s_88536c5a6fce9b::t_a6a07c7fa820a4 136-141
+  s_88536c5a6fce9b::t_5ecc9f335e9e38 77-89,91-93
+  s_88536c5a6fce9b::t_05b63dbde344b3 90
+app/src/mastra/agents/model-match-agent.ts
+  s_88536c5a6fce9b::t_a5880e467395d0 13
+app/src/mastra/agents/public-marketing-agent.ts
+  s_88536c5a6fce9b::t_95d2c1d1d42183 10
+app/src/mastra/agents/index.ts
+  s_88536c5a6fce9b::t_460795d5ade945 9
+app/src/mastra/tools/social-discovery.ts
+  s_88536c5a6fce9b::t_6909fbdea30e45 12-13
+app/src/mastra/agents/crm-assistant-agent.ts
+  s_88536c5a6fce9b::t_045176084dc530 10
+app/src/mastra/tools/suggestShootBrief.ts
+  s_88536c5a6fce9b::t_3c5cba67f4984d 32
+  s_88536c5a6fce9b::t_7135b891bc890b 45-46
+app/src/lib/ai/provider.test.ts
+  s_88536c5a6fce9b::t_f329e7c42c4d36 10,13,17,20
+  s_88536c5a6fce9b::t_8ed308d8816b79 85-138
+app/src/mastra/agents/visual-identity.test.ts
+  s_88536c5a6fce9b::t_98fe26c285ef9e 159-175
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "1f1216f621fe512be3f08a6124b334b80d4a032f",
+  "prompts": {},
+  "sessions": {
+    "s_88536c5a6fce9b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "9affed21-8515-433a-b4d9-f7506bb6c652",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
