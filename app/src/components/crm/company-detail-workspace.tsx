@@ -8,7 +8,6 @@ import { ChevronRight, ExternalLink } from "lucide-react";
 import { EntityList } from "@/components/ui/entity-list";
 import { ErrorState } from "@/components/ui/error-state";
 import { StatusChip } from "@/components/ui/status-chip";
-import { formatMoney } from "@/components/shoot/shoot-detail-format";
 import type { CompanyDetailPayload } from "@/lib/crm/get-company-detail";
 import type { ContactRow, DealRow } from "@/lib/crm/queries";
 import {
@@ -17,6 +16,7 @@ import {
   crmStatusDotToken,
   crmStatusLabel,
 } from "@/lib/crm/status-tokens";
+import { formatMoney } from "@/lib/format";
 import { ActivityTimeline } from "./activity-timeline";
 import { CrmAvatar } from "./crm-avatar";
 import styles from "./company-detail-workspace.module.css";

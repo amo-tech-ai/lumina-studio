@@ -1,8 +1,8 @@
 import { DollarSign } from "lucide-react";
 
 import { EmptyState } from "@/components/ui/empty-state";
+import { formatMoney } from "@/lib/format";
 import type { ShootDetailPayload } from "@/lib/shoot/get-shoot-detail";
-import { formatMoney } from "../shoot-detail-format";
 import styles from "../shoot-detail.module.css";
 
 type Props = {
