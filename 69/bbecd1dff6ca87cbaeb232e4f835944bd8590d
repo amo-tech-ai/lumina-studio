@@ -1,0 +1,23 @@
+.claude/skills/worktrees/SKILL.md
+  s_88536c5a6fce9b::t_3474d7516e72d3 23
+CLAUDE.md
+  s_88536c5a6fce9b::t_2b69d84b0b570d 155
+scripts/worktree-health.mjs
+  s_88536c5a6fce9b::t_2950d28b84ae6d 163-176
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "69bbecd1dff6ca87cbaeb232e4f835944bd8590d",
+  "prompts": {},
+  "sessions": {
+    "s_88536c5a6fce9b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "9affed21-8515-433a-b4d9-f7506bb6c652",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
