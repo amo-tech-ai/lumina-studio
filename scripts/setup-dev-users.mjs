@@ -146,9 +146,9 @@ const SEED_DATA = [
   ]},
   // Org members (RLS membership)
   { table: "org_members", rows: [
-    { id: "00000000-0000-0000-0000-000000000801", org_id: ORG_1, user_id: A, role: "admin" },
-    { id: "00000000-0000-0000-0000-000000000802", org_id: ORG_1, user_id: B, role: "member" },
-    { id: "00000000-0000-0000-0000-000000000803", org_id: ORG_1, user_id: C, role: "member" },
+    { id: "00000000-0000-0000-0000-000000000801", org_id: ORG_1, user_id: A, role: "owner" },
+    { id: "00000000-0000-0000-0000-000000000802", org_id: ORG_1, user_id: B, role: "editor" },
+    { id: "00000000-0000-0000-0000-000000000803", org_id: ORG_1, user_id: C, role: "viewer" },
   ]},
   // Brands
   { table: "brands", rows: [
