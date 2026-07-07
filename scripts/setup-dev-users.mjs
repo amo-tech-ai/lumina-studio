@@ -31,6 +31,7 @@ if (existsSync(envPath)) {
 }
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  ?? process.env.NEXT_SUPABASE_URL
   ?? process.env.SUPABASE_URL;
 const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
@@ -79,20 +80,61 @@ for (const user of DEV_USERS) {
   }
 
   const errBody = await res.json().catch(() => ({}));
-  if (res.status === 409 || errBody?.msg?.includes("already exists")) {
+  if (res.status === 409 || res.status === 422 || errBody?.code === "23505" || errBody?.message?.includes("already exists") || errBody?.error_code === "email_exists") {
+    // Try Admin API list (only returns users with GoTrue identities)
     const listRes = await fetch(`${supabaseUrl}/auth/v1/admin/users`, {
       headers: AUTH_HEADERS,
     });
+    let match = null;
     if (listRes.ok) {
       const list = await listRes.json();
-      const match = list.users?.find((u) => u.email === user.email);
-      if (match) {
-        user.id = match.id;
-        console.log(`  ✓ Found ${user.email} → ${user.id}`);
-        foundCount++;
-        continue;
-      }
+      match = list.users?.find((u) => u.email === user.email);
     }
+    if (match) {
+      user.id = match.id;
+      console.log(`  ✓ Found ${user.email} → ${user.id}`);
+      foundCount++;
+      continue;
+    }
+    // User exists in auth.users but has no GoTrue identity (orphaned from old seed.sql).
+    // Delete via Supabase CLI so Admin API can recreate properly.
+    console.log(`  ↪ ${user.email} has no GoTrue identity — cleaning up orphan`);
+    const { execSync } = await import("node:child_process");
+    try {
+      execSync(
+        `npx supabase db query --linked "DELETE FROM auth.users WHERE email='${user.email}'" 2>/dev/null`,
+        { encoding: "utf8", timeout: 30000, stdio: "pipe" }
+      );
+    } catch {
+      console.error(
+        `  ✗ Could not delete orphaned ${user.email} from auth.users.\n` +
+        `    Run manually from a linked checkout:\n` +
+        `      npx supabase db query --linked "DELETE FROM auth.users WHERE email='${user.email}'"`
+      );
+      process.exitCode = 1;
+      continue;
+    }
+    // Recreate via Admin API
+    const retry = await fetch(`${supabaseUrl}/auth/v1/admin/users`, {
+      method: "POST",
+      headers: AUTH_HEADERS,
+      body: JSON.stringify({
+        email: user.email,
+        password: user.password,
+        email_confirm: true,
+        user_metadata: { full_name: user.full_name },
+      }),
+    });
+    if (retry.ok) {
+      const body = await retry.json();
+      user.id = body.id;
+      console.log(`  ✓ Recreated ${user.email} → ${user.id}`);
+      createdCount++;
+      continue;
+    }
+    console.error(`  ✗ Failed to recreate ${user.email}: ${retry.status}`);
+    process.exitCode = 1;
+    continue;
   }
 
   console.error(`  ✗ Failed to create/find ${user.email}: ${res.status}`);
