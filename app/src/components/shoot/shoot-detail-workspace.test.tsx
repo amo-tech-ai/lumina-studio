@@ -149,4 +149,24 @@ describe("ShootDetailWorkspace — review-fix regressions", () => {
     fireEvent.click(screen.getByRole("tab", { name: "Deliverables" }));
     expect(screen.getByText("· 1/1 ready")).toBeDefined();
   });
+
+  it("isDeliverableReady is case/whitespace-insensitive (free-text status column)", () => {
+    const data = payload({
+      deliverables: [{ id: "d1", channel: "amazon", format: "JPG", quantity: 8, status: "Delivered " }],
+    });
+    render(<ShootDetailWorkspace data={data} fetchError={null} />);
+    fireEvent.click(screen.getByRole("tab", { name: "Deliverables" }));
+    expect(screen.getByText("· 1/1 ready")).toBeDefined();
+  });
+
+  it("hero renders a non-Cloudinary cover_url as a real image, not the decorative fallback", () => {
+    render(
+      <ShootDetailWorkspace
+        data={payload({ shoot: { ...payload().shoot, cover_url: "https://example.com/real-cover.jpg" } })}
+        fetchError={null}
+      />,
+    );
+    const heroImg = screen.getAllByAltText("")[0] as HTMLImageElement;
+    expect(heroImg.src).toBe("https://example.com/real-cover.jpg");
+  });
 });

@@ -83,7 +83,6 @@ export function ShootDetailWorkspace({ data, fetchError }: Props) {
   const { shoot, brand, deliverables, shots, assets, crew, approvals, activity } = data;
   const shotsDone = shots.filter((s) => s.status !== "pending").length;
   const progressPct = shots.length > 0 ? Math.round((shotsDone / shots.length) * 100) : 0;
-  const coverSrc = isDeliverableCover(shoot.cover_url) ? shoot.cover_url : shootListCoverForShoot(shoot.id);
   const confirmedCrew = crew.filter((c) => c.confirmed).slice(0, 4);
 
   // DC wsEmpty — a shoot with no shots yet swaps the whole workspace, not just the Shots tab.
@@ -97,11 +96,7 @@ export function ShootDetailWorkspace({ data, fetchError }: Props) {
         </div>
         <div className={styles.stateRoot}>
           <div className={styles.hero} style={{ width: 200, aspectRatio: "16/10", flexShrink: 0 }}>
-            {isDeliverableCover(shoot.cover_url) ? (
-              <Image src={shoot.cover_url} alt="" fill sizes="200px" className={styles.heroImage} />
-            ) : (
-              <Image src={coverSrc} alt="" fill sizes="200px" className={styles.heroImage} />
-            )}
+            <ShootCover coverUrl={shoot.cover_url} shootId={shoot.id} sizes="200px" />
           </div>
           <h2 style={{ margin: "20px 0 0", fontSize: "var(--fs-xl)", fontWeight: 600 }}>{shoot.name} — no shots yet</h2>
           <p style={{ margin: "8px 0 0", maxWidth: 440, fontSize: "var(--fs-sm)", color: "var(--color-text-secondary)", lineHeight: 1.55 }}>
@@ -129,7 +124,7 @@ export function ShootDetailWorkspace({ data, fetchError }: Props) {
           <Breadcrumb name={shoot.name} />
 
           <div className={styles.hero}>
-            <Image src={coverSrc} alt="" fill sizes="960px" className={styles.heroImage} priority />
+            <ShootCover coverUrl={shoot.cover_url} shootId={shoot.id} sizes="960px" priority />
             <span className={styles.heroScrim} aria-hidden />
             <div className={styles.heroContent}>
               <div style={{ minWidth: 0 }}>
@@ -231,6 +226,31 @@ export function ShootDetailWorkspace({ data, fetchError }: Props) {
       </div>
     </div>
   );
+}
+
+/** Shared by both hero render sites (populated + wsEmpty). Three real states:
+ *  a deliverable Cloudinary cover (optimized), a real but off-cloud cover URL
+ *  (plain <img> — next/image throws on disallowed hosts, mood_board_urls is
+ *  free-form), or no cover at all (decorative fallback, only case that uses
+ *  shootListCoverForShoot). */
+function ShootCover({
+  coverUrl,
+  shootId,
+  sizes,
+  priority,
+}: {
+  coverUrl: string | null;
+  shootId: string;
+  sizes: string;
+  priority?: boolean;
+}) {
+  if (isDeliverableCover(coverUrl)) {
+    return <Image src={coverUrl} alt="" fill sizes={sizes} priority={priority} className={styles.heroImage} />;
+  }
+  if (coverUrl) {
+    return <img src={coverUrl} alt="" className={styles.fillImgFallback} />;
+  }
+  return <Image src={shootListCoverForShoot(shootId)} alt="" fill sizes={sizes} priority={priority} className={styles.heroImage} />;
 }
 
 function Breadcrumb({ name }: { name: string }) {
