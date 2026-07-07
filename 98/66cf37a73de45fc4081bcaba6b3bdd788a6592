@@ -1,0 +1,25 @@
+app/src/components/shoot/shoot-detail-tabs/overview-tab.tsx
+  s_ff0f27c2808314::t_df0982c1520e71 6,8
+app/src/components/crm/company-detail-workspace.tsx
+  s_ff0f27c2808314::t_57ecb117c3bfe4 19
+app/src/lib/format.ts
+  s_ff0f27c2808314::t_9319b296d257e7 1-14
+app/src/components/shoot/shoot-detail-tabs/budget-tab.tsx
+  s_ff0f27c2808314::t_b9af8059d8ba18 4
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "9866cf37a73de45fc4081bcaba6b3bdd788a6592",
+  "prompts": {},
+  "sessions": {
+    "s_ff0f27c2808314": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "f541cadc-3ecd-4f00-aa24-6136f7995021",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
