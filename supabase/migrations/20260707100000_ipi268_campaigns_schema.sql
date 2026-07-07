@@ -85,6 +85,26 @@ create trigger check_campaign_org_consistency
   before insert or update on public.campaigns
   for each row execute function public.check_campaign_org_consistency();
 
+-- Protect brand org_id changes when campaigns reference the brand
+create or replace function public.block_brand_org_change()
+returns trigger
+security definer
+set search_path = public
+as $$
+begin
+  if old.org_id != new.org_id and exists (select 1 from public.campaigns where brand_id = new.id) then
+    raise exception 'Cannot change brand.org_id: % campaign(s) reference this brand',
+      (select count(*) from public.campaigns where brand_id = new.id);
+  end if;
+  return new;
+end;
+$$ language plpgsql;
+
+drop trigger if exists block_brand_org_change on public.brands;
+create trigger block_brand_org_change
+  before update on public.brands
+  for each row execute function public.block_brand_org_change();
+
 -- 6. RLS
 alter table public.campaigns enable row level security;
 alter table public.campaign_deliverables enable row level security;
@@ -133,7 +153,7 @@ create policy "campaign_deliverables_update_assigned_or_owner" on public.campaig
   )
   with check (
     is_org_member((select org_id from public.campaigns where id = campaign_id))
-    and ((select auth.uid()) = assigned_to or is_org_member((select org_id from public.campaigns where id = campaign_id)))
+    and (select auth.uid()) = assigned_to
   );
 
 drop policy if exists "campaign_deliverables_delete_org_member" on public.campaign_deliverables;
