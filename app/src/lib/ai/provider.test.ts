@@ -6,6 +6,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import {
   assertGroqTierCapabilities,
   findGroqModelsConfigPath,
+  GEMINI_MODELS,
   getGroqModelEntry,
   loadGroqModelsConfig,
   resolveAiProvider,
@@ -19,6 +20,7 @@ describe("AI provider (GROQ-002 / GROQ-004)", () => {
     AI_PROVIDER: process.env.AI_PROVIDER,
     GROQ_API_KEY: process.env.GROQ_API_KEY,
     GEMINI_API_KEY: process.env.GEMINI_API_KEY,
+    GEMINI_MODEL: process.env.GEMINI_MODEL,
     GROQ_MODEL_DEFAULT: process.env.GROQ_MODEL_DEFAULT,
     GROQ_MODEL_STRUCTURED: process.env.GROQ_MODEL_STRUCTURED,
     GROQ_MODEL_VISION: process.env.GROQ_MODEL_VISION,
@@ -126,8 +128,10 @@ describe("AI provider (GROQ-002 / GROQ-004)", () => {
   it("resolveModel uses Gemini when AI_PROVIDER=gemini", () => {
     process.env.AI_PROVIDER = "gemini";
     process.env.GEMINI_API_KEY = "test-key";
+    delete process.env.GEMINI_MODEL;
     const model = resolveModel();
     expect(model.provider).toBe("google.generative-ai");
+    expect(model.modelId).toBe(GEMINI_MODELS.default);
     expect(getGroqModelEntry("llama-3.3-70b-versatile")?.parallelTools).toBe(true);
   });
 
@@ -151,8 +155,10 @@ describe("AI provider (GROQ-002 / GROQ-004)", () => {
       process.env.GROQ_API_KEY = "test-groq-key";
       process.env.GEMINI_API_KEY = "test-gemini-key";
       delete process.env.GROQ_MODEL_VISION;
+      delete process.env.GEMINI_MODEL;
       const model = resolveModel("vision");
       expect(model.provider).toBe("google.generative-ai");
+      expect(model.modelId).toBe(GEMINI_MODELS.default);
     });
 
     it("uses Groq for vision tier once GROQ_MODEL_VISION is explicitly configured", () => {
@@ -168,8 +174,10 @@ describe("AI provider (GROQ-002 / GROQ-004)", () => {
       process.env.AI_PROVIDER = "gemini";
       process.env.GEMINI_API_KEY = "test-gemini-key";
       delete process.env.GROQ_MODEL_VISION;
+      delete process.env.GEMINI_MODEL;
       const model = resolveModel("vision");
       expect(model.provider).toBe("google.generative-ai");
+      expect(model.modelId).toBe(GEMINI_MODELS.default);
     });
   });
 
