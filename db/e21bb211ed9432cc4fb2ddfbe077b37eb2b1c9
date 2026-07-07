@@ -1,0 +1,52 @@
+app/src/components/crm/crm-list-loading.tsx
+  s_fb6d75e0972fb7::t_608948ee76a44a 1-20
+app/src/components/crm/crm-list-loading.module.css
+  s_fb6d75e0972fb7::t_09fc52b8c01b5f 1-31
+app/src/components/crm/crm-avatar.tsx
+  s_fb6d75e0972fb7::t_906352fcc6c167 1-19
+app/src/components/crm/companies-workspace.test.tsx
+  s_fb6d75e0972fb7::t_fcfcf05ecc45ce 1-91
+app/src/components/crm/crm-list-workspace.module.css
+  s_fb6d75e0972fb7::t_4342ac739dec71 1-39,41-42,44-70,72-89,95,98-99,102-114,116-178
+  s_fb6d75e0972fb7::t_9d55ef3edb9ff0 115
+  s_fb6d75e0972fb7::t_9609c29c8573e0 100
+  s_fb6d75e0972fb7::t_4408af35a2426f 90-94,96-97,101
+  s_fb6d75e0972fb7::t_30287d253849ba 40,43
+  s_fb6d75e0972fb7::t_187812e833b0a9 71
+app/src/app/(operator)/app/crm/contacts/loading.tsx
+  s_fb6d75e0972fb7::t_bc3798b4a9730b 1-5
+app/src/components/crm/contacts-workspace.tsx
+  s_fb6d75e0972fb7::t_aba5c308431ca2 1-8,10-14,22-83,85-105
+  s_fb6d75e0972fb7::t_9ed88a66243002 84
+  s_fb6d75e0972fb7::t_66452695775996 9,15-21
+app/src/app/(operator)/app/crm/companies/loading.tsx
+  s_fb6d75e0972fb7::t_66291eda06626b 1-5
+app/src/components/crm/crm-avatar.module.css
+  s_fb6d75e0972fb7::t_3f1dd06fe6aa4e 1-21
+app/src/components/crm/companies-workspace.tsx
+  s_fb6d75e0972fb7::t_5535dad6320fdf 1-65,67-100
+  s_fb6d75e0972fb7::t_3848e7ff6ea9ec 66
+app/src/components/crm/contacts-workspace.test.tsx
+  s_fb6d75e0972fb7::t_4ffdaf6b2674a3 1-85
+app/src/app/(operator)/app/crm/companies/page.tsx
+  s_fb6d75e0972fb7::t_e51a41c08ffa57 1-3,7-17,19-22
+  s_fb6d75e0972fb7::t_97bd07df585a9c 18
+app/src/app/(operator)/app/crm/contacts/page.tsx
+  s_fb6d75e0972fb7::t_d22e08b09dea1a 1-3,7-30
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "dbe21bb211ed9432cc4fb2ddfbe077b37eb2b1c9",
+  "prompts": {},
+  "sessions": {
+    "s_fb6d75e0972fb7": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "482ba906-0d79-473d-87a7-390cf354e015",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
