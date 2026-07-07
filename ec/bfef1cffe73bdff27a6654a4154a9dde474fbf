@@ -1,0 +1,30 @@
+scripts/lib/worktree-health-checks.mjs
+  s_88536c5a6fce9b::t_cdbbcdabc2b71f 1-31
+CLAUDE.md
+  s_88536c5a6fce9b::t_c43e36b1fdc936 137-150
+scripts/worktree-health.mjs
+  s_88536c5a6fce9b::t_ea74aecf83af8a 54
+  s_88536c5a6fce9b::t_11ee3f245330ed 1-28,30-53,55-65,67-123
+  s_88536c5a6fce9b::t_ca15942ec104ec 66
+  s_88536c5a6fce9b::t_b729e6b3be3958 29
+scripts/lib/worktree-health-checks.test.mjs
+  s_88536c5a6fce9b::t_623cff508290ed 1-52
+package.json
+  s_88536c5a6fce9b::t_6cc3dfc056faa2 25-28
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "ecbfef1cffe73bdff27a6654a4154a9dde474fbf",
+  "prompts": {},
+  "sessions": {
+    "s_88536c5a6fce9b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "9affed21-8515-433a-b4d9-f7506bb6c652",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
