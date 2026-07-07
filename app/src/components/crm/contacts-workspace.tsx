@@ -8,7 +8,7 @@ import { CrmAvatar } from "./crm-avatar";
 import { ComingSoonButton, CrmListWorkspace } from "./crm-list-workspace";
 import styles from "./crm-list-workspace.module.css";
 
-const FILTER_LABELS = ["Organization", "Role"];
+const FILTER_LABELS = ["Organization", "Type", "Has open deal"];
 
 /** email is a jsonb array ({value,type,primary}), not a single column —
  *  getPrimaryEntry (jsonb-contact-fields.ts) already picks the primary/first
