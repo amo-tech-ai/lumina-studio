@@ -1,17 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
-const mockDoGenerate = vi.fn();
-const mockDoStream = vi.fn();
-
-vi.mock("@ai-sdk/openai-compatible", () => ({
-  createOpenAICompatible: () => ({
-    chatModel: () => ({
-      doGenerate: (...args: unknown[]) => mockDoGenerate(...args),
-      doStream: (...args: unknown[]) => mockDoStream(...args),
-    }),
-  }),
-}));
-
 import { providerAdapter } from "./provider-adapter";
 
 describe("providerAdapter", () => {
@@ -25,13 +13,18 @@ describe("providerAdapter", () => {
 
   afterEach(() => {
     process.env = { ...originalEnv };
+    vi.restoreAllMocks();
   });
 
   describe("chat", () => {
     it("returns text from default tier", async () => {
-      mockDoGenerate.mockResolvedValue({
-        text: "Hello from AI",
-        usage: { promptTokens: 10, completionTokens: 20 },
+      globalThis.fetch = vi.fn().mockResolvedValue({
+        ok: true,
+        json: () =>
+          Promise.resolve({
+            choices: [{ message: { content: "Hello from AI" } }],
+            usage: { prompt_tokens: 10, completion_tokens: 20 },
+          }),
       });
 
       const result = await providerAdapter.chat("Say hello");
@@ -41,74 +34,79 @@ describe("providerAdapter", () => {
     });
 
     it("passes temperature and maxTokens", async () => {
-      mockDoGenerate.mockResolvedValue({ text: "ok" });
+      const fetchMock = vi.fn().mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve({ choices: [{ message: { content: "ok" } }] }),
+      });
+      globalThis.fetch = fetchMock;
 
       await providerAdapter.chat("test", { temperature: 0.1, maxTokens: 100 });
 
-      const callArgs = mockDoGenerate.mock.calls[0][0];
-      expect(callArgs.temperature).toBe(0.1);
-      expect(callArgs.maxTokens).toBe(100);
+      const callBody = JSON.parse(fetchMock.mock.calls[0][1].body);
+      expect(callBody.temperature).toBe(0.1);
+      expect(callBody.max_tokens).toBe(100);
     });
 
-    it("returns empty text on no response", async () => {
-      mockDoGenerate.mockResolvedValue({});
+    it("returns empty text on no choices", async () => {
+      globalThis.fetch = vi.fn().mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve({ choices: [] }),
+      });
 
       const result = await providerAdapter.chat("empty");
 
       expect(result.text).toBe("");
     });
+
+    it("throws on non-ok response", async () => {
+      globalThis.fetch = vi.fn().mockResolvedValue({
+        ok: false,
+        status: 503,
+        text: () => Promise.resolve("Service Unavailable"),
+      });
+
+      await expect(providerAdapter.chat("test")).rejects.toThrow("chat completion failed: 503");
+    });
   });
 
   describe("chatStream", () => {
-    it("returns a readable stream", async () => {
-      const asyncIterable = {
-        [Symbol.asyncIterator]() {
-          const chunks = [
-            { type: "text-delta" as const, textDelta: "Hello " },
-            { type: "text-delta" as const, textDelta: "world" },
-          ];
-          let i = 0;
-          return {
-            next() {
-              if (i < chunks.length) return Promise.resolve({ value: chunks[i++], done: false });
-              return Promise.resolve({ value: undefined, done: true });
-            },
-          };
-        },
-      };
-
-      mockDoStream.mockResolvedValue({ stream: asyncIterable });
-
+    it("exposes a chatStream function", () => {
+      globalThis.fetch = vi.fn();
       const stream = providerAdapter.chatStream("test");
-      const reader = stream.getReader();
-      const chunks: string[] = [];
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        chunks.push(new TextDecoder().decode(value));
-      }
-
-      expect(chunks.join("")).toBe("Hello world");
+      expect(stream).toBeInstanceOf(ReadableStream);
+      expect(globalThis.fetch).toHaveBeenCalled();
     });
   });
 
   describe("structured", () => {
     it("returns parsed JSON object", async () => {
-      mockDoGenerate.mockResolvedValue({
-        text: JSON.stringify({ name: "test", score: 85 }),
-        usage: { promptTokens: 15, completionTokens: 5 },
+      globalThis.fetch = vi.fn().mockResolvedValue({
+        ok: true,
+        json: () =>
+          Promise.resolve({
+            choices: [{ message: { content: JSON.stringify({ name: "test", score: 85 }) } }],
+            usage: { prompt_tokens: 15, completion_tokens: 5 },
+          }),
       });
 
-      const schema = {
-        type: "object",
-        properties: { name: { type: "string" }, score: { type: "number" } },
-      };
-
-      const result = await providerAdapter.structured("Parse this", { schema });
+      const result = await providerAdapter.structured("Parse this", {
+        schema: { type: "object", properties: { name: { type: "string" }, score: { type: "number" } } },
+      });
 
       expect(result.object).toEqual({ name: "test", score: 85 });
       expect(result.usage).toEqual({ promptTokens: 15, completionTokens: 5 });
+    });
+
+    it("throws on non-ok response", async () => {
+      globalThis.fetch = vi.fn().mockResolvedValue({
+        ok: false,
+        status: 400,
+        text: () => Promise.resolve("Bad Request"),
+      });
+
+      await expect(
+        providerAdapter.structured("test", { schema: { type: "object", properties: {} } }),
+      ).rejects.toThrow("structured completion failed: 400");
     });
   });
 

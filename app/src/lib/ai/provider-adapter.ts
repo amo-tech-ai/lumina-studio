@@ -1,7 +1,3 @@
-import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
-import type { LanguageModelV1 } from "@ai-sdk/provider";
-import type { AiProvider } from "./types";
-
 export type ModelTier = "default" | "fast" | "structured" | "vision" | "embedding";
 
 export type ChatOptions = {
@@ -10,8 +6,8 @@ export type ChatOptions = {
   maxTokens?: number;
 };
 
-export type StructuredOptions<T> = ChatOptions & {
-  schema: T;
+export type StructuredOptions = ChatOptions & {
+  schema: Record<string, unknown>;
   schemaName?: string;
 };
 
@@ -24,8 +20,8 @@ export type ChatResult = {
   usage?: { promptTokens: number; completionTokens: number };
 };
 
-export type StructuredResult<T> = {
-  object: T;
+export type StructuredResult = {
+  object: Record<string, unknown>;
   usage?: { promptTokens: number; completionTokens: number };
 };
 
@@ -37,17 +33,20 @@ export type EmbedResult = {
 export interface AiProviderAdapter {
   chat(prompt: string, options?: ChatOptions): Promise<ChatResult>;
   chatStream(prompt: string, options?: ChatOptions): ReadableStream<string>;
-  structured<T>(prompt: string, options: StructuredOptions<T>): Promise<StructuredResult<T>>;
+  structured(prompt: string, options: StructuredOptions): Promise<StructuredResult>;
   embed(inputs: string[], options?: EmbedOptions): Promise<EmbedResult>;
 }
 
 const GATEWAY_BASE_URL = process.env.AI_GATEWAY_URL ?? "http://localhost:4111";
 
-function endpointForTier(tier: ModelTier): string {
-  return `${GATEWAY_BASE_URL}/v1/chat/completions`;
+function gatewayHeaders(): Record<string, string> {
+  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  const apiKey = process.env.AI_GATEWAY_API_KEY;
+  if (apiKey) headers["Authorization"] = `Bearer ${apiKey}`;
+  return headers;
 }
 
-function modelIdForTier(tier: ModelTier): string {
+function modelForTier(tier: ModelTier): string {
   const overrides: Record<string, string | undefined> = {
     default: process.env.AI_MODEL_DEFAULT,
     fast: process.env.AI_MODEL_FAST,
@@ -58,55 +57,102 @@ function modelIdForTier(tier: ModelTier): string {
   return overrides[tier] ?? "gemini-3.1-flash-lite";
 }
 
-function createModel(tier: ModelTier): LanguageModelV1 {
-  const provider = createOpenAICompatible({
-    name: "ai-gateway",
-    baseURL: endpointForTier(tier),
-    apiKey: process.env.AI_GATEWAY_API_KEY ?? "",
+function buildMessages(prompt: string) {
+  return [{ role: "user", content: prompt }];
+}
+
+async function chatCompletion(
+  prompt: string,
+  options: ChatOptions,
+): Promise<{ text: string; usage?: { promptTokens: number; completionTokens: number } }> {
+  const tier = options.tier ?? "default";
+  const response = await fetch(`${GATEWAY_BASE_URL}/v1/chat/completions`, {
+    method: "POST",
+    headers: gatewayHeaders(),
+    body: JSON.stringify({
+      model: modelForTier(tier),
+      messages: buildMessages(prompt),
+      temperature: options.temperature ?? 0.7,
+      max_tokens: options.maxTokens ?? 4096,
+    }),
   });
-  return provider.chatModel(modelIdForTier(tier));
+
+  if (!response.ok) {
+    throw new Error(`chat completion failed: ${response.status} ${await response.text()}`);
+  }
+
+  const data = (await response.json()) as {
+    choices: { message: { content: string } }[];
+    usage?: { prompt_tokens: number; completion_tokens: number };
+  };
+
+  return {
+    text: data.choices[0]?.message?.content ?? "",
+    usage: data.usage
+      ? { promptTokens: data.usage.prompt_tokens, completionTokens: data.usage.completion_tokens }
+      : undefined,
+  };
 }
 
 export const providerAdapter: AiProviderAdapter = {
   async chat(prompt, options = {}) {
-    const tier = options.tier ?? "default";
-    const model = createModel(tier);
-    const result = await model.doGenerate({
-      prompt: [{ role: "user", content: [{ type: "text", text: prompt }] }],
-      inputFormat: "messages",
-      mode: { type: "regular" },
-      temperature: options.temperature ?? 0.7,
-      maxTokens: options.maxTokens ?? 4096,
-    });
-    const text = result.text ?? "";
-    return {
-      text,
-      usage: result.usage
-        ? { promptTokens: result.usage.promptTokens, completionTokens: result.usage.completionTokens }
-        : undefined,
-    };
+    return chatCompletion(prompt, options);
   },
 
   chatStream(prompt, options = {}) {
     const tier = options.tier ?? "default";
-    const model = createModel(tier);
-    const encoder = new TextEncoder();
     let cancelled = false;
 
-    return new ReadableStream({
+    const body = JSON.stringify({
+      model: modelForTier(tier),
+      messages: buildMessages(prompt),
+      temperature: options.temperature ?? 0.7,
+      max_tokens: options.maxTokens ?? 4096,
+      stream: true,
+    });
+
+    return new ReadableStream<string>({
       async start(controller) {
         try {
-          const result = await model.doStream({
-            prompt: [{ role: "user", content: [{ type: "text", text: prompt }] }],
-            inputFormat: "messages",
-            mode: { type: "regular" },
-            temperature: options.temperature ?? 0.7,
-            maxTokens: options.maxTokens ?? 4096,
+          const response = await fetch(`${GATEWAY_BASE_URL}/v1/chat/completions`, {
+            method: "POST",
+            headers: gatewayHeaders(),
+            body,
           });
-          for await (const chunk of result.stream) {
+
+          if (!response.ok) {
+            throw new Error(`stream failed: ${response.status}`);
+          }
+
+          const reader = response.body?.getReader();
+          if (!reader) throw new Error("No response body for stream");
+
+          const decoder = new TextDecoder();
+          let buffer = "";
+
+          while (true) {
             if (cancelled) break;
-            if (chunk.type === "text-delta" && chunk.textDelta) {
-              controller.enqueue(encoder.encode(chunk.textDelta));
+            const { done, value } = await reader.read();
+            if (done) break;
+
+            buffer += decoder.decode(value, { stream: true });
+            const lines = buffer.split("\n");
+            buffer = lines.pop() ?? "";
+
+            for (const line of lines) {
+              const trimmed = line.trim();
+              if (!trimmed || !trimmed.startsWith("data: ")) continue;
+              const data = trimmed.slice(6);
+              if (data === "[DONE]") return;
+              try {
+                const parsed = JSON.parse(data) as {
+                  choices?: { delta?: { content?: string } }[];
+                };
+                const content = parsed.choices?.[0]?.delta?.content;
+                if (content) controller.enqueue(content);
+              } catch {
+                // skip malformed chunks
+              }
             }
           }
         } catch (err) {
@@ -117,43 +163,45 @@ export const providerAdapter: AiProviderAdapter = {
       cancel() {
         cancelled = true;
       },
-    }) as ReadableStream<string>;
+    });
   },
 
   async structured(prompt, options) {
     const tier = options.tier ?? "structured";
-    const model = createModel(tier);
-    const result = await model.doGenerate({
-      prompt: [{ role: "user", content: [{ type: "text", text: prompt }] }],
-      inputFormat: "messages",
-      mode: {
-        type: "object-json",
-        schema: options.schema as Record<string, unknown>,
-        name: options.schemaName ?? "response",
-      },
-      temperature: options.temperature ?? 0.3,
-      maxTokens: options.maxTokens ?? 4096,
+    const response = await fetch(`${GATEWAY_BASE_URL}/v1/chat/completions`, {
+      method: "POST",
+      headers: gatewayHeaders(),
+      body: JSON.stringify({
+        model: modelForTier(tier),
+        messages: buildMessages(prompt),
+        temperature: options.temperature ?? 0.3,
+        max_tokens: options.maxTokens ?? 4096,
+        response_format: { type: "json_object", schema: options.schema },
+      }),
     });
-    const text = result.text ?? "{}";
+
+    if (!response.ok) {
+      throw new Error(`structured completion failed: ${response.status} ${await response.text()}`);
+    }
+
+    const data = (await response.json()) as {
+      choices: { message: { content: string } }[];
+      usage?: { prompt_tokens: number; completion_tokens: number };
+    };
+
     return {
-      object: JSON.parse(text) as T,
-      usage: result.usage
-        ? { promptTokens: result.usage.promptTokens, completionTokens: result.usage.completionTokens }
+      object: JSON.parse(data.choices[0]?.message?.content ?? "{}"),
+      usage: data.usage
+        ? { promptTokens: data.usage.prompt_tokens, completionTokens: data.usage.completion_tokens }
         : undefined,
     };
   },
 
-  async embed(inputs) {
-    const baseURL = process.env.AI_GATEWAY_URL ?? "http://localhost:4111";
-    const apiKey = process.env.AI_GATEWAY_API_KEY ?? "";
-    const model = process.env.AI_MODEL_EMBEDDING ?? "bge-base-en-v1.5";
-
-    const response = await fetch(`${baseURL}/v1/embeddings`, {
+  async embed(inputs, options) {
+    const model = options?.model ?? modelForTier("embedding");
+    const response = await fetch(`${GATEWAY_BASE_URL}/v1/embeddings`, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${apiKey}`,
-      },
+      headers: gatewayHeaders(),
       body: JSON.stringify({ model, input: inputs }),
     });
 
