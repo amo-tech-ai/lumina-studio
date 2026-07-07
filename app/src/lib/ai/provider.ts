@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -9,15 +9,39 @@ import {
 import type { AiProvider, GroqModelEntry, GroqModelTier, GroqModelsConfig } from "./types";
 
 const MODULE_DIR = dirname(fileURLToPath(import.meta.url));
+const MAX_ANCESTOR_HOPS = 8;
+
+/**
+ * Walks up from `startDir` looking for `config/groq-models.json`, rather than
+ * joining a hardcoded number of ".." segments. A fixed depth broke the moment
+ * Mastra bundled this module into `.mastra/output/provider.mjs` — that output
+ * file sits one directory shallower than the original `app/src/lib/ai/`
+ * source, so the same "go up 4" math overshot the repo root by one level
+ * (resolved to the parent of the repo instead of `config/` inside it).
+ * Walking up until the file is actually found is correct at any bundling
+ * depth, for both Next.js and Mastra.
+ */
+export function findGroqModelsConfigPath(startDir: string): string {
+  let dir = startDir;
+  for (let hop = 0; hop < MAX_ANCESTOR_HOPS; hop += 1) {
+    const candidate = join(dir, "config", "groq-models.json");
+    if (existsSync(candidate)) return candidate;
+    const parent = dirname(dir);
+    if (parent === dir) break; // reached filesystem root
+    dir = parent;
+  }
+  return join(startDir, "..", "..", "..", "..", "config", "groq-models.json");
+}
 
 /**
  * Repo SSOT at config/groq-models.json — loaded at runtime (not a static import)
- * to stay outside Turbopack's app/ root boundary. Resolved relative to this
- * module's own location (not process.cwd()) so it's correct regardless of the
- * directory the process was launched from.
+ * to stay outside Turbopack's app/ root boundary. Resolved by walking up from
+ * this module's own location (not process.cwd()) so it's correct regardless of
+ * the directory the process was launched from, or how deep the build output
+ * that contains this module happens to be nested.
  */
 export function loadGroqModelsConfig(): GroqModelsConfig {
-  const path = join(MODULE_DIR, "..", "..", "..", "..", "config", "groq-models.json");
+  const path = findGroqModelsConfigPath(MODULE_DIR);
   try {
     return JSON.parse(readFileSync(path, "utf8")) as GroqModelsConfig;
   } catch (error) {
