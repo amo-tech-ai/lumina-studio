@@ -1,0 +1,29 @@
+.claude/skills/mastra/references/groq.md
+  s_88536c5a6fce9b::t_78a339680cf8f2 149-156
+  s_88536c5a6fce9b::t_481fab8175a49b 146-148
+  s_88536c5a6fce9b::t_98a994d391350d 157-159
+  s_88536c5a6fce9b::t_81f3672e61d0c6 1-10,12,14-29,31-50,53-55,58,60-62,66-75,77-93,96-145,160-182
+  s_88536c5a6fce9b::t_ccac0b7cc48e5c 51-52,59
+  s_88536c5a6fce9b::t_57549da3559e9f 11,13
+  s_88536c5a6fce9b::t_9bdb87fde7df63 30
+  s_88536c5a6fce9b::t_3f573436556979 63-65
+  s_88536c5a6fce9b::t_0912071e627a3f 76
+  s_88536c5a6fce9b::t_9376b6060dccc9 94-95
+  s_88536c5a6fce9b::t_31b81195679906 56-57
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "52fd97fbd45d87755ec57addb986375a50190380",
+  "prompts": {},
+  "sessions": {
+    "s_88536c5a6fce9b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "9affed21-8515-433a-b4d9-f7506bb6c652",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
