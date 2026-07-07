@@ -8,13 +8,23 @@ export { PlannerWorkingMemory };
 
 const MODEL = resolveModel("default");
 
+// Excludes booking/CRM write tools that belong to other agents (booking, crm-assistant) —
+// production-planner's instructions never mention them, so it shouldn't have unsupervised
+// access to durable write actions like createBookingDraft from a shoot-planning chat.
+const {
+  checkTalentAvailability: _checkTalentAvailability,
+  draftBookingQuote: _draftBookingQuote,
+  createBookingDraft: _createBookingDraft,
+  ...productionPlannerTools
+} = agentTools;
+
 // ponytail: foundation agents for IPI2-121. Tools/instructions are smoke-level here;
 // the real production-planner tool suite + HITL lands in IPI2-114. Names are production
 // and must match the Mastra registry keys in ./index.ts and the frontend agentId exactly.
 export const productionPlannerAgent = new Agent({
   id: "production-planner",
   name: "Production Planner",
-  tools: agentTools,
+  tools: productionPlannerTools,
   workflows: mastraWorkflows("shoot-wizard"),
   model: MODEL,
   instructions: `You are the iPix production planner for Lumina Studio operators.
