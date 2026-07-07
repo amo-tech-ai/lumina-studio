@@ -113,3 +113,40 @@ describe("ShootDetailWorkspace — honest empty per tab (no fake data)", () => {
     expect(screen.getByTestId("empty-state")).toBeDefined();
   });
 });
+
+describe("ShootDetailWorkspace — review-fix regressions", () => {
+  it("Budget tab renders real actual_cost even when no estimate exists (not EmptyState)", () => {
+    render(
+      <ShootDetailWorkspace
+        data={payload({ shoot: { ...payload().shoot, estimated_budget: null, actual_cost: 1200 } })}
+        fetchError={null}
+      />,
+    );
+    fireEvent.click(screen.getByRole("tab", { name: "Budget" }));
+    expect(screen.queryByTestId("empty-state")).toBeNull();
+    expect(screen.getByText("$1,200")).toBeDefined();
+  });
+
+  it('a "planned" deliverable (the real production status value) counts as not-yet-ready, not muted-unknown', () => {
+    render(
+      <ShootDetailWorkspace
+        data={payload({
+          deliverables: [{ id: "d1", channel: "amazon", format: "JPG", quantity: 8, status: "planned" }],
+        })}
+        fetchError={null}
+      />,
+    );
+    fireEvent.click(screen.getByRole("tab", { name: "Deliverables" }));
+    expect(screen.getByText("· 0/1 ready")).toBeDefined();
+    expect(screen.getByText("planned")).toBeDefined();
+  });
+
+  it("Overview and Deliverables agree on the ready count for the same data (delivered counts as ready)", () => {
+    const data = payload({
+      deliverables: [{ id: "d1", channel: "amazon", format: "JPG", quantity: 8, status: "delivered" }],
+    });
+    render(<ShootDetailWorkspace data={data} fetchError={null} />);
+    fireEvent.click(screen.getByRole("tab", { name: "Deliverables" }));
+    expect(screen.getByText("· 1/1 ready")).toBeDefined();
+  });
+});

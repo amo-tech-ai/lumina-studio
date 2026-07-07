@@ -9,7 +9,7 @@ export function formatMoney(amount: number | null, currency: string | null): str
       maximumFractionDigits: 0,
     }).format(amount);
   } catch {
-    return `$${amount.toLocaleString()}`;
+    return `${currency ?? "USD"} ${amount.toLocaleString()}`;
   }
 }
 
@@ -60,12 +60,30 @@ export function crewInitials(role: CrewRole): string {
   return CREW_ROLE_LABEL[role]?.slice(0, 2).toUpperCase() ?? "?";
 }
 
-/** shoot.shoot_deliverables.status has no fixed DB enum (free text) — used by
- *  both the Overview and Deliverables tabs, so it lives here once. */
+/** shoot.shoot_deliverables.status has no DB CHECK constraint (free text).
+ *  "planned"/"covered"/"delivered" are the values seen in production (verified
+ *  live); "draft"/"in_progress"/"pending"/"ready"/"approved" are kept as
+ *  defensive synonyms in case another writer uses different lifecycle names.
+ *  Shared by the Overview and Deliverables tabs so they can never disagree. */
+const DELIVERABLE_READY = new Set(["delivered", "covered", "ready", "approved"]);
+const DELIVERABLE_IN_PROGRESS = new Set(["planned", "pending", "in_progress"]);
+
+export function isDeliverableReady(status: string | null): boolean {
+  return !!status && DELIVERABLE_READY.has(status);
+}
+
 export function deliverableDot(status: string | null): string {
-  const known = new Set(["draft", "in_progress", "ready", "delivered", "pending", "approved"]);
-  if (!status || !known.has(status)) return "var(--color-text-muted)";
-  if (status === "delivered" || status === "ready" || status === "approved") return "var(--color-approved)";
-  if (status === "pending") return "var(--color-warning-text)";
-  return "var(--color-text-muted)"; // "draft" / "in_progress"
+  if (isDeliverableReady(status)) return "var(--color-approved)";
+  if (status && DELIVERABLE_IN_PROGRESS.has(status)) return "var(--color-warning-text)";
+  return "var(--color-text-muted)"; // "draft" / unrecognized
+}
+
+const VIDEO_FORMATS = new Set(["mp4", "mov", "webm", "m4v", "avi"]);
+
+/** get_shoot_detail doesn't select shoot.shoot_assets.resource_type (would need
+ *  an RPC change, out of scope for this Phase 1 UI PR) — `format` is the best
+ *  available signal to avoid handing next/image a video URL, which it can't
+ *  render as an <img>. */
+export function isVideoFormat(format: string | null): boolean {
+  return !!format && VIDEO_FORMATS.has(format.toLowerCase());
 }

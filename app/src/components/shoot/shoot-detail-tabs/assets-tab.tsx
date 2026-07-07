@@ -1,10 +1,11 @@
 import Link from "next/link";
 import Image from "next/image";
-import { ArrowUpRight, Image as ImageIcon } from "lucide-react";
+import { ArrowUpRight, Image as ImageIcon, Video } from "lucide-react";
 
 import { EmptyState } from "@/components/ui/empty-state";
 import { isDeliverableCover } from "@/lib/cloudinary/url";
 import type { ShootDetailAsset } from "@/lib/shoot/get-shoot-detail";
+import { isVideoFormat } from "../shoot-detail-format";
 import styles from "../shoot-detail.module.css";
 
 type Props = {
@@ -36,11 +37,26 @@ export function AssetsTab({ assets }: Props) {
       <div className={styles.masonry}>
         {assets.map((a) => {
           const ratio = a.width && a.height ? a.width / a.height : 1;
+          const isVideo = isVideoFormat(a.format);
           return (
             <div key={a.id} className={styles.masonryItem} style={{ aspectRatio: ratio }}>
-              {isDeliverableCover(a.url) ? (
+              {isVideo ? (
+                // Neutral video placeholder — resource_type isn't in the RPC payload
+                // yet (would need a migration), so `format` is a best-effort signal
+                // to avoid handing a video URL to next/image.
+                <div
+                  style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center" }}
+                  aria-hidden
+                >
+                  <Video size={22} color="var(--color-text-muted)" />
+                </div>
+              ) : isDeliverableCover(a.url) ? (
                 <Image src={a.url} alt="" fill sizes="25vw" className={styles.heroImage} />
-              ) : null}
+              ) : (
+                // next/image throws on a host outside remotePatterns — real asset
+                // URLs are Cloudinary-only in practice, but render honestly if not.
+                <img src={a.url} alt="" className={styles.fillImgFallback} />
+              )}
             </div>
           );
         })}

@@ -65,13 +65,17 @@ export function OverviewTab({ data }: Props) {
             <span className={styles.statSub}>{brand.name} Brand DNA</span>
           </div>
           <div className={styles.moodboardGrid}>
-            {shoot.mood_board_urls.slice(0, 6).map((url, i) =>
-              isDeliverableCover(url) ? (
-                <div key={i} className={styles.moodboardTile}>
+            {shoot.mood_board_urls.slice(0, 6).map((url, i) => (
+              <div key={i} className={styles.moodboardTile}>
+                {isDeliverableCover(url) ? (
                   <Image src={url} alt="" fill sizes="16vw" className={styles.heroImage} />
-                </div>
-              ) : null,
-            )}
+                ) : (
+                  // next/image throws on a host outside remotePatterns; mood_board_urls
+                  // is free-form, so an off-cloud URL still renders — just unoptimized.
+                  <img src={url} alt="" className={styles.fillImgFallback} />
+                )}
+              </div>
+            ))}
           </div>
         </div>
       ) : null}
