@@ -29,8 +29,9 @@ export default async function CrmCompanyDetailPage({ params }: { params: Promise
   let data;
   try {
     data = await getCompanyDetail(supabase, orgId, id);
-  } catch {
+  } catch (error) {
     // A real query failure gets a retryable ErrorState — an invalid/missing id (below) is a 404, not this.
+    console.error(`[crm/companies/${id}] getCompanyDetail failed for org ${orgId}:`, error);
     // key={id}: the App Router keeps this client component's instance (and its
     // tab state) alive across a companies/[id] -> companies/[otherId] navigation
     // since it's the same position in the tree — key forces a remount per id.
