@@ -77,7 +77,7 @@ Only when all 5 hold for every blocker is the task unblocked.
 
 ```bash
 git fetch origin -q
-REF="$ARGUMENTS"; echo "ref: $REF  gate: $([[ "$REF" == *--done* ]] && echo DONE || echo plan)"
+REF="${ARGUMENTS#--done }"; echo "ref: $REF  gate: $([[ "$ARGUMENTS" == *--done* ]] && echo DONE || echo plan)"
 git ls-tree origin/main -r --name-only >/tmp/vt_main.txt   # authoritative "what's on main"
 ls docs/linear/issues/ 2>/dev/null | grep -iE "${REF%% *}" || echo "(no local issue md — Linear MCP get_issue)"
 # probe-disk-ipix.sh is local-only (.claude/skills gitignored) — skip if absent
