@@ -1,0 +1,86 @@
+"use client";
+
+import { useRouter } from "next/navigation";
+import { useMemo, useState, type ReactNode } from "react";
+import { Plus } from "lucide-react";
+
+import { EntityList } from "@/components/ui/entity-list";
+import styles from "./crm-list-workspace.module.css";
+
+/** Shared chrome for CompaniesWorkspace + ContactsWorkspace (RF-03) — header,
+ *  filter row, search state, and the EntityList wrapper are identical across
+ *  both screens; only row rendering and the search predicate differ. */
+export function CrmListWorkspace<T extends { id: string }>({
+  title,
+  countLabel,
+  newLabel,
+  filterLabels,
+  items,
+  searchPlaceholder,
+  filterItems,
+  emptyLabel,
+  emptyBody,
+  fetchError,
+  renderRow,
+}: {
+  title: string;
+  countLabel: (count: number) => string;
+  newLabel: string;
+  filterLabels: string[];
+  items: T[];
+  searchPlaceholder: string;
+  filterItems: (items: T[], term: string) => T[];
+  emptyLabel: string;
+  emptyBody: string;
+  fetchError: string | null;
+  renderRow: (item: T) => ReactNode;
+}) {
+  const router = useRouter();
+  const [search, setSearch] = useState("");
+
+  const filtered = useMemo(() => {
+    const term = search.trim().toLowerCase();
+    if (!term) return items;
+    return filterItems(items, term);
+  }, [items, search, filterItems]);
+
+  return (
+    <div className={styles.root}>
+      <div className={styles.header}>
+        <div className={styles.titleRow}>
+          <div>
+            <h1 className={styles.title}>{title}</h1>
+            <p className={styles.count}>{countLabel(items.length)}</p>
+          </div>
+          <button type="button" disabled title="Coming soon" className={styles.newBtn}>
+            <Plus size={15} aria-hidden />
+            {newLabel}
+          </button>
+        </div>
+        <div className={styles.filterRow}>
+          {filterLabels.map((label) => (
+            <button key={label} type="button" disabled title="Coming soon" className={styles.filterBtn}>
+              {label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className={styles.body}>
+        <div className={styles.listCard}>
+          <EntityList
+            items={filtered}
+            emptyLabel={emptyLabel}
+            emptyBody={emptyBody}
+            searchPlaceholder={searchPlaceholder}
+            searchValue={search}
+            onSearchChange={setSearch}
+            error={fetchError}
+            onRetry={() => router.refresh()}
+            renderRow={renderRow}
+          />
+        </div>
+      </div>
+    </div>
+  );
+}

@@ -64,6 +64,17 @@ export async function getProfileNames(ids: string[], client: Db): Promise<Record
   return Object.fromEntries((data ?? []).map((p) => [p.id, p.full_name ?? p.email]));
 }
 
+/** Resolves id→name only for the given company ids (not the whole org's
+ *  company list) — callers pass the distinct company_ids off their own
+ *  contacts result. Empty input short-circuits without a query. */
+export async function getCompanyNames(ids: string[], client: Db): Promise<Record<string, string>> {
+  const uniqueIds = [...new Set(ids)];
+  if (uniqueIds.length === 0) return {};
+  const { data, error } = await client.from("crm_companies").select("id, name").in("id", uniqueIds);
+  if (error) throw error;
+  return Object.fromEntries((data ?? []).map((c) => [c.id, c.name]));
+}
+
 export async function listContacts(
   {
     orgId,
