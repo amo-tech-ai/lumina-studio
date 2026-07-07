@@ -144,11 +144,11 @@ const SEED_DATA = [
     { id: ORG_1, name: "Acme Corp", slug: "acme", type: "agency", owner_id: A },
     { id: ORG_2, name: "Globex Inc", slug: "globex", type: "brand", owner_id: A },
   ]},
-  // Org members (RLS membership)
+  // Org members (RLS membership) — composite PK (org_id, user_id), no id column
   { table: "org_members", rows: [
-    { id: "00000000-0000-0000-0000-000000000801", org_id: ORG_1, user_id: A, role: "owner" },
-    { id: "00000000-0000-0000-0000-000000000802", org_id: ORG_1, user_id: B, role: "editor" },
-    { id: "00000000-0000-0000-0000-000000000803", org_id: ORG_1, user_id: C, role: "viewer" },
+    { org_id: ORG_1, user_id: A, role: "owner" },
+    { org_id: ORG_1, user_id: B, role: "editor" },
+    { org_id: ORG_1, user_id: C, role: "viewer" },
   ]},
   // Brands
   { table: "brands", rows: [
@@ -224,9 +224,10 @@ let skipped = 0;
 
 for (const { table, rows } of SEED_DATA) {
   for (const row of rows) {
-    const { error } = await sb.from(table).upsert(row, { onConflict: "id", ignoreDuplicates: true });
+    const onConflict = table === "org_members" ? "org_id,user_id" : "id";
+    const { error } = await sb.from(table).upsert(row, { onConflict, ignoreDuplicates: true });
     if (error) {
-      console.error(`  ✗ ${table}/${row.id?.slice(0, 8)}: ${error.message}`);
+      console.error(`  ✗ ${table}/${(row.id ?? row.user_id)?.slice(0, 8)}: ${error.message}`);
       process.exitCode = 1;
     } else {
       inserted++;
