@@ -1,0 +1,23 @@
+app/src/lib/crm/queries.ts
+  s_fb6d75e0972fb7::t_22603c1ee65a90 12-14,20
+app/src/lib/crm/queries.test.ts
+  s_fb6d75e0972fb7::t_701262df9a381c 3,23-42
+  s_fb6d75e0972fb7::t_cda17668dc3736 79-99
+  s_fb6d75e0972fb7::t_a95d2573ae39f6 43-45
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "94c14c4f60a113f2fc522c69858cf3bf6bd65520",
+  "prompts": {},
+  "sessions": {
+    "s_fb6d75e0972fb7": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "482ba906-0d79-473d-87a7-390cf354e015",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
