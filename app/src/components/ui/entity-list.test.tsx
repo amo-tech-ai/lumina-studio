@@ -40,6 +40,7 @@ describe("EntityList", () => {
         emptyLabel="No companies yet"
         searchPlaceholder="Search companies…"
         searchValue="zzz"
+        onSearchChange={vi.fn()}
       />,
     );
     expect(screen.getByText(/No matches for/)).toBeDefined();
@@ -52,7 +53,9 @@ describe("EntityList", () => {
         items={[]}
         renderRow={renderRow}
         emptyLabel="No companies yet"
+        searchPlaceholder="Search companies…"
         searchValue="zzz"
+        onSearchChange={vi.fn()}
         noMatchLabel={(q) => `Nothing found for ${q}`}
       />,
     );
@@ -88,6 +91,8 @@ describe("EntityList", () => {
         error="Unable to load companies."
         onRetry={onRetry}
         searchPlaceholder="Search…"
+        searchValue=""
+        onSearchChange={vi.fn()}
       />,
     );
     expect(screen.getByRole("alert")).toBeDefined();
