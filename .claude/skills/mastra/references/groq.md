@@ -8,9 +8,9 @@ tags: mastra, groq, ai-sdk, llama, inference
 load_when: Groq migration, AI_PROVIDER=groq, Mastra agents on Groq, llama-3.1-8b-instant, gpt-oss-120b, structured outputs on Groq
 ---
 
-> Discover all available pages from the documentation index: https://mastra.ai/llms.txt
+> Discover all available pages from the documentation index: [mastra.ai/llms.txt](https://mastra.ai/llms.txt)
 
-# ![Groq logo](https://models.dev/logos/groq.svg)Groq
+## ![Groq logo](https://models.dev/logos/groq.svg)Groq
 
 Access 15 Groq models through Mastra's model router. Authentication is handled automatically using the `GROQ_API_KEY` environment variable.
 
@@ -27,7 +27,7 @@ const agent = new Agent({
   id: "my-agent",
   name: "My Agent",
   instructions: "You are a helpful assistant",
-  model: "groq/canopylabs/orpheus-arabic-saudi"
+  model: "groq/llama-3.1-8b-instant"
 });
 
 // Generate a response
@@ -48,17 +48,20 @@ for await (const chunk of stream) {
 | `groq/canopylabs/orpheus-v1-english`             | 4K      |       |           |       |       |       | —          | —           |
 | `groq/groq/compound`                             | 131K    |       |           |       |       |       | —          | —           |
 | `groq/groq/compound-mini`                        | 131K    |       |           |       |       |       | —          | —           |
-| `groq/llama-3.1-8b-instant`                      | 131K    |       |           |       |       |       | $0.05      | $0.08       |
-| `groq/llama-3.3-70b-versatile`                   | 131K    |       |           |       |       |       | $0.59      | $0.79       |
+| `groq/llama-3.1-8b-instant`                      | 131K    | ✅    |           |       |       |       | $0.05      | $0.08       |
+| `groq/llama-3.3-70b-versatile`                   | 131K    | ✅    |           |       |       |       | $0.59      | $0.79       |
 | `groq/meta-llama/llama-4-scout-17b-16e-instruct` | 131K    |       |           |       |       |       | $0.11      | $0.34       |
 | `groq/meta-llama/llama-prompt-guard-2-22m`       | 512     |       |           |       |       |       | $0.03      | $0.03       |
 | `groq/meta-llama/llama-prompt-guard-2-86m`       | 512     |       |           |       |       |       | $0.04      | $0.04       |
-| `groq/openai/gpt-oss-120b`                       | 131K    |       |           |       |       |       | $0.15      | $0.60       |
-| `groq/openai/gpt-oss-20b`                        | 131K    |       |           |       |       |       | $0.07      | $0.30       |
+| `groq/openai/gpt-oss-120b`                       | 131K    | ✅¹   | ✅        |       |       |       | $0.15      | $0.60       |
+| `groq/openai/gpt-oss-20b`                        | 131K    | ✅¹   | ✅        |       |       |       | $0.07      | $0.30       |
 | `groq/openai/gpt-oss-safeguard-20b`              | 131K    |       |           |       |       |       | $0.07      | $0.30       |
-| `groq/qwen/qwen3-32b`                            | 131K    |       |           |       |       |       | $0.29      | $0.59       |
+| `groq/qwen/qwen3-32b`                            | 131K    | ✅    |           |       |       |       | $0.29      | $0.59       |
 | `groq/whisper-large-v3`                          | —       |       |           |       |       |       | —          | —           |
 | `groq/whisper-large-v3-turbo`                    | —       |       |           |       |       |       | —          | —           |
+
+Tools/Reasoning only populated for models in iPix's tier map below — see [`groq-inference`](../../groq-inference/SKILL.md) for the full catalog.
+¹ Supports tool calling but **not parallel tool calls** — don't use for multi-tool Mastra agents (see Production tier map below).
 
 ## Advanced configuration
 
@@ -70,7 +73,7 @@ const agent = new Agent({
   name: "custom-agent",
   model: {
     url: "https://api.groq.com/openai/v1",
-    id: "groq/canopylabs/orpheus-arabic-saudi",
+    id: "groq/llama-3.1-8b-instant",
     apiKey: process.env.GROQ_API_KEY,
     headers: {
       "X-Custom-Header": "value"
@@ -88,8 +91,8 @@ const agent = new Agent({
   model: ({ requestContext }) => {
     const useAdvanced = requestContext.task === "complex";
     return useAdvanced
-      ? "groq/whisper-large-v3-turbo"
-      : "groq/canopylabs/orpheus-arabic-saudi";
+      ? "groq/llama-3.3-70b-versatile"
+      : "groq/llama-3.1-8b-instant";
   }
 });
 ```
@@ -143,11 +146,14 @@ For detailed provider-specific documentation, see the [AI SDK Groq provider docs
 
 ### Production tier map (Mastra `resolveModel`)
 
+Tier names match the runtime SSOT (`config/groq-models.json`) exactly — do not invent tier names not present there.
+
 | Tier | Mastra / router string | Use |
 |------|------------------------|-----|
 | `fast` | `groq/llama-3.1-8b-instant` | CopilotKit chat, marketing sidebar |
-| `reasoning` | `groq/openai/gpt-oss-120b` | Agent tool loops, shoot brief |
-| `structured` | `groq/openai/gpt-oss-20b` | Structured tool outputs (still Zod after parse) |
+| `default` | `groq/llama-3.3-70b-versatile` or `groq/qwen/qwen3-32b` | **Multi-tool agent loops** (parallel tool calls) — production-planner, creative-director, shoot brief. `parallelTools: true` for both in `config/groq-models.json` |
+| `structured` | `groq/openai/gpt-oss-20b` | Single-shot structured tool outputs (still Zod after parse) |
+| `structuredHeavy` | `groq/openai/gpt-oss-120b` | Heavy reasoning, large structured JSON, single-shot inference **only** — **not** agent tool loops (`parallelTools: false` in `config/groq-models.json`; Groq's gpt-oss family does not support parallel tool calls) |
 | `vision` | **Gemini** (until golden eval) | `visual-identity` agent — defer Groq cutover |
 
 ### AI SDK in iPix (preferred for Mastra Phase 4)
