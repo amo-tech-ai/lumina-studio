@@ -9,6 +9,7 @@
  */
 import { readFileSync, existsSync } from "node:fs";
 import { resolve } from "node:path";
+import { execSync } from "node:child_process";
 
 const root = resolve(import.meta.dirname, "..");
 const envPath = resolve(root, ".env.local");
@@ -52,6 +53,31 @@ const DEV_USERS = [
   { email: "carol@acme.com", password: "password123", full_name: "Carol Viewer", role: "photographer" },
 ];
 
+// Paginates through the Admin API's user list until `email` is found or all
+// pages are exhausted. Throws (rather than returning "not found") on any
+// request failure — a network error must never be treated as "confirmed
+// absent", since that path leads to deleting a real, valid user's row.
+async function findAuthUserByEmail(email) {
+  const perPage = 200;
+  for (let page = 1; ; page++) {
+    const res = await fetch(`${supabaseUrl}/auth/v1/admin/users?page=${page}&per_page=${perPage}`, {
+      headers: AUTH_HEADERS,
+    });
+    if (!res.ok) {
+      throw new Error(`Admin API user list failed (page ${page}): ${res.status}`);
+    }
+    const list = await res.json();
+    const match = list.users?.find((u) => u.email === email);
+    if (match) return match;
+    if (!list.users || list.users.length < perPage) return null; // last page, confirmed absent
+  }
+}
+
+// Single-quotes a value for safe interpolation into a shell command string.
+function shellQuote(value) {
+  return `'${value.replace(/'/g, "'\\''")}'`;
+}
+
 // ── Step 1: Create or fetch auth users ──────────────────────────────────────
 
 console.log("=== Step 1: Auth users ===\n");
@@ -81,14 +107,13 @@ for (const user of DEV_USERS) {
 
   const errBody = await res.json().catch(() => ({}));
   if (res.status === 409 || res.status === 422 || errBody?.code === "23505" || errBody?.message?.includes("already exists") || errBody?.error_code === "email_exists") {
-    // Try Admin API list (only returns users with GoTrue identities)
-    const listRes = await fetch(`${supabaseUrl}/auth/v1/admin/users`, {
-      headers: AUTH_HEADERS,
-    });
-    let match = null;
-    if (listRes.ok) {
-      const list = await listRes.json();
-      match = list.users?.find((u) => u.email === user.email);
+    let match;
+    try {
+      match = await findAuthUserByEmail(user.email);
+    } catch (err) {
+      console.error(`  ✗ Could not confirm ${user.email} via Admin API — not treating as orphan: ${err.message}`);
+      process.exitCode = 1;
+      continue;
     }
     if (match) {
       user.id = match.id;
@@ -98,18 +123,29 @@ for (const user of DEV_USERS) {
     }
     // User exists in auth.users but has no GoTrue identity (orphaned from old seed.sql).
     // Delete via Supabase CLI so Admin API can recreate properly.
-    console.log(`  ↪ ${user.email} has no GoTrue identity — cleaning up orphan`);
-    const { execSync } = await import("node:child_process");
+    // `supabase db query --linked` always targets the remote linked project,
+    // never a local stack — refuse to run it against what looks like a local URL.
+    if (/^https?:\/\/(127\.0\.0\.1|localhost)([:/]|$)/i.test(supabaseUrl)) {
+      console.error(
+        `  ✗ ${user.email} is orphaned, but SUPABASE_URL (${supabaseUrl}) looks local.\n` +
+        `    Skipping cleanup — 'supabase db query --linked' would target the remote\n` +
+        `    project instead, not this local stack. Delete manually against your local DB:\n` +
+        `      DELETE FROM auth.users WHERE email=${shellQuote(user.email)};`
+      );
+      process.exitCode = 1;
+      continue;
+    }
+    console.log(`  ↪ ${user.email} has no GoTrue identity — cleaning up orphan (--linked, remote project)`);
     try {
       execSync(
-        `npx supabase db query --linked "DELETE FROM auth.users WHERE email='${user.email}'" 2>/dev/null`,
+        `npx supabase db query --linked "DELETE FROM auth.users WHERE email=${shellQuote(user.email)}" 2>/dev/null`,
         { encoding: "utf8", timeout: 30000, stdio: "pipe" }
       );
     } catch {
       console.error(
         `  ✗ Could not delete orphaned ${user.email} from auth.users.\n` +
         `    Run manually from a linked checkout:\n` +
-        `      npx supabase db query --linked "DELETE FROM auth.users WHERE email='${user.email}'"`
+        `      npx supabase db query --linked "DELETE FROM auth.users WHERE email=${shellQuote(user.email)}"`
       );
       process.exitCode = 1;
       continue;
