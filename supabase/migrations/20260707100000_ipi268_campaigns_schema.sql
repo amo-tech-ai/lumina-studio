@@ -8,7 +8,7 @@ exception
 end $$;
 
 do $$ begin
-  create type public.deliverable_status as enum ('pending', 'in_progress', 'review', 'approved');
+  create type public.deliverable_status as enum ('pending', 'in_progress', 'review', 'approved', 'blocked');
 exception
   when duplicate_object then null;
 end $$;
@@ -95,7 +95,6 @@ drop policy if exists "campaigns_insert_org_member" on public.campaigns;
 create policy "campaigns_insert_org_member" on public.campaigns
   for insert with check (
     is_org_member(org_id)
-    and (select auth.uid()) = (select user_id from public.brands where id = brand_id)
   );
 
 drop policy if exists "campaigns_update_org_member" on public.campaigns;
@@ -103,14 +102,12 @@ create policy "campaigns_update_org_member" on public.campaigns
   for update using (is_org_member(org_id))
   with check (
     is_org_member(org_id)
-    and (select auth.uid()) = (select user_id from public.brands where id = brand_id)
   );
 
 drop policy if exists "campaigns_delete_org_member" on public.campaigns;
 create policy "campaigns_delete_org_member" on public.campaigns
   for delete using (
     is_org_member(org_id)
-    and (select auth.uid()) = (select user_id from public.brands where id = brand_id)
   );
 
 -- campaign_deliverables policies
@@ -133,8 +130,11 @@ create policy "campaign_deliverables_update_assigned_or_owner" on public.campaig
     is_org_member((select org_id from public.campaigns where id = campaign_id))
   )
   with check (
-    (select auth.uid()) = assigned_to
-    or (select auth.uid()) = (select user_id from public.brands where id = (select brand_id from public.campaigns where id = campaign_id))
+    is_org_member((select org_id from public.campaigns where id = campaign_id))
+    and (
+      (select auth.uid()) = assigned_to
+      or (select auth.uid()) = (select user_id from public.brands where id = (select brand_id from public.campaigns where id = campaign_id))
+    )
   );
 
 drop policy if exists "campaign_deliverables_delete_owner" on public.campaign_deliverables;
