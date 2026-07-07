@@ -10,8 +10,7 @@ export type CompanyRow = Database["public"]["Tables"]["crm_companies"]["Row"];
 export type ContactRow = Database["public"]["Tables"]["crm_contacts"]["Row"];
 
 /** First org the user belongs to. CRM is single-org-per-user for MVP — no org switcher yet.
- *  org_members has no created_at column (it has joined_at) — every caller of this
- *  function was throwing a 42703 undefined-column error before this fix. */
+ *  Uses `joined_at` for ordering because `org_members` does not have a `created_at` column. */
 export async function getCurrentOrgId(userId: string, client: Db): Promise<string | null> {
   const { data, error } = await client
     .from("org_members")
@@ -51,6 +50,18 @@ export async function listCompanies(
   const { data, error } = await q.order("created_at", { ascending: false });
   if (error) throw error;
   return data ?? [];
+}
+
+/** crm_companies.owner is a uuid FK to profiles(id), not a display name — resolves
+ *  id→full_name (falling back to email) for the given ids. Empty input short-circuits
+ *  without a query. Missing/unresolvable ids are simply absent from the returned map;
+ *  callers already render "—" for a lookup miss (see CompaniesWorkspace). */
+export async function getProfileNames(ids: string[], client: Db): Promise<Record<string, string>> {
+  const uniqueIds = [...new Set(ids)];
+  if (uniqueIds.length === 0) return {};
+  const { data, error } = await client.from("profiles").select("id, full_name, email").in("id", uniqueIds);
+  if (error) throw error;
+  return Object.fromEntries((data ?? []).map((p) => [p.id, p.full_name ?? p.email]));
 }
 
 export async function listContacts(

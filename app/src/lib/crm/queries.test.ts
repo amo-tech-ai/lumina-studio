@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { getCurrentOrgId, listCompanies } from "./queries";
+import { getCurrentOrgId, getProfileNames, listCompanies } from "./queries";
 
 function mockSupabase(rows: Record<string, unknown>[] | null, error: { message: string } | null = null) {
   const builder: {
@@ -23,23 +23,13 @@ function mockSupabase(rows: Record<string, unknown>[] | null, error: { message: 
 /** org_members query chain is select→eq→order→limit→maybeSingle — a different
  *  shape from listCompanies/listContacts (no maybeSingle there). */
 function mockOrgMembers(row: { org_id: string } | null, error: { message: string } | null = null) {
-  const builder: {
-    select: ReturnType<typeof vi.fn>;
-    eq: ReturnType<typeof vi.fn>;
-    order: ReturnType<typeof vi.fn>;
-    limit: ReturnType<typeof vi.fn>;
-    maybeSingle: ReturnType<typeof vi.fn>;
-  } = {
-    select: vi.fn(),
-    eq: vi.fn(),
-    order: vi.fn(),
-    limit: vi.fn(),
-    maybeSingle: vi.fn(async () => ({ data: row, error })),
+  const builder = {
+    select: vi.fn().mockReturnThis(),
+    eq: vi.fn().mockReturnThis(),
+    order: vi.fn().mockReturnThis(),
+    limit: vi.fn().mockReturnThis(),
+    maybeSingle: vi.fn().mockResolvedValue({ data: row, error }),
   };
-  builder.select.mockReturnValue(builder);
-  builder.eq.mockReturnValue(builder);
-  builder.order.mockReturnValue(builder);
-  builder.limit.mockReturnValue(builder);
   return { from: vi.fn(() => builder), _builder: builder };
 }
 
@@ -95,5 +85,31 @@ describe("getCurrentOrgId", () => {
   it("throws when the query errors — 42703 undefined-column is the regression this guards", async () => {
     const sb = mockOrgMembers(null, { message: "column org_members.created_at does not exist" });
     await expect(getCurrentOrgId("user-1", sb as never)).rejects.toThrow("does not exist");
+  });
+});
+
+function mockProfiles(rows: Array<{ id: string; full_name: string | null; email: string }>) {
+  const builder = {
+    select: vi.fn().mockReturnThis(),
+    in: vi.fn().mockResolvedValue({ data: rows, error: null }),
+  };
+  return { from: vi.fn(() => builder), _builder: builder };
+}
+
+describe("getProfileNames", () => {
+  it("maps id to full_name, falling back to email when full_name is null", async () => {
+    const sb = mockProfiles([
+      { id: "p1", full_name: "S. Kim", email: "s@x.com" },
+      { id: "p2", full_name: null, email: "p2@x.com" },
+    ]);
+    const names = await getProfileNames(["p1", "p2"], sb as never);
+    expect(names).toEqual({ p1: "S. Kim", p2: "p2@x.com" });
+    expect(sb._builder.in).toHaveBeenCalledWith("id", ["p1", "p2"]);
+  });
+
+  it("dedupes ids and short-circuits without a query for an empty list", async () => {
+    const sb = mockProfiles([]);
+    expect(await getProfileNames([], sb as never)).toEqual({});
+    expect(sb.from).not.toHaveBeenCalled();
   });
 });

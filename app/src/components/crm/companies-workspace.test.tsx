@@ -25,7 +25,7 @@ function company(overrides: Partial<CompanyRow> = {}): CompanyRow {
     name: "Acme Athletic",
     domain: "acme.com",
     industry: "Sportswear",
-    owner: "S. Kim",
+    owner: "owner-uuid-1",
     source: null,
     status: "active",
     created_at: "2026-01-01T00:00:00.000Z",
@@ -34,9 +34,11 @@ function company(overrides: Partial<CompanyRow> = {}): CompanyRow {
   };
 }
 
+const OWNER_NAMES = { "owner-uuid-1": "S. Kim" };
+
 describe("CompaniesWorkspace", () => {
   it("renders a row per company with a real StatusChip label — no fabricated kind/deals/lastActivity", () => {
-    render(<CompaniesWorkspace companies={[company()]} fetchError={null} />);
+    render(<CompaniesWorkspace companies={[company()]} ownerNames={OWNER_NAMES} fetchError={null} />);
     expect(screen.getByRole("heading", { name: "Organizations" })).toBeDefined();
     expect(screen.getByText("1 company")).toBeDefined();
     expect(screen.getByText("Acme Athletic")).toBeDefined();
@@ -45,41 +47,53 @@ describe("CompaniesWorkspace", () => {
     expect(screen.getByText("S. Kim")).toBeDefined();
   });
 
+  it("resolves owner (a uuid FK to profiles) to a display name — never renders the raw id", () => {
+    render(<CompaniesWorkspace companies={[company({ owner: "owner-uuid-1" })]} ownerNames={OWNER_NAMES} fetchError={null} />);
+    expect(screen.getByText("S. Kim")).toBeDefined();
+    expect(screen.queryByText("owner-uuid-1")).toBeNull();
+  });
+
+  it("falls back to — when the owner id has no resolved profile name", () => {
+    render(<CompaniesWorkspace companies={[company({ owner: "owner-uuid-missing" })]} ownerNames={OWNER_NAMES} fetchError={null} />);
+    expect(screen.queryByText("owner-uuid-missing")).toBeNull();
+    expect(screen.getAllByText("—").length).toBeGreaterThan(0);
+  });
+
   it("routes a row to the existing /app/crm/companies/[id] stub", () => {
-    render(<CompaniesWorkspace companies={[company({ id: "c-42" })]} fetchError={null} />);
+    render(<CompaniesWorkspace companies={[company({ id: "c-42" })]} ownerNames={OWNER_NAMES} fetchError={null} />);
     const link = screen.getByText("Acme Athletic").closest("a");
     expect(link?.getAttribute("href")).toBe("/app/crm/companies/c-42");
   });
 
   it("filters client-side by name or domain", () => {
     const companies = [company({ id: "c1", name: "Acme Athletic", domain: "acme.com" }), company({ id: "c2", name: "Vega Studios", domain: "vega.io" })];
-    render(<CompaniesWorkspace companies={companies} fetchError={null} />);
+    render(<CompaniesWorkspace companies={companies} ownerNames={OWNER_NAMES} fetchError={null} />);
     fireEvent.change(screen.getByRole("searchbox"), { target: { value: "vega" } });
     expect(screen.getByText("Vega Studios")).toBeDefined();
     expect(screen.queryByText("Acme Athletic")).toBeNull();
   });
 
   it("shows a genuine EmptyState when there are no companies at all", () => {
-    render(<CompaniesWorkspace companies={[]} fetchError={null} />);
+    render(<CompaniesWorkspace companies={[]} ownerNames={{}} fetchError={null} />);
     expect(screen.getByText("No companies yet")).toBeDefined();
   });
 
   it("shows a distinct no-match state when a search yields zero — not the same copy as genuine empty", () => {
-    render(<CompaniesWorkspace companies={[company()]} fetchError={null} />);
+    render(<CompaniesWorkspace companies={[company()]} ownerNames={OWNER_NAMES} fetchError={null} />);
     fireEvent.change(screen.getByRole("searchbox"), { target: { value: "zzz" } });
     expect(screen.getByText(/No matches for/)).toBeDefined();
     expect(screen.queryByText("No companies yet")).toBeNull();
   });
 
   it("shows ErrorState with a working retry that re-runs the server fetch", () => {
-    render(<CompaniesWorkspace companies={[]} fetchError="Unable to load companies." />);
+    render(<CompaniesWorkspace companies={[]} ownerNames={{}} fetchError="Unable to load companies." />);
     expect(screen.getByRole("alert")).toBeDefined();
     fireEvent.click(screen.getByRole("button", { name: "Try again" }));
     expect(refresh).toHaveBeenCalledOnce();
   });
 
   it("renders Phase 2 write actions as disabled with a tooltip, not fake-functional", () => {
-    render(<CompaniesWorkspace companies={[]} fetchError={null} />);
+    render(<CompaniesWorkspace companies={[]} ownerNames={{}} fetchError={null} />);
     const newBtn = screen.getByRole("button", { name: "New organization" });
     expect(newBtn.hasAttribute("disabled")).toBe(true);
     expect(newBtn.getAttribute("title")).toBe("Coming soon");

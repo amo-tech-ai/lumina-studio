@@ -22,9 +22,13 @@ const FILTER_LABELS = ["Type", "Status", "Owner"];
  *  preview, which relies on a hardcoded AI summary this ticket doesn't wire. */
 export function CompaniesWorkspace({
   companies,
+  ownerNames,
   fetchError,
 }: {
   companies: CompanyRow[];
+  /** crm_companies.owner is a uuid FK to profiles(id) — this is the resolved
+   *  id→display-name map built in page.tsx (via getProfileNames), never the raw id. */
+  ownerNames: Record<string, string>;
   fetchError: string | null;
 }) {
   const router = useRouter();
@@ -89,7 +93,7 @@ export function CompaniesWorkspace({
                   <StatusChip dot={crmStatusDotToken(company.status)} label={crmStatusLabel(company.status)} />
                 </div>
                 <div className={styles.rowCell}>{company.industry ?? "—"}</div>
-                <div className={styles.rowCell}>{company.owner ?? "—"}</div>
+                <div className={styles.rowCell}>{(company.owner && ownerNames[company.owner]) ?? "—"}</div>
               </Link>
             )}
           />
