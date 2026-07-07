@@ -49,4 +49,43 @@ describe("classifyBlockers", () => {
     const blockers = classifyBlockers({ groqStaleImport: true, behind: 100, maxBehind: 30 });
     assert.equal(blockers.length, 2);
   });
+
+  it("ignores unpushed commits in start mode (default)", () => {
+    const blockers = classifyBlockers({ groqStaleImport: false, behind: 0, maxBehind: 30, unpushedCommits: 3 });
+    assert.deepEqual(blockers, []);
+  });
+
+  it("ignores unpushed commits in start mode even when explicit", () => {
+    const blockers = classifyBlockers({
+      groqStaleImport: false,
+      behind: 0,
+      maxBehind: 30,
+      unpushedCommits: 3,
+      mode: "start",
+    });
+    assert.deepEqual(blockers, []);
+  });
+
+  it("hard-blocks on unpushed commits in delete mode", () => {
+    const blockers = classifyBlockers({
+      groqStaleImport: false,
+      behind: 0,
+      maxBehind: 30,
+      unpushedCommits: 1,
+      mode: "delete",
+    });
+    assert.equal(blockers.length, 1);
+    assert.match(blockers[0], /HARD BLOCK \(pre-delete\)/);
+  });
+
+  it("does not block in delete mode when there are zero unpushed commits", () => {
+    const blockers = classifyBlockers({
+      groqStaleImport: false,
+      behind: 0,
+      maxBehind: 30,
+      unpushedCommits: 0,
+      mode: "delete",
+    });
+    assert.deepEqual(blockers, []);
+  });
 });

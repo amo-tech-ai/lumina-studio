@@ -16,9 +16,16 @@
  * behind `origin/main` to trust local state — remediation is `git fetch`
  * + rebase, not a code fix.
  *
+ * Pre-delete mode (`--pre-delete`) adds one more hard block: commits on this
+ * branch that were never pushed to any remote. A plain `git worktree remove`
+ * (no --force) succeeds anyway — the working tree is clean — but those
+ * commits are only one `git branch -D` away from being unrecoverable. Run
+ * this before removing any worktree you didn't just finish pushing.
+ *
  * Usage:
- *   node scripts/worktree-health.mjs                  # check current worktree
+ *   node scripts/worktree-health.mjs                  # check current worktree (start-work gate)
  *   node scripts/worktree-health.mjs --all             # check every registered worktree
+ *   node scripts/worktree-health.mjs --pre-delete       # also block on unpushed commits (removal safety)
  *   node scripts/worktree-health.mjs --max-behind=30    # override the soft-block threshold (default 30)
  *   node scripts/worktree-health.mjs --json             # machine-readable
  */
@@ -33,6 +40,7 @@ const PROVIDER_TS_RELATIVE = "app/src/lib/ai/provider.ts";
 const args = process.argv.slice(2);
 const ALL = args.includes("--all");
 const JSON_OUT = args.includes("--json");
+const PRE_DELETE = args.includes("--pre-delete");
 const maxBehindArg = args.find((a) => a.startsWith("--max-behind="));
 const MAX_BEHIND = maxBehindArg ? Number(maxBehindArg.split("=")[1]) : 30;
 
@@ -60,10 +68,26 @@ function checkAheadBehind(wtPath) {
   return { ahead: ahead || 0, behind: behind || 0 };
 }
 
+/** Commits on this branch not present on its own remote-tracking ref (never pushed anywhere). */
+function checkUnpushedCommits(wtPath, branch, aheadOfMain) {
+  if (!branch) return 0; // detached HEAD — no branch to compare
+  const hasRemote = run(`git rev-parse --verify origin/${branch}`, wtPath);
+  if (!hasRemote) return aheadOfMain; // branch never pushed at all — everything ahead of main is at risk
+  const count = run(`git rev-list --count origin/${branch}..HEAD`, wtPath);
+  return count ? Number(count) : 0;
+}
+
 function checkWorktree(wtPath, branch) {
   const groqImport = checkGroqStaleImport(wtPath);
   const { ahead, behind } = checkAheadBehind(wtPath);
-  const blockers = classifyBlockers({ groqStaleImport: groqImport.present, behind, maxBehind: MAX_BEHIND });
+  const unpushedCommits = PRE_DELETE ? checkUnpushedCommits(wtPath, branch, ahead) : 0;
+  const blockers = classifyBlockers({
+    groqStaleImport: groqImport.present,
+    behind,
+    maxBehind: MAX_BEHIND,
+    unpushedCommits,
+    mode: PRE_DELETE ? "delete" : "start",
+  });
 
   return {
     path: wtPath,
@@ -72,6 +96,7 @@ function checkWorktree(wtPath, branch) {
     behind,
     groqStaleImport: groqImport.present,
     providerTsExists: groqImport.fileExists,
+    unpushedCommits,
     blockers,
     safe: blockers.length === 0,
   };
