@@ -1,0 +1,20 @@
+tasks/crm/todo.md
+  s_ff0f27c2808314::t_cfd60e79552cc0 45-46
+  s_ff0f27c2808314::t_07f0617a6ae822 86
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "95ba15455e1826ba8c0c918ce783dfa0d4b8a328",
+  "prompts": {},
+  "sessions": {
+    "s_ff0f27c2808314": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "f541cadc-3ecd-4f00-aa24-6136f7995021",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
