@@ -24,19 +24,19 @@ issueCount: 16
 
 **Branch naming:** Linear auto-suggests `ai/ipi-NNN-...` for every CRM issue — **ignore this**. Per `CLAUDE.md`'s worktree rule, checkout as `ipi/NNN-short-name` (e.g. `ipi/362-crm-schema-rls`), never the Linear-generated `ai/` prefix.
 
-**2026-07-07 re-verification (this update):** Re-checked every issue live against Linear + `origin/main` code (not the 2026-07-04 audit's cache). Key changes since that audit:
+**2026-07-07 re-verification (historical — superseded by "Wave 1 shipped" below):** Re-checked every issue live against Linear + `origin/main` code (not the 2026-07-04 audit's cache). Key changes since that audit:
 - **IPI-365/366 (Pipeline board / Deal detail, old numbering) are now `Duplicate`** — canceled today, superseded by **IPI-395/396** in the DESIGN V2 project. Their design/data specs still apply; use the new issue numbers.
 - **IPI-362 (schema), IPI-368 (AI wave 1), IPI-385/386/387 (StatusChip/EmptyState-ErrorState/EntityList), IPI-244 (ApprovalCard/ApprovalQueue), IPI-388 (Companies+Contacts lists) are all `Done`.** Confirmed on disk: `app/src/lib/crm/queries.ts`, `app/src/components/ui/{status-chip,entity-list,empty-state,error-state}.tsx`, `app/src/components/crm/{companies,contacts}-workspace.tsx` (with tests) are real, not stubs.
 - **IPI-389/390 (SCR-26/28 list-parity issues) are effectively a verification pass, not a fresh build** — the lists they cover already shipped under IPI-388. Don't re-implement; confirm DC visual parity and close.
-- **Data helpers still missing:** `getCompany(id)`, `getContact(id)`, `getDeal(id)`, `listDeals()`. No `ActivityTimeline` or `deal-stage-control.tsx` component exists anywhere yet — build `ActivityTimeline` once, in IPI-391 (its first real consumer), not later in IPI-396.
-- **Known Linear data-hygiene bug (not yet fixed):** IPI-395 and IPI-396 both carry a stray `blockedBy: IPI-392` relation that contradicts their own description text (which lists the correct deps). Don't wait on IPI-392 for Pipeline/Deal Detail — Profile360 extraction has no functional bearing on either screen.
+- **Data helpers were missing at this point in time:** `getCompany(id)`, `getContact(id)`, `getDeal(id)`, `listDeals()`, and no `ActivityTimeline` component existed yet. Since fixed — see "Wave 1 shipped" below.
+- **Known Linear data-hygiene bug (fixed later the same day — see round 2 note below):** IPI-395 and IPI-396 both carried a stray `blockedBy: IPI-392` relation that contradicted their own description text.
 
-**2026-07-07 re-verification, round 2:** A second pass surfaced a sibling, more detailed issue track for the same 4 screens in the *original* CRM-Relationship-Layer project (IPI-363/364/366) — same physical screens as IPI-391/392/396, tracked twice across two Linear projects. Re-checked every claim live before trusting it (this board is being edited in near-real-time):
-- **Already fixed, no action needed:** IPI-244, IPI-349, IPI-427 are all `Done` (not "still In Progress" as an earlier pass claimed). IPI-393 (dup of Company Detail) and IPI-394 (dup of Contact Detail) are already marked `Duplicate`, correctly parented to IPI-391/IPI-392. IPI-395/396's `parentId` is correct (IPI-365/IPI-366) — don't confuse `parentId` with the still-stray `blockedBy: IPI-392` noted above.
+**2026-07-07 re-verification, round 2 (historical — see "Wave 1 shipped" below for current state):** A second pass surfaced a sibling, more detailed issue track for the same 4 screens in the *original* CRM-Relationship-Layer project (IPI-363/364/366) — same physical screens as IPI-391/392/396, tracked twice across two Linear projects. Re-checked every claim live before trusting it (this board was being edited in near-real-time):
+- **Already fixed, no action needed:** IPI-244, IPI-349, IPI-427 are all `Done` (not "still In Progress" as an earlier pass claimed). IPI-393 (dup of Company Detail) and IPI-394 (dup of Contact Detail) are already marked `Duplicate`, correctly parented to IPI-391/IPI-392. IPI-395/396's `parentId` is correct (IPI-365/IPI-366) — don't confuse `parentId` with the stray `blockedBy: IPI-392` noted above (fixed immediately below).
 - **Fixed live in Linear (2026-07-07T19:12):** removed the stray `blockedBy: IPI-392` from IPI-395 and IPI-396, and repointed IPI-367's `blockedBy` from the dead IPI-366 to IPI-396. Verified via a fresh `includeRelations` read after the edit — IPI-395 blockedBy is now just IPI-362; IPI-396 blockedBy is IPI-362+IPI-395; IPI-367 blockedBy is now IPI-396.
 - **Correction to this doc's own earlier guidance:** IPI-366's original spec explicitly names *Deal Detail* as `ActivityTimeline`'s designated owner ("Company Detail and Contact Detail import it, they don't rebuild it") — not Company Detail. But IPI-396 (366's successor) is scheduled after Pipeline (395), while Company Detail (391) needs the timeline sooner. Decoupled below: build `ActivityTimeline` as its own early task (needs only the schema, already done), not gated on either issue's full completion.
 
-**2026-07-07 — Wave 1 shipped (shared foundation only, no pages):**
+**2026-07-07 — Wave 1 shipped (current state — shared foundation only, no pages):**
 - `app/src/lib/crm/queries.ts`: added `getCompany({id, orgId})`, `getContact({id, orgId})`, `getDeal({id, orgId})`, `listDeals({orgId, stage?, companyId?})`, `listActivities({companyId?, contactId?, dealId?})` — all scoped/typed like the existing `listCompanies`/`listContacts`, `getDeal` returns the deal row only (no contact join — `crm_deals` has no `contact_id` column, confirmed against the migration; don't fabricate one). 27 new tests in `queries.test.ts`.
 - `app/src/components/crm/activity-timeline.tsx` (+ `.module.css`, 5 tests): **presentational**, not self-fetching — takes an `activities: ActivityRow[]` prop, so page-building issues call `listActivities` server-side and pass the array in. Per-type icon (note/call/email/meeting/task/ai_summary) via a guarded lookup (mirrors `status-tokens.ts`'s fallback pattern — an unrecognized type never crashes). Task-type rows show `deriveTaskState` (reused from `activity-state.ts`, not reimplemented). Empty state reuses the existing `EmptyState` component. Tokens only (`--color-*`, `--font-size-*`, `--radius-pill`), no hex.
 - Verified: `npm run typecheck` ✅ · `npm run lint` ✅ · `npm test` ✅ (876 passed, 8 skipped, 0 regressions) · `CI=true npm run build` ✅.
@@ -71,7 +71,7 @@ issueCount: 16
 
 ## Part B — Screen-parity build (DESIGN V2 Operator React Parity project, IPI-385–403)
 
-This project owns the actual screen builds now. All 7 issues below were started 2026-07-07.
+This project owns the actual screen builds now — 11 issues total, all started 2026-07-07: 4 shared-atom issues (385–388, done), 2 list-parity verification-only issues (389/390, no fresh build needed), 4 real page-build issues (391/392/395/396, in progress), and 1 deferred (403, P3).
 
 | # | Linear | Screen | DC file | Status | Depends on |
 | --- | -------- | -------- | -------- | -------- | ------------ |
@@ -98,14 +98,16 @@ Done:        Schema (362) → StatusChip/EntityList/EmptyState/ErrorState (385-3
 Wave 1       DONE (2026-07-07). ActivityTimeline (presentational, app/src/components/crm/
 (shipped):   activity-timeline.tsx) + 5 data helpers in app/src/lib/crm/queries.ts:
              getCompany, getContact, getDeal, listDeals, listActivities. Not gated on
-             391/395/396 — both detail pages and Deal Detail now just import/call these.
+             391/395/396 — both detail pages and Deal Detail can now import/call these
+             directly (no longer blocked). The pages themselves are still in progress,
+             per the status table above — Wave 1 only unblocks them, it doesn't wire them.
 
 In progress: IPI-389/390  — verify DC parity on the already-shipped lists, close out
-             IPI-391      — Company Detail: page + 4 tabs, calls getCompany/listActivities, renders ActivityTimeline
-             IPI-392      — Contact Detail: page, calls getContact, then extract <Profile360> from 391+392
-             IPI-395      — Pipeline: PATCH route + Realtime + kanban board (listDeals already built)
-             IPI-396      — Deal Detail: page + deal-stage-control (shares write path with 395)
-                            + ActivityTimeline (reuse from Wave 1, calls listActivities) + Won/Lost ApprovalCard UI shell, inert
+             IPI-391      — Company Detail: page + 4 tabs — still needs getCompany/listActivities wired in, ActivityTimeline rendered
+             IPI-392      — Contact Detail: page — still needs getContact wired in, then extract <Profile360> from 391+392
+             IPI-395      — Pipeline: still needs PATCH route + Realtime + kanban board (listDeals already built, not yet consumed)
+             IPI-396      — Deal Detail: page — still needs deal-stage-control (shares write path with 395)
+                            + ActivityTimeline wired in (reuse from Wave 1) + Won/Lost ApprovalCard UI shell, inert
 
 Not started: IPI-367      — Won/Lost gate: POST /api/crm/deals/[id]/convert, reuses intel-approval-card.tsx (IPI-244, done)
                             — blockedBy now correctly points at IPI-396 (fixed 2026-07-07)
