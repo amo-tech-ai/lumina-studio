@@ -35,6 +35,20 @@ function labelFor(type: string): string {
   return TYPE_LABEL[type] ?? "Activity";
 }
 
+// ponytail: pin to a fixed locale/UTC (matches formatShootDate's fix) so SSR
+// and client hydration render the same string regardless of the server's or
+// browser's local locale/timezone — raw toLocaleString() would mismatch.
+function formatActivityTime(iso: string): string {
+  return new Date(iso).toLocaleString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+    timeZone: "UTC",
+  });
+}
+
 type Props = {
   activities: ActivityRow[];
   emptyHeading?: string;
@@ -75,7 +89,7 @@ export function ActivityTimeline({
               </div>
               {activity.body ? <p className={styles.text}>{activity.body}</p> : null}
               <time className={styles.time} dateTime={activity.created_at}>
-                {new Date(activity.created_at).toLocaleString()}
+                {formatActivityTime(activity.created_at)}
               </time>
             </div>
           </li>
