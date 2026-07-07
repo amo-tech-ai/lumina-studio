@@ -3,8 +3,9 @@ import { Camera, CheckCircle2, Circle, DollarSign, Package } from "lucide-react"
 
 import { StatusChip } from "@/components/ui/status-chip";
 import { isDeliverableCover } from "@/lib/cloudinary/url";
+import { formatMoney } from "@/lib/format";
 import type { ShootDetailPayload } from "@/lib/shoot/get-shoot-detail";
-import { deliverableDot, formatMoney } from "../shoot-detail-format";
+import { deliverableDot } from "../shoot-detail-format";
 import styles from "../shoot-detail.module.css";
 
 type Props = {

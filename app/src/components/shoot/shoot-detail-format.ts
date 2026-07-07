@@ -1,18 +1,5 @@
 import type { CrewRole, ShootAssetStatus, ShotStatus } from "@/lib/shoot/get-shoot-detail";
 
-export function formatMoney(amount: number | null, currency: string | null): string {
-  if (amount == null) return "—";
-  try {
-    return new Intl.NumberFormat("en-US", {
-      style: "currency",
-      currency: currency ?? "USD",
-      maximumFractionDigits: 0,
-    }).format(amount);
-  } catch {
-    return `${currency ?? "USD"} ${amount.toLocaleString()}`;
-  }
-}
-
 export function formatShootDate(iso: string | null): string {
   if (!iso) return "—";
   const date = new Date(iso);
