@@ -1,0 +1,35 @@
+app/src/components/crm/contacts-workspace.tsx
+  s_ff0f27c2808314::t_dd7912ccc504f7 59-64
+  s_ff0f27c2808314::t_3c9b3c0673cd91 4
+app/src/components/crm/contacts-workspace.test.tsx
+  s_ff0f27c2808314::t_0f4f2eaafac3d0 90
+  s_ff0f27c2808314::t_2ca28387434c6d 93-97
+app/src/components/ui/entity-list.tsx
+  s_ff0f27c2808314::t_7fca75e5d14e54 49
+  s_ff0f27c2808314::t_af0ca1073baef9 22-23
+  s_ff0f27c2808314::t_9223f693517495 91
+app/src/components/crm/companies-workspace.test.tsx
+  s_ff0f27c2808314::t_a0a9bc90672555 76,79-81,84,89
+app/src/components/crm/companies-workspace.tsx
+  s_ff0f27c2808314::t_d142349c7354da 4
+  s_ff0f27c2808314::t_4267906886b753 49-54
+app/src/components/crm/crm-list-workspace.tsx
+  s_ff0f27c2808314::t_d7aaf0ac90ca8b 23,36
+  s_ff0f27c2808314::t_d1530b83bf690d 77
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "4723274e0f309742d3f76a354a8459823ca4877a",
+  "prompts": {},
+  "sessions": {
+    "s_ff0f27c2808314": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "f541cadc-3ecd-4f00-aa24-6136f7995021",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
