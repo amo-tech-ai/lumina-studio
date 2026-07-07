@@ -134,6 +134,20 @@ git worktree remove ../wt-ipi-NNN
 
 **Branch naming:** `ipi/<issue-number>-<short-name>` — e.g. `ipi/130-brand-agent`
 
+## Worktree health gate (required before starting work in an existing worktree)
+
+Before writing code in a worktree that already existed (i.e. not one you just created), run:
+
+```bash
+node scripts/worktree-health.mjs
+```
+
+This fails (non-zero exit) if either is true:
+- **`app/src/lib/ai/provider.ts` still has the pre-IPI-428 static JSON import** (`"../../../../config/groq-models.json"`) — a real bug that breaks `next build`/`next dev`. Never re-patch this locally; rebase onto `origin/main`, where it's already fixed.
+- **The worktree is more than 30 commits behind `origin/main`** (`--max-behind=N` to override) — local state is too stale to trust; `git fetch origin && git rebase origin/main` first.
+
+Audit every registered worktree at once (for cleanup, not gating a single task): `npm run worktree:health:all`. For a full human-facing inventory (merged/stale/orphan classification, safe-to-delete list), use `npm run worktree:audit -- --write` instead — `worktree-health` is the fast machine-facing gate, `worktree-audit` is the periodic cleanup report.
+
 ## Pre-push hook (active)
 
 A pre-push git hook runs automatically on every `git push`:
