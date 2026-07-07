@@ -146,10 +146,11 @@ create policy "campaign_deliverables_delete_owner" on public.campaign_deliverabl
   );
 
 -- 7. FK repair: crm_deals.campaign_id with org_id cross-tenant guard
+-- ON DELETE SET NULL (campaign_id) preserves not-null org_id when campaign is deleted
 alter table crm_deals drop constraint if exists fk_crm_deals_campaign;
 do $$ begin
   alter table crm_deals add constraint fk_crm_deals_campaign
-    foreign key (org_id, campaign_id) references public.campaigns(org_id, id) on delete set null;
+    foreign key (org_id, campaign_id) references public.campaigns(org_id, id) on delete set null (campaign_id);
 exception
   when duplicate_object then null;
 end $$;
