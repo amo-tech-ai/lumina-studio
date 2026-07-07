@@ -1,0 +1,22 @@
+scripts/setup-dev-users.mjs
+  s_0fa4a96deb3173::t_0ad919ea738fcc 12
+  s_0fa4a96deb3173::t_90b7e65b75dd1c 126-138
+  s_0fa4a96deb3173::t_0f268a23d21ad9 56-80
+  s_0fa4a96deb3173::t_8d09efeec37361 110-116,141,148
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "1a66ffcf2add1bd301730b83bb8fce9781adeb66",
+  "prompts": {},
+  "sessions": {
+    "s_0fa4a96deb3173": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "1d5eb381-9ec0-43bc-897b-05f40b38cebf",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
