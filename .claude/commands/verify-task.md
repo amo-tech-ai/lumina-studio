@@ -1,7 +1,7 @@
 ---
 description: "Forensic task verifier — GitHub-first evidence gate for IPI/SCR/RF/BE tasks. Proves spec→repo→tests→CI→browser→design→runtime before trusting Linear. Never trusts a status field."
 argument-hint: "IPI-387 | SCR-26 | path/to/spec.md | --done IPI-387"
-allowed-tools: ["Bash", "Read", "Grep", "Glob", "Task"]
+allowed-tools: ["Bash", "Read", "Grep", "Glob", "Task", "Write"]
 ---
 
 # /verify-task — forensic gate before any "Done"
@@ -44,12 +44,15 @@ Detect task type (Phase 0), then run only the relevant dimensions. Score all 10 
 | 10 | **Security** | 5% | no client AI keys (`rg 'NEXT_PUBLIC_.*_API_KEY\|GEMINI_API_KEY\|GROQ_API_KEY' app/src` → server-only); RLS on new tables; auth guard on new routes | code touching auth/data |
 
 ### Design parity (folds into #1 + #6 for DESIGN-* / SCR)
+
 DC HTML wins layout. Verify **pixel parity · spacing · typography · tokens (no raw hex)** side-by-side (DC `:8765` vs React `:3002`) via [`design-to-production`](../skills/design-to-production/SKILL.md). Screenshot each DC state.
 
 ### Performance (folds into #6 for UI)
+
 `CI=true npm run build` bundle delta; hydration/CLS/LCP + React warnings via the `chrome-devtools-mcp:debug-optimize-lcp` plugin skill. Flag slow renders.
 
 ### Accessibility (folds into #6 for UI)
+
 keyboard nav · visible focus · labels/ARIA · contrast · screen-reader names via [`accessibility`](../skills/accessibility/SKILL.md) / chrome-devtools `a11y-debugging`.
 
 ---
@@ -77,7 +80,8 @@ git fetch origin -q
 REF="$ARGUMENTS"; echo "ref: $REF  gate: $([[ "$REF" == *--done* ]] && echo DONE || echo plan)"
 git ls-tree origin/main -r --name-only >/tmp/vt_main.txt   # authoritative "what's on main"
 ls docs/linear/issues/ 2>/dev/null | grep -iE "${REF%% *}" || echo "(no local issue md — Linear MCP get_issue)"
-bash .claude/skills/task-verifier/scripts/probe-disk-ipix.sh git 2>/dev/null | tail -5
+# probe-disk-ipix.sh is local-only (.claude/skills gitignored) — skip if absent
+[ -f .claude/skills/task-verifier/scripts/probe-disk-ipix.sh ] && bash .claude/skills/task-verifier/scripts/probe-disk-ipix.sh git 2>/dev/null | tail -5 || true
 ```
 
 ---
