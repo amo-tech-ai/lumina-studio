@@ -1,0 +1,21 @@
+scripts/worktree-health.mjs
+  s_88536c5a6fce9b::t_6b0119e6dcd398 100-105,108-110,114,117-119,154,166
+CLAUDE.md
+  s_88536c5a6fce9b::t_00544d0f57c7ea 155
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "74d9f0bb3e0c58f40825670344b9be7232c444d5",
+  "prompts": {},
+  "sessions": {
+    "s_88536c5a6fce9b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "9affed21-8515-433a-b4d9-f7506bb6c652",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
