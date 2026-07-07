@@ -6444,7 +6444,12 @@ export type Database = {
         | "seo_discovery"
         | "ecommerce_direct"
       campaign_status: "planning" | "active" | "live" | "complete"
-      deliverable_status: "pending" | "in_progress" | "review" | "approved"
+      deliverable_status:
+        | "pending"
+        | "in_progress"
+        | "review"
+        | "approved"
+        | "blocked"
       distribution_channel:
         | "instagram_feed"
         | "instagram_reels"
@@ -6805,7 +6810,13 @@ export const Constants = {
         "ecommerce_direct",
       ],
       campaign_status: ["planning", "active", "live", "complete"],
-      deliverable_status: ["pending", "in_progress", "review", "approved"],
+      deliverable_status: [
+        "pending",
+        "in_progress",
+        "review",
+        "approved",
+        "blocked",
+      ],
       distribution_channel: [
         "instagram_feed",
         "instagram_reels",
