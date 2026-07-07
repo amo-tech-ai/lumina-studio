@@ -1,0 +1,31 @@
+tasks/crm/todo.md
+  s_ff0f27c2808314::t_4a10f1462bfdeb 86-87
+  s_ff0f27c2808314::t_5d2108026d82ee 3-4,6,11,16-17,23,27-32,51,53,58,62-66,68-83,88,94-95,103,112-118
+  s_ff0f27c2808314::t_82c420702f3c8d 39-43
+  s_ff0f27c2808314::t_c98ae29fc8123c 84-85,92,96,109-110
+  s_ff0f27c2808314::t_eadfd465d09e2a 36
+  s_ff0f27c2808314::t_fd37379a7a9549 111
+  s_ff0f27c2808314::t_620527a6fcbc06 67
+  s_ff0f27c2808314::t_587d9e3e3d0f23 98-101,104-108
+  s_ff0f27c2808314::t_4bc75f826bbfc8 52,54
+  s_ff0f27c2808314::t_b734e74c345d0f 34-35,37-38
+  s_ff0f27c2808314::t_b9e2fd0fd3252a 33
+  s_ff0f27c2808314::t_93a95fa5eaa93a 97
+  s_ff0f27c2808314::t_45ab6fb5784158 102
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "399efd5b3fc116ecce10df8931a31ef8c4ef18e0",
+  "prompts": {},
+  "sessions": {
+    "s_ff0f27c2808314": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "f541cadc-3ecd-4f00-aa24-6136f7995021",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
