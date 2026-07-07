@@ -141,6 +141,7 @@ create policy "campaign_deliverables_select_org_member" on public.campaign_deliv
   );
 
 drop policy if exists "campaign_deliverables_insert_owner" on public.campaign_deliverables;
+drop policy if exists "campaign_deliverables_insert_org_member" on public.campaign_deliverables;
 create policy "campaign_deliverables_insert_org_member" on public.campaign_deliverables
   for insert with check (
     is_org_member((select org_id from public.campaigns where id = campaign_id))
@@ -156,6 +157,7 @@ create policy "campaign_deliverables_update_assigned_or_owner" on public.campaig
     and (select auth.uid()) = assigned_to
   );
 
+drop policy if exists "campaign_deliverables_delete_owner" on public.campaign_deliverables;
 drop policy if exists "campaign_deliverables_delete_org_member" on public.campaign_deliverables;
 create policy "campaign_deliverables_delete_org_member" on public.campaign_deliverables
   for delete using (
