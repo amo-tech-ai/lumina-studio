@@ -1,0 +1,44 @@
+scripts/verify-booking-gate.mjs
+  s_5c9f2a2ec2b3af::t_80ce649e365fdd 43
+app/src/mastra/tools/booking-tools.ts
+  s_5c9f2a2ec2b3af::t_62e8f691c955a4 94-95
+  s_5c9f2a2ec2b3af::t_4ee0127fa09834 125-126,129
+  s_5c9f2a2ec2b3af::t_806bcf87a5a9f6 146-147,149
+  s_12404fa554d700::t_8dd62bcfac04ab 11,16-27
+scripts/test-check-talent-availability.sql
+  s_5c9f2a2ec2b3af::t_36ae5a1cce3811 1-106
+app/src/mastra/tools/booking-tools.test.ts
+  s_e3bc490716abde::t_9b04598fed581b 46-79
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.9",
+  "base_commit_sha": "ee7d017c6b8063a59aac43f152b5b098bcddfc37",
+  "prompts": {},
+  "sessions": {
+    "s_12404fa554d700": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "c51c9d5f-0f8a-4434-b966-5de005a41aad",
+        "model": "unknown"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    },
+    "s_5c9f2a2ec2b3af": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "4c146179-d0c4-4f21-910e-cebd5c5ba751",
+        "model": "composer-2.5"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    },
+    "s_e3bc490716abde": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "27142e80-cf4d-4c53-b598-103370c66824",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
