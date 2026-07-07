@@ -38,6 +38,8 @@ function labelFor(type: string): string {
 // ponytail: pin to a fixed locale/UTC (matches formatShootDate's fix) so SSR
 // and client hydration render the same string regardless of the server's or
 // browser's local locale/timezone — raw toLocaleString() would mismatch.
+// timeZoneName labels it explicitly ("... UTC") so a non-UTC reader isn't
+// silently shown the wrong wall-clock time as if it were their own.
 function formatActivityTime(iso: string): string {
   return new Date(iso).toLocaleString("en-US", {
     month: "short",
@@ -46,6 +48,7 @@ function formatActivityTime(iso: string): string {
     hour: "numeric",
     minute: "2-digit",
     timeZone: "UTC",
+    timeZoneName: "short",
   });
 }
 
