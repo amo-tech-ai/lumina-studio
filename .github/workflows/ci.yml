@@ -104,7 +104,7 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y postgresql-client
 
       - name: Install root dependencies (scripts/verify-rls.mjs needs @supabase/supabase-js)
-        run: npm ci
+        run: npm ci --omit=dev
 
       - name: Install app dependencies (typecheck + API tests in gate script)
         working-directory: app
