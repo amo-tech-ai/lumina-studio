@@ -87,9 +87,14 @@ describe("ContactsWorkspace", () => {
     expect(screen.queryByText("Kit Rho")).toBeNull();
   });
 
-  it("shows a genuine EmptyState when there are no contacts at all", () => {
+  it("shows a genuine EmptyState with a disabled New-person CTA (DC parity — no create flow wired yet)", () => {
     render(<ContactsWorkspace contacts={[]} companyNames={{}} fetchError={null} />);
     expect(screen.getByText("No contacts yet")).toBeDefined();
+    // Two "New person" buttons exist now: the header's (already-existing) and the
+    // new empty-state CTA. Both are disabled — assert on the pair, not just one.
+    const ctas = screen.getAllByRole("button", { name: /New person/ });
+    expect(ctas).toHaveLength(2);
+    for (const cta of ctas) expect(cta).toHaveProperty("disabled", true);
   });
 
   it("shows ErrorState with a working retry that re-runs the server fetch", () => {

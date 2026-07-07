@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { Plus } from "lucide-react";
 
 import { StatusChip } from "@/components/ui/status-chip";
 import { crmStatusDotToken, crmStatusLabel } from "@/lib/crm/status-tokens";
@@ -45,6 +46,12 @@ export function CompaniesWorkspace({
       filterItems={filterCompanies}
       emptyLabel="No companies yet"
       emptyBody="Add your first relationship to start building the pipeline."
+      emptyAction={
+        <button type="button" disabled title="Coming soon" className={styles.newBtn}>
+          <Plus size={15} aria-hidden />
+          Add a company
+        </button>
+      }
       fetchError={fetchError}
       renderRow={(company) => (
         <Link href={`/app/crm/companies/${company.id}`} className={`${styles.row} ${styles.companiesGrid}`}>
