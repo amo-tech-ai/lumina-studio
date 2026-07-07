@@ -13,12 +13,14 @@ import styles from "./entity-list.module.css";
  *  caller-rendered row. Domain-free: no filtering, sorting, or entity knowledge
  *  lives here; the consumer passes already-resolved `items` + `renderRow`.
  *  First consumer is CRM Companies/Contacts — do not add Brand/Shoots options. */
-type Props<T> = {
+export type Props<T> = {
   items: T[];
   renderRow: (item: T) => ReactNode;
   /** EmptyState heading when there is genuinely no data. */
   emptyLabel: string;
   emptyBody?: string;
+  /** Heading when a search yields no results. Default: `No matches for "<query>"`. */
+  noMatchLabel?: (query: string) => string;
   loading?: boolean;
   error?: string | null;
   onRetry?: () => void;
@@ -30,11 +32,14 @@ type Props<T> = {
 
 const SKELETON_ROWS = 5;
 
+const defaultNoMatchLabel = (query: string) => `No matches for “${query}”`;
+
 export function EntityList<T extends { id: string }>({
   items,
   renderRow,
   emptyLabel,
   emptyBody,
+  noMatchLabel = defaultNoMatchLabel,
   loading = false,
   error = null,
   onRetry,
@@ -51,20 +56,29 @@ export function EntityList<T extends { id: string }>({
     );
   }
 
-  const searching = (searchValue ?? "").trim().length > 0;
+  const trimmedSearch = (searchValue ?? "").trim();
+  const searching = trimmedSearch.length > 0;
 
   let body: ReactNode;
   if (loading) {
+    // The status span is a SIBLING of the aria-hidden skeleton container, not
+    // nested inside it — aria-hidden suppresses the whole subtree regardless of
+    // a descendant's own role, so nesting it there would silence the announcement.
     body = (
-      <div className={styles.list} aria-hidden data-testid="entity-list-loading">
-        {Array.from({ length: SKELETON_ROWS }, (_, i) => (
-          <Skeleton key={i} className={styles.skeletonRow} />
-        ))}
-      </div>
+      <>
+        <span className="sr-only" role="status">
+          Loading…
+        </span>
+        <div className={styles.list} aria-hidden data-testid="entity-list-loading">
+          {Array.from({ length: SKELETON_ROWS }, (_, i) => (
+            <Skeleton key={i} className={styles.skeletonRow} />
+          ))}
+        </div>
+      </>
     );
   } else if (items.length === 0) {
     body = searching ? (
-      <EmptyState heading={`No matches for “${searchValue!.trim()}”`} icon={<Search />} />
+      <EmptyState heading={noMatchLabel(trimmedSearch)} icon={<Search />} />
     ) : (
       <EmptyState heading={emptyLabel} body={emptyBody} icon={<Inbox />} />
     );

@@ -46,11 +46,36 @@ describe("EntityList", () => {
     expect(screen.queryByText("No companies yet")).toBeNull();
   });
 
+  it("uses a caller-supplied noMatchLabel instead of the default copy", () => {
+    render(
+      <EntityList
+        items={[]}
+        renderRow={renderRow}
+        emptyLabel="No companies yet"
+        searchValue="zzz"
+        noMatchLabel={(q) => `Nothing found for ${q}`}
+      />,
+    );
+    expect(screen.getByText("Nothing found for zzz")).toBeDefined();
+  });
+
   it("shows skeletons while loading (no rows, no empty state)", () => {
     render(<EntityList items={[]} renderRow={renderRow} emptyLabel="x" loading />);
     expect(screen.getByTestId("entity-list-loading")).toBeDefined();
     expect(screen.queryByTestId("row")).toBeNull();
     expect(screen.queryByTestId("empty-state")).toBeNull();
+  });
+
+  it("loading wins over rendered rows when items are already present", () => {
+    render(<EntityList items={ITEMS} renderRow={renderRow} emptyLabel="x" loading />);
+    expect(screen.getByTestId("entity-list-loading")).toBeDefined();
+    expect(screen.queryByTestId("row")).toBeNull();
+    expect(screen.queryByTestId("empty-state")).toBeNull();
+  });
+
+  it("announces loading to assistive tech outside the aria-hidden skeleton", () => {
+    render(<EntityList items={[]} renderRow={renderRow} emptyLabel="x" loading />);
+    expect(screen.getByRole("status").textContent).toBe("Loading…");
   });
 
   it("shows the ErrorState with a working retry, replacing the list and search", () => {
