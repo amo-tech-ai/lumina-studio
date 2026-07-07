@@ -1,0 +1,78 @@
+app/src/lib/crm/queries.ts
+  s_ff0f27c2808314::t_bead825529a6d6 11-12
+  s_ff0f27c2808314::t_7aa8dfd5e56997 80-146,149,156-157,158-160,162-169
+  s_ff0f27c2808314::t_9aef329c544775 147-148,150-155,161
+app/src/components/crm/activity-timeline.test.tsx
+  s_ff0f27c2808314::t_5c73387e39067e 41-44,49,61,66-67,72
+  s_ff0f27c2808314::t_619f007ddbcee7 2
+  s_ff0f27c2808314::t_e7813c15cdb714 1,3-40,45-48,50-60,62-65,68-71,73-74
+app/src/components/crm/activity-timeline.tsx
+  s_ff0f27c2808314::t_a2c06ee8436d63 1-37,52-91,93-100
+  s_ff0f27c2808314::t_c2b3e49c06c9d0 38-51
+  s_ff0f27c2808314::t_1b4a237ccf0f05 92
+app/src/components/crm/activity-timeline.module.css
+  s_ff0f27c2808314::t_974e86b54686b8 1-80
+app/src/lib/crm/queries.test.ts
+  s_ff0f27c2808314::t_e8d80b0fac31b7 135-234,236,238,240-245,247-251,253-256,258-260
+  s_ff0f27c2808314::t_892afde0323958 3-13
+  s_ff0f27c2808314::t_5e3fcaa4e36f54 235,237,239,246,252,257
+tasks/crm/todo.md
+  s_ff0f27c2808314::t_4a10f1462bfdeb 89-90
+  s_ff0f27c2808314::t_5d2108026d82ee 3-4,6,11,16-17,23,29-31,54,56,61,65-69,71-76,78-86,91,97-98,108,117-123
+  s_ff0f27c2808314::t_82c420702f3c8d 43-46
+  s_ff0f27c2808314::t_c98ae29fc8123c 87-88,95,99,114-115
+  s_ff0f27c2808314::t_eadfd465d09e2a 38
+  s_ff0f27c2808314::t_fd37379a7a9549 116
+  s_ff0f27c2808314::t_620527a6fcbc06 70
+  s_ff0f27c2808314::t_587d9e3e3d0f23 101-103
+  s_ff0f27c2808314::t_4bc75f826bbfc8 55,57
+  s_ff0f27c2808314::t_b734e74c345d0f 39-40
+  s_ff0f27c2808314::t_b9e2fd0fd3252a 36
+  s_ff0f27c2808314::t_93a95fa5eaa93a 100
+  s_ff0f27c2808314::t_45ab6fb5784158 107
+  s_ff0f27c2808314::t_4a0b30b3cf3ebe 77
+  s_ff0f27c2808314::t_7a65b647f4f692 27,32-33,35,37,41
+  s_ff0f27c2808314::t_b566ddbe3104dc 104-106,109-113
+  s_ff0f27c2808314::t_236cc33ac5bbee 28
+  s_ff0f27c2808314::t_50ece048da0329 36
+  s_ff0f27c2808314::t_ad4378d10cec36 42
+app/src/components/crm/company-detail-workspace.tsx
+  s_ff0f27c2808314::t_4b312650a13c36 1-217
+app/src/app/(operator)/app/crm/companies/[id]/loading.tsx
+  s_ff0f27c2808314::t_99e05ea80589f4 1-25
+app/src/lib/crm/get-company-detail.ts
+  s_ff0f27c2808314::t_a987415d8fb43a 29-31,34,36,38,48-52
+  s_ff0f27c2808314::t_51bbf037c8790d 44
+  s_ff0f27c2808314::t_374a02ce2dd41e 1-28,32-33,35,37,39-43,45-47,53-54
+app/src/components/crm/company-detail-workspace.module.css
+  s_ff0f27c2808314::t_72148589f34e3c 1-52,54-76,78-275
+  s_ff0f27c2808314::t_37f475511b1696 53
+  s_ff0f27c2808314::t_c82568dace487c 276-325
+  s_ff0f27c2808314::t_0a1d45f7db4ad2 77
+app/src/components/crm/company-detail-workspace.test.tsx
+  s_ff0f27c2808314::t_b25a5259d160dc 89
+  s_ff0f27c2808314::t_84e1d7b7961dab 1-88,90-91,93-157
+  s_ff0f27c2808314::t_adb4d840904909 92
+app/src/app/(operator)/app/crm/companies/[id]/page.tsx
+  s_ff0f27c2808314::t_adbc54530e4f76 3-4,21-27,29,31
+app/src/lib/crm/get-company-detail.test.ts
+  s_ff0f27c2808314::t_8a6f2c7db27e7a 1
+  s_ff0f27c2808314::t_7be866e6498d9b 2-20,23-68
+  s_ff0f27c2808314::t_ea1e8af23e8666 21-22
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "aaa659dd40f8675d28ea6a7e7a9165ce58065ed1",
+  "prompts": {},
+  "sessions": {
+    "s_ff0f27c2808314": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "f541cadc-3ecd-4f00-aa24-6136f7995021",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
