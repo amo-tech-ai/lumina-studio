@@ -34,12 +34,15 @@ export type ShootDetailShot = {
   status: ShotStatus;
 };
 
-/** shoot.shoot_assets row — no `name`/caption column, url + cloudinary metadata only. */
+/** shoot.shoot_assets row — no `name`/caption column, url + cloudinary metadata only.
+ *  resource_type is Cloudinary's own value ("image"/"video"/"raw"), written verbatim
+ *  from the upload webhook — the reliable signal for video vs image, not `format`. */
 export type ShootDetailAsset = {
   id: string;
   url: string;
   cloudinary_id: string | null;
   format: string | null;
+  resource_type: string | null;
   width: number | null;
   height: number | null;
   dna_score: number | null;

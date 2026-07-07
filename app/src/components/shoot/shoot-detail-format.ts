@@ -85,13 +85,3 @@ export function deliverableDot(status: string | null): string {
   if (normalized && DELIVERABLE_IN_PROGRESS.has(normalized)) return "var(--color-warning-text)";
   return "var(--color-text-muted)"; // "draft" / unrecognized
 }
-
-const VIDEO_FORMATS = new Set(["mp4", "mov", "webm", "m4v", "avi"]);
-
-/** get_shoot_detail doesn't select shoot.shoot_assets.resource_type (would need
- *  an RPC change, out of scope for this Phase 1 UI PR) — `format` is the best
- *  available signal to avoid handing next/image a video URL, which it can't
- *  render as an <img>. */
-export function isVideoFormat(format: string | null): boolean {
-  return !!format && VIDEO_FORMATS.has(format.toLowerCase());
-}
