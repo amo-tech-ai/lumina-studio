@@ -1,0 +1,19 @@
+app/src/app/(operator)/error.tsx
+  s_0fa4a96deb3173::t_1877bbab15b6e5 1-44
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "5c66d2bd2cd6b30165080e7f72caac20153877e9",
+  "prompts": {},
+  "sessions": {
+    "s_0fa4a96deb3173": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "1d5eb381-9ec0-43bc-897b-05f40b38cebf",
+        "model": "unknown"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
