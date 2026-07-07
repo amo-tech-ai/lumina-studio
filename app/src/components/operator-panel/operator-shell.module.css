@@ -47,8 +47,14 @@
   min-height: 0 !important;
 }
 
+/* max-height alone lets a tall message visually overflow past this box and
+   sit on top of the suggestion-chips row rendered right after it in normal
+   flow (confirmed live: a 2-line assistant reply overlapped "Search
+   companies"/"Open contacts"/"View pipeline"). overflow-y makes it scroll
+   inside its own compact box instead of spilling onto whatever's next. */
 .chatDockInner :global(.copilotKitMessages) {
   max-height: 8rem;
+  overflow-y: auto;
 }
 
 .intelligencePanel {
