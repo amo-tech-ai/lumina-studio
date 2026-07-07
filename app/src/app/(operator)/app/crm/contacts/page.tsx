@@ -32,6 +32,10 @@ export default async function CrmContactsPage() {
         } catch {
           companyNames = {};
         }
+      } else {
+        // Distinct from "org has zero contacts" — no org membership is an
+        // access/setup problem, not an empty CRM.
+        fetchError = "Your account isn't linked to an organization yet.";
       }
     } catch {
       fetchError = "Unable to load contacts.";
