@@ -27,7 +27,11 @@ const BASE: ShootRow = {
   cover_url: null,
 };
 
-const coverSrc = () => (screen.getByTestId("cover-img") as HTMLImageElement).getAttribute("src");
+const coverImg = () => screen.getByTestId("cover-img");
+const coverSrc = () => coverImg().getAttribute("src");
+// Cover is decorative (shoot name + details live in the card body / sr-only text),
+// so alt is intentionally empty on both the real-cover and fallback paths.
+const coverAlt = () => coverImg().getAttribute("alt");
 
 afterEach(() => cleanup());
 
@@ -37,15 +41,22 @@ describe("ShootCard cover rendering", () => {
       "https://res.cloudinary.com/dzqy2ixl0/image/upload/c_fill,w_640,h_480/5-fashionos_wc2p1c";
     render(<ShootCard shoot={{ ...BASE, cover_url: cover }} />);
     expect(coverSrc()).toBe(cover);
+    expect(coverAlt()).toBe("");
   });
 
   it("renders the decorative fallback when cover_url is null", () => {
     render(<ShootCard shoot={{ ...BASE, cover_url: null }} />);
     expect(coverSrc()).toBe(shootListCoverForShoot(BASE.id));
+    expect(coverAlt()).toBe("");
   });
 
   it("renders the fallback (not a broken image) when cover_url is an off-cloud host", () => {
     render(<ShootCard shoot={{ ...BASE, cover_url: "https://evil.example.com/x.jpg" }} />);
+    expect(coverSrc()).toBe(shootListCoverForShoot(BASE.id));
+  });
+
+  it("renders the fallback when cover_url is an empty string (falsy/invalid guard)", () => {
+    render(<ShootCard shoot={{ ...BASE, cover_url: "" }} />);
     expect(coverSrc()).toBe(shootListCoverForShoot(BASE.id));
   });
 });
