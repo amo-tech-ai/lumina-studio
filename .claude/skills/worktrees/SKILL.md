@@ -11,6 +11,25 @@ A git worktree is a second working directory with its own files and branch that 
 
 **When NOT to bother:** a quick read of another branch (`git show branch:file`), a one-line fix on a clean tree, or anything where switching branches costs nothing. Worktrees pay off when you have *uncommitted work to protect* or *parallel work to run*.
 
+## Agent Start Gate (required before writing code in an existing worktree)
+
+A real incident: an agent hit a build error that was already fixed on `origin/main` — the local worktree was just 17 commits behind and never got the fix. Before any implementation in a worktree you didn't just create fresh, verify all of the following (or run `npm run worktree:health`, which checks the first two automatically):
+
+- **Not behind `origin/main`** beyond what you're deliberately working from an older base for. `git fetch origin && git rev-list --left-right --count HEAD...origin/main`.
+- **No stale known-bad patterns** — e.g. `rg 'from "\.\./\.\./\.\./\.\./config/groq-models\.json"' app/src/lib/ai/provider.ts` (the pre-IPI-428 bug; `worktree-health.mjs` checks this by default).
+- **Correct worktree for the task** — `git branch --show-current` matches what you intend to work on.
+- **State is clean, or intentionally dirty** — `git status --short`; know what's yours before touching anything.
+- **Docs/specs aren't "missing" due to staleness** — if a file exists on `origin/main` but not locally, that means the checkout is stale, not that the doc needs recreating. Verify with `git show origin/main:<path>` before concluding a doc is missing, and never recreate a doc without first fetching/rebasing to confirm it's genuinely absent upstream.
+- **`.claude/skills/` gitignore state matches upstream** — `grep -q '\.claude/skills/\*' .gitignore` finding a match means this checkout predates the skills-tracking rollout (PR #234) and is running an old ignore rule; rebase before assuming local skill edits will ever be trackable.
+
+If any check fails: **stop and report it, don't route around it.** Fetching/rebasing is the fix; patching around a stale symptom (like re-adding a "fixed" bug's workaround) just reintroduces the original problem in a new place.
+
+```bash
+node scripts/worktree-health.mjs              # gate before starting work (current worktree)
+node scripts/worktree-health.mjs --all        # audit every registered worktree
+node scripts/worktree-health.mjs --pre-delete  # gate before `git worktree remove` (see Backup before cleanup)
+```
+
 ## iPix defaults
 
 For iPix work, use a worktree for any **multi-step implementation task** (anything beyond a trivial one-file edit) so the current working tree stays clean. Prefer the native flow (`claude --worktree`, `EnterWorktree`); when creating manually, follow these conventions:
@@ -65,7 +84,7 @@ Before opening a PR, merging, or flipping a task to Done — all must hold, or i
 - [ ] No leaked dirs in the diff (see Leak guard below)
 - [ ] PR scoped to one concern ([PR splitting playbook](references/ipix-ops.md#pr-splitting-playbook))
 - [ ] [task-verifier](../task-verifier/SKILL.md) report attached for IPI/SCR ship gates
-- [ ] Worktree backed up if it held uncommitted work (Backup-before-cleanup below)
+- [ ] Worktree backed up if it held uncommitted work, and `npm run worktree:pre-delete` clean before removal (Backup-before-cleanup below)
 
 ### Never run blindly
 
@@ -89,6 +108,8 @@ git -C <worktree> diff HEAD > /tmp/wt-<task-id>.patch
 ```
 
 Only then `git worktree remove --force`. A 10-second backup beats unrecoverable loss.
+
+**The quieter danger: committed-but-never-pushed commits need no `--force` at all.** A plain `git worktree remove` succeeds fine on a *clean* working tree — but "clean" only means no uncommitted changes, not that the branch's commits exist anywhere else. If you `git add && git commit` a doc/note/fix in a worktree and never push it, the worktree directory can be removed with zero warnings; the commits survive on the branch ref for now, but become truly unrecoverable the moment that branch is later deleted (e.g. a routine "clean up merged branches" pass). Run **`npm run worktree:pre-delete`** before removing any worktree you didn't just finish pushing — it hard-blocks when the current branch has commits `origin/<branch>` doesn't have.
 
 ### Leak guard
 
@@ -203,6 +224,7 @@ A fresh worktree has the code but none of the *environment*. Initialize it:
   git worktree prune                # clear stale metadata after a manual delete
   ```
 - **Backup first** if the worktree is dirty — see [Backup before cleanup](#backup-before-cleanup). Never `--force` without it.
+- **Pre-delete gate** — `npm run worktree:pre-delete` (blocks if the branch has commits `origin/<branch>` doesn't have; see [Backup before cleanup](#backup-before-cleanup)).
 - **Weekly tidy ritual** (prune stale branches + merged worktrees) → [references/ipix-ops.md#weekly-tidy-ritual](references/ipix-ops.md#weekly-tidy-ritual).
 
 ## Quick reference
@@ -211,6 +233,8 @@ A fresh worktree has the code but none of the *environment*. Initialize it:
 |------|---------|
 | **iPix: add worktree (preferred)** | `npm run worktree:add -- IPI-286 route-aware-sections` |
 | **iPix: audit inventory** | `npm run worktree:audit` · `-- --write` updates tracker |
+| **iPix: start-work gate** | `npm run worktree:health` (current worktree) · `-- --all` (every worktree) |
+| **iPix: pre-delete gate** | `npm run worktree:pre-delete` — run before removing a worktree you didn't just push |
 | Native isolated session | `claude --worktree <name>` |
 | Native, from a PR | `claude --worktree "#<n>"` |
 | Manual: new branch | `git worktree add ../<proj>-<name> -b <branch>` |
