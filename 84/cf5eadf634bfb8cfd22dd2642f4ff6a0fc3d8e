@@ -1,0 +1,19 @@
+app/src/lib/ai/provider-adapter.test.ts
+  s_ff0f27c2808314::t_a616731bd7d614 16,21-27,37-41,45-47,50-54,60-69,73-74,76-77,83-89,92-94,99-110
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "84cf5eadf634bfb8cfd22dd2642f4ff6a0fc3d8e",
+  "prompts": {},
+  "sessions": {
+    "s_ff0f27c2808314": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "f541cadc-3ecd-4f00-aa24-6136f7995021",
+        "model": "unknown"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
