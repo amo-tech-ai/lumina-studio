@@ -1,3 +1,4 @@
+WARN: config section [inbucket] is deprecated. Please use [local_smtp] instead.
 export type Json =
   | string
   | number
@@ -1220,6 +1221,120 @@ export type Database = {
           },
         ]
       }
+      campaign_deliverables: {
+        Row: {
+          assigned_to: string | null
+          campaign_id: string
+          created_at: string
+          due_date: string | null
+          id: string
+          label: string
+          phase: number
+          status: Database["public"]["Enums"]["deliverable_status"]
+          updated_at: string
+        }
+        Insert: {
+          assigned_to?: string | null
+          campaign_id: string
+          created_at?: string
+          due_date?: string | null
+          id?: string
+          label: string
+          phase: number
+          status?: Database["public"]["Enums"]["deliverable_status"]
+          updated_at?: string
+        }
+        Update: {
+          assigned_to?: string | null
+          campaign_id?: string
+          created_at?: string
+          due_date?: string | null
+          id?: string
+          label?: string
+          phase?: number
+          status?: Database["public"]["Enums"]["deliverable_status"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "campaign_deliverables_assigned_to_fkey"
+            columns: ["assigned_to"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "campaign_deliverables_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      campaigns: {
+        Row: {
+          brand_id: string
+          cover_url: string | null
+          created_at: string
+          end_date: string | null
+          id: string
+          name: string
+          objective:
+            | Database["public"]["Enums"]["campaign_objective_type"]
+            | null
+          org_id: string
+          start_date: string | null
+          status: Database["public"]["Enums"]["campaign_status"]
+          updated_at: string
+        }
+        Insert: {
+          brand_id: string
+          cover_url?: string | null
+          created_at?: string
+          end_date?: string | null
+          id?: string
+          name: string
+          objective?:
+            | Database["public"]["Enums"]["campaign_objective_type"]
+            | null
+          org_id: string
+          start_date?: string | null
+          status?: Database["public"]["Enums"]["campaign_status"]
+          updated_at?: string
+        }
+        Update: {
+          brand_id?: string
+          cover_url?: string | null
+          created_at?: string
+          end_date?: string | null
+          id?: string
+          name?: string
+          objective?:
+            | Database["public"]["Enums"]["campaign_objective_type"]
+            | null
+          org_id?: string
+          start_date?: string | null
+          status?: Database["public"]["Enums"]["campaign_status"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "campaigns_brand_id_fkey"
+            columns: ["brand_id"]
+            isOneToOne: false
+            referencedRelation: "brands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "campaigns_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       chatbot_conversations: {
         Row: {
           anon_id: string
@@ -1732,6 +1847,13 @@ export type Database = {
             columns: ["shoot_id"]
             isOneToOne: false
             referencedRelation: "shoots"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_crm_deals_campaign"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
             referencedColumns: ["id"]
           },
         ]
@@ -6109,6 +6231,10 @@ export type Database = {
         }
         Returns: Json
       }
+      crm_deals_verify_convert_stage: {
+        Args: { p_deal_id: string; p_stage: string }
+        Returns: undefined
+      }
       expire_stale_bookings: { Args: never; Returns: number }
       get_booking: { Args: { p_booking_id: string }; Returns: Json }
       get_brand_assets: {
@@ -6318,6 +6444,8 @@ export type Database = {
         | "community"
         | "seo_discovery"
         | "ecommerce_direct"
+      campaign_status: "planning" | "active" | "live" | "complete"
+      deliverable_status: "pending" | "in_progress" | "review" | "approved"
       distribution_channel:
         | "instagram_feed"
         | "instagram_reels"
@@ -6677,6 +6805,8 @@ export const Constants = {
         "seo_discovery",
         "ecommerce_direct",
       ],
+      campaign_status: ["planning", "active", "live", "complete"],
+      deliverable_status: ["pending", "in_progress", "review", "approved"],
       distribution_channel: [
         "instagram_feed",
         "instagram_reels",
