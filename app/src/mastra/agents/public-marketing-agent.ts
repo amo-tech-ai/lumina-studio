@@ -7,7 +7,7 @@ import { resolveModel } from "@/mastra/models";
 export const publicMarketingAgent = new Agent({
   id: "public-marketing",
   name: "iPix Marketing Assistant",
-  model: resolveModel(),
+  model: resolveModel("fast"),
   instructions: PUBLIC_MARKETING_INSTRUCTIONS,
   // No tools: this agent must never access operator or admin functionality.
   // No memory: stateless per-session; lead state lives in the frontend/widget (WEB-015.5).

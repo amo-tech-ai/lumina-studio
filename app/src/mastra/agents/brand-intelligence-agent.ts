@@ -7,7 +7,7 @@ import { getMastraMemory } from "@/mastra/memory";
 import { resolveModel } from "@/mastra/models";
 import { brandIntelligenceTools } from "@/mastra/tools/brand-intelligence-tools";
 
-const MODEL = resolveModel();
+const MODEL = resolveModel("default");
 
 export const brandIntelligenceAgent = new Agent({
   id: "brand-intelligence",

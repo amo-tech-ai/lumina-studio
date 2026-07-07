@@ -6,7 +6,7 @@ import { resolveModel } from "@/mastra/models";
 
 export { PlannerWorkingMemory };
 
-const MODEL = resolveModel();
+const MODEL = resolveModel("default");
 
 // ponytail: foundation agents for IPI2-121. Tools/instructions are smoke-level here;
 // the real production-planner tool suite + HITL lands in IPI2-114. Names are production

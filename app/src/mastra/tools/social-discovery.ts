@@ -9,7 +9,8 @@ import { createSupabaseAdminClient } from "@/app/api/_lib/supabase-admin";
 import { persistSocialDiscovery } from "@/lib/brand/persist-social-discovery";
 import { resolveModel, resolveProviderOptions } from "@/mastra/models";
 
-const MODEL = resolveModel();
+// Strict JSON schema output — structured tier (Zod-validated after parse).
+const MODEL = resolveModel("structured");
 
 const SUPPORTED_PLATFORMS = [
   "instagram",

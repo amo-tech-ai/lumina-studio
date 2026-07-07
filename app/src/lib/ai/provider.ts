@@ -4,6 +4,7 @@ import { fileURLToPath } from "node:url";
 
 import {
   createGeminiLanguageModel,
+  resolveProviderOptions as resolveGeminiProviderOptions,
 } from "./gemini-registry";
 import type { AiProvider, GroqModelEntry, GroqModelTier, GroqModelsConfig } from "./types";
 
@@ -34,7 +35,6 @@ export type { AiProvider, GroqModelTier } from "./types";
 export {
   GEMINI_MODELS,
   resolveGeminiModel,
-  resolveProviderOptions,
 } from "./gemini-registry";
 
 const groqModels = loadGroqModelsConfig();
@@ -72,6 +72,23 @@ export function resolveGroqModelId(tier: GroqModelTier = "default"): string {
     );
   }
   return modelId;
+}
+
+/** True when a Groq vision model is configured (env override or SSOT default). */
+function isGroqVisionConfigured(): boolean {
+  const envKey = groqModels.envMapping.vision;
+  const fromEnv = envKey ? process.env[envKey]?.trim() : "";
+  const fallback = groqModels.defaults.vision?.trim() ?? "";
+  return Boolean(fromEnv || fallback);
+}
+
+/**
+ * Provider options for the active model. Gemini's thinkingBudget hack only
+ * applies to Gemini — Groq has no equivalent today, so omit rather than send
+ * a Gemini-shaped options object the Groq provider would just ignore.
+ */
+export function resolveProviderOptions() {
+  return resolveAiProvider() === "gemini" ? resolveGeminiProviderOptions() : {};
 }
 
 export function assertGroqTierCapabilities(
@@ -116,6 +133,12 @@ function createGroqLanguageModel(tier: GroqModelTier): ResolvedLanguageModel {
 }
 
 export function resolveModel(tier: GroqModelTier = "default"): ResolvedLanguageModel {
+  // Vision stays on Gemini until GROQ_MODEL_VISION is set (golden eval gate) —
+  // forced regardless of AI_PROVIDER so a global groq cutover can't silently
+  // break vision extraction.
+  if (tier === "vision" && !isGroqVisionConfigured()) {
+    return createGeminiLanguageModel();
+  }
   const provider = resolveAiProvider();
   if (provider === "gemini") {
     return createGeminiLanguageModel();

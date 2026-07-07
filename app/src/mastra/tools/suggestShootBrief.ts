@@ -29,7 +29,7 @@ export const suggestShootBriefTool = createTool({
       : "";
 
     const { text } = await generateText({
-      model: resolveModel(),
+      model: resolveModel("default"),
       prompt: `You are a Creative Director writing a concise shoot brief.
 
 ${brandContext ? `Brand context:\n${brandContext}\n` : ""}Campaign: ${shootName}
@@ -42,7 +42,8 @@ Write 2–3 short paragraphs (150–220 words total):
 
 No headings, no bullet points, no deliverables list. Confident creative director voice. Output only the brief text.`,
       maxOutputTokens: 400,
-      // thinkingBudget:0 prevents reasoning tokens from eating the 400-token output budget.
+      // On Gemini, thinkingBudget:0 prevents reasoning tokens from eating the
+      // 400-token output budget. No-op on Groq (resolveProviderOptions is provider-aware).
       providerOptions: resolveProviderOptions(),
     });
 

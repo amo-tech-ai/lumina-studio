@@ -7,7 +7,9 @@ import { v2 as cloudinary } from "cloudinary";
 import { z } from "zod";
 import { resolveModel, resolveProviderOptions } from "@/mastra/models";
 
-const MODEL = resolveModel();
+// Vision stays on Gemini until GROQ_MODEL_VISION is configured (golden eval gate) —
+// resolveModel("vision") forces Gemini regardless of AI_PROVIDER when unconfigured.
+const MODEL = resolveModel("vision");
 
 const HexColor = z.string().regex(/^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/, "Expected hex color");
 

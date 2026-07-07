@@ -10,7 +10,7 @@ import { resolveModel } from "@/mastra/models";
 export const modelMatchAgent = new Agent({
   id: "model-match",
   name: "Model Match",
-  model: resolveModel(),
+  model: resolveModel("default"),
   tools: {
     searchTalentByFilters: agentTools.searchTalentByFilters,
     computeTalentMatchScore: agentTools.computeTalentMatchScore,

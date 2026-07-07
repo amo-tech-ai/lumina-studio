@@ -156,3 +156,20 @@ describe("uploadToCloudinary", () => {
     errorSpy.mockRestore();
   });
 });
+
+describe("visual-identity model wiring (IPI-358 A6 — Groq cutover guard)", () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://test.supabase.co");
+    vi.stubEnv("SUPABASE_SERVICE_ROLE_KEY", "test-key");
+    vi.stubEnv("GEMINI_API_KEY", "test-gemini-key");
+  });
+
+  it("does not throw when AI_PROVIDER=groq and GROQ_MODEL_VISION/GROQ_API_KEY are both unset", async () => {
+    // If visual-identity.ts ever regresses to a bare resolveModel() (no "vision" tier),
+    // this would attempt the Groq path and throw "GROQ_API_KEY is required" at import time.
+    vi.stubEnv("AI_PROVIDER", "groq");
+    vi.resetModules();
+    await expect(import("./visual-identity")).resolves.toBeDefined();
+  });
+});

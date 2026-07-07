@@ -7,7 +7,7 @@ import { agentTools } from "@/mastra/tools";
 export const crmAssistantAgent = new Agent({
   id: "crm-assistant",
   name: "CRM Assistant",
-  model: resolveModel(),
+  model: resolveModel("default"),
   tools: {
     searchCompanies: agentTools.searchCompanies,
     searchContacts: agentTools.searchContacts,
