@@ -1,7 +1,11 @@
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 
 import {
   assertGroqTierCapabilities,
+  findGroqModelsConfigPath,
   getGroqModelEntry,
   loadGroqModelsConfig,
   resolveAiProvider,
@@ -73,6 +77,38 @@ describe("AI provider (GROQ-002 / GROQ-004)", () => {
     const disk = loadGroqModelsConfig();
     expect(getGroqModelEntry(disk.defaults.default)).toBeDefined();
     expect(disk.models.length).toBeGreaterThan(0);
+  });
+
+  describe("findGroqModelsConfigPath (IPI-428 followup — mastra dev ENOENT)", () => {
+    it("finds the repo-root config regardless of how deep the caller's directory is nested", () => {
+      // Reproduces the original bug: app/src/lib/ai/ (4 levels under repo root)
+      // and Mastra's bundled app/.mastra/output/ (3 levels under repo root) must
+      // both resolve to the same file — a fixed "../../../.." depth broke the
+      // shallower one.
+      const fourLevelsDeep = join(process.cwd(), "src", "lib", "ai");
+      const threeLevelsDeep = join(process.cwd(), ".mastra", "output");
+      const expected = join(process.cwd(), "..", "config", "groq-models.json");
+      expect(findGroqModelsConfigPath(fourLevelsDeep)).toBe(expected);
+      expect(findGroqModelsConfigPath(threeLevelsDeep)).toBe(expected);
+    });
+
+    it("finds the repo config from an arbitrary tmp directory structure at any depth", () => {
+      const root = mkdtempSync(join(tmpdir(), "groq-path-test-"));
+      try {
+        const fakeConfigDir = join(root, "config");
+        mkdirSync(fakeConfigDir, { recursive: true });
+        writeFileSync(join(fakeConfigDir, "groq-models.json"), "{}");
+
+        const shallow = join(root, "app", "src");
+        const deep = join(root, "app", ".mastra", "output", "nested", "extra");
+        mkdirSync(deep, { recursive: true });
+
+        expect(findGroqModelsConfigPath(shallow)).toBe(join(fakeConfigDir, "groq-models.json"));
+        expect(findGroqModelsConfigPath(deep)).toBe(join(fakeConfigDir, "groq-models.json"));
+      } finally {
+        rmSync(root, { recursive: true, force: true });
+      }
+    });
   });
 
   it("resolveModel uses Gemini when AI_PROVIDER=gemini", () => {
