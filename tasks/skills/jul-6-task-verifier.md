@@ -64,7 +64,7 @@ bash .claude/skills/task-verifier/scripts/probe-disk-ipix.sh supabase   # if DB/
 
 | Step | Check | Pass |
 |------|-------|:----:|
-| Detect type | IPI / SCR / RF / BE / MOB / Audit | ☐ |
+| Detect type | IPI / SCR / RF / Audit | ☐ |
 | Open router doc | [task-type-router-ipix.md](../../.claude/skills/task-verifier/references/task-type-router-ipix.md) | ☐ |
 | Apply correct template | Not §1–10 on SCR | ☐ |
 
@@ -83,8 +83,8 @@ bash .claude/skills/task-verifier/scripts/probe-disk-ipix.sh supabase   # if DB/
 | Artifacts exist | `ls` / `rg` on changed paths | ☐ |
 | Operator verify | `cd app && npm run lint && npm run typecheck && npm test` | ☐ |
 | Build (if needed) | `cd app && npm run build` | ☐ |
-| Supabase (if needed) | `infisical run -- npm run supabase:verify-rls` | ☐ |
-| No client secrets | `rg GEMINI_API_KEY app/src` → 0 | ☐ |
+| Supabase (if needed) | `infisical run -- npm run supabase:verify-rls && infisical run -- npm run supabase:verify-edge` | ☐ |
+| No client secrets | `rg "GEMINI_API_KEY|SERVICE_ROLE|GROQ_API_KEY|ANON_KEY" app/src` → 0 | ☐ |
 
 ### 4. Skills compliance (Phase 5b) — **new**
 
