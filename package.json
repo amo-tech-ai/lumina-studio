@@ -22,7 +22,10 @@
     "supabase:verify-edge-groq": "cd supabase/functions && deno test --allow-env _shared/bi-groq-guards.test.ts _shared/llm/llm.test.ts _shared/llm/structured.test.ts brand-intelligence/handler.test.ts audit-asset-dna/handler.test.ts",
     "seed:sample-brand": "node scripts/seed-sample-brand.mjs",
     "worktree:audit": "node scripts/worktree-audit.mjs",
-    "worktree:add": "node scripts/worktree-add.mjs"
+    "worktree:add": "node scripts/worktree-add.mjs",
+    "worktree:health": "node scripts/worktree-health.mjs",
+    "worktree:health:all": "node scripts/worktree-health.mjs --all",
+    "worktree:health:test": "node --test scripts/lib/worktree-health-checks.test.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.108.2"
