@@ -1,0 +1,80 @@
+/* Generic activity timeline — icon-circle + line pattern, mirrors
+   shoot-detail.module.css's .activityRow but with a per-type icon instead of
+   a plain dot. Tokens only, per tokens.css — no hardcoded hex. */
+
+.timeline {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.row {
+  display: flex;
+  gap: 13px;
+}
+
+.dotCol {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.iconCircle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: var(--radius-pill);
+  background: var(--color-bg-muted);
+  color: var(--color-text-secondary);
+  margin-top: 2px;
+}
+
+.line {
+  flex: 1;
+  width: 2px;
+  background: var(--color-border-subtle);
+  margin: 4px 0;
+}
+
+.body {
+  padding-bottom: 16px;
+  min-width: 0;
+}
+
+.meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.typeLabel {
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.taskState {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+}
+
+.text {
+  margin: 4px 0 0;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-primary);
+  line-height: 1.45;
+}
+
+.time {
+  display: block;
+  margin-top: 2px;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+}
