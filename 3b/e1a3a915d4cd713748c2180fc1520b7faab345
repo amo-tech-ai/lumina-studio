@@ -1,0 +1,24 @@
+app/src/components/ui/entity-list.tsx
+  s_fb6d75e0972fb7::t_f7e28ced2bc1bc 16,29-36
+  s_fb6d75e0972fb7::t_f69099308d9e8c 37
+app/src/components/ui/entity-list.test.tsx
+  s_fb6d75e0972fb7::t_63d93e5d92ca60 43
+  s_fb6d75e0972fb7::t_e850e7ef82ef1d 56,58
+  s_fb6d75e0972fb7::t_91ff2fd21f9a52 94-95
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "3be1a3a915d4cd713748c2180fc1520b7faab345",
+  "prompts": {},
+  "sessions": {
+    "s_fb6d75e0972fb7": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "482ba906-0d79-473d-87a7-390cf354e015",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
