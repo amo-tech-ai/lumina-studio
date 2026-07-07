@@ -11,7 +11,8 @@ export function CrmListLoading() {
       <Skeleton className={styles.count} />
       <Skeleton className={styles.search} />
       <div className={styles.rows}>
-        {Array.from({ length: 6 }, (_, i) => (
+        {/* 7 rows — matches SCR-26/28's own skeletonRows spec (hint-placeholder-count="7") */}
+        {Array.from({ length: 7 }, (_, i) => (
           <Skeleton key={i} className={styles.row} />
         ))}
       </div>
