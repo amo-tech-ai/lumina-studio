@@ -160,14 +160,20 @@ function main() {
     console.error("⚠️  git fetch origin failed (offline?) — treating every checked worktree as unsafe.");
   }
 
-  const targets = ALL
-    ? parseWorktreeListPorcelain(git(["worktree", "list", "--porcelain"], process.cwd()))
-    : [
-        {
-          path: git(["rev-parse", "--show-toplevel"], process.cwd()),
-          branch: tryGit(["branch", "--show-current"], process.cwd()),
-        },
-      ];
+  let targets;
+  try {
+    targets = ALL
+      ? parseWorktreeListPorcelain(git(["worktree", "list", "--porcelain"], process.cwd()))
+      : [
+          {
+            path: git(["rev-parse", "--show-toplevel"], process.cwd()),
+            branch: tryGit(["branch", "--show-current"], process.cwd()),
+          },
+        ];
+  } catch (err) {
+    console.error(`❌ couldn't resolve worktree(s) to check: ${err.message}`);
+    process.exit(1);
+  }
 
   const results = targets.map((t) => checkWorktree(t.path, t.branch, fetchFailed));
   const anyBlocked = results.some((r) => !r.safe);
