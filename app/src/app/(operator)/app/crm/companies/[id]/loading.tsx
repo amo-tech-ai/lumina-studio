@@ -1,5 +1,5 @@
 import { Skeleton } from "@/components/ui/skeleton";
-import styles from "@/components/crm/company-detail-workspace.module.css";
+import styles from "@/components/crm/crm-detail-shell.module.css";
 
 /** Route-level loading.tsx — shown while getCompanyDetail's fetch is in
  *  flight. Shape mirrors the real header (avatar/name/tabs) + row list. */
