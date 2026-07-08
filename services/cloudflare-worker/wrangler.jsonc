@@ -1,0 +1,17 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "ai-gateway",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-03-10",
+  "observability": {
+    "enabled": true
+  },
+  "upload_source_maps": true,
+  "compatibility_flags": ["nodejs_compat"],
+  "vars": {
+    "MODEL_REGISTRY_OVERRIDE": ""
+  },
+  // "kv_namespaces": [
+  //   { "binding": "AI_MODEL_REGISTRY", "id": "", "preview_id": "" }
+  // ]
+}

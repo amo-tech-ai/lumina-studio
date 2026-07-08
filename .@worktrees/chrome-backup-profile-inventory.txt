@@ -1,0 +1,1639 @@
+/home/sk/.config/google-chrome.backup/Default:
+total 1068
+drwx------ 36 sk sk   4096 Mar 28 22:04 .
+drwx------ 57 sk sk   4096 Jun  8 10:21 ..
+-rw-------  1 sk sk  77824 Mar 28 22:04 Account Web Data
+-rw-------  1 sk sk      0 Mar 28 22:04 Account Web Data-journal
+-rw-------  1 sk sk  53248 Mar 28 22:04 Affiliation Database
+-rw-------  1 sk sk      0 Mar 28 22:04 Affiliation Database-journal
+drwx------  2 sk sk   4096 Mar 28 22:04 AutofillAiModelCache
+drwx------  2 sk sk   4096 Mar 28 22:04 AutofillStrikeDatabase
+drwx------  3 sk sk   4096 Mar 28 22:04 blob_storage
+-rw-------  1 sk sk      4 Mar 28 22:04 BookmarkMergedSurfaceOrdering
+-rw-------  1 sk sk  28672 Mar 28 22:04 BrowsingTopicsSiteData
+-rw-------  1 sk sk      0 Mar 28 22:04 BrowsingTopicsSiteData-journal
+-rw-------  1 sk sk    402 Mar 28 22:04 BrowsingTopicsState
+drwx------  2 sk sk   4096 Mar 28 22:04 BudgetDatabase
+drwx------  2 sk sk   4096 Mar 28 22:04 chrome_cart_db
+drwx------  2 sk sk   4096 Mar 28 22:04 ClientCertificates
+drwx------  2 sk sk   4096 Mar 28 22:04 commerce_subscription_db
+-rw-------  1 sk sk  20480 Mar 28 22:04 Cookies
+-rw-------  1 sk sk      0 Mar 28 22:04 Cookies-journal
+drwx------  2 sk sk   4096 Mar 28 22:04 DawnGraphiteCache
+drwx------  2 sk sk   4096 Mar 28 22:04 DawnWebGPUCache
+-rw-------  1 sk sk  36864 Mar 28 22:04 DIPS
+drwx------  2 sk sk   4096 Mar 28 22:04 discount_infos_db
+drwx------  2 sk sk   4096 Mar 28 22:04 discounts_db
+drwx------  2 sk sk   4096 Mar 28 22:04 Extension Rules
+drwx------  5 sk sk   4096 Mar 28 22:04 Extensions
+drwx------  2 sk sk   4096 Mar 28 22:04 Extension Scripts
+drwx------  2 sk sk   4096 Mar 28 22:04 Extension State
+-rw-------  1 sk sk  20480 Mar 28 22:04 Favicons
+-rw-------  1 sk sk      0 Mar 28 22:04 Favicons-journal
+drwx------  4 sk sk   4096 Mar 28 22:04 Feature Engagement Tracker
+drwx------  3 sk sk   4096 Mar 28 22:04 GCM Store
+drwx------  2 sk sk   4096 Mar 28 22:04 GPUCache
+-rw-------  1 sk sk  16384 Mar 28 22:04 heavy_ad_intervention_opt_out.db
+-rw-------  1 sk sk      0 Mar 28 22:04 heavy_ad_intervention_opt_out.db-journal
+-rw-------  1 sk sk 163840 Mar 28 22:04 History
+-rw-------  1 sk sk      0 Mar 28 22:04 History-journal
+drwx------  3 sk sk   4096 Mar 28 22:04 Local Extension Settings
+drwx------  3 sk sk   4096 Mar 28 22:04 Local Storage
+-rw-------  1 sk sk      0 Mar 28 22:04 LOCK
+-rw-------  1 sk sk      0 Mar 28 22:04 LOG
+-rw-------  1 sk sk  40960 Mar 28 22:04 Login Data
+-rw-------  1 sk sk  40960 Mar 28 22:04 Login Data For Account
+-rw-------  1 sk sk      0 Mar 28 22:04 Login Data For Account-journal
+-rw-------  1 sk sk      0 Mar 28 22:04 Login Data-journal
+-rw-------  1 sk sk  53248 Mar 28 22:04 Network Action Predictor
+-rw-------  1 sk sk      0 Mar 28 22:04 Network Action Predictor-journal
+-rw-------  1 sk sk   2970 Mar 28 22:04 Network Persistent State
+drwx------  2 sk sk   4096 Mar 28 22:04 optimization_guide_hint_cache_store
+drwx------  2 sk sk   4096 Mar 28 22:04 parcel_tracking_db
+drwx------  2 sk sk   4096 Mar 28 22:04 PersistentOriginTrials
+-rw-------  1 sk sk  32440 Mar 28 22:04 Preferences
+-rw-rw-r--  1 sk sk     33 Mar 28 22:04 PreferredApps
+-rw-rw-r--  1 sk sk    180 Mar 28 22:04 README
+-rw-------  1 sk sk  36864 Mar 28 22:04 Reporting and NEL
+-rw-------  1 sk sk      0 Mar 28 22:04 Reporting and NEL-journal
+-rw-------  1 sk sk  20480 Mar 28 22:04 Safe Browsing Cookies
+-rw-------  1 sk sk      0 Mar 28 22:04 Safe Browsing Cookies-journal
+-rw-------  1 sk sk     95 Mar 28 22:04 Secure Preferences
+drwx------  5 sk sk   4096 Mar 28 22:04 Segmentation Platform
+-rw-------  1 sk sk  20480 Mar 28 22:04 ServerCertificate
+-rw-------  1 sk sk      0 Mar 28 22:04 ServerCertificate-journal
+drwx------  4 sk sk   4096 Mar 28 22:04 Service Worker
+drwx------  2 sk sk   4096 Mar 28 22:04 Sessions
+drwx------  2 sk sk   4096 Mar 28 22:04 Session Storage
+drwx------  3 sk sk   4096 Mar 28 22:04 Shared Dictionary
+drwx------  3 sk sk   4096 Mar 28 22:04 shared_proto_db
+-rw-------  1 sk sk   4096 Mar 28 22:04 SharedStorage
+-rw-------  1 sk sk  20480 Mar 28 22:04 Shortcuts
+-rw-------  1 sk sk      0 Mar 28 22:04 Shortcuts-journal
+drwx------  2 sk sk   4096 Mar 28 22:04 Site Characteristics Database
+drwx------  3 sk sk   4096 Mar 28 22:04 Storage
+drwx------  3 sk sk   4096 Mar 28 22:04 Sync Data
+-rw-------  1 sk sk  20480 Mar 28 22:04 Top Sites
+-rw-------  1 sk sk      0 Mar 28 22:04 Top Sites-journal
+-rw-------  1 sk sk   2537 Mar 28 22:04 Translate Ranker Model
+-rw-------  1 sk sk    521 Mar 28 22:04 TransportSecurity
+-rw-------  1 sk sk     84 Mar 28 22:04 trusted_vault.pb
+-rw-------  1 sk sk  36864 Mar 28 22:04 Trust Tokens
+-rw-------  1 sk sk      0 Mar 28 22:04 Trust Tokens-journal
+drwx------  4 sk sk   4096 Mar 28 22:04 Web Applications
+-rw-------  1 sk sk 157696 Mar 28 22:04 Web Data
+-rw-------  1 sk sk      0 Mar 28 22:04 Web Data-journal
+drwx------  2 sk sk   4096 Mar 28 22:04 WebStorage
+
+/home/sk/.config/google-chrome.backup/Profile 1:
+total 35048
+drwx------  50 sk sk     4096 Jun  4 04:02 .
+drwx------  57 sk sk     4096 Jun  8 10:21 ..
+-rw-------   1 sk sk     3194 Mar 31 00:01 AccountBookmarks
+drwx------   3 sk sk     4096 Mar 28 22:29 Accounts
+-rw-------   1 sk sk    77824 Jun  4 03:49 Account Web Data
+-rw-------   1 sk sk        0 Jun  4 03:49 Account Web Data-journal
+-rw-------   1 sk sk   106496 Jun  4 02:03 Affiliation Database
+-rw-------   1 sk sk        0 Jun  4 02:03 Affiliation Database-journal
+drwx------   2 sk sk     4096 Jun  4 03:48 AutofillAiModelCache
+drwx------   2 sk sk     4096 Jun  4 03:48 AutofillStrikeDatabase
+drwx------   3 sk sk     4096 Jun  4 03:48 blob_storage
+-rw-------   1 sk sk        4 Jun  4 03:48 BookmarkMergedSurfaceOrdering
+-rw-------   1 sk sk    28672 Mar 28 22:29 BrowsingTopicsSiteData
+-rw-------   1 sk sk        0 Mar 28 22:29 BrowsingTopicsSiteData-journal
+-rw-------   1 sk sk      858 Jun  4 03:49 BrowsingTopicsState
+drwx------   2 sk sk     4096 Jun  4 03:48 BudgetDatabase
+-rw-------   1 sk sk   163840 May  7 22:17 CdmStorage.db
+-rw-------   1 sk sk        0 May  7 22:17 CdmStorage.db-journal
+drwx------   2 sk sk     4096 Jun  4 03:48 chrome_cart_db
+drwx------   2 sk sk     4096 Jun  4 03:48 ClientCertificates
+drwx------   2 sk sk     4096 Mar 28 22:29 Collaboration
+-rw-------   1 sk sk   143546 Apr  7 02:05 .com.google.Chrome.f831bN
+drwx------   2 sk sk     4096 Jun  4 03:48 commerce_subscription_db
+-rw-------   1 sk sk  2686976 Jun  4 03:49 Cookies
+-rw-------   1 sk sk        0 Jun  4 03:49 Cookies-journal
+drwx------   2 sk sk     4096 Mar 28 22:29 DataSharing
+drwx------   2 sk sk     4096 Apr 22 22:14 DawnGraphiteCache
+drwx------   2 sk sk     4096 Apr 22 22:14 DawnWebGPUCache
+-rw-------   1 sk sk    65536 May 25 08:59 DIPS
+-rw-------   1 sk sk   712792 Jun  4 04:03 DIPS-wal
+drwx------   2 sk sk     4096 Jun  4 03:48 discount_infos_db
+drwx------   2 sk sk     4096 Jun  4 03:48 discounts_db
+drwx------   3 sk sk     4096 Mar 28 22:30 DNR Extension Rules
+-rw-------   1 sk sk     1073 May 10 03:39 DownloadMetadata
+drwx------   4 sk sk     4096 Mar 28 22:29 Download Service
+-rw-------   1 sk sk    20480 May  8 03:59 Extension Cookies
+-rw-------   1 sk sk        0 May  8 03:59 Extension Cookies-journal
+drwx------   2 sk sk     4096 Jun  4 03:48 Extension Rules
+drwx------  21 sk sk     4096 Jun  4 02:03 Extensions
+drwx------   3 sk sk     4096 Jun  4 03:48 Extension Scripts
+drwx------   3 sk sk     4096 Jun  4 03:48 Extension State
+-rw-------   1 sk sk  9601024 Jun  4 02:04 Favicons
+-rw-------   1 sk sk        0 Jun  4 02:04 Favicons-journal
+drwx------   4 sk sk     4096 Mar 28 22:30 Feature Engagement Tracker
+drwx------  15 sk sk     4096 May 11 16:14 File System
+drwx------   3 sk sk     4096 Jun  4 03:48 GCM Store
+-rw-rw-r--   1 sk sk     4139 Mar 28 22:29 Google Profile Picture.png
+drwx------   2 sk sk     4096 Apr 30 14:32 GPUCache
+-rw-------   1 sk sk    16384 Mar 28 22:29 heavy_ad_intervention_opt_out.db
+-rw-------   1 sk sk        0 Mar 28 22:29 heavy_ad_intervention_opt_out.db-journal
+-rw-------   1 sk sk 17924096 Jun  4 02:04 History
+-rw-------   1 sk sk     8720 Jun  4 03:49 History-journal
+drwx------ 181 sk sk    20480 May 14 15:09 IndexedDB
+-rw-------   1 sk sk   126976 May 12 07:28 InterestGroups
+drwx------  19 sk sk     4096 May 11 19:06 Local Extension Settings
+drwx------   3 sk sk     4096 Mar 28 21:17 Local Storage
+-rw-------   1 sk sk        0 Mar 28 22:29 LOCK
+-rw-------   1 sk sk        0 Jun  4 03:48 LOG
+-rw-------   1 sk sk    40960 May 11 16:14 Login Data
+-rw-------   1 sk sk    57344 Jun  4 03:49 Login Data For Account
+-rw-------   1 sk sk        0 Jun  4 03:49 Login Data For Account-journal
+-rw-------   1 sk sk        0 May 11 16:14 Login Data-journal
+-rw-------   1 sk sk        0 Jun  4 02:03 LOG.old
+drwx------  13 sk sk     4096 May 11 19:06 Managed Extension Settings
+-rw-------   1 sk sk    45056 May 10 09:16 MediaDeviceSalts
+-rw-------   1 sk sk        0 May 10 09:16 MediaDeviceSalts-journal
+-rw-------   1 sk sk   688128 Jun  4 02:04 Network Action Predictor
+-rw-------   1 sk sk        0 Jun  4 02:04 Network Action Predictor-journal
+-rw-------   1 sk sk   112098 Jun  4 04:02 Network Persistent State
+drwx------   2 sk sk     4096 Jun  4 03:48 optimization_guide_hint_cache_store
+drwx------   2 sk sk     4096 Jun  4 03:48 parcel_tracking_db
+-rw-------   1 sk sk       67 May  7 05:55 passkey_enclave_state
+drwx------   2 sk sk     4096 Jun  4 03:48 PersistentOriginTrials
+drwx------   2 sk sk     4096 Jun  4 03:48 Platform Notifications
+drwx------   2 sk sk     4096 Mar 31 00:01 Policy
+-rw-------   1 sk sk   506985 Jun  4 03:56 Preferences
+-rw-rw-r--   1 sk sk       33 Mar 28 22:29 PreferredApps
+-rw-------   1 sk sk    20480 Mar 28 21:20 PrivateAggregation
+-rw-------   1 sk sk        0 Mar 28 21:20 PrivateAggregation-journal
+-rw-rw-r--   1 sk sk      180 Apr  8 12:21 README
+-rw-------   1 sk sk  1310720 Jun  4 03:49 Reporting and NEL
+-rw-------   1 sk sk        0 Jun  4 03:49 Reporting and NEL-journal
+-rw-------   1 sk sk    20480 Jun  4 02:04 Safe Browsing Cookies
+-rw-------   1 sk sk        0 Jun  4 02:04 Safe Browsing Cookies-journal
+-rw-------   1 sk sk        2 May 11 16:15 SCT Auditing Pending Reports
+-rw-------   1 sk sk       95 Jun  4 03:49 Secure Preferences
+drwx------   5 sk sk     4096 Mar 28 22:29 Segmentation Platform
+-rw-------   1 sk sk    20480 Mar 28 22:29 ServerCertificate
+-rw-------   1 sk sk        0 Mar 28 22:29 ServerCertificate-journal
+drwx------   5 sk sk     4096 Mar 28 23:09 Service Worker
+drwx------   2 sk sk     4096 Jun  4 02:04 Sessions
+drwx------   2 sk sk     4096 Jun  4 02:03 Session Storage
+drwx------   3 sk sk     4096 Mar 28 22:29 Shared Dictionary
+drwx------   3 sk sk     4096 Jun  4 03:48 shared_proto_db
+-rw-------   1 sk sk     4096 Mar 28 22:29 SharedStorage
+-rw-------   1 sk sk        0 May 25 09:15 SharedStorage-wal
+-rw-------   1 sk sk   196608 May 25 10:24 Shortcuts
+-rw-------   1 sk sk        0 May 25 10:24 Shortcuts-journal
+drwx------   2 sk sk     4096 Jun  4 03:48 Site Characteristics Database
+drwx------   2 sk sk     4096 Apr  4 02:22 Sync App Settings
+drwx------   3 sk sk     4096 Jun  4 03:49 Sync Data
+drwx------  15 sk sk     4096 May 11 19:06 Sync Extension Settings
+-rw-------   1 sk sk    36864 Jun  4 02:03 Top Sites
+-rw-------   1 sk sk        0 Jun  4 02:03 Top Sites-journal
+-rw-------   1 sk sk     2537 Mar 28 22:29 Translate Ranker Model
+-rw-------   1 sk sk   581885 Jun  4 03:58 TransportSecurity
+-rw-------   1 sk sk      173 Jun  4 03:48 trusted_vault.pb
+-rw-------   1 sk sk    36864 May 11 16:14 Trust Tokens
+-rw-------   1 sk sk        0 May 11 16:14 Trust Tokens-journal
+drwx------   2 sk sk     4096 Jun  4 02:04 VideoDecodeStats
+drwx------   4 sk sk     4096 Mar 28 22:29 Web Applications
+-rw-------   1 sk sk   196608 Jun  4 03:49 Web Data
+-rw-------   1 sk sk        0 Jun  4 03:49 Web Data-journal
+drwx------   2 sk sk     4096 Apr  1 09:45 webrtc_event_logs
+drwx------   2 sk sk     4096 May  7 05:57 WebrtcVideoStats
+drwx------ 100 sk sk     4096 May 14 15:11 WebStorage
+
+/home/sk/.config/google-chrome.backup/Profile 13:
+total 1072
+drwx------ 36 sk sk   4096 Mar 28 22:23 .
+drwx------ 57 sk sk   4096 Jun  8 10:21 ..
+-rw-------  1 sk sk  77824 Mar 28 22:23 Account Web Data
+-rw-------  1 sk sk      0 Mar 28 22:23 Account Web Data-journal
+-rw-------  1 sk sk  53248 Mar 28 22:23 Affiliation Database
+-rw-------  1 sk sk      0 Mar 28 22:23 Affiliation Database-journal
+drwx------  2 sk sk   4096 Mar 28 22:23 AutofillAiModelCache
+drwx------  2 sk sk   4096 Mar 28 22:23 AutofillStrikeDatabase
+drwx------  3 sk sk   4096 Mar 28 22:23 blob_storage
+-rw-------  1 sk sk      4 Mar 28 22:23 BookmarkMergedSurfaceOrdering
+-rw-------  1 sk sk  28672 Mar 28 22:23 BrowsingTopicsSiteData
+-rw-------  1 sk sk      0 Mar 28 22:23 BrowsingTopicsSiteData-journal
+-rw-------  1 sk sk    402 Mar 28 22:23 BrowsingTopicsState
+drwx------  2 sk sk   4096 Mar 28 22:23 BudgetDatabase
+drwx------  2 sk sk   4096 Mar 28 22:23 chrome_cart_db
+drwx------  2 sk sk   4096 Mar 28 22:23 ClientCertificates
+drwx------  2 sk sk   4096 Mar 28 22:23 commerce_subscription_db
+-rw-------  1 sk sk  20480 Mar 28 22:23 Cookies
+-rw-------  1 sk sk      0 Mar 28 22:23 Cookies-journal
+drwx------  2 sk sk   4096 Mar 28 22:23 DawnGraphiteCache
+drwx------  2 sk sk   4096 Mar 28 22:23 DawnWebGPUCache
+-rw-------  1 sk sk  36864 Mar 28 22:23 DIPS
+drwx------  2 sk sk   4096 Mar 28 22:23 discount_infos_db
+drwx------  2 sk sk   4096 Mar 28 22:23 discounts_db
+drwx------  2 sk sk   4096 Mar 28 22:23 Extension Rules
+drwx------  5 sk sk   4096 Mar 28 22:23 Extensions
+drwx------  2 sk sk   4096 Mar 28 22:23 Extension Scripts
+drwx------  2 sk sk   4096 Mar 28 22:23 Extension State
+-rw-------  1 sk sk  20480 Mar 28 22:23 Favicons
+-rw-------  1 sk sk      0 Mar 28 22:23 Favicons-journal
+drwx------  4 sk sk   4096 Mar 28 22:23 Feature Engagement Tracker
+drwx------  3 sk sk   4096 Mar 28 22:23 GCM Store
+drwx------  2 sk sk   4096 Mar 28 22:23 GPUCache
+-rw-------  1 sk sk  16384 Mar 28 22:23 heavy_ad_intervention_opt_out.db
+-rw-------  1 sk sk      0 Mar 28 22:23 heavy_ad_intervention_opt_out.db-journal
+-rw-------  1 sk sk 163840 Mar 28 22:23 History
+-rw-------  1 sk sk      0 Mar 28 22:23 History-journal
+drwx------  3 sk sk   4096 Mar 28 22:23 Local Extension Settings
+drwx------  3 sk sk   4096 Mar 28 22:23 Local Storage
+-rw-------  1 sk sk      0 Mar 28 22:23 LOCK
+-rw-------  1 sk sk      0 Mar 28 22:23 LOG
+-rw-------  1 sk sk  40960 Mar 28 22:23 Login Data
+-rw-------  1 sk sk  40960 Mar 28 22:23 Login Data For Account
+-rw-------  1 sk sk      0 Mar 28 22:23 Login Data For Account-journal
+-rw-------  1 sk sk      0 Mar 28 22:23 Login Data-journal
+-rw-------  1 sk sk  53248 Mar 28 22:23 Network Action Predictor
+-rw-------  1 sk sk      0 Mar 28 22:23 Network Action Predictor-journal
+-rw-------  1 sk sk   2971 Mar 28 22:23 Network Persistent State
+drwx------  2 sk sk   4096 Mar 28 22:23 optimization_guide_hint_cache_store
+drwx------  2 sk sk   4096 Mar 28 22:23 parcel_tracking_db
+drwx------  2 sk sk   4096 Mar 28 22:23 PersistentOriginTrials
+-rw-------  1 sk sk  34001 Mar 28 22:23 Preferences
+-rw-rw-r--  1 sk sk     33 Mar 28 22:23 PreferredApps
+-rw-rw-r--  1 sk sk    180 Mar 28 22:23 README
+-rw-------  1 sk sk  36864 Mar 28 22:23 Reporting and NEL
+-rw-------  1 sk sk      0 Mar 28 22:23 Reporting and NEL-journal
+-rw-------  1 sk sk  20480 Mar 28 22:23 Safe Browsing Cookies
+-rw-------  1 sk sk      0 Mar 28 22:23 Safe Browsing Cookies-journal
+-rw-------  1 sk sk     95 Mar 28 22:23 Secure Preferences
+drwx------  5 sk sk   4096 Mar 28 22:23 Segmentation Platform
+-rw-------  1 sk sk  20480 Mar 28 22:23 ServerCertificate
+-rw-------  1 sk sk      0 Mar 28 22:23 ServerCertificate-journal
+drwx------  4 sk sk   4096 Mar 28 22:23 Service Worker
+drwx------  2 sk sk   4096 Mar 28 22:23 Sessions
+drwx------  2 sk sk   4096 Mar 28 22:23 Session Storage
+drwx------  3 sk sk   4096 Mar 28 22:23 Shared Dictionary
+drwx------  3 sk sk   4096 Mar 28 22:23 shared_proto_db
+-rw-------  1 sk sk   4096 Mar 28 22:23 SharedStorage
+-rw-------  1 sk sk  20480 Mar 28 22:23 Shortcuts
+-rw-------  1 sk sk      0 Mar 28 22:23 Shortcuts-journal
+drwx------  2 sk sk   4096 Mar 28 22:23 Site Characteristics Database
+drwx------  3 sk sk   4096 Mar 28 22:23 Storage
+drwx------  3 sk sk   4096 Mar 28 22:23 Sync Data
+-rw-------  1 sk sk  20480 Mar 28 22:23 Top Sites
+-rw-------  1 sk sk      0 Mar 28 22:23 Top Sites-journal
+-rw-------  1 sk sk   2537 Mar 28 22:23 Translate Ranker Model
+-rw-------  1 sk sk    523 Mar 28 22:23 TransportSecurity
+-rw-------  1 sk sk     84 Mar 28 22:23 trusted_vault.pb
+-rw-------  1 sk sk  36864 Mar 28 22:23 Trust Tokens
+-rw-------  1 sk sk      0 Mar 28 22:23 Trust Tokens-journal
+drwx------  4 sk sk   4096 Mar 28 22:23 Web Applications
+-rw-------  1 sk sk 157696 Mar 28 22:23 Web Data
+-rw-------  1 sk sk      0 Mar 28 22:23 Web Data-journal
+drwx------  2 sk sk   4096 Mar 28 22:23 WebStorage
+
+/home/sk/.config/google-chrome.backup/Profile 14:
+total 4904
+drwx------ 47 sk sk    4096 Jun  8 01:27 .
+drwx------ 57 sk sk    4096 Jun  8 10:21 ..
+drwx------  3 sk sk    4096 Mar 28 22:04 Accounts
+-rw-------  1 sk sk   77824 Jun  4 02:03 Account Web Data
+-rw-------  1 sk sk       0 Jun  4 02:03 Account Web Data-journal
+-rw-------  1 sk sk  118784 Jun  7 15:13 Affiliation Database
+-rw-------  1 sk sk       0 Jun  7 15:13 Affiliation Database-journal
+drwx------  2 sk sk    4096 Jun  8 00:53 AutofillAiModelCache
+drwx------  2 sk sk    4096 Jun  8 00:53 AutofillStrikeDatabase
+drwx------  3 sk sk    4096 Jun  8 00:53 blob_storage
+-rw-------  1 sk sk       4 Jun  8 00:53 BookmarkMergedSurfaceOrdering
+-rw-------  1 sk sk    2158 Mar 28 22:04 Bookmarks
+-rw-------  1 sk sk   28672 Mar 28 22:04 BrowsingTopicsSiteData
+-rw-------  1 sk sk       0 Mar 28 22:04 BrowsingTopicsSiteData-journal
+-rw-------  1 sk sk     402 Jun  8 00:53 BrowsingTopicsState
+drwx------  2 sk sk    4096 Jun  8 00:53 BudgetDatabase
+drwx------  2 sk sk    4096 Jun  8 00:53 chrome_cart_db
+drwx------  2 sk sk    4096 Jun  8 00:53 ClientCertificates
+drwx------  2 sk sk    4096 Mar 28 22:29 Collaboration
+-rw-------  1 sk sk   94449 Jun  4 03:48 .com.google.Chrome.xZwPR3
+drwx------  2 sk sk    4096 Jun  8 00:53 commerce_subscription_db
+-rw-------  1 sk sk  163840 Jun  8 01:27 Cookies
+-rw-------  1 sk sk       0 Jun  8 01:27 Cookies-journal
+drwx------  2 sk sk    4096 Mar 28 22:29 DataSharing
+drwx------  2 sk sk    4096 Mar 28 22:04 DawnGraphiteCache
+drwx------  2 sk sk    4096 Mar 28 22:04 DawnWebGPUCache
+-rw-------  1 sk sk   36864 Jun  8 01:27 DIPS
+drwx------  2 sk sk    4096 Jun  8 00:53 discount_infos_db
+drwx------  2 sk sk    4096 Jun  8 00:53 discounts_db
+drwx------  3 sk sk    4096 Mar 28 22:04 DNR Extension Rules
+drwx------  4 sk sk    4096 Jun  4 04:05 Download Service
+-rw-rw-r--  1 sk sk     360 Jun  7 15:13 engine_allowlist.bf
+-rw-------  1 sk sk   20480 Apr  5 05:39 Extension Cookies
+-rw-------  1 sk sk       0 Apr  5 05:39 Extension Cookies-journal
+drwx------  2 sk sk    4096 Jun  7 19:04 Extension Rules
+drwx------ 20 sk sk    4096 Jun  4 02:03 Extensions
+drwx------  3 sk sk    4096 Jun  8 00:53 Extension Scripts
+drwx------  2 sk sk    4096 Jun  8 00:53 Extension State
+-rw-------  1 sk sk  884736 Jun  8 00:56 Favicons
+-rw-------  1 sk sk       0 Jun  8 00:56 Favicons-journal
+drwx------  4 sk sk    4096 Mar 28 22:04 Feature Engagement Tracker
+drwx------  5 sk sk    4096 Jun  4 03:13 File System
+drwx------  3 sk sk    4096 Jun  8 00:53 GCM Store
+-rw-rw-r--  1 sk sk    3888 Mar 28 22:04 Google Profile Picture.png
+drwx------  2 sk sk    4096 Mar 28 22:04 GPUCache
+-rw-------  1 sk sk   16384 Mar 28 22:04 heavy_ad_intervention_opt_out.db
+-rw-------  1 sk sk       0 Mar 28 22:04 heavy_ad_intervention_opt_out.db-journal
+-rw-------  1 sk sk 1835008 Jun  8 01:27 History
+-rw-------  1 sk sk       0 Jun  8 01:27 History-journal
+drwx------ 19 sk sk    4096 Jun  7 15:17 IndexedDB
+drwx------ 16 sk sk    4096 Jun  4 05:03 Local Extension Settings
+drwx------  3 sk sk    4096 Mar 28 22:04 Local Storage
+-rw-------  1 sk sk       0 Mar 28 22:04 LOCK
+-rw-------  1 sk sk       0 Jun  8 00:53 LOG
+-rw-------  1 sk sk   61440 Jun  8 00:56 Login Data
+-rw-------  1 sk sk   40960 Mar 28 22:04 Login Data For Account
+-rw-------  1 sk sk       0 Mar 28 22:04 Login Data For Account-journal
+-rw-------  1 sk sk       0 Jun  8 00:56 Login Data-journal
+-rw-------  1 sk sk       0 Jun  8 00:44 LOG.old
+-rw-------  1 sk sk   24576 Jun  4 03:46 MediaDeviceSalts
+-rw-------  1 sk sk       0 Jun  4 03:46 MediaDeviceSalts-journal
+-rw-------  1 sk sk  327680 Jun  8 00:44 Network Action Predictor
+-rw-------  1 sk sk       0 Jun  8 00:44 Network Action Predictor-journal
+-rw-------  1 sk sk   97456 Jun  8 01:27 Network Persistent State
+drwx------  2 sk sk    4096 Jun  8 00:53 optimization_guide_hint_cache_store
+drwx------  2 sk sk    4096 Jun  8 00:53 parcel_tracking_db
+-rw-------  1 sk sk      67 Apr  3 18:31 passkey_enclave_state
+drwx------  2 sk sk    4096 Jun  8 00:53 PersistentOriginTrials
+drwx------  2 sk sk    4096 Jun  8 00:53 Platform Notifications
+-rw-------  1 sk sk  161031 Jun  8 01:27 Preferences
+-rw-rw-r--  1 sk sk      33 Mar 28 22:04 PreferredApps
+-rw-rw-r--  1 sk sk     180 Mar 28 22:04 README
+-rw-------  1 sk sk  262144 Jun  8 01:24 Reporting and NEL
+-rw-------  1 sk sk       0 Jun  8 01:24 Reporting and NEL-journal
+-rw-------  1 sk sk   20480 Jun  8 00:57 Safe Browsing Cookies
+-rw-------  1 sk sk       0 Jun  8 00:57 Safe Browsing Cookies-journal
+-rw-------  1 sk sk      95 Jun  8 00:53 Secure Preferences
+drwx------  5 sk sk    4096 Mar 28 22:04 Segmentation Platform
+-rw-------  1 sk sk   20480 Mar 28 22:04 ServerCertificate
+-rw-------  1 sk sk       0 Mar 28 22:04 ServerCertificate-journal
+drwx------  5 sk sk    4096 Apr  3 18:28 Service Worker
+drwx------  2 sk sk    4096 Jun  8 01:04 Sessions
+drwx------  2 sk sk    4096 Jun  8 00:56 Session Storage
+drwx------  3 sk sk    4096 Mar 28 22:04 Shared Dictionary
+drwx------  3 sk sk    4096 Jun  8 00:53 shared_proto_db
+-rw-------  1 sk sk    4096 Mar 28 22:04 SharedStorage
+-rw-------  1 sk sk   32768 Jun  7 15:19 Shortcuts
+-rw-------  1 sk sk       0 Jun  7 15:19 Shortcuts-journal
+drwx------  2 sk sk    4096 Jun  8 00:53 Site Characteristics Database
+drwx------  3 sk sk    4096 Mar 28 22:04 Storage
+drwx------  3 sk sk    4096 Jun  8 00:56 Sync Data
+drwx------  6 sk sk    4096 Mar 28 22:04 Sync Extension Settings
+-rw-------  1 sk sk   24576 Jun  7 16:19 Top Sites
+-rw-------  1 sk sk       0 Jun  7 16:19 Top Sites-journal
+-rw-------  1 sk sk    2537 Mar 28 22:04 Translate Ranker Model
+-rw-------  1 sk sk   25075 Jun  8 01:27 TransportSecurity
+-rw-------  1 sk sk     172 Jun  8 00:53 trusted_vault.pb
+-rw-------  1 sk sk   36864 Mar 28 22:04 Trust Tokens
+-rw-------  1 sk sk       0 Mar 28 22:04 Trust Tokens-journal
+drwx------  2 sk sk    4096 Jun  7 19:05 VideoDecodeStats
+drwx------  4 sk sk    4096 Mar 28 22:04 Web Applications
+-rw-------  1 sk sk  327680 Jun  8 01:06 Web Data
+-rw-------  1 sk sk       0 Jun  8 01:06 Web Data-journal
+drwx------  2 sk sk    4096 Jun  8 00:44 WebrtcVideoStats
+drwx------  6 sk sk    4096 Apr  3 22:10 WebStorage
+
+/home/sk/.config/google-chrome.backup/Profile 15:
+total 1440
+drwx------ 43 sk sk   4096 Jun  6 04:30 .
+drwx------ 57 sk sk   4096 Jun  8 10:21 ..
+drwx------  3 sk sk   4096 Mar 28 22:23 Accounts
+-rw-------  1 sk sk  77824 Jun  6 04:30 Account Web Data
+-rw-------  1 sk sk      0 Jun  6 04:30 Account Web Data-journal
+-rw-------  1 sk sk  86016 Mar 29 19:23 Affiliation Database
+-rw-------  1 sk sk      0 Mar 29 19:23 Affiliation Database-journal
+drwx------  2 sk sk   4096 Jun  6 04:30 AutofillAiModelCache
+drwx------  2 sk sk   4096 Jun  6 04:30 AutofillStrikeDatabase
+drwx------  3 sk sk   4096 Jun  6 04:30 blob_storage
+-rw-------  1 sk sk      4 Jun  6 04:30 BookmarkMergedSurfaceOrdering
+-rw-------  1 sk sk   2014 Mar 28 22:23 Bookmarks
+-rw-------  1 sk sk  28672 Mar 28 22:23 BrowsingTopicsSiteData
+-rw-------  1 sk sk      0 Mar 28 22:23 BrowsingTopicsSiteData-journal
+-rw-------  1 sk sk    402 Jun  6 04:30 BrowsingTopicsState
+drwx------  2 sk sk   4096 Jun  6 04:30 BudgetDatabase
+drwx------  2 sk sk   4096 Jun  6 04:30 chrome_cart_db
+drwx------  2 sk sk   4096 Jun  6 04:30 ClientCertificates
+drwx------  2 sk sk   4096 Mar 28 22:29 Collaboration
+drwx------  2 sk sk   4096 Jun  6 04:30 commerce_subscription_db
+-rw-------  1 sk sk  53248 Jun  6 04:30 Cookies
+-rw-------  1 sk sk      0 Jun  6 04:30 Cookies-journal
+drwx------  2 sk sk   4096 Mar 28 22:29 DataSharing
+drwx------  2 sk sk   4096 Mar 28 22:23 DawnGraphiteCache
+drwx------  2 sk sk   4096 Mar 28 22:23 DawnWebGPUCache
+-rw-------  1 sk sk  36864 Jun  6 04:30 DIPS
+drwx------  2 sk sk   4096 Jun  6 04:30 discount_infos_db
+drwx------  2 sk sk   4096 Jun  6 04:30 discounts_db
+drwx------  4 sk sk   4096 Mar 29 18:49 Download Service
+drwx------  2 sk sk   4096 Jun  6 04:30 Extension Rules
+drwx------ 12 sk sk   4096 Jun  6 04:30 Extensions
+drwx------  2 sk sk   4096 Jun  6 04:30 Extension Scripts
+drwx------  2 sk sk   4096 Jun  6 04:30 Extension State
+-rw-------  1 sk sk  49152 Jun  6 04:30 Favicons
+-rw-------  1 sk sk      0 Jun  6 04:30 Favicons-journal
+drwx------  4 sk sk   4096 Mar 28 22:23 Feature Engagement Tracker
+drwx------  3 sk sk   4096 Jun  6 04:30 GCM Store
+-rw-rw-r--  1 sk sk   4250 Mar 28 22:23 Google Profile Picture.png
+drwx------  2 sk sk   4096 Mar 28 22:23 GPUCache
+-rw-------  1 sk sk  16384 Mar 28 22:23 heavy_ad_intervention_opt_out.db
+-rw-------  1 sk sk      0 Mar 28 22:23 heavy_ad_intervention_opt_out.db-journal
+-rw-------  1 sk sk 196608 Jun  6 04:30 History
+-rw-------  1 sk sk      0 Jun  6 04:30 History-journal
+drwx------  6 sk sk   4096 Mar 28 22:24 IndexedDB
+drwx------  8 sk sk   4096 Mar 28 22:23 Local Extension Settings
+drwx------  3 sk sk   4096 Mar 28 22:23 Local Storage
+-rw-------  1 sk sk      0 Mar 28 22:23 LOCK
+-rw-------  1 sk sk      0 Jun  6 04:30 LOG
+-rw-------  1 sk sk  40960 Jun  6 04:30 Login Data
+-rw-------  1 sk sk  40960 Mar 28 22:23 Login Data For Account
+-rw-------  1 sk sk      0 Mar 28 22:23 Login Data For Account-journal
+-rw-------  1 sk sk      0 Jun  6 04:30 Login Data-journal
+-rw-------  1 sk sk      0 Mar 29 18:49 LOG.old
+-rw-------  1 sk sk  24576 Mar 28 22:49 MediaDeviceSalts
+-rw-------  1 sk sk      0 Mar 28 22:49 MediaDeviceSalts-journal
+-rw-------  1 sk sk  65536 Jun  6 04:30 Network Action Predictor
+-rw-------  1 sk sk      0 Jun  6 04:30 Network Action Predictor-journal
+-rw-------  1 sk sk  16069 Jun  6 04:30 Network Persistent State
+drwx------  2 sk sk   4096 Jun  6 04:30 optimization_guide_hint_cache_store
+drwx------  2 sk sk   4096 Jun  6 04:30 parcel_tracking_db
+-rw-------  1 sk sk     67 Mar 29 18:53 passkey_enclave_state
+drwx------  2 sk sk   4096 Jun  6 04:30 PersistentOriginTrials
+-rw-------  1 sk sk 120008 Jun  6 04:30 Preferences
+-rw-rw-r--  1 sk sk     33 Mar 28 22:23 PreferredApps
+-rw-rw-r--  1 sk sk    180 Mar 28 22:23 README
+-rw-------  1 sk sk  53248 Jun  6 04:30 Reporting and NEL
+-rw-------  1 sk sk      0 Jun  6 04:30 Reporting and NEL-journal
+-rw-------  1 sk sk  20480 Mar 28 22:23 Safe Browsing Cookies
+-rw-------  1 sk sk      0 Mar 28 22:23 Safe Browsing Cookies-journal
+-rw-------  1 sk sk     95 Jun  6 04:30 Secure Preferences
+drwx------  5 sk sk   4096 Mar 28 22:23 Segmentation Platform
+-rw-------  1 sk sk  20480 Mar 28 22:23 ServerCertificate
+-rw-------  1 sk sk      0 Mar 28 22:23 ServerCertificate-journal
+drwx------  4 sk sk   4096 Mar 28 22:23 Service Worker
+drwx------  2 sk sk   4096 Jun  6 04:30 Sessions
+drwx------  2 sk sk   4096 Jun  6 04:30 Session Storage
+drwx------  3 sk sk   4096 Mar 28 22:23 Shared Dictionary
+drwx------  3 sk sk   4096 Jun  6 04:30 shared_proto_db
+-rw-------  1 sk sk   4096 Mar 28 22:23 SharedStorage
+-rw-------  1 sk sk      0 Mar 28 22:23 SharedStorage-wal
+-rw-------  1 sk sk  20480 Mar 28 22:48 Shortcuts
+-rw-------  1 sk sk      0 Mar 28 22:48 Shortcuts-journal
+drwx------  2 sk sk   4096 Jun  6 04:30 Site Characteristics Database
+drwx------  3 sk sk   4096 Mar 28 22:23 Storage
+drwx------  3 sk sk   4096 Mar 29 18:50 Sync Data
+drwx------  4 sk sk   4096 Mar 28 22:23 Sync Extension Settings
+-rw-------  1 sk sk  20480 Mar 28 22:48 Top Sites
+-rw-------  1 sk sk      0 Mar 28 22:48 Top Sites-journal
+-rw-------  1 sk sk   2537 Mar 28 22:23 Translate Ranker Model
+-rw-------  1 sk sk   6705 Jun  6 04:30 TransportSecurity
+-rw-------  1 sk sk    172 Jun  6 04:30 trusted_vault.pb
+-rw-------  1 sk sk  36864 Mar 28 22:23 Trust Tokens
+-rw-------  1 sk sk      0 Mar 28 22:23 Trust Tokens-journal
+drwx------  2 sk sk   4096 Mar 28 22:49 VideoDecodeStats
+drwx------  4 sk sk   4096 Mar 28 22:23 Web Applications
+-rw-------  1 sk sk 196608 Jun  6 04:30 Web Data
+-rw-------  1 sk sk      0 Jun  6 04:30 Web Data-journal
+drwx------  3 sk sk   4096 Mar 28 22:49 WebStorage
+
+/home/sk/.config/google-chrome.backup/Profile 16:
+total 61092
+drwx------  50 sk sk     4096 Jun  8 10:21 .
+drwx------  57 sk sk     4096 Jun  8 10:21 ..
+-rw-------   1 sk sk     9225 Jun  8 10:19 AccountBookmarks
+drwx------   3 sk sk     4096 Mar 28 23:17 Accounts
+-rw-------   1 sk sk    77824 Jun  8 10:19 Account Web Data
+-rw-------   1 sk sk        0 Jun  8 10:19 Account Web Data-journal
+-rw-------   1 sk sk   163840 Jun  8 09:52 Affiliation Database
+-rw-------   1 sk sk        0 Jun  8 09:52 Affiliation Database-journal
+drwx------   2 sk sk     4096 Jun  8 10:19 AutofillAiModelCache
+drwx------   2 sk sk     4096 Jun  8 10:19 AutofillStrikeDatabase
+drwx------   3 sk sk     4096 Jun  8 10:19 blob_storage
+-rw-------   1 sk sk        4 Jun  8 10:19 BookmarkMergedSurfaceOrdering
+-rw-------   1 sk sk    28672 Mar 28 23:17 BrowsingTopicsSiteData
+-rw-------   1 sk sk        0 Mar 28 23:17 BrowsingTopicsSiteData-journal
+-rw-------   1 sk sk     1086 Jun  8 10:19 BrowsingTopicsState
+drwx------   2 sk sk     4096 Jun  8 10:19 BudgetDatabase
+drwx------   2 sk sk     4096 Jun  8 10:19 chrome_cart_db
+drwx------   2 sk sk     4096 Jun  8 10:19 ClientCertificates
+drwx------   2 sk sk     4096 Mar 28 23:17 Collaboration
+-rw-------   1 sk sk   112832 Apr 28 14:46 .com.google.Chrome.LnXDEz
+drwx------   2 sk sk     4096 Jun  8 10:19 commerce_subscription_db
+-rw-------   1 sk sk  3047424 Jun  8 10:22 Cookies
+-rw-------   1 sk sk        0 Jun  8 10:22 Cookies-journal
+drwx------   2 sk sk     4096 Mar 28 23:17 DataSharing
+drwx------   2 sk sk     4096 Mar 28 23:17 DawnGraphiteCache
+drwx------   2 sk sk     4096 Mar 28 23:17 DawnWebGPUCache
+-rw-------   1 sk sk    61440 Jun  8 08:08 DIPS
+-rw-------   1 sk sk  4120032 Jun  8 10:21 DIPS-wal
+drwx------   2 sk sk     4096 Jun  8 10:19 discount_infos_db
+drwx------   2 sk sk     4096 Jun  8 10:19 discounts_db
+drwx------   3 sk sk     4096 Mar 28 23:17 DNR Extension Rules
+-rw-------   1 sk sk     1156 Jun  7 17:00 DownloadMetadata
+drwx------   4 sk sk     4096 Apr 12 14:57 Download Service
+-rw-rw-r--   1 sk sk      360 Jun  7 12:52 engine_allowlist.bf
+-rw-------   1 sk sk    20480 Jun  3 22:56 Extension Cookies
+-rw-------   1 sk sk        0 Jun  3 22:56 Extension Cookies-journal
+drwx------   2 sk sk     4096 Jun  8 06:04 Extension Rules
+drwx------  31 sk sk     4096 Jun  8 10:19 Extensions
+drwx------   3 sk sk     4096 Jun  8 10:19 Extension Scripts
+drwx------   3 sk sk     4096 Jun  8 10:19 Extension State
+-rw-------   1 sk sk 11829248 Jun  8 10:21 Favicons
+-rw-------   1 sk sk        0 Jun  8 10:21 Favicons-journal
+drwx------   4 sk sk     4096 Mar 28 23:17 Feature Engagement Tracker
+drwx------  17 sk sk     4096 Jun  8 06:05 File System
+drwx------   3 sk sk     4096 Jun  8 10:19 GCM Store
+-rw-rw-r--   1 sk sk     4010 Mar 28 23:17 Google Profile Picture.png
+drwx------   2 sk sk     4096 Jun  7 14:10 GPUCache
+-rw-------   1 sk sk    16384 Jun  6 00:36 heavy_ad_intervention_opt_out.db
+-rw-------   1 sk sk        0 Jun  6 00:36 heavy_ad_intervention_opt_out.db-journal
+-rw-------   1 sk sk 38731776 Jun  8 10:22 History
+-rw-------   1 sk sk        0 Jun  8 10:22 History-journal
+drwx------ 198 sk sk    20480 Jun  8 06:05 IndexedDB
+-rw-------   1 sk sk   126976 May  9 18:09 InterestGroups
+-rw-------   1 sk sk    24752 Jun  8 06:04 InterestGroups-wal
+drwx------  24 sk sk     4096 Jun  8 06:04 Local Extension Settings
+drwx------   3 sk sk     4096 Mar 28 23:17 Local Storage
+-rw-------   1 sk sk        0 Mar 28 23:17 LOCK
+-rw-------   1 sk sk        0 Jun  8 10:19 LOG
+-rw-------   1 sk sk    40960 Jun  6 02:54 Login Data
+-rw-------   1 sk sk    98304 Jun  8 10:19 Login Data For Account
+-rw-------   1 sk sk        0 Jun  8 10:19 Login Data For Account-journal
+-rw-------   1 sk sk        0 Jun  6 02:54 Login Data-journal
+-rw-------   1 sk sk        0 Jun  8 00:53 LOG.old
+drwx------  15 sk sk     4096 Jun  8 06:04 Managed Extension Settings
+-rw-------   1 sk sk    49152 Jun  8 05:43 MediaDeviceSalts
+-rw-------   1 sk sk        0 Jun  8 05:43 MediaDeviceSalts-journal
+-rw-------   1 sk sk   720896 Jun  8 10:19 Network Action Predictor
+-rw-------   1 sk sk        0 Jun  8 10:19 Network Action Predictor-journal
+-rw-------   1 sk sk   143840 Jun  8 10:21 Network Persistent State
+drwx------   2 sk sk     4096 Jun  8 10:19 optimization_guide_hint_cache_store
+drwx------   2 sk sk     4096 Jun  8 10:19 parcel_tracking_db
+-rw-------   1 sk sk       67 May  6 18:47 passkey_enclave_state
+drwx------   2 sk sk     4096 Jun  8 10:19 PersistentOriginTrials
+drwx------   2 sk sk     4096 Jun  8 10:19 Platform Notifications
+-rw-------   1 sk sk   526135 Jun  8 10:21 Preferences
+-rw-rw-r--   1 sk sk       33 Mar 28 23:17 PreferredApps
+-rw-------   1 sk sk    20480 May  8 12:42 PrivateAggregation
+-rw-------   1 sk sk        0 May  8 12:42 PrivateAggregation-journal
+-rw-rw-r--   1 sk sk      180 Mar 28 23:17 README
+-rw-------   1 sk sk  1409024 Jun  8 10:22 Reporting and NEL
+-rw-------   1 sk sk        0 Jun  8 10:22 Reporting and NEL-journal
+-rw-------   1 sk sk    20480 Jun  8 10:19 Safe Browsing Cookies
+-rw-------   1 sk sk        0 Jun  8 10:19 Safe Browsing Cookies-journal
+-rw-------   1 sk sk        2 May 25 23:08 SCT Auditing Pending Reports
+drwx------   2 sk sk     4096 Jun  1 02:24 Search Logos
+-rw-------   1 sk sk       95 Jun  8 10:19 Secure Preferences
+drwx------   5 sk sk     4096 Mar 28 23:17 Segmentation Platform
+-rw-------   1 sk sk    20480 Mar 28 23:17 ServerCertificate
+-rw-------   1 sk sk        0 Mar 28 23:17 ServerCertificate-journal
+drwx------   5 sk sk     4096 Mar 28 23:18 Service Worker
+drwx------   2 sk sk     4096 Jun  8 10:19 Sessions
+drwx------   2 sk sk     4096 Jun  8 10:21 Session Storage
+drwx------   3 sk sk     4096 Mar 28 23:17 Shared Dictionary
+drwx------   3 sk sk     4096 Jun  8 10:19 shared_proto_db
+-rw-------   1 sk sk     4096 Mar 28 23:17 SharedStorage
+-rw-------   1 sk sk        0 Jun  7 21:23 SharedStorage-wal
+-rw-------   1 sk sk   163840 Jun  8 09:15 Shortcuts
+-rw-------   1 sk sk        0 Jun  8 09:15 Shortcuts-journal
+drwx------   2 sk sk     4096 Jun  8 10:19 Site Characteristics Database
+drwx------   3 sk sk     4096 Mar 28 23:17 Storage
+drwx------   2 sk sk     4096 Jun  8 06:04 Sync App Settings
+drwx------   3 sk sk     4096 Jun  8 10:19 Sync Data
+drwx------  19 sk sk     4096 Jun  8 06:05 Sync Extension Settings
+-rw-------   1 sk sk    20480 Jun  8 05:31 Top Sites
+-rw-------   1 sk sk        0 Jun  8 05:31 Top Sites-journal
+-rw-------   1 sk sk     2537 Mar 28 23:17 Translate Ranker Model
+-rw-------   1 sk sk   348657 Jun  8 10:10 TransportSecurity
+-rw-------   1 sk sk      171 Jun  8 10:19 trusted_vault.pb
+-rw-------   1 sk sk    36864 Jun  4 12:32 Trust Tokens
+-rw-------   1 sk sk        0 Jun  4 12:32 Trust Tokens-journal
+drwx------   2 sk sk     4096 Jun  8 10:19 VideoDecodeStats
+drwx------   4 sk sk     4096 Mar 28 23:17 Web Applications
+-rw-------   1 sk sk   229376 Jun  8 10:19 Web Data
+-rw-------   1 sk sk        0 Jun  8 10:19 Web Data-journal
+drwx------   2 sk sk     4096 Jun  5 23:49 WebrtcVideoStats
+drwx------ 125 sk sk     4096 Jun  8 06:01 WebStorage
+
+/home/sk/.config/google-chrome.backup/Profile 17:
+total 1608
+drwx------ 46 sk sk   4096 Jun  7 23:22 .
+drwx------ 57 sk sk   4096 Jun  8 10:21 ..
+-rw-------  1 sk sk   2094 Mar 29 19:02 AccountBookmarks
+drwx------  3 sk sk   4096 Mar 29 19:02 Accounts
+-rw-------  1 sk sk  77824 Jun  7 22:43 Account Web Data
+-rw-------  1 sk sk      0 Jun  7 22:43 Account Web Data-journal
+-rw-------  1 sk sk  94208 Jun  7 22:44 Affiliation Database
+-rw-------  1 sk sk      0 Jun  7 22:44 Affiliation Database-journal
+drwx------  2 sk sk   4096 Jun  7 22:43 AutofillAiModelCache
+drwx------  2 sk sk   4096 Jun  7 22:43 AutofillStrikeDatabase
+drwx------  3 sk sk   4096 Jun  7 22:43 blob_storage
+-rw-------  1 sk sk      4 Jun  7 22:43 BookmarkMergedSurfaceOrdering
+-rw-------  1 sk sk  28672 Mar 29 19:02 BrowsingTopicsSiteData
+-rw-------  1 sk sk      0 Mar 29 19:02 BrowsingTopicsSiteData-journal
+-rw-------  1 sk sk    402 Jun  7 22:43 BrowsingTopicsState
+drwx------  2 sk sk   4096 Jun  7 22:43 BudgetDatabase
+drwx------  2 sk sk   4096 Jun  7 22:43 chrome_cart_db
+drwx------  2 sk sk   4096 Jun  7 22:43 ClientCertificates
+drwx------  2 sk sk   4096 Mar 29 19:02 Collaboration
+drwx------  2 sk sk   4096 Jun  7 22:43 commerce_subscription_db
+-rw-------  1 sk sk  90112 Jun  7 23:22 Cookies
+-rw-------  1 sk sk      0 Jun  7 23:22 Cookies-journal
+drwx------  2 sk sk   4096 Mar 29 19:02 DataSharing
+drwx------  2 sk sk   4096 Mar 29 19:02 DawnGraphiteCache
+drwx------  2 sk sk   4096 Mar 29 19:02 DawnWebGPUCache
+-rw-------  1 sk sk  36864 Jun  7 23:22 DIPS
+drwx------  2 sk sk   4096 Jun  7 22:43 discount_infos_db
+drwx------  2 sk sk   4096 Jun  7 22:43 discounts_db
+-rw-rw-r--  1 sk sk    360 Jun  7 22:43 engine_allowlist.bf
+drwx------  2 sk sk   4096 Jun  7 22:43 Extension Rules
+drwx------ 13 sk sk   4096 Jun  7 22:44 Extensions
+drwx------  2 sk sk   4096 Jun  7 22:43 Extension Scripts
+drwx------  2 sk sk   4096 Jun  7 22:43 Extension State
+-rw-------  1 sk sk  61440 Jun  7 22:44 Favicons
+-rw-------  1 sk sk      0 Jun  7 22:44 Favicons-journal
+drwx------  4 sk sk   4096 Mar 29 19:02 Feature Engagement Tracker
+drwx------  4 sk sk   4096 Apr  8 23:00 File System
+drwx------  3 sk sk   4096 Jun  7 22:43 GCM Store
+-rw-rw-r--  1 sk sk   3429 Mar 29 19:02 Google Profile Picture.png
+drwx------  2 sk sk   4096 Mar 29 19:02 GPUCache
+-rw-------  1 sk sk  16384 Mar 29 19:02 heavy_ad_intervention_opt_out.db
+-rw-------  1 sk sk      0 Mar 29 19:02 heavy_ad_intervention_opt_out.db-journal
+-rw-------  1 sk sk 262144 Jun  7 23:22 History
+-rw-------  1 sk sk      0 Jun  7 23:22 History-journal
+drwx------  9 sk sk   4096 Jun  7 22:44 IndexedDB
+drwx------ 10 sk sk   4096 Jun  7 22:44 Local Extension Settings
+drwx------  3 sk sk   4096 Mar 29 19:02 Local Storage
+-rw-------  1 sk sk      0 Mar 29 19:02 LOCK
+-rw-------  1 sk sk      0 Jun  7 22:43 LOG
+-rw-------  1 sk sk  40960 Mar 29 19:02 Login Data
+-rw-------  1 sk sk  40960 Jun  7 22:43 Login Data For Account
+-rw-------  1 sk sk      0 Jun  7 22:43 Login Data For Account-journal
+-rw-------  1 sk sk      0 Mar 29 19:02 Login Data-journal
+-rw-------  1 sk sk      0 May 10 09:43 LOG.old
+-rw-------  1 sk sk  24576 Apr  8 23:00 MediaDeviceSalts
+-rw-------  1 sk sk      0 Apr  8 23:00 MediaDeviceSalts-journal
+-rw-------  1 sk sk  77824 Jun  7 22:44 Network Action Predictor
+-rw-------  1 sk sk      0 Jun  7 22:44 Network Action Predictor-journal
+-rw-------  1 sk sk  36616 Jun  7 23:22 Network Persistent State
+drwx------  2 sk sk   4096 Jun  7 22:43 optimization_guide_hint_cache_store
+drwx------  2 sk sk   4096 Jun  7 22:43 parcel_tracking_db
+-rw-------  1 sk sk     67 Apr  9 12:53 passkey_enclave_state
+drwx------  2 sk sk   4096 Jun  7 22:43 PersistentOriginTrials
+drwx------  2 sk sk   4096 Jun  7 22:43 Platform Notifications
+-rw-------  1 sk sk 116646 Jun  7 23:22 Preferences
+-rw-rw-r--  1 sk sk     33 Mar 29 19:02 PreferredApps
+-rw-rw-r--  1 sk sk    180 Mar 29 19:02 README
+-rw-------  1 sk sk  94208 Jun  7 23:22 Reporting and NEL
+-rw-------  1 sk sk      0 Jun  7 23:22 Reporting and NEL-journal
+-rw-------  1 sk sk  20480 Jun  7 22:44 Safe Browsing Cookies
+-rw-------  1 sk sk      0 Jun  7 22:44 Safe Browsing Cookies-journal
+drwx------  2 sk sk   4096 May 10 06:53 Search Logos
+-rw-------  1 sk sk     95 Jun  7 22:43 Secure Preferences
+drwx------  5 sk sk   4096 Mar 29 19:02 Segmentation Platform
+-rw-------  1 sk sk  20480 Mar 29 19:02 ServerCertificate
+-rw-------  1 sk sk      0 Mar 29 19:02 ServerCertificate-journal
+drwx------  5 sk sk   4096 Mar 29 19:08 Service Worker
+drwx------  2 sk sk   4096 Jun  7 22:43 Sessions
+drwx------  2 sk sk   4096 Jun  7 22:43 Session Storage
+drwx------  3 sk sk   4096 Mar 29 19:02 Shared Dictionary
+drwx------  3 sk sk   4096 Jun  7 22:43 shared_proto_db
+-rw-------  1 sk sk   4096 Mar 29 19:02 SharedStorage
+-rw-------  1 sk sk  20480 Jun  7 22:43 Shortcuts
+-rw-------  1 sk sk      0 Jun  7 22:43 Shortcuts-journal
+drwx------  2 sk sk   4096 Jun  7 22:43 Site Characteristics Database
+drwx------  3 sk sk   4096 Mar 29 19:02 Storage
+drwx------  3 sk sk   4096 Apr  9 16:49 Sync Data
+drwx------  4 sk sk   4096 Mar 29 19:02 Sync Extension Settings
+-rw-------  1 sk sk  20480 Mar 29 19:02 Top Sites
+-rw-------  1 sk sk      0 Mar 29 19:02 Top Sites-journal
+-rw-------  1 sk sk   2537 Mar 29 19:02 Translate Ranker Model
+-rw-------  1 sk sk  10374 Jun  7 22:53 TransportSecurity
+-rw-------  1 sk sk    172 Jun  7 22:43 trusted_vault.pb
+-rw-------  1 sk sk  36864 Mar 29 19:02 Trust Tokens
+-rw-------  1 sk sk      0 Mar 29 19:02 Trust Tokens-journal
+drwx------  2 sk sk   4096 Jun  7 22:43 VideoDecodeStats
+drwx------  4 sk sk   4096 Mar 29 19:02 Web Applications
+-rw-------  1 sk sk 157696 Jun  7 22:44 Web Data
+-rw-------  1 sk sk      0 Jun  7 22:44 Web Data-journal
+drwx------  2 sk sk   4096 Apr  5 05:24 WebrtcVideoStats
+drwx------  4 sk sk   4096 Apr  5 05:24 WebStorage
+
+/home/sk/.config/google-chrome.backup/Profile 2:
+total 41060
+drwx------  49 sk sk     4096 Jun  6 02:02 .
+drwx------  57 sk sk     4096 Jun  8 10:21 ..
+-rw-------   1 sk sk   645193 May 16 17:27 AccountBookmarks
+drwx------   3 sk sk     4096 Apr  2 07:17 Accounts
+-rw-------   1 sk sk    77824 Jun  6 00:22 Account Web Data
+-rw-------   1 sk sk        0 Jun  6 00:22 Account Web Data-journal
+-rw-------   1 sk sk  1015808 Jun  6 00:23 Affiliation Database
+-rw-------   1 sk sk        0 Jun  6 00:23 Affiliation Database-journal
+drwx------   2 sk sk     4096 Jun  6 00:22 AutofillAiModelCache
+drwx------   2 sk sk     4096 Jun  6 00:22 AutofillStrikeDatabase
+drwx------   3 sk sk     4096 Jun  6 00:22 blob_storage
+-rw-------   1 sk sk        4 Jun  6 00:22 BookmarkMergedSurfaceOrdering
+-rw-------   1 sk sk    28672 Mar 31 01:28 BrowsingTopicsSiteData
+-rw-------   1 sk sk        0 Mar 31 01:28 BrowsingTopicsSiteData-journal
+-rw-------   1 sk sk     1086 Jun  6 00:22 BrowsingTopicsState
+drwx------   2 sk sk     4096 Jun  6 00:22 BudgetDatabase
+drwx------   2 sk sk     4096 Jun  6 00:22 chrome_cart_db
+drwx------   2 sk sk     4096 Jun  6 00:22 ClientCertificates
+drwx------   2 sk sk     4096 Mar 31 01:28 Collaboration
+-rw-------   1 sk sk   136009 Apr 28 06:18 .com.google.Chrome.2pAlZn
+-rw-------   1 sk sk   517101 May 12 20:33 .com.google.Chrome.5IQBEI
+-rw-------   1 sk sk   120395 Apr 20 19:20 .com.google.Chrome.83YiYJ
+drwx------   2 sk sk     4096 Jun  6 00:22 commerce_subscription_db
+-rw-------   1 sk sk  3047424 Jun  6 02:02 Cookies
+-rw-------   1 sk sk        0 Jun  6 02:02 Cookies-journal
+drwx------   2 sk sk     4096 Mar 31 01:28 DataSharing
+drwx------   2 sk sk     4096 Mar 31 01:28 DawnGraphiteCache
+drwx------   2 sk sk     4096 Mar 31 01:28 DawnWebGPUCache
+-rw-------   1 sk sk    61440 Jun  6 02:02 DIPS
+drwx------   2 sk sk     4096 Jun  6 00:22 discount_infos_db
+drwx------   2 sk sk     4096 Jun  6 00:22 discounts_db
+drwx------   4 sk sk     4096 Apr 14 21:47 DNR Extension Rules
+-rw-------   1 sk sk     1986 May 13 18:01 DownloadMetadata
+drwx------   4 sk sk     4096 Apr  8 07:04 Download Service
+-rw-------   1 sk sk    20480 Apr  5 07:12 Extension Cookies
+-rw-------   1 sk sk        0 Apr  5 07:12 Extension Cookies-journal
+drwx------   2 sk sk     4096 Jun  6 00:22 Extension Rules
+drwx------  52 sk sk     4096 Jun  6 00:23 Extensions
+drwx------   3 sk sk     4096 Jun  6 00:22 Extension Scripts
+drwx------   3 sk sk     4096 Jun  6 00:22 Extension State
+-rw-------   1 sk sk  8060928 Jun  6 00:23 Favicons
+-rw-------   1 sk sk        0 Jun  6 00:23 Favicons-journal
+drwx------   4 sk sk     4096 Mar 31 01:28 Feature Engagement Tracker
+drwx------  19 sk sk     4096 May 13 19:59 File System
+drwx------   3 sk sk     4096 Jun  6 00:22 GCM Store
+-rw-rw-r--   1 sk sk    66337 Apr  2 07:17 Google Profile Picture.png
+drwx------   2 sk sk     4096 May 29 15:04 GPUCache
+-rw-------   1 sk sk    16384 May 14 00:32 heavy_ad_intervention_opt_out.db
+-rw-------   1 sk sk        0 May 14 00:32 heavy_ad_intervention_opt_out.db-journal
+-rw-------   1 sk sk 22937600 Jun  6 02:02 History
+-rw-------   1 sk sk        0 Jun  6 02:02 History-journal
+drwx------ 158 sk sk    12288 May 28 15:45 IndexedDB
+-rw-------   1 sk sk     4096 Apr 21 14:57 InterestGroups
+-rw-------   1 sk sk   226632 Apr 21 14:57 InterestGroups-wal
+drwx------  21 sk sk     4096 May 12 06:20 Local Extension Settings
+drwx------   3 sk sk     4096 Mar 31 01:28 Local Storage
+-rw-------   1 sk sk        0 Mar 31 01:28 LOCK
+-rw-------   1 sk sk        0 Jun  6 00:22 LOG
+-rw-------   1 sk sk    40960 Apr 24 17:35 Login Data
+-rw-------   1 sk sk  1409024 Jun  6 00:22 Login Data For Account
+-rw-------   1 sk sk        0 Jun  6 00:22 Login Data For Account-journal
+-rw-------   1 sk sk        0 Apr 24 17:35 Login Data-journal
+-rw-------   1 sk sk        0 Jun  2 06:11 LOG.old
+-rw-------   1 sk sk    45056 May 29 14:49 MediaDeviceSalts
+-rw-------   1 sk sk        0 May 29 14:49 MediaDeviceSalts-journal
+-rw-------   1 sk sk   557056 Jun  6 00:22 Network Action Predictor
+-rw-------   1 sk sk        0 Jun  6 00:22 Network Action Predictor-journal
+-rw-------   1 sk sk   128538 Jun  6 02:02 Network Persistent State
+drwx------   2 sk sk     4096 Jun  6 00:22 optimization_guide_hint_cache_store
+drwx------   2 sk sk     4096 Jun  6 00:22 parcel_tracking_db
+-rw-------   1 sk sk       67 May  7 03:51 passkey_enclave_state
+drwx------   2 sk sk     4096 Jun  6 00:22 PersistentOriginTrials
+drwx------   2 sk sk     4096 Jun  6 00:22 Platform Notifications
+-rw-------   1 sk sk   516500 Jun  6 02:02 Preferences
+-rw-rw-r--   1 sk sk       33 Mar 31 01:28 PreferredApps
+-rw-------   1 sk sk    20480 Apr 21 14:57 PrivateAggregation
+-rw-------   1 sk sk        0 Apr 21 14:57 PrivateAggregation-journal
+-rw-rw-r--   1 sk sk      180 Mar 31 01:28 README
+-rw-------   1 sk sk  1343488 Jun  6 02:02 Reporting and NEL
+-rw-------   1 sk sk        0 Jun  6 02:02 Reporting and NEL-journal
+-rw-------   1 sk sk    20480 Jun  1 13:52 Safe Browsing Cookies
+-rw-------   1 sk sk        0 Jun  1 13:52 Safe Browsing Cookies-journal
+-rw-------   1 sk sk        2 Apr 21 06:29 SCT Auditing Pending Reports
+drwx------   2 sk sk     4096 May  2 16:33 Search Logos
+-rw-------   1 sk sk       95 Jun  6 00:22 Secure Preferences
+drwx------   5 sk sk     4096 Mar 31 01:28 Segmentation Platform
+-rw-------   1 sk sk    20480 Mar 31 01:28 ServerCertificate
+-rw-------   1 sk sk        0 Mar 31 01:28 ServerCertificate-journal
+drwx------   5 sk sk     4096 Apr  2 07:17 Service Worker
+drwx------   2 sk sk     4096 Jun  6 00:22 Sessions
+drwx------   2 sk sk     4096 Jun  6 00:22 Session Storage
+drwx------   3 sk sk     4096 Mar 31 01:28 Shared Dictionary
+drwx------   3 sk sk     4096 Jun  6 00:22 shared_proto_db
+-rw-------   1 sk sk     4096 Mar 31 01:28 SharedStorage
+-rw-------   1 sk sk    73728 Jun  1 13:52 Shortcuts
+-rw-------   1 sk sk        0 Jun  1 13:52 Shortcuts-journal
+drwx------   2 sk sk     4096 Jun  6 00:22 Site Characteristics Database
+drwx------   3 sk sk     4096 Mar 31 01:28 Storage
+drwx------   2 sk sk     4096 Apr 21 14:57 Sync App Settings
+drwx------   3 sk sk     4096 Jun  6 00:22 Sync Data
+drwx------  21 sk sk     4096 May 21 00:50 Sync Extension Settings
+-rw-------   1 sk sk    20480 Jun  3 01:48 Top Sites
+-rw-------   1 sk sk        0 Jun  3 01:48 Top Sites-journal
+-rw-------   1 sk sk     2537 Mar 31 01:28 Translate Ranker Model
+-rw-------   1 sk sk   290726 Jun  6 02:02 TransportSecurity
+-rw-------   1 sk sk      172 Jun  6 00:22 trusted_vault.pb
+-rw-------   1 sk sk    36864 May 13 23:55 Trust Tokens
+-rw-------   1 sk sk        0 May 13 23:55 Trust Tokens-journal
+drwx------   2 sk sk     4096 Jun  1 13:52 VideoDecodeStats
+drwx------   4 sk sk     4096 Mar 31 01:28 Web Applications
+-rw-------   1 sk sk   229376 Jun  6 00:22 Web Data
+-rw-------   1 sk sk        0 Jun  6 00:22 Web Data-journal
+drwx------   2 sk sk     4096 May 13 19:46 WebrtcVideoStats
+drwx------  68 sk sk     4096 Jun  1 16:29 WebStorage
+
+/home/sk/.config/google-chrome.backup/Profile 20:
+total 4456
+drwx------ 48 sk sk    4096 Jun  8 00:10 .
+drwx------ 57 sk sk    4096 Jun  8 10:21 ..
+-rw-------  1 sk sk    2158 Apr  3 18:09 AccountBookmarks
+drwx------  3 sk sk    4096 Apr  3 18:09 Accounts
+-rw-------  1 sk sk   77824 Jun  7 19:09 Account Web Data
+-rw-------  1 sk sk       0 Jun  7 19:09 Account Web Data-journal
+-rw-------  1 sk sk   86016 Jun  7 19:09 Affiliation Database
+-rw-------  1 sk sk       0 Jun  7 19:09 Affiliation Database-journal
+drwx------  2 sk sk    4096 Jun  7 23:19 AutofillAiModelCache
+drwx------  2 sk sk    4096 Jun  7 23:19 AutofillStrikeDatabase
+drwx------  3 sk sk    4096 Jun  7 23:19 blob_storage
+-rw-------  1 sk sk       4 Jun  7 23:19 BookmarkMergedSurfaceOrdering
+-rw-------  1 sk sk   28672 Apr  3 18:07 BrowsingTopicsSiteData
+-rw-------  1 sk sk       0 Apr  3 18:07 BrowsingTopicsSiteData-journal
+-rw-------  1 sk sk    1086 Jun  7 23:19 BrowsingTopicsState
+drwx------  2 sk sk    4096 Jun  7 23:19 BudgetDatabase
+drwx------  2 sk sk    4096 Jun  7 23:19 chrome_cart_db
+drwx------  2 sk sk    4096 Jun  7 23:19 ClientCertificates
+drwx------  2 sk sk    4096 Apr 22 17:47 Collaboration
+drwx------  2 sk sk    4096 Jun  7 23:19 commerce_subscription_db
+-rw-------  1 sk sk  262144 Jun  8 00:10 Cookies
+-rw-------  1 sk sk       0 Jun  8 00:10 Cookies-journal
+drwx------  2 sk sk    4096 Apr 22 17:47 DataSharing
+drwx------  2 sk sk    4096 Apr  3 18:07 DawnGraphiteCache
+drwx------  2 sk sk    4096 Apr  3 18:07 DawnWebGPUCache
+-rw-------  1 sk sk   36864 Jun  8 00:10 DIPS
+drwx------  2 sk sk    4096 Jun  7 23:19 discount_infos_db
+drwx------  2 sk sk    4096 Jun  7 23:19 discounts_db
+-rw-------  1 sk sk    4208 Apr  4 04:52 DownloadMetadata
+drwx------  4 sk sk    4096 Apr  5 11:44 Download Service
+-rw-rw-r--  1 sk sk     360 Jun  7 19:09 engine_allowlist.bf
+-rw-------  1 sk sk   20480 May 15 06:15 Extension Cookies
+-rw-------  1 sk sk       0 May 15 06:15 Extension Cookies-journal
+drwx------  2 sk sk    4096 Jun  7 19:09 Extension Rules
+drwx------  8 sk sk    4096 Jun  2 06:11 Extensions
+drwx------  3 sk sk    4096 Jun  7 23:19 Extension Scripts
+drwx------  2 sk sk    4096 Jun  7 23:19 Extension State
+-rw-------  1 sk sk  688128 Jun  7 23:21 Favicons
+-rw-------  1 sk sk       0 Jun  7 23:21 Favicons-journal
+drwx------  4 sk sk    4096 Apr  3 18:09 Feature Engagement Tracker
+drwx------  4 sk sk    4096 May 15 06:16 File System
+drwx------  3 sk sk    4096 Jun  7 23:19 GCM Store
+-rw-rw-r--  1 sk sk    3431 Apr  3 18:09 Google Profile Picture.png
+drwx------  2 sk sk    4096 Apr  3 18:07 GPUCache
+-rw-------  1 sk sk   16384 Apr  3 18:07 heavy_ad_intervention_opt_out.db
+-rw-------  1 sk sk       0 Apr  3 18:07 heavy_ad_intervention_opt_out.db-journal
+-rw-------  1 sk sk 1769472 Jun  8 00:10 History
+-rw-------  1 sk sk       0 Jun  8 00:10 History-journal
+drwx------ 25 sk sk    4096 Jun  2 09:54 IndexedDB
+-rw-------  1 sk sk  126976 May 17 22:11 InterestGroups
+drwx------  8 sk sk    4096 May 15 06:15 Local Extension Settings
+drwx------  3 sk sk    4096 Apr  3 18:07 Local Storage
+-rw-------  1 sk sk       0 Apr  3 18:07 LOCK
+-rw-------  1 sk sk       0 Jun  7 23:19 LOG
+-rw-------  1 sk sk   40960 May 25 14:49 Login Data
+-rw-------  1 sk sk   40960 Jun  7 19:09 Login Data For Account
+-rw-------  1 sk sk       0 Jun  7 19:09 Login Data For Account-journal
+-rw-------  1 sk sk       0 May 25 14:49 Login Data-journal
+-rw-------  1 sk sk       0 Jun  7 19:09 LOG.old
+-rw-------  1 sk sk   24576 Jun  3 01:42 MediaDeviceSalts
+-rw-------  1 sk sk       0 Jun  3 01:42 MediaDeviceSalts-journal
+-rw-------  1 sk sk  159744 Jun  7 23:21 Network Action Predictor
+-rw-------  1 sk sk       0 Jun  7 23:21 Network Action Predictor-journal
+-rw-------  1 sk sk  112209 Jun  8 00:10 Network Persistent State
+drwx------  2 sk sk    4096 Jun  7 23:19 optimization_guide_hint_cache_store
+drwx------  2 sk sk    4096 Jun  7 23:19 parcel_tracking_db
+-rw-------  1 sk sk      67 May  7 20:12 passkey_enclave_state
+drwx------  2 sk sk    4096 Jun  7 23:19 PersistentOriginTrials
+drwx------  2 sk sk    4096 Jun  7 23:19 Platform Notifications
+-rw-------  1 sk sk   97508 Jun  8 00:10 Preferences
+-rw-rw-r--  1 sk sk      33 Apr  3 18:07 PreferredApps
+-rw-------  1 sk sk   20480 May 15 06:15 PrivateAggregation
+-rw-------  1 sk sk       0 May 15 06:15 PrivateAggregation-journal
+-rw-rw-r--  1 sk sk     180 Apr  3 18:07 README
+-rw-------  1 sk sk  294912 Jun  8 00:10 Reporting and NEL
+-rw-------  1 sk sk       0 Jun  8 00:10 Reporting and NEL-journal
+-rw-------  1 sk sk   20480 Jun  7 23:21 Safe Browsing Cookies
+-rw-------  1 sk sk       0 Jun  7 23:21 Safe Browsing Cookies-journal
+drwx------  2 sk sk    4096 May 11 17:18 Search Logos
+-rw-------  1 sk sk      95 Jun  7 23:19 Secure Preferences
+drwx------  5 sk sk    4096 Apr  3 18:07 Segmentation Platform
+-rw-------  1 sk sk   20480 Apr  3 18:07 ServerCertificate
+-rw-------  1 sk sk       0 Apr  3 18:07 ServerCertificate-journal
+drwx------  5 sk sk    4096 Apr  3 18:09 Service Worker
+drwx------  2 sk sk    4096 Jun  7 23:19 Sessions
+drwx------  2 sk sk    4096 Jun  7 23:19 Session Storage
+drwx------  3 sk sk    4096 Apr  3 18:07 Shared Dictionary
+drwx------  3 sk sk    4096 Jun  7 23:19 shared_proto_db
+-rw-------  1 sk sk    4096 Apr  3 18:07 SharedStorage
+-rw-------  1 sk sk   40960 Jun  7 23:21 Shortcuts
+-rw-------  1 sk sk       0 Jun  7 23:21 Shortcuts-journal
+drwx------  2 sk sk    4096 Jun  7 23:19 Site Characteristics Database
+drwx------  3 sk sk    4096 Apr  3 18:07 Storage
+drwx------  2 sk sk    4096 May 15 06:15 Sync App Settings
+drwx------  3 sk sk    4096 Jun  6 08:31 Sync Data
+drwx------  4 sk sk    4096 May 15 06:15 Sync Extension Settings
+-rw-------  1 sk sk   20480 Jun  7 19:09 Top Sites
+-rw-------  1 sk sk       0 Jun  7 19:09 Top Sites-journal
+-rw-------  1 sk sk    2537 Apr  3 18:07 Translate Ranker Model
+-rw-------  1 sk sk   40107 Jun  8 00:10 TransportSecurity
+-rw-------  1 sk sk     172 Jun  7 23:19 trusted_vault.pb
+-rw-------  1 sk sk   36864 Apr  3 18:07 Trust Tokens
+-rw-------  1 sk sk       0 Apr  3 18:07 Trust Tokens-journal
+drwx------  2 sk sk    4096 Jun  3 01:42 VideoDecodeStats
+drwx------  4 sk sk    4096 Apr  3 18:07 Web Applications
+-rw-------  1 sk sk  196608 Jun  7 19:13 Web Data
+-rw-------  1 sk sk       0 Jun  7 19:13 Web Data-journal
+drwx------  2 sk sk    4096 Jun  2 17:22 WebrtcVideoStats
+drwx------ 11 sk sk    4096 Jun  2 09:53 WebStorage
+
+/home/sk/.config/google-chrome.backup/Profile 21:
+total 4232
+drwx------ 42 sk sk    4096 May 13 13:13 .
+drwx------ 57 sk sk    4096 Jun  8 10:21 ..
+drwx------  3 sk sk    4096 May 13 13:06 Accounts
+-rw-------  1 sk sk   77824 May 13 13:06 Account Web Data
+-rw-------  1 sk sk       0 May 13 13:06 Account Web Data-journal
+-rw-------  1 sk sk  614400 May 13 13:06 Affiliation Database
+-rw-------  1 sk sk       0 May 13 13:06 Affiliation Database-journal
+drwx------  2 sk sk    4096 May 13 13:04 AutofillAiModelCache
+drwx------  2 sk sk    4096 May 13 13:04 AutofillStrikeDatabase
+drwx------  3 sk sk    4096 May 13 13:04 blob_storage
+-rw-------  1 sk sk       4 May 13 13:04 BookmarkMergedSurfaceOrdering
+-rw-------  1 sk sk 1044721 May 13 13:06 Bookmarks
+-rw-------  1 sk sk   28672 May 13 13:04 BrowsingTopicsSiteData
+-rw-------  1 sk sk       0 May 13 13:04 BrowsingTopicsSiteData-journal
+-rw-------  1 sk sk     402 May 13 13:04 BrowsingTopicsState
+drwx------  2 sk sk    4096 May 13 13:04 BudgetDatabase
+drwx------  2 sk sk    4096 May 13 13:04 chrome_cart_db
+drwx------  2 sk sk    4096 May 13 13:04 ClientCertificates
+drwx------  2 sk sk    4096 May 13 13:04 commerce_subscription_db
+-rw-------  1 sk sk   40960 May 13 13:13 Cookies
+-rw-------  1 sk sk       0 May 13 13:13 Cookies-journal
+drwx------  2 sk sk    4096 May 13 13:04 DawnGraphiteCache
+drwx------  2 sk sk    4096 May 13 13:04 DawnWebGPUCache
+-rw-------  1 sk sk   36864 May 13 13:13 DIPS
+drwx------  2 sk sk    4096 May 13 13:04 discount_infos_db
+drwx------  2 sk sk    4096 May 13 13:04 discounts_db
+-rw-------  1 sk sk   20480 May 13 13:06 Extension Cookies
+-rw-------  1 sk sk       0 May 13 13:06 Extension Cookies-journal
+drwx------  2 sk sk    4096 May 13 13:04 Extension Rules
+drwx------ 20 sk sk    4096 May 13 13:07 Extensions
+drwx------  2 sk sk    4096 May 13 13:04 Extension Scripts
+drwx------  2 sk sk    4096 May 13 13:04 Extension State
+-rw-------  1 sk sk   49152 May 13 13:07 Favicons
+-rw-------  1 sk sk       0 May 13 13:07 Favicons-journal
+drwx------  4 sk sk    4096 May 13 13:04 Feature Engagement Tracker
+drwx------  3 sk sk    4096 May 13 13:04 GCM Store
+-rw-rw-r--  1 sk sk    4025 May 13 13:06 Google Profile Picture.png
+drwx------  2 sk sk    4096 May 13 13:04 GPUCache
+-rw-------  1 sk sk   16384 May 13 13:04 heavy_ad_intervention_opt_out.db
+-rw-------  1 sk sk       0 May 13 13:04 heavy_ad_intervention_opt_out.db-journal
+-rw-------  1 sk sk  458752 May 13 13:13 History
+-rw-------  1 sk sk       0 May 13 13:13 History-journal
+drwx------  3 sk sk    4096 May 13 13:07 IndexedDB
+-rw-------  1 sk sk  126976 May 13 13:13 InterestGroups
+drwx------ 11 sk sk    4096 May 13 13:07 Local Extension Settings
+drwx------  3 sk sk    4096 May 13 13:04 Local Storage
+-rw-------  1 sk sk       0 May 13 13:04 LOCK
+-rw-------  1 sk sk       0 May 13 13:04 LOG
+-rw-------  1 sk sk  972800 May 13 13:08 Login Data
+-rw-------  1 sk sk   40960 May 13 13:06 Login Data For Account
+-rw-------  1 sk sk       0 May 13 13:06 Login Data For Account-journal
+-rw-------  1 sk sk       0 May 13 13:08 Login Data-journal
+-rw-------  1 sk sk   24576 May 13 13:07 MediaDeviceSalts
+-rw-------  1 sk sk       0 May 13 13:07 MediaDeviceSalts-journal
+-rw-------  1 sk sk   53248 May 13 13:07 Network Action Predictor
+-rw-------  1 sk sk       0 May 13 13:07 Network Action Predictor-journal
+-rw-------  1 sk sk   21772 May 13 13:13 Network Persistent State
+drwx------  2 sk sk    4096 May 13 13:04 optimization_guide_hint_cache_store
+drwx------  2 sk sk    4096 May 13 13:04 parcel_tracking_db
+drwx------  2 sk sk    4096 May 13 13:04 PersistentOriginTrials
+drwx------  2 sk sk    4096 May 13 13:06 Platform Notifications
+-rw-------  1 sk sk  110843 May 13 13:13 Preferences
+-rw-rw-r--  1 sk sk      33 May 13 13:04 PreferredApps
+-rw-------  1 sk sk   20480 May 13 13:06 PrivateAggregation
+-rw-------  1 sk sk       0 May 13 13:06 PrivateAggregation-journal
+-rw-rw-r--  1 sk sk     180 May 13 13:04 README
+-rw-------  1 sk sk   53248 May 13 13:13 Reporting and NEL
+-rw-------  1 sk sk       0 May 13 13:13 Reporting and NEL-journal
+-rw-------  1 sk sk   20480 May 13 13:08 Safe Browsing Cookies
+-rw-------  1 sk sk       0 May 13 13:08 Safe Browsing Cookies-journal
+-rw-------  1 sk sk      95 May 13 13:06 Secure Preferences
+drwx------  5 sk sk    4096 May 13 13:04 Segmentation Platform
+-rw-------  1 sk sk   20480 May 13 13:04 ServerCertificate
+-rw-------  1 sk sk       0 May 13 13:04 ServerCertificate-journal
+drwx------  4 sk sk    4096 May 13 13:04 Service Worker
+drwx------  2 sk sk    4096 May 13 13:07 Sessions
+drwx------  2 sk sk    4096 May 13 13:04 Session Storage
+drwx------  3 sk sk    4096 May 13 13:04 Shared Dictionary
+drwx------  3 sk sk    4096 May 13 13:04 shared_proto_db
+-rw-------  1 sk sk    4096 May 13 13:06 SharedStorage
+-rw-------  1 sk sk   20480 May 13 13:06 Shortcuts
+-rw-------  1 sk sk       0 May 13 13:06 Shortcuts-journal
+drwx------  2 sk sk    4096 May 13 13:04 Site Characteristics Database
+drwx------  3 sk sk    4096 May 13 13:04 Storage
+drwx------  2 sk sk    4096 May 13 13:06 Sync App Settings
+drwx------  3 sk sk    4096 May 13 13:06 Sync Data
+drwx------  7 sk sk    4096 May 13 13:07 Sync Extension Settings
+-rw-------  1 sk sk   20480 May 13 13:04 Top Sites
+-rw-------  1 sk sk       0 May 13 13:04 Top Sites-journal
+-rw-------  1 sk sk    2537 May 13 13:04 Translate Ranker Model
+-rw-------  1 sk sk    2868 May 13 13:13 TransportSecurity
+-rw-------  1 sk sk     172 May 13 13:06 trusted_vault.pb
+-rw-------  1 sk sk   36864 May 13 13:04 Trust Tokens
+-rw-------  1 sk sk       0 May 13 13:04 Trust Tokens-journal
+drwx------  2 sk sk    4096 May 13 13:07 VideoDecodeStats
+drwx------  4 sk sk    4096 May 13 13:04 Web Applications
+-rw-------  1 sk sk  157696 May 13 13:08 Web Data
+-rw-------  1 sk sk       0 May 13 13:08 Web Data-journal
+drwx------  3 sk sk    4096 May 13 13:07 WebStorage
+
+/home/sk/.config/google-chrome.backup/Profile 22:
+total 2944
+drwx------ 45 sk sk   4096 Jun  7 13:52 .
+drwx------ 57 sk sk   4096 Jun  8 10:21 ..
+drwx------  3 sk sk   4096 May 13 13:09 Accounts
+-rw-------  1 sk sk  77824 May 13 13:09 Account Web Data
+-rw-------  1 sk sk      0 May 13 13:09 Account Web Data-journal
+-rw-------  1 sk sk  53248 May 13 13:09 Affiliation Database
+-rw-------  1 sk sk      0 May 13 13:09 Affiliation Database-journal
+drwx------  2 sk sk   4096 Jun  7 12:52 AutofillAiModelCache
+drwx------  2 sk sk   4096 Jun  7 12:52 AutofillStrikeDatabase
+drwx------  3 sk sk   4096 Jun  7 12:52 blob_storage
+-rw-------  1 sk sk      4 Jun  7 12:52 BookmarkMergedSurfaceOrdering
+-rw-------  1 sk sk   2086 May 13 13:10 Bookmarks
+-rw-------  1 sk sk  28672 May 13 13:09 BrowsingTopicsSiteData
+-rw-------  1 sk sk      0 May 13 13:09 BrowsingTopicsSiteData-journal
+-rw-------  1 sk sk    858 Jun  7 12:52 BrowsingTopicsState
+drwx------  2 sk sk   4096 Jun  7 12:52 BudgetDatabase
+drwx------  2 sk sk   4096 Jun  7 12:52 chrome_cart_db
+drwx------  2 sk sk   4096 Jun  7 12:52 ClientCertificates
+drwx------  2 sk sk   4096 May 17 00:52 Collaboration
+drwx------  2 sk sk   4096 Jun  7 12:52 commerce_subscription_db
+-rw-------  1 sk sk 167936 Jun  7 12:52 Cookies
+-rw-------  1 sk sk      0 Jun  7 12:52 Cookies-journal
+drwx------  2 sk sk   4096 May 17 00:52 DataSharing
+drwx------  2 sk sk   4096 May 13 13:09 DawnGraphiteCache
+drwx------  2 sk sk   4096 May 13 13:09 DawnWebGPUCache
+-rw-------  1 sk sk  36864 Jun  6 06:19 DIPS
+-rw-------  1 sk sk 238992 Jun  7 15:52 DIPS-wal
+drwx------  2 sk sk   4096 Jun  7 12:52 discount_infos_db
+drwx------  2 sk sk   4096 Jun  7 12:52 discounts_db
+-rw-------  1 sk sk  20480 Jun  6 06:15 Extension Cookies
+-rw-------  1 sk sk      0 Jun  6 06:15 Extension Cookies-journal
+drwx------  2 sk sk   4096 Jun  6 05:51 Extension Rules
+drwx------  7 sk sk   4096 Jun  6 09:34 Extensions
+drwx------  2 sk sk   4096 Jun  7 12:52 Extension Scripts
+drwx------  2 sk sk   4096 Jun  7 12:52 Extension State
+-rw-------  1 sk sk 393216 Jun  6 09:34 Favicons
+-rw-------  1 sk sk      0 Jun  6 09:34 Favicons-journal
+drwx------  4 sk sk   4096 May 13 13:09 Feature Engagement Tracker
+drwx------  5 sk sk   4096 Jun  6 06:10 File System
+drwx------  3 sk sk   4096 Jun  7 12:52 GCM Store
+-rw-rw-r--  1 sk sk   4339 May 13 13:09 Google Profile Picture.png
+drwx------  2 sk sk   4096 May 13 13:59 GPUCache
+-rw-------  1 sk sk  16384 May 13 13:09 heavy_ad_intervention_opt_out.db
+-rw-------  1 sk sk      0 May 13 13:09 heavy_ad_intervention_opt_out.db-journal
+-rw-------  1 sk sk 819200 Jun  6 09:34 History
+-rw-------  1 sk sk   8720 Jun  7 12:53 History-journal
+drwx------ 19 sk sk   4096 Jun  6 06:10 IndexedDB
+drwx------  7 sk sk   4096 Jun  6 06:15 Local Extension Settings
+drwx------  3 sk sk   4096 May 13 13:09 Local Storage
+-rw-------  1 sk sk      0 May 13 13:09 LOCK
+-rw-------  1 sk sk      0 Jun  7 12:52 LOG
+-rw-------  1 sk sk  40960 Jun  7 12:52 Login Data
+-rw-------  1 sk sk  40960 May 13 13:09 Login Data For Account
+-rw-------  1 sk sk      0 May 13 13:09 Login Data For Account-journal
+-rw-------  1 sk sk      0 Jun  7 12:52 Login Data-journal
+-rw-------  1 sk sk      0 Jun  6 09:33 LOG.old
+-rw-------  1 sk sk  24576 Jun  6 05:51 MediaDeviceSalts
+-rw-------  1 sk sk      0 Jun  6 05:51 MediaDeviceSalts-journal
+-rw-------  1 sk sk 110592 Jun  6 09:34 Network Action Predictor
+-rw-------  1 sk sk      0 Jun  6 09:34 Network Action Predictor-journal
+-rw-------  1 sk sk  94510 Jun  7 13:06 Network Persistent State
+drwx------  2 sk sk   4096 Jun  7 12:52 optimization_guide_hint_cache_store
+drwx------  2 sk sk   4096 Jun  7 12:52 parcel_tracking_db
+drwx------  2 sk sk   4096 Jun  7 12:52 PersistentOriginTrials
+drwx------  2 sk sk   4096 Jun  7 12:52 Platform Notifications
+-rw-------  1 sk sk  87882 Jun  7 13:52 Preferences
+-rw-rw-r--  1 sk sk     33 May 13 13:09 PreferredApps
+-rw-rw-r--  1 sk sk    180 May 13 13:09 README
+-rw-------  1 sk sk 147456 Jun  7 12:52 Reporting and NEL
+-rw-------  1 sk sk      0 Jun  7 12:52 Reporting and NEL-journal
+-rw-------  1 sk sk  20480 Jun  6 09:34 Safe Browsing Cookies
+-rw-------  1 sk sk      0 Jun  6 09:34 Safe Browsing Cookies-journal
+-rw-------  1 sk sk     95 Jun  7 12:52 Secure Preferences
+drwx------  5 sk sk   4096 May 13 13:09 Segmentation Platform
+-rw-------  1 sk sk  20480 May 13 13:09 ServerCertificate
+-rw-------  1 sk sk      0 May 13 13:09 ServerCertificate-journal
+drwx------  5 sk sk   4096 May 13 13:10 Service Worker
+drwx------  2 sk sk   4096 Jun  6 09:33 Sessions
+drwx------  2 sk sk   4096 Jun  7 12:52 Session Storage
+drwx------  3 sk sk   4096 May 13 13:09 Shared Dictionary
+drwx------  3 sk sk   4096 Jun  7 12:52 shared_proto_db
+-rw-------  1 sk sk   4096 May 13 13:11 SharedStorage
+-rw-------  1 sk sk      0 Jun  6 09:35 SharedStorage-wal
+-rw-------  1 sk sk  20480 Jun  6 09:34 Shortcuts
+-rw-------  1 sk sk      0 Jun  6 09:34 Shortcuts-journal
+drwx------  2 sk sk   4096 Jun  7 12:52 Site Characteristics Database
+drwx------  3 sk sk   4096 May 13 13:09 Storage
+drwx------  3 sk sk   4096 Jun  7 12:52 Sync Data
+drwx------  4 sk sk   4096 Jun  6 06:15 Sync Extension Settings
+-rw-------  1 sk sk  20480 Jun  7 12:52 Top Sites
+-rw-------  1 sk sk      0 Jun  7 12:52 Top Sites-journal
+-rw-------  1 sk sk   2537 May 13 13:09 Translate Ranker Model
+-rw-------  1 sk sk  26088 Jun  7 13:02 TransportSecurity
+-rw-------  1 sk sk    171 Jun  7 12:52 trusted_vault.pb
+-rw-------  1 sk sk  36864 May 13 13:09 Trust Tokens
+-rw-------  1 sk sk      0 May 13 13:09 Trust Tokens-journal
+drwx------  2 sk sk   4096 Jun  6 00:05 VideoDecodeStats
+drwx------  4 sk sk   4096 May 13 13:09 Web Applications
+-rw-------  1 sk sk 196608 Jun  7 12:52 Web Data
+-rw-------  1 sk sk      0 Jun  7 12:52 Web Data-journal
+drwx------  2 sk sk   4096 Jun  5 23:49 WebrtcVideoStats
+drwx------  3 sk sk   4096 Jun  6 00:05 WebStorage
+
+/home/sk/.config/google-chrome.backup/Profile 23:
+total 2276
+drwx------ 42 sk sk   4096 May 28 14:18 .
+drwx------ 57 sk sk   4096 Jun  8 10:21 ..
+drwx------  3 sk sk   4096 May 26 18:51 Accounts
+-rw-------  1 sk sk  77824 May 26 18:51 Account Web Data
+-rw-------  1 sk sk      0 May 26 18:51 Account Web Data-journal
+-rw-------  1 sk sk  86016 May 27 15:52 Affiliation Database
+-rw-------  1 sk sk      0 May 27 15:52 Affiliation Database-journal
+drwx------  2 sk sk   4096 May 26 21:30 AutofillAiModelCache
+drwx------  2 sk sk   4096 May 26 21:30 AutofillStrikeDatabase
+drwx------  3 sk sk   4096 May 26 21:30 blob_storage
+-rw-------  1 sk sk      4 May 26 21:30 BookmarkMergedSurfaceOrdering
+-rw-------  1 sk sk   2010 May 26 18:51 Bookmarks
+-rw-------  1 sk sk  28672 May 26 18:51 BrowsingTopicsSiteData
+-rw-------  1 sk sk      0 May 26 18:51 BrowsingTopicsSiteData-journal
+-rw-------  1 sk sk    402 May 26 21:30 BrowsingTopicsState
+drwx------  2 sk sk   4096 May 26 21:30 BudgetDatabase
+drwx------  2 sk sk   4096 May 26 21:30 chrome_cart_db
+drwx------  2 sk sk   4096 May 26 21:30 ClientCertificates
+drwx------  2 sk sk   4096 May 26 21:30 commerce_subscription_db
+-rw-------  1 sk sk  57344 May 26 21:31 Cookies
+-rw-------  1 sk sk      0 May 26 21:31 Cookies-journal
+drwx------  2 sk sk   4096 May 26 18:51 DawnGraphiteCache
+drwx------  2 sk sk   4096 May 26 18:51 DawnWebGPUCache
+-rw-------  1 sk sk   4096 May 26 18:51 DIPS
+-rw-------  1 sk sk 589192 May 28 13:30 DIPS-wal
+drwx------  2 sk sk   4096 May 26 21:30 discount_infos_db
+drwx------  2 sk sk   4096 May 26 21:30 discounts_db
+drwx------  2 sk sk   4096 May 26 23:28 Extension Rules
+drwx------ 12 sk sk   4096 May 26 18:52 Extensions
+drwx------  2 sk sk   4096 May 26 23:28 Extension Scripts
+drwx------  2 sk sk   4096 May 26 21:30 Extension State
+-rw-------  1 sk sk 104448 May 26 19:05 Favicons
+-rw-------  1 sk sk      0 May 26 19:05 Favicons-journal
+drwx------  4 sk sk   4096 May 26 18:51 Feature Engagement Tracker
+drwx------  3 sk sk   4096 May 26 21:30 GCM Store
+-rw-rw-r--  1 sk sk   4025 May 26 18:51 Google Profile Picture.png
+drwx------  2 sk sk   4096 May 26 18:51 GPUCache
+-rw-------  1 sk sk  16384 May 26 18:51 heavy_ad_intervention_opt_out.db
+-rw-------  1 sk sk      0 May 26 18:51 heavy_ad_intervention_opt_out.db-journal
+-rw-------  1 sk sk 401408 May 26 19:05 History
+-rw-------  1 sk sk   8720 May 26 21:31 History-journal
+drwx------  8 sk sk   4096 May 26 23:28 IndexedDB
+drwx------ 10 sk sk   4096 May 26 23:28 Local Extension Settings
+drwx------  3 sk sk   4096 May 26 18:51 Local Storage
+-rw-------  1 sk sk      0 May 26 18:51 LOCK
+-rw-------  1 sk sk      0 May 26 21:30 LOG
+-rw-------  1 sk sk  49152 May 28 10:25 Login Data
+-rw-------  1 sk sk  40960 May 26 18:51 Login Data For Account
+-rw-------  1 sk sk      0 May 26 18:51 Login Data For Account-journal
+-rw-------  1 sk sk      0 May 28 10:25 Login Data-journal
+-rw-------  1 sk sk      0 May 26 18:51 LOG.old
+-rw-------  1 sk sk  24576 May 26 18:52 MediaDeviceSalts
+-rw-------  1 sk sk      0 May 26 18:52 MediaDeviceSalts-journal
+-rw-------  1 sk sk  57344 May 26 19:05 Network Action Predictor
+-rw-------  1 sk sk      0 May 26 19:05 Network Action Predictor-journal
+-rw-------  1 sk sk  33693 May 28 14:18 Network Persistent State
+drwx------  2 sk sk   4096 May 26 21:30 optimization_guide_hint_cache_store
+drwx------  2 sk sk   4096 May 26 21:30 parcel_tracking_db
+drwx------  2 sk sk   4096 May 26 21:30 PersistentOriginTrials
+drwx------  2 sk sk   4096 May 26 21:30 Platform Notifications
+-rw-------  1 sk sk 102788 May 28 11:02 Preferences
+-rw-rw-r--  1 sk sk     33 May 26 18:51 PreferredApps
+-rw-rw-r--  1 sk sk    180 May 26 18:51 README
+-rw-------  1 sk sk  77824 May 26 21:31 Reporting and NEL
+-rw-------  1 sk sk      0 May 26 21:31 Reporting and NEL-journal
+-rw-------  1 sk sk  20480 May 26 18:51 Safe Browsing Cookies
+-rw-------  1 sk sk      0 May 26 18:51 Safe Browsing Cookies-journal
+-rw-------  1 sk sk     95 May 26 21:30 Secure Preferences
+drwx------  5 sk sk   4096 May 26 18:51 Segmentation Platform
+-rw-------  1 sk sk  20480 May 26 18:51 ServerCertificate
+-rw-------  1 sk sk      0 May 26 18:51 ServerCertificate-journal
+drwx------  5 sk sk   4096 May 26 18:52 Service Worker
+drwx------  2 sk sk   4096 May 26 19:04 Sessions
+drwx------  2 sk sk   4096 May 26 23:33 Session Storage
+drwx------  3 sk sk   4096 May 26 18:51 Shared Dictionary
+drwx------  3 sk sk   4096 May 26 21:30 shared_proto_db
+-rw-------  1 sk sk   4096 May 26 18:53 SharedStorage
+-rw-------  1 sk sk      0 May 26 18:53 SharedStorage-wal
+-rw-------  1 sk sk  20480 May 26 19:03 Shortcuts
+-rw-------  1 sk sk      0 May 26 19:03 Shortcuts-journal
+drwx------  2 sk sk   4096 May 26 21:30 Site Characteristics Database
+drwx------  3 sk sk   4096 May 26 18:51 Storage
+drwx------  3 sk sk   4096 May 28 10:25 Sync Data
+drwx------  4 sk sk   4096 May 26 18:51 Sync Extension Settings
+-rw-------  1 sk sk  20480 May 26 20:03 Top Sites
+-rw-------  1 sk sk      0 May 26 20:03 Top Sites-journal
+-rw-------  1 sk sk   2537 May 26 18:51 Translate Ranker Model
+-rw-------  1 sk sk   6203 May 26 21:40 TransportSecurity
+-rw-------  1 sk sk    172 May 26 21:30 trusted_vault.pb
+-rw-------  1 sk sk  36864 May 26 18:51 Trust Tokens
+-rw-------  1 sk sk      0 May 26 18:51 Trust Tokens-journal
+drwx------  2 sk sk   4096 May 26 18:56 VideoDecodeStats
+drwx------  4 sk sk   4096 May 26 18:51 Web Applications
+-rw-------  1 sk sk 194560 May 28 10:25 Web Data
+-rw-------  1 sk sk      0 May 28 10:25 Web Data-journal
+drwx------  2 sk sk   4096 May 26 18:52 WebrtcVideoStats
+drwx------  2 sk sk   4096 May 26 18:51 WebStorage
+
+/home/sk/.config/google-chrome.backup/Profile 3:
+total 1080
+drwx------ 38 sk sk   4096 Mar 28 23:17 .
+drwx------ 57 sk sk   4096 Jun  8 10:21 ..
+-rw-------  1 sk sk  77824 Mar 28 23:17 Account Web Data
+-rw-------  1 sk sk      0 Mar 28 23:17 Account Web Data-journal
+-rw-------  1 sk sk  53248 Mar 28 23:17 Affiliation Database
+-rw-------  1 sk sk      0 Mar 28 23:17 Affiliation Database-journal
+drwx------  2 sk sk   4096 Mar 28 23:17 AutofillAiModelCache
+drwx------  2 sk sk   4096 Mar 28 23:17 AutofillStrikeDatabase
+drwx------  3 sk sk   4096 Mar 28 23:17 blob_storage
+-rw-------  1 sk sk      4 Mar 28 23:17 BookmarkMergedSurfaceOrdering
+-rw-------  1 sk sk  28672 Mar 28 23:17 BrowsingTopicsSiteData
+-rw-------  1 sk sk      0 Mar 28 23:17 BrowsingTopicsSiteData-journal
+-rw-------  1 sk sk    402 Mar 28 23:17 BrowsingTopicsState
+drwx------  2 sk sk   4096 Mar 28 23:17 BudgetDatabase
+drwx------  2 sk sk   4096 Mar 28 23:17 chrome_cart_db
+drwx------  2 sk sk   4096 Mar 28 23:17 ClientCertificates
+drwx------  2 sk sk   4096 Mar 28 23:17 Collaboration
+drwx------  2 sk sk   4096 Mar 28 23:17 commerce_subscription_db
+-rw-------  1 sk sk  20480 Mar 28 23:17 Cookies
+-rw-------  1 sk sk      0 Mar 28 23:17 Cookies-journal
+drwx------  2 sk sk   4096 Mar 28 23:17 DataSharing
+drwx------  2 sk sk   4096 Mar 28 23:17 DawnGraphiteCache
+drwx------  2 sk sk   4096 Mar 28 23:17 DawnWebGPUCache
+-rw-------  1 sk sk  36864 Mar 28 23:17 DIPS
+drwx------  2 sk sk   4096 Mar 28 23:17 discount_infos_db
+drwx------  2 sk sk   4096 Mar 28 23:17 discounts_db
+drwx------  2 sk sk   4096 Mar 28 23:17 Extension Rules
+drwx------  5 sk sk   4096 Mar 28 23:17 Extensions
+drwx------  2 sk sk   4096 Mar 28 23:17 Extension Scripts
+drwx------  2 sk sk   4096 Mar 28 23:17 Extension State
+-rw-------  1 sk sk  20480 Mar 28 23:17 Favicons
+-rw-------  1 sk sk      0 Mar 28 23:17 Favicons-journal
+drwx------  4 sk sk   4096 Mar 28 23:17 Feature Engagement Tracker
+drwx------  3 sk sk   4096 Mar 28 23:17 GCM Store
+drwx------  2 sk sk   4096 Mar 28 23:17 GPUCache
+-rw-------  1 sk sk  16384 Mar 28 23:17 heavy_ad_intervention_opt_out.db
+-rw-------  1 sk sk      0 Mar 28 23:17 heavy_ad_intervention_opt_out.db-journal
+-rw-------  1 sk sk 163840 Mar 28 23:17 History
+-rw-------  1 sk sk      0 Mar 28 23:17 History-journal
+drwx------  3 sk sk   4096 Mar 28 23:17 Local Extension Settings
+drwx------  3 sk sk   4096 Mar 28 23:17 Local Storage
+-rw-------  1 sk sk      0 Mar 28 23:17 LOCK
+-rw-------  1 sk sk      0 Mar 28 23:17 LOG
+-rw-------  1 sk sk  40960 Mar 28 23:17 Login Data
+-rw-------  1 sk sk  40960 Mar 28 23:17 Login Data For Account
+-rw-------  1 sk sk      0 Mar 28 23:17 Login Data For Account-journal
+-rw-------  1 sk sk      0 Mar 28 23:17 Login Data-journal
+-rw-------  1 sk sk  53248 Mar 28 23:17 Network Action Predictor
+-rw-------  1 sk sk      0 Mar 28 23:17 Network Action Predictor-journal
+-rw-------  1 sk sk   3117 Mar 28 23:17 Network Persistent State
+drwx------  2 sk sk   4096 Mar 28 23:17 optimization_guide_hint_cache_store
+drwx------  2 sk sk   4096 Mar 28 23:17 parcel_tracking_db
+drwx------  2 sk sk   4096 Mar 28 23:17 PersistentOriginTrials
+-rw-------  1 sk sk  35622 Mar 28 23:17 Preferences
+-rw-rw-r--  1 sk sk     33 Mar 28 23:17 PreferredApps
+-rw-rw-r--  1 sk sk    180 Mar 28 23:17 README
+-rw-------  1 sk sk  36864 Mar 28 23:17 Reporting and NEL
+-rw-------  1 sk sk      0 Mar 28 23:17 Reporting and NEL-journal
+-rw-------  1 sk sk  20480 Mar 28 23:17 Safe Browsing Cookies
+-rw-------  1 sk sk      0 Mar 28 23:17 Safe Browsing Cookies-journal
+-rw-------  1 sk sk     95 Mar 28 23:17 Secure Preferences
+drwx------  5 sk sk   4096 Mar 28 23:17 Segmentation Platform
+-rw-------  1 sk sk  20480 Mar 28 23:17 ServerCertificate
+-rw-------  1 sk sk      0 Mar 28 23:17 ServerCertificate-journal
+drwx------  4 sk sk   4096 Mar 28 23:17 Service Worker
+drwx------  2 sk sk   4096 Mar 28 23:17 Sessions
+drwx------  2 sk sk   4096 Mar 28 23:17 Session Storage
+drwx------  3 sk sk   4096 Mar 28 23:17 Shared Dictionary
+drwx------  3 sk sk   4096 Mar 28 23:17 shared_proto_db
+-rw-------  1 sk sk   4096 Mar 28 23:17 SharedStorage
+-rw-------  1 sk sk  20480 Mar 28 23:17 Shortcuts
+-rw-------  1 sk sk      0 Mar 28 23:17 Shortcuts-journal
+drwx------  2 sk sk   4096 Mar 28 23:17 Site Characteristics Database
+drwx------  3 sk sk   4096 Mar 28 23:17 Storage
+drwx------  3 sk sk   4096 Mar 28 23:17 Sync Data
+-rw-------  1 sk sk  20480 Mar 28 23:17 Top Sites
+-rw-------  1 sk sk      0 Mar 28 23:17 Top Sites-journal
+-rw-------  1 sk sk   2537 Mar 28 23:17 Translate Ranker Model
+-rw-------  1 sk sk    691 Mar 28 23:17 TransportSecurity
+-rw-------  1 sk sk     84 Mar 28 23:17 trusted_vault.pb
+-rw-------  1 sk sk  36864 Mar 28 23:17 Trust Tokens
+-rw-------  1 sk sk      0 Mar 28 23:17 Trust Tokens-journal
+drwx------  4 sk sk   4096 Mar 28 23:17 Web Applications
+-rw-------  1 sk sk 157696 Mar 28 23:17 Web Data
+-rw-------  1 sk sk      0 Mar 28 23:17 Web Data-journal
+drwx------  2 sk sk   4096 Mar 28 23:17 WebStorage
+
+/home/sk/.config/google-chrome.backup/Profile 5:
+total 1244
+drwx------ 40 sk sk   4096 Mar 29 01:00 .
+drwx------ 57 sk sk   4096 Jun  8 10:21 ..
+-rw-------  1 sk sk  77824 Mar 28 22:03 Account Web Data
+-rw-------  1 sk sk      0 Mar 28 22:03 Account Web Data-journal
+-rw-------  1 sk sk  53248 Mar 28 22:03 Affiliation Database
+-rw-------  1 sk sk      0 Mar 28 22:03 Affiliation Database-journal
+drwx------  2 sk sk   4096 Mar 28 22:29 AutofillAiModelCache
+drwx------  2 sk sk   4096 Mar 28 22:29 AutofillStrikeDatabase
+drwx------  3 sk sk   4096 Mar 28 22:29 blob_storage
+-rw-------  1 sk sk      4 Mar 28 22:29 BookmarkMergedSurfaceOrdering
+-rw-------  1 sk sk  28672 Mar 28 22:03 BrowsingTopicsSiteData
+-rw-------  1 sk sk      0 Mar 28 22:03 BrowsingTopicsSiteData-journal
+-rw-------  1 sk sk    402 Mar 28 22:29 BrowsingTopicsState
+drwx------  2 sk sk   4096 Mar 28 22:29 BudgetDatabase
+drwx------  2 sk sk   4096 Mar 28 22:29 chrome_cart_db
+drwx------  2 sk sk   4096 Mar 28 22:29 ClientCertificates
+drwx------  2 sk sk   4096 Mar 28 22:29 Collaboration
+drwx------  2 sk sk   4096 Mar 28 22:29 commerce_subscription_db
+-rw-------  1 sk sk  28672 Mar 28 22:30 Cookies
+-rw-------  1 sk sk      0 Mar 28 22:30 Cookies-journal
+drwx------  2 sk sk   4096 Mar 28 22:29 DataSharing
+drwx------  2 sk sk   4096 Mar 28 22:03 DawnGraphiteCache
+drwx------  2 sk sk   4096 Mar 28 22:03 DawnWebGPUCache
+-rw-------  1 sk sk   4096 Mar 28 22:03 DIPS
+-rw-------  1 sk sk  61832 Mar 28 22:03 DIPS-wal
+drwx------  2 sk sk   4096 Mar 28 22:29 discount_infos_db
+drwx------  2 sk sk   4096 Mar 28 22:29 discounts_db
+drwx------  2 sk sk   4096 Mar 28 22:29 Extension Rules
+drwx------  4 sk sk   4096 Mar 28 22:03 Extensions
+drwx------  2 sk sk   4096 Mar 28 22:29 Extension Scripts
+drwx------  2 sk sk   4096 Mar 28 22:29 Extension State
+-rw-------  1 sk sk  49152 Mar 28 22:22 Favicons
+-rw-------  1 sk sk      0 Mar 28 22:22 Favicons-journal
+drwx------  4 sk sk   4096 Mar 28 22:03 Feature Engagement Tracker
+drwx------  3 sk sk   4096 Mar 28 22:29 GCM Store
+drwx------  2 sk sk   4096 Mar 28 22:03 GPUCache
+-rw-------  1 sk sk  16384 Mar 28 22:03 heavy_ad_intervention_opt_out.db
+-rw-------  1 sk sk      0 Mar 28 22:03 heavy_ad_intervention_opt_out.db-journal
+-rw-------  1 sk sk 184320 Mar 28 22:22 History
+-rw-------  1 sk sk   8720 Mar 28 22:30 History-journal
+drwx------  3 sk sk   4096 Mar 28 22:03 IndexedDB
+drwx------  3 sk sk   4096 Mar 28 22:03 Local Extension Settings
+drwx------  3 sk sk   4096 Mar 28 22:03 Local Storage
+-rw-------  1 sk sk      0 Mar 28 22:03 LOCK
+-rw-------  1 sk sk      0 Mar 28 22:29 LOG
+-rw-------  1 sk sk  40960 Mar 28 22:03 Login Data
+-rw-------  1 sk sk  40960 Mar 28 22:03 Login Data For Account
+-rw-------  1 sk sk      0 Mar 28 22:03 Login Data For Account-journal
+-rw-------  1 sk sk      0 Mar 28 22:03 Login Data-journal
+-rw-------  1 sk sk      0 Mar 28 22:03 LOG.old
+-rw-------  1 sk sk  24576 Mar 28 22:03 MediaDeviceSalts
+-rw-------  1 sk sk      0 Mar 28 22:03 MediaDeviceSalts-journal
+-rw-------  1 sk sk  61440 Mar 28 22:04 Network Action Predictor
+-rw-------  1 sk sk      0 Mar 28 22:04 Network Action Predictor-journal
+-rw-------  1 sk sk  13540 Mar 28 22:43 Network Persistent State
+drwx------  2 sk sk   4096 Mar 28 22:29 optimization_guide_hint_cache_store
+drwx------  2 sk sk   4096 Mar 28 22:29 parcel_tracking_db
+-rw-------  1 sk sk     51 Mar 28 22:33 passkey_enclave_state
+drwx------  2 sk sk   4096 Mar 28 22:29 PersistentOriginTrials
+-rw-------  1 sk sk  44602 Mar 29 01:00 Preferences
+-rw-rw-r--  1 sk sk     33 Mar 28 22:03 PreferredApps
+-rw-rw-r--  1 sk sk    180 Mar 28 22:03 README
+-rw-------  1 sk sk  36864 Mar 28 22:30 Reporting and NEL
+-rw-------  1 sk sk      0 Mar 28 22:30 Reporting and NEL-journal
+-rw-------  1 sk sk  20480 Mar 28 22:03 Safe Browsing Cookies
+-rw-------  1 sk sk      0 Mar 28 22:03 Safe Browsing Cookies-journal
+-rw-------  1 sk sk     95 Mar 28 22:29 Secure Preferences
+drwx------  5 sk sk   4096 Mar 28 22:03 Segmentation Platform
+-rw-------  1 sk sk  20480 Mar 28 22:03 ServerCertificate
+-rw-------  1 sk sk      0 Mar 28 22:03 ServerCertificate-journal
+drwx------  4 sk sk   4096 Mar 28 22:03 Service Worker
+drwx------  2 sk sk   4096 Mar 28 22:03 Sessions
+drwx------  2 sk sk   4096 Mar 28 22:03 Session Storage
+drwx------  3 sk sk   4096 Mar 28 22:03 Shared Dictionary
+drwx------  3 sk sk   4096 Mar 28 22:29 shared_proto_db
+-rw-------  1 sk sk   4096 Mar 28 22:03 SharedStorage
+-rw-------  1 sk sk      0 Mar 28 22:03 SharedStorage-wal
+-rw-------  1 sk sk  20480 Mar 28 22:03 Shortcuts
+-rw-------  1 sk sk      0 Mar 28 22:03 Shortcuts-journal
+drwx------  2 sk sk   4096 Mar 28 22:29 Site Characteristics Database
+drwx------  3 sk sk   4096 Mar 28 22:03 Storage
+drwx------  3 sk sk   4096 Mar 28 22:03 Sync Data
+-rw-------  1 sk sk  20480 Mar 28 22:03 Top Sites
+-rw-------  1 sk sk      0 Mar 28 22:03 Top Sites-journal
+-rw-------  1 sk sk   2537 Mar 28 22:03 Translate Ranker Model
+-rw-------  1 sk sk   2526 Mar 28 22:39 TransportSecurity
+-rw-------  1 sk sk     84 Mar 28 22:29 trusted_vault.pb
+-rw-------  1 sk sk  36864 Mar 28 22:03 Trust Tokens
+-rw-------  1 sk sk      0 Mar 28 22:03 Trust Tokens-journal
+drwx------  2 sk sk   4096 Mar 28 22:03 VideoDecodeStats
+drwx------  4 sk sk   4096 Mar 28 22:03 Web Applications
+-rw-------  1 sk sk 157696 Mar 28 22:29 Web Data
+-rw-------  1 sk sk      0 Mar 28 22:29 Web Data-journal
+drwx------  3 sk sk   4096 Mar 28 22:03 WebStorage
+
+/home/sk/.config/google-chrome.backup/Profile 6:
+total 1236
+drwx------ 40 sk sk   4096 May 10 07:31 .
+drwx------ 57 sk sk   4096 Jun  8 10:21 ..
+drwx------  3 sk sk   4096 May 10 07:26 Accounts
+-rw-------  1 sk sk  77824 May 10 07:25 Account Web Data
+-rw-------  1 sk sk      0 May 10 07:25 Account Web Data-journal
+-rw-------  1 sk sk  53248 May 10 07:25 Affiliation Database
+-rw-------  1 sk sk      0 May 10 07:25 Affiliation Database-journal
+drwx------  2 sk sk   4096 May 10 07:25 AutofillAiModelCache
+drwx------  2 sk sk   4096 May 10 07:25 AutofillStrikeDatabase
+drwx------  3 sk sk   4096 May 10 07:25 blob_storage
+-rw-------  1 sk sk      4 May 10 07:25 BookmarkMergedSurfaceOrdering
+-rw-------  1 sk sk  28672 May 10 07:25 BrowsingTopicsSiteData
+-rw-------  1 sk sk      0 May 10 07:25 BrowsingTopicsSiteData-journal
+-rw-------  1 sk sk    402 May 10 07:25 BrowsingTopicsState
+drwx------  2 sk sk   4096 May 10 07:25 BudgetDatabase
+drwx------  2 sk sk   4096 May 10 07:25 chrome_cart_db
+drwx------  2 sk sk   4096 May 10 07:25 ClientCertificates
+drwx------  2 sk sk   4096 May 10 07:25 commerce_subscription_db
+-rw-------  1 sk sk  49152 May 10 07:31 Cookies
+-rw-------  1 sk sk      0 May 10 07:31 Cookies-journal
+drwx------  2 sk sk   4096 May 10 07:25 DawnGraphiteCache
+drwx------  2 sk sk   4096 May 10 07:25 DawnWebGPUCache
+-rw-------  1 sk sk  36864 May 10 07:31 DIPS
+drwx------  2 sk sk   4096 May 10 07:25 discount_infos_db
+drwx------  2 sk sk   4096 May 10 07:25 discounts_db
+drwx------  2 sk sk   4096 May 10 07:25 Extension Rules
+drwx------  4 sk sk   4096 May 10 07:26 Extensions
+drwx------  2 sk sk   4096 May 10 07:25 Extension Scripts
+drwx------  2 sk sk   4096 May 10 07:25 Extension State
+-rw-------  1 sk sk  57344 May 10 07:26 Favicons
+-rw-------  1 sk sk      0 May 10 07:26 Favicons-journal
+drwx------  4 sk sk   4096 May 10 07:25 Feature Engagement Tracker
+drwx------  3 sk sk   4096 May 10 07:25 GCM Store
+drwx------  2 sk sk   4096 May 10 07:25 GPUCache
+-rw-------  1 sk sk  16384 May 10 07:25 heavy_ad_intervention_opt_out.db
+-rw-------  1 sk sk      0 May 10 07:25 heavy_ad_intervention_opt_out.db-journal
+-rw-------  1 sk sk 192512 May 10 07:31 History
+-rw-------  1 sk sk      0 May 10 07:31 History-journal
+drwx------  4 sk sk   4096 May 10 07:26 IndexedDB
+drwx------  3 sk sk   4096 May 10 07:25 Local Extension Settings
+drwx------  3 sk sk   4096 May 10 07:25 Local Storage
+-rw-------  1 sk sk      0 May 10 07:25 LOCK
+-rw-------  1 sk sk      0 May 10 07:25 LOG
+-rw-------  1 sk sk  40960 May 10 07:25 Login Data
+-rw-------  1 sk sk  40960 May 10 07:25 Login Data For Account
+-rw-------  1 sk sk      0 May 10 07:25 Login Data For Account-journal
+-rw-------  1 sk sk      0 May 10 07:25 Login Data-journal
+-rw-------  1 sk sk  24576 May 10 07:26 MediaDeviceSalts
+-rw-------  1 sk sk      0 May 10 07:26 MediaDeviceSalts-journal
+-rw-------  1 sk sk  53248 May 10 07:26 Network Action Predictor
+-rw-------  1 sk sk      0 May 10 07:26 Network Action Predictor-journal
+-rw-------  1 sk sk  18416 May 10 07:31 Network Persistent State
+drwx------  2 sk sk   4096 May 10 07:25 optimization_guide_hint_cache_store
+drwx------  2 sk sk   4096 May 10 07:25 parcel_tracking_db
+drwx------  2 sk sk   4096 May 10 07:25 PersistentOriginTrials
+-rw-------  1 sk sk  43163 May 10 07:31 Preferences
+-rw-rw-r--  1 sk sk     33 May 10 07:25 PreferredApps
+-rw-rw-r--  1 sk sk    180 May 10 07:25 README
+-rw-------  1 sk sk  36864 May 10 07:31 Reporting and NEL
+-rw-------  1 sk sk      0 May 10 07:31 Reporting and NEL-journal
+-rw-------  1 sk sk  20480 May 10 07:25 Safe Browsing Cookies
+-rw-------  1 sk sk      0 May 10 07:25 Safe Browsing Cookies-journal
+drwx------  2 sk sk   4096 May 10 07:25 Search Logos
+-rw-------  1 sk sk     95 May 10 07:25 Secure Preferences
+drwx------  5 sk sk   4096 May 10 07:25 Segmentation Platform
+-rw-------  1 sk sk  20480 May 10 07:25 ServerCertificate
+-rw-------  1 sk sk      0 May 10 07:25 ServerCertificate-journal
+drwx------  5 sk sk   4096 May 10 07:26 Service Worker
+drwx------  2 sk sk   4096 May 10 07:31 Sessions
+drwx------  2 sk sk   4096 May 10 07:25 Session Storage
+drwx------  3 sk sk   4096 May 10 07:25 Shared Dictionary
+drwx------  3 sk sk   4096 May 10 07:25 shared_proto_db
+-rw-------  1 sk sk   4096 May 10 07:27 SharedStorage
+-rw-------  1 sk sk  20480 May 10 07:25 Shortcuts
+-rw-------  1 sk sk      0 May 10 07:25 Shortcuts-journal
+drwx------  2 sk sk   4096 May 10 07:25 Site Characteristics Database
+drwx------  3 sk sk   4096 May 10 07:25 Storage
+drwx------  3 sk sk   4096 May 10 07:25 Sync Data
+-rw-------  1 sk sk  20480 May 10 07:25 Top Sites
+-rw-------  1 sk sk      0 May 10 07:25 Top Sites-journal
+-rw-------  1 sk sk   2537 May 10 07:25 Translate Ranker Model
+-rw-------  1 sk sk   4534 May 10 07:31 TransportSecurity
+-rw-------  1 sk sk     84 May 10 07:26 trusted_vault.pb
+-rw-------  1 sk sk  36864 May 10 07:25 Trust Tokens
+-rw-------  1 sk sk      0 May 10 07:25 Trust Tokens-journal
+drwx------  4 sk sk   4096 May 10 07:25 Web Applications
+-rw-------  1 sk sk 157696 May 10 07:26 Web Data
+-rw-------  1 sk sk      0 May 10 07:26 Web Data-journal
+drwx------  2 sk sk   4096 May 10 07:26 WebrtcVideoStats
+drwx------  2 sk sk   4096 May 10 07:25 WebStorage
+
+/home/sk/.config/google-chrome.backup/Profile 9:
+total 2000
+drwx------ 42 sk sk   4096 May 10 07:32 .
+drwx------ 57 sk sk   4096 Jun  8 10:21 ..
+-rw-------  1 sk sk     91 May 10 07:19 AccountBookmarks
+drwx------  3 sk sk   4096 Apr  1 23:54 Accounts
+-rw-------  1 sk sk  77824 May 10 07:19 Account Web Data
+-rw-------  1 sk sk      0 May 10 07:19 Account Web Data-journal
+-rw-------  1 sk sk 229376 May 10 07:20 Affiliation Database
+-rw-------  1 sk sk      0 May 10 07:20 Affiliation Database-journal
+drwx------  2 sk sk   4096 May 10 07:19 AutofillAiModelCache
+drwx------  2 sk sk   4096 May 10 07:19 AutofillStrikeDatabase
+drwx------  3 sk sk   4096 May 10 07:19 blob_storage
+-rw-------  1 sk sk      4 May 10 07:19 BookmarkMergedSurfaceOrdering
+-rw-------  1 sk sk    997 May 10 07:19 Bookmarks
+-rw-------  1 sk sk  28672 Apr  1 23:53 BrowsingTopicsSiteData
+-rw-------  1 sk sk      0 Apr  1 23:53 BrowsingTopicsSiteData-journal
+-rw-------  1 sk sk    402 May 10 07:19 BrowsingTopicsState
+drwx------  2 sk sk   4096 May 10 07:19 BudgetDatabase
+drwx------  2 sk sk   4096 May 10 07:19 chrome_cart_db
+drwx------  2 sk sk   4096 May 10 07:19 ClientCertificates
+drwx------  2 sk sk   4096 May 10 07:19 commerce_subscription_db
+-rw-------  1 sk sk 196608 May 10 07:32 Cookies
+-rw-------  1 sk sk      0 May 10 07:32 Cookies-journal
+drwx------  2 sk sk   4096 Apr  1 23:53 DawnGraphiteCache
+drwx------  2 sk sk   4096 Apr  1 23:53 DawnWebGPUCache
+-rw-------  1 sk sk  36864 May 10 07:32 DIPS
+drwx------  2 sk sk   4096 May 10 07:19 discount_infos_db
+drwx------  2 sk sk   4096 May 10 07:19 discounts_db
+drwx------  2 sk sk   4096 May 10 07:19 Extension Rules
+drwx------ 21 sk sk   4096 May 10 07:20 Extensions
+drwx------  2 sk sk   4096 May 10 07:19 Extension Scripts
+drwx------  2 sk sk   4096 May 10 07:19 Extension State
+-rw-------  1 sk sk 114688 May 10 07:27 Favicons
+-rw-------  1 sk sk      0 May 10 07:27 Favicons-journal
+drwx------  4 sk sk   4096 Apr  1 23:53 Feature Engagement Tracker
+drwx------  3 sk sk   4096 May 10 07:19 GCM Store
+-rw-rw-r--  1 sk sk   4025 Apr  1 23:54 Google Profile Picture.png
+drwx------  2 sk sk   4096 Apr  1 23:53 GPUCache
+-rw-------  1 sk sk  16384 Apr  1 23:53 heavy_ad_intervention_opt_out.db
+-rw-------  1 sk sk      0 Apr  1 23:53 heavy_ad_intervention_opt_out.db-journal
+-rw-------  1 sk sk 262144 May 10 07:32 History
+-rw-------  1 sk sk      0 May 10 07:32 History-journal
+drwx------  7 sk sk   4096 May 10 07:26 IndexedDB
+drwx------  3 sk sk   4096 Apr  1 23:53 Local Extension Settings
+drwx------  3 sk sk   4096 Apr  1 23:53 Local Storage
+-rw-------  1 sk sk      0 Apr  1 23:53 LOCK
+-rw-------  1 sk sk      0 May 10 07:19 LOG
+-rw-------  1 sk sk  40960 Apr  1 23:56 Login Data
+-rw-------  1 sk sk 102400 May 10 07:24 Login Data For Account
+-rw-------  1 sk sk      0 May 10 07:24 Login Data For Account-journal
+-rw-------  1 sk sk      0 Apr  1 23:56 Login Data-journal
+-rw-------  1 sk sk      0 Apr  2 10:34 LOG.old
+-rw-------  1 sk sk  24576 May 10 07:27 MediaDeviceSalts
+-rw-------  1 sk sk      0 May 10 07:27 MediaDeviceSalts-journal
+-rw-------  1 sk sk  86016 May 10 07:27 Network Action Predictor
+-rw-------  1 sk sk      0 May 10 07:27 Network Action Predictor-journal
+-rw-------  1 sk sk  60820 May 10 07:32 Network Persistent State
+drwx------  2 sk sk   4096 May 10 07:19 optimization_guide_hint_cache_store
+drwx------  2 sk sk   4096 May 10 07:19 parcel_tracking_db
+-rw-------  1 sk sk     67 Apr  2 10:38 passkey_enclave_state
+drwx------  2 sk sk   4096 May 10 07:19 PersistentOriginTrials
+drwx------  2 sk sk   4096 May 10 07:20 Platform Notifications
+-rw-------  1 sk sk 126573 May 10 07:32 Preferences
+-rw-rw-r--  1 sk sk     33 Apr  1 23:53 PreferredApps
+-rw-rw-r--  1 sk sk    180 Apr  1 23:53 README
+-rw-------  1 sk sk 102400 May 10 07:32 Reporting and NEL
+-rw-------  1 sk sk      0 May 10 07:32 Reporting and NEL-journal
+-rw-------  1 sk sk  20480 Apr  2 00:09 Safe Browsing Cookies
+-rw-------  1 sk sk      0 Apr  2 00:09 Safe Browsing Cookies-journal
+drwx------  2 sk sk   4096 May 10 07:26 Search Logos
+-rw-------  1 sk sk     95 May 10 07:19 Secure Preferences
+drwx------  5 sk sk   4096 Apr  1 23:53 Segmentation Platform
+-rw-------  1 sk sk  20480 Apr  1 23:53 ServerCertificate
+-rw-------  1 sk sk      0 Apr  1 23:53 ServerCertificate-journal
+drwx------  5 sk sk   4096 Apr  1 23:54 Service Worker
+drwx------  2 sk sk   4096 May 10 07:24 Sessions
+drwx------  2 sk sk   4096 May 10 07:32 Session Storage
+drwx------  3 sk sk   4096 Apr  1 23:53 Shared Dictionary
+drwx------  3 sk sk   4096 May 10 07:19 shared_proto_db
+-rw-------  1 sk sk   4096 Apr  1 23:53 SharedStorage
+-rw-------  1 sk sk  20480 Apr  2 00:08 Shortcuts
+-rw-------  1 sk sk      0 Apr  2 00:08 Shortcuts-journal
+drwx------  2 sk sk   4096 May 10 07:19 Site Characteristics Database
+drwx------  3 sk sk   4096 Apr  1 23:53 Storage
+drwx------  3 sk sk   4096 May 10 07:19 Sync Data
+drwx------  8 sk sk   4096 Apr  1 23:54 Sync Extension Settings
+-rw-------  1 sk sk  20480 Apr  1 23:54 Top Sites
+-rw-------  1 sk sk      0 Apr  1 23:54 Top Sites-journal
+-rw-------  1 sk sk   2537 Apr  1 23:53 Translate Ranker Model
+-rw-------  1 sk sk  20572 May 10 07:32 TransportSecurity
+-rw-------  1 sk sk    172 May 10 07:19 trusted_vault.pb
+-rw-------  1 sk sk  36864 Apr  1 23:53 Trust Tokens
+-rw-------  1 sk sk      0 Apr  1 23:53 Trust Tokens-journal
+drwx------  2 sk sk   4096 May 10 07:19 VideoDecodeStats
+drwx------  4 sk sk   4096 Apr  1 23:53 Web Applications
+-rw-------  1 sk sk 157696 May 10 07:24 Web Data
+-rw-------  1 sk sk      0 May 10 07:24 Web Data-journal
+drwx------  2 sk sk   4096 Apr  1 23:53 WebStorage
