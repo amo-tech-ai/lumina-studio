@@ -45,6 +45,37 @@
   color: var(--color-text-secondary);
 }
 
+.subtitle {
+  margin: var(--space-1) 0 0;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+}
+
+.subtitleApproval {
+  color: var(--color-warning-text);
+  font-weight: var(--font-weight-semibold);
+}
+
+.headerActions {
+  display: flex;
+  gap: var(--space-2);
+  flex-shrink: 0;
+}
+
+.ownerFilter {
+  flex-shrink: 0;
+  min-height: 2.75rem; /* >= 44px touch target */
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border-strong);
+  background: var(--color-bg-card);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-secondary);
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
 .riskToggle {
   flex-shrink: 0;
   min-height: 2.75rem; /* >= 44px touch target */
@@ -210,10 +241,14 @@
   text-align: right;
 }
 
-/* ponytail: full accordion (collapse/expand per stage) isn't built — CRM-HANDOFF.md
-   (cited as its source) is unavailable to verify the exact interaction. Simpler,
-   already-proven pattern instead: stack columns vertically, full-width. Upgrade
-   path: true collapsible accordion if the fixed-height stack proves unwieldy. */
+/* ponytail: CRM-HANDOFF.md (now available) confirms the spec wants a real
+   stage accordion ("tap a header to expand" — SCR-MOBILE-CRM-Gallery.dc.html).
+   Shipping the simpler always-expanded vertical stack instead as a deliberate
+   MVP simplification, not an unverifiable guess — this ticket's own scope was
+   "390px mobile behavior", not the accordion specifically, and adding
+   collapse/expand state + ARIA disclosure semantics mid-pr-fix would expand
+   scope beyond what any reviewer flagged. Upgrade path: real accordion,
+   tracked as a follow-up. */
 @media (max-width: 640px) {
   .board {
     flex-direction: column;
@@ -258,4 +293,16 @@
   width: 210px;
   height: 320px;
   border-radius: var(--radius-lg);
+}
+
+/* Mirrors .board's own mobile stacking — without this, the loading skeleton
+   clips columns behind overflow:hidden while the real board stacks vertically. */
+@media (max-width: 640px) {
+  .loadingBoard {
+    flex-direction: column;
+  }
+
+  .loadingColumn {
+    width: 100%;
+  }
 }

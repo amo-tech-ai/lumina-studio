@@ -25,6 +25,12 @@ type Props = {
   deals: DealRow[];
   companyNames: Record<string, string>;
   fetchError: string | null;
+  /** Epoch ms, computed once in the Server Component (page.tsx) and passed
+   *  down — never `Date.now()` inside this client component. The exact same
+   *  value renders server-side and hydrates client-side (it's serialized
+   *  through the same props), so "Updated Xd ago"/at-risk never flips
+   *  between server HTML and client hydration near a day boundary. */
+  now: number;
 };
 
 /** CRM Pipeline — ported from SCR-30-CRM-Pipeline.dc.html (IPI-395). The raw
@@ -41,7 +47,7 @@ type Props = {
  *  (lock icon + badge) — no ApprovalCard wiring, no conversion logic. Deal
  *  cards link to the existing /app/crm/pipeline/[id] stub (SCR-31, separate
  *  issue) rather than embedding deal detail inline. */
-export function PipelineWorkspace({ deals, companyNames, fetchError }: Props) {
+export function PipelineWorkspace({ deals, companyNames, fetchError, now }: Props) {
   const router = useRouter();
   const [atRiskOnly, setAtRiskOnly] = useState(false);
 
@@ -65,18 +71,27 @@ export function PipelineWorkspace({ deals, companyNames, fetchError }: Props) {
     );
   }
 
-  // ponytail: assumes a single-currency org (true for every org today) — sums
-  // raw values directly. If multi-currency deals land, group by currency
-  // before summing rather than adding mismatched currencies together.
-  const currency = deals[0]?.currency ?? "USD";
-  const total = deals.reduce((sum, d) => sum + (d.value ?? 0), 0);
-  const visibleDeals = atRiskOnly ? deals.filter(isAtRisk) : deals;
+  // Grouped by currency rather than summed flat — a single raw sum would be
+  // silently wrong the moment an org has deals in more than one currency.
+  const totalsByCurrency = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const d of deals) map.set(d.currency, (map.get(d.currency) ?? 0) + (d.value ?? 0));
+    return map;
+  }, [deals]);
+  const visibleDeals = atRiskOnly ? deals.filter((d) => isAtRisk(d, now)) : deals;
 
   const byStage = useMemo(() => {
     const map = new Map<CrmDealStage, DealRow[]>();
     for (const stage of STAGES) map.set(stage, []);
     for (const deal of visibleDeals) {
-      map.get(deal.stage as CrmDealStage)?.push(deal);
+      // Unknown/legacy stage values (DB CHECK constraint prevents this for
+      // new writes, but don't let a future enum change or backfilled row
+      // silently vanish from the board) fall back to "lead" — the natural
+      // entry stage — rather than disappearing from every column while
+      // still counting toward the header total, same guarded-fallback
+      // discipline as crmDealStageLabel()/crmDealStageDotToken().
+      const bucket = map.has(deal.stage as CrmDealStage) ? (deal.stage as CrmDealStage) : "lead";
+      map.get(bucket)?.push(deal);
     }
     return map;
   }, [visibleDeals]);
@@ -87,23 +102,35 @@ export function PipelineWorkspace({ deals, companyNames, fetchError }: Props) {
         <div className={styles.titleRow}>
           <div>
             <h1 className={styles.title}>Pipeline</h1>
-            <p className={styles.total}>{formatMoney(total, currency)}</p>
+            <p className={styles.total}>
+              {[...totalsByCurrency.entries()].map(([cur, sum]) => formatMoney(sum, cur)).join(" + ")}
+            </p>
+            <p className={styles.subtitle}>
+              {deals.length} {deals.length === 1 ? "deal" : "deals"} ·{" "}
+              <span className={styles.subtitleApproval}>Won / Lost require approval</span>
+            </p>
           </div>
-          <button
-            type="button"
-            onClick={() => setAtRiskOnly((v) => !v)}
-            aria-pressed={atRiskOnly}
-            className={atRiskOnly ? `${styles.riskToggle} ${styles.riskToggleActive}` : styles.riskToggle}
-          >
-            At risk only
-          </button>
+          <div className={styles.headerActions}>
+            <button type="button" disabled title="Coming soon" className={styles.ownerFilter}>
+              Owner
+            </button>
+            <button
+              type="button"
+              onClick={() => setAtRiskOnly((v) => !v)}
+              aria-pressed={atRiskOnly}
+              className={atRiskOnly ? `${styles.riskToggle} ${styles.riskToggleActive}` : styles.riskToggle}
+            >
+              At risk only
+            </button>
+          </div>
         </div>
       </div>
 
       <div className={styles.board}>
         {STAGES.map((stage) => {
           const stageDeals = byStage.get(stage) ?? [];
-          const stageTotal = stageDeals.reduce((sum, d) => sum + (d.value ?? 0), 0);
+          const stageTotals = new Map<string, number>();
+          for (const d of stageDeals) stageTotals.set(d.currency, (stageTotals.get(d.currency) ?? 0) + (d.value ?? 0));
           const locked = LOCKED_STAGES.has(stage);
           return (
             <div key={stage} className={styles.column}>
@@ -123,15 +150,19 @@ export function PipelineWorkspace({ deals, companyNames, fetchError }: Props) {
                     </div>
                     <div className={styles.cardMeta}>
                       <span className={styles.cardValue}>{formatMoney(deal.value, deal.currency)}</span>
-                      <span className={styles.cardUpdated}>Updated {formatRelativeDays(deal.updated_at)}</span>
+                      <span className={styles.cardUpdated}>Updated {formatRelativeDays(deal.updated_at, now)}</span>
                     </div>
-                    {isAtRisk(deal) ? <span className={styles.atRiskBadge}>At risk</span> : null}
+                    {isAtRisk(deal, now) ? <span className={styles.atRiskBadge}>At risk</span> : null}
                   </Link>
                 ))}
                 {stageDeals.length === 0 ? <div className={styles.columnEmpty}>No deals</div> : null}
               </div>
 
-              {stageTotal > 0 ? <div className={styles.columnTotal}>{formatMoney(stageTotal, currency)}</div> : null}
+              <div className={styles.columnTotal}>
+                {stageTotals.size > 0
+                  ? [...stageTotals.entries()].map(([cur, sum]) => formatMoney(sum, cur)).join(" + ")
+                  : "—"}
+              </div>
             </div>
           );
         })}
@@ -140,19 +171,19 @@ export function PipelineWorkspace({ deals, companyNames, fetchError }: Props) {
   );
 }
 
-function isAtRisk(deal: DealRow): boolean {
+function isAtRisk(deal: DealRow, now: number): boolean {
   if (deal.stage === "won" || deal.stage === "lost") return false;
-  return daysSince(deal.updated_at) >= AT_RISK_DAYS;
+  return daysSince(deal.updated_at, now) >= AT_RISK_DAYS;
 }
 
-function daysSince(iso: string): number {
+function daysSince(iso: string, now: number): number {
   const then = new Date(iso).getTime();
   if (Number.isNaN(then)) return 0;
-  return Math.floor((Date.now() - then) / 86_400_000);
+  return Math.floor((now - then) / 86_400_000);
 }
 
-function formatRelativeDays(iso: string): string {
-  const days = daysSince(iso);
+function formatRelativeDays(iso: string, now: number): string {
+  const days = daysSince(iso, now);
   if (days <= 0) return "today";
   if (days === 1) return "1d ago";
   return `${days}d ago`;
