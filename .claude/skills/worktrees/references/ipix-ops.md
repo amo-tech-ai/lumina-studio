@@ -5,6 +5,7 @@ Command recipes for the iPix worktree workflow. The always-on guardrails (merge 
 ## Table of contents
 
 - [Forensic audit](#forensic-audit) — what state am I actually in?
+- [Pre-delete doc salvage gate](#pre-delete-doc-salvage-gate) — commit or split docs before remove (P0)
 - [Production SHA check](#production-sha-check) — does local main match remote/deployed?
 - [PR splitting playbook](#pr-splitting-playbook) — keep PRs reviewable
 - [Weekly tidy ritual](#weekly-tidy-ritual) — clear stale branches/worktrees
@@ -27,6 +28,77 @@ Read the output before acting:
 - Untracked files you don't recognize → investigate, don't blanket-clean.
 - Local commits ahead of `origin/main` → these are unpushed; removing the worktree with `--force` destroys them.
 - Large `diff --stat` → candidate for the [PR splitting playbook](#pr-splitting-playbook).
+
+## Pre-delete doc salvage gate
+
+**Run in the worktree you're about to remove** — after merge, abandon, or weekly tidy. This is the operational detail for the P0 rule in [../SKILL.md](../SKILL.md#pre-delete-doc-salvage-gate-mandatory--p0).
+
+### 1. Inventory everything not on the remote
+
+```bash
+WT=/path/to/worktree   # e.g. ../wt-ipi-286-route-aware-sections
+git -C "$WT" fetch origin
+git -C "$WT" status -sb
+git -C "$WT" log --oneline origin/$(git -C "$WT" branch --show-current)...HEAD 2>/dev/null || \
+  git -C "$WT" log --oneline origin/main..HEAD
+git -C "$WT" ls-files --others --exclude-standard
+git -C "$WT" diff --stat
+git -C "$WT" diff --cached --stat
+```
+
+### 2. Flag doc paths (review every line)
+
+```bash
+git -C "$WT" ls-files --others --exclude-standard | rg -i \
+  '\.(md|mdc)$|^docs/|^tasks/|^\.claude/skills/|Universal-design|design\.md' || true
+```
+
+Also scan **modified** docs not in the merged PR:
+
+```bash
+git -C "$WT" diff --name-only HEAD | rg -i '\.(md|mdc)$|^docs/|^tasks/' || true
+```
+
+### 3. Triage each flagged file
+
+| Verdict | Action |
+|---------|--------|
+| **Ship with task** | Commit on task branch → push → confirm on PR |
+| **Separate concern** | New branch `ipi/<id>-docs-<slug>` → docs-only PR ([one concern rule](../../pr-workflow/SKILL.md)) |
+| **Preserve only** | Cherry-pick or copy into `ipi/preserve-worktree-docs` pattern; push before remove |
+| **Trash** | `git clean -fd <path>` only after explicit user/agent confirmation |
+
+**Hard rule:** zero untracked doc paths remain before `git worktree remove`, unless the user names specific paths to discard in chat.
+
+### 4. Machine gates (must pass)
+
+```bash
+npm run worktree:pre-delete              # from inside $WT
+node scripts/worktree-health.mjs --pre-delete
+```
+
+### 5. Remove only when clean
+
+```bash
+git -C "$WT" status -sb                   # expect clean (or only gitignored build artifacts)
+git worktree remove "$WT"
+git worktree prune
+# after merge confirmed on GitHub:
+git branch -d "$(git -C "$WT" branch --show-current 2>/dev/null)"  # if still on that branch, run before remove
+```
+
+### 6. Log for the ship report
+
+Paste into PR comment or Linear close-out:
+
+```text
+Worktree removed: <path>
+Doc salvage: <committed PR # | none — tree was clean | preservation PR #>
+pre-delete: green
+audit count after: <n> worktrees
+```
+
+**Reference:** incident log [`.@worktrees/worktrees.md`](../../../../.@worktrees/worktrees.md) — `tasks/llm/`, `docs/llm/`, design package loss from force remove without salvage.
 
 ## Production SHA check
 
@@ -80,7 +152,9 @@ git fetch -p                            # prune remote-tracking branches deleted
 git branch --merged origin/main | grep -vE '^\*|(^|\s)main$' | xargs -r git branch -d
 
 # for each merged/abandoned worktree from `git worktree list`:
-git worktree remove <path>              # add --force only after a backup (see SKILL.md)
+#   1. Run Pre-delete doc salvage gate (above) — commit/split docs first
+#   2. npm run worktree:pre-delete inside that worktree
+git worktree remove <path>              # add --force only after salvage gate + backup (see SKILL.md)
 ```
 
 Review the `git worktree list` and `git branch` output by hand before deleting — confirm each branch is truly merged or abandoned, and that no worktree holds uncommitted work (run the [forensic audit](#forensic-audit) on any you're unsure about).
