@@ -1,0 +1,26 @@
+app/src/lib/crm/jsonb-contact-fields.test.ts
+  s_ff0f27c2808314::t_40c861729be3f6 3,17-43
+  s_ff0f27c2808314::t_318a10bcaba7a4 44
+app/src/components/crm/contacts-workspace.tsx
+  s_ff0f27c2808314::t_b227fe8b72888d 5,13-15,17
+app/src/components/crm/contacts-workspace.test.tsx
+  s_ff0f27c2808314::t_68b5bd3107ec9a 48-58
+app/src/lib/crm/jsonb-contact-fields.ts
+  s_ff0f27c2808314::t_4835b133b6a118 7-28
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "ddbf919fd924f73e51b17a64f9b2c4d886cef884",
+  "prompts": {},
+  "sessions": {
+    "s_ff0f27c2808314": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "f541cadc-3ecd-4f00-aa24-6136f7995021",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
