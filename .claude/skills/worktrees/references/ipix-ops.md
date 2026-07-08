@@ -5,7 +5,7 @@ Command recipes for the iPix worktree workflow. The always-on guardrails (merge 
 ## Table of contents
 
 - [Forensic audit](#forensic-audit) — what state am I actually in?
-- [Pre-delete doc salvage gate](#pre-delete-doc-salvage-gate) — commit or split docs before remove (P0)
+- [Documentation preservation gate](#documentation-preservation-gate) — commit or split docs before remove (P0)
 - [Production SHA check](#production-sha-check) — does local main match remote/deployed?
 - [PR splitting playbook](#pr-splitting-playbook) — keep PRs reviewable
 - [Weekly tidy ritual](#weekly-tidy-ritual) — clear stale branches/worktrees
@@ -29,9 +29,11 @@ Read the output before acting:
 - Local commits ahead of `origin/main` → these are unpushed; removing the worktree with `--force` destroys them.
 - Large `diff --stat` → candidate for the [PR splitting playbook](#pr-splitting-playbook).
 
-## Pre-delete doc salvage gate
+## Documentation preservation gate
 
-**Run in the worktree you're about to remove** — after merge, abandon, or weekly tidy. This is the operational detail for the P0 rule in [../SKILL.md](../SKILL.md#pre-delete-doc-salvage-gate-mandatory--p0).
+**Run in the worktree you're about to remove** — after merge, abandon, or weekly tidy. Operational detail for [../SKILL.md § documentation preservation gate](../SKILL.md#documentation-preservation-gate-mandatory--p0).
+
+**Mandatory question:** Are there uncommitted or unpushed docs/audits/plans that should become permanent repo knowledge?
 
 ### 1. Inventory everything not on the remote
 
@@ -50,7 +52,7 @@ git -C "$WT" diff --cached --stat
 
 ```bash
 git -C "$WT" ls-files --others --exclude-standard | rg -i \
-  '\.(md|mdc)$|^docs/|^tasks/|^\.claude/skills/|Universal-design|design\.md' || true
+  '\.(md|mdx|mdc|csv|json|sql)$|^docs/|^tasks/|^linear/|^\.claude/|^\.@worktrees/|Universal-design|README|AGENTS\.md|CLAUDE\.md' || true
 ```
 
 Also scan **modified** docs not in the merged PR:
@@ -59,14 +61,15 @@ Also scan **modified** docs not in the merged PR:
 git -C "$WT" diff --name-only HEAD | rg -i '\.(md|mdc)$|^docs/|^tasks/' || true
 ```
 
-### 3. Triage each flagged file
+### 3. Triage each flagged file (three outcomes only)
 
-| Verdict | Action |
+| Outcome | Action |
 |---------|--------|
-| **Ship with task** | Commit on task branch → push → confirm on PR |
-| **Separate concern** | New branch `ipi/<id>-docs-<slug>` → docs-only PR ([one concern rule](../../pr-workflow/SKILL.md)) |
-| **Preserve only** | Cherry-pick or copy into `ipi/preserve-worktree-docs` pattern; push before remove |
-| **Trash** | `git clean -fd <path>` only after explicit user/agent confirmation |
+| **1. Commit it** | Useful project knowledge → task PR or split docs-only PR |
+| **2. Move to canonical location** | Valuable but wrong path → move under `docs/` or `tasks/`, then commit |
+| **3. Delete intentionally** | Junk, duplicate, stale, or unsafe — explicit confirmation only |
+
+If unsure → `ipi/docs-preservation-<slug>` branch/PR before remove.
 
 **Hard rule:** zero untracked doc paths remain before `git worktree remove`, unless the user names specific paths to discard in chat.
 
@@ -93,7 +96,7 @@ Paste into PR comment or Linear close-out:
 
 ```text
 Worktree removed: <path>
-Doc salvage: <committed PR # | none — tree was clean | preservation PR #>
+Doc preservation: <committed PR # | moved + committed | preservation PR # | none — tree was clean>
 pre-delete: green
 audit count after: <n> worktrees
 ```
@@ -152,7 +155,7 @@ git fetch -p                            # prune remote-tracking branches deleted
 git branch --merged origin/main | grep -vE '^\*|(^|\s)main$' | xargs -r git branch -d
 
 # for each merged/abandoned worktree from `git worktree list`:
-#   1. Run Pre-delete doc salvage gate (above) — commit/split docs first
+#   1. Run Documentation preservation gate (above) — commit/split docs first
 #   2. npm run worktree:pre-delete inside that worktree
 git worktree remove <path>              # add --force only after salvage gate + backup (see SKILL.md)
 ```

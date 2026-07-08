@@ -27,7 +27,7 @@ Coordinator for **closing the loop** — Linear, todo.md, git commit. **Mandator
 [ ]  9. task-verifier on spec if user requires forensic Done (optional).
 [ ] 10. Report: issue link, files changed, verify summary.
 [ ] 11. Push / PR only if user explicitly asks.
-[ ] 12. **Worktree teardown (if used):** run [doc salvage gate](../worktrees/SKILL.md#pre-delete-doc-salvage-gate-mandatory--p0) → commit/split any untracked docs → `npm run worktree:pre-delete` → `git worktree remove <path>` → `npm run worktree:audit`.
+[ ] 12. **Worktree teardown (if used):** [documentation preservation gate](../worktrees/SKILL.md#documentation-preservation-gate-mandatory--p0) → commit/split docs → `npm run worktree:pre-delete` → `git worktree remove <path>` → `npm run worktree:audit`.
 ```
 
 ---
