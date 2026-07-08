@@ -15,7 +15,7 @@
 1. ✅ Added Cloudflare MCP to `opencode.jsonc`
 2. ✅ Added `CLOUDFLARE_API_TOKEN` + `CF_ACCOUNT_ID` to `.env.example`
 3. ✅ Fixed `wrangler.jsonc` compat date (`2026-07-07`→`2026-03-10`)
-4. ✅ Removed duplicate `.agents/skills/cloudflare/` (`.claude/skills/` is SSOT)
+4. ✅ Consolidated Cloudflare skills into `.claude/skills/cloudflare/` hub (agents-sdk, wrangler, workers-best-practices merged as references; `.agents/skills/` removed)
 
 ## Worker Tests
 - 5/5 passing (health, /v1/chat, embeddings, 404, 405)

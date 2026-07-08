@@ -2,7 +2,7 @@
 
 Coordinator for **Linear-first** planning. Routes scoping to child skills; owns SPEC-ID traceability and issue description quality.
 
-**Load:** [references/linear-issue-steps.md](references/linear-issue-steps.md) · [references/linear-spec-template.md](references/linear-spec-template.md) · [references/linear-prompt-engineering.md](references/linear-prompt-engineering.md)
+**Load:** [references/linear-issue-steps.md](references/linear-issue-steps.md) · [references/linear-spec-template.md](references/linear-spec-template.md) · [references/linear-prompt-engineering.md](references/linear-prompt-engineering.md) · [references/domain-skill-routing.md](references/domain-skill-routing.md)
 
 ---
 
@@ -11,17 +11,18 @@ Coordinator for **Linear-first** planning. Routes scoping to child skills; owns 
 | | Criterion |
 |---|---|
 | **Entry** | New capability in [prd.md](../../../prd.md) / [mvp.md](../../../mvp.md) with no Linear spec, OR user asks to scope IPI-/PLT-/UI-/DNA-/COM- work, OR issue exists but lacks A–E steps + Gantt. |
-| **Exit** | `docs/linear/issues/IPI-*-<SPEC-ID>.md` updated (or created) with acceptance criteria, wiring plan, verify block. Linear description has completion steps + Gantt. [todo.md](../../../todo.md) row exists or updated. |
+| **Exit** | `docs/linear/issues/IPI-*-<SPEC-ID>.md` updated (or created) with acceptance criteria, wiring plan, verify block. Linear description has completion steps + Gantt. [`tasks/plan/todo.md`](../../../tasks/plan/todo.md) row exists or updated. |
 
 ---
 
 ## Workflow checklist
 
 ```
-[ ] 1.  Read SPEC row in todo.md — confirm seq, blocked-by, MVP proof link.
+[ ] 1.  Read SPEC row in tasks/plan/todo.md — confirm seq, blocked-by, MVP proof link.
 [ ] 2.  Read matching docs/linear/issues/IPI-*.md (source of truth for wiring).
 [ ] 3.  Read prd.md / mvp.md section for the SPEC-ID.
-[ ] 4.  Route to child skill if scope ambiguous (routing table below).
+[ ] 3b. **Domain skills (mandatory):** classify task → [domain-skill-routing.md](references/domain-skill-routing.md) + skill-map row → Read each `.claude/skills/<slug>/SKILL.md` → draft **Skills:** line.
+[ ] 4.  Route to process child skill if scope ambiguous (routing table below).
 [ ] 5.  Write the PROBLEM STATEMENT — what breaks today, concrete examples.
 [ ] 6.  Write the USER STORY — single sentence: As / when / I see / so I can.
 [ ] 7.  Draw ASCII wireframe (UI tasks) + states table (all 5 states).
@@ -31,7 +32,7 @@ Coordinator for **Linear-first** planning. Routes scoping to child skills; owns 
 [ ] 10. Add TECHNICAL NOTES — exact files to touch + explicit "Do NOT" antipatterns.
 [ ] 11. Add OUT OF SCOPE — at least 2 explicit exclusions.
 [ ] 12. Add Verify block — per-step proof commands ([per-task-testing](references/per-task-testing.md)).
-[ ] 13. List Skills line (ipix-task-lifecycle + domain skills).
+[ ] 13. **Skills:** line in spec md + Linear — slugs from domain-skill-routing; each skill has ≥1 proof command.
 [ ] 14. Push description to Linear via mcp__linear-ipix__save_issue.
 [ ] 15. Run validation checklist below.
 [ ] 16. Hand off to research.md (Phase 2) or implementation.md if trivial + green-lit.
@@ -54,6 +55,7 @@ Coordinator for **Linear-first** planning. Routes scoping to child skills; owns 
 | Linear step format / mermaid rules | [linear-issue-steps.md](references/linear-issue-steps.md) |
 | Issue as agent prompt | [linear-prompt-engineering.md](references/linear-prompt-engineering.md) |
 | Issue markdown structure | [linear-spec-template.md](references/linear-spec-template.md) |
+| Domain skills (mastra, supabase, …) | [domain-skill-routing.md](references/domain-skill-routing.md) · [`skill-map.md`](../../../tasks/intelligence/ai/skill-map.md) |
 
 ### Planning decision tree
 
@@ -115,7 +117,7 @@ docs/linear/issues/IPI-<n>-<SPEC-ID>.md
 | Rule | Detail |
 |------|--------|
 | `Blocked by` / `Unblocks` | Required in Linear description + spec md |
-| Platform order | Follow [todo.md](../../../todo.md) seq — e.g. PLT-003 before AI-001 |
+| Platform order | Follow [`tasks/plan/todo.md`](../../../tasks/plan/todo.md) seq — e.g. PLT-003 before AI-001 |
 | Migrations before UI | Schema + RLS before hooks/components that query |
 | Edge fn before client | Deploy + verify edge before Next.js client calls it |
 | No cycles | If A blocks B and B blocks A, replan |
@@ -138,7 +140,7 @@ Never merge or split mid-implementation — update Linear + spec md first.
 ## Validation checklist
 
 ```
-[ ] SPEC-ID in issue title matches todo.md row
+[ ] SPEC-ID in issue title matches tasks/plan/todo.md row
 [ ] docs/linear/issues/IPI-*.md exists and links to Linear URL
 [ ] PROBLEM STATEMENT present — concrete examples of what breaks today
 [ ] USER STORY present — As / when / I see / so I can (single sentence)
@@ -151,12 +153,13 @@ Never merge or split mid-implementation — update Linear + spec md first.
 [ ] OUT OF SCOPE — at least 2 explicit exclusions
 [ ] Wiring plan lists Create/Modify per file path
 [ ] Completion steps A–E with proof per step
-[ ] Skills line lists domain skills (ipix-supabase, gemini, etc.)
-[ ] Blocked by / Unblocks accurate vs todo.md
+[ ] **Skills:** line lists all required slugs (ipix-task-lifecycle + domain); each Read from `.claude/skills/<slug>/SKILL.md`
+[ ] Each declared skill has ≥1 AC/step with matching proof command
+[ ] Blocked by / Unblocks accurate vs tasks/plan/todo.md
 [ ] No TBD anywhere in the issue
 [ ] Prompt lint passed — see linear-prompt-engineering.md validation checklist
 [ ] blockedBy in Linear matches any AC that depends on another issue
-[ ] todo.md dot/status reflects planning state (🟡 or ⚪)
+[ ] tasks/plan/todo.md dot/status reflects planning state (🟡 or ⚪)
 ```
 
 ---
@@ -167,7 +170,58 @@ Never merge or split mid-implementation — update Linear + spec md first.
 |-----------|----------|
 | No PRD section for initiative | [prd-template](references/prd-template.md) → Linear spec |
 | Architecture diagram for stakeholders | [mermaid-diagrams](../mermaid-diagrams/SKILL.md) |
-| Roadmap / milestone reshuffle | [todo.md](../../../todo.md) + [docs/linear/linear-plan.md](../../../docs/linear/linear-plan.md) |
+| Roadmap / milestone reshuffle | [`tasks/plan/todo.md`](../../../tasks/plan/todo.md) + [docs/linear/linear-plan.md](../../../docs/linear/linear-plan.md) |
 | Forensic verify before marking planned | [task-verifier](../task-verifier/SKILL.md) |
 
 Hand off to [research.md](research.md) once spec + Linear steps exist.
+
+---
+
+## Issue enrichment — wireframes, diagrams, wiring
+
+Add during Phase 1. Never skip if the issue touches UI or multiple services.
+
+### Wireframe — add when
+
+- Any new UI surface, panel, or screen
+- Existing layout is significantly reorganised
+- Stakeholder alignment needed before coding
+
+**How:** ASCII wireframe inline in Linear · [ipix-wireframe](../ipix-wireframe/SKILL.md)
+
+### Mermaid — add when
+
+| Diagram | When |
+|---------|------|
+| `sequenceDiagram` | API chain, auth, multi-service |
+| `flowchart` | User journey, data pipeline |
+| `stateDiagram-v2` | loading/loaded/error/empty |
+| `erDiagram` | New tables / schema |
+| component `flowchart` | 3+ React components |
+
+[mermaid-diagrams](../mermaid-diagrams/SKILL.md)
+
+### Frontend ↔ backend wiring — add when
+
+- New/changed API route · Supabase fetch · Realtime · shared context
+
+Minimum block in issue:
+
+```
+| Route | Status | Auth | Returns |
+|---|---|---|---|
+| GET /api/foo/[id] | 🔴 create | withOperatorAuth | { ... } |
+```
+
+Auth: `withOperatorAuth` + `createSupabaseServerClient`. Fetch: `useSWR` null-gated or RSC.
+
+### Decision table
+
+| Issue type | Wireframe | Mermaid | Wiring |
+|---|---|---|---|
+| New UI screen / panel | ✅ | flowchart + sequence | ✅ |
+| UI change (existing) | if layout changes | state diagram | if fetch changes |
+| API route only | — | sequence | ✅ |
+| DB migration only | — | erDiagram | if types change |
+| Bug fix | — | — | if wiring gap |
+| Refactor | — | component tree if complex | — |

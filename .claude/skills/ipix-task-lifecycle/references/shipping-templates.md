@@ -2,7 +2,7 @@
 
 ---
 
-## todo.md row update
+## tasks/plan/todo.md row update
 
 Change dot in master table:
 
@@ -38,7 +38,7 @@ Tick each step in completion block:
 - [x] **B1** Operator sees … — proof: screenshot / build log
 ```
 
-Set issue state **Done** when all verify gates pass and todo.md is 🟢.
+Set issue state **Done** when all verify gates pass and `tasks/plan/todo.md` is 🟢.
 
 ---
 

@@ -2,7 +2,7 @@
 
 **Canonical inventory:** [`index-skills.md`](../../index-skills.md) · Last updated: **2026-07-06** · Grade: **A- (92/100)** post P0 link fixes.
 
-**35 active top-level skills** (+ 1 nested ref in `linear/references/pm/`, + 2 archive symlinks).
+**36 active top-level skills** (+ 1 nested ref in `linear/references/pm/`, + 2 archive symlinks).
 **27** skills in [`archive/`](./archive/).
 
 ## Start here — hubs
@@ -17,6 +17,7 @@
 | [`copilotkit`](./copilotkit/SKILL.md) | CopilotKit v2 single plugin. 🔴 1 stale doc link |
 | [`mastra`](./mastra/SKILL.md) | Agents + tools. 🔴 missing `references/full-guide.md` |
 | [`cloudinary`](./cloudinary/SKILL.md) | Media pipeline |
+| [`cloudflare`](./cloudflare/SKILL.md) | Workers, Wrangler, Agents SDK, platform refs |
 | [`infisical`](./infisical/SKILL.md) | Secrets |
 | [`firecrawl`](./firecrawl/SKILL.md) | Web crawl/scrape/search |
 | [`linear`](./linear/SKILL.md) | Issues MCP |
@@ -37,7 +38,7 @@
 ## Rules
 
 1. Fold duplicates into hub `references/` — no new top-level dirs without reason.
-2. No symlinks to `.agents/skills/` (CopilotKit upstream cache).
+2. No symlinks to `.agents/skills/` — all skills live under `.claude/skills/` (CopilotKit upstream sync may still use `.agents/` as a staging copy; do not commit it).
 3. Archived skills: `archive/<name>/` — link as `../archive/<name>/SKILL.md`.
 4. `graphify query` before multi-file reads.
 5. Keep [`index-skills.md`](../../index-skills.md) in sync after add/remove/archive.
