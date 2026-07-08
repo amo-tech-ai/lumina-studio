@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script>
+window.__LU={
+ building:'<rect width="16" height="20" x="4" y="2" rx="2"/><path d="M9 22v-4h6v4"/><path d="M8 6h.01"/><path d="M16 6h.01"/><path d="M12 6h.01"/><path d="M12 10h.01"/><path d="M12 14h.01"/><path d="M16 10h.01"/><path d="M16 14h.01"/><path d="M8 10h.01"/><path d="M8 14h.01"/>',
+ users:'<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>',
+ "git-branch":'<line x1="6" x2="6" y1="3" y2="15"/><circle cx="18" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M18 9a9 9 0 0 1-9 9"/>',
+ home:'<path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M9 22V12h6v10"/>',
+ inbox:'<polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/>',
+ search:'<circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>',
+ plus:'<path d="M5 12h14"/><path d="M12 5v14"/>',
+ sparkles:'<path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .962 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.962 0z"/><path d="M20 3v4"/><path d="M22 5h-4"/><path d="M4 17v2"/><path d="M5 18H3"/>',
+ "chevron-down":'<path d="m6 9 6 6 6-6"/>', "chevron-right":'<path d="m9 18 6-6-6-6"/>',
+ "arrow-up":'<path d="m5 12 7-7 7 7"/><path d="M12 19V5"/>',
+ mail:'<rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/>'
+};
+(function(){ if(customElements.get('lu-ic'))return;
+ class LuIc extends HTMLElement{ static get observedAttributes(){return ['name'];}
+  connectedCallback(){this._r();} attributeChangedCallback(){this._r();}
+  _r(){ var n=this.getAttribute('name');var inner=(window.__LU||{})[n];if(inner==null)return;
+   this.style.display='inline-flex';this.style.alignItems='center';this.style.justifyContent='center';
+   var root=this.shadowRoot||this.attachShadow({mode:'open'});
+   root.innerHTML='<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="100%" height="100%" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:block">'+inner+'</svg>';
+  } }
+ customElements.define('lu-ic',LuIc);
+})();
+</script>
+<style>
+  :root{--bg:#fff;--surface:#fafafa;--muted-bg:#f5f5f5;--border:#e5e7eb;--border-strong:#d1d5db;--border-subtle:#ededed;--text:#111;--text-2:#6b7280;--text-3:#9ca3af;--action:#111;--prospect:#2563eb;--active:#059669;--approval:#d97706;--approval-bg:#fef3e2;--font:"Inter",sans-serif;--mono:"Geist Mono",Menlo,monospace;--r-sm:6px;--r-md:10px;--r-lg:16px;--r-pill:9999px;}
+  *{box-sizing:border-box;}body{margin:0;font-family:var(--font);color:var(--text);background:var(--surface);-webkit-font-smoothing:antialiased;}
+  .tnum{font-variant-numeric:tabular-nums;}::-webkit-scrollbar{width:8px;height:8px;}::-webkit-scrollbar-thumb{background:var(--border-strong);border-radius:4px;}
+  @keyframes shimmer{0%{background-position:-400px 0;}100%{background-position:400px 0;}}.sk{background:linear-gradient(90deg,#f0f0f0 25%,#e6e6e6 37%,#f0f0f0 63%);background-size:800px 100%;animation:shimmer 1.4s infinite linear;border-radius:6px;}
+</style>
+</helmet>
+<div style="display:grid;grid-template-columns:56px minmax(0,1fr) 320px;height:100vh;width:100vw;background:var(--bg);overflow:hidden;">
+  <nav style="background:var(--bg);border-right:1px solid var(--border);display:flex;flex-direction:column;align-items:center;padding:14px 0;gap:4px;">
+    <div style="width:30px;height:30px;border-radius:8px;background:var(--action);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;margin-bottom:12px;">i</div>
+    <sc-for list="{{ nav }}" as="n" hint-placeholder-count="5"><div title="{{ n.label }}" style="{{ n.style }}"><lu-ic name="{{ n.icon }}" style="width:20px;height:20px;"></lu-ic></div></sc-for>
+  </nav>
+
+  <main style="display:flex;flex-direction:column;min-width:0;min-height:0;height:100vh;overflow:hidden;">
+    <div style="flex-shrink:0;padding:20px 26px 0;">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px;">
+        <div>
+          <div style="display:flex;align-items:center;gap:10px;"><h1 style="margin:0;font-size:24px;font-weight:700;letter-spacing:-.02em;">People</h1><span style="display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:var(--r-pill);background:var(--approval-bg);border:1px solid #f4d9ad;font-size:11px;font-weight:600;color:var(--approval);">Sample data — not live</span></div>
+          <p style="margin:4px 0 0;font-size:13px;color:var(--text-2);" class="tnum">6 people across 5 organizations · 1 model · 1 photographer</p>
+        </div>
+        <button style="display:flex;align-items:center;gap:7px;padding:9px 14px;border-radius:var(--r-md);border:none;background:var(--action);color:#fff;font-family:var(--font);font-size:13px;font-weight:600;cursor:pointer;flex-shrink:0;"><lu-ic name="plus" style="width:15px;height:15px;"></lu-ic>New person</button>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;margin-top:16px;flex-wrap:wrap;">
+        <div style="display:flex;align-items:center;gap:8px;flex:1;min-width:200px;border:1px solid var(--border-strong);border-radius:var(--r-md);padding:8px 11px;background:var(--bg);"><lu-ic name="search" style="width:15px;height:15px;color:var(--text-3);"></lu-ic><input type="text" placeholder="Search name or email" style="flex:1;min-width:0;border:none;outline:none;background:none;font-family:var(--font);font-size:13px;" /></div>
+        <sc-for list="{{ filters }}" as="f" hint-placeholder-count="3"><button style="{{ f.style }}">{{ f.label }}<lu-ic name="chevron-down" style="width:13px;height:13px;opacity:.6;"></lu-ic></button></sc-for>
+      </div>
+    </div>
+
+    <div style="flex:1;overflow-y:auto;padding:16px 26px 20px;min-height:0;">
+      <div style="border:1px solid var(--border);border-radius:var(--r-lg);overflow:hidden;background:var(--bg);">
+        <div style="display:grid;grid-template-columns:1.5fr 1fr .9fr 1.2fr .7fr;gap:12px;padding:10px 16px;background:var(--surface);border-bottom:1px solid var(--border);font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--text-3);">
+          <div>Name</div><div>Organization</div><div>Role</div><div>Primary email</div><div>Last activity</div>
+        </div>
+        <sc-for list="{{ rows }}" as="c" hint-placeholder-count="6">
+          <div onClick="{{ c.onSelect }}" style="{{ c.rowStyle }}">
+            <div style="display:flex;align-items:center;gap:11px;min-width:0;"><div style="width:32px;height:32px;border-radius:50%;background:var(--muted-bg);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;color:var(--text-2);flex-shrink:0;">{{ c.initials }}</div><div style="flex:1;min-width:0;"><div style="font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ c.name }}</div><div style="margin-top:3px;"><span style="{{ c.ptypeStyle }}">{{ c.ptypeLabel }}</span></div></div></div>
+            <div style="font-size:13px;color:var(--prospect);align-self:center;font-weight:500;">{{ c.company }}</div>
+            <div style="font-size:13px;color:var(--text-2);align-self:center;">{{ c.role }}</div>
+            <div style="font-size:12px;color:var(--text-2);align-self:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ c.email }}<sc-if value="{{ c.multi }}" hint-placeholder-val="{{ false }}"><span style="font-size:10px;color:var(--text-3);margin-left:5px;">{{ c.multi }}</span></sc-if></div>
+            <div style="font-size:12px;color:var(--text-2);align-self:center;" class="tnum">{{ c.lastActivity }}</div>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+
+    <div style="flex-shrink:0;border-top:1px solid var(--border);background:var(--bg);padding:10px 26px 14px;">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;"><lu-ic name="sparkles" style="width:14px;height:14px;color:var(--prospect);"></lu-ic><span style="font-size:12px;color:var(--text-2);">{{ greeting }}</span><span style="font-size:10px;font-weight:600;color:var(--text-3);border:1px solid var(--border);border-radius:var(--r-pill);padding:2px 7px;">crm-assistant · not yet wired</span></div>
+      <div style="display:flex;align-items:center;gap:8px;border:1px solid var(--border-strong);border-radius:var(--r-pill);padding:8px 8px 8px 14px;"><input type="text" placeholder="Ask about your people…" style="flex:1;min-width:0;border:none;outline:none;background:none;font-family:var(--font);font-size:13px;" /><button style="width:30px;height:30px;border-radius:50%;border:none;background:var(--action);color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;"><lu-ic name="arrow-up" style="width:15px;height:15px;"></lu-ic></button></div>
+    </div>
+  </main>
+
+  <aside style="background:var(--surface);border-left:1px solid var(--border);display:flex;flex-direction:column;min-height:0;overflow-y:auto;">
+    <div style="padding:16px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;"><lu-ic name="sparkles" style="width:15px;height:15px;color:var(--prospect);"></lu-ic><span style="font-size:13px;font-weight:700;">Intelligence</span></div>
+    <sc-if value="{{ hasSelection }}" hint-placeholder-val="{{ false }}">
+      <div style="padding:16px 18px;">
+        <div style="display:flex;align-items:center;gap:11px;margin-bottom:14px;"><div style="width:38px;height:38px;border-radius:50%;background:var(--muted-bg);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;color:var(--text-2);flex-shrink:0;">{{ sel.initials }}</div><div style="min-width:0;"><div style="font-size:14px;font-weight:700;">{{ sel.name }}</div><div style="font-size:11px;color:var(--text-3);">{{ sel.role }} · {{ sel.company }}</div></div></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px;">
+          <div style="border:1px solid var(--border);border-radius:var(--r-md);padding:9px 11px;background:var(--bg);"><div style="font-size:10px;text-transform:uppercase;letter-spacing:.04em;color:var(--text-3);">Open deals</div><div style="font-size:13px;font-weight:600;margin-top:2px;" class="tnum">{{ sel.openDeals }}</div></div>
+          <div style="border:1px solid var(--border);border-radius:var(--r-md);padding:9px 11px;background:var(--bg);"><div style="font-size:10px;text-transform:uppercase;letter-spacing:.04em;color:var(--text-3);">Last touch</div><div style="font-size:13px;font-weight:600;margin-top:2px;" class="tnum">{{ sel.lastActivity }}</div></div>
+        </div>
+        <div style="border:1px solid var(--border-subtle);border-radius:var(--r-md);background:var(--bg);padding:11px 12px;margin-bottom:14px;"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;"><span style="font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--text-3);">Summary</span><span style="font-size:9px;font-weight:600;color:{{ sel.confColor }};border:1px solid var(--border);border-radius:var(--r-pill);padding:1px 6px;">{{ sel.conf }} confidence</span></div><div style="font-size:12px;line-height:1.5;">{{ sel.summary }}</div></div>
+        <div style="display:flex;gap:8px;"><button style="flex:1;padding:9px;border-radius:var(--r-md);border:none;background:var(--action);color:#fff;font-family:var(--font);font-size:12px;font-weight:600;cursor:pointer;">Open</button><button style="flex:1;padding:9px;border-radius:var(--r-md);border:1px solid var(--border-strong);background:var(--bg);font-family:var(--font);font-size:12px;font-weight:500;cursor:pointer;">Log activity</button></div>
+      </div>
+    </sc-if>
+    <sc-if value="{{ noSelection }}" hint-placeholder-val="{{ true }}">
+      <div style="padding:20px 18px;"><div style="border:1px solid var(--border-subtle);border-radius:var(--r-md);background:var(--bg);padding:12px;margin-bottom:12px;"><div style="font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--text-3);margin-bottom:5px;">Contacts</div><div style="font-size:12px;line-height:1.55;">6 people · 1 model (links to full Model Profile), 1 photographer (Phase 2). 2 have open deals. Dana Vale is the decision-maker at Acme.</div></div><div style="margin-top:8px;font-size:11px;color:var(--text-3);text-align:center;">Select a contact for its summary</div></div>
+    </sc-if>
+  </aside>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1360,&quot;height&quot;:840}}">
+class Component extends DCLogic {
+  state = { selected:null };
+  renderVals(){
+    const nav = [
+      { icon:'home', label:'Home' }, { icon:'building', label:'Relationships · Organizations' },
+      { icon:'users', label:'Relationships · People', active:true }, { icon:'git-branch', label:'Relationships · Pipeline' }, { icon:'inbox', label:'Inbox' }
+    ].map(n => ({ ...n, style:'width:38px;height:38px;border-radius:9px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:'+(n.active?'#fff':'var(--text-3)')+';background:'+(n.active?'var(--action)':'transparent')+';' }));
+    const filters = ['Organization','Type','Has open deal'].map(l => ({ label:l, style:'display:flex;align-items:center;gap:5px;padding:8px 11px;border-radius:var(--r-md);border:1px solid var(--border-strong);background:var(--bg);font-family:var(--font);font-size:13px;font-weight:500;color:var(--text-2);cursor:pointer;' }));
+    const cf = c => c==='high'?'var(--active)':c==='low'?'var(--lost)':'var(--approval)';
+    const PT = { contact:{l:'Contact',c:'var(--text-2)'}, model:{l:'Model',c:'var(--prospect)'}, photographer:{l:'Photographer',c:'var(--active)'}, crew:{l:'Crew',c:'var(--approval)'} };
+    const ptChip = t => 'display:inline-flex;align-items:center;padding:1px 7px;border-radius:var(--r-pill);font-size:10px;font-weight:600;background:var(--bg);border:1px solid '+PT[t].c+';color:'+PT[t].c+';flex-shrink:0;';
+    const contacts = [
+      { id:0, initials:'DV', name:'Dana Vale', ptype:'contact', company:'Acme Athletic', role:'Brand Director', email:'dana@acme.com', multi:'+1', lastActivity:'2d ago', openDeals:2, conf:'high', summary:'Decision-maker at Acme. Champions the SS26 work; last spoke 2 days ago.' },
+      { id:1, initials:'KR', name:'Kit Rho', ptype:'contact', company:'Vega Studios', role:'Founder', email:'kit@vega.io', multi:'', lastActivity:'6d ago', openDeals:1, conf:'mid', summary:'Founder-buyer at Vega; single open deal in qualified.' },
+      { id:2, initials:'KM', name:'Kara Mensah', ptype:'model', company:'Elite Models', role:'Model · @runwithkara', email:'kara@elitemodels.com', multi:'', lastActivity:'3d ago', openDeals:1, conf:'high', summary:'Booked talent — has a full Model Profile (SCR-20). Represented by Elite. One booking in flight.' },
+      { id:3, initials:'LC', name:'Lena Cho', ptype:'contact', company:'Orbit Denim', role:'Head of Brand', email:'lena@orbitdenim.com', multi:'+2', lastActivity:'18d ago', openDeals:1, conf:'low', summary:'Quiet 18 days; the Orbit Denim renewal is stalling — follow-up overdue.' },
+      { id:4, initials:'JS', name:'John Sato', ptype:'photographer', company:'Independent', role:'Photographer', email:'john@sato.photo', multi:'+1', lastActivity:'11d ago', openDeals:0, conf:'mid', summary:'Freelance photographer used on 3 past shoots. Photographer profile is Phase 2 — no table yet.' },
+      { id:5, initials:'HP', name:'Hana Park', ptype:'crew', company:'Halcyon Sponsors', role:'Producer', email:'hana@halcyon.studio', multi:'', lastActivity:'61d ago', openDeals:0, conf:'mid', summary:'Dormant crew contact at an inactive account.' }
+    ];
+    const rows = contacts.map(c => ({ initials:c.initials, name:c.name, company:c.company, role:c.role, email:c.email, multi:c.multi, lastActivity:c.lastActivity, ptypeLabel:PT[c.ptype].l, ptypeStyle:ptChip(c.ptype),
+      rowStyle:'display:grid;grid-template-columns:1.5fr 1fr .9fr 1.2fr .7fr;gap:12px;padding:12px 16px;border-bottom:1px solid var(--border-subtle);cursor:pointer;align-items:center;'+(this.state.selected===c.id?'background:var(--surface);':'background:var(--bg);'),
+      onSelect:()=>this.setState({selected:c.id}) }));
+    const s = contacts.find(c=>c.id===this.state.selected);
+    const sel = s ? { initials:s.initials, name:s.name, role:s.role, company:s.company, openDeals:s.openDeals, lastActivity:s.lastActivity, summary:s.summary, conf:s.conf, confColor:cf(s.conf) } : {};
+    return { nav, filters, rows, sel,
+      hasSelection:this.state.selected!==null, noSelection:this.state.selected===null,
+      greeting:'2 contacts have open deals with no touch in 7+ days — want a batch of follow-ups?' };
+  }
+}
+</script>
+</body>
+</html>

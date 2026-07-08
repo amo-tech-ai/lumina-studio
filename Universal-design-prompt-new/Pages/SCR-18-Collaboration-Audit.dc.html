@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+<style>
+  :root{
+    --color-bg-page:#ffffff;--color-bg-card:#ffffff;--color-bg-subtle:#fafafa;--color-bg-muted:#f5f5f5;
+    --color-border:#e5e7eb;--color-border-strong:#d1d5db;--color-border-subtle:#ededed;
+    --color-text-primary:#111111;--color-text-secondary:#4b5563;--color-text-muted:#9ca3af;
+    --color-action:#111111;
+    --dna-high:#059669;--warning:#f3b93c;--warning-text:#d97706;--approved:#059669;--info:#2563eb;--blocked:#dc2626;--purple:#7c3aed;
+    --nav-active:#f5f5f5;
+    --font-sans:"Inter",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+    --font-mono:"Geist Mono",ui-monospace,"SF Mono",Menlo,monospace;
+    --radius-sm:6px;--radius-md:10px;--radius-lg:16px;--radius-xl:20px;--radius-pill:9999px;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;font-family:var(--font-sans);color:var(--color-text-primary);background:var(--color-bg-subtle);-webkit-font-smoothing:antialiased;}
+  ::-webkit-scrollbar{width:9px;}::-webkit-scrollbar-thumb{background:#e0e0e0;border-radius:9px;}
+</style>
+</helmet>
+<div style="display:grid;grid-template-columns:56px minmax(0,1fr) 320px;height:100vh;width:100vw;background:var(--color-bg-page);overflow:hidden;">
+
+  <!-- NAV -->
+  <nav style="display:flex;flex-direction:column;align-items:center;gap:4px;padding:14px 0;border-right:1px solid var(--color-border);background:var(--color-bg-card);">
+    <div style="width:30px;height:30px;border-radius:8px;background:var(--color-action);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;margin-bottom:14px;">iP</div>
+    <sc-for list="{{ navItems }}" as="n" hint-placeholder-count="8">
+      <button title="{{ n.label }}" style="{{ n.style }}"><i data-lucide="{{ n.icon }}" style="width:19px;height:19px;"></i></button>
+    </sc-for>
+    <div style="flex:1;"></div>
+    <div style="width:30px;height:30px;border-radius:50%;background-color:var(--color-bg-muted);background-image:{{ avatarBg }};background-size:cover;background-position:center;"></div>
+  </nav>
+
+  <!-- WORKSPACE -->
+  <main style="display:flex;flex-direction:column;min-width:0;background:var(--color-bg-page);">
+    <header style="flex-shrink:0;padding:18px 32px 0;border-bottom:1px solid var(--color-border);">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+        <div>
+          <h1 style="margin:0;font-size:22px;font-weight:700;letter-spacing:-.02em;">Activity &amp; Audit</h1>
+          <p style="margin:4px 0 0;font-size:13px;color:var(--color-text-muted);"><span style="font-family:var(--font-mono);color:var(--color-text-primary);font-weight:600;">{{ eventCount }}</span> events · <span style="font-family:var(--font-mono);color:var(--warning-text);font-weight:600;">{{ openCount }}</span> unresolved</p>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;">
+          <button onClick="{{ toggleScope }}" title="Toggle scope" style="display:flex;align-items:center;gap:7px;padding:9px 14px;border-radius:var(--radius-md);border:1px solid var(--color-border);background:#fff;font-family:var(--font-sans);font-size:13px;font-weight:500;cursor:pointer;"><i data-lucide="filter" style="width:15px;height:15px;"></i>{{ scopeLabel }}</button>
+          <button onClick="{{ exportLog }}" title="Export audit log" style="display:flex;align-items:center;gap:7px;padding:9px 14px;border-radius:var(--radius-md);border:1px solid var(--color-border);background:#fff;font-family:var(--font-sans);font-size:13px;font-weight:500;cursor:pointer;"><i data-lucide="download" style="width:15px;height:15px;"></i>Export</button>
+        </div>
+      </div>
+      <div style="display:flex;gap:22px;">
+        <sc-for list="{{ filters }}" as="f" hint-placeholder-count="5"><button onClick="{{ f.onClick }}" style="{{ f.style }}">{{ f.label }}<sc-if value="{{ f.showBadge }}" hint-placeholder-val="{{ false }}"><span style="{{ f.badgeStyle }}">{{ f.badge }}</span></sc-if></button></sc-for>
+      </div>
+    </header>
+
+    <div style="flex:1;overflow-y:auto;">
+      <div style="max-width:760px;margin:0 auto;padding:22px 32px 40px;">
+        <sc-if value="{{ isEmpty }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:70px 24px;color:var(--color-text-muted);"><i data-lucide="inbox" style="width:34px;height:34px;"></i><p style="margin:14px 0 0;font-size:15px;">No activity in this view.</p></div>
+        </sc-if>
+
+        <sc-for list="{{ groups }}" as="grp" hint-placeholder-count="2">
+          <div style="font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--color-text-muted);margin:0 0 14px;">{{ grp.label }}</div>
+          <div style="position:relative;margin-bottom:26px;">
+            <div style="position:absolute;left:19px;top:6px;bottom:6px;width:1px;background:var(--color-border);"></div>
+            <div style="display:flex;flex-direction:column;gap:2px;">
+              <sc-for list="{{ grp.rows }}" as="e" hint-placeholder-count="4">
+                <div style="{{ e.wrapStyle }}">
+                  <div style="position:relative;flex-shrink:0;width:40px;display:flex;justify-content:center;padding-top:2px;">
+                    <span style="{{ e.dotStyle }}"><i data-lucide="{{ e.icon }}" style="width:14px;height:14px;"></i></span>
+                  </div>
+                  <div style="flex:1;min-width:0;padding-bottom:16px;">
+                    <div style="display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;">
+                      <span style="font-size:14px;color:var(--color-text-primary);"><span style="font-weight:600;">{{ e.actor }}</span> {{ e.verb }} <span style="font-weight:500;color:var(--color-text-secondary);">{{ e.target }}</span></span>
+                      <span style="font-size:11px;color:var(--color-text-muted);font-family:var(--font-mono);white-space:nowrap;">{{ e.time }}</span>
+                    </div>
+                    <sc-if value="{{ e.isComment }}" hint-placeholder-val="{{ false }}">
+                      <div style="{{ e.commentStyle }}">
+                        <p style="margin:0;font-size:13px;color:var(--color-text-secondary);line-height:1.55;">{{ e.body }}</p>
+                        <div style="display:flex;align-items:center;gap:14px;margin-top:10px;">
+                          <span style="{{ e.statusChip }}"><i data-lucide="{{ e.statusIcon }}" style="width:11px;height:11px;"></i>{{ e.statusText }}</span>
+                          <sc-if value="{{ e.hasReplies }}" hint-placeholder-val="{{ false }}"><span style="font-size:12px;color:var(--color-text-muted);display:flex;align-items:center;gap:4px;"><i data-lucide="message-circle" style="width:12px;height:12px;"></i>{{ e.replies }}</span></sc-if>
+                          <div style="flex:1;"></div>
+                          <sc-if value="{{ e.canResolve }}" hint-placeholder-val="{{ false }}"><button onClick="{{ e.onResolve }}" style="padding:5px 11px;border-radius:var(--radius-sm);border:1px solid var(--color-border);background:#fff;font-family:var(--font-sans);font-size:12px;font-weight:500;cursor:pointer;display:flex;align-items:center;gap:5px;"><i data-lucide="check" style="width:12px;height:12px;"></i>Resolve</button></sc-if>
+                        </div>
+                      </div>
+                    </sc-if>
+                    <sc-if value="{{ e.isDiff }}" hint-placeholder-val="{{ false }}">
+                      <div style="margin-top:8px;border:1px solid var(--color-border);border-radius:var(--radius-md);overflow:hidden;font-family:var(--font-mono);font-size:12px;">
+                        <div style="padding:6px 12px;background:#fdecec;color:#b91c1c;border-bottom:1px solid var(--color-border);"><span style="opacity:.6;">− </span>{{ e.before }}</div>
+                        <div style="padding:6px 12px;background:#eafaf0;color:#15803d;"><span style="opacity:.6;">+ </span>{{ e.after }}</div>
+                      </div>
+                    </sc-if>
+                  </div>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+  </main>
+
+  <!-- INTELLIGENCE PANEL -->
+  <aside style="display:flex;flex-direction:column;border-left:1px solid var(--color-border);background:var(--color-bg-card);min-width:0;">
+    <div style="flex-shrink:0;display:flex;align-items:center;gap:8px;padding:16px 18px;border-bottom:1px solid var(--color-border);">
+      <i data-lucide="sparkles" style="width:15px;height:15px;color:var(--color-text-primary);"></i>
+      <span style="font-size:15px;font-weight:600;">Activity intelligence</span>
+    </div>
+    <div style="flex:1;overflow-y:auto;padding:18px;">
+      <div style="padding:14px;border:1px solid var(--color-border);border-radius:var(--radius-lg);background:var(--color-bg-subtle);">
+        <div style="font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--color-text-muted);margin-bottom:8px;">Summary</div>
+        <p style="margin:0;font-size:13px;color:var(--color-text-secondary);line-height:1.6;">{{ digestSummary }}</p>
+      </div>
+
+      <div style="display:flex;align-items:center;gap:6px;margin:20px 0 10px;"><i data-lucide="alert-circle" style="width:13px;height:13px;color:var(--warning-text);"></i><span style="font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--color-text-muted);">Needs your action</span></div>
+      <sc-if value="{{ hasAttention }}" hint-placeholder-val="{{ true }}">
+        <div style="display:flex;flex-direction:column;gap:8px;">
+          <sc-for list="{{ attention }}" as="a" hint-placeholder-count="2">
+            <button onClick="{{ a.onClick }}" style="display:flex;align-items:center;gap:10px;width:100%;padding:11px 12px;border:1px solid var(--color-border);border-left:3px solid {{ a.accent }};border-radius:var(--radius-md);background:var(--color-bg-card);cursor:pointer;font-family:var(--font-sans);text-align:left;">
+              <span style="flex:1;min-width:0;"><span style="display:block;font-size:12px;font-weight:600;color:var(--color-text-primary);">{{ a.label }}</span><span style="display:block;font-size:12px;color:var(--color-text-muted);margin-top:2px;">{{ a.who }}</span></span>
+              <i data-lucide="chevron-right" style="width:15px;height:15px;color:var(--color-text-muted);flex-shrink:0;"></i>
+            </button>
+          </sc-for>
+        </div>
+      </sc-if>
+      <sc-if value="{{ noAttention }}" hint-placeholder-val="{{ false }}">
+        <p style="margin:0;font-size:13px;color:var(--color-text-muted);">Nothing needs action right now.</p>
+      </sc-if>
+
+      <div style="height:1px;background:var(--color-border);margin:20px 0;"></div>
+      <div style="font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--color-text-muted);margin-bottom:12px;">By type</div>
+      <div style="display:flex;flex-direction:column;gap:10px;">
+        <sc-for list="{{ glance }}" as="g" hint-placeholder-count="4">
+          <div style="display:flex;align-items:center;justify-content:space-between;font-size:13px;"><span style="display:flex;align-items:center;gap:8px;color:var(--color-text-secondary);"><span style="width:8px;height:8px;border-radius:50%;background:{{ g.color }};"></span>{{ g.label }}</span><span style="font-family:var(--font-mono);font-weight:600;">{{ g.count }}</span></div>
+        </sc-for>
+      </div>
+
+      <div style="height:1px;background:var(--color-border);margin:20px 0;"></div>
+      <div style="font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--color-text-muted);margin-bottom:12px;">Most active</div>
+      <div style="display:flex;flex-direction:column;gap:11px;">
+        <sc-for list="{{ people }}" as="p" hint-placeholder-count="3">
+          <div style="display:flex;align-items:center;gap:10px;"><span style="width:26px;height:26px;border-radius:50%;background:{{ p.color }};color:#fff;font-size:10px;font-weight:600;display:flex;align-items:center;justify-content:center;flex-shrink:0;">{{ p.initials }}</span><span style="flex:1;min-width:0;font-size:13px;color:var(--color-text-secondary);">{{ p.name }}</span><span style="font-family:var(--font-mono);font-size:12px;font-weight:600;color:var(--color-text-muted);">{{ p.count }}</span></div>
+        </sc-for>
+      </div>
+    </div>
+    <div style="flex-shrink:0;padding:12px 18px;border-top:1px solid var(--color-border);display:flex;align-items:center;gap:7px;">
+      <span style="width:7px;height:7px;border-radius:50%;background:var(--dna-high);"></span>
+      <span style="font-size:11px;color:var(--color-text-muted);">audit log · immutable · live</span>
+    </div>
+  </aside>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1200,&quot;height&quot;:840}}">
+class Component extends DCLogic {
+  state = { filter:'all', resolved:{}, scope:'Everyone' };
+
+  componentDidMount(){ this._icons(); }
+  componentDidUpdate(){ this._icons(); }
+  _icons(){ let t=0; const run=()=>{ if(window.lucide&&window.lucide.createIcons)window.lucide.createIcons(); else if(t++<40)setTimeout(run,80); }; run(); }
+
+  renderVals(){
+    const nav=[
+      {icon:'layout-dashboard',label:'Command Center'},{icon:'building-2',label:'Brands'},
+      {icon:'camera',label:'Shoots'},{icon:'megaphone',label:'Campaigns'},{icon:'images',label:'Assets'},
+      {icon:'shuffle',label:'Matching'},{icon:'bar-chart-3',label:'Analytics'},{icon:'history',label:'Activity',active:true}
+    ].map(n=>({...n,style:'width:40px;height:40px;border-radius:10px;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;'+(n.active?'background:var(--nav-active);color:var(--color-text-primary);':'background:transparent;color:var(--color-text-muted);')}));
+
+    // type → icon + accent color
+    const T={
+      comment:['message-square','var(--info)'],
+      approval:['check-circle-2','var(--approved)'],
+      edit:['pencil','var(--purple)'],
+      upload:['upload','var(--color-text-primary)'],
+      status:['git-commit-horizontal','var(--warning-text)'],
+      mention:['at-sign','var(--info)'],
+      system:['settings','var(--color-text-muted)']
+    };
+    const PC={SK:'#7c3aed',MT:'#2563eb',AL:'#059669',DV:'#d97706',JS:'#111111',SY:'#9ca3af'};
+
+    // raw audit/activity log (newest first)
+    const raw=[
+      {id:'e1',type:'comment',who:'SK',actor:'Sasha Kim',verb:'commented on',target:'Nike SS26 · Look 04',time:'11m',group:'Today',
+        body:'The crop on the hero shot feels tight — can we get 10% more headroom before this goes to Channel Preview?',status:'open',replies:2,mention:true},
+      {id:'e2',type:'approval',who:'MT',actor:'Maya Torres',verb:'approved',target:'Retouch batch · 12 assets',time:'38m',group:'Today'},
+      {id:'e3',type:'edit',who:'AL',actor:'Alex Lee',verb:'changed day rate on',target:'@runwithkara booking',time:'1h',group:'Today',
+        before:'Day rate: \u00a31,200',after:'Day rate: \u00a31,450'},
+      {id:'e4',type:'comment',who:'DV',actor:'Dana Vale',verb:'commented on',target:'Shoot #482 · Call sheet',time:'2h',group:'Today',
+        body:'@sasha the 7am call is tight for the Studio 17 load-in — flagging before we lock it.',status:'open',replies:0,mention:true},
+      {id:'e5',type:'upload',who:'JS',actor:'Jordan Soto',verb:'uploaded 24 assets to',target:'Nike SS26',time:'3h',group:'Today'},
+      {id:'e6',type:'status',who:'AL',actor:'Alex Lee',verb:'moved booking to',target:'confirmed · @runwithkara',time:'4h',group:'Today'},
+      {id:'e7',type:'comment',who:'MT',actor:'Maya Torres',verb:'resolved a comment on',target:'Adidas Q2 · Look 09',time:'Yesterday',group:'Earlier',
+        body:'Colour grade matches the brand DNA now — good to publish.',status:'resolved',replies:3},
+      {id:'e8',type:'edit',who:'SK',actor:'Sasha Kim',verb:'edited the brief for',target:'Adidas Q2 campaign',time:'Yesterday',group:'Earlier',
+        before:'Tone: energetic, urban',after:'Tone: energetic, urban, optimistic'},
+      {id:'e9',type:'approval',who:'DV',actor:'Dana Vale',verb:'approved publish for',target:'Channel Preview · 6 posts',time:'2d',group:'Earlier'},
+      {id:'e10',type:'system',who:'SY',actor:'System',verb:'auto-archived',target:'expired request · @cityrunner_jo',time:'2d',group:'Earlier'},
+      {id:'e11',type:'mention',who:'JS',actor:'Jordan Soto',verb:'mentioned you in',target:'Nike SS26 · Deliverables',time:'3d',group:'Earlier'}
+    ];
+
+    const isResolved=e=> e.status==='resolved' || !!this.state.resolved[e.id];
+    const catOf=e=> e.type==='comment'||e.type==='mention' ? 'comments'
+      : e.type==='approval' ? 'approvals'
+      : e.type==='edit'||e.type==='upload' ? 'edits'
+      : 'system';
+    const passFilter=e=> this.state.filter==='all' ? true : catOf(e)===this.state.filter;
+
+    const decorate=e=>{
+      const t=T[e.type]||T.system;
+      const resolved=isResolved(e);
+      const canResolve=(e.type==='comment'||e.type==='mention')&&e.status==='open'&&!resolved;
+      const statusResolved=resolved||e.status==='resolved';
+      return {...e,
+        icon:t[0],
+        wrapStyle:'display:flex;gap:0;',
+        dotStyle:'width:34px;height:34px;border-radius:9px;background:var(--color-bg-subtle);border:1px solid var(--color-border);color:'+t[1]+';display:flex;align-items:center;justify-content:center;',
+        isComment:e.type==='comment'||e.type==='mention'&&!!e.body,
+        isDiff:e.type==='edit',
+        commentStyle:'margin-top:8px;padding:12px 14px;border:1px solid var(--color-border);border-radius:var(--radius-md);background:var(--color-bg-subtle);',
+        hasReplies:(e.replies||0)>0, replies:(e.replies||0)+(e.replies===1?' reply':' replies'),
+        canResolve,
+        statusText:statusResolved?'Resolved':'Open',
+        statusIcon:statusResolved?'check-circle-2':'circle-dot',
+        statusChip:'display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:600;padding:3px 9px;border-radius:var(--radius-pill);'+(statusResolved?'background:#eafaf0;color:var(--approved);':'background:#fef3e2;color:var(--warning-text);'),
+        onResolve:()=>this.setState(s=>({resolved:{...s.resolved,[e.id]:true}}))
+      };
+    };
+
+    const visible=raw.filter(passFilter).map(decorate);
+    const groupLabels=['Today','Earlier'];
+    const groups=groupLabels.map(label=>({label,rows:visible.filter(e=>e.group===label)})).filter(g=>g.rows.length>0);
+
+    const openCount=raw.filter(e=>(e.type==='comment'||e.type==='mention')&&e.status==='open'&&!isResolved(e)).length;
+    const pendingApprovals=raw.filter(e=>e.type==='approval'&&e.time.includes('m')).length; // recent, illustrative
+
+    const catCount=c=>raw.filter(e=>catOf(e)===c).length;
+    const filters=[['all','All'],['comments','Comments'],['approvals','Approvals'],['edits','Edits'],['system','System']].map(([k,label])=>{
+      const on=this.state.filter===k;
+      const badge = k==='comments'?openCount:0;
+      return { label, onClick:()=>this.setState({filter:k}),
+        showBadge:badge>0, badge,
+        badgeStyle:'margin-left:6px;font-family:var(--font-mono);font-size:10px;font-weight:600;padding:1px 6px;border-radius:999px;background:var(--warning);color:#fff;',
+        style:'background:none;border:none;cursor:pointer;font-family:var(--font-sans);font-size:14px;padding:0 0 12px;display:inline-flex;align-items:center;'+(on?'color:var(--color-text-primary);font-weight:600;border-bottom:2px solid var(--color-text-primary);':'color:var(--color-text-muted);font-weight:500;border-bottom:2px solid transparent;') };
+    });
+
+    // intelligence
+    const openComments=raw.filter(e=>(e.type==='comment'||e.type==='mention')&&e.status==='open'&&!isResolved(e));
+    const attention=openComments.map(e=>({
+      label:e.type==='mention'?'You were mentioned':'Unresolved comment',
+      who:e.actor+' · '+e.target, accent:'var(--warning)',
+      onClick:()=>this.setState({filter:'comments'})
+    }));
+    const digestSummary=(raw.length+' events logged. '+(openCount>0?openCount+' unresolved comment'+(openCount>1?'s':'')+' need a reply':'all comments resolved')+'; edits and approvals are captured in the immutable audit trail.');
+    const glance=[
+      {label:'Comments',count:catCount('comments'),color:'var(--info)'},
+      {label:'Approvals',count:catCount('approvals'),color:'var(--approved)'},
+      {label:'Edits & uploads',count:catCount('edits'),color:'var(--purple)'},
+      {label:'System',count:catCount('system'),color:'var(--color-text-muted)'}
+    ];
+    const people=[
+      {initials:'SK',name:'Sasha Kim',count:3,color:PC.SK},
+      {initials:'AL',name:'Alex Lee',count:2,color:PC.AL},
+      {initials:'MT',name:'Maya Torres',count:2,color:PC.MT}
+    ];
+
+    return {
+      navItems:nav, avatarBg:'url("../images/24-fashionos.jpeg")',
+      eventCount:raw.length, openCount,
+      filters, groups, isEmpty:visible.length===0,
+      scopeLabel:this.state.scope, toggleScope:()=>this.setState(s=>({scope:s.scope==='Everyone'?'Only me':'Everyone'})),
+      exportLog:()=>{},
+      digestSummary, attention, hasAttention:attention.length>0, noAttention:attention.length===0,
+      glance, people
+    };
+  }
+}
+</script>
+</body>
+</html>

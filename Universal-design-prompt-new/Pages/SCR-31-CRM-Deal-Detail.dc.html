@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script>
+window.__LU={
+ building:'<rect width="16" height="20" x="4" y="2" rx="2"/><path d="M9 22v-4h6v4"/><path d="M8 6h.01"/><path d="M16 6h.01"/><path d="M12 6h.01"/><path d="M12 10h.01"/><path d="M12 14h.01"/><path d="M16 10h.01"/><path d="M16 14h.01"/><path d="M8 10h.01"/><path d="M8 14h.01"/>',
+ users:'<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>',
+ "git-branch":'<line x1="6" x2="6" y1="3" y2="15"/><circle cx="18" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M18 9a9 9 0 0 1-9 9"/>',
+ home:'<path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M9 22V12h6v10"/>',
+ inbox:'<polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/>',
+ sparkles:'<path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .962 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.962 0z"/><path d="M20 3v4"/><path d="M22 5h-4"/><path d="M4 17v2"/><path d="M5 18H3"/>',
+ "chevron-right":'<path d="m9 18 6-6-6-6"/>', "arrow-up":'<path d="m5 12 7-7 7 7"/><path d="M12 19V5"/>',
+ "external-link":'<path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>',
+ mail:'<rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/>',
+ phone:'<path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>',
+ "message-square":'<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>',
+ calendar:'<path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/>',
+ "check-square":'<polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>',
+ "check-circle":'<path d="M21.801 10A10 10 0 1 1 17 3.335"/><path d="m9 11 3 3L22 4"/>'
+};
+(function(){ if(customElements.get('lu-ic'))return;
+ class LuIc extends HTMLElement{ static get observedAttributes(){return ['name'];}
+  connectedCallback(){this._r();} attributeChangedCallback(){this._r();}
+  _r(){ var n=this.getAttribute('name');var inner=(window.__LU||{})[n];if(inner==null)return;
+   this.style.display='inline-flex';this.style.alignItems='center';this.style.justifyContent='center';
+   var root=this.shadowRoot||this.attachShadow({mode:'open'});
+   root.innerHTML='<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="100%" height="100%" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:block">'+inner+'</svg>';
+  } }
+ customElements.define('lu-ic',LuIc);
+})();
+</script>
+<style>
+  :root{--bg:#fff;--surface:#fafafa;--muted-bg:#f5f5f5;--border:#e5e7eb;--border-strong:#d1d5db;--border-subtle:#ededed;--text:#111;--text-2:#6b7280;--text-3:#9ca3af;--action:#111;--prospect:#2563eb;--proposal:#7c3aed;--negotiation:#d97706;--won:#059669;--lost:#b91c1c;--approval:#d97706;--approval-bg:#fef3e2;--font:"Inter",sans-serif;--mono:"Geist Mono",Menlo,monospace;--r-sm:6px;--r-md:10px;--r-lg:16px;--r-pill:9999px;}
+  *{box-sizing:border-box;}body{margin:0;font-family:var(--font);color:var(--text);background:var(--surface);-webkit-font-smoothing:antialiased;}
+  .tnum{font-variant-numeric:tabular-nums;}::-webkit-scrollbar{width:8px;height:8px;}::-webkit-scrollbar-thumb{background:var(--border-strong);border-radius:4px;}
+</style>
+</helmet>
+<div style="display:grid;grid-template-columns:56px minmax(0,1fr) 320px;height:100vh;width:100vw;background:var(--bg);overflow:hidden;">
+  <nav style="background:var(--bg);border-right:1px solid var(--border);display:flex;flex-direction:column;align-items:center;padding:14px 0;gap:4px;">
+    <div style="width:30px;height:30px;border-radius:8px;background:var(--action);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;margin-bottom:12px;">i</div>
+    <sc-for list="{{ nav }}" as="n" hint-placeholder-count="5"><div title="{{ n.label }}" style="{{ n.style }}"><lu-ic name="{{ n.icon }}" style="width:20px;height:20px;"></lu-ic></div></sc-for>
+  </nav>
+
+  <main style="display:flex;flex-direction:column;min-width:0;min-height:0;height:100vh;overflow:hidden;">
+    <div style="flex-shrink:0;padding:18px 26px 0;">
+      <div style="display:flex;align-items:center;gap:7px;font-size:12px;color:var(--text-3);margin-bottom:8px;"><span>Pipeline</span><lu-ic name="chevron-right" style="width:13px;height:13px;"></lu-ic><span style="color:var(--text-2);">Acme Athletic — SS26 Editorial</span><span style="display:inline-flex;align-items:center;gap:5px;margin-left:8px;padding:2px 8px;border-radius:var(--r-pill);background:var(--approval-bg);border:1px solid #f4d9ad;font-size:10px;font-weight:600;color:var(--approval);">Sample data</span></div>
+      <div style="display:flex;align-items:center;gap:12px;">
+        <div style="flex:1;min-width:0;"><div style="display:flex;align-items:center;gap:11px;"><h1 style="margin:0;font-size:22px;font-weight:700;letter-spacing:-.02em;">SS26 Editorial</h1><span style="font-family:var(--mono);font-size:18px;font-weight:600;">£8,000</span><span style="{{ stageChipStyle }}">{{ stageLabel }}</span></div><div style="font-size:12px;color:var(--text-2);margin-top:3px;">Acme Athletic · expected close Apr 20, 2026</div></div>
+      </div>
+    </div>
+
+    <div style="flex:1;overflow-y:auto;padding:18px 26px 20px;min-height:0;">
+      <div style="max-width:640px;">
+        <!-- overview -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:20px;">
+          <div style="border:1px solid var(--border);border-radius:var(--r-md);padding:11px 13px;background:var(--bg);"><div style="font-size:10px;text-transform:uppercase;letter-spacing:.04em;color:var(--text-3);">Company</div><div style="font-size:14px;font-weight:600;margin-top:3px;color:var(--prospect);cursor:pointer;">Acme Athletic ↗</div></div>
+          <div style="border:1px solid var(--border);border-radius:var(--r-md);padding:11px 13px;background:var(--bg);"><div style="font-size:10px;text-transform:uppercase;letter-spacing:.04em;color:var(--text-3);">Primary contact</div><div style="font-size:14px;font-weight:600;margin-top:3px;color:var(--prospect);cursor:pointer;">Dana Vale ↗</div></div>
+          <div style="border:1px solid var(--border);border-radius:var(--r-md);padding:11px 13px;background:var(--bg);"><div style="font-size:10px;text-transform:uppercase;letter-spacing:.04em;color:var(--text-3);">Value</div><div style="font-size:14px;font-weight:600;margin-top:3px;" class="tnum">£8,000 GBP</div></div>
+          <div style="border:1px solid var(--border);border-radius:var(--r-md);padding:11px 13px;background:var(--bg);"><div style="font-size:10px;text-transform:uppercase;letter-spacing:.04em;color:var(--text-3);">Linked shoot</div><div style="font-size:14px;font-weight:600;margin-top:3px;color:var(--prospect);cursor:pointer;">SS26 Editorial ↗</div></div>
+        </div>
+
+        <!-- stage control -->
+        <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--text-3);margin-bottom:8px;">Stage</div>
+        <sc-if value="{{ showStageControl }}" hint-placeholder-val="{{ true }}">
+          <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;">
+            <sc-for list="{{ stages }}" as="s" hint-placeholder-count="6"><button onClick="{{ s.onClick }}" style="{{ s.style }}">{{ s.label }}<sc-if value="{{ s.gated }}" hint-placeholder-val="{{ false }}"><span style="opacity:.6;font-size:10px;margin-left:4px;">approval</span></sc-if></button></sc-for>
+          </div>
+          <div style="font-size:11px;color:var(--text-2);margin-bottom:20px;">Lead → Negotiation write immediately. <span style="color:var(--approval);font-weight:600;">Won / Lost open an approval gate.</span></div>
+        </sc-if>
+
+        <!-- APPROVAL CARD (won/lost gate) -->
+        <sc-if value="{{ showApproval }}" hint-placeholder-val="{{ false }}">
+          <div style="border:2px solid var(--approval);border-radius:var(--r-lg);background:var(--approval-bg);padding:18px;margin-bottom:20px;">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;"><lu-ic name="check-circle" style="width:18px;height:18px;color:var(--approval);"></lu-ic><span style="font-size:15px;font-weight:700;">Mark this deal as {{ approvalTarget }}?</span></div>
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;font-size:13px;"><span style="{{ stageChipStyle }}">{{ stageLabel }}</span><lu-ic name="chevron-right" style="width:15px;height:15px;color:var(--text-3);"></lu-ic><span style="{{ approvalTargetChip }}">{{ approvalTarget }}</span></div>
+            <div style="font-size:13px;line-height:1.55;color:var(--text);margin-bottom:16px;">{{ approvalBody }}</div>
+            <div style="display:flex;gap:10px;"><button onClick="{{ cancelApproval }}" style="flex:1;padding:11px;border-radius:var(--r-md);border:1px solid var(--border-strong);background:var(--bg);font-family:var(--font);font-size:13px;font-weight:600;cursor:pointer;">Cancel</button><button onClick="{{ confirmApproval }}" style="flex:1;padding:11px;border-radius:var(--r-md);border:none;background:{{ approvalBtnColor }};color:#fff;font-family:var(--font);font-size:13px;font-weight:700;cursor:pointer;">Approve · Mark {{ approvalTarget }}</button></div>
+            <div style="margin-top:10px;font-size:10px;color:var(--text-2);text-align:center;">This is the only path that can set won/lost — no drag, button, or agent may bypass it.</div>
+          </div>
+        </sc-if>
+
+        <!-- WON banner -->
+        <sc-if value="{{ isWon }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex;align-items:center;gap:12px;border:1px solid #a7e0c4;border-radius:var(--r-lg);background:#eaf7f0;padding:14px 16px;margin-bottom:20px;"><lu-ic name="check-circle" style="width:20px;height:20px;color:var(--won);flex-shrink:0;"></lu-ic><div style="flex:1;"><div style="font-size:14px;font-weight:700;">Converted to brand</div><div style="font-size:12px;color:var(--text-2);">Handed off to Brand Intelligence.</div></div><a style="display:flex;align-items:center;gap:5px;padding:8px 12px;border-radius:var(--r-md);border:1px solid var(--border-strong);background:var(--bg);font-size:12px;font-weight:600;text-decoration:none;color:var(--text);cursor:pointer;">View brand<lu-ic name="external-link" style="width:13px;height:13px;"></lu-ic></a></div>
+        </sc-if>
+
+        <!-- activity timeline -->
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;"><div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--text-3);">Activity</div><button style="display:flex;align-items:center;gap:5px;padding:6px 11px;border-radius:var(--r-md);border:1px solid var(--border-strong);background:var(--bg);font-family:var(--font);font-size:12px;font-weight:600;cursor:pointer;">Log activity</button></div>
+        <sc-for list="{{ activities }}" as="a" hint-placeholder-count="4"><div style="display:flex;gap:12px;"><div style="display:flex;flex-direction:column;align-items:center;"><div style="width:30px;height:30px;border-radius:50%;background:{{ a.iconBg }};color:{{ a.iconColor }};display:flex;align-items:center;justify-content:center;flex-shrink:0;"><lu-ic name="{{ a.icon }}" style="width:14px;height:14px;"></lu-ic></div><span style="{{ a.line }}"></span></div><div style="padding-bottom:16px;flex:1;"><div style="display:flex;align-items:baseline;gap:8px;"><span style="font-size:13px;font-weight:600;">{{ a.title }}</span><span style="font-size:11px;color:var(--text-3);">{{ a.author }} · {{ a.time }}</span></div><div style="font-size:12px;color:var(--text-2);line-height:1.5;margin-top:2px;">{{ a.body }}</div></div></div></sc-for>
+      </div>
+    </div>
+
+    <div style="flex-shrink:0;border-top:1px solid var(--border);background:var(--bg);padding:10px 26px 14px;">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;"><lu-ic name="sparkles" style="width:14px;height:14px;color:var(--prospect);"></lu-ic><span style="font-size:12px;color:var(--text-2);">This deal has had no activity in 9 days — I can draft a follow-up. Want me to?</span><span style="font-size:10px;font-weight:600;color:var(--text-3);border:1px solid var(--border);border-radius:var(--r-pill);padding:2px 7px;">crm-assistant · not yet wired</span></div>
+      <div style="display:flex;align-items:center;gap:8px;border:1px solid var(--border-strong);border-radius:var(--r-pill);padding:8px 8px 8px 14px;"><input type="text" placeholder="Ask about this deal…" style="flex:1;min-width:0;border:none;outline:none;background:none;font-family:var(--font);font-size:13px;" /><button style="width:30px;height:30px;border-radius:50%;border:none;background:var(--action);color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;"><lu-ic name="arrow-up" style="width:15px;height:15px;"></lu-ic></button></div>
+    </div>
+  </main>
+
+  <aside style="background:var(--surface);border-left:1px solid var(--border);display:flex;flex-direction:column;min-height:0;overflow-y:auto;">
+    <div style="padding:16px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;"><lu-ic name="sparkles" style="width:15px;height:15px;color:var(--prospect);"></lu-ic><span style="font-size:13px;font-weight:700;">Intelligence</span></div>
+    <div style="padding:16px 18px;">
+      <div style="border:1px solid var(--border-subtle);border-radius:var(--r-md);background:var(--bg);padding:12px;margin-bottom:12px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;"><span style="font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--text-3);">Health score</span><span style="font-size:12px;font-weight:700;color:var(--approval);">Watch</span></div>
+        <sc-for list="{{ factors }}" as="f" hint-placeholder-count="3"><div style="margin-bottom:7px;"><div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:3px;"><span style="color:var(--text-2);">{{ f.label }}</span><span style="font-weight:600;">{{ f.val }}</span></div><div style="height:5px;border-radius:3px;background:var(--muted-bg);overflow:hidden;"><div style="height:100%;width:{{ f.pct }};background:{{ f.color }};border-radius:3px;"></div></div></div></sc-for>
+      </div>
+      <!-- second, distinct ApprovalCard: drafted follow-up -->
+      <div style="border:1px solid #f4d9ad;border-radius:var(--r-md);background:var(--approval-bg);padding:12px;"><div style="font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--approval);margin-bottom:6px;font-weight:700;">Approval · drafted follow-up</div><div style="font-size:12px;line-height:1.5;margin-bottom:9px;">“Hi Dana — following up on SS26. Shall we confirm dates this week?”</div><div style="display:flex;gap:7px;"><button style="flex:1;padding:7px;border-radius:var(--r-sm);border:1px solid var(--border-strong);background:var(--bg);font-family:var(--font);font-size:11px;font-weight:600;cursor:pointer;">Edit</button><button style="flex:1;padding:7px;border-radius:var(--r-sm);border:none;background:var(--action);color:#fff;font-family:var(--font);font-size:11px;font-weight:600;cursor:pointer;">Approve &amp; log</button></div><div style="margin-top:7px;font-size:9px;color:var(--text-2);text-align:center;">Distinct from the stage approval · logs only, no send</div></div>
+    </div>
+  </aside>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1360,&quot;height&quot;:840}}">
+class Component extends DCLogic {
+  state = { stage:'proposal', pending:null }; // pending = 'Won'|'Lost'|null
+  renderVals(){
+    const nav = [
+      { icon:'home', label:'Home' }, { icon:'building', label:'CRM · Companies' },
+      { icon:'users', label:'CRM · Contacts' }, { icon:'git-branch', label:'CRM · Pipeline', active:true }, { icon:'inbox', label:'Inbox' }
+    ].map(n => ({ ...n, style:'width:38px;height:38px;border-radius:9px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:'+(n.active?'#fff':'var(--text-3)')+';background:'+(n.active?'var(--action)':'transparent')+';' }));
+
+    const SC = { lead:'var(--text-2)', qualified:'var(--prospect)', proposal:'var(--proposal)', negotiation:'var(--negotiation)', won:'var(--won)', lost:'var(--lost)' };
+    const cap = s => s.charAt(0).toUpperCase()+s.slice(1);
+    const cur = this.state.stage;
+    const chip = (color) => 'display:inline-flex;align-items:center;padding:2px 10px;border-radius:var(--r-pill);background:var(--bg);border:1px solid var(--border);font-size:11px;font-weight:600;color:'+color+';';
+
+    const isWon = cur==='won';
+    const terminal = cur==='won'||cur==='lost';
+
+    const stageList = ['lead','qualified','proposal','negotiation','won','lost'];
+    const stages = stageList.map(k => {
+      const gated = (k==='won'||k==='lost');
+      const active = k===cur;
+      return { label:cap(k), gated,
+        onClick:()=> gated ? this.setState({ pending: cap(k) }) : this.setState({ stage:k, pending:null }),
+        style:'padding:8px 12px;border-radius:var(--r-md);border:1px solid '+(active?'var(--action)':gated?'#f4d9ad':'var(--border-strong)')+';background:'+(active?'var(--action)':gated?'var(--approval-bg)':'var(--bg)')+';color:'+(active?'#fff':gated?'var(--approval)':'var(--text-2)')+';font-family:var(--font);font-size:12px;font-weight:600;cursor:pointer;' };
+    });
+
+    const actIcon = { note:['message-square','var(--muted-bg)','var(--text-2)'], call:['phone','#e7f0ff','var(--prospect)'], email:['mail','#e7f0ff','var(--prospect)'], ai:['sparkles','#f3edff','#7c3aed'] };
+    const rawAct = [
+      { type:'ai', title:'AI summary', author:'crm-assistant', time:'9d ago', body:'Deal quiet 9 days; recommend a follow-up before it slips.' },
+      { type:'email', title:'Proposal sent', author:'S. Kim', time:'11d ago', body:'Sent SS26 scope + £8k quote.' },
+      { type:'call', title:'Scoping call', author:'S. Kim', time:'16d ago', body:'Agreed editorial direction + timeline.' },
+      { type:'note', title:'Deal created', author:'S. Kim', time:'20d ago', body:'From the Acme relationship.' }
+    ];
+    const activities = rawAct.map((a,i,arr)=>{ const m=actIcon[a.type]; return { icon:m[0], iconBg:m[1], iconColor:m[2], title:a.title, author:a.author, time:a.time, body:a.body, line:(i<arr.length-1)?'width:2px;flex:1;min-height:14px;background:var(--border);margin:3px 0;':'width:0;height:0;' }; });
+
+    const pend = this.state.pending;
+    const approvalBody = pend==='Won'
+      ? 'Approving creates or links a brands record for Acme Athletic and hands off to Brand Intelligence. This cannot be undone here.'
+      : 'Approving marks the deal closed-lost with a reason. It leaves the pipeline and cannot be reopened here.';
+
+    return { nav, stages,
+      stageLabel: cap(cur), stageChipStyle: chip(SC[cur]),
+      showStageControl: !terminal && !pend,
+      showApproval: !!pend,
+      approvalTarget: pend || '',
+      approvalTargetChip: chip(pend==='Won'?'var(--won)':'var(--lost)'),
+      approvalBody,
+      approvalBtnColor: pend==='Won'?'var(--won)':'var(--lost)',
+      confirmApproval: ()=> this.setState({ stage: (pend==='Won'?'won':'lost'), pending:null }),
+      cancelApproval: ()=> this.setState({ pending:null }),
+      isWon,
+      activities,
+      factors:[
+        { label:'Recency of contact', val:'Low', pct:'30%', color:'var(--approval)' },
+        { label:'Stage velocity', val:'On pace', pct:'65%', color:'var(--won)' },
+        { label:'Engagement', val:'Fair', pct:'55%', color:'var(--approval)' }
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>
