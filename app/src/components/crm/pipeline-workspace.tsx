@@ -81,9 +81,16 @@ export function PipelineWorkspace({ deals, companyNames, fetchError, now }: Prop
 
   // Grouped by currency rather than summed flat — a single raw sum would be
   // silently wrong the moment an org has deals in more than one currency.
+  // Null-value deals are skipped entirely, not coerced to 0: formatMoney()
+  // already renders a null value as "—" on the card, so a stage/currency
+  // with only unknown-value deals should show the same "—", not a false,
+  // precise-looking "$0" that implies the value is known and zero.
   const totalsByCurrency = useMemo(() => {
     const map = new Map<string, number>();
-    for (const d of visibleDeals) map.set(d.currency, (map.get(d.currency) ?? 0) + (d.value ?? 0));
+    for (const d of visibleDeals) {
+      if (d.value == null) continue;
+      map.set(d.currency, (map.get(d.currency) ?? 0) + d.value);
+    }
     return map;
   }, [visibleDeals]);
 
@@ -110,7 +117,7 @@ export function PipelineWorkspace({ deals, companyNames, fetchError, now }: Prop
           <div>
             <h1 className={styles.title}>Pipeline</h1>
             <p className={styles.total}>
-              {[...totalsByCurrency.entries()].map(([cur, sum]) => formatMoney(sum, cur)).join(" + ")}
+              {[...totalsByCurrency.entries()].map(([cur, sum]) => formatMoney(sum, cur)).join(" + ") || "—"}
             </p>
             <p className={styles.subtitle}>
               {visibleDeals.length} {visibleDeals.length === 1 ? "deal" : "deals"} ·{" "}
@@ -137,7 +144,10 @@ export function PipelineWorkspace({ deals, companyNames, fetchError, now }: Prop
         {STAGES.map((stage) => {
           const stageDeals = byStage.get(stage) ?? [];
           const stageTotals = new Map<string, number>();
-          for (const d of stageDeals) stageTotals.set(d.currency, (stageTotals.get(d.currency) ?? 0) + (d.value ?? 0));
+          for (const d of stageDeals) {
+            if (d.value == null) continue;
+            stageTotals.set(d.currency, (stageTotals.get(d.currency) ?? 0) + d.value);
+          }
           const locked = LOCKED_STAGES.has(stage);
           return (
             <div key={stage} className={styles.column}>
