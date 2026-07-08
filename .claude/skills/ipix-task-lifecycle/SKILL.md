@@ -9,14 +9,32 @@ description: >
   "forensic verify", "wiring plan", "open PR with verify". Always use for multi-step iPix
   delivery. Do NOT use for one-line typo fixes, explain-only questions, isolated copilotkit/
   supabase/migration/lean/release-notes tasks without full lifecycle, or non-iPix repos.
-version: "1.7.0"
+version: "1.8.0"
 ---
 
 # ipix-task-lifecycle
 
 **BLUF:** One hub, five phases, one bookkeeping contract for **iPix / FashionOS** (team **IPI**). Each Linear issue + `docs/linear/issues/IPI-*.md` is the execution contract.
 
-**Hub index:** [README.md](README.md)
+**Hub index:** [README.md](README.md) · v1.8.0 — domain-skill routing, worktree gates, verify-matrix link, tracker path fix
+
+---
+
+## `/task IPI-NNN` — default flow
+
+```
+Read docs/linear/issues/IPI-*.md + Linear (MCP or script)
+  → **Skills:** line → Read each .claude/skills/<slug>/SKILL.md
+  → worktree:audit → worktree:add OR worktree:health (existing wt)
+  → Phase 1 skip? only if A–E + Skills + prompt lint + spec md synced (below)
+  → Phase 2 skip? ≤3 files, no Supabase/RLS/edge/Mastra
+  → Multi-file / unfamiliar? graphify query|path before reading source
+  → Phase 3: Step 1b pre-edit gate → implement one A–E step at a time
+  → Phase 4 verify matrix ([pr-workflow](../pr-workflow/references/verify-matrix.md))
+  → pr-workflow: PR open · Bugbot · resolve threads
+  → task-verifier (mandatory before Done on ship gates)
+  → Phase 5: tasks/plan/todo.md 🟢 · Linear Done
+```
 
 ---
 
@@ -24,11 +42,11 @@ version: "1.7.0"
 
 | Trigger | Action |
 |---------|--------|
-| "Work on IPI-###" / `/task IPI-NNN` | Load issue → mark In Progress → phases 2–5 |
-| "Add Linear steps to IPI-###" | Phase 1 + [linear-issue-steps.md](references/linear-issue-steps.md) + [linear-prompt-engineering.md](references/linear-prompt-engineering.md) |
+| "Work on IPI-###" / `/task IPI-NNN` | Flow above · mark In Progress → phases 2–5 |
+| "Add Linear steps to IPI-###" | Phase 1 + [domain-skill-routing.md](references/domain-skill-routing.md) + [linear-issue-steps.md](references/linear-issue-steps.md) + [linear-prompt-engineering.md](references/linear-prompt-engineering.md) |
 | "Enrich Linear prompt" / tighten AC | [linear-prompt-engineering.md](references/linear-prompt-engineering.md) → sync spec md → Linear |
 | "Process platform backlog" / "Next task" | [`tasks/plan/todo.md`](../../../tasks/plan/todo.md) |
-| "Ship IPI-###" / "Sync Linear" | Phase 5 · mark Done via `mcp__claude_ai_Linear__save_issue` |
+| "Ship IPI-###" / "Sync Linear" | Phase 5 · [pr-workflow](../pr-workflow/SKILL.md) · mark Done via Linear MCP |
 | "Build feature" / greenfield / wiring plan | Phase 1 → child skills → Phase 3 |
 | "Forensic verify" before Done | [task-verifier](../task-verifier/SKILL.md) |
 
@@ -44,15 +62,33 @@ version: "1.7.0"
 | Topic | Rule |
 |-------|------|
 | **Linear** | [linear.app/amo100](https://linear.app/amo100) · team **IPI** · `LINEAR_API_KEY` in `.env.local` |
-| **Linear read** | `mcp__linear-ipix__get_issue` — read issues, descriptions, comments |
-| **Linear status** | `mcp__claude_ai_Linear__save_issue` with `state: "In Progress"` / `"Done"` — **not** `mcp__linear-ipix__save_issue` (cannot update status) |
+| **Linear read** | Linear MCP `get_issue` when connected; else `node scripts/linear-update-issue.mjs` / spec md |
+| **Linear status** | Linear MCP `save_issue` (`In Progress` / `Done`) — verify tool name in session; fallback scripts in [shipping.md](shipping.md) |
 | **Supabase** | Remote linked · project `nvdlhrodvevgwdsneplk` · service role via API routes only |
 | **App** | Next.js `:3002` · `app/` · `(operator)` route group |
+| **Tracker** | [`tasks/plan/todo.md`](../../../tasks/plan/todo.md) — not root `todo.md` |
 | **Issue IDs** | `IPI-NNN` (Linear) — old `PLT-`/`AI-`/`DNA-`/`COM-`/`UI-` spec IDs are retired |
 
 ---
 
+## Worktree contract
+
+Before any multi-step implementation — full detail: [worktrees](../worktrees/SKILL.md).
+
+| When | Command |
+|------|---------|
+| Before add | `npm run worktree:audit` |
+| Create | `npm run worktree:add -- IPI-NNN short-slug` |
+| Existing wt, before code | `npm run worktree:health` |
+| Before remove | `npm run worktree:pre-delete` |
+
+Never push to `main`. Branch: `ipi/<id>-<slug>`.
+
+---
+
 ## Child skills (load on demand)
+
+### Process skills (how to plan/ship)
 
 | Intent | Child |
 |--------|-------|
@@ -64,23 +100,46 @@ version: "1.7.0"
 | Epic → feature PRD | [breakdown-feature-prd](../archive/brainstorming/breakdown-feature-prd/SKILL.md) |
 | Repo / docs hygiene | [lean](../lean/SKILL.md) |
 | Multi-file / architecture | [feature-dev](../archive/feature-dev/SKILL.md) |
+| Blast radius / orientation | [graphify](../graphify/SKILL.md) |
 | Per-task test contract | [per-task-testing](references/per-task-testing.md) |
 | Vitest authoring | [gen-test](../gen-test/SKILL.md) |
+
+### Domain skills (what to build — **mandatory in Phase 1**)
+
+When creating or enriching a task, **Read** each domain skill from `.claude/skills/<slug>/SKILL.md` before writing AC.
+
+**Router:** [references/domain-skill-routing.md](references/domain-skill-routing.md) · task inventory: [`tasks/intelligence/ai/skill-map.md`](../../../tasks/intelligence/ai/skill-map.md)
+
+| Domain | Skill |
+|--------|-------|
+| Mastra agents / tools / workflows | [mastra](../mastra/SKILL.md) |
+| CopilotKit runtime / UI | [copilotkit](../copilotkit/SKILL.md) |
+| Supabase schema / RLS / edge | [ipix-supabase](../ipix-supabase/SKILL.md) |
+| Gemini / structured AI output | [gemini](../gemini/SKILL.md) |
+| Next.js App Router / routes | [nextjs-developer](../nextjs-developer/SKILL.md) |
+| Operator UI / tokens | [frontend-design](../frontend-design/SKILL.md) · [design-md](../design-md/SKILL.md) |
+| Cloudinary media | [cloudinary](../cloudinary/SKILL.md) |
+| Mercur commerce | [mercur](../mercur/SKILL.md) |
+| Shoot production | [fashion-production](../fashion-production/SKILL.md) |
+| Worktrees / isolation | [worktrees](../worktrees/SKILL.md) |
+| PR + verify matrix | [pr-workflow](../pr-workflow/SKILL.md) |
+| Done forensic gate | [task-verifier](../task-verifier/SKILL.md) |
+
+Full path-heuristic table → [domain-skill-routing.md](references/domain-skill-routing.md).
 
 ### Sibling skills (not symlinked)
 
 | Intent | Skill |
 |--------|-------|
 | CLAUDE.md / project memory | [claude-md-improver](../archive/claude-md-improver/SKILL.md) |
-| Forensic Done gate | [task-verifier](../task-verifier/SKILL.md) |
 | Mermaid in Linear | [mermaid-diagrams](../mermaid-diagrams/SKILL.md) |
 
 ### Routing tree
 
 ```
 New / ambiguous → brainstorming → writing-plans → Phase 3
-Linear issue w/ A–E + spec md → phases 2–5
-Large / architecture → feature-dev → writing-plans → Phase 3
+Linear issue w/ A–E + spec md + Skills → phases 2–5
+Large / architecture → feature-dev → graphify → writing-plans → Phase 3
 MVP cut → mvp
 New PRD → prd-template → Linear spec + writing-plans
 ```
@@ -108,11 +167,11 @@ Contract: [references/per-task-testing.md](references/per-task-testing.md) · au
 
 | # | Phase | Output |
 |---|-------|--------|
-| 1 | [planning.md](planning.md) | Linear A–E + gantt + spec md + **diagrams/wireframes** |
+| 1 | [planning.md](planning.md) | Linear A–E + spec md + **Skills** + diagrams/wireframes |
 | 2 | [research.md](research.md) | Audit note + green-light + **API route inventory** |
-| 3 | [implementation.md](implementation.md) | Code + **per-task tests green** |
-| 4 | [testing.md](testing.md) | Aggregate verify + smoke |
-| 5 | [shipping.md](shipping.md) | todo 🟢 · Linear Done · commit |
+| 3 | [implementation.md](implementation.md) | Code + **Step 1b gate** + per-step proofs green |
+| 4 | [testing.md](testing.md) | [verify-matrix](../pr-workflow/references/verify-matrix.md) green |
+| 5 | [shipping.md](shipping.md) · [pr-workflow](../pr-workflow/SKILL.md) | PR merged · threads resolved · `tasks/plan/todo.md` 🟢 · Linear Done |
 
 ---
 
@@ -120,11 +179,12 @@ Contract: [references/per-task-testing.md](references/per-task-testing.md) · au
 
 Treat every executable issue as a **prompt** to Cursor/Claude: role, context, constraints, examples, chain (A–E steps), and eval (proof commands).
 
-**Full guide:** [references/linear-prompt-engineering.md](references/linear-prompt-engineering.md)
+**Full guide:** [references/linear-prompt-engineering.md](references/linear-prompt-engineering.md) · wireframes/wiring detail: [planning.md](planning.md)
 
 | Must have | Why |
 |-----------|-----|
 | Problem statement + user story | Context — most-skipped, highest agent failure rate |
+| **Skills:** line + domain SKILL.md read | Best practices per stack (mastra, supabase, …) |
 | Good/bad **Examples** (security/AI) or wireframe + states (UI) | Multishot — reduces wrong-path implementations |
 | **Do NOT** + out of scope | Negative prompting — stops scope creep and antipatterns |
 | `proof:` on every A–E step | Eval hook — done vs not done is measurable |
@@ -135,86 +195,21 @@ SSOT: edit `docs/linear/issues/IPI-*.md` first → `node scripts/linear-update-i
 
 ---
 
-## Issue enrichment — when to add diagrams, wireframes, and wiring
-
-Add these to the Linear issue description during **Phase 1 (planning)**. Never skip if the issue touches UI or multiple services.
-
-### Wireframe — add when
-- Any new UI surface, panel, or screen
-- Existing layout is significantly reorganised
-- Stakeholder alignment needed before coding
-
-**How:** ASCII wireframe inline in the Linear description (no external tool needed for lo-fi).
-Load [`/ipix-wireframe`](../ipix-wireframe/SKILL.md) · use ASCII + spec table method for speed.
-
-```
-┌─────────────┬──────────────────┬─────────────┐
-│ LEFT        │ CENTER           │ RIGHT       │
-│ Nav         │ AI chat          │ Context     │
-└─────────────┴──────────────────┴─────────────┘
- ← 240px       ← flex-1           ← 320px →
-```
-
-### Mermaid diagrams — add when
-
-| Diagram type | Add when |
-|---|---|
-| `sequenceDiagram` | Any API call chain, auth flow, or multi-service interaction |
-| `flowchart` | User journey with decisions, or data pipeline |
-| `stateDiagram-v2` | Component has multiple states (loading/loaded/error/empty) |
-| `erDiagram` | New tables or schema changes |
-| `flowchart` (component tree) | New React component hierarchy with 3+ components |
-
-**How:** embed fenced ` ```mermaid ``` ` blocks directly in the Linear issue.
-Load [`/mermaid-diagrams`](../mermaid-diagrams/SKILL.md) — type-selection table is the quick reference.
-
-### Frontend ↔ Backend wiring — add when
-- Issue creates or changes any API route
-- Component fetches data from Supabase (directly or via route)
-- Supabase Realtime subscription is involved
-- New React context or shared state is introduced
-
-**Include in the issue:**
-1. **API routes table** — route path · status (🔴 create / 🟡 check / ✅ exists) · auth pattern · return shape
-2. **Auth pattern** — always `withOperatorAuth` + `createSupabaseServerClient`
-3. **Context/state** — provider name, where it wraps, what it exposes
-4. **Data fetch pattern** — `useSWR` null-gated on dependency, or server component fetch
-5. **Realtime** — channel name, table, filter, what triggers refetch
-
-**Minimum wiring block:**
-```
-| Route | Status | Auth | Returns |
-|---|---|---|---|
-| GET /api/foo/[id] | 🔴 create | withOperatorAuth | { ... } |
-```
-
-### Decision table
-
-| Issue type | Wireframe | Mermaid | Wiring |
-|---|---|---|---|
-| New UI screen / panel | ✅ always | flowchart + sequence | ✅ always |
-| UI change (existing screen) | if layout changes | state diagram | if fetch changes |
-| API route only | — | sequence | ✅ always |
-| DB migration only | — | erDiagram | if types change |
-| Bug fix | — | — | only if root cause is a wiring gap |
-| Refactor / cleanup | — | component tree if complex | — |
-
----
-
 ## Slash commands (use these first)
 
 | Command | When |
 |---------|------|
-| `/task IPI-NNN` | Full task lifecycle: read → worktree → implement → test → PR → pr-fix → Done |
-| `/audit [scope]` | Forensic audit of a feature or route before shipping |
-| `/supa [scope]` | Supabase schema, RLS, migration, type-drift audit |
-| `/pr-fix PR#` | Fix PR review comments, resolve threads, re-run tests |
+| `/task IPI-NNN` | Full lifecycle — see flow at top |
+| `/worktree` | Audit / add / clean worktrees |
+| `/audit [scope]` | Forensic audit before shipping |
+| `/supa [scope]` | Supabase schema, RLS, migration, type-drift |
+| `/pr-fix PR#` | Fix PR review comments, resolve threads, re-run verify |
 
 ## Scripts (fallback)
 
 | Script | When |
 |--------|------|
-| `node scripts/linear-update-issue.mjs <id>` | Push spec md → Linear description (bulk sync) |
+| `node scripts/linear-update-issue.mjs <id>` | Push spec md → Linear description |
 | `node scripts/linear-update-issue.mjs --all` | Bulk sync all IPI-*.md → Linear |
 
 Requires `LINEAR_API_KEY` in `.env.local`. Details: [shipping.md](shipping.md)
@@ -223,17 +218,31 @@ Requires `LINEAR_API_KEY` in `.env.local`. Details: [shipping.md](shipping.md)
 
 ## Verification gates
 
-```bash
-cd app
-npm run typecheck   # must be 0 errors
-npm run lint        # must be clean
-npm test            # compare against main baseline — no new failures
-npm run build       # only if route/config/schema changed (~2-3min)
+**Route by changed paths** — full matrix: [pr-workflow verify-matrix](../pr-workflow/references/verify-matrix.md). Never run operator verify at repo root.
+
+| Changed | Minimum |
+|---------|---------|
+| **`app/**`** | `cd app && npm run lint && npm run typecheck && npm test` · `npm run build` if routes/config/env/middleware |
+| **`supabase/**`** | `infisical run -- npm run supabase:verify` · `infisical run -- npm run supabase:verify-rls` (+ edge/BI per matrix) |
+| **Legacy `src/**`** | `infisical run -- npm run build && npm run test` |
+
+After DB changes: `/supa` or matrix scripts above.
+
+---
+
+## Done gate
+
+**Never mark Done unless** all of the following are true:
+
 ```
-
-After DB changes: run `/supa` to verify RLS, indexes, type drift.
-
-**Done gate:** ACs checked `[x]` · `mcp__claude_ai_Linear__save_issue state:"Done"` · todo.md 🟢 · PR merged.
+[ ] AC checked [x] in docs/linear/issues/IPI-*.md
+[ ] Verify matrix green ([pr-workflow verify-matrix](../pr-workflow/references/verify-matrix.md))
+[ ] task-verifier report exists or is explicitly waived (trivial typo only)
+[ ] PR merged or user explicitly waived PR
+[ ] tasks/plan/todo.md row updated 🟢
+[ ] Linear marked Done (MCP or agreed fallback)
+[ ] GitHub review threads resolved (if PR was opened)
+```
 
 ---
 
@@ -241,12 +250,12 @@ After DB changes: run `/supa` to verify RLS, indexes, type drift.
 
 | Skip | When |
 |------|------|
-| Phase 1 | Issue has A–E + gantt + spec md |
-| Phase 2 | ≤3 files, no Supabase/RLS |
-| Phase 4 | Never on auth/RLS/edge |
+| Phase 1 | Issue has A–E + **Skills:** line + prompt lint passed + spec md synced to Linear — not merely "steps exist" |
+| Phase 2 | ≤3 files, no Supabase/RLS/edge/Mastra |
+| Phase 4 | Never on auth/RLS/edge/Mastra/AI |
 | Phase 5 | Never |
 
-Check `docs/plan/todo.md` for current sprint dependencies before starting any IPI task.
+Check [`tasks/plan/todo.md`](../../../tasks/plan/todo.md) for P0 dependencies before starting any IPI task.
 
 ---
 
@@ -256,10 +265,13 @@ Check `docs/plan/todo.md` for current sprint dependencies before starting any IP
 |----------|------|
 | Linear steps | [references/linear-issue-steps.md](references/linear-issue-steps.md) |
 | Linear prompt engineering | [references/linear-prompt-engineering.md](references/linear-prompt-engineering.md) |
+| Domain skill routing | [references/domain-skill-routing.md](references/domain-skill-routing.md) |
+| Skill map (task inventory) | [`tasks/intelligence/ai/skill-map.md`](../../../tasks/intelligence/ai/skill-map.md) |
+| Verify matrix | [pr-workflow/references/verify-matrix.md](../pr-workflow/references/verify-matrix.md) |
 | Spec template | [references/linear-spec-template.md](references/linear-spec-template.md) |
 | Migration safety | [references/migration-safety.md](references/migration-safety.md) |
 | Issue specs | `docs/linear/issues/IPI-*.md` |
-| Backlog | [todo.md](../../../todo.md) |
+| Backlog tracker | [`tasks/plan/todo.md`](../../../tasks/plan/todo.md) |
 | Supabase hub | [ipix-supabase/SKILL.md](../ipix-supabase/SKILL.md) |
 | MCP cadence | [references/mcp-cadence-ipix.md](references/mcp-cadence-ipix.md) |
 
@@ -267,4 +279,7 @@ Check `docs/plan/todo.md` for current sprint dependencies before starting any IP
 
 ## Contract
 
-- Remote Supabase only · no client secrets · traceability IPI ↔ SPEC ↔ todo ↔ code · no push without user ask.
+- **One concern per PR and per commit** — never mix docs+code or two IPI issues ([pr-workflow](../pr-workflow/SKILL.md))
+- Remote Supabase only · no client secrets
+- Traceability: IPI ↔ SPEC ↔ `tasks/plan/todo.md` ↔ code
+- No push without user ask · never push to `main`
