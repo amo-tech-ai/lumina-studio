@@ -45,6 +45,17 @@ describe("ContactsWorkspace", () => {
     expect(screen.getByText("dana@acme.com")).toBeDefined();
   });
 
+  it("renders email stored as a plain string, not just a {value,type,primary} object (real seed-data shape, IPI-392)", () => {
+    render(
+      <ContactsWorkspace
+        contacts={[contact({ email: ["maria.lopez@zara.com"] })]}
+        companyNames={COMPANY_NAMES}
+        fetchError={null}
+      />,
+    );
+    expect(screen.getByText("maria.lopez@zara.com")).toBeDefined();
+  });
+
   it("shows a dash for a contact with no linked company rather than inventing one", () => {
     render(
       <ContactsWorkspace
