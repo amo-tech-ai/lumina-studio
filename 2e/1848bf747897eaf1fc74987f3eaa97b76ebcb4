@@ -1,0 +1,33 @@
+.claude/skills/worktrees/SKILL.md
+  s_345c770fd1d818::t_fb168f7edd67fc 325
+  s_345c770fd1d818::t_47cf8282b18705 340
+  s_345c770fd1d818::t_f08ab4072e8899 112-113,116-120,122,124,127-132,135,137-141,143,145-147,149,151,153,155,157-169,173
+  s_345c770fd1d818::t_e37b8497493efd 87
+  s_345c770fd1d818::t_3952f0dba962fb 279
+  s_345c770fd1d818::t_b1cb370aa2d572 300
+.claude/skills/ipix-task-lifecycle/shipping.md
+  s_345c770fd1d818::t_83f50b85c6f298 30
+.claude/skills/worktrees/references/ipix-ops.md
+  s_345c770fd1d818::t_3bc3e4fe9b96bd 8
+  s_345c770fd1d818::t_34137a8b315401 32,34-36
+  s_345c770fd1d818::t_93cc76397fe504 158
+  s_345c770fd1d818::t_2c631e239472a8 99
+  s_345c770fd1d818::t_51bf4cea0622dd 64,66,68-72
+  s_345c770fd1d818::t_66321924be61dd 55
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "2e1848bf747897eaf1fc74987f3eaa97b76ebcb4",
+  "prompts": {},
+  "sessions": {
+    "s_345c770fd1d818": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "d108b820-9d0c-444e-9d6e-50776334d023",
+        "model": "default"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
