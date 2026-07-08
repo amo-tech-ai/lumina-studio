@@ -40,5 +40,9 @@ export default async function CrmPipelinePage() {
     }
   }
 
-  return <PipelineWorkspace deals={deals} companyNames={companyNames} fetchError={fetchError} />;
+  // Computed once, server-side, and passed down rather than called inside
+  // the client component — the identical value serializes through props and
+  // hydrates client-side, so "Updated Xd ago"/at-risk can never flip between
+  // server HTML and client hydration near a day boundary.
+  return <PipelineWorkspace deals={deals} companyNames={companyNames} fetchError={fetchError} now={Date.now()} />;
 }
