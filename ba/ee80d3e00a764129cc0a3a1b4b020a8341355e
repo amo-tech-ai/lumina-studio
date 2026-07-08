@@ -1,0 +1,33 @@
+app/src/components/crm/pipeline-workspace.test.tsx
+  s_ff0f27c2808314::t_d9d6bea7aab720 2,15-17,19,44,51,58,64,70-84,89-90,95,110,147,152-154,159-171,173,179
+  s_ff0f27c2808314::t_b43a5937772aa5 121-145
+app/src/app/(operator)/app/crm/pipeline/page.tsx
+  s_ff0f27c2808314::t_154135e78d181e 43-47
+app/src/components/crm/pipeline-workspace.module.css
+  s_ff0f27c2808314::t_0788a469879d38 297-308
+  s_ff0f27c2808314::t_8635d1897b0211 48-78
+  s_ff0f27c2808314::t_50658f1f3314ff 244-251
+app/src/components/crm/pipeline-workspace.tsx
+  s_ff0f27c2808314::t_8a1c0a43b4447c 50,74-81,87-94,105-107
+  s_ff0f27c2808314::t_4e72980b3f6b88 153,155,174,176,179,182,185-186
+  s_ff0f27c2808314::t_8d19968b556bc5 161-165
+  s_ff0f27c2808314::t_f317664176679e 108-124
+  s_ff0f27c2808314::t_c179a8cc94f31e 132-133
+  s_ff0f27c2808314::t_eedca15b3d78d0 28-33
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "baee80d3e00a764129cc0a3a1b4b020a8341355e",
+  "prompts": {},
+  "sessions": {
+    "s_ff0f27c2808314": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "f541cadc-3ecd-4f00-aa24-6136f7995021",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
