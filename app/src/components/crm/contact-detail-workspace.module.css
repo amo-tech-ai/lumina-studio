@@ -1,0 +1,84 @@
+/* Ported from SCR-29-CRM-Contact-Detail.dc.html. Contact-specific classes
+   only — shared shell/tab-strip/deals/loading classes live in
+   crm-detail-shell.module.css (extracted this ticket, RF-04b). */
+
+.typeBadge {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 8px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--color-text-secondary);
+  color: var(--color-text-secondary);
+  font-size: 10px;
+  font-weight: var(--font-weight-semibold);
+  flex-shrink: 0;
+}
+
+/* ── Overview tab: email/phone field groups ──────────────────────────── */
+
+.fieldGroupStack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  max-width: 560px;
+}
+
+.fieldGroupLabel {
+  font-size: 11px;
+  font-weight: var(--font-weight-semibold);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-text-muted);
+  margin-bottom: var(--space-2);
+}
+
+.fieldGroupEmpty {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+  font-style: italic;
+}
+
+.fieldGroupList {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.fieldRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: 2.75rem; /* >= 44px touch target */
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-3);
+  background: var(--color-bg-card);
+}
+
+.fieldIcon {
+  color: var(--color-text-muted);
+  flex-shrink: 0;
+}
+
+.fieldValue {
+  flex: 1;
+  min-width: 0;
+  font-size: var(--font-size-sm);
+}
+
+.fieldTypeBadge {
+  font-size: 10px;
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-secondary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-pill);
+  padding: 2px 8px;
+  flex-shrink: 0;
+}
+
+.fieldPrimaryBadge {
+  font-size: 10px;
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-approved);
+  flex-shrink: 0;
+}

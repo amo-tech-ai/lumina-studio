@@ -1,13 +1,22 @@
 import { notFound } from "next/navigation";
 
-import { CrmScreenGate } from "@/components/crm/crm-screen-gate";
+import { ContactDetailWorkspace } from "@/components/crm/contact-detail-workspace";
+import { getContactDetail } from "@/lib/crm/get-contact-detail";
 import { getCurrentOrgId } from "@/lib/crm/queries";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
+// crm_contacts.id is a Postgres uuid column — a non-UUID string makes the query
+// throw "invalid input syntax for type uuid" (a real error), not return an empty
+// row. Reject it here so a malformed id in the URL 404s instead of landing in the
+// catch below and showing a misleading "try again" (retrying won't ever help).
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 export default async function CrmContactDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
+  if (!UUID_RE.test(id)) notFound();
+
   const supabase = await createSupabaseServerClient();
   const {
     data: { user },
@@ -17,14 +26,21 @@ export default async function CrmContactDetailPage({ params }: { params: Promise
   const orgId = await getCurrentOrgId(user.id, supabase);
   if (!orgId) notFound();
 
-  const { data: contact } = await supabase
-    .from("crm_contacts")
-    .select("id")
-    .eq("id", id)
-    .eq("org_id", orgId)
-    .maybeSingle();
+  let data;
+  try {
+    data = await getContactDetail(supabase, orgId, id);
+  } catch (error) {
+    // A real query failure gets a retryable ErrorState — an invalid/missing id (below) is a 404, not this.
+    console.error(`[crm/contacts/${id}] getContactDetail failed for org ${orgId}:`, error);
+    // key={id}: the App Router keeps this client component's instance (and its
+    // tab state) alive across a contacts/[id] -> contacts/[otherId] navigation
+    // since it's the same position in the tree — key forces a remount per id.
+    return (
+      <ContactDetailWorkspace key={id} data={null} fetchError="Unable to load this contact. Try again in a moment." />
+    );
+  }
 
-  if (!contact) notFound();
+  if (!data) notFound();
 
-  return <CrmScreenGate screen="Contact detail" />;
+  return <ContactDetailWorkspace key={id} data={data} fetchError={null} />;
 }
