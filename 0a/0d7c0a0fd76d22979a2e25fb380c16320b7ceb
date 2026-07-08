@@ -1,0 +1,23 @@
+app/src/components/crm/contacts-workspace.tsx
+  s_ff0f27c2808314::t_fecd2139b34512 20,23,27-28
+  s_ff0f27c2808314::t_81cf6dc1d252d2 56-57
+app/src/components/crm/contacts-workspace.test.tsx
+  s_ff0f27c2808314::t_2014eb1524effd 74,76-77,88-89
+  s_ff0f27c2808314::t_5e652cc4bf8e48 90-91
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "0a0d7c0a0fd76d22979a2e25fb380c16320b7ceb",
+  "prompts": {},
+  "sessions": {
+    "s_ff0f27c2808314": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "f541cadc-3ecd-4f00-aa24-6136f7995021",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
