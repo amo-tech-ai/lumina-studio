@@ -1,0 +1,159 @@
+.claude/commands/agents/docs/notes.md
+  s_ff0f27c2808314::t_bd72594b365a38 1-366
+.@worktrees/worktree-prompt.md
+  s_ff0f27c2808314::t_7b5d14137d76cd 1-51
+tasks/design-docs/designtoreact.md
+  s_ff0f27c2808314::t_48f8b5e76516bc 1-522
+.claude/tests/july2-lean-audit-v2-evidence-based.md
+  s_ff0f27c2808314::t_7b4fb77bebc4c6 1-264
+tasks/design-docs/shoot/lessons-from-brand-parity.md
+  s_ff0f27c2808314::t_e46a199d5d4068 1-253
+design.md
+  s_ff0f27c2808314::t_9d7673d0ffae23 1-280
+.claude/skills/senior-prompt-engineer/references/llm_evaluation_frameworks.md
+  s_ff0f27c2808314::t_2c0466346d8375 1-80
+.claude/commands/audit.md
+  s_ff0f27c2808314::t_01cddd0a01241c 1-198
+.claude/commands/supa.md
+  s_ff0f27c2808314::t_c817c0096e9dcb 1-196
+.claude/commands/agents/docs/official/agent-view.md
+  s_ff0f27c2808314::t_9d756ef5a4bceb 1-566
+.claude/commands/agents/security-reviewer.md
+  s_ff0f27c2808314::t_233826dd32684a 1-34
+.claude/commands/agents/docs/01-best-practices.md
+  s_ff0f27c2808314::t_29a87bb797b9b6 1-466
+.@worktrees/worktrees.md
+  s_ff0f27c2808314::t_adae1d0f85e274 1-65
+.claude/commands/agents/docs/official/workflows.md
+  s_ff0f27c2808314::t_4fac4baf73187e 1-257
+.claude/skills/senior-prompt-engineer/references/prompt_engineering_patterns.md
+  s_ff0f27c2808314::t_e4d7f9c7daf035 1-80
+.claude/commands/supabase-forensic-audit.md
+  s_ff0f27c2808314::t_c957430dc952bc 1-402
+.@worktrees/cleanup-prompts.md
+  s_ff0f27c2808314::t_ec9e1d33213a12 1-169
+.claude/commands/agents/docs/claude-setup.md
+  s_ff0f27c2808314::t_1b017413ccae89 1-736
+.claude/commands/agents/docs/official/hooks-guide.md
+  s_ff0f27c2808314::t_e858c168624b2e 1-977
+.claude/commands/agents/docs/official/automode.md
+  s_ff0f27c2808314::t_0959cc3c30dbe7 1-395
+.claude/skills/senior-prompt-engineer/references/agentic_system_design.md
+  s_ff0f27c2808314::t_7e7991964a0c8f 1-80
+.claude/commands/agents/vite-drift-auditor.md
+  s_ff0f27c2808314::t_1137e27ddf9ba4 1-27
+.claude/commands/agents/docs/improve.md
+  s_ff0f27c2808314::t_a0240fb2cff1ca 1-23
+.claude/commands/agents/docs/official/best-practices.md
+  s_ff0f27c2808314::t_497aadf87ba95f 1-608
+.claude/commands/agents/docs/official/claude-sonnet-5.md
+  s_ff0f27c2808314::t_3c052b2efcb600 1-130
+.claude/tests/july2-test-report-lean.md
+  s_ff0f27c2808314::t_94fc7a691236cd 1-181
+.claude/commands/linear.md
+  s_ff0f27c2808314::t_5aba1f03c00d18 1-498
+.claude/commands/agents/docs/best-practices-skills.md
+  s_ff0f27c2808314::t_dc678722f82d5d 1-1140
+.claude/commands/agents/docs/03-claude-chrome.md
+  s_ff0f27c2808314::t_6eb4ebad95252a 1-300
+.claude/tests/improve.md
+  s_ff0f27c2808314::t_e1cfff69cd214f 1-131
+.claude/commands/migrate.md
+  s_ff0f27c2808314::t_b19394beaecd2d 1-155
+.claude/commands/agents/docs/official/sub-agents.md
+  s_ff0f27c2808314::t_58aaa6c566f2f4 1-1109
+app/DESIGN.md
+  s_ff0f27c2808314::t_9cfa186846d17f 1-576
+tasks/design-docs/shoot/PLAN/shoots-list-ipi-372.md
+  s_ff0f27c2808314::t_7a243c1c4eb9ea 1-335
+.claude/commands/agents/docs/official/agent-setup.md
+  s_ff0f27c2808314::t_41504776673167 1-482
+.claude/skills/senior-prompt-engineer/scripts/rag_evaluator.py
+  s_ff0f27c2808314::t_efd98236cea712 1-100
+.claude/commands/agents/docs/prompt.md
+  s_ff0f27c2808314::t_629ab261b4d234 1-166
+app/src/lib/booking/booking-safety.test.ts
+  s_ff0f27c2808314::t_fcb855adb6f754 1-101
+.claude/commands/agents/docs/openrouter.md
+  s_ff0f27c2808314::t_6254e6078a5b8e 1-5
+tasks/design-docs/dc-to-react-plan-template.md
+  s_ff0f27c2808314::t_f90cea07f8b0fd 1-321
+.claude/commands/agents/docs/notes-development.md
+  s_ff0f27c2808314::t_af646d16d10e68 1-401
+.claude/commands/task.md
+  s_ff0f27c2808314::t_55d82861c5668c 1-280
+.claude/commands/agents/mastra-agent-reviewer.md
+  s_ff0f27c2808314::t_9f2f3967363b13 1-30
+.@worktrees/cleanup-run-2026-07-01.md
+  s_ff0f27c2808314::t_64ca65f0012c51 1-104
+.claude/commands/agents/docs/03-prompting.md
+  s_ff0f27c2808314::t_6db54f115af2b3 1-650
+.claude/commands/agents/docs/cookbooks.md
+  s_ff0f27c2808314::t_822e1d69f54929 1-687
+.claude/commands/agents/qa-reviewer.md
+  s_ff0f27c2808314::t_93aba9c30d2227 1-114
+.claude/skills/release-notes/SKILL.md
+  s_ff0f27c2808314::t_8884df9fc59f6a 1-36
+.claude/commands/agents/docs/official/large-codebases.md
+  s_ff0f27c2808314::t_fcd2683d662893 1-471
+.claude/settings.local.json.off
+  s_ff0f27c2808314::t_22b0b9dd368216 1-334
+.claude/commands/agents/docs/official/prompting-best-prctices.md
+  s_ff0f27c2808314::t_21d6cf65820098 1-1090
+.claude/commands/release.md
+  s_ff0f27c2808314::t_2d4d5e769d002f 1-117
+.claude/commands/efficient.md
+  s_ff0f27c2808314::t_c0b760de98fc95 1-242
+AGENTS.md
+  s_ff0f27c2808314::t_00423e2baffe4e 1-244
+.claude/commands/agents/docs/audit-claude.md
+  s_ff0f27c2808314::t_5b372c7d293208 1-161
+.claude/commands/user.md
+  s_ff0f27c2808314::t_f6f84ea4450b7b 1-143
+.claude/commands/agents/docs/official/goal.md
+  s_ff0f27c2808314::t_c2da6041d9e6a0 1-142
+.claude/commands/agents/docs/official/claude-sonnet5-prompting.md
+  s_ff0f27c2808314::t_15416f7240a9f0 1-158
+.claude/commands/agents/docs/02-claude-chrome.md
+  s_ff0f27c2808314::t_27f3c43f9bd36a 1-219
+.claude/skills/senior-prompt-engineer/SKILL.md
+  s_ff0f27c2808314::t_74128e5688ddc9 1-226
+.claude/skills/senior-prompt-engineer/scripts/prompt_optimizer.py
+  s_ff0f27c2808314::t_55dccded5de73a 1-100
+.claude/commands/agents/rls-policy-auditor.md
+  s_ff0f27c2808314::t_e48bd1e4aecd00 1-27
+.claude/commands/agents/docs/official/define-outcomes.md
+  s_ff0f27c2808314::t_a1f996ea522f77 1-730
+.claude/commands/agents/migration-reviewer.md
+  s_ff0f27c2808314::t_eda1336e3ca1ae 1-34
+.claude/commands/agents/copilotkit-v1-guard.md
+  s_ff0f27c2808314::t_d25ce0b223dc9d 1-25
+.claude/commands/discover.md
+  s_ff0f27c2808314::t_bd24f2810c0632 1-13
+.@worktrees/disk-audit-2026-07-01.md
+  s_ff0f27c2808314::t_97d8c3fbca527f 1-335
+.@worktrees/chrome-backup-profile-inventory.txt
+  s_ff0f27c2808314::t_908049f7807416 1-1639
+.claude/skills/senior-prompt-engineer/scripts/agent_orchestrator.py
+  s_ff0f27c2808314::t_7400e9fffc3101 1-100
+.claude/commands/agents/api-documenter.md
+  s_ff0f27c2808314::t_a679fcc02c35eb 1-25
+.claude/commands/agents/docs/02-systematic-plan.md
+  s_ff0f27c2808314::t_35f3e62c4a3e59 1-735
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "7f1597356b6abf7b3cff467a91e14631c52fe0b2",
+  "prompts": {},
+  "sessions": {
+    "s_ff0f27c2808314": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "f541cadc-3ecd-4f00-aa24-6136f7995021",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
