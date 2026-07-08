@@ -50,8 +50,9 @@ describe("PipelineWorkspace", () => {
   it("renders a deal card with resolved company name, real value, and relative update time", () => {
     render(<PipelineWorkspace deals={[deal()]} companyNames={COMPANY_NAMES} fetchError={null} now={NOW} />);
     expect(screen.getByText("Acme Athletic")).toBeDefined();
-    // £8,000 appears twice: the card value and the (single-deal) column total.
-    expect(screen.getAllByText("£8,000").length).toBeGreaterThan(0);
+    // Exactly 3: the header total, the card value, and the (single-deal)
+    // Proposal column total — all identical since there's only one deal.
+    expect(screen.getAllByText("£8,000")).toHaveLength(3);
     expect(screen.getByText("Updated 1d ago")).toBeDefined();
   });
 
@@ -80,6 +81,36 @@ describe("PipelineWorkspace", () => {
       />,
     );
     expect(screen.getByText("£8,000 + $5,000")).toBeDefined();
+  });
+
+  it("excludes null-value deals from totals instead of coercing them to 0", () => {
+    render(
+      <PipelineWorkspace
+        deals={[deal({ id: "unknown-value", value: null })]}
+        companyNames={COMPANY_NAMES}
+        fetchError={null}
+        now={NOW}
+      />,
+    );
+    // The card itself honestly shows "—" for the unknown value (formatMoney's
+    // own null handling); the header total must also read "—", not a false,
+    // precise-looking "$0" implying the value is known and zero.
+    expect(screen.getByText("Acme Athletic")).toBeDefined();
+    expect(screen.getByText("—", { selector: "p.total" })).toBeDefined();
+  });
+
+  it("shows a dash (not a blank line) for the header total when the at-risk filter matches zero deals", () => {
+    render(
+      <PipelineWorkspace
+        deals={[deal({ id: "fresh", updated_at: "2026-07-07T00:00:00.000Z" })]}
+        companyNames={COMPANY_NAMES}
+        fetchError={null}
+        now={NOW}
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "At risk only" }));
+    expect(screen.getByText(/0 deals/)).toBeDefined();
+    expect(screen.getByText("—", { selector: "p.total" })).toBeDefined();
   });
 
   it("flags a stale, still-open deal as at risk, but never a won/lost deal", () => {
@@ -143,8 +174,9 @@ describe("PipelineWorkspace", () => {
 
   it("shows a dash for a column with no deals, rather than omitting the total line", () => {
     render(<PipelineWorkspace deals={[deal()]} companyNames={COMPANY_NAMES} fetchError={null} now={NOW} />);
-    // Proposal (this deal's stage) has a real total; every other stage is empty → "—".
-    expect(screen.getAllByText("—").length).toBeGreaterThan(0);
+    // Proposal (this deal's stage) has a real total; the other 5 stages are
+    // empty and must each show exactly one "—" total.
+    expect(screen.getAllByText("—")).toHaveLength(5);
   });
 
   it("shows a locked badge on Won and Lost columns only", () => {
