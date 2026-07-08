@@ -115,6 +115,38 @@ describe("CompanyDetailWorkspace", () => {
     expect(screen.queryByText("Dana Vale")).toBeNull();
   });
 
+  it("supports roving-tabindex keyboard navigation (WAI-ARIA APG Tabs pattern)", () => {
+    render(<CompanyDetailWorkspace data={payload()} fetchError={null} />);
+    const tabs = screen.getAllByRole("tab");
+    const [overview, contacts] = tabs;
+    const activity = tabs[tabs.length - 1];
+
+    expect(overview.tabIndex).toBe(0);
+    expect(contacts.tabIndex).toBe(-1);
+
+    fireEvent.keyDown(overview, { key: "ArrowRight" });
+    expect(contacts.getAttribute("aria-selected")).toBe("true");
+    expect(document.activeElement).toBe(contacts);
+    expect(overview.tabIndex).toBe(-1);
+    expect(contacts.tabIndex).toBe(0);
+
+    fireEvent.keyDown(contacts, { key: "ArrowLeft" });
+    expect(overview.getAttribute("aria-selected")).toBe("true");
+    expect(document.activeElement).toBe(overview);
+
+    fireEvent.keyDown(overview, { key: "End" });
+    expect(activity.getAttribute("aria-selected")).toBe("true");
+    expect(document.activeElement).toBe(activity);
+
+    fireEvent.keyDown(activity, { key: "Home" });
+    expect(overview.getAttribute("aria-selected")).toBe("true");
+    expect(document.activeElement).toBe(overview);
+
+    // ArrowLeft from the first tab wraps to the last.
+    fireEvent.keyDown(overview, { key: "ArrowLeft" });
+    expect(activity.getAttribute("aria-selected")).toBe("true");
+  });
+
   it("renders deals with real stage/value/close date — no fabricated deal name", () => {
     render(<CompanyDetailWorkspace data={payload({ deals: [deal()] })} fetchError={null} />);
     fireEvent.click(screen.getByRole("tab", { name: /Deals/ }));

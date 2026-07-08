@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { ChevronRight } from "lucide-react";
-import type { ReactNode } from "react";
+import { useRef, type KeyboardEvent, type ReactNode } from "react";
 
 import { StatusChip } from "@/components/ui/status-chip";
 import { EntityList } from "@/components/ui/entity-list";
@@ -49,6 +49,25 @@ export function CrmDetailShell<TabId extends string>({
   tabPanelId: string;
   children: ReactNode;
 }) {
+  const tabRefs = useRef<(HTMLButtonElement | null)[]>([]);
+
+  // Roving tabindex (WAI-ARIA APG Tabs pattern): only the active tab sits in
+  // the natural tab order. Arrow/Home/End move focus AND activate — cheap,
+  // instant tab-content swap here, so automatic activation is appropriate.
+  function handleKeyDown(event: KeyboardEvent<HTMLButtonElement>, index: number) {
+    let nextIndex: number | null = null;
+    if (event.key === "ArrowRight") nextIndex = (index + 1) % tabs.length;
+    else if (event.key === "ArrowLeft") nextIndex = (index - 1 + tabs.length) % tabs.length;
+    else if (event.key === "Home") nextIndex = 0;
+    else if (event.key === "End") nextIndex = tabs.length - 1;
+
+    if (nextIndex !== null) {
+      event.preventDefault();
+      onTabChange(tabs[nextIndex]);
+      tabRefs.current[nextIndex]?.focus();
+    }
+  }
+
   return (
     <div className={styles.root}>
       <div className={styles.header}>
@@ -63,15 +82,20 @@ export function CrmDetailShell<TabId extends string>({
         {header}
 
         <div className={styles.tabRow} role="tablist">
-          {tabs.map((id) => (
+          {tabs.map((id, index) => (
             <button
               key={id}
+              ref={(el) => {
+                tabRefs.current[index] = el;
+              }}
               id={`${tabPanelId}-tab-${id}`}
               type="button"
               role="tab"
               aria-selected={activeTab === id}
               aria-controls={tabPanelId}
+              tabIndex={activeTab === id ? 0 : -1}
               onClick={() => onTabChange(id)}
+              onKeyDown={(event) => handleKeyDown(event, index)}
               className={activeTab === id ? `${styles.tab} ${styles.tabActive}` : styles.tab}
             >
               {tabLabels[id]}
