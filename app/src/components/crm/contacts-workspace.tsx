@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 
-import { getPrimaryEntry, type ContactFieldEntry } from "@/lib/crm/jsonb-contact-fields";
+import { getPrimaryEntry, normalizeContactFields } from "@/lib/crm/jsonb-contact-fields";
 import type { ContactRow } from "@/lib/crm/queries";
 import { CrmAvatar } from "./crm-avatar";
 import { ComingSoonButton, CrmListWorkspace } from "./crm-list-workspace";
@@ -10,11 +10,11 @@ import styles from "./crm-list-workspace.module.css";
 
 const FILTER_LABELS = ["Organization", "Type", "Has open deal"];
 
-/** email is a jsonb array ({value,type,primary}), not a single column —
- *  getPrimaryEntry (jsonb-contact-fields.ts) already picks the primary/first
- *  entry; this just narrows the untyped Json column before calling it. */
+/** email is a jsonb array — normalizeContactFields handles both the
+ *  {value,type,primary} object shape and the plain-string shape real seed
+ *  data actually uses (see jsonb-contact-fields.ts). */
 function primaryEmail(email: unknown): string | null {
-  return Array.isArray(email) ? (getPrimaryEntry(email as ContactFieldEntry[])?.value ?? null) : null;
+  return getPrimaryEntry(normalizeContactFields(email))?.value ?? null;
 }
 
 function filterContacts(contacts: ContactRow[], term: string, companyNames: Record<string, string>): ContactRow[] {
