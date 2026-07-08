@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, type ReactNode } from "react";
 import { Mail, Phone } from "lucide-react";
+import { toast } from "sonner";
 
 import { ErrorState } from "@/components/ui/error-state";
 import type { ContactDetailPayload } from "@/lib/crm/get-contact-detail";
@@ -121,15 +122,33 @@ function ContactFieldGroup({ label, icon, entries }: { label: string; icon: Reac
       ) : (
         <div className={styles.fieldGroupList}>
           {entries.map((entry, i) => (
-            <div key={`${entry.value}-${i}`} className={styles.fieldRow}>
+            <button
+              key={`${entry.value}-${i}`}
+              type="button"
+              className={styles.fieldRow}
+              onClick={() => copyToClipboard(entry.value, label)}
+              aria-label={`Copy ${label.toLowerCase()} ${entry.value}`}
+            >
               {icon}
               <span className={styles.fieldValue}>{entry.value}</span>
               {entry.type ? <span className={styles.fieldTypeBadge}>{entry.type}</span> : null}
               {entry.primary ? <span className={styles.fieldPrimaryBadge}>Primary</span> : null}
-            </div>
+            </button>
           ))}
         </div>
       )}
     </div>
   );
+}
+
+/** Mobile & a11y AC: "Email/phone rows selectable (tap to copy)". Silent
+ *  fallback on unsupported/insecure contexts — clipboard access is a nice-to-have
+ *  affordance here, not a page-breaking feature if it's unavailable. */
+async function copyToClipboard(value: string, label: string) {
+  try {
+    await navigator.clipboard.writeText(value);
+    toast.success(`${label} copied`);
+  } catch {
+    toast.error("Couldn't copy — try selecting the text instead.");
+  }
 }
