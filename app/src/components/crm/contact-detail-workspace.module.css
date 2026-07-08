@@ -48,11 +48,20 @@
   display: flex;
   align-items: center;
   gap: var(--space-3);
+  width: 100%;
   min-height: 2.75rem; /* >= 44px touch target */
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   padding: var(--space-3);
   background: var(--color-bg-card);
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.fieldRow:hover,
+.fieldRow:focus-visible {
+  background: var(--color-bg-subtle);
 }
 
 .fieldIcon {

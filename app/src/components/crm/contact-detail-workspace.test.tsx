@@ -96,6 +96,16 @@ describe("ContactDetailWorkspace", () => {
     expect(screen.getByText("No phone on file.")).toBeDefined();
   });
 
+  it("copies an email/phone row's value to the clipboard on click (tap-to-copy AC)", async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.assign(navigator, { clipboard: { writeText } });
+
+    render(<ContactDetailWorkspace data={payload()} fetchError={null} />);
+    fireEvent.click(screen.getByRole("button", { name: /Copy email dana@acme.com/ }));
+
+    expect(writeText).toHaveBeenCalledWith("dana@acme.com");
+  });
+
   it("renders email/phone stored as plain strings, not just {value,type,primary} objects (real seed-data shape)", () => {
     render(
       <ContactDetailWorkspace
