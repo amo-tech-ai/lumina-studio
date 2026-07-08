@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--color-bg-card:#fff;--color-bg-subtle:#fafafa;--color-border:#e5e7eb;--color-border-strong:#d1d5db;--color-text-primary:#111;--color-text-secondary:#4b5563;--color-action:#111;--color-action-text:#fff;}
+*{box-sizing:border-box;}
+body{margin:0;font-family:'Inter',-apple-system,sans-serif;}
+</style>
+</helmet>
+<div style="display:flex;gap:8px;flex-wrap:wrap;font-family:'Inter',sans-serif;">
+  <sc-for list="{{ chips }}" as="c" hint-placeholder-count="4">
+    <button onClick="{{ c.set }}" style="height:32px;padding:0 14px;border:1px solid {{ c.border }};background:{{ c.bg }};color:{{ c.color }};border-radius:999px;font-size:0.875rem;font-weight:500;cursor:pointer;" style-hover="border-color:var(--color-border-strong);">{{ c.label }}</button>
+  </sc-for>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:480,&quot;height&quot;:48},&quot;options&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;All,Draft,Confirmed,In Production,Complete&quot;,&quot;tsType&quot;:&quot;string&quot;}}">
+class Component extends DCLogic {
+  state = { active: 0 };
+  renderVals(){
+    const raw = this.props.options || 'All,Draft,Confirmed,In Production,Complete';
+    const labels = Array.isArray(raw) ? raw : String(raw).split(',').map(s => s.trim());
+    const active = this.state.active;
+    return {
+      chips: labels.map((label, i) => ({
+        label,
+        set: () => this.setState({ active: i }),
+        bg: i === active ? 'var(--color-action)' : 'var(--color-bg-card)',
+        color: i === active ? 'var(--color-action-text)' : 'var(--color-text-secondary)',
+        border: i === active ? 'var(--color-action)' : 'var(--color-border)',
+      })),
+    };
+  }
+}
+</script>
+</body>
+</html>

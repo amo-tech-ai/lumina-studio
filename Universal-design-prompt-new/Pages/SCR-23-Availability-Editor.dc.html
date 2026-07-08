@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+<style>
+  :root{
+    --color-bg-page:#ffffff;--color-bg-card:#ffffff;--color-bg-subtle:#fafafa;--color-bg-muted:#f5f5f5;
+    --color-border:#e5e7eb;--color-border-strong:#d1d5db;--color-border-subtle:#ededed;
+    --color-text-primary:#111111;--color-text-secondary:#4b5563;--color-text-muted:#9ca3af;
+    --color-action:#111111;
+    --dna-high:#059669;--warning:#f3b93c;--warning-text:#d97706;--approved:#059669;--info:#2563eb;--blocked:#dc2626;
+    --nav-active:#f5f5f5;
+    --font-sans:"Inter",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+    --font-mono:"Geist Mono",ui-monospace,"SF Mono",Menlo,monospace;
+    --radius-sm:6px;--radius-md:10px;--radius-lg:16px;--radius-xl:20px;--radius-pill:9999px;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;font-family:var(--font-sans);color:var(--color-text-primary);background:var(--color-bg-subtle);-webkit-font-smoothing:antialiased;}
+  ::-webkit-scrollbar{width:9px;}::-webkit-scrollbar-thumb{background:#e0e0e0;border-radius:9px;}
+  @keyframes shimmer{0%{opacity:.55;}50%{opacity:1;}100%{opacity:.55;}}
+</style>
+</helmet>
+<div style="display:grid;grid-template-columns:56px minmax(0,1fr);height:100vh;width:100vw;background:var(--color-bg-page);overflow:hidden;">
+
+  <!-- NAV -->
+  <nav style="display:flex;flex-direction:column;align-items:center;gap:4px;padding:14px 0;border-right:1px solid var(--color-border);background:var(--color-bg-card);">
+    <div style="width:30px;height:30px;border-radius:8px;background:var(--color-action);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;margin-bottom:14px;">iP</div>
+    <sc-for list="{{ navItems }}" as="n" hint-placeholder-count="5">
+      <button title="{{ n.label }}" style="{{ n.style }}"><i data-lucide="{{ n.icon }}" style="width:19px;height:19px;"></i></button>
+    </sc-for>
+  </nav>
+
+  <!-- WORKSPACE -->
+  <main style="display:flex;flex-direction:column;min-width:0;height:100vh;overflow:hidden;background:var(--color-bg-page);">
+    <header style="flex-shrink:0;display:flex;align-items:center;justify-content:space-between;padding:18px 32px;border-bottom:1px solid var(--color-border);">
+      <div style="display:flex;align-items:center;gap:8px;font-size:14px;color:var(--color-text-muted);"><span>@runwithkara</span><i data-lucide="chevron-right" style="width:14px;height:14px;"></i><span style="color:var(--color-text-primary);font-weight:600;">Availability</span></div>
+      <button onClick="{{ onSave }}" style="{{ saveStyle }}"><i data-lucide="check" style="width:15px;height:15px;"></i>{{ saveLabel }}</button>
+    </header>
+
+    <div style="flex:1;overflow-y:auto;min-height:0;">
+      <div style="max-width:680px;margin:0 auto;padding:26px 32px 40px;">
+
+        <!-- LOADING -->
+        <sc-if value="{{ isLoading }}" hint-placeholder-val="{{ false }}">
+          <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:8px;">
+            <sc-for list="{{ skels }}" as="s" hint-placeholder-count="35"><div style="aspect-ratio:1;border-radius:8px;background:var(--color-bg-muted);animation:shimmer 1.3s infinite;"></div></sc-for>
+          </div>
+        </sc-if>
+
+        <!-- ERROR -->
+        <sc-if value="{{ isError }}" hint-placeholder-val="{{ false }}">
+          <div style="text-align:center;padding:70px 24px;color:var(--color-text-muted);"><i data-lucide="wifi-off" style="width:34px;height:34px;"></i><p style="margin:14px 0 4px;font-size:16px;color:var(--color-text-primary);font-weight:600;">Couldn't load your calendar</p><p style="margin:0 0 18px;font-size:14px;">You're offline or the request timed out.</p><button onClick="{{ onRetry }}" style="padding:10px 18px;border-radius:var(--radius-md);border:none;background:var(--color-action);color:#fff;font-family:var(--font-sans);font-size:13px;font-weight:600;cursor:pointer;">Retry</button></div>
+        </sc-if>
+
+        <!-- POPULATED -->
+        <sc-if value="{{ isPopulated }}" hint-placeholder-val="{{ true }}">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+            <h1 style="margin:0;font-size:20px;font-weight:700;letter-spacing:-.02em;">March 2026</h1>
+            <div style="display:flex;gap:14px;font-size:12px;color:var(--color-text-secondary);flex-wrap:wrap;">
+              <span style="display:flex;align-items:center;gap:5px;"><span style="width:10px;height:10px;border-radius:50%;background:var(--dna-high);"></span>Available</span>
+              <span style="display:flex;align-items:center;gap:5px;"><span style="width:10px;height:10px;border-radius:50%;background:var(--color-border-strong);"></span>Blocked</span>
+              <span style="display:flex;align-items:center;gap:5px;"><span style="width:10px;height:10px;border-radius:50%;background:var(--warning);"></span>Tentative</span>
+              <span style="display:flex;align-items:center;gap:5px;"><span style="width:10px;height:10px;border-radius:50%;background:var(--color-text-primary);"></span>Booked</span>
+            </div>
+          </div>
+          <p style="margin:0 0 18px;font-size:13px;color:var(--color-text-muted);">Tap a day to toggle available / blocked. Tentative and booked are set by bookings and are read-only.</p>
+
+          <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:8px;">
+            <sc-for list="{{ weekdays }}" as="w" hint-placeholder-count="7"><div style="text-align:center;font-size:11px;color:var(--color-text-muted);padding-bottom:4px;">{{ w }}</div></sc-for>
+            <sc-for list="{{ calendar }}" as="c" hint-placeholder-count="35">
+              <button onClick="{{ c.onClick }}" title="{{ c.title }}" style="{{ c.style }}">{{ c.day }}</button>
+            </sc-for>
+          </div>
+
+          <div style="margin-top:20px;display:flex;gap:20px;font-size:13px;color:var(--color-text-secondary);">
+            <span><b style="color:var(--color-text-primary);font-family:var(--font-mono);">{{ nAvail }}</b> available</span>
+            <span><b style="color:var(--color-text-primary);font-family:var(--font-mono);">{{ nBooked }}</b> booked</span>
+            <span><b style="color:var(--color-text-primary);font-family:var(--font-mono);">{{ nTent }}</b> tentative</span>
+          </div>
+
+          <sc-if value="{{ dirty }}" hint-placeholder-val="{{ false }}">
+            <div style="margin-top:16px;padding:12px 14px;border:1px solid var(--warning);border-radius:12px;background:#fffbf0;display:flex;gap:10px;align-items:center;"><span style="width:8px;height:8px;border-radius:50%;background:var(--warning);"></span><div style="font-size:13px;color:var(--color-text-primary);">Unsaved changes — tap <b>Save</b> to publish your availability.</div></div>
+          </sc-if>
+        </sc-if>
+      </div>
+    </div>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:900,&quot;height&quot;:760},&quot;state&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;default&quot;:&quot;populated&quot;,&quot;options&quot;:[&quot;populated&quot;,&quot;loading&quot;,&quot;error&quot;],&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;State&quot;}}">
+class Component extends DCLogic {
+  state = { view:null, overrides:{}, dirty:false, saved:false };
+
+  componentDidMount(){ this._icons(); this._onKey = (e)=>{ if(e.key==='Escape'){ /* no overlay here; reserved */ } }; window.addEventListener('keydown', this._onKey); }
+  componentDidUpdate(){ this._icons(); }
+  componentWillUnmount(){ window.removeEventListener('keydown', this._onKey); }
+  _icons(){ let t=0; const run=()=>{ if(window.lucide&&window.lucide.createIcons)window.lucide.createIcons(); else if(t++<40)setTimeout(run,80); }; run(); }
+
+  _view(){ return this.state.view || this.props.state || 'populated'; }
+  _toggle(i, base){
+    if(base==='booked'||base==='tentative') return; // read-only
+    this.setState(s=>{ const o={...s.overrides}; const cur=o[i]||base; o[i]= cur==='available'?'blocked':'available'; return { overrides:o, dirty:true, saved:false }; });
+  }
+  _save(){ this.setState({ dirty:false, saved:true }); clearTimeout(this._st); this._st=setTimeout(()=>this.setState({saved:false}),1800); }
+
+  renderVals(){
+    const view=this._view();
+    const nav=[['clock','Availability',true],['calendar','Bookings',false],['bell','Notifications',false],['user','Profile',false],['layout-dashboard','Dashboard',false]]
+      .map(n=>({icon:n[0],label:n[1],style:'width:40px;height:40px;border-radius:10px;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;'+(n[2]?'background:var(--nav-active);color:var(--color-text-primary);':'background:transparent;color:var(--color-text-muted);')}));
+
+    // base pattern (35 cells): available / blocked / tentative / booked
+    const base=['blocked','blocked','available','available','tentative','blocked','blocked',
+      'available','available','available','tentative','tentative','blocked','blocked',
+      'available','available','booked','booked','booked','blocked','blocked',
+      'available','available','available','available','tentative','blocked','blocked',
+      'available','available','available','available','available','blocked','blocked'];
+    const stColor={ available:['#fff','var(--dna-high)','var(--dna-high)'], blocked:['var(--color-bg-subtle)','var(--color-border)','var(--color-text-muted)'], tentative:['#fff','var(--warning)','var(--warning-text)'], booked:['var(--color-text-primary)','var(--color-text-primary)','#fff'] };
+    const cur=i=> this.state.overrides[i] || base[i];
+    const calendar=base.map((b,i)=>{ const st=cur(i); const c=stColor[st]; const ro=(st==='booked'||st==='tentative');
+      return { day:i+1, title:st+(ro?' (read-only)':''), onClick:()=>this._toggle(i,st),
+        style:'aspect-ratio:1;border-radius:8px;display:flex;align-items:center;justify-content:center;font-family:var(--font-mono);font-size:13px;border:1px solid '+c[1]+';background:'+c[0]+';color:'+c[2]+';cursor:'+(ro?'default':'pointer')+';font-weight:'+(st==='booked'?'600':'500')+';' }; });
+    const count=s=>base.filter((b,i)=>cur(i)===s).length;
+
+    return {
+      navItems:nav,
+      isLoading:view==='loading', isError:view==='error', isPopulated:view==='populated'||!view,
+      skels:Array.from({length:35}), weekdays:['M','T','W','T','F','S','S'], calendar,
+      nAvail:count('available'), nBooked:count('booked'), nTent:count('tentative'),
+      dirty:this.state.dirty,
+      saveLabel:this.state.saved?'Saved ✓':'Save availability',
+      saveStyle:'display:flex;align-items:center;gap:7px;padding:9px 16px;border-radius:var(--radius-md);border:none;font-family:var(--font-sans);font-size:13px;font-weight:600;cursor:pointer;'+(this.state.dirty?'background:var(--color-action);color:#fff;':'background:var(--color-bg-muted);color:var(--color-text-muted);'),
+      onSave:()=>{ if(this.state.dirty) this._save(); },
+      onRetry:()=>this.setState({view:'populated'})
+    };
+  }
+}
+</script>
+</body>
+</html>

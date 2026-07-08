@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script>
+window.__LU={
+ home:'<path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M9 22V12h6v10"/>',
+ camera:'<path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/>',
+ user:'<path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>',
+ bell:'<path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/>',
+ calendar:'<path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/>',
+ sparkles:'<path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .962 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.962 0z"/><path d="M20 3v4"/><path d="M22 5h-4"/><path d="M4 17v2"/><path d="M5 18H3"/>',
+ "chevron-left":'<path d="m15 18-6-6 6-6"/>',
+ "chevron-right":'<path d="m9 18 6-6-6-6"/>',
+ x:'<path d="M18 6 6 18"/><path d="m6 6 12 12"/>',
+ star:'<polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>',
+ "check-circle":'<path d="M21.801 10A10 10 0 1 1 17 3.335"/><path d="m9 11 3 3L22 4"/>',
+ signal:'<path d="M2 20h.01"/><path d="M7 20v-4"/><path d="M12 20v-8"/><path d="M17 20V8"/><path d="M22 4v16"/>',
+ wifi:'<path d="M12 20h.01"/><path d="M2 8.82a15 15 0 0 1 20 0"/><path d="M5 12.859a10 10 0 0 1 14 0"/><path d="M8.5 16.429a5 5 0 0 1 7 0"/>',
+ "battery-full":'<path d="M6 10v4"/><path d="M10 10v4"/><path d="M14 10v4"/><rect x="2" y="6" width="16" height="12" rx="2"/><path d="M22 11v2"/>',
+ "calendar-clock":'<path d="M21 7.5V6a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h4.5"/><path d="M16 2v4"/><path d="M8 2v4"/><path d="M3 10h5"/><path d="M17.5 17.5 16 16.25V14"/><circle cx="16" cy="16" r="6"/>',
+ "user-plus":'<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M19 8v6"/><path d="M22 11h-6"/>',
+ "message-square":'<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>',
+ "panel-bottom":'<rect width="18" height="18" x="3" y="3" rx="2"/><path d="M3 15h18"/>',
+ hand:'<path d="M18 11V6a2 2 0 0 0-2-2a2 2 0 0 0-2 2"/><path d="M14 10V4a2 2 0 0 0-2-2a2 2 0 0 0-2 2v2"/><path d="M10 10.5V6a2 2 0 0 0-2-2a2 2 0 0 0-2 2v8"/><path d="M18 8a2 2 0 0 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15"/>'
+};
+(function(){
+ if(customElements.get('lu-ic'))return;
+ class LuIc extends HTMLElement{
+  static get observedAttributes(){return ['name'];}
+  connectedCallback(){this._r();}
+  attributeChangedCallback(){this._r();}
+  _r(){
+   var n=this.getAttribute('name');var inner=(window.__LU||{})[n];if(inner==null)return;
+   this.style.display='inline-flex';this.style.alignItems='center';this.style.justifyContent='center';
+   var fill=(n==='star')?'currentColor':'none';var stroke=(n==='star')?'none':'currentColor';
+   var root=this.shadowRoot||this.attachShadow({mode:'open'});
+   root.innerHTML='<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="100%" height="100%" fill="'+fill+'" stroke="'+stroke+'" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:block">'+inner+'</svg>';
+  }
+ }
+ customElements.define('lu-ic',LuIc);
+})();
+</script>
+<style>
+  :root{
+    --color-bg-page:#ffffff;--color-bg-subtle:#fafafa;--color-bg-muted:#f5f5f5;
+    --color-border:#e5e7eb;--color-border-strong:#d1d5db;--color-border-subtle:#ededed;
+    --color-text-primary:#111111;--color-text-secondary:#4b5563;--color-text-muted:#9ca3af;
+    --color-action:#111111;
+    --dna-high:#059669;--warning:#f3b93c;--warning-text:#d97706;--approved:#059669;--info:#2563eb;--blocked:#dc2626;
+    --font-sans:"Inter",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+    --font-mono:"Geist Mono",ui-monospace,"SF Mono",Menlo,monospace;
+    --radius-sm:6px;--radius-md:10px;--radius-lg:16px;--radius-xl:20px;--radius-pill:9999px;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;font-family:var(--font-sans);color:var(--color-text-primary);background:#e7e5e4;-webkit-font-smoothing:antialiased;}
+  .noscroll::-webkit-scrollbar{display:none;}
+  @keyframes pulseDot{0%,100%{opacity:.35;}50%{opacity:1;}}
+  @keyframes sheetUp{from{transform:translateY(100%);}to{transform:translateY(0);}}
+</style>
+</helmet>
+<div style="min-height:100vh;display:flex;align-items:flex-start;justify-content:center;gap:40px;padding:40px;flex-wrap:wrap;">
+
+  <!-- caption -->
+  <div style="max-width:230px;padding-top:20px;">
+    <div style="font-size:11px;font-weight:600;color:var(--color-text-muted);text-transform:uppercase;letter-spacing:.08em;">Reference · §19 mobile shell</div>
+    <h1 style="margin:8px 0 10px;font-size:22px;font-weight:700;letter-spacing:-.02em;">Booking · mobile</h1>
+    <p style="margin:0 0 16px;font-size:13px;color:var(--color-text-secondary);line-height:1.6;">3-panel → 1-col. NavRail becomes a bottom tab bar, the IntelligencePanel becomes an Insights sheet, and the chat dock becomes a persistent AI composer above the tab bar. Use the <b>screen</b> tweak to switch views.</p>
+    <div style="display:flex;flex-direction:column;gap:7px;">
+      <sc-for list="{{ legend }}" as="l" hint-placeholder-count="4">
+        <div style="display:flex;align-items:center;gap:9px;font-size:12px;color:var(--color-text-secondary);"><span style="width:22px;height:22px;border-radius:6px;background:var(--color-bg-muted);display:flex;align-items:center;justify-content:center;"><lu-ic name="{{ l.icon }}" style="width:13px;height:13px;"></lu-ic></span>{{ l.text }}</div>
+      </sc-for>
+    </div>
+  </div>
+
+  <!-- PHONE -->
+  <div style="position:relative;width:390px;height:844px;border-radius:52px;background:#111;padding:11px;box-shadow:0 40px 80px -20px rgba(0,0,0,.45);flex-shrink:0;">
+    <div style="position:relative;width:100%;height:100%;border-radius:42px;overflow:hidden;background:var(--color-bg-page);display:flex;flex-direction:column;">
+
+      <!-- status bar -->
+      <div style="height:52px;flex-shrink:0;display:flex;align-items:flex-end;justify-content:space-between;padding:0 26px 8px;font-size:14px;font-weight:600;">
+        <span>9:41</span>
+        <div style="position:absolute;left:50%;top:11px;transform:translateX(-50%);width:104px;height:28px;background:#111;border-radius:16px;"></div>
+        <div style="display:flex;align-items:center;gap:6px;"><lu-ic name="signal" style="width:15px;height:15px;"></lu-ic><lu-ic name="wifi" style="width:15px;height:15px;"></lu-ic><lu-ic name="battery-full" style="width:19px;height:19px;"></lu-ic></div>
+      </div>
+
+      <!-- top app bar -->
+      <div style="flex-shrink:0;display:flex;align-items:center;justify-content:space-between;padding:6px 18px 12px;border-bottom:1px solid var(--color-border);">
+        <div style="display:flex;align-items:center;gap:10px;min-width:0;">
+          <sc-if value="{{ showBack }}" hint-placeholder-val="{{ false }}"><lu-ic name="chevron-left" style="width:22px;height:22px;flex-shrink:0;"></lu-ic></sc-if>
+          <div style="min-width:0;"><div style="font-size:17px;font-weight:700;letter-spacing:-.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ title }}</div><div style="font-size:12px;color:var(--color-text-muted);">{{ subtitle }}</div></div>
+        </div>
+        <button onClick="{{ toggleSheet }}" style="display:flex;align-items:center;gap:6px;flex-shrink:0;padding:7px 12px;border-radius:var(--radius-pill);border:1px solid var(--color-border);background:#fff;font-family:var(--font-sans);font-size:12px;font-weight:600;cursor:pointer;"><lu-ic name="sparkles" style="width:14px;height:14px;color:var(--info);"></lu-ic>{{ insightsLabel }}</button>
+      </div>
+
+      <!-- SCROLL BODY -->
+      <div class="noscroll" style="flex:1;overflow-y:auto;scrollbar-width:none;">
+
+        <!-- ===== DASHBOARD ===== -->
+        <sc-if value="{{ isDash }}" hint-placeholder-val="{{ true }}">
+          <div style="padding:14px 16px 24px;">
+            <!-- KPI 2-up snap -->
+            <div class="noscroll" style="display:grid;grid-auto-flow:column;grid-auto-columns:46%;gap:10px;overflow-x:auto;scrollbar-width:none;scroll-snap-type:x mandatory;padding-bottom:4px;">
+              <sc-for list="{{ kpis }}" as="k" hint-placeholder-count="4">
+                <div style="scroll-snap-align:start;border:1px solid var(--color-border);border-radius:var(--radius-lg);padding:13px 14px;"><div style="font-size:11px;color:var(--color-text-muted);text-transform:uppercase;letter-spacing:.04em;">{{ k.label }}</div><div style="font-family:var(--font-mono);font-size:22px;font-weight:600;margin-top:4px;">{{ k.value }}</div></div>
+              </sc-for>
+            </div>
+            <!-- offers pinned first -->
+            <div style="display:flex;align-items:center;justify-content:space-between;margin:20px 0 10px;"><h2 style="margin:0;font-size:15px;font-weight:700;">Incoming offers</h2><span style="font-size:12px;color:var(--warning-text);font-weight:600;">2 need action</span></div>
+            <div style="display:flex;flex-direction:column;gap:10px;">
+              <sc-for list="{{ offers }}" as="o" hint-placeholder-count="2">
+                <div style="border:1px solid var(--color-border);border-left:3px solid var(--warning);border-radius:var(--radius-lg);padding:13px 14px;">
+                  <div style="display:flex;align-items:center;justify-content:space-between;"><div style="font-size:14px;font-weight:600;">{{ o.brand }}</div><span style="font-family:var(--font-mono);font-size:13px;font-weight:600;">{{ o.rate }}</span></div>
+                  <div style="font-size:12px;color:var(--color-text-muted);margin-top:2px;">{{ o.meta }}</div>
+                  <div style="display:flex;gap:8px;margin-top:11px;">
+                    <button style="flex:1;padding:10px;border-radius:var(--radius-md);border:1px solid var(--color-border);background:#fff;font-family:var(--font-sans);font-size:13px;font-weight:500;cursor:pointer;">Decline</button>
+                    <button style="flex:1;padding:10px;border-radius:var(--radius-md);border:none;background:var(--color-action);color:#fff;font-family:var(--font-sans);font-size:13px;font-weight:600;cursor:pointer;">Accept</button>
+                  </div>
+                </div>
+              </sc-for>
+            </div>
+            <!-- roster 2-up -->
+            <h2 style="margin:22px 0 10px;font-size:15px;font-weight:700;">Your bookings</h2>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+              <sc-for list="{{ roster }}" as="r" hint-placeholder-count="4">
+                <div style="border:1px solid var(--color-border);border-radius:var(--radius-lg);overflow:hidden;">
+                  <div style="aspect-ratio:3/4;background-image:url('{{ r.img }}');background-size:cover;background-position:center;"></div>
+                  <div style="padding:9px 10px;"><div style="font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ r.name }}</div><div style="font-size:11px;color:{{ r.c }};margin-top:2px;">{{ r.status }}</div></div>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+        </sc-if>
+
+        <!-- ===== PROFILE ===== -->
+        <sc-if value="{{ isProfile }}" hint-placeholder-val="{{ false }}">
+          <div>
+            <div style="aspect-ratio:3/4;background-image:url('../images/10-fashionos.jpeg');background-size:cover;background-position:center top;position:relative;">
+              <div style="position:absolute;top:12px;left:12px;display:flex;align-items:center;gap:6px;padding:5px 10px;border-radius:var(--radius-pill);background:rgba(255,255,255,.92);font-size:12px;font-weight:600;"><span style="width:7px;height:7px;border-radius:50%;background:var(--dna-high);"></span>Available</div>
+            </div>
+            <div style="padding:16px;">
+              <div style="display:flex;align-items:center;justify-content:space-between;"><h2 style="margin:0;font-size:22px;font-weight:700;letter-spacing:-.02em;">@runwithkara</h2><div style="display:flex;align-items:center;gap:4px;"><lu-ic name="star" style="width:15px;height:15px;fill:var(--warning);color:var(--warning);"></lu-ic><span style="font-family:var(--font-mono);font-size:14px;font-weight:600;">4.9</span></div></div>
+              <p style="margin:4px 0 0;font-size:13px;color:var(--color-text-secondary);">Micro · Running &amp; athlete lifestyle · London</p>
+              <!-- tabs snap -->
+              <div class="noscroll" style="display:flex;gap:20px;overflow-x:auto;scrollbar-width:none;border-bottom:1px solid var(--color-border);margin-top:16px;scroll-snap-type:x mandatory;">
+                <sc-for list="{{ ptabs }}" as="t" hint-placeholder-count="5"><div style="{{ t.style }}">{{ t.label }}</div></sc-for>
+              </div>
+              <!-- portfolio 2-up -->
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:14px;">
+                <sc-for list="{{ portfolio }}" as="p" hint-placeholder-count="4"><div style="aspect-ratio:3/4;border-radius:var(--radius-md);background-image:url('{{ p.img }}');background-size:cover;background-position:center;"></div></sc-for>
+              </div>
+            </div>
+          </div>
+        </sc-if>
+
+        <!-- ===== INBOX ===== -->
+        <sc-if value="{{ isInbox }}" hint-placeholder-val="{{ false }}">
+          <div style="padding:8px 0 20px;">
+            <div class="noscroll" style="display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;padding:8px 16px;">
+              <sc-for list="{{ filters }}" as="f" hint-placeholder-count="3"><span style="{{ f.style }}">{{ f.label }}</span></sc-for>
+            </div>
+            <div style="font-size:11px;font-weight:600;color:var(--color-text-muted);text-transform:uppercase;letter-spacing:.06em;padding:10px 16px 6px;">Today</div>
+            <sc-for list="{{ notifs }}" as="n" hint-placeholder-count="5">
+              <div style="display:flex;align-items:flex-start;gap:12px;padding:12px 16px;border-bottom:1px solid var(--color-border-subtle);min-height:44px;">
+                <span style="width:34px;height:34px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;background:{{ n.bg }};"><lu-ic name="{{ n.icon }}" style="width:16px;height:16px;color:{{ n.fg }};"></lu-ic></span>
+                <div style="flex:1;min-width:0;"><div style="font-size:13px;font-weight:{{ n.weight }};line-height:1.4;">{{ n.text }}</div><div style="font-size:11px;color:var(--color-text-muted);margin-top:2px;">{{ n.time }}</div></div>
+                <sc-if value="{{ n.unread }}" hint-placeholder-val="{{ false }}"><span style="width:8px;height:8px;border-radius:50%;background:var(--info);flex-shrink:0;margin-top:5px;"></span></sc-if>
+              </div>
+            </sc-for>
+          </div>
+        </sc-if>
+
+        <!-- ===== AVAILABILITY ===== -->
+        <sc-if value="{{ isAvail }}" hint-placeholder-val="{{ false }}">
+          <div style="padding:16px;">
+            <h2 style="margin:0 0 4px;font-size:15px;font-weight:700;">March 2026</h2>
+            <p style="margin:0 0 14px;font-size:12px;color:var(--color-text-secondary);">Tap a day to block or free it. Booked days are locked.</p>
+            <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:6px;">
+              <sc-for list="{{ weekdays }}" as="w" hint-placeholder-count="7"><div style="text-align:center;font-size:10px;color:var(--color-text-muted);">{{ w }}</div></sc-for>
+              <sc-for list="{{ cal }}" as="c" hint-placeholder-count="35"><div style="{{ c.style }}">{{ c.day }}</div></sc-for>
+            </div>
+            <div style="display:flex;flex-wrap:wrap;gap:12px;margin-top:16px;font-size:11px;color:var(--color-text-secondary);">
+              <sc-for list="{{ availLegend }}" as="g" hint-placeholder-count="4"><span style="display:flex;align-items:center;gap:5px;"><span style="width:9px;height:9px;border-radius:50%;background:{{ g.c }};"></span>{{ g.label }}</span></sc-for>
+            </div>
+          </div>
+        </sc-if>
+      </div>
+
+      <!-- PERSISTENT AI COMPOSER -->
+      <div style="flex-shrink:0;border-top:1px solid var(--color-border);background:#fff;padding:9px 12px 7px;">
+        <div class="noscroll" style="display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;margin-bottom:8px;">
+          <button onClick="{{ toggleSheet }}" style="flex-shrink:0;display:flex;align-items:center;gap:5px;white-space:nowrap;padding:6px 12px;border-radius:var(--radius-pill);border:1px solid var(--color-border-strong);background:#fff;font-family:var(--font-sans);font-size:12px;font-weight:600;cursor:pointer;">
+            <lu-ic name="sparkles" style="width:13px;height:13px;color:var(--info);"></lu-ic>{{ insightsLabel }}
+          </button>
+          <sc-for list="{{ composerChips }}" as="c" hint-placeholder-count="4">
+            <button style="flex-shrink:0;white-space:nowrap;padding:6px 12px;border-radius:var(--radius-pill);border:1px solid var(--color-border);background:var(--color-bg-subtle);font-family:var(--font-sans);font-size:12px;font-weight:500;color:var(--color-text-secondary);cursor:pointer;">{{ c }}</button>
+          </sc-for>
+        </div>
+        <div style="display:flex;align-items:center;gap:9px;border:1px solid var(--color-border-strong);border-radius:var(--radius-pill);padding:8px 8px 8px 14px;">
+          <lu-ic name="sparkles" style="width:16px;height:16px;flex-shrink:0;color:var(--color-text-muted);"></lu-ic>
+          <input type="text" placeholder="{{ composerPlaceholder }}" style="flex:1;min-width:0;border:none;outline:none;background:none;font-family:var(--font-sans);font-size:13px;color:var(--color-text-primary);" />
+          <button style="flex-shrink:0;width:32px;height:32px;display:flex;align-items:center;justify-content:center;border-radius:50%;border:none;background:var(--color-action);color:#fff;cursor:pointer;">
+            <lu-ic name="arrow-up" style="width:16px;height:16px;"></lu-ic>
+          </button>
+        </div>
+      </div>
+
+      <!-- BOTTOM TAB BAR -->
+      <div style="flex-shrink:0;display:flex;border-top:1px solid var(--color-border);background:rgba(255,255,255,.94);backdrop-filter:blur(10px);padding:8px 6px 22px;">
+        <sc-for list="{{ tabs }}" as="t" hint-placeholder-count="5">
+          <button onClick="{{ t.onClick }}" style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;background:none;border:none;cursor:pointer;position:relative;">
+            <span style="position:relative;"><lu-ic name="{{ t.icon }}" style="width:23px;height:23px;color:{{ t.color }};"></lu-ic><sc-if value="{{ t.badge }}" hint-placeholder-val="{{ false }}"><span style="position:absolute;top:-3px;right:-6px;min-width:15px;height:15px;padding:0 3px;border-radius:8px;background:var(--blocked);color:#fff;font-size:9px;font-weight:700;display:flex;align-items:center;justify-content:center;">{{ t.badgeN }}</span></sc-if></span>
+            <span style="font-size:10px;font-weight:{{ t.weight }};color:{{ t.color }};">{{ t.label }}</span>
+          </button>
+        </sc-for>
+      </div>
+
+      <!-- INSIGHTS BOTTOM SHEET -->
+      <sc-if value="{{ sheetOpen }}" hint-placeholder-val="{{ false }}">
+        <div onClick="{{ toggleSheet }}" style="position:absolute;inset:0;background:rgba(17,17,17,.4);z-index:5;"></div>
+        <div style="position:absolute;left:0;right:0;bottom:0;z-index:6;background:#fff;border-radius:22px 22px 0 0;max-height:74%;display:flex;flex-direction:column;animation:sheetUp .26s cubic-bezier(.32,.72,0,1);box-shadow:0 -12px 40px -8px rgba(0,0,0,.3);">
+          <div style="flex-shrink:0;display:flex;flex-direction:column;align-items:center;padding:10px 0 6px;"><div style="width:38px;height:4px;border-radius:2px;background:var(--color-border-strong);"></div></div>
+          <div style="flex-shrink:0;display:flex;align-items:center;justify-content:space-between;padding:4px 18px 12px;border-bottom:1px solid var(--color-border);">
+            <div style="display:flex;align-items:center;gap:7px;"><lu-ic name="sparkles" style="width:16px;height:16px;color:var(--info);"></lu-ic><span style="font-size:15px;font-weight:700;">{{ sheetTitle }}</span></div>
+            <lu-ic name="x" onClick="{{ toggleSheet }}" style="width:20px;height:20px;color:var(--color-text-muted);cursor:pointer;"></lu-ic>
+          </div>
+          <div class="noscroll" style="flex:1;overflow-y:auto;scrollbar-width:none;padding:16px 18px 26px;">
+            <div style="padding:13px 14px;border:1px solid var(--color-border-subtle);border-radius:var(--radius-lg);background:var(--color-bg-subtle);"><div style="font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--color-text-muted);margin-bottom:6px;">AI summary</div><div style="font-size:14px;line-height:1.55;">{{ sheetSummary }}</div></div>
+            <div style="font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--color-text-muted);margin:18px 0 8px;">Needs attention</div>
+            <div style="display:flex;flex-direction:column;gap:8px;">
+              <sc-for list="{{ sheetItems }}" as="s" hint-placeholder-count="2">
+                <div style="display:flex;align-items:center;gap:10px;padding:11px 12px;border:1px solid var(--color-border);border-radius:var(--radius-md);"><span style="width:8px;height:8px;border-radius:50%;background:{{ s.c }};flex-shrink:0;"></span><span style="flex:1;font-size:13px;">{{ s.text }}</span><lu-ic name="chevron-right" style="width:16px;height:16px;color:var(--color-text-muted);"></lu-ic></div>
+              </sc-for>
+            </div>
+            <div style="margin-top:16px;padding:12px 14px;border:1px solid var(--color-border-subtle);border-radius:var(--radius-lg);"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;"><span style="font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--color-text-muted);">Recommendation</span><span style="font-family:var(--font-mono);font-size:12px;font-weight:600;color:var(--dna-high);">94% fit</span></div><div style="font-size:13px;color:var(--color-text-secondary);line-height:1.55;">{{ sheetRec }}</div></div>
+            <div style="display:flex;align-items:center;gap:7px;margin-top:16px;font-size:12px;color:var(--color-text-muted);"><span style="width:6px;height:6px;border-radius:50%;background:var(--dna-high);"></span>{{ sheetAgent }} · idle</div>
+          </div>
+        </div>
+      </sc-if>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:760,&quot;height&quot;:940},&quot;screen&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;default&quot;:&quot;dashboard&quot;,&quot;options&quot;:[&quot;dashboard&quot;,&quot;profile&quot;,&quot;inbox&quot;,&quot;availability&quot;],&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Screen&quot;}}">
+class Component extends DCLogic {
+  state = { tab: null, sheet: false, dock: true };
+
+  renderVals(){
+    const screen = this.state.tab || this.props.screen || 'dashboard';
+    const img = n => `../images/${n}-fashionos.jpeg`;
+
+    const meta = {
+      dashboard: { title:'Aperture Talent', subtitle:'12 models · 4 offers', back:false, insights:'Insights', sheetTitle:'Agency Assistant',
+        summary:'4 offers pending across 3 models. Roster utilisation is 68%; one model has a date conflict this week.',
+        items:[{text:'Mia double-booked · Apr 3',c:'var(--blocked)'},{text:'On Running offer expires in 40h',c:'var(--warning)'}],
+        rec:"Reassign Ana to the Adidas offer — she's 94% fit and free those dates.", agent:'Booking agent',
+        assistant:'Agency Assistant', chips:['Resolve conflict','Review offers','Draft a reply','Roster report'] },
+      profile: { title:'@runwithkara', subtitle:'Micro · London', back:true, insights:'Fit', sheetTitle:'Booking Assistant',
+        summary:'Strong Nike fit (94%). Available Mar 12–14. Day rate £1,200 is within the shoot budget.',
+        items:[{text:'2 offers awaiting reply',c:'var(--warning)'},{text:'Availability closes in 6 days',c:'var(--info)'}],
+        rec:'Request a booking for the Nike SS26 shoot — dates and rate align.', agent:'model-match',
+        assistant:'Booking Assistant', chips:['Explain fit','Prepare booking','Check availability','Draft outreach'] },
+      inbox: { title:'Notifications', subtitle:'8 unread', back:false, insights:'Insights', sheetTitle:'Inbox Intelligence',
+        summary:'8 unread · 3 need your action · 1 booking just confirmed.',
+        items:[{text:'Nike SS26 needs confirmation',c:'var(--warning)'},{text:'On Running offer expiring',c:'var(--blocked)'}],
+        rec:'Confirm the Nike booking to release the crew hold.', agent:'Booking agent',
+        assistant:'Booking Assistant', chips:['Summarise unread','Review Nike','What’s urgent','Draft a reply'] },
+      availability: { title:'My availability', subtitle:'@runwithkara', back:true, insights:'Insights', sheetTitle:'Availability',
+        summary:'12 open days in March. 3 days held for pending offers; blocking them may decline those offers.',
+        items:[{text:'Mar 16–18 held by Nike offer',c:'var(--warning)'},{text:'8 unblocked weekends',c:'var(--dna-high)'}],
+        rec:'Keep Mar 12–14 open — a 94%-fit Nike request is likely.', agent:'Booking agent',
+        assistant:'Booking Assistant', chips:['Explain holds','Best days to keep','Draft a note'] }
+    }[screen];
+
+    const tabDefs = [
+      { key:'dashboard', icon:'home', label:'Home' },
+      { key:'shoots', icon:'camera', label:'Shoots' },
+      { key:'profile', icon:'user', label:'Talent' },
+      { key:'inbox', icon:'bell', label:'Inbox', badge:true, badgeN:'8' },
+      { key:'availability', icon:'calendar', label:'Dates' }
+    ];
+    const tabScreen = (screen==='shoots') ? 'dashboard' : screen;
+    const tabs = tabDefs.map(t => {
+      const on = t.key === tabScreen || (t.key==='dashboard' && screen==='dashboard');
+      return { icon:t.icon, label:t.label, badge:!!t.badge, badgeN:t.badgeN||'',
+        color: on ? 'var(--color-action)' : 'var(--color-text-muted)', weight: on ? '600':'500',
+        onClick: () => this.setState({ tab:t.key, sheet:false, dock:true }) };
+    });
+
+    const kpis = [
+      { label:'Models', value:'12' }, { label:'Pipeline', value:'4' },
+      { label:'Utilisation', value:'68%' }, { label:'Revenue', value:'£22.4k' }
+    ];
+    const offers = [
+      { brand:'Nike SS26 → Ana', rate:'£1,200', meta:'Mar 12–14 · London · expires 40h' },
+      { brand:'On Running → Lena', rate:'£950', meta:'Apr 3–4 · Manchester · expires 3d' }
+    ];
+    const roster = [
+      { name:'@runwithkara', status:'● Confirmed', c:'var(--approved)', img:img(13) },
+      { name:'@mira.wov', status:'● Offer out', c:'var(--warning-text)', img:img(16) },
+      { name:'@lena.rome', status:'● Available', c:'var(--dna-high)', img:img(20) },
+      { name:'@ana.fields', status:'● Shooting', c:'var(--info)', img:img(18) }
+    ];
+
+    const ptabs = ['Portfolio','Measurements','Availability','Bookings','Reviews'].map((label,i)=>({ label,
+      style:'scroll-snap-align:start;white-space:nowrap;padding:0 0 10px;font-size:13px;'+(i===0?'font-weight:600;border-bottom:2px solid var(--color-action);':'font-weight:500;color:var(--color-text-muted);border-bottom:2px solid transparent;') }));
+    const portfolio = [11,12,14,15].map(n=>({ img:img(n) }));
+
+    const filters = ['All','Unread','Bookings'].map((label,i)=>({ label,
+      style:'white-space:nowrap;padding:6px 13px;border-radius:var(--radius-pill);font-size:12px;font-weight:500;'+(i===0?'background:var(--color-action);color:#fff;':'background:#fff;border:1px solid var(--color-border);color:var(--color-text-secondary);') }));
+    const notifs = [
+      { icon:'check-circle', bg:'#e7f6ee', fg:'var(--approved)', text:'Nike SS26 booking confirmed for @runwithkara', time:'12m ago', weight:'600', unread:true },
+      { icon:'sparkles', bg:'#eef2ff', fg:'var(--info)', text:'3 new talent matches for the On Running brief', time:'1h ago', weight:'600', unread:true },
+      { icon:'calendar-clock', bg:'#fef4e2', fg:'var(--warning-text)', text:'On Running offer to @lena.rome expires in 40h', time:'3h ago', weight:'600', unread:true },
+      { icon:'user-plus', bg:'#f5f5f5', fg:'var(--color-text-secondary)', text:'@ana.fields accepted the Adidas offer', time:'5h ago', weight:'400', unread:false },
+      { icon:'star', bg:'#fef4e2', fg:'var(--warning-text)', text:'New 5.0 review from Lululemon', time:'Yesterday', weight:'400', unread:false }
+    ];
+
+    const weekdays = ['M','T','W','T','F','S','S'];
+    const cs = { available:'background:#fff;border:1px solid var(--dna-high);color:var(--dna-high);',
+      blocked:'background:var(--color-bg-muted);border:1px solid var(--color-border);color:var(--color-text-muted);text-decoration:line-through;',
+      tentative:'background:#fff;border:1px solid var(--warning);color:var(--warning-text);',
+      booked:'background:var(--color-action);border:1px solid var(--color-action);color:#fff;' };
+    const pat = ['available','available','tentative','blocked','blocked','available','available','available','available','tentative','tentative','blocked','blocked','available','available','booked','booked','booked','blocked','blocked','available','available','available','available','tentative','blocked','blocked','available','available','available','blocked'];
+    const cal = pat.map((st,i)=>({ day:i+1, style:'aspect-ratio:1;border-radius:8px;display:flex;align-items:center;justify-content:center;font-family:var(--font-mono);font-size:12px;min-height:40px;'+cs[st] }));
+    const availLegend = [{label:'Available',c:'var(--dna-high)'},{label:'Blocked',c:'var(--color-border-strong)'},{label:'Held',c:'var(--warning)'},{label:'Booked',c:'var(--color-action)'}];
+
+    const legend = [
+      { icon:'panel-bottom', text:'NavRail → bottom tab bar' },
+      { icon:'sparkles', text:'IntelligencePanel → Insights sheet' },
+      { icon:'message-square', text:'Chat dock → persistent composer' },
+      { icon:'hand', text:'HITL: AI never accepts/confirms' }
+    ];
+
+    return {
+      title: meta.title, subtitle: meta.subtitle, showBack: meta.back, insightsLabel: meta.insights,
+      isDash: screen==='dashboard', isProfile: screen==='profile', isInbox: screen==='inbox', isAvail: screen==='availability',
+      tabs, kpis, offers, roster, ptabs, portfolio, filters, notifs, weekdays, cal, availLegend, legend,
+      sheetOpen: this.state.sheet, toggleSheet: () => this.setState(s=>({ sheet:!s.sheet })),
+      sheetTitle: meta.sheetTitle, sheetSummary: meta.summary, sheetItems: meta.items, sheetRec: meta.rec, sheetAgent: meta.agent,
+      composerChips: meta.chips, composerPlaceholder: 'Ask the ' + meta.assistant + '…'
+    };
+  }
+}
+</script>
+</body>
+</html>

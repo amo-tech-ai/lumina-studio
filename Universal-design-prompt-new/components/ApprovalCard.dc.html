@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--color-bg-card:#fff;--color-bg-subtle:#fafafa;--color-border:#e5e7eb;--color-border-strong:#d1d5db;--color-border-subtle:#f0f0f1;--color-text-primary:#111;--color-text-secondary:#4b5563;--color-text-muted:#9ca3af;--color-action:#111;--color-action-hover:#000;--color-action-text:#fff;--color-approved:#059669;--approval-border:#f3b93c;--approval-border-done:#059669;--radius-md:.625rem;--card-radius:1.25rem;--image-radius-sm:0.75rem;}
+*{box-sizing:border-box;}
+body{margin:0;font-family:'Inter',-apple-system,sans-serif;color:var(--color-text-primary);}
+.mono{font-feature-settings:'tnum';}
+</style>
+</helmet>
+
+<sc-if value="{{ compact }}" hint-placeholder-val="{{ false }}">
+  <div role="alertdialog" aria-label="Approval required" style="border:1px solid var(--color-border);background:var(--color-bg-card);border-radius:var(--card-radius);padding:11px;box-shadow:0 1px 3px rgb(17 17 17/0.05),0 1px 2px -1px rgb(17 17 17/0.04);font-family:'Inter',sans-serif;">
+    <div style="display:flex;gap:10px;margin-bottom:9px;">
+      <div style="background-image:{{ thumb }};background-size:cover;background-position:center;width:46px;height:46px;border-radius:var(--image-radius-sm);border:1px solid var(--color-border);flex-shrink:0;"></div>
+      <div style="min-width:0;flex:1;">
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:2px;">
+          <span style="width:6px;height:6px;border-radius:50%;background:{{ dotColor }};flex-shrink:0;"></span>
+          <span style="font-size:0.875rem;font-weight:600;color:var(--color-text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ title }}</span>
+        </div>
+        <p style="margin:0;font-size:0.75rem;color:var(--color-text-secondary);line-height:1.45;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">{{ preview }}</p>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
+      <span class="mono" style="font-size:0.75rem;font-weight:600;color:{{ confColor }};">{{ confLabel }}</span>
+      <span style="font-size:0.75rem;color:var(--color-text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">· {{ source }}</span>
+    </div>
+    <div style="display:flex;gap:8px;">
+      <button style="flex:1;height:30px;border:none;border-radius:7px;background:var(--color-action);color:var(--color-action-text);font-size:0.75rem;font-weight:600;cursor:pointer;" style-hover="background:var(--color-action-hover);">Approve</button>
+      <button style="flex:1;height:30px;border:1px solid var(--color-border);border-radius:7px;background:var(--color-bg-card);color:var(--color-text-primary);font-size:0.75rem;font-weight:500;cursor:pointer;" style-hover="background:var(--color-bg-subtle);">Edit</button>
+    </div>
+  </div>
+</sc-if>
+
+<sc-if value="{{ full }}" hint-placeholder-val="{{ true }}">
+  <div style="background:var(--color-bg-card);border:1.5px solid {{ borderColor }};border-radius:var(--card-radius);padding:16px;font-family:'Inter',sans-serif;max-width:420px;">
+    <div style="display:flex;align-items:center;gap:8px;">
+      <span style="width:8px;height:8px;border-radius:50%;background:{{ dotColor }};flex-shrink:0;"></span>
+      <span style="font-size:0.9375rem;font-weight:600;flex:1;">{{ title }}</span>
+      <sc-if value="{{ isApproved }}" hint-placeholder-val="{{ false }}">
+        <span style="display:inline-flex;align-items:center;gap:5px;font-size:0.75rem;font-weight:600;color:var(--color-approved);"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>Approved</span>
+      </sc-if>
+    </div>
+
+    <sc-if value="{{ hasDiff }}" hint-placeholder-val="{{ true }}">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:13px;">
+        <div style="border:1px solid var(--color-border-subtle);border-radius:var(--radius-md);padding:9px 11px;background:var(--color-bg-subtle);">
+          <div style="font-size:0.6875rem;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--color-text-muted);margin-bottom:4px;">Before</div>
+          <div style="font-size:0.8125rem;color:var(--color-text-secondary);line-height:1.4;">{{ beforeText }}</div>
+        </div>
+        <div style="border:1px solid var(--color-border);border-radius:var(--radius-md);padding:9px 11px;">
+          <div style="font-size:0.6875rem;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--color-text-muted);margin-bottom:4px;">After</div>
+          <div style="font-size:0.8125rem;color:var(--color-text-primary);line-height:1.4;">{{ afterText }}</div>
+        </div>
+      </div>
+    </sc-if>
+
+    <div style="display:flex;align-items:center;gap:12px;margin-top:12px;">
+      <span class="mono" style="font-size:0.75rem;font-weight:600;color:{{ confColor }};">{{ confLabel }}</span>
+      <span style="font-size:0.75rem;color:var(--color-text-muted);">{{ evidence }}</span>
+    </div>
+
+    <sc-if value="{{ isPending }}" hint-placeholder-val="{{ true }}">
+      <div style="display:flex;gap:8px;margin-top:14px;">
+        <button style="flex:1;height:36px;border:none;border-radius:var(--radius-md);background:var(--color-action);color:var(--color-action-text);font-size:0.8125rem;font-weight:600;cursor:pointer;" style-hover="background:var(--color-action-hover);">Approve</button>
+        <button style="height:36px;padding:0 14px;border:1px solid var(--color-border);border-radius:var(--radius-md);background:var(--color-bg-card);color:var(--color-text-primary);font-size:0.8125rem;font-weight:500;cursor:pointer;" style-hover="background:var(--color-bg-subtle);">Edit</button>
+        <button style="height:36px;padding:0 12px;border:none;border-radius:var(--radius-md);background:transparent;color:var(--color-text-muted);font-size:0.8125rem;font-weight:500;cursor:pointer;" style-hover="color:var(--color-text-primary);">Discard</button>
+      </div>
+    </sc-if>
+  </div>
+</sc-if>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:320,&quot;height&quot;:230},&quot;variant&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;default&quot;:&quot;pending&quot;,&quot;options&quot;:[&quot;pending&quot;,&quot;compact&quot;],&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Layout&quot;},&quot;title&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;Brand DNA draft&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Content&quot;},&quot;state&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;default&quot;:&quot;pending&quot;,&quot;options&quot;:[&quot;pending&quot;,&quot;approved&quot;],&quot;tsType&quot;:&quot;string&quot;},&quot;preview&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;Spring drop hero — generated from your moodboard + Nike DNA.&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Compact&quot;},&quot;source&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;brand-match&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Compact&quot;},&quot;beforeText&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;Generic product descriptions, inconsistent voice.&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Diff&quot;},&quot;afterText&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;Refined, editorial tone aligned to Nike Visual DNA.&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Diff&quot;},&quot;confidence&quot;:{&quot;editor&quot;:&quot;int&quot;,&quot;default&quot;:87,&quot;min&quot;:0,&quot;max&quot;:100,&quot;unit&quot;:&quot;%&quot;,&quot;tsType&quot;:&quot;number&quot;},&quot;evidence&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;Based on web crawl of 47 pages&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Content&quot;},&quot;thumb&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;string&quot;},&quot;confLabel&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;string&quot;},&quot;confColor&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;string&quot;},&quot;dotColor&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;string&quot;}}">
+class Component extends DCLogic {
+  renderVals(){
+    const compact = this.props.variant === 'compact';
+    const state = this.props.state || 'pending';
+    const approved = state === 'approved';
+    const conf = this.props.confidence ?? 87;
+    const confColor = this.props.confColor || (conf >= 80 ? 'var(--color-approved)' : conf >= 60 ? '#d97706' : '#dc2626');
+    const before = this.props.beforeText ?? '';
+    return {
+      compact,
+      full: !compact,
+      // compact-only
+      thumb: this.props.thumb || '',
+      preview: this.props.preview || '',
+      source: this.props.source || '',
+      dotColor: compact ? (this.props.dotColor || '#6b7280') : (approved ? 'var(--color-approved)' : 'var(--approval-border)'),
+      // shared
+      title: this.props.title || (compact ? 'IG deliverable' : 'Brand DNA draft'),
+      confLabel: this.props.confLabel || (conf + '% confidence'),
+      confColor,
+      // full-only
+      isApproved: approved,
+      isPending: !approved,
+      borderColor: approved ? 'var(--approval-border-done)' : 'var(--approval-border)',
+      hasDiff: before !== '',
+      beforeText: before,
+      afterText: this.props.afterText || 'Refined, editorial tone aligned to Nike Visual DNA.',
+      confidence: conf,
+      evidence: this.props.evidence || 'Based on web crawl',
+    };
+  }
+}
+</script>
+</body>
+</html>
