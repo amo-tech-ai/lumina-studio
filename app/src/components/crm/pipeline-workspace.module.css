@@ -253,6 +253,11 @@
   .board {
     flex-direction: column;
     overflow-x: hidden;
+    /* Already implied by the desktop rule's overflow-x: auto (CSS computes
+       an unset overflow-y to auto whenever the other axis isn't visible),
+       verified working in the browser — explicit here so scrolling doesn't
+       depend on that easy-to-miss cross-axis rule. */
+    overflow-y: auto;
   }
 
   .column {

@@ -112,10 +112,14 @@ describe("PipelineWorkspace", () => {
     );
     expect(screen.getByText("Acme Athletic")).toBeDefined();
     expect(screen.getByText("Vega Studios")).toBeDefined();
+    expect(screen.getByText(/2 deals/)).toBeDefined();
 
     fireEvent.click(screen.getByRole("button", { name: "At risk only" }));
     expect(screen.getByText("Acme Athletic")).toBeDefined();
     expect(screen.queryByText("Vega Studios")).toBeNull();
+    // Header count must reflect the filtered set, not silently keep showing
+    // the unfiltered total (the bug this test now guards against).
+    expect(screen.getByText(/1 deal\b/)).toBeDefined();
   });
 
   it("shows the real deal count and an honest approval-gate hint in the subtitle", () => {

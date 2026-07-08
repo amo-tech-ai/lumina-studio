@@ -71,14 +71,21 @@ export function PipelineWorkspace({ deals, companyNames, fetchError, now }: Prop
     );
   }
 
+  // Reflects whatever's actually on the board right now — when "At risk
+  // only" is toggled, the header count/total must match the filtered set,
+  // not silently keep showing every deal's numbers.
+  const visibleDeals = useMemo(
+    () => (atRiskOnly ? deals.filter((d) => isAtRisk(d, now)) : deals),
+    [atRiskOnly, deals, now],
+  );
+
   // Grouped by currency rather than summed flat — a single raw sum would be
   // silently wrong the moment an org has deals in more than one currency.
   const totalsByCurrency = useMemo(() => {
     const map = new Map<string, number>();
-    for (const d of deals) map.set(d.currency, (map.get(d.currency) ?? 0) + (d.value ?? 0));
+    for (const d of visibleDeals) map.set(d.currency, (map.get(d.currency) ?? 0) + (d.value ?? 0));
     return map;
-  }, [deals]);
-  const visibleDeals = atRiskOnly ? deals.filter((d) => isAtRisk(d, now)) : deals;
+  }, [visibleDeals]);
 
   const byStage = useMemo(() => {
     const map = new Map<CrmDealStage, DealRow[]>();
@@ -106,7 +113,7 @@ export function PipelineWorkspace({ deals, companyNames, fetchError, now }: Prop
               {[...totalsByCurrency.entries()].map(([cur, sum]) => formatMoney(sum, cur)).join(" + ")}
             </p>
             <p className={styles.subtitle}>
-              {deals.length} {deals.length === 1 ? "deal" : "deals"} ·{" "}
+              {visibleDeals.length} {visibleDeals.length === 1 ? "deal" : "deals"} ·{" "}
               <span className={styles.subtitleApproval}>Won / Lost require approval</span>
             </p>
           </div>
