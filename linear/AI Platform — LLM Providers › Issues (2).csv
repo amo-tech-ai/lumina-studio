@@ -1,0 +1,2240 @@
+"ID","Team","Title","Description","Status","Estimate","Priority","Project ID","Project","Creator","Assignee","Labels","Cycle Number","Cycle Name","Cycle Start","Cycle End","Created","Updated","Started","Triaged","Completed","Canceled","Archived","Due Date","Parent issue","Initiatives","Project Milestone ID","Project Milestone","SLA Status","UUID","Time in status (minutes)","Related to","Blocked by","Duplicate of"
+"IPI-120","iPix1","SEC-001 — Remove exposed VITE_GEMINI_API_KEY from Vercel","The root Vite deployment at [www.ipix.co](<http://www.ipix.co>) has `VITE_GEMINI_API_KEY` configured for Preview/Production. Because `VITE_*` variables are bundled into client JavaScript, this Gemini key must be treated as **public/compromised**.
+
+### Required actions
+
+1. Remove `VITE_GEMINI_API_KEY` from Vercel Preview and Production.
+2. Rotate the Gemini API key in Google AI Studio / Google Cloud.
+3. Keep only server-side `GEMINI_API_KEY`.
+4. Confirm no frontend code depends on `VITE_GEMINI_API_KEY`.
+5. Redeploy root app.
+6. Verify built client JS no longer contains the Gemini key.
+7. Document completion.
+
+> Do not put the real key in Linear.
+
+---
+
+**Evidence (2026-06-22):** `vercel env ls --scope mdeai` on project `mdeai/lumina-studio` lists `VITE_GEMINI_API_KEY` in **Preview, Production** (created 8d ago). The project's Production alias is [**www.ipix.co**](<http://www.ipix.co>) (Ready). `VITE_`-prefixed vars are inlined into the client bundle at build time → the key is extractable from the live site. A non-`VITE_` `GEMINI_API_KEY` already exists for server/edge use, so removing the `VITE_` one should not break server-side Gemini calls (verify step 4).","Backlog",,"High","a91ff388-772a-4b0a-b252-0068d6a1297c","AI Platform — LLM Providers","ai@socialmediaville.ca",,"",,,,,"2026-06-22T16:29:53.772Z","2026-07-06T05:41:49.093Z",,,,,,"2026-07-13T05:41:49.091Z",,"IPIX-INIT-001 — Operator Platform (Q3 2026)","162c5b70-9828-45ea-8c7c-b8e02f160230","GROQ-M3 · Verify","MediumRisk","305bdc1a-694e-4542-ade5-9bd8c758645a",21768,"IPI-119","",
+"IPI-282","iPix1","SHOOT-AI-004B · Shoot DNA scoring pipeline — edge + Vision","## SHOOT-AI-004B — Shoot DNA scoring pipeline (edge + Vision)
+
+**Split from** [IPI-151](https://linear.app/amo100/issue/IPI-151) · **Estimate:** 3
+
+**In plain terms:** When shoot assets upload, edge fn triggers Gemini Vision DNA scoring and writes scores to `shoot_assets` + `ai_agent_logs`.
+
+---
+
+### Scope
+
+* Edge fn or DB trigger on asset upload complete
+* Reuse `audit-asset-dna` patterns (edge ✅ shipped)
+* Structured JSON via `_shared/gemini.ts`
+* Results written to `shoot_assets.dna_score` + pillars JSONB
+
+### Out of scope
+
+* Gallery UI → [IPI-281](https://linear.app/amo100/issue/IPI-281)
+* Batch overnight scoring → [IPI-170](https://linear.app/amo100/issue/IPI-170)
+
+---
+
+### Acceptance criteria
+
+- [ ] Upload completes → scoring invoked
+- [ ] DNA score + pillars persisted on `shoot_assets`
+- [ ] `ai_agent_logs` row with model id, latency, structured result
+- [ ] Failed scoring → asset flagged, not silent
+- [ ] RLS: user can only score own brand's assets
+
+### Verification checklist
+
+- [ ] `infisical run -- npm run supabase:verify-edge`
+- [ ] Integration: 5 uploads → 5 scored rows within 30s
+- [ ] `infisical run -- npm run supabase:verify-rls`
+
+**Blocked by (Linear):** [IPI-257](https://linear.app/amo100/issue/IPI-257) 074a+
+
+**Parent:** [IPI-151](https://linear.app/amo100/issue/IPI-151) · **Sibling:** [IPI-281](https://linear.app/amo100/issue/IPI-281)","Backlog",3,"High","a91ff388-772a-4b0a-b252-0068d6a1297c","AI Platform — LLM Providers","ai@socialmediaville.ca",,"GEMINI, SHOOT, SUPA",,,,,"2026-06-30T12:10:42.806Z","2026-07-04T07:01:29.949Z",,,,,,"2026-07-07T12:10:44.126Z","IPI-151","IPIX-INIT-001 — Operator Platform (Q3 2026)","a07acbf5-d8d3-428b-8834-7bfb28147a76","GROQ-M2 · Edge ∥ Mastra","Breached","6010729e-9f11-4733-8e2a-7791e792c79c",5062,"IPI-257, IPI-172, IPI-170, IPI-281, IPI-151","",
+"IPI-181","iPix1","GEMINI-018 · Function calling — Mercur + commit tools","## GEMINI-018 — Function calling — Mercur + commit tools
+
+**In plain terms:** Harden function calling on product-linking and brand commit paths — declare-once schemas, edge executes, HITL on writes.
+
+**Docs:** [Function calling](<https://ai.google.dev/gemini-api/docs/function-calling>)
+
+**Blocked by:** [IPI-113](https://linear.app/amo100/issue/IPI-113) · [IPI-153](https://linear.app/amo100/issue/IPI-153)
+
+**Related:** [IPI-10](https://linear.app/amo100/issue/IPI-10) AI-019 declare-once registry
+
+### Acceptance criteria
+
+- [ ] `search_mercur_products`, `link_asset_to_product` declarations
+- [ ] `commitApprovedBrandDraft` with JWT + RLS
+- [ ] Function response cycle completes with structured final JSON
+- [ ] Mode AUTO; no client-side execution","Backlog",5,"High","a91ff388-772a-4b0a-b252-0068d6a1297c","AI Platform — LLM Providers","ai@socialmediaville.ca",,"GEMINI",,,,,"2026-06-25T07:59:42.433Z","2026-07-04T07:01:58.562Z",,,,,,"2026-07-02T07:59:43.455Z",,"IPIX-INIT-001 — Operator Platform (Q3 2026)","162c5b70-9828-45ea-8c7c-b8e02f160230","GROQ-M3 · Verify","Breached","fc970247-9699-4042-b489-d8795d4a7fc9",17958,"IPI-10, IPI-113","IPI-153",
+"IPI-106","iPix1","AI-004 · AI Agent Logging Framework","## AI-004 — AI Agent Logging Framework
+
+**In plain terms:** Every Gemini call lands in `ai_agent_logs` for cost/quality loops.
+
+**Blocked by:** [PLT-003](<https://linear.app/amo100/issue/IPI2-16>) · [PLT-001](<https://linear.app/amo100/issue/IPI2-14>)
+
+**Unblocks:** —
+
+**MVP priority:** **P0 Must Have**
+
+### User stories
+
+* As an **engineer**, I want every Gemini call logged in a consistent schema so debugging and regression checks are easier.
+* As an **operator**, I want approval decisions and tool runs captured so I can understand what the AI did before a result reached the UI.
+* As a **product lead**, I want token, cost, and latency visibility so AI features can be prioritized using real usage and quality signals.
+* As an **auditor**, I want failures and redactions logged safely so sensitive input is protected while incident review stays possible.
+
+### Logging requirements
+
+* Track prompt tokens, completion tokens, and total tokens for every supported model call.
+* Track estimated or provider-reported cost per run.
+* Track latency metrics including total duration and step timing where available.
+* Log approval events tied to AI-assisted workflows.
+* Log tool execution events including tool name, result status, and safe payload references.
+* Log model or workflow errors with safe redaction rules.
+
+### Skills (load in order)
+
+| # | Skill | Path |
+| -- | -- | -- |
+| 1 | ipix-task-lifecycle | `.claude/skills/ipix-task-lifecycle/SKILL.md` or repo rule |
+| 2 | supabase | `.claude/skills/supabase/SKILL.md` or repo rule |
+| 3 | task-verifier | `.claude/skills/task-verifier/SKILL.md` or repo rule |
+
+---
+
+### Flow — AI-004
+
+```mermaid
+flowchart TD
+    A[Start AI-004] --> B{Prerequisites met?}
+    B -->|no| C[Blocked — see dependencies]
+    B -->|yes| D[Implement + verify]
+    D --> E[Linear Done + todo.md]
+```
+
+### Audit trail workflow
+
+```mermaid
+sequenceDiagram
+  participant UI as App or workflow
+  participant AI as Gemini call
+  participant Tools as Tool execution
+  participant Logs as ai_agent_logs
+  participant Ops as Operator or reviewer
+
+  UI->>AI: Request with safe context
+  AI-->>Logs: model, tokens, cost, latency
+  AI->>Tools: optional tool call
+  Tools-->>Logs: tool name, status, duration
+  Ops->>UI: approve, reject, or retry
+  UI-->>Logs: approval outcome, actor, timestamp
+  AI-->>Logs: error details with redaction when failures happen
+```
+
+---
+
+### Completion steps
+
+#### A. Implement
+
+- [ ] **A1** Logging wrapper on all AI edges
+- [ ] **A2** Fields: model, tokens, duration_ms, redaction rules
+- [ ] **A3** SQL view: last 20 runs per brand
+
+#### B. Verify + ship
+
+- [ ] **B1** `npm run build` passes
+- [ ] **B2** `npm run supabase:verify` (if Supabase touched)
+- [ ] **B3** Linear **Done** · `todo.md` updated
+
+**Spec score:** 84/100 — lifecycle-ready
+
+---
+
+### Gantt — IPI-37
+
+```mermaid
+gantt
+    title IPI-37 · AI-004
+    dateFormat YYYY-MM-DD
+    axisFormat %b %d
+    section Build
+    Implement AI-004           :active, g1, 2026-06-14, 2d
+    section Verify
+    npm run build + probes      :crit, g2, after g1, 1d
+    Done                        :milestone, gdone, after g2, 0d
+```
+
+*Source:* `docs/linear/issues/IPI-37-AI-004.md` *· push via* `node scripts/linear-update-issue.mjs IPI-37`","Backlog",,"High","a91ff388-772a-4b0a-b252-0068d6a1297c","AI Platform — LLM Providers","ai@socialmediaville.ca",,"AI, SUPA",,,,,"2026-06-14T06:41:12.353Z","2026-07-04T07:02:33.404Z",,,,,,,,"IPIX-INIT-001 — Operator Platform (Q3 2026)","a07acbf5-d8d3-428b-8834-7bfb28147a76","GROQ-M2 · Edge ∥ Mastra",,"c2c20afa-591a-499b-b2ab-156a7086a384",33876,"IPI-76, IPI2-14, IPI2-16, IPI2-128","",
+"IPI-98","iPix1","WEB-015.7 · Service recommendation + FAQ grounding","**Purpose:** Ground answers + recommendations in the real 9 service pages (no hallucinated claims).
+
+**Scope:** `getServiceInfo(slug)` read-only catalog (value props + FAQs sourced from `(marketing)/services/*`), `recommendService(slug)` frontend tool → service card + deep-link to `/services/<slug>`. Map intent → service + package.
+
+**Acceptance:**
+
+* Recommendations link to the correct existing service page; FAQ answers grounded (no invented pricing).
+* Catalog stays in sync with the 9 pages (single source).
+
+**Dependencies:** WEB-015.3, WEB-015.5. **Risks:** drift between catalog and pages. **Complexity:** M. **Files:** `app/src/mastra/tools/marketing/*`, service catalog module.","Backlog",,"Medium","a91ff388-772a-4b0a-b252-0068d6a1297c","AI Platform — LLM Providers","ai@socialmediaville.ca",,"AI",,,,,"2026-06-24T02:30:35.320Z","2026-07-04T07:02:19.504Z",,,,,,,"IPI-91","IPIX-INIT-001 — Operator Platform (Q3 2026)","a07acbf5-d8d3-428b-8834-7bfb28147a76","GROQ-M2 · Edge ∥ Mastra",,"a3f2f3b3-0e31-4d0c-8131-a8f6d7d9a62c",19727,"","",
+"IPI-182","iPix1","GEMINI-019 · Priority inference tier — operator chat SLO","## GEMINI-019 — Priority inference tier — operator chat SLO
+
+**In plain terms:** When operator CopilotKit chat p95 latency exceeds 3s, opt into `service_tier: priority` on **generateContent** calls — not Interactions API.
+
+**Blocked by:** [IPI-47](https://linear.app/amo100/issue/IPI-47) partial · [IPI-107](https://linear.app/amo100/issue/IPI-107) registry CI
+
+**Removed blocker:** ~~IPI-171 GEMINI-008 streaming~~ — streaming baseline shipped via CopilotKit v2; IPI-171 deferred/cancel cluster.
+
+**Does NOT require:** Interactions API ([IPI-164](https://linear.app/amo100/issue/IPI-164))
+
+**MVP priority:** P2 — enable only when SLO breached
+
+### Model IDs
+
+* Default: `resolveGeminiModel()` → **gemini-3.1-flash-lite**
+* Config: `config: { service_tier: 'priority' }` on operator chat path only
+* Edge functions: remain **standard** tier unless product approves cost uplift
+
+### Acceptance criteria
+
+- [ ] p95 latency metric on CopilotKit operator path
+- [ ] `_shared/gemini.ts` + Mastra wrapper accept `serviceTier?: 'standard' | 'priority'`
+- [ ] Feature flag `GEMINI_OPERATOR_PRIORITY_TIER` (Infisical) — default **off**
+- [ ] Auto-enable priority only when rolling p95 > 3s for 15m window
+- [ ] **Never** on batch DNA, flex eval, or edge brand-intelligence path","Backlog",2,"Medium","a91ff388-772a-4b0a-b252-0068d6a1297c","AI Platform — LLM Providers","ai@socialmediaville.ca",,"GEMINI",,,,,"2026-06-25T08:11:30.592Z","2026-07-04T07:01:58.268Z",,,,,,,,"IPIX-INIT-001 — Operator Platform (Q3 2026)","162c5b70-9828-45ea-8c7c-b8e02f160230","GROQ-M3 · Verify",,"d8d74f7c-92e9-4fcf-836f-c33620951d85",17946,"IPI-47, IPI-107, IPI-164","",
+"IPI-93","iPix1","WEB-015.6 · Intent classification + follow-up questioning","**Purpose:** Understand intent and gather the minimum to qualify.
+
+**Scope:** Gemini structured-output classifier → `{intent: 9 slugs|general|ready, confidence, missingFields}`. Slot-filling over `{brand_name, industry, service_interest, goal, budget_range, timeline, email}`; ask the highest-value missing slot, one at a time, stop at ≤5.
+
+**Acceptance:**
+
+* Fixture turns map to expected intent + missing slots (unit tested).
+* Agent surfaces ""Start Intake"" once service_interest + goal + contact path are known; no over-interrogation.
+
+**Dependencies:** WEB-015.3. **Risks:** mis-classification; loops. **Complexity:** M. **Files:** `app/src/mastra/agents/public-marketing-agent.ts` (intent/slot logic), fixtures.","Backlog",,"Medium","a91ff388-772a-4b0a-b252-0068d6a1297c","AI Platform — LLM Providers","ai@socialmediaville.ca",,"AI, GEMINI",,,,,"2026-06-24T02:30:30.922Z","2026-07-04T07:02:44.782Z",,,,,,,"IPI-91","IPIX-INIT-001 — Operator Platform (Q3 2026)","a07acbf5-d8d3-428b-8834-7bfb28147a76","GROQ-M2 · Edge ∥ Mastra",,"8414efd0-daae-4b75-8db7-8f798bc35871",5644,"","",
+"IPI-174","iPix1","GEMINI-011 · Document processing — shoot PDF briefs","## GEMINI-011 — Document processing — shoot PDF briefs
+
+**In plain terms:** Ingest shoot briefs/contracts via Gemini document processing (inline PDF or Files API).
+
+**Docs:** [Document processing](<https://ai.google.dev/gemini-api/docs/document-processing>)
+
+**Blocked by:** [IPI-148](https://linear.app/amo100/issue/IPI-148) SHOOT-AI-001
+
+### Acceptance criteria
+
+- [ ] Edge fn accepts PDF upload or storage URL
+- [ ] Structured shot-list extraction schema
+- [ ] Linked to SHOOT-AI-004 deliverables","Backlog",3,"Medium","a91ff388-772a-4b0a-b252-0068d6a1297c","AI Platform — LLM Providers","ai@socialmediaville.ca",,"GEMINI",,,,,"2026-06-25T07:59:36.037Z","2026-07-04T07:02:06.188Z",,,,,,,,"IPIX-INIT-001 — Operator Platform (Q3 2026)","162c5b70-9828-45ea-8c7c-b8e02f160230","GROQ-M3 · Verify",,"28335b9e-e175-4287-b859-2bec29899352",17958,"IPI-148","",
+"IPI-116","iPix1","DEVX-001 · Operator app dev loop — `dev:clean` + local fixtures/seed (no live Gemini)","## DEVX-001 — Operator app dev loop hardening
+
+From the 2026-06-22 efficiency review. Two recurring frictions slow `app/` iteration:
+
+1. **Stale** `.next` **corruption.** Turbopack panics / `tsc` sees leftover `.next/dev/types` after a killed dev server or concurrent build, producing phantom ""Cannot find module 'next'"" / build failures that clean rebuilds don't have.
+2. **Live-Gemini dependency for UI work.** The chat/agents need `GEMINI_API_KEY` to do anything, so UI iteration can't happen offline.
+
+### Tasks
+
+- [ ] Add `app/package.json` script `dev:clean` (`rm -rf .next && npm run dev`).
+- [ ] Add **fixtures/seed** so the operator UI renders with mock agent responses when no `GEMINI_API_KEY` is set.
+- [ ] Add a graceful ""agent unavailable"" UI state when agent init fails.
+- [ ] Document the dev loop in `app/AGENTS.md`.
+
+### Acceptance
+
+- [ ] `npm run dev:clean` works from a polluted state.
+- [ ] UI renders meaningfully with no `GEMINI_API_KEY`, no crash.
+- [ ] Verification per TEST-001 (IPI2-129).
+
+Source: efficiency review (item #4).","Backlog",,"Medium","a91ff388-772a-4b0a-b252-0068d6a1297c","AI Platform — LLM Providers","ai@socialmediaville.ca",,"",,,,,"2026-06-22T14:39:29.979Z","2026-07-04T07:02:21.329Z",,,,,,,,"IPIX-INIT-001 — Operator Platform (Q3 2026)","162c5b70-9828-45ea-8c7c-b8e02f160230","GROQ-M3 · Verify",,"661d0e93-6d03-4611-b887-a2d217a0fdaa",21878,"","",
+"IPI-167","iPix1","GEMINI-004 · Structured output hardening (edge persistence)","## GEMINI-004 — Shared parser + EvidenceBlock schema extensions
+
+**Scope narrowed 2026-06-30:** NOT a re-audit of shipped BI/DNA edge paths.
+
+**In plain terms:** Harden structured output with a shared parser and EvidenceBlock-compatible schema fields — not re-validating already-shipped `brand-intelligence` or `audit-asset-dna`.
+
+**In scope:**
+
+* Shared `parseStructuredResponse()` in `_shared/gemini.ts`
+* EvidenceBlock-compatible field extensions on structured schemas
+* Required-field validation before DB write
+
+**Out of scope:**
+
+* Re-auditing `brand-intelligence` (shipped)
+* Re-auditing `audit-asset-dna` (shipped with structured JSON)
+
+**Blocked by:** [IPI-47](https://linear.app/amo100/issue/IPI-47) partial ship — full unblock when [IPI-107](https://linear.app/amo100/issue/IPI-107) CI lands
+
+**Related:** [IPI-172](https://linear.app/amo100/issue/IPI-172) EvidenceBlock payload
+
+### Acceptance criteria
+
+- [ ] `parseStructuredResponse()` helper in `_shared/gemini.ts`
+- [ ] EvidenceBlock field extensions documented (AI-EXPLAINABILITY.md)
+- [ ] Required-field validation before DB write on new edge callers
+- [ ] Two-pass BI pattern preserved (no urlContext + JSON same call)
+- [ ] `npm run supabase:verify-brand-intelligence` green
+
+### Verification checklist
+
+- [ ] Unit test: `parseStructuredResponse` handles malformed JSON gracefully
+- [ ] Schema extensions match EvidenceBlock props contract (IPI-172)
+- [ ] `infisical run -- npm run supabase:verify-brand-intelligence` green","Backlog",3,"Medium","a91ff388-772a-4b0a-b252-0068d6a1297c","AI Platform — LLM Providers","ai@socialmediaville.ca",,"GEMINI",,,,,"2026-06-25T07:59:28.740Z","2026-07-04T07:02:11.688Z",,,,,,,,"IPIX-INIT-001 — Operator Platform (Q3 2026)","162c5b70-9828-45ea-8c7c-b8e02f160230","GROQ-M3 · Verify",,"2ba6e753-ce46-463d-b02a-c8bb1e187e9b",17958,"IPI-47, IPI-107","",
+"IPI-77","iPix1","AI-013 · Channel Copy Agent","## AI-013 — Channel Copy Agent
+
+**In plain terms:** **Operator** generates Instagram/Amazon copy from DNA-approved assets.
+
+**Blocked by:** [AI-001](<https://linear.app/amo100/issue/IPI2-18>) · [DNA-001](<https://linear.app/amo100/issue/IPI2-19>)
+
+**Unblocks:** Content velocity Phase 2
+
+**MVP priority:** **P2 Nice To Have**
+
+**Estimate:** 3 points
+
+**Source:** [docs/gemeni/gemeni-plan.md](<../../gemeni/gemeni-plan.md>)
+
+### Skills (load in order)
+
+| # | Skill | Path |
+| -- | -- | -- |
+| 1 | ipix-task-lifecycle | `.claude/skills/ipix-task-lifecycle/SKILL.md` or repo rule |
+| 2 | gemini | `.claude/skills/gemini/SKILL.md` or repo rule |
+
+---
+
+### Flow — AI-013
+
+```mermaid
+flowchart TD
+  A[DNA-approved asset] --> EF[generate-channel-copy]
+  EF --> GM[Gemini 3.5 Flash]
+  GM --> O[Structured captions per channel]
+```
+
+---
+
+### Completion steps
+
+#### A. Implement
+
+- [ ] **A1** Structured output: captions for instagram, amazon, shopify
+- [ ] **A2** Brand voice from enriched `brands.profile_json`
+- [ ] **A3** Store draft in JSONB or new table (Phase 2)
+
+#### B. Verify + ship
+
+- [ ] **B1** `npm run build` passes
+- [ ] **B2** `npm run supabase:verify` (if Supabase touched)
+- [ ] **B3** `npm run supabase:verify-rls` (if auth/RLS touched)
+- [ ] **B4** Linear **Done** · `todo.md` updated
+
+**Spec score:** 84/100 — lifecycle-ready
+
+---
+
+### Gantt — IPI-75
+
+```mermaid
+gantt
+    title IPI-75 · AI-013
+    dateFormat YYYY-MM-DD
+    axisFormat %b %d
+    section Build
+    Implement AI-013           :active, g1, 2026-06-14, 2d
+    section Verify
+    npm run build + probes      :crit, g2, after g1, 1d
+    Done                        :milestone, gdone, after g2, 0d
+```
+
+*Source:* `docs/linear/issues/IPI-75-AI-013.md` *· push via* `node scripts/linear-update-issue.mjs IPI-75`","Backlog",3,"Medium","a91ff388-772a-4b0a-b252-0068d6a1297c","AI Platform — LLM Providers","ai@socialmediaville.ca",,"AI, GEMINI",,,,,"2026-06-14T11:46:22.108Z","2026-07-04T07:02:28.390Z",,,,,,,,"IPIX-INIT-001 — Operator Platform (Q3 2026)","a07acbf5-d8d3-428b-8834-7bfb28147a76","GROQ-M2 · Edge ∥ Mastra",,"eb81ca5a-fb1a-4a33-ab83-d4f84ddbdaac",33571,"IPI2-19, IPI2-18, IPI2-128","",
+"IPI-80","iPix1","AI-016 · Campaign Image Agent","## AI-016 — Campaign Image Agent
+
+**In plain terms:** Generate on-brand stills via Nano Banana; upload to Cloudinary.
+
+**Blocked by:** [CLD-005](<https://linear.app/amo100/issue/IPI2-63>) · [AI-009](<https://linear.app/amo100/issue/IPI2-71>)
+
+**Unblocks:** CLD-005 complementary gen pipeline
+
+**MVP priority:** **P2 Nice To Have**
+
+**Estimate:** 8 points
+
+**Source:** [docs/gemeni/gemeni-plan.md](<../../gemeni/gemeni-plan.md>)
+
+### Skills (load in order)
+
+| # | Skill | Path |
+| -- | -- | -- |
+| 1 | ipix-task-lifecycle | `.claude/skills/ipix-task-lifecycle/SKILL.md` or repo rule |
+| 2 | gemini | `.claude/skills/gemini/SKILL.md` or repo rule |
+| 3 | edge-functions | `.claude/skills/edge-functions/SKILL.md` or repo rule |
+
+---
+
+### Flow — AI-016
+
+```mermaid
+sequenceDiagram
+  participant EF as generate-campaign-image
+  participant GM as gemini-3.1-flash-image
+  participant CLD as Cloudinary upload
+  EF->>GM: generateContent IMAGE
+  GM-->>EF: inlineData base64
+  EF->>CLD: register asset
+```
+
+---
+
+### Completion steps
+
+#### A. Implement
+
+- [ ] **A1** Use `generateContent()` + `responseModalities: ['IMAGE']`
+- [ ] **A2** Parse `inlineData` from parts (never generateImages)
+- [ ] **A3** Upload via CLD-002 pipeline
+- [ ] **A4** Thought signatures on edit chains documented
+
+#### B. Verify + ship
+
+- [ ] **B1** `npm run build` passes
+- [ ] **B2** `npm run supabase:verify` (if Supabase touched)
+- [ ] **B3** `npm run supabase:verify-rls` (if auth/RLS touched)
+- [ ] **B4** Linear **Done** · `todo.md` updated
+
+**Spec score:** 84/100 — lifecycle-ready
+
+---
+
+### Gantt — IPI-78
+
+```mermaid
+gantt
+    title IPI-78 · AI-016
+    dateFormat YYYY-MM-DD
+    axisFormat %b %d
+    section Build
+    Implement AI-016           :active, g1, 2026-06-14, 4d
+    section Verify
+    npm run build + probes      :crit, g2, after g1, 1d
+    Done                        :milestone, gdone, after g2, 0d
+```
+
+*Source:* `docs/linear/issues/IPI-78-AI-016.md` *· push via* `node scripts/linear-update-issue.mjs IPI-78`","Backlog",8,"Medium","a91ff388-772a-4b0a-b252-0068d6a1297c","AI Platform — LLM Providers","ai@socialmediaville.ca",,"AI, CLOUDINARY, GEMINI",,,,,"2026-06-14T11:46:23.825Z","2026-07-07T02:22:03.695Z",,,,,,,,"IPIX-INIT-001 — Operator Platform (Q3 2026)","a07acbf5-d8d3-428b-8834-7bfb28147a76","GROQ-M2 · Edge ∥ Mastra",,"94609502-3bdc-4882-bf2d-d5d5e84c88df",33571,"IPI-47, IPI2-128","IPI-61",
+"IPI-108","iPix1","PLT-017 · Mastra Workspace — brand assets + semantic search config","## Purpose
+
+Configure a Mastra workspace in `app/src/mastra/index.ts` so the Mastra Studio Workspaces tab is active and agents can do semantic search over brand content, shoot briefs, and asset metadata.
+
+Currently: Mastra Studio → localhost:4111/workspaces shows ""Workspace Not Configured"".
+
+---
+
+## Acceptance criteria
+
+**A — Workspace configured**
+
+* `app/src/mastra/index.ts` includes a workspace/RAG config pointing at a content directory
+* Mastra Studio → Workspaces tab shows the workspace (not ""Workspace Not Configured"")
+
+**B — Embedding model set**
+
+* Uses Gemini `text-embedding-004` via `@ai-sdk/google`
+* `GEMINI_API_KEY` reused — no new API key required
+
+**C — Searchable from agent**
+
+* production-planner or creative-director has a workspace search tool wired
+* Agent can answer ""what brand guidelines exist?"" using workspace content
+
+**D — No public agent access**
+
+* `publicMarketingAgent` / `publicMastra` do NOT have workspace access
+* Workspace contains no secrets or service-role keys
+
+**E — Tests + lint green**
+
+* `npm run lint && npm run build` pass
+* `npx tsc --noEmit` clean
+
+---
+
+## Scope
+
+* `app/src/mastra/index.ts` — add workspace config
+* `app/src/mastra/tools/` — workspace search tool
+* `app/content/brand-guides/` — seed content stub
+
+## Out of scope
+
+* Production vector DB (LibSQL for MVP)
+* Public-marketing agent RAG
+* Real brand content ingestion pipeline
+
+## Skills
+
+* `/mastra` · `/ipix-task-lifecycle`
+
+## References
+
+* `app/src/mastra/index.ts` (current — no workspace)
+* Mastra RAG docs: [https://mastra.ai/docs/rag/overview](<https://mastra.ai/docs/rag/overview>)
+* localhost:4111/workspaces","Backlog",,"Low","a91ff388-772a-4b0a-b252-0068d6a1297c","AI Platform — LLM Providers","ai@socialmediaville.ca",,"AI, INFRA",,,,,"2026-06-24T06:33:23.055Z","2026-07-04T07:02:17.136Z",,,,,,,,"IPIX-INIT-001 — Operator Platform (Q3 2026)","a07acbf5-d8d3-428b-8834-7bfb28147a76","GROQ-M2 · Edge ∥ Mastra",,"94403ea9-2729-4949-8429-229d99b0a7cb",19484,"","",
+"IPI-180","iPix1","GEMINI-017 · Code execution — shoot budget QA","## GEMINI-017 — Code execution — shoot budget QA
+
+**In plain terms:** Enable code execution tool for shoot brief math (time blocks, crew counts, budget sanity checks).
+
+**Docs:** [Code execution](<https://ai.google.dev/gemini-api/docs/code-execution>)
+
+**Blocked by:** [IPI-148](https://linear.app/amo100/issue/IPI-148)
+
+### Acceptance criteria
+
+- [ ] Sandbox math on structured shot list JSON
+- [ ] Results surfaced in production-planner agent
+- [ ] No PII in execution prompts","Backlog",3,"Low","a91ff388-772a-4b0a-b252-0068d6a1297c","AI Platform — LLM Providers","ai@socialmediaville.ca",,"GEMINI",,,,,"2026-06-25T07:59:41.661Z","2026-07-04T07:01:58.785Z",,,,,,,,"IPIX-INIT-001 — Operator Platform (Q3 2026)","162c5b70-9828-45ea-8c7c-b8e02f160230","GROQ-M3 · Verify",,"9fa39da5-0115-4efd-9de0-1d46a6f6ebd7",17958,"IPI-148","",
+"IPI-177","iPix1","GEMINI-014 · File Search RAG spike (Gemini native store)","## GEMINI-014 — File Search RAG spike (Gemini native store)
+
+**In plain terms:** Evaluate Gemini File Search store vs MASTRA-RAG pgvector for brand guidelines KB.
+
+**Docs:** [File Search](<https://ai.google.dev/gemini-api/docs/file-search>)
+
+**Blocked by:** [IPI-142](https://linear.app/amo100/issue/IPI-142) MASTRA-RAG-001
+
+### Acceptance criteria
+
+- [ ] Upload sample brand guidelines PDF to File Search store
+- [ ] Query with citations vs pgvector baseline
+- [ ] Decision recorded in gemeni-plans.md","Backlog",5,"Low","a91ff388-772a-4b0a-b252-0068d6a1297c","AI Platform — LLM Providers","ai@socialmediaville.ca",,"GEMINI",,,,,"2026-06-25T07:59:38.542Z","2026-07-04T07:02:04.267Z",,,,,,,,"IPIX-INIT-001 — Operator Platform (Q3 2026)","162c5b70-9828-45ea-8c7c-b8e02f160230","GROQ-M3 · Verify",,"229221a6-f86d-4981-be99-25a0676f0c3a",17958,"","IPI-142",
+"IPI-10","iPix1","AI-019 — Gemini tool/function registry (declare-once schemas)","In plain terms: AIOR-004 covers Mastra registry; Gemini function declarations are separate and should live here.
+
+Source: docs/linear/audit-report.md §5 (missing tasks)","Backlog",,"No priority","a91ff388-772a-4b0a-b252-0068d6a1297c","AI Platform — LLM Providers","ai@socialmediaville.ca",,"",,,,,"2026-06-20T15:18:03.518Z","2026-07-04T07:02:21.666Z",,,,,,,,"IPIX-INIT-001 — Operator Platform (Q3 2026)","a07acbf5-d8d3-428b-8834-7bfb28147a76","GROQ-M2 · Edge ∥ Mastra",,"e9069dc6-c104-42a2-a300-228093f3fe81",24719,"IPI-181","",
+"IPI-6","iPix1","INFRA-003 — Secrets management for agent server (Gemini key, service role)","In plain terms: Edge uses Infisical; the new Node service needs the same secret hygiene.
+
+Source: docs/linear/audit-report.md §5 (missing tasks)","Backlog",,"No priority","a91ff388-772a-4b0a-b252-0068d6a1297c","AI Platform — LLM Providers","ai@socialmediaville.ca",,"",,,,,"2026-06-20T15:18:01.957Z","2026-07-04T07:02:23.091Z",,,,,,,,"IPIX-INIT-001 — Operator Platform (Q3 2026)","162c5b70-9828-45ea-8c7c-b8e02f160230","GROQ-M3 · Verify",,"ca0517ea-d628-446b-9d0a-e4598447914e",24720,"","",
+"IPI-361","iPix1","GROQ-007 · Staged Production Rollout","## GROQ-007 — GROQ-007 · Staged Production Rollout
+
+**Summary (plain English):** This is the actual ""flip the switch"" step — turning Groq on for real users in production, watching it closely for a full week, and having a one-line way to instantly go back to Gemini if anything looks wrong (a config change, not a code deploy). There's no ""10% of users get the new thing"" — it's all-or-nothing per environment (dev → staging → prod), which keeps the rollback dead simple: change one setting, done.
+
+**In plain terms:** **Platform** runs env-stage cutover (dev → staging 48h → prod flip) + 7-day monitor; rollback = `AI_PROVIDER=gemini` in Infisical only.
+
+**Linear:** [IPI-361](https://linear.app/amo100/issue/IPI-361)
+
+**Blocked by:** [GROQ-006](<https://linear.app/amo100/search?q=GROQ-006>) ⬜ Todo (not started — waits on GROQ-005 first)
+
+**Unblocks:** Groq primary in prod · observability dashboard review
+
+**Branch:** `ipi/groq-007-rollout-config`
+
+**PR:** `ipi/groq-007-rollout-config`
+
+**Verify:** `7-day monitor: agent logs, 429s, schema failures, cost`
+
+**Estimate:** 2 points
+
+**Source:** [tasks/llm/groq-plan.md](<../../../tasks/llm/groq-plan.md>) · audit: [tasks/llm/02-groq.md](<../../../tasks/llm/02-groq.md>)
+
+### Skills (load in order)
+
+| # | Skill | Path |
+| -- | -- | -- |
+| 1 | groq-inference | `.claude/skills/groq-``inference``/SKILL.md` — authoritative for model/tier selection, production checklist |
+| 2 | mastra | `.claude/skills/mastra/SKILL.md` → [`references/groq.md`](<../../../.claude/skills/mastra/references/groq.md>) |
+| 3 | infisical | `.claude/skills/infisical/SKILL.md` |
+| 4 | ipix-task-lifecycle | `.claude/skills/ipix-task-lifecycle/SKILL.md` |
+| 5 | gemini | `.claude/skills/gemini/SKILL.md` (rollback path) |
+
+---
+
+### Sequence / architecture — GROQ-007
+
+```mermaid
+stateDiagram-v2
+  [*] --> DevGroq
+  DevGroq --> StagingGroq: smoke green
+  StagingGroq --> ProdFlip: IPI-360 green + 48h green
+  StagingGroq --> GeminiRollback: alert
+  ProdFlip --> Monitor7d: DNA_USE_GEMINI=1
+  Monitor7d --> [*]: stable or rollback
+  ProdFlip --> GeminiRollback: schema fail >2% / sustained 429
+  GeminiRollback --> [*]
+```
+
+---
+
+### User journey
+
+```mermaid
+journey
+    title GROQ-007 delivery path
+    section Plan
+      Read groq-plan.md: 5: Engineer
+      /efficient task IPI-361: 5: Engineer
+    section Build
+      Worktree + branch: 5: Engineer
+      One-concern PR: 5: Engineer
+    section Verify
+      Run verify matrix: 4: Engineer
+      Bugbot + merge: 5: Engineer
+```
+
+---
+
+### User stories
+
+### Story 1
+
+**Operator** on staging feels faster chat — DNA still Gemini-safe.
+
+**Acceptance:** Measurable in PR verification for GROQ-007.
+
+### Story 2
+
+**On-call** reverts AI_PROVIDER=gemini in Infisical without redeploy.
+
+**Acceptance:** Measurable in PR verification for GROQ-007.
+
+### Story 3
+
+**Lead** reviews 7-day `ai_agent_logs` dashboard (schema_valid, 429s, p95, tokens, cost) before calling rollout complete.
+
+**Acceptance:** Measurable in PR verification for GROQ-007.
+
+---
+
+### Dependencies
+
+| Dependency | Status |
+| -- | -- |
+| tasks/llm/groq-plan.md | ✅ SSOT |
+| GROQ-001 infra merged | ✅ Done |
+| GROQ-006 golden eval ([IPI-360](https://linear.app/amo100/issue/IPI-360/groq-006-golden-eval-verify-scripts)) | ⬜ Todo — this is the direct blocker, itself waiting on GROQ-005 |
+| One concern per PR | ✅ enforced |
+
+---
+
+### Completion steps
+
+#### A. Implement
+
+- [ ] **A1** Staging: `AI_PROVIDER=groq`, `DNA_USE_GEMINI=1` — full Groq text, DNA Gemini — monitor 48h
+- [ ] **A2** Prod flip: single Infisical env promotion after [IPI-360](https://linear.app/amo100/issue/IPI-360/groq-006-golden-eval-verify-scripts) green (no 10%/50% traffic split — org-wide `AI_PROVIDER` only)
+- [ ] **A3** Supabase saved queries on `ai_agent_logs`: provider, 429 count, `schema_valid`, p95 latency, tokens, `x_groq.id`
+- [ ] **A4** Alert thresholds: schema fail >2%, DNA FP +5pp vs baseline, sustained 429, p95 2× budget → rollback drill
+- [ ] **A5** Document rollback runbook: `AI_PROVIDER=gemini` + `BI_USE_GEMINI=1` + `DNA_USE_GEMINI=1` — no redeploy
+- [ ] **A6** 7-day monitor post-flip; update Linear + tracker on completion
+
+#### B. Verify + ship
+
+- [ ] **B1** Verification commands green (see **Verify** above)
+- [ ] **B2** Cursor PR Review — no unresolved High/Critical
+- [ ] **B3** Linear **Done** · update groq-plan.md if IDs changed
+
+**Spec score:** 88/100 — lifecycle-ready
+
+---
+
+*Source:* `docs/linear/issues/IPI-361-groq-007.md` *· push via* `node scripts/linear-update-issue.mjs IPI-361`","Todo",2,"High","a91ff388-772a-4b0a-b252-0068d6a1297c","AI Platform — LLM Providers","ai@socialmediaville.ca",,"INFRA, LLM",,,,,"2026-07-04T06:17:34.769Z","2026-07-07T02:45:12.326Z",,,,,,"2026-07-11T06:17:35.435Z","IPI-354","IPIX-INIT-001 — Operator Platform (Q3 2026)","65ee5732-a08e-476e-8647-0455fa5e5305","GROQ-M4 · Rollout","MediumRisk","b0c21a26-bc00-4a48-aecb-b1b6ea86cb44",2251,"","IPI-360",
+"IPI-360","iPix1","GROQ-006 · Golden Eval + Verify Scripts","## GROQ-006 — GROQ-006 · Golden Eval + Verify Scripts
+
+**Summary (plain English):** Before we trust Groq with real vision/DNA scoring (grading whether a product photo matches brand style), we need proof it's at least as accurate as the current system — not a guess. This task builds that proof: a small set of sample images and brand pages with known-correct answers, run through both providers side by side, so any accuracy drop gets caught automatically by a script instead of a customer noticing it first. This is the safety gate — nothing about vision moves to Groq in production until this passes.
+
+**In plain terms:** **QA gate** — golden DNA images + brand fixtures; verify-dna.mjs blocks rollout until metrics ≥ Gemini baseline.
+
+**Linear:** [IPI-360](https://linear.app/amo100/issue/IPI-360)
+
+**Blocked by:** [GROQ-003 ](<https://linear.app/amo100/search?q=GROQ-003>)✅ Done · [GROQ-005](<https://linear.app/amo100/search?q=GROQ-005>) ⬜ Todo
+
+**Unblocks:** GROQ-007
+
+**Branch:** `ipi/groq-006-verify-scripts`
+
+**PR:** `ipi/groq-006-verify-scripts`
+
+**Verify:** `infisical run -- npm run supabase:verify-brand-intelligence && npm run supabase:verify-dna`
+
+**Estimate:** 5 points
+
+**Source:** [tasks/llm/groq-plan.md](<../../../tasks/llm/groq-plan.md>) · audit: [tasks/llm/02-groq.md](<../../../tasks/llm/02-groq.md>)
+
+### Skills (load in order)
+
+| # | Skill | Path |
+| -- | -- | -- |
+| 1 | gen-test | `.claude/skills/gen-test/SKILL.md` |
+| 2 | groq-inference | `.claude/skills/groq-``inference``/SKILL.md` (golden fixtures, model comparison — authoritative for model/tier selection) |
+| 3 | mastra | `.claude/skills/``mastra``/SKILL.md` → [`references/groq.md`](<../../../.claude/skills/mastra/references/groq.md>) |
+| 4 | ipix-supabase | `.claude/skills/``ipix-supabase``/SKILL.md` |
+| 5 | gemini | `.claude/skills/``gemini``/SKILL.md` |
+
+---
+
+### Verified against disk (2026-07-07)
+
+| Claim | Probe | Result |
+| -- | -- | -- |
+| Gemini baseline exists (A3 needs it) | `find . -iname groq-baseline.json` | ✅ `docs/ecommerce/evidence/2026-07-05/groq-baseline.json` |
+| `scripts/verify-dna.mjs` (A5) not yet built | `ls scripts/verify-dna.mjs` | ✅ correctly absent — matches Todo status, this issue builds it |
+| `app/src/test/fixtures/dna-golden/` (A1) not yet built | `ls` | ✅ correctly absent — this issue builds it |
+| `npm run supabase:verify-dna` (Verify line) not yet registered | `grep package.json` | ✅ correctly absent — this issue adds it |
+
+No stale claims found — every ""not yet done"" item in this spec is genuinely not yet done.
+
+---
+
+### Sequence / architecture — GROQ-006
+
+```mermaid
+sequenceDiagram
+  participant Script as verify-dna.mjs
+  participant Edge as audit-asset-dna
+  participant Golden as dna-golden fixtures
+  Script->>Edge: invoke with fixture URL
+  Edge-->>Script: dna_score + status
+  Script->>Golden: compare labels ± tolerance
+```
+
+---
+
+### User journey
+
+```mermaid
+journey
+    title GROQ-006 delivery path
+    section Plan
+      Read groq-plan.md: 5: Engineer
+      /efficient task IPI-360: 5: Engineer
+    section Build
+      Worktree + branch: 5: Engineer
+      One-concern PR: 5: Engineer
+    section Verify
+      Run verify matrix: 4: Engineer
+      Bugbot + merge: 5: Engineer
+```
+
+---
+
+### User stories
+
+### Story 1
+
+**QA** runs verify-dna — fails if Groq DNA FP rate exceeds Gemini.
+
+**Acceptance:** Measurable in PR verification for GROQ-006.
+
+### Story 2
+
+**Engineer** adds fixture image — CI catches vision regression.
+
+**Acceptance:** Measurable in PR verification for GROQ-006.
+
+### Story 3
+
+**Product** signs off Phase 6 before any prod Groq cutover.
+
+**Acceptance:** Measurable in PR verification for GROQ-006.
+
+---
+
+### Dependencies
+
+| Dependency | Status |
+| -- | -- |
+| tasks/llm/groq-plan.md | ✅ SSOT |
+| GROQ-001 infra merged | ✅ Done |
+| GROQ-003 edge functions ([IPI-357](https://linear.app/amo100/issue/IPI-357/groq-003-edge-functions-on-groq-text-first)) | ✅ Done |
+| GROQ-005 CopilotKit smoke ([IPI-359](https://linear.app/amo100/issue/IPI-359/groq-005-copilotkit-smoke-verification)) | ⬜ Todo — blocks this issue starting |
+| Golden eval (Phase 6) | this issue |
+| One concern per PR | ✅ enforced |
+
+---
+
+### Completion steps
+
+#### A. Implement
+
+- [ ] **A1** Golden DNA dataset — **10 images MVP** in `app/src/test/fixtures/dna-golden/` (expand later; label owner assigned)
+- [ ] **A2** Golden brand profiles — 10+ Firecrawl markdown fixtures
+- [ ] **A3** Compare Groq vs **Gemini baseline from** [IPI-355](https://linear.app/amo100/issue/IPI-355/groq-001-groq-migration-infrastructure) (`docs/ecommerce/evidence/2026-07-05/groq-baseline.json` — confirmed on disk) — do not re-capture baseline here
+- [ ] **A4** Extend `verify-brand-intelligence.mjs` for Groq path; Groq BI ≥99% schema valid vs baseline
+- [ ] **A5** Add `scripts/verify-dna.mjs` + `npm run supabase:verify-dna` — `--provider gemini|groq`; default verify path **Gemini** until explicit Groq vision flag
+- [ ] **A6** CI skips live calls without keys; optional staging rate-limit load test (manual)
+
+#### B. Verify + ship
+
+- [ ] **B1** Verification commands green (see **Verify** above)
+- [ ] **B2** Cursor PR Review — no unresolved High/Critical
+- [ ] **B3** Linear **Done** · update groq-plan.md if IDs changed
+
+**Spec score:** 88/100 — lifecycle-ready, no stale claims found 2026-07-07
+
+---
+
+*Source:* `docs/linear/issues/IPI-360-groq-006.md` *· push via* `node scripts/linear-update-issue.mjs IPI-360`","Todo",3,"High","a91ff388-772a-4b0a-b252-0068d6a1297c","AI Platform — LLM Providers","ai@socialmediaville.ca",,"GEMINI, LLM, SUPA",,,,,"2026-07-04T06:17:34.209Z","2026-07-07T02:44:43.303Z",,,,,,"2026-07-11T06:17:34.777Z","IPI-354","IPIX-INIT-001 — Operator Platform (Q3 2026)","162c5b70-9828-45ea-8c7c-b8e02f160230","GROQ-M3 · Verify","MediumRisk","41453959-8f76-45eb-b91d-9bb933130f86",2251,"IPI-357, IPI-355","IPI-359",
+"IPI-359","iPix1","GROQ-005 · CopilotKit Smoke Verification","## GROQ-005 — GROQ-005 · CopilotKit Smoke Verification
+
+**Summary (plain English):** Once the chat agents are switched over to Groq, someone has to actually click through the app and make sure chat still feels the same — same buttons, same responses, no broken conversations, just faster. This task is that manual check: a written checklist run once in the pull request (not a new permanent automated test), confirming operator chat and marketing chat both still work end-to-end after the model swap.
+
+**In plain terms:** **QA** confirms operator + marketing chat unchanged at API layer after Mastra Groq switch.
+
+**Linear:** [IPI-359](https://linear.app/amo100/issue/IPI-359)
+
+**Blocked by:** [GROQ-004](<https://linear.app/amo100/search?q=GROQ-004>) ([IPI-358](https://linear.app/amo100/issue/IPI-358/groq-004-mastra-agents-on-groq) — in review, PR #244) · [IPI-428](https://linear.app/amo100/issue/IPI-428/build-groq-config-fix-turbopack-groq-modelsjson-import-boundary) ✅ Done
+
+**Unblocks:** GROQ-006
+
+**Branch:** `ipi/groq-005-copilotkit-verify`
+
+**PR:** `ipi/groq-005-copilotkit-verify` — **separate PR from** [IPI-358](https://linear.app/amo100/issue/IPI-358/groq-004-mastra-agents-on-groq) (one concern per PR)
+
+**Verify:** Manual smoke `:3002` QA credentials + written checklist in PR body
+
+**Estimate:** 1 point
+
+**Source:** [tasks/llm/groq-plan.md](<../../../tasks/llm/groq-plan.md>) · audit: [tasks/llm/02-groq.md](<../../../tasks/llm/02-groq.md>)
+
+### Skills (load in order)
+
+| # | Skill | Path |
+| -- | -- | -- |
+| 1 | copilotkit | `.claude/skills/copilotkit/SKILL.md` |
+| 2 | mastra | `.claude/skills/mastra/SKILL.md` → [`references/groq.md`](<../../../.claude/skills/mastra/references/groq.md>) |
+| 3 | groq-inference | `.claude/skills/groq-``inference``/SKILL.md` |
+
+---
+
+### Sequence / architecture — GROQ-005
+
+```mermaid
+sequenceDiagram
+  participant Op as Operator UI
+  participant API as /api/copilotkit
+  participant Agent as Mastra registry
+  Op->>API: stream chat
+  API->>Agent: production-planner
+  Agent-->>Op: tool results stream
+```
+
+---
+
+### User journey
+
+```mermaid
+journey
+    title GROQ-005 delivery path
+    section Plan
+      Read groq-plan.md: 5: Engineer
+      /efficient task IPI-359: 5: Engineer
+    section Build
+      Worktree + branch: 5: Engineer
+      One-concern PR: 5: Engineer
+    section Verify
+      Run verify matrix: 4: Engineer
+      Bugbot + merge: 5: Engineer
+```
+
+---
+
+### User stories
+
+### Story 1
+
+**Operator** opens sidebar — same agents, faster tokens.
+
+**Acceptance:** Measurable in PR verification for GROQ-005.
+
+### Story 2
+
+**Marketing** uses marketing chat — no regression.
+
+**Acceptance:** Measurable in PR verification for GROQ-005.
+
+### Story 3
+
+**Engineer** documents smoke checklist in PR verification.
+
+**Acceptance:** Measurable in PR verification for GROQ-005.
+
+---
+
+### Dependencies
+
+| Dependency | Status |
+| -- | -- |
+| tasks/llm/groq-plan.md | ✅ SSOT |
+| GROQ-001 infra merged | ✅ Done |
+| GROQ-004 ([IPI-358](https://linear.app/amo100/issue/IPI-358/groq-004-mastra-agents-on-groq)) Mastra tier wiring | 🟡 In Review — PR #244, CI green, not yet merged |
+| Golden eval (Phase 6) | before vision cutover |
+| One concern per PR | ✅ enforced |
+
+---
+
+### ⚠️ Correction (2026-07-07)
+
+**A2 below previously listed** `default` **as an agent ID — this was wrong.** `default` is a Groq model *tier* name (from `config/groq-models.json`), not an agent ID. Verified the actual 8 Mastra agent IDs on disk: `production-planner`, `creative-director`, `brand-intelligence`, `crm-assistant`, `model-match`, `public-marketing`, `social-discovery`, `visual-identity`. Corrected below.
+
+### Completion steps
+
+#### A. Implement
+
+- [ ] **A1** Execute written smoke checklist on `:3002` (QA creds): all agents, tool calls, streaming sidebar, marketing chat route
+- [ ] **A2** Confirm agent IDs unchanged: `production-planner`, `creative-director`, `brand-intelligence`, `crm-assistant`, `model-match`, `public-marketing`, `social-discovery`, `visual-identity`
+- [ ] **A3** Verify durable workflows + streaming — no regression vs Gemini baseline latency feel
+- [ ] **A4** Provider-neutral progress UI strings; dev infra messages note Groq configured
+- [ ] **A5** Paste checklist + screenshot evidence path in PR verification — **no repo docs PR** (checklist in PR body only)
+
+#### B. Verify + ship
+
+- [ ] **B1** Verification commands green (see **Verify** above)
+- [ ] **B2** Cursor PR Review — no unresolved High/Critical
+- [ ] **B3** Linear **Done** · update groq-plan.md if IDs changed
+
+**Spec score:** 88/100 → 90/100 after 2026-07-07 agent-ID correction
+
+---
+
+*Source:* `docs/linear/issues/IPI-359-groq-005.md` *· push via* `node scripts/linear-update-issue.mjs IPI-359`","Todo",1,"Medium","a91ff388-772a-4b0a-b252-0068d6a1297c","AI Platform — LLM Providers","ai@socialmediaville.ca",,"COPILOTKIT, LLM, MASTRA",,,,,"2026-07-04T06:17:33.903Z","2026-07-07T02:44:11.927Z",,,,,,,"IPI-354","IPIX-INIT-001 — Operator Platform (Q3 2026)","162c5b70-9828-45ea-8c7c-b8e02f160230","GROQ-M3 · Verify",,"ead3345b-3cff-42b2-b8ef-df97c115c4c8",2251,"IPI-428, IPI-358","",
+"IPI-354","iPix1","GROQ — Gemini → Groq Migration Epic","## GROQ-EPIC — Gemini → Groq Migration Epic
+
+**Summary (plain English):** We're switching iPix's AI engine from Google Gemini to Groq for everyday text work — chat, planning, structured data — because Groq is dramatically faster and cheaper for those jobs. Think of it as swapping to a faster typist for notes and emails, while keeping the artist (Gemini) on anything involving looking at photos, until we've proven the new artist is just as accurate. The move is split into 7 small, one-concern-at-a-time steps so nothing breaks all at once, and there's always a one-line ""undo"" switch (`AI_PROVIDER=gemini`) if something goes wrong — no risky big-bang cutover.
+
+**Progress as of 2026-07-07:** 3 of 7 steps merged (GROQ-001, 002, 003), 1 in review (GROQ-004), 3 not started (GROQ-005, 006, 007). Status corrected from Todo → In Progress to reflect this.
+
+**In plain terms:** **Platform** migrates primary LLM inference from Gemini to Groq in seven gated PRs — ship Phase 1 (infra) first; no prod cutover until golden eval passes.
+
+**Linear:** [IPI-354](https://linear.app/amo100/issue/IPI-354)
+
+**Blocked by:** None — **ship first** (Phase 1 gate).
+
+**Unblocks:** GROQ-001…007 · faster operator chat · lower text inference cost
+
+**Branch:** `epic — no branch`
+
+**PR:** `epic — tracks child PRs`
+
+**Verify:** Phase 1 only until golden eval ([IPI-360](https://linear.app/amo100/issue/IPI-360/groq-006-golden-eval-verify-scripts)) + env-stage rollout ([IPI-361](https://linear.app/amo100/issue/IPI-361/groq-007-staged-production-rollout)) gates closed
+
+**Estimate:** 13 points
+
+**Source:** [tasks/llm/groq-plan.md](<../../../tasks/llm/groq-plan.md>) · audit: [tasks/llm/02-groq.md](<../../../tasks/llm/02-groq.md>)
+
+### Skills (load in order)
+
+| # | Skill | Path |
+| -- | -- | -- |
+| 1 | ipix-task-lifecycle | `.claude/skills/ipix-task-lifecycle/SKILL.md` |
+| 2 | mastra | `.claude/skills/mastra/SKILL.md` → [`references/groq.md`](<../../../.claude/skills/mastra/references/groq.md>) |
+| 3 | groq-inference | `.claude/skills/groq-``inference``/SKILL.md` — authoritative for model/tier selection |
+| 4 | gemini | `.claude/skills/gemini/SKILL.md` |
+| 5 | writing-plans | `.claude/skills/writing-plans/SKILL.md` |
+
+---
+
+### Sequence / architecture — GROQ-EPIC
+
+```mermaid
+flowchart LR
+  P1[GROQ-001 Infra ✅] --> P2[GROQ-002 Contract ✅]
+  P2 --> P3[GROQ-003 Edge ✅]
+  P2 --> P4[GROQ-004 Mastra — In Review]
+  P3 --> P6[GROQ-006 Verify]
+  P4 --> P5[GROQ-005 CopilotKit]
+  P5 --> P6
+  P6 --> P7[GROQ-007 Rollout]
+```
+
+---
+
+### User journey
+
+```mermaid
+journey
+    title GROQ-EPIC delivery path
+    section Plan
+      Read groq-plan.md: 5: Engineer
+      /efficient task IPI-354: 5: Engineer
+    section Build
+      Worktree + branch: 5: Engineer
+      One-concern PR: 5: Engineer
+    section Verify
+      Run verify matrix: 4: Engineer
+      Bugbot + merge: 5: Engineer
+```
+
+---
+
+### User stories
+
+### Story 1
+
+**Operator** gets faster Copilot responses without re-stating brand context.
+
+**Acceptance:** Measurable in PR verification for GROQ-EPIC.
+
+### Story 2
+
+**Engineer** rolls back to Gemini via env flag only — no emergency deploy.
+
+**Acceptance:** Measurable in PR verification for GROQ-EPIC.
+
+### Story 3
+
+**Creative Director** keeps DNA compliance accuracy during provider migration.
+
+**Acceptance:** Measurable in PR verification for GROQ-EPIC.
+
+---
+
+### Dependencies
+
+| Dependency | Status |
+| -- | -- |
+| tasks/llm/groq-plan.md | ✅ SSOT |
+| GROQ-001 infra ([IPI-355](https://linear.app/amo100/issue/IPI-355/groq-001-groq-migration-infrastructure)) | ✅ Done — merged #227 |
+| Gemini baseline ([IPI-355](https://linear.app/amo100/issue/IPI-355/groq-001-groq-migration-infrastructure)) | ✅ Done — `docs/ecommerce/evidence/2026-07-05/groq-baseline.json` confirmed on disk |
+| Golden eval ([IPI-360](https://linear.app/amo100/issue/IPI-360/groq-006-golden-eval-verify-scripts)) | ⬜ before prod env flip — not started |
+| One concern per PR | ✅ enforced — **never merge** [IPI-359](https://linear.app/amo100/issue/IPI-359/groq-005-copilotkit-smoke-verification) **into** [IPI-358](https://linear.app/amo100/issue/IPI-358/groq-004-mastra-agents-on-groq) |
+
+---
+
+### Audit corrections (2026-07-05)
+
+Per [tasks/llm/02-groq.md](<../../../tasks/llm/02-groq.md>):
+
+* **M1 baseline** lives in [IPI-355](https://linear.app/amo100/issue/IPI-355/groq-001-groq-migration-infrastructure) (not [IPI-360](https://linear.app/amo100/issue/IPI-360/groq-006-golden-eval-verify-scripts))
+* Ban `compound-beta` — use `groq/compound` / `groq/compound-mini` only
+* **No % traffic rollout** — env stages: dev → staging → prod flip ([IPI-361](https://linear.app/amo100/issue/IPI-361/groq-007-staged-production-rollout))
+* **DNA stays Gemini** through prod cutover (`DNA_USE_GEMINI=1`)
+
+---
+
+### Completion steps
+
+#### A. Implement
+
+- [X] **A1** Epic tracks 7 child issues — one concern per PR each (GROQ-001/002/003 merged, GROQ-004 in review, GROQ-005/006/007 not started)
+- [X] **A2** SSOT: groq-plan.md + audit corrections in 02-groq.md synced to child specs
+- [X] **A3** Ship [IPI-355](https://linear.app/amo100/issue/IPI-355/groq-001-groq-migration-infrastructure) (infra + baseline + smoke) before any Groq inference code — done, PR #227
+- [ ] **A4** [IPI-360](https://linear.app/amo100/issue/IPI-360/groq-006-golden-eval-verify-scripts) green before prod flip; DNA vision Groq only behind explicit flag
+- [ ] **A5** [IPI-361](https://linear.app/amo100/issue/IPI-361/groq-007-staged-production-rollout) env-stage rollout + 7-day monitor (not 10%/50% traffic fiction)
+- [X] **A6** Zero open `compound-beta` refs in plan + Linear specs — confirmed via repo-wide grep 2026-07-07
+
+#### B. Verify + ship
+
+- [ ] **B1** Verification commands green (see **Verify** above)
+- [ ] **B2** Cursor PR Review — no unresolved High/Critical
+- [ ] **B3** Linear **Done** · update groq-plan.md if IDs changed
+
+**Spec score:** 88/100 — lifecycle-ready
+
+---
+
+*Source:* `docs/linear/issues/IPI-354-groq-epic.md` *· push via* `node scripts/linear-update-issue.mjs IPI-354`","In Progress",13,"High","a91ff388-772a-4b0a-b252-0068d6a1297c","AI Platform — LLM Providers","ai@socialmediaville.ca",,"GEMINI, LLM, MASTRA, SUPA",,,,,"2026-07-04T06:17:31.990Z","2026-07-07T02:43:46.746Z","2026-07-07T02:43:46.418Z",,,,,"2026-07-11T06:17:32.500Z",,"IPIX-INIT-001 — Operator Platform (Q3 2026)","f02f3728-8172-4dad-8cfe-0fd23f21b232","GROQ-M1 · Infra + Contract","MediumRisk","6d6e534e-0757-425b-aca3-45408870b752",994,"","",
+"IPI-107","iPix1","AI-018 · Gemini Model Registry + Docs Sync","## Status update — 2026-06-30 (Gemini audit sync)
+
+**Code SSOT on** `origin/main`**:**
+
+* `app/src/mastra/models.ts` — default `gemini-3.1-flash-lite` (IPI-223)
+* `supabase/functions/_shared/gemini.ts` — same default + `KNOWN_MODEL_IDS` allowlist
+* Mastra: `thinkingBudget: 0` · Edge: `thinkingLevel: low` — intentional split
+
+### What's done
+
+* Dual registry with `GEMINI_MODEL` override validation
+* `app/src/mastra/models.test.ts` green (IPI2-80)
+* No `NEXT_PUBLIC_GEMINI_*` in `app/src` (verified)
+
+### Remaining before Done
+
+- [ ] **Registry parity test** — script asserts app + edge same default + allowlist
+- [ ] **Model allowlist** — single `KNOWN_MODEL_IDS` exported; CI fails on drift
+- [ ] **No hardcoded model IDs** — grep/CI ban `gemini-*` outside registry files
+- [ ] **CI verification** — wired into `.github/workflows/ci.yml` or `npm run verify:gemini`
+- [ ] **Documentation synchronized** — `gemini-plan.md` v1.1 + MASTER-DEPENDENCIES
+- [ ] **Skills synchronized** — `.claude/skills/gemini/SKILL.md`
+- [ ] Verify `audit-asset-dna` uses registry constant (not hardcoded string)
+
+---
+
+## AI-018 — Gemini Model Registry + Docs Sync
+
+### Purpose
+
+Create a guardrail that keeps iPix Gemini model usage aligned with official Gemini API documentation. One model registry, one verification script that catches drift.
+
+### Verified model policy
+
+**Production default:** `gemini-3.1-flash-lite`
+
+**Allowlist overrides (via** `GEMINI_MODEL`**):** `gemini-3.5-flash`, `gemini-3.1-pro-preview`
+
+### Acceptance criteria
+
+- [ ] **Registry parity test** — app + edge registries share same default + allowlist
+- [ ] **Model allowlist** — `KNOWN_MODEL_IDS` is SSOT; overrides validated at runtime
+- [ ] **No hardcoded model IDs** — all edge fns + agents import registry constants
+- [ ] **CI verification** — pipeline fails on banned/hardcoded IDs + `NEXT_PUBLIC_GEMINI`
+- [ ] **Documentation synchronized** — `gemini-plan.md`, MASTER-DEPENDENCIES
+- [ ] **Skills synchronized** — `.claude/skills/gemini/SKILL.md`
+- [ ] Closes IPI-47 when merged
+
+### Verification checklist
+
+- [ ] Unit tests — `cd app && npm test src/mastra/models.test.ts` green
+- [ ] Registry parity script passes (app + edge same default + allowlist)
+- [ ] CI fails on hardcoded `gemini-*` outside registry files
+- [ ] `grep -r NEXT_PUBLIC_GEMINI app/src` — 0 matches
+- [ ] `infisical run -- npm run supabase:verify-brand-intelligence` green
+- [ ] Documentation updated
+
+### Dependencies (Linear)
+
+| Type | Issues |
+| -- | -- |
+| **Blocks** | IPI-47 |
+| **Related** | IPI-167 · IPI-172 · all Gemini edge fns |
+","In Review",2,"High","a91ff388-772a-4b0a-b252-0068d6a1297c","AI Platform — LLM Providers","ai@socialmediaville.ca","ai@socialmediaville.ca","AI, GEMINI",,,,,"2026-06-14T11:46:25.014Z","2026-07-04T07:02:27.042Z","2026-06-22T14:57:09.781Z",,,,,,,"IPIX-INIT-001 — Operator Platform (Q3 2026)","a07acbf5-d8d3-428b-8834-7bfb28147a76","GROQ-M2 · Edge ∥ Mastra",,"4d40944a-0bac-4a06-b806-ee631225fd50",18980,"IPI-47, IPI-172, IPI-167, IPI-132, IPI2-174, IPI2-129, IPI-173, IPI-246, IPI-223, IPI-182","",
+"IPI-428","iPix1","BUILD-GROQ-CONFIG · Fix Turbopack groq-models.json Import Boundary","## BUILD-GROQ-CONFIG — Fix Turbopack groq-models.json Import Boundary
+
+**In plain terms:** `next build` fails because Turbopack treats `app/` as the workspace root while `provider.ts` statically imports `config/groq-models.json` from the repo root. Fix the import boundary without changing Groq runtime behavior.
+
+**Linear:** [IPI-428](https://linear.app/amo100/issue/IPI-428/build-groq-config-fix-turbopack-groq-modelsjson-import-boundary)
+
+**Track:** Platform · Build · INFRA · LLM
+
+**Blocked by:** none
+
+**Blocks:** [IPI-358](https://linear.app/amo100/issue/IPI-358/groq-004-mastra-agents-on-groq) · [IPI-359](https://linear.app/amo100/issue/IPI-359/groq-005-copilotkit-smoke-verification) · any `app/**` PR whose CI `app-build` job runs `next build`
+
+**Not part of:** [IPI-357](https://linear.app/amo100/issue/IPI-357/groq-003-edge-functions-on-groq-text-first) · [IPI-358](https://linear.app/amo100/issue/IPI-358/groq-004-mastra-agents-on-groq) feature work · [IPI-426](https://linear.app/amo100/issue/IPI-426/shoot-cover-001-wire-real-cover-url-into-shoots-list-grid) · cover/design PRs · PLT-004 `check-client-env` literal cleanup
+
+**Branch:** `ipi/build-groq-config`
+
+**Worktree:** `../wt-build-groq-config`
+
+**Verify:**
+
+```bash
+cd app && rm -rf .next && CI=true npm run build
+cd app && npm run lint
+cd app && npm run typecheck
+cd app && npm test
+node scripts/check-client-env.mjs   # baseline only — see AC9
+```
+
+**Estimate:** 1 point
+
+**Related:** [IPI-356](https://linear.app/amo100/issue/IPI-356/groq-002-shared-llm-provider-abstraction) GROQ-002 (provider abstraction — do not bundle)
+
+### Skills (load in order)
+
+| # | Skill | Path | Role |
+| -- | -- | -- | -- |
+| 1 | nextjs-16 | `.claude/skills/nextjs-16/SKILL.md` | **Primary** — Turbopack root + build |
+| 2 | ipix-task-lifecycle | `.claude/skills/ipix-task-lifecycle/SKILL.md` | Branch / AC / ship |
+| 3 | pr-workflow | `.claude/skills/pr-workflow/SKILL.md` | Verify matrix + one-concern PR |
+| 4 | worktrees | `.claude/skills/worktrees/SKILL.md` | `../wt-build-groq-config` setup |
+| 5 | task-verifier | `.claude/skills/task-verifier/SKILL.md` | Pre-ship forensic gate |
+| 6 | groq-inference | `.claude/skills/groq-inference/SKILL.md` | *Optional* — do not change runtime/API behavior |
+
+**SSOT context:** allowlist contract is in `tasks/llm/groq-plan.md` + [IPI-356](https://linear.app/amo100/issue/IPI-356/groq-002-shared-llm-provider-abstraction), not groq-inference API docs.
+
+---
+
+### Problem
+
+`app/src/lib/ai/provider.ts` imports:
+
+```text
+../../../../config/groq-models.json
+```
+
+`app/next.config.ts` pins Turbopack root to `__dirname` (`app/`). Turbopack refuses to resolve files outside that root.
+
+```text
+Module not found: Can't resolve '../../../../config/groq-models.json'
+```
+
+Repro: `cd app && rm -rf .next && CI=true npm run build`
+
+Typecheck + Vitest pass; only full `next build` fails. CI `app-build` runs `check-client-env` then `lint` then `build` (`.github/workflows/ci.yml`).
+
+**Verified on main (2026-07-06):** build fails with module-not-found; typecheck + `provider.test.ts` pass.
+
+---
+
+### Options to evaluate
+
+1. Move/copy `config/groq-models.json` under `app/` and update imports.
+2. Widen Turbopack root to repo root safely (may re-trigger multi-lockfile root inference).
+3. Load allowlist server-side at runtime via `fs` (tests already read repo SSOT this way — see `provider.test.ts:73-78`).
+4. Avoid duplicating config — keep `config/groq-models.json` as SSOT for Edge + app.
+
+---
+
+### Implementation recommendation (preferred)
+
+**Option 3 (runtime** `fs`**, SSOT preserved)** — smallest blast radius:
+
+* Replace static JSON import in `app/src/lib/ai/provider.ts` and `provider.test.ts` with module-init `readFileSync(join(process.cwd(), '..', 'config', 'groq-models.json'))` (same path as existing test).
+* `process.cwd()` is `app/` during local build and CI; SSOT stays at `config/groq-models.json`.
+* Add `import ""server-only""` to `provider.ts` if not already present (module is server/RSC-only per build import trace).
+* Edge (`supabase/functions/_shared/llm/allowlist.ts`) unchanged.
+* Do **not** widen `turbopack.root` unless Option 3 fails on Vercel — then try prebuild copy fallback first.
+
+**Fallback:** prebuild copy `config/groq-models.json` → `app/src/lib/ai/groq-models.generated.json`.
+
+---
+
+### Acceptance criteria
+
+- [ ] **AC1** `cd app && rm -rf .next && CI=true npm run build` passes
+- [ ] **AC2** `cd app && npm run` `lint` passes
+- [ ] **AC3** `cd app && npm` `run typecheck` passes
+- [ ] **AC4** `cd app && npm test` passes
+- [ ] **AC5** `config/groq-models.json` remains single SSOT (no divergent allowlists)
+- [ ] **AC6** No Groq runtime/provider behavior changes
+- [ ] **AC7** No Mastra/CopilotKit behavior changes
+- [ ] **AC8** No Edge Function behavior changes
+- [ ] **AC9** `node scripts/check-client-env.mjs` — **baseline unchanged** (pre-existing literal hits in `app/src/lib/ai/*` for `GROQ_API_KEY` / `GEMINI_API_KEY` env names are **out of scope**; tracked under PLT-004, not this PR)
+
+---
+
+### Out of scope (explicit)
+
+* Fixing `check-client-env.mjs` false positives on server-only `lib/ai/*` (PLT-004)
+* Groq inference, Mastra tier wiring, Edge allowlist changes
+* `tasks/intelligence/ai/skill-map.md` row — add in separate docs PR if desired
+
+---
+
+### Completion steps
+
+#### A. Scope
+
+- [ ] **A1** Confirm repro on `origin/main` — proof: build log excerpt
+
+#### B. Implement
+
+- [ ] **B1** Fix import boundary (Option 3 preferred) — proof: diff ≤3 files (`provider.ts`, `provider.test.ts`, optional `server-only`)
+
+#### C. Verify
+
+- [ ] **C1** Run verify commands (lint · typecheck · test · build) — proof: green output
+- [ ] **C2** `@task-verifier` report attached — proof: composite ≥85 or documented 🟡
+
+#### E. Ship
+
+- [ ] **E1** Merge PR; clear blockers on [IPI-358](https://linear.app/amo100/issue/IPI-358/groq-004-mastra-agents-on-groq)/[IPI-359](https://linear.app/amo100/issue/IPI-359/groq-005-copilotkit-smoke-verification) — proof: Linear relations
+
+---
+
+### Links
+
+* SSOT: `config/groq-models.json`
+* Importer: `app/src/lib/ai/provider.ts`
+* Turbopack pin: `app/next.config.ts:17`
+* Local spec: `docs/linear/issues/IPI-428-build-groq-config.md`","Done",1,"High","a91ff388-772a-4b0a-b252-0068d6a1297c","AI Platform — LLM Providers","ai@socialmediaville.ca","ai@socialmediaville.ca","INFRA, LLM",,,,,"2026-07-06T22:53:21.681Z","2026-07-07T10:16:54.475Z","2026-07-06T23:11:13.834Z",,"2026-07-07T10:16:54.442Z",,,"2026-07-13T22:53:22.410Z",,"IPIX-INIT-001 — Operator Platform (Q3 2026)",,,"Completed","94a2cfde-f949-41ef-9b7c-a2de26655d39",996,"IPI-359, IPI-358, IPI-356","",
+"IPI-358","iPix1","GROQ-004 · Mastra Agents on Groq","## GROQ-004 — GROQ-004 · Mastra Agents on Groq
+
+**In plain terms:** **Copilot agents** use Groq via AI SDK; visual-identity stays Gemini until DNA golden eval passes.
+
+**Linear:** [IPI-358](https://linear.app/amo100/issue/IPI-358)
+
+**Status (2026-07-07):** Unblocked — GROQ-002 ([IPI-356](https://linear.app/amo100/issue/IPI-356/groq-002-shared-llm-provider-abstraction)) Done, [IPI-428](https://linear.app/amo100/issue/IPI-428/build-groq-config-fix-turbopack-groq-modelsjson-import-boundary) Done (merged #240). Verified against disk + `groq-inference` skill before starting; two spec corrections applied below.
+
+**Blocked by:** ~~GROQ-002~~ ✅ Done · [IPI-428](https://linear.app/amo100/issue/IPI-428/build-groq-config-fix-turbopack-groq-modelsjson-import-boundary) ✅ Done — **no remaining blockers**
+
+**Unblocks:** GROQ-005, GROQ-006
+
+**Branch:** `ipi/groq-004-mastra`
+
+**PR:** `ipi/groq-004-mastra`
+
+**Verify:** `cd app && npm run lint && npm run build && npm` `run typecheck && npm` `test`
+
+**Estimate:** 3 points
+
+**Source:** [tasks/llm/groq-plan.md](<../../../tasks/llm/groq-plan.md>) · audit: [tasks/llm/02-groq.md](<../../../tasks/llm/02-groq.md>)
+
+### ⚠️ Before starting — verified stale items (2026-07-07)
+
+1. `mastra/references/groq.md` **line 149 is stale/wrong** — its ""Production tier map"" table lists `reasoning → groq/openai/gpt-oss-120b` for ""Agent tool loops"" — this **contradicts** the `groq-inference` skill and `config/groq-models.json` itself (`gpt-oss-120b` is flagged `parallelTools: false`). Do not follow that doc's tier table for A2 — follow the table in A2 below (already correct) and the SSOT config. Fix the doc in a separate docs-only PR if convenient.
+2. **A1 below is redundant** — `@ai-sdk/groq` already shipped via GROQ-002 (confirmed: `app/package.json` has `@ai-sdk/groq: ^3.0.39`). `groq-sdk` does **not** belong in `app/` — Mastra uses the AI SDK provider, not the raw SDK (that's Edge-only, and Edge doesn't even use it — see `groq-client.ts`, which uses raw `fetch` to the OpenAI-compatible endpoint). Treat A1 as ""confirm only,"" not ""add.""
+3. **Verify command above adds** `npm run typecheck` — the original 3-command verify line omitted it; every other GROQ-00x issue's verify matrix includes it.
+
+Everything else below (A2 tier table, A6 vision guard, A7 thinkingBudget removal, A8 mocks) was checked against the current codebase and groq-inference skill on 2026-07-07 and is accurate — no other changes needed.
+
+### Skills (load in order)
+
+| # | Skill | Path |
+| -- | -- | -- |
+| 1 | mastra | `.claude/skills/mastra/SKILL.md` → **read first:** [`references/groq.md`](<../../../.claude/skills/mastra/references/groq.md>) — **but see staleness note above, its tier table is wrong for A2** |
+| 2 | groq-inference | `.claude/skills/groq-inference/SKILL.md` — **authoritative** for model/tier selection |
+| 3 | copilotkit | `.claude/skills/copilotkit/SKILL.md` |
+| 4 | gemini | `.claude/skills/gemini/SKILL.md` (visual-identity stays Gemini) |
+
+---
+
+### Sequence / architecture — GROQ-004
+
+```mermaid
+sequenceDiagram
+  participant CK as CopilotKit
+  participant MA as Mastra agents
+  participant RM as resolveModel()
+  participant Groq as @ai-sdk/groq
+  CK->>MA: agent tool loop
+  MA->>RM: tier: chat / reasoning
+  RM->>Groq: llama / qwen / gpt-oss (tier map)
+```
+
+---
+
+### User stories
+
+### Story 1
+
+**Operator** chats with production-planner — lower latency sidebar.
+
+**Acceptance:** Measurable in PR verification for GROQ-004.
+
+### Story 2
+
+**Creative Director** gets shoot brief drafts from Groq text models.
+
+**Acceptance:** Measurable in PR verification for GROQ-004.
+
+### Story 3
+
+**Engineer** runs npm test with mocked Groq — no live key in CI.
+
+**Acceptance:** Measurable in PR verification for GROQ-004.
+
+---
+
+### Dependencies
+
+| Dependency | Status |
+| -- | -- |
+| tasks/llm/groq-plan.md | ✅ SSOT |
+| GROQ-001 infra merged | ✅ Done |
+| GROQ-002 provider abstraction | ✅ Done |
+| [IPI-428](https://linear.app/amo100/issue/IPI-428/build-groq-config-fix-turbopack-groq-modelsjson-import-boundary) build fix | ✅ Done (merged #240) |
+| Golden eval (Phase 6) | before vision cutover |
+| One concern per PR | ✅ enforced |
+
+---
+
+### Completion steps
+
+#### A. Implement
+
+- [ ] **A1** ~~Add ~~`~~@ai-sdk/groq~~`~~ + ~~`~~groq-sdk~~`~~ to ~~`~~app/package.json~~` — **confirm only**: `@ai-sdk/groq` already present (GROQ-002); do **not** add `groq-sdk` to `app/`
+- [ ] **A2** Tier map via `resolveModel()`: **chat** → `llama-3.1-8b-instant`; **multi-tool agents** → `llama-3.3-70b-versatile` or `qwen/qwen3-32b` (`parallelTools:true` — **not** gpt-oss-120b); **single-shot structured tools** → `openai/gpt-oss-20b` via `generateObject`
+- [ ] **A3** Update agents (all 8: production-planner, creative-director, brand-intelligence, crm-assistant, model-match, public-marketing, social-discovery, visual-identity) + `social-discovery` + `suggestShootBrief` tools; agent IDs unchanged (CopilotKit gotcha)
+- [ ] **A4** CopilotKit streaming on **non-structured** agent turns only (structured ⊥ streaming)
+- [ ] **A5** Prompt caching: static agent instructions in system message prefix
+- [ ] **A6** Defer `visual-identity` Groq cutover — returns Gemini when `GROQ_MODEL_VISION` empty (🔴 currently unguarded — verified `visual-identity.ts:10` calls bare `resolveModel()`)
+- [ ] **A7** Remove Google `thinkingBudget` hack from `resolveProviderOptions()` — Groq-specific options or omit (verified still Google-only in `gemini-registry.ts`)
+- [ ] **A8** Update test mocks for `@ai-sdk/groq`; CI no live key
+
+#### B. Verify + ship
+
+- [ ] **B1** Verification commands green (see **Verify** above — now includes typecheck)
+- [ ] **B2** Cursor PR Review — no unresolved High/Critical
+- [ ] **B3** Linear **Done** · update groq-plan.md if IDs changed
+
+**Spec score:** 88/100 → verified/patched 2026-07-07, no longer blocked
+
+---
+
+*Source:* `docs/linear/issues/IPI-358-groq-004.md` *· push via* `node scripts/linear-update-issue.mjs IPI-358`","Done",3,"High","a91ff388-772a-4b0a-b252-0068d6a1297c","AI Platform — LLM Providers","ai@socialmediaville.ca","ai@socialmediaville.ca","LLM, MASTRA",,,,,"2026-07-04T06:17:33.580Z","2026-07-07T02:59:22.293Z","2026-07-07T01:14:05.739Z",,"2026-07-07T02:45:43.930Z",,,"2026-07-11T06:17:34.100Z","IPI-354","IPIX-INIT-001 — Operator Platform (Q3 2026)","a07acbf5-d8d3-428b-8834-7bfb28147a76","GROQ-M2 · Edge ∥ Mastra","Completed","8bd22412-eb07-4924-8000-fae51bf8513e",992,"IPI-359, IPI-429, IPI-428, IPI-356","",
+"IPI-357","iPix1","GROQ-003 · Edge Functions on Groq (text first)","## GROQ-003 — GROQ-003 · Edge Functions on Groq (text first)
+
+**In plain terms:** **Brand intelligence** edge fn uses Groq structured output; **DNA vision stays on Gemini** until golden eval.
+
+**Linear:** [IPI-357](https://linear.app/amo100/issue/IPI-357)
+
+**Status:** ✅ Done — merged via PR #229, #230, #231. Verified 2026-07-07: all fix commits (`fix(ipi-357): ...` ×5) present on `main` at commit history through `0873d73a`; edge brand-intelligence runs on Groq structured output, DNA stays on Gemini. Linear status was stale (showed ""In Progress"" after a post-Done review-fix round) — corrected to Done now that all follow-up fixes are confirmed merged.
+
+**Blocked by:** [GROQ-002](<https://linear.app/amo100/search?q=GROQ-002>)
+
+**Unblocks:** GROQ-006
+
+**Branch:** `ipi/groq-003-edge-functions`
+
+**PR:** `ipi/groq-003-edge-functions`
+
+**Verify:** `infisical run -- npm run supabase:verify-edge && npm run supabase:verify-brand-intelligence`
+
+**Estimate:** 4 points
+
+**Source:** [tasks/llm/groq-plan.md](<../../../tasks/llm/groq-plan.md>) · audit: [tasks/llm/02-groq.md](<../../../tasks/llm/02-groq.md>)
+
+### Skills (load in order)
+
+| # | Skill | Path |
+| -- | -- | -- |
+| 1 | groq-api | `.claude/skills/groq-api/SKILL.md` |
+| 2 | groq-inference | `.claude/skills/groq-inference/SKILL.md` (structured output, model tiers) |
+| 3 | ipix-supabase | `.claude/skills/ipix-supabase/SKILL.md` |
+| 4 | gemini | `.claude/skills/gemini/SKILL.md` |
+| 5 | firecrawl | `.claude/skills/firecrawl/SKILL.md` |
+
+---
+
+### Completion steps
+
+#### A. Implement
+
+- [X] **A1** Migrate `brand-intelligence` to shared LLM module — **non-streaming** strict JSON pass on `openai/gpt-oss-20b`
+- [X] **A2** **Two-call pattern:** Firecrawl markdown primary + optional `groq/compound-mini` enrichment; separate strict JSON call
+- [X] **A3** Replace Gemini `googleSearch`/`urlContext` with Compound enrichment or gpt-oss built-in tools
+- [X] **A4** Per-function fallback: `AI_PROVIDER=groq` + `BI_USE_GEMINI=1` → Gemini BI; `DNA_USE_GEMINI=1` default for `audit-asset-dna`
+- [X] **A5** Wire `audit-asset-dna` to shared module — **Gemini default** confirmed (verified 2026-07-07: `audit-asset-dna/handler.ts` still direct `GoogleGenAI`)
+- [X] **A6** Agent logs: `provider`, `model`, `x_groq.id`, `schema_repair_count`
+- [X] **A7** Staging-only — no prod BI cutover in this PR
+
+#### B. Verify + ship
+
+- [X] **B1** Verification commands green
+- [X] **B2** Cursor PR Review — resolved (PR #229, #230, #231)
+- [X] **B3** Linear **Done**
+
+**Spec score:** 88/100 — lifecycle-ready
+
+---
+
+*Source:* `docs/linear/issues/IPI-357-groq-003.md` *· push via* `node scripts/linear-update-issue.mjs IPI-357`","Done",4,"High","a91ff388-772a-4b0a-b252-0068d6a1297c","AI Platform — LLM Providers","ai@socialmediaville.ca","ai@socialmediaville.ca","GEMINI, LLM, SUPA",,,,,"2026-07-04T06:17:33.269Z","2026-07-07T00:39:22.174Z","2026-07-06T04:53:06.435Z",,"2026-07-07T00:39:22.065Z",,,"2026-07-11T06:17:33.749Z","IPI-354","IPIX-INIT-001 — Operator Platform (Q3 2026)","a07acbf5-d8d3-428b-8834-7bfb28147a76","GROQ-M2 · Edge ∥ Mastra","Completed","18aa7e86-7ee1-43a4-b420-4404e99367c5",1139,"IPI-360, IPI-356","",
+"IPI-356","iPix1","GROQ-002 · Shared LLM Provider Abstraction","## GROQ-002 — Shared LLM Provider Abstraction
+
+**Status:** ✅ Done · merged [amo-tech-ai/lumina-studio#228](https://linear.app/amo100/review/ipi-356-groq-002-shared-llm-provider-abstraction-33b3bc813ab4) 2026-07-06
+
+**Verify:** provider 9/9 · deno llm 9/9 · groq-smoke OK
+
+### Completion steps
+
+#### A. Implement
+
+- [X] **A1** `app/src/lib/ai/provider.ts` + env
+- [X] **A2** `app/src/mastra/models.ts` delegates
+- [X] **A3** `supabase/functions/_shared/llm/*`
+- [X] **A4** brand-profile strict JSON Schema
+- [X] **A5** Groq API constraint matrix
+- [X] **A6** max_completion_tokens + retry
+- [X] **A7** Tier flags
+- [X] **A8** Prompt-cache layout
+- [X] **A9** Logging + Zod repair
+- [X] **A10** Unit tests
+
+#### B. Verify + ship
+
+- [X] **B1** Verification green
+- [X] **B2** PR Review / merged #228
+- [X] **B3** Linear Done
+
+**Unblocks:** GROQ-003, GROQ-004","Done",3,"High","a91ff388-772a-4b0a-b252-0068d6a1297c","AI Platform — LLM Providers","ai@socialmediaville.ca","ai@socialmediaville.ca","LLM, MASTRA",,,,,"2026-07-04T06:17:32.687Z","2026-07-06T22:53:34.089Z","2026-07-05T23:34:06.752Z",,"2026-07-06T00:48:47.980Z",,,"2026-07-11T06:17:33.809Z","IPI-354","IPIX-INIT-001 — Operator Platform (Q3 2026)","f02f3728-8172-4dad-8cfe-0fd23f21b232","GROQ-M1 · Infra + Contract","Completed","c2cef9bb-b880-46df-8d11-8c14b6dfa31d",2549,"IPI-358, IPI-357, IPI-355, IPI-428","",
+"IPI-355","iPix1","GROQ-001 · Groq Migration Infrastructure","## GROQ-001 — GROQ-001 · Groq Migration Infrastructure
+
+**In plain terms:** **Engineer** lays pipes: Groq keys, env guards, model allowlist — no inference switch yet.
+
+**Linear:** [IPI-355](https://linear.app/amo100/issue/IPI-355)
+
+**Blocked by:** None — **ship first** (Phase 1 gate).
+
+**Unblocks:** GROQ-002…007
+
+**Branch:** `ipi/groq-001-infra`
+
+**PR:** `ipi/groq-001-infra`
+
+**Verify:** `node scripts/check-client-env.mjs` · `infisical run -- node scripts/groq-smoke.mjs`
+
+**Estimate:** 3 points
+
+**Source:** [tasks/llm/groq-plan.md](<../../../tasks/llm/groq-plan.md>) · audit: [tasks/llm/02-groq.md](<../../../tasks/llm/02-groq.md>)
+
+### Skills (load in order)
+
+| # | Skill | Path |
+| -- | -- | -- |
+| 1 | groq-api | `.claude/skills/groq-api/SKILL.md` |
+| 2 | mastra | `.claude/skills/mastra/SKILL.md` → [`references/groq.md`](<../../../.claude/skills/mastra/references/groq.md>) (tier map, secrets) |
+| 3 | ipix-supabase | `.claude/skills/ipix-supabase/SKILL.md` |
+| 4 | ipix-task-lifecycle | `.claude/skills/ipix-task-lifecycle/SKILL.md` |
+| 5 | infisical | `.claude/skills/infisical/SKILL.md` |
+
+---
+
+### Sequence / architecture — GROQ-001
+
+```mermaid
+sequenceDiagram
+  participant Dev as Engineer
+  participant Inf as Infisical
+  participant Edge as Supabase Edge secrets
+  participant CI as check-client-env
+  Dev->>Inf: GROQ_API_KEY (server only)
+  Dev->>Edge: GROQ_API_KEY per env
+  Dev->>CI: forbid GROQ_* client-side
+  CI-->>Dev: green
+```
+
+---
+
+### User journey
+
+```mermaid
+journey
+    title GROQ-001 delivery path
+    section Plan
+      Read groq-plan.md: 5: Engineer
+      /efficient task IPI-355: 5: Engineer
+    section Build
+      Worktree + branch: 5: Engineer
+      One-concern PR: 5: Engineer
+    section Verify
+      Run verify matrix: 4: Engineer
+      Bugbot + merge: 5: Engineer
+```
+
+---
+
+### User stories
+
+### Story 1
+
+**Engineer** runs dev with Groq keys injected server-side only.
+
+**Acceptance:** Measurable in PR verification for GROQ-001.
+
+### Story 2
+
+**Security** CI fails if GROQ_API_KEY appears in client bundle.
+
+**Acceptance:** Measurable in PR verification for GROQ-001.
+
+### Story 3
+
+**Operator** sees no product change — default stays Gemini.
+
+**Acceptance:** Measurable in PR verification for GROQ-001.
+
+---
+
+### Dependencies
+
+| Dependency | Status |
+| -- | -- |
+| tasks/llm/groq-plan.md | ✅ SSOT |
+| tasks/llm/02-groq.md | ✅ audit corrections |
+| Groq Cloud account + keys | manual prerequisite |
+| Golden eval ([IPI-360](https://linear.app/amo100/issue/IPI-360/groq-006-golden-eval-verify-scripts)) | before prod flip / DNA vision Groq |
+| One concern per PR | ✅ enforced |
+
+---
+
+### Completion steps
+
+#### A. Implement
+
+- [ ] **A1** Add `GROQ_API_KEY` to Infisical + Supabase Edge secrets + `app/.env.example` (server-only)
+- [ ] **A2** Groq Cloud: paid tier, spend limits, **separate dev/staging/prod project keys**
+- [ ] **A3** `AI_PROVIDER=groq|gemini` (default `gemini`); tier env vars from groq-plan
+- [ ] **A4** Commit `config/groq-models.json` with schema flags: `strictStructured`, `parallelTools`, `promptCaching`, `evaluationOnly`, `productionDefault` — **no** `compound-beta`
+- [ ] **A5** Sync allowlist against `GET /openai/v1/models` (Groq API)
+- [ ] **A6** Extend `scripts/check-client-env.mjs` — forbid client `GROQ_*` / bundle grep
+- [ ] **A7** Add `scripts/groq-smoke.mjs` — hello-world per Groq libraries doc
+- [ ] **A8** Capture **Gemini baseline JSON** → `docs/ecommerce/evidence/YYYY-MM-DD/groq-baseline.json` (latency, schema fail %, DNA FP rate) **before** [IPI-356](https://linear.app/amo100/issue/IPI-356/groq-002-shared-llm-provider-abstraction)
+- [ ] **A9** Update `app/scripts/copilotkit-dev-env.mjs` for groq branch
+
+#### B. Verify + ship
+
+- [ ] **B1** Verification commands green (see **Verify** above)
+- [ ] **B2** Cursor PR Review — no unresolved High/Critical
+- [ ] **B3** Linear **Done** · update groq-plan.md if IDs changed
+
+**Spec score:** 88/100 — lifecycle-ready
+
+---
+
+*Source:* `docs/linear/issues/IPI-355-groq-001.md` *· push via* `node scripts/linear-update-issue.mjs IPI-355`","Done",2,"High","a91ff388-772a-4b0a-b252-0068d6a1297c","AI Platform — LLM Providers","ai@socialmediaville.ca","ai@socialmediaville.ca","INFRA, LLM, SUPA",,,,,"2026-07-04T06:17:32.358Z","2026-07-06T05:41:32.094Z","2026-07-05T19:20:48.442Z",,"2026-07-05T22:47:14.610Z",,,"2026-07-11T06:17:32.824Z","IPI-354","IPIX-INIT-001 — Operator Platform (Q3 2026)","f02f3728-8172-4dad-8cfe-0fd23f21b232","GROQ-M1 · Infra + Contract","Completed","4f51e521-8627-4223-8310-cd2ca68bf3f6",2670,"IPI-356, IPI-360","",
+"IPI-47","iPix1","AI-009 · 3.1-flash-lite GA default","## AI-009 · 3.1-flash-lite GA default — In Review (partial ship)
+
+**Integration status:** 🔵 Implemented (edge + Mastra) · 🟡 Integrated pending CI gate
+
+**Shipped on disk:**
+
+* `supabase/functions/_shared/gemini.ts` — default `gemini-3.1-flash-lite`, registry, model override, structured helpers
+* `app/src/mastra/models.ts` — `@ai-sdk/google` + `KNOWN_MODEL_IDS`
+
+**Done when:** [IPI-107](https://linear.app/amo100/issue/IPI-107) CI registry gate lands (app + edge parity script, ban hardcoded IDs).
+
+**Unblocks (with waiver or after IPI-107):** IPI-246 EvidenceBlock · IPI-152 DNA agent · DESIGN-075–079
+
+---
+
+## SSOT
+
+`tasks/intelligence/plans/gemini-plan.md` v1.1 · `tasks/intelligence/ai/MASTER-DEPENDENCIES.md`
+
+## Skills
+
+`gemini` · `ipix-task-lifecycle` · `task-verifier
+
+## Blocks
+
+IPI-107 (CI) · IPI-246 · IPI-152","Done",3,"High","a91ff388-772a-4b0a-b252-0068d6a1297c","AI Platform — LLM Providers","ai@socialmediaville.ca",,"AI, GEMINI",,,,,"2026-06-14T11:46:19.452Z","2026-07-07T17:55:07.670Z","2026-06-30T06:43:31.454Z",,"2026-07-07T17:55:07.639Z",,,"2026-07-07T12:13:01.572Z",,"IPIX-INIT-001 — Operator Platform (Q3 2026)","a07acbf5-d8d3-428b-8834-7bfb28147a76","GROQ-M2 · Edge ∥ Mastra","Failed","4b148a19-c0e3-49e1-a1d5-598731effb42",82,"IPI2-174, IPI-246, IPI-179, IPI-167, IPI-164, IPI-113, IPI-80, IPI2-72, IPI2-129, IPI-107, IPI2-16, IPI-182, IPI-173, IPI-254, IPI2-128","",
+"IPI-429","iPix1","DOCS-GROQ-MASTRA — Align Mastra Groq Tier Reference with Runtime SSOT","## DOCS-GROQ-MASTRA — Align Mastra Groq Tier Reference with Runtime SSOT
+
+**In plain terms:** `.claude/skills/mastra/references/groq.md` recommended `gpt-oss-120b` for ""Agent tool loops"" — this contradicts `config/groq-models.json` (`parallelTools: false` for that model) and the `groq-inference` skill. Fixed the doc only; zero runtime/config/agent code touched.
+
+**Branch:** `ipi/docs-groq-mastra-tier-map`
+**Worktree:** `../wt-docs-groq-mastra-tier-map`
+**PR:** [https://github.com/amo-tech-ai/lumina-studio/pull/242](<https://github.com/amo-tech-ai/lumina-studio/pull/242>) (docs-only)
+
+### Problem
+
+Tier table listed:
+
+```
+| `reasoning` | `groq/openai/gpt-oss-120b` | Agent tool loops, shoot brief |
+```
+
+Runtime SSOT (`config/groq-models.json`) marks `gpt-oss-120b` `parallelTools: false`. The `groq-inference` skill already says multi-tool Mastra agents should use `llama-3.3-70b-versatile` or `qwen/qwen3-32b`, not `gpt-oss-120b`. This was a developer risk — [IPI-358](https://linear.app/amo100/issue/IPI-358/groq-004-mastra-agents-on-groq) (Mastra tier wiring) explicitly relies on this reference doc.
+
+### Fix applied
+
+* Renamed the invented `reasoning` tier to match the actual SSOT tier name (`structuredHeavy`)
+* Multi-tool tier now points at `llama-3.3-70b-versatile` / `qwen/qwen3-32b`, with the `parallelTools: true` fact cited
+* Added a note on when `gpt-oss-120b` SHOULD be used: heavy reasoning, large structured JSON, single-shot inference — **not** agent tool loops
+
+### Verification
+
+* Repo-wide grep for `gpt-oss-120b` — confirmed this was the *only* stale/incorrect claim (groq-inference skill, [IPI-358](https://linear.app/amo100/issue/IPI-358/groq-004-mastra-agents-on-groq) spec, and all `tasks/llm/*.md` notes already had the correct guidance)
+* `git diff --stat` — 1 file changed (`.claude/skills/mastra/references/groq.md`), 0 runtime/config files touched
+* `cd app && npm run typecheck && npm test` — green (759 passed, 6 skipped) — pre-push gate
+
+### Note on file tracking
+
+`.claude/skills/*` is still gitignored on `main` today (except `design-to-production`) — a broader un-ignore is pending in PR #234 (1089 files, in-flight). This file was force-added (`git add -f`) as a deliberate, scoped exception, confirmed with the user before doing so. No `.gitignore` changes made here — avoids any conflict with #234's broader change.
+
+### Acceptance criteria
+
+- [X] Runtime SSOT and documentation match exactly
+- [X] GPT OSS 120B documented as NOT supporting parallel tool calls
+- [X] Multi-tool agent recommendation changed to `llama-3.3-70b-versatile` / `qwen/qwen3-32b`
+- [X] Note added explaining when GPT OSS 120B SHOULD be used
+- [X] No runtime code changes
+- [X] Docs-only PR
+- [X] One concern only
+
+**Blocks:** [IPI-358](https://linear.app/amo100/issue/IPI-358/groq-004-mastra-agents-on-groq) (was relying on the stale reference)","Done",1,"Medium","a91ff388-772a-4b0a-b252-0068d6a1297c","AI Platform — LLM Providers","ai@socialmediaville.ca","ai@socialmediaville.ca","LLM, MASTRA",,,,,"2026-07-07T00:56:05.038Z","2026-07-07T02:11:34.910Z","2026-07-07T00:56:26.286Z",,"2026-07-07T02:11:34.875Z",,,,"IPI-354","IPIX-INIT-001 — Operator Platform (Q3 2026)",,,,"69c14dcd-6448-46e1-993f-58ebee36e06d",1026,"IPI-358","",
+"IPI-219","iPix1","IPI-218B: Asset grid in brand context right panel","## Context
+
+Follow-up to [IPI-218](https://linear.app/amo100/issue/IPI-218/3-panel-operator-layout-wire-right-panel-to-copilotkit-context) (PR #127). `BrandContextPanel` shows name, status, DNA scores. This adds an asset thumbnail grid below the scores section.
+
+---
+
+## Schema (verified against migrations)
+
+```
+assets table
+  id                   uuid PK
+  brand_id             uuid FK → brands.id
+  cloudinary_public_id text  (nullable — skip row if null)
+  status               text  lifecycle: draft | final
+  dna_status           text  nullable: approved | review | blocked
+  dna_score            numeric(5,2) nullable
+  created_at           timestamptz
+
+RLS: enforced via brands.user_id = auth.uid()
+     wrong-brand returns [] (not 403) — never add manual ownership filter
+```
+
+---
+
+## Wireframe
+
+```
+┌─────────────────────────────────────┐
+│ BRAND CONTEXT PANEL  (320px)        │
+│ ┌───────────────────────────────┐   │
+│ │ Acme Corp          [active]   │   │
+│ └───────────────────────────────┘   │
+│                                     │
+│  DNA SCORES                         │
+│  ████████░░  Visual    82           │
+│  ██████░░░░  Tone      63           │
+│  ████████░░  Brand     79           │
+│                                     │
+│  ─────────────────────────────────  │
+│  ASSETS  (12)                       │
+│  ┌──────┐ ┌──────┐ ┌──────┐        │
+│  │ img1 │ │ img2 │ │ img3 │  ←  dna_status badge overlay
+│  │ [✓] │ │ [!] │ │      │        │
+│  └──────┘ └──────┘ └──────┘        │
+│  ┌──────┐ ┌──────┐ ┌──────┐        │
+│  │ img4 │ │ img5 │ │ img6 │        │
+│  └──────┘ └──────┘ └──────┘        │
+│  (showing latest 6 of 12)           │
+└─────────────────────────────────────┘
+
+States
+  loading  → 3×2 skeleton boxes (pulse animation)
+  empty    → ""No assets yet""  (centred, muted text)
+  error    → ""Assets unavailable""
+  loaded   → 3-col grid, count in section header
+  null id  → skip thumbnail, show grey placeholder
+```
+
+---
+
+## Data flow
+
+```mermaid
+sequenceDiagram
+    participant P as BrandContextPanel
+    participant A as GET /api/brands/[id]/assets
+    participant DB as Supabase (RLS)
+    participant CDN as Cloudinary CDN
+
+    P->>A: brandId changes → fetch (AbortController)
+    A->>DB: SELECT id, cloudinary_public_id, status, dna_status\n  FROM assets WHERE brand_id=id\n  ORDER BY created_at DESC LIMIT 6
+    DB-->>A: rows (RLS enforces ownership — wrong brand returns [])
+    A-->>P: {assets: [{id, cloudinary_public_id, status, dna_status}], total: n}
+    P->>CDN: buildThumbUrl(public_id) → c_thumb,w_120,h_120,g_auto
+    CDN-->>P: 120px thumbnail
+    Note over P: null cloudinary_public_id → grey placeholder, no CDN call
+```
+
+## Panel states
+
+```mermaid
+stateDiagram-v2
+    [*] --> Loading : brandId set / changes (new AbortController)
+    Loading --> Loaded  : fetch 200
+    Loading --> Error   : fetch fails / non-2xx
+    Loading --> [*]     : aborted (brandId changed mid-flight)
+    Loaded  --> Loading : brandId changes
+    Error   --> Loading : brandId changes
+```
+
+---
+
+## User stories
+
+* As an operator, I can see a grid of brand assets in the context panel so I can review visual identity without leaving the page.
+* As an operator, I see a dna_status badge on each thumbnail so I know at a glance which assets are DNA-compliant.
+* As an operator, I see a clear empty state when no assets exist so I am not confused by a blank section.
+* As an operator, thumbnails are served as 120px Cloudinary crops so the panel loads fast.
+
+---
+
+## Acceptance Criteria
+
+**API —** `GET /api/brands/[id]/assets`
+
+- [ ] Returns `{assets: [{id, cloudinary_public_id, status, dna_status}], total: number}` ordered by `created_at DESC LIMIT 6`
+- [ ] Returns 401 when unauthenticated
+- [ ] Returns 400 for non-UUID `id`
+- [ ] Returns `{assets: [], total: 0}` when brand has no assets (own brand, empty) — not 404
+- [ ] Returns `{assets: [], total: 0}` when brand is not owned (RLS filters silently — do NOT add manual ownership check)
+- [ ] `total` reflects the full count, not just the 6 returned rows
+
+**UI — grid**
+
+- [ ] Renders 3-column thumbnail grid below DNA scores section
+- [ ] Section header shows ""ASSETS (N)"" where N is `total`
+- [ ] ""showing latest 6"" sub-label when total > 6 (no Load More button in MVP)
+- [ ] Each thumbnail URL uses `buildThumbUrl(public_id)` → `c_thumb,w_120,h_120,g_auto` Cloudinary transform
+- [ ] Rows with null/missing `cloudinary_public_id` render a grey placeholder, no CDN call
+- [ ] `dna_status` badge overlay on each thumbnail: ✓ approved · ! review · ✗ blocked · none when null
+- [ ] `alt` attribute on every `<img>` (e.g. ""Brand asset {n}"")
+
+**UI — states**
+
+- [ ] Skeleton placeholders shown during load (pulse animation)
+- [ ] ""No assets yet"" shown when `assets` array is empty
+- [ ] ""Assets unavailable"" shown on fetch error
+- [ ] `brandId` change aborts the in-flight fetch via `AbortController` and loads new brand's assets
+
+**Layout**
+
+- [ ] Grid does not overflow at 320px panel width
+- [ ] Grid collapses to 2 columns at ≤480px
+
+**Implementation notes**
+
+* No new npm dependency — `useEffect + fetch + AbortController`, inline `buildThumbUrl` util
+* No SWR/React Query
+* RLS handles ownership — `createSupabaseServerClient()` is the only auth mechanism needed","Done",,"Medium","a91ff388-772a-4b0a-b252-0068d6a1297c","AI Platform — LLM Providers","ai@socialmediaville.ca","ai@socialmediaville.ca","CLOUDINARY, Feature",,,,,"2026-06-28T13:42:29.371Z","2026-07-04T07:01:37.357Z","2026-06-28T13:45:38.590Z",,"2026-06-28T19:22:46.301Z",,,,"IPI-218","IPIX-INIT-001 — Operator Platform (Q3 2026)","a07acbf5-d8d3-428b-8834-7bfb28147a76","GROQ-M2 · Edge ∥ Mastra",,"6eac3480-cdbf-4ecd-b503-788cf45f04d0",12955,"IPI-242, IPI-243","",
+"IPI-99","iPix1","WEB-015.9 · Login redirect + draft claim + Brand Intake prefill","**Purpose:** Convert a captured anonymous lead into an authenticated, prefilled Brand Intake.
+
+**Scope:** `startIntake()` ensures a ready `lead_intake_drafts` row exists, then redirects to `/login?redirect=/app/brand/intake&draft=<id>`. The `claim_token` must be stored only in an httpOnly cookie; it must never be placed in the URL, localStorage, readable JS, logs, or analytics payloads. After Supabase login, `/app/brand/intake` claims the draft by calling `claim_lead_draft(id, token)` server-side, preloads safe `answers`, emits a `claimed` event, and sets the conversation `user_id`. Claim failure must gracefully start a clean intake without exposing draft data.
+
+**Acceptance:**
+
+* E2E: capture lead → Start Intake → login → `/app/brand/``intake` opens with fields prefilled from conversation answers.
+* `claim_token` is never visible to client JavaScript or URL query params.
+* Hijack, wrong-token, expired, reused, already-claimed, and missing-token attempts are rejected.
+* Failed claim does not crash and does not leak draft data; user starts clean intake.
+* User A cannot claim or read User B's draft.
+* Claim emits a `claimed` event and updates conversation `user_id` only after successful authenticated claim.
+* Existing `/app/*` auth gate from [IPI2-127](https://linear.app/amo100/issue/IPI2-127/aior-002b-replace-demo-user-identity-in-copilotkit-runtime-real-auth) remains enforced.
+* If [IPI2-83](https://linear.app/amo100/issue/IPI2-83/aior-003-brand-intake-workflow) is not available, implementation must stop at login/basic intake fallback and not fake prefill.
+
+**Required tests:**
+
+* RPC/security test: `claim_lead_draft` succeeds only for authenticated user with correct unexpired token.
+* RPC/security test: wrong token rejected.
+* RPC/security test: expired draft rejected.
+* RPC/security test: double claim/reused token rejected.
+* RPC/security test: already-owned draft cannot be claimed by another user.
+* RPC/security test: `SECURITY DEFINER` function uses safe `search_path`.
+* Integration test: `startIntake()` sets httpOnly claim cookie and redirects with only `draft=<id>` in URL.
+* Integration test: claim token is absent from URL, localStorage, sessionStorage, event payloads, and rendered HTML.
+* Integration test: after login, authenticated request claims draft and loads prefill data.
+* Integration test: failed claim falls back to clean intake without leaking data.
+* E2E: public chatbot capture → Start Intake → Supabase login → Brand Intake prefilled.
+* E2E negative: second browser/session cannot hijack draft with only draft id.
+* Regression: logged-out `/app/brand/intake` redirects to login via [IPI2-127](https://linear.app/amo100/issue/IPI2-127/aior-002b-replace-demo-user-identity-in-copilotkit-runtime-real-auth).
+* Build validation: lint, typecheck, test, build all pass.
+
+**Dependencies:** WEB-015.1 — DB schema + RLS + claim RPC; WEB-015.8 — Lead capture workflow; [IPI2-127](https://linear.app/amo100/issue/IPI2-127/aior-002b-replace-demo-user-identity-in-copilotkit-runtime-real-auth) **· AIOR-002b — Replace demo-user identity in CopilotKit runtime (real auth)**; [IPI2-83](https://linear.app/amo100/issue/IPI2-83/aior-003-brand-intake-workflow) **· AIOR-003 — Brand Intake Workflow**. This task is gated on both [IPI2-127](https://linear.app/amo100/issue/IPI2-127/aior-002b-replace-demo-user-identity-in-copilotkit-runtime-real-auth) and [IPI2-83](https://linear.app/amo100/issue/IPI2-83/aior-003-brand-intake-workflow) for full prefill. **Risks:** destination page missing until [IPI2-83](https://linear.app/amo100/issue/IPI2-83/aior-003-brand-intake-workflow); token leakage; unsafe SECURITY DEFINER RPC; draft hijack. **Complexity:** L. **Files:** `app/src/components/marketing/marketing-chat.tsx`, `app/src/app/(operator)/app/brand/intake/*` from [IPI2-83](https://linear.app/amo100/issue/IPI2-83/aior-003-brand-intake-workflow), Supabase claim RPC migration/tests, auth callback/redirect handling as needed.","Done",,"Medium","a91ff388-772a-4b0a-b252-0068d6a1297c","AI Platform — LLM Providers","ai@socialmediaville.ca","ai@socialmediaville.ca","AI",,,,,"2026-06-24T02:31:02.918Z","2026-07-04T07:02:18.727Z","2026-06-26T07:52:17.165Z",,"2026-06-26T07:59:56.667Z",,,,"IPI-91","IPIX-INIT-001 — Operator Platform (Q3 2026)","a07acbf5-d8d3-428b-8834-7bfb28147a76","GROQ-M2 · Edge ∥ Mastra",,"0465d0a5-d653-4a5c-b790-640fbd5443cd",16518,"IPI-132, IPI-114, IPI-97, IPI-101","",
+"IPI-97","iPix1","WEB-015.8 · Lead capture workflow (tool → edge fn → draft)","**Purpose:** Turn the gathered slots into a persisted, claimable lead draft.
+
+## ✅ Completed — 2026-06-24
+
+All 3 blockers resolved, edge fn hardened, 243/243 tests green. One env var action required for live e2e.
+
+### Completion checklist
+
+- [X] **B1:** Agent prompt calls `capture_lead` at `ready_to_submit` (`public-marketing.ts`)
+- [X] **B2:** DB tables confirmed live on remote — `chatbot_conversations`, `chatbot_messages`, `chatbot_events`, `lead_intake_drafts` (migration `20260623000000` applied; B2 was stale)
+- [X] **B3:** `claimToken` set as `HttpOnly; Secure; SameSite=Strict` cookie in `/api/marketing-lead` proxy — never exposed to browser JS
+- [X] `status=""ready""` on draft insert (was `""draft""`)
+- [X] Envelope bug fixed: proxy was accessing `data.draftId` but `jsonResponse()` wrapped in `{ ok: true, data }` → always `undefined` in prod. Fixed: edge fn now returns flat JSON
+- [X] **243/243 tests green** (marketing-chat + marketing-lead suites + 5 new cookie/proxy-secret assertions)
+- [X] `capture-lead` v3 deployed to Supabase
+- ⚠️ **ACTION REQUIRED:** Set `CAPTURE_LEAD_PROXY_SECRET` in Vercel env vars + Supabase edge secrets → live e2e test (lead row in Supabase after full conversation)
+
+### Security hardening shipped (beyond original scope)
+
+| Fix | Details |
+| -- | -- |
+| Proxy secret gate | `claimToken` only returned when `x-ipix-proxy-secret` header matches `CAPTURE_LEAD_PROXY_SECRET` |
+| Idempotency | Updates existing draft per conversation; no duplicate rows |
+| Ownership check | `conversation_id` verified against `anon_id` — prevents cross-session attachment |
+| Email normalization | `trim().toLowerCase()` before storage |
+| `brand_url` validation | `new URL()` guard |
+| `lead_answers` safety | All values must be strings |
+| Payload size fallback | Secondary size check after body parse |
+
+### Architecture (verified correct)
+
+```
+CopilotPopup
+  ↓
+capture_lead frontend tool (useFrontendTool)
+  ↓
+POST /api/marketing-lead  (Next.js Zod proxy)
+  ↓ x-ipix-proxy-secret header
+capture-lead edge fn  (Supabase, verify_jwt=false)
+  ↓
+lead_intake_drafts  (status=ready, claim_token stored)
+  ↓ claimToken returned server-to-server only
+Set-Cookie: claim_token=...; HttpOnly; Secure; SameSite=Strict
+```
+
+### Next: IPI2-168
+
+Login → `claim_lead_draft()` RPC → Brand Intake prefill. Unblocked once `CAPTURE_LEAD_PROXY_SECRET` env var is set.","Done",,"Medium","a91ff388-772a-4b0a-b252-0068d6a1297c","AI Platform — LLM Providers","ai@socialmediaville.ca",,"AI",,,,,"2026-06-24T02:30:45.070Z","2026-07-04T07:02:19.031Z","2026-06-24T12:20:39.304Z",,"2026-06-24T12:51:06.700Z",,,,"IPI-91","IPIX-INIT-001 — Operator Platform (Q3 2026)","a07acbf5-d8d3-428b-8834-7bfb28147a76","GROQ-M2 · Edge ∥ Mastra",,"e836ed3b-f3d4-47d7-ab07-ffaffdc7b2b7",19106,"IPI-99","",
+"IPI-95","iPix1","WEB-015.2 · capture-lead edge function (validate, rate-limit, write)","**Purpose:** Build the only backend write path for anonymous chatbot leads.
+
+**Beginner-Friendly Summary:**
+The public website should not write directly into Supabase tables. This task creates a controlled Supabase Edge Function that checks the data, blocks abuse, and safely saves the lead draft.
+
+**Real-World Example:**
+A visitor gives their brand URL, email, budget, and timeline. The chatbot calls this function. The function validates the data, rate-limits the request, saves the draft, stores the conversation event, and returns a draft id.
+
+**Scope:**
+Create `capture-lead` Supabase Edge Function that:
+
+* accepts validated lead payloads from the public chatbot
+* validates fields with a schema such as Zod
+* rate-limits by `anon_id` and salted IP hash
+* writes to `lead_intake_drafts`, `chatbot_conversations`, `chatbot_messages`, and `chatbot_events`
+* returns safe data only: `draftId` and status
+* never returns service-role data or private rows
+* never exposes the `claim_token` to readable client JavaScript
+
+**Security Requirements:**
+
+* Use service-role key only inside the Edge Function.
+* Reject invalid origins where possible.
+* Reject oversized messages and malformed payloads.
+* Strip or minimize sensitive PII in logs.
+* Do not log full transcripts in production logs.
+* Add abuse protection for repeated lead submits.
+
+**Required Tests:**
+
+* Valid payload creates or updates a lead draft.
+* Missing required fields are rejected.
+* Invalid service interest is rejected.
+* Oversized content is rejected.
+* Rate limit triggers after configured threshold.
+* Function writes expected `lead_captured` event.
+* Function does not expose service-role key or private data.
+* Function does not allow direct arbitrary table writes.
+* Function handles duplicate conversation id safely.
+* Function returns safe response shape only.
+* Edge Function local test passes.
+
+**Dependencies:** [IPI2-160](https://linear.app/amo100/issue/IPI2-160/web-0151-db-schema-rls-claim-rpc-chatbot-lead-drafts) · WEB-015.1 — DB schema + RLS + claim RPC.
+
+**Risks:** Public endpoint abuse, PII leakage in logs, accidental direct table access from client, weak validation.
+
+**Definition of Done:**
+The public chatbot can safely persist a lead draft through a validated, rate-limited backend function without exposing private database access.","Done",,"Medium","a91ff388-772a-4b0a-b252-0068d6a1297c","AI Platform — LLM Providers","ai@socialmediaville.ca",,"AI",,,,,"2026-06-24T02:29:53.387Z","2026-07-04T07:02:19.979Z",,,"2026-06-24T05:52:44.790Z",,,,"IPI-91","IPIX-INIT-001 — Operator Platform (Q3 2026)","a07acbf5-d8d3-428b-8834-7bfb28147a76","GROQ-M2 · Edge ∥ Mastra",,"d412f964-fdea-4150-b843-32292385b35f",19525,"","",
+"IPI-101","iPix1","WEB-015.1 · DB schema + RLS + claim RPC (chatbot + lead drafts)","**Purpose:** Create the safe database foundation for the public homepage chatbot.
+
+**Beginner-Friendly Summary:**
+This task creates the tables that store a visitor's chatbot conversation, their answers, and the draft that can later become a Brand Intake after login. Think of it like a temporary notebook: the visitor can start anonymously, and after signing in, FashionOS connects that notebook to the correct user.
+
+**Real-World Example:**
+A visitor says: ""I sell jewellery and need Shopify photos next month."" The system stores the conversation, the detected service interest, timeline, and draft answers so the visitor does not need to repeat everything after login.
+
+**Scope:**
+Create a Supabase migration for:
+
+* `chatbot_conversations`
+* `chatbot_messages`
+* `chatbot_events`
+* `lead_intake_drafts`
+* indexes, constraints, enum/check rules, expiry fields, and safe defaults
+* `claim_lead_draft(draft_id, claim_token)` RPC
+
+**Security Requirements:**
+
+* RLS enabled on all tables.
+* Default deny for anonymous clients.
+* Anonymous users cannot directly read or write these tables.
+* Authenticated users can read only their own claimed lead drafts.
+* `claim_lead_draft` must be `SECURITY DEFINER` with an explicit safe `search_path`.
+* Claim token must be single-use, expiring, and never stored in readable client-side storage.
+* No raw IP addresses stored; only salted hash if needed.
+
+**Required Tests:**
+
+* Migration creates all four tables.
+* Required columns, foreign keys, indexes, and constraints exist.
+* RLS is enabled on all four tables.
+* Anonymous user cannot select/insert/update/delete directly.
+* Authenticated user can select only their own claimed draft.
+* User A cannot read User B's draft.
+* `claim_lead_draft` succeeds with correct user + valid token.
+* Wrong token is rejected.
+* Expired draft is rejected.
+* Already-claimed draft is rejected.
+* Double-claim is rejected.
+* Function has safe `search_path`.
+* Type generation passes after migration.
+
+**Dependencies:** None. This is the first required WEB-015 data task.
+
+**Risks:** Bad RLS could expose private lead data; unsafe RPC could allow draft hijacking; missing indexes could slow analytics later.
+
+**Definition of Done:**
+The chatbot data model exists, is locked down by RLS, can safely create anonymous lead drafts through backend-only code, and can securely claim a draft after login.","Done",,"Medium","a91ff388-772a-4b0a-b252-0068d6a1297c","AI Platform — LLM Providers","ai@socialmediaville.ca","ai@socialmediaville.ca","AI",,,,,"2026-06-24T02:29:47.161Z","2026-07-04T07:02:20.238Z",,,"2026-06-24T05:52:44.747Z",,,,"IPI-91","IPIX-INIT-001 — Operator Platform (Q3 2026)","a07acbf5-d8d3-428b-8834-7bfb28147a76","GROQ-M2 · Edge ∥ Mastra",,"8d7b281c-08bd-4b5a-b12b-7a1a9b09719b",19525,"IPI-99","",
+"IPI-173","iPix1","GEMINI-010 · Thinking levels + implicit caching defaults","## GEMINI-010 — Thinking levels + implicit caching defaults
+
+**In plain terms:** Centralize `thinkingLevel` per task type; structure prompts for implicit caching (≥4096 token stable prefix on **gemini-3.1-flash-lite**).
+
+**Docs:** [Thinking](<https://ai.google.dev/gemini-api/docs/thinking>) · [Caching](<https://ai.google.dev/gemini-api/docs/caching>)
+
+**Blocked by:** [IPI-107](https://linear.app/amo100/issue/IPI-107) AI-018 registry CI
+
+**Model note (2026-06-30):** Default operator/edge model is `gemini-3.1-flash-lite` (`app/src/mastra/models.ts`, `_shared/gemini.ts`). Use `thinkingLevel: high` only on DNA/brand scoring paths; `pro` tier override = `gemini-3.5-flash` via `GEMINI_MODEL` env.
+
+### Acceptance criteria
+
+- [ ] Default `medium`/`low` on 3.1-flash-lite; `high` only for DNA/brand scoring
+- [ ] Brand rubric + schema at prompt prefix for cache hits
+- [ ] Registry documents thinking per workload (gemini-plan.md model table)
+- [ ] No hardcoded model IDs outside `models.ts` / `_shared/gemini.ts`","Canceled",2,"High","a91ff388-772a-4b0a-b252-0068d6a1297c","AI Platform — LLM Providers","ai@socialmediaville.ca",,"GEMINI",,,,,"2026-06-25T07:59:35.230Z","2026-07-07T00:39:59.655Z",,,,"2026-07-07T00:39:59.637Z",,,,"IPIX-INIT-001 — Operator Platform (Q3 2026)","162c5b70-9828-45ea-8c7c-b8e02f160230","GROQ-M3 · Verify",,"32b4d097-4f71-47b6-9ff7-74d8cde06fdb",1118,"IPI-47, IPI-107","",
+"IPI-166","iPix1","GEMINI-003 · Thought signatures in CopilotKit tool loops","## GEMINI-003 — Thought signatures in CopilotKit tool loops
+
+**In plain terms:** Preserve Gemini 3+ thought signatures on function-calling round-trips so multi-tool agent flows don't 400.
+
+**Docs:** [Thinking signatures](<https://ai.google.dev/gemini-api/docs/thinking#signatures>)
+
+**Blocked by:** [IPI-113](https://linear.app/amo100/issue/IPI-113)
+
+### Acceptance criteria
+
+- [ ] CopilotKit/Mastra passes full model content parts back (signatures intact)
+- [ ] Test: 2+ sequential tool calls on same thread without error
+- [ ] Document workaround if SDK auto-handles vs manual","Canceled",3,"High","a91ff388-772a-4b0a-b252-0068d6a1297c","AI Platform — LLM Providers","ai@socialmediaville.ca",,"GEMINI",,,,,"2026-06-25T07:59:27.985Z","2026-07-07T00:39:59.129Z",,,,"2026-07-07T00:39:59.098Z",,,,"IPIX-INIT-001 — Operator Platform (Q3 2026)","162c5b70-9828-45ea-8c7c-b8e02f160230","GROQ-M3 · Verify",,"01a77b87-5e43-4d6b-84f7-9f80c522aa07",1118,"IPI-113","",
+"IPI-170","iPix1","GEMINI-007 · Batch API — overnight DNA scoring","## GEMINI-007 — Batch API — overnight DNA scoring
+
+**In plain terms:** Run bulk asset DNA via Batch API (50% cost) — `generateContent` batch jobs, not Interactions yet.
+
+**Docs:** [Batch API](<https://ai.google.dev/gemini-api/docs/batch-api>)
+
+**Blocked by:** [IPI-152](https://linear.app/amo100/issue/IPI-152) DNA-002
+
+### Acceptance criteria
+
+- [ ] Batch job submit + poll script or webhook (GEMINI-015)
+- [ ] Results written to `assets` + `ai_agent_logs`
+- [ ] Cost doc in `gemeni-plans.md`","Canceled",5,"Medium","a91ff388-772a-4b0a-b252-0068d6a1297c","AI Platform — LLM Providers","ai@socialmediaville.ca",,"GEMINI",,,,,"2026-06-25T07:59:32.400Z","2026-07-07T00:39:59.604Z",,,,"2026-07-07T00:39:59.543Z",,,,"IPIX-INIT-001 — Operator Platform (Q3 2026)","162c5b70-9828-45ea-8c7c-b8e02f160230","GROQ-M3 · Verify",,"b447802f-31ca-4e4d-b1fc-bb26ea3434e1",1118,"IPI-178, IPI-152, IPI-282","",
+"IPI-169","iPix1","GEMINI-006 · Maps grounding — venue scout + matching","## GEMINI-006 — Maps grounding — venue scout + matching
+
+**In plain terms:** Enable `google_maps` tool with lat/lng for shoot location scout and MATCH workspace sponsor/venue discovery.
+
+**Docs:** [Maps grounding](<https://ai.google.dev/gemini-api/docs/maps-grounding>) — **English only** today
+
+**Blocked by:** [IPI-160](https://linear.app/amo100/issue/IPI-160) MATCH-001
+
+### Acceptance criteria
+
+- [ ] Maps tool requires coordinates in prompt/context
+- [ ] Structured shortlist output schema
+- [ ] Document English-only limitation in operator UI","Canceled",5,"Medium","a91ff388-772a-4b0a-b252-0068d6a1297c","AI Platform — LLM Providers","ai@socialmediaville.ca",,"GEMINI",,,,,"2026-06-25T07:59:30.893Z","2026-07-07T00:39:59.427Z",,,,"2026-07-07T00:39:59.208Z",,,,"IPIX-INIT-001 — Operator Platform (Q3 2026)","162c5b70-9828-45ea-8c7c-b8e02f160230","GROQ-M3 · Verify",,"dae7fb1a-1de7-4a4f-a470-6c19c118dcce",1118,"IPI-160","",
+"IPI-179","iPix1","GEMINI-016 · Flex inference tier — offline eval chains","## GEMINI-016 — Flex inference tier — offline eval chains
+
+**In plain terms:** Use `service_tier: flex` for agent eval suites and non-urgent enrichment (50% cost, 1–15 min latency).
+
+**Docs:** [Flex inference](<https://ai.google.dev/gemini-api/docs/flex-inference>)
+
+**Blocked by:** [IPI-47](https://linear.app/amo100/issue/IPI-47)
+
+### Acceptance criteria
+
+- [ ] Flex flag in `_shared/gemini.ts` for batch eval only
+- [ ] Never on user-facing CopilotKit chat path
+- [ ] Cost comparison in docs","Canceled",2,"Low","a91ff388-772a-4b0a-b252-0068d6a1297c","AI Platform — LLM Providers","ai@socialmediaville.ca",,"GEMINI",,,,,"2026-06-25T07:59:40.656Z","2026-07-07T00:39:59.972Z",,,,"2026-07-07T00:39:59.946Z",,,,"IPIX-INIT-001 — Operator Platform (Q3 2026)","162c5b70-9828-45ea-8c7c-b8e02f160230","GROQ-M3 · Verify",,"58b40e71-52ae-49e6-becb-2cc5cbe00cdd",1118,"IPI-47","",
+"IPI-178","iPix1","GEMINI-015 · Webhooks — batch + interaction LRO","## ⛔ CANCELED — depends on deferred Interactions cluster (IPI-164/176)
+
+**Policy:** No Interactions LRO webhooks through MVP.
+
+---
+
+## GEMINI-015 — Webhooks — batch + interaction LRO
+
+**In plain terms:** Configure static/dynamic webhooks for batch.succeeded and interaction.completed → update Supabase job status.
+
+**Blocked by:** GEMINI-007 · GEMINI-013 (both deferred)
+
+### Acceptance criteria (when un-deferred)
+
+- [ ] Webhook endpoint with signature verification
+- [ ] Handles thin payload + fetches result URI
+- [ ] Document in edge deployment guide","Canceled",3,"Low","a91ff388-772a-4b0a-b252-0068d6a1297c","AI Platform — LLM Providers","ai@socialmediaville.ca",,"GEMINI",,,,,"2026-06-25T07:59:39.475Z","2026-07-04T07:02:04.041Z",,,,"2026-06-30T11:54:34.147Z",,,,"IPIX-INIT-001 — Operator Platform (Q3 2026)","162c5b70-9828-45ea-8c7c-b8e02f160230","GROQ-M3 · Verify",,"bc6a7aec-e9d5-42a3-8b13-67df1f095412",10523,"IPI-164, IPI-176, IPI-170","",
+"IPI-176","iPix1","GEMINI-013 · Deep Research agent spike (competitor reports)","## ⛔ CANCELED — depends on deferred Interactions API (IPI-164)
+
+**Policy:** No Interactions API / Deep Research through MVP.
+
+---
+
+## GEMINI-013 — Deep Research agent spike (competitor reports)
+
+**In plain terms:** Spike managed Deep Research agent via Interactions `background=true` for quarterly competitor reports — not MVP hot path.
+
+**Blocked by:** GEMINI-001 (IPI-164 — deferred)
+
+### Acceptance criteria (when un-deferred)
+
+- [ ] One LATAM fashion competitor report end-to-end
+- [ ] Webhook or poll completion → Supabase job row
+- [ ] Go/no-go doc with cost/latency vs Search+URL","Canceled",8,"Low","a91ff388-772a-4b0a-b252-0068d6a1297c","AI Platform — LLM Providers","ai@socialmediaville.ca",,"GEMINI",,,,,"2026-06-25T07:59:37.677Z","2026-07-04T07:02:04.598Z",,,,"2026-06-30T11:54:31.161Z",,,,"IPIX-INIT-001 — Operator Platform (Q3 2026)","162c5b70-9828-45ea-8c7c-b8e02f160230","GROQ-M3 · Verify",,"5fe2ffff-ffa9-4a8a-b287-099011f0953d",10523,"IPI-178, IPI-164","",
+"IPI-171","iPix1","GEMINI-008 · Streaming Interactions SSE (operator chat)","## ⛔ CANCELED — depends on deferred Interactions API (IPI-164)
+
+**Policy:** No Interactions API through MVP. CopilotKit + Mastra streaming via `generateContent` is sufficient.
+
+---
+
+## GEMINI-008 — Streaming Interactions SSE (operator chat)
+
+**In plain terms:** Enable `stream: true` on Interactions API for CopilotKit operator panel — SSE incremental tokens.
+
+**Blocked by:** GEMINI-001 (IPI-164 — deferred)
+
+### Acceptance criteria (when un-deferred)
+
+- [ ] Mastra/CopilotKit path streams to UI without buffer-until-done
+- [ ] Error handling on partial stream failure
+- [ ] Latency improvement measurable vs non-stream","Canceled",3,"Low","a91ff388-772a-4b0a-b252-0068d6a1297c","AI Platform — LLM Providers","ai@socialmediaville.ca",,"GEMINI",,,,,"2026-06-25T07:59:33.692Z","2026-07-04T07:02:08.350Z",,,,"2026-06-30T11:54:19.369Z",,,,"IPIX-INIT-001 — Operator Platform (Q3 2026)","162c5b70-9828-45ea-8c7c-b8e02f160230","GROQ-M3 · Verify",,"adfd7a12-b3c1-4403-a5ff-a9a3eb281322",10523,"IPI-164","",
+"IPI-164","iPix1","GEMINI-001 · Interactions API migration (Mastra operator)","## ⛔ DEFER — no Interactions API through MVP
+
+**Label:** `defer:no-interactions` · **Priority:** Low · Do not start before MVP 8/8 proofs.
+
+---
+
+## GEMINI-001 — Interactions API migration (Mastra operator)
+
+**In plain terms:** Migrate `app/` Mastra agents from legacy `generateContent` to GA **Interactions API** with `previous_interaction_id` for multi-turn state.
+
+**MVP priority:** **Deferred** — CopilotKit + Mastra already manage thread state; Interactions adds interaction IDs, thread mapping, and migration cost without solving a current problem.
+
+### Why defer
+
+Current path works:
+
+```text
+Next.js → Mastra → CopilotKit → Supabase → Gemini generateContent
+```
+
+Adopt Interactions only when a concrete gap appears (e.g. managed Deep Research agent, cross-service interaction continuity). Until then: **generateContent** + streaming + thought signatures.
+
+### Acceptance criteria (when un-deferred)
+
+- [ ] Spike `client.interactions.create` on `brand-intelligence` agent
+- [ ] `previous_interaction_id` wired for CopilotKit thread continuity
+- [ ] Dual-path: edge stays `generateContent` until Deno parity proven
+- [ ] Document migration checklist in `docs/gemeni/`
+
+### Skills
+
+`gemini` · `mastra` · `copilotkit`","Canceled",5,"Low","a91ff388-772a-4b0a-b252-0068d6a1297c","AI Platform — LLM Providers","ai@socialmediaville.ca",,"GEMINI",,,,,"2026-06-25T07:59:26.248Z","2026-07-07T00:39:58.970Z",,,,"2026-07-07T00:39:58.880Z",,,,"IPIX-INIT-001 — Operator Platform (Q3 2026)","162c5b70-9828-45ea-8c7c-b8e02f160230","GROQ-M3 · Verify",,"06d37799-11b5-4d5b-9ea7-59f3882cfc1f",1118,"IPI-47, IPI-178, IPI-176, IPI-171, IPI-182","",
+"IPI-79","iPix1","AI-015 · Live API Shoot Spike","## AI-015 — Live API Shoot Spike
+
+**In plain terms:** Spike Gemini Live API for shoot-floor voice co-pilot (Phase 3).
+
+**Blocked by:** [UI-001](<https://linear.app/amo100/issue/IPI2-22>) · [DNA-001](<https://linear.app/amo100/issue/IPI2-19>)
+
+**Unblocks:** IPIX-LIVE-001
+
+**MVP priority:** **P3 Future**
+
+**Estimate:** 13 points
+
+**Source:** [docs/gemeni/gemeni-plan.md](<../../gemeni/gemeni-plan.md>)
+
+### Skills (load in order)
+
+| # | Skill | Path |
+| -- | -- | -- |
+| 1 | ipix-task-lifecycle | `.claude/skills/ipix-task-lifecycle/SKILL.md` or repo rule |
+| 2 | gemini | `.claude/skills/gemini/SKILL.md` or repo rule |
+
+---
+
+### Flow — AI-015
+
+```mermaid
+flowchart TD
+  Mic[Operator voice] --> Live[Gemini Live API]
+  Live --> DNA[Real-time DNA hints]
+```
+
+---
+
+### Completion steps
+
+#### A. Implement
+
+- [ ] **A1** WebSocket proof-of-concept (dev only)
+- [ ] **A2** Document session cost model
+- [ ] **A3** No production ship in spike
+
+#### B. Verify + ship
+
+- [ ] **B1** `npm run build` passes
+- [ ] **B2** `npm run supabase:verify` (if Supabase touched)
+- [ ] **B3** `npm run supabase:verify-rls` (if auth/RLS touched)
+- [ ] **B4** Linear **Done** · `todo.md` updated
+
+**Spec score:** 84/100 — lifecycle-ready
+
+---
+
+### Gantt — IPI-77
+
+```mermaid
+gantt
+    title IPI-77 · AI-015
+    dateFormat YYYY-MM-DD
+    axisFormat %b %d
+    section Build
+    Implement AI-015           :active, g1, 2026-06-14, 7d
+    section Verify
+    npm run build + probes      :crit, g2, after g1, 1d
+    Done                        :milestone, gdone, after g2, 0d
+```
+
+*Source:* `docs/linear/issues/IPI-77-AI-015.md` *· push via* `node scripts/linear-update-issue.mjs IPI-77`","Canceled",13,"Low","a91ff388-772a-4b0a-b252-0068d6a1297c","AI Platform — LLM Providers","ai@socialmediaville.ca",,"AI, GEMINI",,,,,"2026-06-14T11:46:23.219Z","2026-07-04T07:02:27.666Z",,,,"2026-06-22T10:24:47.916Z",,,,"IPIX-INIT-001 — Operator Platform (Q3 2026)","a07acbf5-d8d3-428b-8834-7bfb28147a76","GROQ-M2 · Edge ∥ Mastra",,"7e016a46-d7b8-4668-8670-5b43a9c7dd9a",22133,"IPI2-19, IPI2-22","",
+"IPI-78","iPix1","AI-014 · Deep Research Integration Spike","## AI-014 — Deep Research Integration Spike
+
+**In plain terms:** Evaluate Managed Deep Research agent vs Search+URL chain for competitive reports.
+
+**Blocked by:** [AI-001](<https://linear.app/amo100/issue/IPI2-18>)
+
+**Unblocks:** Phase 3 autonomous research
+
+**MVP priority:** **P3 Future**
+
+**Estimate:** 8 points
+
+**Source:** [docs/gemeni/gemeni-plan.md](<../../gemeni/gemeni-plan.md>)
+
+### Skills (load in order)
+
+| # | Skill | Path |
+| -- | -- | -- |
+| 1 | ipix-task-lifecycle | `.claude/skills/ipix-task-lifecycle/SKILL.md` or repo rule |
+| 2 | gemini | `.claude/skills/gemini/SKILL.md` or repo rule |
+
+---
+
+### Flow — AI-014
+
+```mermaid
+flowchart LR
+  Spike[2-day spike] --> DR[Deep Research agent]
+  Spike --> Chain[Search + URL Context]
+  DR --> Doc[Decision doc in docs/gemeni/]
+```
+
+---
+
+### Completion steps
+
+#### A. Implement
+
+- [ ] **A1** Prototype one brand competitive report via Deep Research
+- [ ] **A2** Compare cost/latency vs tool-combination on 3.5 Flash
+- [ ] **A3** Document go/no-go in docs/gemeni/
+
+#### B. Verify + ship
+
+- [ ] **B1** `npm run build` passes
+- [ ] **B2** `npm run supabase:verify` (if Supabase touched)
+- [ ] **B3** `npm run supabase:verify-rls` (if auth/RLS touched)
+- [ ] **B4** Linear **Done** · `todo.md` updated
+
+**Spec score:** 84/100 — lifecycle-ready
+
+---
+
+### Gantt — IPI-76
+
+```mermaid
+gantt
+    title IPI-76 · AI-014
+    dateFormat YYYY-MM-DD
+    axisFormat %b %d
+    section Build
+    Implement AI-014           :active, g1, 2026-06-14, 4d
+    section Verify
+    npm run build + probes      :crit, g2, after g1, 1d
+    Done                        :milestone, gdone, after g2, 0d
+```
+
+*Source:* `docs/linear/issues/IPI-76-AI-014.md` *· push via* `node scripts/linear-update-issue.mjs IPI-76`","Canceled",8,"Low","a91ff388-772a-4b0a-b252-0068d6a1297c","AI Platform — LLM Providers","ai@socialmediaville.ca",,"AI, GEMINI",,,,,"2026-06-14T11:46:22.729Z","2026-07-04T07:02:28.026Z",,,,"2026-06-22T10:24:46.051Z",,,,"IPIX-INIT-001 — Operator Platform (Q3 2026)","a07acbf5-d8d3-428b-8834-7bfb28147a76","GROQ-M2 · Edge ∥ Mastra",,"19ebedc7-6cd0-4344-93fb-a5c7204e8a07",22133,"IPI2-174, IPI2-18","",
