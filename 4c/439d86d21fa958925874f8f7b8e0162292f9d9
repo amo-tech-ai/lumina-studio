@@ -1,0 +1,33 @@
+tasks/cloudflare/todo.md
+  s_ff0f27c2808314::t_6a6625cd7f93de 1-64
+tasks/cloudflare/ai-agent-architecture.md
+  s_ff0f27c2808314::t_8895d1510d26dd 1-322
+tasks/diagrams/01-system-architecture.md
+  s_ff0f27c2808314::t_23c7278a34919b 1-39
+tasks/diagrams/02-ai-provider-flow.md
+  s_ff0f27c2808314::t_5ffdd01945b4af 1-24
+tasks/diagrams/03-agent-tool-architecture.md
+  s_ff0f27c2808314::t_bdb1466d855d91 1-35
+tasks/diagrams/04-workflow-architecture.md
+  s_ff0f27c2808314::t_0338f12e50d4c9 1-33
+tasks/diagrams/05-data-storage-decision-map.md
+  s_ff0f27c2808314::t_54452c95d1c67e 1-42
+tasks/diagrams/README.md
+  s_ff0f27c2808314::t_7675d60cb991cc 1-13
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "4c439d86d21fa958925874f8f7b8e0162292f9d9",
+  "prompts": {},
+  "sessions": {
+    "s_ff0f27c2808314": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "f541cadc-3ecd-4f00-aa24-6136f7995021",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
