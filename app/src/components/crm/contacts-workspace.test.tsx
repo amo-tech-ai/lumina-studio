@@ -71,10 +71,10 @@ describe("ContactsWorkspace", () => {
     expect(screen.queryByText("Dana Vale")).toBeNull();
   });
 
-  it("also filters by role and email, not just name", () => {
+  it("also filters by role, email, and organization, not just name", () => {
     const contacts = [
-      contact({ id: "p1", name: "Dana Vale", role_title: "Brand Director", email: [{ value: "dana@acme.com", type: "work", primary: true }] }),
-      contact({ id: "p2", name: "Kit Rho", role_title: "Photographer", email: [{ value: "kit@vega.io", type: "work", primary: true }] }),
+      contact({ id: "p1", name: "Dana Vale", company_id: "c1", role_title: "Brand Director", email: [{ value: "dana@acme.com", type: "work", primary: true }] }),
+      contact({ id: "p2", name: "Kit Rho", company_id: null, role_title: "Photographer", email: [{ value: "kit@vega.io", type: "work", primary: true }] }),
     ];
     render(<ContactsWorkspace contacts={contacts} companyNames={COMPANY_NAMES} fetchError={null} />);
 
@@ -83,6 +83,10 @@ describe("ContactsWorkspace", () => {
     expect(screen.queryByText("Dana Vale")).toBeNull();
 
     fireEvent.change(screen.getByRole("searchbox"), { target: { value: "dana@acme.com" } });
+    expect(screen.getByText("Dana Vale")).toBeDefined();
+    expect(screen.queryByText("Kit Rho")).toBeNull();
+
+    fireEvent.change(screen.getByRole("searchbox"), { target: { value: "acme athletic" } });
     expect(screen.getByText("Dana Vale")).toBeDefined();
     expect(screen.queryByText("Kit Rho")).toBeNull();
   });
