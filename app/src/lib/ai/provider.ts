@@ -71,9 +71,10 @@ const MODEL_BY_ID = new Map(
 
 export function resolveAiProvider(): AiProvider {
   const raw = (process.env.AI_PROVIDER ?? "gemini").trim().toLowerCase();
-  if (raw === "gemini" || raw === "groq" || raw === "openai") return raw as AiProvider;
+  const validProviders = ["gemini", "groq", "openai", "workers-ai", "nvidia", "openai-compatible", "mock"] as const;
+  if (validProviders.includes(raw as typeof validProviders[number])) return raw as AiProvider;
   throw new Error(
-    `AI_PROVIDER="${raw}" is invalid (expected gemini | groq | openai).`,
+    `AI_PROVIDER="${raw}" is invalid (expected ${validProviders.join(" | ")}).`,
   );
 }
 

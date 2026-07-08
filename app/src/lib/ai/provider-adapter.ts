@@ -101,7 +101,7 @@ export const providerAdapter: AiProviderAdapter = {
 
   chatStream(prompt, options = {}) {
     const tier = options.tier ?? "default";
-    let cancelled = false;
+    const abortController = new AbortController();
 
     const body = JSON.stringify({
       model: modelForTier(tier),
@@ -118,6 +118,7 @@ export const providerAdapter: AiProviderAdapter = {
             method: "POST",
             headers: gatewayHeaders(),
             body,
+            signal: abortController.signal,
           });
 
           if (!response.ok) {
@@ -131,7 +132,7 @@ export const providerAdapter: AiProviderAdapter = {
           let buffer = "";
 
           while (true) {
-            if (cancelled) break;
+            if (abortController.signal.aborted) break;
             const { done, value } = await reader.read();
             if (done) break;
 
@@ -143,7 +144,7 @@ export const providerAdapter: AiProviderAdapter = {
               const trimmed = line.trim();
               if (!trimmed || !trimmed.startsWith("data: ")) continue;
               const data = trimmed.slice(6);
-              if (data === "[DONE]") return;
+              if (data === "[DONE]") { controller.close(); return; }
               try {
                 const parsed = JSON.parse(data) as {
                   choices?: { delta?: { content?: string } }[];
@@ -156,12 +157,12 @@ export const providerAdapter: AiProviderAdapter = {
             }
           }
         } catch (err) {
-          if (!cancelled) controller.error(err);
+          if (!abortController.signal.aborted) controller.error(err);
         }
-        if (!cancelled) controller.close();
+        if (!abortController.signal.aborted) controller.close();
       },
       cancel() {
-        cancelled = true;
+        abortController.abort();
       },
     });
   },
