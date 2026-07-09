@@ -248,7 +248,7 @@ export class PlannerEngine {
     if (phaseTasks.length === 0) {
       return { passed: false, reason: "Phase has no tasks; gate cannot be passed." };
     }
-    const allDone = phaseTasks.every((t) => t.status === "done" || t.status === "completed");
+    const allDone = phaseTasks.every((t) => t.status === "done");
     if (!allDone) {
       return { passed: false, reason: "Not all tasks in this phase are complete." };
     }
