@@ -1,0 +1,19 @@
+supabase/migrations/20260709000000_planner_schema_rls.sql
+  s_90b4c1b32a0876::t_1cdd68f0e8f05f 224-226,233,590-597
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "e7482c23a21bab28eaec997a410b8a76a1ffe814",
+  "prompts": {},
+  "sessions": {
+    "s_90b4c1b32a0876": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a1959affd8e6c0c95",
+        "model": "unknown"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
