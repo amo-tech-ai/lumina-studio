@@ -6,8 +6,8 @@ import type {
   PlannerPhase,
   PlannerDependency,
   PlannerAssignment,
-  PlannerInstanceStatus,
   PlannerTaskStatus,
+  DependencyType,
   DependencyGraph,
 } from "./types";
 
@@ -98,20 +98,31 @@ export class PlannerEngine {
       return { updated, conflicts };
     }
 
-    // Validate: cannot shift before predecessor end
+    // Validate: cannot shift before predecessor end (including lag)
     const preds = graph.reverseAdjacency.get(taskId) ?? [];
     if (deltaDays < 0) {
-      // Backward shift: check predecessors
+      // Backward shift: check predecessors with lag
       for (const predId of preds) {
         const pred = updated.get(predId);
         if (pred && pred.endDate) {
+          // Find the dependency edge to include lagDays
+          const dep = dependencies.find(
+            (d) => d.fromTaskId === predId && d.toTaskId === taskId,
+          );
+          const lagDays = dep?.lagDays ?? 0;
+
           const newStart = this.addBusinessDays(
             new Date(base.startDate ?? pred.endDate),
             deltaDays,
           );
-          if (this.toMs(newStart) < this.toMs(pred.endDate)) {
+          const boundaryDate = this.addBusinessDays(
+            new Date(pred.endDate),
+            lagDays + 1, // +1 because successor starts day after predecessor end + lag
+          );
+
+          if (this.toMs(newStart) < this.toMs(boundaryDate)) {
             conflicts.push(
-              `Cannot shift "${base.title}" before predecessor "${pred.title}" ends on ${pred.endDate}.`,
+              `Cannot shift "${base.title}" before predecessor "${pred.title}" (requires ${lagDays}-day lag after ${pred.endDate}).`,
             );
             return { updated, conflicts };
           }
@@ -124,28 +135,36 @@ export class PlannerEngine {
     updated.set(taskId, shifted);
     visited.add(taskId);
 
-    // BFS propagation to successors
+    // BFS propagation to successors using offset tracking
     queue.push({ id: taskId, offset: deltaDays });
+    const offsets = new Map<string, number>();
+    offsets.set(taskId, deltaDays);
 
     while (queue.length > 0) {
       const current = queue.shift()!;
 
       for (const succId of graph.adjacency.get(current.id) ?? []) {
-        if (visited.has(succId)) {
-          // Cycle detected
-          conflicts.push(`Circular dependency detected: task ${succId} already shifted.`);
-          continue;
-        }
-        visited.add(succId);
-
         const succ = updated.get(succId);
         if (!succ) continue;
 
-        // Find the dependency edge to determine lag
+        // Find the dependency edge to determine lag + type
         const dep = dependencies.find(
           (d) => d.fromTaskId === current.id && d.toTaskId === succId,
         );
-        const effectiveDelta = current.offset + (dep?.lagDays ?? 0);
+
+        // Compute effective delta based on dependency type
+        let effectiveDelta = current.offset;
+        if (dep) {
+          effectiveDelta = this.computePropagatedDelta(current.offset, dep);
+        }
+
+        // Fan-in: only re-process if offset is larger than previously applied
+        const prevOffset = offsets.get(succId);
+        if (prevOffset !== undefined && effectiveDelta <= prevOffset) {
+          continue;
+        }
+        offsets.set(succId, effectiveDelta);
+
         const shiftedSucc = this.applyDelta(succ, effectiveDelta);
         updated.set(succId, shiftedSucc);
 
@@ -217,16 +236,20 @@ export class PlannerEngine {
       return { passed: true };
     }
 
-    // Check all tasks in this phase are done
-    const phaseTasks = tasks.filter((t) => t.phaseId === phase.id);
+    // Check all tasks in this phase are done (scoped to instance)
+    const phaseTasks = tasks.filter(
+      (t) => t.phaseId === phase.id && t.instanceId === instance.id,
+    );
     const allDone = phaseTasks.every((t) => t.status === "done");
     if (!allDone) {
       return { passed: false, reason: "Not all tasks in this phase are complete." };
     }
 
-    // Check user's role meets the gate requirement
+    // Check user's role meets the gate requirement (scoped to instance)
     if (phase.requiredRole) {
-      const userAssignment = assignments.find((a) => a.userId === userId);
+      const userAssignment = assignments.find(
+        (a) => a.userId === userId && a.instanceId === instance.id,
+      );
       if (!userAssignment) {
         return { passed: false, reason: "User is not assigned to this instance." };
       }
@@ -297,6 +320,17 @@ export class PlannerEngine {
       canUpdateTasks: role === "owner" || role === "manager" || role === "contributor",
       canManageWorkflow: role === "owner" || role === "manager",
     };
+  }
+
+  private computePropagatedDelta(
+    currentOffset: number,
+    dep: PlannerDependency,
+  ): number {
+    // finish_to_start and start_to_start propagate the full offset
+    // finish_to_finish propagates the full offset (both ends shift together)
+    // start_to_finish also propagates full offset (predecessor start drives successor end)
+    // All types: the lag is additive to the propagated shift
+    return currentOffset + dep.lagDays;
   }
 
   // ── Private helpers ────────────────────────────────────────────────────
