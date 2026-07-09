@@ -7,6 +7,7 @@ import {
   type ChatCompletionResponse,
   type EmbeddingRequest,
   type EmbeddingResponse,
+  type ProviderConfig,
   createCompletionId,
 } from "./providers/provider";
 
@@ -30,7 +31,7 @@ function getProvider(name: string): AiProvider {
   }
 }
 
-function getProviderConfig(provider: string, env: Env): { apiKey: string; baseUrl: string } {
+function getProviderConfig(provider: string, env: Env): ProviderConfig {
   switch (provider) {
     case "gemini":
       return { apiKey: env.GEMINI_API_KEY ?? "", baseUrl: "https://generativelanguage.googleapis.com" };
@@ -45,7 +46,11 @@ function getProviderConfig(provider: string, env: Env): { apiKey: string; baseUr
   }
 }
 
-function selectProvider(model: string, env: Env): { provider: AiProvider; config: ReturnType<typeof getProviderConfig>; entry: ReturnType<typeof resolveModelEntry> } {
+function selectProvider(model: string, env: Env): {
+  provider: AiProvider;
+  config: ProviderConfig;
+  entry: ReturnType<typeof resolveModelEntry>;
+} {
   const tier = env.MODEL_REGISTRY_OVERRIDE
     ? JSON.parse(env.MODEL_REGISTRY_OVERRIDE) as ModelRegistry
     : undefined;

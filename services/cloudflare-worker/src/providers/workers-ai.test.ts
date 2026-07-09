@@ -15,10 +15,39 @@ describe("workersAiOpenAiBaseUrl", () => {
     );
   });
 
-  it("throws when CLOUDFLARE_ACCOUNT_ID is missing", () => {
+  it("throws when CLOUDFLARE_ACCOUNT_ID is missing for direct Workers AI API", () => {
     expect(() =>
       workersAiOpenAiBaseUrl({ apiKey: "token", baseUrl: CONFIG.baseUrl }),
     ).toThrow(/CLOUDFLARE_ACCOUNT_ID/);
+  });
+
+  it("uses managed AI Gateway URL as-is without accountId", () => {
+    const gateway =
+      "https://gateway.ai.cloudflare.com/v1/acct123/my-gateway/openai";
+    expect(
+      workersAiOpenAiBaseUrl({ apiKey: "token", baseUrl: gateway }),
+    ).toBe(gateway);
+  });
+
+  it("does not append /accounts/ to managed AI Gateway URLs", () => {
+    const gateway =
+      "https://gateway.ai.cloudflare.com/v1/acct123/my-gateway/compat";
+    const url = workersAiOpenAiBaseUrl({
+      apiKey: "token",
+      baseUrl: gateway,
+      accountId: "should-not-appear",
+    });
+    expect(url).toBe(gateway);
+    expect(url).not.toContain("/accounts/");
+  });
+
+  it("uses /v1 suffix for custom gateway worker base URL", () => {
+    expect(
+      workersAiOpenAiBaseUrl({
+        apiKey: "token",
+        baseUrl: "http://127.0.0.1:8787",
+      }),
+    ).toBe("http://127.0.0.1:8787/v1");
   });
 
   it("does not put the API token in the URL path", () => {
@@ -60,6 +89,31 @@ describe("workersAiProvider HTTP", () => {
     expect(init.headers).toMatchObject({
       Authorization: "Bearer cf-api-token-secret",
     });
+  });
+
+  it("chat uses managed AI Gateway URL without account path", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        choices: [{ message: { content: "ok" }, finish_reason: "stop" }],
+        usage: { prompt_tokens: 1, completion_tokens: 2, total_tokens: 3 },
+      }),
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const gateway =
+      "https://gateway.ai.cloudflare.com/v1/acct123/my-gateway/openai";
+    await workersAiProvider.chat(
+      {
+        model: "@cf/meta/llama-3.1-8b-instruct-fp8",
+        messages: [{ role: "user", content: "ping" }],
+      },
+      { apiKey: "cf-aig-token", baseUrl: gateway },
+    );
+
+    const [url] = fetchMock.mock.calls[0] as [string];
+    expect(url).toBe(`${gateway}/chat/completions`);
+    expect(url).not.toContain("/accounts/");
   });
 
   it("embed uses account ID in embeddings path", async () => {

@@ -10,11 +10,22 @@ import {
 
 /** @see https://developers.cloudflare.com/workers-ai/configuration/open-ai-compatibility/ */
 export function workersAiOpenAiBaseUrl(config: ProviderConfig): string {
+  const base = config.baseUrl.replace(/\/$/, "");
+
+  // Managed Cloudflare AI Gateway — account + gateway id already in the URL.
+  if (base.includes("gateway.ai.cloudflare.com")) {
+    return base;
+  }
+
+  // Custom gateway worker (this repo or local dev) — OpenAI-compat at /v1/*.
+  if (!base.includes("api.cloudflare.com/client/v4")) {
+    return base.endsWith("/v1") ? base : `${base}/v1`;
+  }
+
   const accountId = config.accountId?.trim();
   if (!accountId) {
     throw new Error("CLOUDFLARE_ACCOUNT_ID is required for Workers AI requests.");
   }
-  const base = config.baseUrl.replace(/\/$/, "");
   return `${base}/accounts/${accountId}/ai/v1`;
 }
 
