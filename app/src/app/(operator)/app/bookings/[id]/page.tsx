@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { BookingDetailWorkspace } from "@/components/booking/booking-detail-workspace";
 import { getBooking } from "@/lib/booking/booking-service";
 import { isUuid } from "@/lib/booking/validation";
+import { getCurrentOrgId } from "@/lib/crm/queries";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -16,6 +17,12 @@ export default async function BookingDetailPage({ params }: { params: Promise<{ 
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) notFound();
+
+  // Same operator gate as every other (operator)/app/** page (crm, matching,
+  // etc.): a talent- or agency-only account has no org_members row, so it's
+  // blocked here even though get_booking itself would resolve their viewer_role.
+  const orgId = await getCurrentOrgId(user.id, supabase);
+  if (!orgId) notFound();
 
   const result = await getBooking(supabase, id);
 
