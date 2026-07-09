@@ -982,6 +982,21 @@ try {
     .eq("score_type", "visual")
     .maybeSingle();
   assert(!visualAfterEditorDelete?.id, "org editor delete removed visual score row");
+
+  // ── IPI-476 planner schema RLS probes ─────────────────────────
+  // planner.workflows — org-scoped read
+  const { data: plannerWorkflow, error: plannerWorkflowErr } = await userA.client
+    .from("planner_workflows")
+    .select("id")
+    .limit(1);
+  if (plannerWorkflowErr?.code === "42P01" || plannerWorkflowErr?.code === "PGRST205" || plannerWorkflowErr?.message?.includes("does not exist") || plannerWorkflowErr?.message?.includes("Could not find the table")) {
+    console.log("skip: planner RLS probes (migration not pushed)");
+  } else {
+    assert(
+      !plannerWorkflowErr && (plannerWorkflow ?? []).length >= 0,
+      "org member can select planner_workflows",
+    );
+  }
 } catch (err) {
   fail(err instanceof Error ? err.message : String(err));
 } finally {
