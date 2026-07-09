@@ -77,7 +77,7 @@ type Props = {
 
 export function BookingDetailWorkspace({ bookingId, booking, talent, history, viewerRole, fetchError }: Props) {
   const router = useRouter();
-  const [, startTransition] = useTransition();
+  const [isRefreshing, startTransition] = useTransition();
   const [activeTab, setActiveTab] = useState<TabId>("overview");
   const [actionPending, setActionPending] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
@@ -151,6 +151,9 @@ export function BookingDetailWorkspace({ bookingId, booking, talent, history, vi
       }
       startTransition(() => router.refresh());
       return true;
+    } catch {
+      setActionError("Couldn't reach the server. Check your connection and try again.");
+      return false;
     } finally {
       setActionPending(false);
     }
@@ -168,13 +171,18 @@ export function BookingDetailWorkspace({ bookingId, booking, talent, history, vi
       }
       startTransition(() => router.refresh());
       return true;
+    } catch {
+      setActionError("Couldn't reach the server. Check your connection and try again.");
+      return false;
     } finally {
       setActionPending(false);
     }
   }
 
+  const busy = actionPending || isRefreshing;
+
   function handleAction(kind: BookingActionKind) {
-    if (actionPending) return;
+    if (busy) return;
     if (kind === "cancel") {
       setCancelOpen(true);
       return;
@@ -187,7 +195,7 @@ export function BookingDetailWorkspace({ bookingId, booking, talent, history, vi
   }
 
   async function submitCancel() {
-    if (!cancelReason.trim() || actionPending) return;
+    if (!cancelReason.trim() || busy) return;
     const ok = await runTransition({
       expected_version: version,
       to_status: "cancelled",
@@ -240,7 +248,7 @@ export function BookingDetailWorkspace({ bookingId, booking, talent, history, vi
               <button
                 key={kind}
                 type="button"
-                disabled={actionPending}
+                disabled={busy}
                 onClick={() => handleAction(kind)}
                 className={kind === "cancel" || kind === "decline" ? styles.actionBtnGhost : styles.actionBtnPrimary}
               >
@@ -468,7 +476,7 @@ export function BookingDetailWorkspace({ bookingId, booking, talent, history, vi
               <button
                 type="button"
                 className={styles.actionBtnGhost}
-                disabled={actionPending}
+                disabled={busy}
                 onClick={() => {
                   setCancelOpen(false);
                   setCancelReason("");
@@ -480,7 +488,7 @@ export function BookingDetailWorkspace({ bookingId, booking, talent, history, vi
               <button
                 type="button"
                 className={styles.actionBtnDanger}
-                disabled={actionPending || !cancelReason.trim()}
+                disabled={busy || !cancelReason.trim()}
                 onClick={() => void submitCancel()}
               >
                 Confirm cancellation

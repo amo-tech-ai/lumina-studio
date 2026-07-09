@@ -171,6 +171,29 @@ describe("BookingDetailWorkspace", () => {
     await waitFor(() => expect(refresh).toHaveBeenCalled());
   });
 
+  it("shows a friendly error and re-enables the button when fetch itself rejects (network failure)", async () => {
+    const fetchMock = vi.fn().mockRejectedValue(new TypeError("Failed to fetch"));
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(
+      <BookingDetailWorkspace
+        bookingId={BOOKING_ID}
+        booking={booking()}
+        talent={TALENT}
+        history={[]}
+        viewerRole="brand"
+        fetchError={null}
+      />,
+    );
+
+    const approveBtn = screen.getByText("Approve");
+    fireEvent.click(approveBtn);
+
+    await waitFor(() => expect(screen.getByText(/Couldn't reach the server/)).toBeDefined());
+    expect(approveBtn).toHaveProperty("disabled", false);
+    expect(refresh).not.toHaveBeenCalled();
+  });
+
   it("requires a reason before submitting a cancellation, then PATCHes it", async () => {
     const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => ({}) });
     vi.stubGlobal("fetch", fetchMock);
