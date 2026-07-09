@@ -5,6 +5,8 @@
  * Workers that externalizes to eval-based `externalImport`, which fails with
  * "Code generation from strings disallowed". Marketing + operator fetch routes
  * import from here instead.
+ *
+ * Aliases in next.config.ts (turbopack + webpack) map @copilotkit/runtime-internal/*.
  */
 export { CopilotRuntime } from "@copilotkit/runtime-internal/runtime";
 export { InMemoryAgentRunner } from "@copilotkit/runtime-internal/in-memory";

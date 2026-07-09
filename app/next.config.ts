@@ -6,6 +6,22 @@ import { CLOUDINARY_CLOUD_NAME } from "./src/lib/cloudinary/url";
 
 const appDir = path.dirname(fileURLToPath(import.meta.url));
 
+/** Fetch-only CopilotKit v2 entrypoints — shared by Turbopack (dev) and webpack (next build / OpenNext). */
+const copilotkitRuntimeInternalAliases = {
+  "@copilotkit/runtime-internal/runtime": path.join(
+    appDir,
+    "node_modules/@copilotkit/runtime/dist/v2/runtime/core/runtime.mjs",
+  ),
+  "@copilotkit/runtime-internal/in-memory": path.join(
+    appDir,
+    "node_modules/@copilotkit/runtime/dist/v2/runtime/runner/in-memory.mjs",
+  ),
+  "@copilotkit/runtime-internal/fetch-handler": path.join(
+    appDir,
+    "node_modules/@copilotkit/runtime/dist/v2/runtime/core/fetch-handler.mjs",
+  ),
+} as const;
+
 const nextConfig: NextConfig = {
   serverExternalPackages: [
     "@mastra/core",
@@ -30,14 +46,20 @@ const nextConfig: NextConfig = {
   },
   turbopack: {
     root: appDir,
-    resolveAlias: {
-      "@copilotkit/runtime-internal/runtime":
-        "./node_modules/@copilotkit/runtime/dist/v2/runtime/core/runtime.mjs",
-      "@copilotkit/runtime-internal/in-memory":
-        "./node_modules/@copilotkit/runtime/dist/v2/runtime/runner/in-memory.mjs",
-      "@copilotkit/runtime-internal/fetch-handler":
-        "./node_modules/@copilotkit/runtime/dist/v2/runtime/core/fetch-handler.mjs",
-    },
+    resolveAlias: Object.fromEntries(
+      Object.entries(copilotkitRuntimeInternalAliases).map(([key, absPath]) => [
+        key,
+        `./${path.relative(appDir, absPath)}`,
+      ]),
+    ),
+  },
+  webpack: (config) => {
+    config.resolve ??= {};
+    config.resolve.alias = {
+      ...config.resolve.alias,
+      ...copilotkitRuntimeInternalAliases,
+    };
+    return config;
   },
   env: {
     NEXT_PUBLIC_COPILOTKIT_THREADS_ENABLED:
