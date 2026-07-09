@@ -181,17 +181,18 @@ describe("shiftTask", () => {
     expect(result.conflicts).toContain("Task nonexistent not found.");
   });
 
-  it("handles lag days in dependency propagation", () => {
+  it("propagates predecessor delta through lag edges without re-adding lag", () => {
     const t1 = makeTask({ id: "t1", startDate: "2026-07-01", endDate: "2026-07-03" });
     const t2 = makeTask({ id: "t2", startDate: "2026-07-04", endDate: "2026-07-06" });
     const tasks = new Map([["t1", t1], ["t2", t2]]);
     const deps = [makeDep({ id: "d1", fromTaskId: "t1", toTaskId: "t2", lagDays: 2 })];
 
-    engine.shiftTask("t1", 5, tasks, deps);
+    const result = engine.shiftTask("t1", 5, tasks, deps);
 
-    // t2 should shift by 5 (base) + 2 (lag) = 7 days
-    expect(tasks.get("t2")!.startDate).toBe("2026-07-04");
-    expect(tasks.get("t2")!.endDate).toBe("2026-07-06");
+    // lagDays is a fixed edge constraint (applied at build time), not re-propagated
+    // t2 should shift by 5 (predecessor delta only), not 5 + 2
+    expect(result.updated.get("t2")!.startDate).toBe("2026-07-09");
+    expect(result.updated.get("t2")!.endDate).toBe("2026-07-11");
   });
 });
 

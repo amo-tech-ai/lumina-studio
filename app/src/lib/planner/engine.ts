@@ -86,7 +86,13 @@ export class PlannerEngine {
   ): { updated: Map<string, PlannerTask>; conflicts: string[] } {
     const updated = new Map(tasks);
     const conflicts: string[] = [];
-    const visited = new Set<string>();
+
+    // Guard: detect cycles before BFS to prevent infinite loops
+    const cycles = this.detectCycles(dependencies);
+    if (cycles.length > 0) {
+      conflicts.push("Dependency graph contains a cycle; cannot shift tasks.");
+      return { updated, conflicts };
+    }
 
     const graph = this.buildDependencyGraph(dependencies);
     const queue: Array<{ id: string; offset: number }> = [];
@@ -133,7 +139,6 @@ export class PlannerEngine {
     // Shift the base task
     const shifted = this.applyDelta(base, deltaDays);
     updated.set(taskId, shifted);
-    visited.add(taskId);
 
     // BFS propagation to successors using offset tracking
     queue.push({ id: taskId, offset: deltaDays });
@@ -324,13 +329,12 @@ export class PlannerEngine {
 
   private computePropagatedDelta(
     currentOffset: number,
-    dep: PlannerDependency,
+    _dep: PlannerDependency,
   ): number {
-    // finish_to_start and start_to_start propagate the full offset
-    // finish_to_finish propagates the full offset (both ends shift together)
-    // start_to_finish also propagates full offset (predecessor start drives successor end)
-    // All types: the lag is additive to the propagated shift
-    return currentOffset + dep.lagDays;
+    // Only the predecessor's delta propagates downstream. dep.lagDays is a
+    // fixed gap on the dependency edge (applied at schedule-build time), not
+    // additional shift to re-apply on every propagation pass.
+    return currentOffset;
   }
 
   // ── Private helpers ────────────────────────────────────────────────────
