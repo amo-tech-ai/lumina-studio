@@ -66,6 +66,36 @@ describe("GET /auth/callback", () => {
     expect(res.headers.get("location")).toBe("https://www.ipix.co/app");
   });
 
+  it("uses TRUSTED_OAUTH_FORWARDED_HOSTS for Cloudflare preview redirect origin", async () => {
+    vi.stubEnv("TRUSTED_OAUTH_FORWARDED_HOSTS", "ipix-operator.workers.dev");
+    exchangeCodeForSession.mockResolvedValue({ error: null });
+    const GET = await loadGet();
+
+    const res = await GET(
+      callbackRequest("code=abc123", {
+        "x-forwarded-host": "ipix-operator.workers.dev",
+        "x-forwarded-proto": "https",
+      }),
+    );
+
+    expect(res.headers.get("location")).toBe("https://ipix-operator.workers.dev/app");
+  });
+
+  it("rejects spoofed *.workers.dev not in the allowlist", async () => {
+    delete process.env.TRUSTED_OAUTH_FORWARDED_HOSTS;
+    exchangeCodeForSession.mockResolvedValue({ error: null });
+    const GET = await loadGet();
+
+    const res = await GET(
+      callbackRequest("code=abc123", {
+        "x-forwarded-host": "attacker-subdomain.workers.dev",
+        "x-forwarded-proto": "https",
+      }),
+    );
+
+    expect(res.headers.get("location")).toBe("https://www.ipix.co/app");
+  });
+
   it("uses x-forwarded-host for the redirect origin in production", async () => {
     exchangeCodeForSession.mockResolvedValue({ error: null });
     const GET = await loadGet();

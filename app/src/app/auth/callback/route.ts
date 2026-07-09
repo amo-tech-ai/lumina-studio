@@ -12,19 +12,38 @@ function supabaseEnv() {
   };
 }
 
+function hostsFromEnvList(raw: string | undefined): string[] {
+  if (!raw) return [];
+  return raw
+    .split(",")
+    .map((host) => host.trim().toLowerCase())
+    .filter(Boolean);
+}
+
+/** Exact hostnames allowed via x-forwarded-host (Cloudflare preview, custom domains). */
+function trustedForwardedHostAllowlist(): Set<string> {
+  const hosts = new Set<string>();
+  try {
+    hosts.add(new URL(SITE_URL).host.toLowerCase());
+  } catch {
+    // ignore malformed SITE_URL
+  }
+  for (const host of hostsFromEnvList(process.env.TRUSTED_OAUTH_FORWARDED_HOSTS)) {
+    hosts.add(host);
+  }
+  return hosts;
+}
+
 function isTrustedForwardedHost(forwardedHost: string, requestOrigin: string): boolean {
   const host = forwardedHost.toLowerCase();
+  if (trustedForwardedHostAllowlist().has(host)) return true;
   try {
     if (host === new URL(requestOrigin).host.toLowerCase()) return true;
   } catch {
     // ignore malformed request origin
   }
-  try {
-    if (host === new URL(SITE_URL).host.toLowerCase()) return true;
-  } catch {
-    // ignore malformed SITE_URL
-  }
-  return host.endsWith(".vercel.app") || host.endsWith(".workers.dev");
+  // Vercel preview namespace only — never trust arbitrary *.workers.dev (open redirect).
+  return host.endsWith(".vercel.app");
 }
 
 function redirectOrigin(request: Request): string {

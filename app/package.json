@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "build": "NEXT_PRIVATE_WORKER_THREADS=false next build",
+    "prebuild": "node scripts/sync-groq-models.mjs",
     "dev": "npm run dev:infra && concurrently \"npm run dev:ui\" \"npm run dev:agent\" --names ui,agent --prefix-colors blue,green --kill-others",
     "dev:agent": "mastra dev",
     "dev:ui": "next dev --turbopack -p 3002",

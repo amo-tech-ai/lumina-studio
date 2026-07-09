@@ -1,4 +1,4 @@
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
@@ -75,10 +75,16 @@ describe("AI provider (GROQ-002 / GROQ-004)", () => {
     expect(entry.parallelTools).toBe(true);
   });
 
-  it("loads SSOT allowlist from repo config/groq-models.json", () => {
+  it("loads SSOT allowlist from bundled groq-models.ssot.json", () => {
     const disk = loadGroqModelsConfig();
     expect(getGroqModelEntry(disk.defaults.default)).toBeDefined();
     expect(disk.models.length).toBeGreaterThan(0);
+  });
+
+  it("keeps groq-models.ssot.json in sync with config/groq-models.json", () => {
+    const repoConfig = join(process.cwd(), "..", "config", "groq-models.json");
+    const onDisk = JSON.parse(readFileSync(repoConfig, "utf8"));
+    expect(loadGroqModelsConfig()).toEqual(onDisk);
   });
 
   describe("findGroqModelsConfigPath (IPI-428 followup — mastra dev ENOENT)", () => {

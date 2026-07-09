@@ -1,6 +1,4 @@
-import { existsSync } from "node:fs";
 import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
 
 import groqModelsSsot from "./groq-models.ssot.json";
 
@@ -10,13 +8,13 @@ import {
 } from "./gemini-registry";
 import type { AiProvider, GroqModelEntry, GroqModelTier, GroqModelsConfig } from "./types";
 
-const MODULE_DIR = dirname(fileURLToPath(import.meta.url));
-const MAX_ANCESTOR_HOPS = 8;
+const MAX_BUNDLE_ANCESTOR_HOPS = 8;
 
 /** Walks up from `startDir` looking for `config/groq-models.json` (tests / Mastra dev). */
 export function findGroqModelsConfigPath(startDir: string): string {
+  const { existsSync } = require("node:fs") as typeof import("node:fs");
   let dir = startDir;
-  for (let hop = 0; hop < MAX_ANCESTOR_HOPS; hop += 1) {
+  for (let hop = 0; hop < MAX_BUNDLE_ANCESTOR_HOPS; hop += 1) {
     const candidate = join(dir, "config", "groq-models.json");
     if (existsSync(candidate)) return candidate;
     const parent = dirname(dir);
@@ -24,13 +22,13 @@ export function findGroqModelsConfigPath(startDir: string): string {
     dir = parent;
   }
   throw new Error(
-    `Could not find config/groq-models.json within ${MAX_ANCESTOR_HOPS} ancestor directories of "${startDir}"`,
+    `Could not find config/groq-models.json within ${MAX_BUNDLE_ANCESTOR_HOPS} ancestor directories of "${startDir}"`,
   );
 }
 
 /**
  * CF-MIG-210: static JSON bundled for Cloudflare Workers (no runtime readFileSync).
- * Source of truth: `config/groq-models.json` — keep `groq-models.ssot.json` in sync.
+ * Source of truth: `config/groq-models.json` — synced via `scripts/sync-groq-models.mjs` (prebuild).
  */
 export function loadGroqModelsConfig(): GroqModelsConfig {
   return groqModelsSsot as GroqModelsConfig;
@@ -88,7 +86,7 @@ export function resolveGroqModelId(tier: GroqModelTier = "default"): string {
   }
   if (!getModelById().has(modelId)) {
     throw new Error(
-      `Groq model "${modelId}" is not in config/groq-models.json allowlist.`,
+      `Groq model "${modelId}" is not in the bundled Groq allowlist (groq-models.ssot.json).`,
     );
   }
   return modelId;
