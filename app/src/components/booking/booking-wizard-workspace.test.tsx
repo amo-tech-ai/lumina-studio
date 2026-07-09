@@ -327,6 +327,27 @@ describe("BookingWizardWorkspace", () => {
     expect(fetchFn.mock.calls.some(([url]: [string]) => url === "/api/bookings")).toBe(false);
   });
 
+  it("Start over clears prior dates, rate, and message instead of returning to step 0 pre-filled", async () => {
+    const fetchFn = draftFetch();
+    vi.stubGlobal("fetch", fetchFn);
+    render(<BookingWizardWorkspace talent={TALENT} talentId={TALENT.id} orgId={ORG_ID} fetchError={null} />);
+    await goToReviewStep(fetchFn);
+    fireEvent.click(screen.getByText("Don't send — cancel"));
+    fireEvent.click(screen.getByText("Start over"));
+
+    expect(screen.getByText(/Step 1 of 5/)).toBeDefined();
+    fireEvent.click(screen.getByRole("button", { name: "Continue" })); // talent & shoot -> dates
+    expect((screen.getByLabelText("Start date") as HTMLInputElement).value).toBe("");
+    expect((screen.getByLabelText("End date") as HTMLInputElement).value).toBe("");
+
+    // Continue must be gated again — a prior approved rate must not carry over.
+    fireEvent.change(screen.getByLabelText("Start date"), { target: { value: "2026-08-01" } });
+    fireEvent.change(screen.getByLabelText("End date"), { target: { value: "2026-08-03" } });
+    fireEvent.click(screen.getByRole("button", { name: "Continue" })); // dates -> rate
+    await waitFor(() => expect(screen.getByText("AI draft")).toBeDefined());
+    expect(screen.queryByText("✓ Approved")).toBeNull();
+  });
+
   it("Back preserves rate approval and message edits when returning to Review", async () => {
     const fetchFn = draftFetch();
     vi.stubGlobal("fetch", fetchFn);

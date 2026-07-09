@@ -74,6 +74,21 @@ describe("POST /api/bookings/quote-draft", () => {
     expect(body.suggestedRate).toBe(1500);
   });
 
+  it("rejects an unrecognized rateTier instead of silently dropping it", async () => {
+    const { POST } = await importRoute();
+    const res = await POST(
+      postRequest({
+        displayName: "Maria Rossi",
+        dateStart: "2026-08-01",
+        dateEnd: "2026-08-03",
+        rateTier: "$$$$",
+      }),
+    );
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error.code).toBe("VALIDATION_ERROR");
+  });
+
   it("rejects a missing displayName", async () => {
     const { POST } = await importRoute();
     const res = await POST(postRequest({ dateStart: "2026-08-01", dateEnd: "2026-08-03" }));

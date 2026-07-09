@@ -206,6 +206,19 @@ export function BookingWizardWorkspace({ talent, talentId, orgId, fetchError }: 
   function handleStartOver() {
     setOutcome("idle");
     setStep(0);
+    setShootChoice("standalone");
+    setDateStart("");
+    setDateEnd("");
+    setAvailability(null);
+    setRateQuotedInput("");
+    setRateQuotedSnapshot("");
+    setRateFieldStatus("pending");
+    setRateEditing(false);
+    setRateWhyOpen(false);
+    setSuggestedRate(null);
+    setMessageDraft("");
+    setDraftFetched(false);
+    setError(null);
   }
 
   async function handleSend() {
