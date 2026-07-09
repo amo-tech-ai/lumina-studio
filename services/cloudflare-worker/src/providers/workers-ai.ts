@@ -8,11 +8,28 @@ import {
   createCompletionId,
 } from "./provider";
 
+/** @see https://developers.cloudflare.com/workers-ai/configuration/open-ai-compatibility/ */
+export function workersAiOpenAiBaseUrl(config: ProviderConfig): string {
+  const accountId = config.accountId?.trim();
+  if (!accountId) {
+    throw new Error("CLOUDFLARE_ACCOUNT_ID is required for Workers AI requests.");
+  }
+  const base = config.baseUrl.replace(/\/$/, "");
+  return `${base}/accounts/${accountId}/ai/v1`;
+}
+
+function authHeaders(config: ProviderConfig): Record<string, string> {
+  return {
+    Authorization: `Bearer ${config.apiKey}`,
+    "Content-Type": "application/json",
+  };
+}
+
 export const workersAiProvider: AiProvider = {
   async chat(req: ChatCompletionRequest, config: ProviderConfig): Promise<ChatCompletionResponse> {
-    const res = await fetch(`${config.baseUrl}/accounts/${config.apiKey}/ai/v1/chat/completions`, {
+    const res = await fetch(`${workersAiOpenAiBaseUrl(config)}/chat/completions`, {
       method: "POST",
-      headers: { "Authorization": `Bearer ${config.apiKey}`, "Content-Type": "application/json" },
+      headers: authHeaders(config),
       body: JSON.stringify(req),
     });
 
@@ -31,17 +48,11 @@ export const workersAiProvider: AiProvider = {
   },
 
   async chatStream(req: ChatCompletionRequest, config: ProviderConfig): Promise<Response> {
-    const upstream = await fetch(
-      `${config.baseUrl}/accounts/${config.apiKey}/ai/v1/chat/completions`,
-      {
-        method: "POST",
-        headers: {
-          "Authorization": `Bearer ${config.apiKey}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ ...req, stream: true }),
-      },
-    );
+    const upstream = await fetch(`${workersAiOpenAiBaseUrl(config)}/chat/completions`, {
+      method: "POST",
+      headers: authHeaders(config),
+      body: JSON.stringify({ ...req, stream: true }),
+    });
 
     if (!upstream.ok) {
       const err = await upstream.text();
@@ -64,17 +75,11 @@ export const workersAiProvider: AiProvider = {
     const inputs = typeof req.input === "string" ? [req.input] : req.input;
     const results = await Promise.all(
       inputs.map(async (text) => {
-        const res = await fetch(
-          `${config.baseUrl}/accounts/${config.apiKey}/ai/v1/embeddings`,
-          {
-            method: "POST",
-            headers: {
-              "Authorization": `Bearer ${config.apiKey}`,
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({ model: req.model, text: [text] }),
-          },
-        );
+        const res = await fetch(`${workersAiOpenAiBaseUrl(config)}/embeddings`, {
+          method: "POST",
+          headers: authHeaders(config),
+          body: JSON.stringify({ model: req.model, text: [text] }),
+        });
         if (!res.ok) throw new Error(`Workers AI embedding error ${res.status}`);
         const data: any = await res.json();
         return data.result?.data?.[0]?.embedding ?? [];

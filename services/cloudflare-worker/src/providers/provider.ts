@@ -39,8 +39,11 @@ export interface EmbeddingResponse {
 }
 
 export interface ProviderConfig {
+  /** Bearer token (Workers AI API token or gateway auth). */
   apiKey: string;
   baseUrl: string;
+  /** Cloudflare account ID — URL path segment for Workers AI OpenAI-compat API. */
+  accountId?: string;
 }
 
 export interface AiProvider {

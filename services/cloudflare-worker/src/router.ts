@@ -37,7 +37,8 @@ function getProviderConfig(provider: string, env: Env): { apiKey: string; baseUr
     case "workers-ai":
       return {
         apiKey: env.CLOUDFLARE_API_TOKEN ?? "",
-        baseUrl: env.AI_GATEWAY_URL ?? `https://api.cloudflare.com/client/v4`,
+        accountId: env.CLOUDFLARE_ACCOUNT_ID ?? "",
+        baseUrl: env.AI_GATEWAY_URL ?? "https://api.cloudflare.com/client/v4",
       };
     default:
       throw new Error(`No config for provider: ${provider}`);
