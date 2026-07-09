@@ -1,0 +1,27 @@
+services/cloudflare-worker/src/router.ts
+  s_250922caeff5ac::t_6d874f41b84c61 49-53
+  s_250922caeff5ac::t_e993bc2f0c8c5f 10
+  s_250922caeff5ac::t_abfd261a431292 34
+services/cloudflare-worker/src/providers/workers-ai.ts
+  s_250922caeff5ac::t_e2d91a68f3e123 13-24
+services/cloudflare-worker/src/providers/workers-ai.test.ts
+  s_250922caeff5ac::t_5b55bcbd4518e7 51,94-118
+  s_250922caeff5ac::t_1a4b0e30b35949 18,24-50
+  s_250922caeff5ac::t_519149ad70b17f 52
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "dcbdf25b48c3f48e1b723c9fd9e68d8e4d2649b3",
+  "prompts": {},
+  "sessions": {
+    "s_250922caeff5ac": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "d615a929-53ba-4467-b380-aff6877ff353",
+        "model": "default"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
