@@ -187,6 +187,38 @@ describe("BookingWizardWorkspace", () => {
     expect(screen.getByRole("button", { name: "Continue" }).hasAttribute("disabled")).toBe(false);
   });
 
+  it("rejects an out-of-range rate override on Save instead of silently approving it", async () => {
+    const fetchFn = draftFetch();
+    vi.stubGlobal("fetch", fetchFn);
+    render(<BookingWizardWorkspace talent={TALENT} talentId={TALENT.id} orgId={ORG_ID} fetchError={null} />);
+    await goToRateStep();
+    await waitFor(() => expect(screen.getByText("Approve")).toBeDefined());
+
+    fireEvent.click(screen.getByText("Edit"));
+    fireEvent.change(screen.getByLabelText("Day rate override"), { target: { value: "-5" } });
+    fireEvent.click(screen.getByText("Save"));
+
+    // Still in edit mode, not approved — Continue must stay gated.
+    expect(screen.getByLabelText("Day rate override")).toBeDefined();
+    expect(screen.queryByText("✓ Approved")).toBeNull();
+    expect(screen.getByRole("button", { name: "Continue" }).hasAttribute("disabled")).toBe(true);
+  });
+
+  it("Cancel restores the rate to its pre-edit value instead of leaving the typed amount", async () => {
+    const fetchFn = draftFetch();
+    vi.stubGlobal("fetch", fetchFn);
+    render(<BookingWizardWorkspace talent={TALENT} talentId={TALENT.id} orgId={ORG_ID} fetchError={null} />);
+    await goToRateStep();
+    await waitFor(() => expect(screen.getByText("$1,000")).toBeDefined());
+
+    fireEvent.click(screen.getByText("Edit"));
+    fireEvent.change(screen.getByLabelText("Day rate override"), { target: { value: "9999" } });
+    fireEvent.click(screen.getByText("Cancel"));
+
+    expect(screen.getByText("$1,000")).toBeDefined();
+    expect(screen.queryByText("$9,999")).toBeNull();
+  });
+
   it("pre-fills the Message step with the drafted message", async () => {
     const fetchFn = draftFetch();
     vi.stubGlobal("fetch", fetchFn);
@@ -249,6 +281,39 @@ describe("BookingWizardWorkspace", () => {
       shoot_id: null,
     });
     expect(screen.getByText("33333333-3333-4333-8333-333333333333")).toBeDefined();
+  });
+
+  it("ignores a second Send click while the first request is still in flight", async () => {
+    let resolveBookingsPost: (value: unknown) => void = () => {};
+    const bookingsPostPromise = new Promise((resolve) => {
+      resolveBookingsPost = resolve;
+    });
+    const fetchFn = fetchMock().mockImplementation((url: string) => {
+      if (url === "/api/bookings/quote-draft") {
+        return Promise.resolve({ ok: true, json: async () => ({ suggestedRate: 1000, messageDraft: "Draft text" }) });
+      }
+      if (url === "/api/bookings") {
+        return bookingsPostPromise;
+      }
+      throw new Error(`Unexpected fetch to ${url}`);
+    });
+    vi.stubGlobal("fetch", fetchFn);
+    render(<BookingWizardWorkspace talent={TALENT} talentId={TALENT.id} orgId={ORG_ID} fetchError={null} />);
+    await goToReviewStep(fetchFn);
+
+    const sendBtn = screen.getByRole("button", { name: "Send booking request" });
+    fireEvent.click(sendBtn);
+    fireEvent.click(sendBtn); // double-click before the first response resolves
+    fireEvent.click(sendBtn);
+
+    const bookingsCallsSoFar = fetchFn.mock.calls.filter(([url]: [string]) => url === "/api/bookings");
+    expect(bookingsCallsSoFar).toHaveLength(1);
+
+    resolveBookingsPost({
+      ok: true,
+      json: async () => ({ booking_id: "44444444-4444-4444-8444-444444444444", status: "requested", version: 1, expires_at: null }),
+    });
+    await waitFor(() => expect(screen.getByText("Booking requested")).toBeDefined());
   });
 
   it("'Don't send — cancel' shows a clean cancelled state without ever calling POST /api/bookings", async () => {

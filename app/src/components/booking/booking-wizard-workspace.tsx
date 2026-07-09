@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 import { ErrorState } from "@/components/ui/error-state";
 import { StatusChip } from "@/components/ui/status-chip";
@@ -49,6 +49,7 @@ export function BookingWizardWorkspace({ talent, talentId, orgId, fetchError }: 
   const [availability, setAvailability] = useState<Availability | null>(null);
   const [availabilityLoading, setAvailabilityLoading] = useState(false);
   const [rateQuotedInput, setRateQuotedInput] = useState("");
+  const [rateQuotedSnapshot, setRateQuotedSnapshot] = useState("");
   const [rateFieldStatus, setRateFieldStatus] = useState<RateFieldStatus>("pending");
   const [rateEditing, setRateEditing] = useState(false);
   const [rateWhyOpen, setRateWhyOpen] = useState(false);
@@ -115,31 +116,8 @@ export function BookingWizardWorkspace({ talent, talentId, orgId, fetchError }: 
 
   const canFetchDraft = Boolean(talent) && isIsoDate(dateStart) && isIsoDate(dateEnd) && isValidDateRange(dateStart, dateEnd);
 
-  // Auto-drafts once the operator reaches the Rate step (index 2) — matches
-  // the DC flow's "already drafted by the time you arrive" pattern rather
-  // than requiring a manual generate click. Regenerate stays available below.
-  useEffect(() => {
-    if (step !== 2 || draftFetched || !canFetchDraft) return;
-    void fetchDraft();
-  }, [step, draftFetched, canFetchDraft]);
-
-  if (fetchError) {
-    return (
-      <div className={styles.stateRoot}>
-        <ErrorState message={fetchError} onRetry={() => router.refresh()} />
-      </div>
-    );
-  }
-
-  if (!talent || !orgId) {
-    return (
-      <div className={styles.stateRoot}>
-        <ErrorState message="Unable to load this talent profile." onRetry={() => router.refresh()} />
-      </div>
-    );
-  }
-
-  async function fetchDraft() {
+  const fetchDraft = useCallback(async () => {
+    if (!talent) return;
     setDraftLoading(true);
     setError(null);
     try {
@@ -147,10 +125,10 @@ export function BookingWizardWorkspace({ talent, talentId, orgId, fetchError }: 
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          displayName: talent!.display_name,
+          displayName: talent.display_name,
           dateStart,
           dateEnd,
-          rateTier: talent!.rate_tier ?? undefined,
+          rateTier: talent.rate_tier ?? undefined,
           rateQuoted: rateQuotedInput.trim() && isRateQuoted(Number(rateQuotedInput)) ? Number(rateQuotedInput) : undefined,
         }),
       });
@@ -170,6 +148,30 @@ export function BookingWizardWorkspace({ talent, talentId, orgId, fetchError }: 
       setDraftFetched(true);
       setDraftLoading(false);
     }
+  }, [talent, dateStart, dateEnd, rateQuotedInput]);
+
+  // Auto-drafts once the operator reaches the Rate step (index 2) — matches
+  // the DC flow's "already drafted by the time you arrive" pattern rather
+  // than requiring a manual generate click. Regenerate stays available below.
+  useEffect(() => {
+    if (step !== 2 || draftFetched || !canFetchDraft) return;
+    void fetchDraft();
+  }, [step, draftFetched, canFetchDraft, fetchDraft]);
+
+  if (fetchError) {
+    return (
+      <div className={styles.stateRoot}>
+        <ErrorState message={fetchError} onRetry={() => router.refresh()} />
+      </div>
+    );
+  }
+
+  if (!talent || !orgId) {
+    return (
+      <div className={styles.stateRoot}>
+        <ErrorState message="Unable to load this talent profile." onRetry={() => router.refresh()} />
+      </div>
+    );
   }
 
   function handleApproveRate() {
@@ -177,10 +179,24 @@ export function BookingWizardWorkspace({ talent, talentId, orgId, fetchError }: 
     setRateWhyOpen(false);
   }
 
+  function handleStartRateEdit() {
+    setRateQuotedSnapshot(rateQuotedInput);
+    setRateEditing(true);
+  }
+
   function handleSaveRateEdit() {
+    // Reject an invalid override rather than silently approving it — the
+    // operator would otherwise only discover the problem at Send, when
+    // /api/bookings rejects it (prevent mistakes before save, not after).
+    if (rateQuotedInput.trim() && !isRateQuoted(Number(rateQuotedInput))) return;
     setRateFieldStatus("approved");
     setRateEditing(false);
     setRateWhyOpen(false);
+  }
+
+  function handleCancelRateEdit() {
+    setRateQuotedInput(rateQuotedSnapshot);
+    setRateEditing(false);
   }
 
   function handleReject() {
@@ -193,6 +209,7 @@ export function BookingWizardWorkspace({ talent, talentId, orgId, fetchError }: 
   }
 
   async function handleSend() {
+    if (sendLoading) return; // guard against a double-click firing a second POST before the disabled state re-renders
     setSendLoading(true);
     setError(null);
     try {
@@ -493,7 +510,7 @@ export function BookingWizardWorkspace({ talent, talentId, orgId, fetchError }: 
                         <button type="button" onClick={handleSaveRateEdit} className={styles.aiFieldBtn}>
                           Save
                         </button>
-                        <button type="button" onClick={() => setRateEditing(false)} className={styles.aiFieldBtnGhost}>
+                        <button type="button" onClick={handleCancelRateEdit} className={styles.aiFieldBtnGhost}>
                           Cancel
                         </button>
                       </>
@@ -502,7 +519,7 @@ export function BookingWizardWorkspace({ talent, talentId, orgId, fetchError }: 
                         <button type="button" onClick={handleApproveRate} className={styles.aiFieldBtn}>
                           Approve
                         </button>
-                        <button type="button" onClick={() => setRateEditing(true)} className={styles.aiFieldBtnGhost}>
+                        <button type="button" onClick={handleStartRateEdit} className={styles.aiFieldBtnGhost}>
                           Edit
                         </button>
                         <button type="button" onClick={() => setRateWhyOpen((v) => !v)} className={styles.aiFieldWhyBtn}>
@@ -510,7 +527,7 @@ export function BookingWizardWorkspace({ talent, talentId, orgId, fetchError }: 
                         </button>
                       </>
                     ) : (
-                      <button type="button" onClick={() => setRateEditing(true)} className={styles.aiFieldBtnGhost}>
+                      <button type="button" onClick={handleStartRateEdit} className={styles.aiFieldBtnGhost}>
                         Edit
                       </button>
                     )}
