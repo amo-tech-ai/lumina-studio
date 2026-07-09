@@ -23,67 +23,44 @@ type Props = {
 
 type Availability = { isAvailable: boolean; reason: string };
 type Outcome = "idle" | "created" | "rejected";
+type ShootChoice = "standalone" | "existing";
+type RateFieldStatus = "pending" | "approved";
 
-const STEPS: { label: string; gate?: boolean }[] = [
-  { label: "Dates & rate" },
-  { label: "AI draft", gate: true },
-  { label: "Review & send", gate: true },
-];
+// Shell mirrors Shoot Wizard.v2.image-first.dc.html (topbar + horizontal step
+// rail + centered content) — reused as an authoring shortcut per
+// docs/models/02-engineering-reference.md; the booking flow itself is a
+// standalone build (5 steps below), not a literal isBooking clone of that file.
+const STEPS = [
+  { label: "Talent & shoot" },
+  { label: "Dates" },
+  { label: "Rate" },
+  { label: "Message" },
+  { label: "Review & send" },
+] as const;
+const LAST_STEP = STEPS.length - 1;
 
-function HITLGate({ message }: { message: string }) {
-  return (
-    <div className={styles.hitlGate}>
-      ⚠ <strong>HITL Gate</strong> — {message}
-    </div>
-  );
-}
-
-function StepRail({ current, talent }: { current: number; talent: TalentResult }) {
-  return (
-    <nav className={styles.rail} aria-label="Wizard steps">
-      <Link href="/app/matching" className={styles.railBack}>
-        ← Matching
-      </Link>
-      <div className={styles.railTalent}>
-        <p className={styles.railTalentName}>{talent.display_name}</p>
-        {talent.rate_tier ? <p className={styles.railTalentRate}>{talent.rate_tier} rate tier</p> : null}
-      </div>
-      <ol className={styles.railList}>
-        {STEPS.map((s, i) => {
-          const stateName = i < current ? "completed" : i === current ? "active" : "future";
-          return (
-            <li
-              key={s.label}
-              className={styles.railStep}
-              data-state={stateName}
-              aria-current={i === current ? "step" : undefined}
-            >
-              <span className={styles.railMarker} aria-hidden>
-                {i < current ? "✓" : i + 1}
-              </span>
-              <span className={styles.railLabel}>{s.label}</span>
-              {s.gate ? <span className={styles.railGate} aria-hidden title="Approval gate" /> : null}
-            </li>
-          );
-        })}
-      </ol>
-    </nav>
-  );
+function initials(name: string): string {
+  const parts = name.trim().split(/\s+/);
+  return ((parts[0]?.[0] ?? "") + (parts[1]?.[0] ?? "")).toUpperCase() || "?";
 }
 
 export function BookingWizardWorkspace({ talent, talentId, orgId, fetchError }: Props) {
   const router = useRouter();
 
   const [step, setStep] = useState(0);
+  const [shootChoice, setShootChoice] = useState<ShootChoice>("standalone");
   const [dateStart, setDateStart] = useState("");
   const [dateEnd, setDateEnd] = useState("");
-  const [rateQuotedInput, setRateQuotedInput] = useState("");
-  const [shootId, setShootId] = useState("");
   const [availability, setAvailability] = useState<Availability | null>(null);
   const [availabilityLoading, setAvailabilityLoading] = useState(false);
-  const [draftLoading, setDraftLoading] = useState(false);
+  const [rateQuotedInput, setRateQuotedInput] = useState("");
+  const [rateFieldStatus, setRateFieldStatus] = useState<RateFieldStatus>("pending");
+  const [rateEditing, setRateEditing] = useState(false);
+  const [rateWhyOpen, setRateWhyOpen] = useState(false);
   const [suggestedRate, setSuggestedRate] = useState<number | null>(null);
   const [messageDraft, setMessageDraft] = useState("");
+  const [draftLoading, setDraftLoading] = useState(false);
+  const [draftFetched, setDraftFetched] = useState(false);
   const [sendLoading, setSendLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [outcome, setOutcome] = useState<Outcome>("idle");
@@ -101,9 +78,8 @@ export function BookingWizardWorkspace({ talent, talentId, orgId, fetchError }: 
     outcome,
   });
 
-  // Live availability check (UX feedback only — the DB EXCLUDE constraint is
-  // the real guarantee at request time). Native <input type="date"> only
-  // fires onChange on a completed selection, so no debounce is needed here.
+  // Live availability check — UX feedback only, the DB EXCLUDE constraint is
+  // the real guarantee at request time.
   useEffect(() => {
     if (!isIsoDate(dateStart) || !isIsoDate(dateEnd) || !isValidDateRange(dateStart, dateEnd)) {
       setAvailability(null);
@@ -142,6 +118,16 @@ export function BookingWizardWorkspace({ talent, talentId, orgId, fetchError }: 
     };
   }, [dateStart, dateEnd, talentId]);
 
+  const canFetchDraft = Boolean(talent) && isIsoDate(dateStart) && isIsoDate(dateEnd) && isValidDateRange(dateStart, dateEnd);
+
+  // Auto-drafts once the operator reaches the Rate step (index 2) — matches
+  // the DC flow's "already drafted by the time you arrive" pattern rather
+  // than requiring a manual generate click. Regenerate stays available below.
+  useEffect(() => {
+    if (step !== 2 || draftFetched || draftLoading || !canFetchDraft) return;
+    void fetchDraft();
+  }, [step, draftFetched, draftLoading, canFetchDraft]);
+
   if (fetchError) {
     return (
       <div className={styles.stateRoot}>
@@ -158,9 +144,7 @@ export function BookingWizardWorkspace({ talent, talentId, orgId, fetchError }: 
     );
   }
 
-  const canContinueStep0 = isIsoDate(dateStart) && isIsoDate(dateEnd) && isValidDateRange(dateStart, dateEnd);
-
-  async function handleGenerateDraft() {
+  async function fetchDraft() {
     setDraftLoading(true);
     setError(null);
     try {
@@ -182,11 +166,23 @@ export function BookingWizardWorkspace({ talent, talentId, orgId, fetchError }: 
       const data = await res.json();
       setSuggestedRate(data.suggestedRate ?? null);
       setMessageDraft(data.messageDraft ?? "");
+      setDraftFetched(true);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to draft a quote.");
     } finally {
       setDraftLoading(false);
     }
+  }
+
+  function handleApproveRate() {
+    setRateFieldStatus("approved");
+    setRateWhyOpen(false);
+  }
+
+  function handleSaveRateEdit() {
+    setRateFieldStatus("approved");
+    setRateEditing(false);
+    setRateWhyOpen(false);
   }
 
   function handleReject() {
@@ -198,7 +194,7 @@ export function BookingWizardWorkspace({ talent, talentId, orgId, fetchError }: 
     setStep(0);
   }
 
-  async function handleApprove() {
+  async function handleSend() {
     setSendLoading(true);
     setError(null);
     try {
@@ -208,7 +204,7 @@ export function BookingWizardWorkspace({ talent, talentId, orgId, fetchError }: 
         body: JSON.stringify({
           brand_org_id: orgId,
           talent_profile_id: talentId,
-          shoot_id: shootId.trim() || null,
+          shoot_id: null, // real shoot picker not wired yet — see talent-shoot step comment
           date_start: dateStart,
           date_end: dateEnd,
           rate_quoted: rateQuotedInput.trim() ? Number(rateQuotedInput) : suggestedRate ?? undefined,
@@ -230,229 +226,368 @@ export function BookingWizardWorkspace({ talent, talentId, orgId, fetchError }: 
     }
   }
 
+  const canAdvance: Record<number, boolean> = {
+    0: true,
+    1: isIsoDate(dateStart) && isIsoDate(dateEnd) && isValidDateRange(dateStart, dateEnd),
+    2: rateFieldStatus === "approved",
+    3: messageDraft.trim().length > 0,
+    4: !sendLoading,
+  };
+
+  function handleBack() {
+    if (step === 0) return;
+    setStep(step - 1);
+  }
+
+  function handleNext() {
+    if (step === LAST_STEP) {
+      void handleSend();
+      return;
+    }
+    setStep(step + 1);
+  }
+
   const rateDisplay = rateQuotedInput.trim()
     ? `$${Number(rateQuotedInput).toLocaleString()}`
     : suggestedRate != null
-      ? `$${suggestedRate.toLocaleString()} (suggested)`
+      ? `$${suggestedRate.toLocaleString()}`
       : "—";
+
+  if (outcome === "created") {
+    return (
+      <div className={styles.page}>
+        <div className={styles.content}>
+          <div className={styles.contentInner}>
+            <StatusChip dot={BOOKING_STATUS_DOT.requested} label={bookingStatusLabel("requested")} />
+            <h1 className={styles.title}>Booking requested</h1>
+            <p className={styles.subtitle}>
+              Your request to book {talent.display_name} for {dateStart}–{dateEnd} has been sent.
+            </p>
+            <div className={styles.summaryCard}>
+              <div className={styles.summaryRow}>
+                <span className={styles.summaryRowLabel}>Booking ID</span>
+                <span className={`${styles.summaryRowValue} ${styles.summaryRowMono}`}>{bookingId}</span>
+              </div>
+              {bookingExpiresAt ? (
+                <div className={styles.summaryRow}>
+                  <span className={styles.summaryRowLabel}>Expires</span>
+                  <span className={styles.summaryRowValue}>{new Date(bookingExpiresAt).toLocaleString()}</span>
+                </div>
+              ) : null}
+            </div>
+            <p className={styles.hint}>
+              Booking status tracking ships separately (IPI-411). The talent will need to confirm.
+            </p>
+            <div className={styles.footer}>
+              <Link href="/app/matching" className={styles.btnPrimary}>
+                ← Back to talent search
+              </Link>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (outcome === "rejected") {
+    return (
+      <div className={styles.page}>
+        <div className={styles.content}>
+          <div className={styles.contentInner}>
+            <h1 className={styles.title}>Request not sent</h1>
+            <p className={styles.subtitle}>You chose not to send this booking request. Nothing was saved.</p>
+            <div className={styles.footer}>
+              <button type="button" onClick={handleStartOver} className={styles.btnGhost}>
+                Start over
+              </button>
+              <Link href="/app/matching" className={styles.btnPrimary}>
+                ← Back to talent search
+              </Link>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  const nextLabel = step === LAST_STEP ? (sendLoading ? "Sending…" : "Send booking request") : "Continue";
 
   return (
     <div className={styles.page}>
-      <div className={styles.workspace}>
-        <StepRail current={step} talent={talent} />
+      {/* Touch targets here are 44px (2.75rem via CSS min-height), not the DC
+          prototype's literal 34-38px — accessibility requirement (SCR-21 AC:
+          "Touch targets >=44px") wins over pixel-exact parity; flagged, not
+          silently matched. */}
+      <div className={styles.topbar}>
+        <div className={styles.topbarLeft}>
+          <Link href="/app/matching" className={styles.backBtn}>
+            ← Matching
+          </Link>
+          <span className={styles.divider} aria-hidden />
+          <span className={styles.talentAvatar} aria-hidden>
+            {initials(talent.display_name)}
+          </span>
+          <div className={styles.titleBlock}>
+            <div className={styles.titleName}>{talent.display_name}</div>
+            <div className={styles.titleMeta}>
+              Step {step + 1} of {STEPS.length} · {STEPS[step].label}
+            </div>
+          </div>
+        </div>
+        <div className={styles.topbarRight}>
+          {step === LAST_STEP ? (
+            <button type="button" onClick={handleReject} className={styles.cancelLink}>
+              Don&apos;t send — cancel
+            </button>
+          ) : null}
+          {step > 0 ? (
+            <button type="button" onClick={handleBack} className={styles.backAction}>
+              Back
+            </button>
+          ) : null}
+          <button type="button" disabled={!canAdvance[step]} onClick={handleNext} className={styles.nextAction}>
+            {nextLabel}
+          </button>
+        </div>
+      </div>
 
-        <div className={styles.content}>
-          {outcome === "created" ? (
-            <div className={styles.section}>
-              <StatusChip dot={BOOKING_STATUS_DOT.requested} label={bookingStatusLabel("requested")} />
-              <h1 className={styles.title}>Booking requested</h1>
-              <p className={styles.body}>
-                Your request to book {talent.display_name} for {dateStart}–{dateEnd} has been sent.
-              </p>
-              <dl className={styles.summaryList}>
-                <div>
-                  <dt>Booking ID</dt>
-                  <dd className={styles.summaryMono}>{bookingId}</dd>
-                </div>
-                {bookingExpiresAt ? (
-                  <div>
-                    <dt>Expires</dt>
-                    <dd>{new Date(bookingExpiresAt).toLocaleString()}</dd>
-                  </div>
-                ) : null}
-              </dl>
-              <p className={styles.hint}>
-                Booking status tracking ships separately (IPI-411). The talent will need to confirm.
-              </p>
-              <div className={styles.footer}>
-                <Link href="/app/matching" className={styles.btnPrimary}>
-                  ← Back to talent search
-                </Link>
-              </div>
+      <nav className={styles.stepRail} aria-label="Wizard steps">
+        {STEPS.map((s, i) => {
+          const stateName = i < step ? "completed" : i === step ? "active" : "future";
+          return (
+            <span key={s.label} style={{ display: "contents" }}>
+              <button
+                type="button"
+                className={styles.stepRailItem}
+                data-state={stateName}
+                aria-current={i === step ? "step" : undefined}
+                onClick={() => (i < step ? setStep(i) : undefined)}
+              >
+                <span className={styles.stepRailMarker} aria-hidden>
+                  {i < step ? "✓" : i + 1}
+                </span>
+                <span className={styles.stepRailLabel}>{s.label}</span>
+              </button>
+              {i < STEPS.length - 1 ? <span className={styles.stepRailConnector} aria-hidden /> : null}
+            </span>
+          );
+        })}
+      </nav>
+
+      <div className={styles.content}>
+        <div className={styles.contentInner}>
+          {error ? (
+            <div className={styles.errorBanner} role="alert">
+              {error}
             </div>
-          ) : outcome === "rejected" ? (
-            <div className={styles.section}>
-              <h1 className={styles.title}>Request not sent</h1>
-              <p className={styles.body}>You chose not to send this booking request. Nothing was saved.</p>
-              <div className={styles.footer}>
-                <button type="button" onClick={handleStartOver} className={styles.btnGhost}>
-                  Start over
-                </button>
-                <Link href="/app/matching" className={styles.btnPrimary}>
-                  ← Back to talent search
-                </Link>
-              </div>
-            </div>
-          ) : (
+          ) : null}
+
+          {step === 0 && (
             <>
-              <p className={styles.stepMeta}>
-                Step {step + 1} of {STEPS.length} · {STEPS[step].label}
-              </p>
+              <div className={styles.stepHeading}>
+                <h1 className={styles.title}>Talent &amp; shoot</h1>
+                <p className={styles.subtitle}>Confirm the talent and link this booking to a shoot.</p>
+              </div>
+              <div className={styles.talentCard}>
+                <span className={styles.talentCardAvatar} aria-hidden>
+                  {initials(talent.display_name)}
+                </span>
+                <div>
+                  <div className={styles.talentCardName}>{talent.display_name}</div>
+                  <div className={styles.talentCardMeta}>
+                    {talent.rate_tier ? `${talent.rate_tier} rate tier` : "Rate tier not set"}
+                  </div>
+                </div>
+              </div>
+              <div className={styles.choiceLabel}>Link to a shoot</div>
+              <button
+                type="button"
+                onClick={() => setShootChoice("standalone")}
+                data-selected={shootChoice === "standalone"}
+                className={styles.choiceCard}
+              >
+                <span className={styles.choiceIcon} aria-hidden>
+                  +
+                </span>
+                <span>
+                  <span className={styles.choiceTitle}>Standalone booking</span>
+                  <span className={styles.choiceSub}>Not tied to a shoot yet</span>
+                </span>
+              </button>
+              {/* ponytail: no "list shoots for org" query exists yet — a real
+                  picker here is a separate follow-up (new RPC/query), not
+                  bundled into this layout PR. Card shown per DC for parity,
+                  disabled + labeled honestly rather than faking shoot data. */}
+              <button type="button" disabled data-selected="false" title="Coming soon" className={styles.choiceCard}>
+                <span className={styles.choiceIcon} aria-hidden>
+                  ▤
+                </span>
+                <span>
+                  <span className={styles.choiceTitle}>Link to an existing shoot</span>
+                  <span className={styles.choiceSub}>Coming soon</span>
+                </span>
+              </button>
+            </>
+          )}
 
-              {error ? (
-                <div className={styles.errorBanner} role="alert">
-                  {error}
+          {step === 1 && (
+            <>
+              <div className={styles.stepHeading}>
+                <h1 className={styles.title}>Dates</h1>
+                <p className={styles.subtitle}>When is {talent.display_name} needed?</p>
+              </div>
+              <label className={styles.field}>
+                <span>Start date</span>
+                <input type="date" value={dateStart} onChange={(e) => setDateStart(e.target.value)} aria-label="Start date" />
+              </label>
+              <label className={styles.field}>
+                <span>End date</span>
+                <input type="date" value={dateEnd} onChange={(e) => setDateEnd(e.target.value)} aria-label="End date" />
+              </label>
+              {availabilityLoading ? (
+                <p className={styles.hint}>Checking availability…</p>
+              ) : availability ? (
+                <div className={styles.availabilityBanner}>
+                  <span className={styles.availDot} data-warn={!availability.isAvailable} aria-hidden />
+                  <span>
+                    {talent.display_name} is{" "}
+                    <strong>{availability.isAvailable ? "available" : "not available"}</strong> on these dates.{" "}
+                    {!availability.isAvailable && availability.reason}
+                  </span>
                 </div>
               ) : null}
+            </>
+          )}
 
-              {step === 0 && (
-                <div className={styles.section}>
-                  <h1 className={styles.title}>Dates & rate</h1>
-                  <label className={styles.field}>
-                    <span>Start date</span>
-                    <input
-                      type="date"
-                      value={dateStart}
-                      onChange={(e) => setDateStart(e.target.value)}
-                      aria-label="Start date"
-                    />
-                  </label>
-                  <label className={styles.field}>
-                    <span>End date</span>
-                    <input
-                      type="date"
-                      value={dateEnd}
-                      onChange={(e) => setDateEnd(e.target.value)}
-                      aria-label="End date"
-                    />
-                  </label>
-                  {availabilityLoading ? (
-                    <p className={styles.hint}>Checking availability…</p>
-                  ) : availability ? (
-                    <p className={availability.isAvailable ? styles.availOk : styles.availWarn}>
-                      {availability.isAvailable ? "✓ Available" : `⚠ ${availability.reason}`}
-                    </p>
-                  ) : null}
-                  <label className={styles.field}>
-                    <span>Rate override (optional)</span>
-                    <input
-                      type="number"
-                      min={0}
-                      step="0.01"
-                      value={rateQuotedInput}
-                      onChange={(e) => setRateQuotedInput(e.target.value)}
-                      placeholder="Leave blank for the AI-suggested rate"
-                    />
-                  </label>
-                  {/* ponytail: plain optional id field, not a real shoot picker —
-                      no "list shoots for org" query exists yet in app/src/lib/shoot/.
-                      Upgrade path: wire a real shoot search once that's needed. */}
-                  <label className={styles.field}>
-                    <span>Link to a shoot (optional)</span>
-                    <input
-                      type="text"
-                      value={shootId}
-                      onChange={(e) => setShootId(e.target.value)}
-                      placeholder="Shoot ID"
-                    />
-                  </label>
-                  <div className={styles.footer}>
-                    <Link href="/app/matching" className={styles.btnGhost}>
-                      Cancel
-                    </Link>
-                    <button
-                      type="button"
-                      disabled={!canContinueStep0}
-                      onClick={() => setStep(1)}
-                      className={styles.btnPrimary}
-                    >
-                      Continue
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              {step === 1 && (
-                <div className={styles.section}>
-                  <h1 className={styles.title}>AI draft</h1>
-                  <HITLGate message="Review and edit the AI-drafted quote before sending." />
-                  <div>
-                    <button
-                      type="button"
-                      onClick={handleGenerateDraft}
-                      disabled={draftLoading}
-                      className={styles.btnPrimary}
-                    >
-                      {draftLoading ? "Drafting…" : messageDraft ? "Regenerate draft" : "Generate draft"}
-                    </button>
-                  </div>
-                  {messageDraft ? (
-                    <>
-                      <p className={styles.body}>
-                        Suggested rate: {suggestedRate != null ? `$${suggestedRate.toLocaleString()}` : "—"}
-                      </p>
-                      <label className={styles.field}>
-                        <span>Message draft</span>
-                        <textarea
-                          value={messageDraft}
-                          onChange={(e) => setMessageDraft(e.target.value)}
-                          rows={6}
-                          aria-label="Message draft"
+          {step === 2 && (
+            <>
+              <div className={styles.stepHeading}>
+                <h1 className={styles.title}>Rate</h1>
+                <p className={styles.subtitle}>
+                  I drafted a rate from {talent.display_name}&apos;s rate tier. Review before sending.
+                </p>
+              </div>
+              {draftLoading && !draftFetched ? (
+                <p className={styles.hint}>Drafting a rate…</p>
+              ) : (
+                <div className={styles.aiField} data-status={rateFieldStatus}>
+                  <div className={styles.aiFieldHead}>
+                    <div>
+                      <div className={styles.aiFieldLabel}>Day rate</div>
+                      {rateEditing ? (
+                        <input
+                          type="number"
+                          min={0}
+                          step="0.01"
+                          autoFocus
+                          value={rateQuotedInput}
+                          onChange={(e) => setRateQuotedInput(e.target.value)}
+                          className={styles.rateInput}
+                          aria-label="Day rate override"
                         />
-                      </label>
-                    </>
+                      ) : (
+                        <div className={styles.aiFieldValue}>{rateDisplay}</div>
+                      )}
+                    </div>
+                    <span className={styles.aiFieldChip} data-status={rateFieldStatus}>
+                      {rateFieldStatus === "approved" ? "✓ Approved" : "AI draft"}
+                    </span>
+                  </div>
+                  <div className={styles.aiFieldActions}>
+                    {rateEditing ? (
+                      <>
+                        <button type="button" onClick={handleSaveRateEdit} className={styles.aiFieldBtn}>
+                          Save
+                        </button>
+                        <button type="button" onClick={() => setRateEditing(false)} className={styles.aiFieldBtnGhost}>
+                          Cancel
+                        </button>
+                      </>
+                    ) : rateFieldStatus === "pending" ? (
+                      <>
+                        <button type="button" onClick={handleApproveRate} className={styles.aiFieldBtn}>
+                          Approve
+                        </button>
+                        <button type="button" onClick={() => setRateEditing(true)} className={styles.aiFieldBtnGhost}>
+                          Edit
+                        </button>
+                        <button type="button" onClick={() => setRateWhyOpen((v) => !v)} className={styles.aiFieldWhyBtn}>
+                          Why
+                        </button>
+                      </>
+                    ) : (
+                      <button type="button" onClick={() => setRateEditing(true)} className={styles.aiFieldBtnGhost}>
+                        Edit
+                      </button>
+                    )}
+                  </div>
+                  {rateWhyOpen ? (
+                    <div className={styles.aiFieldWhy}>
+                      {talent.rate_tier
+                        ? `Suggested from the ${talent.rate_tier} rate tier — no manual override was set.`
+                        : "No rate tier on file for this talent — suggest an amount manually."}
+                    </div>
                   ) : null}
-                  <div className={styles.footer}>
-                    <button type="button" onClick={() => setStep(0)} className={styles.btnGhost}>
-                      ← Back
-                    </button>
-                    <button
-                      type="button"
-                      disabled={!messageDraft.trim()}
-                      onClick={() => setStep(2)}
-                      className={styles.btnPrimary}
-                    >
-                      Continue
-                    </button>
-                  </div>
                 </div>
               )}
+            </>
+          )}
 
-              {step === 2 && (
-                <div className={styles.section}>
-                  <h1 className={styles.title}>Review & send</h1>
-                  <HITLGate message="This creates a real booking request — the talent will be notified." />
-                  <dl className={styles.summaryList}>
-                    <div>
-                      <dt>Talent</dt>
-                      <dd>{talent.display_name}</dd>
-                    </div>
-                    <div>
-                      <dt>Dates</dt>
-                      <dd>
-                        {dateStart} – {dateEnd}
-                      </dd>
-                    </div>
-                    <div>
-                      <dt>Rate</dt>
-                      <dd>{rateDisplay}</dd>
-                    </div>
-                    {shootId.trim() ? (
-                      <div>
-                        <dt>Shoot</dt>
-                        <dd className={styles.summaryMono}>{shootId.trim()}</dd>
-                      </div>
-                    ) : null}
-                  </dl>
-                  <p className={styles.messagePreview}>{messageDraft}</p>
-                  <div className={styles.footer}>
-                    <button type="button" onClick={() => setStep(0)} className={styles.btnGhost}>
-                      ← Edit
-                    </button>
-                    <button type="button" onClick={handleReject} className={styles.btnReject}>
-                      Reject
-                    </button>
-                    <button
-                      type="button"
-                      disabled={sendLoading}
-                      onClick={handleApprove}
-                      className={styles.btnApprove}
-                    >
-                      {sendLoading ? "Sending…" : "✓ Send request"}
-                    </button>
-                  </div>
+          {step === 3 && (
+            <>
+              <div className={styles.stepHeading}>
+                <h1 className={styles.title}>Message</h1>
+                <p className={styles.subtitle}>A short note to {talent.display_name}. Edit freely.</p>
+              </div>
+              <label className={styles.field}>
+                <span>Message</span>
+                <textarea
+                  value={messageDraft}
+                  onChange={(e) => setMessageDraft(e.target.value)}
+                  rows={6}
+                  aria-label="Message draft"
+                />
+              </label>
+            </>
+          )}
+
+          {step === 4 && (
+            <>
+              <div className={styles.stepHeading}>
+                <h1 className={styles.title}>Review &amp; send</h1>
+                <p className={styles.subtitle}>
+                  This sends a booking <strong>request</strong> — {talent.display_name} can accept or counter.
+                </p>
+              </div>
+              <div className={styles.summaryCard}>
+                <div className={styles.summaryRow}>
+                  <span className={styles.summaryRowLabel}>Talent</span>
+                  <span className={styles.summaryRowValue}>{talent.display_name}</span>
                 </div>
-              )}
+                <div className={styles.summaryRow}>
+                  <span className={styles.summaryRowLabel}>Shoot</span>
+                  <span className={styles.summaryRowValue}>Standalone booking</span>
+                </div>
+                <div className={styles.summaryRow}>
+                  <span className={styles.summaryRowLabel}>Dates</span>
+                  <span className={`${styles.summaryRowValue} ${styles.summaryRowMono}`}>
+                    {dateStart} – {dateEnd}
+                  </span>
+                </div>
+                <div className={styles.summaryRow}>
+                  <span className={styles.summaryRowLabel}>Rate</span>
+                  <span className={`${styles.summaryRowValue} ${styles.summaryRowMono}`}>{rateDisplay}/day</span>
+                </div>
+                <div className={styles.summaryRow}>
+                  <span className={styles.summaryRowLabel}>Status on send</span>
+                  <span className={`${styles.summaryRowValue} ${styles.summaryRowMono}`}>requested</span>
+                </div>
+                <div className={styles.summaryRow}>
+                  <span className={styles.summaryRowLabel}>Request expires</span>
+                  <span className={styles.summaryRowValue}>72 hours after sending</span>
+                </div>
+              </div>
+              <p className={styles.messagePreview}>{messageDraft}</p>
             </>
           )}
         </div>

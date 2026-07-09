@@ -37,6 +37,13 @@ function fetchMock() {
   return vi.fn();
 }
 
+function draftFetch() {
+  return fetchMock().mockResolvedValue({
+    ok: true,
+    json: async () => ({ suggestedRate: 1000, messageDraft: "Hi Maria Rossi, ..." }),
+  });
+}
+
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
@@ -47,18 +54,36 @@ beforeEach(() => {
   rpc.mockResolvedValue({ data: { is_available: true }, error: null });
 });
 
-async function goToDraftStep() {
+function clickNext() {
+  fireEvent.click(screen.getByRole("button", { name: /Continue|Send booking request/ }));
+}
+
+async function goToDatesStep() {
+  clickNext(); // talent & shoot -> dates
+}
+
+async function goToRateStep() {
+  await goToDatesStep();
   fireEvent.change(screen.getByLabelText("Start date"), { target: { value: "2026-08-01" } });
   fireEvent.change(screen.getByLabelText("End date"), { target: { value: "2026-08-03" } });
   await waitFor(() => expect(rpc).toHaveBeenCalled());
-  fireEvent.click(screen.getByRole("button", { name: "Continue" }));
+  clickNext(); // dates -> rate
+  await waitFor(() => expect(screen.getByRole("heading", { name: "Rate" })).toBeDefined());
 }
 
-async function goToReviewStep(fetchImpl: ReturnType<typeof fetchMock>) {
-  await goToDraftStep();
-  fireEvent.click(screen.getByRole("button", { name: "Generate draft" }));
+async function approveRateAndGoToMessage(fetchFn: ReturnType<typeof fetchMock>) {
+  await goToRateStep();
+  await waitFor(() => expect(fetchFn).toHaveBeenCalledWith("/api/bookings/quote-draft", expect.anything()));
+  await waitFor(() => expect(screen.getByText("Approve")).toBeDefined());
+  fireEvent.click(screen.getByText("Approve"));
+  clickNext(); // rate -> message
   await waitFor(() => expect(screen.getByLabelText("Message draft")).toBeDefined());
-  fireEvent.click(screen.getByRole("button", { name: "Continue" }));
+}
+
+async function goToReviewStep(fetchFn: ReturnType<typeof fetchMock>) {
+  await approveRateAndGoToMessage(fetchFn);
+  clickNext(); // message -> review
+  await waitFor(() => expect(screen.getByRole("heading", { name: "Review & send" })).toBeDefined());
 }
 
 describe("BookingWizardWorkspace", () => {
@@ -69,25 +94,30 @@ describe("BookingWizardWorkspace", () => {
     expect(refresh).toHaveBeenCalled();
   });
 
-  it("renders the talent name/rate tier and starts on the Dates & rate step", () => {
+  it("renders the talent name in the topbar and starts on Talent & shoot with Standalone pre-selected", () => {
     render(<BookingWizardWorkspace talent={TALENT} talentId={TALENT.id} orgId={ORG_ID} fetchError={null} />);
-    expect(screen.getByText("Maria Rossi")).toBeDefined();
-    expect(screen.getByText("$$ rate tier")).toBeDefined();
-    expect(screen.getByText(/Step 1 of 3/)).toBeDefined();
+    expect(screen.getAllByText("Maria Rossi").length).toBeGreaterThan(0);
+    expect(screen.getByText(/Step 1 of 5/)).toBeDefined();
+    const standalone = screen.getByText("Standalone booking").closest("button");
+    expect(standalone?.getAttribute("data-selected")).toBe("true");
+    const existing = screen.getByText("Link to an existing shoot").closest("button");
+    expect(existing?.hasAttribute("disabled")).toBe(true);
   });
 
-  it("disables Continue on step 0 until a valid date range is set", () => {
+  it("disables Continue on the Dates step until a valid date range is set", async () => {
     render(<BookingWizardWorkspace talent={TALENT} talentId={TALENT.id} orgId={ORG_ID} fetchError={null} />);
-    const continueBtn = screen.getByRole("button", { name: "Continue" });
-    expect(continueBtn.hasAttribute("disabled")).toBe(true);
+    await goToDatesStep();
+    const nextBtn = screen.getByRole("button", { name: "Continue" });
+    expect(nextBtn.hasAttribute("disabled")).toBe(true);
 
-    fireEvent.change(screen.getByLabelText("Start date"), { target: { value: "2026-08-05" } });
-    fireEvent.change(screen.getByLabelText("End date"), { target: { value: "2026-08-01" } });
-    expect(continueBtn.hasAttribute("disabled")).toBe(true);
+    fireEvent.change(screen.getByLabelText("Start date"), { target: { value: "2026-08-01" } });
+    fireEvent.change(screen.getByLabelText("End date"), { target: { value: "2026-08-03" } });
+    await waitFor(() => expect(nextBtn.hasAttribute("disabled")).toBe(false));
   });
 
   it("checks live availability via check_talent_availability once both dates are valid", async () => {
     render(<BookingWizardWorkspace talent={TALENT} talentId={TALENT.id} orgId={ORG_ID} fetchError={null} />);
+    await goToDatesStep();
     fireEvent.change(screen.getByLabelText("Start date"), { target: { value: "2026-08-01" } });
     fireEvent.change(screen.getByLabelText("End date"), { target: { value: "2026-08-03" } });
     await waitFor(() =>
@@ -97,21 +127,14 @@ describe("BookingWizardWorkspace", () => {
         p_date_end: "2026-08-03",
       }),
     );
-    expect(await screen.findByText("✓ Available")).toBeDefined();
+    expect(await screen.findByText(/available/)).toBeDefined();
   });
 
-  it("generates an AI draft via /api/bookings/quote-draft and pre-fills the message", async () => {
-    const fetchFn = fetchMock().mockResolvedValue({
-      ok: true,
-      json: async () => ({ suggestedRate: 1000, messageDraft: "Hi Maria Rossi, ..." }),
-    });
+  it("auto-drafts a rate on arriving at the Rate step, and gates Continue until Approved", async () => {
+    const fetchFn = draftFetch();
     vi.stubGlobal("fetch", fetchFn);
-
     render(<BookingWizardWorkspace talent={TALENT} talentId={TALENT.id} orgId={ORG_ID} fetchError={null} />);
-    await goToDraftStep();
-
-    fireEvent.click(screen.getByRole("button", { name: "Generate draft" }));
-    await waitFor(() => expect(screen.getByLabelText("Message draft")).toBeDefined());
+    await goToRateStep();
 
     expect(fetchFn).toHaveBeenCalledWith(
       "/api/bookings/quote-draft",
@@ -119,16 +142,41 @@ describe("BookingWizardWorkspace", () => {
     );
     const [, options] = fetchFn.mock.calls[0];
     const body = JSON.parse(options.body);
-    expect(body).toMatchObject({
-      displayName: "Maria Rossi",
-      dateStart: "2026-08-01",
-      dateEnd: "2026-08-03",
-      rateTier: "$$",
-    });
-    expect(screen.getByText("Suggested rate: $1,000")).toBeDefined();
+    expect(body).toMatchObject({ displayName: "Maria Rossi", dateStart: "2026-08-01", dateEnd: "2026-08-03", rateTier: "$$" });
+
+    await waitFor(() => expect(screen.getByText("$1,000")).toBeDefined());
+    const nextBtn = screen.getByRole("button", { name: "Continue" });
+    expect(nextBtn.hasAttribute("disabled")).toBe(true);
+
+    fireEvent.click(screen.getByText("Approve"));
+    expect(nextBtn.hasAttribute("disabled")).toBe(false);
+    expect(screen.getByText("✓ Approved")).toBeDefined();
   });
 
-  it("never calls POST /api/bookings before the operator explicitly clicks Send request", async () => {
+  it("lets the operator edit the rate, which also counts as approval", async () => {
+    const fetchFn = draftFetch();
+    vi.stubGlobal("fetch", fetchFn);
+    render(<BookingWizardWorkspace talent={TALENT} talentId={TALENT.id} orgId={ORG_ID} fetchError={null} />);
+    await goToRateStep();
+    await waitFor(() => expect(screen.getByText("Approve")).toBeDefined());
+
+    fireEvent.click(screen.getByText("Edit"));
+    fireEvent.change(screen.getByLabelText("Day rate override"), { target: { value: "1500" } });
+    fireEvent.click(screen.getByText("Save"));
+
+    expect(screen.getByText("✓ Approved")).toBeDefined();
+    expect(screen.getByRole("button", { name: "Continue" }).hasAttribute("disabled")).toBe(false);
+  });
+
+  it("pre-fills the Message step with the drafted message", async () => {
+    const fetchFn = draftFetch();
+    vi.stubGlobal("fetch", fetchFn);
+    render(<BookingWizardWorkspace talent={TALENT} talentId={TALENT.id} orgId={ORG_ID} fetchError={null} />);
+    await approveRateAndGoToMessage(fetchFn);
+    expect((screen.getByLabelText("Message draft") as HTMLTextAreaElement).value).toBe("Hi Maria Rossi, ...");
+  });
+
+  it("never calls POST /api/bookings before the operator explicitly clicks Send", async () => {
     const fetchFn = fetchMock().mockImplementation((url: string) => {
       if (url === "/api/bookings/quote-draft") {
         return Promise.resolve({ ok: true, json: async () => ({ suggestedRate: 1000, messageDraft: "Draft text" }) });
@@ -136,17 +184,14 @@ describe("BookingWizardWorkspace", () => {
       throw new Error(`Unexpected fetch to ${url}`);
     });
     vi.stubGlobal("fetch", fetchFn);
-
     render(<BookingWizardWorkspace talent={TALENT} talentId={TALENT.id} orgId={ORG_ID} fetchError={null} />);
     await goToReviewStep(fetchFn);
 
-    // Reached the review step — confirm no write RPC/API has fired yet.
-    expect(screen.getByRole("heading", { name: "Review & send" })).toBeDefined();
     const bookingsCalls = fetchFn.mock.calls.filter(([url]: [string]) => url === "/api/bookings");
     expect(bookingsCalls).toHaveLength(0);
   });
 
-  it("creates the booking via live POST /api/bookings only after Send request, and shows the requested confirmation", async () => {
+  it("sends the booking via live POST /api/bookings only after Send, with the correct payload", async () => {
     const fetchFn = fetchMock().mockImplementation((url: string) => {
       if (url === "/api/bookings/quote-draft") {
         return Promise.resolve({ ok: true, json: async () => ({ suggestedRate: 1000, messageDraft: "Draft text" }) });
@@ -154,17 +199,21 @@ describe("BookingWizardWorkspace", () => {
       if (url === "/api/bookings") {
         return Promise.resolve({
           ok: true,
-          json: async () => ({ booking_id: "33333333-3333-4333-8333-333333333333", status: "requested", version: 1, expires_at: "2026-08-10T00:00:00.000Z" }),
+          json: async () => ({
+            booking_id: "33333333-3333-4333-8333-333333333333",
+            status: "requested",
+            version: 1,
+            expires_at: "2026-08-10T00:00:00.000Z",
+          }),
         });
       }
       throw new Error(`Unexpected fetch to ${url}`);
     });
     vi.stubGlobal("fetch", fetchFn);
-
     render(<BookingWizardWorkspace talent={TALENT} talentId={TALENT.id} orgId={ORG_ID} fetchError={null} />);
     await goToReviewStep(fetchFn);
 
-    fireEvent.click(screen.getByRole("button", { name: "✓ Send request" }));
+    fireEvent.click(screen.getByRole("button", { name: "Send booking request" }));
     await waitFor(() => expect(screen.getByText("Booking requested")).toBeDefined());
 
     const bookingsCall = fetchFn.mock.calls.find(([url]: [string]) => url === "/api/bookings");
@@ -183,40 +232,28 @@ describe("BookingWizardWorkspace", () => {
     expect(screen.getByText("33333333-3333-4333-8333-333333333333")).toBeDefined();
   });
 
-  it("Reject shows a clean cancelled state without ever calling POST /api/bookings", async () => {
-    const fetchFn = fetchMock().mockImplementation((url: string) => {
-      if (url === "/api/bookings/quote-draft") {
-        return Promise.resolve({ ok: true, json: async () => ({ suggestedRate: 1000, messageDraft: "Draft text" }) });
-      }
-      throw new Error(`Unexpected fetch to ${url}`);
-    });
+  it("'Don't send — cancel' shows a clean cancelled state without ever calling POST /api/bookings", async () => {
+    const fetchFn = draftFetch();
     vi.stubGlobal("fetch", fetchFn);
-
     render(<BookingWizardWorkspace talent={TALENT} talentId={TALENT.id} orgId={ORG_ID} fetchError={null} />);
     await goToReviewStep(fetchFn);
 
-    fireEvent.click(screen.getByRole("button", { name: "Reject" }));
+    fireEvent.click(screen.getByText("Don't send — cancel"));
     expect(screen.getByText("Request not sent")).toBeDefined();
     expect(fetchFn.mock.calls.some(([url]: [string]) => url === "/api/bookings")).toBe(false);
   });
 
-  it("Edit from the review step returns to Dates & rate with the draft preserved", async () => {
-    const fetchFn = fetchMock().mockResolvedValue({
-      ok: true,
-      json: async () => ({ suggestedRate: 1000, messageDraft: "Draft text" }),
-    });
+  it("Back preserves rate approval and message edits when returning to Review", async () => {
+    const fetchFn = draftFetch();
     vi.stubGlobal("fetch", fetchFn);
-
     render(<BookingWizardWorkspace talent={TALENT} talentId={TALENT.id} orgId={ORG_ID} fetchError={null} />);
     await goToReviewStep(fetchFn);
 
-    fireEvent.click(screen.getByRole("button", { name: "← Edit" }));
-    expect(screen.getByText(/Step 1 of 3/)).toBeDefined();
+    fireEvent.click(screen.getByRole("button", { name: "Back" }));
+    expect(screen.getByText(/Step 4 of 5/)).toBeDefined();
+    fireEvent.change(screen.getByLabelText("Message draft"), { target: { value: "Edited message" } });
+    fireEvent.click(screen.getByRole("button", { name: "Continue" }));
 
-    // Draft state survives the round trip back through step 1.
-    fireEvent.click(screen.getByRole("button", { name: "Continue" }));
-    expect(screen.getByText(/Step 2 of 3/)).toBeDefined();
-    fireEvent.click(screen.getByRole("button", { name: "Continue" }));
-    expect(screen.getByText("Draft text")).toBeDefined();
+    expect(screen.getByText("Edited message")).toBeDefined();
   });
 });
