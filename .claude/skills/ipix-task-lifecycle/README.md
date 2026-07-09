@@ -2,7 +2,7 @@
 
 Five-phase orchestrator for **iPix / FashionOS** Linear team **IPI**: plan → research → implement → test → ship.
 
-**Entry:** [SKILL.md](./SKILL.md)
+**Hub:** [SKILL.md](./SKILL.md) v1.8.0
 
 ---
 
@@ -10,9 +10,9 @@ Five-phase orchestrator for **iPix / FashionOS** Linear team **IPI**: plan → r
 
 | Phase | Goal | Key refs |
 |-------|------|----------|
-| 1 Plan | Linear steps, AC, skills | [linear-issue-steps.md](./references/linear-issue-steps.md) |
+| 1 Plan | Linear steps, AC, **domain skills** | [domain-skill-routing.md](./references/domain-skill-routing.md) · [linear-issue-steps.md](./references/linear-issue-steps.md) |
 | 2 Research | MCP probes, graphify | [task-verifier](../task-verifier/SKILL.md) readiness |
-| 3 Implement | Worktree + domain skills | [worktrees](../worktrees/SKILL.md) |
+| 3 Implement | Worktree + **Step 1b gate** + domain skills | [implementation.md](./implementation.md) · [worktrees](../worktrees/SKILL.md) |
 | 4 Verify | Area matrix | [per-task-testing.md](./references/per-task-testing.md) |
 | 5 Ship | PR + Linear Done | [pr-workflow](../pr-workflow/SKILL.md) |
 

@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script>
+window.__LU={
+ building:'<rect width="16" height="20" x="4" y="2" rx="2"/><path d="M9 22v-4h6v4"/><path d="M8 6h.01"/><path d="M16 6h.01"/><path d="M12 6h.01"/><path d="M12 10h.01"/><path d="M12 14h.01"/><path d="M16 10h.01"/><path d="M16 14h.01"/><path d="M8 10h.01"/><path d="M8 14h.01"/>',
+ users:'<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>',
+ "git-branch":'<line x1="6" x2="6" y1="3" y2="15"/><circle cx="18" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M18 9a9 9 0 0 1-9 9"/>',
+ home:'<path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M9 22V12h6v10"/>',
+ inbox:'<polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/>',
+ sparkles:'<path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .962 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.962 0z"/><path d="M20 3v4"/><path d="M22 5h-4"/><path d="M4 17v2"/><path d="M5 18H3"/>',
+ "chevron-down":'<path d="m6 9 6 6 6-6"/>', "arrow-up":'<path d="m5 12 7-7 7 7"/><path d="M12 19V5"/>',
+ lock:'<rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>',
+ clock:'<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>',
+ "alert-triangle":'<path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3z"/><line x1="12" x2="12" y1="9" y2="13"/><line x1="12" x2="12.01" y1="17" y2="17"/>'
+};
+(function(){ if(customElements.get('lu-ic'))return;
+ class LuIc extends HTMLElement{ static get observedAttributes(){return ['name'];}
+  connectedCallback(){this._r();} attributeChangedCallback(){this._r();}
+  _r(){ var n=this.getAttribute('name');var inner=(window.__LU||{})[n];if(inner==null)return;
+   this.style.display='inline-flex';this.style.alignItems='center';this.style.justifyContent='center';
+   var root=this.shadowRoot||this.attachShadow({mode:'open'});
+   root.innerHTML='<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="100%" height="100%" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:block">'+inner+'</svg>';
+  } }
+ customElements.define('lu-ic',LuIc);
+})();
+</script>
+<style>
+  :root{--bg:#fff;--surface:#fafafa;--muted-bg:#f5f5f5;--border:#e5e7eb;--border-strong:#d1d5db;--border-subtle:#ededed;--text:#111;--text-2:#6b7280;--text-3:#9ca3af;--action:#111;--lead:#6b7280;--qualified:#2563eb;--proposal:#7c3aed;--negotiation:#d97706;--won:#059669;--lost:#b91c1c;--approval:#d97706;--approval-bg:#fef3e2;--font:"Inter",sans-serif;--mono:"Geist Mono",Menlo,monospace;--r-sm:6px;--r-md:10px;--r-lg:16px;--r-pill:9999px;}
+  *{box-sizing:border-box;}body{margin:0;font-family:var(--font);color:var(--text);background:var(--surface);-webkit-font-smoothing:antialiased;}
+  .tnum{font-variant-numeric:tabular-nums;}::-webkit-scrollbar{width:8px;height:8px;}::-webkit-scrollbar-thumb{background:var(--border-strong);border-radius:4px;}
+</style>
+</helmet>
+<div style="display:grid;grid-template-columns:56px minmax(0,1fr) 320px;height:100vh;width:100vw;background:var(--bg);overflow:hidden;">
+  <nav style="background:var(--bg);border-right:1px solid var(--border);display:flex;flex-direction:column;align-items:center;padding:14px 0;gap:4px;">
+    <div style="width:30px;height:30px;border-radius:8px;background:var(--action);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;margin-bottom:12px;">i</div>
+    <sc-for list="{{ nav }}" as="n" hint-placeholder-count="5"><div title="{{ n.label }}" style="{{ n.style }}"><lu-ic name="{{ n.icon }}" style="width:20px;height:20px;"></lu-ic></div></sc-for>
+  </nav>
+
+  <main style="display:flex;flex-direction:column;min-width:0;min-height:0;height:100vh;overflow:hidden;">
+    <div style="flex-shrink:0;padding:20px 26px 0;">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px;">
+        <div>
+          <div style="display:flex;align-items:center;gap:10px;"><h1 style="margin:0;font-size:24px;font-weight:700;letter-spacing:-.02em;">Pipeline</h1><span style="font-family:var(--mono);font-size:15px;font-weight:600;color:var(--text-2);">£52,000</span><span style="display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:var(--r-pill);background:var(--approval-bg);border:1px solid #f4d9ad;font-size:11px;font-weight:600;color:var(--approval);">Sample data — not live</span></div>
+          <p style="margin:4px 0 0;font-size:13px;color:var(--text-2);">8 deals · drag between stages · <span style="color:var(--approval);font-weight:600;">Won / Lost require approval</span></p>
+        </div>
+        <div style="display:flex;gap:8px;">
+          <button style="display:flex;align-items:center;gap:5px;padding:8px 11px;border-radius:var(--r-md);border:1px solid var(--border-strong);background:var(--bg);font-family:var(--font);font-size:13px;font-weight:500;color:var(--text-2);cursor:pointer;">Owner<lu-ic name="chevron-down" style="width:13px;height:13px;opacity:.6;"></lu-ic></button>
+          <button onClick="{{ toggleAtRisk }}" style="{{ atRiskStyle }}"><lu-ic name="alert-triangle" style="width:13px;height:13px;"></lu-ic>At risk only</button>
+        </div>
+      </div>
+    </div>
+
+    <div style="flex:1;overflow-x:auto;overflow-y:hidden;padding:16px 26px 20px;min-height:0;">
+      <div style="display:flex;gap:12px;height:100%;min-width:min-content;">
+        <sc-for list="{{ columns }}" as="col" hint-placeholder-count="6">
+          <div style="width:210px;flex-shrink:0;display:flex;flex-direction:column;background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);overflow:hidden;">
+            <div style="padding:11px 13px;border-bottom:1px solid var(--border);">
+              <div style="display:flex;align-items:center;justify-content:space-between;"><div style="display:flex;align-items:center;gap:6px;"><span style="width:8px;height:8px;border-radius:50%;background:{{ col.color }};"></span><span style="font-size:12px;font-weight:700;">{{ col.label }}</span><sc-if value="{{ col.locked }}" hint-placeholder-val="{{ false }}"><lu-ic name="lock" style="width:11px;height:11px;color:var(--text-3);"></lu-ic></sc-if></div><span style="font-family:var(--mono);font-size:11px;font-weight:600;color:var(--text-3);">{{ col.count }}</span></div>
+              <div style="font-family:var(--mono);font-size:11px;color:var(--text-3);margin-top:3px;">{{ col.value }}</div>
+            </div>
+            <div style="flex:1;overflow-y:auto;padding:9px;display:flex;flex-direction:column;gap:8px;">
+              <sc-if value="{{ col.gated }}" hint-placeholder-val="{{ false }}"><div style="font-size:10px;color:var(--approval);background:var(--approval-bg);border:1px solid #f4d9ad;border-radius:var(--r-sm);padding:6px 8px;text-align:center;font-weight:600;">Enter via approval only</div></sc-if>
+              <sc-for list="{{ col.deals }}" as="d" hint-placeholder-count="2">
+                <div onClick="{{ d.onSelect }}" style="{{ d.cardStyle }}">
+                  <div style="font-size:12px;font-weight:600;margin-bottom:5px;">{{ d.company }}</div>
+                  <div style="font-family:var(--mono);font-size:15px;font-weight:600;margin-bottom:7px;">{{ d.value }}</div>
+                  <div style="display:flex;align-items:center;justify-content:space-between;">
+                    <span style="{{ d.riskStyle }}"><span style="width:5px;height:5px;border-radius:50%;background:{{ d.riskColor }};"></span>{{ d.riskLabel }}</span>
+                    <span style="display:flex;align-items:center;gap:3px;font-size:10px;color:var(--text-3);"><lu-ic name="clock" style="width:11px;height:11px;"></lu-ic>{{ d.days }}</span>
+                  </div>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+
+    <div style="flex-shrink:0;border-top:1px solid var(--border);background:var(--bg);padding:10px 26px 14px;">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;"><lu-ic name="sparkles" style="width:14px;height:14px;color:var(--qualified);"></lu-ic><span style="font-size:12px;color:var(--text-2);">3 deals have had no activity in 10+ days — want me to draft follow-ups for all three?</span><span style="font-size:10px;font-weight:600;color:var(--text-3);border:1px solid var(--border);border-radius:var(--r-pill);padding:2px 7px;">crm-assistant · not yet wired</span></div>
+      <div style="display:flex;align-items:center;gap:8px;border:1px solid var(--border-strong);border-radius:var(--r-pill);padding:8px 8px 8px 14px;"><input type="text" placeholder="Ask about your pipeline…" style="flex:1;min-width:0;border:none;outline:none;background:none;font-family:var(--font);font-size:13px;" /><button style="width:30px;height:30px;border-radius:50%;border:none;background:var(--action);color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;"><lu-ic name="arrow-up" style="width:15px;height:15px;"></lu-ic></button></div>
+    </div>
+  </main>
+
+  <aside style="background:var(--surface);border-left:1px solid var(--border);display:flex;flex-direction:column;min-height:0;overflow-y:auto;">
+    <div style="padding:16px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;"><lu-ic name="sparkles" style="width:15px;height:15px;color:var(--qualified);"></lu-ic><span style="font-size:13px;font-weight:700;">Intelligence</span></div>
+    <sc-if value="{{ hasSelection }}" hint-placeholder-val="{{ false }}">
+      <div style="padding:16px 18px;">
+        <div style="font-size:14px;font-weight:700;margin-bottom:2px;">{{ sel.company }}</div>
+        <div style="font-family:var(--mono);font-size:13px;color:var(--text-2);margin-bottom:14px;">{{ sel.value }} · {{ sel.stage }}</div>
+        <div style="border:1px solid var(--border-subtle);border-radius:var(--r-md);background:var(--bg);padding:12px;margin-bottom:12px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;"><span style="font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--text-3);">Health score</span><span style="font-size:12px;font-weight:700;color:{{ sel.riskColor }};">{{ sel.riskLabel }}</span></div>
+          <sc-for list="{{ sel.factors }}" as="f" hint-placeholder-count="3"><div style="margin-bottom:7px;"><div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:3px;"><span style="color:var(--text-2);">{{ f.label }}</span><span style="font-weight:600;">{{ f.val }}</span></div><div style="height:5px;border-radius:3px;background:var(--muted-bg);overflow:hidden;"><div style="height:100%;width:{{ f.pct }};background:{{ f.color }};border-radius:3px;"></div></div></div></sc-for>
+        </div>
+        <div style="border:1px solid var(--border-subtle);border-radius:var(--r-md);background:var(--bg);padding:11px 12px;margin-bottom:14px;"><div style="font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--text-3);margin-bottom:5px;">Next best action</div><div style="font-size:12px;line-height:1.5;">{{ sel.nba }}</div></div>
+        <button style="width:100%;padding:10px;border-radius:var(--r-md);border:none;background:var(--action);color:#fff;font-family:var(--font);font-size:13px;font-weight:600;cursor:pointer;">Open deal</button>
+      </div>
+    </sc-if>
+    <sc-if value="{{ noSelection }}" hint-placeholder-val="{{ true }}">
+      <div style="padding:20px 18px;"><div style="border:1px solid var(--border-subtle);border-radius:var(--r-md);background:var(--bg);padding:12px;margin-bottom:12px;"><div style="font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--text-3);margin-bottom:5px;">Board health</div><div style="font-size:12px;line-height:1.55;">8 deals · £52k. 2 flagged at risk (quiet 10+ days). Best next move: the Nord Apparel proposal.</div></div><div style="margin-top:8px;font-size:11px;color:var(--text-3);text-align:center;">Select a deal for its health breakdown</div></div>
+    </sc-if>
+  </aside>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1360,&quot;height&quot;:840}}">
+class Component extends DCLogic {
+  state = { selected:null, atRisk:false };
+  renderVals(){
+    const nav = [
+      { icon:'home', label:'Home' }, { icon:'building', label:'CRM · Companies' },
+      { icon:'users', label:'CRM · Contacts' }, { icon:'git-branch', label:'CRM · Pipeline', active:true }, { icon:'inbox', label:'Inbox' }
+    ].map(n => ({ ...n, style:'width:38px;height:38px;border-radius:9px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:'+(n.active?'#fff':'var(--text-3)')+';background:'+(n.active?'var(--action)':'transparent')+';' }));
+
+    const ST = { lead:'var(--lead)', qualified:'var(--qualified)', proposal:'var(--proposal)', negotiation:'var(--negotiation)', won:'var(--won)', lost:'var(--lost)' };
+    const risk = (r) => r==='at_risk' ? { c:'var(--lost)', l:'At risk' } : r==='watch' ? { c:'var(--approval)', l:'Watch' } : { c:'var(--won)', l:'On track' };
+    const riskChip = (c) => 'display:inline-flex;align-items:center;gap:4px;font-size:10px;font-weight:600;color:var(--text-2);';
+
+    const deals = [
+      { id:0, company:'Acme Athletic', value:'£8,000', stage:'proposal', days:'3d', risk:'on_track' },
+      { id:1, company:'Orbit Denim', value:'£20,000', stage:'negotiation', days:'2d', risk:'on_track' },
+      { id:2, company:'Vega Studios', value:'£12,000', stage:'qualified', days:'6d', risk:'watch' },
+      { id:3, company:'Nord Apparel', value:'£4,000', stage:'proposal', days:'12d', risk:'at_risk' },
+      { id:4, company:'Kestrel Wear', value:'£6,000', stage:'lead', days:'1d', risk:'on_track' },
+      { id:5, company:'Pace Co.', value:'£2,000', stage:'lead', days:'14d', risk:'at_risk' },
+      { id:6, company:'Sable Studio', value:'£9,000', stage:'qualified', days:'4d', risk:'on_track' }
+    ];
+
+    const stages = [['lead','Lead'],['qualified','Qualified'],['proposal','Proposal'],['negotiation','Negotiation'],['won','Won'],['lost','Lost']];
+    const visible = this.state.atRisk ? deals.filter(d=>d.risk==='at_risk') : deals;
+
+    const columns = stages.map(([key,label]) => {
+      const cd = visible.filter(d=>d.stage===key);
+      const total = cd.reduce((s,d)=>s+parseInt(d.value.replace(/[^0-9]/g,'')),0);
+      const cards = cd.map(d => { const rk = risk(d.risk); return {
+        company:d.company, value:d.value,
+        riskLabel:rk.l, riskColor:rk.c, riskStyle:riskChip(), days:d.days,
+        cardStyle:'background:var(--bg);border:1px solid '+(this.state.selected===d.id?'var(--action)':'var(--border)')+';border-radius:var(--r-md);padding:10px 11px;cursor:pointer;',
+        onSelect:()=>this.setState({selected:d.id}) }; });
+      return { label, color:ST[key], count:cd.length, value: total? '£'+total.toLocaleString() : '—',
+        locked:(key==='won'||key==='lost'), gated:(key==='won'||key==='lost')&&cd.length===0, deals:cards };
+    });
+
+    const s = deals.find(d=>d.id===this.state.selected);
+    const sk = s ? risk(s.risk) : null;
+    const sel = s ? { company:s.company, value:s.value, stage:s.stage.charAt(0).toUpperCase()+s.stage.slice(1),
+      riskLabel:sk.l, riskColor:sk.c,
+      factors:[
+        { label:'Recency of contact', val:s.risk==='at_risk'?'Low':'Good', pct:s.risk==='at_risk'?'25%':'85%', color:s.risk==='at_risk'?'var(--lost)':'var(--won)' },
+        { label:'Stage velocity', val:'On pace', pct:'70%', color:'var(--won)' },
+        { label:'Engagement', val:s.risk==='watch'?'Fair':'Strong', pct:s.risk==='watch'?'55%':'80%', color:s.risk==='watch'?'var(--approval)':'var(--won)' }
+      ],
+      nba: s.risk==='at_risk' ? 'Draft a follow-up — quiet '+s.days+', deal is slipping.' : 'Advance to the next stage; signals are healthy.' } : {};
+
+    return { nav, columns, sel,
+      hasSelection:this.state.selected!==null, noSelection:this.state.selected===null,
+      toggleAtRisk:()=>this.setState(st=>({atRisk:!st.atRisk, selected:null})),
+      atRiskStyle:'display:flex;align-items:center;gap:5px;padding:8px 11px;border-radius:var(--r-md);border:1px solid '+(this.state.atRisk?'var(--lost)':'var(--border-strong)')+';background:'+(this.state.atRisk?'#fdeaea':'var(--bg)')+';font-family:var(--font);font-size:13px;font-weight:600;color:'+(this.state.atRisk?'var(--lost)':'var(--text-2)')+';cursor:pointer;' };
+  }
+}
+</script>
+</body>
+</html>

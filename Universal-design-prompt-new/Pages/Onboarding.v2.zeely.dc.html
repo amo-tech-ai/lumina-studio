@@ -1,0 +1,615 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --onb-bg:#000000; --onb-motif:#0E1A12; --onb-card:#FFFFFF; --onb-ink:#0A0A0A;
+    --onb-sub:#5C5C5C; --onb-muted:#9E9E9E; --onb-hair:#ECECEC;
+    --onb-accent:#16E07D; --onb-accent-tint:#E8FBF1; --onb-accent-line:#9BE9C4; --onb-accent-ink:#0B7A43;
+    --onb-cta:#000000; --onb-weak:#B45309;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;background:var(--onb-bg);font-family:Inter,-apple-system,sans-serif;-webkit-font-smoothing:antialiased;}
+  button{font-family:inherit;}
+  @keyframes onbBlink{0%,49%{opacity:1}50%,100%{opacity:0}}
+  @keyframes onbSlide{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+  @keyframes onbPulse{0%,100%{opacity:.35;transform:scale(.8)}50%{opacity:1;transform:scale(1)}}
+  @keyframes onbFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-7px)}}
+</style>
+</helmet>
+<div style="position:fixed; inset:0; overflow-y:auto; background:var(--onb-bg);">
+
+  <!-- striped globe motif -->
+  <div style="position:fixed; inset:0; display:flex; align-items:flex-start; justify-content:center; pointer-events:none; z-index:0;">
+    <div style="width:min(125vw,1180px); aspect-ratio:1; margin-top:2vh; border-radius:50%; background:repeating-linear-gradient(to bottom, var(--onb-motif) 0 20px, transparent 20px 42px); -webkit-mask:radial-gradient(circle, #000 58%, transparent 72%); mask:radial-gradient(circle, #000 58%, transparent 72%); transform:translateY(-4%);"></div>
+  </div>
+
+  <!-- full-bleed photo layer (welcome / payoff) -->
+  <sc-if value="{{ showPhotoBg }}" hint-placeholder-val="{{ false }}">
+    <div style="position:fixed; inset:0; z-index:0;">
+      <div style="width:100%; height:100%; background-image:url({{ bgPhoto }}); background-size:cover; background-position:center;"></div>
+      <div style="position:absolute; inset:0; background:rgba(0,0,0,.5);"></div>
+    </div>
+  </sc-if>
+
+  <!-- top chrome -->
+  <div style="position:fixed; top:0; left:0; right:0; z-index:20; padding:18px 26px 0;">
+    <div style="display:flex; align-items:center; max-width:1320px; margin:0 auto;">
+      <div style="flex:1; display:flex;">
+        <sc-if value="{{ canBack }}" hint-placeholder-val="{{ false }}">
+          <button onClick="{{ back }}" aria-label="Back" style="width:34px; height:34px; display:flex; align-items:center; justify-content:center; background:none; border:0; cursor:pointer;">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
+          </button>
+        </sc-if>
+      </div>
+      <div style="flex:0 0 auto; display:flex; align-items:center; gap:8px;">
+        <span style="width:18px; height:18px; border-radius:50%; background:repeating-linear-gradient(115deg,#fff 0 2px,#000 2px 4px); display:inline-block;"></span>
+        <span style="font:700 17px Inter; color:#fff; letter-spacing:-.01em;">FashionOS</span>
+      </div>
+      <div style="flex:1; display:flex; justify-content:flex-end;">
+        <sc-if value="{{ canSkip }}" hint-placeholder-val="{{ false }}">
+          <button onClick="{{ next }}" style="background:none; border:0; cursor:pointer; font:500 13px Inter; color:rgba(255,255,255,.55);">Skip for now</button>
+        </sc-if>
+      </div>
+    </div>
+    <!-- progress -->
+    <div style="display:flex; gap:7px; max-width:1320px; margin:14px auto 0;">
+      <div style="flex:1; height:3px; border-radius:3px; background:#2A2A2A; overflow:hidden;"><div style="height:100%; background:var(--onb-accent); border-radius:3px; width:{{ seg1 }}; transition:width .4s ease;"></div></div>
+      <div style="flex:1; height:3px; border-radius:3px; background:#2A2A2A; overflow:hidden;"><div style="height:100%; background:var(--onb-accent); border-radius:3px; width:{{ seg2 }}; transition:width .4s ease;"></div></div>
+      <div style="flex:1; height:3px; border-radius:3px; background:#2A2A2A; overflow:hidden;"><div style="height:100%; background:var(--onb-accent); border-radius:3px; width:{{ seg3 }}; transition:width .4s ease;"></div></div>
+    </div>
+    <div style="text-align:center; margin-top:8px; font:500 12px Inter; color:var(--onb-muted);">{{ screen }} / 13</div>
+  </div>
+
+  <!-- stage -->
+  <div style="position:relative; z-index:10; min-height:100vh; display:flex; align-items:center; justify-content:center; padding:118px 20px 96px;">
+
+    <!-- SCREEN 1 — social proof welcome -->
+    <sc-if value="{{ is1 }}" hint-placeholder-val="{{ false }}">
+      <div style="width:100%; max-width:480px; background:var(--onb-card); border-radius:28px; padding:32px; box-shadow:0 24px 60px rgba(0,0,0,.4);">
+        <h1 style="font:800 28px/1.15 Inter; color:var(--onb-ink); letter-spacing:-.025em; margin:0;">We've helped 10,000+ fashion brands launch</h1>
+        <div style="display:grid; grid-template-columns:repeat(5,1fr); gap:8px; margin:22px 0 6px;">
+          <sc-for list="{{ proofTiles }}" as="t">
+            <div style="position:relative; aspect-ratio:1; border-radius:11px; overflow:hidden; background:#f0f0f0;">
+              <div style="width:100%; height:100%; background-image:url({{ t.img }}); background-size:cover; background-position:center;"></div>
+              <span style="position:absolute; left:4px; bottom:4px; padding:1px 5px; border-radius:6px; background:rgba(0,0,0,.72); color:#fff; font:600 8px Inter;">{{ t.sales }}</span>
+            </div>
+          </sc-for>
+        </div>
+        <p style="text-align:center; font:500 12px Inter; color:var(--onb-muted); margin:20px 0 10px;">Featured in</p>
+        <div style="display:flex; align-items:center; justify-content:center; gap:22px; margin-bottom:6px; filter:grayscale(1); opacity:.85;">
+          <span style="font:700 17px Georgia,serif; color:#111;">Forbes</span>
+          <span style="font:800 16px Inter; color:#111; letter-spacing:-.03em;">TC</span>
+          <span style="font:600 15px Inter; color:#111;">\sifted/</span>
+        </div>
+        <button onClick="{{ next }}" style="{{ ctaStyle }}">Continue<span style="{{ arrowStyle }}">→</span></button>
+      </div>
+    </sc-if>
+
+    <!-- SCREEN 2 — what are you building (radio) -->
+    <sc-if value="{{ is2 }}" hint-placeholder-val="{{ false }}">
+      <div style="width:100%; max-width:480px; background:var(--onb-card); border-radius:28px; padding:32px; box-shadow:0 24px 60px rgba(0,0,0,.4);">
+        <h1 style="font:800 28px/1.15 Inter; color:var(--onb-ink); letter-spacing:-.025em; margin:0;">What are you building?</h1>
+        <p style="font:400 14px Inter; color:var(--onb-sub); margin:8px 0 14px;">Choose one.</p>
+        <div>
+          <sc-for list="{{ buildOpts }}" as="o">
+            <button onClick="{{ o.pick }}" style="display:flex; align-items:center; gap:14px; width:100%; padding:12px 2px; background:none; border:0; border-bottom:1px solid var(--onb-hair); cursor:pointer; text-align:left;">
+              <div style="width:40px; height:40px; border-radius:50%; background-image:url({{ o.img }}); background-size:cover; background-position:center; flex:0 0 auto;"></div>
+              <span style="flex:1; font:600 16px Inter; color:var(--onb-ink);">{{ o.label }}</span>
+              <span style="width:22px; height:22px; border-radius:50%; flex:0 0 auto; display:flex; align-items:center; justify-content:center; border:1.5px solid {{ o.bd }}; background:{{ o.bg }};">
+                <span style="width:8px; height:8px; border-radius:50%; background:{{ o.dot }};"></span>
+              </span>
+            </button>
+          </sc-for>
+        </div>
+        <sc-if value="{{ build }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex; gap:9px; margin-top:16px; padding:11px 13px; background:var(--onb-accent-tint); border-left:3px solid var(--onb-accent-line); border-radius:9px;">
+            <span style="color:var(--onb-accent-ink); font-size:13px;">✦</span>
+            <span style="font:500 13px/1.4 Inter; color:var(--onb-accent-ink);">Great — fashion brands hit 91% DNA accuracy in under 3 minutes.</span>
+          </div>
+        </sc-if>
+        <button onClick="{{ next }}" disabled="{{ ctaDisabled }}" style="{{ ctaStyle }}">Continue<span style="{{ arrowStyle }}">→</span></button>
+      </div>
+    </sc-if>
+
+    <!-- SCREEN 3 — value prop: before/after -->
+    <sc-if value="{{ is3 }}" hint-placeholder-val="{{ false }}">
+      <div style="width:100%; max-width:480px; background:var(--onb-card); border-radius:28px; padding:32px; box-shadow:0 24px 60px rgba(0,0,0,.4);">
+        <h1 style="font:800 27px/1.15 Inter; color:var(--onb-ink); letter-spacing:-.025em; margin:0;">FashionOS builds your Brand DNA fast</h1>
+        <p style="font:400 14px/1.45 Inter; color:var(--onb-sub); margin:10px 0 0;">Trained on top fashion houses — watch your identity score climb.</p>
+        <div style="display:flex; align-items:flex-end; gap:12px; margin:26px 0 8px; justify-content:center;">
+          <div style="flex:0 0 38%;">
+            <div style="display:inline-block; margin-bottom:8px; padding:4px 12px; border-radius:20px; background:#FF3B5C; color:#fff; font:700 11px Inter;">Before</div>
+            <div style="border:1px solid #f0d2d8; border-radius:14px; padding:14px;">
+              <div style="font:500 10px Inter; color:var(--onb-muted);">DNA score</div>
+              <div style="font:800 22px Inter; color:var(--onb-ink); margin:2px 0 12px;">0</div>
+              <div style="height:42px; border-bottom:1px solid #eee; display:flex; align-items:flex-end;"><div style="width:100%; height:1px; background:#cdb;"></div></div>
+            </div>
+          </div>
+          <div style="flex:0 0 50%;">
+            <div style="display:inline-block; margin-bottom:8px; padding:4px 12px; border-radius:20px; background:var(--onb-accent); color:#05311c; font:700 11px Inter;">After</div>
+            <div style="border:1.5px solid var(--onb-accent); border-radius:14px; padding:14px; box-shadow:0 8px 24px rgba(22,224,125,.18);">
+              <div style="display:flex; align-items:center; gap:6px;"><span style="font:500 10px Inter; color:var(--onb-muted);">DNA score</span><span style="font:700 10px Inter; color:var(--onb-accent-ink);">↗ 42%</span></div>
+              <div style="font:800 24px Inter; color:var(--onb-ink); margin:2px 0 10px;">87</div>
+              <svg viewBox="0 0 140 44" style="width:100%; height:42px;" preserveAspectRatio="none"><polyline points="0,40 20,34 40,36 60,24 80,26 100,12 120,16 140,4" fill="none" stroke="#2F6BFF" stroke-width="2.5"/></svg>
+            </div>
+          </div>
+        </div>
+        <p style="text-align:center; font:500 11px Inter; color:var(--onb-muted); margin:10px 0 0;">Results may vary across brands</p>
+        <button onClick="{{ next }}" style="{{ ctaStyle }}">Continue<span style="{{ arrowStyle }}">→</span></button>
+      </div>
+    </sc-if>
+
+    <!-- SCREEN 4 — tell us about your brand (inputs) -->
+    <sc-if value="{{ is4 }}" hint-placeholder-val="{{ false }}">
+      <div style="width:100%; max-width:480px; background:var(--onb-card); border-radius:28px; padding:32px; box-shadow:0 24px 60px rgba(0,0,0,.4);">
+        <h1 style="font:800 28px/1.15 Inter; color:var(--onb-ink); letter-spacing:-.025em; margin:0 0 18px;">Tell us about your brand</h1>
+        <label style="display:block; font:600 13px Inter; color:var(--onb-ink); margin-bottom:6px;">Brand name *</label>
+        <input value="{{ brandName }}" onInput="{{ onName }}" placeholder="e.g. Atelier Nord" style="width:100%; height:48px; padding:0 14px; border:1px solid var(--onb-hair); border-radius:10px; font:400 15px Inter; color:var(--onb-ink); outline:none; margin-bottom:14px;">
+        <label style="display:block; font:600 13px Inter; color:var(--onb-ink); margin-bottom:6px;">Website <span style="color:var(--onb-muted); font-weight:400;">(optional)</span></label>
+        <input value="{{ url }}" onInput="{{ onUrl }}" placeholder="https://" style="width:100%; height:48px; padding:0 14px; border:1px solid var(--onb-hair); border-radius:10px; font:400 15px Inter; color:var(--onb-ink); outline:none;">
+        <sc-if value="{{ showUrlPreview }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex; align-items:center; gap:8px; margin-top:10px; padding:8px 12px; background:#F5F5F5; border-radius:8px;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9E9E9E" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15 15 0 0 1 0 20 15 15 0 0 1 0-20"/></svg>
+            <span style="font:500 13px Inter; color:var(--onb-sub);">{{ urlPreview }}</span>
+          </div>
+        </sc-if>
+        <div style="display:flex; gap:12px; margin-top:14px;">
+          <div style="flex:1;">
+            <label style="display:block; font:600 13px Inter; color:var(--onb-ink); margin-bottom:6px;">Instagram</label>
+            <input placeholder="@" style="width:100%; height:48px; padding:0 14px; border:1px solid var(--onb-hair); border-radius:10px; font:400 15px Inter; outline:none;">
+          </div>
+          <div style="flex:1;">
+            <label style="display:block; font:600 13px Inter; color:var(--onb-ink); margin-bottom:6px;">TikTok</label>
+            <input placeholder="@" style="width:100%; height:48px; padding:0 14px; border:1px solid var(--onb-hair); border-radius:10px; font:400 15px Inter; outline:none;">
+          </div>
+        </div>
+        <button onClick="{{ next }}" disabled="{{ ctaDisabled }}" style="{{ ctaStyle }}">Continue<span style="{{ arrowStyle }}">→</span></button>
+      </div>
+    </sc-if>
+
+    <!-- SCREEN 5 — where is your brand listed (checkbox) -->
+    <sc-if value="{{ is5 }}" hint-placeholder-val="{{ false }}">
+      <div style="width:100%; max-width:480px; background:var(--onb-card); border-radius:28px; padding:32px; box-shadow:0 24px 60px rgba(0,0,0,.4);">
+        <h1 style="font:800 28px/1.15 Inter; color:var(--onb-ink); letter-spacing:-.025em; margin:0;">Where is your brand listed?</h1>
+        <p style="font:400 14px Inter; color:var(--onb-sub); margin:8px 0 8px;">Select all that apply</p>
+        <div>
+          <sc-for list="{{ listedOpts }}" as="o" hint-placeholder-count="8">
+            <button onClick="{{ o.toggle }}" style="display:flex; align-items:center; gap:13px; width:100%; padding:11px 2px; background:none; border:0; border-bottom:1px solid var(--onb-hair); cursor:pointer; text-align:left;">
+              <span style="width:28px; height:28px; border-radius:8px; flex:0 0 auto; display:flex; align-items:center; justify-content:center; font:800 13px Inter; color:#fff; background:{{ o.glyphBg }};">{{ o.glyph }}</span>
+              <span style="flex:1; font:600 15px Inter; color:var(--onb-ink);">{{ o.label }}</span>
+              <span style="width:22px; height:22px; border-radius:6px; flex:0 0 auto; display:flex; align-items:center; justify-content:center; border:1.5px solid {{ o.boxBd }}; background:{{ o.boxBg }};">
+                <span style="font:700 13px Inter; color:{{ o.tick }};">✓</span>
+              </span>
+            </button>
+          </sc-for>
+        </div>
+        <div style="text-align:center; margin-top:16px;"><button onClick="{{ next }}" style="background:none; border:0; cursor:pointer; font:500 13px Inter; color:var(--onb-muted);">Skip for now</button></div>
+        <button onClick="{{ next }}" disabled="{{ ctaDisabled }}" style="{{ ctaStyle }}">Continue<span style="{{ arrowStyle }}">→</span></button>
+      </div>
+    </sc-if>
+
+    <!-- SCREEN 6 — testimonial -->
+    <sc-if value="{{ is6 }}" hint-placeholder-val="{{ false }}">
+      <div style="width:100%; max-width:480px; background:var(--onb-card); border-radius:28px; padding:32px; box-shadow:0 24px 60px rgba(0,0,0,.4);">
+        <h1 style="font:800 28px/1.2 Inter; color:var(--onb-ink); letter-spacing:-.025em; margin:0 0 18px;">"21 sales in the first hour!"</h1>
+        <div style="border:1px solid var(--onb-hair); border-radius:14px; padding:16px;">
+          <div style="display:flex; align-items:center; gap:11px;">
+            <div style="width:40px; height:40px; border-radius:50%; background-image:url({{ reviewerImg }}); background-size:cover; background-position:center;"></div>
+            <div>
+              <div style="font:700 14px Inter; color:var(--onb-ink);">Rosemary N. Conroy</div>
+              <div style="display:flex; align-items:center; gap:6px; margin-top:2px;"><span style="color:#2F6BFF; font-size:11px; letter-spacing:1px;">★★★★★</span><span style="font:400 11px Inter; color:var(--onb-muted);">Nov 30, 2025</span></div>
+            </div>
+          </div>
+          <p style="font:400 13px/1.5 Inter; color:var(--onb-sub); margin:12px 0 0;">My first FashionOS campaign brought 21 sales in the first hour. Just starting out and already selling!</p>
+        </div>
+        <div style="position:relative; margin-top:14px; border-radius:14px; overflow:hidden; height:170px;">
+          <div style="width:100%; height:100%; background-image:url({{ resultImg }}); background-size:cover; background-position:center;"></div>
+          <div style="position:absolute; right:12px; top:12px; background:#fff; border-radius:10px; padding:8px 11px; box-shadow:0 4px 14px rgba(0,0,0,.18);">
+            <div style="font:400 9px Inter; color:var(--onb-muted);">Total sales</div>
+            <div style="font:800 15px Inter; color:var(--onb-ink);">$587.65</div>
+            <div style="font:600 9px Inter; color:var(--onb-accent-ink);">21 orders</div>
+          </div>
+        </div>
+        <button onClick="{{ next }}" style="{{ ctaStyle }}">Continue<span style="{{ arrowStyle }}">→</span></button>
+      </div>
+    </sc-if>
+
+    <!-- SCREEN 7 — preferred way to grow (radio) -->
+    <sc-if value="{{ is7 }}" hint-placeholder-val="{{ false }}">
+      <div style="width:100%; max-width:480px; background:var(--onb-card); border-radius:28px; padding:32px; box-shadow:0 24px 60px rgba(0,0,0,.4);">
+        <h1 style="font:800 27px/1.2 Inter; color:var(--onb-ink); letter-spacing:-.025em; margin:0 0 16px;">What's your preferred way to get more customers?</h1>
+        <div>
+          <sc-for list="{{ growOpts }}" as="o" hint-placeholder-count="4">
+            <button onClick="{{ o.pick }}" style="display:flex; align-items:center; gap:14px; width:100%; padding:13px 2px; background:none; border:0; border-bottom:1px solid var(--onb-hair); cursor:pointer; text-align:left;">
+              <span style="flex:1; font:600 16px Inter; color:var(--onb-ink);">{{ o.label }}</span>
+              <span style="width:22px; height:22px; border-radius:50%; flex:0 0 auto; display:flex; align-items:center; justify-content:center; border:1.5px solid {{ o.bd }}; background:{{ o.bg }};">
+                <span style="width:8px; height:8px; border-radius:50%; background:{{ o.dot }};"></span>
+              </span>
+            </button>
+          </sc-for>
+        </div>
+        <sc-if value="{{ grow }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex; gap:9px; margin-top:16px; padding:11px 13px; background:var(--onb-accent-tint); border-left:3px solid var(--onb-accent-line); border-radius:9px;">
+            <span style="color:var(--onb-accent-ink); font-size:13px;">✦</span>
+            <span style="font:500 13px/1.4 Inter; color:var(--onb-accent-ink);">{{ growAffirm }}</span>
+          </div>
+        </sc-if>
+        <button onClick="{{ next }}" disabled="{{ ctaDisabled }}" style="{{ ctaStyle }}">Continue<span style="{{ arrowStyle }}">→</span></button>
+      </div>
+    </sc-if>
+
+    <!-- SCREEN 8 — ads run by AI (phone mock) -->
+    <sc-if value="{{ is8 }}" hint-placeholder-val="{{ false }}">
+      <div style="width:100%; max-width:480px; background:var(--onb-card); border-radius:28px; padding:32px; box-shadow:0 24px 60px rgba(0,0,0,.4);">
+        <h1 style="font:800 27px/1.2 Inter; color:var(--onb-ink); letter-spacing:-.025em; margin:0;">Turn your brand into cash flow with ads run by AI</h1>
+        <p style="font:400 14px/1.45 Inter; color:var(--onb-sub); margin:10px 0 0;">Create, launch, and optimize high-performing ads automatically — no team needed.</p>
+        <div style="position:relative; margin:22px auto 6px; width:200px;">
+          <div style="position:relative; border-radius:30px; overflow:hidden; border:6px solid #111; box-shadow:0 14px 36px rgba(0,0,0,.25); aspect-ratio:9/17;">
+            <div style="width:100%; height:100%; background-image:url({{ adImg }}); background-size:cover; background-position:center;"></div>
+            <div style="position:absolute; top:10px; right:10px; background:var(--onb-accent); color:#05311c; font:700 9px Inter; padding:3px 8px; border-radius:20px;">Live ad</div>
+            <div style="position:absolute; left:10px; bottom:14px; right:10px; color:#fff; font:700 13px Inter; text-shadow:0 1px 4px rgba(0,0,0,.6);">This cozy drop just dropped</div>
+          </div>
+          <div style="position:absolute; left:-26px; top:46px; background:#fff; border-radius:12px; padding:7px 10px; box-shadow:0 6px 18px rgba(0,0,0,.16); display:flex; align-items:center; gap:7px; animation:onbFloat 4s ease-in-out infinite;">
+            <span style="width:22px; height:22px; border-radius:50%; background:#1877F2; color:#fff; font:800 11px Inter; display:flex; align-items:center; justify-content:center;">f</span>
+            <div><div style="font:400 8px Inter; color:var(--onb-muted);">Clicks</div><div style="font:800 12px Inter; color:var(--onb-ink);">14K</div></div>
+          </div>
+          <div style="position:absolute; right:-22px; bottom:40px; background:#fff; border-radius:12px; padding:7px 10px; box-shadow:0 6px 18px rgba(0,0,0,.16); display:flex; align-items:center; gap:7px; animation:onbFloat 5s ease-in-out infinite;">
+            <span style="width:22px; height:22px; border-radius:6px; background:linear-gradient(45deg,#f9ce34,#ee2a7b,#6228d7); display:flex; align-items:center; justify-content:center;"><span style="width:9px;height:9px;border:1.5px solid #fff;border-radius:50%;"></span></span>
+            <div><div style="font:400 8px Inter; color:var(--onb-muted);">Views</div><div style="font:800 12px Inter; color:var(--onb-ink);">35K</div></div>
+          </div>
+        </div>
+        <button onClick="{{ next }}" style="{{ ctaStyle }}">Continue<span style="{{ arrowStyle }}">→</span></button>
+      </div>
+    </sc-if>
+
+    <!-- SCREEN 9 — budget smarter (monthly goals) -->
+    <sc-if value="{{ is9 }}" hint-placeholder-val="{{ false }}">
+      <div style="width:100%; max-width:480px; background:var(--onb-card); border-radius:28px; padding:32px; box-shadow:0 24px 60px rgba(0,0,0,.4);">
+        <h1 style="font:800 27px/1.2 Inter; color:var(--onb-ink); letter-spacing:-.025em; margin:0;">Make your ad budget work smarter with AI</h1>
+        <p style="font:400 14px/1.45 Inter; color:var(--onb-sub); margin:10px 0 0;">Test, learn, and scale what works — so your money works harder.</p>
+        <div style="margin:22px 0 6px; border:1px solid var(--onb-hair); border-radius:16px; padding:18px;">
+          <div style="display:flex; align-items:baseline; gap:8px; margin-bottom:16px;"><span style="font:700 14px Inter; color:var(--onb-ink);">Monthly goals</span><span style="font:400 11px Inter; color:var(--onb-muted);">2 days left</span></div>
+          <div style="display:flex; justify-content:space-between; font:600 12px Inter; color:var(--onb-ink); margin-bottom:5px;"><span>Revenue</span><span>$450 <span style="color:var(--onb-muted);">/ $5,000</span></span></div>
+          <div style="height:5px; border-radius:5px; background:#f0f0f0; margin-bottom:14px;"><div style="height:100%; width:9%; border-radius:5px; background:#FF3B5C;"></div></div>
+          <div style="display:flex; justify-content:space-between; font:600 12px Inter; color:var(--onb-ink); margin-bottom:5px;"><span>Amount spent</span><span>$2,000 <span style="color:var(--onb-muted);">/ $2,000</span></span></div>
+          <div style="height:5px; border-radius:5px; background:#f0f0f0; margin-bottom:14px;"><div style="height:100%; width:100%; border-radius:5px; background:#2F6BFF;"></div></div>
+          <div style="display:flex; justify-content:space-between; font:600 12px Inter; color:var(--onb-ink); margin-bottom:5px;"><span>Ad profit</span><span>0.7 <span style="color:var(--onb-muted);">/ 3.3</span></span></div>
+          <div style="height:5px; border-radius:5px; background:#f0f0f0; margin-bottom:8px;"><div style="height:100%; width:21%; border-radius:5px; background:var(--onb-accent);"></div></div>
+          <div style="display:flex; align-items:center; justify-content:flex-end; gap:8px; margin-top:12px;"><span style="font:600 11px Inter; color:var(--onb-ink);">FashionOS AI</span><span style="width:34px; height:20px; border-radius:20px; background:var(--onb-accent); position:relative; display:inline-block;"><span style="position:absolute; right:2px; top:2px; width:16px; height:16px; border-radius:50%; background:#fff;"></span></span></div>
+        </div>
+        <p style="text-align:center; font:500 11px Inter; color:var(--onb-muted); margin:8px 0 0;">Results may vary across brands</p>
+        <button onClick="{{ next }}" style="{{ ctaStyle }}">Continue<span style="{{ arrowStyle }}">→</span></button>
+      </div>
+    </sc-if>
+
+    <!-- SCREEN 10 — go viral (funnel) -->
+    <sc-if value="{{ is10 }}" hint-placeholder-val="{{ false }}">
+      <div style="width:100%; max-width:480px; background:var(--onb-card); border-radius:28px; padding:32px; box-shadow:0 24px 60px rgba(0,0,0,.4);">
+        <h1 style="font:800 27px/1.2 Inter; color:var(--onb-ink); letter-spacing:-.025em; margin:0;">Go viral on socials and 10× your orders</h1>
+        <p style="font:400 14px/1.45 Inter; color:var(--onb-sub); margin:10px 0 0;">FashionOS taps into social algorithms to turn attention into customers.</p>
+        <div style="display:flex; align-items:center; justify-content:space-between; gap:6px; margin:30px 0 14px;">
+          <div style="display:flex; flex-direction:column; gap:12px;">
+            <span style="width:42px; height:42px; border-radius:12px; background:#1877F2; color:#fff; display:flex; align-items:center; justify-content:center; font:800 20px Inter;">f</span>
+            <span style="width:42px; height:42px; border-radius:12px; background:#000; color:#fff; display:flex; align-items:center; justify-content:center; font:700 16px Inter;">♪</span>
+            <span style="width:42px; height:42px; border-radius:12px; background:linear-gradient(45deg,#f9ce34,#ee2a7b,#6228d7); display:flex; align-items:center; justify-content:center;"><span style="width:16px;height:16px;border:2px solid #fff;border-radius:5px;"></span></span>
+          </div>
+          <svg width="40" height="120" viewBox="0 0 40 120" fill="none" stroke="var(--onb-accent)" stroke-width="2"><path d="M2 20 H20 V60 H38"/><path d="M2 60 H20"/><path d="M2 100 H20 V60"/></svg>
+          <div style="display:flex; margin:0 -6px;">
+            <div style="width:40px; height:40px; border-radius:50%; border:2px solid #fff; background-image:url({{ funnelA }}); background-size:cover; background-position:center;"></div>
+            <div style="width:40px; height:40px; border-radius:50%; border:2px solid #fff; background-image:url({{ funnelB }}); background-size:cover; background-position:center; margin-left:-12px;"></div>
+          </div>
+          <svg width="36" height="20" viewBox="0 0 36 20" fill="none" stroke="var(--onb-accent)" stroke-width="2"><path d="M0 10 H30"/><path d="M24 4 L32 10 L24 16"/></svg>
+          <div style="position:relative;">
+            <span style="width:52px; height:52px; border-radius:50%; background:var(--onb-accent); display:flex; align-items:center; justify-content:center;"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#05311c" stroke-width="2"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.7 13.4a2 2 0 0 0 2 1.6h9.7a2 2 0 0 0 2-1.6L23 6H6"/></svg></span>
+            <span style="position:absolute; top:-10px; right:-30px; background:#fff; border-radius:20px; padding:3px 9px; box-shadow:0 4px 12px rgba(0,0,0,.14); font:800 11px Inter; color:var(--onb-ink); white-space:nowrap;">+704 orders</span>
+          </div>
+        </div>
+        <button onClick="{{ next }}" style="{{ ctaStyle }}">Continue<span style="{{ arrowStyle }}">→</span></button>
+      </div>
+    </sc-if>
+
+    <!-- SCREEN 11 — clicks to sales (content grid) -->
+    <sc-if value="{{ is11 }}" hint-placeholder-val="{{ false }}">
+      <div style="width:100%; max-width:480px; background:var(--onb-card); border-radius:28px; padding:32px; box-shadow:0 24px 60px rgba(0,0,0,.4);">
+        <h1 style="font:800 27px/1.2 Inter; color:var(--onb-ink); letter-spacing:-.025em; margin:0;">Go from clicks to sales in minutes, not weeks</h1>
+        <p style="font:400 14px/1.45 Inter; color:var(--onb-sub); margin:10px 0 0;">Generate a full content pack in one click — test faster, grow sooner.</p>
+        <div style="display:flex; gap:10px; margin:22px 0 6px;">
+          <div style="flex:0 0 33%; display:flex; flex-direction:column; justify-content:center;">
+            <div style="align-self:center; margin-bottom:8px; padding:4px 11px; border-radius:20px; background:var(--onb-accent); color:#05311c; font:700 11px Inter;">Your photo</div>
+            <div style="border:1px solid var(--onb-hair); border-radius:12px; overflow:hidden; aspect-ratio:3/4;"><div style="width:100%; height:100%; background-image:url({{ packMain }}); background-size:cover; background-position:center;"></div></div>
+          </div>
+          <div style="flex:1; display:grid; grid-template-columns:1fr 1fr 1fr; gap:7px;">
+            <sc-for list="{{ packShots }}" as="p">
+              <div style="border-radius:9px; overflow:hidden; aspect-ratio:1; background-image:url({{ p }}); background-size:cover; background-position:center;"></div>
+            </sc-for>
+          </div>
+        </div>
+        <button onClick="{{ next }}" style="{{ ctaStyle }}">Continue<span style="{{ arrowStyle }}">→</span></button>
+      </div>
+    </sc-if>
+
+    <!-- SCREEN 12 — AI analysis (full black, no card) -->
+    <sc-if value="{{ is12 }}" hint-placeholder-val="{{ false }}">
+      <div style="width:100%; max-width:560px; text-align:left; color:#fff;">
+        <h1 style="text-align:center; font:800 30px/1.2 Inter; color:#fff; letter-spacing:-.02em; margin:0 0 36px;">Building your Brand DNA profile<span style="animation:onbBlink 1s step-end infinite;">▏</span></h1>
+        <div style="display:flex; flex-direction:column; gap:16px; max-width:340px; margin:0 auto;">
+          <sc-for list="{{ analysisSteps }}" as="st" hint-placeholder-count="6">
+            <div style="display:flex; align-items:center; gap:12px;">
+              <span style="width:18px; height:18px; flex:0 0 auto; display:flex; align-items:center; justify-content:center;">
+                <span style="{{ st.dotStyle }}">{{ st.glyph }}</span>
+              </span>
+              <span style="font:500 14px Inter; color:{{ st.color }};">{{ st.label }}</span>
+            </div>
+          </sc-for>
+        </div>
+        <div style="margin-top:40px;">
+          <div style="display:flex; justify-content:space-between; font:500 12px Inter; color:#9E9E9E; margin-bottom:8px;"><span>{{ analysisTask }}</span><span>{{ percentLabel }}</span></div>
+          <div style="height:3px; border-radius:3px; background:#2A2A2A; overflow:hidden;"><div style="height:100%; background:var(--onb-accent); border-radius:3px; width:{{ percentLabel }};"></div></div>
+        </div>
+      </div>
+    </sc-if>
+
+    <!-- SCREEN 13 — DNA ready (payoff) -->
+    <sc-if value="{{ is13 }}" hint-placeholder-val="{{ false }}">
+      <div style="width:100%; max-width:480px; background:var(--onb-card); border-radius:28px; padding:32px; box-shadow:0 24px 60px rgba(0,0,0,.45);">
+        <h1 style="font:800 28px/1.15 Inter; color:var(--onb-ink); letter-spacing:-.025em; margin:0;">Your Brand DNA is ready</h1>
+        <p style="font:500 12px Inter; color:var(--onb-muted); margin:8px 0 18px;">{{ dnaMeta }}</p>
+        <div style="display:flex; justify-content:flex-end; align-items:baseline; gap:8px; margin-bottom:14px;"><span style="font:600 11px Inter; color:var(--onb-muted); letter-spacing:.08em; text-transform:uppercase;">DNA score</span><span style="font:800 32px Inter; color:var(--onb-ink);">87</span></div>
+        <div style="display:flex; flex-direction:column; gap:13px; padding-top:14px; border-top:1px solid var(--onb-hair);">
+          <sc-for list="{{ pillars }}" as="p" hint-placeholder-count="4">
+            <div style="display:flex; align-items:center; gap:12px;">
+              <div style="flex:1; height:7px; border-radius:7px; background:#F0F0F0; overflow:hidden;"><div style="height:100%; border-radius:7px; background:var(--onb-ink); width:{{ p.w }}; transition:width .6s cubic-bezier(.2,.7,.2,1);"></div></div>
+              <span style="flex:0 0 96px; font:600 13px Inter; color:var(--onb-ink);">{{ p.name }}</span>
+              <span style="flex:0 0 30px; text-align:right; font:700 13px Inter; color:{{ p.scoreColor }};">{{ p.score }}</span>
+            </div>
+          </sc-for>
+        </div>
+        <div style="margin-top:16px; padding-top:16px; border-top:1px solid var(--onb-hair);">
+          <div style="font:700 12px Inter; color:var(--onb-ink);">Strengths</div>
+          <div style="font:400 13px/1.45 Inter; color:var(--onb-sub); margin:3px 0 12px;">Strong athlete-lifestyle voice · aspirational tone · e-commerce ready</div>
+          <div style="font:700 12px Inter; color:var(--onb-ink);">Opportunities</div>
+          <div style="font:400 13px/1.45 Inter; color:var(--onb-sub); margin:3px 0 0;">Visual consistency (72) · brand-tone text density</div>
+        </div>
+        <button onClick="{{ openApp }}" style="{{ ctaStyle }}">Open FashionOS<span style="{{ arrowStyle }}">→</span></button>
+        <div style="text-align:center; margin-top:12px;"><button onClick="{{ restart }}" style="background:none; border:0; cursor:pointer; font:500 13px Inter; color:var(--onb-sub);">Review before committing</button></div>
+      </div>
+    </sc-if>
+
+  </div>
+
+  <!-- review dock: jump to any screen -->
+  <div style="position:fixed; left:50%; bottom:14px; transform:translateX(-50%); z-index:30; display:flex; gap:6px; padding:7px 11px; background:rgba(20,20,20,.72); border:1px solid rgba(255,255,255,.1); border-radius:30px; backdrop-filter:blur(8px);">
+    <sc-for list="{{ dots }}" as="d" hint-placeholder-count="13">
+      <button onClick="{{ d.go }}" aria-label="Go to screen" style="width:9px; height:9px; padding:0; border:0; border-radius:50%; cursor:pointer; background:{{ d.color }};"></button>
+    </sc-for>
+  </div>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  state = {
+    screen: 1,
+    build: null,
+    grow: null,
+    listed: {},
+    brandName: '',
+    url: '',
+    percent: 0,
+    analysisStep: 0,
+    pillarsIn: false,
+  };
+
+  IMG(n){ return '../images/' + n + '-fashionos.jpeg'; }
+
+  componentDidMount(){
+    this._key = (e) => {
+      if (e.key === 'Enter' && !this.ctaDisabled() && this.state.screen !== 12) this.next();
+      else if (e.key === 'Escape') this.back();
+    };
+    document.addEventListener('keydown', this._key);
+  }
+  componentWillUnmount(){
+    document.removeEventListener('keydown', this._key);
+    if (this._iv) clearInterval(this._iv);
+  }
+  componentDidUpdate(_p, prev){
+    if (this.state.screen === 12 && prev.screen !== 12) this.startAnalysis();
+    if (this.state.screen === 13 && prev.screen !== 13){
+      this.setState({ pillarsIn: false });
+      setTimeout(() => this.setState({ pillarsIn: true }), 80);
+    }
+  }
+
+  startAnalysis(){
+    if (this._iv) clearInterval(this._iv);
+    this.setState({ percent: 0, analysisStep: 0 });
+    this._iv = setInterval(() => {
+      this.setState(s => {
+        const p = Math.min(100, s.percent + 2.5);
+        const step = Math.min(6, Math.floor(p / 16.7));
+        if (p >= 100){
+          clearInterval(this._iv); this._iv = null;
+          setTimeout(() => { if (this.state.screen === 12) this.setState({ screen: 13 }); }, 650);
+        }
+        return { percent: p, analysisStep: step };
+      });
+    }, 110);
+  }
+
+  ctaDisabled(){
+    const s = this.state.screen;
+    if (s === 2) return this.state.build === null;
+    if (s === 4) return this.state.brandName.trim() === '';
+    if (s === 5) return Object.keys(this.state.listed).length === 0;
+    if (s === 7) return this.state.grow === null;
+    return false;
+  }
+
+  goScreen(t){
+    if (this._iv){ clearInterval(this._iv); this._iv = null; }
+    this.setState({ screen: t });
+    if (t === 12) setTimeout(() => this.startAnalysis(), 30);
+  }
+  next = () => { this.goScreen(Math.min(13, this.state.screen + 1)); };
+  back = () => { this.goScreen(Math.max(1, this.state.screen - 1)); };
+  goTo = (n) => { this.goScreen(n); };
+  restart = () => { this.goScreen(1); };
+  openApp = () => { window.location.href = 'Command Center.v2.image-first.dc.html'; };
+
+  pickBuild = (v) => () => this.setState({ build: v });
+  pickGrow = (v) => () => this.setState({ grow: v });
+  toggleListed = (k) => () => this.setState(s => {
+    const l = Object.assign({}, s.listed);
+    if (l[k]) delete l[k]; else l[k] = true;
+    return { listed: l };
+  });
+  onName = (e) => this.setState({ brandName: e.target.value });
+  onUrl = (e) => this.setState({ url: e.target.value });
+
+  seg(a, b){
+    const s = this.state.screen;
+    if (s < a) return '0%';
+    if (s > b) return '100%';
+    return Math.round(((s - a + 1) / (b - a + 1)) * 100) + '%';
+  }
+
+  radio(active){
+    return active
+      ? { bd: '#0A0A0A', bg: '#0A0A0A', dot: '#ffffff' }
+      : { bd: '#C7C7C7', bg: 'transparent', dot: 'transparent' };
+  }
+  check(active){
+    return active
+      ? { boxBd: '#0A0A0A', boxBg: '#0A0A0A', tick: '#ffffff' }
+      : { boxBd: '#C7C7C7', boxBg: 'transparent', tick: 'transparent' };
+  }
+
+  renderVals(){
+    const s = this.state.screen;
+    const disabled = this.ctaDisabled();
+
+    const ctaStyle = 'display:flex; align-items:center; justify-content:center; gap:9px; width:100%; height:56px; margin-top:22px; border:0; border-radius:100px; cursor:' + (disabled ? 'default' : 'pointer') + '; font:600 16px Inter; background:' + (disabled ? '#EDEDED' : '#000000') + '; color:' + (disabled ? '#B0B0B0' : '#ffffff') + ';';
+    const arrowStyle = 'font-size:18px; color:' + (disabled ? '#B0B0B0' : '#16E07D') + ';';
+
+    const buildList = [
+      { id: 'fashion', label: 'Fashion brand', n: 15 },
+      { id: 'clothing', label: 'Clothing label', n: 16 },
+      { id: 'access', label: 'Accessories & jewelry', n: 17 },
+      { id: 'beauty', label: 'Beauty', n: 18 },
+      { id: 'both', label: 'Both products & services', n: 19 },
+    ];
+    const buildOpts = buildList.map(o => Object.assign(
+      { label: o.label, img: this.IMG(o.n), pick: this.pickBuild(o.label) },
+      this.radio(this.state.build === o.label)
+    ));
+
+    const growList = ['Social media', 'Paid ads', 'Both', 'No plan yet — FashionOS decides'];
+    const growOpts = growList.map(l => Object.assign(
+      { label: l, pick: this.pickGrow(l) },
+      this.radio(this.state.grow === l)
+    ));
+    const growAffirmMap = {
+      'Social media': "Smart — we'll turn your social posts into a steady stream of customers.",
+      'Paid ads': "Perfect — our AI runs and optimizes your ads so every dollar works harder.",
+      'Both': "Great choice! We'll combine ads and social to grow you faster.",
+      'No plan yet — FashionOS decides': "No problem — FashionOS will pick the highest-ROI mix for you.",
+    };
+
+    const listedDefs = [
+      { id: 'ig', label: 'Instagram', glyph: '◎', bg: 'linear-gradient(45deg,#f9ce34,#ee2a7b,#6228d7)' },
+      { id: 'fb', label: 'Facebook', glyph: 'f', bg: '#1877F2' },
+      { id: 'shopify', label: 'Shopify', glyph: 'S', bg: '#95BF47' },
+      { id: 'web', label: 'My own website', glyph: '◍', bg: '#6B7280' },
+      { id: 'tiktok', label: 'TikTok', glyph: '♪', bg: '#000000' },
+      { id: 'etsy', label: 'Etsy', glyph: 'E', bg: '#F1641E' },
+      { id: 'amazon', label: 'Amazon', glyph: 'a', bg: '#232F3E' },
+      { id: 'ebay', label: 'eBay', glyph: 'e', bg: '#E53238' },
+    ];
+    const listedOpts = listedDefs.map(o => Object.assign(
+      { label: o.label, glyph: o.glyph, glyphBg: o.bg, toggle: this.toggleListed(o.id) },
+      this.check(!!this.state.listed[o.id])
+    ));
+
+    const proofTiles = [
+      [5, '2.2K'], [6, '1.8K'], [7, '3.1K'], [8, '947'], [9, '1.4K'],
+      [10, '2.7K'], [11, '880'], [12, '1.9K'], [13, '2.1K'], [14, '760'],
+    ].map(t => ({ img: this.IMG(t[0]), sales: t[1] }));
+
+    const analysisLabels = ['Website analysed', 'Instagram detected', 'Colours extracted', 'Building Brand DNA…', 'Scoring visual identity', 'Preparing recommendations'];
+    const analysisSteps = analysisLabels.map((label, i) => {
+      const done = i < this.state.analysisStep;
+      const cur = i === this.state.analysisStep;
+      return {
+        label,
+        glyph: done ? '✓' : (cur ? '•' : '○'),
+        color: done ? '#9E9E9E' : (cur ? '#ffffff' : '#3A3A3A'),
+        dotStyle: 'font:700 13px Inter; color:' + (done ? '#16E07D' : (cur ? '#16E07D' : '#3A3A3A')) + ';' + (cur ? 'animation:onbPulse 1s ease-in-out infinite;' : ''),
+      };
+    });
+
+    const pillarDefs = [
+      { name: 'Brand', score: 88 },
+      { name: 'Visual', score: 72, weak: true },
+      { name: 'Voice', score: 94 },
+      { name: 'Commerce', score: 79 },
+    ];
+    const pillars = pillarDefs.map(p => ({
+      name: p.name,
+      score: p.score,
+      scoreColor: p.weak ? '#B45309' : '#0A0A0A',
+      w: p.score + '%',
+    }));
+
+    const dots = Array.from({ length: 13 }, (_, i) => {
+      const n = i + 1;
+      return { go: () => this.goTo(n), color: n === s ? '#16E07D' : 'rgba(255,255,255,.32)' };
+    });
+
+    let urlPreview = '';
+    const u = this.state.url.replace(/^https?:\/\//, '').replace(/\/.*$/, '').trim();
+    if (u && u.includes('.')) urlPreview = u + ' · 47 pages found · Apparel';
+
+    return {
+      screen: s,
+      is1: s === 1, is2: s === 2, is3: s === 3, is4: s === 4, is5: s === 5,
+      is6: s === 6, is7: s === 7, is8: s === 8, is9: s === 9, is10: s === 10,
+      is11: s === 11, is12: s === 12, is13: s === 13,
+      canBack: s > 1 && s !== 12,
+      canSkip: s >= 4 && s <= 7,
+      showPhotoBg: s === 1 || s === 13,
+      bgPhoto: this.IMG(s === 13 ? 12 : 20),
+      seg1: this.seg(1, 3), seg2: this.seg(4, 7), seg3: this.seg(8, 13),
+      ctaStyle, arrowStyle, ctaDisabled: disabled,
+      next: this.next, back: this.back, openApp: this.openApp, restart: this.restart,
+      build: this.state.build, buildOpts,
+      grow: this.state.grow, growOpts, growAffirm: growAffirmMap[this.state.grow] || '',
+      listedOpts,
+      brandName: this.state.brandName, url: this.state.url,
+      onName: this.onName, onUrl: this.onUrl,
+      showUrlPreview: !!urlPreview, urlPreview,
+      proofTiles,
+      reviewerImg: this.IMG(20), resultImg: this.IMG(21),
+      adImg: this.IMG(22),
+      funnelA: this.IMG(23), funnelB: this.IMG(24),
+      packMain: this.IMG(12), packShots: [6, 7, 8, 9, 10, 11].map(n => this.IMG(n)),
+      analysisSteps, analysisTask: 'Analysing brand presence', percentLabel: Math.round(this.state.percent) + '%',
+      pillars, dnaMeta: (this.state.brandName ? this.state.brandName.toLowerCase().replace(/\s+/g, '') + '.com' : 'your-brand.com') + ' · 47 pages · 90 seconds',
+      dots,
+    };
+  }
+}
+</script>
+</body>
+</html>

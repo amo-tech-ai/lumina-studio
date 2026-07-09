@@ -1,6 +1,6 @@
 # iPix Skills Inventory & Health
 
-**33 active top-level skills** (+ 1 nested ref, + 2 archive symlinks, + **29** in [`archive/`](.claude/skills/archive/)).
+**34 active top-level skills** (+ 1 nested ref, + 2 archive symlinks, + **29** in [`archive/`](.claude/skills/archive/)).
 
 Orientation: [`.claude/skills/README.md`](.claude/skills/README.md).
 
@@ -41,15 +41,15 @@ Last reviewed: **2026-07-06** (Next.js hub consolidation).
 
 | | Count |
 |---|------:|
-| 🟢 Core hubs + stack | 24 |
+| 🟢 Core hubs + stack | 25 |
 | 🟡 Useful situational | 9 |
 | ⚪ Top-level archive symlinks | 2 (`accessibility`, `design-md`) |
 | ⚪ In `archive/` | 29 |
-| **Active (excl. symlinks)** | **33** |
+| **Active (excl. symlinks)** | **34** |
 
-**Active hubs (13):** `ipix` · `ipix-task-lifecycle` · `ipix-supabase` · `design-to-production` ·
-`fashion-production` · `copilotkit` · `mastra` · `cloudinary` · `infisical` · `firecrawl` ·
-`linear` · `mercur` · `frontend-design`
+**Active hubs (14):** `ipix` · `ipix-task-lifecycle` · `ipix-supabase` · `design-to-production` ·
+`fashion-production` · `copilotkit` · `mastra` · `cloudinary` · `cloudflare` · `infisical` ·
+`firecrawl` · `linear` · `mercur` · `frontend-design`
 
 ---
 
@@ -88,6 +88,7 @@ See [`tasks/skills/jul6-audit.md`](tasks/skills/jul6-audit.md). Remaining deep r
 | `copilotkit` | 116 | 93 | 🔴 | Single plugin hub |
 | `mastra` | 79 | 33 | 🔴 | Agent registry |
 | `cloudinary` | 94 | 15 | ✅ | Media hub |
+| `cloudflare` | 175 | 340+ | ✅ | Platform hub (Workers, Wrangler, Agents SDK) |
 | `infisical` | 79 | — | ✅ | Secrets |
 | `firecrawl` | 100 | — | ✅ | Web crawl/scrape |
 | `linear` | 153 | 29 | ✅ | Issue MCP |

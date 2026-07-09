@@ -27,6 +27,7 @@ do not paste bodies here.
 | Pre-build creative exploration | [brainstorming](../archive/brainstorming/SKILL.md) |
 | Operator UI wireframes | [ipix-wireframe](../ipix-wireframe/SKILL.md) |
 | Supabase / edge functions / DNA scoring | [ipix-supabase](../ipix-supabase/SKILL.md) + [gemini](../gemini/SKILL.md) |
+| Cloudflare Workers / Wrangler / Agents SDK | [cloudflare](../cloudflare/SKILL.md) |
 | Shoot / campaign / commerce specs | `docs/prd/` (shoot-prd, campaign-prd, prd-ecommerce) |
 
 ---

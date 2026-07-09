@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+<style>
+  :root{
+    --color-bg-page:#ffffff;--color-bg-card:#ffffff;--color-bg-subtle:#fafafa;--color-bg-muted:#f5f5f5;
+    --color-border:#e5e7eb;--color-border-strong:#d1d5db;--color-border-subtle:#ededed;
+    --color-text-primary:#111111;--color-text-secondary:#4b5563;--color-text-muted:#9ca3af;
+    --color-action:#111111;
+    --dna-high:#059669;--warning:#f3b93c;--warning-text:#d97706;--approved:#059669;--info:#2563eb;--blocked:#dc2626;
+    --nav-active:#f5f5f5;
+    --font-sans:"Inter",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+    --font-mono:"Geist Mono",ui-monospace,"SF Mono",Menlo,monospace;
+    --radius-sm:6px;--radius-md:10px;--radius-lg:16px;--radius-xl:20px;--radius-pill:9999px;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;font-family:var(--font-sans);color:var(--color-text-primary);background:var(--color-bg-subtle);-webkit-font-smoothing:antialiased;}
+  ::-webkit-scrollbar{width:9px;}::-webkit-scrollbar-thumb{background:#e0e0e0;border-radius:9px;}
+</style>
+</helmet>
+<div style="display:grid;grid-template-columns:56px minmax(0,1fr) 340px;height:100vh;width:100vw;background:var(--color-bg-page);overflow:hidden;">
+
+  <!-- NAV -->
+  <nav style="display:flex;flex-direction:column;align-items:center;gap:4px;padding:14px 0;border-right:1px solid var(--color-border);background:var(--color-bg-card);">
+    <div style="width:30px;height:30px;border-radius:8px;background:var(--color-action);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;margin-bottom:14px;">iP</div>
+    <sc-for list="{{ navItems }}" as="n" hint-placeholder-count="5">
+      <button title="{{ n.label }}" style="{{ n.style }}"><i data-lucide="{{ n.icon }}" style="width:19px;height:19px;"></i></button>
+    </sc-for>
+    <div style="flex:1;"></div>
+    <div style="width:30px;height:30px;border-radius:50%;background-color:var(--color-bg-muted);background-image:{{ avatarBg }};background-size:cover;background-position:center;"></div>
+  </nav>
+
+  <!-- WORKSPACE -->
+  <main style="display:flex;flex-direction:column;min-width:0;min-height:0;height:100vh;overflow:hidden;background:var(--color-bg-page);">
+    <div style="flex:1;overflow-y:auto;min-height:0;">
+    <div style="max-width:920px;width:100%;margin:0 auto;padding:26px 32px 40px;">
+
+      <!-- header -->
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:22px;flex-wrap:wrap;">
+        <div style="display:flex;align-items:center;gap:14px;">
+          <div style="width:52px;height:52px;border-radius:50%;background-color:var(--color-bg-muted);background-image:{{ heroBg }};background-size:cover;background-position:center;flex-shrink:0;"></div>
+          <div>
+            <h1 style="margin:0;font-size:22px;font-weight:700;letter-spacing:-.02em;">{{ title }}</h1>
+            <p style="margin:3px 0 0;font-size:13px;color:var(--color-text-muted);">{{ subtitle }}</p>
+          </div>
+        </div>
+        <sc-if value="{{ hasPending }}" hint-placeholder-val="{{ true }}">
+          <span style="display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:500;color:var(--warning-text);border:1px solid var(--warning);border-radius:var(--radius-pill);padding:6px 12px;background:#fffbf0;"><span style="width:7px;height:7px;border-radius:50%;background:var(--warning);"></span>{{ pendingCount }} pending {{ pendingLabel }}</span>
+        </sc-if>
+      </div>
+
+      <!-- KPIs -->
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:28px;">
+        <sc-for list="{{ kpis }}" as="k" hint-placeholder-count="4">
+          <div style="border:1px solid var(--color-border);border-radius:var(--radius-lg);padding:16px;background:var(--color-bg-card);">
+            <div style="display:flex;align-items:center;gap:7px;font-size:12px;color:var(--color-text-muted);margin-bottom:9px;"><i data-lucide="{{ k.icon }}" style="width:14px;height:14px;"></i>{{ k.label }}</div>
+            <div style="font-family:var(--font-mono);font-size:24px;font-weight:700;letter-spacing:-.01em;">{{ k.value }}</div>
+            <div style="font-size:12px;color:var(--color-text-secondary);margin-top:2px;">{{ k.meta }}</div>
+          </div>
+        </sc-for>
+      </div>
+
+      <!-- Incoming offers (HITL) -->
+      <sc-if value="{{ hasOffers }}" hint-placeholder-val="{{ true }}">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+          <h2 style="margin:0;font-size:16px;font-weight:600;">Incoming offers</h2>
+          <span style="font-size:12px;color:var(--color-text-muted);">You accept or decline — this is your side of the booking.</span>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:12px;margin-bottom:30px;">
+          <sc-for list="{{ offers }}" as="o" hint-placeholder-count="2">
+            <div style="border:1px solid var(--warning);border-left:3px solid var(--warning);border-radius:var(--radius-lg);padding:16px 18px;background:var(--color-bg-card);">
+              <div style="display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;">
+                <div style="display:flex;align-items:center;gap:12px;min-width:0;">
+                  <div style="width:44px;height:56px;border-radius:10px;flex-shrink:0;background-color:var(--color-bg-subtle);background-image:{{ o.bg }};background-size:cover;background-position:center;border:1px solid var(--color-border);"></div>
+                  <div style="min-width:0;">
+                    <div style="font-size:15px;font-weight:600;">{{ o.brand }}</div>
+                    <div style="font-size:13px;color:var(--color-text-secondary);margin-top:2px;">{{ o.who }} · <span class="mono">{{ o.dates }}</span> · <span class="mono">{{ o.rate }}</span></div>
+                    <div style="font-size:12px;color:var(--warning-text);margin-top:4px;">Expires in {{ o.expires }}</div>
+                  </div>
+                </div>
+                <div style="display:flex;align-items:center;gap:9px;flex-shrink:0;">
+                  <button onClick="{{ o.onWhy }}" style="padding:8px 12px;border-radius:var(--radius-md);border:1px solid var(--color-border);background:#fff;font-family:var(--font-sans);font-size:13px;cursor:pointer;">Details</button>
+                  <button onClick="{{ o.onDecline }}" style="padding:8px 14px;border-radius:var(--radius-md);border:1px solid var(--color-border);background:#fff;font-family:var(--font-sans);font-size:13px;font-weight:500;color:var(--blocked);cursor:pointer;">Decline</button>
+                  <button onClick="{{ o.onAccept }}" style="padding:8px 16px;border-radius:var(--radius-md);border:none;background:var(--color-action);color:#fff;font-family:var(--font-sans);font-size:13px;font-weight:600;cursor:pointer;">Accept</button>
+                </div>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+      </sc-if>
+
+      <!-- Roster (agency) OR Upcoming bookings (model) -->
+      <sc-if value="{{ isAgency }}" hint-placeholder-val="{{ false }}">
+        <h2 style="margin:0 0 12px;font-size:16px;font-weight:600;">Roster · {{ rosterCount }} models</h2>
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;">
+          <sc-for list="{{ roster }}" as="m" hint-placeholder-count="8">
+            <div style="border:1px solid var(--color-border);border-radius:var(--radius-lg);overflow:hidden;background:var(--color-bg-card);">
+              <div style="aspect-ratio:3/4;background-color:var(--color-bg-subtle);background-image:{{ m.bg }};background-size:cover;background-position:center;"></div>
+              <div style="padding:10px 12px;"><div style="font-size:13px;font-weight:600;">{{ m.name }}</div><div style="font-size:11px;color:var(--color-text-muted);margin-top:2px;display:flex;align-items:center;gap:5px;"><span style="width:7px;height:7px;border-radius:50%;background:{{ m.dot }};"></span>{{ m.status }}</div></div>
+            </div>
+          </sc-for>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ isModel }}" hint-placeholder-val="{{ true }}">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+          <h2 style="margin:0;font-size:16px;font-weight:600;">Upcoming bookings</h2>
+          <button onClick="{{ onEditAvail }}" style="display:inline-flex;align-items:center;gap:6px;padding:8px 12px;border-radius:var(--radius-md);border:1px solid var(--color-border);background:#fff;font-family:var(--font-sans);font-size:13px;font-weight:500;cursor:pointer;"><i data-lucide="calendar" style="width:14px;height:14px;"></i>Edit availability</button>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:10px;">
+          <sc-for list="{{ bookings }}" as="b" hint-placeholder-count="3">
+            <div style="display:flex;align-items:center;gap:14px;border:1px solid var(--color-border);border-radius:var(--radius-lg);padding:13px 16px;background:var(--color-bg-card);">
+              <div style="width:40px;height:50px;border-radius:8px;flex-shrink:0;background-color:var(--color-bg-subtle);background-image:{{ b.bg }};background-size:cover;background-position:center;"></div>
+              <div style="flex:1;min-width:0;"><div style="font-size:14px;font-weight:600;">{{ b.brand }}</div><div style="font-size:12px;color:var(--color-text-secondary);margin-top:1px;"><span class="mono">{{ b.dates }}</span> · {{ b.location }}</div></div>
+              <span style="{{ b.chipStyle }}">{{ b.status }}</span>
+              <span class="mono" style="font-size:14px;font-weight:600;flex-shrink:0;">{{ b.rate }}</span>
+            </div>
+          </sc-for>
+        </div>
+      </sc-if>
+    </div>
+    </div>
+
+    <!-- OPERATOR CHAT DOCK (proactive, contextual) -->
+    <div style="flex-shrink:0;border-top:1px solid var(--color-border);background:var(--color-bg-card);padding:14px 32px;">
+      <div style="max-width:920px;margin:0 auto;">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:9px;">
+          <i data-lucide="sparkles" style="width:15px;height:15px;color:var(--color-text-primary);"></i>
+          <span style="font-size:13px;color:var(--color-text-secondary);"><b style="color:var(--color-text-primary);font-weight:600;">{{ dockAgent }}</b> · {{ dockGreeting }}</span>
+          <span style="margin-left:auto;display:flex;align-items:center;gap:5px;font-size:11px;color:var(--color-text-muted);border:1px solid var(--color-border);border-radius:var(--radius-pill);padding:3px 9px;"><span style="width:6px;height:6px;border-radius:50%;background:var(--approved);"></span>idle</span>
+        </div>
+        <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap;">
+          <sc-for list="{{ dockCards }}" as="c" hint-placeholder-count="3"><button style="padding:7px 12px;border-radius:var(--radius-pill);border:1px solid var(--color-border);background:#fff;font-family:var(--font-sans);font-size:12px;color:var(--color-text-primary);cursor:pointer;">{{ c }}</button></sc-for>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;border:1px solid var(--color-border);border-radius:var(--radius-md);padding:9px 12px;">
+          <i data-lucide="mic" style="width:16px;height:16px;color:var(--color-text-muted);"></i>
+          <input placeholder="Ask {{ dockAgent }}…" style="flex:1;border:none;outline:none;font-family:var(--font-sans);font-size:14px;background:transparent;">
+          <button style="width:30px;height:30px;border-radius:8px;border:none;background:var(--color-action);color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;"><i data-lucide="arrow-up" style="width:16px;height:16px;"></i></button>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- INTELLIGENCE PANEL (persistent AI awareness — not chat) -->
+  <aside style="display:flex;flex-direction:column;border-left:1px solid var(--color-border);background:var(--color-bg-card);min-width:0;overflow-y:auto;">
+    <div style="display:flex;align-items:center;gap:8px;padding:16px 18px;border-bottom:1px solid var(--color-border);">
+      <i data-lucide="sparkles" style="width:15px;height:15px;"></i><span style="font-size:15px;font-weight:600;">{{ dockAgent }}</span>
+    </div>
+    <div style="padding:18px;display:flex;flex-direction:column;gap:18px;">
+      <div>
+        <div style="font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--color-text-muted);margin-bottom:7px;">AI summary</div>
+        <p style="margin:0;font-size:13px;color:var(--color-text-secondary);line-height:1.6;">{{ panelSummary }}</p>
+      </div>
+      <div style="height:1px;background:var(--color-border);"></div>
+      <div>
+        <div style="font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--color-text-muted);margin-bottom:8px;">Needs attention</div>
+        <div style="display:flex;gap:9px;align-items:flex-start;padding:11px;border:1px solid var(--warning);border-radius:10px;background:#fffbf0;"><span style="width:7px;height:7px;border-radius:50%;background:var(--warning);margin-top:5px;flex-shrink:0;"></span><div style="font-size:12px;color:var(--color-text-primary);line-height:1.5;">{{ panelAttention }}</div></div>
+      </div>
+      <div>
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px;"><i data-lucide="sparkles" style="width:12px;height:12px;"></i><span style="font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--color-text-muted);">Recommendation</span></div>
+        <p style="margin:0 0 8px;font-size:13px;color:var(--color-text-secondary);line-height:1.55;">{{ panelRec }}</p>
+        <div style="padding:11px;border:1px solid var(--color-border-subtle);border-radius:10px;background:var(--color-bg-subtle);"><div style="display:flex;justify-content:space-between;margin-bottom:5px;"><span style="font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--color-text-muted);">{{ panelEvLabel }}</span><span class="mono" style="font-size:12px;font-weight:600;color:var(--warning-text);">{{ panelEvConf }}</span></div><div style="font-size:12px;color:var(--color-text-secondary);line-height:1.55;">{{ panelEvidence }}</div></div>
+      </div>
+      <div style="height:1px;background:var(--color-border);"></div>
+      <div>
+        <div style="font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--color-text-muted);margin-bottom:8px;">Recent activity</div>
+        <div style="display:flex;flex-direction:column;gap:9px;">
+          <sc-for list="{{ panelActivity }}" as="a" hint-placeholder-count="3"><div style="display:flex;gap:9px;align-items:flex-start;"><span style="width:7px;height:7px;border-radius:50%;background:{{ a.dot }};margin-top:5px;flex-shrink:0;"></span><div style="font-size:12px;color:var(--color-text-secondary);">{{ a.text }} <span style="color:var(--color-text-muted);">· {{ a.when }}</span></div></div></sc-for>
+        </div>
+      </div>
+    </div>
+  </aside>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1200,&quot;height&quot;:840},&quot;role&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;default&quot;:&quot;model&quot;,&quot;options&quot;:[&quot;model&quot;,&quot;agency&quot;],&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Role&quot;}}">
+class Component extends DCLogic {
+  state = { role:'model', offerState:{} };
+
+  componentDidMount(){ this._icons(); }
+  componentDidUpdate(){ this._icons(); }
+  _icons(){ let t=0; const run=()=>{ if(window.lucide&&window.lucide.createIcons)window.lucide.createIcons(); else if(t++<40)setTimeout(run,80); }; run(); }
+
+  img(k){ return `url("../images/${k}-fashionos.jpeg")`; }
+  _act(id,v){ this.setState(s=>({offerState:{...s.offerState,[id]:v}})); }
+
+  renderVals(){
+    const role=(this.state.role==='agency'||this.props.role==='agency')?'agency':'model';
+    const isAgency=role==='agency', isModel=role==='model';
+    const BD='../../../Shoot Detail.v2.image-first.dc.html';
+
+    const nav=[
+      {icon:'layout-dashboard',label:'Dashboard',active:true},{icon:'calendar',label:'Bookings'},
+      {icon:'clock',label:'Availability'},{icon:'bell',label:'Notifications'},{icon:'user',label:'Profile'}
+    ].map(n=>({...n,style:'width:40px;height:40px;border-radius:10px;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;'+(n.active?'background:var(--nav-active);color:var(--color-text-primary);':'background:transparent;color:var(--color-text-muted);')}));
+
+    // ---- role config (extensible; add more roles here) ----
+    const ROLES={
+      model:{ title:'@runwithkara', subtitle:'Independent model · Micro tier', heroImg:'10', pendingLabel:'invites', agent:'Booking Assistant',
+        summary:'2 offers to review; On Running expires in 40h. Nike SS26 is confirmed and on your calendar.',
+        attention:'On Running offer — 40h left to respond.', rec:'Review the Nike offer — 94% brand fit and within your usual rate.', evLabel:'Rate check', evConf:'94% fit', evidence:'£1,200/day matches your Micro-tier average; Nike brand-tone fit is 94%.',
+        cards:['Review offer','Check availability','Prepare acceptance','Draft a reply'],
+        kpis:[['calendar','Upcoming','3','shoots booked'],['banknote','Earnings','£4,800','next 30 days'],['star','Rating','4.9','23 reviews'],['clock','Availability','12','open days']] },
+      agency:{ title:'Aperture Talent', subtitle:'Agency · 12 models', heroImg:'20', pendingLabel:'offers', agent:'Agency Assistant',
+        summary:'4 offers pending across 3 models; roster utilisation 68%. Mia has a date conflict on Apr 3.',
+        attention:'Mia is double-booked Apr 3 — resolve before confirming.', rec:'Reassign Ana → the Adidas offer; she is available and a strong fit.', evLabel:'Utilisation', evConf:'68%', evidence:'8 of 12 models booked this month; 2 idle with open availability.',
+        cards:['Resolve conflict','Review a model’s offers','Prepare best offers','Roster report'],
+        kpis:[['users','Models','12','on roster'],['git-branch','Pipeline','4 · 2','offers · booked'],['trending-up','Utilisation','68%','this month'],['banknote','Revenue','£22.4k','this month']] }
+    };
+    const cfg=ROLES[role];
+    const kpis=cfg.kpis.map(k=>({icon:k[0],label:k[1],value:k[2],meta:k[3]}));
+
+    // ---- incoming offers (HITL — talent/agency side) ----
+    const rawOffers=[
+      {id:'o1',brand:'Nike SS26',who:'Studio 9, London',dates:'Mar 12–14',rate:'£1,200/day',expires:'68h',img:'11',talent:'runwithkara'},
+      {id:'o2',brand:'On Running',who:'Outdoor · Peak District',dates:'Apr 3–4',rate:'£950/day',expires:'40h',img:'12',talent:(role==='agency'?'lena':'runwithkara')}
+    ];
+    const offers=rawOffers.filter(o=>!this.state.offerState[o.id]).map(o=>({...o, bg:this.img(o.img),
+      onAccept:()=>{ this._act(o.id,'accepted'); setTimeout(()=>{ window.location.href=BD+'?flow=booking&talent='+o.talent+'&status=approved'; },140); },
+      onDecline:()=>this._act(o.id,'declined'),
+      onWhy:()=>{ window.location.href=BD+'?flow=booking&talent='+o.talent+'&status=requested'; } }));
+
+    const chip=(label,c)=>'display:inline-flex;align-items:center;gap:5px;flex-shrink:0;padding:4px 10px;border-radius:var(--radius-pill);border:1px solid '+c+';color:'+c+';font-size:11px;font-weight:600;';
+    const bookings=[
+      {brand:'Nike SS26',dates:'Mar 12–14',location:'Studio 9, London',rate:'£3,600',status:'Confirmed',c:'var(--approved)',img:'13'},
+      {brand:'Lululemon',dates:'Feb 20',location:'Shoreditch',rate:'£1,100',status:'Completed',c:'var(--color-text-muted)',img:'14'},
+      {brand:'Strava',dates:'Apr 9–10',location:'TBC',rate:'£2,000',status:'Held',c:'var(--warning-text)',img:'15'}
+    ].map(b=>({...b,bg:this.img(b.img),chipStyle:chip(b.status,b.c)}));
+
+    const rosterDefs=[['Kara N.','Available','var(--approved)','10'],['Mia L.','Booked','var(--color-text-primary)','16'],['Ana R.','Held','var(--warning)','17'],['Sofia D.','Available','var(--approved)','19'],['Lena M.','Available','var(--approved)','12'],['Priya K.','Booked','var(--color-text-primary)','21'],['Noor A.','Available','var(--approved)','22'],['Ivy T.','Held','var(--warning)','23']];
+    const roster=rosterDefs.map(m=>({name:m[0],status:m[1],dot:m[2],bg:this.img(m[3])}));
+
+    return {
+      navItems:nav, avatarBg:this.img(cfg.heroImg), heroBg:this.img(cfg.heroImg),
+      title:cfg.title, subtitle:cfg.subtitle,
+      kpis, isAgency, isModel,
+      offers, hasOffers:offers.length>0,
+      pendingCount:offers.length, pendingLabel:cfg.pendingLabel, hasPending:offers.length>0,
+      bookings, roster, rosterCount:roster.length,
+      onEditAvail:()=>{ window.location.href='SCR-23-Availability-Editor.dc.html'; },
+      dockAgent:cfg.agent, dockGreeting:cfg.summary, dockCards:cfg.cards,
+      panelSummary:cfg.summary, panelAttention:cfg.attention, panelRec:cfg.rec,
+      panelEvLabel:cfg.evLabel, panelEvConf:cfg.evConf, panelEvidence:cfg.evidence,
+      panelActivity:[{text:'Nike SS26 confirmed',when:'9m',dot:'var(--approved)'},{text:'On Running offer received',when:'2h',dot:'var(--warning)'},{text:'Availability updated',when:'1d',dot:'var(--color-text-muted)'}]
+    };
+  }
+}
+</script>
+</body>
+</html>

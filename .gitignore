@@ -58,3 +58,6 @@ pr9-storefront-test/
 
 .cursor/
 .codex/
+
+# Deprecated skills staging — canonical skills live in .claude/skills/
+.agents/

@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script>
+window.__LU={
+ building:'<rect width="16" height="20" x="4" y="2" rx="2"/><path d="M9 22v-4h6v4"/><path d="M8 6h.01"/><path d="M16 6h.01"/><path d="M12 6h.01"/><path d="M12 10h.01"/><path d="M12 14h.01"/><path d="M16 10h.01"/><path d="M16 14h.01"/><path d="M8 10h.01"/><path d="M8 14h.01"/>',
+ users:'<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>',
+ "git-branch":'<line x1="6" x2="6" y1="3" y2="15"/><circle cx="18" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M18 9a9 9 0 0 1-9 9"/>',
+ home:'<path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M9 22V12h6v10"/>',
+ search:'<circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>',
+ plus:'<path d="M5 12h14"/><path d="M12 5v14"/>',
+ sparkles:'<path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .962 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.962 0z"/><path d="M20 3v4"/><path d="M22 5h-4"/><path d="M4 17v2"/><path d="M5 18H3"/>',
+ "chevron-down":'<path d="m6 9 6 6 6-6"/>',
+ "chevron-right":'<path d="m9 18 6-6-6-6"/>',
+ "alert-triangle":'<path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3z"/><line x1="12" x2="12" y1="9" y2="13"/><line x1="12" x2="12.01" y1="17" y2="17"/>',
+ "arrow-up":'<path d="m5 12 7-7 7 7"/><path d="M12 19V5"/>',
+ filter:'<polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/>',
+ inbox:'<polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/>'
+};
+(function(){ if(customElements.get('lu-ic'))return;
+ class LuIc extends HTMLElement{ static get observedAttributes(){return ['name'];}
+  connectedCallback(){this._r();} attributeChangedCallback(){this._r();}
+  _r(){ var n=this.getAttribute('name');var inner=(window.__LU||{})[n];if(inner==null)return;
+   this.style.display='inline-flex';this.style.alignItems='center';this.style.justifyContent='center';
+   var root=this.shadowRoot||this.attachShadow({mode:'open'});
+   root.innerHTML='<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="100%" height="100%" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:block">'+inner+'</svg>';
+  } }
+ customElements.define('lu-ic',LuIc);
+})();
+</script>
+<style>
+  :root{
+    --bg:#ffffff;--surface:#fafafa;--muted-bg:#f5f5f5;
+    --border:#e5e7eb;--border-strong:#d1d5db;--border-subtle:#ededed;
+    --text:#111111;--text-2:#6b7280;--text-3:#9ca3af;
+    --action:#111111;
+    --prospect:#2563eb;--active:#059669;--inactive:#9ca3af;--lost:#b91c1c;
+    --approval:#d97706;--approval-bg:#fef3e2;
+    --font:"Inter",-apple-system,BlinkMacSystemFont,sans-serif;
+    --mono:"Geist Mono",ui-monospace,Menlo,monospace;
+    --r-sm:6px;--r-md:10px;--r-lg:16px;--r-xl:20px;--r-pill:9999px;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;font-family:var(--font);color:var(--text);background:var(--surface);-webkit-font-smoothing:antialiased;}
+  .tnum{font-variant-numeric:tabular-nums;font-feature-settings:'tnum';}
+  ::-webkit-scrollbar{width:8px;height:8px;}::-webkit-scrollbar-thumb{background:var(--border-strong);border-radius:4px;}
+  @keyframes shimmer{0%{background-position:-400px 0;}100%{background-position:400px 0;}}
+  .sk{background:linear-gradient(90deg,#f0f0f0 25%,#e6e6e6 37%,#f0f0f0 63%);background-size:800px 100%;animation:shimmer 1.4s infinite linear;border-radius:6px;}
+</style>
+</helmet>
+<div style="display:grid;grid-template-columns:56px minmax(0,1fr) 320px;height:100vh;width:100vw;background:var(--bg);overflow:hidden;">
+
+  <!-- NAV RAIL -->
+  <nav style="background:var(--bg);border-right:1px solid var(--border);display:flex;flex-direction:column;align-items:center;padding:14px 0;gap:4px;">
+    <div style="width:30px;height:30px;border-radius:8px;background:var(--action);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;margin-bottom:12px;">i</div>
+    <sc-for list="{{ nav }}" as="n" hint-placeholder-count="5">
+      <div title="{{ n.label }}" style="{{ n.style }}"><lu-ic name="{{ n.icon }}" style="width:20px;height:20px;"></lu-ic></div>
+    </sc-for>
+  </nav>
+
+  <!-- WORKSPACE -->
+  <main style="display:flex;flex-direction:column;min-width:0;min-height:0;height:100vh;overflow:hidden;">
+
+    <!-- header -->
+    <div style="flex-shrink:0;padding:20px 26px 0;">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px;">
+        <div>
+          <div style="display:flex;align-items:center;gap:10px;">
+            <h1 style="margin:0;font-size:24px;font-weight:700;letter-spacing:-.02em;">Organizations</h1>
+            <span style="display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:var(--r-pill);background:var(--approval-bg);border:1px solid #f4d9ad;font-size:11px;font-weight:600;color:var(--approval);">Sample data — not live</span>
+          </div>
+          <p style="margin:4px 0 0;font-size:13px;color:var(--text-2);" class="tnum">{{ countLabel }}</p>
+        </div>
+        <button style="display:flex;align-items:center;gap:7px;padding:9px 14px;border-radius:var(--r-md);border:none;background:var(--action);color:#fff;font-family:var(--font);font-size:13px;font-weight:600;cursor:pointer;flex-shrink:0;"><lu-ic name="plus" style="width:15px;height:15px;"></lu-ic>New organization</button>
+      </div>
+
+      <!-- filter + search row -->
+      <div style="display:flex;align-items:center;gap:8px;margin-top:16px;flex-wrap:wrap;">
+        <div style="display:flex;align-items:center;gap:8px;flex:1;min-width:200px;border:1px solid var(--border-strong);border-radius:var(--r-md);padding:8px 11px;background:var(--bg);">
+          <lu-ic name="search" style="width:15px;height:15px;color:var(--text-3);"></lu-ic>
+          <input type="text" placeholder="Search name or domain" style="flex:1;min-width:0;border:none;outline:none;background:none;font-family:var(--font);font-size:13px;color:var(--text);" />
+        </div>
+        <sc-for list="{{ filters }}" as="f" hint-placeholder-count="3">
+          <button onClick="{{ f.onClick }}" style="{{ f.style }}">{{ f.label }}<lu-ic name="chevron-down" style="width:13px;height:13px;opacity:.6;"></lu-ic></button>
+        </sc-for>
+      </div>
+    </div>
+
+    <!-- content region -->
+    <div style="flex:1;overflow-y:auto;padding:16px 26px 20px;min-height:0;">
+
+      <!-- LOADING -->
+      <sc-if value="{{ isLoading }}" hint-placeholder-val="{{ false }}">
+        <div style="border:1px solid var(--border);border-radius:var(--r-lg);overflow:hidden;">
+          <sc-for list="{{ skeletonRows }}" as="r" hint-placeholder-count="7">
+            <div style="display:flex;align-items:center;gap:14px;padding:14px 16px;border-bottom:1px solid var(--border-subtle);">
+              <div class="sk" style="width:32px;height:32px;border-radius:8px;"></div>
+              <div class="sk" style="width:150px;height:13px;"></div>
+              <div class="sk" style="width:70px;height:13px;margin-left:auto;"></div>
+              <div class="sk" style="width:90px;height:13px;"></div>
+              <div class="sk" style="width:40px;height:13px;"></div>
+            </div>
+          </sc-for>
+        </div>
+      </sc-if>
+
+      <!-- ERROR -->
+      <sc-if value="{{ isError }}" hint-placeholder-val="{{ false }}">
+        <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:64px 20px;text-align:center;">
+          <div style="width:44px;height:44px;border-radius:50%;background:#fdeaea;color:var(--lost);display:flex;align-items:center;justify-content:center;"><lu-ic name="alert-triangle" style="width:22px;height:22px;"></lu-ic></div>
+          <div style="font-size:15px;font-weight:600;">Couldn't load companies</div>
+          <div style="font-size:13px;color:var(--text-2);max-width:280px;">Something went wrong fetching your relationships. Your filters are preserved.</div>
+          <button style="padding:8px 16px;border-radius:var(--r-md);border:1px solid var(--border-strong);background:var(--bg);font-family:var(--font);font-size:13px;font-weight:600;cursor:pointer;">Retry</button>
+        </div>
+      </sc-if>
+
+      <!-- EMPTY -->
+      <sc-if value="{{ isEmpty }}" hint-placeholder-val="{{ false }}">
+        <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:64px 20px;text-align:center;">
+          <div style="width:48px;height:48px;border-radius:12px;background:var(--muted-bg);color:var(--text-3);display:flex;align-items:center;justify-content:center;"><lu-ic name="building" style="width:24px;height:24px;"></lu-ic></div>
+          <div style="font-size:15px;font-weight:600;">No companies yet</div>
+          <div style="font-size:13px;color:var(--text-2);max-width:280px;">Add your first relationship to start building the pipeline.</div>
+          <button style="display:flex;align-items:center;gap:7px;padding:9px 15px;border-radius:var(--r-md);border:none;background:var(--action);color:#fff;font-family:var(--font);font-size:13px;font-weight:600;cursor:pointer;"><lu-ic name="plus" style="width:15px;height:15px;"></lu-ic>Add a company</button>
+        </div>
+      </sc-if>
+
+      <!-- FILTERED-EMPTY -->
+      <sc-if value="{{ isFilteredEmpty }}" hint-placeholder-val="{{ false }}">
+        <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:64px 20px;text-align:center;">
+          <div style="width:44px;height:44px;border-radius:50%;background:var(--muted-bg);color:var(--text-3);display:flex;align-items:center;justify-content:center;"><lu-ic name="filter" style="width:20px;height:20px;"></lu-ic></div>
+          <div style="font-size:15px;font-weight:600;">No companies match these filters</div>
+          <button onClick="{{ clearFilters }}" style="padding:8px 16px;border-radius:var(--r-md);border:1px solid var(--border-strong);background:var(--bg);font-family:var(--font);font-size:13px;font-weight:600;cursor:pointer;">Clear filters</button>
+        </div>
+      </sc-if>
+
+      <!-- POPULATED table -->
+      <sc-if value="{{ isPopulated }}" hint-placeholder-val="{{ true }}">
+        <div style="border:1px solid var(--border);border-radius:var(--r-lg);overflow:hidden;background:var(--bg);">
+          <div style="display:grid;grid-template-columns:1.6fr .8fr 1fr .9fr .8fr .5fr;gap:12px;padding:10px 16px;background:var(--surface);border-bottom:1px solid var(--border);font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--text-3);">
+            <div>Company</div><div>Status</div><div>Industry</div><div>Owner</div><div>Last activity</div><div style="text-align:right;">Deals</div>
+          </div>
+          <sc-for list="{{ rows }}" as="c" hint-placeholder-count="6">
+            <div onClick="{{ c.onSelect }}" style="{{ c.rowStyle }}">
+              <div style="display:flex;align-items:center;gap:11px;min-width:0;">
+                <div style="width:32px;height:32px;border-radius:8px;flex-shrink:0;background-image:{{ c.logo }};background-size:cover;background-position:center;border:1px solid var(--border);"></div>
+                <div style="flex:1;min-width:0;">
+                  <div style="font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ c.name }}</div>
+                  <div style="display:flex;align-items:center;gap:6px;min-width:0;"><span style="{{ c.kindStyle }}">{{ c.kindLabel }}</span><span style="font-size:11px;color:var(--text-3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ c.domain }}</span></div>
+                </div>
+              </div>
+              <div><span style="{{ c.badgeStyle }}"><span style="width:6px;height:6px;border-radius:50%;background:{{ c.statusColor }};"></span>{{ c.statusLabel }}</span></div>
+              <div style="font-size:13px;color:var(--text-2);align-self:center;">{{ c.industry }}</div>
+              <div style="font-size:13px;color:var(--text-2);align-self:center;">{{ c.owner }}</div>
+              <div style="font-size:12px;color:var(--text-2);align-self:center;" class="tnum">{{ c.lastActivity }}</div>
+              <div style="text-align:right;align-self:center;font-family:var(--mono);font-size:13px;font-weight:600;">{{ c.deals }}</div>
+            </div>
+          </sc-for>
+        </div>
+      </sc-if>
+
+    </div>
+
+    <!-- CHAT DOCK -->
+    <div style="flex-shrink:0;border-top:1px solid var(--border);background:var(--bg);padding:10px 26px 14px;">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+        <lu-ic name="sparkles" style="width:14px;height:14px;color:var(--prospect);"></lu-ic>
+        <span style="font-size:12px;color:var(--text-2);">{{ greeting }}</span>
+        <span style="font-size:10px;font-weight:600;color:var(--text-3);border:1px solid var(--border);border-radius:var(--r-pill);padding:2px 7px;">crm-assistant · not yet wired</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;border:1px solid var(--border-strong);border-radius:var(--r-pill);padding:8px 8px 8px 14px;">
+        <input type="text" placeholder="Ask about your organizations…" style="flex:1;min-width:0;border:none;outline:none;background:none;font-family:var(--font);font-size:13px;" />
+        <button style="width:30px;height:30px;border-radius:50%;border:none;background:var(--action);color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;"><lu-ic name="arrow-up" style="width:15px;height:15px;"></lu-ic></button>
+      </div>
+    </div>
+  </main>
+
+  <!-- INTELLIGENCE PANEL -->
+  <aside style="background:var(--surface);border-left:1px solid var(--border);display:flex;flex-direction:column;min-height:0;overflow-y:auto;">
+    <div style="padding:16px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;">
+      <lu-ic name="sparkles" style="width:15px;height:15px;color:var(--prospect);"></lu-ic>
+      <span style="font-size:13px;font-weight:700;">Intelligence</span>
+    </div>
+
+    <sc-if value="{{ hasSelection }}" hint-placeholder-val="{{ false }}">
+      <div style="padding:16px 18px;">
+        <div style="display:flex;align-items:center;gap:11px;margin-bottom:14px;">
+          <div style="width:38px;height:38px;border-radius:9px;background-image:{{ sel.logo }};background-size:cover;background-position:center;border:1px solid var(--border);flex-shrink:0;"></div>
+          <div style="min-width:0;"><div style="font-size:14px;font-weight:700;">{{ sel.name }}</div><div style="font-size:11px;color:var(--text-3);">{{ sel.domain }}</div></div>
+        </div>
+
+        <!-- quick facts -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px;">
+          <div style="border:1px solid var(--border);border-radius:var(--r-md);padding:9px 11px;background:var(--bg);"><div style="font-size:10px;text-transform:uppercase;letter-spacing:.04em;color:var(--text-3);">Status</div><div style="font-size:13px;font-weight:600;margin-top:2px;">{{ sel.statusLabel }}</div></div>
+          <div style="border:1px solid var(--border);border-radius:var(--r-md);padding:9px 11px;background:var(--bg);"><div style="font-size:10px;text-transform:uppercase;letter-spacing:.04em;color:var(--text-3);">Open deals</div><div style="font-size:13px;font-weight:600;margin-top:2px;" class="tnum">{{ sel.openDeals }}</div></div>
+          <div style="border:1px solid var(--border);border-radius:var(--r-md);padding:9px 11px;background:var(--bg);"><div style="font-size:10px;text-transform:uppercase;letter-spacing:.04em;color:var(--text-3);">Owner</div><div style="font-size:13px;font-weight:600;margin-top:2px;">{{ sel.owner }}</div></div>
+          <div style="border:1px solid var(--border);border-radius:var(--r-md);padding:9px 11px;background:var(--bg);"><div style="font-size:10px;text-transform:uppercase;letter-spacing:.04em;color:var(--text-3);">Last touch</div><div style="font-size:13px;font-weight:600;margin-top:2px;" class="tnum">{{ sel.lastActivity }}</div></div>
+        </div>
+
+        <!-- EvidenceBlock summary -->
+        <div style="border:1px solid var(--border-subtle);border-radius:var(--r-md);background:var(--bg);padding:11px 12px;margin-bottom:14px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+            <span style="font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--text-3);">Relationship summary</span>
+            <span style="font-size:9px;font-weight:600;color:{{ sel.confColor }};border:1px solid var(--border);border-radius:var(--r-pill);padding:1px 6px;">{{ sel.confLabel }} confidence</span>
+          </div>
+          <div style="font-size:12px;line-height:1.5;color:var(--text);">{{ sel.summary }}</div>
+          <div style="margin-top:8px;font-size:10px;color:var(--text-3);">via crm-assistant · sample</div>
+        </div>
+
+        <!-- actions -->
+        <div style="display:flex;gap:8px;">
+          <button style="flex:1;padding:9px;border-radius:var(--r-md);border:none;background:var(--action);color:#fff;font-family:var(--font);font-size:12px;font-weight:600;cursor:pointer;">Open</button>
+          <button style="flex:1;padding:9px;border-radius:var(--r-md);border:1px solid var(--border-strong);background:var(--bg);font-family:var(--font);font-size:12px;font-weight:500;cursor:pointer;">Log activity</button>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ noSelection }}" hint-placeholder-val="{{ true }}">
+      <div style="padding:20px 18px;">
+        <div style="border:1px solid var(--border-subtle);border-radius:var(--r-md);background:var(--bg);padding:12px;margin-bottom:12px;">
+          <div style="font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--text-3);margin-bottom:5px;">Portfolio</div>
+          <div style="font-size:12px;line-height:1.55;color:var(--text);">{{ portfolioSummary }}</div>
+        </div>
+        <div style="font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--text-3);margin-bottom:7px;">Needs attention</div>
+        <div style="display:flex;flex-direction:column;gap:7px;">
+          <sc-for list="{{ attention }}" as="a" hint-placeholder-count="2">
+            <div style="display:flex;align-items:center;gap:9px;padding:9px 11px;border:1px solid var(--border);border-radius:var(--r-md);background:var(--bg);"><span style="width:7px;height:7px;border-radius:50%;background:{{ a.c }};flex-shrink:0;"></span><span style="flex:1;font-size:12px;">{{ a.text }}</span></div>
+          </sc-for>
+        </div>
+        <div style="margin-top:16px;font-size:11px;color:var(--text-3);text-align:center;">Select a company for its summary</div>
+      </div>
+    </sc-if>
+  </aside>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1360,&quot;height&quot;:840},&quot;viewState&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;default&quot;:&quot;populated&quot;,&quot;options&quot;:[&quot;populated&quot;,&quot;loading&quot;,&quot;empty&quot;,&quot;filtered&quot;,&quot;error&quot;],&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Prototype&quot;}}">
+class Component extends DCLogic {
+  state = { selected: null };
+
+  renderVals(){
+    const st = this.props.viewState || 'populated'; // populated|loading|empty|filtered|error
+    const pic = n => `url("../images/${n}-fashionos.jpeg")`;
+
+    const SC = { prospect:'var(--prospect)', active:'var(--active)', inactive:'var(--inactive)', lost:'var(--lost)' };
+    const badge = (color) => 'display:inline-flex;align-items:center;gap:5px;padding:2px 8px;border-radius:var(--r-pill);background:var(--bg);border:1px solid var(--border);font-size:11px;font-weight:600;';
+
+    const nav = [
+      { icon:'home', label:'Home', active:false },
+      { icon:'building', label:'Relationships · Organizations', active:true },
+      { icon:'users', label:'Relationships · People', active:false },
+      { icon:'git-branch', label:'Relationships · Pipeline', active:false },
+      { icon:'inbox', label:'Inbox', active:false }
+    ].map(n => ({ ...n, style:'width:38px;height:38px;border-radius:9px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:'+(n.active?'#fff':'var(--text-3)')+';background:'+(n.active?'var(--action)':'transparent')+';' }));
+
+    const companies = [
+      { id:0, name:'Acme Athletic', domain:'acme.com', logo:12, kind:'brand', status:'active', industry:'Sportswear', owner:'S. Kim', lastActivity:'2d ago', deals:3, openDeals:2, summary:'Active 3 shoots this quarter; strong repeat engagement. Last proposal accepted 2 days ago.', conf:'high' },
+      { id:1, name:'Vega Studios', domain:'vega.io', logo:15, kind:'vendor', status:'prospect', industry:'Editorial', owner:'M. Rowe', lastActivity:'6d ago', deals:1, openDeals:1, summary:'Prospect from inbound; one open deal in qualified. No brand link yet.', conf:'mid' },
+      { id:2, name:'Nord Apparel', domain:'nord.co', logo:17, kind:'brand', status:'lost', industry:'Outerwear', owner:'S. Kim', lastActivity:'34d ago', deals:0, openDeals:0, summary:'Closed-lost last month on budget. Worth a re-engagement in Q3.', conf:'mid' },
+      { id:3, name:'Elite Models', domain:'elitemodels.com', logo:19, kind:'agency', status:'active', industry:'Talent agency', owner:'A. Fields', lastActivity:'3d ago', deals:1, openDeals:1, summary:'Represents 4 booked models. One retainer deal open; strong roster for runway.', conf:'high' },
+      { id:4, name:'Orbit Denim', domain:'orbitdenim.com', logo:11, kind:'brand', status:'active', industry:'Denim', owner:'M. Rowe', lastActivity:'4d ago', deals:2, openDeals:1, summary:'Converted brand (linked). SS26 campaign in negotiation, healthy signals.', conf:'high' },
+      { id:5, name:'Halcyon Sponsors', domain:'halcyon.studio', logo:18, kind:'sponsor', status:'inactive', industry:'Lifestyle', owner:'A. Fields', lastActivity:'61d ago', deals:0, openDeals:0, summary:'Dormant 2 months. No open deals; archive candidate unless re-engaged.', conf:'mid' }
+    ];
+
+    const confColor = c => c==='high'?'var(--active)':c==='low'?'var(--lost)':'var(--approval)';
+
+    const KIND = { brand:{l:'Brand',c:'var(--prospect)'}, agency:{l:'Agency',c:'var(--active)'}, vendor:{l:'Vendor',c:'var(--approval)'}, sponsor:{l:'Sponsor',c:'var(--text-2)'} };
+    const kindChip = k => 'display:inline-flex;align-items:center;padding:1px 7px;border-radius:var(--r-pill);font-size:10px;font-weight:600;background:var(--bg);border:1px solid '+KIND[k].c+';color:'+KIND[k].c+';';
+
+    const rows = companies.map(c => ({
+      name:c.name, domain:c.domain, logo:pic(c.logo),
+      kindLabel: KIND[c.kind].l, kindStyle: kindChip(c.kind),
+      statusLabel: c.status.charAt(0).toUpperCase()+c.status.slice(1),
+      statusColor: SC[c.status], badgeStyle: badge(SC[c.status]),
+      industry:c.industry, owner:c.owner, lastActivity:c.lastActivity, deals:c.deals,
+      rowStyle:'display:grid;grid-template-columns:1.6fr .8fr 1fr .9fr .8fr .5fr;gap:12px;padding:12px 16px;border-bottom:1px solid var(--border-subtle);cursor:pointer;align-items:center;'+(this.state.selected===c.id?'background:var(--surface);':'background:var(--bg);'),
+      onSelect: () => this.setState({ selected: c.id })
+    }));
+
+    const selC = companies.find(c => c.id===this.state.selected);
+    const sel = selC ? {
+      name:selC.name, domain:selC.domain, logo:pic(selC.logo),
+      statusLabel:selC.status.charAt(0).toUpperCase()+selC.status.slice(1),
+      openDeals:selC.openDeals, owner:selC.owner, lastActivity:selC.lastActivity,
+      kindLabel: KIND[selC.kind].l, kindStyle: kindChip(selC.kind),
+      summary:selC.summary, confLabel:selC.conf, confColor:confColor(selC.conf)
+    } : {};
+
+    const filters = ['Type','Status','Owner'].map(l => ({
+      label:l, onClick:()=>{},
+      style:'display:flex;align-items:center;gap:5px;padding:8px 11px;border-radius:var(--r-md);border:1px solid var(--border-strong);background:var(--bg);font-family:var(--font);font-size:13px;font-weight:500;color:var(--text-2);cursor:pointer;'
+    }));
+
+    return {
+      nav, filters, rows, sel,
+      isLoading: st==='loading', isError: st==='error',
+      isEmpty: st==='empty', isFilteredEmpty: st==='filtered',
+      isPopulated: st==='populated',
+      skeletonRows:[0,0,0,0,0,0,0],
+      hasSelection: st==='populated' && this.state.selected!==null,
+      noSelection: st!=='populated' || this.state.selected===null,
+      countLabel: st==='populated' ? (companies.length + ' organizations · 3 brands · 1 agency · 1 vendor · 1 sponsor') : (st==='empty'?'0 organizations':'…'),
+      greeting: '2 organizations have no activity in 14+ days — want me to draft a follow-up for the oldest?',
+      portfolioSummary: '6 organizations · 3 brands, 1 agency, 1 vendor, 1 sponsor. Brand rows link to full Brand Detail. Pipeline value £52k across 8 deals.',
+      attention:[
+        { text:'Nord Apparel quiet 34 days', c:'var(--approval)' },
+        { text:'Halcyon dormant 61 days — archive?', c:'var(--inactive)' }
+      ],
+      clearFilters: ()=>{}
+    };
+  }
+}
+</script>
+</body>
+</html>
