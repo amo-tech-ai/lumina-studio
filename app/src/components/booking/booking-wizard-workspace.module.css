@@ -41,7 +41,7 @@
 }
 
 .backBtn {
-  height: 34px;
+  min-height: 2.75rem; /* >= 44px touch target */
   padding: 0 13px 0 10px;
   flex-shrink: 0;
   border: 1px solid var(--color-border);
@@ -104,7 +104,7 @@
 }
 
 .cancelLink {
-  height: 34px;
+  min-height: 2.75rem; /* >= 44px touch target */
   padding: 0 12px;
   border: none;
   background: transparent;
@@ -113,10 +113,12 @@
   font-weight: var(--font-weight-medium);
   cursor: pointer;
   white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
 }
 
 .backAction {
-  height: 38px;
+  min-height: 2.75rem; /* >= 44px touch target */
   padding: 0 15px;
   border: 1px solid var(--color-border);
   background: var(--color-bg-card);
@@ -126,6 +128,8 @@
   border-radius: var(--radius-md);
   cursor: pointer;
   white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
 }
 .backAction:disabled {
   opacity: 0.4;
@@ -133,7 +137,7 @@
 }
 
 .nextAction {
-  height: 38px;
+  min-height: 2.75rem; /* >= 44px touch target */
   padding: 0 18px;
   border: none;
   background: var(--color-action);
