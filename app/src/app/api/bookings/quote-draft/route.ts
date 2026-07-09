@@ -48,7 +48,10 @@ export async function POST(req: NextRequest) {
     return apiErrorResponse("VALIDATION_ERROR", 400, "rateQuoted must be a number between 0 and 999999.99.");
   }
 
-  const rateTier = typeof b.rateTier === "string" && RATE_TIERS.has(b.rateTier) ? (b.rateTier as "$" | "$$" | "$$$") : undefined;
+  if (typeof b.rateTier === "string" && !RATE_TIERS.has(b.rateTier)) {
+    return apiErrorResponse("VALIDATION_ERROR", 400, "rateTier must be one of: $, $$, $$$.");
+  }
+  const rateTier = typeof b.rateTier === "string" ? (b.rateTier as "$" | "$$" | "$$$") : undefined;
 
   try {
     const draft = buildQuoteDraft({
