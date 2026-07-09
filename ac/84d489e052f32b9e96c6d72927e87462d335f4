@@ -1,0 +1,46 @@
+app/src/lib/copilotkit/runtime-v2-fetch.ts
+  s_250922caeff5ac::t_b7e8e11575cf46 1-11
+app/src/app/auth/callback/route.ts
+  s_250922caeff5ac::t_f71e9432c7552e 27
+app/src/lib/ai/provider.ts
+  s_250922caeff5ac::t_7d7395d9e6ca8a 5,16,32-33,36
+  s_250922caeff5ac::t_69a30a5f4c1278 6,23,47-48,50-64,77,81,89,98
+  s_250922caeff5ac::t_489c09417d626a 1
+app/next.config.ts
+  s_250922caeff5ac::t_ff5bf2e6ceec86 31,33,40-41
+  s_250922caeff5ac::t_9b2761be4f8b69 32,34-39
+app/src/lib/copilotkit/runtime-internal.d.ts
+  s_250922caeff5ac::t_a226b733aa3598 1-12
+app/src/app/api/marketing-chat/[[...slug]]/route.ts
+  s_250922caeff5ac::t_23459e7d477661 5,16
+app/src/app/api/marketing-chat/[[...slug]]/route.test.ts
+  s_250922caeff5ac::t_94bb99930073b3 79-80
+  s_250922caeff5ac::t_d611782447e872 77-78
+app/src/app/api/copilotkit/[[...slug]]/route.runtime.test.ts
+  s_250922caeff5ac::t_a46fac50a53f68 47,52,59,161-174
+  s_250922caeff5ac::t_9a8d268874b5cd 175
+app/src/app/auth/callback/route.workers.test.ts
+  s_250922caeff5ac::t_731fa8fc98a5a4 1-14
+app/src/app/api/copilotkit/[[...slug]]/route.ts
+  s_250922caeff5ac::t_a282f42b2f265d 4,6,48-49
+app/vitest.config.ts
+  s_250922caeff5ac::t_32c54280b6649b 13
+app/src/lib/ai/groq-models.ssot.json
+  s_250922caeff5ac::t_a015382c74faeb 1-125
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "ac84d489e052f32b9e96c6d72927e87462d335f4",
+  "prompts": {},
+  "sessions": {
+    "s_250922caeff5ac": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "d615a929-53ba-4467-b380-aff6877ff353",
+        "model": "default"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
