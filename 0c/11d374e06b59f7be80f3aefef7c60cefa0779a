@@ -1,0 +1,21 @@
+app/wrangler.jsonc
+  s_250922caeff5ac::t_0620b6d7fddbcc 28-36
+app/open-next.config.ts
+  s_250922caeff5ac::t_9a1d2a1d91a276 1,4
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "0c11d374e06b59f7be80f3aefef7c60cefa0779a",
+  "prompts": {},
+  "sessions": {
+    "s_250922caeff5ac": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "d615a929-53ba-4467-b380-aff6877ff353",
+        "model": "default"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
