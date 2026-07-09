@@ -38,6 +38,9 @@ const STEPS = [
   { label: "Review & send" },
 ] as const;
 const LAST_STEP = STEPS.length - 1;
+// Matches validation.ts's parseCreateBookingBody message limit — enforced
+// client-side too so the operator never discovers it only at Send.
+const MESSAGE_MAX_LENGTH = 2000;
 
 export function BookingWizardWorkspace({ talent, talentId, orgId, fetchError }: Props) {
   const router = useRouter();
@@ -152,7 +155,8 @@ export function BookingWizardWorkspace({ talent, talentId, orgId, fetchError }: 
 
   // Auto-drafts once the operator reaches the Rate step (index 2) — matches
   // the DC flow's "already drafted by the time you arrive" pattern rather
-  // than requiring a manual generate click. Regenerate stays available below.
+  // than requiring a manual generate click. No regenerate action exists yet
+  // (only Approve/Edit/Why) — a real gap if the draft needs a second pass.
   useEffect(() => {
     if (step !== 2 || draftFetched || !canFetchDraft) return;
     void fetchDraft();
@@ -570,9 +574,13 @@ export function BookingWizardWorkspace({ talent, talentId, orgId, fetchError }: 
                   value={messageDraft}
                   onChange={(e) => setMessageDraft(e.target.value)}
                   rows={6}
+                  maxLength={MESSAGE_MAX_LENGTH}
                   aria-label="Message draft"
                 />
               </label>
+              <p className={styles.hint}>
+                {messageDraft.length}/{MESSAGE_MAX_LENGTH}
+              </p>
             </>
           )}
 
