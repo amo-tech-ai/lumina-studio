@@ -316,6 +316,39 @@ describe("BookingWizardWorkspace", () => {
     await waitFor(() => expect(screen.getByText("Booking requested")).toBeDefined());
   });
 
+  it("disables 'Don't send — cancel' while Send is in flight, so a real request can't be masked as cancelled", async () => {
+    let resolveBookingsPost: (value: unknown) => void = () => {};
+    const bookingsPostPromise = new Promise((resolve) => {
+      resolveBookingsPost = resolve;
+    });
+    const fetchFn = fetchMock().mockImplementation((url: string) => {
+      if (url === "/api/bookings/quote-draft") {
+        return Promise.resolve({ ok: true, json: async () => ({ suggestedRate: 1000, messageDraft: "Draft text" }) });
+      }
+      if (url === "/api/bookings") {
+        return bookingsPostPromise;
+      }
+      throw new Error(`Unexpected fetch to ${url}`);
+    });
+    vi.stubGlobal("fetch", fetchFn);
+    render(<BookingWizardWorkspace talent={TALENT} talentId={TALENT.id} orgId={ORG_ID} fetchError={null} />);
+    await goToReviewStep(fetchFn);
+
+    fireEvent.click(screen.getByRole("button", { name: "Send booking request" }));
+    const cancelBtn = screen.getByText("Don't send — cancel");
+    expect(cancelBtn.hasAttribute("disabled")).toBe(true);
+
+    fireEvent.click(cancelBtn);
+    // Still mid-send — must not have jumped to the misleading "nothing was sent" screen.
+    expect(screen.queryByText("Request not sent")).toBeNull();
+
+    resolveBookingsPost({
+      ok: true,
+      json: async () => ({ booking_id: "55555555-5555-4555-8555-555555555555", status: "requested", version: 1, expires_at: null }),
+    });
+    await waitFor(() => expect(screen.getByText("Booking requested")).toBeDefined());
+  });
+
   it("'Don't send — cancel' shows a clean cancelled state without ever calling POST /api/bookings", async () => {
     const fetchFn = draftFetch();
     vi.stubGlobal("fetch", fetchFn);

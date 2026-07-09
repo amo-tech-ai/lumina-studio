@@ -200,6 +200,7 @@ export function BookingWizardWorkspace({ talent, talentId, orgId, fetchError }: 
   }
 
   function handleReject() {
+    if (sendLoading) return; // disabled attribute covers the click; guard here too in case Send is already in flight
     setOutcome("rejected");
   }
 
@@ -362,7 +363,7 @@ export function BookingWizardWorkspace({ talent, talentId, orgId, fetchError }: 
         </div>
         <div className={styles.topbarRight}>
           {step === LAST_STEP ? (
-            <button type="button" onClick={handleReject} className={styles.cancelLink}>
+            <button type="button" onClick={handleReject} disabled={sendLoading} className={styles.cancelLink}>
               Don&apos;t send — cancel
             </button>
           ) : null}
