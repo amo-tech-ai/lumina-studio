@@ -90,6 +90,20 @@ describe("POST /api/bookings/quote-draft", () => {
     expect(res.status).toBe(400);
   });
 
+  it("rejects a null JSON body instead of throwing on property access", async () => {
+    const { POST } = await importRoute();
+    const res = await POST(postRequest(null));
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error.code).toBe("VALIDATION_ERROR");
+  });
+
+  it("rejects a JSON array body", async () => {
+    const { POST } = await importRoute();
+    const res = await POST(postRequest([1, 2, 3]));
+    expect(res.status).toBe(400);
+  });
+
   it("rejects malformed JSON", async () => {
     const { POST } = await importRoute();
     const res = await POST(

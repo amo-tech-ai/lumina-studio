@@ -2,12 +2,14 @@
 
 import { useAgentContext } from "@copilotkit/react-core/v2";
 
-const STEP_LABELS = ["Dates & rate", "AI draft", "Review & send"];
+const STEP_LABELS = ["Talent & shoot", "Dates", "Rate", "Message", "Review & send"];
 
 const STEP_NEXT_ACTIONS: Record<number, string[]> = {
-  0: ["suggest dates", "check availability", "continue to the AI draft"],
-  1: ["draft a quote message", "suggest a rate", "improve the message", "continue to review"],
-  2: ["review the draft", "send the request"],
+  0: ["confirm the talent", "link a shoot", "continue to dates"],
+  1: ["suggest dates", "check availability", "continue to the rate"],
+  2: ["suggest a rate", "explain the suggested rate", "approve the rate", "continue to the message"],
+  3: ["draft a message", "improve the message", "continue to review"],
+  4: ["review the request", "send the request"],
 };
 
 type Outcome = "idle" | "created" | "rejected";

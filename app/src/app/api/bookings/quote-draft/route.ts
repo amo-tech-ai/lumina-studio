@@ -30,6 +30,9 @@ export async function POST(req: NextRequest) {
     return apiErrorResponse("VALIDATION_ERROR", 400, "Invalid JSON body.");
   }
 
+  if (typeof body !== "object" || body === null || Array.isArray(body)) {
+    return apiErrorResponse("VALIDATION_ERROR", 400, "Request body must be a JSON object.");
+  }
   const b = body as Record<string, unknown>;
 
   if (typeof b.displayName !== "string" || !b.displayName.trim()) {
