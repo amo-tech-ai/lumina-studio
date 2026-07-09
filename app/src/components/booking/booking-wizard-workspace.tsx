@@ -39,11 +39,6 @@ const STEPS = [
 ] as const;
 const LAST_STEP = STEPS.length - 1;
 
-function initials(name: string): string {
-  const parts = name.trim().split(/\s+/);
-  return ((parts[0]?.[0] ?? "") + (parts[1]?.[0] ?? "")).toUpperCase() || "?";
-}
-
 export function BookingWizardWorkspace({ talent, talentId, orgId, fetchError }: Props) {
   const router = useRouter();
 
@@ -327,9 +322,7 @@ export function BookingWizardWorkspace({ talent, talentId, orgId, fetchError }: 
             ← Matching
           </Link>
           <span className={styles.divider} aria-hidden />
-          <span className={styles.talentAvatar} aria-hidden>
-            {initials(talent.display_name)}
-          </span>
+          <span className={styles.talentAvatar} aria-hidden />
           <div className={styles.titleBlock}>
             <div className={styles.titleName}>{talent.display_name}</div>
             <div className={styles.titleMeta}>
@@ -392,9 +385,7 @@ export function BookingWizardWorkspace({ talent, talentId, orgId, fetchError }: 
                 <p className={styles.subtitle}>Confirm the talent and link this booking to a shoot.</p>
               </div>
               <div className={styles.talentCard}>
-                <span className={styles.talentCardAvatar} aria-hidden>
-                  {initials(talent.display_name)}
-                </span>
+                <span className={styles.talentCardAvatar} aria-hidden />
                 <div>
                   <div className={styles.talentCardName}>{talent.display_name}</div>
                   <div className={styles.talentCardMeta}>
