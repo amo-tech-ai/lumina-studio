@@ -221,13 +221,16 @@ set search_path = planner, public
 language plpgsql
 as $$
 begin
+  if (select auth.uid()) is null then
+    return new;
+  end if;
   insert into planner.assignments (instance_id, user_id, role)
   values (new.id, (select auth.uid()), 'owner')
   on conflict (instance_id, user_id) do nothing;
   return new;
 end;
 $$;
-comment on function planner.bootstrap_owner_assignment is 'Auto-create owner assignment when a user creates a new planner instance — solves the bootstrap chicken-and-egg problem.';
+comment on function planner.bootstrap_owner_assignment is 'Auto-create owner assignment when a user creates a new planner instance — solves the bootstrap chicken-and-egg problem. Skips when auth.uid() is null (e.g. direct SQL, service-role).';
 
 create trigger instances_bootstrap_owner
   after insert on planner.instances
@@ -584,10 +587,14 @@ create policy "planner_channel_subscribe"
   on realtime.messages for select to authenticated
   using (
     channel_name like 'planner:%'
-    and planner.is_at_least(
-      substring(channel_name from 9)::uuid,
-      'viewer'
-    )
+    and case
+      when channel_name ~ '^planner:[0-9a-f-]{36}$' then
+        planner.is_at_least(
+          substring(channel_name from 9)::uuid,
+          'viewer'
+        )
+      else false
+    end
   );
 
 -- ── 8. Seed: default "5-Week Product Shoot" workflow template ────────────
