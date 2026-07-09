@@ -1,0 +1,25 @@
+app/src/app/api/bookings/quote-draft/route.ts
+  s_ff0f27c2808314::t_0d68f917b9ba48 51-54
+app/src/app/api/bookings/quote-draft/route.test.ts
+  s_ff0f27c2808314::t_f652acc540bf72 77-91
+app/src/components/booking/booking-wizard-workspace.test.tsx
+  s_ff0f27c2808314::t_3144e2a8f1fd43 330-350
+app/src/components/booking/booking-wizard-workspace.tsx
+  s_ff0f27c2808314::t_a88bfcf99b33c3 209-221
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "0f33cd0e4710a92f9881086ca06be33210a49513",
+  "prompts": {},
+  "sessions": {
+    "s_ff0f27c2808314": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "f541cadc-3ecd-4f00-aa24-6136f7995021",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
