@@ -283,6 +283,10 @@ it("wires maxLength=2000 on the message textarea and renders a live counter", as
 
     fireEvent.click(screen.getByRole("button", { name: "Send booking request" }));
     await waitFor(() => expect(screen.getByText("Booking requested")).toBeDefined());
+    expect(screen.getByRole("link", { name: "View booking" })).toHaveProperty(
+      "href",
+      expect.stringContaining("/app/bookings/33333333-3333-4333-8333-333333333333"),
+    );
 
     const bookingsCall = fetchFn.mock.calls.find(([url]: [string]) => url === "/api/bookings");
     expect(bookingsCall).toBeDefined();

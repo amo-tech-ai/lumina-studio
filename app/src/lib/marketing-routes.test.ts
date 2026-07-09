@@ -19,6 +19,12 @@ const OPERATOR_SECTIONS = [
   "preview",
 ] as const;
 
+// Top-level (operator)/app directories that are detail-only entry points
+// (reached via links, e.g. from the booking wizard) — no list page/nav
+// section of their own, so they're excluded from the index-page check above
+// but still expected on disk by the guard below (IPI-411).
+const DETAIL_ONLY_SECTIONS = ["bookings"] as const;
+
 function marketingPagePath(urlPath: string): string {
   if (urlPath === "/") return join(APP_DIR, "(marketing)/page.tsx");
   const segments = urlPath.replace(/^\//, "").split("/");
@@ -52,7 +58,9 @@ describe("marketing route contract (WEB-001 / WEB-014)", () => {
       .filter((e) => e.isDirectory())
       .map((e) => e.name)
       .sort();
-    expect(onDisk).toEqual([...OPERATOR_SECTIONS].sort());
+    expect(onDisk).toEqual(
+      [...OPERATOR_SECTIONS, ...DETAIL_ONLY_SECTIONS].sort(),
+    );
   });
 
   it("covers all service pages referenced by the nav registry", () => {

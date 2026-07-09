@@ -308,11 +308,14 @@ export function BookingWizardWorkspace({ talent, talentId, orgId, fetchError }: 
                 </div>
               ) : null}
             </div>
-            <p className={styles.hint}>
-              Booking status tracking ships separately (IPI-411). The talent will need to confirm.
-            </p>
+            <p className={styles.hint}>The talent will need to confirm before this is booked.</p>
             <div className={styles.footer}>
-              <Link href="/app/matching" className={styles.btnPrimary}>
+              {bookingId ? (
+                <Link href={`/app/bookings/${bookingId}`} className={styles.btnPrimary}>
+                  View booking
+                </Link>
+              ) : null}
+              <Link href="/app/matching" className={bookingId ? styles.btnGhost : styles.btnPrimary}>
                 ← Back to talent search
               </Link>
             </div>
