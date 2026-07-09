@@ -401,12 +401,12 @@ create policy "dependencies_insert_org"
 
 create policy "dependencies_update_contributor"
   on planner.dependencies for update to authenticated
-  using (exists (select 1 from planner.instances where id = instance_id and planner.is_at_least(id, 'contributor')))
-  with check (exists (select 1 from planner.instances where id = instance_id and planner.is_at_least(id, 'contributor')));
+  using (exists (select 1 from planner.instances where id = instance_id and public.is_org_member(org_id) and planner.is_at_least(id, 'contributor')))
+  with check (exists (select 1 from planner.instances where id = instance_id and public.is_org_member(org_id) and planner.is_at_least(id, 'contributor')));
 
 create policy "dependencies_delete_manager"
   on planner.dependencies for delete to authenticated
-  using (exists (select 1 from planner.instances where id = instance_id and planner.is_at_least(id, 'manager')));
+  using (exists (select 1 from planner.instances where id = instance_id and public.is_org_member(org_id) and planner.is_at_least(id, 'manager')));
 
 -- 6g. planner.assignments — owner/manager can read; owner can mutate
 alter table planner.assignments enable row level security;
@@ -417,7 +417,10 @@ create policy "assignments_select_org"
 
 create policy "assignments_insert_manager"
   on planner.assignments for insert to authenticated
-  with check (exists (select 1 from planner.instances where id = instance_id and planner.is_at_least(id, 'manager')));
+  with check (
+    exists (select 1 from planner.instances where id = instance_id and planner.is_at_least(id, 'manager'))
+    and role in ('manager', 'contributor', 'viewer')
+  );
 
 create policy "assignments_update_owner"
   on planner.assignments for update to authenticated
@@ -522,3 +525,33 @@ create trigger events_broadcast after insert or update or delete on planner.even
 
 create trigger assignments_broadcast after insert or update or delete on planner.assignments
   for each row execute function planner.broadcast_instance_change();
+
+-- ── 8. Seed: default "5-Week Product Shoot" workflow template ────────────
+-- Uses deterministic UUIDs and on-conflict clauses for idempotency.
+-- Inlined here (not as a separate seed file) because supabase/config.toml
+-- has [db.seed] disabled per repo convention.
+
+insert into planner.workflows (id, org_id, name, category, version, is_default)
+values (
+  '00000000-0000-0000-0000-000000000001',
+  (select id from public.organizations limit 1),
+  '5-Week Product Shoot',
+  'production',
+  1,
+  true
+)
+on conflict (id) do nothing;
+
+insert into planner.phases (id, workflow_id, slug, name, order_index, default_duration_days, gate_type, required_role) values
+  ('00000000-0000-0000-0000-000000000010', '00000000-0000-0000-0000-000000000001', 'brief',          'Brief confirmation',            1, 2,  null,       null),
+  ('00000000-0000-0000-0000-000000000011', '00000000-0000-0000-0000-000000000001', 'casting',        'Casting',                       2, 3,  'approval', 'manager'),
+  ('00000000-0000-0000-0000-000000000012', '00000000-0000-0000-0000-000000000001', 'soft-hold',      'Soft hold on shoot date',       3, 1,  null,       null),
+  ('00000000-0000-0000-0000-000000000013', '00000000-0000-0000-0000-000000000001', 'item-delivery',  'Item delivery',                 4, 5,  null,       null),
+  ('00000000-0000-0000-0000-000000000014', '00000000-0000-0000-0000-000000000001', 'outfit-confirm', 'Outfit confirmation',           5, 2,  'approval', 'manager'),
+  ('00000000-0000-0000-0000-000000000015', '00000000-0000-0000-0000-000000000001', 'payment-sched',  'Payment & scheduling',          6, 2,  null,       null),
+  ('00000000-0000-0000-0000-000000000016', '00000000-0000-0000-0000-000000000001', 'awaiting-shoot', 'Awaiting shoot',                7, 1,  null,       null),
+  ('00000000-0000-0000-0000-000000000017', '00000000-0000-0000-0000-000000000001', 'production',     'Production',                    8, 3,  null,       null),
+  ('00000000-0000-0000-0000-000000000018', '00000000-0000-0000-0000-000000000001', 'retouching',     'Retouching',                    9, 5,  null,       null),
+  ('00000000-0000-0000-0000-000000000019', '00000000-0000-0000-0000-000000000001', 'final-approval', 'Final approval',               10, 2,  'signoff',  'owner'),
+  ('00000000-0000-0000-0000-00000000001a', '00000000-0000-0000-0000-000000000001', 'product-return', 'Product return',               11, 3,  null,       null)
+on conflict (workflow_id, slug) do nothing;
