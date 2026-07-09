@@ -25,6 +25,14 @@
   // wrangler dev rebundles handler.mjs and fails on native .node; Mastra only lazy-loads ast-grep.
   "alias": {
     "@ast-grep/napi": "./scripts/cf-ast-grep-stub.mjs",
-    "@ast-grep/napi-linux-x64-gnu": "./scripts/cf-ast-grep-stub.mjs"
+    "@ast-grep/napi-darwin-arm64": "./scripts/cf-ast-grep-stub.mjs",
+    "@ast-grep/napi-darwin-x64": "./scripts/cf-ast-grep-stub.mjs",
+    "@ast-grep/napi-linux-arm64-gnu": "./scripts/cf-ast-grep-stub.mjs",
+    "@ast-grep/napi-linux-arm64-musl": "./scripts/cf-ast-grep-stub.mjs",
+    "@ast-grep/napi-linux-x64-gnu": "./scripts/cf-ast-grep-stub.mjs",
+    "@ast-grep/napi-linux-x64-musl": "./scripts/cf-ast-grep-stub.mjs",
+    "@ast-grep/napi-win32-arm64-msvc": "./scripts/cf-ast-grep-stub.mjs",
+    "@ast-grep/napi-win32-ia32-msvc": "./scripts/cf-ast-grep-stub.mjs",
+    "@ast-grep/napi-win32-x64-msvc": "./scripts/cf-ast-grep-stub.mjs"
   }
 }
