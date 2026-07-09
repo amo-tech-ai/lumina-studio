@@ -1,0 +1,31 @@
+app/src/app/api/bookings/quote-draft/route.ts
+  s_ff0f27c2808314::t_1d4cbe4da63d80 33-35
+app/src/components/booking/booking-wizard-workspace.tsx
+  s_ff0f27c2808314::t_f130142789720d 52
+  s_ff0f27c2808314::t_788f5058086885 513,522,530
+  s_ff0f27c2808314::t_282c4a06cdd0b1 119-120,128,131,151-174,182-186,188-191,197-201,212
+  s_ff0f27c2808314::t_ad6b164d2f9ec5 5
+app/src/components/booking/booking-wizard-context.tsx
+  s_ff0f27c2808314::t_a42e268fc116a0 5,8-12
+app/src/app/api/bookings/quote-draft/route.test.ts
+  s_ff0f27c2808314::t_73864148b1ae1d 93-106
+app/src/components/booking/booking-wizard-workspace.test.tsx
+  s_ff0f27c2808314::t_2b33816ce8f18b 190-221
+  s_ff0f27c2808314::t_d35e40dbd8370a 286-318
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "fd0f20fab36425804037c3bb28f895d281c94c17",
+  "prompts": {},
+  "sessions": {
+    "s_ff0f27c2808314": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "f541cadc-3ecd-4f00-aa24-6136f7995021",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
