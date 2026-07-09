@@ -1,0 +1,44 @@
+app/src/lib/booking/booking-fsm.test.ts
+  s_ff0f27c2808314::t_bb4db4cca2bed9 1-38
+app/src/components/booking/booking-detail-context.tsx
+  s_ff0f27c2808314::t_1278b96e2a360b 1-49
+app/src/components/booking/booking-detail-workspace.tsx
+  s_ff0f27c2808314::t_ef2cf7387f6b6d 270-277,279-288,290
+  s_ff0f27c2808314::t_ae51c7a25baef2 1-204,223-269,278,289,291-311,337-339,341-359,364-399,401-494
+  s_ff0f27c2808314::t_b5d54b78636470 312-336,340,360-363
+  s_ff0f27c2808314::t_0cc390b6e19bb1 205-222
+  s_ff0f27c2808314::t_befdbd7f0ae3f7 400
+app/src/components/booking/booking-detail-workspace.module.css
+  s_ff0f27c2808314::t_28bb017aaf0de6 1-35,46-47,62-63,66-72,75-80,82,84-494
+  s_ff0f27c2808314::t_32298d4241b8d6 36-45,48-61,64-65,73-74,81,83
+app/src/components/booking/booking-detail-workspace.test.tsx
+  s_ff0f27c2808314::t_0e695d12976815 1-86,88-272
+  s_ff0f27c2808314::t_c90fd054ac1e7a 87
+app/src/components/booking/booking-wizard-workspace.test.tsx
+  s_ff0f27c2808314::t_4945f77b1fba01 286-289
+app/src/app/(operator)/app/bookings/[id]/page.tsx
+  s_ff0f27c2808314::t_7047caebbaaeae 1-48
+app/src/components/booking/booking-wizard-workspace.tsx
+  s_ff0f27c2808314::t_6b92c78ea419d8 311,313-318
+app/src/lib/booking/booking-fsm.ts
+  s_ff0f27c2808314::t_6fc2df070c0860 1-37
+app/src/lib/marketing-routes.test.ts
+  s_ff0f27c2808314::t_ce4083b2c8a417 61-63
+  s_ff0f27c2808314::t_6f3b2a204671f0 22-27
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "7f70cd7cac220a6a54f3346c62425d3da48a618a",
+  "prompts": {},
+  "sessions": {
+    "s_ff0f27c2808314": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "f541cadc-3ecd-4f00-aa24-6136f7995021",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
