@@ -307,13 +307,16 @@ export class PlannerEngine {
   getEffectivePermissions(
     userId: string,
     assignments: PlannerAssignment[],
+    instanceId: string,
   ): {
     role: string | null;
     canRead: boolean;
     canUpdateTasks: boolean;
     canManageWorkflow: boolean;
   } {
-    const assignment = assignments.find((a) => a.userId === userId);
+    const assignment = assignments.find(
+      (a) => a.userId === userId && a.instanceId === instanceId,
+    );
     if (!assignment) {
       return { role: null, canRead: false, canUpdateTasks: false, canManageWorkflow: false };
     }

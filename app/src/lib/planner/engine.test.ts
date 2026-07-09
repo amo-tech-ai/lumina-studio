@@ -324,10 +324,12 @@ describe("resolveDependencies", () => {
 });
 
 describe("getEffectivePermissions", () => {
+  const instId = "inst-1";
+
   it("owner can read, update, manage", () => {
     const perms = engine.getEffectivePermissions("user-1", [
-      makeAssign({ id: "a1", userId: "user-1", role: "owner" }),
-    ]);
+      makeAssign({ id: "a1", userId: "user-1", instanceId: instId, role: "owner" }),
+    ], instId);
     expect(perms.canRead).toBe(true);
     expect(perms.canUpdateTasks).toBe(true);
     expect(perms.canManageWorkflow).toBe(true);
@@ -336,16 +338,16 @@ describe("getEffectivePermissions", () => {
 
   it("manager can read, update, manage", () => {
     const perms = engine.getEffectivePermissions("user-1", [
-      makeAssign({ id: "a1", userId: "user-1", role: "manager" }),
-    ]);
+      makeAssign({ id: "a1", userId: "user-1", instanceId: instId, role: "manager" }),
+    ], instId);
     expect(perms.canUpdateTasks).toBe(true);
     expect(perms.canManageWorkflow).toBe(true);
   });
 
   it("contributor can read and update but not manage", () => {
     const perms = engine.getEffectivePermissions("user-1", [
-      makeAssign({ id: "a1", userId: "user-1", role: "contributor" }),
-    ]);
+      makeAssign({ id: "a1", userId: "user-1", instanceId: instId, role: "contributor" }),
+    ], instId);
     expect(perms.canRead).toBe(true);
     expect(perms.canUpdateTasks).toBe(true);
     expect(perms.canManageWorkflow).toBe(false);
@@ -353,18 +355,26 @@ describe("getEffectivePermissions", () => {
 
   it("viewer can read only", () => {
     const perms = engine.getEffectivePermissions("user-1", [
-      makeAssign({ id: "a1", userId: "user-1", role: "viewer" }),
-    ]);
+      makeAssign({ id: "a1", userId: "user-1", instanceId: instId, role: "viewer" }),
+    ], instId);
     expect(perms.canRead).toBe(true);
     expect(perms.canUpdateTasks).toBe(false);
     expect(perms.canManageWorkflow).toBe(false);
   });
 
   it("unassigned user has no permissions", () => {
-    const perms = engine.getEffectivePermissions("unknown-user", []);
+    const perms = engine.getEffectivePermissions("unknown-user", [], instId);
     expect(perms.canRead).toBe(false);
     expect(perms.canUpdateTasks).toBe(false);
     expect(perms.canManageWorkflow).toBe(false);
     expect(perms.role).toBeNull();
+  });
+
+  it("ignores assignments from other instances", () => {
+    const perms = engine.getEffectivePermissions("user-1", [
+      makeAssign({ id: "a1", userId: "user-1", instanceId: "other-inst", role: "owner" }),
+    ], instId);
+    expect(perms.role).toBeNull();
+    expect(perms.canRead).toBe(false);
   });
 });
