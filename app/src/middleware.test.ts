@@ -1,12 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { config, proxy } from "./proxy";
+import { config, middleware } from "./middleware";
 
-describe("proxy wiring (IPI2-127)", () => {
-  it("proxy exports a handler function", () => {
-    expect(typeof proxy).toBe("function");
+describe("middleware wiring (IPI2-127 / CF-MIG-110)", () => {
+  it("middleware exports a handler function", () => {
+    expect(typeof middleware).toBe("function");
   });
 
-  it("proxy config matches all non-static routes for session refresh", () => {
+  it("middleware config matches all non-static routes for session refresh", () => {
     expect(config.matcher).toEqual([
       "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
     ]);
