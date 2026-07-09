@@ -1,0 +1,22 @@
+app/src/components/booking/booking-wizard-workspace.tsx
+  s_ff0f27c2808314::t_0f6f7c37808163 203
+  s_ff0f27c2808314::t_d8c973a247b12f 366
+app/src/components/booking/booking-wizard-workspace.test.tsx
+  s_ff0f27c2808314::t_a8014fe5ba3316 319-351
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "6e3de923a826a8b498e603eef62e0561e1361414",
+  "prompts": {},
+  "sessions": {
+    "s_ff0f27c2808314": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "f541cadc-3ecd-4f00-aa24-6136f7995021",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
