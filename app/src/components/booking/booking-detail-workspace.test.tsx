@@ -194,6 +194,28 @@ describe("BookingDetailWorkspace", () => {
     expect(refresh).not.toHaveBeenCalled();
   });
 
+  it("clears a stale error from a previous action when opening the cancel dialog", async () => {
+    const fetchMock = vi.fn().mockRejectedValue(new TypeError("Failed to fetch"));
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(
+      <BookingDetailWorkspace
+        bookingId={BOOKING_ID}
+        booking={booking()}
+        talent={TALENT}
+        history={[]}
+        viewerRole="brand"
+        fetchError={null}
+      />,
+    );
+
+    fireEvent.click(screen.getByText("Approve"));
+    await waitFor(() => expect(screen.getByText(/Couldn't reach the server/)).toBeDefined());
+
+    fireEvent.click(screen.getByText("Cancel booking"));
+    expect(screen.queryByText(/Couldn't reach the server/)).toBeNull();
+  });
+
   it("requires a reason before submitting a cancellation, then PATCHes it", async () => {
     const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => ({}) });
     vi.stubGlobal("fetch", fetchMock);

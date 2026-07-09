@@ -106,6 +106,8 @@ export function BookingDetailWorkspace({ bookingId, booking, talent, history, vi
   useEffect(() => {
     if (!talentProfileId || !dateStart || !dateEnd) return;
     let cancelled = false;
+    setAvailability(null);
+    setAvailabilityError(false);
     const supabase = createSupabaseBrowserClient();
     supabase
       .rpc("check_talent_availability", {
@@ -115,12 +117,13 @@ export function BookingDetailWorkspace({ bookingId, booking, talent, history, vi
       })
       .then(({ data, error }) => {
         if (cancelled) return;
-        if (error || !data) {
+        const row = record(data);
+        if (error || !row) {
+          // Unparseable/unexpected RPC shape is treated as unknown, not "available".
           setAvailabilityError(true);
           return;
         }
-        const row = record(data);
-        setAvailability({ is_available: row ? bool(row.is_available) : true });
+        setAvailability({ is_available: bool(row.is_available) });
       });
     return () => {
       cancelled = true;
@@ -184,6 +187,7 @@ export function BookingDetailWorkspace({ bookingId, booking, talent, history, vi
   function handleAction(kind: BookingActionKind) {
     if (busy) return;
     if (kind === "cancel") {
+      setActionError(null);
       setCancelOpen(true);
       return;
     }
@@ -302,9 +306,11 @@ export function BookingDetailWorkspace({ bookingId, booking, talent, history, vi
             {TABS.map((tab) => (
               <button
                 key={tab.id}
+                id={`booking-tab-${tab.id}`}
                 type="button"
                 role="tab"
                 aria-selected={activeTab === tab.id}
+                aria-controls="booking-tabpanel"
                 onClick={() => setActiveTab(tab.id)}
                 className={activeTab === tab.id ? styles.tabActive : styles.tab}
               >
@@ -314,7 +320,12 @@ export function BookingDetailWorkspace({ bookingId, booking, talent, history, vi
           </div>
         </div>
 
-        <div className={styles.body}>
+        <div
+          className={styles.body}
+          id="booking-tabpanel"
+          role="tabpanel"
+          aria-labelledby={`booking-tab-${activeTab}`}
+        >
           {activeTab === "overview" ? (
             <div className={styles.tabPanel}>
               <div className={styles.card}>
