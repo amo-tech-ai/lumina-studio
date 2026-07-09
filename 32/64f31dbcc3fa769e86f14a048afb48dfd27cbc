@@ -1,0 +1,23 @@
+app/src/components/booking/booking-detail-workspace.test.tsx
+  s_ff0f27c2808314::t_305937e1318de3 197-218
+app/src/components/booking/booking-detail-workspace.tsx
+  s_ff0f27c2808314::t_85f93c23fcba7c 109-110,120-122,126
+  s_ff0f27c2808314::t_4f208597257244 309,313,323-328
+  s_ff0f27c2808314::t_d567a477eeabbc 190
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "3264f31dbcc3fa769e86f14a048afb48dfd27cbc",
+  "prompts": {},
+  "sessions": {
+    "s_ff0f27c2808314": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "f541cadc-3ecd-4f00-aa24-6136f7995021",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "AMO Tech AI <214654688+amo-tech-ai@users.noreply.github.com>"
+    }
+  }
+}
