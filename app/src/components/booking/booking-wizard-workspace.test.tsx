@@ -130,6 +130,25 @@ describe("BookingWizardWorkspace", () => {
     expect(await screen.findByText(/available/)).toBeDefined();
   });
 
+  it("does not retry forever when /api/bookings/quote-draft fails", async () => {
+    const fetchFn = fetchMock().mockResolvedValue({
+      ok: false,
+      json: async () => ({ error: { message: "boom" } }),
+    });
+    vi.stubGlobal("fetch", fetchFn);
+    render(<BookingWizardWorkspace talent={TALENT} talentId={TALENT.id} orgId={ORG_ID} fetchError={null} />);
+    await goToDatesStep();
+    fireEvent.change(screen.getByLabelText("Start date"), { target: { value: "2026-08-01" } });
+    fireEvent.change(screen.getByLabelText("End date"), { target: { value: "2026-08-03" } });
+    await waitFor(() => expect(rpc).toHaveBeenCalled());
+    clickNext(); // dates -> rate
+    await waitFor(() => expect(screen.getByRole("alert")).toBeDefined());
+
+    // Give any runaway retry loop a chance to fire before asserting it didn't.
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(fetchFn).toHaveBeenCalledTimes(1);
+  });
+
   it("auto-drafts a rate on arriving at the Rate step, and gates Continue until Approved", async () => {
     const fetchFn = draftFetch();
     vi.stubGlobal("fetch", fetchFn);

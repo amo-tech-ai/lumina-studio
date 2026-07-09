@@ -124,9 +124,9 @@ export function BookingWizardWorkspace({ talent, talentId, orgId, fetchError }: 
   // the DC flow's "already drafted by the time you arrive" pattern rather
   // than requiring a manual generate click. Regenerate stays available below.
   useEffect(() => {
-    if (step !== 2 || draftFetched || draftLoading || !canFetchDraft) return;
+    if (step !== 2 || draftFetched || !canFetchDraft) return;
     void fetchDraft();
-  }, [step, draftFetched, draftLoading, canFetchDraft]);
+  }, [step, draftFetched, canFetchDraft]);
 
   if (fetchError) {
     return (
@@ -166,10 +166,13 @@ export function BookingWizardWorkspace({ talent, talentId, orgId, fetchError }: 
       const data = await res.json();
       setSuggestedRate(data.suggestedRate ?? null);
       setMessageDraft(data.messageDraft ?? "");
-      setDraftFetched(true);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to draft a quote.");
     } finally {
+      // Mark the attempt done on failure too — otherwise draftFetched stays
+      // false forever and the auto-draft effect below retries on every
+      // render (draftLoading flips false → re-runs → fetches again → loop).
+      setDraftFetched(true);
       setDraftLoading(false);
     }
   }
