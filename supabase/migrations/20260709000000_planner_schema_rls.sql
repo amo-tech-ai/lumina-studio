@@ -193,6 +193,26 @@ create trigger view_configs_updated_at before update on planner.view_configs
 create trigger notification_rules_updated_at before update on planner.notification_rules
   for each row execute function public.handle_updated_at();
 
+-- Guard: prevent changing instance_id on tasks (assignees could otherwise move tasks between instances)
+create or replace function planner.prevent_task_instance_change()
+returns trigger
+security definer
+set search_path = planner, public
+language plpgsql
+as $$
+begin
+  if old.instance_id <> new.instance_id then
+    raise exception 'Cannot move task to a different planner instance';
+  end if;
+  return new;
+end;
+$$;
+comment on function planner.prevent_task_instance_change is 'Rejects updates that change task.instance_id — prevents cross-instance task migration.';
+
+create trigger tasks_prevent_instance_change
+  before update on planner.tasks
+  for each row execute function planner.prevent_task_instance_change();
+
 -- Bootstrap: auto-assign owner role to the instance creator
 create or replace function planner.bootstrap_owner_assignment()
 returns trigger
@@ -212,6 +232,37 @@ comment on function planner.bootstrap_owner_assignment is 'Auto-create owner ass
 create trigger instances_bootstrap_owner
   after insert on planner.instances
   for each row execute function planner.bootstrap_owner_assignment();
+
+-- Guard: ensure dependency edges link tasks in the same instance
+create or replace function planner.validate_dependency_instance()
+returns trigger
+security definer
+set search_path = planner, public
+language plpgsql
+as $$
+declare
+  v_from_instance uuid;
+  v_to_instance uuid;
+begin
+  select instance_id into v_from_instance from planner.tasks where id = new.from_task_id;
+  select instance_id into v_to_instance from planner.tasks where id = new.to_task_id;
+  if v_from_instance is null or v_to_instance is null then
+    raise exception 'Referenced task does not exist';
+  end if;
+  if v_from_instance <> v_to_instance then
+    raise exception 'Dependency tasks must belong to the same planner instance';
+  end if;
+  if v_from_instance <> new.instance_id then
+    raise exception 'Dependency instance_id must match the referenced tasks instance';
+  end if;
+  return new;
+end;
+$$;
+comment on function planner.validate_dependency_instance is 'Rejects dependency edges that link tasks across different planner instances.';
+
+create trigger dependencies_validate_instance
+  before insert or update on planner.dependencies
+  for each row execute function planner.validate_dependency_instance();
 
 -- ── 5. Planner role helpers ───────────────────────────────────────────────
 
@@ -467,14 +518,14 @@ create policy "notification_rules_select_org"
   on planner.notification_rules for select to authenticated
   using (public.is_org_member(org_id));
 
-create policy "notification_rules_insert_org"
+create policy "notification_rules_insert_owner"
   on planner.notification_rules for insert to authenticated
-  with check (public.is_org_member(org_id));
+  with check (public.is_org_owner(org_id));
 
-create policy "notification_rules_update_org"
+create policy "notification_rules_update_owner"
   on planner.notification_rules for update to authenticated
-  using (public.is_org_member(org_id))
-  with check (public.is_org_member(org_id));
+  using (public.is_org_owner(org_id))
+  with check (public.is_org_owner(org_id));
 
 create policy "notification_rules_delete_owner"
   on planner.notification_rules for delete to authenticated
@@ -525,6 +576,19 @@ create trigger events_broadcast after insert or update or delete on planner.even
 
 create trigger assignments_broadcast after insert or update or delete on planner.assignments
   for each row execute function planner.broadcast_instance_change();
+
+-- Realtime channel authorization: allow authenticated users with at least viewer role
+-- on a planner instance to subscribe to its planner:<instance_id> channel.
+-- Uses planner.is_at_least to verify the user has access to the extracted instance UUID.
+create policy "planner_channel_subscribe"
+  on realtime.messages for select to authenticated
+  using (
+    channel_name like 'planner:%'
+    and planner.is_at_least(
+      substring(channel_name from 9)::uuid,
+      'viewer'
+    )
+  );
 
 -- ── 8. Seed: default "5-Week Product Shoot" workflow template ────────────
 -- Uses deterministic UUIDs and on-conflict clauses for idempotency.
