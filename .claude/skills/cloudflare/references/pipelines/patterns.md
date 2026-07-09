@@ -119,7 +119,7 @@ await Promise.all([env.EVENTS_V1.send([event]), env.EVENTS_V2.send([event])]);
 External APIs → Collector Worker (cron) → Pipeline → R2 (Iceberg) → Dashboard Worker → R2 SQL
 ```
 
-1. Create bucket + enable catalog ([r2-data-catalog](../r2-data-catalog/configuration.md))
+1. Create bucket + enable catalog — [R2 Data Catalog](https://developers.cloudflare.com/r2/data-catalog/)
 2. Create stream + sink + pipeline (here)
 3. Collector Worker with cron + stream binding (above)
 4. Dashboard Worker querying R2 SQL ([r2-sql/patterns.md](../r2-sql/patterns.md))

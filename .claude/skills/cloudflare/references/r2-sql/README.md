@@ -60,5 +60,5 @@ There is no `env.R2_SQL` binding. Query from a Worker via `fetch()` to the REST 
 
 ## See Also
 
-- [r2-data-catalog](../r2-data-catalog/) — PyIceberg/PySpark, table management
+- [R2 Data Catalog](https://developers.cloudflare.com/r2/data-catalog/) — PyIceberg/PySpark, table management (ref trimmed from hub)
 - [pipelines](../pipelines/) — streaming ingest into queryable tables

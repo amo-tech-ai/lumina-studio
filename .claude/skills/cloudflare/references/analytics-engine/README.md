@@ -90,5 +90,5 @@ ORDER BY total_requests DESC
 ## See Also
 
 - [Cloudflare Analytics Engine Docs](https://developers.cloudflare.com/analytics/analytics-engine/)
-- [GraphQL Analytics API Reference](../graphql-api/) - Query built-in Cloudflare analytics (HTTP, Workers, DNS, Firewall, etc.)
+- [GraphQL Analytics API](https://developers.cloudflare.com/analytics/graphql-api/) — built-in CF analytics (ref trimmed from hub)
 - [Observability Reference](../observability/) - Workers Logs, Traces, and real-time debugging
