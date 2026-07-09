@@ -193,6 +193,26 @@ create trigger view_configs_updated_at before update on planner.view_configs
 create trigger notification_rules_updated_at before update on planner.notification_rules
   for each row execute function public.handle_updated_at();
 
+-- Bootstrap: auto-assign owner role to the instance creator
+create or replace function planner.bootstrap_owner_assignment()
+returns trigger
+security definer
+set search_path = planner, public
+language plpgsql
+as $$
+begin
+  insert into planner.assignments (instance_id, user_id, role)
+  values (new.id, (select auth.uid()), 'owner')
+  on conflict (instance_id, user_id) do nothing;
+  return new;
+end;
+$$;
+comment on function planner.bootstrap_owner_assignment is 'Auto-create owner assignment when a user creates a new planner instance — solves the bootstrap chicken-and-egg problem.';
+
+create trigger instances_bootstrap_owner
+  after insert on planner.instances
+  for each row execute function planner.bootstrap_owner_assignment();
+
 -- ── 5. Planner role helpers ───────────────────────────────────────────────
 
 create or replace function planner.is_assigned(
@@ -250,12 +270,12 @@ create policy "workflows_select_org"
 
 create policy "workflows_insert_org"
   on planner.workflows for insert to authenticated
-  with check (public.is_org_member(org_id));
+  with check (public.is_org_owner(org_id));
 
 create policy "workflows_update_org"
   on planner.workflows for update to authenticated
-  using (public.is_org_member(org_id))
-  with check (public.is_org_member(org_id));
+  using (public.is_org_owner(org_id))
+  with check (public.is_org_owner(org_id));
 
 create policy "workflows_delete_owner"
   on planner.workflows for delete to authenticated
@@ -310,7 +330,13 @@ create policy "instances_select_org"
 
 create policy "instances_insert_org"
   on planner.instances for insert to authenticated
-  with check (public.is_org_member(org_id));
+  with check (
+    public.is_org_member(org_id)
+    and exists (
+      select 1 from planner.workflows w
+      where w.id = workflow_id and w.org_id = planner.instances.org_id
+    )
+  );
 
 create policy "instances_update_at_least_contributor"
   on planner.instances for update to authenticated
@@ -330,7 +356,10 @@ create policy "tasks_select_org"
 
 create policy "tasks_insert_org"
   on planner.tasks for insert to authenticated
-  with check (exists (select 1 from planner.instances where id = instance_id and public.is_org_member(org_id)));
+  with check (
+    exists (select 1 from planner.instances where id = instance_id and public.is_org_member(org_id))
+    and planner.is_at_least(instance_id, 'contributor')
+  );
 
 create policy "tasks_update_assigned_or_contributor"
   on planner.tasks for update to authenticated
@@ -365,7 +394,10 @@ create policy "dependencies_select_org"
 
 create policy "dependencies_insert_org"
   on planner.dependencies for insert to authenticated
-  with check (exists (select 1 from planner.instances where id = instance_id and public.is_org_member(org_id)));
+  with check (
+    exists (select 1 from planner.instances where id = instance_id and public.is_org_member(org_id))
+    and planner.is_at_least(instance_id, 'contributor')
+  );
 
 create policy "dependencies_update_contributor"
   on planner.dependencies for update to authenticated
@@ -381,7 +413,7 @@ alter table planner.assignments enable row level security;
 
 create policy "assignments_select_org"
   on planner.assignments for select to authenticated
-  using (exists (select 1 from planner.instances where id = instance_id and public.is_org_member(org_id)));
+  using (exists (select 1 from planner.instances where id = instance_id and planner.is_at_least(id, 'manager')));
 
 create policy "assignments_insert_manager"
   on planner.assignments for insert to authenticated

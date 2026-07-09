@@ -30,4 +30,4 @@ insert into planner.phases (id, workflow_id, slug, name, order_index, default_du
   ('00000000-0000-0000-0000-000000000018', '00000000-0000-0000-0000-000000000001', 'retouching',     'Retouching',                    9, 5,  null,       null),
   ('00000000-0000-0000-0000-000000000019', '00000000-0000-0000-0000-000000000001', 'final-approval', 'Final approval',               10, 2,  'signoff',  'owner'),
   ('00000000-0000-0000-0000-00000000001a', '00000000-0000-0000-0000-000000000001', 'product-return', 'Product return',               11, 3,  null,       null)
-on conflict (id) do nothing;
+on conflict (workflow_id, slug) do nothing;
