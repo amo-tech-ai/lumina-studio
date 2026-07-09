@@ -64,18 +64,15 @@
   flex-shrink: 0;
 }
 
+/* Plain placeholder — no photo field exists on TalentResult; matches the
+   Matching/Talent tab's own treatment (talent-card.tsx TalentRow) rather
+   than faking a specific person's headshot with a stock sample image. */
 .talentAvatar {
   width: 30px;
   height: 30px;
   border-radius: var(--radius-md);
   border: 1px solid var(--color-border);
   background: var(--color-bg-muted);
-  color: var(--color-text-secondary);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: var(--font-size-xs);
-  font-weight: var(--font-weight-semibold);
   flex-shrink: 0;
 }
 
@@ -283,18 +280,13 @@
   padding: var(--space-4);
 }
 
+/* Plain placeholder, same reasoning as .talentAvatar above. */
 .talentCardAvatar {
   width: 56px;
   height: 56px;
   border-radius: var(--radius-md);
   border: 1px solid var(--color-border);
   background: var(--color-bg-muted);
-  color: var(--color-text-secondary);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: var(--font-size-lg);
-  font-weight: var(--font-weight-semibold);
   flex-shrink: 0;
 }
 
