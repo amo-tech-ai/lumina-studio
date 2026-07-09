@@ -227,7 +227,7 @@ describe("BookingWizardWorkspace", () => {
     expect((screen.getByLabelText("Message draft") as HTMLTextAreaElement).value).toBe("Hi Maria Rossi, ...");
   });
 
-  it("caps the message at 2000 characters, matching the backend's limit, and shows a live counter", async () => {
+it("wires maxLength=2000 on the message textarea and renders a live counter", async () => {
     const fetchFn = draftFetch();
     vi.stubGlobal("fetch", fetchFn);
     render(<BookingWizardWorkspace talent={TALENT} talentId={TALENT.id} orgId={ORG_ID} fetchError={null} />);
@@ -235,11 +235,13 @@ describe("BookingWizardWorkspace", () => {
 
     const textarea = screen.getByLabelText("Message draft") as HTMLTextAreaElement;
     expect(textarea.maxLength).toBe(2000);
-
-    fireEvent.change(textarea, { target: { value: "x".repeat(2500) } });
-    // maxLength only truncates real user input in a browser; jsdom's change
-    // event doesn't enforce it, so assert the constraint is wired instead.
     expect(textarea.getAttribute("maxlength")).toBe("2000");
+
+    // Counter should render and update as the message changes.
+    expect(screen.getByText(`${textarea.value.length}/2000`)).toBeDefined();
+
+    fireEvent.change(textarea, { target: { value: "x".repeat(1999) } });
+    await waitFor(() => expect(screen.getByText("1999/2000")).toBeDefined());
   });
 
   it("never calls POST /api/bookings before the operator explicitly clicks Send", async () => {
