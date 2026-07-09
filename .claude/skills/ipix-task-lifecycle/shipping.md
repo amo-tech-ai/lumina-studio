@@ -18,20 +18,6 @@ Coordinator for **closing the loop** — PR, Linear, [`tasks/plan/todo.md`](../.
 ## Shipping checklist
 
 ```
-<<<<<<< HEAD
-[ ]  1. Re-run: npm run lint && npm run build (+ test / supabase verify if required).
-[ ]  2. Update docs/linear/issues/IPI-*-<SPEC-ID>.md — AC [x], verify evidence.
-[ ]  3. Tick Linear completion steps A–E (UI or node scripts/linear-update-issue.mjs).
-[ ]  4. Set Linear state Done or In Review per team gate.
-[ ]  5. Update todo.md row → 🟢 + date; bump executive summary if needed.
-[ ]  6. Self-review git diff — no scope creep, no secrets, no console.log.
-[ ]  7. Stage explicit paths (never git add -A).
-[ ]  8. Commit with conventional message (template below).
-[ ]  9. task-verifier on spec if user requires forensic Done (optional).
-[ ] 10. Report: issue link, files changed, verify summary.
-[ ] 11. Push / PR only if user explicitly asks.
-[ ] 12. **Worktree teardown (if used):** [documentation preservation gate](../worktrees/SKILL.md#documentation-preservation-gate-mandatory--p0) → commit/split docs → `npm run worktree:pre-delete` → `git worktree remove <path>` → `npm run worktree:audit`.
-=======
 [ ]  1. Re-run verify matrix ([pr-workflow verify-matrix](../pr-workflow/references/verify-matrix.md)) — paste output.
 [ ]  2. task-verifier report (mandatory for auth/RLS/edge/Mastra/UI; document waiver if trivial).
 [ ]  3. Update docs/linear/issues/IPI-*-<SPEC-ID>.md — AC [x], verify evidence.
@@ -44,8 +30,7 @@ Coordinator for **closing the loop** — PR, Linear, [`tasks/plan/todo.md`](../.
 [ ] 10. Commit with conventional message (template below).
 [ ] 11. Report: issue link, PR link, files changed, verify summary.
 [ ] 12. Push / merge only if user explicitly asks.
-[ ] 13. worktree:pre-delete before removing worktree (if applicable).
->>>>>>> origin/main
+[ ] 13. **Worktree teardown (if used):** [documentation preservation gate](../worktrees/SKILL.md#documentation-preservation-gate-mandatory--p0) → commit/split docs → `npm run worktree:pre-delete` → `git worktree remove <path>` → `npm run worktree:audit`.
 ```
 
 ---
