@@ -292,6 +292,32 @@ describe("checkGate", () => {
     );
     expect(result.passed).toBe(true);
   });
+
+  it("fails when phase has no tasks (empty every trap)", () => {
+    const phase = makePhase({ id: "phase-a", gateType: "approval", requiredRole: "viewer" });
+    const result = engine.checkGate(
+      makeInstance({ id: "inst-1" }),
+      phase,
+      [],
+      [makeAssign({ id: "a1", userId: "user-1", role: "owner" })],
+      "user-1",
+    );
+    expect(result.passed).toBe(false);
+    expect(result.reason).toContain("no tasks");
+  });
+
+  it("fails when requiredRole is unrecognized", () => {
+    const phase = makePhase({ id: "phase-a", gateType: "signoff", requiredRole: "admin" });
+    const result = engine.checkGate(
+      makeInstance({ id: "inst-1" }),
+      phase,
+      [makeTask({ id: "t1", phaseId: "phase-a", status: "done" })],
+      [makeAssign({ id: "a1", userId: "user-1", role: "owner" })],
+      "user-1",
+    );
+    expect(result.passed).toBe(false);
+    expect(result.reason).toContain("admin");
+  });
 });
 
 describe("resolveDependencies", () => {

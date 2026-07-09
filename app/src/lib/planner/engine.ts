@@ -245,6 +245,9 @@ export class PlannerEngine {
     const phaseTasks = tasks.filter(
       (t) => t.phaseId === phase.id && t.instanceId === instance.id,
     );
+    if (phaseTasks.length === 0) {
+      return { passed: false, reason: "Phase has no tasks; gate cannot be passed." };
+    }
     const allDone = phaseTasks.every((t) => t.status === "done");
     if (!allDone) {
       return { passed: false, reason: "Not all tasks in this phase are complete." };
@@ -266,8 +269,15 @@ export class PlannerEngine {
         owner: 3,
       };
 
+      if (!(phase.requiredRole in hierarchy)) {
+        return {
+          passed: false,
+          reason: `Unknown required role "${phase.requiredRole}".`,
+        };
+      }
+
       const userLevel = hierarchy[userAssignment.role] ?? 0;
-      const requiredLevel = hierarchy[phase.requiredRole] ?? 0;
+      const requiredLevel = hierarchy[phase.requiredRole];
 
       if (userLevel < requiredLevel) {
         return {
