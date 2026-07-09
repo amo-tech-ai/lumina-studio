@@ -1,6 +1,8 @@
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+
+import groqModelsSsot from "./groq-models.ssot.json";
 
 import {
   createGeminiLanguageModel,
@@ -11,23 +13,14 @@ import type { AiProvider, GroqModelEntry, GroqModelTier, GroqModelsConfig } from
 const MODULE_DIR = dirname(fileURLToPath(import.meta.url));
 const MAX_ANCESTOR_HOPS = 8;
 
-/**
- * Walks up from `startDir` looking for `config/groq-models.json`, rather than
- * joining a hardcoded number of ".." segments. A fixed depth broke the moment
- * Mastra bundled this module into `.mastra/output/provider.mjs` — that output
- * file sits one directory shallower than the original `app/src/lib/ai/`
- * source, so the same "go up 4" math overshot the repo root by one level
- * (resolved to the parent of the repo instead of `config/` inside it).
- * Walking up until the file is actually found is correct at any bundling
- * depth, for both Next.js and Mastra.
- */
+/** Walks up from `startDir` looking for `config/groq-models.json` (tests / Mastra dev). */
 export function findGroqModelsConfigPath(startDir: string): string {
   let dir = startDir;
   for (let hop = 0; hop < MAX_ANCESTOR_HOPS; hop += 1) {
     const candidate = join(dir, "config", "groq-models.json");
     if (existsSync(candidate)) return candidate;
     const parent = dirname(dir);
-    if (parent === dir) break; // reached filesystem root
+    if (parent === dir) break;
     dir = parent;
   }
   throw new Error(
@@ -36,23 +29,11 @@ export function findGroqModelsConfigPath(startDir: string): string {
 }
 
 /**
- * Repo SSOT at config/groq-models.json — loaded at runtime (not a static import)
- * to stay outside Turbopack's app/ root boundary. Resolved by walking up from
- * this module's own location (not process.cwd()) so it's correct regardless of
- * the directory the process was launched from, or how deep the build output
- * that contains this module happens to be nested.
+ * CF-MIG-210: static JSON bundled for Cloudflare Workers (no runtime readFileSync).
+ * Source of truth: `config/groq-models.json` — keep `groq-models.ssot.json` in sync.
  */
 export function loadGroqModelsConfig(): GroqModelsConfig {
-  try {
-    const path = findGroqModelsConfigPath(MODULE_DIR);
-    return JSON.parse(readFileSync(path, "utf8")) as GroqModelsConfig;
-  } catch (error) {
-    throw new Error(
-      `Failed to load Groq models SSOT allowlist (expected config/groq-models.json at repo root, searched up from "${MODULE_DIR}"): ${
-        error instanceof Error ? error.message : String(error)
-      }`,
-    );
-  }
+  return groqModelsSsot as GroqModelsConfig;
 }
 
 type ResolvedLanguageModel = ReturnType<typeof createGeminiLanguageModel>;
@@ -63,11 +44,24 @@ export {
   resolveGeminiModel,
 } from "./gemini-registry";
 
-const groqModels = loadGroqModelsConfig();
+let groqModelsCache: GroqModelsConfig | null = null;
+let modelByIdCache: Map<string, GroqModelEntry> | null = null;
 
-const MODEL_BY_ID = new Map(
-  groqModels.models.map((entry) => [entry.id, entry] as const),
-);
+function getGroqModelsConfig(): GroqModelsConfig {
+  if (!groqModelsCache) {
+    groqModelsCache = loadGroqModelsConfig();
+  }
+  return groqModelsCache;
+}
+
+function getModelById(): Map<string, GroqModelEntry> {
+  if (!modelByIdCache) {
+    modelByIdCache = new Map(
+      getGroqModelsConfig().models.map((entry) => [entry.id, entry] as const),
+    );
+  }
+  return modelByIdCache;
+}
 
 export function resolveAiProvider(): AiProvider {
   const raw = (process.env.AI_PROVIDER ?? "gemini").trim().toLowerCase();
@@ -77,14 +71,14 @@ export function resolveAiProvider(): AiProvider {
   );
 }
 
-/** Alias for groq-plan naming. */
 export const resolveProvider = resolveAiProvider;
 
 export function getGroqModelEntry(modelId: string): GroqModelEntry | undefined {
-  return MODEL_BY_ID.get(modelId);
+  return getModelById().get(modelId);
 }
 
 export function resolveGroqModelId(tier: GroqModelTier = "default"): string {
+  const groqModels = getGroqModelsConfig();
   const envKey = groqModels.envMapping[tier];
   const fromEnv = envKey ? process.env[envKey]?.trim() : "";
   const fallback = groqModels.defaults[tier]?.trim() ?? "";
@@ -92,7 +86,7 @@ export function resolveGroqModelId(tier: GroqModelTier = "default"): string {
   if (!modelId) {
     throw new Error(`No Groq model configured for tier "${tier}".`);
   }
-  if (!MODEL_BY_ID.has(modelId)) {
+  if (!getModelById().has(modelId)) {
     throw new Error(
       `Groq model "${modelId}" is not in config/groq-models.json allowlist.`,
     );
@@ -100,19 +94,14 @@ export function resolveGroqModelId(tier: GroqModelTier = "default"): string {
   return modelId;
 }
 
-/** True when a Groq vision model is configured (env override or SSOT default). */
 function isGroqVisionConfigured(): boolean {
+  const groqModels = getGroqModelsConfig();
   const envKey = groqModels.envMapping.vision;
   const fromEnv = envKey ? process.env[envKey]?.trim() : "";
   const fallback = groqModels.defaults.vision?.trim() ?? "";
   return Boolean(fromEnv || fallback);
 }
 
-/**
- * Provider options for the active model. Gemini's thinkingBudget hack only
- * applies to Gemini — Groq has no equivalent today, so omit rather than send
- * a Gemini-shaped options object the Groq provider would just ignore.
- */
 export function resolveProviderOptions() {
   return resolveAiProvider() === "gemini" ? resolveGeminiProviderOptions() : {};
 }
@@ -138,7 +127,6 @@ export function assertGroqTierCapabilities(
   return entry;
 }
 
-// Lazy require keeps Gemini-only deploys from failing when @ai-sdk/groq is unused.
 function createGroqLanguageModel(tier: GroqModelTier): ResolvedLanguageModel {
   const apiKey = process.env.GROQ_API_KEY?.trim();
   if (!apiKey) {
@@ -159,9 +147,6 @@ function createGroqLanguageModel(tier: GroqModelTier): ResolvedLanguageModel {
 }
 
 export function resolveModel(tier: GroqModelTier = "default"): ResolvedLanguageModel {
-  // Vision stays on Gemini until GROQ_MODEL_VISION is set (golden eval gate) —
-  // forced regardless of AI_PROVIDER so a global groq cutover can't silently
-  // break vision extraction.
   if (tier === "vision" && !isGroqVisionConfigured()) {
     return createGeminiLanguageModel();
   }

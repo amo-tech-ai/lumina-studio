@@ -24,7 +24,7 @@ function isTrustedForwardedHost(forwardedHost: string, requestOrigin: string): b
   } catch {
     // ignore malformed SITE_URL
   }
-  return host.endsWith(".vercel.app");
+  return host.endsWith(".vercel.app") || host.endsWith(".workers.dev");
 }
 
 function redirectOrigin(request: Request): string {
