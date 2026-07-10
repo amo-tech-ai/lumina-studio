@@ -53,18 +53,20 @@ Both PRs are **merged**. Embeddings through the local AI Gateway now work: `crea
 
 ### Live (`http://127.0.0.1:8787`)
 
-Worker process at audit time: `workerd` from `wt-ipi-491-gateway-embeddings` (same embed/chat sources as `d112dea4`; `git diff origin/main` on those files empty).
+**Initial audit Worker:** `workerd` from `wt-ipi-491-gateway-embeddings` (same embed/chat sources as `d112dea4`).
+
+**Pure-main re-smoke (2026-07-10):** restarted Wrangler from clean worktree `wt-docs-315-316-successor` @ `75ae8c2c` (tip includes `d112dea4` + CRM #311 + this docs commit). Adapter API smoke via `tsx` — all Pass:
 
 | Path | Result | Evidence |
 |------|--------|----------|
 | `GET /health` | Pass | `{"status":"ok","service":"ai-gateway"}` |
-| `POST /v1/embeddings` `model=embedding` | Pass | `@cf/baai/bge-base-en-v1.5`, **768-d** |
-| `POST /v1/chat/completions` non-stream | Pass | `PONG` |
-| Adapter `chat()` | Pass | `PONG` (~1.1s) |
+| Adapter `chat()` | Pass | `PONG` |
 | Adapter `structured()` | Pass | `{ ok: true }` |
-| Adapter `embed()` (2 inputs) | Pass | dims `[768, 768]` |
-| Adapter `chatStream()` | Pass | chunks ≥ 1 |
-| Adapter cancel | Pass | reader.cancel OK |
+| Adapter `embed()` | Pass | **768-d** |
+| Adapter `chatStream()` | Pass | chunks ≥ 1 (`Hello`) |
+| Adapter cancel | Pass | `reader.cancel` clean |
+
+Earlier audit table (same tip Worker sources) also recorded raw `/v1/embeddings` + dual-input embed Pass.
 
 ### Edge probes (real-world failure points)
 
@@ -85,8 +87,9 @@ Worker process at audit time: `workerd` from `wt-ipi-491-gateway-embeddings` (sa
 |----|---------|-------------------|
 | E1 | Adapter default embed → Gemini chat model → 404 | **Fixed** on `main` (`modelForTier("embedding")` → `"embedding"`) |
 | E2 | Workers AI `{ text }` → 400 | **Fixed** (`{ model, input }` + OpenAI `data[].embedding` parse) |
-| E3 | **IPI-461** still **In Progress** though Done gate now Pass | 🔴 Process blocker — reassess Done |
-| E4 | **IPI-454** Linear body still says “embeddings Fail on main” | 🔴 Doc/Linear drift — update B4 |
+| E3 | **IPI-461** still **In Progress** though Done gate now Pass | ✅ **Done** in Linear (local runtime gate) |
+| E4 | **IPI-454** Linear body still says “embeddings Fail on main” | ✅ Updated — B4 Pass; AC-F → PR #317; J/I open |
+| E5 | **IPI-491** AC checkboxes unchecked in body | ✅ Checked off 2026-07-10 |
 | E5 | No Cloudflare **production** Worker deploy | 🔴 Blocks AC-I / prod claims (**IPI-472 · INFRA-001**) |
 
 ### High (epic incomplete)
