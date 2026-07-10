@@ -22,6 +22,7 @@ function asset(overrides: Partial<AssetRow> = {}): AssetRow {
     url: "https://res.cloudinary.com/dzqy2ixl0/image/upload/v1/a1.jpg",
     thumbnail_url: null,
     cloudinary_public_id: "a1",
+    displayUrl: null,
     status: "ready",
     dna_score: null,
     dna_pillars: {},
@@ -74,21 +75,21 @@ describe("AssetCard", () => {
     expect(screen.getByText("Approved")).toBeDefined();
   });
 
-  it("applies the asset-masonry Cloudinary transform (f_auto,q_auto,w_600) for a real delivery URL", () => {
+  it("renders the pre-resolved displayUrl as-is — get-assets.ts owns URL resolution (signed vs public), not this component", () => {
     const { container } = render(
       <AssetCard
-        asset={asset({ url: "https://res.cloudinary.com/dzqy2ixl0/image/upload/v1/a1.jpg" })}
+        asset={asset({
+          displayUrl: "https://res.cloudinary.com/dzqy2ixl0/image/authenticated/s--abc123--/c_limit,w_600,f_auto,q_auto/real-upload-01",
+        })}
       />,
     );
     expect(container.querySelector("img")?.getAttribute("src")).toBe(
-      "https://res.cloudinary.com/dzqy2ixl0/image/upload/c_limit,w_600,f_auto,q_auto/v1/a1.jpg",
+      "https://res.cloudinary.com/dzqy2ixl0/image/authenticated/s--abc123--/c_limit,w_600,f_auto,q_auto/real-upload-01",
     );
   });
 
-  it("falls back to a file icon (never a broken <img>) for a non-Cloudinary URL", () => {
-    const { container } = render(
-      <AssetCard asset={asset({ url: "https://placehold.co/600x600/png?text=ipix" })} />,
-    );
+  it("falls back to a file icon (never a broken <img>) when displayUrl is null", () => {
+    const { container } = render(<AssetCard asset={asset({ displayUrl: null })} />);
     expect(container.querySelector("img")).toBeNull();
   });
 

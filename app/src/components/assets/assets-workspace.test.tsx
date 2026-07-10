@@ -8,10 +8,18 @@ vi.mock("../ui/empty-state.module.css", () => ({ default: new Proxy({}, { get: (
 vi.mock("../ui/error-state.module.css", () => ({ default: new Proxy({}, { get: (_, k) => String(k) }) }));
 vi.mock("next/image", () => ({ default: (props: { alt: string }) => <img alt={props.alt} /> }));
 
+const { useSearchParamsMock } = vi.hoisted(() => ({
+  useSearchParamsMock: vi.fn(() => new URLSearchParams("")),
+}));
+vi.mock("next/navigation", () => ({ useSearchParams: useSearchParamsMock }));
+
 import { AssetsWorkspace } from "./assets-workspace";
 import type { AssetRow } from "@/lib/assets/get-assets";
 
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  useSearchParamsMock.mockReturnValue(new URLSearchParams(""));
+});
 
 function asset(overrides: Partial<AssetRow> = {}): AssetRow {
   return {
@@ -22,6 +30,7 @@ function asset(overrides: Partial<AssetRow> = {}): AssetRow {
     url: "https://res.cloudinary.com/dzqy2ixl0/image/upload/v1/a1.jpg",
     thumbnail_url: null,
     cloudinary_public_id: "a1",
+    displayUrl: null,
     status: "ready",
     dna_score: null,
     dna_pillars: {},
@@ -145,6 +154,21 @@ describe("AssetsWorkspace", () => {
   it("only renders the brand filter when a real brand is present on at least one asset", () => {
     render(<AssetsWorkspace assets={[asset({ brand_id: null, brand: null })]} isAuthenticated />);
     expect(screen.queryByText("Filter by brand")).toBeNull();
+  });
+
+  it("initializes the brand filter from a ?brand= deep link (Brand Detail / command-center quick action)", () => {
+    useSearchParamsMock.mockReturnValue(new URLSearchParams("brand=b2"));
+    render(
+      <AssetsWorkspace
+        assets={[
+          asset({ id: "a1", brand_id: "b1", brand: { name: "Acme" } }),
+          asset({ id: "a2", brand_id: "b2", brand: { name: "Zeta" } }),
+        ]}
+        isAuthenticated
+      />,
+    );
+    expect(screen.getAllByTestId("asset-card")).toHaveLength(1);
+    expect(screen.getByLabelText("Filter by brand")).toHaveProperty("value", "b2");
   });
 
   it("filters client-side by brand_id when brands are present", () => {

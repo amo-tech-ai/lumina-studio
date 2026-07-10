@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { useMemo, useState } from "react";
 import { ImageOff } from "lucide-react";
 
@@ -82,8 +83,12 @@ type Props = {
  *  that doesn't exist in the schema yet. The DC "DNA match" sort control
  *  *is* in scope — it's real (`dna_score`), no fabrication needed. */
 export function AssetsWorkspace({ assets, isAuthenticated, fetchError }: Props) {
+  // Brand Detail's "Review assets" link and the command-center quick action both
+  // deep-link as `/app/assets?brand=<id>` (brand-detail-workspace.tsx, quick-action-chips.tsx)
+  // — honor it as the initial filter so multi-brand operators land scoped, not on "All brands".
+  const searchParams = useSearchParams();
   const [filter, setFilter] = useState<AssetFilter>("all");
-  const [brandFilter, setBrandFilter] = useState<string>("all");
+  const [brandFilter, setBrandFilter] = useState<string>(() => searchParams.get("brand") ?? "all");
   const [dateFilter, setDateFilter] = useState<DateBucket>("all");
   const [sortByMatch, setSortByMatch] = useState(false);
 

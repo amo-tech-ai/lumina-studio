@@ -2,7 +2,6 @@ import Image from "next/image";
 import { FileText, Video } from "lucide-react";
 
 import { StatusChip } from "@/components/ui/status-chip";
-import { isDeliverableCover, withCloudinaryPreset } from "@/lib/cloudinary/url";
 import { assetDnaStatusDotToken, assetDnaStatusLabel } from "@/lib/assets/status-tokens";
 import type { AssetRow } from "@/lib/assets/get-assets";
 
@@ -24,7 +23,6 @@ function formatShortDate(iso: string): string {
  *  table (see get-assets.ts), so this never fabricates one: only the real
  *  type, date, and (when present) DNA status/score are shown. */
 export function AssetCard({ asset }: { asset: AssetRow }) {
-  const imgSrc = asset.thumbnail_url ?? asset.url;
   const ratio = asset.width && asset.height ? asset.width / asset.height : 1;
   const dnaLabel = assetDnaStatusLabel(asset.dna_status);
   const dnaDot = assetDnaStatusDotToken(asset.dna_status);
@@ -40,14 +38,8 @@ export function AssetCard({ asset }: { asset: AssetRow }) {
           <div className={styles.iconFallback} aria-hidden>
             <FileText size={22} />
           </div>
-        ) : isDeliverableCover(imgSrc) ? (
-          <Image
-            src={withCloudinaryPreset(imgSrc, "asset-masonry")}
-            alt=""
-            fill
-            sizes="25vw"
-            className={styles.thumbImage}
-          />
+        ) : asset.displayUrl ? (
+          <Image src={asset.displayUrl} alt="" fill sizes="25vw" className={styles.thumbImage} />
         ) : (
           <div className={styles.iconFallback} aria-hidden>
             <FileText size={22} />
