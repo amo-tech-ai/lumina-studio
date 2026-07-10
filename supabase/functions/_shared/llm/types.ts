@@ -2,7 +2,17 @@
 // This file exists for backward compatibility with existing Supabase Edge Function imports.
 // The SSOT is app/src/lib/ai/types.ts — do not add new types here.
 
-// @ts-ignore — Deno may not resolve the app path during CI. Types are checked at app build time.
+import type {
+  AiProvider,
+  ModelTier,
+  ModelCapabilities,
+  ModelRegistryEntry,
+  ModelRegistry,
+  GroqModelTier,
+  GroqModelEntry,
+  GroqModelsConfig,
+} from "../../../../app/src/lib/ai/types.ts";
+
 export type { AiProvider, ModelTier, ModelCapabilities, ModelRegistryEntry, ModelRegistry } from "../../../../app/src/lib/ai/types.ts";
 
 // ── Edge-function-specific types NOT in the shared package ──
@@ -17,7 +27,7 @@ export type GroqRateLimitHeaders = {
 };
 
 export type StructuredGenerationLog = {
-  provider: string;
+  provider: AiProvider;
   model: string;
   xGroqRequestId?: string;
   schemaRepairCount: number;
@@ -37,7 +47,7 @@ export type StructuredGenerationOptions = {
   jsonSchema: Record<string, unknown>;
   geminiResponseSchema?: object;
   schemaName?: string;
-  tier?: string;
+  tier?: GroqModelTier;
   maxCompletionTokens?: number;
   temperature?: number;
   timeoutMs?: number;
@@ -51,5 +61,4 @@ export type StructuredGenerationResult<T> = {
 
 // ── Groq-specific types — still actively used, not deprecated (see app/src/lib/ai/types.ts) ──
 
-// @ts-ignore — Deno may not resolve the app path during CI. Types are checked at app build time.
 export type { GroqModelTier, GroqModelEntry, GroqModelsConfig } from "../../../../app/src/lib/ai/types.ts";

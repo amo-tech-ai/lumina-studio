@@ -71,8 +71,8 @@ function emitSseDeltas(
 
   for (const line of lines) {
     const trimmed = line.trim();
-    if (!trimmed || !trimmed.startsWith("data: ")) continue;
-    const data = trimmed.slice(6);
+    if (!trimmed || !trimmed.startsWith("data:")) continue;
+    const data = trimmed.slice(trimmed.startsWith("data: ") ? 6 : 5);
     if (data === "[DONE]") return { remainder, done: true };
 
     try {
@@ -148,7 +148,7 @@ export const providerAdapter: AiProviderAdapter = {
           });
 
           if (!response.ok) {
-            throw new Error(`stream failed: ${response.status}`);
+            throw new Error(`stream failed: ${response.status} ${await response.text()}`);
           }
 
           const reader = response.body?.getReader();
@@ -170,7 +170,10 @@ export const providerAdapter: AiProviderAdapter = {
             }
           }
         } catch (err) {
-          if (!abortController.signal.aborted) controller.error(err);
+          if (!abortController.signal.aborted) {
+            controller.error(err);
+            return;
+          }
         }
         if (!abortController.signal.aborted) controller.close();
       },
@@ -190,7 +193,7 @@ export const providerAdapter: AiProviderAdapter = {
         messages: buildMessages(prompt),
         temperature: options.temperature ?? 0.3,
         max_tokens: options.maxTokens ?? 4096,
-        response_format: { type: "json_object", schema: options.schema },
+        response_format: { type: "json_object" },
       }),
     });
 

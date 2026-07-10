@@ -3,16 +3,17 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { providerAdapter } from "./provider-adapter";
 
 describe("providerAdapter", () => {
-  const originalEnv = { ...process.env };
+  const originalFetch = globalThis.fetch;
 
   beforeEach(() => {
     vi.clearAllMocks();
-    process.env.AI_GATEWAY_URL = "http://localhost:4111";
-    process.env.AI_GATEWAY_API_KEY = "test-key";
+    vi.stubEnv("AI_GATEWAY_URL", "http://localhost:4111");
+    vi.stubEnv("AI_GATEWAY_API_KEY", "test-key");
   });
 
   afterEach(() => {
-    process.env = { ...originalEnv };
+    globalThis.fetch = originalFetch;
+    vi.unstubAllEnvs();
     vi.restoreAllMocks();
   });
 
@@ -76,6 +77,80 @@ describe("providerAdapter", () => {
       expect(stream).toBeInstanceOf(ReadableStream);
       expect(globalThis.fetch).toHaveBeenCalled();
     });
+
+    it("parses SSE deltas and closes on [DONE]", async () => {
+      const sseBody = [
+        'data: {"choices":[{"delta":{"content":"Hello"}}]}',
+        "",
+        'data: {"choices":[{"delta":{"content":" world"}}]}',
+        "",
+        "data: [DONE]",
+        "",
+      ].join("\n");
+
+      globalThis.fetch = vi.fn().mockResolvedValue({
+        ok: true,
+        body: new ReadableStream({
+          start(controller) {
+            controller.enqueue(new TextEncoder().encode(sseBody));
+            controller.close();
+          },
+        }),
+      });
+
+      const stream = providerAdapter.chatStream("test");
+      const reader = stream.getReader();
+      const chunks: string[] = [];
+      for (;;) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        chunks.push(value);
+      }
+
+      expect(chunks).toEqual(["Hello", " world"]);
+    });
+
+    it("handles data: without space (no-space SSE delimiter)", async () => {
+      const sseBody = [
+        'data:{"choices":[{"delta":{"content":"no-space"}}]}',
+        "",
+        "data:[DONE]",
+        "",
+      ].join("\n");
+
+      globalThis.fetch = vi.fn().mockResolvedValue({
+        ok: true,
+        body: new ReadableStream({
+          start(controller) {
+            controller.enqueue(new TextEncoder().encode(sseBody));
+            controller.close();
+          },
+        }),
+      });
+
+      const stream = providerAdapter.chatStream("test");
+      const reader = stream.getReader();
+      const chunks: string[] = [];
+      for (;;) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        chunks.push(value);
+      }
+
+      expect(chunks).toEqual(["no-space"]);
+    });
+
+    it("throws on non-ok response with body text", async () => {
+      globalThis.fetch = vi.fn().mockResolvedValue({
+        ok: false,
+        status: 502,
+        text: () => Promise.resolve("Bad Gateway"),
+      });
+
+      const stream = providerAdapter.chatStream("test");
+      const reader = stream.getReader();
+      await expect(reader.read()).rejects.toThrow("stream failed: 502 Bad Gateway");
+    });
   });
 
   describe("structured", () => {
@@ -95,6 +170,25 @@ describe("providerAdapter", () => {
 
       expect(result.object).toEqual({ name: "test", score: 85 });
       expect(result.usage).toEqual({ promptTokens: 15, completionTokens: 5 });
+    });
+
+    it("sends response_format without schema field (gateway contract)", async () => {
+      const fetchMock = vi.fn().mockResolvedValue({
+        ok: true,
+        json: () =>
+          Promise.resolve({
+            choices: [{ message: { content: "{}" } }],
+          }),
+      });
+      globalThis.fetch = fetchMock;
+
+      await providerAdapter.structured("test", {
+        schema: { type: "object", properties: {} },
+      });
+
+      const callBody = JSON.parse(fetchMock.mock.calls[0][1].body);
+      expect(callBody.response_format).toEqual({ type: "json_object" });
+      expect(callBody.response_format).not.toHaveProperty("schema");
     });
 
     it("throws on non-ok response", async () => {
