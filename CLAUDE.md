@@ -204,6 +204,21 @@ gh run list --limit 5          # see recent runs
 gh run view <id> --log-failed  # debug a failure
 ```
 
+## Cloudflare / infrastructure task workflow
+
+For **any** Cloudflare-related task (Workers, OpenNext, AI Gateway, Workers AI, Durable Objects,
+Queues, KV, Vectorize, Hyperdrive, D1, R2, Workflows, AI provider integrations, CopilotKit,
+Mastra wiring, OAuth/runtime compatibility, deployment, CI/CD, security), follow the 8-stage
+accuracy-first standard in [`tasks/cloudflare/ENGINEERING-WORKFLOW.md`](tasks/cloudflare/ENGINEERING-WORKFLOW.md):
+scope verification → evidence collection → focused implementation → right-sized testing → runtime
+verification → documentation verification → architecture review → production readiness, with a
+standard reporting table and closing quality gates.
+
+Key discipline: match verification cost to actual risk — don't re-run a full local production
+build on every change when CI's `app-build` job already does, and prefer Cloudflare's own
+gradual-deployment/rollback/observability tooling over exhaustive pre-merge local verification
+where it applies (see the doc's "Right-sizing verification" section).
+
 ## QA test credentials
 
 For automated browser testing (`npm run dev` on port 3002):
