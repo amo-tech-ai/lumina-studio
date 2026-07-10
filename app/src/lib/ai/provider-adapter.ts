@@ -65,7 +65,8 @@ function modelForTier(tier: ModelTier): string {
     vision: process.env.AI_MODEL_VISION,
     embedding: process.env.AI_MODEL_EMBEDDING,
   };
-  return overrides[tier] ?? "gemini-3.1-flash-lite";
+  // Worker registry key → Workers AI BGE; never fall back to a Gemini chat model.
+  return overrides[tier] ?? (tier === "embedding" ? "embedding" : "gemini-3.1-flash-lite");
 }
 
 function buildMessages(prompt: string) {

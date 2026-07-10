@@ -83,24 +83,34 @@ export const workersAiProvider: AiProvider = {
   },
 
   async embed(req: EmbeddingRequest, config: ProviderConfig): Promise<EmbeddingResponse> {
-    const inputs = typeof req.input === "string" ? [req.input] : req.input;
-    const results = await Promise.all(
-      inputs.map(async (text) => {
-        const res = await fetch(`${workersAiOpenAiBaseUrl(config)}/embeddings`, {
-          method: "POST",
-          headers: authHeaders(config),
-          body: JSON.stringify({ model: req.model, text: [text] }),
-        });
-        if (!res.ok) throw new Error(`Workers AI embedding error ${res.status}`);
-        const data: any = await res.json();
-        return data.result?.data?.[0]?.embedding ?? [];
-      }),
-    );
+    // OpenAI-compat `/v1/embeddings` uses `input` (string | string[]), not native `text`.
+    // @see https://developers.cloudflare.com/workers-ai/configuration/open-ai-compatibility/
+    const res = await fetch(`${workersAiOpenAiBaseUrl(config)}/embeddings`, {
+      method: "POST",
+      headers: authHeaders(config),
+      body: JSON.stringify({ model: req.model, input: req.input }),
+    });
+    if (!res.ok) {
+      const err = await res.text();
+      throw new Error(`Workers AI embedding error ${res.status}: ${err}`);
+    }
+    const data: {
+      data?: { index?: number; embedding?: number[] }[];
+      result?: { data?: { index?: number; embedding?: number[] }[] };
+      usage?: { prompt_tokens?: number; total_tokens?: number };
+    } = await res.json();
+    const rows = data.data ?? data.result?.data ?? [];
 
     return {
       model: req.model,
-      data: results.map((embedding, i) => ({ index: i, embedding })),
-      usage: { prompt_tokens: 0, total_tokens: 0 },
+      data: rows.map((row, i) => ({
+        index: row.index ?? i,
+        embedding: row.embedding ?? [],
+      })),
+      usage: {
+        prompt_tokens: data.usage?.prompt_tokens ?? 0,
+        total_tokens: data.usage?.total_tokens ?? 0,
+      },
     };
   },
 };
