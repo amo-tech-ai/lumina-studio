@@ -1,36 +1,4 @@
 -- IPI-341 · MG-4 — transition_booking() RPC + bookings RLS status lockdown.
--- Canonical FSM: tasks/models/engineering/rpc-contracts.md § Lifecycle transitions
---
--- Actor matrix (transition_booking — corrected):
--- | From → To              | Brand | Talent | Agency | Required inputs              |
--- |------------------------|:-----:|:------:|:------:|------------------------------|
--- | requested → quoted     |  ❌   |   ✅   |   ✅   | rate_quoted                  |
--- | requested → approved   |  ✅   |   ❌   |   ❌   | —                            |
--- | requested → declined   |  ✅   |   ✅   |   ✅   | —                            |
--- | requested → cancelled  |  ✅   |   ✅   |   ✅   | cancellation_reason          |
--- | quoted → approved      |  ✅   |   ❌   |   ❌   | sets approved_by             |
--- | quoted → declined      |  ✅   |   ✅   |   ✅   | —                            |
--- | quoted → cancelled     |  ✅   |   ✅   |   ✅   | cancellation_reason          |
--- | quoted → requested     |  ✅   |   ✅   |   ✅   | optional date change         |
--- | approved → cancelled   |  ✅   |   ✅   |   ✅   | cancellation_reason          |
--- | confirmed → cancelled  |  ✅   |   ✅   |   ✅   | cancellation_reason          |
--- | any → confirmed        |  ❌   |   ❌   |   ❌   | use confirm_booking only     |
--- | any → expired          |  ❌   |   ❌   |   ❌   | cron expire_stale_bookings   |
--- Date-only (p_to_status NULL): requested|quoted · any party · both dates · expected_version
---
--- Side effects (history, notifications, availability): trg_bookings_log_status_change only.
--- This RPC must NOT insert notifications directly.
---
--- Verify:
---   infisical run -- npm run supabase:verify-rls
---   psql -v ON_ERROR_STOP=1 "$DATABASE_URL" -f scripts/test-booking-transition-fsm.sql
---   psql -v ON_ERROR_STOP=1 "$DATABASE_URL" -f scripts/test-booking-transition-concurrency.sql
---   psql -v ON_ERROR_STOP=1 "$DATABASE_URL" -f scripts/test-booking-rls-bypass.sql
---   cd app && npm run typecheck
---
--- Rollback:
---   drop function if exists public.transition_booking(uuid, integer, text, numeric, date, date, text);
---   -- restore prior bookings_update_party policy from 20260701125300
 
 create or replace function public.transition_booking(
   p_booking_id uuid,
@@ -44,7 +12,7 @@ create or replace function public.transition_booking(
 returns jsonb
 language plpgsql
 security definer
-set search_path = pg_catalog, public, talent, shoot
+set search_path = public, talent, shoot
 as $func$
 declare
   v_booking talent.bookings%rowtype;
@@ -137,11 +105,7 @@ begin
       'from_status', v_from_status,
       'to_status', v_booking.status,
       'date_start', v_booking.date_start,
-      'date_end', v_booking.date_end,
-      'rate_quoted', v_booking.rate_quoted,
-      'approved_by', v_booking.approved_by,
-      'cancelled_by', v_booking.cancelled_by,
-      'cancellation_reason', v_booking.cancellation_reason
+      'date_end', v_booking.date_end
     );
   end if;
 
@@ -250,11 +214,8 @@ revoke all on function public.transition_booking(uuid, integer, text, numeric, d
 grant execute on function public.transition_booking(uuid, integer, text, numeric, date, date, text)
   to authenticated;
 
--- Layer 2 lockdown: authenticated clients cannot mutate bookings directly (MVP).
--- All writes go through SECURITY DEFINER RPCs (create_booking_request, transition_booking).
 drop policy if exists bookings_update_party on talent.bookings;
 
 create policy bookings_update_party on talent.bookings
   for update to authenticated
-  using (false)
-  with check (false);
+  using (false);;

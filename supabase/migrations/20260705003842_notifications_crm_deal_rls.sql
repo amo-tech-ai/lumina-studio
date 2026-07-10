@@ -83,4 +83,4 @@ $$;
 
 create index if not exists idx_notifications_crm_deal_id
   on public.notifications (crm_deal_id, created_at desc)
-  where crm_deal_id is not null;
+  where crm_deal_id is not null;;

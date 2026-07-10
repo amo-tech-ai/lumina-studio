@@ -1,10 +1,3 @@
--- IPI-348 · MG-10 — point lookup for booking agent availability pre-check.
--- Mirrors search_talent is_available logic for one talent_profiles_public row
--- (avoids false negatives from search_talent's 50-row browse limit).
---
--- Verify: infisical run -- npm run supabase:verify-rls
--- Rollback: drop function if exists public.check_talent_availability(uuid, date, date);
-
 create or replace function public.check_talent_availability(
   p_talent_profile_id uuid,
   p_date_start date default null,
@@ -56,3 +49,4 @@ $func$;
 
 revoke all on function public.check_talent_availability(uuid, date, date) from public, anon;
 grant execute on function public.check_talent_availability(uuid, date, date) to authenticated;
+;

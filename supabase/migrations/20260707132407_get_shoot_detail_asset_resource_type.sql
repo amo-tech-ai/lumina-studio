@@ -160,3 +160,4 @@ $$;
 
 revoke all on function public.get_shoot_detail(uuid) from public;
 grant execute on function public.get_shoot_detail(uuid) to authenticated;
+;

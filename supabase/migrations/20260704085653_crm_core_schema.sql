@@ -90,38 +90,19 @@ security definer
 set search_path = ''
 as $$
 begin
-  if tg_op = 'INSERT' then
-    if new.stage in ('won', 'lost')
-       and coalesce(current_setting('app.crm_convert', true), '') <> '1' then
-      raise exception 'crm_deals.stage may only be set to won/lost via api/crm/deals/[id]/convert (IPI-367)';
-    end if;
-  elsif tg_op = 'UPDATE' then
-    if (new.stage in ('won', 'lost') or old.stage in ('won', 'lost'))
-       and new.stage is distinct from old.stage
-       and coalesce(current_setting('app.crm_convert', true), '') <> '1' then
+  if new.stage in ('won', 'lost') and old.stage not in ('won', 'lost') then
+    if coalesce(current_setting('app.crm_convert', true), '') <> '1' then
       raise exception 'crm_deals.stage may only be set to won/lost via api/crm/deals/[id]/convert (IPI-367)';
     end if;
   end if;
   return new;
 end;
 $$;
-comment on function public.crm_deals_guard_terminal_stage() is 'Defense-in-depth for IPI-367: rejects INSERT/UPDATE touching won/lost unless app.crm_convert=1 is set in the same transaction by the convert route.';
-
-revoke all on function public.crm_deals_guard_terminal_stage() from public;
-revoke all on function public.crm_deals_guard_terminal_stage() from anon, authenticated;
+comment on function public.crm_deals_guard_terminal_stage() is 'Defense-in-depth for IPI-367: rejects any UPDATE setting stage=won/lost unless app.crm_convert=1 is set in the same transaction by the convert route.';
 
 create trigger crm_deals_terminal_stage_guard
-  before insert or update on public.crm_deals
+  before update on public.crm_deals
   for each row execute function public.crm_deals_guard_terminal_stage();
-
--- ── Task 2b: wave-1 indexes (supabase-plan.md) ─────────────────────────
-
-create index crm_companies_org_id_idx on public.crm_companies (org_id);
-create index crm_contacts_org_id_idx on public.crm_contacts (org_id);
-create index crm_deals_org_id_idx on public.crm_deals (org_id);
-create index crm_deals_org_id_stage_idx on public.crm_deals (org_id, stage);
-create index crm_activities_org_id_idx on public.crm_activities (org_id);
-create index crm_activities_deal_id_idx on public.crm_activities (deal_id) where deal_id is not null;
 
 -- ── Task 3: RLS policies — all 4 tables, written out explicitly ────────
 
@@ -179,4 +160,4 @@ alter table public.notifications
   add constraint notifications_at_least_one_recipient
   check (num_nonnulls(brand_org_id, talent_profile_id, agency_org_id, crm_deal_id) >= 1);
 
-comment on column public.notifications.crm_deal_id is 'IPI-362 Task 4: CRM notification recipient anchor (deal_stage_changed, follow_up_due). Nullable — existing booking/talent rows unaffected.';
+comment on column public.notifications.crm_deal_id is 'IPI-362 Task 4: CRM notification recipient anchor (deal_stage_changed, follow_up_due). Nullable — existing booking/talent rows unaffected.';;
