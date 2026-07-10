@@ -18,8 +18,7 @@
 Both PRs are **merged**. Embeddings through the local AI Gateway now work: `createProviderAdapter().embed()` returns **768-d** vectors via Workers AI BGE. Chat / structured / stream still pass (no regression from #312).
 
 **Do not** mark **IPI-454 · CF-AI-001** Done — AC-J / AC-I remain open; AC-F is in PR [#317](https://github.com/amo-tech-ai/lumina-studio/pull/317) (not on `main` until merge).  
-**Do** treat **IPI-461 · CF-AI-004** as Done (local Done-gate paths all Pass on this run).  
-**IPI-491 · CF-AI-004b** is Done in Linear with AC checkboxes checked (2026-07-10 hygiene pass).
+**Verified Linear (2026-07-10 MCP):** **IPI-461 · CF-AI-004** = **Done** (local Done-gate Pass). **IPI-491 · CF-AI-004b** = **Done** with AC checkboxes checked. Do not re-open hygiene for those two.
 
 | Scorecard | Score | Notes |
 |-----------|------:|-------|
@@ -94,20 +93,20 @@ Earlier audit table (same tip Worker sources) also recorded raw `/v1/embeddings`
 
 ### High (epic incomplete)
 
-| ID | Finding |
-|----|---------|
-| H1 | Mastra `resolveModel()` not on gateway (**AC-F**) |
-| H2 | AC-J E2E checklist mostly unchecked |
-| H3 | Dual model registries (app vs Worker) still diverge |
-| H4 | IPI-491 AC checkboxes unchecked while status=Done |
+| ID | Finding | Status (verified 2026-07-10) |
+|----|---------|------------------------------|
+| H1 | Mastra `resolveModel()` not on gateway (**AC-F**) | Open — PR [#317](https://github.com/amo-tech-ai/lumina-studio/pull/317) |
+| H2 | AC-J E2E checklist mostly unchecked | Open |
+| H3 | Dual model registries (app vs Worker) still diverge | Open |
+| H4 | ~~IPI-491 AC checkboxes unchecked while status=Done~~ | ✅ Resolved — AC boxes checked; Linear **Done** |
 
 ### Medium
 
 | ID | Finding |
 |----|---------|
-| M1 | Empty `input: []` → opaque 502 (Worker wraps provider 400) |
-| M2 | Explicit wrong embed model still routes to Gemini 404 |
-| M3 | #315 audit file still says “#316 open” / embed Fail (historical; needs successor note) |
+| M1 | Empty `input: []` → opaque 502 (Worker wraps provider 400) — follow-up **IPI-492 · CF-AI-004c** / PR [#319](https://github.com/amo-tech-ai/lumina-studio/pull/319) |
+| M2 | Explicit wrong embed model still routes to Gemini 404 — same hardening track as M1 |
+| M3 | #315 audit file still says “#316 open” / embed Fail (historical; successor note added) |
 | M4 | Extra untracked test docs under dirty `/home/sk/ipix` checkout **not** on `origin/main` |
 | M5 | Live Worker was not restarted from `wt-audit-315-316` (content-equivalent; restart for purity) |
 
@@ -122,18 +121,25 @@ Earlier audit table (same tip Worker sources) also recorded raw `/v1/embeddings`
 
 ## Critical fixes (ordered)
 
-1. **Linear hygiene (no code)** — Update **IPI-454** truth: B4 local Pass via #316; keep F/J/I open; bump ~74%.  
-2. **Reassess IPI-461 Done** — All Done-gate probes Pass this run → mark Done *or* leave open only if you require prod deploy (that belongs to IPI-472, not 461).  
-3. **Tick IPI-491 AC boxes** to match Done.  
-4. **Do not** reopen #315/#316 for AC-F.  
-5. Next code: **IPI-454 · CF-AI-001 AC-F** (Option A: chat/stream only).  
-6. Parallel infra: **IPI-472 · INFRA-001** (owns prod AC-I).
+**Linear hygiene (verified Done — no further action):**
 
-Optional hardening (not merge blockers for #316):
+| Issue | Linear status (2026-07-10) | Notes |
+|-------|----------------------------|-------|
+| **IPI-461 · CF-AI-004** | ✅ **Done** | Local Done gate Pass; prod deploy is **IPI-472**, not 461 |
+| **IPI-491 · CF-AI-004b** | ✅ **Done** | AC checkboxes checked; PR #316 merged |
 
-- Reject empty embed inputs in adapter before fetch (clear 400).  
-- If `opts.model` looks like a Gemini chat id on `embed()`, warn or remap to `"embedding"`.  
-- Add one Worker integration test for empty `input` → stable error shape.
+**Still open (do these next):**
+
+1. Keep **IPI-454 · CF-AI-001** open — B4 local Pass via #316; AC-F → [#317](https://github.com/amo-tech-ai/lumina-studio/pull/317); AC-J / AC-I remain.  
+2. **Do not** reopen #315/#316 for AC-F.  
+3. Next code after #317: AC-J E2E + **IPI-472 · INFRA-001** (owns prod AC-I).  
+4. Embed hardening (empty input / wrong model → clear 400): **IPI-492 · CF-AI-004c** / [#319](https://github.com/amo-tech-ai/lumina-studio/pull/319).
+
+Optional hardening notes (tracked on IPI-492, not merge blockers for #316):
+
+- Reject empty embed inputs before provider fetch (clear 400).  
+- Reject unsupported embed models (no silent Gemini remap).  
+- Stable sanitized error envelope on the Worker.
 
 ---
 
@@ -146,10 +152,11 @@ Optional hardening (not merge blockers for #316):
 | Live embed on local Worker | ✅ (this audit) |
 | Live chat regression | ✅ |
 | #315 successor audit after #316 | ✅ **this file** |
-| IPI-461 Done flip | ❌ still In Progress |
-| IPI-454 Linear B4 update | ❌ stale |
-| Mastra gateway wire (AC-F) | ❌ |
-| Prod Worker | ❌ |
+| **IPI-461 · CF-AI-004** Done | ✅ Linear **Done** (local gate; not Production Verified) |
+| **IPI-491 · CF-AI-004b** Done + AC boxes | ✅ Linear **Done** |
+| **IPI-454** Linear B4 / AC-F truth | ✅ Updated (AC-F → #317; J/I open) |
+| Mastra gateway wire (AC-F) on `main` | ❌ until #317 merges |
+| Prod Worker | ❌ → **IPI-472 · INFRA-001** |
 | Remote Preview Verified | ❌ |
 | Production Verified | ❌ |
 
@@ -187,9 +194,9 @@ Accurate snapshot of post-#312 / pre-#316 world. −12 for now-stale “#316 ope
 
 | Epic | % | Why not 100 |
 |------|--:|-------------|
-| **IPI-491 · CF-AI-004b** | ~95 | Done justified; AC boxes + empty-input polish |
-| **IPI-461 · CF-AI-004** | ~96 | Ready for Done on local gate |
-| **IPI-454 · CF-AI-001** | ~74 | F/J/I open; B4 local only |
+| **IPI-491 · CF-AI-004b** | ~95 | ✅ Linear **Done**; residual empty-input / wrong-model polish → IPI-492 |
+| **IPI-461 · CF-AI-004** | ~96 | ✅ Linear **Done** on local gate; not Production Verified |
+| **IPI-454 · CF-AI-001** | ~76 | AC-F in #317; J/I open; B4 local only |
 
 ---
 
@@ -201,7 +208,7 @@ Accurate snapshot of post-#312 / pre-#316 world. −12 for now-stale “#316 ope
 | JSON shot-list via `structured()` | ✅ |
 | Live typing via `chatStream()` | ✅ |
 | Semantic / vector prep via `embed()` | ✅ local gateway |
-| Mastra agent → gateway (no direct Gemini) | ❌ AC-F |
+| Mastra agent → gateway (no direct Gemini) | ❌ AC-F (#317) |
 | Same paths on Cloudflare prod Worker | ❌ IPI-472 |
 
 ---
@@ -210,15 +217,15 @@ Accurate snapshot of post-#312 / pre-#316 world. −12 for now-stale “#316 ope
 
 | Item | Result |
 |------|--------|
-| Finding | #315+#316 merged; embed fixed locally; epic not Done |
-| Evidence | Unit 24+23; live health/chat/structured/embed/stream/cancel; dry-run |
-| Classification | #316 **Confirmed correct**; #315 **Confirmed historical / partially stale**; IPI-461 **Ready for Done reassessment** |
+| Finding | #315+#316 merged; embed fixed locally; **IPI-454** epic not Done |
+| Evidence | Unit 24+23; live health/chat/structured/embed/stream/cancel; Linear MCP: **IPI-461**/**IPI-491** = Done |
+| Classification | #316 **Confirmed correct**; #315 **Confirmed historical / successor landed**; IPI-461/491 **Done (local)** |
 | Change made | This audit doc only (no production code) |
 | Regression test | Adapter + Worker suites green; live smoke script used once |
 | Validation level | **Local Runtime Verified** |
 | Scope preserved | Yes — audit only |
-| Remaining risks | Prod undeployed; AC-F missing; Linear drift; empty embed input 502 |
-| Next action | Update Linear (454/461/491) → start AC-F → IPI-472 for prod |
+| Remaining risks | Prod undeployed; AC-F not on `main` until #317; empty embed input 502 → #319 |
+| Next action | Merge #317 (AC-F) → #319 (embed errors) → AC-J → **IPI-472** for prod |
 
 ---
 
