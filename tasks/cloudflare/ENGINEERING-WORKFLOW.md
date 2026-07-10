@@ -85,10 +85,10 @@ Run the cheapest gate that actually proves the change first, then escalate only 
 2. **Focused** — lint on changed files only.
 3. **Full local suite** — before pushing (this is what the repo's pre-push hook already runs:
    `tsc --noEmit` + `vitest run`).
-4. **Full production build** (`next build`, `opennextjs-cloudflare build`) — **only when the
-   change touches build/bundling config itself** (`next.config.ts`, `wrangler.jsonc`,
-   `open-next.config.ts`, dependency bundling). For ordinary application code, trust CI's
-   `app-build` job to run this — don't duplicate a 2–3 minute build locally on every change.
+4. **Full production build** (`next build`, `opennextjs-cloudflare build`) — recommended before opening a PR if you've enabled the repo's full pre-push gate (see `CLAUDE.md`), and **required** when the
+   change touches build/bundling config itself (`next.config.ts`, `wrangler.jsonc`,
+   `open-next.config.ts`, dependency bundling). For ordinary application code, it's reasonable
+   to rely on CI's `app-build` job instead of duplicating a 2–3 minute build locally.
 5. **Cloudflare preview** (local `wrangler dev` or, better, a real remote preview — see
    "Right-sizing verification" below) — only for changes to runtime-compat surfaces: streaming,
    bindings, OAuth/auth, env-var timing, CopilotKit/Mastra wiring.
