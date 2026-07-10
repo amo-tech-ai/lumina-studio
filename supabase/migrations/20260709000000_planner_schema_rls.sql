@@ -588,17 +588,17 @@ create trigger assignments_broadcast after insert or update or delete on planner
 
 -- Realtime channel authorization: allow authenticated users with at least viewer role
 -- on a planner instance to subscribe to its planner:<instance_id> channel.
--- Uses planner.is_at_least to verify the user has access to the extracted instance UUID.
+-- realtime.messages uses topic (not channel_name); realtime.topic() is the auth helper.
 create policy "planner_channel_subscribe"
   on realtime.messages for select to authenticated
   using (
-    channel_name like 'planner:%'
+    realtime.topic() like 'planner:%'
     and case
-      when channel_name ~ '^planner:[0-9a-f-]{36}$' then
+      when realtime.topic() ~ '^planner:[0-9a-f-]{36}$' then
         exists (
           select 1
           from planner.instances i
-          where i.id = substring(channel_name from 9)::uuid
+          where i.id = substring(realtime.topic() from 9)::uuid
             and public.is_org_member(i.org_id)
             and planner.is_at_least(i.id, 'viewer')
         )
