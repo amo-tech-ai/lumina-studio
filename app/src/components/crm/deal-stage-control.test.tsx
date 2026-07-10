@@ -89,6 +89,16 @@ describe("DealStageControl", () => {
     resolveFetch({ ok: true, json: async () => ({ ok: true, dealId: DEAL_ID, stage: "negotiation" }) });
   });
 
+  it("skips the PATCH entirely when clicking the already-active stage", () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+    const onStageChange = vi.fn();
+    render(<DealStageControl dealId={DEAL_ID} stage="proposal" onStageChange={onStageChange} />);
+    fireEvent.click(screen.getByText("Proposal"));
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(onStageChange).not.toHaveBeenCalled();
+  });
+
   it("opens the approval gate for Won instead of writing immediately — never calls fetch for terminal stages", () => {
     const onStageChange = vi.fn();
     const fetchMock = vi.fn();

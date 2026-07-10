@@ -57,6 +57,7 @@ export function DealStageControl({ dealId, stage, onStageChange }: Props) {
   }
 
   async function handleClick(target: CrmDealStage) {
+    if (target === stage) return; // already here — skip the round-trip
     if (TERMINAL.has(target)) {
       setPending(target);
       return;
