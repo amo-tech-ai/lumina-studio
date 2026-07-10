@@ -198,10 +198,9 @@ of Stage 4/5's burden from "verify everything locally before pushing" to "the pl
 fast, and rollback is one command":
 
 1. **Cloudflare Workers Builds (native GitHub integration)** — connecting the repo gives every PR
-   a real `*.workers.dev` preview URL, auto-posted as a PR comment, without a manual `wrangler
-   dev` session. This is the single biggest gap: this repo has never done a *remote* Cloudflare
-   preview deploy, only local `wrangler dev` — closes CF-MIG-111/CF-MIG-220 in the tracker.
-   ([docs](https://developers.cloudflare.com/workers/ci-cd/builds/))
+   a real `*.workers.dev` preview URL, auto-posted as a PR comment, without a manual `wrangler dev`
+   session. This is a major gap today: the repo doesn't currently have automated *remote* preview
+   deployments for PRs. ([docs](https://developers.cloudflare.com/workers/ci-cd/builds/))
 2. **Gradual deployments + version affinity** — ship a risky change to 10% of traffic, watch
    error rates via Observability, ramp or roll back in one command. Makes "is this 100% correct
    before merge" a less load-bearing question — the blast radius of being wrong is capped and
