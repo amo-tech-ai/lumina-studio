@@ -32,9 +32,12 @@ export function withStreamIdleTimeout(response: Response, timeoutMs: number): Re
         timer = setTimeout(() => resolve("timeout"), timeoutMs);
       });
 
-      const result = await Promise.race([reader.read(), timedOut]);
-      clearTimeout(timer);
-
+      let result: ReadableStreamReadResult<Uint8Array> | "timeout";
+      try {
+        result = await Promise.race([reader.read(), timedOut]);
+      } finally {
+        if (timer !== undefined) clearTimeout(timer);
+      }
       if (result === "timeout") {
         const event = {
           type: "RUN_ERROR",
