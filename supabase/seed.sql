@@ -103,13 +103,13 @@ insert into talent.talent_profiles (id, agency_org_id, display_name, bio, measur
   ('00000000-0000-0000-0000-000000000801', '00000000-0000-0000-0000-000000000001', 'Sophie Laurent',
    'Paris-based fashion model with 8+ years experience in haute couture and editorial.',
    '{"height_cm": 178, "bust_cm": 86, "waist_cm": 61, "hips_cm": 89, "shoes_eu": 39, "hair": "blonde", "eyes": "blue"}'::jsonb,
-   '{"daily_rate": 3500, "half_day_rate": 2000, "buyout_rate": 12000, "currency": "EUR"}'::jsonb,
+   '{"daily_rate": 3500, "half_day": 2000, "buyout_rate": 12000, "currency": "EUR"}'::jsonb,
    '{"English", "French", "Italian"}'::text[], true, 'verified',
    '{"look": ["editorial", "high_fashion"], "specialties": ["runway", "print", "beauty"], "brands_worked": ["Chanel", "Dior", "Louis Vuitton"]}'::jsonb),
   ('00000000-0000-0000-0000-000000000802', '00000000-0000-0000-0000-000000000001', 'Lena Schmidt',
    'Berlin-based commercial and lifestyle model. Flexible for international travel.',
    '{"height_cm": 172, "bust_cm": 88, "waist_cm": 64, "hips_cm": 92, "shoes_eu": 38, "hair": "brown", "eyes": "green"}'::jsonb,
-   '{"daily_rate": 1800, "half_day_rate": 1000, "buyout_rate": 6000, "currency": "EUR"}'::jsonb,
+   '{"daily_rate": 1800, "half_day": 1000, "buyout_rate": 6000, "currency": "EUR"}'::jsonb,
    '{"German", "English", "Spanish"}'::text[], true, 'pending',
    '{"look": ["commercial", "lifestyle", "streetwear"], "specialties": ["ecommerce", "catalog", "social"], "brands_worked": ["Zalando", "Adidas", "Mango"]}'::jsonb)
 on conflict (id) do nothing;
