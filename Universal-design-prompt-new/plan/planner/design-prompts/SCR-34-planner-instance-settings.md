@@ -74,3 +74,26 @@ Ship a real, functional Members tab. Show the other 3 as tab labels that exist i
 - Row action menu offers role change and remove-member; removing a member is a destructive action and needs a confirm step (this app's "everything is undoable" principle — or at minimum a clear confirm, since membership removal affects RLS-gated access immediately).
 - Changing a member's role updates their effective permissions immediately (per IPI-479's server-side RLS enforcement) — the UI should reflect this without requiring a page reload.
 - Gate ownership (which role can approve which phase gate) is configured per-workflow, not per-member — don't add a "can approve gates" toggle to the member row; that's workflow-template configuration, out of scope for this tab per the spec's Do-NOT note ("Do NOT authorize view filtering purely on the client").
+
+## Implementation notes
+
+*References only — not additional design work.*
+
+- **Related Linear:** `IPI-479` (Members tab, this screen) · `IPI-481` (Notifications tab — placeholder only, see MVP scope above)
+- **Blocked by:** `IPI-476` (assignment/RLS model)
+- **Unblocks:** none directly
+- **React components:** `app/src/components/planner/PlannerSettings.tsx`, `InviteMemberDialog.tsx`, `app/src/app/(operator)/app/planner/[instanceId]/settings/page.tsx`
+- **Supabase tables:** `planner.assignments`; edge function `planner-invite-member`
+- **Mastra tools:** none — this is a pure CRUD/admin surface, no agent involvement
+
+## Definition of done
+
+- [ ] Desktop (full table) / tablet (expandable row detail) / mobile (stacked card list) layouts
+- [ ] Full keyboard navigation (table semantics, focus-trapped Invite dialog)
+- [ ] Empty (owner-only), loading, invite-pending, and invite-error states designed
+- [ ] Disabled Notifications/Workflow/Danger tabs have `aria-disabled` + a reason on focus
+- [ ] Destructive remove-member action has a confirm step
+
+## Future (explicitly deferred — no Linear issue backs these today)
+
+Workflow and Danger tab content (template swap, archive/delete instance) were considered and rejected for this pass. Ship them as labeled-but-disabled tabs only; design the real panels when an issue exists for them.

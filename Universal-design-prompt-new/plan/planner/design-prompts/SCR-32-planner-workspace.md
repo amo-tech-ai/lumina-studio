@@ -78,3 +78,27 @@
 - Clicking any task/phase surface in any of the 4 views opens the **same** `TaskDetailDrawer` — build one component, not four.
 - The AI chat dock's greeting is context-aware to the open instance (per `DESIGN.md` §5I) — e.g. *"You're viewing Summer Lookbook's production plan. 2 tasks need your approval."* — never a generic "How can I help?".
 - Hover tooltips on Timeline bars show owner + exact dates without requiring a click — this is a discovery aid, not a required interaction path (everything it shows is also in the drawer).
+
+## Implementation notes
+
+*References only — not additional design work.*
+
+- **Related Linear:** `IPI-478` (this screen) · `IPI-483` (dependency lines, later) · `IPI-482` (AI tools behind the chat dock)
+- **Blocked by:** `IPI-476` (schema/engine) · `IPI-477` (5-week template data)
+- **Unblocks:** `IPI-479` (role filtering) · `IPI-480` (presence/real-time)
+- **React components:** `app/src/components/planner/PlannerTimeline.tsx`, `PlannerKanban.tsx`, `PlannerCalendar.tsx`, `TaskDetailDrawer.tsx`, `PlannerViewShell.tsx`
+- **Supabase tables:** `planner.tasks`, `planner.phases`, `planner.dependencies`, `planner.instances`
+- **Mastra tools:** none directly (this view is read-only); the chat dock invokes `production-planner`'s tools per `IPI-482`
+
+## Definition of done
+
+- [ ] Desktop / tablet / mobile layouts per §"Responsive layouts"
+- [ ] Full keyboard navigation (every bar/card/chip focusable, documented keyboard equivalents for drag)
+- [ ] Empty, loading, error, and not-found states designed
+- [ ] Read-only role variant (no drag handles, view-only drawer)
+- [ ] Approval-gate state (diamond badge + `ApprovalCard` full variant)
+- [ ] Accessibility: color-independent status, `aria-disabled` on gated Kanban columns, `prefers-reduced-motion` respected
+
+## Future (explicitly deferred — no Linear issue backs these today)
+
+A Dependency Inspector, Planner Analytics, and a dedicated Activity Timeline visualization were considered and rejected for this pass. Revisit only if a real issue is opened for them — do not pre-build.

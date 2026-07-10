@@ -11,8 +11,11 @@ The Planner (`linear/issues/IPI-476..483-PLN-*.md`) needs 3 new UI surfaces that
 | `SCR-32-planner-workspace.md` | Planner Workspace (Timeline/Kanban/Calendar/List) | `/app/planner/[instanceId]` | IPI-478, IPI-483 |
 | `SCR-33-planner-dashboard.md` | Planner Dashboard | `/app/planner/dashboard` | IPI-479 |
 | `SCR-34-planner-instance-settings.md` | Instance Settings | `/app/planner/[instanceId]/settings` | IPI-479 |
+| `SCR-35-planner-hub.md` | Planner Hub (index of all plans) | `/app/planner` | **None yet** — see the file's own header note; open a Linear issue before implementing |
 
-Diagrams referenced from all 3 prompts live in `diagrams.md`.
+*(Added 2026-07-09 after an external design-quality review confirmed the Hub was a real gap in the original wireframe inventory — see that review's "Valid findings" §1. Everything else the review flagged — Workflow Builder, Approval History, Comments, Dependency Inspector, Notification Rules screen, Planner Analytics, an "AI Modes" taxonomy — was cross-checked against `IPI-476`–`483` and found to have no backing acceptance criteria, so none of it was built. See "Future" notes at the end of each screen prompt and §5 below.)*
+
+Diagrams referenced from all 4 prompts live in `diagrams.md`.
 
 ## Note on `DESIGN.md`'s upload sequence
 
@@ -101,3 +104,43 @@ Shell grid, every screen: `grid-template-columns: 56px minmax(0,1fr) 340px` — 
 ## 4. Aspect ratio note
 
 `DESIGN.md`'s image aspect-ratio table (§5H) already lists **"Shoot cover — 4:3 — shoot cards, planner"** — the Planner was anticipated. Any plan/instance card with a cover image (e.g. on the Dashboard's "Recent plans" row) uses 4:3, matching Shoot cards exactly.
+
+---
+
+## 5. Planner design tokens
+
+The Planner introduces two visual primitives — a Gantt timeline and a dependency graph — that nothing else in this design system has. These need their own geometry tokens so every screen (and every future implementer) uses the same values instead of hand-picking pixels per component. Values below extend the existing scale (`--radius-sm` 6px / `--radius-md` 10px / `--radius-lg` 16-20px, `--space-*` in the 4-8-12-16-24-32px rhythm already used across `components/*.dc.html`) — none of these are arbitrary new numbers.
+
+| Token | Value | Use |
+|---|---|---|
+| `--planner-row-height` | 44px | Timeline row height (phase/task lane) — matches the ≥48px-with-padding row-height convention from `DESIGN.md` §5F, minus the extra table padding since Timeline rows are denser |
+| `--planner-bar-height` | 28px | Task/phase bar height within a row, vertically centered |
+| `--planner-bar-radius` | `--radius-pill` (9999px) | Bar ends — pill-shaped per `SCR-32`'s prompt |
+| `--planner-task-padding` | 8px 12px | Internal padding for bar labels and Kanban card bodies |
+| `--planner-grid-gap` | 1px solid `--color-border-subtle` | Vertical day/week column dividers on the Timeline |
+| `--planner-week-header-height` | 32px | Week/day header row above the Timeline grid |
+| `--planner-calendar-cell-min` | 96px | Minimum calendar-day cell height (enough for 2 event chips + "+N more") |
+| `--planner-dependency-stroke` | 1.5px, `--color-text-muted` | `DependencyLine` SVG connectors — charcoal/grey only, never colored (per `IPI-483` scope) |
+| `--planner-today-marker` | 2px solid `--color-text-primary` | Vertical "today" line — black, not a colored column, per `SCR-32`'s prompt |
+| `--planner-drag-handle-size` | 6px × 100% (edge grab zone) | Timeline bar resize handles |
+| `--planner-selection-outline` | 2px solid `--color-action` | Selected task/phase (keyboard focus or click-select) |
+| `--planner-hover-elevation` | none (border darkens to `--color-border-strong` only) | Per `DESIGN.md` §5B: "no shadow jump, no scale" on hover — Planner follows the same rule, no exception |
+| `--planner-drop-target` | 2px dashed `--color-action`, `--color-bg-subtle` fill | Kanban drop-target column/slot during drag |
+
+These are additions to the existing token file, not a parallel system — `--planner-*` tokens should be defined alongside the other component tokens in `app/src/styles/tokens.css` when implemented, referencing the same primitives (`--color-*`, `--radius-*`) rather than new raw hex values.
+
+## 6. Explicitly deferred (no Linear issue backs these — do not design or build)
+
+An external design-quality review of `SCR-32`–`34` (2026-07-09) proposed 8 additional screens and a 6-mode AI taxonomy. Each was checked against `IPI-476` through `IPI-483`'s actual acceptance criteria and found to have no backing spec. Listed here once so it doesn't need re-litigating per-screen, and so a future real request can find prior art instead of starting from scratch:
+
+- **Workflow Template Builder / Library** (clone, publish, version, archive templates) — `IPI-476` explicitly scopes v1 as SQL-seeded templates, no UI.
+- **Approval History screen** — already covered by `planner.events` + `ApprovalCard` + the Task Detail Drawer; no dedicated timeline view is specified.
+- **Activity Timeline visualization** — same events table, no dedicated screen specified.
+- **Comments & Discussion panel** (threaded, mentions, attachments) — not in any acceptance criteria; the Task Detail Drawer's "comments" mention in the original wireframe was aspirational, not a built requirement.
+- **Dependency Inspector** — `IPI-483` only specifies inline `DependencyLine` SVG connectors on the Timeline, not a separate inspector screen.
+- **Notification Rules screen** — `IPI-481` specifies a small `NotificationSettings.tsx` component, not a dedicated screen; don't invent a second settings surface.
+- **Planner Analytics** — no backing issue anywhere.
+- **AI Modes taxonomy** (Suggest/Explain/Optimize/Simulate/Review/Compare) — `IPI-482`'s actual tools (`buildSchedule`, `detectScheduleRisks`, `suggestDependencies`, `shiftTimeline`, `assignTasks`, `commitSchedule`, `explainDelay`, `summarizeTimeline`) are already the interface; a marketing-style mode taxonomy on top would be presentation, not implementation.
+- **Cloudflare/infra implementation notes inside these design prompts** — `IPI-480` (Durable Objects/presence) and `IPI-481` (Queues/notification fan-out) already have their own architecture diagrams; repeating that detail here would duplicate rather than help, and blurs design-vs-engineering scope.
+
+If a real Linear issue is opened for any of these, write a new design prompt the same way `SCR-32`–`35` were written: read the existing library first, reuse before inventing, and cite the issue.

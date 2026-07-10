@@ -65,3 +65,26 @@
 - Every stat card is clickable and deep-links into the Planner Workspace (SCR-32) pre-filtered — this dashboard is a router, not a dead end, matching this app's "always show the next step" principle.
 - Role-conditional content (which stats show, what the recent-activity feed emphasizes) is resolved server-side via `planner.assignments` + `permissions` JSONB (IPI-479 acceptance criterion F) — the design should have clearly-labeled "slots" for role variants (Producer sees budget gates, Client approver sees only their approval gates), matching how `SCR-25` already documents its Model vs. Agency variants inline.
 - Chat dock greeting is dashboard-aware, not instance-aware here (no single open plan) — e.g. *"You have 3 plans active. Item delivery on Summer Lookbook needs attention first."*
+
+## Implementation notes
+
+*References only — not additional design work.*
+
+- **Related Linear:** `IPI-479` (this screen)
+- **Blocked by:** `IPI-476` (schema) · `IPI-478` (workspace it links into)
+- **Unblocks:** `IPI-480` (real-time) · `IPI-483` (dependency/gate engine)
+- **React components:** `app/src/components/planner/RoleDashboard.tsx`, `app/src/app/(operator)/app/planner/dashboard/page.tsx`
+- **Supabase tables:** `planner.assignments`, `planner.instances`, `planner.tasks`
+- **Mastra tools:** none directly — pure data read, filtered server-side by RLS
+
+## Definition of done
+
+- [ ] Desktop (4-col) / tablet (2-col) / mobile (1-col, default mobile landing) layouts
+- [ ] Full keyboard navigation (every stat card and plan card is a real focusable link)
+- [ ] Empty ("not assigned to any plans"), loading, error states designed
+- [ ] Role-conditional variants documented (at minimum: Producer, Client Approver)
+- [ ] Accessibility: stat cards have real accessible names beyond the number, calendar-strip cells have a text equivalent
+
+## Future (explicitly deferred — no Linear issue backs these today)
+
+Planner Analytics (cross-instance reporting) was considered and rejected for this pass. Revisit only if a real issue is opened for it.
