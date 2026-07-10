@@ -122,9 +122,9 @@ insert into talent.talent_availability (id, talent_profile_id, date_range, statu
   ('00000000-0000-0000-0000-000000000904', '00000000-0000-0000-0000-000000000802', '[2026-07-25, 2026-08-05]'::daterange, 'blocked')
 on conflict (id) do nothing;
 
--- QA booking request (from alice to Sophie). Deterministic expires_at after shoot window.
+-- QA booking request (from alice to Sophie). Far-future expires_at so cron won't expire QA row.
 insert into talent.bookings (id, brand_org_id, talent_profile_id, status, date_start, date_end, rate_quoted, message, requested_by, expires_at) values
-  ('00000000-0000-0000-0000-000000000a01', '00000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000801', 'requested', '2026-08-01', '2026-08-03', 3500, 'August editorial shoot — SS26 Collection lookbook. Need Sophie for 3 full days in Paris.', '00000000-0000-0000-0000-000000000101', '2026-08-10T12:00:00Z')
+  ('00000000-0000-0000-0000-000000000a01', '00000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000801', 'requested', '2026-08-01', '2026-08-03', 3500, 'August editorial shoot — SS26 Collection lookbook. Need Sophie for 3 full days in Paris.', '00000000-0000-0000-0000-000000000101', '2027-12-31T23:59:59Z')
 on conflict (id) do nothing;
 
 -- Notifications
