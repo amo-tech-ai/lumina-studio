@@ -114,7 +114,7 @@ insert into talent.talent_profiles (id, agency_org_id, display_name, bio, measur
    '{"look": ["commercial", "lifestyle", "streetwear"], "specialties": ["ecommerce", "catalog", "social"], "brands_worked": ["Zalando", "Adidas", "Mango"]}'::jsonb)
 on conflict (id) do nothing;
 
--- Talent availability (July–August 2026)
+-- Talent availability (July–September 2026)
 insert into talent.talent_availability (id, talent_profile_id, date_range, status) values
   ('00000000-0000-0000-0000-000000000901', '00000000-0000-0000-0000-000000000801', '[2026-07-15, 2026-08-15)'::daterange, 'available'),
   ('00000000-0000-0000-0000-000000000902', '00000000-0000-0000-0000-000000000801', '[2026-09-01, 2026-09-30)'::daterange, 'available'),

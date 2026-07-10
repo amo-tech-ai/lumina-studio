@@ -1,7 +1,10 @@
 import { expect, test } from "@playwright/test";
 
+/** Auth gate runs before body/query validation when enabled. */
+const authEnabled = process.env.OPERATOR_AUTH_ENABLED === "true";
+
 test.describe("Booking Wizard — API reliability", () => {
-  test("POST /api/bookings returns 401 without auth", async ({ request }) => {
+  test("POST /api/bookings without credentials does not 500", async ({ request }) => {
     const res = await request.post("/api/bookings", {
       data: {
         brand_org_id: "00000000-0000-0000-0000-000000000001",
@@ -10,17 +13,27 @@ test.describe("Booking Wizard — API reliability", () => {
         date_end: "2026-08-03",
       },
     });
-    expect(res.status()).toBe(401);
+    // Auth on → 401 at withOperatorAuth; auth off → may proceed into RPC/validation.
+    if (authEnabled) {
+      expect(res.status()).toBe(401);
+    } else {
+      expect([400, 401, 403, 404]).toContain(res.status());
+    }
+    expect(res.status()).not.toBe(500);
   });
 
-  test("POST /api/bookings returns 400 for invalid body", async ({ request }) => {
+  test("POST /api/bookings rejects invalid body without 500", async ({ request }) => {
     const res = await request.post("/api/bookings", {
       data: { invalid: true },
     });
-    expect(res.status()).toBe(400);
+    // Auth check happens before body validation when OPERATOR_AUTH_ENABLED=true.
+    expect(res.status()).toBe(authEnabled ? 401 : 400);
+    expect(res.status()).not.toBe(500);
   });
 
-  test("POST /api/bookings returns 401 for non-existent talent UUID", async ({ request }) => {
+  test("POST /api/bookings unauthenticated never reaches talent-not-found 404", async ({
+    request,
+  }) => {
     const res = await request.post("/api/bookings", {
       data: {
         brand_org_id: "00000000-0000-0000-0000-000000000001",
@@ -29,19 +42,27 @@ test.describe("Booking Wizard — API reliability", () => {
         date_end: "2026-08-03",
       },
     });
-    // Auth check happens before validation — expect 401 not 404
-    expect([401, 400]).toContain(res.status());
+    // Unauthenticated: auth gate (401) or validation — not the RPC 404 branch.
+    if (authEnabled) {
+      expect(res.status()).toBe(401);
+    } else {
+      expect([400, 401, 403]).toContain(res.status());
+    }
+    expect(res.status()).not.toBe(404);
     expect(res.status()).not.toBe(500);
   });
 
-  test("GET /api/bookings returns 401 without auth (not 500)", async ({ request }) => {
+  test("GET /api/bookings without credentials does not 500", async ({ request }) => {
     const res = await request.get("/api/bookings");
-    expect(res.status()).toBe(401);
+    // Auth on → 401; auth off → missing required query params → 400.
+    expect(res.status()).toBe(authEnabled ? 401 : 400);
+    expect(res.status()).not.toBe(500);
   });
 
-  test("GET /api/bookings returns 400 with invalid query params (not 500)", async ({ request }) => {
+  test("GET /api/bookings with invalid query does not 500", async ({ request }) => {
     const res = await request.get("/api/bookings?role=invalid");
-    expect(res.status()).toBe(400);
+    // Auth on → 401 before query validation; auth off → 400 from parseListBookingsQuery.
+    expect(res.status()).toBe(authEnabled ? 401 : 400);
     expect(res.status()).not.toBe(500);
   });
 });
