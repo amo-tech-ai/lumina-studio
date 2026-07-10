@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, type KeyboardEvent } from "react";
+import { useEffect, useRef, useState, type KeyboardEvent, type RefObject } from "react";
 import { toast } from "sonner";
 
 import { StatusChip } from "@/components/ui/status-chip";
@@ -24,12 +24,16 @@ type Props = {
  *  deal-stage-control.tsx — replace the inert won/lost handler with the
  *  real gate."
  *
- *  Neither transition persists yet — there is no backend for either:
- *  - Non-terminal moves (Lead→Negotiation) need a PATCH route that IPI-365
- *    ("CRM-UX-003 Pipeline board kanban ungated stage moves") owns and
- *    hasn't shipped. Clicking a non-terminal stage updates the label locally
- *    (matches DC's own interaction) but does not write to the database —
- *    it reverts on refresh. This is a real, open gap, not simulated success.
+ *  Neither transition persists from THIS component yet:
+ *  - Non-terminal moves (Lead→Negotiation) DO have a working backend
+ *    already — the `moveDealStage` Mastra tool (crm-assistant agent,
+ *    IPI-368, shipped), reachable from the chat dock on this same page.
+ *    IPI-365 (a kanban-board PATCH route for the same 4 stages) is
+ *    `status: Duplicate` — its own Phase-0 notes say not to duplicate
+ *    `moveDealStage`'s allow-list logic in a second place. This component's
+ *    buttons don't call that tool (yet) — clicking only updates the label
+ *    locally, matching DC's own interaction, and reverts on refresh. See
+ *    IPI-396 for the follow-up to wire these buttons to the existing tool.
  *  - Won/Lost must go through `POST /api/crm/deals/:id/convert` per
  *    CRM-HANDOFF.md §3 ("no drag, button, or agent may bypass it") — that
  *    route is IPI-367's job (Urgent, not started as of this PR) because
@@ -92,45 +96,16 @@ export function DealStageControl({ stage, onStageChange }: Props) {
   }
 
   if (pending) {
-    const targetLabel = crmDealStageLabel(pending);
-    const body =
-      pending === "won"
-        ? "Approving would create or link a brands record and hand off to Brand Intelligence. This cannot be undone here."
-        : "Approving would mark the deal closed-lost with no further pipeline action.";
     return (
-      <div
-        className={styles.approvalCard}
-        role="dialog"
-        aria-modal="true"
-        aria-label={`Mark this deal as ${targetLabel}?`}
+      <ApprovalDialog
+        stage={stage}
+        target={pending}
+        cancelRef={cancelRef}
+        approveRef={approveRef}
+        onCancel={handleCancel}
+        onApprove={handleApprove}
         onKeyDown={handleTrapKeyDown}
-      >
-        <div className={styles.approvalHeading}>Mark this deal as {targetLabel}?</div>
-        <div className={styles.approvalStages}>
-          <StatusChip dot={crmDealStageDotToken(stage)} label={crmDealStageLabel(stage)} />
-          <span className={styles.approvalArrow} aria-hidden>
-            →
-          </span>
-          <StatusChip dot={crmDealStageDotToken(pending)} label={targetLabel} />
-        </div>
-        <p className={styles.approvalBody}>{body}</p>
-        <div className={styles.approvalActions}>
-          <button ref={cancelRef} type="button" onClick={handleCancel} className={styles.cancelButton}>
-            Cancel
-          </button>
-          <button
-            ref={approveRef}
-            type="button"
-            onClick={handleApprove}
-            className={pending === "won" ? styles.approveButtonWon : styles.approveButtonLost}
-          >
-            Approve · Mark {targetLabel}
-          </button>
-        </div>
-        <p className={styles.approvalFootnote}>
-          This is the only path that can set won/lost — no drag, button, or agent may bypass it.
-        </p>
-      </div>
+      />
     );
   }
 
@@ -168,4 +143,67 @@ function approveDealTransition(): { ok: false; error: string } {
     ok: false,
     error: "Won/Lost approval isn't wired to the database yet (pending IPI-367). Nothing was changed.",
   };
+}
+
+/** Extracted from DealStageControl to keep that component under Codacy's
+ *  50-line/15-complexity method limits — pure presentation, all decisions
+ *  (target, body copy, revert-on-approve) stay in the parent. */
+function ApprovalDialog({
+  stage,
+  target,
+  cancelRef,
+  approveRef,
+  onCancel,
+  onApprove,
+  onKeyDown,
+}: {
+  stage: CrmDealStage;
+  target: CrmDealStage;
+  cancelRef: RefObject<HTMLButtonElement | null>;
+  approveRef: RefObject<HTMLButtonElement | null>;
+  onCancel: () => void;
+  onApprove: () => void;
+  onKeyDown: (event: KeyboardEvent<HTMLDivElement>) => void;
+}) {
+  const targetLabel = crmDealStageLabel(target);
+  const body =
+    target === "won"
+      ? "Approving would create or link a brands record and hand off to Brand Intelligence. This cannot be undone here."
+      : "Approving would mark the deal closed-lost with no further pipeline action.";
+
+  return (
+    <div
+      className={styles.approvalCard}
+      role="dialog"
+      aria-modal="true"
+      aria-label={`Mark this deal as ${targetLabel}?`}
+      onKeyDown={onKeyDown}
+    >
+      <div className={styles.approvalHeading}>Mark this deal as {targetLabel}?</div>
+      <div className={styles.approvalStages}>
+        <StatusChip dot={crmDealStageDotToken(stage)} label={crmDealStageLabel(stage)} />
+        <span className={styles.approvalArrow} aria-hidden>
+          →
+        </span>
+        <StatusChip dot={crmDealStageDotToken(target)} label={targetLabel} />
+      </div>
+      <p className={styles.approvalBody}>{body}</p>
+      <div className={styles.approvalActions}>
+        <button ref={cancelRef} type="button" onClick={onCancel} className={styles.cancelButton}>
+          Cancel
+        </button>
+        <button
+          ref={approveRef}
+          type="button"
+          onClick={onApprove}
+          className={target === "won" ? styles.approveButtonWon : styles.approveButtonLost}
+        >
+          Approve · Mark {targetLabel}
+        </button>
+      </div>
+      <p className={styles.approvalFootnote}>
+        This is the only path that can set won/lost — no drag, button, or agent may bypass it.
+      </p>
+    </div>
+  );
 }

@@ -73,84 +73,20 @@ export function DealDetailWorkspace({ data, fetchError }: Props) {
 
   const { deal, companyName, shootName, companyBrandId, activities } = data;
   const stage = previewStage ?? toKnownStage(deal.stage);
-  const isWon = stage === "won";
-  const closeDate = formatShortDate(deal.expected_close_date);
   const displayTitle = shootName ?? `${companyName ?? "Untitled company"} deal`;
 
   return (
     <div className={styles.root}>
-      <div className={styles.header}>
-        <div className={shellStyles.breadcrumb}>
-          <Link href="/app/crm/pipeline" className={shellStyles.breadcrumbLink}>
-            Pipeline
-          </Link>
-          <span aria-hidden>›</span>
-          <span className={shellStyles.breadcrumbCurrent}>
-            {companyName ? `${companyName} — ${displayTitle}` : displayTitle}
-          </span>
-        </div>
-
-        <div className={styles.titleRow}>
-          <h1 className={styles.title}>{displayTitle}</h1>
-          <span className={styles.value}>{formatMoney(deal.value, deal.currency)}</span>
-          <StatusChip dot={crmDealStageDotToken(stage)} label={crmDealStageLabel(stage)} />
-        </div>
-        <div className={styles.subtitle}>
-          {companyName ?? "—"}
-          {closeDate ? ` · expected close ${closeDate}` : null}
-        </div>
-      </div>
+      <DealHeader deal={deal} stage={stage} companyName={companyName} displayTitle={displayTitle} />
 
       <div className={styles.body}>
         <div className={styles.content}>
-          <OverviewFields
-            fields={[
-              {
-                label: "Company",
-                value: (
-                  <Link href={`/app/crm/companies/${deal.company_id}`} className={shellStyles.overviewLink}>
-                    {companyName ?? "—"} ↗
-                  </Link>
-                ),
-              },
-              { label: "Value", value: formatMoney(deal.value, deal.currency) },
-              {
-                label: "Linked shoot",
-                value: deal.shoot_id ? (
-                  <Link href={`/app/shoots/${deal.shoot_id}`} className={shellStyles.overviewLink}>
-                    {shootName ?? "View shoot"} ↗
-                  </Link>
-                ) : (
-                  "Not linked"
-                ),
-              },
-            ]}
-          />
+          <DealOverview deal={deal} companyName={companyName} shootName={shootName} />
 
           <div className={styles.stageLabel}>Stage</div>
           <DealStageControl stage={stage} onStageChange={setPreviewStage} />
 
-          {isWon ? (
-            <div className={styles.wonBanner}>
-              <CheckCircle size={20} aria-hidden className={styles.wonIcon} />
-              <div className={styles.wonText}>
-                <div className={styles.wonHeading}>
-                  {companyBrandId ? "Converted to brand" : "Won — not yet linked to a brand"}
-                </div>
-                <div className={styles.wonSub}>
-                  {companyBrandId
-                    ? "Handed off to Brand Intelligence."
-                    : "Brand conversion isn't wired yet (pending IPI-367)."}
-                </div>
-              </div>
-              {companyBrandId ? (
-                <Link href={`/app/brand/${companyBrandId}`} className={styles.wonLink}>
-                  View brand
-                  <ExternalLink size={13} aria-hidden />
-                </Link>
-              ) : null}
-            </div>
-          ) : null}
+          {stage === "won" ? <WonBanner companyBrandId={companyBrandId} /> : null}
 
           <div className={styles.activityHeader}>
             <span className={styles.activityLabel}>Activity</span>
@@ -158,6 +94,104 @@ export function DealDetailWorkspace({ data, fetchError }: Props) {
           <ActivityTimeline activities={activities} />
         </div>
       </div>
+    </div>
+  );
+}
+
+function DealHeader({
+  deal,
+  stage,
+  companyName,
+  displayTitle,
+}: {
+  deal: DealDetailPayload["deal"];
+  stage: CrmDealStage;
+  companyName: string | null;
+  displayTitle: string;
+}) {
+  const closeDate = formatShortDate(deal.expected_close_date);
+  return (
+    <div className={styles.header}>
+      <div className={shellStyles.breadcrumb}>
+        <Link href="/app/crm/pipeline" className={shellStyles.breadcrumbLink}>
+          Pipeline
+        </Link>
+        <span aria-hidden>›</span>
+        <span className={shellStyles.breadcrumbCurrent}>
+          {companyName ? `${companyName} — ${displayTitle}` : displayTitle}
+        </span>
+      </div>
+
+      <div className={styles.titleRow}>
+        <h1 className={styles.title}>{displayTitle}</h1>
+        <span className={styles.value}>{formatMoney(deal.value, deal.currency)}</span>
+        <StatusChip dot={crmDealStageDotToken(stage)} label={crmDealStageLabel(stage)} />
+      </div>
+      <div className={styles.subtitle}>
+        {companyName ?? "—"}
+        {closeDate ? ` · expected close ${closeDate}` : null}
+      </div>
+    </div>
+  );
+}
+
+function DealOverview({
+  deal,
+  companyName,
+  shootName,
+}: {
+  deal: DealDetailPayload["deal"];
+  companyName: string | null;
+  shootName: string | null;
+}) {
+  return (
+    <OverviewFields
+      fields={[
+        {
+          label: "Company",
+          value: (
+            <Link href={`/app/crm/companies/${deal.company_id}`} className={shellStyles.overviewLink}>
+              {companyName ?? "—"} ↗
+            </Link>
+          ),
+        },
+        { label: "Value", value: formatMoney(deal.value, deal.currency) },
+        {
+          label: "Linked shoot",
+          value: deal.shoot_id ? (
+            <Link href={`/app/shoots/${deal.shoot_id}`} className={shellStyles.overviewLink}>
+              {shootName ?? "View shoot"} ↗
+            </Link>
+          ) : (
+            "Not linked"
+          ),
+        },
+      ]}
+    />
+  );
+}
+
+/** Only rendered once `stage === "won"` — see the module doc for why
+ *  "Converted to brand" requires a real `companyBrandId`, not just the
+ *  stage value. */
+function WonBanner({ companyBrandId }: { companyBrandId: string | null }) {
+  return (
+    <div className={styles.wonBanner}>
+      <CheckCircle size={20} aria-hidden className={styles.wonIcon} />
+      <div className={styles.wonText}>
+        <div className={styles.wonHeading}>
+          {companyBrandId ? "Converted to brand" : "Won — not yet linked to a brand"}
+        </div>
+        <div className={styles.wonSub}>
+          {companyBrandId ? "Handed off to Brand Intelligence." : "Brand conversion isn't wired yet (pending IPI-367)."}
+        </div>
+      </div>
+      {companyBrandId ? (
+        <Link href={`/app/brand/${companyBrandId}`} className={styles.wonLink}>
+          View brand
+          <ExternalLink size={13} aria-hidden />
+        </Link>
+      ) : null}
     </div>
   );
 }
