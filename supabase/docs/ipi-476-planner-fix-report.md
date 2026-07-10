@@ -1,7 +1,7 @@
 # IPI-476 · Planner access fix report
 
 **Date:** 2026-07-10  
-**Worktree:** `/home/sk/wt-ipi-476-planner-grants-api` · branch `ipi/476-planner-grants-api`  
+**Branch:** `ipi/476-planner-grants-api` · PRs [#295](https://github.com/amo-tech-ai/lumina-studio/pull/295) (migrations), [#296](https://github.com/amo-tech-ai/lumina-studio/pull/296) (verify), [#297](https://github.com/amo-tech-ai/lumina-studio/pull/297) (types)  
 **Project:** `nvdlhrodvevgwdsneplk`
 
 ## Summary
@@ -16,7 +16,7 @@ Unblocked client/PostgREST access to `planner.*` without weakening RLS. Grants +
 | IPI-476 · PLAN-RLS-001 — Add Live Cross-Organization RLS Verification | ✅ | `npm run supabase:verify-rls` — soft-skip removed; org A/B isolation, viewer/contributor/manager/owner, non-member deny, service_role select — **passed** | Role matrix still has product nuances (e.g. assignments SELECT is manager+) |
 | IPI-476 · PLAN-SEED-001 — Backfill Missing Planner Templates | ✅ | Same migration; orgs=workflows for `5-Week Product Shoot`; missing=0; dupes=0 | New orgs still need bootstrap (documented: re-run seed / IPI-477 org-create hook) — no auto-trigger in v1 |
 | IPI-476 · PLAN-RT-001 — Verify Secure Planner Realtime | ✅ | Migration `20260710081000` SECURITY DEFINER helper (avoids realtime#1111 JOIN failure); scenario: auth **SUBSCRIBED** + broadcast received; other org **CHANNEL_ERROR** / no payload | Confirm Dashboard “Allow public access” stays off for private channels |
-| IPI-476 · PLAN-INT-001 — Add Database-Backed Planner Scenario Tests | ✅ | `node --experimental-strip-types scripts/verify-planner-scenario.mjs` — create instance, owner bootstrap, engine schedule, +3d shift, persist, dependents moved, cleanup | Not wired into CI yet — run manually / add npm script |
+| IPI-476 · PLAN-INT-001 — Add Database-Backed Planner Scenario Tests | ✅ | `npm run supabase:verify-planner` (#296) — create instance, owner bootstrap, engine schedule, +3d shift, persist, dependents moved, cleanup | Script exists; not wired into CI yet |
 
 ## Migrations applied
 
@@ -38,13 +38,13 @@ curl … Accept-Profile: planner → HTTP 200 + workflow rows
 # RLS
 npm run supabase:verify-rls → passed
 
-# Scenario + Realtime
-node --experimental-strip-types scripts/verify-planner-scenario.mjs → passed
+# Scenario + Realtime (#296)
+npm run supabase:verify-planner → passed
 
 # App
 cd app && npm run typecheck && npm run lint
-npm test -- --run src/lib/planner/engine.test.ts → 27 passed
-npm run build → success
+cd app && npm test -- src/lib/planner/engine.test.ts → 27 passed
+cd app && npm run build → success
 ```
 
 ## Explicit non-goals (unchanged)
@@ -56,7 +56,7 @@ npm run build → success
 
 ## Follow-ups (optional)
 
-- Wire `verify-planner-scenario.mjs` into `package.json` / CI  
+- Wire existing `supabase:verify-planner` (#296) into CI  
 - Org-create hook to seed default workflow (IPI-477)  
 - Optimistic locking before multi-editor UI  
 
