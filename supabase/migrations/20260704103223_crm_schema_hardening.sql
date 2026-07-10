@@ -1,4 +1,4 @@
--- IPI-362 follow-up — harden terminal-stage guard + wave-1 indexes (remote may have applied pre-split 20260704090000)
+-- IPI-362 follow-up — harden terminal-stage guard + wave-1 indexes
 
 create or replace function public.crm_deals_guard_terminal_stage()
 returns trigger
@@ -36,4 +36,4 @@ create index if not exists crm_contacts_org_id_idx on public.crm_contacts (org_i
 create index if not exists crm_deals_org_id_idx on public.crm_deals (org_id);
 create index if not exists crm_deals_org_id_stage_idx on public.crm_deals (org_id, stage);
 create index if not exists crm_activities_org_id_idx on public.crm_activities (org_id);
-create index if not exists crm_activities_deal_id_idx on public.crm_activities (deal_id) where deal_id is not null;
+create index if not exists crm_activities_deal_id_idx on public.crm_activities (deal_id) where deal_id is not null;;

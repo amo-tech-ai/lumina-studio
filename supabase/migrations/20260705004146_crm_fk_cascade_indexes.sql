@@ -1,9 +1,4 @@
 -- IPI-362 review fixes — explicit ON DELETE CASCADE, FK indexes, jsonb shape checks.
--- Fix-forward for remotes that already applied 20260704090000 / 20260704110000.
---
--- Rollback: reverse FK actions to NO ACTION; drop indexes/constraints/function added here.
-
--- ── FK delete actions (match notifications/booking cascade pattern) ───────
 
 alter table public.crm_contacts
   drop constraint if exists crm_contacts_company_id_fkey;
@@ -41,8 +36,6 @@ alter table public.notifications
   add constraint notifications_crm_deal_id_fkey
   foreign key (crm_deal_id) references public.crm_deals(id) on delete cascade;
 
--- ── FK lookup indexes (entity detail views) ─────────────────────────────
-
 create index if not exists crm_contacts_company_id_idx
   on public.crm_contacts (company_id)
   where company_id is not null;
@@ -58,8 +51,6 @@ create index if not exists crm_activities_contact_id_idx
   on public.crm_activities (contact_id)
   where contact_id is not null;
 
--- ── jsonb array shape (contacts email/phone) ────────────────────────────
-
 alter table public.crm_contacts
   drop constraint if exists crm_contacts_email_is_array;
 alter table public.crm_contacts
@@ -71,9 +62,6 @@ alter table public.crm_contacts
 alter table public.crm_contacts
   add constraint crm_contacts_phone_is_array
   check (jsonb_typeof(phone) = 'array');
-
--- ── verify-rls positive probe for IPI-367 convert session flag ────────────
--- Service-role only — simulates convert route set_config in same transaction.
 
 create or replace function public.crm_deals_verify_convert_stage(
   p_deal_id uuid,
@@ -97,4 +85,4 @@ comment on function public.crm_deals_verify_convert_stage(uuid, text) is
   'verify-rls only: applies terminal stage with app.crm_convert=1 in same transaction. Not for app use — IPI-367 convert route owns production path.';
 
 revoke all on function public.crm_deals_verify_convert_stage(uuid, text) from public;
-revoke all on function public.crm_deals_verify_convert_stage(uuid, text) from anon, authenticated;
+revoke all on function public.crm_deals_verify_convert_stage(uuid, text) from anon, authenticated;;
