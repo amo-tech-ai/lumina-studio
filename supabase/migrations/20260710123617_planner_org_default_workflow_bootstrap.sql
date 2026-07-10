@@ -3,6 +3,8 @@
 -- organizations INSERT, and backfill orgs created after the last seed pass.
 -- Does not overwrite existing phases (on conflict do nothing). Does not
 -- touch customized workflows that already have this default name.
+-- EXECUTE: service_role only (SECURITY DEFINER must not be callable by arbitrary
+-- authenticated clients for arbitrary org_ids). Trigger runs as definer.
 
 -- ── ensure_default_5_week_workflow ─────────────────────────────────────────
 
@@ -18,6 +20,9 @@ begin
   if p_org_id is null then
     raise exception 'org_id is required';
   end if;
+
+  -- Serialize concurrent ensure for the same org (no unique on default name yet).
+  perform pg_advisory_xact_lock(hashtext(p_org_id::text));
 
   select id into v_workflow_id
   from planner.workflows
@@ -53,11 +58,10 @@ end;
 $$;
 
 comment on function planner.ensure_default_5_week_workflow(uuid) is
-  'Idempotent: ensure org has default 5-Week Product Shoot workflow + phases. Safe to re-run.';
+  'Idempotent (advisory xact lock): ensure org has default 5-Week Product Shoot. service_role / trigger only.';
 
-revoke all on function planner.ensure_default_5_week_workflow(uuid) from public, anon;
-grant execute on function planner.ensure_default_5_week_workflow(uuid)
-  to authenticated, service_role;
+revoke all on function planner.ensure_default_5_week_workflow(uuid) from public, anon, authenticated;
+grant execute on function planner.ensure_default_5_week_workflow(uuid) to service_role;
 
 -- ── AFTER INSERT trigger on organizations ──────────────────────────────────
 
@@ -79,14 +83,11 @@ create trigger organizations_ensure_planner_default
   for each row
   execute function public.trg_organizations_ensure_planner_default();
 
--- ── Backfill existing orgs (idempotent) ────────────────────────────────────
+-- ── Backfill existing orgs (idempotent, set-based) ─────────────────────────
 
 do $$
-declare
-  v_org record;
 begin
-  for v_org in select id from public.organizations loop
-    perform planner.ensure_default_5_week_workflow(v_org.id);
-  end loop;
+  perform planner.ensure_default_5_week_workflow(o.id)
+  from public.organizations o;
 end;
 $$;
