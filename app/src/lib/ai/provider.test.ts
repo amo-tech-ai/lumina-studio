@@ -210,6 +210,20 @@ describe("AI provider (GROQ-002 / GROQ-004)", () => {
       expect(resolveGatewayModelId("fast")).toBe("structured");
     });
 
+    it("keeps specialized Groq tiers (compound/stt/safety) on direct — no silent default remap", () => {
+      process.env.AI_ROUTING_MODE = "gateway";
+      process.env.AI_PROVIDER = "groq";
+      process.env.GROQ_API_KEY = "test-groq-key";
+      delete process.env.AI_GATEWAY_ALLOW_TOOL_TIERS;
+      for (const tier of ["compound", "compoundMini", "stt", "safety"] as const) {
+        expect(shouldRouteTierViaGateway(tier)).toBe(false);
+        expect(() => resolveGatewayModelId(tier)).toThrow(/not a Worker registry/);
+      }
+      // resolveModel falls through to direct Groq for compound
+      const model = resolveModel("compound");
+      expect(model.provider).toBe("groq.chat");
+    });
+
     it("keeps vision on direct Gemini when gateway mode is on", () => {
       process.env.AI_ROUTING_MODE = "gateway";
       process.env.AI_PROVIDER = "gemini";

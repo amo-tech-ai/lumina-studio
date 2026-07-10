@@ -121,29 +121,33 @@ export function resolveGatewayModelId(tier: GroqModelTier = "default"): string {
 
   if (tier === "structuredHeavy") return "structured";
   if (WORKER_REGISTRY_KEYS.has(tier)) return tier;
-  return "default";
+
+  // Never silently remap compound/stt/safety/… onto Worker "default".
+  throw new Error(
+    `Tier "${tier}" is not a Worker registry chat key — keep AI_ROUTING_MODE=direct for this tier.`,
+  );
 }
 
 /**
  * Whether this tier may use the OpenAI-compat Worker under AI_ROUTING_MODE=gateway.
- * Worker chat is text-only today: no ImageParts, no OpenAI `tools` passthrough.
+ * Allowlist only — Worker chat is text-only (no ImageParts, no OpenAI `tools`).
+ * Specialized Groq tiers (compound/stt/safety/…) must stay on direct SDKs.
  */
 export function shouldRouteTierViaGateway(tier: GroqModelTier): boolean {
   if (resolveAiRoutingMode() !== "gateway") return false;
 
-  // Visual-identity sends screenshot ImageParts; Worker Gemini adapter is text-only.
-  if (tier === "vision" || tier === "visionExperimental") return false;
+  // Tool-free marketing path — only Worker-safe text tier in production gateway mode.
+  if (tier === "fast") return true;
 
-  // Tool-bearing Mastra agents (planner, CRM, BI, booking, …) use these tiers.
-  // Opt in only for explicit local experiments once a Worker tool bridge exists.
+  // Tool-bearing Mastra agents — opt in only after a Worker tool bridge exists.
   if (
     (tier === "default" || tier === "structured" || tier === "structuredHeavy") &&
-    process.env.AI_GATEWAY_ALLOW_TOOL_TIERS !== "1"
+    process.env.AI_GATEWAY_ALLOW_TOOL_TIERS === "1"
   ) {
-    return false;
+    return true;
   }
 
-  return true;
+  return false;
 }
 
 function createGatewayLanguageModel(tier: GroqModelTier): ResolvedLanguageModel {
