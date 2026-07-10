@@ -265,15 +265,17 @@ try {
   assert(!depInsErr, "persist engine dependencies");
 
   // 5–9. Shift first task +3 days via engine, persist, verify dependents moved
-  const { data: dbTasks } = await pA
+  const { data: dbTasks, error: dbTasksErr } = await pA
     .from("tasks")
     .select("*")
     .eq("instance_id", instanceId)
     .order("sort_order");
-  const { data: dbDeps } = await pA
+  assert(!dbTasksErr && (dbTasks?.length ?? 0) > 0, "load tasks for shiftTask");
+  const { data: dbDeps, error: dbDepsErr } = await pA
     .from("dependencies")
     .select("*")
     .eq("instance_id", instanceId);
+  assert(!dbDepsErr && Array.isArray(dbDeps), "load dependencies for shiftTask");
 
   const taskMap = new Map(
     dbTasks.map((t) => [
@@ -325,11 +327,12 @@ try {
   }
   pass("persist shifted dates");
 
-  const { data: afterTasks } = await pA
+  const { data: afterTasks, error: afterTasksErr } = await pA
     .from("tasks")
     .select("id, start_date, end_date, sort_order")
     .eq("instance_id", instanceId)
     .order("sort_order");
+  assert(!afterTasksErr && (afterTasks?.length ?? 0) > 0, "reload tasks after shift");
   assert(afterTasks[0].end_date !== beforeFirstEnd, "DB first task end moved");
   assert(
     afterTasks[afterTasks.length - 1].start_date !== beforeLastStart,
