@@ -72,24 +72,28 @@ function buildMessages(prompt: string) {
   return [{ role: "user" as const, content: prompt }];
 }
 
-function withTimeout(timeoutMs: number, signal?: AbortSignal): AbortSignal {
+type TimeoutHandle = { signal: AbortSignal; dispose: () => void };
+
+/** AbortSignal that fires after timeoutMs. Call dispose() when the request settles. */
+function withTimeout(timeoutMs: number, linked?: AbortSignal): TimeoutHandle {
   const controller = new AbortController();
   const timer = setTimeout(
     () => controller.abort(new Error(`Gateway timeout after ${timeoutMs}ms`)),
     timeoutMs,
   );
-  if (signal) {
-    signal.addEventListener(
+  const dispose = () => clearTimeout(timer);
+  if (linked) {
+    linked.addEventListener(
       "abort",
       () => {
-        clearTimeout(timer);
-        controller.abort(signal.reason);
+        dispose();
+        if (!controller.signal.aborted) controller.abort(linked.reason);
       },
       { once: true },
     );
   }
-  controller.signal.addEventListener("abort", () => clearTimeout(timer), { once: true });
-  return controller.signal;
+  controller.signal.addEventListener("abort", dispose, { once: true });
+  return { signal: controller.signal, dispose };
 }
 
 /** Strip `data:` / `data: ` prefix; null if not an SSE data line. */
@@ -163,6 +167,34 @@ async function readChatResult(response: Response, label: string): Promise<ChatRe
   };
 }
 
+async function pumpSseStream(
+  reader: ReadableStreamDefaultReader<Uint8Array>,
+  controller: ReadableStreamDefaultController<string>,
+  aborted: () => boolean,
+): Promise<"done" | "aborted"> {
+  const decoder = new TextDecoder();
+  let buffer = "";
+
+  while (!aborted()) {
+    const { done, value } = await reader.read();
+    if (done) return "done";
+
+    buffer += decoder.decode(value, { stream: true });
+    const result = emitSseDeltas(buffer, controller);
+    buffer = result.remainder;
+    if (result.done) return "done";
+  }
+  return "aborted";
+}
+
+function failStream(
+  controller: ReadableStreamDefaultController<string>,
+  cancelled: boolean,
+  err: unknown,
+) {
+  if (!cancelled) controller.error(err);
+}
+
 /**
  * Configurable OpenAI-compatible client for the AI Gateway Worker.
  * IPI-461: runtime entry point. Do not wire into resolveModel() here — that is IPI-454 AC-F.
@@ -181,27 +213,37 @@ export function createProviderAdapter(options: ProviderAdapterOptions = {}): AiP
   return {
     async chat(prompt, opts = {}) {
       const tier = opts.tier ?? "default";
-      const response = await fetch(`${baseUrl()}/v1/chat/completions`, {
-        method: "POST",
-        headers: headers(),
-        body: JSON.stringify({
-          model: modelForTier(tier),
-          messages: buildMessages(prompt),
-          temperature: opts.temperature ?? 0.7,
-          max_tokens: opts.maxTokens ?? 4096,
-        }),
-        signal: withTimeout(timeoutMs),
-      });
-      return readChatResult(response, "chat completion");
+      const timeout = withTimeout(timeoutMs);
+      try {
+        const response = await fetch(`${baseUrl()}/v1/chat/completions`, {
+          method: "POST",
+          headers: headers(),
+          body: JSON.stringify({
+            model: modelForTier(tier),
+            messages: buildMessages(prompt),
+            temperature: opts.temperature ?? 0.7,
+            max_tokens: opts.maxTokens ?? 4096,
+          }),
+          signal: timeout.signal,
+        });
+        return await readChatResult(response, "chat completion");
+      } finally {
+        timeout.dispose();
+      }
     },
 
     chatStream(prompt, opts = {}) {
       const tier = opts.tier ?? "default";
       const abortController = new AbortController();
-      const timeoutSignal = withTimeout(timeoutMs);
-      timeoutSignal.addEventListener(
+      // Link cancel → clear timeout timer; timeout abort → abort fetch.
+      const timeout = withTimeout(timeoutMs, abortController.signal);
+      timeout.signal.addEventListener(
         "abort",
-        () => abortController.abort(timeoutSignal.reason),
+        () => {
+          if (!abortController.signal.aborted) {
+            abortController.abort(timeout.signal.reason);
+          }
+        },
         { once: true },
       );
 
@@ -213,47 +255,58 @@ export function createProviderAdapter(options: ProviderAdapterOptions = {}): AiP
         stream: true,
       });
 
-      return new ReadableStream<string>({
-        async start(controller) {
-          try {
-            const response = await fetch(`${baseUrl()}/v1/chat/completions`, {
-              method: "POST",
-              headers: headers(),
-              body,
-              signal: abortController.signal,
-            });
+      let consumerCancelled = false;
 
-            if (!response.ok) {
-              throw new Error(`stream failed: ${response.status} ${await response.text()}`);
-            }
+      async function runStream(controller: ReadableStreamDefaultController<string>) {
+        try {
+          const response = await fetch(`${baseUrl()}/v1/chat/completions`, {
+            method: "POST",
+            headers: headers(),
+            body,
+            signal: abortController.signal,
+          });
 
-            const reader = response.body?.getReader();
-            if (!reader) throw new Error("No response body for stream");
-
-            const decoder = new TextDecoder();
-            let buffer = "";
-
-            while (!abortController.signal.aborted) {
-              const { done, value } = await reader.read();
-              if (done) break;
-
-              buffer += decoder.decode(value, { stream: true });
-              const result = emitSseDeltas(buffer, controller);
-              buffer = result.remainder;
-              if (result.done) {
-                controller.close();
-                return;
-              }
-            }
-          } catch (err) {
-            if (!abortController.signal.aborted) {
-              controller.error(err);
-              return;
-            }
+          if (!response.ok) {
+            throw new Error(`stream failed: ${response.status} ${await response.text()}`);
           }
-          if (!abortController.signal.aborted) controller.close();
+
+          const reader = response.body?.getReader();
+          if (!reader) throw new Error("No response body for stream");
+
+          const outcome = await pumpSseStream(
+            reader,
+            controller,
+            () => abortController.signal.aborted,
+          );
+          if (outcome === "done") {
+            controller.close();
+            return;
+          }
+          failStream(
+            controller,
+            consumerCancelled,
+            abortController.signal.reason ??
+              new Error(`Gateway timeout after ${timeoutMs}ms`),
+          );
+        } catch (err) {
+          failStream(
+            controller,
+            consumerCancelled,
+            abortController.signal.aborted
+              ? (abortController.signal.reason ?? err)
+              : err,
+          );
+        } finally {
+          timeout.dispose();
+        }
+      }
+
+      return new ReadableStream<string>({
+        start(controller) {
+          return runStream(controller);
         },
         cancel() {
+          consumerCancelled = true;
           abortController.abort();
         },
       });
@@ -261,51 +314,61 @@ export function createProviderAdapter(options: ProviderAdapterOptions = {}): AiP
 
     async structured(prompt, opts) {
       const tier = opts.tier ?? "structured";
-      const response = await fetch(`${baseUrl()}/v1/chat/completions`, {
-        method: "POST",
-        headers: headers(),
-        body: JSON.stringify({
-          model: modelForTier(tier),
-          messages: buildMessages(prompt),
-          temperature: opts.temperature ?? 0.3,
-          max_tokens: opts.maxTokens ?? 4096,
-          response_format: { type: "json_object" },
-        }),
-        signal: withTimeout(timeoutMs),
-      });
+      const timeout = withTimeout(timeoutMs);
+      try {
+        const response = await fetch(`${baseUrl()}/v1/chat/completions`, {
+          method: "POST",
+          headers: headers(),
+          body: JSON.stringify({
+            model: modelForTier(tier),
+            messages: buildMessages(prompt),
+            temperature: opts.temperature ?? 0.3,
+            max_tokens: opts.maxTokens ?? 4096,
+            response_format: { type: "json_object" },
+          }),
+          signal: timeout.signal,
+        });
 
-      await assertOk(response, "structured completion");
-      const data = (await response.json()) as {
-        choices?: { message: { content: string } }[];
-        usage?: GatewayChatUsage;
-      };
+        await assertOk(response, "structured completion");
+        const data = (await response.json()) as {
+          choices?: { message: { content: string } }[];
+          usage?: GatewayChatUsage;
+        };
 
-      return {
-        object: parseJsonObject(data.choices?.[0]?.message?.content ?? ""),
-        usage: mapChatUsage(data.usage),
-      };
+        return {
+          object: parseJsonObject(data.choices?.[0]?.message?.content ?? ""),
+          usage: mapChatUsage(data.usage),
+        };
+      } finally {
+        timeout.dispose();
+      }
     },
 
     async embed(inputs, opts = {}) {
       const model = opts.model ?? modelForTier("embedding");
-      const response = await fetch(`${baseUrl()}/v1/embeddings`, {
-        method: "POST",
-        headers: headers(),
-        body: JSON.stringify({ model, input: inputs }),
-        signal: withTimeout(timeoutMs),
-      });
+      const timeout = withTimeout(timeoutMs);
+      try {
+        const response = await fetch(`${baseUrl()}/v1/embeddings`, {
+          method: "POST",
+          headers: headers(),
+          body: JSON.stringify({ model, input: inputs }),
+          signal: timeout.signal,
+        });
 
-      await assertOk(response, "embedding");
+        await assertOk(response, "embedding");
 
-      const data = (await response.json()) as {
-        data: { embedding: number[] }[];
-        usage?: { prompt_tokens: number };
-      };
+        const data = (await response.json()) as {
+          data: { embedding: number[] }[];
+          usage?: { prompt_tokens: number };
+        };
 
-      return {
-        embeddings: data.data.map((d) => d.embedding),
-        usage: data.usage ? { promptTokens: data.usage.prompt_tokens } : undefined,
-      };
+        return {
+          embeddings: data.data.map((d) => d.embedding),
+          usage: data.usage ? { promptTokens: data.usage.prompt_tokens } : undefined,
+        };
+      } finally {
+        timeout.dispose();
+      }
     },
   };
 }

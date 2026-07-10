@@ -15,14 +15,13 @@ export async function GET() {
   const hasApiKey = Boolean(process.env.AI_GATEWAY_API_KEY);
   const adapter = createProviderAdapter({ baseUrl: gatewayUrl });
 
-  try {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 5_000);
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 5_000);
 
+  try {
     const response = await fetch(`${gatewayUrl}/health`, {
       signal: controller.signal,
     });
-    clearTimeout(timeout);
 
     if (!response.ok) {
       return NextResponse.json(
@@ -57,5 +56,7 @@ export async function GET() {
       },
       { status: 503 },
     );
+  } finally {
+    clearTimeout(timeout);
   }
 }

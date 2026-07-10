@@ -256,6 +256,27 @@ describe("providerAdapter / createProviderAdapter", () => {
 
       expect(abortSignal?.aborted).toBe(true);
     });
+
+    it("stream timeout aborts fetch and errors the reader", async () => {
+      let abortSignal: AbortSignal | undefined;
+      globalThis.fetch = vi.fn().mockImplementation((_url, init) => {
+        abortSignal = init.signal;
+        return new Promise((_resolve, reject) => {
+          init.signal?.addEventListener(
+            "abort",
+            () => reject(init.signal.reason ?? new Error("Aborted")),
+            { once: true },
+          );
+        });
+      });
+
+      const adapter = createProviderAdapter({ timeoutMs: 30 });
+      const stream = adapter.chatStream("test");
+      const reader = stream.getReader();
+
+      await expect(reader.read()).rejects.toThrow(/Gateway timeout after 30ms/);
+      expect(abortSignal?.aborted).toBe(true);
+    });
   });
 
   describe("structured", () => {
