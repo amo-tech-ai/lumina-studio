@@ -10,6 +10,12 @@ import { getMastra } from "@/mastra";
 import { type OperatorUser, extractAccessToken } from "@/lib/auth";
 import { OperatorAuthError, withOperatorAuth } from "@/lib/operator-gate";
 import { requestToken } from "@/lib/request-token";
+import { withStreamIdleTimeout } from "@/lib/copilotkit/stream-idle-timeout";
+
+// See stream-idle-timeout.ts for why this exists — bounds a stalled agent
+// turn (e.g. a hung PostgresStore query) to a controlled RUN_ERROR instead
+// of an indefinite hang.
+const STREAM_IDLE_TIMEOUT_MS = 20_000;
 
 // AsyncLocalStorage propagates the resolved operator identity through the
 // entire async call-stack of a request — including agent factory callbacks that
@@ -62,7 +68,10 @@ const handler = async (request: Request): Promise<Response> => {
     throw err;
   }
   const token = extractAccessToken(request) ?? "";
-  return _requestUser.run(user, () => requestToken.run(token, () => endpoint(request)));
+  const response = await _requestUser.run(user, () =>
+    requestToken.run(token, () => endpoint(request)),
+  );
+  return withStreamIdleTimeout(response, STREAM_IDLE_TIMEOUT_MS);
 };
 
 export const GET = handler;

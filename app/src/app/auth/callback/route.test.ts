@@ -82,7 +82,7 @@ describe("GET /auth/callback", () => {
   });
 
   it("rejects spoofed *.workers.dev not in the allowlist", async () => {
-    delete process.env.TRUSTED_OAUTH_FORWARDED_HOSTS;
+    vi.stubEnv("TRUSTED_OAUTH_FORWARDED_HOSTS", undefined);
     exchangeCodeForSession.mockResolvedValue({ error: null });
     const GET = await loadGet();
 
@@ -97,7 +97,7 @@ describe("GET /auth/callback", () => {
   });
 
   it("no longer trusts the *.vercel.app namespace by default (no blanket wildcard)", async () => {
-    delete process.env.TRUSTED_OAUTH_FORWARDED_HOSTS;
+    vi.stubEnv("TRUSTED_OAUTH_FORWARDED_HOSTS", undefined);
     exchangeCodeForSession.mockResolvedValue({ error: null });
     const GET = await loadGet();
 
