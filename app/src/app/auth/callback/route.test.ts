@@ -96,6 +96,36 @@ describe("GET /auth/callback", () => {
     expect(res.headers.get("location")).toBe("https://www.ipix.co/app");
   });
 
+  it("no longer trusts the *.vercel.app namespace by default (no blanket wildcard)", async () => {
+    delete process.env.TRUSTED_OAUTH_FORWARDED_HOSTS;
+    exchangeCodeForSession.mockResolvedValue({ error: null });
+    const GET = await loadGet();
+
+    const res = await GET(
+      callbackRequest("code=abc123", {
+        "x-forwarded-host": "attacker-app.vercel.app",
+        "x-forwarded-proto": "https",
+      }),
+    );
+
+    expect(res.headers.get("location")).toBe("https://www.ipix.co/app");
+  });
+
+  it("matches an allowlisted host even when x-forwarded-host includes a port", async () => {
+    vi.stubEnv("TRUSTED_OAUTH_FORWARDED_HOSTS", "localhost:8787");
+    exchangeCodeForSession.mockResolvedValue({ error: null });
+    const GET = await loadGet();
+
+    const res = await GET(
+      callbackRequest("code=abc123", {
+        "x-forwarded-host": "localhost:8787",
+        "x-forwarded-proto": "http",
+      }),
+    );
+
+    expect(res.headers.get("location")).toBe("http://localhost:8787/app");
+  });
+
   it("uses x-forwarded-host for the redirect origin in production", async () => {
     exchangeCodeForSession.mockResolvedValue({ error: null });
     const GET = await loadGet();

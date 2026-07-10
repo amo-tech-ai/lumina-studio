@@ -20,30 +20,36 @@ function hostsFromEnvList(raw: string | undefined): string[] {
     .filter(Boolean);
 }
 
-/** Exact hostnames allowed via x-forwarded-host (Cloudflare preview, custom domains). */
-function trustedForwardedHostAllowlist(): Set<string> {
+/** Strips a `:port` suffix so comparisons don't miss on proxies that append one (e.g. `host:443`, local `wrangler dev` on `:8787`). */
+function stripPort(host: string): string {
+  return host.replace(/:\d+$/, "");
+}
+
+/** Exact hostnames allowed via x-forwarded-host (Cloudflare preview, custom domains). Computed once — SITE_URL and TRUSTED_OAUTH_FORWARDED_HOSTS are static for the process lifetime. */
+const trustedForwardedHostAllowlist: Set<string> = (() => {
   const hosts = new Set<string>();
   try {
-    hosts.add(new URL(SITE_URL).host.toLowerCase());
+    hosts.add(stripPort(new URL(SITE_URL).host.toLowerCase()));
   } catch {
     // ignore malformed SITE_URL
   }
   for (const host of hostsFromEnvList(process.env.TRUSTED_OAUTH_FORWARDED_HOSTS)) {
-    hosts.add(host);
+    hosts.add(stripPort(host));
   }
   return hosts;
-}
+})();
 
 function isTrustedForwardedHost(forwardedHost: string, requestOrigin: string): boolean {
-  const host = forwardedHost.toLowerCase();
-  if (trustedForwardedHostAllowlist().has(host)) return true;
+  const host = stripPort(forwardedHost.toLowerCase());
+  if (trustedForwardedHostAllowlist.has(host)) return true;
   try {
-    if (host === new URL(requestOrigin).host.toLowerCase()) return true;
+    if (host === stripPort(new URL(requestOrigin).host.toLowerCase())) return true;
   } catch {
     // ignore malformed request origin
   }
-  // Vercel preview namespace only — never trust arbitrary *.workers.dev (open redirect).
-  return host.endsWith(".vercel.app");
+  // No blanket *.vercel.app (or any) wildcard — add specific preview hosts to
+  // TRUSTED_OAUTH_FORWARDED_HOSTS instead of trusting an entire public suffix.
+  return false;
 }
 
 function redirectOrigin(request: Request): string {

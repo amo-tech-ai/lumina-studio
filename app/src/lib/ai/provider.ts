@@ -1,3 +1,4 @@
+import { existsSync } from "node:fs";
 import { dirname, join } from "node:path";
 
 import groqModelsSsot from "./groq-models.ssot.json";
@@ -12,7 +13,6 @@ const MAX_BUNDLE_ANCESTOR_HOPS = 8;
 
 /** Walks up from `startDir` looking for `config/groq-models.json` (tests / Mastra dev). */
 export function findGroqModelsConfigPath(startDir: string): string {
-  const { existsSync } = require("node:fs") as typeof import("node:fs");
   let dir = startDir;
   for (let hop = 0; hop < MAX_BUNDLE_ANCESTOR_HOPS; hop += 1) {
     const candidate = join(dir, "config", "groq-models.json");
@@ -42,23 +42,19 @@ export {
   resolveGeminiModel,
 } from "./gemini-registry";
 
-let groqModelsCache: GroqModelsConfig | null = null;
-let modelByIdCache: Map<string, GroqModelEntry> | null = null;
+// `groqModelsSsot` is a static bundled import (no runtime load), so these can
+// be plain module-level constants instead of lazy-initialized caches.
+const groqModelsConfig: GroqModelsConfig = loadGroqModelsConfig();
+const modelById: Map<string, GroqModelEntry> = new Map(
+  groqModelsConfig.models.map((entry) => [entry.id, entry] as const),
+);
 
 function getGroqModelsConfig(): GroqModelsConfig {
-  if (!groqModelsCache) {
-    groqModelsCache = loadGroqModelsConfig();
-  }
-  return groqModelsCache;
+  return groqModelsConfig;
 }
 
 function getModelById(): Map<string, GroqModelEntry> {
-  if (!modelByIdCache) {
-    modelByIdCache = new Map(
-      getGroqModelsConfig().models.map((entry) => [entry.id, entry] as const),
-    );
-  }
-  return modelByIdCache;
+  return modelById;
 }
 
 export function resolveAiProvider(): AiProvider {
