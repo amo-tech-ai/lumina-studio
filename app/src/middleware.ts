@@ -61,6 +61,7 @@ export const config = {
      * on /login, /auth/callback, /app/*, and API routes.
      * Keep in sync with tests in src/test/operator-middleware-contract.test.ts.
      */
-    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+    // Exclude Sentry tunnelRoute (/monitoring) so auth/session logic does not intercept it.
+    "/((?!monitoring|_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
   ],
 };

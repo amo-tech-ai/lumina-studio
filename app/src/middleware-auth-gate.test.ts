@@ -128,7 +128,7 @@ describe("middleware — operator auth gate (IPI2-127)", () => {
 
   it("matches all app routes except static assets for session refresh", () => {
     expect(config.matcher).toEqual([
-      "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+      "/((?!monitoring|_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
     ]);
   });
 });

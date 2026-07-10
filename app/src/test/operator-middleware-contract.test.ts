@@ -14,7 +14,7 @@ const SRC_MIDDLEWARE = resolve(APP_DIR, "src/middleware.ts");
 const PROXY = resolve(APP_DIR, "src/proxy.ts");
 
 const MATCHER = [
-  "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+  "/((?!monitoring|_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
 ];
 
 describe("operator middleware — wiring contract (IPI2-127 / CF-MIG-110)", () => {
