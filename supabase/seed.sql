@@ -114,17 +114,17 @@ insert into talent.talent_profiles (id, agency_org_id, display_name, bio, measur
    '{"look": ["commercial", "lifestyle", "streetwear"], "specialties": ["ecommerce", "catalog", "social"], "brands_worked": ["Zalando", "Adidas", "Mango"]}'::jsonb)
 on conflict (id) do nothing;
 
--- Talent availability (July–September 2026)
+-- Talent availability (July–September 2026). Inclusive '[]' matches booking RPCs/triggers.
 insert into talent.talent_availability (id, talent_profile_id, date_range, status) values
-  ('00000000-0000-0000-0000-000000000901', '00000000-0000-0000-0000-000000000801', '[2026-07-15, 2026-08-15)'::daterange, 'available'),
-  ('00000000-0000-0000-0000-000000000902', '00000000-0000-0000-0000-000000000801', '[2026-09-01, 2026-09-30)'::daterange, 'available'),
-  ('00000000-0000-0000-0000-000000000903', '00000000-0000-0000-0000-000000000802', '[2026-07-20, 2026-08-20)'::daterange, 'available'),
-  ('00000000-0000-0000-0000-000000000904', '00000000-0000-0000-0000-000000000802', '[2026-07-25, 2026-08-05)'::daterange, 'blocked')
+  ('00000000-0000-0000-0000-000000000901', '00000000-0000-0000-0000-000000000801', '[2026-07-15, 2026-08-15]'::daterange, 'available'),
+  ('00000000-0000-0000-0000-000000000902', '00000000-0000-0000-0000-000000000801', '[2026-09-01, 2026-09-30]'::daterange, 'available'),
+  ('00000000-0000-0000-0000-000000000903', '00000000-0000-0000-0000-000000000802', '[2026-07-20, 2026-08-20]'::daterange, 'available'),
+  ('00000000-0000-0000-0000-000000000904', '00000000-0000-0000-0000-000000000802', '[2026-07-25, 2026-08-05]'::daterange, 'blocked')
 on conflict (id) do nothing;
 
--- QA booking request (from alice to Sophie for a hypothetical shoot)
+-- QA booking request (from alice to Sophie). Deterministic expires_at after shoot window.
 insert into talent.bookings (id, brand_org_id, talent_profile_id, status, date_start, date_end, rate_quoted, message, requested_by, expires_at) values
-  ('00000000-0000-0000-0000-000000000a01', '00000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000801', 'requested', '2026-08-01', '2026-08-03', 3500, 'August editorial shoot — SS26 Collection lookbook. Need Sophie for 3 full days in Paris.', '00000000-0000-0000-0000-000000000101', now() + interval '72 hours')
+  ('00000000-0000-0000-0000-000000000a01', '00000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000801', 'requested', '2026-08-01', '2026-08-03', 3500, 'August editorial shoot — SS26 Collection lookbook. Need Sophie for 3 full days in Paris.', '00000000-0000-0000-0000-000000000101', '2026-08-10T12:00:00Z')
 on conflict (id) do nothing;
 
 -- Notifications
