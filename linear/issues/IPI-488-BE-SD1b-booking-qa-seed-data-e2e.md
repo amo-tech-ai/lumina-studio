@@ -57,7 +57,7 @@ flowchart TD
 
 ## Acceptance criteria
 
-- **A1 — Seed talent:** At least two talent profiles (verified + pending) with `rates` keys `day` / `half_day` / `hour` so `talent.compute_rate_tier()` is non-null.
+- **A1 — Seed talent:** At least two talent profiles (verified + pending) whose `rates` JSON includes `half_day` so `talent.compute_rate_tier(p_talent_profile_id)` returns a non-null tier (`$` / `$$` / `$$$`). That helper only reads `rates->>'half_day'` (not `day` / `hour`).
 - **A2 — Seed availability:** Availability rows use inclusive daterange bounds `[]` matching booking overlap RPCs (not half-open `[)`).
 - **A3 — Seed booking:** Sample booking stays in `requested` for the QA window (`expires_at` far-future, not ~72h TTL).
 - **A4 — Auth probe (POST valid):** Unauthenticated POST with UUID_RE-valid body → **401** in both auth-on and auth-off modes (gate or RPC `authentication required`); never 500 / never talent 404.
