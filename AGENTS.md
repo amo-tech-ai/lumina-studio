@@ -222,16 +222,18 @@ Full inventory: `index-skills.md`.
 
 ## Graphify
 
-Knowledge graph of the codebase at `docs/graphify/graphify-out/graph.json` (~80K nodes). Use for architecture exploration, dependency analysis, and impact assessment before changes.
+**SSOT graph:** `graphify-out/graph.json` (repo root — CLI default, ~41K nodes). Do **not** use `docs/graphify/graphify-out/` (stale / docs-only risk). Skill hub: `.claude/skills/graphify/SKILL.md` · Cursor rule: `.cursor/rules/graphify.mdc`.
 
 ```bash
-# Query from repo root
-graphify query "Brand Intelligence" --graph docs/graphify/graphify-out/graph.json
-graphify explain "commerce_product_links" --graph docs/graphify/graphify-out/graph.json
-graphify path "Brand Intelligence" "Asset DNA" --graph docs/graphify/graphify-out/graph.json
+# From repo root (or: cd "$(git rev-parse --show-toplevel)")
+graphify query "Brand Intelligence"
+graphify explain "commerce_product_links"
+graphify path "Brand Intelligence" "Asset DNA"
+graphify affected "<node>"
 
 # Rebuild — do NOT run `graphify update docs/graphify/`
 # (that overwrites the full graph with just the docs folder)
+graphify update .
 ```
 
 ## Common Gotchas

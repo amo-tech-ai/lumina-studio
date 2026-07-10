@@ -1,13 +1,13 @@
 ---
 description: Mastra docs MCP — tool selection, Node setup, iPix projectPath, and doc lookup fallbacks
-globs: app/src/mastra/**,.cursor/mcp.json,tasks/cloudflare/mastra/**,**/mastra/**
+globs: app/src/mastra/**,.cursor/mcp.example.json,tasks/cloudflare/mastra/**,**/mastra/**
 alwaysApply: false
 ---
 
 # Mastra MCP — docs lookup for iPix
 
 **Live config:** `~/.cursor/mcp.json` → server id **`mastra`** (Cursor exposes as **`user-mastra`**).  
-**Repo template:** `.cursor/mcp.json`  
+**Repo template:** `.cursor/mcp.example.json` (install: `bash scripts/cursor-mcp-setup.sh`)  
 **Skill hub:** `.claude/skills/mastra/SKILL.md` · MCP matrix: `.claude/skills/mastra/references/mcp-docs-lookup.md`  
 **Official:** [Build with AI](https://mastra.ai/docs/getting-started/build-with-ai) · [Get started](https://mastra.ai/docs) · Doc index: [mastra.ai/llms.txt](https://mastra.ai/llms.txt)
 
@@ -28,30 +28,39 @@ Per [Build with AI](https://mastra.ai/docs/getting-started/build-with-ai): prefe
 "mastra": {
   "type": "stdio",
   "command": "npx",
-  "args": ["-y", "@mastra/mcp-docs-server@latest"]
+  "args": ["-y", "@mastra/mcp-docs-server@1.2.6"]
 }
 ```
 
 | ✅ Do | ❌ Don't |
 |-------|---------|
 | Enable **mastra** in Cursor **Settings → MCP** after config change | Assume MCP hot-reloads — **quit + reopen Cursor** |
-| Use **Node ≥ 22.13** for `@mastra/mcp-docs-server@latest` | Run on Node 20 — server stays **error**, tools missing |
-| Pass **`projectPath: "/home/sk/ipix/app"`** on embedded-doc tools | Use root `/home/sk/ipix` — wrong `node_modules` |
+| Use **Node.js ≥ 22.13.0** for `@mastra/mcp-docs-server@1.2.6` | Run on Node 20 — server stays **error**, tools missing |
+| Pass **`projectPath`** = absolute path to **`app/`** (derive at runtime) | Hardcode a machine path or use repo root — wrong `node_modules` |
 | Verify APIs from MCP + embedded docs before coding | Trust training-data Mastra APIs (they drift fast) |
 | Use **`infisical run --env=dev --`** for dev commands needing `GEMINI_API_KEY` | Put API keys in MCP config |
+
+### Resolve `projectPath` (required for embedded-doc tools)
+
+```bash
+# Absolute path to the operator app (owns node_modules/@mastra/*)
+echo "$(git rev-parse --show-toplevel)/app"
+```
+
+Pass that value as `projectPath` on `searchMastraDocs`, `readMastraDocs`, `listMastraPackages`, `getMastraExports`.
 
 ### Node 22 fix
 
 ```bash
 nvm install 22 && nvm use 22
-node -v   # must be v22.13+
+node -v   # must be v22.13.0+
 # optional: pin absolute npx in ~/.cursor/mcp.json if PATH fails in Cursor
 which npx
 ```
 
 ### Enable after install
 
-1. Save `~/.cursor/mcp.json`
+1. Save `~/.cursor/mcp.json` (or run `bash scripts/cursor-mcp-setup.sh`)
 2. **Quit Cursor** completely
 3. **Settings → MCP** → enable **mastra**
 4. **New agent chat** (existing chats may not pick up tools)
@@ -67,7 +76,7 @@ which npx
 | Export / API surface | **`getMastraExports`** | `package`, **`projectPath`** |
 | v0 → v1 migration | **`mastraMigration`** | per tool schema |
 
-**Always:** `projectPath: "/home/sk/ipix/app"` (operator app owns `node_modules/@mastra/*`).
+**Always:** `projectPath` = `$(git rev-parse --show-toplevel)/app` (operator app owns `node_modules/@mastra/*`).
 
 ### `mastraDocs` path patterns
 
@@ -88,7 +97,7 @@ Optional: `queryKeywords: ["CopilotKit", "stream"]` for related-path hints.
 
 1. **Mastra change in `app/src/mastra/`** → load `.claude/skills/mastra/SKILL.md` + this rule.
 2. **Need doc page** → `mastraDocs` with path from table above.
-3. **Need installed API** → `searchMastraDocs` / `readMastraDocs` with `projectPath: "/home/sk/ipix/app"`.
+3. **Need installed API** → `searchMastraDocs` / `readMastraDocs` with runtime `projectPath` → `…/app`.
 4. **Migration / breaking changes** → `mastraMigration` (MCP) or skill `references/migration-guide.md`.
 5. **MCP empty / 404** → fallbacks below.
 
@@ -131,12 +140,12 @@ Install Mastra skills so agents know CLI commands: `npx skills add mastra-ai/ski
 
 | Symptom | Fix |
 |---------|-----|
-| `user-mastra` **error**, only `mcp_auth` | Upgrade to **Node 22+**, restart Cursor |
+| `user-mastra` **error**, only `mcp_auth` | Upgrade to **Node.js ≥ 22.13.0**, restart Cursor |
 | Tools not in chat | Enable in MCP settings; start **new** chat |
 | `searchMastraDocs` empty | Fall back to **`mastraDocs`** paths or `mastra.ai/llms.txt` |
 | `npx` not found in Cursor | Use absolute path from `which npx` as `"command"` |
 | Wrong API in generated code | `grep` `app/node_modules/@mastra/core/dist/docs/references` |
-| Dev server / agent run fails | `infisical run --env=dev -- cd app && npm run dev` |
+| Dev server / agent run fails | `cd app && infisical run --env=dev -- npm run dev` |
 
 ## Example prompts (once MCP is green)
 

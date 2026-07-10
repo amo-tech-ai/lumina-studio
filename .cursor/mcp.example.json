@@ -25,7 +25,7 @@
     "mastra": {
       "type": "stdio",
       "command": "npx",
-      "args": ["-y", "@mastra/mcp-docs-server@latest"]
+      "args": ["-y", "@mastra/mcp-docs-server@1.2.6"]
     },
     "copilotkit-docs": {
       "type": "http",

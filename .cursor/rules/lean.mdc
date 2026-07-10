@@ -72,7 +72,7 @@ Apply **after** graphify discovery and **during** implementation (see `ponytail.
 | | |
 |---|---|
 | **Enter** | Task boundary understood |
-| **Do** | `graphify query/explain/path`; `rg` for exact symbols; trace real execution path; confirm partial/full existing impl |
+| **Do** | `graphify query → explain → path → affected`; then task-scoped `rg`; trace real execution path; confirm partial/full existing impl |
 | **Verify** | Reuse candidates identified or "net-new" justified |
 | **Exit** | Know which files will likely change |
 
@@ -80,7 +80,8 @@ Apply **after** graphify discovery and **during** implementation (see `ponytail.
 graphify query "<feature>"
 graphify explain "<symbol>"
 graphify path "<A>" "<B>"
-rg -l "<exactSymbol>" app/ supabase/
+graphify affected "<node>"
+rg -l "<exactSymbol>"   # scope to task paths when known (app/, supabase/, scripts/, …)
 ```
 
 ### 3. Plan
@@ -251,7 +252,7 @@ graphify update .   # after significant structural merge
 - **Targeted reads** — open symbols/ranges from graph results, not whole directories
 - **Summarize** before loading more files
 - **Stop** when evidence suffices
-- **No regenerate** — skip `supabase:types`, graph rebuild, etc. when inputs unchanged
+- **Check freshness first** — rebuild with `graphify update .` when more than 10 tracked files are newer than `graphify-out/graph.json`; skip `supabase:types` / graph rebuild when inputs are unchanged
 - **Follow-ups** → new Linear issues, not hidden TODOs
 - **Claim done only with evidence** — test output, probe, or inspection
 

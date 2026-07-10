@@ -34,7 +34,7 @@ Optional Cursor skill copy: `graphify install --platform cursor`
 ## Mandatory workflow (before source reads)
 
 ```bash
-cd /home/sk/ipix
+# From repo root (or: cd "$(git rev-parse --show-toplevel)")
 
 # 1. Orient — scoped subgraph around your question
 graphify query "<question>"

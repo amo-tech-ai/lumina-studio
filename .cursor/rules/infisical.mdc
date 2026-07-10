@@ -87,11 +87,16 @@ infisical run --env=dev --path=/app -- npm run dev
 infisical run --env=dev --path=/supabase -- npm run supabase:verify
 ```
 
-List what's configured:
+List what's configured (names only — do not print values):
 
 ```bash
 infisical secrets --env=dev
-infisical secrets get GEMINI_API_KEY CLOUDFLARE_API_TOKEN --env=dev
+```
+
+Confirm a key is injectable without echoing it:
+
+```bash
+infisical run --env=dev -- bash -c 'test -n "$GEMINI_API_KEY" && echo GEMINI_API_KEY=set'
 ```
 
 Set / rotate (never echo values in terminal output to user):
@@ -106,20 +111,18 @@ infisical secrets set GEMINI_API_KEY=... --env=dev
 | Surface | Role |
 |---------|------|
 | **Infisical** | Canonical store for all team secrets |
-| **`app/.env.local`** | Local cache for tools that read files directly (MCP `cf-mcp-bridge.sh`, Next.js, worktrees via `.worktreeinclude`) |
+| **`app/.env.local`** | Local cache for tools that read files directly (stdio MCP bridges, Next.js, worktrees via `.worktreeinclude`) |
 
-After rotating a secret in Infisical, sync to `app/.env.local` for file-based tools:
+After rotating a secret in Infisical, **overwrite** the local cache (do not append — avoids stale/duplicate keys):
 
 ```bash
-# Export only what you need (do not commit)
-infisical export --env=dev --format=dotenv --path=/app >> app/.env.local
+# Regenerates app/.env.local from Infisical (do not commit)
+infisical export --env=dev --format=dotenv --path=/app --output-file=app/.env.local
 ```
-
-Or set keys manually in `.env.local` after updating Infisical — keep both in sync.
 
 ## Agent workflow
 
-1. **Need a secret?** → `infisical secrets get <KEY> --env=dev` (do not print full values in replies).
+1. **Need a secret in a command?** → `infisical run --env=dev -- <command>` (do not print secret values in replies).
 2. **Run dev server / tests / verify** → `infisical run --env=dev -- <command>`.
 3. **User pasted a token in chat** → tell them to rotate in Infisical + Cloudflare/provider dashboard.
 4. **CI** → machine identity + `INFISICAL_TOKEN`, not user login ([usage docs](https://infisical.com/docs/cli/usage)).
