@@ -38,11 +38,13 @@ function getModelById(): Map<string, GroqModelEntry> {
   return modelById;
 }
 
+const VALID_PROVIDERS = ["gemini", "groq", "openai", "workers-ai", "nvidia", "openai-compatible", "mock"] as const satisfies readonly AiProvider[];
+
 export function resolveAiProvider(): AiProvider {
   const raw = (process.env.AI_PROVIDER ?? "gemini").trim().toLowerCase();
-  if (raw === "gemini" || raw === "groq" || raw === "openai") return raw;
+  if ((VALID_PROVIDERS as readonly string[]).includes(raw)) return raw as AiProvider;
   throw new Error(
-    `AI_PROVIDER="${raw}" is invalid (expected gemini | groq | openai).`,
+    `AI_PROVIDER="${raw}" is invalid (expected ${VALID_PROVIDERS.join(" | ")}).`,
   );
 }
 
