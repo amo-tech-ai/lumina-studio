@@ -37,7 +37,9 @@ export interface AiProviderAdapter {
   embed(inputs: string[], options?: EmbedOptions): Promise<EmbedResult>;
 }
 
-const GATEWAY_BASE_URL = process.env.AI_GATEWAY_URL ?? "http://localhost:4111";
+function gatewayBaseUrl(): string {
+  return process.env.AI_GATEWAY_URL ?? "http://localhost:4111";
+}
 
 function gatewayHeaders(): Record<string, string> {
   const headers: Record<string, string> = { "Content-Type": "application/json" };
@@ -92,7 +94,7 @@ async function chatCompletion(
   options: ChatOptions,
 ): Promise<{ text: string; usage?: { promptTokens: number; completionTokens: number } }> {
   const tier = options.tier ?? "default";
-  const response = await fetch(`${GATEWAY_BASE_URL}/v1/chat/completions`, {
+  const response = await fetch(`${gatewayBaseUrl()}/v1/chat/completions`, {
     method: "POST",
     headers: gatewayHeaders(),
     body: JSON.stringify({
@@ -140,7 +142,7 @@ export const providerAdapter: AiProviderAdapter = {
     return new ReadableStream<string>({
       async start(controller) {
         try {
-          const response = await fetch(`${GATEWAY_BASE_URL}/v1/chat/completions`, {
+          const response = await fetch(`${gatewayBaseUrl()}/v1/chat/completions`, {
             method: "POST",
             headers: gatewayHeaders(),
             body,
@@ -185,7 +187,7 @@ export const providerAdapter: AiProviderAdapter = {
 
   async structured(prompt, options) {
     const tier = options.tier ?? "structured";
-    const response = await fetch(`${GATEWAY_BASE_URL}/v1/chat/completions`, {
+    const response = await fetch(`${gatewayBaseUrl()}/v1/chat/completions`, {
       method: "POST",
       headers: gatewayHeaders(),
       body: JSON.stringify({
@@ -216,7 +218,7 @@ export const providerAdapter: AiProviderAdapter = {
 
   async embed(inputs, options) {
     const model = options?.model ?? modelForTier("embedding");
-    const response = await fetch(`${GATEWAY_BASE_URL}/v1/embeddings`, {
+    const response = await fetch(`${gatewayBaseUrl()}/v1/embeddings`, {
       method: "POST",
       headers: gatewayHeaders(),
       body: JSON.stringify({ model, input: inputs }),

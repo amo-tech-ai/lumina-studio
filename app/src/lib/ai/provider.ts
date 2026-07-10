@@ -125,6 +125,6 @@ export function resolveModel(tier: GroqModelTier = "default"): ResolvedLanguageM
     return createGroqLanguageModel(tier);
   }
   throw new Error(
-    `AI_PROVIDER="${provider}" is not wired in GROQ-002 (use gemini or groq).`,
+    `AI_PROVIDER="${provider}" is not wired in resolveModel() (legacy direct-provider path — use gemini or groq). For workers-ai/nvidia/openai-compatible/mock, use the gateway adapter (providerAdapter) instead — see IPI-454 AC-F for the resolveModel() → gateway wire.`,
   );
 }
