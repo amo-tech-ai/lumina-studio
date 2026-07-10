@@ -192,21 +192,6 @@ export function createProviderAdapter(options: ProviderAdapterOptions = {}): AiP
         }),
         signal: withTimeout(timeoutMs),
       });
-      // #region agent log
-      fetch("http://127.0.0.1:7607/ingest/d64b1863-23d3-4239-b3b4-eaa6e4ef6a78", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "f1c947" },
-        body: JSON.stringify({
-          sessionId: "f1c947",
-          runId: "post-fix",
-          hypothesisId: "B",
-          location: "provider-adapter.ts:chat",
-          message: "chat via readChatResult",
-          data: { ok: response.ok, status: response.status },
-          timestamp: Date.now(),
-        }),
-      }).catch(() => {});
-      // #endregion
       return readChatResult(response, "chat completion");
     },
 
@@ -247,21 +232,6 @@ export function createProviderAdapter(options: ProviderAdapterOptions = {}): AiP
 
             const decoder = new TextDecoder();
             let buffer = "";
-            // #region agent log
-            fetch("http://127.0.0.1:7607/ingest/d64b1863-23d3-4239-b3b4-eaa6e4ef6a78", {
-              method: "POST",
-              headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "f1c947" },
-              body: JSON.stringify({
-                sessionId: "f1c947",
-                runId: "post-fix",
-                hypothesisId: "A",
-                location: "provider-adapter.ts:chatStream",
-                message: "stream using split emitSseDeltas helpers",
-                data: { hasBody: true },
-                timestamp: Date.now(),
-              }),
-            }).catch(() => {});
-            // #endregion
 
             while (!abortController.signal.aborted) {
               const { done, value } = await reader.read();
