@@ -1113,20 +1113,34 @@ try {
     .eq("id", taskA.id);
   assert(!viewerTaskReadErr && (viewerTaskRead ?? []).length === 1, "viewer can read planner.tasks");
 
-  const { data: viewerBefore } = await plannerA
+  const { data: viewerBefore, error: viewerBeforeErr } = await plannerA
     .from("tasks")
     .select("title")
     .eq("id", taskA.id)
     .single();
-  await plannerB.from("tasks").update({ title: "viewer-hijack" }).eq("id", taskA.id);
-  const { data: viewerAfter } = await plannerA
+  assert(!viewerBeforeErr && viewerBefore?.title, "owner can read task title before viewer update probe");
+
+  // Prefer counting updated rows: RLS should yield 0 ids, not a silent no-op that
+  // looks green when SELECTs fail and both titles are undefined.
+  const { data: viewerUpdateRows, error: viewerUpdateErr } = await plannerB
     .from("tasks")
-    .select("title")
+    .update({ title: "viewer-hijack" })
     .eq("id", taskA.id)
-    .single();
+    .select("id");
   assert(
-    viewerAfter?.title === viewerBefore?.title,
-    "viewer cannot mutate planner.tasks",
+    !viewerUpdateErr && (viewerUpdateRows ?? []).length === 0,
+    "viewer UPDATE on planner.tasks returns 0 rows under RLS",
+  );
+
+  const { data: viewerAfter, error: viewerAfterErr } = await plannerA
+    .from("tasks")
+    .select("title")
+    .eq("id", taskA.id)
+    .single();
+  assert(!viewerAfterErr && viewerAfter?.title, "owner can read task title after viewer update probe");
+  assert(
+    viewerAfter.title === viewerBefore.title,
+    "viewer cannot mutate planner.tasks (title unchanged)",
   );
 
   // Promote B to contributor + assign the task

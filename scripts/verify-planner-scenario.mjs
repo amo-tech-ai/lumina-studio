@@ -88,8 +88,20 @@ try {
   const pA = userA.client.schema("planner");
   const pB = userB.client.schema("planner");
 
-  await userA.client.from("profiles").insert({ id: userA.user.id, email: emailA });
-  await userB.client.from("profiles").insert({ id: userB.user.id, email: emailB });
+  const { error: profileAErr } = await userA.client
+    .from("profiles")
+    .insert({ id: userA.user.id, email: emailA });
+  assert(
+    !profileAErr || profileAErr.code === "23505",
+    "user A profile insert succeeds (or already exists)",
+  );
+  const { error: profileBErr } = await userB.client
+    .from("profiles")
+    .insert({ id: userB.user.id, email: emailB });
+  assert(
+    !profileBErr || profileBErr.code === "23505",
+    "user B profile insert succeeds (or already exists)",
+  );
 
   const { data: orgA, error: orgAErr } = await userA.client
     .from("organizations")
