@@ -1850,10 +1850,10 @@ export type Database = {
           },
           {
             foreignKeyName: "fk_crm_deals_campaign"
-            columns: ["campaign_id"]
+            columns: ["org_id", "campaign_id"]
             isOneToOne: false
             referencedRelation: "campaigns"
-            referencedColumns: ["id"]
+            referencedColumns: ["org_id", "id"]
           },
         ]
       }
@@ -6181,6 +6181,14 @@ export type Database = {
           p_shoot_type: Database["public"]["Enums"]["service_type"]
         }
         Returns: number
+      }
+      check_talent_availability: {
+        Args: {
+          p_date_end?: string
+          p_date_start?: string
+          p_talent_profile_id: string
+        }
+        Returns: Json
       }
       claim_lead_draft: {
         Args: { p_claim_token: string; p_draft_id: string }
