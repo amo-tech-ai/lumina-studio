@@ -2,10 +2,9 @@ import {
   CopilotRuntime,
   createCopilotRuntimeHandler,
   InMemoryAgentRunner,
-} from "@copilotkit/runtime/v2";
+} from "@/lib/copilotkit/runtime-v2-fetch";
 import { MastraAgent } from "@ag-ui/mastra";
 import { Mastra } from "@mastra/core/mastra";
-import { LibSQLStore } from "@mastra/libsql";
 import { publicMarketingAgent } from "@/mastra/agents/public-marketing-agent";
 
 // ponytail: isolated Mastra instance — only public-marketing exposed.
@@ -17,7 +16,8 @@ const publicMastra = new Mastra({
     default: publicMarketingAgent,
     "public-marketing": publicMarketingAgent,
   },
-  storage: new LibSQLStore({ id: "public-chat-storage", url: ":memory:" }),
+  // No LibSQLStore — :memory: resolves to file: URLs that Workers reject.
+  // CopilotKit InMemoryAgentRunner owns thread state for this public route.
 });
 
 const runtime = new CopilotRuntime({

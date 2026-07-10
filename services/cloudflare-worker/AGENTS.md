@@ -5,7 +5,8 @@ STOP. Your knowledge of Cloudflare Workers APIs and limits may be outdated. Alwa
 ## Docs
 
 - https://developers.cloudflare.com/workers/
-- MCP: `https://docs.mcp.cloudflare.com/mcp`
+- MCP (Cursor): merge `tasks/cloudflare/cursor-mcp-cloudflare.json` into `.cursor/mcp.json`
+- [Cloudflare managed MCP servers](https://developers.cloudflare.com/agents/model-context-protocol/cloudflare/servers-for-cloudflare/)
 
 For all limits and quotas, retrieve from the product's `/platform/limits/` page. eg. `/workers/platform/limits`
 

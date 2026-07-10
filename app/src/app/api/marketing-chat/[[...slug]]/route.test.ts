@@ -74,9 +74,10 @@ describe("marketing-chat runtime — agent isolation (IPI2-163)", () => {
     expect(src).not.toMatch(/handle\(app\)/);
   });
 
-  it("uses LibSQLStore :memory: to avoid native-binding failures on Vercel", () => {
-    expect(src).toMatch(/LibSQLStore/);
-    expect(src).toMatch(/url:\s*["']:memory:["']/);
+  it("does not instantiate LibSQLStore (Workers reject file: URLs; CopilotKit owns thread state)", () => {
+    expect(src).not.toMatch(/new LibSQLStore/);
+    expect(src).not.toMatch(/from "@mastra\/libsql"/);
+    expect(src).toMatch(/InMemoryAgentRunner/);
   });
 });
 

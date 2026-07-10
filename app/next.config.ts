@@ -6,10 +6,24 @@ import { CLOUDINARY_CLOUD_NAME } from "./src/lib/cloudinary/url";
 
 const appDir = path.dirname(fileURLToPath(import.meta.url));
 
+/** Fetch-only CopilotKit v2 entrypoints — shared by Turbopack (dev) and webpack (next build / OpenNext). */
+const copilotkitRuntimeInternalAliases = {
+  "@copilotkit/runtime-internal/runtime": path.join(
+    appDir,
+    "node_modules/@copilotkit/runtime/dist/v2/runtime/core/runtime.mjs",
+  ),
+  "@copilotkit/runtime-internal/in-memory": path.join(
+    appDir,
+    "node_modules/@copilotkit/runtime/dist/v2/runtime/runner/in-memory.mjs",
+  ),
+  "@copilotkit/runtime-internal/fetch-handler": path.join(
+    appDir,
+    "node_modules/@copilotkit/runtime/dist/v2/runtime/core/fetch-handler.mjs",
+  ),
+} as const;
+
 const nextConfig: NextConfig = {
   serverExternalPackages: [
-    "@copilotkit/runtime",
-    "@copilotkit/runtime/v2",
     "@mastra/core",
     "@mastra/libsql",
     "@mastra/pg",
@@ -30,8 +44,23 @@ const nextConfig: NextConfig = {
       },
     ],
   },
-  // Pin workspace root — repo has multiple lockfiles; otherwise Turbopack infers /home/sk.
-  turbopack: { root: appDir },
+  turbopack: {
+    root: appDir,
+    resolveAlias: Object.fromEntries(
+      Object.entries(copilotkitRuntimeInternalAliases).map(([key, absPath]) => [
+        key,
+        `./${path.relative(appDir, absPath)}`,
+      ]),
+    ),
+  },
+  webpack: (config) => {
+    config.resolve ??= {};
+    config.resolve.alias = {
+      ...config.resolve.alias,
+      ...copilotkitRuntimeInternalAliases,
+    };
+    return config;
+  },
   env: {
     NEXT_PUBLIC_COPILOTKIT_THREADS_ENABLED:
       process.env.COPILOTKIT_LICENSE_TOKEN && process.env.OPERATOR_AUTH_ENABLED === "true"
