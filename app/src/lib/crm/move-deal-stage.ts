@@ -51,7 +51,10 @@ export async function moveDealStage(
     if (error.code === "PGRST116") {
       return { ok: false, status: 404, code: "NOT_FOUND", message: "Deal not found." };
     }
-    return { ok: false, status: 500, code: "INTERNAL_ERROR", message: error.message };
+    // Never forward the raw PostgREST message to the client — it can include
+    // schema/constraint/RLS details. Same shape as api/brands/[id]'s 500 path.
+    console.error("[crm/move-deal-stage] update failed:", error.message);
+    return { ok: false, status: 500, code: "INTERNAL_ERROR", message: "Failed to update deal stage." };
   }
   return { ok: true, dealId: data.id, stage: data.stage };
 }

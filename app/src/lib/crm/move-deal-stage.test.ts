@@ -42,10 +42,16 @@ describe("moveDealStage", () => {
     );
   });
 
-  it("returns a typed failure instead of throwing when the query errors", async () => {
-    const sb = mockSingleTable(null, { message: "boom" });
+  it("returns a typed failure instead of throwing when the query errors — never forwarding the raw PostgREST message", async () => {
+    const sb = mockSingleTable(null, { message: "relation crm_deals violates row-level security policy" });
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
     const result = await moveDealStage({ dealId: "missing", orgId: "org-1", stage: "lead" }, sb as never);
-    expect(result).toEqual({ ok: false, status: 500, code: "INTERNAL_ERROR", message: "boom" });
+    expect(result).toEqual({ ok: false, status: 500, code: "INTERNAL_ERROR", message: "Failed to update deal stage." });
+    expect(consoleError).toHaveBeenCalledWith(
+      "[crm/move-deal-stage] update failed:",
+      "relation crm_deals violates row-level security policy",
+    );
+    consoleError.mockRestore();
   });
 
   it("maps a no-row update (stale/deleted/cross-org id) to 404, not 500", async () => {
