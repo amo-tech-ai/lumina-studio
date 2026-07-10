@@ -269,7 +269,23 @@ describe("AI provider (GROQ-002 / GROQ-004)", () => {
     it("keeps Gemini provider options when gateway mode is on (tool tiers stay direct)", () => {
       process.env.AI_ROUTING_MODE = "gateway";
       process.env.AI_PROVIDER = "gemini";
-      expect(resolveProviderOptions()).toEqual({
+      delete process.env.AI_GATEWAY_ALLOW_TOOL_TIERS;
+      expect(resolveProviderOptions("default")).toEqual({
+        google: { thinkingConfig: { thinkingBudget: 0 } },
+      });
+      expect(resolveProviderOptions("vision")).toEqual({
+        google: { thinkingConfig: { thinkingBudget: 0 } },
+      });
+    });
+
+    it("omits Gemini provider options when the tier routes via gateway", () => {
+      process.env.AI_ROUTING_MODE = "gateway";
+      process.env.AI_PROVIDER = "gemini";
+      process.env.AI_GATEWAY_ALLOW_TOOL_TIERS = "1";
+      expect(resolveProviderOptions("default")).toEqual({});
+      expect(resolveProviderOptions("structured")).toEqual({});
+      // Vision never routes via gateway — still Gemini options.
+      expect(resolveProviderOptions("vision")).toEqual({
         google: { thinkingConfig: { thinkingBudget: 0 } },
       });
     });

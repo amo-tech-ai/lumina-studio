@@ -169,10 +169,13 @@ function createGatewayLanguageModel(tier: GroqModelTier): ResolvedLanguageModel 
   return gateway.chatModel(resolveGatewayModelId(tier));
 }
 
-export function resolveProviderOptions() {
+export function resolveProviderOptions(tier: GroqModelTier = "default") {
   // Gemini thinkingBudget applies to direct @ai-sdk/google models only.
-  // Gateway openai-compatible clients ignore these options; safe to return for mixed routing
-  // (tool/vision tiers stay direct even when AI_ROUTING_MODE=gateway).
+  // When this tier is routed via openai-compatible gateway, return {} so
+  // Google-specific fields are not forwarded to the Worker (rejects unknown options).
+  if (shouldRouteTierViaGateway(tier)) {
+    return {};
+  }
   return resolveAiProvider() === "gemini" ? resolveGeminiProviderOptions() : {};
 }
 
