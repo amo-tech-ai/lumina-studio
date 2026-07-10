@@ -137,6 +137,7 @@ export function DealStageControl({ dealId, stage, onStageChange }: Props) {
               disabled={submitting}
               onClick={() => handleClick(s)}
               className={className}
+              aria-pressed={active}
             >
               {crmDealStageLabel(s)}
               {gated ? <span className={styles.gatedHint}>approval</span> : null}

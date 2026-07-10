@@ -49,7 +49,6 @@ function payload(overrides: Partial<DealDetailPayload> = {}): DealDetailPayload 
   return {
     deal: deal(),
     companyName: "Acme Athletic",
-    shootName: null,
     companyBrandId: null,
     activities: [],
     ...overrides,
@@ -66,19 +65,15 @@ describe("DealDetailWorkspace", () => {
     expect(screen.getAllByText("Proposal").length).toBeGreaterThan(0);
   });
 
-  it("uses the linked shoot's real name as the title when one exists", () => {
-    render(
-      <DealDetailWorkspace
-        data={payload({ deal: deal({ shoot_id: "s1" }), shootName: "SS26 Editorial" })}
-        fetchError={null}
-      />,
-    );
-    expect(screen.getByRole("heading", { name: "SS26 Editorial" })).toBeDefined();
-  });
-
   it('shows "Not linked" for an honestly-null shoot, never a fake link', () => {
     render(<DealDetailWorkspace data={payload()} fetchError={null} />);
     expect(screen.getByText("Not linked")).toBeDefined();
+  });
+
+  it('shows a plain "Linked" indicator (no name/link) when shoot_id is set — the target table has no detail page', () => {
+    render(<DealDetailWorkspace data={payload({ deal: deal({ shoot_id: "s1" }) })} fetchError={null} />);
+    expect(screen.getByText("Linked")).toBeDefined();
+    expect(screen.queryByRole("link", { name: /view shoot/i })).toBeNull();
   });
 
   it("does not render a Primary contact field — crm_deals has no such column", () => {

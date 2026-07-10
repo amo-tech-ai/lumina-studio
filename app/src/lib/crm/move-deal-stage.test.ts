@@ -1,7 +1,10 @@
 import { describe, expect, it, vi } from "vitest";
 import { isNonTerminalDealStage, moveDealStage, NON_TERMINAL_DEAL_STAGES } from "./move-deal-stage";
 
-function mockSingleTable(row: Record<string, unknown> | null, error: { message: string } | null = null) {
+function mockSingleTable(
+  row: Record<string, unknown> | null,
+  error: { message: string; code?: string } | null = null,
+) {
   const builder = {
     update: vi.fn().mockReturnThis(),
     eq: vi.fn().mockReturnThis(),
@@ -40,8 +43,14 @@ describe("moveDealStage", () => {
   });
 
   it("returns a typed failure instead of throwing when the query errors", async () => {
-    const sb = mockSingleTable(null, { message: "no rows updated" });
+    const sb = mockSingleTable(null, { message: "boom" });
     const result = await moveDealStage({ dealId: "missing", orgId: "org-1", stage: "lead" }, sb as never);
-    expect(result).toEqual({ ok: false, status: 500, code: "INTERNAL_ERROR", message: "no rows updated" });
+    expect(result).toEqual({ ok: false, status: 500, code: "INTERNAL_ERROR", message: "boom" });
+  });
+
+  it("maps a no-row update (stale/deleted/cross-org id) to 404, not 500", async () => {
+    const sb = mockSingleTable(null, { message: "JSON object requested, multiple (or no) rows returned", code: "PGRST116" });
+    const result = await moveDealStage({ dealId: "missing", orgId: "org-1", stage: "lead" }, sb as never);
+    expect(result).toEqual({ ok: false, status: 404, code: "NOT_FOUND", message: "Deal not found." });
   });
 });

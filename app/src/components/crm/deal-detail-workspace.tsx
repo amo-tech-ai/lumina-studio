@@ -72,9 +72,9 @@ export function DealDetailWorkspace({ data, fetchError }: Props) {
     );
   }
 
-  const { deal, companyName, shootName, companyBrandId, activities } = data;
+  const { deal, companyName, companyBrandId, activities } = data;
   const stage = confirmedStage ?? toKnownStage(deal.stage);
-  const displayTitle = shootName ?? `${companyName ?? "Untitled company"} deal`;
+  const displayTitle = `${companyName ?? "Untitled company"} deal`;
 
   return (
     <div className={styles.root}>
@@ -82,7 +82,7 @@ export function DealDetailWorkspace({ data, fetchError }: Props) {
 
       <div className={styles.body}>
         <div className={styles.content}>
-          <DealOverview deal={deal} companyName={companyName} shootName={shootName} />
+          <DealOverview deal={deal} companyName={companyName} />
 
           <div className={styles.stageLabel}>Stage</div>
           <DealStageControl dealId={deal.id} stage={stage} onStageChange={setConfirmedStage} />
@@ -139,11 +139,9 @@ function DealHeader({
 function DealOverview({
   deal,
   companyName,
-  shootName,
 }: {
   deal: DealDetailPayload["deal"];
   companyName: string | null;
-  shootName: string | null;
 }) {
   return (
     <OverviewFields
@@ -157,16 +155,9 @@ function DealOverview({
           ),
         },
         { label: "Value", value: formatMoney(deal.value, deal.currency) },
-        {
-          label: "Linked shoot",
-          value: deal.shoot_id ? (
-            <Link href={`/app/shoots/${deal.shoot_id}`} className={shellStyles.overviewLink}>
-              {shootName ?? "View shoot"} ↗
-            </Link>
-          ) : (
-            "Not linked"
-          ),
-        },
+        // No link/name — deal.shoot_id targets a table with no detail page
+        // in this app (see get-deal-detail.ts's module doc).
+        { label: "Linked shoot", value: deal.shoot_id ? "Linked" : "Not linked" },
       ]}
     />
   );

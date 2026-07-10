@@ -46,6 +46,12 @@ describe("DealStageControl", () => {
     }
   });
 
+  it("exposes the active stage to assistive tech via aria-pressed, not just styling", () => {
+    render(<DealStageControl dealId={DEAL_ID} stage="proposal" onStageChange={vi.fn()} />);
+    expect(screen.getByText("Proposal").closest("button")).toHaveProperty("ariaPressed", "true");
+    expect(screen.getByText("Lead").closest("button")).toHaveProperty("ariaPressed", "false");
+  });
+
   it("PATCHes /api/crm/deals/:id/stage for a non-terminal move and calls onStageChange with the server-returned stage", async () => {
     const fetchMock = mockFetchOk("negotiation");
     vi.stubGlobal("fetch", fetchMock);

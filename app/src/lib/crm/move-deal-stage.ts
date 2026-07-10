@@ -46,6 +46,11 @@ export async function moveDealStage(
     .select("id, stage")
     .single();
   if (error) {
+    // PGRST116 = no row matched id+org_id — stale/deleted/cross-org id, not a
+    // server failure. Same idiom as api/brands/[id] and api/intelligence/panel.
+    if (error.code === "PGRST116") {
+      return { ok: false, status: 404, code: "NOT_FOUND", message: "Deal not found." };
+    }
     return { ok: false, status: 500, code: "INTERNAL_ERROR", message: error.message };
   }
   return { ok: true, dealId: data.id, stage: data.stage };
