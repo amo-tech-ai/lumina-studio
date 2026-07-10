@@ -4,7 +4,7 @@ Auth and setup. For the current permission matrix and wrangler flags, pull `http
 
 ## Prerequisites
 
-- R2 bucket with Data Catalog enabled ([r2-data-catalog/configuration.md](../r2-data-catalog/configuration.md))
+- R2 bucket with Data Catalog enabled — see [R2 Data Catalog docs](https://developers.cloudflare.com/r2/data-catalog/)
 - R2 API token: **R2 Storage Admin Read & Write** (includes R2 SQL Read), or add **R2 SQL Read** explicitly
 - Wrangler CLI (for CLI queries)
 

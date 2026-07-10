@@ -84,6 +84,6 @@ Worker mode?
 ## See Also
 - [workers](../workers/) - Core Workers runtime documentation
 - [durable-objects](../durable-objects/) - Stateful multi-tenant patterns
-- [sandbox](../sandbox/) - Alternative for untrusted code execution
+- Cloudflare Sandbox API — see [developers.cloudflare.com](https://developers.cloudflare.com/workers/runtime-apis/bindings/sandbox/) (ref removed from hub; not on iPix roadmap)
 - [Reference Architecture: Programmable Platforms](https://developers.cloudflare.com/reference-architecture/diagrams/serverless/programmable-platforms/)
 - [Reference Architecture: AI Vibe Coding Platform](https://developers.cloudflare.com/reference-architecture/diagrams/ai/ai-vibe-coding-platform/)

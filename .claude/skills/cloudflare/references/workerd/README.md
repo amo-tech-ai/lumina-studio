@@ -74,5 +74,4 @@ workerd is in **active development**. Breaking changes possible. Pin versions in
 
 ## Related References
 - [workers](../workers/) - Workers runtime API documentation
-- [miniflare](../miniflare/) - Testing tool built on workerd
-- [wrangler](../wrangler/) - CLI that uses workerd for local dev
+- [wrangler](../wrangler/) - CLI that uses workerd for local dev (`wrangler dev`)
