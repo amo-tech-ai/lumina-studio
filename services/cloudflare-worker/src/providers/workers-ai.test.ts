@@ -116,21 +116,55 @@ describe("workersAiProvider HTTP", () => {
     expect(url).not.toContain("/accounts/");
   });
 
-  it("embed uses account ID in embeddings path", async () => {
+  it("embed uses OpenAI-compat input body and parses data[].embedding", async () => {
     const fetchMock = vi.fn().mockResolvedValue({
       ok: true,
-      json: async () => ({ result: { data: [{ embedding: [0.1] }] } }),
+      json: async () => ({
+        data: [{ index: 0, embedding: [0.1, 0.2] }],
+        usage: { prompt_tokens: 2, total_tokens: 2 },
+      }),
     });
     vi.stubGlobal("fetch", fetchMock);
 
-    await workersAiProvider.embed!(
+    const result = await workersAiProvider.embed!(
       { model: "@cf/baai/bge-base-en-v1.5", input: "hello" },
       CONFIG,
     );
 
-    const [url] = fetchMock.mock.calls[0] as [string];
+    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
     expect(url).toBe(
       "https://api.cloudflare.com/client/v4/accounts/a1b2c3d4e5f6789012345678901234567/ai/v1/embeddings",
     );
+    expect(JSON.parse(String(init.body))).toEqual({
+      model: "@cf/baai/bge-base-en-v1.5",
+      input: "hello",
+    });
+    expect(result.data[0]?.embedding).toEqual([0.1, 0.2]);
+    expect(result.usage.total_tokens).toBe(2);
+  });
+
+  it("embed accepts batch input array in one request", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        data: [
+          { index: 0, embedding: [0.1] },
+          { index: 1, embedding: [0.2] },
+        ],
+      }),
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await workersAiProvider.embed!(
+      { model: "@cf/baai/bge-base-en-v1.5", input: ["a", "b"] },
+      CONFIG,
+    );
+
+    expect(fetchMock).toHaveBeenCalledOnce();
+    expect(JSON.parse(String((fetchMock.mock.calls[0] as [string, RequestInit])[1].body))).toEqual({
+      model: "@cf/baai/bge-base-en-v1.5",
+      input: ["a", "b"],
+    });
+    expect(result.data).toHaveLength(2);
   });
 });

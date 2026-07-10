@@ -358,6 +358,23 @@ describe("providerAdapter / createProviderAdapter", () => {
       expect(result.usage).toEqual({ promptTokens: 10 });
     });
 
+    it("defaults model to Worker embedding tier key", async () => {
+      const fetchMock = vi.fn().mockResolvedValue({
+        ok: true,
+        json: () =>
+          Promise.resolve({
+            data: [{ embedding: [0.1] }],
+            usage: { prompt_tokens: 1 },
+          }),
+      });
+      globalThis.fetch = fetchMock;
+
+      await providerAdapter.embed(["hello"]);
+
+      const [, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+      expect(JSON.parse(String(init.body))).toMatchObject({ model: "embedding" });
+    });
+
     it("throws on non-ok response with body text", async () => {
       globalThis.fetch = vi.fn().mockResolvedValue({
         ok: false,
