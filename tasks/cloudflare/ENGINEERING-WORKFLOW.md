@@ -6,8 +6,8 @@ CopilotKit, Mastra, Supabase integration, OAuth, runtime compatibility, deployme
 security.
 
 Referenced from [`CLAUDE.md`](../../CLAUDE.md) — this is the canonical, tracked copy. (The
-`.claude/skills/cloudflare/` hub is gitignored/local-only and cannot be the source of truth for a
-team-wide standard.)
+`.claude/skills/cloudflare/` hub is versioned in-repo, but skills are supplemental guidance; this
+ document is the team-wide source of truth for the workflow standard.)
 
 ## Principles
 
