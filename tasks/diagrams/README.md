@@ -1,5 +1,7 @@
 # iPix Cloudflare Architecture — Mermaid Diagrams
 
+**⚠️ Superseded 2026-07-09.** This 5-file set predates a full architecture diagramming pass and has known drift (e.g. `03-agent-tool-architecture.md` draws Campaign/Research agents as if they have real tools; `04-workflow-architecture.md` lists 7 Mastra workflows when only 2 exist). **The current, maintained diagram set lives at `/home/sk/ipix/docs/architecture/diagrams/`** (16 diagrams, verified against `prd.md`/`roadmap.md`/code, re-verified twice). Kept here only as historical reference — do not treat as current.
+
 **Purpose:** Visual planning references for Cloudflare platform migration.
 
 | # | File | Type | Supports Tasks |
