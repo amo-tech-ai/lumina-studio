@@ -2,6 +2,7 @@ import type { NextConfig } from "next";
 import path from "node:path";
 import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
+import { withSentryConfig } from "@sentry/nextjs";
 
 import { CLOUDINARY_CLOUD_NAME } from "./src/lib/cloudinary/url";
 
@@ -73,7 +74,15 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default nextConfig;
+export default withSentryConfig(nextConfig, {
+  org: "amo-2b",
+  project: "javascript-nextjs",
+  authToken: process.env.SENTRY_AUTH_TOKEN,
+  widenClientFileUpload: true,
+  // Ad-blocker bypass tunnel (exclude from middleware matcher)
+  tunnelRoute: "/monitoring",
+  silent: !process.env.CI,
+});
 
 if (process.env.NODE_ENV !== "production") {
   void import("@opennextjs/cloudflare").then((m) => m.initOpenNextCloudflareForDev());
