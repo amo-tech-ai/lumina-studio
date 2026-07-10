@@ -29,14 +29,25 @@ function toGeminiMessages(messages: ChatCompletionRequest["messages"]) {
   return { system, contents };
 }
 
+/** Non-stream must return JSON (`generateContent`). Stream uses SSE (`alt=sse`). */
+export function geminiRequestUrl(
+  model: string,
+  stream: boolean,
+  apiKey: string,
+): string {
+  const action = stream ? "streamGenerateContent" : "generateContent";
+  const key = encodeURIComponent(apiKey);
+  const query = stream ? `alt=sse&key=${key}` : `key=${key}`;
+  return `${GEMINI_BASE}/models/${geminiModelId(model)}:${action}?${query}`;
+}
+
 async function geminiFetch(
   model: string,
   body: Record<string, unknown>,
   config: ProviderConfig,
   stream: boolean,
 ): Promise<Response> {
-  const url = `${GEMINI_BASE}/models/${geminiModelId(model)}:${stream ? "streamGenerateContent" : "generateContent"}?alt=sse&key=${config.apiKey}`;
-  return fetch(url, {
+  return fetch(geminiRequestUrl(model, stream, config.apiKey), {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
@@ -167,7 +178,7 @@ export const geminiProvider: AiProvider = {
   },
 
   async embed(req: EmbeddingRequest, config: ProviderConfig): Promise<EmbeddingResponse> {
-    const url = `${GEMINI_BASE}/models/${geminiModelId("text-embedding-004")}:embedContent?key=${config.apiKey}`;
+    const url = `${GEMINI_BASE}/models/${geminiModelId("text-embedding-004")}:embedContent?key=${encodeURIComponent(config.apiKey)}`;
     const inputs = typeof req.input === "string" ? [req.input] : req.input;
 
     const results = await Promise.all(
