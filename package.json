@@ -26,7 +26,8 @@
     "worktree:health": "node scripts/worktree-health.mjs",
     "worktree:health:all": "node scripts/worktree-health.mjs --all",
     "worktree:pre-delete": "node scripts/worktree-health.mjs --pre-delete",
-    "worktree:health:test": "node --test scripts/lib/worktree-health-checks.test.mjs"
+    "worktree:health:test": "node --test scripts/lib/worktree-health-checks.test.mjs",
+    "supabase:verify-planner": "node --experimental-strip-types scripts/verify-planner-scenario.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.108.2"

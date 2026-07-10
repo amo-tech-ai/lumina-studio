@@ -983,21 +983,220 @@ try {
     .maybeSingle();
   assert(!visualAfterEditorDelete?.id, "org editor delete removed visual score row");
 
-  // ── IPI-476 planner schema RLS probes ─────────────────────────
-  // planner.workflows — org-scoped read
-  const { data: plannerWorkflow, error: plannerWorkflowErr } = await userA.client
-    .schema("planner")
+  // ── IPI-476 planner schema RLS probes (fail-closed — no soft skip) ──
+  assert(!!admin, "service_role admin client required for planner probes");
+
+  const plannerA = userA.client.schema("planner");
+  const plannerB = userB.client.schema("planner");
+  const plannerAdmin = admin.schema("planner");
+
+  // service_role can operate on planner tables
+  const { data: svcWf, error: svcWfErr } = await plannerAdmin
+    .from("workflows")
+    .select("id")
+    .limit(1);
+  assert(!svcWfErr && (svcWf ?? []).length >= 0, "service_role can select planner.workflows");
+
+  // Org A owner creates a workflow (new orgs are not auto-seeded)
+  const { data: wfA, error: wfAErr } = await plannerA
+    .from("workflows")
+    .insert({
+      org_id: orgAId,
+      name: `RLS Planner WF ${stamp}`,
+      category: "production",
+      version: 1,
+      is_default: false,
+    })
+    .select("id")
+    .single();
+  assert(!wfAErr && wfA?.id, "org owner can insert planner.workflows");
+
+  const { data: ownWf, error: ownWfErr } = await plannerA
     .from("workflows")
     .select("id")
     .eq("org_id", orgAId)
-    .limit(1);
-  if (plannerWorkflowErr?.code === "42P01" || plannerWorkflowErr?.code === "PGRST205" || plannerWorkflowErr?.message?.includes("does not exist") || plannerWorkflowErr?.message?.includes("Could not find the table") || plannerWorkflowErr?.message?.includes("schema must be")) {
-    console.log("skip: planner RLS probes (migration not pushed or planner schema not exposed)");
-  } else {
-    assert(
-      !plannerWorkflowErr && (plannerWorkflow ?? []).length >= 0,
-      "org member can select planner.workflows",
+    .eq("id", wfA.id);
+  assert(!ownWfErr && (ownWf ?? []).length === 1, "org member can select own planner.workflows");
+
+  // Org B owned by user B — cross-org isolation
+  const { data: orgB, error: orgBErr } = await userB.client
+    .from("organizations")
+    .insert({
+      name: `RLS Org B Planner ${stamp}`,
+      slug: `rls-org-b-planner-${stamp}`,
+      owner_id: userB.user.id,
+      type: "brand",
+    })
+    .select("id")
+    .single();
+  assert(!orgBErr && orgB?.id, "user B creates org B for planner isolation");
+  const orgBId = orgB?.id;
+
+  const { data: wfB, error: wfBErr } = await plannerB
+    .from("workflows")
+    .insert({
+      org_id: orgBId,
+      name: `RLS Planner WF B ${stamp}`,
+      category: "production",
+      version: 1,
+      is_default: false,
+    })
+    .select("id")
+    .single();
+  assert(!wfBErr && wfB?.id, "org B owner can insert planner.workflows");
+
+  const { data: crossWf, error: crossWfErr } = await plannerA
+    .from("workflows")
+    .select("id")
+    .eq("id", wfB.id);
+  assertSelectDenied(crossWfErr, crossWf, "org A cannot read org B planner.workflows");
+
+  // Instance + bootstrap owner assignment
+  const entityId = crypto.randomUUID();
+  const { data: instA, error: instAErr } = await plannerA
+    .from("instances")
+    .insert({
+      org_id: orgAId,
+      workflow_id: wfA.id,
+      entity_type: "shoot",
+      entity_id: entityId,
+      name: `RLS Plan ${stamp}`,
+      status: "draft",
+    })
+    .select("id")
+    .single();
+  assert(!instAErr && instA?.id, "org member can insert planner.instances");
+
+  const { data: ownerAssign, error: ownerAssignErr } = await plannerA
+    .from("assignments")
+    .select("id, role")
+    .eq("instance_id", instA.id)
+    .eq("user_id", userA.user.id)
+    .maybeSingle();
+  // assignments_select is manager+ — owner can read
+  assert(
+    !ownerAssignErr && ownerAssign?.role === "owner",
+    "bootstrap owner assignment created and readable by owner",
+  );
+
+  const { data: taskA, error: taskAErr } = await plannerA
+    .from("tasks")
+    .insert({
+      instance_id: instA.id,
+      title: `RLS Task ${stamp}`,
+      status: "todo",
+      priority: "medium",
+      sort_order: 0,
+    })
+    .select("id")
+    .single();
+  assert(!taskAErr && taskA?.id, "owner/contributor can insert planner.tasks");
+
+  // Owner can update task
+  const { error: ownerTaskUpdErr } = await plannerA
+    .from("tasks")
+    .update({ title: `RLS Task Owner ${stamp}` })
+    .eq("id", taskA.id);
+  assert(!ownerTaskUpdErr, "owner can update planner.tasks");
+
+  // Assign user B as viewer on the instance (owner may insert manager/contributor/viewer)
+  const { error: viewerAssignErr } = await plannerA.from("assignments").insert({
+    instance_id: instA.id,
+    user_id: userB.user.id,
+    role: "viewer",
+  });
+  assert(!viewerAssignErr, "owner can assign viewer on planner instance");
+
+  const { data: viewerTaskRead, error: viewerTaskReadErr } = await plannerB
+    .from("tasks")
+    .select("id")
+    .eq("id", taskA.id);
+  assert(!viewerTaskReadErr && (viewerTaskRead ?? []).length === 1, "viewer can read planner.tasks");
+
+  const { data: viewerBefore } = await plannerA
+    .from("tasks")
+    .select("title")
+    .eq("id", taskA.id)
+    .single();
+  await plannerB.from("tasks").update({ title: "viewer-hijack" }).eq("id", taskA.id);
+  const { data: viewerAfter } = await plannerA
+    .from("tasks")
+    .select("title")
+    .eq("id", taskA.id)
+    .single();
+  assert(
+    viewerAfter?.title === viewerBefore?.title,
+    "viewer cannot mutate planner.tasks",
+  );
+
+  // Promote B to contributor + assign the task
+  const { error: contribRoleErr } = await plannerA
+    .from("assignments")
+    .update({ role: "contributor" })
+    .eq("instance_id", instA.id)
+    .eq("user_id", userB.user.id);
+  assert(!contribRoleErr, "owner can promote assignment to contributor");
+
+  const { error: assignTaskErr } = await plannerA
+    .from("tasks")
+    .update({ assignee_user_id: userB.user.id })
+    .eq("id", taskA.id);
+  assert(!assignTaskErr, "owner can set task assignee");
+
+  const { error: contribUpdErr } = await plannerB
+    .from("tasks")
+    .update({ status: "in_progress" })
+    .eq("id", taskA.id);
+  assert(!contribUpdErr, "contributor can update assigned planner.tasks");
+
+  // Promote B to manager — can update without being assignee
+  const { error: mgrRoleErr } = await plannerA
+    .from("assignments")
+    .update({ role: "manager" })
+    .eq("instance_id", instA.id)
+    .eq("user_id", userB.user.id);
+  assert(!mgrRoleErr, "owner can promote assignment to manager");
+
+  const { error: clearAssigneeErr } = await plannerA
+    .from("tasks")
+    .update({ assignee_user_id: null })
+    .eq("id", taskA.id);
+  assert(!clearAssigneeErr, "owner clears assignee for manager probe");
+
+  const { error: mgrUpdErr } = await plannerB
+    .from("tasks")
+    .update({ status: "blocked" })
+    .eq("id", taskA.id);
+  assert(!mgrUpdErr, "manager can update planner.tasks without assignee");
+
+  // User C — no org membership — cannot read planner rows
+  const emailC = `plt002-rls-c-${stamp}@example.com`;
+  let userC;
+  try {
+    userC = await createTestUser(emailC);
+    const plannerC = userC.client.schema("planner");
+    const { data: outsiderWf, error: outsiderWfErr } = await plannerC
+      .from("workflows")
+      .select("id")
+      .eq("id", wfA.id);
+    assertSelectDenied(
+      outsiderWfErr,
+      outsiderWf,
+      "non-member cannot read planner.workflows",
     );
+  } finally {
+    if (userC?.user?.id) {
+      const { error } = await deleteAuthUser(userC.user.id);
+      if (error) console.warn(`warn: cleanup user C: ${error.message}`);
+      else pass("cleaned up user C (service role)");
+    }
+  }
+
+  // Cleanup planner org B (cascade via organizations delete)
+  if (orgBId && admin) {
+    await admin.from("org_members").delete().eq("org_id", orgBId);
+    const { error: orgBDelErr } = await admin.from("organizations").delete().eq("id", orgBId);
+    if (orgBDelErr) console.warn(`warn: cleanup org B: ${orgBDelErr.message}`);
   }
 } catch (err) {
   fail(err instanceof Error ? err.message : String(err));
