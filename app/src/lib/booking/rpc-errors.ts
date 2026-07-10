@@ -86,6 +86,15 @@ const RPC_ERROR_MATCHERS: RpcErrorMatcher[] = [
     match: (msg) => includes(msg, "authentication required"),
     map: () => ({ status: 401, code: "UNAUTHORIZED", message: "Sign in to continue." }),
   },
+  // Anon lacks EXECUTE on booking RPCs → PostgREST "permission denied for function …"
+  // (not the in-body "authentication required"). Map to 401 so auth-off never 500s.
+  {
+    match: (msg, pgCode) =>
+      pgCode === "42501" ||
+      includes(msg, "permission denied for function") ||
+      includes(msg, "permission denied for schema"),
+    map: () => ({ status: 401, code: "UNAUTHORIZED", message: "Sign in to continue." }),
+  },
   {
     match: (msg) =>
       includes(msg, "not authorized for this booking") ||

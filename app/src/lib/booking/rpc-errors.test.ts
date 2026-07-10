@@ -20,6 +20,21 @@ describe("mapSupabaseRpcError", () => {
     expect(mapped.code).toBe("BOOKING_CONFLICT");
     expect(mapped.status).toBe(409);
   });
+
+  it("maps anon EXECUTE denial to UNAUTHORIZED (not INTERNAL_ERROR)", () => {
+    const byMessage = mapSupabaseRpcError(
+      "permission denied for function create_booking_request",
+    );
+    expect(byMessage).toEqual({
+      status: 401,
+      code: "UNAUTHORIZED",
+      message: "Sign in to continue.",
+    });
+
+    const byPgCode = mapSupabaseRpcError("permission denied", "42501");
+    expect(byPgCode.status).toBe(401);
+    expect(byPgCode.code).toBe("UNAUTHORIZED");
+  });
 });
 
 describe("isStaleBookingMessage", () => {
