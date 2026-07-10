@@ -59,9 +59,10 @@ type Props = {
  *    than fed fabricated health-score percentages. */
 export function DealDetailWorkspace({ data, fetchError }: Props) {
   const router = useRouter();
-  // Ephemeral, local-only preview of a non-terminal stage move — see
-  // DealStageControl's doc comment for why this doesn't persist yet.
-  const [previewStage, setPreviewStage] = useState<CrmDealStage | null>(null);
+  // Set only from a server-confirmed PATCH response (DealStageControl calls
+  // onStageChange with the value the API actually returned) — never
+  // optimistic. null until the operator makes a non-terminal move.
+  const [confirmedStage, setConfirmedStage] = useState<CrmDealStage | null>(null);
 
   if (fetchError || !data) {
     return (
@@ -72,7 +73,7 @@ export function DealDetailWorkspace({ data, fetchError }: Props) {
   }
 
   const { deal, companyName, shootName, companyBrandId, activities } = data;
-  const stage = previewStage ?? toKnownStage(deal.stage);
+  const stage = confirmedStage ?? toKnownStage(deal.stage);
   const displayTitle = shootName ?? `${companyName ?? "Untitled company"} deal`;
 
   return (
@@ -84,7 +85,7 @@ export function DealDetailWorkspace({ data, fetchError }: Props) {
           <DealOverview deal={deal} companyName={companyName} shootName={shootName} />
 
           <div className={styles.stageLabel}>Stage</div>
-          <DealStageControl stage={stage} onStageChange={setPreviewStage} />
+          <DealStageControl dealId={deal.id} stage={stage} onStageChange={setConfirmedStage} />
 
           {stage === "won" ? <WonBanner companyBrandId={companyBrandId} /> : null}
 

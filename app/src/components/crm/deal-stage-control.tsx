@@ -12,9 +12,10 @@ const STAGES: CrmDealStage[] = ["lead", "qualified", "proposal", "negotiation", 
 const TERMINAL = new Set<CrmDealStage>(["won", "lost"]);
 
 type Props = {
+  dealId: string;
   stage: CrmDealStage;
-  /** Called only for a non-terminal move — see the component doc for why
-   *  this doesn't persist yet. */
+  /** Called with the server-confirmed stage after a successful non-terminal
+   *  PATCH — never called optimistically, never called for won/lost. */
   onStageChange: (stage: CrmDealStage) => void;
 };
 
@@ -24,16 +25,13 @@ type Props = {
  *  deal-stage-control.tsx — replace the inert won/lost handler with the
  *  real gate."
  *
- *  Neither transition persists from THIS component yet:
- *  - Non-terminal moves (Lead→Negotiation) DO have a working backend
- *    already — the `moveDealStage` Mastra tool (crm-assistant agent,
- *    IPI-368, shipped), reachable from the chat dock on this same page.
- *    IPI-365 (a kanban-board PATCH route for the same 4 stages) is
- *    `status: Duplicate` — its own Phase-0 notes say not to duplicate
- *    `moveDealStage`'s allow-list logic in a second place. This component's
- *    buttons don't call that tool (yet) — clicking only updates the label
- *    locally, matching DC's own interaction, and reverts on refresh. See
- *    IPI-396 for the follow-up to wire these buttons to the existing tool.
+ *  - Non-terminal moves (Lead→Negotiation) PATCH `/api/crm/deals/:id/stage`,
+ *    which delegates to the same `lib/crm/move-deal-stage.ts` function the
+ *    crm-assistant Mastra tool (`moveDealStage`, IPI-368, shipped) already
+ *    calls — one allow-list, two callers, per IPI-365's own "do not
+ *    duplicate" note (IPI-365 itself is `status: Duplicate`). `onStageChange`
+ *    only fires with the value the server actually returned; a failed PATCH
+ *    shows `toast.error` and leaves the displayed stage unchanged.
  *  - Won/Lost must go through `POST /api/crm/deals/:id/convert` per
  *    CRM-HANDOFF.md §3 ("no drag, button, or agent may bypass it") — that
  *    route is IPI-367's job (Urgent, not started as of this PR) because
@@ -42,8 +40,9 @@ type Props = {
  *    Approving here always surfaces an honest failure — per IPI-367's own
  *    acceptance criterion ("failed response reverts + shows an error —
  *    never an optimistic success state"), never a fake success. */
-export function DealStageControl({ stage, onStageChange }: Props) {
+export function DealStageControl({ dealId, stage, onStageChange }: Props) {
   const [pending, setPending] = useState<CrmDealStage | null>(null);
+  const [submitting, setSubmitting] = useState(false);
   const cancelRef = useRef<HTMLButtonElement>(null);
   const approveRef = useRef<HTMLButtonElement>(null);
 
@@ -57,11 +56,21 @@ export function DealStageControl({ stage, onStageChange }: Props) {
     return null;
   }
 
-  function handleClick(target: CrmDealStage) {
+  async function handleClick(target: CrmDealStage) {
     if (TERMINAL.has(target)) {
       setPending(target);
-    } else {
-      onStageChange(target);
+      return;
+    }
+    setSubmitting(true);
+    try {
+      const result = await patchDealStage(dealId, target);
+      if (!result.ok) {
+        toast.error(result.error);
+        return;
+      }
+      onStageChange(result.stage);
+    } finally {
+      setSubmitting(false);
     }
   }
 
@@ -121,7 +130,13 @@ export function DealStageControl({ stage, onStageChange }: Props) {
               ? styles.stageGated
               : styles.stageDefault;
           return (
-            <button key={s} type="button" onClick={() => handleClick(s)} className={className}>
+            <button
+              key={s}
+              type="button"
+              disabled={submitting}
+              onClick={() => handleClick(s)}
+              className={className}
+            >
               {crmDealStageLabel(s)}
               {gated ? <span className={styles.gatedHint}>approval</span> : null}
             </button>
@@ -129,10 +144,34 @@ export function DealStageControl({ stage, onStageChange }: Props) {
         })}
       </div>
       <p className={styles.stageHint}>
-        Won / Lost open an approval gate — no stage here writes to the database yet.
+        Lead through Negotiation update immediately. Won / Lost open an approval gate.
       </p>
     </div>
   );
+}
+
+/** Non-terminal-only PATCH — the route rejects won/lost before touching
+ *  Supabase (see route.ts), so this can never be the path that sets a
+ *  terminal stage. Mirrors the {ok,error}/{ok,dealId,stage} result shape
+ *  used across this codebase's other client-side service calls. */
+async function patchDealStage(
+  dealId: string,
+  stage: CrmDealStage,
+): Promise<{ ok: true; stage: CrmDealStage } | { ok: false; error: string }> {
+  try {
+    const res = await fetch(`/api/crm/deals/${dealId}/stage`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ stage }),
+    });
+    const body = await res.json();
+    if (!res.ok) {
+      return { ok: false, error: body?.error?.message ?? "Could not update the stage." };
+    }
+    return { ok: true, stage: body.stage as CrmDealStage };
+  } catch {
+    return { ok: false, error: "Network error — the stage was not changed." };
+  }
 }
 
 /** No backend exists to call — `/api/crm/deals/:id/convert` is IPI-367

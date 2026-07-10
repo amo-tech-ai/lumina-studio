@@ -22,7 +22,9 @@ export async function getCrmUserClient(): Promise<CrmUserContext> {
   return { client, orgId, userId: user.id };
 }
 
-export const NON_TERMINAL_DEAL_STAGES = ["lead", "qualified", "proposal", "negotiation"] as const;
+// Canonical home is app/src/lib/crm/move-deal-stage.ts — re-exported here so
+// existing imports (`from "./_shared"`) keep working. Do not redefine.
+export { NON_TERMINAL_DEAL_STAGES } from "@/lib/crm/move-deal-stage";
 
 export async function verifyCrmAnchors(
   client: SupabaseClient,
