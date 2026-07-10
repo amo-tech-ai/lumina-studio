@@ -96,9 +96,18 @@ export function resolveAiRoutingMode(): AiRoutingMode {
   );
 }
 
+/** Worker `model-registry` tier keys — `resolveModelEntry(model)` misses fall back to `default`. */
+const WORKER_REGISTRY_KEYS = new Set([
+  "default",
+  "fast",
+  "structured",
+  "vision",
+  "embedding",
+]);
+
 /**
  * Model id sent to the AI Gateway Worker (OpenAI-compat `model` field).
- * Aligns with `provider-adapter` chat-tier defaults.
+ * Must be a Worker registry tier key — not a Gemini/Groq provider model id.
  */
 export function resolveGatewayModelId(tier: GroqModelTier = "default"): string {
   const overrides: Partial<Record<string, string | undefined>> = {
@@ -107,7 +116,34 @@ export function resolveGatewayModelId(tier: GroqModelTier = "default"): string {
     structured: process.env.AI_MODEL_STRUCTURED,
     vision: process.env.AI_MODEL_VISION,
   };
-  return overrides[tier]?.trim() || "gemini-3.1-flash-lite";
+  const override = overrides[tier]?.trim();
+  if (override && WORKER_REGISTRY_KEYS.has(override)) return override;
+
+  if (tier === "structuredHeavy") return "structured";
+  if (WORKER_REGISTRY_KEYS.has(tier)) return tier;
+  return "default";
+}
+
+/**
+ * Whether this tier may use the OpenAI-compat Worker under AI_ROUTING_MODE=gateway.
+ * Worker chat is text-only today: no ImageParts, no OpenAI `tools` passthrough.
+ */
+export function shouldRouteTierViaGateway(tier: GroqModelTier): boolean {
+  if (resolveAiRoutingMode() !== "gateway") return false;
+
+  // Visual-identity sends screenshot ImageParts; Worker Gemini adapter is text-only.
+  if (tier === "vision" || tier === "visionExperimental") return false;
+
+  // Tool-bearing Mastra agents (planner, CRM, BI, booking, …) use these tiers.
+  // Opt in only for explicit local experiments once a Worker tool bridge exists.
+  if (
+    (tier === "default" || tier === "structured" || tier === "structuredHeavy") &&
+    process.env.AI_GATEWAY_ALLOW_TOOL_TIERS !== "1"
+  ) {
+    return false;
+  }
+
+  return true;
 }
 
 function createGatewayLanguageModel(tier: GroqModelTier): ResolvedLanguageModel {
@@ -127,7 +163,9 @@ function createGatewayLanguageModel(tier: GroqModelTier): ResolvedLanguageModel 
 }
 
 export function resolveProviderOptions() {
-  if (resolveAiRoutingMode() === "gateway") return {};
+  // Gemini thinkingBudget applies to direct @ai-sdk/google models only.
+  // Gateway openai-compatible clients ignore these options; safe to return for mixed routing
+  // (tool/vision tiers stay direct even when AI_ROUTING_MODE=gateway).
   return resolveAiProvider() === "gemini" ? resolveGeminiProviderOptions() : {};
 }
 
@@ -163,8 +201,8 @@ function createGroqLanguageModel(tier: GroqModelTier): ResolvedLanguageModel {
 
 export function resolveModel(tier: GroqModelTier = "default"): ResolvedLanguageModel {
   // IPI-454 AC-F: Mastra agents keep calling resolveModel(); flip AI_ROUTING_MODE=gateway
-  // to route through the OpenAI-compat Worker (no per-agent code change).
-  if (resolveAiRoutingMode() === "gateway") {
+  // for Worker-safe tiers (see shouldRouteTierViaGateway). Vision + tool tiers stay direct.
+  if (shouldRouteTierViaGateway(tier)) {
     return createGatewayLanguageModel(tier);
   }
 

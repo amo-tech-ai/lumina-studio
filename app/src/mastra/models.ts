@@ -7,6 +7,7 @@ export {
   resolveAiProvider,
   resolveAiRoutingMode,
   resolveGatewayModelId,
+  shouldRouteTierViaGateway,
   resolveGroqModelId,
   assertGroqTierCapabilities,
   getGroqModelEntry,
