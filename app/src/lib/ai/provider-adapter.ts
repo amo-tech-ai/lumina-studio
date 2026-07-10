@@ -92,6 +92,29 @@ function withTimeout(timeoutMs: number, signal?: AbortSignal): AbortSignal {
   return controller.signal;
 }
 
+/** Strip `data:` / `data: ` prefix; null if not an SSE data line. */
+function sseDataPayload(line: string): string | null {
+  const trimmed = line.trim();
+  if (!trimmed.startsWith("data:")) return null;
+  return trimmed.slice(trimmed.startsWith("data: ") ? 6 : 5);
+}
+
+/** Enqueue delta text from one SSE payload. Returns true on `[DONE]`. */
+function enqueueSsePayload(
+  data: string,
+  controller: ReadableStreamDefaultController<string>,
+): boolean {
+  if (data === "[DONE]") return true;
+  try {
+    const parsed = JSON.parse(data) as { choices?: { delta?: { content?: string } }[] };
+    const content = parsed.choices?.[0]?.delta?.content;
+    if (content) controller.enqueue(content);
+  } catch {
+    // skip malformed chunks
+  }
+  return false;
+}
+
 /** Parses one buffered chunk of `data: {...}` SSE lines, enqueuing any text deltas found. */
 function emitSseDeltas(
   buffer: string,
@@ -101,18 +124,9 @@ function emitSseDeltas(
   const remainder = lines.pop() ?? "";
 
   for (const line of lines) {
-    const trimmed = line.trim();
-    if (!trimmed || !trimmed.startsWith("data:")) continue;
-    const data = trimmed.slice(trimmed.startsWith("data: ") ? 6 : 5);
-    if (data === "[DONE]") return { remainder, done: true };
-
-    try {
-      const parsed = JSON.parse(data) as { choices?: { delta?: { content?: string } }[] };
-      const content = parsed.choices?.[0]?.delta?.content;
-      if (content) controller.enqueue(content);
-    } catch {
-      // skip malformed chunks
-    }
+    const data = sseDataPayload(line);
+    if (data === null) continue;
+    if (enqueueSsePayload(data, controller)) return { remainder, done: true };
   }
 
   return { remainder, done: false };
@@ -122,6 +136,31 @@ function parseJsonObject(content: string): Record<string, unknown> {
   const trimmed = content.trim();
   if (!trimmed) return {};
   return JSON.parse(trimmed) as Record<string, unknown>;
+}
+
+type GatewayChatUsage = { prompt_tokens: number; completion_tokens: number };
+
+function mapChatUsage(usage?: GatewayChatUsage): ChatResult["usage"] {
+  if (!usage) return undefined;
+  return { promptTokens: usage.prompt_tokens, completionTokens: usage.completion_tokens };
+}
+
+async function assertOk(response: Response, label: string): Promise<void> {
+  if (!response.ok) {
+    throw new Error(`${label} failed: ${response.status} ${await response.text()}`);
+  }
+}
+
+async function readChatResult(response: Response, label: string): Promise<ChatResult> {
+  await assertOk(response, label);
+  const data = (await response.json()) as {
+    choices?: { message: { content: string } }[];
+    usage?: GatewayChatUsage;
+  };
+  return {
+    text: data.choices?.[0]?.message?.content ?? "",
+    usage: mapChatUsage(data.usage),
+  };
 }
 
 /**
@@ -153,22 +192,22 @@ export function createProviderAdapter(options: ProviderAdapterOptions = {}): AiP
         }),
         signal: withTimeout(timeoutMs),
       });
-
-      if (!response.ok) {
-        throw new Error(`chat completion failed: ${response.status} ${await response.text()}`);
-      }
-
-      const data = (await response.json()) as {
-        choices?: { message: { content: string } }[];
-        usage?: { prompt_tokens: number; completion_tokens: number };
-      };
-
-      return {
-        text: data.choices?.[0]?.message?.content ?? "",
-        usage: data.usage
-          ? { promptTokens: data.usage.prompt_tokens, completionTokens: data.usage.completion_tokens }
-          : undefined,
-      };
+      // #region agent log
+      fetch("http://127.0.0.1:7607/ingest/d64b1863-23d3-4239-b3b4-eaa6e4ef6a78", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "f1c947" },
+        body: JSON.stringify({
+          sessionId: "f1c947",
+          runId: "post-fix",
+          hypothesisId: "B",
+          location: "provider-adapter.ts:chat",
+          message: "chat via readChatResult",
+          data: { ok: response.ok, status: response.status },
+          timestamp: Date.now(),
+        }),
+      }).catch(() => {});
+      // #endregion
+      return readChatResult(response, "chat completion");
     },
 
     chatStream(prompt, opts = {}) {
@@ -208,6 +247,21 @@ export function createProviderAdapter(options: ProviderAdapterOptions = {}): AiP
 
             const decoder = new TextDecoder();
             let buffer = "";
+            // #region agent log
+            fetch("http://127.0.0.1:7607/ingest/d64b1863-23d3-4239-b3b4-eaa6e4ef6a78", {
+              method: "POST",
+              headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "f1c947" },
+              body: JSON.stringify({
+                sessionId: "f1c947",
+                runId: "post-fix",
+                hypothesisId: "A",
+                location: "provider-adapter.ts:chatStream",
+                message: "stream using split emitSseDeltas helpers",
+                data: { hasBody: true },
+                timestamp: Date.now(),
+              }),
+            }).catch(() => {});
+            // #endregion
 
             while (!abortController.signal.aborted) {
               const { done, value } = await reader.read();
@@ -250,20 +304,15 @@ export function createProviderAdapter(options: ProviderAdapterOptions = {}): AiP
         signal: withTimeout(timeoutMs),
       });
 
-      if (!response.ok) {
-        throw new Error(`structured completion failed: ${response.status} ${await response.text()}`);
-      }
-
+      await assertOk(response, "structured completion");
       const data = (await response.json()) as {
         choices?: { message: { content: string } }[];
-        usage?: { prompt_tokens: number; completion_tokens: number };
+        usage?: GatewayChatUsage;
       };
 
       return {
         object: parseJsonObject(data.choices?.[0]?.message?.content ?? ""),
-        usage: data.usage
-          ? { promptTokens: data.usage.prompt_tokens, completionTokens: data.usage.completion_tokens }
-          : undefined,
+        usage: mapChatUsage(data.usage),
       };
     },
 
@@ -276,9 +325,7 @@ export function createProviderAdapter(options: ProviderAdapterOptions = {}): AiP
         signal: withTimeout(timeoutMs),
       });
 
-      if (!response.ok) {
-        throw new Error(`embedding failed: ${response.status} ${await response.text()}`);
-      }
+      await assertOk(response, "embedding");
 
       const data = (await response.json()) as {
         data: { embedding: number[] }[];
