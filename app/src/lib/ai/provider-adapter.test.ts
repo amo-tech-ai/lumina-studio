@@ -4,6 +4,7 @@ import {
   createProviderAdapter,
   providerAdapter,
   DEFAULT_AI_GATEWAY_URL,
+  AiGatewayError,
 } from "./provider-adapter";
 
 describe("providerAdapter / createProviderAdapter", () => {
@@ -149,9 +150,11 @@ describe("providerAdapter / createProviderAdapter", () => {
         text: () => Promise.resolve("Service Unavailable"),
       });
 
-      await expect(providerAdapter.chat("test")).rejects.toThrow(
-        "chat completion failed: 503 Service Unavailable",
-      );
+      await expect(providerAdapter.chat("test")).rejects.toMatchObject({
+        name: "AiGatewayError",
+        httpStatus: 503,
+        message: expect.stringContaining("chat completion failed: 503"),
+      });
     });
   });
 
@@ -234,7 +237,11 @@ describe("providerAdapter / createProviderAdapter", () => {
 
       const stream = providerAdapter.chatStream("test");
       const reader = stream.getReader();
-      await expect(reader.read()).rejects.toThrow("stream failed: 502 Bad Gateway");
+      await expect(reader.read()).rejects.toMatchObject({
+        name: "AiGatewayError",
+        httpStatus: 502,
+        message: expect.stringContaining("stream failed: 502"),
+      });
     });
 
     it("stream cancel aborts the fetch", async () => {
@@ -382,9 +389,40 @@ describe("providerAdapter / createProviderAdapter", () => {
         text: () => Promise.resolve("Service Unavailable"),
       });
 
-      await expect(providerAdapter.embed(["test"])).rejects.toThrow(
-        "embedding failed: 503 Service Unavailable",
-      );
+      await expect(providerAdapter.embed(["test"])).rejects.toMatchObject({
+        name: "AiGatewayError",
+        httpStatus: 503,
+        message: expect.stringContaining("embedding failed: 503"),
+      });
+    });
+
+    it("throws AiGatewayError from stable gateway envelope", async () => {
+      globalThis.fetch = vi.fn().mockResolvedValue({
+        ok: false,
+        status: 400,
+        text: () =>
+          Promise.resolve(
+            JSON.stringify({
+              error: {
+                code: "invalid_request",
+                message: "input must contain at least one non-empty string",
+                requestId: "req_test",
+              },
+            }),
+          ),
+      });
+
+      try {
+        await providerAdapter.embed([]);
+        expect.unreachable();
+      } catch (err) {
+        expect(err).toBeInstanceOf(AiGatewayError);
+        const e = err as AiGatewayError;
+        expect(e.code).toBe("invalid_request");
+        expect(e.httpStatus).toBe(400);
+        expect(e.requestId).toBe("req_test");
+        expect(e.message).toBe("input must contain at least one non-empty string");
+      }
     });
   });
 
