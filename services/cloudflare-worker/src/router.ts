@@ -1,14 +1,20 @@
 import { resolveModelEntry, type ModelRegistry } from "./model-registry";
+import {
+  gatewayErrorResponse,
+  mapProviderFailure,
+  newRequestId,
+} from "./gateway-errors";
+import {
+  resolveEmbeddingEntry,
+  validateEmbeddingInput,
+} from "./embed-validation";
 import { geminiProvider } from "./providers/gemini";
 import { workersAiProvider } from "./providers/workers-ai";
 import {
   type AiProvider,
   type ChatCompletionRequest,
-  type ChatCompletionResponse,
   type EmbeddingRequest,
-  type EmbeddingResponse,
   type ProviderConfig,
-  createCompletionId,
 } from "./providers/provider";
 
 export interface Env {
@@ -46,14 +52,18 @@ function getProviderConfig(provider: string, env: Env): ProviderConfig {
   }
 }
 
+function registryOverride(env: Env): ModelRegistry | undefined {
+  return env.MODEL_REGISTRY_OVERRIDE
+    ? (JSON.parse(env.MODEL_REGISTRY_OVERRIDE) as ModelRegistry)
+    : undefined;
+}
+
 function selectProvider(model: string, env: Env): {
   provider: AiProvider;
   config: ProviderConfig;
-  entry: ReturnType<typeof resolveModelEntry>;
+  entry: NonNullable<ReturnType<typeof resolveModelEntry>>;
 } {
-  const tier = env.MODEL_REGISTRY_OVERRIDE
-    ? JSON.parse(env.MODEL_REGISTRY_OVERRIDE) as ModelRegistry
-    : undefined;
+  const tier = registryOverride(env);
   const entry = resolveModelEntry(model, tier) ?? resolveModelEntry("default");
 
   if (!entry) {
@@ -93,20 +103,52 @@ export async function handleEmbed(
   req: EmbeddingRequest,
   env: Env,
 ): Promise<Response> {
-  const { provider, config, entry } = selectProvider(req.model, env);
+  const requestId = newRequestId();
+  const registry = registryOverride(env);
 
-  if (!provider.embed) {
-    return Response.json({ error: `Provider ${entry.provider} does not support embeddings` }, { status: 400 });
+  const validated = validateEmbeddingInput(req.input);
+  if (!validated.ok) {
+    return gatewayErrorResponse(400, "invalid_request", validated.message, { requestId });
   }
 
+  const model = req.model?.trim() || "embedding";
+  const entry = resolveEmbeddingEntry(model, registry);
+  if (!entry) {
+    return gatewayErrorResponse(
+      400,
+      "unsupported_embedding_model",
+      `Model '${model}' is not configured for embeddings`,
+      { requestId },
+    );
+  }
+
+  const provider = getProvider(entry.provider);
+  if (!provider.embed) {
+    return gatewayErrorResponse(
+      400,
+      "unsupported_embedding_model",
+      `Provider ${entry.provider} does not support embeddings`,
+      { requestId },
+    );
+  }
+
+  const config = getProviderConfig(entry.provider, env);
+
   try {
-    const result = await provider.embed({ ...req, model: entry.model }, config);
+    const result = await provider.embed(
+      { model: entry.model, input: validated.input },
+      config,
+    );
     return Response.json(result, {
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", "x-request-id": requestId },
     });
   } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
-    return Response.json({ error: message }, { status: 502 });
+    const mapped = mapProviderFailure(err);
+    return gatewayErrorResponse(mapped.status, mapped.code, mapped.message, {
+      providerStatus: mapped.providerStatus,
+      retryable: mapped.retryable,
+      requestId,
+    });
   }
 }
 
@@ -126,14 +168,21 @@ export async function handleRequest(
   }
 
   const body = await request.json() as Record<string, unknown>;
-  const model = (body.model as string) ?? "default";
 
   if (url.pathname === "/v1/chat/completions") {
-    return handleChat(body as unknown as ChatCompletionRequest, env);
+    const model = (body.model as string) ?? "default";
+    return handleChat({ ...(body as object), model } as ChatCompletionRequest, env);
   }
 
   if (url.pathname === "/v1/embeddings") {
-    return handleEmbed(body as unknown as EmbeddingRequest, env);
+    // Default missing model to embedding tier — never chat "default".
+    const model = typeof body.model === "string" && body.model.trim()
+      ? body.model
+      : "embedding";
+    return handleEmbed(
+      { model, input: body.input as string | string[] },
+      env,
+    );
   }
 
   return Response.json({ error: `Unknown endpoint: ${url.pathname}` }, { status: 404 });

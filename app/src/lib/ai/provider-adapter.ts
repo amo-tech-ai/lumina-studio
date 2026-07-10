@@ -33,6 +33,52 @@ export type EmbedResult = {
   usage?: { promptTokens: number };
 };
 
+/** Stable gateway error codes (must match Worker `gateway-errors.ts`). */
+export type AiGatewayErrorCode =
+  | "invalid_request"
+  | "unsupported_embedding_model"
+  | "provider_rate_limited"
+  | "provider_timeout"
+  | "provider_unavailable"
+  | "provider_error"
+  | "internal_error";
+
+export type AiGatewayErrorBody = {
+  code: AiGatewayErrorCode | string;
+  message: string;
+  providerStatus?: number;
+  retryable?: boolean;
+  requestId?: string;
+};
+
+/** Typed error from AI Gateway — prefer over raw `Error` for embed/chat failures. */
+export class AiGatewayError extends Error {
+  readonly code: string;
+  readonly httpStatus: number;
+  readonly providerStatus?: number;
+  readonly retryable: boolean;
+  readonly requestId?: string;
+
+  constructor(
+    message: string,
+    opts: {
+      code: string;
+      httpStatus: number;
+      providerStatus?: number;
+      retryable?: boolean;
+      requestId?: string;
+    },
+  ) {
+    super(message);
+    this.name = "AiGatewayError";
+    this.code = opts.code;
+    this.httpStatus = opts.httpStatus;
+    this.providerStatus = opts.providerStatus;
+    this.retryable = opts.retryable ?? false;
+    this.requestId = opts.requestId;
+  }
+}
+
 export interface AiProviderAdapter {
   chat(prompt: string, options?: ChatOptions): Promise<ChatResult>;
   chatStream(prompt: string, options?: ChatOptions): ReadableStream<string>;
@@ -150,9 +196,39 @@ function mapChatUsage(usage?: GatewayChatUsage): ChatResult["usage"] {
   return { promptTokens: usage.prompt_tokens, completionTokens: usage.completion_tokens };
 }
 
+async function throwGatewayFailure(response: Response, label: string): Promise<never> {
+  const raw = await response.text();
+  let parsed: { error?: AiGatewayErrorBody | string } | null = null;
+  try {
+    parsed = JSON.parse(raw) as { error?: AiGatewayErrorBody | string };
+  } catch {
+    // non-JSON body
+  }
+
+  const envelope = parsed?.error;
+  if (envelope && typeof envelope === "object" && typeof envelope.message === "string") {
+    throw new AiGatewayError(envelope.message, {
+      code: envelope.code ?? "provider_error",
+      httpStatus: response.status,
+      providerStatus: envelope.providerStatus,
+      retryable: envelope.retryable,
+      requestId: envelope.requestId,
+    });
+  }
+
+  const flat =
+    typeof envelope === "string"
+      ? envelope
+      : raw || response.statusText || "request failed";
+  throw new AiGatewayError(`${label} failed: ${response.status} ${flat}`, {
+    code: "provider_error",
+    httpStatus: response.status,
+  });
+}
+
 async function assertOk(response: Response, label: string): Promise<void> {
   if (!response.ok) {
-    throw new Error(`${label} failed: ${response.status} ${await response.text()}`);
+    await throwGatewayFailure(response, label);
   }
 }
 
@@ -268,7 +344,7 @@ export function createProviderAdapter(options: ProviderAdapterOptions = {}): AiP
           });
 
           if (!response.ok) {
-            throw new Error(`stream failed: ${response.status} ${await response.text()}`);
+            await throwGatewayFailure(response, "stream");
           }
 
           const reader = response.body?.getReader();

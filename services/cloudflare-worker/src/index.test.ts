@@ -48,6 +48,33 @@ describe("AI Gateway Worker", () => {
     expect(res.status).toBe(404);
   });
 
+  it("rejects empty embed input with 400 envelope", async () => {
+    const req = INCOMING_REQUEST("/v1/embeddings", "POST", {
+      model: "embedding",
+      input: [],
+    });
+    const ctx = createExecutionContext();
+    const res = await worker.fetch(req, env, ctx);
+    await waitOnExecutionContext(ctx);
+    expect(res.status).toBe(400);
+    const data: any = await res.json();
+    expect(data.error.code).toBe("invalid_request");
+    expect(data.error.requestId).toMatch(/^req_/);
+  });
+
+  it("rejects unsupported embed model with 400 envelope", async () => {
+    const req = INCOMING_REQUEST("/v1/embeddings", "POST", {
+      model: "gemini-3.1-flash-lite",
+      input: ["hello"],
+    });
+    const ctx = createExecutionContext();
+    const res = await worker.fetch(req, env, ctx);
+    await waitOnExecutionContext(ctx);
+    expect(res.status).toBe(400);
+    const data: any = await res.json();
+    expect(data.error.code).toBe("unsupported_embedding_model");
+  });
+
   it("includes gateway version header", async () => {
     const req = INCOMING_REQUEST("/");
     const ctx = createExecutionContext();
