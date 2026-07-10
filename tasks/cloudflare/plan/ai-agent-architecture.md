@@ -70,8 +70,7 @@ Any agent action that writes data, publishes content, processes payments, or com
 **Data write:** brands.ai_profile, brand_scores (after HITL approval)
 
 **Approval points:**
-- ✅ Brand profile draft → operator reviews before committing
-- ✅ DNA scores → operator can accept/reject/re-run
+- ✅ One combined suspend/resume gate — operator reviews the brand profile draft *and* DNA scores together, committed atomically. *(Corrected 2026-07-09: this previously listed two separate approval points. The real workflow's `saveDraftAndWait` step holds profile and `_draft_scores` in one `brand_intake_drafts` row; `promoteBrandDraft` commits both together, not as two independent gates. See `docs/architecture/diagrams/08-brand-shoot-workflow.md`.)*
 
 **Memory:** Brand crawl results (temporary), conversation context during review
 

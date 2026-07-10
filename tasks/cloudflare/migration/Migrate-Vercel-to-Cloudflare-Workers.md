@@ -1,5 +1,7 @@
 # iPix Architecture Review — Migrate from Vercel to Cloudflare Workers
 
+> **SSOT:** [`plan-migrate.md`](./plan-migrate.md) — canonical migration plan, lean Linear tasks, and verification matrix. This document is the original architecture review prompt; do not treat it as the execution tracker.
+
 ## Objective
 
 Perform a deep architecture review of the current iPix setup and produce a complete migration plan from **Vercel** to **Cloudflare Workers** while preserving all existing functionality.
