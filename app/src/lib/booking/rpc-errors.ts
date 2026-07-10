@@ -14,6 +14,11 @@ function includes(haystack: string, needle: string): boolean {
 export type StaleBookingContext = {
   expectedVersion?: number;
   currentVersion?: number;
+  /**
+   * When mapping EXECUTE / privilege denials: true → 403, false/omit → 401.
+   * Omit when the caller has no session signal (treat as unauthenticated).
+   */
+  authenticated?: boolean;
 };
 
 export function isStaleBookingMessage(message: string): boolean {
@@ -87,13 +92,21 @@ const RPC_ERROR_MATCHERS: RpcErrorMatcher[] = [
     map: () => ({ status: 401, code: "UNAUTHORIZED", message: "Sign in to continue." }),
   },
   // Anon lacks EXECUTE on booking RPCs → PostgREST "permission denied for function …"
-  // (not the in-body "authentication required"). Map to 401 so auth-off never 500s.
+  // (not the in-body "authentication required"). Never map to 500.
+  // authenticated=true → 403 (signed in but no privilege); else → 401.
   {
     match: (msg, pgCode) =>
       pgCode === "42501" ||
       includes(msg, "permission denied for function") ||
       includes(msg, "permission denied for schema"),
-    map: () => ({ status: 401, code: "UNAUTHORIZED", message: "Sign in to continue." }),
+    map: (_msg, ctx) =>
+      ctx?.authenticated
+        ? {
+            status: 403,
+            code: "FORBIDDEN",
+            message: "You do not have permission to perform this action.",
+          }
+        : { status: 401, code: "UNAUTHORIZED", message: "Sign in to continue." },
   },
   {
     match: (msg) =>

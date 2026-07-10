@@ -35,6 +35,19 @@ describe("mapSupabaseRpcError", () => {
     expect(byPgCode.status).toBe(401);
     expect(byPgCode.code).toBe("UNAUTHORIZED");
   });
+
+  it("maps EXECUTE denial to FORBIDDEN when caller is authenticated", () => {
+    const mapped = mapSupabaseRpcError(
+      "permission denied for function create_booking_request",
+      null,
+      { authenticated: true },
+    );
+    expect(mapped).toEqual({
+      status: 403,
+      code: "FORBIDDEN",
+      message: "You do not have permission to perform this action.",
+    });
+  });
 });
 
 describe("isStaleBookingMessage", () => {
