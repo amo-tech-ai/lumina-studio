@@ -19,8 +19,22 @@ cd "$REPO_ROOT/app" || exit 0
 TYPECHECK_OUT=$(npm run typecheck 2>&1)
 TYPECHECK_STATUS=$?
 
-# Convert repo-root-relative paths (app/src/...) to app-relative (src/...) for eslint
-LINT_FILES=$(echo "$CHANGED" | sed -n 's#^app/##p' | grep -E '\.(ts|tsx|js|jsx)$')
+# Convert repo-root-relative paths (app/src/...) to app-relative (src/...) for eslint.
+# Skip deleted paths — eslint errors if the file no longer exists on disk.
+LINT_FILES=""
+while IFS= read -r path; do
+  [ -z "$path" ] && continue
+  apprel="${path#app/}"
+  case "$apprel" in
+    *.ts|*.tsx|*.js|*.jsx) ;;
+    *) continue ;;
+  esac
+  [ -f "$apprel" ] || continue
+  LINT_FILES="$LINT_FILES $apprel"
+done <<EOF
+$(echo "$CHANGED" | awk '{print $2}')
+EOF
+LINT_FILES="${LINT_FILES# }"
 LINT_OUT=""
 LINT_STATUS=0
 if [ -n "$LINT_FILES" ]; then
