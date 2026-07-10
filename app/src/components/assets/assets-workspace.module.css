@@ -1,0 +1,288 @@
+/* IPI-404 · Assets workspace — DC Assets.v2.image-first.dc.html (read-only masonry scope) */
+
+.workspace {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  min-height: 100%;
+  background: var(--color-bg-page);
+}
+
+.header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-shrink: 0;
+  padding: 1.75rem 2.25rem 0;
+  margin-bottom: 1.125rem;
+}
+
+.title {
+  margin: 0;
+  font-size: var(--font-size-2xl);
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: -0.01em;
+  color: var(--color-text-primary);
+}
+
+.subtitle {
+  margin: 0.3125rem 0 0;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+}
+
+.primaryBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 2.5rem;
+  padding: 0 1.125rem;
+  border: none;
+  border-radius: var(--radius-md);
+  background: var(--color-action);
+  color: var(--color-action-text);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.primaryBtn:hover {
+  background: var(--color-action-hover);
+}
+
+.filterRow {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  padding: 0 2.25rem;
+  margin-bottom: 0.875rem;
+}
+
+.filterChip {
+  height: 2rem;
+  padding: 0 0.875rem;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  background: var(--color-bg-card);
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  cursor: pointer;
+}
+
+.filterChip:hover {
+  border-color: var(--color-border-strong);
+}
+
+.filterChipActive {
+  height: 2rem;
+  padding: 0 0.875rem;
+  border: 1px solid var(--color-action);
+  border-radius: 999px;
+  background: var(--color-action);
+  color: var(--color-action-text);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  cursor: pointer;
+}
+
+.filterSelectLabel {
+  display: inline-flex;
+}
+
+.filterSelect {
+  height: 2rem;
+  padding: 0 1.75rem 0 0.75rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-bg-card);
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  cursor: pointer;
+}
+
+.filterSelect:hover {
+  border-color: var(--color-border-strong);
+}
+
+.clearFilterBtn {
+  margin-top: 0.75rem;
+  height: 2.25rem;
+  padding: 0 1rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-bg-card);
+  color: var(--color-text-primary);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  cursor: pointer;
+}
+
+.clearFilterBtn:hover {
+  border-color: var(--color-border-strong);
+}
+
+.body {
+  flex: 1;
+  padding: 0 2.25rem 1.5rem;
+}
+
+/* Masonry — matches shoot-detail.module.css's established .masonry pattern */
+.masonry {
+  columns: 4;
+  column-gap: 1rem;
+}
+
+.masonryItem {
+  break-inside: avoid;
+  margin-bottom: 1rem;
+}
+
+@media (max-width: 1280px) {
+  .masonry {
+    columns: 3;
+  }
+}
+
+@media (max-width: 880px) {
+  .masonry {
+    columns: 2;
+  }
+}
+
+@media (max-width: 560px) {
+  .masonry {
+    columns: 1;
+  }
+
+  .header,
+  .filterRow,
+  .body {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+
+  .header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}
+
+/* --- AssetCard --- */
+.card {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-bg-card);
+  overflow: hidden;
+}
+
+.thumbWrap {
+  position: relative;
+  width: 100%;
+  background: var(--color-bg-subtle);
+}
+
+.thumbImage {
+  object-fit: cover;
+}
+
+.iconFallback {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-text-muted);
+}
+
+.dnaBadge {
+  position: absolute;
+  top: 0.5rem;
+  left: 0.5rem;
+}
+
+.cardFooter {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.625rem;
+  font-size: var(--font-size-xs);
+}
+
+.cardType {
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-primary);
+}
+
+.cardScore {
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text-secondary);
+}
+
+.cardDate {
+  margin-left: auto;
+  color: var(--color-text-muted);
+}
+
+.noMatchState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 3rem 1.5rem;
+}
+
+.noMatchTitle {
+  margin: 0;
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
+}
+
+.noMatchCopy {
+  margin: 0.5rem 0 0;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+}
+
+/* --- Skeleton --- */
+.skeletonLine {
+  height: 1.5rem;
+  width: 8rem;
+  border-radius: 0.625rem;
+  background: var(--color-bg-muted);
+}
+
+.skeletonCard {
+  width: 100%;
+  aspect-ratio: 4 / 5;
+  border-radius: var(--radius-lg);
+  background: linear-gradient(
+    90deg,
+    var(--color-bg-subtle) 25%,
+    var(--color-bg-muted) 50%,
+    var(--color-bg-subtle) 75%
+  );
+  background-size: 800px 100%;
+  animation: assets-shimmer 1.4s infinite linear;
+}
+
+@keyframes assets-shimmer {
+  0% {
+    background-position: -400px 0;
+  }
+  100% {
+    background-position: 400px 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeletonCard {
+    animation: none;
+  }
+}

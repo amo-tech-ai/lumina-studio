@@ -1,16 +1,34 @@
-import { SectionPlaceholder } from "@/components/section-placeholder";
+import { AssetsWorkspace } from "@/components/assets/assets-workspace";
+import { listAssets } from "@/lib/assets/get-assets";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
 
-/**
- * IPI-248 — Asset library workspace (UI pending).
- * Data: GET /api/assets?brand_id=&shoot_id= → get_brand_assets RPC
- * (unifies public.assets + shoot.shoot_assets — see tasks/design-docs/shoot/data.md)
- */
-export default function AssetsPage() {
-  return (
-    <SectionPlaceholder
-      title="Assets"
-      blurb="Score Asset DNA and review brand compliance for shoot media. API: GET /api/assets?brand_id=…"
-      issue="IPI-248 Asset library"
-    />
-  );
-}
+export const dynamic = "force-dynamic";
+
+/** SCR-08 — read-only asset library (IPI-404). Data: `assets` table, scoped
+ *  by RLS (`assets_select_via_brand` — owner's brands only), same trust
+ *  model brand/page.tsx already uses for the brand list. */
+const AssetsPage = async () => {
+  const supabase = await createSupabaseServerClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return <AssetsWorkspace assets={[]} isAuthenticated={false} />;
+  }
+
+  try {
+    const assets = await listAssets(supabase);
+    return <AssetsWorkspace assets={assets} isAuthenticated />;
+  } catch {
+    return (
+      <AssetsWorkspace
+        assets={[]}
+        isAuthenticated
+        fetchError="Unable to load assets. Try again in a moment."
+      />
+    );
+  }
+};
+
+export default AssetsPage;
