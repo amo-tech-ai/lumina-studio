@@ -3,9 +3,9 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 
+import { findGroqModelsConfigPath } from "./groq-models-path";
 import {
   assertGroqTierCapabilities,
-  findGroqModelsConfigPath,
   GEMINI_MODELS,
   getGroqModelEntry,
   loadGroqModelsConfig,
@@ -84,6 +84,8 @@ describe("AI provider (GROQ-002 / GROQ-004)", () => {
   it("keeps groq-models.ssot.json in sync with config/groq-models.json", () => {
     const repoConfig = join(process.cwd(), "..", "config", "groq-models.json");
     const onDisk = JSON.parse(readFileSync(repoConfig, "utf8"));
+    // $schema is intentionally stripped from the bundled copy (dangling relative path there).
+    delete onDisk.$schema;
     expect(loadGroqModelsConfig()).toEqual(onDisk);
   });
 

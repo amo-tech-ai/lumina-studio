@@ -1,5 +1,4 @@
 {
-  "$schema": "./groq-models.schema.json",
   "version": 1,
   "updatedAt": "2026-07-05",
   "envMapping": {

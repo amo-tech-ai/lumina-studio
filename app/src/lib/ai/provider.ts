@@ -1,6 +1,3 @@
-import { existsSync } from "node:fs";
-import { dirname, join } from "node:path";
-
 import groqModelsSsot from "./groq-models.ssot.json";
 
 import {
@@ -8,23 +5,6 @@ import {
   resolveProviderOptions as resolveGeminiProviderOptions,
 } from "./gemini-registry";
 import type { AiProvider, GroqModelEntry, GroqModelTier, GroqModelsConfig } from "./types";
-
-const MAX_BUNDLE_ANCESTOR_HOPS = 8;
-
-/** Walks up from `startDir` looking for `config/groq-models.json` (tests / Mastra dev). */
-export function findGroqModelsConfigPath(startDir: string): string {
-  let dir = startDir;
-  for (let hop = 0; hop < MAX_BUNDLE_ANCESTOR_HOPS; hop += 1) {
-    const candidate = join(dir, "config", "groq-models.json");
-    if (existsSync(candidate)) return candidate;
-    const parent = dirname(dir);
-    if (parent === dir) break;
-    dir = parent;
-  }
-  throw new Error(
-    `Could not find config/groq-models.json within ${MAX_BUNDLE_ANCESTOR_HOPS} ancestor directories of "${startDir}"`,
-  );
-}
 
 /**
  * CF-MIG-210: static JSON bundled for Cloudflare Workers (no runtime readFileSync).
