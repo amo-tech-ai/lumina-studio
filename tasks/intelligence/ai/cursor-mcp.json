@@ -1,0 +1,62 @@
+{
+  "_comment": "SSOT for ~/.cursor/mcp.json — install via: bash scripts/cursor-mcp-setup.sh",
+  "_plugins_keep": ["linear", "supabase", "vercel", "cloudinary", "codspeed"],
+  "_plugins_disable_mcp": [
+    "plugin-cloudflare-cloudflare-api",
+    "plugin-cloudflare-cloudflare-bindings",
+    "plugin-cloudflare-cloudflare-builds",
+    "plugin-cloudflare-cloudflare-docs",
+    "plugin-cloudflare-cloudflare-observability"
+  ],
+  "_plugins_note": "Cloudflare: official HTTP MCP only in default config (github.com/cloudflare/mcp). Optional bridges: scripts/cf-mcp-setup.sh --with-bridges",
+  "mcpServers": {
+    "firecrawl": {
+      "command": "bash",
+      "args": [
+        "/home/sk/ipix/scripts/mcp-env-bridge.sh",
+        "FIRECRAWL_API_KEY",
+        "npx",
+        "-y",
+        "firecrawl-mcp"
+      ]
+    },
+    "mastra": {
+      "command": "npx",
+      "args": ["-y", "@mastra/mcp-docs-server@latest"]
+    },
+    "mercur": {
+      "url": "https://docs.mercurjs.com/mcp"
+    },
+    "desktop-commander": {
+      "command": "npx",
+      "args": ["-y", "@wonderwhy-er/desktop-commander@latest"]
+    },
+    "copilotkit-docs": {
+      "type": "http",
+      "url": "https://mcp.copilotkit.ai/mcp"
+    },
+    "morph-mcp": {
+      "command": "bash",
+      "args": [
+        "/home/sk/ipix/scripts/mcp-env-bridge.sh",
+        "MORPH_API_KEY",
+        "npx",
+        "--prefer-offline",
+        "-y",
+        "@morphllm/morphmcp"
+      ]
+    },
+    "cloudflare-api": {
+      "type": "http",
+      "url": "https://mcp.cloudflare.com/mcp"
+    },
+    "cloudflare-docs": {
+      "type": "http",
+      "url": "https://docs.mcp.cloudflare.com/mcp"
+    },
+    "cloudflare-agents-sdk": {
+      "type": "http",
+      "url": "https://agents.cloudflare.com/mcp"
+    }
+  }
+}

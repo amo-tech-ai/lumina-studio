@@ -1,0 +1,10 @@
+{
+  "name": "ipix-mcp-bridges",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Pinned MCP bridge binaries for Cursor stdio servers (avoid npx cold-start timeouts)",
+  "scripts": {},
+  "dependencies": {
+    "mcp-remote": "0.1.38"
+  }
+}
