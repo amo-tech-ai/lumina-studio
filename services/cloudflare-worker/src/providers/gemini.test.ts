@@ -16,6 +16,12 @@ describe("geminiRequestUrl", () => {
     expect(url).toContain("alt=sse");
     expect(url).toContain("key=secret");
   });
+
+  it("encodes apiKey so &/= do not corrupt the query string", () => {
+    const url = geminiRequestUrl("gemini-3.1-flash-lite", false, "a&b=c");
+    expect(url).toContain(`key=${encodeURIComponent("a&b=c")}`);
+    expect(url).not.toMatch(/[?&]key=a&/);
+  });
 });
 
 describe("geminiProvider.chat", () => {
@@ -156,6 +162,7 @@ describe("geminiProvider.embed", () => {
 
     const url = String(fetchMock.mock.calls[0][0]);
     expect(url).toContain(":embedContent?");
+    expect(url).toContain(`key=${encodeURIComponent("secret")}`);
     expect(url).not.toContain("alt=sse");
     expect(result.data[0].embedding).toEqual([0.1, 0.2]);
   });

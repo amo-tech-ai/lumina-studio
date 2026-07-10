@@ -36,7 +36,8 @@ export function geminiRequestUrl(
   apiKey: string,
 ): string {
   const action = stream ? "streamGenerateContent" : "generateContent";
-  const query = stream ? `alt=sse&key=${apiKey}` : `key=${apiKey}`;
+  const key = encodeURIComponent(apiKey);
+  const query = stream ? `alt=sse&key=${key}` : `key=${key}`;
   return `${GEMINI_BASE}/models/${geminiModelId(model)}:${action}?${query}`;
 }
 
@@ -177,7 +178,7 @@ export const geminiProvider: AiProvider = {
   },
 
   async embed(req: EmbeddingRequest, config: ProviderConfig): Promise<EmbeddingResponse> {
-    const url = `${GEMINI_BASE}/models/${geminiModelId("text-embedding-004")}:embedContent?key=${config.apiKey}`;
+    const url = `${GEMINI_BASE}/models/${geminiModelId("text-embedding-004")}:embedContent?key=${encodeURIComponent(config.apiKey)}`;
     const inputs = typeof req.input === "string" ? [req.input] : req.input;
 
     const results = await Promise.all(
