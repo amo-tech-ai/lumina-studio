@@ -66,13 +66,17 @@ export function validateEmbeddingInput(input: unknown): EmbedValidationResult {
 /**
  * Resolve an embedding-capable registry entry.
  * Does NOT fall back to the default chat tier.
+ *
+ * Policy:
+ * - Custom registry has a capable `embedding` tier → use it
+ * - Custom registry missing / incapable `embedding` → canonical default BGE
+ * - Explicit `@cf/baai/bge-base-en-v1.5` → always canonical default BGE
  */
 export function resolveEmbeddingEntry(
   model: string,
   registry?: ModelRegistry,
 ): ModelEntry | undefined {
   // Explicit Workers AI BGE id — always the canonical default entry (ignore override alias).
-  // Prevents MODEL_REGISTRY_OVERRIDE from silently swapping a different embed model under this id.
   if (model === "@cf/baai/bge-base-en-v1.5") {
     return resolveModelEntry("embedding");
   }
@@ -82,8 +86,10 @@ export function resolveEmbeddingEntry(
     return byTier;
   }
 
+  // Alias "embedding": override may replace the whole registry (getRegistry does not merge).
+  // If the override omitted the tier, fall back to DEFAULT_REGISTRY — never re-query the same incomplete override.
   if (model === "embedding") {
-    return resolveModelEntry("embedding", registry);
+    return resolveModelEntry("embedding");
   }
 
   return undefined;

@@ -78,6 +78,58 @@ describe("resolveEmbeddingEntry / allowlist", () => {
     expect(entry?.model).toBe("@cf/baai/bge-base-en-v1.5");
   });
 
+  it("override without embedding tier falls back to canonical default BGE", () => {
+    const entry = resolveEmbeddingEntry("embedding", {
+      tiers: {
+        fast: {
+          provider: "gemini",
+          model: "gemini-3.1-flash-lite",
+          capabilities: ["text", "streaming"],
+          contextWindow: 128000,
+          costPer1kIn: 0,
+          costPer1kOut: 0,
+        },
+      },
+    });
+    expect(entry?.provider).toBe("workers-ai");
+    expect(entry?.model).toBe("@cf/baai/bge-base-en-v1.5");
+    expect(entry?.capabilities).toContain("embedding");
+  });
+
+  it("override with capable embedding tier uses the custom entry", () => {
+    const entry = resolveEmbeddingEntry("embedding", {
+      tiers: {
+        embedding: {
+          provider: "workers-ai",
+          model: "@cf/baai/bge-small-en-v1.5",
+          capabilities: ["embedding"],
+          contextWindow: 0,
+          costPer1kIn: 0,
+          costPer1kOut: 0,
+        },
+      },
+    });
+    expect(entry?.model).toBe("@cf/baai/bge-small-en-v1.5");
+  });
+
+  it("never falls back to chat default tier", () => {
+    expect(resolveEmbeddingEntry("default")).toBeUndefined();
+    expect(
+      resolveEmbeddingEntry("default", {
+        tiers: {
+          default: {
+            provider: "gemini",
+            model: "gemini-3.1-flash-lite",
+            capabilities: ["text"],
+            contextWindow: 1,
+            costPer1kIn: 0,
+            costPer1kOut: 0,
+          },
+        },
+      }),
+    ).toBeUndefined();
+  });
+
   it("rejects chat default tier (no silent remap)", () => {
     expect(resolveEmbeddingEntry("default")).toBeUndefined();
     expect(isSupportedEmbeddingModel("default")).toBe(false);
