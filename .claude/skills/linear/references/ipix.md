@@ -8,15 +8,16 @@ Use this reference for all iPix / Lumina Studio Linear work.
 - Team: `IPI`
 - Issue format: `IPI-###`
 - Spec IDs: `PLT-###`, `AI-###`, `COM-###`, `UI-###`, `DNA-###`
-- Local specs: `docs/linear/issues/IPI-<n>-<SPEC-ID>.md`
+- Local specs: `linear/issues/IPI-<n>-<SPEC-ID>.md` (canonical)
+- Legacy mirror (deprecated): `docs/linear/issues/` — do not add new specs there
 - Progress tracker: `todo.md`
 - Supabase policy: remote-only for MVP; do not run local Supabase Docker.
 
 ## Read first for iPix tasks
 
 1. `ipix-task-lifecycle` skill if available.
-2. Local spec: `docs/linear/issues/IPI-*-*.md`.
-3. `docs/linear/issues/` for related specs.
+2. Local spec: `linear/issues/IPI-*-*.md`.
+3. `linear/issues/` for related specs.
 4. `todo.md` for current progress state.
 5. Relevant project docs, PRDs, or diagrams.
 
