@@ -1,6 +1,7 @@
 import { createTool } from "@mastra/core/tools";
 import { z } from "zod";
-import { crmToolError, getCrmUserClient, NON_TERMINAL_DEAL_STAGES } from "./_shared";
+import { moveDealStage as moveDealStageForOperator, NON_TERMINAL_DEAL_STAGES } from "@/lib/crm/move-deal-stage";
+import { crmToolError, getCrmUserClient } from "./_shared";
 
 export const moveDealStage = createTool({
   id: "moveDealStage",
@@ -16,19 +17,16 @@ export const moveDealStage = createTool({
     dealId: z.string().uuid().optional(),
     stage: z.string().optional(),
   }),
+  // Delegates the actual write to lib/crm/move-deal-stage.ts — the same
+  // function the PATCH /api/crm/deals/[id]/stage route calls (IPI-396),
+  // so the allow-list + write logic lives in exactly one place.
   execute: async ({ dealId, stage }) => {
     try {
       const ctx = await getCrmUserClient();
       if (!ctx.client) return crmToolError(ctx.error);
-      const { data, error } = await ctx.client
-        .from("crm_deals")
-        .update({ stage })
-        .eq("id", dealId)
-        .eq("org_id", ctx.orgId)
-        .select("id, stage")
-        .single();
-      if (error) return crmToolError(error.message);
-      return { ok: true, dealId: data.id, stage: data.stage };
+      const result = await moveDealStageForOperator({ dealId, orgId: ctx.orgId, stage }, ctx.client);
+      if (!result.ok) return crmToolError(result.message);
+      return { ok: true, dealId: result.dealId, stage: result.stage };
     } catch (e) {
       return crmToolError(e instanceof Error ? e.message : String(e));
     }

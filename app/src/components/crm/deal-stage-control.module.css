@@ -1,0 +1,132 @@
+/* Ported from SCR-31-CRM-Deal-Detail.dc.html's stage control + inline
+   ApprovalCard. Approval surface uses this design system's own
+   --approval-* tokens (white bg + amber hairline), not DC's raw amber fill —
+   see tokens.css: "white — no orange fill" is a deliberate override. */
+
+.stageRow {
+  display: flex;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+  margin-bottom: var(--space-2);
+}
+
+.stageDefault,
+.stageActive,
+.stageGated {
+  min-height: 2.75rem; /* >= 44px touch target */
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.stageDefault {
+  border: 1px solid var(--color-border-strong);
+  background: var(--color-bg-card);
+  color: var(--color-text-secondary);
+}
+
+.stageActive {
+  border: 1px solid var(--color-action);
+  background: var(--color-action);
+  color: var(--color-text-inverse);
+}
+
+.stageGated {
+  border: 1px solid var(--approval-border);
+  background: var(--approval-bg);
+  color: var(--approval-accent);
+}
+
+.gatedHint {
+  opacity: 0.7;
+  font-size: 10px;
+  margin-left: var(--space-1);
+}
+
+.stageHint {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+  margin: 0 0 var(--space-5);
+}
+
+/* ── Approval gate ─────────────────────────────────────────────────────── */
+
+.approvalCard {
+  border: 2px solid var(--approval-border);
+  border-radius: var(--radius-lg);
+  background: var(--approval-bg);
+  padding: var(--space-4);
+  margin-bottom: var(--space-5);
+}
+
+.approvalHeading {
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-bold);
+  margin-bottom: var(--space-3);
+}
+
+.approvalStages {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
+  font-size: var(--font-size-sm);
+}
+
+.approvalArrow {
+  color: var(--color-text-muted);
+}
+
+.approvalBody {
+  font-size: var(--font-size-sm);
+  line-height: 1.55;
+  color: var(--color-text-primary);
+  margin: 0 0 var(--space-4);
+}
+
+.approvalActions {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.cancelButton,
+.approveButtonWon,
+.approveButtonLost {
+  flex: 1;
+  min-height: 2.75rem;
+  padding: var(--space-2);
+  border-radius: var(--radius-md);
+  font-family: inherit;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-bold);
+  cursor: pointer;
+}
+
+.cancelButton {
+  border: 1px solid var(--color-border-strong);
+  background: var(--color-bg-card);
+  color: var(--color-text-primary);
+  font-weight: var(--font-weight-semibold);
+}
+
+.approveButtonWon {
+  border: none;
+  background: var(--color-approved);
+  color: var(--color-text-inverse);
+}
+
+.approveButtonLost {
+  border: none;
+  background: var(--color-blocked);
+  color: var(--color-text-inverse);
+}
+
+.approvalFootnote {
+  margin: var(--space-2) 0 0;
+  font-size: 10px;
+  color: var(--color-text-secondary);
+  text-align: center;
+}
