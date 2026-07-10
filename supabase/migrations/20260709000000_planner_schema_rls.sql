@@ -176,7 +176,7 @@ comment on table planner.notification_rules is 'Declarative notification routing
 create index planner_instances_entity_idx     on planner.instances (org_id, entity_type, entity_id);
 create index planner_tasks_instance_idx       on planner.tasks (instance_id, status);
 create index planner_tasks_assignee_idx       on planner.tasks (assignee_user_id, status) where assignee_user_id is not null;
-create index planner_events_instance_idx      on planner.instances (id, created_at desc);
+create index planner_events_instance_idx      on planner.events (instance_id, created_at desc);
 create index planner_dependencies_from_idx    on planner.dependencies (from_task_id);
 create index planner_dependencies_to_idx      on planner.dependencies (to_task_id);
 
@@ -472,7 +472,13 @@ create policy "assignments_select_org"
 create policy "assignments_insert_manager"
   on planner.assignments for insert to authenticated
   with check (
-    exists (select 1 from planner.instances where id = instance_id and planner.is_at_least(id, 'manager'))
+    exists (
+      select 1
+      from planner.instances i
+      join public.org_members om on om.org_id = i.org_id and om.user_id = assignments.user_id
+      where i.id = instance_id
+        and planner.is_at_least(i.id, 'manager')
+    )
     and role in ('manager', 'contributor', 'viewer')
   );
 
@@ -589,9 +595,12 @@ create policy "planner_channel_subscribe"
     channel_name like 'planner:%'
     and case
       when channel_name ~ '^planner:[0-9a-f-]{36}$' then
-        planner.is_at_least(
-          substring(channel_name from 9)::uuid,
-          'viewer'
+        exists (
+          select 1
+          from planner.instances i
+          where i.id = substring(channel_name from 9)::uuid
+            and public.is_org_member(i.org_id)
+            and planner.is_at_least(i.id, 'viewer')
         )
       else false
     end
@@ -603,24 +612,34 @@ create policy "planner_channel_subscribe"
 do $$
 declare
   v_org record;
+  v_workflow_id uuid;
 begin
   for v_org in select id from public.organizations loop
-    insert into planner.workflows (id, org_id, name, category, version, is_default)
-    values ('00000000-0000-0000-0000-000000000001', v_org.id, '5-Week Product Shoot', 'production', 1, true)
-    on conflict (id) do nothing;
+    select id into v_workflow_id
+    from planner.workflows
+    where org_id = v_org.id
+      and name = '5-Week Product Shoot'
+      and is_default = true
+    limit 1;
 
-    insert into planner.phases (id, workflow_id, slug, name, order_index, default_duration_days, gate_type, required_role) values
-      ('00000000-0000-0000-0000-000000000010', '00000000-0000-0000-0000-000000000001', 'brief',          'Brief confirmation',            1, 2,  null,       null),
-      ('00000000-0000-0000-0000-000000000011', '00000000-0000-0000-0000-000000000001', 'casting',        'Casting',                       2, 3,  'approval', 'manager'),
-      ('00000000-0000-0000-0000-000000000012', '00000000-0000-0000-0000-000000000001', 'soft-hold',      'Soft hold on shoot date',       3, 1,  null,       null),
-      ('00000000-0000-0000-0000-000000000013', '00000000-0000-0000-0000-000000000001', 'item-delivery',  'Item delivery',                 4, 5,  null,       null),
-      ('00000000-0000-0000-0000-000000000014', '00000000-0000-0000-0000-000000000001', 'outfit-confirm', 'Outfit confirmation',           5, 2,  'approval', 'manager'),
-      ('00000000-0000-0000-0000-000000000015', '00000000-0000-0000-0000-000000000001', 'payment-sched',  'Payment & scheduling',          6, 2,  null,       null),
-      ('00000000-0000-0000-0000-000000000016', '00000000-0000-0000-0000-000000000001', 'awaiting-shoot', 'Awaiting shoot',                7, 1,  null,       null),
-      ('00000000-0000-0000-0000-000000000017', '00000000-0000-0000-0000-000000000001', 'production',     'Production',                    8, 3,  null,       null),
-      ('00000000-0000-0000-0000-000000000018', '00000000-0000-0000-0000-000000000001', 'retouching',     'Retouching',                    9, 5,  null,       null),
-      ('00000000-0000-0000-0000-000000000019', '00000000-0000-0000-0000-000000000001', 'final-approval', 'Final approval',               10, 2,  'signoff',  'owner'),
-      ('00000000-0000-0000-0000-00000000001a', '00000000-0000-0000-0000-000000000001', 'product-return', 'Product return',               11, 3,  null,       null)
+    if v_workflow_id is null then
+      insert into planner.workflows (org_id, name, category, version, is_default)
+      values (v_org.id, '5-Week Product Shoot', 'production', 1, true)
+      returning id into v_workflow_id;
+    end if;
+
+    insert into planner.phases (workflow_id, slug, name, order_index, default_duration_days, gate_type, required_role) values
+      (v_workflow_id, 'brief',          'Brief confirmation',   1,  2, null,       null),
+      (v_workflow_id, 'casting',        'Casting',              2,  3, 'approval', 'manager'),
+      (v_workflow_id, 'soft-hold',      'Soft hold on shoot date', 3, 1, null,    null),
+      (v_workflow_id, 'item-delivery',  'Item delivery',        4,  5, null,       null),
+      (v_workflow_id, 'outfit-confirm', 'Outfit confirmation',  5,  2, 'approval', 'manager'),
+      (v_workflow_id, 'payment-sched',  'Payment & scheduling', 6,  2, null,       null),
+      (v_workflow_id, 'awaiting-shoot', 'Awaiting shoot',       7,  1, null,       null),
+      (v_workflow_id, 'production',     'Production',           8,  3, null,       null),
+      (v_workflow_id, 'retouching',     'Retouching',           9,  5, null,       null),
+      (v_workflow_id, 'final-approval', 'Final approval',      10,  2, 'signoff',  'owner'),
+      (v_workflow_id, 'product-return', 'Product return',      11,  3, null,       null)
     on conflict (workflow_id, slug) do nothing;
   end loop;
 end;

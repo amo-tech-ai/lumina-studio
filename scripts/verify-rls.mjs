@@ -986,15 +986,17 @@ try {
   // ── IPI-476 planner schema RLS probes ─────────────────────────
   // planner.workflows — org-scoped read
   const { data: plannerWorkflow, error: plannerWorkflowErr } = await userA.client
-    .from("planner_workflows")
+    .schema("planner")
+    .from("workflows")
     .select("id")
+    .eq("org_id", orgAId)
     .limit(1);
-  if (plannerWorkflowErr?.code === "42P01" || plannerWorkflowErr?.code === "PGRST205" || plannerWorkflowErr?.message?.includes("does not exist") || plannerWorkflowErr?.message?.includes("Could not find the table")) {
-    console.log("skip: planner RLS probes (migration not pushed)");
+  if (plannerWorkflowErr?.code === "42P01" || plannerWorkflowErr?.code === "PGRST205" || plannerWorkflowErr?.message?.includes("does not exist") || plannerWorkflowErr?.message?.includes("Could not find the table") || plannerWorkflowErr?.message?.includes("schema must be")) {
+    console.log("skip: planner RLS probes (migration not pushed or planner schema not exposed)");
   } else {
     assert(
       !plannerWorkflowErr && (plannerWorkflow ?? []).length >= 0,
-      "org member can select planner_workflows",
+      "org member can select planner.workflows",
     );
   }
 } catch (err) {
