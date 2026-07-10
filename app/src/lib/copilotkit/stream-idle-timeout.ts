@@ -62,9 +62,12 @@ export function withStreamIdleTimeout(response: Response, timeoutMs: number): Re
     },
   });
 
+  const headers = new Headers(response.headers);
+  headers.delete("content-length");
+
   return new Response(stream, {
     status: response.status,
     statusText: response.statusText,
-    headers: response.headers,
+    headers,
   });
 }
