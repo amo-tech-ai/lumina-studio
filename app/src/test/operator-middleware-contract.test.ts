@@ -4,7 +4,7 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { config } from "../middleware";
 
-// IPI2-127 + CF-MIG-110 — Edge middleware for Supabase session refresh + operator gate.
+// IPI2-127 + CF-MIG-210 — Edge middleware for Supabase session refresh + operator gate.
 // OpenNext on Cloudflare does not support proxy.ts (Node runtime); use src/middleware.ts only.
 // Do not add app/middleware.ts: dual entry breaks Turbopack NFT tracing.
 
@@ -17,7 +17,7 @@ const MATCHER = [
   "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
 ];
 
-describe("operator middleware — wiring contract (IPI2-127 / CF-MIG-110)", () => {
+describe("operator middleware — wiring contract (IPI2-127 / CF-MIG-210)", () => {
   it("src/middleware.ts is the sole network gate (no app/middleware.ts or proxy.ts)", () => {
     expect(existsSync(SRC_MIDDLEWARE)).toBe(true);
     expect(existsSync(PROXY)).toBe(false);

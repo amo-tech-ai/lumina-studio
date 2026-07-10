@@ -9,7 +9,7 @@ import { copyResponseCookies, updateSession } from "@/lib/supabase/session";
 // (requireOperator in the API route); a network getUser on every navigation would
 // add latency and needs the @supabase/ssr session wiring (remaining IPI2-127 work).
 //
-// CF-MIG-110: OpenNext on Cloudflare requires Edge middleware (not proxy.ts Node
+// CF-MIG-210: OpenNext on Cloudflare requires Edge middleware (not proxy.ts Node
 // runtime). Logic is Edge-safe — @supabase/ssr cookie refresh + JWT shape check only.
 //
 // Flag-gated by OPERATOR_AUTH_ENABLED so it stays OFF until login creates a real

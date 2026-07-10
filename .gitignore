@@ -55,9 +55,14 @@ pr9-storefront-test/
 .claude/agents/
 # .claude/skills/ is versioned on GitHub — no real secrets in SKILL.md bodies
 .claude/*.py
+__pycache__/
 
 .cursor/
 .codex/
 
 # Deprecated skills staging — canonical skills live in .claude/skills/
 .agents/
+
+# Obsidian vault config (personal editor preference, not project content)
+.obsidian/
+**/.obsidian/

@@ -63,11 +63,25 @@ export {
   resolveGeminiModel,
 } from "./gemini-registry";
 
-const groqModels = loadGroqModelsConfig();
+let groqModelsCache: GroqModelsConfig | null = null;
+let modelByIdCache: Map<string, GroqModelEntry> | null = null;
 
-const MODEL_BY_ID = new Map(
-  groqModels.models.map((entry) => [entry.id, entry] as const),
-);
+/** Lazy — avoid top-level readFileSync (breaks Cloudflare Workers when AI_PROVIDER=gemini). */
+function getGroqModelsConfig(): GroqModelsConfig {
+  if (!groqModelsCache) {
+    groqModelsCache = loadGroqModelsConfig();
+  }
+  return groqModelsCache;
+}
+
+function getModelById(): Map<string, GroqModelEntry> {
+  if (!modelByIdCache) {
+    modelByIdCache = new Map(
+      getGroqModelsConfig().models.map((entry) => [entry.id, entry] as const),
+    );
+  }
+  return modelByIdCache;
+}
 
 export function resolveAiProvider(): AiProvider {
   const raw = (process.env.AI_PROVIDER ?? "gemini").trim().toLowerCase();
@@ -81,10 +95,11 @@ export function resolveAiProvider(): AiProvider {
 export const resolveProvider = resolveAiProvider;
 
 export function getGroqModelEntry(modelId: string): GroqModelEntry | undefined {
-  return MODEL_BY_ID.get(modelId);
+  return getModelById().get(modelId);
 }
 
 export function resolveGroqModelId(tier: GroqModelTier = "default"): string {
+  const groqModels = getGroqModelsConfig();
   const envKey = groqModels.envMapping[tier];
   const fromEnv = envKey ? process.env[envKey]?.trim() : "";
   const fallback = groqModels.defaults[tier]?.trim() ?? "";
@@ -92,7 +107,7 @@ export function resolveGroqModelId(tier: GroqModelTier = "default"): string {
   if (!modelId) {
     throw new Error(`No Groq model configured for tier "${tier}".`);
   }
-  if (!MODEL_BY_ID.has(modelId)) {
+  if (!getModelById().has(modelId)) {
     throw new Error(
       `Groq model "${modelId}" is not in config/groq-models.json allowlist.`,
     );
@@ -102,6 +117,7 @@ export function resolveGroqModelId(tier: GroqModelTier = "default"): string {
 
 /** True when a Groq vision model is configured (env override or SSOT default). */
 function isGroqVisionConfigured(): boolean {
+  const groqModels = getGroqModelsConfig();
   const envKey = groqModels.envMapping.vision;
   const fromEnv = envKey ? process.env[envKey]?.trim() : "";
   const fallback = groqModels.defaults.vision?.trim() ?? "";

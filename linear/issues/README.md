@@ -64,6 +64,30 @@ Verifier reference: `.claude/skills/ipix-task-lifecycle/references/verifier-prob
 
 ---
 
+## CF-MIG · Vercel → Cloudflare Workers (lean track)
+
+**Epic:** CF-MIG · Vercel → Cloudflare Workers  
+**Platform epic (Linear):** [IPI-487 · CLOUDFLARE-EPIC](https://linear.app/amo100/issue/IPI-487) · `linear/issues/IPI-487-cloudflare-epic.md` · `tasks/cloudflare/CLOUDFLARE-EPIC.md`  
+**Mastra epic:** [IPI-486 · MASTRA-EPIC](https://linear.app/amo100/issue/IPI-486)  
+**Project:** [AI Platform — LLM Providers](https://linear.app/amo100/project/ai-platform-llm-providers-8088f63224f2/issues)  
+**Plan SSOT:** [`tasks/cloudflare/migration/plan-migrate.md`](../../tasks/cloudflare/migration/plan-migrate.md)
+
+| File | ID | Name | Priority | Blocks |
+|------|-----|------|----------|--------|
+| `IPI-CF-MIG-110-opennext-foundation.md` | CF-MIG-110 | OpenNext Foundation — Scaffold & Edge Middleware | Urgent | 111, 210 |
+| `IPI-CF-MIG-111-ci-opennext-build.md` | CF-MIG-111 | OpenNext CI Build Pipeline | Urgent | 220 |
+| `IPI-CF-MIG-210-runtime-compat.md` | CF-MIG-210 | Runtime Compatibility — Hono, OAuth & Groq Bundle | Urgent | 220 |
+| `IPI-CF-MIG-220-preview-smoke-gate.md` | CF-MIG-220 | Preview Smoke Testing & Validation | Urgent | 810 |
+| `IPI-CF-MIG-810-production-cutover.md` | CF-MIG-810 | Production DNS Cutover & Rollback | High | — |
+
+**10-task spine:** 5 CF-MIG + 5 AI (IPI-454, 457, 485, 462, 463). No CF-INFRA tasks.
+
+**Import script:** `infisical run -- python3 scripts/linear-create-cf-mig-issues.py`
+
+**Order:** 110 → (111 ∥ 210) → 220 → 810
+
+---
+
 ## Issue index (IPI-5 → IPI-70)
 
 | File | Issue | Spec ID | Linear state |

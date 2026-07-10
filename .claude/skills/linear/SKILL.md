@@ -61,7 +61,7 @@ Do not invoke this skill for generic product planning unless the output is meant
    - Prefer the official Linear MCP server when present.
    - Use Linear CLI or SDK scripts only as fallback.
    - Never treat missing MCP as a blocker if CLI/SDK access works.
-4. For iPix issues, read the local spec in `docs/linear/issues/IPI-*-*.md` when it exists before acting.
+4. For iPix issues, read the local spec in `linear/issues/IPI-*-*.md` when it exists before acting.
 5. For any create/update/delete/bulk operation, confirm only when the user intent is ambiguous, destructive, or materially different from the request.
 
 ---
@@ -87,7 +87,7 @@ Use the actual tool names available in the current session. Do not assume a tool
 - **Filtered reads:** never fetch all team issues without filters.
 - **State transitions:** use stable workflow state IDs when available; state names are fallback only.
 - **Pagination:** respect cursors and limits.
-- **iPix traceability:** every executable iPix issue should connect `IPI-###`, `SPEC-ID`, `docs/linear/issues/`, `todo.md`, code changes, and Linear state.
+- **iPix traceability:** every executable iPix issue should connect `IPI-###`, `SPEC-ID`, `linear/issues/`, `todo.md`, code changes, and Linear state.
 - **No blind automation:** do not run destructive bulk updates or create PRs without explicit user intent.
 - **No outdated Rails-only workflow:** the old `linear-implement` skill referenced Rails/TDD sub-skills that do not apply to this Vite/React/Supabase repo unless the user explicitly asks for that workflow.
 

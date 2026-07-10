@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { config, middleware } from "./middleware";
 
-describe("middleware wiring (IPI2-127 / CF-MIG-110)", () => {
+describe("middleware wiring (IPI2-127 / CF-MIG-210)", () => {
   it("middleware exports a handler function", () => {
     expect(typeof middleware).toBe("function");
   });

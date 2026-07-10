@@ -107,8 +107,12 @@ function checkAheadBehind(wtPath) {
  * at-risk as an unpushed branch's — they're reachable only from this one ref
  * and `git worktree remove` won't protect them — so it's treated the same as
  * "no upstream configured" rather than hardcoded to 0.
+ *
+ * Exported so `worktree-audit.mjs` can fold the same unpushed-commit risk
+ * into its "safe to delete" classification instead of relying on working-tree
+ * dirtiness alone (a clean tree can still hide unpushed commits).
  */
-function checkUnpushedCommits(wtPath, branch, aheadOfMain) {
+export function checkUnpushedCommits(wtPath, branch, aheadOfMain) {
   const upstream = branch
     ? tryGit(["rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{upstream}"], wtPath)
     : null;
@@ -196,4 +200,7 @@ function main() {
   process.exit(anyBlocked ? 1 : 0);
 }
 
-main();
+// Guarded so `worktree-audit.mjs` can `import { checkUnpushedCommits }` from
+// this module without triggering its CLI (which calls process.exit()) —
+// only run main() when this file is the actual entry point, not an import.
+if (import.meta.url === `file://${process.argv[1]}`) main();

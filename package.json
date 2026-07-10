@@ -26,6 +26,7 @@
     "worktree:health": "node scripts/worktree-health.mjs",
     "worktree:health:all": "node scripts/worktree-health.mjs --all",
     "worktree:pre-delete": "node scripts/worktree-health.mjs --pre-delete",
+    "worktree:sync-main": "node scripts/worktree-sync-main.mjs",
     "worktree:health:test": "node --test scripts/lib/worktree-health-checks.test.mjs"
   },
   "dependencies": {

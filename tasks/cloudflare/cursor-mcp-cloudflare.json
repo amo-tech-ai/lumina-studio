@@ -1,0 +1,20 @@
+{
+  "_comment": "Official hosted MCP — https://github.com/cloudflare/mcp — install: bash scripts/cf-mcp-setup.sh",
+  "_api_token": "If OAuth fails or token is account-scoped (cfat_): bash scripts/cf-mcp-setup.sh --api-token",
+  "_uninstall_plugin": "bash scripts/cursor-uninstall-cloudflare-plugin.sh (quit Cursor first)",
+  "mcpServers": {
+    "cloudflare-docs": {
+      "type": "http",
+      "url": "https://docs.mcp.cloudflare.com/mcp"
+    },
+    "cloudflare-agents-sdk": {
+      "type": "http",
+      "url": "https://agents.cloudflare.com/mcp"
+    },
+    "cloudflare-api": {
+      "type": "http",
+      "url": "https://mcp.cloudflare.com/mcp"
+    }
+  },
+  "_optional_bridges": "bash scripts/cf-mcp-setup.sh --with-bridges (bindings/builds/observability/ai-gateway; slow in Cursor). Prefer cloudflare-api search+execute."
+}

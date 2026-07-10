@@ -50,7 +50,7 @@ cd ../wt-ipi-286-route-aware-sections
 cd app && npm ci && cd ..
 ```
 
-**Before adding:** `npm run worktree:audit` — check count, orphans, merged/stale trees ([docs/development/worktree-tracker.md](../../../docs/development/worktree-tracker.md)).
+**Before adding:** `npm run worktree:audit` — check count, orphans, merged/stale trees ([.@worktrees/worktrees.md](../../../.@worktrees/worktrees.md)).
 
 **Default validation** — run **in the worktree**, matched to changed paths ([pr-workflow verify-matrix](../pr-workflow/references/verify-matrix.md)):
 
@@ -85,6 +85,7 @@ Before opening a PR, merging, or flipping a task to Done — all must hold, or i
 - [ ] PR scoped to one concern ([PR splitting playbook](references/ipix-ops.md#pr-splitting-playbook))
 - [ ] [task-verifier](../task-verifier/SKILL.md) report attached for IPI/SCR ship gates
 - [ ] Worktree backed up if it held uncommitted work, and `npm run worktree:pre-delete` clean before removal (Backup-before-cleanup below)
+- [ ] **After the PR merges:** `npm run worktree:sync-main` (fast-forwards local `main` to `origin/main`; refuses instead of forcing if it's ever not a clean fast-forward), then `git worktree remove` the now-merged worktree
 
 ### Never run blindly
 
@@ -127,15 +128,14 @@ done
 
 ### Worktree count guard
 
-Before adding a new worktree, audit existing ones — this repo has drifted past the ~3–4 cap (13+ seen in Jul 2026 audit):
+Before adding a new worktree, audit existing ones — this repo has drifted past the ~3–4 cap before (13+ seen in Jul 2026, 8 seen in a Jul 10 2026 re-audit). `npm run worktree:audit` computes the active count itself and prints a `⚠️ Over the 4-worktree target` banner in its output whenever it's exceeded — don't eyeball `git worktree list | wc -l` by hand, the script already does this comparison:
 
 ```bash
-npm run worktree:audit              # markdown inventory + health score
-npm run worktree:audit -- --write    # refresh docs/development/worktree-tracker.md
-git worktree list | wc -l
+npm run worktree:audit              # markdown inventory + health score + over-cap banner if applicable
+npm run worktree:audit -- --write    # refresh .@worktrees/worktrees.md
 ```
 
-If it's high, run the [weekly tidy ritual](references/ipix-ops.md#weekly-tidy-ritual) first (prune stale metadata, delete branches already merged into `origin/main`) rather than adding another on top of the pile. A worktree for a task that's already merged or abandoned is pure confusion risk for the next session that runs `git worktree list`.
+If it's over cap, run the [weekly tidy ritual](references/ipix-ops.md#weekly-tidy-ritual) first (prune stale metadata, delete branches already merged into `origin/main`) rather than adding another on top of the pile. A worktree for a task that's already merged or abandoned is pure confusion risk for the next session that runs `git worktree list`.
 
 ### Nested worktree guard
 
@@ -225,6 +225,7 @@ A fresh worktree has the code but none of the *environment*. Initialize it:
   ```
 - **Backup first** if the worktree is dirty — see [Backup before cleanup](#backup-before-cleanup). Never `--force` without it.
 - **Pre-delete gate** — `npm run worktree:pre-delete` (blocks if the branch has commits `origin/<branch>` doesn't have; see [Backup before cleanup](#backup-before-cleanup)).
+- **After removing a merged worktree** — `npm run worktree:sync-main` so local `main` doesn't quietly fall behind again, then delete the spent branch: `git branch -d <branch>`.
 - **Weekly tidy ritual** (prune stale branches + merged worktrees) → [references/ipix-ops.md#weekly-tidy-ritual](references/ipix-ops.md#weekly-tidy-ritual).
 
 ## Quick reference
@@ -235,6 +236,7 @@ A fresh worktree has the code but none of the *environment*. Initialize it:
 | **iPix: audit inventory** | `npm run worktree:audit` · `-- --write` updates tracker |
 | **iPix: start-work gate** | `npm run worktree:health` (current worktree) · `-- --all` (every worktree) |
 | **iPix: pre-delete gate** | `npm run worktree:pre-delete` — run before removing a worktree you didn't just push |
+| **iPix: sync main post-merge** | `npm run worktree:sync-main` — fast-forwards local `main` to `origin/main`; refuses (doesn't force) if diverged |
 | Native isolated session | `claude --worktree <name>` |
 | Native, from a PR | `claude --worktree "#<n>"` |
 | Manual: new branch | `git worktree add ../<proj>-<name> -b <branch>` |
