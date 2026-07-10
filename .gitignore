@@ -55,6 +55,7 @@ pr9-storefront-test/
 .claude/agents/
 # .claude/skills/ is versioned on GitHub — no real secrets in SKILL.md bodies
 .claude/*.py
+__pycache__/
 
 .cursor/
 .codex/
