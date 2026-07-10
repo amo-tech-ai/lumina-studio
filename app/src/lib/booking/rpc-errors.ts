@@ -11,9 +11,15 @@ function includes(haystack: string, needle: string): boolean {
   return haystack.toLowerCase().includes(needle.toLowerCase());
 }
 
-export type StaleBookingContext = {
+/** Context for mapSupabaseRpcError (stale versions + auth signal for EXECUTE denials). */
+export type RpcErrorContext = {
   expectedVersion?: number;
   currentVersion?: number;
+  /**
+   * When mapping EXECUTE / privilege denials: true → 403, false/omit → 401.
+   * Omit when the caller has no session signal (treat as unauthenticated).
+   */
+  authenticated?: boolean;
 };
 
 export function isStaleBookingMessage(message: string): boolean {
@@ -23,10 +29,10 @@ export function isStaleBookingMessage(message: string): boolean {
 
 type RpcErrorMatcher = {
   match: (msg: string, pgCode?: string | null) => boolean;
-  map: (msg: string, ctx?: StaleBookingContext) => MappedRpcError;
+  map: (msg: string, ctx?: RpcErrorContext) => MappedRpcError;
 };
 
-function staleBookingError(ctx?: StaleBookingContext): MappedRpcError {
+function staleBookingError(ctx?: RpcErrorContext): MappedRpcError {
   const details: Record<string, unknown> = {};
   if (ctx?.expectedVersion != null) {
     details.expected_version = ctx.expectedVersion;
@@ -85,6 +91,23 @@ const RPC_ERROR_MATCHERS: RpcErrorMatcher[] = [
   {
     match: (msg) => includes(msg, "authentication required"),
     map: () => ({ status: 401, code: "UNAUTHORIZED", message: "Sign in to continue." }),
+  },
+  // Privilege denials (pg 42501, or PostgREST "permission denied for function|schema").
+  // Common case: anon lacks EXECUTE on booking RPCs — never map to 500.
+  // authenticated=true → 403 (signed in but no privilege); else → 401.
+  {
+    match: (msg, pgCode) =>
+      pgCode === "42501" ||
+      includes(msg, "permission denied for function") ||
+      includes(msg, "permission denied for schema"),
+    map: (_msg, ctx) =>
+      ctx?.authenticated
+        ? {
+            status: 403,
+            code: "FORBIDDEN",
+            message: "You do not have permission to perform this action.",
+          }
+        : { status: 401, code: "UNAUTHORIZED", message: "Sign in to continue." },
   },
   {
     match: (msg) =>
@@ -147,7 +170,7 @@ const RPC_ERROR_MATCHERS: RpcErrorMatcher[] = [
 export function mapSupabaseRpcError(
   message: string,
   pgCode?: string | null,
-  ctx?: StaleBookingContext,
+  ctx?: RpcErrorContext,
 ): MappedRpcError {
   const msg = message ?? "";
 
