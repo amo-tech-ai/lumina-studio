@@ -92,8 +92,8 @@ const RPC_ERROR_MATCHERS: RpcErrorMatcher[] = [
     match: (msg) => includes(msg, "authentication required"),
     map: () => ({ status: 401, code: "UNAUTHORIZED", message: "Sign in to continue." }),
   },
-  // Anon lacks EXECUTE on booking RPCs → PostgREST "permission denied for function …"
-  // (not the in-body "authentication required"). Never map to 500.
+  // Privilege denials (pg 42501, or PostgREST "permission denied for function|schema").
+  // Common case: anon lacks EXECUTE on booking RPCs — never map to 500.
   // authenticated=true → 403 (signed in but no privilege); else → 401.
   {
     match: (msg, pgCode) =>
