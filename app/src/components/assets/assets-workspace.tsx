@@ -56,8 +56,15 @@ function matchesDateFilter(asset: AssetRow, bucket: DateBucket, now: number): bo
   return now - created <= days * 24 * 60 * 60 * 1000;
 }
 
+// DC's header is a single computed {{ countLabel }} string ("1,240 assets · avg DNA
+// match 86%") — mirrored here from two real fields (count, avg of non-null dna_score).
+// Omits the match segment entirely when no asset has a score, rather than showing 0%.
 function countLabel(assets: AssetRow[]): string {
-  return `${assets.length} asset${assets.length === 1 ? "" : "s"}`;
+  const base = `${assets.length} asset${assets.length === 1 ? "" : "s"}`;
+  const scored = assets.map((a) => a.dna_score).filter((s): s is number => s != null);
+  if (scored.length === 0) return base;
+  const avg = Math.round(scored.reduce((sum, s) => sum + s, 0) / scored.length);
+  return `${base} · avg DNA match ${avg}%`;
 }
 
 type Props = {
@@ -67,15 +74,18 @@ type Props = {
 };
 
 /** Read-only asset masonry — ported from Assets.v2.image-first.dc.html
- *  (SCR-08). Upload, bulk select/drag, table view, and the DNA-match /
- *  rights-&-usage IntelligencePanel content are out of scope for this PR
+ *  (SCR-08). Upload, bulk select/drag, table view, free-text search (DC's
+ *  search implies a `name`/`filename` field the schema doesn't have), and
+ *  the rights-&-usage IntelligencePanel content are out of scope for this PR
  *  (see tasks/screens/SCR-08-assets.md's "Out of scope") — those need real
  *  backing data (rights records, usage history, channel-readiness scores)
- *  that doesn't exist in the schema yet. */
+ *  that doesn't exist in the schema yet. The DC "DNA match" sort control
+ *  *is* in scope — it's real (`dna_score`), no fabrication needed. */
 export function AssetsWorkspace({ assets, isAuthenticated, fetchError }: Props) {
   const [filter, setFilter] = useState<AssetFilter>("all");
   const [brandFilter, setBrandFilter] = useState<string>("all");
   const [dateFilter, setDateFilter] = useState<DateBucket>("all");
+  const [sortByMatch, setSortByMatch] = useState(false);
 
   const brandOptions = useMemo(() => {
     const byId = new Map<string, string>();
@@ -87,13 +97,16 @@ export function AssetsWorkspace({ assets, isAuthenticated, fetchError }: Props) 
 
   const filteredAssets = useMemo(() => {
     const now = Date.now();
-    return assets.filter(
+    const matched = assets.filter(
       (a) =>
         matchesTypeFilter(a, filter) &&
         (brandFilter === "all" || a.brand_id === brandFilter) &&
         matchesDateFilter(a, dateFilter, now),
     );
-  }, [assets, filter, brandFilter, dateFilter]);
+    if (!sortByMatch) return matched;
+    // DC's "DNA match" sort button — real dna_score desc, nulls (no score yet) last.
+    return [...matched].sort((a, b) => (b.dna_score ?? -1) - (a.dna_score ?? -1));
+  }, [assets, filter, brandFilter, dateFilter, sortByMatch]);
 
   const hasActiveFilter = filter !== "all" || brandFilter !== "all" || dateFilter !== "all";
 
@@ -162,6 +175,15 @@ export function AssetsWorkspace({ assets, isAuthenticated, fetchError }: Props) 
       </header>
 
       <div className={styles.filterRow} role="group" aria-label="Filter assets">
+        <button
+          type="button"
+          className={sortByMatch ? styles.filterChipActive : styles.filterChip}
+          aria-pressed={sortByMatch}
+          onClick={() => setSortByMatch((v) => !v)}
+        >
+          DNA match
+        </button>
+
         {FILTERS.map((f) => {
           const active = filter === f;
           return (

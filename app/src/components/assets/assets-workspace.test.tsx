@@ -68,6 +68,39 @@ describe("AssetsWorkspace", () => {
     expect(screen.getAllByTestId("asset-card")).toHaveLength(2);
   });
 
+  it("shows the real avg DNA match in the header when at least one asset has a score", () => {
+    render(
+      <AssetsWorkspace
+        assets={[asset({ id: "a1", dna_score: 80 }), asset({ id: "a2", dna_score: 60 })]}
+        isAuthenticated
+      />,
+    );
+    expect(screen.getByText("2 assets · avg DNA match 70%")).toBeDefined();
+  });
+
+  it("omits the avg DNA match segment entirely when no asset has a score — never shows a fake 0%", () => {
+    render(<AssetsWorkspace assets={[asset({ id: "a1", dna_score: null })]} isAuthenticated />);
+    expect(screen.getByText("1 asset")).toBeDefined();
+    expect(screen.queryByText(/avg DNA match/)).toBeNull();
+  });
+
+  it("sorts by real dna_score (desc, nulls last) when the DNA match sort is toggled on", () => {
+    render(
+      <AssetsWorkspace
+        assets={[
+          asset({ id: "a1", dna_score: 40 }),
+          asset({ id: "a2", dna_score: 95 }),
+          asset({ id: "a3", dna_score: null }),
+        ]}
+        isAuthenticated
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "DNA match" }));
+    const cards = screen.getAllByTestId("asset-card");
+    expect(cards[0].textContent).toContain("95%");
+    expect(cards[1].textContent).toContain("40%");
+  });
+
   it("filters the grid client-side by asset_type", () => {
     render(
       <AssetsWorkspace
