@@ -511,6 +511,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      can_broadcast_instance: { Args: { p_topic: string }; Returns: boolean }
       can_subscribe_instance: { Args: { p_topic: string }; Returns: boolean }
       is_assigned: {
         Args: { p_instance_id: string; p_roles: string[] }
