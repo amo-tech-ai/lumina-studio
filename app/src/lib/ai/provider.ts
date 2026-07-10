@@ -38,11 +38,13 @@ function getModelById(): Map<string, GroqModelEntry> {
   return modelById;
 }
 
+const VALID_PROVIDERS = ["gemini", "groq", "openai", "workers-ai", "nvidia", "openai-compatible", "mock"] as const satisfies readonly AiProvider[];
+
 export function resolveAiProvider(): AiProvider {
   const raw = (process.env.AI_PROVIDER ?? "gemini").trim().toLowerCase();
-  if (raw === "gemini" || raw === "groq" || raw === "openai") return raw;
+  if ((VALID_PROVIDERS as readonly string[]).includes(raw)) return raw as AiProvider;
   throw new Error(
-    `AI_PROVIDER="${raw}" is invalid (expected gemini | groq | openai).`,
+    `AI_PROVIDER="${raw}" is invalid (expected ${VALID_PROVIDERS.join(" | ")}).`,
   );
 }
 
@@ -123,6 +125,6 @@ export function resolveModel(tier: GroqModelTier = "default"): ResolvedLanguageM
     return createGroqLanguageModel(tier);
   }
   throw new Error(
-    `AI_PROVIDER="${provider}" is not wired in GROQ-002 (use gemini or groq).`,
+    `AI_PROVIDER="${provider}" is not wired in resolveModel() (legacy direct-provider path — use gemini or groq). For workers-ai/nvidia/openai-compatible/mock, use the gateway adapter (providerAdapter) instead — see IPI-454 AC-F for the resolveModel() → gateway wire.`,
   );
 }
