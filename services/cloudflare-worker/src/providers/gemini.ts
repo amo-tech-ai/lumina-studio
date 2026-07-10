@@ -29,14 +29,24 @@ function toGeminiMessages(messages: ChatCompletionRequest["messages"]) {
   return { system, contents };
 }
 
+/** Non-stream must return JSON (`generateContent`). Stream uses SSE (`alt=sse`). */
+export function geminiRequestUrl(
+  model: string,
+  stream: boolean,
+  apiKey: string,
+): string {
+  const action = stream ? "streamGenerateContent" : "generateContent";
+  const query = stream ? `alt=sse&key=${apiKey}` : `key=${apiKey}`;
+  return `${GEMINI_BASE}/models/${geminiModelId(model)}:${action}?${query}`;
+}
+
 async function geminiFetch(
   model: string,
   body: Record<string, unknown>,
   config: ProviderConfig,
   stream: boolean,
 ): Promise<Response> {
-  const url = `${GEMINI_BASE}/models/${geminiModelId(model)}:${stream ? "streamGenerateContent" : "generateContent"}?alt=sse&key=${config.apiKey}`;
-  return fetch(url, {
+  return fetch(geminiRequestUrl(model, stream, config.apiKey), {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
