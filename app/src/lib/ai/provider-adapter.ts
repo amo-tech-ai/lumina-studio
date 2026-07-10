@@ -1,5 +1,8 @@
 import type { ModelTier } from "./types";
 
+/** Default local AI Gateway Worker port (`wrangler dev`). Not Mastra (:4111). */
+export const DEFAULT_AI_GATEWAY_URL = "http://localhost:8787";
+
 export type ChatOptions = {
   tier?: ModelTier;
   temperature?: number;
@@ -37,13 +40,19 @@ export interface AiProviderAdapter {
   embed(inputs: string[], options?: EmbedOptions): Promise<EmbedResult>;
 }
 
-function gatewayBaseUrl(): string {
-  return process.env.AI_GATEWAY_URL ?? "http://localhost:4111";
+export type ProviderAdapterOptions = {
+  baseUrl?: string;
+  apiKey?: string;
+  timeoutMs?: number;
+};
+
+function resolveBaseUrl(options: ProviderAdapterOptions): string {
+  return options.baseUrl ?? process.env.AI_GATEWAY_URL ?? DEFAULT_AI_GATEWAY_URL;
 }
 
-function gatewayHeaders(): Record<string, string> {
+function resolveHeaders(options: ProviderAdapterOptions): Record<string, string> {
   const headers: Record<string, string> = { "Content-Type": "application/json" };
-  const apiKey = process.env.AI_GATEWAY_API_KEY;
+  const apiKey = options.apiKey ?? process.env.AI_GATEWAY_API_KEY;
   if (apiKey) headers["Authorization"] = `Bearer ${apiKey}`;
   return headers;
 }
@@ -60,7 +69,27 @@ function modelForTier(tier: ModelTier): string {
 }
 
 function buildMessages(prompt: string) {
-  return [{ role: "user", content: prompt }];
+  return [{ role: "user" as const, content: prompt }];
+}
+
+function withTimeout(timeoutMs: number, signal?: AbortSignal): AbortSignal {
+  const controller = new AbortController();
+  const timer = setTimeout(
+    () => controller.abort(new Error(`Gateway timeout after ${timeoutMs}ms`)),
+    timeoutMs,
+  );
+  if (signal) {
+    signal.addEventListener(
+      "abort",
+      () => {
+        clearTimeout(timer);
+        controller.abort(signal.reason);
+      },
+      { once: true },
+    );
+  }
+  controller.signal.addEventListener("abort", () => clearTimeout(timer), { once: true });
+  return controller.signal;
 }
 
 /** Parses one buffered chunk of `data: {...}` SSE lines, enqueuing any text deltas found. */
@@ -89,153 +118,180 @@ function emitSseDeltas(
   return { remainder, done: false };
 }
 
-async function chatCompletion(
-  prompt: string,
-  options: ChatOptions,
-): Promise<{ text: string; usage?: { promptTokens: number; completionTokens: number } }> {
-  const tier = options.tier ?? "default";
-  const response = await fetch(`${gatewayBaseUrl()}/v1/chat/completions`, {
-    method: "POST",
-    headers: gatewayHeaders(),
-    body: JSON.stringify({
-      model: modelForTier(tier),
-      messages: buildMessages(prompt),
-      temperature: options.temperature ?? 0.7,
-      max_tokens: options.maxTokens ?? 4096,
-    }),
-  });
-
-  if (!response.ok) {
-    throw new Error(`chat completion failed: ${response.status} ${await response.text()}`);
-  }
-
-  const data = (await response.json()) as {
-    choices: { message: { content: string } }[];
-    usage?: { prompt_tokens: number; completion_tokens: number };
-  };
-
-  return {
-    text: data.choices[0]?.message?.content ?? "",
-    usage: data.usage
-      ? { promptTokens: data.usage.prompt_tokens, completionTokens: data.usage.completion_tokens }
-      : undefined,
-  };
+function parseJsonObject(content: string): Record<string, unknown> {
+  const trimmed = content.trim();
+  if (!trimmed) return {};
+  return JSON.parse(trimmed) as Record<string, unknown>;
 }
 
-export const providerAdapter: AiProviderAdapter = {
-  async chat(prompt, options = {}) {
-    return chatCompletion(prompt, options);
-  },
+/**
+ * Configurable OpenAI-compatible client for the AI Gateway Worker.
+ * IPI-461: runtime entry point. Do not wire into resolveModel() here — that is IPI-454 AC-F.
+ */
+export function createProviderAdapter(options: ProviderAdapterOptions = {}): AiProviderAdapter {
+  const timeoutMs = options.timeoutMs ?? 30_000;
 
-  chatStream(prompt, options = {}) {
-    const tier = options.tier ?? "default";
-    const abortController = new AbortController();
+  function baseUrl(): string {
+    return resolveBaseUrl(options);
+  }
 
-    const body = JSON.stringify({
-      model: modelForTier(tier),
-      messages: buildMessages(prompt),
-      temperature: options.temperature ?? 0.7,
-      max_tokens: options.maxTokens ?? 4096,
-      stream: true,
-    });
+  function headers(): Record<string, string> {
+    return resolveHeaders(options);
+  }
 
-    return new ReadableStream<string>({
-      async start(controller) {
-        try {
-          const response = await fetch(`${gatewayBaseUrl()}/v1/chat/completions`, {
-            method: "POST",
-            headers: gatewayHeaders(),
-            body,
-            signal: abortController.signal,
-          });
+  return {
+    async chat(prompt, opts = {}) {
+      const tier = opts.tier ?? "default";
+      const response = await fetch(`${baseUrl()}/v1/chat/completions`, {
+        method: "POST",
+        headers: headers(),
+        body: JSON.stringify({
+          model: modelForTier(tier),
+          messages: buildMessages(prompt),
+          temperature: opts.temperature ?? 0.7,
+          max_tokens: opts.maxTokens ?? 4096,
+        }),
+        signal: withTimeout(timeoutMs),
+      });
 
-          if (!response.ok) {
-            throw new Error(`stream failed: ${response.status} ${await response.text()}`);
-          }
+      if (!response.ok) {
+        throw new Error(`chat completion failed: ${response.status} ${await response.text()}`);
+      }
 
-          const reader = response.body?.getReader();
-          if (!reader) throw new Error("No response body for stream");
+      const data = (await response.json()) as {
+        choices?: { message: { content: string } }[];
+        usage?: { prompt_tokens: number; completion_tokens: number };
+      };
 
-          const decoder = new TextDecoder();
-          let buffer = "";
+      return {
+        text: data.choices?.[0]?.message?.content ?? "",
+        usage: data.usage
+          ? { promptTokens: data.usage.prompt_tokens, completionTokens: data.usage.completion_tokens }
+          : undefined,
+      };
+    },
 
-          while (!abortController.signal.aborted) {
-            const { done, value } = await reader.read();
-            if (done) break;
+    chatStream(prompt, opts = {}) {
+      const tier = opts.tier ?? "default";
+      const abortController = new AbortController();
+      const timeoutSignal = withTimeout(timeoutMs);
+      timeoutSignal.addEventListener(
+        "abort",
+        () => abortController.abort(timeoutSignal.reason),
+        { once: true },
+      );
 
-            buffer += decoder.decode(value, { stream: true });
-            const result = emitSseDeltas(buffer, controller);
-            buffer = result.remainder;
-            if (result.done) {
-              controller.close();
+      const body = JSON.stringify({
+        model: modelForTier(tier),
+        messages: buildMessages(prompt),
+        temperature: opts.temperature ?? 0.7,
+        max_tokens: opts.maxTokens ?? 4096,
+        stream: true,
+      });
+
+      return new ReadableStream<string>({
+        async start(controller) {
+          try {
+            const response = await fetch(`${baseUrl()}/v1/chat/completions`, {
+              method: "POST",
+              headers: headers(),
+              body,
+              signal: abortController.signal,
+            });
+
+            if (!response.ok) {
+              throw new Error(`stream failed: ${response.status} ${await response.text()}`);
+            }
+
+            const reader = response.body?.getReader();
+            if (!reader) throw new Error("No response body for stream");
+
+            const decoder = new TextDecoder();
+            let buffer = "";
+
+            while (!abortController.signal.aborted) {
+              const { done, value } = await reader.read();
+              if (done) break;
+
+              buffer += decoder.decode(value, { stream: true });
+              const result = emitSseDeltas(buffer, controller);
+              buffer = result.remainder;
+              if (result.done) {
+                controller.close();
+                return;
+              }
+            }
+          } catch (err) {
+            if (!abortController.signal.aborted) {
+              controller.error(err);
               return;
             }
           }
-        } catch (err) {
-          if (!abortController.signal.aborted) {
-            controller.error(err);
-            return;
-          }
-        }
-        if (!abortController.signal.aborted) controller.close();
-      },
-      cancel() {
-        abortController.abort();
-      },
-    });
-  },
+          if (!abortController.signal.aborted) controller.close();
+        },
+        cancel() {
+          abortController.abort();
+        },
+      });
+    },
 
-  async structured(prompt, options) {
-    const tier = options.tier ?? "structured";
-    const response = await fetch(`${gatewayBaseUrl()}/v1/chat/completions`, {
-      method: "POST",
-      headers: gatewayHeaders(),
-      body: JSON.stringify({
-        model: modelForTier(tier),
-        messages: buildMessages(prompt),
-        temperature: options.temperature ?? 0.3,
-        max_tokens: options.maxTokens ?? 4096,
-        response_format: { type: "json_object" },
-      }),
-    });
+    async structured(prompt, opts) {
+      const tier = opts.tier ?? "structured";
+      const response = await fetch(`${baseUrl()}/v1/chat/completions`, {
+        method: "POST",
+        headers: headers(),
+        body: JSON.stringify({
+          model: modelForTier(tier),
+          messages: buildMessages(prompt),
+          temperature: opts.temperature ?? 0.3,
+          max_tokens: opts.maxTokens ?? 4096,
+          response_format: { type: "json_object" },
+        }),
+        signal: withTimeout(timeoutMs),
+      });
 
-    if (!response.ok) {
-      throw new Error(`structured completion failed: ${response.status} ${await response.text()}`);
-    }
+      if (!response.ok) {
+        throw new Error(`structured completion failed: ${response.status} ${await response.text()}`);
+      }
 
-    const data = (await response.json()) as {
-      choices: { message: { content: string } }[];
-      usage?: { prompt_tokens: number; completion_tokens: number };
-    };
+      const data = (await response.json()) as {
+        choices?: { message: { content: string } }[];
+        usage?: { prompt_tokens: number; completion_tokens: number };
+      };
 
-    return {
-      object: JSON.parse(data.choices[0]?.message?.content ?? "{}"),
-      usage: data.usage
-        ? { promptTokens: data.usage.prompt_tokens, completionTokens: data.usage.completion_tokens }
-        : undefined,
-    };
-  },
+      return {
+        object: parseJsonObject(data.choices?.[0]?.message?.content ?? ""),
+        usage: data.usage
+          ? { promptTokens: data.usage.prompt_tokens, completionTokens: data.usage.completion_tokens }
+          : undefined,
+      };
+    },
 
-  async embed(inputs, options) {
-    const model = options?.model ?? modelForTier("embedding");
-    const response = await fetch(`${gatewayBaseUrl()}/v1/embeddings`, {
-      method: "POST",
-      headers: gatewayHeaders(),
-      body: JSON.stringify({ model, input: inputs }),
-    });
+    async embed(inputs, opts = {}) {
+      const model = opts.model ?? modelForTier("embedding");
+      const response = await fetch(`${baseUrl()}/v1/embeddings`, {
+        method: "POST",
+        headers: headers(),
+        body: JSON.stringify({ model, input: inputs }),
+        signal: withTimeout(timeoutMs),
+      });
 
-    if (!response.ok) {
-      throw new Error(`embedding failed: ${response.status} ${await response.text()}`);
-    }
+      if (!response.ok) {
+        throw new Error(`embedding failed: ${response.status} ${await response.text()}`);
+      }
 
-    const data = (await response.json()) as {
-      data: { embedding: number[] }[];
-      usage?: { prompt_tokens: number };
-    };
+      const data = (await response.json()) as {
+        data: { embedding: number[] }[];
+        usage?: { prompt_tokens: number };
+      };
 
-    return {
-      embeddings: data.data.map((d) => d.embedding),
-      usage: data.usage ? { promptTokens: data.usage.prompt_tokens } : undefined,
-    };
-  },
-};
+      return {
+        embeddings: data.data.map((d) => d.embedding),
+        usage: data.usage ? { promptTokens: data.usage.prompt_tokens } : undefined,
+      };
+    },
+  };
+}
+
+/** Env-backed singleton — same contract as createProviderAdapter(). */
+export const providerAdapter: AiProviderAdapter = createProviderAdapter();
