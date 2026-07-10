@@ -1,5 +1,10 @@
 import { expect, test, type APIRequestContext } from "@playwright/test";
 
+/** Valid v4-shaped UUIDs (UUID_RE); nil-style seed IDs fail version/variant checks. */
+const BRAND_ORG_ID = "00000000-0000-4000-8000-000000000001";
+const TALENT_ID = "00000000-0000-4000-8000-000000000801";
+const MISSING_TALENT_ID = "00000000-0000-4000-8000-000000000999";
+
 /**
  * Playwright does not start Next.js, so runner env may disagree with the server.
  * GET /api/bookings: auth gate → 401; auth off → 400 (missing required query).
@@ -17,8 +22,8 @@ test.describe("Booking Wizard — API reliability", () => {
   }) => {
     const res = await request.post("/api/bookings", {
       data: {
-        brand_org_id: "00000000-0000-0000-0000-000000000001",
-        talent_profile_id: "00000000-0000-0000-0000-000000000801",
+        brand_org_id: BRAND_ORG_ID,
+        talent_profile_id: TALENT_ID,
         date_start: "2026-08-01",
         date_end: "2026-08-03",
       },
@@ -41,8 +46,8 @@ test.describe("Booking Wizard — API reliability", () => {
   }) => {
     const res = await request.post("/api/bookings", {
       data: {
-        brand_org_id: "00000000-0000-0000-0000-000000000001",
-        talent_profile_id: "00000000-0000-0000-0000-000000000999",
+        brand_org_id: BRAND_ORG_ID,
+        talent_profile_id: MISSING_TALENT_ID,
         date_start: "2026-08-01",
         date_end: "2026-08-03",
       },
