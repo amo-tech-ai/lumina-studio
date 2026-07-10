@@ -1,14 +1,14 @@
 # Post-merge audit — PR #312 Gemini non-stream SSE
 
 **Task:** **IPI-454 · CF-AI-001 — Fix Gemini Non-Stream SSE**  
-**PR:** https://github.com/amo-tech-ai/lumina-studio/pull/312  
+**PR:** [#312](https://github.com/amo-tech-ai/lumina-studio/pull/312)  
 **Merged:** 2026-07-10T17:04:13Z  
 **Merge commit:** `0635fd9555ddef2aecdeeeed93bd403475660529`  
 **Pre-merge HEAD:** `281a977909d56adf722cdd47601c35cd3a0476cd`  
 **Audit date:** 2026-07-10  
 **Verification level:** Local Runtime Verified (post-merge `origin/main`)
 
-> Docs-only. Sibling code PR #312 already merged. Related: #313 (Sentry), #314 (pre-merge verify doc).
+> Docs-only. Sibling code PR #312 already merged. Related: #313 (Sentry), #314 (pre-merge verify doc), [#316](https://github.com/amo-tech-ai/lumina-studio/pull/316) / **IPI-491 · CF-AI-004b** (embed fix, open).
 
 ---
 
@@ -101,10 +101,10 @@ Operators can again get **finished** AI answers (brand DNA summaries, JSON shot 
 
 ## Critical fixes (ordered)
 
-1. **Embedding contract** — decide SSOT: adapter should send Worker tier `embedding` (or real Workers AI model id), and/or fix Gemini `embedContent` model id to a current Google embedding model. One or two PRs; evidence first.
+1. **Embedding contract** — **IPI-491 · CF-AI-004b** / [#316](https://github.com/amo-tech-ai/lumina-studio/pull/316): adapter default → Worker tier `embedding`; Workers AI OpenAI-compat `{ input }` (not `text`).
 2. **Do not** reopen #312 for embeds.
-3. After embeds green → reassess **IPI-461 · CF-AI-004** Done.
-4. Then **IPI-454 · CF-AI-001 AC-F** (`resolveModel` → gateway).
+3. After embeds green on main → reassess **IPI-461 · CF-AI-004** Done.
+4. **AC-F** may proceed in parallel (Option A: chat/stream only; no `embed()` in the cutover agent).
 5. Then **AC-J**, then **IPI-472 · INFRA-001**.
 
 ---
@@ -165,12 +165,12 @@ Operators can again get **finished** AI answers (brand DNA summaries, JSON shot 
 
 1. ~~Merge #312~~ **Done** (`0635fd95`)
 2. ~~Docs #314~~ **Done** on main
-3. **File Linear** for embedding 404/400 (full name; link this audit)
-4. Implement embedding fix (separate PR) → live prove `embed()`
+3. ~~File Linear for embedding 404/400~~ **Done** — **IPI-491 · CF-AI-004b** · [#316](https://github.com/amo-tech-ai/lumina-studio/pull/316)
+4. Merge #316 → live prove `embed()` on `main`
 5. Reassess **IPI-461 · CF-AI-004** Done
-6. **IPI-454 · CF-AI-001 — AC-F** — `resolveModel()` → gateway
-7. **AC-J** checklist
-8. **IPI-472 · INFRA-001** deploy pipeline
+6. **IPI-454 · CF-AI-001 — AC-F** — `resolveModel()` → gateway (Option A: chat/stream; not blocked on embed)
+7. **AC-J** checklist (model-specific tool probes)
+8. **IPI-472 · INFRA-001** deploy pipeline (owns AC-I / prod AC-J evidence)
 9. Ops: Infisical/Vercel Sentry DSN for preview/prod
 
 ---
@@ -183,5 +183,5 @@ Operators can again get **finished** AI answers (brand DNA summaries, JSON shot 
 | Evidence | Code on `main` + Worker tests 22 + live adapter smoke |
 | Classification | SSE fix **Confirmed Done**; embeds **Confirmed** separate failure |
 | Merge state | **Merged** |
-| Remaining blocker | Embeddings (E1/E2); then AC-F |
-| Next task | Embedding failure investigation (new Linear) → then **IPI-454 · CF-AI-001 AC-F** |
+| Remaining blocker | Embeddings (E1/E2) via IPI-491/#316; AC-F unblocked for chat/stream (Option A) |
+| Next task | Merge **IPI-491 · CF-AI-004b** (#316) and/or start **IPI-454 · CF-AI-001 AC-F** |
