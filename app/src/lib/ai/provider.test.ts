@@ -24,6 +24,7 @@ describe("AI provider (GROQ-002 / GROQ-004)", () => {
     AI_ROUTING_MODE: process.env.AI_ROUTING_MODE,
     AI_GATEWAY_URL: process.env.AI_GATEWAY_URL,
     AI_GATEWAY_API_KEY: process.env.AI_GATEWAY_API_KEY,
+    AI_GATEWAY_REQUEST_ID: process.env.AI_GATEWAY_REQUEST_ID,
     AI_MODEL_DEFAULT: process.env.AI_MODEL_DEFAULT,
     AI_MODEL_FAST: process.env.AI_MODEL_FAST,
     AI_MODEL_STRUCTURED: process.env.AI_MODEL_STRUCTURED,
@@ -180,6 +181,16 @@ describe("AI provider (GROQ-002 / GROQ-004)", () => {
       const model = resolveModel("fast");
       expect(model.provider).toBe("ipix-ai-gateway.chat");
       expect(model.modelId).toBe("fast");
+    });
+
+    it("does not mint a sticky x-request-id at model construction", () => {
+      // createOpenAICompatible freezes headers; a randomUUID() here would be shared
+      // for the process lifetime. Only AI_GATEWAY_REQUEST_ID (tests) may set it.
+      process.env.AI_ROUTING_MODE = "gateway";
+      delete process.env.AI_GATEWAY_REQUEST_ID;
+      const model = resolveModel("fast");
+      expect(model.provider).toBe("ipix-ai-gateway.chat");
+      expect(process.env.AI_GATEWAY_REQUEST_ID).toBeUndefined();
     });
 
     it("defaults base to localhost:8787 when AI_GATEWAY_URL unset", () => {

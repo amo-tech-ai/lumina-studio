@@ -1,6 +1,5 @@
 import { createGroq } from "@ai-sdk/groq";
 import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
-import { randomUUID } from "node:crypto";
 import groqModelsSsot from "./groq-models.ssot.json";
 
 import {
@@ -154,12 +153,16 @@ function createGatewayLanguageModel(tier: GroqModelTier): ResolvedLanguageModel 
   const base = (process.env.AI_GATEWAY_URL ?? DEFAULT_AI_GATEWAY_URL).replace(/\/$/, "");
   const apiKey = process.env.AI_GATEWAY_API_KEY?.trim();
   // Optional locally; set AI_GATEWAY_API_KEY when the Worker requires Bearer auth.
+  // Do NOT mint x-request-id here — createOpenAICompatible freezes headers for the
+  // process lifetime (agents call resolveModel() at module load). Optional sticky
+  // override for tests only; production correlation belongs on the Worker / fetch layer.
+  const requestId = process.env.AI_GATEWAY_REQUEST_ID?.trim();
   const gateway = createOpenAICompatible({
     name: "ipix-ai-gateway",
     baseURL: `${base}/v1`,
     ...(apiKey ? { apiKey } : {}),
     headers: {
-      "x-request-id": process.env.AI_GATEWAY_REQUEST_ID?.trim() || randomUUID(),
+      ...(requestId ? { "x-request-id": requestId } : {}),
       "x-ipix-routing": "gateway",
     },
   });
