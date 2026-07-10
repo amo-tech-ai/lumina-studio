@@ -8,7 +8,9 @@
 **Audit date:** 2026-07-10  
 **Verification level:** Local Runtime Verified (post-merge `origin/main`)
 
-> Docs-only. Sibling code PR #312 already merged. Related: #313 (Sentry), #314 (pre-merge verify doc), [#316](https://github.com/amo-tech-ai/lumina-studio/pull/316) / **IPI-491 · CF-AI-004b** (embed fix, open).
+> **Successor (2026-07-10):** PR [#316](https://github.com/amo-tech-ai/lumina-studio/pull/316) is **merged** (`d112dea4`). Local `embed()` now **Pass** (768-d via Workers AI). Do not treat the embed Fail rows below as current truth — see [`pr-315-316-post-merge-audit-2026-07-10.md`](./pr-315-316-post-merge-audit-2026-07-10.md). **IPI-461 · CF-AI-004** → Done (local gate). AC-F → PR [#317](https://github.com/amo-tech-ai/lumina-studio/pull/317). AC-J / AC-I still open.
+
+> Docs-only. Sibling code PR #312 already merged. Related: #313 (Sentry), #314 (pre-merge verify doc), [#316](https://github.com/amo-tech-ai/lumina-studio/pull/316) / **IPI-491 · CF-AI-004b** (embed fix — **merged**).
 
 ---
 
@@ -166,10 +168,10 @@ Operators can again get **finished** AI answers (brand DNA summaries, JSON shot 
 1. ~~Merge #312~~ **Done** (`0635fd95`)
 2. ~~Docs #314~~ **Done** on main
 3. ~~File Linear for embedding 404/400~~ **Done** — **IPI-491 · CF-AI-004b** · [#316](https://github.com/amo-tech-ai/lumina-studio/pull/316)
-4. Merge #316 → live prove `embed()` on `main`
-5. Reassess **IPI-461 · CF-AI-004** Done
-6. **IPI-454 · CF-AI-001 — AC-F** — `resolveModel()` → gateway (Option A: chat/stream; not blocked on embed)
-7. **AC-J** checklist (model-specific tool probes)
+4. ~~Merge #316 → live prove `embed()` on `main`~~ **Done** (`d112dea4`) — see successor audit
+5. ~~Reassess **IPI-461 · CF-AI-004** Done~~ **Done** (local runtime gate)
+6. **IPI-454 · CF-AI-001 — AC-F** — PR [#317](https://github.com/amo-tech-ai/lumina-studio/pull/317) (In Review)
+7. **AC-J** checklist (after #317 on main)
 8. **IPI-472 · INFRA-001** deploy pipeline (owns AC-I / prod AC-J evidence)
 9. Ops: Infisical/Vercel Sentry DSN for preview/prod
 
@@ -181,7 +183,7 @@ Operators can again get **finished** AI answers (brand DNA summaries, JSON shot 
 |------|--------|
 | Task | **IPI-454 · CF-AI-001 — Fix Gemini Non-Stream SSE** |
 | Evidence | Code on `main` + Worker tests 22 + live adapter smoke |
-| Classification | SSE fix **Confirmed Done**; embeds **Confirmed** separate failure |
+| Classification | SSE fix **Confirmed Done**; embeds **Confirmed fixed** in #316 (see successor) |
 | Merge state | **Merged** |
-| Remaining blocker | Embeddings (E1/E2) via IPI-491/#316; AC-F unblocked for chat/stream (Option A) |
-| Next task | Merge **IPI-491 · CF-AI-004b** (#316) and/or start **IPI-454 · CF-AI-001 AC-F** |
+| Remaining blocker | AC-F (#317), AC-J, **IPI-472 · INFRA-001** (AC-I) |
+| Next task | Merge **PR #317** (AC-F) → AC-J → **IPI-472** |
