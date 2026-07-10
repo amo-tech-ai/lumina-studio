@@ -1,24 +1,28 @@
 import type { NextConfig } from "next";
 import path from "node:path";
+import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
 
 import { CLOUDINARY_CLOUD_NAME } from "./src/lib/cloudinary/url";
 
 const appDir = path.dirname(fileURLToPath(import.meta.url));
 
+// Resolve the installed package's real root via its own package.json — robust
+// against hoisting/monorepo/pnpm layouts where node_modules isn't necessarily
+// a direct child of appDir (the previous hardcoded `appDir/node_modules/...`
+// path assumed a flat layout).
+const copilotkitRuntimeDir = path.join(
+  path.dirname(createRequire(import.meta.url).resolve("@copilotkit/runtime/package.json")),
+  "dist/v2/runtime",
+);
+
 /** Fetch-only CopilotKit v2 entrypoints — shared by Turbopack (dev) and webpack (next build / OpenNext). */
 const copilotkitRuntimeInternalAliases = {
-  "@copilotkit/runtime-internal/runtime": path.join(
-    appDir,
-    "node_modules/@copilotkit/runtime/dist/v2/runtime/core/runtime.mjs",
-  ),
-  "@copilotkit/runtime-internal/in-memory": path.join(
-    appDir,
-    "node_modules/@copilotkit/runtime/dist/v2/runtime/runner/in-memory.mjs",
-  ),
+  "@copilotkit/runtime-internal/runtime": path.join(copilotkitRuntimeDir, "core/runtime.mjs"),
+  "@copilotkit/runtime-internal/in-memory": path.join(copilotkitRuntimeDir, "runner/in-memory.mjs"),
   "@copilotkit/runtime-internal/fetch-handler": path.join(
-    appDir,
-    "node_modules/@copilotkit/runtime/dist/v2/runtime/core/fetch-handler.mjs",
+    copilotkitRuntimeDir,
+    "core/fetch-handler.mjs",
   ),
 } as const;
 
