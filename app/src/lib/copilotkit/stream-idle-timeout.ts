@@ -12,9 +12,9 @@
  * observing the identical agent stream to completion. The public
  * marketing-chat agent has no storage configured and is unaffected. This
  * wrapper is a defensive mitigation for that failure mode, not a fix for the
- * underlying Postgres-over-Workers connectivity issue itself (that likely
- * needs Cloudflare Hyperdrive — see `cloudflare` skill's `d1`/`hyperdrive`
- * guidance — tracked as a follow-up, out of scope for CF-MIG-210).
+ * underlying Postgres-over-Workers connectivity issue itself (likely requiring
+ * Cloudflare Hyperdrive or an equivalent connection proxy) — tracked as a follow-up,
+ * out of scope for CF-MIG-210).
  */
 export function withStreamIdleTimeout(response: Response, timeoutMs: number): Response {
   const body = response.body;
