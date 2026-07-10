@@ -116,7 +116,7 @@ flowchart TD
 
 #### E. Ship
 - [ ] **E1** Open/merge sibling PRs #288 → #299 → #300 — proof: GitHub
-- [ ] **E2** Sync this markdown → Linear description — proof: `infisical run -- node scripts/linear-update-issue.mjs IPI-488`
+- [ ] **E2** Sync this markdown → Linear description — proof: paste/update [IPI-488](https://linear.app/amo100/issue/IPI-488) description from this file (no `scripts/linear-update-issue.mjs` in repo; use Linear UI or Linear MCP `save_issue`)
 - [ ] **E3** Linear → Done when seed + E2E landed — proof: Linear state
 
 ---
