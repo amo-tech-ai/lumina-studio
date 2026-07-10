@@ -71,13 +71,18 @@ export function resolveEmbeddingEntry(
   model: string,
   registry?: ModelRegistry,
 ): ModelEntry | undefined {
+  // Explicit Workers AI BGE id — always the canonical default entry (ignore override alias).
+  // Prevents MODEL_REGISTRY_OVERRIDE from silently swapping a different embed model under this id.
+  if (model === "@cf/baai/bge-base-en-v1.5") {
+    return resolveModelEntry("embedding");
+  }
+
   const byTier = resolveModelEntry(model, registry);
   if (byTier?.capabilities.includes("embedding")) {
     return byTier;
   }
 
-  if (SUPPORTED_EMBEDDING_MODELS.has(model)) {
-    // Explicit Workers AI model id → same entry as tier alias "embedding"
+  if (model === "embedding") {
     return resolveModelEntry("embedding", registry);
   }
 

@@ -100,4 +100,59 @@ describe("handleEmbed contracts (IPI-492)", () => {
     expect(body.error.message).not.toContain("tok"); // no secrets
     expect(body.error.requestId).toMatch(/^req_/);
   });
+
+  it("returns structured internal_error for unknown provider in registry override", async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+
+    const res = await handleEmbed(
+      { model: "embedding", input: ["hello"] },
+      {
+        CLOUDFLARE_API_TOKEN: "tok",
+        CLOUDFLARE_ACCOUNT_ID: "acct",
+        MODEL_REGISTRY_OVERRIDE: JSON.stringify({
+          tiers: {
+            embedding: {
+              provider: "openai",
+              model: "text-embedding-3-small",
+              capabilities: ["embedding"],
+              contextWindow: 0,
+              costPer1kIn: 0,
+              costPer1kOut: 0,
+            },
+          },
+        }),
+      },
+    );
+
+    expect(res.status).toBe(500);
+    const body = (await res.json()) as {
+      error: { code: string; message: string; retryable?: boolean };
+    };
+    expect(body.error.code).toBe("internal_error");
+    expect(body.error.message).toBe("Embedding provider is not configured");
+    expect(body.error.retryable).toBe(false);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("ignores invalid MODEL_REGISTRY_OVERRIDE JSON and uses default embed path", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve({ result: { data: [[0.1, 0.2]] } }),
+      }),
+    );
+
+    const res = await handleEmbed(
+      { model: "embedding", input: ["hello"] },
+      {
+        CLOUDFLARE_API_TOKEN: "tok",
+        CLOUDFLARE_ACCOUNT_ID: "acct",
+        MODEL_REGISTRY_OVERRIDE: "{not-json",
+      },
+    );
+
+    expect(res.status).toBe(200);
+  });
 });

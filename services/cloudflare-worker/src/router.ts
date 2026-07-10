@@ -53,9 +53,13 @@ function getProviderConfig(provider: string, env: Env): ProviderConfig {
 }
 
 function registryOverride(env: Env): ModelRegistry | undefined {
-  return env.MODEL_REGISTRY_OVERRIDE
-    ? (JSON.parse(env.MODEL_REGISTRY_OVERRIDE) as ModelRegistry)
-    : undefined;
+  if (!env.MODEL_REGISTRY_OVERRIDE) return undefined;
+  try {
+    return JSON.parse(env.MODEL_REGISTRY_OVERRIDE) as ModelRegistry;
+  } catch {
+    // Invalid JSON — fall back to default registry (do not 500 the request).
+    return undefined;
+  }
 }
 
 function selectProvider(model: string, env: Env): {
@@ -122,19 +126,18 @@ export async function handleEmbed(
     );
   }
 
-  const provider = getProvider(entry.provider);
-  if (!provider.embed) {
-    return gatewayErrorResponse(
-      400,
-      "unsupported_embedding_model",
-      `Provider ${entry.provider} does not support embeddings`,
-      { requestId },
-    );
-  }
-
-  const config = getProviderConfig(entry.provider, env);
-
   try {
+    const provider = getProvider(entry.provider);
+    if (!provider.embed) {
+      return gatewayErrorResponse(
+        400,
+        "unsupported_embedding_model",
+        `Provider ${entry.provider} does not support embeddings`,
+        { requestId },
+      );
+    }
+
+    const config = getProviderConfig(entry.provider, env);
     const result = await provider.embed(
       { model: entry.model, input: validated.input },
       config,
@@ -144,11 +147,24 @@ export async function handleEmbed(
     });
   } catch (err) {
     const mapped = mapProviderFailure(err);
-    return gatewayErrorResponse(mapped.status, mapped.code, mapped.message, {
-      providerStatus: mapped.providerStatus,
-      retryable: mapped.retryable,
-      requestId,
-    });
+    // Unknown provider from registry override → internal_error (sanitized).
+    const code =
+      err instanceof Error && /Unknown provider|No config for provider/.test(err.message)
+        ? "internal_error"
+        : mapped.code;
+    const status = code === "internal_error" ? 500 : mapped.status;
+    return gatewayErrorResponse(
+      status,
+      code,
+      code === "internal_error"
+        ? "Embedding provider is not configured"
+        : mapped.message,
+      {
+        providerStatus: mapped.providerStatus,
+        retryable: code === "internal_error" ? false : mapped.retryable,
+        requestId,
+      },
+    );
   }
 }
 

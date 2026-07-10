@@ -69,7 +69,12 @@ export function mapProviderFailure(err: unknown): {
       retryable: true,
     };
   }
-  if (providerStatus === 408 || providerStatus === 504 || /timeout/i.test(raw)) {
+  // Timeout regex only when no status was extracted — avoid mislabeling "503: backend timeout".
+  if (
+    providerStatus === 408 ||
+    providerStatus === 504 ||
+    (providerStatus === undefined && /timeout/i.test(raw))
+  ) {
     return {
       status: 504,
       code: "provider_timeout",
@@ -78,7 +83,12 @@ export function mapProviderFailure(err: unknown): {
       retryable: true,
     };
   }
-  if (providerStatus === 503 || providerStatus === 502) {
+  // Transient provider server errors — callers may retry.
+  if (
+    providerStatus === 500 ||
+    providerStatus === 502 ||
+    providerStatus === 503
+  ) {
     return {
       status: 503,
       code: "provider_unavailable",

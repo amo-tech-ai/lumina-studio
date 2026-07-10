@@ -62,6 +62,22 @@ describe("resolveEmbeddingEntry / allowlist", () => {
     );
   });
 
+  it("explicit BGE id ignores overridden embedding alias", () => {
+    const entry = resolveEmbeddingEntry("@cf/baai/bge-base-en-v1.5", {
+      tiers: {
+        embedding: {
+          provider: "workers-ai",
+          model: "@cf/baai/bge-small-en-v1.5",
+          capabilities: ["embedding"],
+          contextWindow: 0,
+          costPer1kIn: 0,
+          costPer1kOut: 0,
+        },
+      },
+    });
+    expect(entry?.model).toBe("@cf/baai/bge-base-en-v1.5");
+  });
+
   it("rejects chat default tier (no silent remap)", () => {
     expect(resolveEmbeddingEntry("default")).toBeUndefined();
     expect(isSupportedEmbeddingModel("default")).toBe(false);
@@ -81,6 +97,37 @@ describe("mapProviderFailure", () => {
       code: "provider_rate_limited",
       retryable: true,
       providerStatus: 429,
+    });
+  });
+
+  it("maps 500 to retryable provider_unavailable", () => {
+    const mapped = mapProviderFailure(new Error("Workers AI embedding error 500: boom"));
+    expect(mapped).toMatchObject({
+      status: 503,
+      code: "provider_unavailable",
+      retryable: true,
+      providerStatus: 500,
+    });
+  });
+
+  it("does not treat statused 503 with timeout text as provider_timeout", () => {
+    const mapped = mapProviderFailure(
+      new Error("Workers AI embedding error 503: backend timeout"),
+    );
+    expect(mapped).toMatchObject({
+      status: 503,
+      code: "provider_unavailable",
+      retryable: true,
+      providerStatus: 503,
+    });
+  });
+
+  it("maps timeout text without status to provider_timeout", () => {
+    const mapped = mapProviderFailure(new Error("request timeout after 30s"));
+    expect(mapped).toMatchObject({
+      status: 504,
+      code: "provider_timeout",
+      retryable: true,
     });
   });
 
