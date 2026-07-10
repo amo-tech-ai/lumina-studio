@@ -185,6 +185,16 @@ function approveDealTransition(): { ok: false; error: string } {
   };
 }
 
+type ApprovalDialogProps = {
+  stage: CrmDealStage;
+  target: CrmDealStage;
+  cancelRef: RefObject<HTMLButtonElement | null>;
+  approveRef: RefObject<HTMLButtonElement | null>;
+  onCancel: () => void;
+  onApprove: () => void;
+  onKeyDown: (event: KeyboardEvent<HTMLDivElement>) => void;
+};
+
 /** Extracted from DealStageControl to keep that component under Codacy's
  *  50-line/15-complexity method limits — pure presentation, all decisions
  *  (target, body copy, revert-on-approve) stay in the parent. */
@@ -196,15 +206,7 @@ function ApprovalDialog({
   onCancel,
   onApprove,
   onKeyDown,
-}: {
-  stage: CrmDealStage;
-  target: CrmDealStage;
-  cancelRef: RefObject<HTMLButtonElement | null>;
-  approveRef: RefObject<HTMLButtonElement | null>;
-  onCancel: () => void;
-  onApprove: () => void;
-  onKeyDown: (event: KeyboardEvent<HTMLDivElement>) => void;
-}) {
+}: ApprovalDialogProps) {
   const targetLabel = crmDealStageLabel(target);
   const body =
     target === "won"
@@ -216,10 +218,12 @@ function ApprovalDialog({
       className={styles.approvalCard}
       role="dialog"
       aria-modal="true"
-      aria-label={`Mark this deal as ${targetLabel}?`}
+      aria-labelledby="deal-approval-dialog-heading"
       onKeyDown={onKeyDown}
     >
-      <div className={styles.approvalHeading}>Mark this deal as {targetLabel}?</div>
+      <div id="deal-approval-dialog-heading" className={styles.approvalHeading}>
+        Mark this deal as {targetLabel}?
+      </div>
       <div className={styles.approvalStages}>
         <StatusChip dot={crmDealStageDotToken(stage)} label={crmDealStageLabel(stage)} />
         <span className={styles.approvalArrow} aria-hidden>
