@@ -1,13 +1,17 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
-import { providerAdapter } from "./provider-adapter";
+import {
+  createProviderAdapter,
+  providerAdapter,
+  DEFAULT_AI_GATEWAY_URL,
+} from "./provider-adapter";
 
-describe("providerAdapter", () => {
+describe("providerAdapter / createProviderAdapter", () => {
   const originalFetch = globalThis.fetch;
 
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.stubEnv("AI_GATEWAY_URL", "http://localhost:4111");
+    vi.stubEnv("AI_GATEWAY_URL", "http://localhost:8787");
     vi.stubEnv("AI_GATEWAY_API_KEY", "test-key");
   });
 
@@ -15,6 +19,78 @@ describe("providerAdapter", () => {
     globalThis.fetch = originalFetch;
     vi.unstubAllEnvs();
     vi.restoreAllMocks();
+  });
+
+  describe("factory configuration", () => {
+    it("uses explicit baseUrl when provided", async () => {
+      const fetchMock = vi.fn().mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve({ choices: [{ message: { content: "ok" } }] }),
+      });
+      globalThis.fetch = fetchMock;
+
+      const adapter = createProviderAdapter({ baseUrl: "http://custom-gateway:9999" });
+      await adapter.chat("test");
+
+      expect(fetchMock.mock.calls[0][0]).toBe("http://custom-gateway:9999/v1/chat/completions");
+    });
+
+    it("uses explicit apiKey when provided", async () => {
+      const fetchMock = vi.fn().mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve({ choices: [{ message: { content: "ok" } }] }),
+      });
+      globalThis.fetch = fetchMock;
+
+      const adapter = createProviderAdapter({ apiKey: "explicit-key" });
+      await adapter.chat("test");
+
+      expect(fetchMock.mock.calls[0][1].headers["Authorization"]).toBe("Bearer explicit-key");
+    });
+
+    it("falls back to env vars when no explicit options", async () => {
+      const fetchMock = vi.fn().mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve({ choices: [{ message: { content: "ok" } }] }),
+      });
+      globalThis.fetch = fetchMock;
+
+      const adapter = createProviderAdapter();
+      await adapter.chat("test");
+
+      expect(fetchMock.mock.calls[0][0]).toBe("http://localhost:8787/v1/chat/completions");
+      expect(fetchMock.mock.calls[0][1].headers["Authorization"]).toBe("Bearer test-key");
+    });
+
+    it(`defaults to ${DEFAULT_AI_GATEWAY_URL} when no env or explicit URL`, async () => {
+      vi.stubEnv("AI_GATEWAY_URL", undefined);
+      vi.stubEnv("AI_GATEWAY_API_KEY", undefined);
+
+      const fetchMock = vi.fn().mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve({ choices: [{ message: { content: "ok" } }] }),
+      });
+      globalThis.fetch = fetchMock;
+
+      const adapter = createProviderAdapter();
+      await adapter.chat("test");
+
+      expect(fetchMock.mock.calls[0][0]).toBe(`${DEFAULT_AI_GATEWAY_URL}/v1/chat/completions`);
+    });
+
+    it("omits Authorization header when no API key", async () => {
+      vi.stubEnv("AI_GATEWAY_API_KEY", undefined);
+
+      const fetchMock = vi.fn().mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve({ choices: [{ message: { content: "ok" } }] }),
+      });
+      globalThis.fetch = fetchMock;
+
+      await createProviderAdapter().chat("test");
+
+      expect(fetchMock.mock.calls[0][1].headers["Authorization"]).toBeUndefined();
+    });
   });
 
   describe("chat", () => {
@@ -54,19 +130,28 @@ describe("providerAdapter", () => {
         json: () => Promise.resolve({ choices: [] }),
       });
 
-      const result = await providerAdapter.chat("empty");
-
-      expect(result.text).toBe("");
+      expect((await providerAdapter.chat("empty")).text).toBe("");
     });
 
-    it("throws on non-ok response", async () => {
+    it("returns empty text when choices is missing", async () => {
+      globalThis.fetch = vi.fn().mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve({}),
+      });
+
+      expect((await createProviderAdapter().chat("test")).text).toBe("");
+    });
+
+    it("throws on non-ok response with body text", async () => {
       globalThis.fetch = vi.fn().mockResolvedValue({
         ok: false,
         status: 503,
         text: () => Promise.resolve("Service Unavailable"),
       });
 
-      await expect(providerAdapter.chat("test")).rejects.toThrow("chat completion failed: 503");
+      await expect(providerAdapter.chat("test")).rejects.toThrow(
+        "chat completion failed: 503 Service Unavailable",
+      );
     });
   });
 
@@ -151,6 +236,47 @@ describe("providerAdapter", () => {
       const reader = stream.getReader();
       await expect(reader.read()).rejects.toThrow("stream failed: 502 Bad Gateway");
     });
+
+    it("stream cancel aborts the fetch", async () => {
+      let abortSignal: AbortSignal | undefined;
+      globalThis.fetch = vi.fn().mockImplementation((_url, init) => {
+        abortSignal = init.signal;
+        return new Promise(() => {
+          // hung gateway
+        });
+      });
+
+      const adapter = createProviderAdapter({ timeoutMs: 60_000 });
+      const stream = adapter.chatStream("test");
+      const reader = stream.getReader();
+
+      void reader.read().catch(() => {});
+      await new Promise((r) => setTimeout(r, 10));
+      await reader.cancel("test cancel");
+
+      expect(abortSignal?.aborted).toBe(true);
+    });
+
+    it("stream timeout aborts fetch and errors the reader", async () => {
+      let abortSignal: AbortSignal | undefined;
+      globalThis.fetch = vi.fn().mockImplementation((_url, init) => {
+        abortSignal = init.signal;
+        return new Promise((_resolve, reject) => {
+          init.signal?.addEventListener(
+            "abort",
+            () => reject(init.signal.reason ?? new Error("Aborted")),
+            { once: true },
+          );
+        });
+      });
+
+      const adapter = createProviderAdapter({ timeoutMs: 30 });
+      const stream = adapter.chatStream("test");
+      const reader = stream.getReader();
+
+      await expect(reader.read()).rejects.toThrow(/Gateway timeout after 30ms/);
+      expect(abortSignal?.aborted).toBe(true);
+    });
   });
 
   describe("structured", () => {
@@ -165,7 +291,10 @@ describe("providerAdapter", () => {
       });
 
       const result = await providerAdapter.structured("Parse this", {
-        schema: { type: "object", properties: { name: { type: "string" }, score: { type: "number" } } },
+        schema: {
+          type: "object",
+          properties: { name: { type: "string" }, score: { type: "number" } },
+        },
       });
 
       expect(result.object).toEqual({ name: "test", score: 85 });
@@ -175,10 +304,7 @@ describe("providerAdapter", () => {
     it("sends response_format without schema field (gateway contract)", async () => {
       const fetchMock = vi.fn().mockResolvedValue({
         ok: true,
-        json: () =>
-          Promise.resolve({
-            choices: [{ message: { content: "{}" } }],
-          }),
+        json: () => Promise.resolve({ choices: [{ message: { content: "{}" } }] }),
       });
       globalThis.fetch = fetchMock;
 
@@ -189,6 +315,16 @@ describe("providerAdapter", () => {
       const callBody = JSON.parse(fetchMock.mock.calls[0][1].body);
       expect(callBody.response_format).toEqual({ type: "json_object" });
       expect(callBody.response_format).not.toHaveProperty("schema");
+    });
+
+    it("returns empty object when structured content is empty", async () => {
+      globalThis.fetch = vi.fn().mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve({ choices: [{ message: { content: "" } }] }),
+      });
+
+      const result = await createProviderAdapter().structured("test", { schema: {} });
+      expect(result.object).toEqual({});
     });
 
     it("throws on non-ok response", async () => {
@@ -222,14 +358,31 @@ describe("providerAdapter", () => {
       expect(result.usage).toEqual({ promptTokens: 10 });
     });
 
-    it("throws on non-ok response", async () => {
+    it("throws on non-ok response with body text", async () => {
       globalThis.fetch = vi.fn().mockResolvedValue({
         ok: false,
         status: 503,
         text: () => Promise.resolve("Service Unavailable"),
       });
 
-      await expect(providerAdapter.embed(["test"])).rejects.toThrow("embedding failed: 503");
+      await expect(providerAdapter.embed(["test"])).rejects.toThrow(
+        "embedding failed: 503 Service Unavailable",
+      );
+    });
+  });
+
+  describe("timeout", () => {
+    it("aborts chat request after timeout", async () => {
+      globalThis.fetch = vi.fn().mockImplementation((_url, init) => {
+        return new Promise((_resolve, reject) => {
+          init.signal?.addEventListener("abort", () => {
+            reject(new Error("Aborted"));
+          });
+        });
+      });
+
+      const adapter = createProviderAdapter({ timeoutMs: 50 });
+      await expect(adapter.chat("test")).rejects.toThrow();
     });
   });
 });
