@@ -11,7 +11,8 @@ function includes(haystack: string, needle: string): boolean {
   return haystack.toLowerCase().includes(needle.toLowerCase());
 }
 
-export type StaleBookingContext = {
+/** Context for mapSupabaseRpcError (stale versions + auth signal for EXECUTE denials). */
+export type RpcErrorContext = {
   expectedVersion?: number;
   currentVersion?: number;
   /**
@@ -28,10 +29,10 @@ export function isStaleBookingMessage(message: string): boolean {
 
 type RpcErrorMatcher = {
   match: (msg: string, pgCode?: string | null) => boolean;
-  map: (msg: string, ctx?: StaleBookingContext) => MappedRpcError;
+  map: (msg: string, ctx?: RpcErrorContext) => MappedRpcError;
 };
 
-function staleBookingError(ctx?: StaleBookingContext): MappedRpcError {
+function staleBookingError(ctx?: RpcErrorContext): MappedRpcError {
   const details: Record<string, unknown> = {};
   if (ctx?.expectedVersion != null) {
     details.expected_version = ctx.expectedVersion;
@@ -169,7 +170,7 @@ const RPC_ERROR_MATCHERS: RpcErrorMatcher[] = [
 export function mapSupabaseRpcError(
   message: string,
   pgCode?: string | null,
-  ctx?: StaleBookingContext,
+  ctx?: RpcErrorContext,
 ): MappedRpcError {
   const msg = message ?? "";
 

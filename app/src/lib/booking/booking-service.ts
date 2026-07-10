@@ -1,6 +1,10 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { ApiErrorCode } from "@/lib/api/error-envelope";
-import { isStaleBookingMessage, mapSupabaseRpcError } from "@/lib/booking/rpc-errors";
+import {
+  isStaleBookingMessage,
+  mapSupabaseRpcError,
+  type RpcErrorContext,
+} from "@/lib/booking/rpc-errors";
 import type {
   CreateBookingBody,
   ListBookingsQuery,
@@ -21,7 +25,7 @@ export type ServiceResult<T> = ServiceSuccess<T> | ServiceFailure;
 
 function rpcFailure(
   error: { message?: string; code?: string | null },
-  ctx?: { expectedVersion?: number; currentVersion?: number; authenticated?: boolean },
+  ctx?: RpcErrorContext,
 ): ServiceFailure {
   const mapped = mapSupabaseRpcError(error.message ?? "Unknown error", error.code, ctx);
   return { ok: false, ...mapped };
@@ -39,7 +43,7 @@ function isExecutePrivilegeDenied(error: { message?: string; code?: string | nul
 async function rpcFailureForClient(
   userSb: SupabaseClient,
   error: { message?: string; code?: string | null },
-  ctx?: { expectedVersion?: number; currentVersion?: number },
+  ctx?: Omit<RpcErrorContext, "authenticated">,
 ): Promise<ServiceFailure> {
   if (isExecutePrivilegeDenied(error)) {
     const { data } = await userSb.auth.getUser();
@@ -337,7 +341,8 @@ export async function approveBooking(
   });
 
   if (error) {
-    return rpcFailureForClient(serviceSb, error);
+    // Map 401/403 from the requesting user session, not serviceSb (no JWT).
+    return rpcFailureForClient(userSb, error);
   }
 
   const row = requireBookingIdRow(data);
