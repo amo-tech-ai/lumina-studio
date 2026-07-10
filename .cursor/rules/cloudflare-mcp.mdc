@@ -1,0 +1,128 @@
+---
+description: Cloudflare MCP server selection, auth, and tool-use patterns for iPix
+globs: tasks/cloudflare/**,scripts/cf-mcp*.sh,**/wrangler.jsonc,**/wrangler.toml,.cursor/mcp.json
+alwaysApply: false
+---
+
+# Cloudflare MCP — use cases & best practices
+
+**Live config:** `~/.cursor/mcp.json` (install via `bash scripts/cf-mcp-setup.sh`).  
+**Repo template:** `tasks/cloudflare/cursor-mcp-cloudflare.json` and `.cursor/mcp.json` (HTTP URLs only, no secrets).  
+**Bridge:** `scripts/cf-mcp-bridge.sh` / `cf-mcp-api-bridge.sh` — reads `CLOUDFLARE_API_TOKEN` via `grep` from `app/.env.local` (**never `source` the whole file**).
+
+Official catalog: [Cloudflare's own MCP servers](https://developers.cloudflare.com/agents/model-context-protocol/cloudflare/servers-for-cloudflare/) · API: [developers.cloudflare.com/api](https://developers.cloudflare.com/api/)
+
+## Setup rules (do not regress)
+
+| ✅ Do | ❌ Don't |
+|-------|---------|
+| **3 user servers:** `cloudflare-docs`, `cloudflare-agents-sdk`, `cloudflare-api` ([official URLs](https://developers.cloudflare.com/agents/model-context-protocol/cloudflare/servers-for-cloudflare/)) | `plugin-cloudflare-*` Cursor marketplace plugin (id `407`) — duplicates + errors |
+| **OAuth** (`cf-mcp-setup.sh`) or **API token** (`cf-mcp-setup.sh --api-token`) for `cloudflare-api` | Test account tokens with `/user/tokens/verify` (user tokens only) |
+| Account API token (`cfat_`) scoped to **Entire account** + product permissions you need | Client IP filtering on token ([unsupported by MCP](https://github.com/cloudflare/mcp)) |
+| After rotating token → update `app/.env.local` → `cf-mcp-setup.sh --api-token` → quit Cursor | Put shell commands in `app/.env.local` (breaks stdio MCP stdout) |
+
+### Auth modes for `cloudflare-api`
+
+| Mode | Config | When |
+|------|--------|------|
+| **OAuth** (Option 1) | `"type":"http","url":"https://mcp.cloudflare.com/mcp"` | Click **Connect** in Customize → MCP |
+| **API token** (Option 2) | `cf-mcp-api-bridge.sh` stdio bridge | CI, account `cfat_` tokens, OAuth flaky |
+
+`curl -I https://mcp.cloudflare.com/mcp` → **401** is expected without auth.
+
+### Verify account API token (`cfat_`)
+
+```bash
+# NOT this (fails for account tokens):
+# curl .../user/tokens/verify
+
+# Use accounts list or account token verify:
+curl -s "https://api.cloudflare.com/client/v4/accounts" \
+  -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" | jq '.success, .result[].name'
+```
+
+## Official server map
+
+| Server | URL | Auth |
+|--------|-----|------|
+| `cloudflare-api` | `https://mcp.cloudflare.com/mcp` | OAuth or Bearer |
+| `cloudflare-docs` | `https://docs.mcp.cloudflare.com/mcp` | None |
+| `cloudflare-agents-sdk` | `https://agents.cloudflare.com/mcp` | None |
+| `cloudflare-workers-bindings` | `https://bindings.mcp.cloudflare.com/mcp` | OAuth/Bearer (optional bridge) |
+| `cloudflare-workers-builds` | `https://builds.mcp.cloudflare.com/mcp` | OAuth/Bearer (optional bridge) |
+| `cloudflare-observability` | `https://observability.mcp.cloudflare.com/mcp` | OAuth/Bearer (optional bridge) |
+| `cloudflare-ai-gateway` | `https://ai-gateway.mcp.cloudflare.com/mcp` | OAuth/Bearer (optional bridge) |
+
+**Default iPix install:** first three only. Bindings/builds/observability/ai-gateway via `cloudflare-api` `search` + `execute` unless you add `--with-bridges`.
+
+## Token permissions (account token on Sk@ipix.co's Account)
+
+Your listed permissions cover the migration stack. Minimum useful sets:
+
+| Use case | Permissions |
+|----------|-------------|
+| **cloudflare-api** (all REST) | Account scope + Workers Scripts, D1, KV, Pages, DNS, R2 as needed |
+| **Bindings MCP** | Workers Scripts Read, D1/KV/R2 Read (+ Write to mutate) |
+| **Builds MCP** | Workers CI Read |
+| **Observability MCP** | Workers Observability Read, Workers Tail Read |
+| **AI Gateway MCP** | AI Gateway Read |
+
+Account tokens: include **Account** resource read (you have **Entire account** ✓).
+
+## Which server for which job
+
+| Need | MCP server | Tool(s) |
+|------|------------|---------|
+| Product/docs lookup | `cloudflare-docs` | `search_cloudflare_documentation` |
+| Agents SDK (DO, callable, WS) | `cloudflare-agents-sdk` | `search-agent-docs` |
+| OpenAPI / endpoint shape | `cloudflare-api` | `search` |
+| Live API call | `cloudflare-api` | `execute` |
+| KV, D1, R2 inventory (optional) | `cloudflare-workers-bindings` | `d1_*`, `kv_*`, `r2_*`, `workers_list` |
+| Build failures (optional) | `cloudflare-workers-builds` | `workers_builds_*` |
+| Runtime logs (optional) | `cloudflare-observability` | `query_worker_observability` |
+
+## Agent workflow
+
+1. `cloudflare-docs` → 2. `cloudflare-agents-sdk` (if Agents) → 3. `cloudflare-api` `search` → 4. specialized server if installed → 5. `cloudflare-api` `execute`
+
+## Tool patterns
+
+**Search** (JS async arrow, `spec` in sandbox):
+
+```javascript
+async () => {
+  const results = [];
+  for (const [path, methods] of Object.entries(spec.paths)) {
+    for (const [method, op] of Object.entries(methods)) {
+      if (op.tags?.some(t => t.toLowerCase() === 'workers')) {
+        results.push({ method: method.toUpperCase(), path, summary: op.summary });
+      }
+    }
+  }
+  return results.slice(0, 10);
+}
+```
+
+**Execute** (`accountId` auto-bound for account tokens):
+
+```javascript
+async () => cloudflare.request({
+  method: "GET",
+  path: `/accounts/${accountId}/workers/scripts`
+})
+```
+
+## When MCP is unavailable
+
+`.claude/skills/cloudflare/references/**` → [developers.cloudflare.com](https://developers.cloudflare.com) → `wrangler` CLI. Do not block **IPI-487 · CLOUDFLARE-EPIC — Cloudflare Platform Migration** on MCP.
+
+## Troubleshooting
+
+| Symptom | Fix |
+|---------|-----|
+| `plugin-cloudflare-*` errors | Quit Cursor → `bash scripts/cursor-uninstall-cloudflare-plugin.sh` → reopen |
+| `9109` / `Invalid access token` on execute | Paste **new** token into `app/.env.local` → `cf-mcp-setup.sh --api-token` → quit Cursor |
+| `/user/tokens/verify` → Invalid | Normal for `cfat_` — use `/accounts` instead |
+| `cloudflare-api` needs auth | Connect (OAuth) or switch to `--api-token` |
+| Stdio bridges timeout | Stay on HTTP + `cloudflare-api` only (no `--with-bridges`) |
+| `.cursor/mcp.json` empty | Restored to SSOT HTTP entries; run `cf-mcp-setup.sh` for `~/.cursor/mcp.json` |

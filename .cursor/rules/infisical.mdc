@@ -1,0 +1,135 @@
+---
+description: Infisical CLI — inject secrets for dev, Supabase, Linear, and AI commands (never hardcode or paste secrets)
+globs: app/**,supabase/**,scripts/**,.infisical.json,**/.env.example,**/wrangler.toml,**/wrangler.jsonc
+alwaysApply: false
+---
+
+# Infisical CLI — iPix secret management
+
+**SSOT for secrets:** [Infisical](https://infisical.com) project linked via `.infisical.json` (safe to commit).  
+**Skill hub:** `.claude/skills/infisical/SKILL.md` · Docs: [CLI usage](https://infisical.com/docs/cli/usage) · [Commands](https://infisical.com/docs/cli/commands) · [Project config](https://infisical.com/docs/cli/project-config)
+
+## Golden rules
+
+| ✅ Do | ❌ Don't |
+|-------|---------|
+| Prefix secret-dependent commands with `infisical run --` | Paste API keys/tokens in chat, commits, or docs |
+| `infisical login` once per machine (keyring stores session) | Commit `.env.local` — gitignored; worktree copy only |
+| Store `GEMINI_API_KEY`, `CLOUDFLARE_API_TOKEN`, Supabase keys in Infisical | Put shell commands at the bottom of `.env.local` (breaks MCP stdio bridges) |
+| Use `--env=dev` when `.infisical.json` has no `defaultEnvironment` | `source .env.local` in agent shell commands when `infisical run` works |
+
+## Project link
+
+Repo root `.infisical.json`:
+
+```json
+{
+  "workspaceId": "81f93e92-167a-4ae2-806e-4b5bee28cf12",
+  "defaultEnvironment": "",
+  "gitBranchToEnvironmentMapping": null
+}
+```
+
+Because `defaultEnvironment` is empty, **always pass `--env=dev`** (or `staging` / `prod`) unless the user specifies otherwise.
+
+Optional improvement (human sets in Infisical UI + json):
+
+```json
+"defaultEnvironment": "dev",
+"gitBranchToEnvironmentMapping": { "main": "prod", "ipi/*": "dev" }
+```
+
+## Auth (one-time per machine)
+
+```bash
+# Browser login (default)
+infisical login
+
+# WSL / headless / SSH — no browser
+infisical login -i
+
+# CI / machine identity
+export INFISICAL_TOKEN=$(infisical login --method=universal-auth \
+  --client-id=... --client-secret=... --silent --plain)
+```
+
+EU / self-hosted: set `INFISICAL_DOMAIN` or `domain` in `.infisical.json` ([project config](https://infisical.com/docs/cli/project-config)).
+
+## iPix command patterns
+
+Wrap any command that needs secrets:
+
+```bash
+# Operator app (canonical) — from app/
+cd app && infisical run --env=dev -- npm run dev
+
+# Supabase verify / push (remote-only policy)
+infisical run --env=dev -- npm run supabase:verify
+infisical run --env=dev -- npm run supabase:verify-rls
+infisical run --env=dev -- npm run supabase:push
+
+# Linear scripts (need LINEAR_API_KEY etc.)
+infisical run --env=dev -- node scripts/linear-update-issue.mjs IPI-NNN
+
+# Wrangler / Cloudflare
+infisical run --env=dev -- npx wrangler whoami
+
+# Tests that hit real APIs
+cd app && infisical run --env=dev -- npm test
+```
+
+## Secret paths in Infisical
+
+Use folder paths when secrets are grouped (adjust to match your Infisical layout):
+
+```bash
+infisical run --env=dev --path=/app -- npm run dev
+infisical run --env=dev --path=/supabase -- npm run supabase:verify
+```
+
+List what's configured:
+
+```bash
+infisical secrets --env=dev
+infisical secrets get GEMINI_API_KEY CLOUDFLARE_API_TOKEN --env=dev
+```
+
+Set / rotate (never echo values in terminal output to user):
+
+```bash
+infisical secrets set CLOUDFLARE_API_TOKEN=... --env=dev
+infisical secrets set GEMINI_API_KEY=... --env=dev
+```
+
+## `.env.local` vs Infisical
+
+| Surface | Role |
+|---------|------|
+| **Infisical** | Canonical store for all team secrets |
+| **`app/.env.local`** | Local cache for tools that read files directly (MCP `cf-mcp-bridge.sh`, Next.js, worktrees via `.worktreeinclude`) |
+
+After rotating a secret in Infisical, sync to `app/.env.local` for file-based tools:
+
+```bash
+# Export only what you need (do not commit)
+infisical export --env=dev --format=dotenv --path=/app >> app/.env.local
+```
+
+Or set keys manually in `.env.local` after updating Infisical — keep both in sync.
+
+## Agent workflow
+
+1. **Need a secret?** → `infisical secrets get <KEY> --env=dev` (do not print full values in replies).
+2. **Run dev server / tests / verify** → `infisical run --env=dev -- <command>`.
+3. **User pasted a token in chat** → tell them to rotate in Infisical + Cloudflare/provider dashboard.
+4. **CI** → machine identity + `INFISICAL_TOKEN`, not user login ([usage docs](https://infisical.com/docs/cli/usage)).
+
+## Troubleshooting
+
+| Symptom | Fix |
+|---------|-----|
+| `You must be logged in` | `infisical login` or `infisical login -i` |
+| Wrong secrets loaded | Add `--env=dev` explicitly |
+| `infisical: command not found` | CLI installed — check `PATH` or reinstall per [CLI usage](https://infisical.com/docs/cli/usage) |
+| MCP bridge can't find token | `CLOUDFLARE_API_TOKEN` must be in `app/.env.local` (sync from Infisical) |
+| Domain / EU errors | `export INFISICAL_DOMAIN=https://eu.infisical.com` |
