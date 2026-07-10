@@ -62,3 +62,7 @@ __pycache__/
 
 # Deprecated skills staging — canonical skills live in .claude/skills/
 .agents/
+
+# Obsidian vault config (personal editor preference, not project content)
+.obsidian/
+**/.obsidian/
