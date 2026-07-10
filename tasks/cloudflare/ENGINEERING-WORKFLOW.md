@@ -206,9 +206,8 @@ fast, and rollback is one command":
    before merge" a less load-bearing question — the blast radius of being wrong is capped and
    reversible. ([docs](https://developers.cloudflare.com/workers/versions-and-deployments/gradual-deployments/))
 3. **One-command rollback** — up to the last 100 versions, via `wrangler rollback` or the
-   dashboard. Means a bounded-timeout mitigation (like this session's `PostgresStore` hang fix)
-   can ship with less pre-merge exhaustiveness, because "it broke in prod" has a fast, cheap exit.
-   ([docs](https://developers.cloudflare.com/workers/versions-and-deployments/rollbacks/))
+   dashboard. Lets you ship bounded mitigations with less pre-merge exhaustiveness, because "it
+   broke in prod" has a fast, cheap exit. ([docs](https://developers.cloudflare.com/workers/versions-and-deployments/rollbacks/))
 4. **Workers Logs / Traces / Analytics Engine** — real-time console logs and execution traces are
    free and always on. Cheaper and more accurate than trying to predict every runtime edge case
    locally — for CopilotKit/Mastra streaming specifically, this beats guessing at hang causes from
