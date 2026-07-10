@@ -1,15 +1,33 @@
 import type { NextConfig } from "next";
 import path from "node:path";
+import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
 
 import { CLOUDINARY_CLOUD_NAME } from "./src/lib/cloudinary/url";
 
 const appDir = path.dirname(fileURLToPath(import.meta.url));
 
+// Resolve the installed package's real root via its own package.json — robust
+// against hoisting/monorepo/pnpm layouts where node_modules isn't necessarily
+// a direct child of appDir (the previous hardcoded `appDir/node_modules/...`
+// path assumed a flat layout).
+const copilotkitRuntimeDir = path.join(
+  path.dirname(createRequire(import.meta.url).resolve("@copilotkit/runtime/package.json")),
+  "dist/v2/runtime",
+);
+
+/** Fetch-only CopilotKit v2 entrypoints — shared by Turbopack (dev) and webpack (next build / OpenNext). */
+const copilotkitRuntimeInternalAliases = {
+  "@copilotkit/runtime-internal/runtime": path.join(copilotkitRuntimeDir, "core/runtime.mjs"),
+  "@copilotkit/runtime-internal/in-memory": path.join(copilotkitRuntimeDir, "runner/in-memory.mjs"),
+  "@copilotkit/runtime-internal/fetch-handler": path.join(
+    copilotkitRuntimeDir,
+    "core/fetch-handler.mjs",
+  ),
+} as const;
+
 const nextConfig: NextConfig = {
   serverExternalPackages: [
-    "@copilotkit/runtime",
-    "@copilotkit/runtime/v2",
     "@mastra/core",
     "@mastra/libsql",
     "@mastra/pg",
@@ -30,8 +48,23 @@ const nextConfig: NextConfig = {
       },
     ],
   },
-  // Pin workspace root — repo has multiple lockfiles; otherwise Turbopack infers /home/sk.
-  turbopack: { root: appDir },
+  turbopack: {
+    root: appDir,
+    resolveAlias: Object.fromEntries(
+      Object.entries(copilotkitRuntimeInternalAliases).map(([key, absPath]) => [
+        key,
+        `./${path.relative(appDir, absPath)}`,
+      ]),
+    ),
+  },
+  webpack: (config) => {
+    config.resolve ??= {};
+    config.resolve.alias = {
+      ...config.resolve.alias,
+      ...copilotkitRuntimeInternalAliases,
+    };
+    return config;
+  },
   env: {
     NEXT_PUBLIC_COPILOTKIT_THREADS_ENABLED:
       process.env.COPILOTKIT_LICENSE_TOKEN && process.env.OPERATOR_AUTH_ENABLED === "true"
@@ -42,8 +75,6 @@ const nextConfig: NextConfig = {
 
 export default nextConfig;
 
-// OpenNext dev integration only — must NOT run during `next build` / OpenNext bundle
-// (wrangler proxy + vm monkey-patch can race Turbopack and break pages-manifest writes).
 if (process.env.NODE_ENV !== "production") {
   void import("@opennextjs/cloudflare").then((m) => m.initOpenNextCloudflareForDev());
 }

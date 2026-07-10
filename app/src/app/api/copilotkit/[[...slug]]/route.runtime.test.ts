@@ -1,7 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-// ── Mocks (must be before dynamic import) ──────────────────────────────────
-
 const getLocalAgentsCalls: Array<{ resourceId: string }> = [];
 
 beforeEach(() => {
@@ -46,27 +44,19 @@ async function setupMocks() {
     },
   }));
 
-  vi.doMock("@copilotkit/runtime/v2", () => ({
+  vi.doMock("@/lib/copilotkit/runtime-v2-fetch", () => ({
     CopilotRuntime: vi.fn((config: { agents: () => unknown }) => {
       (globalThis as Record<string, unknown>).__capturedAgentFactory = config.agents;
       return {};
     }),
-    createCopilotEndpoint: vi.fn(() => ({})),
-    CopilotKitIntelligence: vi.fn(),
-    InMemoryAgentRunner: vi.fn(),
-  }));
-
-  // The endpoint mock invokes the captured factory inside the same async
-  // context as the caller — i.e., inside _requestUser.run() — so the ALS
-  // store is populated when getLocalAgents reads it (C3 fix v2).
-  vi.doMock("hono/vercel", () => ({
-    handle: vi.fn(() => async () => {
+    createCopilotRuntimeHandler: vi.fn(() => async () => {
       const factory = (globalThis as Record<string, unknown>).__capturedAgentFactory as
         | (() => unknown)
         | undefined;
       if (factory) await factory();
       return new Response("ok");
     }),
+    InMemoryAgentRunner: vi.fn(),
   }));
 }
 
@@ -80,8 +70,6 @@ describe("IPI2-127 — two-user isolation (runtime)", () => {
     const route = await import("@/app/api/copilotkit/[[...slug]]/route");
     const withOperatorAuth = vi.mocked((await import("@/lib/operator-gate")).withOperatorAuth);
 
-    // Each route.GET call resolves the user via withOperatorAuth, injects it
-    // into the ALS context, then calls the endpoint (which calls the factory).
     withOperatorAuth.mockResolvedValueOnce({ id: "user-a-uuid", email: "alice@example.com", name: "Alice" });
     await route.GET(new Request("http://localhost/api/copilotkit"));
 
@@ -144,7 +132,6 @@ describe("IPI2-127 — anonymous → 401 when auth enabled (runtime)", () => {
 
     expect(response.status).toBe(200);
     expect(await response.text()).toBe("ok");
-    // extractAccessToken is mocked to return "test-token"; assert it reaches requestToken.run
     expect(vi.mocked(requestToken.run)).toHaveBeenCalledWith("test-token", expect.any(Function));
   });
 });
@@ -162,9 +149,6 @@ describe("C3 — single auth resolution per request (runtime)", () => {
 
     withOperatorAuth.mockResolvedValue({ id: "cached-user", email: "cached@test.com", name: "Cached" });
 
-    // Each route.GET call: withOperatorAuth once, then endpoint (mock) calls factory
-    // inside the ALS context set by _requestUser.run(). Two requests → two factory
-    // invocations, each reading the same "cached-user" from the store.
     await route.GET(new Request("http://localhost/api/copilotkit"));
     await route.GET(new Request("http://localhost/api/copilotkit"));
 
@@ -172,5 +156,20 @@ describe("C3 — single auth resolution per request (runtime)", () => {
     expect(resolveOperatorUser).not.toHaveBeenCalled();
     expect(getLocalAgentsCalls).toHaveLength(2);
     expect(getLocalAgentsCalls.every((c) => c.resourceId === "cached-user")).toBe(true);
+  });
+});
+
+describe("CF-MIG-210 — Workers-safe runtime (no hono/vercel)", () => {
+  beforeEach(async () => {
+    vi.stubEnv("NODE_ENV", "development");
+    await setupMocks();
+  });
+
+  it("uses createCopilotRuntimeHandler from runtime-v2-fetch", async () => {
+    const { createCopilotRuntimeHandler } = await import("@/lib/copilotkit/runtime-v2-fetch");
+    await import("@/app/api/copilotkit/[[...slug]]/route");
+    expect(createCopilotRuntimeHandler).toHaveBeenCalledWith(
+      expect.objectContaining({ basePath: "/api/copilotkit" }),
+    );
   });
 });

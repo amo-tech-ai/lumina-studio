@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "build": "NEXT_PRIVATE_WORKER_THREADS=false next build",
+    "prebuild": "node scripts/sync-groq-models.mjs",
     "dev": "npm run dev:infra && concurrently \"npm run dev:ui\" \"npm run dev:agent\" --names ui,agent --prefix-colors blue,green --kill-others",
     "dev:agent": "mastra dev",
     "dev:ui": "next dev --turbopack -p 3002",
@@ -13,9 +14,9 @@
     "test": "vitest run",
     "start": "next start -p 3002",
     "dev:infra": "node scripts/copilotkit-dev-infra.mjs",
-    "preview": "rm -rf .next .open-next && opennextjs-cloudflare build && opennextjs-cloudflare preview",
-    "deploy": "rm -rf .next .open-next && opennextjs-cloudflare build && opennextjs-cloudflare deploy",
-    "upload": "rm -rf .next .open-next && opennextjs-cloudflare build && opennextjs-cloudflare upload",
+    "preview": "node scripts/sync-groq-models.mjs && rm -rf .next .open-next && opennextjs-cloudflare build && opennextjs-cloudflare preview",
+    "deploy": "node scripts/sync-groq-models.mjs && rm -rf .next .open-next && opennextjs-cloudflare build && opennextjs-cloudflare deploy",
+    "upload": "node scripts/sync-groq-models.mjs && rm -rf .next .open-next && opennextjs-cloudflare build && opennextjs-cloudflare upload",
     "cf-typegen": "wrangler types --env-interface CloudflareEnv cloudflare-env.d.ts"
   },
   "dependencies": {
