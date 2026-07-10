@@ -1,3 +1,4 @@
+import { createGroq } from "@ai-sdk/groq";
 import groqModelsSsot from "./groq-models.ssot.json";
 
 import {
@@ -106,16 +107,6 @@ function createGroqLanguageModel(tier: GroqModelTier): ResolvedLanguageModel {
   if (!apiKey) {
     throw new Error("GROQ_API_KEY is required when AI_PROVIDER=groq.");
   }
-
-  let createGroq: typeof import("@ai-sdk/groq").createGroq;
-  try {
-    ({ createGroq } = require("@ai-sdk/groq"));
-  } catch {
-    throw new Error(
-      "@ai-sdk/groq is not installed. Run `npm install` in app/ (see package.json).",
-    );
-  }
-
   const groq = createGroq({ apiKey });
   return groq(resolveGroqModelId(tier));
 }
