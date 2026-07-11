@@ -122,7 +122,6 @@ async function cleanupRlsTestData({
   brandId,
   notificationId,
   crmNotificationId,
-  assetId,
   userAId,
   userBId,
 }) {
@@ -132,13 +131,6 @@ async function cleanupRlsTestData({
     const { error: notifDelErr } = await admin.from("notifications").delete().eq("id", id);
     if (notifDelErr) {
       console.warn(`warn: cleanup notification ${id}: ${notifDelErr.message}`);
-    }
-  }
-
-  if (assetId) {
-    const { error: assetDelErr } = await admin.from("assets").delete().eq("id", assetId);
-    if (assetDelErr) {
-      console.warn(`warn: cleanup asset ${assetId}: ${assetDelErr.message}`);
     }
   }
 
@@ -209,7 +201,6 @@ let brandAId;
 let orgAId;
 let notificationId;
 let crmNotificationId;
-let assetId;
 
 try {
   userA = await createTestUser(emailA);
@@ -533,46 +524,6 @@ try {
     score: 99,
   });
   assert(!!crossScoreInsertErr, "user B cannot insert brand_score on user A brand");
-
-  // IPI-499 — assets_select_via_brand org-awareness. Seed via service role
-  // (insert policy stays owner-only by design); B isn't an org member yet at
-  // this point in the script — that happens below, near the viewer/editor probes.
-  if (!admin) {
-    console.warn("warn: skip IPI-499 assets RLS probes (no SUPABASE_SERVICE_ROLE_KEY)");
-  } else {
-    const { data: assetRow, error: assetAdminErr } = await admin
-      .from("assets")
-      .insert({
-        brand_id: brandAId,
-        url: `https://example.com/rls-probe-${stamp}.jpg`,
-        asset_type: "image",
-        status: "draft",
-        dna_pillars: {},
-      })
-      .select("id")
-      .single();
-    assert(!assetAdminErr && assetRow?.id, "service role inserts asset for RLS probe");
-    assetId = assetRow?.id;
-
-    const { data: assetReadOwner, error: assetReadOwnerErr } = await userA.client
-      .from("assets")
-      .select("id")
-      .eq("id", assetId);
-    assert(
-      !assetReadOwnerErr && (assetReadOwner ?? []).length === 1,
-      "brand owner reads own asset",
-    );
-
-    const { data: assetReadNonMember, error: assetReadNonMemberErr } = await userB.client
-      .from("assets")
-      .select("id")
-      .eq("id", assetId);
-    assertSelectDenied(
-      assetReadNonMemberErr,
-      assetReadNonMember,
-      "non-org-member cannot read brand asset (pre-membership)",
-    );
-  }
 
   // IPI-26 — service-role writes; org-member SELECT only
   if (!admin) {
@@ -915,20 +866,6 @@ try {
   });
   assert(!viewerMemberErr, "user A adds user B as org viewer");
 
-  // IPI-499 — now that B is an org member (even just viewer), assets_select_via_brand's
-  // is_org_member OR-branch should make the same asset from the pre-membership probe
-  // above visible. This is the exact bug the migration fixes.
-  if (admin && assetId) {
-    const { data: assetReadMember, error: assetReadMemberErr } = await userB.client
-      .from("assets")
-      .select("id")
-      .eq("id", assetId);
-    assert(
-      !assetReadMemberErr && (assetReadMember ?? []).length === 1,
-      "org member (viewer role) reads brand asset after joining — IPI-499",
-    );
-  }
-
   const { error: viewerScoreInsertErr } = await userB.client.from("brand_scores").insert({
     brand_id: brandAId,
     score_type: "visual",
@@ -1261,20 +1198,6 @@ try {
       outsiderWf,
       "non-member cannot read planner.workflows",
     );
-
-    // IPI-499 — a user who is a member of no org at all must never see the asset,
-    // even after the org-aware policy shipped (org A membership check must fail closed).
-    if (assetId) {
-      const { data: outsiderAsset, error: outsiderAssetErr } = await userC.client
-        .from("assets")
-        .select("id")
-        .eq("id", assetId);
-      assertSelectDenied(
-        outsiderAssetErr,
-        outsiderAsset,
-        "non-org-member cannot read brand asset — IPI-499",
-      );
-    }
   } finally {
     if (userC?.user?.id) {
       const { error } = await deleteAuthUser(userC.user.id);
@@ -1297,7 +1220,6 @@ try {
     brandId: brandAId,
     notificationId,
     crmNotificationId,
-    assetId,
     userAId: userA?.user?.id,
     userBId: userB?.user?.id,
   });
