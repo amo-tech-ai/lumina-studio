@@ -20,7 +20,8 @@ const AssetsPage = async () => {
   try {
     const assets = await listAssets(supabase);
     return <AssetsWorkspace assets={assets} isAuthenticated />;
-  } catch {
+  } catch (error) {
+    console.error("[app/assets] listAssets failed:", error);
     return (
       <AssetsWorkspace
         assets={[]}

@@ -110,6 +110,22 @@ describe("AssetsWorkspace", () => {
     expect(cards[1].textContent).toContain("40%");
   });
 
+  it("clearing filters also turns off the DNA match sort toggle", () => {
+    render(
+      <AssetsWorkspace
+        assets={[asset({ id: "a1", asset_type: "image" }), asset({ id: "a2", asset_type: "video" })]}
+        isAuthenticated
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "DNA match" }));
+    fireEvent.click(screen.getByRole("button", { name: "Document" }));
+    expect(screen.getByRole("button", { name: "DNA match" }).getAttribute("aria-pressed")).toBe("true");
+    expect(screen.getByTestId("assets-no-match")).toBeDefined();
+
+    fireEvent.click(screen.getByRole("button", { name: "Clear filters" }));
+    expect(screen.getByRole("button", { name: "DNA match" }).getAttribute("aria-pressed")).toBe("false");
+  });
+
   it("filters the grid client-side by asset_type", () => {
     render(
       <AssetsWorkspace

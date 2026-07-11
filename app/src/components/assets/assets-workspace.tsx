@@ -119,6 +119,7 @@ export function AssetsWorkspace({ assets, isAuthenticated, fetchError }: Props) 
     setFilter("all");
     setBrandFilter("all");
     setDateFilter("all");
+    setSortByMatch(false);
   }
 
   if (!isAuthenticated) {
