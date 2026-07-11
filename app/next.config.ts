@@ -47,6 +47,11 @@ const nextConfig: NextConfig = {
         hostname: "res.cloudinary.com",
         pathname: `/${CLOUDINARY_CLOUD_NAME}/image/upload/**`,
       },
+      {
+        protocol: "https",
+        hostname: "res.cloudinary.com",
+        pathname: `/${CLOUDINARY_CLOUD_NAME}/image/authenticated/**`,
+      },
     ],
   },
   turbopack: {
