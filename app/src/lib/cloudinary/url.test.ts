@@ -54,6 +54,25 @@ describe("presetTransformString / cropTransformString", () => {
   });
 });
 
+describe("withCloudinaryPreset", () => {
+  it("inserts the preset transform right after /image/upload/", async () => {
+    const { withCloudinaryPreset } = await importUrl();
+    const url = withCloudinaryPreset(
+      "https://res.cloudinary.com/dzqy2ixl0/image/upload/v1700000000/brand/asset_01.jpg",
+      "asset-masonry",
+    );
+    expect(url).toBe(
+      "https://res.cloudinary.com/dzqy2ixl0/image/upload/c_limit,w_600,f_auto,q_auto/v1700000000/brand/asset_01.jpg",
+    );
+  });
+
+  it("returns the URL unchanged when it has no /image/upload/ marker", async () => {
+    const { withCloudinaryPreset } = await importUrl();
+    const url = "https://example.com/not-cloudinary.jpg";
+    expect(withCloudinaryPreset(url, "asset-masonry")).toBe(url);
+  });
+});
+
 describe("isDeliverableCover", () => {
   it("accepts a delivery URL under the configured cloud", async () => {
     const { isDeliverableCover } = await importUrl();
