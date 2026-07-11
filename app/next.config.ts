@@ -47,6 +47,14 @@ const nextConfig: NextConfig = {
         hostname: "res.cloudinary.com",
         pathname: `/${CLOUDINARY_CLOUD_NAME}/image/upload/**`,
       },
+      {
+        // Signed delivery for real (type:"authenticated") assets — see
+        // api/_lib/cloudinary-signed-url.ts. Separate path shape from the
+        // public /image/upload/ pattern above, so next/image needs its own entry.
+        protocol: "https",
+        hostname: "res.cloudinary.com",
+        pathname: `/${CLOUDINARY_CLOUD_NAME}/image/authenticated/**`,
+      },
     ],
   },
   turbopack: {
