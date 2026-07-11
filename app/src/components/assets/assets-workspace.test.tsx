@@ -11,7 +11,11 @@ vi.mock("next/image", () => ({ default: (props: { alt: string }) => <img alt={pr
 const { useSearchParamsMock } = vi.hoisted(() => ({
   useSearchParamsMock: vi.fn(() => new URLSearchParams("")),
 }));
-vi.mock("next/navigation", () => ({ useSearchParams: useSearchParamsMock }));
+const refresh = vi.fn();
+vi.mock("next/navigation", () => ({
+  useSearchParams: useSearchParamsMock,
+  useRouter: () => ({ refresh }),
+}));
 
 import { AssetsWorkspace } from "./assets-workspace";
 import type { AssetRow } from "@/lib/assets/get-assets";
@@ -64,6 +68,40 @@ describe("AssetsWorkspace", () => {
     render(<AssetsWorkspace assets={[]} isAuthenticated fetchError="Unable to load assets." />);
     expect(screen.getByRole("alert")).toBeDefined();
     expect(screen.getByText("Unable to load assets.")).toBeDefined();
+  });
+
+  it("retry re-runs the server fetch via router.refresh(), not a no-op link", () => {
+    refresh.mockClear();
+    render(<AssetsWorkspace assets={[]} isAuthenticated fetchError="Unable to load assets." />);
+    fireEvent.click(screen.getByRole("button", { name: "Try again" }));
+    expect(refresh).toHaveBeenCalledTimes(1);
+  });
+
+  it("re-syncs the brand filter when the URL's ?brand= changes without remounting (client-side nav / back-forward)", () => {
+    useSearchParamsMock.mockReturnValue(new URLSearchParams("brand=b1"));
+    const { rerender } = render(
+      <AssetsWorkspace
+        assets={[
+          asset({ id: "a1", brand_id: "b1", brand: { name: "Acme" } }),
+          asset({ id: "a2", brand_id: "b2", brand: { name: "Zeta" } }),
+        ]}
+        isAuthenticated
+      />,
+    );
+    expect(screen.getAllByTestId("asset-card")).toHaveLength(1);
+
+    useSearchParamsMock.mockReturnValue(new URLSearchParams("brand=b2"));
+    rerender(
+      <AssetsWorkspace
+        assets={[
+          asset({ id: "a1", brand_id: "b1", brand: { name: "Acme" } }),
+          asset({ id: "a2", brand_id: "b2", brand: { name: "Zeta" } }),
+        ]}
+        isAuthenticated
+      />,
+    );
+    expect(screen.getByLabelText("Filter by brand")).toHaveProperty("value", "b2");
+    expect(screen.getAllByTestId("asset-card")).toHaveLength(1);
   });
 
   it("shows an honest empty state when there are no assets", () => {

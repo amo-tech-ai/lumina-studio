@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useEffect, useMemo, useState } from "react";
 import { ImageOff } from "lucide-react";
 
 import { EmptyState } from "@/components/ui/empty-state";
@@ -86,11 +86,20 @@ export function AssetsWorkspace({ assets, isAuthenticated, fetchError }: Props) 
   // Brand Detail's "Review assets" link and the command-center quick action both
   // deep-link as `/app/assets?brand=<id>` (brand-detail-workspace.tsx, quick-action-chips.tsx)
   // — honor it as the initial filter so multi-brand operators land scoped, not on "All brands".
+  const router = useRouter();
   const searchParams = useSearchParams();
   const [filter, setFilter] = useState<AssetFilter>("all");
   const [brandFilter, setBrandFilter] = useState<string>(() => searchParams.get("brand") ?? "all");
   const [dateFilter, setDateFilter] = useState<DateBucket>("all");
   const [sortByMatch, setSortByMatch] = useState(false);
+
+  // The useState initializer above only runs on first mount — client-side
+  // navigation between two /app/assets?brand=<id> URLs (or browser back/forward)
+  // updates searchParams without remounting this component, so brandFilter needs
+  // its own sync or it silently shows the previous brand's assets under a new URL.
+  useEffect(() => {
+    setBrandFilter(searchParams.get("brand") ?? "all");
+  }, [searchParams]);
 
   const brandOptions = useMemo(() => {
     const byId = new Map<string, string>();
@@ -145,7 +154,11 @@ export function AssetsWorkspace({ assets, isAuthenticated, fetchError }: Props) 
           <h1 className={styles.title}>Assets</h1>
         </header>
         <div className={styles.body}>
-          <ErrorState message={fetchError} title="Couldn't load assets" />
+          <ErrorState
+            message={fetchError}
+            title="Couldn't load assets"
+            onRetry={() => router.refresh()}
+          />
         </div>
       </div>
     );
