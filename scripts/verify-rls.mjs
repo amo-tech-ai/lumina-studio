@@ -554,24 +554,26 @@ try {
     assert(!assetAdminErr && assetRow?.id, "service role inserts asset for RLS probe");
     assetId = assetRow?.id;
 
-    const { data: assetReadOwner, error: assetReadOwnerErr } = await userA.client
-      .from("assets")
-      .select("id")
-      .eq("id", assetId);
-    assert(
-      !assetReadOwnerErr && (assetReadOwner ?? []).length === 1,
-      "brand owner reads own asset",
-    );
+    if (assetId) {
+      const { data: assetReadOwner, error: assetReadOwnerErr } = await userA.client
+        .from("assets")
+        .select("id")
+        .eq("id", assetId);
+      assert(
+        !assetReadOwnerErr && (assetReadOwner ?? []).length === 1,
+        "brand owner reads own asset",
+      );
 
-    const { data: assetReadNonMember, error: assetReadNonMemberErr } = await userB.client
-      .from("assets")
-      .select("id")
-      .eq("id", assetId);
-    assertSelectDenied(
-      assetReadNonMemberErr,
-      assetReadNonMember,
-      "non-org-member cannot read brand asset (pre-membership)",
-    );
+      const { data: assetReadNonMember, error: assetReadNonMemberErr } = await userB.client
+        .from("assets")
+        .select("id")
+        .eq("id", assetId);
+      assertSelectDenied(
+        assetReadNonMemberErr,
+        assetReadNonMember,
+        "non-org-member cannot read brand asset (pre-membership)",
+      );
+    }
   }
 
   // IPI-26 — service-role writes; org-member SELECT only
