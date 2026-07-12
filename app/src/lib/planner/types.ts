@@ -164,3 +164,15 @@ export interface DependencyGraph {
   adjacency: Map<string, string[]>; // taskId -> successor taskIds
   reverseAdjacency: Map<string, string[]>; // taskId -> predecessor taskIds
 }
+
+// IPI-536 — shared mutation-result shape for all Planner mutations (IPI-574/575/582).
+// `ok` discriminant matches the existing ServiceResult<T> convention in
+// app/src/lib/booking/booking-service.ts, not a `success` field.
+export interface PlannerMutationError {
+  code: string;
+  message: string;
+}
+
+export type MutationResult<T> =
+  | { ok: true; data: T }
+  | { ok: false; error: PlannerMutationError };
