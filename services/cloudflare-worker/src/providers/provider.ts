@@ -33,7 +33,7 @@ export interface ChatToolCall {
 
 export interface ChatMessage {
   role: "system" | "user" | "assistant" | "tool";
-  content: string;
+  content: string | null;
   /** Required on tool-result messages so the model can match the result to a call. */
   tool_call_id?: string;
   /** Returned on assistant messages when the model selects one or more tools. */
