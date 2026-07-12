@@ -33,8 +33,8 @@ Any Fail in a Required row = blocker. Advisory rows are recommended but not bloc
 
 | Check | Skill | MCP / Tool | Command | Pass criteria |
 |-------|-------|------------|---------|---------------|
-| Runtime API docs | `cloudflare` | `cloudflare_docs` / `cloudflare-bindings_search_cloudflare_documentation` | Search for the API being used (e.g. "node:fs Workers", "nodejs_compat") | Docs confirm the API is supported + required flags |
-| OpenNext docs | `cloudflare` | `cloudflare_docs` | Search "OpenNext" + feature name | OpenNext compatibility confirmed |
+| Runtime API docs | `cloudflare-workflow` | `mcp__claude_ai_Cloudflare_Developer_Platform__search_cloudflare_documentation` | Search for the API being used (e.g. "node:fs Workers", "nodejs_compat") | Docs confirm the API is supported + required flags |
+| OpenNext docs | `cloudflare-workflow` | `mcp__claude_ai_Cloudflare_Developer_Platform__search_cloudflare_documentation` | Search "OpenNext" + feature name | OpenNext compatibility confirmed |
 | Workers best practices | `workers-best-practices` | — | Read SKILL.md | Pattern matches recommended approach |
 
 ### 0.4 Read installed package source
@@ -91,7 +91,7 @@ Any Fail in a Required row = blocker. Advisory rows are recommended but not bloc
 |-------|-------|------------|---------|---------------|
 | Read source at HEAD | — | — | `git show <SHA>:<path>` | File read at exact line |
 | Read package source | — | — | `cat node_modules/<pkg>/dist/<file>` | Package behavior confirmed |
-| Cloudflare docs confirm | `cloudflare` | `cloudflare_docs` / `user-cloudflare-docs` | Search for the API/pattern | Docs support or refute the claim |
+| Cloudflare docs confirm | `cloudflare-workflow` | `mcp__claude_ai_Cloudflare_Developer_Platform__search_cloudflare_documentation` | Search for the API/pattern | Docs support or refute the claim |
 | Runtime reproduction | `cloudflare-workflow` | — | `wrangler dev` + curl the route | Behavior reproduced or refuted |
 | Classify finding | `cloudflare-workflow` | — | — | Confirmed / Unproven / Already Fixed / Incorrect / Out of Scope |
 
@@ -130,7 +130,7 @@ Any Fail in a Required row = blocker. Advisory rows are recommended but not bloc
 | `supabase/migrations/**` | `ipix-supabase` | `supabase` MCP (`execute_sql`, `get_advisors`) |
 | `supabase/functions/**` | `ipix-supabase`, `gemini` | `supabase` MCP (`list_edge_functions`) |
 | Cloudflare Workers, wrangler config | `cloudflare`, `workers-best-practices`, `wrangler` | `cloudflare-docs` MCP |
-| D1 / KV / R2 bindings | `cloudflare` | `cloudflare-bindings` MCP |
+| D1 / KV / R2 bindings | `cloudflare-workflow` | `mcp__claude_ai_Cloudflare_Developer_Platform__d1_database_query`, `kv_namespaces_list`, `r2_buckets_list` |
 | Durable Objects | `durable-objects` | `cloudflare-docs` MCP |
 | Workers builds / deploy | `cloudflare`, `wrangler` | `cloudflare-builds` MCP |
 | Worker logs / observability | `cloudflare` | `cloudflare-observability` MCP |
@@ -237,7 +237,7 @@ Score every Cloudflare PR against this rubric. Any Fail = blocker.
 | # | Criterion | Skill | MCP | How to verify | Pass | Fail |
 |---|-----------|-------|-----|---------------|------|------|
 | 1 | Runtime compatibility | `workers-best-practices` | `cloudflare-docs` | Grep Workers-loaded modules for `require()` | No `require()`, ESM only | `require()` in Workers path |
-| 2 | Official docs checked | `cloudflare` | `cloudflare_docs` / `cloudflare-bindings_search_cloudflare_documentation` | Search docs for each runtime API claim | Docs confirm support + flags | Assumed from training data |
+| 2 | Official docs checked | `cloudflare-workflow` | `mcp__claude_ai_Cloudflare_Developer_Platform__search_cloudflare_documentation` | Search docs for each runtime API claim | Docs confirm support + flags | Assumed from training data |
 | 3 | Bundle verified | `cloudflare-workflow` | — | Stage 5 bundle audit | No secrets, no Node imports, assets present | Bundle not inspected |
 | 4 | No Node runtime assumptions | `cloudflare` | `cloudflare-docs` | Verify node:fs/require against nodejs_compat + compat_date | Verified against current docs | Assumed without checking |
 | 5 | OpenNext build passes | `cloudflare` | — | `npx opennextjs-cloudflare build` | Exit 0 | Fails or skipped |
@@ -255,12 +255,10 @@ Score every Cloudflare PR against this rubric. Any Fail = blocker.
 
 | MCP Server | When to use | Key tools |
 |------------|-------------|-----------|
-| `cloudflare` | API calls, OpenAPI spec search, doc search | `cloudflare_request`, `cloudflare_search`, `cloudflare_docs` |
-| `cloudflare-docs` | Documentation lookup for Workers/AI/D1/R2 | `cloudflare-docs_search_cloudflare_documentation` |
-| `cloudflare-bindings` | D1/KV/R2/Hyperdrive CRUD + queries | `d1_database_query`, `kv_namespaces_list`, `r2_buckets_list`, `hyperdrive_configs_list` |
-| `cloudflare-builds` | Workers build inspection + logs | `workers_builds_list_builds`, `workers_builds_get_build_logs` |
-| `cloudflare-observability` | Worker logs, metrics, error analysis | `query_worker_observability`, `observability_keys`, `observability_values` |
-| `supabase` | SQL execution, migrations, advisors, edge functions | `execute_sql`, `apply_migration`, `get_advisors`, `list_edge_functions` |
+| **Cloudflare Developer Platform** | All Workers/D1/KV/R2/Hyperdrive operations | `mcp__claude_ai_Cloudflare_Developer_Platform__search_cloudflare_documentation`, `workers_get_worker_code`, `d1_database_query`, `kv_namespaces_list`, `r2_buckets_list` |
+| **Cloudflare Docs** (backup) | Doc lookup if Developer Platform search times out | `mcp__plugin_cloudflare_cloudflare-docs__search_cloudflare_documentation` |
+| **Cloudflare API** | Direct API calls when MCP tools insufficient | `mcp__plugin_cloudflare_cloudflare-api__execute` |
+| **Supabase** | D1 is Postgres; SQL execution, migrations, RLS | `execute_sql`, `apply_migration`, `get_advisors`, `list_edge_functions` |
 
 ---
 

@@ -43,6 +43,26 @@ Applies to **all** Cloudflare-related work, including:
 
 ---
 
+## MCP Cloudflare Tools Reference
+
+Use these tools throughout all stages. Names are exact — copy/paste into ToolSearch.
+
+| Tool | Purpose | When to use |
+|------|---------|------------|
+| `mcp__claude_ai_Cloudflare_Developer_Platform__search_cloudflare_documentation` | Official Cloudflare API docs | Stage 0 research, any "is this supported?" question |
+| `mcp__claude_ai_Cloudflare_Developer_Platform__workers_get_worker` | Get live Worker code | Stage 5 runtime verification — compare deployed vs local |
+| `mcp__claude_ai_Cloudflare_Developer_Platform__workers_get_worker_code` | Fetch Worker JS | Stage 2 evidence collection for deployed code |
+| `mcp__claude_ai_Cloudflare_Developer_Platform__workers_list` | List Workers | Stage 1 scope verification (no orphan Workers created) |
+| `mcp__claude_ai_Cloudflare_Developer_Platform__d1_databases_list` | List D1 instances | Stage 1 scope verification |
+| `mcp__claude_ai_Cloudflare_Developer_Platform__d1_database_query` | Run SQL query | Stage 5 runtime verification for schema changes |
+| `mcp__claude_ai_Cloudflare_Developer_Platform__kv_namespaces_list` | List KV namespaces | Stage 1 scope verification |
+| `mcp__claude_ai_Cloudflare_Developer_Platform__kv_namespace_get` | Get KV namespace config | Stage 5 verify binding exists and is configured |
+| `mcp__claude_ai_Cloudflare_Developer_Platform__r2_buckets_list` | List R2 buckets | Stage 1 scope verification |
+| `mcp__plugin_cloudflare_cloudflare-api__execute` | Execute arbitrary API call | Stage 5 when MCP tools insufficient |
+| `mcp__plugin_cloudflare_cloudflare-docs__search_cloudflare_documentation` | Alternate docs search | Backup if Developer Platform search times out |
+
+---
+
 ## Stage 0 — Research & Architecture Review
 
 Before any code changes. Many previous mistakes came from architecture drift, not coding errors.
@@ -221,6 +241,19 @@ Especially for Workers. After the build, inspect the generated bundle:
 
 This catches problems before deployment, not after.
 
+### Stage 5b — Cloudflare Bindings & Service Verification (if applicable)
+
+For any PR touching KV, D1, R2, Hyperdrive, Durable Objects, or deployed Workers:
+
+| Check | MCP Tool | Command | Pass criteria |
+|-------|----------|---------|---------------|
+| Workers code deployed | `workers_get_worker_code` | Compare commit hash vs deployed code | Deployed version matches latest push |
+| D1 schema applied | `d1_database_query` | Query information schema or `_cf_metadata` | All migrations present and consistent |
+| KV namespaces exist | `kv_namespaces_list` | Verify expected namespaces listed in response | No orphan/missing namespaces |
+| KV binding config | `kv_namespace_get` | Check binding exists in wrangler.jsonc | Matches deployed configuration |
+| R2 buckets configured | `r2_buckets_list` | Verify expected buckets exist | Buckets match wrangler.jsonc, CORS rules applied |
+| Hyperdrive configured | `kv_namespaces_list` | Check Hyperdrive credentials are bound (not exposed) | No secrets in environment |
+
 ---
 
 ## Stage 6 — Documentation Contradiction Check
@@ -286,6 +319,58 @@ Verify:
 If any production blocker remains, classify it clearly.
 
 Do not describe mitigations as complete fixes.
+
+---
+
+## Known Cloudflare Gotchas (Real Incidents)
+
+### Workers AI embed dimension mismatch (IPI-492)
+
+- **Gotcha:** BGE Base returns **768 dimensions**, not 512 or 1536
+- **Impact:** Adapter code assumes wrong dimension; vectors silently truncated or padded
+- **Prevention:** Always verify embed response shape against [official model card](https://developers.cloudflare.com/workers-ai/models/bge-base-en-v1.5/)
+- **Test:** Call `/v1/embeddings` with test input; inspect `data[0].embedding.length`
+- **MCP:** `mcp__claude_ai_Cloudflare_Developer_Platform__search_cloudflare_documentation` for model specs
+
+### OpenNext build requires exact compatibility_date
+
+- **Gotcha:** `opennextjs-cloudflare build` succeeds but `wrangler dev` fails if `compatibility_date` is stale
+- **Impact:** Build passes CI; runtime fails only on `wrangler dev` or deployed Workers
+- **Prevention:** Keep `compatibility_date` in `wrangler.jsonc` on latest stable (check official docs monthly)
+- **Test:** Run both `opennextjs-cloudflare build` AND `wrangler dev` locally before push
+- **MCP:** `mcp__claude_ai_Cloudflare_Developer_Platform__search_cloudflare_documentation` for current recommended date
+
+### D1 remote DB vs local preview mismatch
+
+- **Gotcha:** Migrations apply locally; remote apply fails due to auth/state divergence or SQL incompatibility
+- **Impact:** Code passes local tests; fails on production D1 at deploy time
+- **Prevention:** Test migrations on actual D1 instance before merge (Stage 5b)
+- **Test:** Run `d1_database_query` on production DB; verify schema state matches local
+- **MCP:** `mcp__claude_ai_Cloudflare_Developer_Platform__d1_database_query` to inspect remote schema
+
+### KV key collisions with reserved prefixes
+
+- **Gotcha:** Keys starting with `_` have special handling; overlaps can cause silent data loss
+- **Impact:** System keys and user keys collide; data silently overwritten or inaccessible
+- **Prevention:** Reserve `_internal_*` prefix for framework keys only; document user key convention
+- **Test:** Namespace keys and verify no `_` prefix overlap with user namespaces
+- **MCP:** `mcp__plugin_cloudflare_cloudflare-api__execute` to list KV keys (MCP tools show namespaces only)
+
+### Workers script size limit (1 MB uncompressed)
+
+- **Gotcha:** OpenNext build succeeds; deployed Worker fails with "Script too large" at runtime
+- **Impact:** Code passes local tests; fails silently on production deploy
+- **Prevention:** Monitor `.open-next/worker.js` file size; flag if >500KB (safety margin)
+- **Test:** `du -sh .open-next/worker.js` after build; should be <1 MB
+- **Fix:** Tree-shake unused imports, defer code-splitting, or migrate to service workers
+
+### nodejs_compat flag must be in compatibility_flags array
+
+- **Gotcha:** Setting `nodejs_compat = true` in wrangler.jsonc does NOT enable `node:fs`/`node:path`
+- **Impact:** Code uses `node:fs` but Workers environment doesn't have the flag
+- **Prevention:** Use `compatibility_flags = ["nodejs_compat"]` (array syntax, exact name)
+- **Test:** `wrangler dev` with simple `import fs from "node:fs"` should not throw
+- **MCP:** `mcp__claude_ai_Cloudflare_Developer_Platform__search_cloudflare_documentation` for nodejs_compat docs
 
 ---
 
@@ -366,6 +451,26 @@ Reusable rubric — score every Cloudflare PR/task against these criteria before
 | Embed/error contract (when touched) | Allowlist reject; no silent remap; no opaque 502 for client validation; typed adapter error | Remap / gemini-name detect / raw provider body leak |
 
 **Merge gate:** all criteria must be Pass or explicitly waived with a documented reason. Any Fail = blocker.
+
+---
+
+## Skills × MCP Integration Table
+
+Load skills in this order for Cloudflare work:
+
+| Skill | MCP Tools Available | When to load | Key integration |
+|-------|-------------------|--------------|-----------------|
+| **cloudflare-workflow** (this) | `search_cloudflare_documentation`, `workers_*`, `d1_*`, `kv_*`, `r2_*`, `cloudflare-api__execute` | Every Cloudflare task | Primary skill; provides 9-stage gate |
+| `ipix-task-lifecycle` | Linear MCP | Any task with Linear tracking (IPI-###) | Provides context + acceptance criteria |
+| `pr-workflow` | GitHub MCP (PR threads, CI status) | Before merge gate | Provides PR state + review gate |
+| `ipix-supabase` | Supabase MCP | If D1 is involved | D1 is Postgres; RLS patterns apply |
+| `graphify` | — | Stage 0 architecture review | Dependency mapping |
+
+**Load order:**
+1. Start with this skill (cloudflare-workflow)
+2. Grab MCP tools via ToolSearch (copy/paste tool names from MCP Tools Reference above)
+3. Load domain skill if needed (e.g., `ipix-supabase` for D1)
+4. Load lifecycle skills (`ipix-task-lifecycle`, `pr-workflow`) for tracking
 
 ---
 
