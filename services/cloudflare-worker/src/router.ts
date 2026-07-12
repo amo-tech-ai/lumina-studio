@@ -203,6 +203,14 @@ export async function handleChat(
     const latency = Date.now() - startTime;
     const errorMessage = err instanceof Error ? err.message : String(err);
 
+    // Determine status code based on error classification
+    const isClientError = errorMessage.includes("does not support") ||
+                          errorMessage.includes("Invalid model") ||
+                          errorMessage.includes("Invalid parameter") ||
+                          errorMessage.includes("missing required") ||
+                          errorMessage.includes("missing field");
+    const errorStatus = isClientError ? 400 : 502;
+
     // Primary provider failed — check if error is retryable
     if (!isRetryableProviderError(err)) {
       // Non-retryable error (auth, validation, etc.) — fail fast
@@ -211,8 +219,9 @@ export async function handleChat(
         provider: entry.provider,
         latencyMs: latency,
         errorMessage,
+        status: errorStatus,
       });
-      return Response.json({ error: errorMessage }, { status: 502 });
+      return Response.json({ error: errorMessage }, { status: errorStatus });
     }
 
     // Retryable error (429, 5xx, timeout) — try Bedrock fallback
@@ -235,7 +244,7 @@ export async function handleChat(
           primaryProvider: entry.provider,
           fallbackEntry: fallbackEntry ? fallbackEntry.provider : "none",
         });
-        return Response.json({ error: errorMessage }, { status: 502 });
+        return Response.json({ error: errorMessage }, { status: errorStatus });
       }
 
       // Skip fallback if Bedrock provider is not configured (no API key)
@@ -243,7 +252,7 @@ export async function handleChat(
         console.log(`[gateway] Bedrock fallback not configured (missing AWS_BEDROCK_API_KEY)`, {
           requestId,
         });
-        return Response.json({ error: errorMessage }, { status: 502 });
+        return Response.json({ error: errorMessage }, { status: errorStatus });
       }
 
       const fallbackProvider = getProvider(fallbackEntry.provider);
