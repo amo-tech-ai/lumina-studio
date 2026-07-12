@@ -90,6 +90,18 @@ describe("Bearer token authentication", () => {
       expect(res.status).not.toBe(401);
     });
 
+    it("accepts Bearer token with trailing whitespace", async () => {
+      const req = INCOMING_REQUEST(
+        "/v1/chat/completions",
+        "POST",
+        { model: "default", messages: [{ role: "user", content: "hi" }] },
+        { Authorization: "Bearer secret-token-123   " }, // trailing spaces
+      );
+      const res = await handleRequest(req, envWithToken);
+      // Auth should pass (trimmed), may fail downstream, but not 401
+      expect(res.status).not.toBe(401);
+    });
+
     it("accepts case-insensitive Bearer scheme", async () => {
       const req = INCOMING_REQUEST(
         "/v1/chat/completions",

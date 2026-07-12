@@ -105,7 +105,9 @@ function verifyBearerToken(request: Request, env: Env): { valid: boolean; messag
     return { valid: false, message: "Bearer token cannot be empty" };
   }
 
-  if (token !== env.AI_GATEWAY_AUTH_TOKEN) {
+  // Trim whitespace before comparison (HTTP headers may have insignificant trailing spaces)
+  const trimmedToken = token.trim();
+  if (trimmedToken !== env.AI_GATEWAY_AUTH_TOKEN) {
     return { valid: false, message: "Unauthorized" };
   }
 
