@@ -92,7 +92,7 @@ export function DealDetailWorkspace({ data, fetchError }: Props) {
       <DealHeader deal={deal} stage={stage} companyName={companyName} displayTitle={displayTitle} />
 
       <div className={styles.body}>
-        <div className={styles.content}>
+        <div className={styles.content} data-testid="deal-detail-content">
           <DealOverview deal={deal} companyName={companyName} />
 
           <div className={styles.stageLabel}>Stage</div>

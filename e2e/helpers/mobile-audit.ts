@@ -34,7 +34,10 @@ export async function loginOperatorIfConfigured(page: Page): Promise<boolean> {
   await page.goto("/login");
   await page.fill('input[name="email"]', "qa@ipix.test");
   await page.fill('input[name="password"]', password);
-  await page.getByRole("button", { name: /sign in|log in/i }).click();
+  // Scoped to the email/password form's own submit button — a bare
+  // name-regex match also hits "Sign in with Google" and the email/Google
+  // tab-toggle button, both of which also contain "Sign in".
+  await page.locator('form button[type="submit"]').click();
   await page.waitForURL(/\/app/, { timeout: 15_000 });
   return page.url().includes("/app");
 }
