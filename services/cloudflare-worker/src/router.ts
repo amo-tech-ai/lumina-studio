@@ -62,16 +62,19 @@ function registryOverride(env: Env): ModelRegistry | undefined {
   }
 }
 
-function selectProvider(model: string, env: Env): {
+function selectProvider(req: ChatCompletionRequest, env: Env): {
   provider: AiProvider;
   config: ProviderConfig;
   entry: NonNullable<ReturnType<typeof resolveModelEntry>>;
 } {
   const tier = registryOverride(env);
-  const entry = resolveModelEntry(model, tier) ?? resolveModelEntry("default");
+  // Route tool-bearing requests to tool-calling tier (Workers AI)
+  const hasTools = req.tools?.length || (req.tool_choice && req.tool_choice !== "none") || req.parallel_tool_calls;
+  const modelTier = hasTools ? "tool-calling" : req.model;
+  const entry = resolveModelEntry(modelTier, tier) ?? resolveModelEntry("default");
 
   if (!entry) {
-    throw new Error(`No model entry found for tier "${model}" and no default fallback`);
+    throw new Error(`No model entry found for tier "${modelTier}" and no default fallback`);
   }
 
   const provider = getProvider(entry.provider);
@@ -83,7 +86,7 @@ export async function handleChat(
   req: ChatCompletionRequest,
   env: Env,
 ): Promise<Response> {
-  const { provider, config, entry } = selectProvider(req.model, env);
+  const { provider, config, entry } = selectProvider(req, env);
 
   try {
     if (req.stream) {

@@ -29,6 +29,14 @@ const DEFAULT_REGISTRY: ModelRegistry = {
       costPer1kIn: 0.000075,
       costPer1kOut: 0.0003,
     },
+    "tool-calling": {
+      provider: "workers-ai",
+      model: "@cf/meta/llama-3.1-8b-instruct-fast",
+      capabilities: ["text", "streaming"],
+      contextWindow: 128000,
+      costPer1kIn: 0.00015,
+      costPer1kOut: 0.00015,
+    },
     structured: {
       provider: "gemini",
       model: "gemini-3.1-pro-preview",
