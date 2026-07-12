@@ -77,9 +77,9 @@ function fromBedrockResponse(
 
 export const bedrockProvider: AiProvider = {
   async chat(req: ChatCompletionRequest, config: ProviderConfig): Promise<ChatCompletionResponse> {
-    const apiKey = process.env.AWS_BEDROCK_API_KEY;
-    const region = process.env.AWS_REGION || "us-east-1";
-    const baseUrl = process.env.AWS_BEDROCK_BASE_URL;
+    const apiKey = config.apiKey;
+    const region = (config as any).region || process.env.AWS_REGION || "us-east-1";
+    const baseUrl = config.baseUrl;
 
     if (!apiKey) {
       throw new Error("AWS_BEDROCK_API_KEY not set");
@@ -110,9 +110,9 @@ export const bedrockProvider: AiProvider = {
   },
 
   async chatStream(req: ChatCompletionRequest, config: ProviderConfig): Promise<Response> {
-    const apiKey = process.env.AWS_BEDROCK_API_KEY;
-    const region = process.env.AWS_REGION || "us-east-1";
-    const baseUrl = process.env.AWS_BEDROCK_BASE_URL;
+    const apiKey = config.apiKey;
+    const region = (config as any).region || process.env.AWS_REGION || "us-east-1";
+    const baseUrl = config.baseUrl;
 
     if (!apiKey) {
       throw new Error("AWS_BEDROCK_API_KEY not set");
@@ -149,7 +149,7 @@ export const bedrockProvider: AiProvider = {
     });
   },
 
-  async embed?(req: EmbeddingRequest, config: ProviderConfig): Promise<EmbeddingResponse> {
+  embed(req: EmbeddingRequest, config: ProviderConfig): Promise<EmbeddingResponse> {
     throw new Error("Bedrock provider does not support embeddings yet");
   },
 };

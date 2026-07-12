@@ -3,11 +3,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { bedrockProvider } from "./bedrock";
 
 describe("bedrockProvider.chat", () => {
-  beforeEach(() => {
-    vi.stubEnv("AWS_BEDROCK_API_KEY", "test-api-key");
-    vi.stubEnv("AWS_REGION", "us-east-1");
-  });
-
   afterEach(() => {
     vi.unstubAllGlobals();
     vi.restoreAllMocks();
@@ -34,7 +29,7 @@ describe("bedrockProvider.chat", () => {
         messages: [{ role: "user", content: "hi" }],
         tools: [{ type: "function", function: { name: "test_tool" } }],
       },
-      { apiKey: "test", baseUrl: "https://bedrock-mantle.us-east-1.api.aws" },
+      { apiKey: "test-api-key", baseUrl: "https://bedrock-mantle.us-east-1.api.aws" },
     );
 
     expect(result.choices[0].message.content).toBe("Hello");
@@ -68,22 +63,20 @@ describe("bedrockProvider.chat", () => {
         messages: [{ role: "user", content: "get weather" }],
         tools: [{ type: "function", function: { name: "get_weather" } }],
       },
-      { apiKey: "test", baseUrl: "https://bedrock-mantle.us-east-1.api.aws" },
+      { apiKey: "test-api-key", baseUrl: "https://bedrock-mantle.us-east-1.api.aws" },
     );
 
     expect(result.choices[0].message.tool_calls).toEqual([toolCall]);
   });
 
   it("throws when AWS_BEDROCK_API_KEY is not set", async () => {
-    vi.unstubEnv("AWS_BEDROCK_API_KEY");
-
     await expect(
       bedrockProvider.chat(
         {
           model: "openai.gpt-oss-120b-1:0",
           messages: [{ role: "user", content: "hi" }],
         },
-        { apiKey: "test", baseUrl: "https://bedrock-mantle.us-east-1.api.aws" },
+        { apiKey: "", baseUrl: "https://bedrock-mantle.us-east-1.api.aws" },
       ),
     ).rejects.toThrow(/AWS_BEDROCK_API_KEY/);
   });
@@ -108,11 +101,6 @@ describe("bedrockProvider.chat", () => {
 });
 
 describe("bedrockProvider.chatStream", () => {
-  beforeEach(() => {
-    vi.stubEnv("AWS_BEDROCK_API_KEY", "test-api-key");
-    vi.stubEnv("AWS_REGION", "us-east-1");
-  });
-
   afterEach(() => {
     vi.unstubAllGlobals();
     vi.restoreAllMocks();
@@ -131,7 +119,7 @@ describe("bedrockProvider.chatStream", () => {
         model: "openai.gpt-oss-120b-1:0",
         messages: [{ role: "user", content: "hi" }],
       },
-      { apiKey: "test", baseUrl: "https://bedrock-mantle.us-east-1.api.aws" },
+      { apiKey: "test-api-key", baseUrl: "https://bedrock-mantle.us-east-1.api.aws" },
     );
 
     expect(response.headers.get("Content-Type")).toBe("text/event-stream");
@@ -150,7 +138,7 @@ describe("bedrockProvider.chatStream", () => {
         model: "openai.gpt-oss-120b-1:0",
         messages: [{ role: "user", content: "hi" }],
       },
-      { apiKey: "test", baseUrl: "https://bedrock-mantle.us-east-1.api.aws" },
+      { apiKey: "test-api-key", baseUrl: "https://bedrock-mantle.us-east-1.api.aws" },
     );
 
     expect(response.status).toBe(500);
