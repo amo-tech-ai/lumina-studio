@@ -82,6 +82,9 @@ Folded from `tasks/design-docs/audit/checklist.md`. These are the exact mistakes
 | 8 | Panel/dock preview test asserted on a published node never rendered | Render provider + a `DetailSink` that renders `detail` (copy `shoots-list-workspace.test.tsx`). |
 | 9 | Read exit code `0` from a piped test run that had failed | Read actual test output, not just tail/exit-code notification. |
 | 10 | Over-scoped to the whole DC file (extra steps/flows) | Honor the decision of record (e.g. IPI-252: 6 steps ship, not 10). Build only in-scope nodes; mark the rest ➖ deferred with its issue. |
+| 11 | Trusted local `supabase/migrations/*.sql` as ground truth without checking the live ledger | Audit Supabase first (Phase 0, below) — `list_migrations` + `pg_get_functiondef()` against the live project before assuming a local file reflects what's actually deployed. |
+
+Full write-ups, dates, and PR links: [`Universal-design-prompt-4/lessons.md`](../../../Universal-design-prompt-4/lessons.md).
 
 ---
 
@@ -90,12 +93,21 @@ Folded from `tasks/design-docs/audit/checklist.md`. These are the exact mistakes
 Run from [`improve.md`](../../../tasks/design-docs/improve.md) + brand parity lessons:
 
 ```text
+[ ] Audit Supabase FIRST — live schema, RLS, and migration ledger before reading anything else
 [ ] Read target *.dc.html + screen checklist row
 [ ] Production state table — shell/route/API exists on disk?
 [ ] Data-source table — Supabase MCP probe for list/tab columns
 [ ] Negative AC — no fake fallbacks documented
 [ ] @task-verifier readiness — fix 🔴 spec gaps before coding
 ```
+
+**Audit Supabase first — before trusting any local file.** Local schema/migration files and written specs can both diverge from what's actually live. Before building against any table/column/RPC this screen needs, run against the live project via Supabase MCP (read-only):
+
+1. `list_tables` / a targeted `select` — does the column the DC mockup implies actually exist, and is it non-null on real rows (not just in dev fixtures)? A field that's always null in seed data hides whether the feature works at all (lessons #7, #8).
+2. For any RPC the screen calls, `execute_sql`: `select pg_get_functiondef('public.<fn>(<args>)'::regprocedure)` — confirm the **live** function body, not just the migration file's version. `create or replace` migrations can be reapplied incrementally on the live project (via `apply_migration` during iteration) in a way local files don't always track 1:1 (lesson #9).
+3. `list_migrations` — confirm the live ledger's version/name list matches what's in `supabase/migrations/` locally. A squashed or renumbered local file that doesn't match a live-applied version is invisible to CI and will desync on the next `db push` (lesson #9).
+
+Only after this — not before — read the `.dc.html` and start the Discover phase below.
 
 **Shoots List example:** `Shoots List.v2.image-first.dc.html` requires 920px workspace, 3-col grid, 5 distinct states — current `/app/shoots/page.tsx` fails layout + tokens + architecture (see audit `tasks/design-docs/audit/05-skills-improve.md`).
 
