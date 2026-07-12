@@ -274,7 +274,8 @@ function failStream(
 
 /**
  * Configurable OpenAI-compatible client for the AI Gateway Worker.
- * IPI-461: runtime entry point. Do not wire into resolveModel() here — that is IPI-454 AC-F.
+ * IPI-461: runtime entry point for non-Mastra REST (chat/structured/embed/health).
+ * Mastra agents use resolveModel() — set AI_ROUTING_MODE=gateway for IPI-454 AC-F.
  */
 export function createProviderAdapter(options: ProviderAdapterOptions = {}): AiProviderAdapter {
   const timeoutMs = options.timeoutMs ?? 30_000;

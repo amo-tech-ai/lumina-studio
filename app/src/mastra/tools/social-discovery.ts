@@ -114,7 +114,7 @@ Return URLs as full https:// URLs only.`;
         model: MODEL,
         schema: DiscoveryResultSchema,
         prompt,
-        providerOptions: resolveProviderOptions(),
+        providerOptions: resolveProviderOptions("structured"),
       });
       channels = Array.from(
         new Map(

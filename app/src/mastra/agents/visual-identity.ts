@@ -149,7 +149,7 @@ const extractVisualIdentityTool = createTool({
       model: MODEL,
       schema: VisualIdentitySchema,
       messages: [{ role: "user", content: userContent }],
-      providerOptions: resolveProviderOptions(),
+      providerOptions: resolveProviderOptions("vision"),
     });
 
     const screenshotUrl = screenshot ? await uploadToCloudinary(screenshot, brandId) : null;
