@@ -10,6 +10,8 @@ import {
 } from "./embed-validation";
 import { geminiProvider } from "./providers/gemini";
 import { workersAiProvider } from "./providers/workers-ai";
+import { bedrockProvider } from "./providers/bedrock";
+import { isRetryableProviderError } from "./providers/retry-classifier";
 import {
   type AiProvider,
   type ChatCompletionRequest,
@@ -24,6 +26,9 @@ export interface Env {
   CLOUDFLARE_ACCOUNT_ID?: string;
   MODEL_REGISTRY_OVERRIDE?: string;
   AI_GATEWAY_URL?: string;
+  AWS_BEDROCK_API_KEY?: string;
+  AWS_BEDROCK_BASE_URL?: string;
+  AWS_REGION?: string;
 }
 
 function getProvider(name: string): AiProvider {
@@ -32,6 +37,8 @@ function getProvider(name: string): AiProvider {
       return geminiProvider;
     case "workers-ai":
       return workersAiProvider;
+    case "bedrock":
+      return bedrockProvider;
     default:
       throw new Error(`Unknown provider: ${name}`);
   }
@@ -46,6 +53,11 @@ function getProviderConfig(provider: string, env: Env): ProviderConfig {
         apiKey: env.CLOUDFLARE_API_TOKEN ?? "",
         accountId: env.CLOUDFLARE_ACCOUNT_ID ?? "",
         baseUrl: env.AI_GATEWAY_URL ?? "https://api.cloudflare.com/client/v4",
+      };
+    case "bedrock":
+      return {
+        apiKey: env.AWS_BEDROCK_API_KEY ?? "",
+        baseUrl: env.AWS_BEDROCK_BASE_URL,
       };
     default:
       throw new Error(`No config for provider: ${provider}`);
@@ -84,6 +96,7 @@ export async function handleChat(
   env: Env,
 ): Promise<Response> {
   const { provider, config, entry } = selectProvider(req.model, env);
+  const requestId = newRequestId();
 
   try {
     if (req.stream) {
@@ -98,8 +111,61 @@ export async function handleChat(
       headers: { "Content-Type": "application/json" },
     });
   } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
-    return Response.json({ error: message }, { status: 502 });
+    // Primary provider failed — check if error is retryable
+    if (!isRetryableProviderError(err)) {
+      // Non-retryable error (auth, validation, etc.) — fail fast
+      const message = err instanceof Error ? err.message : String(err);
+      return Response.json({ error: message }, { status: 502 });
+    }
+
+    // Retryable error (429, 5xx, timeout) — try Bedrock fallback
+    console.log(`[gateway] ${entry.provider} failed (retryable), attempting Bedrock fallback`, {
+      requestId,
+      error: err instanceof Error ? err.message : String(err),
+    });
+
+    try {
+      const fallbackEntry = resolveModelEntry("default-fallback");
+      if (!fallbackEntry || fallbackEntry.provider === entry.provider) {
+        // No fallback configured or fallback is same as primary
+        const message = err instanceof Error ? err.message : String(err);
+        return Response.json({ error: message }, { status: 502 });
+      }
+
+      const fallbackProvider = getProvider(fallbackEntry.provider);
+      const fallbackConfig = getProviderConfig(fallbackEntry.provider, env);
+
+      if (req.stream) {
+        return await fallbackProvider.chatStream(
+          { ...req, model: fallbackEntry.model },
+          fallbackConfig,
+        );
+      }
+
+      const result = await fallbackProvider.chat(
+        { ...req, model: fallbackEntry.model },
+        fallbackConfig,
+      );
+
+      console.log(`[gateway] Bedrock fallback succeeded`, { requestId });
+
+      return Response.json(result, {
+        headers: {
+          "Content-Type": "application/json",
+          "X-Fallback-Provider": fallbackEntry.provider,
+          "X-Request-Id": requestId,
+        },
+      });
+    } catch (fallbackErr) {
+      // Fallback also failed
+      console.log(`[gateway] Bedrock fallback failed`, {
+        requestId,
+        error: fallbackErr instanceof Error ? fallbackErr.message : String(fallbackErr),
+      });
+
+      const message = fallbackErr instanceof Error ? fallbackErr.message : String(fallbackErr);
+      return Response.json({ error: message }, { status: 502 });
+    }
   }
 }
 
