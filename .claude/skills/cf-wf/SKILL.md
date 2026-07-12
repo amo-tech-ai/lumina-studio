@@ -263,6 +263,34 @@ Bug → Fix → Regression Test
 
 The test must fail before the fix and pass after.
 
+### HTTP Header Edge Cases (Auth-critical code)
+
+**For any authentication, authorization, or header-parsing code:**
+
+Test these edge cases automatically. HTTP parsers inject whitespace and normalization that can break string comparisons.
+
+| Input | Expected | Why | Issue (if missed) |
+|-------|----------|-----|-------------------|
+| `"secret-token"` | ✅ Pass | Happy path | N/A |
+| `"secret-token  "` (trailing spaces) | ✅ Pass | HTTP header parsers inject whitespace | Token comparison fails (401 on valid token) |
+| `"SECRET-TOKEN"` (uppercase) | Handle per policy | Case sensitivity policy-dependent | Inconsistent rejection |
+| `"secret-token\r\n"` (CRLF) | ✅ Pass | HTTP normalization | Token comparison fails |
+| `""` (empty) | ❌ Fail | Empty token detection | Allows empty tokens to bypass auth |
+| `null` / `undefined` | ❌ Fail | Null handling | Type error or unexpected auth bypass |
+| `" secret-token "` (leading + trailing) | ✅ Pass | Full trim required | Token comparison fails |
+
+**Rule:** Every auth route must pass all seven tests. **Always trim both sides of token before equality check.**
+
+**Code pattern (Bearer token):**
+```typescript
+const token = match[1];                    // Extract from "Bearer <token>"
+if (!token || token.trim() === "") return; // Check for empty
+const trimmedToken = token.trim();        // TRIM before comparison
+if (trimmedToken !== env.AUTH_TOKEN) return 401;  // Compare trimmed values
+```
+
+**Prevention:** Add these tests to any new auth/header parsing code. (Real incident: IPI-468 whitespace bug shipped because happy-path test passed but edge case wasn't covered.)
+
 ---
 
 ## Stage 5 — Runtime Matrix Verification
