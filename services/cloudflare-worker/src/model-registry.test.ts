@@ -53,7 +53,7 @@ describe("getRegistry", () => {
     const fallback = registry.tiers["default-fallback"];
     expect(fallback).toBeDefined();
     expect(fallback!.provider).toBe("bedrock");
-    expect(fallback!.model).toBe("us.anthropic.claude-sonnet-4-6");
+    expect(fallback!.model).toBe("openai.gpt-oss-120b");
   });
 
   it("override values take precedence over matching default tier values", () => {
@@ -79,7 +79,7 @@ describe("getRegistry", () => {
   it("empty tiers override preserves all defaults unchanged", () => {
     const registry = getRegistry({ tiers: {} });
     expect(Object.keys(registry.tiers)).toHaveLength(6);
-    expect(registry.tiers["default-fallback"]!.model).toBe("us.anthropic.claude-sonnet-4-6");
+    expect(registry.tiers["default-fallback"]!.model).toBe("openai.gpt-oss-120b");
     expect(registry.tiers.default!.model).toBe("@cf/meta/llama-4-scout-17b-16e-instruct");
   });
 

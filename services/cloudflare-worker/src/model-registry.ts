@@ -71,11 +71,11 @@ const DEFAULT_REGISTRY: ModelRegistry = {
     },
     "default-fallback": {
       provider: "bedrock",
-      model: "us.anthropic.claude-sonnet-4-6",
+      model: "openai.gpt-oss-120b",
       capabilities: ["text", "structured", "streaming"],
-      contextWindow: 200000,
-      costPer1kIn: 0.00025,
-      costPer1kOut: 0.00125,
+      contextWindow: 128000,
+      costPer1kIn: 0.0003,
+      costPer1kOut: 0.0012,
     },
   },
 };
