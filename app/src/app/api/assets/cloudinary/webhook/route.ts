@@ -137,6 +137,16 @@ async function upsertAssetRecord(
       "[cloudinary/webhook] brand_id update rejected (stale/deleted brand), preserving existing value:",
       error.message,
     );
+    // Deliberately still returns a result even if this retry itself fails (unlike
+    // the insert path, which returns undefined and halts on a failed retry). The
+    // two cases aren't symmetric: an insert failure means there's no row at all
+    // for anything downstream to attach to, but existingAsset.id/brand_id are
+    // already known-valid here regardless of whether this url-only write lands —
+    // this update only ever refreshes `url`, which get-assets.ts never reads once
+    // cloudinary_public_id is set (it always regenerates a fresh signed URL from
+    // the public_id instead), so a failed retry has no observable effect beyond
+    // the logged error. Halting here would also drop the DNA-audit trigger and
+    // cloudinary_assets sync for an asset that's otherwise perfectly resolvable.
     const { error: retryErr } = await db.from("assets").update({ url: secureUrl }).eq("id", existingAsset.id);
     if (retryErr) console.error("[cloudinary/webhook] assets update (brand-safe retry) failed:", retryErr.message);
     return { assetId: existingAsset.id, effectiveBrandId: existingAsset.brand_id };

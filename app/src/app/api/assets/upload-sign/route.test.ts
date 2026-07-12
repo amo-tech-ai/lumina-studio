@@ -20,6 +20,7 @@ function makeRequest(body: unknown): Request {
 
 const mockWithOperatorAuth = vi.fn();
 const mockMaybeSingle = vi.fn();
+const mockCampaignMaybeSingle = vi.fn();
 const mockCreateSupabaseServerClient = vi.fn();
 
 vi.mock("@/lib/operator-gate", () => ({
@@ -37,10 +38,13 @@ vi.mock("@/lib/supabase/server", () => ({
 }));
 
 function supabaseClientStub() {
-  const eq2 = vi.fn(() => ({ maybeSingle: mockMaybeSingle }));
-  const eq1 = vi.fn(() => ({ eq: eq2 }));
-  const select = vi.fn(() => ({ eq: eq1 }));
-  const from = vi.fn(() => ({ select }));
+  const from = vi.fn((table: string) => {
+    const maybeSingle = table === "campaigns" ? mockCampaignMaybeSingle : mockMaybeSingle;
+    const eq2 = vi.fn(() => ({ maybeSingle }));
+    const eq1 = vi.fn(() => ({ eq: eq2 }));
+    const select = vi.fn(() => ({ eq: eq1 }));
+    return { select };
+  });
   return { from };
 }
 
@@ -51,6 +55,7 @@ beforeEach(() => {
   vi.stubEnv("CLOUDINARY_API_SECRET", "test-api-secret");
   mockWithOperatorAuth.mockResolvedValue({ id: "44444444-4444-4444-4444-444444444444", name: "QA" });
   mockMaybeSingle.mockResolvedValue({ data: { id: VALID_BRAND_ID }, error: null });
+  mockCampaignMaybeSingle.mockResolvedValue({ data: { id: VALID_CAMPAIGN_ID }, error: null });
   mockCreateSupabaseServerClient.mockResolvedValue(supabaseClientStub());
 });
 
@@ -196,13 +201,51 @@ describe("POST /api/assets/upload-sign", () => {
     expect(data.assetFolder).toBe(`ipix/shoots/${VALID_SHOOT_ID}/raw`);
   });
 
-  it("derives the campaign folder when context.campaignId is a valid UUID", async () => {
+  it("derives the campaign folder when context.campaignId is a valid UUID and belongs to the requested brand", async () => {
     const { POST } = await importRoute();
     const res = await POST(
       makeRequest({ ...VALID_BODY, context: { campaignId: VALID_CAMPAIGN_ID } }),
     );
+    expect(res.status).toBe(200);
     const data = await res.json();
     expect(data.assetFolder).toBe(`ipix/campaigns/${VALID_CAMPAIGN_ID}`);
+  });
+
+  it("returns 403 when the campaign does not belong to the requested brand (cross-tenant guard)", async () => {
+    mockCampaignMaybeSingle.mockResolvedValueOnce({ data: null, error: null });
+    const { POST } = await importRoute();
+    const res = await POST(
+      makeRequest({ ...VALID_BODY, context: { campaignId: VALID_CAMPAIGN_ID } }),
+    );
+    expect(res.status).toBe(403);
+    const data = await res.json();
+    expect(data.error).toMatch(/campaign/i);
+  });
+
+  it("returns 500 when the campaign ownership query errors", async () => {
+    mockCampaignMaybeSingle.mockResolvedValueOnce({ data: null, error: { message: "boom" } });
+    const { POST } = await importRoute();
+    const res = await POST(
+      makeRequest({ ...VALID_BODY, context: { campaignId: VALID_CAMPAIGN_ID } }),
+    );
+    expect(res.status).toBe(500);
+  });
+
+  it("skips the campaign ownership check entirely when no campaignId is given", async () => {
+    const { POST } = await importRoute();
+    const res = await POST(makeRequest(VALID_BODY));
+    expect(res.status).toBe(200);
+    expect(mockCampaignMaybeSingle).not.toHaveBeenCalled();
+  });
+
+  it("skips the campaign ownership check for the dev-unauthenticated fallback identity", async () => {
+    mockWithOperatorAuth.mockResolvedValueOnce({ id: "dev-unauthenticated", name: "Dev (auth disabled)" });
+    const { POST } = await importRoute();
+    const res = await POST(
+      makeRequest({ ...VALID_BODY, context: { campaignId: VALID_CAMPAIGN_ID } }),
+    );
+    expect(res.status).toBe(200);
+    expect(mockCreateSupabaseServerClient).not.toHaveBeenCalled();
   });
 
   it("falls back to the default brand folder when context ids are not valid UUIDs", async () => {
