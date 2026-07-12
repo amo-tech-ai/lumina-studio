@@ -28,6 +28,7 @@ Shift from **Create → Check → Fix** to **Guide → Prevent → Confirm** —
 | `/lean` | `lean` | Dev speed audit — scores repo, finds bottlenecks, gives ranked fixes |
 | `/graphify` | `graphify` | Build/query knowledge graph for code exploration |
 | `/ponytail` | `ponytail` | Enforce lean code — shortest working solution, no speculative abstractions |
+| `/cloudflare` | `cloudflare-workflow` | 8-stage accuracy gate for all Cloudflare-related work — Workers, OpenNext, AI Gateway, OAuth, runtime integration |
 
 ## Plugins in use
 
@@ -208,8 +209,9 @@ gh run view <id> --log-failed  # debug a failure
 
 For **any** Cloudflare-related task (Workers, OpenNext, AI Gateway, Workers AI, Durable Objects,
 Queues, KV, Vectorize, Hyperdrive, D1, R2, Workflows, AI provider integrations, CopilotKit,
-Mastra wiring, OAuth/runtime compatibility, deployment, CI/CD, security), follow the 8-stage
-accuracy-first standard in [`tasks/cloudflare/ENGINEERING-WORKFLOW.md`](tasks/cloudflare/ENGINEERING-WORKFLOW.md):
+Mastra wiring, OAuth/runtime compatibility, deployment, CI/CD, security), load the `cloudflare-workflow` skill
+via `/cloudflare` or use it proactively when touching `services/cloudflare-worker/`, OpenNext builds, or
+runtime integration paths. It enforces an 8-stage accuracy-first gate:
 scope verification → evidence collection → focused implementation → right-sized testing → runtime
 verification → documentation verification → architecture review → production readiness, with a
 standard reporting table and closing quality gates.
@@ -217,7 +219,7 @@ standard reporting table and closing quality gates.
 Key discipline: match verification cost to actual risk — don't re-run a full local production
 build on every change when CI's `app-build` job already does, and prefer Cloudflare's own
 gradual-deployment/rollback/observability tooling over exhaustive pre-merge local verification
-where it applies (see the doc's "Right-sizing verification" section).
+where it applies (see the skill's verification checklist for right-sizing guidance).
 
 ## QA test credentials
 
