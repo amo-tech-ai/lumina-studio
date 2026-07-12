@@ -31,7 +31,7 @@ const DEFAULT_REGISTRY: ModelRegistry = {
   tiers: {
     default: {
       provider: "workers-ai",
-      model: "@cf/meta/llama-4-scout",
+      model: "@cf/meta/llama-4-scout-17b-16e-instruct",
       capabilities: ["text", "structured", "streaming"],
       contextWindow: 128000,
       costPer1kIn: 0.000067,
@@ -39,7 +39,7 @@ const DEFAULT_REGISTRY: ModelRegistry = {
     },
     fast: {
       provider: "workers-ai",
-      model: "@cf/meta/llama-4-scout",
+      model: "@cf/meta/llama-4-scout-17b-16e-instruct",
       capabilities: ["text", "streaming"],
       contextWindow: 128000,
       costPer1kIn: 0.000067,

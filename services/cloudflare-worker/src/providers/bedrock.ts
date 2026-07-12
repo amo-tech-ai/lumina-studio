@@ -12,7 +12,7 @@ const BEDROCK_BASE = "https://bedrock-mantle";
 
 function bedrockBaseUrl(region: string, baseUrl?: string): string {
   if (baseUrl) return baseUrl;
-  return `${BEDROCK_BASE}.${region}.amazonaws.com`;
+  return `${BEDROCK_BASE}.${region}.api.aws`;
 }
 
 function bedrockRequestUrl(baseUrl: string): string {

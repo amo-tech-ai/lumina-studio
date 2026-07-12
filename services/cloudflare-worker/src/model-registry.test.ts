@@ -29,7 +29,7 @@ describe("getRegistry", () => {
 
     const registry = getRegistry(override);
     expect(registry.tiers.default.model).toBe("gemini-3.5-flash");
-    expect(registry.tiers.fast.model).toBe("@cf/meta/llama-4-scout");
+    expect(registry.tiers.fast.model).toBe("@cf/meta/llama-4-scout-17b-16e-instruct");
     expect(registry.tiers.structured.provider).toBe("gemini");
     expect(registry.tiers.vision.provider).toBe("gemini");
     expect(registry.tiers.embedding.provider).toBe("workers-ai");
@@ -80,7 +80,7 @@ describe("getRegistry", () => {
     const registry = getRegistry({ tiers: {} });
     expect(Object.keys(registry.tiers)).toHaveLength(6);
     expect(registry.tiers["default-fallback"]!.model).toBe("us.anthropic.claude-sonnet-4-6");
-    expect(registry.tiers.default!.model).toBe("@cf/meta/llama-4-scout");
+    expect(registry.tiers.default!.model).toBe("@cf/meta/llama-4-scout-17b-16e-instruct");
   });
 
   it("returned registry does not mutate DEFAULT_REGISTRY", () => {
@@ -103,7 +103,7 @@ describe("getRegistry", () => {
 
     expect(result1.tiers.default.model).toBe("gemini-3.5-flash");
     expect(result2.tiers.default.model).toBe("gemini-3.5-flash");
-    expect(withoutOverride.tiers.default.model).toBe("@cf/meta/llama-4-scout");
+    expect(withoutOverride.tiers.default.model).toBe("@cf/meta/llama-4-scout-17b-16e-instruct");
     expect(result1.tiers).not.toBe(result2.tiers);
   });
 });
@@ -120,7 +120,7 @@ describe("resolveModelEntry", () => {
       tiers: {
         default: {
           provider: "workers-ai" as const,
-          model: "@cf/meta/llama-4-scout",
+          model: "@cf/meta/llama-4-scout-17b-16e-instruct",
           capabilities: ["text"],
           contextWindow: 4096,
           costPer1kIn: 0.0001,
