@@ -85,7 +85,7 @@ function selectProvider(model: string, env: Env): {
   entry: NonNullable<ReturnType<typeof resolveModelEntry>>;
 } {
   const tier = registryOverride(env);
-  const entry = resolveModelEntry(model, tier) ?? resolveModelEntry("default");
+  const entry = resolveModelEntry(model, tier) ?? resolveModelEntry("default", tier);
 
   if (!entry) {
     throw new Error(`No model entry found for tier "${model}" and no default fallback`);
