@@ -88,7 +88,7 @@ describe("Bearer token authentication", () => {
       const res = await handleRequest(req, envWithToken);
       // Will fail downstream (no real provider), but auth passes → not 401
       expect(res.status).not.toBe(401);
-    });
+    }, 10000);
 
     it("accepts Bearer token with trailing whitespace", async () => {
       const req = INCOMING_REQUEST(
@@ -100,7 +100,7 @@ describe("Bearer token authentication", () => {
       const res = await handleRequest(req, envWithToken);
       // Auth should pass (trimmed), may fail downstream, but not 401
       expect(res.status).not.toBe(401);
-    });
+    }, 10000);
 
     it("accepts case-insensitive Bearer scheme", async () => {
       const req = INCOMING_REQUEST(

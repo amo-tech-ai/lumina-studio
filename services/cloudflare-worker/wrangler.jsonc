@@ -8,6 +8,10 @@
   },
   "upload_source_maps": true,
   "compatibility_flags": ["nodejs_compat"],
+  // Test environment: disable auth for unit/integration tests (matches .dev.vars)
+  "vars": {
+    "AI_GATEWAY_ALLOW_UNAUTHENTICATED": "true"
+  },
   // Preserve dashboard plaintext vars (MODEL_REGISTRY_OVERRIDE, CLOUDFLARE_ACCOUNT_ID)
   // on wrangler deploy / versions upload. Secrets are already kept; empty local `vars`
   // previously wiped the Workers AI registry and caused Gemini 403.

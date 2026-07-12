@@ -107,7 +107,17 @@ function verifyBearerToken(request: Request, env: Env): { valid: boolean; messag
 
   // Trim whitespace before comparison (HTTP headers may have insignificant trailing spaces)
   const trimmedToken = token.trim();
-  if (trimmedToken !== env.AI_GATEWAY_AUTH_TOKEN) {
+  const expectedToken = env.AI_GATEWAY_AUTH_TOKEN ?? "";
+
+  // Constant-time comparison to prevent timing attacks (XOR-based)
+  let isValid = trimmedToken.length === expectedToken.length;
+  for (let i = 0; i < Math.max(trimmedToken.length, expectedToken.length); i++) {
+    const char1 = trimmedToken.charCodeAt(i) || 0;
+    const char2 = expectedToken.charCodeAt(i) || 0;
+    isValid = (char1 === char2) && isValid;
+  }
+
+  if (!isValid) {
     return { valid: false, message: "Unauthorized" };
   }
 
