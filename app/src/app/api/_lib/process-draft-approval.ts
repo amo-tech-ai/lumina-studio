@@ -1,3 +1,4 @@
+import { getMastra } from "@/mastra";
 import { createSupabaseAdminClient } from "@/app/api/_lib/supabase-admin";
 import { discardBrandDraft } from "@/lib/brand/discard-draft";
 import { promoteBrandDraft } from "@/lib/brand/promote-draft";
@@ -87,11 +88,6 @@ export async function processBrandIntelligenceDraftApproval(params: {
   }
 
   try {
-    // Dynamic import (not a top-level one) breaks a real circular dependency:
-    // this file is imported by brand-intelligence-tools.ts, which is imported by
-    // brand-intelligence-agent.ts, which @/mastra's index.ts registers — a
-    // top-level import here would cycle straight back to @/mastra.
-    const { getMastra } = await import("@/mastra");
     const run = await getMastra().getWorkflow("brand-intelligence").createRun({ runId });
     await run.resume({ step: "save-draft-and-wait", resumeData: { approved } });
   } catch (resumeErr) {
