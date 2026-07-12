@@ -47,8 +47,14 @@
   padding: var(--space-4) var(--page-padding) var(--space-5);
 }
 
+/* Centered, not left-hugging: the DC design puts a 320px health-score
+   aside to the right of this column (not built — DC's own copy labels
+   that data "crm-assistant · not yet wired", see the module doc above),
+   so on any viewport wider than ~960px this is the only content in the
+   workspace and left-aligning it leaves a lopsided gap on the right. */
 .content {
   max-width: 640px;
+  margin: 0 auto;
 }
 
 .stageLabel,
