@@ -1,6 +1,5 @@
 [config]
 model = "bedrock/qwen.qwen3-coder-next"
-fallback_models = ["bedrock/qwen.qwen3-coder-next"]
 custom_model_max_tokens = 250000
 
 [github_action_config]
