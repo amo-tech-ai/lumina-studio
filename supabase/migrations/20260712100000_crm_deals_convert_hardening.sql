@@ -42,6 +42,15 @@
 -- brand yet" (the failed lookup and the genuine-no-brand-yet case were
 -- indistinguishable), creating an orphaned brand while marking the deal won.
 -- Fixed with an explicit FOUND check after the locked company lookup.
+--
+-- A sixth gap, also found by automated PR review, on the fifth fix itself:
+-- that FOUND check only ran inside the p_decision = 'won' branch, but the
+-- crm_activities insert (which uses v_company_id) runs for BOTH decisions —
+-- so a 'lost' conversion on a deal with a cross-org company_id still wrote
+-- an activity row whose org_id/company_id belonged to different orgs, the
+-- same data-isolation violation the fifth fix was meant to close entirely.
+-- Moved the company lookup + FOUND check out of the 'won'-only branch so it
+-- runs unconditionally.
 
 create or replace function public.crm_convert_deal(
   p_deal_id uuid,
@@ -102,27 +111,32 @@ begin
   -- one UPDATE that's allowed to cross into won/lost.
   perform set_config('app.crm_convert', '1', true);
 
+  -- Also locked (see the deal-row lock above) — same concurrent-convert race,
+  -- this time on the company's brand_id. Same ambiguity fix — brand_id is
+  -- also a RETURNS TABLE column name.
+  --
+  -- Runs for BOTH decisions, not just 'won': crm_deals.company_id is a plain
+  -- FK, not constrained to the deal's own org_id — a deal could (via a bug
+  -- elsewhere, or a crafted request) point at a company in a different org.
+  -- The crm_activities insert below uses v_company_id regardless of decision,
+  -- so validating it only on the 'won' branch left 'lost' free to write an
+  -- activity row whose org_id/company_id belong to different orgs — a real
+  -- data-isolation violation caught by automated PR review. `FOUND` is set
+  -- by the SELECT INTO immediately below; without this check, a not-found
+  -- company lookup is indistinguishable from "found, no brand yet" on the
+  -- 'won' path, silently creating an orphaned brand and a no-op company
+  -- UPDATE while still marking the deal won.
+  select crm_companies.brand_id, crm_companies.name, crm_companies.domain
+    into v_existing_brand_id, v_company_name, v_company_domain
+    from public.crm_companies
+    where id = v_company_id and org_id = v_org_id
+    for update;
+
+  if not found then
+    raise exception 'crm_convert_deal: company % not found in org %', v_company_id, v_org_id;
+  end if;
+
   if p_decision = 'won' then
-    -- Also locked (see the deal-row lock above) — same concurrent-convert
-    -- race, this time on the company's brand_id.
-    -- Same ambiguity fix — brand_id is also a RETURNS TABLE column name.
-    select crm_companies.brand_id, crm_companies.name, crm_companies.domain
-      into v_existing_brand_id, v_company_name, v_company_domain
-      from public.crm_companies
-      where id = v_company_id and org_id = v_org_id
-      for update;
-
-    -- crm_deals.company_id is a plain FK, not constrained to the deal's own
-    -- org_id — a deal could (via a bug elsewhere, or a crafted request) point
-    -- at a company in a different org. Without this check, a not-found company
-    -- lookup is indistinguishable from "found, no brand yet": the code below
-    -- would silently create an orphaned brand and a no-op company UPDATE
-    -- while still marking the deal won. `FOUND` is set by the SELECT INTO
-    -- immediately above.
-    if not found then
-      raise exception 'crm_convert_deal: company % not found in org %', v_company_id, v_org_id;
-    end if;
-
     if v_existing_brand_id is null then
       -- brands.org_id is NOT NULL (20260624000000_ipi16_org_layer.sql) —
       -- confirmed present. brand_url only set when domain is non-blank.
