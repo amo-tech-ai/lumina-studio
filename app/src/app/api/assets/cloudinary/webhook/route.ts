@@ -8,6 +8,9 @@ export const dynamic = "force-dynamic";
 // Spec: SDK default valid_for is 7200s (2h); IPI-257 §3 tightens the replay window to 300s.
 const REPLAY_WINDOW_SECONDS = 300;
 const BRAND_FOLDER_RE = /ipix\/brands\/([0-9a-f-]{36})(?:\/|$)/i;
+const CAMPAIGN_FOLDER_RE = /ipix\/campaigns\/([0-9a-f-]{36})(?:\/|$)/i;
+const SHOOT_FOLDER_RE = /ipix\/shoots\/([0-9a-f-]{36})(?:\/|$)/i;
+const ASSETS_BRAND_FK = "assets_brand_id_fkey";
 
 type CloudinaryNotification = {
   notification_type?: string;
@@ -30,13 +33,45 @@ function resourceTypeToAssetType(resourceType: string): "image" | "video" | "doc
   return "document";
 }
 
-// ponytail: shoot/campaign folder uploads (ipix/shoots/{id}/raw, ipix/campaigns/{id})
-// don't resolve brand_id yet — assets.shoot_id's FK targets the legacy public.shoots
-// table, not shoot.shoots, and the two aren't confirmed to share IDs; campaigns has no
-// backing table at all. brand_id stays null (nullable column) for those uploads until
-// that's confirmed — add a shoot.shoots lookup then.
-function brandIdFromFolder(folderOrPublicId: string): string | null {
-  return BRAND_FOLDER_RE.exec(folderOrPublicId)?.[1] ?? null;
+// IPI-513: brand-folder and campaign-folder uploads resolve to a real brand_id.
+// Shoot-folder uploads (ipix/shoots/{id}/raw) stay unresolved — assets.shoot_id's FK
+// targets the legacy public.shoots table, which has no brand_id column at all; the
+// schema that does (shoot.shoots) isn't what assets.shoot_id references, and the
+// Cloudinary webhook never writes to shoot.shoot_assets either. This is an
+// architecture decision, not a missing lookup — tracked in IPI-524
+// (SHOOT-ARCH-001) rather than patched here.
+async function resolveBrandId(
+  db: ReturnType<typeof createSupabaseAdminClient>,
+  folder: string,
+  publicId: string,
+): Promise<{ brandId: string | null; reason: string }> {
+  const brandMatch = BRAND_FOLDER_RE.exec(folder) ?? BRAND_FOLDER_RE.exec(publicId);
+  if (brandMatch) return { brandId: brandMatch[1], reason: "brand_folder_resolved" };
+
+  const campaignMatch = CAMPAIGN_FOLDER_RE.exec(folder) ?? CAMPAIGN_FOLDER_RE.exec(publicId);
+  if (campaignMatch) {
+    const { data, error } = await db
+      .from("campaigns")
+      .select("brand_id")
+      .eq("id", campaignMatch[1])
+      .maybeSingle();
+    if (error) {
+      console.error("[cloudinary/webhook] campaign lookup failed:", error.message);
+      return { brandId: null, reason: "campaign_lookup_failed" };
+    }
+    if (!data) return { brandId: null, reason: "campaign_not_found" };
+    return { brandId: data.brand_id, reason: "campaign_folder_resolved" };
+  }
+
+  if (SHOOT_FOLDER_RE.test(folder) || SHOOT_FOLDER_RE.test(publicId)) {
+    return { brandId: null, reason: "shoot_folders_unsupported_see_ipi524" };
+  }
+
+  return { brandId: null, reason: "no_ownership_signal" };
+}
+
+function isBrandFkViolation(error: { code?: string; message?: string } | null | undefined): boolean {
+  return error?.code === "23503" && !!error.message?.includes(ASSETS_BRAND_FK);
 }
 
 async function logNonFatal(
@@ -56,15 +91,23 @@ async function logNonFatal(
   }
 }
 
+type AssetUpsertResult = { assetId: string; effectiveBrandId: string | null };
+
+// IPI-513: insert and update need different FK-failure behavior. A new row has no
+// prior brand_id to protect, so a bad candidate just retries as null. An existing
+// row might already carry a valid brand_id from an earlier event — retrying its
+// update with null would erase that on every later event with a worse signal
+// (e.g. a duplicate notification whose folder didn't parse), so a failed update
+// is skipped (not retried) and the existing value is preserved untouched.
 async function upsertAssetRecord(
   db: ReturnType<typeof createSupabaseAdminClient>,
   fields: { publicId: string; secureUrl: string; resourceType: string; brandId: string | null },
-): Promise<string | undefined> {
+): Promise<AssetUpsertResult | undefined> {
   const { publicId, secureUrl, resourceType, brandId } = fields;
 
   const { data: existingAsset, error: findErr } = await db
     .from("assets")
-    .select("id")
+    .select("id, brand_id")
     .eq("cloudinary_public_id", publicId)
     .maybeSingle();
   if (findErr) {
@@ -73,28 +116,77 @@ async function upsertAssetRecord(
   }
 
   if (existingAsset?.id) {
-    const update: Record<string, unknown> = { url: secureUrl };
-    if (brandId) update.brand_id = brandId;
-    const { error: updateErr } = await db.from("assets").update(update).eq("id", existingAsset.id);
-    if (updateErr) console.error("[cloudinary/webhook] assets update failed:", updateErr.message);
-    return existingAsset.id;
+    if (!brandId) {
+      const { error } = await db.from("assets").update({ url: secureUrl }).eq("id", existingAsset.id);
+      if (error) console.error("[cloudinary/webhook] assets update failed:", error.message);
+      return { assetId: existingAsset.id, effectiveBrandId: existingAsset.brand_id };
+    }
+
+    const { error } = await db
+      .from("assets")
+      .update({ url: secureUrl, brand_id: brandId })
+      .eq("id", existingAsset.id);
+    if (!error) return { assetId: existingAsset.id, effectiveBrandId: brandId };
+
+    if (!isBrandFkViolation(error)) {
+      console.error("[cloudinary/webhook] assets update failed:", error.message);
+      return { assetId: existingAsset.id, effectiveBrandId: existingAsset.brand_id };
+    }
+
+    console.error(
+      "[cloudinary/webhook] brand_id update rejected (stale/deleted brand), preserving existing value:",
+      error.message,
+    );
+    // Deliberately still returns a result even if this retry itself fails (unlike
+    // the insert path, which returns undefined and halts on a failed retry). The
+    // two cases aren't symmetric: an insert failure means there's no row at all
+    // for anything downstream to attach to, but existingAsset.id/brand_id are
+    // already known-valid here regardless of whether this url-only write lands —
+    // this update only ever refreshes `url`, which get-assets.ts never reads once
+    // cloudinary_public_id is set (it always regenerates a fresh signed URL from
+    // the public_id instead), so a failed retry has no observable effect beyond
+    // the logged error. Halting here would also drop the DNA-audit trigger and
+    // cloudinary_assets sync for an asset that's otherwise perfectly resolvable.
+    const { error: retryErr } = await db.from("assets").update({ url: secureUrl }).eq("id", existingAsset.id);
+    if (retryErr) console.error("[cloudinary/webhook] assets update (brand-safe retry) failed:", retryErr.message);
+    return { assetId: existingAsset.id, effectiveBrandId: existingAsset.brand_id };
   }
+
+  const insertRow = {
+    url: secureUrl,
+    asset_type: resourceTypeToAssetType(resourceType),
+    cloudinary_public_id: publicId,
+  };
 
   const { data: inserted, error: insertErr } = await db
     .from("assets")
-    .insert({
-      url: secureUrl,
-      asset_type: resourceTypeToAssetType(resourceType),
-      cloudinary_public_id: publicId,
-      brand_id: brandId,
-    })
+    .insert({ ...insertRow, brand_id: brandId })
     .select("id")
     .single();
-  if (insertErr || !inserted) {
-    console.error("[cloudinary/webhook] assets insert failed:", insertErr?.message);
+  if (!insertErr) {
+    if (!inserted) return undefined;
+    return { assetId: inserted.id, effectiveBrandId: brandId };
+  }
+
+  if (!isBrandFkViolation(insertErr)) {
+    console.error("[cloudinary/webhook] assets insert failed:", insertErr.message);
     return undefined;
   }
-  return inserted.id;
+
+  console.error(
+    "[cloudinary/webhook] brand_id insert rejected (stale/deleted brand), retrying with brand_id null:",
+    insertErr.message,
+  );
+  const { data: retried, error: retryErr } = await db
+    .from("assets")
+    .insert({ ...insertRow, brand_id: null })
+    .select("id")
+    .single();
+  if (retryErr || !retried) {
+    console.error("[cloudinary/webhook] assets insert (brand-null retry) failed:", retryErr?.message);
+    return undefined;
+  }
+  return { assetId: retried.id, effectiveBrandId: null };
 }
 
 async function upsertCloudinaryAssetRecord(
@@ -143,24 +235,25 @@ async function handleUpload(db: ReturnType<typeof createSupabaseAdminClient>, pa
   }
 
   const folder = payload.folder ?? payload.asset_folder ?? publicId;
-  const brandId = brandIdFromFolder(folder) ?? brandIdFromFolder(publicId);
+  const { brandId, reason } = await resolveBrandId(db, folder, publicId);
 
-  const assetId = await upsertAssetRecord(db, { publicId, secureUrl, resourceType, brandId });
-  if (!assetId) return;
+  const upserted = await upsertAssetRecord(db, { publicId, secureUrl, resourceType, brandId });
+  if (!upserted) return;
+  const { assetId, effectiveBrandId } = upserted;
 
   const persisted = await upsertCloudinaryAssetRecord(db, assetId, {
     publicId,
     secureUrl,
     resourceType,
     folder,
-    brandId,
+    brandId: effectiveBrandId,
     payload,
   });
   if (!persisted) return;
 
   await logNonFatal(db, {
-    brandId,
-    input: { notification_type: payload.notification_type, public_id: publicId },
+    brandId: effectiveBrandId,
+    input: { notification_type: payload.notification_type, public_id: publicId, resolution_reason: reason },
     output: { asset_id: assetId },
   });
 
