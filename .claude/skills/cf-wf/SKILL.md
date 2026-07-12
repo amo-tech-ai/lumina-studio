@@ -124,6 +124,24 @@ If `node:fs` is used:
 
 **The rule is:** avoid relying on Node filesystem *semantics* (arbitrary runtime disk reads), not `node:fs` the module. A static `import json from "./config.json"` is Workers-safe; a runtime `readFileSync(path)` that expects a real disk is not.
 
+### CI Testing Audit
+
+Before claiming a test passes, verify that CI actually runs security-sensitive tests with the same configuration as local development:
+
+**Checklist:**
+- [ ] Local tests run with security features **ENABLED** (auth, RLS, edge validation) — not bypassed via `.dev.vars` or test fixtures
+- [ ] CI runs the same test suites (not a subset)
+- [ ] CI explicitly injects secrets/env vars (never using `.dev.vars` or hardcoded test tokens — use actual credentials)
+- [ ] CI gate is a **required check** (not optional)
+- [ ] If any test file is missing from CI → Stage 0 blocker
+
+**Red flag patterns:**
+- `.dev.vars` with `ALLOW_UNAUTHENTICATED=true` used in CI (dev-only bypass)
+- Test coverage for auth/RLS/edge missing from CI job matrix
+- Security-critical tests only running locally
+
+**Prevention:** Add to `.github/workflows/ci.yml` any test suites that verify authentication, RLS policies, or edge function behavior. Example: `services/cloudflare-worker/npm test` must run in CI with explicit token injection, not dev-mode bypass.
+
 ---
 
 ## Stage 1 — Scope Verification
@@ -166,6 +184,43 @@ Classify each finding:
 - ⚠️ Out of scope
 
 Only implement confirmed, in-scope issues.
+
+### Official Sources Rule
+
+**For any claim about status, pricing, limits, or deprecation — cite the official source.**
+
+Cloudflare documentation evolves fast (models deprecate monthly, limits change, pricing updates). Training data is stale. **Do NOT assume.**
+
+**Source hierarchy (highest to lowest authority):**
+
+1. **Official Cloudflare docs** (via `cloudflare_docs` MCP lookup or webfetch to developers.cloudflare.com)
+2. Installed package source (`node_modules/@cloudflare/`, `package.json` dependencies)
+3. Test results (local or CI verification)
+4. Training data / memory (⚠️ treat as hypothesis, verify before shipping)
+
+**Hard rule: Material claims require proof**
+
+| Claim Type | Example | Proof Required |
+|------------|---------|----------------|
+| **Status** | "Model X is currently supported" | Link to [Cloudflare model page](https://developers.cloudflare.com/workers-ai/models/) or MCP result |
+| **Deprecation** | "Model X was deprecated on DATE" | Link to [Cloudflare changelog](https://developers.cloudflare.com/changelog) with deprecation date |
+| **Pricing** | "Model X costs $0.06 per 1M input tokens" | Link to [official pricing page](https://developers.cloudflare.com/workers-ai/pricing/) |
+| **Limits** | "Model X supports up to 128k context" | Link to model card or MCP `search_cloudflare_documentation` result |
+| **Capability** | "Model X supports tool calling" | Link to model capability matrix or official docs |
+
+**Unverified claims must be marked "TBD"**
+
+If a claim cannot be sourced → mark as "TBD" in the code/PR, not shipped as fact.
+
+**PR review flags:**
+
+- 🔴 **Blocker:** "same pricing" / "same performance" / "zero risk" without source → request link or reject
+- 🟡 **Question:** "currently supported" without docs link → ask for source before merge
+- 🔴 **Blocker:** "deprecated as of [DATE]" without Cloudflare changelog link → reject until sourced
+
+**Example (from IPI-525 audit):**
+- ❌ "Llama 3.1 8B Fast variant has same pricing" (unverified)
+- ✅ "Llama 3.1 8B Fast variant: active, 128k context, per [Cloudflare model page](link), pricing TBD" (honest)
 
 ---
 
