@@ -26,6 +26,8 @@ export interface Env {
   CLOUDFLARE_ACCOUNT_ID?: string;
   MODEL_REGISTRY_OVERRIDE?: string;
   AI_GATEWAY_URL?: string;
+  AI_GATEWAY_AUTH_TOKEN?: string;
+  AI_GATEWAY_ALLOW_UNAUTHENTICATED?: string;
   AWS_BEDROCK_API_KEY?: string;
   AWS_BEDROCK_BASE_URL?: string;
   AWS_REGION?: string;
@@ -73,6 +75,41 @@ function registryOverride(env: Env): ModelRegistry | undefined {
     // Invalid JSON — fall back to default registry (do not 500 the request).
     return undefined;
   }
+}
+
+function verifyBearerToken(request: Request, env: Env): { valid: boolean; message?: string } {
+  const authHeader = request.headers.get("Authorization");
+  const isLocalDev = env.AI_GATEWAY_ALLOW_UNAUTHENTICATED === "true";
+
+  // Fail closed: if token is not configured, reject unless explicitly in local-dev mode
+  if (!env.AI_GATEWAY_AUTH_TOKEN) {
+    if (isLocalDev) {
+      return { valid: true };
+    }
+    // Production: missing secret is a configuration error, block the request
+    return { valid: false, message: "Gateway authentication is not configured" };
+  }
+
+  // Token is configured — require valid bearer token
+  if (!authHeader) {
+    return { valid: false, message: "Missing Authorization header" };
+  }
+
+  const match = authHeader.match(/^Bearer\s+(.*)$/i);
+  if (!match) {
+    return { valid: false, message: "Invalid Authorization header format (expected: Bearer <token>)" };
+  }
+
+  const token = match[1];
+  if (!token || token.trim() === "") {
+    return { valid: false, message: "Bearer token cannot be empty" };
+  }
+
+  if (token !== env.AI_GATEWAY_AUTH_TOKEN) {
+    return { valid: false, message: "Unauthorized" };
+  }
+
+  return { valid: true };
 }
 
 function selectProvider(model: string, env: Env): {
@@ -376,6 +413,12 @@ export async function handleRequest(
 
   if (method !== "POST") {
     return Response.json({ error: "Method not allowed" }, { status: 405 });
+  }
+
+  // Verify bearer token for all POST requests (before parsing body)
+  const auth = verifyBearerToken(request, env);
+  if (!auth.valid) {
+    return Response.json({ error: auth.message }, { status: 401 });
   }
 
   const body = await request.json() as Record<string, unknown>;

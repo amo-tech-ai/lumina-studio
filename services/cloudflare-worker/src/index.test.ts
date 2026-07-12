@@ -2,10 +2,16 @@ import { env, createExecutionContext, waitOnExecutionContext } from "cloudflare:
 import { describe, it, expect } from "vitest";
 import worker from "./index";
 
-const INCOMING_REQUEST = (path: string, method = "GET", body?: unknown): Request => {
+const INCOMING_REQUEST = (
+  path: string,
+  method = "GET",
+  body?: unknown,
+  headers?: Record<string, string>,
+): Request => {
+  const defaultHeaders: Record<string, string> = { "Content-Type": "application/json" };
   return new Request(`http://localhost${path}`, {
     method,
-    headers: { "Content-Type": "application/json" },
+    headers: { ...defaultHeaders, ...headers },
     body: body ? JSON.stringify(body) : undefined,
   });
 };
@@ -41,7 +47,12 @@ describe("AI Gateway Worker", () => {
   });
 
   it("returns 404 for unknown endpoints", async () => {
-    const req = INCOMING_REQUEST("/v1/unknown", "POST", { model: "test" });
+    const req = INCOMING_REQUEST(
+      "/v1/unknown",
+      "POST",
+      { model: "test" },
+      { Authorization: "Bearer test-token" },
+    );
     const ctx = createExecutionContext();
     const res = await worker.fetch(req, env, ctx);
     await waitOnExecutionContext(ctx);
@@ -49,10 +60,15 @@ describe("AI Gateway Worker", () => {
   });
 
   it("rejects empty embed input with 400 envelope", async () => {
-    const req = INCOMING_REQUEST("/v1/embeddings", "POST", {
-      model: "embedding",
-      input: [],
-    });
+    const req = INCOMING_REQUEST(
+      "/v1/embeddings",
+      "POST",
+      {
+        model: "embedding",
+        input: [],
+      },
+      { Authorization: "Bearer test-token" },
+    );
     const ctx = createExecutionContext();
     const res = await worker.fetch(req, env, ctx);
     await waitOnExecutionContext(ctx);
@@ -63,10 +79,15 @@ describe("AI Gateway Worker", () => {
   });
 
   it("rejects unsupported embed model with 400 envelope", async () => {
-    const req = INCOMING_REQUEST("/v1/embeddings", "POST", {
-      model: "gemini-3.1-flash-lite",
-      input: ["hello"],
-    });
+    const req = INCOMING_REQUEST(
+      "/v1/embeddings",
+      "POST",
+      {
+        model: "gemini-3.1-flash-lite",
+        input: ["hello"],
+      },
+      { Authorization: "Bearer test-token" },
+    );
     const ctx = createExecutionContext();
     const res = await worker.fetch(req, env, ctx);
     await waitOnExecutionContext(ctx);
