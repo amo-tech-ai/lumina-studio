@@ -31,14 +31,11 @@ export interface ChatToolCall {
   };
 }
 
-export interface ChatMessage {
-  role: "system" | "user" | "assistant" | "tool";
-  content: string | null;
-  /** Required on tool-result messages so the model can match the result to a call. */
-  tool_call_id?: string;
-  /** Returned on assistant messages when the model selects one or more tools. */
-  tool_calls?: ChatToolCall[];
-}
+export type ChatMessage =
+  | { role: "system"; content: string; tool_call_id?: never; tool_calls?: never }
+  | { role: "user"; content: string; tool_call_id?: never; tool_calls?: never }
+  | { role: "assistant"; content: string | null; tool_call_id?: never; tool_calls?: ChatToolCall[] }
+  | { role: "tool"; content: string; tool_call_id: string; tool_calls?: never };
 
 export interface ChatCompletionRequest {
   model: string;

@@ -20,11 +20,18 @@ function geminiModelId(openAiModel: string): string {
 }
 
 function toGeminiMessages(messages: ChatCompletionRequest["messages"]) {
-  const system = messages.filter((m) => m.role === "system").map((m) => m.content).join("\n");
-  const contents = messages.filter((m) => m.role !== "system").map((m) => ({
-    role: m.role === "assistant" ? "model" : "user",
-    parts: [{ text: m.content }],
-  }));
+  const system = messages
+    .filter((m) => m.role === "system")
+    .map((m) => (m.role === "system" ? m.content : ""))
+    .filter(Boolean)
+    .join("\n");
+  const contents = messages
+    .filter((m) => m.role !== "system" && m.role !== "tool")
+    .map((m) => ({
+      role: m.role === "assistant" ? "model" : "user",
+      parts: m.content ? [{ text: m.content }] : [],
+    }))
+    .filter((m) => m.parts.length > 0);
 
   return { system, contents };
 }
@@ -82,6 +89,11 @@ function fromGeminiResponse(
 
 export const geminiProvider: AiProvider = {
   async chat(req: ChatCompletionRequest, config: ProviderConfig): Promise<ChatCompletionResponse> {
+    if (req.tools || req.tool_choice || req.parallel_tool_calls) {
+      throw new Error(
+        "Gemini provider does not support tool calls. Route tool-bearing requests to a tool-aware provider (Workers AI)."
+      );
+    }
     const { system, contents } = toGeminiMessages(req.messages);
     const body: Record<string, unknown> = {
       contents,
@@ -107,6 +119,11 @@ export const geminiProvider: AiProvider = {
   },
 
   async chatStream(req: ChatCompletionRequest, config: ProviderConfig): Promise<Response> {
+    if (req.tools || req.tool_choice || req.parallel_tool_calls) {
+      throw new Error(
+        "Gemini provider does not support tool calls. Route tool-bearing requests to a tool-aware provider (Workers AI)."
+      );
+    }
     const { system, contents } = toGeminiMessages(req.messages);
     const body: Record<string, unknown> = {
       contents,
