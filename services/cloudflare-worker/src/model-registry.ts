@@ -30,20 +30,20 @@ export interface ModelRegistry {
 const DEFAULT_REGISTRY: ModelRegistry = {
   tiers: {
     default: {
-      provider: "gemini",
-      model: "gemini-3.1-flash-lite",
+      provider: "workers-ai",
+      model: "@cf/meta/llama-4-scout",
       capabilities: ["text", "structured", "streaming"],
       contextWindow: 128000,
-      costPer1kIn: 0.000075,
-      costPer1kOut: 0.0003,
+      costPer1kIn: 0.000067,
+      costPer1kOut: 0.000136,
     },
     fast: {
-      provider: "gemini",
-      model: "gemini-3.1-flash-lite",
+      provider: "workers-ai",
+      model: "@cf/meta/llama-4-scout",
       capabilities: ["text", "streaming"],
       contextWindow: 128000,
-      costPer1kIn: 0.000075,
-      costPer1kOut: 0.0003,
+      costPer1kIn: 0.000067,
+      costPer1kOut: 0.000136,
     },
     structured: {
       provider: "gemini",
@@ -71,7 +71,7 @@ const DEFAULT_REGISTRY: ModelRegistry = {
     },
     "default-fallback": {
       provider: "bedrock",
-      model: "anthropic.claude-3-haiku-20240307-v1:0",
+      model: "us.anthropic.claude-sonnet-4-6",
       capabilities: ["text", "structured", "streaming"],
       contextWindow: 200000,
       costPer1kIn: 0.00025,

@@ -126,21 +126,19 @@ describe("bedrockProvider.chatStream", () => {
     expect(response.headers.get("Cache-Control")).toBe("no-cache");
   });
 
-  it("returns error response when Bedrock stream fails", async () => {
+  it("throws when Bedrock stream fails (for router fallback)", async () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
       ok: false,
       status: 500,
       text: async () => "Internal error",
     }));
 
-    const response = await bedrockProvider.chatStream(
+    await expect(bedrockProvider.chatStream(
       {
         model: "openai.gpt-oss-120b-1:0",
         messages: [{ role: "user", content: "hi" }],
       },
       { apiKey: "test-api-key", baseUrl: "https://bedrock-mantle.us-east-1.api.aws" },
-    );
-
-    expect(response.status).toBe(500);
+    )).rejects.toThrow("Bedrock API error 500: Internal error");
   });
 });

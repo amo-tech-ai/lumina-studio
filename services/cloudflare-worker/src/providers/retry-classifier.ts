@@ -48,11 +48,20 @@ function isRetryableStatus(status?: number, code?: string): boolean {
 function isRetryableMessage(message: string): boolean {
   const lowerMsg = message.toLowerCase();
 
-  // HTTP status codes in error message (e.g. "Workers AI error 503: ...")
-  if (lowerMsg.includes(" 429") || lowerMsg.includes("429:")) return true; // Rate limit
-  if (/\s50\d\s/.test(message) || / 50\d:/.test(message)) return true; // 500–509 server errors
+  // Non-retryable errors checked FIRST — before network keywords that might overlap
+  // (e.g. "invalid timeout parameter" should NOT be retryable)
+  if (lowerMsg.includes("authentication")) return false;
+  if (lowerMsg.includes("unauthorized")) return false;
+  if (lowerMsg.includes("forbidden")) return false;
+  if (lowerMsg.includes("invalid")) return false;
+  if (lowerMsg.includes("schema")) return false;
+  if (lowerMsg.includes("validation")) return false;
 
-  // Timeout errors (network timeouts, Cloudflare timeout, AWS timeout)
+  // HTTP status codes in error message (e.g. "Workers AI error 503: ...")
+  if (lowerMsg.includes(" 429") || lowerMsg.includes("429:")) return true;
+  if (/\s50\d\s/.test(message) || / 50\d:/.test(message)) return true;
+
+  // Timeout errors
   if (lowerMsg.includes("timeout")) return true;
   if (lowerMsg.includes("timed out")) return true;
   if (lowerMsg.includes("deadline exceeded")) return true;
@@ -73,14 +82,6 @@ function isRetryableMessage(message: string): boolean {
   if (lowerMsg.includes("enetunreach")) return true;
   if (lowerMsg.includes("ehostunreach")) return true;
   if (lowerMsg.includes("broken pipe")) return true;
-
-  // Non-retryable errors
-  if (lowerMsg.includes("authentication")) return false;
-  if (lowerMsg.includes("unauthorized")) return false;
-  if (lowerMsg.includes("forbidden")) return false;
-  if (lowerMsg.includes("invalid")) return false;
-  if (lowerMsg.includes("schema")) return false;
-  if (lowerMsg.includes("validation")) return false;
 
   // Unknown error → don't retry by default (safer)
   return false;

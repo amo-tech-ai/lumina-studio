@@ -8,20 +8,15 @@ import {
   createCompletionId,
 } from "./provider";
 
-const BEDROCK_BASE = "https://bedrock-mantle";
+const BEDROCK_BASE = "https://bedrock-runtime";
 
 function bedrockBaseUrl(region: string, baseUrl?: string): string {
   if (baseUrl) return baseUrl;
-  return `${BEDROCK_BASE}.${region}.api.aws`;
+  return `${BEDROCK_BASE}.${region}.amazonaws.com`;
 }
 
-function bedrockRequestUrl(
-  model: string,
-  baseUrl: string,
-  stream: boolean,
-): string {
-  const action = stream ? "chat/completions" : "chat/completions";
-  return `${baseUrl}/openai/deployments/${model}/v1/${action}`;
+function bedrockRequestUrl(baseUrl: string): string {
+  return `${baseUrl}/v1/chat/completions`;
 }
 
 async function bedrockFetch(
@@ -33,7 +28,7 @@ async function bedrockFetch(
   baseUrl: string | undefined,
   stream: boolean,
 ): Promise<Response> {
-  const url = bedrockRequestUrl(model, bedrockBaseUrl(region, baseUrl), stream);
+  const url = bedrockRequestUrl(bedrockBaseUrl(region, baseUrl));
 
   return fetch(url, {
     method: "POST",
@@ -41,7 +36,7 @@ async function bedrockFetch(
       "Content-Type": "application/json",
       "Authorization": `Bearer ${apiKey}`,
     },
-    body: JSON.stringify(body),
+    body: JSON.stringify({ ...body, model }),
   });
 }
 
@@ -78,7 +73,7 @@ function fromBedrockResponse(
 export const bedrockProvider: AiProvider = {
   async chat(req: ChatCompletionRequest, config: ProviderConfig): Promise<ChatCompletionResponse> {
     const apiKey = config.apiKey;
-    const region = (config as any).region || process.env.AWS_REGION || "us-east-1";
+    const region = (config as any).region || "us-east-1";
     const baseUrl = config.baseUrl;
 
     if (!apiKey) {
@@ -111,7 +106,7 @@ export const bedrockProvider: AiProvider = {
 
   async chatStream(req: ChatCompletionRequest, config: ProviderConfig): Promise<Response> {
     const apiKey = config.apiKey;
-    const region = (config as any).region || process.env.AWS_REGION || "us-east-1";
+    const region = (config as any).region || "us-east-1";
     const baseUrl = config.baseUrl;
 
     if (!apiKey) {
@@ -133,10 +128,7 @@ export const bedrockProvider: AiProvider = {
 
     if (!upstream.ok) {
       const err = await upstream.text();
-      return new Response(JSON.stringify({ error: `Bedrock error ${upstream.status}: ${err}` }), {
-        status: upstream.status,
-        headers: { "Content-Type": "application/json" },
-      });
+      throw new Error(`Bedrock API error ${upstream.status}: ${err}`);
     }
 
     // Stream passthrough: Bedrock Responses API returns OpenAI-compatible SSE format

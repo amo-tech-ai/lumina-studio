@@ -19,6 +19,10 @@ import {
   type ProviderConfig,
 } from "./providers/provider";
 
+export interface BedrockConfig extends ProviderConfig {
+  region?: string;
+}
+
 export interface Env {
   GEMINI_API_KEY?: string;
   NVIDIA_API_KEY?: string;
@@ -58,6 +62,7 @@ function getProviderConfig(provider: string, env: Env): ProviderConfig {
       return {
         apiKey: env.AWS_BEDROCK_API_KEY ?? "",
         baseUrl: env.AWS_BEDROCK_BASE_URL,
+        region: env.AWS_REGION,
       };
     default:
       throw new Error(`No config for provider: ${provider}`);
@@ -159,7 +164,7 @@ export async function handleChat(
     });
 
     return Response.json(result, {
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", "X-Request-Id": requestId },
     });
   } catch (err) {
     const latency = Date.now() - startTime;
@@ -196,6 +201,14 @@ export async function handleChat(
           requestId,
           primaryProvider: entry.provider,
           fallbackEntry: fallbackEntry ? fallbackEntry.provider : "none",
+        });
+        return Response.json({ error: errorMessage }, { status: 502 });
+      }
+
+      // Skip fallback if Bedrock provider is not configured (no API key)
+      if (fallbackEntry.provider === "bedrock" && !env.AWS_BEDROCK_API_KEY) {
+        console.log(`[gateway] Bedrock fallback not configured (missing AWS_BEDROCK_API_KEY)`, {
+          requestId,
         });
         return Response.json({ error: errorMessage }, { status: 502 });
       }
@@ -241,7 +254,7 @@ export async function handleChat(
       );
       const fallbackLatency = Date.now() - fallbackStartTime;
 
-      const hasToolCalls = result.choices[0]?.message?.tool_calls?.length ?? 0 > 0;
+      const hasToolCalls = (result.choices[0]?.message?.tool_calls?.length ?? 0) > 0;
       console.log(`[gateway] fallback succeeded`, {
         requestId,
         primaryProvider: entry.provider,
