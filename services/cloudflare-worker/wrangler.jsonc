@@ -8,9 +8,9 @@
   },
   "upload_source_maps": true,
   "compatibility_flags": ["nodejs_compat"],
-  // Test environment: disable auth for unit/integration tests (matches .dev.vars)
+  // Test environment: provide auth token for unit/integration tests
   "vars": {
-    "AI_GATEWAY_ALLOW_UNAUTHENTICATED": "true"
+    "AI_GATEWAY_AUTH_TOKEN": "test-token"
   },
   // Preserve dashboard plaintext vars (MODEL_REGISTRY_OVERRIDE, CLOUDFLARE_ACCOUNT_ID)
   // on wrangler deploy / versions upload. Secrets are already kept; empty local `vars`
