@@ -35,7 +35,7 @@ version: "2.0.0"
 | 6 | **`vercel-react-best-practices`** | Search/filter performance |
 | 7 | **`task-verifier`** | Phase 2 readiness + Done gate |
 
-Shoot domain: also [`shoot/lessons-from-brand-parity.md`](../../../tasks/design-docs/shoot/lessons-from-brand-parity.md) · [`production-readiness.md`](../../../tasks/design-docs/shoot/production-readiness.md).
+Shoot domain: also [`shoot/lessons-from-brand-parity.md`](../../../tasks/design-docs/shoot/lessons-from-brand-parity.md).
 
 ---
 
@@ -90,7 +90,7 @@ Full write-ups, dates, and PR links: [`Universal-design-prompt-4/lessons.md`](..
 
 ## Phase 0 — gates (before Discover)
 
-Run from [`improve.md`](../../../tasks/design-docs/improve.md) + brand parity lessons:
+Run from [`improve.md`](../../../Universal-design-prompt-new/docs/design/improve.md) + brand parity lessons:
 
 ```text
 [ ] Audit Supabase FIRST — live schema, RLS, and migration ledger before reading anything else
@@ -109,7 +109,7 @@ Run from [`improve.md`](../../../tasks/design-docs/improve.md) + brand parity le
 
 Only after this — not before — read the `.dc.html` and start the Discover phase below.
 
-**Shoots List example:** `Shoots List.v2.image-first.dc.html` requires 920px workspace, 3-col grid, 5 distinct states — current `/app/shoots/page.tsx` fails layout + tokens + architecture (see audit `tasks/design-docs/audit/05-skills-improve.md`).
+**Shoots List example:** `Shoots List.v2.image-first.dc.html` requires 920px workspace, 3-col grid, 5 distinct states — current `/app/shoots/page.tsx` fails layout + tokens + architecture.
 
 ---
 
