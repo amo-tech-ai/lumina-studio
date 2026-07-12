@@ -101,6 +101,11 @@ export const geminiProvider: AiProvider = {
         "Gemini provider does not support tool-result messages. Complete tool conversations in a tool-aware provider (Workers AI)."
       );
     }
+    if (req.messages.some((m) => m.role === "assistant" && m.tool_calls)) {
+      throw new Error(
+        "Gemini provider does not support assistant messages with tool_calls. Route tool-calling conversations to a tool-aware provider (Workers AI)."
+      );
+    }
     const { system, contents } = toGeminiMessages(req.messages);
     const body: Record<string, unknown> = {
       contents,
@@ -134,6 +139,11 @@ export const geminiProvider: AiProvider = {
     if (req.messages.some((m) => m.role === "tool")) {
       throw new Error(
         "Gemini provider does not support tool-result messages. Complete tool conversations in a tool-aware provider (Workers AI)."
+      );
+    }
+    if (req.messages.some((m) => m.role === "assistant" && m.tool_calls)) {
+      throw new Error(
+        "Gemini provider does not support assistant messages with tool_calls. Route tool-calling conversations to a tool-aware provider (Workers AI)."
       );
     }
     const { system, contents } = toGeminiMessages(req.messages);
