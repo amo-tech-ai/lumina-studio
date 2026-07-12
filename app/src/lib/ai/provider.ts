@@ -1,10 +1,12 @@
 import { createGroq } from "@ai-sdk/groq";
+import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
 import groqModelsSsot from "./groq-models.ssot.json";
 
 import {
   createGeminiLanguageModel,
   resolveProviderOptions as resolveGeminiProviderOptions,
 } from "./gemini-registry";
+import { DEFAULT_AI_GATEWAY_URL } from "./provider-adapter";
 import type { AiProvider, GroqModelEntry, GroqModelTier, GroqModelsConfig } from "./types";
 
 /**
@@ -15,7 +17,12 @@ export function loadGroqModelsConfig(): GroqModelsConfig {
   return groqModelsSsot as GroqModelsConfig;
 }
 
-type ResolvedLanguageModel = ReturnType<typeof createGeminiLanguageModel>;
+type ResolvedLanguageModel =
+  | ReturnType<typeof createGeminiLanguageModel>
+  | ReturnType<ReturnType<typeof createOpenAICompatible>["chatModel"]>;
+
+/** Rollback flag for Mastra → gateway cutover (IPI-454 AC-F). Default = legacy direct SDKs. */
+export type AiRoutingMode = "direct" | "gateway";
 
 export type { AiProvider, GroqModelTier } from "./types";
 export {
@@ -79,7 +86,96 @@ function isGroqVisionConfigured(): boolean {
   return Boolean(fromEnv || fallback);
 }
 
-export function resolveProviderOptions() {
+export function resolveAiRoutingMode(): AiRoutingMode {
+  const raw = (process.env.AI_ROUTING_MODE ?? "direct").trim().toLowerCase();
+  if (raw === "gateway") return "gateway";
+  if (raw === "direct" || raw === "") return "direct";
+  throw new Error(
+    `AI_ROUTING_MODE="${raw}" is invalid (expected direct | gateway).`,
+  );
+}
+
+/** Worker `model-registry` tier keys — `resolveModelEntry(model)` misses fall back to `default`. */
+const WORKER_REGISTRY_KEYS = new Set([
+  "default",
+  "fast",
+  "structured",
+  "vision",
+  "embedding",
+]);
+
+/**
+ * Model id sent to the AI Gateway Worker (OpenAI-compat `model` field).
+ * Must be a Worker registry tier key — not a Gemini/Groq provider model id.
+ */
+export function resolveGatewayModelId(tier: GroqModelTier = "default"): string {
+  const overrides: Partial<Record<string, string | undefined>> = {
+    default: process.env.AI_MODEL_DEFAULT,
+    fast: process.env.AI_MODEL_FAST,
+    structured: process.env.AI_MODEL_STRUCTURED,
+    vision: process.env.AI_MODEL_VISION,
+  };
+  const override = overrides[tier]?.trim();
+  if (override && WORKER_REGISTRY_KEYS.has(override)) return override;
+
+  if (tier === "structuredHeavy") return "structured";
+  if (WORKER_REGISTRY_KEYS.has(tier)) return tier;
+
+  // Never silently remap compound/stt/safety/… onto Worker "default".
+  throw new Error(
+    `Tier "${tier}" is not a Worker registry chat key — keep AI_ROUTING_MODE=direct for this tier.`,
+  );
+}
+
+/**
+ * Whether this tier may use the OpenAI-compat Worker under AI_ROUTING_MODE=gateway.
+ * Allowlist only — Worker chat is text-only (no ImageParts, no OpenAI `tools`).
+ * Specialized Groq tiers (compound/stt/safety/…) must stay on direct SDKs.
+ */
+export function shouldRouteTierViaGateway(tier: GroqModelTier): boolean {
+  if (resolveAiRoutingMode() !== "gateway") return false;
+
+  // Tool-free marketing path — only Worker-safe text tier in production gateway mode.
+  if (tier === "fast") return true;
+
+  // Tool-bearing Mastra agents — opt in only after a Worker tool bridge exists.
+  if (
+    (tier === "default" || tier === "structured" || tier === "structuredHeavy") &&
+    process.env.AI_GATEWAY_ALLOW_TOOL_TIERS === "1"
+  ) {
+    return true;
+  }
+
+  return false;
+}
+
+function createGatewayLanguageModel(tier: GroqModelTier): ResolvedLanguageModel {
+  const base = (process.env.AI_GATEWAY_URL ?? DEFAULT_AI_GATEWAY_URL).replace(/\/$/, "");
+  const apiKey = process.env.AI_GATEWAY_API_KEY?.trim();
+  // Optional locally; set AI_GATEWAY_API_KEY when the Worker requires Bearer auth.
+  // Do NOT mint x-request-id here — createOpenAICompatible freezes headers for the
+  // process lifetime (agents call resolveModel() at module load). Optional sticky
+  // override for tests only; production correlation belongs on the Worker / fetch layer.
+  const requestId = process.env.AI_GATEWAY_REQUEST_ID?.trim();
+  const gateway = createOpenAICompatible({
+    name: "ipix-ai-gateway",
+    baseURL: `${base}/v1`,
+    ...(apiKey ? { apiKey } : {}),
+    headers: {
+      ...(requestId ? { "x-request-id": requestId } : {}),
+      "x-ipix-routing": "gateway",
+    },
+  });
+  return gateway.chatModel(resolveGatewayModelId(tier));
+}
+
+export function resolveProviderOptions(tier: GroqModelTier = "default") {
+  // Gemini thinkingBudget applies to direct @ai-sdk/google models only.
+  // When this tier is routed via openai-compatible gateway, return {} so
+  // Google-specific fields are not forwarded to the Worker (rejects unknown options).
+  if (shouldRouteTierViaGateway(tier)) {
+    return {};
+  }
   return resolveAiProvider() === "gemini" ? resolveGeminiProviderOptions() : {};
 }
 
@@ -114,6 +210,12 @@ function createGroqLanguageModel(tier: GroqModelTier): ResolvedLanguageModel {
 }
 
 export function resolveModel(tier: GroqModelTier = "default"): ResolvedLanguageModel {
+  // IPI-454 AC-F: Mastra agents keep calling resolveModel(); flip AI_ROUTING_MODE=gateway
+  // for Worker-safe tiers (see shouldRouteTierViaGateway). Vision + tool tiers stay direct.
+  if (shouldRouteTierViaGateway(tier)) {
+    return createGatewayLanguageModel(tier);
+  }
+
   if (tier === "vision" && !isGroqVisionConfigured()) {
     return createGeminiLanguageModel();
   }
@@ -125,6 +227,8 @@ export function resolveModel(tier: GroqModelTier = "default"): ResolvedLanguageM
     return createGroqLanguageModel(tier);
   }
   throw new Error(
-    `AI_PROVIDER="${provider}" is not wired in resolveModel() (legacy direct-provider path — use gemini or groq). For workers-ai/nvidia/openai-compatible/mock, use the gateway adapter (providerAdapter) instead — see IPI-454 AC-F for the resolveModel() → gateway wire.`,
+    `AI_PROVIDER="${provider}" is not wired for AI_ROUTING_MODE=direct (use gemini or groq). ` +
+      `Set AI_ROUTING_MODE=gateway to use @ai-sdk/openai-compatible → AI_GATEWAY_URL, ` +
+      `or use createProviderAdapter() for non-Mastra REST (IPI-454).`,
   );
 }

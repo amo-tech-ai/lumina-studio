@@ -1,0 +1,27 @@
+[config]
+model = "bedrock/qwen.qwen3-coder-next"
+custom_model_max_tokens = 250000
+
+[github_action_config]
+auto_review = true
+auto_describe = false
+auto_improve = false
+pr_actions = ["opened", "reopened", "ready_for_review"]
+
+[pr_reviewer]
+extra_instructions = """
+Respect AGENTS.md and the iPix one-concern-per-PR rule.
+
+Prioritize:
+- correctness and regressions
+- authentication and authorization
+- Supabase RLS and organization isolation
+- migration and data-loss risk
+- exposed secrets
+- Next.js server/client boundaries
+- Cloudflare Workers and OpenNext compatibility
+- missing high-value tests
+
+Avoid formatting-only and low-value style comments.
+Only report findings supported by the changed code.
+"""

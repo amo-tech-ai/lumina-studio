@@ -1,0 +1,34 @@
+name: PR Agent — Bedrock Qwen3 Coder Next
+
+on:
+  pull_request:
+    types: [opened, reopened, ready_for_review]
+
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+
+concurrency:
+  group: pr-agent-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  pr_agent_job:
+    if: github.event.sender.type != 'Bot'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Run PR-Agent
+        uses: the-pr-agent/pr-agent@01569655d8b4825bbe599fd5b2a8de59d5c58390
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          aws.AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws.AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws.AWS_REGION_NAME: "us-east-1"
+          config.model: "bedrock/qwen.qwen3-coder-next"
+          config.custom_model_max_tokens: "250000"
+          github_action_config.auto_review: "true"
+          github_action_config.auto_describe: "false"
+          github_action_config.auto_improve: "false"
+          github_action_config.pr_actions: '["opened", "reopened", "ready_for_review"]'

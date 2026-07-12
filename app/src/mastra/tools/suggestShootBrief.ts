@@ -43,8 +43,8 @@ Write 2–3 short paragraphs (150–220 words total):
 No headings, no bullet points, no deliverables list. Confident creative director voice. Output only the brief text.`,
       maxOutputTokens: 400,
       // On Gemini, thinkingBudget:0 prevents reasoning tokens from eating the
-      // 400-token output budget. No-op on Groq (resolveProviderOptions is provider-aware).
-      providerOptions: resolveProviderOptions(),
+      // 400-token output budget. Empty when this tier routes via AI Gateway.
+      providerOptions: resolveProviderOptions("default"),
     });
 
     return { brief: text.trim() };
