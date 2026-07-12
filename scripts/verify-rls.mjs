@@ -539,6 +539,24 @@ try {
       "converting a deal whose company_id belongs to a different org is rejected, not silently orphaned",
     );
 
+    // Atomicity — the whole conversion is one transaction, so a rejected
+    // convert must leave no trace: no audit row, no brand.
+    const { data: danglingActivity } = await admin
+      .from("crm_activities")
+      .select("id")
+      .eq("deal_id", danglingDeal?.id);
+    assert(
+      (danglingActivity ?? []).length === 0,
+      "rejected cross-org won convert writes no crm_activities row",
+    );
+
+    const { data: danglingCompanyAfterWon } = await admin
+      .from("crm_companies")
+      .select("brand_id")
+      .eq("id", foreignCompany?.id)
+      .single();
+    assert(!danglingCompanyAfterWon?.brand_id, "rejected cross-org won convert creates no brand");
+
     // Same cross-org-company check, 'lost' path — the first fix only ran the
     // FOUND check inside the 'won' branch, so a 'lost' conversion on a
     // dangling company_id still slipped through and wrote a data-isolation-
@@ -562,6 +580,16 @@ try {
       !!danglingLostConvertErr,
       "marking a deal lost is also rejected when its company_id belongs to a different org",
     );
+
+    const { data: danglingLostActivity } = await admin
+      .from("crm_activities")
+      .select("id")
+      .eq("deal_id", danglingLostDeal?.id);
+    assert(
+      (danglingLostActivity ?? []).length === 0,
+      "rejected cross-org lost convert writes no crm_activities row",
+    );
+
     await admin.from("crm_deals").delete().eq("id", danglingLostDeal?.id);
 
     // Throwaway org cleanup — not part of orgAId's cascade, so not covered

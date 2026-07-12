@@ -86,11 +86,16 @@ export function DealStageControl({ dealId, stage, onStageChange }: Props) {
   }
 
   function handleCancel() {
+    // Once approval is in flight the action is committed — Escape (via
+    // handleTrapKeyDown below) and the Cancel button (disabled via the
+    // `approving` prop, but this is the single choke point both route
+    // through) must not dismiss the dialog while the request can still land.
+    if (approving) return;
     setPending(null);
   }
 
   async function handleApprove() {
-    if (!pending) return;
+    if (!pending || approving) return;
     setApproving(true);
     try {
       const result = await postConvert(dealId, pending);

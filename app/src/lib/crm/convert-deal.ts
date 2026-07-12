@@ -45,7 +45,16 @@ export async function convertDeal(
     // shape, not an unexpected server failure. Kept as two narrow substrings
     // rather than one broad one so a genuinely new/unrelated exception text
     // doesn't silently get mapped to 403.
-    if (message.includes("editor or owner") || message.includes("not found in org")) {
+    if (message.includes("not found in org")) {
+      // Unlike a routine permission denial, this signals crm_deals.company_id
+      // pointing at a company in a different org — a data-integrity anomaly,
+      // not just an unauthorized caller. Logged so it doesn't vanish behind
+      // an ordinary-looking 403 (the exact class of silent failure the
+      // hardening migration's own audit trail was written to catch).
+      console.error("[crm/convert-deal] rejected cross-org company:", message);
+      return { ok: false, status: 403, code: "FORBIDDEN", message: "You do not have access to this deal." };
+    }
+    if (message.includes("editor or owner")) {
       return { ok: false, status: 403, code: "FORBIDDEN", message: "You do not have access to this deal." };
     }
     if (message.includes("already terminal")) {

@@ -46,10 +46,10 @@ describe("convertDeal", () => {
     });
   });
 
-  it("maps the cross-org company exception to 403, not 500", async () => {
-    const sb = mockRpc(null, {
-      message: "crm_convert_deal: company c1 not found in org org-1",
-    });
+  it("maps the cross-org company exception to 403, not 500, and logs it server-side", async () => {
+    const message = "crm_convert_deal: company c1 not found in org org-1";
+    const sb = mockRpc(null, { message });
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
     const result = await convertDeal({ dealId: "d1", decision: "won" }, sb as never);
     expect(result).toEqual({
       ok: false,
@@ -57,6 +57,11 @@ describe("convertDeal", () => {
       code: "FORBIDDEN",
       message: "You do not have access to this deal.",
     });
+    // A cross-org company_id is a data-integrity anomaly, not a routine
+    // permission denial — it must leave a server-side breadcrumb, unlike
+    // the ordinary editor-or-above 403 below.
+    expect(consoleError).toHaveBeenCalledWith("[crm/convert-deal] rejected cross-org company:", message);
+    consoleError.mockRestore();
   });
 
   it("maps 'already terminal' to 409", async () => {

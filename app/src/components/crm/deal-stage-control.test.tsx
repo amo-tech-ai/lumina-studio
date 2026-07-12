@@ -236,6 +236,94 @@ describe("DealStageControl", () => {
     expect(screen.queryByRole("dialog")).toBeNull();
   });
 
+  it("Escape during an in-flight approve does NOT close the dialog — the request is already committed", async () => {
+    let resolveFetch: (v: unknown) => void = () => {};
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockReturnValue(new Promise((resolve) => { resolveFetch = resolve; })),
+    );
+    const onStageChange = vi.fn();
+    render(<DealStageControl dealId={DEAL_ID} stage="negotiation" onStageChange={onStageChange} />);
+    fireEvent.click(screen.getByText("Won"));
+    fireEvent.click(screen.getByText(/Approve · Mark Won/));
+    await waitFor(() => expect(screen.getByText("Approving…")).toBeDefined());
+
+    const dialog = screen.getByRole("dialog");
+    fireEvent.keyDown(dialog, { key: "Escape" });
+    // Still open — Escape must not dismiss a committed, in-flight approval.
+    expect(screen.getByRole("dialog")).toBeDefined();
+
+    resolveFetch({ ok: true, json: async () => ({ ok: true, dealId: DEAL_ID, stage: "won", brandId: "b1" }) });
+    await waitFor(() => expect(onStageChange).toHaveBeenCalledWith("won", "b1"));
+    // Now that the request has landed, the dialog closes normally.
+    expect(screen.queryByRole("dialog")).toBeNull();
+  });
+
+  it("clicking the disabled Cancel button while approving does not dismiss the dialog", async () => {
+    let resolveFetch: (v: unknown) => void = () => {};
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockReturnValue(new Promise((resolve) => { resolveFetch = resolve; })),
+    );
+    render(<DealStageControl dealId={DEAL_ID} stage="negotiation" onStageChange={vi.fn()} />);
+    fireEvent.click(screen.getByText("Won"));
+    fireEvent.click(screen.getByText(/Approve · Mark Won/));
+    await waitFor(() => expect(screen.getByText("Cancel")).toHaveProperty("disabled", true));
+
+    fireEvent.click(screen.getByText("Cancel"));
+    expect(screen.getByRole("dialog")).toBeDefined();
+
+    resolveFetch({ ok: true, json: async () => ({ ok: true, dealId: DEAL_ID, stage: "won", brandId: "b1" }) });
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+  });
+
+  it("double-clicking Approve sends only one convert request", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ ok: true, dealId: DEAL_ID, stage: "won", brandId: "b1" }),
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    const onStageChange = vi.fn();
+    render(<DealStageControl dealId={DEAL_ID} stage="negotiation" onStageChange={onStageChange} />);
+    fireEvent.click(screen.getByText("Won"));
+    const approveButton = screen.getByText(/Approve · Mark Won/);
+    fireEvent.click(approveButton);
+    fireEvent.click(approveButton);
+
+    await waitFor(() => expect(onStageChange).toHaveBeenCalledTimes(1));
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("a failed approve permits retry — Won can be reopened and re-approved", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce({
+        ok: false,
+        json: async () => ({ error: { code: "INTERNAL_ERROR", message: "Failed to convert the deal." } }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ ok: true, dealId: DEAL_ID, stage: "won", brandId: "b1" }),
+      });
+    vi.stubGlobal("fetch", fetchMock);
+    const onStageChange = vi.fn();
+    render(<DealStageControl dealId={DEAL_ID} stage="negotiation" onStageChange={onStageChange} />);
+
+    fireEvent.click(screen.getByText("Won"));
+    fireEvent.click(screen.getByText(/Approve · Mark Won/));
+    await waitFor(() => expect(toastError).toHaveBeenCalledWith("Failed to convert the deal."));
+    expect(onStageChange).not.toHaveBeenCalled();
+
+    // Retry: reopen the gate and approve again — buttons are enabled again.
+    fireEvent.click(screen.getByText("Won"));
+    const retryButton = screen.getByText(/Approve · Mark Won/);
+    expect(retryButton).toHaveProperty("disabled", false);
+    fireEvent.click(retryButton);
+
+    await waitFor(() => expect(onStageChange).toHaveBeenCalledWith("won", "b1"));
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
   it("renders nothing (no row, no gate) once terminal and settled", () => {
     const { container } = render(<DealStageControl dealId={DEAL_ID} stage="won" onStageChange={vi.fn()} />);
     expect(container.firstChild).toBeNull();
