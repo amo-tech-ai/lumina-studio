@@ -81,7 +81,10 @@ const DEFAULT_REGISTRY: ModelRegistry = {
 };
 
 export function getRegistry(overrides?: ModelRegistry): ModelRegistry {
-  return overrides ?? DEFAULT_REGISTRY;
+  if (!overrides) return DEFAULT_REGISTRY;
+  return {
+    tiers: { ...DEFAULT_REGISTRY.tiers, ...overrides.tiers },
+  };
 }
 
 export function resolveModelEntry(
