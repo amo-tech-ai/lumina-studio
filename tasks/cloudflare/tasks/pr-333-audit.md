@@ -1,6 +1,13 @@
 Forensic Audit Report — PR #333 · Workers AI Tool Calling
-Files: 3 files (+155/−1)
+Files (original): 8 files (+1217/−?), later split into 3 clean PRs
 Updated since last review: Gemini guards added, ChatMessage now discriminated union
+
+NOTE — SCOPE CORRECTION: The original PR #333 mixed code + skills + CLAUDE.md + audit doc in one PR, violating AGENTS.md #1 (NEVER MIX CONCERNS). It has since been split into:
+  • PR #333 (now code-only): 4 files — types + Gemini guards + tests — ORIGINAL STALE
+  • PR #334 (ipi/525-code): code-only split (identical to #333)
+  • PR #335 (ipi/525-skill): docs-only — cloudflare-workflow skill + CLAUDE.md
+  • PR #336 (ipi/525-audit): docs-only — this audit file
+This audit was written for the pre-split state. The scores below have been corrected to reflect current truth.
 
 Official Schema Verification (Gemma 4 26B — Cloudflare's own docs)
 PR Type	Official Schema	Verdict
@@ -58,26 +65,36 @@ Router doesn't validate tool-capable model	🟢 N/A	Router passes through; Worke
 Grading
 Criterion	Score	Rationale
 Correctness vs official docs	95%	All types match Cloudflare's schema exactly; minor array-content type omission
-Test coverage	95%	18 tests in gemini.test.ts (10 guard tests new), 14 in workers-ai.test.ts. Full Gemini rejection coverage. Minor: no live E2E proof against real endpoint
-Safety (fail-closed)	95%	Gemini guards fail closed at 6 validation checkpoints. Workers AI returns 502 on unsupported models, caught by catch→502. content: null handled correctly in conversation flow
-Scope preservation	100%	Single concern: tool calling types + forwarding + Gemini guard + CloudflareWorkflow skill integration
-Docs alignment	100%	Types match Cloudflare official schema; CLAUDE.md updated; cloudflare-workflow skill integrated
-Composite	96%	
+Test coverage	90%	18 tests in gemini.test.ts (10 guard tests new), 14 in workers-ai.test.ts. Full Gemini rejection coverage. LIVE PROOF MISSING: tools silently dropped by deployed Gemini (pre-PR #333). No model-registry tool-capable model registered
+Safety (fail-closed)	85%	Gemini guards fail closed at 6 validation checkpoints in code. BUT: deployed Worker (ai-gateway.sk-498.workers.dev) is pre-PR #333 — no guards active. Tools silently dropped by Gemini provider. Live gateway has zero auth
+Scope preservation	30%	FAIL — Original PR #333 mixed code + skills + CLAUDE.md + audit in one PR. Violation of AGENTS.md #1. Split into #334/#335/#336 fixed this, but the violation existed at time of writing
+Docs alignment	70%	Types match Cloudflare official schema. But: no model-registry entry for a tool-capable Workers AI model. CLAUDE.md update and cloudflare-workflow skill moved to PR #335
+Composite	70%	CORRECTED from 96%. Main drag: scope violation (30%), and production readiness blockers (deployed guards missing, no auth, no model-registry update)
 Merge Recommendation
-🟢 **APPROVED FOR MERGE**
+🟡 **SPLIT REQUIRED — DO NOT MERGE AS-IS**
 
-All required gates passed:
+The original PR #333 had mixed concerns and was blocked. It has since been split into 3 clean PRs:
+  • PR #334 (code-only) — review and merge this for the code changes
+  • PR #335 (docs-only) — merge-ready, infra CI failures are pre-existing
+  • PR #336 (audit-only) — this file, updated here
+
+Gates status:
 ✅ Gemini guard tests added (10 test cases, commit ca37957d)
 ✅ Redundant ternary fixed (1 line change, commit ca37957d)
 ✅ All 1150 app tests pass
-✅ All 65 Worker tests pass (includes 18 Gemini tests)
+✅ All 67 Worker tests pass (includes 18 Gemini tests)
 ✅ ChatMessage discriminated union enforces tool_call_id requirement
 ✅ Tool rejection fails closed at 6 validation points (tools, tool_choice, parallel_tool_calls, tool msgs, assistant tool_calls, content: null handling)
-✅ CLAUDE.md updated
-✅ cloudflare-workflow skill integrated
+🔴 CLAUDE.md update → MOVED to PR #335
+🔴 cloudflare-workflow skill → MOVED to PR #335
+🔴 Scope violation → SPLIT into 3 clean PRs (now resolved)
 
-Optional (post-merge):
-- Add array-content variant to ChatMessage assistant type for future multi-modal support
-- Add live E2E curl proof against real Workers AI endpoint in IPI-525 closure
+Post-merge blockers (must close before IPI-525 can ship):
+1. Merge PR #334 → deploy Worker → verify tools no longer silently dropped
+2. Register a tool-capable Workers AI model (e.g. qwen3-30b-a3b-fp8) in model-registry.ts
+3. Add Bearer auth to Worker handleChat() — currently zero auth on deployed gateway
+4. Fix requireOperator() gap — referenced in middleware.ts but does not exist
+5. Live E2E proof: Mastra agent → gateway → Workers AI tool_calls → execute → result
+6. Optional: add array-content variant to ChatMessage assistant type for future multi-modal support
 
-Production readiness: **READY**. No blockers. Tool calling is isolated to Workers AI provider; Gemini provider safely rejects all tool requests.
+Production readiness: **NOT YET**. Blocked on deployment gap (guards not live), no model-registry tool model, zero auth on gateway, missing requireOperator(). Composite corrected from 96% to 70%.
