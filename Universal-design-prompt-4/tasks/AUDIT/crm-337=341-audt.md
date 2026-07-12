@@ -39,6 +39,7 @@ No new worktree was created. Both expected paths existed and matched `gh pr view
 ## 3. PR #341 findings — migration and database layer
 
 **Files (final state, 5 migrations, none squashed):**
+
 - `20260712084425_crm_deals_convert_rpc.sql` — base RPC
 - `20260712091149_crm_deals_convert_hardening.sql` — editor-tier auth, activity log, domain→brand_url
 - `20260712091706_crm_deals_convert_hardening_fix_ambiguous_column.sql` — RETURNS TABLE column-shadowing fix
@@ -267,6 +268,7 @@ The function content *did* match (confirmed via `pg_get_functiondef()`), which i
 ## 17. Exact corrections required before merge
 
 **None.** All corrections identified during this and the prior audit pass have already been applied, tested, committed, and pushed:
+
 - #337: `6d34652c`
 - #341: `59725d9e`
 
