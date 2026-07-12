@@ -3,6 +3,15 @@ export interface ChatMessage {
   content: string;
 }
 
+export interface ToolCall {
+  id: string;
+  type: "function";
+  function: {
+    name: string;
+    arguments: string;
+  };
+}
+
 export interface ChatCompletionRequest {
   model: string;
   messages: ChatMessage[];
@@ -10,6 +19,9 @@ export interface ChatCompletionRequest {
   max_tokens?: number;
   stream?: boolean;
   response_format?: { type: "json_object" } | { type: "text" };
+  tools?: { type: "function"; function: { name: string; description?: string }; }[];
+  tool_choice?: string | { type: "function"; function: { name: string } };
+  parallel_tool_calls?: boolean;
 }
 
 export interface ChatCompletionResponse {
@@ -17,7 +29,7 @@ export interface ChatCompletionResponse {
   model: string;
   choices: {
     index: number;
-    message: { role: string; content: string };
+    message: { role: string; content: string; tool_calls?: ToolCall[] };
     finish_reason: string;
   }[];
   usage: {
@@ -44,6 +56,8 @@ export interface ProviderConfig {
   baseUrl: string;
   /** Cloudflare account ID — URL path segment for Workers AI OpenAI-compat API. */
   accountId?: string;
+  /** AWS region for Bedrock provider. */
+  region?: string;
 }
 
 export interface AiProvider {
