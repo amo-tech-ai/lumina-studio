@@ -1,5 +1,5 @@
 ---
-name: cloudflare-workflow
+name: cf-wf
 description: Accuracy-first engineering workflow standard for ALL Cloudflare-related work — Workers, OpenNext, AI Gateway, Workers AI, Durable Objects, Queues, KV, Vectorize, Hyperdrive, D1, R2, Workflows, AI provider integrations, CopilotKit, Mastra, Supabase integration, OAuth, runtime compatibility, deployment, CI/CD, and security. Enforces a 9-stage gate (Stage 0 research & architecture review, scope verification, evidence collection, focused implementation, layered testing, runtime matrix verification, documentation contradiction check, architecture review, production readiness) with a per-stage reporting template and a Cloudflare Outcome Grader rubric. Use whenever touching Cloudflare infrastructure, Workers code, OpenNext builds, bindings, or any task that crosses Cloudflare + Supabase/Mastra/CopilotKit — even if the user does not say "Cloudflare". Do NOT skip stages or merge before all quality gates pass.
 ---
 
