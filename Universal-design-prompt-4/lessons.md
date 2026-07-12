@@ -4,7 +4,7 @@ Captured from the IPI-404 (SCR-08 Assets) forensic review on 2026-07-10, cross-r
 
 ## 1. Written specs can mis-transcribe the DC HTML's actual layout mechanism — always re-derive from the `.dc.html` file itself
 
-Both `tasks/screens/SCR-08-assets.md` and the Linear IPI-404 issue body describe the Assets grid as CSS Grid: `grid-template-columns: repeat(auto-fill, minmax(280px, 1fr))`, gap 16px. The real `Pages/Assets.v2.image-first.dc.html` uses CSS **multi-column masonry** instead: `.masonry{column-count:4;column-gap:16px}` with breakpoints at 1280px (→3) and 880px (→2). Grid and multi-column are different layout primitives with different card-ordering and sizing behavior — building to the written spec would have shipped the wrong layout.
+Both `Universal-design-prompt-new/tasks/screens/SCR-08-assets.md` and the Linear IPI-404 issue body describe the Assets grid as CSS Grid: `grid-template-columns: repeat(auto-fill, minmax(280px, 1fr))`, gap 16px. The real `Universal-design-prompt-new/Pages/Assets.v2.image-first.dc.html` uses CSS **multi-column masonry** instead: `.masonry{column-count:4;column-gap:16px}` with breakpoints at 1280px (→3) and 880px (→2). Grid and multi-column are different layout primitives with different card-ordering and sizing behavior — building to the written spec would have shipped the wrong layout.
 
 The implementer in this case got it right by reading the DC HTML directly and matching an established `.masonry` pattern already used in `shoot-detail.module.css`, not by trusting the prose spec. That's the correct instinct — codify it.
 
@@ -12,7 +12,7 @@ The implementer in this case got it right by reading the DC HTML directly and ma
 
 ## 2. A purpose-built utility can exist and still go unused — grep for it, don't just skim the reuse table
 
-Both `tasks/screens/SCR-08-assets.md` and Linear IPI-404 explicitly call for `CldImage` (next-cloudinary) with Cloudinary thumbnails. `app/src/lib/cloudinary/url.ts` even has an `"asset-masonry"` preset (`width:600, crop:"limit"`, and `cropTransformString` appends `f_auto,q_auto`) built for exactly this screen. The shipped `asset-card.tsx` renders `asset.thumbnail_url ?? asset.url` through plain `next/image` — no transform applied, no `f_auto`/`q_auto`, unoptimized delivery.
+Both `Universal-design-prompt-new/tasks/screens/SCR-08-assets.md` and Linear IPI-404 explicitly call for `CldImage` (next-cloudinary) with Cloudinary thumbnails. `app/src/lib/cloudinary/url.ts` even has an `"asset-masonry"` preset (`width:600, crop:"limit"`, and `cropTransformString` appends `f_auto,q_auto`) built for exactly this screen. The shipped `asset-card.tsx` renders `asset.thumbnail_url ?? asset.url` through plain `next/image` — no transform applied, no `f_auto`/`q_auto`, unoptimized delivery.
 
 **Guard:** When a skill's "Reuse audit" table lists a component/util as "✅ reuse," verify by grep (`rg "CLOUDINARY_PRESETS\|CldImage"`) that the file actually imports and calls it — not just that a plausible-looking import exists. A reuse table is a plan, not proof; task-verifier's Phase 2 disk probes exist precisely to catch this gap between planned and actual reuse.
 
