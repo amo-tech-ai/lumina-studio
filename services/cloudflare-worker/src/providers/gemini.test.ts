@@ -348,6 +348,76 @@ describe("geminiProvider.chatStream", () => {
     expect(url).toContain(":streamGenerateContent?");
     expect(url).toContain("alt=sse");
   });
+
+  it("allows empty tools array (no-op OpenAI compatibility)", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        candidates: [{ content: { parts: [{ text: "response" }] }, finishReason: "STOP" }],
+        usageMetadata: { promptTokenCount: 10, candidatesTokenCount: 20 },
+      }),
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await geminiProvider.chat(
+      {
+        model: "gemini-3.1-flash-lite",
+        messages: [{ role: "user", content: "hello" }],
+        tools: [], // Empty array — no tools to call
+      },
+      { apiKey: "secret", baseUrl: "https://generativelanguage.googleapis.com" },
+    );
+
+    expect(result.choices[0].message.content).toBe("response");
+    expect(fetchMock).toHaveBeenCalled();
+  });
+
+  it("allows tool_choice='none' (no-op OpenAI compatibility)", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        candidates: [{ content: { parts: [{ text: "response" }] }, finishReason: "STOP" }],
+        usageMetadata: { promptTokenCount: 10, candidatesTokenCount: 20 },
+      }),
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await geminiProvider.chat(
+      {
+        model: "gemini-3.1-flash-lite",
+        messages: [{ role: "user", content: "hello" }],
+        tool_choice: "none", // No tools — explicitly disabled
+      },
+      { apiKey: "secret", baseUrl: "https://generativelanguage.googleapis.com" },
+    );
+
+    expect(result.choices[0].message.content).toBe("response");
+    expect(fetchMock).toHaveBeenCalled();
+  });
+
+  it("allows empty tools + tool_choice='none' together", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        candidates: [{ content: { parts: [{ text: "response" }] }, finishReason: "STOP" }],
+        usageMetadata: { promptTokenCount: 10, candidatesTokenCount: 20 },
+      }),
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await geminiProvider.chat(
+      {
+        model: "gemini-3.1-flash-lite",
+        messages: [{ role: "user", content: "hello" }],
+        tools: [],
+        tool_choice: "none",
+      },
+      { apiKey: "secret", baseUrl: "https://generativelanguage.googleapis.com" },
+    );
+
+    expect(result.choices[0].message.content).toBe("response");
+    expect(fetchMock).toHaveBeenCalled();
+  });
 });
 
 describe("geminiProvider.embed", () => {

@@ -91,7 +91,7 @@ function fromGeminiResponse(
 
 export const geminiProvider: AiProvider = {
   async chat(req: ChatCompletionRequest, config: ProviderConfig): Promise<ChatCompletionResponse> {
-    if (req.tools || req.tool_choice || req.parallel_tool_calls) {
+    if (req.tools?.length || (req.tool_choice && req.tool_choice !== "none") || req.parallel_tool_calls) {
       throw new Error(
         "Gemini provider does not support tool calls. Route tool-bearing requests to a tool-aware provider (Workers AI)."
       );
@@ -131,7 +131,7 @@ export const geminiProvider: AiProvider = {
   },
 
   async chatStream(req: ChatCompletionRequest, config: ProviderConfig): Promise<Response> {
-    if (req.tools || req.tool_choice || req.parallel_tool_calls) {
+    if (req.tools?.length || (req.tool_choice && req.tool_choice !== "none") || req.parallel_tool_calls) {
       throw new Error(
         "Gemini provider does not support tool calls. Route tool-bearing requests to a tool-aware provider (Workers AI)."
       );
