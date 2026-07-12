@@ -118,8 +118,36 @@ describe("DealDetailWorkspace", () => {
 
   it("shows an honest 'not yet linked' Won state instead of a fake brand link when brand_id is null", () => {
     render(<DealDetailWorkspace data={payload({ deal: deal({ stage: "won" }) })} fetchError={null} />);
-    expect(screen.getByText("Won — not yet linked to a brand")).toBeDefined();
+    expect(screen.getByText("Won — no brand linked")).toBeDefined();
     expect(screen.queryByText("View brand")).toBeNull();
+  });
+
+  it("shows the real brand link immediately after approving Won — never the stale 'not yet linked' state while router.refresh() is still in flight (IPI-367 audit fix)", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({ ok: true, dealId: "d1", stage: "won", brandId: "brand-99" }),
+      }),
+    );
+    render(
+      <DealDetailWorkspace
+        data={payload({ deal: deal({ stage: "negotiation" }), companyBrandId: null })}
+        fetchError={null}
+      />,
+    );
+
+    fireEvent.click(screen.getByText("Won"));
+    fireEvent.click(screen.getByText(/Approve · Mark Won/));
+
+    // data.companyBrandId is still null (this render's props never change —
+    // that's the point: WonBanner must use the convert response directly,
+    // not wait for a real router.refresh() to update `data`).
+    expect(await screen.findByText("Converted to brand")).toBeDefined();
+    expect(screen.getByText("View brand")).toBeDefined();
+    expect(screen.queryByText("Won — no brand linked")).toBeNull();
+
+    vi.unstubAllGlobals();
   });
 
   it("shows a retryable ErrorState instead of the workspace when the fetch failed", () => {

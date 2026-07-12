@@ -6743,6 +6743,10 @@ export type Database = {
         }
         Returns: Json
       }
+      crm_convert_deal: {
+        Args: { p_deal_id: string; p_decision: string }
+        Returns: { brand_id: string | null; deal_id: string; stage: string }[]
+      }
       crm_deals_verify_convert_stage: {
         Args: { p_deal_id: string; p_stage: string }
         Returns: undefined

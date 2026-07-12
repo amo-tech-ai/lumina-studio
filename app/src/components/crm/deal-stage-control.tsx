@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, type KeyboardEvent, type RefObject } from "react";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
 import { StatusChip } from "@/components/ui/status-chip";
@@ -15,8 +16,14 @@ type Props = {
   dealId: string;
   stage: CrmDealStage;
   /** Called with the server-confirmed stage after a successful non-terminal
-   *  PATCH — never called optimistically, never called for won/lost. */
-  onStageChange: (stage: CrmDealStage) => void;
+   *  PATCH — `brandId` is `undefined` for these calls, never optimistic.
+   *  Called again after a successful won/lost approval with the real
+   *  `brandId` from the same response — `null` for lost or won-with-no-brand,
+   *  a real id for won. The parent must use this value directly rather than
+   *  waiting on its own RSC refresh, or `WonBanner` renders a stale
+   *  "not yet linked" state for the length of that refresh even though the
+   *  server already returned the real brand id. */
+  onStageChange: (stage: CrmDealStage, brandId?: string | null) => void;
 };
 
 /** Deal stage selector + Won/Lost approval gate — ported from
@@ -32,17 +39,20 @@ type Props = {
  *    duplicate" note (IPI-365 itself is `status: Duplicate`). `onStageChange`
  *    only fires with the value the server actually returned; a failed PATCH
  *    shows `toast.error` and leaves the displayed stage unchanged.
- *  - Won/Lost must go through `POST /api/crm/deals/:id/convert` per
+ *  - Won/Lost go through `POST /api/crm/deals/:id/convert` per
  *    CRM-HANDOFF.md §3 ("no drag, button, or agent may bypass it") — that
- *    route is IPI-367's job (Urgent, not started as of this PR) because
- *    Won also creates/links a `brands` row, which needs the
- *    rls-policy-auditor + migration-reviewer sign-off IPI-367 mandates.
- *    Approving here always surfaces an honest failure — per IPI-367's own
- *    acceptance criterion ("failed response reverts + shows an error —
- *    never an optimistic success state"), never a fake success. */
+ *    route + its `crm_convert_deal` RPC are IPI-367's own deliverable. Won
+ *    also creates/links a `brands` row, reviewed by a migration-safety pass
+ *    + `rls-policy-auditor` before the migration was applied. Approve calls
+ *    the real endpoint and only calls `onStageChange`/refreshes on a
+ *    server-confirmed 200 — a failed response reverts and shows an honest
+ *    error, per IPI-367's own acceptance criterion, never an optimistic
+ *    success state. */
 export function DealStageControl({ dealId, stage, onStageChange }: Props) {
+  const router = useRouter();
   const [pending, setPending] = useState<CrmDealStage | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [approving, setApproving] = useState(false);
   const cancelRef = useRef<HTMLButtonElement>(null);
   const approveRef = useRef<HTMLButtonElement>(null);
 
@@ -76,16 +86,33 @@ export function DealStageControl({ dealId, stage, onStageChange }: Props) {
   }
 
   function handleCancel() {
+    // Once approval is in flight the action is committed — Escape (via
+    // handleTrapKeyDown below) and the Cancel button (disabled via the
+    // `approving` prop, but this is the single choke point both route
+    // through) must not dismiss the dialog while the request can still land.
+    if (approving) return;
     setPending(null);
   }
 
-  function handleApprove() {
-    const result = approveDealTransition();
-    if (!result.ok) {
-      toast.error(result.error);
+  async function handleApprove() {
+    if (!pending || approving) return;
+    setApproving(true);
+    try {
+      const result = await postConvert(dealId, pending);
+      if (!result.ok) {
+        toast.error(result.error);
+        // Revert on failure — never an optimistic success state.
+        setPending(null);
+        return;
+      }
+      // Server-confirmed — pass the real brandId up immediately (don't make
+      // the parent wait for router.refresh() to know it — see the Props doc).
+      onStageChange(result.stage, result.brandId);
+      setPending(null);
+      router.refresh();
+    } finally {
+      setApproving(false);
     }
-    // Always revert the pending state — approve never optimistically commits.
-    setPending(null);
   }
 
   function handleTrapKeyDown(event: KeyboardEvent<HTMLDivElement>) {
@@ -110,6 +137,7 @@ export function DealStageControl({ dealId, stage, onStageChange }: Props) {
       <ApprovalDialog
         stage={stage}
         target={pending}
+        approving={approving}
         cancelRef={cancelRef}
         approveRef={approveRef}
         onCancel={handleCancel}
@@ -176,19 +204,35 @@ async function patchDealStage(
   }
 }
 
-/** No backend exists to call — `/api/crm/deals/:id/convert` is IPI-367
- *  (Urgent, not started). Synchronous stub so the UI never shows an
- *  optimistic success it can't back up. */
-function approveDealTransition(): { ok: false; error: string } {
-  return {
-    ok: false,
-    error: "Won/Lost approval isn't wired to the database yet (pending IPI-367). Nothing was changed.",
-  };
+/** Won/Lost only — `/api/crm/deals/:id/convert` is the sole path allowed to
+ *  set a terminal stage (IPI-367); it 400s on any other decision value. Same
+ *  {ok,error}/{ok,...} result shape as patchDealStage above. */
+async function postConvert(
+  dealId: string,
+  decision: CrmDealStage,
+): Promise<
+  { ok: true; stage: CrmDealStage; brandId: string | null } | { ok: false; error: string }
+> {
+  try {
+    const res = await fetch(`/api/crm/deals/${dealId}/convert`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ decision }),
+    });
+    const body = await res.json();
+    if (!res.ok) {
+      return { ok: false, error: body?.error?.message ?? "Could not approve the transition." };
+    }
+    return { ok: true, stage: body.stage as CrmDealStage, brandId: body.brandId ?? null };
+  } catch {
+    return { ok: false, error: "Network error — the deal was not changed." };
+  }
 }
 
 type ApprovalDialogProps = {
   stage: CrmDealStage;
   target: CrmDealStage;
+  approving: boolean;
   cancelRef: RefObject<HTMLButtonElement | null>;
   approveRef: RefObject<HTMLButtonElement | null>;
   onCancel: () => void;
@@ -202,6 +246,7 @@ type ApprovalDialogProps = {
 function ApprovalDialog({
   stage,
   target,
+  approving,
   cancelRef,
   approveRef,
   onCancel,
@@ -234,16 +279,23 @@ function ApprovalDialog({
       </div>
       <p className={styles.approvalBody}>{body}</p>
       <div className={styles.approvalActions}>
-        <button ref={cancelRef} type="button" onClick={onCancel} className={styles.cancelButton}>
+        <button
+          ref={cancelRef}
+          type="button"
+          onClick={onCancel}
+          disabled={approving}
+          className={styles.cancelButton}
+        >
           Cancel
         </button>
         <button
           ref={approveRef}
           type="button"
           onClick={onApprove}
+          disabled={approving}
           className={target === "won" ? styles.approveButtonWon : styles.approveButtonLost}
         >
-          Approve · Mark {targetLabel}
+          {approving ? "Approving…" : `Approve · Mark ${targetLabel}`}
         </button>
       </div>
       <p className={styles.approvalFootnote}>

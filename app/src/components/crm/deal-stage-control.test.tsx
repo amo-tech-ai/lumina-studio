@@ -9,6 +9,9 @@ vi.mock("../ui/status-chip.module.css", () => ({ default: new Proxy({}, { get: (
 const toastError = vi.fn();
 vi.mock("sonner", () => ({ toast: { error: (...args: unknown[]) => toastError(...args) } }));
 
+const routerRefresh = vi.fn();
+vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: routerRefresh }) }));
+
 import { DealStageControl } from "./deal-stage-control";
 
 const DEAL_ID = "d1";
@@ -125,12 +128,60 @@ describe("DealStageControl", () => {
     expect(screen.getByRole("group", { name: "Deal stage" })).toBeDefined();
   });
 
-  it("Approve on Won never optimistically succeeds — shows an honest error and reverts", () => {
+  it("Approve on Won POSTs /convert and calls onStageChange + router.refresh on a server-confirmed success", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ ok: true, dealId: DEAL_ID, stage: "won", brandId: "brand-1" }),
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    const onStageChange = vi.fn();
+    render(<DealStageControl dealId={DEAL_ID} stage="negotiation" onStageChange={onStageChange} />);
+    fireEvent.click(screen.getByText("Won"));
+    fireEvent.click(screen.getByText(/Approve · Mark Won/));
+
+    await waitFor(() => expect(onStageChange).toHaveBeenCalledWith("won", "brand-1"));
+    expect(fetchMock).toHaveBeenCalledWith(
+      `/api/crm/deals/${DEAL_ID}/convert`,
+      expect.objectContaining({ method: "POST", body: JSON.stringify({ decision: "won" }) }),
+    );
+    expect(routerRefresh).toHaveBeenCalled();
+    expect(toastError).not.toHaveBeenCalled();
+    expect(screen.queryByRole("dialog")).toBeNull();
+  });
+
+  it("Approve on Won never optimistically succeeds — a failed convert shows an honest error and reverts", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: false,
+        json: async () => ({ error: { code: "INTERNAL_ERROR", message: "Failed to convert the deal." } }),
+      }),
+    );
+    const onStageChange = vi.fn();
+    render(<DealStageControl dealId={DEAL_ID} stage="negotiation" onStageChange={onStageChange} />);
+    fireEvent.click(screen.getByText("Won"));
+    fireEvent.click(screen.getByText(/Approve · Mark Won/));
+
+    await waitFor(() => expect(toastError).toHaveBeenCalledWith("Failed to convert the deal."));
+    expect(onStageChange).not.toHaveBeenCalled();
+    expect(routerRefresh).not.toHaveBeenCalled();
+    expect(screen.queryByRole("dialog")).toBeNull();
+  });
+
+  it("disables Cancel and Approve while the convert POST is in flight", async () => {
+    let resolveFetch: (v: unknown) => void = () => {};
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockReturnValue(new Promise((resolve) => { resolveFetch = resolve; })),
+    );
     render(<DealStageControl dealId={DEAL_ID} stage="negotiation" onStageChange={vi.fn()} />);
     fireEvent.click(screen.getByText("Won"));
     fireEvent.click(screen.getByText(/Approve · Mark Won/));
-    expect(toastError).toHaveBeenCalledWith(expect.stringContaining("pending IPI-367"));
-    expect(screen.queryByRole("dialog")).toBeNull();
+
+    await waitFor(() => expect(screen.getByText("Cancel")).toHaveProperty("disabled", true));
+    expect(screen.getByText("Approving…")).toBeDefined();
+
+    resolveFetch({ ok: true, json: async () => ({ ok: true, dealId: DEAL_ID, stage: "won", brandId: "b1" }) });
   });
 
   it("opens the approval gate for Lost and Cancel reverts with no write", () => {
@@ -141,11 +192,39 @@ describe("DealStageControl", () => {
     expect(screen.queryByRole("dialog")).toBeNull();
   });
 
-  it("Approve on Lost also shows an honest error, never a fake success", () => {
-    render(<DealStageControl dealId={DEAL_ID} stage="negotiation" onStageChange={vi.fn()} />);
+  it("Approve on Lost calls onStageChange('lost') and never touches a brand on success", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ ok: true, dealId: DEAL_ID, stage: "lost", brandId: null }),
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    const onStageChange = vi.fn();
+    render(<DealStageControl dealId={DEAL_ID} stage="negotiation" onStageChange={onStageChange} />);
     fireEvent.click(screen.getByText("Lost"));
     fireEvent.click(screen.getByText(/Approve · Mark Lost/));
-    expect(toastError).toHaveBeenCalled();
+
+    await waitFor(() => expect(onStageChange).toHaveBeenCalledWith("lost", null));
+    expect(fetchMock).toHaveBeenCalledWith(
+      `/api/crm/deals/${DEAL_ID}/convert`,
+      expect.objectContaining({ body: JSON.stringify({ decision: "lost" }) }),
+    );
+  });
+
+  it("Approve on Lost also shows an honest error on failure, never a fake success", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: false,
+        json: async () => ({ error: { code: "INVALID_TRANSITION", message: "Already terminal." } }),
+      }),
+    );
+    const onStageChange = vi.fn();
+    render(<DealStageControl dealId={DEAL_ID} stage="negotiation" onStageChange={onStageChange} />);
+    fireEvent.click(screen.getByText("Lost"));
+    fireEvent.click(screen.getByText(/Approve · Mark Lost/));
+
+    await waitFor(() => expect(toastError).toHaveBeenCalledWith("Already terminal."));
+    expect(onStageChange).not.toHaveBeenCalled();
     expect(screen.queryByRole("dialog")).toBeNull();
   });
 
@@ -155,6 +234,94 @@ describe("DealStageControl", () => {
     const dialog = screen.getByRole("dialog");
     fireEvent.keyDown(dialog, { key: "Escape" });
     expect(screen.queryByRole("dialog")).toBeNull();
+  });
+
+  it("Escape during an in-flight approve does NOT close the dialog — the request is already committed", async () => {
+    let resolveFetch: (v: unknown) => void = () => {};
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockReturnValue(new Promise((resolve) => { resolveFetch = resolve; })),
+    );
+    const onStageChange = vi.fn();
+    render(<DealStageControl dealId={DEAL_ID} stage="negotiation" onStageChange={onStageChange} />);
+    fireEvent.click(screen.getByText("Won"));
+    fireEvent.click(screen.getByText(/Approve · Mark Won/));
+    await waitFor(() => expect(screen.getByText("Approving…")).toBeDefined());
+
+    const dialog = screen.getByRole("dialog");
+    fireEvent.keyDown(dialog, { key: "Escape" });
+    // Still open — Escape must not dismiss a committed, in-flight approval.
+    expect(screen.getByRole("dialog")).toBeDefined();
+
+    resolveFetch({ ok: true, json: async () => ({ ok: true, dealId: DEAL_ID, stage: "won", brandId: "b1" }) });
+    await waitFor(() => expect(onStageChange).toHaveBeenCalledWith("won", "b1"));
+    // Now that the request has landed, the dialog closes normally.
+    expect(screen.queryByRole("dialog")).toBeNull();
+  });
+
+  it("clicking the disabled Cancel button while approving does not dismiss the dialog", async () => {
+    let resolveFetch: (v: unknown) => void = () => {};
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockReturnValue(new Promise((resolve) => { resolveFetch = resolve; })),
+    );
+    render(<DealStageControl dealId={DEAL_ID} stage="negotiation" onStageChange={vi.fn()} />);
+    fireEvent.click(screen.getByText("Won"));
+    fireEvent.click(screen.getByText(/Approve · Mark Won/));
+    await waitFor(() => expect(screen.getByText("Cancel")).toHaveProperty("disabled", true));
+
+    fireEvent.click(screen.getByText("Cancel"));
+    expect(screen.getByRole("dialog")).toBeDefined();
+
+    resolveFetch({ ok: true, json: async () => ({ ok: true, dealId: DEAL_ID, stage: "won", brandId: "b1" }) });
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+  });
+
+  it("double-clicking Approve sends only one convert request", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ ok: true, dealId: DEAL_ID, stage: "won", brandId: "b1" }),
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    const onStageChange = vi.fn();
+    render(<DealStageControl dealId={DEAL_ID} stage="negotiation" onStageChange={onStageChange} />);
+    fireEvent.click(screen.getByText("Won"));
+    const approveButton = screen.getByText(/Approve · Mark Won/);
+    fireEvent.click(approveButton);
+    fireEvent.click(approveButton);
+
+    await waitFor(() => expect(onStageChange).toHaveBeenCalledTimes(1));
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("a failed approve permits retry — Won can be reopened and re-approved", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce({
+        ok: false,
+        json: async () => ({ error: { code: "INTERNAL_ERROR", message: "Failed to convert the deal." } }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ ok: true, dealId: DEAL_ID, stage: "won", brandId: "b1" }),
+      });
+    vi.stubGlobal("fetch", fetchMock);
+    const onStageChange = vi.fn();
+    render(<DealStageControl dealId={DEAL_ID} stage="negotiation" onStageChange={onStageChange} />);
+
+    fireEvent.click(screen.getByText("Won"));
+    fireEvent.click(screen.getByText(/Approve · Mark Won/));
+    await waitFor(() => expect(toastError).toHaveBeenCalledWith("Failed to convert the deal."));
+    expect(onStageChange).not.toHaveBeenCalled();
+
+    // Retry: reopen the gate and approve again — buttons are enabled again.
+    fireEvent.click(screen.getByText("Won"));
+    const retryButton = screen.getByText(/Approve · Mark Won/);
+    expect(retryButton).toHaveProperty("disabled", false);
+    fireEvent.click(retryButton);
+
+    await waitFor(() => expect(onStageChange).toHaveBeenCalledWith("won", "b1"));
+    expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 
   it("renders nothing (no row, no gate) once terminal and settled", () => {
