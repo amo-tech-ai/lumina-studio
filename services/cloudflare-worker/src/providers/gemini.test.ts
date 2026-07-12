@@ -30,6 +30,79 @@ describe("geminiProvider.chat", () => {
     vi.restoreAllMocks();
   });
 
+  it("rejects requests with tools property", async () => {
+    await expect(
+      geminiProvider.chat(
+        {
+          model: "gemini-3.1-flash-lite",
+          messages: [{ role: "user", content: "hi" }],
+          tools: [{ type: "function", function: { name: "test" } }],
+        },
+        { apiKey: "secret", baseUrl: "https://generativelanguage.googleapis.com" },
+      ),
+    ).rejects.toThrow(/does not support tool calls/);
+  });
+
+  it("rejects requests with tool_choice property", async () => {
+    await expect(
+      geminiProvider.chat(
+        {
+          model: "gemini-3.1-flash-lite",
+          messages: [{ role: "user", content: "hi" }],
+          tool_choice: "auto",
+        },
+        { apiKey: "secret", baseUrl: "https://generativelanguage.googleapis.com" },
+      ),
+    ).rejects.toThrow(/does not support tool calls/);
+  });
+
+  it("rejects requests with parallel_tool_calls property", async () => {
+    await expect(
+      geminiProvider.chat(
+        {
+          model: "gemini-3.1-flash-lite",
+          messages: [{ role: "user", content: "hi" }],
+          parallel_tool_calls: true,
+        },
+        { apiKey: "secret", baseUrl: "https://generativelanguage.googleapis.com" },
+      ),
+    ).rejects.toThrow(/does not support tool calls/);
+  });
+
+  it("rejects messages with tool role", async () => {
+    await expect(
+      geminiProvider.chat(
+        {
+          model: "gemini-3.1-flash-lite",
+          messages: [
+            { role: "user", content: "hi" },
+            { role: "tool", content: "result", tool_call_id: "call-1" },
+          ],
+        },
+        { apiKey: "secret", baseUrl: "https://generativelanguage.googleapis.com" },
+      ),
+    ).rejects.toThrow(/does not support tool-result messages/);
+  });
+
+  it("rejects assistant messages with tool_calls", async () => {
+    await expect(
+      geminiProvider.chat(
+        {
+          model: "gemini-3.1-flash-lite",
+          messages: [
+            { role: "user", content: "hi" },
+            {
+              role: "assistant",
+              content: null,
+              tool_calls: [{ id: "1", type: "function", function: { name: "f", arguments: "{}" } }],
+            },
+          ],
+        },
+        { apiKey: "secret", baseUrl: "https://generativelanguage.googleapis.com" },
+      ),
+    ).rejects.toThrow(/does not support assistant messages with tool_calls/);
+  });
+
   it("parses JSON generateContent response (not SSE)", async () => {
     const fetchMock = vi.fn().mockResolvedValue({
       ok: true,
@@ -117,6 +190,79 @@ describe("geminiProvider.chatStream", () => {
   afterEach(() => {
     vi.unstubAllGlobals();
     vi.restoreAllMocks();
+  });
+
+  it("rejects requests with tools property", async () => {
+    await expect(
+      geminiProvider.chatStream(
+        {
+          model: "gemini-3.1-flash-lite",
+          messages: [{ role: "user", content: "hi" }],
+          tools: [{ type: "function", function: { name: "test" } }],
+        },
+        { apiKey: "secret", baseUrl: "https://generativelanguage.googleapis.com" },
+      ),
+    ).rejects.toThrow(/does not support tool calls/);
+  });
+
+  it("rejects requests with tool_choice property", async () => {
+    await expect(
+      geminiProvider.chatStream(
+        {
+          model: "gemini-3.1-flash-lite",
+          messages: [{ role: "user", content: "hi" }],
+          tool_choice: "auto",
+        },
+        { apiKey: "secret", baseUrl: "https://generativelanguage.googleapis.com" },
+      ),
+    ).rejects.toThrow(/does not support tool calls/);
+  });
+
+  it("rejects requests with parallel_tool_calls property", async () => {
+    await expect(
+      geminiProvider.chatStream(
+        {
+          model: "gemini-3.1-flash-lite",
+          messages: [{ role: "user", content: "hi" }],
+          parallel_tool_calls: true,
+        },
+        { apiKey: "secret", baseUrl: "https://generativelanguage.googleapis.com" },
+      ),
+    ).rejects.toThrow(/does not support tool calls/);
+  });
+
+  it("rejects messages with tool role", async () => {
+    await expect(
+      geminiProvider.chatStream(
+        {
+          model: "gemini-3.1-flash-lite",
+          messages: [
+            { role: "user", content: "hi" },
+            { role: "tool", content: "result", tool_call_id: "call-1" },
+          ],
+        },
+        { apiKey: "secret", baseUrl: "https://generativelanguage.googleapis.com" },
+      ),
+    ).rejects.toThrow(/does not support tool-result messages/);
+  });
+
+  it("rejects assistant messages with tool_calls", async () => {
+    await expect(
+      geminiProvider.chatStream(
+        {
+          model: "gemini-3.1-flash-lite",
+          messages: [
+            { role: "user", content: "hi" },
+            {
+              role: "assistant",
+              content: null,
+              tool_calls: [{ id: "1", type: "function", function: { name: "f", arguments: "{}" } }],
+            },
+          ],
+        },
+        { apiKey: "secret", baseUrl: "https://generativelanguage.googleapis.com" },
+      ),
+    ).rejects.toThrow(/does not support assistant messages with tool_calls/);
   });
 
   it("requests streamGenerateContent with alt=sse", async () => {

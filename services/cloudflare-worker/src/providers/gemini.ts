@@ -22,7 +22,7 @@ function geminiModelId(openAiModel: string): string {
 function toGeminiMessages(messages: ChatCompletionRequest["messages"]) {
   const system = messages
     .filter((m) => m.role === "system")
-    .map((m) => (m.role === "system" ? m.content : ""))
+    .map((m) => m.content)
     .filter(Boolean)
     .join("\n");
   const contents = messages
