@@ -84,7 +84,7 @@ describe("geminiProvider.chat", () => {
     ).rejects.toThrow(/does not support tool-result messages/);
   });
 
-  it("rejects assistant messages with tool_calls", async () => {
+  it("rejects assistant messages with non-empty tool_calls", async () => {
     await expect(
       geminiProvider.chat(
         {
@@ -101,6 +101,40 @@ describe("geminiProvider.chat", () => {
         { apiKey: "secret", baseUrl: "https://generativelanguage.googleapis.com" },
       ),
     ).rejects.toThrow(/does not support assistant messages with tool_calls/);
+  });
+
+  it("allows assistant messages with empty tool_calls array (no tools called)", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        candidates: [
+          {
+            content: { parts: [{ text: "PONG" }] },
+            finishReason: "STOP",
+          },
+        ],
+        usageMetadata: { promptTokenCount: 1, candidatesTokenCount: 1 },
+      }),
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await geminiProvider.chat(
+      {
+        model: "gemini-3.1-flash-lite",
+        messages: [
+          { role: "user", content: "hi" },
+          {
+            role: "assistant",
+            content: "answer",
+            tool_calls: [], // Empty array — no tools actually called
+          },
+          { role: "user", content: "thanks" },
+        ],
+      },
+      { apiKey: "secret", baseUrl: "https://generativelanguage.googleapis.com" },
+    );
+
+    expect(result.choices[0].message.content).toBe("PONG");
   });
 
   it("parses JSON generateContent response (not SSE)", async () => {
@@ -246,7 +280,7 @@ describe("geminiProvider.chatStream", () => {
     ).rejects.toThrow(/does not support tool-result messages/);
   });
 
-  it("rejects assistant messages with tool_calls", async () => {
+  it("rejects assistant messages with non-empty tool_calls", async () => {
     await expect(
       geminiProvider.chatStream(
         {
@@ -263,6 +297,34 @@ describe("geminiProvider.chatStream", () => {
         { apiKey: "secret", baseUrl: "https://generativelanguage.googleapis.com" },
       ),
     ).rejects.toThrow(/does not support assistant messages with tool_calls/);
+  });
+
+  it("allows assistant messages with empty tool_calls array (no tools called)", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      body: {
+        pipeTo: async () => undefined,
+      },
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    await geminiProvider.chatStream(
+      {
+        model: "gemini-3.1-flash-lite",
+        messages: [
+          { role: "user", content: "hi" },
+          {
+            role: "assistant",
+            content: "answer",
+            tool_calls: [], // Empty array — no tools actually called
+          },
+          { role: "user", content: "thanks" },
+        ],
+      },
+      { apiKey: "secret", baseUrl: "https://generativelanguage.googleapis.com" },
+    );
+
+    expect(fetchMock).toHaveBeenCalled();
   });
 
   it("requests streamGenerateContent with alt=sse", async () => {
