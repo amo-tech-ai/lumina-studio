@@ -16,8 +16,14 @@ type Props = {
   dealId: string;
   stage: CrmDealStage;
   /** Called with the server-confirmed stage after a successful non-terminal
-   *  PATCH — never called optimistically, never called for won/lost. */
-  onStageChange: (stage: CrmDealStage) => void;
+   *  PATCH — `brandId` is `undefined` for these calls, never optimistic.
+   *  Called again after a successful won/lost approval with the real
+   *  `brandId` from the same response — `null` for lost or won-with-no-brand,
+   *  a real id for won. The parent must use this value directly rather than
+   *  waiting on its own RSC refresh, or `WonBanner` renders a stale
+   *  "not yet linked" state for the length of that refresh even though the
+   *  server already returned the real brand id. */
+  onStageChange: (stage: CrmDealStage, brandId?: string | null) => void;
 };
 
 /** Deal stage selector + Won/Lost approval gate — ported from
@@ -94,9 +100,9 @@ export function DealStageControl({ dealId, stage, onStageChange }: Props) {
         setPending(null);
         return;
       }
-      // Server-confirmed — safe to reflect the new stage and pull the fresh
-      // companyBrandId (set by the RPC on won) into the parent's RSC data.
-      onStageChange(result.stage);
+      // Server-confirmed — pass the real brandId up immediately (don't make
+      // the parent wait for router.refresh() to know it — see the Props doc).
+      onStageChange(result.stage, result.brandId);
       setPending(null);
       router.refresh();
     } finally {
@@ -199,7 +205,9 @@ async function patchDealStage(
 async function postConvert(
   dealId: string,
   decision: CrmDealStage,
-): Promise<{ ok: true; stage: CrmDealStage } | { ok: false; error: string }> {
+): Promise<
+  { ok: true; stage: CrmDealStage; brandId: string | null } | { ok: false; error: string }
+> {
   try {
     const res = await fetch(`/api/crm/deals/${dealId}/convert`, {
       method: "POST",
@@ -210,7 +218,7 @@ async function postConvert(
     if (!res.ok) {
       return { ok: false, error: body?.error?.message ?? "Could not approve the transition." };
     }
-    return { ok: true, stage: body.stage as CrmDealStage };
+    return { ok: true, stage: body.stage as CrmDealStage, brandId: body.brandId ?? null };
   } catch {
     return { ok: false, error: "Network error — the deal was not changed." };
   }

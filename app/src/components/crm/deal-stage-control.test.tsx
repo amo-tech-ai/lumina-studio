@@ -139,7 +139,7 @@ describe("DealStageControl", () => {
     fireEvent.click(screen.getByText("Won"));
     fireEvent.click(screen.getByText(/Approve · Mark Won/));
 
-    await waitFor(() => expect(onStageChange).toHaveBeenCalledWith("won"));
+    await waitFor(() => expect(onStageChange).toHaveBeenCalledWith("won", "brand-1"));
     expect(fetchMock).toHaveBeenCalledWith(
       `/api/crm/deals/${DEAL_ID}/convert`,
       expect.objectContaining({ method: "POST", body: JSON.stringify({ decision: "won" }) }),
@@ -203,7 +203,7 @@ describe("DealStageControl", () => {
     fireEvent.click(screen.getByText("Lost"));
     fireEvent.click(screen.getByText(/Approve · Mark Lost/));
 
-    await waitFor(() => expect(onStageChange).toHaveBeenCalledWith("lost"));
+    await waitFor(() => expect(onStageChange).toHaveBeenCalledWith("lost", null));
     expect(fetchMock).toHaveBeenCalledWith(
       `/api/crm/deals/${DEAL_ID}/convert`,
       expect.objectContaining({ body: JSON.stringify({ decision: "lost" }) }),

@@ -120,6 +120,7 @@ async function deleteAuthUser(userId) {
 async function cleanupRlsTestData({
   orgId,
   brandId,
+  brandIds,
   notificationId,
   crmNotificationId,
   assetId,
@@ -142,13 +143,12 @@ async function cleanupRlsTestData({
     }
   }
 
-  if (brandId) {
-    const { error: brandDelErr } = await admin.from("brands").delete().eq("id", brandId);
-    if (brandDelErr) {
-      console.warn(`warn: cleanup brand ${brandId}: ${brandDelErr.message}`);
-    }
-  }
-
+  // Order matters: crm_companies.brand_id → brands has no ON DELETE action,
+  // and brands.org_id → organizations is ON DELETE RESTRICT. Every
+  // crm_companies row referencing a probe-created brand (crm_convert_deal's
+  // included) must be deleted BEFORE that brand, and every such brand must
+  // be deleted BEFORE the org — reversed, both deletes fail and leave
+  // dangling test rows on every run.
   if (orgId) {
     for (const table of ["crm_activities", "crm_deals", "crm_contacts", "crm_companies"]) {
       const { error } = await admin.from(table).delete().eq("org_id", orgId);
@@ -156,6 +156,16 @@ async function cleanupRlsTestData({
         console.warn(`warn: cleanup ${table} for org ${orgId}: ${error.message}`);
       }
     }
+  }
+
+  for (const id of [brandId, ...(brandIds ?? [])].filter(Boolean)) {
+    const { error: brandDelErr } = await admin.from("brands").delete().eq("id", id);
+    if (brandDelErr) {
+      console.warn(`warn: cleanup brand ${id}: ${brandDelErr.message}`);
+    }
+  }
+
+  if (orgId) {
     await admin.from("org_members").delete().eq("org_id", orgId);
     const { error: orgDelErr } = await admin.from("organizations").delete().eq("id", orgId);
     if (orgDelErr) {
@@ -210,6 +220,7 @@ let orgAId;
 let notificationId;
 let crmNotificationId;
 let assetId;
+let crmConvertBrandIds = [];
 
 try {
   userA = await createTestUser(emailA);
@@ -346,6 +357,162 @@ try {
       .eq("id", crmDeal.id)
       .single();
     assert(!wonDealErr && wonDeal?.stage === "won", "user A reads crm_deal after convert probe");
+  }
+
+  // IPI-367 — crm_convert_deal RPC (Won/Lost HITL gate + brand conversion),
+  // added 2026-07-12 (Universal-design-prompt-4/tasks/AUDIT/crm-supa-audit.md
+  // — this coverage did not exist when the RPC was first shipped). The probe
+  // above only proves the trigger via the verify-only helper; this exercises
+  // the *production* RPC directly: editor-tier authorization (tightened from
+  // is_org_member, which admits role='viewer'), brand create-vs-reuse,
+  // domain→brand_url mapping, idempotency, the audit-log write, and the
+  // raw-SQL trigger guard independent of RLS.
+  if (admin) {
+    const { data: convertCompany, error: convertCompanyErr } = await userA.client
+      .from("crm_companies")
+      .insert({
+        org_id: orgAId,
+        name: `RLS Convert Co ${stamp}`,
+        domain: `convert-${stamp}.example.com`,
+      })
+      .select("id")
+      .single();
+    assert(!convertCompanyErr && convertCompany?.id, "user A inserts crm_company for convert probes");
+
+    const { data: convertDeal, error: convertDealErr } = await userA.client
+      .from("crm_deals")
+      .insert({ org_id: orgAId, company_id: convertCompany.id, stage: "lead" })
+      .select("id")
+      .single();
+    assert(!convertDealErr && convertDeal?.id, "user A inserts crm_deal for convert probes");
+
+    // Direct-SQL trigger guard, independent of RLS — admin (service role)
+    // bypasses RLS entirely, so this proves the trigger itself holds, not
+    // just the app-level PostgREST policy (IPI-367 Task 4).
+    const { error: rawTriggerErr } = await admin
+      .from("crm_deals")
+      .update({ stage: "won" })
+      .eq("id", convertDeal.id);
+    assert(!!rawTriggerErr, "raw admin UPDATE to won is blocked by the trigger, not just RLS");
+
+    // Cross-org: user B has no org_members row in org A at all yet.
+    const { error: crossConvertErr } = await userB.client.rpc("crm_convert_deal", {
+      p_deal_id: convertDeal.id,
+      p_decision: "won",
+    });
+    assert(!!crossConvertErr, "user B (no org membership) cannot call crm_convert_deal on org A's deal");
+
+    // Viewer tier: tightened 2026-07-12 — requires is_org_editor_or_above,
+    // not is_org_member (which admits role='viewer').
+    const { error: viewerAddErr } = await admin
+      .from("org_members")
+      .insert({ org_id: orgAId, user_id: userB.user.id, role: "viewer" });
+    assert(!viewerAddErr, "admin seeds user B as org A viewer");
+
+    const { error: viewerConvertErr } = await userB.client.rpc("crm_convert_deal", {
+      p_deal_id: convertDeal.id,
+      p_decision: "won",
+    });
+    assert(!!viewerConvertErr, "org A viewer cannot call crm_convert_deal (editor-or-above required)");
+
+    const { error: promoteErr } = await admin
+      .from("org_members")
+      .update({ role: "editor" })
+      .eq("org_id", orgAId)
+      .eq("user_id", userB.user.id);
+    assert(!promoteErr, "admin promotes user B to org A editor");
+
+    const { data: editorConvert, error: editorConvertErr } = await userB.client
+      .rpc("crm_convert_deal", { p_deal_id: convertDeal.id, p_decision: "won" })
+      .single();
+    assert(
+      !editorConvertErr && editorConvert?.brand_id,
+      "org A editor converts a deal to won, creates a brand",
+    );
+    if (editorConvert?.brand_id) crmConvertBrandIds.push(editorConvert.brand_id);
+
+    const { data: convertedCompany, error: convertedCompanyErr } = await admin
+      .from("crm_companies")
+      .select("brand_id")
+      .eq("id", convertCompany.id)
+      .single();
+    assert(
+      !convertedCompanyErr && convertedCompany?.brand_id === editorConvert?.brand_id,
+      "crm_companies.brand_id linked to the newly created brand",
+    );
+
+    const { data: newBrand, error: newBrandErr } = await admin
+      .from("brands")
+      .select("brand_url")
+      .eq("id", editorConvert?.brand_id)
+      .single();
+    assert(
+      !newBrandErr && newBrand?.brand_url === `convert-${stamp}.example.com`,
+      "new brand's brand_url copied from crm_companies.domain",
+    );
+
+    const { data: convertActivity, error: convertActivityErr } = await admin
+      .from("crm_activities")
+      .select("id")
+      .eq("deal_id", convertDeal.id)
+      .eq("type", "note")
+      .limit(1);
+    assert(
+      !convertActivityErr && (convertActivity ?? []).length > 0,
+      "crm_convert_deal writes a crm_activities audit row",
+    );
+
+    const { error: idempotentErr } = await userB.client.rpc("crm_convert_deal", {
+      p_deal_id: convertDeal.id,
+      p_decision: "won",
+    });
+    assert(!!idempotentErr, "converting an already-terminal deal again is rejected");
+
+    // Second deal, same company — proves brand reuse, not a duplicate.
+    const { data: convertDeal2, error: convertDeal2Err } = await userA.client
+      .from("crm_deals")
+      .insert({ org_id: orgAId, company_id: convertCompany.id, stage: "lead" })
+      .select("id")
+      .single();
+    assert(
+      !convertDeal2Err && convertDeal2?.id,
+      "user A inserts a second crm_deal on the same company",
+    );
+
+    const { data: reuseConvert, error: reuseConvertErr } = await userA.client
+      .rpc("crm_convert_deal", { p_deal_id: convertDeal2?.id, p_decision: "won" })
+      .single();
+    assert(
+      !reuseConvertErr && reuseConvert?.brand_id === editorConvert?.brand_id,
+      "converting a second deal on the same company reuses the existing brand, no duplicate",
+    );
+
+    // lost — never touches brands.
+    const { data: lostDeal, error: lostDealErr } = await userA.client
+      .from("crm_deals")
+      .insert({ org_id: orgAId, company_id: convertCompany.id, stage: "lead" })
+      .select("id")
+      .single();
+    assert(!lostDealErr && lostDeal?.id, "user A inserts a crm_deal for the lost-path probe");
+
+    const { data: lostConvert, error: lostConvertErr } = await userA.client
+      .rpc("crm_convert_deal", { p_deal_id: lostDeal?.id, p_decision: "lost" })
+      .single();
+    assert(
+      !lostConvertErr && lostConvert?.brand_id === null,
+      "converting a deal to lost returns a null brand_id",
+    );
+
+    // Every test below this block assumes user B has zero relationship to
+    // org A — undo the viewer→editor membership these probes needed, or
+    // every subsequent cross-org assertion in this script (and the script's
+    // own later "add user B as org viewer" step) breaks.
+    const { error: demoteErr } = await admin
+      .from("org_members")
+      .delete()
+      .eq("org_id", orgAId)
+      .eq("user_id", userB.user.id);
+    assert(!demoteErr, "cleanup: user B removed from org A after convert probes");
   }
 
   const { data: crmActivity, error: crmActivityErr } = await userA.client
@@ -1297,6 +1464,7 @@ try {
   await cleanupRlsTestData({
     orgId: orgAId,
     brandId: brandAId,
+    brandIds: crmConvertBrandIds,
     notificationId,
     crmNotificationId,
     assetId,

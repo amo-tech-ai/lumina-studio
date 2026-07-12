@@ -59,10 +59,20 @@ type Props = {
  *    than fed fabricated health-score percentages. */
 export function DealDetailWorkspace({ data, fetchError }: Props) {
   const router = useRouter();
-  // Set only from a server-confirmed PATCH response (DealStageControl calls
-  // onStageChange with the value the API actually returned) — never
-  // optimistic. null until the operator makes a non-terminal move.
+  // Set only from a server-confirmed PATCH/convert response (DealStageControl
+  // calls onStageChange with the values the API actually returned) — never
+  // optimistic. null until the operator makes a move.
   const [confirmedStage, setConfirmedStage] = useState<CrmDealStage | null>(null);
+  // `undefined` = "no won/lost approval has happened yet, defer to data.companyBrandId".
+  // Once a convert response comes back, this holds the real value (possibly
+  // null) so WonBanner never shows a stale "not yet linked" state while
+  // router.refresh() is still in flight — see DealStageControl's Props doc.
+  const [confirmedBrandId, setConfirmedBrandId] = useState<string | null | undefined>(undefined);
+
+  function handleStageChange(newStage: CrmDealStage, brandId?: string | null) {
+    setConfirmedStage(newStage);
+    if (brandId !== undefined) setConfirmedBrandId(brandId);
+  }
 
   if (fetchError || !data) {
     return (
@@ -74,6 +84,7 @@ export function DealDetailWorkspace({ data, fetchError }: Props) {
 
   const { deal, companyName, companyBrandId, activities } = data;
   const stage = confirmedStage ?? toKnownStage(deal.stage);
+  const brandId = confirmedBrandId !== undefined ? confirmedBrandId : companyBrandId;
   const displayTitle = `${companyName ?? "Untitled company"} deal`;
 
   return (
@@ -85,9 +96,9 @@ export function DealDetailWorkspace({ data, fetchError }: Props) {
           <DealOverview deal={deal} companyName={companyName} />
 
           <div className={styles.stageLabel}>Stage</div>
-          <DealStageControl dealId={deal.id} stage={stage} onStageChange={setConfirmedStage} />
+          <DealStageControl dealId={deal.id} stage={stage} onStageChange={handleStageChange} />
 
-          {stage === "won" ? <WonBanner companyBrandId={companyBrandId} /> : null}
+          {stage === "won" ? <WonBanner companyBrandId={brandId} /> : null}
 
           <div className={styles.activityHeader}>
             <span className={styles.activityLabel}>Activity</span>
