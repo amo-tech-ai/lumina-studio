@@ -8,6 +8,20 @@ const CONFIG = {
   baseUrl: "https://api.cloudflare.com/client/v4",
 };
 
+const WEATHER_TOOL = {
+  type: "function" as const,
+  function: {
+    name: "get_weather",
+    description: "Get the weather for a city",
+    parameters: {
+      type: "object",
+      properties: { city: { type: "string" } },
+      required: ["city"],
+      additionalProperties: false,
+    },
+  },
+};
+
 describe("workersAiOpenAiBaseUrl", () => {
   it("builds OpenAI-compat base with account ID in path", () => {
     expect(workersAiOpenAiBaseUrl(CONFIG)).toBe(
@@ -88,6 +102,138 @@ describe("workersAiProvider HTTP", () => {
     expect(url).not.toContain("cf-api-token-secret");
     expect(init.headers).toMatchObject({
       Authorization: "Bearer cf-api-token-secret",
+    });
+  });
+
+  it("forwards the complete OpenAI-compatible tool request unchanged", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ choices: [], usage: {} }),
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    await workersAiProvider.chat(
+      {
+        model: "@cf/openai/gpt-oss-120b",
+        messages: [{ role: "user", content: "What is the weather in Medellin?" }],
+        tools: [WEATHER_TOOL],
+        tool_choice: { type: "function", function: { name: "get_weather" } },
+        parallel_tool_calls: false,
+      },
+      CONFIG,
+    );
+
+    const [, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(JSON.parse(String(init.body))).toEqual({
+      model: "@cf/openai/gpt-oss-120b",
+      messages: [{ role: "user", content: "What is the weather in Medellin?" }],
+      tools: [WEATHER_TOOL],
+      tool_choice: { type: "function", function: { name: "get_weather" } },
+      parallel_tool_calls: false,
+    });
+  });
+
+  it("preserves assistant tool_calls in the non-stream response", async () => {
+    const toolCall = {
+      id: "call_weather_1",
+      type: "function" as const,
+      function: { name: "get_weather", arguments: '{"city":"Medellin"}' },
+    };
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        choices: [
+          {
+            index: 0,
+            message: { role: "assistant", content: "", tool_calls: [toolCall] },
+            finish_reason: "tool_calls",
+          },
+        ],
+        usage: { prompt_tokens: 10, completion_tokens: 5, total_tokens: 15 },
+      }),
+    }));
+
+    const result = await workersAiProvider.chat(
+      {
+        model: "@cf/openai/gpt-oss-120b",
+        messages: [{ role: "user", content: "What is the weather in Medellin?" }],
+        tools: [WEATHER_TOOL],
+        tool_choice: "auto",
+      },
+      CONFIG,
+    );
+
+    expect(result.choices[0]?.message.tool_calls).toEqual([toolCall]);
+    expect(result.choices[0]?.finish_reason).toBe("tool_calls");
+  });
+
+  it("forwards tool result messages for the second model turn", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ choices: [], usage: {} }),
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    await workersAiProvider.chat(
+      {
+        model: "@cf/openai/gpt-oss-120b",
+        messages: [
+          { role: "user", content: "What is the weather in Medellin?" },
+          {
+            role: "assistant",
+            content: "",
+            tool_calls: [
+              {
+                id: "call_weather_1",
+                type: "function",
+                function: { name: "get_weather", arguments: '{"city":"Medellin"}' },
+              },
+            ],
+          },
+          {
+            role: "tool",
+            tool_call_id: "call_weather_1",
+            content: '{"temperature_c":24}',
+          },
+        ],
+        tools: [WEATHER_TOOL],
+      },
+      CONFIG,
+    );
+
+    const [, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    const body = JSON.parse(String(init.body));
+    expect(body.messages[1].tool_calls[0].id).toBe("call_weather_1");
+    expect(body.messages[2]).toEqual({
+      role: "tool",
+      tool_call_id: "call_weather_1",
+      content: '{"temperature_c":24}',
+    });
+  });
+
+  it("chatStream forwards tools and forces stream=true", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      body: new ReadableStream(),
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    await workersAiProvider.chatStream(
+      {
+        model: "@cf/openai/gpt-oss-120b",
+        messages: [{ role: "user", content: "Use the weather tool" }],
+        tools: [WEATHER_TOOL],
+        tool_choice: "auto",
+      },
+      CONFIG,
+    );
+
+    const [, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(JSON.parse(String(init.body))).toMatchObject({
+      model: "@cf/openai/gpt-oss-120b",
+      tools: [WEATHER_TOOL],
+      tool_choice: "auto",
+      stream: true,
     });
   });
 
