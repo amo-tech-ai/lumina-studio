@@ -189,7 +189,7 @@ export async function handleChat(
       latencyMs: latency,
       errorMessage,
       fallbackReason: err instanceof Error && err.message.includes("429") ? "rate-limit"
-        : err instanceof Error && err.message.match(/50\d/) ? "server-error"
+        : err instanceof Error && err.message.match(/5\d{2}/) ? "server-error"
         : "network-error",
     });
 
