@@ -44,6 +44,17 @@ describe("isRetryableProviderError", () => {
   });
 
   describe("Network errors (message-based)", () => {
+    it("retries HTTP 5xx errors in message", () => {
+      expect(isRetryableProviderError(new Error("Workers AI error 503: Service unavailable"))).toBe(true);
+      expect(isRetryableProviderError(new Error("error 500: internal error"))).toBe(true);
+      expect(isRetryableProviderError(new Error("Bedrock error 504: gateway timeout"))).toBe(true);
+    });
+
+    it("retries HTTP 429 (rate limit) in message", () => {
+      expect(isRetryableProviderError(new Error("Workers AI error 429: rate limited"))).toBe(true);
+      expect(isRetryableProviderError(new Error("429: too many requests"))).toBe(true);
+    });
+
     it("retries timeout errors", () => {
       expect(isRetryableProviderError(new Error("Request timeout"))).toBe(true);
       expect(isRetryableProviderError(new Error("Timed out"))).toBe(true);

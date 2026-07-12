@@ -96,6 +96,7 @@ export async function handleChat(
   env: Env,
 ): Promise<Response> {
   const { provider, config, entry } = selectProvider(req.model, env);
+  const registry = registryOverride(env);
   const requestId = newRequestId();
   const startTime = Date.now();
 
@@ -176,7 +177,7 @@ export async function handleChat(
     });
 
     try {
-      const fallbackEntry = resolveModelEntry("default-fallback");
+      const fallbackEntry = resolveModelEntry("default-fallback", registry);
       if (!fallbackEntry || fallbackEntry.provider === entry.provider) {
         // No fallback configured or fallback is same as primary
         console.log(`[gateway] no fallback configured`, {

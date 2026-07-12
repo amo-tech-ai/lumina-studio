@@ -48,6 +48,10 @@ function isRetryableStatus(status?: number, code?: string): boolean {
 function isRetryableMessage(message: string): boolean {
   const lowerMsg = message.toLowerCase();
 
+  // HTTP status codes in error message (e.g. "Workers AI error 503: ...")
+  if (lowerMsg.includes(" 429") || lowerMsg.includes("429:")) return true; // Rate limit
+  if (/\s50\d\s/.test(message) || / 50\d:/.test(message)) return true; // 500–509 server errors
+
   // Timeout errors (network timeouts, Cloudflare timeout, AWS timeout)
   if (lowerMsg.includes("timeout")) return true;
   if (lowerMsg.includes("timed out")) return true;
