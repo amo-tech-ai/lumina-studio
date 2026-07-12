@@ -97,57 +97,148 @@ export async function handleChat(
 ): Promise<Response> {
   const { provider, config, entry } = selectProvider(req.model, env);
   const requestId = newRequestId();
+  const startTime = Date.now();
+
+  console.log(`[gateway] chat request started`, {
+    requestId,
+    provider: entry.provider,
+    model: entry.model,
+    stream: req.stream,
+    hasTools: !!req.tools && req.tools.length > 0,
+    toolCount: req.tools?.length ?? 0,
+  });
 
   try {
     if (req.stream) {
-      return await provider.chatStream(
+      const response = await provider.chatStream(
         { ...req, model: entry.model },
         config,
       );
+      const latency = Date.now() - startTime;
+      console.log(`[gateway] stream response succeeded`, {
+        requestId,
+        provider: entry.provider,
+        model: entry.model,
+        latencyMs: latency,
+      });
+      return new Response(response.body, {
+        status: response.status,
+        headers: {
+          "Content-Type": "text/event-stream",
+          "Cache-Control": "no-cache",
+          "Connection": "keep-alive",
+          "X-Request-Id": requestId,
+        },
+      });
     }
 
     const result = await provider.chat({ ...req, model: entry.model }, config);
+    const latency = Date.now() - startTime;
+
+    const hasToolCalls = result.choices[0]?.message?.tool_calls?.length ?? 0 > 0;
+    console.log(`[gateway] chat response succeeded`, {
+      requestId,
+      provider: entry.provider,
+      latencyMs: latency,
+      finishReason: result.choices[0]?.finish_reason,
+      hasToolCalls,
+      toolCallCount: result.choices[0]?.message?.tool_calls?.length ?? 0,
+    });
+
     return Response.json(result, {
       headers: { "Content-Type": "application/json" },
     });
   } catch (err) {
+    const latency = Date.now() - startTime;
+    const errorMessage = err instanceof Error ? err.message : String(err);
+
     // Primary provider failed — check if error is retryable
     if (!isRetryableProviderError(err)) {
       // Non-retryable error (auth, validation, etc.) — fail fast
-      const message = err instanceof Error ? err.message : String(err);
-      return Response.json({ error: message }, { status: 502 });
+      console.log(`[gateway] non-retryable error from primary provider`, {
+        requestId,
+        provider: entry.provider,
+        latencyMs: latency,
+        errorMessage,
+      });
+      return Response.json({ error: errorMessage }, { status: 502 });
     }
 
     // Retryable error (429, 5xx, timeout) — try Bedrock fallback
-    console.log(`[gateway] ${entry.provider} failed (retryable), attempting Bedrock fallback`, {
+    console.log(`[gateway] retryable error from primary provider, attempting fallback`, {
       requestId,
-      error: err instanceof Error ? err.message : String(err),
+      provider: entry.provider,
+      latencyMs: latency,
+      errorMessage,
+      fallbackReason: err instanceof Error && err.message.includes("429") ? "rate-limit"
+        : err instanceof Error && err.message.match(/50\d/) ? "server-error"
+        : "network-error",
     });
 
     try {
       const fallbackEntry = resolveModelEntry("default-fallback");
       if (!fallbackEntry || fallbackEntry.provider === entry.provider) {
         // No fallback configured or fallback is same as primary
-        const message = err instanceof Error ? err.message : String(err);
-        return Response.json({ error: message }, { status: 502 });
+        console.log(`[gateway] no fallback configured`, {
+          requestId,
+          primaryProvider: entry.provider,
+          fallbackEntry: fallbackEntry ? fallbackEntry.provider : "none",
+        });
+        return Response.json({ error: errorMessage }, { status: 502 });
       }
 
       const fallbackProvider = getProvider(fallbackEntry.provider);
       const fallbackConfig = getProviderConfig(fallbackEntry.provider, env);
+      const fallbackStartTime = Date.now();
+
+      console.log(`[gateway] attempting fallback provider`, {
+        requestId,
+        primaryProvider: entry.provider,
+        fallbackProvider: fallbackEntry.provider,
+        fallbackModel: fallbackEntry.model,
+      });
 
       if (req.stream) {
-        return await fallbackProvider.chatStream(
+        const response = await fallbackProvider.chatStream(
           { ...req, model: fallbackEntry.model },
           fallbackConfig,
         );
+        const fallbackLatency = Date.now() - fallbackStartTime;
+        console.log(`[gateway] fallback stream succeeded`, {
+          requestId,
+          fallbackProvider: fallbackEntry.provider,
+          fallbackLatencyMs: fallbackLatency,
+          totalLatencyMs: Date.now() - startTime,
+        });
+        return new Response(response.body, {
+          status: response.status,
+          headers: {
+            "Content-Type": "text/event-stream",
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Fallback-Provider": fallbackEntry.provider,
+            "X-Request-Id": requestId,
+          },
+        });
       }
 
       const result = await fallbackProvider.chat(
         { ...req, model: fallbackEntry.model },
         fallbackConfig,
       );
+      const fallbackLatency = Date.now() - fallbackStartTime;
 
-      console.log(`[gateway] Bedrock fallback succeeded`, { requestId });
+      const hasToolCalls = result.choices[0]?.message?.tool_calls?.length ?? 0 > 0;
+      console.log(`[gateway] fallback succeeded`, {
+        requestId,
+        primaryProvider: entry.provider,
+        fallbackProvider: fallbackEntry.provider,
+        fallbackLatencyMs: fallbackLatency,
+        totalLatencyMs: Date.now() - startTime,
+        finishReason: result.choices[0]?.finish_reason,
+        hasToolCalls,
+        toolCallCount: result.choices[0]?.message?.tool_calls?.length ?? 0,
+      });
 
       return Response.json(result, {
         headers: {
@@ -158,13 +249,18 @@ export async function handleChat(
       });
     } catch (fallbackErr) {
       // Fallback also failed
-      console.log(`[gateway] Bedrock fallback failed`, {
+      const fallbackLatency = Date.now() - startTime;
+      const fallbackErrorMessage = fallbackErr instanceof Error ? fallbackErr.message : String(fallbackErr);
+
+      console.log(`[gateway] fallback provider also failed`, {
         requestId,
-        error: fallbackErr instanceof Error ? fallbackErr.message : String(fallbackErr),
+        primaryProvider: entry.provider,
+        primaryError: errorMessage,
+        fallbackError: fallbackErrorMessage,
+        totalLatencyMs: fallbackLatency,
       });
 
-      const message = fallbackErr instanceof Error ? fallbackErr.message : String(fallbackErr);
-      return Response.json({ error: message }, { status: 502 });
+      return Response.json({ error: fallbackErrorMessage }, { status: 502 });
     }
   }
 }
@@ -204,10 +300,21 @@ export async function handleEmbed(
     }
 
     const config = getProviderConfig(entry.provider, env);
+    const startTime = Date.now();
+
     const result = await provider.embed(
       { model: entry.model, input: validated.input },
       config,
     );
+
+    const latency = Date.now() - startTime;
+    console.log(`[gateway] embed response succeeded`, {
+      requestId,
+      provider: entry.provider,
+      model: entry.model,
+      latencyMs: latency,
+    });
+
     return Response.json(result, {
       headers: { "Content-Type": "application/json", "x-request-id": requestId },
     });
