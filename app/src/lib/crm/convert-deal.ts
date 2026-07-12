@@ -17,35 +17,35 @@ export type ConvertDealResult =
   | { ok: true; dealId: string; stage: ConvertDecision; brandId: string | null }
   | ConvertDealFailure;
 
-type CrmConvertDealRow = { deal_id: string; stage: string; brand_id: string | null };
-
 /** The only function allowed to call `crm_convert_deal` — the DB RPC (IPI-367
- *  migration `20260712090000_crm_deals_convert_rpc.sql`) that sets
+ *  migration `20260712084425_crm_deals_convert_rpc.sql`, hardened by
+ *  `20260712100000_crm_deals_convert_hardening.sql`) that sets
  *  `crm_deals.stage = won/lost` and, on won, creates or links a `brands` row.
- *  Org membership is enforced inside the RPC itself (`is_org_member`), not
- *  re-checked here — this function is a thin error-mapping wrapper, the same
- *  shape as `moveDealStage` in `move-deal-stage.ts`.
- *
- *  `.rpc("crm_convert_deal", ...)` is cast through an untyped client because
- *  `types/supabase.ts` hasn't been regenerated against this new function yet
- *  (regeneration requires the migration to be applied to the remote project
- *  first) — remove the cast once `npm run supabase:gen-types` (or MCP
- *  `generate_typescript_types`) picks it up. */
+ *  Authorization is enforced inside the RPC itself (`is_org_editor_or_above`
+ *  as of the hardening migration — not `is_org_member`, which admits
+ *  role='viewer'), not re-checked here — this function is a thin
+ *  error-mapping wrapper, the same shape as `moveDealStage` in
+ *  `move-deal-stage.ts`. */
 export async function convertDeal(
   { dealId, decision }: { dealId: string; decision: ConvertDecision },
   client: Db,
 ): Promise<ConvertDealResult> {
-  const untyped = client as unknown as SupabaseClient;
-  const { data, error } = await untyped
+  const { data, error } = await client
     .rpc("crm_convert_deal", { p_deal_id: dealId, p_decision: decision })
-    .single<CrmConvertDealRow>();
+    .single();
 
   if (error) {
     const message = error.message ?? "";
     if (message.includes("deal not found")) {
       return { ok: false, status: 404, code: "NOT_FOUND", message: "Deal not found." };
     }
-    if (message.includes("not a member")) {
+    // Matches both "caller must be an org editor or owner" (authorization)
+    // and "company ... not found in org ..." (cross-org data integrity,
+    // added by the hardening migration) — both are the caller-not-permitted
+    // shape, not an unexpected server failure. Kept as two narrow substrings
+    // rather than one broad one so a genuinely new/unrelated exception text
+    // doesn't silently get mapped to 403.
+    if (message.includes("editor or owner") || message.includes("not found in org")) {
       return { ok: false, status: 403, code: "FORBIDDEN", message: "You do not have access to this deal." };
     }
     if (message.includes("already terminal")) {

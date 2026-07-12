@@ -503,6 +503,52 @@ try {
       "converting a deal to lost returns a null brand_id",
     );
 
+    // Cross-org company_id — crm_deals.company_id is a plain FK to
+    // crm_companies(id), never constrained to the deal's own org_id, so a
+    // deal can legitimately reference a company row that exists but belongs
+    // to a different org. Admin crafts this exact anomaly (a real company,
+    // wrong org) rather than a merely-nonexistent id, since that's the
+    // precise case the RPC's FOUND check has to reject.
+    const { data: foreignOrg, error: foreignOrgErr } = await admin
+      .from("organizations")
+      .insert({ name: `RLS Foreign Org ${stamp}`, slug: `rls-foreign-org-${stamp}`, owner_id: userB.user.id, type: "brand" })
+      .select("id")
+      .single();
+    assert(!foreignOrgErr && foreignOrg?.id, "admin seeds a throwaway foreign org");
+
+    const { data: foreignCompany, error: foreignCompanyErr } = await admin
+      .from("crm_companies")
+      .insert({ org_id: foreignOrg?.id, name: `RLS Foreign Co ${stamp}` })
+      .select("id")
+      .single();
+    assert(!foreignCompanyErr && foreignCompany?.id, "admin seeds a company in the foreign org");
+
+    const { data: danglingDeal, error: danglingDealErr } = await admin
+      .from("crm_deals")
+      .insert({ org_id: orgAId, company_id: foreignCompany?.id, stage: "lead" })
+      .select("id")
+      .single();
+    assert(!danglingDealErr && danglingDeal?.id, "admin seeds an org A deal pointing at the foreign company");
+
+    const { error: danglingConvertErr } = await userA.client.rpc("crm_convert_deal", {
+      p_deal_id: danglingDeal?.id,
+      p_decision: "won",
+    });
+    assert(
+      !!danglingConvertErr,
+      "converting a deal whose company_id belongs to a different org is rejected, not silently orphaned",
+    );
+
+    // Throwaway org cleanup — not part of orgAId's cascade, so not covered
+    // by the standard cleanupRlsTestData() call at the end of the script.
+    await admin.from("crm_deals").delete().eq("id", danglingDeal?.id);
+    await admin.from("crm_companies").delete().eq("id", foreignCompany?.id);
+    if (foreignOrg?.id) {
+      await admin.from("org_members").delete().eq("org_id", foreignOrg.id);
+      const { error: foreignOrgDelErr } = await admin.from("organizations").delete().eq("id", foreignOrg.id);
+      if (foreignOrgDelErr) console.warn(`warn: cleanup foreign org ${foreignOrg.id}: ${foreignOrgDelErr.message}`);
+    }
+
     // Every test below this block assumes user B has zero relationship to
     // org A — undo the viewer→editor membership these probes needed, or
     // every subsequent cross-org assertion in this script (and the script's

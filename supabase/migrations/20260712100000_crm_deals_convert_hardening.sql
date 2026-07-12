@@ -35,6 +35,13 @@
 -- rls-policy-auditor) caught this, because both reviewed the SQL text only
 -- and neither executed it. Fixed here by qualifying every such reference
 -- with its source table name.
+--
+-- A fifth gap, found by automated PR review (Bugbot): crm_deals.company_id
+-- has no cross-org constraint, so a deal whose company_id points at another
+-- org's crm_companies row would silently pass through as "company has no
+-- brand yet" (the failed lookup and the genuine-no-brand-yet case were
+-- indistinguishable), creating an orphaned brand while marking the deal won.
+-- Fixed with an explicit FOUND check after the locked company lookup.
 
 create or replace function public.crm_convert_deal(
   p_deal_id uuid,
@@ -104,6 +111,17 @@ begin
       from public.crm_companies
       where id = v_company_id and org_id = v_org_id
       for update;
+
+    -- crm_deals.company_id is a plain FK, not constrained to the deal's own
+    -- org_id — a deal could (via a bug elsewhere, or a crafted request) point
+    -- at a company in a different org. Without this check, a not-found company
+    -- lookup is indistinguishable from "found, no brand yet": the code below
+    -- would silently create an orphaned brand and a no-op company UPDATE
+    -- while still marking the deal won. `FOUND` is set by the SELECT INTO
+    -- immediately above.
+    if not found then
+      raise exception 'crm_convert_deal: company % not found in org %', v_company_id, v_org_id;
+    end if;
 
     if v_existing_brand_id is null then
       -- brands.org_id is NOT NULL (20260624000000_ipi16_org_layer.sql) —
