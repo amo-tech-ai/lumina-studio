@@ -26,8 +26,8 @@ jobs:
           aws.AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws.AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws.AWS_REGION_NAME: "us-east-1"
-          config.model: "bedrock/us-east-1/qwen.qwen3-coder-next"
-          config.fallback_models: '["bedrock/us-east-1/qwen.qwen3-coder-next"]'
+          config.model: "bedrock/qwen.qwen3-coder-next"
+          config.fallback_models: '["bedrock/qwen.qwen3-coder-next"]'
           config.custom_model_max_tokens: "250000"
           github_action_config.auto_review: "true"
           github_action_config.auto_describe: "false"
