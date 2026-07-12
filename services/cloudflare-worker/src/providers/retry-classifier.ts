@@ -51,7 +51,7 @@ function isRetryableMessage(message: string): boolean {
   // HTTP status codes in error message checked FIRST — before keyword checks
   // that might overlap (e.g. "Workers AI error 503: invalid upstream" is a server error)
   if (lowerMsg.includes(" 429") || lowerMsg.includes("429:")) return true;
-  if (/\s50\d\s/.test(message) || / 50\d:/.test(message)) return true;
+  if (/\s5\d{2}\s/.test(message) || / 5\d{2}:/.test(message)) return true;
 
   // Non-retryable errors checked after HTTP status codes
   if (lowerMsg.includes("authentication")) return false;
