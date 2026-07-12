@@ -439,13 +439,14 @@ Do not describe mitigations as complete fixes.
 - **Test:** Namespace keys and verify no `_` prefix overlap with user namespaces
 - **MCP:** `mcp__plugin_cloudflare_cloudflare-api__execute` to list KV keys (MCP tools show namespaces only)
 
-### Workers script size limit (1 MB uncompressed)
+### Workers script size limits (gzip after compression)
 
-- **Gotcha:** OpenNext build succeeds; deployed Worker fails with "Script too large" at runtime
-- **Impact:** Code passes local tests; fails silently on production deploy
-- **Prevention:** Monitor `.open-next/worker.js` file size; flag if >500KB (safety margin)
-- **Test:** `du -sh .open-next/worker.js` after build; should be <1 MB
-- **Fix:** Tree-shake unused imports, defer code-splitting, or migrate to service workers
+- **Gotcha:** OpenNext build succeeds locally; deployed Worker fails at upload if over service limits
+- **Impact:** Code passes local tests; fails on `wrangler deploy` with size error
+- **Official limits:** Free tier 3 MB (after gzip) / 64 MB (before gzip); Paid tier 10 MB (after gzip) / 64 MB (before gzip)
+- **Prevention:** Use `wrangler deploy --dry-run` to check gzip upload size (not local file size)
+- **Test:** Run `wrangler deploy --dry-run` and check reported upload size against tier limits
+- **Fix:** Tree-shake unused imports, defer code-splitting, or migrate to service workers if exceeding limits
 
 ### nodejs_compat flag must be in compatibility_flags array
 
@@ -546,7 +547,7 @@ Load skills in this order for Cloudflare work:
 | **cf-wf** (this) | `search_cloudflare_documentation`, `workers_*`, `d1_*`, `kv_*`, `r2_*`, `cloudflare-api__execute` | Every Cloudflare task | Primary skill; provides 9-stage gate |
 | `ipix-task-lifecycle` | Linear MCP | Any task with Linear tracking (IPI-###) | Provides context + acceptance criteria |
 | `pr-workflow` | GitHub MCP (PR threads, CI status) | Before merge gate | Provides PR state + review gate |
-| `ipix-supabase` | Supabase MCP | If D1 is involved | D1 is Postgres; RLS patterns apply |
+| `ipix-supabase` | Supabase MCP | For Supabase/Postgres only | D1 is SQLite, not Postgres; route D1 work to Cloudflare D1 docs, not Supabase |
 | `graphify` | — | Stage 0 architecture review | Dependency mapping |
 
 **Load order:**
