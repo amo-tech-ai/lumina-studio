@@ -539,6 +539,31 @@ try {
       "converting a deal whose company_id belongs to a different org is rejected, not silently orphaned",
     );
 
+    // Same cross-org-company check, 'lost' path — the first fix only ran the
+    // FOUND check inside the 'won' branch, so a 'lost' conversion on a
+    // dangling company_id still slipped through and wrote a data-isolation-
+    // violating crm_activities row (org_id from org A, company_id from the
+    // foreign org). Caught by automated PR review; regression-tested here.
+    const { data: danglingLostDeal, error: danglingLostDealErr } = await admin
+      .from("crm_deals")
+      .insert({ org_id: orgAId, company_id: foreignCompany?.id, stage: "lead" })
+      .select("id")
+      .single();
+    assert(
+      !danglingLostDealErr && danglingLostDeal?.id,
+      "admin seeds a second org A deal pointing at the foreign company (lost-path probe)",
+    );
+
+    const { error: danglingLostConvertErr } = await userA.client.rpc("crm_convert_deal", {
+      p_deal_id: danglingLostDeal?.id,
+      p_decision: "lost",
+    });
+    assert(
+      !!danglingLostConvertErr,
+      "marking a deal lost is also rejected when its company_id belongs to a different org",
+    );
+    await admin.from("crm_deals").delete().eq("id", danglingLostDeal?.id);
+
     // Throwaway org cleanup — not part of orgAId's cascade, so not covered
     // by the standard cleanupRlsTestData() call at the end of the script.
     await admin.from("crm_deals").delete().eq("id", danglingDeal?.id);

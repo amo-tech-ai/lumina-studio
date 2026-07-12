@@ -118,7 +118,7 @@ describe("DealDetailWorkspace", () => {
 
   it("shows an honest 'not yet linked' Won state instead of a fake brand link when brand_id is null", () => {
     render(<DealDetailWorkspace data={payload({ deal: deal({ stage: "won" }) })} fetchError={null} />);
-    expect(screen.getByText("Won — not yet linked to a brand")).toBeDefined();
+    expect(screen.getByText("Won — no brand linked")).toBeDefined();
     expect(screen.queryByText("View brand")).toBeNull();
   });
 
@@ -145,7 +145,7 @@ describe("DealDetailWorkspace", () => {
     // not wait for a real router.refresh() to update `data`).
     expect(await screen.findByText("Converted to brand")).toBeDefined();
     expect(screen.getByText("View brand")).toBeDefined();
-    expect(screen.queryByText("Won — not yet linked to a brand")).toBeNull();
+    expect(screen.queryByText("Won — no brand linked")).toBeNull();
 
     vi.unstubAllGlobals();
   });

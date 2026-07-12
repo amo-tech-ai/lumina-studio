@@ -176,17 +176,24 @@ function DealOverview({
 
 /** Only rendered once `stage === "won"` — see the module doc for why
  *  "Converted to brand" requires a real `companyBrandId`, not just the
- *  stage value. */
+ *  stage value.
+ *
+ *  A null `companyBrandId` on a won deal is no longer the expected
+ *  "feature not wired yet" state — `crm_convert_deal` (IPI-367) always
+ *  creates or links a brand on `won`. It's now a legacy/edge-case signal
+ *  (e.g. a deal marked won before this RPC existed, or via the verify-only
+ *  admin RPC in tests) — the copy below reflects that honestly instead of
+ *  claiming the feature is pending. */
 function WonBanner({ companyBrandId }: { companyBrandId: string | null }) {
   return (
     <div className={styles.wonBanner}>
       <CheckCircle size={20} aria-hidden className={styles.wonIcon} />
       <div className={styles.wonText}>
         <div className={styles.wonHeading}>
-          {companyBrandId ? "Converted to brand" : "Won — not yet linked to a brand"}
+          {companyBrandId ? "Converted to brand" : "Won — no brand linked"}
         </div>
         <div className={styles.wonSub}>
-          {companyBrandId ? "Handed off to Brand Intelligence." : "Brand conversion isn't wired yet (pending IPI-367)."}
+          {companyBrandId ? "Handed off to Brand Intelligence." : "This deal was marked won without creating a brand link."}
         </div>
       </div>
       {companyBrandId ? (
