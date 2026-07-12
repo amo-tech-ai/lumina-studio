@@ -71,11 +71,17 @@ describe("visual-identity agent", () => {
     vi.mocked(generateObject).mockResolvedValue({ object: MOCK_VISUAL } as Awaited<ReturnType<typeof generateObject>>);
   });
 
-  it("exports visualIdentityAgent with correct id", async () => {
-    const { visualIdentityAgent } = await import("./visual-identity");
-    expect(visualIdentityAgent).toBeDefined();
-    expect((visualIdentityAgent as { id: string }).id).toBe("visual-identity");
-  });
+  it(
+    "exports visualIdentityAgent with correct id",
+    async () => {
+      // Cold-imports the full agent module (~600ms measured idle) — scoped
+      // timeout rather than a global bump; this file flaked under load.
+      const { visualIdentityAgent } = await import("./visual-identity");
+      expect(visualIdentityAgent).toBeDefined();
+      expect((visualIdentityAgent as { id: string }).id).toBe("visual-identity");
+    },
+    15_000,
+  );
 
   it("uses text-only prompt when no FIRECRAWL_API_KEY (no screenshot)", async () => {
     const { generateObject } = await import("ai");
