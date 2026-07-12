@@ -323,12 +323,21 @@ describe("Router Fallback Integration", () => {
     expect(requestId).toMatch(/^req_[a-f0-9-]+$/);
   });
 
-  it("does not fall back when fallback provider is not configured", async () => {
+  it("does not fall back when fallback provider matches primary provider", async () => {
     const envNoFallback = {
       ...ENV,
+      AWS_BEDROCK_API_KEY: undefined,
       MODEL_REGISTRY_OVERRIDE: JSON.stringify({
         tiers: {
           "default": {
+            provider: "workers-ai",
+            model: "llama",
+            capabilities: ["text"],
+            contextWindow: 4096,
+            costPer1kIn: 0.0001,
+            costPer1kOut: 0.0001,
+          },
+          "default-fallback": {
             provider: "workers-ai",
             model: "llama",
             capabilities: ["text"],
@@ -357,5 +366,57 @@ describe("Router Fallback Integration", () => {
     );
 
     expect(response.status).toBe(502);
+  });
+
+  it("preserves default-fallback from defaults when MODEL_REGISTRY_OVERRIDE omits it", async () => {
+    const envPartial = {
+      ...ENV,
+      MODEL_REGISTRY_OVERRIDE: JSON.stringify({
+        tiers: {
+          "default": {
+            provider: "workers-ai",
+            model: "llama",
+            capabilities: ["text"],
+            contextWindow: 4096,
+            costPer1kIn: 0.0001,
+            costPer1kOut: 0.0001,
+          },
+        },
+      }),
+    };
+
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce({
+        ok: false,
+        status: 503,
+        text: async () => "Service unavailable",
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          choices: [
+            {
+              message: { role: "assistant", content: "Fallback from Bedrock" },
+              finish_reason: "stop",
+            },
+          ],
+          usage: { prompt_tokens: 5, completion_tokens: 10 },
+        }),
+      });
+
+    vi.stubGlobal("fetch", fetchMock);
+
+    const response = await handleChat(
+      {
+        model: "default",
+        messages: [{ role: "user", content: "Test" }],
+      },
+      envPartial,
+    );
+
+    expect(response.status).toBe(200);
+    const body = await response.json();
+    expect(body.choices[0].message.content).toBe("Fallback from Bedrock");
+    expect(response.headers.get("X-Fallback-Provider")).toBe("bedrock");
   });
 });
