@@ -1,7 +1,7 @@
 /**
  * Classifies provider errors as retryable or not.
  *
- * Retryable: 429, 500–504, timeout, connection reset, DNS failure
+ * Retryable: 429, 500–599, timeout, connection reset, DNS failure
  * Non-retryable: 4xx (except 429), schema/tool validation, auth errors
  */
 
@@ -18,7 +18,10 @@ export class ProviderError extends Error {
 
 export function isRetryableProviderError(error: unknown): boolean {
   if (error instanceof ProviderError) {
-    return isRetryableStatus(error.status, error.code);
+    if (error.status !== undefined) {
+      return isRetryableStatus(error.status);
+    }
+    return isRetryableMessage(error.message);
   }
 
   if (error instanceof Error) {
@@ -28,7 +31,7 @@ export function isRetryableProviderError(error: unknown): boolean {
   return false;
 }
 
-function isRetryableStatus(status?: number, code?: string): boolean {
+function isRetryableStatus(status?: number): boolean {
   if (!status) {
     // Unknown status (network error, timeout) → retryable
     return true;

@@ -109,15 +109,29 @@ describe("isRetryableProviderError", () => {
       );
     });
 
-    it("does NOT retry unknown errors (fail-safe)", () => {
+    it("does NOT retry unknown errors (fail-safe) — plain Error with non-retryable message", () => {
       expect(isRetryableProviderError(new Error("Some random error"))).toBe(
         false,
       );
     });
   });
 
+  describe("ProviderError without HTTP status", () => {
+    it("routes ProviderError with undefined status through isRetryableMessage — non-retryable message", () => {
+      expect(isRetryableProviderError(new ProviderError("Invalid request format"))).toBe(false);
+      expect(isRetryableProviderError(new ProviderError("Authentication failed"))).toBe(false);
+      expect(isRetryableProviderError(new ProviderError("Schema validation error"))).toBe(false);
+    });
+
+    it("routes ProviderError with undefined status through isRetryableMessage — retryable message", () => {
+      expect(isRetryableProviderError(new ProviderError("Request timeout"))).toBe(true);
+      expect(isRetryableProviderError(new ProviderError("ECONNREFUSED"))).toBe(true);
+      expect(isRetryableProviderError(new ProviderError("Connection reset by peer"))).toBe(true);
+    });
+  });
+
   describe("Unknown error types", () => {
-    it("retries unknown non-ProviderError (network assumed)", () => {
+    it("does NOT retry unknown plain Error (fail-safe)", () => {
       expect(isRetryableProviderError(new Error())).toBe(false);
       expect(isRetryableProviderError(new Error("Undefined error"))).toBe(
         false,

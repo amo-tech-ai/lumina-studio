@@ -19,10 +19,6 @@ import {
   type ProviderConfig,
 } from "./providers/provider";
 
-export interface BedrockConfig extends ProviderConfig {
-  region?: string;
-}
-
 export interface Env {
   GEMINI_API_KEY?: string;
   NVIDIA_API_KEY?: string;
@@ -61,7 +57,7 @@ function getProviderConfig(provider: string, env: Env): ProviderConfig {
     case "bedrock":
       return {
         apiKey: env.AWS_BEDROCK_API_KEY ?? "",
-        baseUrl: env.AWS_BEDROCK_BASE_URL,
+        baseUrl: env.AWS_BEDROCK_BASE_URL ?? "",
         region: env.AWS_REGION,
       };
     default:

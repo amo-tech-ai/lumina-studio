@@ -5,8 +5,27 @@ import {
   type EmbeddingRequest,
   type EmbeddingResponse,
   type ProviderConfig,
+  type ToolCall,
   createCompletionId,
 } from "./provider";
+
+interface BedrockChoice {
+  message?: {
+    content?: string | null;
+    tool_calls?: ToolCall[];
+  };
+  finish_reason?: string;
+}
+
+interface BedrockUsage {
+  prompt_tokens?: number;
+  completion_tokens?: number;
+}
+
+interface BedrockApiResponse {
+  choices?: BedrockChoice[];
+  usage?: BedrockUsage;
+}
 
 const BEDROCK_BASE = "https://bedrock-mantle";
 
@@ -41,7 +60,7 @@ async function bedrockFetch(
 }
 
 function fromBedrockResponse(
-  bedrockData: any,
+  bedrockData: BedrockApiResponse,
   model: string,
 ): ChatCompletionResponse {
   const choice = bedrockData.choices?.[0];
@@ -73,7 +92,7 @@ function fromBedrockResponse(
 export const bedrockProvider: AiProvider = {
   async chat(req: ChatCompletionRequest, config: ProviderConfig): Promise<ChatCompletionResponse> {
     const apiKey = config.apiKey;
-    const region = (config as any).region || "us-east-1";
+    const region = config.region ?? "us-east-1";
     const baseUrl = config.baseUrl;
 
     if (!apiKey) {
@@ -100,13 +119,13 @@ export const bedrockProvider: AiProvider = {
       throw new Error(`Bedrock API error ${res.status}: ${err}`);
     }
 
-    const data = await res.json();
+    const data = await res.json() as BedrockApiResponse;
     return fromBedrockResponse(data, req.model);
   },
 
   async chatStream(req: ChatCompletionRequest, config: ProviderConfig): Promise<Response> {
     const apiKey = config.apiKey;
-    const region = (config as any).region || "us-east-1";
+    const region = config.region ?? "us-east-1";
     const baseUrl = config.baseUrl;
 
     if (!apiKey) {
