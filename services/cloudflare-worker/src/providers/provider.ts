@@ -1,6 +1,43 @@
+export interface JsonSchema {
+  [key: string]: unknown;
+}
+
+/** OpenAI-compatible function declaration used by Workers AI chat completions. */
+export interface ToolDeclaration {
+  type: "function";
+  function: {
+    name: string;
+    description?: string;
+    parameters?: JsonSchema;
+    strict?: boolean;
+  };
+}
+
+export type ToolChoice =
+  | "none"
+  | "auto"
+  | "required"
+  | {
+      type: "function";
+      function: { name: string };
+    };
+
+export interface ChatToolCall {
+  id: string;
+  type: "function";
+  function: {
+    name: string;
+    arguments: string;
+  };
+}
+
 export interface ChatMessage {
-  role: "system" | "user" | "assistant";
+  role: "system" | "user" | "assistant" | "tool";
   content: string;
+  /** Required on tool-result messages so the model can match the result to a call. */
+  tool_call_id?: string;
+  /** Returned on assistant messages when the model selects one or more tools. */
+  tool_calls?: ChatToolCall[];
 }
 
 export interface ChatCompletionRequest {
@@ -10,6 +47,12 @@ export interface ChatCompletionRequest {
   max_tokens?: number;
   stream?: boolean;
   response_format?: { type: "json_object" } | { type: "text" };
+  /** OpenAI-compatible tools forwarded unchanged to Workers AI. */
+  tools?: ToolDeclaration[];
+  /** Controls whether and which tool the model may call. */
+  tool_choice?: ToolChoice;
+  /** Allow supported models to request multiple tools in one turn. */
+  parallel_tool_calls?: boolean;
 }
 
 export interface ChatCompletionResponse {
@@ -17,7 +60,7 @@ export interface ChatCompletionResponse {
   model: string;
   choices: {
     index: number;
-    message: { role: string; content: string };
+    message: ChatMessage;
     finish_reason: string;
   }[];
   usage: {
