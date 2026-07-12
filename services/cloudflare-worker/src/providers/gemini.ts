@@ -27,11 +27,13 @@ function toGeminiMessages(messages: ChatCompletionRequest["messages"]) {
     .join("\n");
   const contents = messages
     .filter((m) => m.role !== "system" && m.role !== "tool")
-    .map((m) => ({
-      role: m.role === "assistant" ? "model" : "user",
-      parts: m.content ? [{ text: m.content }] : [],
-    }))
-    .filter((m) => m.parts.length > 0);
+    .map((m) => {
+      const parts = m.content ? [{ text: m.content }] : [];
+      return {
+        role: m.role === "assistant" ? "model" : "user",
+        parts: parts.length > 0 ? parts : [{ text: "" }], // Preserve empty turns for conversation flow
+      };
+    });
 
   return { system, contents };
 }
