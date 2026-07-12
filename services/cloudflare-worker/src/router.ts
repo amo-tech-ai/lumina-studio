@@ -153,7 +153,7 @@ export async function handleChat(
     const result = await provider.chat({ ...req, model: entry.model }, config);
     const latency = Date.now() - startTime;
 
-    const hasToolCalls = result.choices[0]?.message?.tool_calls?.length ?? 0 > 0;
+    const hasToolCalls = (result.choices[0]?.message?.tool_calls?.length ?? 0) > 0;
     console.log(`[gateway] chat response succeeded`, {
       requestId,
       provider: entry.provider,

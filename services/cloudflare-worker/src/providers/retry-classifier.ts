@@ -48,18 +48,18 @@ function isRetryableStatus(status?: number, code?: string): boolean {
 function isRetryableMessage(message: string): boolean {
   const lowerMsg = message.toLowerCase();
 
-  // Non-retryable errors checked FIRST — before network keywords that might overlap
-  // (e.g. "invalid timeout parameter" should NOT be retryable)
+  // HTTP status codes in error message checked FIRST — before keyword checks
+  // that might overlap (e.g. "Workers AI error 503: invalid upstream" is a server error)
+  if (lowerMsg.includes(" 429") || lowerMsg.includes("429:")) return true;
+  if (/\s50\d\s/.test(message) || / 50\d:/.test(message)) return true;
+
+  // Non-retryable errors checked after HTTP status codes
   if (lowerMsg.includes("authentication")) return false;
   if (lowerMsg.includes("unauthorized")) return false;
   if (lowerMsg.includes("forbidden")) return false;
   if (lowerMsg.includes("invalid")) return false;
   if (lowerMsg.includes("schema")) return false;
   if (lowerMsg.includes("validation")) return false;
-
-  // HTTP status codes in error message (e.g. "Workers AI error 503: ...")
-  if (lowerMsg.includes(" 429") || lowerMsg.includes("429:")) return true;
-  if (/\s50\d\s/.test(message) || / 50\d:/.test(message)) return true;
 
   // Timeout errors
   if (lowerMsg.includes("timeout")) return true;
