@@ -1,5 +1,17 @@
+/**
+ * A configured model with routing info and capabilities.
+ * Used by the gateway to select providers and handle fallback.
+ *
+ * Supported providers:
+ * - "gemini": Google Gemini (primary)
+ * - "workers-ai": Cloudflare Workers AI (primary)
+ * - "bedrock": AWS Bedrock Responses API (fallback for 429/5xx/timeout)
+ *
+ * Special tiers:
+ * - "default-fallback": Used when primary provider fails with a retryable error.
+ */
 export interface ModelEntry {
-  provider: "gemini" | "workers-ai" | "nvidia";
+  provider: "gemini" | "workers-ai" | "bedrock" | "nvidia";
   model: string;
   capabilities: string[];
   contextWindow: number;
@@ -7,6 +19,10 @@ export interface ModelEntry {
   costPer1kOut: number;
 }
 
+/**
+ * Model registry mapping tier names to model configs.
+ * Supports custom overrides via MODEL_REGISTRY_OVERRIDE env var (JSON).
+ */
 export interface ModelRegistry {
   tiers: Record<string, ModelEntry>;
 }
@@ -52,6 +68,14 @@ const DEFAULT_REGISTRY: ModelRegistry = {
       contextWindow: 0,
       costPer1kIn: 0.000067,
       costPer1kOut: 0,
+    },
+    "default-fallback": {
+      provider: "bedrock",
+      model: "anthropic.claude-3-haiku-20240307-v1:0",
+      capabilities: ["text", "structured", "streaming"],
+      contextWindow: 200000,
+      costPer1kIn: 0.00025,
+      costPer1kOut: 0.00125,
     },
   },
 };

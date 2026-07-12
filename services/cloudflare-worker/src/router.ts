@@ -91,6 +91,18 @@ function selectProvider(model: string, env: Env): {
   return { provider, config, entry };
 }
 
+/**
+ * Handle chat completions with automatic fallback.
+ *
+ * Flow:
+ * 1. Try primary provider (model registry tier)
+ * 2. If error is retryable (429, 5xx, timeout, connection error):
+ *    - Try fallback provider ("default-fallback" tier)
+ *    - Add X-Fallback-Provider header on success
+ * 3. If error is non-retryable (auth, validation): fail fast
+ *
+ * Observability: All calls logged with requestId, provider, model, latency, tool events.
+ */
 export async function handleChat(
   req: ChatCompletionRequest,
   env: Env,
