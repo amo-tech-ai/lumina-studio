@@ -67,10 +67,7 @@ export const workersAiProvider: AiProvider = {
 
     if (!upstream.ok) {
       const err = await upstream.text();
-      return new Response(JSON.stringify({ error: `Workers AI error ${upstream.status}: ${err}` }), {
-        status: upstream.status,
-        headers: { "Content-Type": "application/json" },
-      });
+      throw new Error(`Workers AI error ${upstream.status}: ${err}`);
     }
 
     return new Response(upstream.body, {

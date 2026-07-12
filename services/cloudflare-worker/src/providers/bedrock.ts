@@ -8,7 +8,7 @@ import {
   createCompletionId,
 } from "./provider";
 
-const BEDROCK_BASE = "https://bedrock-runtime";
+const BEDROCK_BASE = "https://bedrock-mantle";
 
 function bedrockBaseUrl(region: string, baseUrl?: string): string {
   if (baseUrl) return baseUrl;
