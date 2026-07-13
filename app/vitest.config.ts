@@ -8,6 +8,13 @@ export default defineConfig({
   test: {
     environment: "node",
     include: ["src/**/*.{test,spec}.{ts,tsx}", "scripts/**/*.test.mjs"],
+    pool: "forks",
+    poolOptions: {
+      forks: {
+        maxForks: 4,
+        minForks: 4,
+      },
+    },
   },
 });
 
