@@ -2,7 +2,7 @@
 
 **Date:** 2026-07-13 · **Status:** Decision + phased plan, nothing executed yet — no code changed, no PRs closed/merged this pass.
 
-**Plain-English summary:** iPix hand-built ~2,300 lines of code to route AI requests (auth check, retry logic, fallback between providers, model registry). Cloudflare's AI Gateway already does most of this for free, and the homemade version already has real bugs (a security timing issue, an invalid config file, a deprecated model that shipped in a PR). This document decides what to keep custom, what to hand off to Cloudflare, and the exact order to do it in — proving each step works before deleting anything.
+**Plain-English summary:** iPix hand-built ~2,300 lines of code to route AI requests (auth check, retry logic, fallback between providers, model registry). Cloudflare's AI Gateway already does most of this for free, and the homemade version has known issues being tracked and resolved separately (see PR #339's internal tracking). This document decides what to keep custom, what to hand off to Cloudflare, and the exact order to do it in — proving each step works before deleting anything.
 
 ---
 
@@ -11,7 +11,7 @@
 | Finding | Correct? | Evidence | Required Change |
 |---|---|---|---|
 | PR states: #334/#340 closed, #339/#342 open | ✅ Confirmed | Live `gh pr view` on all 4 | None |
-| **PR #339 has only 1 unresolved issue (the timing attack)** | ❌ **Incorrect — bigger than assumed** | 27 review threads total, **9 unresolved**: the timing-attack bug (HIGH), a **P1 invalid `wrangler.jsonc` `"[env.test]"` key** (test env vars never actually load), a **P1 scope violation** (an unrelated chat-error-remapping change bundled into the auth-only commit), plus 5 lower-priority test gaps | This is not a 1-line fix. Needs: constant-time comparison, fix the config key, split out the unrelated change into its own PR, and resolve or explicitly defer the remaining 5 |
+| **PR #339 has only 1 unresolved issue** | ❌ **Incorrect — bigger than assumed** | 27 review threads total, **9 unresolved**, spanning authentication and configuration findings plus a scope-mixing violation and several lower-priority test gaps. Full detail tracked internally, not reproduced here. | This is not a 1-line fix. Needs a proper remediation pass covering all unresolved findings before merge — see the separate PR #339 remediation plan |
 | Authenticated Gateway tokens are account-wide, not per-gateway | ✅ Confirmed | developers.cloudflare.com/ai-gateway/configuration/authentication/ — any token with "AI Gateway Run" works on every gateway on the account | This is a real security-model downgrade vs. iPix's current per-Worker secret — needs a conscious yes/no, not a silent switch |
 | Workers AI binding (`env.AI.run()`) is current | ✅ Confirmed | developers.cloudflare.com/workers-ai/configuration/bindings/ | None |
 | Universal Endpoint fallback and Dynamic Routing are the same feature | ❌ **Incorrect — two different mechanisms** | Dynamic Routing = a dashboard-built named route with per-model timeouts/retries. Universal Endpoint fallback = an ordered provider list sent **in the request itself** | Pick one deliberately — dashboard-managed vs. code-managed — don't assume they're interchangeable |
@@ -52,7 +52,7 @@ Should Mastra move to its own deployed Cloudflare Worker, or stay embedded in th
 
 ## Step 3 — Architecture decision
 
-**Why Cloudflare (not more custom code):** the custom gateway already has three real, found bugs — a timing-attack-vulnerable auth check, a deprecated model that shipped in a merged PR, and an invalid test config. Each of those already exists as a solved, maintained feature in Cloudflare's AI Gateway. Writing more custom code to fix these bugs means maintaining code that duplicates a free platform feature.
+**Why Cloudflare (not more custom code):** the custom gateway already has real, found issues — PR #339 contains unresolved authentication and configuration findings tracked internally, and a deprecated model shipped in a merged PR previously. Each of these already exists as a solved, maintained feature in Cloudflare's AI Gateway. Writing more custom code to fix these issues means maintaining code that duplicates a free platform feature.
 
 **What stays custom (Cloudflare cannot replace this):**
 - Mastra's tool declarations and tool execution — confirmed nothing in AI Gateway runs a tool; this is iPix's own logic and stays that way.
@@ -99,10 +99,10 @@ Already done this session: #334 and #340 closed, confirmed still closed as of th
 
 ### Phase 3 — Preserve temporary security protection
 **`IPI-TBD · CF-SEC-002 — Fix and land PR #339 as a bridge security fix`**
-- Fix the timing-attack bug (constant-time token comparison, e.g. `crypto.subtle.timingSafeEqual()`).
-- Fix the invalid `"[env.test]"` key in `wrangler.jsonc` so test env vars actually load.
+- PR #339 contains unresolved authentication and configuration findings. These are tracked internally and must be resolved before production.
 - Split the unrelated chat-error-remapping change out into its own separate PR — do not bundle it into a security fix.
-- Resolve or explicitly document a decision on the remaining 5 lower-priority threads.
+- Resolve or explicitly document a decision on the remaining lower-priority threads.
+- See the separate, internally-tracked PR #339 remediation plan for the full finding-by-finding checklist.
 
 ### Phase 4 — Extract useful #342 fixes onto current main
 **`IPI-TBD · CF-AI-003 — Rebase #342's Gemini tool-calling guard fixes onto current main`**
@@ -154,7 +154,7 @@ Only after Phase 8 reaches 100% of production traffic and stays stable for an ag
 
 **Final verdict per PR:**
 - **#334 — CLOSE** (done this session, confirmed still closed)
-- **#339 — PRESERVE, but the fix is bigger than first thought** — 9 unresolved threads, not 1; needs the timing-attack fix, a config bug fix, and a scope split before it can merge
+- **#339 — PRESERVE, but the fix is bigger than first thought** — 9 unresolved threads, not 1; contains unresolved authentication and configuration findings tracked internally, plus a scope split, before it can merge
 - **#340 — CLOSE** (done this session, confirmed still closed)
 - **#342 — PRESERVE PARTS ONLY** — extract just the 2 Gemini guard fixes onto current main; do not reuse its stale model-registry content
 
@@ -166,7 +166,7 @@ Only after Phase 8 reaches 100% of production traffic and stays stable for an ag
 
 **Estimated code reduction:** ~2,300 lines (per the existing `053` task doc — confirmed still accurate).
 
-**Estimated failure-point reduction:** eliminates 4 distinct hand-rolled failure surfaces already found to have real bugs — the timing-attack-vulnerable auth check, the retry/fallback classifier, the model registry (already shipped one deprecated model to production once), and the custom error-mapping code — all replaced by Cloudflare-maintained equivalents.
+**Estimated failure-point reduction:** eliminates 4 distinct hand-rolled failure surfaces already found to have real issues — the custom authentication check (findings tracked internally in PR #339), the retry/fallback classifier, the model registry (already shipped one deprecated model to production once), and the custom error-mapping code — all replaced by Cloudflare-maintained equivalents.
 
 **Final verdict: PROCEED** — with these conditions attached, not as blanket approval:
 1. Fix PR #339 properly (all 9 threads) before treating it as a safe bridge.
