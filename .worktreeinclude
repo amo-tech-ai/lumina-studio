@@ -1,4 +1,7 @@
 # Copied into new worktrees by scripts/worktree-add.mjs (and Claude --worktree when supported).
 # Patterns use gitignore syntax; only gitignored paths are copied (tracked files are not duplicated).
+.env
 .env.local
+app/.env
 app/.env.local
+Universal design prompt/
