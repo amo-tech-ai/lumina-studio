@@ -1,5 +1,6 @@
 "use client";
 
+import * as Sentry from "@sentry/nextjs";
 import { useEffect } from "react";
 import Link from "next/link";
 
@@ -11,7 +12,7 @@ export default function OperatorError({
   reset: () => void;
 }) {
   useEffect(() => {
-    console.error("Operator route error:", error);
+    Sentry.captureException(error);
   }, [error]);
 
   return (
@@ -31,7 +32,7 @@ export default function OperatorError({
       <div className="flex gap-4">
         <button
           onClick={reset}
-          className="rounded-[var(--radius-md)] bg-[var(--color-action)] px-6 py-3 text-sm font-medium text-[var(--color-action-text)] transition-opacity hover:opacity-80"
+          className="rounded-[var(--radius-md)] bg-[var(--color-action)] px-6 py-3 text-sm font-medium text-[var(--color-action-text)] transition-colors hover:bg-[var(--color-action-hover)]"
         >
           Try Again
         </button>
