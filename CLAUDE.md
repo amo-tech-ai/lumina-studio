@@ -92,6 +92,8 @@ We are in active development. Always leave the system better than you found it: 
 - `GEMINI_API_KEY` is server-only — used exclusively in `app/src/mastra/` and `supabase/functions/`.
 - **Never skip the pre-push hook** (`--no-verify`). If it fails, fix the underlying issue — don't bypass it.
 
+- **🚫 NEVER run `gh pr create` without first running `/review-pr all`.** Typecheck/lint/tests/build passing is not the same as a review — none of those catch silent-failure patterns (RLS returning empty instead of erroring, `maybeSingle()` ignoring `.error`) or type-design smells (a parameter the implementation silently ignores). `/review-pr` already routes exactly those classes to `silent-failure-hunter` and `type-design-analyzer`. Skipping this step on IPI-536/PR #347 meant 5 real bugs (1 P1) were found by external bots after the PR was already open instead of before — evidence-based rule, not theoretical. Any Critical/Important finding is a blocker, same as a CI failure.
+
 ## Graphify — mandatory before reading source files
 
 `graphify-out/graph.json` is always present. Before reading any source file:

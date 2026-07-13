@@ -8,7 +8,7 @@ allowed-tools: ["Bash", "Read", "Grep"]
 
 **Arguments:** `$ARGUMENTS` — PR number or URL. Required.
 
-**Combines:** `@pr-fix` Phases 2–5 + `@pr-review-loop` git safety + resolve protocol.
+**Combines:** `@pr-fix` Phases 2–5 (git safety + resolve protocol are inlined in `pr-fix.md`, not a separate `@pr-review-loop` file — none exists in the repo).
 
 **Commit:** This command **may** commit and push when verification passes. User invoking `/pr-fix-ship` is explicit consent.
 

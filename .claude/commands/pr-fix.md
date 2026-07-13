@@ -15,11 +15,9 @@ Act as a senior GitHub PR reviewer and fixer for the iPix / Lumina Studio codeba
 ## Workflow hub
 
 - **Orchestrator:** `/pr` — auto-detect; use `/pr fix` for this command's full loop
-- **Rule:** `@pr-review-loop`
+- **Rule:** comment taxonomy, merge-blocker source of truth, and HEAD/worktree gate are inlined below — this file is self-contained. (`@pr-review-loop` was referenced here in an earlier revision; no such rule file exists anywhere in the repo — removed rather than left dangling.)
 - **Resolve only:** `/pr resolve` or `/pr-fix-resolve`
 - **Full ship:** `/pr ship` or `/pr-fix-ship` (explicit commit consent)
-
-**Canonical Cursor rule:** `.claude/commands/pr-fix.md` ↔ `.cursor/rules/pr-fix.mdc` (keep in sync).
 
 ## Skill map SSOT
 
@@ -200,12 +198,14 @@ gh pr view <N> --json number,title,body,headRefName,files
 |---------------|----------------|----------------|
 | `app/src/styles/**`, `tokens.css` | `design-md`, `frontend-design`, `claude-design-handoff` | — |
 | `app/src/components/**`, operator UI | `design-md`, `frontend-design`, `shadcn`, `accessibility` | `cursor-ide-browser` |
-| `app/src/app/api/copilotkit/**` | `copilotkit` | — |
-| `app/src/mastra/**` | `mastra`, `gemini` | `user-mastra` (`searchMastraDocs`) |
+| `app/src/app/api/copilotkit/**`, CopilotKit provider/chat components | `copilotkit` | **`copilotkit-v1-guard`** subagent — deprecated v1 imports the eslint guard misses |
+| `app/src/mastra/**` | `mastra`, `gemini` | **`mastra-agent-reviewer`** subagent (known iPix Mastra gotchas) + `user-mastra` MCP (`searchMastraDocs`) |
 | `app/src/lib/supabase/**`, auth, `proxy.ts` | `ipix-supabase`, `nextjs-developer`, `nextjs-16` | Supabase MCP |
 | App Router (data fetching, RSC) | **`nextjs-developer`**, `nextjs-16` | `next-devtools-mcp` |
-| `supabase/migrations/**`, `*.sql` | `ipix-supabase`, `create-migration` | Supabase MCP + **migration-reviewer** |
+| `supabase/migrations/**`, `*.sql`, any new/changed RLS policy | `ipix-supabase`, `create-migration` | **`rls-policy-auditor`** subagent — the real agent for this; there is no "migration-reviewer" in the available agent list, do not reference it |
 | `supabase/functions/**` | `ipix-supabase`, `gemini` | `list_edge_functions`, `get_edge_function` |
+| Root `src/` (legacy Vite) touched | — | **`vite-drift-auditor`** subagent — flags new functionality landing in the retiring Vite tree |
+| `app/src/app/api/**/route.ts`, `supabase/functions/**` added/removed/changed shape | — | **`api-documenter`** subagent — keeps `app/AGENTS.md` in sync |
 | AI / prompts | `gemini`, `senior-prompt-engineer` | `user-gemini-api-docs-mcp` |
 | Cloudinary / media | `cloudinary` | Cloudinary MCP plugins |
 | Firecrawl / crawl | `firecrawl`, `ipix-supabase` | `user-firecrawl` |
@@ -268,7 +268,7 @@ Order: Bug → Refactor → Tech debt → Style
 - Gemini: server-only; see `gemini` skill
 - AI SDK 6.x: `maxOutputTokens`
 - Never `--no-verify`
-- Stop if fix needs migration — report, use `create-migration` + migration-reviewer
+- Stop if fix needs migration — report, use `create-migration` + the `rls-policy-auditor` subagent (adversarial review before applying, see IPI-536/PR #347's `planner_get_my_assignment` RPC for the pattern)
 
 ---
 
@@ -316,7 +316,31 @@ Re-trigger Bugbot if material diff.
 
 ## Phase 5 — Final report
 
-Output the report template from `.cursor/rules/pr-fix.mdc`.
+No external template file exists for this (an earlier revision pointed at `.cursor/rules/pr-fix.mdc`, which was never created) — use this format directly:
+
+```markdown
+## Phase 5 — Final report: `/pr-fix` on PR #<N>
+
+### Triage
+| # | File:line | Source | Tier | Outcome |
+|---|---|---|---|---|
+| 1 | ... | Sentry/CodeRabbit/Codex/inline | A/B/C | Fixed / Dismissed (reason) |
+
+### Fixes applied (commit <sha>)
+One paragraph per real finding: what was wrong, how it was verified (not assumed), how it was fixed.
+
+### Dismissed, with reasoning (not silently)
+Anything closed without a code change — the evidence checked before dismissing, not just "looks fine."
+
+### Verification
+- Static: typecheck/test/lint/build results
+- Domain (Tier B/C only): skill/MCP probes run, live-system checks
+- Unresolved GraphQL review threads: <N> (must be 0 to sign off)
+- CI on latest HEAD: <pass/fail per check>
+
+### Prevention (if this session found something worth generalizing)
+What skill/command/rule was updated so this class of bug is caught earlier next time — not just "fixed," but "why won't this recur."
+```
 
 ---
 
