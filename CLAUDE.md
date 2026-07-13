@@ -112,6 +112,20 @@ If >10 files are newer than `graphify-out/graph.json`, the graph is stale. Rebui
 
 ## Worktree workflow (required for every task)
 
+**Step 0 — clean up stale worktrees before creating a new one, every time:**
+
+```bash
+npm run worktree:audit
+```
+
+Any row marked ⚪ merged or 🔴 stale with `safeToDelete ✅` → remove it now, before running `git worktree add` for the new task:
+
+```bash
+git worktree remove <path>
+```
+
+This is not the same as the periodic "weekly ritual" in `.claude/commands/worktree.md` — it's a mandatory pre-check for *this* task, every time, not a background chore. Evidence this is a real failure mode, not a hypothetical: a single session on IPI-536 created `wt-ipi-536-foundation` (implementation) and later `wt-ipi-536-qa` (QA pass) without removing the first once its PR merged — two worktrees open for one ticket, unbounded growth across a long session if repeated.
+
 ```bash
 # 1. Create branch + worktree before any code change
 git worktree add ../wt-ipi-NNN -b ipi/NNN-short-name
