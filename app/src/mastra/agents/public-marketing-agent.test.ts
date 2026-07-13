@@ -204,8 +204,15 @@ describe("Mastra registry — public-marketing agent", () => {
     expect(agent.id).toBe("public-marketing");
   });
 
-  it("is NOT in the shared operator registry (C5 fix — must stay in publicMastra only)", async () => {
-    const { agents } = await import("@/mastra/index");
-    expect(agents).not.toHaveProperty("public-marketing");
-  });
+  it(
+    "is NOT in the shared operator registry (C5 fix — must stay in publicMastra only)",
+    async () => {
+      // @/mastra/index cold-imports the full agent/workflow/storage graph —
+      // measured 1.2-1.3s idle, too little headroom against the 5s default
+      // under any real machine load. Scoped timeout, not a global bump.
+      const { agents } = await import("@/mastra/index");
+      expect(agents).not.toHaveProperty("public-marketing");
+    },
+    15_000,
+  );
 });
