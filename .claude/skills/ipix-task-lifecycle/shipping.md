@@ -30,7 +30,7 @@ Coordinator for **closing the loop** — PR, Linear, [`tasks/plan/todo.md`](../.
 [ ] 10. Commit with conventional message (template below).
 [ ] 11. Report: issue link, PR link, files changed, verify summary.
 [ ] 12. Push / merge only if user explicitly asks.
-[ ] 13. worktree:pre-delete before removing worktree (if applicable).
+[ ] 13. **Worktree teardown (if used):** [documentation preservation gate](../worktrees/SKILL.md#documentation-preservation-gate-mandatory--p0) → commit/split docs → `npm run worktree:pre-delete` → `git worktree remove <path>` → `npm run worktree:audit`.
 ```
 
 ---
