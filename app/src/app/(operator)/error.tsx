@@ -31,12 +31,12 @@ export default function OperatorError({
       <div className="flex gap-4">
         <button
           onClick={reset}
-          className="rounded-[var(--radius-md)] bg-[var(--color-text)] px-6 py-3 text-sm font-medium text-[var(--color-bg)] transition-opacity hover:opacity-80"
+          className="rounded-[var(--radius-md)] bg-[var(--color-action)] px-6 py-3 text-sm font-medium text-[var(--color-action-text)] transition-opacity hover:opacity-80"
         >
           Try Again
         </button>
         <Link
-          href="/"
+          href="/app"
           className="rounded-[var(--radius-md)] border border-[var(--color-border)] px-6 py-3 text-sm font-medium transition-opacity hover:opacity-80"
         >
           Return to Dashboard
