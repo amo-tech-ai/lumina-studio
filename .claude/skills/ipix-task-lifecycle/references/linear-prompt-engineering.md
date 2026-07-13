@@ -99,13 +99,34 @@ UPDATE crm_deals SET stage = 'won' WHERE id = …;
 
 ## Completion steps A–E
 - [ ] **B2** … — proof: `<command>` exit 0 on `<sha>`
-```
+
+---
+
+## Verification instructions (for the implementing agent)
+
+**Naming — does it match what's already there?**
+- Before writing a new function/type/component name, grep for it: `grep -rn "<name>" app/src/` — if something with that name already exists, confirm in a comment whether this is an intentional wrapper/extension or a naming collision to rename away from. Never let two independent implementations share a name silently.
+
+**Source of truth — where does each claim in this ticket come from?**
+| Claim in this issue | Source (file:line / table / doc) | Re-check command |
+|---|---|---|
+| <fact> | <path> | <command> |
+
+Fill this table with the actual sources used when the issue was written. An empty table is a red flag — it means claims were asserted, not verified.
+
+**Proof — what actually demonstrates "done"?**
+- Every AC/completion step already has a `proof:` command. Run it yourself before checking the box — the ticket's own text is not proof, the command's exit code is.
+- If a proof command is missing, stale, or fails, stop and flag it on the issue with the actual command output — do not mark Done on the assumption it would pass.
+
+**If something looks wrong:** flag it as a comment with the grep/probe output as evidence. Do not silently rewrite the ticket to match what you built, and do not silently build around a spec bug — surface it.
+
+---
 
 Optional XML-style tags (`<example>`, `<constraints>`) help agents parse sections; they render fine in Linear markdown.
 
 ---
 
-## Seven rules for Linear prompts
+## Eight rules for Linear prompts
 
 ### 1. Clarity — one interpretation only
 
@@ -164,6 +185,15 @@ Add **E — Regression guard** AC for safety-critical work:
 - Named `verify-rls` probe in AC
 - Browser smoke: "click Approve → lands on `/app/brand/:id`"
 
+### 8. Self-verification — the agent checks the ticket's own claims, not just its own code
+
+Every issue includes a **Verification instructions** block (see template) so the implementing agent re-checks the ticket's facts against live reality before treating them as true:
+
+- Naming: grep before reusing/extending a name — confirm wrapper-vs-collision.
+- Source of truth: a claim → source-file/table → re-check-command table, not assertions.
+- Proof: run each AC's `proof:` command yourself; a ticket's prose is never proof.
+- A ticket written months ago can drift from the codebase — this rule exists so drift is caught at implementation time, not just at spec time.
+
 ---
 
 ## Relations must mirror AC
@@ -212,6 +242,7 @@ Run mentally (or via future `scripts/linear-lint-issue-spec.mjs`) before marking
 [ ] Every A–E step has proof:
 [ ] blockedBy matches any cross-issue AC dependency
 [ ] Local md synced to Linear (or sync planned in step E)
+[ ] Verification instructions block present — naming-check + source-of-truth table + proof-first directive
 ```
 
 ---
