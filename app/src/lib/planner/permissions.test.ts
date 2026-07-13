@@ -24,7 +24,7 @@ describe("permissions.ts::getEffectivePermissions", () => {
       Promise.resolve({ data: [row], error: null }),
     );
 
-    const result = await getEffectivePermissions("user-1", "inst-1", supabase);
+    const result = await getEffectivePermissions("inst-1", supabase);
 
     // Asserts the exact RPC name and args — not just that *a* query ran.
     // planner_get_my_assignment is a SECURITY DEFINER RPC hard-scoped to
@@ -63,20 +63,16 @@ describe("permissions.ts::getEffectivePermissions", () => {
     );
 
     await expect(
-      getEffectivePermissions("user-1", "inst-1", supabase),
+      getEffectivePermissions("inst-1", supabase),
     ).rejects.toThrow();
   });
 
-  it("unassigned user gets zero permissions, same as calling the engine directly", async () => {
+  it("no assignment row (unassigned) gets zero permissions, same as calling the engine directly", async () => {
     const supabase = makeSupabaseStub(() =>
       Promise.resolve({ data: [], error: null }),
     );
 
-    const result = await getEffectivePermissions(
-      "unknown-user",
-      "inst-1",
-      supabase,
-    );
+    const result = await getEffectivePermissions("inst-1", supabase);
 
     expect(result).toEqual({
       role: null,

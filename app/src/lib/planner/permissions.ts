@@ -48,12 +48,19 @@ async function fetchMyAssignment(
   };
 }
 
+// No `userId` parameter: `planner_get_my_assignment` is hardcoded to
+// auth.uid(), so this can only ever answer "what are MY OWN permissions" —
+// accepting a userId here would silently ignore any value that didn't match
+// the current session, a contract mismatch caught by PR #347 review. The
+// engine call still needs a userId to match `assignments` against; deriving
+// it from the fetched row (rather than trusting a caller-supplied one) keeps
+// that match meaningful without reopening the mismatch this fixes.
 export async function getEffectivePermissions(
-  userId: string,
   instanceId: string,
   supabase: Db,
 ): Promise<EffectivePermissions> {
   const assignment = await fetchMyAssignment(instanceId, supabase);
   const assignments = assignment ? [assignment] : [];
+  const userId = assignment?.userId ?? "";
   return engine.getEffectivePermissions(userId, assignments, instanceId);
 }
