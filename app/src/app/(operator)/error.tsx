@@ -16,15 +16,15 @@ export default function OperatorError({
 
   return (
     <div className="flex flex-col items-center justify-center px-6 py-24 text-center">
-      <p className="mb-2 text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-accent)]">
+      <p className="mb-2 text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-text-muted)]">
         Something went wrong
       </p>
       <h1 className="mb-3 text-3xl font-light">Unexpected Error</h1>
-      <p className="mb-2 max-w-md text-sm leading-relaxed text-[var(--color-muted)]">
+      <p className="mb-2 max-w-md text-sm leading-relaxed text-[var(--color-text-secondary)]">
         An unexpected error occurred. Try again or return to the dashboard.
       </p>
       {error.digest && (
-        <p className="mb-8 max-w-md text-xs text-[var(--color-muted)] opacity-60">
+        <p className="mb-8 max-w-md text-xs text-[var(--color-text-muted)]">
           Error digest: {error.digest}
         </p>
       )}
