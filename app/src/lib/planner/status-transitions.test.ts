@@ -31,9 +31,17 @@ describe("isValidTransition", () => {
 });
 
 describe("getInstanceUiTreatment", () => {
-  it("returns a label and tone for every status", () => {
+  it("returns a label and tone for every one of the 7 stored statuses", () => {
+    // All 7 PlannerInstanceStatus values, not just 3 — a QA pass on IPI-536
+    // found only draft/blocked/completed were covered here. "at_risk" is
+    // deliberately absent: it's a derived dashboard metric, never a stored
+    // instance status, so there is nothing to test it against here.
     expect(getInstanceUiTreatment("draft")).toEqual({ label: "Draft", tone: "neutral" });
+    expect(getInstanceUiTreatment("planned")).toEqual({ label: "Planned", tone: "info" });
+    expect(getInstanceUiTreatment("active")).toEqual({ label: "Active", tone: "info" });
     expect(getInstanceUiTreatment("blocked")).toEqual({ label: "Blocked", tone: "danger" });
     expect(getInstanceUiTreatment("completed")).toEqual({ label: "Completed", tone: "success" });
+    expect(getInstanceUiTreatment("archived")).toEqual({ label: "Archived", tone: "neutral" });
+    expect(getInstanceUiTreatment("cancelled")).toEqual({ label: "Cancelled", tone: "neutral" });
   });
 });
