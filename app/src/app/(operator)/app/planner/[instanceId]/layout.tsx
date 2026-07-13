@@ -23,15 +23,20 @@ export default async function PlannerInstanceLayout({
 
   // RLS on planner.instances (org-scoped) means a cross-org id returns zero
   // rows here rather than needing a manual org check — same as an id that
-  // simply doesn't exist. Both cases 404.
+  // simply doesn't exist. Both cases 404. A real query failure (network,
+  // RLS-policy regression, schema drift) is a distinct case: maybeSingle()
+  // returns { data: null, error } for that, not { data: null, error: null }
+  // like a genuine miss — thrown here so error.tsx catches it instead of
+  // masking a real outage as "Plan not found" (PR #347 review finding).
   const supabase = await createSupabaseServerClient();
-  const { data: instance } = await supabase
+  const { data: instance, error } = await supabase
     .schema("planner")
     .from("instances")
     .select("id")
     .eq("id", instanceId)
     .maybeSingle();
 
+  if (error) throw error;
   if (!instance) notFound();
 
   return <>{children}</>;

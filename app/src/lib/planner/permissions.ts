@@ -18,25 +18,34 @@ export type EffectivePermissions = ReturnType<
 
 const engine = new PlannerEngine();
 
-async function fetchAssignments(
+// planner.assignments' RLS policy (assignments_select_org) requires the
+// CALLER to already be manager+ before they can SELECT any row at all —
+// including their own. A contributor/viewer querying this table directly
+// with their own RLS-scoped client would get zero rows back and be
+// incorrectly treated as unassigned. public.planner_get_my_assignment is a
+// SECURITY DEFINER RPC hard-scoped to auth.uid() that answers "what is MY
+// OWN role here" regardless of that manager-only policy (found in PR #347
+// review; see migration 20260712235000_planner_get_my_assignment_rpc.sql).
+async function fetchMyAssignment(
   instanceId: string,
   supabase: Db,
-): Promise<PlannerAssignment[]> {
-  const { data, error } = await supabase
-    .schema("planner")
-    .from("assignments")
-    .select("id, instance_id, user_id, role, permissions")
-    .eq("instance_id", instanceId);
+): Promise<PlannerAssignment | null> {
+  const { data, error } = await supabase.rpc("planner_get_my_assignment", {
+    p_instance_id: instanceId,
+  });
 
   if (error) throw error;
 
-  return (data ?? []).map((row) => ({
+  const row = data?.[0];
+  if (!row) return null;
+
+  return {
     id: row.id,
     instanceId: row.instance_id,
     userId: row.user_id,
     role: row.role as PlannerAssignment["role"],
     permissions: row.permissions as Record<string, unknown> | null,
-  }));
+  };
 }
 
 export async function getEffectivePermissions(
@@ -44,6 +53,7 @@ export async function getEffectivePermissions(
   instanceId: string,
   supabase: Db,
 ): Promise<EffectivePermissions> {
-  const assignments = await fetchAssignments(instanceId, supabase);
+  const assignment = await fetchMyAssignment(instanceId, supabase);
+  const assignments = assignment ? [assignment] : [];
   return engine.getEffectivePermissions(userId, assignments, instanceId);
 }

@@ -2,7 +2,12 @@
 
 export function PlannerLoadingSkeleton() {
   return (
-    <div style={{ padding: "2rem" }} aria-busy="true" aria-label="Loading Planner">
+    <div
+      style={{ padding: "2rem" }}
+      role="status"
+      aria-busy="true"
+      aria-label="Loading Planner"
+    >
       <div
         style={{
           height: 24,
