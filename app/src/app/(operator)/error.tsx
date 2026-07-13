@@ -20,11 +20,14 @@ export default function OperatorError({
         Something went wrong
       </p>
       <h1 className="mb-3 text-3xl font-light">Unexpected Error</h1>
-      <p className="mb-8 max-w-md text-sm leading-relaxed text-[var(--color-muted)]">
-        {error.digest
-          ? `Error digest: ${error.digest}`
-          : "An unexpected error occurred. Try again or return to the dashboard."}
+      <p className="mb-2 max-w-md text-sm leading-relaxed text-[var(--color-muted)]">
+        An unexpected error occurred. Try again or return to the dashboard.
       </p>
+      {error.digest && (
+        <p className="mb-8 max-w-md text-xs text-[var(--color-muted)] opacity-60">
+          Error digest: {error.digest}
+        </p>
+      )}
       <div className="flex gap-4">
         <button
           onClick={reset}
@@ -33,7 +36,7 @@ export default function OperatorError({
           Try Again
         </button>
         <Link
-          href="/app"
+          href="/"
           className="rounded-[var(--radius-md)] border border-[var(--color-border)] px-6 py-3 text-sm font-medium transition-opacity hover:opacity-80"
         >
           Return to Dashboard
