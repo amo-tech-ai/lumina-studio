@@ -1,0 +1,37 @@
+[
+  {
+    "name": "J11_health",
+    "ok": true,
+    "detail": "{\"status\":\"ok\",\"gatewayUrl\":\"http://127.0.0.1:8787\",\"hasApiKey\":false,\"gateway\":{\"status\":\"ok\",\"service\":\"ai-gateway\"},\"adapterAvailable\":true}"
+  },
+  {
+    "name": "Worker_health_tab",
+    "ok": true,
+    "detail": "{\"status\":\"ok\",\"service\":\"ai-gateway\"}"
+  },
+  {
+    "name": "J09_embed",
+    "ok": true,
+    "detail": "{\"status\":200,\"dims\":[768,768]}"
+  },
+  {
+    "name": "J09_invalid_empty",
+    "ok": true,
+    "detail": "{\"code\":\"invalid_request\",\"message\":\"input must contain at least one non-empty string\",\"requestId\":\"req_4af29980-d16a-4515-aa07-0fc8b01d2240\"}"
+  },
+  {
+    "name": "J09_invalid_model",
+    "ok": true,
+    "detail": "{\"code\":\"unsupported_embedding_model\",\"message\":\"Model 'text-embedding-3-large' is not configured for embeddings\",\"requestId\":\"req_463b7159-3bf0-4792-a046-2939e9ebd175\"}"
+  },
+  {
+    "name": "J08_ui_loads",
+    "ok": true,
+    "detail": "clothing page loaded; chat widgets=0"
+  },
+  {
+    "name": "J08_worker_fast_chat",
+    "ok": true,
+    "detail": "BROWSER_OK"
+  }
+]
