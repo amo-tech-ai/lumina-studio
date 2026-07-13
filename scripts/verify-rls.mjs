@@ -1438,6 +1438,42 @@ try {
   });
   assert(!viewerAssignErr, "owner can assign viewer on planner instance");
 
+  // IPI-536 · PR #347 review fix — planner_get_my_assignment RPC probes.
+  // assignments_select_org (this file, above) gates SELECT on planner.assignments
+  // behind manager+ — a viewer/contributor querying the table directly for their
+  // OWN row gets 0 rows back under RLS, not an error (the bug). The RPC exists
+  // specifically to answer "what's my own role" without needing manager+.
+  const { data: viewerDirectAssign, error: viewerDirectAssignErr } = await plannerB
+    .from("assignments")
+    .select("id, role")
+    .eq("instance_id", instA.id)
+    .eq("user_id", userB.user.id);
+  assert(
+    !viewerDirectAssignErr && (viewerDirectAssign ?? []).length === 0,
+    "viewer cannot SELECT their own planner.assignments row directly (assignments_select_org is manager+ only — this is the bug the RPC below fixes)",
+  );
+
+  const { data: viewerRpcAssign, error: viewerRpcAssignErr } = await userB.client.rpc(
+    "planner_get_my_assignment",
+    { p_instance_id: instA.id },
+  );
+  assert(
+    !viewerRpcAssignErr &&
+      (viewerRpcAssign ?? []).length === 1 &&
+      viewerRpcAssign[0].role === "viewer" &&
+      viewerRpcAssign[0].user_id === userB.user.id,
+    "viewer CAN read their own row via planner_get_my_assignment RPC (the fix)",
+  );
+
+  const { data: viewerRpcNoInstance, error: viewerRpcNoInstanceErr } = await userB.client.rpc(
+    "planner_get_my_assignment",
+    { p_instance_id: crypto.randomUUID() },
+  );
+  assert(
+    !viewerRpcNoInstanceErr && (viewerRpcNoInstance ?? []).length === 0,
+    "planner_get_my_assignment returns empty for an instance the caller has no assignment on (no enumeration leak)",
+  );
+
   const { data: viewerTaskRead, error: viewerTaskReadErr } = await plannerB
     .from("tasks")
     .select("id")

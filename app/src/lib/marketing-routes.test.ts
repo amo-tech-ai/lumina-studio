@@ -16,6 +16,7 @@ const OPERATOR_SECTIONS = [
   "crm",
   "matching",
   "onboarding",
+  "planner",
   "preview",
 ] as const;
 

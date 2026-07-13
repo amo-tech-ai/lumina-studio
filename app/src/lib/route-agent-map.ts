@@ -10,6 +10,7 @@ const BOOKING_WIZARD_PATH = /^\/app\/matching\/talent\/[^/]+\/book(\/|$)/;
 const ROUTE_MAP: [prefix: string, agentId: string][] = [
   ["/app/crm", "crm-assistant"], // IPI-368 · CRM-AI-002
   ["/app/shoots", "production-planner"],
+  ["/app/planner", "production-planner"], // IPI-536 — same agent as DEFAULT_AGENT, explicit so a future default change doesn't silently retarget Planner
   ["/app/campaigns", "creative-director"],
   ["/app/brand", "brand-intelligence"],  // IPI-130
   ["/app/assets", "creative-director"],  // IPI-247 · DESIGN-070

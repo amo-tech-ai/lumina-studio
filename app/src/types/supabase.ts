@@ -6820,6 +6820,16 @@ export type Database = {
         Args: { n: Database["public"]["Tables"]["notifications"]["Row"] }
         Returns: boolean
       }
+      planner_get_my_assignment: {
+        Args: { p_instance_id: string }
+        Returns: {
+          id: string
+          instance_id: string
+          permissions: Json
+          role: string
+          user_id: string
+        }[]
+      }
       search_brands: {
         Args: {
           p_embedding: string
