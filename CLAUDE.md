@@ -233,3 +233,10 @@ For automated browser testing (`npm run dev` on port 3002):
 | Password | See `.env.local` (`QA_PASSWORD`) or ask the team lead |
 
 These are test-only accounts with no real data. Safe to use in browser automation, Playwright, and MCP browser tools.
+
+## Response style — clarity first
+
+Audit reports, plans, and explanations must be easy to understand, not just complete. Prefer plain language over jargon, short sentences over long ones, and tables/checklists over dense prose. When a finding is technical, add a one-line plain-English translation of why it matters. Organize long outputs (todos, audits, roadmaps) so a new team member could follow them without needing prior context.
+
+- **Use real iPix examples, not generic ones.** When an abstract point needs illustrating, ground it in this repo's own screens, tickets, or code — e.g. "like IPI-536's `permissions.ts` wrapper," not "like a typical service wrapper."
+- **Never cite a bare issue number.** `IPI-582` or `IPI-483` means nothing to a reader without Linear open. Always pair the number with its actual title on first mention — e.g. `IPI-582 (Task Detail and Safe Mutations)` — the same rule applies to any PR number.
