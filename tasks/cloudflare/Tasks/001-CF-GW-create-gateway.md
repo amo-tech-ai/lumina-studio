@@ -57,7 +57,7 @@ Click the Create Gateway button.
 
 ### Step 4: Name the gateway
 
-Enter the name `ipix-prod` for the production gateway. This name will be used in the wrangler.jsonc configuration to route AI requests through this gateway.
+Enter the name `ipix-prod` for the production gateway. This name is the gateway ID — it gets passed at request time in application code (see Step 6 and "Connecting the Gateway to the Worker" below), not written into `wrangler.jsonc`.
 
 Alternatively, use the `default` gateway, which is automatically created on the first request. However, a named gateway is recommended for production to keep analytics and configuration separate.
 
