@@ -1550,6 +1550,173 @@ try {
     .eq("id", taskA.id);
   assert(!mgrUpdErr, "manager can update planner.tasks without assignee");
 
+  // ── IPI-575 · PLN-DATA-001C — planner member mutation RPC probes ──
+  // planner_invite_member / planner_update_role / planner_remove_assignment.
+  // At this point: userA = owner on instA, userB = manager on instA (promoted
+  // above). Note userB is NOT a valid "not in org" fixture — the earlier CRM/
+  // brand-score section of this script already adds userB to org_members(orgA)
+  // as an editor (see "user A promotes user B to org editor" above) — a real
+  // "not in org" probe needs a dedicated user with zero org_members(orgA) rows.
+
+  const { error: anonInviteErr } = await anon.rpc("planner_invite_member", {
+    p_instance_id: instA.id,
+    p_email: "nobody@example.com",
+    p_role: "viewer",
+  });
+  assert(!!anonInviteErr, "anon cannot execute planner_invite_member (no EXECUTE grant)");
+
+  const { error: crossOrgInviteErr } = await userB.client.rpc("planner_invite_member", {
+    p_instance_id: crypto.randomUUID(),
+    p_email: emailB,
+    p_role: "viewer",
+  });
+  assert(
+    !!crossOrgInviteErr && crossOrgInviteErr.message.includes("instance_not_found"),
+    "invite on a nonexistent/foreign instance fails closed (instance_not_found)",
+  );
+
+  const emailF = `plt002-rls-f-${stamp}@example.com`;
+  let userF;
+  try {
+    userF = await createTestUser(emailF); // real account, deliberately NOT added to org_members(orgA)
+    const { error: notInOrgErr } = await userA.client.rpc("planner_invite_member", {
+      p_instance_id: instA.id,
+      p_email: emailF,
+      p_role: "viewer",
+    });
+    assert(
+      !!notInOrgErr && notInOrgErr.message.includes("user_not_in_org"),
+      "invite rejects a real email outside the instance's org (user_not_in_org)",
+    );
+  } finally {
+    if (userF?.user?.id) {
+      const { error } = await deleteAuthUser(userF.user.id);
+      if (error) console.warn(`warn: cleanup user F: ${error.message}`);
+      else pass("cleaned up user F (service role)");
+    }
+  }
+
+  const { error: ownerRoleErr } = await userA.client.rpc("planner_invite_member", {
+    p_instance_id: instA.id,
+    p_email: emailB,
+    p_role: "owner",
+  });
+  assert(
+    !!ownerRoleErr && ownerRoleErr.message.includes("invalid_role"),
+    "invite rejects p_role='owner' (invalid_role)",
+  );
+
+  // User D — a genuine org A member (org_members seeded via service role) with
+  // no planner assignment yet — drives the successful-invite → duplicate →
+  // concurrent-race → role-hierarchy → last-owner flow below.
+  const emailD = `plt002-rls-d-${stamp}@example.com`;
+  let userD;
+  try {
+    userD = await createTestUser(emailD);
+    assert(!!admin, "service_role admin client required to seed org_members for user D");
+    const { error: orgMemberDErr } = await admin
+      .from("org_members")
+      .insert({ org_id: orgAId, user_id: userD.user.id, role: "editor" });
+    assert(!orgMemberDErr, "seed user D as org A member (service role)");
+
+    const { data: invitedD, error: inviteDErr } = await userA.client.rpc("planner_invite_member", {
+      p_instance_id: instA.id,
+      p_email: emailD,
+      p_role: "contributor",
+    });
+    assert(
+      !inviteDErr && (invitedD ?? []).length === 1 && invitedD[0].role === "contributor",
+      "owner successfully invites an org-A member by email",
+    );
+
+    const { error: dupeErr } = await userA.client.rpc("planner_invite_member", {
+      p_instance_id: instA.id,
+      p_email: emailD.toUpperCase(), // also exercises email normalization (trim+lower)
+      p_role: "viewer",
+    });
+    assert(
+      !!dupeErr && dupeErr.message.includes("already_member"),
+      "duplicate invite with a case-varied email is rejected as already_member",
+    );
+
+    // Concurrency: two identical invite requests for a fresh user, fired at once —
+    // the unique (instance_id, user_id) constraint must let exactly one through.
+    const emailE = `plt002-rls-e-${stamp}@example.com`;
+    let userE;
+    try {
+      userE = await createTestUser(emailE);
+      const { error: orgMemberEErr } = await admin
+        .from("org_members")
+        .insert({ org_id: orgAId, user_id: userE.user.id, role: "editor" });
+      assert(!orgMemberEErr, "seed user E as org A member (service role)");
+
+      const raceResults = await Promise.all([
+        userA.client.rpc("planner_invite_member", {
+          p_instance_id: instA.id, p_email: emailE, p_role: "viewer",
+        }),
+        userA.client.rpc("planner_invite_member", {
+          p_instance_id: instA.id, p_email: emailE, p_role: "viewer",
+        }),
+      ]);
+      const raceSuccesses = raceResults.filter((r) => !r.error).length;
+      const raceAlreadyMember = raceResults.filter((r) =>
+        r.error?.message.includes("already_member"),
+      ).length;
+      assert(
+        raceSuccesses === 1 && raceAlreadyMember === 1,
+        "concurrent duplicate invite: exactly one succeeds, the other gets already_member",
+      );
+    } finally {
+      if (userE?.user?.id) {
+        await admin.from("org_members").delete().eq("org_id", orgAId).eq("user_id", userE.user.id);
+        const { error } = await deleteAuthUser(userE.user.id);
+        if (error) console.warn(`warn: cleanup user E: ${error.message}`);
+      }
+    }
+
+    const { error: mgrOnContribErr } = await userB.client.rpc("planner_update_role", {
+      p_instance_id: instA.id, p_target_user_id: userD.user.id, p_new_role: "viewer",
+    });
+    assert(!mgrOnContribErr, "manager can update a contributor/viewer target's role");
+
+    const { error: mgrOnOwnerErr } = await userB.client.rpc("planner_update_role", {
+      p_instance_id: instA.id, p_target_user_id: userA.user.id, p_new_role: "contributor",
+    });
+    assert(
+      !!mgrOnOwnerErr && mgrOnOwnerErr.message.includes("insufficient_role_for_target"),
+      "manager cannot touch the owner's assignment (insufficient_role_for_target)",
+    );
+
+    const { error: lastOwnerErr } = await userA.client.rpc("planner_remove_assignment", {
+      p_instance_id: instA.id, p_target_user_id: userA.user.id,
+    });
+    assert(
+      !!lastOwnerErr && lastOwnerErr.message.includes("last_owner_protected"),
+      "removing the last owner is rejected (last_owner_protected)",
+    );
+
+    // userD is 'viewer' after the manager-driven update above.
+    const { error: viewerInviteErr } = await userD.client.rpc("planner_invite_member", {
+      p_instance_id: instA.id, p_email: emailB, p_role: "viewer",
+    });
+    assert(
+      !!viewerInviteErr && viewerInviteErr.message.includes("insufficient_role"),
+      "viewer cannot invite members (insufficient_role)",
+    );
+
+    const { error: removeDErr } = await userA.client.rpc("planner_remove_assignment", {
+      p_instance_id: instA.id, p_target_user_id: userD.user.id,
+    });
+    assert(!removeDErr, "owner can remove a viewer/contributor-tier member");
+  } finally {
+    if (userD?.user?.id) {
+      await admin.from("org_members").delete().eq("org_id", orgAId).eq("user_id", userD.user.id);
+      const { error } = await deleteAuthUser(userD.user.id);
+      if (error) console.warn(`warn: cleanup user D: ${error.message}`);
+      else pass("cleaned up user D (service role)");
+    }
+  }
+
   // User C — no org membership — cannot read planner rows
   const emailC = `plt002-rls-c-${stamp}@example.com`;
   let userC;

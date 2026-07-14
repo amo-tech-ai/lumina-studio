@@ -7,6 +7,7 @@ import {
   derivePlannerDashboardSummary,
   getPlannerDashboardSummary,
   isPlannerInstanceAtRisk,
+  listMembers,
   listPlannerInstances,
 } from "./queries";
 
@@ -385,5 +386,51 @@ describe("listPlannerInstances", () => {
       error: { code: "QUERY_FAILED", message: "Planner instances could not be loaded." },
     });
     expect(client.from).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("listMembers", () => {
+  it("maps assignment rows to PlannerAssignment", async () => {
+    const query = makeQuery({
+      data: [
+        {
+          id: "a1",
+          instance_id: "i1",
+          user_id: "u1",
+          role: "owner",
+          permissions: null,
+        },
+      ],
+      error: null,
+    });
+    const client = mockClient(query);
+
+    const result = await listMembers("i1");
+
+    expect(result).toEqual({
+      ok: true,
+      data: [{ id: "a1", instanceId: "i1", userId: "u1", role: "owner", permissions: null }],
+    });
+    expect(client.from).toHaveBeenCalledWith("assignments");
+    expect(query.eq).toHaveBeenCalledWith("instance_id", "i1");
+  });
+
+  it("returns an empty list, not an error, for a contributor/viewer caller (RLS is manager+ only)", async () => {
+    const query = makeQuery({ data: [], error: null });
+    mockClient(query);
+
+    const result = await listMembers("i1");
+
+    expect(result).toEqual({ ok: true, data: [] });
+  });
+
+  it("returns a typed query failure without leaking the raw error", async () => {
+    const query = makeQuery({ data: null, error: { message: "private database error" } });
+    mockClient(query);
+
+    await expect(listMembers("i1")).resolves.toEqual({
+      ok: false,
+      error: { code: "QUERY_FAILED", message: "Planner members could not be loaded." },
+    });
   });
 });
