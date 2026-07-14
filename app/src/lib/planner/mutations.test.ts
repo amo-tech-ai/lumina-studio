@@ -80,8 +80,14 @@ describe("inviteMember", () => {
   });
 });
 
-describe("auditable atomicity", () => {
-  it("an RPC failure after any point maps to an error — the DB rolls back the assignment", async () => {
+// NOTE: Atomic rollback of assignment + audit event is structurally guaranteed
+// by PostgreSQL function transaction semantics (both statements execute in the
+// same function body / single transaction). A true fault-injection test
+// (force planner.events INSERT to fail, verify no assignment remains) requires
+// a live DB harness — not a mocked RPC. This test only confirms the error
+// mapping layer; it does NOT prove database-level rollback.
+describe("error mapping", () => {
+  it("maps known errors to typed codes without leaking raw Postgres message", async () => {
     const sb = mockRpc(null, { message: "planner_invite_member: already_member" });
     const result = await inviteMember({ instanceId: "i1", email: "dupe@example.com", role: "viewer" }, sb as never);
     expect(result.ok).toBe(false);
