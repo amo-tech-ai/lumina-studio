@@ -38,6 +38,17 @@ describe("inviteMember", () => {
     if (!outResult.ok) expect(outResult.error.code).toBe("user_not_available");
   });
 
+  it("maps pre-migration no_account_found/user_not_in_org to the same cloaked result (deploy-order safety net)", async () => {
+    for (const legacyCode of ["no_account_found", "user_not_in_org"]) {
+      const sb = mockRpc(null, { message: `planner_invite_member: ${legacyCode}` });
+      const result = await inviteMember({ instanceId: "i1", email: "x@example.com", role: "viewer" }, sb as never);
+      expect(result).toEqual({
+        ok: false,
+        error: { code: "user_not_available", message: "That person is not available to invite." },
+      });
+    }
+  });
+
   it("maps invalid_role (e.g. inviting as owner)", async () => {
     const sb = mockRpc(null, { message: "planner_invite_member: invalid_role" });
     const result = await inviteMember({ instanceId: "i1", email: "x@example.com", role: "owner" as never }, sb as never);

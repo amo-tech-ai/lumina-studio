@@ -30,10 +30,18 @@ function toAssignment(row: { id: string; instance_id: string; user_id: string; r
   };
 }
 
+// SEC-004 cloaks "no account" vs. "not in org" behind one message so a caller
+// can't probe registration status. The RPC only raises user_not_available
+// post-migration (20260714211800, PR #390) — until that migration has landed
+// everywhere this app code runs, it may still raise the pre-migration codes.
+// Recognize all three but map them to the *same* message, so a schema that's
+// momentarily behind never regresses to UNKNOWN_ERROR or reopens the leak.
+const USER_UNAVAILABLE_CODES = ["user_not_available", "no_account_found", "user_not_in_org"];
+
 function memberMutationError(fn: string, message: string): MutationResult<never> {
   const code =
     ["invalid_role", "instance_not_found", "insufficient_role_for_target", "insufficient_role",
-      "user_not_available", "already_member", "member_not_found", "last_owner_protected"]
+      ...USER_UNAVAILABLE_CODES, "already_member", "member_not_found", "last_owner_protected"]
       .find((known) => message.includes(known)) ?? "UNKNOWN_ERROR";
 
   if (code === "UNKNOWN_ERROR") {
@@ -48,12 +56,14 @@ function memberMutationError(fn: string, message: string): MutationResult<never>
     insufficient_role: "You don't have permission to do that.",
     insufficient_role_for_target: "Only an owner can perform that action.",
     user_not_available: "That person is not available to invite.",
+    no_account_found: "That person is not available to invite.",
+    user_not_in_org: "That person is not available to invite.",
     already_member: "That person is already a member.",
     member_not_found: "That member could not be found.",
     last_owner_protected: "A plan must always have at least one owner.",
   };
 
-  return { ok: false, error: { code, message: humanMessage[code] } };
+  return { ok: false, error: { code: USER_UNAVAILABLE_CODES.includes(code) ? "user_not_available" : code, message: humanMessage[code] } };
 }
 
 export async function inviteMember(
