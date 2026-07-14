@@ -96,14 +96,15 @@ describe("InviteMemberDialog", () => {
     expect(screen.getByRole("dialog")).toBeDefined();
   });
 
-  it("closes and unmounts the dialog on Cancel — focus-return is Radix's own FocusScope behavior", async () => {
+  it("closes and unmounts the dialog on Cancel — focus-return verified live, not here", async () => {
     // ponytail: jsdom doesn't implement real focus/blur semantics (documented
     // jsdom limitation, e.g. jsdom/jsdom#2586), so document.activeElement
-    // after an unmount can't be reliably asserted here even though the
-    // underlying wiring is correct — DialogContentImpl (@radix-ui/react-
-    // dialog/src/dialog.tsx) passes onCloseAutoFocus straight to FocusScope's
-    // onUnmountAutoFocus, the same primitive evidence-dialog.tsx already
-    // relies on elsewhere in this app. Browser-verified manually instead.
+    // after an unmount can't be reliably asserted in this environment. This
+    // isn't Radix's default FocusScope behavior — this component has no
+    // <DialogTrigger>, so an explicit onCloseAutoFocus + triggerRef.focus()
+    // was added (Sentry caught the missing case in review; confirmed live in
+    // a real browser that focus landed on <body> without the fix, and on the
+    // "Add member" button with it).
     const user = userEvent.setup();
     render(<InviteMemberDialog instanceId="i1" />);
     await user.click(screen.getByRole("button", { name: "Add member" }));

@@ -6,7 +6,7 @@
 // existing registered account immediately; there is no multi-step
 // invitation lifecycle to render any state for.
 
-import { useState, useTransition } from "react";
+import { useRef, useState, useTransition } from "react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -34,6 +34,12 @@ export function InviteMemberDialog({ instanceId }: { instanceId: string }) {
   const [role, setRole] = useState<PlannerRole>("contributor");
   const [error, setError] = useState<string | null>(null);
   const [isSaving, startTransition] = useTransition();
+  // No <DialogTrigger> here (this button also needs an onClick outside
+  // Radix's own open-state machine), so FocusScope's default focus-return
+  // has no trigger element to restore to — confirmed live in a real browser
+  // (focus landed on <body>, not this button). onCloseAutoFocus below
+  // restores it explicitly.
+  const triggerRef = useRef<HTMLButtonElement>(null);
 
   function reset() {
     setEmail("");
@@ -63,10 +69,17 @@ export function InviteMemberDialog({ instanceId }: { instanceId: string }) {
         if (!next) reset();
       }}
     >
-      <Button type="button" onClick={() => setOpen(true)}>
+      <Button type="button" ref={triggerRef} onClick={() => setOpen(true)}>
         Add member
       </Button>
-      <DialogContent id="pl-invite-dialog" className="sm:max-w-md">
+      <DialogContent
+        id="pl-invite-dialog"
+        className="sm:max-w-md"
+        onCloseAutoFocus={(e) => {
+          e.preventDefault();
+          triggerRef.current?.focus();
+        }}
+      >
         <DialogHeader>
           <DialogTitle>Add member</DialogTitle>
         </DialogHeader>
@@ -101,7 +114,14 @@ export function InviteMemberDialog({ instanceId }: { instanceId: string }) {
             </p>
           ) : null}
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => setOpen(false)}>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                setOpen(false);
+                reset();
+              }}
+            >
               Cancel
             </Button>
             <Button type="submit" disabled={isSaving || !email.trim()}>
