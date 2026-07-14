@@ -56,13 +56,41 @@ There is no dashboard or template option for agent migration. Each agent is migr
 
 ## Migration Steps (repeat for each agent)
 
+### Step 0: Establish per-request env access (do this once, before any agent)
+
+**Found 2026-07-14 (PR review) — every "Detailed Migration" step below originally said `resolveModel("tier", env)` without ever explaining where `env` comes from. This gap is real and blocks all nine agents equally, so it's fixed here once instead of nine times.**
+
+The problem: every agent currently resolves its model at **module top level** — e.g. `app/src/mastra/agents/index.ts:9`: `const MODEL = resolveModel("default");`, evaluated once at import time, before any request exists. Cloudflare's `env.AI` binding is only available inside a request handler — it cannot be passed to a module-level call, no matter how the function signature is written.
+
+**Fix — use Mastra's dynamic model resolution, not a static top-level constant.** Confirmed present in the installed `@mastra/core` version (`node_modules/@mastra/core/dist/agent/types.d.ts`): an agent's `model` field accepts a function `({ requestContext }) => model`, evaluated per-request instead of at import time.
+
+```ts
+// Before (module top-level, breaks with the new env-requiring resolveModel):
+const MODEL = resolveModel("default");
+export const productionPlannerAgent = new Agent({ model: MODEL, /* ... */ });
+
+// After (per-request, env comes from requestContext):
+export const productionPlannerAgent = new Agent({
+  model: ({ requestContext }) => resolveModel("default", requestContext.get("cfEnv")),
+  /* ... */
+});
+```
+
+`requestContext.get("cfEnv")` requires something to have put it there first. Use `getCloudflareContext()` from `@opennextjs/cloudflare` (confirmed installed — `app/package.json` — but **not currently used anywhere in this codebase**, so this is new wiring, not a copy-paste from an existing pattern) at the point where a Mastra agent run is kicked off (the API route handler), and set `.env` onto the `requestContext` passed into that run.
+
+**Acceptance for this step specifically:**
+- [ ] `getCloudflareContext()` is called inside a request handler (never at module scope — same class of bug as `getMastra()`, see `CLAUDE.md`'s Mastra gotchas)
+- [ ] `cfEnv` is set on Mastra's `requestContext` before any agent's dynamic `model` function runs
+- [ ] At least one agent's dynamic `model` function successfully reads `requestContext.get("cfEnv").AI`
+- [ ] `npx tsc --noEmit` passes with the dynamic `model` function typed correctly (no `any`)
+
 ### Step 1: Update the agent's model import
 
-Each agent file in `app/src/mastra/agents/` currently imports from the old provider. Update it to import `resolveModel` from the new provider.ts (created in Task CF-AI-021).
+Each agent file in `app/src/mastra/agents/` currently imports from the old provider. Update it to import `resolveModel` from the new provider.ts (created in Task CF-AI-021), and convert its static `const MODEL = resolveModel(tier)` to the dynamic `model: ({ requestContext }) => ...` form from Step 0.
 
 ### Step 2: Set the correct model tier
 
-Each agent should use the model tier from the table above. The `resolveModel` function takes the tier as a parameter.
+Each agent should use the model tier from the table above. The `resolveModel` function takes the tier as a parameter, plus the `env` retrieved via Step 0's `requestContext.get("cfEnv")`.
 
 ### Step 3: Test the agent locally
 
@@ -83,6 +111,8 @@ Deploy the updated agent to the staging environment and verify it works on the r
 ---
 
 ## Detailed Migration for Each Agent
+
+**Every `resolveModel("tier", env)` call below means the Step 0 dynamic-model pattern — `model: ({ requestContext }) => resolveModel("tier", requestContext.get("cfEnv"))`, not a literal top-level call. Step 0 must be done first.**
 
 ### Agent 1: public-marketing (P0, no tools)
 

@@ -99,6 +99,12 @@ export function resolveModel(tier: ModelTier, env: { AI: Ai }) {
 }
 ```
 
+**⚠️ Breaking change (found 2026-07-14, PR review): the `env` parameter above is NOT a drop-in addition.** The *current* `resolveModel(tier)` (in `app/src/lib/ai/provider.ts`, single-arg) is called at true **module top level** in at least 8 agent files — e.g. `app/src/mastra/agents/index.ts:9`: `const MODEL = resolveModel("default");`, evaluated once at import time. Cloudflare Workers bindings (`env.AI`) do not exist at module-evaluation time — only inside a request handler. Passing `env` to a module-top-level call is not possible; every one of those 8+ call sites needs to move from a static `const MODEL = resolveModel(tier)` to a **per-request** resolution.
+
+The fix is **not** scoped to this task — this file only replaces `provider.ts` itself. The call-site migration (moving every agent from static to per-request model resolution, and establishing how `env.AI` reaches that per-request call in the first place) is `054-CF-MIGRATION-wire-mastra-agents.md`'s scope — see that file's "Step 0" for the corrected pattern (Mastra's dynamic `model: ({ requestContext }) => ...` support, confirmed present in the installed `@mastra/core` version, plus `getCloudflareContext()` from `@opennextjs/cloudflare`, confirmed installed but currently unused anywhere in this codebase).
+
+**Do not consider this task done once `provider.ts` type-checks in isolation** — until `054` lands, every existing agent call site would break at runtime if this new signature were adopted as-is.
+
 The four models are:
 
 | Tier | Model ID | Used for |
@@ -155,6 +161,7 @@ Pass criteria: The agent returns a streamed response from a Workers AI model.
 - [ ] `workers-ai-provider` is in package.json
 - [ ] The new provider.ts is approximately 30 lines (down from 234)
 - [ ] `resolveModel()` constructs `createWorkersAI()` with `gateway: { id: "ipix-prod" }` — not a bare `{ binding: env.AI }`
+- [ ] This task does NOT modify any file under `app/src/mastra/agents/` — call-site migration (including the required move off module-top-level `resolveModel(tier)`) is `054-CF-MIGRATION-wire-mastra-agents.md`'s scope, not this one
 - [ ] A test call made through `resolveModel()` shows up in `ipix-prod`'s Gateway Logs (not just a successful Workers AI response — the whole point is that it's gated through the gateway)
 - [ ] `npx tsc --noEmit` passes
 - [ ] The marketing agent returns a response locally
