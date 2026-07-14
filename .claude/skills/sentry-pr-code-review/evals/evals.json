@@ -1,0 +1,23 @@
+{
+  "skill_name": "sentry-pr-code-review",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "Review Seer comments on PR #312 and tell me what to fix vs skip.",
+      "expected_output": "Fetches seer-by-sentry[bot] comments via gh; reports Resolved/Skipped table even if count is zero; does not invent findings.",
+      "files": []
+    },
+    {
+      "id": 2,
+      "prompt": "Find open PRs that have unresolved Seer feedback.",
+      "expected_output": "Scans recent open PRs, prints PR numbers with Seer comment counts; uses bot login seer-by-sentry[bot].",
+      "files": []
+    },
+    {
+      "id": 3,
+      "prompt": "Sentry left a HIGH severity finding on app/src/middleware.ts about a null check — verify and fix if real.",
+      "expected_output": "Reads the cited file/line, classifies confirmed vs false positive, applies minimal fix only if confirmed, ends with Seer Review report template.",
+      "files": []
+    }
+  ]
+}
