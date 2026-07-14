@@ -15,7 +15,7 @@ Runbook for **fashionos** (`nvdlhrodvevgwdsneplk`). Remote-only policy; no `supa
 supabase projects list   # expect ● on nvdlhrodvevgwdsneplk
 ```
 
-Dashboard: https://supabase.com/dashboard/project/nvdlhrodvevgwdsneplk
+Dashboard: <https://supabase.com/dashboard/project/nvdlhrodvevgwdsneplk>
 
 ---
 
