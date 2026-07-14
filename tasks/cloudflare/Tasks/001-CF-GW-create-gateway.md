@@ -11,11 +11,11 @@
 
 ## Purpose
 
-Create a managed AI Gateway in the Cloudflare dashboard. The AI Gateway is a managed product that sits between the iPix application and the AI models. It provides caching, rate limiting, cost tracking, retries, fallbacks, and analytics — all without writing any code.
+Create a managed AI Gateway in the Cloudflare dashboard. This task only creates the gateway shell — it does not turn on any of its controls. Right after creation, caching, rate limiting, retries, fallback routing, spend limits, and cost tracking are all still off (verified live: `cache_ttl: 0`, `rate_limiting_limit: 0`, `retry_max_attempts: null` on a freshly-created gateway). Those get configured and verified in later tasks (CF-GW-002 and on). What this task does provide immediately: a place for the gateway's settings and analytics pages to exist, and a fixed `ipix-prod` gateway ID that later tasks route traffic through.
 
 ### Real-world iPix example
 
-When fifty users simultaneously ask the Brand Intelligence agent to analyze different fashion brands, the AI Gateway caches identical requests, rate-limits abusive users, tracks how much each analysis costs, and automatically retries if a model is temporarily unavailable. Without the gateway, every request goes straight to the model with no protection, no caching, and no visibility into cost or performance.
+Today, every Workers AI request goes straight to the model with no protection, no caching, and no visibility into cost or performance. Once `ipix-prod` exists *and* is configured *and* is wired into application traffic (later tasks), fifty users simultaneously asking the Brand Intelligence agent to analyze different fashion brands would get caching on identical requests, rate limits on abusive users, per-request cost tracking, and automatic retries. None of that is live after this task alone.
 
 ---
 
@@ -23,9 +23,9 @@ When fifty users simultaneously ask the Brand Intelligence agent to analyze diff
 
 **Dashboard — create the gateway in the Cloudflare dashboard.**
 
-This is the only method available. The AI Gateway is a managed product configured through the dashboard. No CLI command creates it. No code is needed.
+Dashboard is the recommended method for this task and is what the rest of this plan assumes. Cloudflare's REST API can also create gateways (`POST /accounts/{account_id}/ai-gateway/gateways`) — dashboard is not the only method, it's the one this task deliberately uses for a one-time, low-frequency setup step. No code is needed either way.
 
-**Priority order confirmation:** This is option 1 (official dashboard setup) in the priority list. It is the highest priority and the only option for this component.
+**Priority order confirmation:** This is option 1 (official dashboard setup) in the priority list — the intentional choice for this task, not the only choice Cloudflare offers.
 
 ---
 
@@ -59,7 +59,7 @@ Click the Create Gateway button.
 
 Enter the name `ipix-prod` for the production gateway. This name is the gateway ID — it gets passed at request time in application code (see Step 6 and "Connecting the Gateway to the Worker" below), not written into `wrangler.jsonc`.
 
-Alternatively, use the `default` gateway, which is automatically created on the first request. However, a named gateway is recommended for production to keep analytics and configuration separate.
+Do not use the `default` gateway for this migration. Cloudflare auto-creates a `default` gateway on the first authenticated request in some flows (and Workers AI REST calls still require an explicit `cf-aig-gateway-id` header regardless), but every task and control in this plan targets `ipix-prod` by name — using `default` would split analytics, spend limits, and dynamic routes away from the gateway this plan configures and verifies.
 
 ### Step 5: Confirm creation
 
@@ -179,16 +179,10 @@ Removing the gateway option means AI calls go directly to Workers AI without cac
 
 ## What Custom Code This Removes
 
-This task replaces the following custom code (removed in Task 5):
-
-- Custom router logic (400 lines) — the AI Gateway routes requests
-- Custom retry classifier (112 lines) — the AI Gateway retries automatically
-- Custom error handling (107 lines) — the AI Gateway standardizes errors
-- Custom cost tracking (not built) — the AI Gateway dashboard shows costs
-- Custom logging (scattered console.log) — the AI Gateway logs every request
+Nothing, yet. This task creates an empty gateway shell with every control still off — it doesn't route traffic, retry requests, or track cost on its own, so there's nothing here for it to replace. The custom router (400 lines), retry classifier (112 lines), error handling (107 lines), and ad-hoc logging only become genuinely redundant once CF-GW-002 turns the equivalent gateway features on *and* application traffic is proven to route through them. Actual removal happens in `053-CF-MIGRATION-cleanup-custom-code.md`, after routing, retries, logging, rollback, and production validation are all proven — not here.
 
 ---
 
 ## User Journey After This Task
 
-> An iPix operator asks the Creative Director agent to "create a moodboard for a luxury skincare campaign." The request flows through the AI Gateway. The gateway checks if a similar request is cached (it is not, since this is the first time). It forwards the request to the Workers AI model. The model generates the moodboard description. The gateway logs the request, calculates that it cost $0.002, and records a 1.3-second latency. The analytics dashboard updates in real time. The engineering team can see exactly how much each creative direction session costs, without writing any tracking code.
+> The native `ipix-prod` gateway exists in the Cloudflare dashboard. Its Settings and Analytics pages are reachable and show zero requests. No application traffic is connected yet — an iPix operator using the Creative Director agent right now still goes through the existing custom `ai-gateway` Worker, unchanged. A later task (Workers AI binding + wiring `env.AI.run()`'s `gateway: { id: "ipix-prod" }` option) routes real traffic through it and verifies the request shows up in Gateway Logs and Analytics with model, cost, and latency data.
