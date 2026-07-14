@@ -73,13 +73,15 @@ After creation, note the gateway ID (it's the gateway name, e.g. `ipix-prod`). T
 
 ## Connecting the Gateway to the Worker
 
-**Correction (verified against current Cloudflare docs, 2026-07-13):** the AI binding in `wrangler.jsonc` does NOT take a `gateway` sub-key. The binding is always just:
+**Correction (verified against current Cloudflare docs, 2026-07-13):** the AI binding in `wrangler.jsonc` does NOT take a `gateway` sub-key. The binding is always:
 
 ```jsonc
 {
-  "ai": { "binding": "AI" }
+  "ai": { "binding": "AI", "remote": true }
 }
 ```
+
+`remote: true` is required, not optional (added 2026-07-14, per `developers.cloudflare.com/workers/local-development/` and confirmed against two current official Cloudflare repos — `cloudflare/agents-starter`, `cloudflare/vinext-agents-example`). Workers AI has no local simulation, so it always calls the real backend regardless — but if `remote` is omitted, Cloudflare issues a warning on every `wrangler dev`/build; if set to `false`, Cloudflare produces an error.
 
 (This is what Task CF-AI-020 / `003-CF-AI-add-workers-ai-binding.md` already adds — nothing more is needed there for gateway routing.)
 
@@ -109,7 +111,7 @@ Command: `npm run preview`
 
 ## Files Changed
 
-None in this task. `wrangler.jsonc` only ever needs the plain `{ "ai": { "binding": "AI" } }` block added in Task CF-AI-020 — there is no gateway-specific config file to change. The gateway ID is wired in wherever `env.AI.run()` is called (tracked separately, e.g. in the Mastra model-registry task).
+None in this task. `wrangler.jsonc` only ever needs the plain `{ "ai": { "binding": "AI", "remote": true } }` block added in Task CF-AI-020 — there is no gateway-specific config file to change. The gateway ID is wired in wherever `env.AI.run()` is called (tracked separately, e.g. in the Mastra model-registry task).
 
 ---
 
