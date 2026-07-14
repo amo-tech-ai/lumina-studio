@@ -84,7 +84,11 @@ test.describe("Planner — routes", () => {
     test.skip(!FIXTURE_INSTANCE_ID, "QA_PLANNER_INSTANCE_ID not set — no seeded fixture instance");
     const res = await page.goto(`/app/planner/${FIXTURE_INSTANCE_ID}/settings`);
     expect(res?.status()).toBeLessThan(400);
-    await expect(page.locator('h1:not([class*="cpk"])')).toHaveText("Planner Settings");
+    // "Settings", not "Planner Settings" — this assertion predates IPI-577's
+    // actual Settings screen. Corrected to match the SCR-34 design source of
+    // truth (Universal-design-prompt-4/Pages/SCR-34-Planner-Instance-
+    // Settings.dc.html:126, <h1>Settings</h1>) that IPI-577 shipped against.
+    await expect(page.locator('h1:not([class*="cpk"])')).toHaveText("Settings");
     await expectNavMatchesViewport(page);
   });
 
