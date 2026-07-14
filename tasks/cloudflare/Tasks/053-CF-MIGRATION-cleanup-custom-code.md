@@ -1,8 +1,11 @@
-# IPI-XXX · CF-MIG-220 — Delete Custom Gateway Worker
+# IPI-592 · CF-MIG-820 — Delete Custom Gateway Worker
 
-> **🛑 DO NOT EXECUTE YET — Phase 9 of 9.** Per `000-Architecture-Decision.md`, this is the *last* step of the migration, only after native-gateway traffic works, staging succeeds, production rollout succeeds, fallback succeeds, and rollback has actually been tested — not right after the 4 "core setup" tasks below. `services/cloudflare-worker/` is still the live production AI path today (confirmed on disk, unchanged) — running this now would take down production AI traffic.
+> **🛑 DO NOT EXECUTE YET — Phase 9 of 9.** Per `000-Architecture-Decision.md`, this is the *last* step of the migration, only after native-gateway traffic works, staging succeeds, production rollout succeeds, fallback succeeds, and rollback has actually been tested — not right after the 4 "core setup" tasks below. `services/cloudflare-worker/` is still the live production AI path today (confirmed on disk, unchanged, 98/98 tests passing as of 2026-07-14) — running this now would take down production AI traffic.
+>
+> **Task ID corrected 2026-07-14 (Linear sync):** was `CF-MIG-220`, which collided with the pre-existing `CF-MIG-220 · Preview Smoke Testing & Validation` milestone already tracked in IPI-487's progress table (a different, earlier-phase item). Now `CF-MIG-820` — after `CF-MIG-810` cutover, since this is explicitly the last step.
 
-**Task ID:** CF-MIG-220  
+**Linear:** [IPI-592 · CF-MIG-820 — Delete custom AI Gateway Worker (Phase 9 of 9, production-gated)](https://linear.app/amo100/issue/IPI-592)  
+**Task ID:** CF-MIG-820  
 **Phase:** 9 of 9 — Cleanup (not Phase 3 — corrected per `000-Architecture-Decision.md`)  
 **Difficulty:** Easy  
 **Risk:** Medium  

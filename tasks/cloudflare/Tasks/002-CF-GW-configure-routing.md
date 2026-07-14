@@ -1,5 +1,6 @@
-# IPI-XXX · CF-GW-002 — Configure AI Gateway Features
+# IPI-590 · CF-GW-002 — Configure AI Gateway Features
 
+**Linear:** [IPI-590 · CF-GW-002 — Configure AI Gateway managed features](https://linear.app/amo100/issue/IPI-590)  
 **Task ID:** CF-GW-002  
 **Phase:** 2 — Gateway setup  
 **Difficulty:** Easy  
@@ -51,17 +52,18 @@ During a busy fashion week, fifty iPix users simultaneously ask agents to analyz
 
 ## What Custom Code This Removes
 
-| Feature | Custom code or task it replaces |
+**Correction (2026-07-14, Linear sync):** the table below previously marked IPI-531, IPI-460, and IPI-463 as "canceled." Verified live against Linear on 2026-07-14 — **none of the three are canceled** (IPI-531 is Todo, IPI-460 is Backlog, IPI-463 is Backlog), and none has been touched this session. Corrected below with real status and honest overlap, not full replacement.
+
+| Feature | Custom code or task it relates to |
 |---------|-------------------------------|
 | Caching | No equivalent existed — new capability |
 | Rate limiting | No equivalent existed — new capability |
-| Spend limits | IPI-531 circuit breaker task (canceled) |
-| Automatic retries | Custom retry-classifier.ts (112 lines) — removed in Task 5 |
-| Dynamic routing fallback | Custom Bedrock fallback in router.ts — removed in Task 5 |
-| Cost tracking | IPI-460 cost tracking task (canceled) |
-| Failover | IPI-463 failover task (canceled) |
+| Auto-retry | Partial overlap with IPI-531 (CF-AI-016, Todo, not canceled) — that issue also covers AbortController timeout enforcement and structured JSON logging, which this dashboard feature does not provide. Do not close IPI-531 on this task's completion alone. |
+| Dynamic routing fallback | Partial overlap with IPI-463 (CF-AI-012a, Backlog, not canceled) and the already-built, tested `services/cloudflare-worker/src/providers/bedrock.ts` fallback (98/98 tests passing as of 2026-07-14) — that custom fallback is still the live production path and stays in place until `053-CF-MIGRATION-cleanup-custom-code.md` (Linear: IPI-592 · CF-MIG-820) is unblocked and executed. |
+| Cost tracking | Related to IPI-460 (CF-AI-010, Backlog, not canceled) — Gateway Spend Limits caps total dollar spend; IPI-460's per-brand cost attribution into Supabase `ai_agent_logs` is a distinct, still-open product need this dashboard feature does not cover. |
+| Custom retry-classifier.ts / router.ts fallback logic | Deleted only in `053-CF-MIGRATION-cleanup-custom-code.md` (Linear: IPI-592 · CF-MIG-820), gated on the native path being proven in production — not by this task. |
 
-This single dashboard task cancels or replaces four Linear tasks and removes hundreds of lines of custom retry and fallback code.
+This task configures native gateway features that will eventually let IPI-592 delete the custom fallback/retry code, but does not itself cancel or complete any of the three related Linear issues.
 
 ---
 

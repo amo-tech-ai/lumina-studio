@@ -1,5 +1,6 @@
-# IPI-XXX · CF-AI-021 — Install Workers AI Provider
+# IPI-586 · CF-AI-021 — Install Workers AI Provider
 
+**Linear:** [IPI-586 · CF-AI-003 — Wire one Workers AI call through ipix-prod gateway](https://linear.app/amo100/issue/IPI-586)  
 **Task ID:** CF-AI-021  
 **Phase:** 1 — Core setup  
 **Difficulty:** Easy  

@@ -1,7 +1,8 @@
-# IPI-XXX · CF-TEST-010 — Verify Multi-Turn Tool Calling
+# IPI-591 · CF-TEST-010 — Verify Multi-Turn Tool Calling
 
 > **Status: Blocked (pending `054-CF-MIGRATION-wire-mastra-agents.md` / CF-MIG-230).** Renamed from `012-CF-TEST-verify-endpoints.md` — the original filename was misleading (this is a multi-turn tool-calling regression test, not a simple endpoint health check) and collided with an unrelated, simpler task of nearly the same name in the archived `TASKS-INDEX.md`.
 
+**Linear:** [IPI-591 · CF-TEST-010 — Verify multi-turn tool calling through native gateway](https://linear.app/amo100/issue/IPI-591)  
 **Task ID:** CF-TEST-010  
 **Phase:** 4 — Production  
 **Difficulty:** Medium  
