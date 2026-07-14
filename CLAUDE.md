@@ -92,7 +92,7 @@ We are in active development. Always leave the system better than you found it: 
 - `GEMINI_API_KEY` is server-only — used exclusively in `app/src/mastra/` and `supabase/functions/`.
 - **Never skip the pre-push hook** (`--no-verify`). If it fails, fix the underlying issue — don't bypass it.
 
-- **🚫 Never run `gh pr create` without running `/review-pr all` first** (waived only for docs-only or typo PRs). Typecheck/lint/tests alone miss whole classes of bugs — silent-failure patterns (RLS returning empty instead of erroring, `maybeSingle()` ignoring `.error`) and type-design smells (parameters the implementation silently ignores). `/review-pr` catches these via `silent-failure-hunter` and `type-design-analyzer`. Skipping this step on [IPI-536](https://linear.app/amo100/issue/IPI-536) (PR #347) meant 5 real bugs (1 P1) were found by external bots after the PR was already open. Any Critical/Important finding from `/review-pr` is a blocker, same as a CI failure. (IPI = Internal Project Issue — this repo's Linear issue-ID prefix.)
+- **Run `/review-pr all` before `gh pr create`.** Waived for docs-only or typo fixes. IPI (Internal Project Issue) is this repo's Linear issue-ID prefix. Typecheck/lint/tests alone miss silent-failure patterns — RLS returning empty instead of erroring, `maybeSingle()` ignoring `.error`. On [IPI-536](https://linear.app/amo100/issue/IPI-536) (PR #347), skipping `/review-pr` meant 5 bugs (1 P1) were found by external bots post-merge. Any Critical/Important finding from `/review-pr` blocks merge.
 
 ## Graphify — mandatory before reading source files
 
