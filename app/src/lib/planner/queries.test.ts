@@ -28,18 +28,24 @@ function makeQuery(response: QueryResponse) {
   return query;
 }
 
-function mockClient(query: ReturnType<typeof makeQuery>, userId = "user-a") {
+function mockClient(
+  query: ReturnType<typeof makeQuery>,
+  userId = "user-a",
+  names: { user_id: string; display_name: string | null }[] = [],
+) {
   const from = vi.fn(() => query);
   const schema = vi.fn(() => ({ from }));
   const getUser = vi.fn().mockResolvedValue({
     data: { user: { id: userId } },
     error: null,
   });
+  const rpc = vi.fn().mockResolvedValue({ data: names, error: null });
   vi.mocked(createSupabaseServerClient).mockResolvedValue({
     auth: { getUser },
     schema,
+    rpc,
   } as never);
-  return { from, schema, getUser };
+  return { from, schema, getUser, rpc };
 }
 
 function instance(overrides: Record<string, unknown> = {}) {
@@ -390,7 +396,7 @@ describe("listPlannerInstances", () => {
 });
 
 describe("listMembers", () => {
-  it("maps assignment rows to PlannerAssignment", async () => {
+  it("maps assignment rows to PlannerMember, merging display names from planner_get_member_names", async () => {
     const query = makeQuery({
       data: [
         {
@@ -403,16 +409,32 @@ describe("listMembers", () => {
       ],
       error: null,
     });
-    const client = mockClient(query);
+    const client = mockClient(query, "user-a", [{ user_id: "u1", display_name: "Maya" }]);
 
     const result = await listMembers("i1");
 
     expect(result).toEqual({
       ok: true,
-      data: [{ id: "a1", instanceId: "i1", userId: "u1", role: "owner", permissions: null }],
+      data: [{ id: "a1", instanceId: "i1", userId: "u1", role: "owner", permissions: null, displayName: "Maya" }],
     });
     expect(client.from).toHaveBeenCalledWith("assignments");
     expect(query.eq).toHaveBeenCalledWith("instance_id", "i1");
+    expect(client.rpc).toHaveBeenCalledWith("planner_get_member_names", { p_instance_id: "i1" });
+  });
+
+  it("degrades to displayName: null when a member has no matching name row, rather than failing the list", async () => {
+    const query = makeQuery({
+      data: [{ id: "a1", instance_id: "i1", user_id: "u1", role: "viewer", permissions: null }],
+      error: null,
+    });
+    mockClient(query, "user-a", []);
+
+    const result = await listMembers("i1");
+
+    expect(result).toEqual({
+      ok: true,
+      data: [{ id: "a1", instanceId: "i1", userId: "u1", role: "viewer", permissions: null, displayName: null }],
+    });
   });
 
   it("returns an empty list, not an error, for a contributor/viewer caller (RLS is manager+ only)", async () => {

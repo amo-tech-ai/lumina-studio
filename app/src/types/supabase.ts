@@ -6820,6 +6820,13 @@ export type Database = {
         Args: { n: Database["public"]["Tables"]["notifications"]["Row"] }
         Returns: boolean
       }
+      planner_get_member_names: {
+        Args: { p_instance_id: string }
+        Returns: {
+          display_name: string | null
+          user_id: string
+        }[]
+      }
       planner_get_my_assignment: {
         Args: { p_instance_id: string }
         Returns: {

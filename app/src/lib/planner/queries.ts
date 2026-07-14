@@ -1,9 +1,10 @@
 import type { PostgrestClient } from "@supabase/postgrest-js";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import type { Database } from "@/types/supabase";
 
-import type { EntityType, PlannerAssignment, PlannerInstanceStatus, PlannerTaskStatus } from "./types";
+import type { EntityType, PlannerAssignment, PlannerInstanceStatus, PlannerMember, PlannerTaskStatus } from "./types";
 
 type PlannerClient = PostgrestClient<
   Database,
@@ -314,7 +315,7 @@ function toInstancePage(rows: HubInstanceRow[], limit: number): PlannerInstanceP
 }
 
 async function authenticatedPlannerClient(): Promise<
-  PlannerQueryResult<{ client: PlannerClient; userId: string }>
+  PlannerQueryResult<{ client: PlannerClient; base: SupabaseClient<Database>; userId: string }>
 > {
   const supabase = await createSupabaseServerClient();
   const {
@@ -330,6 +331,7 @@ async function authenticatedPlannerClient(): Promise<
     ok: true,
     data: {
       client: supabase.schema("planner") as PlannerClient,
+      base: supabase as SupabaseClient<Database>,
       userId: user.id,
     },
   };
@@ -419,14 +421,17 @@ function toAssignment(row: AssignmentRow): PlannerAssignment {
 // IPI-575 — the live assignments_select_org RLS policy requires manager+ to
 // SELECT any row on planner.assignments, including the caller's own (the same
 // bulk-vs-own-row gap IPI-536 hit for permissions.ts) — so a contributor/
-// viewer calling this legitimately gets an empty list, not an error. Display
-// name/email resolution is NOT included here: public.profiles' own RLS is
-// self-row-only (auth.uid() = id), so listing teammates' names needs a
-// follow-up SECURITY DEFINER RPC (same shape as planner_get_my_assignment) —
-// left for IPI-577 (Settings UI) to add when it needs display data.
+// viewer calling this legitimately gets an empty list, not an error.
+//
+// IPI-577 — display name comes from public.planner_get_member_names, a
+// SECURITY DEFINER RPC (migration 20260714110000): public.profiles' own RLS
+// is self-row-only (auth.uid() = id), so a plain join can't resolve
+// teammates' names. A failed name lookup degrades to displayName: null
+// rather than failing the whole member list — the table can still render
+// role/access with a placeholder name.
 export async function listMembers(
   instanceId: string,
-): Promise<PlannerQueryResult<PlannerAssignment[]>> {
+): Promise<PlannerQueryResult<PlannerMember[]>> {
   const context = await authenticatedPlannerClient();
   if (!context.ok) return context;
 
@@ -440,5 +445,16 @@ export async function listMembers(
     return failure("QUERY_FAILED", "Planner members could not be loaded.");
   }
 
-  return { ok: true, data: (data ?? []).map(toAssignment) };
+  const { data: names } = await context.data.base.rpc("planner_get_member_names", {
+    p_instance_id: instanceId,
+  });
+  const nameByUserId = new Map((names ?? []).map((n) => [n.user_id, n.display_name]));
+
+  return {
+    ok: true,
+    data: (data ?? []).map((row) => ({
+      ...toAssignment(row),
+      displayName: nameByUserId.get(row.user_id) ?? null,
+    })),
+  };
 }
