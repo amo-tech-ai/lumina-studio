@@ -94,9 +94,9 @@ We are in active development. Always leave the system better than you found it: 
 
 - **Run `/review-pr all` before `gh pr create`.**
 - Typecheck/lint/tests miss silent-failure patterns.
-- [IPI-536](https://linear.app/amo100/issue/IPI-536) — 5 bugs found post-merge after skipping `/review-pr`.
 - `/review-pr` Critical/Important findings block merge.
-- IPI is this repo's Linear issue-ID prefix.
+- IPI (Internal Project Issue) is this repo's Linear issue-ID prefix.
+- [IPI-536](https://linear.app/amo100/issue/IPI-536) — 5 bugs found post-merge after skipping `/review-pr`.
 
 ## Graphify — mandatory before reading source files
 
