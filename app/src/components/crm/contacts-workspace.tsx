@@ -2,28 +2,30 @@
 
 import Link from "next/link";
 
-import { getPrimaryEntry, type ContactFieldEntry } from "@/lib/crm/jsonb-contact-fields";
+import { getPrimaryEntry, normalizeContactFields } from "@/lib/crm/jsonb-contact-fields";
 import type { ContactRow } from "@/lib/crm/queries";
 import { CrmAvatar } from "./crm-avatar";
-import { CrmListWorkspace } from "./crm-list-workspace";
+import { ComingSoonButton, CrmListWorkspace } from "./crm-list-workspace";
 import styles from "./crm-list-workspace.module.css";
 
-const FILTER_LABELS = ["Organization", "Role"];
+const FILTER_LABELS = ["Organization", "Type", "Has open deal"];
 
-/** email is a jsonb array ({value,type,primary}), not a single column —
- *  getPrimaryEntry (jsonb-contact-fields.ts) already picks the primary/first
- *  entry; this just narrows the untyped Json column before calling it. */
+/** email is a jsonb array — normalizeContactFields handles both the
+ *  {value,type,primary} object shape and the plain-string shape real seed
+ *  data actually uses (see jsonb-contact-fields.ts). */
 function primaryEmail(email: unknown): string | null {
-  return Array.isArray(email) ? (getPrimaryEntry(email as ContactFieldEntry[])?.value ?? null) : null;
+  return getPrimaryEntry(normalizeContactFields(email))?.value ?? null;
 }
 
-function filterContacts(contacts: ContactRow[], term: string): ContactRow[] {
+function filterContacts(contacts: ContactRow[], term: string, companyNames: Record<string, string>): ContactRow[] {
   return contacts.filter((c) => {
     const email = primaryEmail(c.email)?.toLowerCase() ?? "";
+    const org = (c.company_id ? companyNames[c.company_id] : undefined)?.toLowerCase() ?? "";
     return (
       c.name.toLowerCase().includes(term) ||
       email.includes(term) ||
-      (c.role_title ?? "").toLowerCase().includes(term)
+      (c.role_title ?? "").toLowerCase().includes(term) ||
+      org.includes(term)
     );
   });
 }
@@ -51,10 +53,11 @@ export function ContactsWorkspace({
       newLabel="New person"
       filterLabels={FILTER_LABELS}
       items={contacts}
-      searchPlaceholder="Search name, role, or email"
-      filterItems={filterContacts}
+      searchPlaceholder="Search name, organization, role, or email"
+      filterItems={(items, term) => filterContacts(items, term, companyNames)}
       emptyLabel="No contacts yet"
       emptyBody="Add your first person to start tracking relationships."
+      emptyAction={<ComingSoonButton label="New person" />}
       fetchError={fetchError}
       renderRow={(contact) => {
         const email = primaryEmail(contact.email);

@@ -1,23 +1,34 @@
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 
+import { findGroqModelsConfigPath } from "./groq-models-path";
 import {
   assertGroqTierCapabilities,
-  findGroqModelsConfigPath,
   GEMINI_MODELS,
   getGroqModelEntry,
   loadGroqModelsConfig,
   resolveAiProvider,
+  resolveAiRoutingMode,
+  resolveGatewayModelId,
   resolveGroqModelId,
   resolveModel,
   resolveProviderOptions,
+  shouldRouteTierViaGateway,
 } from "./provider";
 
 describe("AI provider (GROQ-002 / GROQ-004)", () => {
   const original = {
     AI_PROVIDER: process.env.AI_PROVIDER,
+    AI_ROUTING_MODE: process.env.AI_ROUTING_MODE,
+    AI_GATEWAY_URL: process.env.AI_GATEWAY_URL,
+    AI_GATEWAY_API_KEY: process.env.AI_GATEWAY_API_KEY,
+    AI_GATEWAY_REQUEST_ID: process.env.AI_GATEWAY_REQUEST_ID,
+    AI_MODEL_DEFAULT: process.env.AI_MODEL_DEFAULT,
+    AI_MODEL_FAST: process.env.AI_MODEL_FAST,
+    AI_MODEL_STRUCTURED: process.env.AI_MODEL_STRUCTURED,
+    AI_GATEWAY_ALLOW_TOOL_TIERS: process.env.AI_GATEWAY_ALLOW_TOOL_TIERS,
     GROQ_API_KEY: process.env.GROQ_API_KEY,
     GEMINI_API_KEY: process.env.GEMINI_API_KEY,
     GEMINI_MODEL: process.env.GEMINI_MODEL,
@@ -75,10 +86,18 @@ describe("AI provider (GROQ-002 / GROQ-004)", () => {
     expect(entry.parallelTools).toBe(true);
   });
 
-  it("loads SSOT allowlist from repo config/groq-models.json", () => {
+  it("loads SSOT allowlist from bundled groq-models.ssot.json", () => {
     const disk = loadGroqModelsConfig();
     expect(getGroqModelEntry(disk.defaults.default)).toBeDefined();
     expect(disk.models.length).toBeGreaterThan(0);
+  });
+
+  it("keeps groq-models.ssot.json in sync with config/groq-models.json", () => {
+    const repoConfig = join(process.cwd(), "..", "config", "groq-models.json");
+    const onDisk = JSON.parse(readFileSync(repoConfig, "utf8"));
+    // $schema is intentionally stripped from the bundled copy (dangling relative path there).
+    delete onDisk.$schema;
+    expect(loadGroqModelsConfig()).toEqual(onDisk);
   });
 
   describe("findGroqModelsConfigPath (IPI-428 followup — mastra dev ENOENT)", () => {
@@ -129,6 +148,7 @@ describe("AI provider (GROQ-002 / GROQ-004)", () => {
     process.env.AI_PROVIDER = "gemini";
     process.env.GEMINI_API_KEY = "test-key";
     delete process.env.GEMINI_MODEL;
+    delete process.env.AI_ROUTING_MODE;
     const model = resolveModel();
     expect(model.provider).toBe("google.generative-ai");
     expect(model.modelId).toBe(GEMINI_MODELS.default);
@@ -138,6 +158,7 @@ describe("AI provider (GROQ-002 / GROQ-004)", () => {
   it("resolveModel uses Groq when AI_PROVIDER=groq (no live key needed — client construction only)", () => {
     process.env.AI_PROVIDER = "groq";
     process.env.GROQ_API_KEY = "test-groq-key";
+    delete process.env.AI_ROUTING_MODE;
     const model = resolveModel("default");
     expect(model.provider).toBe("groq.chat");
     expect(model.modelId).toBe("llama-3.3-70b-versatile");
@@ -146,7 +167,133 @@ describe("AI provider (GROQ-002 / GROQ-004)", () => {
   it("resolveModel throws without GROQ_API_KEY when AI_PROVIDER=groq", () => {
     process.env.AI_PROVIDER = "groq";
     delete process.env.GROQ_API_KEY;
+    delete process.env.AI_ROUTING_MODE;
     expect(() => resolveModel("default")).toThrow(/GROQ_API_KEY is required/);
+  });
+
+  describe("AI_ROUTING_MODE=gateway (IPI-454 AC-F)", () => {
+    it("routes tool-free fast tier through openai-compatible gateway", () => {
+      process.env.AI_ROUTING_MODE = "gateway";
+      process.env.AI_GATEWAY_URL = "http://gateway.test:8787";
+      process.env.AI_GATEWAY_API_KEY = "gw-key";
+      delete process.env.AI_MODEL_FAST;
+      delete process.env.AI_GATEWAY_ALLOW_TOOL_TIERS;
+      const model = resolveModel("fast");
+      expect(model.provider).toBe("ipix-ai-gateway.chat");
+      expect(model.modelId).toBe("fast");
+    });
+
+    it("does not mint a sticky x-request-id at model construction", () => {
+      // createOpenAICompatible freezes headers; a randomUUID() here would be shared
+      // for the process lifetime. Only AI_GATEWAY_REQUEST_ID (tests) may set it.
+      process.env.AI_ROUTING_MODE = "gateway";
+      delete process.env.AI_GATEWAY_REQUEST_ID;
+      const model = resolveModel("fast");
+      expect(model.provider).toBe("ipix-ai-gateway.chat");
+      expect(process.env.AI_GATEWAY_REQUEST_ID).toBeUndefined();
+    });
+
+    it("defaults base to localhost:8787 when AI_GATEWAY_URL unset", () => {
+      process.env.AI_ROUTING_MODE = "gateway";
+      delete process.env.AI_GATEWAY_URL;
+      delete process.env.AI_GATEWAY_API_KEY;
+      delete process.env.AI_GATEWAY_ALLOW_TOOL_TIERS;
+      const model = resolveModel("fast");
+      expect(model.provider).toBe("ipix-ai-gateway.chat");
+      expect(model.modelId).toBe("fast");
+    });
+
+    it("sends Worker registry keys, not Gemini model ids", () => {
+      process.env.AI_ROUTING_MODE = "gateway";
+      process.env.AI_GATEWAY_ALLOW_TOOL_TIERS = "1";
+      delete process.env.AI_MODEL_STRUCTURED;
+      expect(resolveGatewayModelId("structured")).toBe("structured");
+      expect(resolveModel("structured").modelId).toBe("structured");
+    });
+
+    it("ignores Gemini-id AI_MODEL_* overrides (would miss Worker registry)", () => {
+      process.env.AI_MODEL_STRUCTURED = "gemini-3.1-pro-preview";
+      expect(resolveGatewayModelId("structured")).toBe("structured");
+    });
+
+    it("honors AI_MODEL_* overrides only when they are Worker registry keys", () => {
+      process.env.AI_MODEL_FAST = "structured";
+      expect(resolveGatewayModelId("fast")).toBe("structured");
+    });
+
+    it("keeps specialized Groq tiers (compound/stt/safety) on direct — no silent default remap", () => {
+      process.env.AI_ROUTING_MODE = "gateway";
+      process.env.AI_PROVIDER = "groq";
+      process.env.GROQ_API_KEY = "test-groq-key";
+      delete process.env.AI_GATEWAY_ALLOW_TOOL_TIERS;
+      for (const tier of ["compound", "compoundMini", "stt", "safety"] as const) {
+        expect(shouldRouteTierViaGateway(tier)).toBe(false);
+        expect(() => resolveGatewayModelId(tier)).toThrow(/not a Worker registry/);
+      }
+      // resolveModel falls through to direct Groq for compound
+      const model = resolveModel("compound");
+      expect(model.provider).toBe("groq.chat");
+    });
+
+    it("keeps vision on direct Gemini when gateway mode is on", () => {
+      process.env.AI_ROUTING_MODE = "gateway";
+      process.env.AI_PROVIDER = "gemini";
+      process.env.GEMINI_API_KEY = "test-gemini-key";
+      delete process.env.GEMINI_MODEL;
+      delete process.env.GROQ_MODEL_VISION;
+      delete process.env.AI_GATEWAY_ALLOW_TOOL_TIERS;
+      expect(shouldRouteTierViaGateway("vision")).toBe(false);
+      const model = resolveModel("vision");
+      expect(model.provider).toBe("google.generative-ai");
+      expect(model.modelId).toBe(GEMINI_MODELS.default);
+    });
+
+    it("keeps default/structured on direct so Mastra tools stay on the SDK path", () => {
+      process.env.AI_ROUTING_MODE = "gateway";
+      process.env.AI_PROVIDER = "gemini";
+      process.env.GEMINI_API_KEY = "test-gemini-key";
+      delete process.env.AI_GATEWAY_ALLOW_TOOL_TIERS;
+      expect(shouldRouteTierViaGateway("default")).toBe(false);
+      expect(shouldRouteTierViaGateway("structured")).toBe(false);
+      expect(resolveModel("default").provider).toBe("google.generative-ai");
+    });
+
+    it("allows tool tiers through gateway only with AI_GATEWAY_ALLOW_TOOL_TIERS=1", () => {
+      process.env.AI_ROUTING_MODE = "gateway";
+      process.env.AI_GATEWAY_ALLOW_TOOL_TIERS = "1";
+      expect(shouldRouteTierViaGateway("default")).toBe(true);
+      expect(resolveModel("default").provider).toBe("ipix-ai-gateway.chat");
+      expect(resolveModel("default").modelId).toBe("default");
+    });
+
+    it("keeps Gemini provider options when gateway mode is on (tool tiers stay direct)", () => {
+      process.env.AI_ROUTING_MODE = "gateway";
+      process.env.AI_PROVIDER = "gemini";
+      delete process.env.AI_GATEWAY_ALLOW_TOOL_TIERS;
+      expect(resolveProviderOptions("default")).toEqual({
+        google: { thinkingConfig: { thinkingBudget: 0 } },
+      });
+      expect(resolveProviderOptions("vision")).toEqual({
+        google: { thinkingConfig: { thinkingBudget: 0 } },
+      });
+    });
+
+    it("omits Gemini provider options when the tier routes via gateway", () => {
+      process.env.AI_ROUTING_MODE = "gateway";
+      process.env.AI_PROVIDER = "gemini";
+      process.env.AI_GATEWAY_ALLOW_TOOL_TIERS = "1";
+      expect(resolveProviderOptions("default")).toEqual({});
+      expect(resolveProviderOptions("structured")).toEqual({});
+      // Vision never routes via gateway — still Gemini options.
+      expect(resolveProviderOptions("vision")).toEqual({
+        google: { thinkingConfig: { thinkingBudget: 0 } },
+      });
+    });
+
+    it("rejects invalid AI_ROUTING_MODE", () => {
+      process.env.AI_ROUTING_MODE = "banana";
+      expect(() => resolveAiRoutingMode()).toThrow(/AI_ROUTING_MODE/);
+    });
   });
 
   describe("vision tier guard (A6 — defer Groq cutover until golden eval)", () => {

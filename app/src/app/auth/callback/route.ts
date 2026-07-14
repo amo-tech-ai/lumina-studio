@@ -12,19 +12,55 @@ function supabaseEnv() {
   };
 }
 
-function isTrustedForwardedHost(forwardedHost: string, requestOrigin: string): boolean {
-  const host = forwardedHost.toLowerCase();
+function hostsFromEnvList(raw: string | undefined): string[] {
+  if (!raw) return [];
+  return raw
+    .split(",")
+    .map((host) => host.trim().toLowerCase())
+    .filter(Boolean);
+}
+
+/** Strips a `:port` suffix so comparisons don't miss on proxies that append one (e.g. `host:443`, local `wrangler dev` on `:8787`). */
+function stripPort(host: string): string {
+  return host.replace(/:\d+$/, "");
+}
+
+/**
+ * Exact hostnames allowed via x-forwarded-host (Cloudflare preview, custom domains).
+ * Deliberately NOT cached at module scope. OpenNext's Cloudflare adapter documents
+ * `process.env` as populated per-request, not guaranteed available at
+ * module-evaluation/cold-start time — caching env-derived data in a module-level
+ * constant risks reading `undefined` once at cold start and keeping that forever.
+ * Local `wrangler dev` couldn't fully exercise this (this route's own
+ * `NODE_ENV === "development"` short-circuit bypasses the allowlist check entirely
+ * in local preview), so this specific ordering wasn't directly observable there —
+ * treat this as a defensive correctness fix per Workers/OpenNext guidance, not a
+ * locally-reproduced bug.
+ */
+function trustedForwardedHostAllowlist(): Set<string> {
+  const hosts = new Set<string>();
   try {
-    if (host === new URL(requestOrigin).host.toLowerCase()) return true;
-  } catch {
-    // ignore malformed request origin
-  }
-  try {
-    if (host === new URL(SITE_URL).host.toLowerCase()) return true;
+    hosts.add(stripPort(new URL(SITE_URL).host.toLowerCase()));
   } catch {
     // ignore malformed SITE_URL
   }
-  return host.endsWith(".vercel.app");
+  for (const host of hostsFromEnvList(process.env.TRUSTED_OAUTH_FORWARDED_HOSTS)) {
+    hosts.add(stripPort(host));
+  }
+  return hosts;
+}
+
+function isTrustedForwardedHost(forwardedHost: string, requestOrigin: string): boolean {
+  const host = stripPort(forwardedHost.toLowerCase());
+  if (trustedForwardedHostAllowlist().has(host)) return true;
+  try {
+    if (host === stripPort(new URL(requestOrigin).host.toLowerCase())) return true;
+  } catch {
+    // ignore malformed request origin
+  }
+  // No blanket *.vercel.app (or any) wildcard — add specific preview hosts to
+  // TRUSTED_OAUTH_FORWARDED_HOSTS instead of trusting an entire public suffix.
+  return false;
 }
 
 function redirectOrigin(request: Request): string {

@@ -7,6 +7,17 @@ import { Plus } from "lucide-react";
 import { EntityList } from "@/components/ui/entity-list";
 import styles from "./crm-list-workspace.module.css";
 
+/** Empty-state "add" CTA shared by CompaniesWorkspace + ContactsWorkspace — both
+ *  were byte-identical apart from the label (CodeRabbit nitpick on PR #270). */
+export function ComingSoonButton({ label }: { label: string }) {
+  return (
+    <button type="button" disabled title="Coming soon" className={styles.newBtn}>
+      <Plus size={15} aria-hidden />
+      {label}
+    </button>
+  );
+}
+
 /** Shared chrome for CompaniesWorkspace + ContactsWorkspace (RF-03) — header,
  *  filter row, search state, and the EntityList wrapper are identical across
  *  both screens; only row rendering and the search predicate differ. */
@@ -20,6 +31,7 @@ export function CrmListWorkspace<T extends { id: string }>({
   filterItems,
   emptyLabel,
   emptyBody,
+  emptyAction,
   fetchError,
   renderRow,
 }: {
@@ -32,6 +44,7 @@ export function CrmListWorkspace<T extends { id: string }>({
   filterItems: (items: T[], term: string) => T[];
   emptyLabel: string;
   emptyBody: string;
+  emptyAction?: ReactNode;
   fetchError: string | null;
   renderRow: (item: T) => ReactNode;
 }) {
@@ -52,10 +65,7 @@ export function CrmListWorkspace<T extends { id: string }>({
             <h1 className={styles.title}>{title}</h1>
             <p className={styles.count}>{countLabel(items.length)}</p>
           </div>
-          <button type="button" disabled title="Coming soon" className={styles.newBtn}>
-            <Plus size={15} aria-hidden />
-            {newLabel}
-          </button>
+          <ComingSoonButton label={newLabel} />
         </div>
         <div className={styles.filterRow}>
           {filterLabels.map((label) => (
@@ -72,6 +82,7 @@ export function CrmListWorkspace<T extends { id: string }>({
             items={filtered}
             emptyLabel={emptyLabel}
             emptyBody={emptyBody}
+            emptyAction={emptyAction}
             searchPlaceholder={searchPlaceholder}
             searchValue={search}
             onSearchChange={setSearch}

@@ -1,0 +1,1165 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --color-bg-page:#ffffff;--color-bg-card:#ffffff;--color-bg-subtle:#fafafa;--color-bg-muted:#f4f4f5;
+  --color-border:#e5e7eb;--color-border-strong:#d1d5db;--color-border-subtle:#f0f0f1;--color-border-focus:#111111;
+  --color-text-primary:#111111;--color-text-secondary:#6b7280;--color-text-muted:#9ca3af;--color-text-disabled:#c4c7cc;
+  --color-action:#111111;--color-action-hover:#000000;--color-action-text:#ffffff;
+  --color-approved:#059669;--color-warn:#b45309;
+  --shadow-card:0 1px 3px 0 rgb(17 17 17 / 0.05),0 1px 2px -1px rgb(17 17 17 / 0.04);--shadow-panel:0 8px 24px -8px rgb(17 17 17 / 0.12);--shadow-modal:0 24px 64px -16px rgb(17 17 17 / 0.2);
+  --duration-normal:250ms;--ease-default:cubic-bezier(0.16,1,0.3,1);
+  --radius-md:0.625rem;--card-radius:1.25rem;--image-radius:1.25rem;--image-radius-sm:0.75rem;
+  --fs-xs:0.75rem;--fs-sm:0.875rem;--fs-base:1rem;--fs-lg:1.125rem;--fs-xl:1.25rem;--fs-2xl:1.5rem;--fs-3xl:2rem;
+  --image-scrim:linear-gradient(to top, rgb(17 17 17 / 0.72), rgb(17 17 17 / 0) 60%);
+}
+*{box-sizing:border-box;}
+body{margin:0;font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:var(--color-text-primary);-webkit-font-smoothing:antialiased;}
+.mono{font-feature-settings:'tnum';}
+.photo{background-size:cover;background-position:center top;background-repeat:no-repeat;background-color:var(--color-bg-subtle);position:relative;}
+@keyframes pulse{0%,100%{opacity:1;}50%{opacity:.25;}}
+.railscroll::-webkit-scrollbar{display:none;}
+.railscroll{scrollbar-width:none;}
+.revgrid{display:grid;grid-template-columns:266px 1fr;gap:20px;align-items:start;}
+.revleft{position:sticky;top:0;}
+.revcards{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.revres{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;}
+@media(max-width:760px){.revgrid{grid-template-columns:1fr;}.revleft{position:static;}.revres{grid-template-columns:repeat(2,1fr);}}
+@media(max-width:760px){
+  .wz-content [style*="grid-template-columns"]{grid-template-columns:1fr !important;}
+  .wz-topbar{padding:12px 16px !important;}
+  .wz-brandblock{display:none !important;}
+  .wz-backlabel{display:none !important;}
+  .wz-savetop{display:none !important;}
+  .railscroll{padding-left:16px !important;padding-right:16px !important;}
+}
+</style>
+</helmet>
+
+<div style="display:flex;flex-direction:column;height:100vh;width:100%;background:var(--color-bg-page);overflow:hidden;">
+
+  <!-- ===================== TOP BAR ===================== -->
+  <div class="wz-topbar" style="flex-shrink:0;display:flex;align-items:center;justify-content:space-between;gap:16px;padding:14px 28px;border-bottom:1px solid var(--color-border);">
+    <div style="display:flex;align-items:center;gap:14px;min-width:0;">
+      <button onClick="{{ exit }}" style="height:34px;padding:0 13px 0 10px;flex-shrink:0;border:1px solid var(--color-border);background:var(--color-bg-card);border-radius:9px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;color:var(--color-text-secondary);font-size:var(--fs-sm);font-weight:500;font-family:inherit;" style-hover="background:var(--color-bg-subtle);">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg><span class="wz-backlabel">Back to Shoots</span>
+      </button>
+      <div style="position:relative;flex-shrink:0;">
+        <button onClick="{{ toggleMenu }}" aria-label="Menu" style="width:34px;height:34px;border:1px solid var(--color-border);background:var(--color-bg-card);border-radius:9px;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--color-text-secondary);" style-hover="background:var(--color-bg-subtle);">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+        </button>
+        <sc-if value="{{ menuOpen }}" hint-placeholder-val="{{ false }}">
+          <div onClick="{{ closeMenu }}" style="position:fixed;inset:0;z-index:40;"></div>
+          <div style="position:absolute;top:42px;left:0;z-index:50;width:250px;background:var(--color-bg-card);border:1px solid var(--color-border);border-radius:12px;box-shadow:0 16px 42px rgba(17,17,17,.16);padding:6px;">
+            <div style="padding:8px 10px 6px;font-size:var(--fs-xs);font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--color-text-muted);">Jump to step</div>
+            <sc-for list="{{ steps }}" as="s" hint-placeholder-count="10">
+              <button onClick="{{ s.go }}" style="width:100%;display:flex;align-items:center;gap:10px;padding:7px 10px;border:none;background:transparent;border-radius:8px;cursor:pointer;text-align:left;font-family:inherit;" style-hover="background:var(--color-bg-subtle);">
+                <span style="width:20px;height:20px;flex-shrink:0;border-radius:50%;border:1.5px solid {{ s.ringColor }};background:{{ s.fill }};color:{{ s.numColor }};display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:600;" data-om-raster>{{ s.glyph }}</span>
+                <span style="font-size:var(--fs-sm);font-weight:{{ s.weight }};color:{{ s.labelColor }};">{{ s.label }}</span>
+              </button>
+            </sc-for>
+            <div style="height:1px;background:var(--color-border-subtle);margin:6px 4px;"></div>
+            <button onClick="{{ saveDraft }}" style="width:100%;display:flex;align-items:center;gap:10px;padding:8px 10px;border:none;background:transparent;border-radius:8px;cursor:pointer;text-align:left;font-family:inherit;font-size:var(--fs-sm);font-weight:500;color:var(--color-text-primary);" style-hover="background:var(--color-bg-subtle);"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>{{ saveLabel }}</button>
+            <button onClick="{{ exit }}" style="width:100%;display:flex;align-items:center;gap:10px;padding:8px 10px;border:none;background:transparent;border-radius:8px;cursor:pointer;text-align:left;font-family:inherit;font-size:var(--fs-sm);font-weight:500;color:var(--color-text-primary);" style-hover="background:var(--color-bg-subtle);"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>Back to Shoots</button>
+          </div>
+        </sc-if>
+      </div>
+      <span style="width:1px;height:24px;background:var(--color-border);flex-shrink:0;" class="wz-brandblock"></span>
+      <span class="photo wz-brandblock" style="background-image:{{ brandImg }};width:30px;height:30px;border-radius:8px;border:1px solid var(--color-border);flex-shrink:0;"></span>
+      <div class="wz-brandblock" style="min-width:0;">
+        <div style="font-size:var(--fs-sm);font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ wizTitle }}</div>
+        <div style="font-size:var(--fs-xs);color:var(--color-text-muted);">Step {{ stepNum }} of {{ stepCount }} · {{ stepName }}</div>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;gap:9px;flex-shrink:0;">
+      <button onClick="{{ saveDraft }}" class="wz-savetop" style="height:38px;padding:0 15px;border:1px solid var(--color-border);background:var(--color-bg-card);color:var(--color-text-secondary);font-size:var(--fs-sm);font-weight:500;border-radius:var(--radius-md);cursor:pointer;display:{{ saveDisplay }};" style-hover="background:var(--color-bg-subtle);">{{ saveLabel }}</button>
+      <button onClick="{{ back }}" style="height:38px;padding:0 15px;border:1px solid var(--color-border);background:var(--color-bg-card);color:var(--color-text-primary);font-size:var(--fs-sm);font-weight:600;border-radius:var(--radius-md);cursor:pointer;display:{{ backDisplay }};" style-hover="background:var(--color-bg-subtle);">Back</button>
+      <button onClick="{{ next }}" style="height:38px;padding:0 18px;border:none;background:var(--color-action);color:var(--color-action-text);font-size:var(--fs-sm);font-weight:600;border-radius:var(--radius-md);cursor:pointer;display:inline-flex;align-items:center;gap:7px;opacity:{{ nextOpacity }};" style-hover="background:var(--color-action-hover);">{{ nextLabel }}<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></button>
+    </div>
+  </div>
+
+  <!-- ===================== STEP RAIL ===================== -->
+  <div class="railscroll" style="flex-shrink:0;display:flex;align-items:center;gap:0;padding:11px 28px;border-bottom:1px solid var(--color-border);overflow-x:auto;background:var(--color-bg-subtle);">
+    <sc-for list="{{ steps }}" as="s" hint-placeholder-count="10">
+      <button onClick="{{ s.go }}" style="display:flex;align-items:center;gap:9px;padding:0;border:none;background:transparent;cursor:pointer;flex-shrink:0;">
+        <span style="width:22px;height:22px;flex-shrink:0;border-radius:50%;border:1.5px solid {{ s.ringColor }};background:{{ s.fill }};color:{{ s.numColor }};display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;" data-om-raster>{{ s.glyph }}</span>
+        <span style="font-size:var(--fs-sm);font-weight:{{ s.weight }};color:{{ s.labelColor }};white-space:nowrap;">{{ s.label }}</span>
+      </button>
+      <span style="width:26px;height:1px;background:var(--color-border-strong);flex-shrink:0;margin:0 12px;"></span>
+    </sc-for>
+  </div>
+
+  <!-- ===================== CONTENT ===================== -->
+  <div style="flex:1;overflow-y:auto;">
+    <div class="wz-content" style="max-width:1000px;margin:0 auto;padding:30px 28px 36px;">
+
+      <!-- STEP 1 — WELCOME -->
+      <sc-if value="{{ isS1 }}" hint-placeholder-val="{{ true }}">
+        <div class="photo" style="background-image:{{ heroImg }};width:100%;height:340px;border-radius:var(--card-radius);border:1px solid var(--color-border);overflow:hidden;">
+          <span style="position:absolute;inset:0;background:var(--image-scrim);"></span>
+          <div style="position:absolute;left:30px;bottom:28px;right:30px;color:#fff;">
+            <div style="display:inline-flex;align-items:center;gap:7px;font-size:var(--fs-xs);font-weight:600;background:rgba(255,255,255,.16);backdrop-filter:blur(4px);padding:5px 11px;border-radius:999px;margin-bottom:13px;"><span style="width:6px;height:6px;border-radius:50%;background:var(--color-approved);"></span>Production Planner</div>
+            <h1 style="margin:0;font-size:var(--fs-3xl);font-weight:700;letter-spacing:-.02em;max-width:560px;line-height:1.1;">You're creating a new Nike shoot.</h1>
+            <p style="margin:10px 0 0;font-size:var(--fs-base);color:rgba(255,255,255,.85);max-width:520px;line-height:1.5;">I reviewed your Brand DNA and recent assets — and found <span style="font-weight:600;color:#fff;">3 opportunities</span> to make this your strongest campaign yet.</p>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:18px;">
+          <button onClick="{{ next }}" style="text-align:left;padding:20px;border:none;border-radius:var(--card-radius);background:var(--color-action);color:var(--color-action-text);cursor:pointer;display:flex;flex-direction:column;gap:10px;min-height:148px;" style-hover="background:var(--color-action-hover);">
+            <span style="width:34px;height:34px;border-radius:9px;background:rgba(255,255,255,.14);display:flex;align-items:center;justify-content:center;" data-om-raster><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437z"/></svg></span>
+            <span style="font-size:var(--fs-base);font-weight:600;margin-top:auto;">Generate shoot</span>
+            <span style="font-size:var(--fs-sm);color:rgba(255,255,255,.72);line-height:1.45;">I'll plan everything from your Brand DNA — brief, shots, crew, budget.</span>
+          </button>
+          <button style="text-align:left;padding:20px;border:1px solid var(--color-border);border-radius:var(--card-radius);background:var(--color-bg-card);cursor:pointer;display:flex;flex-direction:column;gap:10px;min-height:148px;" style-hover="border-color:var(--color-border-strong);">
+            <span class="photo" style="background-image:{{ prevImg }};width:34px;height:34px;border-radius:9px;border:1px solid var(--color-border);"></span>
+            <span style="font-size:var(--fs-base);font-weight:600;margin-top:auto;">Use previous shoot</span>
+            <span style="font-size:var(--fs-sm);color:var(--color-text-secondary);line-height:1.45;">Duplicate "Air Max Lookbook" and adjust the details.</span>
+          </button>
+          <button style="text-align:left;padding:20px;border:1px solid var(--color-border);border-radius:var(--card-radius);background:var(--color-bg-card);cursor:pointer;display:flex;flex-direction:column;gap:10px;min-height:148px;" style-hover="border-color:var(--color-border-strong);">
+            <span style="width:34px;height:34px;border-radius:9px;background:var(--color-bg-muted);display:flex;align-items:center;justify-content:center;color:var(--color-text-secondary);" data-om-raster><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></span>
+            <span style="font-size:var(--fs-base);font-weight:600;margin-top:auto;">Start from scratch</span>
+            <span style="font-size:var(--fs-sm);color:var(--color-text-secondary);line-height:1.45;">Build the shoot step by step on your own.</span>
+          </button>
+        </div>
+      </sc-if>
+
+      <!-- STEP 2 — BASICS -->
+      <sc-if value="{{ isS2 }}" hint-placeholder-val="{{ false }}">
+        <sc-if value="{{ ctxLocked }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex;align-items:center;gap:11px;margin-bottom:18px;padding:12px 15px;border:1px solid var(--color-border);border-radius:var(--card-radius);background:var(--color-bg-subtle);">
+            <span style="display:flex;flex-shrink:0;width:24px;height:24px;border-radius:50%;background:var(--color-action);color:var(--color-action-text);align-items:center;justify-content:center;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>
+            <span style="flex:1;min-width:0;font-size:var(--fs-sm);color:var(--color-text-primary);">Carried over from <span style="font-weight:600;">{{ ctxBrand }}</span> — <span style="font-weight:600;">{{ ctxCampaign }}</span> · <span style="font-weight:600;">{{ ctxSeason }}</span>. No need to re-enter.</span>
+            <button onClick="{{ unlockCtx }}" style="flex-shrink:0;height:30px;padding:0 12px;border:1px solid var(--color-border);border-radius:999px;background:var(--color-bg-card);color:var(--color-text-secondary);font-size:var(--fs-xs);font-weight:600;cursor:pointer;" style-hover="background:var(--color-bg-subtle);">Change</button>
+          </div>
+        </sc-if>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;align-items:start;">
+          <div style="display:flex;flex-direction:column;gap:18px;">
+            <div><h2 style="margin:0 0 4px;font-size:var(--fs-xl);font-weight:600;">The basics</h2><p style="margin:0;font-size:var(--fs-sm);color:var(--color-text-secondary);">Tell me a little — I'll plan the rest.</p></div>
+            <label style="display:flex;flex-direction:column;gap:7px;"><span style="font-size:var(--fs-sm);font-weight:500;">Shoot name</span><input value="Spring Lookbook 2026" style="height:44px;border:1px solid var(--color-border);border-radius:var(--radius-md);padding:0 13px;font-size:var(--fs-sm);font-family:inherit;color:var(--color-text-primary);outline:none;" style-focus="border-color:var(--color-border-focus);" /></label>
+            <label style="display:flex;flex-direction:column;gap:7px;"><span style="font-size:var(--fs-sm);font-weight:500;">Campaign</span><div style="position:relative;"><select defaultValue="Spring 2026" disabled="{{ ctxLocked }}" style="width:100%;height:44px;border:1px solid var(--color-border);border-radius:var(--radius-md);padding:0 38px 0 13px;font-size:var(--fs-sm);font-family:inherit;color:var(--color-text-primary);background:var(--color-bg-card);cursor:pointer;outline:none;appearance:none;-webkit-appearance:none;" style-focus="border-color:var(--color-border-focus);"><option>Spring 2026</option><option>Summer 2026</option><option>Fall 2026</option><option>Holiday 2026</option></select><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--color-text-muted)" stroke-width="2" stroke-linecap="round" style="position:absolute;right:13px;top:50%;transform:translateY(-50%);pointer-events:none;"><polyline points="6 9 12 15 18 9"/></svg></div></label>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+              <label style="display:flex;flex-direction:column;gap:7px;"><span style="font-size:var(--fs-sm);font-weight:500;">Season</span><div style="position:relative;"><select id="wiz-season" defaultValue="Spring" disabled="{{ ctxLocked }}" style="width:100%;height:44px;border:1px solid var(--color-border);border-radius:var(--radius-md);padding:0 38px 0 13px;font-size:var(--fs-sm);font-family:inherit;color:var(--color-text-primary);background:var(--color-bg-card);cursor:pointer;outline:none;appearance:none;-webkit-appearance:none;" style-focus="border-color:var(--color-border-focus);"><option>Spring</option><option>Summer</option><option>Fall</option><option>Winter</option></select><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--color-text-muted)" stroke-width="2" stroke-linecap="round" style="position:absolute;right:13px;top:50%;transform:translateY(-50%);pointer-events:none;"><polyline points="6 9 12 15 18 9"/></svg></div></label>
+              <label style="display:flex;flex-direction:column;gap:7px;"><span style="font-size:var(--fs-sm);font-weight:500;">Brand</span><div style="height:44px;border:1px solid var(--color-border);border-radius:var(--radius-md);padding:0 11px;display:flex;align-items:center;gap:9px;font-size:var(--fs-sm);font-weight:500;background:var(--color-bg-subtle);"><span class="photo" style="background-image:{{ brandImg }};width:22px;height:22px;border-radius:6px;border:1px solid var(--color-border);"></span>Nike<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--color-text-muted)" stroke-width="2" stroke-linecap="round" style="margin-left:auto;"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></div></label>
+            </div>
+          </div>
+          <div style="border:1px solid var(--color-border);border-radius:var(--card-radius);background:var(--color-bg-subtle);padding:20px;">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;">
+              <span style="display:flex;color:var(--color-text-secondary);" data-om-raster><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437z"/></svg></span>
+              <span style="font-size:var(--fs-sm);font-weight:600;">Suggested plan</span>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:1px;">
+              <sc-for list="{{ planRows }}" as="r" hint-placeholder-count="4">
+                <div style="display:flex;align-items:center;justify-content:space-between;padding:11px 0;border-bottom:1px solid var(--color-border-subtle);">
+                  <span style="font-size:var(--fs-sm);color:var(--color-text-secondary);">{{ r.label }}</span>
+                  <span style="font-size:var(--fs-sm);font-weight:600;">{{ r.value }}</span>
+                </div>
+              </sc-for>
+            </div>
+            <button onClick="{{ next }}" style="margin-top:16px;width:100%;height:42px;border:none;border-radius:var(--radius-md);background:var(--color-action);color:var(--color-action-text);font-size:var(--fs-sm);font-weight:600;cursor:pointer;" style-hover="background:var(--color-action-hover);">Apply AI plan</button>
+            <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;">
+              <span onClick="{{ focusSeason }}" style="height:30px;padding:0 12px;border:1px solid var(--color-border);border-radius:999px;font-size:var(--fs-xs);font-weight:500;color:var(--color-text-secondary);display:inline-flex;align-items:center;cursor:pointer;background:var(--color-bg-card);">Change season</span>
+              <span onClick="{{ usePrevious }}" style="height:30px;padding:0 12px;border:1px solid var(--color-border);border-radius:999px;font-size:var(--fs-xs);font-weight:500;color:var(--color-text-secondary);display:inline-flex;align-items:center;cursor:pointer;background:var(--color-bg-card);">Use previous</span>
+            </div>
+          </div>
+        </div>
+      </sc-if>
+
+      <!-- STEP 3 — CREATIVE BRIEF -->
+      <sc-if value="{{ isS3 }}" hint-placeholder-val="{{ false }}">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:18px;">
+          <div><h2 style="margin:0 0 4px;font-size:var(--fs-xl);font-weight:600;">Creative brief</h2><p style="margin:0;font-size:var(--fs-sm);color:var(--color-text-secondary);">Generated from Nike's Brand DNA. Review and refine.</p></div>
+          <span style="display:inline-flex;align-items:center;gap:6px;font-size:var(--fs-xs);font-weight:500;color:var(--color-text-secondary);background:var(--color-bg-muted);padding:5px 11px;border-radius:999px;">AI draft</span>
+        </div>
+        <div style="border:1.5px solid var(--color-border);border-radius:var(--card-radius);background:var(--color-bg-card);overflow:hidden;">
+          <div style="display:grid;grid-template-columns:1fr 1fr;">
+            <sc-for list="{{ briefRows }}" as="b" hint-placeholder-count="4">
+              <div style="padding:16px 20px;border-bottom:1px solid var(--color-border-subtle);border-right:1px solid var(--color-border-subtle);">
+                <div style="font-size:var(--fs-xs);font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--color-text-muted);margin-bottom:6px;">{{ b.label }}</div>
+                <div style="font-size:var(--fs-sm);color:var(--color-text-primary);line-height:1.5;">{{ b.value }}</div>
+              </div>
+            </sc-for>
+          </div>
+          <!-- visual direction before/after -->
+          <div style="padding:18px 20px;background:var(--color-bg-subtle);">
+            <div style="font-size:var(--fs-xs);font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--color-text-muted);margin-bottom:10px;">Visual direction</div>
+            <div style="display:grid;grid-template-columns:1fr auto 1fr;gap:14px;align-items:center;">
+              <div style="padding:13px 15px;border:1px solid var(--color-border);border-radius:12px;background:var(--color-bg-card);">
+                <div style="font-size:var(--fs-xs);color:var(--color-text-muted);margin-bottom:5px;">Before</div>
+                <div style="font-size:var(--fs-sm);color:var(--color-text-secondary);line-height:1.45;">Bright studio, energetic, primary colours, motion blur.</div>
+              </div>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--color-text-muted)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+              <div style="padding:13px 15px;border:1.5px solid var(--color-text-primary);border-radius:12px;background:var(--color-bg-card);">
+                <div style="font-size:var(--fs-xs);color:var(--color-text-primary);font-weight:600;margin-bottom:5px;">After — more luxury</div>
+                <div style="font-size:var(--fs-sm);color:var(--color-text-primary);line-height:1.45;">{{ afterText }}</div>
+              </div>
+            </div>
+            <div style="display:flex;align-items:center;gap:10px;margin-top:16px;">
+              <button onClick="{{ next }}" style="height:40px;padding:0 18px;border:none;border-radius:var(--radius-md);background:var(--color-action);color:var(--color-action-text);font-size:var(--fs-sm);font-weight:600;cursor:pointer;">Approve brief</button>
+              <button onClick="{{ editBrief }}" style="height:40px;padding:0 16px;border:1px solid var(--color-border);border-radius:var(--radius-md);background:var(--color-bg-card);font-size:var(--fs-sm);font-weight:500;cursor:pointer;" style-hover="border-color:var(--color-border-strong);">Edit</button>
+              <span style="font-size:var(--fs-xs);color:var(--color-text-muted);margin-left:2px;">Tell me "make it more luxury" below — I update instantly.</span>
+            </div>
+          </div>
+        </div>
+      </sc-if>
+
+      <!-- STEP 4 — MOODBOARD -->
+      <sc-if value="{{ isS4 }}" hint-placeholder-val="{{ false }}">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:18px;">
+          <div><h2 style="margin:0 0 4px;font-size:var(--fs-xl);font-weight:600;">Moodboard</h2><p style="margin:0;font-size:var(--fs-sm);color:var(--color-text-secondary);">8 references matched to Nike's Brand DNA.</p></div>
+          <button onClick="{{ regenAll }}" style="height:36px;padding:0 14px;border:1px solid var(--color-border);border-radius:var(--radius-md);background:var(--color-bg-card);font-size:var(--fs-sm);font-weight:500;cursor:pointer;display:inline-flex;align-items:center;gap:7px;" style-hover="border-color:var(--color-border-strong);"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/><path d="M3 21v-5h5"/></svg>Regenerate all</button>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;">
+          <sc-for list="{{ moodImages }}" as="m" hint-placeholder-count="8">
+            <div style="border:1px solid {{ m.border }};border-radius:var(--image-radius);overflow:hidden;background:var(--color-bg-card);">
+              <div class="photo" style="background-image:{{ m.img }};width:100%;aspect-ratio:3/4;">
+                <span style="position:absolute;inset:0;background:linear-gradient(to top, rgb(17 17 17 / 0.55), rgb(17 17 17 / 0) 50%);"></span>
+                <button onClick="{{ m.toggleLock }}" aria-label="Toggle lock" style="position:absolute;top:8px;left:8px;width:24px;height:24px;border:none;border-radius:7px;background:{{ m.lockBg }};-webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px);display:flex;align-items:center;justify-content:center;cursor:pointer;" data-om-raster><sc-if value="{{ m.locked }}" hint-placeholder-val="{{ false }}"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></sc-if><sc-if value="{{ m.unlocked }}" hint-placeholder-val="{{ true }}"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#111" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 9.9-1"/></svg></sc-if></button>
+                <div style="position:absolute;right:8px;top:8px;display:flex;gap:5px;">
+                  <button onClick="{{ m.regen }}" aria-label="Regenerate" style="width:24px;height:24px;border:none;border-radius:7px;background:rgba(255,255,255,.92);display:flex;align-items:center;justify-content:center;cursor:pointer;" style-hover="background:#fff;" data-om-raster><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#111" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M21 3v5h-5"/></svg></button>
+                </div>
+              </div>
+              <div style="padding:10px 11px 11px;">
+                <div style="font-size:var(--fs-xs);color:var(--color-text-secondary);line-height:1.4;">{{ m.why }}</div>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+      </sc-if>
+
+      <!-- STEP 5 — SHOT LIST -->
+      <sc-if value="{{ isS5 }}" hint-placeholder-val="{{ false }}">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:18px;">
+          <div><h2 style="margin:0 0 4px;font-size:var(--fs-xl);font-weight:600;">Shot list</h2><p style="margin:0;font-size:var(--fs-sm);color:var(--color-text-secondary);">{{ shotCount }} shots · 3 looks · generated from the brief.</p></div>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;">
+          <sc-for list="{{ shotChips }}" as="c" hint-placeholder-count="4">
+            <button onClick="{{ c.set }}" style="height:34px;padding:0 14px;border:1px solid var(--color-border);background:var(--color-bg-card);color:var(--color-text-primary);border-radius:999px;font-size:var(--fs-sm);font-weight:500;cursor:pointer;" style-hover="border-color:var(--color-border-strong);background:var(--color-bg-subtle);">{{ c.label }}</button>
+          </sc-for>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:10px;">
+          <sc-for list="{{ shots }}" as="s" hint-placeholder-count="7">
+            <div style="display:flex;align-items:center;gap:14px;padding:10px;border:1px solid var(--color-border);border-radius:14px;background:var(--color-bg-card);" style-hover="border-color:var(--color-border-strong);">
+              <div class="photo" style="background-image:{{ s.img }};width:60px;height:60px;border-radius:11px;border:1px solid var(--color-border);flex-shrink:0;"></div>
+              <div style="min-width:0;flex:1;">
+                <div style="font-size:var(--fs-sm);font-weight:600;">{{ s.name }}</div>
+                <div style="font-size:var(--fs-xs);color:var(--color-text-muted);margin-top:3px;">{{ s.meta }}</div>
+              </div>
+              <span class="mono" style="font-size:var(--fs-xs);color:var(--color-text-muted);flex-shrink:0;">{{ s.ratio }}</span>
+              <button onClick="{{ s.edit }}" aria-label="Edit shot" style="width:32px;height:32px;flex-shrink:0;border:1px solid var(--color-border);background:var(--color-bg-card);border-radius:8px;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--color-text-secondary);" style-hover="background:var(--color-bg-subtle);"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button>
+            </div>
+          </sc-for>
+        </div>
+      </sc-if>
+
+      <!-- STEP 6 — PRODUCTION PLAN -->
+      <sc-if value="{{ isS6 }}" hint-placeholder-val="{{ false }}">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:18px;">
+          <div><h2 style="margin:0 0 4px;font-size:var(--fs-xl);font-weight:600;">Production plan</h2><p style="margin:0;font-size:var(--fs-sm);color:var(--color-text-secondary);">Crew and resources for a 2-day studio shoot.</p></div>
+          <sc-if value="{{ hasMissing }}" hint-placeholder-val="{{ true }}"><span style="display:inline-flex;align-items:center;gap:6px;font-size:var(--fs-xs);font-weight:600;color:var(--color-warn);background:var(--color-bg-subtle);border:1px solid var(--color-border);padding:5px 11px;border-radius:999px;">1 resource missing</span></sc-if>
+          <sc-if value="{{ propsDone }}" hint-placeholder-val="{{ false }}"><span style="display:inline-flex;align-items:center;gap:6px;font-size:var(--fs-xs);font-weight:600;color:var(--color-approved);background:var(--color-bg-subtle);border:1px solid var(--color-border);padding:5px 11px;border-radius:999px;">All resources confirmed</span></sc-if>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+          <sc-for list="{{ resources }}" as="r" hint-placeholder-count="8">
+            <div style="display:flex;align-items:center;gap:12px;padding:13px 15px;border:1px solid {{ r.border }};border-radius:14px;background:var(--color-bg-card);">
+              <span style="width:34px;height:34px;flex-shrink:0;border-radius:9px;background:var(--color-bg-muted);display:flex;align-items:center;justify-content:center;color:var(--color-text-secondary);" data-om-raster>{{ r.icon }}</span>
+              <div style="min-width:0;flex:1;">
+                <div style="font-size:var(--fs-xs);color:var(--color-text-muted);">{{ r.role }}</div>
+                <div style="font-size:var(--fs-sm);font-weight:600;color:{{ r.nameColor }};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ r.name }}</div>
+              </div>
+              <sc-if value="{{ r.missing }}" hint-placeholder-val="{{ false }}"><button onClick="{{ r.assign }}" style="flex-shrink:0;height:30px;padding:0 13px;border:none;border-radius:8px;background:var(--color-action);color:var(--color-action-text);font-size:var(--fs-xs);font-weight:600;cursor:pointer;" style-hover="background:var(--color-action-hover);">Assign</button></sc-if>
+              <sc-if value="{{ r.ok }}" hint-placeholder-val="{{ true }}"><span style="flex-shrink:0;display:flex;" data-om-raster><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--color-approved)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span></sc-if>
+            </div>
+          </sc-for>
+        </div>
+      </sc-if>
+
+      <!-- STEP 7 — BUDGET -->
+      <sc-if value="{{ isS7 }}" hint-placeholder-val="{{ false }}">
+        <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:16px;margin-bottom:22px;">
+          <div><h2 style="margin:0 0 4px;font-size:var(--fs-xl);font-weight:600;">Budget</h2><p style="margin:0;font-size:var(--fs-sm);color:var(--color-text-secondary);">AI estimate for a 2-day Nike studio shoot.</p></div>
+          <div style="text-align:right;"><div class="mono" style="font-size:var(--fs-3xl);font-weight:700;line-height:1;">{{ budgetTotal }}</div><div style="font-size:var(--fs-xs);color:var(--color-text-muted);margin-top:4px;">Estimated total</div></div>
+        </div>
+        <div style="display:grid;grid-template-columns:1.5fr 1fr;gap:24px;align-items:start;">
+          <div style="display:flex;flex-direction:column;gap:14px;">
+            <sc-for list="{{ budget }}" as="b" hint-placeholder-count="7">
+              <div>
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;"><span style="font-size:var(--fs-sm);color:var(--color-text-secondary);">{{ b.label }}</span><span class="mono" style="font-size:var(--fs-sm);font-weight:600;">{{ b.amount }}</span></div>
+                <div style="height:7px;border-radius:7px;background:var(--color-bg-muted);overflow:hidden;"><span style="display:block;height:100%;width:{{ b.w }};background:var(--color-text-primary);border-radius:7px;"></span></div>
+              </div>
+            </sc-for>
+          </div>
+          <div style="border:1px solid var(--color-border);border-radius:var(--card-radius);background:var(--color-bg-subtle);padding:18px;">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;"><span style="display:flex;color:var(--color-approved);" data-om-raster><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></span><span style="font-size:var(--fs-sm);font-weight:600;">Savings</span></div>
+            <p style="margin:0 0 13px;font-size:var(--fs-sm);color:var(--color-text-secondary);line-height:1.5;">{{ savingsNote }}</p>
+            <button onClick="{{ applySavings }}" style="width:100%;height:38px;border:1px solid var(--color-border);border-radius:var(--radius-md);background:var(--color-bg-card);font-size:var(--fs-sm);font-weight:600;cursor:pointer;" style-hover="background:var(--color-bg-card);border-color:var(--color-border-strong);">{{ savingsBtnLabel }}</button>
+          </div>
+        </div>
+      </sc-if>
+
+      <!-- STEP 8 — TIMELINE -->
+      <sc-if value="{{ isS8 }}" hint-placeholder-val="{{ false }}">
+        <div style="margin-bottom:18px;"><h2 style="margin:0 0 4px;font-size:var(--fs-xl);font-weight:600;">Timeline</h2><p style="margin:0;font-size:var(--fs-sm);color:var(--color-text-secondary);">Production schedule with dependencies — 6 weeks to delivery.</p></div>
+        <div style="display:flex;flex-direction:column;gap:0;">
+          <sc-for list="{{ phases }}" as="p" hint-placeholder-count="6">
+            <div style="display:flex;gap:16px;">
+              <div style="display:flex;flex-direction:column;align-items:center;flex-shrink:0;">
+                <span style="width:14px;height:14px;border-radius:50%;background:{{ p.dot }};border:2px solid var(--color-bg-page);box-shadow:0 0 0 1.5px {{ p.dot }};"></span>
+                <span style="flex:1;width:2px;background:var(--color-border);min-height:18px;display:{{ p.lineDisplay }};"></span>
+              </div>
+              <div style="flex:1;padding-bottom:16px;">
+                <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:14px 16px;border:1px solid var(--color-border);border-radius:14px;background:var(--color-bg-card);">
+                  <div><div style="font-size:var(--fs-sm);font-weight:600;">{{ p.name }}</div><div style="font-size:var(--fs-xs);color:var(--color-text-muted);margin-top:3px;">{{ p.dep }}</div></div>
+                  <span class="mono" style="font-size:var(--fs-xs);color:var(--color-text-secondary);background:var(--color-bg-muted);padding:4px 10px;border-radius:999px;white-space:nowrap;">{{ p.dates }}</span>
+                </div>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+      </sc-if>
+
+      <!-- STEP 9 — CALL SHEET -->
+      <sc-if value="{{ isS9 }}" hint-placeholder-val="{{ false }}">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:18px;">
+          <div><h2 style="margin:0 0 4px;font-size:var(--fs-xl);font-weight:600;">Call sheet</h2><p style="margin:0;font-size:var(--fs-sm);color:var(--color-text-secondary);">Day 1 · Studio 7, Los Angeles · Apr 12.</p></div>
+          <div style="display:flex;gap:8px;">
+            <sc-for list="{{ exports }}" as="e" hint-placeholder-count="3">
+              <button onClick="{{ e.set }}" style="height:36px;padding:0 13px;border:1px solid var(--color-border);border-radius:var(--radius-md);background:var(--color-bg-card);font-size:var(--fs-sm);font-weight:500;cursor:pointer;display:inline-flex;align-items:center;gap:7px;" style-hover="border-color:var(--color-border-strong);"><span style="display:flex;color:var(--color-text-secondary);" data-om-raster>{{ e.icon }}</span>{{ e.label }}</button>
+            </sc-for>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:1.3fr 1fr;gap:16px;align-items:start;">
+          <div style="border:1px solid var(--color-border);border-radius:var(--card-radius);background:var(--color-bg-card);overflow:hidden;">
+            <div style="padding:13px 16px;border-bottom:1px solid var(--color-border-subtle);font-size:var(--fs-sm);font-weight:600;">Team &amp; arrival</div>
+            <sc-for list="{{ callTeam }}" as="t" hint-placeholder-count="5">
+              <div style="display:flex;align-items:center;gap:12px;padding:11px 16px;border-bottom:1px solid var(--color-border-subtle);">
+                <span style="width:30px;height:30px;flex-shrink:0;border-radius:50%;background:var(--color-bg-muted);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;color:var(--color-text-secondary);">{{ t.initials }}</span>
+                <div style="flex:1;min-width:0;"><div style="font-size:var(--fs-sm);font-weight:500;">{{ t.name }}</div><div style="font-size:var(--fs-xs);color:var(--color-text-muted);">{{ t.role }}</div></div>
+                <span class="mono" style="font-size:var(--fs-xs);color:var(--color-text-secondary);">{{ t.arrive }}</span>
+              </div>
+            </sc-for>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:16px;">
+            <div style="border:1px solid var(--color-border);border-radius:var(--card-radius);background:var(--color-bg-card);padding:16px;">
+              <div style="font-size:var(--fs-sm);font-weight:600;margin-bottom:11px;">Shot order</div>
+              <sc-for list="{{ shotOrder }}" as="o" hint-placeholder-count="4">
+                <div style="display:flex;align-items:center;gap:10px;padding:6px 0;"><span class="mono" style="font-size:var(--fs-xs);color:var(--color-text-muted);width:16px;">{{ o.n }}</span><span style="font-size:var(--fs-sm);color:var(--color-text-primary);">{{ o.name }}</span><span class="mono" style="font-size:var(--fs-xs);color:var(--color-text-muted);margin-left:auto;">{{ o.time }}</span></div>
+              </sc-for>
+            </div>
+            <div style="border:1px solid var(--color-border);border-radius:var(--card-radius);background:var(--color-bg-subtle);padding:16px;">
+              <div style="font-size:var(--fs-xs);font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--color-text-muted);margin-bottom:8px;">Emergency</div>
+              <div style="font-size:var(--fs-sm);color:var(--color-text-primary);">Studio front desk · <span class="mono">(323) 555-0148</span></div>
+              <div style="font-size:var(--fs-sm);color:var(--color-text-primary);margin-top:4px;">Producer — Maya R. · <span class="mono">(310) 555-0192</span></div>
+            </div>
+          </div>
+        </div>
+      </sc-if>
+
+      <!-- STEP 10 — REVIEW -->
+      <sc-if value="{{ isS10 }}" hint-placeholder-val="{{ false }}">
+        <div style="margin-bottom:18px;"><h2 style="margin:0 0 4px;font-size:var(--fs-xl);font-weight:600;">Review &amp; create</h2><p style="margin:0;font-size:var(--fs-sm);color:var(--color-text-secondary);">Everything's planned. Here's the production-readiness breakdown before I create the shoot.</p></div>
+
+        <div class="revgrid">
+          <!-- LEFT RAIL — always-visible readiness + section menu -->
+          <div class="revleft" style="display:flex;flex-direction:column;gap:14px;">
+            <div style="border:1px solid var(--color-border);border-radius:var(--card-radius);background:var(--color-bg-card);padding:18px;text-align:center;">
+              <div style="font-size:var(--fs-xs);font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--color-text-muted);">Production Readiness</div>
+              <div class="mono" style="font-size:46px;font-weight:700;line-height:1;margin:12px 0 0;">{{ overallScore }}<span style="font-size:var(--fs-lg);color:var(--color-text-muted);font-weight:600;"> / 100</span></div>
+              <div style="display:inline-flex;align-items:center;gap:7px;margin-top:12px;padding:5px 12px;border-radius:999px;background:var(--color-bg-subtle);border:1px solid var(--color-border);">
+                <span style="width:9px;height:9px;border-radius:50%;background:var(--color-approved);"></span>
+                <span style="font-size:var(--fs-sm);font-weight:600;">{{ overallGrade }}</span>
+              </div>
+              <div style="font-size:var(--fs-sm);color:{{ readyColor }};font-weight:600;margin-top:11px;">{{ readyText }}</div>
+            </div>
+            <div style="border:1px solid var(--color-border);border-radius:var(--card-radius);background:var(--color-bg-card);overflow:hidden;">
+              <div style="padding:11px 14px;border-bottom:1px solid var(--color-border-subtle);font-size:var(--fs-xs);font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--color-text-muted);">Section scores</div>
+              <sc-for list="{{ scorecards }}" as="c" hint-placeholder-count="8">
+                <button onClick="{{ c.select }}" style="width:100%;text-align:left;display:flex;align-items:center;gap:10px;padding:10px 13px;border:none;border-bottom:1px solid var(--color-border-subtle);background:{{ c.bg }};cursor:pointer;border-left:2px solid {{ c.bd }};" style-hover="background:var(--color-bg-subtle);">
+                  <span style="width:8px;height:8px;border-radius:50%;background:{{ c.gColor }};flex-shrink:0;"></span>
+                  <span style="flex:1;font-size:var(--fs-sm);font-weight:500;color:var(--color-text-primary);min-width:0;">{{ c.key }}</span>
+                  <span class="mono" style="font-size:var(--fs-xs);color:var(--color-text-secondary);">{{ c.score }}</span>
+                  <span style="font-size:11px;font-weight:700;color:{{ c.gColor }};width:24px;text-align:right;">{{ c.grade }}</span>
+                </button>
+              </sc-for>
+            </div>
+          </div>
+
+          <!-- RIGHT — detail dashboard -->
+          <div style="display:flex;flex-direction:column;gap:16px;min-width:0;">
+
+            <!-- WHY for selected section -->
+            <div style="border:1.5px solid var(--color-text-primary);border-radius:var(--card-radius);background:var(--color-bg-card);padding:18px 20px;">
+              <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:13px;">
+                <div style="display:flex;align-items:center;gap:9px;min-width:0;">
+                  <span style="font-size:var(--fs-base);font-weight:600;">{{ selName }}</span>
+                  <span style="font-size:11px;font-weight:700;color:{{ selGColor }};padding:2px 8px;border-radius:6px;background:var(--color-bg-subtle);">{{ selGrade }}</span>
+                </div>
+                <span class="mono" style="font-size:var(--fs-2xl);font-weight:700;">{{ selScore }}</span>
+              </div>
+              <div style="display:flex;flex-direction:column;gap:8px;">
+                <sc-for list="{{ selWhy }}" as="w" hint-placeholder-count="4">
+                  <div style="display:flex;align-items:center;gap:9px;">
+                    <span style="width:7px;height:7px;border-radius:50%;background:{{ w.dot }};flex-shrink:0;"></span>
+                    <span style="font-size:var(--fs-sm);color:var(--color-text-secondary);">{{ w.text }}</span>
+                  </div>
+                </sc-for>
+              </div>
+              <div style="margin-top:13px;padding-top:12px;border-top:1px solid var(--color-border-subtle);display:flex;align-items:center;justify-content:space-between;">
+                <span style="font-size:var(--fs-xs);color:var(--color-text-muted);">Potential score</span>
+                <span class="mono" style="font-size:var(--fs-sm);font-weight:600;color:var(--color-text-primary);">{{ selPot }}</span>
+              </div>
+            </div>
+
+            <!-- Approvals + AI improvements -->
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start;">
+              <div style="border:1px solid var(--color-border);border-radius:var(--card-radius);background:var(--color-bg-card);overflow:hidden;">
+                <div style="padding:11px 14px;border-bottom:1px solid var(--color-border-subtle);display:flex;align-items:center;justify-content:space-between;"><span style="font-size:var(--fs-sm);font-weight:600;">Approvals</span><span style="font-size:var(--fs-xs);color:var(--color-warn);font-weight:600;">{{ pendingCount }} pending</span></div>
+                <sc-for list="{{ approvals }}" as="a" hint-placeholder-count="6">
+                  <div style="padding:9px 14px;border-bottom:1px solid var(--color-border-subtle);">
+                    <div style="display:flex;align-items:center;gap:9px;">
+                      <span style="width:8px;height:8px;border-radius:50%;background:{{ a.dot }};flex-shrink:0;"></span>
+                      <span style="flex:1;font-size:var(--fs-sm);color:var(--color-text-primary);">{{ a.label }}</span>
+                      <span style="font-size:var(--fs-xs);color:var(--color-text-muted);">{{ a.status }}</span>
+                    </div>
+                    <sc-if value="{{ a.hasReason }}" hint-placeholder-val="{{ false }}"><div style="font-size:var(--fs-xs);color:var(--color-text-muted);margin:5px 0 0 17px;line-height:1.45;">{{ a.reason }}</div></sc-if>
+                  </div>
+                </sc-for>
+              </div>
+              <div style="border:1px solid var(--color-border);border-radius:var(--card-radius);background:var(--color-bg-card);overflow:hidden;">
+                <div style="padding:11px 14px;border-bottom:1px solid var(--color-border-subtle);font-size:var(--fs-sm);font-weight:600;">AI Improvements</div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--color-border-subtle);">
+                  <sc-for list="{{ improvements }}" as="i" hint-placeholder-count="6">
+                    <div style="background:var(--color-bg-card);padding:12px 14px;">
+                      <div class="mono" style="font-size:var(--fs-base);font-weight:700;">{{ i.val }}</div>
+                      <div style="font-size:var(--fs-xs);color:var(--color-text-muted);margin-top:2px;">{{ i.label }}</div>
+                    </div>
+                  </sc-for>
+                </div>
+              </div>
+            </div>
+
+            <!-- Risks + Resources -->
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start;">
+              <div style="border:1px solid var(--color-border);border-radius:var(--card-radius);background:var(--color-bg-card);overflow:hidden;">
+                <div style="padding:11px 14px;border-bottom:1px solid var(--color-border-subtle);font-size:var(--fs-sm);font-weight:600;">Production Risks</div>
+                <sc-for list="{{ risks }}" as="r" hint-placeholder-count="4">
+                  <div style="display:flex;align-items:center;gap:9px;padding:10px 14px;border-bottom:1px solid var(--color-border-subtle);">
+                    <span style="width:8px;height:8px;border-radius:50%;background:{{ r.dot }};flex-shrink:0;"></span>
+                    <span style="font-size:var(--fs-sm);color:var(--color-text-secondary);">{{ r.text }}</span>
+                  </div>
+                </sc-for>
+              </div>
+              <div style="border:1px solid var(--color-border);border-radius:var(--card-radius);background:var(--color-bg-card);overflow:hidden;">
+                <div style="padding:11px 14px;border-bottom:1px solid var(--color-border-subtle);font-size:var(--fs-sm);font-weight:600;">Resource Readiness</div>
+                <div class="revres" style="padding:12px;">
+                  <sc-for list="{{ readiness }}" as="r" hint-placeholder-count="5">
+                    <div style="border:1px solid var(--color-border);border-radius:10px;padding:10px 8px;text-align:center;">
+                      <div style="font-size:11px;color:var(--color-text-muted);">{{ r.label }}</div>
+                      <div style="font-size:var(--fs-sm);font-weight:600;margin:4px 0 6px;">{{ r.value }}</div>
+                      <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:{{ r.dot }};"></span>
+                    </div>
+                  </sc-for>
+                </div>
+              </div>
+            </div>
+
+            <!-- Completed fixes + Remaining warnings -->
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start;">
+              <div style="border:1px solid var(--color-border);border-radius:var(--card-radius);background:var(--color-bg-card);overflow:hidden;">
+                <div style="padding:11px 14px;border-bottom:1px solid var(--color-border-subtle);font-size:var(--fs-sm);font-weight:600;display:flex;align-items:center;gap:8px;"><span style="width:8px;height:8px;border-radius:50%;background:var(--color-approved);"></span>Completed fixes</div>
+                <sc-if value="{{ hasCompleted }}" hint-placeholder-val="{{ false }}">
+                  <sc-for list="{{ completed }}" as="c" hint-placeholder-count="2">
+                    <div style="display:flex;align-items:center;gap:9px;padding:9px 14px;border-bottom:1px solid var(--color-border-subtle);">
+                      <span style="display:flex;color:var(--color-approved);flex-shrink:0;" data-om-raster><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span>
+                      <span style="font-size:var(--fs-sm);color:var(--color-text-secondary);">{{ c }}</span>
+                    </div>
+                  </sc-for>
+                </sc-if>
+                <sc-if value="{{ hasNoCompleted }}" hint-placeholder-val="{{ true }}">
+                  <div style="padding:14px;font-size:var(--fs-sm);color:var(--color-text-muted);">No fixes applied yet — use the AI quick actions to resolve warnings.</div>
+                </sc-if>
+              </div>
+              <div style="border:1px solid var(--color-border);border-radius:var(--card-radius);background:var(--color-bg-card);overflow:hidden;">
+                <div style="padding:11px 14px;border-bottom:1px solid var(--color-border-subtle);font-size:var(--fs-sm);font-weight:600;display:flex;align-items:center;justify-content:space-between;"><span style="display:flex;align-items:center;gap:8px;"><span style="width:8px;height:8px;border-radius:50%;background:var(--color-warn);"></span>Remaining warnings</span><span style="font-size:var(--fs-xs);color:var(--color-text-muted);font-weight:600;">{{ remainingCount }}</span></div>
+                <sc-if value="{{ hasRemaining }}" hint-placeholder-val="{{ true }}">
+                  <sc-for list="{{ remaining }}" as="w" hint-placeholder-count="4">
+                    <div style="display:flex;align-items:center;gap:9px;padding:9px 14px;border-bottom:1px solid var(--color-border-subtle);">
+                      <span style="width:7px;height:7px;border-radius:50%;background:var(--color-warn);flex-shrink:0;"></span>
+                      <span style="font-size:var(--fs-sm);color:var(--color-text-secondary);">{{ w }}</span>
+                    </div>
+                  </sc-for>
+                </sc-if>
+                <sc-if value="{{ hasNoRemaining }}" hint-placeholder-val="{{ false }}">
+                  <div style="padding:14px;font-size:var(--fs-sm);color:var(--color-approved);">All warnings resolved — ready to create.</div>
+                </sc-if>
+              </div>
+            </div>
+
+            <!-- Deliverables -->
+            <div style="border:1px solid var(--color-border);border-radius:var(--card-radius);background:var(--color-bg-card);padding:14px 16px;">
+              <div style="font-size:var(--fs-sm);font-weight:600;margin-bottom:11px;">Deliverables</div>
+              <div style="display:flex;flex-wrap:wrap;gap:8px;">
+                <sc-for list="{{ deliverables }}" as="d" hint-placeholder-count="7">
+                  <span style="height:32px;padding:0 13px;border:1px solid var(--color-border);border-radius:999px;font-size:var(--fs-sm);font-weight:500;color:var(--color-text-primary);display:inline-flex;align-items:center;background:var(--color-bg-subtle);">{{ d }}</span>
+                </sc-for>
+              </div>
+            </div>
+
+            <!-- Production journey -->
+            <div style="border:1px solid var(--color-border);border-radius:var(--card-radius);background:var(--color-bg-card);padding:14px 16px;">
+              <div style="font-size:var(--fs-sm);font-weight:600;margin-bottom:13px;">Production journey</div>
+              <div style="display:flex;align-items:center;flex-wrap:wrap;gap:10px;">
+                <sc-for list="{{ journey }}" as="j" hint-placeholder-count="5">
+                  <div style="display:flex;align-items:center;gap:8px;">
+                    <span style="width:10px;height:10px;border-radius:50%;background:{{ j.dot }};flex-shrink:0;"></span>
+                    <span style="font-size:var(--fs-sm);font-weight:{{ j.weight }};color:{{ j.nameColor }};">{{ j.name }}</span>
+                  </div>
+                  <sc-if value="{{ j.showArrow }}" hint-placeholder-val="{{ false }}"><span style="display:flex;color:var(--color-border-strong);" data-om-raster><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></span></sc-if>
+                </sc-for>
+              </div>
+            </div>
+
+            <!-- Final CTA -->
+            <div style="border:1.5px solid var(--color-text-primary);border-radius:var(--card-radius);background:var(--color-bg-card);padding:20px;">
+              <div style="font-size:var(--fs-base);font-weight:600;">Create Production Plan</div>
+              <p style="margin:4px 0 13px;font-size:var(--fs-sm);color:var(--color-text-secondary);">This will:</p>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px 16px;">
+                <sc-for list="{{ ctaBullets }}" as="b" hint-placeholder-count="6">
+                  <div style="display:flex;align-items:center;gap:8px;">
+                    <span style="display:flex;color:var(--color-approved);flex-shrink:0;" data-om-raster><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span>
+                    <span style="font-size:var(--fs-sm);color:var(--color-text-primary);">{{ b }}</span>
+                  </div>
+                </sc-for>
+              </div>
+              <div style="display:flex;align-items:center;gap:10px;margin-top:18px;flex-wrap:wrap;">
+                <button onClick="{{ createShoot }}" style="height:46px;padding:0 26px;border:none;border-radius:var(--radius-md);background:var(--color-action);color:var(--color-action-text);font-size:var(--fs-base);font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:8px;" style-hover="background:var(--color-action-hover);"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>{{ createLabel }}</button>
+                <button onClick="{{ saveDraft }}" style="height:46px;padding:0 20px;border:1px solid var(--color-border);border-radius:var(--radius-md);background:var(--color-bg-card);font-size:var(--fs-sm);font-weight:600;cursor:pointer;" style-hover="background:var(--color-bg-subtle);">{{ saveLabel }}</button>
+                <button onClick="{{ back }}" style="height:46px;padding:0 18px;border:none;background:transparent;color:var(--color-text-secondary);font-size:var(--fs-sm);font-weight:600;cursor:pointer;">Back</button>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </sc-if>
+
+      <!-- ===== BOOKING · STEP 1 — TALENT & SHOOT ===== -->
+      <sc-if value="{{ isB1 }}" hint-placeholder-val="{{ false }}">
+        <div style="margin-bottom:18px;"><h2 style="margin:0 0 4px;font-size:var(--fs-xl);font-weight:600;">Talent &amp; shoot</h2><p style="margin:0;font-size:var(--fs-sm);color:var(--color-text-secondary);">Confirm the talent and link this booking to a shoot.</p></div>
+        <div style="display:flex;gap:16px;align-items:center;border:1px solid var(--color-border);border-radius:var(--card-radius);padding:16px;margin-bottom:22px;">
+          <div class="photo" style="background-image:{{ bkTalentBg }};width:64px;height:80px;border-radius:12px;border:1px solid var(--color-border);flex-shrink:0;"></div>
+          <div><div style="font-size:var(--fs-lg);font-weight:600;">{{ bkTalent }}</div><div style="font-size:var(--fs-sm);color:var(--color-text-secondary);">{{ bkTalentMeta }}</div></div>
+        </div>
+        <div style="font-size:var(--fs-sm);font-weight:600;margin-bottom:10px;">Link to a shoot</div>
+        <div style="display:flex;flex-direction:column;gap:10px;">
+          <button onClick="{{ pickNike }}" style="text-align:left;display:flex;align-items:center;gap:12px;padding:14px 16px;border:1.5px solid {{ bkNikeBorder }};border-radius:14px;background:var(--color-bg-card);cursor:pointer;font-family:inherit;">
+            <span class="photo" style="background-image:{{ brandImg }};width:34px;height:34px;border-radius:8px;flex-shrink:0;"></span>
+            <span style="flex:1;"><span style="display:block;font-size:var(--fs-sm);font-weight:600;">Nike SS26 — Studio 9</span><span style="display:block;font-size:var(--fs-xs);color:var(--color-text-muted);">Mar 12–14 · 12 looks</span></span>
+          </button>
+          <button onClick="{{ pickStandalone }}" style="text-align:left;display:flex;align-items:center;gap:12px;padding:14px 16px;border:1.5px solid {{ bkStandBorder }};border-radius:14px;background:var(--color-bg-card);cursor:pointer;font-family:inherit;">
+            <span style="width:34px;height:34px;border-radius:8px;background:var(--color-bg-muted);flex-shrink:0;"></span>
+            <span style="flex:1;"><span style="display:block;font-size:var(--fs-sm);font-weight:600;">Standalone booking</span><span style="display:block;font-size:var(--fs-xs);color:var(--color-text-muted);">Not tied to a shoot yet</span></span>
+          </button>
+        </div>
+      </sc-if>
+
+      <!-- ===== BOOKING · STEP 2 — DATES ===== -->
+      <sc-if value="{{ isB2 }}" hint-placeholder-val="{{ false }}">
+        <div style="margin-bottom:18px;"><h2 style="margin:0 0 4px;font-size:var(--fs-xl);font-weight:600;">Dates &amp; availability</h2><p style="margin:0;font-size:var(--fs-sm);color:var(--color-text-secondary);">I filled these from the shoot. Approve or edit each before sending.</p></div>
+        <div style="display:flex;flex-direction:column;gap:12px;">
+          <sc-for list="{{ bkFields2 }}" as="f" hint-placeholder-count="2">
+            <div style="{{ f.rowStyle }}">
+              <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;">
+                <div style="flex:1;min-width:0;">
+                  <div style="font-size:11px;color:var(--color-text-muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:5px;">{{ f.label }}</div>
+                  <sc-if value="{{ f.editing }}" hint-placeholder-val="{{ false }}"><input value="{{ f.draft }}" onInput="{{ f.onDraft }}" style="width:100%;padding:8px 10px;border:1px solid var(--color-border-strong);border-radius:6px;font-family:inherit;font-size:var(--fs-sm);outline:none;" /></sc-if>
+                  <sc-if value="{{ f.notEditing }}" hint-placeholder-val="{{ true }}"><div style="font-size:var(--fs-sm);color:var(--color-text-primary);">{{ f.value }}</div></sc-if>
+                </div>
+                <div style="{{ f.chipStyle }}">{{ f.chipText }}</div>
+              </div>
+              <div style="display:flex;align-items:center;gap:8px;margin-top:11px;">
+                <sc-if value="{{ f.editing }}" hint-placeholder-val="{{ false }}"><button onClick="{{ f.onSave }}" style="padding:6px 12px;border-radius:6px;border:none;background:var(--color-action);color:#fff;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;">Save</button><button onClick="{{ f.onCancel }}" style="padding:6px 12px;border-radius:6px;border:1px solid var(--color-border);background:#fff;font-size:12px;cursor:pointer;font-family:inherit;">Cancel</button></sc-if>
+                <sc-if value="{{ f.showAi }}" hint-placeholder-val="{{ true }}"><button onClick="{{ f.onApprove }}" style="padding:6px 12px;border-radius:6px;border:none;background:var(--color-action);color:#fff;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;">Approve</button><button onClick="{{ f.onEdit }}" style="padding:6px 12px;border-radius:6px;border:1px solid var(--color-border);background:#fff;font-size:12px;cursor:pointer;font-family:inherit;">Edit</button><button onClick="{{ f.onWhy }}" style="margin-left:auto;padding:6px 8px;border:none;background:transparent;font-size:12px;color:var(--color-text-secondary);cursor:pointer;font-family:inherit;">Why</button></sc-if>
+                <sc-if value="{{ f.showDone }}" hint-placeholder-val="{{ false }}"><button onClick="{{ f.onEdit }}" style="margin-left:auto;padding:6px 10px;border-radius:6px;border:1px solid var(--color-border);background:#fff;font-size:12px;cursor:pointer;font-family:inherit;">Edit</button></sc-if>
+              </div>
+              <sc-if value="{{ f.whyOpen }}" hint-placeholder-val="{{ false }}"><div style="margin-top:11px;padding:11px;border:1px solid var(--color-border-subtle);border-radius:8px;background:var(--color-bg-subtle);"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:7px;"><span style="font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--color-text-muted);">Why this value</span><span class="mono" style="font-size:12px;font-weight:600;color:{{ f.confColor }};">{{ f.conf }}% confidence</span></div><div style="font-size:12px;color:var(--color-text-secondary);line-height:1.5;">{{ f.evidence }}</div></div></sc-if>
+            </div>
+          </sc-for>
+        </div>
+        <div style="margin-top:16px;padding:12px 14px;border:1px solid var(--color-border);border-radius:12px;background:var(--color-bg-subtle);display:flex;gap:10px;align-items:flex-start;">
+          <span style="width:8px;height:8px;border-radius:50%;background:var(--color-approved);margin-top:5px;flex-shrink:0;"></span>
+          <div style="font-size:var(--fs-sm);color:var(--color-text-secondary);">{{ bkTalent }} is <b style="color:var(--color-text-primary);">available</b> on these dates. Booked or blocked dates are read-only and would prevent sending.</div>
+        </div>
+      </sc-if>
+
+      <!-- ===== BOOKING · STEP 3 — RATE & TERMS ===== -->
+      <sc-if value="{{ isB3 }}" hint-placeholder-val="{{ false }}">
+        <div style="margin-bottom:18px;"><h2 style="margin:0 0 4px;font-size:var(--fs-xl);font-weight:600;">Rate &amp; terms</h2><p style="margin:0;font-size:var(--fs-sm);color:var(--color-text-secondary);">I drafted a rate from the agency default and shoot budget. Nothing sends until every AI field is reviewed.</p></div>
+        <div style="display:flex;flex-direction:column;gap:12px;">
+          <sc-for list="{{ bkFields3 }}" as="f" hint-placeholder-count="4">
+            <div style="{{ f.rowStyle }}">
+              <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;">
+                <div style="flex:1;min-width:0;">
+                  <div style="font-size:11px;color:var(--color-text-muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:5px;">{{ f.label }}</div>
+                  <sc-if value="{{ f.editing }}" hint-placeholder-val="{{ false }}"><input value="{{ f.draft }}" onInput="{{ f.onDraft }}" style="width:100%;padding:8px 10px;border:1px solid var(--color-border-strong);border-radius:6px;font-family:inherit;font-size:var(--fs-sm);outline:none;" /></sc-if>
+                  <sc-if value="{{ f.notEditing }}" hint-placeholder-val="{{ true }}"><div style="font-size:var(--fs-sm);color:var(--color-text-primary);">{{ f.value }}</div></sc-if>
+                </div>
+                <div style="{{ f.chipStyle }}">{{ f.chipText }}</div>
+              </div>
+              <div style="display:flex;align-items:center;gap:8px;margin-top:11px;">
+                <sc-if value="{{ f.editing }}" hint-placeholder-val="{{ false }}"><button onClick="{{ f.onSave }}" style="padding:6px 12px;border-radius:6px;border:none;background:var(--color-action);color:#fff;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;">Save</button><button onClick="{{ f.onCancel }}" style="padding:6px 12px;border-radius:6px;border:1px solid var(--color-border);background:#fff;font-size:12px;cursor:pointer;font-family:inherit;">Cancel</button></sc-if>
+                <sc-if value="{{ f.showAi }}" hint-placeholder-val="{{ true }}"><button onClick="{{ f.onApprove }}" style="padding:6px 12px;border-radius:6px;border:none;background:var(--color-action);color:#fff;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;">Approve</button><button onClick="{{ f.onEdit }}" style="padding:6px 12px;border-radius:6px;border:1px solid var(--color-border);background:#fff;font-size:12px;cursor:pointer;font-family:inherit;">Edit</button><button onClick="{{ f.onWhy }}" style="margin-left:auto;padding:6px 8px;border:none;background:transparent;font-size:12px;color:var(--color-text-secondary);cursor:pointer;font-family:inherit;">Why</button></sc-if>
+                <sc-if value="{{ f.showDone }}" hint-placeholder-val="{{ false }}"><button onClick="{{ f.onEdit }}" style="margin-left:auto;padding:6px 10px;border-radius:6px;border:1px solid var(--color-border);background:#fff;font-size:12px;cursor:pointer;font-family:inherit;">Edit</button></sc-if>
+                <sc-if value="{{ f.showSet }}" hint-placeholder-val="{{ false }}"><button onClick="{{ f.onEdit }}" style="margin-left:auto;padding:6px 10px;border-radius:6px;border:1px solid var(--color-border);background:#fff;font-size:12px;cursor:pointer;font-family:inherit;">Edit</button></sc-if>
+              </div>
+              <sc-if value="{{ f.whyOpen }}" hint-placeholder-val="{{ false }}"><div style="margin-top:11px;padding:11px;border:1px solid var(--color-border-subtle);border-radius:8px;background:var(--color-bg-subtle);"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:7px;"><span style="font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--color-text-muted);">Why this value</span><span class="mono" style="font-size:12px;font-weight:600;color:{{ f.confColor }};">{{ f.conf }}% confidence</span></div><div style="font-size:12px;color:var(--color-text-secondary);line-height:1.5;">{{ f.evidence }}</div></div></sc-if>
+            </div>
+          </sc-for>
+        </div>
+      </sc-if>
+
+      <!-- ===== BOOKING · STEP 4 — MESSAGE ===== -->
+      <sc-if value="{{ isB4 }}" hint-placeholder-val="{{ false }}">
+        <div style="margin-bottom:18px;"><h2 style="margin:0 0 4px;font-size:var(--fs-xl);font-weight:600;">Message</h2><p style="margin:0;font-size:var(--fs-sm);color:var(--color-text-secondary);">A short note to {{ bkTalent }}. Edit freely.</p></div>
+        <textarea value="{{ bkMsg }}" onInput="{{ setMsg }}" rows="5" style="width:100%;border:1px solid var(--color-border);border-radius:12px;padding:12px 14px;font-family:inherit;font-size:var(--fs-sm);line-height:1.55;color:var(--color-text-primary);resize:vertical;outline:none;box-sizing:border-box;"></textarea>
+      </sc-if>
+
+      <!-- ===== BOOKING · STEP 5 — REVIEW & SEND ===== -->
+      <sc-if value="{{ isB5 }}" hint-placeholder-val="{{ false }}">
+        <div style="margin-bottom:18px;"><h2 style="margin:0 0 4px;font-size:var(--fs-xl);font-weight:600;">Review &amp; send</h2><p style="margin:0;font-size:var(--fs-sm);color:var(--color-text-secondary);">This sends a booking <b style="color:var(--color-text-primary);">request</b> — {{ bkTalent }} can accept or counter. You confirm later, after they accept.</p></div>
+        <sc-if value="{{ bkNotAllReviewed }}" hint-placeholder-val="{{ false }}">
+          <div style="margin-bottom:16px;padding:12px 14px;border:1px solid var(--color-warn);border-radius:12px;background:#fffbf0;display:flex;gap:10px;align-items:center;"><span style="width:8px;height:8px;border-radius:50%;background:var(--color-warn);flex-shrink:0;"></span><div style="font-size:var(--fs-sm);color:var(--color-text-primary);"><b>{{ bkReviewedN }} of {{ bkReviewedTotal }}</b> AI fields reviewed — approve or edit all before you can send.</div></div>
+        </sc-if>
+        <sc-if value="{{ bkSendError }}" hint-placeholder-val="{{ false }}">
+          <div style="margin-bottom:16px;padding:14px 16px;border:1px solid #dc2626;border-radius:12px;background:#fef2f2;display:flex;gap:11px;align-items:flex-start;"><span style="width:8px;height:8px;border-radius:50%;background:#dc2626;margin-top:6px;flex-shrink:0;"></span><div style="flex:1;"><div style="font-size:var(--fs-sm);font-weight:600;color:var(--color-text-primary);">Couldn't send the request</div><div style="font-size:var(--fs-sm);color:var(--color-text-secondary);margin-top:2px;">You're offline or the request timed out. Nothing was sent — try again.</div></div><button onClick="{{ onRetrySend }}" style="flex-shrink:0;height:34px;padding:0 14px;border-radius:var(--radius-md);border:none;background:var(--color-action);color:#fff;font-family:inherit;font-size:var(--fs-sm);font-weight:600;cursor:pointer;">Retry</button></div>
+        </sc-if>
+        <div style="border:1px solid var(--color-border);border-radius:var(--card-radius);overflow:hidden;">
+          <div style="display:flex;justify-content:space-between;padding:13px 16px;border-bottom:1px solid var(--color-border-subtle);"><span style="font-size:var(--fs-sm);color:var(--color-text-muted);">Talent</span><span style="font-size:var(--fs-sm);font-weight:600;">{{ bkTalent }}</span></div>
+          <div style="display:flex;justify-content:space-between;padding:13px 16px;border-bottom:1px solid var(--color-border-subtle);"><span style="font-size:var(--fs-sm);color:var(--color-text-muted);">Shoot</span><span style="font-size:var(--fs-sm);font-weight:600;">{{ bkSumShoot }}</span></div>
+          <div style="display:flex;justify-content:space-between;padding:13px 16px;border-bottom:1px solid var(--color-border-subtle);"><span style="font-size:var(--fs-sm);color:var(--color-text-muted);">Dates</span><span class="mono" style="font-size:var(--fs-sm);font-weight:600;">{{ bkSumDates }}</span></div>
+          <div style="display:flex;justify-content:space-between;padding:13px 16px;border-bottom:1px solid var(--color-border-subtle);"><span style="font-size:var(--fs-sm);color:var(--color-text-muted);">Rate</span><span class="mono" style="font-size:var(--fs-sm);font-weight:600;">{{ bkSumRate }}/day × {{ bkSumDays }}</span></div>
+          <div style="display:flex;justify-content:space-between;padding:13px 16px;border-bottom:1px solid var(--color-border-subtle);"><span style="font-size:var(--fs-sm);color:var(--color-text-muted);">Usage</span><span style="font-size:var(--fs-sm);font-weight:600;">{{ bkSumUsage }}</span></div>
+          <div style="display:flex;justify-content:space-between;padding:13px 16px;border-bottom:1px solid var(--color-border-subtle);"><span style="font-size:var(--fs-sm);color:var(--color-text-muted);">Deliverables</span><span style="font-size:var(--fs-sm);font-weight:600;">{{ bkSumDeliv }}</span></div>
+          <div style="display:flex;justify-content:space-between;padding:13px 16px;border-bottom:1px solid var(--color-border-subtle);"><span style="font-size:var(--fs-sm);color:var(--color-text-muted);">Status on send</span><span class="mono" style="font-size:var(--fs-sm);font-weight:600;color:var(--color-warn);">requested</span></div>
+          <div style="display:flex;justify-content:space-between;padding:13px 16px;"><span style="font-size:var(--fs-sm);color:var(--color-text-muted);">Request expires</span><span style="font-size:var(--fs-sm);font-weight:600;">72 hours after sending</span></div>
+        </div>
+      </sc-if>
+
+    </div>
+  </div>
+
+  <!-- ===================== AI CHAT DOCK ===================== -->
+  <div style="flex-shrink:0;border-top:1px solid var(--color-border);background:var(--color-bg-card);padding:13px 28px 15px;">
+    <div style="max-width:1000px;margin:0 auto;display:flex;flex-direction:column;gap:11px;">
+      <div style="display:flex;align-items:center;gap:8px;">
+        <span style="width:22px;height:22px;border-radius:6px;background:var(--color-bg-muted);display:flex;align-items:center;justify-content:center;flex-shrink:0;" data-om-raster><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--color-text-secondary)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437z"/></svg></span>
+        <span style="font-size:var(--fs-xs);font-weight:600;color:var(--color-text-secondary);">Production Planner</span>
+        <span style="width:5px;height:5px;border-radius:50%;background:var(--color-approved);"></span>
+      </div>
+
+      <sc-if value="{{ chatIdle }}" hint-placeholder-val="{{ true }}">
+        <p style="margin:0;font-size:var(--fs-sm);color:var(--color-text-primary);line-height:1.5;">{{ greeting }}</p>
+      </sc-if>
+
+      <sc-if value="{{ chatThinking }}" hint-placeholder-val="{{ false }}">
+        <div style="display:flex;flex-direction:column;gap:6px;">
+          <sc-for list="{{ streamLines }}" as="l" hint-placeholder-count="5">
+            <div style="display:flex;align-items:center;gap:9px;">
+              <sc-if value="{{ l.done }}" hint-placeholder-val="{{ false }}"><span style="display:flex;flex-shrink:0;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--color-approved)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span></sc-if>
+              <sc-if value="{{ l.active }}" hint-placeholder-val="{{ true }}"><span style="width:8px;height:8px;border-radius:50%;background:var(--color-text-primary);flex-shrink:0;animation:pulse 1s infinite;"></span></sc-if>
+              <sc-if value="{{ l.todo }}" hint-placeholder-val="{{ false }}"><span style="width:8px;height:8px;border-radius:50%;background:var(--color-border);flex-shrink:0;"></span></sc-if>
+              <span style="font-size:var(--fs-sm);color:{{ l.textColor }};">{{ l.text }}</span>
+            </div>
+          </sc-for>
+        </div>
+      </sc-if>
+
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <sc-for list="{{ quickActions }}" as="q" hint-placeholder-count="4">
+          <button onClick="{{ q.set }}" style="height:34px;padding:0 13px;border:1px solid var(--color-border);background:var(--color-bg-card);color:var(--color-text-primary);border-radius:999px;font-size:var(--fs-sm);font-weight:500;cursor:pointer;display:inline-flex;align-items:center;gap:7px;" style-hover="border-color:var(--color-border-strong);background:var(--color-bg-subtle);">
+            <span style="display:flex;flex-shrink:0;color:var(--color-text-secondary);" data-om-raster>{{ q.icon }}</span>{{ q.label }}
+          </button>
+        </sc-for>
+      </div>
+
+      <div style="display:flex;align-items:center;gap:10px;background:var(--color-bg-card);border:1px solid var(--color-border);border-radius:var(--radius-md);padding:0 8px 0 14px;height:48px;" style-focus="border-color:var(--color-border-focus);">
+        <button aria-label="Voice input" style="border:none;background:transparent;color:var(--color-text-muted);cursor:pointer;display:flex;padding:4px;" style-hover="color:var(--color-text-primary);">
+          <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="22"/></svg>
+        </button>
+        <input placeholder="{{ inputHint }}" style="flex:1;border:none;outline:none;background:transparent;font-size:var(--fs-sm);color:var(--color-text-primary);font-family:inherit;" />
+        <button aria-label="Send" style="width:34px;height:34px;flex-shrink:0;border:none;background:var(--color-action);color:var(--color-action-text);border-radius:8px;cursor:pointer;display:flex;align-items:center;justify-content:center;" style-hover="background:var(--color-action-hover);">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+        </button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+  <!-- ===================== EDIT MODAL ===================== -->
+  <sc-if value="{{ modalOpen }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ closeModal }}" style="position:fixed;inset:0;z-index:50;background:rgba(17,17,17,.42);backdrop-filter:blur(2px);display:flex;align-items:center;justify-content:center;padding:24px;">
+      <div onClick="{{ stop }}" style="width:100%;max-width:480px;background:var(--color-bg-card);border:1px solid var(--color-border);border-radius:var(--card-radius);box-shadow:0 24px 60px rgba(17,17,17,.22);overflow:hidden;">
+
+        <sc-if value="{{ modalBrief }}" hint-placeholder-val="{{ false }}">
+          <div style="padding:18px 22px;border-bottom:1px solid var(--color-border-subtle);display:flex;align-items:center;justify-content:space-between;">
+            <div style="font-size:var(--fs-base);font-weight:600;">Edit creative brief</div>
+            <button onClick="{{ closeModal }}" aria-label="Close" style="width:30px;height:30px;border:none;background:transparent;color:var(--color-text-muted);cursor:pointer;display:flex;align-items:center;justify-content:center;border-radius:7px;" style-hover="background:var(--color-bg-subtle);"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+          </div>
+          <div style="padding:20px 22px;display:flex;flex-direction:column;gap:14px;max-height:60vh;overflow-y:auto;">
+            <label style="display:flex;flex-direction:column;gap:6px;"><span style="font-size:var(--fs-xs);font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--color-text-muted);">Objective</span><textarea onChange="{{ setObjective }}" rows="2" style="border:1px solid var(--color-border);border-radius:var(--radius-md);padding:10px 12px;font-size:var(--fs-sm);font-family:inherit;color:var(--color-text-primary);outline:none;resize:vertical;" style-focus="border-color:var(--color-border-focus);">{{ draft.objective }}</textarea></label>
+            <label style="display:flex;flex-direction:column;gap:6px;"><span style="font-size:var(--fs-xs);font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--color-text-muted);">Mood</span><input onChange="{{ setMood }}" value="{{ draft.mood }}" style="height:42px;border:1px solid var(--color-border);border-radius:var(--radius-md);padding:0 12px;font-size:var(--fs-sm);font-family:inherit;color:var(--color-text-primary);outline:none;" style-focus="border-color:var(--color-border-focus);" /></label>
+            <label style="display:flex;flex-direction:column;gap:6px;"><span style="font-size:var(--fs-xs);font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--color-text-muted);">Audience</span><input onChange="{{ setAudience }}" value="{{ draft.audience }}" style="height:42px;border:1px solid var(--color-border);border-radius:var(--radius-md);padding:0 12px;font-size:var(--fs-sm);font-family:inherit;color:var(--color-text-primary);outline:none;" style-focus="border-color:var(--color-border-focus);" /></label>
+            <label style="display:flex;flex-direction:column;gap:6px;"><span style="font-size:var(--fs-xs);font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--color-text-muted);">References</span><input onChange="{{ setReferences }}" value="{{ draft.references }}" style="height:42px;border:1px solid var(--color-border);border-radius:var(--radius-md);padding:0 12px;font-size:var(--fs-sm);font-family:inherit;color:var(--color-text-primary);outline:none;" style-focus="border-color:var(--color-border-focus);" /></label>
+            <label style="display:flex;flex-direction:column;gap:6px;"><span style="font-size:var(--fs-xs);font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--color-text-muted);">Visual direction (after)</span><textarea onChange="{{ setAfter }}" rows="2" style="border:1px solid var(--color-border);border-radius:var(--radius-md);padding:10px 12px;font-size:var(--fs-sm);font-family:inherit;color:var(--color-text-primary);outline:none;resize:vertical;" style-focus="border-color:var(--color-border-focus);">{{ draft.after }}</textarea></label>
+          </div>
+          <div style="padding:14px 22px;border-top:1px solid var(--color-border-subtle);display:flex;justify-content:flex-end;gap:9px;">
+            <button onClick="{{ closeModal }}" style="height:40px;padding:0 16px;border:1px solid var(--color-border);border-radius:var(--radius-md);background:var(--color-bg-card);font-size:var(--fs-sm);font-weight:500;cursor:pointer;" style-hover="background:var(--color-bg-subtle);">Cancel</button>
+            <button onClick="{{ saveBrief }}" style="height:40px;padding:0 20px;border:none;border-radius:var(--radius-md);background:var(--color-action);color:var(--color-action-text);font-size:var(--fs-sm);font-weight:600;cursor:pointer;" style-hover="background:var(--color-action-hover);">Save brief</button>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ modalShot }}" hint-placeholder-val="{{ false }}">
+          <div style="padding:18px 22px;border-bottom:1px solid var(--color-border-subtle);display:flex;align-items:center;justify-content:space-between;">
+            <div style="font-size:var(--fs-base);font-weight:600;">Edit shot</div>
+            <button onClick="{{ closeModal }}" aria-label="Close" style="width:30px;height:30px;border:none;background:transparent;color:var(--color-text-muted);cursor:pointer;display:flex;align-items:center;justify-content:center;border-radius:7px;" style-hover="background:var(--color-bg-subtle);"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+          </div>
+          <div style="padding:20px 22px;display:flex;flex-direction:column;gap:14px;">
+            <label style="display:flex;flex-direction:column;gap:6px;"><span style="font-size:var(--fs-xs);font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--color-text-muted);">Shot name</span><input onChange="{{ setName }}" value="{{ draft.name }}" style="height:42px;border:1px solid var(--color-border);border-radius:var(--radius-md);padding:0 12px;font-size:var(--fs-sm);font-family:inherit;color:var(--color-text-primary);outline:none;" style-focus="border-color:var(--color-border-focus);" /></label>
+            <label style="display:flex;flex-direction:column;gap:6px;"><span style="font-size:var(--fs-xs);font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--color-text-muted);">Frames &amp; notes</span><input onChange="{{ setMeta }}" value="{{ draft.meta }}" style="height:42px;border:1px solid var(--color-border);border-radius:var(--radius-md);padding:0 12px;font-size:var(--fs-sm);font-family:inherit;color:var(--color-text-primary);outline:none;" style-focus="border-color:var(--color-border-focus);" /></label>
+            <label style="display:flex;flex-direction:column;gap:6px;"><span style="font-size:var(--fs-xs);font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--color-text-muted);">Aspect ratio</span><div style="position:relative;"><select onChange="{{ setRatio }}" value="{{ draft.ratio }}" style="width:100%;height:42px;border:1px solid var(--color-border);border-radius:var(--radius-md);padding:0 38px 0 12px;font-size:var(--fs-sm);font-family:inherit;color:var(--color-text-primary);background:var(--color-bg-card);cursor:pointer;outline:none;appearance:none;-webkit-appearance:none;" style-focus="border-color:var(--color-border-focus);"><option>4:5</option><option>1:1</option><option>9:16</option><option>16:9</option><option>3:2</option></select><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--color-text-muted)" stroke-width="2" stroke-linecap="round" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);pointer-events:none;"><polyline points="6 9 12 15 18 9"/></svg></div></label>
+          </div>
+          <div style="padding:14px 22px;border-top:1px solid var(--color-border-subtle);display:flex;justify-content:flex-end;gap:9px;">
+            <button onClick="{{ closeModal }}" style="height:40px;padding:0 16px;border:1px solid var(--color-border);border-radius:var(--radius-md);background:var(--color-bg-card);font-size:var(--fs-sm);font-weight:500;cursor:pointer;" style-hover="background:var(--color-bg-subtle);">Cancel</button>
+            <button onClick="{{ saveShot }}" style="height:40px;padding:0 20px;border:none;border-radius:var(--radius-md);background:var(--color-action);color:var(--color-action-text);font-size:var(--fs-sm);font-weight:600;cursor:pointer;" style-hover="background:var(--color-action-hover);">Save shot</button>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ modalConfirm }}" hint-placeholder-val="{{ false }}">
+          <div style="padding:22px 24px 4px;">
+            <div style="width:42px;height:42px;border-radius:50%;background:var(--color-bg-subtle);display:flex;align-items:center;justify-content:center;margin-bottom:14px;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--color-text-primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></div>
+            <div style="font-size:var(--fs-lg);font-weight:600;">Create this shoot?</div>
+            <p style="margin:6px 0 0;font-size:var(--fs-sm);color:var(--color-text-secondary);line-height:1.5;">This will create the shoot, generate its tasks, build the call sheet, and lock in the budget. You can edit everything afterward.</p>
+          </div>
+          <div style="padding:14px 24px;display:flex;flex-direction:column;gap:9px;">
+            <div style="display:flex;align-items:center;gap:9px;"><span style="display:flex;color:var(--color-approved);" data-om-raster><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span><span style="font-size:var(--fs-sm);color:var(--color-text-secondary);">Create the shoot &amp; reserve resources</span></div>
+            <div style="display:flex;align-items:center;gap:9px;"><span style="display:flex;color:var(--color-approved);" data-om-raster><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span><span style="font-size:var(--fs-sm);color:var(--color-text-secondary);">Generate production tasks &amp; call sheet</span></div>
+            <div style="display:flex;align-items:center;gap:9px;"><span style="display:flex;color:var(--color-approved);" data-om-raster><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span><span style="font-size:var(--fs-sm);color:var(--color-text-secondary);">Lock in the budget &amp; notify the team</span></div>
+          </div>
+          <div style="padding:14px 24px 20px;display:flex;justify-content:flex-end;gap:9px;">
+            <button onClick="{{ closeModal }}" style="height:42px;padding:0 18px;border:1px solid var(--color-border);border-radius:var(--radius-md);background:var(--color-bg-card);font-size:var(--fs-sm);font-weight:500;cursor:pointer;" style-hover="background:var(--color-bg-subtle);">Cancel</button>
+            <button onClick="{{ confirmCreate }}" style="height:42px;padding:0 22px;border:none;border-radius:var(--radius-md);background:var(--color-action);color:var(--color-action-text);font-size:var(--fs-sm);font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:8px;" style-hover="background:var(--color-action-hover);">{{ createLabel }}</button>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ modalExit }}" hint-placeholder-val="{{ false }}">
+          <div style="padding:22px 24px 4px;">
+            <div style="width:42px;height:42px;border-radius:50%;background:var(--color-bg-subtle);display:flex;align-items:center;justify-content:center;margin-bottom:14px;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--color-warn)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div>
+            <div style="font-size:var(--fs-lg);font-weight:600;">Leave with unsaved changes?</div>
+            <p style="margin:6px 0 0;font-size:var(--fs-sm);color:var(--color-text-secondary);line-height:1.5;">You've made changes that aren't saved to a draft yet. Save them before heading back to Shoots, or discard and leave.</p>
+          </div>
+          <div style="padding:18px 24px 20px;display:flex;justify-content:flex-end;gap:9px;flex-wrap:wrap;">
+            <button onClick="{{ doExit }}" style="height:42px;padding:0 16px;border:1px solid var(--color-border);border-radius:var(--radius-md);background:var(--color-bg-card);font-size:var(--fs-sm);font-weight:500;color:var(--color-text-secondary);cursor:pointer;font-family:inherit;" style-hover="background:var(--color-bg-subtle);">Discard &amp; leave</button>
+            <button onClick="{{ closeModal }}" style="height:42px;padding:0 16px;border:1px solid var(--color-border);border-radius:var(--radius-md);background:var(--color-bg-card);font-size:var(--fs-sm);font-weight:600;cursor:pointer;font-family:inherit;" style-hover="background:var(--color-bg-subtle);">Stay</button>
+            <button onClick="{{ saveAndExit }}" style="height:42px;padding:0 20px;border:none;border-radius:var(--radius-md);background:var(--color-action);color:var(--color-action-text);font-size:var(--fs-sm);font-weight:600;cursor:pointer;font-family:inherit;" style-hover="background:var(--color-action-hover);">Save &amp; leave</button>
+          </div>
+        </sc-if>
+
+      </div>
+    </div>
+  </sc-if>
+  <sc-if value="{{ hasToast }}" hint-placeholder-val="{{ false }}">
+    <div role="status" aria-live="polite" style="position:fixed;left:50%;bottom:26px;transform:translateX(-50%);z-index:60;background:var(--color-text-primary);color:var(--color-bg-card);padding:11px 18px;border-radius:999px;font-size:var(--fs-sm);font-weight:500;box-shadow:0 10px 30px rgba(17,17,17,.28);display:inline-flex;align-items:center;gap:9px;">
+      <span style="display:flex;color:var(--color-approved);" data-om-raster><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span>
+      {{ toast }}
+    </div>
+  </sc-if>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1440,&quot;height&quot;:900},&quot;flow&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;default&quot;:&quot;shoot&quot;,&quot;options&quot;:[&quot;shoot&quot;,&quot;booking&quot;],&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Wizard&quot;},&quot;sendResult&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;default&quot;:&quot;success&quot;,&quot;options&quot;:[&quot;success&quot;,&quot;error&quot;],&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;State&quot;}}">
+class Component extends DCLogic {
+  state = { step:1, chatState:'idle', streamIdx:0, saved:false,
+    propsAssigned:false, savingsApplied:false, created:false,
+    modal:null, shotEdit:null, draft:{}, briefOv:null, shotOv:{},
+    toast:null, moodLocks:{1:true}, dirty:false, menuOpen:false,
+    ctx:null, ctxLocked:true,
+    flow:'shoot', talent:null, bk:{}, bkReview:{}, bkEdit:null, bkWhy:null, bkDraft:'', shootLink:'nike', sending:false, sendError:false };
+
+  componentDidMount(){
+    try{
+      const p = new URLSearchParams(window.location.search);
+      const brand = p.get('brand'), campaign = p.get('campaign'), season = p.get('season');
+      if(brand || campaign || season){
+        const cap = s => s ? s.charAt(0).toUpperCase()+s.slice(1) : s;
+        const campaignName = campaign ? campaign.split('-').map(cap).join(' ') : 'Spring 2026';
+        const seasonName = {SS26:'Spring',SS:'Spring',FW26:'Fall',FW:'Fall',AW26:'Fall'}[season] || 'Spring';
+        this.setState({ ctx:{
+          brandId: brand||'nike', brandName: cap(brand)||'Nike',
+          campaignSlug: campaign||'spring-2026', campaignName,
+          seasonCode: season||'SS26', seasonName,
+        }, ctxLocked:true });
+      }
+      const flowP=p.get('flow'), talentP=p.get('talent');
+      if(flowP==='booking' || this.props.flow==='booking'){
+        const hmap={runwithkara:'@runwithkara',daily:'@the_daily_athlete',lena:'@lena.moves',kara:'@runwithkara',nikefan:'@nikestylegram',mira:'@studio.mira',fuel:'@fuelledbymovement',cityjo:'@cityrunner_jo',marcus:'@marcus.frames'};
+        this.setState({ flow:'booking', talent:{ id:talentP||'kara', handle:hmap[talentP]||'@runwithkara' } });
+      }
+    }catch(e){}
+  }
+  unlockCtx(){ this.setState({ ctxLocked:false }); }
+
+  toast(msg){ this.setState({toast:msg}); clearTimeout(this._tt); this._tt=setTimeout(()=>this.setState({toast:null}),2200); }
+  regenMood(i){ if(i==='all'){ this.toast('Regenerating unlocked references…'); this.startStream(); } else { this.toast('Reference regenerated'); } }
+  toggleLock(i){ this.setState(s=>{ const m={...s.moodLocks}; m[i]=!m[i]; return {moodLocks:m, dirty:true}; }); }
+  doExport(label){ const m={PDF:'Call sheet exported to PDF',Email:'Call sheet emailed to 8 crew',WhatsApp:'Call sheet sent via WhatsApp'}; this.toast(m[label]||'Done'); }
+  openConfirm(){ this.setState({modal:'confirm'}); }
+
+  ico(name,size){
+    const p={width:size||16,height:size||16,viewBox:'0 0 24 24',fill:'none',stroke:'currentColor',strokeWidth:1.7,strokeLinecap:'round',strokeLinejoin:'round'};
+    const d={
+      sparkles:[['path',{d:'M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437z'}]],
+      camera:[['path',{d:'M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3z'}],['circle',{cx:12,cy:13,r:3}]],
+      image:[['rect',{x:3,y:3,width:18,height:18,rx:2}],['circle',{cx:9,cy:9,r:2}],['path',{d:'m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21'}]],
+      clipboard:[['rect',{x:8,y:2,width:8,height:4,rx:1}],['path',{d:'M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2'}]],
+      dollar:[['line',{x1:12,y1:1,x2:12,y2:23}],['path',{d:'M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6'}]],
+      users:[['path',{d:'M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2'}],['circle',{cx:9,cy:7,r:4}],['path',{d:'M22 21v-2a4 4 0 0 0-3-3.87'}],['path',{d:'M16 3.13a4 4 0 0 1 0 7.75'}]],
+      user:[['path',{d:'M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2'}],['circle',{cx:12,cy:7,r:4}]],
+      scissors:[['circle',{cx:6,cy:6,r:3}],['circle',{cx:6,cy:18,r:3}],['line',{x1:20,y1:4,x2:8.12,y2:15.88}],['line',{x1:14.47,y1:14.48,x2:20,y2:20}],['line',{x1:8.12,y1:8.12,x2:12,y2:12}]],
+      brush:[['path',{d:'M9.06 11.9l8.07-8.06a2.85 2.85 0 1 1 4.03 4.03l-8.06 8.08'}],['path',{d:'M7.07 14.94c-1.66 0-3 1.35-3 3.02 0 1.33-2.5 1.52-2 2.02 1.08 1.1 2.49 2.02 4 2.02 2.2 0 4-1.8 4-4.04a3.01 3.01 0 0 0-3-3.02z'}]],
+      home:[['path',{d:'M3 9.5 12 3l9 6.5V20a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1z'}]],
+      box:[['path',{d:'M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z'}],['polyline',{points:'3.27 6.96 12 12.01 20.73 6.96'}]],
+      file:[['path',{d:'M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z'}],['polyline',{points:'14 2 14 8 20 8'}]],
+      mail:[['rect',{x:2,y:4,width:20,height:16,rx:2}],['path',{d:'m22 7-10 5L2 7'}]],
+      msg:[['path',{d:'M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8z'}]],
+    };
+    return React.createElement('svg',p,(d[name]||d.sparkles).map((n,i)=>React.createElement(n[0],{key:i,...n[1]})));
+  }
+  img(k){ return `url("../images/${k}-fashionos.jpeg")`; }
+
+  go(n){ this.setState({step:n,chatState:'idle',streamIdx:0,menuOpen:false}); }
+  exit(){ this.setState({menuOpen:false}); if(this.state.dirty){ this.setState({modal:'exit'}); } else { window.location.href='Shoots List.v2.image-first.dc.html'; } }
+  doExit(){ window.location.href='Shoots List.v2.image-first.dc.html'; }
+  saveAndExit(){ try{ localStorage.setItem('ipix.shootDraft', JSON.stringify({step:this.state.step, ts:Date.now()})); }catch(e){} this.doExit(); }
+  toggleMenu(){ this.setState(s=>({menuOpen:!s.menuOpen})); }
+  closeMenu(){ this.setState({menuOpen:false}); }
+  saveDraft(){
+    try{ localStorage.setItem('ipix.shootDraft', JSON.stringify({step:this.state.step, ts:Date.now()})); }catch(e){}
+    this.setState({saved:true,dirty:false});
+    clearTimeout(this._st);
+    this._st=setTimeout(()=>this.setState({saved:false}),1800);
+  }
+  setField(k,v){ this.setState(s=>({draft:{...s.draft,[k]:v}})); }
+  closeModal(){ this.setState({modal:null,shotEdit:null,draft:{}}); }
+  saveBrief(){ this.setState(s=>({briefOv:{...s.draft}, modal:null, draft:{}, dirty:true})); }
+  saveShot(){ this.setState(s=>({shotOv:{...s.shotOv,[s.shotEdit]:{...s.draft}}, modal:null, shotEdit:null, draft:{}, dirty:true})); }
+  assignProps(){ this.setState({propsAssigned:true,dirty:true}); }
+  applySavings(){ this.setState({savingsApplied:true,dirty:true}); }
+  createShoot(){ if(this.state.created) return; this.setState({created:true}); setTimeout(()=>{window.location.href='Shoot Detail.v2.image-first.dc.html';},1100); }
+  startStream(){
+    if(this._iv) return;
+    this.setState({chatState:'thinking',streamIdx:0});
+    this._iv=setInterval(()=>{
+      this.setState(s=>{
+        const n=s.streamIdx+1;
+        if(n>=5){ clearInterval(this._iv); this._iv=null; setTimeout(()=>this.setState({chatState:'idle',streamIdx:0}),900); return {streamIdx:5}; }
+        return {streamIdx:n};
+      });
+    },680);
+  }
+  componentWillUnmount(){ if(this._iv)clearInterval(this._iv); }
+
+  bkDefs(){ return [
+    {step:2,key:'dates',label:'Shoot dates',ai:true,def:'Mar 12\u201314, 2026',ev:'Pulled from the linked shoot schedule.',conf:92},
+    {step:2,key:'location',label:'Location',ai:true,def:'Studio 9, London',ev:'From the shoot location field.',conf:88},
+    {step:3,key:'rate',label:'Day rate',ai:true,def:'\u00a31,200',ev:'Agency default for Micro-tier running talent, within the Nike shoot budget.',conf:74},
+    {step:3,key:'days',label:'Number of days',ai:false,def:'3'},
+    {step:3,key:'usage',label:'Usage / licensing',ai:true,def:'Organic social \u00b7 6 months \u00b7 UK',ev:'Matches the campaign channel plan.',conf:81},
+    {step:3,key:'deliv',label:'Deliverables',ai:false,def:'12 assets'},
+  ]; }
+  bkApprove(k){ this.setState(s=>({bkReview:{...s.bkReview,[k]:'approved'},bkWhy:null,dirty:true})); }
+  bkStartEdit(k){ const d=this.bkDefs().find(f=>f.key===k); this.setState(s=>({bkEdit:k,bkDraft:(s.bk[k]!==undefined?s.bk[k]:d.def)})); }
+  bkSaveEdit(k){ this.setState(s=>({bk:{...s.bk,[k]:s.bkDraft},bkReview:{...s.bkReview,[k]:'edited'},bkEdit:null,dirty:true})); }
+  bkCancel(){ this.setState({bkEdit:null}); }
+  bkToggleWhy(k){ this.setState(s=>({bkWhy:s.bkWhy===k?null:k})); }
+  bkSetDraft(e){ this.setState({bkDraft:e.target.value}); }
+  bkSetShoot(v){ this.setState({shootLink:v,dirty:true}); }
+  bkAllReviewed(){ const r=this.state.bkReview; return this.bkDefs().filter(f=>f.ai).every(f=>r[f.key]&&r[f.key]!=='ai'); }
+  sendBooking(){ if(this.state.sending) return; if(!this.bkAllReviewed()) return; this.setState({sending:true,sendError:false}); const tid=(this.state.talent&&this.state.talent.id)||'runwithkara'; const willFail=(this.props.sendResult==='error'); setTimeout(()=>{ if(willFail){ this.setState({sending:false,sendError:true}); } else { window.location.href='Shoot Detail.v2.image-first.dc.html?flow=booking&talent='+tid+'&status=requested'; } },1200); }
+  bkRow(f){
+    const cc=k=> k>=80?'var(--color-approved)':k>=60?'var(--color-warn)':'#dc2626';
+    const val=this.state.bk[f.key]!==undefined?this.state.bk[f.key]:f.def;
+    const st=f.ai?(this.state.bkReview[f.key]||'ai'):'set';
+    const editing=this.state.bkEdit===f.key;
+    const border= st==='ai'?'var(--color-warn)': st==='approved'?'var(--color-approved)':'var(--color-border-strong)';
+    const chip = st==='ai'?['AI \u00b7 review','#fff','var(--color-warn)','var(--color-warn)']: st==='approved'?['Approved','#fff','var(--color-approved)','var(--color-approved)']: st==='edited'?['Edited','var(--color-bg-subtle)','var(--color-border)','var(--color-text-secondary)']:['','','',''];
+    return { label:f.label, value:val, draft:this.state.bkDraft, editing, notEditing:!editing,
+      rowStyle:'border:1px solid var(--color-border);border-left:3px solid '+border+';border-radius:14px;padding:14px 15px;background:var(--color-bg-card);',
+      chipText:chip[0], chipStyle: chip[0]?('flex-shrink:0;padding:4px 9px;border-radius:999px;background:'+chip[1]+';border:1px solid '+chip[2]+';color:'+chip[3]+';font-size:11px;font-weight:600;'):'display:none;',
+      showAi: st==='ai'&&!editing, showDone: (st==='approved'||st==='edited')&&!editing, showSet: st==='set'&&!editing,
+      whyOpen: this.state.bkWhy===f.key, evidence:f.ev||'', conf:f.conf||0, confPct:(f.conf||0)+'%', confColor:cc(f.conf||0),
+      onApprove:()=>this.bkApprove(f.key), onEdit:()=>this.bkStartEdit(f.key), onSave:()=>this.bkSaveEdit(f.key),
+      onCancel:()=>this.bkCancel(), onWhy:()=>this.bkToggleWhy(f.key), onDraft:e=>this.bkSetDraft(e) };
+  }
+  bookingVals(step, isBooking){
+    if(!isBooking) return { isB1:false,isB2:false,isB3:false,isB4:false,isB5:false };
+    const t=this.state.talent||{handle:'@runwithkara'};
+    const D=this.bkDefs();
+    const val=k=>{const f=D.find(x=>x.key===k);return this.state.bk[k]!==undefined?this.state.bk[k]:f.def;};
+    const reviewedAI=D.filter(f=>f.ai);
+    const doneN=reviewedAI.filter(f=>{const s=this.state.bkReview[f.key];return s&&s!=='ai';}).length;
+    const allDone=doneN===reviewedAI.length;
+    const link=this.state.shootLink||'nike';
+    const bkGreet={
+      1:'Booking '+t.handle+' for Nike SS26. Link a shoot or keep it standalone \u2014 then I will draft the dates and rate for your review.',
+      2:'I pulled dates and location from the Nike SS26 shoot. Review each \u2014 approve or edit before we send.',
+      3:'I drafted a day rate from the agency default and your shoot budget. Approve it or set your own.',
+      4:'Here is a short note to Kara. Adjust the tone or details as you like.',
+      5:'Ready. This sends a booking request \u2014 Kara can accept or counter. It expires in 72 hours. You confirm later, after she accepts.'
+    };
+    return {
+      isB1:step===1,isB2:step===2,isB3:step===3,isB4:step===4,isB5:step===5,
+      bkTalent:t.handle, bkTalentMeta:'Micro \u00b7 42K IG \u00b7 Running', bkTalentBg:this.img('10'),
+      bkShootNike: link==='nike', bkStandalone: link==='standalone',
+      bkNikeBorder: link==='nike'?'var(--color-text-primary)':'var(--color-border)',
+      bkStandBorder: link==='standalone'?'var(--color-text-primary)':'var(--color-border)',
+      pickNike:()=>this.bkSetShoot('nike'), pickStandalone:()=>this.bkSetShoot('standalone'),
+      bkFields2:D.filter(f=>f.step===2).map(f=>this.bkRow(f)), bkFields3:D.filter(f=>f.step===3).map(f=>this.bkRow(f)),
+      bkMsg:this.state.bk.msg!==undefined?this.state.bk.msg:'Hi Kara \u2014 we would love to book you for Nike\u2019s SS26 running shoot. Details below; let us know if the dates work.',
+      setMsg:e=>this.setState(s=>({bk:{...s.bk,msg:e.target.value},dirty:true})),
+      bkReviewedN:doneN, bkReviewedTotal:reviewedAI.length, bkAllReviewed:allDone, bkNotAllReviewed:!allDone,
+      bkSendError:this.state.sendError, onRetrySend:()=>this.sendBooking(),
+      bkSumShoot: link==='nike'?'Nike SS26 \u2014 Studio 9':'Standalone booking',
+      bkSumDates: val('dates'), bkSumRate: val('rate'), bkSumDays: val('days'), bkSumDeliv: val('deliv'), bkSumUsage: val('usage'),
+      greeting: bkGreet[step], inputHint:'Ask about this booking\u2026',
+      quickActions:[['Draft the rate','dollar'],['Check availability','clipboard'],['Shorten the message','sparkles']].map(q=>({label:q[0],icon:this.ico(q[1],15),set:()=>this.startStream()}))
+    };
+  }
+
+  renderVals(){
+    const step=this.state.step;
+    const flow=(this.state.flow==='booking'||this.props.flow==='booking')?'booking':'shoot', isShoot=flow!=='booking', isBooking=flow==='booking';
+    const names = isBooking
+      ? ['Talent & shoot','Dates','Rate & terms','Message','Review']
+      : ['Welcome','Basics','Brief','Moodboard','Shot list','Production','Budget','Timeline','Call sheet','Review'];
+    const stepCount=names.length, lastStep=stepCount;
+    const steps=names.map((l,i)=>{
+      const n=i+1, done=n<step, cur=n===step;
+      return { label:l, go:()=>this.go(n),
+        glyph: done?'✓':String(n),
+        fill: done?'var(--color-text-primary)':(cur?'var(--color-bg-card)':'var(--color-bg-card)'),
+        ringColor: done?'var(--color-text-primary)':(cur?'var(--color-text-primary)':'var(--color-border-strong)'),
+        numColor: done?'#fff':(cur?'var(--color-text-primary)':'var(--color-text-muted)'),
+        labelColor: cur?'var(--color-text-primary)':(done?'var(--color-text-secondary)':'var(--color-text-muted)'),
+        weight: cur?'600':'500' };
+    });
+
+    const greetings={
+      1:"You're creating a new Nike shoot. I already reviewed your brand and found 3 opportunities to lift Brand DNA from 88 → 92.",
+      2:"I pre-filled a plan from Nike's Spring 2026 campaign — 2-day studio shoot, 12 looks. Adjust anything and I'll re-plan.",
+      3:"I drafted the brief from your Brand DNA. Try \"make it more luxury\" — I'll rewrite the visual direction instantly.",
+      4:"These 8 references score highest against Nike's visual pillars. Lock the ones you love and I'll regenerate the rest.",
+      5:"7 shot types, 12 frames. Want more close-ups or an outdoor version? Just ask.",
+      6:"Crew is mostly set — Props stylist is still unassigned. I can pull 3 candidates from your roster.",
+      7:"Estimated $48,200. I found a way to save $4,800 without cutting any looks.",
+      8:"6-week schedule with casting on the critical path. Shifting the shoot earlier risks the editing window.",
+      9:"Call sheet's ready for Day 1. Export to PDF, email the team, or send via WhatsApp.",
+      10:"Overall readiness 92/100 (Grade A). Three things left: assign a props stylist, approve the call sheet, and add two product close-ups — that lifts you to 97. Ready to create?"
+    };
+    const cx=this.state.ctx;
+    if(cx){
+      greetings[1]=`Planning ${cx.brandName}'s ${cx.campaignName} campaign (${cx.seasonCode}). I found your Brand DNA, moodboard, and previous shoots — I've drafted a production brief for review.`;
+      greetings[2]=`Brand, campaign and season carried over from ${cx.brandName} — ${cx.campaignName} · ${cx.seasonCode}. I pre-filled the plan: 2-day studio shoot, 12 looks. Adjust anything and I'll re-plan.`;
+    }
+    const hints={
+      1:'Ask me to plan this shoot…',2:'Change location to beach, add a day…',3:'Make it feel more luxury…',
+      4:'Replace image 3, more monochrome…',5:'Add product closeups, more lifestyle…',6:'Add another model, find a props stylist…',
+      7:'Reduce budget by 20%…',8:'Pull delivery forward a week…',9:'Add a driver, change arrival times…',10:'Anything else before we create it?'
+    };
+    const qaBase=[['Improve brief','sparkles'],['Generate shots','camera'],['Improve visuals','image'],['Create call sheet','clipboard'],['Estimate budget','dollar']];
+    const qa10=[['Fix all issues','sparkles'],['Assign resources','users'],['Improve score','image'],['Export production plan','file'],['Notify team','mail']];
+    const set10=lbl=>{ if(lbl==='Fix all issues') return ()=>this.setState({propsAssigned:true,savingsApplied:true,dirty:true}); if(lbl==='Assign resources') return ()=>this.go(6); return ()=>this.startStream(); };
+    const quickActions = step===10
+      ? qa10.map(q=>({label:q[0],icon:this.ico(q[1],15),set:set10(q[0])}))
+      : qaBase.map(q=>({label:q[0],icon:this.ico(q[1],15),set:()=>this.startStream()}));
+
+    const SL=['Reading Brand DNA…','Reviewing recent assets…','Generating moodboard…','Optimizing budget…','Creating timeline…'];
+    const cs=this.state.chatState, sidx=this.state.streamIdx;
+    const streamLines=SL.map((t,i)=>({text:t,done:i<sidx,active:i===sidx,todo:i>sidx,textColor:i<sidx?'var(--color-text-secondary)':i===sidx?'var(--color-text-primary)':'var(--color-text-disabled)'}));
+
+    const planRows=[{label:'Location',value:'Studio 7, Los Angeles'},{label:'Duration',value:'2 days'},{label:'Team',value:'8 people'},{label:'Looks',value:'12 looks'}];
+    const bov=this.state.briefOv;
+    const briefRows=[
+      {label:'Objective',value:(bov&&bov.objective)||'Launch the Spring apparel line with a premium, editorial campaign.'},
+      {label:'Mood',value:(bov&&bov.mood)||'Confident, elevated, quietly powerful.'},
+      {label:'Audience',value:(bov&&bov.audience)||'Style-led women, 24–38, urban, design-aware.'},
+      {label:'References',value:(bov&&bov.references)||'Editorial daylight, sculptural styling, monochrome sets.'},
+    ];
+    const afterText=(bov&&bov.after)||'Soft daylight, restrained palette, elevated tailoring, editorial stillness.';
+
+    const moodKeys=['7','8','10','11','16','18','20','22'];
+    const moodWhy=['Bold athletic silhouette','Monochrome restraint','Editorial daylight','Sculptural styling','Strong negative space','Confident posture','Elevated tailoring','Quiet luxury tone'];
+    const mlocks=this.state.moodLocks;
+    const moodImages=moodKeys.map((k,i)=>({img:this.img(k),why:moodWhy[i],locked:!!mlocks[i],unlocked:!mlocks[i],
+      border:mlocks[i]?'var(--color-text-primary)':'var(--color-border)',
+      lockBg:mlocks[i]?'rgba(17,17,17,.62)':'rgba(255,255,255,.92)',
+      regen:()=>this.regenMood(i), toggleLock:()=>this.toggleLock(i)}));
+
+    const shotDefs=[['Hero — full look','3 frames · key visual','4:5','6'],['Lifestyle — street','3 frames · in motion','4:5','11'],['Detail — fabric & trims','4 frames · macro','1:1','10'],['Runway — walk','2 frames · motion','9:16','16'],['Accessories — flatlay','3 frames · overhead','1:1','19'],['Motion — turn','2 frames · video','9:16','21'],['Flatlay — full kit','2 frames · overhead','1:1','24']];
+    const sov=this.state.shotOv;
+    const shots=shotDefs.map((s,i)=>{const o=sov[i]||{};return {name:o.name||s[0],meta:o.meta||s[1],ratio:o.ratio||s[2],img:this.img(s[3]),edit:()=>this.setState({modal:'shot',shotEdit:i,draft:{name:o.name||s[0],meta:o.meta||s[1],ratio:o.ratio||s[2]}})};});
+    const shotChips=[['Add closeups'],['More lifestyle'],['Luxury lighting'],['Outdoor version']].map(c=>({label:c[0],set:()=>this.startStream()}));
+
+    const pa=this.state.propsAssigned;
+    const resDefs=[['Photographer','Elena Brooks','user',true],['Models (4)','Booked — 4 confirmed','users',true],['Stylist','Marcus Lee','sparkles',true],['Hair','Priya N.','scissors',true],['Makeup','Jordan T.','brush',true],['Studio','Studio 7, LA','home',true],['Equipment','Profoto kit + 2 bodies','camera',true],['Props',(pa?'Sofia Reyes — confirmed':'Not assigned'),'box',pa]];
+    const resources=resDefs.map(r=>({role:r[0],name:r[1],icon:this.ico(r[2],17),missing:!r[3],ok:r[3],
+      border:r[3]?'var(--color-border)':'var(--color-text-primary)',nameColor:r[3]?'var(--color-text-primary)':'var(--color-warn)',
+      assign:()=>this.assignProps()}));
+    const hasMissing=!pa;
+
+    const sa=this.state.savingsApplied;
+    const budDefs=sa
+      ? [['Models','$14,000',100],['Studio','$3,600',26],['Crew','$9,600',69],['Equipment','$5,200',37],['Styling','$4,800',34],['Travel','$3,400',24],['Contingency','$2,800',20]]
+      : [['Models','$14,000',100],['Studio','$8,400',60],['Crew','$9,600',69],['Equipment','$5,200',37],['Styling','$4,800',34],['Travel','$3,400',24],['Contingency','$2,800',20]];
+    const budget=budDefs.map(b=>({label:b[0],amount:b[1],w:b[2]+'%'}));
+    const budgetTotal=sa?'$43,400':'$48,200';
+    const savingsNote=sa?'In-house studio booked for Tue–Wed — $4,800 saved and applied to the estimate.':'Shoot Tue–Wed instead of the weekend and book the in-house studio to save $4,800.';
+    const savingsBtnLabel=sa?'Savings applied ✓':'Apply savings';
+
+    const phaseDefs=[['Planning','No dependencies','Apr 1 – Apr 5','var(--color-text-primary)'],['Casting','After planning','Apr 6 – Apr 11','var(--color-text-primary)'],['Shoot','After casting','Apr 12 – Apr 13','var(--color-text-primary)'],['Editing','After shoot','Apr 14 – Apr 22','var(--color-text-secondary)'],['Review','After editing','Apr 23 – Apr 26','var(--color-border-strong)'],['Delivery','After review','Apr 29','var(--color-border-strong)']];
+    const phases=phaseDefs.map((p,i)=>({name:p[0],dep:p[1],dates:p[2],dot:p[3],lineDisplay:i===phaseDefs.length-1?'none':'block'}));
+
+    const exports=[['PDF','file'],['Email','mail'],['WhatsApp','msg']].map(e=>({label:e[0],icon:this.ico(e[1],15),set:()=>this.doExport(e[0])}));
+    const callTeam=[['Elena Brooks','Photographer','EB','7:30 AM'],['Marcus Lee','Stylist','ML','8:00 AM'],['Priya N.','Hair','PN','8:00 AM'],['Jordan T.','Makeup','JT','8:00 AM'],['Maya R.','Producer','MR','7:00 AM']].map(t=>({name:t[0],role:t[1],initials:t[2],arrive:t[3]}));
+    const shotOrder=[['1','Hero — full look','9:00 AM'],['2','Lifestyle — street','11:30 AM'],['3','Detail — fabric','2:00 PM'],['4','Runway — walk','4:00 PM']].map(o=>({n:o[0],name:o[1],time:o[2]}));
+
+    // ===== STEP 10 — PRODUCTION READINESS DASHBOARD =====
+    const gColor=g=> g[0]==='A'?'var(--color-approved)': g[0]==='B'?'var(--color-warn)': g[0]==='C'?'#C2710C':'var(--color-text-muted)';
+    const gradeOf=n=> n>=95?'A+': n>=90?'A': n>=80?'B': n>=70?'C':'D';
+    const shotEdited=Object.keys(this.state.shotOv).length>0;
+    const sectionDefs=[
+      {key:'Creative Brief',score:95,grade:'A',why:[[1,'Clear objective & audience'],[1,'Mood aligned to Brand DNA'],[1,'Strong visual direction']],pot:null},
+      {key:'Moodboard',score:90,grade:'A',why:[[1,'8 on-DNA references'],[1,'Monochrome restraint'],[0,'1 reference low contrast']],pot:[90,93]},
+      {key:'Shot List',score:shotEdited?92:88,grade:shotEdited?'A':'B',why:shotEdited?[[1,'Hero coverage'],[1,'Lifestyle shots'],[1,'Shot list refined'],[0,'Missing macro product shots']]:[[1,'Hero coverage'],[1,'Lifestyle shots'],[0,'Missing accessories'],[0,'Missing macro product shots']],pot:shotEdited?[92,95]:[88,95]},
+      {key:'Production',score:pa?90:82,grade:pa?'A':'B',why:pa?[[1,'Full crew confirmed'],[1,'Props stylist assigned'],[1,'Studio booked']]:[[1,'Crew confirmed'],[1,'Studio booked'],[0,'Props stylist not assigned']],pot:pa?null:[82,90]},
+      {key:'Budget',score:sa?96:92,grade:sa?'A+':'A',why:sa?[[1,'Within target'],[1,'$4,800 savings applied'],[1,'Contingency included']]:[[1,'Within target'],[0,'$4,800 savings available — not applied'],[1,'Contingency included']],pot:sa?null:[92,96]},
+      {key:'Timeline',score:91,grade:'A',why:[[1,'6-week schedule'],[1,'Dependencies mapped'],[0,'Editing window tight']],pot:[91,94]},
+      {key:'Call Sheet',score:75,grade:'C',why:[[1,'Team & arrivals set'],[0,'Awaiting approval'],[0,'No driver assigned']],pot:[75,88]},
+      {key:'Deliverables',score:100,grade:'A+',why:[[1,'All formats defined'],[1,'Social crops included'],[1,'Video deliverables set']],pot:null},
+    ];
+    const reviewSel=this.state.reviewSel||'Shot List';
+    const scorecards=sectionDefs.map(s=>({key:s.key,score:s.score+'%',grade:s.grade,gColor:gColor(s.grade),active:s.key===reviewSel,
+      bg:s.key===reviewSel?'var(--color-bg-subtle)':'var(--color-bg-card)',bd:s.key===reviewSel?'var(--color-text-primary)':'var(--color-border)',
+      select:()=>this.setState({reviewSel:s.key})}));
+    const selS=sectionDefs.find(s=>s.key===reviewSel)||sectionDefs[2];
+    const selWhy=selS.why.map(w=>({ok:!!w[0],text:w[1],dot:w[0]?'var(--color-approved)':'var(--color-warn)'}));
+    const selName=selS.key, selScore=selS.score+'%', selGrade=selS.grade, selGColor=gColor(selS.grade);
+    const selPot=selS.pot?(selS.pot[0]+' → '+selS.pot[1]):'At target — no gap';
+    const selHasPot=!!selS.pot;
+    const approvals=[
+      {label:'Brief',ok:true},{label:'Moodboard',ok:true},{label:'Shot List',ok:true},
+      {label:'Budget',ok:sa,reason: sa?'':'Awaiting sign-off on the $4,800 savings option.'},
+      {label:'Timeline',ok:true},
+      {label:'Call Sheet',ok:false,reason:'Driver and final arrival times still pending.'},
+    ].map(a=>({label:a.label,status:a.ok?'Approved':'Pending',dot:a.ok?'var(--color-approved)':'var(--color-warn)',hasReason:!!a.reason,reason:a.reason||''}));
+    const improvements=[['+4','Brand DNA'],['+$0','Budget increase'],['−$4,800','Savings'],['+3','Missing shots added'],['+2','Lifestyle images'],['+1','Close-up rec.']].map(i=>({val:i[0],label:i[1]}));
+    const risks=[
+      {text:'Props stylist '+(pa?'assigned':'not assigned'),ok:pa},
+      {text:'Editing window is tight',ok:false},
+      {text:'Crew confirmed',ok:true},
+      {text:'Studio booked',ok:true},
+    ].map(r=>({text:r.text,dot:r.ok?'var(--color-approved)':'var(--color-warn)'}));
+    const readiness=[
+      {label:'Crew',value:'8 / 8',ok:true},{label:'Models',value:'4 / 4',ok:true},
+      {label:'Studio',value:'Booked',ok:true},{label:'Equipment',value:'Ready',ok:true},
+      {label:'Props',value:pa?'Assigned':'Pending',ok:pa},
+    ].map(r=>({label:r.label,value:r.value,dot:r.ok?'var(--color-approved)':'var(--color-warn)'}));
+    const deliverables=['12 Photos','6 Social Crops','4 Stories','2 TikTok Videos','Call Sheet','Production Schedule','Budget Report'];
+    const journey=['Planning','Shoot','Editing','Review','Publishing'].map((p,i)=>({name:p,current:i===0,
+      dot:i===0?'var(--color-text-primary)':'var(--color-border-strong)',
+      nameColor:i===0?'var(--color-text-primary)':'var(--color-text-muted)',
+      weight:i===0?'600':'500', showArrow:i<4}));
+    const ctaBullets=['Create the shoot','Reserve resources','Generate tasks','Generate call sheet','Notify the team','Open the Shoot Detail page'];
+    const pendingCount=approvals.filter(a=>a.status==='Pending').length;
+    // Composite readiness — starts at 92 (Grade A) and improves as fixes are applied
+    const overallNum=Math.min(100, 92 + (pa?2:0) + (sa?1:0) + (shotEdited?1:0));
+    const overallG=gradeOf(overallNum);
+    const readyText = overallNum>=90?'Ready for Production': overallNum>=80?'Almost ready':'Needs work';
+    const readyColor = overallNum>=90?'var(--color-approved)': overallNum>=80?'var(--color-warn)':'#C2710C';
+    const completed=[];
+    if(pa) completed.push('Props stylist assigned');
+    if(sa) completed.push('$4,800 budget savings applied');
+    if(shotEdited) completed.push('Shot list refined');
+    const remaining=[];
+    sectionDefs.forEach(s=>s.why.forEach(w=>{ if(!w[0]) remaining.push(s.key+' — '+w[1]); }));
+
+    return {
+      stepNum:step, stepName:names[step-1], steps,
+      back:()=>this.go(Math.max(1,step-1)),
+      next:()=> step===lastStep ? (isBooking ? this.sendBooking() : this.openConfirm()) : this.go(step+1),
+      exit:()=>this.exit(),
+      saveDraft:()=>this.saveDraft(),
+      focusSeason:()=>{const e=document.getElementById('wiz-season'); if(e){e.focus();}},
+      usePrevious:()=>this.go(1),
+      regenAll:()=>this.regenMood('all'),
+      menuOpen:this.state.menuOpen, toggleMenu:()=>this.toggleMenu(), closeMenu:()=>this.closeMenu(),
+      modalExit:this.state.modal==='exit', doExit:()=>this.doExit(), saveAndExit:()=>this.saveAndExit(),
+      isDirty:this.state.dirty,
+      saved:this.state.saved,
+      saveLabel:this.state.saved?'Draft saved ✓':'Save draft',
+      afterText, hasMissing, propsDone:this.state.propsAssigned, budgetTotal, savingsNote, savingsBtnLabel,
+      applySavings:()=>this.applySavings(),
+      createShoot:()=>this.openConfirm(),
+      confirmCreate:()=>this.createShoot(),
+      modalConfirm:this.state.modal==='confirm',
+      createLabel:this.state.created?'Creating production plan…':'Create Production Plan',
+      toast:this.state.toast, hasToast:!!this.state.toast,
+      editBrief:()=>this.setState({modal:'brief',draft:{objective:briefRows[0].value,mood:briefRows[1].value,audience:briefRows[2].value,references:briefRows[3].value,after:afterText}}),
+      modalBrief:this.state.modal==='brief', modalShot:this.state.modal==='shot', modalOpen:!!this.state.modal,
+      draft:this.state.draft,
+      setName:e=>this.setField('name',e.target.value),
+      setMeta:e=>this.setField('meta',e.target.value),
+      setRatio:e=>this.setField('ratio',e.target.value),
+      setObjective:e=>this.setField('objective',e.target.value),
+      setMood:e=>this.setField('mood',e.target.value),
+      setAudience:e=>this.setField('audience',e.target.value),
+      setReferences:e=>this.setField('references',e.target.value),
+      setAfter:e=>this.setField('after',e.target.value),
+      saveBrief:()=>this.saveBrief(),
+      saveShot:()=>this.saveShot(),
+      closeModal:()=>this.closeModal(),
+      stop:e=>e.stopPropagation(),
+      nextLabel: step===lastStep ? (isBooking ? (this.state.sending?'Sending\u2026':'Send booking request') : 'Create shoot') : 'Continue',
+      backDisplay: step===1?'none':'inline-flex',
+      stepCount,
+      wizTitle: isBooking ? (this.state.talent?this.state.talent.handle:'@runwithkara') : 'New Nike Shoot',
+      saveDisplay: isBooking ? 'none' : 'inline-flex',
+      nextOpacity: (isBooking && step===lastStep && !this.bkAllReviewed()) ? '0.5' : '1',
+      isS1:isShoot&&step===1,isS2:isShoot&&step===2,isS3:isShoot&&step===3,isS4:isShoot&&step===4,isS5:isShoot&&step===5,isS6:isShoot&&step===6,isS7:isShoot&&step===7,isS8:isShoot&&step===8,isS9:isShoot&&step===9,isS10:isShoot&&step===10,
+      brandImg:this.img('5'), heroImg:this.img('7'), prevImg:this.img('6'),
+      planRows, briefRows, moodImages, shots, shotChips, shotCount:12, resources, budget, phases, exports, callTeam, shotOrder,
+      overallScore:String(overallNum), overallGrade:'Grade '+overallG, readyText, readyColor,
+      completed, hasCompleted:completed.length>0, hasNoCompleted:completed.length===0,
+      remaining, hasRemaining:remaining.length>0, hasNoRemaining:remaining.length===0, remainingCount:remaining.length,
+      scorecards, selName, selScore, selGrade, selGColor, selWhy, selPot, selHasPot,
+      approvals, improvements, risks, readiness, deliverables, journey, ctaBullets, pendingCount, hasPending:pendingCount>0,
+      greeting: step===10 ? ('Overall readiness '+overallNum+'/100 (Grade '+overallG+'). '+(remaining.length?(remaining.length+' warning'+(remaining.length>1?'s':'')+' left — I can fix them, then create.'):'Everything checks out. Ready to create the shoot?')) : greetings[step],
+      inputHint:hints[step], quickActions, streamLines,
+      chatIdle:cs==='idle', chatThinking:cs==='thinking',
+      fromBrand: !!cx, ctxLocked: !!cx && this.state.ctxLocked,
+      ctxBrand: cx?cx.brandName:'Nike', ctxCampaign: cx?cx.campaignName:'Spring 2026',
+      ctxSeason: cx?cx.seasonCode:'SS26', ctxSeasonName: cx?cx.seasonName:'Spring',
+      unlockCtx: ()=>this.unlockCtx(),
+      ...this.bookingVals(step, isBooking),
+    };
+  }
+}
+</script>
+</body>
+</html>

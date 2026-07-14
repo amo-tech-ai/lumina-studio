@@ -1,6 +1,10 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { ApiErrorCode } from "@/lib/api/error-envelope";
-import { isStaleBookingMessage, mapSupabaseRpcError } from "@/lib/booking/rpc-errors";
+import {
+  isStaleBookingMessage,
+  mapSupabaseRpcError,
+  type RpcErrorContext,
+} from "@/lib/booking/rpc-errors";
 import type {
   CreateBookingBody,
   ListBookingsQuery,
@@ -21,10 +25,31 @@ export type ServiceResult<T> = ServiceSuccess<T> | ServiceFailure;
 
 function rpcFailure(
   error: { message?: string; code?: string | null },
-  ctx?: { expectedVersion?: number; currentVersion?: number },
+  ctx?: RpcErrorContext,
 ): ServiceFailure {
   const mapped = mapSupabaseRpcError(error.message ?? "Unknown error", error.code, ctx);
   return { ok: false, ...mapped };
+}
+
+function isExecutePrivilegeDenied(error: { message?: string; code?: string | null }): boolean {
+  const msg = error.message ?? "";
+  return (
+    error.code === "42501" ||
+    /permission denied for function/i.test(msg) ||
+    /permission denied for schema/i.test(msg)
+  );
+}
+
+async function rpcFailureForClient(
+  userSb: SupabaseClient,
+  error: { message?: string; code?: string | null },
+  ctx?: Omit<RpcErrorContext, "authenticated">,
+): Promise<ServiceFailure> {
+  if (isExecutePrivilegeDenied(error)) {
+    const { data } = await userSb.auth.getUser();
+    return rpcFailure(error, { ...ctx, authenticated: !!data.user });
+  }
+  return rpcFailure(error, ctx);
 }
 
 function internalError(): ServiceFailure {
@@ -87,7 +112,7 @@ export async function createBookingRequest(
   });
 
   if (error) {
-    return rpcFailure(error);
+    return rpcFailureForClient(userSb, error);
   }
 
   const row = requireBookingIdRow(data);
@@ -140,7 +165,7 @@ export async function listBookings(
   });
 
   if (error) {
-    return rpcFailure(error);
+    return rpcFailureForClient(userSb, error);
   }
 
   const row = asRecord(data);
@@ -206,7 +231,7 @@ export async function getBooking(
   });
 
   if (error) {
-    return rpcFailure(error);
+    return rpcFailureForClient(userSb, error);
   }
 
   const row = asRecord(data);
@@ -266,7 +291,7 @@ export async function transitionBooking(
     if (isStaleBookingMessage(error.message ?? "")) {
       return staleTransitionFailure(userSb, bookingId, input.expected_version, error);
     }
-    return rpcFailure(error, { expectedVersion: input.expected_version });
+    return rpcFailureForClient(userSb, error, { expectedVersion: input.expected_version });
   }
 
   const row = asRecord(data);
@@ -316,7 +341,8 @@ export async function approveBooking(
   });
 
   if (error) {
-    return rpcFailure(error);
+    // Map 401/403 from the requesting user session, not serviceSb (no JWT).
+    return rpcFailureForClient(userSb, error);
   }
 
   const row = requireBookingIdRow(data);

@@ -73,16 +73,20 @@ describe("CompaniesWorkspace", () => {
     expect(screen.queryByText("Acme Athletic")).toBeNull();
   });
 
-  it("shows a genuine EmptyState when there are no companies at all", () => {
+  it("shows a genuine EmptyState with a disabled Add-a-company CTA (DC parity — no create flow wired yet)", () => {
     render(<CompaniesWorkspace companies={[]} ownerNames={{}} fetchError={null} />);
     expect(screen.getByText("No companies yet")).toBeDefined();
+    const cta = screen.getByRole("button", { name: /Add a company/ });
+    expect(cta).toBeDefined();
+    expect(cta).toHaveProperty("disabled", true);
   });
 
-  it("shows a distinct no-match state when a search yields zero — not the same copy as genuine empty", () => {
+  it("shows a distinct no-match state when a search yields zero — not the same copy as genuine empty, no Add-a-company CTA", () => {
     render(<CompaniesWorkspace companies={[company()]} ownerNames={OWNER_NAMES} fetchError={null} />);
     fireEvent.change(screen.getByRole("searchbox"), { target: { value: "zzz" } });
     expect(screen.getByText(/No matches for/)).toBeDefined();
     expect(screen.queryByText("No companies yet")).toBeNull();
+    expect(screen.queryByRole("button", { name: /Add a company/ })).toBeNull();
   });
 
   it("shows ErrorState with a working retry that re-runs the server fetch", () => {

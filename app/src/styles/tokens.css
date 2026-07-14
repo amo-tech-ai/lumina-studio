@@ -381,4 +381,15 @@
     --duration-normal:  0ms;
     --duration-slow:    0ms;
   }
+
+  /* Tailwind's animate-pulse (shared Skeleton primitive, ui/skeleton.tsx; also
+     CopilotKit's "cpk:animate-pulse" thinking-indicator dot, which compiles to a
+     distinct .cpk\:animate-pulse class) has its own fixed animation duration, not
+     tied to --duration-* above — override by substring match so every prefixed/
+     namespaced variant is caught, not just the bare class. tokens.css is unlayered
+     (imported after Tailwind's @layer-wrapped utilities), so this wins in the
+     cascade without !important. */
+  [class*="animate-pulse"] {
+    animation: none;
+  }
 }

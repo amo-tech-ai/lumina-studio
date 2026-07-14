@@ -55,6 +55,14 @@ describe("AssetsTab", () => {
     expect(container.querySelector("img")).not.toBeNull();
   });
 
+  it("renders a generic file placeholder for resource_type: raw — not an <img> pointed at a non-media file", () => {
+    const { container } = render(
+      <AssetsTab assets={[asset({ resource_type: "raw", format: "pdf", url: "https://res.cloudinary.com/demo/raw/upload/v1/shoot/brief.pdf" })]} />,
+    );
+    expect(container.querySelector("img")).toBeNull();
+    expect(container.querySelector("svg")).not.toBeNull();
+  });
+
   it("renders one card per asset", () => {
     render(
       <AssetsTab

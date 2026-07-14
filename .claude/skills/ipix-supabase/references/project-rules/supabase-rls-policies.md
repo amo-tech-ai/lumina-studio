@@ -248,4 +248,44 @@ to authenticated
 using ( (select auth.uid()) = user_id );
 ```
 
+## iPix lesson learned — a bulk-access policy doesn't cover "read your own row" (IPI-536/PR #347)
+
+A policy written to answer "can a manager see everyone's assignments" does **not** automatically answer "can a contributor see their own single row." These are two different questions, and writing only the first one is a common way to accidentally lock ordinary users out of their own data.
+
+```sql
+-- Written to gate bulk access for managers — correct for that purpose,
+-- but ALSO silently blocks a contributor/viewer from seeing their own row.
+create policy "assignments_select_org"
+  on planner.assignments for select to authenticated
+  using (exists (select 1 from planner.instances where id = instance_id and planner.is_at_least(id, 'manager')));
+```
+
+If a lower-privileged user needs to read their own record and the bulk policy can't safely be loosened (loosening it would let them see everyone else's rows too), add a narrow `SECURITY DEFINER` RPC instead of touching the bulk policy:
+
+```sql
+-- Hard-scoped to auth.uid() — cannot accept a caller-supplied user id,
+-- so it can never return anyone else's row. Answers only "what's MY OWN row."
+create or replace function public.planner_get_my_assignment(p_instance_id uuid)
+returns table (id uuid, instance_id uuid, user_id uuid, role text, permissions jsonb)
+language sql
+security definer
+set search_path = ''
+stable
+as $$
+  select a.id, a.instance_id, a.user_id, a.role, a.permissions
+  from planner.assignments a
+  where a.instance_id = p_instance_id
+    and a.user_id = (select auth.uid())
+  limit 1;
+$$;
+
+-- Postgres grants EXECUTE to PUBLIC by default on function creation
+-- (unlike tables) — always revoke explicitly before granting narrowly.
+revoke all on function public.planner_get_my_assignment(uuid) from public;
+revoke all on function public.planner_get_my_assignment(uuid) from anon;
+grant execute on function public.planner_get_my_assignment(uuid) to authenticated;
+```
+
+**When writing any new RLS policy for "managers/owners can see all X," ask at write time — not after a reviewer catches it — whether a lower-privileged user also needs to read their own X, and if so, ship the narrow RPC alongside the policy in the same migration.**
+
 This prevents the policy `( (select auth.uid()) = user_id )` from running for any `anon` users, since the execution stops at the `to authenticated` step.

@@ -19,6 +19,8 @@ type BaseProps<T> = {
   /** EmptyState heading when there is genuinely no data. */
   emptyLabel: string;
   emptyBody?: string;
+  /** CTA slot for the genuinely-empty state only — never shown for a no-match search. */
+  emptyAction?: ReactNode;
   /** Heading when a search yields no results. Default: `No matches for "<query>"`. */
   noMatchLabel?: (query: string) => string;
   loading?: boolean;
@@ -44,6 +46,7 @@ export function EntityList<T extends { id: string }>({
   renderRow,
   emptyLabel,
   emptyBody,
+  emptyAction,
   noMatchLabel = defaultNoMatchLabel,
   loading = false,
   error = null,
@@ -85,7 +88,7 @@ export function EntityList<T extends { id: string }>({
     body = searching ? (
       <EmptyState heading={noMatchLabel(trimmedSearch)} icon={<Search />} />
     ) : (
-      <EmptyState heading={emptyLabel} body={emptyBody} icon={<Inbox />} />
+      <EmptyState heading={emptyLabel} body={emptyBody} icon={<Inbox />} action={emptyAction} />
     );
   } else {
     body = (

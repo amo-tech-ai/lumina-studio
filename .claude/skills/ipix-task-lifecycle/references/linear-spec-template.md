@@ -14,9 +14,11 @@ Use for `docs/linear/issues/IPI-<n>-<SPEC-ID>.md`. Mirror structure in Linear de
 **Linear:** https://linear.app/amo100/issue/IPI-<n>
 **Track:** Platform | Commerce | UI | DNA | AI | Media
 **Blocked by:** … · **Unblocks:** …
-**Skills:** ipix-task-lifecycle · …
+**Skills:** ipix-task-lifecycle · mastra · gemini · worktrees · pr-workflow
 **MVP proof:** #N (if applicable)
 ```
+
+Slugs = `.claude/skills/<slug>/`. Pick from [domain-skill-routing.md](domain-skill-routing.md); **Read** each `SKILL.md` before writing AC.
 
 ---
 
@@ -168,7 +170,7 @@ Order: schema → edge → server → UI.
 - [ ] `cd app && npm run build` (if routes/config/schema)
 - [ ] `infisical run -- npm run supabase:verify-rls` (if RLS touched)
 - [ ] Browser smoke: <route> @ 375px + 1280px
-- [ ] todo.md row → 🟢 · Linear → Done
+- [ ] `tasks/plan/todo.md` row → 🟢 · Linear → Done
 ```
 
 See [per-task-testing.md](per-task-testing.md).

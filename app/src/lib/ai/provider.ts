@@ -1,61 +1,28 @@
-import { existsSync, readFileSync } from "node:fs";
-import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
+import { createGroq } from "@ai-sdk/groq";
+import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
+import groqModelsSsot from "./groq-models.ssot.json";
 
 import {
   createGeminiLanguageModel,
   resolveProviderOptions as resolveGeminiProviderOptions,
 } from "./gemini-registry";
+import { DEFAULT_AI_GATEWAY_URL } from "./provider-adapter";
 import type { AiProvider, GroqModelEntry, GroqModelTier, GroqModelsConfig } from "./types";
 
-const MODULE_DIR = dirname(fileURLToPath(import.meta.url));
-const MAX_ANCESTOR_HOPS = 8;
-
 /**
- * Walks up from `startDir` looking for `config/groq-models.json`, rather than
- * joining a hardcoded number of ".." segments. A fixed depth broke the moment
- * Mastra bundled this module into `.mastra/output/provider.mjs` — that output
- * file sits one directory shallower than the original `app/src/lib/ai/`
- * source, so the same "go up 4" math overshot the repo root by one level
- * (resolved to the parent of the repo instead of `config/` inside it).
- * Walking up until the file is actually found is correct at any bundling
- * depth, for both Next.js and Mastra.
- */
-export function findGroqModelsConfigPath(startDir: string): string {
-  let dir = startDir;
-  for (let hop = 0; hop < MAX_ANCESTOR_HOPS; hop += 1) {
-    const candidate = join(dir, "config", "groq-models.json");
-    if (existsSync(candidate)) return candidate;
-    const parent = dirname(dir);
-    if (parent === dir) break; // reached filesystem root
-    dir = parent;
-  }
-  throw new Error(
-    `Could not find config/groq-models.json within ${MAX_ANCESTOR_HOPS} ancestor directories of "${startDir}"`,
-  );
-}
-
-/**
- * Repo SSOT at config/groq-models.json — loaded at runtime (not a static import)
- * to stay outside Turbopack's app/ root boundary. Resolved by walking up from
- * this module's own location (not process.cwd()) so it's correct regardless of
- * the directory the process was launched from, or how deep the build output
- * that contains this module happens to be nested.
+ * CF-MIG-210: static JSON bundled for Cloudflare Workers (no runtime readFileSync).
+ * Source of truth: `config/groq-models.json` — synced via `scripts/sync-groq-models.mjs` (prebuild).
  */
 export function loadGroqModelsConfig(): GroqModelsConfig {
-  try {
-    const path = findGroqModelsConfigPath(MODULE_DIR);
-    return JSON.parse(readFileSync(path, "utf8")) as GroqModelsConfig;
-  } catch (error) {
-    throw new Error(
-      `Failed to load Groq models SSOT allowlist (expected config/groq-models.json at repo root, searched up from "${MODULE_DIR}"): ${
-        error instanceof Error ? error.message : String(error)
-      }`,
-    );
-  }
+  return groqModelsSsot as GroqModelsConfig;
 }
 
-type ResolvedLanguageModel = ReturnType<typeof createGeminiLanguageModel>;
+type ResolvedLanguageModel =
+  | ReturnType<typeof createGeminiLanguageModel>
+  | ReturnType<ReturnType<typeof createOpenAICompatible>["chatModel"]>;
+
+/** Rollback flag for Mastra → gateway cutover (IPI-454 AC-F). Default = legacy direct SDKs. */
+export type AiRoutingMode = "direct" | "gateway";
 
 export type { AiProvider, GroqModelTier } from "./types";
 export {
@@ -63,28 +30,39 @@ export {
   resolveGeminiModel,
 } from "./gemini-registry";
 
-const groqModels = loadGroqModelsConfig();
-
-const MODEL_BY_ID = new Map(
-  groqModels.models.map((entry) => [entry.id, entry] as const),
+// `groqModelsSsot` is a static bundled import (no runtime load), so these can
+// be plain module-level constants instead of lazy-initialized caches.
+const groqModelsConfig: GroqModelsConfig = loadGroqModelsConfig();
+const modelById: Map<string, GroqModelEntry> = new Map(
+  groqModelsConfig.models.map((entry) => [entry.id, entry] as const),
 );
+
+function getGroqModelsConfig(): GroqModelsConfig {
+  return groqModelsConfig;
+}
+
+function getModelById(): Map<string, GroqModelEntry> {
+  return modelById;
+}
+
+const VALID_PROVIDERS = ["gemini", "groq", "openai", "workers-ai", "nvidia", "openai-compatible", "mock"] as const satisfies readonly AiProvider[];
 
 export function resolveAiProvider(): AiProvider {
   const raw = (process.env.AI_PROVIDER ?? "gemini").trim().toLowerCase();
-  if (raw === "gemini" || raw === "groq" || raw === "openai") return raw;
+  if ((VALID_PROVIDERS as readonly string[]).includes(raw)) return raw as AiProvider;
   throw new Error(
-    `AI_PROVIDER="${raw}" is invalid (expected gemini | groq | openai).`,
+    `AI_PROVIDER="${raw}" is invalid (expected ${VALID_PROVIDERS.join(" | ")}).`,
   );
 }
 
-/** Alias for groq-plan naming. */
 export const resolveProvider = resolveAiProvider;
 
 export function getGroqModelEntry(modelId: string): GroqModelEntry | undefined {
-  return MODEL_BY_ID.get(modelId);
+  return getModelById().get(modelId);
 }
 
 export function resolveGroqModelId(tier: GroqModelTier = "default"): string {
+  const groqModels = getGroqModelsConfig();
   const envKey = groqModels.envMapping[tier];
   const fromEnv = envKey ? process.env[envKey]?.trim() : "";
   const fallback = groqModels.defaults[tier]?.trim() ?? "";
@@ -92,28 +70,112 @@ export function resolveGroqModelId(tier: GroqModelTier = "default"): string {
   if (!modelId) {
     throw new Error(`No Groq model configured for tier "${tier}".`);
   }
-  if (!MODEL_BY_ID.has(modelId)) {
+  if (!getModelById().has(modelId)) {
     throw new Error(
-      `Groq model "${modelId}" is not in config/groq-models.json allowlist.`,
+      `Groq model "${modelId}" is not in the bundled Groq allowlist (groq-models.ssot.json).`,
     );
   }
   return modelId;
 }
 
-/** True when a Groq vision model is configured (env override or SSOT default). */
 function isGroqVisionConfigured(): boolean {
+  const groqModels = getGroqModelsConfig();
   const envKey = groqModels.envMapping.vision;
   const fromEnv = envKey ? process.env[envKey]?.trim() : "";
   const fallback = groqModels.defaults.vision?.trim() ?? "";
   return Boolean(fromEnv || fallback);
 }
 
+export function resolveAiRoutingMode(): AiRoutingMode {
+  const raw = (process.env.AI_ROUTING_MODE ?? "direct").trim().toLowerCase();
+  if (raw === "gateway") return "gateway";
+  if (raw === "direct" || raw === "") return "direct";
+  throw new Error(
+    `AI_ROUTING_MODE="${raw}" is invalid (expected direct | gateway).`,
+  );
+}
+
+/** Worker `model-registry` tier keys — `resolveModelEntry(model)` misses fall back to `default`. */
+const WORKER_REGISTRY_KEYS = new Set([
+  "default",
+  "fast",
+  "structured",
+  "vision",
+  "embedding",
+]);
+
 /**
- * Provider options for the active model. Gemini's thinkingBudget hack only
- * applies to Gemini — Groq has no equivalent today, so omit rather than send
- * a Gemini-shaped options object the Groq provider would just ignore.
+ * Model id sent to the AI Gateway Worker (OpenAI-compat `model` field).
+ * Must be a Worker registry tier key — not a Gemini/Groq provider model id.
  */
-export function resolveProviderOptions() {
+export function resolveGatewayModelId(tier: GroqModelTier = "default"): string {
+  const overrides: Partial<Record<string, string | undefined>> = {
+    default: process.env.AI_MODEL_DEFAULT,
+    fast: process.env.AI_MODEL_FAST,
+    structured: process.env.AI_MODEL_STRUCTURED,
+    vision: process.env.AI_MODEL_VISION,
+  };
+  const override = overrides[tier]?.trim();
+  if (override && WORKER_REGISTRY_KEYS.has(override)) return override;
+
+  if (tier === "structuredHeavy") return "structured";
+  if (WORKER_REGISTRY_KEYS.has(tier)) return tier;
+
+  // Never silently remap compound/stt/safety/… onto Worker "default".
+  throw new Error(
+    `Tier "${tier}" is not a Worker registry chat key — keep AI_ROUTING_MODE=direct for this tier.`,
+  );
+}
+
+/**
+ * Whether this tier may use the OpenAI-compat Worker under AI_ROUTING_MODE=gateway.
+ * Allowlist only — Worker chat is text-only (no ImageParts, no OpenAI `tools`).
+ * Specialized Groq tiers (compound/stt/safety/…) must stay on direct SDKs.
+ */
+export function shouldRouteTierViaGateway(tier: GroqModelTier): boolean {
+  if (resolveAiRoutingMode() !== "gateway") return false;
+
+  // Tool-free marketing path — only Worker-safe text tier in production gateway mode.
+  if (tier === "fast") return true;
+
+  // Tool-bearing Mastra agents — opt in only after a Worker tool bridge exists.
+  if (
+    (tier === "default" || tier === "structured" || tier === "structuredHeavy") &&
+    process.env.AI_GATEWAY_ALLOW_TOOL_TIERS === "1"
+  ) {
+    return true;
+  }
+
+  return false;
+}
+
+function createGatewayLanguageModel(tier: GroqModelTier): ResolvedLanguageModel {
+  const base = (process.env.AI_GATEWAY_URL ?? DEFAULT_AI_GATEWAY_URL).replace(/\/$/, "");
+  const apiKey = process.env.AI_GATEWAY_API_KEY?.trim();
+  // Optional locally; set AI_GATEWAY_API_KEY when the Worker requires Bearer auth.
+  // Do NOT mint x-request-id here — createOpenAICompatible freezes headers for the
+  // process lifetime (agents call resolveModel() at module load). Optional sticky
+  // override for tests only; production correlation belongs on the Worker / fetch layer.
+  const requestId = process.env.AI_GATEWAY_REQUEST_ID?.trim();
+  const gateway = createOpenAICompatible({
+    name: "ipix-ai-gateway",
+    baseURL: `${base}/v1`,
+    ...(apiKey ? { apiKey } : {}),
+    headers: {
+      ...(requestId ? { "x-request-id": requestId } : {}),
+      "x-ipix-routing": "gateway",
+    },
+  });
+  return gateway.chatModel(resolveGatewayModelId(tier));
+}
+
+export function resolveProviderOptions(tier: GroqModelTier = "default") {
+  // Gemini thinkingBudget applies to direct @ai-sdk/google models only.
+  // When this tier is routed via openai-compatible gateway, return {} so
+  // Google-specific fields are not forwarded to the Worker (rejects unknown options).
+  if (shouldRouteTierViaGateway(tier)) {
+    return {};
+  }
   return resolveAiProvider() === "gemini" ? resolveGeminiProviderOptions() : {};
 }
 
@@ -138,30 +200,22 @@ export function assertGroqTierCapabilities(
   return entry;
 }
 
-// Lazy require keeps Gemini-only deploys from failing when @ai-sdk/groq is unused.
 function createGroqLanguageModel(tier: GroqModelTier): ResolvedLanguageModel {
   const apiKey = process.env.GROQ_API_KEY?.trim();
   if (!apiKey) {
     throw new Error("GROQ_API_KEY is required when AI_PROVIDER=groq.");
   }
-
-  let createGroq: typeof import("@ai-sdk/groq").createGroq;
-  try {
-    ({ createGroq } = require("@ai-sdk/groq"));
-  } catch {
-    throw new Error(
-      "@ai-sdk/groq is not installed. Run `npm install` in app/ (see package.json).",
-    );
-  }
-
   const groq = createGroq({ apiKey });
   return groq(resolveGroqModelId(tier));
 }
 
 export function resolveModel(tier: GroqModelTier = "default"): ResolvedLanguageModel {
-  // Vision stays on Gemini until GROQ_MODEL_VISION is set (golden eval gate) —
-  // forced regardless of AI_PROVIDER so a global groq cutover can't silently
-  // break vision extraction.
+  // IPI-454 AC-F: Mastra agents keep calling resolveModel(); flip AI_ROUTING_MODE=gateway
+  // for Worker-safe tiers (see shouldRouteTierViaGateway). Vision + tool tiers stay direct.
+  if (shouldRouteTierViaGateway(tier)) {
+    return createGatewayLanguageModel(tier);
+  }
+
   if (tier === "vision" && !isGroqVisionConfigured()) {
     return createGeminiLanguageModel();
   }
@@ -173,6 +227,8 @@ export function resolveModel(tier: GroqModelTier = "default"): ResolvedLanguageM
     return createGroqLanguageModel(tier);
   }
   throw new Error(
-    `AI_PROVIDER="${provider}" is not wired in GROQ-002 (use gemini or groq).`,
+    `AI_PROVIDER="${provider}" is not wired for AI_ROUTING_MODE=direct (use gemini or groq). ` +
+      `Set AI_ROUTING_MODE=gateway to use @ai-sdk/openai-compatible → AI_GATEWAY_URL, ` +
+      `or use createProviderAdapter() for non-Mastra REST (IPI-454).`,
   );
 }

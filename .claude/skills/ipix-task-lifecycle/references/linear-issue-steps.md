@@ -174,7 +174,7 @@ sequenceDiagram
 - [ ] **E1** `npm run build` passes
 - [ ] **E2** Browser smoke — <what to click/see>
 - [ ] **E3** `npm run supabase:verify-rls` (only if RLS touched)
-- [ ] **E4** todo.md row → 🟢 · Linear → Done
+- [ ] **E4** `tasks/plan/todo.md` row → 🟢 · Linear → Done
 
 ```
 
@@ -235,7 +235,7 @@ Example states table (copy and fill in):
 - [ ] **E2** `npm run supabase:verify` (if Supabase touched)
 - [ ] **E3** `npm run supabase:verify-rls` (if auth/RLS touched)
 - [ ] **E4** Browser smoke or script evidence documented in issue comment
-- [ ] **E5** [todo.md](https://github.com/...) row updated · Linear state set
+- [ ] **E5** `tasks/plan/todo.md` row updated · Linear state set
 ```
 
 ---
@@ -261,7 +261,7 @@ Example states table (copy and fill in):
 | Repo tracker | `tasks/plan/todo.md` + mirror `tasks/todo.md` | Status column |
 | Supabase ops | `supabase/README.md` | New workflow or migration |
 
-**Dot legend (todo.md):** 🟢 Done · 🟡 In progress · 🔴 Blocked · ⚫ Not started
+**Dot legend (`tasks/plan/todo.md`):** 🟢 Done · 🟡 In progress · 🔴 Blocked · ⚫ Not started
 
 ---
 
@@ -273,7 +273,7 @@ Example states table (copy and fill in):
 | Research | A. Spike / audit steps |
 | Implement | B–C. Scaffold + code |
 | Test | D–E. Scripts + browser |
-| Ship | E. Done milestone · todo.md |
+| Ship | E. Done milestone · `tasks/plan/todo.md` |
 
 ---
 

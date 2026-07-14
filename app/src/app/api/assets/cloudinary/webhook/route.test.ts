@@ -28,6 +28,7 @@ const assetsUpdateEq = vi.fn();
 const cloudinaryAssetsUpsert = vi.fn();
 const cloudinaryAssetsUpdateEq = vi.fn();
 const aiAgentLogsInsert = vi.fn();
+const campaignsSelectMaybeSingle = vi.fn();
 
 const mockFrom = vi.fn((table: string) => {
   if (table === "assets") {
@@ -46,8 +47,19 @@ const mockFrom = vi.fn((table: string) => {
   if (table === "ai_agent_logs") {
     return { insert: aiAgentLogsInsert };
   }
+  if (table === "campaigns") {
+    return {
+      select: vi.fn(() => ({ eq: vi.fn(() => ({ maybeSingle: campaignsSelectMaybeSingle })) })),
+    };
+  }
   throw new Error(`unexpected table: ${table}`);
 });
+
+const FK_VIOLATION = {
+  code: "23503",
+  message:
+    'insert or update on table "assets" violates foreign key constraint "assets_brand_id_fkey"',
+};
 
 const mockCreateSupabaseAdminClient = vi.fn(() => ({ from: mockFrom }));
 
@@ -90,6 +102,7 @@ beforeEach(() => {
   cloudinaryAssetsUpsert.mockResolvedValue({ data: null, error: null });
   cloudinaryAssetsUpdateEq.mockResolvedValue({ data: null, error: null });
   aiAgentLogsInsert.mockResolvedValue({ data: null, error: null });
+  campaignsSelectMaybeSingle.mockResolvedValue({ data: null, error: null });
   mockFetch.mockReset();
   mockFetch.mockResolvedValue({ ok: true, text: () => Promise.resolve("") });
   vi.stubGlobal("fetch", mockFetch);
@@ -194,7 +207,7 @@ describe("POST /api/assets/cloudinary/webhook", () => {
   });
 
   it("updates the existing assets row instead of inserting when cloudinary_public_id is already linked", async () => {
-    assetsSelectMaybeSingle.mockResolvedValue({ data: { id: "asset-existing" }, error: null });
+    assetsSelectMaybeSingle.mockResolvedValue({ data: { id: "asset-existing", brand_id: null }, error: null });
     const { POST } = await importRoute();
     const res = await POST(makeRequest(UPLOAD_PAYLOAD));
     expect(res.status).toBe(200);
@@ -262,5 +275,127 @@ describe("POST /api/assets/cloudinary/webhook", () => {
     const { POST } = await importRoute();
     const res = await POST(makeRequest(UPLOAD_PAYLOAD));
     expect(res.status).toBe(200);
+  });
+
+  describe("IPI-513 — campaign resolution and FK-safe brand_id handling", () => {
+    const CAMPAIGN_ID = "33333333-3333-3333-3333-333333333333";
+    const CAMPAIGN_BRAND_ID = "44444444-4444-4444-4444-444444444444";
+    const CAMPAIGN_PAYLOAD = {
+      ...UPLOAD_PAYLOAD,
+      public_id: `ipix/campaigns/${CAMPAIGN_ID}/abc123`,
+    };
+
+    it("resolves brand_id from campaigns.brand_id for a campaign-folder upload", async () => {
+      campaignsSelectMaybeSingle.mockResolvedValue({ data: { brand_id: CAMPAIGN_BRAND_ID }, error: null });
+      const { POST } = await importRoute();
+      const res = await POST(makeRequest(CAMPAIGN_PAYLOAD));
+      expect(res.status).toBe(200);
+      expect(assetsInsertSingle).toHaveBeenCalled();
+      expect(cloudinaryAssetsUpsert).toHaveBeenCalledWith(
+        expect.objectContaining({ brand_id: CAMPAIGN_BRAND_ID }),
+        { onConflict: "public_id" },
+      );
+    });
+
+    it("leaves brand_id null when the campaign folder doesn't match a known campaign", async () => {
+      campaignsSelectMaybeSingle.mockResolvedValue({ data: null, error: null });
+      const { POST } = await importRoute();
+      const res = await POST(makeRequest(CAMPAIGN_PAYLOAD));
+      expect(res.status).toBe(200);
+      expect(cloudinaryAssetsUpsert).toHaveBeenCalledWith(
+        expect.objectContaining({ brand_id: null }),
+        { onConflict: "public_id" },
+      );
+    });
+
+    it("logs shoot-folder uploads as unresolved (out of scope, tracked in IPI-524), not silently", async () => {
+      const { POST } = await importRoute();
+      const res = await POST(
+        makeRequest({ ...UPLOAD_PAYLOAD, public_id: "ipix/shoots/22222222-2222-2222-2222-222222222222/raw/abc" }),
+      );
+      expect(res.status).toBe(200);
+      expect(cloudinaryAssetsUpsert).toHaveBeenCalledWith(
+        expect.objectContaining({ brand_id: null }),
+        { onConflict: "public_id" },
+      );
+      expect(aiAgentLogsInsert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          brand_id: null,
+          input: expect.objectContaining({ resolution_reason: "shoot_folders_unsupported_see_ipi524" }),
+        }),
+      );
+    });
+
+    it("new asset: retries the insert with brand_id null when the candidate brand fails its FK check, and propagates null to cloudinary_assets", async () => {
+      assetsInsertSingle
+        .mockResolvedValueOnce({ data: null, error: FK_VIOLATION })
+        .mockResolvedValueOnce({ data: { id: "asset-retried" }, error: null });
+      const { POST } = await importRoute();
+      const res = await POST(makeRequest(UPLOAD_PAYLOAD));
+      expect(res.status).toBe(200);
+      expect(assetsInsertSingle).toHaveBeenCalledTimes(2);
+      expect(cloudinaryAssetsUpsert).toHaveBeenCalledWith(
+        expect.objectContaining({ asset_id: "asset-retried", brand_id: null }),
+        { onConflict: "public_id" },
+      );
+      expect(aiAgentLogsInsert).toHaveBeenCalledWith(expect.objectContaining({ brand_id: null }));
+    });
+
+    it("existing asset with a valid brand: does NOT null it out when a later event's candidate brand fails its FK check — preserves the existing value", async () => {
+      const EXISTING_GOOD_BRAND = "55555555-5555-5555-5555-555555555555";
+      assetsSelectMaybeSingle.mockResolvedValue({
+        data: { id: "asset-existing", brand_id: EXISTING_GOOD_BRAND },
+        error: null,
+      });
+      assetsUpdateEq
+        .mockResolvedValueOnce({ data: null, error: FK_VIOLATION })
+        .mockResolvedValueOnce({ data: null, error: null });
+      const { POST } = await importRoute();
+      const res = await POST(makeRequest(UPLOAD_PAYLOAD));
+      expect(res.status).toBe(200);
+      expect(assetsUpdateEq).toHaveBeenCalledTimes(2);
+      expect(cloudinaryAssetsUpsert).toHaveBeenCalledWith(
+        expect.objectContaining({ asset_id: "asset-existing", brand_id: EXISTING_GOOD_BRAND }),
+        { onConflict: "public_id" },
+      );
+    });
+
+    it("a non-brand FK error (or any other update failure) does not retry and preserves the existing brand_id", async () => {
+      const EXISTING_GOOD_BRAND = "66666666-6666-6666-6666-666666666666";
+      assetsSelectMaybeSingle.mockResolvedValue({
+        data: { id: "asset-existing", brand_id: EXISTING_GOOD_BRAND },
+        error: null,
+      });
+      assetsUpdateEq.mockResolvedValueOnce({
+        data: null,
+        error: { code: "23503", message: 'violates foreign key constraint "assets_shoot_id_fkey"' },
+      });
+      const { POST } = await importRoute();
+      const res = await POST(makeRequest(UPLOAD_PAYLOAD));
+      expect(res.status).toBe(200);
+      expect(assetsUpdateEq).toHaveBeenCalledTimes(1);
+      expect(cloudinaryAssetsUpsert).toHaveBeenCalledWith(
+        expect.objectContaining({ brand_id: EXISTING_GOOD_BRAND }),
+        { onConflict: "public_id" },
+      );
+    });
+
+    it("upload then eager for the same asset: the second call finds the existing row and updates rather than inserting again", async () => {
+      const { POST } = await importRoute();
+
+      assetsSelectMaybeSingle.mockResolvedValueOnce({ data: null, error: null });
+      const uploadRes = await POST(makeRequest(UPLOAD_PAYLOAD));
+      expect(uploadRes.status).toBe(200);
+      expect(assetsInsertSingle).toHaveBeenCalledTimes(1);
+
+      assetsSelectMaybeSingle.mockResolvedValueOnce({
+        data: { id: "asset-1", brand_id: BRAND_ID },
+        error: null,
+      });
+      const eagerRes = await POST(makeRequest({ ...UPLOAD_PAYLOAD, notification_type: "eager" }));
+      expect(eagerRes.status).toBe(200);
+      expect(assetsInsertSingle).toHaveBeenCalledTimes(1);
+      expect(assetsUpdateEq).toHaveBeenCalledWith("id", "asset-1");
+    });
   });
 });

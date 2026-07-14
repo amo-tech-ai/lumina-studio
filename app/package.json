@@ -3,22 +3,28 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+    "build": "NEXT_PRIVATE_WORKER_THREADS=false next build",
+    "prebuild": "node scripts/sync-groq-models.mjs",
     "dev": "npm run dev:infra && concurrently \"npm run dev:ui\" \"npm run dev:agent\" --names ui,agent --prefix-colors blue,green --kill-others",
     "dev:agent": "mastra dev",
     "dev:ui": "next dev --turbopack -p 3002",
     "dev:debug": "LOG_LEVEL=debug npm run dev",
     "typecheck": "tsc --noEmit",
-    "build": "next build",
     "lint": "eslint .",
     "test": "vitest run",
     "start": "next start -p 3002",
-    "dev:infra": "node scripts/copilotkit-dev-infra.mjs"
+    "dev:infra": "node scripts/copilotkit-dev-infra.mjs",
+    "preview": "node scripts/sync-groq-models.mjs && rm -rf .next .open-next && opennextjs-cloudflare build && opennextjs-cloudflare preview",
+    "deploy": "node scripts/sync-groq-models.mjs && rm -rf .next .open-next && opennextjs-cloudflare build && opennextjs-cloudflare deploy",
+    "upload": "node scripts/sync-groq-models.mjs && rm -rf .next .open-next && opennextjs-cloudflare build && opennextjs-cloudflare upload",
+    "cf-typegen": "wrangler types --env-interface CloudflareEnv cloudflare-env.d.ts"
   },
   "dependencies": {
     "@ag-ui/client": "0.0.57",
     "@ag-ui/mastra": "0.2.1-beta.2",
     "@ai-sdk/google": "^3.0.83",
     "@ai-sdk/groq": "^3.0.39",
+    "@ai-sdk/openai-compatible": "^1.0.42",
     "@copilotkit/react-core": "1.61.0",
     "@copilotkit/runtime": "1.61.0",
     "@libsql/client": "^0.15.15",
@@ -27,6 +33,7 @@
     "@mastra/libsql": "1.1.0-alpha.2",
     "@mastra/memory": "1.0.1-alpha.1",
     "@mastra/pg": "1.12.0",
+    "@opennextjs/cloudflare": "^1.20.1",
     "@radix-ui/react-dialog": "^1.1.17",
     "@radix-ui/react-progress": "^1.1.10",
     "@radix-ui/react-select": "^2.3.1",
@@ -43,7 +50,7 @@
     "libsql": "^0.5.22",
     "lucide-react": "^0.525.0",
     "mastra": "1.1.0-alpha.3",
-    "next": "16.1.2",
+    "next": "16.2.10",
     "next-cloudinary": "^6.17.5",
     "next-themes": "^0.4.6",
     "react": "^19.2.1",
@@ -65,7 +72,8 @@
     "tailwindcss": "^4",
     "typescript": "^5",
     "typescript-eslint": "^8.61.1",
-    "vitest": "^3.2.4"
+    "vitest": "^3.2.4",
+    "wrangler": "^4.107.1"
   },
   "overrides": {
     "@ag-ui/client": "0.0.57",

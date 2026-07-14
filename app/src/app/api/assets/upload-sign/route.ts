@@ -89,6 +89,8 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Invalid filename" }, { status: 400 });
   }
 
+  const { shootId, campaignId } = validContextIds(body.context);
+
   // Dev fallback identity never owns a real brand row — skip the ownership
   // check so local dev (OPERATOR_AUTH_ENABLED=false) isn't hard-blocked.
   if (operator.id !== "dev-unauthenticated") {
@@ -106,10 +108,31 @@ export async function POST(request: Request) {
     if (!brand) {
       return NextResponse.json({ error: "Brand not owned by caller" }, { status: 403 });
     }
+
+    // IPI-513 follow-up: the campaign folder (ipix/campaigns/{id}) carries no
+    // brandId of its own — the Cloudinary webhook resolves brand_id purely by
+    // looking up campaigns.brand_id for the folder's UUID. Without this check,
+    // an operator who owns brandId could pass any campaignId (including one
+    // belonging to a different brand) and get the upload attributed to that
+    // other brand once the webhook processes it.
+    if (campaignId) {
+      const { data: campaign, error: campaignErr } = await svc
+        .from("campaigns")
+        .select("id")
+        .eq("id", campaignId)
+        .eq("brand_id", brandId)
+        .maybeSingle();
+      if (campaignErr) {
+        console.error("[assets/upload-sign] campaign ownership query failed:", campaignErr.message);
+        return NextResponse.json({ error: "Internal error" }, { status: 500 });
+      }
+      if (!campaign) {
+        return NextResponse.json({ error: "Campaign does not belong to the requested brand" }, { status: 403 });
+      }
+    }
   }
 
   const timestamp = Math.floor(Date.now() / 1000);
-  const { shootId, campaignId } = validContextIds(body.context);
   const assetFolder = assetFolderFor(brandId, shootId, campaignId);
   const contextParts = [`brand_id=${brandId}`];
   if (shootId) contextParts.push(`shoot_id=${shootId}`);

@@ -1,6 +1,6 @@
 ---
 name: worktrees
-description: Set up and operate git worktrees for isolated, parallel development — running multiple branches or Claude sessions at once without stashing or branch-switching, reviewing a PR while developing, comparing implementations side by side, or giving a risky change its own clean checkout. Use this whenever the user mentions worktrees, "isolated workspace", "parallel branches", "work on two things at once", `git worktree`, `--worktree`, or before executing a multi-step implementation plan that should not touch the current working tree. Also use when you (the agent) need an isolated checkout to make file changes that must not collide with the user's working tree.
+description: Set up and operate git worktrees for isolated, parallel development — running multiple branches or Claude sessions at once without stashing or branch-switching, reviewing a PR while developing, comparing implementations side by side, or giving a risky change its own clean checkout. Use whenever the user mentions worktrees, "isolated workspace", "parallel branches", "work on two things at once", `git worktree`, `--worktree`, removing/cleaning up a worktree, salvaging uncommitted docs before delete, or before executing a multi-step implementation plan that should not touch the current working tree. Also use when you (the agent) need an isolated checkout to make file changes that must not collide with the user's working tree, and **mandatory** at Phase 5 ship when deciding whether uncommitted docs must be committed and the worktree removed.
 ---
 
 # Git Worktrees
@@ -84,7 +84,7 @@ Before opening a PR, merging, or flipping a task to Done — all must hold, or i
 - [ ] No leaked dirs in the diff (see Leak guard below)
 - [ ] PR scoped to one concern ([PR splitting playbook](references/ipix-ops.md#pr-splitting-playbook))
 - [ ] [task-verifier](../task-verifier/SKILL.md) report attached for IPI/SCR ship gates
-- [ ] Worktree backed up if it held uncommitted work, and `npm run worktree:pre-delete` clean before removal (Backup-before-cleanup below)
+- [ ] Documentation preservation gate passed; worktree **removed** after merge — [End-of-task removal rule](#end-of-task-worktree-removal-rule)
 
 ### Never run blindly
 
@@ -109,7 +109,68 @@ git -C <worktree> diff HEAD > /tmp/wt-<task-id>.patch
 
 Only then `git worktree remove --force`. A 10-second backup beats unrecoverable loss.
 
+> **Clean working tree does not mean safe to delete.** A worktree can be clean and still contain unpushed commits with valuable docs.
+
 **The quieter danger: committed-but-never-pushed commits need no `--force` at all.** A plain `git worktree remove` succeeds fine on a *clean* working tree — but "clean" only means no uncommitted changes, not that the branch's commits exist anywhere else. If you `git add && git commit` a doc/note/fix in a worktree and never push it, the worktree directory can be removed with zero warnings; the commits survive on the branch ref for now, but become truly unrecoverable the moment that branch is later deleted (e.g. a routine "clean up merged branches" pass). Run **`npm run worktree:pre-delete`** before removing any worktree you didn't just finish pushing — it hard-blocks when the current branch has commits `origin/<branch>` doesn't have.
+
+### Documentation preservation gate (mandatory — P0)
+
+Before deleting, resetting, cleaning, or abandoning any worktree, **ask and answer**:
+
+> Are there uncommitted or unpushed docs/audits/plans that should become permanent repo knowledge?
+
+That question is how valuable docs get lost when skipped. **Incident (Jul 2026):** force-removed worktrees dropped untracked `tasks/llm/`, `docs/llm/`, and `Universal-design-prompt-new/` — unrecoverable once the directory was gone.
+
+Run:
+
+```bash
+git -C <worktree> status --short
+git -C <worktree> ls-files --others --exclude-standard
+git -C <worktree> diff --name-only
+git -C <worktree> log --oneline origin/main..HEAD
+npm run worktree:pre-delete
+node scripts/worktree-health.mjs --pre-delete
+```
+
+Check especially:
+
+- `*.md` · `*.mdx` · `*.mdc` · `*.csv` · `*.json` · `*.sql`
+- `docs/**` · `tasks/**` · `linear/**`
+- `.claude/**` · `.@worktrees/**` · `.worktrees/**`
+- `README*` · `AGENTS.md` · `CLAUDE.md`
+- design packages (e.g. `Universal-design-prompt-new/`)
+
+For every doc/planning/audit file, decide **one of three outcomes** — and record the decision before remove:
+
+1. **Commit it** — if it is useful project knowledge (same concern → task PR; different concern → **split docs-only PR**).
+2. **Move it to the canonical docs/tasks location** — if valuable but in the wrong place; then commit.
+3. **Delete it intentionally** — only if generated junk, duplicated, stale, or unsafe (explicit confirmation).
+
+Never delete a worktree until this decision is recorded for every flagged file.
+
+If unsure, preserve first in a `ipi/docs-preservation-<slug>` branch or PR. **Losing useful docs is worse than carrying a small preservation PR.**
+
+Never `git worktree remove --force` while untracked docs remain unless the user explicitly waives a named path list in the session.
+
+Full playbook → [references/ipix-ops.md#documentation-preservation-gate](references/ipix-ops.md#documentation-preservation-gate).
+
+### End-of-task worktree removal rule
+
+When a task is complete, merged, abandoned, or no longer active, **remove its worktree**. A completed worktree should not remain on disk "just in case." Each tree typically holds **1–3 GB** (`node_modules`, `.next`, caches) and traps the next agent (stale code, `git worktree list` noise).
+
+Before removal:
+
+1. Confirm the PR is merged or the branch is intentionally abandoned.
+2. Run the [documentation preservation gate](#documentation-preservation-gate-mandatory--p0).
+3. Run `npm run worktree:pre-delete`.
+4. Remove the worktree with `git worktree remove <path>` (no `--force` unless backup + gate complete).
+5. Run `git worktree prune` · `git branch -d ipi/<task>-<slug>` after merge · `npm run worktree:audit` (target ≤ ~3–4 active trees).
+
+Do not keep unused worktrees. They waste disk space, create stale branches, and cause agents to work from old code.
+
+If the user says "keep the worktree for follow-up", record **why** and a **remove-by date** in the PR or Linear comment — default is still remove after merge.
+
+**Agent duty at Phase 5:** [ipix-task-lifecycle](../ipix-task-lifecycle/shipping.md) — run this gate before reporting Done.
 
 ### Leak guard
 
@@ -215,6 +276,7 @@ A fresh worktree has the code but none of the *environment*. Initialize it:
 
 **Never `rm -rf` a worktree** — that orphans metadata in `.git/worktrees/`. Use git (or let the native session do it).
 
+- **After every shipped or abandoned task:** run [Documentation preservation gate](#documentation-preservation-gate-mandatory--p0) then [End-of-task worktree removal rule](#end-of-task-worktree-removal-rule). Do not end Phase 5 with a merged task still checked out in a sibling worktree.
 - **Native sessions:** on exit, a worktree with no uncommitted changes, untracked files, or new commits is removed automatically (named sessions prompt instead). A dirty worktree prompts keep-or-remove. `-p` runs don't auto-clean — remove manually.
 - **Manual:**
   ```bash
@@ -235,6 +297,7 @@ A fresh worktree has the code but none of the *environment*. Initialize it:
 | **iPix: audit inventory** | `npm run worktree:audit` · `-- --write` updates tracker |
 | **iPix: start-work gate** | `npm run worktree:health` (current worktree) · `-- --all` (every worktree) |
 | **iPix: pre-delete gate** | `npm run worktree:pre-delete` — run before removing a worktree you didn't just push |
+| **iPix: doc preservation + remove** | [Documentation preservation gate](#documentation-preservation-gate-mandatory--p0) → `git worktree remove` |
 | Native isolated session | `claude --worktree <name>` |
 | Native, from a PR | `claude --worktree "#<n>"` |
 | Manual: new branch | `git worktree add ../<proj>-<name> -b <branch>` |
@@ -259,6 +322,8 @@ iPix command playbooks (forensic audit, production SHA check, PR splitting, week
 | Native tool over raw git when available | Avoids phantom state the harness can't clean up |
 | Distinct dev port per running worktree | Prevents silent "address in use" failures |
 | Commit or stash before `git worktree remove` | `remove` without `--force` refuses; `--force` discards work |
+| Run documentation preservation gate before remove | Untracked `tasks/` / `docs/` / design packages are lost forever on `--force` |
+| Remove worktree after PR merge | Orphan trees waste disk (~GB each) and cause doc-loss incidents |
 | `/clear` when switching contexts in a long session | Keeps one task's context from polluting another |
 
 ## Common mistakes
@@ -272,6 +337,8 @@ iPix command playbooks (forensic audit, production SHA check, PR splitting, week
 | Same dev port in two worktrees | Assign distinct ports |
 | "Branch already checked out" error | A branch lives in one worktree only — `git worktree list` to find it |
 | Forgetting deps/env in the new worktree | Install deps + copy `.env` (or use `.worktreeinclude`) |
+| Removing a merged worktree without documentation preservation gate | Run [documentation preservation gate](#documentation-preservation-gate-mandatory--p0) first |
+| Leaving 10+ worktrees after merge | [Weekly tidy ritual](references/ipix-ops.md#weekly-tidy-ritual) + post-ship remove |
 
 ## Non-git VCS
 

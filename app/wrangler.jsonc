@@ -1,0 +1,38 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "main": ".open-next/worker.js",
+  "name": "ipix-operator",
+  "compatibility_date": "2026-07-08",
+  "compatibility_flags": [
+    "nodejs_compat"
+  ],
+  "assets": {
+    "directory": ".open-next/assets",
+    "binding": "ASSETS"
+  },
+  "services": [
+    {
+      "binding": "WORKER_SELF_REFERENCE",
+      "service": "ipix-operator"
+    }
+  ],
+  "images": {
+    "binding": "IMAGES"
+  },
+  "observability": {
+    "enabled": true
+  },
+  // wrangler dev rebundles handler.mjs and fails on native .node; Mastra only lazy-loads ast-grep.
+  "alias": {
+    "@ast-grep/napi": "./scripts/cf-ast-grep-stub.mjs",
+    "@ast-grep/napi-darwin-arm64": "./scripts/cf-ast-grep-stub.mjs",
+    "@ast-grep/napi-darwin-x64": "./scripts/cf-ast-grep-stub.mjs",
+    "@ast-grep/napi-linux-arm64-gnu": "./scripts/cf-ast-grep-stub.mjs",
+    "@ast-grep/napi-linux-arm64-musl": "./scripts/cf-ast-grep-stub.mjs",
+    "@ast-grep/napi-linux-x64-gnu": "./scripts/cf-ast-grep-stub.mjs",
+    "@ast-grep/napi-linux-x64-musl": "./scripts/cf-ast-grep-stub.mjs",
+    "@ast-grep/napi-win32-arm64-msvc": "./scripts/cf-ast-grep-stub.mjs",
+    "@ast-grep/napi-win32-ia32-msvc": "./scripts/cf-ast-grep-stub.mjs",
+    "@ast-grep/napi-win32-x64-msvc": "./scripts/cf-ast-grep-stub.mjs"
+  }
+}

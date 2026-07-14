@@ -5,8 +5,11 @@ export {
   resolveProvider,
   resolveProviderOptions,
   resolveAiProvider,
+  resolveAiRoutingMode,
+  resolveGatewayModelId,
+  shouldRouteTierViaGateway,
   resolveGroqModelId,
   assertGroqTierCapabilities,
   getGroqModelEntry,
 } from "@/lib/ai/provider";
-export type { AiProvider, GroqModelTier } from "@/lib/ai/provider";
+export type { AiProvider, GroqModelTier, AiRoutingMode } from "@/lib/ai/provider";

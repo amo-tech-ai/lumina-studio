@@ -39,7 +39,7 @@ For epic → feature PRDs, use [`breakdown-feature-prd`](../../archive/brainstor
 - At least 2 explicit exclusions
 
 ### 7. Timeline
-- Phases, milestones, dependencies vs `docs/plan/todo.md`
+- Phases, milestones, dependencies vs `tasks/plan/todo.md`
 
 ## Save location
 

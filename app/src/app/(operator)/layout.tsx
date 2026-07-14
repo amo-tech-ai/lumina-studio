@@ -9,7 +9,7 @@ export const dynamic = "force-dynamic";
 
 // Always mount CopilotKit for operator routes — pages use CopilotKit hooks (useAgentContext,
 // useFrontendTool) and will crash without the provider. Auth is handled by middleware (see
-// app/middleware.ts → src/proxy.ts), not by conditionally mounting providers.
+// app/middleware.ts → src/middleware.ts), not by conditionally mounting providers.
 const OperatorLayout = ({
   children,
 }: Readonly<{ children: React.ReactNode }>) => {

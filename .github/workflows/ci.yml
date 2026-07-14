@@ -38,9 +38,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # IPI-476 · PLAN-VERIFY-002 — Node 22 (native WebSocket; matches booking-gate)
       - uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: "22"
           cache: npm
           cache-dependency-path: app/package-lock.json
 
@@ -120,3 +121,11 @@ jobs:
           NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
         run: npm run supabase:verify-booking-gate
+
+      # IPI-476 · PLAN-CI-001 — planner scenario + Realtime (needs Node 22 WebSocket)
+      - name: Planner scenario + Realtime verification
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: npm run supabase:verify-planner

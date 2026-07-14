@@ -120,8 +120,10 @@ async function deleteAuthUser(userId) {
 async function cleanupRlsTestData({
   orgId,
   brandId,
+  brandIds,
   notificationId,
   crmNotificationId,
+  assetId,
   userAId,
   userBId,
 }) {
@@ -134,13 +136,19 @@ async function cleanupRlsTestData({
     }
   }
 
-  if (brandId) {
-    const { error: brandDelErr } = await admin.from("brands").delete().eq("id", brandId);
-    if (brandDelErr) {
-      console.warn(`warn: cleanup brand ${brandId}: ${brandDelErr.message}`);
+  if (assetId) {
+    const { error: assetDelErr } = await admin.from("assets").delete().eq("id", assetId);
+    if (assetDelErr) {
+      console.warn(`warn: cleanup asset ${assetId}: ${assetDelErr.message}`);
     }
   }
 
+  // Order matters: crm_companies.brand_id → brands has no ON DELETE action,
+  // and brands.org_id → organizations is ON DELETE RESTRICT. Every
+  // crm_companies row referencing a probe-created brand (crm_convert_deal's
+  // included) must be deleted BEFORE that brand, and every such brand must
+  // be deleted BEFORE the org — reversed, both deletes fail and leave
+  // dangling test rows on every run.
   if (orgId) {
     for (const table of ["crm_activities", "crm_deals", "crm_contacts", "crm_companies"]) {
       const { error } = await admin.from(table).delete().eq("org_id", orgId);
@@ -148,6 +156,16 @@ async function cleanupRlsTestData({
         console.warn(`warn: cleanup ${table} for org ${orgId}: ${error.message}`);
       }
     }
+  }
+
+  for (const id of [brandId, ...(brandIds ?? [])].filter(Boolean)) {
+    const { error: brandDelErr } = await admin.from("brands").delete().eq("id", id);
+    if (brandDelErr) {
+      console.warn(`warn: cleanup brand ${id}: ${brandDelErr.message}`);
+    }
+  }
+
+  if (orgId) {
     await admin.from("org_members").delete().eq("org_id", orgId);
     const { error: orgDelErr } = await admin.from("organizations").delete().eq("id", orgId);
     if (orgDelErr) {
@@ -201,6 +219,8 @@ let brandAId;
 let orgAId;
 let notificationId;
 let crmNotificationId;
+let assetId;
+let crmConvertBrandIds = [];
 
 try {
   userA = await createTestUser(emailA);
@@ -337,6 +357,261 @@ try {
       .eq("id", crmDeal.id)
       .single();
     assert(!wonDealErr && wonDeal?.stage === "won", "user A reads crm_deal after convert probe");
+  }
+
+  // IPI-367 — crm_convert_deal RPC (Won/Lost HITL gate + brand conversion),
+  // added 2026-07-12 (Universal-design-prompt-4/tasks/AUDIT/crm-supa-audit.md
+  // — this coverage did not exist when the RPC was first shipped). The probe
+  // above only proves the trigger via the verify-only helper; this exercises
+  // the *production* RPC directly: editor-tier authorization (tightened from
+  // is_org_member, which admits role='viewer'), brand create-vs-reuse,
+  // domain→brand_url mapping, idempotency, the audit-log write, and the
+  // raw-SQL trigger guard independent of RLS.
+  if (admin) {
+    const { data: convertCompany, error: convertCompanyErr } = await userA.client
+      .from("crm_companies")
+      .insert({
+        org_id: orgAId,
+        name: `RLS Convert Co ${stamp}`,
+        domain: `convert-${stamp}.example.com`,
+      })
+      .select("id")
+      .single();
+    assert(!convertCompanyErr && convertCompany?.id, "user A inserts crm_company for convert probes");
+
+    const { data: convertDeal, error: convertDealErr } = await userA.client
+      .from("crm_deals")
+      .insert({ org_id: orgAId, company_id: convertCompany.id, stage: "lead" })
+      .select("id")
+      .single();
+    assert(!convertDealErr && convertDeal?.id, "user A inserts crm_deal for convert probes");
+
+    // Direct-SQL trigger guard, independent of RLS — admin (service role)
+    // bypasses RLS entirely, so this proves the trigger itself holds, not
+    // just the app-level PostgREST policy (IPI-367 Task 4).
+    const { error: rawTriggerErr } = await admin
+      .from("crm_deals")
+      .update({ stage: "won" })
+      .eq("id", convertDeal.id);
+    assert(!!rawTriggerErr, "raw admin UPDATE to won is blocked by the trigger, not just RLS");
+
+    // Cross-org: user B has no org_members row in org A at all yet.
+    const { error: crossConvertErr } = await userB.client.rpc("crm_convert_deal", {
+      p_deal_id: convertDeal.id,
+      p_decision: "won",
+    });
+    assert(!!crossConvertErr, "user B (no org membership) cannot call crm_convert_deal on org A's deal");
+
+    // Viewer tier: tightened 2026-07-12 — requires is_org_editor_or_above,
+    // not is_org_member (which admits role='viewer').
+    const { error: viewerAddErr } = await admin
+      .from("org_members")
+      .insert({ org_id: orgAId, user_id: userB.user.id, role: "viewer" });
+    assert(!viewerAddErr, "admin seeds user B as org A viewer");
+
+    const { error: viewerConvertErr } = await userB.client.rpc("crm_convert_deal", {
+      p_deal_id: convertDeal.id,
+      p_decision: "won",
+    });
+    assert(!!viewerConvertErr, "org A viewer cannot call crm_convert_deal (editor-or-above required)");
+
+    const { error: promoteErr } = await admin
+      .from("org_members")
+      .update({ role: "editor" })
+      .eq("org_id", orgAId)
+      .eq("user_id", userB.user.id);
+    assert(!promoteErr, "admin promotes user B to org A editor");
+
+    const { data: editorConvert, error: editorConvertErr } = await userB.client
+      .rpc("crm_convert_deal", { p_deal_id: convertDeal.id, p_decision: "won" })
+      .single();
+    assert(
+      !editorConvertErr && editorConvert?.brand_id,
+      "org A editor converts a deal to won, creates a brand",
+    );
+    if (editorConvert?.brand_id) crmConvertBrandIds.push(editorConvert.brand_id);
+
+    const { data: convertedCompany, error: convertedCompanyErr } = await admin
+      .from("crm_companies")
+      .select("brand_id")
+      .eq("id", convertCompany.id)
+      .single();
+    assert(
+      !convertedCompanyErr && convertedCompany?.brand_id === editorConvert?.brand_id,
+      "crm_companies.brand_id linked to the newly created brand",
+    );
+
+    const { data: newBrand, error: newBrandErr } = await admin
+      .from("brands")
+      .select("brand_url")
+      .eq("id", editorConvert?.brand_id)
+      .single();
+    assert(
+      !newBrandErr && newBrand?.brand_url === `convert-${stamp}.example.com`,
+      "new brand's brand_url copied from crm_companies.domain",
+    );
+
+    const { data: convertActivity, error: convertActivityErr } = await admin
+      .from("crm_activities")
+      .select("id")
+      .eq("deal_id", convertDeal.id)
+      .eq("type", "note")
+      .limit(1);
+    assert(
+      !convertActivityErr && (convertActivity ?? []).length > 0,
+      "crm_convert_deal writes a crm_activities audit row",
+    );
+
+    const { error: idempotentErr } = await userB.client.rpc("crm_convert_deal", {
+      p_deal_id: convertDeal.id,
+      p_decision: "won",
+    });
+    assert(!!idempotentErr, "converting an already-terminal deal again is rejected");
+
+    // Second deal, same company — proves brand reuse, not a duplicate.
+    const { data: convertDeal2, error: convertDeal2Err } = await userA.client
+      .from("crm_deals")
+      .insert({ org_id: orgAId, company_id: convertCompany.id, stage: "lead" })
+      .select("id")
+      .single();
+    assert(
+      !convertDeal2Err && convertDeal2?.id,
+      "user A inserts a second crm_deal on the same company",
+    );
+
+    const { data: reuseConvert, error: reuseConvertErr } = await userA.client
+      .rpc("crm_convert_deal", { p_deal_id: convertDeal2?.id, p_decision: "won" })
+      .single();
+    assert(
+      !reuseConvertErr && reuseConvert?.brand_id === editorConvert?.brand_id,
+      "converting a second deal on the same company reuses the existing brand, no duplicate",
+    );
+
+    // lost — never touches brands.
+    const { data: lostDeal, error: lostDealErr } = await userA.client
+      .from("crm_deals")
+      .insert({ org_id: orgAId, company_id: convertCompany.id, stage: "lead" })
+      .select("id")
+      .single();
+    assert(!lostDealErr && lostDeal?.id, "user A inserts a crm_deal for the lost-path probe");
+
+    const { data: lostConvert, error: lostConvertErr } = await userA.client
+      .rpc("crm_convert_deal", { p_deal_id: lostDeal?.id, p_decision: "lost" })
+      .single();
+    assert(
+      !lostConvertErr && lostConvert?.brand_id === null,
+      "converting a deal to lost returns a null brand_id",
+    );
+
+    // Cross-org company_id — crm_deals.company_id is a plain FK to
+    // crm_companies(id), never constrained to the deal's own org_id, so a
+    // deal can legitimately reference a company row that exists but belongs
+    // to a different org. Admin crafts this exact anomaly (a real company,
+    // wrong org) rather than a merely-nonexistent id, since that's the
+    // precise case the RPC's FOUND check has to reject.
+    const { data: foreignOrg, error: foreignOrgErr } = await admin
+      .from("organizations")
+      .insert({ name: `RLS Foreign Org ${stamp}`, slug: `rls-foreign-org-${stamp}`, owner_id: userB.user.id, type: "brand" })
+      .select("id")
+      .single();
+    assert(!foreignOrgErr && foreignOrg?.id, "admin seeds a throwaway foreign org");
+
+    const { data: foreignCompany, error: foreignCompanyErr } = await admin
+      .from("crm_companies")
+      .insert({ org_id: foreignOrg?.id, name: `RLS Foreign Co ${stamp}` })
+      .select("id")
+      .single();
+    assert(!foreignCompanyErr && foreignCompany?.id, "admin seeds a company in the foreign org");
+
+    const { data: danglingDeal, error: danglingDealErr } = await admin
+      .from("crm_deals")
+      .insert({ org_id: orgAId, company_id: foreignCompany?.id, stage: "lead" })
+      .select("id")
+      .single();
+    assert(!danglingDealErr && danglingDeal?.id, "admin seeds an org A deal pointing at the foreign company");
+
+    const { error: danglingConvertErr } = await userA.client.rpc("crm_convert_deal", {
+      p_deal_id: danglingDeal?.id,
+      p_decision: "won",
+    });
+    assert(
+      !!danglingConvertErr,
+      "converting a deal whose company_id belongs to a different org is rejected, not silently orphaned",
+    );
+
+    // Atomicity — the whole conversion is one transaction, so a rejected
+    // convert must leave no trace: no audit row, no brand.
+    const { data: danglingActivity } = await admin
+      .from("crm_activities")
+      .select("id")
+      .eq("deal_id", danglingDeal?.id);
+    assert(
+      (danglingActivity ?? []).length === 0,
+      "rejected cross-org won convert writes no crm_activities row",
+    );
+
+    const { data: danglingCompanyAfterWon } = await admin
+      .from("crm_companies")
+      .select("brand_id")
+      .eq("id", foreignCompany?.id)
+      .single();
+    assert(!danglingCompanyAfterWon?.brand_id, "rejected cross-org won convert creates no brand");
+
+    // Same cross-org-company check, 'lost' path — the first fix only ran the
+    // FOUND check inside the 'won' branch, so a 'lost' conversion on a
+    // dangling company_id still slipped through and wrote a data-isolation-
+    // violating crm_activities row (org_id from org A, company_id from the
+    // foreign org). Caught by automated PR review; regression-tested here.
+    const { data: danglingLostDeal, error: danglingLostDealErr } = await admin
+      .from("crm_deals")
+      .insert({ org_id: orgAId, company_id: foreignCompany?.id, stage: "lead" })
+      .select("id")
+      .single();
+    assert(
+      !danglingLostDealErr && danglingLostDeal?.id,
+      "admin seeds a second org A deal pointing at the foreign company (lost-path probe)",
+    );
+
+    const { error: danglingLostConvertErr } = await userA.client.rpc("crm_convert_deal", {
+      p_deal_id: danglingLostDeal?.id,
+      p_decision: "lost",
+    });
+    assert(
+      !!danglingLostConvertErr,
+      "marking a deal lost is also rejected when its company_id belongs to a different org",
+    );
+
+    const { data: danglingLostActivity } = await admin
+      .from("crm_activities")
+      .select("id")
+      .eq("deal_id", danglingLostDeal?.id);
+    assert(
+      (danglingLostActivity ?? []).length === 0,
+      "rejected cross-org lost convert writes no crm_activities row",
+    );
+
+    await admin.from("crm_deals").delete().eq("id", danglingLostDeal?.id);
+
+    // Throwaway org cleanup — not part of orgAId's cascade, so not covered
+    // by the standard cleanupRlsTestData() call at the end of the script.
+    await admin.from("crm_deals").delete().eq("id", danglingDeal?.id);
+    await admin.from("crm_companies").delete().eq("id", foreignCompany?.id);
+    if (foreignOrg?.id) {
+      await admin.from("org_members").delete().eq("org_id", foreignOrg.id);
+      const { error: foreignOrgDelErr } = await admin.from("organizations").delete().eq("id", foreignOrg.id);
+      if (foreignOrgDelErr) console.warn(`warn: cleanup foreign org ${foreignOrg.id}: ${foreignOrgDelErr.message}`);
+    }
+
+    // Every test below this block assumes user B has zero relationship to
+    // org A — undo the viewer→editor membership these probes needed, or
+    // every subsequent cross-org assertion in this script (and the script's
+    // own later "add user B as org viewer" step) breaks.
+    const { error: demoteErr } = await admin
+      .from("org_members")
+      .delete()
+      .eq("org_id", orgAId)
+      .eq("user_id", userB.user.id);
+    assert(!demoteErr, "cleanup: user B removed from org A after convert probes");
   }
 
   const { data: crmActivity, error: crmActivityErr } = await userA.client
@@ -524,6 +799,48 @@ try {
     score: 99,
   });
   assert(!!crossScoreInsertErr, "user B cannot insert brand_score on user A brand");
+
+  // IPI-499 — assets_select_via_brand org-awareness. Seed via service role
+  // (insert policy stays owner-only by design); B isn't an org member yet at
+  // this point in the script — that happens below, near the viewer/editor probes.
+  if (!admin) {
+    console.warn("warn: skip IPI-499 assets RLS probes (no SUPABASE_SERVICE_ROLE_KEY)");
+  } else {
+    const { data: assetRow, error: assetAdminErr } = await admin
+      .from("assets")
+      .insert({
+        brand_id: brandAId,
+        url: `https://example.com/rls-probe-${stamp}.jpg`,
+        asset_type: "image",
+        status: "draft",
+        dna_pillars: {},
+      })
+      .select("id")
+      .single();
+    assert(!assetAdminErr && assetRow?.id, "service role inserts asset for RLS probe");
+    assetId = assetRow?.id;
+
+    if (assetId) {
+      const { data: assetReadOwner, error: assetReadOwnerErr } = await userA.client
+        .from("assets")
+        .select("id")
+        .eq("id", assetId);
+      assert(
+        !assetReadOwnerErr && (assetReadOwner ?? []).length === 1,
+        "brand owner reads own asset",
+      );
+
+      const { data: assetReadNonMember, error: assetReadNonMemberErr } = await userB.client
+        .from("assets")
+        .select("id")
+        .eq("id", assetId);
+      assertSelectDenied(
+        assetReadNonMemberErr,
+        assetReadNonMember,
+        "non-org-member cannot read brand asset (pre-membership)",
+      );
+    }
+  }
 
   // IPI-26 — service-role writes; org-member SELECT only
   if (!admin) {
@@ -866,6 +1183,20 @@ try {
   });
   assert(!viewerMemberErr, "user A adds user B as org viewer");
 
+  // IPI-499 — now that B is an org member (even just viewer), assets_select_via_brand's
+  // is_org_member OR-branch should make the same asset from the pre-membership probe
+  // above visible. This is the exact bug the migration fixes.
+  if (admin && assetId) {
+    const { data: assetReadMember, error: assetReadMemberErr } = await userB.client
+      .from("assets")
+      .select("id")
+      .eq("id", assetId);
+    assert(
+      !assetReadMemberErr && (assetReadMember ?? []).length === 1,
+      "org member (viewer role) reads brand asset after joining — IPI-499",
+    );
+  }
+
   const { error: viewerScoreInsertErr } = await userB.client.from("brand_scores").insert({
     brand_id: brandAId,
     score_type: "visual",
@@ -982,14 +1313,296 @@ try {
     .eq("score_type", "visual")
     .maybeSingle();
   assert(!visualAfterEditorDelete?.id, "org editor delete removed visual score row");
+
+  // ── IPI-476 planner schema RLS probes (fail-closed — no soft skip) ──
+  assert(!!admin, "service_role admin client required for planner probes");
+
+  const plannerA = userA.client.schema("planner");
+  const plannerB = userB.client.schema("planner");
+  const plannerAdmin = admin.schema("planner");
+
+  // service_role can operate on planner tables
+  const { data: svcWf, error: svcWfErr } = await plannerAdmin
+    .from("workflows")
+    .select("id")
+    .limit(1);
+  assert(!svcWfErr && (svcWf ?? []).length >= 0, "service_role can select planner.workflows");
+
+  // Org A owner creates a workflow (new orgs are not auto-seeded)
+  const { data: wfA, error: wfAErr } = await plannerA
+    .from("workflows")
+    .insert({
+      org_id: orgAId,
+      name: `RLS Planner WF ${stamp}`,
+      category: "production",
+      version: 1,
+      is_default: false,
+    })
+    .select("id")
+    .single();
+  assert(!wfAErr && wfA?.id, "org owner can insert planner.workflows");
+
+  const { data: ownWf, error: ownWfErr } = await plannerA
+    .from("workflows")
+    .select("id")
+    .eq("org_id", orgAId)
+    .eq("id", wfA.id);
+  assert(!ownWfErr && (ownWf ?? []).length === 1, "org member can select own planner.workflows");
+
+  // Org B owned by user B — cross-org isolation
+  const { data: orgB, error: orgBErr } = await userB.client
+    .from("organizations")
+    .insert({
+      name: `RLS Org B Planner ${stamp}`,
+      slug: `rls-org-b-planner-${stamp}`,
+      owner_id: userB.user.id,
+      type: "brand",
+    })
+    .select("id")
+    .single();
+  assert(!orgBErr && orgB?.id, "user B creates org B for planner isolation");
+  const orgBId = orgB?.id;
+
+  const { data: wfB, error: wfBErr } = await plannerB
+    .from("workflows")
+    .insert({
+      org_id: orgBId,
+      name: `RLS Planner WF B ${stamp}`,
+      category: "production",
+      version: 1,
+      is_default: false,
+    })
+    .select("id")
+    .single();
+  assert(!wfBErr && wfB?.id, "org B owner can insert planner.workflows");
+
+  const { data: crossWf, error: crossWfErr } = await plannerA
+    .from("workflows")
+    .select("id")
+    .eq("id", wfB.id);
+  assertSelectDenied(crossWfErr, crossWf, "org A cannot read org B planner.workflows");
+
+  // Instance + bootstrap owner assignment
+  const entityId = crypto.randomUUID();
+  const { data: instA, error: instAErr } = await plannerA
+    .from("instances")
+    .insert({
+      org_id: orgAId,
+      workflow_id: wfA.id,
+      entity_type: "shoot",
+      entity_id: entityId,
+      name: `RLS Plan ${stamp}`,
+      status: "draft",
+    })
+    .select("id")
+    .single();
+  assert(!instAErr && instA?.id, "org member can insert planner.instances");
+
+  const { data: ownerAssign, error: ownerAssignErr } = await plannerA
+    .from("assignments")
+    .select("id, role")
+    .eq("instance_id", instA.id)
+    .eq("user_id", userA.user.id)
+    .maybeSingle();
+  // assignments_select is manager+ — owner can read
+  assert(
+    !ownerAssignErr && ownerAssign?.role === "owner",
+    "bootstrap owner assignment created and readable by owner",
+  );
+
+  const { data: taskA, error: taskAErr } = await plannerA
+    .from("tasks")
+    .insert({
+      instance_id: instA.id,
+      title: `RLS Task ${stamp}`,
+      status: "todo",
+      priority: "medium",
+      sort_order: 0,
+    })
+    .select("id")
+    .single();
+  assert(!taskAErr && taskA?.id, "owner/contributor can insert planner.tasks");
+
+  // Owner can update task
+  const { error: ownerTaskUpdErr } = await plannerA
+    .from("tasks")
+    .update({ title: `RLS Task Owner ${stamp}` })
+    .eq("id", taskA.id);
+  assert(!ownerTaskUpdErr, "owner can update planner.tasks");
+
+  // Assign user B as viewer on the instance (owner may insert manager/contributor/viewer)
+  const { error: viewerAssignErr } = await plannerA.from("assignments").insert({
+    instance_id: instA.id,
+    user_id: userB.user.id,
+    role: "viewer",
+  });
+  assert(!viewerAssignErr, "owner can assign viewer on planner instance");
+
+  // IPI-536 · PR #347 review fix — planner_get_my_assignment RPC probes.
+  // assignments_select_org (this file, above) gates SELECT on planner.assignments
+  // behind manager+ — a viewer/contributor querying the table directly for their
+  // OWN row gets 0 rows back under RLS, not an error (the bug). The RPC exists
+  // specifically to answer "what's my own role" without needing manager+.
+  const { data: viewerDirectAssign, error: viewerDirectAssignErr } = await plannerB
+    .from("assignments")
+    .select("id, role")
+    .eq("instance_id", instA.id)
+    .eq("user_id", userB.user.id);
+  assert(
+    !viewerDirectAssignErr && (viewerDirectAssign ?? []).length === 0,
+    "viewer cannot SELECT their own planner.assignments row directly (assignments_select_org is manager+ only — this is the bug the RPC below fixes)",
+  );
+
+  const { data: viewerRpcAssign, error: viewerRpcAssignErr } = await userB.client.rpc(
+    "planner_get_my_assignment",
+    { p_instance_id: instA.id },
+  );
+  assert(
+    !viewerRpcAssignErr &&
+      (viewerRpcAssign ?? []).length === 1 &&
+      viewerRpcAssign[0].role === "viewer" &&
+      viewerRpcAssign[0].user_id === userB.user.id,
+    "viewer CAN read their own row via planner_get_my_assignment RPC (the fix)",
+  );
+
+  const { data: viewerRpcNoInstance, error: viewerRpcNoInstanceErr } = await userB.client.rpc(
+    "planner_get_my_assignment",
+    { p_instance_id: crypto.randomUUID() },
+  );
+  assert(
+    !viewerRpcNoInstanceErr && (viewerRpcNoInstance ?? []).length === 0,
+    "planner_get_my_assignment returns empty for an instance the caller has no assignment on (no enumeration leak)",
+  );
+
+  const { data: viewerTaskRead, error: viewerTaskReadErr } = await plannerB
+    .from("tasks")
+    .select("id")
+    .eq("id", taskA.id);
+  assert(!viewerTaskReadErr && (viewerTaskRead ?? []).length === 1, "viewer can read planner.tasks");
+
+  const { data: viewerBefore, error: viewerBeforeErr } = await plannerA
+    .from("tasks")
+    .select("title")
+    .eq("id", taskA.id)
+    .single();
+  assert(!viewerBeforeErr && viewerBefore?.title, "owner can read task title before viewer update probe");
+
+  // Prefer counting updated rows: RLS should yield 0 ids, not a silent no-op that
+  // looks green when SELECTs fail and both titles are undefined.
+  const { data: viewerUpdateRows, error: viewerUpdateErr } = await plannerB
+    .from("tasks")
+    .update({ title: "viewer-hijack" })
+    .eq("id", taskA.id)
+    .select("id");
+  assert(
+    !viewerUpdateErr && (viewerUpdateRows ?? []).length === 0,
+    "viewer UPDATE on planner.tasks returns 0 rows under RLS",
+  );
+
+  const { data: viewerAfter, error: viewerAfterErr } = await plannerA
+    .from("tasks")
+    .select("title")
+    .eq("id", taskA.id)
+    .single();
+  assert(!viewerAfterErr && viewerAfter?.title, "owner can read task title after viewer update probe");
+  assert(
+    viewerAfter.title === viewerBefore.title,
+    "viewer cannot mutate planner.tasks (title unchanged)",
+  );
+
+  // Promote B to contributor + assign the task
+  const { error: contribRoleErr } = await plannerA
+    .from("assignments")
+    .update({ role: "contributor" })
+    .eq("instance_id", instA.id)
+    .eq("user_id", userB.user.id);
+  assert(!contribRoleErr, "owner can promote assignment to contributor");
+
+  const { error: assignTaskErr } = await plannerA
+    .from("tasks")
+    .update({ assignee_user_id: userB.user.id })
+    .eq("id", taskA.id);
+  assert(!assignTaskErr, "owner can set task assignee");
+
+  const { error: contribUpdErr } = await plannerB
+    .from("tasks")
+    .update({ status: "in_progress" })
+    .eq("id", taskA.id);
+  assert(!contribUpdErr, "contributor can update assigned planner.tasks");
+
+  // Promote B to manager — can update without being assignee
+  const { error: mgrRoleErr } = await plannerA
+    .from("assignments")
+    .update({ role: "manager" })
+    .eq("instance_id", instA.id)
+    .eq("user_id", userB.user.id);
+  assert(!mgrRoleErr, "owner can promote assignment to manager");
+
+  const { error: clearAssigneeErr } = await plannerA
+    .from("tasks")
+    .update({ assignee_user_id: null })
+    .eq("id", taskA.id);
+  assert(!clearAssigneeErr, "owner clears assignee for manager probe");
+
+  const { error: mgrUpdErr } = await plannerB
+    .from("tasks")
+    .update({ status: "blocked" })
+    .eq("id", taskA.id);
+  assert(!mgrUpdErr, "manager can update planner.tasks without assignee");
+
+  // User C — no org membership — cannot read planner rows
+  const emailC = `plt002-rls-c-${stamp}@example.com`;
+  let userC;
+  try {
+    userC = await createTestUser(emailC);
+    const plannerC = userC.client.schema("planner");
+    const { data: outsiderWf, error: outsiderWfErr } = await plannerC
+      .from("workflows")
+      .select("id")
+      .eq("id", wfA.id);
+    assertSelectDenied(
+      outsiderWfErr,
+      outsiderWf,
+      "non-member cannot read planner.workflows",
+    );
+
+    // IPI-499 — a user who is a member of no org at all must never see the asset,
+    // even after the org-aware policy shipped (org A membership check must fail closed).
+    if (assetId) {
+      const { data: outsiderAsset, error: outsiderAssetErr } = await userC.client
+        .from("assets")
+        .select("id")
+        .eq("id", assetId);
+      assertSelectDenied(
+        outsiderAssetErr,
+        outsiderAsset,
+        "non-org-member cannot read brand asset — IPI-499",
+      );
+    }
+  } finally {
+    if (userC?.user?.id) {
+      const { error } = await deleteAuthUser(userC.user.id);
+      if (error) console.warn(`warn: cleanup user C: ${error.message}`);
+      else pass("cleaned up user C (service role)");
+    }
+  }
+
+  // Cleanup planner org B (cascade via organizations delete)
+  if (orgBId && admin) {
+    await admin.from("org_members").delete().eq("org_id", orgBId);
+    const { error: orgBDelErr } = await admin.from("organizations").delete().eq("id", orgBId);
+    if (orgBDelErr) console.warn(`warn: cleanup org B: ${orgBDelErr.message}`);
+  }
 } catch (err) {
   fail(err instanceof Error ? err.message : String(err));
 } finally {
   await cleanupRlsTestData({
     orgId: orgAId,
     brandId: brandAId,
+    brandIds: crmConvertBrandIds,
     notificationId,
     crmNotificationId,
+    assetId,
     userAId: userA?.user?.id,
     userBId: userB?.user?.id,
   });

@@ -39,6 +39,8 @@ app/.next
 app/.mastra
 app/.env
 app/out
+app/.env.sentry-build-plugin
+.env.sentry-build-plugin
 
 # Local backups
 app/.backup-*/
@@ -58,3 +60,10 @@ pr9-storefront-test/
 
 .cursor/
 .codex/
+
+# Deprecated skills staging — canonical skills live in .claude/skills/
+.agents/
+
+# Design source files — not committed, copied into worktrees via .worktreeinclude
+Universal design prompt/
+Universal design prompt.zip

@@ -1,0 +1,21 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "ai-gateway",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-03-10",
+  "observability": {
+    "enabled": true
+  },
+  "upload_source_maps": true,
+  "compatibility_flags": ["nodejs_compat"],
+  // Preserve dashboard plaintext vars (MODEL_REGISTRY_OVERRIDE, CLOUDFLARE_ACCOUNT_ID)
+  // on wrangler deploy / versions upload. Secrets are already kept; empty local `vars`
+  // previously wiped the Workers AI registry and caused Gemini 403.
+  // https://developers.cloudflare.com/workers/wrangler/configuration/#keep-vars
+  "keep_vars": true
+  // Do NOT add vars.MODEL_REGISTRY_OVERRIDE here (even as "").
+  // Set overrides in the Cloudflare dashboard (production) or .dev.vars (local).
+  // "kv_namespaces": [
+  //   { "binding": "AI_MODEL_REGISTRY", "id": "", "preview_id": "" }
+  // ]
+}

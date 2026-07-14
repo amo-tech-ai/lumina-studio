@@ -123,7 +123,7 @@ Full orientation: [references/tables-overview.md](references/tables-overview.md)
 |------|-------|
 | Supabase client (canonical) | `app/src/lib/supabase/server.ts`, `session.ts` |
 | Supabase client (legacy) | `src/lib/supabase.ts` — remove after [IPI-89](https://linear.app/amo100/issue/IPI-89) |
-| Types | `src/types/supabase.ts` (regenerate: `npm run supabase:types`) |
+| Types | `src/types/supabase.ts` (regenerate: `npm run supabase:types`) — **⚠️ if regenerating via the Supabase MCP `generate_typescript_types` tool instead of the CLI, it silently outputs `public` schema only and drops `planner`/`graphql_public`/any other exposed schema, even though `supabase/config.toml`'s `schemas = [...]` lists all three. Confirmed on IPI-536/PR #347: it nearly deleted the entire `planner` schema's types. Always run `git diff --stat` on the types file before trusting MCP-generated output — if the diff is mostly deletions, don't commit it; hand-add just the new entry to the existing file instead.** |
 | Auth UI | `app/src/app/(marketing)/login`, `app/src/app/auth/callback/route.ts` |
 | Profile sync | `app/src/lib/onboarding.ts` (`createOrgAndBrand`) · legacy `src/services/profileService.ts` |
 | Edge functions | `supabase/functions/<name>/index.ts` |
@@ -267,6 +267,8 @@ Legacy FashionOS `storage` buckets and shoot-scoped RLS remain — extend with b
 - **Storage upsert needs INSERT + SELECT + UPDATE** policies
 - **Service role never in `app/` or `src/`**
 - Extend `scripts/verify-rls.mjs` when adding tenant-scoped tables
+- **`maybeSingle()`/`single()` calls MUST check `error` before checking for a missing row.** `maybeSingle()` returns `{ data: null, error: null }` on a genuine miss but `{ data: null, error: PostgrestError }` on a real DB/RLS/network failure — treating both the same way (`if (!data) notFound()`) silently converts real outages into a misleading 404. Found via 3 independent PR reviewers flagging the exact same line on IPI-536/PR #347. Always: `const { data, error } = await ...; if (error) throw error; if (!data) notFound();` — never skip the error check.
+- **A bulk-access RLS policy does not automatically cover "can a user see their own row."** `assignments_select_org` (`supabase/migrations/20260709000000_planner_schema_rls.sql:468-470`) required manager+ to `SELECT` *any* `planner.assignments` row, including the caller's own — so a contributor/viewer checking their own permissions got zero rows and was treated as unassigned (P1 bug, PR #347). Any time you write an RLS policy for "managers/owners can see everyone's records," ask the separate question **"can a user see their own record too?"** at write time — if yes, add a narrow `SECURITY DEFINER` RPC hard-scoped to `auth.uid()` (never a caller-supplied user id) alongside the bulk policy, don't wait for a reviewer to find the gap. See `public.planner_get_my_assignment` (migration `20260712235000`) for the pattern.
 
 ---
 

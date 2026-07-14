@@ -1,36 +1,22 @@
-export type AiProvider = "gemini" | "groq" | "openai";
+// Re-exports from the shared AI provider types package.
+// This file exists for backward compatibility with existing Supabase Edge Function imports.
+// The SSOT is app/src/lib/ai/types.ts — do not add new types here.
 
-export type GroqModelTier =
-  | "default"
-  | "fast"
-  | "structured"
-  | "structuredHeavy"
-  | "vision"
-  | "visionExperimental"
-  | "compound"
-  | "compoundMini"
-  | "stt"
-  | "safety";
+import type {
+  AiProvider,
+  ModelTier,
+  ModelCapabilities,
+  ModelRegistryEntry,
+  ModelRegistry,
+  GroqModelTier,
+  GroqModelEntry,
+  GroqModelsConfig,
+} from "../../../../app/src/lib/ai/types.ts";
 
-export type GroqModelEntry = {
-  id: string;
-  tier: GroqModelTier;
-  strictStructured: boolean;
-  parallelTools: boolean;
-  promptCaching: boolean;
-  evaluationOnly: boolean;
-  productionDefault: boolean;
-  deprecatedAfter?: string;
-  replacementModel?: string;
-};
+export type { AiProvider, ModelTier, ModelCapabilities, ModelRegistryEntry, ModelRegistry } from "../../../../app/src/lib/ai/types.ts";
 
-export type GroqModelsConfig = {
-  version: number;
-  updatedAt: string;
-  envMapping: Record<GroqModelTier, string>;
-  defaults: Record<GroqModelTier, string>;
-  models: GroqModelEntry[];
-};
+// ── Edge-function-specific types NOT in the shared package ──
+// These are Edge-function-only concerns and stay here.
 
 export type GroqRateLimitHeaders = {
   retryAfterMs?: number;
@@ -55,13 +41,10 @@ export type StructuredGenerationLog = {
 export type StructuredGenerationScope = "bi" | "dna" | "default";
 
 export type StructuredGenerationOptions = {
-  /** Per-function provider override (BI / DNA env flags). */
   scope?: StructuredGenerationScope;
   systemPrompt: string;
   userContent: string;
-  /** Groq strict JSON Schema object. */
   jsonSchema: Record<string, unknown>;
-  /** Gemini `@google/genai` responseSchema — required for gemini provider path. */
   geminiResponseSchema?: object;
   schemaName?: string;
   tier?: GroqModelTier;
@@ -75,3 +58,7 @@ export type StructuredGenerationResult<T> = {
   text: string;
   log: StructuredGenerationLog;
 };
+
+// ── Groq-specific types — still actively used, not deprecated (see app/src/lib/ai/types.ts) ──
+
+export type { GroqModelTier, GroqModelEntry, GroqModelsConfig } from "../../../../app/src/lib/ai/types.ts";

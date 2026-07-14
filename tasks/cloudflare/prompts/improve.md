@@ -1,0 +1,1 @@
+web search each doc and identify how to improve the plan find different options to setup pre built module simple cli install dashboard for for each explain better create a table of contents top in table format with a progress tracker for cloudflare workers ai nextjs models functions cli etc and list on plan docs with links and clear instructions

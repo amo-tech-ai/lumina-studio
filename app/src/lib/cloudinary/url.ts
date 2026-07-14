@@ -59,3 +59,18 @@ export function cropTransformString({ width, height, crop }: CropTransform): str
 export function presetTransformString(preset: CloudinaryPresetName): string {
   return cropTransformString(CLOUDINARY_PRESETS[preset]);
 }
+
+/**
+ * Injects a preset's transform string into a raw Cloudinary delivery URL already
+ * stored verbatim (e.g. `assets.url`/`assets.thumbnail_url` — no `public_id` column
+ * is populated yet, so `cloudinaryImageUrl`'s public-id builder doesn't apply here).
+ * Only call after `isDeliverableCover(url)` confirms the '/image/upload/' marker exists;
+ * otherwise returns the URL unchanged.
+ */
+export function withCloudinaryPreset(url: string, preset: CloudinaryPresetName): string {
+  const marker = "/image/upload/";
+  const idx = url.indexOf(marker);
+  if (idx === -1) return url;
+  const insertAt = idx + marker.length;
+  return `${url.slice(0, insertAt)}${presetTransformString(preset)}/${url.slice(insertAt)}`;
+}

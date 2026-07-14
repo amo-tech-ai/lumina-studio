@@ -11,7 +11,7 @@
     "test:e2e": "playwright test",
     "test:e2e:mobile": "playwright test e2e/05-mobile-operator-matrix.spec.ts",
     "test:web015": "bash supabase/tests/web015/run.sh",
-    "supabase:types": "supabase gen types typescript --linked > app/src/types/supabase.ts",
+    "supabase:types": "supabase gen types typescript --linked --schema public,planner,graphql_public > app/src/types/supabase.ts",
     "supabase:migrations": "supabase migration list --linked",
     "supabase:push": "supabase db push --linked",
     "supabase:verify": "node scripts/verify-supabase.mjs",
@@ -26,7 +26,8 @@
     "worktree:health": "node scripts/worktree-health.mjs",
     "worktree:health:all": "node scripts/worktree-health.mjs --all",
     "worktree:pre-delete": "node scripts/worktree-health.mjs --pre-delete",
-    "worktree:health:test": "node --test scripts/lib/worktree-health-checks.test.mjs"
+    "worktree:health:test": "node --test scripts/lib/worktree-health-checks.test.mjs",
+    "supabase:verify-planner": "node --experimental-strip-types scripts/verify-planner-scenario.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.108.2"

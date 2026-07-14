@@ -40,6 +40,13 @@ describe("resolveAgentId", () => {
     expect(resolveAgentId("/app/matching/talent/t1")).toBe("model-match");
   });
 
+  it("Planner routes resolve to production-planner (IPI-536)", () => {
+    expect(resolveAgentId("/app/planner")).toBe("production-planner");
+    expect(resolveAgentId("/app/planner/dashboard")).toBe("production-planner");
+    expect(resolveAgentId("/app/planner/instance-id")).toBe("production-planner");
+    expect(resolveAgentId("/app/planner/instance-id/settings")).toBe("production-planner");
+  });
+
   it("unknown route falls back to default", () => {
     expect(resolveAgentId("/app/unknown")).toBe("production-planner");
     expect(resolveAgentId("/")).toBe("production-planner");
