@@ -1,4 +1,5 @@
 # IPI-529 · CF-AI-015 — Fix Audit Report Score & Claims
+
 **Status:** Ready for Phase 1  
 **Type:** Documentation  
 **Priority:** P1  
@@ -19,34 +20,39 @@ Audit report claims 92/100 score. Actual calculation from listed categories: (10
 ## Acceptance Criteria
 
 ### A. Correct composite score calculation
-```
+
+```text
 - [ ] Recalculate from listed 11 categories
 - [ ] Correct score: ~90/100 (not 92)
 - [ ] Update report with corrected composite
 ```
 
 ### B. Revise production readiness verdict
-```
+
+```text
 - [ ] Change from "Production-ready (Phase 1)" to "Ready for CI & Staging"
 - [ ] Add gate: "Live verification required before production"
 - [ ] List 5 required pre-production checks
 ```
 
 ### C. Flag security score inadequacy
-```
+
+```text
 - [ ] Note security 70/100 incompatible with production claim
 - [ ] Add: "No injection test, no authorization layer"
 - [ ] List security gaps requiring pre-production fixes
 ```
 
 ### D. Correct test terminology
-```
+
+```text
 - [ ] Change "E2E tests" to "Integration tests"
 - [ ] Add note: "E2E = client → gateway → GLM → tool → final response (not yet tested)"
 ```
 
 ### E. Update report summary table
-```
+
+```text
 - [ ] Add new "Corrected Estimate" column
 - [ ] Show gap between claimed vs actual scores
 - [ ] Highlight P0/P1 gaps
@@ -68,6 +74,7 @@ head -100 /home/sk/ipix/tasks/cloudflare/pr/test-report.md | grep -E "Composite|
 **File:** `/home/sk/ipix/tasks/cloudflare/pr/test-report.md`
 
 **Update sections:**
+
 - Summary table: Correct 92 → 90
 - Production readiness: Change "Production-ready" → "Ready for CI & staging"
 - Security section: Add note about 70/100 score
@@ -78,4 +85,3 @@ head -100 /home/sk/ipix/tasks/cloudflare/pr/test-report.md | grep -E "Composite|
 ## Severity & Blocker
 
 🟡 **HIGH** — Important for accurate merge/production assessment. Not code-blocking but trust-critical.
-

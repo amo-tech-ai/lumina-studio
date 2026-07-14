@@ -1,4 +1,5 @@
 # IPI-533 · CF-AI-019 — Add Registry Schema Validation with Zod
+
 **Status:** Ready for Phase 1  
 **Type:** Feature (Production Hardening)  
 **Priority:** P1  
@@ -19,7 +20,8 @@
 ## Acceptance Criteria
 
 ### A. Define Zod schema for ModelEntry
-```
+
+```text
 - [ ] Create modelEntrySchema with Zod
 - [ ] Validate provider enum: ["workers-ai", "gemini", "bedrock", "nvidia"]
 - [ ] Validate model: non-empty string
@@ -29,20 +31,23 @@
 ```
 
 ### B. Add tool-tier capability check
-```
+
+```text
 - [ ] If tier === "tool-calling", require "function-calling" capability
 - [ ] Throw RegistryConfigurationError if missing
 ```
 
 ### C. Integrate validation into buildEffectiveRegistry
-```
+
+```text
 - [ ] For each override tier, run schema validation
 - [ ] On validation error, log error and return DEFAULT_REGISTRY
 - [ ] Include error details in log (but not secrets)
 ```
 
 ### D. Test schema validation
-```
+
+```text
 - [ ] Valid override passes
 - [ ] Invalid provider rejected
 - [ ] Negative pricing rejected
@@ -51,7 +56,8 @@
 ```
 
 ### E. Document configuration policy
-```
+
+```text
 - [ ] Add comment explaining validation rules
 - [ ] List rejected patterns
 ```
@@ -73,6 +79,7 @@ npm run typecheck
 **File:** `services/cloudflare-worker/src/model-registry.ts`
 
 **Add at top:**
+
 ```ts
 import { z } from "zod";
 
@@ -93,4 +100,3 @@ const modelEntrySchema = z.object({
 ## Severity & Blocker
 
 🟡 **HIGH** — Not a merge blocker but critical for configuration safety. Recommend pre-production.
-

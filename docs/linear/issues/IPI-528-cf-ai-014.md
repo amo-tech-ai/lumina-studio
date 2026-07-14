@@ -1,4 +1,5 @@
 # IPI-528 · CF-AI-014 — Add Explicit Tool Message Guard to toGeminiMessages
+
 **Status:** Ready for Phase 1  
 **Type:** Bug Fix (Critical Blocker)  
 **Priority:** P0  
@@ -19,27 +20,31 @@ The `toGeminiMessages()` function doesn't explicitly reject `role: "tool"` messa
 ## Acceptance Criteria
 
 ### A. Add explicit tool message rejection
-```
+
+```text
 - [ ] Add guard at start of toGeminiMessages function
 - [ ] Check: if (messages.some(m => m.role === "tool"))
 - [ ] Throw Error("Tool messages cannot be converted to Gemini format")
 ```
 
 ### B. Test guard blocks tool messages
-```
+
+```text
 - [ ] Create ChatCompletionRequest with role: "tool" message
 - [ ] Call geminiProvider.chat(req, config)
 - [ ] Assert throws with message containing "Tool"
 ```
 
 ### C. Verify guard on both chat and chatStream paths
-```
+
+```text
 - [ ] chatStream() also reaches toGeminiMessages
 - [ ] Guard prevents tool messages in both paths
 ```
 
 ### D. Confirm validateGeminiRequest still runs first
-```
+
+```text
 - [ ] Ensure validateGeminiRequest() is called before toGeminiMessages()
 - [ ] Both guards work in tandem (defense-in-depth)
 ```
@@ -61,6 +66,7 @@ npm run typecheck
 **File:** `services/cloudflare-worker/src/providers/gemini.ts`
 
 **Add at line 22, start of `toGeminiMessages` function:**
+
 ```ts
 function toGeminiMessages(messages: ChatCompletionRequest["messages"]) {
   // Explicit guard: tool messages cannot reach this function
@@ -77,4 +83,3 @@ function toGeminiMessages(messages: ChatCompletionRequest["messages"]) {
 ## Severity & Blocker
 
 🔴 **CRITICAL** — Defensive layer gap. Must fix before merge.
-

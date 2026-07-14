@@ -1,6 +1,6 @@
 # IPI-492 — CF-AI-004c Harden AI Gateway embed & error contracts
 
-**Linear:** https://linear.app/amo100/issue/IPI-492  
+**Linear:** <https://linear.app/amo100/issue/IPI-492>  
 **Audit:** `tasks/cloudflare/tasks/492-audit.md` (MCP-verified 2026-07-10)  
 **Skills:** ipix-task-lifecycle · cloudflare · cloudflare-workflow · gemini · worktrees · pr-workflow · ponytail  
 **Parent:** IPI-461 · CF-AI-004 · **Blocked by:** IPI-491 (Done)
