@@ -37,7 +37,7 @@ afterEach(() => cleanup());
 describe("InviteMemberDialog", () => {
   it("is a real dialog with role=dialog aria-modal=true — AC-B a11y", async () => {
     const user = userEvent.setup();
-    render(<InviteMemberDialog instanceId="i1" />);
+    render(<InviteMemberDialog instanceId="i1" callerRole="owner" />);
     await user.click(screen.getByRole("button", { name: "Add member" }));
 
     const dialog = await screen.findByRole("dialog");
@@ -54,7 +54,7 @@ describe("InviteMemberDialog", () => {
     // proven by source (INVITE_ROLES never includes 'owner') and covered
     // live by mutations.test.ts's "maps invalid_role" case for the RPC.
     const user = userEvent.setup();
-    render(<InviteMemberDialog instanceId="i1" />);
+    render(<InviteMemberDialog instanceId="i1" callerRole="owner" />);
     await user.click(screen.getByRole("button", { name: "Add member" }));
 
     expect(screen.getByRole("combobox").textContent).toBe("contributor");
@@ -66,7 +66,7 @@ describe("InviteMemberDialog", () => {
       data: { id: "a1", instanceId: "i1", userId: "u1", role: "contributor" },
     });
     const user = userEvent.setup();
-    render(<InviteMemberDialog instanceId="i1" />);
+    render(<InviteMemberDialog instanceId="i1" callerRole="owner" />);
     await user.click(screen.getByRole("button", { name: "Add member" }));
 
     await user.type(screen.getByLabelText(/email/i), "new@example.com");
@@ -78,13 +78,17 @@ describe("InviteMemberDialog", () => {
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
   });
 
-  it("shows 'No account found' inline via #pl-invite-err, dialog stays open — unknown/not-found state", async () => {
+  it("shows the cloaked unavailable-account error inline via #pl-invite-err, dialog stays open — unknown/not-found state", async () => {
+    // SEC-004 (migration 20260714211800, PR #387): unknown email and
+    // out-of-org email are deliberately indistinguishable now — the RPC only
+    // ever raises user_not_available, not the old no_account_found/
+    // user_not_in_org split. This mock must track that live contract.
     vi.mocked(inviteMemberAction).mockResolvedValue({
       ok: false,
-      error: { code: "no_account_found", message: "No account found for that email." },
+      error: { code: "user_not_available", message: "That person is not available to invite." },
     });
     const user = userEvent.setup();
-    render(<InviteMemberDialog instanceId="i1" />);
+    render(<InviteMemberDialog instanceId="i1" callerRole="owner" />);
     await user.click(screen.getByRole("button", { name: "Add member" }));
 
     await user.type(screen.getByLabelText(/email/i), "nobody@example.com");
@@ -92,7 +96,7 @@ describe("InviteMemberDialog", () => {
 
     const err = await screen.findByRole("alert");
     expect(err.id).toBe("pl-invite-err");
-    expect(err.textContent).toBe("No account found for that email.");
+    expect(err.textContent).toBe("That person is not available to invite.");
     expect(screen.getByRole("dialog")).toBeDefined();
   });
 
@@ -106,7 +110,7 @@ describe("InviteMemberDialog", () => {
     // a real browser that focus landed on <body> without the fix, and on the
     // "Add member" button with it).
     const user = userEvent.setup();
-    render(<InviteMemberDialog instanceId="i1" />);
+    render(<InviteMemberDialog instanceId="i1" callerRole="owner" />);
     await user.click(screen.getByRole("button", { name: "Add member" }));
     await user.click(screen.getByRole("button", { name: "Cancel" }));
 
@@ -115,7 +119,7 @@ describe("InviteMemberDialog", () => {
 
   it("never renders invited/pending/accepted/expired/resend language — AC-F regression guard", async () => {
     const user = userEvent.setup();
-    render(<InviteMemberDialog instanceId="i1" />);
+    render(<InviteMemberDialog instanceId="i1" callerRole="owner" />);
     await user.click(screen.getByRole("button", { name: "Add member" }));
 
     const text = document.body.textContent ?? "";

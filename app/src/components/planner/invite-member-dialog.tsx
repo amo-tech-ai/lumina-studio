@@ -26,9 +26,19 @@ import styles from "./invite-member-dialog.module.css";
 // Never 'owner' — matches planner_invite_member's invalid_role rejection.
 // Offering it in this dropdown would only produce an RPC error the user
 // can't fix by retrying.
-const INVITE_ROLES: PlannerRole[] = ["manager", "contributor", "viewer"];
+const ALL_INVITE_ROLES: PlannerRole[] = ["manager", "contributor", "viewer"];
 
-export function InviteMemberDialog({ instanceId }: { instanceId: string }) {
+export function InviteMemberDialog({
+  instanceId,
+  callerRole,
+}: {
+  instanceId: string;
+  callerRole: PlannerRole | null;
+}) {
+  // SEC-003 (migration 20260714211800): the RPC rejects p_role='manager'
+  // unless the caller is owner — a manager-level caller offered "manager"
+  // here would only ever get insufficient_role_for_target on submit.
+  const inviteRoles = callerRole === "owner" ? ALL_INVITE_ROLES : ALL_INVITE_ROLES.filter((r) => r !== "manager");
   const [open, setOpen] = useState(false);
   const [email, setEmail] = useState("");
   const [role, setRole] = useState<PlannerRole>("contributor");
@@ -102,7 +112,7 @@ export function InviteMemberDialog({ instanceId }: { instanceId: string }) {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {INVITE_ROLES.map((r) => (
+                {inviteRoles.map((r) => (
                   <SelectItem key={r} value={r}>{r}</SelectItem>
                 ))}
               </SelectContent>
