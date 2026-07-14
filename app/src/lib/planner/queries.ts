@@ -3,7 +3,7 @@ import type { PostgrestClient } from "@supabase/postgrest-js";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import type { Database } from "@/types/supabase";
 
-import type { EntityType, PlannerInstanceStatus, PlannerTaskStatus } from "./types";
+import type { EntityType, PlannerAssignment, PlannerInstanceStatus, PlannerTaskStatus } from "./types";
 
 type PlannerClient = PostgrestClient<
   Database,
@@ -402,4 +402,43 @@ export async function listPlannerInstances(
     ok: true,
     data: toInstancePage((data ?? []) as HubInstanceRow[], options.limit),
   };
+}
+
+type AssignmentRow = Database["planner"]["Tables"]["assignments"]["Row"];
+
+function toAssignment(row: AssignmentRow): PlannerAssignment {
+  return {
+    id: row.id,
+    instanceId: row.instance_id,
+    userId: row.user_id,
+    role: row.role as PlannerAssignment["role"],
+    permissions: row.permissions as Record<string, unknown> | null,
+  };
+}
+
+// IPI-575 — the live assignments_select_org RLS policy requires manager+ to
+// SELECT any row on planner.assignments, including the caller's own (the same
+// bulk-vs-own-row gap IPI-536 hit for permissions.ts) — so a contributor/
+// viewer calling this legitimately gets an empty list, not an error. Display
+// name/email resolution is NOT included here: public.profiles' own RLS is
+// self-row-only (auth.uid() = id), so listing teammates' names needs a
+// follow-up SECURITY DEFINER RPC (same shape as planner_get_my_assignment) —
+// left for IPI-577 (Settings UI) to add when it needs display data.
+export async function listMembers(
+  instanceId: string,
+): Promise<PlannerQueryResult<PlannerAssignment[]>> {
+  const context = await authenticatedPlannerClient();
+  if (!context.ok) return context;
+
+  const { data, error } = await context.data.client
+    .from("assignments")
+    .select("*")
+    .eq("instance_id", instanceId)
+    .order("created_at", { ascending: true });
+
+  if (error) {
+    return failure("QUERY_FAILED", "Planner members could not be loaded.");
+  }
+
+  return { ok: true, data: (data ?? []).map(toAssignment) };
 }

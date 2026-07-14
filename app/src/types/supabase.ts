@@ -6830,6 +6830,37 @@ export type Database = {
           user_id: string
         }[]
       }
+      planner_invite_member: {
+        Args: { p_email: string; p_instance_id: string; p_role: string }
+        Returns: {
+          id: string
+          instance_id: string
+          role: string
+          user_id: string
+        }[]
+      }
+      planner_remove_assignment: {
+        Args: { p_instance_id: string; p_target_user_id: string }
+        Returns: {
+          id: string
+          instance_id: string
+          role: string
+          user_id: string
+        }[]
+      }
+      planner_update_role: {
+        Args: {
+          p_instance_id: string
+          p_new_role: string
+          p_target_user_id: string
+        }
+        Returns: {
+          id: string
+          instance_id: string
+          role: string
+          user_id: string
+        }[]
+      }
       search_brands: {
         Args: {
           p_embedding: string
