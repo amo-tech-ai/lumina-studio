@@ -119,6 +119,9 @@ describe("Planner metric formulas", () => {
         "2026-07-13",
       ),
     ).toBe(false);
+  });
+
+  it("does not fabricate risk for blocked plans without schedule evidence", () => {
     expect(
       isPlannerInstanceAtRisk(
         {
