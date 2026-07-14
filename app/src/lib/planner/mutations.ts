@@ -33,7 +33,7 @@ function toAssignment(row: { id: string; instance_id: string; user_id: string; r
 function memberMutationError(fn: string, message: string): MutationResult<never> {
   const code =
     ["invalid_role", "instance_not_found", "insufficient_role_for_target", "insufficient_role",
-      "no_account_found", "user_not_in_org", "already_member", "member_not_found", "last_owner_protected"]
+      "user_not_available", "already_member", "member_not_found", "last_owner_protected"]
       .find((known) => message.includes(known)) ?? "UNKNOWN_ERROR";
 
   if (code === "UNKNOWN_ERROR") {
@@ -46,9 +46,8 @@ function memberMutationError(fn: string, message: string): MutationResult<never>
     invalid_role: "That role can't be assigned here.",
     instance_not_found: "This plan could not be found.",
     insufficient_role: "You don't have permission to do that.",
-    insufficient_role_for_target: "Only an owner can change or remove that member.",
-    no_account_found: "No account found for that email.",
-    user_not_in_org: "That person isn't part of your organization.",
+    insufficient_role_for_target: "Only an owner can perform that action.",
+    user_not_available: "That person is not available to invite.",
     already_member: "That person is already a member.",
     member_not_found: "That member could not be found.",
     last_owner_protected: "A plan must always have at least one owner.",
