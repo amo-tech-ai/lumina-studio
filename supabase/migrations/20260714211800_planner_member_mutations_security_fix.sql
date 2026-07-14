@@ -1,7 +1,7 @@
 -- IPI-575 · PLN-DATA-001C — security hardening found during post-merge
 -- verification of PR #384.
 --
--- Two fixes:
+-- Three fixes:
 --
 -- 1. Manager-gate on invite-as-manager (SEC-003):
 --    A manager-level caller could invite any new member as 'manager', letting
@@ -18,6 +18,20 @@
 --    email addresses to learn which are registered on the platform. Both cases
 --    now raise the same error (user_not_available) with the same human message,
 --    making them indistinguishable.
+--
+-- 3. Role-promotion gating in planner_update_role (SEC-003b):
+--    planner_update_role only checked the target's current role (v_target_role)
+--    against the owner/manager boundary, not the requested role (p_new_role).
+--    A manager who could not invite as 'manager' directly could instead invite
+--    as 'contributor' and then update the target's role to 'manager', bypassing
+--    the invite gate. Fixed by also rejecting p_new_role='manager' when the
+--    caller is not an owner.
+--
+-- Ordering fix in planner_invite_member:
+--   The manager-role gate ran before the instance-existence and general
+--   permission checks, causing semantically incorrect errors (e.g.
+--   insufficient_role_for_target instead of instance_not_found when the
+--   instance doesn't exist). The gate now runs after both checks.
 --
 -- create or replace preserves the existing grants (revoke public/anon, grant
 -- authenticated) from migration 20260714100000 — no need to repeat them.
@@ -42,12 +56,8 @@ begin
     raise exception 'planner_invite_member: invalid_role';
   end if;
 
-  -- A manager may not invite someone as manager — that requires owner approval,
-  -- matching the invariant in planner_update_role/planner_remove_assignment.
-  if p_role = 'manager' and not planner.is_at_least(p_instance_id, 'owner') then
-    raise exception 'planner_invite_member: insufficient_role_for_target';
-  end if;
-
+  -- Instance must exist before any is_at_least checks (which return false for
+  -- non-existent instances, producing misleading error codes).
   select i.org_id into v_org_id from planner.instances i where i.id = p_instance_id;
   if v_org_id is null then
     raise exception 'planner_invite_member: instance_not_found';
@@ -55,6 +65,14 @@ begin
 
   if not planner.is_at_least(p_instance_id, 'manager') then
     raise exception 'planner_invite_member: insufficient_role';
+  end if;
+
+  -- A manager may not invite someone as manager — that requires owner approval.
+  -- Placed after the instance/permission checks so the error is semantically
+  -- correct: the caller is manager+ but not owner, so the target role is the
+  -- issue, not the caller's base permission level or instance validity.
+  if p_role = 'manager' and not planner.is_at_least(p_instance_id, 'owner') then
+    raise exception 'planner_invite_member: insufficient_role_for_target';
   end if;
 
   v_email := lower(trim(p_email));
@@ -95,3 +113,84 @@ $$;
 
 comment on function public.planner_invite_member(uuid, text, text) is
   'IPI-575 — adds an existing registered user (matched by email, trimmed+lowercased) to a planner instance. Caller must be manager+; inviting as manager requires owner. Invitee must be in the instance''s org — indistinguishable error (user_not_available) for unknown or out-of-org addresses.';
+
+-- ── planner_update_role: also gate p_new_role='manager' ─────────────────────
+-- SEC-003b: without this, a manager could bypass the invite-as-manager gate
+-- by inviting as contributor and then promoting to manager.
+
+create or replace function public.planner_update_role(
+  p_instance_id uuid,
+  p_target_user_id uuid,
+  p_new_role text
+)
+returns table (id uuid, instance_id uuid, user_id uuid, role text)
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_target_role text;
+  v_owner_count integer;
+  v_row planner.assignments;
+begin
+  if p_new_role not in ('manager', 'contributor', 'viewer') then
+    raise exception 'planner_update_role: invalid_role';
+  end if;
+
+  if not planner.is_at_least(p_instance_id, 'manager') then
+    raise exception 'planner_update_role: insufficient_role';
+  end if;
+
+  perform 1 from planner.assignments a
+    where a.instance_id = p_instance_id and a.role = 'owner'
+    order by a.id
+    for update;
+
+  select a.role into v_target_role
+  from planner.assignments a
+  where a.instance_id = p_instance_id and a.user_id = p_target_user_id
+  for update;
+
+  if not found then
+    raise exception 'planner_update_role: member_not_found';
+  end if;
+
+  -- A manager may only act on contributor/viewer rows; touching another
+  -- manager's or the owner's assignment requires owner. Also, a manager
+  -- cannot promote anyone to manager (even if the target is currently a
+  -- contributor/viewer), matching the invite-as-manager gate above.
+  if (v_target_role in ('owner', 'manager') or p_new_role = 'manager')
+    and not planner.is_at_least(p_instance_id, 'owner')
+  then
+    raise exception 'planner_update_role: insufficient_role_for_target';
+  end if;
+
+  if v_target_role = 'owner' then
+    select count(*) into v_owner_count
+    from planner.assignments a
+    where a.instance_id = p_instance_id and a.role = 'owner';
+
+    if v_owner_count <= 1 then
+      raise exception 'planner_update_role: last_owner_protected';
+    end if;
+  end if;
+
+  update planner.assignments a
+    set role = p_new_role
+    where a.instance_id = p_instance_id and a.user_id = p_target_user_id
+    returning * into v_row;
+
+  insert into planner.events (instance_id, actor_user_id, event_type, payload)
+  values (
+    p_instance_id,
+    (select auth.uid()),
+    'member_role_updated',
+    jsonb_build_object('user_id', p_target_user_id, 'old_role', v_target_role, 'new_role', p_new_role)
+  );
+
+  return query select v_row.id, v_row.instance_id, v_row.user_id, v_row.role;
+end;
+$$;
+
+comment on function public.planner_update_role(uuid, uuid, text) is
+  'IPI-575 — changes an existing member''s role on a planner instance. Owner role is never settable here. A manager caller may only act on contributor/viewer targets, and cannot promote anyone to manager.';
