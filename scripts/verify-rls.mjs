@@ -1613,8 +1613,8 @@ try {
       p_role: "viewer",
     });
     assert(
-      !!notInOrgErr && notInOrgErr.message.includes("user_not_in_org"),
-      "invite rejects a real email outside the instance's org (user_not_in_org)",
+      !!notInOrgErr && notInOrgErr.message.includes("user_not_available"),
+      "invite rejects a real email outside the instance's org (user_not_available)",
     );
   } finally {
     if (userF?.user?.id) {
