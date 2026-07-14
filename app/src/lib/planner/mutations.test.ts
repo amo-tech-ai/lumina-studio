@@ -22,12 +22,12 @@ describe("inviteMember", () => {
     );
   });
 
-  it("maps user_not_available", async () => {
-    const sb = mockRpc(null, { message: "planner_invite_member: user_not_available" });
+  it("maps no_account_found", async () => {
+    const sb = mockRpc(null, { message: "planner_invite_member: no_account_found" });
     const result = await inviteMember({ instanceId: "i1", email: "nobody@example.com", role: "viewer" }, sb as never);
     expect(result).toEqual({
       ok: false,
-      error: { code: "user_not_available", message: "That person is not available to invite." },
+      error: { code: "no_account_found", message: "No account found for that email." },
     });
   });
 
