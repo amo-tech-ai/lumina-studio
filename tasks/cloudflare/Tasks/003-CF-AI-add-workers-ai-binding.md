@@ -75,11 +75,11 @@ Add this block inside the main JSON object (verified against the current `app/wr
 
 ```jsonc
 {
-  "ai": { "binding": "AI" }
+  "ai": { "binding": "AI", "remote": true }
 }
 ```
 
-That's the complete binding — no `gateway` sub-key here (see `001-CF-GW-create-gateway.md`, corrected: the gateway ID is passed per-call in application code, not in this file). The binding name `AI` is what appears in Worker code as `env.AI`. This is the convention used in all Cloudflare documentation. Workers AI allows exactly one `ai` binding per Worker.
+That's the complete binding — no `gateway` sub-key here (see `001-CF-GW-create-gateway.md`, corrected: the gateway ID is passed per-call in application code, not in this file). `remote: true` is required, not optional: Workers AI has no local simulation, so it always calls the real backend, but Cloudflare issues a warning if `remote` is omitted and an error if it's set to `false` (verified against `developers.cloudflare.com/workers/local-development/` and two current official Cloudflare repos, `cloudflare/agents-starter` and `cloudflare/vinext-agents-example`). The binding name `AI` is what appears in Worker code as `env.AI`. This is the convention used in all Cloudflare documentation. Workers AI allows exactly one `ai` binding per Worker.
 
 ---
 
