@@ -43,6 +43,26 @@ Applies to **all** Cloudflare-related work, including:
 
 ---
 
+## MCP Cloudflare Tools Reference
+
+Use these tools throughout all stages. Names are exact — copy/paste into ToolSearch.
+
+| Tool | Purpose | When to use |
+|------|---------|------------|
+| `mcp__claude_ai_Cloudflare_Developer_Platform__search_cloudflare_documentation` | Official Cloudflare API docs | Stage 0 research, any "is this supported?" question |
+| `mcp__claude_ai_Cloudflare_Developer_Platform__workers_get_worker` | Get live Worker code | Stage 5 runtime verification — compare deployed vs local |
+| `mcp__claude_ai_Cloudflare_Developer_Platform__workers_get_worker_code` | Fetch Worker JS | Stage 2 evidence collection for deployed code |
+| `mcp__claude_ai_Cloudflare_Developer_Platform__workers_list` | List Workers | Stage 1 scope verification (no orphan Workers created) |
+| `mcp__claude_ai_Cloudflare_Developer_Platform__d1_databases_list` | List D1 instances | Stage 1 scope verification |
+| `mcp__claude_ai_Cloudflare_Developer_Platform__d1_database_query` | Run SQL query | Stage 5 runtime verification for schema changes |
+| `mcp__claude_ai_Cloudflare_Developer_Platform__kv_namespaces_list` | List KV namespaces | Stage 1 scope verification |
+| `mcp__claude_ai_Cloudflare_Developer_Platform__kv_namespace_get` | Get KV namespace config | Stage 5 verify binding exists and is configured |
+| `mcp__claude_ai_Cloudflare_Developer_Platform__r2_buckets_list` | List R2 buckets | Stage 1 scope verification |
+| `mcp__plugin_cloudflare_cloudflare-api__execute` | Execute arbitrary API call | Stage 5 when MCP tools insufficient |
+| `mcp__plugin_cloudflare_cloudflare-docs__search_cloudflare_documentation` | Alternate docs search | Backup if Developer Platform search times out |
+
+---
+
 ## Stage 0 — Research & Architecture Review
 
 Before any code changes. Many previous mistakes came from architecture drift, not coding errors.
@@ -104,6 +124,24 @@ If `node:fs` is used:
 
 **The rule is:** avoid relying on Node filesystem *semantics* (arbitrary runtime disk reads), not `node:fs` the module. A static `import json from "./config.json"` is Workers-safe; a runtime `readFileSync(path)` that expects a real disk is not.
 
+### CI Testing Audit
+
+Before claiming a test passes, verify that CI actually runs security-sensitive tests with the same configuration as local development:
+
+**Checklist:**
+- [ ] Local tests run with security features **ENABLED** (auth, RLS, edge validation) — not bypassed via `.dev.vars` or test fixtures
+- [ ] CI runs the same test suites (not a subset)
+- [ ] CI explicitly injects secrets/env vars (never using `.dev.vars` or hardcoded test tokens — use actual credentials)
+- [ ] CI gate is a **required check** (not optional)
+- [ ] If any test file is missing from CI → Stage 0 blocker
+
+**Red flag patterns:**
+- `.dev.vars` with `ALLOW_UNAUTHENTICATED=true` used in CI (dev-only bypass)
+- Test coverage for auth/RLS/edge missing from CI job matrix
+- Security-critical tests only running locally
+
+**Prevention:** Add to `.github/workflows/ci.yml` any test suites that verify authentication, RLS policies, or edge function behavior. Example: `services/cloudflare-worker/npm test` must run in CI with explicit token injection, not dev-mode bypass.
+
 ---
 
 ## Stage 1 — Scope Verification
@@ -147,6 +185,43 @@ Classify each finding:
 
 Only implement confirmed, in-scope issues.
 
+### Official Sources Rule
+
+**For any claim about status, pricing, limits, or deprecation — cite the official source.**
+
+Cloudflare documentation evolves fast (models deprecate monthly, limits change, pricing updates). Training data is stale. **Do NOT assume.**
+
+**Source hierarchy (highest to lowest authority):**
+
+1. **Official Cloudflare docs** (via `cloudflare_docs` MCP lookup or webfetch to developers.cloudflare.com)
+2. Installed package source (`node_modules/@cloudflare/`, `package.json` dependencies)
+3. Test results (local or CI verification)
+4. Training data / memory (⚠️ treat as hypothesis, verify before shipping)
+
+**Hard rule: Material claims require proof**
+
+| Claim Type | Example | Proof Required |
+|------------|---------|----------------|
+| **Status** | "Model X is currently supported" | Link to [Cloudflare model page](https://developers.cloudflare.com/workers-ai/models/) or MCP result |
+| **Deprecation** | "Model X was deprecated on DATE" | Link to [Cloudflare changelog](https://developers.cloudflare.com/changelog) with deprecation date |
+| **Pricing** | "Model X costs $0.06 per 1M input tokens" | Link to [official pricing page](https://developers.cloudflare.com/workers-ai/pricing/) |
+| **Limits** | "Model X supports up to 128k context" | Link to model card or MCP `search_cloudflare_documentation` result |
+| **Capability** | "Model X supports tool calling" | Link to model capability matrix or official docs |
+
+**Unverified claims must be marked "TBD"**
+
+If a claim cannot be sourced → mark as "TBD" in the code/PR, not shipped as fact.
+
+**PR review flags:**
+
+- 🔴 **Blocker:** "same pricing" / "same performance" / "zero risk" without source → request link or reject
+- 🟡 **Question:** "currently supported" without docs link → ask for source before merge
+- 🔴 **Blocker:** "deprecated as of [DATE]" without Cloudflare changelog link → reject until sourced
+
+**Example (from IPI-525 audit):**
+- ❌ "Llama 3.1 8B Fast variant has same pricing" (unverified)
+- ✅ "Llama 3.1 8B Fast variant: active, 128k context, per [Cloudflare model page](link), pricing TBD" (honest)
+
 ---
 
 ## Stage 3 — Implementation
@@ -188,6 +263,34 @@ Bug → Fix → Regression Test
 
 The test must fail before the fix and pass after.
 
+### HTTP Header Edge Cases (Auth-critical code)
+
+**For any authentication, authorization, or header-parsing code:**
+
+Test these edge cases automatically. HTTP parsers inject whitespace and normalization that can break string comparisons.
+
+| Input | Expected | Why | Issue (if missed) |
+|-------|----------|-----|-------------------|
+| `"secret-token"` | ✅ Pass | Happy path | N/A |
+| `"secret-token  "` (trailing spaces) | ✅ Pass | HTTP header parsers inject whitespace | Token comparison fails (401 on valid token) |
+| `"SECRET-TOKEN"` (uppercase) | Handle per policy | Case sensitivity policy-dependent | Inconsistent rejection |
+| `"secret-token\r\n"` (CRLF) | ✅ Pass | HTTP normalization | Token comparison fails |
+| `""` (empty) | ❌ Fail | Empty token detection | Allows empty tokens to bypass auth |
+| `null` / `undefined` | ❌ Fail | Null handling | Type error or unexpected auth bypass |
+| `" secret-token "` (leading + trailing) | ✅ Pass | Full trim required | Token comparison fails |
+
+**Rule:** Every auth route must pass all seven tests. **Always trim both sides of token before equality check.**
+
+**Code pattern (Bearer token):**
+```typescript
+const token = match[1];                    // Extract from "Bearer <token>"
+if (!token || token.trim() === "") return; // Check for empty
+const trimmedToken = token.trim();        // TRIM before comparison
+if (trimmedToken !== env.AUTH_TOKEN) return 401;  // Compare trimmed values
+```
+
+**Prevention:** Add these tests to any new auth/header parsing code. (Real incident: IPI-468 whitespace bug shipped because happy-path test passed but edge case wasn't covered.)
+
 ---
 
 ## Stage 5 — Runtime Matrix Verification
@@ -220,6 +323,19 @@ Especially for Workers. After the build, inspect the generated bundle:
 | No `eval` or code-gen-from-string | `grep -r "eval(\|Function(" .open-next/` — Workers blocks this |
 
 This catches problems before deployment, not after.
+
+### Stage 5b — Cloudflare Bindings & Service Verification (if applicable)
+
+For any PR touching KV, D1, R2, Hyperdrive, Durable Objects, or deployed Workers:
+
+| Check | MCP Tool | Command | Pass criteria |
+|-------|----------|---------|---------------|
+| Workers code deployed | `workers_get_worker_code` | Compare commit hash vs deployed code | Deployed version matches latest push |
+| D1 schema applied | `d1_database_query` | Query `sqlite_master` (D1 is SQLite, not Postgres — no `information_schema`) or check D1 migration state | All migrations present and consistent |
+| KV namespaces exist | `kv_namespaces_list` | Verify expected namespaces listed in response | No orphan/missing namespaces |
+| KV binding config | `kv_namespace_get` | Check binding exists in wrangler.jsonc | Matches deployed configuration |
+| R2 buckets configured | `r2_buckets_list` | Verify expected buckets exist | Buckets match wrangler.jsonc, CORS rules applied |
+| Hyperdrive configured | `hyperdrive_configs_list` / `hyperdrive_config_get` | Check Hyperdrive credentials are bound (not exposed) — `kv_namespaces_list` cannot see Hyperdrive at all | No secrets in environment |
 
 ---
 
@@ -286,6 +402,59 @@ Verify:
 If any production blocker remains, classify it clearly.
 
 Do not describe mitigations as complete fixes.
+
+---
+
+## Known Cloudflare Gotchas (Real Incidents)
+
+### Workers AI embed dimension mismatch (IPI-492)
+
+- **Gotcha:** BGE Base returns **768 dimensions**, not 512 or 1536
+- **Impact:** Adapter code assumes wrong dimension; vectors silently truncated or padded
+- **Prevention:** Always verify embed response shape against [official model card](https://developers.cloudflare.com/workers-ai/models/bge-base-en-v1.5/)
+- **Test:** Call `/v1/embeddings` with test input; inspect `data[0].embedding.length`
+- **MCP:** `mcp__claude_ai_Cloudflare_Developer_Platform__search_cloudflare_documentation` for model specs
+
+### OpenNext build requires exact compatibility_date
+
+- **Gotcha:** `opennextjs-cloudflare build` succeeds but `wrangler dev` fails if `compatibility_date` is stale
+- **Impact:** Build passes CI; runtime fails only on `wrangler dev` or deployed Workers
+- **Prevention:** Keep `compatibility_date` in `wrangler.jsonc` on latest stable (check official docs monthly)
+- **Test:** Run both `opennextjs-cloudflare build` AND `wrangler dev` locally before push
+- **MCP:** `mcp__claude_ai_Cloudflare_Developer_Platform__search_cloudflare_documentation` for current recommended date
+
+### D1 remote DB vs local preview mismatch
+
+- **Gotcha:** Migrations apply locally; remote apply fails due to auth/state divergence or SQL incompatibility
+- **Impact:** Code passes local tests; fails on production D1 at deploy time
+- **Prevention:** Test migrations on actual D1 instance before merge (Stage 5b)
+- **Test:** Run `d1_database_query` on production DB; verify schema state matches local
+- **MCP:** `mcp__claude_ai_Cloudflare_Developer_Platform__d1_database_query` to inspect remote schema
+
+### KV key collisions with reserved prefixes
+
+- **Gotcha:** Keys starting with `_` have special handling; overlaps can cause silent data loss
+- **Impact:** System keys and user keys collide; data silently overwritten or inaccessible
+- **Prevention:** Reserve `_internal_*` prefix for framework keys only; document user key convention
+- **Test:** Namespace keys and verify no `_` prefix overlap with user namespaces
+- **MCP:** `mcp__plugin_cloudflare_cloudflare-api__execute` to list KV keys (MCP tools show namespaces only)
+
+### Workers script size limits (gzip after compression)
+
+- **Gotcha:** OpenNext build succeeds locally; deployed Worker fails at upload if over service limits
+- **Impact:** Code passes local tests; fails on `wrangler deploy` with size error
+- **Official limits:** Free tier 3 MB (after gzip) / 64 MB (before gzip); Paid tier 10 MB (after gzip) / 64 MB (before gzip)
+- **Prevention:** Use `wrangler deploy --dry-run` to check gzip upload size (not local file size)
+- **Test:** Run `wrangler deploy --dry-run` and check reported upload size against tier limits
+- **Fix:** Tree-shake unused imports, defer code-splitting, or migrate to service workers if exceeding limits
+
+### nodejs_compat flag must be in compatibility_flags array
+
+- **Gotcha:** Setting `nodejs_compat = true` in wrangler.jsonc does NOT enable `node:fs`/`node:path`
+- **Impact:** Code uses `node:fs` but Workers environment doesn't have the flag
+- **Prevention:** Use `compatibility_flags = ["nodejs_compat"]` (array syntax, exact name)
+- **Test:** `wrangler dev` with simple `import fs from "node:fs"` should not throw
+- **MCP:** `mcp__claude_ai_Cloudflare_Developer_Platform__search_cloudflare_documentation` for nodejs_compat docs
 
 ---
 
@@ -366,6 +535,26 @@ Reusable rubric — score every Cloudflare PR/task against these criteria before
 | Embed/error contract (when touched) | Allowlist reject; no silent remap; no opaque 502 for client validation; typed adapter error | Remap / gemini-name detect / raw provider body leak |
 
 **Merge gate:** all criteria must be Pass or explicitly waived with a documented reason. Any Fail = blocker.
+
+---
+
+## Skills × MCP Integration Table
+
+Load skills in this order for Cloudflare work:
+
+| Skill | MCP Tools Available | When to load | Key integration |
+|-------|-------------------|--------------|-----------------|
+| **cf-wf** (this) | `search_cloudflare_documentation`, `workers_*`, `d1_*`, `kv_*`, `r2_*`, `cloudflare-api__execute` | Every Cloudflare task | Primary skill; provides 9-stage gate |
+| `ipix-task-lifecycle` | Linear MCP | Any task with Linear tracking (IPI-###) | Provides context + acceptance criteria |
+| `pr-workflow` | GitHub MCP (PR threads, CI status) | Before merge gate | Provides PR state + review gate |
+| `ipix-supabase` | Supabase MCP | For Supabase/Postgres only | D1 is SQLite, not Postgres; route D1 work to Cloudflare D1 docs, not Supabase |
+| `graphify` | — | Stage 0 architecture review | Dependency mapping |
+
+**Load order:**
+1. Start with this skill (cloudflare-workflow)
+2. Grab MCP tools via ToolSearch (copy/paste tool names from MCP Tools Reference above)
+3. Load domain skill if needed (e.g., `ipix-supabase` for D1)
+4. Load lifecycle skills (`ipix-task-lifecycle`, `pr-workflow`) for tracking
 
 ---
 

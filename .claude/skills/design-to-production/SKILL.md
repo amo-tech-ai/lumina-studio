@@ -10,7 +10,8 @@ description: >
   Enforces RSC + CSS modules + tokens + state parity + side-by-side verification. Does NOT
   replace claude-design-handoff for full program planning — use this skill for execute-and-verify
   on a single screen or small route bundle.
-version: "2.0.0"
+metadata:
+  version: "2.1.0"
 ---
 
 # design-to-production — HTML design → React parity
@@ -29,11 +30,12 @@ version: "2.0.0"
 |-------|-------------|---------|
 | 1 | **`design-md`** | Tokens, 3-panel contract, HITL |
 | 2 | **This skill** | DC → React execution |
-| 3 | [`dc-html-anatomy.md`](references/dc-html-anatomy.md) | Parse Workspace zones + states |
-| 4 | [`react-next-parity-rules.md`](references/react-next-parity-rules.md) | RSC, CSS modules, no hex |
-| 5 | [`screen-checklists.md`](references/screen-checklists.md) | Per-screen dimensions |
-| 6 | **`vercel-react-best-practices`** | Search/filter performance |
-| 7 | **`task-verifier`** | Phase 2 readiness + Done gate |
+| 3 | [`reuse-first-checklist.md`](references/reuse-first-checklist.md) | **Run before any task exists** — prove nothing reusable was missed |
+| 4 | [`dc-html-anatomy.md`](references/dc-html-anatomy.md) | Parse Workspace zones + states |
+| 5 | [`react-next-parity-rules.md`](references/react-next-parity-rules.md) | RSC, CSS modules, no hex |
+| 6 | [`screen-checklists.md`](references/screen-checklists.md) | Per-screen dimensions |
+| 7 | **`vercel-react-best-practices`** | Search/filter performance |
+| 8 | **`task-verifier`** | Phase 2 readiness + Done gate |
 
 Shoot domain: also [`shoot/lessons-from-brand-parity.md`](../../../tasks/design-docs/shoot/lessons-from-brand-parity.md).
 
@@ -69,6 +71,8 @@ Shoot domain: also [`shoot/lessons-from-brand-parity.md`](../../../tasks/design-
 ## Regression guardrails (IPI-383/372 lessons — do not repeat)
 
 Folded from `tasks/design-docs/audit/checklist.md`. These are the exact mistakes that cost review cycles — each is now a hard step, not advice.
+
+**Also read [`Universal-design-prompt-4/lessons.md`](../../../Universal-design-prompt-4/lessons.md) Top 10 before starting a screen.** That doc captures the *broader* mistakes (migration drift, cross-org data bugs, stale branches reintroducing fixed code, accessibility fixes that miss third-party utility classes) found across CRM + Planner PRs — this table below is the narrower, DC-parity-specific subset. Both apply; neither replaces the other. When you find a new mistake during a screen conversion, add it to `lessons.md`, not a third list.
 
 | # | Trap | Guardrail |
 |---|------|-----------|
@@ -162,8 +166,15 @@ Score: 🟢 match · 🟡 partial · 🔴 missing · ➖ defer.
 - **Create:** `*-workspace.tsx` + `*.module.css` only
 - **Defer:** DC STATE switcher, bulk select demos
 - **Out of scope:** explicit list in PR
+- **Data access:** one typed function per read/mutation (e.g. `listCompanies()`, `updateDealStage()`) — no component calls `supabase.from()` directly. UI, Mastra tools, and CopilotKit actions all call the same function. (See `lessons.md` — the pattern that prevents "which of these five queries is the real one.")
 
 Link Linear · one concern per PR · ≤500 LOC target.
+
+**Before merge, prove every "REUSE" line in the table above, don't just state it** (lessons.md #2 — a reuse table is a plan, not proof):
+```bash
+rg "<ComponentName>" app/src/components/<feature> app/src/app/\(operator\)/app/<route>
+```
+If the grep comes back empty, the component was planned to be reused but isn't actually imported — fix before merge, not after review flags it.
 
 ### 4. Implement
 
@@ -249,11 +260,14 @@ Match 920px / 3-col / DC empty state. No shell rebuild.
 - [ ] DC HTML file read; Workspace-only diff
 - [ ] No legacy hex / min-h-screen in changed files
 - [ ] RSC + loading.tsx where list screen
-- [ ] All DC states implemented (not collapsed)
-- [ ] lint · test · tsc · build green
+- [ ] All DC states implemented (not collapsed) — loading/empty/error/retry, not just populated
+- [ ] Every "REUSE" line grep-verified as actually imported, not just planned (lessons.md #2)
+- [ ] All data reads/writes go through one typed function per operation — no direct `supabase.from()` in a component
+- [ ] lint · test · tsc · build green — **and this proves nothing about whether a database function actually runs** (lessons.md #10); if this PR touches an RPC, invoke it live at least once
 - [ ] Side-by-side screenshots per checklist dimension
 - [ ] Report + known gaps honest
 - [ ] One concern per PR
+- [ ] **Rebased onto current `origin/main` immediately before requesting review** (lessons.md #4, #13) — `git fetch origin && git rebase origin/main`; a same-day merge on `main` can make an un-rebased diff misread as a regression, or silently reintroduce a bug `main` already fixed
 
 ---
 
@@ -261,6 +275,7 @@ Match 920px / 3-col / DC empty state. No shell rebuild.
 
 | File | Contents |
 |------|----------|
+| [reuse-first-checklist.md](references/reuse-first-checklist.md) | Stop-and-prove gate — run before any task is created |
 | [dc-html-anatomy.md](references/dc-html-anatomy.md) | Parse DC HTML structure |
 | [react-next-parity-rules.md](references/react-next-parity-rules.md) | Next.js + React patterns |
 | [screen-checklists.md](references/screen-checklists.md) | Shoots List 14 dims + index |
