@@ -22,20 +22,20 @@ describe("inviteMember", () => {
     );
   });
 
-  it("maps no_account_found", async () => {
-    const sb = mockRpc(null, { message: "planner_invite_member: no_account_found" });
+  it("maps user_not_available for an unknown email", async () => {
+    const sb = mockRpc(null, { message: "planner_invite_member: user_not_available" });
     const result = await inviteMember({ instanceId: "i1", email: "nobody@example.com", role: "viewer" }, sb as never);
     expect(result).toEqual({
       ok: false,
-      error: { code: "no_account_found", message: "No account found for that email." },
+      error: { code: "user_not_available", message: "That person is not available to invite." },
     });
   });
 
-  it("maps user_not_in_org", async () => {
-    const sb = mockRpc(null, { message: "planner_invite_member: user_not_in_org" });
-    const result = await inviteMember({ instanceId: "i1", email: "outsider@example.com", role: "viewer" }, sb as never);
-    expect(result.ok).toBe(false);
-    if (!result.ok) expect(result.error.code).toBe("user_not_in_org");
+  it("maps user_not_available for an email outside the org (same error — no enumeration)", async () => {
+    const sbOut = mockRpc(null, { message: "planner_invite_member: user_not_available" });
+    const outResult = await inviteMember({ instanceId: "i1", email: "outsider@example.com", role: "viewer" }, sbOut as never);
+    expect(outResult.ok).toBe(false);
+    if (!outResult.ok) expect(outResult.error.code).toBe("user_not_available");
   });
 
   it("maps invalid_role (e.g. inviting as owner)", async () => {
@@ -50,6 +50,13 @@ describe("inviteMember", () => {
     const result = await inviteMember({ instanceId: "i1", email: "dupe@example.com", role: "viewer" }, sb as never);
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.error.code).toBe("already_member");
+  });
+
+  it("denies a manager inviting someone as manager (insufficient_role_for_target)", async () => {
+    const sb = mockRpc(null, { message: "planner_invite_member: insufficient_role_for_target" });
+    const result = await inviteMember({ instanceId: "i1", email: "newmgr@example.com", role: "manager" }, sb as never);
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error.code).toBe("insufficient_role_for_target");
   });
 
   it("never forwards a raw, unrecognized Postgres message", async () => {
@@ -70,6 +77,15 @@ describe("inviteMember", () => {
     const result = await inviteMember({ instanceId: "i1", email: "x@example.com", role: "viewer" }, sb as never);
     expect(result.ok).toBe(false);
     consoleError.mockRestore();
+  });
+});
+
+describe("auditable atomicity", () => {
+  it("an RPC failure after any point maps to an error — the DB rolls back the assignment", async () => {
+    const sb = mockRpc(null, { message: "planner_invite_member: already_member" });
+    const result = await inviteMember({ instanceId: "i1", email: "dupe@example.com", role: "viewer" }, sb as never);
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error.code).toBe("already_member");
   });
 });
 

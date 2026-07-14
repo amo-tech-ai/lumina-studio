@@ -1585,8 +1585,8 @@ try {
       p_role: "viewer",
     });
     assert(
-      !!notInOrgErr && notInOrgErr.message.includes("user_not_in_org"),
-      "invite rejects a real email outside the instance's org (user_not_in_org)",
+      !!notInOrgErr && notInOrgErr.message.includes("user_not_available"),
+      "invite rejects a real email outside the instance's org (user_not_available — no enumeration)",
     );
   } finally {
     if (userF?.user?.id) {
@@ -1595,6 +1595,19 @@ try {
       else pass("cleaned up user F (service role)");
     }
   }
+
+  // SEC-004: unknown email returns user_not_available, not a distinguishable
+  // error — an authenticated caller cannot distinguish "email not on platform"
+  // from "email outside the org".
+  const { error: unknownEmailErr } = await userA.client.rpc("planner_invite_member", {
+    p_instance_id: instA.id,
+    p_email: "nonexistent-user-on-platform@example.com",
+    p_role: "viewer",
+  });
+  assert(
+    !!unknownEmailErr && unknownEmailErr.message.includes("user_not_available"),
+    "unknown email returns user_not_available (no platform-account enumeration)",
+  );
 
   const { error: ownerRoleErr } = await userA.client.rpc("planner_invite_member", {
     p_instance_id: instA.id,
@@ -1627,6 +1640,29 @@ try {
     assert(
       !inviteDErr && (invitedD ?? []).length === 1 && invitedD[0].role === "contributor",
       "owner successfully invites an org-A member by email",
+    );
+
+    // Manager cannot invite someone as manager (would create a peer without
+    // owner approval — SEC-003).
+    const { error: mgrInviteMgrErr } = await userB.client.rpc("planner_invite_member", {
+      p_instance_id: instA.id,
+      p_email: emailD,
+      p_role: "manager",
+    });
+    assert(
+      !!mgrInviteMgrErr && mgrInviteMgrErr.message.includes("insufficient_role_for_target"),
+      "manager cannot invite someone as manager (insufficient_role_for_target)",
+    );
+
+    // Owner CAN invite someone as manager.
+    const { error: ownerInviteMgrErr } = await userA.client.rpc("planner_invite_member", {
+      p_instance_id: instA.id,
+      p_email: emailD,
+      p_role: "manager",
+    });
+    assert(
+      !!ownerInviteMgrErr && ownerInviteMgrErr.message.includes("already_member"),
+      "owner inviting (already member) as manager — confirms owner CAN pass the role gate",
     );
 
     const { error: dupeErr } = await userA.client.rpc("planner_invite_member", {
