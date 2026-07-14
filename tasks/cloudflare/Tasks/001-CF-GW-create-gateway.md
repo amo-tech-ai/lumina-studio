@@ -67,25 +67,41 @@ Click Create. The gateway is created immediately and appears in the gateway list
 
 ### Step 6: Note the gateway ID
 
-After creation, note the gateway ID. This ID is used in the wrangler.jsonc configuration in Task CF-AI-020 (or as an update to that task) to route the Workers AI binding through this gateway.
+After creation, note the gateway ID (it's the gateway name, e.g. `ipix-prod`). This ID is passed at **request time** in application code — it is not a `wrangler.jsonc` configuration value.
 
 ---
 
 ## Connecting the Gateway to the Worker
 
-After creating the gateway, update the wrangler.jsonc AI binding to reference it.
+**Correction (verified against current Cloudflare docs, 2026-07-13):** the AI binding in `wrangler.jsonc` does NOT take a `gateway` sub-key. The binding is always just:
 
-The AI binding in wrangler.jsonc should include a gateway configuration. The binding block should specify the binding name as `AI` and include a gateway object with the `id` set to `ipix-prod` (or whatever name was chosen in Step 4).
+```jsonc
+{
+  "ai": { "binding": "AI" }
+}
+```
 
-This tells Cloudflare to route all Workers AI calls through the AI Gateway, enabling caching, rate limiting, and analytics.
+(This is what Task CF-AI-020 / `003-CF-AI-add-workers-ai-binding.md` already adds — nothing more is needed there for gateway routing.)
+
+The gateway ID is instead passed as the **third argument** to `env.AI.run()` in the Worker/Mastra code that calls the model:
+
+```ts
+const response = await env.AI.run(
+  "@cf/meta/llama-3.1-8b-instruct",
+  { prompt: "..." },
+  { gateway: { id: "ipix-prod", skipCache: false } }, // <- gateway ID goes here, per call
+);
+```
+
+This tells Cloudflare to route that specific request through the named AI Gateway, enabling caching, rate limiting, and analytics for it.
 
 ---
 
 ## Commands
 
-None required. This task is entirely dashboard-based.
+None required for gateway creation itself — that's dashboard-only.
 
-After creating the gateway and updating wrangler.jsonc, run the preview server to confirm the binding routes through the gateway:
+Once the gateway exists and the code that calls `env.AI.run()` passes the `gateway: { id: "ipix-prod" }` option (see above), run the preview server to confirm requests route through the gateway:
 
 Command: `npm run preview`
 
@@ -93,11 +109,7 @@ Command: `npm run preview`
 
 ## Files Changed
 
-### File 1: app/wrangler.jsonc
-
-Update the AI binding (added in Task CF-AI-020) to include the gateway configuration.
-
-The AI block now contains both the binding name and a gateway object with the gateway ID.
+None in this task. `wrangler.jsonc` only ever needs the plain `{ "ai": { "binding": "AI" } }` block added in Task CF-AI-020 — there is no gateway-specific config file to change. The gateway ID is wired in wherever `env.AI.run()` is called (tracked separately, e.g. in the Mastra model-registry task).
 
 ---
 
@@ -120,7 +132,7 @@ Pass criteria: The dashboard shows the gateway with zero requests initially.
 
 ### Test 2: Requests route through the gateway
 
-After deploying or previewing with the updated binding, make a test AI request.
+After deploying or previewing with an `env.AI.run()` call that passes `gateway: { id: "ipix-prod" }`, make a test AI request.
 
 Pass criteria: The gateway analytics dashboard shows one new request within a few seconds.
 
@@ -135,7 +147,7 @@ Pass criteria: The analytics page displays all metadata fields for the test requ
 ## Acceptance Criteria
 
 - [ ] The `ipix-prod` gateway exists in the Cloudflare dashboard
-- [ ] The wrangler.jsonc AI binding includes the gateway configuration
+- [ ] The code calling `env.AI.run()` passes `gateway: { id: "ipix-prod" }` as the third argument (not a wrangler.jsonc change)
 - [ ] A test request appears in the gateway analytics
 - [ ] The gateway shows model, latency, and cost data for the test request
 
