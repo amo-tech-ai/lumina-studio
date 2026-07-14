@@ -1,0 +1,88 @@
+/* IPI-577 — grid matches SCR-34's 4-column shape (name/role/access/actions).
+   Last column widened from the wireframe's 44px (sized for a "⋯" menu
+   trigger) to auto, since this ticket skips a dropdown-menu primitive (none
+   installed — @radix-ui/react-dropdown-menu isn't a repo dependency) and
+   instead renders role-select + remove inline. Revisit if a real overflow
+   menu need shows up elsewhere and the dependency gets added anyway. */
+
+.wrap {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-bg-card);
+  overflow: hidden;
+}
+
+.header {
+  display: flex;
+  justify-content: flex-end;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.grid {
+  display: flex;
+  flex-direction: column;
+}
+
+.row {
+  display: grid;
+  grid-template-columns: minmax(120px, 1fr) 120px 140px auto;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.row:last-child {
+  border-bottom: none;
+}
+
+.headCell {
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-secondary);
+  text-transform: uppercase;
+}
+
+.cell {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-primary);
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.roleSelect {
+  width: 120px;
+}
+
+.ownerLock {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+}
+
+.rowError {
+  color: var(--color-destructive, #b91c1c);
+  font-size: var(--font-size-xs);
+  margin-top: 4px;
+  text-align: right;
+}
+
+@media (max-width: 900px) {
+  .row {
+    grid-template-columns: 1fr;
+    gap: 4px;
+  }
+
+  .actions {
+    justify-content: flex-start;
+  }
+
+  .headCell {
+    display: none;
+  }
+}

@@ -118,6 +118,14 @@ export interface PlannerAssignment {
   permissions: Record<string, unknown> | null;
 }
 
+// IPI-577 — a PlannerAssignment plus the display name the Settings member
+// table needs. Kept separate from PlannerAssignment (used by engine.ts's
+// pure permission logic) rather than adding displayName there, since most
+// callers never need it and profiles.full_name resolution is Settings-only.
+export interface PlannerMember extends PlannerAssignment {
+  displayName: string | null;
+}
+
 export interface PlannerEvent {
   id: string;
   instanceId: string;

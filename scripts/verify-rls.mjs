@@ -1474,6 +1474,34 @@ try {
     "planner_get_my_assignment returns empty for an instance the caller has no assignment on (no enumeration leak)",
   );
 
+  // IPI-577 · PLN-S6 — planner_get_member_names RPC probes. listMembers()
+  // returns no display name (profiles' SELECT policy is self-row-only), so
+  // this RPC resolves names for co-members of a shared instance — but only
+  // for a caller who is themselves assigned to it (viewer+).
+  const { data: viewerNames, error: viewerNamesErr } = await userB.client.rpc(
+    "planner_get_member_names",
+    { p_instance_id: instA.id },
+  );
+  assert(
+    !viewerNamesErr &&
+      (viewerNames ?? []).length === 2 &&
+      new Set((viewerNames ?? []).map((r) => r.user_id)).has(userA.user.id) &&
+      new Set((viewerNames ?? []).map((r) => r.user_id)).has(userB.user.id),
+    "viewer CAN resolve display names for all co-members via planner_get_member_names (owner + viewer, both rows)",
+  );
+
+  const { data: namesNoInstance, error: namesNoInstanceErr } = await userB.client.rpc(
+    "planner_get_member_names",
+    { p_instance_id: crypto.randomUUID() },
+  );
+  assert(
+    !namesNoInstanceErr && (namesNoInstance ?? []).length === 0,
+    "planner_get_member_names returns empty for an instance the caller has no assignment on (no enumeration leak)",
+  );
+
+  const { error: anonNamesErr } = await anon.rpc("planner_get_member_names", { p_instance_id: instA.id });
+  assert(!!anonNamesErr, "anon cannot call planner_get_member_names (no EXECUTE grant)");
+
   const { data: viewerTaskRead, error: viewerTaskReadErr } = await plannerB
     .from("tasks")
     .select("id")
