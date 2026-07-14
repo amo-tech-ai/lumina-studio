@@ -1588,8 +1588,8 @@ try {
   const emailG = `plt002-rls-g-${stamp}@example.com`;
   let userG;
   try {
-    userG = await createTestUser(emailG);
     assert(!!admin, "service_role admin client required to seed org_members for user G");
+    userG = await createTestUser(emailG);
     const { error: orgMemberGErr } = await admin
       .from("org_members")
       .insert({ org_id: orgAId, user_id: userG.user.id, role: "editor" });
