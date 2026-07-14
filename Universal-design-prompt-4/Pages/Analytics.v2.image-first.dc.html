@@ -1,0 +1,570 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --color-bg-page:#ffffff;--color-bg-card:#ffffff;--color-bg-subtle:#fafafa;--color-bg-muted:#f4f4f5;
+  --color-border:#e5e7eb;--color-border-strong:#d1d5db;--color-border-subtle:#f0f0f1;--color-border-focus:#111111;
+  --color-text-primary:#111111;--color-text-secondary:#6b7280;--color-text-muted:#9ca3af;--color-text-disabled:#c4c7cc;
+  --color-action:#111111;--color-action-hover:#000000;--color-action-text:#ffffff;
+  --color-approved:#059669;--color-low:#b45309;--color-danger:#b91c1c;
+  --shadow-card:0 1px 3px 0 rgb(17 17 17 / 0.05),0 1px 2px -1px rgb(17 17 17 / 0.04);--shadow-panel:0 8px 24px -8px rgb(17 17 17 / 0.12);--shadow-modal:0 24px 64px -16px rgb(17 17 17 / 0.2);
+  --duration-normal:250ms;--ease-default:cubic-bezier(0.16,1,0.3,1);
+  --radius-md:0.625rem;--card-radius:1.25rem;--image-radius:1.25rem;--image-radius-sm:0.75rem;
+  --intel-bg:#ffffff;--nav-item-active:#f4f4f5;--nav-item-hover:#f4f4f5;--nav-bg:#ffffff;--nav-border:#e5e7eb;
+  --nav-width-collapsed:3.5rem;--nav-width-expanded:14rem;
+  --fs-xs:0.75rem;--fs-sm:0.875rem;--fs-base:1rem;--fs-lg:1.125rem;--fs-xl:1.25rem;--fs-2xl:1.5rem;--fs-3xl:2rem;
+}
+*{box-sizing:border-box;}
+body{margin:0;font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:var(--color-text-primary);-webkit-font-smoothing:antialiased;}
+.mono{font-feature-settings:'tnum';font-variant-numeric:tabular-nums;}
+.photo{background-size:cover;background-position:center top;background-repeat:no-repeat;background-color:var(--color-bg-subtle);position:relative;}
+@keyframes shimmer{0%{background-position:-400px 0;}100%{background-position:400px 0;}}
+@keyframes pulse{0%,100%{opacity:1;}50%{opacity:.25;}}
+.skel{background:linear-gradient(90deg,var(--color-bg-subtle) 25%,var(--color-bg-muted) 50%,var(--color-bg-subtle) 75%);background-size:800px 100%;animation:shimmer 1.4s infinite linear;border-radius:10px;}
+@media (prefers-reduced-motion:reduce){.skel{animation:none !important;}}
+.sheetbtn{display:none;}
+.m-tabbar{display:none;position:fixed;left:0;right:0;bottom:0;height:calc(56px + env(safe-area-inset-bottom));padding:0 4px env(safe-area-inset-bottom);background:var(--nav-bg);border-top:1px solid var(--nav-border);z-index:500;}
+@media (min-width:1025px){.m-tabbar{display:none !important;}}
+@media (max-width:1180px){.kpirow{grid-template-columns:repeat(3,1fr) !important;} .chartgrid{grid-template-columns:1fr !important;}}
+@media (max-width:1024px){
+  nav[data-screen-label="NavSidebar"]{display:none !important;}
+  main[data-screen-label="Workspace"]{padding-bottom:calc(58px + env(safe-area-inset-bottom)) !important;}
+  .m-tabbar{display:flex !important;}
+  aside[data-screen-label="IntelligencePanel"]{position:fixed !important;inset:auto 0 0 0 !important;width:100% !important;height:82vh !important;border-left:none !important;border-top:1px solid var(--color-border) !important;border-radius:20px 20px 0 0 !important;transform:translateY(102%);box-shadow:var(--shadow-modal);z-index:500;}
+  aside.sheet-open{transform:translateY(0) !important;}
+  .sheetbtn{display:inline-flex !important;}
+  .kpirow{grid-template-columns:repeat(2,1fr) !important;}
+  .chartgrid{grid-template-columns:1fr !important;}
+}
+.m-more-cb{position:absolute;opacity:0;pointer-events:none;}
+.m-more-backdrop,.m-more-sheet{display:none;}
+@media (max-width:1024px){
+  .m-more-cb:checked ~ .m-more-backdrop{display:block;position:fixed;inset:0;background:rgba(17,17,17,.42);z-index:560;}
+  .m-more-sheet{display:block;position:fixed;left:0;right:0;bottom:0;background:var(--nav-bg);border-top:1px solid var(--nav-border);border-radius:18px 18px 0 0;z-index:570;transform:translateY(101%);transition:transform var(--duration-normal) var(--ease-default);box-shadow:var(--shadow-modal);padding-bottom:env(safe-area-inset-bottom);}
+  .m-more-cb:checked ~ .m-more-sheet{transform:translateY(0);}
+}
+@media (min-width:1025px){.m-more-sheet,.m-more-backdrop{display:none !important;}}
+@media (max-width:1024px){.m-chatdock{padding-left:16px !important;padding-right:16px !important;max-height:48vh;overflow-y:auto;}}
+</style>
+</helmet>
+
+<div style="display:grid;grid-template-columns:auto minmax(0,1fr) auto;height:100vh;width:100%;background:var(--color-bg-page);overflow:hidden;">
+  <input type="checkbox" id="m-more" class="m-more-cb" aria-hidden="true" tabindex="-1">
+
+  <!-- ===================== NAV SIDEBAR ===================== -->
+  <nav data-screen-label="NavSidebar" style="width:{{ navWidth }};flex-shrink:0;background:var(--color-bg-card);border-right:1px solid var(--color-border);display:flex;flex-direction:column;justify-content:space-between;padding:14px 10px;transition:width var(--duration-normal) var(--ease-default);overflow:hidden;z-index:200;">
+    <div style="display:flex;flex-direction:column;gap:6px;">
+      <button onClick="{{ toggleNav }}" aria-label="Toggle navigation" title="Expand / collapse sidebar" style="display:flex;align-items:center;gap:12px;height:36px;padding:0 7px;border:none;background:transparent;border-radius:8px;color:var(--color-text-secondary);cursor:pointer;" style-hover="background:var(--nav-item-hover);">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" style="flex-shrink:0;"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+        <sc-if value="{{ navExpanded }}" hint-placeholder-val="{{ false }}"><span style="font-size:var(--fs-sm);font-weight:600;color:var(--color-text-primary);white-space:nowrap;">iPix</span></sc-if>
+      </button>
+      <div style="height:1px;background:var(--color-border-subtle);margin:6px 4px;"></div>
+      <sc-if value="{{ navExpanded }}" hint-placeholder-val="{{ false }}">
+        <div style="font-size:var(--fs-xs);font-weight:500;letter-spacing:.06em;color:var(--color-text-muted);padding:4px 8px 2px;white-space:nowrap;">BRANDS</div>
+      </sc-if>
+      <sc-for list="{{ brandsNav }}" as="b" hint-placeholder-count="3">
+        <button aria-label="{{ b.name }}" style="display:flex;align-items:center;gap:12px;height:40px;padding:0 7px;border:none;background:{{ b.activeBg }};border-radius:8px;cursor:pointer;" style-hover="background:var(--nav-item-hover);">
+          <span class="photo" style="background-image:{{ b.img }};position:relative;flex-shrink:0;width:26px;height:26px;border-radius:7px;border:1px solid var(--color-border);"><span style="position:absolute;top:-2px;right:-2px;width:8px;height:8px;border-radius:50%;background:{{ b.dot }};border:1.5px solid var(--color-bg-card);"></span></span>
+          <sc-if value="{{ navExpanded }}" hint-placeholder-val="{{ false }}"><span style="font-size:var(--fs-sm);font-weight:{{ b.weight }};color:{{ b.nameColor }};white-space:nowrap;flex:1;text-align:left;">{{ b.name }}</span></sc-if>
+        </button>
+      </sc-for>
+      <div style="height:1px;background:var(--color-border-subtle);margin:6px 4px;"></div>
+      <sc-for list="{{ navItems }}" as="n" hint-placeholder-count="6">
+        <a href="{{ n.href }}" aria-label="{{ n.label }}" style="display:flex;align-items:center;gap:12px;height:38px;padding:0 8px;border:none;background:{{ n.bg }};border-radius:8px;color:{{ n.color }};cursor:pointer;text-decoration:none;" style-hover="background:var(--nav-item-hover);">
+          <span style="flex-shrink:0;display:flex;" data-om-raster>{{ n.icon }}</span>
+          <sc-if value="{{ navExpanded }}" hint-placeholder-val="{{ false }}"><span style="font-size:var(--fs-sm);font-weight:{{ n.weight }};white-space:nowrap;">{{ n.label }}</span></sc-if>
+        </a>
+      </sc-for>
+    </div>
+    <button aria-label="Account" title="Account · Sasha Kim" style="display:flex;align-items:center;gap:12px;height:40px;padding:0 6px;border:none;background:transparent;border-radius:8px;cursor:pointer;" style-hover="background:var(--nav-item-hover);">
+      <span style="flex-shrink:0;width:30px;height:30px;border-radius:50%;background:var(--color-action);color:var(--color-action-text);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;">SK</span>
+      <sc-if value="{{ navExpanded }}" hint-placeholder-val="{{ false }}"><span style="font-size:var(--fs-sm);color:var(--color-text-secondary);white-space:nowrap;">Sasha Kim</span></sc-if>
+    </button>
+  </nav>
+
+  <!-- ===================== WORKSPACE ===================== -->
+  <main data-screen-label="Workspace" style="display:flex;flex-direction:column;min-width:0;height:100vh;position:relative;">
+    <div style="flex-shrink:0;padding:28px 40px 0;">
+      <div style="max-width:1000px;margin:0 auto;">
+        <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:16px;margin-bottom:18px;">
+          <div>
+            <h1 style="margin:0;font-size:var(--fs-2xl);font-weight:600;letter-spacing:-.01em;">Analytics</h1>
+            <p style="margin:5px 0 0;font-size:var(--fs-sm);color:var(--color-text-secondary);">{{ subtitle }}</p>
+          </div>
+          <button title="Export report" aria-label="Export report" style="height:40px;padding:0 16px;border:1px solid var(--color-border);border-radius:var(--radius-md);background:var(--color-bg-card);color:var(--color-text-primary);font-size:var(--fs-sm);font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:8px;" style-hover="border-color:var(--color-border-strong);">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Export
+          </button>
+        </div>
+        <sc-if value="{{ showControls }}" hint-placeholder-val="{{ true }}">
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px;">
+            <sc-for list="{{ ranges }}" as="r" hint-placeholder-count="4">
+              <button onClick="{{ r.set }}" style="height:32px;padding:0 14px;border:1px solid {{ r.border }};background:{{ r.bg }};color:{{ r.color }};border-radius:999px;font-size:var(--fs-sm);font-weight:500;cursor:pointer;" style-hover="border-color:var(--color-border-strong);">{{ r.label }}</button>
+            </sc-for>
+            <div style="flex:1;"></div>
+            <button style="height:32px;padding:0 13px;border:1px solid var(--color-border);background:var(--color-bg-card);color:var(--color-text-secondary);border-radius:999px;font-size:var(--fs-sm);font-weight:500;cursor:pointer;display:inline-flex;align-items:center;gap:7px;" style-hover="border-color:var(--color-border-strong);">
+              <span class="photo" style="background-image:{{ brandCover }};width:18px;height:18px;border-radius:5px;border:1px solid var(--color-border);flex-shrink:0;"></span>Nike
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+            </button>
+          </div>
+        </sc-if>
+      </div>
+    </div>
+
+    <div style="flex:1;overflow-y:auto;padding:18px 40px 24px;">
+      <div style="max-width:1000px;margin:0 auto;">
+
+        <!-- LOADING -->
+        <sc-if value="{{ wsLoading }}" hint-placeholder-val="{{ false }}">
+          <div class="kpirow" style="display:grid;grid-template-columns:repeat(6,1fr);gap:12px;margin-bottom:20px;">
+            <sc-for list="{{ kpiSkel }}" as="s" hint-placeholder-count="6"><div style="border:1px solid var(--color-border);border-radius:var(--card-radius);padding:15px;"><div class="skel" style="height:10px;width:60%;"></div><div class="skel" style="height:26px;width:70%;margin-top:12px;"></div><div class="skel" style="height:20px;width:100%;margin-top:12px;"></div></div></sc-for>
+          </div>
+          <div class="chartgrid" style="display:grid;grid-template-columns:1.4fr 1fr;gap:16px;">
+            <div class="skel" style="height:220px;border-radius:var(--card-radius);"></div>
+            <div class="skel" style="height:220px;border-radius:var(--card-radius);"></div>
+          </div>
+        </sc-if>
+
+        <!-- EMPTY -->
+        <sc-if value="{{ wsEmpty }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex;flex-direction:column;align-items:center;text-align:center;padding:70px 24px;gap:10px;">
+            <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="var(--color-text-muted)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+            <h2 style="margin:4px 0 0;font-size:var(--fs-xl);font-weight:600;">No data yet</h2>
+            <p style="margin:0;max-width:420px;font-size:var(--fs-sm);color:var(--color-text-secondary);line-height:1.55;">Publish a campaign and its assets to see performance, DNA trends, and AI activity here.</p>
+            <a href="Campaigns.v2.image-first.dc.html" style="margin-top:14px;height:40px;padding:0 20px;border:none;border-radius:var(--radius-md);background:var(--color-action);color:var(--color-action-text);font-size:var(--fs-sm);font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:8px;text-decoration:none;">Go to Campaigns</a>
+            <p style="margin:10px 0 0;font-size:var(--fs-xs);color:var(--color-text-muted);">Analytics: "Once Spring 2026 goes live, I'll track reach, engagement, and DNA lift."</p>
+          </div>
+        </sc-if>
+
+        <!-- ERROR -->
+        <sc-if value="{{ wsError }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex;flex-direction:column;align-items:center;text-align:center;padding:64px 24px;gap:10px;">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--color-text-muted)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><line x1="2" y1="2" x2="22" y2="22"/><path d="M8.5 16.5a5 5 0 0 1 7 0"/><path d="M2 8.82a15 15 0 0 1 4.17-2.65"/><path d="M10.66 5c4.01-.36 8.14.9 11.34 3.76"/><line x1="12" y1="20" x2="12.01" y2="20"/></svg>
+            <p style="margin:0;font-size:var(--fs-base);font-weight:600;">Couldn't load analytics</p>
+            <p style="margin:0;font-size:var(--fs-sm);color:var(--color-text-secondary);">The analytics service didn't respond.</p>
+            <div style="display:flex;gap:9px;margin-top:6px;">
+              <button onClick="{{ goPopulated }}" style="height:38px;padding:0 16px;border:none;background:var(--color-action);color:var(--color-action-text);font-size:var(--fs-sm);font-weight:600;border-radius:var(--radius-md);cursor:pointer;">Retry</button>
+              <button style="height:38px;padding:0 16px;border:1px solid var(--color-border);background:var(--color-bg-card);color:var(--color-text-primary);font-size:var(--fs-sm);font-weight:500;border-radius:var(--radius-md);cursor:pointer;">Report</button>
+            </div>
+          </div>
+        </sc-if>
+
+        <!-- POPULATED -->
+        <sc-if value="{{ wsData }}" hint-placeholder-val="{{ true }}">
+          <!-- KPI ROW -->
+          <div class="kpirow" style="display:grid;grid-template-columns:repeat(6,1fr);gap:12px;margin-bottom:18px;">
+            <sc-for list="{{ kpis }}" as="k" hint-placeholder-count="6">
+              <button onClick="{{ k.explain }}" style="text-align:left;border:1px solid {{ k.border }};border-radius:var(--card-radius);padding:14px 15px;background:var(--color-bg-card);cursor:pointer;display:flex;flex-direction:column;gap:9px;" style-hover="border-color:var(--color-border-strong);">
+                <span style="font-size:var(--fs-xs);font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--color-text-muted);line-height:1.3;">{{ k.label }}</span>
+                <span class="mono" style="font-size:var(--fs-2xl);font-weight:700;line-height:1;color:var(--color-text-primary);">{{ k.value }}</span>
+                <span style="display:flex;align-items:center;gap:5px;font-size:var(--fs-xs);font-weight:600;color:{{ k.deltaColor }};"><span data-om-raster style="display:flex;">{{ k.deltaIcon }}</span>{{ k.delta }}<span style="color:var(--color-text-muted);font-weight:500;">{{ k.deltaNote }}</span></span>
+                <svg viewBox="0 0 100 26" preserveAspectRatio="none" style="width:100%;height:22px;overflow:visible;"><polyline points="{{ k.spark }}" fill="none" stroke="{{ k.sparkColor }}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"/></svg>
+              </button>
+            </sc-for>
+          </div>
+
+          <!-- CHART GRID ROW 1 -->
+          <div class="chartgrid" style="display:grid;grid-template-columns:1.5fr 1fr;gap:16px;margin-bottom:16px;">
+            <!-- TREND: DNA over time -->
+            <div style="border:1px solid var(--color-border);border-radius:var(--card-radius);padding:18px 20px;background:var(--color-bg-card);">
+              <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:14px;">
+                <div><div style="font-size:var(--fs-sm);font-weight:600;">Brand DNA over time</div><div style="font-size:var(--fs-xs);color:var(--color-text-muted);margin-top:3px;">Overall score · last 7 periods</div></div>
+                <button onClick="{{ explainDna }}" title="Explain this metric" aria-label="Explain this metric" style="width:28px;height:28px;border:1px solid var(--color-border);border-radius:8px;background:var(--color-bg-card);color:var(--color-text-secondary);cursor:pointer;display:flex;align-items:center;justify-content:center;" style-hover="border-color:var(--color-border-strong);color:var(--color-text-primary);"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg></button>
+              </div>
+              <svg viewBox="0 0 320 130" style="width:100%;height:auto;overflow:visible;">
+                <line x1="0" y1="122" x2="320" y2="122" stroke="var(--color-border)" stroke-width="1"/>
+                <polygon points="{{ dnaArea }}" fill="rgba(17,17,17,0.05)"/>
+                <polyline points="{{ dnaLine }}" fill="none" stroke="var(--color-text-primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <circle cx="{{ dnaLastX }}" cy="{{ dnaLastY }}" r="3.5" fill="var(--color-text-primary)"/>
+                <sc-for list="{{ dnaTicks }}" as="t" hint-placeholder-count="7"><text x="{{ t.x }}" y="130" font-size="9" fill="#9ca3af" text-anchor="middle" font-family="Inter">{{ t.label }}</text></sc-for>
+              </svg>
+            </div>
+            <!-- SCORE: approval rate ring -->
+            <div style="border:1px solid var(--color-border);border-radius:var(--card-radius);padding:18px 20px;background:var(--color-bg-card);display:flex;flex-direction:column;">
+              <div style="font-size:var(--fs-sm);font-weight:600;margin-bottom:2px;">AI approval rate</div>
+              <div style="font-size:var(--fs-xs);color:var(--color-text-muted);">Approved ÷ AI actions</div>
+              <div style="flex:1;display:flex;align-items:center;justify-content:center;padding:12px 0;">
+                <svg viewBox="0 0 100 100" style="width:130px;height:130px;">
+                  <circle cx="50" cy="50" r="42" fill="none" stroke="var(--color-bg-muted)" stroke-width="9"/>
+                  <circle cx="50" cy="50" r="42" fill="none" stroke="{{ ringColor }}" stroke-width="9" stroke-linecap="round" stroke-dasharray="{{ ringDash }}" transform="rotate(-90 50 50)"/>
+                  <text x="50" y="49" text-anchor="middle" font-size="23" font-weight="700" fill="#111" font-family="Inter" class="mono">{{ approvalRate }}</text>
+                  <text x="50" y="63" text-anchor="middle" font-size="8" fill="#9ca3af" font-family="Inter">approved</text>
+                </svg>
+              </div>
+              <div style="display:flex;justify-content:space-between;font-size:var(--fs-xs);color:var(--color-text-secondary);"><span>128 approved</span><span>11 edited · 3 rejected</span></div>
+            </div>
+          </div>
+
+          <!-- CHART GRID ROW 2 -->
+          <div class="chartgrid" style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;">
+            <!-- COMPARISON: campaign performance -->
+            <div style="border:1px solid var(--color-border);border-radius:var(--card-radius);padding:18px 20px;background:var(--color-bg-card);">
+              <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:16px;"><div><div style="font-size:var(--fs-sm);font-weight:600;">Campaign performance</div><div style="font-size:var(--fs-xs);color:var(--color-text-muted);margin-top:3px;">Engagement rate by campaign</div></div><a href="Campaign%20Performance.v2.image-first.dc.html" style="font-size:var(--fs-xs);font-weight:600;color:var(--color-text-secondary);text-decoration:none;display:inline-flex;align-items:center;gap:3px;flex-shrink:0;" style-hover="color:var(--color-text-primary);">Drill in<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></a></div>
+              <div style="display:flex;flex-direction:column;gap:13px;">
+                <sc-for list="{{ campaignBars }}" as="b" hint-placeholder-count="4">
+                  <a href="{{ b.href }}" style="display:flex;align-items:center;gap:11px;text-decoration:none;cursor:pointer;" style-hover="opacity:.72;">
+                    <span style="width:96px;flex-shrink:0;font-size:var(--fs-sm);color:var(--color-text-secondary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ b.name }}</span>
+                    <div style="flex:1;height:10px;border-radius:6px;background:var(--color-bg-muted);overflow:hidden;"><span style="display:block;height:100%;width:{{ b.w }};background:{{ b.color }};border-radius:6px;"></span></div>
+                    <span class="mono" style="width:38px;text-align:right;font-size:var(--fs-xs);font-weight:600;color:var(--color-text-primary);">{{ b.val }}</span>
+                  </a>
+                </sc-for>
+              </div>
+            </div>
+            <!-- COMPARISON: asset DNA vs engagement (bars) -->
+            <div style="border:1px solid var(--color-border);border-radius:var(--card-radius);padding:18px 20px;background:var(--color-bg-card);">
+              <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:16px;"><div><div style="font-size:var(--fs-sm);font-weight:600;">Top assets</div><div style="font-size:var(--fs-xs);color:var(--color-text-muted);margin-top:3px;">By engagement · DNA match shown</div></div></div>
+              <div style="display:flex;align-items:flex-end;gap:14px;height:120px;padding-top:6px;">
+                <sc-for list="{{ assetBars }}" as="a" hint-placeholder-count="5">
+                  <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:7px;height:100%;justify-content:flex-end;">
+                    <span class="mono" style="font-size:10px;font-weight:600;color:var(--color-text-secondary);">{{ a.dna }}</span>
+                    <div style="width:100%;max-width:34px;height:{{ a.h }};background:{{ a.color }};border-radius:6px 6px 0 0;"></div>
+                    <span style="font-size:10px;color:var(--color-text-muted);">{{ a.label }}</span>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+          </div>
+
+          <!-- AI INSIGHTS -->
+          <div style="border:1px solid var(--color-border);border-radius:var(--card-radius);padding:18px 20px;background:var(--color-bg-card);">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;"><span style="width:22px;height:22px;border-radius:6px;background:var(--color-bg-muted);display:flex;align-items:center;justify-content:center;" data-om-raster><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--color-text-secondary)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437z"/></svg></span><span style="font-size:var(--fs-sm);font-weight:600;">AI insights</span></div>
+            <div style="display:flex;flex-direction:column;gap:2px;">
+              <sc-for list="{{ insights }}" as="i" hint-placeholder-count="3">
+                <div style="display:flex;align-items:flex-start;gap:12px;padding:13px 0;border-bottom:1px solid var(--color-border-subtle);">
+                  <span style="width:7px;height:7px;border-radius:50%;background:{{ i.dot }};flex-shrink:0;margin-top:6px;"></span>
+                  <div style="flex:1;min-width:0;">
+                    <div style="font-size:var(--fs-sm);color:var(--color-text-primary);line-height:1.5;">{{ i.text }}</div>
+                    <div style="display:flex;align-items:center;gap:8px;margin-top:5px;"><span style="font-size:var(--fs-xs);font-weight:600;color:{{ i.confColor }};">{{ i.conf }}% confidence</span><span style="font-size:var(--fs-xs);color:var(--color-text-muted);">· {{ i.source }}</span></div>
+                  </div>
+                  <button onClick="{{ i.explain }}" style="flex-shrink:0;height:32px;padding:0 13px;border:1px solid var(--color-border);border-radius:999px;background:var(--color-bg-card);color:var(--color-text-primary);font-size:var(--fs-xs);font-weight:600;cursor:pointer;" style-hover="background:var(--color-bg-subtle);border-color:var(--color-border-strong);">{{ i.action }}</button>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+
+        </sc-if>
+      </div>
+    </div>
+
+    <!-- ===================== AI ANALYTICS — DOCKED CHAT ===================== -->
+    <sc-if value="{{ chatDockShow }}" hint-placeholder-val="{{ true }}">
+    <div class="m-chatdock" style="flex-shrink:0;border-top:1px solid var(--color-border);background:var(--color-bg-card);padding:13px 40px 15px;">
+      <div style="max-width:1000px;margin:0 auto;display:flex;flex-direction:column;gap:11px;">
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span style="width:22px;height:22px;border-radius:6px;background:var(--color-bg-muted);display:flex;align-items:center;justify-content:center;flex-shrink:0;" data-om-raster><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--color-text-secondary)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437z"/></svg></span>
+          <span style="font-size:var(--fs-xs);font-weight:600;color:var(--color-text-secondary);">Analytics Intelligence</span>
+          <span style="width:5px;height:5px;border-radius:50%;background:var(--color-approved);"></span>
+        </div>
+        <sc-if value="{{ chatIdle }}" hint-placeholder-val="{{ true }}">
+          <p style="margin:0;font-size:var(--fs-sm);color:var(--color-text-primary);line-height:1.5;">{{ chatGreeting }}</p>
+        </sc-if>
+        <sc-if value="{{ chatThinking }}" hint-placeholder-val="{{ false }}">
+          <div role="status" aria-live="polite" style="display:flex;flex-direction:column;gap:6px;">
+            <sc-for list="{{ streamLines }}" as="l" hint-placeholder-count="5">
+              <div style="display:flex;align-items:center;gap:9px;">
+                <sc-if value="{{ l.done }}" hint-placeholder-val="{{ false }}"><span style="display:flex;flex-shrink:0;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--color-approved)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span></sc-if>
+                <sc-if value="{{ l.active }}" hint-placeholder-val="{{ true }}"><span style="width:8px;height:8px;border-radius:50%;background:var(--color-text-primary);flex-shrink:0;animation:pulse 1s infinite;"></span></sc-if>
+                <sc-if value="{{ l.todo }}" hint-placeholder-val="{{ false }}"><span style="width:8px;height:8px;border-radius:50%;background:var(--color-border);flex-shrink:0;"></span></sc-if>
+                <span style="font-size:var(--fs-sm);color:{{ l.textColor }};">{{ l.text }}</span>
+              </div>
+            </sc-for>
+          </div>
+        </sc-if>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <sc-for list="{{ quickActions }}" as="q" hint-placeholder-count="3">
+            <button onClick="{{ q.set }}" style="height:34px;padding:0 13px;border:1px solid var(--color-border);background:var(--color-bg-card);color:var(--color-text-primary);border-radius:999px;font-size:var(--fs-sm);font-weight:500;cursor:pointer;display:inline-flex;align-items:center;gap:7px;" style-hover="border-color:var(--color-border-strong);background:var(--color-bg-subtle);">
+              <span style="display:flex;flex-shrink:0;color:var(--color-text-secondary);" data-om-raster>{{ q.icon }}</span>{{ q.label }}
+            </button>
+          </sc-for>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;background:var(--color-bg-card);border:1px solid var(--color-border);border-radius:var(--radius-md);padding:0 8px 0 14px;height:48px;" style-focus="border-color:var(--color-border-focus);">
+          <button aria-label="Voice input" title="Voice input — coming soon" aria-disabled="true" style="border:none;background:transparent;color:var(--color-text-muted);cursor:pointer;display:flex;padding:4px;" style-hover="color:var(--color-text-primary);">
+            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="22"/></svg>
+          </button>
+          <input placeholder="Ask about performance…" style="flex:1;border:none;outline:none;background:transparent;font-size:var(--fs-sm);color:var(--color-text-primary);font-family:inherit;" />
+          <button aria-label="Send" style="width:34px;height:34px;flex-shrink:0;border:none;background:var(--color-action);color:var(--color-action-text);border-radius:8px;cursor:pointer;display:flex;align-items:center;justify-content:center;" style-hover="background:var(--color-action-hover);">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+          </button>
+        </div>
+      </div>
+    </div>
+    </sc-if>
+    <button class="sheetbtn" onClick="{{ toggleSheet }}" style="position:absolute;right:20px;top:74px;height:36px;padding:0 15px;border:1px solid var(--color-border);border-radius:999px;background:var(--color-bg-card);color:var(--color-text-primary);font-size:var(--fs-sm);font-weight:600;cursor:pointer;align-items:center;gap:8px;box-shadow:var(--shadow-panel);z-index:21;">Insights</button>
+  </main>
+
+  <!-- ===================== MOBILE BOTTOM TAB BAR ===================== -->
+  <nav class="m-tabbar" aria-label="Primary">
+    <button onClick="{{ mHome }}" aria-label="Home" style="flex:1;min-width:0;height:100%;border:none;background:transparent;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;color:var(--color-text-secondary);cursor:pointer;padding-top:6px;"><span style="display:flex;" data-om-raster><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9.5 12 3l9 6.5V20a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1z"/></svg></span><span style="font-size:10px;font-weight:500;">Home</span></button>
+    <button onClick="{{ mShoots }}" aria-label="Shoots" style="flex:1;min-width:0;height:100%;border:none;background:transparent;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;color:var(--color-text-secondary);cursor:pointer;padding-top:6px;"><span style="display:flex;" data-om-raster><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3z"/><circle cx="12" cy="13" r="3"/></svg></span><span style="font-size:10px;font-weight:500;">Shoots</span></button>
+    <button onClick="{{ mAssets }}" aria-label="Assets" style="flex:1;min-width:0;height:100%;border:none;background:transparent;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;color:var(--color-text-secondary);cursor:pointer;padding-top:6px;"><span style="display:flex;" data-om-raster><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg></span><span style="font-size:10px;font-weight:500;">Assets</span></button>
+    <button onClick="{{ mBrands }}" aria-label="Brands" style="flex:1;min-width:0;height:100%;border:none;background:transparent;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;color:var(--color-text-secondary);cursor:pointer;padding-top:6px;"><span style="display:flex;" data-om-raster><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="m12.83 2.18 8.36 4.18a1 1 0 0 1 0 1.79l-8.36 4.18a2 2 0 0 1-1.66 0L2.81 8.15a1 1 0 0 1 0-1.79l8.36-4.18a2 2 0 0 1 1.66 0z"/><path d="m2 12 9.34 4.67a2 2 0 0 0 1.66 0L22 12"/><path d="m2 17 9.34 4.67a2 2 0 0 0 1.66 0L22 17"/></svg></span><span style="font-size:10px;font-weight:500;">Brands</span></button>
+    <label for="m-more" aria-label="More" style="flex:1;min-width:0;height:100%;border:none;background:transparent;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;cursor:pointer;padding-top:6px;color:var(--color-text-primary);"><span style="display:flex;" data-om-raster><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="5" cy="12" r="1.4"/><circle cx="12" cy="12" r="1.4"/><circle cx="19" cy="12" r="1.4"/></svg></span><span style="font-size:10px;font-weight:600;">More</span></label>
+  </nav>
+
+  <!-- ===================== MOBILE MORE SHEET ===================== -->
+  <label for="m-more" class="m-more-backdrop" aria-label="Close menu"></label>
+  <div class="m-more-sheet" role="menu" aria-label="More destinations">
+    <label for="m-more" style="display:flex;align-items:center;justify-content:center;padding:9px 0 4px;cursor:pointer;"><span style="width:36px;height:4px;border-radius:2px;background:var(--color-border-strong);"></span></label>
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:4px 16px 8px;"><span style="font-size:var(--fs-sm);font-weight:600;color:var(--color-text-primary);">More</span><label for="m-more" aria-label="Close" style="display:flex;cursor:pointer;color:var(--color-text-muted);padding:4px;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></label></div>
+    <div style="padding:0 8px 12px;display:flex;flex-direction:column;gap:2px;">
+      <div aria-current="page" style="display:flex;align-items:center;gap:14px;height:52px;padding:0 16px;border-radius:12px;background:var(--nav-item-active);color:var(--color-text-primary);font-size:var(--fs-base);font-weight:600;"><span style="display:flex;color:var(--color-text-secondary);" data-om-raster><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg></span>Analytics<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--color-text-primary)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="margin-left:auto;"><path d="M20 6 9 17l-5-5"/></svg></div>
+      <a href="Campaigns.v2.image-first.dc.html" style="display:flex;align-items:center;gap:14px;height:52px;padding:0 16px;border-radius:12px;background:transparent;color:var(--color-text-primary);text-decoration:none;font-size:var(--fs-base);font-weight:500;"><span style="display:flex;color:var(--color-text-secondary);" data-om-raster><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="m3 11 18-5v12L3 14v-3z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/></svg></span>Campaigns<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--color-text-muted)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="margin-left:auto;"><polyline points="9 18 15 12 9 6"/></svg></a>
+      <a href="Matching.v2.image-first.dc.html" style="display:flex;align-items:center;gap:14px;height:52px;padding:0 16px;border-radius:12px;background:transparent;color:var(--color-text-primary);text-decoration:none;font-size:var(--fs-base);font-weight:500;"><span style="display:flex;color:var(--color-text-secondary);" data-om-raster><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg></span>Matching<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--color-text-muted)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="margin-left:auto;"><polyline points="9 18 15 12 9 6"/></svg></a>
+      <a href="Channel%20Preview.v2.image-first.dc.html" style="display:flex;align-items:center;gap:14px;height:52px;padding:0 16px;border-radius:12px;background:transparent;color:var(--color-text-primary);text-decoration:none;font-size:var(--fs-base);font-weight:500;"><span style="display:flex;color:var(--color-text-secondary);" data-om-raster><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg></span>Channel Preview<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--color-text-muted)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="margin-left:auto;"><polyline points="9 18 15 12 9 6"/></svg></a>
+    </div>
+  </div>
+
+  <!-- ===================== INTELLIGENCE PANEL ===================== -->
+  <aside data-screen-label="IntelligencePanel" class="{{ sheetClass }}" style="width:340px;flex-shrink:0;background:var(--intel-bg);border-left:1px solid var(--color-border);height:100vh;overflow-y:auto;position:relative;">
+    <div style="position:sticky;top:0;z-index:5;display:flex;align-items:center;justify-content:space-between;gap:6px;padding:5px 16px;background:var(--color-bg-subtle);border-bottom:1px solid var(--color-border);">
+      <span style="font-size:11px;font-weight:500;color:var(--color-text-muted);">Target — IntelligencePanel not production-wired</span>
+      <button class="sheetbtn" onClick="{{ toggleSheet }}" aria-label="Close" style="border:none;background:transparent;color:var(--color-text-muted);cursor:pointer;padding:2px;align-items:center;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+    </div>
+
+    <sc-if value="{{ intelLoading }}" hint-placeholder-val="{{ false }}">
+      <div style="padding:20px;display:flex;flex-direction:column;gap:16px;"><div class="skel" style="height:16px;width:60%;"></div><div class="skel" style="height:70px;width:100%;border-radius:12px;"></div><div class="skel" style="height:44px;width:100%;border-radius:12px;"></div><div class="skel" style="height:44px;width:100%;border-radius:12px;"></div></div>
+    </sc-if>
+    <sc-if value="{{ intelError }}" hint-placeholder-val="{{ false }}">
+      <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:48px 32px;gap:10px;"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--color-text-muted)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><line x1="2" y1="2" x2="22" y2="22"/><path d="M8.5 16.5a5 5 0 0 1 7 0"/><path d="M2 8.82a15 15 0 0 1 4.17-2.65"/><line x1="12" y1="20" x2="12.01" y2="20"/></svg><p style="margin:0;font-size:var(--fs-sm);color:var(--color-text-muted);">Unavailable</p></div>
+    </sc-if>
+
+    <sc-if value="{{ intelData }}" hint-placeholder-val="{{ true }}">
+      <div style="padding:18px 18px 28px;display:flex;flex-direction:column;gap:18px;">
+        <div>
+          <div style="font-size:var(--fs-xs);font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--color-text-muted);margin-bottom:9px;">Active filters</div>
+          <div style="display:flex;flex-wrap:wrap;gap:7px;">
+            <span style="display:inline-flex;align-items:center;gap:6px;height:28px;padding:0 11px;border:1px solid var(--color-border);border-radius:999px;font-size:var(--fs-xs);font-weight:500;color:var(--color-text-secondary);"><span class="photo" style="background-image:{{ brandCover }};width:15px;height:15px;border-radius:4px;flex-shrink:0;"></span>Nike</span>
+            <span style="display:inline-flex;align-items:center;height:28px;padding:0 11px;border:1px solid var(--color-border);border-radius:999px;font-size:var(--fs-xs);font-weight:500;color:var(--color-text-secondary);">{{ rangeLabel }}</span>
+          </div>
+        </div>
+
+        <div style="border:1px solid var(--color-border);border-radius:14px;padding:15px;background:var(--color-bg-subtle);">
+          <div style="display:flex;align-items:center;justify-content:space-between;"><span style="font-size:var(--fs-xs);font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--color-text-muted);">Headline</span></div>
+          <div style="display:flex;align-items:baseline;gap:9px;margin-top:8px;"><span class="mono" style="font-size:var(--fs-3xl);font-weight:700;line-height:1;">87</span><span style="font-size:var(--fs-sm);font-weight:600;color:var(--color-approved);">▲ 3 avg DNA</span></div>
+          <p style="margin:9px 0 0;font-size:var(--fs-sm);color:var(--color-text-secondary);line-height:1.5;">Brand DNA is up 3 points this period, led by Visual consistency across Spring assets.</p>
+          <button onClick="{{ explainDna }}" style="margin-top:12px;width:100%;height:36px;border:1px solid var(--color-border);border-radius:var(--radius-md);background:var(--color-bg-card);color:var(--color-text-primary);font-size:var(--fs-sm);font-weight:600;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:8px;" style-hover="border-color:var(--color-border-strong);"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>Explain this metric</button>
+        </div>
+
+        <div>
+          <div style="font-size:var(--fs-xs);font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--color-text-muted);margin-bottom:11px;">Top AI insights</div>
+          <div style="display:flex;flex-direction:column;gap:11px;">
+            <sc-for list="{{ panelInsights }}" as="p" hint-placeholder-count="3">
+              <button onClick="{{ p.explain }}" style="text-align:left;display:flex;gap:10px;padding:11px;border:1px solid var(--color-border);border-radius:12px;background:var(--color-bg-card);cursor:pointer;" style-hover="border-color:var(--color-border-strong);">
+                <span style="width:6px;height:6px;border-radius:50%;background:{{ p.dot }};flex-shrink:0;margin-top:5px;"></span>
+                <div style="min-width:0;"><div style="font-size:var(--fs-sm);color:var(--color-text-primary);line-height:1.45;">{{ p.text }}</div><div style="font-size:var(--fs-xs);color:var(--color-text-muted);margin-top:4px;">{{ p.conf }}% · {{ p.source }}</div></div>
+              </button>
+            </sc-for>
+          </div>
+        </div>
+      </div>
+    </sc-if>
+  </aside>
+
+  <!-- ===================== EVIDENCE MODAL ===================== -->
+  <sc-if value="{{ evOpen }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ closeEv }}" style="position:fixed;inset:0;z-index:680;background:rgba(17,17,17,.5);display:flex;align-items:flex-start;justify-content:center;padding:40px 20px;overflow-y:auto;">
+      <div onClick="{{ stopEv }}" style="width:440px;max-width:100%;margin:auto;position:relative;">
+        <button onClick="{{ closeEv }}" aria-label="Close" style="position:absolute;top:-34px;right:0;width:30px;height:30px;border:none;background:rgba(255,255,255,.15);color:#fff;border-radius:8px;cursor:pointer;display:flex;align-items:center;justify-content:center;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+        <dc-import name="components/EvidenceBlock"
+          title="{{ evTitle }}" score="{{ evScore }}" potential="{{ evPotential }}"
+          confidence="{{ evConfidence }}" why="{{ evWhy }}" reasoning="{{ evReasoning }}"
+          evidence="{{ evEvidence }}" suggestions="{{ evSuggestions }}"
+          on-approve="{{ evApprove }}" on-improve="{{ evImprove }}" on-regenerate="{{ evRegen }}"
+          hint-size="440px,560px"></dc-import>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- ===================== TOAST ===================== -->
+  <sc-if value="{{ toast }}" hint-placeholder-val="{{ false }}">
+    <div role="status" aria-live="polite" style="position:fixed;bottom:26px;left:50%;transform:translateX(-50%);z-index:670;display:flex;align-items:center;gap:9px;background:var(--color-text-primary);color:#fff;padding:11px 18px;border-radius:11px;box-shadow:0 8px 28px rgba(0,0,0,.22);font-size:var(--fs-sm);font-weight:500;max-width:90vw;">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#4ade80" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><path d="M20 6 9 17l-5-5"/></svg>{{ toast }}
+    </div>
+  </sc-if>
+
+  <!-- ===================== STATE SWITCHER ===================== -->
+  <div style="position:fixed;top:14px;left:50%;transform:translateX(-50%);z-index:600;display:flex;align-items:center;gap:3px;background:var(--color-text-primary);padding:5px;border-radius:11px;box-shadow:var(--shadow-modal);">
+    <span style="font-size:11px;color:rgba(255,255,255,.55);padding:0 8px 0 6px;font-weight:500;letter-spacing:.03em;">STATE</span>
+    <sc-for list="{{ states }}" as="s" hint-placeholder-count="4">
+      <button onClick="{{ s.set }}" style="height:28px;padding:0 12px;border:none;border-radius:7px;background:{{ s.bg }};color:{{ s.color }};font-size:12px;font-weight:{{ s.weight }};cursor:pointer;font-family:inherit;white-space:nowrap;" style-hover="background:rgba(255,255,255,.12);">{{ s.label }}</button>
+    </sc-for>
+  </div>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  state = { view:'populated', navExpanded:false, range:'30d', sheetOpen:false, chatState:'idle', streamIdx:0, evOpen:false, evKey:'dna', toast:null };
+
+  fireToast(msg){ this.setState({toast:msg}); clearTimeout(this._tt); this._tt=setTimeout(()=>this.setState({toast:null}),2400); }
+
+  ico(name,size){
+    const p={width:size||20,height:size||20,viewBox:'0 0 24 24',fill:'none',stroke:'currentColor',strokeWidth:1.7,strokeLinecap:'round',strokeLinejoin:'round'};
+    const d={calendar:[['rect',{x:3,y:4,width:18,height:18,rx:2}],['line',{x1:16,y1:2,x2:16,y2:6}],['line',{x1:8,y1:2,x2:8,y2:6}],['line',{x1:3,y1:10,x2:21,y2:10}]],
+      home:[['path',{d:'M3 9.5 12 3l9 6.5V20a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1z'}]],
+      layers:[['path',{d:'m12.83 2.18 8.36 4.18a1 1 0 0 1 0 1.79l-8.36 4.18a2 2 0 0 1-1.66 0L2.81 8.15a1 1 0 0 1 0-1.79l8.36-4.18a2 2 0 0 1 1.66 0z'}],['path',{d:'m2 12 9.34 4.67a2 2 0 0 0 1.66 0L22 12'}],['path',{d:'m2 17 9.34 4.67a2 2 0 0 0 1.66 0L22 17'}]],
+      camera:[['path',{d:'M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3z'}],['circle',{cx:12,cy:13,r:3}]],
+      grid:[['rect',{x:3,y:3,width:7,height:7,rx:1}],['rect',{x:14,y:3,width:7,height:7,rx:1}],['rect',{x:14,y:14,width:7,height:7,rx:1}],['rect',{x:3,y:14,width:7,height:7,rx:1}]],
+      megaphone:[['path',{d:'m3 11 18-5v12L3 14v-3z'}],['path',{d:'M11.6 16.8a3 3 0 1 1-5.8-1.6'}]],
+      chart:[['line',{x1:18,y1:20,x2:18,y2:10}],['line',{x1:12,y1:20,x2:12,y2:4}],['line',{x1:6,y1:20,x2:6,y2:14}]],
+      sparkles:[['path',{d:'M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437z'}]],
+      trend:[['polyline',{points:'22 7 13.5 15.5 8.5 10.5 2 17'}],['polyline',{points:'16 7 22 7 22 13'}]],
+      target:[['circle',{cx:12,cy:12,r:10}],['circle',{cx:12,cy:12,r:6}],['circle',{cx:12,cy:12,r:2}]],
+    };
+    return React.createElement('svg',p,d[name].map((n,i)=>React.createElement(n[0],{key:i,...n[1]})));
+  }
+  img(k){ return `url("../images/${k}-fashionos.jpeg")`; }
+
+  // build an SVG polyline points string from an array of values
+  pts(arr,w,h,pad){ const mn=Math.min(...arr),mx=Math.max(...arr),rng=(mx-mn)||1; const p=pad||0; return arr.map((v,i)=>{ const x=(i/(arr.length-1))*w; const y=h-p-((v-mn)/rng)*(h-2*p); return x.toFixed(1)+','+y.toFixed(1); }); }
+
+  startStream(){
+    if(this._iv) return;
+    this.setState({chatState:'thinking',streamIdx:0});
+    this._iv=setInterval(()=>{ this.setState(s=>{ const n=s.streamIdx+1; if(n>=5){ clearInterval(this._iv); this._iv=null; setTimeout(()=>this.setState({chatState:'idle',streamIdx:0}),900); return {streamIdx:5}; } return {streamIdx:n}; }); },700);
+  }
+  componentWillUnmount(){ if(this._iv)clearInterval(this._iv); }
+
+  openEv(key){ this.setState({evOpen:true, evKey:key}); }
+
+  renderVals(){
+    const v=this.state.view, exp=this.state.navExpanded, range=this.state.range;
+
+    const navDef=[{k:'home',l:'Home'},{k:'layers',l:'Brands'},{k:'camera',l:'Shoots'},{k:'calendar',l:'Planner'},{k:'grid',l:'Assets'},{k:'megaphone',l:'Campaigns'},{k:'chart',l:'Analytics',active:true}];
+    const NAVHREF={"Home":"Command Center.v2.image-first.dc.html","Brands":"Brand List.v2.image-first.dc.html","Shoots":"Shoots List.v2.image-first.dc.html","Planner":"SCR-35-Planner-Hub.dc.html","Assets":"Assets.v2.image-first.dc.html","Campaigns":"Campaigns.v2.image-first.dc.html","Analytics":"Analytics.v2.image-first.dc.html"};
+    const navItems=navDef.map(n=>({label:n.l,href:NAVHREF[n.l],icon:this.ico(n.k),bg:n.active?'var(--nav-item-active)':'transparent',color:n.active?'var(--color-text-primary)':'var(--color-text-secondary)',weight:n.active?'600':'500'}));
+    const brandsNav=[{name:'Nike',img:this.img('5'),active:true},{name:'Adidas',img:this.img('6'),active:false},{name:'Zara',img:this.img('9'),active:false}].map(b=>({...b,activeBg:b.active?'var(--nav-item-active)':'transparent',dot:b.active?'#111111':'var(--color-text-disabled)',nameColor:b.active?'var(--color-text-primary)':'var(--color-text-secondary)',weight:b.active?'600':'400'}));
+
+    // ---- ranges ----
+    const rangeDefs=[['7d','7 days'],['30d','30 days'],['90d','Quarter'],['12m','Year']];
+    const ranges=rangeDefs.map(r=>({label:r[1],set:()=>this.setState({range:r[0]}),bg:r[0]===range?'var(--color-action)':'var(--color-bg-card)',color:r[0]===range?'var(--color-action-text)':'var(--color-text-secondary)',border:r[0]===range?'var(--color-action)':'var(--color-border)'}));
+    const rangeLabel=(rangeDefs.find(r=>r[0]===range)||[])[1]||'30 days';
+
+    // ---- KPIs (D-DS11) ----
+    const up='var(--color-approved)', down='var(--color-danger)';
+    const arrowUp=this.ico('trend',12);
+    const kpiDefs=[
+      {key:'dna',label:'Avg Brand DNA',value:'87',delta:'+3',note:'vs prior',good:true,spark:[80,79,82,84,83,85,87]},
+      {key:'live',label:'Campaigns live',value:'4',delta:'+1',note:'',good:true,spark:[2,2,3,3,3,4,4]},
+      {key:'assets',label:'Assets published',value:'342',delta:'+18',note:'',good:true,spark:[280,295,300,315,320,332,342]},
+      {key:'match',label:'Avg asset match',value:'86%',delta:'+2',note:'',good:true,spark:[81,82,83,84,84,85,86]},
+      {key:'ai',label:'AI actions approved',value:'128',delta:'+24',note:'',good:true,spark:[70,84,92,101,110,119,128]},
+      {key:'turn',label:'Approval turnaround',value:'1.4d',delta:'-0.3',note:'faster',good:true,spark:[2.1,2.0,1.9,1.8,1.6,1.5,1.4]},
+    ];
+    const kpis=kpiDefs.map(k=>({
+      label:k.label, value:k.value, delta:k.delta, deltaNote:k.note,
+      deltaColor:k.good?up:down, deltaIcon:this.ico('trend',12),
+      spark:this.pts(k.spark,100,26,3).join(' '), sparkColor:k.good?up:down,
+      border:this.state.evKey===k.key&&this.state.evOpen?'var(--color-text-primary)':'var(--color-border)',
+      explain:()=>this.openEv(k.key),
+    }));
+
+    // ---- Trend: DNA over time ----
+    const dnaVals=[78,80,79,82,84,85,87];
+    const dnaPts=this.pts(dnaVals,320,112,10);
+    const dnaLine=dnaPts.join(' ');
+    const last=dnaPts[dnaPts.length-1].split(',');
+    const dnaArea='0,122 '+dnaLine+' 320,122';
+    const dnaTickLabels=['','','','','','',''];
+    const monthLbls=['Oct','Nov','Dec','Jan','Feb','Mar','Apr'];
+    const dnaTicks=dnaPts.map((p,i)=>({x:p.split(',')[0],label:monthLbls[i]}));
+
+    // ---- Score ring: approval rate ----
+    const approvalRate=90; const C=2*Math.PI*42;
+    const ringDash=((approvalRate/100)*C).toFixed(1)+' '+C.toFixed(1);
+    const ringColor=approvalRate>=80?'var(--color-approved)':approvalRate>=60?'var(--color-low)':'var(--color-danger)';
+
+    // ---- Comparison: campaign performance ----
+    const cRaw=[['Spring 2026',7.8,'spring'],['Air Max Drop',6.2,'airmax'],['Resort Capsule',5.1,'resort'],['Heritage',3.4,'heritage']];
+    const cMax=Math.max(...cRaw.map(c=>c[1]));
+    const campaignBars=cRaw.map((c,i)=>({name:c[0],val:c[1].toFixed(1)+'%',w:((c[1]/cMax)*100).toFixed(0)+'%',color:i===0?'var(--color-text-primary)':'var(--color-border-strong)',href:'Campaign%20Performance.v2.image-first.dc.html?c='+c[2]}));
+
+    // ---- Comparison: top assets (bar heights) ----
+    const aRaw=[['A1',92,100],['A2',88,84],['A3',86,72],['A4',79,58],['A5',74,44]];
+    const assetBars=aRaw.map((a,i)=>({label:a[0],dna:a[1],h:a[2]+'%',color:i===0?'var(--color-text-primary)':'var(--color-border-strong)'}));
+
+    // ---- AI insights ----
+    const insDefs=[
+      {key:'reallocate',text:'Spring 2026 is outperforming — reallocating 15% of Heritage budget could lift total engagement ~9%.',conf:88,source:'12-week performance model',dot:'#059669',action:'Explain'},
+      {key:'dna',text:'Visual DNA rose 4 points after the studio-lighting guideline — apply it to Air Max assets next.',conf:91,source:'DNA trend + asset scan',dot:'#111111',action:'Explain'},
+      {key:'turn',text:'Approval turnaround improved to 1.4 days; auto-approve ≥95% confidence to reach <1 day.',conf:76,source:'Approval log',dot:'#b45309',action:'Explain'},
+    ];
+    const confColor=c=>c>=85?up:c>=70?'var(--color-low)':down;
+    const insights=insDefs.map(i=>({...i,confColor:confColor(i.conf),explain:()=>this.openEv(i.key)}));
+    const panelInsights=insDefs.slice(0,3).map(i=>({text:i.text.length>96?i.text.slice(0,94)+'…':i.text,conf:i.conf,source:i.source,dot:i.dot,explain:()=>this.openEv(i.key)}));
+
+    // ---- EvidenceBlock content per metric/insight ----
+    const evMap={
+      dna:{title:'Avg Brand DNA — why 87',score:87,potential:93,confidence:90,
+        why:'Overall Brand DNA is 87, up 3 this period. Visual consistency drove most of the lift after the studio-lighting guideline shipped; Voice is the laggard.',
+        reasoning:'DNA blends Brand (guideline adherence), Visual (palette/composition/lighting vs. references), and Voice (caption tone). The period-over-period delta is attributed to the pillar with the largest change — here, Visual +4.',
+        evidence:[{text:'Visual 88 (+4) — studio-lighting guideline applied to 62% of new assets'},{text:'Brand 88 (+2)'},{text:'Voice 84 (−1) — caption tone drift on 3 posts'},{text:'Based on 342 published assets this period'}],
+        suggestions:[{text:'Apply the studio-lighting guideline to Air Max assets',gain:3},{text:'Re-run caption tone check on the 3 flagged posts',gain:2},{text:'Add 2 lifestyle refs to the Visual set',gain:1}]},
+      live:{title:'Campaigns live — why 4',score:80,potential:88,confidence:85,why:'Four campaigns are live; one more is ready to launch pending final deliverables.',reasoning:'Counts campaigns in the Live state within the range; readiness is inferred from deliverable completion.',evidence:[{text:'Spring 2026, Air Max, Resort, Studio Editorial live'},{text:'Heritage 2/14 deliverables — not yet live'}],suggestions:[{text:'Complete Heritage moodboard to launch #5',gain:8}]},
+      assets:{title:'Assets published — why 342',score:85,potential:90,confidence:88,why:'342 assets published this period, up 18 — pace is strong and match quality is holding.',reasoning:'Counts approved+published assets; quality tracked via avg DNA match.',evidence:[{text:'+18 vs prior period'},{text:'Avg match 86% on published set'}],suggestions:[{text:'Bulk-approve the 9 pending ≥90% assets',gain:5}]},
+      match:{title:'Avg asset match — why 86%',score:86,potential:91,confidence:87,why:'Average DNA match on published assets is 86%, up 2. 18 assets sit below the 70% threshold.',reasoning:'Mean of per-asset DNA match across published assets in range.',evidence:[{text:'18 assets below 70% (down from 24)'},{text:'Top quartile ≥ 92%'}],suggestions:[{text:'Replace or re-grade the 18 low-match assets',gain:3},{text:'Lock the palette on new shoots',gain:2}]},
+      ai:{title:'AI actions approved — why 128',score:82,potential:90,confidence:84,why:'128 AI actions approved this period (+24). Approval rate is 90% with a 1.4-day turnaround.',reasoning:'Counts approved AI write-actions (drafts, scores, plans). Rate = approved ÷ total AI actions.',evidence:[{text:'90% approval rate'},{text:'11 edited before approval · 3 rejected'}],suggestions:[{text:'Auto-approve ≥95% confidence to cut queue',gain:6}]},
+      turn:{title:'Approval turnaround — why 1.4d',score:80,potential:92,confidence:80,why:'Turnaround improved to 1.4 days (−0.3). Faster is better here.',reasoning:'Median time from AI action created → operator decision. Lower is better; inverted colour scale.',evidence:[{text:'Down from 1.7 days'},{text:'Weekend queue is the main delay'}],suggestions:[{text:'Auto-approve ≥95% confidence',gain:8},{text:'Route weekend approvals to on-call',gain:4}]},
+      reallocate:{title:'Budget reallocation — why',score:74,potential:90,confidence:88,why:'Spring 2026 returns ~2.3× the engagement per dollar of Heritage. Shifting 15% of Heritage budget is projected to lift total engagement ~9%.',reasoning:'Compares engagement-per-spend across live campaigns over 12 weeks; projects a marginal-return reallocation.',evidence:[{text:'Spring CPE $0.14 vs Heritage $0.32'},{text:'Heritage still in planning (2/14)'},{text:'12-week model, R²=0.81'}],suggestions:[{text:'Move 15% Heritage → Spring paid social',gain:9},{text:'Re-evaluate Heritage after moodboard lock',gain:4}]},
+    };
+    const ev=evMap[this.state.evKey]||evMap.dna;
+
+    // ---- chat ----
+    const cs=this.state.chatState,sidx=this.state.streamIdx;
+    const SL=['Reading metrics…','Comparing to prior period…','Scanning campaigns…','Ranking insights…','Ready'];
+    const streamLines=SL.map((t,i)=>({text:t,done:i<sidx,active:i===sidx,todo:i>sidx,textColor:i<sidx?'var(--color-text-secondary)':i===sidx?'var(--color-text-primary)':'var(--color-text-disabled)'}));
+    const qa=[['Top movers','trend'],['Why is DNA up?','sparkles'],['Budget ideas','target']];
+    const quickActions=qa.map(q=>({label:q[0],icon:this.ico(q[1],15),set:()=>this.startStream()}));
+
+    const stateDef=[{id:'populated',l:'Populated'},{id:'loading',l:'Loading'},{id:'empty',l:'Empty'},{id:'error',l:'Error'}];
+    const states=stateDef.map(s=>({label:s.l,set:()=>this.setState({view:s.id,sheetOpen:false}),bg:v===s.id?'#ffffff':'transparent',color:v===s.id?'#111111':'rgba(255,255,255,.7)',weight:v===s.id?'600':'500'}));
+
+    return {
+      navWidth:exp?'var(--nav-width-expanded)':'var(--nav-width-collapsed)', navExpanded:exp,
+      toggleNav:()=>this.setState(s=>({navExpanded:!s.navExpanded})),
+      mHome:()=>{window.location.href='Command Center.v2.image-first.dc.html';},
+      mShoots:()=>{window.location.href='Shoots List.v2.image-first.dc.html';},
+      mAssets:()=>{window.location.href='Assets.v2.image-first.dc.html';},
+      mBrands:()=>{window.location.href='Brand List.v2.image-first.dc.html';},
+      goPopulated:()=>this.setState({view:'populated'}),
+      toggleSheet:()=>this.setState(s=>({sheetOpen:!s.sheetOpen})),
+      sheetClass:this.state.sheetOpen?'sheet-open':'',
+      subtitle:(v==='empty')?'No data yet':'Nike · '+rangeLabel+' · updated just now',
+      showControls:v==='populated', brandCover:this.img('5'), rangeLabel,
+      ranges,
+      wsLoading:v==='loading', wsEmpty:v==='empty', wsError:v==='error', wsData:v==='populated',
+      intelLoading:v==='loading', intelError:v==='error', intelData:v==='populated',
+      kpiSkel:[1,2,3,4,5,6],
+      navItems, brandsNav, kpis, states,
+      dnaLine, dnaArea, dnaLastX:last[0], dnaLastY:last[1], dnaTicks,
+      approvalRate, ringDash, ringColor,
+      campaignBars, assetBars, insights, panelInsights,
+      // chat
+      chatDockShow:(v==='populated'), chatIdle:cs==='idle', chatThinking:cs==='thinking',
+      chatGreeting:"Nike is up 3 DNA points this period and Spring 2026 is your top performer. I found 3 opportunities — the biggest is a budget reallocation worth ~9% engagement.",
+      streamLines, quickActions,
+      // EvidenceBlock
+      evOpen:this.state.evOpen, openEv:()=>this.openEv('dna'), explainDna:()=>this.openEv('dna'),
+      closeEv:()=>this.setState({evOpen:false}), stopEv:(e)=>{ if(e&&e.stopPropagation)e.stopPropagation(); },
+      evTitle:ev.title, evScore:ev.score, evPotential:ev.potential, evConfidence:ev.confidence,
+      evWhy:ev.why, evReasoning:ev.reasoning, evEvidence:ev.evidence, evSuggestions:ev.suggestions,
+      evApprove:()=>{ this.setState({evOpen:false}); this.fireToast('Recommendation applied'); },
+      evImprove:()=>this.fireToast('Generating an alternative…'),
+      evRegen:()=>{ this.startStream(); this.fireToast('Recomputing…'); },
+      toast:this.state.toast,
+    };
+  }
+}
+</script>
+</body>
+</html>
