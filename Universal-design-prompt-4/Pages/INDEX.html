@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pages — iPix / FashionOS</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Geist+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root{--bg:#fff;--surface:#fafafa;--border:#e5e7eb;--border-2:#d1d5db;--text:#111;--text-2:#6b7280;--text-3:#9ca3af;--action:#111;--prospect:#2563eb;--active:#059669;--approval:#d97706;--approval-bg:#fef3e2;}
+  *{box-sizing:border-box;}
+  body{margin:0;font-family:"Inter",sans-serif;color:var(--text);background:var(--surface);-webkit-font-smoothing:antialiased;}
+  .wrap{max-width:960px;margin:0 auto;padding:48px 28px 80px;}
+  header{margin-bottom:8px;display:flex;align-items:center;gap:12px;}
+  .logo{width:36px;height:36px;border-radius:9px;background:var(--action);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:17px;}
+  h1{margin:0;font-size:26px;font-weight:700;letter-spacing:-.02em;}
+  .sub{margin:6px 0 0;font-size:14px;color:var(--text-2);line-height:1.55;}
+  .badge{display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:9999px;background:var(--approval-bg);border:1px solid #f4d9ad;font-size:11px;font-weight:600;color:var(--approval);}
+  .sec{margin-top:34px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--text-3);margin-bottom:12px;}
+  .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;}
+  a.card{display:block;text-decoration:none;color:inherit;border:1px solid var(--border);border-radius:14px;background:var(--bg);padding:15px 16px;transition:border-color .15s,transform .15s,box-shadow .15s;}
+  a.card:hover{border-color:var(--text);transform:translateY(-1px);box-shadow:0 6px 20px rgba(0,0,0,.06);}
+  .scr{font-family:"Geist Mono",monospace;font-size:11px;font-weight:600;color:var(--prospect);}
+  .scr.legacy{color:var(--text-3);}
+  .ct{font-size:14px;font-weight:600;margin:5px 0 4px;}
+  .cd{font-size:12px;color:var(--text-2);line-height:1.5;}
+  .route{font-family:"Geist Mono",monospace;font-size:10.5px;color:var(--text-3);margin-top:8px;}
+  a.doc{display:flex;align-items:center;justify-content:space-between;text-decoration:none;color:inherit;border:1px solid var(--border);border-radius:12px;background:var(--bg);padding:12px 16px;margin-bottom:8px;transition:border-color .15s;}
+  a.doc:hover{border-color:var(--text);}
+  .doc .cd{margin-top:2px;}
+  .arrow{color:var(--text-3);font-size:16px;}
+  .note{margin-top:34px;border:1px solid var(--border);border-radius:12px;background:var(--bg);padding:15px 17px;font-size:12.5px;color:var(--text-2);line-height:1.6;}
+  .note b{color:var(--text);}
+  .warn{border-color:#f4d9ad;background:var(--approval-bg);}
+  @media(max-width:820px){.grid{grid-template-columns:repeat(2,1fr);}}
+  @media(max-width:560px){.grid{grid-template-columns:1fr;}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="logo">i</div>
+    <div>
+      <h1>Pages — iPix / FashionOS</h1>
+      <p class="sub">Single source of truth for every screen prototype. 35 Design-Component screens across the operator platform, the two-sided booking set, the CRM / Relationships hub, and the Planner suite — one flat folder, one <code>support.js</code>.</p>
+    </div>
+  </header>
+  <p style="margin-top:14px;"><span class="badge">Sample data — all screens are fixtures · AI agents not yet wired</span></p>
+
+  <div class="sec">Operator & Shoot lifecycle</div>
+  <div class="grid">
+    <a class="card" href="Command Center.v2.image-first.dc.html"><div class="scr">SCR-01</div><div class="ct">Command Center</div><div class="cd">Operator home — KPIs, needs-attention, IntelligencePanel.</div><div class="route">/app</div></a>
+    <a class="card" href="Brand List.v2.image-first.dc.html"><div class="scr">SCR-02</div><div class="ct">Brand List</div><div class="cd">Brand portfolio with DNA scores + at-risk surfacing.</div><div class="route">/app/brand</div></a>
+    <a class="card" href="Brand Detail.v2.image-first.dc.html"><div class="scr">SCR-03</div><div class="ct">Brand Detail</div><div class="cd">Brand 360° — DNA, health, campaigns, shoots.</div><div class="route">/app/brand/[id]</div></a>
+    <a class="card" href="Shoots List.v2.image-first.dc.html"><div class="scr">SCR-04</div><div class="ct">Shoots List</div><div class="cd">Production pipeline with status + progress.</div><div class="route">/app/shoots</div></a>
+    <a class="card" href="Shoot Detail.v2.image-first.dc.html"><div class="scr">SCR-05</div><div class="ct">Shoot Detail <span style="color:var(--text-3)">(+ booking flow)</span></div><div class="cd">Tabbed workspace. <code>flow=booking</code> → Booking Detail variant (SCR-22).</div><div class="route">/app/shoots/[id]</div></a>
+    <a class="card" href="Shoot Wizard.v2.image-first.dc.html"><div class="scr">SCR-06</div><div class="ct">Shoot Wizard <span style="color:var(--text-3)">(+ booking flow)</span></div><div class="cd">Multi-step wizard. <code>flow=booking</code> → Booking Wizard (SCR-21).</div><div class="route">/app/shoots/new</div></a>
+    <a class="card" href="Campaigns.v2.image-first.dc.html"><div class="scr">SCR-07</div><div class="ct">Campaigns</div><div class="cd">Campaign planning + creative direction.</div><div class="route">/app/campaigns</div></a>
+    <a class="card" href="Assets.v2.image-first.dc.html"><div class="scr">SCR-08</div><div class="ct">Assets</div><div class="cd">Asset library — rights, usage, release metadata.</div><div class="route">/app/assets</div></a>
+    <a class="card" href="Channel Preview.v2.image-first.dc.html"><div class="scr">SCR-10</div><div class="ct">Channel Preview</div><div class="cd">In-feed preview + publish flow.</div><div class="route">/app/preview</div></a>
+    <a class="card" href="Onboarding.v2.zeely.dc.html"><div class="scr">SCR-11</div><div class="ct">Onboarding</div><div class="cd">Brand onboarding (13-screen flow).</div><div class="route">/onboarding</div></a>
+    <a class="card" href="Analytics.v2.image-first.dc.html"><div class="scr">SCR-16</div><div class="ct">Analytics</div><div class="cd">KPIs with deltas + sparklines.</div><div class="route">/app/analytics</div></a>
+    <a class="card" href="Campaign Performance.v2.image-first.dc.html"><div class="scr">SCR-17</div><div class="ct">Campaign Performance</div><div class="cd">Per-campaign drill-down.</div><div class="route">/app/analytics/campaigns</div></a>
+    <a class="card" href="Component Library.dc.html"><div class="scr">LIB</div><div class="ct">Component Library</div><div class="cd">Shared component / token reference.</div><div class="route">reference</div></a>
+    <a class="card" href="SCR-18-Collaboration-Audit.dc.html"><div class="scr">SCR-18</div><div class="ct">Activity &amp; Audit</div><div class="cd">Collaboration feed + immutable audit log — comments (resolve HITL), approvals, edits w/ diffs.</div><div class="route">/app/activity</div></a>
+    <a class="card" href="Matching.v2.image-first.dc.html"><div class="scr legacy">SCR-09 ·legacy</div><div class="ct">Matching (Discovery)</div><div class="cd"><b>Legacy</b> brand↔creator discovery reference — kept until merged/retired. See note below.</div><div class="route">/app/matching (legacy)</div></a>
+  </div>
+
+  <div class="sec">Booking (two-sided)</div>
+  <div class="grid">
+    <a class="card" href="SCR-09-Matching-Talent.dc.html"><div class="scr">SCR-09 ·current</div><div class="ct">Matching · Casting Review</div><div class="cd">Talent Matches — Casting Review (card + swipe) · Grid · List. Shortlist drawer + fit breakdown. <b>Current booking workflow.</b></div><div class="route">/app/matching</div></a>
+    <a class="card" href="SCR-20-Talent-Profile.dc.html"><div class="scr">SCR-20</div><div class="ct">Talent / Model Profile 360°</div><div class="cd"><code>mode</code> (operator · model). Portfolio · Measurements · Availability · Bookings · Reviews · Documents.</div><div class="route">/app/matching/talent/:id</div></a>
+    <a class="card" href="SCR-24-Talent-Onboarding.dc.html"><div class="scr">SCR-24</div><div class="ct">Talent Onboarding · HITL</div><div class="cd">URL-context build; <b>FieldReview</b> per AI field — Finish locked until 0 unreviewed.</div><div class="route">/app/talent/profile</div></a>
+    <a class="card" href="SCR-23-Availability-Editor.dc.html"><div class="scr">SCR-23</div><div class="ct">Availability Editor</div><div class="cd">Month editor — available/blocked toggle; tentative/booked read-only. 4 states + loading/error.</div><div class="route">talent-scoped</div></a>
+    <a class="card" href="SCR-25-Role-Dashboards.dc.html"><div class="scr">SCR-25</div><div class="ct">Role Dashboards</div><div class="cd"><code>role</code> (Model · Agency). Incoming offers with Accept/Decline — talent counterpart to operator confirm.</div><div class="route">/app/model · /app/roster</div></a>
+    <a class="card" href="SCR-15-Notification-Center.dc.html"><div class="scr">SCR-15</div><div class="ct">Notification Center</div><div class="cd">Destination for every booking event — bell + slide-over, rows deep-link to Booking Detail.</div><div class="route">/app/inbox</div></a>
+  </div>
+
+  <div class="sec">CRM / Relationships <span style="color:var(--approval)">(design-ready · backend-gated IPI-362)</span></div>
+  <div class="grid">
+    <a class="card" href="SCR-26-CRM-Companies-List.dc.html"><div class="scr">SCR-26</div><div class="ct">Organizations</div><div class="cd">Kind chips (Brand·Agency·Vendor·Sponsor) + search. Front door onto Brand Detail.</div><div class="route">/app/crm/companies</div></a>
+    <a class="card" href="SCR-27-CRM-Company-Detail.dc.html"><div class="scr">SCR-27</div><div class="ct">Organization 360°</div><div class="cd">Header + kind chip + tab strip + unified activity timeline.</div><div class="route">/app/crm/companies/[id]</div></a>
+    <a class="card" href="SCR-28-CRM-Contacts-List.dc.html"><div class="scr">SCR-28</div><div class="ct">People</div><div class="cd">Role chips (Contact·Model·Photographer·Crew) + search.</div><div class="route">/app/crm/contacts</div></a>
+    <a class="card" href="SCR-29-CRM-Contact-Detail.dc.html"><div class="scr">SCR-29</div><div class="ct">Person 360°</div><div class="cd">Header + role chip + stacked contact arrays + linked deals.</div><div class="route">/app/crm/contacts/[id]</div></a>
+    <a class="card" href="SCR-30-CRM-Pipeline.dc.html"><div class="scr">SCR-30</div><div class="ct">Pipeline</div><div class="cd">Kanban board (desktop) / stage accordion (mobile). Won/Lost HITL-gated.</div><div class="route">/app/crm/pipeline</div></a>
+    <a class="card" href="SCR-31-CRM-Deal-Detail.dc.html"><div class="scr">SCR-31</div><div class="ct">Deal Detail</div><div class="cd">Stage control + EvidenceBlock + ApprovalCard (won/lost/convert).</div><div class="route">/app/crm/pipeline/[id]</div></a>
+    <a class="card" href="DEMO-360-Agency.dc.html"><div class="scr">DEMO</div><div class="ct">360° Agency (demo)</div><div class="cd">Visual demo of the shared 360° profile template applied to an agency entity.</div><div class="route">template demo</div></a>
+  </div>
+
+  <div class="sec">Planner <span style="color:var(--approval)">(design-ready · backend-gated IPI-476/478)</span></div>
+  <div class="grid">
+    <a class="card" href="SCR-32-Planner-Workspace.dc.html"><div class="scr">SCR-32</div><div class="ct">Planner Workspace</div><div class="cd">Timeline (Gantt) · Kanban (phase columns) · Calendar · List. Task drawer w/ Approve·Edit·Discard gate.</div><div class="route">/app/planner/[id]</div></a>
+    <a class="card" href="SCR-33-Planner-Dashboard.dc.html"><div class="scr">SCR-33</div><div class="ct">Planner Dashboard</div><div class="cd">Role-based landing — KPI cards (link out), recent plans, week strip. Default mobile Planner view.</div><div class="route">/app/planner/dashboard</div></a>
+    <a class="card" href="SCR-34-Planner-Instance-Settings.dc.html"><div class="scr">SCR-34</div><div class="ct">Instance Settings</div><div class="cd">Members tab (access-role table + Invite dialog). Notif/Workflow/Danger = disabled placeholders.</div><div class="route">/app/planner/[id]/settings</div></a>
+    <a class="card" href="SCR-35-Planner-Hub.dc.html"><div class="scr">SCR-35</div><div class="ct">Planner Hub</div><div class="cd">Index of all plan instances — type filter (shoot·campaign·crm_deal) + status + cross-plan summary.</div><div class="route">/app/planner</div></a>
+  </div>
+
+  <div class="sec">Mobile reference builds</div>
+  <div class="grid">
+    <a class="card" href="SCR-MOBILE-Gallery.dc.html"><div class="scr">MOBILE</div><div class="ct">Mobile Preview Gallery</div><div class="cd">All 28 platform screens as 390 px phone frames — composer + Insights sheet + bottom nav.</div><div class="route">390 px frames</div></a>
+    <a class="card" href="SCR-MOBILE-CRM-Gallery.dc.html"><div class="scr">MOBILE</div><div class="ct">CRM Mobile Gallery</div><div class="cd">6 CRM screens as phone frames — incl. the kanban→stage-accordion reflow.</div><div class="route">390 px frames</div></a>
+    <a class="card" href="SCR-MOBILE-Booking-Shell.dc.html"><div class="scr">MOBILE</div><div class="ct">Booking Shell (reference)</div><div class="cd">Phone-frame shell proof — tab bar, persistent composer, Insights sheet.</div><div class="route">390 × 844</div></a>
+    <a class="card" href="SCR-MOBILE-BottomSheet.dc.html"><div class="scr">MOBILE</div><div class="ct">BottomSheet (primitive)</div><div class="cd">Snap-point sheet — drag handle, backdrop, keyboard-aware.</div><div class="route">primitive</div></a>
+  </div>
+
+  <div class="sec">Booking flows — same folder, hosted in the Shoot DCs</div>
+  <a class="doc" href="Shoot Wizard.v2.image-first.dc.html"><div><div class="ct" style="margin:0;">SCR-21 · Booking Wizard</div><div class="cd">= the Shoot Wizard's <code>flow=booking</code> (Talent · Dates · Rate · Message · Review). One reusable wizard, not a separate file.</div></div><span class="arrow">→</span></a>
+  <a class="doc" href="Shoot Detail.v2.image-first.dc.html"><div><div class="ct" style="margin:0;">SCR-22 · Booking Detail</div><div class="cd">= Shoot Detail's <code>flow=booking</code> variant via shared FLOWCFG. Confirm is operator-only.</div></div><span class="arrow">→</span></a>
+
+  <div class="note warn">
+    <b>SCR-09 — two files, one ID.</b> <code>SCR-09-Matching-Talent.dc.html</code> is the <b>current booking workflow</b> (talent casting). <code>Matching.v2.image-first.dc.html</code> is <b>legacy discovery</b> (brand↔creator) kept as reference until merged/retired. Both carry registry ID SCR-09; merge is a later task.
+  </div>
+
+  <div class="note">
+    <b>Where things live:</b> this <b><code>Pages/</code></b> folder is the single source of truth for all 35 <code>.dc.html</code> screens + one shared <code>support.js</code>. Reference imagery is shared from the root <code>images/</code> folder (<code>../images/</code>). Permanent screen IDs are owned by <code>docs/handoff/SCREEN-REGISTRY.md</code>. Screen-level plans live in <code>../booking/*.plan.md</code> and <code>../crm/*.md</code>; program-level plans & handoff in <code>docs/models/</code>.
+  </div>
+</div>
+</body>
+</html>

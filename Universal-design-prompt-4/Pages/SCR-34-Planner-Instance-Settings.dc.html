@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script>
+window.__LU={
+ home:'<path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M9 22V12h6v10"/>',
+ "calendar-range":'<rect width="18" height="18" x="3" y="4" rx="2"/><path d="M16 2v4"/><path d="M8 2v4"/><path d="M3 10h18"/><path d="M17 14h-6"/><path d="M13 18H7"/><path d="M7 14h.01"/><path d="M17 18h.01"/>',
+ "layout-dashboard":'<rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/>',
+ inbox:'<polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/>',
+ settings:'<path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/>',
+ sparkles:'<path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .962 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.962 0z"/><path d="M20 3v4"/><path d="M22 5h-4"/><path d="M4 17v2"/><path d="M5 18H3"/>',
+ users:'<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>',
+ bell:'<path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/>',
+ "git-branch":'<line x1="6" x2="6" y1="3" y2="15"/><circle cx="18" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M18 9a9 9 0 0 1-9 9"/>',
+ "alert-triangle":'<path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3z"/><line x1="12" x2="12" y1="9" y2="13"/><line x1="12" x2="12.01" y1="17" y2="17"/>',
+ plus:'<path d="M5 12h14"/><path d="M12 5v14"/>',
+ "more-horizontal":'<circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/>',
+ mail:'<rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/>',
+ x:'<path d="M18 6 6 18"/><path d="M6 6l12 12"/>',
+ check:'<path d="M20 6 9 17l-5-5"/>',
+ "chevron-down":'<path d="m6 9 6 6 6-6"/>',
+ "arrow-left":'<path d="m12 19-7-7 7-7"/><path d="M19 12H5"/>',
+ clock:'<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>',
+ shield:'<path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/>',
+ trash:'<path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>'
+};
+(function(){ if(customElements.get('lu-ic'))return;
+ class LuIc extends HTMLElement{ static get observedAttributes(){return ['name'];}
+  connectedCallback(){this._r();} attributeChangedCallback(){this._r();}
+  _r(){ var n=this.getAttribute('name');var inner=(window.__LU||{})[n];if(inner==null)return;
+   this.style.display='inline-flex';this.style.alignItems='center';this.style.justifyContent='center';
+   var root=this.shadowRoot||this.attachShadow({mode:'open'});
+   root.innerHTML='<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="100%" height="100%" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:block">'+inner+'</svg>';
+  } }
+ customElements.define('lu-ic',LuIc);
+})();
+</script>
+<style>
+  :root{--bg:#fff;--surface:#fafafa;--muted-bg:#f5f5f5;--border:#e5e7eb;--border-strong:#d1d5db;--border-subtle:#ededed;--text:#111;--text-2:#6b7280;--text-3:#9ca3af;--action:#111;--blocked:#b91c1c;--done:#059669;--gate:#d97706;--gate-bg:#fef3e2;--lost:#b91c1c;--font:"Inter",sans-serif;--mono:"Geist Mono",Menlo,monospace;--r-sm:6px;--r-md:10px;--r-lg:16px;--r-pill:9999px;}
+  *{box-sizing:border-box;}body{margin:0;font-family:var(--font);color:var(--text);background:var(--surface);-webkit-font-smoothing:antialiased;}
+  a{color:var(--action);text-decoration:none;}a:hover{opacity:.85;}
+  .tnum{font-variant-numeric:tabular-nums;}::-webkit-scrollbar{width:8px;height:8px;}::-webkit-scrollbar-thumb{background:var(--border-strong);border-radius:4px;}
+  @keyframes shimmer{0%{background-position:-500px 0}100%{background-position:500px 0}}
+  .sk{background:linear-gradient(90deg,#efefef 25%,#e4e4e4 37%,#efefef 63%);background-size:900px 100%;animation:shimmer 1.4s infinite linear;border-radius:8px;}
+  @keyframes toastIn{from{opacity:0;transform:translate(-50%,10px)}to{opacity:1;transform:translate(-50%,0)}}
+  @keyframes panelIn{from{opacity:0;transform:translateX(8px)}to{opacity:1;transform:translateX(0)}}
+  a:focus-visible,button:focus-visible,input:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--action);outline-offset:2px;border-radius:5px;}
+  .pl-skip{position:absolute;left:8px;top:-46px;z-index:200;background:var(--action);color:#fff;padding:9px 15px;border-radius:var(--r-md);font-size:13px;font-weight:600;transition:top .16s;}
+  .pl-skip:focus{top:8px;}
+  .pl-sr{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0;}
+  .pl-scrim{display:none;}
+  .pl-panel-fab{display:none;}
+  @media (max-width:1279px){ .pl-shell{grid-template-columns:56px minmax(0,1fr) 300px !important;} }
+  @media (max-width:1023px){
+    .pl-shell{grid-template-columns:56px minmax(0,1fr) !important;}
+    .pl-aside{position:fixed !important;top:0;right:0;height:100vh;width:340px;max-width:88vw;z-index:60;transform:translateX(103%);transition:transform .22s ease;box-shadow:-14px 0 40px rgba(0,0,0,.18);}
+    .pl-aside.pl-open{transform:translateX(0);}
+    .pl-scrim.pl-open{display:block;position:fixed;inset:0;background:rgba(17,17,17,.34);z-index:55;}
+    .pl-panel-fab{display:inline-flex !important;position:fixed;right:18px;bottom:18px;z-index:50;width:52px;height:52px;border-radius:var(--r-pill);border:none;background:var(--action);color:#fff;align-items:center;justify-content:center;box-shadow:0 10px 28px rgba(0,0,0,.26);cursor:pointer;}
+  }
+  @media (prefers-reduced-motion:reduce){ .pl-aside{transition:none !important;} .sk{animation:none !important;} }
+</style>
+</helmet>
+<div class="pl-shell" style="display:grid;grid-template-columns:56px minmax(0,1fr) 340px;height:100vh;width:100vw;background:var(--bg);overflow:hidden;position:relative;">
+
+  <a href="#pl-main" class="pl-skip">Skip to settings</a>
+
+  <nav aria-label="Primary" style="background:var(--bg);border-right:1px solid var(--border);display:flex;flex-direction:column;align-items:center;padding:14px 0;gap:4px;">
+    <div style="width:30px;height:30px;border-radius:8px;background:var(--action);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;margin-bottom:12px;">i</div>
+    <sc-for list="{{ nav }}" as="n" hint-placeholder-count="5"><a href="{{ n.href }}" title="{{ n.label }}" aria-label="{{ n.label }}" aria-current="{{ n.current }}" style="{{ n.style }}" style-hover="{{ n.hover }}"><lu-ic name="{{ n.icon }}" style="width:20px;height:20px;"></lu-ic></a></sc-for>
+  </nav>
+
+  <main style="display:flex;flex-direction:column;min-width:0;min-height:0;height:100vh;overflow:auto;position:relative;">
+
+    <sc-if value="{{ readOnly }}" hint-placeholder-val="{{ false }}">
+      <div style="flex-shrink:0;margin:14px 30px 0;display:flex;align-items:center;gap:8px;padding:9px 13px;border-radius:var(--r-md);background:var(--muted-bg);border:1px solid var(--border-strong);font-size:12px;color:var(--text-2);"><lu-ic name="lock" style="width:14px;height:14px;flex-shrink:0;"></lu-ic><span><strong style="color:var(--text);">Read-only</strong> — Viewer access. You can see members but can't invite, change roles, or remove anyone.</span></div>
+    </sc-if>
+    <sc-if value="{{ syncFailed }}" hint-placeholder-val="{{ false }}">
+      <div style="flex-shrink:0;margin:14px 30px 0;display:flex;align-items:center;gap:8px;padding:9px 13px;border-radius:var(--r-md);background:#fdeaea;border:1px solid #f4c9c9;font-size:12px;color:var(--lost);"><lu-ic name="alert-triangle" style="width:14px;height:14px;flex-shrink:0;"></lu-ic><span style="flex:1;">A member change couldn't sync. It's saved locally and will retry.</span><button onClick="{{ dismissSync }}" style="border:1px solid #f4c9c9;background:var(--bg);color:var(--lost);border-radius:var(--r-sm);padding:4px 10px;font-family:var(--font);font-size:11px;font-weight:600;cursor:pointer;">Retry now</button></div>
+    </sc-if>
+
+    <sc-if value="{{ isLoading }}" hint-placeholder-val="{{ false }}">
+      <div style="width:100%;padding:22px 30px 40px;">
+        <div class="sk" style="height:22px;width:120px;margin-bottom:18px;"></div>
+        <div class="sk" style="height:28px;width:320px;margin-bottom:22px;"></div>
+        <div style="border:1px solid var(--border);border-radius:var(--r-lg);overflow:hidden;"><sc-for list="{{ skRows }}" as="r" hint-placeholder-count="5"><div style="padding:13px 18px;border-bottom:1px solid var(--border-subtle);"><div class="sk" style="height:16px;width:70%;"></div></div></sc-for></div>
+      </div>
+    </sc-if>
+    <sc-if value="{{ isEmpty }}" hint-placeholder-val="{{ false }}">
+      <div style="flex:1;display:flex;align-items:center;justify-content:center;padding:40px;min-height:0;">
+        <div style="text-align:center;max-width:340px;">
+          <div style="width:52px;height:52px;border-radius:var(--r-lg);background:var(--muted-bg);display:flex;align-items:center;justify-content:center;margin:0 auto 14px;"><lu-ic name="users" style="width:24px;height:24px;color:var(--text-3);"></lu-ic></div>
+          <div style="font-size:16px;font-weight:700;margin-bottom:6px;">Just you so far</div>
+          <div style="font-size:13px;color:var(--text-2);line-height:1.5;margin-bottom:16px;">No one else has access to this plan yet. Invite a producer, contributor, or client approver to collaborate.</div>
+          <button onClick="{{ openInvite }}" style="display:inline-flex;align-items:center;gap:6px;padding:9px 16px;border-radius:var(--r-md);border:none;background:var(--action);color:#fff;font-family:var(--font);font-size:13px;font-weight:600;cursor:pointer;"><lu-ic name="plus" style="width:14px;height:14px;"></lu-ic>Invite member</button>
+        </div>
+      </div>
+    </sc-if>
+    <sc-if value="{{ isError }}" hint-placeholder-val="{{ false }}">
+      <div style="flex:1;display:flex;align-items:center;justify-content:center;padding:40px;min-height:0;">
+        <div style="text-align:center;max-width:340px;">
+          <div style="width:52px;height:52px;border-radius:var(--r-lg);background:#fdeaea;display:flex;align-items:center;justify-content:center;margin:0 auto 14px;"><lu-ic name="alert-triangle" style="width:24px;height:24px;color:var(--lost);"></lu-ic></div>
+          <div style="font-size:16px;font-weight:700;margin-bottom:6px;">Couldn't load settings</div>
+          <div style="font-size:13px;color:var(--text-2);line-height:1.5;margin-bottom:16px;">We couldn't fetch this plan's members. Try again.</div>
+          <button onClick="{{ retry }}" style="display:inline-flex;align-items:center;gap:6px;padding:9px 16px;border-radius:var(--r-md);border:1px solid var(--border-strong);background:var(--bg);color:var(--text);font-family:var(--font);font-size:13px;font-weight:600;cursor:pointer;">Try again</button>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ isLive }}" hint-placeholder-val="{{ true }}">
+    <div style="width:100%;padding:22px 30px 40px;">
+
+      <!-- breadcrumb + title -->
+      <a href="#" style="display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:500;color:var(--text-2);margin-bottom:14px;"><lu-ic name="arrow-left" style="width:14px;height:14px;"></lu-ic>Summer Lookbook</a>
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px;">
+        <h1 style="margin:0;font-size:23px;font-weight:700;letter-spacing:-.02em;">Settings</h1>
+        <span style="display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:var(--r-pill);background:var(--gate-bg);border:1px solid #f4d9ad;font-size:11px;font-weight:600;color:var(--gate);">Sample data — not live</span>
+      </div>
+      <p style="margin:0 0 18px;font-size:13px;color:var(--text-2);">Manage who can access this production plan and what they can do.</p>
+
+      <!-- TAB STRIP -->
+      <div style="display:flex;gap:2px;border-bottom:1px solid var(--border);margin-bottom:22px;">
+        <sc-for list="{{ tabs }}" as="t" hint-placeholder-count="4">
+          <button onClick="{{ t.onClick }}" aria-disabled="{{ t.disabledAttr }}" title="{{ t.title }}" style="{{ t.style }}">{{ t.label }}<sc-if value="{{ t.soon }}" hint-placeholder-val="{{ false }}"><span style="font-size:9px;font-weight:600;color:var(--text-3);border:1px solid var(--border);border-radius:var(--r-pill);padding:1px 6px;margin-left:6px;">Soon</span></sc-if></button>
+        </sc-for>
+      </div>
+
+      <!-- MEMBERS TAB -->
+      <sc-if value="{{ isMembers }}" hint-placeholder-val="{{ true }}">
+
+        <!-- INVITE-FIRST HERO -->
+        <sc-if value="{{ showInviteHero }}" hint-placeholder-val="{{ true }}">
+        <div style="border:1px solid var(--border);border-radius:var(--r-lg);background:var(--bg);padding:18px 20px;margin-bottom:20px;display:flex;align-items:center;gap:18px;">
+          <div style="width:44px;height:44px;flex-shrink:0;border-radius:var(--r-md);background:var(--muted-bg);display:flex;align-items:center;justify-content:center;color:var(--action);"><lu-ic name="users" style="width:22px;height:22px;"></lu-ic></div>
+          <div style="flex:1;min-width:0;">
+            <div style="font-size:15px;font-weight:700;letter-spacing:-.01em;margin-bottom:3px;">Bring your team into this plan</div>
+            <div style="font-size:13px;color:var(--text-2);line-height:1.45;">A plan works best with the people who run it. Invite a producer to help manage, contributors to own their tasks, or the client as an approver — you choose what each can do.</div>
+            <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:13px;">
+              <button onClick="{{ inviteManager }}" style="display:inline-flex;align-items:center;gap:5px;padding:7px 12px;border-radius:var(--r-md);border:1px solid var(--border-strong);background:var(--bg);font-family:var(--font);font-size:12px;font-weight:600;color:var(--text);cursor:pointer;">+ Producer</button>
+              <button onClick="{{ inviteContributor }}" style="display:inline-flex;align-items:center;gap:5px;padding:7px 12px;border-radius:var(--r-md);border:1px solid var(--border-strong);background:var(--bg);font-family:var(--font);font-size:12px;font-weight:600;color:var(--text);cursor:pointer;">+ Contributor</button>
+              <button onClick="{{ inviteViewer }}" style="display:inline-flex;align-items:center;gap:5px;padding:7px 12px;border-radius:var(--r-md);border:1px solid var(--border-strong);background:var(--bg);font-family:var(--font);font-size:12px;font-weight:600;color:var(--text);cursor:pointer;">+ Client approver</button>
+            </div>
+          </div>
+          <button onClick="{{ openInvite }}" style="flex-shrink:0;align-self:flex-start;display:inline-flex;align-items:center;gap:6px;padding:10px 16px;border-radius:var(--r-md);border:none;background:var(--action);color:#fff;font-family:var(--font);font-size:13px;font-weight:700;cursor:pointer;"><lu-ic name="plus" style="width:15px;height:15px;"></lu-ic>Invite member</button>
+        </div>
+        </sc-if>
+
+        <!-- PENDING INVITE CALLOUT -->
+        <sc-if value="{{ hasPending }}" hint-placeholder-val="{{ false }}">
+        <div style="border:1px solid #f4d9ad;background:var(--gate-bg);border-radius:var(--r-md);padding:11px 14px;margin-bottom:18px;display:flex;align-items:center;gap:11px;">
+          <lu-ic name="clock" style="width:15px;height:15px;color:var(--gate);flex-shrink:0;"></lu-ic>
+          <div style="flex:1;min-width:0;font-size:12px;"><strong style="color:var(--text);">1 invite pending</strong> <span style="color:var(--text-2);">— dana@brandco.com hasn't accepted yet.</span></div>
+          <button onClick="{{ resendInvite }}" style="flex-shrink:0;display:inline-flex;align-items:center;gap:5px;padding:6px 12px;border-radius:var(--r-sm);border:1px solid #f4d9ad;background:var(--bg);color:var(--gate);font-family:var(--font);font-size:11px;font-weight:700;cursor:pointer;"><lu-ic name="mail" style="width:12px;height:12px;"></lu-ic>Resend</button>
+        </div>
+        </sc-if>
+
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+          <div style="font-size:13px;color:var(--text-2);"><span class="tnum" style="font-family:var(--mono);font-weight:600;color:var(--text);">{{ memberCount }}</span> members · <span class="tnum" style="font-family:var(--mono);font-weight:600;color:var(--text);">{{ invitedCount }}</span> invited</div>
+          <button onClick="{{ openInvite }}" style="display:flex;align-items:center;gap:6px;padding:9px 14px;border-radius:var(--r-md);border:none;background:var(--action);color:#fff;font-family:var(--font);font-size:13px;font-weight:600;cursor:pointer;"><lu-ic name="plus" style="width:15px;height:15px;"></lu-ic>Invite member</button>
+        </div>
+
+        <div role="table" style="border:1px solid var(--border);border-radius:var(--r-lg);overflow:hidden;background:var(--bg);">
+          <div role="row" style="display:grid;grid-template-columns:150px 1fr 200px 44px;padding:11px 18px;background:var(--surface);border-bottom:1px solid var(--border);font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--text-3);">
+            <span>Access role</span><span>Name</span><span>Permissions</span><span></span>
+          </div>
+          <sc-for list="{{ members }}" as="m" hint-placeholder-count="5">
+            <div role="row" onClick="{{ m.onSelect }}" style="{{ m.rowStyle }}">
+              <span><span style="{{ m.roleChip }}">{{ m.role }}</span></span>
+              <div style="display:flex;align-items:center;gap:11px;min-width:0;">
+                <span style="width:30px;height:30px;border-radius:50%;background:var(--muted-bg);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--text-2);flex-shrink:0;">{{ m.initials }}</span>
+                <div style="min-width:0;">
+                  <div style="font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ m.name }}<sc-if value="{{ m.invited }}" hint-placeholder-val="{{ false }}"><span style="{{ m.invitedChip }}">Invited</span></sc-if></div>
+                  <div style="font-size:11px;color:var(--text-3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ m.email }}</div>
+                </div>
+              </div>
+              <span style="font-size:12px;color:var(--text-2);">{{ m.perms }}</span>
+              <button title="Manage member" style="width:32px;height:32px;border-radius:var(--r-md);border:1px solid transparent;background:none;display:flex;align-items:center;justify-content:center;color:var(--text-3);cursor:pointer;" style-hover="border-color:var(--border);background:var(--surface);"><lu-ic name="more-horizontal" style="width:16px;height:16px;"></lu-ic></button>
+            </div>
+          </sc-for>
+        </div>
+        <p style="margin:12px 2px 0;font-size:11px;color:var(--text-3);">Approval rights are set per workflow template, not per member. Changing an access role updates permissions immediately.</p>
+      </sc-if>
+
+      <!-- COMING SOON TABS -->
+      <sc-if value="{{ isSoon }}" hint-placeholder-val="{{ false }}">
+        <div style="border:1px solid var(--border);border-radius:var(--r-lg);background:var(--bg);padding:56px 24px;text-align:center;">
+          <div style="width:44px;height:44px;border-radius:var(--r-md);background:var(--muted-bg);display:inline-flex;align-items:center;justify-content:center;color:var(--text-3);margin-bottom:14px;"><lu-ic name="{{ soonIcon }}" style="width:20px;height:20px;"></lu-ic></div>
+          <div style="font-size:15px;font-weight:600;margin-bottom:4px;">{{ soonTitle }}</div>
+          <div style="font-size:13px;color:var(--text-3);">Coming soon — not part of this release.</div>
+        </div>
+      </sc-if>
+
+    </div>
+    </sc-if>
+
+    <!-- TOAST -->
+    <sc-if value="{{ toast }}" hint-placeholder-val="{{ false }}">
+      <div aria-live="polite" style="position:absolute;bottom:24px;left:50%;transform:translateX(-50%);z-index:8;display:flex;align-items:center;gap:8px;background:var(--action);color:#fff;padding:11px 16px;border-radius:var(--r-pill);font-size:12px;font-weight:600;box-shadow:0 8px 24px rgba(0,0,0,.18);animation:toastIn .22s ease-out;"><lu-ic name="check" style="width:14px;height:14px;"></lu-ic>{{ toast }}</div>
+    </sc-if>
+  </main>
+
+  <button class="pl-panel-fab" onClick="{{ togglePanel }}" aria-label="Toggle access panel" title="Access summary"><lu-ic name="sparkles" style="width:20px;height:20px;"></lu-ic></button>
+  <div class="pl-scrim {{ panelCls }}" onClick="{{ closePanel }}"></div>
+
+  <!-- ===== ADAPTIVE RIGHT CONTEXT PANEL (Access summary ↔ member detail) ===== -->
+  <aside class="pl-aside {{ panelCls }}" aria-label="Access summary and detail" style="background:var(--surface);border-left:1px solid var(--border);display:flex;flex-direction:column;min-height:0;overflow:hidden;">
+
+    <sc-if value="{{ panelIntel }}" hint-placeholder-val="{{ true }}">
+      <div style="flex-shrink:0;padding:16px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;"><lu-ic name="sparkles" style="width:15px;height:15px;color:var(--action);"></lu-ic><span style="font-size:13px;font-weight:700;">Intelligence</span></div>
+    </sc-if>
+    <sc-if value="{{ panelDetail }}" hint-placeholder-val="{{ false }}">
+      <div style="flex-shrink:0;padding:13px 16px 13px 18px;border-bottom:1px solid var(--border);display:flex;align-items:flex-start;justify-content:space-between;gap:10px;">
+        <div style="min-width:0;">
+          <button onClick="{{ closeDetail }}" style="display:inline-flex;align-items:center;gap:4px;border:none;background:none;padding:0;margin-bottom:9px;font-family:var(--font);font-size:11px;font-weight:600;color:var(--text-2);cursor:pointer;"><lu-ic name="arrow-left" style="width:12px;height:12px;"></lu-ic>Intelligence</button>
+          <div style="display:flex;align-items:center;gap:10px;min-width:0;">
+            <span style="width:38px;height:38px;border-radius:50%;background:var(--muted-bg);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:var(--text-2);flex-shrink:0;">{{ dv.initials }}</span>
+            <div style="min-width:0;">
+              <div style="font-size:15px;font-weight:700;letter-spacing:-.01em;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ dv.name }}</div>
+              <div style="font-size:11px;color:var(--text-3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ dv.email }}</div>
+            </div>
+          </div>
+        </div>
+        <button onClick="{{ closeDetail }}" title="Close" style="width:28px;height:28px;flex-shrink:0;border-radius:var(--r-md);border:1px solid var(--border);background:var(--bg);display:flex;align-items:center;justify-content:center;color:var(--text-2);cursor:pointer;"><lu-ic name="x" style="width:14px;height:14px;"></lu-ic></button>
+      </div>
+    </sc-if>
+
+    <div style="flex:1;overflow-y:auto;">
+
+      <!-- ===== BODY: INTELLIGENCE (Access summary) ===== -->
+      <sc-if value="{{ panelIntel }}" hint-placeholder-val="{{ true }}">
+        <div style="padding:16px 18px;animation:panelIn .2s ease-out;">
+          <div style="font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--text-3);margin-bottom:8px;">Access summary</div>
+          <div style="border:1px solid var(--border-subtle);border-radius:var(--r-md);background:var(--bg);padding:12px;margin-bottom:14px;">
+            <div style="display:flex;flex-direction:column;gap:8px;">
+              <sc-for list="{{ accessRows }}" as="a" hint-placeholder-count="4"><div style="display:flex;align-items:center;justify-content:space-between;font-size:12px;"><span style="color:var(--text-2);text-transform:capitalize;">{{ a.label }}</span><span class="tnum" style="font-family:var(--mono);font-weight:600;">{{ a.count }}</span></div></sc-for>
+            </div>
+          </div>
+
+          <div style="font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--text-3);margin-bottom:8px;">Needs attention</div>
+          <div style="border:1px solid #f4d9ad;background:var(--gate-bg);border-radius:var(--r-md);padding:10px 12px;margin-bottom:14px;">
+            <div style="display:flex;align-items:center;gap:6px;margin-bottom:3px;"><lu-ic name="clock" style="width:12px;height:12px;color:var(--gate);"></lu-ic><span style="font-size:12px;font-weight:600;">1 pending invite</span></div>
+            <div style="font-size:11px;color:var(--gate);font-weight:600;">dana@brandco.com hasn't accepted yet</div>
+          </div>
+
+          <div style="border-top:1px solid var(--border-subtle);padding-top:14px;display:flex;align-items:center;gap:7px;font-size:11px;color:var(--text-3);"><lu-ic name="shield" style="width:13px;height:13px;"></lu-ic>Select a member to manage their access</div>
+        </div>
+      </sc-if>
+
+      <!-- ===== BODY: MEMBER DETAIL ===== -->
+      <sc-if value="{{ panelDetail }}" hint-placeholder-val="{{ false }}">
+        <div style="padding:16px 18px;animation:panelIn .2s ease-out;">
+          <div style="display:flex;align-items:center;gap:7px;margin-bottom:14px;"><span style="{{ dv.roleChip }}">{{ dv.role }}</span><sc-if value="{{ dv.invited }}" hint-placeholder-val="{{ false }}"><span style="display:inline-flex;align-items:center;padding:2px 8px;border-radius:var(--r-pill);font-size:10px;font-weight:600;color:var(--gate);background:var(--gate-bg);border:1px solid #f4d9ad;">Invited</span></sc-if></div>
+
+          <div style="border:1px solid var(--border-subtle);border-radius:var(--r-md);background:var(--bg);padding:11px 12px;margin-bottom:12px;">
+            <div style="font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--text-3);margin-bottom:8px;">Access</div>
+            <div style="display:flex;flex-direction:column;gap:7px;">
+              <div style="display:flex;justify-content:space-between;font-size:12px;"><span style="color:var(--text-2);">Role</span><span style="font-weight:600;text-transform:capitalize;">{{ dv.role }}</span></div>
+              <div style="display:flex;justify-content:space-between;gap:12px;font-size:12px;"><span style="color:var(--text-2);flex-shrink:0;">Permissions</span><span style="font-weight:600;text-align:right;">{{ dv.perms }}</span></div>
+              <div style="display:flex;justify-content:space-between;font-size:12px;"><span style="color:var(--text-2);">Status</span><span style="font-weight:600;">{{ dv.status }}</span></div>
+              <div style="display:flex;justify-content:space-between;font-size:12px;"><span style="color:var(--text-2);">Last active</span><span style="font-family:var(--mono);font-weight:600;">{{ dv.lastActive }}</span></div>
+            </div>
+          </div>
+
+          <div style="font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--text-3);margin-bottom:8px;">Change access role</div>
+          <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:16px;">
+            <sc-for list="{{ dv.roleOpts }}" as="r" hint-placeholder-count="4"><button onClick="{{ r.onClick }}" style="{{ r.style }}">{{ r.label }}</button></sc-for>
+          </div>
+
+          <sc-if value="{{ dv.removable }}" hint-placeholder-val="{{ true }}">
+            <button onClick="{{ dv.onRemove }}" style="width:100%;display:flex;align-items:center;justify-content:center;gap:6px;padding:9px;border-radius:var(--r-md);border:1px solid #f4c9c9;background:var(--bg);color:var(--lost);font-family:var(--font);font-size:12px;font-weight:600;cursor:pointer;"><lu-ic name="trash" style="width:13px;height:13px;"></lu-ic>Remove from plan</button>
+          </sc-if>
+          <sc-if value="{{ dv.ownerLock }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex;align-items:center;gap:6px;padding:9px 11px;border-radius:var(--r-md);background:var(--muted-bg);border:1px solid var(--border-strong);font-size:11px;color:var(--text-2);"><lu-ic name="shield" style="width:12px;height:12px;flex-shrink:0;"></lu-ic>The plan owner can't be removed. Transfer ownership first.</div>
+          </sc-if>
+        </div>
+      </sc-if>
+
+    </div>
+  </aside>
+
+  <!-- INVITE DIALOG (action modal) -->
+  <sc-if value="{{ inviteOpen }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ closeInvite }}" style="position:absolute;inset:0;background:rgba(17,17,17,.28);z-index:10;display:flex;align-items:center;justify-content:center;">
+      <div onClick="{{ stop }}" id="pl-invite-dialog" role="dialog" aria-modal="true" aria-label="Invite member" style="width:440px;max-width:calc(100vw - 40px);background:var(--bg);border-radius:var(--r-lg);border:1px solid var(--border-strong);box-shadow:0 24px 60px rgba(0,0,0,.22);overflow:hidden;">
+        <div style="padding:18px 22px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;">
+          <div style="font-size:16px;font-weight:700;">Invite member</div>
+          <button onClick="{{ closeInvite }}" style="width:30px;height:30px;border-radius:var(--r-md);border:1px solid var(--border);background:var(--bg);display:flex;align-items:center;justify-content:center;color:var(--text-2);cursor:pointer;"><lu-ic name="x" style="width:15px;height:15px;"></lu-ic></button>
+        </div>
+        <div style="padding:20px 22px;">
+          <label for="pl-invite-email" style="display:block;font-size:12px;font-weight:600;margin-bottom:6px;">Email address</label>
+          <div style="display:flex;align-items:center;gap:8px;border:1px solid {{ inviteBorder }};border-radius:var(--r-md);padding:0 12px;margin-bottom:{{ inviteErrGap }};"><lu-ic name="mail" style="width:15px;height:15px;color:var(--text-3);"></lu-ic><input id="pl-invite-email" type="email" value="{{ inviteEmail }}" onInput="{{ onEmailInput }}" aria-invalid="{{ inviteInvalid }}" aria-describedby="pl-invite-err" placeholder="name@studio.com" style="flex:1;min-width:0;border:none;outline:none;background:none;font-family:var(--font);font-size:13px;padding:10px 0;" /></div>
+          <sc-if value="{{ hasInviteErr }}" hint-placeholder-val="{{ false }}"><div id="pl-invite-err" role="alert" style="display:flex;align-items:center;gap:6px;font-size:11.5px;font-weight:600;color:var(--lost);margin-bottom:16px;"><lu-ic name="alert-triangle" style="width:13px;height:13px;"></lu-ic>{{ inviteErr }}</div></sc-if>
+
+          <label style="display:block;font-size:12px;font-weight:600;margin-bottom:6px;">Access role</label>
+          <div style="display:flex;gap:6px;margin-bottom:18px;">
+            <sc-for list="{{ roleOpts }}" as="r" hint-placeholder-count="4"><button onClick="{{ r.onClick }}" style="{{ r.style }}">{{ r.label }}</button></sc-for>
+          </div>
+
+          <div style="display:flex;align-items:center;gap:8px;background:var(--surface);border:1px solid var(--border-subtle);border-radius:var(--r-md);padding:11px 12px;">
+            <lu-ic name="check" style="width:14px;height:14px;color:var(--done);"></lu-ic>
+            <span style="font-size:12px;color:var(--text-2);">{{ rolePreset }}</span>
+          </div>
+        </div>
+        <div style="padding:16px 22px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:9px;">
+          <button onClick="{{ closeInvite }}" style="padding:9px 16px;border-radius:var(--r-md);border:1px solid var(--border-strong);background:var(--bg);font-family:var(--font);font-size:13px;font-weight:600;color:var(--text);cursor:pointer;">Cancel</button>
+          <button onClick="{{ sendInvite }}" style="display:flex;align-items:center;gap:6px;padding:9px 16px;border-radius:var(--r-md);border:none;background:var(--action);color:#fff;font-family:var(--font);font-size:13px;font-weight:600;cursor:pointer;"><lu-ic name="mail" style="width:14px;height:14px;"></lu-ic>Send invite</button>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1360,&quot;height&quot;:840},&quot;screenState&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;live&quot;,&quot;loading&quot;,&quot;empty&quot;,&quot;error&quot;],&quot;default&quot;:&quot;live&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Demo states&quot;},&quot;role&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;owner&quot;,&quot;producer&quot;,&quot;viewer&quot;],&quot;default&quot;:&quot;owner&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Demo states&quot;},&quot;syncFailed&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Demo states&quot;}}">
+class Component extends DCLogic {
+  state = { tab:'members', inviteOpen:false, inviteRole:'contributor', selected:null, toast:null, panelOpen:false, inviteEmail:'', inviteErr:'' };
+
+  componentDidMount(){
+    this._esc=(e)=>{
+      if(e.key==='Escape'){ if(this.state.inviteOpen){ this.closeInvite(); } else if(this.state.panelOpen){ this.setState({panelOpen:false}); } else if(this.state.selected!=null){ this.setState({selected:null}); } return; }
+      if(e.key==='Tab' && this.state.inviteOpen){ this._trap(e); }
+    };
+    document.addEventListener('keydown',this._esc);
+  }
+  componentDidUpdate(pp, ps){}
+  componentWillUnmount(){ document.removeEventListener('keydown',this._esc); clearTimeout(this._t); }
+  _focusables(){ const d=document.getElementById('pl-invite-dialog'); if(!d) return []; return [].slice.call(d.querySelectorAll('a[href],button:not([disabled]),input:not([disabled]),select,textarea,[tabindex]:not([tabindex="-1"])')).filter(el=>el.offsetParent!==null); }
+  _trap(e){ const f=this._focusables(); if(!f.length) return; const first=f[0], last=f[f.length-1]; if(e.shiftKey && document.activeElement===first){ e.preventDefault(); last.focus(); } else if(!e.shiftKey && document.activeElement===last){ e.preventDefault(); first.focus(); } }
+  openInviteDlg(r){ this._trigger=document.activeElement; this.setState({ inviteOpen:true, inviteRole:r||this.state.inviteRole, inviteEmail:'', inviteErr:'' }); setTimeout(()=>{ const el=document.getElementById('pl-invite-email'); el&&el.focus(); },120); }
+  closeInvite(e){ if(e&&e.stopPropagation)e.stopPropagation(); this.setState({ inviteOpen:false, inviteErr:'' }); const t=this._trigger; setTimeout(()=>{ t&&t.focus&&t.focus(); },20); }
+  sendInvite(e){ if(e&&e.stopPropagation)e.stopPropagation(); const em=(this.state.inviteEmail||'').trim(); if(!em){ this.setState({inviteErr:'Enter an email address to send an invite.'}); return; } if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(em)){ this.setState({inviteErr:'That doesn’t look like a valid email — check the address.'}); return; } this.setState({inviteOpen:false, inviteErr:''}); const t=this._trigger; setTimeout(()=>{ t&&t.focus&&t.focus(); },20); this.showToast('Invite sent to '+em); }
+  togglePanel(){ this.setState(st=>({panelOpen:!st.panelOpen})); }
+  closePanel(){ this.setState({panelOpen:false}); }
+  showToast(msg){ this.setState({ toast:msg }); clearTimeout(this._t); this._t=setTimeout(()=>this.setState({toast:null}),2600); }
+
+  renderVals(){
+    const S = this.state;
+    const scr=S.screenState||this.props.screenState||'live';
+    const role=S.role||this.props.role||'owner';
+    const live=scr==='live', isLoading=scr==='loading', isEmpty=scr==='empty', isError=scr==='error';
+    const readOnly=role==='viewer';
+    const syncFailed=live && (S.syncFailed==null?!!this.props.syncFailed:S.syncFailed);
+    const nav = [
+      { icon:'home', label:'Home', href:'Command%20Center.v2.image-first.dc.html' },
+      { icon:'calendar-range', label:'Planner', href:'SCR-35-Planner-Hub.dc.html' },
+      { icon:'layout-dashboard', label:'Planner Dashboard', href:'SCR-33-Planner-Dashboard.dc.html' },
+      { icon:'inbox', label:'Notifications', href:'SCR-15-Notification-Center.dc.html' },
+      { icon:'settings', label:'Settings', href:'SCR-34-Planner-Instance-Settings.dc.html', active:true }
+    ].map(n=>({ ...n, current:n.active?'page':'false', style:'width:38px;height:38px;border-radius:9px;display:flex;align-items:center;justify-content:center;cursor:pointer;text-decoration:none;color:'+(n.active?'#fff':'var(--text-3)')+';background:'+(n.active?'var(--action)':'transparent')+';', hover:n.active?'background:var(--action);color:#fff;':'background:var(--muted-bg);color:var(--text-2);' }));
+
+    const TABS = [
+      { key:'members', label:'Members', enabled:true },
+      { key:'notifications', label:'Notifications', enabled:false, icon:'bell', title:'Coming soon' },
+      { key:'workflow', label:'Workflow', enabled:false, icon:'git-branch', title:'Coming soon' },
+      { key:'danger', label:'Danger zone', enabled:false, icon:'alert-triangle', title:'Coming soon' }
+    ];
+    const tabs = TABS.map(t=>{ const on=S.tab===t.key;
+      return { label:t.label, soon:!t.enabled, disabledAttr: t.enabled?'false':'true', title:t.title||'',
+        onClick: t.enabled ? (()=>this.setState({tab:t.key})) : (()=>{}),
+        style:'display:inline-flex;align-items:center;padding:10px 15px;border:none;background:none;font-family:var(--font);font-size:13px;font-weight:600;cursor:'+(t.enabled?'pointer':'not-allowed')+';color:'+(on?'var(--text)':(t.enabled?'var(--text-2)':'var(--text-3)'))+';border-bottom:2px solid '+(on?'var(--action)':'transparent')+';margin-bottom:-1px;'+(t.enabled?'':'opacity:.65;') }; });
+
+    const RC = {
+      owner:{ c:'#fff', bg:'var(--action)', bd:'var(--action)' },
+      manager:{ c:'var(--text)', bg:'var(--muted-bg)', bd:'var(--border-strong)' },
+      contributor:{ c:'var(--text)', bg:'var(--muted-bg)', bd:'var(--border-strong)' },
+      viewer:{ c:'var(--text-2)', bg:'var(--bg)', bd:'var(--border-strong)' }
+    };
+    const roleChip = (r)=>{ const s=RC[r]; return 'display:inline-flex;align-items:center;padding:3px 11px;border-radius:var(--r-pill);font-size:11px;font-weight:600;text-transform:capitalize;color:'+s.c+';background:'+s.bg+';border:1px solid '+s.bd+';'; };
+    const invitedChip = 'display:inline-flex;align-items:center;margin-left:8px;padding:1px 8px;border-radius:var(--r-pill);font-size:10px;font-weight:600;color:var(--gate);background:var(--gate-bg);border:1px solid #f4d9ad;';
+
+    const MEM = [
+      { id:'maya', initials:'MC', name:'Maya Chen', email:'maya@studio.com', role:'owner', perms:'Full access · approvals', invited:false, last:'2h ago' },
+      { id:'jon', initials:'JA', name:'Jon Alvi', email:'jon@studio.com', role:'manager', perms:'Edit plan · assign', invited:false, last:'Yesterday' },
+      { id:'priya', initials:'PR', name:'Priya R.', email:'priya@studio.com', role:'contributor', perms:'Edit own tasks', invited:false, last:'3d ago' },
+      { id:'finn', initials:'FN', name:'Finn Osei', email:'finn@studio.com', role:'contributor', perms:'Edit own tasks', invited:false, last:'5d ago' },
+      { id:'dana', initials:'DK', name:'dana@brandco.com', email:'Client approver', role:'viewer', perms:'View · approve', invited:true, last:'—' }
+    ];
+    const members = MEM.map(m=>({ ...m, roleChip:roleChip(m.role), invitedChip,
+      onSelect:()=>this.setState({selected:m.id}),
+      rowStyle:'display:grid;grid-template-columns:150px 1fr 200px 44px;align-items:center;padding:0 18px;min-height:56px;border-bottom:1px solid var(--border-subtle);cursor:pointer;'+(S.selected===m.id?'background:var(--muted-bg);':'') }));
+
+    // access summary counts
+    const counts = {}; MEM.forEach(m=>counts[m.role]=(counts[m.role]||0)+1);
+    const accessRows = [['owner','Owner'],['manager','Manager'],['contributor','Contributor'],['viewer','Viewer']].map(([k,label])=>({ label, count:String(counts[k]||0) }));
+
+    // invite dialog role toggle
+    const ROLES = [['owner','Owner'],['manager','Manager'],['contributor','Contributor'],['viewer','Viewer']];
+    const roleOpts = ROLES.map(([k,label])=>{ const on=S.inviteRole===k;
+      return { label, onClick:()=>this.setState({inviteRole:k}),
+        style:'flex:1;padding:8px 6px;border-radius:var(--r-md);border:1px solid '+(on?'var(--action)':'var(--border-strong)')+';background:'+(on?'var(--action)':'var(--bg)')+';color:'+(on?'#fff':'var(--text-2)')+';font-family:var(--font);font-size:12px;font-weight:600;cursor:pointer;' }; });
+    const PRESET = { owner:'Full access — edit, assign, approve, manage members.', manager:'Edit the plan, assign tasks, and move steps.', contributor:'Edit their own assigned tasks only.', viewer:'View the plan and approve the steps they own.' };
+
+    const soonMap = { notifications:{icon:'bell',title:'Notification settings'}, workflow:{icon:'git-branch',title:'Workflow template'}, danger:{icon:'alert-triangle',title:'Danger zone'} };
+    const soon = soonMap[S.tab] || soonMap.notifications;
+
+    // member detail panel
+    const selM = MEM.find(m=>m.id===S.selected);
+    const panelDetail = !!selM;
+    const dv = selM ? (()=>{ const isOwner=selM.role==='owner';
+      const dRoleOpts = ROLES.map(([k,label])=>{ const on=selM.role===k;
+        return { label, onClick:()=>this.showToast(readOnly?'Viewer access — you can’t change roles':(on?(selM.name+' is already '+label):('Role changed to '+label+' (sample)'))),
+          style:'padding:7px 12px;border-radius:var(--r-md);border:1px solid '+(on?'var(--action)':'var(--border-strong)')+';background:'+(on?'var(--action)':'var(--bg)')+';color:'+(on?'#fff':'var(--text-2)')+';font-family:var(--font);font-size:12px;font-weight:600;cursor:pointer;' }; });
+      return { initials:selM.initials, name:selM.name, email:selM.email, role:selM.role, roleChip:roleChip(selM.role),
+        perms:selM.perms, invited:selM.invited, status:selM.invited?'Invited — pending':'Active', lastActive:selM.last,
+        roleOpts:dRoleOpts, removable:!isOwner, ownerLock:isOwner,
+        onRemove:()=>this.showToast(readOnly?'Viewer access — you can’t remove members':('Removed '+selM.name+' from this plan (sample)')) }; })()
+      : { initials:'', name:'', email:'', role:'', roleChip:'', perms:'', invited:false, status:'', lastActive:'', roleOpts:[], removable:false, ownerLock:false, onRemove:()=>{} };
+
+    return {
+      nav, tabs,
+      isMembers: S.tab==='members', isSoon: S.tab!=='members',
+      soonIcon: soon.icon, soonTitle: soon.title,
+      members, memberCount:'4', invitedCount:'1',
+      accessRows, panelDetail, panelIntel:!panelDetail, dv, toast:S.toast, closeDetail:()=>this.setState({selected:null}),
+      panelCls: S.panelOpen?'pl-open':'', togglePanel:()=>this.togglePanel(), closePanel:()=>this.closePanel(),
+      openInvite:()=>{ if(readOnly){ this.showToast('Viewer access — you can’t invite members'); return; } this.openInviteDlg(); }, closeInvite:(e)=>this.closeInvite(e), sendInvite:(e)=>this.sendInvite(e),
+      inviteEmail:S.inviteEmail, onEmailInput:(e)=>this.setState({inviteEmail:(e&&e.target?e.target.value:''), inviteErr:''}),
+      inviteErr:S.inviteErr, hasInviteErr:!!S.inviteErr, inviteInvalid:S.inviteErr?'true':'false',
+      inviteBorder:S.inviteErr?'var(--lost)':'var(--border-strong)', inviteErrGap:S.inviteErr?'8px':'16px',top:(e)=>e.stopPropagation(),
+      showInviteHero: !readOnly,
+      hasPending: true,
+      inviteManager:()=>{ if(readOnly){ this.showToast('Viewer access — you can’t invite members'); return; } this.openInviteDlg('manager'); },
+      inviteContributor:()=>{ if(readOnly){ this.showToast('Viewer access — you can’t invite members'); return; } this.openInviteDlg('contributor'); },
+      inviteViewer:()=>{ if(readOnly){ this.showToast('Viewer access — you can’t invite members'); return; } this.openInviteDlg('viewer'); },
+      resendInvite:()=>this.showToast('Invite re-sent to dana@brandco.com (sample)'),
+      inviteOpen:S.inviteOpen, roleOpts, rolePreset:PRESET[S.inviteRole],
+      isLive:live, isLoading, isEmpty, isError, readOnly, syncFailed,
+      skRows:[0,0,0,0,0], dismissSync:()=>this.setState({syncFailed:false}), retry:()=>this.setState({screenState:'live'})
+    };
+  }
+}
+</script>
+</body>
+</html>
