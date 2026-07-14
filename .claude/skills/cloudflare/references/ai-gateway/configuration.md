@@ -16,12 +16,17 @@ curl -X POST https://api.cloudflare.com/client/v4/accounts/{account_id}/ai-gatew
 
 ## Wrangler Integration
 
+The `ai` binding takes no gateway sub-key — it's always just:
+
 ```toml
 [ai]
 binding = "AI"
+```
 
-[[ai.gateway]]
-id = "my-gateway"
+The gateway ID is passed per-call instead, as the third argument to `env.AI.run()`:
+
+```typescript
+await env.AI.run("@cf/meta/llama-3-8b-instruct", { messages: [...] }, { gateway: { id: "my-gateway" } });
 ```
 
 ```bash

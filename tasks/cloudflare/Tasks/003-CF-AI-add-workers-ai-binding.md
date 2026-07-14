@@ -71,13 +71,15 @@ None required. The AI binding is configured in the wrangler.jsonc file, not in t
 
 ### File 1: app/wrangler.jsonc
 
-Add the AI binding to the existing configuration.
+Add this block inside the main JSON object (verified against the current `app/wrangler.jsonc`, which has no `ai` key yet):
 
-Add this block inside the main JSON object:
+```jsonc
+{
+  "ai": { "binding": "AI" }
+}
+```
 
-A new key called `ai` with a nested object containing `binding` set to the string `AI`.
-
-The binding name `AI` is what appears in the Worker code as `env.AI`. This is the convention used in all Cloudflare documentation.
+That's the complete binding — no `gateway` sub-key here (see `001-CF-GW-create-gateway.md`, corrected: the gateway ID is passed per-call in application code, not in this file). The binding name `AI` is what appears in Worker code as `env.AI`. This is the convention used in all Cloudflare documentation. Workers AI allows exactly one `ai` binding per Worker.
 
 ---
 
