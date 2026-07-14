@@ -20,7 +20,7 @@ function makeQuery(response: QueryResponse) {
   const query: Record<string, ReturnType<typeof vi.fn>> & {
     then?: (resolve: (value: QueryResponse) => unknown, reject?: (reason: unknown) => unknown) => unknown;
   } = {};
-  for (const method of ["select", "in", "eq", "neq", "ilike", "or", "order", "limit"]) {
+  for (const method of ["select", "in", "eq", "neq", "filter", "or", "order", "limit"]) {
     query[method] = vi.fn(() => query);
   }
   query.then = (resolve, reject) => Promise.resolve(response).then(resolve, reject);
@@ -115,6 +115,16 @@ describe("Planner metric formulas", () => {
           status: "active",
           planned_end: "2026-07-20",
           tasks: [{ status: "cancelled", end_date: "2026-07-30" }],
+        },
+        "2026-07-13",
+      ),
+    ).toBe(false);
+    expect(
+      isPlannerInstanceAtRisk(
+        {
+          status: "blocked",
+          planned_end: null,
+          tasks: [],
         },
         "2026-07-13",
       ),
@@ -257,11 +267,12 @@ describe("getPlannerDashboardSummary", () => {
 
 describe("listPlannerInstances", () => {
   it("uses stable limit+1 pagination and returns a cursor from the last visible row", async () => {
+    const preciseCreatedAt = "2026-07-10T12:00:00.123456+00:00";
     const rows = [
-      instance(),
+      instance({ created_at: preciseCreatedAt }),
       instance({
         id: "00000000-0000-4000-8000-000000000002",
-        created_at: "2026-07-10T12:00:00.000Z",
+        created_at: preciseCreatedAt,
       }),
       instance({
         id: "00000000-0000-4000-8000-000000000003",
@@ -285,25 +296,29 @@ describe("listPlannerInstances", () => {
     if (!first.ok || !first.data.nextCursor) throw new Error("expected next cursor");
     await listPlannerInstances({ limit: 2, cursor: first.data.nextCursor });
     expect(secondQuery.or).toHaveBeenCalledWith(
-      "created_at.lt.2026-07-10T12:00:00.000Z,and(created_at.eq.2026-07-10T12:00:00.000Z,id.lt.00000000-0000-4000-8000-000000000002)",
+      `created_at.lt.${preciseCreatedAt},and(created_at.eq.${preciseCreatedAt},id.lt.00000000-0000-4000-8000-000000000002)`,
     );
   });
 
-  it("applies schema-backed filters and escapes search wildcards", async () => {
+  it("applies schema-backed filters and treats every search character literally", async () => {
     const query = makeQuery({ data: [], error: null });
     mockClient(query);
 
     await listPlannerInstances({
       entityType: "crm_deal",
       status: "archived",
-      search: "  50%_launch\\  ",
+      search: "  50%_launch\\*  ",
       includeArchived: false,
     });
 
     expect(query.eq).toHaveBeenCalledWith("status", "archived");
     expect(query.eq).toHaveBeenCalledWith("entity_type", "crm_deal");
     expect(query.neq).not.toHaveBeenCalled();
-    expect(query.ilike).toHaveBeenCalledWith("name", "%50\\%\\_launch\\\\%");
+    expect(query.filter).toHaveBeenCalledWith(
+      "name",
+      "imatch",
+      String.raw`.*50%_launch\\\*.*`,
+    );
   });
 
   it("rejects invalid limits, search, and cursors before authentication", async () => {
@@ -316,6 +331,15 @@ describe("listPlannerInstances", () => {
       { limit: 1.5 },
       { search: "x".repeat(101) },
       { cursor: "not-a-valid-cursor" },
+      {
+        cursor: Buffer.from(
+          JSON.stringify({
+            createdAt: "July 10, 2026 12:00:00 GMT",
+            id: "00000000-0000-4000-8000-000000000001",
+          }),
+          "utf8",
+        ).toString("base64url"),
+      },
     ]) {
       const result = await listPlannerInstances(input);
       expect(result.ok).toBe(false);

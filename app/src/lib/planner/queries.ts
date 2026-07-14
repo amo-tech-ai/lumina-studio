@@ -119,6 +119,7 @@ const RISK_ELIGIBLE_STATUSES = new Set<PlannerInstanceStatus>([
 ]);
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const TIMESTAMPTZ_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,6})?(?:Z|[+-]\d{2}:\d{2})$/;
 
 const UNAVAILABLE_APPROVAL: UnavailableApprovalMetric = {
   available: false,
@@ -247,21 +248,24 @@ function decodeCursor(value: string): PlannerQueryResult<PlannerCursor> {
     if (typeof parsed.createdAt !== "string" || typeof parsed.id !== "string") {
       return failure("INVALID_INPUT", "The Planner cursor is invalid.");
     }
-    const timestamp = new Date(parsed.createdAt);
-    if (Number.isNaN(timestamp.getTime()) || !UUID_RE.test(parsed.id)) {
+    if (
+      !TIMESTAMPTZ_RE.test(parsed.createdAt) ||
+      Number.isNaN(Date.parse(parsed.createdAt)) ||
+      !UUID_RE.test(parsed.id)
+    ) {
       return failure("INVALID_INPUT", "The Planner cursor is invalid.");
     }
     return {
       ok: true,
-      data: { createdAt: timestamp.toISOString(), id: parsed.id.toLowerCase() },
+      data: { createdAt: parsed.createdAt, id: parsed.id.toLowerCase() },
     };
   } catch {
     return failure("INVALID_INPUT", "The Planner cursor is invalid.");
   }
 }
 
-function escapeLikePattern(value: string): string {
-  return value.replace(/[\\%_]/g, (character) => `\\${character}`);
+function escapeRegexPattern(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
 function normalizeListPlannerInstancesInput(
@@ -299,7 +303,7 @@ function toInstancePage(rows: HubInstanceRow[], limit: number): PlannerInstanceP
   const pageRows = rows.slice(0, limit);
   const last = pageRows.at(-1);
   const nextCursor = hasMore && last
-    ? encodeCursor({ createdAt: new Date(last.created_at).toISOString(), id: last.id })
+    ? encodeCursor({ createdAt: last.created_at, id: last.id })
     : null;
   const today = utcDate(new Date());
 
@@ -377,7 +381,7 @@ export async function listPlannerInstances(
   }
   if (options.entityType) query = query.eq("entity_type", options.entityType);
   if (options.search) {
-    query = query.ilike("name", `%${escapeLikePattern(options.search)}%`);
+    query = query.filter("name", "imatch", `.*${escapeRegexPattern(options.search)}.*`);
   }
   if (options.cursor) {
     query = query.or(
