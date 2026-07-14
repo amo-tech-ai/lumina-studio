@@ -102,17 +102,23 @@ describe("MemberTable", () => {
     expect(screen.queryByRole("button", { name: "Remove" })).toBeNull(); // owner row has no controls
   });
 
-  it("a manager sees no controls on their own row, but does on a peer's — self-elevation/self-removal guard", () => {
+  it("a manager sees no controls on their own row, and none on a peer manager's either — self-elevation guard + SEC-003b target gate", () => {
+    // Live-verified: planner_update_role/planner_remove_assignment reject
+    // v_target_role IN ('owner','manager') for any non-owner caller — a
+    // manager cannot act on a peer manager's row at all, not just role
+    // changes. VIEWER stays here to prove the row-level gate is target-role-
+    // specific, not "manager sees nothing but their own row."
     const MANAGER_2: PlannerMember = { ...MANAGER, id: "a4", userId: "manager-2", displayName: "Deepa" };
     render(
       <MemberTable
         instanceId="i1"
-        members={[OWNER, MANAGER, MANAGER_2]}
+        members={[OWNER, MANAGER, MANAGER_2, VIEWER]}
         role="manager"
         currentUserId="manager-1"
       />,
     );
-    // manager-1 is the caller: exactly one Remove control (for manager-2), none for self
+    // manager-1 is the caller: no control on self (MANAGER) or the peer
+    // manager (MANAGER_2) — only the viewer row is actionable.
     expect(screen.getAllByRole("button", { name: "Remove" })).toHaveLength(1);
   });
 

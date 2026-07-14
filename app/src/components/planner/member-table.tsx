@@ -26,7 +26,7 @@ const ACCESS_LABEL: Record<PlannerRole, string> = {
 // Never 'owner' — matches planner_invite_member/planner_update_role's own
 // invalid_role rejection (owner status only transfers via a separate,
 // explicit action, out of this ticket's scope).
-const EDITABLE_ROLES: PlannerRole[] = ["manager", "contributor", "viewer"];
+const ALL_EDITABLE_ROLES: PlannerRole[] = ["manager", "contributor", "viewer"];
 
 type Props = {
   instanceId: string;
@@ -42,7 +42,7 @@ export function MemberTable({ instanceId, members, role, currentUserId }: Props)
   return (
     <div className={styles.wrap}>
       <div className={styles.header}>
-        {canManage ? <InviteMemberDialog instanceId={instanceId} /> : null}
+        {canManage ? <InviteMemberDialog instanceId={instanceId} callerRole={role} /> : null}
       </div>
 
       <div className={styles.grid} role="table" aria-label="Plan members">
@@ -59,6 +59,7 @@ export function MemberTable({ instanceId, members, role, currentUserId }: Props)
             instanceId={instanceId}
             member={member}
             canManage={canManage}
+            callerRole={role}
             isSelf={member.userId === currentUserId}
             isLastOwner={member.role === "owner" && ownerCount <= 1}
           />
@@ -72,12 +73,14 @@ function MemberRow({
   instanceId,
   member,
   canManage,
+  callerRole,
   isSelf,
   isLastOwner,
 }: {
   instanceId: string;
   member: PlannerMember;
   canManage: boolean;
+  callerRole: PlannerRole | null;
   isSelf: boolean;
   isLastOwner: boolean;
 }) {
@@ -88,7 +91,21 @@ function MemberRow({
   // can't be changed here (matches insufficient_role_for_target server-side),
   // and self-elevation/self-demotion is blocked in the UI rather than only
   // relying on the RPC's own self-elevation guard.
-  const showControls = canManage && member.role !== "owner" && !isSelf;
+  //
+  // A peer manager's row is also off-limits to a non-owner caller — verified
+  // live: both planner_update_role and planner_remove_assignment reject
+  // v_target_role IN ('owner', 'manager') unless the caller is owner, not
+  // just target='owner'. Without this, a manager caller would see working-
+  // looking role-select/Remove controls on a peer manager that always fail.
+  const showControls =
+    canManage && member.role !== "owner" && !isSelf && (member.role !== "manager" || callerRole === "owner");
+
+  // SEC-003b (migration 20260714211800): planner_update_role rejects
+  // p_new_role='manager' from anyone below owner, regardless of the target's
+  // current role — a manager-level caller offered "manager" here would only
+  // ever get insufficient_role_for_target on submit.
+  const editableRoles =
+    callerRole === "owner" ? ALL_EDITABLE_ROLES : ALL_EDITABLE_ROLES.filter((r) => r !== "manager");
 
   function handleRoleChange(next: string) {
     setError(null);
@@ -121,7 +138,7 @@ function MemberRow({
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {EDITABLE_ROLES.map((r) => (
+                {editableRoles.map((r) => (
                   <SelectItem key={r} value={r}>{r}</SelectItem>
                 ))}
               </SelectContent>
