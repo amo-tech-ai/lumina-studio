@@ -92,11 +92,11 @@ We are in active development. Always leave the system better than you found it: 
 - `GEMINI_API_KEY` is server-only — used exclusively in `app/src/mastra/` and `supabase/functions/`.
 - **Never skip the pre-push hook** (`--no-verify`). If it fails, fix the underlying issue — don't bypass it.
 
-- **Run `/review-pr all` before `gh pr create`.** Waived for docs-only or typo fixes.
-- Typecheck/lint/tests alone miss silent-failure patterns — RLS returning empty instead of erroring, `maybeSingle()` ignoring `.error`.
-- On [IPI-536](https://linear.app/amo100/issue/IPI-536) (PR #347), skipping `/review-pr` meant 5 bugs (1 P1) found post-merge.
-- Any Critical/Important finding from `/review-pr` blocks merge.
-- IPI (Internal Project Issue) is this repo's Linear issue-ID prefix.
+- **Run `/review-pr all` before `gh pr create`.**
+- Typecheck/lint/tests miss silent-failure patterns.
+- [IPI-536](https://linear.app/amo100/issue/IPI-536) — 5 bugs found post-merge after skipping `/review-pr`.
+- `/review-pr` Critical/Important findings block merge.
+- IPI is this repo's Linear issue-ID prefix.
 
 ## Graphify — mandatory before reading source files
 
