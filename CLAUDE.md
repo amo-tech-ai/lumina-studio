@@ -221,6 +221,8 @@ build on every change when CI's `app-build` job already does, and prefer Cloudfl
 gradual-deployment/rollback/observability tooling over exhaustive pre-merge local verification
 where it applies (see the skill's verification checklist for right-sizing guidance).
 
+**Setup/architecture review:** `tasks/cloudflare/plan/2026-07-13-cloudflare-setup-review.md` audits iPix's actual deployed Cloudflare setup (Next.js+OpenNext, Workers AI, AI Gateway, the standalone `services/cloudflare-worker/`) against current official best-practice setup options — scoped to what iPix really runs, not a from-scratch comparison of app shapes we don't have. Check it (and its linked `CF-1xx` task docs) before re-deriving a Cloudflare setup decision from scratch.
+
 ## QA test credentials
 
 For automated browser testing (`npm run dev` on port 3002):
