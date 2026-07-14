@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script>
+window.__LU={
+ home:'<path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M9 22V12h6v10"/>',
+ "calendar-range":'<rect width="18" height="18" x="3" y="4" rx="2"/><path d="M16 2v4"/><path d="M8 2v4"/><path d="M3 10h18"/><path d="M17 14h-6"/><path d="M13 18H7"/><path d="M7 14h.01"/><path d="M17 18h.01"/>',
+ "layout-dashboard":'<rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/>',
+ inbox:'<polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/>',
+ settings:'<path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/>',
+ sparkles:'<path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .962 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.962 0z"/><path d="M20 3v4"/><path d="M22 5h-4"/><path d="M4 17v2"/><path d="M5 18H3"/>',
+ "arrow-up":'<path d="m5 12 7-7 7 7"/><path d="M12 19V5"/>',
+ "chevron-right":'<path d="m9 18 6-6-6-6"/>',
+ "list-checks":'<path d="m3 17 2 2 4-4"/><path d="m3 7 2 2 4-4"/><path d="M13 6h8"/><path d="M13 12h8"/><path d="M13 18h8"/>',
+ "circle-check":'<circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/>',
+ "alert-triangle":'<path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3z"/><line x1="12" x2="12" y1="9" y2="13"/><line x1="12" x2="12.01" y1="17" y2="17"/>',
+ clock:'<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>',
+ flag:'<path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" x2="4" y1="22" y2="15"/>',
+ "trending-up":'<polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/>'
+};
+(function(){ if(customElements.get('lu-ic'))return;
+ class LuIc extends HTMLElement{ static get observedAttributes(){return ['name'];}
+  connectedCallback(){this._r();} attributeChangedCallback(){this._r();}
+  _r(){ var n=this.getAttribute('name');var inner=(window.__LU||{})[n];if(inner==null)return;
+   this.style.display='inline-flex';this.style.alignItems='center';this.style.justifyContent='center';
+   var root=this.shadowRoot||this.attachShadow({mode:'open'});
+   root.innerHTML='<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="100%" height="100%" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:block">'+inner+'</svg>';
+  } }
+ customElements.define('lu-ic',LuIc);
+})();
+</script>
+<style>
+  :root{--bg:#fff;--surface:#fafafa;--muted-bg:#f5f5f5;--border:#e5e7eb;--border-strong:#d1d5db;--border-subtle:#ededed;--text:#111;--text-2:#6b7280;--text-3:#9ca3af;--action:#111;--todo:#9ca3af;--inprog:#111;--blocked:#b91c1c;--done:#059669;--gate:#d97706;--gate-bg:#fef3e2;--lost:#b91c1c;--won:#059669;--font:"Inter",sans-serif;--mono:"Geist Mono",Menlo,monospace;--r-sm:6px;--r-md:10px;--r-lg:16px;--r-pill:9999px;}
+  *{box-sizing:border-box;}body{margin:0;font-family:var(--font);color:var(--text);background:var(--surface);-webkit-font-smoothing:antialiased;}
+  a{color:var(--action);text-decoration:none;}a:hover{opacity:.85;}
+  .tnum{font-variant-numeric:tabular-nums;}::-webkit-scrollbar{width:8px;height:8px;}::-webkit-scrollbar-thumb{background:var(--border-strong);border-radius:4px;}
+  @keyframes shimmer{0%{background-position:-500px 0}100%{background-position:500px 0}}
+  .sk{background:linear-gradient(90deg,#efefef 25%,#e4e4e4 37%,#efefef 63%);background-size:900px 100%;animation:shimmer 1.4s infinite linear;border-radius:8px;}
+  @keyframes toastIn{from{opacity:0;transform:translate(-50%,10px)}to{opacity:1;transform:translate(-50%,0)}}
+  a:focus-visible,button:focus-visible,input:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--action);outline-offset:2px;border-radius:5px;}
+  .pl-skip{position:absolute;left:8px;top:-46px;z-index:200;background:var(--action);color:#fff;padding:9px 15px;border-radius:var(--r-md);font-size:13px;font-weight:600;transition:top .16s;}
+  .pl-skip:focus{top:8px;}
+  .pl-sr{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0;}
+  .pl-scrim{display:none;}
+  .pl-panel-fab{display:none;}
+  @media (max-width:1279px){ .pl-shell{grid-template-columns:56px minmax(0,1fr) 300px !important;} }
+  @media (max-width:1023px){
+    .pl-shell{grid-template-columns:56px minmax(0,1fr) !important;}
+    .pl-aside{position:fixed !important;top:0;right:0;height:100vh;width:340px;max-width:88vw;z-index:60;transform:translateX(103%);transition:transform .22s ease;box-shadow:-14px 0 40px rgba(0,0,0,.18);}
+    .pl-aside.pl-open{transform:translateX(0);}
+    .pl-scrim.pl-open{display:block;position:fixed;inset:0;background:rgba(17,17,17,.34);z-index:55;}
+    .pl-panel-fab{display:inline-flex !important;position:fixed;right:18px;bottom:88px;z-index:50;width:52px;height:52px;border-radius:var(--r-pill);border:none;background:var(--action);color:#fff;align-items:center;justify-content:center;box-shadow:0 10px 28px rgba(0,0,0,.26);cursor:pointer;}
+  }
+  @media (prefers-reduced-motion:reduce){ .pl-aside{transition:none !important;} .sk{animation:none !important;} }
+</style>
+</helmet>
+<div class="pl-shell" style="display:grid;grid-template-columns:56px minmax(0,1fr) 320px;height:100vh;width:100vw;background:var(--bg);overflow:hidden;">
+
+  <a href="#pl-main" class="pl-skip">Skip to dashboard</a>
+
+  <nav aria-label="Primary" style="background:var(--bg);border-right:1px solid var(--border);display:flex;flex-direction:column;align-items:center;padding:14px 0;gap:4px;">
+    <div style="width:30px;height:30px;border-radius:8px;background:var(--action);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;margin-bottom:12px;">i</div>
+    <sc-for list="{{ nav }}" as="n" hint-placeholder-count="5"><a href="{{ n.href }}" title="{{ n.label }}" aria-label="{{ n.label }}" aria-current="{{ n.current }}" style="{{ n.style }}" style-hover="{{ n.hover }}"><lu-ic name="{{ n.icon }}" style="width:20px;height:20px;"></lu-ic></a></sc-for>
+  </nav>
+
+  <main id="pl-main" style="display:flex;flex-direction:column;min-width:0;min-height:0;height:100vh;overflow:hidden;position:relative;">
+
+    <sc-if value="{{ readOnly }}" hint-placeholder-val="{{ false }}">
+      <div style="flex-shrink:0;margin:12px 26px 0;display:flex;align-items:center;gap:8px;padding:9px 13px;border-radius:var(--r-md);background:var(--muted-bg);border:1px solid var(--border-strong);font-size:12px;color:var(--text-2);"><lu-ic name="alert-triangle" style="width:14px;height:14px;flex-shrink:0;"></lu-ic><span><strong style="color:var(--text);">Read-only</strong> — Viewer access. You can browse plans but can't sign off approvals or edit tasks.</span></div>
+    </sc-if>
+    <sc-if value="{{ syncFailed }}" hint-placeholder-val="{{ false }}">
+      <div style="flex-shrink:0;margin:12px 26px 0;display:flex;align-items:center;gap:8px;padding:9px 13px;border-radius:var(--r-md);background:#fdeaea;border:1px solid #f4c9c9;font-size:12px;color:var(--lost);"><lu-ic name="alert-triangle" style="width:14px;height:14px;flex-shrink:0;"></lu-ic><span style="flex:1;">Dashboard couldn't sync. Showing your last cached view.</span><button onClick="{{ dismissSync }}" style="border:1px solid #f4c9c9;background:var(--bg);color:var(--lost);border-radius:var(--r-sm);padding:4px 10px;font-family:var(--font);font-size:11px;font-weight:600;cursor:pointer;">Retry now</button></div>
+    </sc-if>
+
+    <sc-if value="{{ isLoading }}" hint-placeholder-val="{{ false }}">
+      <div style="flex:1;overflow:hidden;padding:22px 26px 8px;min-height:0;">
+        <div class="sk" style="height:26px;width:280px;margin-bottom:22px;"></div>
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:26px;"><sc-for list="{{ skCards }}" as="s" hint-placeholder-count="4"><div class="sk" style="height:118px;"></div></sc-for></div>
+        <div class="sk" style="height:16px;width:140px;margin-bottom:12px;"></div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;"><sc-for list="{{ skCards3 }}" as="s" hint-placeholder-count="3"><div class="sk" style="height:190px;"></div></sc-for></div>
+      </div>
+    </sc-if>
+    <sc-if value="{{ isEmpty }}" hint-placeholder-val="{{ false }}">
+      <div style="flex:1;display:flex;align-items:center;justify-content:center;padding:40px;min-height:0;">
+        <div style="text-align:center;max-width:340px;">
+          <div style="width:52px;height:52px;border-radius:var(--r-lg);background:var(--muted-bg);display:flex;align-items:center;justify-content:center;margin:0 auto 14px;"><lu-ic name="layout-dashboard" style="width:24px;height:24px;color:var(--text-3);"></lu-ic></div>
+          <div style="font-size:16px;font-weight:700;margin-bottom:6px;">No plans yet</div>
+          <div style="font-size:13px;color:var(--text-2);line-height:1.5;margin-bottom:16px;">Once you're on a production plan it'll show here with your tasks, approvals, and this week's schedule.</div>
+          <a href="SCR-35-Planner-Hub.dc.html" style="display:inline-flex;align-items:center;gap:6px;padding:9px 16px;border-radius:var(--r-md);background:var(--action);color:#fff;font-size:13px;font-weight:600;"><lu-ic name="calendar-range" style="width:14px;height:14px;"></lu-ic>Browse plans</a>
+        </div>
+      </div>
+    </sc-if>
+    <sc-if value="{{ isError }}" hint-placeholder-val="{{ false }}">
+      <div style="flex:1;display:flex;align-items:center;justify-content:center;padding:40px;min-height:0;">
+        <div style="text-align:center;max-width:340px;">
+          <div style="width:52px;height:52px;border-radius:var(--r-lg);background:#fdeaea;display:flex;align-items:center;justify-content:center;margin:0 auto 14px;"><lu-ic name="alert-triangle" style="width:24px;height:24px;color:var(--lost);"></lu-ic></div>
+          <div style="font-size:16px;font-weight:700;margin-bottom:6px;">Couldn't load your dashboard</div>
+          <div style="font-size:13px;color:var(--text-2);line-height:1.5;margin-bottom:16px;">Something went wrong fetching your tasks and plans. Try again.</div>
+          <button onClick="{{ retry }}" style="display:inline-flex;align-items:center;gap:6px;padding:9px 16px;border-radius:var(--r-md);border:1px solid var(--border-strong);background:var(--bg);color:var(--text);font-family:var(--font);font-size:13px;font-weight:600;cursor:pointer;">Try again</button>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ isLive }}" hint-placeholder-val="{{ true }}">
+    <div style="flex:1;overflow:auto;min-height:0;padding:22px 26px 8px;">
+
+      <!-- GREETING -->
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:16px;">
+        <div style="max-width:640px;">
+          <h1 style="margin:0;font-size:24px;font-weight:700;letter-spacing:-.02em;">Good morning, Maya</h1>
+          <p style="margin:6px 0 0;font-size:14px;color:var(--text-2);line-height:1.5;">Friday, March 13 · here's what needs you today.</p>
+        </div>
+        <span style="flex-shrink:0;display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:var(--r-pill);background:var(--gate-bg);border:1px solid #f4d9ad;font-size:11px;font-weight:600;color:var(--gate);">Sample data — not live</span>
+      </div>
+
+      <!-- START HERE (P2) -->
+      <a href="SCR-32-Planner-Workspace.dc.html" style="display:flex;align-items:center;gap:14px;border:1px solid #f4d9ad;background:var(--gate-bg);border-radius:var(--r-lg);padding:15px 17px;margin-bottom:24px;" style-hover="border-color:var(--gate);">
+        <div style="width:40px;height:40px;border-radius:var(--r-md);background:var(--gate);color:#fff;display:flex;align-items:center;justify-content:center;flex-shrink:0;"><lu-ic name="circle-check" style="width:20px;height:20px;"></lu-ic></div>
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--gate);font-weight:700;margin-bottom:2px;">Start here</div>
+          <div style="font-size:15px;font-weight:700;">2 approvals are blocking today's work</div>
+          <div style="font-size:12.5px;color:var(--text-2);margin-top:2px;">Outfit confirmation on Summer Lookbook is the most urgent — approving it unblocks payment &amp; scheduling.</div>
+        </div>
+        <span style="flex-shrink:0;display:inline-flex;align-items:center;gap:6px;padding:9px 16px;border-radius:var(--r-md);background:var(--action);color:#fff;font-size:13px;font-weight:600;">Review<lu-ic name="chevron-right" style="width:14px;height:14px;"></lu-ic></span>
+      </a>
+
+      <!-- KPI STAT CARDS (urgency-ordered) -->
+      <div style="font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--text-3);margin-bottom:10px;font-weight:700;">At a glance</div>
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:26px;">
+        <sc-for list="{{ stats }}" as="s" hint-placeholder-count="4">
+          <a href="#" aria-label="{{ s.aria }}" title="{{ s.tip }}" style="{{ s.cardStyle }}" style-hover="border-color:var(--border-strong);">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+              <div style="width:30px;height:30px;border-radius:var(--r-md);background:{{ s.iconBg }};display:flex;align-items:center;justify-content:center;color:{{ s.iconColor }};"><lu-ic name="{{ s.icon }}" style="width:16px;height:16px;"></lu-ic></div>
+              <lu-ic name="chevron-right" style="width:15px;height:15px;color:var(--text-3);"></lu-ic>
+            </div>
+            <div class="tnum" style="font-family:var(--mono);font-size:30px;font-weight:600;line-height:1;color:{{ s.valColor }};">{{ s.value }}</div>
+            <div style="font-size:12px;font-weight:600;margin-top:8px;">{{ s.label }}</div>
+            <div style="font-size:11px;color:var(--text-3);margin-top:2px;">{{ s.meta }}</div>
+          </a>
+        </sc-for>
+      </div>
+
+      <!-- RECENT PLANS -->
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+        <h2 style="margin:0;font-size:14px;font-weight:700;">Recent plans</h2>
+        <a href="#" style="font-size:12px;font-weight:600;color:var(--text-2);">View all →</a>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:28px;">
+        <sc-for list="{{ plans }}" as="p" hint-placeholder-count="3">
+          <a href="#" style="border:1px solid var(--border);border-radius:var(--r-lg);overflow:hidden;background:var(--bg);display:block;" style-hover="border-color:var(--border-strong);">
+            <div style="position:relative;aspect-ratio:4/3;background-image:{{ p.cover }};background-size:cover;background-position:center;">
+              <span style="position:absolute;inset:0;background:linear-gradient(180deg,transparent 55%,rgba(0,0,0,.45));"></span>
+              <span style="position:absolute;left:11px;top:11px;{{ p.chipStyle }}"><span style="width:5px;height:5px;border-radius:50%;{{ p.chipDot }}"></span>{{ p.statusLabel }}</span>
+              <span style="position:absolute;left:12px;bottom:10px;display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:600;color:#fff;"><lu-ic name="{{ p.entityIcon }}" style="width:12px;height:12px;"></lu-ic>{{ p.entityLabel }}</span>
+            </div>
+            <div style="padding:12px 13px;">
+              <div style="font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ p.name }}</div>
+              <div style="font-size:11.5px;color:var(--text-2);margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ p.statusSentence }}</div>
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-top:8px;">
+                <span style="font-family:var(--mono);font-size:11px;color:var(--text-3);">{{ p.progress }}</span>
+                <span style="font-family:var(--mono);font-size:11px;color:var(--text-3);">{{ p.dates }}</span>
+              </div>
+              <div style="height:4px;border-radius:2px;background:var(--muted-bg);margin-top:8px;overflow:hidden;"><div style="{{ p.barStyle }}"></div></div>
+            </div>
+          </a>
+        </sc-for>
+      </div>
+
+      <!-- UPCOMING THIS WEEK -->
+      <h2 style="margin:0 0 12px;font-size:14px;font-weight:700;">Upcoming this week</h2>
+      <div style="border:1px solid var(--border);border-radius:var(--r-lg);overflow:hidden;background:var(--bg);margin-bottom:8px;">
+        <div style="display:grid;grid-template-columns:repeat(7,1fr);">
+          <sc-for list="{{ week }}" as="d" hint-placeholder-count="7">
+            <div style="{{ d.colStyle }}">
+              <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:9px;">
+                <span style="font-size:10px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--text-3);">{{ d.dow }}</span>
+                <span class="tnum" style="{{ d.numStyle }}">{{ d.num }}</span>
+              </div>
+              <div style="display:flex;flex-direction:column;gap:5px;">
+                <sc-for list="{{ d.tasks }}" as="t" hint-placeholder-count="1"><div style="{{ t.style }}"><span style="width:5px;height:5px;border-radius:50%;flex-shrink:0;{{ t.dot }}"></span><span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ t.t }}</span></div></sc-for>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+
+    </div>
+    </sc-if>
+
+    <sc-if value="{{ toast }}" hint-placeholder-val="{{ false }}">
+      <div aria-live="polite" style="position:absolute;bottom:86px;left:50%;transform:translateX(-50%);z-index:8;display:flex;align-items:center;gap:8px;background:var(--action);color:#fff;padding:11px 16px;border-radius:var(--r-pill);font-size:12px;font-weight:600;box-shadow:0 8px 24px rgba(0,0,0,.18);animation:toastIn .22s ease-out;"><lu-ic name="circle-check" style="width:14px;height:14px;"></lu-ic>{{ toast }}</div>
+    </sc-if>
+
+    <!-- CHAT DOCK -->
+    <div style="flex-shrink:0;border-top:1px solid var(--border);background:var(--bg);padding:10px 26px 14px;">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;"><lu-ic name="sparkles" style="width:14px;height:14px;color:var(--action);"></lu-ic><span style="font-size:12px;color:var(--text-2);">You have 3 plans active. Item delivery on Summer Lookbook needs attention first — want me to summarize?</span><span style="font-size:10px;font-weight:600;color:var(--text-3);border:1px solid var(--border);border-radius:var(--r-pill);padding:2px 7px;white-space:nowrap;">production-planner · not yet wired</span></div>
+      <div style="display:flex;align-items:center;gap:8px;border:1px solid var(--border-strong);border-radius:var(--r-pill);padding:8px 8px 8px 14px;"><input type="text" placeholder="Ask across all your plans…" style="flex:1;min-width:0;border:none;outline:none;background:none;font-family:var(--font);font-size:13px;" /><button aria-label="Send" style="width:30px;height:30px;border-radius:50%;border:none;background:var(--action);color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;"><lu-ic name="arrow-up" style="width:15px;height:15px;"></lu-ic></button></div>
+    </div>
+  </main>
+
+  <button class="pl-panel-fab" onClick="{{ togglePanel }}" aria-label="Toggle insights panel" title="Insights"><lu-ic name="sparkles" style="width:20px;height:20px;"></lu-ic></button>
+  <div class="pl-scrim {{ panelCls }}" onClick="{{ closePanel }}"></div>
+
+  <!-- INTELLIGENCE PANEL -->
+  <aside class="pl-aside {{ panelCls }}" aria-label="Insights" style="background:var(--surface);border-left:1px solid var(--border);display:flex;flex-direction:column;min-height:0;overflow-y:auto;">
+    <div style="padding:16px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;"><lu-ic name="sparkles" style="width:15px;height:15px;color:var(--action);"></lu-ic><span style="font-size:13px;font-weight:700;">Intelligence</span></div>
+    <div style="padding:16px 18px;">
+
+      <div style="font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--text-3);margin-bottom:8px;">Board health</div>
+      <div style="border:1px solid var(--border-subtle);border-radius:var(--r-md);background:var(--bg);padding:12px;margin-bottom:14px;">
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:10px;"><lu-ic name="trending-up" style="width:14px;height:14px;color:var(--done);"></lu-ic><span style="font-size:12px;font-weight:600;">3 of 4 plans on track</span></div>
+        <div style="display:flex;flex-direction:column;gap:7px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;font-size:12px;"><span style="display:inline-flex;align-items:center;gap:6px;color:var(--text-2);"><span style="width:7px;height:7px;border-radius:50%;background:var(--done);"></span>On track</span><span class="tnum" style="font-family:var(--mono);font-weight:600;">3</span></div>
+          <div style="display:flex;align-items:center;justify-content:space-between;font-size:12px;"><span style="display:inline-flex;align-items:center;gap:6px;color:var(--text-2);"><span style="width:7px;height:7px;border-radius:50%;background:var(--gate);"></span>At risk</span><span class="tnum" style="font-family:var(--mono);font-weight:600;color:var(--gate);">1</span></div>
+        </div>
+      </div>
+
+      <div style="font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--text-3);margin-bottom:8px;">Recommendation</div>
+      <a href="#" onClick="{{ recAction }}" style="display:block;border:1px solid #f4d9ad;background:var(--gate-bg);border-radius:var(--r-md);padding:11px 12px;margin-bottom:16px;cursor:pointer;">
+        <div style="font-size:12px;font-weight:600;margin-bottom:2px;">Approve Outfit confirmation</div>
+        <div style="font-size:11px;color:var(--gate);font-weight:600;">Unblocks Payment &amp; scheduling · review →</div>
+      </a>
+
+      <div style="font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--text-3);margin-bottom:8px;">Recent activity</div>
+      <div style="display:flex;flex-direction:column;gap:12px;">
+        <sc-for list="{{ activity }}" as="a" hint-placeholder-count="4">
+          <div style="display:flex;gap:9px;">
+            <span style="width:7px;height:7px;border-radius:50%;margin-top:5px;flex-shrink:0;{{ a.dot }}"></span>
+            <div style="min-width:0;"><div style="font-size:12px;line-height:1.45;">{{ a.text }}</div><div style="font-size:11px;color:var(--text-3);margin-top:1px;">{{ a.time }}</div></div>
+          </div>
+        </sc-for>
+      </div>
+
+    </div>
+  </aside>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1360,&quot;height&quot;:840},&quot;screenState&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;live&quot;,&quot;loading&quot;,&quot;empty&quot;,&quot;error&quot;],&quot;default&quot;:&quot;live&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Demo states&quot;},&quot;role&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;owner&quot;,&quot;producer&quot;,&quot;viewer&quot;],&quot;default&quot;:&quot;producer&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Demo states&quot;},&quot;syncFailed&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Demo states&quot;}}">
+class Component extends DCLogic {
+  state = { screenState:null, role:null, syncFailed:null, toast:null, panelOpen:false };
+  componentDidMount(){ this._esc=(e)=>{ if(e.key==='Escape'&&this.state.panelOpen) this.setState({panelOpen:false}); }; document.addEventListener('keydown', this._esc); }
+  componentWillUnmount(){ document.removeEventListener('keydown', this._esc); clearTimeout(this._t); }
+  togglePanel(){ this.setState(st=>({panelOpen:!st.panelOpen})); }
+  closePanel(){ this.setState({panelOpen:false}); }
+  showToast(m){ this.setState({toast:m}); clearTimeout(this._t); this._t=setTimeout(()=>this.setState({toast:null}),2600); }
+  renderVals(){
+    const S=this.state;
+    const scr=S.screenState||this.props.screenState||'live';
+    const role=S.role||this.props.role||'producer';
+    const live=scr==='live', isLoading=scr==='loading', isEmpty=scr==='empty', isError=scr==='error';
+    const readOnly=role==='viewer';
+    const syncFailed=live && (S.syncFailed==null?!!this.props.syncFailed:S.syncFailed);
+    const nav = [
+      { icon:'home', label:'Home', href:'Command%20Center.v2.image-first.dc.html' },
+      { icon:'calendar-range', label:'Planner', href:'SCR-35-Planner-Hub.dc.html' },
+      { icon:'layout-dashboard', label:'Planner Dashboard', href:'SCR-33-Planner-Dashboard.dc.html', active:true },
+      { icon:'inbox', label:'Notifications', href:'SCR-15-Notification-Center.dc.html' },
+      { icon:'settings', label:'Settings', href:'SCR-34-Planner-Instance-Settings.dc.html' }
+    ].map(n=>({ ...n, current:n.active?'page':'false', style:'width:38px;height:38px;border-radius:9px;display:flex;align-items:center;justify-content:center;cursor:pointer;text-decoration:none;color:'+(n.active?'#fff':'var(--text-3)')+';background:'+(n.active?'var(--action)':'transparent')+';', hover:n.active?'background:var(--action);color:#fff;':'background:var(--muted-bg);color:var(--text-2);' }));
+
+    const card = 'border:1px solid var(--border);border-radius:var(--r-lg);background:var(--bg);padding:15px 16px;display:block;';
+    const stats = [
+      { icon:'circle-check', label:'Needs your approval', value:'2', meta:'approvals awaiting you', aria:'Needs your approval, 2 approvals awaiting you — view', tip:'Approvals waiting on you. These block downstream work until you approve or edit.',
+        iconBg:'var(--gate-bg)', iconColor:'var(--gate)', valColor:'var(--text)' },
+      { icon:'alert-triangle', label:'At risk', value:'3', meta:'may miss deadlines', aria:'At risk, 3 tasks may miss deadlines — view', tip:'At risk = may miss its deadline. Usually because an upstream step is late.',
+        iconBg:'var(--gate-bg)', iconColor:'var(--gate)', valColor:'var(--gate)' },
+      { icon:'clock', label:'Due today', value:'4', meta:'across 2 plans', aria:'Due today, 4 tasks across 2 plans — view', tip:'Tasks with a due date of today across all your plans.',
+        iconBg:'var(--muted-bg)', iconColor:'var(--text)', valColor:'var(--text)' },
+      { icon:'list-checks', label:'My tasks', value:'12', meta:'4 due this week', aria:'My tasks, 12 total, 4 due this week — view', tip:'Everything assigned to you across every plan.',
+        iconBg:'var(--muted-bg)', iconColor:'var(--text)', valColor:'var(--text)' }
+    ].map(s=>({ ...s, cardStyle:card }));
+
+    // instance status chips
+    const IST = {
+      active:{ l:'Active', c:'var(--text)', bg:'rgba(255,255,255,.9)', dot:'var(--action)' },
+      planned:{ l:'Planned', c:'var(--text)', bg:'rgba(255,255,255,.9)', dot:'var(--text-2)' },
+      blocked:{ l:'At risk', c:'var(--gate)', bg:'rgba(255,255,255,.95)', dot:'var(--gate)' }
+    };
+    const chip = (k)=>{ const s=IST[k]; return { style:'display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:var(--r-pill);font-size:10px;font-weight:600;background:'+s.bg+';color:'+s.c+';backdrop-filter:blur(4px);', dot:'background:'+s.dot+';', label:s.l }; };
+    const img = k => 'url("../images/'+k+'-fashionos.jpeg")';
+    const plans = [
+      { name:'Summer Lookbook', k:'active', img:12, entity:'shoot', progress:'27% · 3/11 steps', dates:'Mar 2 – Apr 5', pct:27, risk:true, sentence:'Waiting on item delivery — 2 days late' },
+      { name:'SS26 Campaign', k:'planned', img:8, entity:'campaign', progress:'Not started', dates:'Apr 8 – May 2', pct:6, risk:false, sentence:'Kicks off Apr 8 — brief in draft' },
+      { name:'Nike Editorial', k:'active', img:15, entity:'shoot', progress:'62% · 7/11 steps', dates:'Feb 24 – Mar 20', pct:62, risk:false, sentence:'On track — retouch underway' }
+    ].map(p=>{ const c=chip(p.k); const ent = p.entity==='campaign' ? {icon:'flag',label:'Campaign'} : {icon:'calendar-range',label:'Shoot'};
+      return { name:p.name, cover:img(p.img), chipStyle:c.style, chipDot:c.dot, statusLabel:c.label, statusSentence:p.sentence,
+        entityIcon:ent.icon, entityLabel:ent.label, progress:p.progress, dates:p.dates,
+        barStyle:'height:100%;width:'+p.pct+'%;background:'+(p.risk?'var(--gate)':'var(--action)')+';' }; });
+
+    // upcoming week
+    const evClr = { done:'var(--done)', prog:'var(--action)', risk:'var(--gate)', gate:'var(--gate)', todo:'var(--text-3)' };
+    const taskChip = (t,c)=>({ t, style:'display:flex;align-items:center;gap:5px;font-size:10px;font-weight:600;padding:3px 6px;border-radius:var(--r-sm);background:var(--surface);border:1px solid var(--border-subtle);', dot:'background:'+evClr[c]+';' });
+    const WK = [
+      { dow:'Mon', num:9, today:false, tasks:[['Soft holds','prog']] },
+      { dow:'Tue', num:10, today:false, tasks:[['Sample pull','risk']] },
+      { dow:'Wed', num:11, today:false, tasks:[['Soft holds','prog'],['Sample pull','risk']] },
+      { dow:'Thu', num:12, today:true, tasks:[['Courier','risk']] },
+      { dow:'Fri', num:13, today:false, tasks:[['Courier in','todo']] },
+      { dow:'Sat', num:14, today:false, tasks:[] },
+      { dow:'Sun', num:15, today:false, tasks:[] }
+    ];
+    const week = WK.map((d,i)=>({ dow:d.dow, num:d.num,
+      colStyle:'padding:12px 11px;min-height:120px;'+(i<6?'border-right:1px solid var(--border-subtle);':'')+(d.today?'background:var(--surface);':''),
+      numStyle:d.today?'font-family:var(--mono);font-size:11px;font-weight:700;color:#fff;background:var(--action);width:20px;height:20px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;':'font-family:var(--mono);font-size:12px;font-weight:600;color:var(--text-2);',
+      tasks:d.tasks.map(([t,c])=>taskChip(t,c)) }));
+
+    const activity = [
+      { text:'Maya approved Casting on Summer Lookbook', time:'2h ago', dot:'background:var(--done);' },
+      { text:'Courier inbound task moved to Blocked', time:'4h ago', dot:'background:var(--blocked);' },
+      { text:'Priya updated Sample pull — 24 looks', time:'Yesterday', dot:'background:var(--action);' },
+      { text:'Nike Editorial reached the Retouching step', time:'Yesterday', dot:'background:var(--text-3);' }
+    ];
+
+    const recAction=(e)=>{ if(e&&e.preventDefault)e.preventDefault(); if(readOnly){ this.showToast('Viewer access — you can’t approve'); return; } this.showToast('Opening Outfit confirmation approval… (sample)'); };
+    return { nav, stats, plans, week, activity,
+      isLive:live, isLoading, isEmpty, isError, readOnly, syncFailed,
+      skCards:[0,0,0,0], skCards3:[0,0,0],
+      dismissSync:()=>this.setState({syncFailed:false}), retry:()=>this.setState({screenState:'live'}),
+      toast:S.toast, recAction,
+      panelCls: S.panelOpen?'pl-open':'', togglePanel:()=>this.togglePanel(), closePanel:()=>this.closePanel() };
+  }
+}
+</script>
+</body>
+</html>

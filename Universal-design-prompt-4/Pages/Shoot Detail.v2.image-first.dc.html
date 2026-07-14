@@ -1,0 +1,1048 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --color-bg-page:#ffffff;--color-bg-card:#ffffff;--color-bg-subtle:#fafafa;--color-bg-muted:#f4f4f5;
+  --color-border:#e5e7eb;--color-border-strong:#d1d5db;--color-border-subtle:#f0f0f1;--color-border-focus:#111111;
+  --color-text-primary:#111111;--color-text-secondary:#6b7280;--color-text-muted:#9ca3af;--color-text-disabled:#c4c7cc;
+  --color-action:#111111;--color-action-hover:#000000;--color-action-text:#ffffff;
+  --color-approved:#059669;--color-approved-bg:#ecfdf5;--color-warning:#b45309;--color-warning-bg:#fffbeb;--color-dna-low:#dc2626;
+  --shadow-card:0 1px 3px 0 rgb(17 17 17 / 0.05),0 1px 2px -1px rgb(17 17 17 / 0.04);--shadow-panel:0 8px 24px -8px rgb(17 17 17 / 0.12);--shadow-modal:0 24px 64px -16px rgb(17 17 17 / 0.2);
+  --duration-normal:250ms;--ease-default:cubic-bezier(0.16,1,0.3,1);
+  --radius-md:0.625rem;--card-radius:1.25rem;--image-radius:1.25rem;--image-radius-sm:0.75rem;
+  --intel-bg:#ffffff;--nav-item-active:#f4f4f5;--nav-item-hover:#f4f4f5;
+  --nav-width-collapsed:3.5rem;--nav-width-expanded:14rem;
+  --image-scrim:linear-gradient(to top, rgb(17 17 17 / 0.72), rgb(17 17 17 / 0) 60%);
+  --fs-xs:0.75rem;--fs-sm:0.875rem;--fs-base:1rem;--fs-lg:1.125rem;--fs-xl:1.25rem;--fs-2xl:1.5rem;
+}
+*{box-sizing:border-box;}
+body{margin:0;font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:var(--color-text-primary);-webkit-font-smoothing:antialiased;}
+.mono{font-family:'Inter',sans-serif;font-feature-settings:'tnum';}
+.photo{background-size:cover;background-position:center top;background-repeat:no-repeat;background-color:var(--color-bg-subtle);position:relative;}
+@keyframes shimmer{0%{background-position:-400px 0;}100%{background-position:400px 0;}}
+@keyframes pulse{0%,100%{opacity:1;}50%{opacity:.25;}}
+.skel{background:linear-gradient(90deg,var(--color-bg-subtle) 25%,var(--color-bg-muted) 50%,var(--color-bg-subtle) 75%);background-size:800px 100%;animation:shimmer 1.4s infinite linear;border-radius:10px;}
+@media (prefers-reduced-motion:reduce){.skel,.pulse-dot{animation:none !important;}}
+.tabrow::-webkit-scrollbar{height:0;}
+.sheetbtn{display:none;}
+.m-tabbar{display:none;position:fixed;left:0;right:0;bottom:0;height:calc(56px + env(safe-area-inset-bottom));padding:0 4px env(safe-area-inset-bottom);background:var(--color-bg-card);border-top:1px solid var(--color-border);z-index:500;}
+@media (min-width:1025px){.m-tabbar{display:none !important;}}
+@media (max-width:1024px){
+  nav[data-screen-label="NavSidebar"]{display:none !important;}
+  main[data-screen-label="Workspace"]{padding-bottom:calc(58px + env(safe-area-inset-bottom)) !important;}
+  .m-tabbar{display:flex !important;}
+  .hpad{padding-left:18px !important;padding-right:18px !important;}
+  aside[data-screen-label="IntelligencePanel"]{position:fixed !important;inset:auto 0 0 0 !important;width:100% !important;height:82vh !important;border-left:none !important;border-top:1px solid var(--color-border) !important;border-radius:20px 20px 0 0 !important;transform:translateY(102%);box-shadow:var(--shadow-modal);z-index:500;}
+  aside.sheet-open{transform:translateY(0) !important;}
+  .sheetbtn{display:inline-flex !important;}
+}
+.m-more-cb{position:absolute;opacity:0;pointer-events:none;}
+.m-more-backdrop,.m-more-sheet{display:none;}
+@media (max-width:1024px){
+  .m-more-cb:checked ~ .m-more-backdrop{display:block;position:fixed;inset:0;background:rgba(17,17,17,.42);z-index:560;}
+  .m-more-sheet{display:block;position:fixed;left:0;right:0;bottom:0;background:var(--color-bg-card);border-top:1px solid var(--color-border);border-radius:18px 18px 0 0;z-index:570;transform:translateY(101%);transition:transform var(--duration-normal) var(--ease-default);box-shadow:var(--shadow-modal);padding-bottom:env(safe-area-inset-bottom);}
+  .m-more-cb:checked ~ .m-more-sheet{transform:translateY(0);}
+}
+@media (min-width:1025px){.m-more-sheet,.m-more-backdrop{display:none !important;}}
+@media (max-width:1024px){
+  .m-chatdock{padding-left:16px !important;padding-right:16px !important;max-height:46vh;overflow-y:auto;}
+}
+</style>
+</helmet>
+
+<div style="display:grid;grid-template-columns:auto minmax(0,1fr) auto;height:100vh;width:100%;background:var(--color-bg-page);overflow:hidden;">
+  <input type="checkbox" id="m-more" class="m-more-cb" aria-hidden="true" tabindex="-1">
+
+  <!-- ===================== NAV SIDEBAR ===================== -->
+  <nav data-screen-label="NavSidebar" style="width:{{ navWidth }};flex-shrink:0;background:var(--color-bg-card);border-right:1px solid var(--color-border);display:flex;flex-direction:column;justify-content:space-between;padding:14px 10px;transition:width var(--duration-normal) var(--ease-default);overflow:hidden;z-index:200;">
+    <div style="display:flex;flex-direction:column;gap:6px;">
+      <button onClick="{{ toggleNav }}" aria-label="Toggle navigation" title="Expand / collapse sidebar" style="display:flex;align-items:center;gap:12px;height:36px;padding:0 7px;border:none;background:transparent;border-radius:8px;color:var(--color-text-secondary);cursor:pointer;" style-hover="background:var(--nav-item-hover);">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" style="flex-shrink:0;"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+        <sc-if value="{{ navExpanded }}" hint-placeholder-val="{{ false }}"><span style="font-size:var(--fs-sm);font-weight:600;color:var(--color-text-primary);white-space:nowrap;">iPix</span></sc-if>
+      </button>
+      <div style="height:1px;background:var(--color-border-subtle);margin:6px 4px;"></div>
+      <sc-if value="{{ navExpanded }}" hint-placeholder-val="{{ false }}">
+        <div style="font-size:var(--fs-xs);font-weight:500;letter-spacing:.06em;color:var(--color-text-muted);padding:4px 8px 2px;white-space:nowrap;">BRANDS</div>
+      </sc-if>
+      <sc-for list="{{ brands }}" as="b" hint-placeholder-count="3">
+        <button aria-label="{{ b.name }}" style="display:flex;align-items:center;gap:12px;height:40px;padding:0 7px;border:none;background:{{ b.activeBg }};border-radius:8px;cursor:pointer;" style-hover="background:var(--nav-item-hover);">
+          <span class="photo" style="background-image:{{ b.img }};position:relative;flex-shrink:0;width:26px;height:26px;border-radius:7px;border:1px solid var(--color-border);"><span style="position:absolute;top:-2px;right:-2px;width:8px;height:8px;border-radius:50%;background:{{ b.dot }};border:1.5px solid var(--color-bg-card);"></span></span>
+          <sc-if value="{{ navExpanded }}" hint-placeholder-val="{{ false }}"><span style="font-size:var(--fs-sm);font-weight:{{ b.weight }};color:{{ b.nameColor }};white-space:nowrap;flex:1;text-align:left;">{{ b.name }}</span></sc-if>
+        </button>
+      </sc-for>
+      <div style="height:1px;background:var(--color-border-subtle);margin:6px 4px;"></div>
+      <sc-for list="{{ navItems }}" as="n" hint-placeholder-count="5">
+        <a href="{{ n.href }}" aria-label="{{ n.label }}" style="display:flex;align-items:center;gap:12px;height:38px;padding:0 8px;border:none;background:{{ n.bg }};border-radius:8px;color:{{ n.color }};cursor:pointer;text-decoration:none;" style-hover="background:var(--nav-item-hover);">
+          <span style="flex-shrink:0;display:flex;" data-om-raster>{{ n.icon }}</span>
+          <sc-if value="{{ navExpanded }}" hint-placeholder-val="{{ false }}"><span style="font-size:var(--fs-sm);font-weight:{{ n.weight }};white-space:nowrap;">{{ n.label }}</span></sc-if>
+        </a>
+      </sc-for>
+    </div>
+    <button aria-label="Account" style="display:flex;align-items:center;gap:12px;height:40px;padding:0 6px;border:none;background:transparent;border-radius:8px;cursor:pointer;" style-hover="background:var(--nav-item-hover);">
+      <span style="flex-shrink:0;width:30px;height:30px;border-radius:50%;background:var(--color-action);color:var(--color-action-text);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;">SK</span>
+      <sc-if value="{{ navExpanded }}" hint-placeholder-val="{{ false }}"><span style="font-size:var(--fs-sm);color:var(--color-text-secondary);white-space:nowrap;">Sasha Kim</span></sc-if>
+    </button>
+  </nav>
+
+  <!-- ===================== WORKSPACE ===================== -->
+  <main data-screen-label="Workspace" style="display:flex;flex-direction:column;min-width:0;height:100vh;position:relative;">
+
+    <!-- ===== LOADING ===== -->
+    <sc-if value="{{ wsLoading }}" hint-placeholder-val="{{ false }}">
+      <div class="hpad" style="flex:1;overflow-y:auto;padding:28px 40px;">
+        <div style="max-width:960px;margin:0 auto;display:flex;flex-direction:column;gap:18px;">
+          <div class="skel" style="width:90px;height:14px;"></div>
+          <div class="skel" style="width:100%;aspect-ratio:21/9;border-radius:var(--image-radius);"></div>
+          <div class="skel" style="width:50%;height:24px;"></div>
+          <div style="display:flex;gap:10px;"><div class="skel" style="width:120px;height:34px;border-radius:999px;"></div><div class="skel" style="width:120px;height:34px;border-radius:999px;"></div><div class="skel" style="width:120px;height:34px;border-radius:999px;"></div></div>
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;"><div class="skel" style="height:96px;border-radius:14px;"></div><div class="skel" style="height:96px;border-radius:14px;"></div><div class="skel" style="height:96px;border-radius:14px;"></div></div>
+        </div>
+      </div>
+    </sc-if>
+
+    <!-- ===== ERROR ===== -->
+    <sc-if value="{{ wsError }}" hint-placeholder-val="{{ false }}">
+      <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:64px 24px;gap:10px;">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--color-text-muted)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><line x1="2" y1="2" x2="22" y2="22"/><path d="M8.5 16.5a5 5 0 0 1 7 0"/><path d="M2 8.82a15 15 0 0 1 4.17-2.65"/><path d="M10.66 5c4.01-.36 8.14.9 11.34 3.76"/><line x1="12" y1="20" x2="12.01" y2="20"/></svg>
+        <p style="margin:0;font-size:var(--fs-base);font-weight:600;">Couldn't load this shoot</p>
+        <p style="margin:0;font-size:var(--fs-sm);color:var(--color-text-secondary);">Check your connection and try again.</p>
+        <button onClick="{{ goPopulated }}" style="margin-top:6px;height:38px;padding:0 16px;border:1px solid var(--color-border);background:var(--color-bg-card);color:var(--color-text-primary);font-size:var(--fs-sm);font-weight:500;border-radius:var(--radius-md);cursor:pointer;" style-hover="background:var(--color-bg-subtle);">Try again</button>
+      </div>
+    </sc-if>
+
+    <!-- ===== EMPTY (no shots yet) ===== -->
+    <sc-if value="{{ wsEmpty }}" hint-placeholder-val="{{ false }}">
+      <div class="hpad" style="flex-shrink:0;padding:22px 40px 0;"><div style="max-width:960px;margin:0 auto;"><a href="Shoots List.v2.image-first.dc.html" style="display:inline-flex;align-items:center;gap:6px;font-size:var(--fs-sm);color:var(--color-text-secondary);text-decoration:none;" style-hover="color:var(--color-text-primary);"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>Shoots</a></div></div>
+      <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:40px 24px;">
+        <div class="photo" style="background-image:{{ shoot.cover }};width:200px;aspect-ratio:16/10;border-radius:var(--image-radius);border:1px solid var(--color-border);box-shadow:var(--shadow-card);filter:grayscale(.2);"><span style="position:absolute;inset:0;background:var(--image-scrim);border-radius:var(--image-radius);"></span></div>
+        <h2 style="margin:20px 0 0;font-size:var(--fs-xl);font-weight:600;">{{ shoot.name }} — no shots yet</h2>
+        <p style="margin:8px 0 0;max-width:440px;font-size:var(--fs-sm);color:var(--color-text-secondary);line-height:1.55;">This shoot is created but the shot list is empty. I can build a full shot list, schedule, and deliverables from {{ shoot.brand }}'s Brand DNA.</p>
+        <button onClick="{{ startStream }}" style="margin-top:18px;height:42px;padding:0 22px;border:none;border-radius:var(--radius-md);background:var(--color-action);color:var(--color-action-text);font-size:var(--fs-sm);font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:8px;" style-hover="background:var(--color-action-hover);"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437z"/></svg>Generate shot list</button>
+      </div>
+    </sc-if>
+
+    <!-- ===== POPULATED / APPROVAL ===== -->
+    <sc-if value="{{ wsMain }}" hint-placeholder-val="{{ true }}">
+      <!-- header (hero + meta) -->
+      <div class="hpad" style="flex-shrink:0;padding:18px 40px 0;">
+        <div style="max-width:960px;margin:0 auto;">
+          <div style="display:flex;align-items:center;gap:7px;font-size:var(--fs-sm);color:var(--color-text-muted);margin-bottom:14px;"><a href="Shoots List.v2.image-first.dc.html" style="color:var(--color-text-secondary);text-decoration:none;" style-hover="color:var(--color-text-primary);">Shoots</a><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="9 18 15 12 9 6"/></svg><span style="color:var(--color-text-primary);font-weight:500;">{{ shoot.name }}</span></div>
+
+          <div class="photo" style="background-image:{{ shoot.cover }};width:100%;aspect-ratio:24/9;border-radius:var(--image-radius);border:1px solid var(--color-border);overflow:hidden;">
+            <span style="position:absolute;inset:0;background:var(--image-scrim);"></span>
+            <div style="position:absolute;left:20px;right:20px;bottom:16px;display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap;">
+              <div style="min-width:0;">
+                <div style="display:flex;align-items:center;gap:9px;margin-bottom:7px;">
+                  <span style="display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:600;color:#fff;background:rgba(17,17,17,.5);backdrop-filter:blur(3px);padding:3px 9px;border-radius:999px;"><span style="width:6px;height:6px;border-radius:50%;background:{{ shoot.statusDot }};"></span>{{ shoot.status }}</span>
+                  <span class="mono" style="font-size:11px;font-weight:600;color:#fff;background:rgba(17,17,17,.5);backdrop-filter:blur(3px);padding:3px 9px;border-radius:999px;">DNA {{ shoot.dna }}</span>
+                </div>
+                <h1 style="margin:0;font-size:var(--fs-2xl);font-weight:600;letter-spacing:-.01em;color:#fff;text-shadow:0 1px 12px rgba(0,0,0,.3);">{{ shoot.name }}</h1>
+                <div style="display:flex;align-items:center;gap:8px;margin-top:5px;font-size:var(--fs-sm);color:rgba(255,255,255,.86);"><span>{{ shoot.brand }}</span><span style="opacity:.6;">·</span><span class="mono">{{ shoot.date }}</span><span style="opacity:.6;">·</span><span class="mono">{{ shoot.looks }} looks</span></div>
+              </div>
+              <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
+                <div style="display:flex;align-items:center;">
+                  <sc-for list="{{ team }}" as="m" hint-placeholder-count="4">
+                    <span title="{{ m.name }}" style="width:30px;height:30px;border-radius:50%;background:{{ m.bg }};color:#fff;border:2px solid rgba(255,255,255,.85);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;margin-left:-8px;">{{ m.initials }}</span>
+                  </sc-for>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- title row actions + progress -->
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:14px;margin-top:16px;flex-wrap:wrap;">
+            <div style="display:flex;align-items:center;gap:14px;min-width:0;">
+              <div style="display:flex;flex-direction:column;gap:5px;min-width:180px;display:{{ progressDisplay }};">
+                <div style="display:flex;align-items:center;justify-content:space-between;"><span style="font-size:var(--fs-xs);font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--color-text-muted);">Progress</span><span class="mono" style="font-size:var(--fs-xs);font-weight:600;color:var(--color-text-primary);">{{ shoot.shotsDone }}/{{ shoot.shotsTotal }} shots</span></div>
+                <div style="height:6px;border-radius:6px;background:var(--color-bg-muted);overflow:hidden;"><span style="display:block;height:100%;width:{{ shoot.progressPct }}%;background:var(--color-action);border-radius:6px;"></span></div>
+              </div>
+            </div>
+            <div style="display:flex;gap:8px;">
+              <button onClick="{{ openEdit }}" style="height:38px;padding:0 16px;border:none;border-radius:var(--radius-md);background:var(--color-action);color:var(--color-action-text);font-size:var(--fs-sm);font-weight:600;cursor:pointer;display:{{ shootOnlyDisplay }};align-items:center;gap:7px;" style-hover="background:var(--color-action-hover);"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4z"/></svg>Edit shoot</button>
+              <button aria-label="Share" title="Share shoot" style="width:38px;height:38px;border:1px solid var(--color-border);border-radius:var(--radius-md);background:var(--color-bg-card);color:var(--color-text-secondary);cursor:pointer;display:inline-flex;align-items:center;justify-content:center;" style-hover="background:var(--color-bg-subtle);"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg></button>
+              <button aria-label="More" title="More options" style="width:38px;height:38px;border:1px solid var(--color-border);border-radius:var(--radius-md);background:var(--color-bg-card);color:var(--color-text-secondary);cursor:pointer;display:inline-flex;align-items:center;justify-content:center;" style-hover="background:var(--color-bg-subtle);"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="5" cy="12" r="1.4"/><circle cx="12" cy="12" r="1.4"/><circle cx="19" cy="12" r="1.4"/></svg></button>
+            </div>
+          </div>
+
+          <!-- tabs -->
+          <div class="tabrow" style="display:flex;gap:4px;margin-top:14px;border-bottom:1px solid var(--color-border);overflow-x:auto;">
+            <sc-for list="{{ tabs }}" as="t" hint-placeholder-count="9">
+              <button onClick="{{ t.set }}" style="flex-shrink:0;position:relative;height:40px;padding:0 13px;border:none;background:transparent;font-size:var(--fs-sm);font-weight:{{ t.weight }};color:{{ t.color }};cursor:pointer;font-family:inherit;border-bottom:2px solid {{ t.border }};margin-bottom:-1px;" style-hover="color:var(--color-text-primary);">{{ t.label }}<sc-if value="{{ t.count }}" hint-placeholder-val="{{ false }}"><span class="mono" style="margin-left:6px;font-size:10px;font-weight:600;color:var(--color-text-muted);background:var(--color-bg-muted);padding:1px 6px;border-radius:8px;">{{ t.count }}</span></sc-if></button>
+            </sc-for>
+          </div>
+        </div>
+      </div>
+
+      <!-- scroll body -->
+      <div style="flex:1;overflow-y:auto;" class="hpad" style2="padding:0 40px;">
+        <div class="hpad" style="padding:22px 40px 26px;"><div style="max-width:960px;margin:0 auto;">
+
+          <!-- approval banner (approval state) -->
+          <sc-if value="{{ isApproval }}" hint-placeholder-val="{{ false }}">
+            <div role="alertdialog" style="border:1.5px solid var(--color-warning);background:var(--color-warning-bg);border-radius:var(--card-radius);padding:16px 18px;margin-bottom:20px;display:flex;gap:14px;align-items:flex-start;">
+              <span style="width:8px;height:8px;border-radius:50%;background:var(--color-warning);flex-shrink:0;margin-top:5px;"></span>
+              <div style="flex:1;min-width:0;">
+                <div style="font-size:var(--fs-base);font-weight:600;">Shot list draft awaiting your approval</div>
+                <p style="margin:4px 0 12px;font-size:var(--fs-sm);color:var(--color-text-secondary);line-height:1.5;">I generated 4 additional shots to lift DNA from {{ shoot.dna }} → {{ shoot.dnaTo }}. Review before they're added to the production plan.</p>
+                <div style="display:flex;gap:10px;flex-wrap:wrap;"><button onClick="{{ goPopulated }}" style="height:36px;padding:0 16px;border:none;border-radius:var(--radius-md);background:var(--color-action);color:var(--color-action-text);font-size:var(--fs-sm);font-weight:600;cursor:pointer;" style-hover="background:var(--color-action-hover);">Approve &amp; add</button><button style="height:36px;padding:0 14px;border:1px solid var(--color-border);border-radius:var(--radius-md);background:var(--color-bg-card);color:var(--color-text-primary);font-size:var(--fs-sm);font-weight:500;cursor:pointer;" style-hover="background:var(--color-bg-subtle);">Review in wizard</button></div>
+              </div>
+            </div>
+          </sc-if>
+
+          <!-- ===== OVERVIEW ===== -->
+          <sc-if value="{{ tabOverview }}" hint-placeholder-val="{{ true }}">
+            <div style="display:flex;flex-direction:column;gap:24px;">
+              <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;">
+                <sc-for list="{{ statCards }}" as="c" hint-placeholder-count="3">
+                  <div style="border:1px solid var(--color-border);border-radius:var(--card-radius);padding:15px 16px;background:var(--color-bg-card);box-shadow:var(--shadow-card);">
+                    <div style="display:flex;align-items:center;gap:8px;font-size:var(--fs-xs);font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--color-text-muted);"><span style="display:flex;color:var(--color-text-secondary);" data-om-raster>{{ c.icon }}</span>{{ c.label }}</div>
+                    <div style="margin-top:9px;font-size:var(--fs-xl);font-weight:600;letter-spacing:-.01em;">{{ c.value }}</div>
+                    <div style="margin-top:3px;font-size:var(--fs-xs);color:var(--color-text-secondary);">{{ c.sub }}</div>
+                  </div>
+                </sc-for>
+              </div>
+
+              <div>
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:11px;"><h3 style="margin:0;font-size:var(--fs-base);font-weight:600;">Moodboard</h3><div style="display:flex;align-items:center;gap:14px;"><span class="mono" style="font-size:var(--fs-xs);color:var(--color-text-muted);">{{ shoot.brand }} Brand DNA</span><a href="{{ assetsHref }}" style="font-size:var(--fs-xs);font-weight:600;color:var(--color-text-primary);text-decoration:none;display:inline-flex;align-items:center;gap:5px;">View in Assets<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="7" y1="17" x2="17" y2="7"/><polyline points="7 7 17 7 17 17"/></svg></a></div></div>
+                <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:8px;">
+                  <sc-for list="{{ moodboard }}" as="a" hint-placeholder-count="6">
+                    <dc-import name="components/AssetCard" variant="tile" img-url="{{ a.bg }}" match="{{ a.match }}" badge-color="{{ a.color }}" hint-size="100%,100%"></dc-import>
+                  </sc-for>
+                </div>
+              </div>
+
+              <div style="display:grid;grid-template-columns:1.1fr 1fr;gap:20px;">
+                <div>
+                  <h3 style="margin:0 0 11px;font-size:var(--fs-base);font-weight:600;">Production checklist</h3>
+                  <div style="display:flex;flex-direction:column;gap:7px;">
+                    <sc-for list="{{ checklist }}" as="c" hint-placeholder-count="5">
+                      <button onClick="{{ c.toggle }}" style="display:flex;align-items:center;gap:11px;padding:10px 12px;border:1px solid var(--color-border);border-radius:12px;background:var(--color-bg-card);cursor:pointer;text-align:left;" style-hover="border-color:var(--color-border-strong);">
+                        <span style="width:19px;height:19px;border-radius:6px;border:1.5px solid {{ c.boxBorder }};background:{{ c.boxBg }};display:flex;align-items:center;justify-content:center;flex-shrink:0;">{{ c.check }}</span>
+                        <span style="font-size:var(--fs-sm);color:{{ c.textColor }};text-decoration:{{ c.strike }};">{{ c.label }}</span>
+                      </button>
+                    </sc-for>
+                  </div>
+                </div>
+                <div>
+                  <h3 style="margin:0 0 11px;font-size:var(--fs-base);font-weight:600;">Deliverables</h3>
+                  <div style="display:flex;flex-direction:column;gap:8px;">
+                    <sc-for list="{{ deliverables }}" as="d" hint-placeholder-count="4">
+                      <div style="display:flex;align-items:center;gap:11px;padding:9px 12px;border:1px solid var(--color-border);border-radius:12px;background:var(--color-bg-card);">
+                        <span style="width:34px;height:34px;border-radius:8px;background:var(--color-bg-muted);display:flex;align-items:center;justify-content:center;color:var(--color-text-secondary);flex-shrink:0;" data-om-raster>{{ d.icon }}</span>
+                        <div style="flex:1;min-width:0;"><div style="font-size:var(--fs-sm);font-weight:500;">{{ d.label }}</div><div style="font-size:var(--fs-xs);color:var(--color-text-muted);">{{ d.spec }}</div></div>
+                        <dc-import name="components/StatusChip" status="{{ d.status }}" bare="{{ true }}" hint-size="78px,16px"></dc-import>
+                      </div>
+                    </sc-for>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </sc-if>
+
+          <!-- ===== SHOT LIST (editable) ===== -->
+          <sc-if value="{{ tabShots }}" hint-placeholder-val="{{ false }}">
+            <div>
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;"><h3 style="margin:0;font-size:var(--fs-base);font-weight:600;">Shot list <span class="mono" style="font-weight:500;color:var(--color-text-muted);">· {{ shotList.length }}</span></h3><button style="height:34px;padding:0 13px;border:1px solid var(--color-border);border-radius:var(--radius-md);background:var(--color-bg-card);font-size:var(--fs-sm);font-weight:500;cursor:pointer;display:inline-flex;align-items:center;gap:7px;" style-hover="border-color:var(--color-border-strong);"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Add shot</button></div>
+              <div style="display:flex;flex-direction:column;gap:8px;">
+                <sc-for list="{{ shotList }}" as="t" hint-placeholder-count="6">
+                  <div style="display:flex;align-items:center;gap:13px;padding:9px 12px 9px 9px;border:1px solid var(--color-border);border-radius:14px;background:var(--color-bg-card);" style-hover="border-color:var(--color-border-strong);">
+                    <span class="mono" style="font-size:var(--fs-xs);color:var(--color-text-muted);width:18px;text-align:center;flex-shrink:0;">{{ t.num }}</span>
+                    <div class="photo" style="background-image:{{ t.bg }};width:54px;height:54px;border-radius:10px;border:1px solid var(--color-border);flex-shrink:0;"></div>
+                    <div style="flex:1;min-width:0;"><div style="font-size:var(--fs-sm);font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ t.name }}</div><div style="font-size:var(--fs-xs);color:var(--color-text-muted);margin-top:2px;">{{ t.meta }}</div></div>
+                    <button onClick="{{ t.toggle }}" style="height:28px;padding:0 11px;border:1px solid {{ t.chipBorder }};border-radius:999px;background:{{ t.chipBg }};color:{{ t.chipColor }};font-size:var(--fs-xs);font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:6px;flex-shrink:0;"><span style="width:6px;height:6px;border-radius:50%;background:{{ t.dot }};"></span>{{ t.statusLabel }}</button>
+                    <button aria-label="Shot options" style="width:30px;height:30px;border:none;background:transparent;color:var(--color-text-muted);cursor:pointer;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;" style-hover="color:var(--color-text-primary);"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="5" cy="12" r="1.4"/><circle cx="12" cy="12" r="1.4"/><circle cx="19" cy="12" r="1.4"/></svg></button>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+          </sc-if>
+
+          <!-- ===== ASSETS ===== -->
+          <sc-if value="{{ tabAssets }}" hint-placeholder-val="{{ false }}">
+            <div>
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;"><h3 style="margin:0;font-size:var(--fs-base);font-weight:600;">Captured assets <span class="mono" style="font-weight:500;color:var(--color-text-muted);">· {{ assets.length }}</span></h3><a href="{{ assetsHref }}" style="display:inline-flex;align-items:center;gap:7px;height:34px;padding:0 14px;border:1px solid var(--color-border);border-radius:var(--radius-md);background:var(--color-bg-card);color:var(--color-text-primary);font-size:var(--fs-sm);font-weight:600;text-decoration:none;" style-hover="background:var(--color-bg-subtle);">View in Assets<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="7" y1="17" x2="17" y2="7"/><polyline points="7 7 17 7 17 17"/></svg></a></div>
+              <div style="columns:4;column-gap:12px;">
+                <sc-for list="{{ assets }}" as="a" hint-placeholder-count="8">
+                  <div style="break-inside:avoid;margin-bottom:12px;"><dc-import name="components/AssetCard" variant="masonry" img-url="{{ a.bg }}" height="{{ a.h }}" match="{{ a.match }}" match-dot="{{ a.dot }}" type="{{ a.type }}" show-footer="{{ false }}" hint-size="100%,200px"></dc-import></div>
+                </sc-for>
+              </div>
+            </div>
+          </sc-if>
+
+          <!-- ===== TEAM ===== -->
+          <sc-if value="{{ tabTeam }}" hint-placeholder-val="{{ false }}">
+            <div>
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;"><h3 style="margin:0;font-size:var(--fs-base);font-weight:600;">Team &amp; crew</h3><button style="height:34px;padding:0 13px;border:1px solid var(--color-border);border-radius:var(--radius-md);background:var(--color-bg-card);font-size:var(--fs-sm);font-weight:500;cursor:pointer;display:inline-flex;align-items:center;gap:7px;" style-hover="border-color:var(--color-border-strong);"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Invite</button></div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+                <sc-for list="{{ crew }}" as="m" hint-placeholder-count="6">
+                  <div style="display:flex;align-items:center;gap:12px;padding:11px 13px;border:1px solid {{ m.rowBorder }};border-radius:14px;background:var(--color-bg-card);">
+                    <span style="width:38px;height:38px;border-radius:50%;background:{{ m.bg }};color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;flex-shrink:0;">{{ m.initials }}</span>
+                    <div style="flex:1;min-width:0;"><div style="font-size:var(--fs-sm);font-weight:600;">{{ m.name }}</div><div style="font-size:var(--fs-xs);color:var(--color-text-muted);">{{ m.role }}</div></div>
+                    <sc-if value="{{ m.booked }}" hint-placeholder-val="{{ false }}"><a href="{{ m.href }}" style="display:inline-flex;align-items:center;gap:4px;font-size:var(--fs-xs);font-weight:600;color:var(--color-approved);text-decoration:none;border:1px solid var(--color-approved);border-radius:999px;padding:3px 9px;">Booked ›</a></sc-if>
+                    <sc-if value="{{ m.notBooked }}" hint-placeholder-val="{{ true }}"><dc-import name="components/StatusChip" status="{{ m.status }}" label="{{ m.statusLabel }}" bare="{{ true }}" hint-size="80px,16px"></dc-import></sc-if>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+          </sc-if>
+
+          <!-- ===== SCHEDULE ===== -->
+          <sc-if value="{{ tabSchedule }}" hint-placeholder-val="{{ false }}">
+            <div>
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;"><h3 style="margin:0;font-size:var(--fs-base);font-weight:600;">Shoot day — {{ shoot.date }}</h3><span class="mono" style="font-size:var(--fs-xs);color:var(--color-text-muted);">Call 07:30 · Wrap 18:00</span></div>
+              <div style="display:flex;flex-direction:column;">
+                <sc-for list="{{ schedule }}" as="b" hint-placeholder-count="5">
+                  <div style="display:flex;gap:16px;">
+                    <div style="display:flex;flex-direction:column;align-items:center;flex-shrink:0;width:62px;"><span class="mono" style="font-size:var(--fs-xs);font-weight:600;color:var(--color-text-secondary);padding-top:1px;">{{ b.time }}</span><span style="flex:1;width:2px;background:var(--color-border);margin-top:5px;"></span></div>
+                    <div style="flex:1;padding-bottom:16px;"><div style="border:1px solid var(--color-border);border-left:3px solid {{ b.accent }};border-radius:12px;padding:11px 14px;background:var(--color-bg-card);"><div style="font-size:var(--fs-sm);font-weight:600;">{{ b.title }}</div><div style="font-size:var(--fs-xs);color:var(--color-text-muted);margin-top:2px;">{{ b.detail }}</div></div></div>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+          </sc-if>
+
+          <!-- ===== BUDGET ===== -->
+          <sc-if value="{{ tabBudget }}" hint-placeholder-val="{{ false }}">
+            <div>
+              <div style="border:1px solid var(--color-border);border-radius:var(--card-radius);padding:16px 18px;background:var(--color-bg-card);box-shadow:var(--shadow-card);margin-bottom:18px;">
+                <div style="display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:10px;"><div><div style="font-size:var(--fs-xs);font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--color-text-muted);">Budget used</div><div style="margin-top:4px;font-size:var(--fs-2xl);font-weight:600;letter-spacing:-.01em;">{{ budget.spentLabel }} <span style="font-size:var(--fs-base);font-weight:500;color:var(--color-text-muted);">/ {{ budget.totalLabel }}</span></div></div><span class="mono" style="font-size:var(--fs-sm);font-weight:600;color:{{ budget.pctColor }};">{{ budget.pct }}%</span></div>
+                <div style="height:8px;border-radius:8px;background:var(--color-bg-muted);overflow:hidden;"><span style="display:block;height:100%;width:{{ budget.pct }}%;background:{{ budget.pctColor }};border-radius:8px;"></span></div>
+              </div>
+              <div style="display:flex;flex-direction:column;gap:2px;">
+                <sc-for list="{{ budgetLines }}" as="l" hint-placeholder-count="5">
+                  <div style="display:flex;align-items:center;justify-content:space-between;padding:11px 4px;border-bottom:1px solid var(--color-border-subtle);"><span style="font-size:var(--fs-sm);color:var(--color-text-primary);">{{ l.label }}</span><span class="mono" style="font-size:var(--fs-sm);font-weight:500;color:var(--color-text-secondary);">{{ l.amount }}</span></div>
+                </sc-for>
+              </div>
+            </div>
+          </sc-if>
+
+          <!-- ===== APPROVALS ===== -->
+          <sc-if value="{{ tabApprovals }}" hint-placeholder-val="{{ false }}">
+            <div>
+              <h3 style="margin:0 0 14px;font-size:var(--fs-base);font-weight:600;">Approvals</h3>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+                <sc-for list="{{ approvals }}" as="a" hint-placeholder-count="3">
+                  <dc-import name="components/ApprovalCard" variant="compact" title="{{ a.title }}" preview="{{ a.preview }}" conf-label="{{ a.conf }}" conf-color="{{ a.confColor }}" source="{{ a.source }}" thumb="{{ a.thumb }}" hint-size="100%,150px"></dc-import>
+                </sc-for>
+              </div>
+            </div>
+          </sc-if>
+
+          <!-- ===== DELIVERABLES ===== -->
+          <sc-if value="{{ tabDeliverables }}" hint-placeholder-val="{{ false }}">
+            <div>
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;"><h3 style="margin:0;font-size:var(--fs-base);font-weight:600;">Deliverables <span class="mono" style="font-weight:500;color:var(--color-text-muted);">· {{ delivDone }}/{{ delivTotal }} ready</span></h3><button onClick="{{ openCallsheet }}" style="height:34px;padding:0 14px;border:1px solid var(--color-border);border-radius:var(--radius-md);background:var(--color-bg-card);color:var(--color-text-primary);font-size:var(--fs-sm);font-weight:600;cursor:pointer;" style-hover="background:var(--color-bg-subtle);">Call sheet</button></div>
+              <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;">
+                <sc-for list="{{ delivCards }}" as="d" hint-placeholder-count="4">
+                  <div style="border:1px solid var(--color-border);border-radius:var(--card-radius);overflow:hidden;background:var(--color-bg-card);box-shadow:var(--shadow-card);">
+                    <div class="photo" style="background-image:{{ d.bg }};width:100%;aspect-ratio:{{ d.ratio }};"><span style="position:absolute;inset:0;background:var(--image-scrim);"></span><span style="position:absolute;left:9px;bottom:8px;font-size:10px;font-weight:600;color:#fff;">{{ d.fmt }}</span></div>
+                    <div style="padding:10px 11px;"><div style="font-size:var(--fs-sm);font-weight:500;">{{ d.label }}</div><div class="mono" style="font-size:var(--fs-xs);color:var(--color-text-muted);margin-top:2px;">{{ d.spec }}</div><div style="margin-top:6px;"><dc-import name="components/StatusChip" status="{{ d.status }}" bare="{{ true }}" hint-size="78px,16px"></dc-import></div></div>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+          </sc-if>
+
+          <!-- ===== ACTIVITY ===== -->
+          <sc-if value="{{ tabActivity }}" hint-placeholder-val="{{ false }}">
+            <div>
+              <h3 style="margin:0 0 14px;font-size:var(--fs-base);font-weight:600;">Activity <span class="mono" style="font-weight:500;color:var(--color-text-muted);">· {{ activityCount }}</span></h3>
+              <div style="display:flex;flex-direction:column;">
+                <sc-for list="{{ activity }}" as="e" hint-placeholder-count="5">
+                  <div style="display:flex;gap:13px;">
+                    <div style="display:flex;flex-direction:column;align-items:center;flex-shrink:0;"><span style="width:9px;height:9px;border-radius:50%;background:{{ e.dot }};margin-top:4px;"></span><span style="flex:1;width:2px;background:var(--color-border-subtle);margin:4px 0;"></span></div>
+                    <div style="padding-bottom:16px;"><div style="font-size:var(--fs-sm);color:var(--color-text-primary);line-height:1.45;">{{ e.text }}</div><div style="font-size:var(--fs-xs);color:var(--color-text-muted);margin-top:2px;">{{ e.time }}</div></div>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+          </sc-if>
+
+          <!-- ===== BOOKING · OVERVIEW ===== -->
+          <sc-if value="{{ bkOverview }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex;flex-direction:column;gap:20px;">
+              <div style="border:1px solid var(--color-border);border-radius:var(--card-radius);padding:18px;background:var(--color-bg-card);box-shadow:var(--shadow-card);">
+                <div style="font-size:var(--fs-xs);font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--color-text-muted);margin-bottom:14px;">Booking status</div>
+                <div style="display:flex;align-items:center;">
+                  <sc-for list="{{ bkStepper }}" as="s" hint-placeholder-count="4">
+                    <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;"><span style="width:12px;height:12px;border-radius:50%;background:{{ s.dot }};flex-shrink:0;"></span><span style="font-size:var(--fs-sm);font-weight:{{ s.weight }};color:{{ s.color }};white-space:nowrap;">{{ s.label }}</span></div>
+                    <span style="flex:1;min-width:16px;height:1.5px;background:{{ s.lineColor }};margin:0 10px;display:{{ s.line }};"></span>
+                  </sc-for>
+                </div>
+              </div>
+
+              <sc-if value="{{ bkHasExpiry }}" hint-placeholder-val="{{ false }}">
+                <div style="padding:12px 14px;border:1px solid var(--color-warning);border-radius:12px;background:#fffbf0;display:flex;gap:10px;align-items:center;"><span style="width:8px;height:8px;border-radius:50%;background:var(--color-warning);flex-shrink:0;"></span><div style="font-size:var(--fs-sm);color:var(--color-text-primary);">{{ bkExpiry }}</div></div>
+              </sc-if>
+
+              <div style="display:grid;grid-template-columns:1.25fr 1fr;gap:16px;">
+                <div style="border:1px solid var(--color-border);border-radius:var(--card-radius);padding:16px 18px;background:var(--color-bg-card);box-shadow:var(--shadow-card);">
+                  <div style="font-size:var(--fs-base);font-weight:600;margin-bottom:12px;">Rate &amp; quote</div>
+                  <div style="display:flex;flex-direction:column;">
+                    <sc-for list="{{ bkRateRows }}" as="r" hint-placeholder-count="5">
+                      <div style="display:flex;align-items:center;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--color-border-subtle);"><span style="font-size:var(--fs-sm);color:var(--color-text-secondary);">{{ r.label }}</span><span class="mono" style="font-size:var(--fs-sm);font-weight:600;">{{ r.value }}</span></div>
+                    </sc-for>
+                  </div>
+                  <div style="margin-top:14px;padding:12px;border:1px solid var(--color-border-subtle);border-radius:10px;background:var(--color-bg-subtle);">
+                    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;"><span style="font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--color-text-muted);">Why this rate</span><span class="mono" style="font-size:12px;font-weight:600;color:var(--color-warning);">74% confidence</span></div>
+                    <div style="font-size:12px;color:var(--color-text-secondary);line-height:1.55;">Agency default for Micro-tier running talent, within the Nike SS26 shoot budget. AI drafted this — approve or edit; it cannot confirm the booking.</div>
+                  </div>
+                </div>
+
+                <div style="border:1px solid var(--color-border);border-radius:var(--card-radius);padding:16px 18px;background:var(--color-bg-card);box-shadow:var(--shadow-card);display:flex;flex-direction:column;">
+                  <div style="font-size:var(--fs-base);font-weight:600;margin-bottom:6px;">Operator actions</div>
+                  <p style="margin:0 0 14px;font-size:var(--fs-xs);color:var(--color-text-muted);line-height:1.5;">Confirming is <b style="color:var(--color-text-primary);">operator-only</b>. AI can draft or explain — never confirm.</p>
+                  <sc-if value="{{ bkHasActions }}" hint-placeholder-val="{{ true }}">
+                    <div style="display:flex;flex-direction:column;gap:9px;">
+                      <sc-for list="{{ bkActions }}" as="a" hint-placeholder-count="2"><button onClick="{{ a.go }}" style="{{ a.style }}">{{ a.label }}</button></sc-for>
+                    </div>
+                  </sc-if>
+                  <sc-if value="{{ bkConfirmed }}" hint-placeholder-val="{{ false }}">
+                    <div style="display:flex;gap:9px;align-items:flex-start;padding:12px;border:1px solid var(--color-approved);border-radius:10px;background:#ecfdf5;"><span style="width:8px;height:8px;border-radius:50%;background:var(--color-approved);margin-top:5px;flex-shrink:0;"></span><div style="font-size:var(--fs-sm);color:var(--color-text-primary);"><b>Confirmed.</b> {{ bkHandle }} was added to the Nike SS26 shoot crew.</div></div>
+                  </sc-if>
+                </div>
+              </div>
+
+              <div style="border:1px solid var(--color-border);border-radius:var(--card-radius);padding:16px 18px;background:var(--color-bg-card);box-shadow:var(--shadow-card);display:flex;gap:10px;align-items:center;">
+                <span style="width:8px;height:8px;border-radius:50%;background:var(--color-approved);flex-shrink:0;"></span>
+                <div style="font-size:var(--fs-sm);color:var(--color-text-secondary);">{{ bkHandle }} is <b style="color:var(--color-text-primary);">available</b> Mar 12–14 (from their availability calendar). Booked or blocked dates would block confirming.</div>
+              </div>
+            </div>
+          </sc-if>
+
+          <!-- ===== BOOKING · TALENT ===== -->
+          <sc-if value="{{ bkTalent }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex;gap:18px;align-items:center;border:1px solid var(--color-border);border-radius:var(--card-radius);padding:18px;background:var(--color-bg-card);box-shadow:var(--shadow-card);">
+              <div class="photo" style="background-image:{{ bkTalentBg }};width:88px;height:110px;border-radius:14px;border:1px solid var(--color-border);flex-shrink:0;"></div>
+              <div style="flex:1;min-width:0;">
+                <div style="font-size:var(--fs-xl);font-weight:600;">{{ bkHandle }}</div>
+                <div style="font-size:var(--fs-sm);color:var(--color-text-secondary);margin-top:3px;">{{ bkTalentMeta }}</div>
+                <div style="margin-top:12px;"><a href="SCR-20-Talent-Profile.dc.html" style="display:inline-flex;align-items:center;gap:6px;font-size:var(--fs-sm);font-weight:500;color:var(--color-text-primary);text-decoration:none;border:1px solid var(--color-border);border-radius:var(--radius-md);padding:8px 14px;">View full profile</a></div>
+              </div>
+            </div>
+          </sc-if>
+
+          <!-- ===== BOOKING · AVAILABILITY (reuses Schedule slot) ===== -->
+          <sc-if value="{{ bkSchedule }}" hint-placeholder-val="{{ false }}">
+            <div>
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;"><h3 style="margin:0;font-size:var(--fs-base);font-weight:600;">Availability — March 2026</h3>
+                <div style="display:flex;gap:14px;font-size:var(--fs-xs);color:var(--color-text-secondary);flex-wrap:wrap;">
+                  <span style="display:flex;align-items:center;gap:5px;"><span style="width:9px;height:9px;border-radius:50%;background:var(--color-approved);"></span>Available</span>
+                  <span style="display:flex;align-items:center;gap:5px;"><span style="width:9px;height:9px;border-radius:50%;background:var(--color-warning);"></span>Tentative</span>
+                  <span style="display:flex;align-items:center;gap:5px;"><span style="width:9px;height:9px;border-radius:50%;background:var(--color-text-primary);"></span>Booked</span>
+                  <span style="display:flex;align-items:center;gap:5px;"><span style="width:9px;height:9px;border-radius:50%;background:var(--color-border-strong);"></span>Blocked</span>
+                </div>
+              </div>
+              <div style="padding:14px 16px;border:1px solid var(--color-border);border-radius:var(--card-radius);background:var(--color-bg-card);box-shadow:var(--shadow-card);display:flex;gap:10px;align-items:center;">
+                <span style="width:8px;height:8px;border-radius:50%;background:var(--color-approved);flex-shrink:0;"></span>
+                <div style="font-size:var(--fs-sm);color:var(--color-text-secondary);">{{ bkHandle }} is <b style="color:var(--color-text-primary);">available</b> Mar 12–14 (the requested dates). Tentative/booked cells are read-only; a booked or blocked overlap would block confirming.</div>
+              </div>
+            </div>
+          </sc-if>
+
+          <!-- ===== BOOKING · APPROVALS (booking approval, ApprovalCard pattern) ===== -->
+          <sc-if value="{{ bkApprovals }}" hint-placeholder-val="{{ false }}">
+            <div>
+              <h3 style="margin:0 0 14px;font-size:var(--fs-base);font-weight:600;">Booking approval</h3>
+              <div style="border:1px solid var(--color-warning);border-radius:var(--card-radius);padding:16px 18px;background:var(--color-bg-card);box-shadow:var(--shadow-card);">
+                <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;"><span style="width:8px;height:8px;border-radius:50%;background:var(--color-warning);"></span><span style="font-size:var(--fs-sm);font-weight:600;">{{ bkHandle }} · £1,200/day × 3</span></div>
+                <p style="margin:0 0 12px;font-size:var(--fs-sm);color:var(--color-text-secondary);line-height:1.55;">AI drafted this quote (74% confidence). Approve to move to <b style="color:var(--color-text-primary);">approved</b>; confirming is a separate operator-only step. AI cannot confirm.</p>
+                <sc-if value="{{ bkHasActions }}" hint-placeholder-val="{{ true }}">
+                  <div style="display:flex;gap:9px;flex-wrap:wrap;"><sc-for list="{{ bkActions }}" as="a" hint-placeholder-count="2"><button onClick="{{ a.go }}" style="{{ a.style }}">{{ a.label }}</button></sc-for></div>
+                </sc-if>
+                <sc-if value="{{ bkConfirmed }}" hint-placeholder-val="{{ false }}"><div style="font-size:var(--fs-sm);color:var(--color-approved);font-weight:600;">Confirmed — added to shoot crew.</div></sc-if>
+              </div>
+            </div>
+          </sc-if>
+
+          <!-- ===== BOOKING · ACTIVITY (approval timeline) ===== -->
+          <sc-if value="{{ bkActivity }}" hint-placeholder-val="{{ false }}">
+            <div>
+              <h3 style="margin:0 0 14px;font-size:var(--fs-base);font-weight:600;">Approval timeline</h3>
+              <div style="display:flex;flex-direction:column;">
+                <sc-for list="{{ bkTimeline }}" as="e" hint-placeholder-count="4">
+                  <div style="display:flex;gap:13px;">
+                    <div style="display:flex;flex-direction:column;align-items:center;flex-shrink:0;"><span style="width:10px;height:10px;border-radius:50%;background:{{ e.dot }};margin-top:4px;"></span><span style="flex:1;width:1.5px;background:var(--color-border);margin:3px 0;"></span></div>
+                    <div style="padding-bottom:18px;"><div style="font-size:var(--fs-sm);font-weight:600;">{{ e.title }}</div><div style="font-size:var(--fs-xs);color:var(--color-text-muted);margin-top:2px;">{{ e.by }} · <span class="mono">{{ e.when }}</span></div></div>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+          </sc-if>
+
+        </div></div>
+      </div>
+
+      <!-- ===================== AI PRODUCTION PLANNER — DOCKED CHAT ===================== -->
+      <div class="m-chatdock" style="flex-shrink:0;border-top:1px solid var(--color-border);background:var(--color-bg-card);padding:13px 40px 15px;">
+        <div style="max-width:960px;margin:0 auto;display:flex;flex-direction:column;gap:11px;">
+          <div style="display:flex;align-items:center;gap:8px;">
+            <span style="width:22px;height:22px;border-radius:6px;background:var(--color-bg-muted);display:flex;align-items:center;justify-content:center;flex-shrink:0;" data-om-raster><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--color-text-secondary)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437z"/></svg></span>
+            <span style="font-size:var(--fs-xs);font-weight:600;color:var(--color-text-secondary);">Production Planner</span>
+            <span style="width:5px;height:5px;border-radius:50%;background:var(--color-approved);"></span>
+          </div>
+
+          <sc-if value="{{ chatIdle }}" hint-placeholder-val="{{ true }}">
+            <p style="margin:0;font-size:var(--fs-sm);color:var(--color-text-primary);line-height:1.5;">You're reviewing <span style="font-weight:600;">{{ shoot.brand }} – {{ shoot.name }}</span>. {{ chatLead }}</p>
+          </sc-if>
+
+          <sc-if value="{{ chatThinking }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex;flex-direction:column;gap:6px;">
+              <sc-for list="{{ streamLines }}" as="l" hint-placeholder-count="5">
+                <div style="display:flex;align-items:center;gap:9px;">
+                  <sc-if value="{{ l.done }}" hint-placeholder-val="{{ false }}"><span style="display:flex;flex-shrink:0;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--color-approved)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span></sc-if>
+                  <sc-if value="{{ l.active }}" hint-placeholder-val="{{ true }}"><span class="pulse-dot" style="width:8px;height:8px;border-radius:50%;background:var(--color-text-primary);flex-shrink:0;animation:pulse 1s infinite;"></span></sc-if>
+                  <sc-if value="{{ l.todo }}" hint-placeholder-val="{{ false }}"><span style="width:8px;height:8px;border-radius:50%;background:var(--color-border);flex-shrink:0;"></span></sc-if>
+                  <span style="font-size:var(--fs-sm);color:{{ l.textColor }};">{{ l.text }}</span>
+                </div>
+              </sc-for>
+            </div>
+          </sc-if>
+
+          <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            <sc-for list="{{ quickActions }}" as="q" hint-placeholder-count="6">
+              <button onClick="{{ q.set }}" style="height:34px;padding:0 13px;border:1px solid var(--color-border);background:var(--color-bg-card);color:var(--color-text-primary);border-radius:999px;font-size:var(--fs-sm);font-weight:500;cursor:pointer;display:inline-flex;align-items:center;gap:7px;" style-hover="border-color:var(--color-border-strong);background:var(--color-bg-subtle);">
+                <span style="display:flex;flex-shrink:0;color:var(--color-text-secondary);" data-om-raster>{{ q.icon }}</span>{{ q.label }}
+              </button>
+            </sc-for>
+          </div>
+
+          <div style="display:flex;align-items:center;gap:10px;background:var(--color-bg-card);border:1px solid var(--color-border);border-radius:var(--radius-md);padding:0 8px 0 14px;height:48px;" style-focus="border-color:var(--color-border-focus);">
+            <button aria-label="Voice input" style="border:none;background:transparent;color:var(--color-text-muted);cursor:pointer;display:flex;padding:4px;" style-hover="color:var(--color-text-primary);"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="22"/></svg></button>
+            <input placeholder="Ask about {{ shoot.name }}…" style="flex:1;border:none;outline:none;background:transparent;font-size:var(--fs-sm);color:var(--color-text-primary);font-family:inherit;" />
+            <button aria-label="Send" style="width:34px;height:34px;flex-shrink:0;border:none;background:var(--color-action);color:var(--color-action-text);border-radius:8px;cursor:pointer;display:flex;align-items:center;justify-content:center;" style-hover="background:var(--color-action-hover);"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg></button>
+          </div>
+        </div>
+      </div>
+
+      <button class="sheetbtn" onClick="{{ toggleSheet }}" style="position:absolute;right:20px;top:18px;height:36px;padding:0 15px;border:1px solid var(--color-border);border-radius:999px;background:var(--color-bg-card);color:var(--color-text-primary);font-size:var(--fs-sm);font-weight:600;cursor:pointer;align-items:center;gap:8px;box-shadow:var(--shadow-panel);z-index:21;">Insights</button>
+    </sc-if>
+  </main>
+
+  <!-- ===================== MOBILE BOTTOM TAB BAR ===================== -->
+  <nav class="m-tabbar" aria-label="Primary">
+    <a href="Command Center.v2.image-first.dc.html" aria-label="Home" style="flex:1;min-width:0;height:100%;border:none;background:transparent;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;color:var(--color-text-secondary);cursor:pointer;padding-top:6px;text-decoration:none;"><span style="display:flex;" data-om-raster><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9.5 12 3l9 6.5V20a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1z"/></svg></span><span style="font-size:10px;font-weight:500;">Home</span></a>
+    <a href="Shoots List.v2.image-first.dc.html" aria-label="Shoots" style="flex:1;min-width:0;height:100%;border:none;background:transparent;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;color:var(--color-text-primary);cursor:pointer;padding-top:6px;text-decoration:none;"><span style="display:flex;" data-om-raster><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3z"/><circle cx="12" cy="13" r="3"/></svg></span><span style="font-size:10px;font-weight:600;">Shoots</span></a>
+    <a href="Assets.v2.image-first.dc.html" aria-label="Assets" style="flex:1;min-width:0;height:100%;border:none;background:transparent;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;color:var(--color-text-secondary);cursor:pointer;padding-top:6px;text-decoration:none;"><span style="display:flex;" data-om-raster><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg></span><span style="font-size:10px;font-weight:500;">Assets</span></a>
+    <a href="Brand List.v2.image-first.dc.html" aria-label="Brands" style="flex:1;min-width:0;height:100%;border:none;background:transparent;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;color:var(--color-text-secondary);cursor:pointer;padding-top:6px;text-decoration:none;"><span style="display:flex;" data-om-raster><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="m12.83 2.18 8.36 4.18a1 1 0 0 1 0 1.79l-8.36 4.18a2 2 0 0 1-1.66 0L2.81 8.15a1 1 0 0 1 0-1.79l8.36-4.18a2 2 0 0 1 1.66 0z"/><path d="m2 12 9.34 4.67a2 2 0 0 0 1.66 0L22 12"/></svg></span><span style="font-size:10px;font-weight:500;">Brands</span></a>
+    <label for="m-more" aria-label="More" style="flex:1;min-width:0;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;cursor:pointer;padding-top:6px;color:var(--color-text-secondary);"><span style="display:flex;" data-om-raster><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="5" cy="12" r="1.4"/><circle cx="12" cy="12" r="1.4"/><circle cx="19" cy="12" r="1.4"/></svg></span><span style="font-size:10px;font-weight:500;">More</span></label>
+  </nav>
+
+  <!-- ===================== MOBILE MORE SHEET ===================== -->
+  <label for="m-more" class="m-more-backdrop" aria-label="Close menu"></label>
+  <div class="m-more-sheet" role="menu" aria-label="More destinations">
+    <label for="m-more" style="display:flex;align-items:center;justify-content:center;padding:9px 0 4px;cursor:pointer;"><span style="width:36px;height:4px;border-radius:2px;background:var(--color-border-strong);"></span></label>
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:4px 16px 8px;"><span style="font-size:var(--fs-sm);font-weight:600;">More</span><label for="m-more" aria-label="Close" style="display:flex;cursor:pointer;color:var(--color-text-muted);padding:4px;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></label></div>
+    <div style="padding:0 8px 12px;display:flex;flex-direction:column;gap:2px;">
+      <a href="Campaigns.v2.image-first.dc.html" style="display:flex;align-items:center;gap:14px;height:52px;padding:0 16px;border-radius:12px;color:var(--color-text-primary);text-decoration:none;font-size:var(--fs-base);font-weight:500;"><span style="display:flex;color:var(--color-text-secondary);" data-om-raster><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="m3 11 18-5v12L3 14v-3z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/></svg></span>Campaigns</a>
+      <a href="Matching.v2.image-first.dc.html" style="display:flex;align-items:center;gap:14px;height:52px;padding:0 16px;border-radius:12px;color:var(--color-text-primary);text-decoration:none;font-size:var(--fs-base);font-weight:500;"><span style="display:flex;color:var(--color-text-secondary);" data-om-raster><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg></span>Matching</a>
+      <a href="Channel%20Preview.v2.image-first.dc.html" style="display:flex;align-items:center;gap:14px;height:52px;padding:0 16px;border-radius:12px;color:var(--color-text-primary);text-decoration:none;font-size:var(--fs-base);font-weight:500;"><span style="display:flex;color:var(--color-text-secondary);" data-om-raster><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/></svg></span>Channel Preview</a>
+    </div>
+  </div>
+
+  <!-- ===================== INTELLIGENCE PANEL ===================== -->
+  <aside data-screen-label="IntelligencePanel" class="{{ sheetClass }}" style="width:340px;flex-shrink:0;background:var(--intel-bg);border-left:1px solid var(--color-border);height:100vh;overflow-y:auto;position:relative;">
+    <div style="position:sticky;top:0;z-index:5;display:flex;align-items:center;justify-content:space-between;gap:6px;padding:5px 16px;background:var(--color-bg-subtle);border-bottom:1px solid var(--color-border);">
+      <span style="font-size:11px;font-weight:500;color:var(--color-text-muted);">Production insights — not production-wired</span>
+      <button class="sheetbtn" onClick="{{ toggleSheet }}" aria-label="Close" style="border:none;background:transparent;color:var(--color-text-muted);cursor:pointer;padding:2px;align-items:center;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+    </div>
+
+    <!-- LOADING -->
+    <sc-if value="{{ wsLoading }}" hint-placeholder-val="{{ false }}">
+      <div style="padding:20px;display:flex;flex-direction:column;gap:16px;"><div class="skel" style="height:80px;border-radius:12px;"></div><div class="skel" style="height:16px;width:60%;"></div><div class="skel" style="height:64px;border-radius:12px;"></div><div class="skel" style="height:64px;border-radius:12px;"></div></div>
+    </sc-if>
+    <!-- ERROR -->
+    <sc-if value="{{ wsError }}" hint-placeholder-val="{{ false }}">
+      <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:48px 32px;gap:10px;"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--color-text-muted)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><line x1="2" y1="2" x2="22" y2="22"/><path d="M8.5 16.5a5 5 0 0 1 7 0"/><line x1="12" y1="20" x2="12.01" y2="20"/></svg><p style="margin:0;font-size:var(--fs-sm);color:var(--color-text-muted);">Unavailable</p></div>
+    </sc-if>
+
+    <!-- INSIGHTS -->
+    <sc-if value="{{ wsMain }}" hint-placeholder-val="{{ true }}">
+      <div style="padding:18px 18px 28px;display:flex;flex-direction:column;gap:18px;">
+        <!-- DNA + progress -->
+        <div style="display:flex;gap:14px;">
+          <div style="flex-shrink:0;width:74px;height:74px;border-radius:50%;background:conic-gradient({{ dnaColor }} {{ dnaDeg }}deg, var(--color-bg-muted) 0);display:flex;align-items:center;justify-content:center;"><span style="width:56px;height:56px;border-radius:50%;background:var(--color-bg-card);display:flex;flex-direction:column;align-items:center;justify-content:center;"><span class="mono" style="font-size:var(--fs-lg);font-weight:700;line-height:1;">{{ shoot.dna }}</span><span style="font-size:9px;color:var(--color-text-muted);letter-spacing:.05em;">DNA</span></span></div>
+          <div style="flex:1;display:flex;flex-direction:column;justify-content:center;gap:8px;">
+            <div><div style="display:flex;justify-content:space-between;font-size:var(--fs-xs);"><span style="color:var(--color-text-secondary);">Shots captured</span><span class="mono" style="font-weight:600;">{{ shoot.shotsDone }}/{{ shoot.shotsTotal }}</span></div><div style="height:5px;border-radius:5px;background:var(--color-bg-muted);margin-top:4px;overflow:hidden;"><span style="display:block;height:100%;width:{{ shoot.progressPct }}%;background:var(--color-action);"></span></div></div>
+            <div><div style="display:flex;justify-content:space-between;font-size:var(--fs-xs);"><span style="color:var(--color-text-secondary);">Budget used</span><span class="mono" style="font-weight:600;">{{ budget.pct }}%</span></div><div style="height:5px;border-radius:5px;background:var(--color-bg-muted);margin-top:4px;overflow:hidden;"><span style="display:block;height:100%;width:{{ budget.pct }}%;background:{{ budget.pctColor }};"></span></div></div>
+          </div>
+        </div>
+
+        <!-- approval status -->
+        <div style="display:flex;align-items:center;gap:10px;padding:11px 13px;border:1px solid {{ apprBorder }};background:{{ apprBg }};border-radius:12px;">
+          <span style="width:8px;height:8px;border-radius:50%;background:{{ apprDot }};flex-shrink:0;"></span>
+          <div style="flex:1;min-width:0;"><div style="font-size:var(--fs-sm);font-weight:600;">{{ apprTitle }}</div><div style="font-size:var(--fs-xs);color:var(--color-text-secondary);">{{ apprSub }}</div></div>
+        </div>
+
+        <!-- missing shots -->
+        <div>
+          <div style="font-size:var(--fs-xs);font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--color-text-muted);margin-bottom:9px;">Missing shots</div>
+          <div style="display:flex;flex-direction:column;gap:7px;">
+            <sc-for list="{{ missingShots }}" as="m" hint-placeholder-count="3">
+              <div style="display:flex;align-items:center;gap:9px;font-size:var(--fs-sm);color:var(--color-text-secondary);"><span style="display:flex;flex-shrink:0;color:var(--color-warning);"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg></span>{{ m }}</div>
+            </sc-for>
+          </div>
+        </div>
+
+        <!-- risks -->
+        <div>
+          <div style="font-size:var(--fs-xs);font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--color-text-muted);margin-bottom:9px;">Risks &amp; alerts</div>
+          <div style="display:flex;flex-direction:column;gap:8px;">
+            <sc-for list="{{ risks }}" as="r" hint-placeholder-count="3">
+              <div style="display:flex;align-items:flex-start;gap:9px;padding:9px 11px;border:1px solid var(--color-border);border-radius:10px;background:var(--color-bg-card);"><span style="width:6px;height:6px;border-radius:50%;background:{{ r.dot }};flex-shrink:0;margin-top:5px;"></span><div style="font-size:var(--fs-xs);color:var(--color-text-secondary);line-height:1.45;">{{ r.text }}</div></div>
+            </sc-for>
+          </div>
+        </div>
+
+        <!-- recommended next actions -->
+        <div>
+          <div style="font-size:var(--fs-xs);font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--color-text-muted);margin-bottom:9px;">Recommended next</div>
+          <div style="display:flex;flex-direction:column;gap:7px;">
+            <sc-for list="{{ nextActions }}" as="a" hint-placeholder-count="3">
+              <button onClick="{{ a.set }}" style="display:flex;align-items:center;gap:9px;width:100%;text-align:left;padding:10px 12px;border:1px solid var(--color-border);border-radius:10px;background:var(--color-bg-card);cursor:pointer;font-size:var(--fs-sm);font-weight:500;color:var(--color-text-primary);font-family:inherit;" style-hover="border-color:var(--color-border-strong);background:var(--color-bg-subtle);"><span style="display:flex;flex-shrink:0;color:var(--color-text-secondary);" data-om-raster>{{ a.icon }}</span><span style="flex:1;">{{ a.label }}</span><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--color-text-disabled)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></button>
+            </sc-for>
+          </div>
+        </div>
+      </div>
+    </sc-if>
+  </aside>
+
+  <!-- ===================== EDIT SHOOT MODAL ===================== -->
+  <sc-if value="{{ editing }}" hint-placeholder-val="{{ false }}">
+    <div role="dialog" aria-modal="true" aria-label="Edit shoot" style="position:fixed;inset:0;z-index:700;display:flex;align-items:center;justify-content:center;padding:20px;">
+      <div onClick="{{ cancelEdit }}" style="position:absolute;inset:0;background:rgba(17,17,17,.42);"></div>
+      <div style="position:relative;width:100%;max-width:540px;max-height:88vh;display:flex;flex-direction:column;background:var(--color-bg-card);border:1px solid var(--color-border);border-radius:var(--card-radius);box-shadow:var(--shadow-modal);overflow:hidden;">
+        <div style="flex-shrink:0;display:flex;align-items:center;justify-content:space-between;padding:18px 20px;border-bottom:1px solid var(--color-border);">
+          <div><h2 style="margin:0;font-size:var(--fs-lg);font-weight:600;">Edit shoot</h2><p style="margin:3px 0 0;font-size:var(--fs-xs);color:var(--color-text-muted);">Update core details for this shoot.</p></div>
+          <button onClick="{{ cancelEdit }}" aria-label="Close" style="width:34px;height:34px;border:none;background:transparent;color:var(--color-text-muted);cursor:pointer;display:inline-flex;align-items:center;justify-content:center;border-radius:8px;" style-hover="background:var(--color-bg-subtle);color:var(--color-text-primary);"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+        </div>
+
+        <div style="flex:1;overflow-y:auto;padding:18px 20px;display:flex;flex-direction:column;gap:16px;">
+          <label style="display:flex;flex-direction:column;gap:6px;">
+            <span style="font-size:var(--fs-xs);font-weight:600;letter-spacing:.03em;text-transform:uppercase;color:var(--color-text-muted);">Shoot name</span>
+            <input value="{{ draftName }}" onInput="{{ setName }}" style="height:42px;border:1px solid var(--color-border);border-radius:var(--radius-md);padding:0 13px;font-size:var(--fs-sm);font-family:inherit;color:var(--color-text-primary);outline:none;" style-focus="border-color:var(--color-border-focus);" />
+          </label>
+
+          <div>
+            <span style="display:block;font-size:var(--fs-xs);font-weight:600;letter-spacing:.03em;text-transform:uppercase;color:var(--color-text-muted);margin-bottom:7px;">Status</span>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;">
+              <sc-for list="{{ statusOpts }}" as="o" hint-placeholder-count="4">
+                <button onClick="{{ o.set }}" style="height:34px;padding:0 14px;border:1px solid {{ o.border }};background:{{ o.bg }};color:{{ o.color }};border-radius:999px;font-size:var(--fs-sm);font-weight:500;cursor:pointer;font-family:inherit;" style-hover="border-color:var(--color-border-strong);">{{ o.label }}</button>
+              </sc-for>
+            </div>
+          </div>
+
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+            <label style="display:flex;flex-direction:column;gap:6px;">
+              <span style="font-size:var(--fs-xs);font-weight:600;letter-spacing:.03em;text-transform:uppercase;color:var(--color-text-muted);">Date</span>
+              <input value="{{ draftDate }}" onInput="{{ setDate }}" placeholder="May 02" style="height:42px;border:1px solid var(--color-border);border-radius:var(--radius-md);padding:0 13px;font-size:var(--fs-sm);font-family:inherit;color:var(--color-text-primary);outline:none;" style-focus="border-color:var(--color-border-focus);" />
+            </label>
+            <label style="display:flex;flex-direction:column;gap:6px;">
+              <span style="font-size:var(--fs-xs);font-weight:600;letter-spacing:.03em;text-transform:uppercase;color:var(--color-text-muted);">Brand</span>
+              <input value="{{ draftBrand }}" onInput="{{ setBrand }}" style="height:42px;border:1px solid var(--color-border);border-radius:var(--radius-md);padding:0 13px;font-size:var(--fs-sm);font-family:inherit;color:var(--color-text-primary);outline:none;" style-focus="border-color:var(--color-border-focus);" />
+            </label>
+            <label style="display:flex;flex-direction:column;gap:6px;">
+              <span style="font-size:var(--fs-xs);font-weight:600;letter-spacing:.03em;text-transform:uppercase;color:var(--color-text-muted);">Looks</span>
+              <input type="number" min="0" value="{{ draftLooks }}" onInput="{{ setLooks }}" class="mono" style="height:42px;border:1px solid var(--color-border);border-radius:var(--radius-md);padding:0 13px;font-size:var(--fs-sm);font-family:inherit;color:var(--color-text-primary);outline:none;" style-focus="border-color:var(--color-border-focus);" />
+            </label>
+            <label style="display:flex;flex-direction:column;gap:6px;">
+              <span style="font-size:var(--fs-xs);font-weight:600;letter-spacing:.03em;text-transform:uppercase;color:var(--color-text-muted);">Total shots</span>
+              <input type="number" min="0" value="{{ draftShots }}" onInput="{{ setShots }}" class="mono" style="height:42px;border:1px solid var(--color-border);border-radius:var(--radius-md);padding:0 13px;font-size:var(--fs-sm);font-family:inherit;color:var(--color-text-primary);outline:none;" style-focus="border-color:var(--color-border-focus);" />
+            </label>
+          </div>
+
+          <label style="display:flex;flex-direction:column;gap:6px;">
+            <span style="font-size:var(--fs-xs);font-weight:600;letter-spacing:.03em;text-transform:uppercase;color:var(--color-text-muted);">Location</span>
+            <input value="{{ draftLocation }}" onInput="{{ setLocation }}" placeholder="Studio 4 · Brooklyn" style="height:42px;border:1px solid var(--color-border);border-radius:var(--radius-md);padding:0 13px;font-size:var(--fs-sm);font-family:inherit;color:var(--color-text-primary);outline:none;" style-focus="border-color:var(--color-border-focus);" />
+          </label>
+
+          <label style="display:flex;flex-direction:column;gap:6px;">
+            <span style="font-size:var(--fs-xs);font-weight:600;letter-spacing:.03em;text-transform:uppercase;color:var(--color-text-muted);">Team notes</span>
+            <textarea onInput="{{ setNotes }}" rows="3" style="border:1px solid var(--color-border);border-radius:var(--radius-md);padding:10px 13px;font-size:var(--fs-sm);font-family:inherit;color:var(--color-text-primary);outline:none;resize:vertical;line-height:1.5;" style-focus="border-color:var(--color-border-focus);">{{ draftNotes }}</textarea>
+          </label>
+        </div>
+
+        <div style="flex-shrink:0;display:flex;align-items:center;justify-content:flex-end;gap:10px;padding:14px 20px;border-top:1px solid var(--color-border);background:var(--color-bg-subtle);">
+          <button onClick="{{ cancelEdit }}" style="height:40px;padding:0 18px;border:1px solid var(--color-border);border-radius:var(--radius-md);background:var(--color-bg-card);color:var(--color-text-primary);font-size:var(--fs-sm);font-weight:500;cursor:pointer;" style-hover="background:var(--color-bg-muted);">Cancel</button>
+          <button onClick="{{ saveEdit }}" style="height:40px;padding:0 20px;border:none;border-radius:var(--radius-md);background:var(--color-action);color:var(--color-action-text);font-size:var(--fs-sm);font-weight:600;cursor:pointer;" style-hover="background:var(--color-action-hover);">Save changes</button>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- ===================== CALL SHEET PREVIEW ===================== -->
+  <sc-if value="{{ callsheetOpen }}" hint-placeholder-val="{{ false }}">
+    <div role="dialog" aria-modal="true" aria-label="Call sheet" style="position:fixed;inset:0;z-index:700;display:flex;align-items:center;justify-content:center;padding:20px;">
+      <div onClick="{{ closeCallsheet }}" style="position:absolute;inset:0;background:rgba(17,17,17,.42);"></div>
+      <div style="position:relative;width:100%;max-width:560px;max-height:88vh;display:flex;flex-direction:column;background:var(--color-bg-card);border:1px solid var(--color-border);border-radius:var(--card-radius);box-shadow:var(--shadow-modal);overflow:hidden;">
+        <div style="flex-shrink:0;display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--color-border);">
+          <div><h2 style="margin:0;font-size:var(--fs-lg);font-weight:600;">Call sheet</h2><p style="margin:3px 0 0;font-size:var(--fs-xs);color:var(--color-text-muted);">{{ shoot.brand }} — {{ shoot.name }}</p></div>
+          <div style="display:flex;gap:8px;">
+            <button onClick="{{ exportCallsheet }}" style="height:34px;padding:0 14px;border:none;border-radius:var(--radius-md);background:var(--color-action);color:var(--color-action-text);font-size:var(--fs-sm);font-weight:600;cursor:pointer;">Export PDF</button>
+            <button onClick="{{ closeCallsheet }}" aria-label="Close" title="Close" style="width:34px;height:34px;border:1px solid var(--color-border);border-radius:var(--radius-md);background:var(--color-bg-card);color:var(--color-text-secondary);cursor:pointer;display:flex;align-items:center;justify-content:center;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+          </div>
+        </div>
+        <div style="flex:1;overflow-y:auto;padding:22px 24px;background:var(--color-bg-subtle);">
+          <div style="background:#fff;border:1px solid var(--color-border);border-radius:var(--radius-md);padding:22px;box-shadow:var(--shadow-card);">
+            <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;border-bottom:2px solid var(--color-text-primary);padding-bottom:12px;margin-bottom:14px;">
+              <div><div style="font-size:var(--fs-lg);font-weight:700;">{{ shoot.name }}</div><div style="font-size:var(--fs-sm);color:var(--color-text-secondary);">{{ shoot.brand }} · Call Sheet</div></div>
+              <div class="mono" style="text-align:right;font-size:var(--fs-xs);color:var(--color-text-secondary);">{{ shoot.date }}<br/>{{ shoot.location }}</div>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;">
+              <div>
+                <div style="font-size:var(--fs-xs);font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--color-text-muted);margin-bottom:8px;">Crew</div>
+                <sc-for list="{{ crew }}" as="c" hint-placeholder-count="4">
+                  <div style="display:flex;align-items:center;gap:9px;padding:5px 0;border-bottom:1px solid var(--color-border-subtle);">
+                    <span style="width:24px;height:24px;border-radius:50%;background:{{ c.bg }};color:#fff;font-size:10px;font-weight:600;display:flex;align-items:center;justify-content:center;flex-shrink:0;">{{ c.initials }}</span>
+                    <span style="flex:1;font-size:var(--fs-sm);">{{ c.name }}</span>
+                    <span style="font-size:var(--fs-xs);color:var(--color-text-muted);">{{ c.role }}</span>
+                  </div>
+                </sc-for>
+              </div>
+              <div>
+                <div style="font-size:var(--fs-xs);font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--color-text-muted);margin-bottom:8px;">Schedule</div>
+                <sc-for list="{{ schedule }}" as="s" hint-placeholder-count="4">
+                  <div style="display:flex;gap:10px;padding:5px 0;border-bottom:1px solid var(--color-border-subtle);">
+                    <span class="mono" style="font-size:var(--fs-xs);color:var(--color-text-secondary);width:64px;flex-shrink:0;">{{ s.time }}</span>
+                    <span style="flex:1;font-size:var(--fs-sm);">{{ s.title }}</span>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ toast }}" hint-placeholder-val="{{ false }}">
+    <div role="status" aria-live="polite" style="position:fixed;bottom:26px;left:50%;transform:translateX(-50%);z-index:720;display:flex;align-items:center;gap:9px;background:var(--color-text-primary);color:#fff;padding:11px 18px;border-radius:11px;box-shadow:0 8px 28px rgba(0,0,0,.22);font-size:var(--fs-sm);font-weight:500;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#4ade80" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>{{ toast }}</div>
+  </sc-if>
+
+  <!-- ===================== STATE SWITCHER ===================== -->
+  <div style="position:fixed;top:14px;left:50%;transform:translateX(-50%);z-index:600;display:flex;align-items:center;gap:3px;background:var(--color-text-primary);padding:5px;border-radius:11px;box-shadow:var(--shadow-modal);">
+    <span style="font-size:11px;color:rgba(255,255,255,.55);padding:0 8px 0 6px;font-weight:500;letter-spacing:.03em;">STATE</span>
+    <sc-for list="{{ states }}" as="s" hint-placeholder-count="5">
+      <button onClick="{{ s.set }}" style="height:28px;padding:0 11px;border:none;border-radius:7px;background:{{ s.bg }};color:{{ s.color }};font-size:12px;font-weight:{{ s.weight }};cursor:pointer;font-family:inherit;white-space:nowrap;" style-hover="background:rgba(255,255,255,.12);">{{ s.label }}</button>
+    </sc-for>
+  </div>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1440,&quot;height&quot;:900},&quot;flow&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;default&quot;:&quot;shoot&quot;,&quot;options&quot;:[&quot;shoot&quot;,&quot;booking&quot;],&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Screen&quot;}}">
+class Component extends DCLogic {
+  state = { view:'populated', tab:'overview', navExpanded:false, sheetOpen:false, chatState:'idle', streamIdx:0, checks:{c2:true,c4:true}, captured:{}, overrides:{}, flow:'shoot', talent:null, bkStatus:'requested', editing:false, draft:null, callsheet:false, toast:null };
+
+  fireToast(m){ this.setState({toast:m}); clearTimeout(this._tt); this._tt=setTimeout(()=>this.setState({toast:null}),2200); }
+
+  openEdit(base){
+    this.setState({editing:true, draft:{name:base.name,brand:base.brand,date:base.date,status:base.status,looks:base.looks,shotsTotal:base.shotsTotal,location:base.location,teamNotes:base.teamNotes}});
+  }
+  setField(k,e){ const val=e&&e.target?e.target.value:e; this.setState(s=>({draft:{...s.draft,[k]:val}})); }
+  saveEdit(id){
+    this.setState(s=>{
+      const d=s.draft||{};
+      const clean={...d, looks:Math.max(0,parseInt(d.looks,10)||0), shotsTotal:Math.max(0,parseInt(d.shotsTotal,10)||0)};
+      return {overrides:{...s.overrides,[id]:clean}, editing:false, draft:null};
+    });
+  }
+  componentDidMount(){ this._onKey=(e)=>{ if(e.key==='Escape'){ if(this.state.callsheetOpen) this.setState({callsheetOpen:false}); else if(this.state.editing) this.cancelEdit(); } }; window.addEventListener('keydown',this._onKey); }
+  componentWillUnmount(){ window.removeEventListener('keydown',this._onKey); }
+  cancelEdit(){ this.setState({editing:false, draft:null}); }
+
+  ico(name,size){
+    const p={width:size||20,height:size||20,viewBox:'0 0 24 24',fill:'none',stroke:'currentColor',strokeWidth:1.7,strokeLinecap:'round',strokeLinejoin:'round'};
+    const d={
+      home:[['path',{d:'M3 9.5 12 3l9 6.5V20a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1z'}]],
+      layers:[['path',{d:'m12.83 2.18 8.36 4.18a1 1 0 0 1 0 1.79l-8.36 4.18a2 2 0 0 1-1.66 0L2.81 8.15a1 1 0 0 1 0-1.79l8.36-4.18a2 2 0 0 1 1.66 0z'}],['path',{d:'m2 12 9.34 4.67a2 2 0 0 0 1.66 0L22 12'}],['path',{d:'m2 17 9.34 4.67a2 2 0 0 0 1.66 0L22 17'}]],
+      camera:[['path',{d:'M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3z'}],['circle',{cx:12,cy:13,r:3}]],
+      grid:[['rect',{x:3,y:3,width:7,height:7,rx:1}],['rect',{x:14,y:3,width:7,height:7,rx:1}],['rect',{x:14,y:14,width:7,height:7,rx:1}],['rect',{x:3,y:14,width:7,height:7,rx:1}]],
+      megaphone:[['path',{d:'m3 11 18-5v12L3 14v-3z'}],['path',{d:'M11.6 16.8a3 3 0 1 1-5.8-1.6'}]],
+      sparkles:[['path',{d:'M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437z'}]],
+      image:[['rect',{x:3,y:3,width:18,height:18,rx:2}],['circle',{cx:9,cy:9,r:2}],['path',{d:'m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21'}]],
+      clipboard:[['rect',{x:8,y:2,width:8,height:4,rx:1}],['path',{d:'M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2'}]],
+      dollar:[['line',{x1:12,y1:1,x2:12,y2:23}],['path',{d:'M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6'}]],
+      calendar:[['rect',{x:3,y:4,width:18,height:18,rx:2}],['line',{x1:16,y1:2,x2:16,y2:6}],['line',{x1:8,y1:2,x2:8,y2:6}],['line',{x1:3,y1:10,x2:21,y2:10}]],
+      film:[['rect',{x:2,y:2,width:20,height:20,rx:2.18}],['line',{x1:7,y1:2,x2:7,y2:22}],['line',{x1:17,y1:2,x2:17,y2:22}],['line',{x1:2,y1:12,x2:22,y2:12}]],
+      check:[['path',{d:'M20 6 9 17l-5-5'}]],
+      users:[['path',{d:'M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2'}],['circle',{cx:9,cy:7,r:4}],['path',{d:'M23 21v-2a4 4 0 0 0-3-3.87'}]],
+      send:[['line',{x1:22,y1:2,x2:11,y2:13}],['polygon',{points:'22 2 15 22 11 13 2 9 22 2'}]],
+    };
+    return React.createElement('svg',p,d[name].map((n,i)=>React.createElement(n[0],{key:i,...n[1]})));
+  }
+  img(k){ return `url("../images/${k}-fashionos.jpeg")`; }
+
+  startStream(){
+    if(this._iv) return;
+    this.setState({chatState:'thinking',streamIdx:0});
+    this._iv=setInterval(()=>{
+      this.setState(s=>{
+        const n=s.streamIdx+1;
+        if(n>=5){ clearInterval(this._iv); this._iv=null; setTimeout(()=>this.setState({chatState:'idle',streamIdx:0}),1000); return {streamIdx:5}; }
+        return {streamIdx:n};
+      });
+    },720);
+  }
+
+  renderVals(){
+    const v=this.state.view, exp=this.state.navExpanded, tab=this.state.tab;
+    const statusDot={Draft:'#c4c7cc',Confirmed:'#9ca3af','In Production':'#111111',Complete:'#6b7280'};
+
+    const navDef=[{k:'home',l:'Home'},{k:'layers',l:'Brands'},{k:'camera',l:'Shoots',active:true},{k:'calendar',l:'Planner'},{k:'grid',l:'Assets'},{k:'megaphone',l:'Campaigns'}];
+    const NAVHREF={"Home":"Command Center.v2.image-first.dc.html","Brands":"Brand List.v2.image-first.dc.html","Shoots":"Shoots List.v2.image-first.dc.html","Planner":"SCR-35-Planner-Hub.dc.html","Assets":"Assets.v2.image-first.dc.html","Campaigns":"Campaigns.v2.image-first.dc.html","Matching":"Matching.v2.image-first.dc.html","Preview":"Channel Preview.v2.image-first.dc.html"};
+    const navItems=navDef.map(n=>({label:n.l,href:NAVHREF[n.l],icon:this.ico(n.k),bg:n.active?'var(--nav-item-active)':'transparent',color:n.active?'var(--color-text-primary)':'var(--color-text-secondary)',weight:n.active?'600':'500'}));
+    const brands=[{name:'Nike',img:this.img('5'),active:true},{name:'Adidas',img:this.img('6'),active:false},{name:'Zara',img:this.img('9'),active:false}].map(b=>({...b,activeBg:b.active?'var(--nav-item-active)':'transparent',dot:b.active?'#111111':'var(--color-text-disabled)',nameColor:b.active?'var(--color-text-primary)':'var(--color-text-secondary)',weight:b.active?'600':'400'}));
+
+    // ---- resolve shoot by URL ?id ----
+    const all={
+      s1:{name:'Spring Campaign',brand:'Nike',date:'Apr 12',status:'In Production',dna:92,cover:'5',looks:12,shotsDone:9,shotsTotal:12},
+      s2:{name:'Air Max Lookbook',brand:'Nike',date:'Apr 18',status:'Confirmed',dna:88,cover:'6',looks:9,shotsDone:0,shotsTotal:9},
+      s3:{name:'Studio Editorial',brand:'Nike',date:'Mar 30',status:'Complete',dna:95,cover:'9',looks:14,shotsDone:14,shotsTotal:14},
+      s4:{name:'Street Series',brand:'Nike',date:'May 02',status:'In Production',dna:78,cover:'10',looks:6,shotsDone:4,shotsTotal:8},
+      s5:{name:'Resort Capsule',brand:'Nike',date:'May 09',status:'Confirmed',dna:84,cover:'11',looks:10,shotsDone:2,shotsTotal:10},
+      s6:{name:'Athleisure Drop',brand:'Nike',date:'Apr 25',status:'In Production',dna:79,cover:'12',looks:8,shotsDone:5,shotsTotal:8},
+      s7:{name:'Holiday Teaser',brand:'Nike',date:'Jun 01',status:'Draft',dna:66,cover:'14',looks:5,shotsDone:0,shotsTotal:5},
+      s8:{name:'Heritage Reissue',brand:'Nike',date:'Mar 22',status:'Complete',dna:90,cover:'15',looks:11,shotsDone:11,shotsTotal:11},
+    };
+    let id='s4';
+    try{ const q=new URLSearchParams((typeof location!=='undefined'?location.search:'')).get('id'); if(q&&all[q]) id=q; }catch(e){}
+    const rawBase=all[id]||all.s4;
+    const ov=(this.state.overrides&&this.state.overrides[id])||{};
+    const raw={...rawBase, location:rawBase.location||'Studio 4 · Brooklyn', teamNotes:rawBase.teamNotes||'Lighting + backdrop booked. Confirm stylist 48h before call.', ...ov};
+    const shotsTotalSafe=raw.shotsTotal>0?raw.shotsTotal:1;
+    const shotsDoneSafe=Math.min(raw.shotsDone,raw.shotsTotal);
+    const progressPct=Math.round((shotsDoneSafe/shotsTotalSafe)*100);
+    const shoot={...raw,shotsDone:shotsDoneSafe,cover:this.img(rawBase.cover),statusDot:statusDot[raw.status]||'#9ca3af',progressPct,dnaTo:Math.min(99,raw.dna+7)};
+
+    // ================= BOOKING FLOW (SCR-22 — variant of this screen) =================
+    const params=(()=>{try{return new URLSearchParams(window.location.search);}catch(e){return new URLSearchParams();}})();
+    const flow=(this.state.flow==='booking'||this.props.flow==='booking'||params.get('flow')==='booking')?'booking':'shoot';
+    const isBooking=flow==='booking', isShoot=!isBooking;
+    const thmap={runwithkara:'@runwithkara',kara:'@runwithkara',daily:'@the_daily_athlete',lena:'@lena.moves',nikefan:'@nikestylegram',mira:'@studio.mira',fuel:'@fuelledbymovement',cityjo:'@cityrunner_jo',marcus:'@marcus.frames'};
+    const bkHandle=thmap[params.get('talent')]||'@runwithkara';
+    const bkStatus=this.state.bkStatus||'requested';
+    const bkOrder=['requested','quoted','approved','confirmed'];
+    const bkIdx=bkOrder.indexOf(bkStatus);
+    const bkDotMap={requested:'var(--color-warning)',quoted:'var(--color-warning)',approved:'#2563eb',confirmed:'var(--color-approved)',declined:'#dc2626',cancelled:'#dc2626'};
+    const bkStepper=['Requested','Quoted','Approved','Confirmed'].map((label,i)=>({label,
+      dot: i<bkIdx?'var(--color-approved)': i===bkIdx?bkDotMap[bkStatus]:'var(--color-border-strong)',
+      color: i<=bkIdx?'var(--color-text-primary)':'var(--color-text-muted)', weight:i===bkIdx?'600':'500',
+      line:i<3?'block':'none', lineColor:i<bkIdx?'var(--color-approved)':'var(--color-border-strong)'}));
+    const bkShootView=Object.assign({},shoot,{name:bkHandle,brand:'Nike SS26 · Booking',status:(bkStatus.charAt(0).toUpperCase()+bkStatus.slice(1)),statusDot:bkDotMap[bkStatus]||'#9ca3af',date:'Mar 12–14',looks:3,cover:this.img('10'),dna:94});
+    const bkActsDef=[];
+    if(bkStatus==='requested'){ bkActsDef.push(['Approve as-is','p',()=>this.setState({bkStatus:'approved'})]); bkActsDef.push(['Decline','d',()=>this.setState({bkStatus:'declined'})]); }
+    else if(bkStatus==='quoted'){ bkActsDef.push(['Approve quote','p',()=>this.setState({bkStatus:'approved'})]); bkActsDef.push(['Decline','d',()=>this.setState({bkStatus:'declined'})]); }
+    else if(bkStatus==='approved'){ bkActsDef.push(['Confirm booking','p',()=>this.setState({bkStatus:'confirmed'})]); bkActsDef.push(['Cancel','d',()=>this.setState({bkStatus:'cancelled'})]); }
+    const bkActions=bkActsDef.map(a=>({label:a[0], go:a[2],
+      style:'height:40px;padding:0 18px;border-radius:var(--radius-md);font-size:var(--fs-sm);font-weight:600;cursor:pointer;font-family:inherit;border:'+(a[1]==='p'?'none':'1px solid var(--color-border)')+';background:'+(a[1]==='p'?'var(--color-action)':'#fff')+';color:'+(a[1]==='p'?'#fff':(a[1]==='d'?'#dc2626':'var(--color-text-primary)'))+';'}));
+    const bkConfirmed=bkStatus==='confirmed';
+    const bkExpiry= bkStatus==='requested' ? 'Request expires in 72 hours — Mar 5, 2026. No action needed; expiry shows as a timeline event.' : '';
+    const bkRateRows=[['Day rate','£1,200'],['Number of days','3'],['Total','£3,600'],['Usage / licensing','Organic social · 6 months · UK'],['Deliverables','12 assets']].map(r=>({label:r[0],value:r[1]}));
+    const bkTimeline=[
+      {t:'Booking request sent',by:'You · Operator',when:'Mar 2, 09:14',dot:'var(--color-approved)'},
+      {t:'Talent response',by:bkHandle,when:bkIdx>=1?'Mar 2, 11:40':'awaiting',dot:bkIdx>=1?'var(--color-approved)':'var(--color-warning)'},
+      {t:'Operator approval',by:'Operator',when:bkIdx>=2?'Mar 2, 14:02':'pending',dot:bkIdx>=2?'var(--color-approved)':'var(--color-border-strong)'},
+      {t:'Confirmed → added to shoot crew',by:'Operator only · never AI',when:bkConfirmed?'Mar 2, 15:20':'pending',dot:bkConfirmed?'var(--color-approved)':'var(--color-border-strong)'},
+    ].map(e=>({title:e.t,by:e.by,when:e.when,dot:e.dot}));
+    const shootFinal=isBooking?bkShootView:shoot;
+
+    const team=[{initials:'SK',bg:'#111827'},{initials:'MA',bg:'#7c3aed'},{initials:'LR',bg:'#0d9488'},{initials:'JT',bg:'#b45309'}];
+
+    // ---- tabs ---- shared flow configuration (one object per flow; extensible: casting/campaign/vendor/event)
+    const FLOWCFG={
+      booking:{ pageTitle:bkHandle, pageSubtitle:'Nike SS26 · Booking',
+        chat:'Booking '+bkHandle+' — status '+bkStatus+'. I can draft a counter-quote or explain the rate, but only you can confirm.',
+        tabs:[['overview','Overview',null],['talent','Talent',null],['schedule','Availability',null],['approvals','Approvals',null],['activity','Activity',null]] }
+    };
+    const flowCfg=FLOWCFG[flow]||null;
+    const tabDef= flowCfg
+      ? flowCfg.tabs
+      : [['overview','Overview',null],['shots','Shot List',raw.shotsTotal],['assets','Assets',raw.shotsDone],['team','Team',null],['schedule','Schedule',null],['budget','Budget',null],['approvals','Approvals',2],['deliverables','Deliverables',4],['activity','Activity',null]];
+    const tabs=tabDef.map(t=>({label:t[1],count:t[2],set:()=>this.setState({tab:t[0]}),
+      color:tab===t[0]?'var(--color-text-primary)':'var(--color-text-secondary)',
+      weight:tab===t[0]?'600':'500',
+      border:tab===t[0]?'var(--color-text-primary)':'transparent'}));
+
+    // ---- overview ----
+    const statCards=[
+      {icon:this.ico('camera',15),label:'Shots',value:`${shoot.shotsDone}/${shoot.shotsTotal}`,sub:`${shoot.shotsTotal-shoot.shotsDone} remaining`},
+      {icon:this.ico('dollar',15),label:'Budget',value:'62%',sub:'$9.3k of $15k'},
+      {icon:this.ico('calendar',15),label:'Shoot day',value:shoot.date,sub:'Call 07:30 · Studio 4'},
+    ];
+    const mb=[['5',94],['6',88],['9',91],['10',76],['11',83],['12',69]];
+    const matchColor=s=>s>=85?'#059669':s>=70?'#9ca3af':'#b45309';
+    const moodboard=mb.map(m=>({bg:this.img(m[0]),match:m[1],color:matchColor(m[1])}));
+
+    const clDef=[['c1','Lock shot list with creative director'],['c2','Confirm studio + lighting booking'],['c3','Send call sheet to crew'],['c4','Wardrobe + samples checked in'],['c5','Client pre-approval on moodboard']];
+    const checks=this.state.checks;
+    const checklist=clDef.map(c=>{const on=!!checks[c[0]];return{label:c[1],toggle:()=>this.setState(s=>({checks:{...s.checks,[c[0]]:!s.checks[c[0]]}})),
+      check:on?this.ico('check',12):'',boxBg:on?'var(--color-action)':'transparent',boxBorder:on?'var(--color-action)':'var(--color-border-strong)',
+      textColor:on?'var(--color-text-muted)':'var(--color-text-primary)',strike:on?'line-through':'none'};});
+
+    const deliverables=[
+      {icon:this.ico('image',16),label:'Instagram 4:5',spec:'1080×1350',status:'complete'},
+      {icon:this.ico('film',16),label:'IG Story 9:16',spec:'1080×1920',status:'in-production'},
+      {icon:this.ico('film',16),label:'TikTok 9:16',spec:'1080×1920',status:'planning'},
+      {icon:this.ico('image',16),label:'Facebook 1:1',spec:'1080×1080',status:'pending'},
+    ];
+
+    // ---- shot list (editable) ----
+    const slDef=[['6','Hero — full look','4:5 · 3 frames',true],['16','Motion — runway','9:16 · 2 frames',true],['10','Detail — fabric','1:1 · 4 frames',true],['11','Lifestyle — street','4:5 · 3 frames',false],['5','Group — squad','3:2 · 2 frames',false],['12','Close-up — footwear','1:1 · 4 frames',false]];
+    const cap=this.state.captured;
+    const shotList=slDef.map((t,i)=>{const base=t[3]; const flipped=!!cap[i]; const done=base!==flipped; return{
+      num:i+1,bg:this.img(t[0]),name:t[1],meta:t[2],
+      statusLabel:done?'Captured':'Planned',dot:done?'#059669':'#c4c7cc',
+      chipBg:done?'var(--color-approved-bg)':'var(--color-bg-card)',chipColor:done?'#059669':'var(--color-text-secondary)',chipBorder:done?'transparent':'var(--color-border)',
+      toggle:()=>this.setState(s=>({captured:{...s.captured,[i]:!s.captured[i]}}))};});
+
+    // ---- assets (masonry) ----
+    const asDef=[['6',230,96],['9',180,91],['16',260,84],['10',200,72],['11',240,88],['5',190,93],['12',220,67],['15',210,90]];
+    const assets=asDef.map(a=>({bg:this.img(a[0]),h:a[1]+'px',match:a[2],dot:matchColor(a[2]),type:'Photo'}));
+
+    // ---- team / crew ----
+    const crew=[
+      {initials:'RK',name:'@runwithkara',role:'Model · Nike SS26 booking',bg:'#059669',booked:true,href:'Shoot Detail.v2.image-first.dc.html?flow=booking&talent=runwithkara&status=confirmed'},
+      {initials:'SK',name:'Sasha Kim',role:'Producer',bg:'#111827',status:'active',statusLabel:'Confirmed'},
+      {initials:'MA',name:'Mara Aoki',role:'Photographer',bg:'#7c3aed',status:'active',statusLabel:'Confirmed'},
+      {initials:'LR',name:'Leo Ruiz',role:'Stylist',bg:'#0d9488',status:'pending',statusLabel:'Pending'},
+      {initials:'JT',name:'Jun Tan',role:'Lighting',bg:'#b45309',status:'active',statusLabel:'Confirmed'},
+      {initials:'EV',name:'Eva Vance',role:'Hair & Makeup',bg:'#be185d',status:'pending',statusLabel:'Pending'},
+      {initials:'DM',name:'Dao Mi',role:'Set assistant',bg:'#374151',status:'active',statusLabel:'Confirmed'},
+    ].map(m=>({...m, booked:!!m.booked, notBooked:!m.booked, rowBorder:m.booked?'var(--color-approved)':'var(--color-border)'}));
+
+    // ---- schedule ----
+    const schedule=[
+      {time:'07:30',title:'Crew call & setup',detail:'Studio 4 · lighting + backdrop',accent:'#9ca3af'},
+      {time:'09:00',title:'Block A — Hero looks',detail:'Looks 1–3 · 4:5 + motion',accent:'#111827'},
+      {time:'12:30',title:'Lunch',detail:'45 min',accent:'#e5e7eb'},
+      {time:'13:30',title:'Block B — Lifestyle & street',detail:'Looks 4–6 · on-location',accent:'#111827'},
+      {time:'17:00',title:'Detail + pickup shots',detail:'Footwear, fabric close-ups',accent:'#9ca3af'},
+    ];
+
+    // ---- budget ----
+    const budget={spentLabel:'$9.3k',totalLabel:'$15k',pct:62,pctColor:'var(--color-action)'};
+    const budgetLines=[
+      {label:'Studio + equipment',amount:'$3,200'},{label:'Crew & talent',amount:'$4,100'},
+      {label:'Wardrobe & styling',amount:'$1,150'},{label:'Post-production',amount:'$850'},{label:'Misc / contingency',amount:'$300'},
+    ];
+
+    // ---- approvals ----
+    const approvals=[
+      {title:'Hero look — final select',preview:'Look 1 retouched, graded to Nike Visual DNA.',conf:'94%',confColor:'var(--color-approved)',source:'brand-match',thumb:this.img('6')},
+      {title:'Motion cut — 9:16',preview:'6s runway motion, captions pending.',conf:'81%',confColor:'#d97706',source:'Spring brief',thumb:this.img('16')},
+    ];
+
+    // ---- deliverables tab cards ----
+    const delivCards=[
+      {bg:this.img('6'),ratio:'4/5',fmt:'IG 4:5',label:'Instagram feed',spec:'1080×1350',status:'complete'},
+      {bg:this.img('16'),ratio:'9/16',fmt:'Story 9:16',label:'IG / FB Story',spec:'1080×1920',status:'in-production'},
+      {bg:this.img('10'),ratio:'9/16',fmt:'TikTok 9:16',label:'TikTok',spec:'1080×1920',status:'planning'},
+      {bg:this.img('11'),ratio:'1/1',fmt:'FB 1:1',label:'Facebook feed',spec:'1080×1080',status:'pending'},
+    ];
+
+    // ---- activity ----
+    const activity=[
+      {dot:'#059669',text:'Mara uploaded 4 assets to Block A',time:'12 min ago'},
+      {dot:'#111827',text:'You marked "Detail — fabric" captured',time:'1 hr ago'},
+      {dot:'#b45309',text:'Production Planner flagged 2 missing shots',time:'2 hr ago'},
+      {dot:'#9ca3af',text:'Leo Ruiz added to crew as Stylist',time:'Yesterday'},
+      {dot:'#9ca3af',text:'Shoot created from Spring Campaign',time:'Mar 28'},
+    ];
+
+    // ---- AI chat ----
+    const SL=['Reading shoot…','Analyzing Brand DNA…','Reviewing captured assets…','Checking shot coverage…','Generating recommendations…'];
+    const cs=this.state.chatState, sidx=this.state.streamIdx;
+    const streamLines=SL.map((t,i)=>({text:t,done:i<sidx,active:i===sidx,todo:i>sidx,textColor:i<sidx?'var(--color-text-secondary)':i===sidx?'var(--color-text-primary)':'var(--color-text-disabled)'}));
+    const qaDef=[['Generate missing shots','sparkles'],['Improve DNA','image'],['Create call sheet','clipboard'],['Estimate budget','dollar'],['Build production schedule','calendar'],['Generate client update','send']];
+    const quickActions=qaDef.map(q=>({label:q[0],icon:this.ico(q[1],15),set:()=>this.startStream()}));
+
+    // ---- panel ----
+    const dnaColor=shoot.dna>=85?'#059669':shoot.dna>=70?'#111827':'#b45309';
+    const isApproval=v==='approval';
+    const appr=isApproval
+      ? {border:'var(--color-warning)',bg:'var(--color-warning-bg)',dot:'var(--color-warning)',title:'Approval pending',sub:'Shot list draft awaiting review'}
+      : {border:'var(--color-border)',bg:'var(--color-bg-card)',dot:'var(--color-approved)',title:'On track',sub:'No approvals pending'};
+    const missingShots=['Close-up — footwear detail','Group — full squad','Lifestyle — motion (9:16)'];
+    const risks=[
+      {dot:'#b45309',text:'Weather risk on Block B (on-location) — backup studio slot held.'},
+      {dot:'#dc2626',text:'Stylist + HMU still Pending — confirm 48h before call.'},
+      {dot:'#9ca3af',text:'Budget at 62% with 4 shots left — tracking to ~88%.'},
+    ];
+    const nextActions=[
+      {label:'Generate 4 missing shots',icon:this.ico('sparkles',15),set:()=>this.startStream()},
+      {label:'Send call sheet to crew',icon:this.ico('clipboard',15),set:()=>this.startStream()},
+      {label:'Draft client update',icon:this.ico('send',15),set:()=>this.startStream()},
+    ];
+    const chatLead=isApproval?'A shot list draft is waiting for your approval.':`${shoot.shotsTotal-shoot.shotsDone} shots left and I found 3 ways to lift DNA toward ${shoot.dnaTo}.`;
+
+    // ---- edit mode ----
+    const d=this.state.draft||{};
+    const statusOpts=['Draft','Confirmed','In Production','Complete'].map(st=>({label:st,set:()=>this.setField('status',st),
+      bg:d.status===st?'var(--color-action)':'var(--color-bg-card)',color:d.status===st?'var(--color-action-text)':'var(--color-text-secondary)',border:d.status===st?'var(--color-action)':'var(--color-border)'}));
+
+    const stateDef=[{id:'populated',l:'Populated'},{id:'loading',l:'Loading'},{id:'empty',l:'Empty'},{id:'error',l:'Error'},{id:'approval',l:'Approval'}];
+    const states=stateDef.map(s=>({label:s.l,set:()=>this.setState({view:s.id,sheetOpen:false}),
+      bg:v===s.id?'#ffffff':'transparent',color:v===s.id?'#111111':'rgba(255,255,255,.7)',weight:v===s.id?'600':'500'}));
+
+    return {
+      navWidth:exp?'var(--nav-width-expanded)':'var(--nav-width-collapsed)', navExpanded:exp,
+      toggleNav:()=>this.setState(s=>({navExpanded:!s.navExpanded})),
+      goPopulated:()=>this.setState({view:'populated'}),
+      openEdit:()=>this.openEdit(raw),
+      openCallsheet:()=>this.setState({callsheet:true}),
+      closeCallsheet:()=>this.setState({callsheet:false}),
+      exportCallsheet:()=>this.fireToast('Call sheet exported to PDF'),
+      callsheetOpen:this.state.callsheet, toast:this.state.toast,
+      delivDone:delivCards.filter(d=>d.status==='complete').length, delivTotal:delivCards.length,
+      activityCount:activity.length,
+      cancelEdit:()=>this.cancelEdit(),
+      saveEdit:()=>this.saveEdit(id),
+      editing:this.state.editing,
+      draftName:d.name, draftBrand:d.brand, draftDate:d.date, draftLooks:d.looks, draftShots:d.shotsTotal, draftLocation:d.location, draftNotes:d.teamNotes,
+      setName:(e)=>this.setField('name',e), setBrand:(e)=>this.setField('brand',e), setDate:(e)=>this.setField('date',e),
+      setLooks:(e)=>this.setField('looks',e), setShots:(e)=>this.setField('shotsTotal',e), setLocation:(e)=>this.setField('location',e), setNotes:(e)=>this.setField('teamNotes',e),
+      statusOpts,
+      toggleSheet:()=>this.setState(s=>({sheetOpen:!s.sheetOpen})),
+      sheetClass:this.state.sheetOpen?'sheet-open':'',
+      startStream:()=>this.startStream(),
+
+      wsLoading:v==='loading', wsError:v==='error', wsEmpty:v==='empty',
+      wsMain:v==='populated'||v==='approval', isApproval,
+
+      shoot:shootFinal, team, tabs, isBooking, isShoot,
+      shootOnlyDisplay: isBooking?'none':'inline-flex',
+      progressDisplay: isBooking?'none':'flex',
+      bkOverview:isBooking&&tab==='overview', bkTalent:isBooking&&tab==='talent', bkActivity:isBooking&&tab==='activity',
+      bkSchedule:isBooking&&tab==='schedule', bkApprovals:isBooking&&tab==='approvals',
+      bkStepper, bkActions, bkHasActions:bkActions.length>0, bkConfirmed, bkExpiry, bkHasExpiry:!!bkExpiry,
+      bkRateRows, bkTimeline, bkHandle, bkTalentBg:this.img('10'), bkTalentMeta:'Micro · 42K IG · Running',
+      assetsHref:'Assets.v2.image-first.dc.html?shoot='+id+'&name='+encodeURIComponent(raw.name),
+      tabOverview:isShoot&&tab==='overview', tabShots:isShoot&&tab==='shots', tabAssets:isShoot&&tab==='assets', tabTeam:isShoot&&tab==='team',
+      tabSchedule:isShoot&&tab==='schedule', tabBudget:isShoot&&tab==='budget', tabApprovals:isShoot&&tab==='approvals', tabDeliverables:isShoot&&tab==='deliverables', tabActivity:isShoot&&tab==='activity',
+
+      statCards, moodboard, checklist, deliverables, shotList, assets, crew, schedule,
+      budget, budgetLines, approvals, delivCards, activity,
+
+      chatIdle:cs==='idle', chatThinking:cs==='thinking', chatLead: flowCfg ? flowCfg.chat : chatLead, quickActions, streamLines,
+
+      dnaColor, dnaDeg:Math.round(shoot.dna/100*360),
+      apprBorder:appr.border, apprBg:appr.bg, apprDot:appr.dot, apprTitle:appr.title, apprSub:appr.sub,
+      missingShots, risks, nextActions,
+      states,
+    };
+  }
+}
+</script>
+</body>
+</html>

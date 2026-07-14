@@ -1,0 +1,665 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script>
+window.__LU={
+ home:'<path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M9 22V12h6v10"/>',
+ "calendar-range":'<rect width="18" height="18" x="3" y="4" rx="2"/><path d="M16 2v4"/><path d="M8 2v4"/><path d="M3 10h18"/><path d="M17 14h-6"/><path d="M13 18H7"/><path d="M7 14h.01"/><path d="M17 18h.01"/>',
+ "layout-dashboard":'<rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/>',
+ inbox:'<polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/>',
+ settings:'<path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/>',
+ sparkles:'<path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .962 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.962 0z"/><path d="M20 3v4"/><path d="M22 5h-4"/><path d="M4 17v2"/><path d="M5 18H3"/>',
+ "chevron-down":'<path d="m6 9 6 6 6-6"/>', "arrow-up":'<path d="m5 12 7-7 7 7"/><path d="M12 19V5"/>', "arrow-left":'<path d="m12 19-7-7 7-7"/><path d="M19 12H5"/>',
+ lock:'<rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>',
+ clock:'<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>',
+ "alert-triangle":'<path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3z"/><line x1="12" x2="12" y1="9" y2="13"/><line x1="12" x2="12.01" y1="17" y2="17"/>',
+ "gantt-chart":'<path d="M8 6h10"/><path d="M6 12h9"/><path d="M11 18h7"/>',
+ "layout-grid":'<rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/>',
+ list:'<path d="M8 6h13"/><path d="M8 12h13"/><path d="M8 18h13"/><path d="M3 6h.01"/><path d="M3 12h.01"/><path d="M3 18h.01"/>',
+ check:'<path d="M20 6 9 17l-5-5"/>',
+ x:'<path d="M18 6 6 18"/><path d="M6 6l12 12"/>',
+ flag:'<path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" x2="4" y1="22" y2="15"/>',
+ pencil:'<path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/>',
+ "circle-check":'<circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/>',
+ trash:'<path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>',
+ "refresh-cw":'<path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/>'
+};
+(function(){ if(customElements.get('lu-ic'))return;
+ class LuIc extends HTMLElement{ static get observedAttributes(){return ['name'];}
+  connectedCallback(){this._r();} attributeChangedCallback(){this._r();}
+  _r(){ var n=this.getAttribute('name');var inner=(window.__LU||{})[n];if(inner==null)return;
+   this.style.display='inline-flex';this.style.alignItems='center';this.style.justifyContent='center';
+   var root=this.shadowRoot||this.attachShadow({mode:'open'});
+   root.innerHTML='<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="100%" height="100%" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:block">'+inner+'</svg>';
+  } }
+ customElements.define('lu-ic',LuIc);
+})();
+</script>
+<style>
+  :root{--bg:#fff;--surface:#fafafa;--muted-bg:#f5f5f5;--border:#e5e7eb;--border-strong:#d1d5db;--border-subtle:#ededed;--text:#111;--text-2:#6b7280;--text-3:#9ca3af;--action:#111;--todo:#9ca3af;--inprog:#111;--blocked:#b91c1c;--done:#059669;--gate:#d97706;--gate-bg:#fef3e2;--lost:#b91c1c;--won:#059669;--font:"Inter",sans-serif;--mono:"Geist Mono",Menlo,monospace;--r-sm:6px;--r-md:10px;--r-lg:16px;--r-pill:9999px;}
+  *{box-sizing:border-box;}body{margin:0;font-family:var(--font);color:var(--text);background:var(--surface);-webkit-font-smoothing:antialiased;}
+  a{color:var(--action);text-decoration:none;}a:hover{opacity:.75;}
+  .tnum{font-variant-numeric:tabular-nums;}::-webkit-scrollbar{width:8px;height:8px;}::-webkit-scrollbar-thumb{background:var(--border-strong);border-radius:4px;}
+  @keyframes shimmer{0%{background-position:-500px 0}100%{background-position:500px 0}}
+  .sk{background:linear-gradient(90deg,#efefef 25%,#e4e4e4 37%,#efefef 63%);background-size:900px 100%;animation:shimmer 1.4s infinite linear;border-radius:6px;}
+  @keyframes toastIn{from{opacity:0;transform:translate(-50%,10px)}to{opacity:1;transform:translate(-50%,0)}}
+  @keyframes panelIn{from{opacity:0;transform:translateX(8px)}to{opacity:1;transform:translateX(0)}}
+  @keyframes popIn{0%{opacity:0;transform:scale(.8)}60%{transform:scale(1.06)}100%{opacity:1;transform:scale(1)}}
+  /* ===== a11y ===== */
+  a:focus-visible,button:focus-visible,input:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--action);outline-offset:2px;border-radius:5px;}
+  .pl-skip{position:absolute;left:8px;top:-46px;z-index:200;background:var(--action);color:#fff;padding:9px 15px;border-radius:var(--r-md);font-size:13px;font-weight:600;transition:top .16s;}
+  .pl-skip:focus{top:8px;}
+  .pl-sr{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0;}
+  /* ===== responsive: tablet & below (§14.5) ===== */
+  .pl-scrim{display:none;}
+  .pl-panel-fab{display:none;}
+  @media (max-width:1279px){ .pl-shell{grid-template-columns:56px minmax(0,1fr) 300px !important;} }
+  @media (max-width:1023px){
+    .pl-shell{grid-template-columns:56px minmax(0,1fr) !important;}
+    .pl-aside{position:fixed !important;top:0;right:0;height:100vh;width:340px;max-width:88vw;z-index:60;transform:translateX(103%);transition:transform .22s ease;box-shadow:-14px 0 40px rgba(0,0,0,.18);}
+    .pl-aside.pl-open{transform:translateX(0);}
+    .pl-scrim.pl-open{display:block;position:fixed;inset:0;background:rgba(17,17,17,.34);z-index:55;}
+    .pl-panel-fab{display:inline-flex !important;position:fixed;right:18px;bottom:88px;z-index:50;width:52px;height:52px;border-radius:var(--r-pill);border:none;background:var(--action);color:#fff;align-items:center;justify-content:center;box-shadow:0 10px 28px rgba(0,0,0,.26);cursor:pointer;}
+  }
+  @media (max-width:767px){ .pl-nownext{grid-template-columns:1fr !important;} .pl-toolbar{flex-wrap:wrap !important;gap:10px !important;} }
+  @media (prefers-reduced-motion:reduce){ .pl-aside{transition:none !important;} .sk,[style*="popIn"]{animation:none !important;} }
+</style>
+</helmet>
+<div class="pl-shell" style="display:grid;grid-template-columns:56px minmax(0,1fr) 340px;height:100vh;width:100vw;background:var(--bg);overflow:hidden;">
+
+  <a href="#pl-main" class="pl-skip">Skip to plan</a>
+  <div class="pl-sr" aria-live="polite">{{ liveMsg }}</div>
+
+  <nav aria-label="Primary" style="background:var(--bg);border-right:1px solid var(--border);display:flex;flex-direction:column;align-items:center;padding:14px 0;gap:4px;">
+    <div style="width:30px;height:30px;border-radius:8px;background:var(--action);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;margin-bottom:12px;">i</div>
+    <sc-for list="{{ nav }}" as="n" hint-placeholder-count="5"><a href="{{ n.href }}" title="{{ n.label }}" aria-label="{{ n.label }}" aria-current="{{ n.current }}" style="{{ n.style }}" style-hover="{{ n.hover }}"><lu-ic name="{{ n.icon }}" style="width:20px;height:20px;"></lu-ic></a></sc-for>
+  </nav>
+
+  <main id="pl-main" style="display:flex;flex-direction:column;min-width:0;min-height:0;height:100vh;overflow:hidden;position:relative;">
+
+    <div style="flex-shrink:0;padding:18px 26px 0;">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px;">
+        <div>
+          <div style="display:flex;align-items:center;gap:10px;">
+            <h1 style="margin:0;font-size:23px;font-weight:700;letter-spacing:-.02em;">Summer Lookbook</h1>
+            <span style="display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:var(--r-pill);background:rgba(17,17,17,.06);border:1px solid var(--border-strong);font-size:11px;font-weight:600;color:var(--text);"><span style="width:6px;height:6px;border-radius:50%;background:var(--action);"></span>Active</span>
+            <span style="display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:var(--r-pill);background:var(--gate-bg);border:1px solid #f4d9ad;font-size:11px;font-weight:600;color:var(--gate);">Sample data — not live</span>
+          </div>
+          <p style="margin:4px 0 0;font-size:13px;color:var(--text-2);">5-Week Product Shoot · 11 steps · <span style="color:var(--gate);font-weight:600;">1 approval waiting for you</span></p>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <button style="display:flex;align-items:center;gap:5px;padding:8px 11px;border-radius:var(--r-md);border:1px solid var(--border-strong);background:var(--bg);font-family:var(--font);font-size:13px;font-weight:500;color:var(--text-2);cursor:pointer;">{{ roleLabel }}<lu-ic name="chevron-down" style="width:13px;height:13px;opacity:.6;"></lu-ic></button>
+          <button title="Instance settings" style="width:36px;height:36px;border-radius:var(--r-md);border:1px solid var(--border-strong);background:var(--bg);display:flex;align-items:center;justify-content:center;color:var(--text-2);cursor:pointer;"><lu-ic name="settings" style="width:16px;height:16px;"></lu-ic></button>
+        </div>
+      </div>
+
+      <div class="pl-toolbar" style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:16px;">
+        <div style="display:inline-flex;background:var(--surface);border:1px solid var(--border);border-radius:var(--r-md);padding:3px;gap:2px;">
+          <sc-for list="{{ views }}" as="v" hint-placeholder-count="4"><button onClick="{{ v.onClick }}" style="{{ v.style }}"><lu-ic name="{{ v.icon }}" style="width:14px;height:14px;"></lu-ic>{{ v.label }}</button></sc-for>
+        </div>
+        <div style="display:flex;align-items:center;gap:14px;font-size:11px;color:var(--text-3);">
+          <span style="display:inline-flex;align-items:center;gap:5px;"><span style="width:9px;height:9px;border-radius:2px;border:1.5px solid var(--done);background:rgba(5,150,105,.1);"></span>Done</span>
+          <span style="display:inline-flex;align-items:center;gap:5px;"><span style="width:9px;height:9px;border-radius:2px;border:1.5px solid var(--inprog);background:rgba(17,17,17,.05);"></span>In progress</span>
+          <span style="display:inline-flex;align-items:center;gap:5px;"><span style="width:9px;height:9px;border-radius:2px;border:1.5px solid var(--gate);background:rgba(217,119,6,.1);"></span>At risk</span>
+          <span style="display:inline-flex;align-items:center;gap:5px;"><span style="width:9px;height:9px;border-radius:2px;border:1.5px solid var(--border-strong);background:var(--surface);"></span>To do</span>
+          <span style="display:inline-flex;align-items:center;gap:5px;"><span style="width:9px;height:9px;transform:rotate(45deg);border:1.5px solid var(--gate);"></span>Approval</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== NOW & NEXT (pinned priority bar) ===== -->
+    <sc-if value="{{ showNowNext }}" hint-placeholder-val="{{ true }}">
+      <div class="pl-nownext" style="flex-shrink:0;margin:14px 26px 0;display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+        <div style="border:1px solid var(--border);border-radius:var(--r-lg);background:var(--bg);padding:12px 14px;display:flex;align-items:flex-start;gap:11px;">
+          <div style="width:30px;height:30px;flex-shrink:0;border-radius:var(--r-md);background:rgba(17,17,17,.05);display:flex;align-items:center;justify-content:center;"><lu-ic name="clock" style="width:15px;height:15px;color:var(--action);"></lu-ic></div>
+          <div style="min-width:0;flex:1;">
+            <div style="font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--text-3);font-weight:700;margin-bottom:3px;">Happening now</div>
+            <div style="font-size:13px;font-weight:700;line-height:1.3;">{{ nowTitle }}</div>
+            <div style="font-size:12px;color:var(--text-2);line-height:1.4;margin-top:2px;">{{ nowSub }}</div>
+          </div>
+          <button onClick="{{ jumpNow }}" style="flex-shrink:0;align-self:center;display:inline-flex;align-items:center;gap:4px;padding:6px 11px;border-radius:var(--r-md);border:1px solid var(--border-strong);background:var(--bg);font-family:var(--font);font-size:12px;font-weight:600;color:var(--text);cursor:pointer;">View</button>
+        </div>
+        <div style="{{ nextCardStyle }}">
+          <div style="width:30px;height:30px;flex-shrink:0;border-radius:var(--r-md);background:{{ nextIconBg }};display:flex;align-items:center;justify-content:center;"><lu-ic name="{{ nextIcon }}" style="width:15px;height:15px;color:{{ nextIconColor }};"></lu-ic></div>
+          <div style="min-width:0;flex:1;">
+            <div style="font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--text-3);font-weight:700;margin-bottom:3px;">Your next approval</div>
+            <div style="font-size:13px;font-weight:700;line-height:1.3;">{{ nextTitle }}</div>
+            <div style="font-size:12px;color:{{ nextSubColor }};line-height:1.4;margin-top:2px;">{{ nextSub }}</div>
+          </div>
+          <sc-if value="{{ hasNextApproval }}" hint-placeholder-val="{{ true }}">
+            <button onClick="{{ jumpNext }}" style="flex-shrink:0;align-self:center;display:inline-flex;align-items:center;gap:4px;padding:6px 12px;border-radius:var(--r-md);border:none;background:var(--gate);color:#fff;font-family:var(--font);font-size:12px;font-weight:700;cursor:pointer;">Review</button>
+          </sc-if>
+        </div>
+      </div>
+    </sc-if>
+
+    <!-- ===== READ-ONLY / SYNC BANNERS ===== -->
+    <sc-if value="{{ readOnly }}" hint-placeholder-val="{{ false }}">
+      <div style="flex-shrink:0;margin:12px 26px 0;display:flex;align-items:center;gap:8px;padding:9px 13px;border-radius:var(--r-md);background:var(--muted-bg);border:1px solid var(--border-strong);font-size:12px;color:var(--text-2);"><lu-ic name="lock" style="width:14px;height:14px;flex-shrink:0;"></lu-ic><span><strong style="color:var(--text);">Read-only</strong> — you have Viewer access. Browse phases and tasks, but approving gates and editing is disabled.</span></div>
+    </sc-if>
+    <sc-if value="{{ syncFailed }}" hint-placeholder-val="{{ false }}">
+      <div style="flex-shrink:0;margin:12px 26px 0;display:flex;align-items:center;gap:8px;padding:9px 13px;border-radius:var(--r-md);background:#fdeaea;border:1px solid #f4c9c9;font-size:12px;color:var(--lost);"><lu-ic name="alert-triangle" style="width:14px;height:14px;flex-shrink:0;"></lu-ic><span style="flex:1;">Changes couldn't sync. Your edits are saved locally and will retry automatically.</span><button onClick="{{ dismissSync }}" style="display:flex;align-items:center;gap:5px;border:1px solid #f4c9c9;background:var(--bg);color:var(--lost);border-radius:var(--r-sm);padding:4px 10px;font-family:var(--font);font-size:11px;font-weight:600;cursor:pointer;"><lu-ic name="refresh-cw" style="width:11px;height:11px;"></lu-ic>Retry now</button></div>
+    </sc-if>
+
+    <!-- ===== LOADING ===== -->
+    <sc-if value="{{ isLoading }}" hint-placeholder-val="{{ false }}">
+      <div style="flex:1;overflow:hidden;padding:14px 26px 18px;min-height:0;">
+        <div style="border:1px solid var(--border);border-radius:var(--r-lg);overflow:hidden;background:var(--bg);padding:18px;">
+          <div class="sk" style="height:13px;width:130px;margin-bottom:20px;"></div>
+          <sc-for list="{{ skRows }}" as="r" hint-placeholder-count="8">
+            <div style="display:grid;grid-template-columns:170px 1fr;gap:18px;align-items:center;height:42px;">
+              <div class="sk" style="height:12px;width:78%;"></div>
+              <div class="sk" style="{{ r.barStyle }}"></div>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+    </sc-if>
+
+    <!-- ===== EMPTY ===== -->
+    <sc-if value="{{ isEmpty }}" hint-placeholder-val="{{ false }}">
+      <div style="flex:1;display:flex;align-items:center;justify-content:center;padding:40px;min-height:0;">
+        <div style="text-align:center;max-width:340px;">
+          <div style="width:52px;height:52px;border-radius:var(--r-lg);background:var(--muted-bg);display:flex;align-items:center;justify-content:center;margin:0 auto 14px;"><lu-ic name="gantt-chart" style="width:24px;height:24px;color:var(--text-3);"></lu-ic></div>
+          <div style="font-size:16px;font-weight:700;margin-bottom:6px;">No steps yet</div>
+          <div style="font-size:13px;color:var(--text-2);line-height:1.5;margin-bottom:16px;">This plan hasn't been set up. Add steps from a template, or ask the planner assistant to draft a schedule.</div>
+          <button style="display:inline-flex;align-items:center;gap:6px;padding:9px 16px;border-radius:var(--r-md);border:none;background:var(--action);color:#fff;font-family:var(--font);font-size:13px;font-weight:600;cursor:pointer;"><lu-ic name="sparkles" style="width:14px;height:14px;"></lu-ic>Draft a plan</button>
+        </div>
+      </div>
+    </sc-if>
+
+    <!-- ===== ERROR ===== -->
+    <sc-if value="{{ isError }}" hint-placeholder-val="{{ false }}">
+      <div style="flex:1;display:flex;align-items:center;justify-content:center;padding:40px;min-height:0;">
+        <div style="text-align:center;max-width:340px;">
+          <div style="width:52px;height:52px;border-radius:var(--r-lg);background:#fdeaea;display:flex;align-items:center;justify-content:center;margin:0 auto 14px;"><lu-ic name="alert-triangle" style="width:24px;height:24px;color:var(--lost);"></lu-ic></div>
+          <div style="font-size:16px;font-weight:700;margin-bottom:6px;">Couldn't load this plan</div>
+          <div style="font-size:13px;color:var(--text-2);line-height:1.5;margin-bottom:16px;">Something went wrong fetching the schedule. Check your connection and try again.</div>
+          <button onClick="{{ retry }}" style="display:inline-flex;align-items:center;gap:6px;padding:9px 16px;border-radius:var(--r-md);border:1px solid var(--border-strong);background:var(--bg);color:var(--text);font-family:var(--font);font-size:13px;font-weight:600;cursor:pointer;"><lu-ic name="refresh-cw" style="width:14px;height:14px;"></lu-ic>Try again</button>
+        </div>
+      </div>
+    </sc-if>
+
+    <!-- ===== TIMELINE ===== -->
+    <sc-if value="{{ isTimeline }}" hint-placeholder-val="{{ true }}">
+      <div style="flex:1;overflow:auto;padding:14px 26px 18px;min-height:0;">
+        <div style="min-width:760px;border:1px solid var(--border);border-radius:var(--r-lg);overflow:hidden;background:var(--bg);">
+          <div style="display:grid;grid-template-columns:180px 1fr;border-bottom:1px solid var(--border);background:var(--surface);">
+            <div style="padding:9px 12px;font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--text-3);border-right:1px solid var(--border-subtle);">Step</div>
+            <div style="position:relative;display:flex;">
+              <sc-for list="{{ weeksHead }}" as="w" hint-placeholder-count="5"><div style="width:20%;padding:9px 10px;border-left:1px solid var(--border-subtle);"><div style="font-family:var(--mono);font-size:11px;font-weight:600;">{{ w.label }}</div><div style="font-family:var(--mono);font-size:10px;color:var(--text-3);">{{ w.date }}</div></div></sc-for>
+              <div style="position:absolute;top:0;bottom:-9999px;left:46%;width:1px;background:var(--action);opacity:.4;z-index:3;"></div>
+              <div style="position:absolute;top:6px;left:46%;transform:translateX(-50%);font-family:var(--mono);font-size:9px;font-weight:600;color:#fff;background:var(--action);padding:1px 6px;border-radius:var(--r-pill);z-index:4;">TODAY</div>
+            </div>
+          </div>
+          <sc-for list="{{ phasesTL }}" as="p" hint-placeholder-count="11">
+            <div style="display:grid;grid-template-columns:180px 1fr;align-items:center;height:46px;border-bottom:1px solid var(--border-subtle);">
+              <div onClick="{{ p.onSelect }}" style="{{ p.labelStyle }}">
+                <span style="width:8px;height:8px;border-radius:50%;flex-shrink:0;{{ p.dotBg }}"></span>
+                <span style="font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ p.name }}</span>
+                <sc-if value="{{ p.hasGateLabel }}" hint-placeholder-val="{{ false }}"><lu-ic name="lock" style="width:11px;height:11px;color:var(--text-3);flex-shrink:0;"></lu-ic></sc-if>
+              </div>
+              <div style="position:relative;height:100%;background:repeating-linear-gradient(90deg,transparent,transparent calc(20% - 1px),var(--border-subtle) calc(20% - 1px),var(--border-subtle) 20%);">
+                <div onClick="{{ p.onSelect }}" style="{{ p.barStyle }}">
+                  <sc-if value="{{ p.hasProgress }}" hint-placeholder-val="{{ false }}"><div style="{{ p.progressStyle }}"></div></sc-if>
+                  <span style="position:relative;font-family:var(--mono);font-size:10px;font-weight:600;{{ p.barTextColor }}">{{ p.dur }}</span>
+                </div>
+                <sc-if value="{{ p.hasMilestone }}" hint-placeholder-val="{{ false }}"><div title="Shoot day" style="{{ p.milestoneStyle }}"><lu-ic name="flag" style="width:12px;height:12px;color:var(--action);"></lu-ic></div></sc-if>
+                <sc-if value="{{ p.hasGate }}" hint-placeholder-val="{{ false }}"><div title="{{ p.gateTitle }}" style="{{ p.gateStyle }}"></div></sc-if>
+                <div style="position:absolute;top:0;bottom:0;left:46%;width:1px;background:var(--action);opacity:.28;"></div>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+    </sc-if>
+
+    <!-- ===== KANBAN (columns = phases) ===== -->
+    <sc-if value="{{ isKanban }}" hint-placeholder-val="{{ false }}">
+      <div style="flex:1;overflow-x:auto;overflow-y:hidden;padding:14px 26px 18px;min-height:0;">
+        <div style="display:flex;gap:12px;height:100%;min-width:min-content;">
+          <sc-for list="{{ kanbanCols }}" as="col" hint-placeholder-count="6">
+            <div style="width:210px;flex-shrink:0;display:flex;flex-direction:column;background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);overflow:hidden;">
+              <div style="padding:11px 13px;border-bottom:1px solid var(--border);">
+                <div style="display:flex;align-items:center;justify-content:space-between;"><div style="display:flex;align-items:center;gap:6px;min-width:0;"><span style="width:8px;height:8px;border-radius:50%;flex-shrink:0;{{ col.dotBg }}"></span><span style="font-size:12px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ col.label }}</span><sc-if value="{{ col.locked }}" hint-placeholder-val="{{ false }}"><lu-ic name="lock" style="width:11px;height:11px;color:var(--text-3);flex-shrink:0;"></lu-ic></sc-if></div><span style="font-family:var(--mono);font-size:11px;font-weight:600;color:var(--text-3);">{{ col.count }}</span></div>
+              </div>
+              <div style="flex:1;overflow-y:auto;padding:9px;display:flex;flex-direction:column;gap:8px;">
+                <sc-if value="{{ col.gated }}" hint-placeholder-val="{{ false }}"><button onClick="{{ col.onBlocked }}" aria-label="{{ col.blockedAria }}" style="display:flex;align-items:center;justify-content:center;gap:5px;width:100%;font-size:10px;color:var(--gate);background:repeating-linear-gradient(45deg,var(--gate-bg),var(--gate-bg) 6px,#fbe9cd 6px,#fbe9cd 12px);border:1.5px dashed var(--gate);border-radius:var(--r-sm);padding:8px;font-weight:600;font-family:var(--font);cursor:not-allowed;"><lu-ic name="lock" style="width:11px;height:11px;"></lu-ic>Locked — approve to add</button></sc-if>
+                <sc-for list="{{ col.tasks }}" as="t" hint-placeholder-count="2">
+                  <div onClick="{{ t.onSelect }}" style="{{ t.cardStyle }}">
+                    <div style="font-size:12px;font-weight:600;margin-bottom:8px;line-height:1.35;">{{ t.title }}</div>
+                    <div style="display:flex;align-items:center;justify-content:space-between;">
+                      <span style="{{ t.chipStyle }}"><span style="width:5px;height:5px;border-radius:50%;{{ t.chipDot }}"></span>{{ t.statusLabel }}</span>
+                      <span style="width:22px;height:22px;border-radius:50%;background:var(--muted-bg);display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:var(--text-2);">{{ t.who }}</span>
+                    </div>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+    </sc-if>
+
+    <!-- ===== CALENDAR ===== -->
+    <sc-if value="{{ isCalendar }}" hint-placeholder-val="{{ false }}">
+      <div style="flex:1;overflow:auto;padding:14px 26px 18px;min-height:0;">
+        <div style="border:1px solid var(--border);border-radius:var(--r-lg);overflow:hidden;background:var(--bg);">
+          <div style="display:grid;grid-template-columns:repeat(7,1fr);background:var(--surface);border-bottom:1px solid var(--border);">
+            <sc-for list="{{ dow }}" as="d" hint-placeholder-count="7"><div style="padding:8px 10px;font-size:10px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--text-3);text-align:right;">{{ d }}</div></sc-for>
+          </div>
+          <sc-for list="{{ calWeeks }}" as="wk" hint-placeholder-count="5">
+            <div style="display:grid;grid-template-columns:repeat(7,1fr);border-bottom:1px solid var(--border-subtle);">
+              <sc-for list="{{ wk }}" as="day" hint-placeholder-count="7">
+                <div style="{{ day.cellStyle }}">
+                  <div style="{{ day.numStyle }}">{{ day.num }}</div>
+                  <sc-for list="{{ day.events }}" as="e" hint-placeholder-count="1"><div style="{{ e.style }}"><span style="width:5px;height:5px;border-radius:50%;flex-shrink:0;{{ e.dot }}"></span><span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ e.t }}</span></div></sc-for>
+                </div>
+              </sc-for>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+    </sc-if>
+
+    <!-- ===== LIST ===== -->
+    <sc-if value="{{ isList }}" hint-placeholder-val="{{ false }}">
+      <div style="flex:1;overflow:auto;padding:14px 26px 18px;min-height:0;">
+        <div style="border:1px solid var(--border);border-radius:var(--r-lg);overflow:hidden;background:var(--bg);">
+          <div style="display:grid;grid-template-columns:2.4fr 1.3fr 0.7fr 1.4fr 0.7fr 0.8fr 1fr;padding:10px 16px;background:var(--surface);border-bottom:1px solid var(--border);font-size:10px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--text-3);">
+            <span>Task</span><span>Step</span><span>Owner</span><span>Dates</span><span>Dur</span><span>Priority</span><span>Status</span>
+          </div>
+          <sc-for list="{{ listRows }}" as="r" hint-placeholder-count="13">
+            <div onClick="{{ r.onSelect }}" style="display:grid;grid-template-columns:2.4fr 1.3fr 0.7fr 1.4fr 0.7fr 0.8fr 1fr;align-items:center;padding:11px 16px;border-bottom:1px solid var(--border-subtle);cursor:pointer;font-size:12px;">
+              <span style="font-weight:600;">{{ r.title }}</span>
+              <span style="color:var(--text-2);">{{ r.phase }}</span>
+              <span><span style="width:22px;height:22px;border-radius:50%;background:var(--muted-bg);display:inline-flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:var(--text-2);">{{ r.who }}</span></span>
+              <span style="font-family:var(--mono);font-size:11px;color:var(--text-2);">{{ r.dates }}</span>
+              <span style="font-family:var(--mono);font-size:11px;color:var(--text-2);">{{ r.dur }}</span>
+              <span style="color:var(--text-2);">{{ r.pri }}</span>
+              <span><span style="{{ r.chipStyle }}"><span style="width:5px;height:5px;border-radius:50%;{{ r.chipDot }}"></span>{{ r.statusLabel }}</span></span>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+    </sc-if>
+
+    <!-- ===== CHAT DOCK ===== -->
+    <div style="flex-shrink:0;border-top:1px solid var(--border);background:var(--bg);padding:10px 26px 14px;">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;"><lu-ic name="sparkles" style="width:14px;height:14px;color:var(--action);"></lu-ic><span style="font-size:12px;color:var(--text-2);">{{ dockLine }}</span><span style="font-size:10px;font-weight:600;color:var(--text-3);border:1px solid var(--border);border-radius:var(--r-pill);padding:2px 7px;white-space:nowrap;">production-planner · not yet wired</span></div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:9px;"><sc-for list="{{ dockChips }}" as="c" hint-placeholder-count="3"><button onClick="{{ c.onClick }}" style="display:inline-flex;align-items:center;gap:5px;padding:5px 11px;border-radius:var(--r-pill);border:1px solid var(--border-strong);background:var(--surface);font-family:var(--font);font-size:11.5px;font-weight:600;color:var(--text-2);cursor:pointer;"><lu-ic name="sparkles" style="width:11px;height:11px;color:var(--action);"></lu-ic>{{ c.label }}</button></sc-for></div>
+      <div style="display:flex;align-items:center;gap:8px;border:1px solid var(--border-strong);border-radius:var(--r-pill);padding:8px 8px 8px 14px;"><input type="text" placeholder="Ask the planner to reschedule, assign, or explain a delay…" style="flex:1;min-width:0;border:none;outline:none;background:none;font-family:var(--font);font-size:13px;" /><button aria-label="Send" style="width:30px;height:30px;border-radius:50%;border:none;background:var(--action);color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;"><lu-ic name="arrow-up" style="width:15px;height:15px;"></lu-ic></button></div>
+    </div>
+
+    <!-- ===== TOAST ===== -->
+    <sc-if value="{{ toast }}" hint-placeholder-val="{{ false }}">
+      <div aria-live="polite" style="position:absolute;bottom:86px;left:50%;transform:translateX(-50%);z-index:8;display:flex;align-items:center;gap:8px;background:var(--action);color:#fff;padding:11px 16px;border-radius:var(--r-pill);font-size:12px;font-weight:600;box-shadow:0 8px 24px rgba(0,0,0,.18);animation:toastIn .22s ease-out;"><lu-ic name="check" style="width:14px;height:14px;"></lu-ic>{{ toast }}</div>
+    </sc-if>
+
+    <!-- ===== COMPLETION CELEBRATION ===== -->
+    <sc-if value="{{ isComplete }}" hint-placeholder-val="{{ false }}">
+      <div style="flex:1;display:flex;align-items:center;justify-content:center;padding:40px;min-height:0;">
+        <div style="text-align:center;max-width:420px;">
+          <div style="width:64px;height:64px;border-radius:50%;background:#ecfdf3;display:flex;align-items:center;justify-content:center;margin:0 auto 18px;animation:popIn .4s ease-out;"><lu-ic name="circle-check" style="width:34px;height:34px;color:var(--done);"></lu-ic></div>
+          <div style="font-size:21px;font-weight:700;letter-spacing:-.02em;margin-bottom:8px;">Summer Lookbook is complete</div>
+          <div style="font-size:14px;color:var(--text-2);line-height:1.55;margin-bottom:20px;">All 11 steps are done and every approval is signed off. Nice work — the plan wrapped 1 day ahead of the Apr 5 target.</div>
+          <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-bottom:22px;">
+            <div style="border:1px solid var(--border);border-radius:var(--r-md);background:var(--bg);padding:10px 16px;"><div style="font-family:var(--mono);font-size:19px;font-weight:600;">11</div><div style="font-size:11px;color:var(--text-3);">steps done</div></div>
+            <div style="border:1px solid var(--border);border-radius:var(--r-md);background:var(--bg);padding:10px 16px;"><div style="font-family:var(--mono);font-size:19px;font-weight:600;">4</div><div style="font-size:11px;color:var(--text-3);">approvals</div></div>
+            <div style="border:1px solid var(--border);border-radius:var(--r-md);background:var(--bg);padding:10px 16px;"><div style="font-family:var(--mono);font-size:19px;font-weight:600;color:var(--done);">−1d</div><div style="font-size:11px;color:var(--text-3);">vs target</div></div>
+          </div>
+          <div style="display:flex;gap:9px;justify-content:center;">
+            <button onClick="{{ retry }}" style="display:inline-flex;align-items:center;gap:6px;padding:9px 16px;border-radius:var(--r-md);border:1px solid var(--border-strong);background:var(--bg);font-family:var(--font);font-size:13px;font-weight:600;cursor:pointer;">View timeline</button>
+            <button style="display:inline-flex;align-items:center;gap:6px;padding:9px 16px;border-radius:var(--r-md);border:none;background:var(--action);color:#fff;font-family:var(--font);font-size:13px;font-weight:600;cursor:pointer;"><lu-ic name="flag" style="width:15px;height:15px;"></lu-ic>Archive plan</button>
+          </div>
+        </div>
+      </div>
+    </sc-if>
+
+  </main>
+
+  <button class="pl-panel-fab" onClick="{{ togglePanel }}" aria-label="Toggle insights panel" title="Insights"><lu-ic name="sparkles" style="width:20px;height:20px;"></lu-ic></button>
+  <div class="pl-scrim {{ panelCls }}" onClick="{{ closePanel }}"></div>
+
+  <!-- ===== ADAPTIVE RIGHT CONTEXT PANEL (Intelligence ↔ detail) ===== -->
+  <aside class="pl-aside {{ panelCls }}" aria-label="Insights and detail" style="background:var(--surface);border-left:1px solid var(--border);display:flex;flex-direction:column;min-height:0;overflow:hidden;">
+
+    <!-- header: Intelligence (default) -->
+    <sc-if value="{{ panelIntel }}" hint-placeholder-val="{{ true }}">
+      <div style="flex-shrink:0;padding:16px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;"><lu-ic name="sparkles" style="width:15px;height:15px;color:var(--action);"></lu-ic><span style="font-size:13px;font-weight:700;">Intelligence</span></div>
+    </sc-if>
+    <!-- header: detail (phase selected) -->
+    <sc-if value="{{ panelDetail }}" hint-placeholder-val="{{ false }}">
+      <div style="flex-shrink:0;padding:13px 16px 13px 18px;border-bottom:1px solid var(--border);display:flex;align-items:flex-start;justify-content:space-between;gap:10px;">
+        <div style="min-width:0;">
+          <button onClick="{{ closeDrawer }}" style="display:inline-flex;align-items:center;gap:4px;border:none;background:none;padding:0;margin-bottom:7px;font-family:var(--font);font-size:11px;font-weight:600;color:var(--text-2);cursor:pointer;"><lu-ic name="arrow-left" style="width:12px;height:12px;"></lu-ic>Intelligence</button>
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:5px;"><span style="{{ dw.chipStyle }}"><span style="width:5px;height:5px;border-radius:50%;{{ dw.chipDot }}"></span>{{ dw.statusLabel }}</span><span style="font-family:var(--mono);font-size:11px;color:var(--text-3);">{{ dw.range }}</span></div>
+          <div style="font-size:16px;font-weight:700;letter-spacing:-.01em;line-height:1.25;">{{ dw.name }}</div>
+        </div>
+        <button onClick="{{ closeDrawer }}" title="Close" style="width:28px;height:28px;flex-shrink:0;border-radius:var(--r-md);border:1px solid var(--border);background:var(--bg);display:flex;align-items:center;justify-content:center;color:var(--text-2);cursor:pointer;"><lu-ic name="x" style="width:14px;height:14px;"></lu-ic></button>
+      </div>
+    </sc-if>
+
+    <div style="flex:1;overflow-y:auto;">
+
+      <!-- ===== BODY: INTELLIGENCE ===== -->
+      <sc-if value="{{ panelIntel }}" hint-placeholder-val="{{ true }}">
+        <div style="padding:16px 18px;animation:panelIn .2s ease-out;">
+          <div style="font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--text-3);margin-bottom:6px;">Context</div>
+          <div style="font-size:13px;font-weight:600;margin-bottom:2px;">{{ ctxTitle }}</div>
+          <div style="font-size:12px;color:var(--text-2);margin-bottom:16px;line-height:1.5;">{{ ctxSub }}</div>
+
+          <div style="border:1px solid var(--border-subtle);border-radius:var(--r-md);background:var(--bg);padding:12px;margin-bottom:12px;">
+            <div style="display:flex;align-items:center;gap:6px;margin-bottom:7px;"><lu-ic name="alert-triangle" style="width:13px;height:13px;color:var(--gate);"></lu-ic><span style="font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--text-3);">AI insight</span></div>
+            <div style="font-size:12px;line-height:1.5;">Item delivery is <span style="color:var(--gate);font-weight:600;">at risk</span> — sample pull is 2 days behind and the courier task is blocked. This threatens the Mar 24 shoot day.</div>
+          </div>
+
+          <div style="border:1px solid var(--border-subtle);border-radius:var(--r-md);background:var(--bg);padding:11px 12px;margin-bottom:12px;">
+            <div style="font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--text-3);margin-bottom:7px;">Evidence</div>
+            <div style="display:flex;flex-direction:column;gap:6px;">
+              <div style="display:flex;justify-content:space-between;font-size:12px;"><span style="color:var(--text-2);">Planned finish</span><span style="font-family:var(--mono);font-weight:600;">Mar 13</span></div>
+              <div style="display:flex;justify-content:space-between;font-size:12px;"><span style="color:var(--text-2);">Projected finish</span><span style="font-family:var(--mono);font-weight:600;color:var(--gate);">Mar 15</span></div>
+              <div style="display:flex;justify-content:space-between;font-size:12px;"><span style="color:var(--text-2);">Slip</span><span style="font-family:var(--mono);font-weight:600;color:var(--lost);">+2 days</span></div>
+            </div>
+          </div>
+
+          <div style="border:1px solid var(--border-subtle);border-radius:var(--r-md);background:var(--bg);padding:11px 12px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;"><span style="font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--text-3);">Approvals</span><span style="font-family:var(--mono);font-size:12px;font-weight:700;color:var(--gate);">{{ approvalCount }}</span></div>
+            <sc-if value="{{ hasApproval }}" hint-placeholder-val="{{ true }}">
+              <div onClick="{{ openOutfitGate }}" style="border:1px solid #f4d9ad;background:var(--gate-bg);border-radius:var(--r-sm);padding:9px 10px;cursor:pointer;">
+                <div style="font-size:12px;font-weight:600;margin-bottom:2px;">Outfit confirmation</div>
+                <div style="font-size:11px;color:var(--gate);font-weight:600;">Ready for approval · review →</div>
+              </div>
+            </sc-if>
+            <sc-if value="{{ noApproval }}" hint-placeholder-val="{{ false }}">
+              <div style="font-size:11px;color:var(--text-3);">No approvals waiting.</div>
+            </sc-if>
+          </div>
+
+          <div style="margin-top:14px;font-size:11px;color:var(--text-3);text-align:center;">Select any step to see its tasks &amp; approval here</div>
+        </div>
+      </sc-if>
+
+      <!-- ===== BODY: DETAIL (phase) ===== -->
+      <sc-if value="{{ panelDetail }}" hint-placeholder-val="{{ false }}">
+        <div style="padding:16px 18px;animation:panelIn .2s ease-out;">
+          <sc-if value="{{ dw.hasGate }}" hint-placeholder-val="{{ false }}">
+            <div style="border:1px solid #f4d9ad;background:var(--gate-bg);border-radius:var(--r-md);padding:14px;margin-bottom:18px;">
+              <div style="display:flex;align-items:center;gap:7px;margin-bottom:6px;"><lu-ic name="lock" style="width:14px;height:14px;color:var(--gate);"></lu-ic><span style="font-size:12px;font-weight:700;color:var(--gate);">Approval gate — {{ dw.gateType }}</span></div>
+              <div style="font-size:12px;line-height:1.5;color:var(--text);margin-bottom:6px;">{{ dw.gateText }}</div>
+              <div style="font-size:11px;color:var(--text-2);border-top:1px solid #f4d9ad;padding-top:8px;margin-top:4px;">{{ dw.gateReq }}</div>
+              <sc-if value="{{ dw.canApprove }}" hint-placeholder-val="{{ true }}">
+              <div style="display:flex;gap:8px;margin-top:12px;">
+                <button onClick="{{ dw.onApprove }}" style="flex:1;display:flex;align-items:center;justify-content:center;gap:5px;padding:9px;border-radius:var(--r-md);border:none;background:var(--action);color:#fff;font-family:var(--font);font-size:12px;font-weight:600;cursor:pointer;"><lu-ic name="circle-check" style="width:14px;height:14px;"></lu-ic>Approve</button>
+                <button onClick="{{ dw.onEdit }}" style="display:flex;align-items:center;justify-content:center;gap:5px;padding:9px 12px;border-radius:var(--r-md);border:1px solid var(--border-strong);background:var(--bg);color:var(--text);font-family:var(--font);font-size:12px;font-weight:600;cursor:pointer;"><lu-ic name="pencil" style="width:13px;height:13px;"></lu-ic>Edit</button>
+                <button onClick="{{ dw.onDiscard }}" title="Discard" style="width:36px;display:flex;align-items:center;justify-content:center;padding:9px;border-radius:var(--r-md);border:1px solid var(--border-strong);background:var(--bg);color:var(--text-2);cursor:pointer;"><lu-ic name="trash" style="width:14px;height:14px;"></lu-ic></button>
+              </div>
+              </sc-if>
+              <sc-if value="{{ dw.viewerLocked }}" hint-placeholder-val="{{ false }}">
+              <div style="display:flex;align-items:center;gap:6px;margin-top:12px;padding:9px 11px;border-radius:var(--r-md);background:var(--bg);border:1px solid var(--border-strong);font-size:11px;color:var(--text-2);"><lu-ic name="lock" style="width:12px;height:12px;flex-shrink:0;"></lu-ic>Viewer access — only a Producer or Owner can approve this gate.</div>
+              </sc-if>
+            </div>
+          </sc-if>
+          <sc-if value="{{ dw.approved }}" hint-placeholder-val="{{ false }}">
+            <div style="border:1px solid #bbf7d0;background:#ecfdf3;border-radius:var(--r-md);padding:12px 14px;margin-bottom:18px;display:flex;align-items:center;gap:8px;"><lu-ic name="circle-check" style="width:16px;height:16px;color:var(--done);"></lu-ic><span style="font-size:12px;font-weight:600;color:var(--done);">Gate approved — next phase unlocked (sample)</span></div>
+          </sc-if>
+          <div style="font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--text-3);margin-bottom:10px;">Tasks · {{ dw.taskCount }}</div>
+          <div style="display:flex;flex-direction:column;gap:8px;">
+            <sc-for list="{{ dw.tasks }}" as="t" hint-placeholder-count="2">
+              <div style="border:1px solid var(--border-subtle);border-radius:var(--r-md);background:var(--bg);padding:11px 12px;">
+                <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:8px;"><span style="font-size:12px;font-weight:600;line-height:1.35;">{{ t.title }}</span><span style="width:22px;height:22px;border-radius:50%;background:var(--muted-bg);display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:var(--text-2);flex-shrink:0;">{{ t.who }}</span></div>
+                <div style="display:flex;align-items:center;justify-content:space-between;"><span style="{{ t.chipStyle }}"><span style="width:5px;height:5px;border-radius:50%;{{ t.chipDot }}"></span>{{ t.statusLabel }}</span><span style="font-family:var(--mono);font-size:10px;color:var(--text-3);">{{ t.dates }} · {{ t.dur }}</span></div>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+      </sc-if>
+
+    </div>
+  </aside>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1360,&quot;height&quot;:840},&quot;screenState&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;live&quot;,&quot;loading&quot;,&quot;empty&quot;,&quot;error&quot;,&quot;complete&quot;],&quot;default&quot;:&quot;live&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Demo states&quot;},&quot;role&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;owner&quot;,&quot;producer&quot;,&quot;viewer&quot;],&quot;default&quot;:&quot;producer&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Demo states&quot;},&quot;syncFailed&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Demo states&quot;}}">
+class Component extends DCLogic {
+  state = { view:'timeline', selected:null, drawerOpen:false, approved:{}, screenState:null, role:null, toast:null, syncFailed:null, panelOpen:false, liveMsg:'' };
+
+  componentDidMount(){ this._key = (e)=>{
+      if(e.key==='Escape'){ if(this.state.panelOpen){ this.setState({panelOpen:false}); return; } if(this.state.drawerOpen) this.setState({drawerOpen:false}); return; }
+      const S=this.state; const scr=S.screenState||this.props.screenState||'live'; if(scr!=='live') return;
+      const tag=(e.target&&e.target.tagName)||''; if(tag==='INPUT'||tag==='TEXTAREA') return;
+      if(['ArrowDown','ArrowUp','ArrowRight','ArrowLeft'].includes(e.key) && ['timeline','list','kanban'].includes(S.view)){
+        const keys=this._phaseKeys||[]; if(!keys.length) return; e.preventDefault();
+        const fwd=(e.key==='ArrowDown'||e.key==='ArrowRight'); let i=keys.indexOf(S.selected);
+        i = i<0 ? 0 : (fwd? Math.min(keys.length-1,i+1) : Math.max(0,i-1)); const k=keys[i];
+        this.setState({selected:k, drawerOpen:true, liveMsg:'Step '+(i+1)+' of '+keys.length+': '+((this._phaseNames||{})[k]||k)});
+      }
+    }; document.addEventListener('keydown', this._key); }
+  componentWillUnmount(){ document.removeEventListener('keydown', this._key); clearTimeout(this._t); }
+  togglePanel(){ this.setState(st=>({panelOpen:!st.panelOpen})); }
+  closePanel(){ this.setState({panelOpen:false}); }
+
+  showToast(msg){ this.setState({ toast:msg }); clearTimeout(this._t); this._t=setTimeout(()=>this.setState({toast:null}),2600); }
+  select(key){ this.setState({ selected:key, drawerOpen:true }); }
+  close(){ this.setState({ drawerOpen:false }); }
+
+  renderVals(){
+    const S = this.state;
+    const scr = S.screenState || this.props.screenState || 'live';
+    const role = S.role || this.props.role || 'producer';
+    const live = scr==='live', isLoading = scr==='loading', isEmpty = scr==='empty', isError = scr==='error', isComplete = scr==='complete';
+    const readOnly = role==='viewer';
+    const canApprove = role==='owner' || role==='producer';
+    const syncFailed = live && (S.syncFailed==null ? !!this.props.syncFailed : S.syncFailed);
+    const roleLabel = { owner:'Owner', producer:'Producer', viewer:'Viewer' }[role] || 'All roles';
+
+    const PH = [
+      { key:'brief', name:'Brief', status:'done', start:0, span:0.7 },
+      { key:'casting', name:'Casting', status:'done', start:0.6, span:1.1, gate:'approved' },
+      { key:'softhold', name:'Soft hold', status:'in_progress', start:1.5, span:0.8, progress:60 },
+      { key:'delivery', name:'Item delivery', status:'in_progress', start:1.8, span:1.3, progress:40, atRisk:true },
+      { key:'outfit', name:'Outfit confirmation', status:'todo', start:2.6, span:0.7, gate:'ready' },
+      { key:'payment', name:'Payment & scheduling', status:'todo', start:2.9, span:0.6 },
+      { key:'awaiting', name:'Awaiting shoot', status:'todo', start:3.1, span:0.7 },
+      { key:'production', name:'Production', status:'todo', start:3.5, span:0.9, milestone:true },
+      { key:'retouch', name:'Retouching', status:'todo', start:4.0, span:0.8 },
+      { key:'approval', name:'Final approval', status:'todo', start:4.5, span:0.4, gate:'locked' },
+      { key:'return', name:'Product return', status:'todo', start:4.6, span:0.4 }
+    ];
+    const PHNAME = {}; PH.forEach(p=>PHNAME[p.key]=p.name);
+    const TK = [
+      { id:0, phase:'brief', title:'Creative brief sign-off', status:'done', who:'MC', dates:'Mar 2–3', dur:'1d', pri:'High' },
+      { id:1, phase:'casting', title:'Shortlist models', status:'done', who:'JA', dates:'Mar 4–6', dur:'2d', pri:'Med' },
+      { id:2, phase:'casting', title:'Casting approval', status:'done', who:'MC', dates:'Mar 6', dur:'1d', pri:'High' },
+      { id:3, phase:'softhold', title:'Place soft holds', status:'in_progress', who:'MC', dates:'Mar 9–11', dur:'2d', pri:'Med' },
+      { id:4, phase:'delivery', title:'Sample pull — 24 looks', status:'in_progress', who:'PR', dates:'Mar 10–13', dur:'3d', pri:'High' },
+      { id:5, phase:'delivery', title:'Courier inbound', status:'blocked', who:'PR', dates:'Mar 13–14', dur:'1d', pri:'High' },
+      { id:6, phase:'outfit', title:'Confirm outfits', status:'todo', who:'MC', dates:'Mar 17–18', dur:'1d', pri:'Med' },
+      { id:7, phase:'payment', title:'Issue talent POs', status:'todo', who:'FN', dates:'Mar 19–20', dur:'1d', pri:'Low' },
+      { id:8, phase:'awaiting', title:'Lock call sheet', status:'todo', who:'MC', dates:'Mar 21–22', dur:'1d', pri:'Med' },
+      { id:9, phase:'production', title:'Shoot day', status:'todo', who:'JA', dates:'Mar 24–25', dur:'2d', pri:'High' },
+      { id:10, phase:'retouch', title:'Retouch 120 selects', status:'todo', who:'PR', dates:'Mar 27–Apr 1', dur:'4d', pri:'Med' },
+      { id:11, phase:'approval', title:'Client final approval', status:'todo', who:'DK', dates:'Apr 2', dur:'1d', pri:'High' },
+      { id:12, phase:'return', title:'Return samples', status:'todo', who:'CO', dates:'Apr 4–5', dur:'1d', pri:'Low' }
+    ];
+
+    const ST = {
+      todo:{ l:'To Do', c:'var(--text-2)', bg:'var(--muted-bg)', dot:'var(--text-3)' },
+      in_progress:{ l:'In Progress', c:'var(--action)', bg:'rgba(17,17,17,.06)', dot:'var(--action)' },
+      blocked:{ l:'Blocked', c:'var(--lost)', bg:'#fdeaea', dot:'var(--lost)' },
+      done:{ l:'Done', c:'var(--done)', bg:'#ecfdf3', dot:'var(--done)' },
+      cancelled:{ l:'Cancelled', c:'var(--text-3)', bg:'var(--muted-bg)', dot:'var(--text-3)' }
+    };
+    const chip = (st)=>{ const s=ST[st]; return { style:'display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:var(--r-pill);font-size:10px;font-weight:600;background:'+s.bg+';color:'+s.c+';'+(st==='cancelled'?'text-decoration:line-through;':''), dot:'background:'+s.dot+';', label:s.l }; };
+
+    const barVis = (p)=>{
+      if(p.atRisk) return { bd:'var(--gate)', bg:'rgba(217,119,6,.10)', tx:'var(--gate)', dot:'var(--gate)' };
+      if(p.status==='done') return { bd:'var(--done)', bg:'rgba(5,150,105,.10)', tx:'var(--done)', dot:'var(--done)' };
+      if(p.status==='in_progress') return { bd:'var(--inprog)', bg:'rgba(17,17,17,.05)', tx:'var(--inprog)', dot:'var(--inprog)' };
+      if(p.status==='blocked') return { bd:'var(--blocked)', bg:'#fdeaea', tx:'var(--blocked)', dot:'var(--blocked)' };
+      return { bd:'var(--border-strong)', bg:'var(--surface)', tx:'var(--text-3)', dot:'var(--text-3)' };
+    };
+    const gateVis = (g, approved)=>{
+      if(approved || g==='approved') return { bd:'var(--done)', bg:'rgba(5,150,105,.25)' };
+      if(g==='ready') return { bd:'var(--gate)', bg:'rgba(217,119,6,.25)' };
+      return { bd:'var(--text-3)', bg:'var(--bg)' };
+    };
+
+    const nav = [
+      { icon:'home', label:'Home', href:'Command%20Center.v2.image-first.dc.html' },
+      { icon:'calendar-range', label:'Planner', href:'SCR-35-Planner-Hub.dc.html', active:true },
+      { icon:'layout-dashboard', label:'Planner Dashboard', href:'SCR-33-Planner-Dashboard.dc.html' },
+      { icon:'inbox', label:'Notifications', href:'SCR-15-Notification-Center.dc.html' },
+      { icon:'settings', label:'Settings', href:'SCR-34-Planner-Instance-Settings.dc.html' }
+    ].map(n=>({ ...n, current:n.active?'page':'false', style:'width:38px;height:38px;border-radius:9px;display:flex;align-items:center;justify-content:center;cursor:pointer;text-decoration:none;color:'+(n.active?'#fff':'var(--text-3)')+';background:'+(n.active?'var(--action)':'transparent')+';', hover:n.active?'background:var(--action);color:#fff;':'background:var(--muted-bg);color:var(--text-2);' }));
+
+    const VIEWS = [['timeline','Timeline','gantt-chart'],['kanban','Kanban','layout-grid'],['calendar','Calendar','calendar-range'],['list','List','list']];
+    const views = VIEWS.map(([k,label,icon])=>{ const on=S.view===k; return { label, icon,
+      onClick:()=>this.setState({view:k}),
+      style:'display:flex;align-items:center;gap:6px;padding:6px 12px;border-radius:var(--r-sm);border:none;font-family:var(--font);font-size:12px;font-weight:600;cursor:pointer;background:'+(on?'var(--action)':'transparent')+';color:'+(on?'#fff':'var(--text-2)')+';' }; });
+
+    const weeksHead = [['W1','Mar 2'],['W2','Mar 9'],['W3','Mar 16'],['W4','Mar 23'],['W5','Mar 30']].map(([label,date])=>({label,date}));
+
+    const phasesTL = PH.map(p=>{
+      const bv = barVis(p);
+      const left=(p.start/5*100), width=(p.span/5*100), end=((p.start+p.span)/5*100);
+      const sel = S.selected===p.key;
+      const appr = !!S.approved[p.key];
+      const g = p.gate && (appr?'approved':p.gate);
+      const gv = p.gate ? gateVis(p.gate, appr) : null;
+      const durDays = Math.max(1, Math.round(p.span*5))+'d';
+      return {
+        name:p.name, dur:durDays,
+        dotBg:'background:'+bv.dot+';',
+        labelStyle:'display:flex;align-items:center;gap:7px;padding:0 12px;height:100%;cursor:pointer;border-right:1px solid var(--border-subtle);'+(sel?'background:var(--muted-bg);':''),
+        barStyle:'position:absolute;top:10px;height:26px;left:'+left+'%;width:'+width+'%;border-radius:6px;border:1.5px solid '+bv.bd+';background:'+bv.bg+';display:flex;align-items:center;padding:0 8px;cursor:pointer;overflow:hidden;box-sizing:border-box;'+(sel?'outline:2px solid var(--action);outline-offset:1.5px;':''),
+        barTextColor:'color:'+bv.tx+';',
+        hasProgress:p.status==='in_progress', progressStyle:'position:absolute;top:0;left:0;bottom:0;width:'+(p.progress||0)+'%;background:rgba(17,17,17,.12);',
+        hasGate:!!p.gate, gateStyle:'position:absolute;top:16px;left:calc('+end+'% - 7px);width:13px;height:13px;transform:rotate(45deg);border:1.6px solid '+(gv?gv.bd:'')+';background:'+(gv?gv.bg:'')+';z-index:2;', gateTitle:'Gate: '+g,
+        hasGateLabel:p.gate==='locked'||p.gate==='ready',
+        hasMilestone:!!p.milestone, milestoneStyle:'position:absolute;top:12px;left:calc('+left+'% - 5px);z-index:2;',
+        onSelect:()=>this.select(p.key)
+      };
+    });
+
+    const kanbanCols = PH.map(p=>{
+      const bv = barVis(p);
+      const tasks = TK.filter(t=>t.phase===p.key).map(t=>{ const c=chip(t.status); return {
+        title:t.title, who:t.who, statusLabel:c.label, chipStyle:c.style, chipDot:c.dot,
+        cardStyle:'background:var(--bg);border:1px solid '+(S.selected===p.key?'var(--action)':'var(--border)')+';border-radius:var(--r-md);padding:10px 11px;cursor:pointer;',
+        onSelect:()=>this.select(p.key) }; });
+      return { label:p.name, dotBg:'background:'+bv.dot+';', count:tasks.length, tasks,
+        locked:p.gate==='locked'||p.gate==='ready', gated:(p.gate==='locked'||p.gate==='ready'),
+        blockedAria:'Locked step — approve the previous step before moving tasks into '+p.name,
+        onBlocked:()=>this.showToast(p.name+' is locked — approve the previous step first') };
+    });
+
+    const listRows = TK.map(t=>{ const c=chip(t.status); return {
+      title:t.title, phase:PHNAME[t.phase], who:t.who, dates:t.dates, dur:t.dur, pri:t.pri,
+      statusLabel:c.label, chipStyle:c.style, chipDot:c.dot, onSelect:()=>this.select(t.phase) }; });
+
+    const dow = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+    const CEV = {
+      '3-2':[['Brief','done']], '3-4':[['Casting','done']], '3-6':[['Cast. approval','done']],
+      '3-10':[['Soft hold','in_progress']], '3-12':[['Sample pull','risk']], '3-13':[['Courier','blocked']],
+      '3-17':[['Confirm outfits','gate']], '3-19':[['Talent POs','todo']], '3-24':[['Shoot day','mile']],
+      '3-27':[['Retouch','todo']], '4-2':[['Final approval','gate']], '4-4':[['Return','todo']]
+    };
+    const evColor = { done:'var(--done)', in_progress:'var(--action)', risk:'var(--gate)', blocked:'var(--blocked)', gate:'var(--gate)', mile:'var(--action)', todo:'var(--text-3)' };
+    const weeksDef = [[3,2,3,4,5,6,7,8],[3,9,10,11,12,13,14,15],[3,16,17,18,19,20,21,22],[3,23,24,25,26,27,28,29],[[3,30],[3,31],[4,1],[4,2],[4,3],[4,4],[4,5]]];
+    const buildDay = (mo,d)=>{
+      const key=mo+'-'+d;
+      const other = mo===4;
+      const today = mo===3 && d===12;
+      const events = (CEV[key]||[]).map(([t,c])=>({ t, style:'display:flex;align-items:center;gap:4px;font-size:10px;font-weight:600;padding:2px 5px;border-radius:var(--r-sm);margin-top:3px;background:var(--surface);border:1px solid var(--border-subtle);color:var(--text);', dot:'background:'+evColor[c]+';' }));
+      return { num:d, events,
+        cellStyle:'min-height:80px;padding:6px 7px;border-left:1px solid var(--border-subtle);'+(other?'background:var(--surface);':''),
+        numStyle:'font-family:var(--mono);font-size:11px;font-weight:600;text-align:right;'+(today?'color:#fff;background:var(--action);width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;margin-left:auto;':'color:'+(other?'var(--text-3)':'var(--text-2)')+';') };
+    };
+    const calWeeks = weeksDef.map(wk=>{
+      if(Array.isArray(wk[0])) return wk.map(([mo,d])=>buildDay(mo,d));
+      const mo=wk[0]; return wk.slice(1).map(d=>buildDay(mo,d));
+    });
+
+    const selP = PH.find(p=>p.key===S.selected);
+    const selChip = selP ? chip(selP.atRisk?'blocked':selP.status) : chip('todo');
+    const selTasks = selP ? TK.filter(t=>t.phase===selP.key) : [];
+    const gateText = { ready:'The stylist has locked all 24 outfits. Approving opens Payment & scheduling.', locked:'This approval unlocks once the shoot is delivered.', approved:'Casting was approved on Mar 6.' };
+    const gateReqMap = { ready:'Requires: Producer or Owner', locked:'Requires: Client Approver', approved:'Approved by Maya Chen' };
+    const apprd = selP ? !!S.approved[selP.key] : false;
+    const panelDetail = S.drawerOpen && !!selP;
+    const dw = selP ? {
+      name:selP.name, statusLabel:selChip.label, chipStyle:selChip.style, chipDot:selChip.dot,
+      range: selTasks.length ? (selTasks[0].dates.split('–')[0]+' → '+selTasks[selTasks.length-1].dates.split('–').pop()) : '—',
+      hasGate: selP.gate==='ready' && !apprd,
+      approved: apprd,
+      canApprove: canApprove,
+      viewerLocked: !canApprove,
+      gateType: selP.gate==='ready'?'Sign-off':'Approval',
+      gateText: gateText[selP.gate]||'',
+      gateReq: gateReqMap[selP.gate]||'',
+      onApprove:()=>{ if(!canApprove){ this.showToast('You have Viewer access — approvals are disabled'); return; } this.setState(st=>({ approved:{...st.approved,[selP.key]:true} })); this.showToast('Gate approved — Payment & scheduling unlocked'); },
+      onEdit:()=>this.showToast('Edit is a sample — not wired'), onDiscard:()=>this.setState({drawerOpen:false}),
+      taskCount:selTasks.length,
+      tasks: selTasks.map(t=>{ const c=chip(t.status); return { title:t.title, who:t.who, dates:t.dates, dur:t.dur, statusLabel:c.label, chipStyle:c.style, chipDot:c.dot }; })
+    } : { name:'', statusLabel:'', chipStyle:'', chipDot:'', range:'', hasGate:false, approved:false, canApprove:false, viewerLocked:false, gateType:'', gateText:'', gateReq:'', taskCount:0, tasks:[], onApprove:()=>{}, onEdit:()=>{}, onDiscard:()=>{} };
+
+    const outfitApproved = !!S.approved['outfit'];
+    const nextApr = !outfitApproved;
+    const dockLines = {
+      timeline:'Item delivery is slipping — want me to shift the downstream steps by 2 days and flag the shoot date?',
+      kanban:'3 tasks are unassigned in later steps — want me to suggest owners based on past shoots?',
+      calendar:'The shoot day (Mar 24) has no call sheet locked yet — draft one?',
+      list:'2 high-priority tasks are due this week — want a focused checklist?'
+    };
+
+    const skRows = [0,1,2,3,4,5,6,7].map(i=>({ barStyle:'height:24px;margin-left:'+(6+(i*7)%22)+'%;width:'+(34+(i*11)%40)+'%;' }));
+
+    this._phaseKeys = PH.map(p=>p.key); this._phaseNames = PHNAME;
+    return {
+      nav, views, weeksHead, phasesTL, kanbanCols, listRows, dow, calWeeks, dw,
+      isTimeline:live&&S.view==='timeline', isKanban:live&&S.view==='kanban', isCalendar:live&&S.view==='calendar', isList:live&&S.view==='list',
+      isLoading, isEmpty, isError, isComplete, readOnly, syncFailed, roleLabel, skRows,
+      panelDetail, panelIntel: !panelDetail,
+      panelCls: S.panelOpen?'pl-open':'', togglePanel:()=>this.togglePanel(), closePanel:()=>this.closePanel(), liveMsg:S.liveMsg,
+      dismissSync:()=>this.setState({syncFailed:false}),
+      retry:()=>this.setState({screenState:'live'}),
+      toast:S.toast,
+      closeDrawer:()=>this.close(),
+      dockLine: dockLines[S.view],
+      dockChips: ({
+        timeline:['Shift downstream 2 days','Explain the delay','What needs me today?'],
+        kanban:['Suggest owners','Balance the workload','What\u2019s blocked?'],
+        calendar:['Draft the call sheet','Any date conflicts?','What ships this week?'],
+        list:['Build my checklist','Sort by priority','What\u2019s overdue?']
+      }[S.view]||[]).map(t=>({ label:t, onClick:()=>this.showToast('Sample assistant \u2014 not wired yet') })),
+      ctxTitle:'Summer Lookbook', ctxSub:'5-Week Product Shoot · started Mar 2 · 3 of 11 steps underway.',
+      approvalCount: outfitApproved ? '0' : '1', hasApproval: !outfitApproved, noApproval: outfitApproved,
+      openOutfitGate:()=>this.select('outfit'),
+      showNowNext: live,
+      nowTitle:'Item delivery', nowSub:'In progress · 2 days behind — the courier task is blocked.',
+      jumpNow:()=>this.select('delivery'),
+      hasNextApproval: nextApr,
+      nextTitle: nextApr ? 'Outfit confirmation' : 'You’re all caught up',
+      nextSub: nextApr ? 'Ready for your sign-off — approving opens Payment & scheduling.' : 'No approvals waiting on you right now.',
+      nextIcon: nextApr ? 'lock' : 'circle-check',
+      nextIconBg: nextApr ? 'var(--gate-bg)' : '#ecfdf3',
+      nextIconColor: nextApr ? 'var(--gate)' : 'var(--done)',
+      nextSubColor: nextApr ? 'var(--gate)' : 'var(--text-2)',
+      jumpNext:()=>this.select('outfit'),
+      nextCardStyle:'border:1px solid '+(nextApr?'#f4d9ad':'var(--border)')+';border-radius:var(--r-lg);background:'+(nextApr?'var(--gate-bg)':'var(--bg)')+';padding:12px 14px;display:flex;align-items:flex-start;gap:11px;'
+    };
+  }
+}
+</script>
+</body>
+</html>
