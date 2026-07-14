@@ -11,6 +11,13 @@ export default defineConfig({
   testDir: "./e2e",
   timeout: 45_000,
   retries: 1,
+  webServer: {
+    command: "npm run dev",
+    cwd: "./app",
+    url: "http://127.0.0.1:3002",
+    reuseExistingServer: !process.env.CI,
+    timeout: 120_000,
+  },
   use: {
     baseURL: "http://localhost:3002",
     headless: true,
