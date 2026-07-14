@@ -68,13 +68,15 @@ const client = new Anthropic({
 
 ## Workers AI Binding
 
+The binding itself takes no gateway sub-key:
+
 ```toml
 # wrangler.toml
 [ai]
 binding = "AI"
-[[ai.gateway]]
-id = "my-gateway"
 ```
+
+The gateway ID is passed per-call instead, as the third argument to `env.AI.run()`:
 
 ```typescript
 await env.AI.run('@cf/meta/llama-3-8b-instruct', 
