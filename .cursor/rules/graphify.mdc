@@ -1,0 +1,125 @@
+---
+description: Graphify knowledge graph — query before grepping or reading source; iPix graph paths and rebuild workflow
+globs:
+alwaysApply: true
+---
+
+# Graphify — knowledge graph for iPix
+
+**SSOT graph:** `graphify-out/graph.json` (repo root — CLI default).  
+**Skill hub:** `.claude/skills/graphify/SKILL.md`  
+**Docs:** [graphify.net](https://graphify.net/) · [Knowledge graphs for AI coding](https://graphify.net/knowledge-graph-for-ai-coding-assistants.html) · [GitHub](https://github.com/Graphify-Labs/graphify)
+
+Graphify builds a **queryable knowledge graph** from code, docs, and schemas so agents traverse structure (`calls`, `imports`, `rationale_for`) instead of grepping raw files. On mixed corpora, queries cost ~**71× fewer tokens** than reading files directly ([Graphify docs](https://graphify.net/knowledge-graph-for-ai-coding-assistants.html)).
+
+## Golden rules
+
+| ✅ Do | ❌ Don't |
+|-------|---------|
+| Run **`graphify query`** before reading multi-file source | Grep-first on cross-module questions |
+| Use **`graphify explain`** for a symbol before opening its file | Trust training-data API shapes without graph + file check |
+| Use **`graphify path`** for "what connects A to B" | Use `docs/graphify/graphify-out/` — graph is at **repo root** |
+| Rebuild after large moves: **`graphify update .`** | Run `graphify update docs/graphify/` (overwrites with docs-only subgraph) |
+| Read **`GRAPH_REPORT.md`** for god nodes and surprising edges | Query a stale graph (>10 files newer than `graph.json`) |
+
+## Install (verify)
+
+```bash
+graphify --version          # expect graphify 0.9.x via pipx/pip install graphifyy
+graphify query "Mastra"     # smoke test — should return nodes
+```
+
+Optional Cursor skill copy: `graphify install --platform cursor`
+
+## Mandatory workflow (before source reads)
+
+```bash
+# From repo root (or: cd "$(git rev-parse --show-toplevel)")
+
+# 1. Orient — scoped subgraph around your question
+graphify query "<question>"
+
+# 2. Symbol lookup — neighbors and provenance
+graphify explain "<concept>"
+
+# 3. Connection — shortest path (use specific node names from query/explain)
+graphify path "<A>" "<B>"
+
+# 4. Blast radius — what breaks if X changes
+graphify affected "<node>"
+```
+
+**Only read raw files after graphify orients you**, or to edit specific lines you already identified.
+
+### Path tips
+
+- Vague labels (`CopilotKit`, `Mastra`) often **fail** — use names from `query`/`explain` (e.g. `getMastra()`, `app/src/mastra/index.ts`).
+- Graph may note **pre-#1504 ID scheme** — rebuild with `graphify extract --force` for path-qualified IDs.
+
+## iPix query cookbook
+
+| Goal | Command |
+|------|---------|
+| Mastra / agents | `graphify query "Mastra agents registry"` |
+| CopilotKit wiring | `graphify query "CopilotKit route getLocalAgents"` |
+| Supabase / RLS | `graphify query "Supabase RLS policies"` |
+| Brand Intelligence | `graphify query "Brand Intelligence workflow"` |
+| Asset DNA | `graphify query "Asset DNA audit"` |
+| Commerce links | `graphify query "commerce_product_links"` |
+| Cloudflare migration | `graphify query "wrangler workers"` |
+| IPI / tasks docs | `graphify query "IPI-487 Cloudflare"` |
+| Single symbol | `graphify explain "getMastra"` |
+
+## Graph locations
+
+| Graph | Path | Use when |
+|-------|------|----------|
+| **Full repo** | `graphify-out/graph.json` (~41K nodes) | Default — cross-module, docs, tasks |
+| **Operator app only** | `app/src/graphify-out/graph.json` (~474 nodes) | Narrow Next.js/Mastra scope |
+| **Report / viz** | `graphify-out/GRAPH_REPORT.md`, `graphify-out/graph.html` | Audit, god nodes, surprising connections |
+
+## Rebuild & freshness
+
+```bash
+# Incremental update (repo root)
+graphify update .
+
+# Force full AST re-extract
+graphify update . --force
+# or: graphify extract --force
+
+# App-only subgraph
+cd app/src && graphify update .
+```
+
+**Stale gate:** if >10 tracked files are newer than `graphify-out/graph.json`, rebuild before querying.
+
+Excludes: `.graphifyignore` at repo root (`github/`, `node_modules/`, vendored trees, etc.).
+
+## When NOT to use graphify
+
+- Single known file + line edit
+- Simple literal grep (`rg 'exactSymbol'`)
+- Secrets / `.env` inspection
+- Graph missing or empty — run `graphify update .` first
+
+## Graph health check
+
+```bash
+graphify diagnose multigraph
+# expect: 0 missing_endpoint_edges, 0 dangling_endpoint_edges
+```
+
+## What the graph contains ([features](https://graphify.net/index.html#features))
+
+- **God nodes** — high-degree hubs everything routes through
+- **Surprising connections** — cross-file edges with plain-English _why_
+- **Rationale nodes** — docstrings, `# WHY:` comments, design docs via `rationale_for`
+- **Edge provenance** — `EXTRACTED` vs `INFERRED` vs `AMBIGUOUS` + confidence
+
+## Reference files in repo
+
+- `graphify-out/GRAPHIFY_USAGE_GUIDE.md`
+- `graphify-out/GRAPHIFY_DEV_WORKFLOW.md`
+- `graphify-out/GRAPHIFY_EXCLUDE_RULES.md`
+- `graphify-out/GRAPH_REPORT.md`

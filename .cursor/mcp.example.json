@@ -1,0 +1,35 @@
+{
+  "_comment": "Template for ~/.cursor/mcp.json — install: bash scripts/cursor-mcp-setup.sh",
+  "_plugins_keep": ["linear", "supabase", "vercel", "cloudinary", "codspeed"],
+  "_plugins_disable_mcp": [
+    "plugin-cloudflare-cloudflare-api",
+    "plugin-cloudflare-cloudflare-bindings",
+    "plugin-cloudflare-cloudflare-builds",
+    "plugin-cloudflare-cloudflare-docs",
+    "plugin-cloudflare-cloudflare-observability"
+  ],
+  "_plugins_note": "Use HTTP Cloudflare MCP below (not OAuth plugin servers). Optional stdio bridges: scripts/cf-mcp-setup.sh when added to repo.",
+  "mcpServers": {
+    "cloudflare-docs": {
+      "type": "http",
+      "url": "https://docs.mcp.cloudflare.com/mcp"
+    },
+    "cloudflare-agents-sdk": {
+      "type": "http",
+      "url": "https://agents.cloudflare.com/mcp"
+    },
+    "cloudflare-api": {
+      "type": "http",
+      "url": "https://mcp.cloudflare.com/mcp"
+    },
+    "mastra": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "@mastra/mcp-docs-server@1.2.6"]
+    },
+    "copilotkit-docs": {
+      "type": "http",
+      "url": "https://mcp.copilotkit.ai/mcp"
+    }
+  }
+}

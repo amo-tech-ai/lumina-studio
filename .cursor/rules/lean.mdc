@@ -1,0 +1,311 @@
+---
+description: Lean development lifecycle — smallest safe change from issue to merge; orchestrates graphify, ponytail, worktrees, verify, and PR workflow
+globs:
+alwaysApply: true
+---
+
+# Lean — efficient development lifecycle (iPix)
+
+**Orchestrator rule.** Delegates detail to sibling rules — do not duplicate their full text here.
+
+| Rule / skill | Role |
+|--------------|------|
+| `graphify.mdc` | Query graph before broad source reads |
+| `ponytail.mdc` | Smallest safe change ladder during implementation |
+| `task-naming.mdc` | **IPI-NNN · SPEC — Title** in user-facing text |
+| `infisical.mdc` | `infisical run --env=dev --` for secrets |
+| `.claude/skills/worktrees/` | Worktree create, health, cleanup |
+| `.claude/skills/pr-workflow/` | Verify matrix, PR shape, one concern per PR |
+| `.claude/skills/ipix-task-lifecycle/` | Five-phase IPI delivery hub |
+
+**Hard gates (never override):** never push to `main`; one concern per PR **and** per commit; build in `app/` not retiring `src/`; remote-only Supabase; no client AI keys.
+
+## Operating modes
+
+Set explicitly (`lean-strict`, `lean-relaxed`) or default to **lean-standard**.
+
+| Mode | When | Worktree | Tests | Plan |
+|------|------|----------|-------|------|
+| **lean-relaxed** | Typo, copy, single-file fix, docs-only | Skip if clean tree + one file | Focused test or lint only | Mental checklist OK |
+| **lean-standard** | Default IPI feature/fix | Required for multi-file / multi-step | Verify matrix rows for touched paths | Short written plan |
+| **lean-strict** | Migrations, RLS, auth, payments, Mastra/agents, Cloudflare deploy | Always | Full matrix + build when applicable + manual probes | Plan + rollback notes |
+
+## Decision ladder (reuse → create)
+
+Apply **after** graphify discovery and **during** implementation (see `ponytail.mdc` for full ladder):
+
+```text
+1. Does this need to exist? (YAGNI)
+2. Does it already exist in this repo?
+3. Can existing code be extended safely?
+4. Stdlib / native platform?
+5. Installed dependency (no new package)?
+6. Only then: minimum new code
+```
+
+| Decision | Choose when | Avoid when |
+|----------|-------------|------------|
+| **Reuse** | Same behavior, same boundary | Hidden coupling or wrong abstraction level |
+| **Extend** | One call site, clear owner module | File already overloaded |
+| **New code** | No safe extension point | "Might need later" |
+| **New dependency** | Clear gap, no stdlib/existing lib | One function wrapper |
+| **Refactor** | Blocks correct minimal fix; evidence in diff | Drive-by cleanup |
+| **Worktree** | Multi-step task or dirty main tree | One-line fix on clean branch |
+| **Focused tests** | Every commit during implementation | Full suite on every save |
+| **Full suite / build** | Routes, env, middleware, pre-PR | Docs-only change |
+| **Open PR** | Branch pushed, local verify green | Mixed concerns still in diff |
+| **Remove worktree** | PR merged, branch merged, tree clean | Any uncertainty on uncommitted work |
+
+## Lifecycle (entry → action → verify → exit)
+
+### 1. Understand
+
+| | |
+|---|---|
+| **Enter** | New task, user request, or Linear issue |
+| **Do** | Read issue/spec (`docs/linear/issues/IPI-*.md`), AC, dependencies; name task per `task-naming.mdc`; list completion checklist and non-goals |
+| **Verify** | Expected outcome + boundaries are unambiguous |
+| **Exit** | Checklist written; blockers flagged; no edits yet |
+
+### 2. Discover
+
+| | |
+|---|---|
+| **Enter** | Task boundary understood |
+| **Do** | `graphify query → explain → path → affected`; then task-scoped `rg`; trace real execution path; confirm partial/full existing impl |
+| **Verify** | Reuse candidates identified or "net-new" justified |
+| **Exit** | Know which files will likely change |
+
+```bash
+graphify query "<feature>"
+graphify explain "<symbol>"
+graphify path "<A>" "<B>"
+graphify affected "<node>"
+rg -l "<exactSymbol>"   # scope to task paths when known (app/, supabase/, scripts/, …)
+```
+
+### 3. Plan
+
+| | |
+|---|---|
+| **Enter** | Discovery complete |
+| **Do** | Short plan: files, reuse, tests, risks/trust boundaries, non-goals, verify commands |
+| **Verify** | Plan fits task size (≤10 bullets for small tasks) |
+| **Exit** | Plan approved or implicit for trivial fixes |
+
+### 4. Isolate (worktree)
+
+| | |
+|---|---|
+| **Enter** | Multi-file task, parallel work, or **lean-standard+** |
+| **Do** | `npm run worktree:audit`; create or reuse `../wt-ipi-<id>-<slug>`; branch `ipi/<id>-<slug>`; copy env via `.worktreeinclude` |
+| **Verify** | `node scripts/worktree-health.mjs` passes in existing wt |
+| **Exit** | Correct branch, clean or intentional dirty state |
+
+```bash
+npm run worktree:audit
+npm run worktree:add -- IPI-NNN short-name
+node scripts/worktree-health.mjs
+git branch --show-current   # expect ipi/NNN-short-name
+```
+
+**Skip worktree** only in **lean-relaxed** on a clean tree with a single-file change.
+
+### 5. Implement
+
+| | |
+|---|---|
+| **Enter** | Plan + isolation ready |
+| **Do** | Smallest change; reuse APIs; one concern; `ponytail:` for deferred shortcuts; no drive-by refactors |
+| **Verify** | AC satisfied; diff stays scoped |
+| **Exit** | Code complete; ready for progressive test |
+
+### 6. Test (progressive)
+
+| | |
+|---|---|
+| **Enter** | Behavior changed |
+| **Do** | Ladder: focused test → feature tests → typecheck → lint → integration → E2E → full suite when justified |
+| **Verify** | New/changed behavior covered; bug repro fails before fix; no weakened tests |
+| **Exit** | Relevant verify matrix rows green |
+
+**iPix commands (pick by touched path):**
+
+```bash
+# app/ (canonical)
+cd app && npm run typecheck && npm run lint && npm test
+cd app && npm run build    # routes, config, env, middleware
+
+# Supabase
+infisical run --env=dev -- npm run supabase:verify
+infisical run --env=dev -- npm run supabase:verify-rls
+infisical run --env=dev -- npm run supabase:verify-edge      # edge functions
+infisical run --env=dev -- npm run supabase:verify-brand-intelligence
+
+# Secrets-wrapped dev
+cd app && infisical run --env=dev -- npm run dev
+```
+
+Domain checks: **Supabase** — migrations order, RLS, RPC; **Cloudflare** — bindings, wrangler, runtime; **Mastra** — agent IDs sync, `getMastra()` in handlers only, HITL/schemas.
+
+### 7. Diff review (pre-commit)
+
+| | |
+|---|---|
+| **Enter** | Tests green for scope |
+| **Do** | `git status`, `git diff`; remove debug noise, secrets, accidental formatting; confirm no mixed concerns |
+| **Verify** | Only intended files; AC met |
+| **Exit** | Staged set matches one commit concern |
+
+```bash
+git status --short
+git diff --stat
+git diff
+```
+
+### 8. Commit
+
+| | |
+|---|---|
+| **Enter** | Diff reviewed |
+| **Do** | One logical commit; conventional message with task id |
+| **Verify** | No `.env*`, artifacts, or unrelated paths |
+| **Exit** | Commit on task branch |
+
+```text
+fix(ipi-397): enforce booking agent draft-only guard
+feat(ipi-476): add planner output schema validation
+```
+
+### 9. Pull request
+
+| | |
+|---|---|
+| **Enter** | Commit(s) ready; branch pushed |
+| **Do** | Rebase if needed; `gh pr create`; body: problem, cause, solution, files, tests, security/data impact, limitations, rollback, linked issue |
+| **Verify** | Local matrix green; **one concern**; docs-only vs code split |
+| **Exit** | PR open, CI running |
+
+```bash
+git push -u origin HEAD
+gh pr create --title "IPI-NNN · SPEC — Plain English title" --body "..."
+```
+
+Pre-push hook runs typecheck + tests — fix root cause if it fails; never `--no-verify` except docs-only without app code.
+
+### 10. CI & review
+
+| | |
+|---|---|
+| **Enter** | PR open |
+| **Do** | Fix CI root cause; address valid review; reject scope creep with reason; re-run affected tests first |
+| **Verify** | Required checks green; threads resolved |
+| **Exit** | Merge-ready |
+
+```bash
+gh run list --limit 5
+gh run view <id> --log-failed
+```
+
+### 11. Merge
+
+| | |
+|---|---|
+| **Enter** | Reviews + CI pass |
+| **Do** | Confirm migrations/deploy deps; squash merge unless policy says otherwise |
+| **Verify** | No open blocking threads |
+| **Exit** | On `main` via merge |
+
+### 12. Cleanup
+
+| | |
+|---|---|
+| **Enter** | PR merged |
+| **Do** | Confirm merge; remove worktree safely; prune branches; refresh graph if large merge |
+| **Verify** | No lost uncommitted work |
+| **Exit** | Issue updated; follow-ups filed separately |
+
+**Before `git worktree remove` — all must be yes or inspected:**
+
+```text
+Clean? Committed? Pushed? PR merged? Branch merged? Env backed up? No unique untracked files?
+```
+
+```bash
+git worktree list
+git branch --merged main
+git worktree remove ../wt-ipi-NNN-slug   # never -f unless inspected
+git branch -d ipi/NNN-slug
+git worktree prune
+graphify update .   # after significant structural merge
+```
+
+## Worktree hygiene
+
+- One task per worktree; no duplicate wt for same issue
+- Inspect regularly: `npm run worktree:audit`, `git worktree list`
+- Never delete uncertain trees — inspect `git status` inside first
+
+## Context & token efficiency
+
+- **Graphify before grep storms** — one query beats reading 10 files
+- **Targeted reads** — open symbols/ranges from graph results, not whole directories
+- **Summarize** before loading more files
+- **Stop** when evidence suffices
+- **Check freshness first** — rebuild with `graphify update .` when more than 10 tracked files are newer than `graphify-out/graph.json`; skip `supabase:types` / graph rebuild when inputs are unchanged
+- **Follow-ups** → new Linear issues, not hidden TODOs
+- **Claim done only with evidence** — test output, probe, or inspection
+
+## Task lifecycle checklist
+
+Copy for every **lean-standard+** task:
+
+```text
+[ ] Issue + AC understood          [ ] Graphify discovery done
+[ ] Lean plan (files, reuse, tests) [ ] Worktree + branch correct
+[ ] worktree-health passed          [ ] Smallest safe implementation
+[ ] Progressive tests green         [ ] Diff review (no secrets/mix)
+[ ] Focused commit(s)               [ ] PR opened (one concern)
+[ ] CI green                        [ ] Merged
+[ ] Worktree removed safely         [ ] Issue closed / follow-ups filed
+```
+
+## Decision flow (summary)
+
+```mermaid
+flowchart TD
+  A[Task received] --> B{Boundary clear?}
+  B -->|no| B1[Clarify AC + non-goals]
+  B -->|yes| C[graphify query + rg]
+  C --> D{Exists already?}
+  D -->|yes| E[Reuse or extend]
+  D -->|no| F{Need new code?}
+  F --> G[Ponytail ladder]
+  E --> H{Multi-file or dirty tree?}
+  G --> H
+  H -->|yes| I[worktree + ipi branch]
+  H -->|no| J[Implement on current branch]
+  I --> K[Implement smallest change]
+  J --> K
+  K --> L[Progressive tests]
+  L --> M{Verify matrix green?}
+  M -->|no| K
+  M -->|yes| N[Diff review + commit]
+  N --> O[PR + CI]
+  O --> P{Merged?}
+  P -->|yes| Q[Safe worktree cleanup]
+```
+
+## Conflict avoidance
+
+| Topic | Owner rule |
+|-------|------------|
+| Graph queries | `graphify.mdc` |
+| Code minimalism | `ponytail.mdc` |
+| Issue naming | `task-naming.mdc` |
+| Secrets | `infisical.mdc` |
+| Cloudflare MCP | `cloudflare-mcp.mdc` |
+| Mastra MCP | `mastra-mcp.mdc` |
+| Repo speed audit | `.claude/skills/lean/SKILL.md` (`/lean` command — not this rule) |
+
+This rule is the **lifecycle orchestrator**; `/lean` skill is the **velocity audit** — different jobs.

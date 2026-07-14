@@ -60,7 +60,15 @@ pr9-storefront-test/
 # .claude/skills/ is versioned on GitHub — no real secrets in SKILL.md bodies
 .claude/*.py
 
-.cursor/
+# Ignore local Cursor state by default
+.cursor/*
+
+# Version shared project configuration
+!.cursor/rules/
+!.cursor/rules/**/*.mdc
+!.cursor/docs/
+!.cursor/docs/**
+!.cursor/mcp.example.json
 .codex/
 
 # Deprecated skills staging — canonical skills live in .claude/skills/

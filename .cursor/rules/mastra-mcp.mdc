@@ -1,0 +1,154 @@
+---
+description: Mastra docs MCP — tool selection, Node setup, iPix projectPath, and doc lookup fallbacks
+globs: app/src/mastra/**,.cursor/mcp.example.json,tasks/cloudflare/mastra/**,**/mastra/**
+alwaysApply: false
+---
+
+# Mastra MCP — docs lookup for iPix
+
+**Live config:** `~/.cursor/mcp.json` → server id **`mastra`** (Cursor exposes as **`user-mastra`**).  
+**Repo template:** `.cursor/mcp.example.json` (install: `bash scripts/cursor-mcp-setup.sh`)  
+**Skill hub:** `.claude/skills/mastra/SKILL.md` · MCP matrix: `.claude/skills/mastra/references/mcp-docs-lookup.md`  
+**Official:** [Build with AI](https://mastra.ai/docs/getting-started/build-with-ai) · [Get started](https://mastra.ai/docs) · Doc index: [mastra.ai/llms.txt](https://mastra.ai/llms.txt)
+
+## Skills vs MCP (Mastra recommendation)
+
+| Layer | When to use |
+|-------|-------------|
+| **Mastra skills** (`npx skills add mastra-ai/skills`) | Default for agents — setup, best practices, CLI; **better accuracy** than MCP alone |
+| **`user-mastra` MCP** | Need MCP **tools** (migration, embedded package search, export discovery) |
+| **Embedded `node_modules/@mastra/*/dist/docs`** | Package-local API truth — grep before guessing signatures |
+| **Remote `.md` / `llms.txt`** | MCP miss or path 404 |
+
+Per [Build with AI](https://mastra.ai/docs/getting-started/build-with-ai): prefer **skills** for documentation; use MCP when you need its tools (e.g. **`mastraMigration`**).
+
+## Setup (do not regress)
+
+```json
+"mastra": {
+  "type": "stdio",
+  "command": "npx",
+  "args": ["-y", "@mastra/mcp-docs-server@1.2.6"]
+}
+```
+
+| ✅ Do | ❌ Don't |
+|-------|---------|
+| Enable **mastra** in Cursor **Settings → MCP** after config change | Assume MCP hot-reloads — **quit + reopen Cursor** |
+| Use **Node.js ≥ 22.13.0** for `@mastra/mcp-docs-server@1.2.6` | Run on Node 20 — server stays **error**, tools missing |
+| Pass **`projectPath`** = absolute path to **`app/`** (derive at runtime) | Hardcode a machine path or use repo root — wrong `node_modules` |
+| Verify APIs from MCP + embedded docs before coding | Trust training-data Mastra APIs (they drift fast) |
+| Use **`infisical run --env=dev --`** for dev commands needing `GEMINI_API_KEY` | Put API keys in MCP config |
+
+### Resolve `projectPath` (required for embedded-doc tools)
+
+```bash
+# Absolute path to the operator app (owns node_modules/@mastra/*)
+echo "$(git rev-parse --show-toplevel)/app"
+```
+
+Pass that value as `projectPath` on `searchMastraDocs`, `readMastraDocs`, `listMastraPackages`, `getMastraExports`.
+
+### Node 22 fix
+
+```bash
+nvm install 22 && nvm use 22
+node -v   # must be v22.13.0+
+# optional: pin absolute npx in ~/.cursor/mcp.json if PATH fails in Cursor
+which npx
+```
+
+### Enable after install
+
+1. Save `~/.cursor/mcp.json` (or run `bash scripts/cursor-mcp-setup.sh`)
+2. **Quit Cursor** completely
+3. **Settings → MCP** → enable **mastra**
+4. **New agent chat** (existing chats may not pick up tools)
+
+## Tool pick (Cursor `user-mastra`)
+
+| Need | Tool | Required args |
+|------|------|---------------|
+| Full doc page by path | **`mastraDocs`** | `paths: ["docs/agents/overview"]` |
+| Browse embedded package docs | **`readMastraDocs`** | `package`, **`projectPath`** |
+| Keyword search in installed docs | **`searchMastraDocs`** | `query`, **`projectPath`** |
+| List installed `@mastra/*` | **`listMastraPackages`** | **`projectPath`** |
+| Export / API surface | **`getMastraExports`** | `package`, **`projectPath`** |
+| v0 → v1 migration | **`mastraMigration`** | per tool schema |
+
+**Always:** `projectPath` = `$(git rev-parse --show-toplevel)/app` (operator app owns `node_modules/@mastra/*`).
+
+### `mastraDocs` path patterns
+
+| Area | Example paths |
+|------|---------------|
+| Agents | `docs/agents/overview`, `reference/agents/generate`, `reference/agents/agent` |
+| Memory | `docs/memory/working-memory`, `reference/memory/memory-class` |
+| Workflows | `docs/workflows/suspend-and-resume`, `reference/workflows/workflow` |
+| Tools | `reference/tools/create-tool` |
+| Streaming | `reference/streaming/agents/stream` |
+| CopilotKit | `guides/build-your-ui/copilotkit` |
+| Build with AI / MCP | `docs/getting-started/build-with-ai` |
+| Processors | `reference/processors/pii-detector`, `docs/agents/processors` |
+
+Optional: `queryKeywords: ["CopilotKit", "stream"]` for related-path hints.
+
+## Agent workflow
+
+1. **Mastra change in `app/src/mastra/`** → load `.claude/skills/mastra/SKILL.md` + this rule.
+2. **Need doc page** → `mastraDocs` with path from table above.
+3. **Need installed API** → `searchMastraDocs` / `readMastraDocs` with runtime `projectPath` → `…/app`.
+4. **Migration / breaking changes** → `mastraMigration` (MCP) or skill `references/migration-guide.md`.
+5. **MCP empty / 404** → fallbacks below.
+
+## Remote fallbacks (MCP miss)
+
+1. Append **`.md`** to any Mastra docs URL — e.g. `https://mastra.ai/docs/agents/overview.md`
+2. Per-page **`/llms.txt`** — e.g. `https://mastra.ai/docs/llms.txt`
+3. Index: `curl -sL https://mastra.ai/llms.txt`
+4. `.claude/skills/mastra/links.md` in repo
+5. Remote MCP (last resort): `https://mastra.mcp.kapa.ai` — Google auth, rate-limited ([docs](https://mastra.ai/docs/getting-started/build-with-ai))
+
+## iPix-specific (read before wiring)
+
+| Topic | iPix pattern |
+|-------|----------------|
+| Code location | `app/src/mastra/` only — not root `src/` |
+| Registry | `getMastra()` in handlers only — **never** top-level in routes |
+| CLI export | Proxy `export const mastra` in `index.ts` for `mastra dev` |
+| Model | Gemini via `models.ts` — `GEMINI_API_KEY` server-only |
+| CopilotKit | **In-process** `MastraAgent.getLocalAgents()` in `/api/copilotkit` — not standalone `:4111/chat` |
+| Agent IDs | `default`, `production-planner`, `creative-director`, … must match frontend `useAgent({ agentId })` |
+| Storage | `DATABASE_URL` + `getMastraStorage()` — CI guard when unset |
+
+Full gotchas: `CLAUDE.md` (Mastra section) + `app/AGENTS.md`.
+
+## Mastra CLI (optional, complements MCP)
+
+Global CLI talks to a **running** Mastra dev server (`:4111`):
+
+```bash
+npm install -g mastra@latest
+cd app && infisical run --env=dev -- npm run dev   # Next :3002 + Mastra :4111
+mastra api --url http://localhost:4111 agent run production-planner '{"messages":"..."}'
+mastra api --url http://localhost:4111 trace list
+```
+
+Install Mastra skills so agents know CLI commands: `npx skills add mastra-ai/skills`.
+
+## Troubleshooting
+
+| Symptom | Fix |
+|---------|-----|
+| `user-mastra` **error**, only `mcp_auth` | Upgrade to **Node.js ≥ 22.13.0**, restart Cursor |
+| Tools not in chat | Enable in MCP settings; start **new** chat |
+| `searchMastraDocs` empty | Fall back to **`mastraDocs`** paths or `mastra.ai/llms.txt` |
+| `npx` not found in Cursor | Use absolute path from `which npx` as `"command"` |
+| Wrong API in generated code | `grep` `app/node_modules/@mastra/core/dist/docs/references` |
+| Dev server / agent run fails | `cd app && infisical run --env=dev -- npm run dev` |
+
+## Example prompts (once MCP is green)
+
+- "Add evals to `production-planner` — use Mastra MCP for current API"
+- "Does Mastra support suspend/resume for brand-intelligence workflow?"
+- "Migrate this agent tool to v1 — run `mastraMigration` first"
