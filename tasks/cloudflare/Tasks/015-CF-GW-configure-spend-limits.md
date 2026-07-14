@@ -47,6 +47,7 @@ No CLI required. Verify the budget enforcement with a single request:
 # Send a request that should be blocked because the limit is already exhausted for the day
 curl -X POST "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/ai/v1/chat/completions" \
   -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+  -H "cf-aig-gateway-id: ipix-prod" \
   -d '{"model":"openai/gpt-5","messages":[{"role":"user","content":"long prompt..."}]}'
 ```
 
@@ -94,6 +95,8 @@ None.
 Send requests until cumulative spend exceeds the limit.
 
 Pass criteria: Requests after the limit return 429. The 429 message identifies the spend limit rule that was triggered.
+
+Note: spend limits are documented as eventually consistent — a request's cost is recorded after it completes, so a burst of concurrent requests can transiently exceed the limit before enforcement catches up. Don't treat a single brief overshoot under concurrent load as a test failure.
 
 ### Test 2: Per-user limit is independent
 

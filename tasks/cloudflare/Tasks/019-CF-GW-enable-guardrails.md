@@ -52,14 +52,7 @@ No CLI.
 3. Select the **Guardrails** tab (also available under Settings, depending on dashboard version).
 4. Toggle **Enable guardrails** on.
 5. **Evaluation scope:** choose both — user prompts and model responses.
-6. **Hazard categories:** select the categories you want to block or flag. Common set:
-   - Hate/HR (harassment)
-   - Hate/Threatening
-   - Self-Harm
-   - Sexual
-   - Sexual/Minors
-   - Violence
-   - Violence/Graphic
+6. **Hazard categories:** select the categories you want to block or flag. **Verify the exact current list in the dashboard at configuration time** — official docs describe this as customizable rather than publishing a fixed category list, so treat any specific category names here as a starting point to confirm, not a guaranteed-current set.
 7. **Action per category:** Block (recommended for production) or Flag (for analytics only).
 8. Save.
 
@@ -83,9 +76,16 @@ None.
 
 ### Test 1: Hazardous prompt is blocked
 
-Send a known-harassment prompt through the gateway.
+Send a known-harassment prompt through the gateway:
 
-Pass criteria: Response is a 400 or 451 with a `moderation_blocked` indicator. Analytics logs the matched hazard category.
+```bash
+curl -X POST "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/ai/v1/chat/completions" \
+  -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+  -H "cf-aig-gateway-id: ipix-prod" \
+  -d '{"model":"@cf/meta/llama-4-scout-17b-16e-instruct","messages":[{"role":"user","content":"<known-harassment test prompt>"}]}'
+```
+
+Pass criteria (corrected — verified against `developers.cloudflare.com/ai-gateway/features/guardrails/set-up-guardrail/`, the original "400 or 451 with `moderation_blocked`" claim was wrong): the response contains error code **`2016`**, message `"Prompt blocked due to security configurations"`. A response blocked by the *model's* output instead uses error code **`2017`**, message `"Response blocked due to security configurations"`. Catch these by matching the error code/message in application logic — don't assume a specific HTTP status without confirming it against the live response, since official docs don't pin one down explicitly. Analytics logs the matched hazard category.
 
 ### Test 2: Safe prompt passes
 

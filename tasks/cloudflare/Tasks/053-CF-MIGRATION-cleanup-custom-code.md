@@ -1,11 +1,13 @@
 # IPI-XXX · CF-MIG-220 — Delete Custom Gateway Worker
 
+> **🛑 DO NOT EXECUTE YET — Phase 9 of 9.** Per `000-Architecture-Decision.md`, this is the *last* step of the migration, only after native-gateway traffic works, staging succeeds, production rollout succeeds, fallback succeeds, and rollback has actually been tested — not right after the 4 "core setup" tasks below. `services/cloudflare-worker/` is still the live production AI path today (confirmed on disk, unchanged) — running this now would take down production AI traffic.
+
 **Task ID:** CF-MIG-220  
-**Phase:** 3 — Cleanup  
+**Phase:** 9 of 9 — Cleanup (not Phase 3 — corrected per `000-Architecture-Decision.md`)  
 **Difficulty:** Easy  
 **Risk:** Medium  
 **Estimated time:** 2 hours  
-**Dependencies:** Tasks CF-AI-020, CF-AI-021, CF-GW-001, CF-GW-002 (all core setup must be verified working first)
+**Dependencies:** `001-CF-GW-create-gateway.md` (CF-GW-001), `002-CF-GW-configure-routing.md` (CF-GW-002), `003-CF-AI-add-workers-ai-binding.md` (CF-AI-020), `004-CF-AI-setup-models.md` (CF-AI-021) — all four must be verified working in production, not just staging, before this task starts
 
 ---
 
@@ -23,7 +25,7 @@ After this task, the iPix repository has no custom AI routing code, no custom mo
 
 **CLI — delete files and remove dependencies.**
 
-This task removes code. There is no dashboard or template option. The priority is to verify the new path works (Tasks 1 through 4) before deleting the old one.
+This task removes code. There is no dashboard or template option. The priority is to verify the new path works — `001`, `002`, `003`, `004` all proven **in production**, not just staging — before deleting the old one. See the Phase 9 gate banner above.
 
 ---
 
@@ -172,8 +174,9 @@ In the dashboard, remove any secrets that were only used by the custom gateway:
 
 | Dependency | Status | Notes |
 |------------|--------|-------|
-| Workers AI binding works (Tasks CF-AI-020, CF-AI-021) | Must be verified | Cannot delete old code until new path is proven |
-| AI Gateway created and configured (Tasks CF-GW-001, CF-GW-002) | Recommended | Gateway replaces the custom router and retry logic |
+| Workers AI binding works (`003-CF-AI-add-workers-ai-binding.md`, `004-CF-AI-setup-models.md`) | Must be verified **in production** | Cannot delete old code until new path is proven, not just staged |
+| AI Gateway created and configured (`001-CF-GW-create-gateway.md`, `002-CF-GW-configure-routing.md`) | Required | Gateway replaces the custom router and retry logic |
+| Full production rollout stable, fallback tested, rollback tested | Must be verified | Per `000-Architecture-Decision.md` Phase 9 gate — not satisfied by staging success alone |
 | At least one agent works through the new path | Must be verified | Proves the new path before deleting the old one |
 
 ---

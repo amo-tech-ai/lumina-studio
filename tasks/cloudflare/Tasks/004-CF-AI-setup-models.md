@@ -76,6 +76,29 @@ The `workers-ai-provider` dependency is added automatically by npm install.
 
 The new file contains approximately 30 lines. It defines four model IDs as constants (fast, default, structured, embedding), a type for the model tier, and a single function called `resolveModel` that takes a tier and the environment, and returns a language model from the Workers AI provider.
 
+**Critical: `resolveModel` must route through `ipix-prod`, not call Workers AI directly.** Verified against the current `workers-ai-provider` README (`github.com/cloudflare/ai/packages/workers-ai-provider`): the gateway ID is configured once, at `createWorkersAI()` construction time, via a `gateway: { id }` option — this is a different call shape than the raw `env.AI.run()` binding's per-call gateway option used in `001`/`003`. Without this, every model call from this file bypasses `ipix-prod` entirely, silently defeating `001`/`002`'s caching, rate limiting, spend limits, and analytics.
+
+```ts
+import { createWorkersAI } from "workers-ai-provider";
+
+const MODEL_IDS = {
+  fast: "@cf/zai-org/glm-4.7-flash",
+  default: "@cf/meta/llama-4-scout-17b-16e-instruct",
+  structured: "@cf/google/gemma-4-26b-a4b-it",
+  embedding: "@cf/baai/bge-base-en-v1.5",
+} as const;
+
+type ModelTier = keyof typeof MODEL_IDS;
+
+export function resolveModel(tier: ModelTier, env: { AI: Ai }) {
+  const workersai = createWorkersAI({
+    binding: env.AI,
+    gateway: { id: "ipix-prod" }, // <- every call from this provider instance routes through the gateway
+  });
+  return workersai(MODEL_IDS[tier]);
+}
+```
+
 The four models are:
 
 | Tier | Model ID | Used for |
@@ -131,6 +154,8 @@ Pass criteria: The agent returns a streamed response from a Workers AI model.
 
 - [ ] `workers-ai-provider` is in package.json
 - [ ] The new provider.ts is approximately 30 lines (down from 234)
+- [ ] `resolveModel()` constructs `createWorkersAI()` with `gateway: { id: "ipix-prod" }` — not a bare `{ binding: env.AI }`
+- [ ] A test call made through `resolveModel()` shows up in `ipix-prod`'s Gateway Logs (not just a successful Workers AI response — the whole point is that it's gated through the gateway)
 - [ ] `npx tsc --noEmit` passes
 - [ ] The marketing agent returns a response locally
 - [ ] No existing tests break
@@ -154,6 +179,7 @@ The old custom provider code still exists in git history and can be restored.
 2. Output of `npx tsc --noEmit` showing no errors
 3. Screenshot of the marketing agent responding locally
 4. Diff showing the provider.ts file shrank from 234 to approximately 30 lines
+5. Screenshot or API response showing the test call in `ipix-prod`'s Gateway Logs (proves `gateway: { id: "ipix-prod" }` actually routed the request — not just that Workers AI responded)
 
 ---
 

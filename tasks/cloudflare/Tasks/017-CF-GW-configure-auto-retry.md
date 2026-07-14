@@ -45,14 +45,15 @@ No CLI required. Per-request retry overrides via headers:
 ```bash
 curl -X POST "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/ai/v1/chat/completions" \
   -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+  -H "cf-aig-gateway-id: ipix-prod" \
   -H "cf-aig-max-attempts: 5" \
   -H "cf-aig-retry-delay: 1000" \
   -d '{"model":"@cf/meta/llama-4-scout-17b-16e-instruct","messages":[{"role":"user","content":"hi"}]}'
 ```
 
 Header reference:
-- `cf-aig-max-attempts` — max tries including the initial request
-- `cf-aig-retry-delay` — delay between attempts in milliseconds
+- `cf-aig-max-attempts` — max tries including the initial request (platform ceiling: 5)
+- `cf-aig-retry-delay` — delay between attempts in milliseconds (platform ceiling: 5000ms)
 - `cf-aig-request-timeout` — per-attempt timeout in milliseconds
 
 ---

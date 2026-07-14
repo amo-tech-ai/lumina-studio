@@ -47,6 +47,7 @@ Caching is dashboard-only — there is no required CLI command. To verify from C
 # Send the same prompt twice and confirm the second is served from cache
 curl -X POST "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/ai/v1/chat/completions" \
   -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+  -H "cf-aig-gateway-id: ipix-prod" \
   -H "Content-Type: application/json" \
   -d '{"model":"@cf/meta/llama-4-scout-17b-16e-instruct","messages":[{"role":"user","content":"What is iPix?"}]}'
 ```
@@ -57,10 +58,12 @@ curl -X POST "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_
 
 1. Open the Cloudflare dashboard → **AI Gateway**.
 2. Select the gateway created in task 001.
-3. Select the **Caching** tab.
-4. Toggle **Enable caching** on.
+3. Select the **Settings** tab (verified against current docs — caching lives under Settings, not a dedicated "Caching" tab).
+4. Toggle **Cache Responses** on.
 5. Set TTL (default 1 hour is fine; bump to 24 hours for static marketing prompts).
 6. Click **Save**.
+
+Machine-checkable pass signal (works without dashboard access): the cached response's `cf-aig-cache-status` header reads `HIT`. Caching only applies to **identical** requests, and only text/image responses (per current docs).
 
 ---
 

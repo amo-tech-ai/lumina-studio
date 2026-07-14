@@ -16,7 +16,7 @@ Configure dynamic routes in AI Gateway so that a primary model failure or budget
 
 ### Real-world iPix example
 
-The Production Planner agent calls `@cf/openai/gpt-5` as its primary model. OpenAI has a 10-minute outage. Without dynamic routing, every Production Planner request fails with a 502 from the custom router, and users see errors. With dynamic routing, the gateway automatically rewrites the request to `@cf/meta/llama-4-scout-17b-16e-instruct` (the default iPix managed Workers AI model), users keep working, and the analytics dashboard shows the fallback traffic in green.
+The Production Planner agent calls `openai/gpt-5` as its primary model. OpenAI has a 10-minute outage. Without dynamic routing, every Production Planner request fails with a 502 from the custom router, and users see errors. With dynamic routing, the gateway automatically rewrites the request to `@cf/meta/llama-4-scout-17b-16e-instruct` (the default iPix managed Workers AI model), users keep working, and the analytics dashboard shows the fallback traffic in green.
 
 ---
 
@@ -59,14 +59,14 @@ No CLI required.
 2. Configure:
    - **Route name:** `planner-primary`
    - **Strategy**: weighted or fallback.
-   - **Primary model:** `@cf/openai/gpt-5` (or per project choice)
+   - **Primary model:** `openai/gpt-5` (or per project choice — no `@cf/` prefix for third-party models; that prefix is reserved for Workers-AI-hosted models)
    - **Fallback model:** `@cf/meta/llama-4-scout-17b-16e-instruct`
    - **Trigger for fallback:** on 5xx, on timeout, or on spend limit (links to task 015).
 3. Click **Save**.
 
 ### Step 3: Point the agent at this route
 
-The Mastra provider config (task 031) will reference this route by name — no code changes are needed once the route exists.
+The Mastra provider config (`004-CF-AI-setup-models.md`'s `resolveModel()`) will reference this route by name — no code changes are needed once the route exists. (Correction: the original `task 031` reference here pointed to `031-CF-MASTRA-model-registry.md`, which was archived — it imported a nonexistent package and was never a real dependency of this step.)
 
 ---
 

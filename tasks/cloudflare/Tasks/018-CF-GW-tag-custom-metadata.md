@@ -67,6 +67,7 @@ Or via the REST API header:
 ```bash
 curl -X POST "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/ai/v1/chat/completions" \
   -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+  -H "cf-aig-gateway-id: ipix-prod" \
   -H "Content-Type: application/json" \
   -H "cf-aig-metadata: user_id=u_42,tenant_id=brand_a,feature=production_planner" \
   -d '{"model":"@cf/meta/llama-4-scout-17b-16e-instruct","messages":[{"role":"user","content":"hi"}]}'
