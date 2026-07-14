@@ -22,20 +22,31 @@ describe("inviteMember", () => {
     );
   });
 
-  it("maps no_account_found", async () => {
-    const sb = mockRpc(null, { message: "planner_invite_member: no_account_found" });
+  it("maps user_not_available for an unknown email", async () => {
+    const sb = mockRpc(null, { message: "planner_invite_member: user_not_available" });
     const result = await inviteMember({ instanceId: "i1", email: "nobody@example.com", role: "viewer" }, sb as never);
     expect(result).toEqual({
       ok: false,
-      error: { code: "no_account_found", message: "No account found for that email." },
+      error: { code: "user_not_available", message: "That person is not available to invite." },
     });
   });
 
-  it("maps user_not_in_org", async () => {
-    const sb = mockRpc(null, { message: "planner_invite_member: user_not_in_org" });
-    const result = await inviteMember({ instanceId: "i1", email: "outsider@example.com", role: "viewer" }, sb as never);
-    expect(result.ok).toBe(false);
-    if (!result.ok) expect(result.error.code).toBe("user_not_in_org");
+  it("maps user_not_available for an email outside the org (same error — no enumeration)", async () => {
+    const sbOut = mockRpc(null, { message: "planner_invite_member: user_not_available" });
+    const outResult = await inviteMember({ instanceId: "i1", email: "outsider@example.com", role: "viewer" }, sbOut as never);
+    expect(outResult.ok).toBe(false);
+    if (!outResult.ok) expect(outResult.error.code).toBe("user_not_available");
+  });
+
+  it("maps pre-migration no_account_found/user_not_in_org to the same cloaked result (deploy-order safety net)", async () => {
+    for (const legacyCode of ["no_account_found", "user_not_in_org"]) {
+      const sb = mockRpc(null, { message: `planner_invite_member: ${legacyCode}` });
+      const result = await inviteMember({ instanceId: "i1", email: "x@example.com", role: "viewer" }, sb as never);
+      expect(result).toEqual({
+        ok: false,
+        error: { code: "user_not_available", message: "That person is not available to invite." },
+      });
+    }
   });
 
   it("maps invalid_role (e.g. inviting as owner)", async () => {
@@ -50,6 +61,13 @@ describe("inviteMember", () => {
     const result = await inviteMember({ instanceId: "i1", email: "dupe@example.com", role: "viewer" }, sb as never);
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.error.code).toBe("already_member");
+  });
+
+  it("denies a manager inviting someone as manager (insufficient_role_for_target)", async () => {
+    const sb = mockRpc(null, { message: "planner_invite_member: insufficient_role_for_target" });
+    const result = await inviteMember({ instanceId: "i1", email: "newmgr@example.com", role: "manager" }, sb as never);
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error.code).toBe("insufficient_role_for_target");
   });
 
   it("never forwards a raw, unrecognized Postgres message", async () => {
@@ -70,6 +88,21 @@ describe("inviteMember", () => {
     const result = await inviteMember({ instanceId: "i1", email: "x@example.com", role: "viewer" }, sb as never);
     expect(result.ok).toBe(false);
     consoleError.mockRestore();
+  });
+});
+
+// NOTE: Atomic rollback of assignment + audit event is structurally guaranteed
+// by PostgreSQL function transaction semantics (both statements execute in the
+// same function body / single transaction). A true fault-injection test
+// (force planner.events INSERT to fail, verify no assignment remains) requires
+// a live DB harness — not a mocked RPC. This test only confirms the error
+// mapping layer; it does NOT prove database-level rollback.
+describe("error mapping", () => {
+  it("maps known errors to typed codes without leaking raw Postgres message", async () => {
+    const sb = mockRpc(null, { message: "planner_invite_member: already_member" });
+    const result = await inviteMember({ instanceId: "i1", email: "dupe@example.com", role: "viewer" }, sb as never);
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error.code).toBe("already_member");
   });
 });
 

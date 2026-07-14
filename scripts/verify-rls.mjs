@@ -1578,6 +1578,50 @@ try {
     .eq("id", taskA.id);
   assert(!mgrUpdErr, "manager can update planner.tasks without assignee");
 
+  // IPI-575 · PR #387 review (chatgpt-codex-connector) — "Tighten the
+  // assignments insert RLS path too": planner_invite_member's SEC-003 gate
+  // (manager cannot invite as manager) only guarded the RPC — a manager
+  // could bypass it entirely with a direct INSERT into planner.assignments
+  // via their own RLS-scoped session, since assignments_insert_manager's
+  // with_check had no owner condition on role='manager'. Migration
+  // 20260714220000 closes this; probe it directly, not just through the RPC.
+  const emailG = `plt002-rls-g-${stamp}@example.com`;
+  let userG;
+  try {
+    assert(!!admin, "service_role admin client required to seed org_members for user G");
+    userG = await createTestUser(emailG);
+    const { error: orgMemberGErr } = await admin
+      .from("org_members")
+      .insert({ org_id: orgAId, user_id: userG.user.id, role: "editor" });
+    assert(!orgMemberGErr, "seed user G as org A member (service role)");
+
+    const { error: directInsertMgrErr } = await plannerB.from("assignments").insert({
+      instance_id: instA.id,
+      user_id: userG.user.id,
+      role: "manager",
+    });
+    assert(
+      !!directInsertMgrErr,
+      "manager cannot bypass SEC-003 via direct INSERT into planner.assignments with role='manager'",
+    );
+
+    const { error: directInsertViewerErr } = await plannerB.from("assignments").insert({
+      instance_id: instA.id,
+      user_id: userG.user.id,
+      role: "viewer",
+    });
+    assert(
+      !directInsertViewerErr,
+      "manager can still directly INSERT role='viewer' into planner.assignments (unchanged)",
+    );
+  } finally {
+    if (userG?.user?.id) {
+      const { error } = await deleteAuthUser(userG.user.id);
+      if (error) console.warn(`warn: cleanup user G: ${error.message}`);
+      else pass("cleaned up user G (service role)");
+    }
+  }
+
   // ── IPI-575 · PLN-DATA-001C — planner member mutation RPC probes ──
   // planner_invite_member / planner_update_role / planner_remove_assignment.
   // At this point: userA = owner on instA, userB = manager on instA (promoted
@@ -1613,8 +1657,8 @@ try {
       p_role: "viewer",
     });
     assert(
-      !!notInOrgErr && notInOrgErr.message.includes("user_not_in_org"),
-      "invite rejects a real email outside the instance's org (user_not_in_org)",
+      !!notInOrgErr && notInOrgErr.message.includes("user_not_available"),
+      "invite rejects a real email outside the instance's org (user_not_available)",
     );
   } finally {
     if (userF?.user?.id) {
