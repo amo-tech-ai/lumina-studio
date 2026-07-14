@@ -49,7 +49,7 @@ const resp = await env.AI.run(
   "@cf/meta/llama-4-scout-17b-16e-instruct",
   { messages: [{ role: "user", content: "Plan a shoot" }] },
   {
-    gateway: { id: "ipix-default" },
+    gateway: { id: "ipix-prod" }, // matches the gateway created in Task 001 — not "ipix-default"
     // metadata keys/values can be string, number, or boolean (no objects)
     metadata: {
       user_id: "u_42",
