@@ -513,6 +513,10 @@ export type Database = {
     Functions: {
       can_broadcast_instance: { Args: { p_topic: string }; Returns: boolean }
       can_subscribe_instance: { Args: { p_topic: string }; Returns: boolean }
+      ensure_default_5_week_workflow: {
+        Args: { p_org_id: string }
+        Returns: string
+      }
       is_assigned: {
         Args: { p_instance_id: string; p_roles: string[] }
         Returns: boolean
@@ -6745,7 +6749,11 @@ export type Database = {
       }
       crm_convert_deal: {
         Args: { p_deal_id: string; p_decision: string }
-        Returns: { brand_id: string | null; deal_id: string; stage: string }[]
+        Returns: {
+          brand_id: string
+          deal_id: string
+          stage: string
+        }[]
       }
       crm_deals_verify_convert_stage: {
         Args: { p_deal_id: string; p_stage: string }
