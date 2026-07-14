@@ -26,7 +26,12 @@ export type PlannerRole = "owner" | "manager" | "contributor" | "viewer";
 
 export type EntityType = "shoot" | "campaign" | "crm_deal";
 
-export type ViewType = "timeline" | "kanban" | "calendar";
+// IPI-578 — ViewType is the 4-value switchable Workspace tab state (includes
+// "list"). PersistedViewType is the narrower 3-value type IPI-574 writes to
+// planner.view_configs.default_view, whose CHECK constraint intentionally
+// excludes "list" (List is transient, never a persisted default).
+export type ViewType = "timeline" | "kanban" | "calendar" | "list";
+export type PersistedViewType = Exclude<ViewType, "list">;
 
 export type GateType = "approval" | "review" | "signoff" | null;
 
@@ -127,7 +132,7 @@ export interface PlannerViewConfig {
   id: string;
   userId: string;
   instanceId: string;
-  defaultView: ViewType;
+  defaultView: PersistedViewType;
   filters: Record<string, unknown>;
   sortConfig: Record<string, unknown>;
 }
