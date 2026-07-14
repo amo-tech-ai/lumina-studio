@@ -21,6 +21,8 @@ dist-ssr
 .vscode/*
 !.vscode/extensions.json
 .idea
+.obsidian/
+.opencode/
 .DS_Store
 *.suo
 *.ntvs*
@@ -66,4 +68,4 @@ pr9-storefront-test/
 
 # Design source files — not committed, copied into worktrees via .worktreeinclude
 Universal design prompt/
-Universal design prompt.zip
+Universal design prompt*.zip
