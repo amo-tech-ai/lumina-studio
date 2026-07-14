@@ -1,0 +1,39 @@
+{
+  "skill_name": "pr-agent",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "Set up The-PR-Agent/pr-agent for amo-tech-ai/lumina-studio using Amazon Bedrock Qwen3 Coder Next in us-east-1. What goes in .pr_agent.toml and how do we authenticate GitHub Actions?",
+      "expected_output": "bedrock/us-east-1/qwen.qwen3-coder-next, custom_model_max_tokens=250000, GitHub OIDC to IAM role, no XAI_KEY, SHA-pinned actions, auto_review only.",
+      "files": [],
+      "expectations": [
+        "Uses bedrock/us-east-1/qwen.qwen3-coder-next not xai/grok",
+        "Requires custom_model_max_tokens around 250000",
+        "Recommends GitHub OIDC / IAM role instead of long-lived AWS keys in secrets",
+        "Keeps auto_describe and auto_improve false for pilot",
+        "Pins Action SHAs rather than @main"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "Before enabling the PR-Agent workflow, what AWS checks must pass, and what do we do if aws login credentials are not picked up by PR-Agent?",
+      "expected_output": "list-foundation-models + converse smoke; export-credentials --format env; AWS_REGION=us-east-1.",
+      "files": [],
+      "expectations": [
+        "Requires direct Bedrock converse before PR-Agent",
+        "Mentions aws configure export-credentials --format env",
+        "Sets AWS_REGION / us-east-1"
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "Someone wants to reuse the old xAI plan and only change the model string to Bedrock. Is that OK?",
+      "expected_output": "No — auth, IAM, verification, secrets, and token limits must change; abandon XAI_KEY path.",
+      "files": [],
+      "expectations": [
+        "Rejects model-string-only migration from xAI",
+        "Calls out OIDC/IAM and Bedrock verification as required changes"
+      ]
+    }
+  ]
+}
