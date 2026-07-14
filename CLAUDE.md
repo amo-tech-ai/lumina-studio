@@ -92,7 +92,7 @@ We are in active development. Always leave the system better than you found it: 
 - `GEMINI_API_KEY` is server-only — used exclusively in `app/src/mastra/` and `supabase/functions/`.
 - **Never skip the pre-push hook** (`--no-verify`). If it fails, fix the underlying issue — don't bypass it.
 
-- **Run `/review-pr all` before `gh pr create`.**
+- **Run `/review-pr` before `gh pr create`; run `/review-pr all` before marking ready.**
 - Typecheck/lint/tests miss silent-failure patterns.
 - `/review-pr` Critical/Important findings block merge.
 - IPI (Internal Project Issue) is this repo's Linear issue-ID prefix.
