@@ -51,7 +51,7 @@ Shift from **Create → Check → Fix** to **Guide → Prevent → Confirm** —
 
 - **PR/code review — repo commands + plugins:**
   - **Orchestrator:** `/pr` (`.claude/commands/pr.md`) — auto-detect; ask before commit
-  - **Before PR (author):** `/pr new` or `/review-pr` + `@pr-review-loop`
+  - **Before PR (author):** `/pr new` or `/review-pr` + `@pr-workflow`
   - **After PR feedback:** `/pr fix` → `/pr ship` · `/pr resolve` · `/pr ready`
   - **Plugin breadth:** `pr-review-toolkit`'s `/review-pr` (6 subagents) — use for comprehensive pre-merge pass; repo command adds iPix path→agent matrix
   - **Bot findings:** Cursor Bugbot on PR — not a substitute for pre-PR `/review-pr`
