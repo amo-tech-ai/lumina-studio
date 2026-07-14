@@ -118,11 +118,14 @@ None in this task. `wrangler.jsonc` only ever needs the plain `{ "ai": { "bindin
 | Dependency | Status | Notes |
 |------------|--------|-------|
 | Cloudflare account | Active | iPix account verified |
-| Workers AI binding (Task CF-AI-020) | Recommended first | The gateway is connected via the binding |
+| Workers AI binding (Task CF-AI-020) | Recommended first | The `ai` binding must exist before any `env.AI.run()` call can pass a gateway option |
+| Wiring the `gateway: { id }` option into `env.AI.run()` calls | **Separate follow-up task, not part of CF-GW-001** | This task only creates the gateway in the dashboard. Nothing calls it yet until that wiring task lands (tracked wherever `env.AI.run()` is first added — e.g. the Mastra model-registry task) |
 
 ---
 
 ## Tests
+
+These verify the gateway itself. Full end-to-end request routing (Test 2/3) can only be exercised once the separate wiring task above has landed — they are not blocking for this task's completion.
 
 ### Test 1: Gateway appears in dashboard
 
@@ -130,13 +133,13 @@ After creation, the gateway `ipix-prod` appears in the AI Gateway list.
 
 Pass criteria: The dashboard shows the gateway with zero requests initially.
 
-### Test 2: Requests route through the gateway
+### Test 2: Requests route through the gateway (post-wiring)
 
-After deploying or previewing with an `env.AI.run()` call that passes `gateway: { id: "ipix-prod" }`, make a test AI request.
+Once some `env.AI.run()` call passes `gateway: { id: "ipix-prod" }`, make a test AI request.
 
 Pass criteria: The gateway analytics dashboard shows one new request within a few seconds.
 
-### Test 3: Gateway metadata is logged
+### Test 3: Gateway metadata is logged (post-wiring)
 
 In the gateway analytics, verify that the request shows the model, latency, token count, and estimated cost.
 
@@ -146,10 +149,12 @@ Pass criteria: The analytics page displays all metadata fields for the test requ
 
 ## Acceptance Criteria
 
+This task is dashboard-only — its criteria stop at gateway creation, not request routing:
+
 - [ ] The `ipix-prod` gateway exists in the Cloudflare dashboard
-- [ ] The code calling `env.AI.run()` passes `gateway: { id: "ipix-prod" }` as the third argument (not a wrangler.jsonc change)
-- [ ] A test request appears in the gateway analytics
-- [ ] The gateway shows model, latency, and cost data for the test request
+- [ ] The gateway's Settings tab loads without error
+
+Routing verification (Test 2/3 above) is the acceptance criteria of the separate wiring task, not this one — see Dependencies.
 
 ---
 
@@ -157,18 +162,18 @@ Pass criteria: The analytics page displays all metadata fields for the test requ
 
 To roll back this change:
 
-1. Remove the gateway configuration from the AI binding in wrangler.jsonc (leave just the binding name)
+1. Remove the `gateway: { id: "ipix-prod" }` option from wherever `env.AI.run()` is called (the wrangler.jsonc AI binding itself is untouched by this task and needs no change)
 2. Optionally delete the gateway from the dashboard (the gateway can also be kept but unused)
 
-Removing the gateway configuration means AI calls go directly to Workers AI without caching, rate limiting, or analytics. The application continues to work.
+Removing the gateway option means AI calls go directly to Workers AI without caching, rate limiting, or analytics. The application continues to work.
 
 ---
 
 ## Evidence Required
 
-1. Screenshot of the AI Gateway list showing `ipix-prod`
-2. Screenshot of the gateway analytics dashboard showing at least one request
-3. Copy of the updated wrangler.jsonc AI binding block
+1. Screenshot of the AI Gateway list showing `ipix-prod` (required for this task)
+2. Screenshot of the gateway analytics dashboard showing at least one request (post-wiring — evidence for the separate wiring task, not blocking here)
+3. Copy of the `env.AI.run()` call showing the `gateway: { id: "ipix-prod" }` option (post-wiring — same as above)
 
 ---
 
