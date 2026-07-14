@@ -136,10 +136,13 @@ test.describe("Planner — routes", () => {
 // login redirect); not-found specifically needs a real query result to
 // render, so a permission wall short-circuits it into the generic error
 // boundary instead. Skip on that boundary too, not just on a /login redirect.
-async function skipIfAuthWallBlocksNotFound(page: Page) {
+// Returns why this navigation can't be checked for the not-found page right
+// now, or null if it's safe to proceed. Playwright's own guidance is that
+// test.skip() should be called synchronously in the test body, not from
+// inside an awaited helper — do the detection here, skip at the call site.
+async function authWallBlockingNotFound(page: Page): Promise<string | null> {
   if (page.url().includes("/login")) {
-    test.skip(true, "operator auth gate is on and no session exists");
-    return;
+    return "operator auth gate is on and no session exists";
   }
   // The heading is one of two possible end states after goto() — wait for it
   // to actually render instead of taking an instant, un-awaited snapshot (a
@@ -149,10 +152,9 @@ async function skipIfAuthWallBlocksNotFound(page: Page) {
   const heading = page.locator('h1:not([class*="cpk"])');
   await expect(heading).toBeVisible({ timeout: 5000 });
   const blocked = await heading.filter({ hasText: "Something went wrong" }).count();
-  test.skip(
-    blocked > 0,
-    "anon lacks schema USAGE on planner by design — unauthenticated request hits a DB permission wall before the not-found check runs, not a regression",
-  );
+  return blocked > 0
+    ? "anon lacks schema USAGE on planner by design — unauthenticated request hits a DB permission wall before the not-found check runs, not a regression"
+    : null;
 }
 
 test.describe("Planner — not-found routes (auth-independent)", () => {
@@ -160,7 +162,8 @@ test.describe("Planner — not-found routes (auth-independent)", () => {
     page,
   }) => {
     await page.goto(`/app/planner/${MALFORMED_ID}`);
-    await skipIfAuthWallBlocksNotFound(page);
+    const authWallReason = await authWallBlockingNotFound(page);
+    test.skip(authWallReason !== null, authWallReason ?? "");
     await expect(page.locator('h1:not([class*="cpk"])')).toHaveText("Plan not found");
     // Marketing 404 renders "Page Not Found" and has no operator nav — assert both absent.
     await expect(page.getByText("Page Not Found")).toHaveCount(0);
@@ -171,14 +174,16 @@ test.describe("Planner — not-found routes (auth-independent)", () => {
     page,
   }) => {
     await page.goto(`/app/planner/${NONEXISTENT_UUID}`);
-    await skipIfAuthWallBlocksNotFound(page);
+    const authWallReason = await authWallBlockingNotFound(page);
+    test.skip(authWallReason !== null, authWallReason ?? "");
     await expect(page.locator('h1:not([class*="cpk"])')).toHaveText("Plan not found");
     await expect(page.getByText("Page Not Found")).toHaveCount(0);
     await expectNavMatchesViewport(page);
 
     // Same instance under /settings must 404 the same way.
     await page.goto(`/app/planner/${NONEXISTENT_UUID}/settings`);
-    await skipIfAuthWallBlocksNotFound(page);
+    const settingsAuthWallReason = await authWallBlockingNotFound(page);
+    test.skip(settingsAuthWallReason !== null, settingsAuthWallReason ?? "");
     await expect(page.locator('h1:not([class*="cpk"])')).toHaveText("Plan not found");
     await expectNavMatchesViewport(page);
   });
