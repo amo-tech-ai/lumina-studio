@@ -76,12 +76,39 @@ export const productionPlannerAgent = new Agent({
 });
 ```
 
-`requestContext.get("cfEnv")` requires something to have put it there first. Use `getCloudflareContext()` from `@opennextjs/cloudflare` (confirmed installed — `app/package.json` — but **not currently used anywhere in this codebase**, so this is new wiring, not a copy-paste from an existing pattern) at the point where a Mastra agent run is kicked off (the API route handler), and set `.env` onto the `requestContext` passed into that run.
+**⚠️ Critical (found in PR #381 review, confirmed real): the example above throws at runtime if you stop here.** `requestContext.get("cfEnv")` returns `undefined` unless something calls `.set("cfEnv", ...)` on the *same* `RequestContext` instance first — `resolveModel(tier, undefined)` then throws `TypeError: Cannot read properties of undefined (reading 'AI')`. The fix isn't optional prose, it's a required second edit, and there's already a real, working example of exactly this pattern in this codebase to copy:
+
+`app/src/app/api/copilotkit/[[...slug]]/route.ts:33-44` (the CopilotKit runtime's `agents:` factory — called fresh per request, not at module scope) already does this for `userId`/`email`:
+
+```ts
+const runtime = new CopilotRuntime({
+  agents: async () => {
+    const user = _requestUser.getStore() ?? UNKNOWN_USER;
+    const requestContext = new RequestContext();
+    requestContext.set("userId", user.id);
+    if (user.email) requestContext.set("email", user.email);
+    // ADD THIS — the missing piece that makes the Step 0 example above actually work:
+    const { env } = getCloudflareContext();
+    requestContext.set("cfEnv", env);
+    return MastraAgent.getLocalAgents({
+      mastra: getMastra(),
+      resourceId: user.id,
+      requestContext,
+    });
+  },
+  // ...
+});
+```
+
+Import `getCloudflareContext` from `@opennextjs/cloudflare` (confirmed installed in `app/package.json`, but not yet imported anywhere in this codebase — this specific call is new wiring, the surrounding `RequestContext`/`.set()` pattern is not).
+
+**Verified 2026-07-14 — `grep -rl "new RequestContext()" app/src` finds exactly one production file:** `app/src/app/api/copilotkit/[[...slug]]/route.ts`. That's the only place this fix needs to go — there is no separate marketing-chat `RequestContext` construction despite this file's own code comment ("same pattern as marketing-chat") implying otherwise; marketing-chat goes through the same CopilotKit runtime. If a future PR adds a second Mastra entry point outside CopilotKit, re-run that grep — don't assume this list stays at one.
 
 **Acceptance for this step specifically:**
-- [ ] `getCloudflareContext()` is called inside a request handler (never at module scope — same class of bug as `getMastra()`, see `CLAUDE.md`'s Mastra gotchas)
+- [ ] `getCloudflareContext()` is called inside a request-scoped async function (never at module scope — same class of bug as `getMastra()`, see `CLAUDE.md`'s Mastra gotchas)
+- [ ] `requestContext.set("cfEnv", env)` is added in `app/src/app/api/copilotkit/[[...slug]]/route.ts` — confirmed the only production file constructing a `RequestContext` as of 2026-07-14; re-verify with `grep -rl "new RequestContext()" app/src` before treating this as complete if the codebase has changed since
 - [ ] `cfEnv` is set on Mastra's `requestContext` before any agent's dynamic `model` function runs
-- [ ] At least one agent's dynamic `model` function successfully reads `requestContext.get("cfEnv").AI`
+- [ ] At least one agent's dynamic `model` function successfully reads `requestContext.get("cfEnv").AI` — proven by an actual test call, not just a type-check
 - [ ] `npx tsc --noEmit` passes with the dynamic `model` function typed correctly (no `any`)
 
 ### Step 1: Update the agent's model import
