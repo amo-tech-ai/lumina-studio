@@ -1,12 +1,11 @@
-// IPI-536 — Workspace route stub. Existence/UUID guard lives in the sibling
-// layout.tsx (shared with settings/page.tsx). Real content ships in PLN-S1A–F
-// (IPI-578/579/580/581/582).
+// IPI-578 — Workspace route. Existence/UUID guard lives in the sibling
+// layout.tsx (shared with settings/page.tsx). Server Component with zero
+// view-switching logic — all interactive behavior lives in
+// PlannerWorkspaceShell. Real view content (Timeline/Kanban/Calendar/List)
+// ships in PLN-S1B–D (IPI-579/580/581); mutations ship in PLN-S1E (IPI-582).
+
+import { PlannerWorkspaceShell } from "@/components/planner/planner-workspace-shell";
 
 export default function PlannerWorkspacePage() {
-  return (
-    <div style={{ padding: "2rem" }}>
-      <h1>Planner Workspace</h1>
-      <p>Timeline, Kanban, List, and Calendar views will appear here.</p>
-    </div>
-  );
+  return <PlannerWorkspaceShell />;
 }
