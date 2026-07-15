@@ -513,6 +513,10 @@ export type Database = {
     Functions: {
       can_broadcast_instance: { Args: { p_topic: string }; Returns: boolean }
       can_subscribe_instance: { Args: { p_topic: string }; Returns: boolean }
+      ensure_default_5_week_workflow: {
+        Args: { p_org_id: string }
+        Returns: string
+      }
       is_assigned: {
         Args: { p_instance_id: string; p_roles: string[] }
         Returns: boolean
@@ -1485,7 +1489,7 @@ export type Database = {
           {
             foreignKeyName: "brand_intake_drafts_brand_id_fkey"
             columns: ["brand_id"]
-            isOneToOne: false
+            isOneToOne: true
             referencedRelation: "brands"
             referencedColumns: ["id"]
           },
@@ -6743,9 +6747,14 @@ export type Database = {
         }
         Returns: Json
       }
+      // crm_convert_deal returns NULL brand_id for lost deals (SQL assigns v_result_brand_id only in the 'won' branch)
       crm_convert_deal: {
         Args: { p_deal_id: string; p_decision: string }
-        Returns: { brand_id: string | null; deal_id: string; stage: string }[]
+        Returns: {
+          brand_id: string | null
+          deal_id: string
+          stage: string
+        }[]
       }
       crm_deals_verify_convert_stage: {
         Args: { p_deal_id: string; p_stage: string }
@@ -6823,7 +6832,7 @@ export type Database = {
       planner_get_member_names: {
         Args: { p_instance_id: string }
         Returns: {
-          display_name: string | null
+          display_name: string
           user_id: string
         }[]
       }
