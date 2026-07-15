@@ -1,4 +1,7 @@
 -- IPI-26 / IPI-BI-003 — brands lifecycle enum, instagram_handle, brand_scores audit columns
+-- IPI-614: added add column intake_status (column was missing from migration chain,
+-- existed on remote only via OOB SQL; the alter type / set default / set not null
+-- statements below require it to exist for db reset reproducibility).
 
 do $$
 begin
@@ -17,6 +20,9 @@ end $$;
 
 alter table public.brands
   add column if not exists instagram_handle text;
+
+alter table public.brands
+  add column if not exists intake_status text;
 
 alter table public.brands
   alter column intake_status drop default;

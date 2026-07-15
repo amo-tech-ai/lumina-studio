@@ -42,3 +42,4 @@ comment on function public.planner_get_member_names is 'Resolves display_name fo
 revoke all on function public.planner_get_member_names(uuid) from public;
 revoke all on function public.planner_get_member_names(uuid) from anon;
 grant execute on function public.planner_get_member_names(uuid) to authenticated;
+;

@@ -1,28 +1,3 @@
--- IPI-575 · PLN-DATA-001C — fix a live "column reference is ambiguous"
--- error (SQLSTATE 42702) found by executing the RPCs for real, not just
--- reading them.
---
--- Root cause: `returns table (id uuid, instance_id uuid, user_id uuid,
--- role text)` implicitly declares `id`, `instance_id`, `user_id`, `role` as
--- PL/pgSQL variables in scope for the ENTIRE function body — not just the
--- final `return query` line. Every bare `where id = ...` / `where
--- instance_id = ...` / `where role = ...` anywhere in the function became
--- ambiguous between "the table column" and "the RETURNS TABLE output
--- variable of the same name", and every single call failed with:
---   {"code":"42702","message":"column reference \"id\" is ambiguous"}
---
--- crm_convert_deal never hit this because its RETURNS TABLE columns
--- (deal_id, stage, brand_id) don't collide with any bare column name used
--- unqualified in its body — this migration adopts the same discipline by
--- table-aliasing every reference instead (keeps the output column names
--- id/instance_id/user_id/role, which the TypeScript layer already expects,
--- rather than renaming them).
---
--- Neither a static read-through nor an independent security audit caught
--- this — it only surfaced by actually executing the function against a
--- real session. Logged here as the concrete reason "run it for real" is a
--- required verification step, not an optional one, before any RPC ships.
-
 create or replace function public.planner_invite_member(
   p_instance_id uuid,
   p_email text,
@@ -219,3 +194,4 @@ begin
   return query select v_row.id, v_row.instance_id, v_row.user_id, v_row.role;
 end;
 $$;
+;
