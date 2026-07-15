@@ -1,11 +1,16 @@
-# IPI-XXX · CF-MIG-220 — Delete Custom Gateway Worker
+# IPI-592 · CF-MIG-820 — Delete Custom Gateway Worker
 
-**Task ID:** CF-MIG-220  
-**Phase:** 3 — Cleanup  
+> **🛑 DO NOT EXECUTE YET — Phase 9 of 9, final production-gated cleanup.** `services/cloudflare-worker/` is still the live production AI path today. Running this before the required gates below are met would take down production AI traffic.
+
+**Naming corrected 2026-07-14 (audit finding, confirmed still wrong on this branch until now):** was `CF-MIG-220`, which collides with the existing `CF-MIG-220 · Preview Smoke Testing` milestone already tracked in IPI-487. Was also mislabeled "Phase 3 — Cleanup"; it is Phase 9 of 9, the *last* step, not an early one.
+
+**Linear:** [IPI-592 · CF-MIG-820 — Delete custom AI Gateway Worker (Phase 9 of 9, production-gated)](https://linear.app/amo100/issue/IPI-592)  
+**Task ID:** CF-MIG-820  
+**Phase:** 9 of 9 — Final production-gated cleanup  
 **Difficulty:** Easy  
 **Risk:** Medium  
-**Estimated time:** 2 hours  
-**Dependencies:** Tasks CF-AI-020, CF-AI-021, CF-GW-001, CF-GW-002 (all core setup must be verified working first)
+**Estimated time:** 2 hours for the code deletion itself — the gates before it take far longer
+**Dependencies:** IPI-586 (native call proven), IPI-591 (multi-turn tool calling proven), IPI-594 (all agents migrated) — **all in production, not staging**, plus the full entry gate below
 
 ---
 
@@ -21,9 +26,34 @@ After this task, the iPix repository has no custom AI routing code, no custom mo
 
 ## Recommended Setup Method
 
-**CLI — delete files and remove dependencies.**
+**CLI — delete files and remove dependencies, across three separate PRs (corrected 2026-07-14, audit finding).**
 
-This task removes code. There is no dashboard or template option. The priority is to verify the new path works (Tasks 1 through 4) before deleting the old one.
+This task removes code. There is no dashboard or template option.
+
+**⚠️ Entry gate strengthened 2026-07-14 (audit finding) — "one marketing agent works" is not sufficient evidence to delete ~2,300 lines and multiple provider SDKs.** That alone doesn't prove tool calling, multi-turn continuation, structured output, embeddings, streaming, CRM authorization, external-provider fallback, staging deployment, production reliability, rollback, or cost controls. Required before starting this task:
+
+| Gate | Required evidence |
+|---|---|
+| Native production traffic | 100% for an agreed soak period |
+| Legacy Worker requests | Zero for an agreed observation period |
+| Agent matrix | All required agents (IPI-594) green |
+| Tool calling | IPI-591 green |
+| Failover / Dynamic Routing | Verified |
+| Rollback | Tested, not just documented |
+| Error/latency/cost SLOs | Within target |
+| Security | Authorization unchanged, verified |
+| Secret inventory | Complete (see Step 5 below) |
+| Approval | Named incident/rollback owner signs off |
+
+**Use three separate PRs, not one destructive PR:**
+
+| PR | Scope | Risk |
+|---|---|---|
+| A | Remove dead routing references and feature flags | Low |
+| B | Remove legacy Worker and app provider code | Medium |
+| C | Remove dependencies, secrets, and obsolete docs — only after an observation window post-B | Medium |
+
+This keeps each review small, makes a regression traceable to one category of change, and keeps rollback safer than reverting one giant commit.
 
 ---
 
@@ -79,7 +109,16 @@ Command: `git rm app/src/lib/ai/model-registry.ts`
 
 ### Step 4: Remove unused npm packages
 
-Remove the packages that are no longer needed:
+**⚠️ Do not uninstall blindly (audit finding, 2026-07-14) — this belongs in PR C, after an observation window, not immediately after Steps 2-3.** `@ai-sdk/google`, `@ai-sdk/groq`, or `@ai-sdk/openai-compatible` may still be imported somewhere outside the deleted gateway code. Verify first:
+
+```bash
+rg '@ai-sdk/google|@ai-sdk/groq|@ai-sdk/openai-compatible' app
+npm explain @ai-sdk/google
+npm explain @ai-sdk/groq
+npm explain @ai-sdk/openai-compatible
+```
+
+Only remove a dependency when zero required imports remain.
 
 Command: `cd app && npm uninstall @ai-sdk/google @ai-sdk/groq @ai-sdk/openai-compatible`
 
@@ -87,40 +126,60 @@ These packages were used by the custom provider code. The new path uses only `wo
 
 ### Step 5: Clean up environment variables
 
-Remove the environment variables that are no longer needed from Infisical and from the `.env.example` file:
+**⚠️ Do not delete secrets immediately (audit finding, 2026-07-14) — this makes emergency rollback harder and belongs in PR C, not alongside code deletion.** Correct sequence: mark deprecated → stop new usage → complete the rollback observation window → revoke the provider key → *then* remove the secret. Deleting a secret the moment code is removed leaves no path back if the deletion needs reverting.
 
-Remove: `GEMINI_API_KEY`, `GROQ_API_KEY`, `AI_GATEWAY_URL`, `AI_ROUTING_MODE`, `AI_GATEWAY_API_KEY`, `AI_GATEWAY_REQUEST_ID`, `AI_GATEWAY_ALLOW_TOOL_TIERS`, all `GROQ_MODEL_*` variables, `MODEL_REGISTRY_OVERRIDE`.
+Also classify each secret before deciding where it lives — not every secret needs the Worker runtime:
 
-Keep: `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_API_TOKEN`, `SUPABASE_*`, `DATABASE_URL`.
+| Secret type | Where it belongs |
+|---|---|
+| Runtime application secret | Worker runtime |
+| Deployment token | CI/Infisical only, not Worker runtime |
+| Local developer credential | Infisical developer environment |
+| Public configuration | Wrangler vars |
+| Retired provider key | Revoke only after the rollback window |
+
+**Note on `CLOUDFLARE_API_TOKEN` specifically:** the app usually does not need a general-purpose Cloudflare API token at runtime to call a Workers AI binding — build/deployment tokens should stay in CI/Infisical, not necessarily the Worker's runtime environment. Verify this rather than assume it belongs in "Keep."
+
+Remove (only after the rollback window, per the sequence above): `GEMINI_API_KEY`, `GROQ_API_KEY`, `AI_GATEWAY_URL`, `AI_ROUTING_MODE`, `AI_GATEWAY_API_KEY`, `AI_GATEWAY_REQUEST_ID`, `AI_GATEWAY_ALLOW_TOOL_TIERS`, all `GROQ_MODEL_*` variables, `MODEL_REGISTRY_OVERRIDE`.
+
+Keep: `CLOUDFLARE_ACCOUNT_ID`, `SUPABASE_*`, `DATABASE_URL`. `CLOUDFLARE_API_TOKEN`: classify per the table above before deciding — don't default to "keep in Worker runtime."
 
 ### Step 6: Verify the build
 
 Command: `npx tsc --noEmit && npm run lint && npm test && npm run build`
 
-All must pass. If any test references the deleted files, update or remove those tests.
+All must pass. **Corrected 2026-07-14 (audit finding): "update or remove those tests" is too permissive.** Do not simply delete a test because its implementation was removed — replace implementation-specific tests with behavior/contract tests where the underlying behavior (e.g. "an agent call succeeds") still needs coverage on the new path. Only remove a test outright if the behavior it covered is genuinely gone, not just relocated.
 
 ### Step 7: Verify no references remain
 
-Search the codebase for any remaining references to the deleted code:
+**Expanded 2026-07-14 (audit finding) — the original grep only checked source filenames, not the broader surface area.** Search more than the codebase:
 
-Command: `grep -r "provider-adapter\|gemini-registry\|cloudflare-worker\|groq-models" app/ src/`
+```bash
+rg -i \
+'ai-gateway|AI_GATEWAY_|MODEL_REGISTRY_OVERRIDE|provider-adapter|model-registry|retry-classifier|gateway-errors|workers-ai-only|workers\.dev' \
+. \
+--glob '!node_modules/**' \
+--glob '!.git/**'
+```
 
-This should return no results (except possibly in documentation files that should be updated).
+This should return no results (except documentation files being updated in this PR). Also manually check, since grep won't find these: GitHub Actions workflows, Vercel environment variables, Infisical, Linear/docs cross-references, Cloudflare Worker dashboard variables, dashboards/monitors, Sentry configuration, shell/deployment scripts.
 
 ---
 
 ## Dashboard Steps
 
-### Step 1: Delete the deployed custom gateway Worker (optional)
+### Step 1: Delete the deployed custom gateway Worker (not optional at final completion — corrected 2026-07-14, audit finding)
 
-If the custom gateway Worker is still deployed at `ai-gateway.sk-498.workers.dev`, it can be deleted from the dashboard:
+The public `workers.dev` route was already disabled (see IPI-487 migration gate), but disabling the route is not the same as completing this cleanup task. Task completion requires either:
+- the Worker script actually deleted, or
+- an explicit retained-for-forensics exception, with a named owner and an expiry date
+
+Leaving the deployed Worker in an ambiguous "disabled but still there, nobody decided" state means this cleanup task isn't actually done.
 
 1. Navigate to Workers and Pages in the dashboard
 2. Select the `ai-gateway` Worker
 3. Go to Settings
 4. Scroll to the bottom and click Delete
-
-This is optional — the Worker can remain deployed but unused. However, deleting it avoids confusion and any ongoing request routing to the old code.
 
 ### Step 2: Remove unused secrets
 
@@ -214,30 +273,39 @@ Pass criteria: The Worker deploys without errors.
 
 ## Acceptance Criteria
 
-- [ ] The `services/cloudflare-worker/` directory no longer exists
-- [ ] The `app/src/lib/ai/provider-adapter.ts` file no longer exists
-- [ ] The `app/src/lib/ai/gemini-registry.ts` file no longer exists
-- [ ] The `app/src/lib/ai/groq-models.*` files no longer exist
-- [ ] The `app/src/lib/ai/model-registry.ts` file no longer exists
-- [ ] The `@ai-sdk/google`, `@ai-sdk/groq`, and `@ai-sdk/openai-compatible` packages are uninstalled
-- [ ] Unused environment variables are removed
-- [ ] `npm run build` passes
-- [ ] `npm test` passes
-- [ ] `npm run preview` serves the application
-- [ ] No grep results for deleted file names in TypeScript files
+**Rewritten 2026-07-14 (audit finding) — the original list was entirely about the deletion mechanics, with none of the production-readiness gates that justify doing the deletion at all:**
+
+- [ ] Native path has served 100% of production traffic for the agreed soak period
+- [ ] Zero requests to the legacy Worker observed for the agreed observation period
+- [ ] IPI-591 (multi-turn tool calling) passes
+- [ ] All migrated-agent tests (IPI-594) pass
+- [ ] Rollback was tested before cleanup started, not just documented
+- [ ] Repository references audited (the expanded grep in Step 7, plus manual checks)
+- [ ] Dashboard, CI, Vercel, and Infisical references audited
+- [ ] The `services/cloudflare-worker/` directory no longer exists (PR B)
+- [ ] The `app/src/lib/ai/provider-adapter.ts`, `gemini-registry.ts`, `groq-models.*`, `model-registry.ts` files no longer exist (PR B)
+- [ ] Deployed legacy Worker deleted, or an explicit retained-for-forensics exception recorded with owner and expiry
+- [ ] Behavior/contract tests retained where the old implementation-specific tests were removed
+- [ ] The `@ai-sdk/google`, `@ai-sdk/groq`, and `@ai-sdk/openai-compatible` packages are uninstalled **only after the `rg`/`npm explain` audit confirms zero remaining imports** (PR C)
+- [ ] Secrets revoked only after the rollback observation window, following the mark-deprecated → stop-new-usage → revoke → remove sequence (PR C)
+- [ ] `npm run build`, `npm test`, `npm run preview` all pass
+- [ ] Post-cleanup production smoke test passes
+- [ ] Documentation and Linear updated to reflect completion
 
 ---
 
 ## Rollback
 
-If something breaks after deletion:
+**⚠️ Corrected 2026-07-14 (audit finding) — `git revert HEAD` alone is incomplete.** Code revert does not restore: the deleted Worker deployment, removed secrets, revoked provider keys, removed dashboard variables, changed Dynamic Routes, changed production routing, or removed monitoring. A real rollback runbook needs infrastructure restoration, not just a git command:
 
-1. `git revert HEAD` — reverts the deletion commit
+1. `git revert HEAD` — reverts the deletion commit (code only)
 2. Reinstall the old packages: `cd app && npm install @ai-sdk/google @ai-sdk/groq @ai-sdk/openai-compatible`
-3. Restore the old environment variables in Infisical
-4. Redeploy: `npm run deploy`
+3. Restore the old environment variables in Infisical **and redeploy secrets to the Worker runtime** — Infisical alone doesn't push them
+4. **If the deployed Worker was actually deleted (Dashboard Step 1), redeploy it from source** — this is not automatic from a code revert
+5. **If provider keys were revoked, they need reissuing**, not just restoring the old secret reference — a revoked key doesn't come back
+6. Redeploy: `npm run deploy`
 
-The git history contains the deleted code. It can always be restored.
+The git history contains the deleted code and can always be restored *at the code level*. Infrastructure (deployed Workers, revoked keys, dashboard config) needs separate, deliberate restoration.
 
 **Important:** Before reverting, investigate what actually broke. It is likely a missed reference that is easy to fix without reverting the entire deletion.
 

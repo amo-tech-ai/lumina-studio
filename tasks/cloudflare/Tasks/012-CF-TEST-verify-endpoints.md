@@ -182,6 +182,31 @@ Pass criteria: The agent reports the error to the user without crashing the conv
 
 ---
 
+## Managed-First Verification & Definition of Done
+
+*(Added 2026-07-14, per `tasks/cloudflare/Tasks/notes/04-improvements.md` — fill in at execution time, not in advance. A dashboard toggle alone does not satisfy "done.")*
+
+| Verification gate | Result |
+|---|---|
+| Cloudflare dashboard feature available? | — |
+| Wrangler command available? | — |
+| Cloudflare API available? | — |
+| Official package/module available? | — |
+| Official GitHub repository checked? | — |
+| Official example checked? | — |
+| Official tutorial/recipe checked? | — |
+| Existing iPix code already implements it? | — |
+| Configuration-only solution possible? | — |
+| Minimum integration code required | — |
+| Custom implementation necessary? | — |
+| Why custom code is unavoidable | — |
+| Rollback method | — |
+| Production evidence | — |
+
+**Definition of done:** Configured + integrated + tested + observed in logs + failure tested + rollback tested + documented = complete.
+
+---
+
 ## Acceptance Criteria
 
 - [ ] The manual test scenario (Steps 1-8) completes without any 502 errors

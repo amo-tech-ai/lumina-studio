@@ -1,11 +1,16 @@
-# IPI-XXX · CF-MIG-230 — Migrate All Agents to Workers AI
+# IPI-594 · CF-MIG-230 — Migrate Mastra Agents to Cloudflare-Native AI Routing
 
+**Renamed 2026-07-14 (audit finding):** was "Migrate All Agents to Workers AI" — corrected because AI Gateway may route an agent to Workers AI, a Dynamic Route, or an approved external provider; agents don't all need to become Workers-AI-only by assumption.
+
+**⚠️ Phase corrected 2026-07-14 (real bug, confirmed on this branch) — this file said "Phase 3 — Cleanup," which is wrong on two counts: this is the agent-migration task, not cleanup, and it must run *before* `053-CF-MIGRATION-cleanup-custom-code.md` (Linear: IPI-592 · CF-MIG-820), not after. This file previously contained an internal contradiction claiming the old provider "was already removed in Task CF-MIG-220" while also describing rolling an agent back to it — both cannot be true, and the correct order is migrate-then-cleanup, never the reverse. See "Rollback" and "What Custom Code This Removes" below, both corrected.**
+
+**Linear:** [IPI-594 · CF-MIG-230 — Migrate all Mastra agents to Workers AI via ipix-prod](https://linear.app/amo100/issue/IPI-594)  
 **Task ID:** CF-MIG-230  
-**Phase:** 3 — Cleanup  
+**Phase:** 7 of 9 — Agent migration, before rollout and cleanup (corrected from "Phase 3 — Cleanup")  
 **Difficulty:** Medium  
 **Risk:** Medium  
-**Estimated time:** 2 days  
-**Dependencies:** Tasks CF-AI-020, CF-AI-021, CF-GW-001, CF-GW-002 (new path must be ready)
+**Estimated time:** 2 days, likely more once split into waves (see below)  
+**Dependencies:** IPI-586 (native call proven through `ipix-prod`) — **not** the old `CF-AI-020`/`CF-GW-002` IDs this file previously cited, which don't correspond to real current task files
 
 ---
 
@@ -40,6 +45,13 @@ There is no dashboard or template option for agent migration. Each agent is migr
 
 ## The Nine Agents to Migrate
 
+**⚠️ Verify this list against the actual repository before planning around it (audit finding, 2026-07-14) — do not assume agents keep these exact names/files:**
+
+```bash
+find app/src/mastra/agents -maxdepth 2 -type f \( -name '*.ts' -o -name '*.tsx' \)
+rg -n 'new Agent|createAgent|model:|tools:' app/src/mastra
+```
+
 | # | Agent | What it does | Uses tools? | Priority | Model tier |
 |:-:|-------|-------------|:-----------:|:--------:|------------|
 | 1 | public-marketing | Answers visitor questions on the marketing site | No | P0 (first) | fast |
@@ -52,17 +64,77 @@ There is no dashboard or template option for agent migration. Each agent is migr
 | 8 | shipping-agent | Manages shipping logistics | No | P2 | fast |
 | 9 | brand-approval | Workflow approval scaffold | No | P3 | fast |
 
+## Migration waves (added 2026-07-14, audit finding — one issue for nine agents in one deployment is too broad)
+
+Split into separate PRs/waves by risk, not all at once:
+
+| Wave | Agent(s) | Gate |
+|---|---|---|
+| 0 | Protected smoke route (IPI-586) | Real gateway request succeeds — prerequisite, not part of this task's agent count |
+| 1 | public-marketing | No tools, low risk — response quality |
+| 2 | marketing-chat, exports-agent, shipping-agent | Simple interactions — streaming and basic errors |
+| 3 | production-planner | Tool-calling validation, single and multi-turn |
+| 4 | creative-director | Creative quality evaluation |
+| 5 | brand-intelligence | Tools + structured output |
+| 6 | crm-assistant | **Sensitive data and authorization — see caution below** |
+| 7 | brand-approval | Workflow behavior, full regression matrix |
+
+Each wave should be its own PR with independent rollback, not one 9-agent commit.
+
+**⚠️ CRM Assistant sensitive-data caution (audit finding):** "Show me the relationship history with Nike" (Agent 6's example test below) must use **seeded test data, not real client data**, in any staging test or evidence screenshot.
+
+---
+
+## Step 0: Establish per-request env access (do this once, before any agent — confirmed missing on this branch, 2026-07-14)
+
+**Every agent below resolves its model at module top level today** — e.g. `app/src/mastra/agents/index.ts:9`: `const MODEL = resolveModel("default");`, evaluated once at import time, before any request exists. Cloudflare's `env.AI` binding is only available inside a request handler — it cannot be passed to a module-level call, no matter how `resolveModel`'s signature is written. Following Steps 1-2 below as literally written throws `TypeError: Cannot read properties of undefined (reading 'AI')` at runtime.
+
+**Fix — use Mastra's dynamic model resolution.** Confirmed present in the installed `@mastra/core` version: an agent's `model` field accepts a function `({ requestContext }) => model`, evaluated per-request instead of at import time.
+
+```ts
+// Before (module top-level, breaks):
+const MODEL = resolveModel("default");
+export const productionPlannerAgent = new Agent({ model: MODEL, /* ... */ });
+
+// After (per-request, env comes from requestContext):
+export const productionPlannerAgent = new Agent({
+  model: ({ requestContext }) => resolveModel("default", requestContext.get("cfEnv")),
+  /* ... */
+});
+```
+
+`requestContext.get("cfEnv")` requires something to `.set()` it first. `app/src/app/api/copilotkit/[[...slug]]/route.ts:33-44` already constructs a `RequestContext` per-request and calls `.set("userId", ...)`/`.set("email", ...)` in its `agents:` factory — add `requestContext.set("cfEnv", env)` there via `getCloudflareContext()` from `@opennextjs/cloudflare` (installed, not yet imported anywhere in this codebase). Confirmed via `grep -rl "new RequestContext()" app/src` that this is the only production file constructing one — re-run that grep before treating this as complete if the codebase has changed.
+
+**Acceptance for this step specifically:**
+- [ ] `getCloudflareContext()` is called inside a request-scoped async function, never at module scope
+- [ ] `requestContext.set("cfEnv", env)` is added in the CopilotKit route
+- [ ] At least one agent's dynamic `model` function successfully reads `requestContext.get("cfEnv").AI`
+- [ ] `npx tsc --noEmit` passes with the dynamic `model` function typed correctly (no `any`)
+
 ---
 
 ## Migration Steps (repeat for each agent)
 
 ### Step 1: Update the agent's model import
 
-Each agent file in `app/src/mastra/agents/` currently imports from the old provider. Update it to import `resolveModel` from the new provider.ts (created in Task CF-AI-021).
+Each agent file in `app/src/mastra/agents/` currently imports from the old provider. Update it to import `resolveModel` from the new provider.ts (created in Task CF-AI-021), and convert its static `const MODEL = resolveModel(tier)` to the dynamic `model: ({ requestContext }) => ...` form from Step 0.
 
 ### Step 2: Set the correct model tier
 
-Each agent should use the model tier from the table above. The `resolveModel` function takes the tier as a parameter.
+Each agent should use the model tier from the table above. The `resolveModel` function takes the tier as a parameter, plus the `env` retrieved via Step 0's `requestContext.get("cfEnv")`.
+
+### Step 1.5: Add a per-agent feature flag (added 2026-07-14, audit finding)
+
+Each agent needs independent routing so one agent can be rolled back without reverting the whole migration:
+
+```text
+agent-native-routing:
+  public-marketing: native
+  production-planner: legacy
+  brand-intelligence: legacy
+```
+
+Without this, "pause one agent's migration" (see Rollback below) has no actual mechanism — it's currently just a sentence, not something implementable.
 
 ### Step 3: Test the agent locally
 
@@ -224,7 +296,20 @@ The brand-intelligence agent must return structured data (JSON), not free text.
 
 ### Test 5: Output quality comparison
 
-Compare the output of 3-5 test queries between the old Gemini path and the new Workers AI path. The Workers AI output should be equivalent or better.
+**Corrected 2026-07-14 (audit finding) — "equivalent or better" is not a measurable bar; use a scorecard, not a subjective read:**
+
+| Area | Metric |
+|---|---|
+| Correctness | Golden-answer score against a fixed evaluation set (create one — reference this in IPI-600 · CF-GW-015's capability matrix) |
+| Tool selection | Correct-tool rate |
+| Tool arguments | Schema validity |
+| Structured output | JSON/schema pass rate |
+| Latency | p50/p95 — measured baseline, not an arbitrary "under 2 seconds" (the "2 seconds" figure elsewhere in this file's per-agent examples is illustrative only, not a real target) |
+| Cost | Per successful task |
+| Safety | Policy test score |
+| Hallucination | Unsupported-claim rate |
+
+Use deterministic fixtures for this comparison, not live external sites or real CRM data (see the CRM sensitive-data caution above) — a live website crawl in the acceptance path makes the test flaky and untestable offline.
 
 ---
 
@@ -247,9 +332,11 @@ Compare the output of 3-5 test queries between the old Gemini path and the new W
 
 ## Rollback
 
-Each agent can be individually rolled back by reverting its model import to the old provider. However, since the old provider code is deleted in Task CF-MIG-220, a full rollback requires reverting that task first.
+**Corrected 2026-07-14 (real bug — this section previously claimed the old provider code was already deleted, which is impossible: cleanup (IPI-592 · CF-MIG-820) is Phase 9, strictly *after* this migration task, never before).** The old provider code (`app/src/lib/ai/provider.ts`'s static `resolveModel(tier)` and everything under `services/cloudflare-worker/`) is still present and untouched during this task — that's exactly what makes per-agent rollback possible.
 
-**Recommended approach:** Migrate agents one at a time. If an agent has issues, pause its migration while keeping the already-migrated agents on the new path. This hybrid state is fully supported.
+Each agent can be individually rolled back via the feature flag from Step 1.5 (`agent-native-routing: <agent>: legacy`), which reverts that agent to the still-present old provider without touching any other agent's migration state or requiring a code revert.
+
+**Recommended approach:** Migrate one wave at a time (see "Migration waves" above). If an agent has issues, flip its flag back to `legacy` while keeping already-migrated agents on the new path. This hybrid state is fully supported and is the normal operating mode during the migration, not an edge case.
 
 ---
 
@@ -265,7 +352,7 @@ Each agent can be individually rolled back by reverting its model import to the 
 
 ## What Custom Code This Removes
 
-This task does not remove code — it rewires the agents to use the new path. The old provider code was already removed in Task CF-MIG-220.
+This task does not remove code — it rewires the agents to use the new path, behind per-agent feature flags, alongside the still-present old provider. **Corrected 2026-07-14 — the old provider code is not removed by this task or before it.** Removal is `053-CF-MIGRATION-cleanup-custom-code.md` (Linear: IPI-592 · CF-MIG-820), Phase 9 of 9, strictly after this task completes and production has soaked on the native path.
 
 ---
 

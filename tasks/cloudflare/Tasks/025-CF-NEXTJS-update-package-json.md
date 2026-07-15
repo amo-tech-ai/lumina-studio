@@ -14,7 +14,15 @@ references:
 
 # CF-NEXTJS-004 — Update package.json with Build & Deploy Scripts
 
-**Status:** 🟡 Ready to start  
+**Status:** 🟢 Already complete (verified 2026-07-14 against live `app/wrangler.jsonc`, `app/open-next.config.ts`, and `app/package.json` — this exact setup already exists). See IPI-486 / `CF-MIG-110` (PR #282, merged) for the tracked completion.
+
+> **🛑 DO NOT RUN the steps below — corrected 2026-07-14 (audit finding), real regression risk.** The real `app/package.json` already has correct, working scripts (`preview`/`deploy`/`upload` each run `sync-groq-models.mjs && rm -rf .next .open-next && opennextjs-cloudflare build && opennextjs-cloudflare <verb>` — pre-build model sync and output cleanup are required steps). If this file's body suggests a simpler `"build": "next build && opennextjs-cloudflare build"`, **do not apply it** — it would drop the sync/cleanup steps and cause real regressions. Kept as historical record only. Verify current state instead:
+> ```bash
+> cd ~/ipix/app
+> npm run
+> npm run typecheck
+> ```
+
 **Effort:** 10 minutes  
 **Dependency:** 015, 016, 017 (all prior configs)  
 **Enables:** Build and deploy to Cloudflare

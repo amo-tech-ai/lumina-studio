@@ -1,6 +1,16 @@
 # 000 · Architecture Decision — Cloudflare-Native AI Gateway Migration
 
-**Date:** 2026-07-13 · **Status:** Decision + phased plan, nothing executed yet — no code changed, no PRs closed/merged this pass.
+**Date:** 2026-07-13 · **Status: Accepted and partially executed** (corrected 2026-07-14 — this document previously said "nothing executed yet," which stopped being true the same day).
+
+**Completed since this doc was written:**
+- `ipix-prod` native AI Gateway created (dashboard-confirmed)
+- Legacy `ai-gateway.sk-498.workers.dev` public `workers.dev` exposure disabled (was unauthenticated — confirmed via live curl, contained via Cloudflare API; see IPI-487 for the full incident record)
+- Obsolete custom-gateway-path Linear issues canceled: IPI-525, 461, 457, 454, 530, 529, 528, 527, 531 (decision: stop investing further in `services/cloudflare-worker/`)
+- PR #339 is no longer an active bridge strategy — closed unmerged, not fixed and merged as this document's Phase 3 originally planned
+
+**Current gate:** [IPI-586 · CF-AI-003 — Wire one Workers AI call through ipix-prod gateway](https://linear.app/amo100/issue/IPI-586) — in progress, zero code shipped yet (no `ai` binding in `wrangler.jsonc`, nothing calls `env.AI.run()`). This is the actual next step; the phased plan below (Steps 4-9) is superseded in its specifics by IPI-586/590/591/592/594 but its sequencing principle (prove before deleting) still holds.
+
+**Also stale, not yet corrected in the body below:** "AI Gateway does most of this for free" needs qualifying — Workers AI inference, third-party models, and plan limits have different pricing behavior. Dynamic Routing and Spend Limits are **not** Beta (verified multiple times against live docs this session, despite several audit documents repeatedly claiming otherwise) — that specific correction is the opposite direction from what an earlier version of this note assumed.
 
 **Plain-English summary:** iPix hand-built ~2,300 lines of code to route AI requests (auth check, retry logic, fallback between providers, model registry). Cloudflare's AI Gateway already does most of this for free, and the homemade version already has real bugs (a security timing issue, an invalid config file, a deprecated model that shipped in a PR). This document decides what to keep custom, what to hand off to Cloudflare, and the exact order to do it in — proving each step works before deleting anything.
 
