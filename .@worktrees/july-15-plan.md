@@ -1,8 +1,25 @@
 # July 15 worktree cleanup plan — preserve first, delete second
 
-**Status:** Awaiting approval for Phase A only  
+**Status:** Phase A+B+CF+C+PR369 complete — 61 worktrees deleted, PR #369 merged, 4 PRs closed, 23 remain  
 **Audit score accepted:** 82/100  
+**Audit PR:** #398 (docs-only, merged/open)  
 **Rule:** Never delete a worktree until its unique plans/docs/skills/code are either on `main`, in a salvage archive, or explicitly abandoned in writing.
+
+---
+
+## Progress log
+
+| Date | Action | Recovered | Notes |
+|---|---|---:|---|
+| 2026-07-15 | Deleted `.claude/worktrees/adoring-snyder-2de01d` | 135 MB | CLOSED PR #214, all content already on `main` |
+| 2026-07-15 | Opened PR #398 (audit docs) | — | `.@worktrees/` files only |
+| 2026-07-15 | **Phase A1 complete** — 15 MERGED-clean worktrees | ~29 GB | All 15 ✅, 80 worktrees remain |
+| 2026-07-15 | **Phase A2 complete** — 36 MERGED-clean worktrees | ~79 GB | All 36 ✅, 44 worktrees remain |
+| 2026-07-15 | Pruned startupai16L + mde stale refs | — | Harmless metadata cleanup |
+| 2026-07-15 | **Phase B salvage** — archived 3 risk areas | — | `ipi-488` (410 files, 19MB), `cf-plan-phase1` (5 patches), `claude-md` (22-line diff) |
+| 2026-07-15 | **Cloudflare cleanup** — closed PRs #374 + #372, deleted 6 CF worktrees | ~12 GB | `wt-cf-plan-phase1`, `wt-cf-plan-phase1-public`, `wt-cf-tasks-phase2-fixes`, `wt-cf-tasks-phase3-linear-sync`, `wt-cf-gw-001-scope-fix`, `wt-cf-wf-skill-fixes` |
+| 2026-07-15 | **PR #369 merged** — design-prompt deduplication (375 byte-identical files removed) | ~2 GB | `wt-docs-dedupe-design-prompt-new` removed |
+| 2026-07-15 | **Phase C complete** — 2 remaining dirty-merged worktrees force-removed | ~4 GB | `wt-ipi-404-assets-masonry` (local-only next.config tweak), `wt-ipi-454-ac-f-gateway` (smoke script already on main) |
 
 ---
 
@@ -165,6 +182,8 @@ Abort Batch A1 if any worktree shows dirty or untracked high-value files.
 
 ### Exact delete commands (worktrees only — keep branches)
 
+Pre-delete gate runs before each removal:
+
 ```bash
 cd /home/sk/ipix
 for name in \
@@ -184,6 +203,10 @@ for name in \
   wt-docs-response-style \
   wt-docs-supabase-rls-lessons
 do
+  echo "--- Verifying $name ---"
+  git -C "/home/sk/$name" status --short
+  git -C "/home/sk/$name" ls-files --others --exclude-standard | head -5
+  git -C "/home/sk/$name" log --oneline origin/main..HEAD | wc -l
   git worktree remove "/home/sk/$name"
 done
 git worktree prune
@@ -221,7 +244,9 @@ rm -rf /home/sk/wt-ipi-578-workspace-shell   # orphan, 456K, broken git
 mkdir -p /home/sk/worktree-salvage/{ipi-488,claude-md-examples,ipi-454-gateway,cf-plan-phase1,lean-audit-2026-07-12,closed-prs,no-pr}
 ```
 
-### B1 — `wt-ipi-488-booking-qa-seed` (410 untracked)
+### B1 — `wt-ipi-488-booking-qa-seed` (410 untracked + 2 dirty tracked)
+
+**Dirty tracked files:** `.infisical.json` (generated) + local dev config — classified as GENERATED/JUNK.
 
 ```bash
 cp -a /home/sk/wt-ipi-488-booking-qa-seed/Universal-design-prompt5 \
@@ -235,6 +260,7 @@ Then:
 - Compare against canonical design sources on `main` / design archives
 - Hash sample files (`sha256sum`) before discarding duplicates
 - Do **not** dump the folder into `main`
+- Dirty tracked files confirmed as generated — safe to discard
 
 ### B2 — `wt-claude-md-real-world-examples`
 
@@ -315,22 +341,22 @@ git -C /home/sk/ipix worktree remove --force <path>
 
 ### CLOSED queue
 
-1. Archive unique files from each of the 6 CLOSED worktrees into `/home/sk/worktree-salvage/closed-prs/<slug>/`
+1. Archive unique files from remaining CLOSED worktrees into `/home/sk/worktree-salvage/closed-prs/<slug>/`
 2. For each, decide: reopen/split PR · docs-only follow-up · intentional abandon
 3. Highest risk of loss if deleted cold:
    - **IPI-468 worker auth** (`wt-ipi-468`)
    - **IPI-525 tool calling** (`wt-ipi-525-registry` + related `wt-ipi-342-fix`)
-   - **Cloudflare plan consolidation** (`wt-cf-plan-phase1` / public twin)
+   - ~~**Cloudflare plan consolidation** (`wt-cf-plan-phase1` / public twin)~~ ✅ DONE — salvaged as patches, PRs #374 + #372 closed, worktrees deleted
 
 ### No-PR queue
 
 | Worktree | Suggested outcome |
 |---|---|
-| `wt-cf-plan-phase1` | Preserve docs (see B4) |
+| ~~`wt-cf-plan-phase1`~~ | ~~Preserve docs (see B4)~~ ✅ DONE — salvaged + deleted |
 | `wt-docs-lean-audit-2026-07-12` | Preserve audit record (see B5) |
 | `wt-ipi-342-fix` | Compare to IPI-525 CLOSED work; salvage tests if not on main |
-| `wt-ipi-488-booking-e2e` | Compare to merged #303 / booking E2E on main |
-| `wt-ipi-488-booking-qa-docs` | Archive Linear spec if not already in `docs/linear/` |
+| ~~`wt-ipi-488-booking-e2e`~~ | ~~Compare to merged #303~~ ✅ DONE — deleted (Phase A2) |
+| ~~`wt-ipi-488-booking-qa-docs`~~ | ~~Archive Linear spec~~ ✅ DONE — deleted (Phase A2) |
 
 ---
 
@@ -362,9 +388,9 @@ df -h /
 | 349 | `wt-docs-pr-workflow-fixes` | Check if still relevant |
 | 356 | `wt-fix-vitest-pool-config` | Rebase only if still needed |
 | **369** | `wt-docs-dedupe-design-prompt-new` | **Prioritize** — reduces future bloat / doc-loss risk |
-| 372 | `wt-cf-wf-skill-fixes` | Review vs current skills |
+| ~~372~~ | ~~`wt-cf-wf-skill-fixes`~~ | ✅ CLOSED + deleted |
 | 373 | `wt-opencode-workflow` | Review security/usefulness |
-| 374 | `wt-cf-gw-001-scope-fix` | Merge or close quickly (small docs) |
+| ~~374~~ | ~~`wt-cf-gw-001-scope-fix`~~ | ✅ CLOSED + deleted |
 
 Delete worktrees only after PR merge/close **and** Phase A-style MERGED gate.
 

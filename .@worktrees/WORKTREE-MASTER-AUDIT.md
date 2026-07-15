@@ -21,22 +21,24 @@
 ## Table 2 — Master Worktree Inventory (ipix)
 
 ### Legend
-- **Status:** 🟢 SAFE · 🟡 SALVAGE · 🔵 ACTIVE · 🔴 DO NOT DELETE · ⚪ PHANTOM · 🟣 UNKNOWN
+- **Status:** 🟢 SAFE TO DELETE · 🟡 SALVAGE FIRST · 🔵 ACTIVE/PROTECTED · 🔴 DO NOT DELETE · ⚪ PHANTOM/ORPHAN · 🟣 UNKNOWN/MANUAL REVIEW · 🟠 ACTION REQUIRED (open PR — merge or close first)
+
+> **Note:** This inventory was captured at 2026-07-15 16:10 EDT. Execution followed the phased plan in `july-15-plan.md` — CLOSED PRs were handled separately from MERGED, with salvage before deletion. See the progress log there for what was actually done.
 
 | Status | Worktree | Branch | PR | PR State | Behind | Ahead | Size | Dirty | Untracked | Owner | Verdict |
 |---|---|---|---:|---|---:|---:|---:|---:|---:|---|---|
 | 🔵 | `/home/sk/ipix` (main) | `main` | — | — | 0 | 0 | 8.2G | 0 | 0 | Primary | **MAIN CHECKOUT** |
-| 🟢 | `wt-cf-gw-001-scope-fix` | `docs/cf-gw-001-scope-and-accuracy-fix` | 374 | OPEN | 27 | 1 | 2.1G | 0 | 0 | Cursor | Merge or close PR first |
+| 🟠 | `wt-cf-gw-001-scope-fix` | `docs/cf-gw-001-scope-and-accuracy-fix` | 374 | OPEN | 27 | 1 | 2.1G | 0 | 0 | Cursor | Merge or close PR first |
 | 🟢 | `wt-cf-gw-docs-fix` | `docs/cf-gateway-binding-accuracy-fix` | 367 | MERGED | 33 | 4 | 2.1G | 0 | 0 | Cursor | **SAFE TO DELETE** |
 | 🟢 | `wt-cf-gw-remote-true` | `docs/cf-gw-remote-true-binding-fix` | 375 | MERGED | 27 | 1 | 2.1G | 0 | 0 | Cursor | **SAFE TO DELETE** |
 | 🟢 | `wt-cf-mig-210-pr286` | `ipi/cf-mig-210-runtime-compat` | 286 | MERGED | 93 | 12 | 2.6G | 0 | 0 | Cursor | **SAFE TO DELETE** |
 | 🟢 | `wt-cf-plan-phase1` | `docs/cloudflare-plan-phase1` | — | NONE | 48 | 5 | 173M | 0 | 0 | Claude | No PR — unpushed |
-| 🟢 | `wt-cf-plan-phase1-public` | `docs/cloudflare-plan-phase1-public` | 355 | CLOSED | 48 | 5 | 2.1G | 0 | 0 | Cursor | **SAFE TO DELETE** |
+| 🟡 | `wt-cf-plan-phase1-public` | `docs/cloudflare-plan-phase1-public` | 355 | CLOSED | 48 | 5 | 2.1G | 0 | 0 | Cursor | **CLOSED — salvage/review before delete** |
 | 🟢 | `wt-cf-tasks-archive-plan-a` | `docs/cf-tasks-archive-plan-a` | 379 | MERGED | 26 | 1 | 2.1G | 0 | 0 | Cursor | **SAFE TO DELETE** |
 | 🟢 | `wt-cf-tasks-audit-corrections` | `docs/cf-tasks-audit-corrections` | 395 | MERGED | 17 | 4 | 2.1G | 0 | 0 | Cursor | **SAFE TO DELETE** |
-| 🟢 | `wt-cf-tasks-phase2-fixes` | `docs/cf-tasks-phase2-fixes` | 381 | CLOSED | 26 | 3 | 2.1G | 0 | 0 | Cursor | **SAFE TO DELETE** |
-| 🟢 | `wt-cf-tasks-phase3-linear-sync` | `docs/cf-tasks-phase3-linear-sync` | 383 | CLOSED | 26 | 2 | 2.1G | 0 | 0 | Cursor | **SAFE TO DELETE** |
-| 🟢 | `wt-cf-wf-skill-fixes` | `docs/cf-workflow-and-dtp-skill-fixes` | 372 | OPEN | 28 | 1 | 2.1G | 0 | 0 | Cursor | Merge or close PR first |
+| 🟡 | `wt-cf-tasks-phase2-fixes` | `docs/cf-tasks-phase2-fixes` | 381 | CLOSED | 26 | 3 | 2.1G | 0 | 0 | Cursor | **CLOSED — salvage/review before delete** |
+| 🟡 | `wt-cf-tasks-phase3-linear-sync` | `docs/cf-tasks-phase3-linear-sync` | 383 | CLOSED | 26 | 2 | 2.1G | 0 | 0 | Cursor | **CLOSED — salvage/review before delete** |
+| 🟠 | `wt-cf-wf-skill-fixes` | `docs/cf-workflow-and-dtp-skill-fixes` | 372 | OPEN | 28 | 1 | 2.1G | 0 | 0 | Cursor | Merge or close PR first |
 | 🟢 | `wt-chore-remove-groq-infisical` | `chore/remove-groq-infisical-skills` | 362 | MERGED | 42 | 1 | 2.1G | 0 | 0 | Cursor | **SAFE TO DELETE** |
 | 🟢 | `wt-chore-remove-stale-symlink` | `chore/remove-stale-design-prompt-symlink` | 363 | MERGED | 42 | 1 | 2.1G | 0 | 0 | Cursor | **SAFE TO DELETE** |
 | 🟡 | `wt-claude-md-real-world-examples` | `docs/claude-md-real-world-examples` | — | NONE | 53 | 3 | 164M | 1 | 0 | OpenCode | Dirty CLAUDE.md — salvage |
@@ -45,7 +47,7 @@
 | 🟢 | `wt-cursor-agent-rules` | `docs/cursor-agent-rules` | 289 | MERGED | 112 | 3 | 1.9G | 0 | 0 | Cursor | **SAFE TO DELETE** |
 | 🟢 | `wt-docs-315-316-successor` | `docs/pr-315-316-successor` | 318 | MERGED | 70 | 3 | 2.1G | 0 | 0 | Cursor | **SAFE TO DELETE** |
 | 🟢 | `wt-docs-cloudflare-tasks` | `docs/cloudflare-tasks-archive` | 361 | MERGED | 42 | 1 | 2.1G | 0 | 0 | Cursor | **SAFE TO DELETE** |
-| 🟢 | `wt-docs-dedupe-design-prompt-new` | `docs/dedupe-design-prompt-new` | 369 | OPEN | 29 | 1 | 2.1G | 0 | 0 | Cursor | Merge or close PR first |
+| 🟠 | `wt-docs-dedupe-design-prompt-new` | `docs/dedupe-design-prompt-new` | 369 | OPEN | 29 | 1 | 2.1G | 0 | 0 | Cursor | Merge or close PR first |
 | 🟢 | `wt-docs-lean-audit-2026-07-12` | `docs/lean-audit-2026-07-12` | — | NONE | 48 | 1 | 166M | 0 | 0 | Claude | No PR — unpushed |
 | 🟢 | `wt-docs-linear-prompt-template` | `docs/linear-prompt-engineering-verification` | 353 | MERGED | 48 | 1 | 2.1G | 0 | 0 | Cursor | **SAFE TO DELETE** |
 | 🔵 | `wt-docs-pr-workflow-fixes` | `docs/pr-workflow-command-fixes` | 349 | OPEN | 48 | 9 | 2.1G | 0 | 0 | Cursor | **OPEN PR — ACTIVE** |
@@ -54,7 +56,7 @@
 | 🟢 | `wt-docs-response-style` | `docs/response-style-clarity` | 351 | MERGED | 49 | 3 | 164M | 0 | 0 | Cursor | **SAFE TO DELETE** |
 | 🟢 | `wt-docs-supabase-rls-lessons` | `docs/ipix-supabase-rls-lessons` | 352 | MERGED | 49 | 2 | 2.1G | 0 | 0 | Cursor | **SAFE TO DELETE** |
 | 🟢 | `wt-docs-worktree-hygiene` | `docs/worktree-cleanup-step0` | 350 | MERGED | 49 | 2 | 2.1G | 0 | 0 | Cursor | **SAFE TO DELETE** |
-| 🟢 | `wt-fix-vitest-pool-config` | `fix/vitest-pool-config` | 356 | OPEN | 57 | 2 | 2.1G | 0 | 0 | Cursor | Merge or close PR first |
+| 🟠 | `wt-fix-vitest-pool-config` | `fix/vitest-pool-config` | 356 | OPEN | 57 | 2 | 2.1G | 0 | 0 | Cursor | Merge or close PR first |
 | 🟢 | `wt-ipi-342-fix` | `ipi/342-tool-routing-fix` | — | NONE | 57 | 6 | 2.3G | 0 | 0 | Cursor | No PR — review commits |
 | 🟢 | `wt-ipi-367-crm-won-lost-gate` | `ipi/367-crm-won-lost-gate` | 337 | MERGED | 57 | 6 | 2.3G | 0 | 0 | Cursor | **SAFE TO DELETE** |
 | 🟢 | `wt-ipi-367-migration` | `ipi/367-crm-convert-migration` | 341 | MERGED | 56 | 3 | 2.1G | 0 | 0 | Cursor | **SAFE TO DELETE** |
@@ -65,7 +67,7 @@
 | 🟢 | `wt-ipi-454-gemini-sse` | `ipi/454-gemini-nonstream-sse` | 312 | MERGED | 76 | 3 | 1.9G | 0 | 0 | Cursor | **SAFE TO DELETE** |
 | 🟢 | `wt-ipi-457-registry` | `ipi/457-ai-provider-registry` | 302 | MERGED | 78 | 3 | 2.0G | 0 | 0 | Cursor | **SAFE TO DELETE** |
 | 🟢 | `wt-ipi-461-adapter-runtime` | `ipi/461-adapter-runtime-integration` | 310 | MERGED | 77 | 4 | 2.0G | 0 | 0 | Cursor | **SAFE TO DELETE** |
-| 🟢 | `wt-ipi-468` | `ipi/468-worker-auth` | 339 | CLOSED | 53 | 6 | 2.5G | 0 | 0 | Cursor | **SAFE TO DELETE** |
+| 🟡 | `wt-ipi-468` | `ipi/468-worker-auth` | 339 | CLOSED | 53 | 6 | 2.5G | 0 | 0 | Cursor | **CLOSED — salvage/review before delete** |
 | 🟢 | `wt-ipi-472-wrangler-vars` | `ipi/472-wrangler-no-empty-override` | 323 | MERGED | 68 | 2 | 2.5G | 0 | 0 | Cursor | **SAFE TO DELETE** |
 | 🟢 | `wt-ipi-476-plan-ci` | `ipi/476-plan-ci-verify` | 307 | MERGED | 83 | 1 | 1.9G | 0 | 0 | Cursor | **SAFE TO DELETE** |
 | 🟢 | `wt-ipi-476-plan-docs` | `ipi/476-plan-docs` | 308 | MERGED | 83 | 1 | 1.9G | 0 | 0 | Cursor | **SAFE TO DELETE** |
@@ -87,8 +89,8 @@
 | 🟢 | `wt-ipi-499-verify-rls-probes` | `ipi/499-verify-rls-assets-probes` | 322 | MERGED | 68 | 2 | 2.1G | 0 | 0 | Cursor | **SAFE TO DELETE** |
 | 🟢 | `wt-ipi-513-brand-ownership` | `ipi/513-cloudinary-brand-ownership` | 329 | MERGED | 62 | 2 | 2.1G | 0 | 0 | Cursor | **SAFE TO DELETE** |
 | 🟢 | `wt-ipi-519-pr-agent-bedrock` | `ipi/519-pr-agent-bedrock` | 328 | MERGED | 62 | 3 | 2.1G | 0 | 0 | Cursor | **SAFE TO DELETE** |
-| 🟢 | `wt-ipi-525-audit` | `ipi/525-audit` | 336 | CLOSED | 57 | 2 | 2.1G | 0 | 0 | Cursor | **SAFE TO DELETE** |
-| 🟢 | `wt-ipi-525-registry` | `ipi/340a-gemini-provider-fix` | 342 | CLOSED | 54 | 11 | 2.6G | 0 | 0 | Cursor | **SAFE TO DELETE** |
+| 🟡 | `wt-ipi-525-audit` | `ipi/525-audit` | 336 | CLOSED | 57 | 2 | 2.1G | 0 | 0 | Cursor | **CLOSED — salvage/review before delete** |
+| 🟡 | `wt-ipi-525-registry` | `ipi/340a-gemini-provider-fix` | 342 | CLOSED | 54 | 11 | 2.6G | 0 | 0 | Cursor | **CLOSED — salvage/review before delete** |
 | 🟢 | `wt-ipi-526` | `ipi/526-bedrock-fallback` | 338 | MERGED | 54 | 19 | 2.5G | 0 | 0 | Cursor | **SAFE TO DELETE** |
 | 🟢 | `wt-ipi-536-fix-settings-heading-e2e` | `ipi/536-fix-settings-heading-e2e` | 389 | MERGED | 21 | 1 | 4.1G | 0 | 0 | Cursor | **SAFE TO DELETE** |
 | 🟡 | `wt-ipi-536-qa` | `ipi/536-planner-qa-tests` | 348 | MERGED | 48 | 4 | 5.8G | 1 | 1 | Cursor | Untracked `test-results/` |
@@ -124,7 +126,7 @@
 | 🟢 | `nimble-star` | `opencode/nimble-star` | 48 | 3 | 165M | 0 | 0 | Ephemeral session |
 | 🟢 | `quiet-eagle` | `opencode/quiet-eagle` | 48 | 3 | 165M | 0 | 0 | Ephemeral session |
 | 🟡 | `tidy-otter` | `opencode/tidy-otter` | 26 | 4 | 187M | 9 | 8 | 8 untracked files — check |
-| 🟢 | `wt-ipi-452-migration-ordering-fix` | `ipi/452-migration-ordering-fix` | 167 | 3 | 1.6G | 0 | 0 | PR #266 CLOSED — safe |
+| 🟡 | `wt-ipi-452-migration-ordering-fix` | `ipi/452-migration-ordering-fix` | 167 | 3 | 1.6G | 0 | 0 | PR #266 CLOSED — review before delete |
 
 ---
 
@@ -256,11 +258,12 @@
 
 ## Table 8 — Merged-but-Still-Present Worktrees (sample)
 
-All 55+ merged-and-clean worktrees are listed in Table 5. All have been verified:
-- PR state = MERGED or CLOSED via `gh`
+All 55+ merged-and-clean worktrees are listed in Table 5. Verification criteria:
+- PR state = **MERGED** via `gh` (CLOSED PRs handled separately — see `july-15-plan.md` "CLOSED PRs" section)
 - `git status` = clean (0 dirty, 0 staged)
 - No unique untracked files
-- Commits are ancestry-equivalent or squash-merged into main
+- For MERGED PRs: commits are ancestry-equivalent or squash-merged into main
+- For CLOSED PRs: `git cherry -v` confirms unique commits still on branch; salvaged or explicitly abandoned before deletion
 
 ---
 
@@ -303,46 +306,49 @@ git -C /home/sk/mde worktree prune
 - Pre-verify: directories are empty or broken git refs
 - Rollback: N/A (already broken)
 
-### Phase 2: Merged clean worktrees — batch (59 worktrees, ~128 GB)
+### Phase 2: Merged clean worktrees — MERGED-only (controlled batches of 10-15)
+
+**IMPORTANT:** Only worktrees with PR state = `MERGED` are eligible. CLOSED/no-PR worktrees are handled separately in Phase 4 (salvage) or after explicit review.
 
 ```bash
 cd /home/sk/ipix
-# Run all safe-delete commands from Table 5
-# Example batch (first 10):
+# Batch A1 (first 15 MERGED-only):
 git worktree remove /home/sk/wt-cf-gw-docs-fix
 git worktree remove /home/sk/wt-cf-gw-remote-true
 git worktree remove /home/sk/wt-cf-mig-210-pr286
-git worktree remove /home/sk/wt-cf-plan-phase1-public
 git worktree remove /home/sk/wt-cf-tasks-archive-plan-a
 git worktree remove /home/sk/wt-cf-tasks-audit-corrections
-git worktree remove /home/sk/wt-cf-tasks-phase2-fixes
-git worktree remove /home/sk/wt-cf-tasks-phase3-linear-sync
 git worktree remove /home/sk/wt-chore-remove-groq-infisical
 git worktree remove /home/sk/wt-chore-remove-stale-symlink
-# ... (full list in Table 5)
+# ... (see july-15-plan.md for exact batches and gate between each)
 ```
 
-- Pre-verify: Each has PR MERGED/CLOSED + clean status + no untracked
+- Pre-verify: Each has PR **MERGED** + clean status + no untracked + no post-merge commits
+- Gate between batches: `git worktree list`, `df -h /`, regenerate audit
 - Rollback: Re-create with `git worktree add <path> <branch>` (branch still exists on remote)
-- Space recovery: ~128 GB
+- Space recovery: ~128 GB across all MERGED batches
 
-### Phase 3: Merged worktrees with trivial dirty files (~14 GB)
+### Phase 3 (C): Merged worktrees with dirty/untracked files — individual review
 
-Worktrees with only `.infisical.json`, `test-results/`, or generated junk:
+Each worktree is inspected individually. Only `--force` when **every** dirty/untracked file is confirmed as:
+- Generated junk (`.infisical.json`, `test-results/`, `node_modules/`)
+- Duplicate already on `main` (verified with `sha256sum` or `git diff`)
+- Local-only dev convenience (e.g. local `next.config.ts` tweak)
+
+**Excluded from automatic force-delete:**
+- `wt-ipi-577-verify` — detached HEAD, requires manual review
+- Any worktree with unique docs, tests, scripts, or migrations
 
 ```bash
-# These can use --force since untracked files are generated
-git worktree remove --force /home/sk/wt-ipi-476-planner-grants-api
-git worktree remove --force /home/sk/wt-ipi-488-book-e2e-500
-git worktree remove --force /home/sk/wt-ipi-536-qa
-git worktree remove --force /home/sk/wt-ipi-577-planner-settings-ui
-git worktree remove --force /home/sk/wt-ipi-577-verify
-git worktree remove --force /home/sk/wt-ipi-404-assets-masonry
-git worktree remove --force /home/sk/wt-ipi-575-planner-data-settings
+# Only after individual file classification:
+git worktree remove --force /home/sk/wt-ipi-476-planner-grants-api  # only .infisical.json
+git worktree remove --force /home/sk/wt-ipi-536-qa                  # only .infisical.json
+git worktree remove --force /home/sk/wt-ipi-404-assets-masonry      # local next.config tweak only
+# ... (each verified individually — see july-15-plan.md progress log)
 ```
 
-- Pre-verify: Confirm dirty files are only generated (`.infisical.json`, `test-results/`)
-- Space recovery: ~23 GB
+- Pre-verify: `git status --short` + `git ls-files --others` + classify each file
+- Space recovery: ~14 GB (actual: ~4 GB after safe subset identified)
 
 ### Phase 4: Salvage-first worktrees (~4 GB)
 
