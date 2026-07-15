@@ -81,7 +81,11 @@ Report includes:
 
 ## Add (`add IPI-286 slug`)
 
+**Before adding — clean up stale worktrees first, every time (CLAUDE.md Step 0), not just on the weekly `clean` ritual below.** Run audit, remove anything ⚪/🔴 with `safeToDelete ✅`, then create the new one:
+
 ```bash
+npm run worktree:audit
+# remove anything safe-to-delete, then:
 npm run worktree:add -- IPI-286 route-aware-sections
 cd ../wt-ipi-286-route-aware-sections
 ```
