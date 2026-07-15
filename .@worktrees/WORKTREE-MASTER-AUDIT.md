@@ -32,7 +32,7 @@
 | 🟢 | `wt-cf-gw-docs-fix` | `docs/cf-gateway-binding-accuracy-fix` | 367 | MERGED | 33 | 4 | 2.1G | 0 | 0 | Cursor | **SAFE TO DELETE** |
 | 🟢 | `wt-cf-gw-remote-true` | `docs/cf-gw-remote-true-binding-fix` | 375 | MERGED | 27 | 1 | 2.1G | 0 | 0 | Cursor | **SAFE TO DELETE** |
 | 🟢 | `wt-cf-mig-210-pr286` | `ipi/cf-mig-210-runtime-compat` | 286 | MERGED | 93 | 12 | 2.6G | 0 | 0 | Cursor | **SAFE TO DELETE** |
-| 🟢 | `wt-cf-plan-phase1` | `docs/cloudflare-plan-phase1` | — | NONE | 48 | 5 | 173M | 0 | 0 | Claude | No PR — unpushed |
+| 🟡 | `wt-cf-plan-phase1` | `docs/cloudflare-plan-phase1` | — | NONE | 48 | 5 | 173M | 0 | 0 | Claude | **No PR — 5 unpushed commits, salvage first** |
 | 🟡 | `wt-cf-plan-phase1-public` | `docs/cloudflare-plan-phase1-public` | 355 | CLOSED | 48 | 5 | 2.1G | 0 | 0 | Cursor | **CLOSED — salvage/review before delete** |
 | 🟢 | `wt-cf-tasks-archive-plan-a` | `docs/cf-tasks-archive-plan-a` | 379 | MERGED | 26 | 1 | 2.1G | 0 | 0 | Cursor | **SAFE TO DELETE** |
 | 🟢 | `wt-cf-tasks-audit-corrections` | `docs/cf-tasks-audit-corrections` | 395 | MERGED | 17 | 4 | 2.1G | 0 | 0 | Cursor | **SAFE TO DELETE** |
@@ -48,7 +48,7 @@
 | 🟢 | `wt-docs-315-316-successor` | `docs/pr-315-316-successor` | 318 | MERGED | 70 | 3 | 2.1G | 0 | 0 | Cursor | **SAFE TO DELETE** |
 | 🟢 | `wt-docs-cloudflare-tasks` | `docs/cloudflare-tasks-archive` | 361 | MERGED | 42 | 1 | 2.1G | 0 | 0 | Cursor | **SAFE TO DELETE** |
 | 🟠 | `wt-docs-dedupe-design-prompt-new` | `docs/dedupe-design-prompt-new` | 369 | OPEN | 29 | 1 | 2.1G | 0 | 0 | Cursor | Merge or close PR first |
-| 🟢 | `wt-docs-lean-audit-2026-07-12` | `docs/lean-audit-2026-07-12` | — | NONE | 48 | 1 | 166M | 0 | 0 | Claude | No PR — unpushed |
+| 🟡 | `wt-docs-lean-audit-2026-07-12` | `docs/lean-audit-2026-07-12` | — | NONE | 48 | 1 | 166M | 0 | 0 | Claude | **No PR — 1 unpushed commit, salvage first** |
 | 🟢 | `wt-docs-linear-prompt-template` | `docs/linear-prompt-engineering-verification` | 353 | MERGED | 48 | 1 | 2.1G | 0 | 0 | Cursor | **SAFE TO DELETE** |
 | 🔵 | `wt-docs-pr-workflow-fixes` | `docs/pr-workflow-command-fixes` | 349 | OPEN | 48 | 9 | 2.1G | 0 | 0 | Cursor | **OPEN PR — ACTIVE** |
 | 🟢 | `wt-docs-pr312-audit` | `docs/pr-312-post-merge-audit` | 315 | MERGED | 73 | 2 | 2.5G | 0 | 0 | Cursor | **SAFE TO DELETE** |
@@ -57,7 +57,7 @@
 | 🟢 | `wt-docs-supabase-rls-lessons` | `docs/ipix-supabase-rls-lessons` | 352 | MERGED | 49 | 2 | 2.1G | 0 | 0 | Cursor | **SAFE TO DELETE** |
 | 🟢 | `wt-docs-worktree-hygiene` | `docs/worktree-cleanup-step0` | 350 | MERGED | 49 | 2 | 2.1G | 0 | 0 | Cursor | **SAFE TO DELETE** |
 | 🟠 | `wt-fix-vitest-pool-config` | `fix/vitest-pool-config` | 356 | OPEN | 57 | 2 | 2.1G | 0 | 0 | Cursor | Merge or close PR first |
-| 🟢 | `wt-ipi-342-fix` | `ipi/342-tool-routing-fix` | — | NONE | 57 | 6 | 2.3G | 0 | 0 | Cursor | No PR — review commits |
+| 🟣 | `wt-ipi-342-fix` | `ipi/342-tool-routing-fix` | — | NONE | 57 | 6 | 2.3G | 0 | 0 | Cursor | **No PR — 6 unpushed commits, manual review** |
 | 🟢 | `wt-ipi-367-crm-won-lost-gate` | `ipi/367-crm-won-lost-gate` | 337 | MERGED | 57 | 6 | 2.3G | 0 | 0 | Cursor | **SAFE TO DELETE** |
 | 🟢 | `wt-ipi-367-migration` | `ipi/367-crm-convert-migration` | 341 | MERGED | 56 | 3 | 2.1G | 0 | 0 | Cursor | **SAFE TO DELETE** |
 | 🟢 | `wt-ipi-396-scr-31-deal-detail` | `ai/ipi-396-scr-31-crm-deal-detail-react-parity` | 311 | MERGED | 77 | 7 | 4.4G | 0 | 0 | Cursor | **SAFE TO DELETE** |
@@ -80,8 +80,8 @@
 | 🟢 | `wt-ipi-476-realtime-fix` | `ipi/476-realtime-policy-fix` | 293 | MERGED | 95 | 1 | 1.9G | 0 | 0 | Cursor | **SAFE TO DELETE** |
 | 🟢 | `wt-ipi-477-plan-seed-org-bootstrap` | `ipi/477-plan-seed-org-bootstrap` | 305 | MERGED | 84 | 2 | 1.9G | 0 | 0 | Cursor | **SAFE TO DELETE** |
 | 🟡 | `wt-ipi-488-book-e2e-500` | `ipi/488-book-e2e-500` | 303 | MERGED | 85 | 4 | 1.9G | 1 | 1 | Cursor | Untracked `test-results/` |
-| 🟢 | `wt-ipi-488-booking-e2e` | `ipi/488-booking-e2e` | — | NONE | 90 | 3 | 1.9G | 0 | 0 | Cursor | No PR — likely superseded |
-| 🟢 | `wt-ipi-488-booking-qa-docs` | `ipi/488-booking-qa-docs` | — | NONE | 90 | 4 | 1.9G | 0 | 0 | Cursor | No PR — likely superseded |
+| 🟡 | `wt-ipi-488-booking-e2e` | `ipi/488-booking-e2e` | — | NONE | 90 | 3 | 1.9G | 0 | 0 | Cursor | **No PR — 3 unpushed commits, review before delete** |
+| 🟡 | `wt-ipi-488-booking-qa-docs` | `ipi/488-booking-qa-docs` | — | NONE | 90 | 4 | 1.9G | 0 | 0 | Cursor | **No PR — 4 unpushed commits, review before delete** |
 | 🟡 | `wt-ipi-488-booking-qa-seed` | `ipi/488-booking-qa-seed` | 288 | MERGED | 90 | 6 | 1.9G | 2 | 410 | Cursor | **410 untracked** — `Universal-design-prompt5/` + `mvp.md` |
 | 🟢 | `wt-ipi-491-gateway-embeddings` | `ipi/491-gateway-embeddings` | 316 | MERGED | 73 | 1 | 2.5G | 0 | 0 | Cursor | **SAFE TO DELETE** |
 | 🟢 | `wt-ipi-492-embed-error-contracts` | `ai/ipi-492-embed-error-contracts` | 319 | MERGED | 69 | 3 | 2.5G | 0 | 0 | Cursor | **SAFE TO DELETE** |
