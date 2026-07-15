@@ -5,6 +5,10 @@
 --
 -- DROP + CREATE (rather than IF NOT EXISTS) ensures every environment gets the correct
 -- order regardless of whether the historical migration created the index with the old order.
+--
+-- CREATE INDEX CONCURRENTLY is not used because Supabase migration files run inside a
+-- transaction, which is incompatible with CONCURRENTLY. The brand_intake_drafts table is
+-- small (<10K rows per tenant), so the brief ACCESS EXCLUSIVE lock is negligible.
 
 DROP INDEX IF EXISTS public.brand_intake_drafts_pending_user_updated_idx;
 
