@@ -1,12 +1,57 @@
-# Worktrees audit — iPix (2026-07-05)
+# Worktrees audit — iPix (2026-07-15)
 
-## Disk emergency cleanup (this session)
+## Current state
+
+| Metric | Value |
+|---|---|
+| **Total repositories** | 4 (ipix, mdeai/mdeapp, startupai16L, mde) |
+| **Total registered worktrees** | **113** |
+| **ipix worktrees** | 95 (1 main + 10 OpenCode + 1 Claude + 83 sibling) |
+| **Safe to delete now** | **59** (merged/closed, clean, no unique files) |
+| **Estimated recovery** | **~128 GB** (Phase 2) |
+| **Free disk** | 520 GB |
+
+**Full forensic audit:** [`WORKTREE-MASTER-AUDIT.md`](./WORKTREE-MASTER-AUDIT.md) (2026-07-15)
+
+---
+
+## Cleanup phases (pending approval)
+
+| Phase | What | Worktrees | Recovery | Risk |
+|---|---|---:|---:|---|
+| 1 | Phantoms + prune stale refs | 9 | <1 MB | None |
+| 2 | Merged/closed + clean | 59 | ~128 GB | None (all verified) |
+| 3 | Merged + trivial generated junk | 7 | ~23 GB | Low (`.infisical.json`, `test-results/`) |
+| 4 | Salvage-first (unique files) | 5 | ~4 GB | Medium (must copy first) |
+| 5 | Open PR worktrees (after merge) | 6 | ~13 GB | Wait for PR resolution |
+| 6 | Detached/unknown | 3 | ~9 GB | Manual review |
+| 7 | OpenCode pool | 10 | ~5 GB | Do NOT touch yet |
+
+---
+
+## Active/protected worktrees
+
+| Worktree | PR | Status | Why |
+|---|---:|---|---|
+| `/home/sk/ipix` (main) | — | Primary | Never delete |
+| `wt-docs-pr-workflow-fixes` | 349 | OPEN | Active PR |
+| `wt-opencode-workflow` | 373 | OPEN | Active CI PR |
+| `wt-cf-gw-001-scope-fix` | 374 | OPEN | Active docs PR |
+| `wt-cf-wf-skill-fixes` | 372 | OPEN | Active skills PR |
+| `wt-docs-dedupe-design-prompt-new` | 369 | OPEN | Active dedup PR |
+| `wt-fix-vitest-pool-config` | 356 | OPEN | Active test fix PR |
+| `wt-ipi-575-main-fix` | 387 | MERGED (dirty) | Post-merge work in progress |
+| `/home/sk/wt-main-audit` | — | DETACHED | **DO NOT TOUCH** — protected verification checkout |
+
+---
+
+## History
+
+### 2026-07-05 — Disk emergency cleanup
 
 | Before | After | Recovered |
 |--------|-------|-----------|
 | **3.3 GB free** | **~55 GB free** | **~52 GB** |
-
-### Actions taken
 
 | Action | ~Recovered |
 |--------|------------|
@@ -16,45 +61,6 @@
 | Orphan dirs removed (`383-tomain`, `270`, `273`, `shoot-shotlist`) | ~0.3 GB |
 
 ---
-
-## Count (post-cleanup)
-
-| Metric | Value |
-|---|---|
-| **Total checkouts** | **13** (1 main + 12 sibling worktrees) |
-| **Orphans** | 0 |
-| **Safe to delete now** | 0 (audit) — see optional below |
-| **Health score** | 80/100 |
-
-Live tracker: `docs/development/worktree-tracker.md` (refresh with `npm run worktree:audit -- --write`).
-
-## Active worktrees — keep
-
-| Worktree | Branch | Size | Notes |
-|---|---|---:|---|
-| `../ipix` (main) | `ipi/claude-skills-git` | 12G | primary checkout |
-| `wt-ipi-274-shoot-wizard` | `ipi/274-shoot-wizard` | 1.7G | WIP |
-| `wt-ipi-274-wizard` | `ipi/274-shoot-wizard-frame` | 3.2G | WIP |
-| `wt-ipi-286` | `ipi/286-route-aware-sections` | 1.6G | active |
-| `wt-ipi-337-shoot-detail-tabs` | `ipi/337-shoot-detail-tabs` | 3.2G | 23 dirty — real WIP |
-| `wt-ipi-340-create-booking-request` | `main` | 1.8G | on main — review if still needed |
-| `wt-ipi-348-booking-agent` | `ipi/ipi-348-…` | 1.6G | active |
-| `wt-ipi-349-cloudinary-config` | `ipi/349-cloudinary-config-cleanup` | 1.6G | active |
-| `wt-ipi-356-groq-002` | `ipi/groq-002-shared-client` | 1.6G | active (IPI-356) |
-| `wt-ipi-372-shoots-list` | `ipi/372-shoots-list-parity` | 3.3G | **PR #219 MERGED** — optional remove |
-| `wt-ipi-docs-audit-linear-sync` | `ipi/docs-audit-linear-sync` | 1.6G | #187 OPEN |
-| `wt-ipi-pr-165` | `ipi/docs-nextjs16-pr-fix` | 1.6G | #165 OPEN |
-
-**Total sibling worktrees:** ~22G
-
-## Optional next wins (manual confirm)
-
-| Target | Size | Risk |
-|--------|-----:|------|
-| `wt-ipi-372-shoots-list` (merged #219, untracked docs only) | 3.3G | low if WIP copied elsewhere |
-| `wt-ipi-340-create-booking-request` (stale `main` checkout) | 1.8G | medium — verify unused |
-| Docker unused volumes | ~2.2G | medium — may affect stopped containers |
-| `~/.cache/google-chrome` | 2.7G | low — browser rebuilds cache |
 
 ## Refresh commands
 
