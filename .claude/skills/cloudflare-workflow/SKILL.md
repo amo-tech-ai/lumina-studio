@@ -104,6 +104,24 @@ If `node:fs` is used:
 
 **The rule is:** avoid relying on Node filesystem *semantics* (arbitrary runtime disk reads), not `node:fs` the module. A static `import json from "./config.json"` is Workers-safe; a runtime `readFileSync(path)` that expects a real disk is not.
 
+### CI Testing Audit
+
+Before claiming a test passes, verify that CI actually runs security-sensitive tests with the same configuration as local development:
+
+**Checklist:**
+
+- [ ] Local tests run with security features **ENABLED** (auth, RLS, edge validation) — not bypassed via `.dev.vars` or test fixtures
+- [ ] CI runs the same test suites (not a subset)
+- [ ] CI explicitly injects secrets/env vars (never using `.dev.vars` or hardcoded test tokens)
+- [ ] CI gate is a **required check** (not optional)
+- [ ] If any test file is missing from CI → Stage 0 blocker
+
+**Red flag patterns:**
+
+- `.dev.vars` with an auth-bypass flag used in CI (a dev-only shortcut)
+- Test coverage for auth/RLS/edge behavior missing from the CI job matrix
+- Security-critical tests only running locally, never in CI
+
 ---
 
 ## Stage 1 — Scope Verification
@@ -147,6 +165,37 @@ Classify each finding:
 
 Only implement confirmed, in-scope issues.
 
+### Official Sources Rule
+
+**For any claim about status, pricing, limits, or deprecation — cite the official source.**
+
+Cloudflare documentation evolves fast (models deprecate monthly, limits change, pricing updates). Training data is stale. Do not assume.
+
+**Source hierarchy (highest to lowest authority):**
+
+1. Official Cloudflare docs (`cloudflare_docs` MCP lookup or webfetch to developers.cloudflare.com)
+2. Installed package source (`node_modules/@cloudflare/`, `package.json` dependencies)
+3. Test results (local or CI verification)
+4. Training data / memory (⚠️ treat as hypothesis, verify before shipping)
+
+**Material claims require proof:**
+
+| Claim type | Example | Proof required |
+|------------|---------|-----------------|
+| Status | "Model X is currently supported" | Link to the [Workers AI model page](https://developers.cloudflare.com/workers-ai/models/) or MCP result |
+| Deprecation | "Model X was deprecated on DATE" | Link to the [Cloudflare changelog](https://developers.cloudflare.com/changelog) with the deprecation date |
+| Pricing | "Model X costs $Y per 1M tokens" | Link to the official [pricing page](https://developers.cloudflare.com/workers-ai/pricing/) |
+| Limits | "Model X supports up to N context" | Link to the model card or MCP `search_cloudflare_documentation` result |
+| Capability | "Model X supports tool calling" | Link to the model capability matrix or official docs |
+
+An unverified claim must be marked **TBD** in the code/PR, not shipped as fact.
+
+**PR review flags:**
+
+- 🔴 Blocker: "same pricing" / "same performance" / "zero risk" without a source → request a link or reject
+- 🟡 Question: "currently supported" without a docs link → ask for a source before merge
+- 🔴 Blocker: "deprecated as of [DATE]" without a Cloudflare changelog link → reject until sourced
+
 ---
 
 ## Stage 3 — Implementation
@@ -187,6 +236,31 @@ Bug → Fix → Regression Test
 ```
 
 The test must fail before the fix and pass after.
+
+### HTTP Header Edge Cases (auth-critical code)
+
+For any authentication, authorization, or header-parsing code, test these edge cases automatically. HTTP parsers inject whitespace and normalization that can break string comparisons.
+
+| Input | Expected | Why |
+|-------|----------|-----|
+| `"secret-token"` | ✅ Pass | Happy path |
+| `"secret-token  "` (trailing spaces) | ✅ Pass | HTTP header parsers inject whitespace |
+| `"SECRET-TOKEN"` (uppercase) | Handle per policy | Case sensitivity is policy-dependent |
+| `"secret-token\r\n"` (CRLF) | ✅ Pass | HTTP normalization |
+| `""` (empty) | ❌ Fail | Empty token must be rejected |
+| `null` / `undefined` | ❌ Fail | Null handling — no type error, no auth bypass |
+| `" secret-token "` (leading + trailing) | ✅ Pass | Full trim required |
+
+**Rule:** every auth route must pass all seven cases. Always trim both sides of a token before the equality check.
+
+```typescript
+const token = match[1];                          // Extract from "Bearer <token>"
+if (!token || token.trim() === "") return;        // Reject empty
+const trimmedToken = token.trim();                // Trim before comparison
+if (trimmedToken !== env.AUTH_TOKEN) return 401;   // Compare trimmed values
+```
+
+**Why this matters:** a happy-path-only test can pass while a header-whitespace variant still causes a valid token to be rejected (401) or an invalid one to slip through untrimmed. Add these cases to any new auth/header-parsing code — don't rely on the happy path alone.
 
 ---
 
@@ -286,6 +360,36 @@ Verify:
 If any production blocker remains, classify it clearly.
 
 Do not describe mitigations as complete fixes.
+
+---
+
+## Known Cloudflare Gotchas
+
+### OpenNext build requires a current compatibility_date
+
+- **Gotcha:** `opennextjs-cloudflare build` can succeed while `wrangler dev` still fails if `compatibility_date` in `wrangler.jsonc` is stale.
+- **Impact:** the build passes CI; the failure only shows up at `wrangler dev` or on a deployed Worker.
+- **Prevention:** keep `compatibility_date` current and re-check it against official docs periodically — do not assume last quarter's date is still safe.
+- **Test:** run both `opennextjs-cloudflare build` and `wrangler dev` locally before pushing, not just the build.
+
+### D1 remote vs. local preview mismatch
+
+- **Gotcha:** migrations can apply cleanly against the local D1 preview while the remote database fails due to auth or state divergence, or SQL the remote engine rejects.
+- **Impact:** local tests pass; the migration fails at deploy time against production D1.
+- **Prevention:** verify a migration against the actual D1 instance (Stage 5b) before merging, not just the local preview.
+
+### Workers script size limits (compressed vs. uncompressed)
+
+- **Gotcha:** a local `opennextjs-cloudflare build` can succeed while `wrangler deploy` still rejects the upload for exceeding the platform's script size limit — the limit applies to the gzip-compressed size, not the local file size.
+- **Official limits** ([Cloudflare Workers platform limits](https://developers.cloudflare.com/workers/platform/limits/)): Free plan — 3 MB after compression (gzip) / 64 MB before compression; Paid plan — 10 MB after compression (gzip) / 64 MB before compression.
+- **Prevention:** run `wrangler deploy --dry-run` to check the actual gzip upload size against the plan's limit before assuming a build success means a deploy will succeed.
+- **Fix if over the limit:** tree-shake unused imports, defer code-splitting, or reduce bundled static assets.
+
+### `nodejs_compat` must be set via `compatibility_flags` array syntax
+
+- **Gotcha:** the flag only takes effect as an array entry — `"compatibility_flags": ["nodejs_compat"]` in `wrangler.jsonc` (or `compatibility_flags = ["nodejs_compat"]` in `wrangler.toml`) — combined with `compatibility_date` at or after `2024-09-23`.
+- **Source:** [Cloudflare Node.js compatibility docs](https://developers.cloudflare.com/workers/runtime-apis/nodejs/).
+- **Test:** a simple `import fs from "node:fs"` under `wrangler dev` should not throw once both are set correctly.
 
 ---
 
