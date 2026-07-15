@@ -22,8 +22,10 @@ create table if not exists public.brand_intake_drafts (
 create index if not exists brand_intake_drafts_user_id_idx
   on public.brand_intake_drafts (user_id);
 
+-- Sort key (updated_at desc) before status to serve ORDER BY updated_at DESC
+-- directly when both status values are queried.
 create index if not exists brand_intake_drafts_pending_user_updated_idx
-  on public.brand_intake_drafts (user_id, status, updated_at desc)
+  on public.brand_intake_drafts (user_id, updated_at desc, status)
   where status in ('pending', 'pending_approval');
 
 -- Unique constraint has been moved to its own guarded migration
