@@ -1,31 +1,26 @@
--- IPI-575 · PLN-DATA-001C — fix a real deadlock in planner_update_role /
--- planner_remove_assignment, found by an independent rls-policy-auditor pass
--- on migration 20260714100000 before this ticket was marked done.
+-- IPI-575 · PLN-DATA-001C — Planner member mutations: invite / role update / removal
 --
--- The bug: the target row was locked FIRST, unconditionally and unordered
--- (`select ... where user_id = p_target_user_id for update`), and only THEN,
--- conditionally, were all owner rows locked in id order. Two concurrent
--- callers demoting two DIFFERENT owners (O1, O2) on the same instance could
--- each lock their own target first, then each block waiting for the other's
--- row inside the "lock all owners" step — a classic circular wait. Postgres's
--- deadlock detector would catch this (no data corruption), but it aborts one
--- legitimate concurrent request with a generic `deadlock_detected` error
--- instead of the intended clean `last_owner_protected` outcome.
+-- Three SECURITY DEFINER RPCs, all public schema, mirroring crm_convert_deal's
+-- pattern (search_path='', explicit checks, no reliance on RLS alone) plus
+-- planner_get_my_assignment's hard-scoping precedent.
 --
--- The fix: the owner-set lock (id-ordered, `for update`) now runs FIRST and
--- UNCONDITIONALLY in both functions, before the target row is ever locked.
--- Every call now acquires its first lock over the exact same row set in the
--- exact same order — two concurrent calls can only block each other at that
--- first step, never form a cycle.
+-- Caller authorization mirrors the live RLS convention on planner.assignments,
+-- refined to a "manager acts below manager, owner acts on anyone" hierarchy:
+--   - INSERT (invite): caller >= manager (matches assignments_insert_manager RLS)
+--   - UPDATE/DELETE (role change / removal) of an existing row: caller >= manager
+--     if the target is contributor/viewer, caller must be owner if the target is
+--     manager/owner — a manager can never touch another manager's or an owner's
+--     assignment, only the base RLS "assignments_update_owner"/"assignments_
+--     delete_owner" policies (owner-only for any row) as a blunter backstop.
 --
--- Also fixes two lower-severity findings from the same audit:
---   - `insufficient_role` was raised from two different causes in the same
---     function (caller isn't manager+ at all, vs. caller is manager but the
---     target is owner/manager) with an identical message — the TypeScript
---     layer couldn't distinguish them. Now two distinct messages.
---   - The `auth.users` email lookup had no `order by`, so a residual/duplicate
---     auth identity with the same lowercased email would resolve to an
---     arbitrary row. Now deterministic (oldest account wins).
+-- Live-audit findings this migration resolves (2026-07-14, see IPI-575):
+--   1. Invitee org-membership: SECURITY DEFINER bypasses assignments_insert_manager's
+--      own "JOIN org_members" check, so it must be re-asserted explicitly here.
+--   2. Owner role is never settable via invite or role-update — matches the live
+--      RLS policy's own role list (ARRAY['manager','contributor','viewer']).
+--   3. Last-owner protection needs row locking to be race-free under concurrency.
+
+-- ── 1. planner_invite_member ────────────────────────────────────────────────
 
 create or replace function public.planner_invite_member(
   p_instance_id uuid,
@@ -57,12 +52,7 @@ begin
   end if;
 
   v_email := lower(trim(p_email));
-  select id into v_user_id
-  from auth.users
-  where lower(email) = v_email
-  order by created_at asc
-  limit 1;
-
+  select id into v_user_id from auth.users where lower(email) = v_email limit 1;
   if v_user_id is null then
     raise exception 'planner_invite_member: no_account_found';
   end if;
@@ -94,6 +84,15 @@ begin
 end;
 $$;
 
+comment on function public.planner_invite_member(uuid, text, text) is
+  'IPI-575 — adds an existing registered user (matched by email, trimmed+lowercased) to a planner instance. Caller must be manager+ on the instance; invitee must already belong to the instance''s org (public.org_members) — a SECURITY DEFINER-only check, since this bypasses assignments_insert_manager''s own org_members join. Owner role is never invitable. Writes assignment + event in one transaction; duplicate invites map to already_member via the unique (instance_id, user_id) constraint.';
+
+revoke all on function public.planner_invite_member(uuid, text, text) from public;
+revoke all on function public.planner_invite_member(uuid, text, text) from anon;
+grant execute on function public.planner_invite_member(uuid, text, text) to authenticated;
+
+-- ── 2. planner_update_role ──────────────────────────────────────────────────
+
 create or replace function public.planner_update_role(
   p_instance_id uuid,
   p_target_user_id uuid,
@@ -117,16 +116,6 @@ begin
     raise exception 'planner_update_role: insufficient_role';
   end if;
 
-  -- Fixed global lock order: ALWAYS lock every owner-role row for this
-  -- instance first, id-ordered, regardless of what the target turns out to
-  -- be. Every caller of this function takes this exact same first lock in
-  -- the exact same order, so two concurrent calls can only block each other
-  -- here — never deadlock. See migration header for the failure this fixes.
-  perform 1 from planner.assignments
-    where instance_id = p_instance_id and role = 'owner'
-    order by id
-    for update;
-
   select role into v_target_role
   from planner.assignments
   where instance_id = p_instance_id and user_id = p_target_user_id
@@ -136,15 +125,16 @@ begin
     raise exception 'planner_update_role: member_not_found';
   end if;
 
-  -- A manager may only act on contributor/viewer rows; touching another
-  -- manager's or the owner's assignment requires owner. Distinct message
-  -- from the "caller isn't manager+ at all" case above, so the TypeScript
-  -- layer can render the right error for each.
   if v_target_role in ('owner', 'manager') and not planner.is_at_least(p_instance_id, 'owner') then
-    raise exception 'planner_update_role: insufficient_role_for_target';
+    raise exception 'planner_update_role: insufficient_role';
   end if;
 
   if v_target_role = 'owner' then
+    perform 1 from planner.assignments
+      where instance_id = p_instance_id and role = 'owner'
+      order by id
+      for update;
+
     select count(*) into v_owner_count
     from planner.assignments
     where instance_id = p_instance_id and role = 'owner';
@@ -171,6 +161,15 @@ begin
 end;
 $$;
 
+comment on function public.planner_update_role(uuid, uuid, text) is
+  'IPI-575 — changes an existing member''s role on a planner instance. Owner role is never settable here (no self/other-elevation to owner). A manager caller may only act on contributor/viewer targets; touching a manager or owner target requires an owner caller. Demoting the last owner is rejected (last_owner_protected), checked with row-locked, id-ordered owner-count locking to stay race-free under concurrent calls.';
+
+revoke all on function public.planner_update_role(uuid, uuid, text) from public;
+revoke all on function public.planner_update_role(uuid, uuid, text) from anon;
+grant execute on function public.planner_update_role(uuid, uuid, text) to authenticated;
+
+-- ── 3. planner_remove_assignment ────────────────────────────────────────────
+
 create or replace function public.planner_remove_assignment(
   p_instance_id uuid,
   p_target_user_id uuid
@@ -189,13 +188,6 @@ begin
     raise exception 'planner_remove_assignment: insufficient_role';
   end if;
 
-  -- Same fixed global lock order as planner_update_role — see that function
-  -- and the migration header for the deadlock this fixes.
-  perform 1 from planner.assignments
-    where instance_id = p_instance_id and role = 'owner'
-    order by id
-    for update;
-
   select role into v_target_role
   from planner.assignments
   where instance_id = p_instance_id and user_id = p_target_user_id
@@ -206,10 +198,15 @@ begin
   end if;
 
   if v_target_role in ('owner', 'manager') and not planner.is_at_least(p_instance_id, 'owner') then
-    raise exception 'planner_remove_assignment: insufficient_role_for_target';
+    raise exception 'planner_remove_assignment: insufficient_role';
   end if;
 
   if v_target_role = 'owner' then
+    perform 1 from planner.assignments
+      where instance_id = p_instance_id and role = 'owner'
+      order by id
+      for update;
+
     select count(*) into v_owner_count
     from planner.assignments
     where instance_id = p_instance_id and role = 'owner';
@@ -235,5 +232,10 @@ begin
 end;
 $$;
 
--- create or replace preserves the existing grants (revoke public/anon, grant
--- authenticated) from migration 20260714100000 — no need to repeat them.
+comment on function public.planner_remove_assignment(uuid, uuid) is
+  'IPI-575 — removes an existing member from a planner instance. A manager caller may only remove contributor/viewer targets; removing a manager or owner requires an owner caller. Removing the last owner is rejected (last_owner_protected), checked with the same row-locked, id-ordered owner-count pattern as planner_update_role.';
+
+revoke all on function public.planner_remove_assignment(uuid, uuid) from public;
+revoke all on function public.planner_remove_assignment(uuid, uuid) from anon;
+grant execute on function public.planner_remove_assignment(uuid, uuid) to authenticated;
+;

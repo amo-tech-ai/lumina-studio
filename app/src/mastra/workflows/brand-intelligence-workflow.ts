@@ -188,7 +188,7 @@ export const fanOutEnrichment = createStep({
 });
 
 // Step 6: write draft record and suspend for HITL approval
-const saveDraftAndWait = createStep({
+export const saveDraftAndWait = createStep({
   id: "save-draft-and-wait",
   inputSchema: z.object({ enriched: z.boolean() }),
   outputSchema: z.object({ draftId: z.string() }),
@@ -211,6 +211,13 @@ const saveDraftAndWait = createStep({
       // edge fn writes ai_profile_draft + embeds _draft_scores when draft_mode:true
       const draftProfile = brandRow?.ai_profile_draft as Record<string, unknown> | null ?? null;
       const scores = Array.isArray(draftProfile?._draft_scores) ? draftProfile._draft_scores : [];
+      // Strip _draft_scores from profile — it belongs in the dedicated column.
+      const cleanDraftProfile =
+        draftProfile && typeof draftProfile === "object"
+          ? Object.fromEntries(
+              Object.entries(draftProfile).filter(([key]) => key !== "_draft_scores"),
+            )
+          : {};
       const { data: draft, error } = await sb
         .from("brand_intake_drafts")
         .upsert(
@@ -219,11 +226,14 @@ const saveDraftAndWait = createStep({
             user_id: userId,
             source_url: brandRow?.brand_url ?? "",
             status: "pending_approval",
+            approved_at: null,
+            rejected_at: null,
+            expires_at: null,
             draft_profile: {
+              ...cleanDraftProfile,
               _workflow_run_id: runId,
-              profile: draftProfile,
-              scores,
             },
+            draft_scores: scores,
             updated_at: new Date().toISOString(),
           },
           { onConflict: "brand_id" },

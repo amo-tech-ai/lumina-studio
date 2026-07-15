@@ -185,7 +185,7 @@ function mapRecentShoots(rows: ShootRow[]): RecentShoot[] {
     }));
 }
 
-async function resolveFeaturedApproval(
+export async function resolveFeaturedApproval(
   supabase: Db,
   draft:
     | {
@@ -203,7 +203,18 @@ async function resolveFeaturedApproval(
   if (!runId) return null;
 
   const brandName = brandNameById.get(draft.brand_id) ?? "Brand";
-  const draftScores = normalizeDraftScores(draft.draft_scores);
+  // Backward compatibility: the old writer stored a wrapper {profile, scores},
+  // the new writer stores profile fields at the top level + separate draft_scores.
+  const rawDraftProfile =
+    dp?.profile && typeof dp.profile === "object"
+      ? dp.profile
+      : draft.draft_profile;
+  const rawDraftScores = Array.isArray(draft.draft_scores) && draft.draft_scores.length > 0
+    ? draft.draft_scores
+    : Array.isArray(dp?.scores)
+      ? dp.scores
+      : [];
+  const draftScores = normalizeDraftScores(rawDraftScores);
 
   const { data: liveRows, error: liveScoresError } = await supabase
     .from("brand_scores")
@@ -220,7 +231,7 @@ async function resolveFeaturedApproval(
     brandId: draft.brand_id,
     brandName,
     runId,
-    draft: parseAiProfile(draft.draft_profile),
+    draft: parseAiProfile(rawDraftProfile),
     draftScores,
     liveScores,
   };
