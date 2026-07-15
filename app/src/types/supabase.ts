@@ -1489,7 +1489,7 @@ export type Database = {
           {
             foreignKeyName: "brand_intake_drafts_brand_id_fkey"
             columns: ["brand_id"]
-            isOneToOne: false
+            isOneToOne: true
             referencedRelation: "brands"
             referencedColumns: ["id"]
           },
@@ -6747,10 +6747,11 @@ export type Database = {
         }
         Returns: Json
       }
+      // crm_convert_deal returns NULL brand_id for lost deals (SQL assigns v_result_brand_id only in the 'won' branch)
       crm_convert_deal: {
         Args: { p_deal_id: string; p_decision: string }
         Returns: {
-          brand_id: string
+          brand_id: string | null
           deal_id: string
           stage: string
         }[]
@@ -6831,7 +6832,7 @@ export type Database = {
       planner_get_member_names: {
         Args: { p_instance_id: string }
         Returns: {
-          display_name: string | null
+          display_name: string
           user_id: string
         }[]
       }

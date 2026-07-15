@@ -1,5 +1,12 @@
 import { describe, expect, it, vi } from "vitest";
 import { convertDeal } from "./convert-deal";
+import type { Database } from "@/types/supabase";
+
+// Type-level regression: crm_convert_deal returns NULL brand_id for lost deals
+type ConvertDealResult =
+  Database["public"]["Functions"]["crm_convert_deal"]["Returns"][number];
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+const _lostDealBrandId: ConvertDealResult["brand_id"] = null;
 
 function mockRpc(row: Record<string, unknown> | null, error: { message: string } | null = null) {
   const builder = { single: vi.fn(async () => ({ data: row, error })) };
