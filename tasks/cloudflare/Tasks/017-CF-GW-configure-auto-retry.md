@@ -45,14 +45,19 @@ No CLI required. Per-request retry overrides via headers:
 ```bash
 curl -X POST "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/ai/v1/chat/completions" \
   -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+  -H "cf-aig-gateway-id: ipix-prod" \
   -H "cf-aig-max-attempts: 5" \
   -H "cf-aig-retry-delay: 1000" \
+  -H "cf-aig-backoff: exponential" \
+  -H "Content-Type: application/json" \
   -d '{"model":"@cf/meta/llama-4-scout-17b-16e-instruct","messages":[{"role":"user","content":"hi"}]}'
 ```
 
+**Corrected 2026-07-14 (audit findings):** the Worker does not skip the failure process — it waits for the gateway's final response after retries complete, it doesn't get notified retry-by-retry. Never retry a request whose side effect already happened (a tool call) — retries belong to the model-inference layer, not tool execution. Do not test against a genuinely unreliable random upstream for a demo; use a controlled failure simulation instead. Define a total user-facing latency budget (attempts × delay must stay under whatever the agent's UX can tolerate) before picking attempt/delay values.
+
 Header reference:
-- `cf-aig-max-attempts` — max tries including the initial request
-- `cf-aig-retry-delay` — delay between attempts in milliseconds
+- `cf-aig-max-attempts` — max tries including the initial request. **Platform ceiling: 5 retry attempts** (verified against `developers.cloudflare.com/ai-gateway/configuration/request-handling/` — Cloudflare's own docs use "retry attempts," not just "attempts")
+- `cf-aig-retry-delay` — delay between attempts in milliseconds. **Platform ceiling: 5000ms**
 - `cf-aig-request-timeout` — per-attempt timeout in milliseconds
 
 ---
@@ -106,6 +111,31 @@ Pass criteria: Only 1 attempt is made, the upstream error is returned to the cal
 Force a 400 Bad Request from the upstream.
 
 Pass criteria: Single attempt, immediate 400 returned to caller. Auto-retry does not retry client errors.
+
+---
+
+## Managed-First Verification & Definition of Done
+
+*(Added 2026-07-14, per `tasks/cloudflare/Tasks/notes/04-improvements.md` — fill in at execution time, not in advance. A dashboard toggle alone does not satisfy "done.")*
+
+| Verification gate | Result |
+|---|---|
+| Cloudflare dashboard feature available? | — |
+| Wrangler command available? | — |
+| Cloudflare API available? | — |
+| Official package/module available? | — |
+| Official GitHub repository checked? | — |
+| Official example checked? | — |
+| Official tutorial/recipe checked? | — |
+| Existing iPix code already implements it? | — |
+| Configuration-only solution possible? | — |
+| Minimum integration code required | — |
+| Custom implementation necessary? | — |
+| Why custom code is unavoidable | — |
+| Rollback method | — |
+| Production evidence | — |
+
+**Definition of done:** Configured + integrated + tested + observed in logs + failure tested + rollback tested + documented = complete.
 
 ---
 

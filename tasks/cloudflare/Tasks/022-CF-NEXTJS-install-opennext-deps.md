@@ -17,9 +17,19 @@ references:
 
 # CF-NEXTJS-001 — Install OpenNext & Wrangler Dependencies
 
-**Status:** 🟡 Ready to start  
+**Status:** 🟢 Already complete (verified 2026-07-14 against live `app/wrangler.jsonc`, `app/open-next.config.ts`, and `app/package.json` — this exact setup already exists). See IPI-486 / `CF-MIG-110` (PR #282, merged) for the tracked completion.
+
+> **🛑 DO NOT RUN the Step-by-Step Instructions below — corrected 2026-07-14 (audit finding).** They install packages, upgrade Node, and run `npm audit fix --force` against an already-configured, working setup — real regression risk. They're kept only as historical record of what was originally installed. Verify current state instead:
+> ```bash
+> cd ~/ipix/app
+> npm ls @opennextjs/cloudflare wrangler
+> npx wrangler --version
+> npm run typecheck
+> ```
+> Also note: the body below recommends Node 18 and references a wrong next-task filename (`016-CF-NEXTJS-create-wrangler-config.md` — the real file is `023-CF-NEXTJS-create-wrangler-config.md`) — both stale, do not follow.
+
 **Effort:** 5 minutes  
-**Blocker for:** All subsequent OpenNext tasks
+**Blocker for:** All subsequent OpenNext tasks (historically — all are also already complete, see `023`-`025`)
 
 ---
 

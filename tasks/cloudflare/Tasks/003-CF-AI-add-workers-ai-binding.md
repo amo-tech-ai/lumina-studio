@@ -1,5 +1,6 @@
 # IPI-XXX · CF-AI-020 — Add Workers AI Binding
 
+**Linear:** [IPI-586 · CF-AI-003 — Wire one Workers AI call through ipix-prod gateway](https://linear.app/amo100/issue/IPI-586) (covers this step plus the model-resolver work in `004`)  
 **Task ID:** CF-AI-020  
 **Phase:** 1 — Core setup  
 **Difficulty:** Easy  
@@ -113,6 +114,37 @@ In the application code, reference `env.AI` and verify it is not undefined.
 
 Pass criteria: The application logs confirm the AI binding is present.
 
+### Test 4: A real protected call succeeds (added 2026-07-14, audit finding)
+
+`env.AI !== undefined` only proves the binding exists, not that it works. Make one real, authenticated `env.AI.run()` call (via the isolated smoke route in IPI-586) and confirm a real model response comes back.
+
+Pass criteria: The call returns an actual model response, not just a truthy binding reference.
+
+---
+
+## Managed-First Verification & Definition of Done
+
+*(Added 2026-07-14, per `tasks/cloudflare/Tasks/notes/04-improvements.md` — fill in at execution time, not in advance. A dashboard toggle alone does not satisfy "done.")*
+
+| Verification gate | Result |
+|---|---|
+| Cloudflare dashboard feature available? | — |
+| Wrangler command available? | — |
+| Cloudflare API available? | — |
+| Official package/module available? | — |
+| Official GitHub repository checked? | — |
+| Official example checked? | — |
+| Official tutorial/recipe checked? | — |
+| Existing iPix code already implements it? | — |
+| Configuration-only solution possible? | — |
+| Minimum integration code required | — |
+| Custom implementation necessary? | — |
+| Why custom code is unavoidable | — |
+| Rollback method | — |
+| Production evidence | — |
+
+**Definition of done:** Configured + integrated + tested + observed in logs + failure tested + rollback tested + documented = complete.
+
 ---
 
 ## Acceptance Criteria
@@ -149,7 +181,7 @@ The change is purely additive — removing it restores the previous state exactl
 
 ## What Custom Code This Removes
 
-None yet. This task is additive. The custom gateway code is removed in Task 5 (CF-MIG-220) after the new path is verified working.
+None yet. This task is additive. The custom gateway code is removed in `053-CF-MIGRATION-cleanup-custom-code.md` (IPI-592 · CF-MIG-820, Phase 9 of 9) after the new path is verified working — not "Task 5 (CF-MIG-220)," which was this task's superseded name/ordering.
 
 ---
 

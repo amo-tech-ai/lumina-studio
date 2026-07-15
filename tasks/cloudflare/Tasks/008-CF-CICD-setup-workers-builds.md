@@ -61,9 +61,15 @@ This is the officially recommended CI/CD method for Cloudflare Workers. It suppo
 
 ### Step 3: Configure build settings
 
-1. Set the build command to `npm run build` (this runs the OpenNext build)
-2. Set the deploy command to `npx wrangler deploy`
-3. Set the output directory if prompted (OpenNext handles this automatically)
+**⚠️ Corrected 2026-07-14 — real bug, verified against `app/package.json`:** `npm run build` is the plain Next.js build (`next build`), **not** the OpenNext build. Using it as the "build command" with `npx wrangler deploy` as a separate "deploy command" would deploy the wrong artifact. `app/package.json` defines a single combined command that does the whole pipeline correctly:
+
+```
+"deploy": "sync-groq-models.mjs && rm -rf .next .open-next && opennextjs-cloudflare build && opennextjs-cloudflare deploy"
+```
+
+1. Leave the build command **empty**, or set it to a non-deploying validation step (e.g. `npm run typecheck`)
+2. Set the deploy command to `npm run deploy` — **not** `npm run build` + `npx wrangler deploy` separately
+3. For non-production/preview branches, use a dedicated OpenNext preview/upload script (`npm run upload` exists in `app/package.json` for this) rather than the production `deploy` script
 4. Save the configuration
 
 ### Step 4: Configure environment variables for builds
@@ -157,15 +163,48 @@ Pass criteria: Build logs show the OpenNext build output and any errors clearly.
 
 ---
 
+## Managed-First Verification & Definition of Done
+
+*(Added 2026-07-14, per `tasks/cloudflare/Tasks/notes/04-improvements.md` — fill in at execution time, not in advance. A dashboard toggle alone does not satisfy "done.")*
+
+| Verification gate | Result |
+|---|---|
+| Cloudflare dashboard feature available? | — |
+| Wrangler command available? | — |
+| Cloudflare API available? | — |
+| Official package/module available? | — |
+| Official GitHub repository checked? | — |
+| Official example checked? | — |
+| Official tutorial/recipe checked? | — |
+| Existing iPix code already implements it? | — |
+| Configuration-only solution possible? | — |
+| Minimum integration code required | — |
+| Custom implementation necessary? | — |
+| Why custom code is unavoidable | — |
+| Rollback method | — |
+| Production evidence | — |
+
+**Definition of done:** Configured + integrated + tested + observed in logs + failure tested + rollback tested + documented = complete.
+
+---
+
 ## Acceptance Criteria
 
 - [ ] The `ipix-operator` Worker is connected to the GitHub repository
 - [ ] The root directory is set to `app`
-- [ ] The build command is `npm run build`
+- [ ] The deploy command is `npm run deploy` (not `npm run build` + a separate `wrangler deploy`)
 - [ ] A push to main triggers a build and deploy
 - [ ] A pull request triggers a preview deployment
 - [ ] Build logs are visible in the dashboard
 - [ ] Build environment variables are configured
+- [ ] **Missing gates, added 2026-07-14 (audit finding):** lint, typecheck, and unit tests run and pass (GitHub CI, not just Workers Builds) before this deploy step runs
+- [ ] Deployment health check exists (a post-deploy smoke request, not just "build succeeded")
+- [ ] Rollback has been tested at least once, not just documented
+- [ ] Branch protection prevents direct pushes to `main` bypassing PR review
+- [ ] Production deploys require explicit approval, not just an automatic merge trigger
+- [ ] Confirmed preview deployments do not have access to production data/secrets
+
+Workers Builds deploying on every push is not, by itself, a complete quality gate — it must run only after GitHub CI (lint/typecheck/test) passes.
 
 ---
 

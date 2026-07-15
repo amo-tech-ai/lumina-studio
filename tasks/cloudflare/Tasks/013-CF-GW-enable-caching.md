@@ -47,9 +47,12 @@ Caching is dashboard-only — there is no required CLI command. To verify from C
 # Send the same prompt twice and confirm the second is served from cache
 curl -X POST "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/ai/v1/chat/completions" \
   -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+  -H "cf-aig-gateway-id: ipix-prod" \
   -H "Content-Type: application/json" \
   -d '{"model":"@cf/meta/llama-4-scout-17b-16e-instruct","messages":[{"role":"user","content":"What is iPix?"}]}'
 ```
+
+**Corrected 2026-07-14:** `<50ms` and "$0" above are illustrative, not documented guarantees — measure actual latency/cost, don't treat them as acceptance requirements. Global one-hour caching is unsafe for personalized, tool-derived, or CRM/brand-data-dependent responses — only enable for deterministic, non-private, read-only prompts (e.g. this file's marketing-FAQ example), not agents that touch client data. Cache key includes the full request body plus the provider auth header, so only genuinely identical requests hit cache.
 
 ---
 
@@ -98,6 +101,45 @@ Set TTL to 1 minute, send a prompt, wait 70 seconds, repeat.
 
 Pass criteria: The second request returns cache: MISS again.
 
+### Test 4: Different tenant/request body is a cache miss (added 2026-07-14, audit finding)
+
+Send the same prompt text but with different tenant metadata or a different system prompt.
+
+Pass criteria: cache MISS — confirms the cache key includes the full request body, not just the visible prompt text, so tenant/context differences aren't accidentally served a cached response meant for someone else.
+
+### Test 5: Explicit cache bypass for tool-bearing requests (corrected 2026-07-15, audit finding)
+
+**Corrected 2026-07-15:** tool-bearing requests are not automatically excluded from cache — the cache key is derived from the full request body, including the `tools` array, per Cloudflare's caching docs (https://developers.cloudflare.com/ai-gateway/features/caching/). Two identical tool-bearing requests can still return a cache HIT. If stale tool output must never be served, the caller must explicitly opt out.
+
+Send a request that includes a `tools` array, setting the `cf-aig-skip-cache: true` header (the current documented bypass; the older `cf-skip-cache` header is deprecated).
+
+Pass criteria: response is a confirmed cache bypass (not merely a changed cache key or a MISS from a first-time prompt) — verify via the gateway analytics/response metadata that skip-cache was honored. Keep this alongside a second case without the header, sending the same tool-bearing payload twice, to confirm it CAN return cache HIT — proving the two behaviors are distinct and cache bypass for live-state calls is explicit, not assumed.
+
+---
+
+## Managed-First Verification & Definition of Done
+
+*(Added 2026-07-14, per `tasks/cloudflare/Tasks/notes/04-improvements.md` — fill in at execution time, not in advance. A dashboard toggle alone does not satisfy "done.")*
+
+| Verification gate | Result |
+|---|---|
+| Cloudflare dashboard feature available? | — |
+| Wrangler command available? | — |
+| Cloudflare API available? | — |
+| Official package/module available? | — |
+| Official GitHub repository checked? | — |
+| Official example checked? | — |
+| Official tutorial/recipe checked? | — |
+| Existing iPix code already implements it? | — |
+| Configuration-only solution possible? | — |
+| Minimum integration code required | — |
+| Custom implementation necessary? | — |
+| Why custom code is unavoidable | — |
+| Rollback method | — |
+| Production evidence | — |
+
+**Definition of done:** Configured + integrated + tested + observed in logs + failure tested + rollback tested + documented = complete.
+
 ---
 
 ## Acceptance Criteria
@@ -115,7 +157,7 @@ Pass criteria: The second request returns cache: MISS again.
 2. Toggle caching off.
 3. Click Save.
 
-Cached entries expire immediately on the next request — no further action required.
+**Corrected 2026-07-14:** cached entries clearing immediately on toggle-off is not a documented Cloudflare guarantee — verify actual behavior rather than assuming, especially if a cached response ever needs to be invalidated urgently (e.g. incorrect content).
 
 ---
 
@@ -128,7 +170,7 @@ Cached entries expire immediately on the next request — no further action requ
 
 ## What Custom Code This Removes
 
-Removes any in-Mastra or in-Worker response caching code. Custom LRU caches, custom Redis-backed prompt caches, or any in-memory `resultCache` map in the previous gateway Worker can be deleted once AI Gateway caching is on. Custom caching code in `services/cloudflare-worker/` is deleted as part of task 053.
+**Corrected 2026-07-14 (overclaim):** gateway exact-match caching is not equivalent to a general-purpose application cache — it only helps for genuinely identical requests. It does not replace business-logic caches (e.g. a Redis cache keyed on business entities, not raw prompts) that serve a different purpose. Custom caching code in `services/cloudflare-worker/` is only deleted as part of task 053, and only if it's confirmed redundant, not assumed redundant.
 
 ---
 

@@ -52,15 +52,8 @@ No CLI.
 3. Select the **Guardrails** tab (also available under Settings, depending on dashboard version).
 4. Toggle **Enable guardrails** on.
 5. **Evaluation scope:** choose both — user prompts and model responses.
-6. **Hazard categories:** select the categories you want to block or flag. Common set:
-   - Hate/HR (harassment)
-   - Hate/Threatening
-   - Self-Harm
-   - Sexual
-   - Sexual/Minors
-   - Violence
-   - Violence/Graphic
-7. **Action per category:** Block (recommended for production) or Flag (for analytics only).
+6. **Hazard categories:** select the categories you want to block or flag. **Verify the exact current list in the dashboard at configuration time** — official docs describe this as customizable rather than publishing a fixed category list; treat any specific category names as a starting point to confirm, not a guaranteed-current set.
+7. **Action per category:** start with **Flag** (analytics only, no blocking) for every category. Promote a category to **Block** only after the false-positive rate gate below is met — do not start in Block mode.
 8. Save.
 
 ---
@@ -83,9 +76,16 @@ None.
 
 ### Test 1: Hazardous prompt is blocked
 
-Send a known-harassment prompt through the gateway.
+Send a known-harassment prompt through the gateway:
 
-Pass criteria: Response is a 400 or 451 with a `moderation_blocked` indicator. Analytics logs the matched hazard category.
+```bash
+curl -X POST "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/ai/v1/chat/completions" \
+  -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+  -H "cf-aig-gateway-id: ipix-prod" \
+  -d '{"model":"@cf/meta/llama-4-scout-17b-16e-instruct","messages":[{"role":"user","content":"<known-harassment test prompt>"}]}'
+```
+
+**Pass criteria (corrected 2026-07-14 — the original "400 or 451 with `moderation_blocked`" claim was wrong, re-verified against `developers.cloudflare.com/ai-gateway/features/guardrails/`):** the response contains error code **`2016`**, message `"Prompt blocked due to security configurations"`. A response blocked by the *model's* output instead uses error code **`2017`**, message `"Response blocked due to security configurations"`. No specific HTTP status is documented for either case — match on the error code/message in application logic, don't assume a status code. Analytics logs the matched hazard category.
 
 ### Test 2: Safe prompt passes
 
@@ -107,13 +107,42 @@ Pass criteria: Response-guardrail triggers, the user sees a safe message block.
 
 ---
 
+## Managed-First Verification & Definition of Done
+
+*(Added 2026-07-14, per `tasks/cloudflare/Tasks/notes/04-improvements.md` — fill in at execution time, not in advance. A dashboard toggle alone does not satisfy "done.")*
+
+| Verification gate | Result |
+|---|---|
+| Cloudflare dashboard feature available? | — |
+| Wrangler command available? | — |
+| Cloudflare API available? | — |
+| Official package/module available? | — |
+| Official GitHub repository checked? | — |
+| Official example checked? | — |
+| Official tutorial/recipe checked? | — |
+| Existing iPix code already implements it? | — |
+| Configuration-only solution possible? | — |
+| Minimum integration code required | — |
+| Custom implementation necessary? | — |
+| Why custom code is unavoidable | — |
+| Rollback method | — |
+| Production evidence | — |
+
+**Definition of done:** Configured + integrated + tested + observed in logs + failure tested + rollback tested + documented = complete.
+
+---
+
 ## Acceptance Criteria
 
-- [ ] Guardrails enabled on the gateway
+- [ ] Guardrails enabled on the gateway, starting in **Flag mode** for every hazard category, not Block (added 2026-07-14, audit finding — rolling straight to Block in production is too risky before false-positive rate is known)
 - [ ] Evaluation scope includes both prompts and responses
 - [ ] Hazard categories selected
-- [ ] Action per category set (Block or Flag)
-- [ ] At least one blocked request visible in the analytics dashboard
+- [ ] At least one flagged request is visible in the analytics dashboard, confirming Flag mode is capturing hazard hits
+- [ ] **Promotion gate (corrected 2026-07-14 — reconciles Flag-first rollout with the old "blocked request" criterion, which forced Block prematurely):** false-positive rate is measured in Flag mode against curated safe/unsafe test datasets. A category is promoted from Flag to Block only once its measured false-positive rate is below an agreed threshold (set the threshold with the policy team before promoting, e.g. <1%). A blocked request appearing in analytics is evidence of *this promotion step*, not a requirement for closing the initial Flag-mode rollout.
+
+**Out of scope for this dashboard-only task (audit finding):** blocked-response UX (what the user sees), and tool-calling/structured-output behavior when a request is blocked, require application code changes. They are tracked separately in the application integration task, not this one — this task's acceptance criteria stay limited to what's verifiable from the dashboard/analytics.
+
+**Missing companion task (audit finding):** Guardrails evaluates harmful content; it does not cover data loss prevention (DLP) — secrets or sensitive client data appearing in prompts/responses need a separate DLP evaluation, not assumed covered by this task.
 
 ---
 
@@ -132,7 +161,7 @@ Open Guardrails tab → toggle **Enable guardrails** off → Save. All future re
 
 ## What Custom Code This Removes
 
-Removes any custom profanity filter, harassment-detection middleware, or pre-flight content inspection the previous Worker implemented. Custom OpenAI Moderation API wrapper code can be deleted.
+**Corrected 2026-07-14 (overclaim):** don't delete custom moderation code immediately on enabling this. Run Guardrails in Flag mode first, measure false-positive rate against real traffic, and only remove the old custom profanity filter / harassment-detection middleware / OpenAI Moderation API wrapper once Guardrails has been proven equivalent or better in production — not on the strength of it being configured.
 
 ---
 
