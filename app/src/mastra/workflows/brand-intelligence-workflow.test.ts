@@ -113,4 +113,95 @@ describe("save-draft-and-wait stale-timestamp clearing", () => {
     expect(upsertPayload.expires_at).toBeNull();
     expect(upsertPayload.draft_profile).toBeDefined();
   });
+
+  it("stores profile fields at the top level of draft_profile", async () => {
+    const aiProfileDraft = {
+      name: "Test Brand",
+      tagline: "A test",
+      overview: "Just testing",
+      _draft_scores: [{ score_type: "visual_identity", score: 85, rationale: "Solid" }],
+    };
+    const mockClient = makeMockClient();
+    // Return an ai_profile_draft with actual profile data
+    mockClient.from = vi.fn((table: string) => {
+      if (table === "brands") {
+        return {
+          select: vi.fn().mockReturnThis(),
+          eq: vi.fn().mockReturnThis(),
+          single: vi.fn().mockResolvedValue({
+            data: { brand_url: "https://example.com", ai_profile_draft: aiProfileDraft },
+            error: null,
+          }),
+          update: vi.fn().mockReturnValue({
+            eq: vi.fn().mockResolvedValue({ data: null, error: null }),
+          }),
+        } as never;
+      }
+      if (table === "brand_intake_drafts") {
+        return { upsert: mockClient._upsertSpy };
+      }
+      return {};
+    });
+    vi.mocked(createClient).mockReturnValue(mockClient);
+
+    await saveDraftAndWait.execute(
+      {
+        enriched: true,
+        suspend: vi.fn().mockResolvedValue(undefined),
+        getInitData: () => ({ brandId: BRAND_ID, userId: USER_ID }),
+        runId: RUN_ID,
+      } as never,
+    );
+
+    const p = mockClient._upsertPayload[0] as Record<string, unknown>;
+    const df = p.draft_profile as Record<string, unknown>;
+    // Profile fields at top level
+    expect(df.name).toBe("Test Brand");
+    expect(df.tagline).toBe("A test");
+    expect(df.overview).toBe("Just testing");
+    // _draft_scores stripped from draft_profile
+    expect(df).not.toHaveProperty("_draft_scores");
+    // _workflow_run_id present
+    expect(df._workflow_run_id).toBe(RUN_ID);
+  });
+
+  it("populates draft_scores column", async () => {
+    const scores = [{ score_type: "visual_identity", score: 85, rationale: "Solid" }];
+    const aiProfileDraft = { name: "Test", _draft_scores: scores };
+    const mockClient = makeMockClient();
+    mockClient.from = vi.fn((table: string) => {
+      if (table === "brands") {
+        return {
+          select: vi.fn().mockReturnThis(),
+          eq: vi.fn().mockReturnThis(),
+          single: vi.fn().mockResolvedValue({
+            data: { brand_url: "https://example.com", ai_profile_draft: aiProfileDraft },
+            error: null,
+          }),
+          update: vi.fn().mockReturnValue({
+            eq: vi.fn().mockResolvedValue({ data: null, error: null }),
+          }),
+        } as never;
+      }
+      if (table === "brand_intake_drafts") {
+        return { upsert: mockClient._upsertSpy };
+      }
+      return {};
+    });
+    vi.mocked(createClient).mockReturnValue(mockClient);
+
+    await saveDraftAndWait.execute(
+      {
+        enriched: true,
+        suspend: vi.fn().mockResolvedValue(undefined),
+        getInitData: () => ({ brandId: BRAND_ID, userId: USER_ID }),
+        runId: RUN_ID,
+      } as never,
+    );
+
+    const p = mockClient._upsertPayload[0] as Record<string, unknown>;
+    expect(Array.isArray(p.draft_scores)).toBe(true);
+    expect(p.draft_scores).toHaveLength(1);
+    expect((p.draft_scores as Array<Record<string, unknown>>)[0].score_type).toBe("visual_identity");
+  });
 });

@@ -211,6 +211,13 @@ export const saveDraftAndWait = createStep({
       // edge fn writes ai_profile_draft + embeds _draft_scores when draft_mode:true
       const draftProfile = brandRow?.ai_profile_draft as Record<string, unknown> | null ?? null;
       const scores = Array.isArray(draftProfile?._draft_scores) ? draftProfile._draft_scores : [];
+      // Strip _draft_scores from profile — it belongs in the dedicated column.
+      const cleanDraftProfile =
+        draftProfile && typeof draftProfile === "object"
+          ? Object.fromEntries(
+              Object.entries(draftProfile).filter(([key]) => key !== "_draft_scores"),
+            )
+          : {};
       const { data: draft, error } = await sb
         .from("brand_intake_drafts")
         .upsert(
@@ -223,10 +230,10 @@ export const saveDraftAndWait = createStep({
             rejected_at: null,
             expires_at: null,
             draft_profile: {
+              ...cleanDraftProfile,
               _workflow_run_id: runId,
-              profile: draftProfile,
-              scores,
             },
+            draft_scores: scores,
             updated_at: new Date().toISOString(),
           },
           { onConflict: "brand_id" },
