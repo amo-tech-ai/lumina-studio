@@ -181,7 +181,7 @@ The change is purely additive — removing it restores the previous state exactl
 
 ## What Custom Code This Removes
 
-None yet. This task is additive. The custom gateway code is removed in Task 5 (CF-MIG-220) after the new path is verified working.
+None yet. This task is additive. The custom gateway code is removed in `053-CF-MIGRATION-cleanup-custom-code.md` (IPI-592 · CF-MIG-820, Phase 9 of 9) after the new path is verified working — not "Task 5 (CF-MIG-220)," which was this task's superseded name/ordering.
 
 ---
 

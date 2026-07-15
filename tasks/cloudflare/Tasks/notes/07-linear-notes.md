@@ -11,6 +11,14 @@ A strong group of new follow-up tasks was created, especially around security, p
 * multiple existing issues still describe the retired custom-gateway architecture;
 * some new issue descriptions repeat technical errors already identified in the task audits.
 
+> **Superseded (partially):** This audit predates the creation of `IPI-606`–`IPI-611`. Per-agent
+> routing flags (`IPI-607`), the production soak gate (`IPI-609`), the AI Search child tasks
+> (`IPI-608`, `IPI-610`, `IPI-611`), and `CF-SEC-010` (`IPI-606`) are now tracked in Linear — see
+> `notes/09-notes-linear.md` (lines 20–27) and `notes/10-linear-list.md` (lines 8–10, 36–42) for
+> current coverage. The findings below are kept as the historical point-in-time record and were
+> not silently rewritten; do not create duplicate issues for the items flagged "🔴 Missing" in
+> sections 3–5 or the "Final audit result" table without checking `notes/09`/`notes/10` first.
+
 ### Overall synchronization score
 
 | Area                                           |   Score | Status            |
@@ -206,6 +214,10 @@ Manual documentation should be the fallback, not the first solution.
 
 # 3. Suggested improvements missing from Linear
 
+> **Superseded:** per-agent flags, migration waves, AI Search rows, and Infisical/`CF-SEC-010`
+> below are now covered by `IPI-606`–`IPI-611` — see `notes/09-notes-linear.md` (lines 20–27) and
+> `notes/10-linear-list.md` (lines 8–10, 36–42).
+
 ## Missing task group
 
 | Missing improvement                                                            | Linear coverage | Required action                                               |
@@ -294,6 +306,9 @@ Infisical
 This was one of the specific proposed improvements and remains missing.
 
 ## Required task
+
+> **Superseded:** this issue now exists as `IPI-606 · CF-SEC-010` — see
+> `notes/10-linear-list.md` line 9. Do not create a duplicate.
 
 **IPI-XXX · CF-SEC-010 — Connect Infisical Secrets to Cloudflare Deployment**
 
@@ -397,6 +412,11 @@ Cloudflare currently exposes official documentation sections for REST APIs, Work
 ---
 
 # Final audit result
+
+> **Superseded (partially):** the "No" rows for per-agent feature-flag rollback, Infisical
+> integration, AI Search tenant isolation, and zero-legacy-traffic verification predate
+> `IPI-606`–`IPI-611`. See `notes/09-notes-linear.md` (lines 20–27) and `notes/10-linear-list.md`
+> (lines 8–10, 36–42) for current Linear coverage before creating new issues.
 
 | Question                                              | Answer                    |
 | ----------------------------------------------------- | -------------------------- |

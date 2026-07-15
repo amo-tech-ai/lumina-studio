@@ -211,8 +211,8 @@ Pass criteria: The response comes from the fallback model. The response header i
 
 ## Acceptance Criteria
 
-- [ ] Caching is enabled with a 1-hour TTL
-- [ ] Rate limiting is set to 200 requests per minute
+- [ ] Caching is enabled only for agents/routes cleared by the data-classification decision (Feature 1), with 1-hour TTL where enabled — not enabled globally by default
+- [ ] Rate limiting is enabled with a limit justified by measured traffic and documented capacity needs (Feature 2) — not a fixed 200 RPM pass/fail bar
 - [ ] A daily spend limit of $50 is configured
 - [ ] Automatic retries are set to 3 attempts with exponential backoff
 - [ ] Dynamic routing is configured with GLM-4.7-Flash as the fallback, **and** at least one real call site has been updated to invoke `dynamic/ipix-default` by name (not just the route existing in the dashboard)

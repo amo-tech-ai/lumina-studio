@@ -95,7 +95,7 @@ To verify in dashboard:
 1. Open **AI Gateway**.
 2. Select the gateway.
 3. Open the **Logs** / **Analytics** tab.
-4. Filter by `tenant_id = brand_a` and confirm only those requests appear.
+4. Filter by `tenant_hash = <hash of brand_a>` and confirm only those requests appear.
 
 ---
 
@@ -123,6 +123,8 @@ export function gatewayMetadata(req: RequestContext) {
 }
 ```
 
+`hash()` is not an existing shared util (no `crypto.createHash`/HMAC helper exists in `app/src` today — confirmed by repo search). Implement it inline in this same file: Node's `crypto.createHash('sha256').update(id).digest('hex').slice(0, 16)`. This only needs to be one-way and stable per ID for filtering/cardinality in analytics — not a security secret, so no key/salt is required.
+
 ---
 
 ## Dependencies
@@ -145,13 +147,13 @@ Pass criteria: The request appears in the gateway analytics with all 5 metadata 
 
 ### Test 2: Filter by metadata
 
-In the dashboard, filter logs by `tenant_id = brand_a`.
+In the dashboard, filter logs by `tenant_hash = <hash of brand_a>`.
 
 Pass criteria: Only requests for brand_a are returned.
 
 ### Test 3: Per-user spend limit (paired with task 015)
 
-Configure a spend limit scoped by `metadata.user_id: split by value`. Make one request from user A exceeding the budget, another from user B.
+Configure a spend limit scoped by `metadata.actor_hash: split by value`. Make one request from user A exceeding the budget, another from user B.
 
 Pass criteria: User A is blocked, user B succeeds.
 
@@ -190,9 +192,9 @@ Pass criteria: Request succeeds. No analytics column is populated.
 
 ## Acceptance Criteria
 
-- [ ] Metadata helper exists in `app/src/lib/ai/gateway-metadata.ts`
+- [ ] Metadata helper exists in `app/src/lib/ai/gateway-context.ts`
 - [ ] Every Mastra agent's AI call passes the metadata object
-- [ ] At least 5 metadata fields are populated (user_id, tenant_id, feature, session_id, is_trial)
+- [ ] At least 5 metadata fields are populated (actor_hash, tenant_hash, feature, session_id, is_trial)
 - [ ] Logs in the dashboard are filterable by every metadata field
 
 ---
@@ -205,7 +207,7 @@ Remove the `metadata` parameter (or the `cf-aig-metadata` header) from the call 
 
 ## Evidence Required
 
-1. Screenshot of the gateway analytics filtered by tenant_id, showing filtered results.
+1. Screenshot of the gateway analytics filtered by tenant_hash, showing filtered results.
 2. Code diff showing the `metadata: {...}` object on the AI binding call.
 
 ---
@@ -218,4 +220,4 @@ Removes any custom logging-sidecar code that annotated AI calls with user IDs be
 
 ## User Journey After This Task
 
-> A premium brand's account manager gets a support ticket: "Why was I rate limited at 3 PM yesterday?" The ops team opens the gateway analytics, filters by `tenant_id = brand_premium` and `user_id = u_42`, sees the exact times, models, prompts, and token counts for that user. They confirm the user ran a Creative Director loop that hit the rate limit. They respond to the user with the dashboard screenshot. No ticket escalation, no engineering time spent.
+> A premium brand's account manager gets a support ticket: "Why was I rate limited at 3 PM yesterday?" The ops team opens the gateway analytics, filters by `tenant_hash = <hash of brand_premium>` and `actor_hash = <hash of u_42>`, sees the exact times, models, prompts, and token counts for that user. They confirm the user ran a Creative Director loop that hit the rate limit. They respond to the user with the dashboard screenshot. No ticket escalation, no engineering time spent.

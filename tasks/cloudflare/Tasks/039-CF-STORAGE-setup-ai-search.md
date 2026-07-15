@@ -10,7 +10,7 @@
 **Estimated time:** 30 minutes for the dashboard proof-of-concept; tenant isolation and upload security are separate, larger follow-on work
 **Dependencies:** None required for the dashboard pilot phase — the "001, 003" dependency below applied to the old, premature "production hardening" framing; a Workers binding isn't needed until Step 2 of the pilot
 
-**⚠️ Beta status correction (2026-07-14):** AI Search is confirmed **GA (generally available), not Beta**, per `developers.cloudflare.com/ai-search/` (shows "Available on all plans" — verified directly, no Beta badge). Two separate audit passes on this file assumed Beta status; both were checked against live docs and found wrong. Don't let that false assumption drive urgency either direction — evaluate on its actual merits, not a Beta/GA label.
+**⚠️ Beta status correction (2026-07-15):** AI Search is confirmed **in open beta (entered April 16, 2026), not GA (generally available)** — `developers.cloudflare.com/ai-search/` still shows an "Overview Beta" badge alongside "Available on all plans" (those two facts aren't mutually exclusive; "available on all plans" doesn't mean GA). A prior version of this note inferred GA from the "available on all plans" wording alone — that inference was wrong. Treat AI Search as an active beta product (API/behavior can still change) until Cloudflare publishes an explicit GA announcement.
 
 ---
 
@@ -92,6 +92,8 @@ const results = await instance.search({
 });
 ```
 
+**Provisioning note (audit finding, 2026-07-15):** `env.AI_SEARCH.get(...)` looks up an existing instance — it does not create one. The Dashboard Steps below create a single instance named `brand-intelligence-kb` for the pilot only, not one instance per `orgId`. Before onboarding a second org under the instance-per-tenant model, add a server-side, authenticated, idempotent provisioning step — e.g. `await env.AI_SEARCH.create({ id: \`brand-intelligence-kb-${orgId}\` })`, called once per org (guarded so a repeat call is a no-op) — or, if per-tenant instances turn out not to be needed for the pilot's scope, switch this code sample to the shared instance + server-verified metadata filter option from the table above instead.
+
 **Upload security — not yet designed, required before this leaves pilot (audit finding):** MIME allow-list, file size limit, filename sanitization, duplicate detection, PDF-parsing-failure handling, document ownership, deletion/offboarding, retention policy, and a decision on whether malware scanning is needed. None of this exists yet in the pilot scope above.
 
 ---
@@ -151,6 +153,7 @@ Pass criteria: `env.AI_SEARCH` type is generated as `AISearchNamespace` (or equi
 Call the Worker route that indexes a test string and queries it.
 
 **Corrected 2026-07-14 (audit finding) — pass criteria: do not use a fixed `score > 0.8` threshold.** Retrieval scores depend on model, query, and corpus — a universal numeric cutoff isn't a reliable quality metric. Use retrieval evaluation instead:
+
 - the expected document appears in the top 3 results
 - no other tenant's document appears in the results (cross-tenant leak test)
 - source filename/citation is present in the response
@@ -163,6 +166,15 @@ Query with a specific keyword present in only one chunk.
 
 Pass criteria: Keyword matches correctly, BM25 score boosts the correct document to rank #1.
 
+### Test 4: Answer Contract (citations, source attribution, not-found)
+
+**Added 2026-07-15 (audit finding):** `instance.search()` (Test 2) only proves chunk retrieval — it doesn't prove the downstream answer layer the Brand Intelligence agent actually returns to the operator emits a proper citations array or a defined not-found response. Test the agent's response, not just the raw `search()` call.
+
+Pass criteria, matching the answer-contract shape in `tasks/cloudflare/mastra/output.md:300-307`:
+- Response includes a `citations[]` array (not just "a citation is present") with `url`/filename per entry
+- Every citation traces back to an uploaded reference document, never a fabricated source
+- An unsupported query returns a defined "not found" response, never a hallucinated citation
+
 ---
 
 ## Acceptance Criteria
@@ -173,6 +185,12 @@ Pass criteria: Keyword matches correctly, BM25 score boosts the correct document
 - [ ] Tenant-isolation model selected (instance-per-tenant or proven filtered-shared — see table above)
 - [ ] Authenticated organization context (Supabase session) controls instance/filter selection — no client-supplied tenant header
 - [ ] Upload type and size restrictions enforced
+- [ ] Filenames sanitized before storage/display (no path traversal, no unsafe characters)
+- [ ] Duplicate-upload detection in place (same file/tenant doesn't silently double-index)
+- [ ] PDF-parsing failures are caught and surfaced (a failed upload doesn't silently disappear)
+- [ ] Document ownership (uploader + org) recorded for every item
+- [ ] Retention policy defined (how long documents are kept, when they expire)
+- [ ] Malware-scanning decision made and documented (scan on upload, or explicitly deferred with rationale)
 - [ ] AI Search instance created in the dashboard
 - [ ] Binding `AI_SEARCH` added to Wrangler config
 - [ ] One test document indexes successfully

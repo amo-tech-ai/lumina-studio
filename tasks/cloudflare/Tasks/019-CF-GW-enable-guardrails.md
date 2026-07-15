@@ -53,7 +53,7 @@ No CLI.
 4. Toggle **Enable guardrails** on.
 5. **Evaluation scope:** choose both — user prompts and model responses.
 6. **Hazard categories:** select the categories you want to block or flag. **Verify the exact current list in the dashboard at configuration time** — official docs describe this as customizable rather than publishing a fixed category list; treat any specific category names as a starting point to confirm, not a guaranteed-current set.
-7. **Action per category:** Block (recommended for production) or Flag (for analytics only).
+7. **Action per category:** start with **Flag** (analytics only, no blocking) for every category. Promote a category to **Block** only after the false-positive rate gate below is met — do not start in Block mode.
 8. Save.
 
 ---
@@ -134,14 +134,13 @@ Pass criteria: Response-guardrail triggers, the user sees a safe message block.
 
 ## Acceptance Criteria
 
-- [ ] Guardrails enabled on the gateway, starting in **Flag mode**, not Block (added 2026-07-14, audit finding — rolling straight to Block in production is too risky before false-positive rate is known)
+- [ ] Guardrails enabled on the gateway, starting in **Flag mode** for every hazard category, not Block (added 2026-07-14, audit finding — rolling straight to Block in production is too risky before false-positive rate is known)
 - [ ] Evaluation scope includes both prompts and responses
 - [ ] Hazard categories selected
-- [ ] Action per category set (Block or Flag)
-- [ ] At least one blocked request visible in the analytics dashboard
-- [ ] False-positive rate measured against curated safe/unsafe test datasets before enabling Block mode in production
-- [ ] Blocked-response UX is defined in the application (what the user actually sees), not left as a raw gateway error
-- [ ] Tool-calling and structured-output requests have a defined behavior when blocked (not just plain chat)
+- [ ] At least one flagged request is visible in the analytics dashboard, confirming Flag mode is capturing hazard hits
+- [ ] **Promotion gate (corrected 2026-07-14 — reconciles Flag-first rollout with the old "blocked request" criterion, which forced Block prematurely):** false-positive rate is measured in Flag mode against curated safe/unsafe test datasets. A category is promoted from Flag to Block only once its measured false-positive rate is below an agreed threshold (set the threshold with the policy team before promoting, e.g. <1%). A blocked request appearing in analytics is evidence of *this promotion step*, not a requirement for closing the initial Flag-mode rollout.
+
+**Out of scope for this dashboard-only task (audit finding):** blocked-response UX (what the user sees), and tool-calling/structured-output behavior when a request is blocked, require application code changes. They are tracked separately in the application integration task, not this one — this task's acceptance criteria stay limited to what's verifiable from the dashboard/analytics.
 
 **Missing companion task (audit finding):** Guardrails evaluates harmful content; it does not cover data loss prevention (DLP) — secrets or sensitive client data appearing in prompts/responses need a separate DLP evaluation, not assumed covered by this task.
 

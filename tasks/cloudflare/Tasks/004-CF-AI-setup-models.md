@@ -87,6 +87,8 @@ The `workers-ai-provider` dependency is added automatically by npm install.
 
 **Critical: `resolveModel` must route through `ipix-prod`, not call Workers AI directly.** Verified against the current `workers-ai-provider` README (`github.com/cloudflare/ai/packages/workers-ai-provider`): the gateway ID is configured once, at `createWorkersAI()` construction time, via a `gateway: { id }` option.
 
+**Note: embedding is resolved separately, not through this chat resolver.** `@cf/baai/bge-base-en-v1.5` is an embedding model, not a callable chat/language model — Cloudflare's AI SDK provider exposes it via `workersai.textEmbedding(...)` (used with `embed`/`embedMany` from the `ai` package), not the generic `workersai(modelId)` callable that `resolveWorkersAiModel` returns below. Keeping it in the same tier map as the chat models would let a caller wrap an embedding model in a language-model interface and fail at runtime. This matches the existing split in `app/src/lib/ai/provider-adapter.ts`, where embeddings already go through a dedicated `/v1/embeddings` path rather than the chat completion path.
+
 ```ts
 import { createWorkersAI } from "workers-ai-provider";
 
@@ -94,17 +96,30 @@ const MODEL_IDS = {
   fast: "@cf/zai-org/glm-4.7-flash",
   default: "@cf/meta/llama-4-scout-17b-16e-instruct",
   structured: "@cf/google/gemma-4-26b-a4b-it",
-  embedding: "@cf/baai/bge-base-en-v1.5",
 } as const;
+
+const EMBEDDING_MODEL_ID = "@cf/baai/bge-base-en-v1.5";
 
 type ModelTier = keyof typeof MODEL_IDS;
 
 export function resolveWorkersAiModel(tier: ModelTier, env: { AI: Ai }) {
+  if (!Object.prototype.hasOwnProperty.call(MODEL_IDS, tier)) {
+    throw new Error(`Unsupported Workers AI model tier: ${tier}`);
+  }
   const workersai = createWorkersAI({
     binding: env.AI,
     gateway: { id: "ipix-prod" }, // <- every call from this provider instance routes through the gateway
   });
   return workersai(MODEL_IDS[tier]);
+}
+
+// Dedicated embedding resolver — do not route "embedding" through resolveWorkersAiModel above.
+export function resolveWorkersAiEmbeddingModel(env: { AI: Ai }) {
+  const workersai = createWorkersAI({
+    binding: env.AI,
+    gateway: { id: "ipix-prod" },
+  });
+  return workersai.textEmbedding(EMBEDDING_MODEL_ID);
 }
 ```
 
@@ -112,12 +127,12 @@ export function resolveWorkersAiModel(tier: ModelTier, env: { AI: Ai }) {
 
 The four models are:
 
-| Tier | Model ID | Used for |
-|------|----------|----------|
-| fast | @cf/zai-org/glm-4.7-flash | Marketing chat, quick responses |
-| default | @cf/meta/llama-4-scout-17b-16e-instruct | General agent tasks, function calling |
-| structured | @cf/google/gemma-4-26b-a4b-it | Brand DNA analysis, structured output |
-| embedding | @cf/baai/bge-base-en-v1.5 | Asset DNA scoring, semantic search |
+| Tier | Model ID | Used for | Resolved via |
+|------|----------|----------|---------------|
+| fast | @cf/zai-org/glm-4.7-flash | Marketing chat, quick responses | `resolveWorkersAiModel` |
+| default | @cf/meta/llama-4-scout-17b-16e-instruct | General agent tasks, function calling | `resolveWorkersAiModel` |
+| structured | @cf/google/gemma-4-26b-a4b-it | Brand DNA analysis, structured output | `resolveWorkersAiModel` |
+| embedding | @cf/baai/bge-base-en-v1.5 | Asset DNA scoring, semantic search | `resolveWorkersAiEmbeddingModel` (separate — see code sample above) |
 
 ---
 

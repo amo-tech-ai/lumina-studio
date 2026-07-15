@@ -74,7 +74,7 @@ No CLI required.
 
 ## Files Changed
 
-None in this task. Task 031 (Mastra model registry) references the route by name.
+None in this task. **Corrected 2026-07-15 (audit finding):** the earlier pointer to "Task 031 (Mastra model registry)" is dead — Tasks 029–034 (the standalone Mastra deployer track) were archived in PR #379 as superseded (Mastra stays in-process; see `tasks/cloudflare/todo.md`). The current owner of call-site wiring (updating each agent's model resolution to reference `dynamic/planner-primary` instead of a raw model ID) is `054-CF-MIGRATION-wire-mastra-agents.md` ([IPI-594](https://linear.app/amo100/issue/IPI-594)), which migrates agents off static model resolution in waves and already accounts for an agent routing through a Dynamic Route rather than Workers AI directly.
 
 ---
 

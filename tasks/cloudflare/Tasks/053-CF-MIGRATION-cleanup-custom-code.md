@@ -71,11 +71,11 @@ This keeps each review small, makes a regression traceable to one category of ch
 
 ### Step 1: Verify the new path works
 
-Before deleting anything, confirm that at least one agent works through the new Workers AI binding path.
+Before deleting anything, confirm every row in the entry-gate table above has evidence attached — a marketing-agent response alone does not satisfy this step and does not authorize proceeding to Step 2.
 
 Command: `npm run preview`
 
-Test that the marketing agent responds. If it does, proceed.
+Test that the marketing agent responds, then attach evidence for the *remaining* gates before proceeding: production soak %, zero-legacy-traffic observation window, the full IPI-594 agent matrix (not just marketing), IPI-591 tool-calling proof, tested (not just documented) rollback, SLO dashboards, unchanged-authorization confirmation, the complete secret inventory from Step 5, and the named owner's sign-off. Proceed to Step 2 only once all ten gates have attached evidence — one successful agent response is necessary, not sufficient.
 
 ### Step 2: Delete the custom gateway Worker directory
 
@@ -119,6 +119,8 @@ npm explain @ai-sdk/openai-compatible
 ```
 
 Only remove a dependency when zero required imports remain.
+
+**Known current blocker (verified 2026-07-14):** `app/src/lib/ai/provider.ts` itself still imports `@ai-sdk/groq` (`createGroq`) and `@ai-sdk/openai-compatible` (`createOpenAICompatible`) directly, for `createGroqLanguageModel()` and `createGatewayLanguageModel()`. The `rg` check above will catch this, but don't rely on it silently blocking — the "Files updated" table below assumes provider.ts was "already simplified in Task CF-AI-021" before this step runs. Confirm that simplification actually happened (or that `resolveModel`'s Groq/gateway code paths are gone) before running Step 4; otherwise the uninstall breaks the remaining provider path.
 
 Command: `cd app && npm uninstall @ai-sdk/google @ai-sdk/groq @ai-sdk/openai-compatible`
 
@@ -220,7 +222,7 @@ In the dashboard, remove any secrets that were only used by the custom gateway:
 
 | File | Change |
 |------|--------|
-| app/src/lib/ai/provider.ts | Already simplified in Task CF-AI-021 |
+| app/src/lib/ai/provider.ts | Must be simplified in Task CF-AI-021 before Step 4 runs — as of 2026-07-14 it still imports `@ai-sdk/groq` and `@ai-sdk/openai-compatible` directly; verify those imports are gone, not just assume it |
 | app/src/lib/ai/types.ts | Remove unused types (Gemini, Groq) |
 | app/package.json | Remove unused dependencies |
 | .env.example | Remove unused variables |

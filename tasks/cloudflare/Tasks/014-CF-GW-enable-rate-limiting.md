@@ -16,7 +16,9 @@ Cap the number of requests a single user, IP, or session can send through the AI
 
 ### Real-world iPix example
 
-A misconfigured script in a partner integration accidentally loops the Creative Director agent thousands of times per minute. **Corrected 2026-07-14: the "300 req/min Workers AI account limit" claim below was never verified against current Cloudflare docs — do not assume a specific number without checking current limits/pricing at execution time.** Without rate limiting, that limit (whatever it currently is) returns 429s for every customer — a global outage from one partner's bug. With rate limiting at the gateway, that one partner hits a per-scope cap, the rest of iPix traffic flows normally, and the partner gets a clean 429 with a `Retry-After` header to retry correctly (note: `Retry-After` is not a documented guarantee — verify it's actually present before relying on it in application code).
+A misconfigured script in a partner integration accidentally loops the Creative Director agent thousands of times per minute. **Corrected 2026-07-14: the "300 req/min Workers AI account limit" claim below was never verified against current Cloudflare docs — do not assume a specific number without checking current limits/pricing at execution time.** Without rate limiting, that limit (whatever it currently is) returns 429s for every customer — a global outage from one partner's bug.
+
+**Corrected 2026-07-15 (audit finding):** the gateway rate limit configured below (100 req/min) is a single **shared, gateway-wide cap**, not an isolated per-partner scope — standard AI Gateway rate limiting applies to the whole gateway, not per-caller, unless scoped separately with custom metadata. So this scenario is only partially fixed by rate limiting alone: the noisy partner still gets throttled once the shared cap is hit, but so does everyone else sharing that gateway — one bad script can still degrade service for all iPix traffic, just at a higher, capped threshold instead of an unbounded one. Rate limiting bounds the blast radius (429s at 100 req/min instead of an unlimited flood hitting Workers AI's own account limit), it does not isolate the bad actor. True per-partner isolation requires scoping by custom metadata (see task 018) or Spend Limits per caller, not the base rate-limiting feature. Whoever hits the 429 (which could be the buggy partner or an innocent one sharing the cap) gets a clean 429 with a `Retry-After` header to retry correctly (note: `Retry-After` is not a documented guarantee — verify it's actually present before relying on it in application code).
 
 ---
 
@@ -89,9 +91,13 @@ None.
 
 ### Test 1: Limit is enforced
 
-Fire 20 requests inside 60 seconds.
+**Corrected 2026-07-15 (audit finding):** 20 requests cannot trigger a 429 against the configured 100/minute gateway limit — 20 < 100. Either use a temporary low staging rule for this test, or fire enough requests to exceed the real configured limit.
 
-Pass criteria: Requests beyond the configured limit return `429 Too Many Requests`.
+For a fast test: set a temporary staging rate limit rule (e.g. 3 requests / 30 seconds), then fire 20 requests inside that window.
+
+For testing the actual production rule: fire more than 100 requests inside 60 seconds.
+
+Pass criteria: Requests beyond whichever limit is actually configured for the test return `429 Too Many Requests`.
 
 ### Test 2: `Retry-After` header is present
 

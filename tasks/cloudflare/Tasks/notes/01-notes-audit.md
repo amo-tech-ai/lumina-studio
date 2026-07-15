@@ -1,6 +1,6 @@
 # Cloudflare Native Migration Audit — Batch 1
 
-**Scope:** `TASKS-INDEX.md`, architecture decision, and Tasks `001–009`
+**Scope:** `TASKS-INDEX.md`, architecture decision, Tasks `001–009`, and Tasks `022–025`
 **Audit date:** 2026-07-14
 **Method:** compared the uploaded plans against current Cloudflare documentation, Cloudflare-managed features, official integration patterns and the current project direction.
 
@@ -229,7 +229,7 @@ This creates:
 Archive as:
 
 ```text
-tasks/cloudflare/archive/2026-07-12-superseded/TASKS-INDEX.md
+tasks/cloudflare/Tasks/archive/2026-07-plan-a/TASKS-INDEX.md
 ```
 
 Add:

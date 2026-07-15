@@ -91,14 +91,18 @@ Each wave should be its own PR with independent rollback, not one 9-agent commit
 
 **Fix — use Mastra's dynamic model resolution.** Confirmed present in the installed `@mastra/core` version: an agent's `model` field accepts a function `({ requestContext }) => model`, evaluated per-request instead of at import time.
 
+**⚠️ Use `resolveWorkersAiModel`, not `resolveModel` (verified against `app/src/lib/ai/provider.ts`, 2026-07-14).** The existing `resolveModel(tier: GroqModelTier = "default")` in `provider.ts` takes exactly one parameter — a second argument is silently accepted by JS/TS call syntax and then simply ignored inside the function body, since nothing in `resolveModel` reads a second parameter. Calling `resolveModel("default", env)` never routes through Workers AI; it silently falls back to whatever `resolveModel`'s existing legacy dispatch (`AI_PROVIDER`/`AI_ROUTING_MODE`) already resolves to — no error, just the wrong provider. The function that actually takes `(tier, env)` and calls Workers AI is `resolveWorkersAiModel(tier, env)`, the new additive resolver defined in `004-CF-AI-setup-models.md` (Task CF-AI-021). Import and call that one here, not the legacy `resolveModel`:
+
 ```ts
 // Before (module top-level, breaks):
 const MODEL = resolveModel("default");
 export const productionPlannerAgent = new Agent({ model: MODEL, /* ... */ });
 
 // After (per-request, env comes from requestContext):
+import { resolveWorkersAiModel } from "../../lib/ai/..."; // see 004-CF-AI-setup-models.md for the exact module path
+
 export const productionPlannerAgent = new Agent({
-  model: ({ requestContext }) => resolveModel("default", requestContext.get("cfEnv")),
+  model: ({ requestContext }) => resolveWorkersAiModel("default", requestContext.get("cfEnv")),
   /* ... */
 });
 ```
@@ -106,9 +110,11 @@ export const productionPlannerAgent = new Agent({
 `requestContext.get("cfEnv")` requires something to `.set()` it first. `app/src/app/api/copilotkit/[[...slug]]/route.ts:33-44` already constructs a `RequestContext` per-request and calls `.set("userId", ...)`/`.set("email", ...)` in its `agents:` factory — add `requestContext.set("cfEnv", env)` there via `getCloudflareContext()` from `@opennextjs/cloudflare` (installed, not yet imported anywhere in this codebase). Confirmed via `grep -rl "new RequestContext()" app/src` that this is the only production file constructing one — re-run that grep before treating this as complete if the codebase has changed.
 
 **Acceptance for this step specifically:**
+
 - [ ] `getCloudflareContext()` is called inside a request-scoped async function, never at module scope
 - [ ] `requestContext.set("cfEnv", env)` is added in the CopilotKit route
 - [ ] At least one agent's dynamic `model` function successfully reads `requestContext.get("cfEnv").AI`
+- [ ] A regression test in the CopilotKit route's test suite — alongside the existing `userId`/`email` assertions — proves `cfEnv` propagates and that the dynamic model can read `env.AI`, not just a manual/screenshot check (otherwise `tsc` can pass while every migrated agent 500s at runtime)
 - [ ] `npx tsc --noEmit` passes with the dynamic `model` function typed correctly (no `any`)
 
 ---
@@ -117,11 +123,11 @@ export const productionPlannerAgent = new Agent({
 
 ### Step 1: Update the agent's model import
 
-Each agent file in `app/src/mastra/agents/` currently imports from the old provider. Update it to import `resolveModel` from the new provider.ts (created in Task CF-AI-021), and convert its static `const MODEL = resolveModel(tier)` to the dynamic `model: ({ requestContext }) => ...` form from Step 0.
+Each agent file in `app/src/mastra/agents/` currently imports from the old provider. Update it to import `resolveWorkersAiModel` — the new native resolver from Task CF-AI-021 (`004-CF-AI-setup-models.md`), **not** the legacy `resolveModel` from `provider.ts` — and convert its static `const MODEL = resolveModel(tier)` to the dynamic `model: ({ requestContext }) => resolveWorkersAiModel(tier, env)` form from Step 0.
 
 ### Step 2: Set the correct model tier
 
-Each agent should use the model tier from the table above. The `resolveModel` function takes the tier as a parameter, plus the `env` retrieved via Step 0's `requestContext.get("cfEnv")`.
+Each agent should use the model tier from the table above. `resolveWorkersAiModel` takes the tier as its first parameter, plus the `env` retrieved via Step 0's `requestContext.get("cfEnv")` as its second. (The legacy `resolveModel(tier)` in `provider.ts` takes only the tier — passing it a second argument does nothing, so do not use it here.)
 
 ### Step 1.5: Add a per-agent feature flag (added 2026-07-14, audit finding)
 
@@ -134,7 +140,14 @@ agent-native-routing:
   brand-intelligence: legacy
 ```
 
-Without this, "pause one agent's migration" (see Rollback below) has no actual mechanism — it's currently just a sentence, not something implementable.
+**This is a sketch, not an implemented mechanism (audit finding, 2026-07-14) — define it before relying on it for rollback.** `app/src/lib/ai/provider.ts` today only has a single global `AiRoutingMode` (`resolveAiRoutingMode()`, reading one `AI_ROUTING_MODE` env var — `"direct" | "gateway"`, applied to every agent alike). There is no per-agent switch yet. Before this table can back a real "pause one agent" rollback, this task must add:
+
+- **Source of truth:** a config object/map keyed by agent name (e.g. `AGENT_ROUTING: Record<AgentName, "native" | "legacy">`), separate from the single global `AiRoutingMode` — not a rename or overload of the existing global flag.
+- **Default for agents not listed:** `"legacy"` — fail toward the still-present old provider path, matching this doc's own established fail-closed pattern (see `resolveAiProvider()`/`resolveAiRoutingMode()` in `provider.ts`, which both throw/fall back rather than silently guess).
+- **Invalid-value handling:** an unrecognized value for an agent throws at startup (same fail-closed pattern), rather than silently routing that agent to whichever path happens to be first.
+- **Propagation:** this map has to be read inside the per-request `model: ({ requestContext }) => ...` function from Step 0 — the same place `resolveWorkersAiModel`/`resolveModel` is called — so the routing decision is made per agent, per request, not once at module load.
+
+Until this map exists and is wired into every agent's dynamic `model` function, "pause one agent" (see Rollback below) is aspirational — treat it as a Step 1.5 implementation task, not an assumption the Rollback section can already lean on.
 
 ### Step 3: Test the agent locally
 
@@ -160,7 +173,7 @@ Deploy the updated agent to the staging environment and verify it works on the r
 
 **Steps:**
 1. Open the agent file
-2. Update the model import to use `resolveModel("fast", env)`
+2. Update the model import to use `resolveWorkersAiModel("fast", env)`
 3. Test locally: ask "What services does iPix offer?"
 4. Verify the response is relevant and streams correctly
 5. Deploy to staging and test again
@@ -170,7 +183,7 @@ Deploy the updated agent to the staging environment and verify it works on the r
 ### Agent 2: production-planner (P0, uses tools)
 
 **Steps:**
-1. Update the model to `resolveModel("default", env)`
+1. Update the model to `resolveWorkersAiModel("default", env)`
 2. Test locally: ask "Schedule a shoot for the summer collection on August 1st"
 3. Verify the agent calls the scheduling tool
 4. Verify the tool result is used in the response
@@ -181,7 +194,7 @@ Deploy the updated agent to the staging environment and verify it works on the r
 ### Agent 3: brand-intelligence (P1, uses tools, structured output)
 
 **Steps:**
-1. Update the model to `resolveModel("structured", env)`
+1. Update the model to `resolveWorkersAiModel("structured", env)`
 2. Test: ask "Analyze the brand DNA of example.com"
 3. Verify the agent returns a structured brand profile (not free text)
 4. Verify the brand crawl tool is called
@@ -192,7 +205,7 @@ Deploy the updated agent to the staging environment and verify it works on the r
 ### Agent 4: creative-director (P1, uses tools)
 
 **Steps:**
-1. Update the model to `resolveModel("default", env)`
+1. Update the model to `resolveWorkersAiModel("default", env)`
 2. Test: ask "Create a moodboard for a luxury skincare campaign"
 3. Verify the response includes visual direction, lighting, styling
 4. Verify any creative tools are called correctly
@@ -206,7 +219,7 @@ Deploy the updated agent to the staging environment and verify it works on the r
 ### Agent 6: crm-assistant (P2, uses tools)
 
 **Steps:**
-1. Update the model to `resolveModel("default", env)`
+1. Update the model to `resolveWorkersAiModel("default", env)`
 2. Test: ask "Show me the relationship history with Nike"
 3. Verify the CRM lookup tool is called
 4. Verify the response references the tool result
@@ -215,7 +228,7 @@ Deploy the updated agent to the staging environment and verify it works on the r
 
 ### Agents 7-9: exports, shipping, brand-approval (P2-P3, minimal tools)
 
-These agents are simpler. Update each to use `resolveModel("fast", env)` and verify they respond.
+These agents are simpler. Update each to use `resolveWorkersAiModel("fast", env)` and verify they respond.
 
 ---
 
