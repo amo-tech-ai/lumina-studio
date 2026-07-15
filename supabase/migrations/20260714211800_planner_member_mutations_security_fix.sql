@@ -27,7 +27,7 @@
 --    the invite gate. Fixed by also rejecting p_new_role='manager' when the
 --    caller is not an owner.
 --
--- Ordering fix in planner_invite_member:
+-- Validation-order fix in planner_invite_member:
 --   The manager-role gate ran before the instance-existence and general
 --   permission checks, causing semantically incorrect errors (e.g.
 --   insufficient_role_for_target instead of instance_not_found when the
@@ -67,10 +67,6 @@ begin
     raise exception 'planner_invite_member: insufficient_role';
   end if;
 
-  -- A manager may not invite someone as manager — that requires owner approval.
-  -- Placed after the instance/permission checks so the error is semantically
-  -- correct: the caller is manager+ but not owner, so the target role is the
-  -- issue, not the caller's base permission level or instance validity.
   if p_role = 'manager' and not planner.is_at_least(p_instance_id, 'owner') then
     raise exception 'planner_invite_member: insufficient_role_for_target';
   end if;
@@ -114,9 +110,7 @@ $$;
 comment on function public.planner_invite_member(uuid, text, text) is
   'IPI-575 — adds an existing registered user (matched by email, trimmed+lowercased) to a planner instance. Caller must be manager+; inviting as manager requires owner. Invitee must be in the instance''s org — indistinguishable error (user_not_available) for unknown or out-of-org addresses.';
 
--- ── planner_update_role: also gate p_new_role='manager' ─────────────────────
--- SEC-003b: without this, a manager could bypass the invite-as-manager gate
--- by inviting as contributor and then promoting to manager.
+-- ── 2. planner_update_role SEC-003b guard ──────────────────────────────────
 
 create or replace function public.planner_update_role(
   p_instance_id uuid,
@@ -141,26 +135,35 @@ begin
     raise exception 'planner_update_role: insufficient_role';
   end if;
 
-  perform 1 from planner.assignments a
-    where a.instance_id = p_instance_id and a.role = 'owner'
-    order by a.id
-    for update;
+  -- Consistent lock order: lock the complete owner set first, id-ordered,
+  -- so every caller acquires locks in the same order regardless of target.
+  perform 1
+  from planner.assignments a
+  where a.instance_id = p_instance_id
+    and a.role = 'owner'
+  order by a.id
+  for update;
 
+  -- Then lock the requested target.
   select a.role into v_target_role
   from planner.assignments a
-  where a.instance_id = p_instance_id and a.user_id = p_target_user_id
+  where a.instance_id = p_instance_id
+    and a.user_id = p_target_user_id
   for update;
 
   if not found then
     raise exception 'planner_update_role: member_not_found';
   end if;
 
-  -- A manager may only act on contributor/viewer rows; touching another
-  -- manager's or the owner's assignment requires owner. Also, a manager
-  -- cannot promote anyone to manager (even if the target is currently a
-  -- contributor/viewer), matching the invite-as-manager gate above.
-  if (v_target_role in ('owner', 'manager') or p_new_role = 'manager')
-    and not planner.is_at_least(p_instance_id, 'owner')
+  -- SEC-003b: reject manager-level callers trying to promote a contributor or
+  -- viewer to manager — the same gate that prevents inviting-as-manager without
+  -- owner approval must also prevent role-promotion to manager without owner
+  -- approval; otherwise a manager could bypass the invite gate entirely.
+  if (
+    v_target_role in ('owner', 'manager')
+    or p_new_role = 'manager'
+  )
+  and not planner.is_at_least(p_instance_id, 'owner')
   then
     raise exception 'planner_update_role: insufficient_role_for_target';
   end if;
@@ -178,7 +181,7 @@ begin
   update planner.assignments a
     set role = p_new_role
     where a.instance_id = p_instance_id and a.user_id = p_target_user_id
-    returning * into v_row;
+    returning a.* into v_row;
 
   insert into planner.events (instance_id, actor_user_id, event_type, payload)
   values (
@@ -193,4 +196,4 @@ end;
 $$;
 
 comment on function public.planner_update_role(uuid, uuid, text) is
-  'IPI-575 — changes an existing member''s role on a planner instance. Owner role is never settable here. A manager caller may only act on contributor/viewer targets, and cannot promote anyone to manager.';
+  'IPI-575+SEC-003b — changes an existing member''s role on a planner instance. Owner role is never settable here (no self/other-elevation to owner). A manager caller may only act on contributor/viewer targets; touching a manager or owner target requires an owner caller. Manager-level callers may not promote to manager (matches invite-as-manager gate). Demoting the last owner is rejected (last_owner_protected), checked with row-locked, id-ordered owner-count locking to stay race-free under concurrent calls.';

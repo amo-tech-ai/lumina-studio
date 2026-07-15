@@ -34,3 +34,4 @@ create policy "assignments_insert_manager"
       )
     )
   );
+;
