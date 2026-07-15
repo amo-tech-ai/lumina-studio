@@ -1,0 +1,79 @@
+---
+description: >-
+  Sentry org amo-2b — CLI, Seer AI Code Review on GitHub PRs, and Next.js SDK.
+  Use when debugging Issues, @sentry review, Seer comments, DSN, or sentry CLI.
+alwaysApply: false
+---
+
+# Sentry (iPix / amo-2b)
+
+## Two products — do not conflate
+
+| Product | What it does | Proof it works |
+|---------|--------------|----------------|
+| **Next.js SDK** (`@sentry/nextjs` in `app/`) | Runtime errors → Issues | Event in [amo-2b Issues](https://amo-2b.sentry.io/) |
+| **Seer AI Code Review** | Predicts bugs on GitHub PRs | `seer-by-sentry[bot]` comments + optional Checks |
+
+SDK install ≠ PR reviews. Missing Seer comments means the **GitHub app / Seer repo toggle**, not a missing DSN.
+
+Docs: [Seer Code Review](https://docs.sentry.io/product/ai-in-sentry/seer/code-review/) · [Product page](https://sentry.io/product/seer/ai-code-review/) · [sentry-for-ai skill](https://github.com/getsentry/sentry-for-ai/blob/main/skills/sentry-pr-code-review/SKILL.md)
+
+## Org / tooling
+
+| Item | Value |
+|------|--------|
+| Org | `amo-2b` |
+| CLI | [cli.sentry.dev](https://cli.sentry.dev) — `sentry auth login` / `sentry whoami` |
+| MCP | `https://mcp.sentry.dev/mcp` (OAuth; separate from CLI) |
+| Agent skill | `.claude/skills/sentry-pr-code-review/` (triage Seer PR comments) |
+| Bot login | `seer-by-sentry[bot]` — **not** `sentry[bot]` |
+
+## CLI cheat sheet
+
+```bash
+sentry whoami
+sentry project list
+sentry issue list amo-2b/ --query 'is:unresolved' --limit 20
+sentry issue view <ISSUE_ID>
+sentry issue explain <ISSUE_ID>   # when available
+```
+
+Prefer CLI/MCP over scraping the HTML UI ([login wall](https://amo-2b.sentry.io/auth/login/amo-2b/)).
+
+## Seer PR reviews — status
+
+**Enabled 2026-07-10** for `amo-tech-ai/lumina-studio` ([Seer repos](https://amo-2b.sentry.io/settings/seer/repos/?query=lum)): Code Review ON · triggers On New Commit + On Ready For Review.
+
+Live proof (`@sentry review`):
+
+| PR | Seer Code Review check | Inline findings |
+|----|------------------------|-----------------|
+| #315 (docs) | **pass** (~34s) | 0 |
+| #316 (embed fix) | **pass** (~2m34s) | 0 |
+
+**pass + 0 comments** = review finished, no predicted errors (not a failure). Neutral check = findings posted as comments.
+
+Re-enable / troubleshoot: [Seer settings](https://sentry.io/orgredirect/organizations/amo-2b/settings/seer/) · GitHub app **Pull Requests** + **Checks** R/W · keep Seer check **optional** in branch protection.
+
+## Agent workflow — Seer findings on a PR
+
+Load skill **`sentry-pr-code-review`** (not generic PR scraping):
+
+1. Fetch: `gh api repos/amo-tech-ai/lumina-studio/pulls/<N>/comments --paginate --jq '.[] | select(.user.login == "seer-by-sentry[bot]")'`
+2. Verify each finding at HEAD (evidence over Seer text)
+3. Smallest safe fix; one concern; no docs+code mix
+4. Report with the skill’s Resolved / Skipped table
+5. Reply/resolve via `pr-workflow` if threads exist
+
+If **zero** Seer comments after `@sentry review`: stop and report setup gap (steps above) — do not invent findings.
+
+## SDK (runtime) — brief
+
+- Config lives under `app/` (`instrumentation.ts`, `sentry.*.config.ts`, `/monitoring` tunnel)
+- DSN via Infisical / env — never commit secrets; never `NEXT_PUBLIC_*` for private keys beyond the public DSN pattern Sentry documents
+- Smoke: hit example route or `Sentry.captureException` → confirm Issue in amo-2b
+
+## Related
+
+- PR bots matrix: Codacy, CodeRabbit, MatterAI, Bugbot, **Seer** — only GraphQL unresolved threads block merge (`pr-fix`)
+- Full PR lifecycle: `pr-workflow` skill

@@ -1,0 +1,107 @@
+---
+description: Accuracy-first workflow for ANY task — verify before change, evidence over assumptions, named verification levels, no fake Done
+alwaysApply: true
+---
+
+# Task accuracy — evidence-first standard (all work)
+
+Applies to **every** task: Cloudflare, Supabase, app UI, Mastra, CopilotKit, CI, docs, booking, planner, commerce — not Cloudflare-only.
+
+Companion skills: `task-verifier` (Done gate), `lean` (lifecycle), `ponytail` (smallest change), domain hubs (`ipix-supabase`, `cloudflare`, …).
+
+## Principles
+
+- Verify before changing.
+- Evidence over assumptions — never guess.
+- One concern per task / PR / commit.
+- Preserve architecture consistency.
+- Prevent documentation drift.
+- Align with Linear, PRDs, and `origin/main`.
+- If unverifiable → write **NOT VERIFIED**.
+- Do not reopen completed work or re-recommend already-fixed issues.
+- Mitigations are not complete fixes — label them honestly.
+
+## Stage 1 — Scope
+
+Before code:
+
+1. Compare with `origin/main`.
+2. Check overlapping PRs / branches.
+3. Read related Linear issue + AC.
+4. Classify: ✅ In scope · ⚠️ Related but separate · ❌ Out of scope.
+
+Do not expand scope. File a new Linear issue for out-of-scope root causes.
+
+## Stage 2 — Evidence
+
+For every finding / review comment, collect from:
+
+1. Current source (`rg`, graphify, file read)
+2. Installed package / types when API shape disputed
+3. Official docs (MCP when available)
+4. Runtime reproduction when possible
+
+Classify: ✅ Confirmed · 🟡 Unproven · ⚪ Already fixed · ❌ Incorrect · ⚠️ Out of scope.
+
+**Only implement confirmed, in-scope issues.**
+
+## Stage 3 — Implementation
+
+- One logical change at a time; small commits.
+- Prefer reuse / extend (ponytail ladder).
+- No drive-by refactors.
+- Stop and open Linear if the real fix belongs to another epic.
+
+## Stage 4 — Testing
+
+Focused first (unit / typecheck / lint on touched paths), then broader suite / build as required by lean mode and path verify matrix.
+
+## Stage 5 — Verification level (required label)
+
+| Level | Meaning |
+|-------|---------|
+| Unit Verified | Tests only |
+| Build Verified | App / Worker builds |
+| Local Runtime Verified | Local server / `wrangler dev` / linked DB probe |
+| Remote Preview Verified | Preview deploy / remote non-prod |
+| Production Verified | Live production evidence |
+
+Never claim production readiness without Production Verified evidence.
+
+## Stage 6 — Docs / Linear sync
+
+Before Done: contradiction check — implementation matches docs, AC, counts, commands, links. No aspirational checkboxes.
+
+## Stage 7 — Architecture
+
+No duplicate SSOT, clear ownership, no unnecessary abstractions, domain skill best practices.
+
+## Stage 8 — Merge / Done gate
+
+CI green · review threads resolved · security/RLS when applicable · regression tests when behavior changed · docs updated · remaining risks named.
+
+Use `@task-verifier` before Linear Done on IPI tasks.
+
+## Reporting (after each stage or at handoff)
+
+| Item | Result |
+|------|--------|
+| Finding | Exact issue |
+| Evidence | Code / Docs / Runtime / MCP |
+| Classification | Confirmed / Unproven / Already Fixed / Incorrect / Out of Scope |
+| Change Made | Files (or none) |
+| Regression Test | Added / updated / N/A |
+| Validation Level | Unit / Build / Local Runtime / Remote Preview / Production |
+| Scope Preserved | Yes / No |
+| Remaining Risks | Details |
+| Next Action | Details |
+
+## Quality gates (all applicable must pass)
+
+- [ ] Current architecture / `origin/main` checked
+- [ ] Scope preserved
+- [ ] Verification level stated honestly
+- [ ] Docs + Linear synchronized
+- [ ] No unresolved contradictions
+- [ ] No duplicate implementations
+- [ ] Production readiness evaluated (or explicitly not claimed)

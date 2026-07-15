@@ -1,0 +1,175 @@
+---
+description: Cloudflare accuracy workflow — right-sized gates, runtime verify levels, AI Gateway embed/error contracts, Outcome Grader (not product API docs)
+globs: services/cloudflare-worker/**,tasks/cloudflare/**,**/wrangler.jsonc,**/wrangler.toml,**/open-next.config.*,app/open-next.config.*,app/src/lib/ai/provider*.ts,app/src/lib/ai/provider-adapter.ts
+alwaysApply: false
+---
+
+# Cloudflare workflow — accuracy-first (Cursor)
+
+**What this rule is:** process gates for Cloudflare / AI Gateway / OpenNext work.  
+**What it is not:** product API docs (→ `.claude/skills/cloudflare`), MCP setup (→ `cloudflare-mcp.mdc`), or generic evidence stages (→ `task-accuracy.mdc`).
+
+**Long-form SSOT (humans):** `tasks/cloudflare/ENGINEERING-WORKFLOW.md`  
+**User-journey tests (most important):** [`tasks/cloudflare/tests/worker-user-journeys.md`](../../tasks/cloudflare/tests/worker-user-journeys.md)  
+**Product hub:** `.claude/skills/cloudflare/SKILL.md` + `references/` on demand  
+**Secrets:** `infisical.mdc`
+
+Do **not** load this for pure Mastra/CopilotKit/Supabase work unless the change crosses a Cloudflare boundary (Worker, wrangler, OpenNext, AI Gateway client, bindings).
+
+---
+
+## North star — Workers must work in iPix apps
+
+Unit / Worker vitest green is **necessary but not sufficient**.
+
+**Primary success criterion:** a real iPix persona completes a journey that hits the AI Gateway Worker and gets a correct, usable result in the product UI (or typed API the UI uses).
+
+| Priority | Proof | Example |
+|----------|-------|---------|
+| **1 — Journey** | Operator / marketing / BI / embed path through app → Worker | `UJ-OP-CHAT`, `UJ-MKT-CHAT`, `UJ-EMBED` |
+| **2 — Local Runtime** | `wrangler dev` + curls matching the journey’s Worker route | Chat stream + embed 768-d |
+| **3 — Unit** | Worker + adapter vitest | Allowlist, envelopes, dims |
+
+Do **not** claim gateway / AC-F / AC-J Done on unit tests alone. Name journey IDs from the reference doc in the PR test plan.
+
+---
+
+## Risk tier (pick one before coding)
+
+| Tier | When | Minimum verify |
+|------|------|----------------|
+| **A — Thread / unit** | Clear review nit, pure Worker unit logic, no deploy config | Focused vitest + typecheck on touched package |
+| **B — Gateway / Worker** | `services/cloudflare-worker/**`, embed/error contracts, provider adapter | Worker tests + **at least one matching journey** (or documented curl stand-in for UJ-EMBED) at Local Runtime |
+| **C — Platform / AC-F / AC-J** | `resolveModel`→gateway, streaming, OpenNext, bindings, deploy | Build as needed + **UJ-HEALTH + UJ-OP-CHAT + UJ-MKT-CHAT** (+ UJ-EMBED if embed touched); Remote Preview when available |
+
+Escalate if confidence &lt; 80%, or auth / secrets / production traffic is involved.
+
+---
+
+## CF-only deltas (on top of `task-accuracy`)
+
+### 0. Orient (Tier B/C)
+
+```bash
+graphify query "<Worker|AI Gateway|OpenNext|bindings>"
+gh pr list --state open --search "cloudflare OR gateway OR wrangler"
+```
+
+Duplicate open PR / Linear issue → stop and redirect.
+
+### Docs before API claims
+
+For Workers runtime, bindings, Workers AI, AI Gateway, OpenNext:
+
+1. Cloudflare docs MCP (`search_cloudflare_documentation`) **or** hub `references/`
+2. Installed package / types if disputed
+3. Then code
+
+Never assert `node:fs` support/limits from memory — check `nodejs_compat` + `compatibility_date` + docs.
+
+### `node:fs` (Workers)
+
+- Virtual bundled FS with `nodejs_compat` — **not** arbitrary disk.
+- Safe: static `import` / bundled assets.
+- Unsafe: runtime `readFileSync(userPath)` expecting real disk.
+
+### Verification level (always name one)
+
+| Level | Meaning |
+|-------|---------|
+| Unit Verified | Tests only |
+| Build Verified | `next build` / Worker build |
+| Local Runtime Verified | `wrangler dev` / local preview |
+| Remote Preview Verified | `*.workers.dev` or CF preview URL |
+| Production Verified | Live prod smoke |
+
+Never say bare “Verified.” Never claim Production without prod evidence.
+
+### Right-size Stage 4/5
+
+1. Targeted tests first (seconds).
+2. Pre-push already runs app typecheck + vitest — don’t re-litigate unless CF package isn’t covered.
+3. Full OpenNext build — **required** when touching `open-next.config.*`, `wrangler.*`, bundling deps; else CI `app-build` may suffice for ordinary app code.
+4. `wrangler deploy --dry-run` — cheap config/binding sanity.
+5. Prefer platform safety nets when available (Workers Builds preview, gradual deploy, `wrangler rollback`) over exhaustive local prophecy — see ENGINEERING-WORKFLOW “Right-sizing verification.”
+
+### Bundle audit (Tier C / OpenNext only)
+
+After `opennextjs-cloudflare build`:
+
+- `.open-next/worker.js` + `assets/` exist
+- No secrets: `SERVICE_ROLE`, `GEMINI_API_KEY`, `GROQ_API_KEY`, etc.
+- Investigate unexpected `require(`, `readFileSync`, `eval(`, `Function(`
+
+### Docs / Linear contradiction
+
+Before Done: Source == Tests == Runtime == PR/docs == Linear.  
+Mitigations ≠ complete fixes — label honestly.
+
+---
+
+## AI Gateway — embed & error contract (IPI-492+)
+
+When changing `services/cloudflare-worker/` embeddings, provider error mapping, or `app/src/lib/ai/provider-adapter.ts` embed/error paths:
+
+| Do | Don't |
+|----|-------|
+| Reject bad/unsupported embed **before** provider fetch (`400` + code) | Silent remap to `embedding` / chat `default` |
+| Allowlist (`embedding`, `@cf/baai/bge-base-en-v1.5`) | `model.includes("gemini")` heuristics |
+| Explicit BGE id → canonical default entry (ignore override alias) | Let `MODEL_REGISTRY_OVERRIDE` swap under that id |
+| Sanitize envelope (`code`, `message`, `retryable?`, `requestId`) | Blind passthrough of provider bodies / secrets |
+| Typed `AiGatewayError` in adapter | Callers parse `"embedding failed: 400 {...}"` |
+| Map 429→rate limit; 408/504/timeout-sans-status→timeout; 500/502/503→unavailable retryable | Treat all 5xx as non-retryable `provider_error` |
+| Safe-parse `MODEL_REGISTRY_OVERRIDE`; provider resolve inside try | Uncaught `JSON.parse` / `getProvider` → unstructured 500 |
+
+**SSOT wording:** gateway supports Workers AI BGE; Gemini embed *routing* is not implemented — not “Gemini cannot embed.”
+
+**Minimum tests:** empty/malformed → 400 no fetch; unsupported model → 400; happy → 200 + 768-d; adapter maps envelope → typed error. Prefer live `wrangler` curls for Tier B+.
+
+Plan: `tasks/cloudflare/tasks/492-audit.md` · **IPI-492 · CF-AI-004c**
+
+---
+
+## Outcome Grader (merge gate)
+
+| Criterion | Pass |
+|-----------|------|
+| **iPix journey proof (Tier B/C)** | Named `UJ-*` from `worker-user-journeys.md` run (or explicit waiver) |
+| Official docs checked for runtime API claims | MCP / hub refs used |
+| Verify level named honestly | Matches what was actually run |
+| Scope / one concern | No docs+code mix; no sibling task |
+| Regression test on bug fixes | Fails before, passes after |
+| Embed/error contract (if touched) | Contract rows + **UJ-EMBED** |
+| Bundle audit (if OpenNext touched) | No secrets / no surprise Node |
+| Linear / PR body | Match reality; journey IDs in test plan |
+
+Any Fail = blocker unless explicitly waived with reason in the PR.
+
+---
+
+## Reporting (after CF stages / handoff)
+
+| Item | Result |
+|------|--------|
+| Finding | Exact issue |
+| Evidence | Code / Docs / Runtime / Bundle |
+| Classification | Confirmed / Unproven / Already Fixed / Incorrect / Out of Scope |
+| Tier | A / B / C |
+| Validation Level | Unit / Build / Local Runtime / Remote Preview / Production |
+| Scope Preserved | Yes / No |
+| Remaining Risks | Details |
+| Next Action | Details |
+
+---
+
+## Companion map
+
+| Need | Use |
+|------|-----|
+| **Worker ↔ iPix journey tests** | `tasks/cloudflare/tests/worker-user-journeys.md` |
+| Generic evidence / Done honesty | `task-accuracy.mdc` |
+| Lifecycle / worktree / PR | `lean.mdc` |
+| Smallest diff | `ponytail.mdc` |
+| Cloudflare MCP servers | `cloudflare-mcp.mdc` |
+| Workers / Wrangler / AI Gateway APIs | `.claude/skills/cloudflare` |
+| Mastra app agents (no Worker) | `.claude/skills/mastra` — not this rule |

@@ -1,0 +1,41 @@
+---
+description: Always pair Linear/spec IDs with plain-English task names — never bare IPI-NNN
+alwaysApply: true
+---
+
+# Task naming (agents + Linear)
+
+**Bare IDs are forbidden in user-facing text.** `IPI-487` and `IPI-486` mean nothing without context.
+
+## Required format
+
+```text
+{ID} · {SPEC} — {Plain English title}
+```
+
+| ✅ Good | ❌ Bad |
+|---------|--------|
+| **IPI-487 · CLOUDFLARE-EPIC — Cloudflare Platform Migration** | "the IPI-487 epic" |
+| **CF-MIG-210 · Runtime Compatibility — Hono, OAuth & Groq Bundle** | "do 210 next" |
+| **IPI-454 · CF-AI-001 — AI Gateway — Cloudflare Provider Routing** | "IPI-454 is blocked" |
+
+## When writing
+
+- **First mention** in a reply → full name (bold).
+- **Roadmaps, tables, PR titles, commits** → full name every row/line.
+- **Later in the same message** → plain English title only if still unambiguous (e.g. "Runtime Compatibility").
+- **Links** → markdown link label uses full name; URL may use numeric ID.
+
+## SSOT for canonical names
+
+| Track | Lookup |
+|-------|--------|
+| Cloudflare migration | `tasks/cloudflare/todo.md`, `tasks/cloudflare/CLOUDFLARE-EPIC.md` |
+| Mastra | `tasks/cloudflare/mastra/MASTRA-EPIC.md` |
+| Any IPI task | Linear issue **title** or `docs/linear/issues/IPI-*.md` H1 |
+
+If unsure of the title, read the SSOT or Linear before citing the ID.
+
+## Linear issue titles
+
+When creating or renaming issues, set **title** to the full format above (not `IPI-487` alone).

@@ -1,0 +1,85 @@
+---
+description: Hard rule — every PR must have a plain-English description with real-world iPix examples (what / for whom / why it matters)
+alwaysApply: true
+---
+
+# PR description — plain English (hard rule)
+
+**Every time** you create or edit a GitHub PR (`gh pr create`, `gh pr edit`, `/pr`, `/pr ship`), the body **must** be easy to understand for a human who did not write the code — including a product/ops reader, not only the authoring engineer.
+
+## Required sections (in order)
+
+```markdown
+## What this PR does (plain English)
+
+<2–4 sentences: what changes, for whom, why. No jargon-only bullets.>
+
+**This PR does not** <explicit non-goals — sibling concerns, docs vs code, etc.>
+
+## Hard rule (every PR)
+
+> **One concern per PR and per commit.** Never mix docs + production code, or two different tasks, in the same PR. (AGENTS.md #1)
+
+This PR’s single concern: **`<one path or concern label>`**.
+
+<!-- If this is a split from a mixed PR, include: -->
+| Sibling | Concern | PR |
+|---------|---------|----|
+| … | … | #N |
+
+## Why it matters in iPix
+
+<2–4 sentences: real product/ops consequence. Name a surface, persona, or workflow — not only modules.>
+
+## Test plan
+
+- [ ] <concrete checks a reviewer can run or verify>
+```
+
+Optional after the hard-rule block when helpful: **How to try it (local)** with copy-paste commands.
+
+## Real-world iPix examples (required flavor)
+
+The plain-English lead **and** **Why it matters in iPix** must ground the change in Lumina Studio / iPix reality. Prefer at least one concrete hook from this list (or an equally specific sibling):
+
+| Domain | Example hooks (use what fits) |
+|--------|-------------------------------|
+| Operator app | Brand Hub crawl, Command Center, Assets DNA chip, shoot detail, booking wizard |
+| Agents | Production Planner shot list, Creative Director brief, visual-identity screenshots, marketing chat on the public site |
+| Commerce / CRM | Deal stage move, contact timeline, Mercur catalog link |
+| AI Gateway / Cloudflare | Embeddings for “find similar”, gateway 502 that looked like an outage, opt-in `AI_ROUTING_MODE` without breaking planner tools |
+| Auth / data | Login → `/app`, RLS “can’t see other brand’s assets”, remote-only Supabase |
+
+### Good vs bad
+
+| ✅ Good (iPix-grounded) | ❌ Bad (jargon-only) |
+|-------------------------|----------------------|
+| “Bad embedding requests used to look like the gateway was down (502) during brand-matching work. Now they fail fast with a clear 400.” | “Harden embed validation and sanitize error envelope in Worker router.” |
+| “Production Planner and CRM agents keep direct Gemini so tool calls (shot references, deal moves) still work; only marketing `fast` can opt into the gateway.” | “Wire `resolveModel()` to `@ai-sdk/openai-compatible` via `AI_ROUTING_MODE`.” |
+| “Docs-only: stop claiming embeddings are broken after #316 so the next engineer doesn’t re-debug a fixed path.” | “Update post-merge audit markdown under `tasks/cloudflare/tests/`.” |
+
+**Rules of thumb**
+
+- Name **who** feels it: operator, engineer debugging locally, public marketing visitor — not “the system.”
+- Name **when**: during a crawl, shoot plan, booking send, local Wrangler smoke — not “at runtime.”
+- If the change is invisible to operators (infra/docs), say so in one line, then name the **engineer workflow** it unblocks.
+- Keep full task names on first mention (`IPI-492 · CF-AI-004c — …`); never bare `IPI-492` alone.
+
+## Rules
+
+| Do | Don't |
+|----|--------|
+| Lead with plain English (“what / for whom / why”) | Lead with file lists or commit hashes only |
+| Add **Why it matters in iPix** with a real surface/persona | Stop at API/module names with no product hook |
+| Name the **single concern** explicitly | Bundle seed + E2E + docs in one body as if one PR |
+| Say **what this PR does not** do | Assume reviewers know the split |
+| Use full task names on first mention (`IPI-488 · BE-SD1b — …`) | Bare IDs alone (`IPI-488`) |
+| Keep the hard-rule block verbatim | Soften or omit the one-concern rule |
+
+## When editing an existing PR
+
+If the body is missing the plain-English block, the hard-rule quote, or an iPix-grounded “why it matters,” **update it** with `gh pr edit` before merge — same standard as create.
+
+## Title
+
+Still use: `IPI-NNN · SPEC — Plain English title` (see `task-naming.mdc`). Prefer a title a non-author can skim (e.g. “Clear errors for bad embedding requests” over “Harden error contracts”).

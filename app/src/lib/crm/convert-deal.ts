@@ -3,6 +3,11 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { ApiErrorCode } from "@/lib/api/error-envelope";
 import type { Database } from "@/types/supabase";
 
+// Type-level regression guard (IPI-587): ConvertDealResult.brand_id must stay
+// nullable. Included in tsc --noEmit (not excluded like *.test.ts).
+type _AssertBrandIdNullable = Database["public"]["Functions"]["crm_convert_deal"]["Returns"][number]["brand_id"];
+const _assertBrandIdNullable: _AssertBrandIdNullable = null;
+
 type Db = SupabaseClient<Database>;
 
 export type ConvertDecision = "won" | "lost";
