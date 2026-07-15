@@ -188,7 +188,7 @@ export const fanOutEnrichment = createStep({
 });
 
 // Step 6: write draft record and suspend for HITL approval
-const saveDraftAndWait = createStep({
+export const saveDraftAndWait = createStep({
   id: "save-draft-and-wait",
   inputSchema: z.object({ enriched: z.boolean() }),
   outputSchema: z.object({ draftId: z.string() }),
@@ -219,6 +219,9 @@ const saveDraftAndWait = createStep({
             user_id: userId,
             source_url: brandRow?.brand_url ?? "",
             status: "pending_approval",
+            approved_at: null,
+            rejected_at: null,
+            expires_at: null,
             draft_profile: {
               _workflow_run_id: runId,
               profile: draftProfile,
