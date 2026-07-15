@@ -1,3 +1,9 @@
+> **⚠️ ARCHIVED — DO NOT EXECUTE — HISTORICAL REFERENCE ONLY**
+>
+> Superseded 2026-07-14. Reason: CI/CD for the custom Worker, which is frozen — see IPI-487. Current plan: `tasks/cloudflare/Tasks/000-Architecture-Decision.md`, Linear IPI-487 (migration gate) and IPI-586/590/591/592/594 (active work).
+
+---
+
 # IPI-472 · CF-DASHBOARD-003 — Set Up Workers Builds (Auto-Deploy from Git)
 
 **Status:** ✅ COMPLETED (2026-07-12)  

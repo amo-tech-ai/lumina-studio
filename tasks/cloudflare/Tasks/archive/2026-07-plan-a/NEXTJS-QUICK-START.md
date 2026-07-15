@@ -1,3 +1,9 @@
+> **⚠️ ARCHIVED — DO NOT EXECUTE — HISTORICAL REFERENCE ONLY**
+>
+> Superseded 2026-07-14. Reason: superseded index/summary doc from the abandoned custom-Worker plan (Plan A). Current plan: `tasks/cloudflare/Tasks/000-Architecture-Decision.md`, Linear IPI-487 (migration gate) and IPI-586/590/591/592/594 (active work).
+
+---
+
 # NextJS + Cloudflare Workers — Quick Start Guide
 
 **Real-world setup for deploying iPix to Cloudflare in 30 minutes**

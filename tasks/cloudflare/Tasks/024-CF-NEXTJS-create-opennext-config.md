@@ -14,7 +14,15 @@ references:
 
 # CF-NEXTJS-003 — Create OpenNext Configuration File
 
-**Status:** 🟡 Ready to start  
+**Status:** 🟢 Already complete (verified 2026-07-14 against live `app/wrangler.jsonc`, `app/open-next.config.ts`, and `app/package.json` — this exact setup already exists). See IPI-486 / `CF-MIG-110` (PR #282, merged) for the tracked completion.
+
+> **🛑 DO NOT RUN the steps below — corrected 2026-07-14 (audit finding).** `app/open-next.config.ts` already exists. The body below describes deletion as harmless and may reference fictional config properties. Kept as historical record only. Verify current state instead:
+> ```bash
+> cd ~/ipix/app
+> sed -n '1,160p' open-next.config.ts
+> npm run typecheck
+> ```
+
 **Effort:** 5 minutes  
 **Dependency:** 016 (wrangler.jsonc created)  
 **Enables:** Build with OpenNext adapter

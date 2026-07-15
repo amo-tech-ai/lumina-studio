@@ -47,8 +47,11 @@ No CLI required. Verify the budget enforcement with a single request:
 # Send a request that should be blocked because the limit is already exhausted for the day
 curl -X POST "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/ai/v1/chat/completions" \
   -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+  -H "cf-aig-gateway-id: ipix-prod" \
   -d '{"model":"openai/gpt-5","messages":[{"role":"user","content":"long prompt..."}]}'
 ```
+
+**Corrected 2026-07-14:** spend limits are eventually consistent — a burst of concurrent requests can briefly exceed the configured threshold before enforcement catches up, and cost figures are best-effort estimates, not a guaranteed hard billing cap. Reconcile against actual provider billing periodically. For testing, use a tiny staging budget (e.g. $0.01) with a low-cost model rather than spending to a production-sized cap.
 
 ---
 
@@ -63,8 +66,10 @@ curl -X POST "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_
    - **Window:** 1 day (rolling)
    - **Scope settings:**
      - Default rule for the whole gateway (cap total daily spend)
-     - Plus per-user rule using `metadata.user_id` split by value (cap each user at $20/day)
+     - Plus per-user rule using `metadata.user_id` split by value (cap each user at $20/day) — **corrected 2026-07-14 (audit finding): use a server-generated hashed identifier, not a raw `user_id`, as gateway metadata is visible in analytics/logs and shouldn't carry raw user identity**
 6. Click **Save**.
+
+**⚠️ Production readiness blocker, added 2026-07-14 (audit finding):** do not enable Block mode in production until the application UI actually handles the blocked-request state (a clear "budget reached" message, not a raw error) and an operator can raise or disable the limit quickly without a deploy. Enabling blocking before that UX exists turns a cost guardrail into a surprise outage.
 7. (Optional) Pair with a Dynamic Route that has a cheaper fallback model — see task 015.
 
 You may define up to 20 spend limit rules per gateway.
@@ -112,6 +117,31 @@ Pass criteria: Requests succeed again at the start of the new window.
 If paired with task 015 (Dynamic Routing), verify that requests fall back to the cheaper model instead of returning 429.
 
 Pass criteria: No 429 — requests return model responses from the fallback model.
+
+---
+
+## Managed-First Verification & Definition of Done
+
+*(Added 2026-07-14, per `tasks/cloudflare/Tasks/notes/04-improvements.md` — fill in at execution time, not in advance. A dashboard toggle alone does not satisfy "done.")*
+
+| Verification gate | Result |
+|---|---|
+| Cloudflare dashboard feature available? | — |
+| Wrangler command available? | — |
+| Cloudflare API available? | — |
+| Official package/module available? | — |
+| Official GitHub repository checked? | — |
+| Official example checked? | — |
+| Official tutorial/recipe checked? | — |
+| Existing iPix code already implements it? | — |
+| Configuration-only solution possible? | — |
+| Minimum integration code required | — |
+| Custom implementation necessary? | — |
+| Why custom code is unavoidable | — |
+| Rollback method | — |
+| Production evidence | — |
+
+**Definition of done:** Configured + integrated + tested + observed in logs + failure tested + rollback tested + documented = complete.
 
 ---
 

@@ -1,3 +1,9 @@
+> **⚠️ ARCHIVED — DO NOT EXECUTE — HISTORICAL REFERENCE ONLY**
+>
+> Superseded 2026-07-14. Reason: superseded index/summary doc from the abandoned custom-Worker plan (Plan A). Current plan: `tasks/cloudflare/Tasks/000-Architecture-Decision.md`, Linear IPI-487 (migration gate) and IPI-586/590/591/592/594 (active work).
+
+---
+
 # Complete Cloudflare Workers AI Research Summary
 
 **Research Date:** 2026-07-12  

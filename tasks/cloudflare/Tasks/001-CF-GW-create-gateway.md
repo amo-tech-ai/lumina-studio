@@ -1,5 +1,6 @@
 # IPI-XXX · CF-GW-001 — Create AI Gateway in Dashboard
 
+**Status:** Already done manually — `ipix-prod` gateway exists (dashboard-confirmed, 2026-07-14). Kept as historical record and reference for the correct binding/call pattern. Active follow-up work is tracked at [IPI-586 · CF-AI-003 — Wire one Workers AI call through ipix-prod gateway](https://linear.app/amo100/issue/IPI-586).  
 **Task ID:** CF-GW-001  
 **Phase:** 2 — Gateway setup  
 **Difficulty:** Easy  
@@ -23,7 +24,7 @@ When fifty users simultaneously ask the Brand Intelligence agent to analyze diff
 
 **Dashboard — create the gateway in the Cloudflare dashboard.**
 
-This is the only method available. The AI Gateway is a managed product configured through the dashboard. No CLI command creates it. No code is needed.
+**Corrected 2026-07-14 (audit finding, verified):** dashboard is the *recommended* method, not the only one — Cloudflare also supports gateway creation via its REST API. No `wrangler` subcommand exists for AI Gateway either way (confirmed absent from the `workers-sdk` CLI surface). No code is needed for this step regardless of which method is used.
 
 **Priority order confirmation:** This is option 1 (official dashboard setup) in the priority list. It is the highest priority and the only option for this component.
 

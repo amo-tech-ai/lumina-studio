@@ -1,3 +1,9 @@
+> **⚠️ ARCHIVED — DO NOT EXECUTE — HISTORICAL REFERENCE ONLY**
+>
+> Superseded 2026-07-14. Reason: describes the custom ai-gateway Worker, which the team decided to stop investing in (2026-07-14) — see IPI-487 migration gate. Current plan: `tasks/cloudflare/Tasks/000-Architecture-Decision.md`, Linear IPI-487 (migration gate) and IPI-586/590/591/592/594 (active work).
+
+---
+
 # IPI-472 · CF-DASHBOARD-005 — Enable Observability (Logs & Monitoring)
 
 **Status:** ✅ COMPLETED (2026-07-12)  

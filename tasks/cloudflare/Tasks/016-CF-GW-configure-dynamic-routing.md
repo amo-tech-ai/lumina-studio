@@ -16,7 +16,7 @@ Configure dynamic routes in AI Gateway so that a primary model failure or budget
 
 ### Real-world iPix example
 
-The Production Planner agent calls `@cf/openai/gpt-5` as its primary model. OpenAI has a 10-minute outage. Without dynamic routing, every Production Planner request fails with a 502 from the custom router, and users see errors. With dynamic routing, the gateway automatically rewrites the request to `@cf/meta/llama-4-scout-17b-16e-instruct` (the default iPix managed Workers AI model), users keep working, and the analytics dashboard shows the fallback traffic in green.
+The Production Planner agent calls `openai/gpt-5` as its primary model. OpenAI has a 10-minute outage. Without dynamic routing, every Production Planner request fails with a 502 from the custom router, and users see errors. With dynamic routing, the gateway automatically rewrites the request to `@cf/meta/llama-4-scout-17b-16e-instruct` (the default iPix managed Workers AI model), users keep working, and the analytics dashboard shows the fallback traffic in green.
 
 ---
 
@@ -25,6 +25,8 @@ The Production Planner agent calls `@cf/openai/gpt-5` as its primary model. Open
 **Dashboard — create a Dynamic Route with a primary and at least one fallback model.**
 
 Priority order: option 1 (dashboard setup).
+
+**⚠️ Prerequisite, corrected 2026-07-14 (verified against `developers.cloudflare.com/ai-gateway/features/dynamic-routing/`):** Dynamic Routing requires the gateway to have authentication turned on, and upstream provider keys stored with BYOK. Confirm both before creating a route — a route referencing an unconfigured provider will fail silently at request time, not at creation time.
 
 ---
 
@@ -59,14 +61,14 @@ No CLI required.
 2. Configure:
    - **Route name:** `planner-primary`
    - **Strategy**: weighted or fallback.
-   - **Primary model:** `@cf/openai/gpt-5` (or per project choice)
+   - **Primary model:** `openai/gpt-5` (or per project choice)
    - **Fallback model:** `@cf/meta/llama-4-scout-17b-16e-instruct`
    - **Trigger for fallback:** on 5xx, on timeout, or on spend limit (links to task 015).
 3. Click **Save**.
 
 ### Step 3: Point the agent at this route
 
-The Mastra provider config (task 031) will reference this route by name — no code changes are needed once the route exists.
+**⚠️ Corrected 2026-07-14 — this does require a code change, it is not automatic.** The application must call the route **by its route name** in place of a normal model ID — e.g. `dynamic/planner-primary`, not `openai/gpt-5` or `@cf/meta/llama-4-scout-17b-16e-instruct`. Every call site that should benefit from the fallback needs updating to reference the route name explicitly.
 
 ---
 
@@ -113,12 +115,52 @@ Pass criteria: Approximately 10 requests are served by the secondary, 90 by the 
 
 ---
 
+## Required capability matrix (added 2026-07-14, audit finding)
+
+Before pairing any primary/fallback model, confirm parity — a fallback that silently drops a capability the primary had is a worse failure mode than no fallback:
+
+| Capability | Primary | Fallback | Must match? |
+|---|---|---|---|
+| Tool calling | Yes | Yes | Required |
+| Structured output | Yes | Yes | Required |
+| Streaming | Yes | Yes | Required |
+| Context size | Defined | Defined | Fallback must fit the same conversation length |
+| Latency | Baseline | Baseline | Measured, not assumed |
+| Cost | Baseline | Baseline | Measured, not assumed |
+
+## Managed-First Verification & Definition of Done
+
+*(Added 2026-07-14, per `tasks/cloudflare/Tasks/notes/04-improvements.md` — fill in at execution time, not in advance. A dashboard toggle alone does not satisfy "done.")*
+
+| Verification gate | Result |
+|---|---|
+| Cloudflare dashboard feature available? | — |
+| Wrangler command available? | — |
+| Cloudflare API available? | — |
+| Official package/module available? | — |
+| Official GitHub repository checked? | — |
+| Official example checked? | — |
+| Official tutorial/recipe checked? | — |
+| Existing iPix code already implements it? | — |
+| Configuration-only solution possible? | — |
+| Minimum integration code required | — |
+| Custom implementation necessary? | — |
+| Why custom code is unavoidable | — |
+| Rollback method | — |
+| Production evidence | — |
+
+**Definition of done:** Configured + integrated + tested + observed in logs + failure tested + rollback tested + documented = complete.
+
+---
+
 ## Acceptance Criteria
 
 - [ ] At least one Dynamic Route configured
 - [ ] Primary and fallback models are specified
+- [ ] The capability matrix above is confirmed for the chosen primary/fallback pair
 - [ ] Failover conditions configured (5xx, timeout, or spend limit)
 - [ ] Fallback is verified by a real test request
+- [ ] Route-version rollback has been tested at least once, not just documented
 
 ---
 

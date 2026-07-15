@@ -1,3 +1,9 @@
+> **⚠️ ARCHIVED — DO NOT EXECUTE — HISTORICAL REFERENCE ONLY**
+>
+> Superseded 2026-07-14. Reason: describes recreating provider keys directly on the custom Worker — superseded by Infisical + the native gateway's own auth. Current plan: `tasks/cloudflare/Tasks/000-Architecture-Decision.md`, Linear IPI-487 (migration gate) and IPI-586/590/591/592/594 (active work).
+
+---
+
 # IPI-472 · CF-DASHBOARD-004 — Configure Secrets & Environment Variables
 
 **Status:** ✅ COMPLETED (2026-07-12)  

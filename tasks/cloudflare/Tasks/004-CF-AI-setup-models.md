@@ -1,5 +1,6 @@
-# IPI-XXX · CF-AI-021 — Install Workers AI Provider
+# IPI-586 · CF-AI-021 — Install Workers AI Provider
 
+**Linear:** [IPI-586 · CF-AI-003 — Wire one Workers AI call through ipix-prod gateway](https://linear.app/amo100/issue/IPI-586)  
 **Task ID:** CF-AI-021  
 **Phase:** 1 — Core setup  
 **Difficulty:** Easy  
@@ -11,11 +12,13 @@
 
 ## Purpose
 
-Install the official Cloudflare Workers AI provider package and create a simple model resolver function that Mastra agents will call. This replaces 700 lines of custom provider code with 30 lines.
+Install the official Cloudflare Workers AI provider package and create a simple model resolver function that Mastra agents will call.
+
+**Corrected 2026-07-14 (audit finding):** "replaces 700 lines with 30" is not proven by this task alone and shouldn't be stated as settled fact — the actual line-count reduction depends on how much of the existing `provider.ts` (single-arg `resolveModel(tier)`, ~230 lines, still serving production via the custom gateway) ends up deleted vs. kept as a fallback. "Maintained by Cloudflare engineers" is replaced below with a sourced claim.
 
 ### Real-world iPix example
 
-When the Production Planner agent needs to "schedule a shoot for the summer collection," it calls `resolveModel("default")` to get a language model. Today, that function routes through a custom adapter with 455 lines of HTTP client code. After this task, it calls the official `workers-ai-provider` package — one function call, maintained by Cloudflare engineers.
+When the Production Planner agent needs to "schedule a shoot for the summer collection," it calls `resolveModel("default")` to get a language model. Today, that function routes through a custom adapter with HTTP client code pointed at the custom gateway Worker. After this task, a **new, separate** resolver calls the official `workers-ai-provider` package — recommended in Cloudflare's official Workers AI integration documentation (`developers.cloudflare.com/workers-ai/configuration/ai-sdk/`).
 
 ---
 
@@ -72,9 +75,40 @@ None required.
 
 The `workers-ai-provider` dependency is added automatically by npm install.
 
-### File 2: app/src/lib/ai/provider.ts (replaces existing 234-line version)
+### File 2: a new resolver, additive not a replacement (corrected 2026-07-14, audit finding)
 
-The new file contains approximately 30 lines. It defines four model IDs as constants (fast, default, structured, embedding), a type for the model tier, and a single function called `resolveModel` that takes a tier and the environment, and returns a language model from the Workers AI provider.
+**Do not replace the existing `app/src/lib/ai/provider.ts` in this task.** That file's `resolveModel(tier)` (single-arg) is what the custom gateway path — still the live production AI route — depends on today. Replacing it immediately removes the rollback path before the new gateway is proven. Correct order:
+
+1. Install `workers-ai-provider`.
+2. Add a **new**, separate resolver function alongside the existing one.
+3. Wire only the isolated `IPI-586` smoke-test route to the new resolver (see that issue for the exact route spec).
+4. Test chat, tools, structured output, and streaming on the new path.
+5. Only after IPI-586 and the agent migration (`054`/IPI-594) are both proven does the old `provider.ts` get deleted — that's Task `053`/IPI-592, explicitly gated, not this task.
+
+**Critical: `resolveModel` must route through `ipix-prod`, not call Workers AI directly.** Verified against the current `workers-ai-provider` README (`github.com/cloudflare/ai/packages/workers-ai-provider`): the gateway ID is configured once, at `createWorkersAI()` construction time, via a `gateway: { id }` option.
+
+```ts
+import { createWorkersAI } from "workers-ai-provider";
+
+const MODEL_IDS = {
+  fast: "@cf/zai-org/glm-4.7-flash",
+  default: "@cf/meta/llama-4-scout-17b-16e-instruct",
+  structured: "@cf/google/gemma-4-26b-a4b-it",
+  embedding: "@cf/baai/bge-base-en-v1.5",
+} as const;
+
+type ModelTier = keyof typeof MODEL_IDS;
+
+export function resolveWorkersAiModel(tier: ModelTier, env: { AI: Ai }) {
+  const workersai = createWorkersAI({
+    binding: env.AI,
+    gateway: { id: "ipix-prod" }, // <- every call from this provider instance routes through the gateway
+  });
+  return workersai(MODEL_IDS[tier]);
+}
+```
+
+**⚠️ Breaking-change warning:** this function's `env` parameter is not available at module top level in the Workers/Next.js runtime — only inside a request handler. Do not assign `const MODEL = resolveWorkersAiModel(tier, env)` as a module-level constant; see `054-CF-MIGRATION-wire-mastra-agents.md`'s "Step 0" for the correct per-request pattern (Mastra's dynamic `model: ({ requestContext }) => ...` resolution).
 
 The four models are:
 
@@ -127,12 +161,40 @@ Pass criteria: The agent returns a streamed response from a Workers AI model.
 
 ---
 
+## Managed-First Verification & Definition of Done
+
+*(Added 2026-07-14, per `tasks/cloudflare/Tasks/notes/04-improvements.md` — fill in at execution time, not in advance. A dashboard toggle alone does not satisfy "done.")*
+
+| Verification gate | Result |
+|---|---|
+| Cloudflare dashboard feature available? | — |
+| Wrangler command available? | — |
+| Cloudflare API available? | — |
+| Official package/module available? | — |
+| Official GitHub repository checked? | — |
+| Official example checked? | — |
+| Official tutorial/recipe checked? | — |
+| Existing iPix code already implements it? | — |
+| Configuration-only solution possible? | — |
+| Minimum integration code required | — |
+| Custom implementation necessary? | — |
+| Why custom code is unavoidable | — |
+| Rollback method | — |
+| Production evidence | — |
+
+**Definition of done:** Configured + integrated + tested + observed in logs + failure tested + rollback tested + documented = complete.
+
+---
+
 ## Acceptance Criteria
 
 - [ ] `workers-ai-provider` is in package.json
-- [ ] The new provider.ts is approximately 30 lines (down from 234)
+- [ ] A new resolver function exists alongside (not replacing) the existing `provider.ts`
+- [ ] `resolveWorkersAiModel()` constructs `createWorkersAI()` with `gateway: { id: "ipix-prod" }` — not a bare `{ binding: env.AI }`
+- [ ] The new resolver is only called from the isolated IPI-586 smoke-test route — no production call site changed
 - [ ] `npx tsc --noEmit` passes
-- [ ] The marketing agent returns a response locally
+- [ ] A test call shows up in `ipix-prod`'s Gateway Logs (not just a successful Workers AI response)
+- [ ] Negative test: unknown tier fails closed, not silently
 - [ ] No existing tests break
 - [ ] The pull request is ready for review
 
@@ -159,15 +221,7 @@ The old custom provider code still exists in git history and can be restored.
 
 ## What Custom Code This Removes
 
-This task prepares for the removal of:
-
-- `app/src/lib/ai/provider-adapter.ts` (455 lines) — removed in Task 5
-- `app/src/lib/ai/gemini-registry.ts` (29 lines) — removed in Task 5
-- `app/src/lib/ai/groq-models.ssot.json` (124 lines) — removed in Task 5
-- `app/src/lib/ai/groq-models-path.ts` (23 lines) — removed in Task 5
-- `app/src/lib/ai/model-registry.ts` (103 lines) — removed in Task 5
-
-The old provider.ts (234 lines) is replaced in this task.
+**Nothing, in this task** (corrected 2026-07-14). This task is purely additive — see "Files Changed" above. The custom `provider-adapter.ts`, `gemini-registry.ts`, `groq-models.ssot.json`, `groq-models-path.ts`, `model-registry.ts`, and the old `provider.ts` are only removed in `053-CF-MIGRATION-cleanup-custom-code.md` (Linear: IPI-592 · CF-MIG-820), explicitly gated on the new path being proven in production first.
 
 ---
 

@@ -17,7 +17,15 @@ references:
 
 # CF-NEXTJS-002 — Create Wrangler Configuration File
 
-**Status:** 🟡 Ready to start  
+**Status:** 🟢 Already complete (verified 2026-07-14 against live `app/wrangler.jsonc`, `app/open-next.config.ts`, and `app/package.json` — this exact setup already exists). See IPI-486 / `CF-MIG-110` (PR #282, merged) for the tracked completion.
+
+> **🛑 DO NOT RUN the steps below — corrected 2026-07-14 (audit finding).** `app/wrangler.jsonc` already exists and is correct; the body below instructs creating a second config, possibly at the wrong path, and describes deleting the file as harmless when deployment depends on it. Kept as historical record only. Verify current state instead:
+> ```bash
+> cd ~/ipix/app
+> cat wrangler.jsonc | head -20
+> npx wrangler types
+> ```
+
 **Effort:** 10 minutes  
 **Dependency:** 015 (OpenNext deps installed)  
 **Enables:** Local development with `wrangler dev`

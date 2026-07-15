@@ -49,14 +49,22 @@ const resp = await env.AI.run(
   "@cf/meta/llama-4-scout-17b-16e-instruct",
   { messages: [{ role: "user", content: "Plan a shoot" }] },
   {
-    gateway: { id: "ipix-prod" }, // matches the gateway created in Task 001 — not "ipix-default"
-    // metadata keys/values can be string, number, or boolean (no objects)
-    metadata: {
-      user_id: "u_42",
-      tenant_id: "brand_a",
-      feature: "production_planner",
-      session_id: "s_abc123",
-      is_trial: false,
+    gateway: {
+      id: "ipix-prod", // matches the gateway created in Task 001 — not "ipix-default"
+      // Corrected 2026-07-14: metadata must be nested INSIDE the gateway object,
+      // not a sibling key at the top level (verified against
+      // developers.cloudflare.com/ai-gateway/usage/worker-binding-methods/).
+      // Keys/values can be string, number, or boolean (no objects).
+      // Illustrative only — use hashed identifiers in real code (see File 2
+      // below), not raw user_id/tenant_id, since metadata is visible in
+      // analytics/logs, not a secure store.
+      metadata: {
+        user_id: "u_42",
+        tenant_id: "brand_a",
+        feature: "production_planner",
+        session_id: "s_abc123",
+        is_trial: false,
+      },
     },
   }
 );
@@ -67,12 +75,13 @@ Or via the REST API header:
 ```bash
 curl -X POST "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/ai/v1/chat/completions" \
   -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+  -H "cf-aig-gateway-id: ipix-prod" \
   -H "Content-Type: application/json" \
-  -H "cf-aig-metadata: user_id=u_42,tenant_id=brand_a,feature=production_planner" \
+  -H 'cf-aig-metadata: {"user_id":"u_42","tenant_id":"brand_a","feature":"production_planner"}' \
   -d '{"model":"@cf/meta/llama-4-scout-17b-16e-instruct","messages":[{"role":"user","content":"hi"}]}'
 ```
 
-Limits: 5 metadata entries per request, types string/number/boolean.
+**Corrected 2026-07-14 (real bugs, verified against `developers.cloudflare.com/ai-gateway/observability/custom-metadata/`):** the `cf-aig-metadata` header value is **JSON**, not the old comma-separated `key=value,key=value` format shown here previously. Limits: up to 5 metadata entries per request — if more than 5 are provided, only the first 5 are saved (not an error, just silently dropped past 5).
 
 ---
 
@@ -96,15 +105,17 @@ To verify in dashboard:
 
 Add the `metadata` object to the second argument of every `ai.run()` call. The Mastra deployer (tasks 029-031) provides the binding.
 
-### File 2: `app/src/lib/ai/gateway-metadata.ts` (new helper)
+### File 2: `app/src/lib/ai/gateway-context.ts` (new helper, added 2026-07-14 — corrected location and content per audit finding)
 
-A small helper that builds metadata from the request context (auth user, tenant, session):
+**Never store in gateway metadata** (it's visible in analytics/logs, not a secure store): names, email addresses, client brand names, raw session tokens, authorization IDs, private URLs, tool arguments, or raw Supabase identifiers unless formally approved.
+
+**Implement this once, centrally** — not inside every individual Mastra tool file (audit finding: putting it in `production-planner.ts` etc. means every new agent has to remember to add it manually and drifts out of sync). A small helper in one shared location, called from wherever the AI binding is invoked, ensures every call gets normalized metadata automatically:
 
 ```ts
 export function gatewayMetadata(req: RequestContext) {
   return {
-    user_id: req.userId,
-    tenant_id: req.tenantId,
+    tenant_hash: hash(req.tenantId),
+    actor_hash: hash(req.userId),
     feature: req.feature,
     session_id: req.sessionId,
     is_trial: !!req.isTrial,
@@ -149,6 +160,31 @@ Pass criteria: User A is blocked, user B succeeds.
 Send a request without metadata.
 
 Pass criteria: Request succeeds. No analytics column is populated.
+
+---
+
+## Managed-First Verification & Definition of Done
+
+*(Added 2026-07-14, per `tasks/cloudflare/Tasks/notes/04-improvements.md` — fill in at execution time, not in advance. A dashboard toggle alone does not satisfy "done.")*
+
+| Verification gate | Result |
+|---|---|
+| Cloudflare dashboard feature available? | — |
+| Wrangler command available? | — |
+| Cloudflare API available? | — |
+| Official package/module available? | — |
+| Official GitHub repository checked? | — |
+| Official example checked? | — |
+| Official tutorial/recipe checked? | — |
+| Existing iPix code already implements it? | — |
+| Configuration-only solution possible? | — |
+| Minimum integration code required | — |
+| Custom implementation necessary? | — |
+| Why custom code is unavoidable | — |
+| Rollback method | — |
+| Production evidence | — |
+
+**Definition of done:** Configured + integrated + tested + observed in logs + failure tested + rollback tested + documented = complete.
 
 ---
 

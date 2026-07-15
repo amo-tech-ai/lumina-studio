@@ -1,3 +1,9 @@
+> **⚠️ ARCHIVED — DO NOT EXECUTE — HISTORICAL REFERENCE ONLY**
+>
+> Superseded 2026-07-14. Reason: assumes Mastra deploys as its own standalone Cloudflare Worker — confirmed false; Mastra stays in-process in the OpenNext Worker (IPI-486). Current plan: `tasks/cloudflare/Tasks/000-Architecture-Decision.md`, Linear IPI-487 (migration gate) and IPI-586/590/591/592/594 (active work).
+
+---
+
 ---
 title: "Task 27: Configure Mastra Model Registry"
 references:
