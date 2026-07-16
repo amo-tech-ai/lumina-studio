@@ -138,6 +138,28 @@ IPI-580 (Kanban+List) stays bundled — already one ticket. IPI-579/581 (Timelin
 
 ---
 
+## 🔬 Spec-quality verification pass (2026-07-16, third pass — `/task-verifier`)
+
+A third review audited IPI-649/650/651's spec quality (missing RPC signatures, concurrency model, permission matrices) and the IPI-574/582/483 correction wording. Verified via `/task-verifier`, adapted for spec-quality (no code/PR exists yet for these Backlog tickets).
+
+| Report claim | Verdict | Applied |
+|---|:---:|---|
+| IPI-649 needs frozen RPC signatures/concurrency/idempotency | 🟡 Partially wrong — already frozen in IPI-574's text, just not inlined | Inlined into IPI-649 |
+| Report's suggested `p_expected_version bigint` concurrency model | 🔴 **Rejected** — contradicts the real frozen contract (timestamp-based `expectedUpdatedAt`, no version column anywhere in this schema) | Used the real contract instead |
+| IPI-649 needs a rollback migration plan | ✅ Correct, genuinely missing | Added |
+| IPI-649 needs a cross-instance-status write guard | 🆕 Found independently while verifying IPI-651 (not in the report) | Added `INSTANCE_TERMINAL` error |
+| IPI-650 needs a full creation transaction shape | ✅ Correct, but **stale target** — critiques the pre-split IPI-650; that scope moved to **IPI-653** in the prior pass | Applied to IPI-653: frozen transaction shape, `INSTANCE_ALREADY_EXISTS` handling, entity validation, proposed permission matrix |
+| IPI-651 needs frozen archive/cancel semantics + resolved restore ambiguity | ✅ Correct — **and worse than reported**: checked `status-transitions.ts` directly, `archive` is only valid from `completed` (not any status, as this ticket originally said), and restore isn't "cheap" — both `archived`/`cancelled` are hard-terminal in the shared `TRANSITIONS` table. My own prior draft had this wrong. | Corrected against real code, not guessed |
+| IPI-651: transition validation must be DB-authoritative, not just the TS helper | ✅ Correct | Added |
+| IPI-582's prose still spotlights the Done IPI-574 as the blocker | ✅ Correct | Reworded to point at IPI-649. `blockedBy: IPI-574` left in place (inert since Done, historically accurate) rather than moved to `relatedTo` — not worth the churn |
+| IPI-483 shouldn't fully block on IPI-649 | ✅ Correct | Added a staged-dependency note: stages A–D (gate visibility, actions, permission, cycle detection) can start now; only E–F (the commit transaction) need IPI-649's concurrency model |
+| Quality score table (88%/72%/76%/84% overall) | ⚪ Not verified — no rubric behind the numbers | Not applied or disputed |
+| Tracker doc restructuring (split current-state from historical appendix) | ⚪ Reasonable, deferred | Not executed this pass |
+
+**Stop condition: ✅ Safe to implement against** — all 6 tickets now carry frozen, code-grounded contracts, zero unresolved blockers.
+
+---
+
 ## 0. Audit-of-audits verdict
 
 Three audit documents now exist for this epic: mine (in-chat), the pasted meta-audit (88/100 grade of mine), and two on-disk reports from a separate "opencode agent" pass dated 2026-07-15. Reconciling all four against live sources:
