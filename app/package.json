@@ -2,6 +2,9 @@
   "name": "ipix-operator",
   "version": "0.1.0",
   "private": true,
+  "engines": {
+    "node": ">=22"
+  },
   "scripts": {
     "build": "NEXT_PRIVATE_WORKER_THREADS=false next build",
     "prebuild": "node scripts/sync-groq-models.mjs",
@@ -9,7 +12,7 @@
     "dev:agent": "mastra dev",
     "dev:ui": "next dev --turbopack -p 3002",
     "dev:debug": "LOG_LEVEL=debug npm run dev",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "tsc --noEmit && npm run cf-typegen && tsc --noEmit -p tsconfig.cf-bindings.json",
     "lint": "eslint .",
     "test": "vitest run",
     "start": "next start -p 3002",
@@ -17,7 +20,8 @@
     "preview": "node scripts/sync-groq-models.mjs && rm -rf .next .open-next && opennextjs-cloudflare build && opennextjs-cloudflare preview",
     "deploy": "node scripts/sync-groq-models.mjs && rm -rf .next .open-next && opennextjs-cloudflare build && opennextjs-cloudflare deploy",
     "upload": "node scripts/sync-groq-models.mjs && rm -rf .next .open-next && opennextjs-cloudflare build && opennextjs-cloudflare upload",
-    "cf-typegen": "wrangler types --env-interface CloudflareEnv cloudflare-env.d.ts",
+    "cf-typegen": "wrangler types cloudflare-env.d.ts --env-interface CloudflareEnv --include-runtime=false",
+    "check:cf-types": "wrangler types cloudflare-env.d.ts --env-interface CloudflareEnv --include-runtime=false --check",
     "verify:cloudinary-pipeline": "node scripts/verify-cloudinary-pipeline.mjs"
   },
   "dependencies": {
@@ -61,6 +65,7 @@
     "zod": "^3.25.0"
   },
   "devDependencies": {
+    "@cloudflare/workers-types": "^5.20260716.1",
     "@tailwindcss/postcss": "^4",
     "@testing-library/react": "^16.3.2",
     "@testing-library/user-event": "^14.6.1",
