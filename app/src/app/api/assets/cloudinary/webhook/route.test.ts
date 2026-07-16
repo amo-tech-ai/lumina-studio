@@ -25,6 +25,7 @@ vi.mock("next/server", async (importOriginal) => {
 const assetsSelectMaybeSingle = vi.fn();
 const assetsInsertSingle = vi.fn();
 const assetsUpdateEq = vi.fn();
+const assetsDeleteEq = vi.fn();
 const cloudinaryAssetsUpsert = vi.fn();
 const cloudinaryAssetsSelectMaybeSingle = vi.fn();
 const cloudinaryAssetsUpdateIs = vi.fn();
@@ -48,6 +49,7 @@ const mockFrom = vi.fn((table: string) => {
       select: vi.fn(() => ({ eq: vi.fn(() => ({ maybeSingle: assetsSelectMaybeSingle })) })),
       insert: vi.fn(() => ({ select: vi.fn(() => ({ single: assetsInsertSingle })) })),
       update: vi.fn(() => ({ eq: assetsUpdateEq })),
+      delete: vi.fn(() => ({ eq: assetsDeleteEq })),
     };
   }
   if (table === "cloudinary_assets") {
@@ -112,6 +114,7 @@ beforeEach(() => {
   assetsSelectMaybeSingle.mockResolvedValue({ data: null, error: null });
   assetsInsertSingle.mockResolvedValue({ data: { id: "asset-1" }, error: null });
   assetsUpdateEq.mockResolvedValue({ data: null, error: null });
+  assetsDeleteEq.mockResolvedValue({ data: null, error: null });
   cloudinaryAssetsUpsert.mockResolvedValue({ data: null, error: null });
   cloudinaryAssetsSelectMaybeSingle.mockResolvedValue({ data: null, error: null });
   cloudinaryAssetsUpdate.mockClear();
@@ -534,11 +537,19 @@ describe("POST /api/assets/cloudinary/webhook", () => {
     );
   });
 
-  it("IPI-641: concurrent mirror created after miss keeps canonical asset_id (no FK reassignment)", async () => {
+  it("IPI-641: concurrent mirror created after miss keeps canonical asset_id and deletes provisional orphan", async () => {
+    // 1) provider lookup miss  2) public_id reuse check miss  3) re-check finds peer mirror
     cloudinaryAssetsSelectMaybeSingle
       .mockResolvedValueOnce({ data: null, error: null })
+      .mockResolvedValueOnce({ data: null, error: null })
       .mockResolvedValueOnce({
-        data: { id: "mirror-1", asset_id: "asset-canonical", brand_id: BRAND_ID, version: 1 },
+        data: {
+          id: "mirror-1",
+          asset_id: "asset-canonical",
+          brand_id: BRAND_ID,
+          version: 1,
+          cloudinary_asset_id: PROVIDER_ASSET_ID,
+        },
         error: null,
       });
     assetsInsertSingle.mockResolvedValue({ data: { id: "asset-orphan" }, error: null });
@@ -552,6 +563,106 @@ describe("POST /api/assets/cloudinary/webhook", () => {
       expect.objectContaining({ asset_id: "asset-canonical", public_id: UPLOAD_PAYLOAD.public_id }),
     );
     expect(assetsUpdateEq).toHaveBeenCalledWith("id", "asset-canonical");
+    expect(assetsDeleteEq).toHaveBeenCalledWith("id", "asset-orphan");
+  });
+
+  it("IPI-641: notification_type rename routes through upload handler (to_public_id)", async () => {
+    const FROM = `ipix/brands/${BRAND_ID}/products/old-name`;
+    const TO = `ipix/brands/${BRAND_ID}/products/new-name`;
+    cloudinaryAssetsSelectMaybeSingle.mockResolvedValue({
+      data: {
+        id: "mirror-1",
+        asset_id: "asset-existing",
+        brand_id: BRAND_ID,
+        version: 1,
+        public_id: FROM,
+        secure_url: "https://res.cloudinary.com/x/old.jpg",
+        cloudinary_asset_id: PROVIDER_ASSET_ID,
+      },
+      error: null,
+    });
+
+    const { POST } = await importRoute();
+    const res = await POST(
+      makeRequest({
+        notification_type: "rename",
+        asset_id: PROVIDER_ASSET_ID,
+        resource_type: "image",
+        from_public_id: FROM,
+        to_public_id: TO,
+        // official rename payload omits public_id + secure_url
+      }),
+    );
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ ok: true });
+    expect(cloudinaryAssetsUpsert).not.toHaveBeenCalled();
+    expect(cloudinaryAssetsUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        public_id: TO,
+        cloudinary_asset_id: PROVIDER_ASSET_ID,
+        asset_id: "asset-existing",
+      }),
+    );
+    expect(assetsUpdateEq).toHaveBeenCalledWith("id", "asset-existing");
+    expect(mockFetch).not.toHaveBeenCalled(); // no DNA on rename
+  });
+
+  it("IPI-641: public_id reused by a different provider id relocates old mirror (no identity steal)", async () => {
+    const OTHER_PROVIDER = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+    // 1) provider lookup for NEW id → miss
+    // 2) public_id reuse check → old mirror with different provider id
+    // 3) upsert re-check by provider → miss
+    // 4) upsert public_id lookup → miss (relocated) → insert
+    cloudinaryAssetsSelectMaybeSingle
+      .mockResolvedValueOnce({ data: null, error: null })
+      .mockResolvedValueOnce({
+        data: {
+          id: "mirror-old",
+          asset_id: "asset-old",
+          brand_id: BRAND_ID,
+          version: 3,
+          public_id: UPLOAD_PAYLOAD.public_id,
+          cloudinary_asset_id: OTHER_PROVIDER,
+        },
+        error: null,
+      })
+      .mockResolvedValueOnce({ data: null, error: null })
+      .mockResolvedValueOnce({ data: null, error: null });
+
+    const { POST } = await importRoute();
+    const res = await POST(makeRequest(UPLOAD_PAYLOAD));
+    expect(res.status).toBe(200);
+    expect(cloudinaryAssetsUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        status: "archived",
+        public_id: expect.stringMatching(
+          new RegExp(`^${UPLOAD_PAYLOAD.public_id.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}__superseded_`),
+        ),
+      }),
+    );
+    expect(assetsUpdateEq).toHaveBeenCalledWith("id", "asset-old");
+    expect(cloudinaryAssetsUpsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        cloudinary_asset_id: PROVIDER_ASSET_ID,
+        public_id: UPLOAD_PAYLOAD.public_id,
+        asset_id: "asset-1",
+      }),
+      { onConflict: "public_id" },
+    );
+  });
+
+  it("normalizeCloudinaryNotification maps to_public_id for rename events", async () => {
+    const { normalizeCloudinaryNotification } = await importRoute();
+    const normalized = normalizeCloudinaryNotification({
+      notification_type: "rename",
+      to_public_id: "folder/new",
+      from_public_id: "folder/old",
+      asset_id: PROVIDER_ASSET_ID,
+      resource_type: "image",
+    });
+    expect(normalized.public_id).toBe("folder/new");
+    expect(normalized.from_public_id).toBe("folder/old");
+    expect(normalized.secure_url).toContain("/image/authenticated/folder/new");
   });
 
   it("IPI-641 delete: archives by provider id and legacy null-identity public_id only", async () => {

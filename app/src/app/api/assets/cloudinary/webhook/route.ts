@@ -17,6 +17,8 @@ type CloudinaryNotification = {
   public_id?: string;
   /** Prior public_id on rename notifications — correlates legacy mirrors lacking cloudinary_asset_id. */
   from_public_id?: string;
+  /** New public_id on official `notification_type: "rename"` payloads (Cloudinary docs). */
+  to_public_id?: string;
   secure_url?: string;
   resource_type?: string;
   format?: string;
@@ -48,6 +50,40 @@ export function mapProviderIdentity(payload: CloudinaryNotification): {
   }
   if (payload.version != null) out.version = payload.version;
   return out;
+}
+
+/**
+ * Official rename notifications use `to_public_id` / `from_public_id` and often omit
+ * `public_id` + `secure_url`. Normalize so handleUpload can reuse the same path.
+ */
+export function normalizeCloudinaryNotification(
+  payload: CloudinaryNotification,
+): CloudinaryNotification {
+  if (payload.notification_type !== "rename") return payload;
+  const toPublicId =
+    (typeof payload.to_public_id === "string" && payload.to_public_id.length > 0
+      ? payload.to_public_id
+      : undefined) ??
+    (typeof payload.public_id === "string" && payload.public_id.length > 0
+      ? payload.public_id
+      : undefined);
+  if (!toPublicId) return payload;
+
+  const resourceType = payload.resource_type ?? "image";
+  const cloud = process.env.CLOUDINARY_CLOUD_NAME?.trim();
+  // iPix uploads use type=authenticated; rename payloads rarely include secure_url.
+  const secureUrl =
+    payload.secure_url ??
+    (cloud
+      ? `https://res.cloudinary.com/${cloud}/${resourceType}/authenticated/${toPublicId}`
+      : undefined);
+
+  return {
+    ...payload,
+    public_id: toPublicId,
+    resource_type: resourceType,
+    secure_url: secureUrl,
+  };
 }
 
 function resourceTypeToAssetType(resourceType: string): "image" | "video" | "document" {
@@ -130,6 +166,7 @@ type MirrorRow = {
   version: number | null;
   public_id: string | null;
   secure_url: string | null;
+  cloudinary_asset_id: string | null;
 };
 
 type MirrorLookup =
@@ -252,7 +289,7 @@ type CloudinaryMirrorRow = {
   version?: number;
 };
 
-const MIRROR_SELECT = "id, asset_id, brand_id, version, public_id, secure_url";
+const MIRROR_SELECT = "id, asset_id, brand_id, version, public_id, secure_url, cloudinary_asset_id";
 
 function toMirrorLookup(
   data: {
@@ -262,6 +299,7 @@ function toMirrorLookup(
     version?: number | null;
     public_id?: string | null;
     secure_url?: string | null;
+    cloudinary_asset_id?: string | null;
   } | null,
 ): MirrorLookup {
   if (!data?.id || !data.asset_id) return { kind: "missing" };
@@ -274,8 +312,45 @@ function toMirrorLookup(
       version: data.version ?? null,
       public_id: data.public_id ?? null,
       secure_url: data.secure_url ?? null,
+      cloudinary_asset_id: data.cloudinary_asset_id ?? null,
     },
   };
+}
+
+/**
+ * Free a public_id held by a different provider identity so a reused Cloudinary
+ * public_id can attach to a new mirror without overwriting immutable identity.
+ */
+async function relocateMirrorPublicId(
+  db: ReturnType<typeof createSupabaseAdminClient>,
+  mirror: MirrorRow,
+  publicId: string,
+): Promise<boolean> {
+  const relocated = `${publicId}__superseded_${mirror.id.replace(/-/g, "").slice(0, 12)}`;
+  const { error: mirrorErr } = await db
+    .from("cloudinary_assets")
+    .update({ public_id: relocated, status: "archived" })
+    .eq("id", mirror.id);
+  if (mirrorErr) {
+    console.error(
+      "[cloudinary/webhook] failed to relocate public_id for provider-id mismatch:",
+      mirrorErr.message,
+    );
+    return false;
+  }
+  // Detach the old assets row from the reused public_id (non-unique index — keep row).
+  const { error: assetErr } = await db
+    .from("assets")
+    .update({ cloudinary_public_id: relocated })
+    .eq("id", mirror.asset_id);
+  if (assetErr) {
+    console.error(
+      "[cloudinary/webhook] failed to detach assets.cloudinary_public_id after relocate:",
+      assetErr.message,
+    );
+    return false;
+  }
+  return true;
 }
 
 async function findMirrorByProviderId(
@@ -428,6 +503,33 @@ async function upsertCloudinaryAssetRecord(
     return { ok: true, assetId: existing.mirror.asset_id };
   }
 
+  // First sighting by provider id: never merge into a public_id row that already has a
+  // different immutable cloudinary_asset_id (delete/rename reuse).
+  const byPublicId = await findMirrorByPublicId(db, publicId);
+  if (byPublicId.kind === "error") return { ok: false };
+  if (byPublicId.kind === "found") {
+    const heldProviderId = byPublicId.mirror.cloudinary_asset_id;
+    const incomingProviderId = identity.cloudinary_asset_id;
+    if (heldProviderId && incomingProviderId && heldProviderId !== incomingProviderId) {
+      const relocated = await relocateMirrorPublicId(db, byPublicId.mirror, publicId);
+      if (!relocated) return { ok: false };
+    } else {
+      // Same provider, legacy null identity, or no incoming id — update that row in place.
+      row.asset_id = byPublicId.mirror.asset_id;
+      row.brand_id = brandId ?? byPublicId.mirror.brand_id;
+      let { error } = await db.from("cloudinary_assets").update(row).eq("id", byPublicId.mirror.id);
+      if (error && brandId && isBrandFkViolation(error)) {
+        row.brand_id = byPublicId.mirror.brand_id;
+        ({ error } = await db.from("cloudinary_assets").update(row).eq("id", byPublicId.mirror.id));
+      }
+      if (error) {
+        console.error("[cloudinary/webhook] cloudinary_assets update by public_id failed:", error.message);
+        return { ok: false };
+      }
+      return { ok: true, assetId: byPublicId.mirror.asset_id };
+    }
+  }
+
   const { error } = await db.from("cloudinary_assets").upsert(row, { onConflict: "public_id" });
   if (error) {
     console.error("[cloudinary/webhook] cloudinary_assets upsert failed:", error.message);
@@ -535,6 +637,23 @@ async function handleUpload(
     if (byFrom.kind === "found") priorLookup = byFrom;
   }
 
+  // Before inserting a new assets row: if this public_id is held by a different provider
+  // identity, relocate it so upsertAssetRecord cannot reuse the wrong local asset.
+  if (priorLookup.kind === "missing" && identity.cloudinary_asset_id) {
+    const byPublicId = await findMirrorByPublicId(db, publicId);
+    if (byPublicId.kind === "error") return { retryable: true };
+    if (byPublicId.kind === "found") {
+      const held = byPublicId.mirror.cloudinary_asset_id;
+      if (held && held !== identity.cloudinary_asset_id) {
+        const relocated = await relocateMirrorPublicId(db, byPublicId.mirror, publicId);
+        if (!relocated) return { retryable: true };
+      } else if (!held || held === identity.cloudinary_asset_id) {
+        // Legacy null id or same id found only by public_id — treat as prior mirror.
+        priorLookup = byPublicId;
+      }
+    }
+  }
+
   const upserted = await resolveAssetForUpload(db, {
     publicId,
     secureUrl,
@@ -584,6 +703,19 @@ async function handleUpload(
     if (!synced) return { retryable: true };
   }
 
+  // Concurrent race: we inserted a provisional assets row, then discovered the canonical
+  // mirror. Delete the orphan so the library does not show a duplicate without a mirror.
+  if (canonicalAssetId !== assetId) {
+    const { error: orphanErr } = await db.from("assets").delete().eq("id", assetId);
+    if (orphanErr) {
+      console.error(
+        "[cloudinary/webhook] failed to delete provisional assets row after canonical race:",
+        orphanErr.message,
+      );
+      return { retryable: true };
+    }
+  }
+
   await logNonFatal(db, {
     brandId: effectiveBrandId,
     input: {
@@ -595,7 +727,11 @@ async function handleUpload(
     output: { asset_id: canonicalAssetId },
   });
 
-  if (resourceTypeToAssetType(resourceType) === "image") {
+  // Renames do not change bytes — skip DNA re-score.
+  if (
+    payload.notification_type !== "rename" &&
+    resourceTypeToAssetType(resourceType) === "image"
+  ) {
     triggerDnaAudit(canonicalAssetId);
   }
   return {};
@@ -772,8 +908,14 @@ export async function POST(request: Request) {
   const notificationType = payload.notification_type;
 
   try {
-    if (notificationType === "upload" || notificationType === "eager") {
-      const result = await handleUpload(db, payload);
+    if (
+      notificationType === "upload" ||
+      notificationType === "eager" ||
+      notificationType === "rename"
+    ) {
+      // Rename payloads use to_public_id/from_public_id — normalize before shared handler.
+      const normalized = normalizeCloudinaryNotification(payload);
+      const result = await handleUpload(db, normalized);
       // Partial rename (mirror ahead of assets) must be retried — not silently acked.
       if (result.retryable) {
         return NextResponse.json({ error: "Transient processing failure" }, { status: 503 });
