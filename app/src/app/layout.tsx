@@ -40,6 +40,18 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} ${cormorant.variable} ${outfit.variable} antialiased`}
         suppressHydrationWarning
       >
+        {/*
+          IPI-654 · CHAT-RUNTIME-001: OpenNext/esbuild keepNames injects `__name(...)`
+          into next-themes' FOUC script (`(${fn.toString()})(...)`). That helper is
+          module-scoped in chunks but missing in the inline IIFE → ReferenceError on
+          every page. Polyfill must precede ThemeProvider's script.
+        */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html:
+              'var __name=globalThis.__name||function(t,n){return Object.defineProperty(t,"name",{value:n,configurable:!0}),t};',
+          }}
+        />
         <ThemeProvider attribute="class" defaultTheme="light" enableSystem disableTransitionOnChange>
           {children}
           <Toaster />

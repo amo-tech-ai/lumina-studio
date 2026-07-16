@@ -182,7 +182,12 @@ export function MarketingChat() {
 
   return (
     <ChatErrorBoundary>
-      <CopilotKit runtimeUrl="/api/marketing-chat">
+      {/*
+        single-route runtime (`mode: "single-route"`) only accepts POST on the
+        catch-all. Without useSingleEndpoint, CopilotKit "auto" transport issues
+        GET /threads → 405. Must stay aligned with marketing-chat/[[...slug]]/route.
+      */}
+      <CopilotKit runtimeUrl="/api/marketing-chat" useSingleEndpoint={true}>
         <MarketingChatInner />
       </CopilotKit>
     </ChatErrorBoundary>
