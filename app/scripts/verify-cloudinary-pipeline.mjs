@@ -338,24 +338,43 @@ function markAssetIdFallbackOk(summary, key) {
   summary[key] = "ok-fallback";
 }
 
+function alreadyDeletedOk(status) {
+  return status === "ok" || String(status).startsWith("ok-fallback");
+}
+
 /**
  * Idempotent sweep by assets.id / cloudinary_assets.asset_id.
  * Always runs when assetId is present (caller already passed the refuse guard).
+ * Does not overwrite a prior successful public_id delete with a redundant sweep error.
  */
 async function deleteRowsByAssetId(supabase, assetId, summary) {
   try {
     const { error } = await supabase.from("cloudinary_assets").delete().eq("asset_id", assetId);
-    if (error) summary.cloudinaryAssets = `error: ${error.message}`;
-    else markAssetIdFallbackOk(summary, "cloudinaryAssets");
+    if (error) {
+      if (!alreadyDeletedOk(summary.cloudinaryAssets)) {
+        summary.cloudinaryAssets = `error: ${error.message}`;
+      }
+    } else {
+      markAssetIdFallbackOk(summary, "cloudinaryAssets");
+    }
   } catch (e) {
-    summary.cloudinaryAssets = `error: ${sanitizeError(e)}`;
+    if (!alreadyDeletedOk(summary.cloudinaryAssets)) {
+      summary.cloudinaryAssets = `error: ${sanitizeError(e)}`;
+    }
   }
   try {
     const { error } = await supabase.from("assets").delete().eq("id", assetId);
-    if (error) summary.assets = `error: ${error.message}`;
-    else markAssetIdFallbackOk(summary, "assets");
+    if (error) {
+      if (!alreadyDeletedOk(summary.assets)) {
+        summary.assets = `error: ${error.message}`;
+      }
+    } else {
+      markAssetIdFallbackOk(summary, "assets");
+    }
   } catch (e) {
-    summary.assets = `error: ${sanitizeError(e)}`;
+    if (!alreadyDeletedOk(summary.assets)) {
+      summary.assets = `error: ${sanitizeError(e)}`;
+    }
   }
 }
 

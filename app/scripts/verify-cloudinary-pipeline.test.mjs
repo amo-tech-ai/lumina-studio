@@ -458,6 +458,25 @@ describe("cleanup — fallback by asset_id", () => {
     expect(supabase._calls.deletes.filter((d) => d.table === "cloudinary_assets").length).toBe(2);
   });
 
+  it("does not overwrite public_id ok with a redundant asset_id sweep error", async () => {
+    const cld = fakeCloudinary();
+    // First delete per table succeeds (public_id); second fails (asset_id sweep).
+    const supabase = fakeSupabase({
+      deletes: {
+        assets: [null, new Error("sweep boom")],
+        cloudinary_assets: [null, new Error("sweep boom")],
+      },
+    });
+    const summary = await cleanup({
+      cloudinary: cld,
+      supabase,
+      publicId: "ipix/cld105-test/cld105-1",
+      assetId: "a1",
+    });
+    expect(summary.assets).toBe("ok");
+    expect(summary.cloudinaryAssets).toBe("ok");
+  });
+
   it("uses the fixture-scoped prefix so a different brand scope does not refuse cleanup", async () => {
     const cld = fakeCloudinary();
     const supabase = fakeSupabase();
