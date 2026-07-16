@@ -36,7 +36,10 @@ export const PLANNER_INSTANCE_STATUSES: readonly PlannerInstanceStatus[] = [
 // let 101-200-char searches through parseHubSearchParams only to fail at
 // the query layer and throw to the error boundary; truncating to the same
 // bound here means the Hub never sends a search it knows will be rejected.
-const MAX_SEARCH_LENGTH = 100;
+// Exported so the search <input>'s maxLength (hub-filters.tsx) can reference
+// the same value instead of hardcoding a second copy that can drift out of
+// sync with this one — the exact bug this constant's own comment describes.
+export const MAX_SEARCH_LENGTH = 100;
 // Matches queries.ts's decodeCursor bound and charset exactly — a value that
 // couldn't have been issued by listPlannerInstances (too long, or containing
 // a character outside base64url) is treated as absent (fall back to page 1)

@@ -9,7 +9,7 @@
 
 import { redirect } from "next/navigation";
 
-import { parseHubSearchParams, type RawHubSearchParams } from "@/components/planner/hub-params";
+import { buildHubUrl, parseHubSearchParams, type RawHubSearchParams } from "@/components/planner/hub-params";
 import { PlannerHubWorkspace } from "@/components/planner/hub-workspace";
 import { listPlannerInstances } from "@/lib/planner/queries";
 
@@ -35,6 +35,16 @@ export default async function PlannerHubPage({
   if (!result.ok) {
     if (result.error.code === "UNAUTHENTICATED") {
       redirect("/login?redirect=/app/planner");
+    }
+    // By this point search/limit/entityType/status are already normalized
+    // to values listPlannerInstances accepts (parseHubSearchParams mirrors
+    // its exact bounds) — the only remaining source of INVALID_INPUT is a
+    // cursor with valid base64url charset but content that doesn't decode
+    // (a stale, tampered, or otherwise malformed pagination URL). Fall back
+    // to page 1 rather than crashing to the error boundary — this never
+    // decodes the cursor, it just stops forwarding one that already failed.
+    if (result.error.code === "INVALID_INPUT" && filters.cursor) {
+      redirect(buildHubUrl({ ...filters, cursor: undefined }));
     }
     throw new Error(result.error.message);
   }

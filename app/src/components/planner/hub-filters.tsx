@@ -9,7 +9,7 @@ import { Search as SearchIcon } from "lucide-react";
 import { getInstanceUiTreatment } from "@/lib/planner/status-transitions";
 import type { EntityType } from "@/lib/planner/types";
 
-import { buildHubUrl, PLANNER_INSTANCE_STATUSES, type HubFilters } from "./hub-params";
+import { buildHubUrl, MAX_SEARCH_LENGTH, PLANNER_INSTANCE_STATUSES, type HubFilters } from "./hub-params";
 import styles from "./hub-workspace.module.css";
 
 const TYPE_CHIPS: { value?: EntityType; label: string }[] = [
@@ -59,7 +59,7 @@ export function HubFilterBar({ filters }: Props) {
               type="search"
               name="search"
               defaultValue={filters.search}
-              maxLength={200}
+              maxLength={MAX_SEARCH_LENGTH}
               placeholder="Search plans"
               className={styles.searchInput}
             />
