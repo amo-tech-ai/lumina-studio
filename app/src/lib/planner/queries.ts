@@ -545,7 +545,12 @@ export async function getInstanceDetail(
       plannedStart: row.planned_start,
       plannedEnd: row.planned_end,
       ownerUserId: row.owner_user_id,
-      tasks: (row.tasks ?? []).map(toTask),
+      // PostgREST doesn't guarantee embedded-resource row order — sort
+      // explicitly rather than relying on whatever order the DB happens to
+      // return, which Workspace consumers would otherwise render as the
+      // plan sequence, disagreeing with each task's own sortOrder and with
+      // buildSchedule's schedule semantics.
+      tasks: (row.tasks ?? []).map(toTask).sort((a, b) => a.sortOrder - b.sortOrder),
     },
   };
 }

@@ -572,6 +572,28 @@ describe("getInstanceDetail", () => {
     expect(selectedColumns).toContain("tasks(");
   });
 
+  it("sorts tasks by sortOrder rather than trusting PostgREST's embed order", async () => {
+    // PostgREST doesn't guarantee embedded-resource row order — deliberately
+    // return tasks out of order here to prove the mapping sorts them, not
+    // just passes through whatever order the query happened to return.
+    const query = makeQuery({
+      data: {
+        ...instance(),
+        tasks: [
+          taskRow({ id: "t3", title: "Wrap", sort_order: 2 }),
+          taskRow({ id: "t1", title: "Casting", sort_order: 0 }),
+          taskRow({ id: "t2", title: "Shoot", sort_order: 1 }),
+        ],
+      },
+      error: null,
+    });
+    mockClient(query);
+
+    const result = await getInstanceDetail("i1");
+
+    expect(result.ok && result.data.tasks.map((t) => t.id)).toEqual(["t1", "t2", "t3"]);
+  });
+
   it("does not distinguish an RLS-filtered instance from a nonexistent one", async () => {
     const query = makeQuery({ data: null, error: null });
     mockClient(query);
