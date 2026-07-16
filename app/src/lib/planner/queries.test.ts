@@ -58,6 +58,7 @@ function mockClient(
   userId = "user-a",
   names: { user_id: string; display_name: string | null }[] = [],
   assignment: AssignmentRpcRow | null = DEFAULT_ASSIGNMENT,
+  assignmentError: unknown = null,
 ) {
   const from = vi.fn(() => query);
   const schema = vi.fn(() => ({ from }));
@@ -70,6 +71,7 @@ function mockClient(
       return Promise.resolve({ data: names, error: null });
     }
     if (fnName === "planner_get_my_assignment") {
+      if (assignmentError) return Promise.resolve({ data: null, error: assignmentError });
       return Promise.resolve({ data: assignment ? [assignment] : [], error: null });
     }
     return Promise.resolve({ data: null, error: null });
@@ -602,6 +604,17 @@ describe("getInstanceDetail", () => {
     // a query that RLS would have let through anyway.
     expect(client.from).not.toHaveBeenCalled();
   });
+
+  it("returns a typed query failure instead of throwing when the assignment RPC errors", async () => {
+    const query = makeQuery({ data: { ...instance(), tasks: [] }, error: null });
+    const client = mockClient(query, "user-a", [], DEFAULT_ASSIGNMENT, { message: "rpc unavailable" });
+
+    await expect(getInstanceDetail("i1")).resolves.toEqual({
+      ok: false,
+      error: { code: "QUERY_FAILED", message: "This plan could not be loaded." },
+    });
+    expect(client.from).not.toHaveBeenCalled();
+  });
 });
 
 describe("listDependencies", () => {
@@ -650,6 +663,17 @@ describe("listDependencies", () => {
     await expect(listDependencies("i1")).resolves.toEqual({
       ok: false,
       error: { code: "INVALID_INPUT", message: "This plan could not be found." },
+    });
+    expect(client.from).not.toHaveBeenCalled();
+  });
+
+  it("returns a typed query failure instead of throwing when the assignment RPC errors", async () => {
+    const query = makeQuery({ data: [], error: null });
+    const client = mockClient(query, "user-a", [], DEFAULT_ASSIGNMENT, { message: "rpc unavailable" });
+
+    await expect(listDependencies("i1")).resolves.toEqual({
+      ok: false,
+      error: { code: "QUERY_FAILED", message: "Plan dependencies could not be loaded." },
     });
     expect(client.from).not.toHaveBeenCalled();
   });

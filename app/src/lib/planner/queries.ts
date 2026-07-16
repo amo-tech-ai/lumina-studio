@@ -4,7 +4,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import type { Database } from "@/types/supabase";
 
-import { getEffectivePermissions } from "./permissions";
+import { getEffectivePermissions, type EffectivePermissions } from "./permissions";
 
 import type {
   EntityType,
@@ -479,6 +479,22 @@ const INSTANCE_DETAIL_COLUMNS =
   "id, org_id, workflow_id, entity_type, entity_id, name, status, planned_start, planned_end, owner_user_id, " +
   "tasks(id, instance_id, phase_id, parent_task_id, title, description, start_date, end_date, duration_days, status, priority, assignee_user_id, assignee_role, sort_order)";
 
+// getEffectivePermissions (permissions.ts) throws if its underlying RPC call
+// fails — this wraps it so getInstanceDetail/listDependencies can honor
+// their PlannerQueryResult contract instead of leaking an unhandled
+// rejection to the caller.
+async function resolveReadPermissions(
+  instanceId: string,
+  client: SupabaseClient<Database>,
+  queryFailedMessage: string,
+): Promise<PlannerQueryResult<EffectivePermissions>> {
+  try {
+    return { ok: true, data: await getEffectivePermissions(instanceId, client) };
+  } catch {
+    return failure("QUERY_FAILED", queryFailedMessage);
+  }
+}
+
 export async function getInstanceDetail(
   id: string,
 ): Promise<PlannerQueryResult<PlannerInstance>> {
@@ -492,8 +508,13 @@ export async function getInstanceDetail(
   // false (same model the Settings route already gates on). Fail closed
   // before querying, using the same enumeration-safe "not found" message
   // as a genuinely missing instance — never reveal it exists.
-  const permissions = await getEffectivePermissions(id, context.data.base);
-  if (!permissions.canRead) {
+  const permissionsResult = await resolveReadPermissions(
+    id,
+    context.data.base,
+    "This plan could not be loaded.",
+  );
+  if (!permissionsResult.ok) return permissionsResult;
+  if (!permissionsResult.data.canRead) {
     return failure("INVALID_INPUT", "This plan could not be found.");
   }
 
@@ -537,8 +558,13 @@ export async function listDependencies(
 
   // Same assignment-level gate as getInstanceDetail above —
   // dependencies_select_org is also only org-scoped, not assignment-scoped.
-  const permissions = await getEffectivePermissions(instanceId, context.data.base);
-  if (!permissions.canRead) {
+  const permissionsResult = await resolveReadPermissions(
+    instanceId,
+    context.data.base,
+    "Plan dependencies could not be loaded.",
+  );
+  if (!permissionsResult.ok) return permissionsResult;
+  if (!permissionsResult.data.canRead) {
     return failure("INVALID_INPUT", "This plan could not be found.");
   }
 
