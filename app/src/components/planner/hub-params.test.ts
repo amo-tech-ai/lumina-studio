@@ -134,9 +134,12 @@ describe("hasActiveFilters", () => {
     { search: "x" },
     { entityType: "shoot" },
     { status: "active" },
-    { includeArchived: "true" },
   ])("is true when %o is set", (raw) => {
     expect(hasActiveFilters(parseHubSearchParams(raw))).toBe(true);
+  });
+
+  it("is false when only includeArchived is set — it can only widen results, never explain zero matches", () => {
+    expect(hasActiveFilters(parseHubSearchParams({ includeArchived: "true" }))).toBe(false);
   });
 });
 

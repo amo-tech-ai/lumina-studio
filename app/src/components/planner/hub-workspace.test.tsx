@@ -43,6 +43,21 @@ describe("PlannerHubWorkspace — states", () => {
     expect(screen.queryByTestId("hub-no-match")).toBeNull();
   });
 
+  it("renders the empty-portfolio state, not no-match, when only includeArchived is set and there are zero results", () => {
+    // includeArchived only ever widens results — it can't be the reason for
+    // zero rows, so a truly empty portfolio with it on should still read
+    // "no plans yet", not "no plans match these filters".
+    render(
+      <PlannerHubWorkspace
+        filters={parseHubSearchParams({ includeArchived: "true" })}
+        items={[]}
+        nextCursor={null}
+      />,
+    );
+    expect(screen.getByTestId("hub-empty")).toBeDefined();
+    expect(screen.queryByTestId("hub-no-match")).toBeNull();
+  });
+
   it("renders the no-match state when filters are active and there are zero results", () => {
     render(
       <PlannerHubWorkspace

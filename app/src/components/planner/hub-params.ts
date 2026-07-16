@@ -92,8 +92,13 @@ export function parseHubSearchParams(raw: RawHubSearchParams): HubFilters {
   return { search, entityType, status, includeArchived, cursor, limit };
 }
 
+// includeArchived only ever widens results (never narrows them), so it can
+// never explain zero matches — excluded here so an org with a truly empty
+// portfolio and archived visibility on still gets the "no plans yet" state,
+// not "no plans match these filters" pointing at a toggle that can't be the
+// cause.
 export function hasActiveFilters(filters: HubFilters): boolean {
-  return Boolean(filters.search || filters.entityType || filters.status || filters.includeArchived);
+  return Boolean(filters.search || filters.entityType || filters.status);
 }
 
 // Any filter change must drop the cursor (correction #3) — every caller
