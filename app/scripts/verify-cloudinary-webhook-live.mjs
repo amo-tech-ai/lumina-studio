@@ -418,6 +418,9 @@ async function main() {
     console.error("FATAL", report.error);
     process.exitCode = 1;
   } finally {
+    // Settle before deletes so a late/retried Cloudinary webhook cannot
+    // recreate rows after cleanup (same window as verify-cloudinary-pipeline).
+    await new Promise((r) => setTimeout(r, 2000));
     // Best-effort cleanup whenever publicId is known (even if assetId never arrived).
     if (publicId && cloudinary && admin) {
       try {
