@@ -27,7 +27,11 @@ export function isCloudflareWorkersRuntime(): boolean {
 /**
  * When true, skip PostgresStore even if DATABASE_URL is set.
  * - wrangler `vars.MASTRA_STORAGE_MODE=noop` on ipix-operator (preview/deploy)
- * - auto on Cloudflare Workers unless MASTRA_STORAGE_MODE=pg (escape hatch)
+ * - auto on Cloudflare Workers unless MASTRA_STORAGE_MODE=pg
+ *
+ * OpenNext Worker builds alias `@mastra/pg` to `cf-mastra-pg-stub.mjs` (IPI-490).
+ * In that bundle `MASTRA_STORAGE_MODE=pg` cannot load the real provider —
+ * {@link assertPostgresStoreModule} rejects the override with a clear error.
  */
 export function shouldSkipMastraPostgresStorage(
   env: NodeJS.ProcessEnv = process.env,
@@ -40,6 +44,22 @@ export function shouldSkipMastraPostgresStorage(
   return onWorkers;
 }
 
+/** Reject OpenNext stub module when operator asked for real PostgresStore. */
+export function assertPostgresStoreModule(mod: {
+  IPIX_CF_MASTRA_PG_STUB?: boolean;
+  PostgresStore?: unknown;
+}): asserts mod is { PostgresStore: typeof import("@mastra/pg").PostgresStore } {
+  if (mod?.IPIX_CF_MASTRA_PG_STUB) {
+    throw new Error(
+      "MASTRA_STORAGE_MODE=pg is unavailable in this Worker bundle (IPI-490). " +
+        "`@mastra/pg` is stubbed for gzip size; use MASTRA_STORAGE_MODE=noop until Hyperdrive (IPI-619/623).",
+    );
+  }
+  if (typeof mod?.PostgresStore !== "function") {
+    throw new Error("Failed to load PostgresStore from @mastra/pg");
+  }
+}
+
 export function getMastraStorage(): MastraAppStorage {
   if (!storage) {
     const url = process.env.DATABASE_URL ?? "";
@@ -48,8 +68,7 @@ export function getMastraStorage(): MastraAppStorage {
       if (url) {
         console.warn(
           "[mastra] Using InMemoryStore on Workers (IPI-490: PostgresStore/pg.Pool hangs). " +
-            "Agent runs without durable memory until Hyperdrive Client path (IPI-619/623). " +
-            "Override: MASTRA_STORAGE_MODE=pg (not recommended until Client-mode).",
+            "Agent runs without durable memory until Hyperdrive Client path (IPI-619/623).",
         );
       }
       // Real Mastra store (getStore("memory") etc.) — bare stubs break agent.stream after RUN_STARTED.
@@ -68,8 +87,12 @@ export function getMastraStorage(): MastraAppStorage {
       // at module init on Workers noop path (Seer). Sync API kept — dynamic import
       // would force async getMastraStorage(). OpenNext stubs `@mastra/pg` (IPI-490).
       const require = createRequire(import.meta.url);
-      const { PostgresStore } = require("@mastra/pg") as typeof import("@mastra/pg");
-      storage = new PostgresStore({ id: "mastra-storage", connectionString: url });
+      const mod = require("@mastra/pg") as {
+        IPIX_CF_MASTRA_PG_STUB?: boolean;
+        PostgresStore: typeof import("@mastra/pg").PostgresStore;
+      };
+      assertPostgresStoreModule(mod);
+      storage = new mod.PostgresStore({ id: "mastra-storage", connectionString: url });
     }
   }
   return storage;

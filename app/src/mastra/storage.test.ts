@@ -1,6 +1,7 @@
 import { InMemoryStore } from "@mastra/core/storage";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
+  assertPostgresStoreModule,
   getMastraStorage,
   isCloudflareWorkersRuntime,
   shouldSkipMastraPostgresStorage,
@@ -21,7 +22,7 @@ describe("shouldSkipMastraPostgresStorage", () => {
     expect(shouldSkipMastraPostgresStorage({}, true)).toBe(true);
   });
 
-  it("allows MASTRA_STORAGE_MODE=pg escape hatch on Workers", () => {
+  it("routes to Postgres path when MASTRA_STORAGE_MODE=pg (Node keeps real @mastra/pg)", () => {
     expect(shouldSkipMastraPostgresStorage({ MASTRA_STORAGE_MODE: "pg" }, true)).toBe(
       false,
     );
@@ -66,6 +67,21 @@ describe("Cloudflare @mastra/pg stub (IPI-490)", () => {
     expect(() => new PostgresStore()).toThrow(/MASTRA_STORAGE_MODE=noop/);
   });
 
+  it("rejects MASTRA_STORAGE_MODE=pg when the Worker stub is what resolved", async () => {
+    const mod = await import("../../scripts/cf-mastra-pg-stub.mjs");
+    expect(mod.IPIX_CF_MASTRA_PG_STUB).toBe(true);
+    expect(() => assertPostgresStoreModule(mod)).toThrow(
+      /MASTRA_STORAGE_MODE=pg is unavailable in this Worker bundle/,
+    );
+  });
+
+  it("allows a real PostgresStore module shape (no stub marker)", () => {
+    class FakePostgresStore {}
+    expect(() =>
+      assertPostgresStoreModule({ PostgresStore: FakePostgresStore }),
+    ).not.toThrow();
+  });
+
   it("OpenNext buildCommand sets noop alongside stubs (Node build is not Workers)", async () => {
     // Regression for Bugbot: IPIX_CF_BUNDLE_STUBS alone stubs PostgresStore to throw,
     // but Node next build keeps shouldSkipMastraPostgresStorage=false when mode unset.
@@ -74,5 +90,17 @@ describe("Cloudflare @mastra/pg stub (IPI-490)", () => {
     const src = readFileSync(resolve(__dirname, "../../open-next.config.ts"), "utf8");
     expect(src).toMatch(/IPIX_CF_BUNDLE_STUBS=1/);
     expect(src).toMatch(/MASTRA_STORAGE_MODE=noop/);
+  });
+
+  it("release scripts run check:worker-bundle before deploy/upload", async () => {
+    const { readFileSync } = await import("node:fs");
+    const { resolve } = await import("node:path");
+    const pkg = JSON.parse(
+      readFileSync(resolve(__dirname, "../../package.json"), "utf8"),
+    ) as { scripts: Record<string, string> };
+    expect(pkg.scripts["build:cf"]).toMatch(/check:worker-bundle/);
+    expect(pkg.scripts.deploy).toMatch(/npm run build:cf/);
+    expect(pkg.scripts.upload).toMatch(/npm run build:cf/);
+    expect(pkg.scripts.preview).toMatch(/npm run build:cf/);
   });
 });
