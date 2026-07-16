@@ -384,6 +384,83 @@ describe("POST /api/assets/cloudinary/webhook", () => {
     expect(assetsUpdateEq).toHaveBeenCalledWith("id", "asset-existing");
   });
 
+  it("IPI-641: equal version with different public_id (no from_public_id) does not regress", async () => {
+    cloudinaryAssetsSelectMaybeSingle.mockResolvedValue({
+      data: {
+        id: "mirror-1",
+        asset_id: "asset-existing",
+        brand_id: BRAND_ID,
+        version: 5,
+        public_id: `ipix/brands/${BRAND_ID}/products/current`,
+        secure_url: "https://res.cloudinary.com/x/current.jpg",
+      },
+      error: null,
+    });
+    const { POST } = await importRoute();
+    const res = await POST(
+      makeRequest({
+        ...UPLOAD_PAYLOAD,
+        public_id: `ipix/brands/${BRAND_ID}/products/stale-old-name`,
+        version: 5,
+      }),
+    );
+    expect(res.status).toBe(200);
+    expect(cloudinaryAssetsUpdate).not.toHaveBeenCalled();
+  });
+
+  it("IPI-641: omitted version with different public_id does not regress", async () => {
+    cloudinaryAssetsSelectMaybeSingle.mockResolvedValue({
+      data: {
+        id: "mirror-1",
+        asset_id: "asset-existing",
+        brand_id: BRAND_ID,
+        version: 5,
+        public_id: `ipix/brands/${BRAND_ID}/products/current`,
+        secure_url: "https://res.cloudinary.com/x/current.jpg",
+      },
+      error: null,
+    });
+    const { POST } = await importRoute();
+    const { version: _v, ...withoutVersion } = UPLOAD_PAYLOAD;
+    const res = await POST(
+      makeRequest({
+        ...withoutVersion,
+        public_id: `ipix/brands/${BRAND_ID}/products/stale-old-name`,
+      }),
+    );
+    expect(res.status).toBe(200);
+    expect(cloudinaryAssetsUpdate).not.toHaveBeenCalled();
+  });
+
+  it("IPI-641: equal version rename allowed when from_public_id matches stored", async () => {
+    const current = `ipix/brands/${BRAND_ID}/products/current`;
+    const renamed = `ipix/brands/${BRAND_ID}/products/renamed`;
+    cloudinaryAssetsSelectMaybeSingle.mockResolvedValue({
+      data: {
+        id: "mirror-1",
+        asset_id: "asset-existing",
+        brand_id: BRAND_ID,
+        version: 5,
+        public_id: current,
+        secure_url: "https://res.cloudinary.com/x/current.jpg",
+      },
+      error: null,
+    });
+    const { POST } = await importRoute();
+    const res = await POST(
+      makeRequest({
+        ...UPLOAD_PAYLOAD,
+        public_id: renamed,
+        from_public_id: current,
+        version: 5,
+      }),
+    );
+    expect(res.status).toBe(200);
+    expect(cloudinaryAssetsUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({ public_id: renamed, version: 5 }),
+    );
+  });
+
   it("IPI-641: from_public_id recovers legacy mirror even without provider asset_id", async () => {
     cloudinaryAssetsSelectMaybeSingle.mockResolvedValue({
       data: {

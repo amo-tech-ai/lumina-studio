@@ -372,14 +372,31 @@ async function upsertCloudinaryAssetRecord(
   if (existing.kind === "found") {
     const storedVersion = existing.mirror.version;
     const incomingVersion = identity.version;
-    if (
-      incomingVersion != null &&
-      storedVersion != null &&
-      incomingVersion < storedVersion
-    ) {
+    const storedPublicId = existing.mirror.public_id;
+    const publicIdDiffers = storedPublicId != null && storedPublicId !== publicId;
+    const explicitRename = Boolean(
+      payload.from_public_id && storedPublicId && payload.from_public_id === storedPublicId,
+    );
+    const isNewerVersion =
+      incomingVersion != null && (storedVersion == null || incomingVersion > storedVersion);
+    const isOlderVersion =
+      incomingVersion != null && storedVersion != null && incomingVersion < storedVersion;
+    // Reject public_id regression unless this is an explicit rename or a strictly newer version.
+    // Equal/missing/partial versions alone must not rewrite public_id back to a stale path.
+    const stalePublicIdRegression =
+      publicIdDiffers && !explicitRename && !isNewerVersion;
+
+    if (isOlderVersion || stalePublicIdRegression) {
       console.warn(
-        "[cloudinary/webhook] ignoring stale notification (version)",
-        JSON.stringify({ incomingVersion, storedVersion, publicId }),
+        "[cloudinary/webhook] ignoring stale notification",
+        JSON.stringify({
+          incomingVersion,
+          storedVersion,
+          publicId,
+          storedPublicId,
+          explicitRename,
+          reason: isOlderVersion ? "older_version" : "public_id_regression",
+        }),
       );
       return {
         ok: true,
@@ -560,7 +577,8 @@ async function handleUpload(
       assetId: canonicalAssetId,
       publicId,
       secureUrl,
-      brandId,
+      // Same brand the mirror just persisted (folder candidate or inherited).
+      brandId: effectiveBrandId,
     });
     // Mirror already has the new public_id — ask Cloudinary to retry so assets can catch up.
     if (!synced) return { retryable: true };
