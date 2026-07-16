@@ -32,10 +32,32 @@ function makeQuery(response: QueryResponse) {
   return query;
 }
 
+type AssignmentRpcRow = {
+  id: string;
+  instance_id: string;
+  user_id: string;
+  role: string;
+  permissions: unknown;
+};
+
+// Default assignment grants the caller "owner" on instance "i1" — the id
+// every getInstanceDetail/listDependencies test below uses — so existing
+// tests (which predate the permission gate) keep passing without needing to
+// know about it. Tests that specifically exercise the gate pass
+// `assignment: null` to simulate an org member with no assignment row.
+const DEFAULT_ASSIGNMENT: AssignmentRpcRow = {
+  id: "assign-default",
+  instance_id: "i1",
+  user_id: "user-a",
+  role: "owner",
+  permissions: null,
+};
+
 function mockClient(
   query: ReturnType<typeof makeQuery>,
   userId = "user-a",
   names: { user_id: string; display_name: string | null }[] = [],
+  assignment: AssignmentRpcRow | null = DEFAULT_ASSIGNMENT,
 ) {
   const from = vi.fn(() => query);
   const schema = vi.fn(() => ({ from }));
@@ -43,7 +65,15 @@ function mockClient(
     data: { user: { id: userId } },
     error: null,
   });
-  const rpc = vi.fn().mockResolvedValue({ data: names, error: null });
+  const rpc = vi.fn((fnName: string) => {
+    if (fnName === "planner_get_member_names") {
+      return Promise.resolve({ data: names, error: null });
+    }
+    if (fnName === "planner_get_my_assignment") {
+      return Promise.resolve({ data: assignment ? [assignment] : [], error: null });
+    }
+    return Promise.resolve({ data: null, error: null });
+  });
   vi.mocked(createSupabaseServerClient).mockResolvedValue({
     auth: { getUser },
     schema,
@@ -528,6 +558,16 @@ describe("getInstanceDetail", () => {
     });
     expect(client.from).toHaveBeenCalledWith("instances");
     expect(query.eq).toHaveBeenCalledWith("id", "i1");
+    expect(client.rpc).toHaveBeenCalledWith("planner_get_my_assignment", {
+      p_instance_id: "i1",
+    });
+    // Explicit column list, not select("*") — a future column added to
+    // instances/tasks must not be forwarded to the frontend without an
+    // explicit decision to include it here.
+    const selectedColumns = query.select.mock.calls[0][0];
+    expect(selectedColumns).not.toContain("*");
+    expect(selectedColumns).toContain("owner_user_id");
+    expect(selectedColumns).toContain("tasks(");
   });
 
   it("does not distinguish an RLS-filtered instance from a nonexistent one", async () => {
@@ -548,6 +588,19 @@ describe("getInstanceDetail", () => {
       ok: false,
       error: { code: "QUERY_FAILED", message: "This plan could not be loaded." },
     });
+  });
+
+  it("denies an org member with no assignment on this instance — instances_select_org/tasks_select_org are org-scoped, not assignment-scoped", async () => {
+    const query = makeQuery({ data: { ...instance(), tasks: [] }, error: null });
+    const client = mockClient(query, "user-a", [], null);
+
+    await expect(getInstanceDetail("i1")).resolves.toEqual({
+      ok: false,
+      error: { code: "INVALID_INPUT", message: "This plan could not be found." },
+    });
+    // Fails closed before querying — an unassigned org member never reaches
+    // a query that RLS would have let through anyway.
+    expect(client.from).not.toHaveBeenCalled();
   });
 });
 
@@ -588,6 +641,17 @@ describe("listDependencies", () => {
       ok: false,
       error: { code: "QUERY_FAILED", message: "Plan dependencies could not be loaded." },
     });
+  });
+
+  it("denies an org member with no assignment on this instance — dependencies_select_org is org-scoped, not assignment-scoped", async () => {
+    const query = makeQuery({ data: [], error: null });
+    const client = mockClient(query, "user-a", [], null);
+
+    await expect(listDependencies("i1")).resolves.toEqual({
+      ok: false,
+      error: { code: "INVALID_INPUT", message: "This plan could not be found." },
+    });
+    expect(client.from).not.toHaveBeenCalled();
   });
 });
 

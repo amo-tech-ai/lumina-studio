@@ -4,6 +4,8 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import type { Database } from "@/types/supabase";
 
+import { getEffectivePermissions } from "./permissions";
+
 import type {
   EntityType,
   PersistedViewType,
@@ -468,15 +470,36 @@ function toViewConfig(row: ViewConfigRow): PlannerViewConfig {
 // needed for v1. planner.events (unbounded audit history) is deliberately
 // excluded — Workspace doesn't need it, and Realtime/notifications
 // (IPI-480/481) will consume events separately.
+// Explicit column list, not `select("*")` — instances_select_org/
+// tasks_select_org RLS is org-scoped (any org member), so a bare `*` would
+// forward every future column (including anything sensitive added later)
+// straight to the frontend with no second gate. List exactly what
+// PlannerInstance/PlannerTask consume.
+const INSTANCE_DETAIL_COLUMNS =
+  "id, org_id, workflow_id, entity_type, entity_id, name, status, planned_start, planned_end, owner_user_id, " +
+  "tasks(id, instance_id, phase_id, parent_task_id, title, description, start_date, end_date, duration_days, status, priority, assignee_user_id, assignee_role, sort_order)";
+
 export async function getInstanceDetail(
   id: string,
 ): Promise<PlannerQueryResult<PlannerInstance>> {
   const context = await authenticatedPlannerClient();
   if (!context.ok) return context;
 
+  // instances_select_org/tasks_select_org are org-scoped (is_org_member),
+  // not assignment-scoped — an org member never assigned to this specific
+  // instance would otherwise pass RLS and still receive full task detail,
+  // even though the app's own permission model treats them as canRead:
+  // false (same model the Settings route already gates on). Fail closed
+  // before querying, using the same enumeration-safe "not found" message
+  // as a genuinely missing instance — never reveal it exists.
+  const permissions = await getEffectivePermissions(id, context.data.base);
+  if (!permissions.canRead) {
+    return failure("INVALID_INPUT", "This plan could not be found.");
+  }
+
   const { data, error } = await context.data.client
     .from("instances")
-    .select("*, tasks(*)")
+    .select(INSTANCE_DETAIL_COLUMNS)
     .eq("id", id)
     .maybeSingle();
 
@@ -484,14 +507,10 @@ export async function getInstanceDetail(
     return failure("QUERY_FAILED", "This plan could not be loaded.");
   }
   if (!data) {
-    // RLS-filtered rows and genuinely nonexistent rows are indistinguishable
-    // here by design (assignments_select_org is manager+ only, same
-    // enumeration-safe pattern as planner_get_my_assignment) — never leak
-    // whether an instance exists to a caller without access to it.
     return failure("INVALID_INPUT", "This plan could not be found.");
   }
 
-  const row = data as InstanceRow & { tasks: TaskRow[] | null };
+  const row = data as unknown as InstanceRow & { tasks: TaskRow[] | null };
   return {
     ok: true,
     data: {
@@ -515,6 +534,13 @@ export async function listDependencies(
 ): Promise<PlannerQueryResult<PlannerDependency[]>> {
   const context = await authenticatedPlannerClient();
   if (!context.ok) return context;
+
+  // Same assignment-level gate as getInstanceDetail above —
+  // dependencies_select_org is also only org-scoped, not assignment-scoped.
+  const permissions = await getEffectivePermissions(instanceId, context.data.base);
+  if (!permissions.canRead) {
+    return failure("INVALID_INPUT", "This plan could not be found.");
+  }
 
   const { data, error } = await context.data.client
     .from("dependencies")
