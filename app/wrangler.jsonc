@@ -29,8 +29,7 @@
   "env": {
     "preview": {
       "vars": {
-        "OPERATOR_AUTH_ENABLED": "true",
-        "MASTRA_STORAGE_MODE": "noop"
+        "OPERATOR_AUTH_ENABLED": "true"
       }
     }
   },

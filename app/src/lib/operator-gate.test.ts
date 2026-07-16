@@ -82,32 +82,51 @@ describe("withOperatorAuth — CopilotKit HTTP boundary (IPI2-127, IPI-468)", ()
     expect(resolveOperatorUserMock).not.toHaveBeenCalled();
   });
 
-  it("throws 401 on production when OPERATOR_AUTH_ENABLED is missing", async () => {
+  it("throws 401 on production when OPERATOR_AUTH_ENABLED is missing and session invalid", async () => {
     vi.stubEnv("NODE_ENV", "production");
+    resolveOperatorUserMock.mockRejectedValue(new Error("no session"));
 
     await expect(
       withOperatorAuth(new Request("http://localhost/api/copilotkit")),
     ).rejects.toThrow(OperatorAuthError);
-    expect(resolveOperatorUserMock).not.toHaveBeenCalled();
+    expect(resolveOperatorUserMock).toHaveBeenCalled();
   });
 
-  it("throws 401 on production when OPERATOR_AUTH_ENABLED is false", async () => {
+  it("throws 401 on production when OPERATOR_AUTH_ENABLED is false and session invalid", async () => {
     vi.stubEnv("NODE_ENV", "production");
     vi.stubEnv("OPERATOR_AUTH_ENABLED", "false");
+    resolveOperatorUserMock.mockRejectedValue(new Error("no session"));
 
     await expect(
       withOperatorAuth(new Request("http://localhost/api/copilotkit")),
     ).rejects.toThrow(OperatorAuthError);
-    expect(resolveOperatorUserMock).not.toHaveBeenCalled();
+    expect(resolveOperatorUserMock).toHaveBeenCalled();
   });
 
-  it("throws 401 on production when OPERATOR_AUTH_ENABLED is malformed", async () => {
+  it("throws 401 on production when OPERATOR_AUTH_ENABLED is malformed and session invalid", async () => {
     vi.stubEnv("NODE_ENV", "production");
     vi.stubEnv("OPERATOR_AUTH_ENABLED", "yes");
+    resolveOperatorUserMock.mockRejectedValue(new Error("no session"));
 
     await expect(
       withOperatorAuth(new Request("http://localhost/api/copilotkit")),
     ).rejects.toThrow(OperatorAuthError);
+    expect(resolveOperatorUserMock).toHaveBeenCalled();
+  });
+
+  it("returns operator user on production when OPERATOR_AUTH_ENABLED is missing but session validates", async () => {
+    vi.stubEnv("NODE_ENV", "production");
+    const expectedUser = { id: "user-prod", name: "Operator" };
+    resolveOperatorUserMock.mockResolvedValue(expectedUser);
+
+    const user = await withOperatorAuth(
+      new Request("http://localhost/api/copilotkit", {
+        headers: { authorization: "Bearer valid.jwt" },
+      }),
+    );
+
+    expect(user).toEqual(expectedUser);
+    expect(resolveOperatorUserMock).toHaveBeenCalled();
   });
 
   it("throws OperatorAuthError when auth is enabled and resolveOperatorUser fails", async () => {

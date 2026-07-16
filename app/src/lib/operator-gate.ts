@@ -27,16 +27,12 @@ function isOperatorAuthStrictlyEnabled(): boolean {
  * auth not strictly enabled — never on preview/production Worker runtimes.
  */
 export async function withOperatorAuth(request: Request): Promise<OperatorUser> {
-  if (isOperatorAuthStrictlyEnabled()) {
+  if (isOperatorAuthEnforced()) {
     try {
       return await resolveOperatorUser(request);
     } catch {
       throw new OperatorAuthError("Unauthorized");
     }
-  }
-
-  if (!isLocalDevAuthFallbackAllowed()) {
-    throw new OperatorAuthError("Unauthorized");
   }
 
   return { id: "dev-unauthenticated", name: "Dev (auth disabled)" };

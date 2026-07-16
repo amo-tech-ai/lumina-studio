@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { accessTokenFromCookieString } from "@/lib/auth";
+import { isOperatorAuthEnforced } from "@/lib/operator-gate";
 import { copyResponseCookies, updateSession } from "@/lib/supabase/session";
 
 // IPI2-127 (AIOR-002b) — operator page gate. Blocks unauthenticated access to
@@ -19,7 +20,6 @@ import { copyResponseCookies, updateSession } from "@/lib/supabase/session";
 export async function middleware(request: NextRequest) {
   const sessionResponse = await updateSession(request);
 
-  const { isOperatorAuthEnforced } = await import("@/lib/operator-gate");
   if (!isOperatorAuthEnforced()) {
     return sessionResponse;
   }
