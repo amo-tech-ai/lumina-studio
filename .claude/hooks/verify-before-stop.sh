@@ -31,6 +31,21 @@ if ! [[ "$REQUIRED_NODE_MAJOR" =~ ^[0-9]+$ ]]; then
   REQUIRED_NODE_MAJOR=22
 fi
 
+# `node -v`'s output isn't guaranteed to be a bare `vNN...` line either (a
+# wrapper/shim could prepend a warning, or the binary could be broken) —
+# sed's non-matching-line passthrough would leave NODE_MAJOR non-numeric in
+# that case too, exactly like the REQUIRED_NODE_MAJOR case above. Validate
+# the same way so an unexpected `node -v` output is treated as "no node"
+# (fails closed below) rather than reaching `-lt` as a string, which bash
+# evaluates as a silently-false test.
+current_node_major() {
+  local major
+  major=$(node -v 2>/dev/null | sed -E 's/^v([0-9]+).*/\1/')
+  if [[ "$major" =~ ^[0-9]+$ ]]; then
+    echo "$major"
+  fi
+}
+
 # Check whatever Node is already active on PATH first. Only fall back to nvm
 # if that doesn't already satisfy the floor — sourcing nvm.sh activates its
 # own default/last-used version immediately, which can be OLDER than a
@@ -38,7 +53,7 @@ fi
 # nvm on PATH); if `nvm use` then also fails to find the required major
 # installed, that older nvm version would be left active, causing a false
 # block even though the original PATH was already fine.
-NODE_MAJOR=$(node -v 2>/dev/null | sed -E 's/^v([0-9]+).*/\1/')
+NODE_MAJOR=$(current_node_major)
 
 if [ -z "$NODE_MAJOR" ] || [ "$NODE_MAJOR" -lt "$REQUIRED_NODE_MAJOR" ]; then
   export NVM_DIR="$HOME/.nvm"
@@ -47,7 +62,7 @@ if [ -z "$NODE_MAJOR" ] || [ "$NODE_MAJOR" -lt "$REQUIRED_NODE_MAJOR" ]; then
     \. "$NVM_DIR/nvm.sh"
     nvm use "$REQUIRED_NODE_MAJOR" >/dev/null 2>&1
   fi
-  NODE_MAJOR=$(node -v 2>/dev/null | sed -E 's/^v([0-9]+).*/\1/')
+  NODE_MAJOR=$(current_node_major)
 fi
 
 # Fail closed with a clear, actionable message rather than silently running
