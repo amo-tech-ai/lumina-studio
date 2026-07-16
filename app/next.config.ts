@@ -5,6 +5,7 @@ import { fileURLToPath } from "node:url";
 import { withSentryConfig } from "@sentry/nextjs";
 
 import { CLOUDINARY_CLOUD_NAME } from "./src/lib/cloudinary/url";
+import { isOperatorAuthEnforced } from "./src/lib/operator-gate";
 
 const appDir = path.dirname(fileURLToPath(import.meta.url));
 
@@ -76,7 +77,7 @@ const nextConfig: NextConfig = {
   },
   env: {
     NEXT_PUBLIC_COPILOTKIT_THREADS_ENABLED:
-      process.env.COPILOTKIT_LICENSE_TOKEN && process.env.OPERATOR_AUTH_ENABLED === "true"
+      process.env.COPILOTKIT_LICENSE_TOKEN && isOperatorAuthEnforced()
         ? "true"
         : "false",
   },

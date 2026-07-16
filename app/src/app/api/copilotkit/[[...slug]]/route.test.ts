@@ -68,6 +68,12 @@ describe("CopilotKit route — operator auth boundary (IPI2-127)", () => {
     expect(src).toMatch(/identifyUser[\s\S]*_requestUser\.getStore\(\)/);
     expect(src).not.toMatch(/identifyUser:[\s\S]*resolveOperatorUser/);
   });
+
+  it("gates licenseToken on isOperatorAuthEnforced, not raw OPERATOR_AUTH_ENABLED (IPI-468)", () => {
+    const src = readFileSync(ROUTE, "utf8");
+    expect(src).toMatch(/isOperatorAuthEnforced\(\)/);
+    expect(src).not.toMatch(/OPERATOR_AUTH_ENABLED === "true"/);
+  });
 });
 
 describe("CopilotKit route — Mastra resourceId isolation (IPI2-127)", () => {
