@@ -177,6 +177,10 @@
 .attentionChip {
   display: inline-flex;
   align-items: center;
+  /* min-width: 0 overrides the flex-item default (auto), which otherwise
+     keeps the box from shrinking below its text's natural width — without
+     it, overflow just clips silently instead of showing the ellipsis. */
+  min-width: 0;
   max-width: 220px;
   padding: 6px 12px;
   border-radius: var(--radius-md);
@@ -188,6 +192,15 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.attentionMore {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 12px;
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-secondary);
 }
 
 /* --- Card grid --- */

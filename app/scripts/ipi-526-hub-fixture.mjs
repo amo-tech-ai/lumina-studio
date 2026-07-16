@@ -91,13 +91,14 @@ const enginePhases = phases.map((ph) => ({
 }));
 
 async function createInstance({ name, plannedStart, status, makeOverdue }) {
+  const entityId = crypto.randomUUID();
   const { data: inst, error: instErr } = await p
     .from("instances")
     .insert({
       org_id: ORG_ID,
       workflow_id: wf.id,
       entity_type: "shoot",
-      entity_id: crypto.randomUUID(),
+      entity_id: entityId,
       name,
       status: "planned",
       planned_start: plannedStart,
@@ -110,7 +111,7 @@ async function createInstance({ name, plannedStart, status, makeOverdue }) {
     workflowId: wf.id,
     orgId: ORG_ID,
     entityType: "shoot",
-    entityId: crypto.randomUUID(),
+    entityId,
     name,
     plannedStart,
   });

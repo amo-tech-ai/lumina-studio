@@ -75,6 +75,30 @@ describe("PlannerHubWorkspace — states", () => {
     expect(card).toBeDefined();
     expect(within(card).getByText("Archived")).toBeDefined();
   });
+
+  it("renders a no-match style state (not empty-portfolio) for a zero-result page past the first", () => {
+    render(
+      <PlannerHubWorkspace
+        filters={parseHubSearchParams({ cursor: "x".repeat(20) })}
+        items={[]}
+        nextCursor={null}
+      />,
+    );
+    expect(screen.getByTestId("hub-no-match")).toBeDefined();
+    expect(screen.queryByTestId("hub-empty")).toBeNull();
+  });
+
+  it("offers Start over (not a dead end) on a zero-result page past the first", () => {
+    render(
+      <PlannerHubWorkspace
+        filters={parseHubSearchParams({ cursor: "x".repeat(20) })}
+        items={[]}
+        nextCursor={null}
+      />,
+    );
+    const link = screen.getByRole("link", { name: "Start over" });
+    expect(link.getAttribute("href")).toBe("/app/planner");
+  });
 });
 
 describe("PlannerHubWorkspace — page-scoped attention", () => {
@@ -100,6 +124,17 @@ describe("PlannerHubWorkspace — page-scoped attention", () => {
     ];
     render(<PlannerHubWorkspace filters={parseHubSearchParams({})} items={items} nextCursor={null} />);
     expect(screen.getByText("On this page: 2 plans need attention")).toBeDefined();
+  });
+
+  it("shows a +N more indicator instead of silently dropping at-risk items past the first 3", () => {
+    const items = [1, 2, 3, 4, 5].map((n) =>
+      makeItem({ id: String(n), name: `Plan ${n}`, atRisk: true }),
+    );
+    render(<PlannerHubWorkspace filters={parseHubSearchParams({})} items={items} nextCursor={null} />);
+    expect(screen.getByText("On this page: 5 plans need attention")).toBeDefined();
+    const band = screen.getByTestId("hub-attention-band");
+    expect(within(band).getAllByRole("link", { name: /^Open Plan \d planner$/ })).toHaveLength(3);
+    expect(within(band).getByText("+2 more")).toBeDefined();
   });
 });
 
@@ -144,6 +179,25 @@ describe("PlannerHubWorkspace — returned formulas and links", () => {
       <PlannerHubWorkspace filters={parseHubSearchParams({})} items={[makeItem()]} nextCursor={null} />,
     );
     expect(screen.queryByText(/new plan/i)).toBeNull();
+  });
+
+  it("falls back to generic entity metadata instead of crashing on an unmapped entityType", () => {
+    // entityType is cast (`as EntityType`) from a raw DB column in
+    // queries.ts, not runtime-validated — simulates a value outside the
+    // three known entity types reaching the card.
+    const unknownEntity = makeItem({
+      name: "Odd Plan",
+      entityType: "webinar" as unknown as PlannerInstanceSummary["entityType"],
+    });
+    render(
+      <PlannerHubWorkspace
+        filters={parseHubSearchParams({})}
+        items={[unknownEntity]}
+        nextCursor={null}
+      />,
+    );
+    const card = screen.getByRole("link", { name: "Open Odd Plan planner" });
+    expect(within(card).getByText("Plan")).toBeDefined();
   });
 });
 

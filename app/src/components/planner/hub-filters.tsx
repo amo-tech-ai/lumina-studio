@@ -41,8 +41,11 @@ export function HubFilterBar({ filters }: Props) {
       </div>
 
       <form method="get" action="/app/planner" className={styles.searchForm}>
-        {/* Type is chip-driven, not part of this form — carry it through unchanged. */}
+        {/* Type/limit aren't part of this form's own fields — carry them
+            through unchanged, otherwise submitting search silently resets
+            a non-default `?limit=` back to the default. */}
         <input type="hidden" name="entityType" value={filters.entityType ?? ""} />
+        <input type="hidden" name="limit" value={filters.limit} />
         <fieldset className={styles.fieldset}>
           <legend className="sr-only">Search and filter plans</legend>
 

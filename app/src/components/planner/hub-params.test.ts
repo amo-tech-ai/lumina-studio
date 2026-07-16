@@ -77,11 +77,14 @@ describe("parseHubSearchParams", () => {
     expect(parseHubSearchParams({ limit: "50" }).limit).toBe(50);
   });
 
-  it("trims and truncates an overlong search to 200 characters", () => {
-    const overlong = `  ${"a".repeat(250)}  `;
+  it("trims and truncates an overlong search to 100 characters — matches queries.ts's own cap", () => {
+    // A larger Hub-side cap than the query layer's would let a 101-200 char
+    // search through parseHubSearchParams only to fail listPlannerInstances
+    // and throw to the error boundary — this bound must match exactly.
+    const overlong = `  ${"a".repeat(150)}  `;
     const filters = parseHubSearchParams({ search: overlong });
-    expect(filters.search).toHaveLength(200);
-    expect(filters.search).toBe("a".repeat(200));
+    expect(filters.search).toHaveLength(100);
+    expect(filters.search).toBe("a".repeat(100));
   });
 
   it("treats an overlong cursor as absent rather than forwarding it", () => {
@@ -91,6 +94,18 @@ describe("parseHubSearchParams", () => {
 
   it("accepts a cursor at the 512-character boundary", () => {
     const cursor = "x".repeat(512);
+    expect(parseHubSearchParams({ cursor }).cursor).toBe(cursor);
+  });
+
+  it.each(["has space", "has!bang", "has/slash", "has+plus", "has=equals"])(
+    "treats a cursor with a non-base64url character as absent: %s",
+    (cursor) => {
+      expect(parseHubSearchParams({ cursor }).cursor).toBeUndefined();
+    },
+  );
+
+  it("accepts a cursor containing only base64url characters (letters, digits, -, _)", () => {
+    const cursor = "AbC123-_xyz";
     expect(parseHubSearchParams({ cursor }).cursor).toBe(cursor);
   });
 

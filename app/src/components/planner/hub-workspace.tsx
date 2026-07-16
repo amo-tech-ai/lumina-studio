@@ -19,6 +19,11 @@ type Props = {
 };
 
 export function PlannerHubWorkspace({ filters, items, nextCursor }: Props) {
+  // A cursor means this page isn't the portfolio's true first page — an empty
+  // result here (e.g. a since-deleted last item, or a stale/expired cursor)
+  // is "nothing more past this point", not "you have no plans" or "no
+  // filters match" (correction #6 only distinguishes those two for page 1).
+  const isPastFirstPage = Boolean(filters.cursor);
   const filtersActive = hasActiveFilters(filters);
   const atRiskItems = items.filter((item) => item.atRisk);
   const countLabel = `Showing ${items.length} ${items.length === 1 ? "plan" : "plans"} on this page`;
@@ -37,11 +42,10 @@ export function PlannerHubWorkspace({ filters, items, nextCursor }: Props) {
       <HubFilterBar filters={filters} />
 
       {items.length === 0 ? (
-        filtersActive ? (
-          <HubNoMatchState />
-        ) : (
-          <HubEmptyState />
-        )
+        <>
+          {filtersActive || isPastFirstPage ? <HubNoMatchState /> : <HubEmptyState />}
+          {isPastFirstPage ? <HubPagination filters={filters} nextCursor={null} /> : null}
+        </>
       ) : (
         <>
           <HubAttentionBand atRiskItems={atRiskItems} />

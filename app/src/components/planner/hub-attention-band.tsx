@@ -35,6 +35,9 @@ export function HubAttentionBand({ atRiskItems }: Props) {
               {item.name}
             </Link>
           ))}
+          {atRiskItems.length > 3 ? (
+            <span className={styles.attentionMore}>+{atRiskItems.length - 3} more</span>
+          ) : null}
         </div>
       </div>
     </div>

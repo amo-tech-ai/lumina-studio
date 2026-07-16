@@ -24,6 +24,12 @@ const ENTITY_META: Record<EntityType, { label: string; Icon: LucideIcon }> = {
   crm_deal: { label: "CRM Deal", Icon: Briefcase },
 };
 
+// item.entityType is cast (`as EntityType`) from a raw DB column in
+// queries.ts's toInstanceSummary, not runtime-validated — a value outside
+// the three known entity types would otherwise make ENTITY_META[...]
+// undefined and crash on entity.Icon/entity.label below.
+const FALLBACK_ENTITY_META = { label: "Plan", Icon: Briefcase };
+
 function formatPlannerDate(iso: string | null): string {
   if (!iso) return "—";
   const date = new Date(iso);
@@ -37,7 +43,7 @@ type Props = { item: PlannerInstanceSummary };
 
 export function HubCard({ item }: Props) {
   const treatment = getInstanceUiTreatment(item.status);
-  const entity = ENTITY_META[item.entityType];
+  const entity = ENTITY_META[item.entityType] ?? FALLBACK_ENTITY_META;
   const Icon = entity.Icon;
 
   return (

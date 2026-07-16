@@ -31,11 +31,18 @@ export const PLANNER_INSTANCE_STATUSES: readonly PlannerInstanceStatus[] = [
   "cancelled",
 ];
 
-const MAX_SEARCH_LENGTH = 200;
-// Matches queries.ts's decodeCursor bound exactly — a value longer than this
-// could never have been issued by listPlannerInstances, so it's treated as
-// absent (fall back to page 1) instead of being sent through to fail.
+// Matches queries.ts's own MAX_SEARCH_LENGTH exactly — that's the layer that
+// actually enforces it (INVALID_INPUT past this). A larger Hub-side limit
+// let 101-200-char searches through parseHubSearchParams only to fail at
+// the query layer and throw to the error boundary; truncating to the same
+// bound here means the Hub never sends a search it knows will be rejected.
+const MAX_SEARCH_LENGTH = 100;
+// Matches queries.ts's decodeCursor bound and charset exactly — a value that
+// couldn't have been issued by listPlannerInstances (too long, or containing
+// a character outside base64url) is treated as absent (fall back to page 1)
+// instead of being sent through to fail.
 const MAX_CURSOR_LENGTH = 512;
+const CURSOR_CHARSET_RE = /^[A-Za-z0-9_-]+$/;
 const DEFAULT_LIMIT = 20;
 const MAX_LIMIT = 50;
 
@@ -65,7 +72,12 @@ export function parseHubSearchParams(raw: RawHubSearchParams): HubFilters {
 
   const cursorRaw = firstValue(raw.cursor);
   const cursor =
-    cursorRaw && cursorRaw.length > 0 && cursorRaw.length <= MAX_CURSOR_LENGTH ? cursorRaw : undefined;
+    cursorRaw &&
+    cursorRaw.length > 0 &&
+    cursorRaw.length <= MAX_CURSOR_LENGTH &&
+    CURSOR_CHARSET_RE.test(cursorRaw)
+      ? cursorRaw
+      : undefined;
 
   const limitRaw = firstValue(raw.limit);
   const limitParsed = limitRaw ? Number.parseInt(limitRaw, 10) : NaN;
