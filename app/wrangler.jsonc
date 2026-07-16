@@ -22,6 +22,11 @@
   "observability": {
     "enabled": true
   },
+  // IPI-468: deployed Worker must fail closed; CopilotKit thread gating reads this flag at runtime.
+  "vars": {
+    "MASTRA_STORAGE_MODE": "noop",
+    "OPERATOR_AUTH_ENABLED": "true"
+  },
   // wrangler dev rebundles handler.mjs and fails on native .node; Mastra only lazy-loads ast-grep.
   "alias": {
     "@ast-grep/napi": "./scripts/cf-ast-grep-stub.mjs",

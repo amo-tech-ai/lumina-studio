@@ -22,11 +22,27 @@ function appRequest(
 describe("middleware — operator auth gate (IPI2-127)", () => {
   afterEach(() => vi.unstubAllEnvs());
 
-  it("passes through when OPERATOR_AUTH_ENABLED is not true", async () => {
+  it("passes through in local dev when OPERATOR_AUTH_ENABLED is not true", async () => {
+    vi.stubEnv("NODE_ENV", "development");
     vi.stubEnv("OPERATOR_AUTH_ENABLED", "false");
     const res = await middleware(appRequest("/app/brand"));
     expect(res.status).toBe(200);
     expect(res.headers.get("location")).toBeNull();
+  });
+
+  it("redirects /app/* on production when OPERATOR_AUTH_ENABLED is missing (fail closed)", async () => {
+    vi.stubEnv("NODE_ENV", "production");
+    const res = await middleware(appRequest("/app/brand"));
+    expect(res.status).toBe(307);
+    expect(res.headers.get("location")).toContain("/login");
+  });
+
+  it("redirects /app/* on production when OPERATOR_AUTH_ENABLED is false", async () => {
+    vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("OPERATOR_AUTH_ENABLED", "false");
+    const res = await middleware(appRequest("/app/shoots"));
+    expect(res.status).toBe(307);
+    expect(res.headers.get("location")).toContain("/login");
   });
 
   it("redirects unauthenticated /app/* requests to /login with redirect param", async () => {

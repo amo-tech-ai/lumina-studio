@@ -1,22 +1,35 @@
+import { isOperatorAuthEnforced } from "./operator-auth-env";
 import { resolveOperatorUser, type OperatorUser } from "@/lib/auth";
 import { apiErrorResponse } from "@/lib/api/error-envelope";
 import type { NextResponse } from "next/server";
 
+export { isOperatorAuthEnforced } from "./operator-auth-env";
+
+/** Local `next dev` only — never on built Worker preview/production runtimes. */
+export function isLocalDevAuthFallbackAllowed(): boolean {
+  return process.env.NODE_ENV !== "production" && !isOperatorAuthStrictlyEnabled();
+}
+
+function isOperatorAuthStrictlyEnabled(): boolean {
+  return process.env.OPERATOR_AUTH_ENABLED === "true";
+}
+
 /**
- * HTTP boundary guard for operator-only routes (IPI2-127). When
- * OPERATOR_AUTH_ENABLED is true, validates the Supabase session via
- * resolveOperatorUser and returns the authenticated identity. Throws on
- * failure so the caller can return a 401. When auth is disabled, returns
- * a dev fallback identity.
+ * HTTP boundary guard for operator-only routes (IPI2-127, IPI-468). When auth is
+ * enforced, validates the Supabase session via resolveOperatorUser and returns the
+ * authenticated identity. Throws on failure so the caller can return 401.
+ * Dev fallback (`dev-unauthenticated`) is allowed only in local `next dev` with
+ * auth not strictly enabled — never on preview/production Worker runtimes.
  */
 export async function withOperatorAuth(request: Request): Promise<OperatorUser> {
-  if (process.env.OPERATOR_AUTH_ENABLED === "true") {
+  if (isOperatorAuthEnforced()) {
     try {
       return await resolveOperatorUser(request);
     } catch {
       throw new OperatorAuthError("Unauthorized");
     }
   }
+
   return { id: "dev-unauthenticated", name: "Dev (auth disabled)" };
 }
 

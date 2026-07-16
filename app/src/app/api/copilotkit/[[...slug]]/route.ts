@@ -8,7 +8,7 @@ import { MastraAgent } from "@ag-ui/mastra";
 import { RequestContext } from "@mastra/core/request-context";
 import { getMastra } from "@/mastra";
 import { type OperatorUser, extractAccessToken } from "@/lib/auth";
-import { OperatorAuthError, withOperatorAuth } from "@/lib/operator-gate";
+import { isOperatorAuthEnforced, OperatorAuthError, withOperatorAuth } from "@/lib/operator-gate";
 import { requestToken } from "@/lib/request-token";
 import { withStreamIdleTimeout } from "@/lib/copilotkit/stream-idle-timeout";
 
@@ -43,7 +43,7 @@ const runtime = new CopilotRuntime({
     });
   },
   runner: new InMemoryAgentRunner(),
-  ...(process.env.COPILOTKIT_LICENSE_TOKEN && process.env.OPERATOR_AUTH_ENABLED === "true"
+  ...(process.env.COPILOTKIT_LICENSE_TOKEN && isOperatorAuthEnforced()
     ? {
         licenseToken: process.env.COPILOTKIT_LICENSE_TOKEN,
         identifyUser: async () => _requestUser.getStore() ?? UNKNOWN_USER,
