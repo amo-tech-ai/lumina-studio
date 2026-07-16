@@ -501,6 +501,73 @@ describe("shiftTask", () => {
     expect(result.ok).toBe(true);
     if (result.ok) expect(result.data.replayed).toBe(true);
   });
+
+  it("maps a null RPC response (no error, no data) to UNKNOWN_ERROR without leaking anything raw", async () => {
+    vi.mocked(getInstanceDetail).mockResolvedValue(instanceDetailOk([BASE_TASK]));
+    vi.mocked(listDependencies).mockResolvedValue({ ok: true, data: [] });
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    const { client, rpcMock } = mockShiftClient({
+      freshRows: [{ id: "t1", start_date: BASE_TASK.startDate, end_date: BASE_TASK.endDate, updated_at: "2026-07-10T00:00:00.000Z" }],
+      rpcData: null,
+      rpcError: null,
+    });
+
+    const result = await shiftTask(
+      { instanceId: "i1", rootTaskId: "t1", deltaDays: 2, idempotencyKey: "idem-null" },
+      client,
+    );
+
+    expect(result).toEqual({ ok: false, error: { code: "UNKNOWN_ERROR", message: "The request could not be completed." } });
+    expect(rpcMock).toHaveBeenCalledTimes(1);
+    expect(consoleError).toHaveBeenCalled();
+    consoleError.mockRestore();
+  });
+
+  it("maps a raw RPC transport error to UNKNOWN_ERROR without forwarding the raw message to the caller", async () => {
+    vi.mocked(getInstanceDetail).mockResolvedValue(instanceDetailOk([BASE_TASK]));
+    vi.mocked(listDependencies).mockResolvedValue({ ok: true, data: [] });
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    const { client } = mockShiftClient({
+      freshRows: [{ id: "t1", start_date: BASE_TASK.startDate, end_date: BASE_TASK.endDate, updated_at: "2026-07-10T00:00:00.000Z" }],
+      rpcError: { message: 'relation "planner.tasks" is locked by another transaction' },
+    });
+
+    const result = await shiftTask(
+      { instanceId: "i1", rootTaskId: "t1", deltaDays: 2, idempotencyKey: "idem-transport-err" },
+      client,
+    );
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.error.code).toBe("UNKNOWN_ERROR");
+      expect(result.error.message).not.toMatch(/relation|locked|transaction/i);
+    }
+    expect(consoleError).toHaveBeenCalled();
+    consoleError.mockRestore();
+  });
+
+  it("maps a failure of the pre-RPC fresh-row re-fetch to a typed error, not a raw DB message", async () => {
+    vi.mocked(getInstanceDetail).mockResolvedValue(instanceDetailOk([BASE_TASK]));
+    vi.mocked(listDependencies).mockResolvedValue({ ok: true, data: [] });
+
+    const { client, rpcMock } = mockShiftClient({
+      freshError: { message: "connection terminated unexpectedly" },
+    });
+
+    const result = await shiftTask(
+      { instanceId: "i1", rootTaskId: "t1", deltaDays: 2, idempotencyKey: "idem-fresh-fail" },
+      client,
+    );
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.error.code).toBe("NOT_FOUND");
+      expect(result.error.message).not.toMatch(/connection|terminated/i);
+    }
+    expect(rpcMock).not.toHaveBeenCalled();
+  });
 });
 
 describe("updateTask", () => {
@@ -584,6 +651,75 @@ describe("updateTask", () => {
     );
 
     expect(result).toEqual({ ok: false, error: { code: "UNKNOWN_ERROR", message: "The request could not be completed." } });
+    expect(consoleError).toHaveBeenCalled();
+    consoleError.mockRestore();
+  });
+
+  it("surfaces replayed:true from an idempotent retry rather than treating it as a fresh write", async () => {
+    const { client, rpcMock } = mockRpcJson({
+      ok: true,
+      replayed: true,
+      taskId: "t1",
+      updatedAt: "2026-07-10T00:01:00.000Z",
+    });
+
+    const result = await updateTask(
+      {
+        taskId: "t1",
+        instanceId: "i1",
+        expectedUpdatedAt: "2026-07-10T00:00:00.000Z",
+        idempotencyKey: "idem-retry",
+        patch: { status: "done" },
+      },
+      client,
+    );
+
+    expect(result.ok).toBe(true);
+    if (result.ok) expect(result.data.replayed).toBe(true);
+    expect(rpcMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("maps a null RPC response (no error, no data) to UNKNOWN_ERROR without leaking anything raw", async () => {
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
+    const { client, rpcMock } = mockRpcJson(null, null);
+
+    const result = await updateTask(
+      {
+        taskId: "t1",
+        instanceId: "i1",
+        expectedUpdatedAt: "2026-07-10T00:00:00.000Z",
+        idempotencyKey: "idem-null",
+        patch: { title: "New" },
+      },
+      client,
+    );
+
+    expect(result).toEqual({ ok: false, error: { code: "UNKNOWN_ERROR", message: "The request could not be completed." } });
+    expect(rpcMock).toHaveBeenCalledTimes(1);
+    expect(consoleError).toHaveBeenCalled();
+    consoleError.mockRestore();
+  });
+
+  it("maps a raw RPC transport error to UNKNOWN_ERROR without forwarding the raw message to the caller", async () => {
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
+    const { client } = mockRpcJson(null, { message: 'duplicate key value violates unique constraint "tasks_pkey"' });
+
+    const result = await updateTask(
+      {
+        taskId: "t1",
+        instanceId: "i1",
+        expectedUpdatedAt: "2026-07-10T00:00:00.000Z",
+        idempotencyKey: "idem-transport-err",
+        patch: { title: "New" },
+      },
+      client,
+    );
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.error.code).toBe("UNKNOWN_ERROR");
+      expect(result.error.message).not.toMatch(/duplicate|constraint|tasks_pkey/i);
+    }
     expect(consoleError).toHaveBeenCalled();
     consoleError.mockRestore();
   });
