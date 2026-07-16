@@ -11,6 +11,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database, Json } from "@/types/supabase";
 
 import { PlannerEngine } from "./engine";
+import { getEffectivePermissions } from "./permissions";
 import { getInstanceDetail, listDependencies } from "./queries";
 import type { MutationResult, PersistedViewType, PlannerRole, PlannerTaskStatus } from "./types";
 
@@ -182,6 +183,48 @@ export async function shiftTask(
     return taskMutationError("planner_shift_task", "NOT_FOUND");
   }
 
+  // Re-fetch dates AND updated_at together, for every task the engine is
+  // about to reason about, immediately before computing the shift — a
+  // deliberately narrow, local query rather than extending getInstanceDetail's
+  // shared, intentionally column-minimized read. This closes the
+  // stale-dates-before-shift-RPC gap (Cursor HIGH / codex P1): the old code
+  // computed the shift from the earlier getInstanceDetail() read, then
+  // separately re-fetched only updated_at right before the RPC call — if a
+  // concurrent edit changed a task's dates AND updated_at in between, the
+  // freshly-fetched updated_at would match the current row (passing the
+  // RPC's CAS check) while the dates being sent were still the stale ones,
+  // silently overwriting the concurrent edit instead of failing
+  // STALE_VERSION. Fetching both together, from the same query, guarantees
+  // the engine computation and the CAS check share one snapshot.
+  const taskIds = [...taskMap.keys()];
+  const { data: freshRows, error: freshError } = await client
+    .schema("planner")
+    .from("tasks")
+    .select("id, start_date, end_date, updated_at")
+    .in("id", taskIds);
+
+  if (freshError || !freshRows) {
+    return taskMutationError("planner_shift_task", "NOT_FOUND");
+  }
+
+  const freshById = new Map(freshRows.map((row) => [row.id, row]));
+
+  // Every task the engine is about to touch must still exist server-side
+  // with a fresh row — a missing row means it was deleted/made inaccessible
+  // since the read that populated taskMap. Abort rather than let a missing
+  // row silently fall back to a fabricated expectedUpdatedAt (Cursor MEDIUM)
+  // that would trivially satisfy no real optimistic-concurrency check.
+  for (const id of taskIds) {
+    if (!freshById.has(id)) {
+      return taskMutationError("planner_shift_task", "NOT_FOUND");
+    }
+  }
+
+  for (const [id, task] of taskMap) {
+    const fresh = freshById.get(id)!;
+    taskMap.set(id, { ...task, startDate: fresh.start_date, endDate: fresh.end_date });
+  }
+
   const { updated, conflicts } = engine.shiftTask(rootTaskId, deltaDays, taskMap, dependencies);
   if (conflicts.length > 0) {
     return { ok: false, error: { code: "DEPENDENCY_CHANGED", message: conflicts.join(" ") } };
@@ -198,26 +241,12 @@ export async function shiftTask(
     return { ok: true, data: { replayed: false, changedTasks: [] } };
   }
 
-  // Freshest possible updated_at snapshot for exactly the affected tasks,
-  // taken right before the RPC call to minimize the stale-version window —
-  // a deliberately narrow, local query rather than extending
-  // getInstanceDetail's shared, intentionally column-minimized read.
-  const { data: freshRows, error: freshError } = await client
-    .schema("planner")
-    .from("tasks")
-    .select("id, updated_at")
-    .in("id", changedIds);
-
-  if (freshError || !freshRows) {
-    return taskMutationError("planner_shift_task", "NOT_FOUND");
-  }
-
   const changedTasks = changedIds.map((id) => {
     const task = updated.get(id)!;
-    const fresh = freshRows.find((row) => row.id === id);
+    const fresh = freshById.get(id)!; // guaranteed present by the guard above
     return {
       taskId: id,
-      expectedUpdatedAt: fresh?.updated_at ?? new Date(0).toISOString(),
+      expectedUpdatedAt: fresh.updated_at,
       newStartDate: task.startDate,
       newEndDate: task.endDate,
     };
@@ -301,7 +330,10 @@ export async function updateTask(
 // user_id = auth.uid() RLS on all 4 verbs (view_configs_select_own/
 // _insert_own/_update_own/_delete_own, confirmed live) and a real
 // UNIQUE (user_id, instance_id) constraint — a plain upsert through the
-// schema-scoped client already respects RLS. "list" is never persisted as
+// schema-scoped client already respects RLS for row ownership. RLS alone
+// doesn't verify plan access though, so an explicit getEffectivePermissions
+// check (matching getViewConfig's) runs first — see below. "list" is never
+// persisted as
 // default_view — the DB CHECK constraint on planner.view_configs already
 // rejects it (excludes "list" from its allowed values); this function simply
 // never includes default_view in the patch when the caller's active view is
@@ -326,6 +358,26 @@ export async function setViewConfig(
 
   if (!user) {
     return { ok: false, error: { code: "UNAUTHENTICATED", message: "Sign in to save your view preference." } };
+  }
+
+  // Same assignment-level access gate getViewConfig() (queries.ts) applies
+  // before reading: view_configs' own RLS (view_configs_*_own) only checks
+  // user_id = auth.uid(), so on its own it never verifies the caller still
+  // has access to the referenced instance — a revoked assignment (or anyone
+  // who merely knows the instance UUID) could otherwise still upsert their
+  // own row against it. getEffectivePermissions throws on RPC failure (see
+  // resolveReadPermissions in queries.ts), so treat that the same way too.
+  let canRead: boolean;
+  try {
+    canRead = (await getEffectivePermissions(instanceId, client)).canRead;
+  } catch (err) {
+    console.error("[planner/mutations] setViewConfig permission check failed:", err);
+    return { ok: false, error: { code: "UNKNOWN_ERROR", message: "Your view preference could not be saved." } };
+  }
+  if (!canRead) {
+    // Enumeration-safe "not found" message, matching getViewConfig() —
+    // never reveal that the instance exists to a caller without access.
+    return { ok: false, error: { code: "INVALID_INPUT", message: "This plan could not be found." } };
   }
 
   const patch: {

@@ -1,10 +1,15 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import { getEffectivePermissions } from "./permissions";
 import { getInstanceDetail, listDependencies } from "./queries";
 
 vi.mock("./queries", () => ({
   getInstanceDetail: vi.fn(),
   listDependencies: vi.fn(),
+}));
+
+vi.mock("./permissions", () => ({
+  getEffectivePermissions: vi.fn(),
 }));
 
 import { inviteMember, removeAssignment, setViewConfig, shiftTask, updateRole, updateTask } from "./mutations";
@@ -223,12 +228,32 @@ function instanceDetailOk(tasks: typeof BASE_TASK[]) {
 }
 
 function mockShiftClient({
-  freshRows = [] as Array<{ id: string; updated_at: string }>,
+  freshRows,
   freshError = null as { message: string } | null,
   rpcData = null as unknown,
   rpcError = null as { message: string } | null,
-}) {
-  const inMock = vi.fn(async () => ({ data: freshRows, error: freshError }));
+}: {
+  freshRows?: Array<{ id: string; updated_at: string; start_date?: string; end_date?: string }>;
+  freshError?: { message: string } | null;
+  rpcData?: unknown;
+  rpcError?: { message: string } | null;
+} = {}) {
+  // When a test doesn't care about freshness specifics, synthesize a fresh
+  // row for every requested id from BASE_TASK's own dates — every task in
+  // taskMap must have a matching fresh row or shiftTask() now aborts with
+  // NOT_FOUND (see mutations.ts's post-getInstanceDetail re-fetch guard).
+  const inMock = vi.fn(async (_column: string, ids: string[]) => {
+    if (freshRows) return { data: freshRows, error: freshError };
+    return {
+      data: ids.map((id) => ({
+        id,
+        start_date: BASE_TASK.startDate,
+        end_date: BASE_TASK.endDate,
+        updated_at: "2026-07-10T00:00:00.000Z",
+      })),
+      error: freshError,
+    };
+  });
   const selectMock = vi.fn(() => ({ in: inMock }));
   const fromMock = vi.fn(() => ({ select: selectMock }));
   const schemaMock = vi.fn(() => ({ from: fromMock }));
@@ -260,7 +285,7 @@ describe("shiftTask", () => {
     vi.mocked(listDependencies).mockResolvedValue({ ok: true, data: [] });
 
     const { client, rpcMock } = mockShiftClient({
-      freshRows: [{ id: "t1", updated_at: "2026-07-10T00:00:00.000Z" }],
+      freshRows: [{ id: "t1", start_date: BASE_TASK.startDate, end_date: BASE_TASK.endDate, updated_at: "2026-07-10T00:00:00.000Z" }],
       rpcData: {
         ok: true,
         replayed: false,
@@ -366,6 +391,50 @@ describe("shiftTask", () => {
     expect(rpcMock).not.toHaveBeenCalled();
   });
 
+  it("aborts with NOT_FOUND instead of an epoch-timestamp fallback when a task is missing from the fresh re-fetch", async () => {
+    vi.mocked(getInstanceDetail).mockResolvedValue(instanceDetailOk([BASE_TASK]));
+    vi.mocked(listDependencies).mockResolvedValue({ ok: true, data: [] });
+
+    // Fresh re-fetch explicitly returns zero rows for t1 — simulating a task
+    // deleted/made inaccessible between getInstanceDetail() and this query.
+    const { client, rpcMock } = mockShiftClient({ freshRows: [] });
+    const result = await shiftTask(
+      { instanceId: "i1", rootTaskId: "t1", deltaDays: 2, idempotencyKey: "idem-missing" },
+      client,
+    );
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error.code).toBe("NOT_FOUND");
+    expect(rpcMock).not.toHaveBeenCalled();
+  });
+
+  it("computes the shift from freshly re-fetched dates, not the earlier getInstanceDetail snapshot", async () => {
+    // getInstanceDetail's snapshot says t1 already ran 2026-07-01 to
+    // 2026-07-03 (BASE_TASK); the fresh re-fetch says a concurrent edit
+    // already moved it to 2026-07-05 to 2026-07-07. The shift must be
+    // computed from the fresh dates, not the stale snapshot — proving the
+    // stale-dates-before-shift-RPC fix actually threads the fresh dates into
+    // the engine rather than only refreshing the CAS token.
+    vi.mocked(getInstanceDetail).mockResolvedValue(instanceDetailOk([BASE_TASK]));
+    vi.mocked(listDependencies).mockResolvedValue({ ok: true, data: [] });
+
+    const { client, rpcMock } = mockShiftClient({
+      freshRows: [
+        { id: "t1", start_date: "2026-07-05", end_date: "2026-07-07", updated_at: "2026-07-10T00:00:00.000Z" },
+      ],
+      rpcData: { ok: true, replayed: false, changedTasks: [], conflicts: [] },
+    });
+
+    await shiftTask({ instanceId: "i1", rootTaskId: "t1", deltaDays: 2, idempotencyKey: "idem-fresh" }, client);
+
+    expect(rpcMock).toHaveBeenCalledTimes(1);
+    const [, args] = rpcMock.mock.calls[0] as [string, Record<string, unknown>];
+    const changedTasks = args.p_changed_tasks as Array<{ taskId: string; newStartDate: string; newEndDate: string }>;
+    expect(changedTasks).toEqual([
+      expect.objectContaining({ taskId: "t1", newStartDate: "2026-07-07", newEndDate: "2026-07-09" }),
+    ]);
+  });
+
   it.each(["STALE_VERSION", "INSTANCE_TERMINAL", "IDEMPOTENCY_CONFLICT", "DEPENDENCY_CHANGED", "FORBIDDEN"])(
     "maps RPC-returned %s to a typed error",
     async (code) => {
@@ -373,7 +442,7 @@ describe("shiftTask", () => {
       vi.mocked(listDependencies).mockResolvedValue({ ok: true, data: [] });
 
       const { client } = mockShiftClient({
-        freshRows: [{ id: "t1", updated_at: "2026-07-10T00:00:00.000Z" }],
+        freshRows: [{ id: "t1", start_date: BASE_TASK.startDate, end_date: BASE_TASK.endDate, updated_at: "2026-07-10T00:00:00.000Z" }],
         rpcData: { ok: false, code },
       });
 
@@ -391,7 +460,7 @@ describe("shiftTask", () => {
     vi.mocked(listDependencies).mockResolvedValue({ ok: true, data: [] });
 
     const { client } = mockShiftClient({
-      freshRows: [{ id: "t1", updated_at: "2026-07-10T00:00:00.000Z" }],
+      freshRows: [{ id: "t1", start_date: BASE_TASK.startDate, end_date: BASE_TASK.endDate, updated_at: "2026-07-10T00:00:00.000Z" }],
       rpcData: {
         ok: true,
         replayed: true,
@@ -496,6 +565,16 @@ describe("updateTask", () => {
 });
 
 describe("setViewConfig", () => {
+  beforeEach(() => {
+    vi.mocked(getEffectivePermissions).mockReset();
+    vi.mocked(getEffectivePermissions).mockResolvedValue({
+      role: "manager",
+      canRead: true,
+      canUpdateTasks: true,
+      canManageWorkflow: true,
+    });
+  });
+
   it("upserts default_view/filters for the current user", async () => {
     const { client, upsertMock } = mockViewConfigClient({ userId: "u1" });
 
@@ -528,6 +607,24 @@ describe("setViewConfig", () => {
     expect(result).toEqual({
       ok: false,
       error: { code: "UNAUTHENTICATED", message: "Sign in to save your view preference." },
+    });
+    expect(upsertMock).not.toHaveBeenCalled();
+  });
+
+  it("denies a caller without read access to the instance before touching the table (revoked assignment / unrelated instance UUID)", async () => {
+    vi.mocked(getEffectivePermissions).mockResolvedValue({
+      role: null,
+      canRead: false,
+      canUpdateTasks: false,
+      canManageWorkflow: false,
+    });
+    const { client, upsertMock } = mockViewConfigClient({ userId: "u1" });
+
+    const result = await setViewConfig({ instanceId: "i1", defaultView: "timeline" }, client);
+
+    expect(result).toEqual({
+      ok: false,
+      error: { code: "INVALID_INPUT", message: "This plan could not be found." },
     });
     expect(upsertMock).not.toHaveBeenCalled();
   });
