@@ -17,7 +17,8 @@
     "preview": "node scripts/sync-groq-models.mjs && rm -rf .next .open-next && opennextjs-cloudflare build && opennextjs-cloudflare preview",
     "deploy": "node scripts/sync-groq-models.mjs && rm -rf .next .open-next && opennextjs-cloudflare build && opennextjs-cloudflare deploy",
     "upload": "node scripts/sync-groq-models.mjs && rm -rf .next .open-next && opennextjs-cloudflare build && opennextjs-cloudflare upload",
-    "cf-typegen": "wrangler types --env-interface CloudflareEnv cloudflare-env.d.ts"
+    "cf-typegen": "wrangler types --env-interface CloudflareEnv cloudflare-env.d.ts",
+    "verify:cloudinary-pipeline": "node scripts/verify-cloudinary-pipeline.mjs"
   },
   "dependencies": {
     "@ag-ui/client": "0.0.57",

@@ -20,7 +20,9 @@ type UploadSignBody = {
   brandId?: string;
   resourceType?: string;
   filename?: string;
+  folder?: string;
   context?: { shootId?: string; campaignId?: string };
+  notificationUrl?: string;
 };
 
 function validContextIds(context: UploadSignBody["context"]) {
@@ -78,7 +80,7 @@ export async function POST(request: Request) {
   }
   const body = parsed as UploadSignBody;
 
-  const { brandId, resourceType, filename } = body;
+  const { brandId, resourceType, filename, folder, notificationUrl } = body;
   if (!brandId || !UUID_RE.test(brandId)) {
     return NextResponse.json({ error: "Invalid brandId" }, { status: 400 });
   }
@@ -87,6 +89,18 @@ export async function POST(request: Request) {
   }
   if (!filename || sanitizeFilename(filename).length === 0) {
     return NextResponse.json({ error: "Invalid filename" }, { status: 400 });
+  }
+  if (folder && typeof folder !== "string") {
+    return NextResponse.json({ error: "folder must be a string" }, { status: 400 });
+  }
+  if (notificationUrl) {
+    try {
+      if (new URL(notificationUrl).protocol !== "https:") {
+        return NextResponse.json({ error: "notificationUrl must use https" }, { status: 400 });
+      }
+    } catch {
+      return NextResponse.json({ error: "notificationUrl must be a valid URL" }, { status: 400 });
+    }
   }
 
   const { shootId, campaignId } = validContextIds(body.context);
@@ -133,7 +147,7 @@ export async function POST(request: Request) {
   }
 
   const timestamp = Math.floor(Date.now() / 1000);
-  const assetFolder = assetFolderFor(brandId, shootId, campaignId);
+  const assetFolder = folder ?? assetFolderFor(brandId, shootId, campaignId);
   const contextParts = [`brand_id=${brandId}`];
   if (shootId) contextParts.push(`shoot_id=${shootId}`);
   if (campaignId) contextParts.push(`campaign_id=${campaignId}`);
@@ -147,11 +161,20 @@ export async function POST(request: Request) {
     allowed_formats: ALLOWED_FORMATS,
     unique_filename: "true",
     use_filename: "true",
-    filename: sanitizeFilename(filename),
     context: contextParts.join("|"),
   };
   if (resourceType === "image") {
     paramsToSign.eager = EAGER_IMAGE_PRESETS.map(presetTransformString).join("|");
+  }
+  if (notificationUrl) {
+    paramsToSign.notification_url = notificationUrl;
+  }
+
+  // folder affects public_id derivation; asset_folder is a separate UI organization
+  // concept. When folder is set, Cloudinary derives public_id as folder/filename,
+  // which the smoke test uses to scope test assets for safe cleanup.
+  if (folder) {
+    paramsToSign.folder = folder;
   }
 
   const signature = cloudinary.utils.api_sign_request(paramsToSign, apiSecret);
@@ -163,6 +186,7 @@ export async function POST(request: Request) {
     signature,
     assetFolder,
     uploadUrl: `https://api.cloudinary.com/v1_1/${cloudName}/${resourceType}/upload`,
+    filename: sanitizeFilename(filename),
     params: paramsToSign,
     expiresAt: timestamp + SIGNATURE_TTL_SECONDS,
   });
