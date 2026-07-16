@@ -114,5 +114,10 @@ Default `false` so ambient license token does not attach the license branch duri
 
 ## Commit / PR
 
-<!-- filled after push -->
+| Item | Value |
+| ---- | ----- |
+| Branch | `fix/copilotkit-runtime-mock-isOperatorAuthEnforced` |
+| PR | https://github.com/amo-tech-ai/lumina-studio/pull/412 |
+| Commits | `fix(copilotkit): mock isOperatorAuthEnforced…` · `fix(tests): stub empty Cloudinary env…` |
+| Tests | CopilotKit **20/20**; get-assets **6/6**; pre-push full suite green |
 )
