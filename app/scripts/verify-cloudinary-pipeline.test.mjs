@@ -43,7 +43,9 @@ function fakeSupabase({ asset = null, cloudinaryAsset = null, deletes = {} } = {
           calls.deletes.push({ table: delTable });
           return {
             eq: () => {
-              const delErr = deletes[delTable] ?? null;
+              let delErr = deletes[delTable] ?? null;
+              // Allow sequential outcomes: first public_id delete fails, asset_id sweep ok.
+              if (Array.isArray(delErr)) delErr = delErr.shift() ?? null;
               return Promise.resolve({ error: delErr });
             },
           };
@@ -423,7 +425,9 @@ describe("cleanup — deletion guard", () => {
 describe("cleanup — fallback by asset_id", () => {
   it("retries cloudinary_assets delete by asset_id when public_id path errored", async () => {
     const cld = fakeCloudinary();
-    const supabase = fakeSupabase({ deletes: { cloudinary_assets: new Error("first try failed") } });
+    const supabase = fakeSupabase({
+      deletes: { cloudinary_assets: [new Error("first try failed"), null] },
+    });
     const summary = await cleanup({
       cloudinary: cld,
       supabase,
@@ -432,6 +436,9 @@ describe("cleanup — fallback by asset_id", () => {
     });
     // Fallback delete by asset_id should also have been attempted.
     expect(supabase._calls.deletes.filter((d) => d.table === "cloudinary_assets").length).toBeGreaterThanOrEqual(2);
+    // Recovered via asset_id, but primary failure stays visible (not masked as bare ok-fallback).
+    expect(summary.cloudinaryAssets).toMatch(/^ok-fallback \(primary: error: first try failed\)/);
+    expect(summary.assets).toBe("ok");
   });
 
   it("always deletes by asset_id even when public_id path already succeeded", async () => {

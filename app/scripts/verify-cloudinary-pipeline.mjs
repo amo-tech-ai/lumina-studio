@@ -323,6 +323,22 @@ export function isTestPublicId(publicId, prefix = TEST_PUBLIC_ID_PREFIX) {
 }
 
 /**
+ * Record a successful asset_id sweep without masking a prior primary-path status.
+ * - already "ok" → leave ("ok")
+ * - prior "error:…" → "ok-fallback (primary: …)" so the first failure stays visible
+ * - skipped / other → "ok-fallback"
+ */
+function markAssetIdFallbackOk(summary, key) {
+  const prev = summary[key];
+  if (prev === "ok") return;
+  if (String(prev).startsWith("error")) {
+    summary[key] = `ok-fallback (primary: ${prev})`;
+    return;
+  }
+  summary[key] = "ok-fallback";
+}
+
+/**
  * Idempotent sweep by assets.id / cloudinary_assets.asset_id.
  * Always runs when assetId is present (caller already passed the refuse guard).
  */
@@ -330,14 +346,14 @@ async function deleteRowsByAssetId(supabase, assetId, summary) {
   try {
     const { error } = await supabase.from("cloudinary_assets").delete().eq("asset_id", assetId);
     if (error) summary.cloudinaryAssets = `error: ${error.message}`;
-    else if (summary.cloudinaryAssets !== "ok") summary.cloudinaryAssets = "ok-fallback";
+    else markAssetIdFallbackOk(summary, "cloudinaryAssets");
   } catch (e) {
     summary.cloudinaryAssets = `error: ${sanitizeError(e)}`;
   }
   try {
     const { error } = await supabase.from("assets").delete().eq("id", assetId);
     if (error) summary.assets = `error: ${error.message}`;
-    else if (summary.assets !== "ok") summary.assets = "ok-fallback";
+    else markAssetIdFallbackOk(summary, "assets");
   } catch (e) {
     summary.assets = `error: ${sanitizeError(e)}`;
   }
@@ -874,6 +890,7 @@ async function main() {
         (v) =>
           v === "ok" ||
           v === "ok-fallback" ||
+          String(v).startsWith("ok-fallback") ||
           v === "skipped" ||
           v === "not found" ||
           (!String(v).startsWith("error") && !String(v).startsWith("refused")),
