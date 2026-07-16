@@ -37,8 +37,7 @@ import { fileURLToPath } from "node:url";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const appRoot = resolve(__dirname, "..");
-const repoRoot = resolve(appRoot, "..");
-const envPath = resolve(repoRoot, ".env.local");
+const envPath = resolve(appRoot, ".env.local");
 
 function loadEnvFile(path) {
   if (!existsSync(path)) return;
@@ -64,6 +63,9 @@ const CLOUDINARY_API_SECRET = process.env.CLOUDINARY_API_SECRET;
 // (not imported) so the script has zero TypeScript loader deps and this is the
 // single non-TS surface that must be kept in sync if the preset changes.
 export const ASSET_MASONRY_TRANSFORM = "c_limit,w_600,f_auto,q_auto";
+
+// All HTTP requests (signing, upload, delivery) abort after this duration.
+const REQUEST_TIMEOUT_MS = 15_000;
 
 // Test assets are scoped under this folder so the deletion guard can identify
 // them and so production folders are never touched.
@@ -297,6 +299,17 @@ export async function cleanup({ cloudinary, supabase, publicId, assetId, resourc
   return summary;
 }
 
+/** Fetch with an AbortController timeout. */
+async function timedFetch(url, opts = {}) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), opts.timeout ?? REQUEST_TIMEOUT_MS);
+  try {
+    return await fetch(url, { ...opts, signal: controller.signal });
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 /** Strip secrets and stack traces from an error for safe reporting. */
 export function sanitizeError(e) {
   const msg = e?.message ?? String(e);
@@ -423,7 +436,7 @@ async function main() {
 
     // 2. upload-signature (via real app route)
     const cookie = await resolveOperatorCookie(supabaseFactory);
-    const signRes = await fetch(`${appBaseUrl}/api/assets/upload-sign`, {
+    const signRes = await timedFetch(`${appBaseUrl}/api/assets/upload-sign`, {
       method: "POST",
       headers: { "Content-Type": "application/json", ...(cookie ? { Cookie: cookie } : {}) },
       body: JSON.stringify({ brandId, resourceType: "image", filename: `${RUN_ID}.png` }),
@@ -443,7 +456,7 @@ async function main() {
     form.append("timestamp", String(signed.timestamp));
     form.append("signature", signed.signature);
     for (const [k, v] of Object.entries(signed.params)) form.append(k, String(v));
-    const upRes = await fetch(signed.uploadUrl, { method: "POST", body: form });
+    const upRes = await timedFetch(signed.uploadUrl, { method: "POST", body: form, timeout: 30_000 });
     const upText = await upRes.text();
     let upJson;
     try {
@@ -457,16 +470,24 @@ async function main() {
       throw new Error("cloudinary-upload failed");
     }
     publicId = validated.publicId;
+    if (!isTestPublicId(publicId)) {
+      stages.push(stage("cloudinary-upload", false, `public_id=${publicId} is not under ${TEST_PUBLIC_ID_PREFIX}`));
+      throw new Error("cloudinary-upload public_id outside test folder");
+    }
     stages.push(stage("cloudinary-upload", true, `public_id=${publicId} bytes=${validated.bytes}`));
 
     // 4 + 5. webhook-received + supabase-row (bounded poll)
     let rows = null;
+    let pollInterval = Number(process.env.CLD105_POLL_INTERVAL_MS ?? 1000);
+    let pollTimeout = Number(process.env.CLD105_POLL_TIMEOUT_MS ?? 30_000);
+    if (!Number.isFinite(pollInterval) || pollInterval <= 0) pollInterval = 1000;
+    if (!Number.isFinite(pollTimeout) || pollTimeout <= 0) pollTimeout = 30_000;
     try {
       rows = await pollForWebhookRow({
         supabase: admin,
         publicId,
-        intervalMs: Number(process.env.CLD105_POLL_INTERVAL_MS ?? 1000),
-        timeoutMs: Number(process.env.CLD105_POLL_TIMEOUT_MS ?? 30_000),
+        intervalMs: pollInterval,
+        timeoutMs: pollTimeout,
       });
     } catch (e) {
       stages.push(stage("webhook-received", false, sanitizeError(e)));
@@ -478,11 +499,12 @@ async function main() {
       throw new Error("webhook did not write rows");
     }
     assetId = rows.asset.id;
+    const caOk = !!rows.cloudinaryAsset;
     stages.push(stage("webhook-received", true, `assets.id=${assetId}`));
     stages.push(
       stage(
         "supabase-row",
-        true,
+        caOk,
         `cloudinary_assets=${rows.cloudinaryAsset?.status ?? "missing"}, brand_id=${rows.asset.brand_id ?? "null"}`,
       ),
     );
@@ -496,7 +518,7 @@ async function main() {
     stages.push(stage("signed-delivery", true, "URL generated"));
 
     // 8. delivery-http-200
-    const dRes = await fetch(deliveryUrl);
+    const dRes = await timedFetch(deliveryUrl);
     const ct = dRes.headers.get("content-type") ?? "";
     stages.push(stage("delivery-http-200", dRes.ok && ct.startsWith("image/"), `HTTP ${dRes.status} ${ct}`));
     if (!dRes.ok || !ct.startsWith("image/")) throw new Error("delivery-http-200 failed");
@@ -507,7 +529,7 @@ async function main() {
   } finally {
     // 9. cleanup (always runs)
     const cleanupSummary = await cleanup({ cloudinary, supabase: admin, publicId, assetId });
-    const cleanupOk = Object.values(cleanupSummary).every((v) => v === "ok" || v === "skipped" || v === "not found" || v === "skipped" || !String(v).startsWith("error"));
+    const cleanupOk = Object.values(cleanupSummary).every((v) => v === "ok" || v === "skipped" || v === "not found" || !String(v).startsWith("error") && !String(v).startsWith("refused"));
     stages.push(
       stage(
         "cleanup",

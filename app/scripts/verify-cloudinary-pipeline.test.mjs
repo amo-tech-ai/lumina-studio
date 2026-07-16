@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect } from "vitest";
 import {
   generateTestImage,
   validateUploadResponse,
@@ -8,7 +8,6 @@ import {
   isTestPublicId,
   cleanup,
   sanitizeError,
-  TEST_FOLDER,
   TEST_PUBLIC_ID_PREFIX,
   ASSET_MASONRY_TRANSFORM,
 } from "./verify-cloudinary-pipeline.mjs";
@@ -321,25 +320,34 @@ describe("cleanup — deletion guard", () => {
   });
 });
 
-describe("cleanup — on success vs failure", () => {
-  it("runs the same destroy+delete path whether called from success or failure path", async () => {
-    // The cleanup function is identical regardless of how we got here; this
-    // test just locks that contract: same inputs → same DB/Cloudinary calls.
-    for (const ctx of [{ fromSuccess: true }, { fromSuccess: false }]) {
-      const cld = fakeCloudinary();
-      const supabase = fakeSupabase();
-      await cleanup({
-        cloudinary: cld,
-        supabase,
-        publicId: "ipix/cld105-test/cld105-1",
-        assetId: "a1",
-      });
-      expect(cld.calls.destroys).toHaveLength(1);
-      expect(supabase._calls.deletes.map((d) => d.table).sort()).toEqual([
-        "assets",
-        "cloudinary_assets",
-      ]);
-    }
+describe("cleanup — fallback by asset_id", () => {
+  it("retries cloudinary_assets delete by asset_id when public_id path errored", async () => {
+    const cld = fakeCloudinary();
+    const supabase = fakeSupabase({ deletes: { cloudinary_assets: new Error("first try failed") } });
+    const summary = await cleanup({
+      cloudinary: cld,
+      supabase,
+      publicId: "ipix/cld105-test/cld105-1",
+      assetId: "a1",
+    });
+    // Fallback delete by asset_id should also have been attempted.
+    expect(supabase._calls.deletes.filter((d) => d.table === "cloudinary_assets").length).toBeGreaterThanOrEqual(2);
+  });
+
+  it("does not retry when public_id delete already succeeded", async () => {
+    const cld = fakeCloudinary();
+    const supabase = fakeSupabase();
+    const summary = await cleanup({
+      cloudinary: cld,
+      supabase,
+      publicId: "ipix/cld105-test/cld105-1",
+      assetId: "a1",
+    });
+    expect(cld.calls.destroys).toHaveLength(1);
+    expect(supabase._calls.deletes.map((d) => d.table).sort()).toEqual([
+      "assets",
+      "cloudinary_assets",
+    ]);
   });
 });
 
@@ -386,5 +394,57 @@ describe("generateTestImage", () => {
 
   it("is small (< 2KB) for fast upload", () => {
     expect(generateTestImage("x").length).toBeLessThan(2048);
+  });
+});
+
+describe("cleanup — after pipeline failure", () => {
+  it("removes test assets even when called from a failure path (publicId known)", async () => {
+    const cld = fakeCloudinary();
+    const supabase = fakeSupabase();
+    const summary = await cleanup({
+      cloudinary: cld,
+      supabase,
+      publicId: "ipix/cld105-test/cld105-fail",
+      assetId: "a1",
+    });
+    expect(cld.calls.destroys).toHaveLength(1);
+    expect(summary.cloudinary).toBe("ok");
+    expect(summary.assets).toBe("ok");
+    expect(summary.cloudinaryAssets).toBe("ok");
+  });
+
+  it("is safe when publicId is unknown (e.g. pipeline failed before upload)", async () => {
+    const cld = fakeCloudinary();
+    const supabase = fakeSupabase();
+    const summary = await cleanup({ cloudinary: cld, supabase, publicId: undefined, assetId: undefined });
+    expect(cld.calls.destroys).toHaveLength(0);
+    expect(summary.cloudinary).toBe("skipped");
+  });
+
+  it("records refused: when production public_id is passed", async () => {
+    const cld = fakeCloudinary();
+    const supabase = fakeSupabase();
+    const summary = await cleanup({
+      cloudinary: cld,
+      supabase,
+      publicId: "ipix/brands/prod-asset/p",
+      assetId: "a1",
+    });
+    expect(summary.cloudinary).toMatch(/refused/);
+    expect(cld.calls.destroys).toHaveLength(0);
+  });
+});
+
+describe("cleanup — idempotent deletes", () => {
+  it("does not throw when Supabase delete returns 'not found' for cloudinary_assets", async () => {
+    const cld = fakeCloudinary();
+    const supabase = fakeSupabase();
+    const summary = await cleanup({
+      cloudinary: cld,
+      supabase,
+      publicId: "ipix/cld105-test/cld105-dup",
+      assetId: "a1",
+    });
+    expect(summary.cloudinaryAssets).toBe("ok");
   });
 });

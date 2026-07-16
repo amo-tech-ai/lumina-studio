@@ -21,6 +21,7 @@ type UploadSignBody = {
   resourceType?: string;
   filename?: string;
   context?: { shootId?: string; campaignId?: string };
+  notificationUrl?: string;
 };
 
 function validContextIds(context: UploadSignBody["context"]) {
@@ -78,7 +79,7 @@ export async function POST(request: Request) {
   }
   const body = parsed as UploadSignBody;
 
-  const { brandId, resourceType, filename } = body;
+  const { brandId, resourceType, filename, notificationUrl } = body;
   if (!brandId || !UUID_RE.test(brandId)) {
     return NextResponse.json({ error: "Invalid brandId" }, { status: 400 });
   }
@@ -87,6 +88,9 @@ export async function POST(request: Request) {
   }
   if (!filename || sanitizeFilename(filename).length === 0) {
     return NextResponse.json({ error: "Invalid filename" }, { status: 400 });
+  }
+  if (notificationUrl && !notificationUrl.startsWith("https://")) {
+    return NextResponse.json({ error: "notificationUrl must use https" }, { status: 400 });
   }
 
   const { shootId, campaignId } = validContextIds(body.context);
@@ -152,6 +156,9 @@ export async function POST(request: Request) {
   };
   if (resourceType === "image") {
     paramsToSign.eager = EAGER_IMAGE_PRESETS.map(presetTransformString).join("|");
+  }
+  if (notificationUrl) {
+    paramsToSign.notification_url = notificationUrl;
   }
 
   const signature = cloudinary.utils.api_sign_request(paramsToSign, apiSecret);
