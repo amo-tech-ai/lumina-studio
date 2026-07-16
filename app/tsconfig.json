@@ -30,5 +30,10 @@
     ".next/dev/types/**/*.ts",
     "../config/groq-models.json"
   ],
-  "exclude": ["node_modules", "**/*.test.ts", "**/*.test.tsx"]
+  "exclude": [
+    "node_modules",
+    "**/*.test.ts",
+    "**/*.test.tsx",
+    "cloudflare-bindings.assert.ts"
+  ]
 }
