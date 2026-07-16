@@ -1,0 +1,168 @@
+/* IPI-576 — Planner Dashboard. Layout/spacing follow
+   SCR-33-Planner-Dashboard.dc.html's in-scope zones (KPI row, recent plans);
+   colors/radii/spacing use the app's own design tokens (styles/tokens.css),
+   not the mockup's local --gate/--action custom properties. The mockup's
+   Start-here approval banner and Upcoming-this-week strip are out of scope
+   (no real data source per IPI-576/IPI-538) and have no styles here. */
+
+.workspace {
+  padding: var(--page-padding);
+  max-width: var(--content-max-width);
+  margin: 0 auto;
+}
+
+.header {
+  margin-bottom: var(--space-4);
+}
+
+.title {
+  margin: 0;
+  font-size: var(--font-size-2xl);
+  font-weight: var(--font-weight-bold);
+  letter-spacing: -0.02em;
+}
+
+.subtitle {
+  margin: 5px 0 0;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+}
+
+/* --- KPI stats --- */
+
+.sectionLabel {
+  font-size: var(--font-size-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-text-muted);
+  font-weight: var(--font-weight-bold);
+  margin: 0 0 10px;
+}
+
+.statsGrid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: var(--space-3);
+  margin-bottom: var(--space-6);
+}
+
+@media (max-width: 1100px) {
+  .statsGrid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (max-width: 640px) {
+  .statsGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.statCard,
+.statCardLink {
+  display: block;
+  border: 1px solid var(--card-border);
+  border-radius: var(--card-radius);
+  background: var(--card-bg);
+  padding: 15px 16px;
+  text-decoration: none;
+  color: inherit;
+}
+
+.statCardLink:hover {
+  border-color: var(--color-border-strong);
+}
+
+.statIconRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+
+.statIcon {
+  width: 30px;
+  height: 30px;
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-bg-muted);
+  color: var(--color-text-primary);
+}
+
+.statIconWarning {
+  background: var(--color-warning-bg);
+  color: var(--color-warning-text);
+}
+
+.statValue {
+  font-family: var(--font-mono);
+  font-size: 28px;
+  font-weight: var(--font-weight-semibold);
+  line-height: 1;
+}
+
+.statValueWarning {
+  color: var(--color-warning-text);
+}
+
+.statValueMuted {
+  color: var(--color-text-muted);
+}
+
+.statLabel {
+  margin: 8px 0 0;
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+}
+
+.statMeta {
+  margin: 2px 0 0;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+}
+
+/* --- Recent plans --- */
+
+.recentHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.recentTitle {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-bold);
+}
+
+.viewAllLink {
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-secondary);
+  text-decoration: none;
+}
+
+.viewAllLink:hover {
+  color: var(--color-text-primary);
+}
+
+.recentGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--card-gap);
+}
+
+@media (max-width: 1100px) {
+  .recentGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 640px) {
+  .recentGrid {
+    grid-template-columns: 1fr;
+  }
+}
