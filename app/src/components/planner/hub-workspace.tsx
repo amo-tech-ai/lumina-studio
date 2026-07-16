@@ -43,7 +43,15 @@ export function PlannerHubWorkspace({ filters, items, nextCursor }: Props) {
 
       {items.length === 0 ? (
         <>
-          {filtersActive || isPastFirstPage ? <HubNoMatchState /> : <HubEmptyState />}
+          {filtersActive ? (
+            <HubNoMatchState />
+          ) : isPastFirstPage ? null : (
+            // Past the first page with no filters active, an empty result is
+            // "nothing more past this point" — HubPagination's own "Start
+            // over" link below is the correct affordance, not a misleading
+            // "no plans match these filters" message with nothing to clear.
+            <HubEmptyState />
+          )}
           {isPastFirstPage ? <HubPagination filters={filters} nextCursor={null} /> : null}
         </>
       ) : (

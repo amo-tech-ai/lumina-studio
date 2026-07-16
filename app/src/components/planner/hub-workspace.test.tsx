@@ -76,10 +76,27 @@ describe("PlannerHubWorkspace — states", () => {
     expect(within(card).getByText("Archived")).toBeDefined();
   });
 
-  it("renders a no-match style state (not empty-portfolio) for a zero-result page past the first", () => {
+  it("renders neither empty-portfolio nor no-match copy for a zero-result page past the first with no filters active", () => {
+    // "Nothing more past this point" isn't "you have no plans" (misleading —
+    // plans exist, just not past this cursor) or "no plans match these
+    // filters" (misleading — no filters are active, so "Clear filters" has
+    // nothing to do). HubPagination's own "Start over" link, asserted below,
+    // is the correct affordance here, not either state's copy.
     render(
       <PlannerHubWorkspace
         filters={parseHubSearchParams({ cursor: "x".repeat(20) })}
+        items={[]}
+        nextCursor={null}
+      />,
+    );
+    expect(screen.queryByTestId("hub-no-match")).toBeNull();
+    expect(screen.queryByTestId("hub-empty")).toBeNull();
+  });
+
+  it("still renders the no-match state for a zero-result page past the first when filters are active", () => {
+    render(
+      <PlannerHubWorkspace
+        filters={parseHubSearchParams({ search: "nonexistent", cursor: "x".repeat(20) })}
         items={[]}
         nextCursor={null}
       />,
