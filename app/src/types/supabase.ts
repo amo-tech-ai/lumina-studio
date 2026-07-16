@@ -6864,17 +6864,6 @@ export type Database = {
           user_id: string
         }[]
       }
-      planner_shift_task: {
-        Args: {
-          p_changed_tasks: Json
-          p_delta_days: number
-          p_expected_dependency_edges: Json
-          p_idempotency_key: string
-          p_instance_id: string
-          p_root_task_id: string
-        }
-        Returns: Json
-      }
       planner_update_role: {
         Args: {
           p_instance_id: string
@@ -6887,16 +6876,6 @@ export type Database = {
           role: string
           user_id: string
         }[]
-      }
-      planner_update_task: {
-        Args: {
-          p_expected_updated_at: string
-          p_idempotency_key: string
-          p_instance_id: string
-          p_patch: Json
-          p_task_id: string
-        }
-        Returns: Json
       }
       search_brands: {
         Args: {
