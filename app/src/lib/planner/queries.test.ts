@@ -666,6 +666,7 @@ describe("listDependencies", () => {
     });
     expect(client.from).toHaveBeenCalledWith("dependencies");
     expect(query.eq).toHaveBeenCalledWith("instance_id", "i1");
+    expect(query.select.mock.calls[0][0]).not.toContain("*");
   });
 
   it("returns a typed query failure without leaking the raw error", async () => {
@@ -732,6 +733,7 @@ describe("getViewConfig", () => {
     expect(client.from).toHaveBeenCalledWith("view_configs");
     expect(query.eq).toHaveBeenCalledWith("instance_id", "i1");
     expect(query.eq).toHaveBeenCalledWith("user_id", "user-a");
+    expect(query.select.mock.calls[0][0]).not.toContain("*");
   });
 
   it("returns null, not an error, when the current user has no saved preference yet", async () => {
@@ -749,6 +751,46 @@ describe("getViewConfig", () => {
       ok: false,
       error: { code: "QUERY_FAILED", message: "Plan view preferences could not be loaded." },
     });
+  });
+
+  it("returns a typed query failure, not a thrown error, when maybeSingle() finds duplicate rows", async () => {
+    // Realistic PostgREST shape for "multiple (or no) rows were found" from
+    // .maybeSingle() — the generic error branch above already handles this,
+    // this locks in that a real duplicate-row failure specifically routes
+    // through it rather than being special-cased or silently swallowed.
+    const query = makeQuery({
+      data: null,
+      error: { code: "PGRST116", message: "JSON object requested, multiple (or no) rows returned" },
+    });
+    mockClient(query);
+
+    await expect(getViewConfig("i1")).resolves.toEqual({
+      ok: false,
+      error: { code: "QUERY_FAILED", message: "Plan view preferences could not be loaded." },
+    });
+  });
+
+  it("normalizes non-object filters/sort_config to {} instead of trusting the jsonb cast", async () => {
+    // jsonb columns can hold any valid JSON value, not just objects — a
+    // legacy or malformed row could have filters/sort_config as an array,
+    // string, number, or JSON null even though the column is NOT NULL.
+    const query = makeQuery({
+      data: {
+        id: "v1",
+        user_id: "user-a",
+        instance_id: "i1",
+        default_view: "timeline",
+        filters: ["not", "an", "object"],
+        sort_config: null,
+      },
+      error: null,
+    });
+    mockClient(query, "user-a");
+
+    const result = await getViewConfig("i1");
+
+    expect(result.ok && result.data?.filters).toEqual({});
+    expect(result.ok && result.data?.sortConfig).toEqual({});
   });
 
   it("denies an org member with no assignment on this instance, even for their own saved preference", async () => {

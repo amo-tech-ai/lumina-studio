@@ -420,8 +420,26 @@ export async function listPlannerInstances(
 }
 
 type TaskRow = Database["planner"]["Tables"]["tasks"]["Row"];
-type DependencyRow = Database["planner"]["Tables"]["dependencies"]["Row"];
-type ViewConfigRow = Database["planner"]["Tables"]["view_configs"]["Row"];
+type FullDependencyRow = Database["planner"]["Tables"]["dependencies"]["Row"];
+type FullViewConfigRow = Database["planner"]["Tables"]["view_configs"]["Row"];
+
+// Explicit column lists, not select("*") — same rationale as
+// INSTANCE_DETAIL_COLUMNS: dependencies_select_org/view_configs_select_own
+// are the only gate on future columns; a bare `*` forwards anything added
+// later without a decision to include it. The Pick<> types below keep
+// toDependency/toViewConfig's parameter types honest about exactly what's
+// selected, matching HubTaskRow's convention above.
+const DEPENDENCY_COLUMNS = "id, instance_id, from_task_id, to_task_id, dep_type, lag_days";
+const VIEW_CONFIG_COLUMNS = "id, user_id, instance_id, default_view, filters, sort_config";
+
+type DependencyRow = Pick<
+  FullDependencyRow,
+  "id" | "instance_id" | "from_task_id" | "to_task_id" | "dep_type" | "lag_days"
+>;
+type ViewConfigRow = Pick<
+  FullViewConfigRow,
+  "id" | "user_id" | "instance_id" | "default_view" | "filters" | "sort_config"
+>;
 
 function toTask(row: TaskRow): PlannerTask {
   return {
@@ -453,14 +471,23 @@ function toDependency(row: DependencyRow): PlannerDependency {
   };
 }
 
+// jsonb columns aren't guaranteed to hold an object at the type level —
+// Postgres accepts any valid JSON value (array, string, number, literal
+// null) for a jsonb column, so a legacy or malformed row could violate the
+// Record<string, unknown> contract a plain `as` cast assumes. Normalize
+// defensively instead of trusting the cast.
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
 function toViewConfig(row: ViewConfigRow): PlannerViewConfig {
   return {
     id: row.id,
     userId: row.user_id,
     instanceId: row.instance_id,
     defaultView: row.default_view as PersistedViewType,
-    filters: row.filters as Record<string, unknown>,
-    sortConfig: row.sort_config as Record<string, unknown>,
+    filters: isPlainObject(row.filters) ? row.filters : {},
+    sortConfig: isPlainObject(row.sort_config) ? row.sort_config : {},
   };
 }
 
@@ -575,7 +602,7 @@ export async function listDependencies(
 
   const { data, error } = await context.data.client
     .from("dependencies")
-    .select("*")
+    .select(DEPENDENCY_COLUMNS)
     .eq("instance_id", instanceId);
 
   if (error) {
@@ -616,7 +643,7 @@ export async function getViewConfig(
 
   const { data, error } = await context.data.client
     .from("view_configs")
-    .select("*")
+    .select(VIEW_CONFIG_COLUMNS)
     .eq("instance_id", instanceId)
     .eq("user_id", context.data.userId)
     .maybeSingle();
