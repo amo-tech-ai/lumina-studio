@@ -65,4 +65,14 @@ describe("Cloudflare @mastra/pg stub (IPI-490)", () => {
     );
     expect(() => new PostgresStore()).toThrow(/MASTRA_STORAGE_MODE=noop/);
   });
+
+  it("OpenNext buildCommand sets noop alongside stubs (Node build is not Workers)", async () => {
+    // Regression for Bugbot: IPIX_CF_BUNDLE_STUBS alone stubs PostgresStore to throw,
+    // but Node next build keeps shouldSkipMastraPostgresStorage=false when mode unset.
+    const { readFileSync } = await import("node:fs");
+    const { resolve } = await import("node:path");
+    const src = readFileSync(resolve(__dirname, "../../open-next.config.ts"), "utf8");
+    expect(src).toMatch(/IPIX_CF_BUNDLE_STUBS=1/);
+    expect(src).toMatch(/MASTRA_STORAGE_MODE=noop/);
+  });
 });
