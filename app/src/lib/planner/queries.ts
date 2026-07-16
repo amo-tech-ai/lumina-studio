@@ -4,7 +4,20 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import type { Database } from "@/types/supabase";
 
-import type { EntityType, PlannerAssignment, PlannerInstanceStatus, PlannerMember, PlannerTaskStatus } from "./types";
+import { getEffectivePermissions, type EffectivePermissions } from "./permissions";
+
+import type {
+  EntityType,
+  PersistedViewType,
+  PlannerAssignment,
+  PlannerDependency,
+  PlannerInstance,
+  PlannerInstanceStatus,
+  PlannerMember,
+  PlannerTask,
+  PlannerTaskStatus,
+  PlannerViewConfig,
+} from "./types";
 
 type PlannerClient = PostgrestClient<
   Database,
@@ -404,6 +417,215 @@ export async function listPlannerInstances(
     ok: true,
     data: toInstancePage((data ?? []) as HubInstanceRow[], options.limit),
   };
+}
+
+type TaskRow = Database["planner"]["Tables"]["tasks"]["Row"];
+type DependencyRow = Database["planner"]["Tables"]["dependencies"]["Row"];
+type ViewConfigRow = Database["planner"]["Tables"]["view_configs"]["Row"];
+
+function toTask(row: TaskRow): PlannerTask {
+  return {
+    id: row.id,
+    instanceId: row.instance_id,
+    phaseId: row.phase_id,
+    parentTaskId: row.parent_task_id,
+    title: row.title,
+    description: row.description,
+    startDate: row.start_date,
+    endDate: row.end_date,
+    durationDays: row.duration_days,
+    status: row.status,
+    priority: row.priority as PlannerTask["priority"],
+    assigneeUserId: row.assignee_user_id,
+    assigneeRole: row.assignee_role,
+    sortOrder: row.sort_order,
+  };
+}
+
+function toDependency(row: DependencyRow): PlannerDependency {
+  return {
+    id: row.id,
+    instanceId: row.instance_id,
+    fromTaskId: row.from_task_id,
+    toTaskId: row.to_task_id,
+    depType: row.dep_type,
+    lagDays: row.lag_days,
+  };
+}
+
+function toViewConfig(row: ViewConfigRow): PlannerViewConfig {
+  return {
+    id: row.id,
+    userId: row.user_id,
+    instanceId: row.instance_id,
+    defaultView: row.default_view as PersistedViewType,
+    filters: row.filters as Record<string, unknown>,
+    sortConfig: row.sort_config as Record<string, unknown>,
+  };
+}
+
+// IPI-574 · PLN-DATA-001B (reads-only PR) — Workspace instance detail.
+// Bounded by design: a Planner instance is bounded by its source workflow
+// template (11 phases, small task count per phase), so no pagination is
+// needed for v1. planner.events (unbounded audit history) is deliberately
+// excluded — Workspace doesn't need it, and Realtime/notifications
+// (IPI-480/481) will consume events separately.
+// Explicit column list, not `select("*")` — instances_select_org/
+// tasks_select_org RLS is org-scoped (any org member), so a bare `*` would
+// forward every future column (including anything sensitive added later)
+// straight to the frontend with no second gate. List exactly what
+// PlannerInstance/PlannerTask consume.
+const INSTANCE_DETAIL_COLUMNS =
+  "id, org_id, workflow_id, entity_type, entity_id, name, status, planned_start, planned_end, owner_user_id, " +
+  "tasks(id, instance_id, phase_id, parent_task_id, title, description, start_date, end_date, duration_days, status, priority, assignee_user_id, assignee_role, sort_order)";
+
+// getEffectivePermissions (permissions.ts) throws if its underlying RPC call
+// fails — this wraps it so getInstanceDetail/listDependencies can honor
+// their PlannerQueryResult contract instead of leaking an unhandled
+// rejection to the caller.
+async function resolveReadPermissions(
+  instanceId: string,
+  client: SupabaseClient<Database>,
+  queryFailedMessage: string,
+): Promise<PlannerQueryResult<EffectivePermissions>> {
+  try {
+    return { ok: true, data: await getEffectivePermissions(instanceId, client) };
+  } catch {
+    return failure("QUERY_FAILED", queryFailedMessage);
+  }
+}
+
+export async function getInstanceDetail(
+  id: string,
+): Promise<PlannerQueryResult<PlannerInstance>> {
+  const context = await authenticatedPlannerClient();
+  if (!context.ok) return context;
+
+  // instances_select_org/tasks_select_org are org-scoped (is_org_member),
+  // not assignment-scoped — an org member never assigned to this specific
+  // instance would otherwise pass RLS and still receive full task detail,
+  // even though the app's own permission model treats them as canRead:
+  // false (same model the Settings route already gates on). Fail closed
+  // before querying, using the same enumeration-safe "not found" message
+  // as a genuinely missing instance — never reveal it exists.
+  const permissionsResult = await resolveReadPermissions(
+    id,
+    context.data.base,
+    "This plan could not be loaded.",
+  );
+  if (!permissionsResult.ok) return permissionsResult;
+  if (!permissionsResult.data.canRead) {
+    return failure("INVALID_INPUT", "This plan could not be found.");
+  }
+
+  const { data, error } = await context.data.client
+    .from("instances")
+    .select(INSTANCE_DETAIL_COLUMNS)
+    .eq("id", id)
+    .maybeSingle();
+
+  if (error) {
+    return failure("QUERY_FAILED", "This plan could not be loaded.");
+  }
+  if (!data) {
+    return failure("INVALID_INPUT", "This plan could not be found.");
+  }
+
+  const row = data as unknown as InstanceRow & { tasks: TaskRow[] | null };
+  return {
+    ok: true,
+    data: {
+      id: row.id,
+      orgId: row.org_id,
+      workflowId: row.workflow_id,
+      entityType: row.entity_type as EntityType,
+      entityId: row.entity_id,
+      name: row.name,
+      status: row.status,
+      plannedStart: row.planned_start,
+      plannedEnd: row.planned_end,
+      ownerUserId: row.owner_user_id,
+      // PostgREST doesn't guarantee embedded-resource row order — sort
+      // explicitly rather than relying on whatever order the DB happens to
+      // return, which Workspace consumers would otherwise render as the
+      // plan sequence, disagreeing with each task's own sortOrder and with
+      // buildSchedule's schedule semantics.
+      tasks: (row.tasks ?? []).map(toTask).sort((a, b) => a.sortOrder - b.sortOrder),
+    },
+  };
+}
+
+export async function listDependencies(
+  instanceId: string,
+): Promise<PlannerQueryResult<PlannerDependency[]>> {
+  const context = await authenticatedPlannerClient();
+  if (!context.ok) return context;
+
+  // Same assignment-level gate as getInstanceDetail above —
+  // dependencies_select_org is also only org-scoped, not assignment-scoped.
+  const permissionsResult = await resolveReadPermissions(
+    instanceId,
+    context.data.base,
+    "Plan dependencies could not be loaded.",
+  );
+  if (!permissionsResult.ok) return permissionsResult;
+  if (!permissionsResult.data.canRead) {
+    return failure("INVALID_INPUT", "This plan could not be found.");
+  }
+
+  const { data, error } = await context.data.client
+    .from("dependencies")
+    .select("*")
+    .eq("instance_id", instanceId);
+
+  if (error) {
+    return failure("QUERY_FAILED", "Plan dependencies could not be loaded.");
+  }
+
+  return { ok: true, data: (data ?? []).map(toDependency) };
+}
+
+// IPI-574 · PLN-DATA-001B correction #1 (2026-07-16) — identity is
+// server-resolved from the session, matching IPI-538's precedent; no
+// caller-supplied userId. Returns null (not an error) when the current
+// user has no saved preference yet for this instance — that's an expected,
+// valid first-visit state, not a failure.
+//
+// view_configs' own RLS (view_configs_select_own) already restricts every
+// row to its owning user regardless of org/assignment, so this can never
+// leak another user's preferences. The gate below closes a narrower gap:
+// without it, a caller whose assignment was later revoked could still read
+// their own stale saved preference for a plan they can no longer otherwise
+// see — same assignment-level model as getInstanceDetail/listDependencies,
+// applied here for consistency rather than to prevent cross-user leakage.
+export async function getViewConfig(
+  instanceId: string,
+): Promise<PlannerQueryResult<PlannerViewConfig | null>> {
+  const context = await authenticatedPlannerClient();
+  if (!context.ok) return context;
+
+  const permissionsResult = await resolveReadPermissions(
+    instanceId,
+    context.data.base,
+    "Plan view preferences could not be loaded.",
+  );
+  if (!permissionsResult.ok) return permissionsResult;
+  if (!permissionsResult.data.canRead) {
+    return failure("INVALID_INPUT", "This plan could not be found.");
+  }
+
+  const { data, error } = await context.data.client
+    .from("view_configs")
+    .select("*")
+    .eq("instance_id", instanceId)
+    .eq("user_id", context.data.userId)
+    .maybeSingle();
+
+  if (error) {
+    return failure("QUERY_FAILED", "Plan view preferences could not be loaded.");
+  }
+
+  return { ok: true, data: data ? toViewConfig(data) : null };
 }
 
 type AssignmentRow = Database["planner"]["Tables"]["assignments"]["Row"];

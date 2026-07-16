@@ -5,8 +5,11 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import {
   calculatePlannerProgress,
   derivePlannerDashboardSummary,
+  getInstanceDetail,
   getPlannerDashboardSummary,
+  getViewConfig,
   isPlannerInstanceAtRisk,
+  listDependencies,
   listMembers,
   listPlannerInstances,
 } from "./queries";
@@ -24,14 +27,38 @@ function makeQuery(response: QueryResponse) {
   for (const method of ["select", "in", "eq", "neq", "filter", "or", "order", "limit"]) {
     query[method] = vi.fn(() => query);
   }
+  query.maybeSingle = vi.fn(() => Promise.resolve(response));
   query.then = (resolve, reject) => Promise.resolve(response).then(resolve, reject);
   return query;
 }
+
+type AssignmentRpcRow = {
+  id: string;
+  instance_id: string;
+  user_id: string;
+  role: string;
+  permissions: unknown;
+};
+
+// Default assignment grants the caller "owner" on instance "i1" — the id
+// every getInstanceDetail/listDependencies test below uses — so existing
+// tests (which predate the permission gate) keep passing without needing to
+// know about it. Tests that specifically exercise the gate pass
+// `assignment: null` to simulate an org member with no assignment row.
+const DEFAULT_ASSIGNMENT: AssignmentRpcRow = {
+  id: "assign-default",
+  instance_id: "i1",
+  user_id: "user-a",
+  role: "owner",
+  permissions: null,
+};
 
 function mockClient(
   query: ReturnType<typeof makeQuery>,
   userId = "user-a",
   names: { user_id: string; display_name: string | null }[] = [],
+  assignment: AssignmentRpcRow | null = DEFAULT_ASSIGNMENT,
+  assignmentError: unknown = null,
 ) {
   const from = vi.fn(() => query);
   const schema = vi.fn(() => ({ from }));
@@ -39,7 +66,16 @@ function mockClient(
     data: { user: { id: userId } },
     error: null,
   });
-  const rpc = vi.fn().mockResolvedValue({ data: names, error: null });
+  const rpc = vi.fn((fnName: string) => {
+    if (fnName === "planner_get_member_names") {
+      return Promise.resolve({ data: names, error: null });
+    }
+    if (fnName === "planner_get_my_assignment") {
+      if (assignmentError) return Promise.resolve({ data: null, error: assignmentError });
+      return Promise.resolve({ data: assignment ? [assignment] : [], error: null });
+    }
+    return Promise.resolve({ data: null, error: null });
+  });
   vi.mocked(createSupabaseServerClient).mockResolvedValue({
     auth: { getUser },
     schema,
@@ -454,5 +490,298 @@ describe("listMembers", () => {
       ok: false,
       error: { code: "QUERY_FAILED", message: "Planner members could not be loaded." },
     });
+  });
+});
+
+function taskRow(overrides: Record<string, unknown> = {}) {
+  return {
+    id: "t1",
+    instance_id: "i1",
+    phase_id: "p1",
+    parent_task_id: null,
+    title: "Casting",
+    description: null,
+    start_date: "2026-07-01",
+    end_date: "2026-07-03",
+    duration_days: 2,
+    status: "todo",
+    priority: "medium",
+    assignee_user_id: null,
+    assignee_role: null,
+    sort_order: 0,
+    created_at: "2026-07-01T00:00:00.000Z",
+    updated_at: "2026-07-01T00:00:00.000Z",
+    ...overrides,
+  };
+}
+
+describe("getInstanceDetail", () => {
+  it("maps the instance row plus its tasks to PlannerInstance", async () => {
+    const query = makeQuery({
+      data: { ...instance(), tasks: [taskRow()] },
+      error: null,
+    });
+    const client = mockClient(query);
+
+    const result = await getInstanceDetail("i1");
+
+    expect(result).toEqual({
+      ok: true,
+      data: {
+        id: "00000000-0000-4000-8000-000000000001",
+        orgId: "00000000-0000-4000-8000-000000000010",
+        workflowId: "00000000-0000-4000-8000-000000000020",
+        entityType: "shoot",
+        entityId: "00000000-0000-4000-8000-000000000030",
+        name: "Summer campaign",
+        status: "active",
+        plannedStart: "2026-07-01",
+        plannedEnd: "2026-07-20",
+        ownerUserId: "user-a",
+        tasks: [
+          {
+            id: "t1",
+            instanceId: "i1",
+            phaseId: "p1",
+            parentTaskId: null,
+            title: "Casting",
+            description: null,
+            startDate: "2026-07-01",
+            endDate: "2026-07-03",
+            durationDays: 2,
+            status: "todo",
+            priority: "medium",
+            assigneeUserId: null,
+            assigneeRole: null,
+            sortOrder: 0,
+          },
+        ],
+      },
+    });
+    expect(client.from).toHaveBeenCalledWith("instances");
+    expect(query.eq).toHaveBeenCalledWith("id", "i1");
+    expect(client.rpc).toHaveBeenCalledWith("planner_get_my_assignment", {
+      p_instance_id: "i1",
+    });
+    // Explicit column list, not select("*") — a future column added to
+    // instances/tasks must not be forwarded to the frontend without an
+    // explicit decision to include it here.
+    const selectedColumns = query.select.mock.calls[0][0];
+    expect(selectedColumns).not.toContain("*");
+    expect(selectedColumns).toContain("owner_user_id");
+    expect(selectedColumns).toContain("tasks(");
+  });
+
+  it("sorts tasks by sortOrder rather than trusting PostgREST's embed order", async () => {
+    // PostgREST doesn't guarantee embedded-resource row order — deliberately
+    // return tasks out of order here to prove the mapping sorts them, not
+    // just passes through whatever order the query happened to return.
+    const query = makeQuery({
+      data: {
+        ...instance(),
+        tasks: [
+          taskRow({ id: "t3", title: "Wrap", sort_order: 2 }),
+          taskRow({ id: "t1", title: "Casting", sort_order: 0 }),
+          taskRow({ id: "t2", title: "Shoot", sort_order: 1 }),
+        ],
+      },
+      error: null,
+    });
+    mockClient(query);
+
+    const result = await getInstanceDetail("i1");
+
+    expect(result.ok && result.data.tasks.map((t) => t.id)).toEqual(["t1", "t2", "t3"]);
+  });
+
+  it("does not distinguish an RLS-filtered instance from a nonexistent one", async () => {
+    const query = makeQuery({ data: null, error: null });
+    mockClient(query);
+
+    await expect(getInstanceDetail("i1")).resolves.toEqual({
+      ok: false,
+      error: { code: "INVALID_INPUT", message: "This plan could not be found." },
+    });
+  });
+
+  it("returns a typed query failure without leaking the raw error", async () => {
+    const query = makeQuery({ data: null, error: { message: "private database error" } });
+    mockClient(query);
+
+    await expect(getInstanceDetail("i1")).resolves.toEqual({
+      ok: false,
+      error: { code: "QUERY_FAILED", message: "This plan could not be loaded." },
+    });
+  });
+
+  it("denies an org member with no assignment on this instance — instances_select_org/tasks_select_org are org-scoped, not assignment-scoped", async () => {
+    const query = makeQuery({ data: { ...instance(), tasks: [] }, error: null });
+    const client = mockClient(query, "user-a", [], null);
+
+    await expect(getInstanceDetail("i1")).resolves.toEqual({
+      ok: false,
+      error: { code: "INVALID_INPUT", message: "This plan could not be found." },
+    });
+    // Fails closed before querying — an unassigned org member never reaches
+    // a query that RLS would have let through anyway.
+    expect(client.from).not.toHaveBeenCalled();
+  });
+
+  it("returns a typed query failure instead of throwing when the assignment RPC errors", async () => {
+    const query = makeQuery({ data: { ...instance(), tasks: [] }, error: null });
+    const client = mockClient(query, "user-a", [], DEFAULT_ASSIGNMENT, { message: "rpc unavailable" });
+
+    await expect(getInstanceDetail("i1")).resolves.toEqual({
+      ok: false,
+      error: { code: "QUERY_FAILED", message: "This plan could not be loaded." },
+    });
+    expect(client.from).not.toHaveBeenCalled();
+  });
+});
+
+describe("listDependencies", () => {
+  it("maps dependency rows to PlannerDependency", async () => {
+    const query = makeQuery({
+      data: [
+        {
+          id: "d1",
+          instance_id: "i1",
+          from_task_id: "t1",
+          to_task_id: "t2",
+          dep_type: "finish_to_start",
+          lag_days: 0,
+        },
+      ],
+      error: null,
+    });
+    const client = mockClient(query);
+
+    const result = await listDependencies("i1");
+
+    expect(result).toEqual({
+      ok: true,
+      data: [
+        { id: "d1", instanceId: "i1", fromTaskId: "t1", toTaskId: "t2", depType: "finish_to_start", lagDays: 0 },
+      ],
+    });
+    expect(client.from).toHaveBeenCalledWith("dependencies");
+    expect(query.eq).toHaveBeenCalledWith("instance_id", "i1");
+  });
+
+  it("returns a typed query failure without leaking the raw error", async () => {
+    const query = makeQuery({ data: null, error: { message: "private database error" } });
+    mockClient(query);
+
+    await expect(listDependencies("i1")).resolves.toEqual({
+      ok: false,
+      error: { code: "QUERY_FAILED", message: "Plan dependencies could not be loaded." },
+    });
+  });
+
+  it("denies an org member with no assignment on this instance — dependencies_select_org is org-scoped, not assignment-scoped", async () => {
+    const query = makeQuery({ data: [], error: null });
+    const client = mockClient(query, "user-a", [], null);
+
+    await expect(listDependencies("i1")).resolves.toEqual({
+      ok: false,
+      error: { code: "INVALID_INPUT", message: "This plan could not be found." },
+    });
+    expect(client.from).not.toHaveBeenCalled();
+  });
+
+  it("returns a typed query failure instead of throwing when the assignment RPC errors", async () => {
+    const query = makeQuery({ data: [], error: null });
+    const client = mockClient(query, "user-a", [], DEFAULT_ASSIGNMENT, { message: "rpc unavailable" });
+
+    await expect(listDependencies("i1")).resolves.toEqual({
+      ok: false,
+      error: { code: "QUERY_FAILED", message: "Plan dependencies could not be loaded." },
+    });
+    expect(client.from).not.toHaveBeenCalled();
+  });
+});
+
+describe("getViewConfig", () => {
+  it("resolves identity from the session — never accepts a caller-supplied userId", async () => {
+    const query = makeQuery({
+      data: {
+        id: "v1",
+        user_id: "user-a",
+        instance_id: "i1",
+        default_view: "timeline",
+        filters: {},
+        sort_config: {},
+      },
+      error: null,
+    });
+    const client = mockClient(query, "user-a");
+
+    const result = await getViewConfig("i1");
+
+    expect(result).toEqual({
+      ok: true,
+      data: {
+        id: "v1",
+        userId: "user-a",
+        instanceId: "i1",
+        defaultView: "timeline",
+        filters: {},
+        sortConfig: {},
+      },
+    });
+    expect(client.from).toHaveBeenCalledWith("view_configs");
+    expect(query.eq).toHaveBeenCalledWith("instance_id", "i1");
+    expect(query.eq).toHaveBeenCalledWith("user_id", "user-a");
+  });
+
+  it("returns null, not an error, when the current user has no saved preference yet", async () => {
+    const query = makeQuery({ data: null, error: null });
+    mockClient(query, "user-a");
+
+    await expect(getViewConfig("i1")).resolves.toEqual({ ok: true, data: null });
+  });
+
+  it("returns a typed query failure without leaking the raw error", async () => {
+    const query = makeQuery({ data: null, error: { message: "private database error" } });
+    mockClient(query);
+
+    await expect(getViewConfig("i1")).resolves.toEqual({
+      ok: false,
+      error: { code: "QUERY_FAILED", message: "Plan view preferences could not be loaded." },
+    });
+  });
+
+  it("denies an org member with no assignment on this instance, even for their own saved preference", async () => {
+    const query = makeQuery({
+      data: {
+        id: "v1",
+        user_id: "user-a",
+        instance_id: "i1",
+        default_view: "timeline",
+        filters: {},
+        sort_config: {},
+      },
+      error: null,
+    });
+    const client = mockClient(query, "user-a", [], null);
+
+    await expect(getViewConfig("i1")).resolves.toEqual({
+      ok: false,
+      error: { code: "INVALID_INPUT", message: "This plan could not be found." },
+    });
+    // Fails closed before querying — a revoked assignment can't still read
+    // back a stale saved preference for a plan it no longer has access to.
+    expect(client.from).not.toHaveBeenCalled();
+  });
+
+  it("returns a typed query failure instead of throwing when the assignment RPC errors", async () => {
+    const query = makeQuery({ data: null, error: null });
+    const client = mockClient(query, "user-a", [], DEFAULT_ASSIGNMENT, { message: "rpc unavailable" });
+
+    await expect(getViewConfig("i1")).resolves.toEqual({
+      ok: false,
+      error: { code: "QUERY_FAILED", message: "Plan view preferences could not be loaded." },
+    });
+    expect(client.from).not.toHaveBeenCalled();
   });
 });
