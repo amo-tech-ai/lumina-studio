@@ -1,14 +1,9 @@
+import { isOperatorAuthEnforced } from "./operator-auth-env";
 import { resolveOperatorUser, type OperatorUser } from "@/lib/auth";
 import { apiErrorResponse } from "@/lib/api/error-envelope";
 import type { NextResponse } from "next/server";
 
-/** True when operator routes must require a real session (preview/production Worker or explicit flag). */
-export function isOperatorAuthEnforced(): boolean {
-  return (
-    process.env.OPERATOR_AUTH_ENABLED === "true" ||
-    process.env.NODE_ENV === "production"
-  );
-}
+export { isOperatorAuthEnforced } from "./operator-auth-env";
 
 /** Local `next dev` only — never on built Worker preview/production runtimes. */
 export function isLocalDevAuthFallbackAllowed(): boolean {

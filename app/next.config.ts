@@ -5,7 +5,7 @@ import { fileURLToPath } from "node:url";
 import { withSentryConfig } from "@sentry/nextjs";
 
 import { CLOUDINARY_CLOUD_NAME } from "./src/lib/cloudinary/url";
-import { isOperatorAuthEnforced } from "./src/lib/operator-gate";
+import { isOperatorAuthEnforced } from "./src/lib/operator-auth-env";
 
 const appDir = path.dirname(fileURLToPath(import.meta.url));
 
