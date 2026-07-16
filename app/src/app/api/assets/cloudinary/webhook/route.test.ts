@@ -282,7 +282,13 @@ describe("POST /api/assets/cloudinary/webhook", () => {
   it("IPI-641 rename: same cloudinary_asset_id updates existing mirror instead of public_id insert", async () => {
     const NEW_PUBLIC_ID = `ipix/brands/${BRAND_ID}/products/renamed`;
     cloudinaryAssetsSelectMaybeSingle.mockResolvedValue({
-      data: { id: "mirror-1", asset_id: "asset-existing", brand_id: BRAND_ID, version: 1 },
+      data: {
+        id: "mirror-1",
+        asset_id: "asset-existing",
+        brand_id: BRAND_ID,
+        version: 1,
+        public_id: UPLOAD_PAYLOAD.public_id,
+      },
       error: null,
     });
 
@@ -344,7 +350,13 @@ describe("POST /api/assets/cloudinary/webhook", () => {
 
   it("IPI-641 rename: assets sync failure after mirror write returns 503 for retry", async () => {
     cloudinaryAssetsSelectMaybeSingle.mockResolvedValue({
-      data: { id: "mirror-1", asset_id: "asset-existing", brand_id: BRAND_ID, version: 1 },
+      data: {
+        id: "mirror-1",
+        asset_id: "asset-existing",
+        brand_id: BRAND_ID,
+        version: 1,
+        public_id: UPLOAD_PAYLOAD.public_id,
+      },
       error: null,
     });
     assetsUpdateEq.mockResolvedValue({ data: null, error: { message: "assets write failed" } });
@@ -535,6 +547,38 @@ describe("POST /api/assets/cloudinary/webhook", () => {
         cloudinary_asset_id: PROVIDER_ASSET_ID,
       }),
     );
+  });
+
+  it("IPI-641: overwrite with same public_id does not sync assets (avoids 503 on redundant write)", async () => {
+    cloudinaryAssetsSelectMaybeSingle.mockResolvedValue({
+      data: {
+        id: "mirror-1",
+        asset_id: "asset-existing",
+        brand_id: BRAND_ID,
+        version: 1,
+        public_id: UPLOAD_PAYLOAD.public_id,
+        secure_url: UPLOAD_PAYLOAD.secure_url,
+        cloudinary_asset_id: PROVIDER_ASSET_ID,
+      },
+      error: null,
+    });
+
+    const { POST } = await importRoute();
+    const res = await POST(makeRequest({ ...UPLOAD_PAYLOAD, version: 2 }));
+    expect(res.status).toBe(200);
+    expect(cloudinaryAssetsUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({ version: 2, public_id: UPLOAD_PAYLOAD.public_id }),
+    );
+    expect(assetsInsertSingle).not.toHaveBeenCalled();
+    expect(assetsUpdateEq).not.toHaveBeenCalled();
+  });
+
+  it("returns 500 when CLOUDINARY_CLOUD_NAME is whitespace-only", async () => {
+    vi.stubEnv("CLOUDINARY_CLOUD_NAME", "   ");
+    const { POST } = await importRoute();
+    const res = await POST(makeRequest(UPLOAD_PAYLOAD));
+    expect(res.status).toBe(500);
+    expect(mockFrom).not.toHaveBeenCalled();
   });
 
   it("IPI-641: concurrent mirror created after miss keeps canonical asset_id and deletes provisional orphan", async () => {
