@@ -12,6 +12,9 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
+# CLD-105 smoke-test report artifact (regenerated per run)
+scripts/.cld105-report.json
+
 node_modules
 dist
 dist-ssr
