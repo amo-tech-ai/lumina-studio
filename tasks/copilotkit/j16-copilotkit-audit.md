@@ -98,9 +98,9 @@ Default `false` so ambient license token does not attach the license branch duri
 
 ---
 
-## Adjacent noise (not CopilotKit)
+## Adjacent noise (unblocked for pre-push)
 
-- `src/lib/assets/get-assets.test.ts` → `listAssets` displayUrl fallback when signing fails — track separately.
+- `src/lib/assets/get-assets.test.ts` → signing-fallback test assumed empty Cloudinary env; with `.env.local` credentials loaded it signed successfully and expected `null`. Fixed by stubbing empty Cloudinary env in that test (same ambient-env class of flake as the CopilotKit mock).
 
 ---
 

@@ -64,6 +64,10 @@ describe("listAssets", () => {
   });
 
   it("falls back to a null displayUrl (not a page-crashing throw) when signing fails for a public_id asset", async () => {
+    // Force signing failure even when .env.local has real Cloudinary credentials.
+    vi.stubEnv("CLOUDINARY_CLOUD_NAME", "");
+    vi.stubEnv("CLOUDINARY_API_KEY", "");
+    vi.stubEnv("CLOUDINARY_API_SECRET", "");
     const rows = [{ id: "a1", cloudinary_public_id: "real-upload-01", url: null }];
     const client = mockClient({ data: rows, error: null });
     const [result] = await listAssets(client);
