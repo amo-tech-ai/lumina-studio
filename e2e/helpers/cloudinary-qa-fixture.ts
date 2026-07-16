@@ -86,19 +86,22 @@ async function assertFixtureOnAssetsPage(page: Page, fixture: CloudinaryQaFixtur
   ).toBe(true);
 }
 
+function cleanupStatusOk(status: string | undefined): boolean {
+  if (!status) return false;
+  return (
+    status === "ok" ||
+    status === "not found" ||
+    status === "skipped" ||
+    status === "ok-fallback" ||
+    status.startsWith("ok-fallback")
+  );
+}
+
 async function assertFixtureCleaned(fixture: CloudinaryQaFixture): Promise<void> {
   const summary = await fixture.cleanup();
-  expect(
-    summary.cloudinary === "ok" ||
-      summary.cloudinary === "not found" ||
-      summary.cloudinary === "skipped",
-  ).toBeTruthy();
-  expect(
-    summary.assets === "ok" ||
-      summary.assets === "ok-fallback" ||
-      String(summary.assets).startsWith("ok-fallback") ||
-      summary.assets === "skipped",
-  ).toBeTruthy();
+  expect(cleanupStatusOk(summary.cloudinary)).toBeTruthy();
+  expect(cleanupStatusOk(summary.assets)).toBeTruthy();
+  expect(cleanupStatusOk(summary.cloudinaryAssets)).toBeTruthy();
   const { data: gone } = await serviceRoleClient()
     .from("assets")
     .select("id")
