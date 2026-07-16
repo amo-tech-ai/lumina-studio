@@ -22,7 +22,8 @@
     "upload": "node scripts/sync-groq-models.mjs && rm -rf .next .open-next && opennextjs-cloudflare build && opennextjs-cloudflare upload",
     "cf-typegen": "wrangler types cloudflare-env.d.ts --env-interface CloudflareEnv --include-runtime=false",
     "check:cf-types": "wrangler types cloudflare-env.d.ts --env-interface CloudflareEnv --include-runtime=false --check",
-    "verify:cloudinary-pipeline": "node scripts/verify-cloudinary-pipeline.mjs"
+    "verify:cloudinary-pipeline": "node scripts/verify-cloudinary-pipeline.mjs",
+    "verify:cloudinary-webhook-live": "node scripts/verify-cloudinary-webhook-live.mjs"
   },
   "dependencies": {
     "@ag-ui/client": "0.0.57",

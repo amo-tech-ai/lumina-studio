@@ -240,6 +240,29 @@ describe("POST /api/assets/cloudinary/webhook", () => {
     expect(cloudinaryAssetsUpdateEq).toHaveBeenCalledWith("public_id", UPLOAD_PAYLOAD.public_id);
   });
 
+  it("archives from resources[].public_id when top-level public_id is absent (live delete shape)", async () => {
+    const { POST } = await importRoute();
+    const res = await POST(
+      makeRequest({
+        notification_type: "delete",
+        resources: [{ public_id: UPLOAD_PAYLOAD.public_id }],
+      }),
+    );
+    expect(res.status).toBe(200);
+    expect(cloudinaryAssetsUpdateEq).toHaveBeenCalledWith("public_id", UPLOAD_PAYLOAD.public_id);
+  });
+
+  it("prefers CLOUDINARY_NOTIFICATION_API_SECRET for signature verification when set", async () => {
+    vi.stubEnv("CLOUDINARY_NOTIFICATION_API_SECRET", "notification-only-secret");
+    const { POST } = await importRoute();
+    await POST(makeRequest(UPLOAD_PAYLOAD));
+    expect(mockConfig).toHaveBeenCalledWith({
+      cloud_name: "dzqy2ixl0",
+      api_key: "test-api-key",
+      api_secret: "notification-only-secret",
+    });
+  });
+
   it("still acks 2xx when the upsert fails (never blocks the webhook ack)", async () => {
     cloudinaryAssetsUpsert.mockResolvedValue({ data: null, error: { message: "boom" } });
     const { POST } = await importRoute();

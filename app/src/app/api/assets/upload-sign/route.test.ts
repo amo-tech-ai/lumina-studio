@@ -165,9 +165,10 @@ describe("POST /api/assets/upload-sign", () => {
     expect(data.expiresAt).toBe(data.timestamp + 300);
 
     expect(data.params.type).toBe("authenticated");
-    // 074e — eager pregeneration of asset-tile/asset-masonry for image uploads.
+    // IPI-430 — eager pregeneration of masonry/review/detail + signed upload preset.
+    expect(data.params.upload_preset).toBe("ipix-signed-upload");
     expect(data.params.eager).toBe(
-      "c_thumb,w_120,h_120,g_auto,f_auto,q_auto|c_limit,w_600,f_auto,q_auto",
+      "c_limit,w_600,f_auto,q_auto|c_limit,w_1200,f_auto,q_auto|c_limit,w_1600,f_auto,q_auto",
     );
     expect(data.params.context).toBe(`brand_id=${VALID_BRAND_ID}`);
     expect(data.params.use_filename).toBe("true");

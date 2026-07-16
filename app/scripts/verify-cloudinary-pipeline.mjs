@@ -493,12 +493,23 @@ async function main() {
   const admin = supabaseFactory(supabaseUrl, serviceRoleKey, {});
 
   const appBaseUrl = (process.env.CLD105_APP_BASE_URL ?? "http://localhost:3002").replace(/\/$/, "");
+  // upload-sign requires https for notificationUrl. This smoke test posts a
+  // synthetic signed webhook itself (Cloudinary async delivery is not proven),
+  // so only attach notificationUrl when an explicit https base is provided.
+  const notificationBaseUrl = (process.env.CLD105_NOTIFICATION_BASE_URL ?? "").replace(/\/$/, "");
+  const notificationUrl =
+    notificationBaseUrl.startsWith("https:")
+      ? `${notificationBaseUrl}/api/assets/cloudinary/webhook`
+      : appBaseUrl.startsWith("https:")
+        ? `${appBaseUrl}/api/assets/cloudinary/webhook`
+        : undefined;
 
   console.log(`\nCLD-105 smoke test — run ${RUN_ID}`);
   console.log(`  app:        ${appBaseUrl}`);
   console.log(`  supabase:   ${supabaseUrl}`);
   console.log(`  cloud:      ${cloudName}`);
-  console.log(`  brand:      ${brandId}\n`);
+  console.log(`  brand:      ${brandId}`);
+  console.log(`  notifyUrl:  ${notificationUrl ?? "(omitted — synthetic webhook path)"}\n`);
 
   let publicId;
   let assetId;
@@ -510,10 +521,17 @@ async function main() {
 
     // 2. upload-signature (via real app route)
     const authHeader = await resolveOperatorAuth(supabaseFactory);
+    const signBody = {
+      brandId,
+      resourceType: "image",
+      filename: `${RUN_ID}.png`,
+      folder: TEST_FOLDER,
+      ...(notificationUrl ? { notificationUrl } : {}),
+    };
     const signRes = await timedFetch(`${appBaseUrl}/api/assets/upload-sign`, {
       method: "POST",
       headers: { "Content-Type": "application/json", ...(authHeader ? { Authorization: authHeader } : {}) },
-      body: JSON.stringify({ brandId, resourceType: "image", filename: `${RUN_ID}.png`, folder: TEST_FOLDER, notificationUrl: `${appBaseUrl}/api/assets/cloudinary/webhook` }),
+      body: JSON.stringify(signBody),
     });
     if (!signRes.ok) {
       const t = await signRes.text().catch(() => "");
