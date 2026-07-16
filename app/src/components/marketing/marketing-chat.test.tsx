@@ -45,8 +45,8 @@ describe("MarketingChat — runtimeUrl contract", () => {
     expect(src).toMatch(/runtimeUrl=["']\/api\/marketing-chat["']/);
   });
 
-  // IPI-654 · CHAT-RUNTIME-001: single-route handler rejects GET /threads (405).
-  it("sets useSingleEndpoint so client does not GET /threads against single-route", () => {
+  // Explicit contract alignment; residual thread-list behavior belongs to IPI-655.
+  it("explicitly aligns marketing chat with the single-route runtime contract", () => {
     expect(src).toMatch(/useSingleEndpoint=\{true\}/);
   });
 });
