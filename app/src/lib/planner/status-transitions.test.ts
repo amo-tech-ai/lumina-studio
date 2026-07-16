@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { getInstanceUiTreatment, isValidTransition } from "./status-transitions";
+import type { PlannerInstanceStatus } from "./types";
 
 describe("isValidTransition", () => {
   it("allows the documented forward transitions", () => {
@@ -43,5 +44,12 @@ describe("getInstanceUiTreatment", () => {
     expect(getInstanceUiTreatment("completed")).toEqual({ label: "Completed", tone: "success" });
     expect(getInstanceUiTreatment("archived")).toEqual({ label: "Archived", tone: "neutral" });
     expect(getInstanceUiTreatment("cancelled")).toEqual({ label: "Cancelled", tone: "neutral" });
+  });
+
+  it("falls back instead of crashing on a status outside the known union", () => {
+    // Simulates a DB enum value added ahead of a frontend redeploy — the type
+    // system can't catch this at compile time, only a runtime fallback can.
+    const unknownStatus = "on_hold" as PlannerInstanceStatus;
+    expect(getInstanceUiTreatment(unknownStatus)).toEqual({ label: "Unknown", tone: "neutral" });
   });
 });
