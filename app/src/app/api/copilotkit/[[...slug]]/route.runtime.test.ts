@@ -33,6 +33,9 @@ async function setupMocks() {
   vi.doMock("@/lib/operator-gate", () => ({
     withOperatorAuth: vi.fn(),
     OperatorAuthError: OperatorAuthErrorClass,
+    // Route attaches licenseToken only when this is true; default false so
+    // ambient COPILOTKIT_LICENSE_TOKEN in .env.local does not break imports.
+    isOperatorAuthEnforced: vi.fn(() => false),
   }));
 
   vi.doMock("@ag-ui/mastra", () => ({
