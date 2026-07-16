@@ -272,8 +272,8 @@ export async function shiftTask(
     p_expected_dependency_edges: expectedDependencyEdges,
   });
 
-  if (error) {
-    console.error("[planner/mutations] planner_shift_task rpc failed:", error.message);
+  if (error || !data) {
+    console.error("[planner/mutations] planner_shift_task rpc failed:", error?.message ?? "empty response");
     return { ok: false, error: { code: "UNKNOWN_ERROR", message: "The request could not be completed." } };
   }
 
@@ -322,8 +322,8 @@ export async function updateTask(
     p_patch: dbPatch as Json,
   });
 
-  if (error) {
-    console.error("[planner/mutations] planner_update_task rpc failed:", error.message);
+  if (error || !data) {
+    console.error("[planner/mutations] planner_update_task rpc failed:", error?.message ?? "empty response");
     return { ok: false, error: { code: "UNKNOWN_ERROR", message: "The request could not be completed." } };
   }
 
