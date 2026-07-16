@@ -43,8 +43,7 @@ function parseStartupMs(text) {
 
 function runWrangler(args) {
   // Prefer installed binary — avoid npx network install / version drift.
-  const cmd = localWrangler;
-  const r = spawnSync(cmd, args, {
+  const r = spawnSync(localWrangler, args, {
     cwd: appDir,
     encoding: "utf8",
     env: process.env,
@@ -54,56 +53,29 @@ function runWrangler(args) {
   return { code: r.status ?? 1, out, error: r.error };
 }
 
-const dry = runWrangler(["deploy", "--dry-run"]);
-if (dry.error) {
-  console.error("check-worker-bundle-size: could not run local wrangler:", dry.error.message);
-  console.error(`Expected binary at ${localWrangler}`);
-  process.exit(2);
-}
+function reportLocalStartup(dryOut) {
+  const startup = runWrangler(["check", "startup"]);
+  const startupMs = parseStartupMs(startup.out) ?? parseStartupMs(dryOut);
 
-const sizes = parseGzipKiB(dry.out);
-if (!sizes) {
-  console.error("check-worker-bundle-size: could not parse wrangler dry-run Total Upload line");
-  console.error(dry.out.slice(-2000));
-  process.exit(2);
-}
+  if (startup.error) {
+    console.warn(
+      `WARN (local profiling only): could not run wrangler check startup: ${startup.error.message}`,
+    );
+    return;
+  }
+  if (startup.code !== 0) {
+    console.warn(
+      `WARN (local profiling only): wrangler check startup exited ${startup.code} — not a size-gate failure; inspect output if investigating cold starts`,
+    );
+  }
 
-const gzipMiB = sizes.gzipKiB / 1024;
+  if (startupMs == null) {
+    console.warn(
+      "WARN (local profiling only): startup ms not parsed from wrangler text — CPU-profile wall-clock is intentionally unused (not Cloudflare startup_time_ms)",
+    );
+    return;
+  }
 
-console.log(
-  `Worker dry-run: ${sizes.uploadKiB.toFixed(2)} KiB / gzip ${sizes.gzipKiB.toFixed(2)} KiB (${gzipMiB.toFixed(3)} MiB)`,
-);
-
-let exit = 0;
-if (gzipMiB >= FAIL_MIB) {
-  console.error(`FAIL: gzip ${gzipMiB.toFixed(3)} MiB ≥ ${FAIL_MIB} MiB iPix fail gate`);
-  exit = 1;
-} else if (gzipMiB >= WARN_MIB) {
-  console.warn(`WARN: gzip ${gzipMiB.toFixed(3)} MiB ≥ ${WARN_MIB} MiB iPix warn gate`);
-} else {
-  console.log(`OK: gzip below ${WARN_MIB} MiB warn gate`);
-}
-
-if (dry.code !== 0) {
-  console.error("wrangler deploy --dry-run exited non-zero");
-  exit = 1;
-}
-
-// --- Local startup profiling (diagnostic only; never hard-fails IPI-490) ---
-const startup = runWrangler(["check", "startup"]);
-const startupMs = parseStartupMs(startup.out) ?? parseStartupMs(dry.out);
-
-if (startup.error) {
-  console.warn(
-    `WARN (local profiling only): could not run wrangler check startup: ${startup.error.message}`,
-  );
-} else if (startup.code !== 0) {
-  console.warn(
-    `WARN (local profiling only): wrangler check startup exited ${startup.code} — not a size-gate failure; inspect output if investigating cold starts`,
-  );
-}
-
-if (startupMs != null) {
   console.log(
     `Startup (local diagnostic text parse): ${startupMs.toFixed(1)} ms — not authoritative remote startup_time_ms (IPI-472)`,
   );
@@ -118,10 +90,48 @@ if (startupMs != null) {
   } else {
     console.log(`OK (local profiling): below ${WARN_STARTUP_MS} ms band`);
   }
-} else {
-  console.warn(
-    "WARN (local profiling only): startup ms not parsed from wrangler text — CPU-profile wall-clock is intentionally unused (not Cloudflare startup_time_ms)",
-  );
 }
 
-process.exit(exit);
+function main() {
+  const dry = runWrangler(["deploy", "--dry-run"]);
+  if (dry.error) {
+    console.error("check-worker-bundle-size: could not run local wrangler:", dry.error.message);
+    console.error(`Expected binary at ${localWrangler}`);
+    process.exit(2);
+  }
+
+  const sizes = parseGzipKiB(dry.out);
+  if (!sizes) {
+    console.error("check-worker-bundle-size: could not parse wrangler dry-run Total Upload line");
+    console.error(dry.out.slice(-2000));
+    process.exit(2);
+  }
+
+  const gzipMiB = sizes.gzipKiB / 1024;
+
+  console.log(
+    `Worker dry-run: ${sizes.uploadKiB.toFixed(2)} KiB / gzip ${sizes.gzipKiB.toFixed(2)} KiB (${gzipMiB.toFixed(3)} MiB)`,
+  );
+
+  let exit = 0;
+  if (gzipMiB >= FAIL_MIB) {
+    console.error(`FAIL: gzip ${gzipMiB.toFixed(3)} MiB ≥ ${FAIL_MIB} MiB iPix fail gate`);
+    exit = 1;
+  } else if (gzipMiB >= WARN_MIB) {
+    console.warn(`WARN: gzip ${gzipMiB.toFixed(3)} MiB ≥ ${WARN_MIB} MiB iPix warn gate`);
+  } else {
+    console.log(`OK: gzip below ${WARN_MIB} MiB warn gate`);
+  }
+
+  if (dry.code !== 0) {
+    console.error("wrangler deploy --dry-run exited non-zero");
+    exit = 1;
+  }
+
+  // Local startup profiling (diagnostic only; never hard-fails IPI-490).
+  reportLocalStartup(dry.out);
+
+  process.exit(exit);
+}
+
+main();
