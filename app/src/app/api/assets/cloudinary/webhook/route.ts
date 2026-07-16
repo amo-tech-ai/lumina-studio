@@ -30,7 +30,7 @@ type CloudinaryNotification = {
   /** API key id used to sign the notification (may differ from CLOUDINARY_API_KEY). */
   signature_key?: string;
   /** Delete notifications often omit top-level public_id and use resources[]. */
-  resources?: Array<{ public_id?: string }>;
+  resources?: Array<{ public_id?: string; asset_id?: string }>;
 };
 
 /** Shared mapper for genuine + synthetic webhook paths (IPI-641). */
@@ -210,6 +210,41 @@ async function upsertAssetRecord(
   return { assetId: retried.id, effectiveBrandId: null };
 }
 
+type CloudinaryMirrorRow = {
+  asset_id: string;
+  public_id: string;
+  secure_url: string;
+  resource_type: string;
+  width: number | null;
+  height: number | null;
+  folder: string | null;
+  brand_id: string | null;
+  format: string | null;
+  bytes: number | null;
+  duration: number | null;
+  status: string;
+  cloudinary_asset_id?: string;
+  version?: number;
+};
+
+async function findMirrorByProviderId(
+  db: ReturnType<typeof createSupabaseAdminClient>,
+  cloudinaryAssetId: string,
+): Promise<{ id: string; asset_id: string; brand_id: string | null } | null> {
+  const { data, error } = await db
+    .from("cloudinary_assets")
+    .select("id, asset_id, brand_id")
+    .eq("cloudinary_asset_id", cloudinaryAssetId)
+    .maybeSingle();
+  if (error) {
+    console.error("[cloudinary/webhook] cloudinary_assets lookup by provider id failed:", error.message);
+    return null;
+  }
+  if (!data?.id || !data.asset_id) return null;
+  return { id: data.id, asset_id: data.asset_id, brand_id: data.brand_id };
+}
+
+/** Prefer provider identity on rename; fall back to public_id upsert for first sighting. */
 async function upsertCloudinaryAssetRecord(
   db: ReturnType<typeof createSupabaseAdminClient>,
   assetId: string,
@@ -224,33 +259,92 @@ async function upsertCloudinaryAssetRecord(
 ): Promise<boolean> {
   const { publicId, secureUrl, resourceType, folder, brandId, payload } = fields;
   const identity = mapProviderIdentity(payload);
-  const { error } = await db.from("cloudinary_assets").upsert(
-    {
-      asset_id: assetId,
-      public_id: publicId,
-      secure_url: secureUrl,
-      resource_type: resourceType,
-      width: payload.width ?? null,
-      height: payload.height ?? null,
-      folder: folder ?? null,
-      brand_id: brandId,
-      format: payload.format ?? null,
-      bytes: payload.bytes ?? null,
-      duration: payload.duration ?? null,
-      status: "ready",
-      // Only set when present — do not wipe backfilled / prior identity with null.
-      ...(identity.cloudinary_asset_id
-        ? { cloudinary_asset_id: identity.cloudinary_asset_id }
-        : {}),
-      ...(identity.version != null ? { version: identity.version } : {}),
-    },
-    { onConflict: "public_id" },
-  );
+  const row: CloudinaryMirrorRow = {
+    asset_id: assetId,
+    public_id: publicId,
+    secure_url: secureUrl,
+    resource_type: resourceType,
+    width: payload.width ?? null,
+    height: payload.height ?? null,
+    folder: folder ?? null,
+    brand_id: brandId,
+    format: payload.format ?? null,
+    bytes: payload.bytes ?? null,
+    duration: payload.duration ?? null,
+    status: "ready",
+  };
+  if (identity.cloudinary_asset_id) row.cloudinary_asset_id = identity.cloudinary_asset_id;
+  if (identity.version != null) row.version = identity.version;
+
+  if (identity.cloudinary_asset_id) {
+    const existing = await findMirrorByProviderId(db, identity.cloudinary_asset_id);
+    if (existing) {
+      const { error } = await db.from("cloudinary_assets").update(row).eq("id", existing.id);
+      if (error) {
+        console.error("[cloudinary/webhook] cloudinary_assets update by provider id failed:", error.message);
+        return false;
+      }
+      return true;
+    }
+  }
+
+  const { error } = await db.from("cloudinary_assets").upsert(row, { onConflict: "public_id" });
   if (error) {
     console.error("[cloudinary/webhook] cloudinary_assets upsert failed:", error.message);
     return false;
   }
   return true;
+}
+
+/** When provider asset_id is known, keep the same assets/cloudinary_assets rows across public_id rename. */
+async function resolveAssetForUpload(
+  db: ReturnType<typeof createSupabaseAdminClient>,
+  fields: {
+    publicId: string;
+    secureUrl: string;
+    resourceType: string;
+    brandId: string | null;
+    cloudinaryAssetId?: string;
+  },
+): Promise<AssetUpsertResult | undefined> {
+  const { publicId, secureUrl, resourceType, brandId, cloudinaryAssetId } = fields;
+
+  if (cloudinaryAssetId) {
+    const mirror = await findMirrorByProviderId(db, cloudinaryAssetId);
+    if (mirror) {
+      const patch: { url: string; cloudinary_public_id: string; brand_id?: string } = {
+        url: secureUrl,
+        cloudinary_public_id: publicId,
+      };
+      if (brandId) patch.brand_id = brandId;
+
+      const { error } = await db.from("assets").update(patch).eq("id", mirror.asset_id);
+      if (!error) {
+        return { assetId: mirror.asset_id, effectiveBrandId: brandId ?? mirror.brand_id };
+      }
+
+      if (brandId && isBrandFkViolation(error)) {
+        console.error(
+          "[cloudinary/webhook] brand_id update rejected on rename, preserving existing brand:",
+          error.message,
+        );
+        const { error: retryErr } = await db
+          .from("assets")
+          .update({ url: secureUrl, cloudinary_public_id: publicId })
+          .eq("id", mirror.asset_id);
+        if (retryErr) {
+          console.error("[cloudinary/webhook] assets rename update failed:", retryErr.message);
+          return undefined;
+        }
+        return { assetId: mirror.asset_id, effectiveBrandId: mirror.brand_id };
+      }
+
+      console.error("[cloudinary/webhook] assets rename update failed:", error.message);
+      return undefined;
+    }
+  }
+
+  return upsertAssetRecord(db, { publicId, secureUrl, resourceType, brandId });
 }
 
 async function handleUpload(db: ReturnType<typeof createSupabaseAdminClient>, payload: CloudinaryNotification) {
@@ -262,8 +356,15 @@ async function handleUpload(db: ReturnType<typeof createSupabaseAdminClient>, pa
 
   const folder = payload.folder ?? payload.asset_folder ?? publicId;
   const { brandId, reason } = await resolveBrandId(db, folder, publicId);
+  const identity = mapProviderIdentity(payload);
 
-  const upserted = await upsertAssetRecord(db, { publicId, secureUrl, resourceType, brandId });
+  const upserted = await resolveAssetForUpload(db, {
+    publicId,
+    secureUrl,
+    resourceType,
+    brandId,
+    cloudinaryAssetId: identity.cloudinary_asset_id,
+  });
   if (!upserted) return;
   const { assetId, effectiveBrandId } = upserted;
 
@@ -279,7 +380,12 @@ async function handleUpload(db: ReturnType<typeof createSupabaseAdminClient>, pa
 
   await logNonFatal(db, {
     brandId: effectiveBrandId,
-    input: { notification_type: payload.notification_type, public_id: publicId, resolution_reason: reason },
+    input: {
+      notification_type: payload.notification_type,
+      public_id: publicId,
+      resolution_reason: reason,
+      cloudinary_asset_id: identity.cloudinary_asset_id ?? null,
+    },
     output: { asset_id: assetId },
   });
 
@@ -334,10 +440,31 @@ function deletePublicIds(payload: CloudinaryNotification): string[] {
   return [...ids];
 }
 
+function deleteProviderAssetIds(payload: CloudinaryNotification): string[] {
+  const ids = new Set<string>();
+  if (typeof payload.asset_id === "string" && payload.asset_id.length > 0) ids.add(payload.asset_id);
+  for (const resource of payload.resources ?? []) {
+    if (typeof resource.asset_id === "string" && resource.asset_id.length > 0) {
+      ids.add(resource.asset_id);
+    }
+  }
+  return [...ids];
+}
+
 async function handleDelete(db: ReturnType<typeof createSupabaseAdminClient>, payload: CloudinaryNotification) {
   // Minimal scoped delete: archive mirror rows. Full reconciliation is IPI-638.
+  // Prefer provider id when present so rename→delete still hits the same row.
+  const providerIds = deleteProviderAssetIds(payload);
   const publicIds = deletePublicIds(payload);
-  if (publicIds.length === 0) return;
+  if (providerIds.length === 0 && publicIds.length === 0) return;
+
+  for (const providerId of providerIds) {
+    const { error } = await db
+      .from("cloudinary_assets")
+      .update({ status: "archived" })
+      .eq("cloudinary_asset_id", providerId);
+    if (error) console.error("[cloudinary/webhook] delete->archive by provider id failed:", error.message);
+  }
   for (const publicId of publicIds) {
     const { error } = await db.from("cloudinary_assets").update({ status: "archived" }).eq("public_id", publicId);
     if (error) console.error("[cloudinary/webhook] delete->archive failed:", error.message);

@@ -26,6 +26,7 @@ const assetsSelectMaybeSingle = vi.fn();
 const assetsInsertSingle = vi.fn();
 const assetsUpdateEq = vi.fn();
 const cloudinaryAssetsUpsert = vi.fn();
+const cloudinaryAssetsSelectMaybeSingle = vi.fn();
 const cloudinaryAssetsUpdateEq = vi.fn();
 const aiAgentLogsInsert = vi.fn();
 const campaignsSelectMaybeSingle = vi.fn();
@@ -40,6 +41,7 @@ const mockFrom = vi.fn((table: string) => {
   }
   if (table === "cloudinary_assets") {
     return {
+      select: vi.fn(() => ({ eq: vi.fn(() => ({ maybeSingle: cloudinaryAssetsSelectMaybeSingle })) })),
       upsert: cloudinaryAssetsUpsert,
       update: vi.fn(() => ({ eq: cloudinaryAssetsUpdateEq })),
     };
@@ -100,6 +102,7 @@ beforeEach(() => {
   assetsInsertSingle.mockResolvedValue({ data: { id: "asset-1" }, error: null });
   assetsUpdateEq.mockResolvedValue({ data: null, error: null });
   cloudinaryAssetsUpsert.mockResolvedValue({ data: null, error: null });
+  cloudinaryAssetsSelectMaybeSingle.mockResolvedValue({ data: null, error: null });
   cloudinaryAssetsUpdateEq.mockResolvedValue({ data: null, error: null });
   aiAgentLogsInsert.mockResolvedValue({ data: null, error: null });
   campaignsSelectMaybeSingle.mockResolvedValue({ data: null, error: null });
@@ -250,6 +253,43 @@ describe("POST /api/assets/cloudinary/webhook", () => {
     });
     expect(renamed.cloudinary_asset_id).toBe(PROVIDER_ASSET_ID);
     expect(renamed.version).toBe(2);
+  });
+
+  it("IPI-641 rename: same cloudinary_asset_id updates existing mirror instead of public_id insert", async () => {
+    const NEW_PUBLIC_ID = `ipix/brands/${BRAND_ID}/products/renamed`;
+    cloudinaryAssetsSelectMaybeSingle.mockResolvedValue({
+      data: { id: "mirror-1", asset_id: "asset-existing", brand_id: BRAND_ID },
+      error: null,
+    });
+
+    const { POST } = await importRoute();
+    const res = await POST(
+      makeRequest({
+        ...UPLOAD_PAYLOAD,
+        public_id: NEW_PUBLIC_ID,
+        version: 7,
+      }),
+    );
+    expect(res.status).toBe(200);
+    expect(assetsInsertSingle).not.toHaveBeenCalled();
+    expect(assetsUpdateEq).toHaveBeenCalledWith("id", "asset-existing");
+    expect(cloudinaryAssetsUpsert).not.toHaveBeenCalled();
+    expect(cloudinaryAssetsUpdateEq).toHaveBeenCalledWith("id", "mirror-1");
+    expect(cloudinaryAssetsSelectMaybeSingle).toHaveBeenCalled();
+  });
+
+  it("IPI-641 delete: archives by cloudinary_asset_id when present", async () => {
+    const { POST } = await importRoute();
+    const res = await POST(
+      makeRequest({
+        notification_type: "delete",
+        asset_id: PROVIDER_ASSET_ID,
+        public_id: UPLOAD_PAYLOAD.public_id,
+      }),
+    );
+    expect(res.status).toBe(200);
+    expect(cloudinaryAssetsUpdateEq).toHaveBeenCalledWith("cloudinary_asset_id", PROVIDER_ASSET_ID);
+    expect(cloudinaryAssetsUpdateEq).toHaveBeenCalledWith("public_id", UPLOAD_PAYLOAD.public_id);
   });
 
   it("updates the existing assets row instead of inserting when cloudinary_public_id is already linked", async () => {
