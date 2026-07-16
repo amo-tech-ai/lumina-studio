@@ -16,6 +16,16 @@ CHANGED=$(git -C "$REPO_ROOT" status --porcelain -- app/src 2>/dev/null | awk '{
 
 cd "$REPO_ROOT/app" || exit 0
 
+# Non-interactive shells skip ~/.bashrc's nvm sourcing, so `node`/`npm` on PATH
+# can resolve to whatever version happens to be first on PATH (observed: v20,
+# while `npm run typecheck`'s cf-typegen step needs wrangler's Node >=22 floor).
+# Force nvm's v22 explicitly rather than relying on shell startup files.
+export NVM_DIR="$HOME/.nvm"
+if [ -s "$NVM_DIR/nvm.sh" ]; then
+  \. "$NVM_DIR/nvm.sh"
+  nvm use 22 >/dev/null 2>&1
+fi
+
 TYPECHECK_OUT=$(npm run typecheck 2>&1)
 TYPECHECK_STATUS=$?
 
