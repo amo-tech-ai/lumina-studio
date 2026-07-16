@@ -5,8 +5,11 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import {
   calculatePlannerProgress,
   derivePlannerDashboardSummary,
+  getInstanceDetail,
   getPlannerDashboardSummary,
+  getViewConfig,
   isPlannerInstanceAtRisk,
+  listDependencies,
   listMembers,
   listPlannerInstances,
 } from "./queries";
@@ -24,6 +27,7 @@ function makeQuery(response: QueryResponse) {
   for (const method of ["select", "in", "eq", "neq", "filter", "or", "order", "limit"]) {
     query[method] = vi.fn(() => query);
   }
+  query.maybeSingle = vi.fn(() => Promise.resolve(response));
   query.then = (resolve, reject) => Promise.resolve(response).then(resolve, reject);
   return query;
 }
@@ -453,6 +457,187 @@ describe("listMembers", () => {
     await expect(listMembers("i1")).resolves.toEqual({
       ok: false,
       error: { code: "QUERY_FAILED", message: "Planner members could not be loaded." },
+    });
+  });
+});
+
+function taskRow(overrides: Record<string, unknown> = {}) {
+  return {
+    id: "t1",
+    instance_id: "i1",
+    phase_id: "p1",
+    parent_task_id: null,
+    title: "Casting",
+    description: null,
+    start_date: "2026-07-01",
+    end_date: "2026-07-03",
+    duration_days: 2,
+    status: "todo",
+    priority: "medium",
+    assignee_user_id: null,
+    assignee_role: null,
+    sort_order: 0,
+    created_at: "2026-07-01T00:00:00.000Z",
+    updated_at: "2026-07-01T00:00:00.000Z",
+    ...overrides,
+  };
+}
+
+describe("getInstanceDetail", () => {
+  it("maps the instance row plus its tasks to PlannerInstance", async () => {
+    const query = makeQuery({
+      data: { ...instance(), tasks: [taskRow()] },
+      error: null,
+    });
+    const client = mockClient(query);
+
+    const result = await getInstanceDetail("i1");
+
+    expect(result).toEqual({
+      ok: true,
+      data: {
+        id: "00000000-0000-4000-8000-000000000001",
+        orgId: "00000000-0000-4000-8000-000000000010",
+        workflowId: "00000000-0000-4000-8000-000000000020",
+        entityType: "shoot",
+        entityId: "00000000-0000-4000-8000-000000000030",
+        name: "Summer campaign",
+        status: "active",
+        plannedStart: "2026-07-01",
+        plannedEnd: "2026-07-20",
+        ownerUserId: "user-a",
+        tasks: [
+          {
+            id: "t1",
+            instanceId: "i1",
+            phaseId: "p1",
+            parentTaskId: null,
+            title: "Casting",
+            description: null,
+            startDate: "2026-07-01",
+            endDate: "2026-07-03",
+            durationDays: 2,
+            status: "todo",
+            priority: "medium",
+            assigneeUserId: null,
+            assigneeRole: null,
+            sortOrder: 0,
+          },
+        ],
+      },
+    });
+    expect(client.from).toHaveBeenCalledWith("instances");
+    expect(query.eq).toHaveBeenCalledWith("id", "i1");
+  });
+
+  it("does not distinguish an RLS-filtered instance from a nonexistent one", async () => {
+    const query = makeQuery({ data: null, error: null });
+    mockClient(query);
+
+    await expect(getInstanceDetail("i1")).resolves.toEqual({
+      ok: false,
+      error: { code: "INVALID_INPUT", message: "This plan could not be found." },
+    });
+  });
+
+  it("returns a typed query failure without leaking the raw error", async () => {
+    const query = makeQuery({ data: null, error: { message: "private database error" } });
+    mockClient(query);
+
+    await expect(getInstanceDetail("i1")).resolves.toEqual({
+      ok: false,
+      error: { code: "QUERY_FAILED", message: "This plan could not be loaded." },
+    });
+  });
+});
+
+describe("listDependencies", () => {
+  it("maps dependency rows to PlannerDependency", async () => {
+    const query = makeQuery({
+      data: [
+        {
+          id: "d1",
+          instance_id: "i1",
+          from_task_id: "t1",
+          to_task_id: "t2",
+          dep_type: "finish_to_start",
+          lag_days: 0,
+        },
+      ],
+      error: null,
+    });
+    const client = mockClient(query);
+
+    const result = await listDependencies("i1");
+
+    expect(result).toEqual({
+      ok: true,
+      data: [
+        { id: "d1", instanceId: "i1", fromTaskId: "t1", toTaskId: "t2", depType: "finish_to_start", lagDays: 0 },
+      ],
+    });
+    expect(client.from).toHaveBeenCalledWith("dependencies");
+    expect(query.eq).toHaveBeenCalledWith("instance_id", "i1");
+  });
+
+  it("returns a typed query failure without leaking the raw error", async () => {
+    const query = makeQuery({ data: null, error: { message: "private database error" } });
+    mockClient(query);
+
+    await expect(listDependencies("i1")).resolves.toEqual({
+      ok: false,
+      error: { code: "QUERY_FAILED", message: "Plan dependencies could not be loaded." },
+    });
+  });
+});
+
+describe("getViewConfig", () => {
+  it("resolves identity from the session — never accepts a caller-supplied userId", async () => {
+    const query = makeQuery({
+      data: {
+        id: "v1",
+        user_id: "user-a",
+        instance_id: "i1",
+        default_view: "timeline",
+        filters: {},
+        sort_config: {},
+      },
+      error: null,
+    });
+    const client = mockClient(query, "user-a");
+
+    const result = await getViewConfig("i1");
+
+    expect(result).toEqual({
+      ok: true,
+      data: {
+        id: "v1",
+        userId: "user-a",
+        instanceId: "i1",
+        defaultView: "timeline",
+        filters: {},
+        sortConfig: {},
+      },
+    });
+    expect(client.from).toHaveBeenCalledWith("view_configs");
+    expect(query.eq).toHaveBeenCalledWith("instance_id", "i1");
+    expect(query.eq).toHaveBeenCalledWith("user_id", "user-a");
+  });
+
+  it("returns null, not an error, when the current user has no saved preference yet", async () => {
+    const query = makeQuery({ data: null, error: null });
+    mockClient(query, "user-a");
+
+    await expect(getViewConfig("i1")).resolves.toEqual({ ok: true, data: null });
+  });
+
+  it("returns a typed query failure without leaking the raw error", async () => {
+    const query = makeQuery({ data: null, error: { message: "private database error" } });
+    mockClient(query);
+
+    await expect(getViewConfig("i1")).resolves.toEqual({
+      ok: false,
+      error: { code: "QUERY_FAILED", message: "Plan view preferences could not be loaded." },
     });
   });
 });

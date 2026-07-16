@@ -4,7 +4,18 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import type { Database } from "@/types/supabase";
 
-import type { EntityType, PlannerAssignment, PlannerInstanceStatus, PlannerMember, PlannerTaskStatus } from "./types";
+import type {
+  EntityType,
+  PersistedViewType,
+  PlannerAssignment,
+  PlannerDependency,
+  PlannerInstance,
+  PlannerInstanceStatus,
+  PlannerMember,
+  PlannerTask,
+  PlannerTaskStatus,
+  PlannerViewConfig,
+} from "./types";
 
 type PlannerClient = PostgrestClient<
   Database,
@@ -404,6 +415,142 @@ export async function listPlannerInstances(
     ok: true,
     data: toInstancePage((data ?? []) as HubInstanceRow[], options.limit),
   };
+}
+
+type TaskRow = Database["planner"]["Tables"]["tasks"]["Row"];
+type DependencyRow = Database["planner"]["Tables"]["dependencies"]["Row"];
+type ViewConfigRow = Database["planner"]["Tables"]["view_configs"]["Row"];
+
+function toTask(row: TaskRow): PlannerTask {
+  return {
+    id: row.id,
+    instanceId: row.instance_id,
+    phaseId: row.phase_id,
+    parentTaskId: row.parent_task_id,
+    title: row.title,
+    description: row.description,
+    startDate: row.start_date,
+    endDate: row.end_date,
+    durationDays: row.duration_days,
+    status: row.status,
+    priority: row.priority as PlannerTask["priority"],
+    assigneeUserId: row.assignee_user_id,
+    assigneeRole: row.assignee_role,
+    sortOrder: row.sort_order,
+  };
+}
+
+function toDependency(row: DependencyRow): PlannerDependency {
+  return {
+    id: row.id,
+    instanceId: row.instance_id,
+    fromTaskId: row.from_task_id,
+    toTaskId: row.to_task_id,
+    depType: row.dep_type,
+    lagDays: row.lag_days,
+  };
+}
+
+function toViewConfig(row: ViewConfigRow): PlannerViewConfig {
+  return {
+    id: row.id,
+    userId: row.user_id,
+    instanceId: row.instance_id,
+    defaultView: row.default_view as PersistedViewType,
+    filters: row.filters as Record<string, unknown>,
+    sortConfig: row.sort_config as Record<string, unknown>,
+  };
+}
+
+// IPI-574 · PLN-DATA-001B (reads-only PR) — Workspace instance detail.
+// Bounded by design: a Planner instance is bounded by its source workflow
+// template (11 phases, small task count per phase), so no pagination is
+// needed for v1. planner.events (unbounded audit history) is deliberately
+// excluded — Workspace doesn't need it, and Realtime/notifications
+// (IPI-480/481) will consume events separately.
+export async function getInstanceDetail(
+  id: string,
+): Promise<PlannerQueryResult<PlannerInstance>> {
+  const context = await authenticatedPlannerClient();
+  if (!context.ok) return context;
+
+  const { data, error } = await context.data.client
+    .from("instances")
+    .select("*, tasks(*)")
+    .eq("id", id)
+    .maybeSingle();
+
+  if (error) {
+    return failure("QUERY_FAILED", "This plan could not be loaded.");
+  }
+  if (!data) {
+    // RLS-filtered rows and genuinely nonexistent rows are indistinguishable
+    // here by design (assignments_select_org is manager+ only, same
+    // enumeration-safe pattern as planner_get_my_assignment) — never leak
+    // whether an instance exists to a caller without access to it.
+    return failure("INVALID_INPUT", "This plan could not be found.");
+  }
+
+  const row = data as InstanceRow & { tasks: TaskRow[] | null };
+  return {
+    ok: true,
+    data: {
+      id: row.id,
+      orgId: row.org_id,
+      workflowId: row.workflow_id,
+      entityType: row.entity_type as EntityType,
+      entityId: row.entity_id,
+      name: row.name,
+      status: row.status,
+      plannedStart: row.planned_start,
+      plannedEnd: row.planned_end,
+      ownerUserId: row.owner_user_id,
+      tasks: (row.tasks ?? []).map(toTask),
+    },
+  };
+}
+
+export async function listDependencies(
+  instanceId: string,
+): Promise<PlannerQueryResult<PlannerDependency[]>> {
+  const context = await authenticatedPlannerClient();
+  if (!context.ok) return context;
+
+  const { data, error } = await context.data.client
+    .from("dependencies")
+    .select("*")
+    .eq("instance_id", instanceId);
+
+  if (error) {
+    return failure("QUERY_FAILED", "Plan dependencies could not be loaded.");
+  }
+
+  return { ok: true, data: (data ?? []).map(toDependency) };
+}
+
+// IPI-574 · PLN-DATA-001B correction #1 (2026-07-16) — identity is
+// server-resolved from the session, matching IPI-538's precedent; no
+// caller-supplied userId. Returns null (not an error) when the current
+// user has no saved preference yet for this instance — that's an expected,
+// valid first-visit state, not a failure.
+export async function getViewConfig(
+  instanceId: string,
+): Promise<PlannerQueryResult<PlannerViewConfig | null>> {
+  const context = await authenticatedPlannerClient();
+  if (!context.ok) return context;
+
+  const { data, error } = await context.data.client
+    .from("view_configs")
+    .select("*")
+    .eq("instance_id", instanceId)
+    .eq("user_id", context.data.userId)
+    .maybeSingle();
+
+  if (error) {
+    return failure("QUERY_FAILED", "Plan view preferences could not be loaded.");
+  }
+
+  return { ok: true, data: data ? toViewConfig(data) : null };
 }
 
 type AssignmentRow = Database["planner"]["Tables"]["assignments"]["Row"];
