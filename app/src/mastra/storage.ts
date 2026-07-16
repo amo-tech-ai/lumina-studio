@@ -52,11 +52,8 @@ export function getMastraStorage(): MastraAppStorage {
         );
       }
       // Real Mastra store (getStore("memory") etc.) — bare stubs break agent.stream after RUN_STARTED.
-      // ponytail: do not cache — mirrors empty-DATABASE_URL path so tests can flip env.
-      return new InMemoryStore({ id: "mastra-storage-memory" });
-    }
-
-    if (!url) {
+      storage = new InMemoryStore({ id: "mastra-storage-memory" });
+    } else if (!url) {
       if (process.env.NODE_ENV === "production" && !process.env.CI) {
         throw new Error(
           "DATABASE_URL is required in production. Set it to the Supabase pooler connection string (port 6543).",
@@ -64,9 +61,10 @@ export function getMastraStorage(): MastraAppStorage {
       }
       // ponytail: in-memory at build/test time — agents import this at module eval,
       // but no DB call happens until an actual agent turn.
-      return new InMemoryStore({ id: "mastra-storage-memory" });
+      storage = new InMemoryStore({ id: "mastra-storage-memory" });
+    } else {
+      storage = new PostgresStore({ id: "mastra-storage", connectionString: url });
     }
-    storage = new PostgresStore({ id: "mastra-storage", connectionString: url });
   }
   return storage;
 }
