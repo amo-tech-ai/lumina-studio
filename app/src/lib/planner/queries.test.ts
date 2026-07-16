@@ -367,6 +367,25 @@ describe("listPlannerInstances", () => {
     );
   });
 
+  it("filters by an explicit status list instead of the single-status/archived default", async () => {
+    const query = makeQuery({ data: [], error: null });
+    mockClient(query);
+
+    await listPlannerInstances({
+      statuses: ["draft", "planned", "active", "blocked", "completed"],
+    });
+
+    expect(query.in).toHaveBeenCalledWith("status", [
+      "draft",
+      "planned",
+      "active",
+      "blocked",
+      "completed",
+    ]);
+    expect(query.eq).not.toHaveBeenCalledWith("status", expect.anything());
+    expect(query.neq).not.toHaveBeenCalled();
+  });
+
   it("rejects invalid limits, search, and cursors before authentication", async () => {
     const query = makeQuery({ data: [], error: null });
     const client = mockClient(query);
