@@ -105,7 +105,36 @@ This supersedes the two earlier audit rounds in this thread (my own IPI-484 repo
 
 Also updated: **IPI-574**'s description now carries an explicit scope-correction note pointing to IPI-649 (kept Done, not reopened — its reads delivery is real). **IPI-582** and **IPI-483** now both list `IPI-649` in `blockedBy`.
 
-Do not create tickets for anything already in the task-level tracker above (579–583, 588, 551, 483, 480, 481, 542, 647, 649, 650, 651) — those are real, correctly scoped, and just not started yet.
+Do not create tickets for anything already in the task-level tracker above (579–583, 588, 551, 483, 480, 481, 542, 647, 649, 650, 651, 652, 653) — those are real, correctly scoped, and just not started yet.
+
+---
+
+## ⚙️ Efficiency restructuring pass (2026-07-16, second pass)
+
+A follow-up review proposed a contract-first, dependency-driven task restructuring to reduce duplicated code and rework. Verified against live Linear relations (not just prose) before acting — one recommendation was wrong and was **not** executed.
+
+### ❌ Rejected: "merge IPI-557 and IPI-583"
+
+Real Linear relations show these are **not duplicates** — they're already correctly sequenced: **IPI-557 is already `blockedBy: IPI-583`** (plus IPI-526/576/577). IPI-557 is the broader pass — responsive breakpoints across all 4 top-level screens (Dashboard/Hub/Settings/Workspace) using `BottomSheet`/`BottomNavigation`. IPI-583 is Workspace-only and owns real, distinct scope IPI-557 never mentions: mobile deep-link routing (a documented conflict with the generic "mobile lands on Dashboard" rule), long-content/slow-response failure tests, reduced-motion, focus-trap/Esc-priority. Merging them would silently drop that scope. **No Linear change made** — left as-is, correctly sequential.
+
+### ✅ Executed: real gap found and wired
+
+**IPI-579, IPI-580, IPI-581 now list IPI-551 (Adaptive Context Panel) in `blockedBy`.** Each of their own acceptance criteria assumes "selecting a task opens the adaptive right panel's Detail mode" — but none previously listed IPI-551 as a blocker, even though IPI-551 is genuinely unbuilt (`adaptive-panel.tsx` doesn't exist on `origin/main`). IPI-551's own description explicitly flagged this exact sequencing gap as unaddressed. Now closed.
+
+### ⚠️ Partially correct: IPI-647 (RLS) sequencing
+
+The proposal put IPI-647 (database read-policy security gap) in "Phase 1 — foundations," ahead of the read-only view tickets. IPI-647 is real and High priority — but its own scope explicitly excludes "Planner UI changes," and the intended read path (`getInstanceDetail` etc.) already has an app-layer permission gate in front of it (PR #405). The actual risk IPI-647 closes is *other/future* code paths that query the tables directly, bypassing that gate. **No `blockedBy` edge added** to IPI-579/580/581/649 — that would misrepresent them as unsafe to start, which they aren't as long as they keep following their own "no direct `supabase.from()`" rule. IPI-647 correctly already blocks only IPI-542 (release gate), which is the right place for it.
+
+### ✅ Executed: contract-first splits
+
+| New ticket | Split from | Why |
+|---|---|---|
+| **IPI-652 · PLN-DATA-002** — Planner Upcoming Work Summary | (Dashboard "Upcoming this week," previously just a documented recommendation) | Data contract before UI, so the eventual Dashboard strip is a small honest wiring PR, not a UI built against invented data |
+| **IPI-653 · PLN-DATA-003** — Planner Instance Creation Service | **IPI-650** (PLN-HUB-002) | IPI-650 previously bundled backend RPC + UI dialog in one ticket. Split so the creation service is built and tested independently — IPI-650 is now `blockedBy: IPI-653` and scoped to UI-only (CTA, template picker, redirect, error rendering) |
+
+### Confirmed correct, no action needed
+
+IPI-580 (Kanban+List) stays bundled — already one ticket. IPI-579/581 (Timeline/Calendar) stay separate — already separate tickets, correctly, since they share data but not UI logic (week-grid date math vs. month-grid date math are genuinely different). Settings Notifications/Workflow — correctly still undocumented-only, should depend on IPI-481/IPI-483 respectively when created. IPI-651 (Danger Zone) — already scoped to archive+cancel v1 with delete/restore explicitly deferred, matches the "freeze the scope decision" ask.
 
 ---
 
