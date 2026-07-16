@@ -27,8 +27,18 @@ const assetsInsertSingle = vi.fn();
 const assetsUpdateEq = vi.fn();
 const cloudinaryAssetsUpsert = vi.fn();
 const cloudinaryAssetsSelectMaybeSingle = vi.fn();
-const cloudinaryAssetsUpdate = vi.fn(() => ({ eq: cloudinaryAssetsUpdateEq }));
+const cloudinaryAssetsUpdateIs = vi.fn();
 const cloudinaryAssetsUpdateEq = vi.fn();
+/** `.eq()` is awaitable and chainable with `.is()` (legacy delete null-identity path). */
+function mockUpdateEqResult(result: { data: null; error: unknown }) {
+  cloudinaryAssetsUpdateEq.mockImplementation(() => {
+    const pending = Promise.resolve(result);
+    return Object.assign(pending, {
+      is: (...args: unknown[]) => cloudinaryAssetsUpdateIs(...args),
+    });
+  });
+}
+const cloudinaryAssetsUpdate = vi.fn(() => ({ eq: cloudinaryAssetsUpdateEq }));
 const aiAgentLogsInsert = vi.fn();
 const campaignsSelectMaybeSingle = vi.fn();
 
@@ -106,7 +116,8 @@ beforeEach(() => {
   cloudinaryAssetsSelectMaybeSingle.mockResolvedValue({ data: null, error: null });
   cloudinaryAssetsUpdate.mockClear();
   cloudinaryAssetsUpdate.mockImplementation(() => ({ eq: cloudinaryAssetsUpdateEq }));
-  cloudinaryAssetsUpdateEq.mockResolvedValue({ data: null, error: null });
+  cloudinaryAssetsUpdateIs.mockResolvedValue({ data: null, error: null });
+  mockUpdateEqResult({ data: null, error: null });
   aiAgentLogsInsert.mockResolvedValue({ data: null, error: null });
   campaignsSelectMaybeSingle.mockResolvedValue({ data: null, error: null });
   mockFetch.mockReset();
@@ -314,7 +325,7 @@ describe("POST /api/assets/cloudinary/webhook", () => {
       data: { id: "mirror-1", asset_id: "asset-existing", brand_id: BRAND_ID, version: 1 },
       error: null,
     });
-    cloudinaryAssetsUpdateEq.mockResolvedValue({ data: null, error: { message: "public_id unique" } });
+    mockUpdateEqResult({ data: null, error: { message: "public_id unique" } });
     const { POST } = await importRoute();
     const res = await POST(
       makeRequest({
@@ -349,7 +360,14 @@ describe("POST /api/assets/cloudinary/webhook", () => {
 
   it("IPI-641: ignores stale notification version and does not revert public_id", async () => {
     cloudinaryAssetsSelectMaybeSingle.mockResolvedValue({
-      data: { id: "mirror-1", asset_id: "asset-existing", brand_id: BRAND_ID, version: 5 },
+      data: {
+        id: "mirror-1",
+        asset_id: "asset-existing",
+        brand_id: BRAND_ID,
+        version: 5,
+        public_id: `ipix/brands/${BRAND_ID}/products/current`,
+        secure_url: "https://res.cloudinary.com/x/current.jpg",
+      },
       error: null,
     });
     const { POST } = await importRoute();
@@ -362,7 +380,42 @@ describe("POST /api/assets/cloudinary/webhook", () => {
     );
     expect(res.status).toBe(200);
     expect(cloudinaryAssetsUpdate).not.toHaveBeenCalled();
-    expect(assetsUpdateEq).not.toHaveBeenCalled();
+    // Reconcile assets to the mirror's current public_id (not the stale payload).
+    expect(assetsUpdateEq).toHaveBeenCalledWith("id", "asset-existing");
+  });
+
+  it("IPI-641: from_public_id recovers legacy mirror even without provider asset_id", async () => {
+    cloudinaryAssetsSelectMaybeSingle.mockResolvedValue({
+      data: {
+        id: "mirror-legacy",
+        asset_id: "asset-legacy",
+        brand_id: BRAND_ID,
+        version: 1,
+        public_id: `ipix/brands/${BRAND_ID}/products/legacy`,
+        secure_url: "https://res.cloudinary.com/x/legacy.jpg",
+      },
+      error: null,
+    });
+    const { POST } = await importRoute();
+    const res = await POST(
+      makeRequest({
+        notification_type: "upload",
+        public_id: `ipix/brands/${BRAND_ID}/products/renamed`,
+        from_public_id: `ipix/brands/${BRAND_ID}/products/legacy`,
+        secure_url: "https://res.cloudinary.com/x/renamed.jpg",
+        resource_type: "image",
+        version: 2,
+        // no asset_id — rename notification shape
+      }),
+    );
+    expect(res.status).toBe(200);
+    expect(assetsInsertSingle).not.toHaveBeenCalled();
+    expect(cloudinaryAssetsUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        asset_id: "asset-legacy",
+        public_id: `ipix/brands/${BRAND_ID}/products/renamed`,
+      }),
+    );
   });
 
   it("IPI-641: provider-id lookup error does not fall through to insert a duplicate pair", async () => {
@@ -424,7 +477,7 @@ describe("POST /api/assets/cloudinary/webhook", () => {
     expect(assetsUpdateEq).toHaveBeenCalledWith("id", "asset-canonical");
   });
 
-  it("IPI-641 delete: archives by cloudinary_asset_id only when provider id is present", async () => {
+  it("IPI-641 delete: archives by provider id and legacy null-identity public_id only", async () => {
     const { POST } = await importRoute();
     const res = await POST(
       makeRequest({
@@ -435,7 +488,8 @@ describe("POST /api/assets/cloudinary/webhook", () => {
     );
     expect(res.status).toBe(200);
     expect(cloudinaryAssetsUpdateEq).toHaveBeenCalledWith("cloudinary_asset_id", PROVIDER_ASSET_ID);
-    expect(cloudinaryAssetsUpdateEq).not.toHaveBeenCalledWith("public_id", UPLOAD_PAYLOAD.public_id);
+    expect(cloudinaryAssetsUpdateEq).toHaveBeenCalledWith("public_id", UPLOAD_PAYLOAD.public_id);
+    expect(cloudinaryAssetsUpdateIs).toHaveBeenCalledWith("cloudinary_asset_id", null);
   });
 
   it("updates the existing assets row instead of inserting when cloudinary_public_id is already linked", async () => {

@@ -128,6 +128,8 @@ type MirrorRow = {
   asset_id: string;
   brand_id: string | null;
   version: number | null;
+  public_id: string | null;
+  secure_url: string | null;
 };
 
 type MirrorLookup =
@@ -250,8 +252,17 @@ type CloudinaryMirrorRow = {
   version?: number;
 };
 
+const MIRROR_SELECT = "id, asset_id, brand_id, version, public_id, secure_url";
+
 function toMirrorLookup(
-  data: { id?: string; asset_id?: string; brand_id?: string | null; version?: number | null } | null,
+  data: {
+    id?: string;
+    asset_id?: string;
+    brand_id?: string | null;
+    version?: number | null;
+    public_id?: string | null;
+    secure_url?: string | null;
+  } | null,
 ): MirrorLookup {
   if (!data?.id || !data.asset_id) return { kind: "missing" };
   return {
@@ -261,6 +272,8 @@ function toMirrorLookup(
       asset_id: data.asset_id,
       brand_id: data.brand_id ?? null,
       version: data.version ?? null,
+      public_id: data.public_id ?? null,
+      secure_url: data.secure_url ?? null,
     },
   };
 }
@@ -271,7 +284,7 @@ async function findMirrorByProviderId(
 ): Promise<MirrorLookup> {
   const { data, error } = await db
     .from("cloudinary_assets")
-    .select("id, asset_id, brand_id, version")
+    .select(MIRROR_SELECT)
     .eq("cloudinary_asset_id", cloudinaryAssetId)
     .maybeSingle();
   if (error) {
@@ -288,7 +301,7 @@ async function findMirrorByPublicId(
 ): Promise<MirrorLookup> {
   const { data, error } = await db
     .from("cloudinary_assets")
-    .select("id, asset_id, brand_id, version")
+    .select(MIRROR_SELECT)
     .eq("public_id", publicId)
     .maybeSingle();
   if (error) {
@@ -300,7 +313,14 @@ async function findMirrorByPublicId(
 
 type MirrorWriteResult =
   | { ok: false }
-  | { ok: true; assetId: string; skippedStale?: boolean };
+  | {
+      ok: true;
+      assetId: string;
+      skippedStale?: boolean;
+      /** When stale-skipped, mirror already holds the newer identity — use for assets reconcile. */
+      mirrorPublicId?: string | null;
+      mirrorSecureUrl?: string | null;
+    };
 
 /**
  * Prefer provider identity on rename; fall back to public_id upsert for first sighting.
@@ -340,48 +360,55 @@ async function upsertCloudinaryAssetRecord(
   if (identity.cloudinary_asset_id) row.cloudinary_asset_id = identity.cloudinary_asset_id;
   if (identity.version != null) row.version = identity.version;
 
-  if (identity.cloudinary_asset_id) {
-    // Rename: reuse prior found lookup. First sighting: re-check to close the insert race.
-    const existing =
-      priorLookup.kind === "found"
-        ? priorLookup
-        : await findMirrorByProviderId(db, identity.cloudinary_asset_id);
-    if (existing.kind === "error") return { ok: false };
-    if (existing.kind === "found") {
-      const storedVersion = existing.mirror.version;
-      const incomingVersion = identity.version;
-      if (
-        incomingVersion != null &&
-        storedVersion != null &&
-        incomingVersion < storedVersion
-      ) {
-        console.warn(
-          "[cloudinary/webhook] ignoring stale notification (version)",
-          JSON.stringify({ incomingVersion, storedVersion, publicId }),
-        );
-        return { ok: true, assetId: existing.mirror.asset_id, skippedStale: true };
-      }
+  // Prefer prior found (provider id or from_public_id). Re-check by provider id only on first sighting.
+  const existing: MirrorLookup =
+    priorLookup.kind === "found"
+      ? priorLookup
+      : identity.cloudinary_asset_id
+        ? await findMirrorByProviderId(db, identity.cloudinary_asset_id)
+        : { kind: "missing" };
 
-      // Never reassign the mirror FK — concurrent inserts must keep the canonical asset_id.
-      row.asset_id = existing.mirror.asset_id;
-      // Prefer candidate brand, but fall back to the mirror's existing brand on FK failure.
-      row.brand_id = brandId ?? existing.mirror.brand_id;
-
-      let { error } = await db.from("cloudinary_assets").update(row).eq("id", existing.mirror.id);
-      if (error && brandId && isBrandFkViolation(error)) {
-        console.error(
-          "[cloudinary/webhook] brand_id rejected on mirror rename, preserving existing brand:",
-          error.message,
-        );
-        row.brand_id = existing.mirror.brand_id;
-        ({ error } = await db.from("cloudinary_assets").update(row).eq("id", existing.mirror.id));
-      }
-      if (error) {
-        console.error("[cloudinary/webhook] cloudinary_assets update by provider id failed:", error.message);
-        return { ok: false };
-      }
-      return { ok: true, assetId: existing.mirror.asset_id };
+  if (existing.kind === "error") return { ok: false };
+  if (existing.kind === "found") {
+    const storedVersion = existing.mirror.version;
+    const incomingVersion = identity.version;
+    if (
+      incomingVersion != null &&
+      storedVersion != null &&
+      incomingVersion < storedVersion
+    ) {
+      console.warn(
+        "[cloudinary/webhook] ignoring stale notification (version)",
+        JSON.stringify({ incomingVersion, storedVersion, publicId }),
+      );
+      return {
+        ok: true,
+        assetId: existing.mirror.asset_id,
+        skippedStale: true,
+        mirrorPublicId: existing.mirror.public_id,
+        mirrorSecureUrl: existing.mirror.secure_url,
+      };
     }
+
+    // Never reassign the mirror FK — concurrent inserts must keep the canonical asset_id.
+    row.asset_id = existing.mirror.asset_id;
+    // Prefer candidate brand, but fall back to the mirror's existing brand on FK failure.
+    row.brand_id = brandId ?? existing.mirror.brand_id;
+
+    let { error } = await db.from("cloudinary_assets").update(row).eq("id", existing.mirror.id);
+    if (error && brandId && isBrandFkViolation(error)) {
+      console.error(
+        "[cloudinary/webhook] brand_id rejected on mirror rename, preserving existing brand:",
+        error.message,
+      );
+      row.brand_id = existing.mirror.brand_id;
+      ({ error } = await db.from("cloudinary_assets").update(row).eq("id", existing.mirror.id));
+    }
+    if (error) {
+      console.error("[cloudinary/webhook] cloudinary_assets update by provider id failed:", error.message);
+      return { ok: false };
+    }
+    return { ok: true, assetId: existing.mirror.asset_id };
   }
 
   const { error } = await db.from("cloudinary_assets").upsert(row, { onConflict: "public_id" });
@@ -479,10 +506,10 @@ async function handleUpload(
     : { kind: "missing" };
   if (priorLookup.kind === "error") return { retryable: true };
 
-  // Legacy mirrors (null cloudinary_asset_id) can still be recovered on rename via from_public_id.
+  // Legacy mirrors (null cloudinary_asset_id) can still be recovered on rename via from_public_id,
+  // even when the notification omits provider asset_id.
   if (
     priorLookup.kind === "missing" &&
-    identity.cloudinary_asset_id &&
     typeof payload.from_public_id === "string" &&
     payload.from_public_id.length > 0
   ) {
@@ -512,7 +539,19 @@ async function handleUpload(
     priorLookup,
   });
   if (!persisted.ok) return { retryable: true };
-  if (persisted.skippedStale) return {};
+  if (persisted.skippedStale) {
+    // Stale payload must not rewrite mirror, but a prior 503 may have left assets lagging the mirror.
+    if (persisted.mirrorPublicId) {
+      const reconciled = await syncAssetPublicIdAfterMirror(db, {
+        assetId: persisted.assetId,
+        publicId: persisted.mirrorPublicId,
+        secureUrl: persisted.mirrorSecureUrl || secureUrl,
+        brandId: null,
+      });
+      if (!reconciled) return { retryable: true };
+    }
+    return {};
+  }
 
   const canonicalAssetId = persisted.assetId;
   // Sync public_id onto the canonical assets row (rename, or race where we keep the prior mirror FK).
@@ -617,6 +656,18 @@ async function handleDelete(db: ReturnType<typeof createSupabaseAdminClient>, pa
         .update({ status: "archived" })
         .eq("cloudinary_asset_id", providerId);
       if (error) console.error("[cloudinary/webhook] delete->archive by provider id failed:", error.message);
+    }
+    // Also archive legacy mirrors (null cloudinary_asset_id) that still match this public_id.
+    // Scoped to null identity so a reused public_id on a different asset is not archived.
+    for (const publicId of publicIds) {
+      const { error } = await db
+        .from("cloudinary_assets")
+        .update({ status: "archived" })
+        .eq("public_id", publicId)
+        .is("cloudinary_asset_id", null);
+      if (error) {
+        console.error("[cloudinary/webhook] delete->archive legacy null-identity failed:", error.message);
+      }
     }
     return;
   }
