@@ -91,6 +91,17 @@ const enginePhases = phases.map((ph) => ({
 }));
 
 async function createInstance({ name, plannedStart, status, makeOverdue }) {
+  const { data: existing } = await p
+    .from("instances")
+    .select("id")
+    .eq("org_id", ORG_ID)
+    .eq("name", name)
+    .maybeSingle();
+  if (existing) {
+    console.log(`already exists, skipping "${name}": ${existing.id}`);
+    return existing.id;
+  }
+
   const entityId = crypto.randomUUID();
   const { data: inst, error: instErr } = await p
     .from("instances")
