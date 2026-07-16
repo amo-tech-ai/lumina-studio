@@ -46,6 +46,19 @@ describe("presetTransformString / cropTransformString", () => {
     expect(presetTransformString("asset-masonry")).toBe("c_limit,w_600,f_auto,q_auto");
   });
 
+  it("builds the asset-review and asset-detail eager presets", async () => {
+    const { presetTransformString, CLOUDINARY_EAGER_PRESETS, CLOUDINARY_UPLOAD_PRESET } =
+      await importUrl();
+    expect(presetTransformString("asset-review")).toBe("c_limit,w_1200,f_auto,q_auto");
+    expect(presetTransformString("asset-detail")).toBe("c_limit,w_1600,f_auto,q_auto");
+    expect([...CLOUDINARY_EAGER_PRESETS]).toEqual([
+      "asset-masonry",
+      "asset-review",
+      "asset-detail",
+    ]);
+    expect(CLOUDINARY_UPLOAD_PRESET).toBe("ipix-signed-upload");
+  });
+
   it("builds an arbitrary fill crop from raw dimensions (channel-spec use case)", async () => {
     const { cropTransformString } = await importUrl();
     expect(cropTransformString({ width: 1080, height: 1350, crop: "fill" })).toBe(

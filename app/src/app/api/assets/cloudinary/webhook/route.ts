@@ -25,6 +25,10 @@ type CloudinaryNotification = {
   version?: number;
   folder?: string;
   asset_folder?: string;
+  /** API key id used to sign the notification (may differ from CLOUDINARY_API_KEY). */
+  signature_key?: string;
+  /** Delete notifications often omit top-level public_id and use resources[]. */
+  resources?: Array<{ public_id?: string }>;
 };
 
 function resourceTypeToAssetType(resourceType: string): "image" | "video" | "document" {
@@ -299,11 +303,23 @@ function triggerDnaAudit(assetId: string) {
   });
 }
 
+function deletePublicIds(payload: CloudinaryNotification): string[] {
+  const ids = new Set<string>();
+  if (payload.public_id) ids.add(payload.public_id);
+  for (const resource of payload.resources ?? []) {
+    if (resource.public_id) ids.add(resource.public_id);
+  }
+  return [...ids];
+}
+
 async function handleDelete(db: ReturnType<typeof createSupabaseAdminClient>, payload: CloudinaryNotification) {
-  const publicId = payload.public_id;
-  if (!publicId) return;
-  const { error } = await db.from("cloudinary_assets").update({ status: "archived" }).eq("public_id", publicId);
-  if (error) console.error("[cloudinary/webhook] delete->archive failed:", error.message);
+  // Minimal scoped delete: archive mirror rows. Full reconciliation is IPI-638.
+  const publicIds = deletePublicIds(payload);
+  if (publicIds.length === 0) return;
+  for (const publicId of publicIds) {
+    const { error } = await db.from("cloudinary_assets").update({ status: "archived" }).eq("public_id", publicId);
+    if (error) console.error("[cloudinary/webhook] delete->archive failed:", error.message);
+  }
 }
 
 type SignatureVerification = { ok: true; rawBody: string } | { ok: false; response: NextResponse };
@@ -311,7 +327,10 @@ type SignatureVerification = { ok: true; rawBody: string } | { ok: false; respon
 async function verifyWebhookSignature(request: Request): Promise<SignatureVerification> {
   const cloudName = process.env.CLOUDINARY_CLOUD_NAME;
   const apiKey = process.env.CLOUDINARY_API_KEY;
-  const apiSecret = process.env.CLOUDINARY_API_SECRET;
+  // Notifications may be signed by the oldest/dedicated key (payload.signature_key),
+  // which can differ from CLOUDINARY_API_KEY used for Upload/Admin API calls.
+  const apiSecret =
+    process.env.CLOUDINARY_NOTIFICATION_API_SECRET?.trim() || process.env.CLOUDINARY_API_SECRET;
   if (!cloudName || !apiKey || !apiSecret) {
     console.error("[cloudinary/webhook] Cloudinary env vars missing");
     return { ok: false, response: NextResponse.json({ error: "Internal error" }, { status: 500 }) };
@@ -340,6 +359,24 @@ async function verifyWebhookSignature(request: Request): Promise<SignatureVerifi
     REPLAY_WINDOW_SECONDS,
   );
   if (!isValid) {
+    let signatureKey: string | undefined;
+    try {
+      signatureKey = (JSON.parse(rawBody) as CloudinaryNotification).signature_key;
+    } catch {
+      // ignore — body may be non-JSON; still reject
+    }
+    console.error(
+      "[cloudinary/webhook] Invalid signature",
+      JSON.stringify({
+        signatureKey: signatureKey ?? null,
+        configuredApiKey: apiKey,
+        usingNotificationSecret: Boolean(process.env.CLOUDINARY_NOTIFICATION_API_SECRET?.trim()),
+        hint:
+          signatureKey && signatureKey !== apiKey
+            ? "payload.signature_key differs from CLOUDINARY_API_KEY — set Console dedicated webhook key or CLOUDINARY_NOTIFICATION_API_SECRET"
+            : "check CLOUDINARY_API_SECRET / CLOUDINARY_NOTIFICATION_API_SECRET",
+      }),
+    );
     return { ok: false, response: NextResponse.json({ error: "Invalid signature" }, { status: 401 }) };
   }
 

@@ -29,17 +29,31 @@ export function cloudinaryImageUrl(
   );
 }
 
-// IPI-257 074e — named transform presets (single source of truth per MEDIA-MAP §5).
+// IPI-257 074e / IPI-430 — transform presets (single source of truth per MEDIA-MAP §5).
+// Dashboard named transforms: asset-masonry, asset-review, asset-detail.
 // `hitl-diff` is intentionally not modeled here: its spec is "side-by-side derivative
 // URLs" (not a crop transform) and its only consumer (Approval/EvidenceBlock UI) is
 // out of scope for IPI-257.
 export type CropTransform = { width: number; height?: number; crop: "fill" | "thumb" | "limit" };
 
-export const CLOUDINARY_PRESETS: Record<"brand-cover" | "asset-tile" | "asset-masonry", CropTransform> = {
+export const CLOUDINARY_UPLOAD_PRESET = "ipix-signed-upload";
+
+/** Schema version mirrored into Cloudinary structured metadata (`ipix_schema_version`). */
+export const CLOUDINARY_METADATA_SCHEMA_VERSION = "1";
+
+export const CLOUDINARY_PRESETS: Record<
+  "brand-cover" | "asset-tile" | "asset-masonry" | "asset-review" | "asset-detail",
+  CropTransform
+> = {
   "brand-cover": { width: 400, height: 300, crop: "fill" },
   "asset-tile": { width: 120, height: 120, crop: "thumb" },
   "asset-masonry": { width: 600, crop: "limit" },
+  "asset-review": { width: 1200, crop: "limit" },
+  "asset-detail": { width: 1600, crop: "limit" },
 };
+
+/** Eager transforms generated on every image upload (IPI-430). */
+export const CLOUDINARY_EAGER_PRESETS = ["asset-masonry", "asset-review", "asset-detail"] as const;
 
 export type CloudinaryPresetName = keyof typeof CLOUDINARY_PRESETS;
 

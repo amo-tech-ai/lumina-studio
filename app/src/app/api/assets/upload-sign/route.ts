@@ -3,7 +3,11 @@ import { NextResponse } from "next/server";
 import { v2 as cloudinary } from "cloudinary";
 import { withOperatorAuth, OperatorAuthError } from "@/lib/operator-gate";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { presetTransformString } from "@/lib/cloudinary/url";
+import {
+  CLOUDINARY_EAGER_PRESETS,
+  CLOUDINARY_UPLOAD_PRESET,
+  presetTransformString,
+} from "@/lib/cloudinary/url";
 
 export const dynamic = "force-dynamic";
 
@@ -42,13 +46,10 @@ function sanitizeFilename(filename: string): string {
   return filename.replace(/[^a-zA-Z0-9._-]/g, "_").slice(0, 200);
 }
 
-// 074e — eager pregeneration for the two image presets consumed off the upload path
-// (asset-tile in the brand asset panel, asset-masonry in the library grid). Cloudinary's
-// `eager` param accepts literal transformation strings, so no server-side named
-// transformation needs to be registered in the account — presetTransformString (in
-// lib/cloudinary/url.ts) is the single source of truth these strings are derived from,
-// shared with the signed delivery URLs in api/_lib/cloudinary-signed-url.ts.
-const EAGER_IMAGE_PRESETS = ["asset-tile", "asset-masonry"] as const;
+// IPI-430 — eager pregeneration for masonry / review / detail. Literal transform
+// strings stay the SSOT via CLOUDINARY_EAGER_PRESETS + presetTransformString so
+// signed delivery URLs cannot drift from upload-time derivatives. The account
+// also has matching named transforms + upload preset `ipix-signed-upload`.
 
 export async function POST(request: Request) {
   let operator;
@@ -154,6 +155,7 @@ export async function POST(request: Request) {
 
   const paramsToSign: Record<string, string | number> = {
     timestamp,
+    upload_preset: CLOUDINARY_UPLOAD_PRESET,
     asset_folder: assetFolder,
     // Pre-approval delivery is always signed/authenticated (see §5 of the
     // IPI-257 spec) — flips to public `upload` only after HITL approval.
@@ -164,7 +166,7 @@ export async function POST(request: Request) {
     context: contextParts.join("|"),
   };
   if (resourceType === "image") {
-    paramsToSign.eager = EAGER_IMAGE_PRESETS.map(presetTransformString).join("|");
+    paramsToSign.eager = CLOUDINARY_EAGER_PRESETS.map(presetTransformString).join("|");
   }
   if (notificationUrl) {
     paramsToSign.notification_url = notificationUrl;
