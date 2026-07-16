@@ -544,12 +544,24 @@ async function resolveOperatorAuth(supabaseFactory) {
 }
 
 /**
+ * Keep fixture when --keep-fixture / mode=fixture, independent of exitCode.
+ * Any publicId or assetId means there is something worth preserving for debug.
+ */
+export function shouldKeepFixture({ keepFixture, publicId, assetId }) {
+  return Boolean(keepFixture && (publicId || assetId));
+}
+
+/**
  * Create one disposable Cloudinary + Supabase fixture via the real upload-sign
  * route and a synthetic signed webhook (deterministic CI path).
  *
  * Shared by CLD-105 smoke and IPI-512 fixture mode / Playwright.
+ *
+ * Optional `progress` object is mutated as soon as Cloudinary/Supabase clients
+ * (and later publicId/assetId) exist, so callers can cleanup() even when this
+ * function throws mid-pipeline.
  */
-export async function createDisposableFixture({ skipDna = false, log = true } = {}) {
+export async function createDisposableFixture({ skipDna = false, log = true, progress } = {}) {
   const stages = [];
   const push = (name, ok, detail) => {
     const s = stage(name, ok, detail, { setExitCode: false });
@@ -591,6 +603,29 @@ export async function createDisposableFixture({ skipDna = false, log = true } = 
     createClient(url, key, { auth: { persistSession: false }, ...opts });
   const admin = supabaseFactory(supabaseUrl, serviceRoleKey, {});
 
+  let publicId;
+  let assetId;
+  const syncProgress = () => {
+    if (!progress) return;
+    progress.brandId = brandId;
+    progress.testFolder = testFolder;
+    progress.testPublicIdPrefix = testPublicIdPrefix;
+    progress.cloudinary = cloudinary;
+    progress.supabase = admin;
+    progress.publicId = publicId;
+    progress.assetId = assetId;
+    progress.stages = stages;
+    progress.cleanup = () =>
+      cleanup({
+        cloudinary,
+        supabase: admin,
+        publicId,
+        assetId,
+        testPublicIdPrefix,
+      });
+  };
+  syncProgress();
+
   const appBaseUrl = (process.env.CLD105_APP_BASE_URL ?? "http://localhost:3002").replace(/\/$/, "");
   // upload-sign requires https for notificationUrl. This fixture posts a
   // synthetic signed webhook itself (Cloudinary async delivery is not proven),
@@ -598,15 +633,13 @@ export async function createDisposableFixture({ skipDna = false, log = true } = 
   const notificationUrl = resolveNotificationUrl(appBaseUrl);
 
   const RUN_ID = `cld105-${Date.now()}-${randomUUID().slice(0, 8)}`;
+  if (progress) progress.runId = RUN_ID;
   if (log) {
     console.log(`\nCloudinary disposable fixture — run ${RUN_ID}`);
     console.log(`  app:        ${appBaseUrl}`);
     console.log(`  brand:      ${brandId}`);
     console.log(`  notifyUrl:  ${notificationUrl ?? "(omitted — synthetic webhook path)"}\n`);
   }
-
-  let publicId;
-  let assetId;
 
   const imageBytes = generateTestImage(RUN_ID);
   push("image-created", true, `${imageBytes.length} bytes`);
@@ -656,6 +689,7 @@ export async function createDisposableFixture({ skipDna = false, log = true } = 
     throw new Error("cloudinary-upload failed");
   }
   publicId = validated.publicId;
+  syncProgress();
   if (!isTestPublicId(publicId, testPublicIdPrefix)) {
     push("cloudinary-upload", false, `public_id=${publicId} is not under ${testPublicIdPrefix}`);
     throw new Error("cloudinary-upload public_id outside test folder");
@@ -695,6 +729,7 @@ export async function createDisposableFixture({ skipDna = false, log = true } = 
     throw new Error("webhook did not write rows");
   }
   assetId = rows.asset.id;
+  syncProgress();
 
   if (rows.asset.brand_id !== brandId) {
     push("supabase-row", false, `assets.brand_id=${rows.asset.brand_id} does not match test brand ${brandId}`);
@@ -762,11 +797,14 @@ async function main() {
   };
 
   let fixture;
+  /** Partial handle updated during create — used for cleanup if create throws. */
+  const progress = {};
   let stages = [];
   try {
     fixture = await createDisposableFixture({
       skipDna: cli.mode === "fixture",
       log: true,
+      progress,
     });
     stages = [...fixture.stages];
     report.runId = fixture.runId;
@@ -813,20 +851,29 @@ async function main() {
       console.log(`Fixture manifest: ${reportPath}`);
     }
   } catch (e) {
+    if (progress.stages?.length && stages.length === 0) stages = [...progress.stages];
+    report.runId ??= progress.runId;
+    report.assetId ??= progress.assetId;
+    report.publicId ??= progress.publicId;
+    report.brandId ??= progress.brandId;
     if (stages.length === 0 || stages[stages.length - 1].name !== "pipeline-error") {
       stages.push(stage("pipeline-error", false, sanitizeError(e)));
     }
   } finally {
-    if (cli.keepFixture && fixture?.assetId && process.exitCode !== 1) {
+    const publicId = fixture?.publicId ?? progress.publicId;
+    const assetId = fixture?.assetId ?? progress.assetId;
+    if (shouldKeepFixture({ keepFixture: cli.keepFixture, publicId, assetId })) {
       stages.push(stage("cleanup", true, "skipped (--keep-fixture / mode=fixture)"));
     } else {
       await new Promise((r) => setTimeout(r, 2000));
-      const cleanupSummary = fixture
-        ? await fixture.cleanup()
+      const runCleanup = fixture?.cleanup ?? progress.cleanup;
+      const cleanupSummary = runCleanup
+        ? await runCleanup()
         : { cloudinary: "skipped", assets: "skipped", cloudinaryAssets: "skipped" };
       const cleanupOk = Object.values(cleanupSummary).every(
         (v) =>
           v === "ok" ||
+          v === "ok-fallback" ||
           v === "skipped" ||
           v === "not found" ||
           (!String(v).startsWith("error") && !String(v).startsWith("refused")),

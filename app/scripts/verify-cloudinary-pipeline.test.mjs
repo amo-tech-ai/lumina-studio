@@ -11,6 +11,7 @@ import {
   sanitizeError,
   TEST_PUBLIC_ID_PREFIX,
   testScopeForBrand,
+  shouldKeepFixture,
   ASSET_MASONRY_TRANSFORM,
 } from "./verify-cloudinary-pipeline.mjs";
 
@@ -344,6 +345,21 @@ describe("testScopeForBrand — isolated per brand", () => {
     expect(a.testPublicIdPrefix).toBe("ipix/brands/brand-a/cld105-test/cld105-");
     expect(b.testPublicIdPrefix).toContain("brand-b");
     expect(TEST_PUBLIC_ID_PREFIX).toBe("ipix/cld105-test/cld105-");
+  });
+});
+
+describe("shouldKeepFixture", () => {
+  it("keeps when keepFixture and publicId/assetId present regardless of exitCode", () => {
+    expect(shouldKeepFixture({ keepFixture: true, publicId: "p", assetId: "a" })).toBe(true);
+    expect(shouldKeepFixture({ keepFixture: true, publicId: "p", assetId: undefined })).toBe(true);
+    expect(shouldKeepFixture({ keepFixture: true, publicId: undefined, assetId: "a" })).toBe(true);
+  });
+
+  it("does not keep in smoke mode or when nothing was created", () => {
+    expect(shouldKeepFixture({ keepFixture: false, publicId: "p", assetId: "a" })).toBe(false);
+    expect(shouldKeepFixture({ keepFixture: true, publicId: undefined, assetId: undefined })).toBe(
+      false,
+    );
   });
 });
 

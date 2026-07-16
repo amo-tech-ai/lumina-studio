@@ -33,12 +33,27 @@ export async function createCloudinaryQaFixture(): Promise<CloudinaryQaFixture> 
     resolve(process.cwd(), "app/scripts/verify-cloudinary-pipeline.mjs"),
   ).href;
   const mod = await import(verifierUrl);
-  const fixture = await mod.createDisposableFixture({ skipDna: true, log: true });
-  return {
-    runId: fixture.runId,
-    brandId: fixture.brandId,
-    publicId: fixture.publicId,
-    assetId: fixture.assetId,
-    cleanup: fixture.cleanup,
-  };
+  const progress: {
+    cleanup?: () => Promise<Record<string, string>>;
+  } = {};
+  try {
+    const fixture = await mod.createDisposableFixture({
+      skipDna: true,
+      log: true,
+      progress,
+    });
+    return {
+      runId: fixture.runId,
+      brandId: fixture.brandId,
+      publicId: fixture.publicId,
+      assetId: fixture.assetId,
+      cleanup: fixture.cleanup,
+    };
+  } catch (err) {
+    // Mid-pipeline failure after upload must not leave Cloudinary/DB junk.
+    if (typeof progress.cleanup === "function") {
+      await progress.cleanup().catch(() => undefined);
+    }
+    throw err;
+  }
 }
