@@ -38,8 +38,14 @@ const UI_TREATMENT: Record<PlannerInstanceStatus, InstanceUiTreatment> = {
   cancelled: { label: "Cancelled", tone: "neutral" },
 };
 
+// Falls back rather than indexing UI_TREATMENT directly: a status value can
+// reach here that predates this union (e.g. a DB enum value added by a
+// migration before this map is redeployed to match), so `status` is typed
+// as the closed union but isn't guaranteed to be a member of it at runtime.
+const FALLBACK_TREATMENT: InstanceUiTreatment = { label: "Unknown", tone: "neutral" };
+
 export function getInstanceUiTreatment(
   status: PlannerInstanceStatus,
 ): InstanceUiTreatment {
-  return UI_TREATMENT[status];
+  return UI_TREATMENT[status] ?? FALLBACK_TREATMENT;
 }
