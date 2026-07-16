@@ -1,12 +1,17 @@
 #!/usr/bin/env node
 /**
- * IPI-490 · CF-MIG-210 — local/CI size + startup gate for OpenNext Worker dry-run.
+ * IPI-490 · CF-MIG-210 — local/CI gzip size gate for OpenNext Worker dry-run.
  *
  * Prerequisites: `npx opennextjs-cloudflare build` already run in app/.
  *
- * iPix policy (CF Paid hard limit = 10 MB gzip / 1000 ms startup):
- *   warn  ≥ 8.5 MiB gzip · fail ≥ 9.0 MiB gzip
- *   warn  ≥ 500 ms startup · fail ≥ 750 ms startup
+ * Size (authoritative for this task — wrangler dry-run gzip):
+ *   warn  ≥ 8.5 MiB · fail ≥ 9.0 MiB
+ *   (Cloudflare Paid Worker compressed limit = 10 MB)
+ *
+ * Startup: `wrangler check startup` is local profiling only. It does NOT
+ * produce authoritative remote `startup_time_ms` (that is IPI-472 · INFRA-001
+ * after `wrangler versions upload`). High local readings print WARN but do
+ * not fail this script — remote 500/750 ms gates belong to IPI-472.
  */
 import { spawnSync } from "node:child_process";
 import path from "node:path";
@@ -17,6 +22,7 @@ const appDir = path.resolve(__dirname, "..");
 
 const WARN_MIB = 8.5;
 const FAIL_MIB = 9.0;
+/** Local profiling only — not a hard fail for IPI-490. */
 const WARN_STARTUP_MS = 500;
 const FAIL_STARTUP_MS = 750;
 
@@ -93,13 +99,18 @@ if (gzipMiB >= FAIL_MIB) {
 
 if (startupMs != null) {
   if (startupMs >= FAIL_STARTUP_MS) {
-    console.error(`FAIL: startup ${startupMs.toFixed(1)} ms ≥ ${FAIL_STARTUP_MS} ms iPix fail gate`);
-    exit = 1;
+    console.warn(
+      `WARN (local profiling only): startup ${startupMs.toFixed(1)} ms ≥ ${FAIL_STARTUP_MS} ms — not a dry-run fail; authoritative remote timing is IPI-472`,
+    );
   } else if (startupMs >= WARN_STARTUP_MS) {
-    console.warn(`WARN: startup ${startupMs.toFixed(1)} ms ≥ ${WARN_STARTUP_MS} ms iPix warn gate`);
+    console.warn(
+      `WARN (local profiling only): startup ${startupMs.toFixed(1)} ms ≥ ${WARN_STARTUP_MS} ms`,
+    );
   } else {
-    console.log(`OK: startup below ${WARN_STARTUP_MS} ms warn gate`);
+    console.log(`OK (local profiling): startup below ${WARN_STARTUP_MS} ms`);
   }
+} else {
+  console.warn("WARN: local startup profiling not parsed — run `npx wrangler check startup` manually");
 }
 
 if (dry.code !== 0) {
