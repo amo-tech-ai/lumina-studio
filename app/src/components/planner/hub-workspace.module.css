@@ -23,6 +23,12 @@
   letter-spacing: -0.02em;
 }
 
+.liveRegion {
+  margin: 5px 0 0;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+}
+
 /* --- Filter bar --- */
 
 .filterBar {
@@ -130,14 +136,6 @@
   text-decoration: underline;
 }
 
-/* --- Live region --- */
-
-.liveRegion {
-  margin: 0 0 var(--space-4);
-  font-size: var(--font-size-sm);
-  color: var(--color-text-secondary);
-}
-
 /* --- Attention band --- */
 
 .attentionBand {
@@ -196,17 +194,23 @@
 
 .grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   gap: var(--card-gap);
 }
 
-@media (max-width: 1280px) {
+@media (max-width: 1100px) {
+  .grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (max-width: 860px) {
   .grid {
     grid-template-columns: repeat(2, 1fr);
   }
 }
 
-@media (max-width: 720px) {
+@media (max-width: 480px) {
   .grid {
     grid-template-columns: 1fr;
   }
@@ -229,15 +233,30 @@
 .cardCover {
   position: relative;
   aspect-ratio: 4 / 3;
-  display: flex;
-  align-items: center;
-  justify-content: center;
   background: var(--image-placeholder-bg);
-  color: var(--color-text-muted);
+  overflow: hidden;
 }
 
-.cardCoverIcon {
-  opacity: 0.5;
+.cardCoverImage {
+  object-fit: cover;
+}
+
+.cardCoverScrim {
+  position: absolute;
+  inset: 0;
+  background: var(--image-scrim);
+}
+
+.cardCoverEntity {
+  position: absolute;
+  left: 12px;
+  bottom: 10px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-inverse);
 }
 
 .statusChip {
@@ -295,20 +314,41 @@
   text-overflow: ellipsis;
 }
 
-.cardMeta {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  margin: 4px 0 0;
+.cardSentence,
+.cardSentenceRisk {
+  margin: 3px 0 0;
   font-size: var(--font-size-xs);
+  line-height: var(--line-height-tight);
   color: var(--color-text-secondary);
 }
 
+.cardSentenceRisk {
+  color: var(--color-warning-text);
+  font-weight: var(--font-weight-medium);
+}
+
+.cardMetaRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 7px;
+}
+
 .cardDates {
-  margin: 6px 0 0;
   font-family: var(--font-mono);
   font-size: var(--font-size-xs);
   color: var(--color-text-muted);
+}
+
+.cardOwner {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--color-bg-muted);
+  color: var(--color-text-secondary);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .progressTrack {

@@ -66,6 +66,15 @@ export function shootListCoverForShoot(shootId: string): string {
   return cloudinaryImageUrl(SAMPLE_IMAGE_POOL[idx], { w: 480, h: 360 });
 }
 
+/** 4:3 decorative fallback for Planner Hub cards (IPI-526) — listPlannerInstances
+ *  has no cover_url field (a plan isn't a shoot; it can point at a campaign or
+ *  CRM deal too), so this is permanently decorative, not a fallback-until-real-data
+ *  placeholder like shootListCoverForShoot above. */
+export function plannerHubCoverForInstance(instanceId: string): string {
+  const idx = hashIndex(instanceId, SAMPLE_IMAGE_POOL.length);
+  return cloudinaryImageUrl(SAMPLE_IMAGE_POOL[idx], { w: 480, h: 360 });
+}
+
 export function approvalPreviewUrl(): string {
   return cloudinaryImageUrl(SAMPLE_IMAGE_POOL[6], { w: 472, h: 590 });
 }

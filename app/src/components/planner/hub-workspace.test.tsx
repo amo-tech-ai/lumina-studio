@@ -5,6 +5,9 @@ import { cleanup, render, screen, within } from "@testing-library/react";
 vi.mock("./hub-workspace.module.css", () => ({
   default: new Proxy({}, { get: (_, key) => String(key) }),
 }));
+vi.mock("next/image", () => ({
+  default: () => null,
+}));
 
 import type { PlannerInstanceSummary } from "@/lib/planner/queries";
 

@@ -26,14 +26,15 @@ export function PlannerHubWorkspace({ filters, items, nextCursor }: Props) {
   return (
     <div className={styles.workspace} data-testid="planner-hub-workspace">
       <header className={styles.header}>
-        <h1 className={styles.title}>Planner</h1>
+        <div>
+          <h1 className={styles.title}>Planner</h1>
+          <p role="status" aria-live="polite" aria-atomic="true" className={styles.liveRegion}>
+            {countLabel}
+          </p>
+        </div>
       </header>
 
       <HubFilterBar filters={filters} />
-
-      <p role="status" aria-live="polite" aria-atomic="true" className={styles.liveRegion}>
-        {countLabel}
-      </p>
 
       {items.length === 0 ? (
         filtersActive ? (

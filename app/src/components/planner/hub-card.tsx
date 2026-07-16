@@ -1,12 +1,17 @@
 // IPI-526 — Planner Hub plan card. Semantic link to the Workspace route
 // (correction #8: accessible name describes the destination). Renders only
-// fields listPlannerInstances actually returns — no owner-name/cover-photo
-// lookups, since neither exists in the Slice A contract and per-card
-// requests are explicitly forbidden.
+// real fields listPlannerInstances returns — no per-card database requests.
+// The cover photo and owner icon are decorative (same fallback-cover idiom
+// ShootCard already uses via shootListCoverForShoot): listPlannerInstances
+// has no cover_url or owner-display-name field, so nothing here is fabricated
+// data — a real name/photo would need its own ticket (owner-name resolution
+// mirrors the listMembers/planner_get_member_names precedent from IPI-577).
 
+import Image from "next/image";
 import Link from "next/link";
-import { Briefcase, Clapperboard, Megaphone, type LucideIcon } from "lucide-react";
+import { Briefcase, Clapperboard, Megaphone, User, type LucideIcon } from "lucide-react";
 
+import { plannerHubCoverForInstance } from "@/lib/command-center/sample-images";
 import type { PlannerInstanceSummary } from "@/lib/planner/queries";
 import { getInstanceUiTreatment } from "@/lib/planner/status-transitions";
 import type { EntityType } from "@/lib/planner/types";
@@ -44,21 +49,36 @@ export function HubCard({ item }: Props) {
       data-at-risk={item.atRisk ? "true" : undefined}
     >
       <div className={styles.cardCover}>
-        <Icon size={22} aria-hidden className={styles.cardCoverIcon} />
+        <Image
+          src={plannerHubCoverForInstance(item.id)}
+          alt=""
+          fill
+          sizes="(max-width: 720px) 100vw, (max-width: 1100px) 33vw, 25vw"
+          className={styles.cardCoverImage}
+        />
+        <span className={styles.cardCoverScrim} aria-hidden />
         <span className={`${styles.statusChip} ${styles[`tone${capitalize(treatment.tone)}`]}`}>
           <span className={styles.statusDot} aria-hidden />
           {treatment.label}
         </span>
+        <span className={styles.cardCoverEntity}>
+          <Icon size={13} aria-hidden />
+          {entity.label}
+        </span>
       </div>
       <div className={styles.cardBody}>
         <p className={styles.cardName}>{item.name}</p>
-        <p className={styles.cardMeta}>
-          <Icon size={12} aria-hidden />
-          {entity.label}
+        <p className={item.atRisk ? styles.cardSentenceRisk : styles.cardSentence}>
+          {item.progress === null ? "No tasks yet" : `${item.progress}% complete`}
         </p>
-        <p className={styles.cardDates}>
-          {formatPlannerDate(item.plannedStart)} – {formatPlannerDate(item.plannedEnd)}
-        </p>
+        <div className={styles.cardMetaRow}>
+          <span className={styles.cardDates}>
+            {formatPlannerDate(item.plannedStart)} – {formatPlannerDate(item.plannedEnd)}
+          </span>
+          <span className={styles.cardOwner} aria-hidden>
+            <User size={11} />
+          </span>
+        </div>
         <div className={styles.progressTrack}>
           <div
             className={item.atRisk ? styles.progressFillRisk : styles.progressFill}
