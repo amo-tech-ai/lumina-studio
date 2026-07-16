@@ -1945,6 +1945,50 @@ try {
     "updateTask on a cancelled instance is rejected with INSTANCE_TERMINAL, even for the owner",
   );
 
+  // ── Round-10 fix: planner_update_task rejects assigning a task to a user
+  // outside the instance's org. The pre-existing tasks.assignee_user_id ->
+  // auth.users FK only proves the id is a real user somewhere — not that
+  // they're in this org. A syntactically-valid-but-outside-org id is
+  // sufficient to prove the fix (no need for a real second user here).
+  const { data: taskAssign, error: taskAssignErr } = await plannerA
+    .from("tasks")
+    .insert({
+      instance_id: instA.id,
+      title: `RLS Assignee Task ${stamp}`,
+      status: "todo",
+      priority: "medium",
+      sort_order: 3,
+      start_date: "2026-08-10",
+      end_date: "2026-08-11",
+    })
+    .select("id, updated_at")
+    .single();
+  assert(!taskAssignErr && taskAssign?.id, "owner creates a task for the round-10 assignee-org-membership probe");
+
+  const { data: outsiderAssignResult, error: outsiderAssignErr } = await userA.client.rpc("planner_update_task", {
+    p_task_id: taskAssign.id,
+    p_instance_id: instA.id,
+    p_expected_updated_at: taskAssign.updated_at,
+    p_idempotency_key: crypto.randomUUID(),
+    p_patch: { assignee_user_id: crypto.randomUUID() },
+  });
+  assert(
+    !outsiderAssignErr && outsiderAssignResult?.ok === false && outsiderAssignResult?.code === "INVALID_INPUT",
+    "planner_update_task rejects assigning a task to a user outside the instance's org (round-10 fix)",
+  );
+
+  const { data: memberAssignResult, error: memberAssignErr } = await userA.client.rpc("planner_update_task", {
+    p_task_id: taskAssign.id,
+    p_instance_id: instA.id,
+    p_expected_updated_at: taskAssign.updated_at,
+    p_idempotency_key: crypto.randomUUID(),
+    p_patch: { assignee_user_id: userB.user.id },
+  });
+  assert(
+    !memberAssignErr && memberAssignResult?.ok === true,
+    "planner_update_task still allows assigning a task to a real org member",
+  );
+
   // Restore user B to 'manager' on instA — this block demoted them to
   // 'viewer' for the per-task-authorization probe (scenario 6 above), but
   // every probe from here on (starting with the IPI-575 section directly
