@@ -164,6 +164,22 @@ function triggerMatchesWebhook(trigger, webhookUrl) {
   }
 }
 
+/** Refuse cleanup outside the brand-scoped ipi636-test folder (mirrors pipeline isTestPublicId). */
+function isLiveTestPublicId(publicId, testFolder) {
+  return typeof publicId === "string" && typeof testFolder === "string" && publicId.startsWith(`${testFolder}/`);
+}
+
+/** Sign a Cloudinary notification body the same way the webhook route verifies. */
+function signNotificationBody(body, apiSecret) {
+  const notifSecret = process.env.CLOUDINARY_NOTIFICATION_API_SECRET?.trim() || apiSecret;
+  const timestamp = Math.floor(Date.now() / 1000);
+  const signature = requireDep("crypto")
+    .createHash("sha1")
+    .update(body + timestamp + notifSecret)
+    .digest("hex");
+  return { timestamp, signature };
+}
+
 async function resolveOperatorAuth(createClient) {
   const token = process.env.CLD105_OPERATOR_TOKEN;
   if (token) {
@@ -203,7 +219,9 @@ async function main() {
     stages: [],
     notes: [
       "No per-upload notification_url (global triggers must fire).",
-      "No synthetic webhook POST — rows prove genuine Cloudinary delivery.",
+      "Upload + first delete rows prove genuine Cloudinary delivery.",
+      "delete-idempotent posts one signed duplicate delete after the genuine archive.",
+      "Cleanup refuses public_ids outside ipix/brands/<brand>/ipi636-test/.",
       "Secrets and full signatures are not logged.",
     ],
   };
@@ -212,16 +230,19 @@ async function main() {
   let assetId;
   let cloudinary;
   let admin;
+  let testFolder;
+  let apiSecret;
 
   try {
     const cloudName = required("CLOUDINARY_CLOUD_NAME", process.env.CLOUDINARY_CLOUD_NAME);
     const apiKey = required("CLOUDINARY_API_KEY", process.env.CLOUDINARY_API_KEY);
-    const apiSecret = required("CLOUDINARY_API_SECRET", process.env.CLOUDINARY_API_SECRET);
+    apiSecret = required("CLOUDINARY_API_SECRET", process.env.CLOUDINARY_API_SECRET);
     const supabaseUrl = required("NEXT_PUBLIC_SUPABASE_URL", process.env.NEXT_PUBLIC_SUPABASE_URL);
     const serviceRoleKey = required("SUPABASE_SERVICE_ROLE_KEY", process.env.SUPABASE_SERVICE_ROLE_KEY);
     const brandId = required("CLD105_BRAND_ID", process.env.CLD105_BRAND_ID);
     const appBaseUrl = (process.env.CLD105_APP_BASE_URL ?? "http://localhost:3002").replace(/\/$/, "");
-    const folder = `ipix/brands/${brandId}/ipi636-test`;
+    testFolder = `ipix/brands/${brandId}/ipi636-test`;
+    const folder = testFolder;
     const expectAppAuthReject = /\/api\/assets\/cloudinary\/webhook\/?$/.test(new URL(webhookUrl).pathname);
 
     const { v2: cloudinarySdk } = requireDep("cloudinary");
@@ -410,9 +431,34 @@ async function main() {
     report.delete = { public_id: publicId, status: deleteRow.status };
     report.stages.push(stage("genuine-delete-webhook", deleteRow.status === "archived", `status=${deleteRow.status}`));
 
-    await admin.from("cloudinary_assets").update({ status: "archived" }).eq("public_id", publicId);
-    const { data: still } = await admin.from("cloudinary_assets").select("status").eq("public_id", publicId).maybeSingle();
-    report.stages.push(stage("delete-idempotent", still?.status === "archived", `status=${still?.status}`));
+    // After a genuine delete archived the row, POST a second signed delete
+    // notification to prove the webhook handler is idempotent (duplicate notify).
+    const deleteBody = JSON.stringify({
+      notification_type: "delete",
+      resources: [{ public_id: publicId }],
+    });
+    const { timestamp: delTs, signature: delSig } = signNotificationBody(deleteBody, apiSecret);
+    const dupRes = await fetch(webhookUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-cld-timestamp": String(delTs),
+        "x-cld-signature": delSig,
+      },
+      body: deleteBody,
+    });
+    const { data: still } = await admin
+      .from("cloudinary_assets")
+      .select("status")
+      .eq("public_id", publicId)
+      .maybeSingle();
+    report.stages.push(
+      stage(
+        "delete-idempotent",
+        dupRes.ok && still?.status === "archived",
+        `webhook=${dupRes.status} status=${still?.status}`,
+      ),
+    );
   } catch (e) {
     report.error = e instanceof Error ? e.message : String(e);
     console.error("FATAL", report.error);
@@ -422,20 +468,28 @@ async function main() {
     // recreate rows after cleanup (same window as verify-cloudinary-pipeline).
     await new Promise((r) => setTimeout(r, 2000));
     // Best-effort cleanup whenever publicId is known (even if assetId never arrived).
+    // Refuse public_ids outside the ipi636-test folder (same safety as pipeline cleanup).
     if (publicId && cloudinary && admin) {
-      try {
-        await cloudinary.uploader.destroy(publicId, {
-          resource_type: "image",
-          type: "authenticated",
-          invalidate: true,
-        });
-      } catch {
-        /* already gone */
-      }
-      await admin.from("cloudinary_assets").delete().eq("public_id", publicId);
-      await admin.from("assets").delete().eq("cloudinary_public_id", publicId);
-      if (assetId) {
-        await admin.from("assets").delete().eq("id", assetId);
+      if (!isLiveTestPublicId(publicId, testFolder)) {
+        console.error(`REFUSED cleanup — public_id not under ${testFolder}: ${publicId}`);
+        report.stages.push(
+          stage("cleanup", false, `refused: public_id not under test folder`),
+        );
+      } else {
+        try {
+          await cloudinary.uploader.destroy(publicId, {
+            resource_type: "image",
+            type: "authenticated",
+            invalidate: true,
+          });
+        } catch {
+          /* already gone */
+        }
+        await admin.from("cloudinary_assets").delete().eq("public_id", publicId);
+        await admin.from("assets").delete().eq("cloudinary_public_id", publicId);
+        if (assetId) {
+          await admin.from("assets").delete().eq("id", assetId);
+        }
       }
     }
     writeReport(report);
