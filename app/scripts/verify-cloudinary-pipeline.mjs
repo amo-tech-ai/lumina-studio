@@ -15,6 +15,7 @@
  * trigger are otherwise fully verified against production paths.
  *
  * Run: npm run verify:cloudinary-pipeline
+ * Fixture (IPI-512): npm run verify:cloudinary-pipeline -- --mode=fixture --keep-fixture
  *
  * Architecture:
  *   - Exercises the REAL application paths (api/assets/upload-sign,
@@ -86,13 +87,16 @@ export const ASSET_MASONRY_TRANSFORM = "c_limit,w_600,f_auto,q_auto";
 // All HTTP requests (signing, upload, delivery) abort after this duration.
 const REQUEST_TIMEOUT_MS = 15_000;
 
-// Test assets are scoped under a brand-specific subfolder so the webhook's
-// resolveBrandId can extract the brand UUID from the folder path AND the
-// deletion guard can identify them with the cld105- prefix. Set at runtime
-// in main() with the actual brandId; defaults here for unit tests that import
-// these symbols without a real brand.
-export let TEST_FOLDER = "ipix/cld105-test";
-export let TEST_PUBLIC_ID_PREFIX = `${TEST_FOLDER}/cld105-`;
+// Default test scope for unit tests (no brand). Live fixtures use
+// testScopeForBrand(brandId) and pass the prefix into cleanup — never mutate these.
+export const TEST_FOLDER = "ipix/cld105-test";
+export const TEST_PUBLIC_ID_PREFIX = `${TEST_FOLDER}/cld105-`;
+
+/** Brand-scoped folder + public_id prefix for a disposable fixture run. */
+export function testScopeForBrand(brandId) {
+  const testFolder = `ipix/brands/${brandId}/cld105-test`;
+  return { testFolder, testPublicIdPrefix: `${testFolder}/cld105-` };
+}
 
 // --- Pure helpers (exported for unit testing) ----------------------------------
 
@@ -319,16 +323,87 @@ export function isTestPublicId(publicId, prefix = TEST_PUBLIC_ID_PREFIX) {
 }
 
 /**
- * Idempotent cleanup of a single test fixture: Cloudinary asset + Supabase rows.
- * Refuses to touch public_ids outside TEST_FOLDER (see isTestPublicId). Returns
- * a summary object; never throws (logs errors into the summary instead) so the
- * `finally` block in main() can't itself crash the report.
+ * Record a successful asset_id sweep without masking a prior primary-path status.
+ * - already "ok" → leave ("ok")
+ * - prior "error:…" → "ok-fallback (primary: …)" so the first failure stays visible
+ * - skipped / other → "ok-fallback"
  */
-export async function cleanup({ cloudinary, supabase, publicId, assetId, resourceType = "image" }) {
+function markAssetIdFallbackOk(summary, key) {
+  const prev = summary[key];
+  if (prev === "ok") return;
+  if (String(prev).startsWith("error")) {
+    summary[key] = `ok-fallback (primary: ${prev})`;
+    return;
+  }
+  summary[key] = "ok-fallback";
+}
+
+function alreadyDeletedOk(status) {
+  return status === "ok" || String(status).startsWith("ok-fallback");
+}
+
+/**
+ * Idempotent sweep by assets.id / cloudinary_assets.asset_id.
+ * Always runs when assetId is present (caller already passed the refuse guard).
+ * Does not overwrite a prior successful public_id delete with a redundant sweep error.
+ */
+async function deleteRowsByAssetId(supabase, assetId, summary) {
+  try {
+    const { error } = await supabase.from("cloudinary_assets").delete().eq("asset_id", assetId);
+    if (error) {
+      if (!alreadyDeletedOk(summary.cloudinaryAssets)) {
+        summary.cloudinaryAssets = `error: ${error.message}`;
+      }
+    } else {
+      markAssetIdFallbackOk(summary, "cloudinaryAssets");
+    }
+  } catch (e) {
+    if (!alreadyDeletedOk(summary.cloudinaryAssets)) {
+      summary.cloudinaryAssets = `error: ${sanitizeError(e)}`;
+    }
+  }
+  try {
+    const { error } = await supabase.from("assets").delete().eq("id", assetId);
+    if (error) {
+      if (!alreadyDeletedOk(summary.assets)) {
+        summary.assets = `error: ${error.message}`;
+      }
+    } else {
+      markAssetIdFallbackOk(summary, "assets");
+    }
+  } catch (e) {
+    if (!alreadyDeletedOk(summary.assets)) {
+      summary.assets = `error: ${sanitizeError(e)}`;
+    }
+  }
+}
+
+/**
+ * Idempotent cleanup of a single test fixture: Cloudinary asset + Supabase rows.
+ * Refuses to touch public_ids outside the given testPublicIdPrefix (see isTestPublicId).
+ * Returns a summary object; never throws (logs errors into the summary instead) so the
+ * `finally` block in main() can't itself crash the report.
+ *
+ * When assetId is known, always deletes by id after the public_id path (idempotent)
+ * so a misleading "ok" summary cannot leave orphaned rows.
+ * Pass testPublicIdPrefix from the fixture that created the asset — do not rely on
+ * module-level mutation.
+ */
+export async function cleanup({
+  cloudinary,
+  supabase,
+  publicId,
+  assetId,
+  resourceType = "image",
+  testPublicIdPrefix = TEST_PUBLIC_ID_PREFIX,
+}) {
   const summary = { cloudinary: "skipped", assets: "skipped", cloudinaryAssets: "skipped" };
-  const isTest = publicId && isTestPublicId(publicId);
+  const isTest = Boolean(publicId && isTestPublicId(publicId, testPublicIdPrefix));
   if (publicId && !isTest) {
-    summary.cloudinary = "refused: public_id not under test folder";
+    const refused = "refused: public_id not under test folder";
+    summary.cloudinary = refused;
+    summary.assets = refused;
+    summary.cloudinaryAssets = refused;
     return summary;
   }
   if (isTest) {
@@ -355,18 +430,7 @@ export async function cleanup({ cloudinary, supabase, publicId, assetId, resourc
       summary.assets = `error: ${sanitizeError(e)}`;
     }
   }
-  // Belt-and-suspenders: if we have an asset_id but the public_id delete above
-  // didn't land (e.g. webhook hadn't linked them yet, or publicId was absent but
-  // assetId was captured mid-run), sweep by asset_id. Never duplicates the work
-  // above — only runs when the public_id path was skipped or errored.
-  if (assetId && summary.cloudinaryAssets !== "ok") {
-    try {
-      const { error } = await supabase.from("cloudinary_assets").delete().eq("asset_id", assetId);
-      summary.cloudinaryAssets = error ? `error: ${error.message}` : "ok-fallback";
-    } catch (e) {
-      summary.cloudinaryAssets = `error: ${sanitizeError(e)}`;
-    }
-  }
+  if (assetId) await deleteRowsByAssetId(supabase, assetId, summary);
   return summary;
 }
 
@@ -392,25 +456,69 @@ export function sanitizeError(e) {
 
 // --- Runner --------------------------------------------------------------------
 
+/** QA brand owned by qa@ipix.test (org member) — used when CLD105_BRAND_ID unset. */
+export const DEFAULT_QA_BRAND_ID = "db1f728d-bee1-430e-a3e7-0c601da74ce7";
+
 function required(name, value) {
   if (!value) {
-    console.error(`Missing required env var: ${name}`);
-    process.exit(2);
+    const msg = `Missing required env var: ${name}`;
+    console.error(msg);
+    throw new Error(msg);
   }
   return value;
 }
 
-function stage(name, ok, detail) {
+/** Only attach notificationUrl when the base is https (upload-sign requirement). */
+function resolveNotificationUrl(appBaseUrl) {
+  const notificationBaseUrl = (process.env.CLD105_NOTIFICATION_BASE_URL ?? "").replace(/\/$/, "");
+  if (notificationBaseUrl.startsWith("https:")) {
+    return `${notificationBaseUrl}/api/assets/cloudinary/webhook`;
+  }
+  if (appBaseUrl.startsWith("https:")) {
+    return `${appBaseUrl}/api/assets/cloudinary/webhook`;
+  }
+  return undefined;
+}
+
+/** Post a synthetically signed upload notification to the local webhook route. */
+async function postSyntheticUploadWebhook({ appBaseUrl, upJson, testFolder }) {
+  const notifBody = JSON.stringify({
+    notification_type: "upload",
+    public_id: upJson.public_id,
+    secure_url: upJson.secure_url,
+    resource_type: upJson.resource_type,
+    format: upJson.format,
+    bytes: upJson.bytes,
+    width: upJson.width,
+    height: upJson.height,
+    version: upJson.version,
+    folder: testFolder,
+    asset_folder: testFolder,
+  });
+  const notifTimestamp = Math.floor(Date.now() / 1000);
+  const notifSecret =
+    process.env.CLOUDINARY_NOTIFICATION_API_SECRET?.trim() || CLOUDINARY_API_SECRET;
+  const sigPayload = notifBody + notifTimestamp + notifSecret;
+  const notifSignature = requireDep("crypto").createHash("sha1").update(sigPayload).digest("hex");
+  return timedFetch(`${appBaseUrl}/api/assets/cloudinary/webhook`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "x-cld-timestamp": String(notifTimestamp),
+      "x-cld-signature": notifSignature,
+    },
+    body: notifBody,
+  });
+}
+
+function stage(name, ok, detail, { setExitCode = true } = {}) {
   const line = `${ok ? "PASS" : "FAIL"} ${name}${detail ? ` — ${detail}` : ""}`;
   console.log(line);
-  if (!ok) process.exitCode = 1;
+  if (!ok && setExitCode) process.exitCode = 1;
   return { name, ok, detail };
 }
 
 function requireDep(name) {
-  // Resolve from this app's node_modules first (the common case), then fall
-  // back to the main checkout's node_modules so the script works in a fresh
-  // worktree without a prerequisite `npm install`.
   const candidates = [
     resolve(appRoot, "node_modules", name),
     resolve(repoRoot, "node_modules", name),
@@ -422,6 +530,24 @@ function requireDep(name) {
     }
   }
   return createRequire(resolve(appRoot, "package.json"))(name);
+}
+
+function parseCliArgs(argv = process.argv.slice(2)) {
+  const out = {
+    mode: "smoke",
+    keepFixture: false,
+    reportFile: null,
+  };
+  for (const arg of argv) {
+    if (arg.startsWith("--mode=")) out.mode = arg.slice("--mode=".length);
+    else if (arg === "--keep-fixture") out.keepFixture = true;
+    else if (arg.startsWith("--report-file=")) out.reportFile = arg.slice("--report-file=".length);
+  }
+  if (out.mode !== "smoke" && out.mode !== "fixture") {
+    throw new Error(`Unsupported --mode=${out.mode} (expected smoke|fixture)`);
+  }
+  if (out.mode === "fixture") out.keepFixture = true;
+  return out;
 }
 
 async function resolveOperatorAuth(supabaseFactory) {
@@ -446,17 +572,164 @@ async function resolveOperatorAuth(supabaseFactory) {
   );
   const { data, error } = await auth.auth.signInWithPassword({ email, password });
   if (error || !data.session) {
-    stage("operator-auth", false, `sign-in failed: ${sanitizeError(error ?? new Error("no session"))}`);
-    throw new Error("operator sign-in failed");
+    throw new Error(`operator sign-in failed: ${sanitizeError(error ?? new Error("no session"))}`);
   }
   console.log(`PASS operator-auth — signed in as ${email}`);
   return `Bearer ${data.session.access_token}`;
 }
 
-async function main() {
-  const startedAt = Date.now();
-  const RUN_ID = `cld105-${Date.now()}-${randomUUID().slice(0, 8)}`;
-  const report = { runId: RUN_ID, startedAt: new Date(startedAt).toISOString(), stages: [] };
+/**
+ * Keep fixture when --keep-fixture / mode=fixture, independent of exitCode.
+ * Any publicId or assetId means there is something worth preserving for debug.
+ */
+export function shouldKeepFixture({ keepFixture, publicId, assetId }) {
+  return Boolean(keepFixture && (publicId || assetId));
+}
+
+function envPositiveMs(name, fallback) {
+  const n = Number(process.env[name] ?? fallback);
+  return Number.isFinite(n) && n > 0 ? n : fallback;
+}
+
+function ensureWsPolyfill() {
+  if (typeof globalThis.WebSocket !== "undefined") return;
+  try {
+    const { WebSocket: WS } = requireDep("ws");
+    globalThis.WebSocket = WS;
+  } catch {
+    /* REST-only */
+  }
+}
+
+async function signAndUploadTestPng({
+  appBaseUrl,
+  authHeader,
+  brandId,
+  testFolder,
+  testPublicIdPrefix,
+  runId,
+  imageBytes,
+  notificationUrl,
+  push,
+}) {
+  const signBody = {
+    brandId,
+    resourceType: "image",
+    filename: `${runId}.png`,
+    folder: testFolder,
+    ...(notificationUrl ? { notificationUrl } : {}),
+  };
+  const signRes = await timedFetch(`${appBaseUrl}/api/assets/upload-sign`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...(authHeader ? { Authorization: authHeader } : {}),
+    },
+    body: JSON.stringify(signBody),
+  });
+  if (!signRes.ok) {
+    const t = await signRes.text().catch(() => "");
+    push("upload-signature", false, `HTTP ${signRes.status} ${t.slice(0, 200)}`);
+    throw new Error("upload-signature failed");
+  }
+  const signed = await signRes.json();
+  push("upload-signature", true, `folder=${signed.assetFolder}`);
+
+  const form = new FormData();
+  form.append("file", new Blob([imageBytes], { type: "image/png" }), `${runId}.png`);
+  form.append("api_key", signed.apiKey);
+  form.append("timestamp", String(signed.timestamp));
+  form.append("signature", signed.signature);
+  if (signed.filename) form.append("filename", signed.filename);
+  for (const [k, v] of Object.entries(signed.params)) form.append(k, String(v));
+  const upRes = await timedFetch(signed.uploadUrl, { method: "POST", body: form, timeout: 30_000 });
+  const upText = await upRes.text();
+  let upJson;
+  try {
+    upJson = JSON.parse(upText);
+  } catch {
+    upJson = null;
+  }
+  const validated = validateUploadResponse(upJson);
+  if (!validated.ok || !upRes.ok) {
+    push("cloudinary-upload", false, `HTTP ${upRes.status} ${validated.error ?? upText.slice(0, 400)}`);
+    throw new Error("cloudinary-upload failed");
+  }
+  if (!isTestPublicId(validated.publicId, testPublicIdPrefix)) {
+    push(
+      "cloudinary-upload",
+      false,
+      `public_id=${validated.publicId} is not under ${testPublicIdPrefix}`,
+    );
+    throw new Error("cloudinary-upload public_id outside test folder");
+  }
+  push("cloudinary-upload", true, `public_id=${validated.publicId} bytes=${validated.bytes}`);
+  return { publicId: validated.publicId, upJson };
+}
+
+async function ingestViaSyntheticWebhook({ appBaseUrl, admin, upJson, testFolder, publicId, brandId, push }) {
+  const notifRes = await postSyntheticUploadWebhook({ appBaseUrl, upJson, testFolder });
+  if (!notifRes.ok) {
+    const t = await notifRes.text().catch(() => "");
+    push("synthetic-webhook-processed", false, `HTTP ${notifRes.status} ${t.slice(0, 200)}`);
+    throw new Error("webhook endpoint rejected notification");
+  }
+
+  let rows;
+  try {
+    rows = await pollForWebhookRow({
+      supabase: admin,
+      publicId,
+      intervalMs: envPositiveMs("CLD105_POLL_INTERVAL_MS", 1000),
+      timeoutMs: envPositiveMs("CLD105_POLL_TIMEOUT_MS", 30_000),
+    });
+  } catch (e) {
+    push("synthetic-webhook-processed", false, sanitizeError(e));
+    throw e;
+  }
+  if (!rows?.asset?.id) {
+    push("synthetic-webhook-processed", false, "timed out waiting for assets row after notification");
+    push("supabase-row", false, "no row written by webhook");
+    throw new Error("webhook did not write rows");
+  }
+  if (rows.asset.brand_id !== brandId) {
+    push("supabase-row", false, `assets.brand_id=${rows.asset.brand_id} does not match test brand ${brandId}`);
+    throw new Error("brand_id mismatch on assets row");
+  }
+  if (rows.cloudinaryAsset.brand_id !== brandId) {
+    push(
+      "supabase-row",
+      false,
+      `cloudinary_assets.brand_id=${rows.cloudinaryAsset.brand_id} does not match test brand ${brandId}`,
+    );
+    throw new Error("brand_id mismatch on cloudinary_assets row");
+  }
+  push("synthetic-webhook-processed", true, `assets.id=${rows.asset.id}`);
+  push(
+    "supabase-row",
+    true,
+    `cloudinary_assets.status=${rows.cloudinaryAsset.status}, brand_id=${rows.asset.brand_id}`,
+  );
+  return rows;
+}
+
+/**
+ * Create one disposable Cloudinary + Supabase fixture via the real upload-sign
+ * route and a synthetic signed webhook (deterministic CI path).
+ *
+ * Shared by CLD-105 smoke and IPI-512 fixture mode / Playwright.
+ *
+ * Optional `progress` object is mutated as soon as Cloudinary/Supabase clients
+ * (and later publicId/assetId) exist, so callers can cleanup() even when this
+ * function throws mid-pipeline.
+ */
+export async function createDisposableFixture({ skipDna = false, log = true, progress } = {}) {
+  const stages = [];
+  const push = (name, ok, detail) => {
+    const s = stage(name, ok, detail, { setExitCode: false });
+    stages.push(s);
+    return s;
+  };
 
   const cloudName = required("CLOUDINARY_CLOUD_NAME", CLOUDINARY_CLOUD_NAME);
   required("CLOUDINARY_API_KEY", CLOUDINARY_API_KEY);
@@ -465,11 +738,11 @@ async function main() {
     process.env.NEXT_PUBLIC_SUPABASE_URL ?? process.env.NEXT_SUPABASE_URL;
   required("NEXT_PUBLIC_SUPABASE_URL", supabaseUrl);
   const serviceRoleKey = required("SUPABASE_SERVICE_ROLE_KEY", process.env.SUPABASE_SERVICE_ROLE_KEY);
-  const brandId = required("CLD105_BRAND_ID", process.env.CLD105_BRAND_ID);
-
-  // Compute brand-aware test folder so the webhook can resolve brand_id.
-  TEST_FOLDER = `ipix/brands/${brandId}/cld105-test`;
-  TEST_PUBLIC_ID_PREFIX = `${TEST_FOLDER}/cld105-`;
+  const brandId = required(
+    "CLD105_BRAND_ID",
+    process.env.CLD105_BRAND_ID || DEFAULT_QA_BRAND_ID,
+  );
+  const { testFolder, testPublicIdPrefix } = testScopeForBrand(brandId);
 
   const { v2: cloudinary } = requireDep("cloudinary");
   cloudinary.config({
@@ -478,210 +751,202 @@ async function main() {
     api_secret: CLOUDINARY_API_SECRET,
     secure: true,
   });
-
-  // Node 20 has no native WebSocket; supabase-js Realtime needs one.
-  if (typeof globalThis.WebSocket === "undefined") {
-    try {
-      const { WebSocket: WS } = requireDep("ws");
-      globalThis.WebSocket = WS;
-    } catch {
-      /* ws not installed — Realtime will throw on use, but we only use REST */
-    }
-  }
+  ensureWsPolyfill();
   const { createClient } = requireDep("@supabase/supabase-js");
-  const supabaseFactory = (url, key, opts) => createClient(url, key, { auth: { persistSession: false }, ...opts });
+  const supabaseFactory = (url, key, opts) =>
+    createClient(url, key, { auth: { persistSession: false }, ...opts });
   const admin = supabaseFactory(supabaseUrl, serviceRoleKey, {});
-
-  const appBaseUrl = (process.env.CLD105_APP_BASE_URL ?? "http://localhost:3002").replace(/\/$/, "");
-  // upload-sign requires https for notificationUrl. This smoke test posts a
-  // synthetic signed webhook itself (Cloudinary async delivery is not proven),
-  // so only attach notificationUrl when an explicit https base is provided.
-  const notificationBaseUrl = (process.env.CLD105_NOTIFICATION_BASE_URL ?? "").replace(/\/$/, "");
-  const notificationUrl =
-    notificationBaseUrl.startsWith("https:")
-      ? `${notificationBaseUrl}/api/assets/cloudinary/webhook`
-      : appBaseUrl.startsWith("https:")
-        ? `${appBaseUrl}/api/assets/cloudinary/webhook`
-        : undefined;
-
-  console.log(`\nCLD-105 smoke test — run ${RUN_ID}`);
-  console.log(`  app:        ${appBaseUrl}`);
-  console.log(`  supabase:   ${supabaseUrl}`);
-  console.log(`  cloud:      ${cloudName}`);
-  console.log(`  brand:      ${brandId}`);
-  console.log(`  notifyUrl:  ${notificationUrl ?? "(omitted — synthetic webhook path)"}\n`);
 
   let publicId;
   let assetId;
-  let stages = [];
-  try {
-    // 1. image-created
-    const imageBytes = generateTestImage(RUN_ID);
-    stages.push(stage("image-created", true, `${imageBytes.length} bytes`));
-
-    // 2. upload-signature (via real app route)
-    const authHeader = await resolveOperatorAuth(supabaseFactory);
-    const signBody = {
+  const syncProgress = () => {
+    if (!progress) return;
+    Object.assign(progress, {
       brandId,
-      resourceType: "image",
-      filename: `${RUN_ID}.png`,
-      folder: TEST_FOLDER,
-      ...(notificationUrl ? { notificationUrl } : {}),
-    };
-    const signRes = await timedFetch(`${appBaseUrl}/api/assets/upload-sign`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", ...(authHeader ? { Authorization: authHeader } : {}) },
-      body: JSON.stringify(signBody),
+      testFolder,
+      testPublicIdPrefix,
+      cloudinary,
+      supabase: admin,
+      publicId,
+      assetId,
+      stages,
+      cleanup: () =>
+        cleanup({ cloudinary, supabase: admin, publicId, assetId, testPublicIdPrefix }),
     });
-    if (!signRes.ok) {
-      const t = await signRes.text().catch(() => "");
-      stages.push(stage("upload-signature", false, `HTTP ${signRes.status} ${t.slice(0, 200)}`));
-      throw new Error("upload-signature failed");
-    }
-    const signed = await signRes.json();
-    stages.push(stage("upload-signature", true, `folder=${signed.assetFolder}`));
+  };
+  syncProgress();
 
-    // 3. cloudinary-upload (multipart signed POST)
-    const form = new FormData();
-    form.append("file", new Blob([imageBytes], { type: "image/png" }), `${RUN_ID}.png`);
-    form.append("api_key", signed.apiKey);
-    form.append("timestamp", String(signed.timestamp));
-    form.append("signature", signed.signature);
-    if (signed.filename) form.append("filename", signed.filename);
-    for (const [k, v] of Object.entries(signed.params)) form.append(k, String(v));
-    const upRes = await timedFetch(signed.uploadUrl, { method: "POST", body: form, timeout: 30_000 });
-    const upText = await upRes.text();
-    let upJson;
-    try {
-      upJson = JSON.parse(upText);
-    } catch {
-      upJson = null;
-    }
-    const validated = validateUploadResponse(upJson);
-    if (!validated.ok || !upRes.ok) {
-      stages.push(stage("cloudinary-upload", false, `HTTP ${upRes.status} ${validated.error ?? upText.slice(0, 400)}`));
-      throw new Error("cloudinary-upload failed");
-    }
-    publicId = validated.publicId;
-    if (!isTestPublicId(publicId)) {
-      stages.push(stage("cloudinary-upload", false, `public_id=${publicId} is not under ${TEST_PUBLIC_ID_PREFIX}`));
-      throw new Error("cloudinary-upload public_id outside test folder");
-    }
-    stages.push(stage("cloudinary-upload", true, `public_id=${publicId} bytes=${validated.bytes}`));
+  const appBaseUrl = (process.env.CLD105_APP_BASE_URL ?? "http://localhost:3002").replace(/\/$/, "");
+  // upload-sign requires https for notificationUrl. This fixture posts a
+  // synthetic signed webhook itself (Cloudinary async delivery is not proven),
+  // so only attach notificationUrl when an explicit https base is provided.
+  const notificationUrl = resolveNotificationUrl(appBaseUrl);
+  const RUN_ID = `cld105-${Date.now()}-${randomUUID().slice(0, 8)}`;
+  if (progress) progress.runId = RUN_ID;
+  if (log) {
+    console.log(`\nCloudinary disposable fixture — run ${RUN_ID}`);
+    console.log(`  app:        ${appBaseUrl}`);
+    console.log(`  brand:      ${brandId}`);
+    console.log(`  notifyUrl:  ${notificationUrl ?? "(omitted — synthetic webhook path)"}\n`);
+  }
 
-    // 4 + 5. synthetic-webhook-processed + supabase-row
-    // The ephemeral tunnel URL is not reliable enough for deterministic
-    // Cloudinary callback delivery. Instead of waiting for Cloudinary's async
-    // push, we construct and POST a signed notification to our webhook endpoint
-    // using the upload response data — this verifies the webhook route's
-    // signature verification, row creation, and DNA trigger are all functional.
-    const notifBody = JSON.stringify({
-      notification_type: "upload",
-      public_id: upJson.public_id,
-      secure_url: upJson.secure_url,
-      resource_type: upJson.resource_type,
-      format: upJson.format,
-      bytes: upJson.bytes,
-      width: upJson.width,
-      height: upJson.height,
-      version: upJson.version,
-      folder: TEST_FOLDER,
-      asset_folder: TEST_FOLDER,
-    });
-    const notifTimestamp = Math.floor(Date.now() / 1000);
-    // Match webhook route: CLOUDINARY_NOTIFICATION_API_SECRET (if set) else API secret.
-    const notifSecret =
-      process.env.CLOUDINARY_NOTIFICATION_API_SECRET?.trim() || CLOUDINARY_API_SECRET;
-    const sigPayload = notifBody + notifTimestamp + notifSecret;
-    const notifSignature = requireDep("crypto").createHash("sha1").update(sigPayload).digest("hex");
-    const notifRes = await timedFetch(`${appBaseUrl}/api/assets/cloudinary/webhook`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-cld-timestamp": String(notifTimestamp),
-        "x-cld-signature": notifSignature,
-      },
-      body: notifBody,
-    });
-    let rows = null;
-    let pollInterval = Number(process.env.CLD105_POLL_INTERVAL_MS ?? 1000);
-    let pollTimeout = Number(process.env.CLD105_POLL_TIMEOUT_MS ?? 30_000);
-    if (!Number.isFinite(pollInterval) || pollInterval <= 0) pollInterval = 1000;
-    if (!Number.isFinite(pollTimeout) || pollTimeout <= 0) pollTimeout = 30_000;
-    if (!notifRes.ok) {
-      const t = await notifRes.text().catch(() => "");
-      stages.push(stage("synthetic-webhook-processed", false, `HTTP ${notifRes.status} ${t.slice(0, 200)}`));
-      throw new Error("webhook endpoint rejected notification");
-    }
-    try {
-      rows = await pollForWebhookRow({
-        supabase: admin,
-        publicId,
-        intervalMs: pollInterval,
-        timeoutMs: pollTimeout,
-      });
-    } catch (e) {
-      stages.push(stage("synthetic-webhook-processed", false, sanitizeError(e)));
-      throw e;
-    }
-    if (!rows?.asset?.id) {
-      stages.push(stage("synthetic-webhook-processed", false, "timed out waiting for assets row after notification"));
-      stages.push(stage("supabase-row", false, "no row written by webhook"));
-      throw new Error("webhook did not write rows");
-    }
-    assetId = rows.asset.id;
+  const imageBytes = generateTestImage(RUN_ID);
+  push("image-created", true, `${imageBytes.length} bytes`);
+  const authHeader = await resolveOperatorAuth(supabaseFactory);
+  const uploaded = await signAndUploadTestPng({
+    appBaseUrl,
+    authHeader,
+    brandId,
+    testFolder,
+    testPublicIdPrefix,
+    runId: RUN_ID,
+    imageBytes,
+    notificationUrl,
+    push,
+  });
+  publicId = uploaded.publicId;
+  syncProgress();
 
-    // Validate brand_id on both rows
-    if (rows.asset.brand_id !== brandId) {
-      stages.push(stage("supabase-row", false, `assets.brand_id=${rows.asset.brand_id} does not match test brand ${brandId}`));
-      throw new Error("brand_id mismatch on assets row");
-    }
-    if (rows.cloudinaryAsset.brand_id !== brandId) {
-      stages.push(stage("supabase-row", false, `cloudinary_assets.brand_id=${rows.cloudinaryAsset.brand_id} does not match test brand ${brandId}`));
-      throw new Error("brand_id mismatch on cloudinary_assets row");
-    }
+  const rows = await ingestViaSyntheticWebhook({
+    appBaseUrl,
+    admin,
+    upJson: uploaded.upJson,
+    testFolder,
+    publicId,
+    brandId,
+    push,
+  });
+  assetId = rows.asset.id;
+  syncProgress();
 
-    stages.push(stage("synthetic-webhook-processed", true, `assets.id=${assetId}`));
-    stages.push(stage("supabase-row", true, `cloudinary_assets.status=${rows.cloudinaryAsset.status}, brand_id=${rows.asset.brand_id}`));
-
-    // 6. dna-status (separate poll — async DNA can take ~30s+)
-    let dnaTimeoutMs = Number(process.env.CLD105_DNA_TIMEOUT_MS ?? 90_000);
-    if (!Number.isFinite(dnaTimeoutMs) || dnaTimeoutMs <= 0) dnaTimeoutMs = 90_000;
+  if (!skipDna) {
     const dna = await pollForDnaState({
       supabase: admin,
       assetId,
       intervalMs: 2000,
-      timeoutMs: dnaTimeoutMs,
+      timeoutMs: envPositiveMs("CLD105_DNA_TIMEOUT_MS", 90_000),
     });
-    stages.push(stage("dna-status", dna.status !== "absent", `${dna.status} (${dna.detail})`));
+    push("dna-status", dna.status !== "absent", `${dna.status} (${dna.detail})`);
     if (dna.status === "absent") throw new Error("dna-status not populated after poll");
+  }
 
-    // 7. signed-delivery
-    const deliveryUrl = buildSignedDeliveryUrl(cloudinary, publicId);
-    stages.push(stage("signed-delivery", true, "URL generated"));
+  return {
+    runId: RUN_ID,
+    brandId,
+    publicId,
+    assetId,
+    testFolder,
+    testPublicIdPrefix,
+    asset: rows.asset,
+    cloudinaryAsset: rows.cloudinaryAsset,
+    cloudinary,
+    supabase: admin,
+    stages,
+    cleanup: () =>
+      cleanup({ cloudinary, supabase: admin, publicId, assetId, testPublicIdPrefix }),
+  };
+}
 
-    // 8. delivery-http-200
-    const dRes = await timedFetch(deliveryUrl);
-    const ct = dRes.headers.get("content-type") ?? "";
-    stages.push(stage("delivery-http-200", dRes.ok && ct.startsWith("image/"), `HTTP ${dRes.status} ${ct}`));
-    if (!dRes.ok || !ct.startsWith("image/")) throw new Error("delivery-http-200 failed");
+async function main() {
+  const cli = parseCliArgs();
+  const startedAt = Date.now();
+  const report = {
+    mode: cli.mode,
+    startedAt: new Date(startedAt).toISOString(),
+    stages: [],
+  };
+
+  let fixture;
+  /** Partial handle updated during create — used for cleanup if create throws. */
+  const progress = {};
+  let stages = [];
+  try {
+    fixture = await createDisposableFixture({
+      skipDna: cli.mode === "fixture",
+      log: true,
+      progress,
+    });
+    stages = [...fixture.stages];
+    report.runId = fixture.runId;
+    report.assetId = fixture.assetId;
+    report.publicId = fixture.publicId;
+    report.brandId = fixture.brandId;
+
+    if (cli.mode === "smoke") {
+      const deliveryUrl = buildSignedDeliveryUrl(fixture.cloudinary, fixture.publicId);
+      stages.push(stage("signed-delivery", true, "URL generated"));
+      const dRes = await timedFetch(deliveryUrl);
+      const ct = dRes.headers.get("content-type") ?? "";
+      stages.push(
+        stage("delivery-http-200", dRes.ok && ct.startsWith("image/"), `HTTP ${dRes.status} ${ct}`),
+      );
+      if (!dRes.ok || !ct.startsWith("image/")) throw new Error("delivery-http-200 failed");
+    } else {
+      stages.push(
+        stage(
+          "fixture-kept",
+          true,
+          `assetId=${fixture.assetId} publicId=${fixture.publicId}`,
+        ),
+      );
+      const reportPath = resolve(
+        __dirname,
+        cli.reportFile ?? ".ipi512-fixture.json",
+      );
+      writeFileSync(
+        reportPath,
+        JSON.stringify(
+          {
+            runId: fixture.runId,
+            assetId: fixture.assetId,
+            publicId: fixture.publicId,
+            brandId: fixture.brandId,
+            kept: true,
+            createdAt: report.startedAt,
+          },
+          null,
+          2,
+        ),
+      );
+      console.log(`Fixture manifest: ${reportPath}`);
+    }
   } catch (e) {
-    if (stages.length > 0 && stages[stages.length - 1].name !== "pipeline-error") {
+    if (progress.stages?.length && stages.length === 0) stages = [...progress.stages];
+    report.runId ??= progress.runId;
+    report.assetId ??= progress.assetId;
+    report.publicId ??= progress.publicId;
+    report.brandId ??= progress.brandId;
+    if (stages.length === 0 || stages[stages.length - 1].name !== "pipeline-error") {
       stages.push(stage("pipeline-error", false, sanitizeError(e)));
     }
   } finally {
-    // 9. cleanup (always runs — small delay first to let any late real callback
-    // settle so we don't race against it recreating rows)
-    await new Promise((r) => setTimeout(r, 2000));
-    const cleanupSummary = await cleanup({ cloudinary, supabase: admin, publicId, assetId });
-    const cleanupOk = Object.values(cleanupSummary).every((v) => v === "ok" || v === "skipped" || v === "not found" || !String(v).startsWith("error") && !String(v).startsWith("refused"));
-    stages.push(
-      stage(
-        "cleanup",
-        cleanupOk,
-        `cld=${cleanupSummary.cloudinary} assets=${cleanupSummary.assets} cloudinary_assets=${cleanupSummary.cloudinaryAssets}`,
-      ),
-    );
+    const publicId = fixture?.publicId ?? progress.publicId;
+    const assetId = fixture?.assetId ?? progress.assetId;
+    if (shouldKeepFixture({ keepFixture: cli.keepFixture, publicId, assetId })) {
+      stages.push(stage("cleanup", true, "skipped (--keep-fixture / mode=fixture)"));
+    } else {
+      await new Promise((r) => setTimeout(r, 2000));
+      const runCleanup = fixture?.cleanup ?? progress.cleanup;
+      const cleanupSummary = runCleanup
+        ? await runCleanup()
+        : { cloudinary: "skipped", assets: "skipped", cloudinaryAssets: "skipped" };
+      const cleanupOk = Object.values(cleanupSummary).every(
+        (v) =>
+          v === "ok" ||
+          v === "ok-fallback" ||
+          String(v).startsWith("ok-fallback") ||
+          v === "skipped" ||
+          v === "not found" ||
+          (!String(v).startsWith("error") && !String(v).startsWith("refused")),
+      );
+      stages.push(
+        stage(
+          "cleanup",
+          cleanupOk,
+          `cld=${cleanupSummary.cloudinary} assets=${cleanupSummary.assets} cloudinary_assets=${cleanupSummary.cloudinaryAssets}`,
+        ),
+      );
+    }
   }
 
   const durationMs = Date.now() - startedAt;
@@ -692,13 +957,17 @@ async function main() {
 
   writeFileSync(resolve(__dirname, ".cld105-report.json"), JSON.stringify(report, null, 2));
 
-  console.log(`\nCloudinary pipeline: ${report.pipeline}`);
+  console.log(`\nCloudinary pipeline (${cli.mode}): ${report.pipeline}`);
   console.log(`Duration: ${(durationMs / 1000).toFixed(1)}s\n`);
   process.exit(pipelinePass ? 0 : 1);
 }
 
-// Run main only when executed directly, not when imported by the test suite.
-const isMain = import.meta.url === `file://${process.argv[1]}` || process.argv[1]?.endsWith("verify-cloudinary-pipeline.mjs");
+const isMain =
+  import.meta.url === `file://${process.argv[1]}` ||
+  process.argv[1]?.endsWith("verify-cloudinary-pipeline.mjs");
 if (isMain) {
-  main();
+  main().catch((e) => {
+    console.error(sanitizeError(e));
+    process.exit(2);
+  });
 }

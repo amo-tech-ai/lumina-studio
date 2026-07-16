@@ -10,6 +10,8 @@ import {
   cleanup,
   sanitizeError,
   TEST_PUBLIC_ID_PREFIX,
+  testScopeForBrand,
+  shouldKeepFixture,
   ASSET_MASONRY_TRANSFORM,
 } from "./verify-cloudinary-pipeline.mjs";
 
@@ -41,7 +43,9 @@ function fakeSupabase({ asset = null, cloudinaryAsset = null, deletes = {} } = {
           calls.deletes.push({ table: delTable });
           return {
             eq: () => {
-              const delErr = deletes[delTable] ?? null;
+              let delErr = deletes[delTable] ?? null;
+              // Allow sequential outcomes: first public_id delete fails, asset_id sweep ok.
+              if (Array.isArray(delErr)) delErr = delErr.shift() ?? null;
               return Promise.resolve({ error: delErr });
             },
           };
@@ -335,6 +339,32 @@ describe("isTestPublicId — test-prefix deletion guard", () => {
   });
 });
 
+describe("testScopeForBrand — isolated per brand", () => {
+  it("returns a brand-scoped folder and prefix without mutating defaults", () => {
+    const a = testScopeForBrand("brand-a");
+    const b = testScopeForBrand("brand-b");
+    expect(a.testFolder).toBe("ipix/brands/brand-a/cld105-test");
+    expect(a.testPublicIdPrefix).toBe("ipix/brands/brand-a/cld105-test/cld105-");
+    expect(b.testPublicIdPrefix).toContain("brand-b");
+    expect(TEST_PUBLIC_ID_PREFIX).toBe("ipix/cld105-test/cld105-");
+  });
+});
+
+describe("shouldKeepFixture", () => {
+  it("keeps when keepFixture and publicId/assetId present regardless of exitCode", () => {
+    expect(shouldKeepFixture({ keepFixture: true, publicId: "p", assetId: "a" })).toBe(true);
+    expect(shouldKeepFixture({ keepFixture: true, publicId: "p", assetId: undefined })).toBe(true);
+    expect(shouldKeepFixture({ keepFixture: true, publicId: undefined, assetId: "a" })).toBe(true);
+  });
+
+  it("does not keep in smoke mode or when nothing was created", () => {
+    expect(shouldKeepFixture({ keepFixture: false, publicId: "p", assetId: "a" })).toBe(false);
+    expect(shouldKeepFixture({ keepFixture: true, publicId: undefined, assetId: undefined })).toBe(
+      false,
+    );
+  });
+});
+
 describe("cleanup — deletion guard", () => {
   it("refuses to delete a production public_id", async () => {
     const cld = fakeCloudinary();
@@ -346,7 +376,10 @@ describe("cleanup — deletion guard", () => {
       assetId: "a1",
     });
     expect(summary.cloudinary).toMatch(/refused/);
+    expect(summary.assets).toMatch(/refused/);
+    expect(summary.cloudinaryAssets).toMatch(/refused/);
     expect(cld.calls.destroys).toHaveLength(0);
+    expect(supabase._calls.deletes).toHaveLength(0);
   });
 
   it("destroys the Cloudinary asset + deletes both DB rows for a test public_id", async () => {
@@ -392,7 +425,9 @@ describe("cleanup — deletion guard", () => {
 describe("cleanup — fallback by asset_id", () => {
   it("retries cloudinary_assets delete by asset_id when public_id path errored", async () => {
     const cld = fakeCloudinary();
-    const supabase = fakeSupabase({ deletes: { cloudinary_assets: new Error("first try failed") } });
+    const supabase = fakeSupabase({
+      deletes: { cloudinary_assets: [new Error("first try failed"), null] },
+    });
     const summary = await cleanup({
       cloudinary: cld,
       supabase,
@@ -401,9 +436,12 @@ describe("cleanup — fallback by asset_id", () => {
     });
     // Fallback delete by asset_id should also have been attempted.
     expect(supabase._calls.deletes.filter((d) => d.table === "cloudinary_assets").length).toBeGreaterThanOrEqual(2);
+    // Recovered via asset_id, but primary failure stays visible (not masked as bare ok-fallback).
+    expect(summary.cloudinaryAssets).toMatch(/^ok-fallback \(primary: error: first try failed\)/);
+    expect(summary.assets).toBe("ok");
   });
 
-  it("does not retry when public_id delete already succeeded", async () => {
+  it("always deletes by asset_id even when public_id path already succeeded", async () => {
     const cld = fakeCloudinary();
     const supabase = fakeSupabase();
     const summary = await cleanup({
@@ -413,10 +451,55 @@ describe("cleanup — fallback by asset_id", () => {
       assetId: "a1",
     });
     expect(cld.calls.destroys).toHaveLength(1);
-    expect(supabase._calls.deletes.map((d) => d.table).sort()).toEqual([
-      "assets",
-      "cloudinary_assets",
-    ]);
+    expect(summary.assets).toBe("ok");
+    expect(summary.cloudinaryAssets).toBe("ok");
+    // public_id path + idempotent asset_id sweep
+    expect(supabase._calls.deletes.filter((d) => d.table === "assets").length).toBe(2);
+    expect(supabase._calls.deletes.filter((d) => d.table === "cloudinary_assets").length).toBe(2);
+  });
+
+  it("does not overwrite public_id ok with a redundant asset_id sweep error", async () => {
+    const cld = fakeCloudinary();
+    // First delete per table succeeds (public_id); second fails (asset_id sweep).
+    const supabase = fakeSupabase({
+      deletes: {
+        assets: [null, new Error("sweep boom")],
+        cloudinary_assets: [null, new Error("sweep boom")],
+      },
+    });
+    const summary = await cleanup({
+      cloudinary: cld,
+      supabase,
+      publicId: "ipix/cld105-test/cld105-1",
+      assetId: "a1",
+    });
+    expect(summary.assets).toBe("ok");
+    expect(summary.cloudinaryAssets).toBe("ok");
+  });
+
+  it("uses the fixture-scoped prefix so a different brand scope does not refuse cleanup", async () => {
+    const cld = fakeCloudinary();
+    const supabase = fakeSupabase();
+    const { testPublicIdPrefix } = testScopeForBrand("db1f728d-bee1-430e-a3e7-0c601da74ce7");
+    const publicId = `${testPublicIdPrefix}run-1`;
+    const summary = await cleanup({
+      cloudinary: cld,
+      supabase,
+      publicId,
+      assetId: "a1",
+      testPublicIdPrefix,
+    });
+    expect(summary.cloudinary).toBe("ok");
+    expect(cld.calls.destroys).toHaveLength(1);
+    // Default module prefix would refuse this brand-scoped public_id
+    const refused = await cleanup({
+      cloudinary: fakeCloudinary(),
+      supabase: fakeSupabase(),
+      publicId,
+      assetId: "a1",
+      // omit testPublicIdPrefix → default TEST_PUBLIC_ID_PREFIX
+    });
+    expect(refused.cloudinary).toMatch(/refused/);
   });
 });
 
@@ -501,6 +584,7 @@ describe("cleanup — after pipeline failure", () => {
     });
     expect(summary.cloudinary).toMatch(/refused/);
     expect(cld.calls.destroys).toHaveLength(0);
+    expect(supabase._calls.deletes).toHaveLength(0);
   });
 });
 
