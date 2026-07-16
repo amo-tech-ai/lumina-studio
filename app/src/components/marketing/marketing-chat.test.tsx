@@ -44,6 +44,11 @@ describe("MarketingChat — runtimeUrl contract", () => {
   it("sets runtimeUrl to /api/marketing-chat exactly", () => {
     expect(src).toMatch(/runtimeUrl=["']\/api\/marketing-chat["']/);
   });
+
+  // Explicit contract alignment; residual thread-list behavior belongs to IPI-655.
+  it("explicitly aligns marketing chat with the single-route runtime contract", () => {
+    expect(src).toMatch(/useSingleEndpoint=\{true\}/);
+  });
 });
 
 // ─── Contract: feature flag ────────────────────────────────────────────────

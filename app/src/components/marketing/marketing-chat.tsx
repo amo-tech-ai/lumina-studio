@@ -182,7 +182,17 @@ export function MarketingChat() {
 
   return (
     <ChatErrorBoundary>
-      <CopilotKit runtimeUrl="/api/marketing-chat">
+      {/*
+        The marketing runtime uses CopilotKit single-route mode.
+
+        Pinned @copilotkit/react-core 1.61.0 already defaults
+        useSingleEndpoint to true. The explicit prop documents the
+        client/server contract and protects against future default changes.
+
+        It does not disable the separate thread-list GET.
+        Residual thread behavior is tracked by IPI-655.
+      */}
+      <CopilotKit runtimeUrl="/api/marketing-chat" useSingleEndpoint={true}>
         <MarketingChatInner />
       </CopilotKit>
     </ChatErrorBoundary>
