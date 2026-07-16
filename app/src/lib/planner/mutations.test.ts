@@ -435,6 +435,31 @@ describe("shiftTask", () => {
     ]);
   });
 
+  it("still shifts an unrelated task even when a different, unchanged task in the instance is missing from the fresh re-fetch", async () => {
+    // t2 has no dependency relationship to t1 and isn't part of this shift —
+    // it merely happens to live in the same instance. Simulating it having
+    // been deleted (freshRows omits it) must not block a valid shift of t1;
+    // only tasks the engine actually decides to write to need a fresh row.
+    const t2 = { ...BASE_TASK, id: "t2", startDate: "2026-08-01", endDate: "2026-08-02" };
+    vi.mocked(getInstanceDetail).mockResolvedValue(instanceDetailOk([BASE_TASK, t2]));
+    vi.mocked(listDependencies).mockResolvedValue({ ok: true, data: [] });
+
+    const { client, rpcMock } = mockShiftClient({
+      freshRows: [
+        { id: "t1", start_date: BASE_TASK.startDate, end_date: BASE_TASK.endDate, updated_at: "2026-07-10T00:00:00.000Z" },
+      ],
+      rpcData: { ok: true, replayed: false, changedTasks: [{ taskId: "t1", updatedAt: "2026-07-10T00:01:00.000Z" }], conflicts: [] },
+    });
+
+    const result = await shiftTask({ instanceId: "i1", rootTaskId: "t1", deltaDays: 2, idempotencyKey: "idem-unrelated" }, client);
+
+    expect(result.ok).toBe(true);
+    expect(rpcMock).toHaveBeenCalledTimes(1);
+    const [, args] = rpcMock.mock.calls[0] as [string, Record<string, unknown>];
+    const changedTasks = args.p_changed_tasks as Array<{ taskId: string }>;
+    expect(changedTasks).toEqual([expect.objectContaining({ taskId: "t1" })]);
+  });
+
   it.each(["STALE_VERSION", "INSTANCE_TERMINAL", "IDEMPOTENCY_CONFLICT", "DEPENDENCY_CHANGED", "FORBIDDEN"])(
     "maps RPC-returned %s to a typed error",
     async (code) => {

@@ -209,20 +209,17 @@ export async function shiftTask(
 
   const freshById = new Map(freshRows.map((row) => [row.id, row]));
 
-  // Every task the engine is about to touch must still exist server-side
-  // with a fresh row — a missing row means it was deleted/made inaccessible
-  // since the read that populated taskMap. Abort rather than let a missing
-  // row silently fall back to a fabricated expectedUpdatedAt (Cursor MEDIUM)
-  // that would trivially satisfy no real optimistic-concurrency check.
-  for (const id of taskIds) {
-    if (!freshById.has(id)) {
-      return taskMutationError("planner_shift_task", "NOT_FOUND");
-    }
-  }
-
+  // Overlay fresh dates onto every task the engine is about to reason
+  // about (dependency-graph participants, not just the ones that end up
+  // changed) so the shift is computed from current state. A task missing
+  // from this re-fetch (deleted/made inaccessible since the earlier
+  // getInstanceDetail read) keeps its stale snapshot dates here — that's
+  // fine for a task that merely participates in the dependency graph, but
+  // NOT fine for a task the engine actually decides to write to (see the
+  // changedIds guard below, which is where a missing row must hard-fail).
   for (const [id, task] of taskMap) {
-    const fresh = freshById.get(id)!;
-    taskMap.set(id, { ...task, startDate: fresh.start_date, endDate: fresh.end_date });
+    const fresh = freshById.get(id);
+    if (fresh) taskMap.set(id, { ...task, startDate: fresh.start_date, endDate: fresh.end_date });
   }
 
   const { updated, conflicts } = engine.shiftTask(rootTaskId, deltaDays, taskMap, dependencies);
@@ -239,6 +236,16 @@ export async function shiftTask(
 
   if (changedIds.length === 0) {
     return { ok: true, data: { replayed: false, changedTasks: [] } };
+  }
+
+  // Only the tasks actually being written need a fresh row to CAS against —
+  // narrowing this guard to changedIds (rather than every task in the
+  // instance) means an unrelated task being deleted elsewhere no longer
+  // fails a valid shift of tasks that don't touch it (Sentry MEDIUM).
+  for (const id of changedIds) {
+    if (!freshById.has(id)) {
+      return taskMutationError("planner_shift_task", "NOT_FOUND");
+    }
   }
 
   const changedTasks = changedIds.map((id) => {
