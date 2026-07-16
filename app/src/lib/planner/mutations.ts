@@ -8,11 +8,16 @@
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-import type { Database } from "@/types/supabase";
+import type { Database, Json } from "@/types/supabase";
 
-import type { MutationResult, PlannerRole } from "./types";
+import { PlannerEngine } from "./engine";
+import { getEffectivePermissions } from "./permissions";
+import { getInstanceDetail, listDependencies } from "./queries";
+import type { MutationResult, PersistedViewType, PlannerRole, PlannerTaskStatus } from "./types";
 
 type Db = SupabaseClient<Database>;
+
+const engine = new PlannerEngine();
 
 export type MemberAssignment = {
   id: string;
@@ -106,4 +111,302 @@ export async function removeAssignment(
   if (!data) return memberMutationError("planner_remove_assignment", "no row returned");
 
   return { ok: true, data: toAssignment(data) };
+}
+
+// IPI-649 · PLN-DATA-001B-M — task mutation adapters. `shiftTask`/`updateTask`
+// call the transactional RPCs from PR #418; the RPC itself is the authority
+// on authorization, concurrency, and idempotency, matching the member
+// mutations above — this layer only maps `{ok:false, code}` JSON responses
+// to MutationResult, never a `raise exception` substring (that idiom is
+// specific to the flat-row member RPCs; these two return jsonb directly).
+//
+// idempotencyKey is caller-owned, not generated here: a retry of the *same*
+// logical mutation must reuse the *same* key so the RPC can detect and
+// replay it. Generating a fresh key inside this function on every call would
+// silently defeat the whole idempotency mechanism.
+
+type PlannerRpcResult<T> = { ok: true; replayed: boolean } & T | { ok: false; code: string; conflicts?: unknown };
+
+export type ShiftTaskResult = {
+  replayed: boolean;
+  changedTasks: Array<{ taskId: string; updatedAt: string }>;
+};
+
+export type UpdateTaskResult = {
+  replayed: boolean;
+  taskId: string;
+  updatedAt: string;
+};
+
+const TASK_MUTATION_MESSAGES: Record<string, string> = {
+  UNAUTHENTICATED: "Sign in to edit this plan.",
+  FORBIDDEN: "You don't have permission to edit this task.",
+  NOT_FOUND: "This task could not be found.",
+  STALE_VERSION: "This task changed since you last viewed it. Refresh and try again.",
+  DEPENDENCY_CHANGED: "This plan's schedule changed since you last viewed it. Refresh and try again.",
+  IDEMPOTENCY_CONFLICT: "This request conflicts with one already in progress. Refresh and try again.",
+  INVALID_INPUT: "That request wasn't valid.",
+  INSTANCE_TERMINAL: "This plan is archived or cancelled and can no longer be edited.",
+};
+
+function taskMutationError(fn: string, code: string): MutationResult<never> {
+  const message = TASK_MUTATION_MESSAGES[code];
+  if (!message) {
+    // Never forward the raw Postgres message — same idiom as convert-deal.ts.
+    console.error(`[planner/mutations] ${fn} rpc failed:`, code);
+    return { ok: false, error: { code: "UNKNOWN_ERROR", message: "The request could not be completed." } };
+  }
+  return { ok: false, error: { code, message } };
+}
+
+export async function shiftTask(
+  {
+    instanceId,
+    rootTaskId,
+    deltaDays,
+    idempotencyKey,
+  }: { instanceId: string; rootTaskId: string; deltaDays: number; idempotencyKey: string },
+  client: Db,
+): Promise<MutationResult<ShiftTaskResult>> {
+  const [detailResult, depsResult] = await Promise.all([
+    getInstanceDetail(instanceId),
+    listDependencies(instanceId),
+  ]);
+
+  if (!detailResult.ok) return { ok: false, error: detailResult.error };
+  if (!depsResult.ok) return { ok: false, error: depsResult.error };
+
+  const taskMap = new Map(detailResult.data.tasks.map((task) => [task.id, task]));
+  const dependencies = depsResult.data;
+
+  if (!taskMap.has(rootTaskId)) {
+    return taskMutationError("planner_shift_task", "NOT_FOUND");
+  }
+
+  // Re-fetch dates AND updated_at together, for every task the engine is
+  // about to reason about, immediately before computing the shift — a
+  // deliberately narrow, local query rather than extending getInstanceDetail's
+  // shared, intentionally column-minimized read. This closes the
+  // stale-dates-before-shift-RPC gap (Cursor HIGH / codex P1): the old code
+  // computed the shift from the earlier getInstanceDetail() read, then
+  // separately re-fetched only updated_at right before the RPC call — if a
+  // concurrent edit changed a task's dates AND updated_at in between, the
+  // freshly-fetched updated_at would match the current row (passing the
+  // RPC's CAS check) while the dates being sent were still the stale ones,
+  // silently overwriting the concurrent edit instead of failing
+  // STALE_VERSION. Fetching both together, from the same query, guarantees
+  // the engine computation and the CAS check share one snapshot.
+  const taskIds = [...taskMap.keys()];
+  const { data: freshRows, error: freshError } = await client
+    .schema("planner")
+    .from("tasks")
+    .select("id, start_date, end_date, updated_at")
+    .in("id", taskIds);
+
+  if (freshError || !freshRows) {
+    return taskMutationError("planner_shift_task", "NOT_FOUND");
+  }
+
+  const freshById = new Map(freshRows.map((row) => [row.id, row]));
+
+  // Overlay fresh dates onto every task the engine is about to reason
+  // about (dependency-graph participants, not just the ones that end up
+  // changed) so the shift is computed from current state. A task missing
+  // from this re-fetch (deleted/made inaccessible since the earlier
+  // getInstanceDetail read) keeps its stale snapshot dates here — that's
+  // fine for a task that merely participates in the dependency graph, but
+  // NOT fine for a task the engine actually decides to write to (see the
+  // changedIds guard below, which is where a missing row must hard-fail).
+  for (const [id, task] of taskMap) {
+    const fresh = freshById.get(id);
+    if (fresh) taskMap.set(id, { ...task, startDate: fresh.start_date, endDate: fresh.end_date });
+  }
+
+  const { updated, conflicts } = engine.shiftTask(rootTaskId, deltaDays, taskMap, dependencies);
+  if (conflicts.length > 0) {
+    return { ok: false, error: { code: "DEPENDENCY_CHANGED", message: conflicts.join(" ") } };
+  }
+
+  const changedIds = [...updated.entries()]
+    .filter(([id, task]) => {
+      const before = taskMap.get(id);
+      return before && (before.startDate !== task.startDate || before.endDate !== task.endDate);
+    })
+    .map(([id]) => id);
+
+  if (changedIds.length === 0) {
+    return { ok: true, data: { replayed: false, changedTasks: [] } };
+  }
+
+  // Only the tasks actually being written need a fresh row to CAS against —
+  // narrowing this guard to changedIds (rather than every task in the
+  // instance) means an unrelated task being deleted elsewhere no longer
+  // fails a valid shift of tasks that don't touch it (Sentry MEDIUM).
+  for (const id of changedIds) {
+    if (!freshById.has(id)) {
+      return taskMutationError("planner_shift_task", "NOT_FOUND");
+    }
+  }
+
+  const changedTasks = changedIds.map((id) => {
+    const task = updated.get(id)!;
+    const fresh = freshById.get(id)!; // guaranteed present by the guard above
+    return {
+      taskId: id,
+      expectedUpdatedAt: fresh.updated_at,
+      newStartDate: task.startDate,
+      newEndDate: task.endDate,
+    };
+  });
+
+  const expectedDependencyEdges = dependencies
+    .filter((dep) => changedIds.includes(dep.fromTaskId) || changedIds.includes(dep.toTaskId))
+    .map((dep) => ({ fromTaskId: dep.fromTaskId, toTaskId: dep.toTaskId, lagDays: dep.lagDays }));
+
+  const { data, error } = await client.rpc("planner_shift_task", {
+    p_instance_id: instanceId,
+    p_root_task_id: rootTaskId,
+    p_delta_days: deltaDays,
+    p_idempotency_key: idempotencyKey,
+    p_changed_tasks: changedTasks,
+    p_expected_dependency_edges: expectedDependencyEdges,
+  });
+
+  if (error || !data) {
+    console.error("[planner/mutations] planner_shift_task rpc failed:", error?.message ?? "empty response");
+    return { ok: false, error: { code: "UNKNOWN_ERROR", message: "The request could not be completed." } };
+  }
+
+  const result = data as PlannerRpcResult<ShiftTaskResult>;
+  if (!result.ok) return taskMutationError("planner_shift_task", result.code);
+
+  return { ok: true, data: { replayed: result.replayed, changedTasks: result.changedTasks } };
+}
+
+export async function updateTask(
+  {
+    taskId,
+    instanceId,
+    expectedUpdatedAt,
+    idempotencyKey,
+    patch,
+  }: {
+    taskId: string;
+    instanceId: string;
+    expectedUpdatedAt: string;
+    idempotencyKey: string;
+    patch: Partial<{
+      title: string;
+      description: string | null;
+      status: PlannerTaskStatus;
+      assigneeUserId: string | null;
+    }>;
+  },
+  client: Db,
+): Promise<MutationResult<UpdateTaskResult>> {
+  const dbPatch: Record<string, unknown> = {};
+  if (patch.title !== undefined) dbPatch.title = patch.title;
+  if (patch.description !== undefined) dbPatch.description = patch.description;
+  if (patch.status !== undefined) dbPatch.status = patch.status;
+  if (patch.assigneeUserId !== undefined) dbPatch.assignee_user_id = patch.assigneeUserId;
+
+  if (Object.keys(dbPatch).length === 0) {
+    return taskMutationError("planner_update_task", "INVALID_INPUT");
+  }
+
+  const { data, error } = await client.rpc("planner_update_task", {
+    p_task_id: taskId,
+    p_instance_id: instanceId,
+    p_expected_updated_at: expectedUpdatedAt,
+    p_idempotency_key: idempotencyKey,
+    p_patch: dbPatch as Json,
+  });
+
+  if (error || !data) {
+    console.error("[planner/mutations] planner_update_task rpc failed:", error?.message ?? "empty response");
+    return { ok: false, error: { code: "UNKNOWN_ERROR", message: "The request could not be completed." } };
+  }
+
+  const result = data as PlannerRpcResult<UpdateTaskResult>;
+  if (!result.ok) return taskMutationError("planner_update_task", result.code);
+
+  return { ok: true, data: { replayed: result.replayed, taskId: result.taskId, updatedAt: result.updatedAt } };
+}
+
+// setViewConfig needs no RPC: planner.view_configs already has
+// user_id = auth.uid() RLS on all 4 verbs (view_configs_select_own/
+// _insert_own/_update_own/_delete_own, confirmed live) and a real
+// UNIQUE (user_id, instance_id) constraint — a plain upsert through the
+// schema-scoped client already respects RLS for row ownership. RLS alone
+// doesn't verify plan access though, so an explicit getEffectivePermissions
+// check (matching getViewConfig's) runs first — see below. "list" is never
+// persisted as
+// default_view — the DB CHECK constraint on planner.view_configs already
+// rejects it (excludes "list" from its allowed values); this function simply
+// never includes default_view in the patch when the caller's active view is
+// "list", leaving it untouched rather than attempting (and failing) to write it.
+export async function setViewConfig(
+  {
+    instanceId,
+    defaultView,
+    filters,
+    sortConfig,
+  }: {
+    instanceId: string;
+    defaultView?: PersistedViewType;
+    filters?: Record<string, unknown>;
+    sortConfig?: Record<string, unknown>;
+  },
+  client: Db,
+): Promise<MutationResult<{ instanceId: string }>> {
+  const {
+    data: { user },
+  } = await client.auth.getUser();
+
+  if (!user) {
+    return { ok: false, error: { code: "UNAUTHENTICATED", message: "Sign in to save your view preference." } };
+  }
+
+  // Same assignment-level access gate getViewConfig() (queries.ts) applies
+  // before reading: view_configs' own RLS (view_configs_*_own) only checks
+  // user_id = auth.uid(), so on its own it never verifies the caller still
+  // has access to the referenced instance — a revoked assignment (or anyone
+  // who merely knows the instance UUID) could otherwise still upsert their
+  // own row against it. getEffectivePermissions throws on RPC failure (see
+  // resolveReadPermissions in queries.ts), so treat that the same way too.
+  let canRead: boolean;
+  try {
+    canRead = (await getEffectivePermissions(instanceId, client)).canRead;
+  } catch (err) {
+    console.error("[planner/mutations] setViewConfig permission check failed:", err);
+    return { ok: false, error: { code: "UNKNOWN_ERROR", message: "Your view preference could not be saved." } };
+  }
+  if (!canRead) {
+    // Enumeration-safe "not found" message, matching getViewConfig() —
+    // never reveal that the instance exists to a caller without access.
+    return { ok: false, error: { code: "INVALID_INPUT", message: "This plan could not be found." } };
+  }
+
+  const patch: {
+    user_id: string;
+    instance_id: string;
+    default_view?: string;
+    filters?: Json;
+    sort_config?: Json;
+  } = { user_id: user.id, instance_id: instanceId };
+  if (defaultView !== undefined) patch.default_view = defaultView;
+  if (filters !== undefined) patch.filters = filters as Json;
+  if (sortConfig !== undefined) patch.sort_config = sortConfig as Json;
+
+  const { error } = await client
+    .schema("planner")
+    .from("view_configs")
+    .upsert(patch, { onConflict: "user_id,instance_id" });
+
+  if (error) {
+    console.error("[planner/mutations] setViewConfig upsert failed:", error.message);
+    return { ok: false, error: { code: "UNKNOWN_ERROR", message: "Your view preference could not be saved." } };
+  }
+
+  return { ok: true, data: { instanceId } };
 }

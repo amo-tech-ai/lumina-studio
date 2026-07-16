@@ -1622,6 +1622,384 @@ try {
     }
   }
 
+  // ── IPI-649 · PLN-DATA-001B-M — planner_shift_task/planner_update_task RPC
+  // probes. Fresh dedicated tasks (not taskA, whose assignee/role state has
+  // been mutated by the probes above) so each scenario starts from a known
+  // baseline. Also proves the Bugbot/Codex security-fix pass (PR #418,
+  // commit 0011fd57): per-task authorization, NULL-assignee/NULL-timestamp
+  // bypass fixes, org-membership check, idempotency race fix.
+  const { data: taskX, error: taskXErr } = await plannerA
+    .from("tasks")
+    .insert({
+      instance_id: instA.id,
+      title: `RLS Shift Task X ${stamp}`,
+      status: "todo",
+      priority: "medium",
+      sort_order: 1,
+      start_date: "2026-08-01",
+      end_date: "2026-08-03",
+    })
+    .select("id, updated_at")
+    .single();
+  assert(!taskXErr && taskX?.id, "owner creates task X for shift-RPC probes");
+
+  const { data: taskY, error: taskYErr } = await plannerA
+    .from("tasks")
+    .insert({
+      instance_id: instA.id,
+      title: `RLS Shift Task Y ${stamp}`,
+      status: "todo",
+      priority: "medium",
+      sort_order: 2,
+      start_date: "2026-08-04",
+      end_date: "2026-08-06",
+    })
+    .select("id, updated_at")
+    .single();
+  assert(!taskYErr && taskY?.id, "owner creates task Y (unassigned) for shift-RPC probes");
+
+  const { error: depXYErr } = await plannerA.from("dependencies").insert({
+    instance_id: instA.id,
+    from_task_id: taskX.id,
+    to_task_id: taskY.id,
+    dep_type: "finish_to_start",
+    lag_days: 0,
+  });
+  assert(!depXYErr, "owner creates X→Y dependency for shift-RPC probes");
+
+  const { error: resetRoleErr } = await plannerA
+    .from("assignments")
+    .update({ role: "contributor" })
+    .eq("instance_id", instA.id)
+    .eq("user_id", userB.user.id);
+  assert(!resetRoleErr, "reset user B to contributor for shift-RPC probes");
+
+  const { error: assignXErr } = await plannerA
+    .from("tasks")
+    .update({ assignee_user_id: userB.user.id })
+    .eq("id", taskX.id);
+  assert(!assignXErr, "assign task X to user B");
+
+  // planner.tasks has a BEFORE UPDATE trigger (tasks_updated_at) that
+  // auto-bumps updated_at on every write — the assignee-update above just
+  // did that, so the updated_at captured at insert time is now stale.
+  // Re-fetch fresh right before building the RPC payload (matches
+  // mutations.ts's shiftTask(), which does the same fresh re-fetch for
+  // exactly this reason).
+  const { data: taskXBaseline } = await plannerA.from("tasks").select("id, updated_at").eq("id", taskX.id).single();
+
+  // 1 — assigned positive path.
+  const shift1Key = crypto.randomUUID();
+  const shift1Payload = {
+    p_instance_id: instA.id,
+    p_root_task_id: taskX.id,
+    p_delta_days: 1,
+    p_idempotency_key: shift1Key,
+    p_changed_tasks: [
+      { taskId: taskX.id, expectedUpdatedAt: taskXBaseline.updated_at, newStartDate: "2026-08-02", newEndDate: "2026-08-04" },
+    ],
+    p_expected_dependency_edges: [{ fromTaskId: taskX.id, toTaskId: taskY.id, lagDays: 0 }],
+  };
+  const { data: shift1, error: shift1Err } = await userB.client.rpc("planner_shift_task", shift1Payload);
+  assert(!shift1Err && shift1?.ok === true, "contributor/assignee can shift their own task (positive path)");
+  assert((shift1?.changedTasks ?? []).length === 1, "shift positive path reports exactly 1 changed task");
+
+  // 2 — idempotent retry: same key + same payload → replayed:true.
+  const { data: shift1Retry, error: shift1RetryErr } = await userB.client.rpc("planner_shift_task", shift1Payload);
+  assert(
+    !shift1RetryErr && shift1Retry?.ok === true && shift1Retry?.replayed === true,
+    "identical retry (same key+payload) replays the original result",
+  );
+
+  // Exactly one audit event for this idempotency key, not two.
+  const { data: eventsForShift1 } = await admin
+    .schema("planner")
+    .from("events")
+    .select("id")
+    .eq("instance_id", instA.id)
+    .eq("event_type", "task_shifted")
+    .eq("idempotency_key", shift1Key);
+  assert(
+    (eventsForShift1 ?? []).length === 1,
+    "exactly one planner.events row for the shift1 idempotency key (retry did not create a second)",
+  );
+
+  // 3 — same key, different payload → IDEMPOTENCY_CONFLICT, not a silent overwrite.
+  const { data: shift1Conflict, error: shift1ConflictErr } = await userB.client.rpc("planner_shift_task", {
+    ...shift1Payload,
+    p_delta_days: 2,
+    p_changed_tasks: [
+      { taskId: taskX.id, expectedUpdatedAt: taskX.updated_at, newStartDate: "2026-08-03", newEndDate: "2026-08-05" },
+    ],
+  });
+  assert(
+    !shift1ConflictErr && shift1Conflict?.ok === false && shift1Conflict?.code === "IDEMPOTENCY_CONFLICT",
+    "same idempotency key with a different payload returns IDEMPOTENCY_CONFLICT, not a silent overwrite or raw DB error",
+  );
+
+  // 4 — stale timestamp conflict.
+  const { data: staleResult, error: staleErr } = await userB.client.rpc("planner_shift_task", {
+    p_instance_id: instA.id,
+    p_root_task_id: taskX.id,
+    p_delta_days: 1,
+    p_idempotency_key: crypto.randomUUID(),
+    p_changed_tasks: [
+      { taskId: taskX.id, expectedUpdatedAt: "2020-01-01T00:00:00.000Z", newStartDate: "2026-08-05", newEndDate: "2026-08-07" },
+    ],
+    p_expected_dependency_edges: [{ fromTaskId: taskX.id, toTaskId: taskY.id, lagDays: 0 }],
+  });
+  assert(
+    !staleErr && staleResult?.ok === false && staleResult?.code === "STALE_VERSION",
+    "a stale expectedUpdatedAt is rejected with STALE_VERSION, not silently overwritten",
+  );
+
+  // 5 — dependency conflict: correct updated_at, wrong expected edges.
+  const { data: taskXFresh } = await plannerA.from("tasks").select("id, updated_at").eq("id", taskX.id).single();
+  const { data: depConflictResult, error: depConflictErr } = await userB.client.rpc("planner_shift_task", {
+    p_instance_id: instA.id,
+    p_root_task_id: taskX.id,
+    p_delta_days: 1,
+    p_idempotency_key: crypto.randomUUID(),
+    p_changed_tasks: [
+      { taskId: taskX.id, expectedUpdatedAt: taskXFresh.updated_at, newStartDate: "2026-08-06", newEndDate: "2026-08-08" },
+    ],
+    p_expected_dependency_edges: [], // real edge X→Y exists — this is stale/wrong on purpose
+  });
+  assert(
+    !depConflictErr && depConflictResult?.ok === false && depConflictResult?.code === "DEPENDENCY_CHANGED",
+    "mismatched dependency-edge snapshot is rejected with DEPENDENCY_CHANGED",
+  );
+
+  // 6 — per-task authorization fix: a caller authorized only on the root
+  // task (as its specific assignee, not instance-wide contributor+) must
+  // not be able to smuggle changes into a task they don't own via
+  // changed_tasks. Demote user B to viewer but keep them assigned to task X.
+  const { error: demoteErr } = await plannerA
+    .from("assignments")
+    .update({ role: "viewer" })
+    .eq("instance_id", instA.id)
+    .eq("user_id", userB.user.id);
+  assert(!demoteErr, "demote user B to viewer, still assigned to task X, for per-task auth probe");
+
+  const { data: taskXForAuth } = await plannerA.from("tasks").select("id, updated_at").eq("id", taskX.id).single();
+  const { data: taskYForAuth } = await plannerA.from("tasks").select("id, updated_at").eq("id", taskY.id).single();
+
+  const { data: perTaskResult, error: perTaskErr } = await userB.client.rpc("planner_shift_task", {
+    p_instance_id: instA.id,
+    p_root_task_id: taskX.id, // userB IS the assignee here — root check alone would pass
+    p_delta_days: 1,
+    p_idempotency_key: crypto.randomUUID(),
+    p_changed_tasks: [
+      { taskId: taskX.id, expectedUpdatedAt: taskXForAuth.updated_at, newStartDate: "2026-08-07", newEndDate: "2026-08-09" },
+      { taskId: taskY.id, expectedUpdatedAt: taskYForAuth.updated_at, newStartDate: "2026-08-10", newEndDate: "2026-08-12" }, // NOT userB's task
+    ],
+    p_expected_dependency_edges: [{ fromTaskId: taskX.id, toTaskId: taskY.id, lagDays: 0 }],
+  });
+  assert(
+    !perTaskErr && perTaskResult?.ok === false,
+    "root-task-only authorization no longer lets a caller smuggle changes into an unauthorized task via changed_tasks",
+  );
+
+  const { data: taskYAfter } = await plannerA.from("tasks").select("start_date").eq("id", taskY.id).single();
+  assert(
+    taskYAfter?.start_date === "2026-08-04",
+    "rejected per-task-auth call left task Y's dates untouched (no partial write)",
+  );
+
+  // 7 — NULL-assignee authorization-bypass fix: a viewer (not contributor+)
+  // must not be able to update an unassigned task via planner_update_task.
+  const { data: taskYFresh2 } = await plannerA.from("tasks").select("id, updated_at").eq("id", taskY.id).single();
+  const { data: nullAssigneeResult, error: nullAssigneeErr } = await userB.client.rpc("planner_update_task", {
+    p_task_id: taskY.id,
+    p_instance_id: instA.id,
+    p_expected_updated_at: taskYFresh2.updated_at,
+    p_idempotency_key: crypto.randomUUID(),
+    p_patch: { title: "hijacked by viewer" },
+  });
+  assert(
+    !nullAssigneeErr && nullAssigneeResult?.ok === false && nullAssigneeResult?.code === "FORBIDDEN",
+    "a viewer cannot update an unassigned task via planner_update_task (NULL-assignee auth-bypass fix)",
+  );
+
+  // 8 — no raw Postgres errors exposed: malformed JSON input.
+  const { data: malformedResult, error: malformedErr } = await userA.client.rpc("planner_shift_task", {
+    p_instance_id: instA.id,
+    p_root_task_id: taskX.id,
+    p_delta_days: 1,
+    p_idempotency_key: crypto.randomUUID(),
+    p_changed_tasks: { not: "an array" },
+    p_expected_dependency_edges: [],
+  });
+  assert(
+    !malformedErr && malformedResult?.ok === false && malformedResult?.code === "INVALID_INPUT",
+    "a non-array p_changed_tasks returns typed INVALID_INPUT, not a raw jsonb_array_length error",
+  );
+
+  // 9 — cross-org denial + org-membership fix: org A's owner has zero
+  // assignment/membership in org B and must be rejected even before the
+  // per-task assignee/contributor check runs.
+  const { data: instB, error: instBErr } = await plannerB
+    .from("instances")
+    .insert({
+      org_id: orgBId,
+      workflow_id: wfB.id,
+      entity_type: "shoot",
+      entity_id: crypto.randomUUID(),
+      name: `RLS Org B Instance ${stamp}`,
+      status: "draft",
+    })
+    .select("id")
+    .single();
+  assert(!instBErr && instB?.id, "user B creates an instance in org B for the cross-org probe");
+
+  const { data: taskB, error: taskBErr } = await plannerB
+    .from("tasks")
+    .insert({
+      instance_id: instB.id,
+      title: `RLS Org B Task ${stamp}`,
+      status: "todo",
+      priority: "medium",
+      sort_order: 0,
+      start_date: "2026-08-01",
+      end_date: "2026-08-02",
+    })
+    .select("id, updated_at")
+    .single();
+  assert(!taskBErr && taskB?.id, "user B creates a task in the org B instance");
+
+  const { data: crossOrgResult, error: crossOrgErr } = await userA.client.rpc("planner_shift_task", {
+    p_instance_id: instB.id,
+    p_root_task_id: taskB.id,
+    p_delta_days: 1,
+    p_idempotency_key: crypto.randomUUID(),
+    p_changed_tasks: [
+      { taskId: taskB.id, expectedUpdatedAt: taskB.updated_at, newStartDate: "2026-08-02", newEndDate: "2026-08-03" },
+    ],
+    p_expected_dependency_edges: [],
+  });
+  assert(
+    !crossOrgErr && crossOrgResult?.ok === false && crossOrgResult?.code === "FORBIDDEN",
+    "org A owner cannot shift a task in an org B instance (cross-org denial, org-membership fix)",
+  );
+
+  // 10 — terminal instance guard (archived/cancelled/completed), even for the owner.
+  const { data: instTerm, error: instTermErr } = await plannerA
+    .from("instances")
+    .insert({
+      org_id: orgAId,
+      workflow_id: wfA.id,
+      entity_type: "shoot",
+      entity_id: crypto.randomUUID(),
+      name: `RLS Terminal Instance ${stamp}`,
+      status: "draft",
+    })
+    .select("id")
+    .single();
+  assert(!instTermErr && instTerm?.id, "owner creates a second instance for the terminal-guard probe");
+
+  const { data: taskTerm, error: taskTermErr } = await plannerA
+    .from("tasks")
+    .insert({
+      instance_id: instTerm.id,
+      title: `RLS Terminal Task ${stamp}`,
+      status: "todo",
+      priority: "medium",
+      sort_order: 0,
+      start_date: "2026-08-01",
+      end_date: "2026-08-02",
+    })
+    .select("id, updated_at")
+    .single();
+  assert(!taskTermErr && taskTerm?.id, "owner creates a task on the terminal-guard instance");
+
+  // Service role sets the instance terminal directly — this probe only
+  // exercises the two RPCs' own INSTANCE_TERMINAL guard, not the (not yet
+  // built) archive/cancel transition RPC from IPI-651.
+  const { error: cancelErr } = await admin.schema("planner").from("instances").update({ status: "cancelled" }).eq("id", instTerm.id);
+  assert(!cancelErr, "service role cancels the terminal-guard instance");
+
+  const { data: terminalShiftResult, error: terminalShiftErr } = await userA.client.rpc("planner_shift_task", {
+    p_instance_id: instTerm.id,
+    p_root_task_id: taskTerm.id,
+    p_delta_days: 1,
+    p_idempotency_key: crypto.randomUUID(),
+    p_changed_tasks: [
+      { taskId: taskTerm.id, expectedUpdatedAt: taskTerm.updated_at, newStartDate: "2026-08-02", newEndDate: "2026-08-03" },
+    ],
+    p_expected_dependency_edges: [],
+  });
+  assert(
+    !terminalShiftErr && terminalShiftResult?.ok === false && terminalShiftResult?.code === "INSTANCE_TERMINAL",
+    "shiftTask on a cancelled instance is rejected with INSTANCE_TERMINAL, even for the owner",
+  );
+
+  const { data: terminalUpdateResult, error: terminalUpdateErr } = await userA.client.rpc("planner_update_task", {
+    p_task_id: taskTerm.id,
+    p_instance_id: instTerm.id,
+    p_expected_updated_at: taskTerm.updated_at,
+    p_idempotency_key: crypto.randomUUID(),
+    p_patch: { title: "should not apply" },
+  });
+  assert(
+    !terminalUpdateErr && terminalUpdateResult?.ok === false && terminalUpdateResult?.code === "INSTANCE_TERMINAL",
+    "updateTask on a cancelled instance is rejected with INSTANCE_TERMINAL, even for the owner",
+  );
+
+  // ── Round-10 fix: planner_update_task rejects assigning a task to a user
+  // outside the instance's org. The pre-existing tasks.assignee_user_id ->
+  // auth.users FK only proves the id is a real user somewhere — not that
+  // they're in this org. A syntactically-valid-but-outside-org id is
+  // sufficient to prove the fix (no need for a real second user here).
+  const { data: taskAssign, error: taskAssignErr } = await plannerA
+    .from("tasks")
+    .insert({
+      instance_id: instA.id,
+      title: `RLS Assignee Task ${stamp}`,
+      status: "todo",
+      priority: "medium",
+      sort_order: 3,
+      start_date: "2026-08-10",
+      end_date: "2026-08-11",
+    })
+    .select("id, updated_at")
+    .single();
+  assert(!taskAssignErr && taskAssign?.id, "owner creates a task for the round-10 assignee-org-membership probe");
+
+  const { data: outsiderAssignResult, error: outsiderAssignErr } = await userA.client.rpc("planner_update_task", {
+    p_task_id: taskAssign.id,
+    p_instance_id: instA.id,
+    p_expected_updated_at: taskAssign.updated_at,
+    p_idempotency_key: crypto.randomUUID(),
+    p_patch: { assignee_user_id: crypto.randomUUID() },
+  });
+  assert(
+    !outsiderAssignErr && outsiderAssignResult?.ok === false && outsiderAssignResult?.code === "INVALID_INPUT",
+    "planner_update_task rejects assigning a task to a user outside the instance's org (round-10 fix)",
+  );
+
+  const { data: memberAssignResult, error: memberAssignErr } = await userA.client.rpc("planner_update_task", {
+    p_task_id: taskAssign.id,
+    p_instance_id: instA.id,
+    p_expected_updated_at: taskAssign.updated_at,
+    p_idempotency_key: crypto.randomUUID(),
+    p_patch: { assignee_user_id: userB.user.id },
+  });
+  assert(
+    !memberAssignErr && memberAssignResult?.ok === true,
+    "planner_update_task still allows assigning a task to a real org member",
+  );
+
+  // Restore user B to 'manager' on instA — this block demoted them to
+  // 'viewer' for the per-task-authorization probe (scenario 6 above), but
+  // every probe from here on (starting with the IPI-575 section directly
+  // below) explicitly assumes "userB = manager on instA".
+  const { error: restoreMgrErr } = await plannerA
+    .from("assignments")
+    .update({ role: "manager" })
+    .eq("instance_id", instA.id)
+    .eq("user_id", userB.user.id);
+  assert(!restoreMgrErr, "restore user B to manager after the IPI-649 RPC probe block");
+
   // ── IPI-575 · PLN-DATA-001C — planner member mutation RPC probes ──
   // planner_invite_member / planner_update_role / planner_remove_assignment.
   // At this point: userA = owner on instA, userB = manager on instA (promoted
