@@ -279,10 +279,13 @@ describe("POST /api/assets/cloudinary/webhook", () => {
     );
     expect(res.status).toBe(200);
     expect(assetsInsertSingle).not.toHaveBeenCalled();
-    expect(assetsUpdateEq).toHaveBeenCalledWith("id", "asset-existing");
     expect(cloudinaryAssetsUpsert).not.toHaveBeenCalled();
     expect(cloudinaryAssetsUpdateEq).toHaveBeenCalledWith("id", "mirror-1");
-    expect(cloudinaryAssetsSelectMaybeSingle).toHaveBeenCalled();
+    expect(assetsUpdateEq).toHaveBeenCalledWith("id", "asset-existing");
+    // Mirror must land before assets.public_id so a failed mirror write cannot desync.
+    expect(cloudinaryAssetsUpdateEq.mock.invocationCallOrder[0]).toBeLessThan(
+      assetsUpdateEq.mock.invocationCallOrder[0],
+    );
   });
 
   it("IPI-641 rename: archived mirror with same provider id is updated (not blocked by unique index)", async () => {
@@ -301,6 +304,37 @@ describe("POST /api/assets/cloudinary/webhook", () => {
     expect(res.status).toBe(200);
     expect(cloudinaryAssetsUpsert).not.toHaveBeenCalled();
     expect(cloudinaryAssetsUpdateEq).toHaveBeenCalledWith("id", "mirror-archived");
+  });
+
+  it("IPI-641 rename: failed mirror update does not rewrite assets.cloudinary_public_id", async () => {
+    cloudinaryAssetsSelectMaybeSingle.mockResolvedValue({
+      data: { id: "mirror-1", asset_id: "asset-existing", brand_id: BRAND_ID },
+      error: null,
+    });
+    cloudinaryAssetsUpdateEq.mockResolvedValue({ data: null, error: { message: "public_id unique" } });
+    const { POST } = await importRoute();
+    const res = await POST(
+      makeRequest({
+        ...UPLOAD_PAYLOAD,
+        public_id: `ipix/brands/${BRAND_ID}/products/renamed-conflict`,
+      }),
+    );
+    expect(res.status).toBe(200);
+    expect(cloudinaryAssetsUpdateEq).toHaveBeenCalled();
+    expect(assetsUpdateEq).not.toHaveBeenCalled();
+    expect(assetsInsertSingle).not.toHaveBeenCalled();
+  });
+
+  it("IPI-641: provider-id lookup error does not fall through to insert a duplicate pair", async () => {
+    cloudinaryAssetsSelectMaybeSingle.mockResolvedValue({
+      data: null,
+      error: { message: "connection reset" },
+    });
+    const { POST } = await importRoute();
+    const res = await POST(makeRequest(UPLOAD_PAYLOAD));
+    expect(res.status).toBe(200);
+    expect(assetsInsertSingle).not.toHaveBeenCalled();
+    expect(cloudinaryAssetsUpsert).not.toHaveBeenCalled();
   });
 
   it("IPI-641 delete: archives by cloudinary_asset_id when present", async () => {

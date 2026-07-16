@@ -112,7 +112,17 @@ async function logNonFatal(
   }
 }
 
-type AssetUpsertResult = { assetId: string; effectiveBrandId: string | null };
+type AssetUpsertResult = {
+  assetId: string;
+  effectiveBrandId: string | null;
+  /** Rename path: sync assets.cloudinary_public_id only after the mirror write succeeds. */
+  deferAssetPublicIdSync?: boolean;
+};
+
+type MirrorLookup =
+  | { kind: "found"; mirror: { id: string; asset_id: string; brand_id: string | null } }
+  | { kind: "missing" }
+  | { kind: "error" };
 
 // IPI-513: insert and update need different FK-failure behavior. A new row has no
 // prior brand_id to protect, so a bad candidate just retries as null. An existing
@@ -230,7 +240,7 @@ type CloudinaryMirrorRow = {
 async function findMirrorByProviderId(
   db: ReturnType<typeof createSupabaseAdminClient>,
   cloudinaryAssetId: string,
-): Promise<{ id: string; asset_id: string; brand_id: string | null } | null> {
+): Promise<MirrorLookup> {
   const { data, error } = await db
     .from("cloudinary_assets")
     .select("id, asset_id, brand_id")
@@ -238,10 +248,10 @@ async function findMirrorByProviderId(
     .maybeSingle();
   if (error) {
     console.error("[cloudinary/webhook] cloudinary_assets lookup by provider id failed:", error.message);
-    return null;
+    return { kind: "error" };
   }
-  if (!data?.id || !data.asset_id) return null;
-  return { id: data.id, asset_id: data.asset_id, brand_id: data.brand_id };
+  if (!data?.id || !data.asset_id) return { kind: "missing" };
+  return { kind: "found", mirror: { id: data.id, asset_id: data.asset_id, brand_id: data.brand_id } };
 }
 
 /** Prefer provider identity on rename; fall back to public_id upsert for first sighting. */
@@ -278,8 +288,9 @@ async function upsertCloudinaryAssetRecord(
 
   if (identity.cloudinary_asset_id) {
     const existing = await findMirrorByProviderId(db, identity.cloudinary_asset_id);
-    if (existing) {
-      const { error } = await db.from("cloudinary_assets").update(row).eq("id", existing.id);
+    if (existing.kind === "error") return false;
+    if (existing.kind === "found") {
+      const { error } = await db.from("cloudinary_assets").update(row).eq("id", existing.mirror.id);
       if (error) {
         console.error("[cloudinary/webhook] cloudinary_assets update by provider id failed:", error.message);
         return false;
@@ -296,7 +307,50 @@ async function upsertCloudinaryAssetRecord(
   return true;
 }
 
-/** When provider asset_id is known, keep the same assets/cloudinary_assets rows across public_id rename. */
+/** After mirror rename succeeds, point assets at the new public_id (never before). */
+async function syncAssetPublicIdAfterMirror(
+  db: ReturnType<typeof createSupabaseAdminClient>,
+  fields: {
+    assetId: string;
+    publicId: string;
+    secureUrl: string;
+    brandId: string | null;
+  },
+): Promise<boolean> {
+  const { assetId, publicId, secureUrl, brandId } = fields;
+  const patch: { url: string; cloudinary_public_id: string; brand_id?: string } = {
+    url: secureUrl,
+    cloudinary_public_id: publicId,
+  };
+  if (brandId) patch.brand_id = brandId;
+
+  const { error } = await db.from("assets").update(patch).eq("id", assetId);
+  if (!error) return true;
+
+  if (brandId && isBrandFkViolation(error)) {
+    console.error(
+      "[cloudinary/webhook] brand_id update rejected on rename, preserving existing brand:",
+      error.message,
+    );
+    const { error: retryErr } = await db
+      .from("assets")
+      .update({ url: secureUrl, cloudinary_public_id: publicId })
+      .eq("id", assetId);
+    if (retryErr) {
+      console.error("[cloudinary/webhook] assets rename update failed:", retryErr.message);
+      return false;
+    }
+    return true;
+  }
+
+  console.error("[cloudinary/webhook] assets rename update failed:", error.message);
+  return false;
+}
+
+/**
+ * When provider asset_id is known, reuse the existing assets row across public_id rename.
+ * Defer assets.cloudinary_public_id write until after the mirror update succeeds.
+ */
 async function resolveAssetForUpload(
   db: ReturnType<typeof createSupabaseAdminClient>,
   fields: {
@@ -310,37 +364,14 @@ async function resolveAssetForUpload(
   const { publicId, secureUrl, resourceType, brandId, cloudinaryAssetId } = fields;
 
   if (cloudinaryAssetId) {
-    const mirror = await findMirrorByProviderId(db, cloudinaryAssetId);
-    if (mirror) {
-      const patch: { url: string; cloudinary_public_id: string; brand_id?: string } = {
-        url: secureUrl,
-        cloudinary_public_id: publicId,
+    const lookup = await findMirrorByProviderId(db, cloudinaryAssetId);
+    if (lookup.kind === "error") return undefined;
+    if (lookup.kind === "found") {
+      return {
+        assetId: lookup.mirror.asset_id,
+        effectiveBrandId: brandId ?? lookup.mirror.brand_id,
+        deferAssetPublicIdSync: true,
       };
-      if (brandId) patch.brand_id = brandId;
-
-      const { error } = await db.from("assets").update(patch).eq("id", mirror.asset_id);
-      if (!error) {
-        return { assetId: mirror.asset_id, effectiveBrandId: brandId ?? mirror.brand_id };
-      }
-
-      if (brandId && isBrandFkViolation(error)) {
-        console.error(
-          "[cloudinary/webhook] brand_id update rejected on rename, preserving existing brand:",
-          error.message,
-        );
-        const { error: retryErr } = await db
-          .from("assets")
-          .update({ url: secureUrl, cloudinary_public_id: publicId })
-          .eq("id", mirror.asset_id);
-        if (retryErr) {
-          console.error("[cloudinary/webhook] assets rename update failed:", retryErr.message);
-          return undefined;
-        }
-        return { assetId: mirror.asset_id, effectiveBrandId: mirror.brand_id };
-      }
-
-      console.error("[cloudinary/webhook] assets rename update failed:", error.message);
-      return undefined;
     }
   }
 
@@ -366,8 +397,9 @@ async function handleUpload(db: ReturnType<typeof createSupabaseAdminClient>, pa
     cloudinaryAssetId: identity.cloudinary_asset_id,
   });
   if (!upserted) return;
-  const { assetId, effectiveBrandId } = upserted;
+  const { assetId, effectiveBrandId, deferAssetPublicIdSync } = upserted;
 
+  // Mirror first on rename so a failed public_id write cannot leave assets ahead of cloudinary_assets.
   const persisted = await upsertCloudinaryAssetRecord(db, assetId, {
     publicId,
     secureUrl,
@@ -377,6 +409,16 @@ async function handleUpload(db: ReturnType<typeof createSupabaseAdminClient>, pa
     payload,
   });
   if (!persisted) return;
+
+  if (deferAssetPublicIdSync) {
+    const synced = await syncAssetPublicIdAfterMirror(db, {
+      assetId,
+      publicId,
+      secureUrl,
+      brandId,
+    });
+    if (!synced) return;
+  }
 
   await logNonFatal(db, {
     brandId: effectiveBrandId,
