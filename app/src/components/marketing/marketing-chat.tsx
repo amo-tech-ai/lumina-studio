@@ -183,16 +183,18 @@ export function MarketingChat() {
   return (
     <ChatErrorBoundary>
       {/*
-        The marketing runtime uses CopilotKit single-route mode.
+        Single-route marketing runtime (useSingleEndpoint defaults true on pin 1.61.0).
 
-        Pinned @copilotkit/react-core 1.61.0 already defaults
-        useSingleEndpoint to true. The explicit prop documents the
-        client/server contract and protects against future default changes.
-
-        It does not disable the separate thread-list GET.
-        Residual thread behavior is tracked by IPI-655.
+        IPI-655 · CHAT-RUNTIME-002: enableInspector={false} stops the localhost
+        web-inspector from owning a thread store and GETting /threads (405 on
+        single-route). CopilotKit from /v2 maps enableInspector → inspector;
+        showDevConsole on this wrapper only controls banners.
       */}
-      <CopilotKit runtimeUrl="/api/marketing-chat" useSingleEndpoint={true}>
+      <CopilotKit
+        runtimeUrl="/api/marketing-chat"
+        useSingleEndpoint={true}
+        enableInspector={false}
+      >
         <MarketingChatInner />
       </CopilotKit>
     </ChatErrorBoundary>

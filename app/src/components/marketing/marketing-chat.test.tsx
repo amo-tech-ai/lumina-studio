@@ -49,6 +49,17 @@ describe("MarketingChat — runtimeUrl contract", () => {
   it("explicitly aligns marketing chat with the single-route runtime contract", () => {
     expect(src).toMatch(/useSingleEndpoint=\{true\}/);
   });
+
+  // IPI-655 · CHAT-RUNTIME-002 — kill localhost inspector → GET /threads 405
+  it("disables CopilotKit inspector so marketing does not GET /threads", () => {
+    expect(src).toMatch(/enableInspector=\{false\}/);
+  });
+
+  it("does not enable the inspector or force showDevConsole on", () => {
+    expect(src).not.toMatch(/enableInspector=\{true\}/);
+    expect(src).not.toMatch(/showDevConsole=\{true\}/);
+    expect(src).not.toMatch(/showDevConsole=["']auto["']/);
+  });
 });
 
 // ─── Contract: feature flag ────────────────────────────────────────────────
