@@ -182,7 +182,20 @@ export function validateUploadResponse(json) {
   if (typeof json.bytes !== "number" || json.bytes <= 0) {
     return { ok: false, error: "missing/invalid bytes in upload response" };
   }
-  return { ok: true, publicId: json.public_id, bytes: json.bytes };
+  // IPI-641: fresh uploads must return provider identity for the pipeline smoke check.
+  if (!json.asset_id || typeof json.asset_id !== "string") {
+    return { ok: false, error: "missing asset_id in upload response" };
+  }
+  if (json.version == null || typeof json.version !== "number") {
+    return { ok: false, error: "missing/invalid version in upload response" };
+  }
+  return {
+    ok: true,
+    publicId: json.public_id,
+    bytes: json.bytes,
+    assetId: json.asset_id,
+    version: json.version,
+  };
 }
 
 /**
@@ -223,7 +236,7 @@ export async function pollForWebhookRow({
     }
     const { data: cloudinaryAsset, error: caError } = await supabase
       .from("cloudinary_assets")
-      .select("id, asset_id, status, brand_id, secure_url, public_id")
+      .select("id, asset_id, status, brand_id, secure_url, public_id, cloudinary_asset_id, version")
       .eq("public_id", publicId)
       .maybeSingle();
     if (caError) throw caError;
@@ -482,6 +495,7 @@ function resolveNotificationUrl(appBaseUrl) {
 
 /** Post a synthetically signed upload notification to the local webhook route. */
 async function postSyntheticUploadWebhook({ appBaseUrl, upJson, testFolder }) {
+  // Same identity fields as genuine Cloudinary notifications (IPI-641).
   const notifBody = JSON.stringify({
     notification_type: "upload",
     public_id: upJson.public_id,
@@ -492,6 +506,7 @@ async function postSyntheticUploadWebhook({ appBaseUrl, upJson, testFolder }) {
     width: upJson.width,
     height: upJson.height,
     version: upJson.version,
+    asset_id: upJson.asset_id,
     folder: testFolder,
     asset_folder: testFolder,
   });
@@ -704,11 +719,28 @@ async function ingestViaSyntheticWebhook({ appBaseUrl, admin, upJson, testFolder
     );
     throw new Error("brand_id mismatch on cloudinary_assets row");
   }
+  // IPI-641: fresh-upload path requires identity (validateUploadResponse already enforces upJson).
+  if (rows.cloudinaryAsset.cloudinary_asset_id !== upJson.asset_id) {
+    push(
+      "supabase-row",
+      false,
+      `cloudinary_asset_id=${rows.cloudinaryAsset.cloudinary_asset_id} expected ${upJson.asset_id}`,
+    );
+    throw new Error("cloudinary_asset_id not persisted from upload response");
+  }
+  if (Number(rows.cloudinaryAsset.version) !== Number(upJson.version)) {
+    push(
+      "supabase-row",
+      false,
+      `version=${rows.cloudinaryAsset.version} expected ${upJson.version}`,
+    );
+    throw new Error("version not persisted from upload response");
+  }
   push("synthetic-webhook-processed", true, `assets.id=${rows.asset.id}`);
   push(
     "supabase-row",
     true,
-    `cloudinary_assets.status=${rows.cloudinaryAsset.status}, brand_id=${rows.asset.brand_id}`,
+    `status=${rows.cloudinaryAsset.status}, brand_id=${rows.asset.brand_id}, cloudinary_asset_id=${rows.cloudinaryAsset.cloudinary_asset_id}, version=${rows.cloudinaryAsset.version}`,
   );
   return rows;
 }
