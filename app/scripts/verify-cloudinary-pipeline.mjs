@@ -223,7 +223,7 @@ export async function pollForWebhookRow({
     }
     const { data: cloudinaryAsset, error: caError } = await supabase
       .from("cloudinary_assets")
-      .select("id, asset_id, status, brand_id, secure_url, public_id")
+      .select("id, asset_id, status, brand_id, secure_url, public_id, cloudinary_asset_id, version")
       .eq("public_id", publicId)
       .maybeSingle();
     if (caError) throw caError;
@@ -706,11 +706,28 @@ async function ingestViaSyntheticWebhook({ appBaseUrl, admin, upJson, testFolder
     );
     throw new Error("brand_id mismatch on cloudinary_assets row");
   }
+  // IPI-641: synthetic path must persist the same identity fields Cloudinary returns.
+  if (upJson?.asset_id && rows.cloudinaryAsset.cloudinary_asset_id !== upJson.asset_id) {
+    push(
+      "supabase-row",
+      false,
+      `cloudinary_asset_id=${rows.cloudinaryAsset.cloudinary_asset_id} expected ${upJson.asset_id}`,
+    );
+    throw new Error("cloudinary_asset_id not persisted from upload response");
+  }
+  if (upJson?.version != null && Number(rows.cloudinaryAsset.version) !== Number(upJson.version)) {
+    push(
+      "supabase-row",
+      false,
+      `version=${rows.cloudinaryAsset.version} expected ${upJson.version}`,
+    );
+    throw new Error("version not persisted from upload response");
+  }
   push("synthetic-webhook-processed", true, `assets.id=${rows.asset.id}`);
   push(
     "supabase-row",
     true,
-    `cloudinary_assets.status=${rows.cloudinaryAsset.status}, brand_id=${rows.asset.brand_id}`,
+    `status=${rows.cloudinaryAsset.status}, brand_id=${rows.asset.brand_id}, cloudinary_asset_id=${rows.cloudinaryAsset.cloudinary_asset_id}, version=${rows.cloudinaryAsset.version}`,
   );
   return rows;
 }

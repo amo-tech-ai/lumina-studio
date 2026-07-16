@@ -255,6 +255,13 @@ describe("POST /api/assets/cloudinary/webhook", () => {
     expect(renamed.version).toBe(2);
   });
 
+  it("IPI-641 mapper: version 0 is preserved; empty asset_id is omitted (not a wipe)", async () => {
+    const { mapProviderIdentity } = await importRoute();
+    expect(mapProviderIdentity({ version: 0 }).version).toBe(0);
+    expect(mapProviderIdentity({ asset_id: "", version: 1 })).not.toHaveProperty("cloudinary_asset_id");
+    expect(mapProviderIdentity({ asset_id: "", version: 1 }).version).toBe(1);
+  });
+
   it("IPI-641 rename: same cloudinary_asset_id updates existing mirror instead of public_id insert", async () => {
     const NEW_PUBLIC_ID = `ipix/brands/${BRAND_ID}/products/renamed`;
     cloudinaryAssetsSelectMaybeSingle.mockResolvedValue({
@@ -276,6 +283,24 @@ describe("POST /api/assets/cloudinary/webhook", () => {
     expect(cloudinaryAssetsUpsert).not.toHaveBeenCalled();
     expect(cloudinaryAssetsUpdateEq).toHaveBeenCalledWith("id", "mirror-1");
     expect(cloudinaryAssetsSelectMaybeSingle).toHaveBeenCalled();
+  });
+
+  it("IPI-641 rename: archived mirror with same provider id is updated (not blocked by unique index)", async () => {
+    cloudinaryAssetsSelectMaybeSingle.mockResolvedValue({
+      data: { id: "mirror-archived", asset_id: "asset-existing", brand_id: BRAND_ID },
+      error: null,
+    });
+    const { POST } = await importRoute();
+    const res = await POST(
+      makeRequest({
+        ...UPLOAD_PAYLOAD,
+        public_id: `ipix/brands/${BRAND_ID}/products/after-rename`,
+        version: 3,
+      }),
+    );
+    expect(res.status).toBe(200);
+    expect(cloudinaryAssetsUpsert).not.toHaveBeenCalled();
+    expect(cloudinaryAssetsUpdateEq).toHaveBeenCalledWith("id", "mirror-archived");
   });
 
   it("IPI-641 delete: archives by cloudinary_asset_id when present", async () => {
