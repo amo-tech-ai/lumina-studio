@@ -34,7 +34,12 @@ export default async function PlannerHubPage({
 
   if (!result.ok) {
     if (result.error.code === "UNAUTHENTICATED") {
-      redirect("/login?redirect=/app/planner");
+      // Preserve the attempted filters/search/cursor through the login
+      // round-trip — safe-redirect.ts's safeRedirect() already accepts any
+      // `/app/*` target including its own query string, and login-form.tsx
+      // reads it via URLSearchParams.get() (auto-decoding), so the full
+      // canonical Hub URL round-trips correctly.
+      redirect(`/login?redirect=${encodeURIComponent(buildHubUrl(filters))}`);
     }
     // By this point search/limit/entityType/status are already normalized
     // to values listPlannerInstances accepts (parseHubSearchParams mirrors
