@@ -56,3 +56,13 @@ describe("getMastraStorage (noop mode)", () => {
     expect(first).toBe(second);
   });
 });
+
+describe("Cloudflare @mastra/pg stub (IPI-490)", () => {
+  it("throws a clear config error — never a silent fake PostgresStore", async () => {
+    const { PostgresStore } = await import("../../scripts/cf-mastra-pg-stub.mjs");
+    expect(() => new PostgresStore()).toThrow(
+      /PostgresStore is unavailable in this Worker bundle/,
+    );
+    expect(() => new PostgresStore()).toThrow(/MASTRA_STORAGE_MODE=noop/);
+  });
+});

@@ -1,6 +1,6 @@
 // OpenNext Cloudflare adapter — R2 incremental cache optional (CF-MIG P1).
-// IPI-490 · CF-MIG-210: set IPIX_CF_BUNDLE_STUBS so next.config turbopack/webpack
-// server stubs drop `@shikijs/langs` (~7.6 MiB) from the Worker graph.
+// IPI-490 · CF-MIG-210: IPIX_CF_BUNDLE_STUBS → shiki bridge + `@mastra/pg` stubs
+// (browser Shiki via CDN; see scripts/cf-shiki-stub.mjs).
 import { defineCloudflareConfig } from "@opennextjs/cloudflare";
 
 const cloudflare = defineCloudflareConfig({});

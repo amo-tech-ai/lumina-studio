@@ -41,7 +41,8 @@
     "@ast-grep/napi-win32-arm64-msvc": "./scripts/cf-ast-grep-stub.mjs",
     "@ast-grep/napi-win32-ia32-msvc": "./scripts/cf-ast-grep-stub.mjs",
     "@ast-grep/napi-win32-x64-msvc": "./scripts/cf-ast-grep-stub.mjs",
-    // Client syntax highlighting (streamdown → shiki) — ~7.6 MiB @shikijs/langs in meta
+    // Chat highlighting (streamdown → shiki): stub drops langs from Worker;
+    // browser loads real Shiki via jsDelivr (see scripts/cf-shiki-stub.mjs).
     "shiki": "./scripts/cf-shiki-stub.mjs",
     "shiki/engine/javascript": "./scripts/cf-shiki-stub.mjs",
     "@shikijs/langs": "./scripts/cf-shiki-stub.mjs",

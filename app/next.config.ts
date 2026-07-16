@@ -34,14 +34,14 @@ const mastraPgStub = path.join(appDir, "scripts/cf-mastra-pg-stub.mjs");
 /**
  * IPI-490 · CF-MIG-210 — OpenNext-only stubs (IPIX_CF_BUNDLE_STUBS=1).
  *
- * Proven in Worker graph: `@shikijs/langs` ~7.6 MiB via CopilotKit → streamdown.
- * Next 16 defaults `next build` to Turbopack (webpack aliases never run; webpack
- * also fails on CopilotKit `export *` in a client boundary).
+ * Proven bloat: `@shikijs/langs` ~7.6 MiB via CopilotKit → streamdown.
+ * Next 16 OpenNext builds use Turbopack; resolveAlias is not server-scoped, and
+ * `next build --webpack` fails on CopilotKit `export *` in a client boundary.
  *
- * Turbopack resolveAlias is not server-scoped — CF client ASSETS in the same
- * build also resolve the stub (plain code blocks in chat until a CDN follow-up).
- * Local `next dev` / plain `npm run build` keep real shiki.
+ * Shiki aliases point at `cf-shiki-stub.mjs`: noop on the server (size gate),
+ * jsDelivr ESM load in the browser (syntax highlighting preserved).
  *
+ * `@mastra/pg` / `pg` are server storage only.
  * Wrangler `alias` alone is insufficient: OpenNext pre-bundles into handler.mjs.
  */
 const cfBundleStubAliases =
@@ -106,8 +106,8 @@ const nextConfig: NextConfig = {
     config.resolve.alias = {
       ...config.resolve.alias,
       ...copilotkitRuntimeInternalAliases,
-      // webpack path kept for optional `next build --webpack`; OpenNext uses Turbopack.
-      ...(isServer || process.env.IPIX_CF_BUNDLE_STUBS === "1" ? cfBundleStubAliases : {}),
+      // Optional `next build --webpack` (CopilotKit currently blocks webpack builds).
+      ...(isServer ? cfBundleStubAliases : {}),
     };
     return config;
   },
