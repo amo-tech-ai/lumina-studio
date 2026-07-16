@@ -1,5 +1,5 @@
 import { InMemoryStore } from "@mastra/core/storage";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   getMastraStorage,
   isCloudflareWorkersRuntime,
@@ -35,18 +35,24 @@ describe("isCloudflareWorkersRuntime", () => {
 });
 
 describe("getMastraStorage (noop mode)", () => {
-  const prev = process.env.MASTRA_STORAGE_MODE;
-
   afterEach(() => {
-    if (prev === undefined) delete process.env.MASTRA_STORAGE_MODE;
-    else process.env.MASTRA_STORAGE_MODE = prev;
+    vi.unstubAllEnvs();
   });
 
   it("returns InMemoryStore with getStore when MASTRA_STORAGE_MODE=noop", async () => {
-    process.env.MASTRA_STORAGE_MODE = "noop";
+    vi.stubEnv("MASTRA_STORAGE_MODE", "noop");
     const store = getMastraStorage();
     expect(store).toBeInstanceOf(InMemoryStore);
     const memory = await store.getStore("memory");
     expect(memory).toBeTruthy();
+  });
+
+  it("reuses the same InMemoryStore instance on repeated calls", async () => {
+    vi.stubEnv("MASTRA_STORAGE_MODE", "noop");
+    vi.resetModules();
+    const { getMastraStorage: freshGetMastraStorage } = await import("./storage");
+    const first = freshGetMastraStorage();
+    const second = freshGetMastraStorage();
+    expect(first).toBe(second);
   });
 });
