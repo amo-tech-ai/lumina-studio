@@ -27,6 +27,7 @@ const assetsInsertSingle = vi.fn();
 const assetsUpdateEq = vi.fn();
 const cloudinaryAssetsUpsert = vi.fn();
 const cloudinaryAssetsSelectMaybeSingle = vi.fn();
+const cloudinaryAssetsUpdate = vi.fn(() => ({ eq: cloudinaryAssetsUpdateEq }));
 const cloudinaryAssetsUpdateEq = vi.fn();
 const aiAgentLogsInsert = vi.fn();
 const campaignsSelectMaybeSingle = vi.fn();
@@ -43,7 +44,7 @@ const mockFrom = vi.fn((table: string) => {
     return {
       select: vi.fn(() => ({ eq: vi.fn(() => ({ maybeSingle: cloudinaryAssetsSelectMaybeSingle })) })),
       upsert: cloudinaryAssetsUpsert,
-      update: vi.fn(() => ({ eq: cloudinaryAssetsUpdateEq })),
+      update: cloudinaryAssetsUpdate,
     };
   }
   if (table === "ai_agent_logs") {
@@ -103,6 +104,8 @@ beforeEach(() => {
   assetsUpdateEq.mockResolvedValue({ data: null, error: null });
   cloudinaryAssetsUpsert.mockResolvedValue({ data: null, error: null });
   cloudinaryAssetsSelectMaybeSingle.mockResolvedValue({ data: null, error: null });
+  cloudinaryAssetsUpdate.mockClear();
+  cloudinaryAssetsUpdate.mockImplementation(() => ({ eq: cloudinaryAssetsUpdateEq }));
   cloudinaryAssetsUpdateEq.mockResolvedValue({ data: null, error: null });
   aiAgentLogsInsert.mockResolvedValue({ data: null, error: null });
   campaignsSelectMaybeSingle.mockResolvedValue({ data: null, error: null });
@@ -335,6 +338,26 @@ describe("POST /api/assets/cloudinary/webhook", () => {
     expect(res.status).toBe(200);
     expect(assetsInsertSingle).not.toHaveBeenCalled();
     expect(cloudinaryAssetsUpsert).not.toHaveBeenCalled();
+  });
+
+  it("IPI-641: concurrent mirror created after miss keeps canonical asset_id (no FK reassignment)", async () => {
+    cloudinaryAssetsSelectMaybeSingle
+      .mockResolvedValueOnce({ data: null, error: null })
+      .mockResolvedValueOnce({
+        data: { id: "mirror-1", asset_id: "asset-canonical", brand_id: BRAND_ID },
+        error: null,
+      });
+    assetsInsertSingle.mockResolvedValue({ data: { id: "asset-orphan" }, error: null });
+
+    const { POST } = await importRoute();
+    const res = await POST(makeRequest(UPLOAD_PAYLOAD));
+    expect(res.status).toBe(200);
+    expect(assetsInsertSingle).toHaveBeenCalled();
+    expect(cloudinaryAssetsUpsert).not.toHaveBeenCalled();
+    expect(cloudinaryAssetsUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({ asset_id: "asset-canonical", public_id: UPLOAD_PAYLOAD.public_id }),
+    );
+    expect(assetsUpdateEq).toHaveBeenCalledWith("id", "asset-canonical");
   });
 
   it("IPI-641 delete: archives by cloudinary_asset_id when present", async () => {

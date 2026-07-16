@@ -254,7 +254,13 @@ async function findMirrorByProviderId(
   return { kind: "found", mirror: { id: data.id, asset_id: data.asset_id, brand_id: data.brand_id } };
 }
 
-/** Prefer provider identity on rename; fall back to public_id upsert for first sighting. */
+type MirrorWriteResult = { ok: false } | { ok: true; assetId: string };
+
+/**
+ * Prefer provider identity on rename; fall back to public_id upsert for first sighting.
+ * When a prior lookup was "missing", re-check before insert so a concurrent writer that
+ * created the mirror cannot have its asset_id FK stolen by this request's new assets row.
+ */
 async function upsertCloudinaryAssetRecord(
   db: ReturnType<typeof createSupabaseAdminClient>,
   assetId: string,
@@ -265,9 +271,11 @@ async function upsertCloudinaryAssetRecord(
     folder: string | null;
     brandId: string | null;
     payload: CloudinaryNotification;
+    /** Result of the single handleUpload lookup (avoids a second blind lookup on rename). */
+    priorLookup: MirrorLookup;
   },
-): Promise<boolean> {
-  const { publicId, secureUrl, resourceType, folder, brandId, payload } = fields;
+): Promise<MirrorWriteResult> {
+  const { publicId, secureUrl, resourceType, folder, brandId, payload, priorLookup } = fields;
   const identity = mapProviderIdentity(payload);
   const row: CloudinaryMirrorRow = {
     asset_id: assetId,
@@ -287,24 +295,30 @@ async function upsertCloudinaryAssetRecord(
   if (identity.version != null) row.version = identity.version;
 
   if (identity.cloudinary_asset_id) {
-    const existing = await findMirrorByProviderId(db, identity.cloudinary_asset_id);
-    if (existing.kind === "error") return false;
+    // Rename: reuse prior found lookup. First sighting: re-check to close the insert race.
+    const existing =
+      priorLookup.kind === "found"
+        ? priorLookup
+        : await findMirrorByProviderId(db, identity.cloudinary_asset_id);
+    if (existing.kind === "error") return { ok: false };
     if (existing.kind === "found") {
+      // Never reassign the mirror FK — concurrent inserts must keep the canonical asset_id.
+      row.asset_id = existing.mirror.asset_id;
       const { error } = await db.from("cloudinary_assets").update(row).eq("id", existing.mirror.id);
       if (error) {
         console.error("[cloudinary/webhook] cloudinary_assets update by provider id failed:", error.message);
-        return false;
+        return { ok: false };
       }
-      return true;
+      return { ok: true, assetId: existing.mirror.asset_id };
     }
   }
 
   const { error } = await db.from("cloudinary_assets").upsert(row, { onConflict: "public_id" });
   if (error) {
     console.error("[cloudinary/webhook] cloudinary_assets upsert failed:", error.message);
-    return false;
+    return { ok: false };
   }
-  return true;
+  return { ok: true, assetId };
 }
 
 /** After mirror rename succeeds, point assets at the new public_id (never before). */
@@ -358,21 +372,18 @@ async function resolveAssetForUpload(
     secureUrl: string;
     resourceType: string;
     brandId: string | null;
-    cloudinaryAssetId?: string;
+    priorLookup: MirrorLookup;
   },
 ): Promise<AssetUpsertResult | undefined> {
-  const { publicId, secureUrl, resourceType, brandId, cloudinaryAssetId } = fields;
+  const { publicId, secureUrl, resourceType, brandId, priorLookup } = fields;
 
-  if (cloudinaryAssetId) {
-    const lookup = await findMirrorByProviderId(db, cloudinaryAssetId);
-    if (lookup.kind === "error") return undefined;
-    if (lookup.kind === "found") {
-      return {
-        assetId: lookup.mirror.asset_id,
-        effectiveBrandId: brandId ?? lookup.mirror.brand_id,
-        deferAssetPublicIdSync: true,
-      };
-    }
+  if (priorLookup.kind === "error") return undefined;
+  if (priorLookup.kind === "found") {
+    return {
+      assetId: priorLookup.mirror.asset_id,
+      effectiveBrandId: brandId ?? priorLookup.mirror.brand_id,
+      deferAssetPublicIdSync: true,
+    };
   }
 
   return upsertAssetRecord(db, { publicId, secureUrl, resourceType, brandId });
@@ -389,12 +400,17 @@ async function handleUpload(db: ReturnType<typeof createSupabaseAdminClient>, pa
   const { brandId, reason } = await resolveBrandId(db, folder, publicId);
   const identity = mapProviderIdentity(payload);
 
+  const priorLookup: MirrorLookup = identity.cloudinary_asset_id
+    ? await findMirrorByProviderId(db, identity.cloudinary_asset_id)
+    : { kind: "missing" };
+  if (priorLookup.kind === "error") return;
+
   const upserted = await resolveAssetForUpload(db, {
     publicId,
     secureUrl,
     resourceType,
     brandId,
-    cloudinaryAssetId: identity.cloudinary_asset_id,
+    priorLookup,
   });
   if (!upserted) return;
   const { assetId, effectiveBrandId, deferAssetPublicIdSync } = upserted;
@@ -407,12 +423,15 @@ async function handleUpload(db: ReturnType<typeof createSupabaseAdminClient>, pa
     folder,
     brandId: effectiveBrandId,
     payload,
+    priorLookup,
   });
-  if (!persisted) return;
+  if (!persisted.ok) return;
 
-  if (deferAssetPublicIdSync) {
+  const canonicalAssetId = persisted.assetId;
+  // Sync public_id onto the canonical assets row (rename, or race where we keep the prior mirror FK).
+  if (deferAssetPublicIdSync || canonicalAssetId !== assetId) {
     const synced = await syncAssetPublicIdAfterMirror(db, {
-      assetId,
+      assetId: canonicalAssetId,
       publicId,
       secureUrl,
       brandId,
@@ -428,11 +447,11 @@ async function handleUpload(db: ReturnType<typeof createSupabaseAdminClient>, pa
       resolution_reason: reason,
       cloudinary_asset_id: identity.cloudinary_asset_id ?? null,
     },
-    output: { asset_id: assetId },
+    output: { asset_id: canonicalAssetId },
   });
 
   if (resourceTypeToAssetType(resourceType) === "image") {
-    triggerDnaAudit(assetId);
+    triggerDnaAudit(canonicalAssetId);
   }
 }
 
