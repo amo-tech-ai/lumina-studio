@@ -585,11 +585,29 @@ export async function listDependencies(
 // caller-supplied userId. Returns null (not an error) when the current
 // user has no saved preference yet for this instance — that's an expected,
 // valid first-visit state, not a failure.
+//
+// view_configs' own RLS (view_configs_select_own) already restricts every
+// row to its owning user regardless of org/assignment, so this can never
+// leak another user's preferences. The gate below closes a narrower gap:
+// without it, a caller whose assignment was later revoked could still read
+// their own stale saved preference for a plan they can no longer otherwise
+// see — same assignment-level model as getInstanceDetail/listDependencies,
+// applied here for consistency rather than to prevent cross-user leakage.
 export async function getViewConfig(
   instanceId: string,
 ): Promise<PlannerQueryResult<PlannerViewConfig | null>> {
   const context = await authenticatedPlannerClient();
   if (!context.ok) return context;
+
+  const permissionsResult = await resolveReadPermissions(
+    instanceId,
+    context.data.base,
+    "Plan view preferences could not be loaded.",
+  );
+  if (!permissionsResult.ok) return permissionsResult;
+  if (!permissionsResult.data.canRead) {
+    return failure("INVALID_INPUT", "This plan could not be found.");
+  }
 
   const { data, error } = await context.data.client
     .from("view_configs")

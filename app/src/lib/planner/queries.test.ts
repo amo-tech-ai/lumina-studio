@@ -728,4 +728,38 @@ describe("getViewConfig", () => {
       error: { code: "QUERY_FAILED", message: "Plan view preferences could not be loaded." },
     });
   });
+
+  it("denies an org member with no assignment on this instance, even for their own saved preference", async () => {
+    const query = makeQuery({
+      data: {
+        id: "v1",
+        user_id: "user-a",
+        instance_id: "i1",
+        default_view: "timeline",
+        filters: {},
+        sort_config: {},
+      },
+      error: null,
+    });
+    const client = mockClient(query, "user-a", [], null);
+
+    await expect(getViewConfig("i1")).resolves.toEqual({
+      ok: false,
+      error: { code: "INVALID_INPUT", message: "This plan could not be found." },
+    });
+    // Fails closed before querying — a revoked assignment can't still read
+    // back a stale saved preference for a plan it no longer has access to.
+    expect(client.from).not.toHaveBeenCalled();
+  });
+
+  it("returns a typed query failure instead of throwing when the assignment RPC errors", async () => {
+    const query = makeQuery({ data: null, error: null });
+    const client = mockClient(query, "user-a", [], DEFAULT_ASSIGNMENT, { message: "rpc unavailable" });
+
+    await expect(getViewConfig("i1")).resolves.toEqual({
+      ok: false,
+      error: { code: "QUERY_FAILED", message: "Plan view preferences could not be loaded." },
+    });
+    expect(client.from).not.toHaveBeenCalled();
+  });
 });
