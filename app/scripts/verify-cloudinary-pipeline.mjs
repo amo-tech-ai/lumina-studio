@@ -567,6 +567,133 @@ export function shouldKeepFixture({ keepFixture, publicId, assetId }) {
   return Boolean(keepFixture && (publicId || assetId));
 }
 
+function envPositiveMs(name, fallback) {
+  const n = Number(process.env[name] ?? fallback);
+  return Number.isFinite(n) && n > 0 ? n : fallback;
+}
+
+function ensureWsPolyfill() {
+  if (typeof globalThis.WebSocket !== "undefined") return;
+  try {
+    const { WebSocket: WS } = requireDep("ws");
+    globalThis.WebSocket = WS;
+  } catch {
+    /* REST-only */
+  }
+}
+
+async function signAndUploadTestPng({
+  appBaseUrl,
+  authHeader,
+  brandId,
+  testFolder,
+  testPublicIdPrefix,
+  runId,
+  imageBytes,
+  notificationUrl,
+  push,
+}) {
+  const signBody = {
+    brandId,
+    resourceType: "image",
+    filename: `${runId}.png`,
+    folder: testFolder,
+    ...(notificationUrl ? { notificationUrl } : {}),
+  };
+  const signRes = await timedFetch(`${appBaseUrl}/api/assets/upload-sign`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...(authHeader ? { Authorization: authHeader } : {}),
+    },
+    body: JSON.stringify(signBody),
+  });
+  if (!signRes.ok) {
+    const t = await signRes.text().catch(() => "");
+    push("upload-signature", false, `HTTP ${signRes.status} ${t.slice(0, 200)}`);
+    throw new Error("upload-signature failed");
+  }
+  const signed = await signRes.json();
+  push("upload-signature", true, `folder=${signed.assetFolder}`);
+
+  const form = new FormData();
+  form.append("file", new Blob([imageBytes], { type: "image/png" }), `${runId}.png`);
+  form.append("api_key", signed.apiKey);
+  form.append("timestamp", String(signed.timestamp));
+  form.append("signature", signed.signature);
+  if (signed.filename) form.append("filename", signed.filename);
+  for (const [k, v] of Object.entries(signed.params)) form.append(k, String(v));
+  const upRes = await timedFetch(signed.uploadUrl, { method: "POST", body: form, timeout: 30_000 });
+  const upText = await upRes.text();
+  let upJson;
+  try {
+    upJson = JSON.parse(upText);
+  } catch {
+    upJson = null;
+  }
+  const validated = validateUploadResponse(upJson);
+  if (!validated.ok || !upRes.ok) {
+    push("cloudinary-upload", false, `HTTP ${upRes.status} ${validated.error ?? upText.slice(0, 400)}`);
+    throw new Error("cloudinary-upload failed");
+  }
+  if (!isTestPublicId(validated.publicId, testPublicIdPrefix)) {
+    push(
+      "cloudinary-upload",
+      false,
+      `public_id=${validated.publicId} is not under ${testPublicIdPrefix}`,
+    );
+    throw new Error("cloudinary-upload public_id outside test folder");
+  }
+  push("cloudinary-upload", true, `public_id=${validated.publicId} bytes=${validated.bytes}`);
+  return { publicId: validated.publicId, upJson };
+}
+
+async function ingestViaSyntheticWebhook({ appBaseUrl, admin, upJson, testFolder, publicId, brandId, push }) {
+  const notifRes = await postSyntheticUploadWebhook({ appBaseUrl, upJson, testFolder });
+  if (!notifRes.ok) {
+    const t = await notifRes.text().catch(() => "");
+    push("synthetic-webhook-processed", false, `HTTP ${notifRes.status} ${t.slice(0, 200)}`);
+    throw new Error("webhook endpoint rejected notification");
+  }
+
+  let rows;
+  try {
+    rows = await pollForWebhookRow({
+      supabase: admin,
+      publicId,
+      intervalMs: envPositiveMs("CLD105_POLL_INTERVAL_MS", 1000),
+      timeoutMs: envPositiveMs("CLD105_POLL_TIMEOUT_MS", 30_000),
+    });
+  } catch (e) {
+    push("synthetic-webhook-processed", false, sanitizeError(e));
+    throw e;
+  }
+  if (!rows?.asset?.id) {
+    push("synthetic-webhook-processed", false, "timed out waiting for assets row after notification");
+    push("supabase-row", false, "no row written by webhook");
+    throw new Error("webhook did not write rows");
+  }
+  if (rows.asset.brand_id !== brandId) {
+    push("supabase-row", false, `assets.brand_id=${rows.asset.brand_id} does not match test brand ${brandId}`);
+    throw new Error("brand_id mismatch on assets row");
+  }
+  if (rows.cloudinaryAsset.brand_id !== brandId) {
+    push(
+      "supabase-row",
+      false,
+      `cloudinary_assets.brand_id=${rows.cloudinaryAsset.brand_id} does not match test brand ${brandId}`,
+    );
+    throw new Error("brand_id mismatch on cloudinary_assets row");
+  }
+  push("synthetic-webhook-processed", true, `assets.id=${rows.asset.id}`);
+  push(
+    "supabase-row",
+    true,
+    `cloudinary_assets.status=${rows.cloudinaryAsset.status}, brand_id=${rows.asset.brand_id}`,
+  );
+  return rows;
+}
+
 /**
  * Create one disposable Cloudinary + Supabase fixture via the real upload-sign
  * route and a synthetic signed webhook (deterministic CI path).
@@ -605,15 +732,7 @@ export async function createDisposableFixture({ skipDna = false, log = true, pro
     api_secret: CLOUDINARY_API_SECRET,
     secure: true,
   });
-
-  if (typeof globalThis.WebSocket === "undefined") {
-    try {
-      const { WebSocket: WS } = requireDep("ws");
-      globalThis.WebSocket = WS;
-    } catch {
-      /* REST-only */
-    }
-  }
+  ensureWsPolyfill();
   const { createClient } = requireDep("@supabase/supabase-js");
   const supabaseFactory = (url, key, opts) =>
     createClient(url, key, { auth: { persistSession: false }, ...opts });
@@ -623,22 +742,18 @@ export async function createDisposableFixture({ skipDna = false, log = true, pro
   let assetId;
   const syncProgress = () => {
     if (!progress) return;
-    progress.brandId = brandId;
-    progress.testFolder = testFolder;
-    progress.testPublicIdPrefix = testPublicIdPrefix;
-    progress.cloudinary = cloudinary;
-    progress.supabase = admin;
-    progress.publicId = publicId;
-    progress.assetId = assetId;
-    progress.stages = stages;
-    progress.cleanup = () =>
-      cleanup({
-        cloudinary,
-        supabase: admin,
-        publicId,
-        assetId,
-        testPublicIdPrefix,
-      });
+    Object.assign(progress, {
+      brandId,
+      testFolder,
+      testPublicIdPrefix,
+      cloudinary,
+      supabase: admin,
+      publicId,
+      assetId,
+      stages,
+      cleanup: () =>
+        cleanup({ cloudinary, supabase: admin, publicId, assetId, testPublicIdPrefix }),
+    });
   };
   syncProgress();
 
@@ -647,7 +762,6 @@ export async function createDisposableFixture({ skipDna = false, log = true, pro
   // synthetic signed webhook itself (Cloudinary async delivery is not proven),
   // so only attach notificationUrl when an explicit https base is provided.
   const notificationUrl = resolveNotificationUrl(appBaseUrl);
-
   const RUN_ID = `cld105-${Date.now()}-${randomUUID().slice(0, 8)}`;
   if (progress) progress.runId = RUN_ID;
   if (log) {
@@ -659,122 +773,39 @@ export async function createDisposableFixture({ skipDna = false, log = true, pro
 
   const imageBytes = generateTestImage(RUN_ID);
   push("image-created", true, `${imageBytes.length} bytes`);
-
   const authHeader = await resolveOperatorAuth(supabaseFactory);
-  const signBody = {
-    brandId,
-    resourceType: "image",
-    filename: `${RUN_ID}.png`,
-    folder: testFolder,
-    ...(notificationUrl ? { notificationUrl } : {}),
-  };
-  const signRes = await timedFetch(`${appBaseUrl}/api/assets/upload-sign`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      ...(authHeader ? { Authorization: authHeader } : {}),
-    },
-    body: JSON.stringify(signBody),
-  });
-  if (!signRes.ok) {
-    const t = await signRes.text().catch(() => "");
-    push("upload-signature", false, `HTTP ${signRes.status} ${t.slice(0, 200)}`);
-    throw new Error("upload-signature failed");
-  }
-  const signed = await signRes.json();
-  push("upload-signature", true, `folder=${signed.assetFolder}`);
-
-  const form = new FormData();
-  form.append("file", new Blob([imageBytes], { type: "image/png" }), `${RUN_ID}.png`);
-  form.append("api_key", signed.apiKey);
-  form.append("timestamp", String(signed.timestamp));
-  form.append("signature", signed.signature);
-  if (signed.filename) form.append("filename", signed.filename);
-  for (const [k, v] of Object.entries(signed.params)) form.append(k, String(v));
-  const upRes = await timedFetch(signed.uploadUrl, { method: "POST", body: form, timeout: 30_000 });
-  const upText = await upRes.text();
-  let upJson;
-  try {
-    upJson = JSON.parse(upText);
-  } catch {
-    upJson = null;
-  }
-  const validated = validateUploadResponse(upJson);
-  if (!validated.ok || !upRes.ok) {
-    push("cloudinary-upload", false, `HTTP ${upRes.status} ${validated.error ?? upText.slice(0, 400)}`);
-    throw new Error("cloudinary-upload failed");
-  }
-  publicId = validated.publicId;
-  syncProgress();
-  if (!isTestPublicId(publicId, testPublicIdPrefix)) {
-    push("cloudinary-upload", false, `public_id=${publicId} is not under ${testPublicIdPrefix}`);
-    throw new Error("cloudinary-upload public_id outside test folder");
-  }
-  push("cloudinary-upload", true, `public_id=${publicId} bytes=${validated.bytes}`);
-
-  const notifRes = await postSyntheticUploadWebhook({
+  const uploaded = await signAndUploadTestPng({
     appBaseUrl,
-    upJson,
+    authHeader,
+    brandId,
     testFolder,
+    testPublicIdPrefix,
+    runId: RUN_ID,
+    imageBytes,
+    notificationUrl,
+    push,
   });
-  let pollInterval = Number(process.env.CLD105_POLL_INTERVAL_MS ?? 1000);
-  let pollTimeout = Number(process.env.CLD105_POLL_TIMEOUT_MS ?? 30_000);
-  if (!Number.isFinite(pollInterval) || pollInterval <= 0) pollInterval = 1000;
-  if (!Number.isFinite(pollTimeout) || pollTimeout <= 0) pollTimeout = 30_000;
-  if (!notifRes.ok) {
-    const t = await notifRes.text().catch(() => "");
-    push("synthetic-webhook-processed", false, `HTTP ${notifRes.status} ${t.slice(0, 200)}`);
-    throw new Error("webhook endpoint rejected notification");
-  }
+  publicId = uploaded.publicId;
+  syncProgress();
 
-  let rows;
-  try {
-    rows = await pollForWebhookRow({
-      supabase: admin,
-      publicId,
-      intervalMs: pollInterval,
-      timeoutMs: pollTimeout,
-    });
-  } catch (e) {
-    push("synthetic-webhook-processed", false, sanitizeError(e));
-    throw e;
-  }
-  if (!rows?.asset?.id) {
-    push("synthetic-webhook-processed", false, "timed out waiting for assets row after notification");
-    push("supabase-row", false, "no row written by webhook");
-    throw new Error("webhook did not write rows");
-  }
+  const rows = await ingestViaSyntheticWebhook({
+    appBaseUrl,
+    admin,
+    upJson: uploaded.upJson,
+    testFolder,
+    publicId,
+    brandId,
+    push,
+  });
   assetId = rows.asset.id;
   syncProgress();
 
-  if (rows.asset.brand_id !== brandId) {
-    push("supabase-row", false, `assets.brand_id=${rows.asset.brand_id} does not match test brand ${brandId}`);
-    throw new Error("brand_id mismatch on assets row");
-  }
-  if (rows.cloudinaryAsset.brand_id !== brandId) {
-    push(
-      "supabase-row",
-      false,
-      `cloudinary_assets.brand_id=${rows.cloudinaryAsset.brand_id} does not match test brand ${brandId}`,
-    );
-    throw new Error("brand_id mismatch on cloudinary_assets row");
-  }
-
-  push("synthetic-webhook-processed", true, `assets.id=${assetId}`);
-  push(
-    "supabase-row",
-    true,
-    `cloudinary_assets.status=${rows.cloudinaryAsset.status}, brand_id=${rows.asset.brand_id}`,
-  );
-
   if (!skipDna) {
-    let dnaTimeoutMs = Number(process.env.CLD105_DNA_TIMEOUT_MS ?? 90_000);
-    if (!Number.isFinite(dnaTimeoutMs) || dnaTimeoutMs <= 0) dnaTimeoutMs = 90_000;
     const dna = await pollForDnaState({
       supabase: admin,
       assetId,
       intervalMs: 2000,
-      timeoutMs: dnaTimeoutMs,
+      timeoutMs: envPositiveMs("CLD105_DNA_TIMEOUT_MS", 90_000),
     });
     push("dna-status", dna.status !== "absent", `${dna.status} (${dna.detail})`);
     if (dna.status === "absent") throw new Error("dna-status not populated after poll");
@@ -793,13 +824,7 @@ export async function createDisposableFixture({ skipDna = false, log = true, pro
     supabase: admin,
     stages,
     cleanup: () =>
-      cleanup({
-        cloudinary,
-        supabase: admin,
-        publicId,
-        assetId,
-        testPublicIdPrefix,
-      }),
+      cleanup({ cloudinary, supabase: admin, publicId, assetId, testPublicIdPrefix }),
   };
 }
 
