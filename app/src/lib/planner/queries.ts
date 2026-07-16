@@ -75,6 +75,7 @@ export type ListPlannerInstancesInput = {
   search?: string;
   entityType?: EntityType;
   status?: PlannerInstanceStatus;
+  statuses?: PlannerInstanceStatus[];
   includeArchived?: boolean;
 };
 
@@ -118,7 +119,7 @@ const DEFAULT_PAGE_LIMIT = 20;
 const MAX_PAGE_LIMIT = 50;
 const MAX_SEARCH_LENGTH = 100;
 
-const DASHBOARD_INSTANCE_STATUSES: PlannerInstanceStatus[] = [
+export const DASHBOARD_INSTANCE_STATUSES: PlannerInstanceStatus[] = [
   "draft",
   "planned",
   "active",
@@ -389,7 +390,9 @@ export async function listPlannerInstances(
     .from("instances")
     .select("*, tasks(id, status, end_date)");
 
-  if (options.status) {
+  if (options.statuses) {
+    query = query.in("status", options.statuses);
+  } else if (options.status) {
     query = query.eq("status", options.status);
   } else if (!options.includeArchived) {
     query = query.neq("status", "archived");
