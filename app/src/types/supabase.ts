@@ -1937,6 +1937,8 @@ export type Database = {
           asset_id: string
           brand_id: string | null
           bytes: number | null
+          /** Cloudinary immutable provider asset_id — not the local assets.id FK. */
+          cloudinary_asset_id: string | null
           created_at: string
           created_by: string | null
           delivery_type: string
@@ -1954,6 +1956,7 @@ export type Database = {
           secure_url: string
           status: string
           updated_at: string
+          /** Latest observed Cloudinary provider version. */
           version: number | null
           width: number | null
         }
@@ -1962,6 +1965,7 @@ export type Database = {
           asset_id: string
           brand_id?: string | null
           bytes?: number | null
+          cloudinary_asset_id?: string | null
           created_at?: string
           created_by?: string | null
           delivery_type?: string
@@ -1987,6 +1991,7 @@ export type Database = {
           asset_id?: string
           brand_id?: string | null
           bytes?: number | null
+          cloudinary_asset_id?: string | null
           created_at?: string
           created_by?: string | null
           delivery_type?: string

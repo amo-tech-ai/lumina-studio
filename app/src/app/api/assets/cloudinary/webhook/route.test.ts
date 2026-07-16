@@ -118,6 +118,8 @@ async function importRoute() {
   return import("./route");
 }
 
+const PROVIDER_ASSET_ID = "3515c6000a548515f1134043f9785c2f";
+
 const UPLOAD_PAYLOAD = {
   notification_type: "upload",
   public_id: `ipix/brands/${BRAND_ID}/products/abc123`,
@@ -128,6 +130,7 @@ const UPLOAD_PAYLOAD = {
   width: 800,
   height: 600,
   version: 1,
+  asset_id: PROVIDER_ASSET_ID,
 };
 
 describe("POST /api/assets/cloudinary/webhook", () => {
@@ -198,12 +201,55 @@ describe("POST /api/assets/cloudinary/webhook", () => {
         public_id: UPLOAD_PAYLOAD.public_id,
         brand_id: BRAND_ID,
         status: "ready",
+        cloudinary_asset_id: PROVIDER_ASSET_ID,
+        version: 1,
       }),
       { onConflict: "public_id" },
     );
     expect(aiAgentLogsInsert).toHaveBeenCalledWith(
       expect.objectContaining({ agent_name: "cloudinary-webhook", brand_id: BRAND_ID }),
     );
+  });
+
+  it("IPI-641: persists cloudinary_asset_id + version from notification asset_id (not local FK)", async () => {
+    const { POST } = await importRoute();
+    await POST(makeRequest(UPLOAD_PAYLOAD));
+    const [row] = cloudinaryAssetsUpsert.mock.calls[0];
+    expect(row.cloudinary_asset_id).toBe(PROVIDER_ASSET_ID);
+    expect(row.asset_id).toBe("asset-1");
+    expect(row.cloudinary_asset_id).not.toBe(row.asset_id);
+    expect(row.version).toBe(1);
+  });
+
+  it("IPI-641: missing provider asset_id still upserts (nullable) without wiping identity keys", async () => {
+    const { asset_id: _omit, ...withoutProviderId } = UPLOAD_PAYLOAD;
+    const { POST } = await importRoute();
+    const res = await POST(makeRequest(withoutProviderId));
+    expect(res.status).toBe(200);
+    const [row] = cloudinaryAssetsUpsert.mock.calls[0];
+    expect(row).not.toHaveProperty("cloudinary_asset_id");
+    expect(row.version).toBe(1);
+  });
+
+  it("IPI-641 overwrite: same public_id keeps cloudinary_asset_id and advances version", async () => {
+    const { POST } = await importRoute();
+    await POST(makeRequest(UPLOAD_PAYLOAD));
+    await POST(makeRequest({ ...UPLOAD_PAYLOAD, version: 99, bytes: 2048 }));
+    const second = cloudinaryAssetsUpsert.mock.calls[1][0];
+    expect(second.public_id).toBe(UPLOAD_PAYLOAD.public_id);
+    expect(second.cloudinary_asset_id).toBe(PROVIDER_ASSET_ID);
+    expect(second.version).toBe(99);
+  });
+
+  it("IPI-641 rename identity: mapper keeps provider id when public_id changes (unit)", async () => {
+    const { mapProviderIdentity } = await importRoute();
+    const renamed = mapProviderIdentity({
+      ...UPLOAD_PAYLOAD,
+      public_id: `ipix/brands/${BRAND_ID}/products/renamed`,
+      version: 2,
+    });
+    expect(renamed.cloudinary_asset_id).toBe(PROVIDER_ASSET_ID);
+    expect(renamed.version).toBe(2);
   });
 
   it("updates the existing assets row instead of inserting when cloudinary_public_id is already linked", async () => {

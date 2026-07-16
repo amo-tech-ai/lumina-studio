@@ -23,6 +23,8 @@ type CloudinaryNotification = {
   height?: number;
   duration?: number;
   version?: number;
+  /** Cloudinary immutable provider asset id (hex). Not the local assets.id FK. */
+  asset_id?: string;
   folder?: string;
   asset_folder?: string;
   /** API key id used to sign the notification (may differ from CLOUDINARY_API_KEY). */
@@ -30,6 +32,21 @@ type CloudinaryNotification = {
   /** Delete notifications often omit top-level public_id and use resources[]. */
   resources?: Array<{ public_id?: string }>;
 };
+
+/** Shared mapper for genuine + synthetic webhook paths (IPI-641). */
+export function mapProviderIdentity(payload: CloudinaryNotification): {
+  cloudinary_asset_id?: string;
+  version?: number;
+} {
+  const out: { cloudinary_asset_id?: string; version?: number } = {};
+  if (typeof payload.asset_id === "string" && payload.asset_id.length > 0) {
+    out.cloudinary_asset_id = payload.asset_id;
+  } else {
+    console.warn("[cloudinary/webhook] notification missing Cloudinary asset_id (nullable ok)");
+  }
+  if (payload.version != null) out.version = payload.version;
+  return out;
+}
 
 function resourceTypeToAssetType(resourceType: string): "image" | "video" | "document" {
   if (resourceType === "image") return "image";
@@ -206,6 +223,7 @@ async function upsertCloudinaryAssetRecord(
   },
 ): Promise<boolean> {
   const { publicId, secureUrl, resourceType, folder, brandId, payload } = fields;
+  const identity = mapProviderIdentity(payload);
   const { error } = await db.from("cloudinary_assets").upsert(
     {
       asset_id: assetId,
@@ -216,11 +234,15 @@ async function upsertCloudinaryAssetRecord(
       height: payload.height ?? null,
       folder: folder ?? null,
       brand_id: brandId,
-      version: payload.version ?? null,
       format: payload.format ?? null,
       bytes: payload.bytes ?? null,
       duration: payload.duration ?? null,
       status: "ready",
+      // Only set when present — do not wipe backfilled / prior identity with null.
+      ...(identity.cloudinary_asset_id
+        ? { cloudinary_asset_id: identity.cloudinary_asset_id }
+        : {}),
+      ...(identity.version != null ? { version: identity.version } : {}),
     },
     { onConflict: "public_id" },
   );

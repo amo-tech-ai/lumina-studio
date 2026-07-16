@@ -482,6 +482,7 @@ function resolveNotificationUrl(appBaseUrl) {
 
 /** Post a synthetically signed upload notification to the local webhook route. */
 async function postSyntheticUploadWebhook({ appBaseUrl, upJson, testFolder }) {
+  // Same identity fields as genuine Cloudinary notifications (IPI-641).
   const notifBody = JSON.stringify({
     notification_type: "upload",
     public_id: upJson.public_id,
@@ -492,6 +493,7 @@ async function postSyntheticUploadWebhook({ appBaseUrl, upJson, testFolder }) {
     width: upJson.width,
     height: upJson.height,
     version: upJson.version,
+    asset_id: upJson.asset_id,
     folder: testFolder,
     asset_folder: testFolder,
   });
