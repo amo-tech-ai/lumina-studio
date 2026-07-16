@@ -28,7 +28,7 @@ export function AssetCard({ asset }: { asset: AssetRow }) {
   const dnaDot = assetDnaStatusDotToken(asset.dna_status);
 
   return (
-    <div className={styles.card} data-testid="asset-card">
+    <div className={styles.card} data-testid="asset-card" data-asset-id={asset.id}>
       <div className={styles.thumbWrap} style={{ aspectRatio: ratio }}>
         {asset.asset_type === "video" ? (
           <div className={styles.iconFallback} aria-hidden>

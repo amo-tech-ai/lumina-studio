@@ -346,7 +346,10 @@ describe("cleanup — deletion guard", () => {
       assetId: "a1",
     });
     expect(summary.cloudinary).toMatch(/refused/);
+    expect(summary.assets).toMatch(/refused/);
+    expect(summary.cloudinaryAssets).toMatch(/refused/);
     expect(cld.calls.destroys).toHaveLength(0);
+    expect(supabase._calls.deletes).toHaveLength(0);
   });
 
   it("destroys the Cloudinary asset + deletes both DB rows for a test public_id", async () => {
@@ -403,7 +406,7 @@ describe("cleanup — fallback by asset_id", () => {
     expect(supabase._calls.deletes.filter((d) => d.table === "cloudinary_assets").length).toBeGreaterThanOrEqual(2);
   });
 
-  it("does not retry when public_id delete already succeeded", async () => {
+  it("always deletes by asset_id even when public_id path already succeeded", async () => {
     const cld = fakeCloudinary();
     const supabase = fakeSupabase();
     const summary = await cleanup({
@@ -413,10 +416,11 @@ describe("cleanup — fallback by asset_id", () => {
       assetId: "a1",
     });
     expect(cld.calls.destroys).toHaveLength(1);
-    expect(supabase._calls.deletes.map((d) => d.table).sort()).toEqual([
-      "assets",
-      "cloudinary_assets",
-    ]);
+    expect(summary.assets).toBe("ok");
+    expect(summary.cloudinaryAssets).toBe("ok");
+    // public_id path + idempotent asset_id sweep
+    expect(supabase._calls.deletes.filter((d) => d.table === "assets").length).toBe(2);
+    expect(supabase._calls.deletes.filter((d) => d.table === "cloudinary_assets").length).toBe(2);
   });
 });
 
@@ -501,6 +505,7 @@ describe("cleanup — after pipeline failure", () => {
     });
     expect(summary.cloudinary).toMatch(/refused/);
     expect(cld.calls.destroys).toHaveLength(0);
+    expect(supabase._calls.deletes).toHaveLength(0);
   });
 });
 

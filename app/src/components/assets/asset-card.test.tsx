@@ -49,6 +49,7 @@ function asset(overrides: Partial<AssetRow> = {}): AssetRow {
 describe("AssetCard", () => {
   it("renders the real asset type and date — never a fabricated name", () => {
     render(<AssetCard asset={asset()} />);
+    expect(screen.getByTestId("asset-card").getAttribute("data-asset-id")).toBe("a1");
     expect(screen.getByText("Image")).toBeDefined();
     expect(screen.getByText("Apr 10")).toBeDefined();
   });
