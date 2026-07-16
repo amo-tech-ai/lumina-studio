@@ -171,7 +171,7 @@ describe("POST /api/assets/upload-sign", () => {
     );
     expect(data.params.context).toBe(`brand_id=${VALID_BRAND_ID}`);
     expect(data.params.use_filename).toBe("true");
-    expect(data.params.filename).toBe("hero-shot.jpg");
+    expect(data.filename).toBe("hero-shot.jpg");
 
     const serialized = JSON.stringify(data);
     expect(serialized).not.toContain("test-api-secret");

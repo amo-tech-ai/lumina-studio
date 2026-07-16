@@ -3,6 +3,7 @@ import {
   generateTestImage,
   validateUploadResponse,
   pollForWebhookRow,
+  pollForDnaState,
   interpretDnaState,
   buildSignedDeliveryUrl,
   isTestPublicId,
@@ -113,9 +114,9 @@ describe("validateUploadResponse", () => {
 });
 
 describe("pollForWebhookRow — successful early polling", () => {
-  it("returns the row on the first hit without further polling", async () => {
+  it("returns both rows when asset and ready cloudinary_assets exist", async () => {
     const asset = { id: "a1", brand_id: "b1", cloudinary_public_id: "pid" };
-    const cloudinaryAsset = { id: "c1", status: "ready" };
+    const cloudinaryAsset = { id: "c1", asset_id: "a1", status: "ready", brand_id: "b1" };
     const supabase = fakeSupabase({ asset, cloudinaryAsset });
     const clock = fakeClock();
     const result = await pollForWebhookRow({
@@ -129,18 +130,33 @@ describe("pollForWebhookRow — successful early polling", () => {
     expect(result).toEqual({ asset, cloudinaryAsset });
   });
 
-  it("returns the row even when cloudinary_assets row is missing", async () => {
+  it("continues polling when cloudinary_assets row is missing (not yet ready)", async () => {
     const asset = { id: "a1", brand_id: null, cloudinary_public_id: "pid" };
     const supabase = fakeSupabase({ asset, cloudinaryAsset: null });
-    const clock = fakeClock();
+    const clock = fakeClock({ step: 15_000 }); // 2 ticks exceeds 30s
     const result = await pollForWebhookRow({
       supabase,
       publicId: "pid",
+      timeoutMs: 30_000,
       now: clock.now,
       sleep: clock.sleep,
     });
-    expect(result.asset.id).toBe("a1");
-    expect(result.cloudinaryAsset).toBeNull();
+    expect(result).toBeNull();
+  });
+
+  it("continues polling when cloudinary_assets status is not yet ready", async () => {
+    const asset = { id: "a1", brand_id: "b1", cloudinary_public_id: "pid" };
+    const cloudinaryAsset = { id: "c1", asset_id: "a1", status: "processing", brand_id: "b1" };
+    const supabase = fakeSupabase({ asset, cloudinaryAsset });
+    const clock = fakeClock({ step: 15_000 }); // 2 ticks exceeds 30s
+    const result = await pollForWebhookRow({
+      supabase,
+      publicId: "pid",
+      timeoutMs: 30_000,
+      now: clock.now,
+      sleep: clock.sleep,
+    });
+    expect(result).toBeNull();
   });
 });
 
@@ -229,6 +245,59 @@ describe("interpretDnaState", () => {
 
   it("treats a missing asset row as absent", () => {
     expect(interpretDnaState(null).status).toBe("absent");
+  });
+});
+
+describe("pollForDnaState", () => {
+  function fakeAssetRow(dnaStatus, dnaScore) {
+    return { data: { dna_status: dnaStatus, dna_score: dnaScore }, error: null };
+  }
+
+  function makeSupabase(row) {
+    return {
+      from() { return { select() { return { eq() { return { maybeSingle: () => Promise.resolve(row) } } } } } },
+    };
+  }
+
+  it("returns populated when dna_score is set", async () => {
+    const result = await pollForDnaState({
+      supabase: makeSupabase(fakeAssetRow("complete", 0.85)),
+      assetId: "a1",
+      now: () => 0,
+      sleep: async () => {},
+    });
+    expect(result.status).toBe("populated");
+    expect(result.score).toBe(0.85);
+  });
+
+  it("returns pending when dna_status is pending", async () => {
+    const result = await pollForDnaState({
+      supabase: makeSupabase(fakeAssetRow("pending", null)),
+      assetId: "a1",
+      now: () => 0,
+      sleep: async () => {},
+    });
+    expect(result.status).toBe("pending");
+  });
+
+  it("returns absent after timeout when DNA never updates", async () => {
+    const supabase = makeSupabase(fakeAssetRow(null, null));
+    const clock = fakeClock({ step: 60_000 }); // 2 ticks exceeds 90s
+    const result = await pollForDnaState({
+      supabase,
+      assetId: "a1",
+      timeoutMs: 90_000,
+      now: clock.now,
+      sleep: clock.sleep,
+    });
+    expect(result.status).toBe("absent");
+  });
+
+  it("propagates supabase errors", async () => {
+    const supabase = {
+      from() { return { select() { return { eq() { return { maybeSingle: () => Promise.resolve({ data: null, error: { message: "query failed" } }) } } } } } },
+    };
+    await expect(pollForDnaState({ supabase, assetId: "a1", now: () => 0, sleep: async () => {} })).rejects.toThrow(/query failed/);
   });
 });
 
