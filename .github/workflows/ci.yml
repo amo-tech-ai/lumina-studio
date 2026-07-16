@@ -38,10 +38,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # IPI-476 · PLAN-VERIFY-002 — Node 22 (native WebSocket; matches booking-gate)
+      # IPI-625 · CF-BASE-001 — Node 22 is the iPix toolchain standard (CI parity with
+      # booking-gate / planner verify). Wrangler supports maintained Node releases; 22 is
+      # not a universal Cloudflare platform requirement.
       - uses: actions/setup-node@v4
         with:
-          node-version: "22"
+          node-version-file: app/.nvmrc
           cache: npm
           cache-dependency-path: app/package-lock.json
 
@@ -57,14 +59,18 @@ jobs:
       - name: Lint
         run: npm run lint
 
-      # Build first: `next build` generates next-env.d.ts + .next/types, so the
-      # subsequent tsc --noEmit is reliable on a clean checkout (and build itself
-      # type-checks app code since next.config.ts has no ignoreBuildErrors).
+      # IPI-625 · CF-BASE-001 — cloudflare-env.d.ts is gitignored; generate binding-only
+      # types from wrangler.jsonc on every clean checkout, then compile. Do not use
+      # check:cf-types alone unless the generated file is committed.
+      - name: Cloudflare binding typegen (cf-typegen)
+        run: npm run cf-typegen
+
+      # Build first: `next build` generates next-env.d.ts + .next/types for tsc.
       - name: Production build
         run: npm run build
 
-      - name: Type-check (tsc --noEmit)
-        run: npx tsc --noEmit
+      - name: Type-check (npm run typecheck)
+        run: npm run typecheck
 
       - name: Unit tests
         run: npm run test

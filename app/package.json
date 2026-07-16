@@ -2,6 +2,9 @@
   "name": "ipix-operator",
   "version": "0.1.0",
   "private": true,
+  "engines": {
+    "node": ">=22"
+  },
   "scripts": {
     "build": "NEXT_PRIVATE_WORKER_THREADS=false next build",
     "prebuild": "node scripts/sync-groq-models.mjs",
@@ -17,7 +20,8 @@
     "preview": "node scripts/sync-groq-models.mjs && rm -rf .next .open-next && opennextjs-cloudflare build && opennextjs-cloudflare preview",
     "deploy": "node scripts/sync-groq-models.mjs && rm -rf .next .open-next && opennextjs-cloudflare build && opennextjs-cloudflare deploy",
     "upload": "node scripts/sync-groq-models.mjs && rm -rf .next .open-next && opennextjs-cloudflare build && opennextjs-cloudflare upload",
-    "cf-typegen": "wrangler types --env-interface CloudflareEnv cloudflare-env.d.ts",
+    "cf-typegen": "wrangler types cloudflare-env.d.ts --env-interface CloudflareEnv --include-runtime=false",
+    "check:cf-types": "wrangler types cloudflare-env.d.ts --env-interface CloudflareEnv --include-runtime=false --check",
     "verify:cloudinary-pipeline": "node scripts/verify-cloudinary-pipeline.mjs"
   },
   "dependencies": {
