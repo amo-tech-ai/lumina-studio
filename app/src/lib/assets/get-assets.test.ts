@@ -64,7 +64,8 @@ describe("listAssets", () => {
   });
 
   it("falls back to a null displayUrl (not a page-crashing throw) when signing fails for a public_id asset", async () => {
-    // Force signing failure even when .env.local has real Cloudinary credentials.
+    // Hermetic: signing must fail even when the developer shell has
+    // CLOUDINARY_* from .env.local (pre-push / local vitest).
     vi.stubEnv("CLOUDINARY_CLOUD_NAME", "");
     vi.stubEnv("CLOUDINARY_API_KEY", "");
     vi.stubEnv("CLOUDINARY_API_SECRET", "");

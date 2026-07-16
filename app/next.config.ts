@@ -28,6 +28,49 @@ const copilotkitRuntimeInternalAliases = {
   ),
 } as const;
 
+const shikiStub = path.join(appDir, "scripts/cf-shiki-stub.mjs");
+const mastraPgStub = path.join(appDir, "scripts/cf-mastra-pg-stub.mjs");
+
+/**
+ * IPI-490 · CF-MIG-210 — OpenNext-only stubs (IPIX_CF_BUNDLE_STUBS=1).
+ *
+ * Proven bloat: `@shikijs/langs` ~7.6 MiB via CopilotKit → streamdown.
+ * Next 16 OpenNext builds use Turbopack; resolveAlias is not server-scoped, and
+ * `next build --webpack` fails on CopilotKit `export *` in a client boundary.
+ *
+ * Shiki aliases point at `cf-shiki-stub.mjs`: noop on the server (size gate),
+ * jsDelivr ESM load in the browser (syntax highlighting preserved).
+ *
+ * `@mastra/pg` / `pg` are server storage only.
+ * Wrangler `alias` alone is insufficient: OpenNext pre-bundles into handler.mjs.
+ */
+const cfBundleStubAliases =
+  process.env.IPIX_CF_BUNDLE_STUBS === "1"
+    ? ({
+        shiki: shikiStub,
+        "shiki/engine/javascript": shikiStub,
+        "@shikijs/langs": shikiStub,
+        "@shikijs/themes": shikiStub,
+        "@shikijs/core": shikiStub,
+        "@shikijs/engine-oniguruma": shikiStub,
+        "@shikijs/vscode-textmate": shikiStub,
+        "@mastra/pg": mastraPgStub,
+        pg: mastraPgStub,
+        "pg-cloudflare": mastraPgStub,
+      } as const)
+    : ({} as const);
+
+const turbopackResolveAlias = Object.fromEntries(
+  Object.entries({
+    ...copilotkitRuntimeInternalAliases,
+    ...cfBundleStubAliases,
+  }).map(([key, absPath]) => [
+    key,
+    // Turbopack aliases are POSIX; path.relative uses `\` on Windows.
+    `./${path.relative(appDir, absPath).replace(/\\/g, "/")}`,
+  ]),
+);
+
 const nextConfig: NextConfig = {
   serverExternalPackages: [
     "@mastra/core",
@@ -60,18 +103,15 @@ const nextConfig: NextConfig = {
   },
   turbopack: {
     root: appDir,
-    resolveAlias: Object.fromEntries(
-      Object.entries(copilotkitRuntimeInternalAliases).map(([key, absPath]) => [
-        key,
-        `./${path.relative(appDir, absPath)}`,
-      ]),
-    ),
+    resolveAlias: turbopackResolveAlias,
   },
-  webpack: (config) => {
+  webpack: (config, { isServer }) => {
     config.resolve ??= {};
     config.resolve.alias = {
       ...config.resolve.alias,
       ...copilotkitRuntimeInternalAliases,
+      // Optional `next build --webpack` (CopilotKit currently blocks webpack builds).
+      ...(isServer ? cfBundleStubAliases : {}),
     };
     return config;
   },

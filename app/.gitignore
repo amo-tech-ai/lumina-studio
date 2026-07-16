@@ -60,3 +60,6 @@ cloudflare-env.d.ts
 
 # CLD-105 smoke-test report artifact (regenerated per run)
 scripts/.cld105-report.json
+
+# IPI-490 · CF-MIG-210 — wrangler check startup local profile
+worker-startup.cpuprofile

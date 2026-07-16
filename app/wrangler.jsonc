@@ -27,7 +27,9 @@
     "MASTRA_STORAGE_MODE": "noop",
     "OPERATOR_AUTH_ENABLED": "true"
   },
-  // wrangler dev rebundles handler.mjs and fails on native .node; Mastra only lazy-loads ast-grep.
+  // Wrangler-only aliases (do not affect Node next-dev / Vitest).
+  // IPI-490 · CF-MIG-210: stub packages proven in dry-run Worker graph but unused
+  // on the Worker default path (noop storage + client-only chat renderers).
   "alias": {
     "@ast-grep/napi": "./scripts/cf-ast-grep-stub.mjs",
     "@ast-grep/napi-darwin-arm64": "./scripts/cf-ast-grep-stub.mjs",
@@ -38,6 +40,19 @@
     "@ast-grep/napi-linux-x64-musl": "./scripts/cf-ast-grep-stub.mjs",
     "@ast-grep/napi-win32-arm64-msvc": "./scripts/cf-ast-grep-stub.mjs",
     "@ast-grep/napi-win32-ia32-msvc": "./scripts/cf-ast-grep-stub.mjs",
-    "@ast-grep/napi-win32-x64-msvc": "./scripts/cf-ast-grep-stub.mjs"
+    "@ast-grep/napi-win32-x64-msvc": "./scripts/cf-ast-grep-stub.mjs",
+    // Chat highlighting (streamdown → shiki): stub drops langs from Worker;
+    // browser loads real Shiki via jsDelivr (see scripts/cf-shiki-stub.mjs).
+    "shiki": "./scripts/cf-shiki-stub.mjs",
+    "shiki/engine/javascript": "./scripts/cf-shiki-stub.mjs",
+    "@shikijs/langs": "./scripts/cf-shiki-stub.mjs",
+    "@shikijs/themes": "./scripts/cf-shiki-stub.mjs",
+    "@shikijs/core": "./scripts/cf-shiki-stub.mjs",
+    "@shikijs/engine-oniguruma": "./scripts/cf-shiki-stub.mjs",
+    "@shikijs/vscode-textmate": "./scripts/cf-shiki-stub.mjs",
+    // Default Worker storage is InMemoryStore (MASTRA_STORAGE_MODE=noop)
+    "@mastra/pg": "./scripts/cf-mastra-pg-stub.mjs",
+    "pg": "./scripts/cf-mastra-pg-stub.mjs",
+    "pg-cloudflare": "./scripts/cf-mastra-pg-stub.mjs"
   }
 }
