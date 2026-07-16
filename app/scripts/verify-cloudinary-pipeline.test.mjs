@@ -94,20 +94,43 @@ function fakeClock({ start = 1_000_000, step = 100 } = {}) {
 
 describe("validateUploadResponse", () => {
   it("accepts a well-formed Cloudinary upload response", () => {
-    const r = validateUploadResponse({ public_id: "ipix/cld105-test/x", bytes: 1234 });
-    expect(r).toEqual({ ok: true, publicId: "ipix/cld105-test/x", bytes: 1234 });
+    const r = validateUploadResponse({
+      public_id: "ipix/cld105-test/x",
+      bytes: 1234,
+      asset_id: "abc123",
+      version: 1,
+    });
+    expect(r).toEqual({
+      ok: true,
+      publicId: "ipix/cld105-test/x",
+      bytes: 1234,
+      assetId: "abc123",
+      version: 1,
+    });
   });
 
   it("rejects a response missing public_id", () => {
-    const r = validateUploadResponse({ bytes: 1234 });
+    const r = validateUploadResponse({ bytes: 1234, asset_id: "a", version: 1 });
     expect(r.ok).toBe(false);
     expect(r.error).toMatch(/public_id/);
   });
 
   it("rejects a response with non-positive bytes", () => {
-    const r = validateUploadResponse({ public_id: "x", bytes: 0 });
+    const r = validateUploadResponse({ public_id: "x", bytes: 0, asset_id: "a", version: 1 });
     expect(r.ok).toBe(false);
     expect(r.error).toMatch(/bytes/);
+  });
+
+  it("rejects a response missing asset_id (IPI-641 identity required)", () => {
+    const r = validateUploadResponse({ public_id: "x", bytes: 10, version: 1 });
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/asset_id/);
+  });
+
+  it("rejects a response missing version (IPI-641 identity required)", () => {
+    const r = validateUploadResponse({ public_id: "x", bytes: 10, asset_id: "a" });
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/version/);
   });
 
   it("rejects a non-object response", () => {

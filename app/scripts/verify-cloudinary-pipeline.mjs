@@ -182,7 +182,20 @@ export function validateUploadResponse(json) {
   if (typeof json.bytes !== "number" || json.bytes <= 0) {
     return { ok: false, error: "missing/invalid bytes in upload response" };
   }
-  return { ok: true, publicId: json.public_id, bytes: json.bytes };
+  // IPI-641: fresh uploads must return provider identity for the pipeline smoke check.
+  if (!json.asset_id || typeof json.asset_id !== "string") {
+    return { ok: false, error: "missing asset_id in upload response" };
+  }
+  if (json.version == null || typeof json.version !== "number") {
+    return { ok: false, error: "missing/invalid version in upload response" };
+  }
+  return {
+    ok: true,
+    publicId: json.public_id,
+    bytes: json.bytes,
+    assetId: json.asset_id,
+    version: json.version,
+  };
 }
 
 /**
@@ -706,8 +719,8 @@ async function ingestViaSyntheticWebhook({ appBaseUrl, admin, upJson, testFolder
     );
     throw new Error("brand_id mismatch on cloudinary_assets row");
   }
-  // IPI-641: synthetic path must persist the same identity fields Cloudinary returns.
-  if (upJson?.asset_id && rows.cloudinaryAsset.cloudinary_asset_id !== upJson.asset_id) {
+  // IPI-641: fresh-upload path requires identity (validateUploadResponse already enforces upJson).
+  if (rows.cloudinaryAsset.cloudinary_asset_id !== upJson.asset_id) {
     push(
       "supabase-row",
       false,
@@ -715,7 +728,7 @@ async function ingestViaSyntheticWebhook({ appBaseUrl, admin, upJson, testFolder
     );
     throw new Error("cloudinary_asset_id not persisted from upload response");
   }
-  if (upJson?.version != null && Number(rows.cloudinaryAsset.version) !== Number(upJson.version)) {
+  if (Number(rows.cloudinaryAsset.version) !== Number(upJson.version)) {
     push(
       "supabase-row",
       false,

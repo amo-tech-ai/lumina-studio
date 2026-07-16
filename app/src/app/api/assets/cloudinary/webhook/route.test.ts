@@ -268,7 +268,7 @@ describe("POST /api/assets/cloudinary/webhook", () => {
   it("IPI-641 rename: same cloudinary_asset_id updates existing mirror instead of public_id insert", async () => {
     const NEW_PUBLIC_ID = `ipix/brands/${BRAND_ID}/products/renamed`;
     cloudinaryAssetsSelectMaybeSingle.mockResolvedValue({
-      data: { id: "mirror-1", asset_id: "asset-existing", brand_id: BRAND_ID },
+      data: { id: "mirror-1", asset_id: "asset-existing", brand_id: BRAND_ID, version: 1 },
       error: null,
     });
 
@@ -293,7 +293,7 @@ describe("POST /api/assets/cloudinary/webhook", () => {
 
   it("IPI-641 rename: archived mirror with same provider id is updated (not blocked by unique index)", async () => {
     cloudinaryAssetsSelectMaybeSingle.mockResolvedValue({
-      data: { id: "mirror-archived", asset_id: "asset-existing", brand_id: BRAND_ID },
+      data: { id: "mirror-archived", asset_id: "asset-existing", brand_id: BRAND_ID, version: 1 },
       error: null,
     });
     const { POST } = await importRoute();
@@ -311,7 +311,7 @@ describe("POST /api/assets/cloudinary/webhook", () => {
 
   it("IPI-641 rename: failed mirror update does not rewrite assets.cloudinary_public_id", async () => {
     cloudinaryAssetsSelectMaybeSingle.mockResolvedValue({
-      data: { id: "mirror-1", asset_id: "asset-existing", brand_id: BRAND_ID },
+      data: { id: "mirror-1", asset_id: "asset-existing", brand_id: BRAND_ID, version: 1 },
       error: null,
     });
     cloudinaryAssetsUpdateEq.mockResolvedValue({ data: null, error: { message: "public_id unique" } });
@@ -322,10 +322,47 @@ describe("POST /api/assets/cloudinary/webhook", () => {
         public_id: `ipix/brands/${BRAND_ID}/products/renamed-conflict`,
       }),
     );
-    expect(res.status).toBe(200);
+    expect(res.status).toBe(503);
     expect(cloudinaryAssetsUpdateEq).toHaveBeenCalled();
     expect(assetsUpdateEq).not.toHaveBeenCalled();
     expect(assetsInsertSingle).not.toHaveBeenCalled();
+  });
+
+  it("IPI-641 rename: assets sync failure after mirror write returns 503 for retry", async () => {
+    cloudinaryAssetsSelectMaybeSingle.mockResolvedValue({
+      data: { id: "mirror-1", asset_id: "asset-existing", brand_id: BRAND_ID, version: 1 },
+      error: null,
+    });
+    assetsUpdateEq.mockResolvedValue({ data: null, error: { message: "assets write failed" } });
+    const { POST } = await importRoute();
+    const res = await POST(
+      makeRequest({
+        ...UPLOAD_PAYLOAD,
+        public_id: `ipix/brands/${BRAND_ID}/products/renamed`,
+        version: 2,
+      }),
+    );
+    expect(res.status).toBe(503);
+    expect(cloudinaryAssetsUpdateEq).toHaveBeenCalledWith("id", "mirror-1");
+    expect(assetsUpdateEq).toHaveBeenCalled();
+  });
+
+  it("IPI-641: ignores stale notification version and does not revert public_id", async () => {
+    cloudinaryAssetsSelectMaybeSingle.mockResolvedValue({
+      data: { id: "mirror-1", asset_id: "asset-existing", brand_id: BRAND_ID, version: 5 },
+      error: null,
+    });
+    const { POST } = await importRoute();
+    const res = await POST(
+      makeRequest({
+        ...UPLOAD_PAYLOAD,
+        public_id: `ipix/brands/${BRAND_ID}/products/stale-old-name`,
+        version: 2,
+      }),
+    );
+    expect(res.status).toBe(200);
+    expect(cloudinaryAssetsUpdate).not.toHaveBeenCalled();
+    expect(assetsUpdateEq).not.toHaveBeenCalled();
   });
 
   it("IPI-641: provider-id lookup error does not fall through to insert a duplicate pair", async () => {
@@ -335,16 +372,43 @@ describe("POST /api/assets/cloudinary/webhook", () => {
     });
     const { POST } = await importRoute();
     const res = await POST(makeRequest(UPLOAD_PAYLOAD));
-    expect(res.status).toBe(200);
+    expect(res.status).toBe(503);
     expect(assetsInsertSingle).not.toHaveBeenCalled();
     expect(cloudinaryAssetsUpsert).not.toHaveBeenCalled();
+  });
+
+  it("IPI-641: from_public_id recovers legacy mirror missing cloudinary_asset_id", async () => {
+    cloudinaryAssetsSelectMaybeSingle
+      .mockResolvedValueOnce({ data: null, error: null }) // by provider id
+      .mockResolvedValueOnce({
+        data: { id: "mirror-legacy", asset_id: "asset-legacy", brand_id: BRAND_ID, version: 1 },
+        error: null,
+      }); // by from_public_id
+    const { POST } = await importRoute();
+    const res = await POST(
+      makeRequest({
+        ...UPLOAD_PAYLOAD,
+        public_id: `ipix/brands/${BRAND_ID}/products/renamed`,
+        from_public_id: `ipix/brands/${BRAND_ID}/products/legacy`,
+        version: 2,
+      }),
+    );
+    expect(res.status).toBe(200);
+    expect(assetsInsertSingle).not.toHaveBeenCalled();
+    expect(cloudinaryAssetsUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        asset_id: "asset-legacy",
+        public_id: `ipix/brands/${BRAND_ID}/products/renamed`,
+        cloudinary_asset_id: PROVIDER_ASSET_ID,
+      }),
+    );
   });
 
   it("IPI-641: concurrent mirror created after miss keeps canonical asset_id (no FK reassignment)", async () => {
     cloudinaryAssetsSelectMaybeSingle
       .mockResolvedValueOnce({ data: null, error: null })
       .mockResolvedValueOnce({
-        data: { id: "mirror-1", asset_id: "asset-canonical", brand_id: BRAND_ID },
+        data: { id: "mirror-1", asset_id: "asset-canonical", brand_id: BRAND_ID, version: 1 },
         error: null,
       });
     assetsInsertSingle.mockResolvedValue({ data: { id: "asset-orphan" }, error: null });
@@ -360,7 +424,7 @@ describe("POST /api/assets/cloudinary/webhook", () => {
     expect(assetsUpdateEq).toHaveBeenCalledWith("id", "asset-canonical");
   });
 
-  it("IPI-641 delete: archives by cloudinary_asset_id when present", async () => {
+  it("IPI-641 delete: archives by cloudinary_asset_id only when provider id is present", async () => {
     const { POST } = await importRoute();
     const res = await POST(
       makeRequest({
@@ -371,7 +435,7 @@ describe("POST /api/assets/cloudinary/webhook", () => {
     );
     expect(res.status).toBe(200);
     expect(cloudinaryAssetsUpdateEq).toHaveBeenCalledWith("cloudinary_asset_id", PROVIDER_ASSET_ID);
-    expect(cloudinaryAssetsUpdateEq).toHaveBeenCalledWith("public_id", UPLOAD_PAYLOAD.public_id);
+    expect(cloudinaryAssetsUpdateEq).not.toHaveBeenCalledWith("public_id", UPLOAD_PAYLOAD.public_id);
   });
 
   it("updates the existing assets row instead of inserting when cloudinary_public_id is already linked", async () => {
@@ -431,11 +495,11 @@ describe("POST /api/assets/cloudinary/webhook", () => {
     });
   });
 
-  it("still acks 2xx when the upsert fails (never blocks the webhook ack)", async () => {
+  it("returns 503 when the mirror upsert fails so Cloudinary can retry", async () => {
     cloudinaryAssetsUpsert.mockResolvedValue({ data: null, error: { message: "boom" } });
     const { POST } = await importRoute();
     const res = await POST(makeRequest(UPLOAD_PAYLOAD));
-    expect(res.status).toBe(200);
+    expect(res.status).toBe(503);
   });
 
   it("triggers audit-asset-dna for an image upload", async () => {
