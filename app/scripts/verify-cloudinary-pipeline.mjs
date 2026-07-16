@@ -589,7 +589,10 @@ async function main() {
       asset_folder: TEST_FOLDER,
     });
     const notifTimestamp = Math.floor(Date.now() / 1000);
-    const sigPayload = notifBody + notifTimestamp + CLOUDINARY_API_SECRET;
+    // Match webhook route: CLOUDINARY_NOTIFICATION_API_SECRET (if set) else API secret.
+    const notifSecret =
+      process.env.CLOUDINARY_NOTIFICATION_API_SECRET?.trim() || CLOUDINARY_API_SECRET;
+    const sigPayload = notifBody + notifTimestamp + notifSecret;
     const notifSignature = requireDep("crypto").createHash("sha1").update(sigPayload).digest("hex");
     const notifRes = await timedFetch(`${appBaseUrl}/api/assets/cloudinary/webhook`, {
       method: "POST",

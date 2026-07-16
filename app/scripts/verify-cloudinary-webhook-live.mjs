@@ -12,7 +12,9 @@
  *   CLD105_BRAND_ID, CLD105_APP_BASE_URL (local sign route; default localhost:3002)
  *
  * Optional:
- *   CLD105_WEBHOOK_BASE_URL (default https://www.ipix.co) — documented target only
+ *   CLD105_WEBHOOK_BASE_URL / CLD105_WEBHOOK_URL (default https://www.ipix.co/.../webhook)
+ *   CLD105_OPERATOR_TOKEN | CLD105_OPERATOR_EMAIL + CLD105_OPERATOR_PASSWORD
+ *     — required when the sign app enforces operator auth
  */
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve, dirname } from "node:path";
@@ -134,6 +136,61 @@ function stage(name, ok, detail) {
   return { name, ok, detail };
 }
 
+function writeReport(report) {
+  report.finishedAt = new Date().toISOString();
+  report.ok = (report.stages ?? []).length > 0 && report.stages.every((s) => s.ok);
+  const out = resolve(appRoot, "scripts/.cld636-report.json");
+  writeFileSync(out, JSON.stringify(report, null, 2));
+  console.log(`\nReport → ${out}`);
+  console.log(report.ok ? "\nIPI-636 LIVE PROOF: PASS\n" : "\nIPI-636 LIVE PROOF: FAIL\n");
+  return out;
+}
+
+function normalizeWebhookPath(pathname) {
+  return pathname.replace(/\/+$/, "") || "/";
+}
+
+function triggerMatchesWebhook(trigger, webhookUrl) {
+  if (!trigger?.uri) return false;
+  try {
+    const expected = new URL(webhookUrl);
+    const actual = new URL(trigger.uri);
+    return (
+      actual.host === expected.host &&
+      normalizeWebhookPath(actual.pathname) === normalizeWebhookPath(expected.pathname)
+    );
+  } catch {
+    return false;
+  }
+}
+
+async function resolveOperatorAuth(createClient) {
+  const token = process.env.CLD105_OPERATOR_TOKEN;
+  if (token) {
+    console.log(`PASS operator-auth — using CLD105_OPERATOR_TOKEN (${token.length} chars)`);
+    return token === "dev" ? null : `Bearer ${token}`;
+  }
+  const email = process.env.CLD105_OPERATOR_EMAIL;
+  const password = process.env.CLD105_OPERATOR_PASSWORD;
+  if (!email || !password) {
+    console.log("PASS operator-auth — dev bypass (no creds, OPERATOR_AUTH_ENABLED=false expected)");
+    return null;
+  }
+  const publishableKey =
+    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ?? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  const auth = createClient(
+    required("NEXT_PUBLIC_SUPABASE_URL", process.env.NEXT_PUBLIC_SUPABASE_URL),
+    required("NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY", publishableKey),
+    { auth: { persistSession: false } },
+  );
+  const { data, error } = await auth.auth.signInWithPassword({ email, password });
+  if (error || !data.session) {
+    throw new Error(`operator sign-in failed: ${error?.message ?? "no session"}`);
+  }
+  console.log(`PASS operator-auth — signed in as ${email}`);
+  return `Bearer ${data.session.access_token}`;
+}
+
 async function main() {
   const runId = `ipi636-${Date.now()}-${randomUUID().slice(0, 8)}`;
   const webhookUrl =
@@ -151,102 +208,113 @@ async function main() {
     ],
   };
 
-  const cloudName = required("CLOUDINARY_CLOUD_NAME", process.env.CLOUDINARY_CLOUD_NAME);
-  const apiKey = required("CLOUDINARY_API_KEY", process.env.CLOUDINARY_API_KEY);
-  const apiSecret = required("CLOUDINARY_API_SECRET", process.env.CLOUDINARY_API_SECRET);
-  const supabaseUrl = required("NEXT_PUBLIC_SUPABASE_URL", process.env.NEXT_PUBLIC_SUPABASE_URL);
-  const serviceRoleKey = required("SUPABASE_SERVICE_ROLE_KEY", process.env.SUPABASE_SERVICE_ROLE_KEY);
-  const brandId = required("CLD105_BRAND_ID", process.env.CLD105_BRAND_ID);
-  const appBaseUrl = (process.env.CLD105_APP_BASE_URL ?? "http://localhost:3002").replace(/\/$/, "");
-  const folder = `ipix/brands/${brandId}/ipi636-test`;
-  const expectAppAuthReject = /\/api\/assets\/cloudinary\/webhook\/?$/.test(new URL(webhookUrl).pathname);
-
-  const { v2: cloudinary } = requireDep("cloudinary");
-  cloudinary.config({ cloud_name: cloudName, api_key: apiKey, api_secret: apiSecret, secure: true });
-  const { createClient } = requireDep("@supabase/supabase-js");
-  const admin = createClient(supabaseUrl, serviceRoleKey, { auth: { persistSession: false } });
-
-  console.log(`\nIPI-636 live webhook proof — ${runId}`);
-  console.log(`  sign app:     ${appBaseUrl}`);
-  console.log(`  webhook:      ${webhookUrl}`);
-  console.log(`  cloud:        ${cloudName}`);
-  console.log(`  brand:        ${brandId}`);
-  console.log(`  folder:       ${folder}\n`);
-
-  // Preflight: app webhook must reject bad signatures; probe workers may ack 200.
-  {
-    const probe = await fetch(webhookUrl, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-Cld-Timestamp": "1",
-        "X-Cld-Signature": "deadbeef",
-      },
-      body: JSON.stringify({ notification_type: "upload" }),
-    });
-    const text = await probe.text();
-    const ok = expectAppAuthReject
-      ? probe.status === 401 && /Signature|signature|expired|Invalid/i.test(text)
-      : probe.status >= 200 && probe.status < 500;
-    report.stages.push(stage("webhook-preflight", ok, `HTTP ${probe.status}`));
-    if (!ok) throw new Error("webhook preflight failed — missing Cloudinary env on target?");
-  }
-
-  // Confirm triggers
-  {
-    const res = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/triggers`, {
-      headers: {
-        Authorization: `Basic ${Buffer.from(`${apiKey}:${apiSecret}`).toString("base64")}`,
-      },
-    });
-    const json = await res.json();
-    const triggers = json.triggers ?? [];
-    const webhookHost = new URL(webhookUrl).host;
-    const upload = triggers.find((t) => t.event_type === "upload" && t.uri && new URL(t.uri).host === webhookHost);
-    const del = triggers.find((t) => t.event_type === "delete" && t.uri && new URL(t.uri).host === webhookHost);
-    const ok =
-      !!upload &&
-      !!del &&
-      upload.additive === true &&
-      del.additive === true &&
-      (upload.auth_scheme === "default" || upload.auth_scheme === "legacy_hmac") &&
-      (del.auth_scheme === "default" || del.auth_scheme === "legacy_hmac");
-    report.triggers = {
-      upload: upload
-        ? {
-            id: upload.id.slice(0, 12) + "…",
-            additive: upload.additive,
-            auth_scheme: upload.auth_scheme,
-            uri_host: new URL(upload.uri).host,
-          }
-        : null,
-      delete: del
-        ? {
-            id: del.id.slice(0, 12) + "…",
-            additive: del.additive,
-            auth_scheme: del.auth_scheme,
-            uri_host: new URL(del.uri).host,
-          }
-        : null,
-    };
-    report.stages.push(
-      stage(
-        "triggers-configured",
-        ok,
-        `upload additive=${upload?.additive} auth=${upload?.auth_scheme}; delete additive=${del?.additive} auth=${del?.auth_scheme}`,
-      ),
-    );
-    if (!ok) throw new Error("upload/delete additive triggers not configured");
-  }
-
   let publicId;
   let assetId;
+  let cloudinary;
+  let admin;
+
   try {
+    const cloudName = required("CLOUDINARY_CLOUD_NAME", process.env.CLOUDINARY_CLOUD_NAME);
+    const apiKey = required("CLOUDINARY_API_KEY", process.env.CLOUDINARY_API_KEY);
+    const apiSecret = required("CLOUDINARY_API_SECRET", process.env.CLOUDINARY_API_SECRET);
+    const supabaseUrl = required("NEXT_PUBLIC_SUPABASE_URL", process.env.NEXT_PUBLIC_SUPABASE_URL);
+    const serviceRoleKey = required("SUPABASE_SERVICE_ROLE_KEY", process.env.SUPABASE_SERVICE_ROLE_KEY);
+    const brandId = required("CLD105_BRAND_ID", process.env.CLD105_BRAND_ID);
+    const appBaseUrl = (process.env.CLD105_APP_BASE_URL ?? "http://localhost:3002").replace(/\/$/, "");
+    const folder = `ipix/brands/${brandId}/ipi636-test`;
+    const expectAppAuthReject = /\/api\/assets\/cloudinary\/webhook\/?$/.test(new URL(webhookUrl).pathname);
+
+    const { v2: cloudinarySdk } = requireDep("cloudinary");
+    cloudinary = cloudinarySdk;
+    cloudinary.config({ cloud_name: cloudName, api_key: apiKey, api_secret: apiSecret, secure: true });
+    const { createClient } = requireDep("@supabase/supabase-js");
+    admin = createClient(supabaseUrl, serviceRoleKey, { auth: { persistSession: false } });
+
+    console.log(`\nIPI-636 live webhook proof — ${runId}`);
+    console.log(`  sign app:     ${appBaseUrl}`);
+    console.log(`  webhook:      ${webhookUrl}`);
+    console.log(`  cloud:        ${cloudName}`);
+    console.log(`  brand:        ${brandId}`);
+    console.log(`  folder:       ${folder}\n`);
+
+    // Preflight: app webhook must reject bad signatures; probe workers may ack 200.
+    {
+      const probe = await fetch(webhookUrl, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Cld-Timestamp": "1",
+          "X-Cld-Signature": "deadbeef",
+        },
+        body: JSON.stringify({ notification_type: "upload" }),
+      });
+      const text = await probe.text();
+      const ok = expectAppAuthReject
+        ? probe.status === 401 && /Signature|signature|expired|Invalid/i.test(text)
+        : probe.status >= 200 && probe.status < 500;
+      report.stages.push(stage("webhook-preflight", ok, `HTTP ${probe.status}`));
+      if (!ok) throw new Error("webhook preflight failed — missing Cloudinary env on target?");
+    }
+
+    // Confirm triggers target the exact webhook path (not just the host).
+    {
+      const res = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/triggers`, {
+        headers: {
+          Authorization: `Basic ${Buffer.from(`${apiKey}:${apiSecret}`).toString("base64")}`,
+        },
+      });
+      const json = await res.json();
+      const triggers = json.triggers ?? [];
+      const upload = triggers.find((t) => t.event_type === "upload" && triggerMatchesWebhook(t, webhookUrl));
+      const del = triggers.find((t) => t.event_type === "delete" && triggerMatchesWebhook(t, webhookUrl));
+      const ok =
+        !!upload &&
+        !!del &&
+        upload.additive === true &&
+        del.additive === true &&
+        (upload.auth_scheme === "default" || upload.auth_scheme === "legacy_hmac") &&
+        (del.auth_scheme === "default" || del.auth_scheme === "legacy_hmac");
+      report.triggers = {
+        upload: upload
+          ? {
+              id: upload.id.slice(0, 12) + "…",
+              additive: upload.additive,
+              auth_scheme: upload.auth_scheme,
+              uri_path: new URL(upload.uri).pathname,
+            }
+          : null,
+        delete: del
+          ? {
+              id: del.id.slice(0, 12) + "…",
+              additive: del.additive,
+              auth_scheme: del.auth_scheme,
+              uri_path: new URL(del.uri).pathname,
+            }
+          : null,
+      };
+      report.stages.push(
+        stage(
+          "triggers-configured",
+          ok,
+          `upload additive=${upload?.additive} auth=${upload?.auth_scheme} path=${upload ? new URL(upload.uri).pathname : "missing"}; delete additive=${del?.additive} auth=${del?.auth_scheme} path=${del ? new URL(del.uri).pathname : "missing"}`,
+        ),
+      );
+      if (!ok) throw new Error("upload/delete additive triggers not configured for webhook path");
+    }
+
+    const authHeader = await resolveOperatorAuth(createClient);
+    report.stages.push(
+      stage("operator-auth", true, authHeader ? "Authorization header attached" : "dev bypass (no Authorization)"),
+    );
+
     // Signed upload via existing route — no notificationUrl
     const imageBytes = generateTestImage(runId);
     const signRes = await fetch(`${appBaseUrl}/api/assets/upload-sign`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        ...(authHeader ? { Authorization: authHeader } : {}),
+      },
       body: JSON.stringify({
         brandId,
         resourceType: "image",
@@ -315,15 +383,12 @@ async function main() {
       ),
     );
 
-    // Idempotency: re-upsert path via a second identical synthetic POST would be
-    // synthetic. Instead, confirm a second poll still shows one ready row (no dup).
     const { count } = await admin
       .from("cloudinary_assets")
       .select("id", { count: "exact", head: true })
       .eq("public_id", publicId);
     report.stages.push(stage("upload-idempotent-row", count === 1, `cloudinary_assets count=${count}`));
 
-    // Destroy with matching resource_type / type + invalidate
     const destroyRes = await cloudinary.uploader.destroy(publicId, {
       resource_type: "image",
       type: "authenticated",
@@ -345,13 +410,16 @@ async function main() {
     report.delete = { public_id: publicId, status: deleteRow.status };
     report.stages.push(stage("genuine-delete-webhook", deleteRow.status === "archived", `status=${deleteRow.status}`));
 
-    // Idempotent delete handling: archive again should stay archived
     await admin.from("cloudinary_assets").update({ status: "archived" }).eq("public_id", publicId);
     const { data: still } = await admin.from("cloudinary_assets").select("status").eq("public_id", publicId).maybeSingle();
     report.stages.push(stage("delete-idempotent", still?.status === "archived", `status=${still?.status}`));
+  } catch (e) {
+    report.error = e instanceof Error ? e.message : String(e);
+    console.error("FATAL", report.error);
+    process.exitCode = 1;
   } finally {
-    // Best-effort cleanup of DB rows for disposable proof assets
-    if (publicId) {
+    // Best-effort cleanup whenever publicId is known (even if assetId never arrived).
+    if (publicId && cloudinary && admin) {
       try {
         await cloudinary.uploader.destroy(publicId, {
           resource_type: "image",
@@ -361,23 +429,30 @@ async function main() {
       } catch {
         /* already gone */
       }
+      await admin.from("cloudinary_assets").delete().eq("public_id", publicId);
+      await admin.from("assets").delete().eq("cloudinary_public_id", publicId);
       if (assetId) {
-        await admin.from("cloudinary_assets").delete().eq("public_id", publicId);
         await admin.from("assets").delete().eq("id", assetId);
       }
     }
+    writeReport(report);
   }
 
-  report.finishedAt = new Date().toISOString();
-  report.ok = report.stages.every((s) => s.ok);
-  const out = resolve(appRoot, "scripts/.cld636-report.json");
-  writeFileSync(out, JSON.stringify(report, null, 2));
-  console.log(`\nReport → ${out}`);
-  console.log(report.ok ? "\nIPI-636 LIVE PROOF: PASS\n" : "\nIPI-636 LIVE PROOF: FAIL\n");
   if (!report.ok) process.exit(1);
 }
 
 main().catch((e) => {
   console.error("FATAL", e.message);
+  try {
+    writeReport({
+      runId: `ipi636-fatal-${Date.now()}`,
+      startedAt: new Date().toISOString(),
+      stages: [],
+      error: e.message,
+      notes: ["Fatal before report context was available."],
+    });
+  } catch {
+    /* ignore secondary write failures */
+  }
   process.exit(1);
 });
