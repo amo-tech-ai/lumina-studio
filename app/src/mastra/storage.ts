@@ -1,7 +1,10 @@
+import { createRequire } from "node:module";
 import { InMemoryStore } from "@mastra/core/storage";
-import { PostgresStore } from "@mastra/pg";
+import type { PostgresStore as PostgresStoreType } from "@mastra/pg";
 
-type MastraAppStorage = InMemoryStore | PostgresStore;
+type MastraAppStorage = InMemoryStore | PostgresStoreType;
+
+const require = createRequire(import.meta.url);
 
 let storage: MastraAppStorage | undefined;
 
@@ -63,6 +66,9 @@ export function getMastraStorage(): MastraAppStorage {
       // but no DB call happens until an actual agent turn.
       storage = new InMemoryStore({ id: "mastra-storage-memory" });
     } else {
+      // Lazy load so OpenNext/Workers can stub `@mastra/pg` (IPI-490 · CF-MIG-210).
+      // Sync API kept — dynamic import would force async getMastraStorage().
+      const { PostgresStore } = require("@mastra/pg") as typeof import("@mastra/pg");
       storage = new PostgresStore({ id: "mastra-storage", connectionString: url });
     }
   }

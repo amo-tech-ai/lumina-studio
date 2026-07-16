@@ -20,8 +20,10 @@
     "preview": "node scripts/sync-groq-models.mjs && rm -rf .next .open-next && opennextjs-cloudflare build && opennextjs-cloudflare preview",
     "deploy": "node scripts/sync-groq-models.mjs && rm -rf .next .open-next && opennextjs-cloudflare build && opennextjs-cloudflare deploy",
     "upload": "node scripts/sync-groq-models.mjs && rm -rf .next .open-next && opennextjs-cloudflare build && opennextjs-cloudflare upload",
+    "build:cf": "opennextjs-cloudflare build",
     "cf-typegen": "wrangler types cloudflare-env.d.ts --env-interface CloudflareEnv --include-runtime=false",
     "check:cf-types": "wrangler types cloudflare-env.d.ts --env-interface CloudflareEnv --include-runtime=false --check",
+    "check:worker-bundle": "node scripts/check-worker-bundle-size.mjs",
     "verify:cloudinary-pipeline": "node scripts/verify-cloudinary-pipeline.mjs",
     "verify:cloudinary-webhook-live": "node scripts/verify-cloudinary-webhook-live.mjs"
   },

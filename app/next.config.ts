@@ -28,6 +28,45 @@ const copilotkitRuntimeInternalAliases = {
   ),
 } as const;
 
+const shikiStub = path.join(appDir, "scripts/cf-shiki-stub.mjs");
+const mastraPgStub = path.join(appDir, "scripts/cf-mastra-pg-stub.mjs");
+
+/**
+ * IPI-490 · CF-MIG-210 — OpenNext-only stubs (IPIX_CF_BUNDLE_STUBS=1).
+ *
+ * Proven in Worker graph: `@shikijs/langs` ~7.6 MiB via CopilotKit → streamdown.
+ * Next 16 defaults `next build` to Turbopack (webpack aliases never run; webpack
+ * also fails on CopilotKit `export *` in a client boundary).
+ *
+ * Turbopack resolveAlias is not server-scoped — CF client ASSETS in the same
+ * build also resolve the stub (plain code blocks in chat until a CDN follow-up).
+ * Local `next dev` / plain `npm run build` keep real shiki.
+ *
+ * Wrangler `alias` alone is insufficient: OpenNext pre-bundles into handler.mjs.
+ */
+const cfBundleStubAliases =
+  process.env.IPIX_CF_BUNDLE_STUBS === "1"
+    ? ({
+        shiki: shikiStub,
+        "shiki/engine/javascript": shikiStub,
+        "@shikijs/langs": shikiStub,
+        "@shikijs/themes": shikiStub,
+        "@shikijs/core": shikiStub,
+        "@shikijs/engine-oniguruma": shikiStub,
+        "@shikijs/vscode-textmate": shikiStub,
+        "@mastra/pg": mastraPgStub,
+        pg: mastraPgStub,
+        "pg-cloudflare": mastraPgStub,
+      } as const)
+    : ({} as const);
+
+const turbopackResolveAlias = Object.fromEntries(
+  Object.entries({
+    ...copilotkitRuntimeInternalAliases,
+    ...cfBundleStubAliases,
+  }).map(([key, absPath]) => [key, `./${path.relative(appDir, absPath)}`]),
+);
+
 const nextConfig: NextConfig = {
   serverExternalPackages: [
     "@mastra/core",
@@ -60,18 +99,15 @@ const nextConfig: NextConfig = {
   },
   turbopack: {
     root: appDir,
-    resolveAlias: Object.fromEntries(
-      Object.entries(copilotkitRuntimeInternalAliases).map(([key, absPath]) => [
-        key,
-        `./${path.relative(appDir, absPath)}`,
-      ]),
-    ),
+    resolveAlias: turbopackResolveAlias,
   },
-  webpack: (config) => {
+  webpack: (config, { isServer }) => {
     config.resolve ??= {};
     config.resolve.alias = {
       ...config.resolve.alias,
       ...copilotkitRuntimeInternalAliases,
+      // webpack path kept for optional `next build --webpack`; OpenNext uses Turbopack.
+      ...(isServer || process.env.IPIX_CF_BUNDLE_STUBS === "1" ? cfBundleStubAliases : {}),
     };
     return config;
   },
