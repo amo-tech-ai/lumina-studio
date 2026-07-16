@@ -60,11 +60,18 @@ describe("extractAccessToken", () => {
 describe("resolveOperatorUser (fail-closed)", () => {
   afterEach(() => vi.unstubAllEnvs());
 
-  it("falls back to a marked demo identity outside production", async () => {
+  it("falls back to a marked demo identity outside production when auth is not enabled", async () => {
     vi.stubEnv("NODE_ENV", "development");
+    vi.stubEnv("OPERATOR_AUTH_ENABLED", "false");
     const user = await resolveOperatorUser(req({}));
     expect(user.id).toBe("demo-user");
     expect(user.name).toContain("dev fallback");
+  });
+
+  it("fails closed in development when OPERATOR_AUTH_ENABLED is true and no session", async () => {
+    vi.stubEnv("NODE_ENV", "development");
+    vi.stubEnv("OPERATOR_AUTH_ENABLED", "true");
+    await expect(resolveOperatorUser(req({}))).rejects.toThrow(/failing closed/);
   });
 
   it("throws (fails closed) in production with no session", async () => {

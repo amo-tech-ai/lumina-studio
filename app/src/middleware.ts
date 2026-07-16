@@ -5,22 +5,22 @@ import { copyResponseCookies, updateSession } from "@/lib/supabase/session";
 // IPI2-127 (AIOR-002b) — operator page gate. Blocks unauthenticated access to
 // /app/* by requiring a Supabase session cookie that DECODES to a JWT-shaped
 // access token — a cookie of the right *name* alone is trivially spoofable.
-// Cryptographic signature validation stays at the runtime boundary
-// (requireOperator in the API route); a network getUser on every navigation would
-// add latency and needs the @supabase/ssr session wiring (remaining IPI2-127 work).
+// Session validation at API routes uses withOperatorAuth (Supabase getUser).
 //
 // CF-MIG-110: OpenNext on Cloudflare requires Edge middleware (not proxy.ts Node
 // runtime). Logic is Edge-safe — @supabase/ssr cookie refresh + JWT shape check only.
 //
-// Flag-gated by OPERATOR_AUTH_ENABLED so it stays OFF until login creates a real
-// session — turning it on before that would lock every operator out.
+// IPI-468: Enforced on production Worker runtimes (NODE_ENV=production) even when
+// OPERATOR_AUTH_ENABLED is unset/false — preview must never expose /app without auth.
+// Local `next dev` keeps the gate off until OPERATOR_AUTH_ENABLED=true.
 //
 // All matched routes also run updateSession() so OAuth PKCE cookies refresh
 // correctly across marketing + operator surfaces.
 export async function middleware(request: NextRequest) {
   const sessionResponse = await updateSession(request);
 
-  if (process.env.OPERATOR_AUTH_ENABLED !== "true") {
+  const { isOperatorAuthEnforced } = await import("@/lib/operator-gate");
+  if (!isOperatorAuthEnforced()) {
     return sessionResponse;
   }
 

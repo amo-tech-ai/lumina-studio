@@ -77,8 +77,10 @@ export async function resolveOperatorUser(request: Request): Promise<OperatorUse
     }
   }
 
-  // Dev-only fallback (explicitly guarded). Production fails closed.
-  if (process.env.NODE_ENV !== "production") {
+  // Dev-only fallback when auth is not explicitly required at the app boundary.
+  // IPI-468: never return demo identity when OPERATOR_AUTH_ENABLED=true or on production.
+  const authExplicitlyEnabled = process.env.OPERATOR_AUTH_ENABLED === "true";
+  if (!authExplicitlyEnabled && process.env.NODE_ENV !== "production") {
     return { id: "demo-user", name: "Demo User (dev fallback)" };
   }
   throw new Error(
