@@ -47,6 +47,7 @@ export default function RootLayout({
           every page. Polyfill must precede ThemeProvider's script.
         */}
         <script
+          suppressHydrationWarning
           dangerouslySetInnerHTML={{
             __html:
               'var __name=globalThis.__name||function(t,n){return Object.defineProperty(t,"name",{value:n,configurable:!0}),t};',

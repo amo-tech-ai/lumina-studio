@@ -23,4 +23,12 @@ describe("RootLayout — OpenNext __name polyfill (IPI-654)", () => {
   it("polyfill assigns Object.defineProperty name helper", () => {
     expect(src).toMatch(/Object\.defineProperty\(t,\s*["']name["']/);
   });
+
+  it("marks the polyfill script suppressHydrationWarning", () => {
+    const scriptBlock = src.slice(
+      src.indexOf("<script"),
+      src.indexOf("/>", src.indexOf("var __name=")) + 2,
+    );
+    expect(scriptBlock).toMatch(/suppressHydrationWarning/);
+  });
 });
