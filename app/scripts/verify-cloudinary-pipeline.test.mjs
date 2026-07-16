@@ -10,6 +10,7 @@ import {
   cleanup,
   sanitizeError,
   TEST_PUBLIC_ID_PREFIX,
+  testScopeForBrand,
   ASSET_MASONRY_TRANSFORM,
 } from "./verify-cloudinary-pipeline.mjs";
 
@@ -335,6 +336,17 @@ describe("isTestPublicId — test-prefix deletion guard", () => {
   });
 });
 
+describe("testScopeForBrand — isolated per brand", () => {
+  it("returns a brand-scoped folder and prefix without mutating defaults", () => {
+    const a = testScopeForBrand("brand-a");
+    const b = testScopeForBrand("brand-b");
+    expect(a.testFolder).toBe("ipix/brands/brand-a/cld105-test");
+    expect(a.testPublicIdPrefix).toBe("ipix/brands/brand-a/cld105-test/cld105-");
+    expect(b.testPublicIdPrefix).toContain("brand-b");
+    expect(TEST_PUBLIC_ID_PREFIX).toBe("ipix/cld105-test/cld105-");
+  });
+});
+
 describe("cleanup — deletion guard", () => {
   it("refuses to delete a production public_id", async () => {
     const cld = fakeCloudinary();
@@ -421,6 +433,31 @@ describe("cleanup — fallback by asset_id", () => {
     // public_id path + idempotent asset_id sweep
     expect(supabase._calls.deletes.filter((d) => d.table === "assets").length).toBe(2);
     expect(supabase._calls.deletes.filter((d) => d.table === "cloudinary_assets").length).toBe(2);
+  });
+
+  it("uses the fixture-scoped prefix so a different brand scope does not refuse cleanup", async () => {
+    const cld = fakeCloudinary();
+    const supabase = fakeSupabase();
+    const { testPublicIdPrefix } = testScopeForBrand("db1f728d-bee1-430e-a3e7-0c601da74ce7");
+    const publicId = `${testPublicIdPrefix}run-1`;
+    const summary = await cleanup({
+      cloudinary: cld,
+      supabase,
+      publicId,
+      assetId: "a1",
+      testPublicIdPrefix,
+    });
+    expect(summary.cloudinary).toBe("ok");
+    expect(cld.calls.destroys).toHaveLength(1);
+    // Default module prefix would refuse this brand-scoped public_id
+    const refused = await cleanup({
+      cloudinary: fakeCloudinary(),
+      supabase: fakeSupabase(),
+      publicId,
+      assetId: "a1",
+      // omit testPublicIdPrefix → default TEST_PUBLIC_ID_PREFIX
+    });
+    expect(refused.cloudinary).toMatch(/refused/);
   });
 });
 

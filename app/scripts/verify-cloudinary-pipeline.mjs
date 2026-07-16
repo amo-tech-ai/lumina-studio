@@ -87,13 +87,16 @@ export const ASSET_MASONRY_TRANSFORM = "c_limit,w_600,f_auto,q_auto";
 // All HTTP requests (signing, upload, delivery) abort after this duration.
 const REQUEST_TIMEOUT_MS = 15_000;
 
-// Test assets are scoped under a brand-specific subfolder so the webhook's
-// resolveBrandId can extract the brand UUID from the folder path AND the
-// deletion guard can identify them with the cld105- prefix. Set at runtime
-// in main() with the actual brandId; defaults here for unit tests that import
-// these symbols without a real brand.
-export let TEST_FOLDER = "ipix/cld105-test";
-export let TEST_PUBLIC_ID_PREFIX = `${TEST_FOLDER}/cld105-`;
+// Default test scope for unit tests (no brand). Live fixtures use
+// testScopeForBrand(brandId) and pass the prefix into cleanup — never mutate these.
+export const TEST_FOLDER = "ipix/cld105-test";
+export const TEST_PUBLIC_ID_PREFIX = `${TEST_FOLDER}/cld105-`;
+
+/** Brand-scoped folder + public_id prefix for a disposable fixture run. */
+export function testScopeForBrand(brandId) {
+  const testFolder = `ipix/brands/${brandId}/cld105-test`;
+  return { testFolder, testPublicIdPrefix: `${testFolder}/cld105-` };
+}
 
 // --- Pure helpers (exported for unit testing) ----------------------------------
 
@@ -342,16 +345,25 @@ async function deleteRowsByAssetId(supabase, assetId, summary) {
 
 /**
  * Idempotent cleanup of a single test fixture: Cloudinary asset + Supabase rows.
- * Refuses to touch public_ids outside TEST_FOLDER (see isTestPublicId). Returns
- * a summary object; never throws (logs errors into the summary instead) so the
+ * Refuses to touch public_ids outside the given testPublicIdPrefix (see isTestPublicId).
+ * Returns a summary object; never throws (logs errors into the summary instead) so the
  * `finally` block in main() can't itself crash the report.
  *
  * When assetId is known, always deletes by id after the public_id path (idempotent)
  * so a misleading "ok" summary cannot leave orphaned rows.
+ * Pass testPublicIdPrefix from the fixture that created the asset — do not rely on
+ * module-level mutation.
  */
-export async function cleanup({ cloudinary, supabase, publicId, assetId, resourceType = "image" }) {
+export async function cleanup({
+  cloudinary,
+  supabase,
+  publicId,
+  assetId,
+  resourceType = "image",
+  testPublicIdPrefix = TEST_PUBLIC_ID_PREFIX,
+}) {
   const summary = { cloudinary: "skipped", assets: "skipped", cloudinaryAssets: "skipped" };
-  const isTest = Boolean(publicId && isTestPublicId(publicId));
+  const isTest = Boolean(publicId && isTestPublicId(publicId, testPublicIdPrefix));
   if (publicId && !isTest) {
     const refused = "refused: public_id not under test folder";
     summary.cloudinary = refused;
@@ -556,9 +568,7 @@ export async function createDisposableFixture({ skipDna = false, log = true } = 
     "CLD105_BRAND_ID",
     process.env.CLD105_BRAND_ID || DEFAULT_QA_BRAND_ID,
   );
-
-  TEST_FOLDER = `ipix/brands/${brandId}/cld105-test`;
-  TEST_PUBLIC_ID_PREFIX = `${TEST_FOLDER}/cld105-`;
+  const { testFolder, testPublicIdPrefix } = testScopeForBrand(brandId);
 
   const { v2: cloudinary } = requireDep("cloudinary");
   cloudinary.config({
@@ -606,7 +616,7 @@ export async function createDisposableFixture({ skipDna = false, log = true } = 
     brandId,
     resourceType: "image",
     filename: `${RUN_ID}.png`,
-    folder: TEST_FOLDER,
+    folder: testFolder,
     ...(notificationUrl ? { notificationUrl } : {}),
   };
   const signRes = await timedFetch(`${appBaseUrl}/api/assets/upload-sign`, {
@@ -646,8 +656,8 @@ export async function createDisposableFixture({ skipDna = false, log = true } = 
     throw new Error("cloudinary-upload failed");
   }
   publicId = validated.publicId;
-  if (!isTestPublicId(publicId)) {
-    push("cloudinary-upload", false, `public_id=${publicId} is not under ${TEST_PUBLIC_ID_PREFIX}`);
+  if (!isTestPublicId(publicId, testPublicIdPrefix)) {
+    push("cloudinary-upload", false, `public_id=${publicId} is not under ${testPublicIdPrefix}`);
     throw new Error("cloudinary-upload public_id outside test folder");
   }
   push("cloudinary-upload", true, `public_id=${publicId} bytes=${validated.bytes}`);
@@ -655,7 +665,7 @@ export async function createDisposableFixture({ skipDna = false, log = true } = 
   const notifRes = await postSyntheticUploadWebhook({
     appBaseUrl,
     upJson,
-    testFolder: TEST_FOLDER,
+    testFolder,
   });
   let pollInterval = Number(process.env.CLD105_POLL_INTERVAL_MS ?? 1000);
   let pollTimeout = Number(process.env.CLD105_POLL_TIMEOUT_MS ?? 30_000);
@@ -724,12 +734,21 @@ export async function createDisposableFixture({ skipDna = false, log = true } = 
     brandId,
     publicId,
     assetId,
+    testFolder,
+    testPublicIdPrefix,
     asset: rows.asset,
     cloudinaryAsset: rows.cloudinaryAsset,
     cloudinary,
     supabase: admin,
     stages,
-    cleanup: () => cleanup({ cloudinary, supabase: admin, publicId, assetId }),
+    cleanup: () =>
+      cleanup({
+        cloudinary,
+        supabase: admin,
+        publicId,
+        assetId,
+        testPublicIdPrefix,
+      }),
   };
 }
 
