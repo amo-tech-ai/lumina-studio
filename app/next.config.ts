@@ -64,7 +64,11 @@ const turbopackResolveAlias = Object.fromEntries(
   Object.entries({
     ...copilotkitRuntimeInternalAliases,
     ...cfBundleStubAliases,
-  }).map(([key, absPath]) => [key, `./${path.relative(appDir, absPath)}`]),
+  }).map(([key, absPath]) => [
+    key,
+    // Turbopack aliases are POSIX; path.relative uses `\` on Windows.
+    `./${path.relative(appDir, absPath).replace(/\\/g, "/")}`,
+  ]),
 );
 
 const nextConfig: NextConfig = {
