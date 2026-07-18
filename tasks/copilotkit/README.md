@@ -25,7 +25,7 @@ Sibling agents docs: [Mastra — Overview](https://linear.app/amo100/document/ma
 
 - Skill hub: `.claude/skills/copilotkit/`
 - Runtime: `app/src/app/api/copilotkit/`
-- Agents behind chat: [`../mastra/`](../mastra/)
+- Agents behind chat: `app/src/mastra/` (docs triad: [PR #491](https://github.com/amo-tech-ai/lumina-studio/pull/491) → `tasks/mastra/`)
 - Always use CopilotKit **v2** imports (`/v2` subpath)
 
 ## Do not use
