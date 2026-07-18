@@ -19,7 +19,7 @@ Shift from **Create → Check → Fix** to **Guide → Prevent → Confirm** —
 9. Every AI recommendation is explainable — show the why + a confidence signal.
 10. Everything is undoable — no destructive AI action without a way back.
 
-**Golden rule — proactive teammate, not a chat box.** The assistant should guide, not wait. It is page-context-aware (knows the current brand/campaign/shoot/selection — the user never re-states where they are) and opens with the next best action, e.g. *"You're planning the Spring Campaign. Next: generate deliverables for IG/TikTok/Amazon/Shopify — I can do that in one click,"* never a blank *"How can I help?"*. The product "personas" (Creative Director, Brand Guardian, etc.) are hats on the **existing 5 agents**, not new agents.
+**Golden rule — proactive teammate, not a chat box.** The assistant should guide, not wait. It is page-context-aware (knows the current brand/campaign/shoot/selection — the user never re-states where they are) and opens with the next best action, e.g. *"You're planning the Spring Campaign. Next: generate deliverables for IG/TikTok/Amazon/Shopify — I can do that in one click,"* never a blank *"How can I help?"*. The product "personas" (Creative Director, Brand Guardian, etc.) are hats on the **existing Mastra agents**, not new agents — 8 registered in the operator agent registry (`production-planner`/`default`, `creative-director`, `visual-identity`, `social-discovery`, `brand-intelligence`, `model-match`, `crm-assistant`, `booking`) plus a 9th, `public-marketing`, that powers the separate public marketing-site chat widget via its own route. (Verified against `app/src/mastra/index.ts` + `durable.ts` 2026-07-18 — previously miscounted as "5" here.)
 
 ## Skills in use
 
@@ -234,6 +234,14 @@ Key discipline: match verification cost to actual risk — don't re-run a full l
 build on every change when CI's `app-build` job already does, and prefer Cloudflare's own
 gradual-deployment/rollback/observability tooling over exhaustive pre-merge local verification
 where it applies (see the skill's verification checklist for right-sizing guidance).
+
+**Current production runtime (verified 2026-07-18):** `ipix.co` (including the `/app` operator
+dashboard) runs on **Vercel**, not Cloudflare. Three Cloudflare tracks exist, none carrying
+production traffic yet: the OpenNext/Workers migration is scaffolded but undeployed (no `routes`
+binding in `app/wrangler.jsonc`); the earlier custom `services/cloudflare-worker/` AI Gateway is
+frozen (2026-07-14 decision, superseded by a dashboard-configured native AI Gateway); the native
+`ipix-prod` AI Gateway is provisioned but has zero real requests routed through it. Don't assume a
+Cloudflare-related change is live in prod until one of these three tracks actually ships.
 
 ## QA test credentials
 
