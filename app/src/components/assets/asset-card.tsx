@@ -3,6 +3,7 @@ import { FileText, Video } from "lucide-react";
 
 import { StatusChip } from "@/components/ui/status-chip";
 import { assetDnaStatusDotToken, assetDnaStatusLabel } from "@/lib/assets/status-tokens";
+import { isAuthenticatedDeliveryUrl } from "@/lib/cloudinary/url";
 import type { AssetRow } from "@/lib/assets/get-assets";
 
 import styles from "./assets-workspace.module.css";
@@ -39,16 +40,27 @@ export function AssetCard({ asset }: { asset: AssetRow }) {
             <FileText size={22} />
           </div>
         ) : asset.displayUrl ? (
-          <Image
-            src={asset.displayUrl}
-            alt=""
-            fill
-            // Mirrors assets-workspace.module.css's .masonry column breakpoints
-            // (4/3/2/1 cols at >1280/1280/880/560px) — a flat 25vw understated the
-            // real rendered width on tablet/mobile, so next/image picked too-small candidates.
-            sizes="(max-width: 560px) 100vw, (max-width: 880px) 50vw, (max-width: 1280px) 33vw, 25vw"
-            className={styles.thumbImage}
-          />
+          isAuthenticatedDeliveryUrl(asset.displayUrl) ? (
+            // Signed authenticated URLs 404 through /_next/image — load directly.
+            <img
+              src={asset.displayUrl}
+              alt=""
+              loading="lazy"
+              decoding="async"
+              className={styles.thumbImageDirect}
+            />
+          ) : (
+            <Image
+              src={asset.displayUrl}
+              alt=""
+              fill
+              // Mirrors assets-workspace.module.css's .masonry column breakpoints
+              // (4/3/2/1 cols at >1280/1280/880/560px) — a flat 25vw understated the
+              // real rendered width on tablet/mobile, so next/image picked too-small candidates.
+              sizes="(max-width: 560px) 100vw, (max-width: 880px) 50vw, (max-width: 1280px) 33vw, 25vw"
+              className={styles.thumbImage}
+            />
+          )
         ) : (
           <div className={styles.iconFallback} aria-hidden>
             <FileText size={22} />
