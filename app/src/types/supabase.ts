@@ -6703,6 +6703,18 @@ export type Database = {
         }
         Returns: number
       }
+      capture_lead_write: {
+        Args: {
+          p_anon_id: string
+          p_answers?: Json
+          p_claim_expires_at?: string
+          p_claim_token?: string
+          p_conversation_id?: string
+          p_message_summary?: string
+          p_service_interest?: string
+        }
+        Returns: Json
+      }
       check_talent_availability: {
         Args: {
           p_date_end?: string
