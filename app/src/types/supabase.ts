@@ -1946,7 +1946,6 @@ export type Database = {
           asset_id: string
           brand_id: string | null
           bytes: number | null
-          /** Cloudinary immutable provider asset_id — not the local assets.id FK. */
           cloudinary_asset_id: string | null
           created_at: string
           created_by: string | null
@@ -1965,7 +1964,6 @@ export type Database = {
           secure_url: string
           status: string
           updated_at: string
-          /** Latest observed Cloudinary provider version. */
           version: number | null
           width: number | null
         }
@@ -6761,11 +6759,10 @@ export type Database = {
         }
         Returns: Json
       }
-      // crm_convert_deal returns NULL brand_id for lost deals (SQL assigns v_result_brand_id only in the 'won' branch)
       crm_convert_deal: {
         Args: { p_deal_id: string; p_decision: string }
         Returns: {
-          brand_id: string | null
+          brand_id: string
           deal_id: string
           stage: string
         }[]

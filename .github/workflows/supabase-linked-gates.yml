@@ -1,0 +1,117 @@
+# IPI-665 · SB-CI-001 — Linked migration ledger, pending dry-run, db lint, types drift.
+# Trusted same-repo pull_request (+ push to main) only. Never pull_request_target.
+name: Supabase linked gates
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: supabase-linked-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  secrets-preflight:
+    runs-on: ubuntu-latest
+    outputs:
+      configured: ${{ steps.check.outputs.configured }}
+      trusted: ${{ steps.check.outputs.trusted }}
+    steps:
+      - id: check
+        shell: bash
+        run: |
+          set -euo pipefail
+          trusted=false
+          if [ "${{ github.event_name }}" = "push" ]; then
+            trusted=true
+          elif [ "${{ github.event_name }}" = "pull_request" ] \
+            && [ "${{ github.event.pull_request.head.repo.full_name }}" = "${{ github.repository }}" ] \
+            && [ "${{ github.actor }}" != "dependabot[bot]" ]; then
+            trusted=true
+          fi
+          echo "trusted=$trusted" >> "$GITHUB_OUTPUT"
+
+          if [ -n "${{ secrets.SUPABASE_ACCESS_TOKEN }}" ] \
+            && [ -n "${{ vars.SUPABASE_PROJECT_ID }}" ] \
+            && [ -n "${{ secrets.SUPABASE_DB_PASSWORD }}" ]; then
+            echo "configured=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+          fi
+
+  supabase-linked-gates:
+    needs: secrets-preflight
+    if: needs.secrets-preflight.outputs.trusted == 'true' && needs.secrets-preflight.outputs.configured == 'true'
+    runs-on: ubuntu-latest
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+      # Non-secret project ref — repository variable (not a secret).
+      SUPABASE_PROJECT_ID: ${{ vars.SUPABASE_PROJECT_ID }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - uses: supabase/setup-cli@v1
+        with:
+          # Pin to the CLI version used for local linked gates (IPI-665).
+          version: 2.109.1
+
+      - name: Link remote project
+        run: |
+          set -euo pipefail
+          supabase link \
+            --project-ref "$SUPABASE_PROJECT_ID" \
+            --password "$SUPABASE_DB_PASSWORD" \
+            --yes
+
+      - name: Ledger + pending-migration validation
+        env:
+          GITHUB_BASE_REF: ${{ github.base_ref }}
+          GITHUB_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          GITHUB_REF_NAME: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" = "push" ]; then
+            node scripts/check-supabase-migration-drift.mjs --main
+          else
+            git fetch origin "${{ github.base_ref }}" --depth=1
+            node scripts/check-supabase-migration-drift.mjs --pr --base "origin/${{ github.base_ref }}"
+          fi
+
+      - name: db lint (public, planner) fail on error
+        run: |
+          set -euo pipefail
+          supabase db lint --linked \
+            -s public,planner \
+            --level warning \
+            --fail-on error
+
+      - name: Types drift vs committed app/src/types/supabase.ts
+        run: |
+          set -euo pipefail
+          tmp_types="$(mktemp)"
+          trap 'rm -f "$tmp_types"' EXIT
+          supabase gen types typescript \
+            --project-id "$SUPABASE_PROJECT_ID" \
+            --schema public,planner,graphql_public \
+            > "$tmp_types"
+          test -s "$tmp_types"
+          diff --unified app/src/types/supabase.ts "$tmp_types"
+
+  # Fail closed when this is a trusted same-repo PR but secrets are missing.
+  supabase-linked-gates-required:
+    needs: secrets-preflight
+    if: needs.secrets-preflight.outputs.trusted == 'true' && needs.secrets-preflight.outputs.configured != 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Secrets missing
+        run: |
+          echo "::error::IPI-665 requires secrets SUPABASE_ACCESS_TOKEN + SUPABASE_DB_PASSWORD and variable SUPABASE_PROJECT_ID on trusted PRs."
+          exit 1

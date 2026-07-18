@@ -1,11 +1,11 @@
 import { describe, expect, it, vi } from "vitest";
-import { convertDeal } from "./convert-deal";
-import type { Database } from "@/types/supabase";
+import { convertDeal, type ConvertDealResult } from "./convert-deal";
 
-// Type-level regression: crm_convert_deal returns NULL brand_id for lost deals
-type ConvertDealResult =
-  Database["public"]["Functions"]["crm_convert_deal"]["Returns"][number];
-const _lostDealBrandId: ConvertDealResult["brand_id"] = null;
+// Type-level regression: lost conversions expose brandId null on the wrapper
+// API (SQL returns NULL). Do not assert Database RPC Returns — supabase gen
+// types emits brand_id as non-null string for RETURNS TABLE(uuid).
+type ConvertDealOk = Extract<ConvertDealResult, { ok: true }>;
+const _lostDealBrandId: ConvertDealOk["brandId"] = null;
 
 function mockRpc(row: Record<string, unknown> | null, error: { message: string } | null = null) {
   const builder = { single: vi.fn(async () => ({ data: row, error })) };
