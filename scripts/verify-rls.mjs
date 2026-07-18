@@ -2432,6 +2432,53 @@ try {
       "malformed-task attempts leave zero phantom planner.instances rows — only the one real instance from the positive-path probe exists",
     );
 
+    // 17 — a task assigned to a real-shaped but non-org-member UUID is
+    // rejected as INVALID_INPUT (the assigneeUserId org-membership guard).
+    const { data: ciNonMemberAssigneeCreate, error: ciNonMemberAssigneeCreateErr } = await userCiEditor.client.rpc("planner_create_instance", {
+      p_org_id: orgAId,
+      p_entity_type: "crm_deal",
+      p_entity_id: crmDeal.id,
+      p_workflow_id: wfA.id,
+      p_name: `RLS CI Non-Member Assignee ${stamp}`,
+      p_planned_start: "2026-08-03",
+      p_idempotency_key: crypto.randomUUID(),
+      p_tasks: [
+        { phaseId: ciPhase1.id, title: "Assigned", startDate: "2026-08-03", endDate: "2026-08-04", durationDays: 2, sortOrder: 0, assigneeUserId: crypto.randomUUID() },
+      ],
+    });
+    assert(
+      !ciNonMemberAssigneeCreateErr && ciNonMemberAssigneeCreate?.ok === false && ciNonMemberAssigneeCreate?.code === "INVALID_INPUT",
+      "planner_create_instance rejects a task assignee who isn't an org member",
+    );
+
+    // 18 — semantic task validation (final migration): non-positive duration,
+    // negative sort order, endDate before startDate, and an unsupported
+    // priority value are all rejected as INVALID_INPUT before any write —
+    // priority in particular would otherwise reach planner.tasks' own CHECK
+    // constraint unvalidated and leak as a raw check_violation.
+    const ciSemanticCases = [
+      { label: "non-positive durationDays", task: { phaseId: ciPhase1.id, title: "Bad Duration", startDate: "2026-08-03", endDate: "2026-08-04", durationDays: 0, sortOrder: 0 } },
+      { label: "negative sortOrder", task: { phaseId: ciPhase1.id, title: "Bad Sort", startDate: "2026-08-03", endDate: "2026-08-04", durationDays: 2, sortOrder: -1 } },
+      { label: "endDate before startDate", task: { phaseId: ciPhase1.id, title: "Bad Range", startDate: "2026-08-05", endDate: "2026-08-03", durationDays: 2, sortOrder: 0 } },
+      { label: "unsupported priority", task: { phaseId: ciPhase1.id, title: "Bad Priority", startDate: "2026-08-03", endDate: "2026-08-04", durationDays: 2, sortOrder: 0, priority: "urgent-ish" } },
+    ];
+    for (const { label, task } of ciSemanticCases) {
+      const { data: ciSemanticResult, error: ciSemanticErr } = await userCiEditor.client.rpc("planner_create_instance", {
+        p_org_id: orgAId,
+        p_entity_type: "crm_deal",
+        p_entity_id: crmDeal.id,
+        p_workflow_id: wfA.id,
+        p_name: `RLS CI Semantic ${label} ${stamp}`,
+        p_planned_start: "2026-08-03",
+        p_idempotency_key: crypto.randomUUID(),
+        p_tasks: [task],
+      });
+      assert(
+        !ciSemanticErr && ciSemanticResult?.ok === false && ciSemanticResult?.code === "INVALID_INPUT",
+        `planner_create_instance rejects a task with ${label} as typed INVALID_INPUT, not a raw check_violation or silent persist`,
+      );
+    }
+
     // 20 — round-7 fix: idempotency replay is denied once the actor's org
     // role no longer permits creation. Authz now runs before the idempotency
     // lookup, so a revoked-role actor cannot replay a cached ok:true result.
