@@ -1,0 +1,142 @@
+/**
+ * IPI-606 · CF-SEC-010 — secret name allowlists for Infisical → Cloudflare routing.
+ * Names only — never import or log secret values in this module.
+ */
+
+/** @typedef {"build" | "runtime"} SecretSurface */
+
+/** Build-time / CI export — NEXT_PUBLIC_* only (inlined by Next.js / OpenNext). */
+export const BUILD_TIME_SECRET_NAMES = Object.freeze([
+  "NEXT_PUBLIC_SUPABASE_URL",
+  "NEXT_PUBLIC_SUPABASE_ANON_KEY",
+  "NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME",
+  "NEXT_PUBLIC_CLOUDINARY_API_KEY",
+  "NEXT_PUBLIC_MARKETING_CHAT_ENABLED",
+  "NEXT_PUBLIC_E2E_UPLOAD_POLL_MAX_MS",
+]);
+
+/**
+ * Worker runtime secrets synced via `wrangler secret put` / `secret bulk`.
+ * Same names in preview and production; values differ per Infisical environment.
+ */
+export const RUNTIME_SECRET_NAMES = Object.freeze([
+  "GEMINI_API_KEY",
+  "GROQ_API_KEY",
+  "OPENAI_API_KEY",
+  "DATABASE_URL",
+  "SUPABASE_SERVICE_ROLE_KEY",
+  "CLOUDINARY_CLOUD_NAME",
+  "CLOUDINARY_API_KEY",
+  "CLOUDINARY_API_SECRET",
+  "CLOUDINARY_NOTIFICATION_API_SECRET",
+  "COPILOTKIT_LICENSE_TOKEN",
+  "INTELLIGENCE_API_KEY",
+  "INTELLIGENCE_API_URL",
+  "INTELLIGENCE_GATEWAY_WS_URL",
+  "FIRECRAWL_API_KEY",
+  "AI_GATEWAY_URL",
+  "AI_GATEWAY_API_KEY",
+]);
+
+/** Per wrangler env — extend when preview/production diverge on secret *names*. */
+export const RUNTIME_SECRET_NAMES_BY_WRANGLER_ENV = Object.freeze({
+  preview: RUNTIME_SECRET_NAMES,
+  production: RUNTIME_SECRET_NAMES,
+});
+
+/** Infisical env slug → wrangler `--env` target. */
+export const INFISICAL_TO_WRANGLER_ENV = Object.freeze({
+  dev: "preview",
+  staging: "preview",
+  prod: "production",
+});
+
+const FORBIDDEN_IN_RUNTIME_PREFIX = "NEXT_PUBLIC_";
+const FORBIDDEN_IN_BUILD_SUBSTRINGS = ["SERVICE_ROLE", "API_SECRET", "_SECRET"];
+
+/**
+ * @param {string[]} names
+ * @param {SecretSurface} surface
+ */
+export function assertNoForbiddenSecrets(names, surface) {
+  const violations = [];
+
+  for (const name of names) {
+    if (surface === "runtime") {
+      if (name.startsWith(FORBIDDEN_IN_RUNTIME_PREFIX)) {
+        violations.push(`${name}: NEXT_PUBLIC_* must not sync to wrangler runtime secrets`);
+      }
+    }
+    if (surface === "build") {
+      if (!name.startsWith("NEXT_PUBLIC_")) {
+        violations.push(`${name}: build-time export must be NEXT_PUBLIC_* only`);
+      }
+      for (const sub of FORBIDDEN_IN_BUILD_SUBSTRINGS) {
+        if (name.includes(sub)) {
+          violations.push(`${name}: build-time export must not include ${sub}`);
+        }
+      }
+    }
+  }
+
+  if (violations.length > 0) {
+    throw new Error(`Forbidden secret names for ${surface} surface:\n${violations.map((v) => `  - ${v}`).join("\n")}`);
+  }
+}
+
+/**
+ * @param {string} wranglerEnv
+ * @returns {readonly string[]}
+ */
+export function runtimeSecretNamesForWranglerEnv(wranglerEnv) {
+  const names = RUNTIME_SECRET_NAMES_BY_WRANGLER_ENV[wranglerEnv];
+  if (!names) {
+    throw new Error(
+      `Unknown wrangler env "${wranglerEnv}". Expected: ${Object.keys(RUNTIME_SECRET_NAMES_BY_WRANGLER_ENV).join(", ")}`,
+    );
+  }
+  return names;
+}
+
+/**
+ * Collect runtime secret values from process.env for allowlisted names only.
+ * @param {NodeJS.ProcessEnv} env
+ * @param {string} wranglerEnv
+ * @returns {{ present: Record<string, string>; missing: string[] }}
+ */
+export function collectRuntimeSecretsFromEnv(env, wranglerEnv) {
+  const allowlist = runtimeSecretNamesForWranglerEnv(wranglerEnv);
+  assertNoForbiddenSecrets(allowlist, "runtime");
+
+  /** @type {Record<string, string>} */
+  const present = {};
+  /** @type {string[]} */
+  const missing = [];
+
+  for (const name of allowlist) {
+    const value = env[name]?.trim();
+    if (value) {
+      present[name] = value;
+    } else {
+      missing.push(name);
+    }
+  }
+
+  return { present, missing };
+}
+
+/**
+ * Compare wrangler secret list output (names only) against allowlist.
+ * @param {string[]} deployedNames — from `wrangler secret list`
+ * @param {string} wranglerEnv
+ * @returns {{ extra: string[]; missing: string[] }}
+ */
+export function diffSecretNames(deployedNames, wranglerEnv) {
+  const allowlist = new Set(runtimeSecretNamesForWranglerEnv(wranglerEnv));
+  const deployed = new Set(deployedNames);
+
+  const extra = [...deployed].filter((n) => !allowlist.has(n)).sort();
+  const missing = [...allowlist].filter((n) => !deployed.has(n)).sort();
+
+  return { extra, missing };
+}
