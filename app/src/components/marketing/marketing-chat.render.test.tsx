@@ -55,6 +55,7 @@ describe("MarketingChat — feature flag behavior", () => {
       expect.objectContaining({
         runtimeUrl: "/api/marketing-chat",
         enableInspector: false,
+        showDevConsole: false,
         useSingleEndpoint: true,
       }),
     );

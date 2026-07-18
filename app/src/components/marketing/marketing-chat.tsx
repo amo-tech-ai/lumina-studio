@@ -187,13 +187,14 @@ export function MarketingChat() {
 
         IPI-655 · CHAT-RUNTIME-002: enableInspector={false} stops the localhost
         web-inspector from owning a thread store and GETting /threads (405 on
-        single-route). CopilotKit from /v2 maps enableInspector → inspector;
-        showDevConsole on this wrapper only controls banners.
+        single-route). showDevConsole={false} turns off ToastProvider / usage
+        banners (wrapper defaults those to isLocalhost() when unset).
       */}
       <CopilotKit
         runtimeUrl="/api/marketing-chat"
         useSingleEndpoint={true}
         enableInspector={false}
+        showDevConsole={false}
       >
         <MarketingChatInner />
       </CopilotKit>

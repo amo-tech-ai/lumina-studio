@@ -55,6 +55,10 @@ describe("MarketingChat — runtimeUrl contract", () => {
     expect(src).toMatch(/enableInspector=\{false\}/);
   });
 
+  it("explicitly disables showDevConsole banners (no localhost auto default)", () => {
+    expect(src).toMatch(/showDevConsole=\{false\}/);
+  });
+
   it("does not enable the inspector or force showDevConsole on", () => {
     expect(src).not.toMatch(/enableInspector=\{true\}/);
     expect(src).not.toMatch(/showDevConsole=\{true\}/);
