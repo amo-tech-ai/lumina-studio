@@ -1,0 +1,196 @@
+{
+  "task": "IPI-681",
+  "captured_at": "2026-07-18T09:09:24.827Z",
+  "project_ref": "nvdlhrodvevgwdsneplk",
+  "auth_mode": "anon_key_only",
+  "rest": [
+    {
+      "schema": "public",
+      "table": "brands",
+      "transport": "rest",
+      "http_status": 200,
+      "content_range": "*/0",
+      "count_category": "zero",
+      "result_class": "empty_ok",
+      "error": null
+    },
+    {
+      "schema": "public",
+      "table": "brand_scores",
+      "transport": "rest",
+      "http_status": 200,
+      "content_range": "*/0",
+      "count_category": "zero",
+      "result_class": "empty_ok",
+      "error": null
+    },
+    {
+      "schema": "public",
+      "table": "brand_intake_drafts",
+      "transport": "rest",
+      "http_status": 200,
+      "content_range": "*/0",
+      "count_category": "zero",
+      "result_class": "empty_ok",
+      "error": null
+    },
+    {
+      "schema": "public",
+      "table": "assets",
+      "transport": "rest",
+      "http_status": 200,
+      "content_range": "*/0",
+      "count_category": "zero",
+      "result_class": "empty_ok",
+      "error": null
+    },
+    {
+      "schema": "public",
+      "table": "org_members",
+      "transport": "rest",
+      "http_status": 200,
+      "content_range": "*/0",
+      "count_category": "zero",
+      "result_class": "empty_ok",
+      "error": null
+    },
+    {
+      "schema": "public",
+      "table": "organizations",
+      "transport": "rest",
+      "http_status": 200,
+      "content_range": "*/0",
+      "count_category": "zero",
+      "result_class": "empty_ok",
+      "error": null
+    },
+    {
+      "schema": "public",
+      "table": "shoots",
+      "transport": "rest",
+      "http_status": 200,
+      "content_range": "*/0",
+      "count_category": "zero",
+      "result_class": "empty_ok",
+      "error": null
+    },
+    {
+      "schema": "public",
+      "table": "profiles",
+      "transport": "rest",
+      "http_status": 200,
+      "content_range": "*/0",
+      "count_category": "zero",
+      "result_class": "empty_ok",
+      "error": null
+    },
+    {
+      "schema": "public",
+      "table": "commerce_product_links",
+      "transport": "rest",
+      "http_status": 200,
+      "content_range": "*/0",
+      "count_category": "zero",
+      "result_class": "empty_ok",
+      "error": null
+    },
+    {
+      "schema": "public",
+      "table": "ai_agent_logs",
+      "transport": "rest",
+      "http_status": 200,
+      "content_range": "*/0",
+      "count_category": "zero",
+      "result_class": "empty_ok",
+      "error": null
+    },
+    {
+      "schema": "public",
+      "table": "crm_deals",
+      "transport": "rest",
+      "http_status": 200,
+      "content_range": "*/0",
+      "count_category": "zero",
+      "result_class": "empty_ok",
+      "error": null
+    },
+    {
+      "schema": "public",
+      "table": "crm_contacts",
+      "transport": "rest",
+      "http_status": 200,
+      "content_range": "*/0",
+      "count_category": "zero",
+      "result_class": "empty_ok",
+      "error": null
+    },
+    {
+      "schema": "planner",
+      "table": "instances",
+      "transport": "rest",
+      "http_status": 401,
+      "content_range": null,
+      "count_category": "unknown",
+      "result_class": "deny",
+      "error": {
+        "code": "42501",
+        "message": "permission denied for schema planner",
+        "hint": null
+      }
+    },
+    {
+      "schema": "public",
+      "table": "chatbot_conversations",
+      "transport": "rest",
+      "http_status": 401,
+      "content_range": null,
+      "count_category": "unknown",
+      "result_class": "deny",
+      "error": {
+        "code": "42501",
+        "message": "permission denied for table chatbot_conversations",
+        "hint": null
+      }
+    },
+    {
+      "schema": "public",
+      "table": "lead_intake_drafts",
+      "transport": "rest",
+      "http_status": 401,
+      "content_range": null,
+      "count_category": "unknown",
+      "result_class": "deny",
+      "error": {
+        "code": "42501",
+        "message": "permission denied for table lead_intake_drafts",
+        "hint": null
+      }
+    }
+  ],
+  "graphql": [
+    {
+      "id": "brands",
+      "transport": "graphql",
+      "http_status": 200,
+      "count_category": "zero",
+      "result_class": "empty_ok",
+      "error": null
+    },
+    {
+      "id": "profiles",
+      "transport": "graphql",
+      "http_status": 200,
+      "count_category": "zero",
+      "result_class": "empty_ok",
+      "error": null
+    },
+    {
+      "id": "assets",
+      "transport": "graphql",
+      "http_status": 200,
+      "count_category": "zero",
+      "result_class": "empty_ok",
+      "error": null
+    }
+  ]
+}
