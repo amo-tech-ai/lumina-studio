@@ -1,8 +1,11 @@
 "use client";
 
 // IPI-150 SHOOT-AI-003 — Gate 2 approval card
+// IPI-304 — renders through the shared ApprovalCardShell/ApprovalHeader;
+// no ApprovalActions (this card has no approve/reject UI today).
 
 import styles from "@/components/shoot/shoot-wizard.module.css";
+import { ApprovalCardShell, ApprovalHeader } from "@/components/approval-card";
 
 type Shot = { shot_number: number; description: string; angle: string; lighting: string; deliverable_ids: string[] };
 
@@ -23,12 +26,12 @@ export function ShotListApprovalCard({ shots, deliverableCount, uncoveredWarning
         <div className={styles.errorBanner}>🚨 Coverage gaps: {uncoveredWarnings.join(" · ")}</div>
       )}
 
-      <div className={styles.card}>
-        <div className={styles.cardHeader}>
-          <span className={styles.cardTitle}>
-            {shots.length} shots · {deliverableCount} deliverable types
-          </span>
-        </div>
+      <ApprovalCardShell className={styles.card}>
+        <ApprovalHeader
+          className={styles.cardHeader}
+          title={`${shots.length} shots · ${deliverableCount} deliverable types`}
+          titleClassName={styles.cardTitle}
+        />
         <table className={styles.table}>
           <thead>
             <tr>
@@ -69,7 +72,7 @@ export function ShotListApprovalCard({ shots, deliverableCount, uncoveredWarning
             ))}
           </tbody>
         </table>
-      </div>
+      </ApprovalCardShell>
     </div>
   );
 }

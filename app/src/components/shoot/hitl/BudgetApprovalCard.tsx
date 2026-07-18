@@ -1,8 +1,11 @@
 "use client";
 
 // IPI-150 SHOOT-AI-003 — Gate 3 approval card
+// IPI-304 — renders through the shared ApprovalCardShell/ApprovalHeader;
+// no ApprovalActions (this card has no approve/reject UI today).
 
 import styles from "@/components/shoot/shoot-wizard.module.css";
+import { ApprovalCardShell, ApprovalHeader } from "@/components/approval-card";
 
 type Budget = { crew: number; studio: number; equipment: number; post: number; total: number };
 
@@ -24,11 +27,13 @@ export function BudgetApprovalCard({ budget, override, onOverrideChange }: Props
   const displayTotal = overrideActive ? Number(override) : budget.total;
 
   return (
-    <div className={styles.card}>
-      <div className={styles.cardHeader}>
-        <span className={styles.cardTitle}>Budget estimate</span>
-        {overrideActive && <span className={styles.cardNote}>Override active</span>}
-      </div>
+    <ApprovalCardShell className={styles.card}>
+      <ApprovalHeader
+        className={styles.cardHeader}
+        title="Budget estimate"
+        titleClassName={styles.cardTitle}
+        right={overrideActive ? <span className={styles.cardNote}>Override active</span> : undefined}
+      />
 
       <div className={styles.budgetLines}>
         {LINES.map(([key, label]) => (
@@ -58,6 +63,6 @@ export function BudgetApprovalCard({ budget, override, onOverrideChange }: Props
           />
         </div>
       </div>
-    </div>
+    </ApprovalCardShell>
   );
 }
