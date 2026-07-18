@@ -157,8 +157,13 @@ async function logNonFatal(
 type AssetUpsertResult = {
   assetId: string;
   effectiveBrandId: string | null;
-  /** Rename path: sync assets.cloudinary_public_id only after the mirror write succeeds. */
+  /** Rename / null→value: sync assets.cloudinary_public_id only after the mirror write succeeds. */
   deferAssetPublicIdSync?: boolean;
+  /**
+   * Overwrite with same public_id: still push a newly resolved brand_id onto assets
+   * without rewriting url/cloudinary_public_id (avoids redundant-write 503s).
+   */
+  reconcileBrandOnly?: boolean;
 };
 
 type MirrorRow = {
@@ -580,11 +585,32 @@ async function syncAssetPublicIdAfterMirror(
   return false;
 }
 
+/** Brand-only assets patch — used on overwrite when public_id/url must not be rewritten. */
+async function syncAssetBrandAfterMirror(
+  db: ReturnType<typeof createSupabaseAdminClient>,
+  assetId: string,
+  brandId: string,
+): Promise<boolean> {
+  const { error } = await db.from("assets").update({ brand_id: brandId }).eq("id", assetId);
+  if (!error) return true;
+  if (isBrandFkViolation(error)) {
+    console.error(
+      "[cloudinary/webhook] brand_id update rejected on overwrite, preserving existing brand:",
+      error.message,
+    );
+    // Mirror already holds the candidate or prior brand; do not 503 the webhook for FK noise.
+    return true;
+  }
+  console.error("[cloudinary/webhook] assets brand reconcile failed:", error.message);
+  return false;
+}
+
 /**
  * When provider asset_id is known, reuse the existing assets row across public_id rename.
  * Defer assets.cloudinary_public_id write only when public_id actually changes — overwrite
  * with the same public_id must not 503 on a redundant assets sync after a successful mirror write.
  * (Library delivery uses signed URLs from public_id; assets.url is not required on overwrite.)
+ * Null stored public_id still counts as a change (legacy / incomplete mirrors).
  */
 async function resolveAssetForUpload(
   db: ReturnType<typeof createSupabaseAdminClient>,
@@ -601,11 +627,16 @@ async function resolveAssetForUpload(
   if (priorLookup.kind === "error") return undefined;
   if (priorLookup.kind === "found") {
     const storedPublicId = priorLookup.mirror.public_id;
-    const publicIdChanged = storedPublicId != null && storedPublicId !== publicId;
+    // Direct inequality: null → value must sync assets (legacy mirrors).
+    const publicIdChanged = storedPublicId !== publicId;
+    // Always attempt brand push on same-public_id overwrites when a candidate exists —
+    // assets.brand_id may still be null after an earlier FK failure even if the mirror already has it.
+    const reconcileBrandOnly = !publicIdChanged && brandId != null;
     return {
       assetId: priorLookup.mirror.asset_id,
       effectiveBrandId: brandId ?? priorLookup.mirror.brand_id,
       deferAssetPublicIdSync: publicIdChanged,
+      reconcileBrandOnly,
     };
   }
 
@@ -669,12 +700,10 @@ async function handleUpload(
     }
   }
 
+  // Rename may omit secure_url — always synthesize for the *new* public_id.
+  // Never reuse prior mirror.secure_url (points at the old path after rename).
   if (!secureUrl) {
-    if (priorLookup.kind === "found" && priorLookup.mirror.secure_url) {
-      secureUrl = priorLookup.mirror.secure_url;
-    } else {
-      secureUrl = synthesizeAuthenticatedUrl(publicId, resourceType);
-    }
+    secureUrl = synthesizeAuthenticatedUrl(publicId, resourceType);
   }
   if (!secureUrl) {
     console.error(
@@ -693,7 +722,7 @@ async function handleUpload(
     priorLookup,
   });
   if (!upserted) return {};
-  const { assetId, effectiveBrandId, deferAssetPublicIdSync } = upserted;
+  const { assetId, effectiveBrandId, deferAssetPublicIdSync, reconcileBrandOnly } = upserted;
 
   // Mirror first on rename so a failed public_id write cannot leave assets ahead of cloudinary_assets.
   const persisted = await upsertCloudinaryAssetRecord(db, assetId, {
@@ -732,6 +761,10 @@ async function handleUpload(
     });
     // Mirror already has the new public_id — ask Cloudinary to retry so assets can catch up.
     if (!synced) return { retryable: true };
+  } else if (reconcileBrandOnly && brandId) {
+    // Same public_id overwrite: skip url/public_id rewrite, but do not drop brand backfill.
+    const branded = await syncAssetBrandAfterMirror(db, canonicalAssetId, brandId);
+    if (!branded) return { retryable: true };
   }
 
   // Concurrent race: we inserted a provisional assets row, then discovered the canonical
