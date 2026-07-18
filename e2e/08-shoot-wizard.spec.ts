@@ -5,21 +5,39 @@ import { loginOperatorIfConfigured } from "./helpers/mobile-audit";
 /**
  * IPI-674 · QA-SHOOT-001 — Shoot Wizard happy-path e2e.
  *
- * Logs in as the real QA operator (skips cleanly if QA_PASSWORD isn't
- * configured, matching this suite's established convention) and drives the
- * real /app/shoots/new UI in a real browser. The 3 AI/workflow-backed calls
- * (plan deliverables, approve→shot list, approve→budget) and the final
- * commit are intercepted via page.route() so the test is fast and
- * deterministic instead of depending on live AI output — Task 10's "no real
- * AI call in CI" guard is satisfied by construction, not by assertion.
+ * Logs in as the real QA operator and drives the real /app/shoots/new UI in
+ * a real browser. Every network dependency is intercepted via page.route()
+ * so the run is fast and fully deterministic:
+ *  - the Supabase brands read (so the test never depends on what's actually
+ *    seeded in whatever environment it runs against)
+ *  - the 3 AI/workflow-backed calls (plan deliverables, approve→shot list,
+ *    approve→budget) and the final commit
+ * A catch-all /api/** route fails any call this test doesn't explicitly
+ * expect, so "no real AI/workflow/commit request escapes the mocks" is
+ * enforced by construction, not by assertion after the fact.
  *
  * Desktop only — this is a functional flow proof, not a responsive-layout
  * audit (that's 05-mobile-operator-matrix.spec.ts's job).
  */
 
 const RUN_ID = "e2e-run-1";
+const BRAND = { id: "e2e-brand-1", name: "E2E Test Brand" };
 
 async function mockWizardApis(page: import("@playwright/test").Page) {
+  // Registered first so it's checked LAST for any URL a more specific route
+  // below also matches (Playwright resolves overlapping routes most-recently
+  // -registered-first) — this only fires for /api/** calls no specific mock
+  // below claims, i.e. an unexpected endpoint.
+  await page.route("**/api/**", (route) => {
+    const req = route.request();
+    return route.fulfill({
+      status: 500,
+      json: { error: `unexpected endpoint call: ${req.method()} ${new URL(req.url()).pathname}` },
+    });
+  });
+
+  await page.route("**/rest/v1/brands*", (route) => route.fulfill({ json: [BRAND] }));
+
   await page.route("**/api/shoots/suggest-brief", (route) =>
     route.fulfill({ json: { brief: "E2E generated creative brief for the SS26 campaign." } }),
   );
@@ -75,31 +93,22 @@ test.describe("IPI-674 — Shoot Wizard happy path", () => {
     test.skip(testInfo.project.name !== "chromium-desktop", "desktop-only functional proof");
     test.setTimeout(60_000);
 
+    // In CI this must fail loudly, not vanish as a green "skipped" run —
+    // a missing credential should never look like a passing test suite.
+    if (process.env.CI && !process.env.QA_PASSWORD) {
+      throw new Error("QA_PASSWORD is required in CI for this test — refusing to silently skip.");
+    }
     const loggedIn = await loginOperatorIfConfigured(page);
     test.skip(!loggedIn, "QA_PASSWORD required in app/.env.local");
 
     await mockWizardApis(page);
 
-    // Brands load asynchronously via a client-side Supabase query
-    // (page.tsx's useEffect hitting /rest/v1/brands) — start waiting for that
-    // response before navigating, so the option-count check below can't race
-    // ahead of the fetch and mistake "not loaded yet" for "not seeded".
-    const brandsLoaded = page
-      .waitForResponse((r) => r.url().includes("/rest/v1/brands"), { timeout: 10_000 })
-      .catch(() => null);
-
     await page.goto("/app/shoots/new");
     await expect(page.locator("body")).not.toContainText("Internal Server Error");
-    await brandsLoaded;
 
-    const brandSelect = page.locator("#brand-select");
-    await expect(brandSelect).toBeVisible();
-    const brandOptionCount = await brandSelect.locator("option").count();
-    test.skip(brandOptionCount <= 1, "no brand seeded for this operator — nothing to select in Basics");
-
-    // ── Basics ──
-    await brandSelect.selectOption({ index: 1 });
-    await page.locator("#shoot-name").fill("E2E SS26 Campaign");
+    // ── Basics ── brand is mocked, deterministic — no environment-dependent skip
+    await page.getByLabel("Brand *").selectOption({ label: BRAND.name });
+    await page.getByLabel("Shoot name *").fill("E2E SS26 Campaign");
     await page.getByRole("button", { name: /IG Feed/ }).click();
     const continueBtn = page.getByRole("button", { name: /Continue/ });
     await expect(continueBtn).toBeEnabled();
@@ -107,7 +116,7 @@ test.describe("IPI-674 — Shoot Wizard happy path", () => {
 
     // ── Brief (auto-generates via the intercepted suggest-brief route) ──
     await expect(page.getByText("Step 2 of 6 · Brief")).toBeVisible();
-    const briefField = page.locator("#brief-text");
+    const briefField = page.getByLabel("Brief *");
     await expect(briefField).toHaveValue(/.+/, { timeout: 10_000 });
     await page.getByRole("button", { name: /Plan deliverables/ }).click();
 
