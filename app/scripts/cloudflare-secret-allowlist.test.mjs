@@ -81,6 +81,22 @@ describe("cloudflare-secret-allowlist", () => {
     expect(wranglerCliEnvArgs("production")).toEqual(["--env", ""]);
     expect(wranglerCliEnvArgs("preview")).toEqual(["--env", "preview"]);
   });
+
+  it("validate-env-pair.mjs reads INFISICAL_ENV and WRANGLER_ENV from env", () => {
+    const scriptPath = resolve(dirname(fileURLToPath(import.meta.url)), "validate-env-pair.mjs");
+    const ok = spawnSync(process.execPath, [scriptPath], {
+      env: { PATH: process.env.PATH, INFISICAL_ENV: "prod", WRANGLER_ENV: "production" },
+      encoding: "utf8",
+    });
+    expect(ok.status).toBe(0);
+    expect(ok.stdout).toContain("pairing ok: prod → production");
+
+    const bad = spawnSync(process.execPath, [scriptPath], {
+      env: { PATH: process.env.PATH, INFISICAL_ENV: "dev", WRANGLER_ENV: "production" },
+      encoding: "utf8",
+    });
+    expect(bad.status).not.toBe(0);
+  });
 });
 
 describe("sync-wrangler-secrets-from-infisical", () => {
@@ -187,11 +203,18 @@ describe("sync-wrangler-secrets-from-infisical", () => {
     expect(() => statSync(filePath)).toThrow();
   });
 
+  it("wrangler.jsonc declares secrets.required per named env", () => {
+    const wranglerPath = resolve(dirname(fileURLToPath(import.meta.url)), "../wrangler.jsonc");
+    const wrangler = readFileSync(wranglerPath, "utf8");
+    expect(wrangler).toMatch(/"preview"[\s\S]*"secrets"[\s\S]*"required"[\s\S]*GEMINI_API_KEY/);
+    expect(wrangler).toMatch(/"production"[\s\S]*"secrets"[\s\S]*"required"[\s\S]*GEMINI_API_KEY/);
+  });
+
   it("sync script header documents secrets-file upload not secret bulk", async () => {
-    const { readFileSync } = await import("node:fs");
-    const { resolve, dirname } = await import("node:path");
-    const { fileURLToPath } = await import("node:url");
-    const scriptPath = resolve(dirname(fileURLToPath(import.meta.url)), "sync-wrangler-secrets-from-infisical.mjs");
+    const scriptPath = resolve(
+      dirname(fileURLToPath(import.meta.url)),
+      "sync-wrangler-secrets-from-infisical.mjs",
+    );
     const src = readFileSync(scriptPath, "utf8");
     expect(src).toMatch(/versions upload/);
     expect(src).toMatch(/--secrets-file/);
