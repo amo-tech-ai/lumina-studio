@@ -80,9 +80,33 @@ describe("getMastraStorage (noop mode)", () => {
     vi.stubEnv("VERCEL", "1");
     vi.stubEnv("DATABASE_URL", "");
     vi.resetModules();
-    const { getMastraStorage: freshGetMastraStorage } = await import("./storage");
+    const { getMastraStorage: freshGetMastraStorage, MastraStorageUnavailableError } =
+      await import("./storage");
+    expect(() => freshGetMastraStorage()).toThrow(MastraStorageUnavailableError);
     expect(() => freshGetMastraStorage()).toThrow(/Vercel production/);
-    expect(() => freshGetMastraStorage()).toThrow(/storage_unavailable|DATABASE_URL is required/);
+  });
+
+  it("caches MastraStorageUnavailableError so prod init is not re-run each call", async () => {
+    vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("VERCEL", "1");
+    vi.stubEnv("DATABASE_URL", "");
+    vi.resetModules();
+    const { getMastraStorage: freshGetMastraStorage, MastraStorageUnavailableError } =
+      await import("./storage");
+    let first: unknown;
+    let second: unknown;
+    try {
+      freshGetMastraStorage();
+    } catch (err) {
+      first = err;
+    }
+    try {
+      freshGetMastraStorage();
+    } catch (err) {
+      second = err;
+    }
+    expect(first).toBeInstanceOf(MastraStorageUnavailableError);
+    expect(second).toBe(first);
   });
 
   it("sets degraded signal when Vercel prod storage is unavailable", async () => {

@@ -7,6 +7,7 @@ type MastraAppStorage = InMemoryStore | PostgresStoreType;
 let storage: MastraAppStorage | undefined;
 let lazyStorageProxy: MastraAppStorage | undefined;
 let storageDegraded = false;
+let cachedStorageUnavailableError: MastraStorageUnavailableError | undefined;
 
 /** Thrown when durable storage is required but DATABASE_URL is unset in production. */
 export class MastraStorageUnavailableError extends Error {
@@ -97,6 +98,9 @@ function requireProductionDatabaseUrl(env: NodeJS.ProcessEnv = process.env): voi
 }
 
 export function getMastraStorage(): MastraAppStorage {
+  if (cachedStorageUnavailableError) {
+    throw cachedStorageUnavailableError;
+  }
   if (!storage) {
     const url = process.env.DATABASE_URL ?? "";
 
@@ -110,7 +114,14 @@ export function getMastraStorage(): MastraAppStorage {
       // Real Mastra store (getStore("memory") etc.) — bare stubs break agent.stream after RUN_STARTED.
       storage = new InMemoryStore({ id: "mastra-storage-memory" });
     } else if (!url) {
-      requireProductionDatabaseUrl();
+      try {
+        requireProductionDatabaseUrl();
+      } catch (err) {
+        if (err instanceof MastraStorageUnavailableError) {
+          cachedStorageUnavailableError = err;
+        }
+        throw err;
+      }
       // ponytail: in-memory at build/test time — agents import this at module eval,
       // but no DB call happens until an actual agent turn.
       storage = new InMemoryStore({ id: "mastra-storage-memory" });
