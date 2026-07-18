@@ -1,0 +1,105 @@
+# IPI-668 · SB-TEST-001 — Required verify-rls + chatbot grant asserts on trusted CI.
+# Separate from supabase-linked-gates.yml (different secrets + concurrency).
+# Never pull_request_target. No path filters (required-check safe).
+name: Supabase verify-rls
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  # Shared remote project — serialize; never cancel mid-cleanup.
+  group: supabase-verify-rls-nvdlhrodvevgwdsneplk
+  cancel-in-progress: false
+
+jobs:
+  supabase-verify-rls:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Trust + secrets gate
+        id: gate
+        shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          PR_HEAD_REPO: ${{ github.event.pull_request.head.repo.full_name }}
+          REPO: ${{ github.repository }}
+          ACTOR: ${{ github.actor }}
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          # Alias some orgs already store as SUPABASE_DB_URL
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          set -euo pipefail
+          trusted=false
+          if [ "$EVENT_NAME" = "push" ]; then
+            trusted=true
+          elif [ "$EVENT_NAME" = "pull_request" ] \
+            && [ "${PR_HEAD_REPO:-}" = "$REPO" ] \
+            && [ "$ACTOR" != "dependabot[bot]" ]; then
+            trusted=true
+          fi
+
+          if [ "$trusted" != "true" ]; then
+            echo "mode=skip" >> "$GITHUB_OUTPUT"
+            echo "Explicit safe skip: fork or Dependabot PR (no secrets)."
+            exit 0
+          fi
+
+          # Prefer DATABASE_URL; accept SUPABASE_DB_URL as the same connection string.
+          if [ -z "${DATABASE_URL:-}" ] && [ -n "${SUPABASE_DB_URL:-}" ]; then
+            DATABASE_URL="$SUPABASE_DB_URL"
+          fi
+
+          missing=()
+          [ -n "${NEXT_PUBLIC_SUPABASE_URL:-}" ] || missing+=("NEXT_PUBLIC_SUPABASE_URL")
+          [ -n "${NEXT_PUBLIC_SUPABASE_ANON_KEY:-}" ] || missing+=("NEXT_PUBLIC_SUPABASE_ANON_KEY")
+          [ -n "${SUPABASE_SERVICE_ROLE_KEY:-}" ] || missing+=("SUPABASE_SERVICE_ROLE_KEY")
+          [ -n "${DATABASE_URL:-}" ] || missing+=("DATABASE_URL|SUPABASE_DB_URL")
+          if [ "${#missing[@]}" -gt 0 ]; then
+            echo "Trusted CI missing required secrets: ${missing[*]}"
+            exit 1
+          fi
+          echo "mode=run" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/setup-node@v4
+        if: steps.gate.outputs.mode == 'run'
+        with:
+          node-version: "22"
+          cache: npm
+
+      - name: Install root deps (supabase-js)
+        if: steps.gate.outputs.mode == 'run'
+        run: npm ci --omit=dev
+
+      - name: Install postgresql-client
+        if: steps.gate.outputs.mode == 'run'
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq postgresql-client
+
+      - name: Chatbot / lead_intake grant assertions
+        if: steps.gate.outputs.mode == 'run'
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          set -euo pipefail
+          DB_URL="${DATABASE_URL:-${SUPABASE_DB_URL:-}}"
+          psql "$DB_URL" -v ON_ERROR_STOP=1 -f supabase/tests/security/chatbot-grants.sql
+
+      - name: verify-rls (fail-closed service role)
+        if: steps.gate.outputs.mode == 'run'
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          REQUIRE_SERVICE_ROLE: "1"
+        run: |
+          set -euo pipefail
+          npm run supabase:verify-rls

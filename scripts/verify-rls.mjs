@@ -33,9 +33,20 @@ const anonKey =
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ??
   process.env.NEXT_SUPABASE_PUBLISHABLE_KEY;
 const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const requireServiceRole =
+  process.env.REQUIRE_SERVICE_ROLE === "1" ||
+  process.env.REQUIRE_SERVICE_ROLE === "true";
 
 if (!url || !anonKey) {
-  console.error("Missing VITE_SUPABASE_URL / VITE_SUPABASE_PUBLISHABLE_KEY");
+  console.error("Missing NEXT_PUBLIC_SUPABASE_URL / NEXT_PUBLIC_SUPABASE_ANON_KEY (or VITE_* aliases)");
+  process.exit(1);
+}
+
+// IPI-668 — trusted CI must never soft-skip service-role probes.
+if (requireServiceRole && !serviceKey) {
+  console.error(
+    "REQUIRE_SERVICE_ROLE=1 but SUPABASE_SERVICE_ROLE_KEY is missing — refuse to run",
+  );
   process.exit(1);
 }
 
@@ -45,6 +56,7 @@ const emailA = `plt002-rls-a-${stamp}@example.com`;
 const emailB = `plt002-rls-b-${stamp}@example.com`;
 
 let failures = 0;
+let cleanupFailures = 0;
 
 function fail(message) {
   console.error(`FAIL: ${message}`);
@@ -58,6 +70,12 @@ function pass(message) {
 function assert(condition, message) {
   if (condition) pass(message);
   else fail(message);
+}
+
+/** Count cleanup errors so CI cannot stay green with leftover fixtures. */
+function trackCleanupError(message) {
+  cleanupFailures += 1;
+  console.warn(`warn: cleanup ${message}`);
 }
 
 /** Cross-user SELECT deny: fail on query error, then assert zero rows. */
@@ -127,19 +145,24 @@ async function cleanupRlsTestData({
   userAId,
   userBId,
 }) {
-  if (!admin) return;
+  if (!admin) {
+    if (requireServiceRole) {
+      trackCleanupError("skipped — no service-role admin client");
+    }
+    return;
+  }
 
   for (const id of [notificationId, crmNotificationId].filter(Boolean)) {
     const { error: notifDelErr } = await admin.from("notifications").delete().eq("id", id);
     if (notifDelErr) {
-      console.warn(`warn: cleanup notification ${id}: ${notifDelErr.message}`);
+      trackCleanupError(`notification ${id}: ${notifDelErr.message}`);
     }
   }
 
   if (assetId) {
     const { error: assetDelErr } = await admin.from("assets").delete().eq("id", assetId);
     if (assetDelErr) {
-      console.warn(`warn: cleanup asset ${assetId}: ${assetDelErr.message}`);
+      trackCleanupError(`asset ${assetId}: ${assetDelErr.message}`);
     }
   }
 
@@ -153,7 +176,7 @@ async function cleanupRlsTestData({
     for (const table of ["crm_activities", "crm_deals", "crm_contacts", "crm_companies"]) {
       const { error } = await admin.from(table).delete().eq("org_id", orgId);
       if (error) {
-        console.warn(`warn: cleanup ${table} for org ${orgId}: ${error.message}`);
+        trackCleanupError(`${table} for org ${orgId}: ${error.message}`);
       }
     }
   }
@@ -161,7 +184,7 @@ async function cleanupRlsTestData({
   for (const id of [brandId, ...(brandIds ?? [])].filter(Boolean)) {
     const { error: brandDelErr } = await admin.from("brands").delete().eq("id", id);
     if (brandDelErr) {
-      console.warn(`warn: cleanup brand ${id}: ${brandDelErr.message}`);
+      trackCleanupError(`brand ${id}: ${brandDelErr.message}`);
     }
   }
 
@@ -169,7 +192,7 @@ async function cleanupRlsTestData({
     await admin.from("org_members").delete().eq("org_id", orgId);
     const { error: orgDelErr } = await admin.from("organizations").delete().eq("id", orgId);
     if (orgDelErr) {
-      console.warn(`warn: cleanup org ${orgId}: ${orgDelErr.message}`);
+      trackCleanupError(`org ${orgId}: ${orgDelErr.message}`);
     }
   }
 
@@ -180,7 +203,7 @@ async function cleanupRlsTestData({
     if (!userId) continue;
     const { error } = await deleteAuthUser(userId);
     if (error) {
-      console.warn(`warn: cleanup ${label} (${userId}): ${error.message}`);
+      trackCleanupError(`${label} (${userId}): ${error.message}`);
     } else {
       pass(`cleaned up ${label} (service role)`);
     }
@@ -599,7 +622,7 @@ try {
     if (foreignOrg?.id) {
       await admin.from("org_members").delete().eq("org_id", foreignOrg.id);
       const { error: foreignOrgDelErr } = await admin.from("organizations").delete().eq("id", foreignOrg.id);
-      if (foreignOrgDelErr) console.warn(`warn: cleanup foreign org ${foreignOrg.id}: ${foreignOrgDelErr.message}`);
+      if (foreignOrgDelErr) trackCleanupError(`foreign org ${foreignOrg.id}: ${foreignOrgDelErr.message}`);
     }
 
     // Every test below this block assumes user B has zero relationship to
@@ -804,7 +827,11 @@ try {
   // (insert policy stays owner-only by design); B isn't an org member yet at
   // this point in the script — that happens below, near the viewer/editor probes.
   if (!admin) {
-    console.warn("warn: skip IPI-499 assets RLS probes (no SUPABASE_SERVICE_ROLE_KEY)");
+    if (requireServiceRole) {
+      fail("IPI-499 assets RLS probes require SUPABASE_SERVICE_ROLE_KEY");
+    } else {
+      console.warn("warn: skip IPI-499 assets RLS probes (no SUPABASE_SERVICE_ROLE_KEY)");
+    }
   } else {
     const { data: assetRow, error: assetAdminErr } = await admin
       .from("assets")
@@ -844,7 +871,11 @@ try {
 
   // IPI-26 — service-role writes; org-member SELECT only
   if (!admin) {
-    console.warn("warn: skip IPI-26 table RLS probes (no SUPABASE_SERVICE_ROLE_KEY)");
+    if (requireServiceRole) {
+      fail("IPI-26 table RLS probes require SUPABASE_SERVICE_ROLE_KEY");
+    } else {
+      console.warn("warn: skip IPI-26 table RLS probes (no SUPABASE_SERVICE_ROLE_KEY)");
+    }
   } else {
     const { data: socialRow, error: socialAdminErr } = await admin
       .from("brand_social_channels")
@@ -958,7 +989,11 @@ try {
 
   // brand_intake_drafts — owner or org member SELECT (seed via service role)
   if (!admin) {
-    console.warn("warn: skip brand_intake_drafts RLS probes (no SUPABASE_SERVICE_ROLE_KEY)");
+    if (requireServiceRole) {
+      fail("brand_intake_drafts RLS probes require SUPABASE_SERVICE_ROLE_KEY");
+    } else {
+      console.warn("warn: skip brand_intake_drafts RLS probes (no SUPABASE_SERVICE_ROLE_KEY)");
+    }
   } else {
     const { data: draftRow, error: draftAdminErr } = await admin
       .from("brand_intake_drafts")
@@ -1106,6 +1141,8 @@ try {
         "user B cannot read user A crawl pages",
       );
     }
+  } else if (requireServiceRole) {
+    fail("brand_crawls RLS insert probes require SUPABASE_SERVICE_ROLE_KEY");
   } else {
     console.log("skip: brand_crawls RLS insert probes (no service role)");
   }
@@ -1116,7 +1153,11 @@ try {
   // Uses brand_org_id ownership only (talent/agency-owner paths live in the
   // `talent` schema, not exposed via PostgREST — see IPI-307 notes).
   if (!admin) {
-    console.warn("warn: skip notifications RLS probes (no SUPABASE_SERVICE_ROLE_KEY)");
+    if (requireServiceRole) {
+      fail("notifications RLS probes require SUPABASE_SERVICE_ROLE_KEY");
+    } else {
+      console.warn("warn: skip notifications RLS probes (no SUPABASE_SERVICE_ROLE_KEY)");
+    }
   } else {
     const { data: notifRow, error: notifInsertErr } = await admin
       .from("notifications")
@@ -1617,7 +1658,7 @@ try {
   } finally {
     if (userG?.user?.id) {
       const { error } = await deleteAuthUser(userG.user.id);
-      if (error) console.warn(`warn: cleanup user G: ${error.message}`);
+      if (error) trackCleanupError(`user G: ${error.message}`);
       else pass("cleaned up user G (service role)");
     }
   }
@@ -2699,12 +2740,12 @@ try {
   } finally {
     if (userCiViewer?.user?.id) {
       const { error } = await deleteAuthUser(userCiViewer.user.id);
-      if (error) console.warn(`warn: cleanup user CI viewer: ${error.message}`);
+      if (error) trackCleanupError(`user CI viewer: ${error.message}`);
       else pass("cleaned up planner_create_instance viewer test user (service role)");
     }
     if (userCiEditor?.user?.id) {
       const { error } = await deleteAuthUser(userCiEditor.user.id);
-      if (error) console.warn(`warn: cleanup user CI editor: ${error.message}`);
+      if (error) trackCleanupError(`user CI editor: ${error.message}`);
       else pass("cleaned up planner_create_instance editor test user (service role)");
     }
   }
@@ -2750,7 +2791,7 @@ try {
   } finally {
     if (userF?.user?.id) {
       const { error } = await deleteAuthUser(userF.user.id);
-      if (error) console.warn(`warn: cleanup user F: ${error.message}`);
+      if (error) trackCleanupError(`user F: ${error.message}`);
       else pass("cleaned up user F (service role)");
     }
   }
@@ -2829,7 +2870,7 @@ try {
       if (userE?.user?.id) {
         await admin.from("org_members").delete().eq("org_id", orgAId).eq("user_id", userE.user.id);
         const { error } = await deleteAuthUser(userE.user.id);
-        if (error) console.warn(`warn: cleanup user E: ${error.message}`);
+        if (error) trackCleanupError(`user E: ${error.message}`);
       }
     }
 
@@ -2871,7 +2912,7 @@ try {
     if (userD?.user?.id) {
       await admin.from("org_members").delete().eq("org_id", orgAId).eq("user_id", userD.user.id);
       const { error } = await deleteAuthUser(userD.user.id);
-      if (error) console.warn(`warn: cleanup user D: ${error.message}`);
+      if (error) trackCleanupError(`user D: ${error.message}`);
       else pass("cleaned up user D (service role)");
     }
   }
@@ -2908,7 +2949,7 @@ try {
   } finally {
     if (userC?.user?.id) {
       const { error } = await deleteAuthUser(userC.user.id);
-      if (error) console.warn(`warn: cleanup user C: ${error.message}`);
+      if (error) trackCleanupError(`user C: ${error.message}`);
       else pass("cleaned up user C (service role)");
     }
   }
@@ -2917,7 +2958,7 @@ try {
   if (orgBId && admin) {
     await admin.from("org_members").delete().eq("org_id", orgBId);
     const { error: orgBDelErr } = await admin.from("organizations").delete().eq("id", orgBId);
-    if (orgBDelErr) console.warn(`warn: cleanup org B: ${orgBDelErr.message}`);
+    if (orgBDelErr) trackCleanupError(`org B: ${orgBDelErr.message}`);
   }
 } catch (err) {
   fail(err instanceof Error ? err.message : String(err));
@@ -2933,11 +2974,23 @@ try {
     userBId: userB?.user?.id,
   });
   if (!serviceKey) {
-    console.warn(
-      "warn: set SUPABASE_SERVICE_ROLE_KEY in .env.local to auto-delete test users",
-    );
+    if (requireServiceRole) {
+      trackCleanupError("no SUPABASE_SERVICE_ROLE_KEY — cannot delete test users");
+    } else {
+      console.warn(
+        "warn: set SUPABASE_SERVICE_ROLE_KEY in .env.local to auto-delete test users",
+      );
+    }
   }
 }
 
-console.log(`\n${failures === 0 ? "RLS verification passed" : `RLS verification failed (${failures})`}`);
-process.exit(failures === 0 ? 0 : 1);
+if (cleanupFailures > 0) {
+  fail(`cleanup left ${cleanupFailures} error(s) — fixtures may remain`);
+}
+
+const ok = failures === 0;
+console.log(
+  `\n${ok ? "RLS verification passed" : `RLS verification failed (${failures})`}` +
+    (cleanupFailures ? ` · cleanupFailures=${cleanupFailures}` : ""),
+);
+process.exit(ok ? 0 : 1);
