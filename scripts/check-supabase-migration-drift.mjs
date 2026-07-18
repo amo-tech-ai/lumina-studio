@@ -79,13 +79,14 @@ function listLocalFiles() {
 }
 
 function parseMigrationListJson(raw) {
-  // CLI may wrap JSON after log lines — take the last {...} object.
-  const start = raw.lastIndexOf("{");
+  // Prefer the root envelope; nested row objects also start with `{`.
+  const start = raw.indexOf('{"migrations"');
+  const sliceStart = start >= 0 ? start : raw.indexOf("{");
   const end = raw.lastIndexOf("}");
-  if (start < 0 || end < start) {
+  if (sliceStart < 0 || end < sliceStart) {
     throw new Error("Could not parse migration list JSON");
   }
-  const parsed = JSON.parse(raw.slice(start, end + 1));
+  const parsed = JSON.parse(raw.slice(sliceStart, end + 1));
   const rows = parsed.migrations ?? parsed;
   if (!Array.isArray(rows)) {
     throw new Error("migration list JSON missing migrations array");
@@ -188,21 +189,27 @@ if (unexpectedLocal.length) {
   process.exit(1);
 }
 
-const introducedSorted = [...introduced].sort();
-const pendingSorted = [...pendingVersions].sort();
-const same =
-  introducedSorted.length === pendingSorted.length &&
-  introducedSorted.every((v, i) => v === pendingSorted[i]);
+const pendingSet = new Set(pendingVersions);
+const surprisePending = pendingVersions.filter((v) => !introduced.has(v));
+if (surprisePending.length) {
+  console.error("PR: dry-run pending migrations not introduced by this PR:");
+  for (const v of surprisePending) console.error(`  - ${v}`);
+  console.error("dry-run output:\n", dryRaw.trim());
+  process.exit(1);
+}
 
-if (!same) {
-  console.error("PR: dry-run pending set must exactly match PR-introduced migrations.");
-  console.error("  introduced:", introducedSorted.join(", ") || "(none)");
-  console.error("  pending:   ", pendingSorted.join(", ") || "(none)");
+// Every local-only (not yet on remote) version must appear in dry-run pending.
+// Introduced versions already applied to remote (both sides) are allowed —
+// common when a migration was pushed during implementation before merge.
+const missingPending = localOnly.filter((v) => introduced.has(v) && !pendingSet.has(v));
+if (missingPending.length) {
+  console.error("PR: local-only introduced migrations missing from dry-run pending:");
+  for (const v of missingPending) console.error(`  - ${v}`);
   console.error("dry-run output:\n", dryRaw.trim());
   process.exit(1);
 }
 
 console.log(
-  `ok: PR ledger clean; pending matches introduced (${pendingSorted.join(", ") || "none"})`,
+  `ok: PR ledger clean; pending=${[...pendingSet].sort().join(", ") || "none"} introduced=${[...introduced].sort().join(", ") || "none"}`,
 );
 process.exit(0);
