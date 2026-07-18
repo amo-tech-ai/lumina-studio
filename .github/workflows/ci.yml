@@ -135,3 +135,64 @@ jobs:
           NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
         run: npm run supabase:verify-planner
+
+  # IPI-674 · QA-SHOOT-001 — real-browser proof of the Shoot Wizard happy path.
+  # Every AI/workflow/commit call is intercepted (see e2e/08-shoot-wizard.spec.ts),
+  # but login is real, so a real QA_PASSWORD is required. This job fails loudly
+  # if that secret is missing rather than letting the suite report a quiet,
+  # misleadingly-green "skipped" run.
+  shoot-wizard-e2e:
+    runs-on: ubuntu-latest
+    # Fork PRs never receive repo secrets (GitHub platform behavior, not
+    # something a workflow can opt into) — skip cleanly for them instead of
+    # hard-failing every external/Dependabot PR on a secret they can never
+    # have. Same-repo pushes and PRs still run and still hard-fail below if
+    # QA_PASSWORD is missing there, where it's expected to be configured.
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: app/.nvmrc
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            app/package-lock.json
+
+      - name: Verify QA credentials are configured
+        run: |
+          if [ -z "${{ secrets.QA_PASSWORD }}" ]; then
+            echo "::error::QA_PASSWORD secret is not set — failing rather than letting this job silently skip the real login."
+            exit 1
+          fi
+
+      - name: Install root dependencies (Playwright)
+        run: npm ci
+
+      - name: Install app dependencies
+        working-directory: app
+        run: npm ci
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Shoot Wizard e2e (chromium-desktop)
+        # Least privilege: QA_PASSWORD + the public anon key/URL are all a
+        # real client-side login needs. Every AI/workflow/commit/brand-read
+        # call this spec makes is intercepted via page.route(), so the app
+        # never exercises a server-side DB path — no service-role key or
+        # direct DB connection string belongs in this job.
+        env:
+          QA_PASSWORD: ${{ secrets.QA_PASSWORD }}
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+        run: npx playwright test e2e/08-shoot-wizard.spec.ts --project=chromium-desktop
+
+      - name: Upload failure evidence (screenshots + traces)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: shoot-wizard-e2e-failure
+          path: test-results/
+          retention-days: 7
