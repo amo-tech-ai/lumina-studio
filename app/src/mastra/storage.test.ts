@@ -3,7 +3,9 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   assertPostgresStoreModule,
   getMastraStorage,
+  getMastraStorageLazy,
   isCloudflareWorkersRuntime,
+  isVercelRuntime,
   shouldSkipMastraPostgresStorage,
 } from "./storage";
 
@@ -35,6 +37,13 @@ describe("isCloudflareWorkersRuntime", () => {
   });
 });
 
+describe("isVercelRuntime", () => {
+  it("detects Vercel via VERCEL=1", () => {
+    expect(isVercelRuntime({ VERCEL: "1" })).toBe(true);
+    expect(isVercelRuntime({})).toBe(false);
+  });
+});
+
 describe("getMastraStorage (noop mode)", () => {
   afterEach(() => {
     vi.unstubAllEnvs();
@@ -55,6 +64,69 @@ describe("getMastraStorage (noop mode)", () => {
     const first = freshGetMastraStorage();
     const second = freshGetMastraStorage();
     expect(first).toBe(second);
+  });
+
+  it("does not initialize storage when getMastraStorageLazy is called", async () => {
+    vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("VERCEL", "1");
+    vi.stubEnv("DATABASE_URL", "");
+    vi.resetModules();
+    const { getMastraStorageLazy: freshLazy } = await import("./storage");
+    expect(() => freshLazy()).not.toThrow();
+  });
+
+  it("throws MastraStorageUnavailableError on Vercel prod when DATABASE_URL is unset", async () => {
+    vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("VERCEL", "1");
+    vi.stubEnv("DATABASE_URL", "");
+    vi.resetModules();
+    const { getMastraStorage: freshGetMastraStorage, MastraStorageUnavailableError } =
+      await import("./storage");
+    expect(() => freshGetMastraStorage()).toThrow(MastraStorageUnavailableError);
+    expect(() => freshGetMastraStorage()).toThrow(/Vercel production/);
+  });
+
+  it("caches MastraStorageUnavailableError so prod init is not re-run each call", async () => {
+    vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("VERCEL", "1");
+    vi.stubEnv("DATABASE_URL", "");
+    vi.resetModules();
+    const { getMastraStorage: freshGetMastraStorage, MastraStorageUnavailableError } =
+      await import("./storage");
+    let first: unknown;
+    let second: unknown;
+    try {
+      freshGetMastraStorage();
+    } catch (err) {
+      first = err;
+    }
+    try {
+      freshGetMastraStorage();
+    } catch (err) {
+      second = err;
+    }
+    expect(first).toBeInstanceOf(MastraStorageUnavailableError);
+    expect(second).toBe(first);
+  });
+
+  it("sets degraded signal when Vercel prod storage is unavailable", async () => {
+    vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("VERCEL", "1");
+    vi.stubEnv("DATABASE_URL", "");
+    vi.resetModules();
+    const mod = await import("./storage");
+    expect(() => mod.getMastraStorage()).toThrow(/Vercel production/);
+    expect(mod.isMastraStorageDegraded()).toBe(true);
+  });
+
+  it("uses InMemoryStore in CI builds when DATABASE_URL is unset", async () => {
+    vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("CI", "true");
+    vi.stubEnv("DATABASE_URL", "");
+    vi.resetModules();
+    const { getMastraStorage: freshGetMastraStorage } = await import("./storage");
+    const store = freshGetMastraStorage();
+    expect(store).toBeInstanceOf(InMemoryStore);
   });
 });
 

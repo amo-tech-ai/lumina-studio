@@ -7,6 +7,7 @@ import {
 import { MastraAgent } from "@ag-ui/mastra";
 import { RequestContext } from "@mastra/core/request-context";
 import { getMastra } from "@/mastra";
+import { getMastraStorage, MastraStorageUnavailableError } from "@/mastra/storage";
 import { type OperatorUser, extractAccessToken } from "@/lib/auth";
 import { isOperatorAuthEnforced, OperatorAuthError, withOperatorAuth } from "@/lib/operator-gate";
 import { isCopilotIntelligenceEnvComplete, isCopilotKitThreadsEnabled } from "@/lib/copilotkit/intelligence-config";
@@ -62,6 +63,92 @@ const endpoint = createCopilotRuntimeHandler({
   basePath: "/api/copilotkit",
 });
 
+function extractSafeRuntimeErrorDetail(bodyText: string, contentType: string): string | undefined {
+  const trimmed = bodyText.trim();
+  if (!trimmed) return undefined;
+
+  if (contentType.includes("application/json")) {
+    try {
+      const parsed = JSON.parse(trimmed) as {
+        message?: unknown;
+        error?: unknown;
+        detail?: unknown;
+      };
+      if (typeof parsed.message === "string" && parsed.message.trim()) {
+        return parsed.message.trim();
+      }
+      if (typeof parsed.error === "string" && parsed.error.trim()) {
+        return parsed.error.trim();
+      }
+      if (typeof parsed.detail === "string" && parsed.detail.trim()) {
+        return parsed.detail.trim();
+      }
+    } catch {
+      return undefined;
+    }
+    return undefined;
+  }
+
+  if (trimmed.includes("<html") || trimmed.includes("<!DOCTYPE")) return undefined;
+  if (trimmed.length > 500) return undefined;
+  return trimmed;
+}
+
+/** CopilotKit may return opaque 500s when agent discovery fails — normalize for the UI. */
+async function normalizeRuntimeErrorResponse(response: Response): Promise<Response> {
+  if (response.status < 500) return response;
+
+  const contentType = response.headers.get("content-type") ?? "";
+  if (response.status === 503 && contentType.includes("application/json")) {
+    return response;
+  }
+
+  let detail: string | undefined;
+  if (contentType.includes("application/json")) {
+    try {
+      detail = extractSafeRuntimeErrorDetail(await response.clone().text(), contentType);
+      if (detail) {
+        console.error("[copilotkit] runtime 5xx detail:", detail);
+      }
+    } catch (err) {
+      console.error("[copilotkit] failed to parse runtime 5xx body", err);
+    }
+  }
+
+  try {
+    response.body?.cancel().catch(() => {});
+  } catch {
+    // body may be null or already consumed
+  }
+
+  return Response.json(
+    {
+      error: "CopilotKit runtime unavailable",
+      code: "runtime_error",
+      ...(detail ? { detail } : {}),
+    },
+    { status: 503 },
+  );
+}
+
+function requestNeedsDurableStorage(request: Request): boolean {
+  const { pathname } = new URL(request.url);
+  if (pathname.endsWith("/info")) return false;
+  return pathname.includes("/agent/");
+}
+
+function storageUnavailableResponse(err: MastraStorageUnavailableError): Response {
+  return Response.json(
+    {
+      error: "Agent persistence unavailable",
+      code: "storage_unavailable",
+      detail: err.message,
+      degraded: true,
+    },
+    { status: 503 },
+  );
+}
+
 const handler = async (request: Request): Promise<Response> => {
   let user: OperatorUser;
   try {
@@ -72,13 +159,30 @@ const handler = async (request: Request): Promise<Response> => {
     }
     throw err;
   }
+
+  if (requestNeedsDurableStorage(request)) {
+    try {
+      getMastraStorage();
+    } catch (err) {
+      if (err instanceof MastraStorageUnavailableError) {
+        console.error("[copilotkit] agent run blocked — durable storage unavailable", err.message);
+        return storageUnavailableResponse(err);
+      }
+      throw err;
+    }
+  }
+
   try {
     const token = extractAccessToken(request) ?? "";
     const response = await _requestUser.run(user, () =>
       requestToken.run(token, () => endpoint(request)),
     );
-    return withStreamIdleTimeout(response, STREAM_IDLE_TIMEOUT_MS);
+    return withStreamIdleTimeout(await normalizeRuntimeErrorResponse(response), STREAM_IDLE_TIMEOUT_MS);
   } catch (err) {
+    if (err instanceof MastraStorageUnavailableError) {
+      console.error("[copilotkit] persistence unavailable", err);
+      return storageUnavailableResponse(err);
+    }
     console.error("[copilotkit] runtime handler failed", err);
     return Response.json(
       { error: "CopilotKit runtime unavailable", code: "runtime_error" },
