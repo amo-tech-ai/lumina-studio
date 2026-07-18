@@ -16,6 +16,11 @@ concurrency:
 jobs:
   changes:
     runs-on: ubuntu-latest
+    # dorny/paths-filter lists PR files via REST — needs pull-requests: read
+    # when GITHUB_TOKEN defaults are restricted.
+    permissions:
+      contents: read
+      pull-requests: read
     outputs:
       edge: ${{ steps.filter.outputs.edge }}
     steps:
@@ -28,6 +33,8 @@ jobs:
           filters: |
             edge:
               - 'supabase/functions/**'
+              - 'config/groq-models.json'
+              - 'app/src/lib/ai/types.ts'
               - 'package.json'
               - '.github/workflows/supabase-verify-edge.yml'
 
@@ -35,8 +42,13 @@ jobs:
     needs: changes
     if: needs.changes.outputs.edge == 'true'
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v4
+
+      - name: Require Deno lockfile
+        run: test -f supabase/functions/deno.lock
 
       # Pin: denoland/setup-deno@v2.0.5 · Deno 2.9.2 matches local CI pin
       - uses: denoland/setup-deno@22d081ff2d3a40755e97629de92e3bcbfa7cf2ed
@@ -53,6 +65,8 @@ jobs:
     needs: [changes, deno-unit]
     if: always()
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - name: Summarize Edge Deno gate
         shell: bash
