@@ -2000,13 +2000,12 @@ try {
     .eq("user_id", userB.user.id);
   assert(!restoreMgrErr, "restore user B to manager after the IPI-649 RPC probe block");
 
-  // ── IPI-653 · PLN-DATA-003 — planner_create_instance RPC probes (PR 2:
-  // engine-computes/RPC-persists contract). p_tasks is a caller-precomputed
-  // task list (the app layer's PlannerEngine.buildSchedule()); this RPC only
-  // validates each task's phaseId against p_workflow_id and persists. Uses
-  // fresh, dedicated org A members (not the ambient userB, whose org_members
-  // role has been mutated by many earlier probe sections) so this block is
-  // self-contained and order-independent — same idiom as user G above.
+  // ── IPI-653 · PLN-DATA-003 + IPI-670 · PLN-DATA-003B — planner_create_instance
+  // RPC probes. p_tasks is a caller-precomputed task list
+  // (PlannerEngine.buildSchedule()); the RPC validates each task's phaseId
+  // against p_workflow_id, then (IPI-670) requires a complete distinct cover
+  // of that workflow's phases before any write. Uses fresh, dedicated org A
+  // members (not the ambient userB) so this block is self-contained.
   const { data: ciPhase1, error: ciPhase1Err } = await plannerA
     .from("phases")
     .insert({ workflow_id: wfA.id, slug: `ci-brief-${stamp}`, name: "Brief", order_index: 0, default_duration_days: 2 })
@@ -2038,6 +2037,50 @@ try {
     .select("id")
     .single();
   assert(!ciDeal3Err && ciDeal3?.id, "user A inserts a third crm_deal for the revoked-role replay probe");
+
+  // Fresh deals for IPI-670 completeness rejects (must not collide with the
+  // positive-path instance on crmDeal / explicit-owner on ciDeal2).
+  const { data: ciDealEmpty, error: ciDealEmptyErr } = await userA.client
+    .from("crm_deals")
+    .insert({ org_id: orgAId, company_id: crmCompany.id, stage: "lead" })
+    .select("id")
+    .single();
+  assert(!ciDealEmptyErr && ciDealEmpty?.id, "user A inserts a crm_deal for the empty-p_tasks completeness probe");
+
+  const { data: ciDealOmit, error: ciDealOmitErr } = await userA.client
+    .from("crm_deals")
+    .insert({ org_id: orgAId, company_id: crmCompany.id, stage: "lead" })
+    .select("id")
+    .single();
+  assert(!ciDealOmitErr && ciDealOmit?.id, "user A inserts a crm_deal for the omitted-phase completeness probe");
+
+  const { data: ciDealDup, error: ciDealDupErr } = await userA.client
+    .from("crm_deals")
+    .insert({ org_id: orgAId, company_id: crmCompany.id, stage: "lead" })
+    .select("id")
+    .single();
+  assert(!ciDealDupErr && ciDealDup?.id, "user A inserts a crm_deal for the duplicate-phase completeness probe");
+
+  const { data: ciDealZeroPhase, error: ciDealZeroPhaseErr } = await userA.client
+    .from("crm_deals")
+    .insert({ org_id: orgAId, company_id: crmCompany.id, stage: "lead" })
+    .select("id")
+    .single();
+  assert(!ciDealZeroPhaseErr && ciDealZeroPhase?.id, "user A inserts a crm_deal for the zero-phase workflow probe");
+
+  // Workflow with zero phases — completeness must reject even with [].
+  const { data: wfZeroPhases, error: wfZeroPhasesErr } = await plannerA
+    .from("workflows")
+    .insert({
+      org_id: orgAId,
+      name: `RLS CI Zero-Phase WF ${stamp}`,
+      category: "production",
+      version: 1,
+      is_default: false,
+    })
+    .select("id")
+    .single();
+  assert(!wfZeroPhasesErr && wfZeroPhases?.id, "org owner inserts a zero-phase workflow for IPI-670");
 
   const emailCiViewer = `plt002-rls-ci-viewer-${stamp}@example.com`;
   const emailCiEditor = `plt002-rls-ci-editor-${stamp}@example.com`;
@@ -2266,7 +2309,7 @@ try {
       p_name: `RLS CI Explicit Owner ${stamp}`,
       p_planned_start: "2026-08-03",
       p_idempotency_key: ciExplicitOwnerIdemKey,
-      p_tasks: [],
+      p_tasks: ciValidTasks,
       p_owner_user_id: userCiViewer.user.id,
     });
     assert(
@@ -2323,7 +2366,7 @@ try {
       p_name: `RLS CI Explicit Owner ${stamp}`,
       p_planned_start: "2026-08-03",
       p_idempotency_key: ciExplicitOwnerIdemKey,
-      p_tasks: [],
+      p_tasks: ciValidTasks,
       p_owner_user_id: userCiViewer.user.id,
     });
     assert(
@@ -2479,6 +2522,132 @@ try {
       );
     }
 
+    // ── IPI-670 · PLN-DATA-003B — complete phase coverage (before any write)
+    const countResidualsForDeal = async (dealId, workflowId) => {
+      const { data: instRows, error: instErr } = await plannerAdmin
+        .from("instances")
+        .select("id")
+        .eq("org_id", orgAId)
+        .eq("entity_type", "crm_deal")
+        .eq("entity_id", dealId)
+        .eq("workflow_id", workflowId);
+      assert(!instErr, "service_role can count residual planner.instances for completeness probes");
+      const ids = (instRows ?? []).map((r) => r.id);
+      if (ids.length === 0) {
+        return { instances: 0, tasks: 0, assignments: 0, events: 0 };
+      }
+      const [{ data: taskRows, error: taskErr }, { data: assignRows, error: assignErr }, { data: eventRows, error: eventErr }] =
+        await Promise.all([
+          plannerAdmin.from("tasks").select("id").in("instance_id", ids),
+          plannerAdmin.from("assignments").select("id").in("instance_id", ids),
+          plannerAdmin.from("events").select("id").in("instance_id", ids),
+        ]);
+      assert(!taskErr && !assignErr && !eventErr, "service_role can count residual tasks/assignments/events");
+      return {
+        instances: ids.length,
+        tasks: (taskRows ?? []).length,
+        assignments: (assignRows ?? []).length,
+        events: (eventRows ?? []).length,
+      };
+    };
+
+    const assertZeroResiduals = (before, after, label) => {
+      assert(
+        after.instances === before.instances &&
+          after.tasks === before.tasks &&
+          after.assignments === before.assignments &&
+          after.events === before.events &&
+          after.instances === 0,
+        `${label} leaves zero residual planner.instances/tasks/assignments/events`,
+      );
+    };
+
+    // 19a — empty p_tasks against a normal (2-phase) workflow → INVALID_INPUT, no write.
+    const beforeEmpty = await countResidualsForDeal(ciDealEmpty.id, wfA.id);
+    const { data: ciEmptyTasksResult, error: ciEmptyTasksErr } = await userCiEditor.client.rpc("planner_create_instance", {
+      p_org_id: orgAId,
+      p_entity_type: "crm_deal",
+      p_entity_id: ciDealEmpty.id,
+      p_workflow_id: wfA.id,
+      p_name: `RLS CI Empty Tasks ${stamp}`,
+      p_planned_start: "2026-08-03",
+      p_idempotency_key: crypto.randomUUID(),
+      p_tasks: [],
+    });
+    assert(
+      !ciEmptyTasksErr && ciEmptyTasksResult?.ok === false && ciEmptyTasksResult?.code === "INVALID_INPUT",
+      "IPI-670: planner_create_instance rejects empty p_tasks when the workflow has phases",
+    );
+    assertZeroResiduals(beforeEmpty, await countResidualsForDeal(ciDealEmpty.id, wfA.id), "empty p_tasks reject");
+
+    // 19b — workflow with zero phases → INVALID_INPUT even with empty p_tasks.
+    const beforeZero = await countResidualsForDeal(ciDealZeroPhase.id, wfZeroPhases.id);
+    const { data: ciZeroPhaseResult, error: ciZeroPhaseErr } = await userCiEditor.client.rpc("planner_create_instance", {
+      p_org_id: orgAId,
+      p_entity_type: "crm_deal",
+      p_entity_id: ciDealZeroPhase.id,
+      p_workflow_id: wfZeroPhases.id,
+      p_name: `RLS CI Zero Phase WF ${stamp}`,
+      p_planned_start: "2026-08-03",
+      p_idempotency_key: crypto.randomUUID(),
+      p_tasks: [],
+    });
+    assert(
+      !ciZeroPhaseErr && ciZeroPhaseResult?.ok === false && ciZeroPhaseResult?.code === "INVALID_INPUT",
+      "IPI-670: planner_create_instance rejects a workflow that has zero phases",
+    );
+    assertZeroResiduals(beforeZero, await countResidualsForDeal(ciDealZeroPhase.id, wfZeroPhases.id), "zero-phase workflow reject");
+
+    // 19c — one phase omitted (submitted_count < expected) → INVALID_INPUT, no write.
+    const beforeOmit = await countResidualsForDeal(ciDealOmit.id, wfA.id);
+    const { data: ciOmitResult, error: ciOmitErr } = await userCiEditor.client.rpc("planner_create_instance", {
+      p_org_id: orgAId,
+      p_entity_type: "crm_deal",
+      p_entity_id: ciDealOmit.id,
+      p_workflow_id: wfA.id,
+      p_name: `RLS CI Omit Phase ${stamp}`,
+      p_planned_start: "2026-08-03",
+      p_idempotency_key: crypto.randomUUID(),
+      p_tasks: [ciValidTasks[0]],
+    });
+    assert(
+      !ciOmitErr && ciOmitResult?.ok === false && ciOmitResult?.code === "INVALID_INPUT",
+      "IPI-670: planner_create_instance rejects p_tasks that omit a workflow phase",
+    );
+    assertZeroResiduals(beforeOmit, await countResidualsForDeal(ciDealOmit.id, wfA.id), "omitted-phase reject");
+
+    // 19d — duplicate phaseId replacing a missing one (count matches, distinct doesn't).
+    const beforeDup = await countResidualsForDeal(ciDealDup.id, wfA.id);
+    const { data: ciDupResult, error: ciDupErr } = await userCiEditor.client.rpc("planner_create_instance", {
+      p_org_id: orgAId,
+      p_entity_type: "crm_deal",
+      p_entity_id: ciDealDup.id,
+      p_workflow_id: wfA.id,
+      p_name: `RLS CI Dup Phase ${stamp}`,
+      p_planned_start: "2026-08-03",
+      p_idempotency_key: crypto.randomUUID(),
+      p_tasks: [
+        ciValidTasks[0],
+        { ...ciValidTasks[0], title: "Brief Dup", sortOrder: 1 },
+      ],
+    });
+    assert(
+      !ciDupErr && ciDupResult?.ok === false && ciDupResult?.code === "INVALID_INPUT",
+      "IPI-670: planner_create_instance rejects duplicate phaseId covering that hides a missing phase",
+    );
+    assertZeroResiduals(beforeDup, await countResidualsForDeal(ciDealDup.id, wfA.id), "duplicate-phase reject");
+
+    // 19e — positive path already proved complete set (#5); assert task count
+    // equals workflow phase count (regression guard for IPI-670).
+    const { data: ciPhaseCountRows, error: ciPhaseCountErr } = await plannerA
+      .from("phases")
+      .select("id")
+      .eq("workflow_id", wfA.id);
+    assert(
+      !ciPhaseCountErr && (ciPhaseCountRows ?? []).length === (ciTasks ?? []).length,
+      "IPI-670: successful create persists exactly one task per workflow phase",
+    );
+
     // 20 — round-7 fix: idempotency replay is denied once the actor's org
     // role no longer permits creation. Authz now runs before the idempotency
     // lookup, so a revoked-role actor cannot replay a cached ok:true result.
@@ -2492,7 +2661,7 @@ try {
       p_name: `RLS CI Revoke Replay ${stamp}`,
       p_planned_start: "2026-08-03",
       p_idempotency_key: ciRevokeReplayKey,
-      p_tasks: [],
+      p_tasks: ciValidTasks,
     });
     assert(
       !ciRevokeReplayCreateErr && ciRevokeReplayCreate?.ok === true,
@@ -2514,7 +2683,7 @@ try {
       p_name: `RLS CI Revoke Replay ${stamp}`,
       p_planned_start: "2026-08-03",
       p_idempotency_key: ciRevokeReplayKey,
-      p_tasks: [],
+      p_tasks: ciValidTasks,
     });
     assert(
       !ciRevokeReplayRetryErr && ciRevokeReplayRetry?.ok === false && ciRevokeReplayRetry?.code === "FORBIDDEN",
