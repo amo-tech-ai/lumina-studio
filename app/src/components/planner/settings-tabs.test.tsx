@@ -17,6 +17,13 @@ vi.mock("@/app/(operator)/app/planner/[instanceId]/settings/actions", () => ({
   removeMemberAction: vi.fn(),
 }));
 
+// IPI-551 — SettingsTabs now mounts AdaptivePanel. Its own behavior is fully
+// covered by adaptive-panel.test.tsx; stubbed here so this file doesn't need
+// an IntelligenceDetailProvider/router context just to render the tabs.
+vi.mock("./adaptive-panel", () => ({
+  AdaptivePanel: () => null,
+}));
+
 import { SettingsTabs } from "./settings-tabs";
 
 afterEach(() => cleanup());

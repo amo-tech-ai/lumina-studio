@@ -8,6 +8,7 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { PlannerMember, PlannerRole } from "@/lib/planner/types";
 
+import { AdaptivePanel } from "./adaptive-panel";
 import { MemberTable } from "./member-table";
 import styles from "./settings-tabs.module.css";
 
@@ -23,6 +24,10 @@ type Props = {
 export function SettingsTabs({ instanceId, members, role, currentUserId }: Props) {
   return (
     <Tabs defaultValue="members">
+      {/* IPI-551 · PLN-S4b — no DOM presence of its own; manages the shared
+          Intelligence⇄Detail panel via context. Order doesn't matter. */}
+      <AdaptivePanel instanceId={instanceId} />
+
       <TabsList className={styles.tabsList} aria-label="Settings">
         <TabsTrigger value="members" className={styles.tabsTrigger}>
           Members

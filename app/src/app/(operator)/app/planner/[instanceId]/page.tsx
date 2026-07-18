@@ -6,6 +6,11 @@
 
 import { PlannerWorkspaceShell } from "@/components/planner/planner-workspace-shell";
 
-export default function PlannerWorkspacePage() {
-  return <PlannerWorkspaceShell />;
+export default async function PlannerWorkspacePage({
+  params,
+}: {
+  params: Promise<{ instanceId: string }>;
+}) {
+  const { instanceId } = await params;
+  return <PlannerWorkspaceShell instanceId={instanceId} />;
 }
