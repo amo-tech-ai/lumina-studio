@@ -87,16 +87,17 @@ jobs:
 
       - name: Ledger + pending-migration validation
         env:
+          GITHUB_EVENT_NAME: ${{ github.event_name }}
           GITHUB_BASE_REF: ${{ github.base_ref }}
           GITHUB_BASE_SHA: ${{ github.event.pull_request.base.sha }}
           GITHUB_REF_NAME: ${{ github.ref_name }}
         run: |
           set -euo pipefail
-          if [ "${{ github.event_name }}" = "push" ]; then
+          if [ "$GITHUB_EVENT_NAME" = "push" ]; then
             node scripts/check-supabase-migration-drift.mjs --main
           else
-            git fetch origin "${{ github.base_ref }}" --depth=1
-            node scripts/check-supabase-migration-drift.mjs --pr --base "origin/${{ github.base_ref }}"
+            git fetch origin "$GITHUB_BASE_REF" --depth=1
+            node scripts/check-supabase-migration-drift.mjs --pr --base "origin/$GITHUB_BASE_REF"
           fi
 
       - name: db lint (public, planner) fail on error
