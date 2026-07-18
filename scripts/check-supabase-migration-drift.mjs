@@ -159,21 +159,25 @@ function parseMigrationListJson(raw) {
   }
 
   // Bare array (or log-prefixed array). Never use raw indexOf("[") — that matches `[INFO]`.
-  // Try every candidate start: a prior `[{...}]` decoy must not block the real list.
+  // Scan candidates right-to-left and prefer non-empty migration lists so a leading
+  // `[]` decoy cannot win before the real list (and a trailing `[]` cannot beat one).
   const starts = findJsonArrayStarts(raw);
   let lastErr;
-  for (const arrayStart of starts) {
+  let emptyFallback = null;
+  for (const arrayStart of [...starts].reverse()) {
     try {
       const rows = parseJsonSlice(raw, arrayStart, "]");
       if (!isMigrationListRows(rows)) {
         lastErr = new Error("parsed JSON array is not a migration list");
         continue;
       }
-      return mapMigrationRows(rows);
+      if (rows.length > 0) return mapMigrationRows(rows);
+      emptyFallback ??= rows;
     } catch (err) {
       lastErr = err;
     }
   }
+  if (emptyFallback) return mapMigrationRows(emptyFallback);
   if (starts.length) {
     throw new Error(
       `Could not parse migration list JSON array: ${lastErr?.message ?? "no candidate matched"}`,
@@ -322,6 +326,20 @@ if (args.includes("--self-check")) {
     '[{"status":"ok"}]\n[{"local":"2","remote":""}]\n',
   );
   assert.equal(wrongShapeThenReal[0].local, "2");
+
+  // Leading empty-array decoy must not win over a later real migration list.
+  const emptyDecoyThenReal = parseMigrationListJson(
+    '[]\n[{"local":"20260718160000","remote":""}]\n',
+  );
+  assert.equal(emptyDecoyThenReal.length, 1);
+  assert.equal(emptyDecoyThenReal[0].local, "20260718160000");
+
+  // Trailing empty array must not beat a preceding real migration list.
+  const realThenEmpty = parseMigrationListJson(
+    '[{"local":"3","remote":"3"}]\n[]\n',
+  );
+  assert.equal(realThenEmpty.length, 1);
+  assert.equal(realThenEmpty[0].local, "3");
 
   const trailingBracket = parseMigrationListJson(
     '[{"local":"1","remote":"1"}]\n[INFO] Done]\n',
