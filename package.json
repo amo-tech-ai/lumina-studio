@@ -19,7 +19,7 @@
     "supabase:verify-booking-gate": "node scripts/verify-booking-gate.mjs",
     "supabase:verify-edge": "node scripts/verify-edge-functions.mjs",
     "supabase:verify-brand-intelligence": "node scripts/verify-brand-intelligence.mjs",
-    "supabase:verify-edge-unit": "cd supabase/functions && deno test --frozen --allow-env _shared/bi-groq-guards.test.ts _shared/resolve-caller.test.ts _shared/llm/llm.test.ts _shared/llm/structured.test.ts brand-intelligence/handler.test.ts audit-asset-dna/handler.test.ts",
+    "supabase:verify-edge-unit": "cd supabase/functions && deno test --frozen --allow-env _shared/bi-groq-guards.test.ts _shared/resolve-caller.test.ts _shared/llm/llm.test.ts _shared/llm/structured.test.ts brand-intelligence/handler.test.ts audit-asset-dna/handler.test.ts capture-lead/handler.test.ts",
     "supabase:verify-edge-groq": "npm run supabase:verify-edge-unit",
     "seed:sample-brand": "node scripts/seed-sample-brand.mjs",
     "worktree:audit": "node scripts/worktree-audit.mjs",

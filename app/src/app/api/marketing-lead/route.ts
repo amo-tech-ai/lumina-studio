@@ -45,15 +45,20 @@ export async function POST(request: Request): Promise<Response> {
 
   const body = buildCaptureLeadPayload(parsed.data);
 
+  const proxySecret = process.env.CAPTURE_LEAD_PROXY_SECRET;
+  if (!proxySecret) {
+    console.error("[marketing-lead] Missing CAPTURE_LEAD_PROXY_SECRET");
+    return Response.json({ error: "Server configuration error" }, { status: 500 });
+  }
+
   let captureRes: Response;
   try {
-    const proxySecret = process.env.CAPTURE_LEAD_PROXY_SECRET;
     captureRes = await fetch(`${supabaseUrl}/functions/v1/capture-lead`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${anonKey}`,
-        ...(proxySecret ? { "x-ipix-proxy-secret": proxySecret } : {}),
+        "x-ipix-proxy-secret": proxySecret,
       },
       body: JSON.stringify(body),
     });

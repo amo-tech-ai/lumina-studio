@@ -32,6 +32,7 @@ beforeEach(() => {
   vi.resetModules();
   vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://test.supabase.co");
   vi.stubEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY", "test-anon-key");
+  vi.stubEnv("CAPTURE_LEAD_PROXY_SECRET", "test-proxy-secret");
 });
 
 afterEach(() => {
@@ -160,20 +161,16 @@ describe("marketing-lead — capture-lead integration", () => {
     });
   });
 
-  it("omits x-ipix-proxy-secret when env var is not set", async () => {
+  it("returns 500 when CAPTURE_LEAD_PROXY_SECRET is not set", async () => {
     vi.stubEnv("CAPTURE_LEAD_PROXY_SECRET", "");
-    const mockFetch = vi.fn().mockResolvedValueOnce(
-      new Response(JSON.stringify({ draftId: "d-xyz" }), { status: 200 }),
-    );
+    const mockFetch = vi.fn();
     vi.stubGlobal("fetch", mockFetch);
 
     const { POST } = await importRoute();
-    await POST(makeRequest(VALID_BODY));
+    const res = await POST(makeRequest(VALID_BODY));
 
-    const [, opts] = mockFetch.mock.calls[0];
-    expect((opts as RequestInit).headers).not.toMatchObject({
-      "x-ipix-proxy-secret": expect.anything(),
-    });
+    expect(res.status).toBe(500);
+    expect(mockFetch).not.toHaveBeenCalled();
   });
 
   it("maps website → brand_url in the capture-lead payload", async () => {
