@@ -1,5 +1,24 @@
 # Cloudinary Progress Task Tracker
 
+**Last reviewed:** 2026-07-18
+
+## Linear (active)
+
+| Surface | Link |
+|---------|------|
+| **Project** | [Cloudinary — Media Platform](https://linear.app/amo100/project/cloudinary-media-platform-a44602c2c36f) |
+| **Overview** | [Cloudinary — Overview](https://linear.app/amo100/document/cloudinary-overview-7461d13600cf) |
+| **Product Plan and Roadmap** | [Cloudinary — Product Plan and Roadmap](https://linear.app/amo100/document/cloudinary-product-plan-and-roadmap-7f263c42ae23) |
+| **Progress Tracker** | [Cloudinary — Progress Tracker](https://linear.app/amo100/document/cloudinary-progress-tracker-34bf8fa188cd) |
+
+### Related active issues
+
+- [IPI-642 · CLD-OPS-001 — Usage/Cost Monitoring](https://linear.app/amo100/issue/IPI-642)
+- [IPI-265 · ASSET-UX-001 — Upload widget](https://linear.app/amo100/issue/IPI-265)
+- [IPI-639 · CLD-APPROVAL-001 — Approval schema](https://linear.app/amo100/issue/IPI-639)
+- [IPI-637 · CLD-EVENT-001 — Durable event inbox](https://linear.app/amo100/issue/IPI-637)
+
+
 **Audit date:** 2026-07-18  
 **Branch:** `ai/ipi-641-cloudinary-asset-id` @ `d6109144`  
 **Production SHA:** `ea91bd5` (Vercel Production – ipix-operator, 2026-07-18T05:59:30Z)  
