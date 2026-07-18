@@ -185,3 +185,17 @@
 @media (max-width: 768px) {
   .nav { display: none; }
 }
+
+/* Windows/high-contrast forced-colors mode suppresses box-shadow entirely,
+   and the :focus-visible rules above pair it with outline:none — without
+   this fallback, keyboard users in forced-colors mode get no focus
+   indicator at all. ButtonText is a CSS system-color keyword guaranteed to
+   render in the user's chosen high-contrast palette (MDN: forced-colors). */
+@media (forced-colors: active) {
+  .item:focus-visible,
+  .toggleBtn:focus-visible,
+  .brandItem:focus-visible {
+    outline: 2px solid ButtonText;
+    outline-offset: 2px;
+  }
+}

@@ -11,7 +11,14 @@ import { loginOperatorIfConfigured } from "./helpers/mobile-audit";
  * scoped to chromium-desktop.
  */
 test.describe("IPI-584 — nav-sidebar accessibility", () => {
-  test.beforeEach(async ({ page }) => {
+  test.beforeEach(async ({ page }, testInfo) => {
+    // nav-sidebar.module.css:185-187 hides the rail entirely below 768px, so
+    // these assertions have nothing to find on the mobile-390/mobile-430/
+    // tablet-768/tablet-1024 projects — skip explicitly instead of timing
+    // out waiting for elements that will never render. Same pattern as
+    // e2e/09-channel-preview.spec.ts's "desktop-only functional proof" skip.
+    test.skip(testInfo.project.name !== "chromium-desktop", "desktop-only — nav rail is hidden below 768px");
+
     const ok = await loginOperatorIfConfigured(page);
     test.skip(!ok, "QA_PASSWORD not set — skipping authenticated nav-sidebar checks");
   });
