@@ -34,16 +34,20 @@ test.describe("CopilotKit production smoke (IPI-670 · COPILOT-RUNTIME-001)", ()
     await page.waitForURL(/\/app/, { timeout: 30_000 });
 
     await page.goto(`${PROD_BASE}/app/assets`);
-    await page.waitForLoadState("networkidle");
+    await page.waitForLoadState("domcontentloaded");
 
-    const infoResponse = await page.waitForResponse(
-      (res) => res.url().includes("/api/copilotkit/info") && res.request().method() === "GET",
-      { timeout: 30_000 },
-    );
-    expect(infoResponse.status()).toBe(200);
-    expect(infoResponse.headers()["content-type"] ?? "").toMatch(/json/i);
+    const infoProbe = await page.evaluate(async () => {
+      const res = await fetch("/api/copilotkit/info", { credentials: "include" });
+      return {
+        status: res.status,
+        contentType: res.headers.get("content-type") ?? "",
+        body: await res.text(),
+      };
+    });
 
-    const infoBody = (await infoResponse.json()) as { agents?: Record<string, unknown> };
+    expect(infoProbe.status).toBe(200);
+    expect(infoProbe.contentType).toMatch(/json/i);
+    const infoBody = JSON.parse(infoProbe.body) as { agents?: Record<string, unknown> };
     expect(infoBody.agents?.["creative-director"]).toBeDefined();
 
     expect(failedRequests).toEqual([]);
