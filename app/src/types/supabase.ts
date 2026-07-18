@@ -5718,6 +5718,44 @@ export type Database = {
         }
         Relationships: []
       }
+      processed_firecrawl_webhooks: {
+        Row: {
+          created_at: string
+          crawl_id: string | null
+          event_type: string
+          firecrawl_job_id: string
+          status: string
+          updated_at: string
+          webhook_id: string
+        }
+        Insert: {
+          created_at?: string
+          crawl_id?: string | null
+          event_type: string
+          firecrawl_job_id: string
+          status?: string
+          updated_at?: string
+          webhook_id: string
+        }
+        Update: {
+          created_at?: string
+          crawl_id?: string | null
+          event_type?: string
+          firecrawl_job_id?: string
+          status?: string
+          updated_at?: string
+          webhook_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "processed_firecrawl_webhooks_crawl_id_fkey"
+            columns: ["crawl_id"]
+            isOneToOne: false
+            referencedRelation: "brand_crawls"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           auth_provider: string | null
