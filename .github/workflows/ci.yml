@@ -214,6 +214,7 @@ jobs:
         with:
           name: shoot-wizard-e2e-failure
           path: test-results/
+          retention-days: 7
 
   # IPI-701 · QA-PREVIEW-001 — real-browser proof of the Channel Preview
   # read path. Unlike shoot-wizard-e2e, this page makes zero client-side
