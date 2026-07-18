@@ -75,8 +75,12 @@ export function getMastraStorage(): MastraAppStorage {
       storage = new InMemoryStore({ id: "mastra-storage-memory" });
     } else if (!url) {
       if (process.env.NODE_ENV === "production" && !process.env.CI) {
-        throw new Error(
-          "DATABASE_URL is required in production. Set it to the Supabase pooler connection string (port 6543).",
+        // Agents call getMastraStorage() at module import (memory: getPlannerMemory()).
+        // Throwing here yields Next.js HTML /500 before the CopilotKit route handler runs.
+        console.error(
+          "[mastra] DATABASE_URL missing in production — using InMemoryStore for this process. " +
+            "CopilotKit /info and agent turns work without durable memory until DATABASE_URL " +
+            "is set to the Supabase pooler connection string (port 6543) and redeployed.",
         );
       }
       // ponytail: in-memory at build/test time — agents import this at module eval,

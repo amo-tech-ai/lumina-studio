@@ -1,6 +1,13 @@
+import { createRequire } from "node:module";
 import { resolve } from "node:path";
 import { availableParallelism } from "node:os";
 import { defineConfig } from "vitest/config";
+
+const appDir = __dirname;
+const copilotkitRuntimeDir = resolve(
+  createRequire(import.meta.url).resolve("@copilotkit/runtime/package.json"),
+  "../dist/v2/runtime",
+);
 
 // Default (unset) maxWorkers is CPU count — on a shared dev machine that's
 // 20+ concurrent forked processes competing with everything else running
@@ -17,7 +24,21 @@ const workers = Math.max(
 
 export default defineConfig({
   resolve: {
-    alias: { "@": resolve(__dirname, "src") },
+    alias: {
+      "@": resolve(appDir, "src"),
+      "@copilotkit/runtime-internal/runtime": resolve(
+        copilotkitRuntimeDir,
+        "core/runtime.mjs",
+      ),
+      "@copilotkit/runtime-internal/in-memory": resolve(
+        copilotkitRuntimeDir,
+        "runner/in-memory.mjs",
+      ),
+      "@copilotkit/runtime-internal/fetch-handler": resolve(
+        copilotkitRuntimeDir,
+        "core/fetch-handler.mjs",
+      ),
+    },
   },
   test: {
     environment: "node",

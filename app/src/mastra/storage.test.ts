@@ -56,6 +56,15 @@ describe("getMastraStorage (noop mode)", () => {
     const second = freshGetMastraStorage();
     expect(first).toBe(second);
   });
+
+  it("falls back to InMemoryStore in production when DATABASE_URL is unset (CopilotKit /info must load)", async () => {
+    vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("DATABASE_URL", "");
+    vi.resetModules();
+    const { getMastraStorage: freshGetMastraStorage } = await import("./storage");
+    const store = freshGetMastraStorage();
+    expect(store).toBeInstanceOf(InMemoryStore);
+  });
 });
 
 describe("Cloudflare @mastra/pg stub (IPI-490)", () => {

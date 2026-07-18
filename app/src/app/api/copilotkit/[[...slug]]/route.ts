@@ -62,6 +62,22 @@ const endpoint = createCopilotRuntimeHandler({
   basePath: "/api/copilotkit",
 });
 
+/** CopilotKit may return opaque 500s when agent discovery fails — normalize for the UI. */
+function normalizeRuntimeErrorResponse(response: Response): Response {
+  if (response.status < 500) return response;
+  const contentType = response.headers.get("content-type") ?? "";
+  if (contentType.includes("application/json")) {
+    return Response.json(
+      { error: "CopilotKit runtime unavailable", code: "runtime_error" },
+      { status: 503 },
+    );
+  }
+  return Response.json(
+    { error: "CopilotKit runtime unavailable", code: "runtime_error" },
+    { status: 503 },
+  );
+}
+
 const handler = async (request: Request): Promise<Response> => {
   let user: OperatorUser;
   try {
@@ -77,7 +93,7 @@ const handler = async (request: Request): Promise<Response> => {
     const response = await _requestUser.run(user, () =>
       requestToken.run(token, () => endpoint(request)),
     );
-    return withStreamIdleTimeout(response, STREAM_IDLE_TIMEOUT_MS);
+    return withStreamIdleTimeout(normalizeRuntimeErrorResponse(response), STREAM_IDLE_TIMEOUT_MS);
   } catch (err) {
     console.error("[copilotkit] runtime handler failed", err);
     return Response.json(
