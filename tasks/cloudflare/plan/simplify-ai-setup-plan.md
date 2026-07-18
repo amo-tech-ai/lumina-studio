@@ -1,3 +1,5 @@
+> **Supporting / superseded (not domain SSOT).** Active Cloudflare roadmap: [`../PLAN.md`](../PLAN.md). Active progress: [`../todo.md`](../todo.md).
+
 # The Plan — Simplify Our Cloudflare AI Setup
 
 **Goal:** Stop fighting bugs. Start shipping.  

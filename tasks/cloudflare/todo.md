@@ -1,7 +1,27 @@
 # Cloudflare Platform — Progress Task Tracker
 
-**Last verified:** 2026-07-18 (codebase grep, Linear MCP, `gh pr view`, audit corrections pass)
-**Source of truth:** Linear project [AI Platform — LLM Providers](https://linear.app/amo100/project/ai-platform-llm-providers-8088f63224f2/issues), parent epic [IPI-487](https://linear.app/amo100/issue/IPI-487), `tasks/cloudflare/Tasks/` (including [`000-Architecture-Decision.md`](Tasks/000-Architecture-Decision.md)), live repo state
+**Last reviewed:** 2026-07-18  
+**Authority:** Linear for status · this file for evidence progress · [`PLAN.md`](./PLAN.md) for roadmap  
+
+## Linear (active)
+
+| Surface | Link |
+|---------|------|
+| **Project** | [AI Platform — LLM Providers](https://linear.app/amo100/project/ai-platform-llm-providers-8088f63224f2) |
+| **Overview** | [Cloudflare — Overview](https://linear.app/amo100/document/cloudflare-overview-d96b306aa8f3) |
+| **Product Plan and Roadmap** | [Cloudflare — Product Plan and Roadmap](https://linear.app/amo100/document/cloudflare-product-plan-and-roadmap-ba1c45a23f10) |
+| **Progress Tracker** | [Cloudflare — Progress Tracker](https://linear.app/amo100/document/cloudflare-progress-tracker-314ad98b0d69) |
+
+### Related active issues
+
+- [IPI-606 · CF-SEC-010 — Connect Infisical Secrets to Cloudflare Deployment](https://linear.app/amo100/issue/IPI-606)
+- [IPI-632 · CF-MIG-220 — Protected Preview Runtime Smoke Validation](https://linear.app/amo100/issue/IPI-632)
+- [IPI-627 · CF-SEC-020 — Deployment Security Proof](https://linear.app/amo100/issue/IPI-627)
+- Historical completed parent: [IPI-487 · CLOUDFLARE-EPIC — Cloudflare Platform Migration](https://linear.app/amo100/issue/IPI-487) (Done — children still drive work)
+
+**Runtime direction (locked 2026-07-18):** see tables below. Status authority is Linear — do not mark Done from markdown alone.
+
+---
 
 **Runtime direction (locked 2026-07-18):**
 
