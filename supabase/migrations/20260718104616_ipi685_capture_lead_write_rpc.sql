@@ -1,14 +1,19 @@
 -- IPI-685 · SB-EDGE-002 — transactional capture-lead write (service_role only)
 -- One RPC for conversation + message + event + lead draft upsert.
 
+-- One draft per conversation (nullable FK → partial unique).
+create unique index if not exists lead_drafts_conversation_uidx
+  on public.lead_intake_drafts (conversation_id)
+  where conversation_id is not null;
+
 create or replace function public.capture_lead_write(
   p_anon_id text,
-  p_conversation_id uuid,
-  p_message_summary text,
-  p_service_interest text,
-  p_answers jsonb,
-  p_claim_token text,
-  p_claim_expires_at timestamptz
+  p_conversation_id uuid default null,
+  p_message_summary text default null,
+  p_service_interest text default null,
+  p_answers jsonb default null,
+  p_claim_token text default null,
+  p_claim_expires_at timestamptz default null
 )
 returns jsonb
 language plpgsql
@@ -36,6 +41,7 @@ begin
      where c.id = v_conversation_id
        and c.anon_id = p_anon_id;
     if v_count = 0 then
+      -- Mismatch / stale id → new conversation (matches pre-RPC Edge behavior).
       v_conversation_id := null;
     end if;
   end if;
@@ -56,35 +62,34 @@ begin
     jsonb_build_object('service_interest', p_service_interest)
   );
 
-  select d.id into v_draft_id
-    from public.lead_intake_drafts d
-   where d.conversation_id = v_conversation_id
-   limit 1;
+  -- Upsert unclaimed draft only. Claimed rows are not rewritten (Codex P2).
+  insert into public.lead_intake_drafts (
+    conversation_id,
+    status,
+    answers,
+    claim_token,
+    claim_token_expires_at
+  )
+  values (
+    v_conversation_id,
+    'ready',
+    coalesce(p_answers, '{}'::jsonb),
+    p_claim_token,
+    p_claim_expires_at
+  )
+  on conflict (conversation_id) where conversation_id is not null
+  do update
+     set status = 'ready',
+         answers = excluded.answers,
+         claim_token = excluded.claim_token,
+         claim_token_expires_at = excluded.claim_token_expires_at,
+         updated_at = now()
+   where public.lead_intake_drafts.user_id is null
+  returning id into v_draft_id;
 
-  if v_draft_id is not null then
-    update public.lead_intake_drafts
-       set status = 'ready',
-           answers = coalesce(p_answers, '{}'::jsonb),
-           claim_token = p_claim_token,
-           claim_token_expires_at = p_claim_expires_at,
-           updated_at = now()
-     where id = v_draft_id;
-  else
-    insert into public.lead_intake_drafts (
-      conversation_id,
-      status,
-      answers,
-      claim_token,
-      claim_token_expires_at
-    )
-    values (
-      v_conversation_id,
-      'ready',
-      coalesce(p_answers, '{}'::jsonb),
-      p_claim_token,
-      p_claim_expires_at
-    )
-    returning id into v_draft_id;
+  if v_draft_id is null then
+    raise exception 'lead draft already claimed for conversation'
+      using errcode = '23514';
   end if;
 
   return jsonb_build_object(
