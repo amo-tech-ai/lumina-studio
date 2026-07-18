@@ -222,3 +222,37 @@ describe("sync-wrangler-secrets-from-infisical", () => {
     expect(src).not.toMatch(/workerPath/);
   });
 });
+
+describe("upload-opennext-with-secrets", () => {
+  it("parseWorkerVersionId extracts UUID from wrangler output", async () => {
+    const { parseWorkerVersionId } = await import("./upload-opennext-with-secrets.mjs");
+    expect(
+      parseWorkerVersionId("Uploaded worker version 550e8400-e29b-41d4-a716-446655440000"),
+    ).toBe("550e8400-e29b-41d4-a716-446655440000");
+    expect(parseWorkerVersionId("no version here")).toBeNull();
+  });
+
+  it("parseWorkersDevUrl extracts workers.dev URL", async () => {
+    const { parseWorkersDevUrl } = await import("./upload-opennext-with-secrets.mjs");
+    expect(parseWorkersDevUrl("Published https://ipix-operator-preview.acct.workers.dev")).toBe(
+      "https://ipix-operator-preview.acct.workers.dev",
+    );
+  });
+
+  it("dry-run with GEMINI lists secret names only", () => {
+    process.env.GEMINI_API_KEY = "super-secret-gemini-key-12345";
+    const scriptPath = resolve(
+      dirname(fileURLToPath(import.meta.url)),
+      "upload-opennext-with-secrets.mjs",
+    );
+    const r = spawnSync(
+      process.execPath,
+      [scriptPath, "--wrangler-env", "preview", "--infisical-env", "dev", "--dry-run"],
+      { env: { ...process.env, PATH: process.env.PATH }, encoding: "utf8" },
+    );
+    expect(r.status).toBe(0);
+    expect(r.stdout).toContain("GEMINI_API_KEY");
+    expect(r.stdout).not.toContain("super-secret-gemini-key-12345");
+    delete process.env.GEMINI_API_KEY;
+  });
+});

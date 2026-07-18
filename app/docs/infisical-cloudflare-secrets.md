@@ -160,20 +160,21 @@ infisical run --env=dev -- npm run dev
 
 ## Sync runtime secrets to Cloudflare
 
-**Order (required):** `build:cf` → deploy or upload Worker → sync script (`versions upload --secrets-file`).
+**Order (required):** fetch runtime secrets → `build:cf` → **one** OpenNext upload with `--secrets-file` (code + secrets in the same Worker version).
 
-| Scenario | Worker command | Why |
-|----------|----------------|-----|
-| **First bootstrap** (greenfield account) | `opennextjs-cloudflare deploy` | Creates the Worker; `upload` (`wrangler versions upload`) fails if the Worker does not exist yet |
-| **Subsequent CI** (Worker exists) | `opennextjs-cloudflare upload` | Uploads a version without immediate promotion; pair with gradual rollout per IPI-472 |
+| Scenario | Command | Why |
+|----------|---------|-----|
+| **Bootstrap / CI upload** | `node scripts/upload-opennext-with-secrets.mjs` | Writes chmod-600 JSON and passes `--secrets-file` to `opennextjs-cloudflare upload`; satisfies `secrets.required` before Wrangler validates the version |
+| **Greenfield Worker** | Same script (auto-fallback) | If the Worker script does not exist, falls back to `opennextjs-cloudflare deploy -- --secrets-file` once |
+| **Secret rotation only** (Worker already live) | `sync-wrangler-secrets-from-infisical.mjs` | Metadata-only version via `wrangler versions upload --secrets-file` without rebuilding |
 
-Sync alone fails if `ipix-operator-preview` has never been deployed.
+Do **not** upload code first and sync secrets in a second step — that creates two versions and can fail when `GEMINI_API_KEY` is listed under `secrets.required`.
 
 ### Dry-run (names only)
 
 ```bash
 cd app
-node scripts/sync-wrangler-secrets-from-infisical.mjs \
+node scripts/upload-opennext-with-secrets.mjs \
   --infisical-env dev --wrangler-env preview --dry-run
 ```
 
@@ -187,27 +188,42 @@ export NEXT_PUBLIC_SUPABASE_URL=...
 export NEXT_PUBLIC_SUPABASE_ANON_KEY=...
 export CLOUDFLARE_API_TOKEN=...
 export CLOUDFLARE_ACCOUNT_ID=...
+export GEMINI_API_KEY=...
+# ... other allowlisted runtime secrets
 npm run cf-typegen
 npm run build:cf
-npx opennextjs-cloudflare deploy --env preview
-# inject runtime secrets (GitHub secrets, infisical run, or workflow dry_run=false)
-node scripts/sync-wrangler-secrets-from-infisical.mjs \
+node scripts/upload-opennext-with-secrets.mjs \
   --infisical-env dev --wrangler-env preview
 ```
 
-Use **`deploy`** on first bootstrap (creates the Worker). After the Worker exists, routine CI may use `npm run upload -- --env preview` for version-only uploads and gradual promotion (see `app/docs/opennext-ci.md`).
+After bootstrap, routine CI may use `npm run upload -- --env preview` for code-only version uploads and gradual promotion (see `app/docs/opennext-ci.md`).
 
 ### Production sync
 
-Same sequence with `--wrangler-env production` / `--env production` after `build:cf`.
+Same sequence with `--wrangler-env production` after `build:cf`. GitHub Actions job uses `environment: production` — configure repo **Environments** with required reviewers before production runs.
 
-Requires in env: `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`, plus allowlisted runtime secrets. Values are written to a temp JSON file (mode 600) and passed to `wrangler versions upload --secrets-file` — **never echoed**.
+Requires in env: `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`, plus allowlisted runtime secrets. Values are written to a temp JSON file (mode 600) and passed to OpenNext → `wrangler versions upload --secrets-file` — **never echoed**.
 
 **Not primary:** `wrangler secret bulk` (each bulk creates a separate deployment version; use `--secrets-file` with upload instead).
 
 ## CI integration (v1)
 
-Workflow: `.github/workflows/cloudflare-secrets-sync.yml` (**workflow_dispatch**). Live run (`dry_run=false`): `cf-typegen` → `build:cf` → `opennextjs-cloudflare deploy` (bootstrap — creates Worker if missing) → sync script. IPI-632 smoke is a separate manual gate after preview URL exists. After bootstrap, regular deploy CI can switch to `upload` + gradual promotion.
+Workflow: `.github/workflows/cloudflare-secrets-sync.yml` (**workflow_dispatch**). Job `worker-bootstrap` uses GitHub **environment** `${{ inputs.wrangler_env }}` (`preview` | `production`) for scoped secrets and production approval gates.
+
+Live run (`dry_run=false`):
+
+```text
+validate pairing → validate OIDC (if selected) → fetch secrets → build:cf → upload+secrets-file → record version ID
+```
+
+IPI-632 smoke is a separate manual gate after preview URL exists.
+
+Configure repo **Settings → Environments**:
+
+| Environment | Purpose |
+|-------------|---------|
+| `preview` | Preview Worker bootstrap; optional branch restriction to `main` |
+| `production` | Production bootstrap; **required reviewers** + branch restriction |
 
 Build job integration (when OIDC ready) — add to `app-build` in `ci.yml`:
 
