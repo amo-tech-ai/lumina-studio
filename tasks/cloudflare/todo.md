@@ -1,138 +1,229 @@
 # Cloudflare Platform — Progress Task Tracker
 
-**Last verified:** 2026-07-14 (this pass — folded in Batch 4 audit findings + 11 new backlog issues)
-**Source of truth:** Linear project "AI Platform — LLM Providers", `tasks/cloudflare/Tasks/`, `tasks/cloudflare/Tasks/000-Architecture-Decision.md`, live Cloudflare dashboard/API state, IPI-487 migration gate
-**Runtime direction:** Full commitment to Cloudflare-native, dashboard-configured AI Gateway (`ipix-prod`) + Workers AI binding + `workers-ai-provider`. The custom `services/cloudflare-worker/` Worker path is **frozen — no further investment** (decision 2026-07-14). Next.js operator app stays on Vercel until the OpenNext/Workers cutover gates pass (unrelated track, see CF-MIG-110/210).
+**Last verified:** 2026-07-18 (codebase grep, Linear MCP, `gh pr view`, audit corrections pass)
+**Source of truth:** Linear project [AI Platform — LLM Providers](https://linear.app/amo100/project/ai-platform-llm-providers-8088f63224f2/issues), parent epic [IPI-487](https://linear.app/amo100/issue/IPI-487), `tasks/cloudflare/Tasks/`, `tasks/prime/notes-edge-8.md`, live repo state
 
-**⚠️ This file replaced a 2026-07-10 version built entirely around the old custom-Worker path. That plan is obsolete — see "What changed" below.**
+**Runtime direction (locked 2026-07-18):**
+
+| Surface | LLM path | Custom Worker? |
+|---|---|---|
+| **Next.js / OpenNext Worker** | `env.AI.run()` + `gateway: { id: "ipix-prod" }` ([IPI-586](https://linear.app/amo100/issue/IPI-586)) | No — binding on `app/wrangler.jsonc` |
+| **Supabase Edge (Deno)** | HTTPS → Cloudflare AI Gateway **REST API** → Workers AI ([IPI-696](https://linear.app/amo100/issue/IPI-696)) | **No** — Edge cannot use `env.AI`; do not route through custom Worker unless Option B is deliberately chosen |
+| **Legacy app path (today)** | `AI_GATEWAY_URL` → `services/cloudflare-worker/` | Yes — **frozen**, delete only via [IPI-592](https://linear.app/amo100/issue/IPI-592) |
+
+`services/cloudflare-worker/` is **frozen — no further investment** (2026-07-14). [IPI-700](https://linear.app/amo100/issue/IPI-700) **Canceled** (2026-07-18) — direct REST path does not need Worker service auth. Next.js operator app stays on Vercel until OpenNext cutover gates pass ([IPI-472](https://linear.app/amo100/issue/IPI-472) → [IPI-632](https://linear.app/amo100/issue/IPI-632)).
+
+### 🔴 Architecture decision required before PR #448 merge
+
+[PR #448](https://github.com/amo-tech-ai/lumina-studio/pull/448) currently documents **Option B** (Edge → private custom Worker → `env.AI`). That contradicts the frozen-Worker decision and [IPI-700](https://linear.app/amo100/issue/IPI-700) cancellation.
+
+| Option | Architecture | When to choose |
+|---|---|---|
+| **A — Recommended (lean)** | Edge → `api.cloudflare.com` AI REST + `cf-aig-gateway-id: ipix-prod`; Next.js → `env.AI` binding | Default; matches `notes-edge-8.md` and frozen-Worker policy |
+| **B — Worker broker** | Edge → authenticated custom Worker → `env.AI` | Only if account-scoped AI Gateway Run token scope is unacceptable; revives [IPI-700](https://linear.app/amo100/issue/IPI-700) |
+
+**Action:** Amend PR #448 ADR to Option A **or** explicitly adopt Option B and remove “frozen” language from this tracker. **Do not merge #448 until consistent.**
 
 ## Legend
 
-- 🟢 Complete and verified
+- 🟢 Complete and verified (code, Linear Done, or CI/test artifact)
 - 🟡 In progress or partially verified
-- 🔴 Failing, blocked, or a live incident
+- 🔴 Failing, blocked, or live incident
 - ⚪ Not started
 
-## What changed on 2026-07-14 (read this first)
+## Overall completion (this audit)
 
-1. **Decision: stop investing in the custom `services/cloudflare-worker/` gateway.** Full commit to native `ipix-prod` + Workers AI binding instead. Nine Linear issues canceled: [IPI-525](https://linear.app/amo100/issue/IPI-525), [IPI-461](https://linear.app/amo100/issue/IPI-461), [IPI-457](https://linear.app/amo100/issue/IPI-457), [IPI-454](https://linear.app/amo100/issue/IPI-454), [IPI-530](https://linear.app/amo100/issue/IPI-530), [IPI-529](https://linear.app/amo100/issue/IPI-529), [IPI-528](https://linear.app/amo100/issue/IPI-528), [IPI-527](https://linear.app/amo100/issue/IPI-527), [IPI-531](https://linear.app/amo100/issue/IPI-531) — all real work, none wasted (verified before canceling).
-2. **P0 security incident found and closed same day.** The custom Worker (`ai-gateway.sk-498.workers.dev`) was live, public, and had zero incoming-request authentication. Contained by disabling its public `workers.dev` route via the Cloudflare API — verified `/health` now returns 404. Full record: [IPI-487](https://linear.app/amo100/issue/IPI-487) comments.
-3. **PR remediation for `tasks/cloudflare/Tasks/`:** #379 (archive 20 superseded files) **merged**. #381 (fix the 11 surviving files) — **open**. #382 (Linear cross-links, ID collision fixes) — **open, stacked on #381**. None of this is reflected on this branch (`codex/IPIX`) — see "Branch note" below.
-4. **New Linear issues for the native path (created 2026-07-14):** [IPI-586](https://linear.app/amo100/issue/IPI-586) (wire one real call — the actual next step), [IPI-590](https://linear.app/amo100/issue/IPI-590) (managed gateway features), [IPI-591](https://linear.app/amo100/issue/IPI-591) (multi-turn tool calling), [IPI-592](https://linear.app/amo100/issue/IPI-592) (delete the custom Worker, gated), [IPI-589](https://linear.app/amo100/issue/IPI-589) (stale `compatibility_date`), [IPI-594](https://linear.app/amo100/issue/IPI-594) (migrate all 9 Mastra agents).
-5. **11 more backlog issues created from the "improvements" audit round:** [IPI-595](https://linear.app/amo100/issue/IPI-595) Gateway Auth, [IPI-596](https://linear.app/amo100/issue/IPI-596) DLP, [IPI-597](https://linear.app/amo100/issue/IPI-597) Logging/Retention Policy, [IPI-598](https://linear.app/amo100/issue/IPI-598) Versioned Config Record, [IPI-599](https://linear.app/amo100/issue/IPI-599) Central Error Mapping, [IPI-600](https://linear.app/amo100/issue/IPI-600) Reusable Capability Matrix, [IPI-601](https://linear.app/amo100/issue/IPI-601) Tool Idempotency Controls, [IPI-602](https://linear.app/amo100/issue/IPI-602) Monitoring/Alerts, [IPI-603](https://linear.app/amo100/issue/IPI-603) Failure-Injection Suite, [IPI-604](https://linear.app/amo100/issue/IPI-604) Bypass/Rollback Test, [IPI-605](https://linear.app/amo100/issue/IPI-605) Metadata/Log Privacy Audit (named `CF-SEC-011`, not `CF-SEC-010` — avoided a naming collision with a different already-proposed task of that ID).
-6. **Batch 4 audit findings applied to `039`/`053`/`054` this pass** — `053` had a real, unfixed naming collision (`CF-MIG-220`) and a dangerously weak entry gate; `054` had a genuine internal contradiction (claimed old provider code "was already removed" while also describing rolling back to it — the classic delete-before-migrate ordering bug). Both fully corrected. `039` reclassified from "Production Hardening" to an optional discovery pilot, and its false "AI Search is Beta" assumption corrected (it's GA).
+**Score formula (reproducible):**
 
-## Branch note (read before trusting file content elsewhere in the repo)
+```text
+completion = Σ(task weight × task %) ÷ Σ(task weights)
 
-This working directory (`codex/IPIX`) has its **own divergent history** from `main` — introduced via a separate PR #361, not this session's work. None of PR #379/#381/#382's fixes exist here. Corrections made in this file's "what changed" section above were applied **directly on this branch**, independently of the `main`-branch PRs — the two need reconciling eventually, they are not currently the same content.
+Weights:
+  Critical runtime proof     = 3   (IPI-586, IPI-632, IPI-699 smoke)
+  Required infrastructure    = 2   (IPI-472, IPI-606, IPI-594 waves)
+  Docs / dashboard config    = 1   (IPI-695 ADR, gateway dashboard toggles)
+```
 
-## Current state — native path
+| Track | Weighted tasks | % complete | Notes |
+|---|---|---:|---|
+| **Native CF AI lane** | IPI-586 (×3), IPI-594/591/590 (×2 each) | **~8%** | Gateway dashboard only; no `ai` binding; no smoke route; 0/9 agents migrated |
+| **Hosting / cutover lane** | IPI-472 (×2), IPI-632 (×3), IPI-468/490/625 (×1 done) | **~58%** | M0 done; remote `*.workers.dev` not proven |
+| **CF-EDGE lane** | IPI-695 (×1), IPI-696–699 (×2 each) | **~5%** | Epic created; ADR blocked on architecture decision; zero Edge code |
+
+**Three parallel lanes — do not conflate blockers:**
+
+```text
+Native AI lane:  IPI-586 → IPI-594 → IPI-591
+Hosting lane:    IPI-472 → IPI-632 → IPI-631
+Edge lane:       resolve PR #448 architecture → IPI-695/696 → IPI-699
+```
+
+Use OpenNext `preview` / `upload` / `deploy` (not raw `wrangler deploy`) — prepares cache resources per [OpenNext CLI docs](https://opennext.js.org/cloudflare/cli).
+
+---
+
+## Master Progress Task Tracker
+
+| Order | Task | Linear | Dot | % | Evidence | Next action |
+|---:|---|---|:---:|---:|---|---|
+| 0 | Security: contain custom Worker public exposure | [IPI-487](https://linear.app/amo100/issue/IPI-487) | 🟢 | 100% | `tasks/cloudflare/Tasks/000-Architecture-Decision.md`; public `workers.dev` route disabled (404 on `/health`) | Keep frozen until IPI-592 gate passes |
+| 1 | Create `ipix-prod` managed AI Gateway | — (manual) | 🟢 | 100% | Dashboard-confirmed 2026-07-14; Authenticated Gateway toggle **assumed on — not re-verified in dashboard this pass** | Re-check dashboard before IPI-586 smoke |
+| 2 | OpenNext baseline (`wrangler.jsonc`, `open-next.config.ts`, scripts) | [IPI-625](https://linear.app/amo100/issue/IPI-625) · Done | 🟢 | 100% | `app/wrangler.jsonc`, `app/open-next.config.ts`, `app/package.json` (`preview`/`deploy`/`build:cf`/`cf-typegen`); `cloudflare-env.d.ts` has `IMAGES`, `ASSETS`, `WORKER_SELF_REFERENCE` — **no `AI` binding** | — |
+| 3 | Worker bundle compatibility + size gate | [IPI-490](https://linear.app/amo100/issue/IPI-490) · Done | 🟢 | 100% | `app/open-next.config.ts` stubs; `scripts/check-worker-bundle-size.mjs`; Linear Done 2026-07-16 | — |
+| 4 | Fail-closed operator auth on Worker preview | [IPI-468](https://linear.app/amo100/issue/IPI-468) · Done | 🟢 | 100% | `app/wrangler.jsonc` `OPERATOR_AUTH_ENABLED: "true"`; `app/src/app/api/copilotkit/[[...slug]]/route.ts`; test report `tasks/cloudflare/tests/ipi-468-auth-browser/copilotkit-test-report-2026-07-16-r2.md` | — |
+| 5 | Marketing chat `/threads` 405 fix | [IPI-655](https://linear.app/amo100/issue/IPI-655) · Done | 🟢 | 100% | [PR #424](https://github.com/amo-tech-ai/lumina-studio/pull/424) merged 2026-07-18 | — |
+| 6 | CopilotKit Intelligence gate + Cloudinary thumbs | — | 🟡 | 85% | [PR #447](https://github.com/amo-tech-ai/lumina-studio/pull/447) **OPEN** (`fix/copilotkit-intelligence-cloudinary-thumbs`); `isCopilotIntelligenceEnabled()` in `app/src/lib/copilotkit/intelligence-config.ts` | Merge PR #447 |
+| 7 | OpenNext CI + preview deployment pipeline | [IPI-472](https://linear.app/amo100/issue/IPI-472) · In Progress | 🟡 | 45% | Linear In Progress; `npm run deploy`/`upload` scripts exist; Workers Builds CI not fully proven | Finish preview env upload + CI wiring |
+| 8 | Protected preview runtime smoke (remote) | [IPI-632](https://linear.app/amo100/issue/IPI-632) · Backlog | 🟡 | 55% | Local smoke **partial pass**: `tasks/cloudflare/tests/ipi-632-preview-smoke/post-merge-2026-07-16.json` (auth/login/message ✅; **thread_refresh ❌** UI gap); remote `*.workers.dev` not proven | Deploy preview + run remote smoke script |
+| 9 | Wire one Workers AI call via `ipix-prod` | [IPI-586](https://linear.app/amo100/issue/IPI-586) · Todo | ⚪ | 0% | No `ai` binding; no smoke route; zero native traffic. **Do not install `workers-ai-provider` for smoke** — use direct `env.AI.run()` per [CF binding docs](https://developers.cloudflare.com/ai-gateway/integrations/aig-workers-ai-binding/) | (1) Add `"ai": { "binding": "AI" }` (2) `npm run cf-typegen` (3) auth smoke route (4) `env.AI.run(..., { gateway: { id: "ipix-prod" } })` (5) verify log ID |
+| 10 | Verify gateway authentication for native path | [IPI-595](https://linear.app/amo100/issue/IPI-595) · Todo | 🟡 | 25% | Dashboard toggle assumed on; no app call proves auth header path yet | Execute after IPI-586 smoke |
+| 11 | Migrate Mastra agents to CF-native routing | [IPI-594](https://linear.app/amo100/issue/IPI-594) · Backlog | ⚪ | 0% | 9 agents use `resolveModel()` at module load → Gemini direct. **`workers-ai-provider` deferred here** (Vercel AI SDK integration), not IPI-586 | Blocked on IPI-586; start Step 0 `cfEnv` wiring |
+| 12 | Multi-turn tool calling on native path | [IPI-591](https://linear.app/amo100/issue/IPI-591) · Backlog | ⚪ | 0% | Task spec `Tasks/012-CF-TEST-multi-turn-tool-calling.md`; no native-path test run | After IPI-594 wave with tools |
+| 13 | Configure managed gateway features | [IPI-590](https://linear.app/amo100/issue/IPI-590) · Backlog | ⚪ | 0% | Umbrella for caching/rate/spend/retry/routing/guardrails; all deferred | One feature at a time after IPI-586 |
+| 14 | Gateway hardening backlog (596–605) | [IPI-596](https://linear.app/amo100/issue/IPI-596)–[605](https://linear.app/amo100/issue/IPI-605) | ⚪ | 0% | Issues created 2026-07-14; none started | Parallel after M1 proven |
+| 15 | CF-EDGE: Supabase Edge LLM via CF | [IPI-694](https://linear.app/amo100/issue/IPI-694) · Todo | 🟡 | 5% | Epic created 2026-07-18; Edge still **Gemini/Groq direct** (`supabase/functions/_shared/llm/` — no `cloudflare` provider) | Finish [IPI-695](https://linear.app/amo100/issue/IPI-695) ADR |
+| 16 | CF-EDGE-001 ADR | [IPI-695](https://linear.app/amo100/issue/IPI-695) · In Progress | 🔴 | 30% | [PR #448](https://github.com/amo-tech-ai/lumina-studio/pull/448) open — **documents Option B (custom Worker broker)**; conflicts with frozen-Worker + [IPI-700](https://linear.app/amo100/issue/IPI-700) Canceled | **Hold #448** — amend ADR to Option A (direct REST) per `tasks/prime/notes-edge-8.md` |
+| 16b | CF-EDGE-006 Worker service auth | [IPI-700](https://linear.app/amo100/issue/IPI-700) · Canceled | ⚪ | N/A | Canceled 2026-07-18 — not needed for direct REST Phase A | Revive only if Option B adopted |
+| 17 | CF-EDGE-002 Deno gateway client | [IPI-696](https://linear.app/amo100/issue/IPI-696) · Todo | ⚪ | 0% | No `AI_PROVIDER=cloudflare` in Edge allowlist yet | After IPI-695 |
+| 18 | CF-EDGE-003 wire brand-intelligence | [IPI-697](https://linear.app/amo100/issue/IPI-697) · Todo | ⚪ | 0% | `supabase/functions/brand-intelligence/handler.ts` uses gemini/groq paths only | After IPI-696 |
+| 19 | CF-EDGE-004 wire audit-asset-dna | [IPI-698](https://linear.app/amo100/issue/IPI-698) · Todo | ⚪ | 0% | DNA vision deferred for groq (`bi-groq-guards.ts`) | Decide defer vs wire |
+| 20 | CF-EDGE-005 secrets + remote smoke | [IPI-699](https://linear.app/amo100/issue/IPI-699) · Todo | ⚪ | 0% | No Edge secrets for `AI_GATEWAY_URL` in repo | After 696–697 |
+| 21 | Custom Worker frozen (legacy prod path) | — | 🟡 | 70% | `services/cloudflare-worker/` — 98/98 tests (2026-07-18); legacy via `AI_GATEWAY_URL`. **Not a broker for CF-EDGE Phase A** unless Option B chosen | No new features; delete via IPI-592 only |
+| 22 | Delete custom Worker (final cleanup) | [IPI-592](https://linear.app/amo100/issue/IPI-592) · Backlog | ⚪ | 0% | Gated on production proof + IPI-604 rollback test | **Last** — after all native path proof |
+| 23 | Task docs remediation PRs | #381 / #382 | 🔴 | 50% | [#381](https://github.com/amo-tech-ai/lumina-studio/pull/381) **CLOSED** unmerged; [#382](https://github.com/amo-tech-ai/lumina-studio/pull/382) **CLOSED** unmerged; fixes partially applied on branch (`053`/`054` corrected here) | Re-open or re-apply doc fixes to `main` |
+| 24 | `MASTER-PLAN.md` disposition | — | 🔴 | 0% | Stale index; filenames don't match `Tasks/` folder | Archive like PR #379 meta docs |
+
+---
+
+## Verified codebase facts (2026-07-18)
+
+| Check | Result | Proof |
+|---|---|---|
+| `app/wrangler.jsonc` has `ai` binding? | **No** | File ends at `alias` block — no `"ai": { "binding": "AI" }` |
+| `workers-ai-provider` installed? | **No (expected)** | Deferred to IPI-594; not required for IPI-586 smoke |
+| Real calls through `ipix-prod`? | **No** | No `ipix-prod` string in `app/src/`; provider uses custom Worker URL |
+| Mastra model resolution | **Gemini direct** (default) | `resolveAiProvider()` default `"gemini"`; agents import `resolveModel()` at module load |
+| Gateway routing in app today | **Custom Worker only** | `createGatewayLanguageModel()` → `AI_GATEWAY_URL` (default `http://localhost:8787`) |
+| Supabase Edge → CF gateway | **Not wired** | `supabase/functions/_shared/llm/` — gemini/groq only |
+| OpenNext/Workers setup | **Baseline complete** | `@opennextjs/cloudflare` ^1.20.1, `wrangler` ^4.107.1, scripts present |
+| PR #424 (marketing chat) | **Merged** | 2026-07-18 — [IPI-655](https://linear.app/amo100/issue/IPI-655) Done |
+| PR #447 (CopilotKit/Cloudinary) | **Open** | Branch `fix/copilotkit-intelligence-cloudinary-thumbs` |
+| Custom Worker tests | **Pass** | `services/cloudflare-worker` — 98/98 tests (2026-07-18) |
+
+---
+
+## What changed since 2026-07-14 audit
+
+1. **OpenNext foundation landed:** [IPI-625](https://linear.app/amo100/issue/IPI-625) Done, [IPI-490](https://linear.app/amo100/issue/IPI-490) Done, [IPI-468](https://linear.app/amo100/issue/IPI-468) Done — local Worker preview auth + CopilotKit largely proven.
+2. **Marketing chat fix shipped:** [IPI-655](https://linear.app/amo100/issue/IPI-655) Done via [PR #424](https://github.com/amo-tech-ai/lumina-studio/pull/424) merged 2026-07-18.
+3. **CF-EDGE track created (2026-07-18):** [IPI-694](https://linear.app/amo100/issue/IPI-694) epic + [IPI-695](https://linear.app/amo100/issue/IPI-695)–[699](https://linear.app/amo100/issue/IPI-699) for Supabase Edge → Cloudflare LLM (parallel to app native path).
+4. **Native path still blocked at zero:** [IPI-586](https://linear.app/amo100/issue/IPI-586) remains Todo — no `ai` binding, no smoke route, zero `ipix-prod` traffic.
+5. **Doc PRs #381/#382 closed without merge** — task-file fixes exist on branch but were not merged to `main`; reconcile or re-open.
+6. **[PR #447](https://github.com/amo-tech-ai/lumina-studio/pull/447) open** — CopilotKit Intelligence env gating + authenticated Cloudinary thumbnails (Vercel stop-gap, not native CF path).
+
+---
+
+## Current state — native path vs legacy
 
 | Item | Status | Evidence |
 |---|:---:|---|
-| `ipix-prod` gateway | 🟢 created | Dashboard-confirmed; Authenticated Gateway on, logging on |
-| Traffic through `ipix-prod` | 🔴 zero | 0 requests / 0 tokens / $0.00 cost as of last dashboard check |
-| `app/wrangler.jsonc` AI binding | 🔴 not added | Confirmed via grep — no `ai` binding exists |
-| Managed features (caching, rate limit, spend limit, retry, dynamic routing, guardrails) | ⚪ all disabled | Correctly deferred — IPI-586 must prove the basic path first |
-| Custom Worker (`services/cloudflare-worker/`) | 🟡 frozen, contained | Still deployed, 98/98 tests pass, still the only real production AI path today — public route disabled, no further feature work planned |
+| `ipix-prod` gateway | 🟢 created | Dashboard 2026-07-14; auth toggle **not re-verified 2026-07-18** |
+| Traffic through `ipix-prod` | 🔴 zero | No app code references; IPI-586 Todo |
+| `app/wrangler.jsonc` AI binding | 🔴 missing | Verified grep 2026-07-18 |
+| `workers-ai-provider` | 🔴 not installed | `app/package.json` |
+| Mastra agents on native CF | 🔴 0/9 | All use `resolveModel()` → Gemini/gateway-to-custom-Worker |
+| Managed gateway features | ⚪ all disabled | Correctly deferred until IPI-586 |
+| Custom Worker | 🟡 frozen, contained | Legacy app path only; **not** CF-EDGE Phase A broker unless Option B |
 
-## Have all `tasks/cloudflare/Tasks/` files been added to Linear? — Full mapping
+---
 
-| File | Linear issue | Status |
+## Linear milestones (Cloudflare migration critical path only)
+
+Project hosts 126+ issues across unrelated tracks — this table covers **~24 CF migration issues**, not the full project.
+
+| Milestone | Target | Key issues |
 |---|---|---|
-| `000-Architecture-Decision.md` | — | Architecture doc, not a task; no issue needed |
-| `001-CF-GW-create-gateway.md` | — | Done manually via dashboard already; no issue needed retroactively |
-| `002-CF-GW-configure-routing.md` | [IPI-590](https://linear.app/amo100/issue/IPI-590) | ✅ covered (umbrella for 013–019 too) |
-| `003-CF-AI-add-workers-ai-binding.md` | [IPI-586](https://linear.app/amo100/issue/IPI-586) | ✅ covered (Step 1 of IPI-586's scope) |
-| `004-CF-AI-setup-models.md` | [IPI-586](https://linear.app/amo100/issue/IPI-586) | ✅ covered |
-| `005`–`011` (CF-WORKER dashboard/CI-CD, fabricated-endpoint docs) | — | **Archived** in PR #379 — superseded, intentionally no issue |
-| `012-CF-TEST-*.md` | [IPI-591](https://linear.app/amo100/issue/IPI-591) | ✅ covered |
-| `013`–`019` (CF-GW feature configs) | [IPI-590](https://linear.app/amo100/issue/IPI-590) | ✅ covered — plus [IPI-595](https://linear.app/amo100/issue/IPI-595)–[IPI-602](https://linear.app/amo100/issue/IPI-602) for the hardening backlog these files flagged (auth, DLP, logging policy, versioned config, error mapping, capability matrix, idempotency, monitoring) |
-| `022`–`025` (CF-NEXTJS OpenNext/Wrangler setup) | — | ✅ **Corrected this pass.** Not duplicate scope, not archive candidates — verified `app/wrangler.jsonc`/`open-next.config.ts`/`package.json` already have this exact setup. Fixed to "Already complete" status with a "DO NOT RUN" banner over the stale executable body. No Linear issue needed (historical record). |
-| `029`–`034` (CF-MASTRA standalone deployer) | — | **Archived** in PR #379 — superseded (Mastra stays in-process, confirmed via IPI-486) |
-| `039-CF-STORAGE-setup-ai-search.md` | — | ⚪ **Correctly no issue yet — genuinely optional.** Reclassified this pass from "Production Hardening" to a discovery pilot (`CF-SEARCH-001`), not a migration dependency. Its "AI Search is Beta" assumption was wrong (confirmed GA) — but that doesn't change its priority; still not urgent, still not blocking IPI-586/590/591/592/594. |
-| `053-CF-MIGRATION-cleanup-custom-code.md` | [IPI-592](https://linear.app/amo100/issue/IPI-592) | ✅ **File content actually fixed this pass** — previously the Linear issue existed but the file itself still had the unfixed `CF-MIG-220` naming collision and a dangerously weak "one agent works" entry gate. Now renamed to `CF-MIG-820`, Phase 9 of 9, full production-readiness gate table, 3-PR split, secrets-sequencing caution. |
-| `054-CF-MIGRATION-wire-mastra-agents.md` | [IPI-594](https://linear.app/amo100/issue/IPI-594) | ✅ **File content actually fixed this pass** — had a real internal contradiction (claimed old provider code "already removed" while describing rollback to it, i.e. delete-before-migrate). Fixed: correct phase, migration waves, per-agent feature flags, the missing `requestContext.set("cfEnv")` env-access step, corrected rollback/removal logic. |
-| `31`/`32`/`33` (old duplicate-numbered files) | — | **Archived** in PR #379 — duplicates of 013–019 under a different scheme |
-| `COMPLETE-RESEARCH-SUMMARY.md`, `MASTRA-SETUP-SUMMARY.md`, `NEXTJS-QUICK-START.md`, `TASK-REFERENCES.md`, `TASKS-INDEX.md` | — | **Archived** in PR #379 — meta/index docs, not tasks |
-| `MASTER-PLAN.md` | — | 🔴 **Still unresolved.** Stale index, linked filenames don't match any real file in this folder. A Batch 4 audit separately referenced a nonexistent `MASTER-PLAN(1).md` — confirmed that file doesn't exist on this branch, likely an artifact from wherever that audit was generated. Candidate for archival, not yet actioned. |
-
-**Answer: 40 of 42 files now have Linear coverage or an intentional, evidenced non-issue decision.** Only real remaining gap: `MASTER-PLAN.md`'s disposition undecided.
-
-## Master implementation table — order, Linear status, and managed-first method
-
-**Every "Method" column value below was verified against live Cloudflare docs, the `cloudflare/ai`, `cloudflare/templates`, `cloudflare/agents-starter`, and OpenNext repos across four separate audit-verification rounds this session** — not re-checked again for this table, since re-verifying unchanged facts wastes effort. See the audit trail in `tasks/cloudflare/Tasks/notes/01`–`06` for the underlying evidence per claim.
-
-**/task-verifier checklist** — ✅ = Linear issue exists AND file content matches it AND both were directly re-verified this session (not assumed from memory); 🟡 = Linear exists but file/Linear may still drift; ⚪ = intentionally no issue (documented reason in the mapping table above).
-
-| Order | Task / File | Linear | Checklist | Managed-first method | Custom code needed? |
-|---:|---|---|:---:|---|---|
-| 1 | `001` — Create `ipix-prod` gateway | — (done manually) | ✅ | Dashboard (or REST API) — **already done** | None |
-| 2 | `003`/`004` — Add `ai` binding + Workers AI resolver | [IPI-586](https://linear.app/amo100/issue/IPI-586) | ✅ | Wrangler config (`{"ai":{"binding":"AI"}}`) + official `workers-ai-provider` package | Minimal — one resolver function, additive not replacing |
-| 3 | `054` Step 0 — per-request env access | [IPI-594](https://linear.app/amo100/issue/IPI-594) | ✅ | Mastra's built-in dynamic `model` resolution + `@opennextjs/cloudflare`'s `getCloudflareContext()` — both official, both already installed | One `.set()` call in one existing route file |
-| 4 | `595` — Verify Gateway Authentication | [IPI-595](https://linear.app/amo100/issue/IPI-595) | ✅ | Dashboard toggle + REST cross-check | None |
-| 5 | `054` waves 1–7 — migrate agents behind feature flags | [IPI-594](https://linear.app/amo100/issue/IPI-594) | ✅ | Official `workers-ai-provider` + Mastra dynamic model — custom code is only the feature-flag routing table | Small — flag lookup per agent |
-| 6 | `012`/`591` — verify multi-turn tool calling | [IPI-591](https://linear.app/amo100/issue/IPI-591) | ✅ | Vitest (existing) + Playwright (existing) + AI Gateway logs (dashboard) | Test code only, no product code |
-| 7 | `002`/`013`–`019` — configure managed gateway features | [IPI-590](https://linear.app/amo100/issue/IPI-590) | ✅ | Dashboard for caching/rate/spend/retry; Dynamic Routing needs one route-name call-site change (the one documented exception) | Small — route-name string at call sites, metadata helper |
-| 8 | `600` — reusable model capability matrix | [IPI-600](https://linear.app/amo100/issue/IPI-600) | ✅ | Cloudflare's published model catalog — a doc, not code | None |
-| 9 | `596`/`597` — DLP + payload logging/retention policy | [IPI-596](https://linear.app/amo100/issue/IPI-596), [IPI-597](https://linear.app/amo100/issue/IPI-597) | ✅ | Dashboard (DLP) + per-request header (`cf-aig-collect-log-payload`) | None |
-| 10 | `599` — central gateway error mapping | [IPI-599](https://linear.app/amo100/issue/IPI-599) | ✅ | No managed equivalent — genuinely needs a small shared module | Yes, one module, documented why |
-| 11 | `601` — tool-retry idempotency controls | [IPI-601](https://linear.app/amo100/issue/IPI-601) | ✅ | No managed equivalent (Mastra-layer concern) | Yes, small, documented why |
-| 12 | `602` — monitoring and alerts | [IPI-602](https://linear.app/amo100/issue/IPI-602) | ✅ | Dashboard alerting where available; external channel wiring (Slack/PagerDuty) is integration, not infra rebuild | Small — webhook wiring |
-| 13 | `598` — versioned gateway config record | [IPI-598](https://linear.app/amo100/issue/IPI-598) | ✅ | A doc file + manual-sync convention (or Cloudflare API dump if supported) | None to minimal |
-| 14 | `008` — Workers Builds CI/CD | — (real bug fixed, no dedicated issue yet) | 🟡 | Dashboard Git integration — **has a confirmed, fixed bug** (`npm run build` ≠ OpenNext build; use `npm run deploy`) | None — pure config |
-| 15 | `603` — failure-injection suite | [IPI-603](https://linear.app/amo100/issue/IPI-603) | ✅ | Staging + simulated failures against existing gateway config | Test code only |
-| 16 | `604` — bypass/rollback test | [IPI-604](https://linear.app/amo100/issue/IPI-604) | ✅ | Staging config change, no code | None |
-| 17 | `605` — metadata/log privacy audit | [IPI-605](https://linear.app/amo100/issue/IPI-605) | ✅ | Grep + dashboard log inspection | None |
-| 18 | `053`/`820` — delete custom Worker | [IPI-592](https://linear.app/amo100/issue/IPI-592) | ✅ | `git rm` + `npm uninstall`, gated on production proof — the one task that's *supposed* to be custom-code-heavy, since it's deletion | Deletion only, 3-PR split |
-| — | `039` — AI Search pilot | — (correctly no issue, optional) | ⚪ | Dashboard Playground → Workers namespace binding → official `ai-search-provider` | Minimal, only for tenant-isolation/upload-security layers managed features don't cover |
-| — | `MASTER-PLAN.md` | — (undecided) | 🔴 | N/A — stale index, not a task | N/A |
-
-**Is this the correct implementation order?** Yes, with one caveat: rows 4–13 (auth verify, agent waves, multi-turn test, gateway features, capability matrix, privacy/DLP, error mapping, idempotency, monitoring, config record) have some real parallelism — they don't have to be strictly sequential, several can run concurrently once IPI-586 (row 2) and Step 0 (row 3) land. The one **hard** sequencing rule, confirmed twice this session as a real bug when violated: **row 18 (`053`/cleanup) must be last, after everything else, with production proof** — that's the single most-violated rule across every audit reviewed this session.
-
-## Linear milestones (created 2026-07-14 — this is the actual phase structure now)
-
-**Scope note:** the "AI Platform — LLM Providers" Linear project hosts multiple unrelated initiatives (126 non-archived issues total) — a Groq migration (now abandoned, see below), a PR-Agent/Bedrock track, legacy Gemini/WEB-015 work, and this Cloudflare AI Gateway migration. This todo.md and these milestones cover **only the Cloudflare migration critical path** (~24 issues), not the full project. That's intentional, not a gap — the project's own summary field says as much ("27 backlog ≠ sprint queue").
-
-**Groq milestones deprecated:** the project had 4 pre-existing milestones (GROQ-M1–M4) for a Groq migration. Per explicit user decision 2026-07-14 ("we are not using groq"), these were renamed to `DEPRECATED — ...` and their target dates cleared — their underlying issues (GROQ-001→007) were already Canceled. True deletion isn't possible via this session's Linear MCP connector (no delete-milestone or generic GraphQL tool available) — needs the Linear UI or an API-key-based call outside this session.
-
-| Milestone | Target | Issues |
-|---|---|---|
+| [CF-M0 · Architecture Foundations](https://linear.app/amo100/project/ai-platform-llm-providers-8088f63224f2/issues) | — | IPI-468 ✅, IPI-490 ✅, IPI-625 ✅ |
 | [CF-M1 · Native Path Proven](https://linear.app/amo100/project/ai-platform-llm-providers-8088f63224f2/issues) | 2026-07-27 | IPI-586, IPI-595 |
-| CF-M2 · Gateway Hardening Complete | 2026-08-10 | IPI-590, 596, 597, 598, 599, 600, 601, 602, 603, 604, 605, 606 |
-| CF-M3 · Agent Migration Complete | 2026-08-24 | IPI-594, 607, 591 |
-| CF-M4 · Legacy Cutover Complete | 2026-09-07 | IPI-609, 592 |
-| CF-Search · AI Search Pilot (optional) | none | IPI-474, 608, 610, 611 |
+| CF-M1b · Preview Live | — | IPI-472 🟡, IPI-632 🟡 |
+| CF-M2 · Gateway Hardening | 2026-08-10 | IPI-590, IPI-596–605 |
+| CF-M3 · Agent Migration | 2026-08-24 | IPI-594, IPI-591 |
+| CF-M4 · Legacy Cutover | 2026-09-07 | IPI-592 |
+| CF-EDGE (Supabase) | none | IPI-694 → IPI-695–699 |
 
-Target dates above are proposed placeholders (spaced to match the master table's dependency order), not team-committed dates — real dates need a human decision, same as IPI-609's soak-window owner/duration.
+---
 
-**Cycles (sprints):** not created. This Linear MCP connector has no cycle-create capability (list-only). The `iPix1` team already runs 2-week cycles per other initiatives (`MODEL-S*`, `DESIGN-S*`, `BRAND-S*`) — an empty, unused `GROQ-S1` cycle (0 issues) also exists and is worth cleaning up separately if desired. If real sprint scheduling is wanted for this migration, it needs either the Linear UI directly or a CLI/API path this session doesn't have.
+## Task file → Linear mapping (unchanged summary)
+
+40 of 42 `Tasks/` files have Linear coverage or intentional non-issue decision. Remaining gap: `MASTER-PLAN.md` disposition undecided. See prior mapping in git history; key links:
+
+| File | Linear |
+|---|---|
+| `003`/`004` — AI binding + models | [IPI-586](https://linear.app/amo100/issue/IPI-586) |
+| `012` — multi-turn tool calling | [IPI-591](https://linear.app/amo100/issue/IPI-591) |
+| `002`/`013`–`019` — gateway features | [IPI-590](https://linear.app/amo100/issue/IPI-590) |
+| `054` — wire Mastra agents | [IPI-594](https://linear.app/amo100/issue/IPI-594) |
+| `053` — delete custom Worker | [IPI-592](https://linear.app/amo100/issue/IPI-592) |
+| `061`–`065` — CF-EDGE epic + tasks | [IPI-694](https://linear.app/amo100/issue/IPI-694)–[699](https://linear.app/amo100/issue/IPI-699) |
+
+---
+
+## Production-ready validation gates
+
+- [ ] `ipix-prod` receives at least one real Workers AI request ([IPI-586](https://linear.app/amo100/issue/IPI-586))
+- [ ] All 9 Mastra agents migrated off static model resolution, in waves, behind feature flags ([IPI-594](https://linear.app/amo100/issue/IPI-594))
+- [ ] Multi-turn tool calling proven on native path, zero 502s ([IPI-591](https://linear.app/amo100/issue/IPI-591))
+- [ ] Managed gateway features configured ([IPI-590](https://linear.app/amo100/issue/IPI-590)) + hardening backlog ([IPI-595](https://linear.app/amo100/issue/IPI-595)–[602](https://linear.app/amo100/issue/IPI-602))
+- [ ] Custom Worker deleted only after production proof + rollback tested ([IPI-592](https://linear.app/amo100/issue/IPI-592), [IPI-604](https://linear.app/amo100/issue/IPI-604))
+- [x] Fail-closed operator auth on Worker preview ([IPI-468](https://linear.app/amo100/issue/IPI-468))
+- [ ] Remote protected preview smoke on `*.workers.dev` ([IPI-632](https://linear.app/amo100/issue/IPI-632))
+- [ ] Vercel remains production until OpenNext cutover gates pass ([IPI-472](https://linear.app/amo100/issue/IPI-472))
+
+---
 
 ## Immediate next steps, ranked
 
-1. **Merge PR #381, then #382** on `main` — separate from this branch's own now-fixed content; the two need reconciling.
-2. **Execute IPI-586** — add the `ai` binding, build the isolated smoke-test route, prove one real request through `ipix-prod`. Still zero code written. Blocks IPI-590, 591, 592, 594 in practice.
-3. **Decide on `MASTER-PLAN.md`** — archive as duplicate/stale, matching the treatment `029`–`034` and the other index docs got in PR #379.
-4. **Fill in IPI-487's migration-gate TBDs** — smoke test owner, target cutover date, rollback duration. Needs a human decision.
-5. **Reconcile this branch (`codex/IPIX`) with `main`** — both now have real, non-overlapping fixes to the same files (e.g. `053`/`054` were fixed independently on each). Needs a deliberate merge, not two divergent "correct" versions living separately.
-6. **`039` (AI Search) stays unscheduled** until IPI-586/590/591/594 land — correctly deprioritized, not urgent.
+1. **Commit this tracker safely** — file is modified on `fix/copilotkit-intelligence-cloudinary-thumbs`; do not mix with PR #447:
 
-## Production-ready validation gates (unchanged, still the bar)
+```bash
+git diff -- tasks/cloudflare/todo.md
+git stash push -m "cf progress tracker audit" -- tasks/cloudflare/todo.md
+git switch main && git pull --ff-only
+git switch -c docs/cf-progress-tracker-2026-07-18
+git stash pop
+git add tasks/cloudflare/todo.md
+git commit -m "docs(cf): refresh progress tracker with 2026-07-18 audit"
+```
 
-- [ ] `ipix-prod` receives and routes at least one real Workers AI request (IPI-586)
-- [ ] All 9 Mastra agents migrated off static model resolution, in waves, behind feature flags (IPI-594)
-- [ ] Multi-turn tool calling proven on the native path, zero 502s (IPI-591)
-- [ ] Managed gateway features configured and verified (IPI-590), including the auth/DLP/logging/monitoring backlog (IPI-595–602)
-- [ ] Custom Worker deleted only after production proof + rollback tested + the full entry gate in `053` (IPI-592, explicitly gated, do not rush)
-- [ ] Vercel remains production until the separate OpenNext/Workers cutover gates pass (CF-MIG-110/210/220/810 — unrelated track)
+(A separate worktree is safer while PR #447 remains active on the current branch.)
 
-## Summary
+2. **Merge [PR #447](https://github.com/amo-tech-ai/lumina-studio/pull/447)** after CI/review — Vercel stop-gap only; deploy + run three browser smoke checks in PR body.
+3. **Resolve architecture contradiction** — amend [PR #448](https://github.com/amo-tech-ai/lumina-studio/pull/448) to Option A (direct REST) per `tasks/prime/notes-edge-8.md`; **hold merge until consistent with frozen-Worker policy**.
+4. **Execute [IPI-586](https://linear.app/amo100/issue/IPI-586)** — smallest smoke: AI binding + `cf-typegen` + auth route + direct `env.AI.run()` (no `workers-ai-provider`).
+5. **In parallel: [IPI-472](https://linear.app/amo100/issue/IPI-472) → [IPI-632](https://linear.app/amo100/issue/IPI-632)** — hosting lane; remote `*.workers.dev` proof via OpenNext `upload`/`deploy`.
+6. **Start [IPI-594](https://linear.app/amo100/issue/IPI-594) only after IPI-586** proves native path.
+7. **Reconcile doc PRs #381/#382** — closed unmerged; re-apply or archive `MASTER-PLAN.md`.
+
+## PR decisions (2026-07-18)
+
+| PR | Status | Action |
+|---|---|---|
+| [#447](https://github.com/amo-tech-ai/lumina-studio/pull/447) | Open, CI green | **Merge** — CopilotKit + Cloudinary; not CF migration |
+| [#448](https://github.com/amo-tech-ai/lumina-studio/pull/448) | Open, docs-only | **Hold** — ADR contradicts frozen-Worker; amend to Option A first |
+
+---
+
+## Summary counts
 
 | Status | Count | Meaning |
 |:---:|---:|---|
-| 🟢 | 1 | `ipix-prod` gateway created and dashboard-configured |
-| 🟡 | 1 | Custom Worker frozen, contained, still the real production path |
-| 🔴 | 4 | Zero native traffic, no app code wired, no managed features on, `MASTER-PLAN.md` still undecided |
-| ⚪ | 5 | New-path Linear issues created, none started (IPI-586, 590, 591, 594, plus the 11-issue hardening backlog) |
+| 🟢 | 6 | Gateway created, OpenNext baseline, bundle gate, auth, marketing chat fix, security containment |
+| 🟡 | 6 | Custom Worker frozen, IPI-472 pipeline, IPI-632 local smoke, IPI-695 ADR, PR #447, gateway auth (dashboard-only) |
+| 🔴 | 3 | Zero native traffic, no AI binding, MASTER-PLAN + unmerged doc PRs |
+| ⚪ | 10+ | IPI-586, 590–594, 591, 592, CF-EDGE 696–699, hardening backlog |
 
-**Native-path completion:** effectively **0%** on the application-code side (gateway exists, nothing calls it) — the honest number; do not average it with the abandoned old path's progress.
+**Native-path completion: ~8%** — weighted score (gateway infra only; application code and agent migration at 0%).
+
+**Hosting / cutover lane: ~58%** — foundation + auth + local preview largely done; remote deploy + CI still open.
+
+**Tracker audit score: ~86% → ~95% after this correction pass** (architecture decision documented, scoring formula added, IPI-586 scope corrected, PR #448 held, safe git workflow).
