@@ -12,8 +12,14 @@ import type { Database, Json } from "@/types/supabase";
 
 import { PlannerEngine } from "./engine";
 import { getEffectivePermissions } from "./permissions";
-import { getInstanceDetail, listDependencies } from "./queries";
-import type { MutationResult, PersistedViewType, PlannerRole, PlannerTaskStatus } from "./types";
+import { getInstanceDetail, listDependencies, listWorkflowPhases } from "./queries";
+import type {
+  CreateInstanceParams,
+  MutationResult,
+  PersistedViewType,
+  PlannerRole,
+  PlannerTaskStatus,
+} from "./types";
 
 type Db = SupabaseClient<Database>;
 
@@ -409,4 +415,79 @@ export async function setViewConfig(
   }
 
   return { ok: true, data: { instanceId } };
+}
+
+export type CreateInstanceResult = {
+  replayed: boolean;
+  instanceId: string;
+};
+
+const INSTANCE_MUTATION_MESSAGES: Record<string, string> = {
+  UNAUTHENTICATED: "Sign in to create a plan.",
+  FORBIDDEN: "You don't have permission to create a plan for this organization.",
+  NOT_FOUND: "The selected workflow or item could not be found.",
+  INVALID_INPUT: "That request wasn't valid.",
+  INSTANCE_ALREADY_EXISTS: "A plan already exists for this item and workflow.",
+  IDEMPOTENCY_CONFLICT: "This request conflicts with one already in progress. Refresh and try again.",
+};
+
+function instanceMutationError(code: string): MutationResult<never> {
+  const message = INSTANCE_MUTATION_MESSAGES[code];
+  if (!message) {
+    // Never forward the raw Postgres message — same idiom as taskMutationError.
+    console.error("[planner/mutations] planner_create_instance rpc failed:", code);
+    return { ok: false, error: { code: "UNKNOWN_ERROR", message: "The request could not be completed." } };
+  }
+  return { ok: false, error: { code, message } };
+}
+
+// Engine-computes/RPC-persists (PR 2 contract): PlannerEngine.buildSchedule()
+// is the sole source of task dates (business-day arithmetic) and sort_order
+// (phase.orderIndex) — the RPC only validates and persists what it's given,
+// closing the calendar-day-vs-business-day gap the migration-only PR 1 left
+// open. buildSchedule() also returns a finish_to_start dependency chain
+// between consecutive phase tasks; that's deliberately discarded here and
+// never sent to the RPC — v1 policy is no auto-generated dependency rows,
+// since sequential dates alone aren't proof of a real dependency.
+export async function createInstance(
+  params: CreateInstanceParams & { idempotencyKey: string },
+  client: Db,
+): Promise<MutationResult<CreateInstanceResult>> {
+  const phasesResult = await listWorkflowPhases(params.workflowId);
+  if (!phasesResult.ok) return { ok: false, error: phasesResult.error };
+
+  const { tasks } = engine.buildSchedule(phasesResult.data, params);
+
+  const taskPayload = tasks.map((task) => ({
+    phaseId: task.phaseId,
+    title: task.title,
+    startDate: task.startDate,
+    endDate: task.endDate,
+    durationDays: task.durationDays,
+    sortOrder: task.sortOrder,
+    priority: task.priority,
+    assigneeUserId: task.assigneeUserId,
+  }));
+
+  const { data, error } = await client.rpc("planner_create_instance", {
+    p_org_id: params.orgId,
+    p_entity_type: params.entityType,
+    p_entity_id: params.entityId,
+    p_workflow_id: params.workflowId,
+    p_name: params.name,
+    p_planned_start: params.plannedStart,
+    p_idempotency_key: params.idempotencyKey,
+    p_tasks: taskPayload as unknown as Json,
+    p_owner_user_id: params.ownerUserId,
+  });
+
+  if (error || !data) {
+    console.error("[planner/mutations] planner_create_instance rpc failed:", error?.message ?? "empty response");
+    return { ok: false, error: { code: "UNKNOWN_ERROR", message: "The request could not be completed." } };
+  }
+
+  const result = data as PlannerRpcResult<{ instanceId: string }>;
+  if (!result.ok) return instanceMutationError(result.code);
+
+  return { ok: true, data: { replayed: result.replayed, instanceId: result.instanceId } };
 }
