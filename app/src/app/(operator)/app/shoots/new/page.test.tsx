@@ -30,15 +30,21 @@ import NewShootPage from "./page";
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
+  // Vitest recommends restoring mocks between tests to prevent state leakage
+  // — belt-and-suspenders alongside the per-test stubGlobal/unstubAllGlobals
+  // pattern above, which already scopes fetch fresh to each test.
+  vi.restoreAllMocks();
 });
 
 // ── Endpoint inventory this ticket verified by reading page.tsx directly ──
+// Method is asserted, not just pathname — a guard that only checked the URL
+// would pass even if a mutation accidentally fired as a GET.
 const ALLOWED_ENDPOINTS = [
-  "/api/shoots/suggest-brief",
-  "/api/workflows/shoot-wizard",
-  "/api/workflows/resume",
-  "/api/shoots/commit",
-  "/api/media/specs",
+  { path: "/api/shoots/suggest-brief", method: "POST" },
+  { path: "/api/workflows/shoot-wizard", method: "POST" },
+  { path: "/api/workflows/resume", method: "POST" },
+  { path: "/api/shoots/commit", method: "POST" },
+  { path: "/api/media/specs", method: "GET" },
 ];
 
 type Call = { url: string; method: string; body: unknown };
@@ -46,6 +52,9 @@ type Call = { url: string; method: string; body: unknown };
 function makeFetch(opts: {
   suggestBrief?: () => { ok: boolean; body: unknown };
   commit?: () => { ok: boolean; body: unknown };
+  shootWizard?: () => { ok: boolean; body: unknown };
+  /** stepId ("deliverable-gate" | "shot-list-gate" | "budget-gate") whose resume call should fail. */
+  resumeFailAt?: string;
 } = {}) {
   const calls: Call[] = [];
   const fn = vi.fn((input: string | URL | Request, init?: RequestInit) => {
@@ -62,19 +71,27 @@ function makeFetch(opts: {
       return Promise.resolve({ ok: r.ok, json: async () => r.body, text: async () => JSON.stringify(r.body) } as Response);
     }
     if (url === "/api/workflows/shoot-wizard") {
-      return Promise.resolve({
+      const r = opts.shootWizard?.() ?? {
         ok: true,
-        json: async () => ({
+        body: {
           runId: "run-1",
           suspendPayload: {
             deliverables: [{ channel: "instagram_feed", format: "JPG", quantity: 6 }],
             total_assets: 6,
           },
-        }),
-      } as Response);
+        },
+      };
+      return Promise.resolve({ ok: r.ok, json: async () => r.body, text: async () => JSON.stringify(r.body) } as Response);
     }
     if (url === "/api/workflows/resume") {
       const stepId = (body as { stepId?: string })?.stepId;
+      if (stepId && stepId === opts.resumeFailAt) {
+        return Promise.resolve({
+          ok: false,
+          json: async () => ({ error: `${stepId} resume rejected by server` }),
+          text: async () => `${stepId} resume rejected by server`,
+        } as Response);
+      }
       if (stepId === "deliverable-gate") {
         return Promise.resolve({
           ok: true,
@@ -233,13 +250,160 @@ describe("Shoot Wizard — HITL gates (Task 3)", () => {
     expect(screen.getByText("SS26 Campaign")).toBeDefined();
     expect(screen.getByText(/shoot-123/)).toBeDefined();
 
-    // Task 8 — regression guard: every call made stays inside the known endpoint set
+    // Task 8 — regression guard: every call made stays inside the known
+    // endpoint set AND uses its expected HTTP method — a mutation silently
+    // firing as a GET would slip past a pathname-only check.
     for (const call of calls) {
-      const known = ALLOWED_ENDPOINTS.some((e) => call.url === e || call.url.startsWith(e));
-      expect(known, `unexpected endpoint called: ${call.method} ${call.url}`).toBe(true);
+      const known = ALLOWED_ENDPOINTS.find((e) => call.url === e.path || call.url.startsWith(e.path));
+      expect(known, `unexpected endpoint called: ${call.method} ${call.url}`).toBeDefined();
+      expect(call.method, `wrong method for ${call.url}`).toBe(known!.method);
     }
     const commitCalls = calls.filter((c) => c.url === "/api/shoots/commit");
     expect(commitCalls).toHaveLength(1);
+  });
+});
+
+describe("Shoot Wizard — state preservation on Back navigation (coverage gap)", () => {
+  it("Basics field values survive Continue → Back", async () => {
+    await renderWizard();
+    fireEvent.change(screen.getByLabelText("Brand *"), { target: { value: "brand-2" } });
+    fireEvent.change(screen.getByLabelText("Shoot name *"), { target: { value: "Preserved Name" } });
+    fireEvent.click(screen.getByRole("button", { name: /TikTok/ }));
+    fireEvent.click(continueButton());
+
+    await waitFor(() => expect(screen.getByText("Step 2 of 6 · Brief")).toBeDefined());
+    fireEvent.click(screen.getByRole("button", { name: /^← Back$/ }));
+
+    expect(screen.getByText("Step 1 of 6 · Basics")).toBeDefined();
+    expect((screen.getByLabelText("Brand *") as HTMLSelectElement).value).toBe("brand-2");
+    expect((screen.getByLabelText("Shoot name *") as HTMLInputElement).value).toBe("Preserved Name");
+    // Continue is immediately enabled again — proves the channel selection also survived
+    expect(continueButton().hasAttribute("disabled")).toBe(false);
+  });
+});
+
+describe("Shoot Wizard — edited HITL data flows to the final commit payload (coverage gap)", () => {
+  it("edits made in the Deliverables, Shot List, and Budget cards all reach /api/shoots/commit", async () => {
+    const { calls } = await renderWizard();
+    fillBasics();
+    fireEvent.click(continueButton());
+    await waitFor(() => expect((screen.getByLabelText("Brief *") as HTMLTextAreaElement).value.length).toBeGreaterThan(0));
+    fireEvent.click(screen.getByRole("button", { name: /Plan deliverables/ }));
+    await waitFor(() => expect(screen.getByText("Step 3 of 6 · Deliverables")).toBeDefined());
+
+    // Edit the seeded deliverable before approving
+    fireEvent.change(screen.getByLabelText("Channel for deliverable 1"), { target: { value: "pinterest" } });
+    fireEvent.change(screen.getByLabelText("Quantity for deliverable 1"), { target: { value: "9" } });
+    fireEvent.click(screen.getByRole("button", { name: /Approve deliverables/ }));
+    await waitFor(() => expect(screen.getByText("Step 4 of 6 · Shot List")).toBeDefined());
+
+    // Edit the seeded shot before approving
+    fireEvent.change(screen.getByLabelText("Description for shot 1"), { target: { value: "Edited hero shot" } });
+    fireEvent.click(screen.getByRole("button", { name: /Approve shot list/ }));
+    await waitFor(() => expect(screen.getByText("Step 5 of 6 · Budget")).toBeDefined());
+
+    // Override the computed budget total before committing
+    fireEvent.change(screen.getByLabelText("Override total (optional)"), { target: { value: "4321" } });
+    fireEvent.click(screen.getByRole("button", { name: /Approve & commit/ }));
+    await waitFor(() => expect(screen.getByText("Shoot committed")).toBeDefined());
+
+    const commitCall = calls.find((c) => c.url === "/api/shoots/commit");
+    const commitBody = commitCall!.body as {
+      deliverables: { channel: string; quantity: number }[];
+      shots: { description: string }[];
+      approved_budget: number;
+    };
+    expect(commitBody.deliverables[0].channel).toBe("pinterest");
+    expect(commitBody.deliverables[0].quantity).toBe(9);
+    expect(commitBody.shots[0].description).toBe("Edited hero shot");
+    expect(commitBody.approved_budget).toBe(4321);
+
+    // The edited deliverable also has to survive the Gate 1 resume call —
+    // that's the actual approval payload, not just what lands in commit.
+    const gate1Call = calls.find(
+      (c) => c.url === "/api/workflows/resume" && (c.body as { stepId?: string }).stepId === "deliverable-gate",
+    );
+    const gate1Body = gate1Call!.body as { resumeData: { approved_deliverables: { channel: string }[] } };
+    expect(gate1Body.resumeData.approved_deliverables[0].channel).toBe("pinterest");
+  });
+});
+
+describe("Shoot Wizard — per-stage workflow failures (coverage gap)", () => {
+  it("shoot-wizard start failure shows an error and stays on Brief — no crash", async () => {
+    await renderWizard({ shootWizard: () => ({ ok: false, body: { error: "AI planning service unavailable" } }) });
+    fillBasics();
+    fireEvent.click(continueButton());
+    await waitFor(() => expect((screen.getByLabelText("Brief *") as HTMLTextAreaElement).value.length).toBeGreaterThan(0));
+
+    fireEvent.click(screen.getByRole("button", { name: /Plan deliverables/ }));
+
+    await waitFor(() => expect(screen.getByRole("alert")).toBeDefined());
+    expect(screen.getByText("Step 2 of 6 · Brief")).toBeDefined();
+    expect(screen.queryByText("Step 3 of 6 · Deliverables")).toBeNull();
+  });
+
+  it("a malformed shoot-wizard response (no deliverables in the payload) shows an error instead of crashing", async () => {
+    await renderWizard({ shootWizard: () => ({ ok: true, body: { runId: "run-1", suspendPayload: {} } }) });
+    fillBasics();
+    fireEvent.click(continueButton());
+    await waitFor(() => expect((screen.getByLabelText("Brief *") as HTMLTextAreaElement).value.length).toBeGreaterThan(0));
+
+    fireEvent.click(screen.getByRole("button", { name: /Plan deliverables/ }));
+
+    await waitFor(() => expect(screen.getByRole("alert")).toBeDefined());
+    expect(screen.getByRole("alert").textContent).toContain("please retry");
+    expect(screen.getByText("Step 2 of 6 · Brief")).toBeDefined();
+  });
+
+  it("Gate 1 (deliverable-gate) resume failure shows an error and stays on Deliverables", async () => {
+    await renderWizard({ resumeFailAt: "deliverable-gate" });
+    fillBasics();
+    fireEvent.click(continueButton());
+    await waitFor(() => expect((screen.getByLabelText("Brief *") as HTMLTextAreaElement).value.length).toBeGreaterThan(0));
+    fireEvent.click(screen.getByRole("button", { name: /Plan deliverables/ }));
+    await waitFor(() => expect(screen.getByText("Step 3 of 6 · Deliverables")).toBeDefined());
+
+    fireEvent.click(screen.getByRole("button", { name: /Approve deliverables/ }));
+
+    await waitFor(() => expect(screen.getByRole("alert")).toBeDefined());
+    expect(screen.getByText("Step 3 of 6 · Deliverables")).toBeDefined();
+    expect(screen.queryByText("Step 4 of 6 · Shot List")).toBeNull();
+  });
+
+  it("Gate 2 (shot-list-gate) resume failure shows an error and stays on Shot List", async () => {
+    await renderWizard({ resumeFailAt: "shot-list-gate" });
+    fillBasics();
+    fireEvent.click(continueButton());
+    await waitFor(() => expect((screen.getByLabelText("Brief *") as HTMLTextAreaElement).value.length).toBeGreaterThan(0));
+    fireEvent.click(screen.getByRole("button", { name: /Plan deliverables/ }));
+    await waitFor(() => expect(screen.getByText("Step 3 of 6 · Deliverables")).toBeDefined());
+    fireEvent.click(screen.getByRole("button", { name: /Approve deliverables/ }));
+    await waitFor(() => expect(screen.getByText("Step 4 of 6 · Shot List")).toBeDefined());
+
+    fireEvent.click(screen.getByRole("button", { name: /Approve shot list/ }));
+
+    await waitFor(() => expect(screen.getByRole("alert")).toBeDefined());
+    expect(screen.getByText("Step 4 of 6 · Shot List")).toBeDefined();
+    expect(screen.queryByText("Step 5 of 6 · Budget")).toBeNull();
+  });
+
+  it("Gate 3 (budget-gate) resume failure shows an error, stays on Budget, and never calls commit", async () => {
+    const { calls } = await renderWizard({ resumeFailAt: "budget-gate" });
+    fillBasics();
+    fireEvent.click(continueButton());
+    await waitFor(() => expect((screen.getByLabelText("Brief *") as HTMLTextAreaElement).value.length).toBeGreaterThan(0));
+    fireEvent.click(screen.getByRole("button", { name: /Plan deliverables/ }));
+    await waitFor(() => expect(screen.getByText("Step 3 of 6 · Deliverables")).toBeDefined());
+    fireEvent.click(screen.getByRole("button", { name: /Approve deliverables/ }));
+    await waitFor(() => expect(screen.getByText("Step 4 of 6 · Shot List")).toBeDefined());
+    fireEvent.click(screen.getByRole("button", { name: /Approve shot list/ }));
+    await waitFor(() => expect(screen.getByText("Step 5 of 6 · Budget")).toBeDefined());
+
+    fireEvent.click(screen.getByRole("button", { name: /Approve & commit/ }));
+
+    await waitFor(() => expect(screen.getByRole("alert")).toBeDefined());
+    expect(screen.getByText("Step 5 of 6 · Budget")).toBeDefined();
+    expect(calls.some((c) => c.url === "/api/shoots/commit")).toBe(false);
   });
 });
 
@@ -274,6 +438,9 @@ describe("Shoot Wizard — commit failure path (Task 6)", () => {
     expect(screen.getByRole("alert").textContent).toContain("Database unavailable");
     expect(screen.getByText("Step 5 of 6 · Budget")).toBeDefined();
     expect(screen.queryByText("Shoot committed")).toBeNull();
+
+    // Retry must be possible — a failed request must not leave the operator stuck
+    expect(screen.getByRole("button", { name: /Approve & commit/ }).hasAttribute("disabled")).toBe(false);
   });
 });
 
