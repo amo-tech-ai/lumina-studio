@@ -1,3 +1,5 @@
+> **Supporting / superseded (not domain SSOT).** Active Mastra roadmap: [`PLAN.md`](./PLAN.md). Active progress: [`todo.md`](./todo.md).
+
 # Mastra × Cloudflare × Supabase — Production Roadmap
 
 **Date:** 2026-07-16  
