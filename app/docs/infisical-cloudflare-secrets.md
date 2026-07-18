@@ -160,7 +160,14 @@ infisical run --env=dev -- npm run dev
 
 ## Sync runtime secrets to Cloudflare
 
-**Order (required):** `build:cf` → `opennextjs-cloudflare upload` (creates Worker version) → sync script (`versions upload --secrets-file`). Sync alone fails if `ipix-operator-preview` has never been uploaded.
+**Order (required):** `build:cf` → deploy or upload Worker → sync script (`versions upload --secrets-file`).
+
+| Scenario | Worker command | Why |
+|----------|----------------|-----|
+| **First bootstrap** (greenfield account) | `opennextjs-cloudflare deploy` | Creates the Worker; `upload` (`wrangler versions upload`) fails if the Worker does not exist yet |
+| **Subsequent CI** (Worker exists) | `opennextjs-cloudflare upload` | Uploads a version without immediate promotion; pair with gradual rollout per IPI-472 |
+
+Sync alone fails if `ipix-operator-preview` has never been deployed.
 
 ### Dry-run (names only)
 
@@ -182,13 +189,13 @@ export CLOUDFLARE_API_TOKEN=...
 export CLOUDFLARE_ACCOUNT_ID=...
 npm run cf-typegen
 npm run build:cf
-npx opennextjs-cloudflare upload --env preview
+npx opennextjs-cloudflare deploy --env preview
 # inject runtime secrets (GitHub secrets, infisical run, or workflow dry_run=false)
 node scripts/sync-wrangler-secrets-from-infisical.mjs \
   --infisical-env dev --wrangler-env preview
 ```
 
-Local equivalent of `npm run upload -- --env preview` includes `build:cf` internally; the sync step still requires a Worker version to exist first on a greenfield account.
+Use **`deploy`** on first bootstrap (creates the Worker). After the Worker exists, routine CI may use `npm run upload -- --env preview` for version-only uploads and gradual promotion (see `app/docs/opennext-ci.md`).
 
 ### Production sync
 
@@ -200,7 +207,7 @@ Requires in env: `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`, plus allowlist
 
 ## CI integration (v1)
 
-Workflow: `.github/workflows/cloudflare-secrets-sync.yml` (**workflow_dispatch**). Live run (`dry_run=false`): `cf-typegen` → `build:cf` → `opennextjs-cloudflare upload` → sync script. IPI-632 smoke is a separate manual gate after preview URL exists.
+Workflow: `.github/workflows/cloudflare-secrets-sync.yml` (**workflow_dispatch**). Live run (`dry_run=false`): `cf-typegen` → `build:cf` → `opennextjs-cloudflare deploy` (bootstrap — creates Worker if missing) → sync script. IPI-632 smoke is a separate manual gate after preview URL exists. After bootstrap, regular deploy CI can switch to `upload` + gradual promotion.
 
 Build job integration (when OIDC ready) — add to `app-build` in `ci.yml`:
 
