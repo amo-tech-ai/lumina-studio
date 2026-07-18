@@ -147,15 +147,21 @@ async function main() {
     body: "{}",
   });
 
+  // Must reject legacy spam shape: old edge-test returned 200 + userId + logId
+  // after writing ai_agent_logs. IPI-688 is read-only — no logId.
   if (
     authed.res.status === 200 &&
     authed.json?.ok === true &&
     authed.json?.data?.status === "ok" &&
-    authed.json?.data?.userId
+    authed.json?.data?.userId &&
+    authed.json?.data?.logId == null
   ) {
-    pass(`edge-test authenticated probe userId=${authed.json.data.userId}`);
+    pass(`edge-test authenticated probe userId=${authed.json.data.userId} (no logId)`);
   } else {
-    fail(`edge-test authed → ${authed.res.status} ${authed.text?.slice(0, 200)}`);
+    fail(
+      `edge-test authed → ${authed.res.status} ${authed.text?.slice(0, 200)}` +
+        (authed.json?.data?.logId != null ? " (unexpected logId — still writing logs?)" : ""),
+    );
   }
 
   if (admin && signIn.user?.id) {
