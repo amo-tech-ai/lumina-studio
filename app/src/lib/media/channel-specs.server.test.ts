@@ -22,6 +22,13 @@ function mockSupabase(resolvers: {
   rule: (channel: string) => RuleRow;
   spec: (channel: string, platformSlugs: string[], imageTypeSlugs: string[]) => SpecRow;
 }) {
+  // Tracks every .eq() call made against recommendation_rules so tests can
+  // assert the (rule_type, condition_value) filter contract — dropping or
+  // mistyping .eq("rule_type", "channel_required") would otherwise still
+  // resolve the same mocked row here (since this fake doesn't filter on it),
+  // while in production it would select the wrong bridge row whenever
+  // another rule_type shares the same condition_value.
+  const ruleEqCalls: [string, string][] = [];
   (createSupabaseServerClient as ReturnType<typeof vi.fn>).mockImplementation(async () => {
     let table = "";
     let channel = "";
@@ -36,6 +43,7 @@ function mockSupabase(resolvers: {
         return chain;
       },
       eq(col: string, val: string) {
+        if (table === "recommendation_rules") ruleEqCalls.push([col, val]);
         if (col === "condition_value") channel = val;
         return chain;
       },
@@ -55,6 +63,7 @@ function mockSupabase(resolvers: {
     };
     return chain;
   });
+  return ruleEqCalls;
 }
 
 const FULL_SPEC_ROW = {
@@ -81,12 +90,18 @@ afterEach(() => vi.restoreAllMocks());
 
 describe("getChannelSpec", () => {
   it("maps a fully-populated spec row to a ChannelSpec, field for field", async () => {
-    mockSupabase({
+    const ruleEqCalls = mockSupabase({
       rule: () => ({ image_type_slugs: ["feed_post"], platform_slugs: ["instagram"] }),
       spec: () => FULL_SPEC_ROW,
     });
 
     const result = await getChannelSpec("instagram_feed");
+
+    // Query contract: the recommendation_rules lookup must filter on BOTH
+    // rule_type and condition_value, not just condition_value — mirrors the
+    // same assertion in lookupChannelSpecs.test.ts for the sibling MI-02 tool.
+    expect(ruleEqCalls).toContainEqual(["rule_type", "channel_required"]);
+    expect(ruleEqCalls).toContainEqual(["condition_value", "instagram_feed"]);
 
     expect(result).toEqual({
       channel: "instagram_feed",
@@ -179,7 +194,7 @@ describe("getAllChannelSpecs", () => {
     // each for a different reason (no rule / empty slugs / no spec row) —
     // proving getAllChannelSpecs doesn't let one channel's success leak
     // into another's result via shared mutable state.
-    mockSupabase({
+    const ruleEqCalls = mockSupabase({
       rule: (channel) => {
         if (channel === "facebook") return { image_type_slugs: ["feed_post"], platform_slugs: ["facebook"] };
         if (channel === "instagram_feed") return { image_type_slugs: [], platform_slugs: ["instagram"] };
@@ -202,5 +217,14 @@ describe("getAllChannelSpecs", () => {
     expect(result.instagram_feed).toBeNull(); // empty image_type_slugs
     expect(result.instagram_story).toBeNull(); // no rule row
     expect(result.tiktok).toBeNull(); // rule resolves, but spec lookup misses
+
+    // All 4 parallel getChannelSpec() calls must filter recommendation_rules
+    // on rule_type, not just condition_value — same contract as the single-
+    // channel test above, checked here too since getAllChannelSpecs has its
+    // own query-fanout code path.
+    for (const channel of ["facebook", "instagram_feed", "instagram_story", "tiktok"]) {
+      expect(ruleEqCalls).toContainEqual(["condition_value", channel]);
+    }
+    expect(ruleEqCalls.filter(([col, val]) => col === "rule_type" && val === "channel_required")).toHaveLength(4);
   });
 });
