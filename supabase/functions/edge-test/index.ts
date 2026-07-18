@@ -1,7 +1,5 @@
-import { insertAgentLog } from "../_shared/agent-log.ts";
 import { isAuthFailure, resolveAuth } from "../_shared/auth.ts";
 import { handleCors } from "../_shared/cors.ts";
-import { createUserClient } from "../_shared/supabase-client.ts";
 import {
   errorResponse,
   jsonResponse,
@@ -10,6 +8,11 @@ import {
 
 console.info("edge-test function started");
 
+/**
+ * Authenticated Edge runtime probe (read-only).
+ * IPI-688 · SB-EDGE-005 — no ai_agent_logs writes; gated by ALLOW_EDGE_TEST=1.
+ * Default production verify uses `health` only; opt-in via REQUIRE_AUTH_EDGE_SMOKE=1.
+ */
 Deno.serve(async (req: Request) => {
   const cors = handleCors(req);
   if (cors) return cors;
@@ -21,25 +24,25 @@ Deno.serve(async (req: Request) => {
       return errorResponse("method_not_allowed", "Use GET or POST", 405);
     }
 
+    // Opt-in only — unset/false means production default path skips this endpoint.
+    if (Deno.env.get("ALLOW_EDGE_TEST") !== "1") {
+      return errorResponse(
+        "not_found",
+        "edge-test is disabled (set ALLOW_EDGE_TEST=1 to enable)",
+        404,
+      );
+    }
+
     const auth = await resolveAuth(req, { required: true });
     if (isAuthFailure(auth)) return auth.response;
 
-    const client = createUserClient(auth.accessToken);
     const durationMs = Math.round(performance.now() - started);
 
-    const { id: logId } = await insertAgentLog(client, {
-      agentName: "edge-test",
-      userId: auth.user.id,
-      input: { source: "edge-test", method: req.method },
-      output: { status: "ok" },
-      durationMs,
-    });
-
+    // ponytail: read-only auth probe — no DB writes (was ai_agent_logs spam)
     return jsonResponse({
       status: "ok",
       function: "edge-test",
       userId: auth.user.id,
-      logId,
       durationMs,
     });
   } catch (err) {
