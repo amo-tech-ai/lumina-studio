@@ -122,3 +122,52 @@ export const BASE_EDGE_ENV = {
   SUPABASE_ANON_KEY: "test-anon-key",
   SUPABASE_SERVICE_ROLE_KEY: "test-service-role-key",
 } as const;
+
+/** HMAC `sha256=<hex>` matching Firecrawl's X-Firecrawl-Signature format. */
+export async function signFirecrawlBody(
+  rawBody: string,
+  secret: string,
+): Promise<string> {
+  const encoder = new TextEncoder();
+  const key = await crypto.subtle.importKey(
+    "raw",
+    encoder.encode(secret),
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"],
+  );
+  const sig = await crypto.subtle.sign("HMAC", key, encoder.encode(rawBody));
+  const hex = Array.from(new Uint8Array(sig))
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
+  return `sha256=${hex}`;
+}
+
+/**
+ * Capture `EdgeRuntime.waitUntil` promises so tests can await background work.
+ * Restores any prior EdgeRuntime on dispose.
+ */
+export function installEdgeRuntimeWaitUntil(): {
+  flush: () => Promise<void>;
+  dispose: () => void;
+} {
+  const g = globalThis as {
+    EdgeRuntime?: { waitUntil?: (p: Promise<unknown>) => void };
+  };
+  const prior = g.EdgeRuntime;
+  const pending: Promise<unknown>[] = [];
+  g.EdgeRuntime = {
+    waitUntil(p: Promise<unknown>) {
+      pending.push(p);
+    },
+  };
+  return {
+    async flush() {
+      await Promise.all(pending.splice(0));
+    },
+    dispose() {
+      if (prior === undefined) delete g.EdgeRuntime;
+      else g.EdgeRuntime = prior;
+    },
+  };
+}
