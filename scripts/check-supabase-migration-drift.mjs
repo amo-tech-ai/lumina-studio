@@ -233,7 +233,6 @@ function prIntroducedVersions() {
 }
 
 function parseDryRunPending(raw) {
-  if (/Remote database is up to date/i.test(raw)) return [];
   const pending = [];
   for (const line of raw.split("\n")) {
     const m = /[•*]\s+(\d{14}_[\w.-]+\.sql)/.exec(line);
@@ -244,16 +243,22 @@ function parseDryRunPending(raw) {
     const m3 = /Would push migration\s+(\d{14}_[\w.-]+\.sql)/i.exec(line);
     if (m3) pending.push(m3[1]);
   }
-  return [...new Set(pending)];
+  const unique = [...new Set(pending)];
+  const upToDate = /Remote database is up to date/i.test(raw);
+  // Contradictory CLI noise must not look like a clean empty pending set.
+  if (upToDate && unique.length) {
+    throw new Error(
+      `contradictory dry-run output: "up to date" with pending: ${unique.join(", ")}`,
+    );
+  }
+  if (upToDate) return [];
+  return unique;
 }
 
 function dryRunIsUsable(dry) {
-  // Exit 0 is always trusted. Non-zero is only accepted when the CLI clearly
-  // reported "up to date" — do NOT treat a parsed pending filename list as
-  // success on failure (CLI may print migrations then die on auth/connection).
-  if (dry.ok) return true;
-  if (/Remote database is up to date/i.test(dry.out)) return true;
-  return false;
+  // Official CLI exits 0 for "Remote database is up to date". Any non-zero
+  // exit is a hard failure (auth/connection/CLI error) — never parse around it.
+  return dry.ok;
 }
 
 if (args.includes("--self-check")) {
@@ -291,10 +296,15 @@ if (args.includes("--self-check")) {
   const empty = parseMigrationListJson("[]");
   assert.equal(empty.length, 0);
 
-  const would = parseDryRunPending(
-    "Would push migration 20230108110451_this_should_fail.sql...\nRemote database is up to date\n",
+  assert.throws(
+    () =>
+      parseDryRunPending(
+        "Would push migration 20230108110451_this_should_fail.sql...\nRemote database is up to date\n",
+      ),
+    /contradictory dry-run output/,
   );
-  assert.deepEqual(would, []); // up-to-date short-circuits
+
+  assert.deepEqual(parseDryRunPending("Remote database is up to date\n"), []);
 
   const wouldOnly = parseDryRunPending(
     "Would push migration 20230108110451_this_should_fail.sql...\n",
@@ -302,7 +312,6 @@ if (args.includes("--self-check")) {
   assert.deepEqual(wouldOnly, ["20230108110451_this_should_fail.sql"]);
 
   assert.equal(dryRunIsUsable({ ok: false, out: "auth failed", status: 1 }), false);
-  // Pending filenames on a failed dry-run must NOT count as usable.
   assert.equal(
     dryRunIsUsable({
       ok: false,
@@ -311,11 +320,20 @@ if (args.includes("--self-check")) {
     }),
     false,
   );
+  // Non-zero + "up to date" must NOT pass — real success exits 0.
   assert.equal(
     dryRunIsUsable({
       ok: false,
       out: "Remote database is up to date\n",
       status: 1,
+    }),
+    false,
+  );
+  assert.equal(
+    dryRunIsUsable({
+      ok: true,
+      out: "Remote database is up to date\n",
+      status: 0,
     }),
     true,
   );
@@ -347,7 +365,7 @@ if (remoteOnly.length) {
 
 const dry = runCapture("supabase", ["db", "push", "--linked", "--dry-run", "--yes"]);
 if (!dryRunIsUsable(dry)) {
-  console.error("db push --dry-run failed without parseable success or pending migrations:");
+  console.error("db push --dry-run failed (non-zero exit):");
   console.error(dry.out.trim() || `(exit ${dry.status})`);
   process.exit(dry.status || 1);
 }

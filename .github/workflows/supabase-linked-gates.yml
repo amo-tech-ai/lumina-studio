@@ -68,6 +68,10 @@ jobs:
         with:
           node-version: "22"
 
+      # Secretless parser fixtures — catches drift-script regressions before link.
+      - name: Drift parser self-check
+        run: node scripts/check-supabase-migration-drift.mjs --self-check
+
       - uses: supabase/setup-cli@v1
         with:
           # Pin to the CLI version used for local linked gates (IPI-665).
