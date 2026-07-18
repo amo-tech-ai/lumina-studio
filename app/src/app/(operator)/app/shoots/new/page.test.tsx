@@ -76,6 +76,19 @@ function makeFetch(opts: {
       return Promise.resolve({ ok: r.ok, json: async () => r.body, text: async () => JSON.stringify(r.body) } as Response);
     }
     if (pathname === "/api/workflows/shoot-wizard") {
+      // Matches the real inputSchema (mastra/workflows/shoot-wizard.ts):
+      // brand_id/shoot_name/brief are required strings, channels a non-empty
+      // array. A page regression that drops one of these would otherwise
+      // still get a "success" response here and the happy path would stay
+      // green for the wrong reason.
+      const b = body as { brand_id?: string; shoot_name?: string; brief?: string; channels?: string[] };
+      if (!b.brand_id || !b.shoot_name || !b.brief || !b.channels?.length) {
+        return Promise.resolve({
+          ok: false,
+          json: async () => ({ error: `shoot-wizard called with incomplete payload: ${JSON.stringify(b)}` }),
+          text: async () => "incomplete payload",
+        } as Response);
+      }
       const r = opts.shootWizard?.() ?? {
         ok: true,
         body: {
@@ -89,7 +102,18 @@ function makeFetch(opts: {
       return Promise.resolve({ ok: r.ok, json: async () => r.body, text: async () => JSON.stringify(r.body) } as Response);
     }
     if (pathname === "/api/workflows/resume") {
-      const stepId = (body as { stepId?: string })?.stepId;
+      // Matches the real route's own validation (api/workflows/resume/route.ts):
+      // "workflowId, runId, and stepId are required". A page regression that
+      // drops one of these would otherwise still advance through this mock.
+      const resumeBody = body as { workflowId?: string; runId?: string; stepId?: string };
+      if (!resumeBody.workflowId || !resumeBody.runId || !resumeBody.stepId) {
+        return Promise.resolve({
+          ok: false,
+          json: async () => ({ error: "workflowId, runId, and stepId are required" }),
+          text: async () => "workflowId, runId, and stepId are required",
+        } as Response);
+      }
+      const stepId = resumeBody.stepId;
       if (stepId && stepId === opts.resumeFailAt) {
         return Promise.resolve({
           ok: false,

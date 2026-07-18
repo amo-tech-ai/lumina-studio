@@ -23,7 +23,6 @@ export default defineConfig({
     headless: true,
     screenshot: "only-on-failure",
     video: "off",
-    trace: "retain-on-failure",
   },
   projects: [
     { name: "chromium-desktop", use: { ...devices["Desktop Chrome"] } },

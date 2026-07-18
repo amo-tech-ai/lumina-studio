@@ -23,6 +23,15 @@ import { loginOperatorIfConfigured } from "./helpers/mobile-audit";
 const RUN_ID = "e2e-run-1";
 const BRAND = { id: "e2e-brand-1", name: "E2E Test Brand" };
 
+// Explicit, not just relying on the project default being unset: this spec
+// does a REAL login, and a Playwright trace captures network request/
+// response bodies — a failure here would otherwise upload the QA password
+// and Supabase auth tokens as a downloadable CI artifact. (Several other
+// specs in this suite also log in for real — a project-wide trace default
+// was considered and rejected for exactly this reason; each real-login spec
+// should opt in explicitly and individually if it ever needs one.)
+test.use({ trace: "off" });
+
 /**
  * Registers routes and returns the list of unexpected /api/** calls made
  * while they were active. A route.fulfill(500) alone doesn't fail a
