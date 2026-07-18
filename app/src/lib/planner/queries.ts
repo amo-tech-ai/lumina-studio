@@ -14,6 +14,7 @@ import type {
   PlannerInstance,
   PlannerInstanceStatus,
   PlannerMember,
+  PlannerPhase,
   PlannerTask,
   PlannerTaskStatus,
   PlannerViewConfig,
@@ -434,6 +435,8 @@ type FullViewConfigRow = Database["planner"]["Tables"]["view_configs"]["Row"];
 // selected, matching HubTaskRow's convention above.
 const DEPENDENCY_COLUMNS = "id, instance_id, from_task_id, to_task_id, dep_type, lag_days";
 const VIEW_CONFIG_COLUMNS = "id, user_id, instance_id, default_view, filters, sort_config";
+const PHASE_COLUMNS =
+  "id, workflow_id, slug, name, order_index, default_duration_days, gate_type, required_role";
 
 type DependencyRow = Pick<
   FullDependencyRow,
@@ -442,6 +445,11 @@ type DependencyRow = Pick<
 type ViewConfigRow = Pick<
   FullViewConfigRow,
   "id" | "user_id" | "instance_id" | "default_view" | "filters" | "sort_config"
+>;
+type FullPhaseRow = Database["planner"]["Tables"]["phases"]["Row"];
+type PhaseRow = Pick<
+  FullPhaseRow,
+  "id" | "workflow_id" | "slug" | "name" | "order_index" | "default_duration_days" | "gate_type" | "required_role"
 >;
 
 function toTask(row: TaskRow): PlannerTask {
@@ -471,6 +479,19 @@ function toDependency(row: DependencyRow): PlannerDependency {
     toTaskId: row.to_task_id,
     depType: row.dep_type,
     lagDays: row.lag_days,
+  };
+}
+
+function toPhase(row: PhaseRow): PlannerPhase {
+  return {
+    id: row.id,
+    workflowId: row.workflow_id,
+    slug: row.slug,
+    name: row.name,
+    orderIndex: row.order_index,
+    defaultDurationDays: row.default_duration_days,
+    gateType: row.gate_type as PlannerPhase["gateType"],
+    requiredRole: row.required_role,
   };
 }
 
@@ -613,6 +634,30 @@ export async function listDependencies(
   }
 
   return { ok: true, data: (data ?? []).map(toDependency) };
+}
+
+// No app-level permission gate here, unlike listDependencies above: phases
+// belong to a workflow, not an instance, and are read before any instance
+// exists (during instance creation). planner.phases' own RLS (phases_select)
+// already scopes rows to the caller's org via the workflow join — a second
+// gate here would just duplicate that check for a plain structural read.
+export async function listWorkflowPhases(
+  workflowId: string,
+): Promise<PlannerQueryResult<PlannerPhase[]>> {
+  const context = await authenticatedPlannerClient();
+  if (!context.ok) return context;
+
+  const { data, error } = await context.data.client
+    .from("phases")
+    .select(PHASE_COLUMNS)
+    .eq("workflow_id", workflowId)
+    .order("order_index", { ascending: true });
+
+  if (error) {
+    return failure("QUERY_FAILED", "Workflow phases could not be loaded.");
+  }
+
+  return { ok: true, data: (data ?? []).map(toPhase) };
 }
 
 // IPI-574 · PLN-DATA-001B correction #1 (2026-07-16) — identity is

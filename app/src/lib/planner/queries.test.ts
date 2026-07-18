@@ -12,6 +12,7 @@ import {
   listDependencies,
   listMembers,
   listPlannerInstances,
+  listWorkflowPhases,
 } from "./queries";
 
 vi.mock("@/lib/supabase/server", () => ({
@@ -716,6 +717,82 @@ describe("listDependencies", () => {
     await expect(listDependencies("i1")).resolves.toEqual({
       ok: false,
       error: { code: "QUERY_FAILED", message: "Plan dependencies could not be loaded." },
+    });
+    expect(client.from).not.toHaveBeenCalled();
+  });
+});
+
+describe("listWorkflowPhases", () => {
+  it("maps phase rows to PlannerPhase, ordered by order_index", async () => {
+    const query = makeQuery({
+      data: [
+        {
+          id: "p1",
+          workflow_id: "wf-1",
+          slug: "brief",
+          name: "Brief",
+          order_index: 0,
+          default_duration_days: 2,
+          gate_type: null,
+          required_role: null,
+        },
+      ],
+      error: null,
+    });
+    const client = mockClient(query);
+
+    const result = await listWorkflowPhases("wf-1");
+
+    expect(result).toEqual({
+      ok: true,
+      data: [
+        {
+          id: "p1",
+          workflowId: "wf-1",
+          slug: "brief",
+          name: "Brief",
+          orderIndex: 0,
+          defaultDurationDays: 2,
+          gateType: null,
+          requiredRole: null,
+        },
+      ],
+    });
+    expect(client.from).toHaveBeenCalledWith("phases");
+    expect(query.eq).toHaveBeenCalledWith("workflow_id", "wf-1");
+    expect(query.order).toHaveBeenCalledWith("order_index", { ascending: true });
+    expect(query.select.mock.calls[0][0]).not.toContain("*");
+  });
+
+  it("returns a typed query failure without leaking the raw error", async () => {
+    const query = makeQuery({ data: null, error: { message: "private database error" } });
+    mockClient(query);
+
+    await expect(listWorkflowPhases("wf-1")).resolves.toEqual({
+      ok: false,
+      error: { code: "QUERY_FAILED", message: "Workflow phases could not be loaded." },
+    });
+  });
+
+  it("relies on phases_select RLS alone — no assignment RPC call, unlike listDependencies", async () => {
+    const query = makeQuery({ data: [], error: null });
+    const client = mockClient(query, "user-a", [], null);
+
+    const result = await listWorkflowPhases("wf-1");
+
+    expect(result).toEqual({ ok: true, data: [] });
+    expect(client.rpc).not.toHaveBeenCalledWith("planner_get_my_assignment", expect.anything());
+    expect(client.from).toHaveBeenCalledWith("phases");
+  });
+
+  it("rejects an unauthenticated caller before querying", async () => {
+    const query = makeQuery({ data: [], error: null });
+    const client = mockClient(query);
+    client.getUser.mockResolvedValue({ data: { user: null }, error: null });
+
+    await expect(listWorkflowPhases("wf-1")).resolves.toEqual({
+      ok: false,
+      error: { code: "UNAUTHENTICATED", message: "Sign in to view Planner data." },
     });
     expect(client.from).not.toHaveBeenCalled();
   });

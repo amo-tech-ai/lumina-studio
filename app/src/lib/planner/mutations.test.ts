@@ -1,18 +1,41 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { getEffectivePermissions } from "./permissions";
-import { getInstanceDetail, listDependencies } from "./queries";
+import { getInstanceDetail, listDependencies, listWorkflowPhases } from "./queries";
+import type { PlannerPhase } from "./types";
 
 vi.mock("./queries", () => ({
   getInstanceDetail: vi.fn(),
   listDependencies: vi.fn(),
+  listWorkflowPhases: vi.fn(),
 }));
 
 vi.mock("./permissions", () => ({
   getEffectivePermissions: vi.fn(),
 }));
 
-import { inviteMember, removeAssignment, setViewConfig, shiftTask, updateRole, updateTask } from "./mutations";
+import {
+  createInstance,
+  inviteMember,
+  removeAssignment,
+  setViewConfig,
+  shiftTask,
+  updateRole,
+  updateTask,
+} from "./mutations";
+
+function makePhase(overrides: Partial<PlannerPhase> & { id: string }): PlannerPhase {
+  return {
+    workflowId: "wf-1",
+    slug: overrides.id,
+    name: overrides.id,
+    orderIndex: 0,
+    defaultDurationDays: 3,
+    gateType: null,
+    requiredRole: null,
+    ...overrides,
+  };
+}
 
 function mockRpc(row: Record<string, unknown> | null, error: { message: string } | null = null) {
   const builder = { single: vi.fn(async () => ({ data: row, error })) };
@@ -800,6 +823,158 @@ describe("setViewConfig", () => {
       ok: false,
       error: { code: "UNKNOWN_ERROR", message: "Your view preference could not be saved." },
     });
+    expect(consoleError).toHaveBeenCalled();
+    consoleError.mockRestore();
+  });
+});
+
+describe("createInstance", () => {
+  const BASE_PARAMS = {
+    workflowId: "wf-1",
+    orgId: "org-1",
+    entityType: "shoot" as const,
+    entityId: "entity-1",
+    name: "Spring Campaign",
+    plannedStart: "2026-07-01", // Wednesday
+    idempotencyKey: "idem-create-1",
+  };
+
+  beforeEach(() => {
+    vi.mocked(listWorkflowPhases).mockReset();
+  });
+
+  it("computes business-day dates via PlannerEngine, discards dependencies, and calls the RPC with the resulting task list", async () => {
+    vi.mocked(listWorkflowPhases).mockResolvedValue({
+      ok: true,
+      data: [
+        makePhase({ id: "p1", orderIndex: 0, defaultDurationDays: 2 }),
+        makePhase({ id: "p2", orderIndex: 1, defaultDurationDays: 3 }),
+      ],
+    });
+
+    const { client, rpcMock } = mockRpcJson({ ok: true, replayed: false, instanceId: "inst-new" });
+
+    const result = await createInstance(BASE_PARAMS, client);
+
+    expect(result).toEqual({ ok: true, data: { replayed: false, instanceId: "inst-new" } });
+    expect(rpcMock).toHaveBeenCalledTimes(1);
+    const [fnName, args] = rpcMock.mock.calls[0] as [string, Record<string, unknown>];
+    expect(fnName).toBe("planner_create_instance");
+    expect(args.p_org_id).toBe("org-1");
+    expect(args.p_entity_type).toBe("shoot");
+    expect(args.p_entity_id).toBe("entity-1");
+    expect(args.p_workflow_id).toBe("wf-1");
+    expect(args.p_name).toBe("Spring Campaign");
+    expect(args.p_planned_start).toBe("2026-07-01");
+    expect(args.p_idempotency_key).toBe("idem-create-1");
+    expect(args.p_owner_user_id).toBeUndefined();
+
+    // Never sent to the RPC — buildSchedule()'s dependency chain is
+    // deliberately discarded (v1 policy: no auto-generated dependencies).
+    expect(args).not.toHaveProperty("p_dependencies");
+    expect(args).not.toHaveProperty("dependencies");
+
+    const tasks = args.p_tasks as Array<Record<string, unknown>>;
+    expect(tasks).toHaveLength(2);
+    // 2 business days from Wed Jul 1: Thu 2, Fri 3 — same fixture as
+    // engine.test.ts's buildSchedule coverage, proving this goes through
+    // the business-day engine, not calendar-day arithmetic.
+    expect(tasks[0]).toEqual(
+      expect.objectContaining({
+        phaseId: "p1",
+        title: "p1",
+        startDate: "2026-07-01",
+        endDate: "2026-07-03",
+        durationDays: 2,
+        sortOrder: 0,
+      }),
+    );
+    expect(tasks[0]).not.toHaveProperty("dependencies");
+    // Start = Jul 3 + 1 day = Jul 4 (Sat); 3 business days: skip Sun, Mon 6, Tue 7, Wed 8
+    expect(tasks[1]).toEqual(
+      expect.objectContaining({ phaseId: "p2", title: "p2", startDate: "2026-07-04", endDate: "2026-07-08", sortOrder: 1 }),
+    );
+  });
+
+  it("forwards an explicit ownerUserId to the RPC", async () => {
+    vi.mocked(listWorkflowPhases).mockResolvedValue({ ok: true, data: [makePhase({ id: "p1" })] });
+    const { client, rpcMock } = mockRpcJson({ ok: true, replayed: false, instanceId: "inst-new" });
+
+    await createInstance({ ...BASE_PARAMS, ownerUserId: "owner-1" }, client);
+
+    const [, args] = rpcMock.mock.calls[0] as [string, Record<string, unknown>];
+    expect(args.p_owner_user_id).toBe("owner-1");
+  });
+
+  it("propagates a phase-fetch failure without calling the engine or the RPC", async () => {
+    vi.mocked(listWorkflowPhases).mockResolvedValue({
+      ok: false,
+      error: { code: "QUERY_FAILED", message: "Workflow phases could not be loaded." },
+    });
+    const { client, rpcMock } = mockRpcJson(null);
+
+    const result = await createInstance(BASE_PARAMS, client);
+
+    expect(result).toEqual({
+      ok: false,
+      error: { code: "QUERY_FAILED", message: "Workflow phases could not be loaded." },
+    });
+    expect(rpcMock).not.toHaveBeenCalled();
+  });
+
+  it("sends an empty task list without erroring when the workflow has no phases", async () => {
+    vi.mocked(listWorkflowPhases).mockResolvedValue({ ok: true, data: [] });
+    const { client, rpcMock } = mockRpcJson({ ok: true, replayed: false, instanceId: "inst-empty" });
+
+    const result = await createInstance(BASE_PARAMS, client);
+
+    expect(result.ok).toBe(true);
+    const [, args] = rpcMock.mock.calls[0] as [string, Record<string, unknown>];
+    expect(args.p_tasks).toEqual([]);
+  });
+
+  it.each(["UNAUTHENTICATED", "FORBIDDEN", "NOT_FOUND", "INVALID_INPUT", "INSTANCE_ALREADY_EXISTS", "IDEMPOTENCY_CONFLICT"])(
+    "maps RPC-returned %s to a typed error",
+    async (code) => {
+      vi.mocked(listWorkflowPhases).mockResolvedValue({ ok: true, data: [makePhase({ id: "p1" })] });
+      const { client } = mockRpcJson({ ok: false, code });
+
+      const result = await createInstance(BASE_PARAMS, client);
+
+      expect(result.ok).toBe(false);
+      if (!result.ok) expect(result.error.code).toBe(code);
+    },
+  );
+
+  it("surfaces replayed:true from an idempotent retry", async () => {
+    vi.mocked(listWorkflowPhases).mockResolvedValue({ ok: true, data: [makePhase({ id: "p1" })] });
+    const { client } = mockRpcJson({ ok: true, replayed: true, instanceId: "inst-existing" });
+
+    const result = await createInstance(BASE_PARAMS, client);
+
+    expect(result).toEqual({ ok: true, data: { replayed: true, instanceId: "inst-existing" } });
+  });
+
+  it("maps a null RPC response to UNKNOWN_ERROR without leaking anything raw", async () => {
+    vi.mocked(listWorkflowPhases).mockResolvedValue({ ok: true, data: [makePhase({ id: "p1" })] });
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
+    const { client } = mockRpcJson(null, null);
+
+    const result = await createInstance(BASE_PARAMS, client);
+
+    expect(result).toEqual({ ok: false, error: { code: "UNKNOWN_ERROR", message: "The request could not be completed." } });
+    expect(consoleError).toHaveBeenCalled();
+    consoleError.mockRestore();
+  });
+
+  it("maps an unrecognized RPC error code to UNKNOWN_ERROR without forwarding it raw", async () => {
+    vi.mocked(listWorkflowPhases).mockResolvedValue({ ok: true, data: [makePhase({ id: "p1" })] });
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
+    const { client } = mockRpcJson({ ok: false, code: "SOME_NEW_DB_ERROR" });
+
+    const result = await createInstance(BASE_PARAMS, client);
+
+    expect(result).toEqual({ ok: false, error: { code: "UNKNOWN_ERROR", message: "The request could not be completed." } });
     expect(consoleError).toHaveBeenCalled();
     consoleError.mockRestore();
   });
