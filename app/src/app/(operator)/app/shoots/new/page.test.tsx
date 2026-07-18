@@ -8,7 +8,13 @@ vi.mock("@/components/shoot/shoot-wizard.module.css", () => ({
 
 vi.mock("@copilotkit/react-core/v2", () => ({ useAgentContext: () => {} }));
 
-const BRANDS = [{ id: "brand-1", name: "Acme" }];
+// Two brands, not one — page.tsx auto-selects a lone brand (single-brand
+// convenience), which would silently pre-fill brandId and defeat the
+// "Continue disabled until brand is set" assertions below.
+const BRANDS = [
+  { id: "brand-1", name: "Acme" },
+  { id: "brand-2", name: "Globex" },
+];
 vi.mock("@supabase/ssr", () => ({
   createBrowserClient: () => ({
     from: () => ({

@@ -80,8 +80,17 @@ test.describe("IPI-674 — Shoot Wizard happy path", () => {
 
     await mockWizardApis(page);
 
+    // Brands load asynchronously via a client-side Supabase query
+    // (page.tsx's useEffect hitting /rest/v1/brands) — start waiting for that
+    // response before navigating, so the option-count check below can't race
+    // ahead of the fetch and mistake "not loaded yet" for "not seeded".
+    const brandsLoaded = page
+      .waitForResponse((r) => r.url().includes("/rest/v1/brands"), { timeout: 10_000 })
+      .catch(() => null);
+
     await page.goto("/app/shoots/new");
     await expect(page.locator("body")).not.toContainText("Internal Server Error");
+    await brandsLoaded;
 
     const brandSelect = page.locator("#brand-select");
     await expect(brandSelect).toBeVisible();
