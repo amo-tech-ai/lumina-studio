@@ -6834,6 +6834,19 @@ export type Database = {
         Args: { n: Database["public"]["Tables"]["notifications"]["Row"] }
         Returns: boolean
       }
+      planner_create_instance: {
+        Args: {
+          p_entity_id: string
+          p_entity_type: string
+          p_idempotency_key: string
+          p_name: string
+          p_org_id: string
+          p_planned_start: string
+          p_tasks: Json
+          p_workflow_id: string
+        }
+        Returns: Json
+      }
       planner_get_member_names: {
         Args: { p_instance_id: string }
         Returns: {
