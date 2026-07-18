@@ -225,6 +225,8 @@ describe("CopilotKit /info — SSE discovery (IPI-670 · COPILOT-RUNTIME-001)", 
   it("returns 503 storage_unavailable JSON when agent run needs storage but DATABASE_URL is missing", async () => {
     vi.stubEnv("NODE_ENV", "production");
     vi.stubEnv("VERCEL", "1");
+    // Clear CI so this matches real Vercel runtime (not GitHub Actions builds).
+    vi.stubEnv("CI", "");
     vi.stubEnv("DATABASE_URL", "");
     vi.stubEnv("OPERATOR_AUTH_ENABLED", "true");
     vi.stubEnv("GEMINI_API_KEY", "test-key");
