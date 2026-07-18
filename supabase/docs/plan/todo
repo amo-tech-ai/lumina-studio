@@ -1,0 +1,111 @@
+# Prime todo — Supabase + Planner (ordered)
+
+**SSOT:** [`supabase-plan.md`](./supabase-plan.md) · [`notes-edge-5.md`](./notes-edge-5.md) · [`testing.md`](./testing.md) · audit [`j18-supa-audit.md`](../audit/j18-supa-audit.md)  
+**Updated:** 2026-07-18 · plan quality **96/100** · Project `nvdlhrodvevgwdsneplk`  
+**Rule:** one concern per PR · never `db reset --linked` · never `migration repair` while drift = 0  
+**Efficiency:** **679 ∥ 681** — only **680** waits on 681
+
+Legend: 🟢 Done · 🔵 In Progress · 🟡 Ops/partial · ⚪ Todo · 🔴 Do not mis-file
+
+---
+
+## Recommended wave
+
+```text
+IPI-669 · SB-CI-002 — Run Edge Deno Unit Tests in CI
+
+Then in parallel:
+├─ IPI-667 · SB-EDGE-001 — Quarantine Legacy FashionOS Edge Functions Not in Repo
+├─ IPI-678 · SB-OPS-001 — Align Infisical DB URL with GitHub Session-Mode DATABASE_URL
+├─ IPI-681 · SB-SEC-003 — Prove Anonymous Data API and GraphQL Row Access
+└─ IPI-679 · SB-SEC-001 — Inventory and Revoke Residual Anon SECURITY DEFINER EXECUTE
+
+After IPI-681:
+└─ IPI-680 · SB-SEC-002 — Disable or Scope pg_graphql Anon Table Exposure
+   └─ IPI-683 · SB-SEC-002b — Authenticated GraphQL (child, later)
+
+Later:
+├─ IPI-682 · SB-PERF-001 — Prioritize DB Advisor Findings from Workload Evidence
+└─ IPI-650 · PLN-HUB-002 — Create Planner Instance Flow
+```
+
+---
+
+## Start here — IPI-669
+
+| ● | Linear | Ship |
+|---|--------|------|
+| 🔵 | [IPI-669 · SB-CI-002 — Edge Deno unit tests in CI](https://linear.app/amo100/issue/IPI-669) | One workflow/job · Deno **2.9.2** · `deno.lock` · `npm run supabase:verify-edge-groq` · no secrets · intentional-red proof |
+
+```bash
+npm run worktree:audit
+git fetch origin
+git worktree add ../wt-ipi-669-edge-deno-ci \
+  -b ipi/669-edge-deno-ci origin/main
+
+cd ../wt-ipi-669-edge-deno-ci
+npm run supabase:verify-edge-groq
+```
+
+**PR minimal:** one CI job · pinned Deno · existing lock + npm script · no prod secrets · no live Supabase · no deploy · prove intentional failure turns CI red, then revert.
+
+---
+
+## Parallel next (after 669 starts)
+
+| ● | Linear | Notes |
+|---|--------|-------|
+| ⚪ | [IPI-667 · SB-EDGE-001](https://linear.app/amo100/issue/IPI-667) | No `--prune` · close IPI-239 |
+| 🟡 | [IPI-678 · SB-OPS-001](https://linear.app/amo100/issue/IPI-678) | Infisical ↔ GH session `:5432` |
+| ⚪ | [IPI-681 · SB-SEC-003](https://linear.app/amo100/issue/IPI-681) | `scripts/probe-anon-data-api.mjs` + Infisical anon key + status matrix |
+| ⚪ | [IPI-679 · SB-SEC-001](https://linear.app/amo100/issue/IPI-679) | **∥ 681** · `supabase/tests/security/definer-grants.sql` in verify-rls CI |
+
+---
+
+## After 681
+
+| ● | Linear | Notes |
+|---|--------|-------|
+| ⚪ | [IPI-680 · SB-SEC-002](https://linear.app/amo100/issue/IPI-680) | Approach **A** locked (disable anon GraphQL) unless 681 finds public GraphQL |
+| ⚪ | [IPI-683 · SB-SEC-002b](https://linear.app/amo100/issue/IPI-683) | Child — authenticated GraphQL **107** |
+
+---
+
+## Later
+
+| ● | Linear | Notes |
+|---|--------|-------|
+| ⚪ | [IPI-682 · SB-PERF-001](https://linear.app/amo100/issue/IPI-682) | PR1: profiles · shoots · commerce_product_links · brand_intake_drafts · ai_agent_logs → ≤130 initplan |
+| ⚪ | [IPI-650 · PLN-HUB-002](https://linear.app/amo100/issue/IPI-650) | Hub New Plan UI |
+| ⚪ | [IPI-619](https://linear.app/amo100/issue/IPI-619) / [IPI-623](https://linear.app/amo100/issue/IPI-623) | CF track — bind after 616; workload = `ai_agent_logs` via helper |
+
+---
+
+## Done (do not reopen)
+
+| ● | Task |
+|---|------|
+| 🟢 | IPI-664 · 665 · 673 · 677 · 668 · 653 · 670 · 662 |
+
+---
+
+## Checklist
+
+```text
+[x] Hygiene + CI + planner create
+[ ] IPI-669 · Edge Deno CI          ← IN PROGRESS
+[ ] Parallel: 667 · 678 · 681 · 679
+[ ] IPI-680 · GraphQL anon (after 681)
+[ ] Later: 682 · 650 · (683) · CF 619/623
+```
+
+## Spec gaps closed (2026-07-18)
+
+| Ticket | Filled |
+|--------|--------|
+| 669 | Workflow path · Deno 2.9.2 · intentional-break steps · main worktree |
+| 681 | `scripts/probe-anon-data-api.mjs` · Infisical anon · status matrix |
+| 679 | `definer-grants.sql` + `supabase-verify-rls.yml` · parallel w/ 681 |
+| 680 | Approach A locked · child [IPI-683](https://linear.app/amo100/issue/IPI-683) |
+| 682 | Named hot tables + delta ≤130 |
+| 619/623 | Stub/dual-bundle plan · named workload `ai_agent_logs` |
