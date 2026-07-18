@@ -4,6 +4,21 @@
 
 Detect task type **first** (Phase 0). Apply the matching template gate — do not run IPI sections on SCR specs or vice versa.
 
+## Verification depth (Quick vs Full)
+
+Used by [quick-gate.md](./quick-gate.md) Phase 0. Artifact type (below) selects **template**; this table selects **depth**.
+
+| Task type | Default mode | Minimum checks |
+|-----------|:------------:|----------------|
+| Production incident / operations | Quick first | logs → runtime endpoint → env/deployment timestamps → remediation |
+| Code-fix PR | Quick | diff → targeted tests → relevant skill |
+| Docs / tracker update | Quick | scope → links → internal consistency |
+| New spec / architecture decision | Full | claims → official docs/MCP → implementation feasibility |
+| In Progress → Done | Full | SKILL.md Phases 0–10 + anti-fake-done (all 10 gates) |
+| Production release gate | Full | deployment + runtime + rollback evidence |
+
+Override: user says `quick` or `full`. Escalate Quick → Full on 🔴 production blockers, evidence conflicts, or Done/release/security scope.
+
 ## Detection
 
 | Signal | Type | Primary artifact |

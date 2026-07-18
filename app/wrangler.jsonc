@@ -54,5 +54,42 @@
     "@mastra/pg": "./scripts/cf-mastra-pg-stub.mjs",
     "pg": "./scripts/cf-mastra-pg-stub.mjs",
     "pg-cloudflare": "./scripts/cf-mastra-pg-stub.mjs"
+  },
+  // IPI-472 · INFRA-001 — SSOT for preview vs production Worker names.
+  // vars + images must repeat per named env (Wrangler schema: not inherited).
+  // No DATABASE_URL here until Hyperdrive (IPI-619). Runtime secrets via wrangler secret put.
+  "env": {
+    "preview": {
+      "name": "ipix-operator-preview",
+      "vars": {
+        "MASTRA_STORAGE_MODE": "noop",
+        "OPERATOR_AUTH_ENABLED": "true"
+      },
+      "images": {
+        "binding": "IMAGES"
+      },
+      "services": [
+        {
+          "binding": "WORKER_SELF_REFERENCE",
+          "service": "ipix-operator-preview"
+        }
+      ]
+    },
+    "production": {
+      "name": "ipix-operator",
+      "vars": {
+        "MASTRA_STORAGE_MODE": "noop",
+        "OPERATOR_AUTH_ENABLED": "true"
+      },
+      "images": {
+        "binding": "IMAGES"
+      },
+      "services": [
+        {
+          "binding": "WORKER_SELF_REFERENCE",
+          "service": "ipix-operator"
+        }
+      ]
+    }
   }
 }

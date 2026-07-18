@@ -2,9 +2,11 @@
 
 > Every box needs a **probe + result**. Unchecked box without probe = invalid Done.
 
+**Quick gate:** abbreviated checks only — full 10 gates required for **Full verify** (Done, release, security). See [quick-gate.md](./quick-gate.md).
+
 ## iPix (default — IPI / SCR / DESIGN V2)
 
-Use for all Lumina Studio / iPix work unless verifying legacy mdeai `F*.md`.
+Use for all Lumina Studio / iPix work unless verifying legacy mdeai `F*.md`. **Full verify mandatory** before marking Done.
 
 ```
 [ ] 1. Implementation on disk
