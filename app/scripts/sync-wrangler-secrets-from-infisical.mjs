@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * IPI-606 · CF-SEC-010 — sync allowlisted runtime secrets from Infisical-injected env
- * to Cloudflare Worker secrets via `wrangler secret bulk` (stdin JSON, never logged).
+ * to Cloudflare Worker via `wrangler versions upload --secrets-file` (single version upload).
  *
  * Usage (operator):
  *   infisical run --env=dev -- node scripts/sync-wrangler-secrets-from-infisical.mjs --wrangler-env preview --dry-run
@@ -9,8 +9,13 @@
  *
  * Requires in env (from Infisical or CI): CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID,
  * plus allowlisted runtime secret values injected by `infisical run`.
+ *
+ * Primary path: ephemeral JSON secrets file (chmod 600) → wrangler versions upload --secrets-file.
+ * Avoids repeated wrangler secret bulk (each bulk creates a new deployment version).
  */
 import { spawnSync } from "node:child_process";
+import { chmodSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import {
@@ -22,10 +27,11 @@ import {
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const appDir = path.resolve(__dirname, "..");
 const localWrangler = path.join(appDir, "node_modules", ".bin", "wrangler");
+const defaultWorkerEntry = path.join(appDir, ".open-next", "worker.js");
 
 function parseArgs(argv) {
-  /** @type {{ wranglerEnv: string | null; dryRun: boolean; help: boolean }} */
-  const opts = { wranglerEnv: null, dryRun: false, help: false };
+  /** @type {{ wranglerEnv: string | null; dryRun: boolean; help: boolean; workerPath: string | null }} */
+  const opts = { wranglerEnv: null, dryRun: false, help: false, workerPath: null };
 
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i];
@@ -37,6 +43,10 @@ function parseArgs(argv) {
       opts.wranglerEnv = argv[++i] ?? null;
     } else if (arg.startsWith("--wrangler-env=")) {
       opts.wranglerEnv = arg.slice("--wrangler-env=".length);
+    } else if (arg === "--worker-path") {
+      opts.workerPath = argv[++i] ?? null;
+    } else if (arg.startsWith("--worker-path=")) {
+      opts.workerPath = arg.slice("--worker-path=".length);
     } else {
       throw new Error(`Unknown argument: ${arg}`);
     }
@@ -47,7 +57,7 @@ function parseArgs(argv) {
 
 function printHelp() {
   console.log(`Usage:
-  infisical run --env=<infisical-env> -- node scripts/sync-wrangler-secrets-from-infisical.mjs --wrangler-env <preview|production> [--dry-run]
+  infisical run --env=<infisical-env> -- node scripts/sync-wrangler-secrets-from-infisical.mjs --wrangler-env <preview|production> [--dry-run] [--worker-path <path>]
 
 Infisical → wrangler mapping (SSOT):
   dev/staging → preview
@@ -55,8 +65,12 @@ Infisical → wrangler mapping (SSOT):
 
 Options:
   --wrangler-env   Target wrangler environment (preview | production)
+  --worker-path    Worker entry for versions upload (default: .open-next/worker.js)
   --dry-run        Print secret names that would sync; never call wrangler or print values
   --help           Show this help
+
+Primary upload: wrangler versions upload --secrets-file <ephemeral-json> --env <env>
+OpenNext equivalent: opennextjs-cloudflare upload --env <env> -- --secrets-file <file>
 
 Env (names only — set via Infisical or CI):
   CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID
@@ -71,12 +85,11 @@ function requireCloudflareCredentials(env) {
   }
 }
 
-function runWrangler(args, stdin) {
+function runWrangler(args) {
   const r = spawnSync(localWrangler, args, {
     cwd: appDir,
     encoding: "utf8",
     env: process.env,
-    input: stdin,
     maxBuffer: 16 * 1024 * 1024,
   });
   const out = `${r.stdout ?? ""}${r.stderr ?? ""}`.trim();
@@ -85,6 +98,35 @@ function runWrangler(args, stdin) {
 
 function redactValues(text) {
   return text.replace(/"[^"]{8,}"/g, '"[REDACTED]"');
+}
+
+/**
+ * Write allowlisted secrets to a secure temp JSON file (chmod 600).
+ * @returns {{ filePath: string; cleanup: () => void }}
+ */
+export function writeSecureSecretsFile(secrets) {
+  const dir = mkdtempSync(path.join(tmpdir(), "ipix-cf-secrets-"));
+  const filePath = path.join(dir, "secrets.json");
+  writeFileSync(filePath, JSON.stringify(secrets), { mode: 0o600 });
+  chmodSync(filePath, 0o600);
+  return {
+    filePath,
+    cleanup: () => {
+      try {
+        rmSync(dir, { recursive: true, force: true });
+      } catch {
+        // best-effort delete
+      }
+    },
+  };
+}
+
+function resolveWorkerPath(explicit) {
+  const candidate = explicit ?? defaultWorkerEntry;
+  if (!candidate || !path.isAbsolute(candidate)) {
+    return path.resolve(appDir, candidate ?? defaultWorkerEntry);
+  }
+  return candidate;
 }
 
 function main() {
@@ -128,24 +170,38 @@ function main() {
 
   requireCloudflareCredentials(process.env);
 
-  const bulkJson = JSON.stringify(present);
-  const bulkArgs = ["secret", "bulk", "--env", opts.wranglerEnv];
+  const workerPath = resolveWorkerPath(opts.workerPath);
+  let secretsFile;
+  try {
+    secretsFile = writeSecureSecretsFile(present);
+    const uploadArgs = [
+      "versions",
+      "upload",
+      workerPath,
+      "--env",
+      opts.wranglerEnv,
+      "--secrets-file",
+      secretsFile.filePath,
+    ];
 
-  const result = runWrangler(bulkArgs, bulkJson);
-  if (result.error) {
-    console.error(`wrangler secret bulk failed: ${result.error.message}`);
-    process.exit(1);
-  }
+    const result = runWrangler(uploadArgs);
+    if (result.error) {
+      console.error(`wrangler versions upload failed: ${result.error.message}`);
+      process.exit(1);
+    }
 
-  if (result.code !== 0) {
-    console.error("wrangler secret bulk exited non-zero:");
-    console.error(redactValues(result.out));
-    process.exit(result.code);
-  }
+    if (result.code !== 0) {
+      console.error("wrangler versions upload exited non-zero:");
+      console.error(redactValues(result.out));
+      process.exit(result.code);
+    }
 
-  console.log("sync complete (values not logged)");
-  if (result.out) {
-    console.log(redactValues(result.out));
+    console.log("sync complete via --secrets-file (values not logged)");
+    if (result.out) {
+      console.log(redactValues(result.out));
+    }
+  } finally {
+    secretsFile?.cleanup();
   }
 }
 
@@ -153,4 +209,4 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.a
   main();
 }
 
-export { parseArgs, redactValues, runWrangler, requireCloudflareCredentials };
+export { parseArgs, redactValues, runWrangler, requireCloudflareCredentials, resolveWorkerPath };

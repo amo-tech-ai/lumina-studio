@@ -24,7 +24,7 @@ flowchart LR
 
   subgraph runtime [Cloudflare — runtime]
     SYNC[sync-wrangler-secrets-from-infisical.mjs]
-    WR[wrangler secret bulk]
+    WR[wrangler versions upload --secrets-file]
     WK[Worker ipix-operator-preview / ipix-operator]
   end
 
@@ -45,7 +45,7 @@ flowchart LR
 | Path | Identity allowlist | Destination | Tool |
 |------|-------------------|-------------|------|
 | **CI build** | `BUILD_TIME_SECRET_NAMES` | GitHub Actions job `env` | `Infisical/secrets-action@v1` (OIDC) |
-| **Deploy sync** | `RUNTIME_SECRET_NAMES` | Cloudflare Worker secrets | `scripts/sync-wrangler-secrets-from-infisical.mjs` |
+| **Deploy sync** | `RUNTIME_SECRET_NAMES` | Cloudflare Worker secrets | `scripts/sync-wrangler-secrets-from-infisical.mjs` → `wrangler versions upload --secrets-file` |
 
 Allowlist module (SSOT for names): `app/scripts/cloudflare-secret-allowlist.mjs`
 
@@ -66,9 +66,9 @@ Inlined into client bundles — **NEXT_PUBLIC_* only**.
 
 **Forbidden in build export:** `SERVICE_ROLE`, `*_SECRET`, any non-`NEXT_PUBLIC_*` name (enforced by `assertNoForbiddenSecrets(..., "build")`).
 
-### RUNTIME_WRANGLER (`wrangler secret put` / `secret bulk`)
+### RUNTIME_WRANGLER (`wrangler versions upload --secrets-file`)
 
-Server-only — never in client chunks. Synced by the allowlist script.
+Server-only — never in client chunks. Synced by the allowlist script via a secure ephemeral JSON file (chmod 600, deleted in `finally`).
 
 | Secret name | Notes |
 |-------------|-------|
@@ -168,13 +168,25 @@ infisical run --env=dev -- node scripts/sync-wrangler-secrets-from-infisical.mjs
 
 ### Production sync (operator — requires Cloudflare + Infisical credentials)
 
+Build the Worker first (`npm run build:cf`), then sync secrets in a single version upload:
+
 ```bash
 cd app
 infisical run --env=prod -- node scripts/sync-wrangler-secrets-from-infisical.mjs \
   --wrangler-env production
 ```
 
-Requires in env: `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`, plus allowlisted runtime secrets from Infisical. Values are piped to `wrangler secret bulk` via stdin — **never echoed**.
+Or combine with OpenNext upload (passthrough to wrangler):
+
+```bash
+cd app
+# After build:cf, write secrets file via sync script dry-run planning, or:
+infisical run --env=dev -- opennextjs-cloudflare upload --env preview -- --secrets-file /path/to/secrets.json
+```
+
+Requires in env: `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`, plus allowlisted runtime secrets from Infisical. Values are written to a temp JSON file (mode 600) and passed to `wrangler versions upload --secrets-file` — **never echoed**.
+
+**Not primary:** `wrangler secret bulk` (each bulk creates a separate deployment version; use `--secrets-file` with upload instead).
 
 ## CI integration (v1)
 

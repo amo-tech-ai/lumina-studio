@@ -7,7 +7,7 @@ import {
   diffSecretNames,
   runtimeSecretNamesForWranglerEnv,
 } from "./cloudflare-secret-allowlist.mjs";
-import { parseArgs, redactValues } from "./sync-wrangler-secrets-from-infisical.mjs";
+import { parseArgs, redactValues, writeSecureSecretsFile } from "./sync-wrangler-secrets-from-infisical.mjs";
 
 describe("cloudflare-secret-allowlist", () => {
   it("keeps build-time and runtime allowlists disjoint", () => {
@@ -78,6 +78,7 @@ describe("sync-wrangler-secrets-from-infisical", () => {
       wranglerEnv: "preview",
       dryRun: true,
       help: false,
+      workerPath: null,
     });
   });
 
@@ -105,5 +106,33 @@ describe("sync-wrangler-secrets-from-infisical", () => {
     const raw = 'Uploaded secret GEMINI_API_KEY with value "AIzaSyRealSecretValue"';
     expect(redactValues(raw)).not.toContain("AIzaSyRealSecretValue");
     expect(redactValues(raw)).toContain("[REDACTED]");
+  });
+
+  it("writeSecureSecretsFile creates chmod-600 temp JSON and cleans up", () => {
+    const fakeGemini = "super-secret-gemini-key-12345";
+    const { filePath, cleanup } = writeSecureSecretsFile({ GEMINI_API_KEY: fakeGemini });
+    expect(filePath).toMatch(/secrets\.json$/);
+
+    const { readFileSync, statSync } = require("node:fs");
+    const mode = statSync(filePath).mode & 0o777;
+    expect(mode).toBe(0o600);
+
+    const parsed = JSON.parse(readFileSync(filePath, "utf8"));
+    expect(parsed.GEMINI_API_KEY).toBe(fakeGemini);
+
+    cleanup();
+    expect(() => statSync(filePath)).toThrow();
+  });
+
+  it("sync script header documents secrets-file upload not secret bulk", async () => {
+    const { readFileSync } = await import("node:fs");
+    const { resolve, dirname } = await import("node:path");
+    const { fileURLToPath } = await import("node:url");
+    const scriptPath = resolve(dirname(fileURLToPath(import.meta.url)), "sync-wrangler-secrets-from-infisical.mjs");
+    const src = readFileSync(scriptPath, "utf8");
+    expect(src).toMatch(/versions upload/);
+    expect(src).toMatch(/--secrets-file/);
+    expect(src).toMatch(/runWrangler\(uploadArgs\)/);
+    expect(src).not.toMatch(/runWrangler\(bulkArgs/);
   });
 });
