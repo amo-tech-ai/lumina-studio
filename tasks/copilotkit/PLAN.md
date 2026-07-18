@@ -1,8 +1,19 @@
 # CopilotKit — Domain plan (PRD + roadmap)
 
 **Updated:** 2026-07-18  
-**Authority:** Linear [AI Platform — Agents](https://linear.app/amo100/project/ai-platform-agents-8a30bc8146cd) · progress [`todo.md`](./todo.md)  
+**Authority:** Linear for status · this file for roadmap · [`todo.md`](./todo.md) for evidence progress  
 **Related epic:** [IPI-486 · MASTRA-EPIC — Mastra × Cloudflare Operating System](https://linear.app/amo100/issue/IPI-486) (agents behind the chat)
+
+## Linear (active)
+
+| Surface | Link |
+|---------|------|
+| **Project** | [AI Platform — Agents](https://linear.app/amo100/project/ai-platform-agents-8a30bc8146cd) |
+| **Overview** | [CopilotKit — Overview](https://linear.app/amo100/document/copilotkit-overview-9d67bc20a26a) |
+| **Product Plan and Roadmap** | [CopilotKit — Product Plan and Roadmap](https://linear.app/amo100/document/copilotkit-product-plan-and-roadmap-d84b0741993c) |
+| **Progress Tracker** | [CopilotKit — Progress Tracker](https://linear.app/amo100/document/copilotkit-progress-tracker-b1784d2041fb) |
+
+Active issues: [IPI-702 · COPILOT-RUNTIME-001](https://linear.app/amo100/issue/IPI-702) · [IPI-127 · AIOR-011](https://linear.app/amo100/issue/IPI-127) · [IPI-91 · WEB-015](https://linear.app/amo100/issue/IPI-91) · [IPI-128 · AIOR-012](https://linear.app/amo100/issue/IPI-128)
 
 ## Purpose
 
