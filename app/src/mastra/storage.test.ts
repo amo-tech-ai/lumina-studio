@@ -78,6 +78,9 @@ describe("getMastraStorage (noop mode)", () => {
   it("throws MastraStorageUnavailableError on Vercel prod when DATABASE_URL is unset", async () => {
     vi.stubEnv("NODE_ENV", "production");
     vi.stubEnv("VERCEL", "1");
+    // GitHub Actions / vitest set CI=true; prod Vercel runtime does not — clear it
+    // so requireProductionDatabaseUrl exercises the hard-fail path (IPI-703).
+    vi.stubEnv("CI", "");
     vi.stubEnv("DATABASE_URL", "");
     vi.resetModules();
     const { getMastraStorage: freshGetMastraStorage, MastraStorageUnavailableError } =
@@ -89,6 +92,7 @@ describe("getMastraStorage (noop mode)", () => {
   it("caches MastraStorageUnavailableError so prod init is not re-run each call", async () => {
     vi.stubEnv("NODE_ENV", "production");
     vi.stubEnv("VERCEL", "1");
+    vi.stubEnv("CI", "");
     vi.stubEnv("DATABASE_URL", "");
     vi.resetModules();
     const { getMastraStorage: freshGetMastraStorage, MastraStorageUnavailableError } =
@@ -112,6 +116,7 @@ describe("getMastraStorage (noop mode)", () => {
   it("sets degraded signal when Vercel prod storage is unavailable", async () => {
     vi.stubEnv("NODE_ENV", "production");
     vi.stubEnv("VERCEL", "1");
+    vi.stubEnv("CI", "");
     vi.stubEnv("DATABASE_URL", "");
     vi.resetModules();
     const mod = await import("./storage");
