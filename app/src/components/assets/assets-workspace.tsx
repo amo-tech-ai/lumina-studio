@@ -10,6 +10,7 @@ import { ErrorState } from "@/components/ui/error-state";
 import type { AssetRow } from "@/lib/assets/get-assets";
 
 import { AssetCard } from "./asset-card";
+import { AssetUploadPanel, type UploadBrandOption } from "./asset-upload-panel";
 import styles from "./assets-workspace.module.css";
 
 // Mirrors Assets.v2.image-first.dc.html's single-select filter chips
@@ -70,6 +71,7 @@ function countLabel(assets: AssetRow[]): string {
 
 type Props = {
   assets: AssetRow[];
+  brands?: UploadBrandOption[];
   isAuthenticated: boolean;
   fetchError?: string | null;
 };
@@ -82,7 +84,7 @@ type Props = {
  *  backing data (rights records, usage history, channel-readiness scores)
  *  that doesn't exist in the schema yet. The DC "DNA match" sort control
  *  *is* in scope — it's real (`dna_score`), no fabrication needed. */
-export function AssetsWorkspace({ assets, isAuthenticated, fetchError }: Props) {
+export function AssetsWorkspace({ assets, brands = [], isAuthenticated, fetchError }: Props) {
   // Brand Detail's "Review assets" link and the command-center quick action both
   // deep-link as `/app/assets?brand=<id>` (brand-detail-workspace.tsx, quick-action-chips.tsx)
   // — honor it as the initial filter so multi-brand operators land scoped, not on "All brands".
@@ -147,6 +149,14 @@ export function AssetsWorkspace({ assets, isAuthenticated, fetchError }: Props) 
     );
   }
 
+  const uploadPanel = (
+    <AssetUploadPanel
+      brands={brands}
+      defaultBrandId={brandFilter !== "all" ? brandFilter : undefined}
+      onReady={() => router.refresh()}
+    />
+  );
+
   if (fetchError) {
     return (
       <div className={styles.workspace}>
@@ -172,12 +182,13 @@ export function AssetsWorkspace({ assets, isAuthenticated, fetchError }: Props) 
             <h1 className={styles.title}>Assets</h1>
             <p className={styles.subtitle}>0 assets</p>
           </div>
+          {uploadPanel}
         </header>
         <div className={styles.body}>
           <EmptyState
             icon={<ImageOff size={28} />}
             heading="No assets yet"
-            body="Assets uploaded to a shoot, or linked to a brand, will appear here."
+            body="Upload a brand asset or link media from a shoot to populate the library."
           />
         </div>
       </div>
@@ -191,6 +202,7 @@ export function AssetsWorkspace({ assets, isAuthenticated, fetchError }: Props) 
           <h1 className={styles.title}>Assets</h1>
           <p className={styles.subtitle}>{countLabel(assets)}</p>
         </div>
+        {uploadPanel}
       </header>
 
       <div className={styles.filterRow} role="group" aria-label="Filter assets">

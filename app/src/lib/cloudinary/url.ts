@@ -7,6 +7,9 @@ import { getCldImageUrl } from "next-cloudinary";
 export const CLOUDINARY_CLOUD_NAME =
   process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME ?? "dzqy2ixl0";
 
+/** Public Cloudinary API key — required by Upload Widget for signed uploads (never the secret). */
+export const CLOUDINARY_API_KEY = process.env.NEXT_PUBLIC_CLOUDINARY_API_KEY ?? "";
+
 /** True when `url` is a delivery URL under our configured cloud — i.e. next/image's
  *  remotePatterns will allow it. Cover URLs come from free-form `mood_board_urls`;
  *  one pointing at another host must fall back, since next/image THROWS (not degrades)

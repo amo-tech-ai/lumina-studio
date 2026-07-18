@@ -12,6 +12,10 @@ const { useSearchParamsMock } = vi.hoisted(() => ({
   useSearchParamsMock: vi.fn(() => new URLSearchParams("")),
 }));
 const refresh = vi.fn();
+vi.mock("next-cloudinary", () => ({
+  CldUploadWidget: ({ children }: { children: (args: { open: () => void }) => React.ReactNode }) =>
+    children({ open: vi.fn() }),
+}));
 vi.mock("next/navigation", () => ({
   useSearchParams: useSearchParamsMock,
   useRouter: () => ({ refresh }),
@@ -60,19 +64,19 @@ function asset(overrides: Partial<AssetRow> = {}): AssetRow {
 
 describe("AssetsWorkspace", () => {
   it("shows a sign-in prompt when unauthenticated — no query attempted", () => {
-    render(<AssetsWorkspace assets={[]} isAuthenticated={false} />);
+    render(<AssetsWorkspace assets={[]} brands={[]} isAuthenticated={false} />);
     expect(screen.getByText(/Sign in to view your asset library/)).toBeDefined();
   });
 
   it("shows a retryable error state instead of the grid when the fetch failed", () => {
-    render(<AssetsWorkspace assets={[]} isAuthenticated fetchError="Unable to load assets." />);
+    render(<AssetsWorkspace assets={[]} brands={[]} isAuthenticated fetchError="Unable to load assets." />);
     expect(screen.getByRole("alert")).toBeDefined();
     expect(screen.getByText("Unable to load assets.")).toBeDefined();
   });
 
   it("retry re-runs the server fetch via router.refresh(), not a no-op link", () => {
     refresh.mockClear();
-    render(<AssetsWorkspace assets={[]} isAuthenticated fetchError="Unable to load assets." />);
+    render(<AssetsWorkspace assets={[]} brands={[]} isAuthenticated fetchError="Unable to load assets." />);
     fireEvent.click(screen.getByRole("button", { name: "Try again" }));
     expect(refresh).toHaveBeenCalledTimes(1);
   });
@@ -85,6 +89,7 @@ describe("AssetsWorkspace", () => {
           asset({ id: "a1", brand_id: "b1", brand: { name: "Acme" } }),
           asset({ id: "a2", brand_id: "b2", brand: { name: "Zeta" } }),
         ]}
+        brands={[]}
         isAuthenticated
       />,
     );
@@ -97,6 +102,7 @@ describe("AssetsWorkspace", () => {
           asset({ id: "a1", brand_id: "b1", brand: { name: "Acme" } }),
           asset({ id: "a2", brand_id: "b2", brand: { name: "Zeta" } }),
         ]}
+        brands={[]}
         isAuthenticated
       />,
     );
@@ -105,12 +111,12 @@ describe("AssetsWorkspace", () => {
   });
 
   it("shows an honest empty state when there are no assets", () => {
-    render(<AssetsWorkspace assets={[]} isAuthenticated />);
+    render(<AssetsWorkspace assets={[]} brands={[]} isAuthenticated />);
     expect(screen.getByText("No assets yet")).toBeDefined();
   });
 
   it("renders one card per asset with a real count", () => {
-    render(<AssetsWorkspace assets={[asset({ id: "a1" }), asset({ id: "a2" })]} isAuthenticated />);
+    render(<AssetsWorkspace assets={[asset({ id: "a1" }), asset({ id: "a2" })]} brands={[]} isAuthenticated />);
     expect(screen.getByText("2 assets")).toBeDefined();
     expect(screen.getAllByTestId("asset-card")).toHaveLength(2);
   });
@@ -119,6 +125,7 @@ describe("AssetsWorkspace", () => {
     render(
       <AssetsWorkspace
         assets={[asset({ id: "a1", dna_score: 80 }), asset({ id: "a2", dna_score: 60 })]}
+        brands={[]}
         isAuthenticated
       />,
     );
@@ -126,7 +133,7 @@ describe("AssetsWorkspace", () => {
   });
 
   it("omits the avg DNA match segment entirely when no asset has a score — never shows a fake 0%", () => {
-    render(<AssetsWorkspace assets={[asset({ id: "a1", dna_score: null })]} isAuthenticated />);
+    render(<AssetsWorkspace assets={[asset({ id: "a1", dna_score: null })]} brands={[]} isAuthenticated />);
     expect(screen.getByText("1 asset")).toBeDefined();
     expect(screen.queryByText(/avg DNA match/)).toBeNull();
   });
@@ -139,6 +146,7 @@ describe("AssetsWorkspace", () => {
           asset({ id: "a2", dna_score: 95 }),
           asset({ id: "a3", dna_score: null }),
         ]}
+        brands={[]}
         isAuthenticated
       />,
     );
@@ -152,6 +160,7 @@ describe("AssetsWorkspace", () => {
     render(
       <AssetsWorkspace
         assets={[asset({ id: "a1", asset_type: "image" }), asset({ id: "a2", asset_type: "video" })]}
+        brands={[]}
         isAuthenticated
       />,
     );
@@ -168,6 +177,7 @@ describe("AssetsWorkspace", () => {
     render(
       <AssetsWorkspace
         assets={[asset({ id: "a1", asset_type: "image" }), asset({ id: "a2", asset_type: "video" })]}
+        brands={[]}
         isAuthenticated
       />,
     );
@@ -181,7 +191,7 @@ describe("AssetsWorkspace", () => {
   });
 
   it("shows a no-match state instead of a fake grid when a filter matches nothing, with a working clear button", () => {
-    render(<AssetsWorkspace assets={[asset({ asset_type: "image" })]} isAuthenticated />);
+    render(<AssetsWorkspace assets={[asset({ asset_type: "image" })]} brands={[]} isAuthenticated />);
     fireEvent.click(screen.getByRole("button", { name: "Video" }));
     expect(screen.getByTestId("assets-no-match")).toBeDefined();
     expect(screen.queryByTestId("assets-grid")).toBeNull();
@@ -198,6 +208,7 @@ describe("AssetsWorkspace", () => {
           asset({ id: "a2", dna_score: 40 }),
           asset({ id: "a3", dna_score: null }),
         ]}
+        brands={[]}
         isAuthenticated
       />,
     );
@@ -206,7 +217,7 @@ describe("AssetsWorkspace", () => {
   });
 
   it("only renders the brand filter when a real brand is present on at least one asset", () => {
-    render(<AssetsWorkspace assets={[asset({ brand_id: null, brand: null })]} isAuthenticated />);
+    render(<AssetsWorkspace assets={[asset({ brand_id: null, brand: null })]} brands={[]} isAuthenticated />);
     expect(screen.queryByText("Filter by brand")).toBeNull();
   });
 
@@ -218,6 +229,7 @@ describe("AssetsWorkspace", () => {
           asset({ id: "a1", brand_id: "b1", brand: { name: "Acme" } }),
           asset({ id: "a2", brand_id: "b2", brand: { name: "Zeta" } }),
         ]}
+        brands={[]}
         isAuthenticated
       />,
     );
@@ -232,6 +244,7 @@ describe("AssetsWorkspace", () => {
           asset({ id: "a1", brand_id: "b1", brand: { name: "Acme" } }),
           asset({ id: "a2", brand_id: "b2", brand: { name: "Zeta" } }),
         ]}
+        brands={[]}
         isAuthenticated
       />,
     );
