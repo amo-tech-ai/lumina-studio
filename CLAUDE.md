@@ -4,6 +4,17 @@
 
 **The final application is what matters.** The goal is to be innovative — nothing here is set in stone. We are constantly experimenting, improving, and raising the quality of the user experience throughout the development process. Treat every doc, diagram, schema, and component as a draft that can be made better, not a fixed contract. When a change serves a better end-product UX, propose it — even if it means rethinking something already built. Ship, learn, refine.
 
+## Communication style — explain with real iPix examples, not abstractions
+
+When explaining a concept, decision, tradeoff, or finding, ground it in something concrete from this repo — a real screen, ticket, table, or file — instead of a generic description. The reader should be able to go look at the actual thing, not imagine a hypothetical one.
+
+- ❌ "A reusable filter component" → ✅ "the Owner filter button on the Pipeline board (`pipeline-workspace.tsx:128`) — already built, just disabled"
+- ❌ "A foreign key without proper scoping" → ✅ "like `crm_deals.company_id` — a plain FK with no org check, which is exactly how a mismatched cross-org company slipped through in PR #337"
+- ❌ "Improve error handling" → ✅ "stop string-matching the server's exception text in `convert-deal.ts` — a migration wording change silently turned a 403 into a 500"
+- ❌ "A screen that hasn't been built yet" → ✅ "the Planner Hub (`/app/planner`, IPI-526) — designed, zero code, 404 today"
+
+This applies to explanations, audit findings, and status summaries alike — not just code comments. A real example a teammate can click into or grep for is worth more than a correct-but-abstract sentence.
+
 ## UX principles (apply to every user-facing change)
 
 Shift from **Create → Check → Fix** to **Guide → Prevent → Confirm** — stop mistakes before they happen, don't just help users recover.
