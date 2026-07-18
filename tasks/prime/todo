@@ -1,0 +1,202 @@
+# Prime todo — Supabase + Edge + CF-EDGE (ordered)
+
+**SSOT:** [`supabase-plan.md`](./supabase-plan.md) · Edge efficiency [`../../supabase/docs/plan/j18-edge-plan.md`](../../supabase/docs/plan/j18-edge-plan.md) · CF tasks [`../cloudflare/Tasks/060-CF-EDGE-AI-epic.md`](../cloudflare/Tasks/060-CF-EDGE-AI-epic.md) · agent [`../cloudflare/agent/5-cf-edge-plan.md`](../cloudflare/agent/5-cf-edge-plan.md)  
+**Updated:** 2026-07-18 (audit correction) · next **IPI-692** · IPI-686/689/690/703 Done  
+**Human final:** **IPI-690** stays **Done (no-rotate)** — audit “rotate Gemini now” **rejected**  
+**Supabase setup:** ~**foundation done** · Edge harden ~**done** · remaining polish **692 → 693** · later sec **680/684** · CF-EDGE **697/699** separate · pgTAP **704** parked
+**Linear view:** [Supabase](https://linear.app/amo100/view/supabase-2d1d1d63cb9c)  
+**Rule:** one concern per PR · never `--prune` · never lose `tasks/**` (`.cursor/rules/tasks-docs-preserve.mdc`)  
+**Naming:** always full **IPI-NNN · SPEC — Title** (never bare IDs)
+
+Legend: 🟢 Done · 🔵 In Progress · 🟡 Ops/partial · ⚪ Todo · ⏸ Parked · 🔴 Do not mis-file
+
+---
+
+## Merge wave — CLOSED (2026-07-18)
+
+| PR | Task | Merge | Linear |
+|----|------|-------|--------|
+| [#452](https://github.com/amo-tech-ai/lumina-studio/pull/452) | **IPI-685** migration `capture_lead_write` | `4dbcb320` | 🟢 Done |
+| [#450](https://github.com/amo-tech-ai/lumina-studio/pull/450) | **IPI-685 · SB-EDGE-002** capture-lead harden | `00ee940d` | 🟢 Done |
+| [#449](https://github.com/amo-tech-ai/lumina-studio/pull/449) | **IPI-688 · SB-EDGE-005** edge-test | `f313a787` | 🟢 Done |
+
+```text
+Ops after merge (if not already):
+  supabase functions deploy capture-lead --linked
+  supabase functions deploy edge-test --linked   # if handler changed
+  npm run supabase:verify-edge
+```
+
+---
+
+## Status note — 2026-07-18 (audit correction pass)
+
+- **IPI-690 · SB-EDGE-007**: 🟢 **Done (no-rotate)** — **human FINAL** 2026-07-18. Audit “rotate Gemini now” **rejected**. Keys work; exposure risk accepted; inventory closed without revoke. Do **not** reopen/Urgent for rotate. Only Edge Gemini *deletion* (if ever) waits on **IPI-699**.
+- **IPI-689 · SB-EDGE-006** [#463](https://github.com/amo-tech-ai/lumina-studio/pull/463): 🟢 **Done** — squash-merged (`d547be05`). Stale `blockedBy` **IPI-667** cleared in Linear.
+- **IPI-686 · SB-EDGE-003** [#459](https://github.com/amo-tech-ai/lumina-studio/pull/459): 🟢 **Done** (`2dcc7324`).
+- **IPI-703 · FIX** [#460](https://github.com/amo-tech-ai/lumina-studio/pull/460): 🟢 **Done** (`0d8c5c8d`).
+- **Next code:** **IPI-692 · SB-EDGE-008** — atomic `webhookId` dedup (High · Todo). Start only when asked.
+
+## Plain English — execution order (audit-corrected)
+
+| Step | Full task name(s) | What / why |
+|------|-------------------|------------|
+| **0 · Done** | **IPI-690 · SB-EDGE-007** | 🟢 **no-rotate** [human final] — keep current keys. |
+| **1 · Done** | **IPI-689 · SB-EDGE-006** | 🟢 [#463](https://github.com/amo-tech-ai/lumina-studio/pull/463) (`d547be05`) inventory CI. |
+| **2 · NEXT** | **IPI-692 · SB-EDGE-008** | Atomic `webhookId` dedup / resume once. |
+| **3 · Parallel** | **IPI-697 · CF-EDGE-003** ∥ **IPI-693 · SB-EDGE-009** | CF REST+BI ∥ crawl quotas (after product limits defined). |
+| **4 · After 697** | **IPI-699 · CF-EDGE-005** | Canary BI first (not DNA); do not wait for 698. |
+| **5 · Later** | **IPI-698 · CF-EDGE-004** | DNA after BI canary. |
+| **6 · Park** | **PLT-010 / disposable DB → IPI-704** | pgTAP — wait squash **or** dedicated disposable test project (never prod). |
+
+---
+
+## Suggested next steps (do this order)
+
+```text
+0. IPI-690 — Done (no-rotate) [human final]
+   → audit “rotate Gemini now” REJECTED · no revoke · no Urgent reopen
+   → Edge Gemini deletion only after IPI-699 if ever
+
+1. IPI-689 — Done #463 (d547be05)
+   → inventory CI shipped · stale blockedBy IPI-667 cleared
+
+2. NEXT: IPI-692 — atomic webhookId dedup
+   → unique webhookId · processed_webhooks claim · resume once
+   → do not rely on job_status read-then-write alone
+
+3. Parallel: IPI-697 CF REST+BI ∥ IPI-693 quotas (after product limits defined)
+   → 697: no remote deploy; safeguards in Linear comment
+   → 693: org/day · brand/day · concurrent · pages · crawl_quota_exceeded + 429
+
+4. IPI-699 canary after 697
+   → Brand Intelligence first · not DNA · do not wait for IPI-698
+
+5. IPI-698 DNA later
+
+6. PLT-010 / disposable DB → IPI-704 pgTAP
+   → parking OK · IPI2-29 old-team ownership gap · squash caveats apply
+```
+
+---
+
+## Recommended wave (mermaid)
+
+```mermaid
+flowchart TD
+  G690["IPI-690 · SB-EDGE-007 Done no-rotate"]
+  M667["IPI-667 · SB-EDGE-001 #443 Done"]
+  M669["IPI-669 · SB-CI-002 #441 Done"]
+  H685["IPI-685 · SB-EDGE-002 capture-lead"]
+  R688["IPI-688 · SB-EDGE-005 edge-test"]
+  A695["IPI-695 · CF-EDGE-001 ADR addendum"]
+  C697["IPI-697 · REST client + BI code"]
+  S699["IPI-699 · CF-EDGE-005 canary ops"]
+  T686["IPI-686 · SB-EDGE-003 crawl tests"]
+  T692["IPI-692 · SB-EDGE-008 webhook"]
+  T693["IPI-693 · SB-EDGE-009 quotas"]
+  M669 --> T686
+  T686 --> T692
+  T686 --> T693
+  A695 -.->|parallel not blockedBy| C697
+  C697 --> S699
+  S699 -.->|safer drop Edge Gemini| G690
+  H685 -.->|parallel| R688
+  M667 --> I689["IPI-689 · SB-EDGE-006 inventory CI"]
+```
+
+---
+
+## A · Supabase wave (closed)
+
+| ● | Linear | PR |
+|---|--------|-----|
+| 🟢 | [IPI-679 · SB-SEC-001 — DEFINER revoke](https://linear.app/amo100/issue/IPI-679) | **#445** |
+| 🟢 | [IPI-667 · SB-EDGE-001 — Quarantine legacy FashionOS Edge Functions](https://linear.app/amo100/issue/IPI-667) | **#443** |
+| 🟢 | [IPI-669 · SB-CI-002 — Run Edge Deno unit tests in CI](https://linear.app/amo100/issue/IPI-669) | **#441** |
+| 🟢 | [IPI-678 · SB-OPS-001 — Document session-mode DATABASE_URL SSOT](https://linear.app/amo100/issue/IPI-678) | **#444** |
+| 🟢 | [IPI-681 · SB-SEC-003 — Prove anonymous Data API and GraphQL row access](https://linear.app/amo100/issue/IPI-681) | **#442** |
+| 🟢 | [IPI-691 · SB-SEC-001b — Use real user JWT for DEFINER RPC probes](https://linear.app/amo100/issue/IPI-691) | **#446** |
+
+**Live Edge (keep):** `health` · `edge-test` · `brand-intelligence` · `audit-asset-dna` · `capture-lead` · `start-brand-crawl` · `firecrawl-webhook`  
+**Deleted (don’t restore):** `generate-event-draft` · `generate-media` · `resolve-venue` · `generate-image-preview` · `generate-image-final`
+
+---
+
+## B · Edge harden + tests + Gemini ops
+
+| ● | Linear | Efficient path |
+|---|--------|----------------|
+| 🟢 | [IPI-690 · SB-EDGE-007 — Assess GEMINI_API_KEY exposure from generate-media and rotate if needed](https://linear.app/amo100/issue/IPI-690) | **Done (no-rotate)** · inventory ✅ · keep current keys · Edge drop after **IPI-699** if canary says so |
+| 🟢 | [IPI-685 · SB-EDGE-002 — Harden capture-lead](https://linear.app/amo100/issue/IPI-685) | **#452** + **#450** merged · deploy `capture-lead` if needed |
+| 🟢 | [IPI-688 · SB-EDGE-005 — Restrict edge-test](https://linear.app/amo100/issue/IPI-688) | **#449** merged · verify-edge no prod log spam |
+| 🟢 | [IPI-686 · SB-EDGE-003 — Crawl Deno tests](https://linear.app/amo100/issue/IPI-686) | **Done** · [PR #459](https://github.com/amo-tech-ai/lumina-studio/pull/459) merged `2dcc7324` |
+| 🟢 | [IPI-689 · SB-EDGE-006 — Inventory CI](https://linear.app/amo100/issue/IPI-689) | Done · [#463](https://github.com/amo-tech-ai/lumina-studio/pull/463) `d547be05` |
+| ⚪ | [IPI-692 · SB-EDGE-008 — Webhook resume idempotent](https://linear.app/amo100/issue/IPI-692) | **Todo · High** · **NEXT** · atomic `webhookId` / `processed_webhooks` claim |
+| ⚪ | [IPI-693 · SB-EDGE-009 — Crawl quotas](https://linear.app/amo100/issue/IPI-693) | After product limits · ∥ **IPI-697** OK |
+| 🔴 | ~~IPI-687~~ | Canceled — merged into **IPI-685 · SB-EDGE-002** |
+
+---
+
+## C · CF-EDGE-AI — Edge LLM → Cloudflare
+
+**Epic:** [IPI-694 · CF-EDGE-AI — Route Supabase Edge LLM Through Cloudflare AI Gateway](https://linear.app/amo100/issue/IPI-694) · parent [IPI-487 · CLOUDFLARE-EPIC](https://linear.app/amo100/issue/IPI-487)  
+**Truth:** Edge stays on Deno; LLM = Cloudflare **AI Gateway REST** (`/ai/v1/chat/completions` + `cf-aig-gateway-id`) → Workers AI. **Not** custom `services/cloudflare-worker/` · not `env.AI`. Verdict: [`notes-edge-8.md`](./notes-edge-8.md).
+
+| ● | Linear | Spec | Ship as |
+|---|--------|------|---------|
+| 🟢 | [IPI-695 · CF-EDGE-001 — ADR addendum](https://linear.app/amo100/issue/IPI-695) | Amend `000-Architecture-Decision.md` | **Done** (#448) |
+| ⚪ | [IPI-697 · CF-EDGE-003 — REST client + BI](https://linear.app/amo100/issue/IPI-697) | Client + allowlist + BI | **One code PR** (absorbs ~~696~~) · no remote deploy |
+| ⚪ | [IPI-699 · CF-EDGE-005 — Secrets + canary](https://linear.app/amo100/issue/IPI-699) | Secrets + 5-step canary | **Ops** after 697 · Remote Runtime / Canary Verified |
+| ⏸ | [IPI-698 · CF-EDGE-004 — DNA eval](https://linear.app/amo100/issue/IPI-698) | 5–10 asset eval set | After **IPI-699** / don’t block |
+| ⏸ | [IPI-455 · CF-EDGE-B — Full Worker port](https://linear.app/amo100/issue/IPI-455) | Phase B | After **IPI-699** only |
+| ❌ | ~~IPI-696~~ · ~~IPI-700~~ | Merged / N/A under direct REST | Canceled 2026-07-18 |
+
+Task docs: `tasks/cloudflare/Tasks/060`–`065` (may still say Worker — trust Linear + notes-edge-8) · prompts: `tasks/cloudflare/agent/5-cf-edge-plan.md`
+
+---
+
+## D · Later track
+
+| ● | Linear | Notes |
+|---|--------|-------|
+| ⚪ | [IPI-680 · SB-SEC-002 — GraphQL anon](https://linear.app/amo100/issue/IPI-680) | After **IPI-681 · SB-SEC-003** Done |
+| ⚪ | [IPI-683 · SB-SEC-002b — Authenticated GraphQL](https://linear.app/amo100/issue/IPI-683) | After **IPI-680** |
+| ⚪ | [IPI-684 · SB-SEC-001b — Default privileges](https://linear.app/amo100/issue/IPI-684) | After **IPI-679 · SB-SEC-001** Done |
+| ⚪ | [IPI-682 · SB-PERF-001 — Advisor from workload](https://linear.app/amo100/issue/IPI-682) | Evidence-driven |
+| ⚪ | [IPI-650 · PLN-HUB-002 — Planner Hub New Plan UI](https://linear.app/amo100/issue/IPI-650) | Product |
+| ⚪ | [IPI-619](https://linear.app/amo100/issue/IPI-619) / [IPI-623](https://linear.app/amo100/issue/IPI-623) | CF Hyperdrive / Mastra thread — use full titles when starting |
+| ⏸ | [IPI-704 · SB-TEST-002 — pgTAP suite and supabase test db in CI](https://linear.app/amo100/issue/IPI-704) | Parked · unblock via **PLT-010** **or** disposable test project (never prod). **IPI2-29** is on old team — ownership/replacement needed. See [`testing.md`](./testing.md). |
+
+---
+
+## Done (do not reopen)
+
+| ● | Task |
+|---|------|
+| 🟢 | IPI-664 · 665 · 673 · 677 · 668 · 653 · 670 · 662 · **679** · **667** · **669** · **678** · **681** · **691** · **685** · **688** · **695** · **690** (no-rotate) · **686** · **703** |
+
+---
+
+## Checklist
+
+```text
+[x] Hygiene + CI + planner create
+[x] IPI-679 · SB-SEC-001 — DEFINER revoke (#445)
+[x] Close wave: IPI-667 #443 · IPI-669 #441 · IPI-678 #444 · IPI-681 #442 · IPI-691 #446
+[x] #452 · IPI-685 migration — 4dbcb320
+[x] #450 · IPI-685 capture-lead — 00ee940d · Linear Done
+[x] #449 · IPI-688 edge-test — f313a787 · Linear Done
+[x] IPI-695 · CF-EDGE-001 ADR — Done
+[x] IPI-690 · SB-EDGE-007 — Done (no-rotate) — keep existing GEMINI keys; no revoke
+[ ] OPS: deploy capture-lead + edge-test if remote lagging
+[x] IPI-686 · SB-EDGE-003 — crawl Deno tests — #459 merged `2dcc7324` · Linear Done
+[x] IPI-689 · SB-EDGE-006 — inventory CI — Done #463 (`d547be05`)
+[ ] IPI-692 · SB-EDGE-008 — atomic webhookId dedup ← NEXT (start only when asked)
+[ ] IPI-697 · CF-EDGE-003 — REST client + BI (∥ 692/693; start only when asked)
+[ ] IPI-693 · SB-EDGE-009 — crawl quotas (after product limits)
+[ ] IPI-699 · CF-EDGE-005 — canary BI after 697 (not DNA; leave open)
+[x] Side: IPI-703 · FIX — app-build Mastra/CopilotKit hotfix — merged #460 (`0d8c5c8d`)
+[ ] Later: IPI-680 · IPI-684 · IPI-682 · IPI-650 · CF IPI-619/623
+[ ] Park: IPI-698 DNA · IPI-455 Phase B · IPI-704 pgTAP (PLT-010 or disposable DB)
+```
