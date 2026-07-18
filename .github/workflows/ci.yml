@@ -161,8 +161,15 @@ jobs:
             app/package-lock.json
 
       - name: Verify QA credentials are configured
+        # Read the secret through env, not interpolated directly into the
+        # shell script via ${{ }} — a value containing $, quotes, or other
+        # shell metacharacters would otherwise be re-expanded/reparsed by
+        # the shell before this check runs (e.g. a password starting with
+        # "$" could look empty), giving a false "missing" failure or worse.
+        env:
+          QA_PASSWORD: ${{ secrets.QA_PASSWORD }}
         run: |
-          if [ -z "${{ secrets.QA_PASSWORD }}" ]; then
+          if [ -z "$QA_PASSWORD" ]; then
             echo "::error::QA_PASSWORD secret is not set — failing rather than letting this job silently skip the real login."
             exit 1
           fi
