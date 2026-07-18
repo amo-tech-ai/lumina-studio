@@ -172,12 +172,15 @@ jobs:
         run: npx playwright install --with-deps chromium
 
       - name: Shoot Wizard e2e (chromium-desktop)
+        # Least privilege: QA_PASSWORD + the public anon key/URL are all a
+        # real client-side login needs. Every AI/workflow/commit/brand-read
+        # call this spec makes is intercepted via page.route(), so the app
+        # never exercises a server-side DB path — no service-role key or
+        # direct DB connection string belongs in this job.
         env:
           QA_PASSWORD: ${{ secrets.QA_PASSWORD }}
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
           NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
-          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
         run: npx playwright test e2e/08-shoot-wizard.spec.ts --project=chromium-desktop
 
       - name: Upload failure evidence (screenshots + traces)
