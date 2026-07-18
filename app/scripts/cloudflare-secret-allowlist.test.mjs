@@ -6,6 +6,8 @@ import { fileURLToPath } from "node:url";
 import {
   BUILD_TIME_SECRET_NAMES,
   RUNTIME_SECRET_NAMES,
+  WRANGLER_VAR_NAMES,
+  RUNTIME_REQUIRED_SECRET_NAMES,
   assertInfisicalWranglerEnvPair,
   assertNoForbiddenSecrets,
   collectRuntimeSecretsFromEnv,
@@ -21,12 +23,31 @@ import {
 } from "./sync-wrangler-secrets-from-infisical.mjs";
 
 describe("cloudflare-secret-allowlist", () => {
-  it("keeps build-time and runtime allowlists disjoint", () => {
+  it("keeps build-time, runtime, and wrangler var allowlists disjoint", () => {
     const runtimeSet = new Set(RUNTIME_SECRET_NAMES);
+    const varSet = new Set(WRANGLER_VAR_NAMES);
     for (const name of BUILD_TIME_SECRET_NAMES) {
       expect(runtimeSet.has(name)).toBe(false);
+      expect(varSet.has(name)).toBe(false);
       expect(name.startsWith("NEXT_PUBLIC_")).toBe(true);
     }
+    for (const name of WRANGLER_VAR_NAMES) {
+      expect(runtimeSet.has(name)).toBe(false);
+    }
+  });
+
+  it("rejects wrangler var names in runtime sync", () => {
+    expect(() => assertNoForbiddenSecrets(["INTELLIGENCE_API_URL"], "runtime")).toThrow(
+      /wrangler\.jsonc vars/,
+    );
+  });
+
+  it("RUNTIME_REQUIRED_SECRET_NAMES matches wrangler secrets.required trio", () => {
+    expect(RUNTIME_REQUIRED_SECRET_NAMES).toEqual([
+      "GEMINI_API_KEY",
+      "SUPABASE_SERVICE_ROLE_KEY",
+      "COPILOTKIT_LICENSE_TOKEN",
+    ]);
   });
 
   it("rejects NEXT_PUBLIC_* in runtime sync", () => {
@@ -206,8 +227,12 @@ describe("sync-wrangler-secrets-from-infisical", () => {
   it("wrangler.jsonc declares secrets.required per named env", () => {
     const wranglerPath = resolve(dirname(fileURLToPath(import.meta.url)), "../wrangler.jsonc");
     const wrangler = readFileSync(wranglerPath, "utf8");
-    expect(wrangler).toMatch(/"preview"[\s\S]*"secrets"[\s\S]*"required"[\s\S]*GEMINI_API_KEY/);
-    expect(wrangler).toMatch(/"production"[\s\S]*"secrets"[\s\S]*"required"[\s\S]*GEMINI_API_KEY/);
+    for (const key of RUNTIME_REQUIRED_SECRET_NAMES) {
+      expect(wrangler).toMatch(new RegExp(`"preview"[\\s\\S]*"required"[\\s\\S]*${key}`));
+      expect(wrangler).toMatch(new RegExp(`"production"[\\s\\S]*"required"[\\s\\S]*${key}`));
+    }
+    expect(wrangler).toMatch(/"preview"[\s\S]*INTELLIGENCE_API_URL/);
+    expect(wrangler).not.toMatch(/"DATABASE_URL"/);
   });
 
   it("sync script header documents secrets-file upload not secret bulk", async () => {

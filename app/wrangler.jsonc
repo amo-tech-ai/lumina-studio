@@ -23,9 +23,15 @@
     "enabled": true
   },
   // IPI-468: deployed Worker must fail closed; CopilotKit thread gating reads this flag at runtime.
+  // CF-SEC-010: non-secret URLs/ids — vars are plain text (not encrypted). Override per env in dashboard or deploy --var.
   "vars": {
     "MASTRA_STORAGE_MODE": "noop",
-    "OPERATOR_AUTH_ENABLED": "true"
+    "OPERATOR_AUTH_ENABLED": "true",
+    "INTELLIGENCE_API_URL": "",
+    "INTELLIGENCE_GATEWAY_WS_URL": "",
+    "AI_GATEWAY_URL": "http://localhost:8787",
+    "CLOUDINARY_CLOUD_NAME": "dzqy2ixl0",
+    "CLOUDINARY_API_KEY": ""
   },
   // Wrangler-only aliases (do not affect Node next-dev / Vitest).
   // IPI-490 · CF-MIG-210: stub packages proven in dry-run Worker graph but unused
@@ -64,7 +70,12 @@
       "name": "ipix-operator-preview",
       "vars": {
         "MASTRA_STORAGE_MODE": "noop",
-        "OPERATOR_AUTH_ENABLED": "true"
+        "OPERATOR_AUTH_ENABLED": "true",
+        "INTELLIGENCE_API_URL": "http://localhost:4201",
+        "INTELLIGENCE_GATEWAY_WS_URL": "ws://localhost:4401",
+        "AI_GATEWAY_URL": "http://localhost:8787",
+        "CLOUDINARY_CLOUD_NAME": "dzqy2ixl0",
+        "CLOUDINARY_API_KEY": ""
       },
       "images": {
         "binding": "IMAGES"
@@ -76,14 +87,19 @@
         }
       ],
       "secrets": {
-        "required": ["GEMINI_API_KEY"]
+        "required": ["GEMINI_API_KEY", "SUPABASE_SERVICE_ROLE_KEY", "COPILOTKIT_LICENSE_TOKEN"]
       }
     },
     "production": {
       "name": "ipix-operator",
       "vars": {
         "MASTRA_STORAGE_MODE": "noop",
-        "OPERATOR_AUTH_ENABLED": "true"
+        "OPERATOR_AUTH_ENABLED": "true",
+        "INTELLIGENCE_API_URL": "",
+        "INTELLIGENCE_GATEWAY_WS_URL": "",
+        "AI_GATEWAY_URL": "",
+        "CLOUDINARY_CLOUD_NAME": "dzqy2ixl0",
+        "CLOUDINARY_API_KEY": ""
       },
       "images": {
         "binding": "IMAGES"
@@ -95,7 +111,7 @@
         }
       ],
       "secrets": {
-        "required": ["GEMINI_API_KEY"]
+        "required": ["GEMINI_API_KEY", "SUPABASE_SERVICE_ROLE_KEY", "COPILOTKIT_LICENSE_TOKEN"]
       }
     }
   }
