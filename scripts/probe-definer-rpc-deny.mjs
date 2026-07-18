@@ -3,7 +3,8 @@
  * IPI-679 · SB-SEC-001 — negative HTTP probes for residual DEFINER RPCs.
  *
  * Expects PostgREST to deny anon (and optional authenticated) EXECUTE:
- *   POST /rest/v1/rpc/<name> → 401/403 (not 200).
+ *   POST /rest/v1/rpc/<name> → 401/403/404 (not 200).
+ *   404 = function not exposed to the role (common PostgREST hide).
  *
  * Usage:
  *   infisical run --env=dev -- node scripts/probe-definer-rpc-deny.mjs
@@ -44,12 +45,13 @@ async function probe(role, headers) {
       },
       body: JSON.stringify(rpc.body),
     });
-    const okDeny = res.status === 401 || res.status === 403;
+    const okDeny =
+      res.status === 401 || res.status === 403 || res.status === 404;
     const line = `${role} POST rpc/${rpc.name} → ${res.status}`;
     if (okDeny) {
       console.log(`ok: ${line}`);
     } else {
-      console.error(`FAIL: ${line} (expected 401/403)`);
+      console.error(`FAIL: ${line} (expected 401/403/404)`);
       failures.push(line);
     }
   }
