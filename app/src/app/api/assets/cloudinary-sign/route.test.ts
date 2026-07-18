@@ -101,7 +101,7 @@ describe("POST /api/assets/cloudinary-sign", () => {
     expect(data.signature.length).toBeGreaterThan(0);
   });
 
-  it("accepts object context from CldUploadWidget and rebuilds canonical params", async () => {
+  it("accepts object context from CldUploadWidget and signs sanitized widget params", async () => {
     const { POST } = await importRoute();
     const res = await POST(
       new Request("http://localhost/api/assets/cloudinary-sign", {
@@ -111,9 +111,9 @@ describe("POST /api/assets/cloudinary-sign", () => {
           paramsToSign: {
             timestamp: 1_784_000_000,
             upload_preset: "ipix-signed-upload",
-            type: "authenticated",
             context: { brand_id: VALID_BRAND_ID },
-            folder: "evil/override/path",
+            folder: `ipix/brands/${VALID_BRAND_ID}/products`,
+            resource_type: "image",
             public_id: "evil-id",
           },
         }),
@@ -122,6 +122,23 @@ describe("POST /api/assets/cloudinary-sign", () => {
     expect(res.status).toBe(200);
     const data = await res.json();
     expect(typeof data.signature).toBe("string");
+
+    const { v2: cloudinary } = await import("cloudinary");
+    const { sanitizeWidgetParamsToSign } = await import("@/lib/cloudinary/sign-upload");
+    const sanitized = sanitizeWidgetParamsToSign(
+      {
+        timestamp: 1_784_000_000,
+        upload_preset: "ipix-signed-upload",
+        context: { brand_id: VALID_BRAND_ID },
+        folder: `ipix/brands/${VALID_BRAND_ID}/products`,
+        resource_type: "image",
+        public_id: "evil-id",
+      },
+      VALID_BRAND_ID,
+    );
+    expect(data.signature).toBe(
+      cloudinary.utils.api_sign_request(sanitized, "test-api-secret"),
+    );
   });
 
   it("returns 403 when brand is not accessible", async () => {

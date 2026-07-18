@@ -6,9 +6,8 @@ import {
   parseBrandIdFromCloudinaryContext,
 } from "@/lib/assets/brand-access";
 import {
-  assetFolderFor,
-  buildUploadParamsToSign,
   isAllowedResourceType,
+  sanitizeWidgetParamsToSign,
   signCloudinaryParams,
   validateParamsToSign,
 } from "@/lib/cloudinary/sign-upload";
@@ -82,15 +81,10 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Invalid resource_type" }, { status: 400 });
   }
 
-  // Rebuild canonical params server-side — never sign arbitrary client-supplied fields.
-  const canonicalParams = buildUploadParamsToSign({
-    brandId,
-    resourceType,
-    timestamp,
-    folder: assetFolderFor(brandId),
-  });
+  // Sign sanitized widget params — must match what CldUploadWidget uploads (not a rebuilt superset).
+  const paramsForSignature = sanitizeWidgetParamsToSign(params, brandId);
 
-  const signature = signCloudinaryParams(canonicalParams, apiSecret);
+  const signature = signCloudinaryParams(paramsForSignature, apiSecret);
 
   return NextResponse.json({ signature });
 }

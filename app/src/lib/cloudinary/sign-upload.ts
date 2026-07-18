@@ -69,7 +69,75 @@ export function isAllowedResourceType(value: string): boolean {
   return RESOURCE_TYPES.has(value);
 }
 
-/** Guard widget params before signing — preset and brand context are required client-side. */
+/** Keys the Upload Widget may include in paramsToSign (Cloudinary signs only these). */
+const WIDGET_SIGN_ALLOWLIST = new Set([
+  "timestamp",
+  "upload_preset",
+  "folder",
+  "context",
+  "resource_type",
+  "source",
+  "format",
+]);
+
+/** Never sign client-supplied overrides for these — server/preset owns them. */
+const WIDGET_SIGN_BLOCKLIST = new Set([
+  "public_id",
+  "overwrite",
+  "invalidate",
+  "api_key",
+  "api_secret",
+  "notification_url",
+  "asset_folder",
+  "allowed_formats",
+  "unique_filename",
+  "use_filename",
+  "eager",
+  "type",
+]);
+
+function contextStringForSigning(context: unknown, brandId: string): string {
+  const parsed = parseBrandIdFromCloudinaryContext(context);
+  return `brand_id=${parsed ?? brandId}`;
+}
+
+/**
+ * Sanitize widget paramsToSign then sign exactly those fields — Cloudinary validates
+ * the signature against the params the widget uploads, not a server-rebuilt superset.
+ */
+export function sanitizeWidgetParamsToSign(
+  clientParams: Record<string, unknown>,
+  brandId: string,
+): Record<string, string | number> {
+  const out: Record<string, string | number> = {};
+
+  for (const [key, value] of Object.entries(clientParams)) {
+    if (WIDGET_SIGN_BLOCKLIST.has(key) || !WIDGET_SIGN_ALLOWLIST.has(key)) continue;
+    if (value === undefined || value === null) continue;
+    if (key === "context") continue;
+    if (typeof value === "string" || typeof value === "number") {
+      out[key] = value;
+    } else if (typeof value === "boolean") {
+      out[key] = value ? "true" : "false";
+    }
+  }
+
+  const timestamp =
+    typeof clientParams.timestamp === "number"
+      ? clientParams.timestamp
+      : Number(clientParams.timestamp);
+  if (Number.isFinite(timestamp) && timestamp > 0) {
+    out.timestamp = timestamp;
+  }
+
+  out.upload_preset = CLOUDINARY_UPLOAD_PRESET;
+  out.folder = assetFolderFor(brandId);
+  out.context = contextStringForSigning(clientParams.context, brandId);
+
+  return out;
+}
+
+/** Guard widget/server params before signing — preset and brand context are required client-side. */
 export function validateParamsToSign(params: Record<string, unknown>): string | null {
   if (params.upload_preset !== CLOUDINARY_UPLOAD_PRESET) {
     return "upload_preset must be ipix-signed-upload";
