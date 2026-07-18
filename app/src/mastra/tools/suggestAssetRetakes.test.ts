@@ -177,4 +177,107 @@ describe("suggestAssetRetakes tool", () => {
     expect(result!.results[0].confidence).toBe(40);
     assertNoWrites();
   });
+
+  it("never reports 'no retake needed' for a malformed non-empty dna_pillars payload (bot-review finding)", async () => {
+    // Mirrors parseDnaPillars({ foo: "bar" }) in getAssetDnaEvidence.ts: a
+    // non-empty object with no recognized pillar keys parses to an all-null
+    // pillars object with pillarsMalformed: true. Every pillar's severity is
+    // "none" (score === null), so actionable.length is 0 — without the fix
+    // this would fall through to the misleading "All scored pillars meet
+    // brand standard — no retake needed" message.
+    const malformedAllNull: AssetDnaEvidence = {
+      assetId: "asset-5",
+      brandId: "brand-1",
+      found: true,
+      dnaScore: 40, // separately low — makes the false "pass" message especially misleading
+      dnaStatus: "review",
+      pillars: {
+        brandConsistency: null,
+        compositionQuality: null,
+        channelReadiness: null,
+        productClarity: null,
+        rationale: null,
+      },
+      pillarsMalformed: true,
+      error: null,
+    };
+
+    const result = await suggestAssetRetakes.execute!({ evidence: [malformedAllNull] }, {} as never);
+    const { why, confidence } = result!.results[0];
+
+    expect(why).not.toMatch(/no retake needed/i);
+    expect(why).not.toMatch(/meet brand standard/i);
+    expect(why).toMatch(/could not be parsed/i);
+    expect(confidence).toBe(40);
+    assertNoWrites();
+  });
+
+  it("distinguishes 'no pillars scored yet' from 'all pillars pass' when pillars are well-formed but unset", async () => {
+    const wellFormedButUnset: AssetDnaEvidence = {
+      assetId: "asset-6",
+      brandId: "brand-1",
+      found: true,
+      dnaScore: null,
+      dnaStatus: null,
+      pillars: {
+        brandConsistency: null,
+        compositionQuality: null,
+        channelReadiness: null,
+        productClarity: null,
+        rationale: null,
+      },
+      pillarsMalformed: false,
+      error: null,
+    };
+
+    const result = await suggestAssetRetakes.execute!({ evidence: [wellFormedButUnset] }, {} as never);
+    const { why } = result!.results[0];
+
+    expect(why).not.toMatch(/no retake needed/i);
+    expect(why).not.toMatch(/meet brand standard/i);
+    expect(why).toMatch(/no pillar scores recorded/i);
+    assertNoWrites();
+  });
+
+  it("never recommends running a DNA audit anywhere in its output (Creative Director's audit rule)", async () => {
+    const neverAudited: AssetDnaEvidence = {
+      assetId: "asset-7",
+      brandId: "brand-1",
+      found: true,
+      dnaScore: null,
+      dnaStatus: null,
+      pillars: null,
+      pillarsMalformed: false,
+      error: null,
+    };
+    const partiallyScored: AssetDnaEvidence = {
+      assetId: "asset-8",
+      brandId: "brand-1",
+      found: true,
+      dnaScore: 60,
+      dnaStatus: "review",
+      pillars: {
+        brandConsistency: 60,
+        compositionQuality: null,
+        channelReadiness: null,
+        productClarity: null,
+        rationale: null,
+      },
+      pillarsMalformed: false,
+      error: null,
+    };
+
+    const result = await suggestAssetRetakes.execute!(
+      { evidence: [neverAudited, partiallyScored] },
+      {} as never,
+    );
+
+    for (const entry of result!.results) {
+      expect(entry.why.toLowerCase()).not.toContain("audit");
+      for (const suggestion of entry.retakeSuggestions) {
+        expect(suggestion.advice.toLowerCase()).not.toContain("audit");
+      }
+    }
+    assertNoWrites();
+  });
 });

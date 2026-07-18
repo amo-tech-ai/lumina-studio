@@ -38,6 +38,18 @@ describe("operator agents — structure (IPI2-121)", () => {
     expect(toolNames).not.toContain("createBookingDraft");
   });
 
+  it("production-planner does NOT inherit creative-director's asset-intelligence tools (IPI-261 bot-review finding)", async () => {
+    const tools = await productionPlannerAgent.listTools();
+    const toolNames = Object.keys(tools ?? {});
+    // getAssetDnaEvidence/suggestAssetRetakes/draftBulkAssetApproval live in the shared
+    // agentTools registry for creative-director's /app/assets flow — production-planner's
+    // instructions and tests don't cover that domain, so it must not inherit them just
+    // because they're in the shared registry (mirrors the booking-tool exclusion above).
+    expect(toolNames).not.toContain("getAssetDnaEvidence");
+    expect(toolNames).not.toContain("suggestAssetRetakes");
+    expect(toolNames).not.toContain("draftBulkAssetApproval");
+  });
+
   it("creative-director carries exactly its 3 asset-intelligence tools (IPI-261), not the full registry", async () => {
     const tools = await creativeDirectorAgent.listTools();
     const toolNames = Object.keys(tools ?? {});

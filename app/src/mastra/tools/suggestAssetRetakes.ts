@@ -69,7 +69,7 @@ export function computeRetakeSuggestions(pillars: AssetDnaPillars | null): Retak
     const advice =
       severity === "none"
         ? score === null
-          ? `No ${DNA_PILLAR_LABELS[key]} score recorded yet — run a DNA audit to get retake guidance.`
+          ? `No ${DNA_PILLAR_LABELS[key]} score recorded for this asset yet — this tool cannot trigger a rescore; retake guidance for this pillar isn't available until evidence exists.`
           : `${DNA_PILLAR_LABELS[key]} meets brand standard — no retake needed.`
         : ADVICE_BY_PILLAR[key][severity];
     return {
@@ -98,7 +98,7 @@ function buildAssetResult(item: AssetDnaEvidence) {
       score: item.dnaScore ?? 0,
       confidence: 0,
       why: item.found
-        ? "No DNA pillar data recorded yet for this asset — run an asset DNA audit before requesting retake guidance."
+        ? "No DNA pillar data recorded yet for this asset — this tool cannot trigger a rescore, so no retake guidance is available until pillar evidence exists."
         : "Asset not found or not accessible — cannot compute retake guidance.",
       evidence: undefined,
       suggestions: undefined,
@@ -108,16 +108,32 @@ function buildAssetResult(item: AssetDnaEvidence) {
 
   const retakeSuggestions = computeRetakeSuggestions(item.pillars);
   const actionable = retakeSuggestions.filter((s) => s.severity !== "none");
+  const anyPillarScored = retakeSuggestions.some((s) => s.score !== null);
   const score = item.dnaScore ?? averagePillarScore(item.pillars) ?? 0;
+
+  // Never report "no retake needed" unless at least one pillar was actually
+  // scored and none are malformed — a non-empty-but-unrecognized dna_pillars
+  // payload (e.g. `{foo: "bar"}`) parses to an all-null pillars object with
+  // pillarsMalformed: true (see parseDnaPillars in getAssetDnaEvidence.ts),
+  // which would otherwise fall through to actionable.length === 0 and read as
+  // a false "all standards met" pass.
+  let why: string;
+  if (actionable.length) {
+    why = `${actionable.length} pillar${actionable.length === 1 ? "" : "s"} below brand standard — see suggestions.`;
+  } else if (item.pillarsMalformed) {
+    why = "DNA pillar data for this asset could not be parsed — retake status cannot be confirmed until valid evidence exists.";
+  } else if (!anyPillarScored) {
+    why = "No pillar scores recorded for this asset yet — retake status cannot be confirmed.";
+  } else {
+    why = "All scored pillars meet brand standard — no retake needed.";
+  }
 
   return {
     assetId: item.assetId,
     title: "Retake Suggestions",
     score,
     confidence: item.pillarsMalformed ? 40 : 90,
-    why: actionable.length
-      ? `${actionable.length} pillar${actionable.length === 1 ? "" : "s"} below brand standard — see suggestions.`
-      : "All scored pillars meet brand standard — no retake needed.",
+    why,
     evidence: retakeSuggestions
       .filter((s) => s.score !== null)
       .map((s) => ({ text: `${s.pillarLabel}: ${s.score}/100` })),

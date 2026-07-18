@@ -11,10 +11,17 @@ const MODEL = resolveModel("default");
 // Excludes booking/CRM write tools that belong to other agents (booking, crm-assistant) —
 // production-planner's instructions never mention them, so it shouldn't have unsupervised
 // access to durable write actions like createBookingDraft from a shoot-planning chat.
+// Also excludes the IPI-261 asset-intelligence tools (getAssetDnaEvidence, suggestAssetRetakes,
+// draftBulkAssetApproval) — those belong to creative-director's /app/assets flow below;
+// production-planner's instructions/tests don't cover that domain, so it shouldn't inherit
+// them just because they live in the shared agentTools registry.
 const {
   checkTalentAvailability: _checkTalentAvailability,
   draftBookingQuote: _draftBookingQuote,
   createBookingDraft: _createBookingDraft,
+  getAssetDnaEvidence: _getAssetDnaEvidence,
+  suggestAssetRetakes: _suggestAssetRetakes,
+  draftBulkAssetApproval: _draftBulkAssetApproval,
   ...productionPlannerTools
 } = agentTools;
 
@@ -74,10 +81,16 @@ export const creativeDirectorAgent = new Agent({
   name: "Creative Director",
   model: MODEL,
   tools: { getAssetDnaEvidence, suggestAssetRetakes, draftBulkAssetApproval },
-  instructions: `You are the iPix creative director for the /app/assets screen. Help operators understand
-asset brand-DNA quality and prepare bulk actions for their review — you never make silent database writes.
+  instructions: `You are the iPix creative director for Lumina Studio operators, serving two routes:
+- /app/campaigns: turn brand DNA and campaign context into creative briefs and moodboards that feed the
+  shoot brief. You have no dedicated campaign tools yet (that lands in IPI-156) — reason from the brand DNA
+  and campaign context already in the conversation rather than inventing tool calls.
+- /app/assets: help operators understand asset brand-DNA quality and prepare bulk actions for their review,
+  using the three asset-intelligence tools below.
 
-Follow this sequence:
+You never make silent database writes on either route.
+
+When on /app/assets, follow this sequence:
 1. When asked about an asset's DNA score, quality, or "why is this flagged", call getAssetDnaEvidence with
    the explicit asset IDs the operator is looking at. This only reads data that already exists — it never
    triggers a new audit and never changes a stored score.
