@@ -1,39 +1,60 @@
--- IPI-653 · PLN-DATA-003 — round-7 (PR 2 review hardening): fixes 4 real
--- findings from PR #427's review pass (Codex + Sentry bots, triaged and
--- confirmed live against pg_get_functiondef / the bootstrap trigger body).
+-- IPI-653 · PLN-DATA-003 — final consolidated PR 2 contract for
+-- planner_create_instance. Consolidates three sequential migrations that
+-- were never merged/published (rounds 5, 6, 7 of this PR — repeatedly
+-- replacing the same function on an already-open, unmerged PR), plus two
+-- new fixes from a subsequent CodeRabbit review pass. Per this repo's own
+-- "never rewrite applied migrations" rule, this is safe: none of the
+-- consolidated migrations were ever on `main` — they only existed as
+-- separate commits on this still-open PR branch.
 --
--- 1. Authorization now runs BEFORE the idempotency replay lookup, matching
---    planner_shift_task/planner_update_task's round-8 fix. Previously a
---    caller whose org role was revoked after a successful create could
---    still replay the cached ok:true result via the same idempotency key.
--- 2. p_owner_user_id, when explicitly different from the caller, now gets
---    its own planner.assignments row. planner.bootstrap_owner_assignment()
---    hardcodes auth.uid() (confirmed via pg_get_functiondef) — it never
---    assigns p_owner_user_id — so an explicit owner previously had zero
---    assignment rows and could not open or manage the plan they nominally
---    owned.
--- 3. Every task's typed fields (phaseId/startDate/endDate/durationDays/
---    sortOrder/assigneeUserId) are now cast inside an exception-handling
---    block during validation, before any write. Previously a malformed
---    value (e.g. phaseId: "") reached its ::cast unguarded during the
---    persist loop, raising a raw Postgres data_exception instead of a
---    typed INVALID_INPUT result — and only after the instance row had
---    already been inserted.
--- 4. A non-null assigneeUserId is now validated against org membership,
---    matching planner_update_task's existing guard
---    (20260716210500_planner_shift_update_task_security_fix_10.sql).
---    Previously an owner/editor could persist tasks assigned to any
---    auth.users id, including one outside the org.
+-- Full history of what's consolidated here:
 --
--- Known, deliberately deferred (not fixed here): a workflow's phase set
+-- 1. (round 5) Accepts p_tasks jsonb — a caller-precomputed task list
+--    (PlannerEngine.buildSchedule() in the app layer) instead of computing
+--    calendar-day dates itself. Closes the business-day-vs-calendar-day gap
+--    from the PR 1 migration.
+-- 2. (round 6) Accepts p_owner_user_id, defaulting to the caller; must be
+--    an org member if explicitly supplied.
+-- 3. (round 7) Authorization runs before idempotency replay (matching
+--    planner_shift_task/planner_update_task's round-8 fix — a revoked-role
+--    actor could otherwise replay a cached ok:true result). An explicit
+--    owner different from the caller gets their own planner.assignments
+--    row (bootstrap_owner_assignment only ever assigns the caller — con-
+--    firmed via its live definition). Every task field is cast inside an
+--    exception-handling block before any write, returning typed
+--    INVALID_INPUT instead of a raw Postgres data_exception. A non-null
+--    assigneeUserId is validated against org membership.
+-- 4. (this migration, new) The request hash now hashes a structured
+--    jsonb document instead of delimiter-free string concatenation — a
+--    name ending in a date could otherwise collide with a shorter name
+--    plus that same date as the planned_start (e.g. name="Foo 2026-08-03"
+--    + null start vs. name="Foo " + start="2026-08-03" hash identically).
+-- 5. (this migration, new) Task fields are now semantically validated, not
+--    just type-cast: durationDays > 0, sortOrder >= 0, endDate >= startDate,
+--    and priority must be one of the four values planner.tasks' own CHECK
+--    constraint allows. Priority previously reached that CHECK constraint
+--    unvalidated — a check_violation is a different exception class than
+--    data_exception, so an invalid priority would have leaked as a raw
+--    Postgres error, not typed INVALID_INPUT. durationDays/sortOrder/date-
+--    ordering had no DB constraint at all, so invalid values would have
+--    silently persisted.
+--
+-- Deliberately deferred (documented, not fixed): (a) a workflow's phase set
 -- can change between the app layer's listWorkflowPhases() read and this
--- call (TOCTOU) — the RPC only validates that supplied phaseIds belong to
--- the workflow, not that the full current phase set is represented. Fixing
--- this properly means passing a workflow revision/version for optimistic
--- concurrency, which is real follow-up scope, not a review-comment fix —
--- tracked separately, not folded into this migration.
+-- call (TOCTOU) — fixing this means passing a workflow revision for
+-- optimistic concurrency, real follow-up scope, not a review-comment fix.
+-- (b) two concurrent calls with the *same* idempotency key can both miss
+-- the replay lookup before either commits — the loser then hits
+-- planner.instances' unique constraint and returns INSTANCE_ALREADY_EXISTS
+-- (with the real instance id) instead of replayed:true. No corruption, no
+-- crash, just a different-but-still-usable result on the losing side of a
+-- rare race. A true fix needs a reservation/advisory lock on
+-- (actor, idempotency_key), which is real engineering scope, not a
+-- same-PR fix.
 
-create or replace function public.planner_create_instance(
+drop function if exists public.planner_create_instance(uuid, text, uuid, uuid, text, date, text, jsonb, uuid);
+
+create function public.planner_create_instance(
   p_org_id uuid,
   p_entity_type text,
   p_entity_id uuid,
@@ -90,7 +111,7 @@ begin
 
   v_owner_user_id := coalesce(p_owner_user_id, v_actor);
 
-  -- Round-7: authz before idempotency replay.
+  -- Authorization before idempotency replay.
   if not exists (
     select 1 from public.org_members
     where org_id = p_org_id
@@ -110,11 +131,21 @@ begin
     return jsonb_build_object('ok', false, 'code', 'INVALID_INPUT');
   end if;
 
+  -- Structured hash: a jsonb document with named fields, not delimiter-free
+  -- concatenation, so two distinct requests can never collide to the same
+  -- preimage.
   v_request_hash := encode(
     extensions.digest(
-      p_org_id::text || p_entity_type || p_entity_id::text || p_workflow_id::text
-        || p_name || coalesce(p_planned_start::text, '') || p_tasks::text
-        || v_owner_user_id::text,
+      jsonb_build_object(
+        'orgId', p_org_id,
+        'entityType', p_entity_type,
+        'entityId', p_entity_id,
+        'workflowId', p_workflow_id,
+        'name', p_name,
+        'plannedStart', p_planned_start,
+        'tasks', p_tasks,
+        'ownerUserId', v_owner_user_id
+      )::text,
       'sha256'
     ),
     'hex'
@@ -157,10 +188,14 @@ begin
     return jsonb_build_object('ok', false, 'code', 'NOT_FOUND');
   end if;
 
-  -- Validate every caller-supplied task before writing anything: phaseId
-  -- must belong to this workflow, required fields must be present, every
-  -- typed field must actually parse (round-7), and a non-null assignee
-  -- must be an org member (round-7).
+  -- Validate every caller-supplied task before writing anything: required
+  -- fields present, every typed field actually parses (exception-handled,
+  -- not a raw Postgres error), semantically valid (positive duration,
+  -- non-negative sort order, end >= start, priority within the domain
+  -- planner.tasks' own CHECK constraint allows — validated here so an
+  -- invalid priority never reaches that constraint as a raw
+  -- check_violation), phaseId belongs to this workflow, and a non-null
+  -- assignee is an org member.
   for v_task in select * from jsonb_array_elements(p_tasks)
   loop
     if v_task->>'phaseId' is null
@@ -184,6 +219,16 @@ begin
       when data_exception then
         return jsonb_build_object('ok', false, 'code', 'INVALID_INPUT');
     end;
+
+    v_priority := coalesce(v_task->>'priority', 'medium');
+
+    if v_duration_days <= 0
+       or v_sort_order < 0
+       or v_end_date < v_start_date
+       or v_priority not in ('low', 'medium', 'high', 'critical')
+    then
+      return jsonb_build_object('ok', false, 'code', 'INVALID_INPUT');
+    end if;
 
     if not exists (
       select 1 from planner.phases
@@ -227,8 +272,8 @@ begin
       return jsonb_build_object('ok', false, 'code', 'INSTANCE_ALREADY_EXISTS', 'instanceId', v_existing_instance_id);
   end;
 
-  -- Round-7: bootstrap_owner_assignment only ever assigns the calling
-  -- actor — give an explicit, different owner their own assignment too.
+  -- bootstrap_owner_assignment only ever assigns the calling actor — give
+  -- an explicit, different owner their own assignment too.
   if p_owner_user_id is not null and p_owner_user_id <> v_actor then
     insert into planner.assignments (instance_id, user_id, role)
     values (v_instance_id, p_owner_user_id, 'owner')
@@ -272,4 +317,8 @@ end;
 $$;
 
 comment on function public.planner_create_instance(uuid, text, uuid, uuid, text, date, text, jsonb, uuid) is
-  'IPI-653 (pass 7 / PR 2 review hardening) — atomic instance-creation RPC. Accepts a caller-precomputed task list (p_tasks) instead of computing dates itself. Authorization (org role + explicit-owner membership) runs before idempotency replay. Every task field is cast inside an exception-handling block before any write (typed INVALID_INPUT, never a raw Postgres error); a non-null assigneeUserId must be an org member. An explicit p_owner_user_id different from the caller gets its own planner.assignments row (bootstrap_owner_assignment only ever assigns the caller). v1 policy unchanged: no planner.dependencies rows written. Known deferred gap: workflow phase set can change between the app layer''s read and this call (TOCTOU) — tracked separately, not fixed here.';
+  'IPI-653 (final, PR 2 contract) — atomic instance-creation RPC. Accepts a caller-precomputed task list (p_tasks) with business-day-accurate dates (PlannerEngine.buildSchedule() in the app layer). Authorization runs before idempotency replay. Every task field is cast and semantically validated (positive duration, non-negative sort order, end >= start, priority within the tasks table''s own CHECK domain) before any write — never a raw Postgres error. A non-null assigneeUserId must be an org member. An explicit p_owner_user_id different from the caller gets its own planner.assignments row. Request hash is a structured jsonb document, not delimiter-free concatenation. v1 policy: no planner.dependencies rows written. Known deferred gaps (documented in the migration header): workflow phase-set TOCTOU between the app layer''s read and this call; same-idempotency-key concurrent calls can race to INSTANCE_ALREADY_EXISTS instead of a clean replay (no corruption, just a different result on the losing side).';
+
+revoke all on function public.planner_create_instance(uuid, text, uuid, uuid, text, date, text, jsonb, uuid) from public;
+revoke all on function public.planner_create_instance(uuid, text, uuid, uuid, text, date, text, jsonb, uuid) from anon;
+grant execute on function public.planner_create_instance(uuid, text, uuid, uuid, text, date, text, jsonb, uuid) to authenticated;
