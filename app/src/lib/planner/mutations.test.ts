@@ -951,6 +951,32 @@ describe("createInstance", () => {
     },
   );
 
+  it("surfaces existingInstanceId on INSTANCE_ALREADY_EXISTS so the caller can link to the pre-existing plan (IPI-650)", async () => {
+    vi.mocked(listWorkflowPhases).mockResolvedValue({ ok: true, data: [makePhase({ id: "p1" })] });
+    const { client } = mockRpcJson({ ok: false, code: "INSTANCE_ALREADY_EXISTS", instanceId: "inst-existing-1" });
+
+    const result = await createInstance(BASE_PARAMS, client);
+
+    expect(result).toEqual({
+      ok: false,
+      error: {
+        code: "INSTANCE_ALREADY_EXISTS",
+        message: "A plan already exists for this item and workflow.",
+        existingInstanceId: "inst-existing-1",
+      },
+    });
+  });
+
+  it("never sets existingInstanceId for a code other than INSTANCE_ALREADY_EXISTS, even if the RPC returned one", async () => {
+    vi.mocked(listWorkflowPhases).mockResolvedValue({ ok: true, data: [makePhase({ id: "p1" })] });
+    const { client } = mockRpcJson({ ok: false, code: "FORBIDDEN", instanceId: "should-be-ignored" });
+
+    const result = await createInstance(BASE_PARAMS, client);
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error).not.toHaveProperty("existingInstanceId");
+  });
+
   it("surfaces replayed:true from an idempotent retry", async () => {
     vi.mocked(listWorkflowPhases).mockResolvedValue({ ok: true, data: [makePhase({ id: "p1" })] });
     const { client } = mockRpcJson({ ok: true, replayed: true, instanceId: "inst-existing" });

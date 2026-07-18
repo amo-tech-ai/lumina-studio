@@ -8,6 +8,18 @@ vi.mock("./hub-workspace.module.css", () => ({
 vi.mock("next/image", () => ({
   default: () => null,
 }));
+// IPI-650 — hub-workspace.test.tsx exercises the grid/pagination/attention
+// presentation, not the New Plan dialog's own form/submit behavior (covered
+// by new-plan-dialog.test.tsx) — stubbed here so this file doesn't also need
+// to mock Radix Dialog, next/navigation, and the createInstanceAction server
+// action chain.
+vi.mock("./new-plan-dialog", () => ({
+  NewPlanDialog: ({ variant }: { variant: "header" | "empty" }) => (
+    <button type="button" data-testid={`new-plan-trigger-${variant}`}>
+      New plan
+    </button>
+  ),
+}));
 
 import type { PlannerInstanceSummary } from "@/lib/planner/queries";
 
@@ -38,7 +50,7 @@ function makeItem(overrides: Partial<PlannerInstanceSummary> = {}): PlannerInsta
 
 describe("PlannerHubWorkspace — states", () => {
   it("renders the empty-portfolio state when no filters are active and there are zero results", () => {
-    render(<PlannerHubWorkspace filters={parseHubSearchParams({})} items={[]} nextCursor={null} />);
+    render(<PlannerHubWorkspace orgId={null} eligibleEntities={[]} workflowTemplates={[]} filters={parseHubSearchParams({})} items={[]} nextCursor={null} />);
     expect(screen.getByTestId("hub-empty")).toBeDefined();
     expect(screen.queryByTestId("hub-no-match")).toBeNull();
   });
@@ -48,7 +60,7 @@ describe("PlannerHubWorkspace — states", () => {
     // zero rows, so a truly empty portfolio with it on should still read
     // "no plans yet", not "no plans match these filters".
     render(
-      <PlannerHubWorkspace
+      <PlannerHubWorkspace orgId={null} eligibleEntities={[]} workflowTemplates={[]}
         filters={parseHubSearchParams({ includeArchived: "true" })}
         items={[]}
         nextCursor={null}
@@ -60,7 +72,7 @@ describe("PlannerHubWorkspace — states", () => {
 
   it("renders the no-match state when filters are active and there are zero results", () => {
     render(
-      <PlannerHubWorkspace
+      <PlannerHubWorkspace orgId={null} eligibleEntities={[]} workflowTemplates={[]}
         filters={parseHubSearchParams({ search: "nonexistent" })}
         items={[]}
         nextCursor={null}
@@ -72,7 +84,7 @@ describe("PlannerHubWorkspace — states", () => {
 
   it("renders active cards for a populated page", () => {
     render(
-      <PlannerHubWorkspace filters={parseHubSearchParams({})} items={[makeItem()]} nextCursor={null} />,
+      <PlannerHubWorkspace orgId={null} eligibleEntities={[]} workflowTemplates={[]} filters={parseHubSearchParams({})} items={[makeItem()]} nextCursor={null} />,
     );
     expect(screen.getAllByTestId("hub-card")).toHaveLength(1);
   });
@@ -80,7 +92,7 @@ describe("PlannerHubWorkspace — states", () => {
   it("renders archived cards when includeArchived returned an archived plan", () => {
     const archived = makeItem({ status: "archived", name: "Old Lookbook" });
     render(
-      <PlannerHubWorkspace
+      <PlannerHubWorkspace orgId={null} eligibleEntities={[]} workflowTemplates={[]}
         filters={parseHubSearchParams({ includeArchived: "true" })}
         items={[archived]}
         nextCursor={null}
@@ -98,7 +110,7 @@ describe("PlannerHubWorkspace — states", () => {
     // nothing to do). HubPagination's own "Start over" link, asserted below,
     // is the correct affordance here, not either state's copy.
     render(
-      <PlannerHubWorkspace
+      <PlannerHubWorkspace orgId={null} eligibleEntities={[]} workflowTemplates={[]}
         filters={parseHubSearchParams({ cursor: "x".repeat(20) })}
         items={[]}
         nextCursor={null}
@@ -110,7 +122,7 @@ describe("PlannerHubWorkspace — states", () => {
 
   it("still renders the no-match state for a zero-result page past the first when filters are active", () => {
     render(
-      <PlannerHubWorkspace
+      <PlannerHubWorkspace orgId={null} eligibleEntities={[]} workflowTemplates={[]}
         filters={parseHubSearchParams({ search: "nonexistent", cursor: "x".repeat(20) })}
         items={[]}
         nextCursor={null}
@@ -122,7 +134,7 @@ describe("PlannerHubWorkspace — states", () => {
 
   it("offers Start over (not a dead end) on a zero-result page past the first", () => {
     render(
-      <PlannerHubWorkspace
+      <PlannerHubWorkspace orgId={null} eligibleEntities={[]} workflowTemplates={[]}
         filters={parseHubSearchParams({ cursor: "x".repeat(20) })}
         items={[]}
         nextCursor={null}
@@ -136,7 +148,7 @@ describe("PlannerHubWorkspace — states", () => {
 describe("PlannerHubWorkspace — page-scoped attention", () => {
   it("does not render the attention band when nothing on the page is at risk", () => {
     render(
-      <PlannerHubWorkspace filters={parseHubSearchParams({})} items={[makeItem()]} nextCursor={null} />,
+      <PlannerHubWorkspace orgId={null} eligibleEntities={[]} workflowTemplates={[]} filters={parseHubSearchParams({})} items={[makeItem()]} nextCursor={null} />,
     );
     expect(screen.queryByTestId("hub-attention-band")).toBeNull();
   });
@@ -144,7 +156,7 @@ describe("PlannerHubWorkspace — page-scoped attention", () => {
   it("says 'On this page' rather than implying portfolio-global risk", () => {
     const atRisk = makeItem({ atRisk: true, status: "blocked" });
     render(
-      <PlannerHubWorkspace filters={parseHubSearchParams({})} items={[atRisk]} nextCursor={null} />,
+      <PlannerHubWorkspace orgId={null} eligibleEntities={[]} workflowTemplates={[]} filters={parseHubSearchParams({})} items={[atRisk]} nextCursor={null} />,
     );
     expect(screen.getByText("On this page: 1 plan needs attention")).toBeDefined();
   });
@@ -154,7 +166,7 @@ describe("PlannerHubWorkspace — page-scoped attention", () => {
       makeItem({ id: "a", name: "A", atRisk: true }),
       makeItem({ id: "b", name: "B", atRisk: true }),
     ];
-    render(<PlannerHubWorkspace filters={parseHubSearchParams({})} items={items} nextCursor={null} />);
+    render(<PlannerHubWorkspace orgId={null} eligibleEntities={[]} workflowTemplates={[]} filters={parseHubSearchParams({})} items={items} nextCursor={null} />);
     expect(screen.getByText("On this page: 2 plans need attention")).toBeDefined();
   });
 
@@ -162,7 +174,7 @@ describe("PlannerHubWorkspace — page-scoped attention", () => {
     const items = [1, 2, 3, 4, 5].map((n) =>
       makeItem({ id: String(n), name: `Plan ${n}`, atRisk: true }),
     );
-    render(<PlannerHubWorkspace filters={parseHubSearchParams({})} items={items} nextCursor={null} />);
+    render(<PlannerHubWorkspace orgId={null} eligibleEntities={[]} workflowTemplates={[]} filters={parseHubSearchParams({})} items={items} nextCursor={null} />);
     expect(screen.getByText("On this page: 5 plans need attention")).toBeDefined();
     const band = screen.getByTestId("hub-attention-band");
     expect(within(band).getAllByRole("link", { name: /^Open Plan \d planner$/ })).toHaveLength(3);
@@ -173,7 +185,7 @@ describe("PlannerHubWorkspace — page-scoped attention", () => {
 describe("PlannerHubWorkspace — returned formulas and links", () => {
   it("renders the returned progress percentage unchanged, without recalculating", () => {
     render(
-      <PlannerHubWorkspace
+      <PlannerHubWorkspace orgId={null} eligibleEntities={[]} workflowTemplates={[]}
         filters={parseHubSearchParams({})}
         items={[makeItem({ progress: 73 })]}
         nextCursor={null}
@@ -185,7 +197,7 @@ describe("PlannerHubWorkspace — returned formulas and links", () => {
 
   it("renders the returned atRisk flag via data-at-risk, unchanged", () => {
     render(
-      <PlannerHubWorkspace
+      <PlannerHubWorkspace orgId={null} eligibleEntities={[]} workflowTemplates={[]}
         filters={parseHubSearchParams({})}
         items={[makeItem({ atRisk: true, status: "blocked" })]}
         nextCursor={null}
@@ -196,7 +208,7 @@ describe("PlannerHubWorkspace — returned formulas and links", () => {
 
   it("gives each card a semantic, destination-describing link name", () => {
     render(
-      <PlannerHubWorkspace
+      <PlannerHubWorkspace orgId={null} eligibleEntities={[]} workflowTemplates={[]}
         filters={parseHubSearchParams({})}
         items={[makeItem({ name: "Q3 Retail Push" })]}
         nextCursor={null}
@@ -206,11 +218,22 @@ describe("PlannerHubWorkspace — returned formulas and links", () => {
     expect(link.getAttribute("href")).toBe(`/app/planner/${makeItem().id}`);
   });
 
-  it("never renders a New Plan control", () => {
+  it("renders the header New Plan CTA on a populated page — IPI-650 supersedes IPI-526's out-of-scope guard", () => {
     render(
-      <PlannerHubWorkspace filters={parseHubSearchParams({})} items={[makeItem()]} nextCursor={null} />,
+      <PlannerHubWorkspace orgId={null} eligibleEntities={[]} workflowTemplates={[]} filters={parseHubSearchParams({})} items={[makeItem()]} nextCursor={null} />,
     );
-    expect(screen.queryByText(/new plan/i)).toBeNull();
+    expect(screen.getByTestId("new-plan-trigger-header")).toBeDefined();
+    // Only the header CTA on a populated page — the empty-state CTA is
+    // conditional on items.length === 0 (see hub-states.tsx).
+    expect(screen.queryByTestId("new-plan-trigger-empty")).toBeNull();
+  });
+
+  it("renders both the header and empty-state New Plan CTAs together when the portfolio is empty", () => {
+    render(
+      <PlannerHubWorkspace orgId={null} eligibleEntities={[]} workflowTemplates={[]} filters={parseHubSearchParams({})} items={[]} nextCursor={null} />,
+    );
+    expect(screen.getByTestId("new-plan-trigger-header")).toBeDefined();
+    expect(screen.getByTestId("new-plan-trigger-empty")).toBeDefined();
   });
 
   it("falls back to generic entity metadata instead of crashing on an unmapped entityType", () => {
@@ -222,7 +245,7 @@ describe("PlannerHubWorkspace — returned formulas and links", () => {
       entityType: "webinar" as unknown as PlannerInstanceSummary["entityType"],
     });
     render(
-      <PlannerHubWorkspace
+      <PlannerHubWorkspace orgId={null} eligibleEntities={[]} workflowTemplates={[]}
         filters={parseHubSearchParams({})}
         items={[unknownEntity]}
         nextCursor={null}
@@ -236,14 +259,14 @@ describe("PlannerHubWorkspace — returned formulas and links", () => {
 describe("PlannerHubWorkspace — pagination", () => {
   it("renders no pagination controls on a single, complete first page", () => {
     render(
-      <PlannerHubWorkspace filters={parseHubSearchParams({})} items={[makeItem()]} nextCursor={null} />,
+      <PlannerHubWorkspace orgId={null} eligibleEntities={[]} workflowTemplates={[]} filters={parseHubSearchParams({})} items={[makeItem()]} nextCursor={null} />,
     );
     expect(screen.queryByTestId("hub-pagination")).toBeNull();
   });
 
   it("shows Next page (not Load more) when a cursor is returned, since navigation replaces the page", () => {
     render(
-      <PlannerHubWorkspace
+      <PlannerHubWorkspace orgId={null} eligibleEntities={[]} workflowTemplates={[]}
         filters={parseHubSearchParams({})}
         items={[makeItem()]}
         nextCursor="next-cursor-value"
@@ -256,7 +279,7 @@ describe("PlannerHubWorkspace — pagination", () => {
 
   it("shows Start over only once past the first page, and it clears the cursor", () => {
     render(
-      <PlannerHubWorkspace
+      <PlannerHubWorkspace orgId={null} eligibleEntities={[]} workflowTemplates={[]}
         filters={parseHubSearchParams({ cursor: "x".repeat(20), search: "Summer" })}
         items={[makeItem()]}
         nextCursor={null}
@@ -268,7 +291,7 @@ describe("PlannerHubWorkspace — pagination", () => {
 
   it("preserves active filters on the Next page link", () => {
     render(
-      <PlannerHubWorkspace
+      <PlannerHubWorkspace orgId={null} eligibleEntities={[]} workflowTemplates={[]}
         filters={parseHubSearchParams({ search: "Summer", entityType: "shoot" })}
         items={[makeItem()]}
         nextCursor="cur-2"
@@ -285,7 +308,7 @@ describe("PlannerHubWorkspace — pagination", () => {
 describe("PlannerHubWorkspace — accessibility", () => {
   it("announces the result count via a polite, atomic live region", () => {
     render(
-      <PlannerHubWorkspace
+      <PlannerHubWorkspace orgId={null} eligibleEntities={[]} workflowTemplates={[]}
         filters={parseHubSearchParams({})}
         items={[makeItem(), makeItem({ id: "2" })]}
         nextCursor={null}
@@ -299,14 +322,14 @@ describe("PlannerHubWorkspace — accessibility", () => {
 
   it("singularizes the live region for exactly one plan", () => {
     render(
-      <PlannerHubWorkspace filters={parseHubSearchParams({})} items={[makeItem()]} nextCursor={null} />,
+      <PlannerHubWorkspace orgId={null} eligibleEntities={[]} workflowTemplates={[]} filters={parseHubSearchParams({})} items={[makeItem()]} nextCursor={null} />,
     );
     expect(screen.getByRole("status").textContent).toBe("Showing 1 plan on this page");
   });
 
   it("labels the search input and status select", () => {
     render(
-      <PlannerHubWorkspace filters={parseHubSearchParams({})} items={[makeItem()]} nextCursor={null} />,
+      <PlannerHubWorkspace orgId={null} eligibleEntities={[]} workflowTemplates={[]} filters={parseHubSearchParams({})} items={[makeItem()]} nextCursor={null} />,
     );
     expect(screen.getByLabelText("Search plans")).toBeDefined();
     expect(screen.getByLabelText("Status")).toBeDefined();
@@ -316,7 +339,7 @@ describe("PlannerHubWorkspace — accessibility", () => {
     // No network/query mocks exist in this test file at all; if the workspace
     // (a pure presentational component) tried to issue one, this would throw.
     render(
-      <PlannerHubWorkspace
+      <PlannerHubWorkspace orgId={null} eligibleEntities={[]} workflowTemplates={[]}
         filters={parseHubSearchParams({ status: "blocked" })}
         items={[]}
         nextCursor={null}

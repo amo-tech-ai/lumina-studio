@@ -2,7 +2,7 @@
 // page: page.tsx owns auth/query/error handling, this composes the filter
 // bar, page-scoped attention band, card grid, states, and pagination.
 
-import type { PlannerInstanceSummary } from "@/lib/planner/queries";
+import type { EligibleEntity, PlannerInstanceSummary, WorkflowTemplate } from "@/lib/planner/queries";
 
 import { HubAttentionBand } from "./hub-attention-band";
 import { HubCard } from "./hub-card";
@@ -11,14 +11,29 @@ import { hasActiveFilters, type HubFilters } from "./hub-params";
 import { HubPagination } from "./hub-pagination";
 import { HubEmptyState, HubNoMatchState } from "./hub-states";
 import styles from "./hub-workspace.module.css";
+import { NewPlanDialog } from "./new-plan-dialog";
 
 type Props = {
   filters: HubFilters;
   items: PlannerInstanceSummary[];
   nextCursor: string | null;
+  // IPI-650 — orgId is null when the caller has no organization yet
+  // (getCurrentOrgId returned null in page.tsx); the CTA still renders (never
+  // pre-filtered client-side — the RPC is the authorization gate), the dialog
+  // just explains there's nothing to attach a plan to yet.
+  orgId: string | null;
+  eligibleEntities: EligibleEntity[];
+  workflowTemplates: WorkflowTemplate[];
 };
 
-export function PlannerHubWorkspace({ filters, items, nextCursor }: Props) {
+export function PlannerHubWorkspace({
+  filters,
+  items,
+  nextCursor,
+  orgId,
+  eligibleEntities,
+  workflowTemplates,
+}: Props) {
   // A cursor means this page isn't the portfolio's true first page — an empty
   // result here (e.g. a since-deleted last item, or a stale/expired cursor)
   // is "nothing more past this point", not "you have no plans" or "no
@@ -37,6 +52,12 @@ export function PlannerHubWorkspace({ filters, items, nextCursor }: Props) {
             {countLabel}
           </p>
         </div>
+        <NewPlanDialog
+          variant="header"
+          orgId={orgId}
+          eligibleEntities={eligibleEntities}
+          workflowTemplates={workflowTemplates}
+        />
       </header>
 
       <HubFilterBar filters={filters} />
@@ -50,7 +71,7 @@ export function PlannerHubWorkspace({ filters, items, nextCursor }: Props) {
             // "nothing more past this point" — HubPagination's own "Start
             // over" link below is the correct affordance, not a misleading
             // "no plans match these filters" message with nothing to clear.
-            <HubEmptyState />
+            <HubEmptyState orgId={orgId} eligibleEntities={eligibleEntities} workflowTemplates={workflowTemplates} />
           )}
           {isPastFirstPage ? <HubPagination filters={filters} nextCursor={null} /> : null}
         </>

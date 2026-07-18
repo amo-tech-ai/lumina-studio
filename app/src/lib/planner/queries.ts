@@ -1,6 +1,7 @@
 import type { PostgrestClient } from "@supabase/postgrest-js";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+import { getCompanyNames } from "@/lib/crm/queries";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import type { Database } from "@/types/supabase";
 
@@ -752,6 +753,168 @@ export async function listMembers(
     data: (data ?? []).map((row) => ({
       ...toAssignment(row),
       displayName: nameByUserId.get(row.user_id) ?? null,
+    })),
+  };
+}
+
+// IPI-650 · PLN-HUB-002 — entity + workflow-template loaders for the "New
+// plan" CTA. Both are UI-only reads; they never write, and they never
+// duplicate planner_create_instance's own authorization (org role, entity
+// tenancy) — that RPC re-validates everything below independently when the
+// dialog actually submits (mutations.ts's createInstance), so a loader gap
+// here can only ever under- or over-*offer* a choice, never grant one.
+
+export type EligibleEntity = {
+  entityType: EntityType;
+  entityId: string;
+  label: string;
+};
+
+type EligibleCampaignRow = { id: string; name: string };
+type EligibleDealRow = { id: string; company_id: string | null };
+type EligibleShootRow = { id: string | null; name: string | null; brand_id: string | null; status: string | null };
+type ClaimedEntityRow = { entity_type: string; entity_id: string };
+
+// planner_create_instance's own uniqueness is per (org, entity_type,
+// entity_id, workflow_id) — not just (entity_type, entity_id) — so in
+// principle the same shoot could get a second instance under a different
+// workflow. Every org has exactly one seeded workflow today
+// (ensure_default_5_week_workflow, confirmed live: 3509/3509
+// planner.workflows rows, one per org — see listWorkflowTemplates below), so
+// that distinction has no practical effect yet. Excluding an entity the
+// moment it has *any* instance avoids offering it as "eligible" only to have
+// the RPC reject it with INSTANCE_ALREADY_EXISTS once a second workflow
+// exists — simpler and more honest than reproducing the RPC's exact
+// per-workflow uniqueness client-side.
+function claimedKey(entityType: string, entityId: string): string {
+  return `${entityType}:${entityId}`;
+}
+
+// IPI-650 — entities the caller's org can attach a *new* Planner instance to:
+// shoots/campaigns/crm_deals that don't already have one. There is no single
+// table or view that already answers this — it's assembled from the same
+// tenancy rules planner_create_instance itself enforces
+// (20260716214521_planner_create_instance_shoot_tenancy_and_race_fix.sql):
+//
+// - campaigns/crm_deals: queried directly with `.eq("org_id", orgId)`. Their
+//   own RLS (campaigns_select_org_member / crm_deals_select_org, both
+//   `is_org_member(org_id)`) already scopes to the org; the explicit filter
+//   here is defense-in-depth, matching listCompanies/listDeals's convention
+//   in crm/queries.ts.
+// - shoots: `shoot.shoots` isn't in the exposed PostgREST schema list, so
+//   this goes through `shoot_portfolio_view` (public, migration
+//   20260626000001_shoot_portfolio_view.sql) — same pattern
+//   app/src/app/(operator)/app/shoots/page.tsx already uses. That view's own
+//   RLS is brand-*owner*-scoped (`b.user_id = auth.uid()`), not org-scoped,
+//   so its rows are cross-checked against `brands.org_id` afterward to match
+//   the RPC's own `b.org_id = p_org_id` check. Archived shoots are excluded,
+//   mirroring the RPC's `s.status <> 'archived'`.
+export async function listEligibleEntities(
+  orgId: string,
+): Promise<PlannerQueryResult<EligibleEntity[]>> {
+  const context = await authenticatedPlannerClient();
+  if (!context.ok) return context;
+  const { base, client } = context.data;
+
+  const [campaignsRes, dealsRes, shootsRes, claimedRes] = await Promise.all([
+    base.from("campaigns").select("id, name").eq("org_id", orgId),
+    base.from("crm_deals").select("id, company_id").eq("org_id", orgId),
+    base.from("shoot_portfolio_view").select("id, name, brand_id, status").neq("status", "archived"),
+    client.from("instances").select("entity_type, entity_id").eq("org_id", orgId),
+  ]);
+
+  if (campaignsRes.error || dealsRes.error || shootsRes.error || claimedRes.error) {
+    return failure("QUERY_FAILED", "Eligible plans could not be loaded.");
+  }
+
+  const claimed = new Set(
+    ((claimedRes.data ?? []) as ClaimedEntityRow[]).map((row) => claimedKey(row.entity_type, row.entity_id)),
+  );
+
+  const shootRows = (shootsRes.data ?? []) as EligibleShootRow[];
+  const brandIds = [...new Set(shootRows.map((row) => row.brand_id).filter((id): id is string => Boolean(id)))];
+  const brandsRes = brandIds.length
+    ? await base.from("brands").select("id, org_id").in("id", brandIds).eq("org_id", orgId)
+    : { data: [] as { id: string; org_id: string | null }[], error: null };
+  if (brandsRes.error) {
+    return failure("QUERY_FAILED", "Eligible plans could not be loaded.");
+  }
+  const orgBrandIds = new Set((brandsRes.data ?? []).map((row) => row.id));
+
+  const dealRows = (dealsRes.data ?? []) as EligibleDealRow[];
+  const companyIds = [...new Set(dealRows.map((row) => row.company_id).filter((id): id is string => Boolean(id)))];
+  const companyNames = await getCompanyNames(companyIds, base);
+
+  const entities: EligibleEntity[] = [
+    ...((campaignsRes.data ?? []) as EligibleCampaignRow[])
+      .filter((row) => !claimed.has(claimedKey("campaign", row.id)))
+      .map((row) => ({ entityType: "campaign" as const, entityId: row.id, label: row.name })),
+    // crm_deals has no name/title column — same "Untitled company deal"
+    // display convention as get-deal-detail.ts / deal-detail-workspace.tsx's
+    // displayTitle, so this doesn't invent a third label format.
+    ...dealRows
+      .filter((row) => !claimed.has(claimedKey("crm_deal", row.id)))
+      .map((row) => ({
+        entityType: "crm_deal" as const,
+        entityId: row.id,
+        label: `${(row.company_id && companyNames[row.company_id]) || "Untitled company"} deal`,
+      })),
+    ...shootRows
+      .filter((row): row is EligibleShootRow & { id: string; name: string; brand_id: string } =>
+        Boolean(row.id && row.name && row.brand_id && orgBrandIds.has(row.brand_id)),
+      )
+      .filter((row) => !claimed.has(claimedKey("shoot", row.id)))
+      .map((row) => ({ entityType: "shoot" as const, entityId: row.id, label: row.name })),
+  ];
+
+  entities.sort((a, b) => a.label.localeCompare(b.label));
+
+  return { ok: true, data: entities };
+}
+
+export type WorkflowTemplate = {
+  id: string;
+  name: string;
+  category: string;
+  isDefault: boolean;
+};
+
+// IPI-650 — workflow templates the "New plan" dialog can offer for the org.
+// The ticket asks for this to be "filtered by entity_type", but
+// planner.workflows has no entity_type (or any per-entity-type) column —
+// confirmed live: every one of its 3509 rows has category = 'production'
+// (one row per org, seeded by ensure_default_5_week_workflow), and
+// planner_create_instance itself never checks entity_type against the
+// workflow it's given, only `org_id`. Filtering by entity_type therefore
+// isn't a real schema-backed concept yet — this returns every workflow the
+// org owns (is_default first, matching Workspace's own "sample" precedent of
+// treating is_default as the default choice). Do not add entity_type
+// filtering here without a migration that actually ties a workflow to entity
+// types first.
+export async function listWorkflowTemplates(
+  orgId: string,
+): Promise<PlannerQueryResult<WorkflowTemplate[]>> {
+  const context = await authenticatedPlannerClient();
+  if (!context.ok) return context;
+
+  const { data, error } = await context.data.client
+    .from("workflows")
+    .select("id, name, category, is_default")
+    .eq("org_id", orgId)
+    .order("is_default", { ascending: false })
+    .order("name", { ascending: true });
+
+  if (error) {
+    return failure("QUERY_FAILED", "Workflow templates could not be loaded.");
+  }
+
+  return {
+    ok: true,
+    data: (data ?? []).map((row) => ({
+      id: row.id,
+      name: row.name,
+      category: row.category,
+      isDefault: row.is_default,
     })),
   };
 }

@@ -29,6 +29,26 @@
   color: var(--color-text-secondary);
 }
 
+/* --- New plan CTA (IPI-650) --- */
+/* SCR-35-Planner-Hub.dc.html's "New plan" button — same style in both the
+   header and the empty state, matching the DC mockup's own reuse of one
+   button style in both places. */
+
+.newPlanBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 15px;
+  border-radius: var(--radius-md);
+  border: none;
+  background: var(--color-action);
+  color: var(--color-action-text);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
 /* --- Filter bar --- */
 
 .filterBar {
