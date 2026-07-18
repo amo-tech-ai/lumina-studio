@@ -1,11 +1,14 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { readFileSync, statSync } from "node:fs";
 import {
   BUILD_TIME_SECRET_NAMES,
   RUNTIME_SECRET_NAMES,
+  assertInfisicalWranglerEnvPair,
   assertNoForbiddenSecrets,
   collectRuntimeSecretsFromEnv,
   diffSecretNames,
   runtimeSecretNamesForWranglerEnv,
+  wranglerCliEnvArgs,
 } from "./cloudflare-secret-allowlist.mjs";
 import { parseArgs, redactValues, writeSecureSecretsFile } from "./sync-wrangler-secrets-from-infisical.mjs";
 
@@ -60,6 +63,16 @@ describe("cloudflare-secret-allowlist", () => {
     expect(missing).toContain("FIRECRAWL_API_KEY");
     expect(extra).toContain("LEGACY_ORPHAN_SECRET");
   });
+
+  it("assertInfisicalWranglerEnvPair rejects dev → production", () => {
+    expect(() => assertInfisicalWranglerEnvPair("dev", "production")).toThrow(/maps to wrangler "preview"/);
+    expect(() => assertInfisicalWranglerEnvPair("prod", "production")).not.toThrow();
+  });
+
+  it("wranglerCliEnvArgs omits --env for production (top-level Worker)", () => {
+    expect(wranglerCliEnvArgs("production")).toEqual([]);
+    expect(wranglerCliEnvArgs("preview")).toEqual(["--env", "preview"]);
+  });
 });
 
 describe("sync-wrangler-secrets-from-infisical", () => {
@@ -74,7 +87,8 @@ describe("sync-wrangler-secrets-from-infisical", () => {
   });
 
   it("parseArgs recognizes dry-run mode", () => {
-    expect(parseArgs(["--wrangler-env", "preview", "--dry-run"])).toEqual({
+    expect(parseArgs(["--infisical-env", "dev", "--wrangler-env", "preview", "--dry-run"])).toEqual({
+      infisicalEnv: "dev",
       wranglerEnv: "preview",
       dryRun: true,
       help: false,
@@ -106,6 +120,7 @@ describe("sync-wrangler-secrets-from-infisical", () => {
     const raw = 'Uploaded secret GEMINI_API_KEY with value "AIzaSyRealSecretValue"';
     expect(redactValues(raw)).not.toContain("AIzaSyRealSecretValue");
     expect(redactValues(raw)).toContain("[REDACTED]");
+    expect(redactValues('value "short"')).toBe('value "[REDACTED]"');
   });
 
   it("writeSecureSecretsFile creates chmod-600 temp JSON and cleans up", () => {
@@ -113,7 +128,6 @@ describe("sync-wrangler-secrets-from-infisical", () => {
     const { filePath, cleanup } = writeSecureSecretsFile({ GEMINI_API_KEY: fakeGemini });
     expect(filePath).toMatch(/secrets\.json$/);
 
-    const { readFileSync, statSync } = require("node:fs");
     const mode = statSync(filePath).mode & 0o777;
     expect(mode).toBe(0o600);
 

@@ -51,6 +51,14 @@ export const INFISICAL_TO_WRANGLER_ENV = Object.freeze({
   prod: "production",
 });
 
+/** Must be present in Infisical env before a non-dry-run sync. */
+export const RUNTIME_REQUIRED_SECRET_NAMES = Object.freeze(["GEMINI_API_KEY"]);
+
+/** Allowlisted but optional — warn when absent; omit from upload JSON. */
+export const RUNTIME_OPTIONAL_SECRET_NAMES = Object.freeze(
+  RUNTIME_SECRET_NAMES.filter((n) => !RUNTIME_REQUIRED_SECRET_NAMES.includes(n)),
+);
+
 const FORBIDDEN_IN_RUNTIME_PREFIX = "NEXT_PUBLIC_";
 const FORBIDDEN_IN_BUILD_SUBSTRINGS = ["SERVICE_ROLE", "API_SECRET", "_SECRET"];
 
@@ -123,6 +131,44 @@ export function collectRuntimeSecretsFromEnv(env, wranglerEnv) {
   }
 
   return { present, missing };
+}
+
+/**
+ * Reject Infisical env / wrangler env mismatches (e.g. dev secrets → production Worker).
+ * @param {string} infisicalEnv
+ * @param {string} wranglerEnv
+ */
+export function assertInfisicalWranglerEnvPair(infisicalEnv, wranglerEnv) {
+  const expected = INFISICAL_TO_WRANGLER_ENV[infisicalEnv];
+  if (!expected) {
+    throw new Error(
+      `Unknown Infisical env "${infisicalEnv}". Expected: ${Object.keys(INFISICAL_TO_WRANGLER_ENV).join(", ")}`,
+    );
+  }
+  if (expected !== wranglerEnv) {
+    throw new Error(
+      `Infisical env "${infisicalEnv}" maps to wrangler "${expected}", not "${wranglerEnv}". ` +
+        "Fix dispatch inputs before syncing.",
+    );
+  }
+}
+
+/**
+ * Wrangler CLI `--env` args for sync/upload.
+ * Production deploy uses the top-level Worker (`ipix-operator`) — no `--env` flag.
+ * Preview uses `env.preview` in wrangler.jsonc.
+ * @param {string} wranglerEnv
+ * @returns {string[]}
+ */
+export function wranglerCliEnvArgs(wranglerEnv) {
+  runtimeSecretNamesForWranglerEnv(wranglerEnv);
+  if (wranglerEnv === "production") {
+    return [];
+  }
+  if (wranglerEnv === "preview") {
+    return ["--env", "preview"];
+  }
+  throw new Error(`Unknown wrangler env "${wranglerEnv}"`);
 }
 
 /**

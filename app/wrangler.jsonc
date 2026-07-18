@@ -56,8 +56,9 @@
     "pg-cloudflare": "./scripts/cf-mastra-pg-stub.mjs"
   },
   // IPI-472 · INFRA-001 — SSOT for preview vs production Worker names.
-  // vars + images must repeat per named env (Wrangler schema: not inherited).
-  // No DATABASE_URL here until Hyperdrive (IPI-619). Runtime secrets via wrangler secret put.
+  // IPI-606 · CF-SEC-010 — secrets.required for cf-typegen + local dev validation.
+  // vars, images, services, secrets must repeat per named env (Wrangler: not inherited).
+  // No DATABASE_URL here until Hyperdrive (IPI-619). Runtime values via Infisical sync.
   "env": {
     "preview": {
       "name": "ipix-operator-preview",
@@ -73,7 +74,10 @@
           "binding": "WORKER_SELF_REFERENCE",
           "service": "ipix-operator-preview"
         }
-      ]
+      ],
+      "secrets": {
+        "required": ["GEMINI_API_KEY"]
+      }
     },
     "production": {
       "name": "ipix-operator",
@@ -89,7 +93,10 @@
           "binding": "WORKER_SELF_REFERENCE",
           "service": "ipix-operator"
         }
-      ]
+      ],
+      "secrets": {
+        "required": ["GEMINI_API_KEY"]
+      }
     }
   }
 }

@@ -100,11 +100,11 @@ Set in `wrangler.jsonc` `vars` — not synced from Infisical:
 
 ## Environment mapping
 
-| Infisical env | Wrangler `--env` | Worker name |
-|---------------|------------------|-------------|
-| `dev` | `preview` | `ipix-operator-preview` |
-| `staging` | `preview` | `ipix-operator-preview` |
-| `prod` | `production` | `ipix-operator` |
+| Infisical env | Wrangler target | Worker name | CLI |
+|---------------|-----------------|-------------|-----|
+| `dev` | `preview` | `ipix-operator-preview` | `--env preview` |
+| `staging` | `preview` | `ipix-operator-preview` | `--env preview` |
+| `prod` | `production` | `ipix-operator` (top-level) | **no `--env` flag** (matches `npm run deploy`) |
 
 Infisical CLI is **not linked in this repo** (no `.infisical.json`). Operators run `infisical init` locally or use dashboard + CI identity only.
 
@@ -136,6 +136,7 @@ In **Infisical Dashboard**:
 |-------------------|---------|
 | `INFISICAL_IDENTITY_ID` | Machine identity UUID (repo **variable**, not secret) |
 | `INFISICAL_PROJECT_SLUG` | Infisical project slug (variable) |
+| `INFISICAL_PROJECT_ID` | Infisical project ID for CLI `--projectId` (Universal Auth fallback) |
 | `INFISICAL_CLIENT_ID` | **Bootstrap only** — Universal Auth if OIDC not ready |
 | `INFISICAL_CLIENT_SECRET` | **Bootstrap only** — rotate after OIDC cutover |
 
@@ -163,7 +164,7 @@ infisical run --env=dev -- npm run dev
 ```bash
 cd app
 infisical run --env=dev -- node scripts/sync-wrangler-secrets-from-infisical.mjs \
-  --wrangler-env preview --dry-run
+  --infisical-env dev --wrangler-env preview --dry-run
 ```
 
 ### Production sync (operator — requires Cloudflare + Infisical credentials)
@@ -173,7 +174,7 @@ Build the Worker first (`npm run build:cf`), then sync secrets in a single versi
 ```bash
 cd app
 infisical run --env=prod -- node scripts/sync-wrangler-secrets-from-infisical.mjs \
-  --wrangler-env production
+  --infisical-env prod --wrangler-env production
 ```
 
 Or combine with OpenNext upload (passthrough to wrangler):
@@ -207,12 +208,9 @@ permissions:
 #     identity-id: ${{ vars.INFISICAL_IDENTITY_ID }}
 #     project-slug: ${{ vars.INFISICAL_PROJECT_SLUG }}
 #     env-slug: dev
-#     secrets: |
-#       NEXT_PUBLIC_SUPABASE_URL
-#       NEXT_PUBLIC_SUPABASE_ANON_KEY
 ```
 
-Use `secrets:` filter so the CI identity reads **only** `BUILD_TIME_SECRET_NAMES`.
+The action exports all secrets from the configured path — scope the machine identity to a folder containing **only** `BUILD_TIME_SECRET_NAMES`, or filter in a follow-up step. There is no per-secret `secrets:` input on v1.0.9.
 
 ## Drift detection (v1 — names only)
 

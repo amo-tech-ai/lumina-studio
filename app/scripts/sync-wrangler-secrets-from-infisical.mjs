@@ -19,9 +19,12 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import {
+  assertInfisicalWranglerEnvPair,
   collectRuntimeSecretsFromEnv,
   INFISICAL_TO_WRANGLER_ENV,
+  RUNTIME_REQUIRED_SECRET_NAMES,
   runtimeSecretNamesForWranglerEnv,
+  wranglerCliEnvArgs,
 } from "./cloudflare-secret-allowlist.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -30,8 +33,14 @@ const localWrangler = path.join(appDir, "node_modules", ".bin", "wrangler");
 const defaultWorkerEntry = path.join(appDir, ".open-next", "worker.js");
 
 function parseArgs(argv) {
-  /** @type {{ wranglerEnv: string | null; dryRun: boolean; help: boolean; workerPath: string | null }} */
-  const opts = { wranglerEnv: null, dryRun: false, help: false, workerPath: null };
+  /** @type {{ wranglerEnv: string | null; infisicalEnv: string | null; dryRun: boolean; help: boolean; workerPath: string | null }} */
+  const opts = {
+    wranglerEnv: null,
+    infisicalEnv: null,
+    dryRun: false,
+    help: false,
+    workerPath: null,
+  };
 
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i];
@@ -43,6 +52,10 @@ function parseArgs(argv) {
       opts.wranglerEnv = argv[++i] ?? null;
     } else if (arg.startsWith("--wrangler-env=")) {
       opts.wranglerEnv = arg.slice("--wrangler-env=".length);
+    } else if (arg === "--infisical-env") {
+      opts.infisicalEnv = argv[++i] ?? null;
+    } else if (arg.startsWith("--infisical-env=")) {
+      opts.infisicalEnv = arg.slice("--infisical-env=".length);
     } else if (arg === "--worker-path") {
       opts.workerPath = argv[++i] ?? null;
     } else if (arg.startsWith("--worker-path=")) {
@@ -57,20 +70,22 @@ function parseArgs(argv) {
 
 function printHelp() {
   console.log(`Usage:
-  infisical run --env=<infisical-env> -- node scripts/sync-wrangler-secrets-from-infisical.mjs --wrangler-env <preview|production> [--dry-run] [--worker-path <path>]
+  infisical run --env=<infisical-env> -- node scripts/sync-wrangler-secrets-from-infisical.mjs \\
+    --infisical-env <infisical-env> --wrangler-env <preview|production> [--dry-run]
 
 Infisical → wrangler mapping (SSOT):
   dev/staging → preview
   prod        → production
 
 Options:
+  --infisical-env  Infisical env slug (dev | staging | prod) — must pair with --wrangler-env
   --wrangler-env   Target wrangler environment (preview | production)
   --worker-path    Worker entry for versions upload (default: .open-next/worker.js)
   --dry-run        Print secret names that would sync; never call wrangler or print values
   --help           Show this help
 
-Primary upload: wrangler versions upload --secrets-file <ephemeral-json> --env <env>
-OpenNext equivalent: opennextjs-cloudflare upload --env <env> -- --secrets-file <file>
+Primary upload: wrangler versions upload [--env preview] --secrets-file <ephemeral-json>
+  production: top-level Worker (ipix-operator) — no --env flag (matches npm run deploy)
 
 Env (names only — set via Infisical or CI):
   CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID
@@ -97,7 +112,7 @@ function runWrangler(args) {
 }
 
 function redactValues(text) {
-  return text.replace(/"[^"]{8,}"/g, '"[REDACTED]"');
+  return text.replace(/"[^"]*"/g, '"[REDACTED]"');
 }
 
 /**
@@ -143,10 +158,32 @@ function main() {
     process.exit(1);
   }
 
+  const infisicalEnv =
+    opts.infisicalEnv ?? process.env.INFISICAL_ENV?.trim() ?? process.env.INFISICAL_ENVIRONMENT?.trim() ?? null;
+
+  if (!opts.dryRun && !infisicalEnv) {
+    console.error("Error: --infisical-env is required for live sync (dev | staging | prod)");
+    printHelp();
+    process.exit(1);
+  }
+
+  if (infisicalEnv) {
+    assertInfisicalWranglerEnvPair(infisicalEnv, opts.wranglerEnv);
+  }
+
   runtimeSecretNamesForWranglerEnv(opts.wranglerEnv);
 
   const { present, missing } = collectRuntimeSecretsFromEnv(process.env, opts.wranglerEnv);
   const namesToSync = Object.keys(present).sort();
+
+  const missingRequired = RUNTIME_REQUIRED_SECRET_NAMES.filter((n) => !present[n]);
+  if (!opts.dryRun && missingRequired.length > 0) {
+    console.error(
+      `Error: required runtime secrets missing from Infisical env (${missingRequired.join(", ")}).`,
+    );
+    console.error("SSOT sync aborted — fix Infisical or use --dry-run to inspect names only.");
+    process.exit(1);
+  }
 
   if (namesToSync.length === 0) {
     console.error(
@@ -160,7 +197,9 @@ function main() {
   console.log(`secrets to sync (${namesToSync.length}): ${namesToSync.join(", ")}`);
 
   if (missing.length > 0) {
-    console.warn(`warn: allowlisted but unset in Infisical env (${missing.length}): ${missing.join(", ")}`);
+    console.warn(
+      `warn: optional allowlisted secrets unset in Infisical env (${missing.length}): ${missing.join(", ")}`,
+    );
   }
 
   if (opts.dryRun) {
@@ -178,8 +217,7 @@ function main() {
       "versions",
       "upload",
       workerPath,
-      "--env",
-      opts.wranglerEnv,
+      ...wranglerCliEnvArgs(opts.wranglerEnv),
       "--secrets-file",
       secretsFile.filePath,
     ];
