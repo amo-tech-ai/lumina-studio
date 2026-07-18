@@ -10,7 +10,7 @@ import { ErrorState } from "@/components/ui/error-state";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { NotificationItem } from "@/lib/notifications/notification-service";
 
-import { GROUP_LABEL, GROUP_ORDER, groupNotifications } from "./inbox-format";
+import { GROUP_LABEL, GROUP_ORDER, groupNotifications, isSafeInternalDeepLink } from "./inbox-format";
 import styles from "./inbox.module.css";
 import { NotificationRow } from "./notification-row";
 
@@ -39,6 +39,13 @@ export function InboxWorkspace({ initialItems, fetchError }: Props) {
       });
       if (!res.ok) throw new Error(`mark-read failed: ${res.status}`);
       window.dispatchEvent(new Event(NOTIFICATIONS_UPDATED_EVENT));
+      // Mark-read persisted — now navigate, but only to a validated internal
+      // route. deep_link comes from notification payload data, not a trusted
+      // static route table, so it must be checked before router.push ever
+      // sees it (never follow an absolute/external/protocol URL).
+      if (isSafeInternalDeepLink(item.deep_link)) {
+        router.push(item.deep_link);
+      }
     } catch {
       // Roll back — the write didn't actually persist.
       setItems((prev) => prev.map((n) => (n.id === item.id ? { ...n, read: false } : n)));

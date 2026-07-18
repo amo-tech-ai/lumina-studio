@@ -7,34 +7,50 @@ import { useEffect, useState } from "react";
 // Poll-on-focus only for MVP (Realtime/RT1 is explicitly out of scope — IPI-401).
 export const NOTIFICATIONS_UPDATED_EVENT = "ipix:notifications-updated";
 
-async function fetchUnreadCount(): Promise<number> {
+// list_notifications caps a single page at `limit` and signals more pages
+// via next_cursor — it never reports a total count. `count` here is only
+// "how many came back in this page" and must never be compared against a
+// cap on its own (fetching limit=50 makes count > 50 impossible by
+// construction); `hasMore` — non-null next_cursor — is the real "50+" signal.
+export type UnreadBadgeState = { count: number; hasMore: boolean };
+
+async function fetchUnreadState(): Promise<UnreadBadgeState> {
   const res = await fetch("/api/notifications?unread_only=true&limit=50");
-  if (!res.ok) return 0;
-  const body = (await res.json()) as { items?: unknown[] };
-  return Array.isArray(body.items) ? body.items.length : 0;
+  if (!res.ok) return { count: 0, hasMore: false };
+  const body = (await res.json()) as { items?: unknown[]; next_cursor?: string | null };
+  return {
+    count: Array.isArray(body.items) ? body.items.length : 0,
+    hasMore: body.next_cursor != null,
+  };
 }
 
-export function useUnreadNotifications(): number {
-  const [count, setCount] = useState(0);
+export function useUnreadNotifications(): UnreadBadgeState {
+  const [state, setState] = useState<UnreadBadgeState>({ count: 0, hasMore: false });
 
   useEffect(() => {
     let cancelled = false;
     const refresh = () => {
-      fetchUnreadCount().then((n) => {
-        if (!cancelled) setCount(n);
+      fetchUnreadState().then((next) => {
+        if (!cancelled) setState(next);
       });
+    };
+
+    const onVisibilityChange = () => {
+      if (document.visibilityState === "visible") refresh();
     };
 
     refresh();
     window.addEventListener("focus", refresh);
+    document.addEventListener("visibilitychange", onVisibilityChange);
     window.addEventListener(NOTIFICATIONS_UPDATED_EVENT, refresh);
 
     return () => {
       cancelled = true;
       window.removeEventListener("focus", refresh);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
       window.removeEventListener(NOTIFICATIONS_UPDATED_EVENT, refresh);
     };
   }, []);
 
-  return count;
+  return state;
 }

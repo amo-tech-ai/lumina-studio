@@ -8,6 +8,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
+import type { UnreadBadgeState } from "./use-unread-notifications";
 import styles from "./nav-sidebar.module.css";
 
 const NAV = [
@@ -33,14 +34,16 @@ export function NavSidebar({
   brands = [],
   activeBrandId,
   onBrandSelect,
-  unreadNotifications = 0,
+  unreadNotifications = { count: 0, hasMore: false },
 }: {
   onThreadsClick?: () => void;
   brands?: Brand[];
   activeBrandId?: string | null;
   onBrandSelect?: (id: string) => void;
-  /** IPI-407 — unread count for the Inbox nav badge (capped display at 50, RPC's own max). */
-  unreadNotifications?: number;
+  /** IPI-407 — unread state for the Inbox nav badge. `count` is only "how many
+   *  came back in a 50-row page" — `hasMore` (next_cursor present) is what
+   *  actually drives the "50+" display, since count alone can never exceed 50. */
+  unreadNotifications?: UnreadBadgeState;
 }) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
@@ -85,8 +88,10 @@ export function NavSidebar({
       <ul className={styles.list}>
         {NAV.map(({ href, icon, label }) => {
           const active = href === "/app" ? pathname === "/app" : pathname.startsWith(href);
-          const badgeCount = href === "/app/inbox" ? unreadNotifications : 0;
-          const badgeLabel = badgeCount > 0 ? (badgeCount > 50 ? "50+" : String(badgeCount)) : null;
+          const isInbox = href === "/app/inbox";
+          const badgeCount = isInbox ? unreadNotifications.count : 0;
+          const badgeHasMore = isInbox && unreadNotifications.hasMore;
+          const badgeLabel = badgeHasMore ? "50+" : badgeCount > 0 ? String(badgeCount) : null;
           return (
             <li key={href}>
               <Link

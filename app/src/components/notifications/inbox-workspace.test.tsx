@@ -8,7 +8,8 @@ vi.mock("../ui/empty-state.module.css", () => ({ default: new Proxy({}, { get: (
 vi.mock("../ui/error-state.module.css", () => ({ default: new Proxy({}, { get: (_, k) => String(k) }) }));
 
 const refresh = vi.fn();
-vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh }) }));
+const push = vi.fn();
+vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh, push }) }));
 
 import type { NotificationItem } from "@/lib/notifications/notification-service";
 import { InboxSkeleton, InboxWorkspace } from "./inbox-workspace";
@@ -33,6 +34,7 @@ function daysAgoIso(days: number): string {
 
 beforeEach(() => {
   refresh.mockReset();
+  push.mockReset();
   vi.stubGlobal("fetch", vi.fn());
 });
 
@@ -108,6 +110,53 @@ describe("InboxWorkspace", () => {
     fireEvent.click(screen.getByTestId("notification-row"));
 
     await waitFor(() => expect(screen.getByLabelText("Unread")).toBeTruthy());
+  });
+
+  it("Deep link: navigates to a validated internal route once mark-read persists", async () => {
+    const fetchMock = fetch as unknown as ReturnType<typeof vi.fn>;
+    fetchMock.mockResolvedValue({ ok: true });
+
+    render(
+      <InboxWorkspace
+        initialItems={[item({ id: "n1", read: false, deep_link: "/app/shoots/123" })]}
+        fetchError={null}
+      />,
+    );
+    fireEvent.click(screen.getByTestId("notification-row"));
+
+    await waitFor(() => expect(push).toHaveBeenCalledWith("/app/shoots/123"));
+  });
+
+  it("Deep link: does not navigate for an unsafe/absolute link, even after mark-read persists", async () => {
+    const fetchMock = fetch as unknown as ReturnType<typeof vi.fn>;
+    fetchMock.mockResolvedValue({ ok: true });
+
+    render(
+      <InboxWorkspace
+        initialItems={[item({ id: "n1", read: false, deep_link: "https://evil.example/x" })]}
+        fetchError={null}
+      />,
+    );
+    fireEvent.click(screen.getByTestId("notification-row"));
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalled());
+    expect(push).not.toHaveBeenCalled();
+  });
+
+  it("Deep link: does not navigate when the POST fails (nothing actually persisted)", async () => {
+    const fetchMock = fetch as unknown as ReturnType<typeof vi.fn>;
+    fetchMock.mockResolvedValue({ ok: false, status: 500 });
+
+    render(
+      <InboxWorkspace
+        initialItems={[item({ id: "n1", read: false, deep_link: "/app/shoots/123" })]}
+        fetchError={null}
+      />,
+    );
+    fireEvent.click(screen.getByTestId("notification-row"));
+
+    await waitFor(() => expect(screen.getByLabelText("Unread")).toBeTruthy());
+    expect(push).not.toHaveBeenCalled();
   });
 
   it("Loading state: InboxSkeleton renders 5 shimmer rows", () => {

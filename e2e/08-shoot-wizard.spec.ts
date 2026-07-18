@@ -65,6 +65,9 @@ function trackedMockWizardApis(page: import("@playwright/test").Page) {
     await page.route("**/api/brands", (route) => route.fulfill({ json: [] }));
     await page.route("**/api/intelligence/panel**", (route) => route.fulfill({ json: {} }));
     await page.route("**/api/copilotkit/info**", (route) => route.fulfill({ json: {} }));
+    // IPI-407 — the nav-wide unread badge (useUnreadNotifications) fires on every
+    // operator route, including this wizard, same category as the shell calls above.
+    await page.route("**/api/notifications**", (route) => route.fulfill({ json: { items: [], next_cursor: null } }));
 
     await page.route("**/api/shoots/suggest-brief", (route) =>
       route.fulfill({ json: { brief: "E2E generated creative brief for the SS26 campaign." } }),

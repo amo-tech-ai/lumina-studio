@@ -85,6 +85,17 @@ export function groupOf(iso: string, now: Date = new Date()): NotificationGroup 
   return "earlier";
 }
 
+/** True only for a same-origin, in-app route — never an absolute URL, a
+ *  protocol-relative "//host" (browser treats that as external), or a
+ *  javascript:/data: scheme. deep_link is notification payload data, not a
+ *  trusted static route table, so this must run before any navigation. */
+export function isSafeInternalDeepLink(deepLink: string | null): deepLink is string {
+  if (!deepLink) return false;
+  if (!deepLink.startsWith("/app/")) return false;
+  if (deepLink.startsWith("//")) return false;
+  return true;
+}
+
 export function groupNotifications(
   items: NotificationItem[],
   now: Date = new Date(),
