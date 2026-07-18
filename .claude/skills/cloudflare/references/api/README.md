@@ -9,7 +9,7 @@ How are you calling the Cloudflare API?
 ├─ From Workers runtime → Use bindings, not REST API (see ../bindings/)
 ├─ Server-side (Node/Python/Go) → Official SDK (see api.md)
 ├─ CLI/scripts → Wrangler or curl (see configuration.md)
-├─ Infrastructure-as-code → See ../pulumi/ or ../terraform/
+├─ Infrastructure-as-code → Terraform/Pulumi via official CF docs (refs trimmed from hub)
 └─ One-off requests → curl examples (see api.md)
 ```
 
@@ -63,4 +63,4 @@ All SDKs are Stainless-generated from OpenAPI spec (consistent APIs).
 - [Cloudflare API Docs](https://developers.cloudflare.com/api/)
 - [Bindings Reference](../bindings/) - Workers runtime bindings (preferred over REST API)
 - [Wrangler Reference](../wrangler/) - CLI tool for Cloudflare development
-- [GraphQL Analytics API Reference](../graphql-api/) - Analytics data via GraphQL (separate endpoint from REST API)
+- [GraphQL Analytics API](https://developers.cloudflare.com/analytics/graphql-api/) — analytics via GraphQL (ref trimmed from hub)

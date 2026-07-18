@@ -106,7 +106,7 @@ SELECT * FROM logs.requests WHERE __ingest_ts < '<last_ts>' ORDER BY __ingest_ts
 ## Performance (essentials)
 
 - **Always `LIMIT`** (early termination); **filter on partition keys first** (`__ingest_ts` range), then add predicates.
-- **Narrow time ranges**; **compact tables** (file count dominates latency — enable automatic compaction in [r2-data-catalog](../r2-data-catalog/configuration.md)).
+- **Narrow time ranges**; **compact tables** (file count dominates latency — enable automatic compaction per [R2 Data Catalog](https://developers.cloudflare.com/r2/data-catalog/)).
 - Read response `metrics` (`files_scanned`, `bytes_scanned`) to tune. Full guidance: limitations-best-practices doc.
 
 ## Pipelines → R2 SQL
@@ -115,4 +115,4 @@ After `npx wrangler pipelines setup` (Data Catalog destination), wait for first 
 
 ## See Also
 
-- [api.md](api.md) · [gotchas.md](gotchas.md) · [r2-data-catalog/patterns.md](../r2-data-catalog/patterns.md)
+- [api.md](api.md) · [gotchas.md](gotchas.md) · [R2 Data Catalog patterns](https://developers.cloudflare.com/r2/data-catalog/)
