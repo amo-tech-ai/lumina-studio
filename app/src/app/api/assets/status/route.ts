@@ -2,7 +2,7 @@
 import { NextResponse } from "next/server";
 import { isBrandAccessible } from "@/lib/assets/brand-access";
 import { withOperatorAuth, OperatorAuthError } from "@/lib/operator-gate";
-import { createSupabaseAdminClient } from "@/lib/supabase/admin";
+import { createSupabaseAdminClient } from "@/app/api/_lib/supabase-admin";
 import { createOperatorSupabaseClient } from "@/lib/supabase/operator-client";
 
 export const dynamic = "force-dynamic";

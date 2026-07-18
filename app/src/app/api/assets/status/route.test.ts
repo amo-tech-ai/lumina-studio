@@ -23,7 +23,7 @@ vi.mock("@/lib/supabase/operator-client", () => ({
   createOperatorSupabaseClient: () => mockCreateOperatorSupabaseClient(),
 }));
 
-vi.mock("@/lib/supabase/admin", () => ({
+vi.mock("@/app/api/_lib/supabase-admin", () => ({
   createSupabaseAdminClient: () => mockCreateSupabaseAdminClient(),
 }));
 

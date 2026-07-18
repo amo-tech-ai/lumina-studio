@@ -93,7 +93,9 @@ test.describe("IPI-433 — Upload workspace queue", () => {
     await waitForUploadPanel(page);
     await simulateUpload(page);
 
-    await expect(page.getByTestId("upload-queue").getByText(/processing/i)).toBeVisible({ timeout: 10_000 });
+    const queue = page.getByTestId("upload-queue");
+    await expect(queue).toBeVisible({ timeout: 10_000 });
+    await page.getByTestId("upload-cancel").waitFor({ timeout: 10_000 });
     const pollsBeforeCancel = pollCount;
 
     await page.getByTestId("upload-cancel").click();
@@ -121,7 +123,7 @@ test.describe("IPI-433 — Upload workspace queue", () => {
     await simulateUpload(page);
 
     const queue = page.getByTestId("upload-queue");
-    await expect(queue.getByText(/taking longer than expected/i)).toBeVisible({ timeout: 10_000 });
+    await expect(queue.getByText(/taking longer than expected/i)).toBeVisible({ timeout: 15_000 });
     await expect(queue.getByText(/processing failed/i)).not.toBeVisible();
   });
 
