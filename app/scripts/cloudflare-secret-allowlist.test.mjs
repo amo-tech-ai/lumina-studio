@@ -10,7 +10,12 @@ import {
   runtimeSecretNamesForWranglerEnv,
   wranglerCliEnvArgs,
 } from "./cloudflare-secret-allowlist.mjs";
-import { parseArgs, redactValues, writeSecureSecretsFile } from "./sync-wrangler-secrets-from-infisical.mjs";
+import {
+  buildVersionsUploadArgs,
+  parseArgs,
+  redactValues,
+  writeSecureSecretsFile,
+} from "./sync-wrangler-secrets-from-infisical.mjs";
 
 describe("cloudflare-secret-allowlist", () => {
   it("keeps build-time and runtime allowlists disjoint", () => {
@@ -69,8 +74,8 @@ describe("cloudflare-secret-allowlist", () => {
     expect(() => assertInfisicalWranglerEnvPair("prod", "production")).not.toThrow();
   });
 
-  it("wranglerCliEnvArgs omits --env for production (top-level Worker)", () => {
-    expect(wranglerCliEnvArgs("production")).toEqual([]);
+  it("wranglerCliEnvArgs targets top-level production Worker via --env=\"\"", () => {
+    expect(wranglerCliEnvArgs("production")).toEqual(["--env", ""]);
     expect(wranglerCliEnvArgs("preview")).toEqual(["--env", "preview"]);
   });
 });
@@ -92,8 +97,26 @@ describe("sync-wrangler-secrets-from-infisical", () => {
       wranglerEnv: "preview",
       dryRun: true,
       help: false,
-      workerPath: null,
     });
+  });
+
+  it("buildVersionsUploadArgs uses wrangler.jsonc main (no positional worker path)", () => {
+    expect(buildVersionsUploadArgs("preview", "/tmp/secrets.json")).toEqual([
+      "versions",
+      "upload",
+      "--env",
+      "preview",
+      "--secrets-file",
+      "/tmp/secrets.json",
+    ]);
+    expect(buildVersionsUploadArgs("production", "/tmp/secrets.json")).toEqual([
+      "versions",
+      "upload",
+      "--env",
+      "",
+      "--secrets-file",
+      "/tmp/secrets.json",
+    ]);
   });
 
   it("dry-run path logs secret names only, never values", () => {
@@ -146,7 +169,7 @@ describe("sync-wrangler-secrets-from-infisical", () => {
     const src = readFileSync(scriptPath, "utf8");
     expect(src).toMatch(/versions upload/);
     expect(src).toMatch(/--secrets-file/);
-    expect(src).toMatch(/runWrangler\(uploadArgs\)/);
-    expect(src).not.toMatch(/runWrangler\(bulkArgs/);
+    expect(src).toMatch(/buildVersionsUploadArgs/);
+    expect(src).not.toMatch(/workerPath/);
   });
 });

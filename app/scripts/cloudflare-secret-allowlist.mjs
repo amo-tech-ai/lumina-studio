@@ -36,6 +36,7 @@ export const RUNTIME_SECRET_NAMES = Object.freeze([
   "FIRECRAWL_API_KEY",
   "AI_GATEWAY_URL",
   "AI_GATEWAY_API_KEY",
+  "INTERNAL_WEBHOOK_SECRET",
 ]);
 
 /** Per wrangler env — extend when preview/production diverge on secret *names*. */
@@ -155,7 +156,7 @@ export function assertInfisicalWranglerEnvPair(infisicalEnv, wranglerEnv) {
 
 /**
  * Wrangler CLI `--env` args for sync/upload.
- * Production deploy uses the top-level Worker (`ipix-operator`) — no `--env` flag.
+ * Production deploy uses the top-level Worker (`ipix-operator`) — `--env=""` when named envs exist.
  * Preview uses `env.preview` in wrangler.jsonc.
  * @param {string} wranglerEnv
  * @returns {string[]}
@@ -163,7 +164,7 @@ export function assertInfisicalWranglerEnvPair(infisicalEnv, wranglerEnv) {
 export function wranglerCliEnvArgs(wranglerEnv) {
   runtimeSecretNamesForWranglerEnv(wranglerEnv);
   if (wranglerEnv === "production") {
-    return [];
+    return ["--env", ""];
   }
   if (wranglerEnv === "preview") {
     return ["--env", "preview"];

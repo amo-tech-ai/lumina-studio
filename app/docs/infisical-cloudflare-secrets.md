@@ -88,6 +88,7 @@ Server-only — never in client chunks. Synced by the allowlist script via a sec
 | `FIRECRAWL_API_KEY` | Visual identity agent |
 | `AI_GATEWAY_URL` | Legacy custom Worker gateway (frozen) |
 | `AI_GATEWAY_API_KEY` | Legacy gateway auth |
+| `INTERNAL_WEBHOOK_SECRET` | Brand-intelligence workflow resume webhook auth |
 
 **Forbidden in runtime sync:** any `NEXT_PUBLIC_*` (enforced by `assertNoForbiddenSecrets(..., "runtime")`).
 

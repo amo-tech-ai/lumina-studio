@@ -30,16 +30,14 @@ import {
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const appDir = path.resolve(__dirname, "..");
 const localWrangler = path.join(appDir, "node_modules", ".bin", "wrangler");
-const defaultWorkerEntry = path.join(appDir, ".open-next", "worker.js");
 
 function parseArgs(argv) {
-  /** @type {{ wranglerEnv: string | null; infisicalEnv: string | null; dryRun: boolean; help: boolean; workerPath: string | null }} */
+  /** @type {{ wranglerEnv: string | null; infisicalEnv: string | null; dryRun: boolean; help: boolean }} */
   const opts = {
     wranglerEnv: null,
     infisicalEnv: null,
     dryRun: false,
     help: false,
-    workerPath: null,
   };
 
   for (let i = 0; i < argv.length; i++) {
@@ -56,10 +54,6 @@ function parseArgs(argv) {
       opts.infisicalEnv = argv[++i] ?? null;
     } else if (arg.startsWith("--infisical-env=")) {
       opts.infisicalEnv = arg.slice("--infisical-env=".length);
-    } else if (arg === "--worker-path") {
-      opts.workerPath = argv[++i] ?? null;
-    } else if (arg.startsWith("--worker-path=")) {
-      opts.workerPath = arg.slice("--worker-path=".length);
     } else {
       throw new Error(`Unknown argument: ${arg}`);
     }
@@ -80,12 +74,12 @@ Infisical → wrangler mapping (SSOT):
 Options:
   --infisical-env  Infisical env slug (dev | staging | prod) — must pair with --wrangler-env
   --wrangler-env   Target wrangler environment (preview | production)
-  --worker-path    Worker entry for versions upload (default: .open-next/worker.js)
   --dry-run        Print secret names that would sync; never call wrangler or print values
   --help           Show this help
 
-Primary upload: wrangler versions upload [--env preview] --secrets-file <ephemeral-json>
-  production: top-level Worker (ipix-operator) — no --env flag (matches npm run deploy)
+Primary upload: wrangler versions upload [--env preview|--env=""] --secrets-file <ephemeral-json>
+  Entry point comes from wrangler.jsonc \`main\` — do not pass a positional worker path.
+  production: top-level Worker (ipix-operator) via --env="" (matches npm run deploy)
 
 Env (names only — set via Infisical or CI):
   CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID
@@ -136,12 +130,15 @@ export function writeSecureSecretsFile(secrets) {
   };
 }
 
-function resolveWorkerPath(explicit) {
-  const candidate = explicit ?? defaultWorkerEntry;
-  if (!candidate || !path.isAbsolute(candidate)) {
-    return path.resolve(appDir, candidate ?? defaultWorkerEntry);
-  }
-  return candidate;
+/** @param {string} wranglerEnv */
+export function buildVersionsUploadArgs(wranglerEnv, secretsFilePath) {
+  return [
+    "versions",
+    "upload",
+    ...wranglerCliEnvArgs(wranglerEnv),
+    "--secrets-file",
+    secretsFilePath,
+  ];
 }
 
 function main() {
@@ -209,18 +206,10 @@ function main() {
 
   requireCloudflareCredentials(process.env);
 
-  const workerPath = resolveWorkerPath(opts.workerPath);
   let secretsFile;
   try {
     secretsFile = writeSecureSecretsFile(present);
-    const uploadArgs = [
-      "versions",
-      "upload",
-      workerPath,
-      ...wranglerCliEnvArgs(opts.wranglerEnv),
-      "--secrets-file",
-      secretsFile.filePath,
-    ];
+    const uploadArgs = buildVersionsUploadArgs(opts.wranglerEnv, secretsFile.filePath);
 
     const result = runWrangler(uploadArgs);
     if (result.error) {
@@ -247,4 +236,4 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.a
   main();
 }
 
-export { parseArgs, redactValues, runWrangler, requireCloudflareCredentials, resolveWorkerPath };
+export { parseArgs, redactValues, runWrangler, requireCloudflareCredentials };
