@@ -19,6 +19,7 @@ const NAV = [
   { href: "/app/assets",    icon: "🖼", label: "Assets" },
   { href: "/app/campaigns", icon: "📣", label: "Campaigns" },
   { href: "/app/matching",  icon: "🤝", label: "Matching" },
+  { href: "/app/inbox",     icon: "🔔", label: "Inbox" },
 ] as const;
 
 export interface Brand {
@@ -32,11 +33,14 @@ export function NavSidebar({
   brands = [],
   activeBrandId,
   onBrandSelect,
+  unreadNotifications = 0,
 }: {
   onThreadsClick?: () => void;
   brands?: Brand[];
   activeBrandId?: string | null;
   onBrandSelect?: (id: string) => void;
+  /** IPI-407 — unread count for the Inbox nav badge (capped display at 50, RPC's own max). */
+  unreadNotifications?: number;
 }) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
@@ -81,16 +85,21 @@ export function NavSidebar({
       <ul className={styles.list}>
         {NAV.map(({ href, icon, label }) => {
           const active = href === "/app" ? pathname === "/app" : pathname.startsWith(href);
+          const badgeCount = href === "/app/inbox" ? unreadNotifications : 0;
+          const badgeLabel = badgeCount > 0 ? (badgeCount > 50 ? "50+" : String(badgeCount)) : null;
           return (
             <li key={href}>
               <Link
                 href={href}
                 className={`${styles.item} ${active ? styles.itemActive : ""}`}
                 title={!open ? label : undefined}
-                aria-label={label}
+                aria-label={badgeLabel ? `${label} — ${badgeLabel} unread` : label}
                 aria-current={active ? "page" : undefined}
               >
-                <span className={styles.icon} aria-hidden="true">{icon}</span>
+                <span className={styles.iconWrap}>
+                  <span className={styles.icon} aria-hidden="true">{icon}</span>
+                  {badgeLabel && <span className={styles.badge} aria-hidden="true">{badgeLabel}</span>}
+                </span>
                 {open && <span className={styles.label}>{label}</span>}
               </Link>
             </li>
