@@ -147,6 +147,26 @@ describe("Shoot Wizard — Basics required-field validation (Task 5)", () => {
     fireEvent.click(screen.getByRole("button", { name: /IG Feed/ })); // toggle off
     expect(continueButton().hasAttribute("disabled")).toBe(true);
   });
+
+  it("selecting a channel fetches its spec from /api/media/specs (5th real endpoint, debounced 200ms)", async () => {
+    const { calls } = await renderWizard();
+    fireEvent.click(screen.getByRole("button", { name: /IG Feed/ }));
+
+    await waitFor(() => {
+      const specCalls = calls.filter((c) => c.url.startsWith("/api/media/specs"));
+      expect(specCalls).toHaveLength(1);
+      expect(specCalls[0].url).toBe("/api/media/specs?channels=instagram_feed");
+    });
+
+    // Selecting a second channel re-fires with the full, updated channel list —
+    // proves the endpoint tracks state.channels, not just "fired once ever".
+    fireEvent.click(screen.getByRole("button", { name: /TikTok/ }));
+    await waitFor(() => {
+      const specCalls = calls.filter((c) => c.url.startsWith("/api/media/specs"));
+      expect(specCalls).toHaveLength(2);
+      expect(specCalls[1].url).toBe("/api/media/specs?channels=instagram_feed,tiktok");
+    });
+  });
 });
 
 describe("Shoot Wizard — step navigation (Task 2)", () => {
