@@ -80,12 +80,11 @@ jobs:
         run: npm run test
 
       # IPI-472 · INFRA-001 — OpenNext Worker build + dry-run gzip gate (8.5 warn / 9.0 fail MiB).
-      # Build-time public Supabase vars must be present so client auth chunks compile correctly.
-      # Secrets are masked by GitHub Actions — never echo values.
+      # Placeholder public Supabase vars — sufficient for bundle gate; fork PRs lack repo secrets.
       - name: OpenNext Cloudflare build + bundle gate (build:cf)
         env:
-          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
-          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+          NEXT_PUBLIC_SUPABASE_URL: https://example.supabase.co
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: placeholder
         run: npm run build:cf
 
   # IPI-347 · Model Gate capstone — remote SQL + RLS when DATABASE_URL secret is set.
