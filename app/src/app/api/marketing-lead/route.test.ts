@@ -13,10 +13,13 @@ const VALID_BODY = {
   website: "https://coolbrand.co",
 };
 
-function makeRequest(body: unknown): Request {
+function makeRequest(
+  body: unknown,
+  headers: Record<string, string> = {},
+): Request {
   return new Request("http://localhost/api/marketing-lead", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", ...headers },
     body: JSON.stringify(body),
   });
 }
@@ -32,6 +35,7 @@ beforeEach(() => {
   vi.resetModules();
   vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://test.supabase.co");
   vi.stubEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY", "test-anon-key");
+  vi.stubEnv("CAPTURE_LEAD_PROXY_SECRET", "test-proxy-secret");
 });
 
 afterEach(() => {
@@ -110,6 +114,22 @@ describe("marketing-lead — payload validation", () => {
     );
     expect(res.status).toBe(422);
   });
+
+  it("strips non-UUID conversation_id before forwarding to capture-lead", async () => {
+    const mockFetch = vi.fn().mockResolvedValueOnce(
+      new Response(JSON.stringify({ draftId: "d-xyz" }), { status: 200 }),
+    );
+    vi.stubGlobal("fetch", mockFetch);
+
+    const { POST } = await importRoute();
+    const res = await POST(
+      makeRequest({ ...VALID_BODY, conversation_id: "stale-not-a-uuid" }),
+    );
+    expect(res.status).toBe(200);
+    const [, opts] = mockFetch.mock.calls[0];
+    const body = JSON.parse(String((opts as RequestInit).body));
+    expect(body.conversation_id).toBeUndefined();
+  });
 });
 
 // ─── LeadPayload routing to capture-lead ────────────────────────────────────
@@ -160,20 +180,34 @@ describe("marketing-lead — capture-lead integration", () => {
     });
   });
 
-  it("omits x-ipix-proxy-secret when env var is not set", async () => {
-    vi.stubEnv("CAPTURE_LEAD_PROXY_SECRET", "");
+  it("forwards client IP to Edge for rate limiting", async () => {
     const mockFetch = vi.fn().mockResolvedValueOnce(
       new Response(JSON.stringify({ draftId: "d-xyz" }), { status: 200 }),
     );
     vi.stubGlobal("fetch", mockFetch);
 
     const { POST } = await importRoute();
-    await POST(makeRequest(VALID_BODY));
+    await POST(
+      makeRequest(VALID_BODY, { "x-forwarded-for": "198.51.100.7, 10.0.0.1" }),
+    );
 
     const [, opts] = mockFetch.mock.calls[0];
-    expect((opts as RequestInit).headers).not.toMatchObject({
-      "x-ipix-proxy-secret": expect.anything(),
+    expect((opts as RequestInit).headers).toMatchObject({
+      "x-forwarded-for": "198.51.100.7",
+      "x-real-ip": "198.51.100.7",
     });
+  });
+
+  it("returns 500 when CAPTURE_LEAD_PROXY_SECRET is not set", async () => {
+    vi.stubEnv("CAPTURE_LEAD_PROXY_SECRET", "");
+    const mockFetch = vi.fn();
+    vi.stubGlobal("fetch", mockFetch);
+
+    const { POST } = await importRoute();
+    const res = await POST(makeRequest(VALID_BODY));
+
+    expect(res.status).toBe(500);
+    expect(mockFetch).not.toHaveBeenCalled();
   });
 
   it("maps website → brand_url in the capture-lead payload", async () => {

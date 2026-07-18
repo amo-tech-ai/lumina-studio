@@ -54,6 +54,7 @@ describe("lead pipeline — runtime: name preserved in capture-lead payload", ()
     vi.resetModules();
     vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://test.supabase.co");
     vi.stubEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY", "test-anon-key");
+    vi.stubEnv("CAPTURE_LEAD_PROXY_SECRET", "test-proxy-secret");
   });
 
   afterEach(() => {
