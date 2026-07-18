@@ -62,18 +62,17 @@ describe("CopilotKit route — operator auth boundary (IPI2-127)", () => {
     expect(src).not.toMatch(/_resolvedUsers/);
   });
 
-  it("identifyUser reads from ALS — no Request param needed (C3 fix v2)", () => {
+  it("defers identifyUser until CopilotKitIntelligence is wired (threads off in SSE mode)", () => {
     const src = readFileSync(ROUTE, "utf8");
-    expect(src).toMatch(/identifyUser:\s*async\s*\(\s*\)\s*=>/);
-    expect(src).toMatch(/identifyUser[\s\S]*_requestUser\.getStore\(\)/);
-    expect(src).not.toMatch(/identifyUser:[\s\S]*resolveOperatorUser/);
+    expect(src).toMatch(/isCopilotKitThreadsEnabled/);
+    expect(src).not.toMatch(/identifyUser:/);
+    expect(src).not.toMatch(/licenseToken:/);
   });
 
-  it("gates licenseToken on isCopilotIntelligenceEnabled and isOperatorAuthEnforced (IPI-468)", () => {
+  it("does not pass licenseToken without CopilotKitIntelligence (threads gated on isCopilotKitThreadsEnabled)", () => {
     const src = readFileSync(ROUTE, "utf8");
-    expect(src).toMatch(/isCopilotIntelligenceEnabled\(\)/);
-    expect(src).toMatch(/isOperatorAuthEnforced\(\)/);
-    expect(src).not.toMatch(/OPERATOR_AUTH_ENABLED === "true"/);
+    expect(src).toMatch(/isCopilotKitThreadsEnabled/);
+    expect(src).not.toMatch(/licenseToken:/);
   });
 });
 

@@ -9,7 +9,7 @@ import { RequestContext } from "@mastra/core/request-context";
 import { getMastra } from "@/mastra";
 import { type OperatorUser, extractAccessToken } from "@/lib/auth";
 import { isOperatorAuthEnforced, OperatorAuthError, withOperatorAuth } from "@/lib/operator-gate";
-import { isCopilotIntelligenceEnabled } from "@/lib/copilotkit/intelligence-config";
+import { isCopilotIntelligenceEnvComplete, isCopilotKitThreadsEnabled } from "@/lib/copilotkit/intelligence-config";
 import { requestToken } from "@/lib/request-token";
 import { withStreamIdleTimeout } from "@/lib/copilotkit/stream-idle-timeout";
 
@@ -29,9 +29,13 @@ if (!process.env.COPILOTKIT_LICENSE_TOKEN) {
   console.warn(
     "[copilotkit] COPILOTKIT_LICENSE_TOKEN not set — thread persistence disabled, each page load starts a fresh conversation",
   );
-} else if (!isCopilotIntelligenceEnabled()) {
+} else if (!isCopilotIntelligenceEnvComplete()) {
   console.warn(
     "[copilotkit] COPILOTKIT_LICENSE_TOKEN set but Intelligence vars incomplete — threads disabled until INTELLIGENCE_API_KEY, INTELLIGENCE_API_URL, INTELLIGENCE_GATEWAY_WS_URL are set",
+  );
+} else if (!isCopilotKitThreadsEnabled()) {
+  console.warn(
+    "[copilotkit] Intelligence env complete but CopilotKitIntelligence not wired in runtime — threads UI stays off (SSE mode)",
   );
 }
 
@@ -48,12 +52,8 @@ const runtime = new CopilotRuntime({
     });
   },
   runner: new InMemoryAgentRunner(),
-  ...(isCopilotIntelligenceEnabled() && isOperatorAuthEnforced()
-    ? {
-        licenseToken: process.env.COPILOTKIT_LICENSE_TOKEN,
-        identifyUser: async () => _requestUser.getStore() ?? UNKNOWN_USER,
-      }
-    : {}),
+  // Intelligence mode requires `intelligence: new CopilotKitIntelligence(...)` — not licenseToken alone.
+  // isCopilotKitThreadsEnabled() stays false until that client is wired (see intelligence-config.ts).
 });
 
 // CF-MIG-210: fetch handler (no hono/vercel — Workers-safe; same pattern as marketing-chat).
