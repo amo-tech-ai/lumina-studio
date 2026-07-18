@@ -184,6 +184,13 @@ export interface DependencyGraph {
 export interface PlannerMutationError {
   code: string;
   message: string;
+  // IPI-650 — set only for createInstance's INSTANCE_ALREADY_EXISTS: the
+  // pre-existing planner.instances row's id, so the UI can link straight to
+  // it instead of just telling the caller to retry. planner_create_instance's
+  // RPC already returns this in its failure payload (migration
+  // 20260716214521_planner_create_instance_shoot_tenancy_and_race_fix.sql);
+  // createInstance (mutations.ts) previously discarded it before this fix.
+  existingInstanceId?: string;
 }
 
 export type MutationResult<T> =

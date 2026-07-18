@@ -11,7 +11,9 @@ import { redirect } from "next/navigation";
 
 import { buildHubUrl, parseHubSearchParams, type RawHubSearchParams } from "@/components/planner/hub-params";
 import { PlannerHubWorkspace } from "@/components/planner/hub-workspace";
-import { listPlannerInstances } from "@/lib/planner/queries";
+import { getCurrentOrgId } from "@/lib/crm/queries";
+import { listEligibleEntities, listPlannerInstances, listWorkflowTemplates } from "@/lib/planner/queries";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
@@ -54,7 +56,32 @@ export default async function PlannerHubPage({
     throw new Error(result.error.message);
   }
 
+  // IPI-650 — "New plan" CTA data. result.ok above proves the caller is
+  // authenticated (listPlannerInstances already redirected otherwise), so
+  // this second auth round-trip only resolves *which* org — same
+  // single-org-per-user MVP assumption getCurrentOrgId's own doc comment
+  // states (crm/queries.ts), reused rather than duplicated here. A caller
+  // with no organization yet (null) still gets the CTA — never pre-filtered
+  // client-side — the dialog itself explains there's nothing to attach a
+  // plan to.
+  const supabase = await createSupabaseServerClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  const orgId = user ? await getCurrentOrgId(user.id, supabase) : null;
+
+  const [eligibleEntitiesResult, workflowTemplatesResult] = orgId
+    ? await Promise.all([listEligibleEntities(orgId), listWorkflowTemplates(orgId)])
+    : [null, null];
+
   return (
-    <PlannerHubWorkspace filters={filters} items={result.data.items} nextCursor={result.data.nextCursor} />
+    <PlannerHubWorkspace
+      filters={filters}
+      items={result.data.items}
+      nextCursor={result.data.nextCursor}
+      orgId={orgId}
+      eligibleEntities={eligibleEntitiesResult?.ok ? eligibleEntitiesResult.data : []}
+      workflowTemplates={workflowTemplatesResult?.ok ? workflowTemplatesResult.data : []}
+    />
   );
 }

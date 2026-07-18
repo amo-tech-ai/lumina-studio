@@ -431,14 +431,24 @@ const INSTANCE_MUTATION_MESSAGES: Record<string, string> = {
   IDEMPOTENCY_CONFLICT: "This request conflicts with one already in progress. Refresh and try again.",
 };
 
-function instanceMutationError(code: string): MutationResult<never> {
+// existingInstanceId is only ever populated by the RPC for
+// INSTANCE_ALREADY_EXISTS — gated on `code` here (not just truthiness) so a
+// stray value on any other code can never leak into the typed error either.
+function instanceMutationError(code: string, existingInstanceId?: string): MutationResult<never> {
   const message = INSTANCE_MUTATION_MESSAGES[code];
   if (!message) {
     // Never forward the raw Postgres message — same idiom as taskMutationError.
     console.error("[planner/mutations] planner_create_instance rpc failed:", code);
     return { ok: false, error: { code: "UNKNOWN_ERROR", message: "The request could not be completed." } };
   }
-  return { ok: false, error: { code, message } };
+  return {
+    ok: false,
+    error: {
+      code,
+      message,
+      ...(code === "INSTANCE_ALREADY_EXISTS" && existingInstanceId ? { existingInstanceId } : {}),
+    },
+  };
 }
 
 // Engine-computes/RPC-persists (PR 2 contract): PlannerEngine.buildSchedule()
@@ -498,8 +508,16 @@ export async function createInstance(
     return { ok: false, error: { code: "UNKNOWN_ERROR", message: "The request could not be completed." } };
   }
 
-  const result = data as PlannerRpcResult<{ instanceId: string }>;
-  if (!result.ok) return instanceMutationError(result.code);
+  // Narrower than the generic PlannerRpcResult<T> above: planner_create_instance's
+  // own failure branch optionally carries `instanceId` (the pre-existing row,
+  // for INSTANCE_ALREADY_EXISTS) directly at the top level, not nested under
+  // `conflicts` the way PlannerRpcResult's generic shape would imply.
+  type CreateInstanceRpcResult =
+    | { ok: true; replayed: boolean; instanceId: string }
+    | { ok: false; code: string; instanceId?: string };
+
+  const result = data as CreateInstanceRpcResult;
+  if (!result.ok) return instanceMutationError(result.code, result.instanceId);
 
   return { ok: true, data: { replayed: result.replayed, instanceId: result.instanceId } };
 }

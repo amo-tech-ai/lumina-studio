@@ -1,0 +1,51 @@
+/* IPI-650 — dialog internals follow invite-member-dialog.module.css's
+   established Planner-dialog convention (shadcn primitives + tokens.css),
+   not SCR-35/SCR-32's mockup styling — neither DC file mocks actual modal
+   contents, only a toast placeholder, so there is no design-file form to
+   match parity against here. */
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-top: 8px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.label {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-secondary);
+}
+
+.select {
+  height: 40px;
+  padding: 0 12px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border-strong);
+  background: var(--color-bg-card);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-primary);
+}
+
+.error {
+  color: var(--color-destructive, #b91c1c);
+  font-size: var(--font-size-sm);
+}
+
+.errorLink {
+  font-weight: var(--font-weight-semibold);
+  text-decoration: underline;
+}
+
+.notice {
+  margin: 8px 0 0;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  line-height: var(--line-height-normal);
+}
