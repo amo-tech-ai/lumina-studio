@@ -143,6 +143,12 @@ jobs:
   # misleadingly-green "skipped" run.
   shoot-wizard-e2e:
     runs-on: ubuntu-latest
+    # Fork PRs never receive repo secrets (GitHub platform behavior, not
+    # something a workflow can opt into) — skip cleanly for them instead of
+    # hard-failing every external/Dependabot PR on a secret they can never
+    # have. Same-repo pushes and PRs still run and still hard-fail below if
+    # QA_PASSWORD is missing there, where it's expected to be configured.
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository
     steps:
       - uses: actions/checkout@v4
 
