@@ -2645,13 +2645,16 @@ try {
     assertZeroResiduals(beforeDup, await countResidualsForDeal(ciDealDup.id, wfA.id), "duplicate-phase reject");
 
     // 19e — positive path already proved complete set (#5); assert task count
-    // equals workflow phase count (regression guard for IPI-670).
+    // equals workflow phase count (regression guard for IPI-670). Require a
+    // positive count so a prior failed create (ciTasks unset) cannot pass as 0===0.
     const { data: ciPhaseCountRows, error: ciPhaseCountErr } = await plannerA
       .from("phases")
       .select("id")
       .eq("workflow_id", wfA.id);
+    const ciPhaseCount = (ciPhaseCountRows ?? []).length;
+    const ciTaskCount = (ciTasks ?? []).length;
     assert(
-      !ciPhaseCountErr && (ciPhaseCountRows ?? []).length === (ciTasks ?? []).length,
+      !ciPhaseCountErr && ciPhaseCount > 0 && ciTaskCount === ciPhaseCount,
       "IPI-670: successful create persists exactly one task per workflow phase",
     );
 
