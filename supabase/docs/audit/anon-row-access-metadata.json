@@ -1,0 +1,185 @@
+{
+  "task": "IPI-681",
+  "captured_at": "2026-07-18T09:10:00.000Z",
+  "project_ref": "nvdlhrodvevgwdsneplk",
+  "source": "supabase_mcp_execute_sql",
+  "sql_helper": "supabase/docs/audit/anon-row-access-metadata.sql",
+  "notes": "Privileged inventory only — no row contents. table_contains_rows from EXISTS (SELECT 1).",
+  "tables": [
+    {
+      "schema_name": "planner",
+      "table_name": "instances",
+      "table_exists": true,
+      "anon_has_select_grant": false,
+      "rls_enabled": true,
+      "rls_forced": false,
+      "has_anon_select_policy": false,
+      "anon_policy_names": [],
+      "table_contains_rows": true
+    },
+    {
+      "schema_name": "public",
+      "table_name": "ai_agent_logs",
+      "table_exists": true,
+      "anon_has_select_grant": true,
+      "rls_enabled": true,
+      "rls_forced": false,
+      "has_anon_select_policy": false,
+      "anon_policy_names": [],
+      "table_contains_rows": true
+    },
+    {
+      "schema_name": "public",
+      "table_name": "assets",
+      "table_exists": true,
+      "anon_has_select_grant": true,
+      "rls_enabled": true,
+      "rls_forced": false,
+      "has_anon_select_policy": true,
+      "anon_policy_names": ["anon_select_assets"],
+      "table_contains_rows": true
+    },
+    {
+      "schema_name": "public",
+      "table_name": "brand_intake_drafts",
+      "table_exists": true,
+      "anon_has_select_grant": true,
+      "rls_enabled": true,
+      "rls_forced": false,
+      "has_anon_select_policy": false,
+      "anon_policy_names": [],
+      "table_contains_rows": true
+    },
+    {
+      "schema_name": "public",
+      "table_name": "brand_scores",
+      "table_exists": true,
+      "anon_has_select_grant": true,
+      "rls_enabled": true,
+      "rls_forced": false,
+      "has_anon_select_policy": true,
+      "anon_policy_names": ["brand_scores_select_via_brand"],
+      "table_contains_rows": true
+    },
+    {
+      "schema_name": "public",
+      "table_name": "brands",
+      "table_exists": true,
+      "anon_has_select_grant": true,
+      "rls_enabled": true,
+      "rls_forced": false,
+      "has_anon_select_policy": false,
+      "anon_policy_names": [],
+      "table_contains_rows": true
+    },
+    {
+      "schema_name": "public",
+      "table_name": "chatbot_conversations",
+      "table_exists": true,
+      "anon_has_select_grant": false,
+      "rls_enabled": true,
+      "rls_forced": false,
+      "has_anon_select_policy": false,
+      "anon_policy_names": [],
+      "table_contains_rows": true
+    },
+    {
+      "schema_name": "public",
+      "table_name": "commerce_product_links",
+      "table_exists": true,
+      "anon_has_select_grant": true,
+      "rls_enabled": true,
+      "rls_forced": false,
+      "has_anon_select_policy": false,
+      "anon_policy_names": [],
+      "table_contains_rows": true
+    },
+    {
+      "schema_name": "public",
+      "table_name": "crm_contacts",
+      "table_exists": true,
+      "anon_has_select_grant": true,
+      "rls_enabled": true,
+      "rls_forced": false,
+      "has_anon_select_policy": true,
+      "anon_policy_names": [
+        "crm_contacts_delete_owner",
+        "crm_contacts_insert_org",
+        "crm_contacts_select_org",
+        "crm_contacts_update_org"
+      ],
+      "table_contains_rows": true
+    },
+    {
+      "schema_name": "public",
+      "table_name": "crm_deals",
+      "table_exists": true,
+      "anon_has_select_grant": true,
+      "rls_enabled": true,
+      "rls_forced": false,
+      "has_anon_select_policy": true,
+      "anon_policy_names": [
+        "crm_deals_delete_owner",
+        "crm_deals_insert_org",
+        "crm_deals_select_org",
+        "crm_deals_update_org"
+      ],
+      "table_contains_rows": true
+    },
+    {
+      "schema_name": "public",
+      "table_name": "lead_intake_drafts",
+      "table_exists": true,
+      "anon_has_select_grant": false,
+      "rls_enabled": true,
+      "rls_forced": false,
+      "has_anon_select_policy": false,
+      "anon_policy_names": [],
+      "table_contains_rows": true
+    },
+    {
+      "schema_name": "public",
+      "table_name": "org_members",
+      "table_exists": true,
+      "anon_has_select_grant": true,
+      "rls_enabled": true,
+      "rls_forced": false,
+      "has_anon_select_policy": false,
+      "anon_policy_names": [],
+      "table_contains_rows": true
+    },
+    {
+      "schema_name": "public",
+      "table_name": "organizations",
+      "table_exists": true,
+      "anon_has_select_grant": true,
+      "rls_enabled": true,
+      "rls_forced": false,
+      "has_anon_select_policy": false,
+      "anon_policy_names": [],
+      "table_contains_rows": true
+    },
+    {
+      "schema_name": "public",
+      "table_name": "profiles",
+      "table_exists": true,
+      "anon_has_select_grant": true,
+      "rls_enabled": true,
+      "rls_forced": false,
+      "has_anon_select_policy": false,
+      "anon_policy_names": [],
+      "table_contains_rows": true
+    },
+    {
+      "schema_name": "public",
+      "table_name": "shoots",
+      "table_exists": true,
+      "anon_has_select_grant": true,
+      "rls_enabled": true,
+      "rls_forced": false,
+      "has_anon_select_policy": false,
+      "anon_policy_names": [],
+      "table_contains_rows": true
+    }
+  ]
+}
