@@ -2,7 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { AlertCircle } from "lucide-react";
 
-import { ApprovalCard } from "@/components/brand-hub/approval-card";
+import { BrandApprovalCard } from "@/components/brand-hub/BrandApprovalCard";
 import { approvalPreviewUrl } from "@/lib/command-center/sample-images";
 import type { FeaturedApproval } from "@/lib/command-center/types";
 
@@ -28,7 +28,7 @@ export function CommandCenterApprovals({ pendingCount, featured }: Props) {
       </div>
 
       {featured ? (
-        <ApprovalCard
+        <BrandApprovalCard
           brandId={featured.brandId}
           runId={featured.runId}
           draft={featured.draft}
