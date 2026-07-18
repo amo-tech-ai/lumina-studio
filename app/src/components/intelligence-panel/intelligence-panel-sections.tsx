@@ -10,9 +10,15 @@ import {
 } from "./brand-detail-panel-extras";
 import { HealthSection } from "./health-section";
 import { IntelApprovalQueueSection } from "./intel-approval-queue-section";
+import { PanelSectionComingSoon } from "./panel-section-coming-soon";
 import { PortfolioPanelSection } from "./portfolio-panel-section";
 import { RecentActivitySection } from "./recent-activity-section";
+import type { PanelSectionType } from "./route-briefing";
 import styles from "./intelligence-panel.module.css";
+
+/** Campaign sub-sections placeholder titles (IPI-286 correction #4 — one
+ * reusable component parameterized 3x, not 3 separate placeholder files). */
+const CAMPAIGN_PLACEHOLDER_TITLES = ["Campaign health", "Deliverables", "Creative approvals"];
 
 type Props = {
   data: IntelligencePanelData;
@@ -25,6 +31,8 @@ type Props = {
   brandDetailMode: boolean;
   onReviewApprovals: () => void;
   onApprovalAction?: () => void;
+  /** Route-derived sections from `resolveRouteBriefing` (IPI-286). */
+  panelSections?: PanelSectionType[];
 };
 
 type ResolvedContext = {
@@ -202,7 +210,26 @@ function CommandCenterAndDetailSections({
 }
 
 export function IntelligencePanelSections(props: Props) {
-  const { data, tab, brandListMode, activeBrandId, onReviewApprovals, onApprovalAction } = props;
+  const {
+    data,
+    tab,
+    brandListMode,
+    activeBrandId,
+    onReviewApprovals,
+    onApprovalAction,
+    panelSections,
+  } = props;
+
+  if (panelSections?.includes("campaign-placeholder")) {
+    return (
+      <>
+        {CAMPAIGN_PLACEHOLDER_TITLES.map((title) => (
+          <PanelSectionComingSoon key={title} title={title} />
+        ))}
+      </>
+    );
+  }
+
   const showOverview = tab === "overview";
   const brandId = activeBrandId ?? data.brand?.id ?? null;
 

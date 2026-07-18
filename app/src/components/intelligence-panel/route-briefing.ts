@@ -1,7 +1,21 @@
+/**
+ * Route-derived Intelligence Panel sections. Shoot types are reserved for
+ * PR 2 (IPI-286) once typed data contracts exist for
+ * `shoot_portfolio_view.dna_score` and shoot budget data — see the ticket's
+ * "Shoot data ownership" correction. Only `campaign-placeholder` is wired
+ * to a real component in this PR.
+ */
+export type PanelSectionType =
+  | "shoot-dna"
+  | "asset-recommendations"
+  | "budget-warnings"
+  | "campaign-placeholder";
+
 export type RouteBriefing = {
   section: string;
   headline: string;
   nextActions: string[];
+  panelSections?: PanelSectionType[];
 };
 
 const DEFAULT_ACTIONS = ["Plan a shoot", "Review brands", "Open Assets"];
@@ -54,6 +68,7 @@ export function resolveRouteBriefing(pathname: string): RouteBriefing {
       section: "Campaigns",
       headline: "Campaign health, deliverables, and creative approvals.",
       nextActions: ["Explain campaign health", "Duplicate campaign", "Add deliverable"],
+      panelSections: ["campaign-placeholder"],
     };
   }
   if (pathname.startsWith("/app/matching")) {
