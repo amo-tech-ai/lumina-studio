@@ -72,7 +72,13 @@ export function AdaptivePanel({ instanceId }: { instanceId: string }) {
 
   // Escape closes the Detail panel back to Intelligence — but only when no
   // nested dismissible overlay (a Select dropdown, the InviteMemberDialog)
-  // already owns the key.
+  // already owns the key. Registered on the CAPTURE phase (top-down, window
+  // fires first): a bubble-phase listener here would run after Radix's own
+  // Dialog/DismissableLayer has already synchronously closed on Escape and
+  // moved focus out of the dialog, so isEscapeOwnedByNestedOverlay()'s
+  // document.activeElement check would see stale, already-cleared state and
+  // wrongly deselect too. Capture guarantees we read focus before anything
+  // else has reacted to the keydown.
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
       if (event.key !== "Escape") return;
@@ -80,8 +86,8 @@ export function AdaptivePanel({ instanceId }: { instanceId: string }) {
       if (selection !== null) deselect();
     }
 
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
+    window.addEventListener("keydown", handleKeyDown, { capture: true });
+    return () => window.removeEventListener("keydown", handleKeyDown, { capture: true });
   }, [selection, deselect]);
 
   // Memoized, not rebuilt every render: AdaptivePanel is itself a consumer of

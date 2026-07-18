@@ -170,7 +170,7 @@ test.describe("Planner — adaptive context panel", () => {
     );
     await expect(page.locator(MEMBER_DETAIL)).toBeVisible();
 
-    const inviteButton = page.getByRole("button", { name: /invite member/i });
+    const inviteButton = page.getByRole("button", { name: /add member/i });
     const canOpenDialog = (await inviteButton.count()) > 0 && (await inviteButton.isVisible());
     test.skip(!canOpenDialog, "qa@ipix.test is not owner/manager on this fixture instance — Invite control not rendered");
 
