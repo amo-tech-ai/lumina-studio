@@ -132,8 +132,11 @@ export type Database = {
           created_at: string
           event_type: string
           id: string
+          idempotency_key: string | null
           instance_id: string
           payload: Json
+          request_hash: string | null
+          result_payload: Json | null
           task_id: string | null
         }
         Insert: {
@@ -141,8 +144,11 @@ export type Database = {
           created_at?: string
           event_type: string
           id?: string
+          idempotency_key?: string | null
           instance_id: string
           payload?: Json
+          request_hash?: string | null
+          result_payload?: Json | null
           task_id?: string | null
         }
         Update: {
@@ -150,8 +156,11 @@ export type Database = {
           created_at?: string
           event_type?: string
           id?: string
+          idempotency_key?: string | null
           instance_id?: string
           payload?: Json
+          request_hash?: string | null
+          result_payload?: Json | null
           task_id?: string | null
         }
         Relationships: [
