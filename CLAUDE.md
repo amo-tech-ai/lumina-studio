@@ -19,7 +19,7 @@ Shift from **Create → Check → Fix** to **Guide → Prevent → Confirm** —
 9. Every AI recommendation is explainable — show the why + a confidence signal.
 10. Everything is undoable — no destructive AI action without a way back.
 
-**Golden rule — proactive teammate, not a chat box.** The assistant should guide, not wait. It is page-context-aware (knows the current brand/campaign/shoot/selection — the user never re-states where they are) and opens with the next best action, e.g. *"You're planning the Spring Campaign. Next: generate deliverables for IG/TikTok/Amazon/Shopify — I can do that in one click,"* never a blank *"How can I help?"*. The product "personas" (Creative Director, Brand Guardian, etc.) are hats on the **existing 5 agents**, not new agents.
+**Golden rule — proactive teammate, not a chat box.** The assistant should guide, not wait. It is page-context-aware (knows the current brand/campaign/shoot/selection — the user never re-states where they are) and opens with the next best action, e.g. *"You're planning the Spring Campaign. Next: generate deliverables for IG/TikTok/Amazon/Shopify — I can do that in one click,"* never a blank *"How can I help?"*. The product "personas" (Creative Director, Brand Guardian, etc.) are hats on the **existing Mastra agents**, not new agents — 8 registered in the operator agent registry (`production-planner`/`default`, `creative-director`, `visual-identity`, `social-discovery`, `brand-intelligence`, `model-match`, `crm-assistant`, `booking`) plus a 9th, `public-marketing`, that powers the separate public marketing-site chat widget via its own route. (Verified against `app/src/mastra/index.ts` + `durable.ts` 2026-07-18 — previously miscounted as "5" here.)
 
 ## Skills in use
 
@@ -234,6 +234,20 @@ Key discipline: match verification cost to actual risk — don't re-run a full l
 build on every change when CI's `app-build` job already does, and prefer Cloudflare's own
 gradual-deployment/rollback/observability tooling over exhaustive pre-merge local verification
 where it applies (see the skill's verification checklist for right-sizing guidance).
+
+**Current production runtime (verified 2026-07-18, corrected 2026-07-18 pass 2 — see
+`tasks/cloudflare/todo.md` as the live SSOT before trusting this snapshot):** the Next.js
+operator app itself (`ipix.co/app`) runs on **Vercel** — the OpenNext/Workers migration is
+scaffolded but not yet cut over (no `routes` binding for `ipix.co` in `app/wrangler.jsonc`;
+`IPI-472`/`IPI-606` still In Progress, `IPI-631` DNS cutover still Backlog). **But the custom
+`services/cloudflare-worker/` AI Gateway Worker is NOT idle** — despite being frozen for further
+feature investment (2026-07-14 decision, no new work planned), it is explicitly documented as
+**"still the only real production AI path today"** (`tasks/cloudflare/todo.md`), 98/98 tests
+passing, still deployed. The dashboard-configured native `ipix-prod` AI Gateway is provisioned as
+its eventual replacement but has zero production traffic yet (`IPI-586` still Todo). So: the app
+is on Vercel, but Cloudflare is already carrying real production AI traffic today via the frozen
+custom Worker — don't say "Cloudflare is 0% live," say "the whole-app migration hasn't cut over,
+but the AI-gateway piece already has."
 
 ## QA test credentials
 
