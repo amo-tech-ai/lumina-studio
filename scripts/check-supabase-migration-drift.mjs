@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * IPI-665 · SB-CI-001 — Ledger + pending-migration validation.
+ * IPI-665 · SB-CI-001 / IPI-673 · SB-CI-001b — Ledger + pending-migration validation.
  *
  * Compares local vs remote migration *timestamps* via
  * `supabase migration list --linked --output-format json`.
@@ -20,11 +20,13 @@
  *
  * Usage:
  *   node scripts/check-supabase-migration-drift.mjs [--pr|--main] [--base <sha>]
+ *   node scripts/check-supabase-migration-drift.mjs --self-check
  */
 import { execFileSync } from "node:child_process";
 import { readdirSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
+import assert from "node:assert/strict";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const migrationsDir = join(root, "supabase", "migrations");
@@ -67,6 +69,25 @@ function run(cmd, cmdArgs, { allowFail = false } = {}) {
   }
 }
 
+/** Capture stdout/stderr and exit status without exiting the process. */
+function runCapture(cmd, cmdArgs) {
+  try {
+    const out = execFileSync(cmd, cmdArgs, {
+      cwd: root,
+      encoding: "utf8",
+      env: process.env,
+      stdio: ["ignore", "pipe", "pipe"],
+    });
+    return { ok: true, out, status: 0 };
+  } catch (err) {
+    return {
+      ok: false,
+      out: `${err.stdout ?? ""}${err.stderr ?? ""}`,
+      status: err.status ?? 1,
+    };
+  }
+}
+
 function versionFromFilename(name) {
   const m = /^(\d{14})_/.exec(name);
   return m ? m[1] : null;
@@ -79,23 +100,62 @@ function listLocalFiles() {
     .filter((r) => r.version);
 }
 
-function parseMigrationListJson(raw) {
-  // Prefer the root envelope; nested row objects also start with `{`.
-  const start = raw.indexOf('{"migrations"');
-  const sliceStart = start >= 0 ? start : raw.indexOf("{");
-  const end = raw.lastIndexOf("}");
-  if (sliceStart < 0 || end < sliceStart) {
-    throw new Error("Could not parse migration list JSON");
-  }
-  const parsed = JSON.parse(raw.slice(sliceStart, end + 1));
-  const rows = parsed.migrations ?? parsed;
-  if (!Array.isArray(rows)) {
-    throw new Error("migration list JSON missing migrations array");
-  }
+function mapMigrationRows(rows) {
   return rows.map((r) => ({
     local: r.local ? String(r.local) : "",
     remote: r.remote ? String(r.remote) : "",
   }));
+}
+
+/** Index of a JSON array start, skipping log tags like `[INFO]` / `[debug]`. */
+function findJsonArrayStart(raw) {
+  // Array of objects: `[{...`  or empty array: `[]` (optional whitespace).
+  const re = /\[\s*(?:\{|\])/g;
+  const m = re.exec(raw);
+  return m ? m.index : -1;
+}
+
+/** Try closing-bracket positions from right to left until JSON.parse succeeds. */
+function parseJsonSlice(raw, start, closeChar) {
+  let end = raw.lastIndexOf(closeChar);
+  let lastErr;
+  while (end >= start) {
+    try {
+      return JSON.parse(raw.slice(start, end + 1));
+    } catch (err) {
+      lastErr = err;
+      end = raw.lastIndexOf(closeChar, end - 1);
+    }
+  }
+  throw lastErr ?? new Error("Could not parse migration list JSON");
+}
+
+function parseMigrationListJson(raw) {
+  const envelopeStart = raw.indexOf('{"migrations"');
+  if (envelopeStart >= 0) {
+    try {
+      const parsed = parseJsonSlice(raw, envelopeStart, "}");
+      const rows = parsed.migrations;
+      if (!Array.isArray(rows)) throw new Error("migration list JSON missing migrations array");
+      return mapMigrationRows(rows);
+    } catch (err) {
+      throw new Error(`Could not parse migration list JSON envelope: ${err.message}`);
+    }
+  }
+
+  // Bare array (or log-prefixed array). Never use raw indexOf("[") — that matches `[INFO]`.
+  const arrayStart = findJsonArrayStart(raw);
+  if (arrayStart >= 0) {
+    try {
+      const rows = parseJsonSlice(raw, arrayStart, "]");
+      if (!Array.isArray(rows)) throw new Error("migration list JSON missing migrations array");
+      return mapMigrationRows(rows);
+    } catch (err) {
+      throw new Error(`Could not parse migration list JSON array: ${err.message}`);
+    }
+  }
+
+  throw new Error("Could not parse migration list JSON");
 }
 
 function classify(rows) {
@@ -173,15 +233,121 @@ function prIntroducedVersions() {
 }
 
 function parseDryRunPending(raw) {
-  if (/Remote database is up to date/i.test(raw)) return [];
   const pending = [];
   for (const line of raw.split("\n")) {
     const m = /[•*]\s+(\d{14}_[\w.-]+\.sql)/.exec(line);
     if (m) pending.push(m[1]);
     const m2 = /^\s*(\d{14}_[\w.-]+\.sql)\s*$/.exec(line.trim());
     if (m2) pending.push(m2[1]);
+    // Upstream CLI style: "Would push migration 20230108110451_this_should_fail.sql..."
+    const m3 = /Would push migration\s+(\d{14}_[\w.-]+\.sql)/i.exec(line);
+    if (m3) pending.push(m3[1]);
   }
-  return [...new Set(pending)];
+  const unique = [...new Set(pending)];
+  const upToDate = /Remote database is up to date/i.test(raw);
+  // Contradictory CLI noise must not look like a clean empty pending set.
+  if (upToDate && unique.length) {
+    throw new Error(
+      `contradictory dry-run output: "up to date" with pending: ${unique.join(", ")}`,
+    );
+  }
+  if (upToDate) return [];
+  return unique;
+}
+
+function dryRunIsUsable(dry) {
+  // Official CLI exits 0 for "Remote database is up to date". Any non-zero
+  // exit is a hard failure (auth/connection/CLI error) — never parse around it.
+  return dry.ok;
+}
+
+if (args.includes("--self-check")) {
+  const envelope = parseMigrationListJson(
+    'noise\n{"migrations":[{"local":"1","remote":"1"}],"message":"ok"}\n',
+  );
+  assert.equal(envelope.length, 1);
+  assert.equal(envelope[0].local, "1");
+
+  const bare = parseMigrationListJson('[{"local":"1","remote":"1"},{"local":"2","remote":""}]');
+  assert.equal(bare.length, 2);
+  assert.equal(bare[1].local, "2");
+
+  const logPrefixed = parseMigrationListJson(
+    '[INFO] Connecting...\n[{"local":"1","remote":"1"}]\n',
+  );
+  assert.equal(logPrefixed.length, 1);
+  assert.equal(logPrefixed[0].local, "1");
+
+  const debugPrefixed = parseMigrationListJson(
+    'noise [debug] foo\n[{"local":"9","remote":""}]\n',
+  );
+  assert.equal(debugPrefixed[0].local, "9");
+
+  const trailingBracket = parseMigrationListJson(
+    '[{"local":"1","remote":"1"}]\n[INFO] Done]\n',
+  );
+  assert.equal(trailingBracket[0].local, "1");
+
+  const trailingBrace = parseMigrationListJson(
+    '{"migrations":[{"local":"1","remote":"1"}],"message":"ok"}\nlog: done}\n',
+  );
+  assert.equal(trailingBrace[0].local, "1");
+
+  const empty = parseMigrationListJson("[]");
+  assert.equal(empty.length, 0);
+
+  assert.throws(
+    () =>
+      parseDryRunPending(
+        "Would push migration 20230108110451_this_should_fail.sql...\nRemote database is up to date\n",
+      ),
+    /contradictory dry-run output/,
+  );
+
+  assert.deepEqual(parseDryRunPending("Remote database is up to date\n"), []);
+
+  const wouldOnly = parseDryRunPending(
+    "Would push migration 20230108110451_this_should_fail.sql...\n",
+  );
+  assert.deepEqual(wouldOnly, ["20230108110451_this_should_fail.sql"]);
+
+  assert.equal(dryRunIsUsable({ ok: false, out: "auth failed", status: 1 }), false);
+  assert.equal(
+    dryRunIsUsable({
+      ok: false,
+      out: "Would push migration 20230108110451_x.sql...\n",
+      status: 1,
+    }),
+    false,
+  );
+  // Non-zero + "up to date" must NOT pass — real success exits 0.
+  assert.equal(
+    dryRunIsUsable({
+      ok: false,
+      out: "Remote database is up to date\n",
+      status: 1,
+    }),
+    false,
+  );
+  assert.equal(
+    dryRunIsUsable({
+      ok: true,
+      out: "Remote database is up to date\n",
+      status: 0,
+    }),
+    true,
+  );
+  assert.equal(
+    dryRunIsUsable({
+      ok: true,
+      out: "Would push migration 20230108110451_x.sql...\n",
+      status: 0,
+    }),
+    true,
+  );
+
+  console.log("ok: self-check");
+  process.exit(0);
 }
 
 console.log(`check-supabase-migration-drift: mode=${isMain ? "main" : "pr"} base=${baseRef}`);
@@ -197,7 +363,13 @@ if (remoteOnly.length) {
   process.exit(1);
 }
 
-const dryRaw = run("supabase", ["db", "push", "--linked", "--dry-run", "--yes"], { allowFail: true });
+const dry = runCapture("supabase", ["db", "push", "--linked", "--dry-run", "--yes"]);
+if (!dryRunIsUsable(dry)) {
+  console.error("db push --dry-run failed (non-zero exit):");
+  console.error(dry.out.trim() || `(exit ${dry.status})`);
+  process.exit(dry.status || 1);
+}
+const dryRaw = dry.out;
 const pendingFiles = parseDryRunPending(dryRaw);
 const pendingVersions = pendingFiles.map((f) => versionFromFilename(f)).filter(Boolean);
 
