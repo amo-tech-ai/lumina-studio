@@ -105,4 +105,45 @@ describe("CopilotKit /info — SSE discovery (IPI-670 · COPILOT-RUNTIME-001)", 
     const body = (await response.json()) as { code?: string };
     expect(body.code).toBe("runtime_error");
   });
+
+  it("cancels a 5xx SSE body when normalizing to 503 JSON", async () => {
+    vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("OPERATOR_AUTH_ENABLED", "true");
+    vi.stubEnv("GEMINI_API_KEY", "test-key");
+
+    const cancel = vi.fn().mockResolvedValue(undefined);
+    const sseResponse = new Response(
+      new ReadableStream({
+        cancel(reason) {
+          cancel(reason);
+          return Promise.resolve();
+        },
+      }),
+      {
+        status: 500,
+        headers: { "content-type": "text/event-stream" },
+      },
+    );
+
+    vi.doMock("@/lib/copilotkit/runtime-v2-fetch", () => ({
+      CopilotRuntime: vi.fn(() => ({})),
+      createCopilotRuntimeHandler: vi.fn(() => async () => sseResponse),
+      InMemoryAgentRunner: vi.fn(),
+    }));
+
+    const route = await importRouteWithMocks();
+    const response = await route.POST(
+      new Request("http://localhost/api/copilotkit/agent/default/run", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ messages: [] }),
+      }),
+    );
+
+    expect(response.status).toBe(503);
+    expect(response.headers.get("content-type")).toMatch(/json/i);
+    expect(cancel).toHaveBeenCalledOnce();
+    const body = (await response.json()) as { code?: string };
+    expect(body.code).toBe("runtime_error");
+  });
 });

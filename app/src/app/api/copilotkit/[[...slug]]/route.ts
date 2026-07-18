@@ -65,12 +65,10 @@ const endpoint = createCopilotRuntimeHandler({
 /** CopilotKit may return opaque 500s when agent discovery fails — normalize for the UI. */
 function normalizeRuntimeErrorResponse(response: Response): Response {
   if (response.status < 500) return response;
-  const contentType = response.headers.get("content-type") ?? "";
-  if (contentType.includes("application/json")) {
-    return Response.json(
-      { error: "CopilotKit runtime unavailable", code: "runtime_error" },
-      { status: 503 },
-    );
+  try {
+    response.body?.cancel().catch(() => {});
+  } catch {
+    // body may be null or already consumed
   }
   return Response.json(
     { error: "CopilotKit runtime unavailable", code: "runtime_error" },
