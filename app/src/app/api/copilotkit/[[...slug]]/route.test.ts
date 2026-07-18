@@ -69,8 +69,9 @@ describe("CopilotKit route — operator auth boundary (IPI2-127)", () => {
     expect(src).not.toMatch(/identifyUser:[\s\S]*resolveOperatorUser/);
   });
 
-  it("gates licenseToken on isOperatorAuthEnforced, not raw OPERATOR_AUTH_ENABLED (IPI-468)", () => {
+  it("gates licenseToken on isCopilotIntelligenceEnabled and isOperatorAuthEnforced (IPI-468)", () => {
     const src = readFileSync(ROUTE, "utf8");
+    expect(src).toMatch(/isCopilotIntelligenceEnabled\(\)/);
     expect(src).toMatch(/isOperatorAuthEnforced\(\)/);
     expect(src).not.toMatch(/OPERATOR_AUTH_ENABLED === "true"/);
   });

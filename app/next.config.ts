@@ -5,6 +5,7 @@ import { fileURLToPath } from "node:url";
 import { withSentryConfig } from "@sentry/nextjs";
 
 import { resolveCloudinaryCloudName } from "./src/lib/cloudinary/url";
+import { isCopilotIntelligenceEnabled } from "./src/lib/copilotkit/intelligence-config";
 
 const CLOUDINARY_CLOUD_NAME = resolveCloudinaryCloudName();
 import { isOperatorAuthEnforced } from "./src/lib/operator-auth-env";
@@ -119,7 +120,7 @@ const nextConfig: NextConfig = {
   },
   env: {
     NEXT_PUBLIC_COPILOTKIT_THREADS_ENABLED:
-      process.env.COPILOTKIT_LICENSE_TOKEN && isOperatorAuthEnforced()
+      isCopilotIntelligenceEnabled() && isOperatorAuthEnforced()
         ? "true"
         : "false",
     NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME:

@@ -102,6 +102,25 @@ describe("isDeliverableCover", () => {
   });
 });
 
+describe("isAuthenticatedDeliveryUrl", () => {
+  it("accepts signed authenticated delivery under the configured cloud", async () => {
+    const { isAuthenticatedDeliveryUrl } = await importUrl();
+    expect(
+      isAuthenticatedDeliveryUrl(
+        "https://res.cloudinary.com/dzqy2ixl0/image/authenticated/s--abc--/c_limit,w_600/x",
+      ),
+    ).toBe(true);
+  });
+
+  it("rejects public upload URLs and foreign hosts", async () => {
+    const { isAuthenticatedDeliveryUrl } = await importUrl();
+    expect(
+      isAuthenticatedDeliveryUrl("https://res.cloudinary.com/dzqy2ixl0/image/upload/v1/x"),
+    ).toBe(false);
+    expect(isAuthenticatedDeliveryUrl(null)).toBe(false);
+  });
+});
+
 describe("CLOUDINARY_CLOUD_NAME", () => {
   it("resolveCloudinaryCloudName prefers public then server-only env", async () => {
     vi.stubEnv("NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME", undefined);

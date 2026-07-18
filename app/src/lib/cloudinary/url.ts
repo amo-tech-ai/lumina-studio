@@ -46,6 +46,14 @@ export function isDeliverableCover(url: string | null | undefined): url is strin
   );
 }
 
+/** Signed authenticated delivery — must bypass next/image optimizer (re-fetch breaks signature). */
+export function isAuthenticatedDeliveryUrl(url: string | null | undefined): url is string {
+  return (
+    typeof url === "string" &&
+    url.startsWith(`https://res.cloudinary.com/${CLOUDINARY_CLOUD_NAME}/image/authenticated/`)
+  );
+}
+
 /** Shared Cloudinary delivery URL builder — wraps next-cloudinary's getCldImageUrl. */
 export function cloudinaryImageUrl(
   publicId: string,
