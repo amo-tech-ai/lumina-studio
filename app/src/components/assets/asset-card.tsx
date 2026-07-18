@@ -42,7 +42,13 @@ export function AssetCard({ asset }: { asset: AssetRow }) {
         ) : asset.displayUrl ? (
           isAuthenticatedDeliveryUrl(asset.displayUrl) ? (
             // Signed authenticated URLs 404 through /_next/image — load directly.
-            <img src={asset.displayUrl} alt="" className={styles.thumbImageDirect} />
+            <img
+              src={asset.displayUrl}
+              alt=""
+              loading="lazy"
+              decoding="async"
+              className={styles.thumbImageDirect}
+            />
           ) : (
             <Image
               src={asset.displayUrl}
