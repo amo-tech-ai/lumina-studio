@@ -74,6 +74,19 @@ describe("AssetsWorkspace", () => {
     expect(screen.getByText("Unable to load assets.")).toBeDefined();
   });
 
+  it("keeps the upload panel available when the asset list fetch failed", () => {
+    render(
+      <AssetsWorkspace
+        assets={[]}
+        brands={[{ id: "b1", name: "Acme" }]}
+        isAuthenticated
+        fetchError="Unable to load assets."
+      />,
+    );
+    expect(screen.getByRole("alert")).toBeDefined();
+    expect(screen.getByLabelText("Upload to brand")).toBeDefined();
+  });
+
   it("retry re-runs the server fetch via router.refresh(), not a no-op link", () => {
     refresh.mockClear();
     render(<AssetsWorkspace assets={[]} brands={[]} isAuthenticated fetchError="Unable to load assets." />);

@@ -4,7 +4,9 @@ import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
 import { withSentryConfig } from "@sentry/nextjs";
 
-import { CLOUDINARY_CLOUD_NAME } from "./src/lib/cloudinary/url";
+import { resolveCloudinaryCloudName } from "./src/lib/cloudinary/url";
+
+const CLOUDINARY_CLOUD_NAME = resolveCloudinaryCloudName();
 import { isOperatorAuthEnforced } from "./src/lib/operator-auth-env";
 
 const appDir = path.dirname(fileURLToPath(import.meta.url));

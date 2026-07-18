@@ -103,6 +103,13 @@ describe("isDeliverableCover", () => {
 });
 
 describe("CLOUDINARY_CLOUD_NAME", () => {
+  it("resolveCloudinaryCloudName prefers public then server-only env", async () => {
+    vi.stubEnv("NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME", undefined);
+    vi.stubEnv("CLOUDINARY_CLOUD_NAME", "server-cloud");
+    const { resolveCloudinaryCloudName } = await importUrl();
+    expect(resolveCloudinaryCloudName()).toBe("server-cloud");
+  });
+
   it("resolves from NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME", async () => {
     vi.stubEnv("NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME", "public-cloud");
     const { CLOUDINARY_CLOUD_NAME, cloudinaryImageUrl } = await importUrl();

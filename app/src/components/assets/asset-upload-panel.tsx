@@ -4,7 +4,11 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { CldUploadWidget } from "next-cloudinary";
 import type { CloudinaryUploadWidgetInfo, CloudinaryUploadWidgetOptions } from "next-cloudinary";
 
-import { CLOUDINARY_UPLOAD_PRESET, CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY } from "@/lib/cloudinary/url";
+import {
+  CLOUDINARY_UPLOAD_PRESET,
+  cloudinaryUploadWidgetConfig,
+  isCloudinaryUploadConfigured,
+} from "@/lib/cloudinary/url";
 import { pollUntilMirrorTerminal } from "@/lib/assets/upload-poll";
 
 import styles from "./assets-workspace.module.css";
@@ -72,6 +76,29 @@ function widgetInfo(info: CloudinaryUploadWidgetInfo | string | undefined) {
   return info;
 }
 
+function uploadKeyFromWidgetInfo(info: unknown): string | null {
+  if (typeof info !== "object" || info === null) return null;
+  const rec = info as Record<string, unknown>;
+  if (typeof rec.id === "string" && rec.id.length > 0) return rec.id;
+  const file = rec.file as Record<string, unknown> | undefined;
+  if (file && typeof file.name === "string") {
+    const lastModified = typeof file.lastModified === "number" ? file.lastModified : 0;
+    const size = typeof file.size === "number" ? file.size : 0;
+    return `${file.name}:${lastModified}:${size}`;
+  }
+  return null;
+}
+
+function filenameFromWidgetInfo(info: unknown, fallback = "upload"): string {
+  if (typeof info !== "object" || info === null) return fallback;
+  const rec = info as Record<string, unknown>;
+  const file = rec.file as Record<string, unknown> | undefined;
+  if (file && typeof file.name === "string") return file.name;
+  if (typeof rec.original_filename === "string") return rec.original_filename;
+  if (typeof rec.filename === "string") return rec.filename;
+  return fallback;
+}
+
 type Props = {
   brands: UploadBrandOption[];
   defaultBrandId?: string;
@@ -83,6 +110,7 @@ export function AssetUploadPanel({ brands = [], defaultBrandId, onReady }: Props
   const [queue, setQueue] = useState<UploadQueueItem[]>(() => readPersistedQueue());
   const abortByItem = useRef(new Map<string, AbortController>());
   const seenSuccess = useRef(new Set<string>());
+  const uploadKeyToItemId = useRef(new Map<string, string>());
 
   useEffect(() => {
     sessionStorage.setItem(STORAGE_KEY, JSON.stringify(queue));
@@ -246,6 +274,9 @@ export function AssetUploadPanel({ brands = [], defaultBrandId, onReady }: Props
     );
   }
 
+  const uploadConfigured = isCloudinaryUploadConfigured();
+  const { cloudName, apiKey } = cloudinaryUploadWidgetConfig();
+
   const uploadOptions: CloudinaryUploadWidgetOptions = {
     sources: ["local"],
     multiple: true,
@@ -275,37 +306,77 @@ export function AssetUploadPanel({ brands = [], defaultBrandId, onReady }: Props
           </select>
         </label>
 
+        {uploadConfigured ? (
         <CldUploadWidget
-          config={{ cloud: { cloudName: CLOUDINARY_CLOUD_NAME, apiKey: CLOUDINARY_API_KEY } }}
+          config={{ cloud: { cloudName, apiKey } }}
           uploadPreset={CLOUDINARY_UPLOAD_PRESET}
           signatureEndpoint="/api/assets/cloudinary-sign"
           options={uploadOptions}
-          onSuccess={(result, { widget: _widget }) => {
+          onUploadAdded={(result) => {
+            const info = result?.info ?? result;
+            const uploadKey = uploadKeyFromWidgetInfo(info) ?? crypto.randomUUID();
             const itemId = crypto.randomUUID();
-            const info = typeof result.info === "string" ? undefined : result.info;
-            const filename =
-              info?.original_filename ?? info?.public_id ?? "upload";
+            uploadKeyToItemId.current.set(uploadKey, itemId);
             setQueue((prev) => [
               {
                 id: itemId,
-                filename,
+                filename: filenameFromWidgetInfo(info),
                 cloudinary_asset_id: null,
                 public_id: null,
                 state: "uploading",
               },
               ...prev,
             ]);
+          }}
+          onSuccess={(result) => {
+            const info = typeof result.info === "string" ? undefined : result.info;
+            const uploadKey = uploadKeyFromWidgetInfo(info);
+            let itemId = uploadKey ? uploadKeyToItemId.current.get(uploadKey) : undefined;
+            if (uploadKey) uploadKeyToItemId.current.delete(uploadKey);
+
+            const filename =
+              info?.original_filename ?? info?.public_id ?? filenameFromWidgetInfo(info);
+
+            if (!itemId) {
+              itemId = crypto.randomUUID();
+              setQueue((prev) => [
+                {
+                  id: itemId!,
+                  filename,
+                  cloudinary_asset_id: null,
+                  public_id: null,
+                  state: "uploading",
+                },
+                ...prev,
+              ]);
+            }
+
             onUploadSuccess(itemId, filename, info);
           }}
           onQueuesEnd={(_result, { widget }) => {
             widget.close();
           }}
-          onError={() => {
+          onError={(error) => {
+            const info = typeof error === "object" && error !== null && "info" in error
+              ? (error as { info?: unknown }).info
+              : undefined;
+            const uploadKey = uploadKeyFromWidgetInfo(info);
+            const existingId = uploadKey ? uploadKeyToItemId.current.get(uploadKey) : undefined;
+            if (uploadKey) uploadKeyToItemId.current.delete(uploadKey);
+
+            if (existingId) {
+              updateItem(existingId, {
+                state: "client_failed",
+                message: "Upload failed in widget",
+              });
+              return;
+            }
+
             const itemId = crypto.randomUUID();
             setQueue((prev) => [
               {
                 id: itemId,
-                filename: "upload",
+                filename: filenameFromWidgetInfo(info),
                 cloudinary_asset_id: null,
                 public_id: null,
                 state: "client_failed",
@@ -321,6 +392,11 @@ export function AssetUploadPanel({ brands = [], defaultBrandId, onReady }: Props
             </button>
           )}
         </CldUploadWidget>
+        ) : (
+          <p className={styles.uploadHint} data-testid="upload-unconfigured">
+            Upload unavailable — set NEXT_PUBLIC_CLOUDINARY_API_KEY (or CLOUDINARY_API_KEY at build).
+          </p>
+        )}
       </div>
 
       {queue.length > 0 ? (

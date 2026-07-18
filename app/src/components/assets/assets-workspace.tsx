@@ -161,7 +161,10 @@ export function AssetsWorkspace({ assets, brands = [], isAuthenticated, fetchErr
     return (
       <div className={styles.workspace}>
         <header className={styles.header}>
-          <h1 className={styles.title}>Assets</h1>
+          <div>
+            <h1 className={styles.title}>Assets</h1>
+          </div>
+          {uploadPanel}
         </header>
         <div className={styles.body}>
           <ErrorState
