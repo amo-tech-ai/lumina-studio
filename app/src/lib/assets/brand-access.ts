@@ -18,7 +18,15 @@ export function parseBrandIdFromCloudinaryContext(context: unknown): string | un
   return undefined;
 }
 
-/** RLS-backed brand access — succeeds when brands_select_org allows the row. */
+/** RLS-backed brand access — succeeds when policy `brands_select_org` allows the row.
+ *
+ * Policy (migration 20260627170000_brands_rls_null_org_backfill.sql):
+ * - org brands: visible when `public.is_org_member(org_id)` for the authenticated user
+ * - legacy null-org brands: visible only to `brands.user_id = auth.uid()`
+ *
+ * This helper must run with `createOperatorSupabaseClient` (cookie or Bearer) so RLS
+ * applies. Do not use the service-role client here — a missing policy would fail open.
+ */
 export async function isBrandAccessible(
   supabase: SupabaseClient<Database>,
   brandId: string,

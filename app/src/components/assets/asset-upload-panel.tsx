@@ -32,6 +32,7 @@ export type UploadQueueItem = {
 
 const STORAGE_KEY = "ipix-asset-upload-queue-v1";
 
+/** Client-side queue only (IPI-433) — Cloudinary + webhook + Supabase mirror are source of truth. */
 function readPersistedQueue(): UploadQueueItem[] {
   if (typeof window === "undefined") return [];
   try {
@@ -39,11 +40,28 @@ function readPersistedQueue(): UploadQueueItem[] {
     if (!raw) return [];
     const parsed = JSON.parse(raw) as UploadQueueItem[];
     if (!Array.isArray(parsed)) return [];
-    return parsed.map((item) =>
-      item.state === "uploading" || item.state === "processing"
-        ? { ...item, state: "unknown_after_refresh" as const, message: "Upload status unknown — check Asset Library" }
-        : item,
-    );
+    return parsed.map((item) => {
+      // Upload still in widget flight — no cloudinary_asset_id to reconcile.
+      if (item.state === "uploading") {
+        return {
+          ...item,
+          state: "unknown_after_refresh" as const,
+          message: "Upload status unknown — check Asset Library",
+        };
+      }
+      // Mirror poll can resume when we retained the immutable provider id.
+      if (item.state === "processing" && item.cloudinary_asset_id) {
+        return { ...item, message: "Resuming status check…" };
+      }
+      if (item.state === "processing") {
+        return {
+          ...item,
+          state: "unknown_after_refresh" as const,
+          message: "Upload status unknown — check Asset Library",
+        };
+      }
+      return item;
+    });
   } catch {
     return [];
   }
@@ -90,34 +108,52 @@ export function AssetUploadPanel({ brands = [], defaultBrandId, onReady }: Props
         if (response.status === "processing" || response.status === "not_found") {
           updateItem(itemId, { state: "processing" });
         }
-      }).then((result) => {
-        abortByItem.current.delete(itemId);
-        if (result.outcome === "ready") {
-          updateItem(itemId, { state: "ready", message: "Ready in Asset Library" });
-          onReady?.();
-          return;
-        }
-        if (result.outcome === "failed") {
+      })
+        .then((result) => {
+          abortByItem.current.delete(itemId);
+          if (result.outcome === "ready") {
+            updateItem(itemId, { state: "ready", message: "Ready in Asset Library" });
+            onReady?.();
+            return;
+          }
+          if (result.outcome === "failed") {
+            updateItem(itemId, {
+              state: "processing_failed",
+              message: "Processing failed — retry or check Asset Library",
+            });
+            return;
+          }
+          if (result.outcome === "timed_out") {
+            updateItem(itemId, {
+              state: "timed_out",
+              message: "Processing is taking longer than expected. Check the Asset Library.",
+            });
+            return;
+          }
+          if (result.outcome === "aborted") {
+            updateItem(itemId, { state: "cancelled", message: "Upload cancelled" });
+          }
+        })
+        .catch(() => {
+          abortByItem.current.delete(itemId);
           updateItem(itemId, {
             state: "processing_failed",
-            message: "Processing failed — retry or check Asset Library",
+            message: "Could not confirm upload status — check the Asset Library or retry",
           });
-          return;
-        }
-        if (result.outcome === "timed_out") {
-          updateItem(itemId, {
-            state: "timed_out",
-            message: "Processing is taking longer than expected. Check the Asset Library.",
-          });
-          return;
-        }
-        if (result.outcome === "aborted") {
-          updateItem(itemId, { state: "cancelled", message: "Upload cancelled" });
-        }
-      });
+        });
     },
     [onReady, updateItem],
   );
+
+  useEffect(() => {
+    for (const item of queue) {
+      if (item.state === "processing" && item.cloudinary_asset_id) {
+        startPolling(item.id, item.cloudinary_asset_id);
+      }
+    }
+    // Resume persisted processing rows once on mount (sessionStorage hydration).
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional mount-only resume
+  }, []);
 
   const onUploadSuccess = useCallback(
     (itemId: string, filename: string, info: CloudinaryUploadWidgetInfo | string | undefined) => {
@@ -244,7 +280,7 @@ export function AssetUploadPanel({ brands = [], defaultBrandId, onReady }: Props
           uploadPreset={CLOUDINARY_UPLOAD_PRESET}
           signatureEndpoint="/api/assets/cloudinary-sign"
           options={uploadOptions}
-          onSuccess={(result, { widget }) => {
+          onSuccess={(result, { widget: _widget }) => {
             const itemId = crypto.randomUUID();
             const info = typeof result.info === "string" ? undefined : result.info;
             const filename =
@@ -260,6 +296,8 @@ export function AssetUploadPanel({ brands = [], defaultBrandId, onReady }: Props
               ...prev,
             ]);
             onUploadSuccess(itemId, filename, info);
+          }}
+          onQueuesEnd={(_result, { widget }) => {
             widget.close();
           }}
           onError={() => {
