@@ -1,6 +1,6 @@
 # iPix / FashionOS — Build Priority Order
 
-**Updated:** 2026-07-12 (evening pass) · Source of truth: [`progress-tracker.md`](progress-tracker.md) (forensic, verified against `app/` code) + live Linear state (fetched this pass, not assumed from ticket titles or a prior snapshot of this file).
+**Updated:** 2026-07-18 · Lane B re-verified against live Linear + production (`ipix.co/app`, real operator login); Lane A last re-verified 2026-07-12 (spot-checked 2026-07-18: IPI-562/IPI-369 still accurate) · Source of truth: [`progress-tracker.md`](progress-tracker.md) (forensic, verified against `app/` code) + live Linear state, not assumed from ticket titles or a prior snapshot of this file.
 
 **Legend:** 🟢 done · 🟡 in progress/partial · 🔴 not started (Todo) · ⚫ not started (Backlog, lower priority tier than Todo) · ⚪ not ticketed yet
 
@@ -41,24 +41,49 @@ Also confirmed correct, unchanged: your CRM percentages (Companies 80 / Company 
 
 ## Lane B — Planner foundation (in parallel with Lane A)
 
-Backend is done ([IPI-476](https://linear.app/amo100/issue/IPI-476), [IPI-477](https://linear.app/amo100/issue/IPI-477)) — 440-line tested `PlannerEngine`, zero UI imports it.
+Backend is done ([IPI-476](https://linear.app/amo100/issue/IPI-476), [IPI-477](https://linear.app/amo100/issue/IPI-477)) — 440-line tested `PlannerEngine`.
 
-**Ticket count, verified live against Linear (2026-07-12):** the original roadmap draft (`planner/implementation-roadmap.md`) planned ~54 tickets across separate Foundation/Screens/Security/Analytics/Testing/Documentation/Reliability epics. What actually exists: **33 issues were created, then ladder-reviewed to 10 active implementation tickets + 23 cancelled** (5 oversized parent trackers + 18 absorbed leaves — all still viewable in Linear as Canceled, not deleted, for traceability). `IPI-543` (Documentation & Data Contract) is one of the 23 cancelled — its one useful piece (fixture→schema field mapping) is now a checklist line inside IPI-536, not a standalone ticket. **No further Planner tickets should be created for v1 unless a real blocker appears** — AI/CopilotKit tools, Cloudflare presence/notifications, Analytics, and Reliability stay correctly unticketed.
+**Superseded 2026-07-18 — the table below replaces the 2026-07-12 version, which had drifted hard.** Re-checked live against Linear *and* against production (`ipix.co/app`, real operator login, not local dev): rows 1-2, 5, 7-9 of the old table were marked "Not started" but were actually Done days ago; rows 6 (IPI-555), 3-4 partially (old IPI-542/546/548/550) were citing ticket IDs that got Canceled/Duplicate/repurposed after a 2026-07-12→07-16 restructure into narrower `PLN-S1x` slices. Kept below for traceability; do not cite the old IDs going forward.
 
-Finalized execution order (security moved up ahead of screens; Hub moved up ahead of Dashboard/Timeline/Kanban):
+**Ticket count (2026-07-12 note, now historical):** the original roadmap draft planned ~54 tickets; 33 were created, ladder-reviewed to ~10 active + 23 cancelled. That "~10 active" set has itself since been split further into `PLN-S1A–G` slices (see table). AI/CopilotKit tools, Cloudflare presence/notifications, Analytics, and Reliability correctly remain unticketed for v1.
 
-| # | Task | Ticket | Status |
-|--:|---|---|:--:|
-| 1 | Foundation — routes, state-mgmt decision, core infra | [IPI-536](https://linear.app/amo100/issue/IPI-536) | 🔴 Not started |
-| 2 | Data & Repository layer | [IPI-538](https://linear.app/amo100/issue/IPI-538) | 🔴 Not started |
-| 3 | Shared components & hooks | [IPI-542](https://linear.app/amo100/issue/IPI-542) | 🔴 Not started |
-| 4 | Security hardening (anon-access gap + permission tests) | [IPI-544](https://linear.app/amo100/issue/IPI-544) | 🔴 Not started |
-| 5 | Hub | [IPI-526](https://linear.app/amo100/issue/IPI-526) | 🔴 Not started |
-| 6 | Dashboard | [IPI-555](https://linear.app/amo100/issue/IPI-555) | 🔴 Not started |
-| 7 | Workspace — Timeline view | [IPI-552](https://linear.app/amo100/issue/IPI-552) | 🔴 Not started |
-| 8 | Workspace — Kanban + Calendar/List | [IPI-553](https://linear.app/amo100/issue/IPI-553) | 🔴 Not started |
-| 9 | Settings + Invite | [IPI-556](https://linear.app/amo100/issue/IPI-556) | 🔴 Not started |
-| 10 | Mobile/tablet layouts | [IPI-557](https://linear.app/amo100/issue/IPI-557) | ⚪ Not started |
+| # | Task | Ticket | Status | Evidence |
+|--:|---|---|:--:|---|
+| 1 | Foundation — routes, state-mgmt decision, core infra | [IPI-536](https://linear.app/amo100/issue/IPI-536) | 🟢 Done (2026-07-14) | Linear |
+| 2 | Data — Dashboard & Hub reads | [IPI-538](https://linear.app/amo100/issue/IPI-538) | 🟢 Done (2026-07-14) | Linear |
+| 3 | Data — Settings & member mutations | [IPI-575](https://linear.app/amo100/issue/IPI-575) | 🟢 Done (2026-07-14) | Linear |
+| 4 | Security hardening (anon-EXECUTE cleanup on 9 Planner functions) | [IPI-544](https://linear.app/amo100/issue/IPI-544) | 🟢 Done (2026-07-15) | Linear |
+| 5 | Hub | [IPI-526](https://linear.app/amo100/issue/IPI-526) | 🟢 Done (2026-07-16) | Linear + live: `/app/planner` shows 2 real plans, needs-attention banner, type/status filters |
+| 6 | Dashboard | [IPI-576](https://linear.app/amo100/issue/IPI-576) | 🟢 Done (2026-07-16) | Linear + live: `/app/planner/dashboard` shows real KPI tiles (9% progress, 1 at risk), recent-plans cards |
+| 7 | Workspace shell + view switching | [IPI-578](https://linear.app/amo100/issue/IPI-578) | 🟢 Done (2026-07-14) | Linear + live: `/app/planner/[id]` renders Timeline/Kanban/Calendar/List tab shell |
+| 7b | Workspace data — reads (`getInstanceDetail`, `listDependencies`, `getViewConfig`) | [IPI-574](https://linear.app/amo100/issue/IPI-574) | 🟢 Done (2026-07-16), reads only | Linear. **Scope-corrected 2026-07-16 by its own description**: the mutation adapters it originally scoped (`updateTask`/`shiftTask`/`setViewConfig`) were never built — confirmed live against `app/src/lib/planner/mutations.ts`, zero task-level functions. Don't assume Done here means mutations exist; that work moved to row 9b. |
+| 8 | Workspace — Timeline (read-only) | [IPI-579](https://linear.app/amo100/issue/IPI-579) | ⚪ Backlog | Live: tab shows literal "Timeline view — content ships in a later Planner ticket." |
+| 9 | Workspace — Kanban + List | [IPI-580](https://linear.app/amo100/issue/IPI-580) | ⚪ Backlog | Live: same placeholder pattern confirmed on Kanban tab |
+| 9b | Workspace mutation adapters (`updateTask`/`shiftTask`/`setViewConfig` RPCs + Server Actions) | [IPI-649](https://linear.app/amo100/issue/IPI-649) | 🟢 Done (2026-07-16) | Linear — **corrected 2026-07-18 pass 3**, wrongly marked Backlog in the prior pass (missed a direct lookup). PRs #418 (migration-only RPCs), #420 (application adapters + Server Actions), #423 (forensic audit evidence). Row 10b's blocker on this is now cleared. |
+| 10 | Workspace — Calendar | [IPI-581](https://linear.app/amo100/issue/IPI-581) | ⚪ Backlog | Linear only, not re-clicked live this pass |
+| 10b | Workspace — Task Detail + Safe Mutations (wires `ApprovalCard` to IPI-483's contract; 3 mutation classes, only `shiftTask` drag-based) | [IPI-582](https://linear.app/amo100/issue/IPI-582) | ⚪ Backlog, blocked by `IPI-579`/`IPI-580`/`IPI-581`/`IPI-483` only | Linear — added 2026-07-18 pass 2. **Corrected pass 3:** its mutation-foundation blocker (`IPI-649`, row 9b) is Done, not Backlog — the issue's own Linear description is stale on this point (still says "IPI-649 (Backlog...)"), worth a quick fix there too. This is the ticket that actually makes Timeline/Kanban/Calendar's cards editable once their read-only views (8/9/10) land. |
+| 11 | Settings + Invite | [IPI-577](https://linear.app/amo100/issue/IPI-577) | 🟢 Done (2026-07-14) | Linear + live: `/app/planner/[id]/settings` — Members tab live with real member row; Notifications/Workflow/Danger-zone tabs visibly disabled |
+| 12 | Mobile/tablet layouts | [IPI-557](https://linear.app/amo100/issue/IPI-557) | ⚪ Backlog | Linear |
+| 13 | Staging deploy / rollback / production verification (release gate) | [IPI-542](https://linear.app/amo100/issue/IPI-542) | ⚫ Backlog | Linear — blocked by #4 (now done), not yet run |
+
+Note: old row 3 ("Shared components & hooks," previously cited as IPI-542) tracked a dead mapping — the actual component tickets (IPI-546 PlannerHeader/Toolbar, IPI-548 StatusChip, IPI-550 Empty/Loading/Error states, IPI-540 state-mgmt ADR) were Canceled 2026-07-12 and folded into Foundation (#1) instead of shipping standalone. IPI-542 was later repurposed to the release-gate ticket now in row 13.
+
+**Correct build order for Workspace (corrected 2026-07-18 pass 3):**
+
+```
+✅ IPI-574 · PLN-DATA-001B — Planner Data Workspace Reads (Done)
+✅ IPI-649 · PLN-DATA-001B-M — Complete Planner Workspace Mutation Adapters (Done)
+Next, can run as separate concerns in parallel:
+  IPI-579 · PLN-S1B — Planner Timeline Read-Only View (Backlog)
+  IPI-580 · PLN-S1C — Planner Kanban and List Views (Backlog)
+  IPI-581 · PLN-S1D — Planner Calendar View (Backlog)
+  IPI-483 · Workflow Engine v2 — Dependencies and Approvals (status not re-checked this pass)
+Then, once the above contracts exist:
+  IPI-582 · PLN-S1E — Planner Task Detail and Safe Mutations (Backlog)
+  → IPI-583 · Responsive/A11y QA (unblocked by 582, not yet added as its own row)
+```
+
+The mutation *foundation* (`IPI-649`) is already done — it's the read-only views (579/580/581) and the approvals engine (483) that gate `IPI-582`, not a missing data layer. Do not revive `IPI-552`/`IPI-553` — both dead (Duplicate/Canceled).
 
 **Deferred, correctly not ticketed yet:** AI/CopilotKit tools, Cloudflare presence/notifications — gated on the unrelated Mastra/Cloudflare provider cutover epic (IPI-485), not a Planner-specific delay.
 
