@@ -1,8 +1,3 @@
-A new release of infisical is available: 0.43.107 -> 0.43.110
-
-To update, run: sudo apt-get update && sudo apt-get install infisical
-
-2026-07-18T01:21:35-04:00 [32mINF[0m Injecting 36 Infisical secrets into your application process
 export type Json =
   | string
   | number

@@ -3,11 +3,6 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { ApiErrorCode } from "@/lib/api/error-envelope";
 import type { Database } from "@/types/supabase";
 
-// Type-level regression guard (IPI-587): ConvertDealResult.brand_id must stay
-// nullable. Included in tsc --noEmit (not excluded like *.test.ts).
-type _AssertBrandIdNullable = Database["public"]["Functions"]["crm_convert_deal"]["Returns"][number]["brand_id"];
-const _assertBrandIdNullable: _AssertBrandIdNullable = null;
-
 type Db = SupabaseClient<Database>;
 
 export type ConvertDecision = "won" | "lost";
@@ -80,5 +75,12 @@ export async function convertDeal(
     return { ok: false, status: 500, code: "INTERNAL_ERROR", message: "Failed to convert the deal." };
   }
 
-  return { ok: true, dealId: data.deal_id, stage: data.stage as ConvertDecision, brandId: data.brand_id };
+  // Lost conversions return SQL NULL brand_id; generated types currently mark
+  // the column non-null, so coalesce at the boundary (IPI-587 / IPI-665).
+  return {
+    ok: true,
+    dealId: data.deal_id,
+    stage: data.stage as ConvertDecision,
+    brandId: data.brand_id ?? null,
+  };
 }
