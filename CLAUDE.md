@@ -235,13 +235,19 @@ build on every change when CI's `app-build` job already does, and prefer Cloudfl
 gradual-deployment/rollback/observability tooling over exhaustive pre-merge local verification
 where it applies (see the skill's verification checklist for right-sizing guidance).
 
-**Current production runtime (verified 2026-07-18):** `ipix.co` (including the `/app` operator
-dashboard) runs on **Vercel**, not Cloudflare. Three Cloudflare tracks exist, none carrying
-production traffic yet: the OpenNext/Workers migration is scaffolded but undeployed (no `routes`
-binding in `app/wrangler.jsonc`); the earlier custom `services/cloudflare-worker/` AI Gateway is
-frozen (2026-07-14 decision, superseded by a dashboard-configured native AI Gateway); the native
-`ipix-prod` AI Gateway is provisioned but has zero real requests routed through it. Don't assume a
-Cloudflare-related change is live in prod until one of these three tracks actually ships.
+**Current production runtime (verified 2026-07-18, corrected 2026-07-18 pass 2 — see
+`tasks/cloudflare/todo.md` as the live SSOT before trusting this snapshot):** the Next.js
+operator app itself (`ipix.co/app`) runs on **Vercel** — the OpenNext/Workers migration is
+scaffolded but not yet cut over (no `routes` binding for `ipix.co` in `app/wrangler.jsonc`;
+`IPI-472`/`IPI-606` still In Progress, `IPI-631` DNS cutover still Backlog). **But the custom
+`services/cloudflare-worker/` AI Gateway Worker is NOT idle** — despite being frozen for further
+feature investment (2026-07-14 decision, no new work planned), it is explicitly documented as
+**"still the only real production AI path today"** (`tasks/cloudflare/todo.md`), 98/98 tests
+passing, still deployed. The dashboard-configured native `ipix-prod` AI Gateway is provisioned as
+its eventual replacement but has zero production traffic yet (`IPI-586` still Todo). So: the app
+is on Vercel, but Cloudflare is already carrying real production AI traffic today via the frozen
+custom Worker — don't say "Cloudflare is 0% live," say "the whole-app migration hasn't cut over,
+but the AI-gateway piece already has."
 
 ## QA test credentials
 
