@@ -1,5 +1,8 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { spawnSync } from "node:child_process";
 import { readFileSync, statSync } from "node:fs";
+import { resolve, dirname } from "node:path";
+import { fileURLToPath } from "node:url";
 import {
   BUILD_TIME_SECRET_NAMES,
   RUNTIME_SECRET_NAMES,
@@ -139,11 +142,34 @@ describe("sync-wrangler-secrets-from-infisical", () => {
     delete process.env.GROQ_API_KEY;
   });
 
-  it("redactValues strips quoted strings from wrangler output", () => {
+  it("redactValues strips secret values but preserves secret names in wrangler output", () => {
     const raw = 'Uploaded secret GEMINI_API_KEY with value "AIzaSyRealSecretValue"';
-    expect(redactValues(raw)).not.toContain("AIzaSyRealSecretValue");
-    expect(redactValues(raw)).toContain("[REDACTED]");
-    expect(redactValues('value "short"')).toBe('value "[REDACTED]"');
+    const redacted = redactValues(raw);
+    expect(redacted).not.toContain("AIzaSyRealSecretValue");
+    expect(redacted).toContain("GEMINI_API_KEY");
+    expect(redacted).toContain('with value "[REDACTED]"');
+    // Unrelated quoted strings (not wrangler value lines) stay intact
+    expect(redactValues('note: binding "ASSETS" configured')).toBe(
+      'note: binding "ASSETS" configured',
+    );
+  });
+
+  it("dry-run with zero secrets exits 0 and reports empty sync set", () => {
+    const scriptPath = resolve(
+      dirname(fileURLToPath(import.meta.url)),
+      "sync-wrangler-secrets-from-infisical.mjs",
+    );
+    const r = spawnSync(
+      process.execPath,
+      [scriptPath, "--wrangler-env", "preview", "--infisical-env", "dev", "--dry-run"],
+      {
+        env: { PATH: process.env.PATH },
+        encoding: "utf8",
+      },
+    );
+    expect(r.status).toBe(0);
+    expect(r.stdout).toMatch(/secrets to sync \(0\)/);
+    expect(r.stdout).toContain("dry-run: no wrangler calls made");
   });
 
   it("writeSecureSecretsFile creates chmod-600 temp JSON and cleans up", () => {

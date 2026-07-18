@@ -106,7 +106,8 @@ function runWrangler(args) {
 }
 
 function redactValues(text) {
-  return text.replace(/"[^"]*"/g, '"[REDACTED]"');
+  // Wrangler logs values as: `Uploaded secret NAME with value "..."`
+  return text.replace(/ with value "[^"]*"/g, ' with value "[REDACTED]"');
 }
 
 /**
@@ -182,7 +183,7 @@ function main() {
     process.exit(1);
   }
 
-  if (namesToSync.length === 0) {
+  if (namesToSync.length === 0 && !opts.dryRun) {
     console.error(
       `Error: no allowlisted runtime secrets found in env for wrangler env "${opts.wranglerEnv}".`,
     );
