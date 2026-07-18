@@ -52,7 +52,12 @@ describe("MarketingChat — feature flag behavior", () => {
       expect(screen.getByTestId("copilot-kit")).toBeTruthy();
     });
     expect(copilotKitMock).toHaveBeenCalledWith(
-      expect.objectContaining({ runtimeUrl: "/api/marketing-chat" }),
+      expect.objectContaining({
+        runtimeUrl: "/api/marketing-chat",
+        enableInspector: false,
+        showDevConsole: false,
+        useSingleEndpoint: true,
+      }),
     );
     expect(screen.getByTestId("copilot-popup")).toBeTruthy();
   });
