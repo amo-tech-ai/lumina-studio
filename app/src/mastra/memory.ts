@@ -5,16 +5,36 @@ import { getMastraStorage } from "./storage";
 let _memory: Memory | undefined;
 let _plannerMemory: Memory | undefined;
 
+function createLazyMemory(factory: () => Memory): Memory {
+  let instance: Memory | undefined;
+  const getInstance = (): Memory => {
+    if (!instance) instance = factory();
+    return instance;
+  };
+  return new Proxy({} as Memory, {
+    get(_target, prop) {
+      const mem = getInstance();
+      const value = Reflect.get(mem, prop, mem) as unknown;
+      return typeof value === "function"
+        ? (value as (...args: unknown[]) => unknown).bind(mem)
+        : value;
+    },
+  });
+}
+
 /** Base memory — message history only. Used by agents without a working-memory schema. */
 export function getMastraMemory(): Memory {
   if (!_memory) {
-    _memory = new Memory({
-      storage: getMastraStorage(),
-      options: {
-        lastMessages: 40,
-        // ponytail: semantic recall + observational memory deferred to IPI-136 / Phase 2
-      },
-    });
+    _memory = createLazyMemory(
+      () =>
+        new Memory({
+          storage: getMastraStorage(),
+          options: {
+            lastMessages: 40,
+            // ponytail: semantic recall + observational memory deferred to IPI-136 / Phase 2
+          },
+        }),
+    );
   }
   return _memory;
 }
@@ -33,17 +53,20 @@ export const PlannerWorkingMemory = z.object({
  */
 export function getPlannerMemory(): Memory {
   if (!_plannerMemory) {
-    _plannerMemory = new Memory({
-      storage: getMastraStorage(),
-      options: {
-        lastMessages: 40,
-        workingMemory: {
-          enabled: true,
-          scope: "thread",
-          schema: PlannerWorkingMemory,
-        },
-      },
-    });
+    _plannerMemory = createLazyMemory(
+      () =>
+        new Memory({
+          storage: getMastraStorage(),
+          options: {
+            lastMessages: 40,
+            workingMemory: {
+              enabled: true,
+              scope: "thread",
+              schema: PlannerWorkingMemory,
+            },
+          },
+        }),
+    );
   }
   return _plannerMemory;
 }

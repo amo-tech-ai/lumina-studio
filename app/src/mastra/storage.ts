@@ -5,6 +5,17 @@ import type { PostgresStore as PostgresStoreType } from "@mastra/pg";
 type MastraAppStorage = InMemoryStore | PostgresStoreType;
 
 let storage: MastraAppStorage | undefined;
+let lazyStorageProxy: MastraAppStorage | undefined;
+
+/** Thrown when durable storage is required but DATABASE_URL is unset in production. */
+export class MastraStorageUnavailableError extends Error {
+  readonly code = "storage_unavailable" as const;
+
+  constructor(message: string) {
+    super(message);
+    this.name = "MastraStorageUnavailableError";
+  }
+}
 
 /**
  * Cloudflare Workers / workerd isolate detection.
@@ -22,6 +33,10 @@ export function isCloudflareWorkersRuntime(): boolean {
   } catch {
     return false;
   }
+}
+
+export function isVercelRuntime(env: NodeJS.ProcessEnv = process.env): boolean {
+  return env.VERCEL === "1";
 }
 
 /**
@@ -60,6 +75,15 @@ export function assertPostgresStoreModule(mod: {
   }
 }
 
+function requireProductionDatabaseUrl(env: NodeJS.ProcessEnv = process.env): void {
+  if (env.NODE_ENV !== "production" || env.CI) return;
+
+  const target = isVercelRuntime(env) ? "Vercel production" : "production";
+  throw new MastraStorageUnavailableError(
+    `DATABASE_URL is required in ${target}. Set it to the Supabase pooler connection string (port 6543).`,
+  );
+}
+
 export function getMastraStorage(): MastraAppStorage {
   if (!storage) {
     const url = process.env.DATABASE_URL ?? "";
@@ -74,15 +98,7 @@ export function getMastraStorage(): MastraAppStorage {
       // Real Mastra store (getStore("memory") etc.) — bare stubs break agent.stream after RUN_STARTED.
       storage = new InMemoryStore({ id: "mastra-storage-memory" });
     } else if (!url) {
-      if (process.env.NODE_ENV === "production" && !process.env.CI) {
-        // Agents call getMastraStorage() at module import (memory: getPlannerMemory()).
-        // Throwing here yields Next.js HTML /500 before the CopilotKit route handler runs.
-        console.error(
-          "[mastra] DATABASE_URL missing in production — using InMemoryStore for this process. " +
-            "CopilotKit /info and agent turns work without durable memory until DATABASE_URL " +
-            "is set to the Supabase pooler connection string (port 6543) and redeployed.",
-        );
-      }
+      requireProductionDatabaseUrl();
       // ponytail: in-memory at build/test time — agents import this at module eval,
       // but no DB call happens until an actual agent turn.
       storage = new InMemoryStore({ id: "mastra-storage-memory" });
@@ -100,4 +116,23 @@ export function getMastraStorage(): MastraAppStorage {
     }
   }
   return storage;
+}
+
+/**
+ * Defers {@link getMastraStorage} until a storage method is invoked — keeps CopilotKit
+ * `/info` and agent discovery loadable without DATABASE_URL at module import.
+ */
+export function getMastraStorageLazy(): MastraAppStorage {
+  if (!lazyStorageProxy) {
+    lazyStorageProxy = new Proxy({} as MastraAppStorage, {
+      get(_target, prop) {
+        const store = getMastraStorage();
+        const value = Reflect.get(store, prop, store) as unknown;
+        return typeof value === "function"
+          ? (value as (...args: unknown[]) => unknown).bind(store)
+          : value;
+      },
+    });
+  }
+  return lazyStorageProxy;
 }

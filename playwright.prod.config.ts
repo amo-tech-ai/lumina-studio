@@ -4,6 +4,7 @@ const prodBase = process.env.IPIX_PROD_BASE_URL?.replace(/\/$/, "") ?? "https://
 
 export default defineConfig({
   testDir: "./e2e",
+  testMatch: ["**/copilotkit-prod-smoke.spec.ts"],
   timeout: 60_000,
   retries: 0,
   use: {

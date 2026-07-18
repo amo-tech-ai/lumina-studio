@@ -1,11 +1,12 @@
 import { expect, test } from "@playwright/test";
 import { getQaCredentials, loadEnvLocal } from "./helpers/qa-credentials";
 
-const PROD_BASE = process.env.IPIX_PROD_BASE_URL?.replace(/\/$/, "") ?? "https://www.ipix.co";
+let prodBase = "https://www.ipix.co";
 
 test.describe("CopilotKit production smoke (IPI-670 · COPILOT-RUNTIME-001)", () => {
   test.beforeAll(() => {
     loadEnvLocal();
+    prodBase = process.env.IPIX_PROD_BASE_URL?.replace(/\/$/, "") ?? "https://www.ipix.co";
   });
 
   test("authenticated /app/assets: /info 200, creative-director, no copilotkit 500s", async ({
@@ -27,13 +28,13 @@ test.describe("CopilotKit production smoke (IPI-670 · COPILOT-RUNTIME-001)", ()
       }
     });
 
-    await page.goto(`${PROD_BASE}/login`);
+    await page.goto(`${prodBase}/login`);
     await page.fill('input[name="email"]', email);
     await page.fill('input[name="password"]', password);
     await page.click('button[type="submit"]');
     await page.waitForURL(/\/app/, { timeout: 30_000 });
 
-    await page.goto(`${PROD_BASE}/app/assets`);
+    await page.goto(`${prodBase}/app/assets`);
     await page.waitForLoadState("domcontentloaded");
 
     const infoProbe = await page.evaluate(async () => {
