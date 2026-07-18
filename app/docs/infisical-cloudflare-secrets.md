@@ -160,39 +160,47 @@ infisical run --env=dev -- npm run dev
 
 ## Sync runtime secrets to Cloudflare
 
+**Order (required):** `build:cf` → `opennextjs-cloudflare upload` (creates Worker version) → sync script (`versions upload --secrets-file`). Sync alone fails if `ipix-operator-preview` has never been uploaded.
+
 ### Dry-run (names only)
 
 ```bash
 cd app
-infisical run --env=dev -- node scripts/sync-wrangler-secrets-from-infisical.mjs \
+node scripts/sync-wrangler-secrets-from-infisical.mjs \
   --infisical-env dev --wrangler-env preview --dry-run
 ```
 
-### Production sync (operator — requires Cloudflare + Infisical credentials)
+Or GitHub Actions: workflow **Cloudflare secrets sync** with `dry_run=true`.
 
-Build the Worker first (`npm run build:cf`), then sync secrets in a single version upload:
-
-```bash
-cd app
-infisical run --env=prod -- node scripts/sync-wrangler-secrets-from-infisical.mjs \
-  --infisical-env prod --wrangler-env production
-```
-
-Or combine with OpenNext upload (passthrough to wrangler):
+### First preview bootstrap (operator)
 
 ```bash
 cd app
-# After build:cf, write secrets file via sync script dry-run planning, or:
-infisical run --env=dev -- opennextjs-cloudflare upload --env preview -- --secrets-file /path/to/secrets.json
+export NEXT_PUBLIC_SUPABASE_URL=...
+export NEXT_PUBLIC_SUPABASE_ANON_KEY=...
+export CLOUDFLARE_API_TOKEN=...
+export CLOUDFLARE_ACCOUNT_ID=...
+npm run cf-typegen
+npm run build:cf
+npx opennextjs-cloudflare upload --env preview
+# inject runtime secrets (GitHub secrets, infisical run, or workflow dry_run=false)
+node scripts/sync-wrangler-secrets-from-infisical.mjs \
+  --infisical-env dev --wrangler-env preview
 ```
 
-Requires in env: `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`, plus allowlisted runtime secrets from Infisical. Values are written to a temp JSON file (mode 600) and passed to `wrangler versions upload --secrets-file` — **never echoed**.
+Local equivalent of `npm run upload -- --env preview` includes `build:cf` internally; the sync step still requires a Worker version to exist first on a greenfield account.
+
+### Production sync
+
+Same sequence with `--wrangler-env production` / `--env production` after `build:cf`.
+
+Requires in env: `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`, plus allowlisted runtime secrets. Values are written to a temp JSON file (mode 600) and passed to `wrangler versions upload --secrets-file` — **never echoed**.
 
 **Not primary:** `wrangler secret bulk` (each bulk creates a separate deployment version; use `--secrets-file` with upload instead).
 
 ## CI integration (v1)
 
-Workflow: `.github/workflows/cloudflare-secrets-sync.yml` (**workflow_dispatch only** — no auto prod sync on PR).
+Workflow: `.github/workflows/cloudflare-secrets-sync.yml` (**workflow_dispatch**). Live run (`dry_run=false`): `cf-typegen` → `build:cf` → `opennextjs-cloudflare upload` → sync script. IPI-632 smoke is a separate manual gate after preview URL exists.
 
 Build job integration (when OIDC ready) — add to `app-build` in `ci.yml`:
 
