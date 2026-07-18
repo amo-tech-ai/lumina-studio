@@ -2616,7 +2616,9 @@ try {
     );
     assertZeroResiduals(beforeOmit, await countResidualsForDeal(ciDealOmit.id, wfA.id), "omitted-phase reject");
 
-    // 19d — duplicate phaseId replacing a missing one (count matches, distinct doesn't).
+    // 19d — duplicate phaseId replacing a missing one. Second copy uses an
+    // alternate accepted UUID text form (uppercase) so the gate must count
+    // distinct casted uuids, not raw JSON strings.
     const beforeDup = await countResidualsForDeal(ciDealDup.id, wfA.id);
     const { data: ciDupResult, error: ciDupErr } = await userCiEditor.client.rpc("planner_create_instance", {
       p_org_id: orgAId,
@@ -2628,12 +2630,17 @@ try {
       p_idempotency_key: crypto.randomUUID(),
       p_tasks: [
         ciValidTasks[0],
-        { ...ciValidTasks[0], title: "Brief Dup", sortOrder: 1 },
+        {
+          ...ciValidTasks[0],
+          phaseId: String(ciValidTasks[0].phaseId).toUpperCase(),
+          title: "Brief Dup",
+          sortOrder: 1,
+        },
       ],
     });
     assert(
       !ciDupErr && ciDupResult?.ok === false && ciDupResult?.code === "INVALID_INPUT",
-      "IPI-670: planner_create_instance rejects duplicate phaseId covering that hides a missing phase",
+      "IPI-670: planner_create_instance rejects duplicate phaseId (incl. alternate UUID text) covering that hides a missing phase",
     );
     assertZeroResiduals(beforeDup, await countResidualsForDeal(ciDealDup.id, wfA.id), "duplicate-phase reject");
 

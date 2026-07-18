@@ -456,6 +456,18 @@ export async function createInstance(
   const phasesResult = await listWorkflowPhases(params.workflowId);
   if (!phasesResult.ok) return { ok: false, error: phasesResult.error };
 
+  // IPI-670: RPC rejects zero-phase workflows; fail closed here so Hub never
+  // sends [] expecting success when the template has no phases yet.
+  if (phasesResult.data.length === 0) {
+    return {
+      ok: false,
+      error: {
+        code: "INVALID_INPUT",
+        message: "This workflow has no phases yet. Add phases before creating a plan.",
+      },
+    };
+  }
+
   const { tasks } = engine.buildSchedule(phasesResult.data, params);
 
   const taskPayload = tasks.map((task) => ({

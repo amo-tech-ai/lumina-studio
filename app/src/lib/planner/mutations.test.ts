@@ -922,15 +922,20 @@ describe("createInstance", () => {
     expect(rpcMock).not.toHaveBeenCalled();
   });
 
-  it("sends an empty task list without erroring when the workflow has no phases", async () => {
+  it("rejects a zero-phase workflow before calling the RPC (IPI-670)", async () => {
     vi.mocked(listWorkflowPhases).mockResolvedValue({ ok: true, data: [] });
     const { client, rpcMock } = mockRpcJson({ ok: true, replayed: false, instanceId: "inst-empty" });
 
     const result = await createInstance(BASE_PARAMS, client);
 
-    expect(result.ok).toBe(true);
-    const [, args] = rpcMock.mock.calls[0] as [string, Record<string, unknown>];
-    expect(args.p_tasks).toEqual([]);
+    expect(result).toEqual({
+      ok: false,
+      error: {
+        code: "INVALID_INPUT",
+        message: "This workflow has no phases yet. Add phases before creating a plan.",
+      },
+    });
+    expect(rpcMock).not.toHaveBeenCalled();
   });
 
   it.each(["UNAUTHENTICATED", "FORBIDDEN", "NOT_FOUND", "INVALID_INPUT", "INSTANCE_ALREADY_EXISTS", "IDEMPOTENCY_CONFLICT"])(
