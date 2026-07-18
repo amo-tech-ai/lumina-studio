@@ -1,6 +1,6 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
-import { uploadPollDelayMs } from "./upload-poll";
+import { pollUntilMirrorTerminal, uploadPollDelayMs } from "./upload-poll";
 
 describe("uploadPollDelayMs", () => {
   it("uses 1s delay for the first 10 seconds", () => {
@@ -16,5 +16,19 @@ describe("uploadPollDelayMs", () => {
   it("uses 5s delay after 30s", () => {
     expect(uploadPollDelayMs(30_000)).toBe(5000);
     expect(uploadPollDelayMs(59_000)).toBe(5000);
+  });
+});
+
+describe("pollUntilMirrorTerminal", () => {
+  it("returns aborted when fetch is rejected with AbortError", async () => {
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockRejectedValue(
+      new DOMException("Aborted", "AbortError"),
+    );
+    const controller = new AbortController();
+
+    const result = await pollUntilMirrorTerminal("abcdef0123456789abcdef0123456789", controller.signal);
+
+    expect(result.outcome).toBe("aborted");
+    fetchMock.mockRestore();
   });
 });

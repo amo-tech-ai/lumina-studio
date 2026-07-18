@@ -5,6 +5,7 @@ import {
   CLOUDINARY_UPLOAD_PRESET,
   presetTransformString,
 } from "@/lib/cloudinary/url";
+import { parseBrandIdFromCloudinaryContext } from "@/lib/assets/brand-access";
 
 const RESOURCE_TYPES = new Set(["image", "video"]);
 const ALLOWED_FORMATS = "jpg,png,webp,mp4,mov";
@@ -76,8 +77,8 @@ export function validateParamsToSign(params: Record<string, unknown>): string | 
   if (params.type !== "authenticated") {
     return "type must be authenticated";
   }
-  const brandId = typeof params.context === "string" ? params.context : "";
-  if (!brandId.includes("brand_id=")) {
+  const brandId = parseBrandIdFromCloudinaryContext(params.context);
+  if (!brandId) {
     return "context must include brand_id";
   }
   return null;

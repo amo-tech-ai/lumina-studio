@@ -56,7 +56,13 @@ export async function pollUntilMirrorTerminal(
   while (Date.now() - started < UPLOAD_POLL_MAX_MS) {
     if (signal.aborted) return { outcome: "aborted" };
 
-    last = await fetchMirrorStatus(cloudinaryAssetId, signal);
+    try {
+      last = await fetchMirrorStatus(cloudinaryAssetId, signal);
+    } catch (e) {
+      if (e instanceof DOMException && e.name === "AbortError") return { outcome: "aborted" };
+      if (e instanceof Error && e.name === "AbortError") return { outcome: "aborted" };
+      throw e;
+    }
     onTick?.(last);
 
     if (last.status === "ready") return { outcome: "ready", response: last };

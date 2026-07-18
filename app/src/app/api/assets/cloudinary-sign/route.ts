@@ -5,7 +5,13 @@ import {
   isBrandAccessible,
   parseBrandIdFromCloudinaryContext,
 } from "@/lib/assets/brand-access";
-import { signCloudinaryParams, validateParamsToSign } from "@/lib/cloudinary/sign-upload";
+import {
+  assetFolderFor,
+  buildUploadParamsToSign,
+  isAllowedResourceType,
+  signCloudinaryParams,
+  validateParamsToSign,
+} from "@/lib/cloudinary/sign-upload";
 import { createOperatorSupabaseClient } from "@/lib/supabase/operator-client";
 
 export const dynamic = "force-dynamic";
@@ -62,10 +68,29 @@ export async function POST(request: Request) {
     }
   }
 
-  const signature = signCloudinaryParams(
-    params as Record<string, string | number>,
-    apiSecret,
-  );
+  const timestamp =
+    typeof params.timestamp === "number" ? params.timestamp : Number(params.timestamp);
+  if (!Number.isFinite(timestamp) || timestamp <= 0) {
+    return NextResponse.json({ error: "Invalid timestamp" }, { status: 400 });
+  }
+
+  const resourceType =
+    typeof params.resource_type === "string" && params.resource_type.length > 0
+      ? params.resource_type
+      : "image";
+  if (!isAllowedResourceType(resourceType)) {
+    return NextResponse.json({ error: "Invalid resource_type" }, { status: 400 });
+  }
+
+  // Rebuild canonical params server-side — never sign arbitrary client-supplied fields.
+  const canonicalParams = buildUploadParamsToSign({
+    brandId,
+    resourceType,
+    timestamp,
+    folder: assetFolderFor(brandId),
+  });
+
+  const signature = signCloudinaryParams(canonicalParams, apiSecret);
 
   return NextResponse.json({ signature });
 }

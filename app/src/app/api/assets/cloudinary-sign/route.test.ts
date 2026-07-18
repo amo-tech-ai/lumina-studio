@@ -80,6 +80,29 @@ describe("POST /api/assets/cloudinary-sign", () => {
     expect(JSON.stringify(data)).not.toContain("test-api-secret");
   });
 
+  it("accepts object context from CldUploadWidget and rebuilds canonical params", async () => {
+    const { POST } = await importRoute();
+    const res = await POST(
+      new Request("http://localhost/api/assets/cloudinary-sign", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          paramsToSign: {
+            timestamp: 1_784_000_000,
+            upload_preset: "ipix-signed-upload",
+            type: "authenticated",
+            context: { brand_id: VALID_BRAND_ID },
+            folder: "evil/override/path",
+            public_id: "evil-id",
+          },
+        }),
+      }),
+    );
+    expect(res.status).toBe(200);
+    const data = await res.json();
+    expect(typeof data.signature).toBe("string");
+  });
+
   it("returns 403 when brand is not accessible", async () => {
     mockMaybeSingle.mockResolvedValueOnce({ data: null, error: null });
     const { POST } = await importRoute();

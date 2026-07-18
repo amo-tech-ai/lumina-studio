@@ -308,6 +308,7 @@ export function AssetUploadPanel({ brands = [], defaultBrandId, onReady }: Props
 
         {uploadConfigured ? (
         <CldUploadWidget
+          key={brandId}
           config={{ cloud: { cloudName, apiKey } }}
           uploadPreset={CLOUDINARY_UPLOAD_PRESET}
           signatureEndpoint="/api/assets/cloudinary-sign"
