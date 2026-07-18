@@ -21,7 +21,7 @@ function makeRequest(body: unknown): Request {
 const mockWithOperatorAuth = vi.fn();
 const mockMaybeSingle = vi.fn();
 const mockCampaignMaybeSingle = vi.fn();
-const mockCreateSupabaseServerClient = vi.fn();
+const mockCreateOperatorSupabaseClient = vi.fn();
 
 vi.mock("@/lib/operator-gate", () => ({
   withOperatorAuth: (...args: unknown[]) => mockWithOperatorAuth(...args),
@@ -33,15 +33,15 @@ vi.mock("@/lib/operator-gate", () => ({
   },
 }));
 
-vi.mock("@/lib/supabase/server", () => ({
-  createSupabaseServerClient: () => mockCreateSupabaseServerClient(),
+vi.mock("@/lib/supabase/operator-client", () => ({
+  createOperatorSupabaseClient: () => mockCreateOperatorSupabaseClient(),
 }));
 
 function supabaseClientStub() {
   const from = vi.fn((table: string) => {
     const maybeSingle = table === "campaigns" ? mockCampaignMaybeSingle : mockMaybeSingle;
     const eq2 = vi.fn(() => ({ maybeSingle }));
-    const eq1 = vi.fn(() => ({ eq: eq2 }));
+    const eq1 = vi.fn(() => ({ eq: eq2, maybeSingle }));
     const select = vi.fn(() => ({ eq: eq1 }));
     return { select };
   });
@@ -56,7 +56,7 @@ beforeEach(() => {
   mockWithOperatorAuth.mockResolvedValue({ id: "44444444-4444-4444-4444-444444444444", name: "QA" });
   mockMaybeSingle.mockResolvedValue({ data: { id: VALID_BRAND_ID }, error: null });
   mockCampaignMaybeSingle.mockResolvedValue({ data: { id: VALID_CAMPAIGN_ID }, error: null });
-  mockCreateSupabaseServerClient.mockResolvedValue(supabaseClientStub());
+  mockCreateOperatorSupabaseClient.mockResolvedValue(supabaseClientStub());
 });
 
 afterEach(() => {
@@ -129,11 +129,13 @@ describe("POST /api/assets/upload-sign", () => {
     expect(data.error).toMatch(/filename/i);
   });
 
-  it("returns 403 when brand is not owned by caller", async () => {
+  it("returns 403 when brand is not accessible to caller (RLS)", async () => {
     mockMaybeSingle.mockResolvedValueOnce({ data: null, error: null });
     const { POST } = await importRoute();
     const res = await POST(makeRequest(VALID_BODY));
     expect(res.status).toBe(403);
+    const data = await res.json();
+    expect(data.error).toMatch(/accessible/i);
   });
 
   it("returns 500 when the brand ownership query errors", async () => {
@@ -148,7 +150,7 @@ describe("POST /api/assets/upload-sign", () => {
     const { POST } = await importRoute();
     const res = await POST(makeRequest(VALID_BODY));
     expect(res.status).toBe(200);
-    expect(mockCreateSupabaseServerClient).not.toHaveBeenCalled();
+    expect(mockCreateOperatorSupabaseClient).not.toHaveBeenCalled();
   });
 
   it("returns a signed payload with type=authenticated and eager presets for images, secret never leaks", async () => {
@@ -246,7 +248,7 @@ describe("POST /api/assets/upload-sign", () => {
       makeRequest({ ...VALID_BODY, context: { campaignId: VALID_CAMPAIGN_ID } }),
     );
     expect(res.status).toBe(200);
-    expect(mockCreateSupabaseServerClient).not.toHaveBeenCalled();
+    expect(mockCreateOperatorSupabaseClient).not.toHaveBeenCalled();
   });
 
   it("falls back to the default brand folder when context ids are not valid UUIDs", async () => {

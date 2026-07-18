@@ -750,6 +750,16 @@ describe("POST /api/assets/cloudinary/webhook", () => {
     expect(normalized.secure_url).toContain("/image/authenticated/folder/new");
   });
 
+  it("isCloudinaryDeliveryMisconfigured is true when CLOUDINARY_CLOUD_NAME is empty or whitespace", async () => {
+    const { isCloudinaryDeliveryMisconfigured } = await importRoute();
+    vi.stubEnv("CLOUDINARY_CLOUD_NAME", "");
+    expect(isCloudinaryDeliveryMisconfigured()).toBe(true);
+    vi.stubEnv("CLOUDINARY_CLOUD_NAME", "   ");
+    expect(isCloudinaryDeliveryMisconfigured()).toBe(true);
+    vi.stubEnv("CLOUDINARY_CLOUD_NAME", "dzqy2ixl0");
+    expect(isCloudinaryDeliveryMisconfigured()).toBe(false);
+  });
+
   it("IPI-641 delete: archives by provider id and legacy null-identity public_id only", async () => {
     const { POST } = await importRoute();
     const res = await POST(

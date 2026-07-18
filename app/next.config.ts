@@ -4,7 +4,9 @@ import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
 import { withSentryConfig } from "@sentry/nextjs";
 
-import { CLOUDINARY_CLOUD_NAME } from "./src/lib/cloudinary/url";
+import { resolveCloudinaryCloudName } from "./src/lib/cloudinary/url";
+
+const CLOUDINARY_CLOUD_NAME = resolveCloudinaryCloudName();
 import { isOperatorAuthEnforced } from "./src/lib/operator-auth-env";
 
 const appDir = path.dirname(fileURLToPath(import.meta.url));
@@ -120,6 +122,12 @@ const nextConfig: NextConfig = {
       process.env.COPILOTKIT_LICENSE_TOKEN && isOperatorAuthEnforced()
         ? "true"
         : "false",
+    NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME:
+      process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME ?? process.env.CLOUDINARY_CLOUD_NAME,
+    NEXT_PUBLIC_CLOUDINARY_API_KEY:
+      process.env.NEXT_PUBLIC_CLOUDINARY_API_KEY ??
+      process.env.NEXT_CLOUDINARY_API_KEY ??
+      process.env.CLOUDINARY_API_KEY,
   },
 };
 

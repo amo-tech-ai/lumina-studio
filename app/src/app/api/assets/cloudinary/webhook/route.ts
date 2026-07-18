@@ -58,6 +58,11 @@ function synthesizeAuthenticatedUrl(publicId: string, resourceType: string): str
   return `https://res.cloudinary.com/${cloud}/${resourceType}/authenticated/${publicId}`;
 }
 
+/** True when rename/upload URL synthesis cannot succeed (non-transient misconfiguration). */
+export function isCloudinaryDeliveryMisconfigured(): boolean {
+  return !process.env.CLOUDINARY_CLOUD_NAME?.trim();
+}
+
 /**
  * Official rename notifications use `to_public_id` / `from_public_id` and often omit
  * `public_id` + `secure_url`. Normalize so handleUpload can reuse the same path.
@@ -181,7 +186,7 @@ type MirrorLookup =
   | { kind: "missing" }
   | { kind: "error" };
 
-type UploadHandleResult = { retryable?: boolean };
+type UploadHandleResult = { retryable?: boolean; permanent?: boolean };
 
 // IPI-513: insert and update need different FK-failure behavior. A new row has no
 // prior brand_id to protect, so a bad candidate just retries as null. An existing
@@ -710,7 +715,10 @@ async function handleUpload(
       "[cloudinary/webhook] rename/upload missing secure_url and CLOUDINARY_CLOUD_NAME is empty after trim",
       { publicId, notification_type: payload.notification_type },
     );
-    // Misconfig or incomplete rename — retry if env is fixed; do not silently ack.
+    // Missing cloud name is misconfiguration — ack to halt Cloudinary retries (not 503).
+    if (isCloudinaryDeliveryMisconfigured()) {
+      return { permanent: true };
+    }
     return { retryable: true };
   }
 
@@ -983,6 +991,13 @@ export async function POST(request: Request) {
       // Rename payloads use to_public_id/from_public_id — normalize before shared handler.
       const normalized = normalizeCloudinaryNotification(payload);
       const result = await handleUpload(db, normalized);
+      if (result.permanent) {
+        console.error(
+          "[cloudinary/webhook] permanent failure — notification acked to stop retries",
+          { notification_type: notificationType },
+        );
+        return NextResponse.json({ ok: true, permanent: true, skipped: "configuration_error" });
+      }
       // Partial rename (mirror ahead of assets) must be retried — not silently acked.
       if (result.retryable) {
         return NextResponse.json({ error: "Transient processing failure" }, { status: 503 });

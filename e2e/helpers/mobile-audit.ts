@@ -32,6 +32,7 @@ export async function loginOperatorIfConfigured(page: Page): Promise<boolean> {
   if (!password) return false;
 
   await page.goto("/login");
+  await page.getByRole("heading", { name: "Welcome" }).waitFor({ timeout: 20_000 });
   await page.fill('input[name="email"]', "qa@ipix.test");
   await page.fill('input[name="password"]', password);
   // Scoped to the email/password form's own submit button — a bare

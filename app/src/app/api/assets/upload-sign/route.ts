@@ -1,23 +1,19 @@
-// IPI-257 074a — signed Cloudinary upload params (secret never leaves the server)
+// IPI-433 / IPI-257 — signed Cloudinary upload params (secret never leaves the server)
 import { NextResponse } from "next/server";
-import { v2 as cloudinary } from "cloudinary";
 import { withOperatorAuth, OperatorAuthError } from "@/lib/operator-gate";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { isBrandAccessible } from "@/lib/assets/brand-access";
 import {
-  CLOUDINARY_EAGER_PRESETS,
-  CLOUDINARY_UPLOAD_PRESET,
-  presetTransformString,
-} from "@/lib/cloudinary/url";
+  assetFolderFor,
+  buildUploadParamsToSign,
+  isAllowedResourceType,
+  sanitizeUploadFilename,
+  signCloudinaryParams,
+} from "@/lib/cloudinary/sign-upload";
+import { createOperatorSupabaseClient } from "@/lib/supabase/operator-client";
 
 export const dynamic = "force-dynamic";
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-const RESOURCE_TYPES = new Set(["image", "video"]);
-const ALLOWED_FORMATS = "jpg,png,webp,mp4,mov";
-// Advisory only — this is when we'd ask the client to re-request a signature,
-// not an enforced window. Cloudinary itself accepts the signed `timestamp` for
-// ~1hr regardless of this value (there's no separate server-side TTL to check
-// against, since the timestamp is minted fresh on every call to this route).
 const SIGNATURE_TTL_SECONDS = 300;
 
 type UploadSignBody = {
@@ -35,21 +31,6 @@ function validContextIds(context: UploadSignBody["context"]) {
     context?.campaignId && UUID_RE.test(context.campaignId) ? context.campaignId : undefined;
   return { shootId, campaignId };
 }
-
-function assetFolderFor(brandId: string, shootId?: string, campaignId?: string): string {
-  if (shootId) return `ipix/shoots/${shootId}/raw`;
-  if (campaignId) return `ipix/campaigns/${campaignId}`;
-  return `ipix/brands/${brandId}/products`;
-}
-
-function sanitizeFilename(filename: string): string {
-  return filename.replace(/[^a-zA-Z0-9._-]/g, "_").slice(0, 200);
-}
-
-// IPI-430 — eager pregeneration for masonry / review / detail. Literal transform
-// strings stay the SSOT via CLOUDINARY_EAGER_PRESETS + presetTransformString so
-// signed delivery URLs cannot drift from upload-time derivatives. The account
-// also has matching named transforms + upload preset `ipix-signed-upload`.
 
 export async function POST(request: Request) {
   let operator;
@@ -85,10 +66,10 @@ export async function POST(request: Request) {
   if (!brandId || !UUID_RE.test(brandId)) {
     return NextResponse.json({ error: "Invalid brandId" }, { status: 400 });
   }
-  if (!resourceType || !RESOURCE_TYPES.has(resourceType)) {
+  if (!resourceType || !isAllowedResourceType(resourceType)) {
     return NextResponse.json({ error: "resourceType must be image or video" }, { status: 400 });
   }
-  if (!filename || sanitizeFilename(filename).length === 0) {
+  if (!filename || sanitizeUploadFilename(filename).length === 0) {
     return NextResponse.json({ error: "Invalid filename" }, { status: 400 });
   }
   if (folder && typeof folder !== "string") {
@@ -106,32 +87,15 @@ export async function POST(request: Request) {
 
   const { shootId, campaignId } = validContextIds(body.context);
 
-  // Dev fallback identity never owns a real brand row — skip the ownership
-  // check so local dev (OPERATOR_AUTH_ENABLED=false) isn't hard-blocked.
   if (operator.id !== "dev-unauthenticated") {
-    const svc = await createSupabaseServerClient();
-    const { data: brand, error } = await svc
-      .from("brands")
-      .select("id")
-      .eq("id", brandId)
-      .eq("user_id", operator.id)
-      .maybeSingle();
-    if (error) {
-      console.error("[assets/upload-sign] brand ownership query failed:", error.message);
-      return NextResponse.json({ error: "Internal error" }, { status: 500 });
-    }
-    if (!brand) {
-      return NextResponse.json({ error: "Brand not owned by caller" }, { status: 403 });
+    const supabase = await createOperatorSupabaseClient(request);
+    const brandCheck = await isBrandAccessible(supabase, brandId);
+    if (!brandCheck.ok) {
+      return NextResponse.json({ error: brandCheck.message }, { status: brandCheck.status });
     }
 
-    // IPI-513 follow-up: the campaign folder (ipix/campaigns/{id}) carries no
-    // brandId of its own — the Cloudinary webhook resolves brand_id purely by
-    // looking up campaigns.brand_id for the folder's UUID. Without this check,
-    // an operator who owns brandId could pass any campaignId (including one
-    // belonging to a different brand) and get the upload attributed to that
-    // other brand once the webhook processes it.
     if (campaignId) {
-      const { data: campaign, error: campaignErr } = await svc
+      const { data: campaign, error: campaignErr } = await supabase
         .from("campaigns")
         .select("id")
         .eq("id", campaignId)
@@ -149,37 +113,17 @@ export async function POST(request: Request) {
 
   const timestamp = Math.floor(Date.now() / 1000);
   const assetFolder = folder ?? assetFolderFor(brandId, shootId, campaignId);
-  const contextParts = [`brand_id=${brandId}`];
-  if (shootId) contextParts.push(`shoot_id=${shootId}`);
-  if (campaignId) contextParts.push(`campaign_id=${campaignId}`);
-
-  const paramsToSign: Record<string, string | number> = {
+  const paramsToSign = buildUploadParamsToSign({
+    brandId,
+    resourceType,
     timestamp,
-    upload_preset: CLOUDINARY_UPLOAD_PRESET,
-    asset_folder: assetFolder,
-    // Pre-approval delivery is always signed/authenticated (see §5 of the
-    // IPI-257 spec) — flips to public `upload` only after HITL approval.
-    type: "authenticated",
-    allowed_formats: ALLOWED_FORMATS,
-    unique_filename: "true",
-    use_filename: "true",
-    context: contextParts.join("|"),
-  };
-  if (resourceType === "image") {
-    paramsToSign.eager = CLOUDINARY_EAGER_PRESETS.map(presetTransformString).join("|");
-  }
-  if (notificationUrl) {
-    paramsToSign.notification_url = notificationUrl;
-  }
+    shootId,
+    campaignId,
+    folder,
+    notificationUrl,
+  });
 
-  // folder affects public_id derivation; asset_folder is a separate UI organization
-  // concept. When folder is set, Cloudinary derives public_id as folder/filename,
-  // which the smoke test uses to scope test assets for safe cleanup.
-  if (folder) {
-    paramsToSign.folder = folder;
-  }
-
-  const signature = cloudinary.utils.api_sign_request(paramsToSign, apiSecret);
+  const signature = signCloudinaryParams(paramsToSign, apiSecret);
 
   return NextResponse.json({
     cloudName,
@@ -188,7 +132,7 @@ export async function POST(request: Request) {
     signature,
     assetFolder,
     uploadUrl: `https://api.cloudinary.com/v1_1/${cloudName}/${resourceType}/upload`,
-    filename: sanitizeFilename(filename),
+    filename: sanitizeUploadFilename(filename),
     params: paramsToSign,
     expiresAt: timestamp + SIGNATURE_TTL_SECONDS,
   });

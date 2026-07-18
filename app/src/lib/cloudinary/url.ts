@@ -1,11 +1,39 @@
 import { getCldImageUrl } from "next-cloudinary";
 
+/** Build-time / server resolution — includes server-only fallback for next.config remotePatterns. */
+export function resolveCloudinaryCloudName(): string {
+  const fromPublic = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME?.trim();
+  if (fromPublic) return fromPublic;
+  const fromServer = process.env.CLOUDINARY_CLOUD_NAME?.trim();
+  if (fromServer) return fromServer;
+  return "dzqy2ixl0";
+}
+
 // Resolve from the PUBLIC var only. The cloud name is inherently public (it's in
 // every browser image URL), and `isDeliverableCover` runs client-side where a
 // server-only `CLOUDINARY_CLOUD_NAME` is undefined — mixing the two would let the
 // client guard and next/image remotePatterns disagree and silently reject covers.
+// next.config.ts maps CLOUDINARY_CLOUD_NAME → NEXT_PUBLIC at build time.
 export const CLOUDINARY_CLOUD_NAME =
-  process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME ?? "dzqy2ixl0";
+  process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME?.trim() || "dzqy2ixl0";
+
+/** Public Cloudinary API key — required by Upload Widget for signed uploads (never the secret). */
+export const CLOUDINARY_API_KEY = process.env.NEXT_PUBLIC_CLOUDINARY_API_KEY?.trim() ?? "";
+
+/** True when signed Upload Widget can render (public cloud name + API key). */
+export function isCloudinaryUploadConfigured(): boolean {
+  const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME?.trim();
+  const apiKey = process.env.NEXT_PUBLIC_CLOUDINARY_API_KEY?.trim();
+  return Boolean(cloudName && apiKey);
+}
+
+/** Runtime public cloud + API key for Upload Widget (reads env at call time for tests/build injection). */
+export function cloudinaryUploadWidgetConfig(): { cloudName: string; apiKey: string } {
+  return {
+    cloudName: process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME?.trim() || CLOUDINARY_CLOUD_NAME,
+    apiKey: process.env.NEXT_PUBLIC_CLOUDINARY_API_KEY?.trim() || CLOUDINARY_API_KEY,
+  };
+}
 
 /** True when `url` is a delivery URL under our configured cloud — i.e. next/image's
  *  remotePatterns will allow it. Cover URLs come from free-form `mood_board_urls`;
