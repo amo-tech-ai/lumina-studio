@@ -180,7 +180,6 @@ export function AssetUploadPanel({ brands = [], defaultBrandId, onReady }: Props
       }
     }
     // Resume persisted processing rows once on mount (sessionStorage hydration).
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional mount-only resume
   }, []);
 
   const onUploadSuccess = useCallback(
