@@ -843,7 +843,17 @@ export async function listEligibleEntities(
 
   const dealRows = (dealsRes.data ?? []) as EligibleDealRow[];
   const companyIds = [...new Set(dealRows.map((row) => row.company_id).filter((id): id is string => Boolean(id)))];
-  const companyNames = await getCompanyNames(companyIds, base);
+  // getCompanyNames throws on query failure; a company-name lookup failing
+  // shouldn't take down the whole eligible-entity list (and, transitively,
+  // the Planner Hub page, which awaits this in Promise.all) — degrade to the
+  // "Untitled company" fallback below instead, same pattern as
+  // crm/pipeline/page.tsx and crm/contacts/page.tsx.
+  let companyNames: Record<string, string> = {};
+  try {
+    companyNames = await getCompanyNames(companyIds, base);
+  } catch {
+    companyNames = {};
+  }
 
   const entities: EligibleEntity[] = [
     ...((campaignsRes.data ?? []) as EligibleCampaignRow[])

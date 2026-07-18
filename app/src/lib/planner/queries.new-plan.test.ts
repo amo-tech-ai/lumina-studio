@@ -174,6 +174,28 @@ describe("listEligibleEntities", () => {
       error: { code: "QUERY_FAILED", message: "Eligible plans could not be loaded." },
     });
   });
+
+  it("degrades to 'Untitled company deal' instead of throwing when the company-name lookup itself fails", async () => {
+    // getCompanyNames throws on a query error (see crm/queries.ts) — a
+    // transient crm_companies failure must not take down the whole eligible
+    // list (and, transitively, the Planner Hub page, which awaits this in
+    // Promise.all), matching the crm/pipeline/page.tsx degrade-to-{} pattern.
+    mockClient({
+      tables: {
+        campaigns: { data: [] },
+        crm_deals: { data: [{ id: "deal-1", company_id: "company-1" }] },
+        crm_companies: { data: null, error: { message: "connection reset" } },
+        shoot_portfolio_view: { data: [] },
+        instances: { data: [] },
+      },
+    });
+
+    const result = await listEligibleEntities(ORG_ID);
+    expect(result).toEqual({
+      ok: true,
+      data: [{ entityType: "crm_deal", entityId: "deal-1", label: "Untitled company deal" }],
+    });
+  });
 });
 
 describe("listWorkflowTemplates", () => {
