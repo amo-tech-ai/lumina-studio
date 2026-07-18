@@ -115,13 +115,26 @@ function findJsonArrayStart(raw) {
   return m ? m.index : -1;
 }
 
+/** Try closing-bracket positions from right to left until JSON.parse succeeds. */
+function parseJsonSlice(raw, start, closeChar) {
+  let end = raw.lastIndexOf(closeChar);
+  let lastErr;
+  while (end >= start) {
+    try {
+      return JSON.parse(raw.slice(start, end + 1));
+    } catch (err) {
+      lastErr = err;
+      end = raw.lastIndexOf(closeChar, end - 1);
+    }
+  }
+  throw lastErr ?? new Error("Could not parse migration list JSON");
+}
+
 function parseMigrationListJson(raw) {
   const envelopeStart = raw.indexOf('{"migrations"');
   if (envelopeStart >= 0) {
-    const end = raw.lastIndexOf("}");
-    if (end < envelopeStart) throw new Error("Could not parse migration list JSON");
     try {
-      const parsed = JSON.parse(raw.slice(envelopeStart, end + 1));
+      const parsed = parseJsonSlice(raw, envelopeStart, "}");
       const rows = parsed.migrations;
       if (!Array.isArray(rows)) throw new Error("migration list JSON missing migrations array");
       return mapMigrationRows(rows);
@@ -133,10 +146,8 @@ function parseMigrationListJson(raw) {
   // Bare array (or log-prefixed array). Never use raw indexOf("[") — that matches `[INFO]`.
   const arrayStart = findJsonArrayStart(raw);
   if (arrayStart >= 0) {
-    const end = raw.lastIndexOf("]");
-    if (end < arrayStart) throw new Error("Could not parse migration list JSON");
     try {
-      const rows = JSON.parse(raw.slice(arrayStart, end + 1));
+      const rows = parseJsonSlice(raw, arrayStart, "]");
       if (!Array.isArray(rows)) throw new Error("migration list JSON missing migrations array");
       return mapMigrationRows(rows);
     } catch (err) {
@@ -266,6 +277,16 @@ if (args.includes("--self-check")) {
     'noise [debug] foo\n[{"local":"9","remote":""}]\n',
   );
   assert.equal(debugPrefixed[0].local, "9");
+
+  const trailingBracket = parseMigrationListJson(
+    '[{"local":"1","remote":"1"}]\n[INFO] Done]\n',
+  );
+  assert.equal(trailingBracket[0].local, "1");
+
+  const trailingBrace = parseMigrationListJson(
+    '{"migrations":[{"local":"1","remote":"1"}],"message":"ok"}\nlog: done}\n',
+  );
+  assert.equal(trailingBrace[0].local, "1");
 
   const empty = parseMigrationListJson("[]");
   assert.equal(empty.length, 0);
