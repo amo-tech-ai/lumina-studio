@@ -5720,8 +5720,8 @@ export type Database = {
       }
       processed_firecrawl_webhooks: {
         Row: {
-          created_at: string
           crawl_id: string | null
+          created_at: string
           event_type: string
           firecrawl_job_id: string
           status: string
@@ -5729,8 +5729,8 @@ export type Database = {
           webhook_id: string
         }
         Insert: {
-          created_at?: string
           crawl_id?: string | null
+          created_at?: string
           event_type: string
           firecrawl_job_id: string
           status?: string
@@ -5738,8 +5738,8 @@ export type Database = {
           webhook_id: string
         }
         Update: {
-          created_at?: string
           crawl_id?: string | null
+          created_at?: string
           event_type?: string
           firecrawl_job_id?: string
           status?: string
