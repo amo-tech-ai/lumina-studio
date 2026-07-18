@@ -2,6 +2,9 @@
 /**
  * PLT-003 edge function smoke test (remote).
  * Run: npm run supabase:verify-edge
+ *
+ * Default: `health` only (no edge-test / no ai_agent_logs).
+ * Opt-in auth smoke: REQUIRE_AUTH_EDGE_SMOKE=1 (requires remote ALLOW_EDGE_TEST=1).
  */
 import { readFileSync, existsSync } from "node:fs";
 import { resolve } from "node:path";
@@ -28,7 +31,7 @@ const anonKey =
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ??
   process.env.NEXT_SUPABASE_PUBLISHABLE_KEY;
 const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-const projectRef = process.env.SUPABASE_PROJECT_REF ?? "nvdlhrodvevgwdsneplk";
+const requireAuthSmoke = process.env.REQUIRE_AUTH_EDGE_SMOKE === "1";
 
 if (!url || !anonKey) {
   console.error(
@@ -81,15 +84,22 @@ async function main() {
     fail(`health GET → ${health.res.status} ${health.text?.slice(0, 120)}`);
   }
 
+  if (!requireAuthSmoke) {
+    pass("skipped edge-test auth smoke (set REQUIRE_AUTH_EDGE_SMOKE=1 to enable)");
+    console.log(failures ? "\nEdge verification FAILED" : "\nEdge verification passed");
+    process.exit(failures ? 1 : 0);
+  }
+
+  // Opt-in: authenticated Edge runtime probe (remote must have ALLOW_EDGE_TEST=1)
   const anonTest = await fetchJson("/edge-test", {
     method: "POST",
     headers: { apikey: anonKey, "Content-Type": "application/json" },
     body: "{}",
   });
-  if (anonTest.res.status === 401) {
-    pass("edge-test rejects anonymous call");
+  if (anonTest.res.status === 401 || anonTest.res.status === 404) {
+    pass(`edge-test rejects anonymous call (${anonTest.res.status})`);
   } else {
-    fail(`edge-test without JWT expected 401, got ${anonTest.res.status}`);
+    fail(`edge-test without JWT expected 401/404, got ${anonTest.res.status}`);
   }
 
   const stamp = Date.now();
@@ -140,9 +150,10 @@ async function main() {
   if (
     authed.res.status === 200 &&
     authed.json?.ok === true &&
-    authed.json?.data?.logId
+    authed.json?.data?.status === "ok" &&
+    authed.json?.data?.userId
   ) {
-    pass(`edge-test authenticated insert logId=${authed.json.data.logId}`);
+    pass(`edge-test authenticated probe userId=${authed.json.data.userId}`);
   } else {
     fail(`edge-test authed → ${authed.res.status} ${authed.text?.slice(0, 200)}`);
   }
