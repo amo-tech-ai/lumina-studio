@@ -9,10 +9,11 @@
  * Modes:
  *   PR (default when GITHUB_BASE_REF / GITHUB_BASE_SHA set, or --pr):
  *     - Fail on remote-only versions (missing local files)
- *     - Allow local-only versions only if they are introduced by this PR
- *       (git diff base...HEAD -- supabase/migrations)
- *     - `db push --linked --dry-run` pending set must exactly match those
- *       PR-introduced versions
+ *     - Allow local-only versions only if they are *added* by this PR
+ *       (git diff --name-status base...HEAD -- supabase/migrations → status A)
+ *     - Fail if any existing migration is Modified / Deleted / Renamed
+ *     - `db push --linked --dry-run` pending set must match those
+ *       PR-introduced (added) versions
  *   main (--main, or GITHUB_REF_NAME=main):
  *     - Fail unless local/remote sets are identical
  *     - Dry-run must report up to date (no pending)
@@ -114,15 +115,47 @@ function classify(rows) {
   return { remoteOnly, localOnly, both };
 }
 
-function prIntroducedVersions() {
-  const diff = run("git", ["diff", "--name-only", `${baseRef}...HEAD`, "--", "supabase/migrations"], {
+function migrationNameStatusDiff() {
+  return run("git", ["diff", "--name-status", `${baseRef}...HEAD`, "--", "supabase/migrations"], {
     allowFail: true,
   });
+}
+
+/** Fail closed if an already-tracked migration file is edited, deleted, or renamed. */
+function assertNoMutationOfExistingMigrations() {
+  const violations = [];
+  for (const line of migrationNameStatusDiff().split("\n")) {
+    const trimmed = line.trim();
+    if (!trimmed) continue;
+    const parts = trimmed.split("\t");
+    const status = parts[0] ?? "";
+    const code = status.charAt(0);
+    // Only newly Added files are allowed. M/D/R/C/T rewrite history.
+    if (code === "A") continue;
+    if (code === "M" || code === "D" || code === "R" || code === "C" || code === "T") {
+      violations.push(trimmed);
+    }
+  }
+  if (violations.length) {
+    console.error(
+      "PR: existing migration files must not be modified, deleted, or renamed (add a new timestamped file instead):",
+    );
+    for (const v of violations) console.error(`  - ${v}`);
+    process.exit(1);
+  }
+}
+
+function prIntroducedVersions() {
   const versions = new Set();
-  for (const line of diff.split("\n")) {
-    const base = line.trim().split("/").pop();
+  for (const line of migrationNameStatusDiff().split("\n")) {
+    const trimmed = line.trim();
+    if (!trimmed) continue;
+    const parts = trimmed.split("\t");
+    const status = parts[0] ?? "";
+    // Only Added files count as PR-introduced. Modified must already have failed above.
+    if (!status.startsWith("A")) continue;
+    const base = (parts[1] ?? "").split("/").pop();
     if (!base?.endsWith(".sql")) continue;
-    // Added or modified migration files count; deleted versions are not "introduced".
     const v = versionFromFilename(base);
     if (v) versions.add(v);
   }
@@ -153,7 +186,9 @@ function parseDryRunPending(raw) {
 
 console.log(`check-supabase-migration-drift: mode=${isMain ? "main" : "pr"} base=${baseRef}`);
 
-const listRaw = run("npx", ["supabase", "migration", "list", "--linked", "--output-format", "json"]);
+// Prefer the PATH `supabase` binary (CI: supabase/setup-cli pin). Do not use
+// `npx supabase` — that can download an unpinned npm package and bypass the pin.
+const listRaw = run("supabase", ["migration", "list", "--linked", "--output-format", "json"]);
 const { remoteOnly, localOnly } = classify(parseMigrationListJson(listRaw));
 
 if (remoteOnly.length) {
@@ -162,7 +197,7 @@ if (remoteOnly.length) {
   process.exit(1);
 }
 
-const dryRaw = run("npx", ["supabase", "db", "push", "--linked", "--dry-run", "--yes"], { allowFail: true });
+const dryRaw = run("supabase", ["db", "push", "--linked", "--dry-run", "--yes"], { allowFail: true });
 const pendingFiles = parseDryRunPending(dryRaw);
 const pendingVersions = pendingFiles.map((f) => versionFromFilename(f)).filter(Boolean);
 
@@ -181,6 +216,7 @@ if (isMain) {
   process.exit(0);
 }
 
+assertNoMutationOfExistingMigrations();
 const introduced = prIntroducedVersions();
 const unexpectedLocal = localOnly.filter((v) => !introduced.has(v));
 if (unexpectedLocal.length) {
