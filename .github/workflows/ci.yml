@@ -214,4 +214,61 @@ jobs:
         with:
           name: shoot-wizard-e2e-failure
           path: test-results/
+
+  # IPI-701 · QA-PREVIEW-001 — real-browser proof of the Channel Preview
+  # read path. Unlike shoot-wizard-e2e, this page makes zero client-side
+  # network calls: getAllChannelSpecs() runs server-side during SSR, so
+  # there's nothing to mock and no mutation risk — this spec deliberately
+  # exercises the real Supabase-backed query end to end. Same QA_PASSWORD
+  # fail-loud contract as shoot-wizard-e2e (see comment above).
+  channel-preview-e2e:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: app/.nvmrc
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            app/package-lock.json
+
+      - name: Verify QA credentials are configured
+        env:
+          QA_PASSWORD: ${{ secrets.QA_PASSWORD }}
+        run: |
+          if [ -z "$QA_PASSWORD" ]; then
+            echo "::error::QA_PASSWORD secret is not set — failing rather than letting this job silently skip the real login."
+            exit 1
+          fi
+
+      - name: Install root dependencies (Playwright)
+        run: npm ci
+
+      - name: Install app dependencies
+        working-directory: app
+        run: npm ci
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Channel Preview e2e (chromium-desktop)
+        # Least privilege: QA_PASSWORD + the public anon key/URL are all a
+        # real client-side login needs. getAllChannelSpecs() reads through
+        # the anon key + the authenticated session cookie under RLS — no
+        # service-role key or direct DB connection string belongs here.
+        env:
+          QA_PASSWORD: ${{ secrets.QA_PASSWORD }}
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+        run: npx playwright test e2e/09-channel-preview.spec.ts --project=chromium-desktop
+
+      - name: Upload failure evidence (screenshots + traces)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: channel-preview-e2e-failure
+          path: test-results/
           retention-days: 7
