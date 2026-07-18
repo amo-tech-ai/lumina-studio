@@ -13,6 +13,7 @@ import { normalizeRoutePath, routeBrandId } from "@/lib/intelligence/normalize-r
 import { useIntelligencePanel } from "@/lib/intelligence/use-intelligence-panel";
 
 import { IntelligencePanelSections } from "./intelligence-panel-sections";
+import { resolveRouteBriefing } from "./route-briefing";
 import styles from "./intelligence-panel.module.css";
 
 type Props = {
@@ -48,6 +49,9 @@ function formatPanelError(message: string): string {
 export function IntelligencePanel({ activeBrandId, brandName }: Props) {
   const pathname = usePathname();
   const normalizedPath = normalizeRoutePath(pathname);
+  // Direct derivation from pathname — no useState/useEffect mirror, so the
+  // panel never flashes stale content from the previous route (IPI-286).
+  const briefing = resolveRouteBriefing(normalizedPath);
   const brandListMode = normalizedPath === "/app/brand";
   const brandDetailMode = isBrandDetailPath(normalizedPath);
   const routeBrandIdFromPath = routeBrandId(pathname);
@@ -166,6 +170,7 @@ export function IntelligencePanel({ activeBrandId, brandName }: Props) {
                   brandDetailMode={brandDetailMode}
                   onReviewApprovals={() => setTab("approvals")}
                   onApprovalAction={() => void reload()}
+                  panelSections={briefing.panelSections}
                 />
 
                 <nav

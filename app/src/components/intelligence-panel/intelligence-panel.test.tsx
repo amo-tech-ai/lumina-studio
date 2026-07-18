@@ -267,4 +267,54 @@ describe("IntelligencePanel", () => {
     expect(screen.getByRole("tab", { name: /Portfolio/i })).toBeTruthy();
     expect(screen.queryByText("active")).toBeNull();
   });
+
+  it("renders the Campaign coming-soon placeholder instead of brand health content (IPI-286)", () => {
+    vi.mocked(usePathname).mockReturnValue("/app/campaigns");
+    vi.mocked(useIntelligencePanel).mockReturnValue({
+      data: DEV_INTELLIGENCE_PANEL_DATA,
+      loading: false,
+      error: null,
+      reload: vi.fn(),
+    });
+
+    renderPanel(<IntelligencePanel activeBrandId={BRAND_ID} brandName="Nike" />);
+
+    expect(screen.getByText("Campaign health")).toBeTruthy();
+    expect(screen.getByText("Deliverables")).toBeTruthy();
+    expect(screen.getByText("Creative approvals")).toBeTruthy();
+    expect(screen.getAllByTitle("Coming soon").length).toBe(3);
+    // Regression guard: the same brand-shaped fixture that renders full
+    // health/approvals content on Brand routes must not leak through here.
+    expect(screen.queryByLabelText("Brand health scores")).toBeNull();
+    expect(screen.queryByLabelText("Approval queue")).toBeNull();
+  });
+
+  it("updates from Brand to Campaign content on route change with no stale flash (IPI-286)", () => {
+    vi.mocked(usePathname).mockReturnValue(`/app/brand/${BRAND_ID}`);
+    vi.mocked(useIntelligencePanel).mockReturnValue({
+      data: DEV_INTELLIGENCE_PANEL_DATA,
+      loading: false,
+      error: null,
+      reload: vi.fn(),
+    });
+
+    const { rerender } = renderPanel(
+      <IntelligencePanel activeBrandId={BRAND_ID} brandName="Nike" />,
+    );
+
+    expect(screen.getByLabelText("Brand health scores")).toBeTruthy();
+    expect(screen.queryByText("Campaign health")).toBeNull();
+
+    vi.mocked(usePathname).mockReturnValue("/app/campaigns");
+    rerender(
+      <IntelligenceDetailProvider>
+        <IntelligencePanel activeBrandId={BRAND_ID} brandName="Nike" />
+      </IntelligenceDetailProvider>,
+    );
+
+    // Direct derivation from pathname means the new route's sections render
+    // immediately — no leftover Brand Hub content from the prior route.
+    expect(screen.queryByLabelText("Brand health scores")).toBeNull();
+    expect(screen.getByText("Campaign health")).toBeTruthy();
+  });
 });
