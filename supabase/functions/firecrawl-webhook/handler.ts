@@ -18,27 +18,42 @@ type AdminClient = ReturnType<typeof createServiceClient>;
 
 type ClaimStatus = "processing" | "processed" | "failed";
 
+type BeginClaimResult =
+  | { outcome: "claimed"; claimKey: string }
+  | { outcome: "duplicate" };
+
 /** Stale processing lease — reclaim after crash / hung waitUntil. */
 const CLAIM_STALE_MS = 10 * 60 * 1000;
 
+/**
+ * Update claim status. Never overwrite `processed` with `failed`
+ * (finalize-after-success must not erase evidence on a later write race).
+ */
 async function setClaimStatus(
   admin: AdminClient,
-  claimId: string,
+  claimKey: string,
   status: ClaimStatus,
 ): Promise<void> {
-  const { error } = await admin
+  let q = admin
     .from("processed_firecrawl_webhooks")
     .update({ status, updated_at: new Date().toISOString() })
-    .eq("webhook_id", claimId);
+    .eq("webhook_id", claimKey);
+  if (status === "failed") {
+    q = q.neq("status", "processed");
+  }
+  const { error } = await q;
   if (error) throw new Error(`setClaimStatus(${status}): ${error.message}`);
 }
 
 /**
  * Begin a retryable claim (status=processing).
  * - processed → permanent duplicate (skip)
- * - failed → reclaim
+ * - failed → reclaim with CAS on observed status + updated_at
  * - processing + fresh → concurrent duplicate (skip)
- * - processing + stale → reclaim
+ * - processing + stale → reclaim with CAS
+ *
+ * Returns the row's actual webhook_id so job+event unique conflicts
+ * update the existing row, not the incoming synthetic id.
  */
 async function beginTerminalClaim(
   admin: AdminClient,
@@ -46,7 +61,7 @@ async function beginTerminalClaim(
   firecrawlJobId: string,
   eventType: string,
   crawlId: string,
-): Promise<"claimed" | "duplicate"> {
+): Promise<BeginClaimResult> {
   const now = new Date().toISOString();
   const { error } = await admin.from("processed_firecrawl_webhooks").insert({
     webhook_id: claimId,
@@ -56,7 +71,7 @@ async function beginTerminalClaim(
     status: "processing",
     updated_at: now,
   });
-  if (!error) return "claimed";
+  if (!error) return { outcome: "claimed", claimKey: claimId };
   if (error.code !== "23505") {
     throw new Error(`beginTerminalClaim: ${error.message}`);
   }
@@ -81,14 +96,14 @@ async function beginTerminalClaim(
   }
   if (!row) throw new Error("beginTerminalClaim: unique conflict but row missing");
 
-  if (row.status === "processed") return "duplicate";
+  if (row.status === "processed") return { outcome: "duplicate" };
 
   const updatedMs = row.updated_at ? new Date(row.updated_at).getTime() : 0;
   const stale = row.status === "processing" &&
     Date.now() - updatedMs > CLAIM_STALE_MS;
-  if (row.status === "processing" && !stale) return "duplicate";
+  if (row.status === "processing" && !stale) return { outcome: "duplicate" };
 
-  // failed or stale processing → reclaim (never overwrite processed)
+  // CAS reclaim: only the observer that still sees this status+lease wins.
   const { data: reclaimed, error: updErr } = await admin
     .from("processed_firecrawl_webhooks")
     .update({
@@ -97,12 +112,13 @@ async function beginTerminalClaim(
       crawl_id: crawlId,
     })
     .eq("webhook_id", row.webhook_id)
-    .in("status", ["failed", "processing"])
+    .eq("status", row.status)
+    .eq("updated_at", row.updated_at)
     .select("webhook_id")
     .maybeSingle();
   if (updErr) throw new Error(`beginTerminalClaim reclaim: ${updErr.message}`);
-  if (!reclaimed) return "duplicate";
-  return "claimed";
+  if (!reclaimed) return { outcome: "duplicate" };
+  return { outcome: "claimed", claimKey: row.webhook_id };
 }
 
 /** Run terminal work under a claim; only mark processed after full success. */
@@ -121,19 +137,48 @@ async function withTerminalClaim(
     eventType,
     crawlId,
   );
-  if (claim === "duplicate") return "duplicate";
+  if (claim.outcome === "duplicate") return "duplicate";
+  const claimKey = claim.claimKey;
   try {
     await work();
-    await setClaimStatus(admin, claimId, "processed");
-    return "done";
   } catch (err) {
     try {
-      await setClaimStatus(admin, claimId, "failed");
+      await setClaimStatus(admin, claimKey, "failed");
     } catch (markErr) {
       console.error("firecrawl-webhook: failed to mark claim failed", markErr);
     }
     throw err;
   }
+  // work() succeeded — never mark failed if finalize throws (Sentry HIGH).
+  try {
+    await setClaimStatus(admin, claimKey, "processed");
+  } catch (finalizeErr) {
+    console.error(
+      "firecrawl-webhook: finalize processed failed; leaving claim processing for retry",
+      finalizeErr,
+    );
+    throw finalizeErr;
+  }
+  return "done";
+}
+
+/** Resume-route returns 500 when wait-for-crawl throws on failed:true — signal was delivered. */
+function isExpectedFailedCrawlResume(status: number, body: string): boolean {
+  return status === 500 && /Crawl failed/i.test(body);
+}
+
+async function requireWorkflowResumeConfig(workflowRunId: string): Promise<{
+  appUrl: string;
+  resumeSecret: string;
+}> {
+  const appUrl = Deno.env.get("NEXT_PUBLIC_APP_URL") ?? Deno.env.get("APP_URL");
+  const resumeSecret = Deno.env.get("INTERNAL_WEBHOOK_SECRET");
+  if (!appUrl || !resumeSecret) {
+    throw new Error(
+      `cannot resume workflow ${workflowRunId} — APP_URL or INTERNAL_WEBHOOK_SECRET not configured`,
+    );
+  }
+  return { appUrl, resumeSecret };
 }
 
 function normalizeEventType(type: string): string {
@@ -399,20 +444,23 @@ export async function handleFirecrawlWebhook(req: Request): Promise<Response> {
           // Only use the DB-persisted workflow_id — never fall back to payload data.
           const workflowRunId = job?.workflow_id;
           if (workflowRunId) {
-            const appUrl = Deno.env.get("NEXT_PUBLIC_APP_URL") ?? Deno.env.get("APP_URL");
-            const resumeSecret = Deno.env.get("INTERNAL_WEBHOOK_SECRET");
-            if (!appUrl || !resumeSecret) {
-              console.error(`firecrawl-webhook: cannot resume workflow ${workflowRunId} — APP_URL or INTERNAL_WEBHOOK_SECRET not configured`);
-            } else {
-              const res = await fetch(`${appUrl}/api/workflows/brand-intelligence/resume`, {
+            const { appUrl, resumeSecret } = await requireWorkflowResumeConfig(
+              workflowRunId,
+            );
+            const res = await fetch(
+              `${appUrl}/api/workflows/brand-intelligence/resume`,
+              {
                 method: "POST",
-                headers: { "Content-Type": "application/json", "X-Internal-Secret": resumeSecret },
+                headers: {
+                  "Content-Type": "application/json",
+                  "X-Internal-Secret": resumeSecret,
+                },
                 body: JSON.stringify({ runId: workflowRunId, crawlId }),
-              });
-              if (!res.ok) {
-                const msg = await res.text().catch(() => res.statusText);
-                throw new Error(`workflow resume ${res.status}: ${msg}`);
-              }
+              },
+            );
+            if (!res.ok) {
+              const msg = await res.text().catch(() => res.statusText);
+              throw new Error(`workflow resume ${res.status}: ${msg}`);
             }
           }
         },
@@ -465,25 +513,32 @@ export async function handleFirecrawlWebhook(req: Request): Promise<Response> {
           });
 
           // Resume workflow with failure signal so it doesn't stay permanently suspended.
+          // wait-for-crawl throws on failed:true → resume route often returns 500; that
+          // still means the fail signal was delivered (do not leave claim failed forever).
           const failWorkflowRunId = job?.workflow_id;
           if (failWorkflowRunId) {
-            const appUrl = Deno.env.get("NEXT_PUBLIC_APP_URL") ?? Deno.env.get("APP_URL");
-            const resumeSecret = Deno.env.get("INTERNAL_WEBHOOK_SECRET");
-            if (!appUrl || !resumeSecret) {
-              console.error(`firecrawl-webhook: cannot fail-resume workflow ${failWorkflowRunId} — APP_URL or INTERNAL_WEBHOOK_SECRET not configured`);
-            } else {
-              const res = await fetch(`${appUrl}/api/workflows/brand-intelligence/resume`, {
+            const { appUrl, resumeSecret } = await requireWorkflowResumeConfig(
+              failWorkflowRunId,
+            );
+            const res = await fetch(
+              `${appUrl}/api/workflows/brand-intelligence/resume`,
+              {
                 method: "POST",
-                headers: { "Content-Type": "application/json", "X-Internal-Secret": resumeSecret },
+                headers: {
+                  "Content-Type": "application/json",
+                  "X-Internal-Secret": resumeSecret,
+                },
                 body: JSON.stringify({
                   runId: failWorkflowRunId,
                   crawlId,
                   failed: true,
                   error: errorMessage,
                 }),
-              });
-              if (!res.ok) {
-                const msg = await res.text().catch(() => res.statusText);
+              },
+            );
+            if (!res.ok) {
+              const msg = await res.text().catch(() => res.statusText);
+              if (!isExpectedFailedCrawlResume(res.status, msg)) {
                 throw new Error(`workflow fail-resume ${res.status}: ${msg}`);
               }
             }
@@ -496,13 +551,32 @@ export async function handleFirecrawlWebhook(req: Request): Promise<Response> {
     }
   };
 
-  const runtime = (globalThis as { EdgeRuntime?: { waitUntil?: (p: Promise<unknown>) => void } })
-    .EdgeRuntime;
-  if (runtime?.waitUntil) {
-    runtime.waitUntil(process().catch((e) => console.error("webhook process:", e)));
-  } else {
-    await process();
+  // Terminal events must await work so Firecrawl can retry on non-2xx.
+  // Non-terminal (started/page) may use waitUntil for snappy ack.
+  const isTerminal = eventType === "crawl.completed" ||
+    eventType === "crawl.failed" ||
+    payload.success === false;
+
+  const runtime = (globalThis as {
+    EdgeRuntime?: { waitUntil?: (p: Promise<unknown>) => void };
+  }).EdgeRuntime;
+
+  if (!isTerminal && runtime?.waitUntil) {
+    runtime.waitUntil(
+      process().catch((e) => console.error("webhook process:", e)),
+    );
+    return jsonResponse({ received: true });
   }
 
-  return jsonResponse({ received: true });
+  try {
+    await process();
+    return jsonResponse({ received: true });
+  } catch (e) {
+    console.error("webhook process:", e);
+    return errorResponse(
+      "process_failed",
+      e instanceof Error ? e.message : "Webhook processing failed",
+      500,
+    );
+  }
 }
