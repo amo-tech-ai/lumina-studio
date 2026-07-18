@@ -160,6 +160,7 @@ describe("CopilotKit /info — SSE discovery (IPI-670 · COPILOT-RUNTIME-001)", 
     vi.stubEnv("NODE_ENV", "production");
     vi.stubEnv("OPERATOR_AUTH_ENABLED", "true");
     vi.stubEnv("GEMINI_API_KEY", "test-key");
+    vi.stubEnv("MASTRA_STORAGE_MODE", "noop");
 
     const cancel = vi.fn().mockResolvedValue(undefined);
     const sseResponse = new Response(
@@ -195,5 +196,51 @@ describe("CopilotKit /info — SSE discovery (IPI-670 · COPILOT-RUNTIME-001)", 
     expect(cancel).toHaveBeenCalledOnce();
     const body = (await response.json()) as { code?: string };
     expect(body.code).toBe("runtime_error");
+  });
+
+  it("returns 200 JSON on /info when DATABASE_URL is missing in production (lazy storage)", async () => {
+    vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("DATABASE_URL", "");
+    vi.stubEnv("OPERATOR_AUTH_ENABLED", "true");
+    vi.stubEnv("GEMINI_API_KEY", "test-key");
+
+    vi.doMock("@/lib/copilotkit/runtime-v2-fetch", () => ({
+      CopilotRuntime: vi.fn(() => ({})),
+      createCopilotRuntimeHandler: vi.fn(
+        () => async () => Response.json({ agents: mockAgents }, { status: 200 }),
+      ),
+      InMemoryAgentRunner: vi.fn(),
+    }));
+
+    const route = await importRouteWithMocks();
+    const response = await route.GET(
+      new Request("http://localhost/api/copilotkit/info"),
+    );
+
+    expect(response.status).toBe(200);
+    const body = (await response.json()) as { agents?: Record<string, unknown> };
+    expect(body.agents?.default).toBeDefined();
+  });
+
+  it("returns 503 storage_unavailable JSON when agent run needs storage but DATABASE_URL is missing", async () => {
+    vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("VERCEL", "1");
+    vi.stubEnv("DATABASE_URL", "");
+    vi.stubEnv("OPERATOR_AUTH_ENABLED", "true");
+    vi.stubEnv("GEMINI_API_KEY", "test-key");
+
+    const route = await importRouteWithMocks();
+    const response = await route.POST(
+      new Request("http://localhost/api/copilotkit/agent/default/run", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ messages: [] }),
+      }),
+    );
+
+    expect(response.status).toBe(503);
+    const body = (await response.json()) as { code?: string; degraded?: boolean };
+    expect(body.code).toBe("storage_unavailable");
+    expect(body.degraded).toBe(true);
   });
 });

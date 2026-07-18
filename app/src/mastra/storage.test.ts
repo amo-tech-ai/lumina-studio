@@ -85,6 +85,16 @@ describe("getMastraStorage (noop mode)", () => {
     expect(() => freshGetMastraStorage()).toThrow(/storage_unavailable|DATABASE_URL is required/);
   });
 
+  it("sets degraded signal when Vercel prod storage is unavailable", async () => {
+    vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("VERCEL", "1");
+    vi.stubEnv("DATABASE_URL", "");
+    vi.resetModules();
+    const mod = await import("./storage");
+    expect(() => mod.getMastraStorage()).toThrow(/Vercel production/);
+    expect(mod.isMastraStorageDegraded()).toBe(true);
+  });
+
   it("uses InMemoryStore in CI builds when DATABASE_URL is unset", async () => {
     vi.stubEnv("NODE_ENV", "production");
     vi.stubEnv("CI", "true");

@@ -6,6 +6,7 @@ type MastraAppStorage = InMemoryStore | PostgresStoreType;
 
 let storage: MastraAppStorage | undefined;
 let lazyStorageProxy: MastraAppStorage | undefined;
+let storageDegraded = false;
 
 /** Thrown when durable storage is required but DATABASE_URL is unset in production. */
 export class MastraStorageUnavailableError extends Error {
@@ -75,10 +76,21 @@ export function assertPostgresStoreModule(mod: {
   }
 }
 
+/** True when Mastra storage init failed in production — safe for health/degraded signals (no secrets). */
+export function isMastraStorageDegraded(): boolean {
+  return storageDegraded;
+}
+
 function requireProductionDatabaseUrl(env: NodeJS.ProcessEnv = process.env): void {
   if (env.NODE_ENV !== "production" || env.CI) return;
 
   const target = isVercelRuntime(env) ? "Vercel production" : "production";
+  storageDegraded = true;
+  console.error(
+    `[mastra] DATABASE_URL missing in ${target} — durable storage unavailable. ` +
+      "CopilotKit /info may still list agents; agent runs requiring memory return 503 " +
+      "storage_unavailable until DATABASE_URL is set (Supabase pooler port 6543) and redeployed.",
+  );
   throw new MastraStorageUnavailableError(
     `DATABASE_URL is required in ${target}. Set it to the Supabase pooler connection string (port 6543).`,
   );
