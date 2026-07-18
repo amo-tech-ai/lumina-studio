@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * IPI-665 · SB-CI-001 — Ledger + pending-migration validation.
+ * IPI-665 · SB-CI-001 / IPI-673 · SB-CI-001b — Ledger + pending-migration validation.
  *
  * Compares local vs remote migration *timestamps* via
  * `supabase migration list --linked --output-format json`.
@@ -20,11 +20,13 @@
  *
  * Usage:
  *   node scripts/check-supabase-migration-drift.mjs [--pr|--main] [--base <sha>]
+ *   node scripts/check-supabase-migration-drift.mjs --self-check
  */
 import { execFileSync } from "node:child_process";
 import { readdirSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
+import assert from "node:assert/strict";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const migrationsDir = join(root, "supabase", "migrations");
@@ -67,6 +69,25 @@ function run(cmd, cmdArgs, { allowFail = false } = {}) {
   }
 }
 
+/** Capture stdout/stderr and exit status without exiting the process. */
+function runCapture(cmd, cmdArgs) {
+  try {
+    const out = execFileSync(cmd, cmdArgs, {
+      cwd: root,
+      encoding: "utf8",
+      env: process.env,
+      stdio: ["ignore", "pipe", "pipe"],
+    });
+    return { ok: true, out, status: 0 };
+  } catch (err) {
+    return {
+      ok: false,
+      out: `${err.stdout ?? ""}${err.stderr ?? ""}`,
+      status: err.status ?? 1,
+    };
+  }
+}
+
 function versionFromFilename(name) {
   const m = /^(\d{14})_/.exec(name);
   return m ? m[1] : null;
@@ -79,23 +100,35 @@ function listLocalFiles() {
     .filter((r) => r.version);
 }
 
-function parseMigrationListJson(raw) {
-  // Prefer the root envelope; nested row objects also start with `{`.
-  const start = raw.indexOf('{"migrations"');
-  const sliceStart = start >= 0 ? start : raw.indexOf("{");
-  const end = raw.lastIndexOf("}");
-  if (sliceStart < 0 || end < sliceStart) {
-    throw new Error("Could not parse migration list JSON");
-  }
-  const parsed = JSON.parse(raw.slice(sliceStart, end + 1));
-  const rows = parsed.migrations ?? parsed;
-  if (!Array.isArray(rows)) {
-    throw new Error("migration list JSON missing migrations array");
-  }
+function mapMigrationRows(rows) {
   return rows.map((r) => ({
     local: r.local ? String(r.local) : "",
     remote: r.remote ? String(r.remote) : "",
   }));
+}
+
+function parseMigrationListJson(raw) {
+  const envelopeStart = raw.indexOf('{"migrations"');
+  if (envelopeStart >= 0) {
+    const end = raw.lastIndexOf("}");
+    if (end < envelopeStart) throw new Error("Could not parse migration list JSON");
+    const parsed = JSON.parse(raw.slice(envelopeStart, end + 1));
+    const rows = parsed.migrations;
+    if (!Array.isArray(rows)) throw new Error("migration list JSON missing migrations array");
+    return mapMigrationRows(rows);
+  }
+
+  // Bare array (or log-prefixed array) — do not use indexOf("{") (that hits the first element).
+  const arrayStart = raw.indexOf("[");
+  if (arrayStart >= 0) {
+    const end = raw.lastIndexOf("]");
+    if (end < arrayStart) throw new Error("Could not parse migration list JSON");
+    const rows = JSON.parse(raw.slice(arrayStart, end + 1));
+    if (!Array.isArray(rows)) throw new Error("migration list JSON missing migrations array");
+    return mapMigrationRows(rows);
+  }
+
+  throw new Error("Could not parse migration list JSON");
 }
 
 function classify(rows) {
@@ -180,8 +213,56 @@ function parseDryRunPending(raw) {
     if (m) pending.push(m[1]);
     const m2 = /^\s*(\d{14}_[\w.-]+\.sql)\s*$/.exec(line.trim());
     if (m2) pending.push(m2[1]);
+    // Upstream CLI style: "Would push migration 20230108110451_this_should_fail.sql..."
+    const m3 = /Would push migration\s+(\d{14}_[\w.-]+\.sql)/i.exec(line);
+    if (m3) pending.push(m3[1]);
   }
   return [...new Set(pending)];
+}
+
+function dryRunIsUsable(dry) {
+  if (dry.ok) return true;
+  if (/Remote database is up to date/i.test(dry.out)) return true;
+  if (parseDryRunPending(dry.out).length > 0) return true;
+  return false;
+}
+
+if (args.includes("--self-check")) {
+  const envelope = parseMigrationListJson(
+    'noise\n{"migrations":[{"local":"1","remote":"1"}],"message":"ok"}\n',
+  );
+  assert.equal(envelope.length, 1);
+  assert.equal(envelope[0].local, "1");
+
+  const bare = parseMigrationListJson('[{"local":"1","remote":"1"},{"local":"2","remote":""}]');
+  assert.equal(bare.length, 2);
+  assert.equal(bare[1].local, "2");
+
+  const empty = parseMigrationListJson("[]");
+  assert.equal(empty.length, 0);
+
+  const would = parseDryRunPending(
+    "Would push migration 20230108110451_this_should_fail.sql...\nRemote database is up to date\n",
+  );
+  assert.deepEqual(would, []); // up-to-date short-circuits
+
+  const wouldOnly = parseDryRunPending(
+    "Would push migration 20230108110451_this_should_fail.sql...\n",
+  );
+  assert.deepEqual(wouldOnly, ["20230108110451_this_should_fail.sql"]);
+
+  assert.equal(dryRunIsUsable({ ok: false, out: "auth failed", status: 1 }), false);
+  assert.equal(
+    dryRunIsUsable({
+      ok: false,
+      out: "Would push migration 20230108110451_x.sql...\n",
+      status: 1,
+    }),
+    true,
+  );
+
+  console.log("ok: self-check");
+  process.exit(0);
 }
 
 console.log(`check-supabase-migration-drift: mode=${isMain ? "main" : "pr"} base=${baseRef}`);
@@ -197,7 +278,13 @@ if (remoteOnly.length) {
   process.exit(1);
 }
 
-const dryRaw = run("supabase", ["db", "push", "--linked", "--dry-run", "--yes"], { allowFail: true });
+const dry = runCapture("supabase", ["db", "push", "--linked", "--dry-run", "--yes"]);
+if (!dryRunIsUsable(dry)) {
+  console.error("db push --dry-run failed without parseable success or pending migrations:");
+  console.error(dry.out.trim() || `(exit ${dry.status})`);
+  process.exit(dry.status || 1);
+}
+const dryRaw = dry.out;
 const pendingFiles = parseDryRunPending(dryRaw);
 const pendingVersions = pendingFiles.map((f) => versionFromFilename(f)).filter(Boolean);
 
