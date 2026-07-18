@@ -66,17 +66,20 @@ test.describe("IPI-584 — nav-sidebar accessibility", () => {
     await page.goto("/app/planner");
     const nav = page.locator('nav[aria-label="App navigation"]');
 
+    // Focus ring is a box-shadow (var(--ring)), matching threads-drawer's
+    // convention — outline itself is intentionally "none", so the visible-
+    // indicator check is on boxShadow, not outlineStyle.
     const toggleBtn = nav.locator("button").first();
     await toggleBtn.focus();
     await expect(toggleBtn).toBeFocused();
-    let outlineStyle = await toggleBtn.evaluate((el) => getComputedStyle(el).outlineStyle);
-    expect(outlineStyle).not.toBe("none");
+    let boxShadow = await toggleBtn.evaluate((el) => getComputedStyle(el).boxShadow);
+    expect(boxShadow).not.toBe("none");
 
     const plannerLink = nav.getByRole("link", { name: "Planner" });
     await plannerLink.focus();
     await expect(plannerLink).toBeFocused();
-    outlineStyle = await plannerLink.evaluate((el) => getComputedStyle(el).outlineStyle);
-    expect(outlineStyle).not.toBe("none");
+    boxShadow = await plannerLink.evaluate((el) => getComputedStyle(el).boxShadow);
+    expect(boxShadow).not.toBe("none");
   });
 
   test("C — brand-switcher item shows a visible focus indicator when expanded", async ({
@@ -95,8 +98,8 @@ test.describe("IPI-584 — nav-sidebar accessibility", () => {
 
     await brandItem.focus();
     await expect(brandItem).toBeFocused();
-    const outlineStyle = await brandItem.evaluate((el) => getComputedStyle(el).outlineStyle);
-    expect(outlineStyle).not.toBe("none");
+    const boxShadow = await brandItem.evaluate((el) => getComputedStyle(el).boxShadow);
+    expect(boxShadow).not.toBe("none");
   });
 
   test("D — Threads shortcut has an accessible name, not the raw emoji", async ({ page }) => {

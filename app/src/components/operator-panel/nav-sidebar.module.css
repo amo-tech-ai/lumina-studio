@@ -36,8 +36,8 @@
 .toggleBtn:hover { background: var(--muted); color: var(--foreground); }
 
 .toggleBtn:focus-visible {
-  outline: 2px solid var(--action, #2563eb);
-  outline-offset: -2px;
+  outline: none;
+  box-shadow: inset 0 0 0 2px var(--ring);
 }
 
 .toggleIcon {
@@ -82,8 +82,8 @@
 .item:hover { background: var(--nav-item-hover); color: var(--foreground); }
 
 .item:focus-visible {
-  outline: 2px solid var(--action, #2563eb);
-  outline-offset: 2px;
+  outline: none;
+  box-shadow: 0 0 0 2px var(--ring);
 }
 
 .itemActive {
@@ -151,8 +151,8 @@
 .brandItem:not(.brandItemActive):hover { background: var(--nav-item-hover); color: var(--foreground); }
 
 .brandItem:focus-visible {
-  outline: 2px solid var(--action, #2563eb);
-  outline-offset: 2px;
+  outline: none;
+  box-shadow: 0 0 0 2px var(--ring);
 }
 
 .brandItemActive {
