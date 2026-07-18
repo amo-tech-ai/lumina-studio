@@ -78,6 +78,12 @@ function trackCleanupError(message) {
   console.warn(`warn: cleanup ${message}`);
 }
 
+/** Await a Supabase delete/update and count any error (never ignore cleanup failures). */
+async function checkedCleanup(label, query) {
+  const { error } = await query;
+  if (error) trackCleanupError(`${label}: ${error.message}`);
+}
+
 /** Cross-user SELECT deny: fail on query error, then assert zero rows. */
 function assertSelectDenied(error, data, message) {
   if (error) {
@@ -153,17 +159,14 @@ async function cleanupRlsTestData({
   }
 
   for (const id of [notificationId, crmNotificationId].filter(Boolean)) {
-    const { error: notifDelErr } = await admin.from("notifications").delete().eq("id", id);
-    if (notifDelErr) {
-      trackCleanupError(`notification ${id}: ${notifDelErr.message}`);
-    }
+    await checkedCleanup(
+      `notification ${id}`,
+      admin.from("notifications").delete().eq("id", id),
+    );
   }
 
   if (assetId) {
-    const { error: assetDelErr } = await admin.from("assets").delete().eq("id", assetId);
-    if (assetDelErr) {
-      trackCleanupError(`asset ${assetId}: ${assetDelErr.message}`);
-    }
+    await checkedCleanup(`asset ${assetId}`, admin.from("assets").delete().eq("id", assetId));
   }
 
   // Order matters: crm_companies.brand_id → brands has no ON DELETE action,
@@ -174,26 +177,26 @@ async function cleanupRlsTestData({
   // dangling test rows on every run.
   if (orgId) {
     for (const table of ["crm_activities", "crm_deals", "crm_contacts", "crm_companies"]) {
-      const { error } = await admin.from(table).delete().eq("org_id", orgId);
-      if (error) {
-        trackCleanupError(`${table} for org ${orgId}: ${error.message}`);
-      }
+      await checkedCleanup(
+        `${table} for org ${orgId}`,
+        admin.from(table).delete().eq("org_id", orgId),
+      );
     }
   }
 
   for (const id of [brandId, ...(brandIds ?? [])].filter(Boolean)) {
-    const { error: brandDelErr } = await admin.from("brands").delete().eq("id", id);
-    if (brandDelErr) {
-      trackCleanupError(`brand ${id}: ${brandDelErr.message}`);
-    }
+    await checkedCleanup(`brand ${id}`, admin.from("brands").delete().eq("id", id));
   }
 
   if (orgId) {
-    await admin.from("org_members").delete().eq("org_id", orgId);
-    const { error: orgDelErr } = await admin.from("organizations").delete().eq("id", orgId);
-    if (orgDelErr) {
-      trackCleanupError(`org ${orgId}: ${orgDelErr.message}`);
-    }
+    await checkedCleanup(
+      `org_members for org ${orgId}`,
+      admin.from("org_members").delete().eq("org_id", orgId),
+    );
+    await checkedCleanup(
+      `org ${orgId}`,
+      admin.from("organizations").delete().eq("id", orgId),
+    );
   }
 
   for (const [label, userId] of [
@@ -613,16 +616,36 @@ try {
       "rejected cross-org lost convert writes no crm_activities row",
     );
 
-    await admin.from("crm_deals").delete().eq("id", danglingLostDeal?.id);
+    if (danglingLostDeal?.id) {
+      await checkedCleanup(
+        `dangling lost deal ${danglingLostDeal.id}`,
+        admin.from("crm_deals").delete().eq("id", danglingLostDeal.id),
+      );
+    }
 
     // Throwaway org cleanup — not part of orgAId's cascade, so not covered
     // by the standard cleanupRlsTestData() call at the end of the script.
-    await admin.from("crm_deals").delete().eq("id", danglingDeal?.id);
-    await admin.from("crm_companies").delete().eq("id", foreignCompany?.id);
+    if (danglingDeal?.id) {
+      await checkedCleanup(
+        `dangling deal ${danglingDeal.id}`,
+        admin.from("crm_deals").delete().eq("id", danglingDeal.id),
+      );
+    }
+    if (foreignCompany?.id) {
+      await checkedCleanup(
+        `foreign company ${foreignCompany.id}`,
+        admin.from("crm_companies").delete().eq("id", foreignCompany.id),
+      );
+    }
     if (foreignOrg?.id) {
-      await admin.from("org_members").delete().eq("org_id", foreignOrg.id);
-      const { error: foreignOrgDelErr } = await admin.from("organizations").delete().eq("id", foreignOrg.id);
-      if (foreignOrgDelErr) trackCleanupError(`foreign org ${foreignOrg.id}: ${foreignOrgDelErr.message}`);
+      await checkedCleanup(
+        `org_members for foreign org ${foreignOrg.id}`,
+        admin.from("org_members").delete().eq("org_id", foreignOrg.id),
+      );
+      await checkedCleanup(
+        `foreign org ${foreignOrg.id}`,
+        admin.from("organizations").delete().eq("id", foreignOrg.id),
+      );
     }
 
     // Every test below this block assumes user B has zero relationship to
@@ -2868,7 +2891,10 @@ try {
       );
     } finally {
       if (userE?.user?.id) {
-        await admin.from("org_members").delete().eq("org_id", orgAId).eq("user_id", userE.user.id);
+        await checkedCleanup(
+          `org_members user E`,
+          admin.from("org_members").delete().eq("org_id", orgAId).eq("user_id", userE.user.id),
+        );
         const { error } = await deleteAuthUser(userE.user.id);
         if (error) trackCleanupError(`user E: ${error.message}`);
       }
@@ -2910,7 +2936,10 @@ try {
     assert(!removeDErr, "owner can remove a viewer/contributor-tier member");
   } finally {
     if (userD?.user?.id) {
-      await admin.from("org_members").delete().eq("org_id", orgAId).eq("user_id", userD.user.id);
+      await checkedCleanup(
+        `org_members user D`,
+        admin.from("org_members").delete().eq("org_id", orgAId).eq("user_id", userD.user.id),
+      );
       const { error } = await deleteAuthUser(userD.user.id);
       if (error) trackCleanupError(`user D: ${error.message}`);
       else pass("cleaned up user D (service role)");
@@ -2956,9 +2985,14 @@ try {
 
   // Cleanup planner org B (cascade via organizations delete)
   if (orgBId && admin) {
-    await admin.from("org_members").delete().eq("org_id", orgBId);
-    const { error: orgBDelErr } = await admin.from("organizations").delete().eq("id", orgBId);
-    if (orgBDelErr) trackCleanupError(`org B: ${orgBDelErr.message}`);
+    await checkedCleanup(
+      `org_members for org B ${orgBId}`,
+      admin.from("org_members").delete().eq("org_id", orgBId),
+    );
+    await checkedCleanup(
+      `org B ${orgBId}`,
+      admin.from("organizations").delete().eq("id", orgBId),
+    );
   }
 } catch (err) {
   fail(err instanceof Error ? err.message : String(err));
