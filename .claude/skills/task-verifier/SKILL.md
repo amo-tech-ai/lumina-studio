@@ -8,20 +8,31 @@ description: >
   router + skills compliance (Phase 5b) + disk/MCP probes. Score with task-spec-rubric.md
   (spec, execution readiness, skills compliance, composite %). Prove every claim against disk,
   node_modules, and MCPs — never trust a status field. NOT for one-line typo fixes or
-  explain-only questions without a Done gate.
+  explain-only questions without a Done gate. Supports **Quick gate** (merge safety, small fixes)
+  and **Full verify** (Done gates, releases, security) — see quick-gate.md.
 ---
 
 # task-verifier — forensic gate before any "Done"
 
 > **Planning is not complete until you can prove the task is safe to execute, skills were followed, and outcomes are verifiable.** Fails closed.
 
+## Quick vs Full
+
+| Mode | When | Protocol |
+|------|------|----------|
+| **Quick** | Merge safety · small fixes · docs · ops triage · `@task-verifier quick` | [references/quick-gate.md](references/quick-gate.md) — 1–3 probes, compact report |
+| **Full** | `In Progress → Done` · production release · security · `@task-verifier full` | Phases 0–10 below — rubric sub-scores + all 10 anti-fake-done gates |
+
+Default when mode unspecified: **Quick** (router may escalate). Any 🔴 in Quick → stop or escalate to Full.
+
 ## When this skill fires
 
 - Verify IPI / SCR / RF / BE / MOB / audit / legacy F* tasks
-- Before `In Progress → Done` on Linear or task md
-- New spec or audit doc quality gate
+- Before `In Progress → Done` on Linear or task md → **Full** mandatory
+- New spec or audit doc quality gate → **Full**
+- Merge safety / small fix / status check → **Quick**
 
-If none of the above — do not invoke (heavyweight).
+If none of the above — do not invoke.
 
 ## Evidence symbols
 
@@ -41,6 +52,7 @@ Memory and `status:` fields are **not** evidence. Re-probe.
 
 | Resource | Path |
 |----------|------|
+| Quick gate | [references/quick-gate.md](references/quick-gate.md) |
 | Task-type router | [references/task-type-router-ipix.md](references/task-type-router-ipix.md) |
 | Skills compliance (5b) | [references/skills-compliance-ipix.md](references/skills-compliance-ipix.md) |
 | Disk probes | [references/verifier-probes-ipix.md](references/verifier-probes-ipix.md) |
@@ -55,9 +67,11 @@ Memory and `status:` fields are **not** evidence. Re-probe.
 
 ---
 
-## Verification protocol
+## Verification protocol (Full)
 
-Run in order. Stop at first 🔴 unless running a full audit report.
+For **Quick gate**, use [quick-gate.md](references/quick-gate.md) instead of Phases 0–10.
+
+Run Full protocol in order. Stop at first 🔴 unless running a full audit report.
 
 ### Phase 0 — Task-type router
 
@@ -200,7 +214,8 @@ Full mdeai traps: [legacy-mdeai.md](references/legacy-mdeai.md).
 
 | File | Purpose |
 |------|---------|
-| `SKILL.md` | This protocol |
+| `SKILL.md` | Full protocol + routing |
+| `references/quick-gate.md` | Quick gate (merge safety, ops triage) |
 | `scripts/probe-disk-ipix.sh` | iPix disk probes |
 | `scripts/probe-disk.sh` | Legacy mdeai |
 | `references/skills-compliance-ipix.md` | Phase 5b |

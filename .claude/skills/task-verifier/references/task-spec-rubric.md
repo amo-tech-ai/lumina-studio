@@ -2,6 +2,8 @@
 
 Score **before execution** (spec quality) and **after** (execution readiness).
 
+**Quick gate:** composite may be a good-faith estimate (blockers → cap at 70; zero 🔴 merge-ready → 75–85 typical). Do not publish spec/execution/skills sub-scores unless escalated to Full. See [quick-gate.md](./quick-gate.md).
+
 ## Letter grades
 
 | Grade | Spec score | Execution readiness |
