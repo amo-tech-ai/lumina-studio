@@ -3019,7 +3019,10 @@ try {
 }
 
 if (cleanupFailures > 0) {
-  fail(`cleanup left ${cleanupFailures} error(s) — fixtures may remain`);
+  console.error(
+    `FAIL: cleanup left ${cleanupFailures} error(s) — fixtures may remain`,
+  );
+  failures += cleanupFailures;
 }
 
 const ok = failures === 0;
