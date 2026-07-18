@@ -1,0 +1,100 @@
+# IPI-669 · SB-CI-002 — Edge Function Deno unit tests (local shared logic only).
+# Always starts (no top-level paths:) so a required check never stays Pending.
+# Job-level path filter skips Deno work when Edge files are untouched.
+# Never pull_request_target. No production secrets. No live Edge invoke.
+name: Supabase Edge Deno unit tests
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: supabase-verify-edge-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  changes:
+    runs-on: ubuntu-latest
+    # dorny/paths-filter lists PR files via REST — needs pull-requests: read
+    # when GITHUB_TOKEN defaults are restricted.
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      edge: ${{ steps.filter.outputs.edge }}
+    steps:
+      - uses: actions/checkout@v4
+
+      # Pin: dorny/paths-filter@v3.0.2
+      - uses: dorny/paths-filter@de90cc6fb38fc0963ad72b210f1f284cd68cea36
+        id: filter
+        with:
+          filters: |
+            edge:
+              - 'supabase/functions/**'
+              - 'config/groq-models.json'
+              - 'app/src/lib/ai/types.ts'
+              - 'package.json'
+              - '.github/workflows/supabase-verify-edge.yml'
+
+  deno-unit:
+    needs: changes
+    if: needs.changes.outputs.edge == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Require Deno lockfile
+        run: test -f supabase/functions/deno.lock
+
+      # Pin: denoland/setup-deno@v2.0.5 · Deno 2.9.2 matches local CI pin
+      - uses: denoland/setup-deno@22d081ff2d3a40755e97629de92e3bcbfa7cf2ed
+        with:
+          deno-version: "2.9.2"
+          cache: true
+          cache-hash: ${{ hashFiles('supabase/functions/deno.lock') }}
+
+      - name: Edge Deno unit tests (frozen lockfile)
+        run: npm run supabase:verify-edge-unit
+
+  # Required-check safe: always completes (success when skipped or green; fails on red).
+  supabase-verify-edge:
+    needs: [changes, deno-unit]
+    if: always()
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Summarize Edge Deno gate
+        shell: bash
+        env:
+          EDGE: ${{ needs.changes.outputs.edge }}
+          CHANGES_RESULT: ${{ needs.changes.result }}
+          DENO_RESULT: ${{ needs.deno-unit.result }}
+        run: |
+          set -euo pipefail
+          if [ "$CHANGES_RESULT" != "success" ]; then
+            echo "::error::changes job did not succeed (result=$CHANGES_RESULT)."
+            exit 1
+          fi
+          if [ "$EDGE" != "true" ]; then
+            echo "No Edge-related path changes — Deno unit tests skipped (OK)."
+            exit 0
+          fi
+          case "$DENO_RESULT" in
+            success)
+              echo "Edge Deno unit tests passed."
+              exit 0
+              ;;
+            failure)
+              echo "::error::Edge Deno unit tests failed."
+              exit 1
+              ;;
+            *)
+              echo "::error::deno-unit ended unexpectedly (result=$DENO_RESULT) while edge=true."
+              exit 1
+              ;;
+          esac
