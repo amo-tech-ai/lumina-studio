@@ -210,16 +210,61 @@ Deno.test("rate limit returns 429 after burst", async () => {
       for (let i = 0; i < RATE_LIMIT_MAX; i++) {
         const res = await handleCaptureLead(captureRequest(leadBody({
           anon_id: "rl-anon",
-        })));
+        }), { "x-forwarded-for": "203.0.113.10" }));
         assertEquals(res.status, 200);
       }
       const blocked = await handleCaptureLead(captureRequest(leadBody({
         anon_id: "rl-anon",
-      })));
+      }), { "x-forwarded-for": "203.0.113.10" }));
       assertEquals(blocked.status, 429);
       const body = await parseError(blocked);
       assertEquals(body.error.code, "rate_limited");
       assertEquals(rpcCalls, RATE_LIMIT_MAX);
+    } finally {
+      globalThis.fetch = original;
+    }
+  });
+});
+
+Deno.test("rate limit is IP-scoped — rotating anon_id does not bypass", async () => {
+  resetRateLimitStoreForTests();
+
+  await withEnv({
+    ...BASE_EDGE_ENV,
+    CAPTURE_LEAD_PROXY_SECRET: PROXY,
+  }, async () => {
+    const original = globalThis.fetch;
+    globalThis.fetch = (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = typeof input === "string"
+        ? input
+        : input instanceof URL
+        ? input.href
+        : input.url;
+      if (url.includes("/rest/v1/rpc/capture_lead_write")) {
+        return Promise.resolve(
+          new Response(
+            JSON.stringify({
+              draft_id: "draft-1",
+              conversation_id: "conv-1",
+            }),
+            { status: 200, headers: { "Content-Type": "application/json" } },
+          ),
+        );
+      }
+      return original(input, init);
+    };
+
+    try {
+      for (let i = 0; i < RATE_LIMIT_MAX; i++) {
+        const res = await handleCaptureLead(captureRequest(leadBody({
+          anon_id: `anon-${i}`,
+        }), { "x-forwarded-for": "203.0.113.44" }));
+        assertEquals(res.status, 200);
+      }
+      const blocked = await handleCaptureLead(captureRequest(leadBody({
+        anon_id: "anon-fresh",
+      }), { "x-forwarded-for": "203.0.113.44" }));
+      assertEquals(blocked.status, 429);
     } finally {
       globalThis.fetch = original;
     }

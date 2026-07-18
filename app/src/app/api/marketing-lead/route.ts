@@ -62,6 +62,12 @@ export async function POST(request: Request): Promise<Response> {
     return Response.json({ error: "Server configuration error" }, { status: 500 });
   }
 
+  // Forward client IP so Edge rate-limits the browser, not the BFF egress IP.
+  const clientIp =
+    request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+    request.headers.get("x-real-ip")?.trim() ||
+    "";
+
   let captureRes: Response;
   try {
     captureRes = await fetch(`${supabaseUrl}/functions/v1/capture-lead`, {
@@ -70,6 +76,9 @@ export async function POST(request: Request): Promise<Response> {
         "Content-Type": "application/json",
         Authorization: `Bearer ${anonKey}`,
         "x-ipix-proxy-secret": proxySecret,
+        ...(clientIp
+          ? { "x-forwarded-for": clientIp, "x-real-ip": clientIp }
+          : {}),
       },
       body: JSON.stringify(body),
     });

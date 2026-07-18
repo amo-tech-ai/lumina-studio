@@ -53,9 +53,10 @@ export function resetRateLimitStoreForTests(): void {
   rateStore.clear();
 }
 
-export function rateLimitKey(anonId: string, ip: string): string {
+/** IP-only key — anon_id is client-controlled and must not bypass the bucket. */
+export function rateLimitKey(ip: string): string {
   const salt = Deno.env.get("RATE_LIMIT_SALT") ?? "ipix-rl-salt";
-  const data = new TextEncoder().encode(`${anonId}:${ip}:${salt}`);
+  const data = new TextEncoder().encode(`${ip}:${salt}`);
   let hash = 0;
   for (let i = 0; i < data.length; i++) {
     hash = ((hash << 5) - hash) + data[i];
@@ -79,16 +80,17 @@ export function checkRateLimit(key: string): { allowed: boolean; remaining: numb
 }
 
 /**
- * Origin = defense-in-depth only.
- * Primary auth is CAPTURE_LEAD_PROXY_SECRET (required for all writes).
- * When ALLOWED_ORIGINS is unset: allow (proxy secret already required).
- * When set: require Origin match. Trusted proxy often omits Origin — skip if absent.
+ * Origin = defense-in-depth only (not auth).
+ * Primary auth is CAPTURE_LEAD_PROXY_SECRET (required before this runs).
+ * When ALLOWED_ORIGINS is unset: allow.
+ * When set: browser Origin must match; absent Origin is OK for the BFF
+ * (Next.js fetch to Edge does not send Origin).
  */
 export function validateOrigin(req: Request): boolean {
   const allowed = Deno.env.get("ALLOWED_ORIGINS");
   if (!allowed) return true;
   const origin = req.headers.get("origin") ?? "";
-  if (!origin) return true; // server-to-server proxy
+  if (!origin) return true; // BFF / server-to-server — already secret-gated
   return allowed.split(",").some((o) => o.trim() === origin);
 }
 
@@ -281,7 +283,7 @@ export async function handleCaptureLead(req: Request): Promise<Response> {
     }
     const payload = validation.payload!;
 
-    const rlKey = rateLimitKey(payload.anon_id, clientIp);
+    const rlKey = rateLimitKey(clientIp);
     const rl = checkRateLimit(rlKey);
     if (!rl.allowed) {
       return errorResponse("rate_limited", "Too many requests. Try again later.", 429);

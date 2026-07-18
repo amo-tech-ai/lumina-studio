@@ -13,10 +13,13 @@ const VALID_BODY = {
   website: "https://coolbrand.co",
 };
 
-function makeRequest(body: unknown): Request {
+function makeRequest(
+  body: unknown,
+  headers: Record<string, string> = {},
+): Request {
   return new Request("http://localhost/api/marketing-lead", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", ...headers },
     body: JSON.stringify(body),
   });
 }
@@ -174,6 +177,24 @@ describe("marketing-lead — capture-lead integration", () => {
     const [, opts] = mockFetch.mock.calls[0];
     expect((opts as RequestInit).headers).toMatchObject({
       "x-ipix-proxy-secret": "test-proxy-secret",
+    });
+  });
+
+  it("forwards client IP to Edge for rate limiting", async () => {
+    const mockFetch = vi.fn().mockResolvedValueOnce(
+      new Response(JSON.stringify({ draftId: "d-xyz" }), { status: 200 }),
+    );
+    vi.stubGlobal("fetch", mockFetch);
+
+    const { POST } = await importRoute();
+    await POST(
+      makeRequest(VALID_BODY, { "x-forwarded-for": "198.51.100.7, 10.0.0.1" }),
+    );
+
+    const [, opts] = mockFetch.mock.calls[0];
+    expect((opts as RequestInit).headers).toMatchObject({
+      "x-forwarded-for": "198.51.100.7",
+      "x-real-ip": "198.51.100.7",
     });
   });
 
