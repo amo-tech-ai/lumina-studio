@@ -1,6 +1,3 @@
-import { readFileSync } from "node:fs";
-import { resolve } from "node:path";
-import { fileURLToPath } from "node:url";
 import { describe, expect, it, vi } from "vitest";
 
 // Stub only the DB-dependent getters; importOriginal preserves real schema + makeThreadId
@@ -16,11 +13,6 @@ import {
   modelMatchAgent,
   bookingAgent,
 } from "./index";
-
-const AGENTS_SRC = readFileSync(
-  resolve(fileURLToPath(new URL(".", import.meta.url)), "index.ts"),
-  "utf8",
-);
 
 describe("operator agents — structure (IPI2-121)", () => {
   it("production-planner id matches Mastra registry key", () => {
@@ -46,15 +38,24 @@ describe("operator agents — structure (IPI2-121)", () => {
     expect(toolNames).not.toContain("createBookingDraft");
   });
 
-  it("creative-director carries no tools (brief-only agent)", () => {
-    expect(AGENTS_SRC).toMatch(
-      /export const creativeDirectorAgent = new Agent\(\{[\s\S]*?instructions:/,
+  it("production-planner does NOT inherit creative-director's asset-intelligence tools (IPI-261 bot-review finding)", async () => {
+    const tools = await productionPlannerAgent.listTools();
+    const toolNames = Object.keys(tools ?? {});
+    // getAssetDnaEvidence/suggestAssetRetakes/draftBulkAssetApproval live in the shared
+    // agentTools registry for creative-director's /app/assets flow — production-planner's
+    // instructions and tests don't cover that domain, so it must not inherit them just
+    // because they're in the shared registry (mirrors the booking-tool exclusion above).
+    expect(toolNames).not.toContain("getAssetDnaEvidence");
+    expect(toolNames).not.toContain("suggestAssetRetakes");
+    expect(toolNames).not.toContain("draftBulkAssetApproval");
+  });
+
+  it("creative-director carries exactly its 3 asset-intelligence tools (IPI-261), not the full registry", async () => {
+    const tools = await creativeDirectorAgent.listTools();
+    const toolNames = Object.keys(tools ?? {});
+    expect(toolNames.sort()).toEqual(
+      ["draftBulkAssetApproval", "getAssetDnaEvidence", "suggestAssetRetakes"].sort(),
     );
-    const creativeBlock = AGENTS_SRC.match(
-      /export const creativeDirectorAgent = new Agent\(\{([\s\S]*?}\);)/,
-    )?.[1];
-    expect(creativeBlock).toBeDefined();
-    expect(creativeBlock).not.toMatch(/\btools:/);
   });
 
   it("model-match id matches Mastra registry key (IPI-308)", () => {

@@ -11,10 +11,17 @@ const MODEL = resolveModel("default");
 // Excludes booking/CRM write tools that belong to other agents (booking, crm-assistant) —
 // production-planner's instructions never mention them, so it shouldn't have unsupervised
 // access to durable write actions like createBookingDraft from a shoot-planning chat.
+// Also excludes the IPI-261 asset-intelligence tools (getAssetDnaEvidence, suggestAssetRetakes,
+// draftBulkAssetApproval) — those belong to creative-director's /app/assets flow below;
+// production-planner's instructions/tests don't cover that domain, so it shouldn't inherit
+// them just because they live in the shared agentTools registry.
 const {
   checkTalentAvailability: _checkTalentAvailability,
   draftBookingQuote: _draftBookingQuote,
   createBookingDraft: _createBookingDraft,
+  getAssetDnaEvidence: _getAssetDnaEvidence,
+  suggestAssetRetakes: _suggestAssetRetakes,
+  draftBulkAssetApproval: _draftBulkAssetApproval,
   ...productionPlannerTools
 } = agentTools;
 
@@ -59,12 +66,50 @@ export { bookingAgent } from "./booking-agent";
 
 export { visualIdentityAgent } from "./visual-identity";
 
+// IPI-261 · DESIGN-077 — restricted asset-intelligence tool set for /app/assets.
+// Only these 3 tools are attached (not the full agentTools registry): reading
+// existing DNA evidence, deterministic retake suggestions, and a proposal-only
+// bulk-approval draft. Campaign-side creative-director tools are IPI-156 scope.
+const {
+  getAssetDnaEvidence,
+  suggestAssetRetakes,
+  draftBulkAssetApproval,
+} = agentTools;
+
 export const creativeDirectorAgent = new Agent({
   id: "creative-director",
   name: "Creative Director",
   model: MODEL,
-  instructions:
-    "You are the iPix creative director. Turn brand DNA and campaigns into creative briefs and moodboards that feed the shoot brief.",
+  tools: { getAssetDnaEvidence, suggestAssetRetakes, draftBulkAssetApproval },
+  instructions: `You are the iPix creative director for Lumina Studio operators, serving two routes:
+- /app/campaigns: turn brand DNA and campaign context into creative briefs and moodboards that feed the
+  shoot brief. You have no dedicated campaign tools yet (that lands in IPI-156) — reason from the brand DNA
+  and campaign context already in the conversation rather than inventing tool calls.
+- /app/assets: help operators understand asset brand-DNA quality and prepare bulk actions for their review,
+  using the three asset-intelligence tools below.
+
+You never make silent database writes on either route.
+
+When on /app/assets, follow this sequence:
+1. When asked about an asset's DNA score, quality, or "why is this flagged", call getAssetDnaEvidence with
+   the explicit asset IDs the operator is looking at. This only reads data that already exists — it never
+   triggers a new audit and never changes a stored score.
+2. If the operator wants retake or improvement guidance, pass the evidence from step 1 straight into
+   suggestAssetRetakes. The pillar-to-advice mapping is deterministic — summarize its structured output in
+   plain language, don't invent guidance that didn't come from the tool.
+3. If the operator asks to approve, reject, or flag a batch of assets for retake, call
+   draftBulkAssetApproval with the explicit asset IDs and action. This ALWAYS returns a draft/proposal only
+   — it never persists anything. Tell the operator this is a draft awaiting their explicit approval before
+   anything is saved.
+
+Key rules:
+- Never call or reference an "audit" or "re-score" action — that is a separate, more expensive operation
+  outside this tool set and would silently overwrite the operator's existing score.
+- Never invent asset IDs — only act on IDs the operator explicitly gives you or that already appear in the
+  conversation/context.
+- If getAssetDnaEvidence reports an asset as not found, say so plainly — do not guess at its score.
+- draftBulkAssetApproval's output is never a completed action; always describe it as a draft pending human
+  approval.`,
   // @ts-expect-error @mastra/memory beta: Memory not yet assignable to MastraMemory (re-check on pkg bump)
   memory: getMastraMemory(),
 });
