@@ -29,8 +29,27 @@
 | **ShootCard** | a shoot | `name`, `brand`, `date`, `status`, `dna`, `cover`, `looks`, `onOpen` | default/selected/loading | Shoots List | `<ShootCard>` | StatusChip |
 | **CampaignCard** | a campaign | `title`, `dates`, `coverUrl`, `statusLabel`, `pct`, `onSelect`, `selected`/`cardBorder` (D-DS5) | default/selected; multi-select + drag (host overlay) | Campaigns | `<CampaignCard>` | StatusChip |
 | **AssetCard** | an asset | `imgUrl`/`coverUrl`, `match`, `type`, `height`, `variant`(tile/masonry), `showFooter`, `onSelect`, `selected`, `border` (D-DS5) | tile / masonry; default/selected; multi-select + drag (host overlay) | Assets, Brand Detail, Shoot Detail | `<AssetCard>` | StatusChip |
-| **ApprovalCard** | a HITL approval | `title`, `confidence`, `evidence`, `before`, `after`, `variant`(compact) | pending / approved / fading | Command Center, Brand Detail, Shoot Detail | `<ApprovalCard>` | StatusChip, AgentStatusIndicator |
+| **ApprovalCard** | a HITL approval — **de-forked (IPI-304, 2026-07-18)** from 4 independent implementations into a shared shell + primitives; see footnote below | shell: `className`; `ApprovalHeader`: `title`, `subtitle?`, `right?`; `ApprovalEvidence`: `fields[{label,value}]`; `ApprovalComparison`: `rows[{label,value,delta?}]`; `ApprovalActions`: `state`(`idle`\|`approving`\|`rejecting`), `onApprove`, `onReject` | pending / approving / rejecting / already-processed (Brand); plain data-table (Budget/Deliverable/ShotList — no approval state) | Command Center (`BrandApprovalCard`, full shell+actions); Shoot Wizard HITL gates (`Budget`/`Deliverable`/`ShotListApprovalCard`, shell+header only) | `<ApprovalCardShell>` + `<ApprovalHeader>`/`<ApprovalEvidence>`/`<ApprovalComparison>`/`<ApprovalActions>` (`app/src/components/approval-card/`) | none (style-free structural primitives — StatusChip/AgentStatusIndicator from the design source are not wired in yet; v1 scope per IPI-304 is Brand-only actions) |
 | **EvidenceBlock** | the canonical AI-explainability surface (score→potential, confidence, why, AI reasoning, evidence imgs+bullets, suggestions+gain, before/after, Approve/Improve/Regenerate) — empty sections auto-hide | `title`, `score`, `potential`, `confidence`, `why`, `reasoning`, `evidence[]`, `evidenceImgs[]`, `suggestions[{text,gain}]`, `beforeImg`, `afterImg`, `onApprove`, `onImprove`, `onRegenerate` | ready / partial (sections hide) | Brand Detail, Assets, Matching, Campaigns, Channel Preview | `<EvidenceBlock>` | StatusChip (confidence) |
+
+**ApprovalCard de-fork (IPI-304, 2026-07-18):** the 4 production forks
+(`app/src/components/brand-hub/approval-card.tsx`,
+`shoot/hitl/{Budget,Deliverable,ShotList}ApprovalCard.tsx`) that this
+component-map's "canonical reuse" rule flagged as a rule violation are now
+thin domain wrappers over a shared shell + primitives in
+`app/src/components/approval-card/` — shell + thin-adapter pattern, same as
+`crm-detail-shell.tsx`. `ApprovalActions` (Approve/Reject) is wired for
+`BrandApprovalCard` only in v1: the 3 shoot HITL cards have no approve/reject
+UI today, so no action UI was invented for them (they render the shell +
+header around their own controlled tables). Prop names above are the actual
+shipped names, reconciled from the design source's `title`/`confidence`/
+`evidence`/`before`/`after`/`variant` where a real mapping existed —
+`ApprovalEvidence`'s `fields[]` covers `confidence`/`evidence` (as a generic
+label/value grid, since Brand Hub's evidence is a tagline/category/score
+fact-grid, not the design source's single evidence string) and
+`ApprovalComparison`'s `rows[]` covers `before`/`after` (as a generic
+label/value/delta list, since Brand Hub compares draft-vs-live *scores*, not
+simple before/after text).
 
 ## Atoms / feedback / inputs
 | Component | Purpose | Props | Variants | Used | React | Deps |
