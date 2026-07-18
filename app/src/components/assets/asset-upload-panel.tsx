@@ -253,12 +253,20 @@ export function AssetUploadPanel({ brands = [], defaultBrandId, onReady }: Props
     (itemId: string) => {
       abortByItem.current.get(itemId)?.abort();
       abortByItem.current.delete(itemId);
+      const item = queue.find((i) => i.id === itemId);
+      if (
+        item?.cloudinary_asset_id &&
+        (item.state === "timed_out" || item.state === "processing_failed")
+      ) {
+        startPolling(itemId, item.cloudinary_asset_id);
+        return;
+      }
       updateItem(itemId, {
         state: "client_failed",
         message: "Select Upload again to retry with a new signature",
       });
     },
-    [updateItem],
+    [queue, startPolling, updateItem],
   );
 
   const removeItem = useCallback((itemId: string) => {
