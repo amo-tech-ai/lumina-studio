@@ -69,13 +69,10 @@ export function isAllowedResourceType(value: string): boolean {
   return RESOURCE_TYPES.has(value);
 }
 
-/** Guard widget/server params before signing — preset and type must stay authenticated. */
+/** Guard widget params before signing — preset and brand context are required client-side. */
 export function validateParamsToSign(params: Record<string, unknown>): string | null {
   if (params.upload_preset !== CLOUDINARY_UPLOAD_PRESET) {
     return "upload_preset must be ipix-signed-upload";
-  }
-  if (params.type !== "authenticated") {
-    return "type must be authenticated";
   }
   const brandId = parseBrandIdFromCloudinaryContext(params.context);
   if (!brandId) {
