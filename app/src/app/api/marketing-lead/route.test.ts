@@ -111,6 +111,22 @@ describe("marketing-lead — payload validation", () => {
     );
     expect(res.status).toBe(422);
   });
+
+  it("strips non-UUID conversation_id before forwarding to capture-lead", async () => {
+    const mockFetch = vi.fn().mockResolvedValueOnce(
+      new Response(JSON.stringify({ draftId: "d-xyz" }), { status: 200 }),
+    );
+    vi.stubGlobal("fetch", mockFetch);
+
+    const { POST } = await importRoute();
+    const res = await POST(
+      makeRequest({ ...VALID_BODY, conversation_id: "stale-not-a-uuid" }),
+    );
+    expect(res.status).toBe(200);
+    const [, opts] = mockFetch.mock.calls[0];
+    const body = JSON.parse(String((opts as RequestInit).body));
+    expect(body.conversation_id).toBeUndefined();
+  });
 });
 
 // ─── LeadPayload routing to capture-lead ────────────────────────────────────

@@ -1,6 +1,10 @@
 import { z } from "zod";
 import { SERVICE_SLUGS } from "@/mastra/types/marketing-lead";
 
+// PostgREST `p_conversation_id uuid` rejects non-UUIDs before Edge RPC fallback.
+const CONVERSATION_UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 // Request body sent by the chat widget when readiness === "ready_to_submit".
 // `anon_id` is generated client-side (e.g. localStorage UUID) and threads the
 // session through chatbot_conversations. `message_summary` is a short human-
@@ -15,7 +19,14 @@ const SubmitLeadSchema = z.object({
   budget: z.string().optional(),
   timeline: z.string().optional(),
   website: z.string().optional(),
-  conversation_id: z.string().optional(),
+  conversation_id: z
+    .string()
+    .optional()
+    .transform((value) => {
+      if (!value) return undefined;
+      const trimmed = value.trim();
+      return CONVERSATION_UUID_RE.test(trimmed) ? trimmed : undefined;
+    }),
 });
 
 type SubmitLeadRequest = z.infer<typeof SubmitLeadSchema>;

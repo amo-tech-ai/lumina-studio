@@ -7,6 +7,7 @@ import {
 import {
   ALLOWED_SERVICE_SLUGS,
   handleCaptureLead,
+  normalizeConversationId,
   RATE_LIMIT_MAX,
   resetRateLimitStoreForTests,
   validatePayload,
@@ -53,6 +54,64 @@ Deno.test("validatePayload rejects overlong message_summary", () => {
   }));
   assertEquals(result.valid, false);
   assertEquals(result.errors.some((e) => e.includes("message_summary")), true);
+});
+
+Deno.test("normalizeConversationId drops non-UUID strings", () => {
+  assertEquals(normalizeConversationId("conv-1"), undefined);
+  assertEquals(normalizeConversationId(""), undefined);
+  assertEquals(normalizeConversationId(null), undefined);
+  assertEquals(
+    normalizeConversationId("22222222-2222-2222-2222-222222222222"),
+    "22222222-2222-2222-2222-222222222222",
+  );
+});
+
+Deno.test("validatePayload clears non-UUID conversation_id (RPC-safe)", () => {
+  const result = validatePayload(leadBody({ conversation_id: "stale-not-a-uuid" }));
+  assertEquals(result.valid, true);
+  assertEquals(result.payload?.conversation_id, undefined);
+});
+
+Deno.test("non-UUID conversation_id is sent to RPC as null", async () => {
+  resetRateLimitStoreForTests();
+  let rpcBody: Record<string, unknown> | null = null;
+
+  await withEnv({
+    ...BASE_EDGE_ENV,
+    CAPTURE_LEAD_PROXY_SECRET: PROXY,
+  }, async () => {
+    const original = globalThis.fetch;
+    globalThis.fetch = (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = typeof input === "string"
+        ? input
+        : input instanceof URL
+        ? input.href
+        : input.url;
+      if (url.includes("/rest/v1/rpc/capture_lead_write")) {
+        rpcBody = JSON.parse(String(init?.body ?? "{}")) as Record<string, unknown>;
+        return Promise.resolve(
+          new Response(
+            JSON.stringify({
+              draft_id: "11111111-1111-1111-1111-111111111111",
+              conversation_id: "22222222-2222-2222-2222-222222222222",
+            }),
+            { status: 200, headers: { "Content-Type": "application/json" } },
+          ),
+        );
+      }
+      return original(input, init);
+    };
+
+    try {
+      const res = await handleCaptureLead(captureRequest(leadBody({
+        conversation_id: "not-a-uuid",
+      })));
+      assertEquals(res.status, 200);
+      assertEquals(rpcBody?.p_conversation_id, null);
+    } finally {
+      globalThis.fetch = original;
+    }
+  });
 });
 
 Deno.test("missing CAPTURE_LEAD_PROXY_SECRET → 503", async () => {

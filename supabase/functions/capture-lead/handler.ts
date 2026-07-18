@@ -102,6 +102,20 @@ function tooLong(value: string, max: number): boolean {
   return value.length > max;
 }
 
+/** PostgREST rejects non-UUID for `p_conversation_id uuid`; treat bad/stale ids as unset. */
+const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+export function normalizeConversationId(
+  value: unknown,
+): string | undefined {
+  if (value === undefined || value === null) return undefined;
+  if (typeof value !== "string") return undefined;
+  const trimmed = value.trim();
+  if (!trimmed || !UUID_RE.test(trimmed)) return undefined;
+  return trimmed;
+}
+
 export function validatePayload(data: Record<string, unknown>): ValidationResult {
   const errors: string[] = [];
 
@@ -200,7 +214,8 @@ export function validatePayload(data: Record<string, unknown>): ValidationResult
     errors: [],
     payload: {
       anon_id: data.anon_id as string,
-      conversation_id: data.conversation_id as string | undefined,
+      // Invalid/non-UUID ids → undefined (RPC gets null; same as previous “no match” path)
+      conversation_id: normalizeConversationId(data.conversation_id),
       message_summary: data.message_summary as string,
       lead_answers: (data.lead_answers as Record<string, string>) ?? {},
       service_interest: data.service_interest as ServiceSlug,
