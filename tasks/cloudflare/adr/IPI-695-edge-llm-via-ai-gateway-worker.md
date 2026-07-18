@@ -47,7 +47,7 @@ Supabase documents Edge Functions as TypeScript functions running in its Deno-co
 ### Phase A — lean provider migration
 
 1. Keep `brand-intelligence` and `audit-asset-dna` hosted on Supabase Edge.
-2. Add `AI_PROVIDER=cloudflare` to the shared Edge provider allowlist.
+2. Add `cloudflare` to the shared Edge provider allowlist in code (**IPI-696 · CF-EDGE-002**). Today `parseBiDnaAiProvider` only accepts `gemini` | `groq` — see deploy-order warning below.
 3. Send an OpenAI-shaped HTTPS request to the custom Cloudflare Worker.
 4. Require a narrow service credential on every model POST route.
 5. The Worker validates the route, credential, payload size, and approved model tier.
@@ -91,15 +91,19 @@ Do not build new integration code on the deprecated AI Gateway Universal endpoin
 
 ## Secrets and configuration
 
+> **Deploy-order warning (do not skip):**  
+> **Do not set `AI_PROVIDER=cloudflare` in Supabase Edge / Infisical until after the allowlist + client code from IPI-696 · CF-EDGE-002 (and BI wiring IPI-697 · CF-EDGE-003) is deployed.**  
+> As of this ADR, `supabase/functions/_shared/llm/allowlist.ts` → `parseBiDnaAiProvider` only accepts `gemini` | `groq`. Setting `AI_PROVIDER=cloudflare` on current production code throws on every Brand Hub / Asset DNA Edge invocation. Keep `AI_PROVIDER=gemini` (or `groq`) until IPI-699 · CF-EDGE-005 remote smoke flips the flag.
+
 ### Supabase Edge secrets
 
-| Name | Purpose |
-|---|---|
-| `AI_PROVIDER=cloudflare` | Select the Cloudflare provider path |
-| `AI_GATEWAY_URL` | Base URL of the custom Worker |
-| `AI_GATEWAY_TOKEN` | Narrow shared service credential accepted by the Worker |
-| `BI_USE_GEMINI` | Emergency BI rollback override |
-| `DNA_USE_GEMINI` | Emergency DNA rollback override |
+| Name | Purpose | When to set |
+|---|---|---|
+| `AI_PROVIDER` | Provider selector (`gemini` \| `groq` today; `cloudflare` only after IPI-696 code ships) | Flip to `cloudflare` only in **IPI-699 · CF-EDGE-005**, never during this ADR or before allowlist support |
+| `AI_GATEWAY_URL` | Base URL of the custom Worker | May stage before flip; unused until Cloudflare path is selected |
+| `AI_GATEWAY_TOKEN` | Narrow shared service credential accepted by the Worker | After Worker auth (**IPI-700 · CF-EDGE-006**); required before remote smoke |
+| `BI_USE_GEMINI` | Emergency BI rollback override | Keep available through soak |
+| `DNA_USE_GEMINI` | Emergency DNA rollback override | Keep available through soak |
 
 ### Cloudflare Worker configuration
 
@@ -200,6 +204,8 @@ flowchart TD
 ```
 
 IPI-700 and IPI-696 may be implemented in parallel after this ADR, but IPI-699 remote smoke must wait for Worker service authentication.
+
+**Secret flip order:** code deploy (IPI-696 + IPI-697) → Worker auth (IPI-700) → then set `AI_PROVIDER=cloudflare` during IPI-699 smoke. Never reverse that order. A premature secret change on current allowlist code is a production outage for Brand Hub crawl analysis and Asset DNA.
 
 ## Validation for this ADR
 
