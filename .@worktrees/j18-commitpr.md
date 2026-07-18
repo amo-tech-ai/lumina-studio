@@ -8,8 +8,8 @@
 
 | Action | Files | PR |
 |--------|------:|-----|
-| **Committed + pushed** | 28 | #478–#482 |
-| **Archive / discard (no commit)** | 25 | — |
+| **Committed + pushed** | 29 | #478–#482 |
+| **Archive / discard (no commit)** | 24 | — |
 | **Still uncommitted (benign)** | 3 | see below |
 
 ---
@@ -48,8 +48,8 @@
 | `~/.local/.../tidy-otter` | `docs/linear/issues/IPI-588-PLN-SD8-scheduling-calendar.md` | Linear task docs | untracked → **salvaged** | ✅ Committed → **#482** |
 | `~/.local/.../gentle-island` | `docs/linear/issues/IPI-526-bedrock-provider-fallback.md` | Linear task docs | modified → **salvaged** | ✅ Committed → **#482** |
 | `~/wt-audit-jul17-main` | `Universal-design-prompt-new/**` (22 paths) | Design files / Prompts | deleted locally | **Archive** — external design prototype bundle, not ipix canonical docs |
-| `~/.local/.../tidy-otter` | `AGENTS.md` | Documentation | modified | **Discard (duplicate/generated)** — agent-worktree drift; canonical is repo-root `AGENTS.md` |
-| `~/.local/.../tidy-otter` | `supabase/docs/audit/` | Audit | untracked | **Discard (duplicate/generated)** — exists on `origin/main` |
+| `~/.local/.../tidy-otter` | `AGENTS.md` (planner audit session) | Audit | modified → **salvaged** | ✅ Committed → **#482** as `docs/audits/planner-security-audit-session-2026-07-14.md` |
+| `~/.local/.../tidy-otter` | `supabase/docs/audit/` | Audit | untracked → cleaned | **Discard (duplicate/generated)** — exists on `origin/main` |
 | `~/.local/.../tidy-otter` | `skills-lock.json` | Config | untracked | **Discard (duplicate/generated)** — not documentation |
 | `~/ipix` | `.@worktrees/j18-commitpr.md` | Plans | untracked | ✅ Committed → **#480** (this report) |
 
@@ -81,7 +81,7 @@
 
 ### #482 · Planner Linear backlog salvage
 - **Branch:** `docs/planner-linear-backlog-salvage`
-- **Files:** 8 new planner Linear docs + `IPI-526` repurposed to SCR-35 Planner Hub
+- **Files:** 8 new planner Linear docs + `IPI-526` repurposed + `docs/audits/planner-security-audit-session-2026-07-14.md`
 - **Summary:** Planner screen backlog (IPI-483, IPI-536, IPI-542, IPI-575, IPI-577, IPI-579, IPI-580, IPI-588) from OpenCode worktrees.
 
 ---
@@ -91,8 +91,7 @@
 | Worktree | What | Why |
 |----------|------|-----|
 | `~/wt-audit-jul17-main` | `Universal-design-prompt-new/**` deletions | External HTML design prototype bundle — not ipix operator docs. Restore with `git checkout -- Universal-design-prompt-new/` if needed locally. |
-| `~/.local/.../tidy-otter` | `AGENTS.md` drift | Canonical agent memory is repo-root `AGENTS.md` on `main`. |
-| `~/.local/.../tidy-otter` | `supabase/docs/audit/` | Duplicate of content already on `origin/main`. |
+| `~/.local/.../tidy-otter` | `skills-lock.json` | Generated lockfile from agent session — not documentation. |
 | OpenCode `brave-*` / `jolly-*` | 4-file workflow diffs | Overlap with open **#373** (`ci/opencode-agent-workflow`) — do not duplicate. |
 
 ---
