@@ -1,9 +1,11 @@
 # Prime todo — Supabase + Edge + CF-EDGE (ordered)
 
 **SSOT:** [`supabase-plan.md`](./supabase-plan.md) · Edge efficiency [`../../supabase/docs/plan/j18-edge-plan.md`](../../supabase/docs/plan/j18-edge-plan.md) · CF tasks [`../cloudflare/Tasks/060-CF-EDGE-AI-epic.md`](../cloudflare/Tasks/060-CF-EDGE-AI-epic.md) · agent [`../cloudflare/agent/5-cf-edge-plan.md`](../cloudflare/agent/5-cf-edge-plan.md)  
-**Updated:** 2026-07-18 (audit correction) · next **IPI-692** · IPI-686/689/690/703 Done  
-**Human final:** **IPI-690** stays **Done (no-rotate)** — audit “rotate Gemini now” **rejected**  
-**Supabase setup:** ~**foundation done** · Edge harden ~**done** · remaining polish **692 → 693** · later sec **680/684** · CF-EDGE **697/699** separate · pgTAP **704** parked
+**Updated:** 2026-07-18 (audit v3) · next **IPI-692** [#470](https://github.com/amo-tech-ai/lumina-studio/pull/470) In Review · sec **680/684** High · CF **697→699**  
+**Forensic SSOT:** [`j18-linear-tasks.md`](./j18-linear-tasks.md) · grades: correctness **90** · efficiency **82** · readiness **58**  
+**Human final:** **IPI-690** stays **Done (no-rotate)** — formal exception checklist still needs owner + review date (+ restrictions/alert/emergency rotate)  
+**Supabase setup:** ~**foundation done** · Edge harden pending **692 deploy** · pgTAP **704** parked (clean local OR disposable DB) · restore drill on **IPI-70**  
+**Canceled:** 456→698 · 239 · 683→680 · 69→682 · 248→404 · 61→698 · 282→698 · 250→405 · 455 parked Low  
 **Linear view:** [Supabase](https://linear.app/amo100/view/supabase-2d1d1d63cb9c)  
 **Rule:** one concern per PR · never `--prune` · never lose `tasks/**` (`.cursor/rules/tasks-docs-preserve.mdc`)  
 **Naming:** always full **IPI-NNN · SPEC — Title** (never bare IDs)
@@ -29,53 +31,67 @@ Ops after merge (if not already):
 
 ---
 
-## Status note — 2026-07-18 (audit correction pass)
+## Status note — 2026-07-18 (audit v3)
 
-- **IPI-690 · SB-EDGE-007**: 🟢 **Done (no-rotate)** — **human FINAL** 2026-07-18. Audit “rotate Gemini now” **rejected**. Keys work; exposure risk accepted; inventory closed without revoke. Do **not** reopen/Urgent for rotate. Only Edge Gemini *deletion* (if ever) waits on **IPI-699**.
-- **IPI-689 · SB-EDGE-006** [#463](https://github.com/amo-tech-ai/lumina-studio/pull/463): 🟢 **Done** — squash-merged (`d547be05`). Stale `blockedBy` **IPI-667** cleared in Linear.
-- **IPI-686 · SB-EDGE-003** [#459](https://github.com/amo-tech-ai/lumina-studio/pull/459): 🟢 **Done** (`2dcc7324`).
-- **IPI-703 · FIX** [#460](https://github.com/amo-tech-ai/lumina-studio/pull/460): 🟢 **Done** (`0d8c5c8d`).
-- **Next code:** **IPI-692 · SB-EDGE-008** — atomic `webhookId` dedup (High · Todo). Start only when asked.
+- **IPI-690 · SB-EDGE-007**: 🟢 **Done (no-rotate)** — status **unchanged**. Formal exception checklist strengthened (owner, review date, restrictions, billing alert, evidence absent, emergency rotate). Framing: accepted risk, not completed security fix.
+- **IPI-692 · SB-EDGE-008**: 🔵 **In Review** [#470](https://github.com/amo-tech-ai/lumina-studio/pull/470) — do **not** merge/deploy until `supabase-linked-gates` passes. Design still good.
+- **IPI-680 / IPI-684**: open High security — do **not** cancel.
+- **IPI-70 · PLT-008**: restore drill checklist attached (no separate restore-drill ticket).
+- **Grades:** correctness **90** · efficiency **82** · readiness **58**.
 
-## Plain English — execution order (audit-corrected)
+## Plain English — execution order (audit v3)
 
 | Step | Full task name(s) | What / why |
 |------|-------------------|------------|
-| **0 · Done** | **IPI-690 · SB-EDGE-007** | 🟢 **no-rotate** [human final] — keep current keys. |
-| **1 · Done** | **IPI-689 · SB-EDGE-006** | 🟢 [#463](https://github.com/amo-tech-ai/lumina-studio/pull/463) (`d547be05`) inventory CI. |
-| **2 · NEXT** | **IPI-692 · SB-EDGE-008** | Atomic `webhookId` dedup / resume once. |
-| **3 · Parallel** | **IPI-697 · CF-EDGE-003** ∥ **IPI-693 · SB-EDGE-009** | CF REST+BI ∥ crawl quotas (after product limits defined). |
-| **4 · After 697** | **IPI-699 · CF-EDGE-005** | Canary BI first (not DNA); do not wait for 698. |
-| **5 · Later** | **IPI-698 · CF-EDGE-004** | DNA after BI canary. |
-| **6 · Park** | **PLT-010 / disposable DB → IPI-704** | pgTAP — wait squash **or** dedicated disposable test project (never prod). |
+| **1 · NEXT** | **IPI-692 · SB-EDGE-008** + [#470](https://github.com/amo-tech-ai/lumina-studio/pull/470) | Fix linked-gates → merge when green. |
+| **2 · Ops** | **IPI-692** deploy | `db push` + deploy `firecrawl-webhook`. |
+| **3** | **IPI-680 · SB-SEC-002** | GraphQL — verify usage → disable or revoke grants. |
+| **4** | **IPI-684 · SB-SEC-001b** | Default EXECUTE + NEW-fn without GRANT regression. |
+| **5** | **IPI-697 · CF-EDGE-003** | REST / `cloudflare/ai` only — no custom Worker. |
+| **6** | **IPI-693 · SB-EDGE-009** | Atomic quota RPC (after 692 deploy); CF AI spend ≠ Firecrawl. |
+| **7** | **IPI-699 · CF-EDGE-005** | Canary with measurable gates (ops-only). |
+| **8** | **IPI-460 · CF-AI-010** | Managed spend + 5 metadata fields first. |
+| **9** | **IPI-70 · PLT-008** | Documented backup restore drill. |
+| **10** | **IPI-682 · SB-PERF-001** | Advisor by frequency/p95/lock/tenant. |
+| **11** | **IPI-502 · CF-UJ-002** | CF journey rerun after 699 (baseline now OK). |
+| **12** | **IPI-690 · SB-EDGE-007** | Fill exception checklist (status stays Done). |
+
+Parked: **IPI-698** DNA · **IPI-455** cancel after 699 · **IPI-704** clean local OR disposable DB · **IPI-675/676** CI hygiene.
 
 ---
 
 ## Suggested next steps (do this order)
 
 ```text
-0. IPI-690 — Done (no-rotate) [human final]
-   → audit “rotate Gemini now” REJECTED · no revoke · no Urgent reopen
-   → Edge Gemini deletion only after IPI-699 if ever
+1. NEXT: IPI-692 / #470 — fix supabase-linked-gates → merge when green
+   → do not auto-merge · do not mark Done until deploy evidence
 
-1. IPI-689 — Done #463 (d547be05)
-   → inventory CI shipped · stale blockedBy IPI-667 cleared
+2. Ops after merge — db push + deploy firecrawl-webhook
 
-2. NEXT: IPI-692 — atomic webhookId dedup
-   → unique webhookId · processed_webhooks claim · resume once
-   → do not rely on job_status read-then-write alone
+3. IPI-680 GraphQL — verify app usage first
+   → unused → disable pg_graphql · used → revoke table privileges
 
-3. Parallel: IPI-697 CF REST+BI ∥ IPI-693 quotas (after product limits defined)
-   → 697: no remote deploy; safeguards in Linear comment
-   → 693: org/day · brand/day · concurrent · pages · crawl_quota_exceeded + 429
+4. IPI-684 default EXECUTE + NEW function without GRANT regression
 
-4. IPI-699 canary after 697
-   → Brand Intelligence first · not DNA · do not wait for IPI-698
+5. IPI-697 CF REST+BI — official path only; no custom gateway Worker
 
-5. IPI-698 DNA later
+6. IPI-693 quotas after 692 deploy
+   → one atomic RPC: org · brand · user · daily pages · concurrent
+   → CF AI spend limits do NOT control Firecrawl
 
-6. PLT-010 / disposable DB → IPI-704 pgTAP
-   → parking OK · IPI2-29 old-team ownership gap · squash caveats apply
+7. IPI-699 canary (ops-only) — measurable gates in Linear
+   → schema 100% · success ≥ Gemini · err ≤+1pp · p95 ≤+20% · cost ≤+15% · rollback ≤5m · prompt logs 0
+
+8. IPI-460 managed spend + 5 metadata fields
+   → organization_id · brand_id · environment · feature · request_type
+
+9. IPI-70 restore drill — backup → isolated restore → migrations → counts → RLS → app smoke → RTO
+
+10. IPI-682 Advisor ranking (frequency / p95 / lock / tenant)
+
+11. IPI-502 CF journey after 699
+
+12. IPI-690 — fill formal exception checklist (status stays Done no-rotate)
 ```
 
 ---
@@ -132,8 +148,8 @@ flowchart TD
 | 🟢 | [IPI-688 · SB-EDGE-005 — Restrict edge-test](https://linear.app/amo100/issue/IPI-688) | **#449** merged · verify-edge no prod log spam |
 | 🟢 | [IPI-686 · SB-EDGE-003 — Crawl Deno tests](https://linear.app/amo100/issue/IPI-686) | **Done** · [PR #459](https://github.com/amo-tech-ai/lumina-studio/pull/459) merged `2dcc7324` |
 | 🟢 | [IPI-689 · SB-EDGE-006 — Inventory CI](https://linear.app/amo100/issue/IPI-689) | Done · [#463](https://github.com/amo-tech-ai/lumina-studio/pull/463) `d547be05` |
-| ⚪ | [IPI-692 · SB-EDGE-008 — Webhook resume idempotent](https://linear.app/amo100/issue/IPI-692) | **Todo · High** · **NEXT** · atomic `webhookId` / `processed_webhooks` claim |
-| ⚪ | [IPI-693 · SB-EDGE-009 — Crawl quotas](https://linear.app/amo100/issue/IPI-693) | After product limits · ∥ **IPI-697** OK |
+| 🔵 | [IPI-692 · SB-EDGE-008 — Webhook resume idempotent](https://linear.app/amo100/issue/IPI-692) | **In Review** [#470](https://github.com/amo-tech-ai/lumina-studio/pull/470) · **NEXT** · merge only when linked-gates green |
+| ⚪ | [IPI-693 · SB-EDGE-009 — Crawl quotas](https://linear.app/amo100/issue/IPI-693) | After **692** deploy · one atomic RPC · CF AI spend ≠ Firecrawl |
 | 🔴 | ~~IPI-687~~ | Canceled — merged into **IPI-685 · SB-EDGE-002** |
 
 ---
@@ -160,13 +176,14 @@ Task docs: `tasks/cloudflare/Tasks/060`–`065` (may still say Worker — trust 
 
 | ● | Linear | Notes |
 |---|--------|-------|
-| ⚪ | [IPI-680 · SB-SEC-002 — GraphQL anon](https://linear.app/amo100/issue/IPI-680) | After **IPI-681 · SB-SEC-003** Done |
-| ⚪ | [IPI-683 · SB-SEC-002b — Authenticated GraphQL](https://linear.app/amo100/issue/IPI-683) | After **IPI-680** |
-| ⚪ | [IPI-684 · SB-SEC-001b — Default privileges](https://linear.app/amo100/issue/IPI-684) | After **IPI-679 · SB-SEC-001** Done |
-| ⚪ | [IPI-682 · SB-PERF-001 — Advisor from workload](https://linear.app/amo100/issue/IPI-682) | Evidence-driven |
+| ⚪ | [IPI-680 · SB-SEC-002 — GraphQL anon then auth](https://linear.app/amo100/issue/IPI-680) | High · verify usage first · PR1 anon then PR2 auth (**IPI-683** absorbed) |
+| ⚪ | [IPI-684 · SB-SEC-001b — Default privileges](https://linear.app/amo100/issue/IPI-684) | High · NEW-fn without GRANT regression required |
+| ⚪ | [IPI-682 · SB-PERF-001 — Advisor from workload](https://linear.app/amo100/issue/IPI-682) | Rank by frequency / p95 / lock / tenant |
+| ⚪ | [IPI-70 · PLT-008 — Production Backup Strategy](https://linear.app/amo100/issue/IPI-70) | Restore drill checklist attached |
+| ⚪ | [IPI-460 · CF-AI-010 — AI Cost Tracking](https://linear.app/amo100/issue/IPI-460) | Managed spend + 5 metadata fields first |
 | ⚪ | [IPI-650 · PLN-HUB-002 — Planner Hub New Plan UI](https://linear.app/amo100/issue/IPI-650) | Product |
 | ⚪ | [IPI-619](https://linear.app/amo100/issue/IPI-619) / [IPI-623](https://linear.app/amo100/issue/IPI-623) | CF Hyperdrive / Mastra thread — use full titles when starting |
-| ⏸ | [IPI-704 · SB-TEST-002 — pgTAP suite and supabase test db in CI](https://linear.app/amo100/issue/IPI-704) | Parked · unblock via **PLT-010** **or** disposable test project (never prod). **IPI2-29** is on old team — ownership/replacement needed. See [`testing.md`](./testing.md). |
+| ⏸ | [IPI-704 · SB-TEST-002 — pgTAP suite and supabase test db in CI](https://linear.app/amo100/issue/IPI-704) | Parked · **clean local OR disposable DB** (PLT-010 squash optional, not required). See [`testing.md`](./testing.md). |
 
 ---
 
@@ -192,11 +209,17 @@ Task docs: `tasks/cloudflare/Tasks/060`–`065` (may still say Worker — trust 
 [ ] OPS: deploy capture-lead + edge-test if remote lagging
 [x] IPI-686 · SB-EDGE-003 — crawl Deno tests — #459 merged `2dcc7324` · Linear Done
 [x] IPI-689 · SB-EDGE-006 — inventory CI — Done #463 (`d547be05`)
-[ ] IPI-692 · SB-EDGE-008 — atomic webhookId dedup ← NEXT (start only when asked)
-[ ] IPI-697 · CF-EDGE-003 — REST client + BI (∥ 692/693; start only when asked)
-[ ] IPI-693 · SB-EDGE-009 — crawl quotas (after product limits)
-[ ] IPI-699 · CF-EDGE-005 — canary BI after 697 (not DNA; leave open)
+[ ] IPI-692 · SB-EDGE-008 — #470 linked-gates → merge → deploy ← NEXT
+[ ] IPI-680 · SB-SEC-002 — GraphQL (verify usage first)
+[ ] IPI-684 · SB-SEC-001b — default EXECUTE + NEW-fn regression
+[ ] IPI-697 · CF-EDGE-003 — REST client + BI (no custom Worker)
+[ ] IPI-693 · SB-EDGE-009 — atomic crawl quotas (after 692 deploy)
+[ ] IPI-699 · CF-EDGE-005 — canary with measurable gates (ops-only)
+[ ] IPI-460 · CF-AI-010 — managed spend + 5 metadata fields
+[ ] IPI-70 · PLT-008 — backup restore drill
+[ ] IPI-682 · SB-PERF-001 — Advisor by workload impact
+[ ] IPI-502 · CF-UJ-002 — CF journey after 699
+[ ] IPI-690 — fill formal exception checklist (status stays Done)
 [x] Side: IPI-703 · FIX — app-build Mastra/CopilotKit hotfix — merged #460 (`0d8c5c8d`)
-[ ] Later: IPI-680 · IPI-684 · IPI-682 · IPI-650 · CF IPI-619/623
-[ ] Park: IPI-698 DNA · IPI-455 Phase B · IPI-704 pgTAP (PLT-010 or disposable DB)
+[ ] Park: IPI-698 DNA · IPI-455 Phase B · IPI-704 pgTAP (clean local or disposable DB) · IPI-675/676
 ```
