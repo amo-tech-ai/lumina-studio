@@ -7,10 +7,13 @@ import {
   BUILD_TIME_SECRET_NAMES,
   RUNTIME_SECRET_NAMES,
   WRANGLER_VAR_NAMES,
+  WRANGLER_REQUIRED_VAR_NAMES,
   RUNTIME_REQUIRED_SECRET_NAMES,
   assertInfisicalWranglerEnvPair,
   assertNoForbiddenSecrets,
+  buildWranglerVarCliArgs,
   collectRuntimeSecretsFromEnv,
+  collectWranglerVarsFromEnv,
   diffSecretNames,
   runtimeSecretNamesForWranglerEnv,
   wranglerCliEnvArgs,
@@ -81,6 +84,40 @@ describe("cloudflare-secret-allowlist", () => {
     expect(present.GEMINI_API_KEY).toBe("secret-value-should-not-appear-in-test-output");
     expect(missing.length).toBeGreaterThan(0);
     expect(missing).not.toContain("GEMINI_API_KEY");
+  });
+
+  it("collectWranglerVarsFromEnv returns only allowlisted present keys", () => {
+    const { present, missing } = collectWranglerVarsFromEnv({
+      INTELLIGENCE_API_URL: "https://intel.example/api",
+      INTELLIGENCE_GATEWAY_WS_URL: "wss://intel.example/ws",
+      GEMINI_API_KEY: "must-not-appear",
+    });
+
+    expect(Object.keys(present).sort()).toEqual([
+      "INTELLIGENCE_API_URL",
+      "INTELLIGENCE_GATEWAY_WS_URL",
+    ]);
+    expect(missing).toContain("AI_GATEWAY_URL");
+  });
+
+  it("buildWranglerVarCliArgs emits sorted --var pairs", () => {
+    expect(
+      buildWranglerVarCliArgs({
+        INTELLIGENCE_API_URL: "https://a",
+        AI_GATEWAY_URL: "http://localhost:8787",
+      }),
+    ).toEqual([
+      "--var",
+      "AI_GATEWAY_URL:http://localhost:8787",
+      "--var",
+      "INTELLIGENCE_API_URL:https://a",
+    ]);
+  });
+
+  it("WRANGLER_REQUIRED_VAR_NAMES is subset of WRANGLER_VAR_NAMES", () => {
+    for (const name of WRANGLER_REQUIRED_VAR_NAMES) {
+      expect(WRANGLER_VAR_NAMES).toContain(name);
+    }
   });
 
   it("diffSecretNames reports extra and missing by name only", () => {
@@ -224,14 +261,15 @@ describe("sync-wrangler-secrets-from-infisical", () => {
     expect(() => statSync(filePath)).toThrow();
   });
 
-  it("wrangler.jsonc declares secrets.required per named env", () => {
+  it("wrangler.jsonc declares secrets.required per named env and static vars only", () => {
     const wranglerPath = resolve(dirname(fileURLToPath(import.meta.url)), "../wrangler.jsonc");
     const wrangler = readFileSync(wranglerPath, "utf8");
     for (const key of RUNTIME_REQUIRED_SECRET_NAMES) {
       expect(wrangler).toMatch(new RegExp(`"preview"[\\s\\S]*"required"[\\s\\S]*${key}`));
       expect(wrangler).toMatch(new RegExp(`"production"[\\s\\S]*"required"[\\s\\S]*${key}`));
     }
-    expect(wrangler).toMatch(/"preview"[\s\S]*INTELLIGENCE_API_URL/);
+    expect(wrangler).toMatch(/"preview"[\s\S]*MASTRA_STORAGE_MODE/);
+    expect(wrangler).not.toMatch(/"preview"[\s\S]*INTELLIGENCE_API_URL/);
     expect(wrangler).not.toMatch(/"DATABASE_URL"/);
   });
 

@@ -16,8 +16,10 @@ export const BUILD_TIME_SECRET_NAMES = Object.freeze([
 ]);
 
 /**
- * Non-secret Worker config — `wrangler.jsonc` `vars` (plain text, available as process.env).
- * Do not sync via `--secrets-file`; set per environment in wrangler or dashboard.
+ * Non-secret Worker config — plain text at runtime (`process.env`).
+ * Committed defaults live in `wrangler.jsonc` (`MASTRA_STORAGE_MODE`, etc.).
+ * Environment-specific values (URLs, public ids) are injected at deploy via
+ * GitHub environment **variables** → upload script `--var` passthrough — not Dashboard edits.
  */
 export const WRANGLER_VAR_NAMES = Object.freeze([
   "INTELLIGENCE_API_URL",
@@ -25,6 +27,12 @@ export const WRANGLER_VAR_NAMES = Object.freeze([
   "AI_GATEWAY_URL",
   "CLOUDINARY_CLOUD_NAME",
   "CLOUDINARY_API_KEY",
+]);
+
+/** Required on live bootstrap upload — CopilotKit Intelligence and smoke routes. */
+export const WRANGLER_REQUIRED_VAR_NAMES = Object.freeze([
+  "INTELLIGENCE_API_URL",
+  "INTELLIGENCE_GATEWAY_WS_URL",
 ]);
 
 /**
@@ -168,6 +176,40 @@ export function collectRuntimeSecretsFromEnv(env, wranglerEnv) {
   }
 
   return { present, missing };
+}
+
+/**
+ * Collect wrangler `--var` values from process.env for allowlisted names only.
+ * @param {NodeJS.ProcessEnv} env
+ * @returns {{ present: Record<string, string>; missing: string[] }}
+ */
+export function collectWranglerVarsFromEnv(env) {
+  /** @type {Record<string, string>} */
+  const present = {};
+  /** @type {string[]} */
+  const missing = [];
+
+  for (const name of WRANGLER_VAR_NAMES) {
+    const value = env[name]?.trim();
+    if (value) {
+      present[name] = value;
+    } else {
+      missing.push(name);
+    }
+  }
+
+  return { present, missing };
+}
+
+/**
+ * Build wrangler CLI `--var KEY:VALUE` args (before the `--` passthrough separator).
+ * @param {Record<string, string>} vars
+ * @returns {string[]}
+ */
+export function buildWranglerVarCliArgs(vars) {
+  return Object.keys(vars)
+    .sort()
+    .flatMap((name) => ["--var", `${name}:${vars[name]}`]);
 }
 
 /**

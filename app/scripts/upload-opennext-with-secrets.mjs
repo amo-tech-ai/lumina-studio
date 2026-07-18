@@ -16,8 +16,11 @@ import { fileURLToPath } from "node:url";
 import path from "node:path";
 import {
   assertInfisicalWranglerEnvPair,
+  buildWranglerVarCliArgs,
   collectRuntimeSecretsFromEnv,
+  collectWranglerVarsFromEnv,
   RUNTIME_REQUIRED_SECRET_NAMES,
+  WRANGLER_REQUIRED_VAR_NAMES,
   runtimeSecretNamesForWranglerEnv,
 } from "./cloudflare-secret-allowlist.mjs";
 import {
@@ -84,13 +87,15 @@ Run \`npm run build:cf\` before this script on live uploads.
  * @param {string} command upload | deploy
  * @param {string} wranglerEnv
  * @param {string} secretsFilePath
+ * @param {string[]} varCliArgs wrangler `--var KEY:VALUE` before `--` passthrough
  */
-function runOpenNext(command, wranglerEnv, secretsFilePath) {
+function runOpenNext(command, wranglerEnv, secretsFilePath, varCliArgs) {
   const envFlag = wranglerEnv === "production" ? "production" : "preview";
   const args = [
     command,
     "--env",
     envFlag,
+    ...varCliArgs,
     "--",
     "--secrets-file",
     secretsFilePath,
@@ -159,6 +164,9 @@ function main() {
 
   const { present, missing } = collectRuntimeSecretsFromEnv(process.env, opts.wranglerEnv);
   const namesToSync = Object.keys(present).sort();
+  const { present: varsPresent, missing: varsMissing } = collectWranglerVarsFromEnv(process.env);
+  const varNames = Object.keys(varsPresent).sort();
+  const varCliArgs = buildWranglerVarCliArgs(varsPresent);
 
   const missingRequired = RUNTIME_REQUIRED_SECRET_NAMES.filter((n) => !present[n]);
   if (!opts.dryRun && missingRequired.length > 0) {
@@ -168,12 +176,28 @@ function main() {
     process.exit(1);
   }
 
+  const missingRequiredVars = WRANGLER_REQUIRED_VAR_NAMES.filter((n) => !varsPresent[n]);
+  if (!opts.dryRun && missingRequiredVars.length > 0) {
+    console.error(
+      `Error: required wrangler vars missing (${missingRequiredVars.join(", ")}). ` +
+        "Set GitHub environment variables and pass them to the upload step — do not use Dashboard edits.",
+    );
+    process.exit(1);
+  }
+
   console.log(`wrangler env: ${opts.wranglerEnv}`);
   console.log(`runtime secrets (${namesToSync.length}): ${namesToSync.join(", ")}`);
+  console.log(`wrangler vars (${varNames.length}): ${varNames.join(", ") || "(none — optional only)"}`);
 
   if (missing.length > 0) {
     console.warn(
       `warn: optional allowlisted secrets unset (${missing.length}): ${missing.join(", ")}`,
+    );
+  }
+
+  if (varsMissing.length > 0) {
+    console.warn(
+      `warn: optional wrangler vars unset (${varsMissing.length}): ${varsMissing.join(", ")}`,
     );
   }
 
@@ -194,7 +218,7 @@ function main() {
     secretsFile = writeSecureSecretsFile(present);
 
     let command = "upload";
-    let result = runOpenNext(command, opts.wranglerEnv, secretsFile.filePath);
+    let result = runOpenNext(command, opts.wranglerEnv, secretsFile.filePath, varCliArgs);
 
     if (result.error) {
       console.error(`opennextjs-cloudflare ${command} failed: ${result.error.message}`);
@@ -204,7 +228,7 @@ function main() {
     if (result.code !== 0 && WORKER_DOES_NOT_EXIST.test(result.out)) {
       console.log("Worker script not found — falling back to deploy with --secrets-file");
       command = "deploy";
-      result = runOpenNext(command, opts.wranglerEnv, secretsFile.filePath);
+      result = runOpenNext(command, opts.wranglerEnv, secretsFile.filePath, varCliArgs);
     }
 
     if (result.error) {
