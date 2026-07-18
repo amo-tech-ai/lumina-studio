@@ -14,7 +14,7 @@
 // resolvePlannerSelectionAction, which itself only calls existing typed
 // contracts (getInstanceDetail/listMembers).
 
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 
 import { resolvePlannerSelectionAction, type ResolvedPlannerSelection } from "@/app/(operator)/app/planner/[instanceId]/selection-actions";
 import { useSetIntelligenceDetail } from "@/context/intelligence-detail-context";
@@ -84,15 +84,22 @@ export function AdaptivePanel({ instanceId }: { instanceId: string }) {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [selection, deselect]);
 
-  let node: ReactNode | null = null;
-  if (selection !== null && state.status === "resolved" && state.result) {
-    node =
-      state.result.kind === "task" ? (
-        <PlannerTaskDetail task={state.result.task} onClose={deselect} />
-      ) : (
-        <PlannerMemberDetail member={state.result.member} onClose={deselect} />
-      );
-  }
+  // Memoized, not rebuilt every render: AdaptivePanel is itself a consumer of
+  // IntelligenceDetailContext (via useSetIntelligenceDetail -> useIntelligenceDetail
+  // -> useContext), so every setDetail() call re-renders this component. An
+  // unmemoized inline JSX element is a brand-new object reference each render,
+  // which the context's own effect (keyed on that reference) sees as "changed"
+  // and re-publishes — setDetail -> re-render -> new node -> setDetail forever.
+  // Same fix as the existing precedent, useShootsListIntelDetail
+  // (shoots-list-intel-detail.tsx), which memoizes its node for the same reason.
+  const node = useMemo<ReactNode | null>(() => {
+    if (selection === null || state.status !== "resolved" || !state.result) return null;
+    return state.result.kind === "task" ? (
+      <PlannerTaskDetail task={state.result.task} onClose={deselect} />
+    ) : (
+      <PlannerMemberDetail member={state.result.member} onClose={deselect} />
+    );
+  }, [selection, state, deselect]);
 
   useSetIntelligenceDetail(node);
 
