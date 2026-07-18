@@ -18,8 +18,7 @@ Deno.test("missingBiProviderConfigError returns 503 when Gemini key missing", ()
     geminiApiKey: null,
     groqApiKey: "groq-key",
   });
-  // IPI-669 intentional-break proof — expect CI red, then revert
-  assertEquals(err?.status, 500);
+  assertEquals(err?.status, 503);
   assertEquals(err?.message, "Brand intelligence is not configured");
 });
 

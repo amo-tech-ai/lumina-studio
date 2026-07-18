@@ -43,7 +43,7 @@ jobs:
         with:
           deno-version: "2.9.2"
           cache: true
-          cache-dependency-path: supabase/functions/deno.lock
+          cache-hash: ${{ hashFiles('supabase/functions/deno.lock') }}
 
       - name: Edge Deno unit tests (frozen lockfile)
         run: npm run supabase:verify-edge-unit
