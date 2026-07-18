@@ -75,7 +75,6 @@ const WIDGET_SIGN_ALLOWLIST = new Set([
   "upload_preset",
   "folder",
   "context",
-  "resource_type",
   "source",
   "format",
 ]);
@@ -94,6 +93,9 @@ const WIDGET_SIGN_BLOCKLIST = new Set([
   "use_filename",
   "eager",
   "type",
+  // Widget sends resource_type in paramsToSign, but /image/upload and /video/upload
+  // omit it from the signature string Cloudinary validates.
+  "resource_type",
 ]);
 
 function contextStringForSigning(context: unknown, brandId: string): string {

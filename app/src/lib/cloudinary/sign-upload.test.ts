@@ -31,8 +31,32 @@ describe("sanitizeWidgetParamsToSign", () => {
     const cloudinarySig = cloudinary.utils.api_sign_request(sanitized, SECRET);
 
     expect(routeSig).toBe(cloudinarySig);
+    expect(sanitized).not.toHaveProperty("resource_type");
     expect(sanitized.folder).toBe(`ipix/brands/${VALID_BRAND_ID}/products`);
     expect(sanitized.context).toBe(`brand_id=${VALID_BRAND_ID}`);
+  });
+
+  it("excludes resource_type from signed params (type-specific upload URL)", async () => {
+    const { sanitizeWidgetParamsToSign } = await importSignUpload();
+    const sanitized = sanitizeWidgetParamsToSign(
+      {
+        timestamp: 1_784_000_000,
+        upload_preset: "ipix-signed-upload",
+        context: { brand_id: VALID_BRAND_ID },
+        folder: `ipix/brands/${VALID_BRAND_ID}/products`,
+        resource_type: "image",
+        source: "uw",
+      },
+      VALID_BRAND_ID,
+    );
+    expect(sanitized).not.toHaveProperty("resource_type");
+    expect(Object.keys(sanitized).sort()).toEqual([
+      "context",
+      "folder",
+      "source",
+      "timestamp",
+      "upload_preset",
+    ]);
   });
 
   it("strips evil overrides and signs the sanitized params the widget will use", async () => {
