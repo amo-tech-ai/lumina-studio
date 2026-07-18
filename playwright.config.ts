@@ -9,6 +9,7 @@ const MOBILE_BREAKPOINTS = [
 
 export default defineConfig({
   testDir: "./e2e",
+  testIgnore: ["**/copilotkit-prod-smoke.spec.ts"],
   timeout: 45_000,
   retries: 1,
   webServer: {

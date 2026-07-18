@@ -5,7 +5,7 @@ import { brandIntelligenceAgent } from "./agents/brand-intelligence-agent";
 import { durableAgents } from "./durable";
 import { shootWizardWorkflow, brandIntelligenceWorkflow } from "./workflows";
 import { ConsoleLogger, LogLevel } from "@mastra/core/logger";
-import { getMastraStorage } from "./storage";
+import { getMastraStorageLazy } from "./storage";
 
 const VALID_LOG_LEVELS: LogLevel[] = ["debug", "info", "warn", "error"];
 const rawLogLevel = process.env.LOG_LEVEL;
@@ -44,7 +44,7 @@ export function getMastra(): Mastra {
   if (!_mastra) {
     _mastra = new Mastra({
       agents,
-      storage: getMastraStorage(),
+      storage: getMastraStorageLazy(),
       workflows: {
         "shoot-wizard": shootWizardWorkflow,
         "brand-intelligence": brandIntelligenceWorkflow,
