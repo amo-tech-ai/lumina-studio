@@ -107,12 +107,17 @@ function mapMigrationRows(rows) {
   }));
 }
 
-/** Index of a JSON array start, skipping log tags like `[INFO]` / `[debug]`. */
-function findJsonArrayStart(raw) {
+/**
+ * Candidate start indexes for a JSON array, skipping log tags like `[INFO]`.
+ * Returns every `[{` / `[]` match so a leading decoy array cannot poison parse.
+ */
+function findJsonArrayStarts(raw) {
   // Array of objects: `[{...`  or empty array: `[]` (optional whitespace).
   const re = /\[\s*(?:\{|\])/g;
-  const m = re.exec(raw);
-  return m ? m.index : -1;
+  const starts = [];
+  let m;
+  while ((m = re.exec(raw)) !== null) starts.push(m.index);
+  return starts;
 }
 
 /** Try closing-bracket positions from right to left until JSON.parse succeeds. */
@@ -130,13 +135,23 @@ function parseJsonSlice(raw, start, closeChar) {
   throw lastErr ?? new Error("Could not parse migration list JSON");
 }
 
+function isMigrationListRows(rows) {
+  if (!Array.isArray(rows)) return false;
+  if (rows.length === 0) return true;
+  return rows.every(
+    (r) => r && typeof r === "object" && ("local" in r || "remote" in r),
+  );
+}
+
 function parseMigrationListJson(raw) {
   const envelopeStart = raw.indexOf('{"migrations"');
   if (envelopeStart >= 0) {
     try {
       const parsed = parseJsonSlice(raw, envelopeStart, "}");
       const rows = parsed.migrations;
-      if (!Array.isArray(rows)) throw new Error("migration list JSON missing migrations array");
+      if (!isMigrationListRows(rows)) {
+        throw new Error("migration list JSON missing migrations array");
+      }
       return mapMigrationRows(rows);
     } catch (err) {
       throw new Error(`Could not parse migration list JSON envelope: ${err.message}`);
@@ -144,15 +159,25 @@ function parseMigrationListJson(raw) {
   }
 
   // Bare array (or log-prefixed array). Never use raw indexOf("[") — that matches `[INFO]`.
-  const arrayStart = findJsonArrayStart(raw);
-  if (arrayStart >= 0) {
+  // Try every candidate start: a prior `[{...}]` decoy must not block the real list.
+  const starts = findJsonArrayStarts(raw);
+  let lastErr;
+  for (const arrayStart of starts) {
     try {
       const rows = parseJsonSlice(raw, arrayStart, "]");
-      if (!Array.isArray(rows)) throw new Error("migration list JSON missing migrations array");
+      if (!isMigrationListRows(rows)) {
+        lastErr = new Error("parsed JSON array is not a migration list");
+        continue;
+      }
       return mapMigrationRows(rows);
     } catch (err) {
-      throw new Error(`Could not parse migration list JSON array: ${err.message}`);
+      lastErr = err;
     }
+  }
+  if (starts.length) {
+    throw new Error(
+      `Could not parse migration list JSON array: ${lastErr?.message ?? "no candidate matched"}`,
+    );
   }
 
   throw new Error("Could not parse migration list JSON");
@@ -258,6 +283,8 @@ function parseDryRunPending(raw) {
 function dryRunIsUsable(dry) {
   // Official CLI exits 0 for "Remote database is up to date". Any non-zero
   // exit is a hard failure (auth/connection/CLI error) — never parse around it.
+  // parseDryRunPending() is only called after this returns true, so contradictory
+  // "up to date" + pending text on a failed dry-run never reaches the parser.
   return dry.ok;
 }
 
@@ -282,6 +309,19 @@ if (args.includes("--self-check")) {
     'noise [debug] foo\n[{"local":"9","remote":""}]\n',
   );
   assert.equal(debugPrefixed[0].local, "9");
+
+  // Leading decoy `[{...}]` must not steal the start index from the real list.
+  const decoyThenReal = parseMigrationListJson(
+    '[{status: ok}]\n[{"local":"1","remote":"1"}]\n',
+  );
+  assert.equal(decoyThenReal.length, 1);
+  assert.equal(decoyThenReal[0].local, "1");
+
+  // Valid JSON array that is not a migration list — skip to the next candidate.
+  const wrongShapeThenReal = parseMigrationListJson(
+    '[{"status":"ok"}]\n[{"local":"2","remote":""}]\n',
+  );
+  assert.equal(wrongShapeThenReal[0].local, "2");
 
   const trailingBracket = parseMigrationListJson(
     '[{"local":"1","remote":"1"}]\n[INFO] Done]\n',
