@@ -72,8 +72,21 @@ jobs:
       - name: Type-check (npm run typecheck)
         run: npm run typecheck
 
+      # IPI-472 · INFRA-001 — verify wrangler.jsonc matches generated binding types.
+      - name: Cloudflare binding types check (check:cf-types)
+        run: npm run check:cf-types
+
       - name: Unit tests
         run: npm run test
+
+      # IPI-472 · INFRA-001 — OpenNext Worker build + dry-run gzip gate (8.5 warn / 9.0 fail MiB).
+      # Build-time public Supabase vars must be present so client auth chunks compile correctly.
+      # Secrets are masked by GitHub Actions — never echo values.
+      - name: OpenNext Cloudflare build + bundle gate (build:cf)
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+        run: npm run build:cf
 
   # IPI-347 · Model Gate capstone — remote SQL + RLS when DATABASE_URL secret is set.
   # secrets.* cannot gate job-level if: — use a probe job (actions/runner#520).
