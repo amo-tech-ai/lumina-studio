@@ -2023,13 +2023,21 @@ try {
 
   // A second crm_deal so the explicit-owner probe (#10 below) doesn't
   // collide with the (org, entity, workflow) tuple the positive-path probe
-  // (#5) already creates against crmDeal.id + wfA.
+  // (#5) already creates against crmDeal.id + wfA. A third for the
+  // revoked-role replay probe (#20), so it doesn't collide with either.
   const { data: ciDeal2, error: ciDeal2Err } = await userA.client
     .from("crm_deals")
     .insert({ org_id: orgAId, company_id: crmCompany.id, stage: "lead" })
     .select("id")
     .single();
   assert(!ciDeal2Err && ciDeal2?.id, "user A inserts a second crm_deal for the explicit-owner probe");
+
+  const { data: ciDeal3, error: ciDeal3Err } = await userA.client
+    .from("crm_deals")
+    .insert({ org_id: orgAId, company_id: crmCompany.id, stage: "lead" })
+    .select("id")
+    .single();
+  assert(!ciDeal3Err && ciDeal3?.id, "user A inserts a third crm_deal for the revoked-role replay probe");
 
   const emailCiViewer = `plt002-rls-ci-viewer-${stamp}@example.com`;
   const emailCiEditor = `plt002-rls-ci-editor-${stamp}@example.com`;
@@ -2249,6 +2257,7 @@ try {
 
     // 10 — a real org member as explicit p_owner_user_id is honored, even
     // when it isn't the caller (owner-editor@caller vs. owner@viewer).
+    const ciExplicitOwnerIdemKey = crypto.randomUUID();
     const { data: ciExplicitOwnerResult, error: ciExplicitOwnerErr } = await userCiEditor.client.rpc("planner_create_instance", {
       p_org_id: orgAId,
       p_entity_type: "crm_deal",
@@ -2256,7 +2265,7 @@ try {
       p_workflow_id: wfA.id,
       p_name: `RLS CI Explicit Owner ${stamp}`,
       p_planned_start: "2026-08-03",
-      p_idempotency_key: crypto.randomUUID(),
+      p_idempotency_key: ciExplicitOwnerIdemKey,
       p_tasks: [],
       p_owner_user_id: userCiViewer.user.id,
     });
@@ -2274,6 +2283,63 @@ try {
       "planner_create_instance honors an explicit p_owner_user_id different from the caller",
     );
 
+    // 10b — round-7 fix: the explicit owner actually gets a planner.assignments
+    // row (bootstrap_owner_assignment only ever assigns the caller). Read via
+    // plannerAdmin, not plannerA: assignments_select_org is manager+ *on that
+    // specific instance*, and userA (org owner but never assigned here) has
+    // no visibility into it — plannerA would read back zero rows regardless
+    // of whether the insert worked, a false negative unrelated to the fix.
+    const { data: ciExplicitOwnerAssignment, error: ciExplicitOwnerAssignmentErr } = await plannerAdmin
+      .from("assignments")
+      .select("role")
+      .eq("instance_id", ciExplicitOwnerResult?.instanceId)
+      .eq("user_id", userCiViewer.user.id)
+      .maybeSingle();
+    assert(
+      !ciExplicitOwnerAssignmentErr && ciExplicitOwnerAssignment?.role === "owner",
+      "explicit p_owner_user_id different from the caller receives their own planner.assignments row with role owner",
+    );
+
+    // 10c — the explicit owner can immediately read the instance through
+    // their own session, not just via the admin/owner client — proves real
+    // access, not just a cosmetic owner_user_id column value.
+    const { data: ciExplicitOwnerRead, error: ciExplicitOwnerReadErr } = await userCiViewer.client
+      .schema("planner")
+      .from("instances")
+      .select("id")
+      .eq("id", ciExplicitOwnerResult?.instanceId);
+    assert(
+      !ciExplicitOwnerReadErr && (ciExplicitOwnerRead ?? []).length === 1,
+      "the explicit owner can immediately read the instance through their own session",
+    );
+
+    // 10d — replaying the explicit-owner create (same key, same payload) does
+    // not create a second planner.assignments row for the explicit owner.
+    const { data: ciExplicitOwnerReplay, error: ciExplicitOwnerReplayErr } = await userCiEditor.client.rpc("planner_create_instance", {
+      p_org_id: orgAId,
+      p_entity_type: "crm_deal",
+      p_entity_id: ciDeal2.id,
+      p_workflow_id: wfA.id,
+      p_name: `RLS CI Explicit Owner ${stamp}`,
+      p_planned_start: "2026-08-03",
+      p_idempotency_key: ciExplicitOwnerIdemKey,
+      p_tasks: [],
+      p_owner_user_id: userCiViewer.user.id,
+    });
+    assert(
+      !ciExplicitOwnerReplayErr && ciExplicitOwnerReplay?.ok === true && ciExplicitOwnerReplay?.replayed === true,
+      "replaying the explicit-owner create returns replayed:true",
+    );
+    const { data: ciExplicitOwnerAssignmentsAfterReplay, error: ciExplicitOwnerAssignmentsAfterReplayErr } = await plannerAdmin
+      .from("assignments")
+      .select("id")
+      .eq("instance_id", ciExplicitOwnerResult?.instanceId)
+      .eq("user_id", userCiViewer.user.id);
+    assert(
+      !ciExplicitOwnerAssignmentsAfterReplayErr && (ciExplicitOwnerAssignmentsAfterReplay ?? []).length === 1,
+      "replaying the explicit-owner create does not create a duplicate planner.assignments row (on conflict do nothing)",
+    );
+
     // 11 — no EXECUTE grant for anon.
     const { error: ciAnonCreateErr } = await anon.rpc("planner_create_instance", {
       p_org_id: orgAId,
@@ -2286,6 +2352,127 @@ try {
       p_tasks: [],
     });
     assert(!!ciAnonCreateErr, "anon cannot call planner_create_instance (no EXECUTE grant)");
+
+    // 12-15 — round-7 fix: malformed task fields return typed INVALID_INPUT,
+    // not a raw Postgres cast/data_exception error.
+    const { data: ciMalformedPhaseCreate, error: ciMalformedPhaseCreateErr } = await userCiEditor.client.rpc("planner_create_instance", {
+      p_org_id: orgAId,
+      p_entity_type: "crm_deal",
+      p_entity_id: crmDeal.id,
+      p_workflow_id: wfA.id,
+      p_name: `RLS CI Malformed Phase ${stamp}`,
+      p_planned_start: "2026-08-03",
+      p_idempotency_key: crypto.randomUUID(),
+      p_tasks: [{ phaseId: "not-a-uuid", title: "Bad Phase", startDate: "2026-08-03", endDate: "2026-08-04", durationDays: 2, sortOrder: 0 }],
+    });
+    assert(
+      !ciMalformedPhaseCreateErr && ciMalformedPhaseCreate?.ok === false && ciMalformedPhaseCreate?.code === "INVALID_INPUT",
+      "planner_create_instance rejects a malformed (non-UUID) phaseId as typed INVALID_INPUT, not a raw Postgres cast error",
+    );
+
+    const { data: ciMalformedDateCreate, error: ciMalformedDateCreateErr } = await userCiEditor.client.rpc("planner_create_instance", {
+      p_org_id: orgAId,
+      p_entity_type: "crm_deal",
+      p_entity_id: crmDeal.id,
+      p_workflow_id: wfA.id,
+      p_name: `RLS CI Malformed Date ${stamp}`,
+      p_planned_start: "2026-08-03",
+      p_idempotency_key: crypto.randomUUID(),
+      p_tasks: [{ phaseId: ciPhase1.id, title: "Bad Date", startDate: "not-a-date", endDate: "2026-08-04", durationDays: 2, sortOrder: 0 }],
+    });
+    assert(
+      !ciMalformedDateCreateErr && ciMalformedDateCreate?.ok === false && ciMalformedDateCreate?.code === "INVALID_INPUT",
+      "planner_create_instance rejects a malformed startDate as typed INVALID_INPUT",
+    );
+
+    const { data: ciMalformedSortCreate, error: ciMalformedSortCreateErr } = await userCiEditor.client.rpc("planner_create_instance", {
+      p_org_id: orgAId,
+      p_entity_type: "crm_deal",
+      p_entity_id: crmDeal.id,
+      p_workflow_id: wfA.id,
+      p_name: `RLS CI Malformed Sort ${stamp}`,
+      p_planned_start: "2026-08-03",
+      p_idempotency_key: crypto.randomUUID(),
+      p_tasks: [{ phaseId: ciPhase1.id, title: "Bad Sort", startDate: "2026-08-03", endDate: "2026-08-04", durationDays: 2, sortOrder: "not-a-number" }],
+    });
+    assert(
+      !ciMalformedSortCreateErr && ciMalformedSortCreate?.ok === false && ciMalformedSortCreate?.code === "INVALID_INPUT",
+      "planner_create_instance rejects a malformed (non-integer) sortOrder as typed INVALID_INPUT",
+    );
+
+    const { data: ciMalformedObjectCreate, error: ciMalformedObjectCreateErr } = await userCiEditor.client.rpc("planner_create_instance", {
+      p_org_id: orgAId,
+      p_entity_type: "crm_deal",
+      p_entity_id: crmDeal.id,
+      p_workflow_id: wfA.id,
+      p_name: `RLS CI Malformed Object ${stamp}`,
+      p_planned_start: "2026-08-03",
+      p_idempotency_key: crypto.randomUUID(),
+      p_tasks: ["just a string, not a task object"],
+    });
+    assert(
+      !ciMalformedObjectCreateErr && ciMalformedObjectCreate?.ok === false && ciMalformedObjectCreate?.code === "INVALID_INPUT",
+      "planner_create_instance rejects a non-object task element as typed INVALID_INPUT",
+    );
+
+    // 16 — all four malformed-task attempts above targeted the same (org,
+    // entity, workflow) tuple the positive-path probe (#5) already created a
+    // real instance for. Validating every task field before any write
+    // (round-7) means none of them could have left a phantom row — the
+    // count must still be exactly the one real instance from #5.
+    const { data: ciNoResidualInstance, error: ciNoResidualInstanceErr } = await plannerA
+      .from("instances")
+      .select("id")
+      .eq("org_id", orgAId)
+      .eq("entity_type", "crm_deal")
+      .eq("entity_id", crmDeal.id)
+      .eq("workflow_id", wfA.id);
+    assert(
+      !ciNoResidualInstanceErr && (ciNoResidualInstance ?? []).length === 1,
+      "malformed-task attempts leave zero phantom planner.instances rows — only the one real instance from the positive-path probe exists",
+    );
+
+    // 20 — round-7 fix: idempotency replay is denied once the actor's org
+    // role no longer permits creation. Authz now runs before the idempotency
+    // lookup, so a revoked-role actor cannot replay a cached ok:true result.
+    // Runs last (before cleanup) since it changes userCiEditor's role.
+    const ciRevokeReplayKey = crypto.randomUUID();
+    const { data: ciRevokeReplayCreate, error: ciRevokeReplayCreateErr } = await userCiEditor.client.rpc("planner_create_instance", {
+      p_org_id: orgAId,
+      p_entity_type: "crm_deal",
+      p_entity_id: ciDeal3.id,
+      p_workflow_id: wfA.id,
+      p_name: `RLS CI Revoke Replay ${stamp}`,
+      p_planned_start: "2026-08-03",
+      p_idempotency_key: ciRevokeReplayKey,
+      p_tasks: [],
+    });
+    assert(
+      !ciRevokeReplayCreateErr && ciRevokeReplayCreate?.ok === true,
+      "org A editor creates an instance for the revoked-role replay probe (positive path, while still authorized)",
+    );
+
+    const { error: ciDemoteEditorErr } = await admin
+      .from("org_members")
+      .update({ role: "viewer" })
+      .eq("org_id", orgAId)
+      .eq("user_id", userCiEditor.user.id);
+    assert(!ciDemoteEditorErr, "admin demotes the CI editor to viewer for the revoked-role replay probe");
+
+    const { data: ciRevokeReplayRetry, error: ciRevokeReplayRetryErr } = await userCiEditor.client.rpc("planner_create_instance", {
+      p_org_id: orgAId,
+      p_entity_type: "crm_deal",
+      p_entity_id: ciDeal3.id,
+      p_workflow_id: wfA.id,
+      p_name: `RLS CI Revoke Replay ${stamp}`,
+      p_planned_start: "2026-08-03",
+      p_idempotency_key: ciRevokeReplayKey,
+      p_tasks: [],
+    });
+    assert(
+      !ciRevokeReplayRetryErr && ciRevokeReplayRetry?.ok === false && ciRevokeReplayRetry?.code === "FORBIDDEN",
+      "identical retry with the same idempotency key is denied FORBIDDEN once the actor's org role no longer permits creation (round-7: authz before idempotency)",
+    );
   } finally {
     if (userCiViewer?.user?.id) {
       const { error } = await deleteAuthUser(userCiViewer.user.id);
