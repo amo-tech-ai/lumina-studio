@@ -6841,6 +6841,7 @@ export type Database = {
           p_idempotency_key: string
           p_name: string
           p_org_id: string
+          p_owner_user_id?: string
           p_planned_start: string
           p_tasks: Json
           p_workflow_id: string
