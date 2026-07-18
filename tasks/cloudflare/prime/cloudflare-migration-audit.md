@@ -1,8 +1,8 @@
 # Cloudflare Migration Forensic Audit (superseded)
 
-> **Superseded 2026-07-18.** This draft predates PR #468 merge and incorrectly states `ipix-operator` is not deployed.  
-> **Use instead:** [`docs/audits/cloudflare-migration-audit.md`](../../docs/audits/cloudflare-migration-audit.md)  
-> **Concise plan:** [`04-plan-hosting.md`](04-plan-hosting.md)
+> **Superseded 2026-07-18.** This draft predates PR #468 merge and incorrectly states preview is not deployed.  
+> **Use instead:** [`docs/audits/cloudflare-hosting-implementation-audit.md`](../../docs/audits/cloudflare-hosting-implementation-audit.md)  
+> **Coordinator summary:** [`j18-cloudflare-audit.md`](j18-cloudflare-audit.md) · **Plan:** [`j18-cloudflare-plan.md`](j18-cloudflare-plan.md)
 
 ---
 
