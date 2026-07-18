@@ -52,6 +52,12 @@ export function mapProviderIdentity(payload: CloudinaryNotification): {
   return out;
 }
 
+function synthesizeAuthenticatedUrl(publicId: string, resourceType: string): string | undefined {
+  const cloud = process.env.CLOUDINARY_CLOUD_NAME?.trim();
+  if (!cloud) return undefined;
+  return `https://res.cloudinary.com/${cloud}/${resourceType}/authenticated/${publicId}`;
+}
+
 /**
  * Official rename notifications use `to_public_id` / `from_public_id` and often omit
  * `public_id` + `secure_url`. Normalize so handleUpload can reuse the same path.
@@ -70,13 +76,9 @@ export function normalizeCloudinaryNotification(
   if (!toPublicId) return payload;
 
   const resourceType = payload.resource_type ?? "image";
-  const cloud = process.env.CLOUDINARY_CLOUD_NAME?.trim();
   // iPix uploads use type=authenticated; rename payloads rarely include secure_url.
   const secureUrl =
-    payload.secure_url ??
-    (cloud
-      ? `https://res.cloudinary.com/${cloud}/${resourceType}/authenticated/${toPublicId}`
-      : undefined);
+    payload.secure_url ?? synthesizeAuthenticatedUrl(toPublicId, resourceType);
 
   return {
     ...payload,
@@ -155,8 +157,13 @@ async function logNonFatal(
 type AssetUpsertResult = {
   assetId: string;
   effectiveBrandId: string | null;
-  /** Rename path: sync assets.cloudinary_public_id only after the mirror write succeeds. */
+  /** Rename / null→value: sync assets.cloudinary_public_id only after the mirror write succeeds. */
   deferAssetPublicIdSync?: boolean;
+  /**
+   * Overwrite with same public_id: still push a newly resolved brand_id onto assets
+   * without rewriting url/cloudinary_public_id (avoids redundant-write 503s).
+   */
+  reconcileBrandOnly?: boolean;
 };
 
 type MirrorRow = {
@@ -578,9 +585,32 @@ async function syncAssetPublicIdAfterMirror(
   return false;
 }
 
+/** Brand-only assets patch — used on overwrite when public_id/url must not be rewritten. */
+async function syncAssetBrandAfterMirror(
+  db: ReturnType<typeof createSupabaseAdminClient>,
+  assetId: string,
+  brandId: string,
+): Promise<boolean> {
+  const { error } = await db.from("assets").update({ brand_id: brandId }).eq("id", assetId);
+  if (!error) return true;
+  if (isBrandFkViolation(error)) {
+    console.error(
+      "[cloudinary/webhook] brand_id update rejected on overwrite, preserving existing brand:",
+      error.message,
+    );
+    // Mirror already holds the candidate or prior brand; do not 503 the webhook for FK noise.
+    return true;
+  }
+  console.error("[cloudinary/webhook] assets brand reconcile failed:", error.message);
+  return false;
+}
+
 /**
  * When provider asset_id is known, reuse the existing assets row across public_id rename.
- * Defer assets.cloudinary_public_id write until after the mirror update succeeds.
+ * Defer assets.cloudinary_public_id write only when public_id actually changes — overwrite
+ * with the same public_id must not 503 on a redundant assets sync after a successful mirror write.
+ * (Library delivery uses signed URLs from public_id; assets.url is not required on overwrite.)
+ * Null stored public_id still counts as a change (legacy / incomplete mirrors).
  */
 async function resolveAssetForUpload(
   db: ReturnType<typeof createSupabaseAdminClient>,
@@ -596,10 +626,17 @@ async function resolveAssetForUpload(
 
   if (priorLookup.kind === "error") return undefined;
   if (priorLookup.kind === "found") {
+    const storedPublicId = priorLookup.mirror.public_id;
+    // Direct inequality: null → value must sync assets (legacy mirrors).
+    const publicIdChanged = storedPublicId !== publicId;
+    // Always attempt brand push on same-public_id overwrites when a candidate exists —
+    // assets.brand_id may still be null after an earlier FK failure even if the mirror already has it.
+    const reconcileBrandOnly = !publicIdChanged && brandId != null;
     return {
       assetId: priorLookup.mirror.asset_id,
       effectiveBrandId: brandId ?? priorLookup.mirror.brand_id,
-      deferAssetPublicIdSync: true,
+      deferAssetPublicIdSync: publicIdChanged,
+      reconcileBrandOnly,
     };
   }
 
@@ -610,8 +647,17 @@ async function handleUpload(
   db: ReturnType<typeof createSupabaseAdminClient>,
   payload: CloudinaryNotification,
 ): Promise<UploadHandleResult> {
-  const { public_id: publicId, secure_url: secureUrl, resource_type: resourceType } = payload;
-  if (!publicId || !secureUrl || !resourceType) {
+  const publicId = payload.public_id;
+  const resourceType = payload.resource_type;
+  let secureUrl = payload.secure_url;
+  const isRename = payload.notification_type === "rename";
+
+  if (!publicId || !resourceType) {
+    console.error("[cloudinary/webhook] upload notification missing required fields", payload);
+    return {};
+  }
+  // Upload/eager always include secure_url. Rename may omit it — resolve after mirror lookup.
+  if (!secureUrl && !isRename) {
     console.error("[cloudinary/webhook] upload notification missing required fields", payload);
     return {};
   }
@@ -654,6 +700,20 @@ async function handleUpload(
     }
   }
 
+  // Rename may omit secure_url — always synthesize for the *new* public_id.
+  // Never reuse prior mirror.secure_url (points at the old path after rename).
+  if (!secureUrl) {
+    secureUrl = synthesizeAuthenticatedUrl(publicId, resourceType);
+  }
+  if (!secureUrl) {
+    console.error(
+      "[cloudinary/webhook] rename/upload missing secure_url and CLOUDINARY_CLOUD_NAME is empty after trim",
+      { publicId, notification_type: payload.notification_type },
+    );
+    // Misconfig or incomplete rename — retry if env is fixed; do not silently ack.
+    return { retryable: true };
+  }
+
   const upserted = await resolveAssetForUpload(db, {
     publicId,
     secureUrl,
@@ -662,7 +722,7 @@ async function handleUpload(
     priorLookup,
   });
   if (!upserted) return {};
-  const { assetId, effectiveBrandId, deferAssetPublicIdSync } = upserted;
+  const { assetId, effectiveBrandId, deferAssetPublicIdSync, reconcileBrandOnly } = upserted;
 
   // Mirror first on rename so a failed public_id write cannot leave assets ahead of cloudinary_assets.
   const persisted = await upsertCloudinaryAssetRecord(db, assetId, {
@@ -701,6 +761,10 @@ async function handleUpload(
     });
     // Mirror already has the new public_id — ask Cloudinary to retry so assets can catch up.
     if (!synced) return { retryable: true };
+  } else if (reconcileBrandOnly && brandId) {
+    // Same public_id overwrite: skip url/public_id rewrite, but do not drop brand backfill.
+    const branded = await syncAssetBrandAfterMirror(db, canonicalAssetId, brandId);
+    if (!branded) return { retryable: true };
   }
 
   // Concurrent race: we inserted a provisional assets row, then discovered the canonical
@@ -835,12 +899,15 @@ async function handleDelete(db: ReturnType<typeof createSupabaseAdminClient>, pa
 type SignatureVerification = { ok: true; rawBody: string } | { ok: false; response: NextResponse };
 
 async function verifyWebhookSignature(request: Request): Promise<SignatureVerification> {
-  const cloudName = process.env.CLOUDINARY_CLOUD_NAME;
-  const apiKey = process.env.CLOUDINARY_API_KEY;
+  // Trim so whitespace-only values fail closed (same as empty) — avoids rename URL
+  // synthesis seeing "" after trim while signature setup treated the raw value as set.
+  const cloudName = process.env.CLOUDINARY_CLOUD_NAME?.trim();
+  const apiKey = process.env.CLOUDINARY_API_KEY?.trim();
   // Notifications may be signed by the oldest/dedicated key (payload.signature_key),
   // which can differ from CLOUDINARY_API_KEY used for Upload/Admin API calls.
   const apiSecret =
-    process.env.CLOUDINARY_NOTIFICATION_API_SECRET?.trim() || process.env.CLOUDINARY_API_SECRET;
+    process.env.CLOUDINARY_NOTIFICATION_API_SECRET?.trim() ||
+    process.env.CLOUDINARY_API_SECRET?.trim();
   if (!cloudName || !apiKey || !apiSecret) {
     console.error("[cloudinary/webhook] Cloudinary env vars missing");
     return { ok: false, response: NextResponse.json({ error: "Internal error" }, { status: 500 }) };

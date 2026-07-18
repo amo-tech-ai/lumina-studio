@@ -382,25 +382,42 @@ async function main() {
       if (!asset) return null;
       const { data: ca } = await admin
         .from("cloudinary_assets")
-        .select("public_id, status, version, brand_id, resource_type, delivery_type")
+        .select(
+          "public_id, status, version, brand_id, resource_type, delivery_type, cloudinary_asset_id",
+        )
         .eq("public_id", publicId)
         .maybeSingle();
       if (!ca || ca.status !== "ready") return null;
       return { asset, ca };
     });
     assetId = uploadRow.asset.id;
+    const providerAssetId = upJson.asset_id ?? null;
+    const identityOk =
+      !!uploadRow.ca.cloudinary_asset_id &&
+      (!providerAssetId || uploadRow.ca.cloudinary_asset_id === providerAssetId) &&
+      uploadRow.ca.version === upJson.version;
     report.upload = {
       asset_id: assetId,
       brand_id: uploadRow.asset.brand_id,
       cloudinary_status: uploadRow.ca.status,
       version: uploadRow.ca.version,
       delivery_type: uploadRow.ca.delivery_type,
+      cloudinary_asset_id: uploadRow.ca.cloudinary_asset_id,
+      provider_asset_id: providerAssetId,
+      identity_ok: identityOk,
     };
     report.stages.push(
       stage(
         "genuine-upload-webhook",
         uploadRow.asset.brand_id === brandId && uploadRow.ca.status === "ready",
         `asset=${assetId} brand=${uploadRow.asset.brand_id} version=${uploadRow.ca.version}`,
+      ),
+    );
+    report.stages.push(
+      stage(
+        "ipi641-provider-identity",
+        identityOk,
+        `cloudinary_asset_id=${uploadRow.ca.cloudinary_asset_id ?? "null"} expected=${providerAssetId ?? "any"} version=${uploadRow.ca.version} cld=${upJson.version}`,
       ),
     );
 
