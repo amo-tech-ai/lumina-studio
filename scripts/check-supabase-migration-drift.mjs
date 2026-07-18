@@ -107,25 +107,41 @@ function mapMigrationRows(rows) {
   }));
 }
 
+/** Index of a JSON array start, skipping log tags like `[INFO]` / `[debug]`. */
+function findJsonArrayStart(raw) {
+  // Array of objects: `[{...`  or empty array: `[]` (optional whitespace).
+  const re = /\[\s*(?:\{|\])/g;
+  const m = re.exec(raw);
+  return m ? m.index : -1;
+}
+
 function parseMigrationListJson(raw) {
   const envelopeStart = raw.indexOf('{"migrations"');
   if (envelopeStart >= 0) {
     const end = raw.lastIndexOf("}");
     if (end < envelopeStart) throw new Error("Could not parse migration list JSON");
-    const parsed = JSON.parse(raw.slice(envelopeStart, end + 1));
-    const rows = parsed.migrations;
-    if (!Array.isArray(rows)) throw new Error("migration list JSON missing migrations array");
-    return mapMigrationRows(rows);
+    try {
+      const parsed = JSON.parse(raw.slice(envelopeStart, end + 1));
+      const rows = parsed.migrations;
+      if (!Array.isArray(rows)) throw new Error("migration list JSON missing migrations array");
+      return mapMigrationRows(rows);
+    } catch (err) {
+      throw new Error(`Could not parse migration list JSON envelope: ${err.message}`);
+    }
   }
 
-  // Bare array (or log-prefixed array) — do not use indexOf("{") (that hits the first element).
-  const arrayStart = raw.indexOf("[");
+  // Bare array (or log-prefixed array). Never use raw indexOf("[") — that matches `[INFO]`.
+  const arrayStart = findJsonArrayStart(raw);
   if (arrayStart >= 0) {
     const end = raw.lastIndexOf("]");
     if (end < arrayStart) throw new Error("Could not parse migration list JSON");
-    const rows = JSON.parse(raw.slice(arrayStart, end + 1));
-    if (!Array.isArray(rows)) throw new Error("migration list JSON missing migrations array");
-    return mapMigrationRows(rows);
+    try {
+      const rows = JSON.parse(raw.slice(arrayStart, end + 1));
+      if (!Array.isArray(rows)) throw new Error("migration list JSON missing migrations array");
+      return mapMigrationRows(rows);
+    } catch (err) {
+      throw new Error(`Could not parse migration list JSON array: ${err.message}`);
+    }
   }
 
   throw new Error("Could not parse migration list JSON");
@@ -221,9 +237,11 @@ function parseDryRunPending(raw) {
 }
 
 function dryRunIsUsable(dry) {
+  // Exit 0 is always trusted. Non-zero is only accepted when the CLI clearly
+  // reported "up to date" — do NOT treat a parsed pending filename list as
+  // success on failure (CLI may print migrations then die on auth/connection).
   if (dry.ok) return true;
   if (/Remote database is up to date/i.test(dry.out)) return true;
-  if (parseDryRunPending(dry.out).length > 0) return true;
   return false;
 }
 
@@ -237,6 +255,17 @@ if (args.includes("--self-check")) {
   const bare = parseMigrationListJson('[{"local":"1","remote":"1"},{"local":"2","remote":""}]');
   assert.equal(bare.length, 2);
   assert.equal(bare[1].local, "2");
+
+  const logPrefixed = parseMigrationListJson(
+    '[INFO] Connecting...\n[{"local":"1","remote":"1"}]\n',
+  );
+  assert.equal(logPrefixed.length, 1);
+  assert.equal(logPrefixed[0].local, "1");
+
+  const debugPrefixed = parseMigrationListJson(
+    'noise [debug] foo\n[{"local":"9","remote":""}]\n',
+  );
+  assert.equal(debugPrefixed[0].local, "9");
 
   const empty = parseMigrationListJson("[]");
   assert.equal(empty.length, 0);
@@ -252,11 +281,28 @@ if (args.includes("--self-check")) {
   assert.deepEqual(wouldOnly, ["20230108110451_this_should_fail.sql"]);
 
   assert.equal(dryRunIsUsable({ ok: false, out: "auth failed", status: 1 }), false);
+  // Pending filenames on a failed dry-run must NOT count as usable.
   assert.equal(
     dryRunIsUsable({
       ok: false,
       out: "Would push migration 20230108110451_x.sql...\n",
       status: 1,
+    }),
+    false,
+  );
+  assert.equal(
+    dryRunIsUsable({
+      ok: false,
+      out: "Remote database is up to date\n",
+      status: 1,
+    }),
+    true,
+  );
+  assert.equal(
+    dryRunIsUsable({
+      ok: true,
+      out: "Would push migration 20230108110451_x.sql...\n",
+      status: 0,
     }),
     true,
   );
