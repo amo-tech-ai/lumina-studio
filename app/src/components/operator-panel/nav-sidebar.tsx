@@ -87,8 +87,10 @@ export function NavSidebar({
                 href={href}
                 className={`${styles.item} ${active ? styles.itemActive : ""}`}
                 title={!open ? label : undefined}
+                aria-label={label}
+                aria-current={active ? "page" : undefined}
               >
-                <span className={styles.icon}>{icon}</span>
+                <span className={styles.icon} aria-hidden="true">{icon}</span>
                 {open && <span className={styles.label}>{label}</span>}
               </Link>
             </li>
@@ -103,8 +105,9 @@ export function NavSidebar({
             className={styles.item}
             onClick={onThreadsClick}
             title={!open ? "Chat threads" : undefined}
+            aria-label="Chat threads"
           >
-            <span className={styles.icon}>💬</span>
+            <span className={styles.icon} aria-hidden="true">💬</span>
             {open && <span className={styles.label}>Threads</span>}
           </button>
         </div>
