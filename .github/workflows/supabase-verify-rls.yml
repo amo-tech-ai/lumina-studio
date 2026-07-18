@@ -93,6 +93,16 @@ jobs:
           DB_URL="${DATABASE_URL:-${SUPABASE_DB_URL:-}}"
           psql "$DB_URL" -v ON_ERROR_STOP=1 -f supabase/tests/security/chatbot-grants.sql
 
+      - name: SECURITY DEFINER RPC grant assertions (IPI-679)
+        if: steps.gate.outputs.mode == 'run'
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          set -euo pipefail
+          DB_URL="${DATABASE_URL:-${SUPABASE_DB_URL:-}}"
+          psql "$DB_URL" -v ON_ERROR_STOP=1 -f supabase/tests/security/definer-grants.sql
+
       - name: verify-rls (fail-closed service role)
         if: steps.gate.outputs.mode == 'run'
         env:
