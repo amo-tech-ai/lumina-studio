@@ -78,7 +78,8 @@
         }
       ],
       "secrets": {
-        "required": ["GEMINI_API_KEY", "SUPABASE_SERVICE_ROLE_KEY", "COPILOTKIT_LICENSE_TOKEN"]
+        // COPILOTKIT_LICENSE_TOKEN is optional — synced when present; SSE mode without it.
+        "required": ["GEMINI_API_KEY", "SUPABASE_SERVICE_ROLE_KEY"]
       }
     },
     "production": {
@@ -97,7 +98,8 @@
         }
       ],
       "secrets": {
-        "required": ["GEMINI_API_KEY", "SUPABASE_SERVICE_ROLE_KEY", "COPILOTKIT_LICENSE_TOKEN"]
+        // COPILOTKIT_LICENSE_TOKEN is optional — synced when present; SSE mode without it.
+        "required": ["GEMINI_API_KEY", "SUPABASE_SERVICE_ROLE_KEY"]
       }
     }
   }

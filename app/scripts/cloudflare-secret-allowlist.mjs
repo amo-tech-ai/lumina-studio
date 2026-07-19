@@ -62,7 +62,8 @@ export const RUNTIME_SECRET_NAMES = Object.freeze([
  * - SENTRY_AUTH_TOKEN — build-time source map upload (Sentry webpack plugin)
  * - CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID — GitHub Actions deploy credentials
  * - INFISICAL_CLIENT_ID, INFISICAL_CLIENT_SECRET — bootstrap Universal Auth (rotate after OIDC)
- * - NEXT_PUBLIC_* — GitHub repository **variables** for CI build (not GitHub secrets)
+ * - NEXT_PUBLIC_* — OpenNext build inputs from GitHub environment **variables**
+ *   (preferred) with secrets fallback in cloudflare-secrets-sync.yml — never Worker secrets
  */
 export const CI_ONLY_SECRET_NAMES = Object.freeze([
   "FIRECRAWL_WEBHOOK_SECRET",
@@ -87,13 +88,14 @@ export const INFISICAL_TO_WRANGLER_ENV = Object.freeze({
 });
 
 /**
- * Must be present in Infisical env before a non-dry-run sync.
- * Matches `secrets.required` in wrangler.jsonc — do not expand blindly (optional secrets stay optional).
+ * Must be present before a non-dry-run sync/upload.
+ * Matches `secrets.required` in wrangler.jsonc — fail closed for truly required only.
+ * COPILOTKIT_LICENSE_TOKEN stays in RUNTIME_SECRET_NAMES (optional): CopilotKit route
+ * warns and runs without thread persistence when absent (SSE mode).
  */
 export const RUNTIME_REQUIRED_SECRET_NAMES = Object.freeze([
   "GEMINI_API_KEY",
   "SUPABASE_SERVICE_ROLE_KEY",
-  "COPILOTKIT_LICENSE_TOKEN",
 ]);
 
 /** Allowlisted but optional — warn when absent; omit from upload JSON. */
