@@ -2,7 +2,8 @@
 
 **Linear:** [IPI-606](https://linear.app/amo100/issue/IPI-606) · **Parent:** [IPI-487](https://linear.app/amo100/issue/IPI-487)  
 **Pairs with:** [IPI-472](https://linear.app/amo100/issue/IPI-472) (OpenNext CI pipeline — see `app/docs/opennext-ci.md` when merged)  
-**Wrangler SSOT:** `app/wrangler.jsonc`
+**Wrangler SSOT:** `app/wrangler.jsonc`  
+**Classification audit:** `docs/audits/secrets-classification-verification.md`
 
 Infisical is the **single source of truth** for secret values. This document defines how secret **names** route to Cloudflare build-time vs runtime surfaces. **No secret values belong in git, CI logs, or this file.**
 
@@ -40,14 +41,30 @@ flowchart LR
   SYNC --> WR --> WK
 ```
 
-**Two paths, least privilege:**
+**Three paths, least privilege:**
 
 | Path | Identity allowlist | Destination | Tool |
 |------|-------------------|-------------|------|
 | **CI build** | `BUILD_TIME_SECRET_NAMES` | GitHub Actions job `env` | `Infisical/secrets-action@v1` (OIDC) |
 | **Deploy sync** | `RUNTIME_SECRET_NAMES` | Cloudflare Worker secrets | `scripts/sync-wrangler-secrets-from-infisical.mjs` → `wrangler versions upload --secrets-file` |
+| **Plain config** | `WRANGLER_VAR_NAMES` | Worker `vars` at deploy | GitHub environment **variables** → upload `--var` passthrough |
 
 Allowlist module (SSOT for names): `app/scripts/cloudflare-secret-allowlist.mjs`
+
+## Worker secrets vs Secrets Store (not interchangeable)
+
+This repo uses **per-Worker secrets** (`wrangler secret put`, `--secrets-file`). Values are available as `process.env.SECRET_NAME` (Node.js compat) or `env.SECRET_NAME` in the fetch handler.
+
+**Cloudflare Secrets Store** (account-level, beta) is a different product:
+
+| | Worker secrets | Secrets Store binding |
+|--|----------------|----------------------|
+| Scope | One Worker | Account-level, reusable |
+| Config | `secrets.required` in wrangler | `secrets_store_secrets` binding |
+| Runtime access | `process.env.API_KEY` / `env.API_KEY` (string) | `await env.BINDING.get()` (async, throws on error) |
+| Sync tool | `--secrets-file`, `wrangler secret put` | `wrangler secrets-store secret create` |
+
+**Do not add `secrets_store_secrets` bindings** until [IPI-TBD CF-SEC-030] completes a full env inventory and operators choose centralized rotation. Store ID `6a663ade…` exists in the account but is **not wired** in this Worker. Mixing Worker secrets and Secrets Store bindings for the same logical credential causes duplicate-binding errors.
 
 ## Build-time vs runtime contract
 
@@ -60,44 +77,80 @@ Inlined into client bundles — **NEXT_PUBLIC_* only**.
 | `NEXT_PUBLIC_SUPABASE_URL` | Public Supabase project URL |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Publishable anon key (not service role) |
 | `NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME` | Optional — client-side Cloudinary |
-| `NEXT_PUBLIC_CLOUDINARY_API_KEY` | Optional — client-side upload widget |
+| `NEXT_PUBLIC_CLOUDINARY_API_KEY` | Optional — client-side upload widget (public key, not API secret) |
 | `NEXT_PUBLIC_MARKETING_CHAT_ENABLED` | Feature flag |
 | `NEXT_PUBLIC_E2E_UPLOAD_POLL_MAX_MS` | E2E tuning |
 
+**GitHub labeling:** `NEXT_PUBLIC_*` values are **not sensitive** — prefer GitHub repository **variables** (not secrets) for CI build injection.
+
 **Forbidden in build export:** `SERVICE_ROLE`, `*_SECRET`, any non-`NEXT_PUBLIC_*` name (enforced by `assertNoForbiddenSecrets(..., "build")`).
+
+### WRANGLER_VARS (deploy-time `vars`)
+
+Non-secret configuration — plain text, available as `process.env` at Worker runtime. **Wrangler configuration is the deployment source of truth** — do not set production values in the Cloudflare Dashboard; a later deploy overwrites Dashboard edits.
+
+| Var name | Required at bootstrap | Notes |
+|----------|----------------------|-------|
+| `MASTRA_STORAGE_MODE` | (committed) | `noop` until Hyperdrive (IPI-619) — in `wrangler.jsonc` |
+| `OPERATOR_AUTH_ENABLED` | (committed) | Fail-closed operator auth (IPI-468) — in `wrangler.jsonc` |
+| `INTELLIGENCE_API_URL` | **Yes** | CopilotKit Intelligence REST — GitHub env variable |
+| `INTELLIGENCE_GATEWAY_WS_URL` | **Yes** | CopilotKit Intelligence WebSocket — GitHub env variable |
+| `AI_GATEWAY_URL` | No | Legacy custom Worker gateway base URL (frozen) |
+| `CLOUDINARY_CLOUD_NAME` | No | Public cloud id |
+| `CLOUDINARY_API_KEY` | No | Public upload-widget key; **not** `CLOUDINARY_API_SECRET` |
+
+**Ownership:** configure `INTELLIGENCE_*`, `AI_GATEWAY_URL`, and `CLOUDINARY_*` as GitHub **environment variables** on `preview` and `production`. The bootstrap workflow passes them to `upload-opennext-with-secrets.mjs`, which forwards `--var KEY:VALUE` to Wrangler during upload.
+
+**Local dev:** copy `app/.dev.vars.example` → `.dev.vars` and set the same names for `wrangler dev` / `infisical run`.
 
 ### RUNTIME_WRANGLER (`wrangler versions upload --secrets-file`)
 
 Server-only — never in client chunks. Synced by the allowlist script via a secure ephemeral JSON file (chmod 600, deleted in `finally`).
 
-| Secret name | Notes |
-|-------------|-------|
-| `GEMINI_API_KEY` | Mastra / Gemini provider |
-| `GROQ_API_KEY` | Groq provider |
-| `OPENAI_API_KEY` | Optional OpenAI fallback |
-| `DATABASE_URL` | Mastra Postgres (until Hyperdrive IPI-619) |
-| `SUPABASE_SERVICE_ROLE_KEY` | Server-side Supabase admin |
-| `CLOUDINARY_CLOUD_NAME` | Server Cloudinary |
-| `CLOUDINARY_API_KEY` | Server Cloudinary |
-| `CLOUDINARY_API_SECRET` | Server signing |
-| `CLOUDINARY_NOTIFICATION_API_SECRET` | Webhook verification |
-| `COPILOTKIT_LICENSE_TOKEN` | CopilotKit runtime |
-| `INTELLIGENCE_API_KEY` | CopilotKit Intelligence |
-| `INTELLIGENCE_API_URL` | Intelligence REST |
-| `INTELLIGENCE_GATEWAY_WS_URL` | Intelligence WebSocket |
-| `FIRECRAWL_API_KEY` | Visual identity agent |
-| `AI_GATEWAY_URL` | Legacy custom Worker gateway (frozen) |
-| `AI_GATEWAY_API_KEY` | Legacy gateway auth |
-| `INTERNAL_WEBHOOK_SECRET` | Brand-intelligence workflow resume webhook auth |
+| Secret name | Required at bootstrap | Notes |
+|-------------|----------------------|-------|
+| `GEMINI_API_KEY` | **Yes** | Mastra / Gemini provider |
+| `SUPABASE_SERVICE_ROLE_KEY` | **Yes** | Server-side Supabase admin |
+| `COPILOTKIT_LICENSE_TOKEN` | **Yes** | CopilotKit runtime license |
+| `GROQ_API_KEY` | No | Groq provider |
+| `OPENAI_API_KEY` | No | Optional OpenAI fallback |
+| `DATABASE_URL` | No | Mastra Postgres — optional while `MASTRA_STORAGE_MODE=noop` (IPI-619 Hyperdrive) |
+| `CLOUDINARY_API_SECRET` | No | Server signing |
+| `CLOUDINARY_NOTIFICATION_API_SECRET` | No | Webhook verification |
+| `INTELLIGENCE_API_KEY` | No | CopilotKit Intelligence auth |
+| `FIRECRAWL_API_KEY` | No | Visual identity agent |
+| `AI_GATEWAY_API_KEY` | No | Legacy gateway auth |
+| `INTERNAL_WEBHOOK_SECRET` | No | Brand-intelligence workflow resume webhook auth |
+| `CAPTURE_LEAD_PROXY_SECRET` | No | Marketing lead proxy HMAC (`/api/marketing-lead`) |
 
-**Forbidden in runtime sync:** any `NEXT_PUBLIC_*` (enforced by `assertNoForbiddenSecrets(..., "runtime")`).
+**Forbidden in runtime sync:** any `NEXT_PUBLIC_*`, any name in `WRANGLER_VAR_NAMES` (enforced by `assertNoForbiddenSecrets(..., "runtime")`).
 
-### Plain configuration (not secrets)
+### CI_ONLY (other surfaces — not Worker runtime)
 
-Set in `wrangler.jsonc` `vars` — not synced from Infisical:
+Documented in `CI_ONLY_SECRET_NAMES` (`cloudflare-secret-allowlist.mjs`):
 
-- `MASTRA_STORAGE_MODE`
-- `OPERATOR_AUTH_ENABLED`
+| Name | Surface |
+|------|---------|
+| `FIRECRAWL_WEBHOOK_SECRET` | Supabase edge function `firecrawl-webhook` only |
+| `SENTRY_AUTH_TOKEN` | Build-time source map upload |
+| `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID` | GitHub Actions deploy credentials |
+| `INFISICAL_CLIENT_ID`, `INFISICAL_CLIENT_SECRET` | Bootstrap Universal Auth |
+
+## `secrets.required` — do not expand blindly
+
+`wrangler.jsonc` declares `secrets.required` for **cf-typegen** and deploy validation. Only names that **must** exist before any preview bootstrap belong here:
+
+```jsonc
+"secrets": {
+  "required": ["GEMINI_API_KEY", "SUPABASE_SERVICE_ROLE_KEY", "COPILOTKIT_LICENSE_TOKEN"]
+}
+```
+
+Optional secrets (e.g. `DATABASE_URL`, `GROQ_API_KEY`) stay in `RUNTIME_SECRET_NAMES` but **outside** `secrets.required` so partial bootstrap and noop-storage deploys succeed.
+
+## `--secrets-file` omission preserves existing secrets
+
+Per [Cloudflare Workers secrets docs](https://developers.cloudflare.com/workers/configuration/secrets/#upload-secrets-alongside-code): secrets **not** included in the upload JSON are **preserved** from the previous Worker version. Partial sync uploads only change listed keys — omitting a key does **not** delete it. Explicit deletion requires `wrangler secret delete` or `wrangler versions secret delete`.
 
 ## Environment mapping
 
@@ -168,7 +221,7 @@ infisical run --env=dev -- npm run dev
 | **Greenfield Worker** | Same script (auto-fallback) | If the Worker script does not exist, falls back to `opennextjs-cloudflare deploy -- --secrets-file` once |
 | **Secret rotation only** (Worker already live) | `sync-wrangler-secrets-from-infisical.mjs` | Metadata-only version via `wrangler versions upload --secrets-file` without rebuilding |
 
-Do **not** upload code first and sync secrets in a second step — that creates two versions and can fail when `GEMINI_API_KEY` is listed under `secrets.required`.
+Do **not** upload code first and sync secrets in a second step — that creates two versions and can fail when required secrets are missing from `secrets.required`.
 
 ### Dry-run (names only)
 
@@ -189,7 +242,11 @@ export NEXT_PUBLIC_SUPABASE_ANON_KEY=...
 export CLOUDFLARE_API_TOKEN=...
 export CLOUDFLARE_ACCOUNT_ID=...
 export GEMINI_API_KEY=...
-# ... other allowlisted runtime secrets
+export SUPABASE_SERVICE_ROLE_KEY=...
+export COPILOTKIT_LICENSE_TOKEN=...
+export INTELLIGENCE_API_URL=...
+export INTELLIGENCE_GATEWAY_WS_URL=...
+# ... other allowlisted runtime secrets and optional WRANGLER_VAR_NAMES
 npm run cf-typegen
 npm run build:cf
 node scripts/upload-opennext-with-secrets.mjs \
@@ -218,12 +275,12 @@ validate pairing → validate OIDC (if selected) → fetch secrets → build:cf 
 
 IPI-632 smoke is a separate manual gate after preview URL exists.
 
-Configure repo **Settings → Environments**:
+Configure repo **Settings → Environments** (each environment must define its complete `WRANGLER_VAR_NAMES` set — Wrangler named envs do not inherit vars from the top level):
 
-| Environment | Purpose |
-|-------------|---------|
-| `preview` | Preview Worker bootstrap; optional branch restriction to `main` |
-| `production` | Production bootstrap; **required reviewers** + branch restriction |
+| Environment | Purpose | GitHub variables (non-secret) |
+|-------------|---------|-------------------------------|
+| `preview` | Preview Worker bootstrap | `INTELLIGENCE_API_URL`, `INTELLIGENCE_GATEWAY_WS_URL`, optional `AI_GATEWAY_URL`, `CLOUDINARY_*` |
+| `production` | Production bootstrap; **required reviewers** | Same variable names with production values |
 
 Build job integration (when OIDC ready) — add to `app-build` in `ci.yml`:
 
@@ -259,7 +316,17 @@ node -e "
 " $(wrangler secret list --env preview | jq -r '.[].name')
 ```
 
-**Drift remediation:** re-run sync from Infisical SSOT. Extra orphan secrets: delete manually with `wrangler secret delete <NAME> --env <env>` after operator review.
+### Orphan secret inventory and deletion
+
+When the allowlist shrinks (e.g. URLs reclassified from secrets → vars), deployed Workers may retain **orphan secrets** — names no longer in `RUNTIME_SECRET_NAMES`. Wrangler does not auto-delete omitted secrets on `--secrets-file` upload.
+
+1. **List deployed names:** `wrangler secret list --env preview` (repeat for production).
+2. **Diff against allowlist:** use `diffSecretNames()` — `extra` entries are orphans.
+3. **Operator review:** confirm each orphan is unused (grep codebase + check Infisical path).
+4. **Delete:** `wrangler secret delete <NAME> --env preview` (one name at a time; production requires approval).
+5. **Record:** note deletions in the change ticket; re-run bootstrap dry-run to confirm allowlist parity.
+
+**Drift remediation (values):** re-run sync from Infisical SSOT or GitHub environment secrets. **Do not** patch values in the Cloudflare Dashboard — use the bootstrap upload path so Wrangler remains SSOT.
 
 ## Rotation procedure
 
@@ -288,12 +355,15 @@ There is no `wrangler secret restore` — Infisical remains SSOT.
 - CI build identity: **BUILD_TIME allowlist only**.
 - Deploy sync identity: **RUNTIME allowlist + Cloudflare deploy token** only.
 - Prefer OIDC over Universal Auth for GitHub Actions.
+- Use `WRANGLER_VAR_NAMES` for URLs and public identifiers — not runtime secrets.
 
 ## Related
 
 | Doc / issue | Scope |
 |-------------|-------|
 | `app/docs/opennext-ci.md` | IPI-472 CI pipeline, bundle gate, wrangler env names |
+| `docs/audits/secrets-classification-verification.md` | CF-SEC-010 audit verification (82/100 baseline) |
+| IPI-TBD CF-SEC-030 | Full env inventory + Secrets Store wiring decision |
 | IPI-468 | Fail-closed operator auth (`OPERATOR_AUTH_ENABLED`) |
 | IPI-619 | Hyperdrive — may remove Worker `DATABASE_URL` |
 | IPI-632 | Protected preview runtime smoke after secrets land |
