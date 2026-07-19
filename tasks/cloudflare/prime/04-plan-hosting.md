@@ -1,6 +1,8 @@
 # Cloudflare hosting — executive plan (2026-07-18)
 
-**Full forensic audit:** [`docs/audits/cloudflare-migration-audit.md`](../../docs/audits/cloudflare-migration-audit.md)  
+**J18 audit (2026-07-18):** [`j18-cloudflare-audit.md`](j18-cloudflare-audit.md) · [`j18-cloudflare-plan.md`](j18-cloudflare-plan.md)  
+**Full forensic audit:** [`docs/audits/cloudflare-hosting-implementation-audit.md`](../../docs/audits/cloudflare-hosting-implementation-audit.md)  
+**Prior audit:** [`docs/audits/cloudflare-migration-audit.md`](../../docs/audits/cloudflare-migration-audit.md)  
 **Task inventory:** [`01-cloudflare-hosting.md`](01-cloudflare-hosting.md) · **Official links:** [`02-links.md`](02-links.md)
 
 ---
