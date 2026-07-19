@@ -44,33 +44,24 @@ test.describe("Notification Center inbox", () => {
   });
 
   test("2. Mark read: dot removed immediately, and persists across a reload (real POST, real DB write)", async ({ page }) => {
-    // Known-broken, not caused by this PR: clicking a real notification row
-    // on /app/inbox reproducibly (2/2 attempts, both retries) does not
-    // register — data-unread stays "true" after a real Playwright .click().
-    // Same pre-existing client-hydration hang the IPI-407 lead + verifier
-    // both independently reproduced on the untouched /app/shoots route
-    // (tracked separately as task_52b72674) — now confirmed via genuine
-    // Chromium automation too, not just the Claude Browser pane's remote
-    // control. The click-handler LOGIC itself is proven correct by
-    // inbox-workspace.test.tsx's real-React-rendering + fireEvent tests,
-    // which exercise the identical markRead() code path without hitting
-    // whatever is wrong with hydration in this environment.
-    test.fixme(true, "pre-existing hydration hang — see task_52b72674, not an IPI-407 regression");
-
     await page.goto("/app/inbox");
     await page.locator(ROW).first().waitFor();
     await page.waitForLoadState("networkidle");
-    await page.waitForTimeout(1000); // let hydration settle before the first interaction
 
     // Target whatever is genuinely unread right now — a live fixture, not a
     // fixed seed, so which row (if any) is unread shifts across runs.
-    const unreadRow = page.locator(`${ROW}[data-unread="true"]`).first();
     const hasUnread = (await page.locator(`${ROW}[data-unread="true"]`).count()) > 0;
     test.skip(!hasUnread, "no unread row in the live fixture right now — all previously marked read");
-    const targetId = await unreadRow.evaluate((el) => el.textContent);
+    // Capture stable content BEFORE clicking, then locate by that content —
+    // not by [data-unread="true"], which stops matching the instant the
+    // click succeeds. Re-asserting on a locator whose own filter the click
+    // invalidates looks identical to "the click did nothing" even when it
+    // worked; match on identity, not on the state being asserted.
+    const targetId = await page.locator(`${ROW}[data-unread="true"]`).first().evaluate((el) => el.textContent);
+    const targetRow = page.locator(ROW).filter({ hasText: targetId ?? "" }).first();
 
-    await unreadRow.click();
-    await expect(unreadRow).toHaveAttribute("data-unread", "false");
+    await targetRow.click();
+    await expect(targetRow).toHaveAttribute("data-unread", "false");
 
     await page.reload();
     await page.locator(ROW).first().waitFor();
