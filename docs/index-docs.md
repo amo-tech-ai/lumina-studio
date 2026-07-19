@@ -1,15 +1,20 @@
 ---
 title: "iPix Documentation Index"
-version: "1.0"
-lastUpdated: "2026-06-14"
-status: "Active"
-purpose: "Master navigation for /docs — hierarchy, authority rules, and AI-native dashboard compliance"
+version: "1.1"
+lastUpdated: "2026-07-19"
+status: "Archive — stale navigation"
+purpose: "Historical /docs navigation map. Prefer repo root index.md for current authority."
 ---
+
+> **Archive / staleness banner (2026-07-19):** This file is a dated `/docs` navigation draft.
+> Counts, several directory indexes, and some paths are stale. Prefer the repository audit
+> index at [`../index.md`](../index.md) for current source-of-truth hierarchy. Keep this file
+> only for local `/docs` browsing after the link repairs below.
 
 # iPix Documentation Index
 
-**Scope:** Everything under [`/docs`](./) (2,100+ markdown files).  
-**Repo index:** [`../index.md`](../index.md) — code, skills, scripts, and cross-repo navigation.  
+**Scope:** Everything under [`/docs`](./) (~180 markdown files on `origin/main` as of 2026-07-19).
+**Repo index:** [`../index.md`](../index.md) — code, skills, scripts, and cross-repo navigation.
 **Product truth:** [`../prd.md`](../prd.md) · [`../mvp.md`](../mvp.md) · [`../todo.md`](../todo.md)
 
 ---
@@ -47,14 +52,14 @@ prd.md / mvp.md / todo.md          (repo root — product + sequence)
 
 | I want to… | Start here |
 |------------|------------|
-| Pick the next Linear task | [`linear/issues/README.md`](./linear/issues/README.md) |
-| Wire CopilotKit + Mastra | [`intelligence/README.md`](./intelligence/README.md) |
+| Pick the next Linear task | [`linear/issues/`](./linear/issues/) (local mirrors; live Linear wins) |
+| Wire CopilotKit + Mastra | [`intelligence/ai/02-ai-native-dashboards-plan.md`](./intelligence/ai/02-ai-native-dashboards-plan.md) |
 | Upgrade a dashboard with AI | [`intelligence/ai/02-ai-native-dashboards-plan.md`](./intelligence/ai/02-ai-native-dashboards-plan.md) |
 | Gemini edge functions | [`gemeni/gemeni-plan.md`](./gemeni/gemeni-plan.md) |
 | Commerce / Mercur boundary | [`ipix-commerce-prd.md`](./ipix-commerce-prd.md) |
-| Cloudinary media pipeline | [`cloudinary/cloudinary-plan.md`](./cloudinary/cloudinary-plan.md) |
+| Cloudinary media pipeline | [`../tasks/cloudinary/cloudinary-plan.md`](../tasks/cloudinary/cloudinary-plan.md) |
 | Shoot system & DNA | [`shoot/00-ai-model-reference.md`](./shoot/00-ai-model-reference.md) (see [`shoot/`](./shoot/)) |
-| Supabase secrets | [`supabase/secrets-inventory.md`](./supabase/secrets-inventory.md) |
+| Supabase secrets / backend | [`../supabase/`](../supabase/) (no `/docs/supabase/secrets-inventory.md` on main) |
 | Infisical layout | [`infisical/folder-structure.md`](./infisical/folder-structure.md) |
 
 ---
@@ -63,21 +68,21 @@ prd.md / mvp.md / todo.md          (repo root — product + sequence)
 
 | Directory | ~Files | Role | Index / entry |
 |-----------|--------|------|----------------|
-| [`linear/`](./linear/) | 99 | Workspace, roadmaps, MCP | [`linear-plan.md`](./linear/linear-plan.md) |
-| [`linear/issues/`](./linear/issues/) | 95 | **IPI issue specs** (COM, PLT, AI, UI, DASH, AIOR, CLD, …) | [`README.md`](./linear/issues/README.md) |
-| [`intelligence/`](./intelligence/) | 14 | AI layer, CopilotKit, Mastra, dashboards | [`README.md`](./intelligence/README.md) |
-| [`tasks/`](./tasks/) | 131 | Master plans, wireframes, schema notes | [`tasks/index-tasks.md`](./tasks/index-tasks.md) |
+| [`linear/`](./linear/) | 99 | Workspace, roadmaps, MCP | [`linear/`](./linear/) |
+| [`linear/issues/`](./linear/issues/) | ~48 | **IPI issue specs** (COM, PLT, AI, UI, DASH, AIOR, CLD, …) | [`linear/issues/`](./linear/issues/) |
+| [`intelligence/`](./intelligence/) | 14 | AI layer, CopilotKit, Mastra, dashboards | [`intelligence/ai/02-ai-native-dashboards-plan.md`](./intelligence/ai/02-ai-native-dashboards-plan.md) |
+| [`tasks/`](./tasks/) | 131 | Master plans, wireframes, schema notes | [`tasks/wireframes-ipix/new/00-index.md`](./tasks/wireframes-ipix/new/00-index.md) |
 | [`tasks/wireframes-ipix/new/`](./tasks/wireframes-ipix/new/) | 17+ | **iPix operator wireframes** | [`00-index.md`](./tasks/wireframes-ipix/new/00-index.md) |
 | [`shoot/`](./shoot/) | 33 | Shot lists, DNA, wizard, Postiz | numbered `00–` docs |
-| [`wireframes/`](./wireframes/) | 22 | Earlier wireframe drafts | [`wireframes/00-index.md`](./wireframes/00-index.md) |
-| [`plan/`](./plan/) | 564 | FashionOS-era plans, foundation, prompts | [`plan/index-plan.md`](./plan/index-plan.md) |
+| `wireframes/` (removed from `/docs`) | — | Earlier drafts moved under tasks wireframes | [`tasks/wireframes-ipix/new/00-index.md`](./tasks/wireframes-ipix/new/00-index.md) |
+| [`plan/`](./plan/) | — | FashionOS-era plans, foundation, prompts | [`plan/`](./plan/) |
 | [`lean/`](./lean/) | 170 | Lean MVP task breakdown | — |
 | [`website/`](./website/) | 35 | Marketing site notes | — |
 | [`ipix/`](./ipix/) | 14 | Repo reviews, PRD iterations, canvas | — |
-| [`cloudinary/`](./cloudinary/) | 5 | CLD-001→012 strategy | [`cloudinary-plan.md`](./cloudinary/cloudinary-plan.md) |
+| Cloudinary (not under `/docs`) | — | CLD strategy lives in tasks | [`../tasks/cloudinary/cloudinary-plan.md`](../tasks/cloudinary/cloudinary-plan.md) |
 | [`gemeni/`](./gemeni/) | 1 | AI-009→018 Gemini roadmap | [`gemeni-plan.md`](./gemeni/gemeni-plan.md) |
 | [`infisical/`](./infisical/) | 2 | Secrets migration | [`folder-structure.md`](./infisical/folder-structure.md) |
-| [`supabase/`](./supabase/) | 1 | Secret inventory | [`secrets-inventory.md`](./supabase/secrets-inventory.md) |
+| Supabase (not under `/docs`) | — | Backend + migrations at repo root | [`../supabase/`](../supabase/) |
 | [`archive/`](./archive/) | 10 | Superseded — do not implement from here | — |
 | [`pr/`](./pr/) | 3 | PR merge notes | — |
 | [`plans/`](./plans/) | 3 | One-off integration plans | — |
@@ -104,9 +109,7 @@ prd.md / mvp.md / todo.md          (repo root — product + sequence)
 
 | Doc | Description |
 |-----|-------------|
-| [`intelligence/README.md`](./intelligence/README.md) | Intelligence folder index |
-| [`intelligence/01-copilotkit-mastra-implementation-plan.md`](./intelligence/01-copilotkit-mastra-implementation-plan.md) | **Canonical** orchestration architecture |
-| [`intelligence/ai/02-ai-native-dashboards-plan.md`](./intelligence/ai/02-ai-native-dashboards-plan.md) | **Canonical** AI-native dashboard pattern (L1–L5) |
+| [`intelligence/ai/02-ai-native-dashboards-plan.md`](./intelligence/ai/02-ai-native-dashboards-plan.md) | **Canonical** AI-native dashboard pattern (L1–L5); use as intelligence entry when no folder README exists |
 | [`intelligence/ai/copilotkit-operator-ui.md`](./intelligence/ai/copilotkit-operator-ui.md) | CopilotKit v2 + 3-panel wiring |
 | [`intelligence/ai/mastra-agent-catalog.md`](./intelligence/ai/mastra-agent-catalog.md) | Agent specs |
 | [`intelligence/ai/mastra-workflows.md`](./intelligence/ai/mastra-workflows.md) | Workflows + HITL |
@@ -135,7 +138,7 @@ prd.md / mvp.md / todo.md          (repo root — product + sequence)
 | AIOR-* | 81–90 | Mastra + CopilotKit runtime |
 | DASH-* | 91–102 | AI-native dashboard implementation |
 
-Sync: [`linear/issues/README.md`](./linear/issues/README.md#sync-workflow)
+Sync: export/update mirrors under [`linear/issues/`](./linear/issues/); live Linear remains authoritative.
 
 ---
 
