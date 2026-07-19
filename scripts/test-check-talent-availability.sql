@@ -59,6 +59,8 @@ begin
   end;
 end;
 $$;
+-- IPI-684: global default EXECUTE no longer includes PUBLIC; SET ROLE tests need this.
+grant execute on function pg_temp.assert_raises(text, text) to public;
 
 do $tests$
 declare
