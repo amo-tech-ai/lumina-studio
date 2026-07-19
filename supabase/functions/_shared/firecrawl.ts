@@ -37,11 +37,31 @@ export type FirecrawlWebhookPayload = {
   success?: boolean;
   type?: string;
   id?: string;
+  /** Stable delivery id reused on Firecrawl retries (when present). */
+  webhookId?: string;
   status?: string;
   data?: FirecrawlPage[];
   metadata?: Record<string, string>;
   error?: string;
 };
+
+/**
+ * Dedupe key for terminal crawl events.
+ * Prefer Firecrawl `webhookId` (stable across retries); fall back to job+event
+ * when crawl payloads omit webhookId (common in current crawl.completed docs).
+ */
+export function firecrawlWebhookClaimId(
+  payload: Pick<FirecrawlWebhookPayload, "webhookId" | "id" | "type">,
+  eventType: string,
+): string | null {
+  const fromWebhook = typeof payload.webhookId === "string"
+    ? payload.webhookId.trim()
+    : "";
+  if (fromWebhook) return fromWebhook;
+  const jobId = typeof payload.id === "string" ? payload.id.trim() : "";
+  if (!jobId || !eventType) return null;
+  return `fc:${jobId}:${eventType}`;
+}
 
 function requireApiKey(): string {
   const key = getOptionalSecret("FIRECRAWL_API_KEY");
