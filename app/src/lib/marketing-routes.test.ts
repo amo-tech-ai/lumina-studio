@@ -14,6 +14,7 @@ const OPERATOR_SECTIONS = [
   "assets",
   "campaigns",
   "crm",
+  "inbox",
   "matching",
   "onboarding",
   "planner",

@@ -26,6 +26,7 @@ import { IntelligenceDetailProvider } from "@/context/intelligence-detail-contex
 import { NavSidebar } from "./nav-sidebar";
 import { OperatorChatDock } from "./operator-chat-dock";
 import { useOperatorBrands } from "./use-operator-brands";
+import { useUnreadNotifications } from "./use-unread-notifications";
 import styles from "./operator-shell.module.css";
 import { resolveAgentId } from "@/lib/route-agent-map";
 import { routeBrandId, routeShootId } from "@/lib/intelligence/normalize-route-path";
@@ -87,6 +88,7 @@ function OperatorShell({
   const [threadsOpen, setThreadsOpen] = useState(false);
   const { activeBrandId, setActiveBrandId } = useActiveBrand();
   const { brands, brandsRef, brandsLoadingRef } = useOperatorBrands(devSkip);
+  const unreadNotifications = useUnreadNotifications();
 
   useHeroBrandSync();
 
@@ -211,6 +213,7 @@ function OperatorShell({
         brands={brands}
         activeBrandId={activeBrandId}
         onBrandSelect={setActiveBrandId}
+        unreadNotifications={unreadNotifications}
       />
 
       {/* Center — page content + bottom chat dock (DC PersistentChatDock) */}

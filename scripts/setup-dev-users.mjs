@@ -298,11 +298,11 @@ const SEED_DATA = [
   ]},
   // Notifications
   { table: "notifications", rows: [
-    { id: "00000000-0000-0000-0000-000000000701", kind: "approval_request", channel: "in-app", read: false, payload: { message: "New brand intake pending review", brand_id: BRAND_1 }, brand_org_id: ORG_1 },
-    { id: "00000000-0000-0000-0000-000000000702", kind: "deal_update", channel: "in-app", read: false, payload: { message: "Zara deal moved to qualified — $50k", deal_id: "00000000-0000-0000-0000-000000000601" }, brand_org_id: ORG_1, crm_deal_id: "00000000-0000-0000-0000-000000000601" },
-    { id: "00000000-0000-0000-0000-000000000703", kind: "campaign_milestone", channel: "in-app", read: true, payload: { message: "SS26 campaign is now active", campaign_id: "00000000-0000-0000-0000-000000000401" }, brand_org_id: ORG_1 },
-    { id: "00000000-0000-0000-0000-000000000704", kind: "approval_request", channel: "in-app", read: false, payload: { message: "Shot list ready for review — SS26 Collection", campaign_id: "00000000-0000-0000-0000-000000000401" }, brand_org_id: ORG_1 },
-    { id: "00000000-0000-0000-0000-000000000705", kind: "deal_update", channel: "in-app", read: true, payload: { message: "H&M deal in negotiation — $28k", deal_id: "00000000-0000-0000-0000-000000000604" }, brand_org_id: ORG_1, crm_deal_id: "00000000-0000-0000-0000-000000000604" },
+    { id: "00000000-0000-4000-8000-000000000701", kind: "approval_request", channel: "in-app", read: false, payload: { message: "New brand intake pending review", brand_id: BRAND_1 }, brand_org_id: ORG_1 },
+    { id: "00000000-0000-4000-8000-000000000702", kind: "deal_update", channel: "in-app", read: false, payload: { message: "Zara deal moved to qualified — $50k", deal_id: "00000000-0000-0000-0000-000000000601" }, brand_org_id: ORG_1, crm_deal_id: "00000000-0000-0000-0000-000000000601" },
+    { id: "00000000-0000-4000-8000-000000000703", kind: "campaign_milestone", channel: "in-app", read: true, payload: { message: "SS26 campaign is now active", campaign_id: "00000000-0000-0000-0000-000000000401" }, brand_org_id: ORG_1 },
+    { id: "00000000-0000-4000-8000-000000000704", kind: "approval_request", channel: "in-app", read: false, payload: { message: "Shot list ready for review — SS26 Collection", campaign_id: "00000000-0000-0000-0000-000000000401" }, brand_org_id: ORG_1 },
+    { id: "00000000-0000-4000-8000-000000000705", kind: "deal_update", channel: "in-app", read: true, payload: { message: "H&M deal in negotiation — $28k", deal_id: "00000000-0000-0000-0000-000000000604" }, brand_org_id: ORG_1, crm_deal_id: "00000000-0000-0000-0000-000000000604" },
   ]},
 ];
 

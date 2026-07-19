@@ -129,11 +129,11 @@ on conflict (id) do nothing;
 
 -- Notifications
 insert into public.notifications (id, kind, channel, read, payload, brand_org_id, crm_deal_id) values
-  ('00000000-0000-0000-0000-000000000701', 'approval_request', 'in-app', false, '{"message":"New brand intake pending review","brand_id":"00000000-0000-0000-0000-000000000201"}'::jsonb, '00000000-0000-0000-0000-000000000001', null),
-  ('00000000-0000-0000-0000-000000000702', 'deal_update', 'in-app', false, '{"message":"Zara deal moved to qualified — $50k","deal_id":"00000000-0000-0000-0000-000000000601"}'::jsonb, '00000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000601'),
-  ('00000000-0000-0000-0000-000000000703', 'campaign_milestone', 'in-app', true, '{"message":"SS26 campaign is now active","campaign_id":"00000000-0000-0000-0000-000000000401"}'::jsonb, '00000000-0000-0000-0000-000000000001', null),
-  ('00000000-0000-0000-0000-000000000704', 'approval_request', 'in-app', false, '{"message":"Shot list ready for review — SS26 Collection","campaign_id":"00000000-0000-0000-0000-000000000401"}'::jsonb, '00000000-0000-0000-0000-000000000001', null),
-  ('00000000-0000-0000-0000-000000000705', 'deal_update', 'in-app', true, '{"message":"H&M deal in negotiation — $28k","deal_id":"00000000-0000-0000-0000-000000000604"}'::jsonb, '00000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000604')
+  ('00000000-0000-4000-8000-000000000701', 'approval_request', 'in-app', false, '{"message":"New brand intake pending review","brand_id":"00000000-0000-0000-0000-000000000201"}'::jsonb, '00000000-0000-0000-0000-000000000001', null),
+  ('00000000-0000-4000-8000-000000000702', 'deal_update', 'in-app', false, '{"message":"Zara deal moved to qualified — $50k","deal_id":"00000000-0000-0000-0000-000000000601"}'::jsonb, '00000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000601'),
+  ('00000000-0000-4000-8000-000000000703', 'campaign_milestone', 'in-app', true, '{"message":"SS26 campaign is now active","campaign_id":"00000000-0000-0000-0000-000000000401"}'::jsonb, '00000000-0000-0000-0000-000000000001', null),
+  ('00000000-0000-4000-8000-000000000704', 'approval_request', 'in-app', false, '{"message":"Shot list ready for review — SS26 Collection","campaign_id":"00000000-0000-0000-0000-000000000401"}'::jsonb, '00000000-0000-0000-0000-000000000001', null),
+  ('00000000-0000-4000-8000-000000000705', 'deal_update', 'in-app', true, '{"message":"H&M deal in negotiation — $28k","deal_id":"00000000-0000-0000-0000-000000000604"}'::jsonb, '00000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000604')
 on conflict (id) do nothing;
 
 
