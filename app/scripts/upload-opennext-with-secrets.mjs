@@ -73,10 +73,10 @@ function printHelp() {
     --infisical-env <dev|staging|prod> --wrangler-env <preview|production> [--dry-run]
 
 Uploads OpenNext bundle and runtime secrets in one Worker version via:
-  opennextjs-cloudflare upload --env <env> -- --secrets-file <ephemeral-json>
+  opennextjs-cloudflare upload --env <env> -- --var KEY:VALUE --secrets-file <ephemeral-json>
 
 Greenfield fallback (Worker script missing):
-  opennextjs-cloudflare deploy --env <env> -- --secrets-file <ephemeral-json>
+  opennextjs-cloudflare deploy --env <env> -- --var KEY:VALUE --secrets-file <ephemeral-json>
 
 Requires in env: CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID, allowlisted runtime secrets.
 Run \`npm run build:cf\` before this script on live uploads.
@@ -84,22 +84,38 @@ Run \`npm run build:cf\` before this script on live uploads.
 }
 
 /**
+ * Build `opennextjs-cloudflare` argv.
+ * OpenNext strips `--` and forwards unknown flags to Wrangler (`unknown-options-as-args`),
+ * but we still place Wrangler-only flags (`--var`, `--secrets-file`) after `--` so intent
+ * matches the passthrough contract and survives stricter CLI parsing later.
+ *
  * @param {string} command upload | deploy
  * @param {string} wranglerEnv
  * @param {string} secretsFilePath
- * @param {string[]} varCliArgs wrangler `--var KEY:VALUE` before `--` passthrough
+ * @param {string[]} varCliArgs wrangler `--var KEY:VALUE` pairs
+ * @returns {string[]}
  */
-function runOpenNext(command, wranglerEnv, secretsFilePath, varCliArgs) {
+export function buildOpenNextCliArgs(command, wranglerEnv, secretsFilePath, varCliArgs) {
   const envFlag = wranglerEnv === "production" ? "production" : "preview";
-  const args = [
+  return [
     command,
     "--env",
     envFlag,
-    ...varCliArgs,
     "--",
+    ...varCliArgs,
     "--secrets-file",
     secretsFilePath,
   ];
+}
+
+/**
+ * @param {string} command upload | deploy
+ * @param {string} wranglerEnv
+ * @param {string} secretsFilePath
+ * @param {string[]} varCliArgs wrangler `--var KEY:VALUE` after `--` passthrough
+ */
+function runOpenNext(command, wranglerEnv, secretsFilePath, varCliArgs) {
+  const args = buildOpenNextCliArgs(command, wranglerEnv, secretsFilePath, varCliArgs);
 
   const r = spawnSync(opennextCli, args, {
     cwd: appDir,

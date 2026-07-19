@@ -204,7 +204,7 @@ export function collectWranglerVarsFromEnv(env) {
 }
 
 /**
- * Build wrangler CLI `--var KEY:VALUE` args (before the `--` passthrough separator).
+ * Build wrangler CLI `--var KEY:VALUE` args (placed after OpenNext `--` passthrough).
  * @param {Record<string, string>} vars
  * @returns {string[]}
  */

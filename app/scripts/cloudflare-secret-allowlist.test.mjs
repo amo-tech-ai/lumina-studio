@@ -305,6 +305,27 @@ describe("sync-wrangler-secrets-from-infisical", () => {
 });
 
 describe("upload-opennext-with-secrets", () => {
+  it("places --var and --secrets-file after OpenNext -- passthrough", async () => {
+    const { buildOpenNextCliArgs } = await import("./upload-opennext-with-secrets.mjs");
+    const varArgs = buildWranglerVarCliArgs({
+      INTELLIGENCE_API_URL: "https://intel.example/api",
+      AI_GATEWAY_URL: "https://gateway.example",
+    });
+    const args = buildOpenNextCliArgs("upload", "preview", "/tmp/secrets.json", varArgs);
+    const sep = args.indexOf("--");
+    expect(sep).toBeGreaterThan(0);
+    expect(args.slice(0, sep)).toEqual(["upload", "--env", "preview"]);
+    expect(args.slice(sep)).toEqual([
+      "--",
+      "--var",
+      "AI_GATEWAY_URL:https://gateway.example",
+      "--var",
+      "INTELLIGENCE_API_URL:https://intel.example/api",
+      "--secrets-file",
+      "/tmp/secrets.json",
+    ]);
+  });
+
   it("parseWorkerVersionId extracts UUID from wrangler output", async () => {
     const { parseWorkerVersionId } = await import("./upload-opennext-with-secrets.mjs");
     expect(
