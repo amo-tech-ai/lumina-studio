@@ -75,6 +75,11 @@
         {
           "binding": "WORKER_SELF_REFERENCE",
           "service": "ipix-operator-preview"
+        },
+        {
+          // IPI-510: same-zone Worker→Worker via *.workers.dev needs a service binding
+          "binding": "AI_GATEWAY",
+          "service": "ai-gateway"
         }
       ],
       "secrets": {
@@ -95,6 +100,10 @@
         {
           "binding": "WORKER_SELF_REFERENCE",
           "service": "ipix-operator"
+        },
+        {
+          "binding": "AI_GATEWAY",
+          "service": "ai-gateway"
         }
       ],
       "secrets": {

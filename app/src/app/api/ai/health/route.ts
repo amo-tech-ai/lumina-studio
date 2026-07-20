@@ -1,61 +1,40 @@
 import { NextResponse } from "next/server";
-import {
-  createProviderAdapter,
-  DEFAULT_AI_GATEWAY_URL,
-} from "@/lib/ai/provider-adapter";
+import { getCloudflareContext } from "@opennextjs/cloudflare";
+import { probeAiGatewayHealth } from "@/lib/ai/probe-ai-gateway-health";
 
 export const dynamic = "force-dynamic";
 
+type EnvWithAiGateway = {
+  AI_GATEWAY?: { fetch: (input: RequestInfo | URL, init?: RequestInit) => Promise<Response> };
+};
+
+async function resolveAiGatewayFetcher(): Promise<EnvWithAiGateway["AI_GATEWAY"] | undefined> {
+  try {
+    const { env } = await getCloudflareContext({ async: true });
+    return (env as EnvWithAiGateway | undefined)?.AI_GATEWAY;
+  } catch {
+    // Node/Vitest / non-Worker runtimes — fall back to AI_GATEWAY_URL.
+    return undefined;
+  }
+}
+
 /**
- * IPI-461 controlled runtime proof: app constructs the adapter and probes gateway /health.
+ * IPI-461 / IPI-510: probe custom ai-gateway Worker /health.
+ * Prefer `AI_GATEWAY` service binding on Workers (same-zone *.workers.dev fetch fails).
  * Does not wire Mastra resolveModel() — that is IPI-454 AC-F.
+ * Never returns secret values (only hasApiKey boolean).
  */
 export async function GET() {
-  const gatewayUrl = process.env.AI_GATEWAY_URL ?? DEFAULT_AI_GATEWAY_URL;
-  const hasApiKey = Boolean(process.env.AI_GATEWAY_API_KEY);
-  const adapter = createProviderAdapter({ baseUrl: gatewayUrl });
-
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 5_000);
 
   try {
-    const response = await fetch(`${gatewayUrl}/health`, {
+    const gatewayFetcher = await resolveAiGatewayFetcher();
+    const { httpStatus, body } = await probeAiGatewayHealth({
+      gatewayFetcher,
       signal: controller.signal,
     });
-
-    if (!response.ok) {
-      return NextResponse.json(
-        {
-          status: "gateway_error",
-          gatewayUrl,
-          hasApiKey,
-          httpStatus: response.status,
-          adapterAvailable: typeof adapter.chat === "function",
-        },
-        { status: 502 },
-      );
-    }
-
-    const health = await response.json();
-    return NextResponse.json({
-      status: "ok",
-      gatewayUrl,
-      hasApiKey,
-      gateway: health,
-      adapterAvailable: typeof adapter.chat === "function",
-    });
-  } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
-    return NextResponse.json(
-      {
-        status: "gateway_unreachable",
-        gatewayUrl,
-        hasApiKey,
-        error: message,
-        adapterAvailable: typeof adapter.chat === "function",
-      },
-      { status: 503 },
-    );
+    return NextResponse.json(body, { status: httpStatus });
   } finally {
     clearTimeout(timeout);
   }
