@@ -35,7 +35,10 @@ type SmokeEnv = {
 };
 
 function isSmokeEnabled(envFlag: string | undefined): boolean {
-  return envFlag === "true" || process.env.ENABLE_CF_AI_SMOKE === "true";
+  // Wrangler types the committed var as literal "false"; coerce for runtime flip.
+  const fromEnv = envFlag != null ? String(envFlag) : undefined;
+  const fromProcess = process.env.ENABLE_CF_AI_SMOKE;
+  return fromEnv === "true" || fromProcess === "true";
 }
 
 function json(
