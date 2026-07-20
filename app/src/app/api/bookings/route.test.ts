@@ -169,10 +169,13 @@ describe("POST /api/bookings", () => {
     );
   });
 
-  it("still rejects a cross-organization request even with a validly-formatted QA org id — validation does not weaken RPC authorization", async () => {
+  it("propagates a service-layer 403 for a cross-organization request even with a validly-formatted QA org id (route-level check only — not an RPC/RLS authorization test)", async () => {
     // Format validation now passes for QA_ORG_ID, but create_booking_request's own
-    // `is_org_member(p_brand_org_id)` check is what actually gates access — simulate
-    // that RPC-level rejection here to prove the two layers are independent.
+    // `is_org_member(p_brand_org_id)` check is what actually gates access in
+    // production. This test only proves the route correctly forwards a 403 the
+    // service layer returns — it mocks createBookingRequest, so it does NOT
+    // independently verify the RPC's own SQL-level authorization. A real
+    // SQL/pgTAP test for that lives with the RPC's own migration coverage.
     mockCreateBookingRequest.mockResolvedValueOnce({
       ok: false,
       status: 403,
