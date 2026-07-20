@@ -26,29 +26,60 @@ export type MoveDealStageFailure = {
   message: string;
 };
 export type MoveDealStageResult =
-  | { ok: true; dealId: string; stage: string }
+  | { ok: true; dealId: string; stage: string; updatedAt: string }
   | MoveDealStageFailure;
 
 /** Org-scoped, allow-list-guarded deal stage update. `stage` is typed to
  *  `NonTerminalDealStage` so a caller can't pass "won"/"lost" without an
  *  explicit cast — the DB's own `crm_deals_guard_terminal_stage()` trigger
  *  (IPI-362) is the real backstop, this is defense-in-depth matching the
- *  pattern already used across this codebase's other CRM writes. */
+ *  pattern already used across this codebase's other CRM writes.
+ *
+ *  Optional `expectedStage` / `expectedUpdatedAt` are compare-and-set filters
+ *  (IPI-563): when present and zero rows match, return 409 rather than
+ *  silently overwriting a concurrent edit. */
 export async function moveDealStage(
-  { dealId, orgId, stage }: { dealId: string; orgId: string; stage: NonTerminalDealStage },
+  {
+    dealId,
+    orgId,
+    stage,
+    expectedStage,
+    expectedUpdatedAt,
+  }: {
+    dealId: string;
+    orgId: string;
+    stage: NonTerminalDealStage;
+    expectedStage?: string;
+    expectedUpdatedAt?: string;
+  },
   client: Db,
 ): Promise<MoveDealStageResult> {
-  const { data, error } = await client
-    .from("crm_deals")
-    .update({ stage })
-    .eq("id", dealId)
-    .eq("org_id", orgId)
-    .select("id, stage")
-    .single();
+  const hasCas = expectedStage != null || expectedUpdatedAt != null;
+  let q = client.from("crm_deals").update({ stage }).eq("id", dealId).eq("org_id", orgId);
+  if (expectedStage != null) q = q.eq("stage", expectedStage);
+  if (expectedUpdatedAt != null) q = q.eq("updated_at", expectedUpdatedAt);
+  const { data, error } = await q.select("id, stage, updated_at").single();
   if (error) {
-    // PGRST116 = no row matched id+org_id — stale/deleted/cross-org id, not a
-    // server failure. Same idiom as api/brands/[id] and api/intelligence/panel.
+    // PGRST116 = no row matched — either missing deal (404) or CAS miss (409).
     if (error.code === "PGRST116") {
+      if (hasCas) {
+        // CAS filter may miss because the deal was deleted — don't call that 409.
+        const { data: existing } = await client
+          .from("crm_deals")
+          .select("id")
+          .eq("id", dealId)
+          .eq("org_id", orgId)
+          .maybeSingle();
+        if (!existing) {
+          return { ok: false, status: 404, code: "NOT_FOUND", message: "Deal not found." };
+        }
+        return {
+          ok: false,
+          status: 409,
+          code: "STALE_BOOKING",
+          message: "This deal was updated elsewhere. Refresh and try again.",
+        };
+      }
       return { ok: false, status: 404, code: "NOT_FOUND", message: "Deal not found." };
     }
     // Never forward the raw PostgREST message to the client — it can include
@@ -56,5 +87,7 @@ export async function moveDealStage(
     console.error("[crm/move-deal-stage] update failed:", error.message);
     return { ok: false, status: 500, code: "INTERNAL_ERROR", message: "Failed to update deal stage." };
   }
-  return { ok: true, dealId: data.id, stage: data.stage };
+  // Return the new updated_at so the next CAS PATCH can use a fresh token
+  // (IPI-563) — stage-only responses left parents stuck on a stale timestamp.
+  return { ok: true, dealId: data.id, stage: data.stage, updatedAt: data.updated_at };
 }

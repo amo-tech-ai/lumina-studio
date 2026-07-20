@@ -68,10 +68,13 @@ export function DealDetailWorkspace({ data, fetchError }: Props) {
   // null) so WonBanner never shows a stale "not yet linked" state while
   // router.refresh() is still in flight — see DealStageControl's Props doc.
   const [confirmedBrandId, setConfirmedBrandId] = useState<string | null | undefined>(undefined);
+  // Fresh CAS token from the last successful non-terminal PATCH (IPI-563).
+  const [confirmedUpdatedAt, setConfirmedUpdatedAt] = useState<string | null>(null);
 
-  function handleStageChange(newStage: CrmDealStage, brandId?: string | null) {
+  function handleStageChange(newStage: CrmDealStage, brandId?: string | null, updatedAt?: string) {
     setConfirmedStage(newStage);
     if (brandId !== undefined) setConfirmedBrandId(brandId);
+    if (updatedAt) setConfirmedUpdatedAt(updatedAt);
   }
 
   if (fetchError || !data) {
@@ -96,7 +99,12 @@ export function DealDetailWorkspace({ data, fetchError }: Props) {
           <DealOverview deal={deal} companyName={companyName} />
 
           <div className={styles.stageLabel}>Stage</div>
-          <DealStageControl dealId={deal.id} stage={stage} onStageChange={handleStageChange} />
+          <DealStageControl
+            dealId={deal.id}
+            stage={stage}
+            updatedAt={confirmedUpdatedAt ?? deal.updated_at}
+            onStageChange={handleStageChange}
+          />
 
           {stage === "won" ? <WonBanner companyBrandId={brandId} /> : null}
 

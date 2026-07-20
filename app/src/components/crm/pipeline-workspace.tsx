@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Inbox, Lock } from "lucide-react";
 
 import { EmptyState } from "@/components/ui/empty-state";
@@ -10,10 +10,12 @@ import { ErrorState } from "@/components/ui/error-state";
 import type { DealRow } from "@/lib/crm/queries";
 import { crmDealStageDotToken, crmDealStageLabel, type CrmDealStage } from "@/lib/crm/status-tokens";
 import { formatMoney } from "@/lib/format";
+import { DealStageControl } from "./deal-stage-control";
 import styles from "./pipeline-workspace.module.css";
 
 const STAGES: CrmDealStage[] = ["lead", "qualified", "proposal", "negotiation", "won", "lost"];
 const LOCKED_STAGES = new Set<CrmDealStage>(["won", "lost"]);
+const OPEN_STAGES = new Set<CrmDealStage>(["lead", "qualified", "proposal", "negotiation"]);
 
 // crm_deals has no risk_score column (verified against the generated schema
 // types) — "at risk" is a naive staleness heuristic (no update in AT_RISK_DAYS,
@@ -25,6 +27,8 @@ const AT_RISK_DAYS = 14;
 type Props = {
   deals: DealRow[];
   companyNames: Record<string, string>;
+  /** id→display name for deal.owner (via getProfileNames), same as companies list. */
+  ownerNames: Record<string, string>;
   fetchError: string | null;
   /** Epoch ms, computed once in the Server Component (page.tsx) and passed
    *  down — never `Date.now()` inside this client component. The exact same
@@ -34,58 +38,65 @@ type Props = {
   now: number;
 };
 
-/** CRM Pipeline — ported from SCR-30-CRM-Pipeline.dc.html (IPI-395). The raw
- *  DC source is unavailable in this checkout (Universal-design-prompt-new/
- *  was removed before this ticket started); built from the Linear issue's own
- *  transcribed grid spec + AC table instead.
+/** CRM Pipeline — SCR-30 (IPI-395 + IPI-563 polish).
  *
- *  Dropped vs the DC/Linear spec: the per-card "risk dot" and "days in stage"
- *  — neither is backed by a real column (no risk_score, no stage_entered_at).
- *  "Updated Xd ago" (from updated_at) replaces "days in stage" as an honest,
- *  if imperfect, proxy. IntelligencePanel health-breakdown-on-select is
- *  dropped too — same call as Company/Contact Detail, no crm-assistant
- *  summary RPC exists yet. Won/Lost columns show a locked visual state only
- *  (lock icon + badge) — no ApprovalCard wiring, no conversion logic. Deal
- *  cards link to the existing /app/crm/pipeline/[id] stub (SCR-31, separate
- *  issue) rather than embedding deal detail inline. */
-export function PipelineWorkspace({ deals, companyNames, fetchError, now }: Props) {
+ *  DnD deferred: accessible Move via DealStageControl is the primary path
+ *  (WCAG 2.5.7). Drag-and-drop is out of scope for this ticket. */
+export function PipelineWorkspace({ deals: initialDeals, companyNames, ownerNames, fetchError, now }: Props) {
   const router = useRouter();
   const [atRiskOnly, setAtRiskOnly] = useState(false);
+  const [ownerFilter, setOwnerFilter] = useState("");
+  const [deals, setDeals] = useState(initialDeals);
+  const [liveMessage, setLiveMessage] = useState("");
+  const focusDealIdRef = useRef<string | null>(null);
 
-  if (fetchError) {
-    return (
-      <div className={styles.stateRoot}>
-        <ErrorState message={fetchError} onRetry={() => router.refresh()} />
-      </div>
-    );
-  }
+  useEffect(() => {
+    setDeals(initialDeals);
+  }, [initialDeals]);
 
-  if (deals.length === 0) {
-    return (
-      <div className={styles.stateRoot}>
-        <EmptyState
-          heading="No deals yet"
-          body="Deals will appear here once they're added to the pipeline."
-          icon={<Inbox />}
-        />
-      </div>
-    );
-  }
+  useEffect(() => {
+    const id = focusDealIdRef.current;
+    if (!id) return;
+    focusDealIdRef.current = null;
+    // Restore focus on the Move control after the card relocates columns.
+    requestAnimationFrame(() => {
+      const el = document.querySelector<HTMLElement>(`[data-deal-move="${id}"] button:not([disabled])`);
+      el?.focus();
+    });
+  }, [deals, liveMessage]);
 
-  // Reflects whatever's actually on the board right now — when "At risk
-  // only" is toggled, the header count/total must match the filtered set,
-  // not silently keep showing every deal's numbers.
-  const visibleDeals = useMemo(
-    () => (atRiskOnly ? deals.filter((d) => isAtRisk(d, now)) : deals),
-    [atRiskOnly, deals, now],
-  );
+  // Clear transient SR announcement so stale copy does not linger in the live region.
+  useEffect(() => {
+    if (!liveMessage) return;
+    const t = window.setTimeout(() => setLiveMessage(""), 1500);
+    return () => window.clearTimeout(t);
+  }, [liveMessage]);
 
-  // Grouped by currency rather than summed flat — a single raw sum would be
-  // silently wrong the moment an org has deals in more than one currency.
-  // Null-value deals are skipped entirely, not coerced to 0: formatMoney()
-  // already renders a null value as "—" on the card, so a stage/currency
-  // with only unknown-value deals should show the same "—", not a false,
-  // precise-looking "$0" that implies the value is known and zero.
+  const ownerOptions = useMemo(() => {
+    // Derive from deals so the filter stays usable even when profiles RLS
+    // only returns the caller's own row (getProfileNames self-row limit).
+    const byId = new Map<string, string>();
+    for (const d of deals) {
+      if (!d.owner) continue;
+      if (!byId.has(d.owner)) {
+        byId.set(d.owner, ownerNames[d.owner] ?? `Teammate · ${d.owner.slice(0, 8)}`);
+      }
+    }
+    for (const [id, name] of Object.entries(ownerNames)) {
+      byId.set(id, name);
+    }
+    return [...byId.entries()]
+      .map(([id, name]) => ({ id, name }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }, [deals, ownerNames]);
+
+  const visibleDeals = useMemo(() => {
+    let list = deals;
+    if (ownerFilter) list = list.filter((d) => d.owner === ownerFilter);
+    if (atRiskOnly) list = list.filter((d) => isAtRisk(d, now));
+    return list;
+  }, [atRiskOnly, deals, now, ownerFilter]);
+
   const totalsByCurrency = useMemo(() => {
     const map = new Map<string, number>();
     for (const d of visibleDeals) {
@@ -99,17 +110,44 @@ export function PipelineWorkspace({ deals, companyNames, fetchError, now }: Prop
     const map = new Map<CrmDealStage, DealRow[]>();
     for (const stage of STAGES) map.set(stage, []);
     for (const deal of visibleDeals) {
-      // Unknown/legacy stage values (DB CHECK constraint prevents this for
-      // new writes, but don't let a future enum change or backfilled row
-      // silently vanish from the board) fall back to "lead" — the natural
-      // entry stage — rather than disappearing from every column while
-      // still counting toward the header total, same guarded-fallback
-      // discipline as crmDealStageLabel()/crmDealStageDotToken().
       const bucket = map.has(deal.stage as CrmDealStage) ? (deal.stage as CrmDealStage) : "lead";
       map.get(bucket)?.push(deal);
     }
     return map;
   }, [visibleDeals]);
+
+  function handleStageChange(dealId: string, newStage: CrmDealStage, updatedAt?: string) {
+    setDeals((prev) =>
+      prev.map((d) =>
+        d.id === dealId
+          ? { ...d, stage: newStage, ...(updatedAt ? { updated_at: updatedAt } : {}) }
+          : d,
+      ),
+    );
+    focusDealIdRef.current = dealId;
+    setLiveMessage(`Moved to ${crmDealStageLabel(newStage)}`);
+    router.refresh();
+  }
+
+  if (fetchError) {
+    return (
+      <div className={styles.stateRoot}>
+        <ErrorState message={fetchError} onRetry={() => router.refresh()} />
+      </div>
+    );
+  }
+
+  if (initialDeals.length === 0) {
+    return (
+      <div className={styles.stateRoot}>
+        <EmptyState
+          heading="No deals yet"
+          body="Deals will appear here once they're added to the pipeline."
+          icon={<Inbox />}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className={styles.root}>
@@ -126,9 +164,22 @@ export function PipelineWorkspace({ deals, companyNames, fetchError, now }: Prop
             </p>
           </div>
           <div className={styles.headerActions}>
-            <button type="button" disabled title="Coming soon" className={styles.ownerFilter}>
-              Owner
-            </button>
+            <label className={styles.ownerFilterLabel}>
+              <span className={styles.ownerFilterSrOnly}>Owner</span>
+              <select
+                className={styles.ownerFilter}
+                value={ownerFilter}
+                onChange={(e) => setOwnerFilter(e.target.value)}
+                aria-label="Owner"
+              >
+                <option value="">All owners</option>
+                {ownerOptions.map((o) => (
+                  <option key={o.id} value={o.id}>
+                    {o.name}
+                  </option>
+                ))}
+              </select>
+            </label>
             <button
               type="button"
               onClick={() => setAtRiskOnly((v) => !v)}
@@ -141,50 +192,85 @@ export function PipelineWorkspace({ deals, companyNames, fetchError, now }: Prop
         </div>
       </div>
 
-      <div className={styles.board}>
-        {STAGES.map((stage) => {
-          const stageDeals = byStage.get(stage) ?? [];
-          const stageTotals = new Map<string, number>();
-          for (const d of stageDeals) {
-            if (d.value == null) continue;
-            stageTotals.set(d.currency, (stageTotals.get(d.currency) ?? 0) + d.value);
-          }
-          const locked = LOCKED_STAGES.has(stage);
-          return (
-            <div key={stage} className={styles.column}>
-              <div className={styles.columnHeader}>
-                <span className={styles.stageDot} style={{ background: crmDealStageDotToken(stage) }} aria-hidden />
-                <span className={styles.stageLabel}>{crmDealStageLabel(stage)}</span>
-                <span className={styles.stageCount}>{stageDeals.length}</span>
-                {locked ? <Lock size={12} aria-hidden className={styles.lockIcon} /> : null}
-              </div>
-              {locked ? <div className={styles.lockedBadge}>Enter via approval only</div> : null}
-
-              <div className={styles.cards}>
-                {stageDeals.map((deal) => (
-                  <Link key={deal.id} href={`/app/crm/pipeline/${deal.id}`} className={styles.card}>
-                    <div className={styles.cardCompany}>
-                      {deal.company_id ? (companyNames[deal.company_id] ?? "—") : "—"}
-                    </div>
-                    <div className={styles.cardMeta}>
-                      <span className={styles.cardValue}>{formatMoney(deal.value, deal.currency)}</span>
-                      <span className={styles.cardUpdated}>Updated {formatRelativeDays(deal.updated_at, now)}</span>
-                    </div>
-                    {isAtRisk(deal, now) ? <span className={styles.atRiskBadge}>At risk</span> : null}
-                  </Link>
-                ))}
-                {stageDeals.length === 0 ? <div className={styles.columnEmpty}>No deals</div> : null}
-              </div>
-
-              <div className={styles.columnTotal}>
-                {stageTotals.size > 0
-                  ? [...stageTotals.entries()].map(([cur, sum]) => formatMoney(sum, cur)).join(" + ")
-                  : "—"}
-              </div>
-            </div>
-          );
-        })}
+      <div className={styles.liveRegion} aria-live="polite" aria-atomic="true">
+        {liveMessage}
       </div>
+
+      {visibleDeals.length === 0 ? (
+        <div className={styles.stateRoot}>
+          <EmptyState
+            heading="No matching deals"
+            body="Try a different owner or clear the At risk filter."
+            icon={<Inbox />}
+          />
+        </div>
+      ) : (
+        <div className={styles.board}>
+          {STAGES.map((stage) => {
+            const stageDeals = byStage.get(stage) ?? [];
+            const stageTotals = new Map<string, number>();
+            for (const d of stageDeals) {
+              if (d.value == null) continue;
+              stageTotals.set(d.currency, (stageTotals.get(d.currency) ?? 0) + d.value);
+            }
+            const locked = LOCKED_STAGES.has(stage);
+            return (
+              <div key={stage} className={styles.column}>
+                <div className={styles.columnHeader}>
+                  <span className={styles.stageDot} style={{ background: crmDealStageDotToken(stage) }} aria-hidden />
+                  <span className={styles.stageLabel}>{crmDealStageLabel(stage)}</span>
+                  <span className={styles.stageCount}>{stageDeals.length}</span>
+                  {locked ? <Lock size={12} aria-hidden className={styles.lockIcon} /> : null}
+                </div>
+                {locked ? <div className={styles.lockedBadge}>Enter via approval only</div> : null}
+
+                <div className={styles.cards}>
+                  {stageDeals.map((deal) => {
+                    const knownStage = OPEN_STAGES.has(deal.stage as CrmDealStage)
+                      ? (deal.stage as CrmDealStage)
+                      : LOCKED_STAGES.has(deal.stage as CrmDealStage)
+                        ? (deal.stage as CrmDealStage)
+                        : "lead";
+                    return (
+                      <div key={deal.id} className={styles.card} data-deal-id={deal.id}>
+                        <Link href={`/app/crm/pipeline/${deal.id}`} className={styles.cardLink}>
+                          <div className={styles.cardCompany}>
+                            {deal.company_id ? (companyNames[deal.company_id] ?? "—") : "—"}
+                          </div>
+                          <div className={styles.cardMeta}>
+                            <span className={styles.cardValue}>{formatMoney(deal.value, deal.currency)}</span>
+                            <span className={styles.cardUpdated}>Updated {formatRelativeDays(deal.updated_at, now)}</span>
+                          </div>
+                          {isAtRisk(deal, now) ? <span className={styles.atRiskBadge}>At risk</span> : null}
+                        </Link>
+                        {OPEN_STAGES.has(knownStage) ? (
+                          <div className={styles.cardMove} data-deal-move={deal.id}>
+                            <DealStageControl
+                              dealId={deal.id}
+                              stage={knownStage}
+                              updatedAt={deal.updated_at}
+                              onStageChange={(next, _brandId, nextUpdatedAt) =>
+                                handleStageChange(deal.id, next, nextUpdatedAt)
+                              }
+                            />
+                          </div>
+                        ) : null}
+                      </div>
+                    );
+                  })}
+                  {stageDeals.length === 0 ? <div className={styles.columnEmpty}>No deals</div> : null}
+                </div>
+
+                <div className={styles.columnTotal}>
+                  {stageTotals.size > 0
+                    ? [...stageTotals.entries()].map(([cur, sum]) => formatMoney(sum, cur)).join(" + ")
+                    : "—"}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }

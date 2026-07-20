@@ -31,7 +31,12 @@ beforeEach(() => {
   });
   mockGetUser.mockResolvedValue({ data: { user: { id: "user-1" } } });
   mockGetCurrentOrgId.mockResolvedValue("org-1");
-  mockMoveDealStage.mockResolvedValue({ ok: true, dealId: DEAL_ID, stage: "negotiation" });
+  mockMoveDealStage.mockResolvedValue({
+    ok: true,
+    dealId: DEAL_ID,
+    stage: "negotiation",
+    updatedAt: "2026-07-20T12:00:00.000Z",
+  });
 });
 
 afterEach(() => {
@@ -108,11 +113,58 @@ describe("PATCH /api/crm/deals/[id]/stage", () => {
     const { PATCH } = await importRoute();
     const res = await PATCH(makePatch({ stage: "negotiation" }), routeContext);
     expect(res.status).toBe(200);
-    expect(await res.json()).toEqual({ ok: true, dealId: DEAL_ID, stage: "negotiation" });
+    expect(await res.json()).toEqual({
+      ok: true,
+      dealId: DEAL_ID,
+      stage: "negotiation",
+      updatedAt: "2026-07-20T12:00:00.000Z",
+    });
     expect(mockMoveDealStage).toHaveBeenCalledWith(
-      { dealId: DEAL_ID, orgId: "org-1", stage: "negotiation" },
+      {
+        dealId: DEAL_ID,
+        orgId: "org-1",
+        stage: "negotiation",
+        expectedStage: undefined,
+        expectedUpdatedAt: undefined,
+      },
       expect.anything(),
     );
+  });
+
+  it("forwards expectedStage and expectedUpdatedAt for compare-and-set", async () => {
+    const { PATCH } = await importRoute();
+    const res = await PATCH(
+      makePatch({
+        stage: "qualified",
+        expectedStage: "lead",
+        expectedUpdatedAt: "2026-07-01T00:00:00.000Z",
+      }),
+      routeContext,
+    );
+    expect(res.status).toBe(200);
+    expect(mockMoveDealStage).toHaveBeenCalledWith(
+      {
+        dealId: DEAL_ID,
+        orgId: "org-1",
+        stage: "qualified",
+        expectedStage: "lead",
+        expectedUpdatedAt: "2026-07-01T00:00:00.000Z",
+      },
+      expect.anything(),
+    );
+  });
+
+  it("propagates a 409 CAS conflict from moveDealStage", async () => {
+    mockMoveDealStage.mockResolvedValueOnce({
+      ok: false,
+      status: 409,
+      code: "STALE_BOOKING",
+      message: "This deal was updated elsewhere. Refresh and try again.",
+    });
+    const { PATCH } = await importRoute();
+    const res = await PATCH(makePatch({ stage: "qualified", expectedStage: "lead" }), routeContext);
+    expect(res.status).toBe(409);
+    expect((await res.json()).error.code).toBe("STALE_BOOKING");
   });
 
   it("propagates a service failure as its mapped status/code", async () => {
