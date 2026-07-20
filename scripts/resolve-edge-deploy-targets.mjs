@@ -320,7 +320,8 @@ export function verifyDeployDelta(preRaw, postRaw, functions) {
       errors.push(`${slug}: missing from post-deploy list`);
       continue;
     }
-    const status = String(b.status ?? "ACTIVE").toUpperCase();
+    // Fail closed: missing status must not default to ACTIVE.
+    const status = String(b.status ?? "UNKNOWN").toUpperCase();
     if (status !== "ACTIVE") {
       errors.push(`${slug}: status=${status} (expected ACTIVE)`);
     }
@@ -502,6 +503,16 @@ function selfCheck() {
   ]);
   d = verifyDeployDelta(pre, postInactive, ["health"]);
   check("delta fails when not ACTIVE", !d.ok, JSON.stringify(d));
+
+  const postNoStatus = JSON.stringify([
+    { slug: "health", id: "1", updated_at: "2026-07-20T12:00:00Z" },
+  ]);
+  d = verifyDeployDelta(pre, postNoStatus, ["health"]);
+  check(
+    "delta fails when status missing (fail-closed)",
+    !d.ok && d.errors.some((e) => e.includes("UNKNOWN")),
+    JSON.stringify(d),
+  );
 
   if (failed) {
     console.error(`\nself-check: ${failed} failure(s)`);
