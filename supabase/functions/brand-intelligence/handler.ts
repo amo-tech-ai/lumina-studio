@@ -279,6 +279,8 @@ export async function handleBrandIntelligenceRequest(req: Request): Promise<Resp
     const configError = missingBiProviderConfigError(biProvider, {
       geminiApiKey: getOptionalSecret("GEMINI_API_KEY"),
       groqApiKey: getOptionalSecret("GROQ_API_KEY"),
+      cloudflareApiToken: getOptionalSecret("CLOUDFLARE_API_TOKEN"),
+      cloudflareAccountId: getOptionalSecret("CLOUDFLARE_ACCOUNT_ID"),
     });
     if (configError) {
       return errorResponse(
@@ -371,13 +373,25 @@ export async function handleBrandIntelligenceRequest(req: Request): Promise<Resp
 
     const crawlRow = await loadCrawlRow(client, brandId, crawlResultId, url);
     const rawData = (crawlRow?.raw_data ?? null) as CrawlRawData | null;
-    let crawlText = formatCrawlForPrompt(rawData);
-    if (biProvider === "groq" && !crawlText.trim() && rawData?.pages?.length) {
+    // IPI-741 — provider-neutral budget: a full 10-page crawl easily exceeds
+    // rate/cost limits on smaller-tier models (e.g. Groq's openai/gpt-oss-20b
+    // on_demand TPM cap). 24k chars / 6 pages is comfortably enough context
+    // for brand analysis while keeping every provider's prompt bounded.
+    const CRAWL_PROMPT_BUDGET = { maxChars: 24_000, maxPages: 6 } as const;
+    let crawlText = formatCrawlForPrompt(rawData, CRAWL_PROMPT_BUDGET);
+    if (
+      (biProvider === "groq" || biProvider === "workers-ai") &&
+      !crawlText.trim() &&
+      rawData?.pages?.length
+    ) {
       const pagesWithMarkdown = rawData.pages.filter(
         (page) => (page.markdown?.trim().length ?? 0) > 0,
       );
       if (pagesWithMarkdown.length > 0) {
-        crawlText = formatCrawlForPrompt({ pages: pagesWithMarkdown });
+        crawlText = formatCrawlForPrompt(
+          { pages: pagesWithMarkdown },
+          CRAWL_PROMPT_BUDGET,
+        );
       }
     }
     const useCrawl = !isCrawlThin(rawData);

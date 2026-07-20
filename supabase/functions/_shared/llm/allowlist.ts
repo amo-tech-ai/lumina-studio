@@ -65,17 +65,43 @@ function parseBiDnaAiProvider(raw: string | undefined): "gemini" | "groq" {
 export function resolveBiProviderFromEnv(env: {
   aiProvider?: string;
   biUseGemini?: string;
-}): "gemini" | "groq" {
+  biProvider?: string;
+}): "gemini" | "groq" | "workers-ai" {
+  // BI_PROVIDER is a scoped override for this call site only — it never
+  // touches the global AI_PROVIDER, so DNA and other structured-generation
+  // flows are unaffected by a brand-intelligence provider change (IPI-741).
+  const explicit = (env.biProvider ?? "").trim().toLowerCase();
+  if (explicit === "cloudflare" || explicit === "workers-ai") return "workers-ai";
+  if (explicit === "gemini" || explicit === "groq") return explicit;
+  if (explicit) {
+    throw new Error(
+      `BI_PROVIDER="${explicit}" is invalid (expected cloudflare | gemini | groq).`,
+    );
+  }
   if (isEnvTruthyValue(env.biUseGemini)) return "gemini";
   return parseBiDnaAiProvider(env.aiProvider);
 }
 
-/** Brand intelligence: BI_USE_GEMINI=1 forces Gemini regardless of AI_PROVIDER. */
-export function resolveBiProvider(): "gemini" | "groq" {
+/** Brand intelligence: BI_PROVIDER overrides everything; else BI_USE_GEMINI=1 forces Gemini; else AI_PROVIDER. */
+export function resolveBiProvider(): "gemini" | "groq" | "workers-ai" {
   return resolveBiProviderFromEnv({
     aiProvider: Deno.env.get("AI_PROVIDER"),
     biUseGemini: Deno.env.get("BI_USE_GEMINI"),
+    biProvider: Deno.env.get("BI_PROVIDER"),
   });
+}
+
+/** Workers AI model called through the ipix-prod AI Gateway (IPI-741). */
+export function resolveCloudflareModel(): string {
+  return (
+    Deno.env.get("CLOUDFLARE_AI_MODEL")?.trim() ||
+    "@cf/meta/llama-4-scout-17b-16e-instruct"
+  );
+}
+
+/** ipix-prod (or override) — the named AI Gateway this account routes Workers AI through. */
+export function resolveCloudflareGatewayId(): string {
+  return Deno.env.get("CLOUDFLARE_AI_GATEWAY_ID")?.trim() || "ipix-prod";
 }
 
 export function resolveDnaProviderFromEnv(env: {

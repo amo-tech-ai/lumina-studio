@@ -53,9 +53,37 @@ Deno.test("groqEmptyCrawlError accepts raw pages when formatter returned empty",
 });
 
 Deno.test("groqEmptyCrawlError returns 422 only for empty formatted crawl text", () => {
-  assertEquals(groqEmptyCrawlError(""), { code: "validation_error", message: "Groq brand analysis requires Firecrawl page content. Run a brand crawl first or set BI_USE_GEMINI=1.", status: 422 });
-  assertEquals(groqEmptyCrawlError("   "), { code: "validation_error", message: "Groq brand analysis requires Firecrawl page content. Run a brand crawl first or set BI_USE_GEMINI=1.", status: 422 });
+  assertEquals(groqEmptyCrawlError(""), { code: "validation_error", message: "Brand analysis requires Firecrawl page content. Run a brand crawl first or set BI_USE_GEMINI=1.", status: 422 });
+  assertEquals(groqEmptyCrawlError("   "), { code: "validation_error", message: "Brand analysis requires Firecrawl page content. Run a brand crawl first or set BI_USE_GEMINI=1.", status: 422 });
   assertEquals(groqEmptyCrawlError("page content"), null);
+});
+
+Deno.test("missingBiProviderConfigError returns 503 when Workers AI credentials missing (IPI-741)", () => {
+  const missingToken = missingBiProviderConfigError("workers-ai", {
+    cloudflareApiToken: null,
+    cloudflareAccountId: "acct-1",
+  });
+  assertEquals(missingToken?.status, 503);
+  assertEquals(missingToken?.message, "Brand intelligence Workers AI is not configured");
+
+  const missingAccount = missingBiProviderConfigError("workers-ai", {
+    cloudflareApiToken: "token-1",
+    cloudflareAccountId: null,
+  });
+  assertEquals(missingAccount?.status, 503);
+
+  assertEquals(
+    missingBiProviderConfigError("workers-ai", {
+      cloudflareApiToken: "token-1",
+      cloudflareAccountId: "acct-1",
+    }),
+    null,
+  );
+});
+
+Deno.test("biUsedCrawlInRequest treats workers-ai like groq — requires non-empty crawl text (IPI-741)", () => {
+  assertEquals(biUsedCrawlInRequest("workers-ai", null, "some crawl text"), true);
+  assertEquals(biUsedCrawlInRequest("workers-ai", null, ""), false);
 });
 
 Deno.test("thin crawl: Gemini URL-fallback vs Groq crawl acceptance diverge", () => {
