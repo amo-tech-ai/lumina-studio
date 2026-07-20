@@ -41,13 +41,16 @@ export const scoreDealHealthTool = createTool({
       if (dealErr) return crmToolError(dealErr.message);
       if (!deal) return crmToolError("Deal not found in your organization");
 
+      // Load enough rows to compute last-touch (completed_at || created_at).
+      // Order by created_at alone can miss an older task completed after many
+      // newer creates — so we fetch a wider window and let the scorer pick max.
       const { data: activities, error: actErr } = await ctx.client
         .from("crm_activities")
         .select("id, created_at, completed_at")
         .eq("org_id", ctx.orgId)
         .eq("deal_id", dealId)
         .order("created_at", { ascending: false })
-        .limit(50);
+        .limit(200);
 
       if (actErr) return crmToolError(actErr.message);
 

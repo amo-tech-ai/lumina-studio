@@ -103,7 +103,7 @@ export function scoreDealHealth(input: ScoreDealHealthInput): ScoreDealHealthRes
 
   if (deal.stage === "lost") {
     reasons.push("Deal is closed lost.");
-    return {
+    const result: ScoreDealHealthResult = {
       score: 0,
       reasons,
       scoreVersion: DEAL_HEALTH_SCORE_VERSION,
@@ -111,6 +111,9 @@ export function scoreDealHealth(input: ScoreDealHealthInput): ScoreDealHealthRes
       evidenceIds: [...evidenceIds],
       matchesFocus: true,
     };
+    // Match pipeline at-risk: terminal deals are never actionable risk.
+    if (focus === "at_risk") result.matchesFocus = false;
+    return result;
   }
 
   let score = 100;
@@ -177,6 +180,6 @@ export function scoreDealHealth(input: ScoreDealHealthInput): ScoreDealHealthRes
     scoreVersion: DEAL_HEALTH_SCORE_VERSION,
     asOf,
     evidenceIds: [...evidenceIds],
-    matchesFocus: focus === "all" || atRisk || deal.stage === "lost",
+    matchesFocus: focus === "all" || atRisk,
   };
 }

@@ -45,10 +45,14 @@ describe("scoreDealHealth", () => {
     expect(risk.matchesFocus).toBe(false);
   });
 
-  it("scores closed lost at 0", () => {
-    const result = scoreDealHealth({ deal: deal({ id: "d-l", stage: "lost" }), now: NOW });
-    expect(result.score).toBe(0);
-    expect(result.reasons.some((r) => /lost/i.test(r))).toBe(true);
+  it("scores closed lost at 0 and excludes from at_risk focus", () => {
+    const all = scoreDealHealth({ deal: deal({ id: "d-l", stage: "lost" }), now: NOW, focus: "all" });
+    expect(all.score).toBe(0);
+    expect(all.reasons.some((r) => /lost/i.test(r))).toBe(true);
+    expect(all.matchesFocus).toBe(true);
+
+    const risk = scoreDealHealth({ deal: deal({ id: "d-l", stage: "lost" }), now: NOW, focus: "at_risk" });
+    expect(risk.matchesFocus).toBe(false);
   });
 
   it("penalizes long staleness into at-risk range", () => {
