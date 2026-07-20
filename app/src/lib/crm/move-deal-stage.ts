@@ -63,6 +63,16 @@ export async function moveDealStage(
     // PGRST116 = no row matched — either missing deal (404) or CAS miss (409).
     if (error.code === "PGRST116") {
       if (hasCas) {
+        // CAS filter may miss because the deal was deleted — don't call that 409.
+        const { data: existing } = await client
+          .from("crm_deals")
+          .select("id")
+          .eq("id", dealId)
+          .eq("org_id", orgId)
+          .maybeSingle();
+        if (!existing) {
+          return { ok: false, status: 404, code: "NOT_FOUND", message: "Deal not found." };
+        }
         return {
           ok: false,
           status: 409,

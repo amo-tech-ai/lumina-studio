@@ -4,12 +4,17 @@ import { isNonTerminalDealStage, moveDealStage, NON_TERMINAL_DEAL_STAGES } from 
 function mockSingleTable(
   row: Record<string, unknown> | null,
   error: { message: string; code?: string } | null = null,
+  opts?: { existsAfterCasMiss?: boolean },
 ) {
   const builder = {
     update: vi.fn().mockReturnThis(),
     eq: vi.fn().mockReturnThis(),
     select: vi.fn().mockReturnThis(),
     single: vi.fn(async () => ({ data: row, error })),
+    maybeSingle: vi.fn(async () => ({
+      data: opts?.existsAfterCasMiss ? { id: "d1" } : null,
+      error: null,
+    })),
   };
   return { from: vi.fn(() => builder), _builder: builder } as never;
 }
@@ -60,11 +65,15 @@ describe("moveDealStage", () => {
     expect(result).toEqual({ ok: false, status: 404, code: "NOT_FOUND", message: "Deal not found." });
   });
 
-  it("returns 409 when compare-and-set filters match zero rows", async () => {
-    const sb = mockSingleTable(null, {
-      message: "JSON object requested, multiple (or no) rows returned",
-      code: "PGRST116",
-    });
+  it("returns 409 when compare-and-set filters match zero rows but the deal still exists", async () => {
+    const sb = mockSingleTable(
+      null,
+      {
+        message: "JSON object requested, multiple (or no) rows returned",
+        code: "PGRST116",
+      },
+      { existsAfterCasMiss: true },
+    );
     const result = await moveDealStage(
       {
         dealId: "d1",
@@ -84,5 +93,27 @@ describe("moveDealStage", () => {
     const eq = (sb as unknown as { _builder: { eq: ReturnType<typeof vi.fn> } })._builder.eq;
     expect(eq).toHaveBeenCalledWith("stage", "lead");
     expect(eq).toHaveBeenCalledWith("updated_at", "2026-07-01T00:00:00.000Z");
+  });
+
+  it("returns 404 (not 409) when CAS misses because the deal was deleted", async () => {
+    const sb = mockSingleTable(
+      null,
+      {
+        message: "JSON object requested, multiple (or no) rows returned",
+        code: "PGRST116",
+      },
+      { existsAfterCasMiss: false },
+    );
+    const result = await moveDealStage(
+      {
+        dealId: "gone",
+        orgId: "org-1",
+        stage: "qualified",
+        expectedStage: "lead",
+        expectedUpdatedAt: "2026-07-01T00:00:00.000Z",
+      },
+      sb as never,
+    );
+    expect(result).toEqual({ ok: false, status: 404, code: "NOT_FOUND", message: "Deal not found." });
   });
 });
