@@ -17,8 +17,12 @@ import { withGroqRetry } from "./retry.ts";
  * @see https://developers.cloudflare.com/ai-gateway/configuration/request-handling/
  */
 
-/** Default client hang budget (ms). Also sent as `cf-aig-request-timeout`. */
+/** Gateway-facing timeout (ms) for `cf-aig-request-timeout`. */
 export const CLOUDFLARE_GATEWAY_TIMEOUT_MS = 60_000;
+/** Client AbortController margin so Gateway can return a structured 504 first. */
+export const CLOUDFLARE_CLIENT_ABORT_MARGIN_MS = 5_000;
+/** Client `withGroqRetry` attempts for 429/502/503 (combined ceiling with gateway ≤ 4). */
+const CLOUDFLARE_CLIENT_RETRY_ATTEMPTS = 2;
 
 const ERROR_LABEL: Record<number, string> = {
   400: "Bad Request",
@@ -76,7 +80,7 @@ export function resolveCloudflareCredentials(): {
   accountId: string;
   credentialPath: CloudflareCredentialPath;
 } {
-  const accountId = getOptionalSecret("CLOUDFLARE_ACCOUNT_ID");
+  const accountId = (getOptionalSecret("CLOUDFLARE_ACCOUNT_ID") ?? "").trim();
   const gatewayToken = getOptionalSecret("CLOUDFLARE_AI_GATEWAY_TOKEN");
   const apiToken = getOptionalSecret("CLOUDFLARE_API_TOKEN");
   const token = (gatewayToken ?? "").trim() || (apiToken ?? "").trim();
@@ -104,10 +108,10 @@ export function buildGatewayHeaders(
     "cf-aig-gateway-id": resolveCloudflareGatewayId(),
     // Privacy: metadata OK; prompt/response bodies off (defaults to true otherwise).
     "cf-aig-collect-log-payload": "false",
-    // Official Gateway timeout (ms) — complements AbortController client hang guard.
+    // Official Gateway timeout (ms). Client abort uses this + CLOUDFLARE_CLIENT_ABORT_MARGIN_MS.
     "cf-aig-request-timeout": String(timeoutMs),
-    // Official Gateway retries for upstream failures (prefer over expanding client retry set).
-    "cf-aig-max-attempts": "3",
+    // Gateway upstream attempts; with client retry(2) combined ceiling ≤ 4 for 429/502/503.
+    "cf-aig-max-attempts": "2",
     "cf-aig-retry-delay": "500",
     "cf-aig-backoff": "exponential",
   };
@@ -141,9 +145,13 @@ export async function gatewayFetch(
   url: string,
   options: GatewayFetchOptions,
 ): Promise<Response> {
-  const timeoutMs = options.timeoutMs ?? CLOUDFLARE_GATEWAY_TIMEOUT_MS;
+  const gatewayTimeoutMs = options.timeoutMs ?? CLOUDFLARE_GATEWAY_TIMEOUT_MS;
+  // Explicit timeoutMs = exact abort (tests/callers). Default path adds margin so Gateway 504 can return.
+  const abortMs = options.timeoutMs != null
+    ? gatewayTimeoutMs
+    : gatewayTimeoutMs + CLOUDFLARE_CLIENT_ABORT_MARGIN_MS;
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  const timer = setTimeout(() => controller.abort(), abortMs);
   try {
     return await fetch(url, {
       method: options.method ?? "POST",
@@ -155,7 +163,7 @@ export async function gatewayFetch(
     const name = err instanceof Error ? err.name : "";
     if (name === "AbortError") {
       throw new CloudflareGatewayError(
-        `Workers AI request timed out after ${timeoutMs}ms`,
+        `Workers AI request timed out after ${abortMs}ms`,
         { status: 408 },
       );
     }
@@ -242,13 +250,15 @@ export async function cloudflareStructuredCompletion(
   const headers = buildGatewayHeaders(token);
   const url = `${resolveBaseUrl(accountId)}/chat/completions`;
 
-  // Client retry remains 429/502/503 only; Gateway headers cover upstream retries.
-  const response = await withGroqRetry(() =>
-    gatewayFetch(url, {
-      method: "POST",
-      headers,
-      body: JSON.stringify(body),
-    })
+  // 429/502/503 only at client; combined with cf-aig-max-attempts(2) ≤ 4 upstream tries.
+  const response = await withGroqRetry(
+    () =>
+      gatewayFetch(url, {
+        method: "POST",
+        headers,
+        body: JSON.stringify(body),
+      }),
+    CLOUDFLARE_CLIENT_RETRY_ATTEMPTS,
   );
 
   const meta = extractRequestMeta(response.headers);

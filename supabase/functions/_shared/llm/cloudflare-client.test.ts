@@ -23,7 +23,7 @@ Deno.test("buildGatewayHeaders sets privacy + timeout + gateway retry headers", 
   assertEquals(headers["cf-aig-gateway-id"], "ipix-prod");
   assertEquals(headers["cf-aig-collect-log-payload"], "false");
   assertEquals(headers["cf-aig-request-timeout"], "12000");
-  assertEquals(headers["cf-aig-max-attempts"], "3");
+  assertEquals(headers["cf-aig-max-attempts"], "2");
   assertEquals(headers["cf-aig-backoff"], "exponential");
   Deno.env.delete("CLOUDFLARE_AI_GATEWAY_ID");
 });
@@ -93,6 +93,39 @@ Deno.test("resolveCloudflareCredentials throws typed error when missing", () => 
   );
 });
 
+Deno.test("resolveCloudflareCredentials rejects whitespace-only ACCOUNT_ID", () => {
+  Deno.env.set("CLOUDFLARE_ACCOUNT_ID", "   ");
+  Deno.env.set("CLOUDFLARE_API_TOKEN", "api-secret");
+  Deno.env.delete("CLOUDFLARE_AI_GATEWAY_TOKEN");
+  assertThrows(
+    () => resolveCloudflareCredentials(),
+    CloudflareGatewayError,
+    "not configured",
+  );
+  Deno.env.delete("CLOUDFLARE_ACCOUNT_ID");
+  Deno.env.delete("CLOUDFLARE_API_TOKEN");
+});
+
+Deno.test("parseGatewayResponse non-JSON 200 preserves credentialPath", async () => {
+  const response = new Response("not-json-at-all", {
+    status: 200,
+    headers: {
+      "content-type": "text/plain",
+      "cf-ray": "ray-nonjson",
+    },
+  });
+  try {
+    await parseGatewayResponse(response, "gateway_token");
+    throw new Error("expected throw");
+  } catch (err) {
+    assertEquals(err instanceof CloudflareGatewayError, true);
+    const e = err as CloudflareGatewayError;
+    assertEquals(e.status, 502);
+    assertEquals(e.credentialPath, "gateway_token");
+    assertEquals(e.cfRay, "ray-nonjson");
+  }
+});
+
 Deno.test("parseGatewayResponse maps 401 with cf-ray", async () => {
   const response = new Response(
     JSON.stringify({ error: { message: "Invalid API Token" } }),
@@ -140,9 +173,8 @@ Deno.test("gatewayFetch aborts with typed 408 timeout", async () => {
         return;
       }
       signal.addEventListener("abort", () => {
-        const err = new Error("Aborted");
-        err.name = "AbortError";
-        reject(err);
+        // Match Deno/browser AbortController: DOMException named AbortError.
+        reject(new DOMException("The operation was aborted", "AbortError"));
       });
     });
 
