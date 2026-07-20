@@ -1,4 +1,11 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+
+const getCloudflareContext = vi.hoisted(() => vi.fn());
+
+vi.mock("@opennextjs/cloudflare", () => ({
+  getCloudflareContext,
+}));
+
 import { GET } from "./route";
 
 describe("GET /api/ai/health", () => {
@@ -7,6 +14,7 @@ describe("GET /api/ai/health", () => {
   beforeEach(() => {
     vi.stubEnv("AI_GATEWAY_URL", "http://localhost:8787");
     vi.stubEnv("AI_GATEWAY_API_KEY", "test-key");
+    getCloudflareContext.mockRejectedValue(new Error("not on workers"));
   });
 
   afterEach(() => {
@@ -15,7 +23,7 @@ describe("GET /api/ai/health", () => {
     vi.restoreAllMocks();
   });
 
-  it("returns ok when gateway /health responds", async () => {
+  it("returns ok via URL fallback when no service binding", async () => {
     globalThis.fetch = vi.fn().mockResolvedValue({
       ok: true,
       json: () => Promise.resolve({ status: "healthy", version: "0.1.0" }),
@@ -26,14 +34,30 @@ describe("GET /api/ai/health", () => {
 
     expect(res.status).toBe(200);
     expect(body.status).toBe("ok");
+    expect(body.probeVia).toBe("url");
     expect(body.gatewayUrl).toBe("http://localhost:8787");
     expect(body.hasApiKey).toBe(true);
-    expect(body.adapterAvailable).toBe(true);
-    expect(body.gateway).toEqual({ status: "healthy", version: "0.1.0" });
-    expect(globalThis.fetch).toHaveBeenCalledWith(
-      "http://localhost:8787/health",
-      expect.objectContaining({ signal: expect.any(AbortSignal) }),
-    );
+    expect(JSON.stringify(body)).not.toContain("test-key");
+  });
+
+  it("prefers AI_GATEWAY service binding when present", async () => {
+    const bindingFetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({ status: "ok", service: "ai-gateway" }),
+    });
+    getCloudflareContext.mockResolvedValue({
+      env: { AI_GATEWAY: { fetch: bindingFetch } },
+    });
+    globalThis.fetch = vi.fn();
+
+    const res = await GET();
+    const body = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(body.probeVia).toBe("service_binding");
+    expect(body.gateway).toEqual({ status: "ok", service: "ai-gateway" });
+    expect(bindingFetch).toHaveBeenCalled();
+    expect(globalThis.fetch).not.toHaveBeenCalled();
   });
 
   it("returns 502 when gateway /health is non-ok", async () => {
@@ -47,7 +71,7 @@ describe("GET /api/ai/health", () => {
 
     expect(res.status).toBe(502);
     expect(body.status).toBe("gateway_error");
-    expect(body.adapterAvailable).toBe(true);
+    expect(body.httpStatus).toBe(500);
   });
 
   it("returns 503 when gateway is unreachable", async () => {
@@ -59,6 +83,5 @@ describe("GET /api/ai/health", () => {
     expect(res.status).toBe(503);
     expect(body.status).toBe("gateway_unreachable");
     expect(body.error).toContain("ECONNREFUSED");
-    expect(body.adapterAvailable).toBe(true);
   });
 });
