@@ -1,7 +1,4 @@
-import {
-  createProviderAdapter,
-  DEFAULT_AI_GATEWAY_URL,
-} from "@/lib/ai/provider-adapter";
+import { DEFAULT_AI_GATEWAY_URL } from "@/lib/ai/provider-adapter";
 
 /**
  * Service-binding fetch target — hostname is a placeholder (never DNS-resolved);
@@ -17,7 +14,6 @@ export type AiGatewayHealthBody = {
   status: "ok" | "gateway_error" | "gateway_unreachable";
   gatewayUrl: string;
   hasApiKey: boolean;
-  adapterAvailable: boolean;
   probeVia: "service_binding" | "url";
   gateway?: unknown;
   httpStatus?: number;
@@ -46,10 +42,6 @@ export async function probeAiGatewayHealth(
     ? (configuredUrl ?? AI_GATEWAY_BINDING_LABEL)
     : (configuredUrl ?? DEFAULT_AI_GATEWAY_URL);
   const hasApiKey = input.hasApiKey ?? Boolean(process.env.AI_GATEWAY_API_KEY);
-  const adapter = createProviderAdapter({
-    baseUrl: configuredUrl ?? DEFAULT_AI_GATEWAY_URL,
-  });
-  const adapterAvailable = typeof adapter.chat === "function";
   const probeVia = useBinding ? "service_binding" : "url";
 
   try {
@@ -70,7 +62,6 @@ export async function probeAiGatewayHealth(
           status: "gateway_error",
           gatewayUrl,
           hasApiKey,
-          adapterAvailable,
           probeVia,
           httpStatus: response.status,
         },
@@ -84,7 +75,6 @@ export async function probeAiGatewayHealth(
         status: "ok",
         gatewayUrl,
         hasApiKey,
-        adapterAvailable,
         probeVia,
         gateway,
       },
@@ -97,7 +87,6 @@ export async function probeAiGatewayHealth(
         status: "gateway_unreachable",
         gatewayUrl,
         hasApiKey,
-        adapterAvailable,
         probeVia,
         error: message,
       },

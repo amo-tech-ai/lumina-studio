@@ -33,6 +33,7 @@ describe("probeAiGatewayHealth", () => {
     expect(result.body.status).toBe("ok");
     expect(result.body.probeVia).toBe("service_binding");
     expect(result.body.hasApiKey).toBe(true);
+    expect(result.body).not.toHaveProperty("adapterAvailable");
     expect(result.body.gateway).toEqual({ status: "ok", service: "ai-gateway" });
     expect(fetchMock).toHaveBeenCalledTimes(1);
     expect(fetchMock).toHaveBeenCalledWith(
@@ -152,6 +153,22 @@ describe("probeAiGatewayHealth", () => {
     expect(result.httpStatus).toBe(503);
     expect(result.body.status).toBe("gateway_unreachable");
     expect(result.body.error).toContain("ECONNREFUSED");
+  });
+
+  it("returns 503 when service binding fetch rejects", async () => {
+    const urlFetch = vi.fn();
+    globalThis.fetch = urlFetch;
+    const fetchMock = vi.fn().mockRejectedValue(new Error("binding fetch failed"));
+
+    const result = await probeAiGatewayHealth({
+      gatewayFetcher: { fetch: fetchMock },
+    });
+
+    expect(result.httpStatus).toBe(503);
+    expect(result.body.status).toBe("gateway_unreachable");
+    expect(result.body.probeVia).toBe("service_binding");
+    expect(result.body.error).toContain("binding fetch failed");
+    expect(urlFetch).not.toHaveBeenCalled();
   });
 
   it("never includes API key material in the body", async () => {
