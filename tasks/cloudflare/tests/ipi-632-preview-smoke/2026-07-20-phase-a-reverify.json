@@ -1,0 +1,69 @@
+{
+  "task": "IPI-632 · CF-MIG-220 — Protected Preview Runtime Smoke Validation",
+  "date": "2026-07-20",
+  "session": "phase-a-reverify-after-ipi-510",
+  "verification_level": "Remote Preview Verified",
+  "preview_url": "https://ipix-operator-preview.sk-498.workers.dev",
+  "worker": "ipix-operator-preview",
+  "preview_version_id": "591796f7-d070-44f2-ae7c-d9ae1a4a2bda",
+  "code_on_main": {
+    "ipi_510_code": "7ebacf7d",
+    "ipi_510_docs": "395842b7",
+    "note": "Preview Worker still on service-binding deploy 591796f7; may predate adapterAvailable removal on main."
+  },
+  "method": "Playwright Chromium headless (local script; QA login)",
+  "checks": {
+    "login": {
+      "pass": true,
+      "after_url": "https://ipix-operator-preview.sk-498.workers.dev/app"
+    },
+    "auth_copilotkit_info": {
+      "pass": true,
+      "status": 200,
+      "mode": "sse",
+      "agents": [
+        "default",
+        "production-planner",
+        "creative-director",
+        "visual-identity",
+        "social-discovery",
+        "brand-intelligence",
+        "model-match",
+        "crm-assistant",
+        "booking"
+      ]
+    },
+    "ai_health": {
+      "pass": true,
+      "status": 200,
+      "probeVia": "service_binding",
+      "status_field": "ok",
+      "cf_ray": "a1df3bf3cb313405-MIA",
+      "note": "Unblocks prior residual (health was 502 before IPI-510 binding)."
+    },
+    "logout_via_clearCookies": {
+      "pass": true,
+      "status": 401,
+      "note": "UI Sign Out control still NOT VERIFIED; session drop via context.clearCookies() → /api/copilotkit/info 401."
+    }
+  },
+  "known_limitations": {
+    "startup_time_ms": {
+      "status": "NOT VERIFIED",
+      "track": "Separate observability / deploy provenance (do not block Phase A).",
+      "note": "No remote startup_time_ms available from wrangler versions list in this session."
+    },
+    "ui_logout_control": {
+      "status": "NOT VERIFIED",
+      "note": "Cookie-clear proves fail-closed auth; UI logout path residual."
+    },
+    "agent_turn": {
+      "status": "ALREADY VERIFIED",
+      "ref": "tasks/cloudflare/tests/ipi-632-preview-smoke/2026-07-20-preview-smoke.json"
+    }
+  },
+  "related": {
+    "ipi_510": "https://github.com/amo-tech-ai/lumina-studio/pull/512",
+    "ipi_627_evidence": "tasks/cloudflare/tests/ipi-627-security/2026-07-20-preview-security.json"
+  }
+}

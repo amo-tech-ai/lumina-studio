@@ -1,0 +1,75 @@
+{
+  "task": "IPI-627 · CF-SEC-020 — Deployment Security Proof",
+  "date": "2026-07-20",
+  "session": "phase-a-same-preview-as-ipi-632",
+  "verification_level": "Remote Preview Verified",
+  "preview_url": "https://ipix-operator-preview.sk-498.workers.dev",
+  "worker": "ipix-operator-preview",
+  "preview_version_id": "591796f7-d070-44f2-ae7c-d9ae1a4a2bda",
+  "checks": {
+    "operator_auth_enabled": {
+      "pass": true,
+      "source": "app/wrangler.jsonc env.preview.vars.OPERATOR_AUTH_ENABLED",
+      "value": "true",
+      "runtime_proof": "GET /api/copilotkit/info anonymous → 401"
+    },
+    "ai_health_no_secrets": {
+      "pass": true,
+      "status": 200,
+      "probeVia": "service_binding",
+      "hasApiKey_boolean_only": true,
+      "secret_material_in_body": false,
+      "cf_ray": "a1df3bf3cb313405-MIA"
+    },
+    "service_binding_configured": {
+      "pass": true,
+      "wrangler_preview_services": [
+        { "binding": "WORKER_SELF_REFERENCE", "service": "ipix-operator-preview" },
+        { "binding": "AI_GATEWAY", "service": "ai-gateway" }
+      ],
+      "runtime_probeVia": "service_binding"
+    },
+    "protected_vs_anonymous": {
+      "pass": true,
+      "anonymous": {
+        "/api/copilotkit/info": 401,
+        "/app": "307 → /login?redirect=%2Fapp (prior smoke)"
+      },
+      "authenticated": {
+        "/api/copilotkit/info": 200,
+        "/api/ai/health": 200
+      }
+    },
+    "secret_inventory_names_only": {
+      "pass": true,
+      "command": "wrangler secret list --name ipix-operator-preview",
+      "names": [
+        "AI_GATEWAY_API_KEY",
+        "CAPTURE_LEAD_PROXY_SECRET",
+        "CLOUDINARY_API_SECRET",
+        "COPILOTKIT_LICENSE_TOKEN",
+        "DATABASE_URL",
+        "FIRECRAWL_API_KEY",
+        "GEMINI_API_KEY",
+        "INTELLIGENCE_API_KEY",
+        "OPENAI_API_KEY",
+        "SUPABASE_SERVICE_ROLE_KEY"
+      ],
+      "note": "Values never printed. Allowlist review residual if a name is unexpected."
+    }
+  },
+  "residuals": {
+    "rate_limit_binding": {
+      "status": "NOT VERIFIED",
+      "note": "No Workers rate-limit binding asserted in this pass — track separately if required for full CF-SEC-020 AC."
+    },
+    "adapterAvailable_on_preview": {
+      "status": "KNOWN STALE FIELD",
+      "note": "Preview still returns adapterAvailable:true; removed on main in #512. Next preview redeploy drops it. Not a secret leak."
+    }
+  },
+  "related": {
+    "ipi_632_evidence": "tasks/cloudflare/tests/ipi-632-preview-smoke/2026-07-20-phase-a-reverify.json",
+    "ipi_510_code": "https://github.com/amo-tech-ai/lumina-studio/pull/512"
+  }
+}
