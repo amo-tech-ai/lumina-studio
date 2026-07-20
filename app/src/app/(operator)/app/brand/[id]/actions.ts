@@ -11,12 +11,29 @@ export type ReanalyzeResult =
   | { ok: true; hasDraft: true }
   | { ok: false; error: string };
 
+// IPI-744 — never throw: a failed restore must not mask the caller's
+// original crawl/analysis error or reject the Server Action. Callers don't
+// need the boolean today; it's here so a future caller (e.g. stale-lock
+// recovery, IPI-745) can react to a failed restore without re-deriving this.
 async function restoreBrandStatus(
   supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
   brandId: string,
   status: string,
-) {
-  await supabase.from("brands").update({ intake_status: status }).eq("id", brandId);
+): Promise<boolean> {
+  try {
+    const { error } = await supabase.from("brands").update({ intake_status: status }).eq("id", brandId);
+    if (error) {
+      console.error("[reanalyze] failed to restore brand status", { brandId, code: error.code });
+      return false;
+    }
+    return true;
+  } catch (error) {
+    console.error("[reanalyze] status restoration threw", {
+      brandId,
+      error: error instanceof Error ? error.message : "Unknown error",
+    });
+    return false;
+  }
 }
 
 export async function reanalyzeBrand(brandId: string): Promise<ReanalyzeResult> {

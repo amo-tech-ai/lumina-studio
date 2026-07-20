@@ -22,8 +22,11 @@ vi.mock("@/lib/brand/promote-draft", () => ({ promoteBrandDraft: vi.fn() }));
 
 type BrandRow = { id: string; name: string; brand_url: string | null; intake_status: string | null };
 
-function makeSupabase(brand: BrandRow) {
+type RestoreMode = "success" | "db-error" | "throw";
+
+function makeSupabase(brand: BrandRow, restoreMode: RestoreMode = "success") {
   const updates: Record<string, unknown>[] = [];
+  let updateCallCount = 0;
   const brandsTable = {
     select: () => ({
       eq: () => ({
@@ -31,17 +34,29 @@ function makeSupabase(brand: BrandRow) {
       }),
     }),
     update: (patch: Record<string, unknown>) => {
+      updateCallCount += 1;
       updates.push(patch);
-      return {
-        eq: () => ({
-          not: () => ({
-            select: () => ({
-              maybeSingle: async () => ({ data: { id: brand.id }, error: null }),
+      if (updateCallCount === 1) {
+        // lock update: acquire analysis_running
+        return {
+          eq: () => ({
+            not: () => ({
+              select: () => ({
+                maybeSingle: async () => ({ data: { id: brand.id }, error: null }),
+              }),
             }),
           }),
-          // restoreBrandStatus path: .update().eq() with no further chain
-          then: undefined,
-        }),
+        };
+      }
+      // restoreBrandStatus update
+      return {
+        eq: () => {
+          if (restoreMode === "throw") throw new Error("network blip");
+          if (restoreMode === "db-error") {
+            return Promise.resolve({ data: null, error: { code: "23505", message: "db error" } });
+          }
+          return Promise.resolve({ data: null, error: null });
+        },
       };
     },
   };
@@ -149,5 +164,73 @@ describe("reanalyzeBrand — IPI-738 crawl-first path", () => {
       expect.objectContaining({ draftMode: true, crawlResultId: undefined }),
     );
     expect(result).toEqual({ ok: true, hasDraft: true });
+  });
+});
+
+describe("reanalyzeBrand — IPI-744 restoreBrandStatus never masks the original error", () => {
+  it("restores successfully and returns the crawl-failure error unchanged", async () => {
+    mockGetUser.mockResolvedValue({ data: { user: { id: "user-1" } }, error: null });
+    mockSupabase = makeSupabase(BRAND, "success");
+    mockInvokeStartBrandCrawl.mockResolvedValue({ crawlId: "crawl-1" });
+    mockWaitForCrawlCompletion.mockResolvedValue("failed");
+
+    const { reanalyzeBrand } = await importActions();
+    const result = await reanalyzeBrand(BRAND.id);
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error).toMatch(/couldn't crawl/i);
+  });
+
+  it("logs and swallows a { error } result from the restore update, without masking the original error", async () => {
+    const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    mockGetUser.mockResolvedValue({ data: { user: { id: "user-1" } }, error: null });
+    mockSupabase = makeSupabase(BRAND, "db-error");
+    mockInvokeStartBrandCrawl.mockResolvedValue({ crawlId: "crawl-1" });
+    mockWaitForCrawlCompletion.mockResolvedValue("failed");
+
+    const { reanalyzeBrand } = await importActions();
+    const result = await reanalyzeBrand(BRAND.id);
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error).toMatch(/couldn't crawl/i);
+    expect(consoleErrorSpy).toHaveBeenCalledWith(
+      "[reanalyze] failed to restore brand status",
+      expect.objectContaining({ brandId: BRAND.id, code: "23505" }),
+    );
+    consoleErrorSpy.mockRestore();
+  });
+
+  it("catches a thrown restore error without rejecting the action or masking the original error", async () => {
+    const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    mockGetUser.mockResolvedValue({ data: { user: { id: "user-1" } }, error: null });
+    mockSupabase = makeSupabase(BRAND, "throw");
+    mockInvokeStartBrandCrawl.mockResolvedValue({ crawlId: "crawl-1" });
+    mockWaitForCrawlCompletion.mockResolvedValue("timeout");
+
+    const { reanalyzeBrand } = await importActions();
+    const result = await reanalyzeBrand(BRAND.id);
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error).toMatch(/taking longer than expected/i);
+    expect(consoleErrorSpy).toHaveBeenCalledWith(
+      "[reanalyze] status restoration threw",
+      expect.objectContaining({ brandId: BRAND.id, error: "network blip" }),
+    );
+    consoleErrorSpy.mockRestore();
+  });
+
+  it("preserves the outer-catch error (e.g. brand-intelligence failure) even when the restore also fails", async () => {
+    const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    mockGetUser.mockResolvedValue({ data: { user: { id: "user-1" } }, error: null });
+    mockSupabase = makeSupabase(BRAND, "throw");
+    mockInvokeStartBrandCrawl.mockResolvedValue({ crawlId: "crawl-1" });
+    mockWaitForCrawlCompletion.mockResolvedValue("complete");
+    mockInvokeBrandIntelligence.mockRejectedValue(new Error("brand-intelligence unavailable"));
+
+    const { reanalyzeBrand } = await importActions();
+    const result = await reanalyzeBrand(BRAND.id);
+
+    expect(result).toEqual({ ok: false, error: "brand-intelligence unavailable" });
+    consoleErrorSpy.mockRestore();
   });
 });
