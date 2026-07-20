@@ -67,7 +67,7 @@ describe("DealStageControl", () => {
       `/api/crm/deals/${DEAL_ID}/stage`,
       expect.objectContaining({
         method: "PATCH",
-        body: JSON.stringify({ stage: "negotiation" }),
+        body: JSON.stringify({ stage: "negotiation", expectedStage: "lead" }),
       }),
     );
     // No approval dialog for a non-terminal move.

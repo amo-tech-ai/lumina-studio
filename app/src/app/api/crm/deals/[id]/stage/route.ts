@@ -31,7 +31,12 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
     return apiErrorResponse("VALIDATION_ERROR", 400, "Invalid JSON body.");
   }
 
-  const stage = (body as { stage?: unknown })?.stage;
+  const parsed = body as {
+    stage?: unknown;
+    expectedStage?: unknown;
+    expectedUpdatedAt?: unknown;
+  };
+  const stage = parsed?.stage;
   if (typeof stage !== "string" || !isNonTerminalDealStage(stage)) {
     return apiErrorResponse(
       "VALIDATION_ERROR",
@@ -39,6 +44,15 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
       "stage must be one of lead, qualified, proposal, negotiation. Won/Lost require the approval flow (IPI-367).",
     );
   }
+
+  const expectedStage =
+    typeof parsed.expectedStage === "string" && parsed.expectedStage.length > 0
+      ? parsed.expectedStage
+      : undefined;
+  const expectedUpdatedAt =
+    typeof parsed.expectedUpdatedAt === "string" && parsed.expectedUpdatedAt.length > 0
+      ? parsed.expectedUpdatedAt
+      : undefined;
 
   const supabase = await createSupabaseServerClient();
   const {
@@ -53,7 +67,10 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
     return apiErrorResponse("FORBIDDEN", 403, "No organization membership for this operator.");
   }
 
-  const result = await moveDealStage({ dealId: id, orgId, stage }, supabase);
+  const result = await moveDealStage(
+    { dealId: id, orgId, stage, expectedStage, expectedUpdatedAt },
+    supabase,
+  );
   if (!result.ok) {
     return apiErrorResponse(result.code, result.status, result.message);
   }

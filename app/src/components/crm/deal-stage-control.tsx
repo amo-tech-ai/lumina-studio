@@ -15,6 +15,8 @@ const TERMINAL = new Set<CrmDealStage>(["won", "lost"]);
 type Props = {
   dealId: string;
   stage: CrmDealStage;
+  /** Optional CAS token — forwarded as `expectedUpdatedAt` on non-terminal PATCH. */
+  updatedAt?: string;
   /** Called with the server-confirmed stage after a successful non-terminal
    *  PATCH — `brandId` is `undefined` for these calls, never optimistic.
    *  Called again after a successful won/lost approval with the real
@@ -48,7 +50,7 @@ type Props = {
  *    server-confirmed 200 — a failed response reverts and shows an honest
  *    error, per IPI-367's own acceptance criterion, never an optimistic
  *    success state. */
-export function DealStageControl({ dealId, stage, onStageChange }: Props) {
+export function DealStageControl({ dealId, stage, updatedAt, onStageChange }: Props) {
   const router = useRouter();
   const [pending, setPending] = useState<CrmDealStage | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -74,7 +76,7 @@ export function DealStageControl({ dealId, stage, onStageChange }: Props) {
     }
     setSubmitting(true);
     try {
-      const result = await patchDealStage(dealId, target);
+      const result = await patchDealStage(dealId, target, stage, updatedAt);
       if (!result.ok) {
         toast.error(result.error);
         return;
@@ -187,12 +189,18 @@ export function DealStageControl({ dealId, stage, onStageChange }: Props) {
 async function patchDealStage(
   dealId: string,
   stage: CrmDealStage,
+  expectedStage: CrmDealStage,
+  expectedUpdatedAt?: string,
 ): Promise<{ ok: true; stage: CrmDealStage } | { ok: false; error: string }> {
   try {
     const res = await fetch(`/api/crm/deals/${dealId}/stage`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ stage }),
+      body: JSON.stringify({
+        stage,
+        expectedStage,
+        ...(expectedUpdatedAt ? { expectedUpdatedAt } : {}),
+      }),
     });
     const body = await res.json();
     if (!res.ok) {

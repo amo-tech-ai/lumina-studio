@@ -96,7 +96,7 @@ export function DealDetailWorkspace({ data, fetchError }: Props) {
           <DealOverview deal={deal} companyName={companyName} />
 
           <div className={styles.stageLabel}>Stage</div>
-          <DealStageControl dealId={deal.id} stage={stage} onStageChange={handleStageChange} />
+          <DealStageControl dealId={deal.id} stage={stage} updatedAt={deal.updated_at} onStageChange={handleStageChange} />
 
           {stage === "won" ? <WonBanner companyBrandId={brandId} /> : null}
 

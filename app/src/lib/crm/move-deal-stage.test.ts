@@ -59,4 +59,30 @@ describe("moveDealStage", () => {
     const result = await moveDealStage({ dealId: "missing", orgId: "org-1", stage: "lead" }, sb as never);
     expect(result).toEqual({ ok: false, status: 404, code: "NOT_FOUND", message: "Deal not found." });
   });
+
+  it("returns 409 when compare-and-set filters match zero rows", async () => {
+    const sb = mockSingleTable(null, {
+      message: "JSON object requested, multiple (or no) rows returned",
+      code: "PGRST116",
+    });
+    const result = await moveDealStage(
+      {
+        dealId: "d1",
+        orgId: "org-1",
+        stage: "qualified",
+        expectedStage: "lead",
+        expectedUpdatedAt: "2026-07-01T00:00:00.000Z",
+      },
+      sb as never,
+    );
+    expect(result).toEqual({
+      ok: false,
+      status: 409,
+      code: "STALE_BOOKING",
+      message: "This deal was updated elsewhere. Refresh and try again.",
+    });
+    const eq = (sb as unknown as { _builder: { eq: ReturnType<typeof vi.fn> } })._builder.eq;
+    expect(eq).toHaveBeenCalledWith("stage", "lead");
+    expect(eq).toHaveBeenCalledWith("updated_at", "2026-07-01T00:00:00.000Z");
+  });
 });
