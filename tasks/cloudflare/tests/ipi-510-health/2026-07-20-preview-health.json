@@ -1,0 +1,75 @@
+{
+  "task": "IPI-510 · CF-UJ-011 — Journey test: AI health / readiness (continuous)",
+  "date": "2026-07-20",
+  "verification_level": "Remote Preview — partial (URL wired; Worker→Worker probe blocked)",
+  "preview_url": "https://ipix-operator-preview.sk-498.workers.dev",
+  "preview_worker": "ipix-operator-preview",
+  "preview_version_id": "cbe7c116-fca6-434a-866c-cdd366440204",
+  "preview_version_note": "Secret Change after AI_GATEWAY_URL put (supersedes a3fd7130 smoke version)",
+  "gateway_worker": "ai-gateway",
+  "gateway_public_url": "https://ai-gateway.sk-498.workers.dev",
+  "health_contract": {
+    "route": "GET /api/ai/health",
+    "ok": {
+      "status": "ok",
+      "gatewayUrl": "string",
+      "hasApiKey": "boolean",
+      "gateway": "object (gateway /health JSON)",
+      "adapterAvailable": "boolean"
+    },
+    "gateway_error": {
+      "http": 502,
+      "status": "gateway_error",
+      "httpStatus": "upstream status"
+    },
+    "gateway_unreachable": {
+      "http": 503,
+      "status": "gateway_unreachable",
+      "error": "string"
+    },
+    "secrets_in_body": false
+  },
+  "checks": {
+    "ai_gateway_public_health": {
+      "url": "https://ai-gateway.sk-498.workers.dev/health",
+      "status": 200,
+      "body": { "status": "ok", "service": "ai-gateway" },
+      "pass": true
+    },
+    "preview_ai_health_before_url": {
+      "status": 502,
+      "gatewayUrl": "http://localhost:8787",
+      "pass": false,
+      "note": "DEFAULT_AI_GATEWAY_URL when secret unset"
+    },
+    "preview_ai_health_after_url": {
+      "url": "https://ipix-operator-preview.sk-498.workers.dev/api/ai/health",
+      "status": 502,
+      "body": {
+        "status": "gateway_error",
+        "gatewayUrl": "https://ai-gateway.sk-498.workers.dev",
+        "hasApiKey": true,
+        "httpStatus": 404,
+        "adapterAvailable": true
+      },
+      "pass": false,
+      "root_cause": "Same-zone Worker→Worker fetch via *.workers.dev fails without a service binding or custom domain (Cloudflare docs). AI_GATEWAY_URL secret is correct; global fetch returns 404.",
+      "docs": "https://developers.cloudflare.com/workers/runtime-apis/bindings/service-bindings/"
+    },
+    "secret_ai_gateway_url_set": {
+      "pass": true,
+      "value": "https://ai-gateway.sk-498.workers.dev",
+      "method": "wrangler secret put AI_GATEWAY_URL --env preview"
+    }
+  },
+  "unblock_remote_ok": [
+    "Add wrangler services binding AI_GATEWAY → ai-gateway on preview (and production)",
+    "Update GET /api/ai/health to prefer env.AI_GATEWAY.fetch when binding present",
+    "Redeploy OpenNext preview; expect status ok"
+  ],
+  "does_not_prove": [
+    "CopilotKit browser chat",
+    "Mastra tool calls through gateway",
+    "Production DNS cutover"
+  ]
+}

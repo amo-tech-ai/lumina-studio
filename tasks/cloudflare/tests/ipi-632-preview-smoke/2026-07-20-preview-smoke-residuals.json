@@ -1,0 +1,37 @@
+{
+  "task": "IPI-632 · CF-MIG-220 — Protected Preview Runtime Smoke Validation",
+  "date": "2026-07-20",
+  "related_evidence": "2026-07-20-preview-smoke.json",
+  "linear_status_note": "Marked Done after PR #509 merge — residuals below are NOT closed. Prefer In Progress or explicit residual comment over fake Done.",
+  "ac_gaps": {
+    "logout_restores_401": {
+      "pass": "partial",
+      "status": "PARTIAL",
+      "note": "2026-07-20 Playwright: QA login → /app; Sign Out UI control not found; context.clearCookies() then GET /api/copilotkit/info → 401. Fail-closed after session drop proven; UI logout path still NOT VERIFIED."
+    },
+    "startup_time_ms": {
+      "pass": false,
+      "status": "NOT VERIFIED",
+      "note": "wrangler check startup ran locally (alpha, machine CPU — not deploy metric). No remote startup_time_ms on versions view. Need CF observability / deploy provenance (IPI-705)."
+    },
+    "marketing_chat_stream": {
+      "pass": false,
+      "status": "NOT VERIFIED"
+    },
+    "worker_sha_matches_main_tip": {
+      "pass": false,
+      "status": "NOT VERIFIED",
+      "note": "Smoke version a3fd7130 predated secret-change version cbe7c116; redeploy from origin/main tip still recommended"
+    }
+  },
+  "passed_and_committed": [
+    "anon /api/copilotkit/info → 401",
+    "login page 200 OpenNext",
+    "auth /info 200 + agents + mode sse",
+    "agent turn suggest shoots (Playwright)"
+  ],
+  "ops_followup_2026-07-20": {
+    "AI_GATEWAY_URL": "set on preview to https://ai-gateway.sk-498.workers.dev",
+    "health_still_502": "same-zone workers.dev limitation — see ipi-510-health evidence"
+  }
+}
