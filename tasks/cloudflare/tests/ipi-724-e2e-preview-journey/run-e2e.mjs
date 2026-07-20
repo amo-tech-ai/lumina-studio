@@ -155,13 +155,18 @@ function mark(id, pass, note, evidence = {}) {
 
 /** Fail closed if evidence text looks like it retained session/auth secrets. */
 function assertNoSecrets(label, text) {
+  // Prefer structured credential shapes over bare words ("authorization" appears
+  // in benign API copy and would crash evidence writes on false positives).
   const patterns = [
     { name: "Cookie header", re: /"name"\s*:\s*"cookie"/i },
     { name: "Set-Cookie", re: /set-cookie/i },
-    { name: "Authorization", re: /authorization/i },
-    { name: "Bearer token", re: /bearer\s+[a-z0-9._\-]+/i },
-    { name: "access_token", re: /access_token/i },
-    { name: "refresh_token", re: /refresh_token/i },
+    {
+      name: "Authorization header",
+      re: /["']?authorization["']?\s*[:=]\s*["']?(?:bearer|basic)\s+\S+/i,
+    },
+    { name: "Bearer token", re: /\bbearer\s+[a-z0-9._\-]{12,}/i },
+    { name: "access_token value", re: /"access_token"\s*:\s*"[^"]+"/i },
+    { name: "refresh_token value", re: /"refresh_token"\s*:\s*"[^"]+"/i },
     { name: "password field", re: /"password"\s*:\s*"[^"]+"/i },
     { name: "JWT-like", re: /eyJ[a-zA-Z0-9_-]{10,}\.[a-zA-Z0-9_-]{10,}\./ },
   ];
