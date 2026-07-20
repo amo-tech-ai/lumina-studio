@@ -279,11 +279,23 @@ export function resolveFromExplicit(csv) {
  * @param {string} head
  */
 export function resolveFromDiff(base, head) {
-  const out = execFileSync(
-    "git",
-    ["diff", "--name-only", `${base}...${head}`],
-    { cwd: ROOT, encoding: "utf8" },
-  );
+  // Three-dot (`A...B`) needs commit-ish on both sides (uses merge-base).
+  // Empty-tree / bare tree SHAs (root-commit fallback) must use two-dot.
+  let baseType = "";
+  try {
+    baseType = execFileSync("git", ["cat-file", "-t", base], {
+      cwd: ROOT,
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "pipe"],
+    }).trim();
+  } catch {
+    baseType = "";
+  }
+  const diffArgs =
+    baseType === "tree"
+      ? ["diff", "--name-only", base, head]
+      : ["diff", "--name-only", `${base}...${head}`];
+  const out = execFileSync("git", diffArgs, { cwd: ROOT, encoding: "utf8" });
   const paths = out
     .split("\n")
     .map((l) => l.trim())
@@ -320,7 +332,8 @@ export function verifyDeployDelta(preRaw, postRaw, functions) {
       errors.push(`${slug}: missing from post-deploy list`);
       continue;
     }
-    const status = String(b.status ?? "ACTIVE").toUpperCase();
+    // Fail closed: missing status must not default to ACTIVE.
+    const status = String(b.status ?? "UNKNOWN").toUpperCase();
     if (status !== "ACTIVE") {
       errors.push(`${slug}: status=${status} (expected ACTIVE)`);
     }
@@ -502,6 +515,33 @@ function selfCheck() {
   ]);
   d = verifyDeployDelta(pre, postInactive, ["health"]);
   check("delta fails when not ACTIVE", !d.ok, JSON.stringify(d));
+
+  const postNoStatus = JSON.stringify([
+    { slug: "health", id: "1", updated_at: "2026-07-20T12:00:00Z" },
+  ]);
+  d = verifyDeployDelta(pre, postNoStatus, ["health"]);
+  check(
+    "delta fails when status missing (fail-closed)",
+    !d.ok && d.errors.some((e) => e.includes("UNKNOWN")),
+    JSON.stringify(d),
+  );
+
+  // Empty-tree base (root-commit / zero-SHA fallback) must not use three-dot
+  const emptyTree = execFileSync("git", ["hash-object", "-t", "tree", "/dev/null"], {
+    cwd: ROOT,
+    encoding: "utf8",
+  }).trim();
+  let fromEmpty;
+  try {
+    fromEmpty = resolveFromDiff(emptyTree, "HEAD");
+  } catch (err) {
+    fromEmpty = { ok: false, error: String(err) };
+  }
+  check(
+    "from-diff empty-tree base succeeds",
+    fromEmpty.ok === true,
+    JSON.stringify(fromEmpty),
+  );
 
   if (failed) {
     console.error(`\nself-check: ${failed} failure(s)`);

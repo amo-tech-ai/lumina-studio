@@ -70,6 +70,7 @@ jobs:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
         with:
           fetch-depth: 0
+          persist-credentials: false
 
       # Pin: actions/setup-node@v4.4.0
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
@@ -135,14 +136,24 @@ jobs:
           if [ "$EVENT_NAME" = "push" ]; then
             BASE="${BEFORE}"
             if [ -z "$BASE" ] || [ "$BASE" = "0000000000000000000000000000000000000000" ]; then
-              BASE="$(git rev-parse HEAD~1)"
+              # New branch / root commit: before is zero SHA. Prefer parent; else empty tree.
+              if git rev-parse --verify -q HEAD~1 >/dev/null; then
+                BASE="$(git rev-parse HEAD~1)"
+              else
+                BASE="$(git hash-object -t tree /dev/null)"
+              fi
             fi
             node scripts/resolve-edge-deploy-targets.mjs --github-output --from-diff "$BASE" "$SHA"
             exit 0
           fi
 
-          # workflow_dispatch without functions: last commit on the ref
-          node scripts/resolve-edge-deploy-targets.mjs --github-output --from-diff HEAD~1 HEAD
+          # workflow_dispatch without functions: last commit on the ref (or full tree if root)
+          if git rev-parse --verify -q HEAD~1 >/dev/null; then
+            node scripts/resolve-edge-deploy-targets.mjs --github-output --from-diff HEAD~1 HEAD
+          else
+            EMPTY_TREE="$(git hash-object -t tree /dev/null)"
+            node scripts/resolve-edge-deploy-targets.mjs --github-output --from-diff "$EMPTY_TREE" HEAD
+          fi
 
   preflight-gates:
     needs: resolve-targets
@@ -152,6 +163,7 @@ jobs:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
         with:
           ref: ${{ needs.resolve-targets.outputs.deploy_sha }}
+          persist-credentials: false
 
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with:
@@ -207,6 +219,7 @@ jobs:
         with:
           ref: ${{ needs.resolve-targets.outputs.deploy_sha }}
           fetch-depth: 0
+          persist-credentials: false
 
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with:
