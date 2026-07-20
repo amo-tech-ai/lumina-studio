@@ -27,6 +27,8 @@ export const WRANGLER_VAR_NAMES = Object.freeze([
   "AI_GATEWAY_URL",
   "CLOUDINARY_CLOUD_NAME",
   "CLOUDINARY_API_KEY",
+  // IPI-586 — optional; set GitHub env var to "true" for preview smoke only.
+  "ENABLE_CF_AI_SMOKE",
 ]);
 
 /** Required on live bootstrap upload — CopilotKit Intelligence and smoke routes. */

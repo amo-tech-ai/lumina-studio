@@ -19,6 +19,11 @@
   "images": {
     "binding": "IMAGES"
   },
+  // IPI-586 · CF-AI-003 — Workers AI binding (no remote:true; that is local-dev only).
+  // Official: https://developers.cloudflare.com/ai-gateway/integrations/aig-workers-ai-binding/
+  "ai": {
+    "binding": "AI"
+  },
   "observability": {
     "enabled": true
   },
@@ -27,7 +32,9 @@
   // at deploy via GitHub environment variables → upload script `--var` (Wrangler is SSOT).
   "vars": {
     "MASTRA_STORAGE_MODE": "noop",
-    "OPERATOR_AUTH_ENABLED": "true"
+    "OPERATOR_AUTH_ENABLED": "true",
+    // IPI-586: internal smoke route stays dark until explicitly flipped for a preview proof.
+    "ENABLE_CF_AI_SMOKE": "false"
   },
   // Wrangler-only aliases (do not affect Node next-dev / Vitest).
   // IPI-490 · CF-MIG-210: stub packages proven in dry-run Worker graph but unused
@@ -66,7 +73,11 @@
       "name": "ipix-operator-preview",
       "vars": {
         "MASTRA_STORAGE_MODE": "noop",
-        "OPERATOR_AUTH_ENABLED": "true"
+        "OPERATOR_AUTH_ENABLED": "true",
+        "ENABLE_CF_AI_SMOKE": "false"
+      },
+      "ai": {
+        "binding": "AI"
       },
       "images": {
         "binding": "IMAGES"
@@ -84,6 +95,7 @@
       ],
       "secrets": {
         // COPILOTKIT_LICENSE_TOKEN is optional — synced when present; SSE mode without it.
+        // INTERNAL_WEBHOOK_SECRET optional — required only when ENABLE_CF_AI_SMOKE=true (IPI-586).
         "required": ["GEMINI_API_KEY", "SUPABASE_SERVICE_ROLE_KEY"]
       }
     },
@@ -91,7 +103,11 @@
       "name": "ipix-operator",
       "vars": {
         "MASTRA_STORAGE_MODE": "noop",
-        "OPERATOR_AUTH_ENABLED": "true"
+        "OPERATOR_AUTH_ENABLED": "true",
+        "ENABLE_CF_AI_SMOKE": "false"
+      },
+      "ai": {
+        "binding": "AI"
       },
       "images": {
         "binding": "IMAGES"
