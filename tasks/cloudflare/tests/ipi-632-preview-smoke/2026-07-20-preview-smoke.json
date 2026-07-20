@@ -1,0 +1,40 @@
+{
+  "task": "IPI-632 · CF-MIG-220 — Protected Preview Runtime Smoke Validation",
+  "date": "2026-07-20",
+  "preview_url": "https://ipix-operator-preview.sk-498.workers.dev",
+  "worker": "ipix-operator-preview",
+  "version_id": "a3fd7130-6d63-41df-ae3b-e2d29da34816",
+  "deployment_id": "66bc4158-2dfa-4871-b7f4-cfe2c9ec20e3",
+  "workers_dev_enabled": true,
+  "checks": {
+    "anon_copilotkit_info": { "status": 401, "pass": true, "note": "fail-closed OPERATOR_AUTH_ENABLED" },
+    "login_page": { "status": 200, "pass": true, "headers": ["x-opennext: 1", "server: cloudflare"] },
+    "app_redirect": { "status": 307, "location": "/login?redirect=%2Fapp", "pass": true },
+    "auth_copilotkit_info": {
+      "status": 200,
+      "pass": true,
+      "agents": ["default", "production-planner", "creative-director", "visual-identity", "social-discovery", "brand-intelligence", "model-match", "crm-assistant", "booking"],
+      "mode": "sse"
+    },
+    "agent_turn": {
+      "prompt": "suggest shoots",
+      "pass": true,
+      "note": "Playwright QA login; streamed clarifying reply; stayed on /app",
+      "method": "playwright"
+    },
+    "ai_health": {
+      "status": 502,
+      "pass": false,
+      "note": "gatewayUrl http://localhost:8787 — missing AI_GATEWAY_URL on Worker; not MVP blocker for CopilotKit smoke"
+    }
+  },
+  "production_ipix_co": {
+    "host": "Vercel",
+    "cloudflare_cutover": false
+  },
+  "evidence_refs": [
+    "tasks/cloudflare/prime/j19-cloudflare-audit.md",
+    "tasks/cloudflare/audits/cloudflare-mastra-hosting-audit.md",
+    "tasks/cloudflare/prime/j18-cloudflare-plan.md"
+  ]
+}
