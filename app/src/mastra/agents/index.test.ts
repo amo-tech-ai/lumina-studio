@@ -13,6 +13,7 @@ import {
   modelMatchAgent,
   bookingAgent,
 } from "./index";
+import { brandIntelligenceAgent } from "./brand-intelligence-agent";
 
 describe("operator agents — structure (IPI2-121)", () => {
   it("production-planner id matches Mastra registry key", () => {
@@ -24,6 +25,20 @@ describe("operator agents — structure (IPI2-121)", () => {
     expect(instructions).toMatch(/shoot-wizard/);
     expect(instructions).toMatch(/\/app\/shoots\/new/);
     expect(instructions).toMatch(/Do not send operators to the shoots list when they asked for the wizard/);
+  });
+
+  it("brand-intelligence teaches shoot-wizard vs shoots list (IPI-731)", () => {
+    const instructions = String(
+      brandIntelligenceAgent.getInstructions?.() ?? brandIntelligenceAgent.instructions ?? "",
+    );
+    expect(instructions).toMatch(/shoot-wizard/);
+    expect(instructions).toMatch(/\/app\/shoots\/new/);
+    expect(instructions).toMatch(/Plan a shoot/);
+    // List intents stay on shoots — must not collapse "plan a shoot" into the list section.
+    expect(instructions).toMatch(/shoots list.*navigateTo\(\{\s*section:\s*"shoots"/s);
+    expect(instructions).toMatch(
+      /Plan a shoot[\s\S]*navigateTo\(\{\s*section:\s*"shoot-wizard"/,
+    );
   });
 
   it("creative-director is a distinct agent", () => {
