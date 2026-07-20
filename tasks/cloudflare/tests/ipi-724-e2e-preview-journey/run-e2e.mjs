@@ -13,6 +13,7 @@ import { mkdirSync, writeFileSync, readFileSync, existsSync, unlinkSync } from "
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createRequire } from "node:module";
+import { execFileSync, execSync } from "node:child_process";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const OUT = __dirname;
@@ -20,6 +21,7 @@ const SHOTS = join(OUT, "screenshots");
 const HAR_DIR = join(OUT, "har");
 const PREVIEW = "https://ipix-operator-preview.sk-498.workers.dev";
 const MAX_TRANSIENT_RETRIES = 2;
+const REPO_ROOT = process.cwd();
 
 const require = createRequire(import.meta.url);
 let playwrightVersion = "unknown";
@@ -28,10 +30,75 @@ try {
 } catch {
   try {
     playwrightVersion = require(
-      join(process.cwd(), "app/node_modules/playwright/package.json"),
+      join(REPO_ROOT, "app/node_modules/playwright/package.json"),
     ).version;
   } catch {
     /* keep unknown */
+  }
+}
+
+/** Live Worker identity from wrangler — never hardcode version/SHA for provenance. */
+function resolvePreviewDeploymentIdentity() {
+  const identity = {
+    worker_version_id: null,
+    deployment_id: null,
+    worker_version_created_on: null,
+    identity_source: null,
+    identity_error: null,
+    evidence_runner_git_sha: null,
+    deployment_git_sha: null,
+    deployment_git_sha_note:
+      "Cloudflare Workers versions API does not expose git SHA; do not invent origin/main tip.",
+  };
+  try {
+    identity.evidence_runner_git_sha = execSync("git rev-parse HEAD", {
+      cwd: REPO_ROOT,
+      encoding: "utf8",
+    }).trim();
+  } catch {
+    identity.evidence_runner_git_sha = null;
+  }
+  try {
+    const appDir = existsSync(join(REPO_ROOT, "app/wrangler.jsonc"))
+      ? join(REPO_ROOT, "app")
+      : REPO_ROOT;
+    const raw = execFileSync(
+      "npx",
+      ["wrangler", "deployments", "list", "--env", "preview", "--json"],
+      { cwd: appDir, encoding: "utf8", timeout: 60_000 },
+    );
+    const deployments = JSON.parse(raw);
+    if (!Array.isArray(deployments) || deployments.length === 0) {
+      identity.identity_error = "wrangler deployments list returned empty";
+      return identity;
+    }
+    const sorted = [...deployments].sort((a, b) =>
+      String(b.created_on || "").localeCompare(String(a.created_on || "")),
+    );
+    const latest = sorted[0];
+    const version =
+      latest?.versions?.find((v) => v.percentage === 100) || latest?.versions?.[0];
+    identity.worker_version_id = version?.version_id || null;
+    identity.deployment_id = latest?.id || null;
+    identity.worker_version_created_on = latest?.created_on || null;
+    identity.identity_source =
+      "wrangler deployments list --env preview --json (latest by created_on)";
+  } catch (e) {
+    identity.identity_error = String(e?.message || e).slice(0, 300);
+  }
+  return identity;
+}
+
+function sanitizeNetworkUrl(url) {
+  try {
+    const u = new URL(url);
+    return {
+      host: u.host,
+      path: u.pathname,
+      // Never retain query — login/auth leaks have appeared in automation URLs.
+    };
+  } catch {
+    return { host: null, path: url.split("?")[0] };
   }
 }
 
@@ -120,10 +187,18 @@ async function main() {
   // Remove any leftover full HAR from a previous unsafe run.
   if (existsSync(harPath)) unlinkSync(harPath);
 
+  const deploymentIdentity = resolvePreviewDeploymentIdentity();
+
   const browser = await chromium.launch({ headless: true });
   const context = await browser.newContext({
-    // Minimal HAR (URLs/status only) — never embed bodies/headers with cookies.
-    recordHar: { path: harPath, mode: "minimal", content: "omit" },
+    // Minimal HAR — API URLs only; never embed bodies/headers with cookies.
+    // Prefer network-summary.json; HAR is deleted after the run and must not be committed.
+    recordHar: {
+      path: harPath,
+      mode: "minimal",
+      content: "omit",
+      urlFilter: "**/api/**",
+    },
     viewport: { width: 1440, height: 900 },
     // Real Cloudflare preview TLS must validate (do not mask cert failures).
   });
@@ -149,8 +224,10 @@ async function main() {
     if (!url.includes(new URL(PREVIEW).host) && !url.includes("/api/")) return;
     const req = res.request();
     const timing = res.request().timing?.() || {};
+    const { host, path } = sanitizeNetworkUrl(url);
     networkLog.push({
-      url,
+      host,
+      path,
       method: req.method(),
       status: res.status(),
       resourceType: req.resourceType(),
@@ -304,7 +381,7 @@ async function main() {
     healthBody = healthRes.json;
     healthCfRay =
       healthRes.cfRay ||
-      networkLog.filter((n) => n.url.includes("/api/ai/health")).at(-1)?.cfRay ||
+      networkLog.filter((n) => n.path?.includes("/api/ai/health")).at(-1)?.cfRay ||
       null;
     mark(
       "06_ai_health",
@@ -430,12 +507,13 @@ async function main() {
       return e.type === "pageerror" || /TypeError|ReferenceError|SyntaxError/i.test(t);
     });
     const criticalFailed = networkLog.filter((n) => {
-      if (!n.url.includes("/api/")) return false;
+      const p = n.path || "";
+      if (!p.includes("/api/")) return false;
       if (n.status >= 500) return true;
       // auth endpoints that should work while logged in
-      if (n.url.includes("/api/copilotkit") && n.method === "POST" && n.status >= 400)
+      if (p.includes("/api/copilotkit") && n.method === "POST" && n.status >= 400)
         return true;
-      if (n.url.includes("/api/ai/health") && n.status !== 200) return true;
+      if (p.includes("/api/ai/health") && n.status !== 200) return true;
       return false;
     });
     mark(
@@ -524,10 +602,7 @@ async function main() {
     task: "IPI-724 · CF-UJ-018 — End-to-End Preview User Journey Validation",
     preview_url: PREVIEW,
     worker: "ipix-operator-preview",
-    worker_version_id: "591796f7-d070-44f2-ae7c-d9ae1a4a2bda",
-    deployment_sha_origin_main: "c640f01e82f3525518300108d2ad3b17db17adec",
-    note_deployment_sha:
-      "Preview Worker version may predate origin/main tip; version_id from wrangler deployments list --env preview",
+    ...deploymentIdentity,
     cf_ray_health: healthCfRay,
     region_guess: region,
     browser: { name: "chromium", version: browserVersion },
@@ -544,7 +619,7 @@ async function main() {
     },
     ai_health: healthBody,
     adapterAvailable_note:
-      "Preview still returns adapterAvailable:true (cosmetic; removed on main in #512, needs redeploy)",
+      "If preview still returns adapterAvailable, Worker predates #512 — redeploy HEAD before claiming current.",
     criteria,
     overall_pass: Object.entries(criteria)
       .filter(([k]) => !k.startsWith("perf_") && k !== "13b_protected_redirect")
@@ -554,20 +629,19 @@ async function main() {
       .every((k) => criteria[k].pass),
   };
 
-  // Soft perf failures don't block overall if marked soft — recompute
+  // Soft perf failures don't block hard AC — recompute
   const hardKeys = Object.keys(criteria).filter((k) => !k.startsWith("perf_"));
   metadata.hard_ac_pass = hardKeys.every((k) => criteria[k].pass);
+  // Sign-out UI is a hard AC — do not special-case it as success.
   metadata.recommendation = metadata.hard_ac_pass
     ? "Done"
-    : criteria["12_signout_ui"] &&
-        !criteria["12_signout_ui"].pass &&
-        hardKeys.filter((k) => k !== "12_signout_ui").every((k) => criteria[k].pass)
-      ? "Needs Fix — missing Sign out UI (session cleared for 401 proof)"
+    : !criteria["12_signout_ui"]?.pass
+      ? "Needs Fix — missing Sign out UI (hard AC; blocked on IPI-725 / PR #519)"
       : "Needs Fix";
 
   metadata.evidence_policy = {
-    har: "minimal + content omit (or deleted if secret scan fails)",
-    preferred: "network-summary.json (method/url/status/latency/cf-ray only)",
+    har: "minimal + content omit + urlFilter **/api/**; deleted after run — never commit",
+    preferred: "network-summary.json (host/path/method/status/latency/cf-ray only)",
     ignoreHTTPSErrors: false,
   };
 
@@ -583,25 +657,36 @@ async function main() {
     count: networkLog.length,
     entries: networkLog,
     critical_failures: networkLog.filter(
-      (n) => n.url.includes("/api/") && n.status >= 500,
+      (n) => (n.path || "").includes("/api/") && n.status >= 500,
     ),
   });
 
-  // Prefer committing network-summary only. Delete HAR unless it passes the scan.
+  // Never commit HAR — network-summary.json is the durable network artifact.
   if (existsSync(harPath)) {
     try {
       assertNoSecrets(harPath, readFileSync(harPath, "utf8"));
-      console.log("HAR secret scan: clean (minimal mode)");
     } catch (e) {
-      unlinkSync(harPath);
       console.warn(String(e.message || e));
-      console.warn("Deleted HAR — use network-summary.json as the network evidence artifact.");
     }
+    unlinkSync(harPath);
+    console.log("Deleted local HAR — commit network-summary.json only.");
   }
 
   console.log("\n=== SUMMARY ===");
-  console.log(JSON.stringify({ recommendation: metadata.recommendation, performance: metadata.performance, hard_ac_pass: metadata.hard_ac_pass }, null, 2));
-  process.exit(metadata.hard_ac_pass || metadata.recommendation.startsWith("Needs Fix — missing") ? 0 : 1);
+  console.log(
+    JSON.stringify(
+      {
+        recommendation: metadata.recommendation,
+        performance: metadata.performance,
+        hard_ac_pass: metadata.hard_ac_pass,
+        worker_version_id: metadata.worker_version_id,
+      },
+      null,
+      2,
+    ),
+  );
+  // Exit non-zero whenever any hard acceptance criterion fails (including Sign out UI).
+  process.exit(metadata.hard_ac_pass ? 0 : 1);
 }
 
 main().catch((e) => {

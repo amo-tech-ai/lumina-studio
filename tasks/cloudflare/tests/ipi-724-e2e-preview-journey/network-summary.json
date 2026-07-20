@@ -2,1525 +2,1694 @@
   "count": 169,
   "entries": [
     {
-      "url": "https://ipix-operator-preview.sk-498.workers.dev/login",
       "method": "GET",
       "status": 200,
       "resourceType": "document",
       "latencyMs": null,
       "cfRay": "a1df76b3380db25a-MIA",
-      "retries": 0
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/login"
     },
     {
-      "url": "https://ipix-operator-preview.sk-498.workers.dev/_next/static/chunks/3cxyt25-owzvw.css",
       "method": "GET",
       "status": 200,
       "resourceType": "stylesheet",
       "latencyMs": null,
       "cfRay": "a1df76b51b6cb25a-MIA",
-      "retries": 0
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/_next/static/chunks/3cxyt25-owzvw.css"
     },
     {
-      "url": "https://ipix-operator-preview.sk-498.workers.dev/_next/static/chunks/004dyyd1j1zqp.css",
       "method": "GET",
       "status": 200,
       "resourceType": "stylesheet",
       "latencyMs": null,
       "cfRay": "a1df76b51b6bb25a-MIA",
-      "retries": 0
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/_next/static/chunks/004dyyd1j1zqp.css"
     },
     {
-      "url": "https://ipix-operator-preview.sk-498.workers.dev/_next/static/media/01e4147cff8141ee-s.p.3huc2loe0ie8a.woff2",
       "method": "GET",
       "status": 200,
       "resourceType": "font",
       "latencyMs": null,
       "cfRay": "a1df76b51b6db25a-MIA",
-      "retries": 0
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/_next/static/media/01e4147cff8141ee-s.p.3huc2loe0ie8a.woff2"
     },
     {
-      "url": "https://ipix-operator-preview.sk-498.workers.dev/_next/static/media/1b99372b3eaef0c8-s.p.1gsd1jahc5dg_.woff2",
       "method": "GET",
       "status": 200,
       "resourceType": "font",
       "latencyMs": null,
       "cfRay": "a1df76b51b6eb25a-MIA",
-      "retries": 0
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/_next/static/media/1b99372b3eaef0c8-s.p.1gsd1jahc5dg_.woff2"
     },
     {
-      "url": "https://ipix-operator-preview.sk-498.workers.dev/_next/static/media/797e433ab948586e-s.p.0r6juujl39pe6.woff2",
       "method": "GET",
       "status": 200,
       "resourceType": "font",
       "latencyMs": null,
       "cfRay": "a1df76b51b6fb25a-MIA",
-      "retries": 0
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/_next/static/media/797e433ab948586e-s.p.0r6juujl39pe6.woff2"
     },
     {
-      "url": "https://ipix-operator-preview.sk-498.workers.dev/_next/static/media/caa3a2e1cccd8315-s.p.0wgildi0cnwt9.woff2",
       "method": "GET",
       "status": 200,
       "resourceType": "font",
       "latencyMs": null,
       "cfRay": "a1df76b51b70b25a-MIA",
-      "retries": 0
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/_next/static/media/caa3a2e1cccd8315-s.p.0wgildi0cnwt9.woff2"
     },
     {
-      "url": "https://ipix-operator-preview.sk-498.workers.dev/_next/static/chunks/3p3z9p0_oadw6.js",
       "method": "GET",
       "status": 200,
       "resourceType": "script",
       "latencyMs": null,
       "cfRay": "a1df76b51b73b25a-MIA",
-      "retries": 0
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/_next/static/chunks/3p3z9p0_oadw6.js"
     },
     {
-      "url": "https://ipix-operator-preview.sk-498.workers.dev/_next/static/chunks/178-rgcgy50q5.js",
       "method": "GET",
       "status": 200,
       "resourceType": "script",
       "latencyMs": null,
       "cfRay": "a1df76b51b74b25a-MIA",
-      "retries": 0
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/_next/static/chunks/178-rgcgy50q5.js"
     },
     {
-      "url": "https://ipix-operator-preview.sk-498.workers.dev/_next/static/chunks/1tsb2lmii3g5i.js",
       "method": "GET",
       "status": 200,
       "resourceType": "script",
       "latencyMs": null,
       "cfRay": "a1df76b51b75b25a-MIA",
-      "retries": 0
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/_next/static/chunks/1tsb2lmii3g5i.js"
     },
     {
-      "url": "https://ipix-operator-preview.sk-498.workers.dev/_next/static/chunks/29zjozoolug-7.js",
       "method": "GET",
       "status": 200,
       "resourceType": "script",
       "latencyMs": null,
       "cfRay": "a1df76b51b77b25a-MIA",
-      "retries": 0
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/_next/static/chunks/29zjozoolug-7.js"
     },
     {
-      "url": "https://ipix-operator-preview.sk-498.workers.dev/_next/static/chunks/2rx9uw4fuec9m.js",
       "method": "GET",
       "status": 200,
       "resourceType": "script",
       "latencyMs": null,
       "cfRay": "a1df76b51b78b25a-MIA",
-      "retries": 0
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/_next/static/chunks/2rx9uw4fuec9m.js"
     },
     {
-      "url": "https://ipix-operator-preview.sk-498.workers.dev/_next/static/chunks/2lj_w-73pkpyx.js",
       "method": "GET",
       "status": 200,
       "resourceType": "script",
       "latencyMs": null,
       "cfRay": "a1df76b51b79b25a-MIA",
-      "retries": 0
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/_next/static/chunks/2lj_w-73pkpyx.js"
     },
     {
-      "url": "https://ipix-operator-preview.sk-498.workers.dev/_next/static/chunks/2kvz3dzuua9g7.js",
       "method": "GET",
       "status": 200,
       "resourceType": "script",
       "latencyMs": null,
       "cfRay": "a1df76b51b7bb25a-MIA",
-      "retries": 0
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/_next/static/chunks/2kvz3dzuua9g7.js"
     },
     {
-      "url": "https://ipix-operator-preview.sk-498.workers.dev/_next/static/chunks/turbopack-2zar6gw9bch5s.js",
       "method": "GET",
       "status": 200,
       "resourceType": "script",
       "latencyMs": null,
       "cfRay": "a1df76b51b7cb25a-MIA",
-      "retries": 0
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/_next/static/chunks/turbopack-2zar6gw9bch5s.js"
     },
     {
-      "url": "https://ipix-operator-preview.sk-498.workers.dev/_next/static/chunks/3t3pihpq3c5wi.js",
       "method": "GET",
       "status": 200,
       "resourceType": "script",
       "latencyMs": null,
       "cfRay": "a1df76b51b7db25a-MIA",
-      "retries": 0
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/_next/static/chunks/3t3pihpq3c5wi.js"
     },
     {
-      "url": "https://ipix-operator-preview.sk-498.workers.dev/_next/static/chunks/2lcsr6r7vughq.js",
       "method": "GET",
       "status": 200,
       "resourceType": "script",
       "latencyMs": null,
       "cfRay": "a1df76b51b7fb25a-MIA",
-      "retries": 0
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/_next/static/chunks/2lcsr6r7vughq.js"
     },
     {
-      "url": "https://ipix-operator-preview.sk-498.workers.dev/_next/static/chunks/19fowf26op6n4.js",
       "method": "GET",
       "status": 200,
       "resourceType": "script",
       "latencyMs": null,
       "cfRay": "a1df76b51b81b25a-MIA",
-      "retries": 0
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/_next/static/chunks/19fowf26op6n4.js"
     },
     {
-      "url": "https://ipix-operator-preview.sk-498.workers.dev/_next/static/chunks/3jm796h_31c0l.js",
       "method": "GET",
       "status": 200,
       "resourceType": "script",
       "latencyMs": null,
       "cfRay": "a1df76b51b7eb25a-MIA",
-      "retries": 0
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/_next/static/chunks/3jm796h_31c0l.js"
     },
     {
-      "url": "https://ipix-operator-preview.sk-498.workers.dev/_next/static/chunks/3--mysv3hflw5.js",
       "method": "GET",
       "status": 200,
       "resourceType": "script",
       "latencyMs": null,
       "cfRay": "a1df76b51b80b25a-MIA",
-      "retries": 0
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/_next/static/chunks/3--mysv3hflw5.js"
     },
     {
-      "url": "https://ipix-operator-preview.sk-498.workers.dev/_next/static/chunks/2xrq5_gqvb77l.js",
       "method": "GET",
       "status": 200,
       "resourceType": "script",
       "latencyMs": null,
       "cfRay": "a1df76b51b82b25a-MIA",
-      "retries": 0
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/_next/static/chunks/2xrq5_gqvb77l.js"
     },
     {
-      "url": "blob:https://ipix-operator-preview.sk-498.workers.dev/d2f2dfb1-5b34-460f-a46f-7b472ad56afb",
       "method": "GET",
       "status": 200,
       "resourceType": "script",
       "latencyMs": null,
       "cfRay": null,
-      "retries": 0
+      "retries": 0,
+      "host": null,
+      "path": "https://ipix-operator-preview.sk-498.workers.dev/d2f2dfb1-5b34-460f-a46f-7b472ad56afb"
     },
     {
-      "url": "https://ipix-operator-preview.sk-498.workers.dev/monitoring?o=4511711904137216&p=4511711906168832&r=us",
       "method": "POST",
       "status": 200,
       "resourceType": "fetch",
       "latencyMs": null,
       "cfRay": "a1df76b91f4e0c83-MIA",
-      "retries": 0
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/monitoring"
     },
     {
-      "url": "https://ipix-operator-preview.sk-498.workers.dev/monitoring?o=4511711904137216&p=4511711906168832&r=us",
       "method": "POST",
       "status": 200,
       "resourceType": "fetch",
       "latencyMs": null,
       "cfRay": "a1df76b91f4f0c83-MIA",
-      "retries": 0
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/monitoring"
     },
     {
-      "url": "https://ipix-operator-preview.sk-498.workers.dev/?_rsc=_H_fFy2_Q06N8BA7",
       "method": "GET",
       "status": 200,
       "resourceType": "fetch",
       "latencyMs": null,
       "cfRay": "a1df76b95f520c83-MIA",
-      "retries": 0
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/"
     },
     {
-      "url": "https://ipix-operator-preview.sk-498.workers.dev/services/instagram?_rsc=_H_fFy2_Q06N8BA7",
       "method": "GET",
       "status": 200,
       "resourceType": "fetch",
       "latencyMs": null,
       "cfRay": "a1df76b95f550c83-MIA",
-      "retries": 0
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/services/instagram"
     },
     {
-      "url": "https://ipix-operator-preview.sk-498.workers.dev/services/video?_rsc=_H_fFy2_Q06N8BA7",
       "method": "GET",
       "status": 200,
       "resourceType": "fetch",
       "latencyMs": null,
       "cfRay": "a1df76b95f540c83-MIA",
-      "retries": 0
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/services/video"
     },
     {
-      "url": "https://ipix-operator-preview.sk-498.workers.dev/_next/static/chunks/1n4q24k2zx0tm.css",
       "method": "GET",
       "status": 200,
       "resourceType": "stylesheet",
       "latencyMs": null,
       "cfRay": "a1df76c3f8a10c83-MIA",
-      "retries": 0
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/_next/static/chunks/1n4q24k2zx0tm.css"
     },
     {
-      "url": "https://ipix-operator-preview.sk-498.workers.dev/services/shopify?_rsc=_H_fFy2_Q06N8BA7",
       "method": "GET",
       "status": 200,
       "resourceType": "fetch",
       "latencyMs": null,
       "cfRay": "a1df76b95f530c83-MIA",
-      "retries": 0
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/services/shopify"
     },
     {
-      "url": "https://ipix-operator-preview.sk-498.workers.dev/app?_rsc=fL2a8_og6Zuh6NPx",
       "method": "GET",
       "status": 200,
       "resourceType": "fetch",
       "latencyMs": null,
       "cfRay": "a1df76beafe20c83-MIA",
-      "retries": 0
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/app"
     },
     {
-      "url": "https://ipix-operator-preview.sk-498.workers.dev/_next/static/chunks/3b5b9jbmp6lar.js",
       "method": "GET",
       "status": 200,
       "resourceType": "script",
       "latencyMs": null,
       "cfRay": "a1df76c578f60c83-MIA",
-      "retries": 0
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/_next/static/chunks/3b5b9jbmp6lar.js"
     },
     {
-      "url": "https://ipix-operator-preview.sk-498.workers.dev/_next/static/chunks/2y9ciwk4ebiun.css",
       "method": "GET",
       "status": 200,
       "resourceType": "stylesheet",
       "latencyMs": null,
       "cfRay": "a1df76c578f90c83-MIA",
-      "retries": 0
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/_next/static/chunks/2y9ciwk4ebiun.css"
     },
     {
-      "url": "https://ipix-operator-preview.sk-498.workers.dev/_next/static/chunks/2nvg7koy6pc54.js",
       "method": "GET",
       "status": 200,
       "resourceType": "script",
       "latencyMs": null,
       "cfRay": "a1df76c578fa0c83-MIA",
-      "retries": 0
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/_next/static/chunks/2nvg7koy6pc54.js"
     },
     {
-      "url": "https://ipix-operator-preview.sk-498.workers.dev/_next/static/chunks/2wq8ip7ji7a72.js",
       "method": "GET",
       "status": 200,
       "resourceType": "script",
       "latencyMs": null,
       "cfRay": "a1df76c578f80c83-MIA",
-      "retries": 0
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/_next/static/chunks/2wq8ip7ji7a72.js"
     },
     {
-      "url": "https://ipix-operator-preview.sk-498.workers.dev/_next/static/chunks/2vg-5x3ya_d9_.js",
       "method": "GET",
       "status": 200,
       "resourceType": "script",
       "latencyMs": null,
       "cfRay": "a1df76c578fc0c83-MIA",
-      "retries": 0
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/_next/static/chunks/2vg-5x3ya_d9_.js"
     },
     {
-      "url": "https://ipix-operator-preview.sk-498.workers.dev/_next/static/chunks/3a6b4-3oq1w7r.js",
       "method": "GET",
       "status": 200,
       "resourceType": "script",
       "latencyMs": null,
       "cfRay": "a1df76c589050c83-MIA",
-      "retries": 0
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/_next/static/chunks/3a6b4-3oq1w7r.js"
     },
     {
-      "url": "https://ipix-operator-preview.sk-498.workers.dev/_next/static/chunks/0htc4fg07vcjn.js",
       "method": "GET",
       "status": 200,
       "resourceType": "script",
       "latencyMs": null,
       "cfRay": "a1df76c589060c83-MIA",
-      "retries": 0
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/_next/static/chunks/0htc4fg07vcjn.js"
     },
     {
-      "url": "https://ipix-operator-preview.sk-498.workers.dev/_next/static/chunks/1w6iqym24ba6k.js",
       "method": "GET",
       "status": 200,
       "resourceType": "script",
       "latencyMs": null,
       "cfRay": "a1df76c578fd0c83-MIA",
-      "retries": 0
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/_next/static/chunks/1w6iqym24ba6k.js"
     },
     {
-      "url": "https://ipix-operator-preview.sk-498.workers.dev/_next/static/chunks/0-xlt1cx89a6b.js",
       "method": "GET",
       "status": 200,
       "resourceType": "script",
       "latencyMs": null,
       "cfRay": "a1df76c578fb0c83-MIA",
-      "retries": 0
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/_next/static/chunks/0-xlt1cx89a6b.js"
     },
     {
-      "url": "https://ipix-operator-preview.sk-498.workers.dev/_next/static/chunks/0jkc536qkhc7w.js",
       "method": "GET",
       "status": 200,
       "resourceType": "script",
       "latencyMs": null,
       "cfRay": "a1df76c589010c83-MIA",
-      "retries": 0
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/_next/static/chunks/0jkc536qkhc7w.js"
     },
     {
-      "url": "https://ipix-operator-preview.sk-498.workers.dev/_next/static/chunks/2y7ui2a3kc2t8.js",
       "method": "GET",
       "status": 200,
       "resourceType": "script",
       "latencyMs": null,
       "cfRay": "a1df76c589030c83-MIA",
-      "retries": 0
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/_next/static/chunks/2y7ui2a3kc2t8.js"
     },
     {
-      "url": "https://ipix-operator-preview.sk-498.workers.dev/_next/static/chunks/3_whfq0aov2t3.js",
       "method": "GET",
       "status": 200,
       "resourceType": "script",
       "latencyMs": null,
       "cfRay": "a1df76c588ff0c83-MIA",
-      "retries": 0
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/_next/static/chunks/3_whfq0aov2t3.js"
     },
     {
-      "url": "https://ipix-operator-preview.sk-498.workers.dev/login?_rsc=Y629TcATobIMnkxF",
       "method": "GET",
       "status": 200,
       "resourceType": "fetch",
       "latencyMs": null,
       "cfRay": "a1df76beafe10c83-MIA",
-      "retries": 0
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/login"
     },
     {
-      "url": "https://ipix-operator-preview.sk-498.workers.dev/_next/static/chunks/1l-1czb-lwgmr.js",
       "method": "GET",
       "status": 200,
       "resourceType": "script",
       "latencyMs": null,
       "cfRay": "a1df76c589040c83-MIA",
-      "retries": 0
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/_next/static/chunks/1l-1czb-lwgmr.js"
     },
     {
-      "url": "https://ipix-operator-preview.sk-498.workers.dev/_next/static/chunks/3svghpp3596o9.js",
       "method": "GET",
       "status": 200,
       "resourceType": "script",
       "latencyMs": null,
       "cfRay": "a1df76c578fe0c83-MIA",
-      "retries": 0
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/_next/static/chunks/3svghpp3596o9.js"
     },
     {
-      "url": "https://ipix-operator-preview.sk-498.workers.dev/_next/static/chunks/1n83fsw_e162n.js",
       "method": "GET",
       "status": 200,
       "resourceType": "script",
       "latencyMs": null,
       "cfRay": "a1df76c589000c83-MIA",
-      "retries": 0
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/_next/static/chunks/1n83fsw_e162n.js"
     },
     {
-      "url": "https://ipix-operator-preview.sk-498.workers.dev/services/jewellery?_rsc=_H_fFy2_Q06N8BA7",
       "method": "GET",
       "status": 200,
       "resourceType": "fetch",
       "latencyMs": null,
       "cfRay": "a1df76c3f8a00c83-MIA",
-      "retries": 0
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/services/jewellery"
     },
     {
-      "url": "https://ipix-operator-preview.sk-498.workers.dev/services/ecommerce-photography?_rsc=_H_fFy2_Q06N8BA7",
       "method": "GET",
       "status": 200,
       "resourceType": "fetch",
       "latencyMs": null,
       "cfRay": "a1df76c468d90c83-MIA",
-      "retries": 0
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/services/ecommerce-photography"
     },
     {
-      "url": "https://ipix-operator-preview.sk-498.workers.dev/services/clothing?_rsc=_H_fFy2_Q06N8BA7",
       "method": "GET",
       "status": 200,
       "resourceType": "fetch",
       "latencyMs": null,
       "cfRay": "a1df76c458d40c83-MIA",
-      "retries": 0
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/services/clothing"
     },
     {
-      "url": "https://ipix-operator-preview.sk-498.workers.dev/services/amazon?_rsc=_H_fFy2_Q06N8BA7",
       "method": "GET",
       "status": 200,
       "resourceType": "fetch",
       "latencyMs": null,
       "cfRay": "a1df76c448d20c83-MIA",
-      "retries": 0
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/services/amazon"
     },
     {
-      "url": "https://ipix-operator-preview.sk-498.workers.dev/monitoring?o=4511711904137216&p=4511711906168832&r=us",
       "method": "POST",
       "status": 200,
       "resourceType": "fetch",
       "latencyMs": null,
       "cfRay": "a1df76c889910c83-MIA",
-      "retries": 0
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/monitoring"
     },
     {
-      "url": "https://ipix-operator-preview.sk-498.workers.dev/monitoring?o=4511711904137216&p=4511711906168832&r=us",
       "method": "POST",
       "status": 200,
       "resourceType": "fetch",
       "latencyMs": null,
       "cfRay": "a1df76c889920c83-MIA",
-      "retries": 0
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/monitoring"
     },
     {
-      "url": "https://ipix-operator-preview.sk-498.workers.dev/api/copilotkit/info",
       "method": "GET",
       "status": 200,
       "resourceType": "fetch",
       "latencyMs": null,
       "cfRay": "a1df76c7f9750c83-MIA",
-      "retries": 0
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/api/copilotkit/info"
     },
     {
-      "url": "https://ipix-operator-preview.sk-498.workers.dev/login?_rsc=ESMN0uHFtARRz41R",
       "method": "GET",
       "status": 200,
       "resourceType": "fetch",
       "latencyMs": null,
       "cfRay": "a1df76c7f9780c83-MIA",
-      "retries": 0
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/login"
     },
     {
-      "url": "https://ipix-operator-preview.sk-498.workers.dev/login?_rsc=1F8-AEclBcB9jFE6",
       "method": "GET",
       "status": 200,
       "resourceType": "fetch",
       "latencyMs": null,
       "cfRay": "a1df76c7f9770c83-MIA",
-      "retries": 0
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/login"
     },
     {
-      "url": "https://ipix-operator-preview.sk-498.workers.dev/login?_rsc=jqrgbBLvqafx9NrK",
       "method": "GET",
       "status": 200,
       "resourceType": "fetch",
       "latencyMs": null,
       "cfRay": "a1df76c819820c83-MIA",
-      "retries": 0
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/login"
     },
     {
-      "url": "https://ipix-operator-preview.sk-498.workers.dev/services/fashion-photography?_rsc=_H_fFy2_Q06N8BA7",
       "method": "GET",
       "status": 200,
       "resourceType": "fetch",
       "latencyMs": null,
       "cfRay": "a1df76c7f9760c83-MIA",
-      "retries": 0
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/services/fashion-photography"
     },
     {
-      "url": "https://ipix-operator-preview.sk-498.workers.dev/api/brands",
       "method": "GET",
       "status": 200,
       "resourceType": "fetch",
       "latencyMs": null,
       "cfRay": "a1df76cb0a4d0c83-MIA",
-      "retries": 0
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/api/brands"
     },
     {
-      "url": "https://ipix-operator-preview.sk-498.workers.dev/api/notifications?unread_only=true&limit=50",
       "method": "GET",
       "status": 200,
       "resourceType": "fetch",
       "latencyMs": null,
       "cfRay": "a1df76cb0a4e0c83-MIA",
-      "retries": 0
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/api/notifications"
     },
     {
-      "url": "https://ipix-operator-preview.sk-498.workers.dev/_next/image?url=https%3A%2F%2Fres.cloudinary.com%2Fdzqy2ixl0%2Fimage%2Fupload%2Fc_fill%2Cw_208%2Ch_208%2Cg_auto%2Ff_auto%2Fq_auto%2Fv1%2F9-fashionos_ddj5jx%3F_a%3DBAVMn6DY0&w=128&q=75",
       "method": "GET",
       "status": 200,
       "resourceType": "image",
       "latencyMs": null,
       "cfRay": "a1df76d14b2e0c83-MIA",
-      "retries": 0
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/_next/image"
     },
     {
-      "url": "https://ipix-operator-preview.sk-498.workers.dev/_next/image?url=https%3A%2F%2Fres.cloudinary.com%2Fdzqy2ixl0%2Fimage%2Fupload%2Fc_fill%2Cw_276%2Ch_345%2Cg_auto%2Ff_auto%2Fq_auto%2Fv1%2F8-fashionos_o0m6yc%3F_a%3DBAVMn6DY0&w=256&q=75",
       "method": "GET",
       "status": 200,
       "resourceType": "image",
       "latencyMs": null,
       "cfRay": "a1df76d16b360c83-MIA",
-      "retries": 0
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/_next/image"
     },
     {
-      "url": "https://ipix-operator-preview.sk-498.workers.dev/_next/image?url=https%3A%2F%2Fres.cloudinary.com%2Fdzqy2ixl0%2Fimage%2Fupload%2Fc_fill%2Cw_276%2Ch_345%2Cg_auto%2Ff_auto%2Fq_auto%2Fv1%2F40-fashionos_ub4ajn%3F_a%3DBAVMn6DY0&w=256&q=75",
       "method": "GET",
       "status": 200,
       "resourceType": "image",
       "latencyMs": null,
       "cfRay": "a1df76d16b340c83-MIA",
-      "retries": 0
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/_next/image"
     },
     {
-      "url": "https://ipix-operator-preview.sk-498.workers.dev/_next/image?url=https%3A%2F%2Fres.cloudinary.com%2Fdzqy2ixl0%2Fimage%2Fupload%2Fc_fill%2Cw_276%2Ch_345%2Cg_auto%2Ff_auto%2Fq_auto%2Fv1%2F36-fashionos_zvz7o5%3F_a%3DBAVMn6DY0&w=256&q=75",
       "method": "GET",
       "status": 200,
       "resourceType": "image",
       "latencyMs": null,
       "cfRay": "a1df76d16b370c83-MIA",
-      "retries": 0
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/_next/image"
     },
     {
-      "url": "https://ipix-operator-preview.sk-498.workers.dev/_next/image?url=https%3A%2F%2Fres.cloudinary.com%2Fdzqy2ixl0%2Fimage%2Fupload%2Fc_fill%2Cw_276%2Ch_345%2Cg_auto%2Ff_auto%2Fq_auto%2Fv1%2F48-fashionos_qj0z9e%3F_a%3DBAVMn6DY0&w=256&q=75",
       "method": "GET",
       "status": 200,
       "resourceType": "image",
       "latencyMs": null,
       "cfRay": "a1df76d16b350c83-MIA",
-      "retries": 0
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/_next/image"
     },
     {
-      "url": "https://ipix-operator-preview.sk-498.workers.dev/app/assets?brand=db1f728d-bee1-430e-a3e7-0c601da74ce7&_rsc=R0tRxeXOP7hmQRIY",
       "method": "GET",
       "status": 200,
       "resourceType": "fetch",
       "latencyMs": null,
       "cfRay": "a1df76d1bb410c83-MIA",
-      "retries": 0
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/app/assets"
     },
     {
-      "url": "https://ipix-operator-preview.sk-498.workers.dev/app/brand?_rsc=R0tRxeXOP7hmQRIY",
       "method": "GET",
       "status": 200,
       "resourceType": "fetch",
       "latencyMs": null,
       "cfRay": "a1df76d19b3f0c83-MIA",
-      "retries": 0
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/app/brand"
     },
     {
-      "url": "https://ipix-operator-preview.sk-498.workers.dev/app/shoots?_rsc=R0tRxeXOP7hmQRIY",
       "method": "GET",
       "status": 200,
       "resourceType": "fetch",
       "latencyMs": null,
       "cfRay": "a1df76d19b3e0c83-MIA",
-      "retries": 0
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/app/shoots"
     },
     {
-      "url": "https://ipix-operator-preview.sk-498.workers.dev/app/shoots/new?_rsc=R0tRxeXOP7hmQRIY",
       "method": "GET",
       "status": 200,
       "resourceType": "fetch",
       "latencyMs": null,
       "cfRay": "a1df76d19b400c83-MIA",
-      "retries": 0
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/app/shoots/new"
     },
     {
-      "url": "https://ipix-operator-preview.sk-498.workers.dev/app/brand/db1f728d-bee1-430e-a3e7-0c601da74ce7?_rsc=R0tRxeXOP7hmQRIY",
       "method": "GET",
       "status": 200,
       "resourceType": "fetch",
       "latencyMs": null,
       "cfRay": "a1df76db3cf10c83-MIA",
-      "retries": 0
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/app/brand/db1f728d-bee1-430e-a3e7-0c601da74ce7"
     },
     {
-      "url": "https://ipix-operator-preview.sk-498.workers.dev/app/inbox?_rsc=R0tRxeXOP7hmQRIY",
       "method": "GET",
       "status": 200,
       "resourceType": "fetch",
       "latencyMs": null,
       "cfRay": "a1df76db4cf50c83-MIA",
-      "retries": 0
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/app/inbox"
     },
     {
-      "url": "https://ipix-operator-preview.sk-498.workers.dev/app/matching?_rsc=R0tRxeXOP7hmQRIY",
       "method": "GET",
       "status": 200,
       "resourceType": "fetch",
       "latencyMs": null,
       "cfRay": "a1df76dbad0c0c83-MIA",
-      "retries": 0
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/app/matching"
     },
     {
-      "url": "https://ipix-operator-preview.sk-498.workers.dev/app/campaigns?_rsc=R0tRxeXOP7hmQRIY",
       "method": "GET",
       "status": 200,
       "resourceType": "fetch",
       "latencyMs": null,
       "cfRay": "a1df76dbbd0e0c83-MIA",
-      "retries": 0
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/app/campaigns"
     },
     {
-      "url": "https://ipix-operator-preview.sk-498.workers.dev/api/intelligence/panel?brandId=db1f728d-bee1-430e-a3e7-0c601da74ce7",
       "method": "GET",
       "status": 200,
       "resourceType": "fetch",
       "latencyMs": null,
       "cfRay": "a1df76d16b3a0c83-MIA",
-      "retries": 0
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/api/intelligence/panel"
     },
     {
-      "url": "https://ipix-operator-preview.sk-498.workers.dev/app/assets?_rsc=R0tRxeXOP7hmQRIY",
       "method": "GET",
       "status": 200,
       "resourceType": "fetch",
       "latencyMs": null,
       "cfRay": "a1df76dc2d2f0c83-MIA",
-      "retries": 0
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/app/assets"
     },
     {
-      "url": "https://ipix-operator-preview.sk-498.workers.dev/app/crm?_rsc=R0tRxeXOP7hmQRIY",
       "method": "GET",
       "status": 200,
       "resourceType": "fetch",
       "latencyMs": null,
       "cfRay": "a1df76dc3d3f0c83-MIA",
-      "retries": 0
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/app/crm"
     },
     {
-      "url": "https://ipix-operator-preview.sk-498.workers.dev/app/planner?_rsc=R0tRxeXOP7hmQRIY",
       "method": "GET",
       "status": 200,
       "resourceType": "fetch",
       "latencyMs": null,
       "cfRay": "a1df76dc5d4d0c83-MIA",
-      "retries": 0
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/app/planner"
     },
     {
-      "url": "https://ipix-operator-preview.sk-498.workers.dev/app/shoots?_rsc=UO2wKmLxFlyAYrEz",
       "method": "GET",
       "status": 200,
       "resourceType": "fetch",
       "latencyMs": null,
       "cfRay": "a1df76dc7d4f0c83-MIA",
-      "retries": 0
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/app/shoots"
     },
     {
-      "url": "https://ipix-operator-preview.sk-498.workers.dev/_next/image?url=https%3A%2F%2Fres.cloudinary.com%2Fdzqy2ixl0%2Fimage%2Fupload%2Fc_fill%2Cw_208%2Ch_208%2Cg_auto%2Ff_auto%2Fq_auto%2Fv1%2F9-fashionos_ddj5jx%3F_a%3DBAVMn6DY0&w=32&q=75",
       "method": "GET",
       "status": 200,
       "resourceType": "image",
       "latencyMs": null,
       "cfRay": "a1df76dd1d710c83-MIA",
-      "retries": 0
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/_next/image"
     },
     {
-      "url": "https://ipix-operator-preview.sk-498.workers.dev/_next/static/chunks/0kmscp_oa3z40.css",
       "method": "GET",
       "status": 200,
       "resourceType": "stylesheet",
       "latencyMs": null,
       "cfRay": "a1df76dd3d7b0c83-MIA",
-      "retries": 0
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/_next/static/chunks/0kmscp_oa3z40.css"
     },
     {
-      "url": "https://ipix-operator-preview.sk-498.workers.dev/_next/static/chunks/2mvu8n8ct2de5.js",
       "method": "GET",
       "status": 200,
       "resourceType": "script",
       "latencyMs": null,
       "cfRay": "a1df76dd3d7c0c83-MIA",
-      "retries": 0
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/_next/static/chunks/2mvu8n8ct2de5.js"
     },
     {
-      "url": "https://ipix-operator-preview.sk-498.workers.dev/app/shoots/new?_rsc=lhYbQuE7kmETP9lF",
       "method": "GET",
       "status": 200,
       "resourceType": "fetch",
       "latencyMs": null,
       "cfRay": "a1df76dcdd630c83-MIA",
-      "retries": 0
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/app/shoots/new"
     },
     {
-      "url": "https://ipix-operator-preview.sk-498.workers.dev/app/assets?brand=db1f728d-bee1-430e-a3e7-0c601da74ce7&_rsc=9AzydjJ4DBEy2ujv",
       "method": "GET",
       "status": 200,
       "resourceType": "fetch",
       "latencyMs": null,
       "cfRay": "a1df76dd1d770c83-MIA",
-      "retries": 0
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/app/assets"
     },
     {
-      "url": "https://ipix-operator-preview.sk-498.workers.dev/app/brand?_rsc=ApZpvSEj5Bgr3UYs",
       "method": "GET",
       "status": 200,
       "resourceType": "fetch",
       "latencyMs": null,
       "cfRay": "a1df76dd1d720c83-MIA",
-      "retries": 0
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/app/brand"
     },
     {
-      "url": "https://ipix-operator-preview.sk-498.workers.dev/app/brand/db1f728d-bee1-430e-a3e7-0c601da74ce7?_rsc=TdwSgot3wiFy-aUn",
       "method": "GET",
       "status": 200,
       "resourceType": "fetch",
       "latencyMs": null,
       "cfRay": "a1df76dd3d7d0c83-MIA",
-      "retries": 0
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/app/brand/db1f728d-bee1-430e-a3e7-0c601da74ce7"
     },
     {
-      "url": "https://ipix-operator-preview.sk-498.workers.dev/_next/static/chunks/2id12fn_9cxav.js",
       "method": "GET",
       "status": 200,
       "resourceType": "script",
       "latencyMs": null,
       "cfRay": "a1df76ddcd970c83-MIA",
-      "retries": 0
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/_next/static/chunks/2id12fn_9cxav.js"
     },
     {
-      "url": "https://ipix-operator-preview.sk-498.workers.dev/_next/static/chunks/2qkja8167xnh6.css",
       "method": "GET",
       "status": 200,
       "resourceType": "stylesheet",
       "latencyMs": null,
       "cfRay": "a1df76ddcd980c83-MIA",
-      "retries": 0
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/_next/static/chunks/2qkja8167xnh6.css"
     },
     {
-      "url": "https://ipix-operator-preview.sk-498.workers.dev/_next/static/chunks/3zp9fw-k6x6qh.js",
       "method": "GET",
       "status": 200,
       "resourceType": "script",
       "latencyMs": null,
       "cfRay": "a1df76ddeda00c83-MIA",
-      "retries": 0
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/_next/static/chunks/3zp9fw-k6x6qh.js"
     },
     {
-      "url": "https://ipix-operator-preview.sk-498.workers.dev/_next/static/chunks/3sxlj80lri2ao.css",
       "method": "GET",
       "status": 200,
       "resourceType": "stylesheet",
       "latencyMs": null,
       "cfRay": "a1df76ddeda20c83-MIA",
-      "retries": 0
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/_next/static/chunks/3sxlj80lri2ao.css"
     },
     {
-      "url": "https://ipix-operator-preview.sk-498.workers.dev/app/inbox?_rsc=ZV0hTRgCMnhmntlL",
       "method": "GET",
       "status": 200,
       "resourceType": "fetch",
       "latencyMs": null,
       "cfRay": "a1df76dd9d8c0c83-MIA",
-      "retries": 0
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/app/inbox"
     },
     {
-      "url": "https://ipix-operator-preview.sk-498.workers.dev/_next/static/chunks/262216z641131.js",
       "method": "GET",
       "status": 200,
       "resourceType": "script",
       "latencyMs": null,
       "cfRay": "a1df76de0da50c83-MIA",
-      "retries": 0
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/_next/static/chunks/262216z641131.js"
     },
     {
-      "url": "https://ipix-operator-preview.sk-498.workers.dev/_next/static/chunks/3of3sflk2w8o7.css",
       "method": "GET",
       "status": 200,
       "resourceType": "stylesheet",
       "latencyMs": null,
       "cfRay": "a1df76de0da70c83-MIA",
-      "retries": 0
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/_next/static/chunks/3of3sflk2w8o7.css"
     },
     {
-      "url": "https://ipix-operator-preview.sk-498.workers.dev/_next/static/chunks/3dsmswplm-59j.js",
       "method": "GET",
       "status": 200,
       "resourceType": "script",
       "latencyMs": null,
       "cfRay": "a1df76de0da90c83-MIA",
-      "retries": 0
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/_next/static/chunks/3dsmswplm-59j.js"
     },
     {
-      "url": "https://ipix-operator-preview.sk-498.workers.dev/_next/static/chunks/03_ts3o-99s47.js",
       "method": "GET",
       "status": 200,
       "resourceType": "script",
       "latencyMs": null,
       "cfRay": "a1df76de0da80c83-MIA",
-      "retries": 0
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/_next/static/chunks/03_ts3o-99s47.js"
     },
     {
-      "url": "https://ipix-operator-preview.sk-498.workers.dev/app/matching?_rsc=KTVpN2EO63YCLLZU",
       "method": "GET",
       "status": 200,
       "resourceType": "fetch",
       "latencyMs": null,
       "cfRay": "a1df76ddcd990c83-MIA",
-      "retries": 0
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/app/matching"
     },
     {
-      "url": "https://ipix-operator-preview.sk-498.workers.dev/_next/static/chunks/02f5_z62xamub.js",
       "method": "GET",
       "status": 200,
       "resourceType": "script",
       "latencyMs": null,
       "cfRay": "a1df76de4db90c83-MIA",
-      "retries": 0
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/_next/static/chunks/02f5_z62xamub.js"
     },
     {
-      "url": "https://ipix-operator-preview.sk-498.workers.dev/app/campaigns?_rsc=KTVpN2EO63YCLLZU",
       "method": "GET",
       "status": 200,
       "resourceType": "fetch",
       "latencyMs": null,
       "cfRay": "a1df76ddfda30c83-MIA",
-      "retries": 0
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/app/campaigns"
     },
     {
-      "url": "https://ipix-operator-preview.sk-498.workers.dev/app/assets?_rsc=KTVpN2EO63YCLLZU",
       "method": "GET",
       "status": 200,
       "resourceType": "fetch",
       "latencyMs": null,
       "cfRay": "a1df76de0dab0c83-MIA",
-      "retries": 0
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/app/assets"
     },
     {
-      "url": "https://ipix-operator-preview.sk-498.workers.dev/app/crm?_rsc=KTVpN2EO63YCLLZU",
       "method": "GET",
       "status": 200,
       "resourceType": "fetch",
       "latencyMs": null,
       "cfRay": "a1df76de4dba0c83-MIA",
-      "retries": 0
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/app/crm"
     },
     {
-      "url": "https://ipix-operator-preview.sk-498.workers.dev/app/planner?_rsc=oFQBNeSPqj93BXxB",
       "method": "GET",
       "status": 200,
       "resourceType": "fetch",
       "latencyMs": null,
       "cfRay": "a1df76de7dc80c83-MIA",
-      "retries": 0
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/app/planner"
     },
     {
-      "url": "https://ipix-operator-preview.sk-498.workers.dev/_next/static/chunks/0zkx-kats_zle.js",
       "method": "GET",
       "status": 200,
       "resourceType": "script",
       "latencyMs": null,
       "cfRay": "a1df76df1de70c83-MIA",
-      "retries": 0
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/_next/static/chunks/0zkx-kats_zle.js"
     },
     {
-      "url": "https://ipix-operator-preview.sk-498.workers.dev/_next/static/chunks/1hmv4_almoh4l.js",
       "method": "GET",
       "status": 200,
       "resourceType": "script",
       "latencyMs": null,
       "cfRay": "a1df76df1de80c83-MIA",
-      "retries": 0
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/_next/static/chunks/1hmv4_almoh4l.js"
     },
     {
-      "url": "https://ipix-operator-preview.sk-498.workers.dev/api/copilotkit/info",
       "method": "GET",
       "status": 200,
       "resourceType": "fetch",
       "latencyMs": null,
       "cfRay": "a1df76e36ed40c83-MIA",
-      "retries": 0
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/api/copilotkit/info"
     },
     {
-      "url": "https://ipix-operator-preview.sk-498.workers.dev/api/ai/health",
       "method": "GET",
       "status": 200,
       "resourceType": "fetch",
       "latencyMs": null,
       "cfRay": "a1df76eb1ffe0c83-MIA",
-      "retries": 0
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/api/ai/health"
     },
     {
-      "url": "https://ipix-operator-preview.sk-498.workers.dev/api/copilotkit/agent/production-planner/run",
       "method": "POST",
       "status": 200,
       "resourceType": "fetch",
       "latencyMs": null,
       "cfRay": "a1df76f3e9380c83-MIA",
-      "retries": 0
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/api/copilotkit/agent/production-planner/run"
     },
     {
-      "url": "https://ipix-operator-preview.sk-498.workers.dev/_next/static/chunks/1z7by85hjkskg.css",
       "method": "GET",
       "status": 200,
       "resourceType": "stylesheet",
       "latencyMs": null,
       "cfRay": "a1df76ff2ac80c83-MIA",
-      "retries": 0
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/_next/static/chunks/1z7by85hjkskg.css"
     },
     {
-      "url": "https://ipix-operator-preview.sk-498.workers.dev/monitoring?o=4511711904137216&p=4511711906168832&r=us",
       "method": "POST",
       "status": 200,
       "resourceType": "fetch",
       "latencyMs": null,
       "cfRay": "a1df7706abcd0c83-MIA",
-      "retries": 0
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/monitoring"
     },
     {
-      "url": "https://ipix-operator-preview.sk-498.workers.dev/api/intelligence/panel?brandId=db1f728d-bee1-430e-a3e7-0c601da74ce7",
       "method": "GET",
       "status": 200,
       "resourceType": "fetch",
       "latencyMs": null,
       "cfRay": "a1df778cfcef0c83-MIA",
-      "retries": 0
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/api/intelligence/panel"
     },
     {
-      "url": "https://ipix-operator-preview.sk-498.workers.dev/api/intelligence/panel?brandId=db1f728d-bee1-430e-a3e7-0c601da74ce7",
       "method": "GET",
       "status": 200,
       "resourceType": "fetch",
       "latencyMs": null,
       "cfRay": "a1df784dbc1eb25a-MIA",
-      "retries": 0
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/api/intelligence/panel"
     },
     {
-      "url": "https://ipix-operator-preview.sk-498.workers.dev/api/intelligence/panel?brandId=db1f728d-bee1-430e-a3e7-0c601da74ce7",
       "method": "GET",
       "status": 200,
       "resourceType": "fetch",
       "latencyMs": null,
       "cfRay": "a1df790c6e7ab25a-MIA",
-      "retries": 0
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/api/intelligence/panel"
     },
     {
-      "url": "https://ipix-operator-preview.sk-498.workers.dev/login",
       "method": "GET",
       "status": 200,
       "resourceType": "document",
       "latencyMs": null,
       "cfRay": "a1df79346d15c288-MIA",
-      "retries": 0
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/login"
     },
     {
-      "url": "https://ipix-operator-preview.sk-498.workers.dev/_next/static/media/01e4147cff8141ee-s.p.3huc2loe0ie8a.woff2",
       "method": "GET",
       "status": 200,
       "resourceType": "font",
       "latencyMs": null,
       "cfRay": "a1df76b51b6db25a-MIA",
-      "retries": 0
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/_next/static/media/01e4147cff8141ee-s.p.3huc2loe0ie8a.woff2"
     },
     {
-      "url": "https://ipix-operator-preview.sk-498.workers.dev/_next/static/media/1b99372b3eaef0c8-s.p.1gsd1jahc5dg_.woff2",
       "method": "GET",
       "status": 200,
       "resourceType": "font",
       "latencyMs": null,
       "cfRay": "a1df76b51b6eb25a-MIA",
-      "retries": 0
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/_next/static/media/1b99372b3eaef0c8-s.p.1gsd1jahc5dg_.woff2"
     },
     {
-      "url": "https://ipix-operator-preview.sk-498.workers.dev/_next/static/media/797e433ab948586e-s.p.0r6juujl39pe6.woff2",
       "method": "GET",
       "status": 200,
       "resourceType": "font",
       "latencyMs": null,
       "cfRay": "a1df76b51b6fb25a-MIA",
-      "retries": 0
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/_next/static/media/797e433ab948586e-s.p.0r6juujl39pe6.woff2"
     },
     {
-      "url": "https://ipix-operator-preview.sk-498.workers.dev/_next/static/media/caa3a2e1cccd8315-s.p.0wgildi0cnwt9.woff2",
       "method": "GET",
       "status": 200,
       "resourceType": "font",
       "latencyMs": null,
       "cfRay": "a1df76b51b70b25a-MIA",
-      "retries": 0
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/_next/static/media/caa3a2e1cccd8315-s.p.0wgildi0cnwt9.woff2"
     },
     {
-      "url": "https://ipix-operator-preview.sk-498.workers.dev/_next/static/chunks/004dyyd1j1zqp.css",
       "method": "GET",
       "status": 200,
       "resourceType": "stylesheet",
       "latencyMs": null,
       "cfRay": "a1df76b51b6bb25a-MIA",
-      "retries": 0
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/_next/static/chunks/004dyyd1j1zqp.css"
     },
     {
-      "url": "https://ipix-operator-preview.sk-498.workers.dev/_next/static/chunks/3cxyt25-owzvw.css",
       "method": "GET",
       "status": 200,
       "resourceType": "stylesheet",
       "latencyMs": null,
       "cfRay": "a1df76b51b6cb25a-MIA",
-      "retries": 0
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/_next/static/chunks/3cxyt25-owzvw.css"
     },
     {
-      "url": "https://ipix-operator-preview.sk-498.workers.dev/_next/static/chunks/3p3z9p0_oadw6.js",
       "method": "GET",
       "status": 200,
       "resourceType": "script",
       "latencyMs": null,
       "cfRay": "a1df76b51b73b25a-MIA",
-      "retries": 0
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/_next/static/chunks/3p3z9p0_oadw6.js"
     },
     {
-      "url": "https://ipix-operator-preview.sk-498.workers.dev/_next/static/chunks/178-rgcgy50q5.js",
       "method": "GET",
       "status": 200,
       "resourceType": "script",
       "latencyMs": null,
       "cfRay": "a1df76b51b74b25a-MIA",
-      "retries": 0
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/_next/static/chunks/178-rgcgy50q5.js"
     },
     {
-      "url": "https://ipix-operator-preview.sk-498.workers.dev/_next/static/chunks/1tsb2lmii3g5i.js",
       "method": "GET",
       "status": 200,
       "resourceType": "script",
       "latencyMs": null,
       "cfRay": "a1df76b51b75b25a-MIA",
-      "retries": 0
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/_next/static/chunks/1tsb2lmii3g5i.js"
     },
     {
-      "url": "https://ipix-operator-preview.sk-498.workers.dev/_next/static/chunks/29zjozoolug-7.js",
       "method": "GET",
       "status": 200,
       "resourceType": "script",
       "latencyMs": null,
       "cfRay": "a1df76b51b77b25a-MIA",
-      "retries": 0
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/_next/static/chunks/29zjozoolug-7.js"
     },
     {
-      "url": "https://ipix-operator-preview.sk-498.workers.dev/_next/static/chunks/2rx9uw4fuec9m.js",
       "method": "GET",
       "status": 200,
       "resourceType": "script",
       "latencyMs": null,
       "cfRay": "a1df76b51b78b25a-MIA",
-      "retries": 0
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/_next/static/chunks/2rx9uw4fuec9m.js"
     },
     {
-      "url": "https://ipix-operator-preview.sk-498.workers.dev/_next/static/chunks/2lj_w-73pkpyx.js",
       "method": "GET",
       "status": 200,
       "resourceType": "script",
       "latencyMs": null,
       "cfRay": "a1df76b51b79b25a-MIA",
-      "retries": 0
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/_next/static/chunks/2lj_w-73pkpyx.js"
     },
     {
-      "url": "https://ipix-operator-preview.sk-498.workers.dev/_next/static/chunks/2kvz3dzuua9g7.js",
       "method": "GET",
       "status": 200,
       "resourceType": "script",
       "latencyMs": null,
       "cfRay": "a1df76b51b7bb25a-MIA",
-      "retries": 0
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/_next/static/chunks/2kvz3dzuua9g7.js"
     },
     {
-      "url": "https://ipix-operator-preview.sk-498.workers.dev/_next/static/chunks/turbopack-2zar6gw9bch5s.js",
       "method": "GET",
       "status": 200,
       "resourceType": "script",
       "latencyMs": null,
       "cfRay": "a1df76b51b7cb25a-MIA",
-      "retries": 0
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/_next/static/chunks/turbopack-2zar6gw9bch5s.js"
     },
     {
-      "url": "https://ipix-operator-preview.sk-498.workers.dev/_next/static/chunks/3t3pihpq3c5wi.js",
       "method": "GET",
       "status": 200,
       "resourceType": "script",
       "latencyMs": null,
       "cfRay": "a1df76b51b7db25a-MIA",
-      "retries": 0
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/_next/static/chunks/3t3pihpq3c5wi.js"
     },
     {
-      "url": "https://ipix-operator-preview.sk-498.workers.dev/_next/static/chunks/3jm796h_31c0l.js",
       "method": "GET",
       "status": 200,
       "resourceType": "script",
       "latencyMs": null,
       "cfRay": "a1df76b51b7eb25a-MIA",
-      "retries": 0
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/_next/static/chunks/3jm796h_31c0l.js"
     },
     {
-      "url": "https://ipix-operator-preview.sk-498.workers.dev/_next/static/chunks/2lcsr6r7vughq.js",
       "method": "GET",
       "status": 200,
       "resourceType": "script",
       "latencyMs": null,
       "cfRay": "a1df76b51b7fb25a-MIA",
-      "retries": 0
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/_next/static/chunks/2lcsr6r7vughq.js"
     },
     {
-      "url": "https://ipix-operator-preview.sk-498.workers.dev/_next/static/chunks/3--mysv3hflw5.js",
       "method": "GET",
       "status": 200,
       "resourceType": "script",
       "latencyMs": null,
       "cfRay": "a1df76b51b80b25a-MIA",
-      "retries": 0
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/_next/static/chunks/3--mysv3hflw5.js"
     },
     {
-      "url": "https://ipix-operator-preview.sk-498.workers.dev/_next/static/chunks/19fowf26op6n4.js",
       "method": "GET",
       "status": 200,
       "resourceType": "script",
       "latencyMs": null,
       "cfRay": "a1df76b51b81b25a-MIA",
-      "retries": 0
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/_next/static/chunks/19fowf26op6n4.js"
     },
     {
-      "url": "https://ipix-operator-preview.sk-498.workers.dev/_next/static/chunks/2xrq5_gqvb77l.js",
       "method": "GET",
       "status": 200,
       "resourceType": "script",
       "latencyMs": null,
       "cfRay": "a1df76b51b82b25a-MIA",
-      "retries": 0
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/_next/static/chunks/2xrq5_gqvb77l.js"
     },
     {
-      "url": "blob:https://ipix-operator-preview.sk-498.workers.dev/74284d54-7d58-4bb8-aa35-75d407a79ff3",
       "method": "GET",
       "status": 200,
       "resourceType": "script",
       "latencyMs": null,
       "cfRay": null,
-      "retries": 0
+      "retries": 0,
+      "host": null,
+      "path": "https://ipix-operator-preview.sk-498.workers.dev/74284d54-7d58-4bb8-aa35-75d407a79ff3"
     },
     {
-      "url": "https://ipix-operator-preview.sk-498.workers.dev/api/copilotkit/info",
       "method": "GET",
       "status": 401,
       "resourceType": "fetch",
       "latencyMs": null,
       "cfRay": "a1df793c9dd4c288-MIA",
-      "retries": 0
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/api/copilotkit/info"
     },
     {
-      "url": "https://ipix-operator-preview.sk-498.workers.dev/app",
       "method": "GET",
       "status": 307,
       "resourceType": "document",
       "latencyMs": null,
       "cfRay": "a1df7945aedac288-MIA",
-      "retries": 0
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/app"
     },
     {
-      "url": "https://ipix-operator-preview.sk-498.workers.dev/monitoring?o=4511711904137216&p=4511711906168832&r=us",
       "method": "POST",
       "status": 200,
       "resourceType": "fetch",
       "latencyMs": null,
       "cfRay": "a1df793cedd8c288-MIA",
-      "retries": 0
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/monitoring"
     },
     {
-      "url": "https://ipix-operator-preview.sk-498.workers.dev/monitoring?o=4511711904137216&p=4511711906168832&r=us",
       "method": "POST",
       "status": 200,
       "resourceType": "fetch",
       "latencyMs": null,
       "cfRay": "a1df793cedd7c288-MIA",
-      "retries": 0
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/monitoring"
     },
     {
-      "url": "https://ipix-operator-preview.sk-498.workers.dev/?_rsc=_H_fFy2_Q06N8BA7",
       "method": "GET",
       "status": 200,
       "resourceType": "fetch",
       "latencyMs": null,
       "cfRay": "a1df793d8de4c288-MIA",
-      "retries": 0
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/"
     },
     {
-      "url": "https://ipix-operator-preview.sk-498.workers.dev/_next/static/chunks/1n4q24k2zx0tm.css",
       "method": "GET",
       "status": 200,
       "resourceType": "stylesheet",
       "latencyMs": null,
       "cfRay": "a1df76c3f8a10c83-MIA",
-      "retries": 0
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/_next/static/chunks/1n4q24k2zx0tm.css"
     },
     {
-      "url": "https://ipix-operator-preview.sk-498.workers.dev/services/shopify?_rsc=_H_fFy2_Q06N8BA7",
       "method": "GET",
       "status": 200,
       "resourceType": "fetch",
       "latencyMs": null,
       "cfRay": "a1df793d9de8c288-MIA",
-      "retries": 0
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/services/shopify"
     },
     {
-      "url": "https://ipix-operator-preview.sk-498.workers.dev/services/video?_rsc=_H_fFy2_Q06N8BA7",
       "method": "GET",
       "status": 200,
       "resourceType": "fetch",
       "latencyMs": null,
       "cfRay": "a1df793d9de9c288-MIA",
-      "retries": 0
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/services/video"
     },
     {
-      "url": "https://ipix-operator-preview.sk-498.workers.dev/services/instagram?_rsc=_H_fFy2_Q06N8BA7",
       "method": "GET",
       "status": 200,
       "resourceType": "fetch",
       "latencyMs": null,
       "cfRay": "a1df793d9deec288-MIA",
-      "retries": 0
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/services/instagram"
     },
     {
-      "url": "https://ipix-operator-preview.sk-498.workers.dev/login?redirect=%2Fapp",
       "method": "GET",
       "status": 200,
       "resourceType": "document",
       "latencyMs": null,
       "cfRay": "a1df79477ef1c288-MIA",
-      "retries": 0
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/login"
     },
     {
-      "url": "https://ipix-operator-preview.sk-498.workers.dev/_next/static/media/01e4147cff8141ee-s.p.3huc2loe0ie8a.woff2",
       "method": "GET",
       "status": 200,
       "resourceType": "font",
       "latencyMs": null,
       "cfRay": "a1df76b51b6db25a-MIA",
-      "retries": 0
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/_next/static/media/01e4147cff8141ee-s.p.3huc2loe0ie8a.woff2"
     },
     {
-      "url": "https://ipix-operator-preview.sk-498.workers.dev/_next/static/media/1b99372b3eaef0c8-s.p.1gsd1jahc5dg_.woff2",
       "method": "GET",
       "status": 200,
       "resourceType": "font",
       "latencyMs": null,
       "cfRay": "a1df76b51b6eb25a-MIA",
-      "retries": 0
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/_next/static/media/1b99372b3eaef0c8-s.p.1gsd1jahc5dg_.woff2"
     },
     {
-      "url": "https://ipix-operator-preview.sk-498.workers.dev/_next/static/media/797e433ab948586e-s.p.0r6juujl39pe6.woff2",
       "method": "GET",
       "status": 200,
       "resourceType": "font",
       "latencyMs": null,
       "cfRay": "a1df76b51b6fb25a-MIA",
-      "retries": 0
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/_next/static/media/797e433ab948586e-s.p.0r6juujl39pe6.woff2"
     },
     {
-      "url": "https://ipix-operator-preview.sk-498.workers.dev/_next/static/media/caa3a2e1cccd8315-s.p.0wgildi0cnwt9.woff2",
       "method": "GET",
       "status": 200,
       "resourceType": "font",
       "latencyMs": null,
       "cfRay": "a1df76b51b70b25a-MIA",
-      "retries": 0
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/_next/static/media/caa3a2e1cccd8315-s.p.0wgildi0cnwt9.woff2"
     },
     {
-      "url": "https://ipix-operator-preview.sk-498.workers.dev/_next/static/chunks/004dyyd1j1zqp.css",
       "method": "GET",
       "status": 200,
       "resourceType": "stylesheet",
       "latencyMs": null,
       "cfRay": "a1df76b51b6bb25a-MIA",
-      "retries": 0
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/_next/static/chunks/004dyyd1j1zqp.css"
     },
     {
-      "url": "https://ipix-operator-preview.sk-498.workers.dev/_next/static/chunks/3cxyt25-owzvw.css",
       "method": "GET",
       "status": 200,
       "resourceType": "stylesheet",
       "latencyMs": null,
       "cfRay": "a1df76b51b6cb25a-MIA",
-      "retries": 0
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/_next/static/chunks/3cxyt25-owzvw.css"
     },
     {
-      "url": "https://ipix-operator-preview.sk-498.workers.dev/_next/static/chunks/3p3z9p0_oadw6.js",
       "method": "GET",
       "status": 200,
       "resourceType": "script",
       "latencyMs": null,
       "cfRay": "a1df76b51b73b25a-MIA",
-      "retries": 0
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/_next/static/chunks/3p3z9p0_oadw6.js"
     },
     {
-      "url": "https://ipix-operator-preview.sk-498.workers.dev/_next/static/chunks/178-rgcgy50q5.js",
       "method": "GET",
       "status": 200,
       "resourceType": "script",
       "latencyMs": null,
       "cfRay": "a1df76b51b74b25a-MIA",
-      "retries": 0
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/_next/static/chunks/178-rgcgy50q5.js"
     },
     {
-      "url": "https://ipix-operator-preview.sk-498.workers.dev/_next/static/chunks/1tsb2lmii3g5i.js",
       "method": "GET",
       "status": 200,
       "resourceType": "script",
       "latencyMs": null,
       "cfRay": "a1df76b51b75b25a-MIA",
-      "retries": 0
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/_next/static/chunks/1tsb2lmii3g5i.js"
     },
     {
-      "url": "https://ipix-operator-preview.sk-498.workers.dev/_next/static/chunks/29zjozoolug-7.js",
       "method": "GET",
       "status": 200,
       "resourceType": "script",
       "latencyMs": null,
       "cfRay": "a1df76b51b77b25a-MIA",
-      "retries": 0
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/_next/static/chunks/29zjozoolug-7.js"
     },
     {
-      "url": "https://ipix-operator-preview.sk-498.workers.dev/_next/static/chunks/2rx9uw4fuec9m.js",
       "method": "GET",
       "status": 200,
       "resourceType": "script",
       "latencyMs": null,
       "cfRay": "a1df76b51b78b25a-MIA",
-      "retries": 0
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/_next/static/chunks/2rx9uw4fuec9m.js"
     },
     {
-      "url": "https://ipix-operator-preview.sk-498.workers.dev/_next/static/chunks/2lj_w-73pkpyx.js",
       "method": "GET",
       "status": 200,
       "resourceType": "script",
       "latencyMs": null,
       "cfRay": "a1df76b51b79b25a-MIA",
-      "retries": 0
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/_next/static/chunks/2lj_w-73pkpyx.js"
     },
     {
-      "url": "https://ipix-operator-preview.sk-498.workers.dev/_next/static/chunks/2kvz3dzuua9g7.js",
       "method": "GET",
       "status": 200,
       "resourceType": "script",
       "latencyMs": null,
       "cfRay": "a1df76b51b7bb25a-MIA",
-      "retries": 0
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/_next/static/chunks/2kvz3dzuua9g7.js"
     },
     {
-      "url": "https://ipix-operator-preview.sk-498.workers.dev/_next/static/chunks/turbopack-2zar6gw9bch5s.js",
       "method": "GET",
       "status": 200,
       "resourceType": "script",
       "latencyMs": null,
       "cfRay": "a1df76b51b7cb25a-MIA",
-      "retries": 0
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/_next/static/chunks/turbopack-2zar6gw9bch5s.js"
     },
     {
-      "url": "https://ipix-operator-preview.sk-498.workers.dev/_next/static/chunks/3t3pihpq3c5wi.js",
       "method": "GET",
       "status": 200,
       "resourceType": "script",
       "latencyMs": null,
       "cfRay": "a1df76b51b7db25a-MIA",
-      "retries": 0
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/_next/static/chunks/3t3pihpq3c5wi.js"
     },
     {
-      "url": "https://ipix-operator-preview.sk-498.workers.dev/_next/static/chunks/3jm796h_31c0l.js",
       "method": "GET",
       "status": 200,
       "resourceType": "script",
       "latencyMs": null,
       "cfRay": "a1df76b51b7eb25a-MIA",
-      "retries": 0
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/_next/static/chunks/3jm796h_31c0l.js"
     },
     {
-      "url": "https://ipix-operator-preview.sk-498.workers.dev/_next/static/chunks/2lcsr6r7vughq.js",
       "method": "GET",
       "status": 200,
       "resourceType": "script",
       "latencyMs": null,
       "cfRay": "a1df76b51b7fb25a-MIA",
-      "retries": 0
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/_next/static/chunks/2lcsr6r7vughq.js"
     },
     {
-      "url": "https://ipix-operator-preview.sk-498.workers.dev/_next/static/chunks/3--mysv3hflw5.js",
       "method": "GET",
       "status": 200,
       "resourceType": "script",
       "latencyMs": null,
       "cfRay": "a1df76b51b80b25a-MIA",
-      "retries": 0
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/_next/static/chunks/3--mysv3hflw5.js"
     },
     {
-      "url": "https://ipix-operator-preview.sk-498.workers.dev/_next/static/chunks/19fowf26op6n4.js",
       "method": "GET",
       "status": 200,
       "resourceType": "script",
       "latencyMs": null,
       "cfRay": "a1df76b51b81b25a-MIA",
-      "retries": 0
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/_next/static/chunks/19fowf26op6n4.js"
     },
     {
-      "url": "https://ipix-operator-preview.sk-498.workers.dev/_next/static/chunks/2xrq5_gqvb77l.js",
       "method": "GET",
       "status": 200,
       "resourceType": "script",
       "latencyMs": null,
       "cfRay": "a1df76b51b82b25a-MIA",
-      "retries": 0
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/_next/static/chunks/2xrq5_gqvb77l.js"
     },
     {
-      "url": "blob:https://ipix-operator-preview.sk-498.workers.dev/93f7e23b-3e2f-44fb-ab6f-b31d555a5dac",
       "method": "GET",
       "status": 200,
       "resourceType": "script",
       "latencyMs": null,
       "cfRay": null,
-      "retries": 0
+      "retries": 0,
+      "host": null,
+      "path": "https://ipix-operator-preview.sk-498.workers.dev/93f7e23b-3e2f-44fb-ab6f-b31d555a5dac"
     },
     {
-      "url": "https://ipix-operator-preview.sk-498.workers.dev/monitoring?o=4511711904137216&p=4511711906168832&r=us",
       "method": "POST",
       "status": 200,
       "resourceType": "fetch",
       "latencyMs": null,
       "cfRay": "a1df794d9f6ec288-MIA",
-      "retries": 0
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/monitoring"
     },
     {
-      "url": "https://ipix-operator-preview.sk-498.workers.dev/monitoring?o=4511711904137216&p=4511711906168832&r=us",
       "method": "POST",
       "status": 200,
       "resourceType": "fetch",
       "latencyMs": null,
       "cfRay": "a1df794d9f6fc288-MIA",
-      "retries": 0
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/monitoring"
     },
     {
-      "url": "https://ipix-operator-preview.sk-498.workers.dev/?_rsc=_H_fFy2_Q06N8BA7",
       "method": "GET",
       "status": 200,
       "resourceType": "fetch",
       "latencyMs": null,
       "cfRay": "a1df794e1f78c288-MIA",
-      "retries": 0
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/"
     },
     {
-      "url": "https://ipix-operator-preview.sk-498.workers.dev/_next/static/chunks/1n4q24k2zx0tm.css",
       "method": "GET",
       "status": 200,
       "resourceType": "stylesheet",
       "latencyMs": null,
       "cfRay": "a1df76c3f8a10c83-MIA",
-      "retries": 0
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/_next/static/chunks/1n4q24k2zx0tm.css"
     },
     {
-      "url": "https://ipix-operator-preview.sk-498.workers.dev/login?_rsc=_H_fFy2_Q06N8BA7",
       "method": "GET",
       "status": 200,
       "resourceType": "fetch",
       "latencyMs": null,
       "cfRay": "a1df794dff77c288-MIA",
-      "retries": 0
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/login"
     },
     {
-      "url": "https://ipix-operator-preview.sk-498.workers.dev/services/shopify?_rsc=_H_fFy2_Q06N8BA7",
       "method": "GET",
       "status": 200,
       "resourceType": "fetch",
       "latencyMs": null,
       "cfRay": "a1df794e1f79c288-MIA",
-      "retries": 0
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/services/shopify"
     },
     {
-      "url": "https://ipix-operator-preview.sk-498.workers.dev/services/video?_rsc=_H_fFy2_Q06N8BA7",
       "method": "GET",
       "status": 200,
       "resourceType": "fetch",
       "latencyMs": null,
       "cfRay": "a1df794e1f7ac288-MIA",
-      "retries": 0
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/services/video"
     }
   ],
   "critical_failures": []

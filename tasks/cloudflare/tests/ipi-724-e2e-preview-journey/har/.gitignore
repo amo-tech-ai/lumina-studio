@@ -1,0 +1,3 @@
+# Never commit Playwright HARs (cookies / tokens / bodies risk).
+session.har
+*.har

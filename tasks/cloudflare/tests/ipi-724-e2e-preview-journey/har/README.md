@@ -1,16 +1,32 @@
 # HAR policy (IPI-724)
 
-Do **not** commit authenticated Playwright HARs with `mode: "full"` / `content: "embed"`.
+Do **not** commit Playwright HARs — especially not `mode: "full"` / `content: "embed"`.
 
-They can retain `Cookie`, `Set-Cookie`, `Authorization`, Supabase tokens, and login POST bodies.
+Those can retain `Cookie`, `Set-Cookie`, `Authorization`, Supabase tokens, and login POST bodies.
+See [Playwright HAR options](https://playwright.dev/docs/api/class-browser#browser-new-context-option-record-har).
 
-## Allowed
+## Allowed in git
 
-- `network-summary.json` at the evidence root (method / URL / status / latency / `cf-ray`)
-- Optional local `session.har` from the runner with `mode: "minimal"` + `content: "omit"`, only if `assertNoSecrets()` passes — still prefer not committing it
+- `network-summary.json` at the evidence root: `host`, `path`, `method`, `status`, `latencyMs`, `cf-ray`
+- This README + `.gitignore` (`*.har`)
 
-## Required after any accidental full HAR commit
+## Runner policy
 
-1. Delete the HAR from the branch **and** purge it from git history on the PR branch.
-2. Rotate the QA password and revoke the captured session.
+`run-e2e.mjs` records HAR only as:
+
+```js
+recordHar: {
+  path: harPath,
+  mode: "minimal",
+  content: "omit",
+  urlFilter: "**/api/**",
+}
+```
+
+Then **deletes** the local HAR before exit. Commit `network-summary.json` only.
+
+## If a full HAR was ever pushed
+
+1. Delete it from the branch and purge from git history on the PR branch.
+2. Rotate `qa@ipix.test` and revoke the captured session ([GitHub secret exposure guidance](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/removing-sensitive-data-from-a-repository)).
 3. Re-run the runner; commit sanitized artifacts only.

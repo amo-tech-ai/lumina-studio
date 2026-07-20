@@ -3,8 +3,6 @@
   "preview_url": "https://ipix-operator-preview.sk-498.workers.dev",
   "worker": "ipix-operator-preview",
   "worker_version_id": "591796f7-d070-44f2-ae7c-d9ae1a4a2bda",
-  "deployment_sha_origin_main": "c640f01e82f3525518300108d2ad3b17db17adec",
-  "note_deployment_sha": "Preview Worker version may predate origin/main tip; version_id from wrangler deployments list --env preview",
   "cf_ray_health": "a1df76eb1ffe0c83-MIA",
   "region_guess": "MIA",
   "browser": {
@@ -33,7 +31,7 @@
       "service": "ai-gateway"
     }
   },
-  "adapterAvailable_note": "Preview still returns adapterAvailable:true (cosmetic; removed on main in #512, needs redeploy)",
+  "adapterAvailable_note": "Preview returned adapterAvailable:true at evidence time (cosmetic; removed on main in #512). Redeploy HEAD before claiming current Worker code.",
   "criteria": {
     "01_login": {
       "pass": true,
@@ -184,13 +182,27 @@
   "overall_pass": false,
   "soft_perf_pass": false,
   "hard_ac_pass": false,
-  "recommendation": "Needs Fix \u2014 missing Sign out UI (session cleared for 401 proof)",
+  "recommendation": "Needs Fix \u2014 missing Sign out UI (hard AC; blocked on IPI-725 / PR #519)",
   "evidence_policy": {
-    "har": "removed \u2014 prior full embedded HAR contained cookies/tokens; do not restore",
-    "preferred": "network-summary.json",
+    "har": "minimal + content omit + urlFilter **/api/**; deleted after run \u2014 never commit",
+    "preferred": "network-summary.json (host/path/method/status/latency/cf-ray only)",
     "ignoreHTTPSErrors": false,
     "secret_scan": "assertNoSecrets in run-e2e.mjs before write",
     "qa_rotation_required": true
   },
-  "security_note": "Full authenticated HAR removed from this PR. Rotate qa@ipix.test password and revoke any session captured in the deleted HAR before treating evidence as safe."
+  "security_note": "No session.har in this PR tip. If any prior full HAR was exposed outside this tip, rotate qa@ipix.test and revoke sessions before treating evidence as safe.",
+  "deployment_id": "9f5a35e4-4721-416a-9b8f-8fe6c9c37117",
+  "worker_version_created_on": "2026-07-20T03:19:43.225217Z",
+  "identity_source": "wrangler deployments list --env preview --json (latest by created_on) \u2014 patched post-audit",
+  "identity_error": null,
+  "evidence_runner_git_sha": "0f73c7d7c58fea1a1737f2cbf88b298cbfa8a1df",
+  "deployment_git_sha": null,
+  "deployment_git_sha_note": "Cloudflare Workers versions API does not expose git SHA; do not invent origin/main tip.",
+  "evidence_class": "historical_partial \u2014 hard AC failed (missing Sign out UI); regenerate after IPI-725/#519 merges + optional preview redeploy",
+  "runner_audit_fixes": {
+    "har": "minimal + omit + urlFilter **/api/**; always deleted; not in git",
+    "exit_semantics": "process.exit(hard_ac_pass ? 0 : 1) \u2014 no special-case for missing sign-out",
+    "deployment_identity": "resolved via wrangler at run time",
+    "network_summary": "host/path/method/status/latency/cf-ray only (no query, cookies, bodies)"
+  }
 }
