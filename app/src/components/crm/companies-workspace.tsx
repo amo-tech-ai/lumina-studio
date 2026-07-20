@@ -61,6 +61,7 @@ export function CompaniesWorkspace({
     <CrmListWorkspace
       title="Organizations"
       countLabel={(n) => `${n} ${n === 1 ? "company" : "companies"}`}
+      headerCount={companies.length}
       newAction={createDialog}
       filters={
         <>

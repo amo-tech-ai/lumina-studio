@@ -12,6 +12,7 @@ import styles from "./crm-list-workspace.module.css";
 export function CrmListWorkspace<T extends { id: string }>({
   title,
   countLabel,
+  headerCount,
   newAction,
   filters,
   items,
@@ -25,6 +26,8 @@ export function CrmListWorkspace<T extends { id: string }>({
 }: {
   title: string;
   countLabel: (count: number) => string;
+  /** Unfiltered org total for the header count (chip filters shrink `items`). */
+  headerCount?: number;
   newAction: ReactNode;
   filters: ReactNode;
   items: T[];
@@ -51,7 +54,7 @@ export function CrmListWorkspace<T extends { id: string }>({
         <div className={styles.titleRow}>
           <div>
             <h1 className={styles.title}>{title}</h1>
-            <p className={styles.count}>{countLabel(items.length)}</p>
+            <p className={styles.count}>{countLabel(headerCount ?? items.length)}</p>
           </div>
           {newAction}
         </div>

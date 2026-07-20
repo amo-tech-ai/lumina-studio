@@ -130,17 +130,15 @@ describe("createDeal", () => {
     if (!result.ok) expect(result.error.code).toBe("VALIDATION");
   });
 
-  it("rejects when company is not in the org", async () => {
-    const client = makeClient({
-      onMaybeSingle: () => ({ data: null, error: null }),
-    });
-    const result = await createDeal(
-      { company_id: "11111111-1111-1111-1111-111111111111" },
-      { orgId: "org-1", client },
-    );
-    expect(result).toEqual({
-      ok: false,
-      error: { code: "VALIDATION", message: "Company not found in your organization." },
-    });
+  it("rejects terminal won/lost stages at validation", async () => {
+    const client = makeClient({});
+    for (const stage of ["won", "lost"] as const) {
+      const result = await createDeal(
+        { company_id: "11111111-1111-1111-1111-111111111111", stage },
+        { orgId: "org-1", client },
+      );
+      expect(result.ok).toBe(false);
+      if (!result.ok) expect(result.error.code).toBe("VALIDATION");
+    }
   });
 });

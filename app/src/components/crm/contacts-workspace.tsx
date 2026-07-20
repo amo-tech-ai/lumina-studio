@@ -76,6 +76,7 @@ export function ContactsWorkspace({
     <CrmListWorkspace
       title="People"
       countLabel={(n) => `${n} ${n === 1 ? "contact" : "contacts"}`}
+      headerCount={contacts.length}
       newAction={<CrmCreateDialog kind="contact" triggerLabel="New person" companies={companyChoices} />}
       filters={
         <>

@@ -1,5 +1,5 @@
 import { ContactsWorkspace } from "@/components/crm/contacts-workspace";
-import { getCurrentOrgId, getCompanyNames, listContacts, type ContactRow } from "@/lib/crm/queries";
+import { getCurrentOrgId, listCompanies, listContacts, type ContactRow } from "@/lib/crm/queries";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -22,13 +22,13 @@ export default async function CrmContactsPage() {
       const orgId = await getCurrentOrgId(user.id, supabase);
       if (orgId) {
         // listContacts is the primary data — its failure is the only thing that
-        // should surface as fetchError. The company-name lookup is auxiliary:
-        // ContactsWorkspace already falls back to "—" for a missing entry, so a
-        // transient failure there shouldn't wipe out the whole contacts list.
+        // should surface as fetchError. Company names come from the full org
+        // listCompanies() so New person can attach any org company, not only
+        // ones already linked on a contact row (IPI-562 review).
         contacts = await listContacts({ orgId }, supabase);
         try {
-          const companyIds = contacts.map((c) => c.company_id).filter((id): id is string => id != null);
-          companyNames = await getCompanyNames(companyIds, supabase);
+          const companies = await listCompanies({ orgId }, supabase);
+          companyNames = Object.fromEntries(companies.map((c) => [c.id, c.name]));
         } catch {
           companyNames = {};
         }

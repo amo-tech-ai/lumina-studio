@@ -12,7 +12,8 @@ export type CreateResult<T> = { ok: true; data: T } | { ok: false; error: Create
 export type CreateCtx = { orgId: string; client: Db };
 
 const COMPANY_STATUSES = ["prospect", "active", "inactive", "lost"] as const;
-const DEAL_STAGES = ["lead", "qualified", "proposal", "negotiation", "won", "lost"] as const;
+// Match moveDealStage — create must not set won/lost (IPI-367 convert path).
+const DEAL_STAGES = ["lead", "qualified", "proposal", "negotiation"] as const;
 
 export const createCompanySchema = z.object({
   name: z.string().trim().min(1, "Name is required.").max(200),
