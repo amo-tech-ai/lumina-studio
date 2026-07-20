@@ -3676,18 +3676,20 @@ try {
         "IPI-727: commit_shoot_draft rejects p_created_by with no relationship to p_brand_id's org",
       );
 
-      // 3. p_created_by omitted (NULL) — still succeeds, preserving the local-dev
-      // auth-disabled fallback behavior (never reachable in production — see
-      // withOperatorAuth's own doc comment).
-      const { data: nullActorResult, error: nullActorErr } = await admin.rpc("commit_shoot_draft", {
+      // 3. p_created_by omitted (NULL) — IPI-727 originally preserved this as a
+      // local-dev auth-disabled fallback. IPI-732 explicitly revisited and
+      // REJECTED that decision: a shared database cannot distinguish "a
+      // trusted local dev call" from any other privileged caller that simply
+      // omitted the actor, so this now fails closed. See the IPI-732 block
+      // below for the full rationale.
+      const { error: nullActorErr } = await admin.rpc("commit_shoot_draft", {
         p_brand_id: commitBrandId,
         p_name: `RLS commit authz null-actor ${stamp}`,
       });
       assert(
-        !nullActorErr && nullActorResult?.shoot_id,
-        "IPI-727: commit_shoot_draft still succeeds with p_created_by omitted (local-dev fallback preserved)",
+        !!nullActorErr && nullActorErr.message.includes("unauthorized"),
+        "IPI-727/IPI-732: commit_shoot_draft rejects p_created_by omitted (NULL actor no longer bypasses authz)",
       );
-      if (nullActorResult?.shoot_id) seededShootIds.push(nullActorResult.shoot_id);
     } finally {
       if (commitBrandId) {
         // Cascades: shoot.shoots.brand_id -> brands(id) ON DELETE CASCADE.
@@ -3716,6 +3718,147 @@ try {
     }
   } else {
     pass("IPI-727: commit_shoot_draft authz block skipped (no service role key)");
+  }
+
+  // ── IPI-732 SHOOT-SEC-002 — restrict shoot creation to org owners/editors ──
+  // IPI-727 proved organization MEMBERSHIP but not ROLE — a viewer satisfied
+  // the same EXISTS check as an owner/editor. This block proves the tightened
+  // role IN ('owner', 'editor') check directly against the RPC (service role,
+  // same call shape as the real /api/shoots/commit -> commitShootDraft() path),
+  // plus the NULL-actor decision reversal documented above.
+  if (admin) {
+    const emailRoleOwner = `plt002-rls-role-owner-${stamp}@example.com`;
+    const emailRoleEditor = `plt002-rls-role-editor-${stamp}@example.com`;
+    const emailRoleViewer = `plt002-rls-role-viewer-${stamp}@example.com`;
+    const emailRoleOutsider = `plt002-rls-role-outsider-${stamp}@example.com`;
+    let userRoleOwner, userRoleEditor, userRoleViewer, userRoleOutsider;
+    let roleOrgId, roleBrandId;
+    const seededRoleShootIds = [];
+    try {
+      // auto_add_org_owner (IPI-16) seeds the creator as role='owner' automatically.
+      userRoleOwner = await createTestUser(emailRoleOwner);
+
+      const { data: roleOrg, error: roleOrgErr } = await userRoleOwner.client
+        .from("organizations")
+        .insert({
+          name: `RLS Role Org ${stamp}`,
+          slug: `rls-role-org-${stamp}`,
+          owner_id: userRoleOwner.user.id,
+          type: "brand",
+        })
+        .select("id")
+        .single();
+      assert(!roleOrgErr && roleOrg?.id, "IPI-732: create dedicated org for role-authz fixture");
+      roleOrgId = roleOrg?.id;
+
+      const { data: roleBrand, error: roleBrandErr } = await userRoleOwner.client
+        .from("brands")
+        .insert({ name: `RLS Role Brand ${stamp}`, user_id: userRoleOwner.user.id, org_id: roleOrgId })
+        .select("id")
+        .single();
+      assert(!roleBrandErr && roleBrand?.id, "IPI-732: owner creates brand in own org");
+      roleBrandId = roleBrand?.id;
+
+      userRoleEditor = await createTestUser(emailRoleEditor);
+      userRoleViewer = await createTestUser(emailRoleViewer);
+      userRoleOutsider = await createTestUser(emailRoleOutsider);
+
+      const { error: roleEditorMemberErr } = await admin
+        .from("org_members")
+        .insert({ org_id: roleOrgId, user_id: userRoleEditor.user.id, role: "editor" });
+      assert(!roleEditorMemberErr, "IPI-732: seed editor as org member (service role)");
+
+      const { error: roleViewerMemberErr } = await admin
+        .from("org_members")
+        .insert({ org_id: roleOrgId, user_id: userRoleViewer.user.id, role: "viewer" });
+      assert(!roleViewerMemberErr, "IPI-732: seed viewer as org member (service role)");
+      // userRoleOutsider deliberately gets no org_members row.
+
+      // 1. Owner — allowed.
+      const { data: ownerResult, error: ownerErr } = await admin.rpc("commit_shoot_draft", {
+        p_brand_id: roleBrandId,
+        p_name: `RLS role authz owner ${stamp}`,
+        p_created_by: userRoleOwner.user.id,
+      });
+      assert(!ownerErr && ownerResult?.shoot_id, "IPI-732: commit_shoot_draft succeeds for org owner");
+      if (ownerResult?.shoot_id) seededRoleShootIds.push(ownerResult.shoot_id);
+
+      // 2. Editor — allowed.
+      const { data: editorResult, error: editorErr } = await admin.rpc("commit_shoot_draft", {
+        p_brand_id: roleBrandId,
+        p_name: `RLS role authz editor ${stamp}`,
+        p_created_by: userRoleEditor.user.id,
+      });
+      assert(!editorErr && editorResult?.shoot_id, "IPI-732: commit_shoot_draft succeeds for org editor");
+      if (editorResult?.shoot_id) seededRoleShootIds.push(editorResult.shoot_id);
+
+      // 3. Viewer — the actual gap this closes. Was allowed before this migration.
+      const { error: viewerErr } = await admin.rpc("commit_shoot_draft", {
+        p_brand_id: roleBrandId,
+        p_name: `RLS role authz viewer ${stamp}`,
+        p_created_by: userRoleViewer.user.id,
+      });
+      assert(
+        !!viewerErr && viewerErr.message.includes("unauthorized"),
+        "IPI-732: commit_shoot_draft rejects org viewer (read-only role, was previously allowed)",
+      );
+
+      // 4. Cross-org outsider — still rejected (IPI-727 coverage, re-proven here
+      // against the tightened function body).
+      const { error: outsiderErr } = await admin.rpc("commit_shoot_draft", {
+        p_brand_id: roleBrandId,
+        p_name: `RLS role authz outsider ${stamp}`,
+        p_created_by: userRoleOutsider.user.id,
+      });
+      assert(
+        !!outsiderErr && outsiderErr.message.includes("unauthorized"),
+        "IPI-732: commit_shoot_draft rejects cross-org outsider",
+      );
+
+      // 5. Route/service-level authorization — is_org_editor_or_above() itself,
+      // called the same way commitShootDraft() calls it (user-scoped client,
+      // no p_created_by involved — this is the pre-RPC gate).
+      const { data: ownerCanCreate, error: ownerRoleErr } = await userRoleOwner.client.rpc(
+        "is_org_editor_or_above",
+        { p_org_id: roleOrgId },
+      );
+      assert(
+        !ownerRoleErr && ownerCanCreate === true,
+        "IPI-732: is_org_editor_or_above() is true for the org owner (route-level gate)",
+      );
+
+      const { data: viewerCanCreate, error: viewerRoleErr } = await userRoleViewer.client.rpc(
+        "is_org_editor_or_above",
+        { p_org_id: roleOrgId },
+      );
+      assert(
+        !viewerRoleErr && viewerCanCreate === false,
+        "IPI-732: is_org_editor_or_above() is false for the org viewer (route-level gate)",
+      );
+    } finally {
+      if (roleBrandId) {
+        await checkedCleanup(
+          "IPI-732 role-authz brand (cascades to shoots)",
+          admin.from("brands").delete().eq("id", roleBrandId),
+        );
+      }
+      if (roleOrgId) {
+        await checkedCleanup(
+          "IPI-732 role-authz org_members",
+          admin.from("org_members").delete().eq("org_id", roleOrgId),
+        );
+        await checkedCleanup("IPI-732 role-authz org", admin.from("organizations").delete().eq("id", roleOrgId));
+      }
+      for (const u of [userRoleOwner, userRoleEditor, userRoleViewer, userRoleOutsider]) {
+        if (u?.user?.id) {
+          const { error } = await deleteAuthUser(u.user.id);
+          if (error) trackCleanupError(`IPI-732 role-authz test user ${u.user.id}: ${error.message}`);
+        }
+      }
+      pass("IPI-732: cleaned up shoot-creation role-authz test fixtures (service role)");
+    }
+  } else {
+    pass("IPI-732: shoot-creation role-authz block skipped (no service role key)");
   }
 
 } catch (err) {
