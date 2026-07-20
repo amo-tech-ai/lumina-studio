@@ -5,7 +5,7 @@
  * Disabled by default via ENABLE_CF_AI_SMOKE=false; enable only for preview proof.
  */
 import { NextResponse } from "next/server";
-import { timingSafeEqual } from "node:crypto";
+import { createHash, timingSafeEqual } from "node:crypto";
 import { getCloudflareContext } from "@opennextjs/cloudflare";
 
 export const dynamic = "force-dynamic";
@@ -43,9 +43,9 @@ function isSmokeEnabled(envFlag: string | undefined): boolean {
 }
 
 function secretsEqual(provided: string, expected: string): boolean {
-  const a = Buffer.from(provided);
-  const b = Buffer.from(expected);
-  if (a.length !== b.length) return false;
+  // Hash to fixed 32-byte digests first — no length short-circuit (workers-best-practices).
+  const a = createHash("sha256").update(provided).digest();
+  const b = createHash("sha256").update(expected).digest();
   return timingSafeEqual(a, b);
 }
 
