@@ -214,7 +214,7 @@ Evidence: `09-post-rollback-hub-*.png`, `post-rollback-smoke.json`.
 4. **Onboarding redirect** after login for disposable users — expected; operators still reached Planner routes.
 5. **Protection bypass secret** on Vercel project for automation — rotate/revoke when staging disposition says so.
 6. **Secret near-miss (local only):** an unpushed worktree checkpoint briefly staged `.local-staging-*` / `.local-vercel-*` files; commit was **hard-reset and never pushed**. Those paths are **not** on `origin` or in PR #521.
-7. **CI note (PR #521):** `booking-gate` Model Gate failed once on `scripts/test-notification-reads-rls.sql` — `users_email_partial_key` duplicate for `ipi343-brand-<epoch>@test.local` (second-resolution stamp race / leftover). Unrelated to docs/evidence. Rerun in progress; if deterministic, track separately (do not fix in this PR).
+7. **CI note (PR #521):** `booking-gate` Model Gate failed once on `scripts/test-notification-reads-rls.sql` — `users_email_partial_key` duplicate for `ipi343-brand-<epoch>@test.local` (second-resolution stamp race). Unrelated to docs/evidence. **Failed-job rerun of run 29720198255 → success** (transient).
 
 ---
 
