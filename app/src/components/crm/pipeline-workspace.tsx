@@ -17,8 +17,9 @@ const LOCKED_STAGES = new Set<CrmDealStage>(["won", "lost"]);
 
 // crm_deals has no risk_score column (verified against the generated schema
 // types) — "at risk" is a naive staleness heuristic (no update in AT_RISK_DAYS,
-// still open), not a real health score. Upgrade path: a crm-assistant-derived
-// health score once that RPC exists — don't fabricate one now.
+// still open), not a real health score. Upgrade path: wire
+// `scoreDealHealth` from `@/lib/crm/score-deal-health` (IPI-369 Phase A) —
+// do not recompute on every board paint; call on demand or cache with `asOf`.
 const AT_RISK_DAYS = 14;
 
 type Props = {
