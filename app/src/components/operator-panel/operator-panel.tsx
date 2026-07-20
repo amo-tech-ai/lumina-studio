@@ -25,6 +25,7 @@ import { DEV_PREVIEW_HERO_BRAND_ID, isDevPreviewBrandId, isDevSkipMode } from ".
 import { IntelligenceDetailProvider } from "@/context/intelligence-detail-context";
 import { NavSidebar } from "./nav-sidebar";
 import { OperatorChatDock } from "./operator-chat-dock";
+import { MobileSignOutBar } from "./mobile-sign-out-bar";
 import { useOperatorBrands } from "./use-operator-brands";
 import { useUnreadNotifications } from "./use-unread-notifications";
 import styles from "./operator-shell.module.css";
@@ -218,6 +219,8 @@ function OperatorShell({
 
       {/* Center — page content + bottom chat dock (DC PersistentChatDock) */}
       <main className={styles.content}>
+        {/* IPI-725 — nav rail is display:none below 768px; keep Sign out reachable */}
+        <MobileSignOutBar />
         <div className={styles.contentScroll}>{children}</div>
         <OperatorChatDock welcomeText={welcomeText} />
       </main>

@@ -4,11 +4,21 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, render, screen } from "@testing-library/react";
 
 vi.mock("./nav-sidebar.module.css", () => ({ default: new Proxy({}, { get: (_, k) => String(k) }) }));
-vi.mock("next/navigation", () => ({ usePathname: () => "/app" }));
+vi.mock("next/navigation", () => ({
+  usePathname: () => "/app",
+}));
 
 import { NavSidebar } from "./nav-sidebar";
 
 afterEach(cleanup);
+
+describe("NavSidebar — Sign out (IPI-725)", () => {
+  it("renders a Sign out control", () => {
+    render(<NavSidebar />);
+    expect(screen.getByTestId("operator-sign-out")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Sign out" })).toBeTruthy();
+  });
+});
 
 describe("NavSidebar — Inbox unread badge", () => {
   it("shows no badge when count is 0", () => {

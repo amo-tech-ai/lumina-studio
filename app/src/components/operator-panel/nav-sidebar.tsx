@@ -8,6 +8,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
+import { SignOutButton } from "./sign-out-button";
 import type { UnreadBadgeState } from "./use-unread-notifications";
 import styles from "./nav-sidebar.module.css";
 
@@ -112,9 +113,9 @@ export function NavSidebar({
         })}
       </ul>
 
-      {/* Threads shortcut at bottom */}
-      {onThreadsClick && (
-        <div className={styles.footer}>
+      {/* Threads + Sign out — always at bottom of the rail */}
+      <div className={styles.footer}>
+        {onThreadsClick && (
           <button
             className={styles.item}
             onClick={onThreadsClick}
@@ -124,8 +125,9 @@ export function NavSidebar({
             <span className={styles.icon} aria-hidden="true">💬</span>
             {open && <span className={styles.label}>Threads</span>}
           </button>
-        </div>
-      )}
+        )}
+        <SignOutButton showLabel={open} />
+      </div>
     </nav>
   );
 }
