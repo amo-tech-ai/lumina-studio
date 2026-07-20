@@ -22,6 +22,18 @@ function unlockSignOut() {
   signingOut = false;
 }
 
+/** True when /auth/signout redirected to login (session cleared), not signoutError. */
+export function isSuccessfulSignOutRedirect(url: string): boolean {
+  try {
+    const parsed = new URL(url, typeof window !== "undefined" ? window.location.origin : "http://localhost");
+    if (parsed.pathname !== "/login") return false;
+    // Reject accidental /login?signoutError=… if ever introduced.
+    return parsed.searchParams.get("signoutError") !== "1";
+  } catch {
+    return false;
+  }
+}
+
 export function SignOutButton({ showLabel = false }: Props) {
   const [busy, setBusy] = useState(false);
 
@@ -42,8 +54,12 @@ export function SignOutButton({ showLabel = false }: Props) {
       });
 
       if (res.redirected && res.url) {
-        // Allowlisted Copilot/operator keys only — never Storage.clear(), never ipix_anon_id.
-        clearOperatorClientStorage();
+        // Only clear on successful logout (/login). Failure lands on
+        // /app?signoutError=1 while the Supabase session may still be valid —
+        // wiping Copilot keys there would drop thread state for a still-authed operator.
+        if (isSuccessfulSignOutRedirect(res.url)) {
+          clearOperatorClientStorage();
+        }
         window.location.assign(res.url);
         return;
       }

@@ -6,13 +6,25 @@ vi.mock("./nav-sidebar.module.css", () => ({
   default: new Proxy({}, { get: (_, k) => String(k) }),
 }));
 
-import { __resetSignOutLockForTests, SignOutButton } from "./sign-out-button";
+import { __resetSignOutLockForTests, isSuccessfulSignOutRedirect, SignOutButton } from "./sign-out-button";
 
 afterEach(() => {
   cleanup();
   __resetSignOutLockForTests();
   vi.unstubAllGlobals();
   vi.restoreAllMocks();
+  localStorage.clear();
+  sessionStorage.clear();
+});
+
+describe("isSuccessfulSignOutRedirect — IPI-725", () => {
+  it("accepts /login", () => {
+    expect(isSuccessfulSignOutRedirect("http://localhost:3002/login")).toBe(true);
+  });
+
+  it("rejects /app?signoutError=1", () => {
+    expect(isSuccessfulSignOutRedirect("http://localhost:3002/app?signoutError=1")).toBe(false);
+  });
 });
 
 describe("SignOutButton — IPI-725", () => {
@@ -136,6 +148,34 @@ describe("SignOutButton — IPI-725", () => {
     await waitFor(() => {
       expect(assign).toHaveBeenCalledWith("http://localhost:3002/app?signoutError=1");
     });
+  });
+
+  it("does not clear operator storage when sign-out fails and lands on signoutError", async () => {
+    const assign = vi.fn();
+    localStorage.setItem("ipix:copilot:thread:v1:u:default:h", "t-1");
+    sessionStorage.setItem("ipix:copilot:thread:v1:u:planner:h", "t-2");
+
+    vi.stubGlobal("location", { ...window.location, assign });
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() =>
+        Promise.resolve({
+          ok: true,
+          redirected: true,
+          url: "http://localhost:3002/app?signoutError=1",
+          status: 200,
+        } as Response),
+      ),
+    );
+
+    render(<SignOutButton showLabel />);
+    fireEvent.submit(screen.getByTestId("operator-sign-out").closest("form")!);
+
+    await waitFor(() => {
+      expect(assign).toHaveBeenCalledWith("http://localhost:3002/app?signoutError=1");
+    });
+    expect(localStorage.getItem("ipix:copilot:thread:v1:u:default:h")).toBe("t-1");
+    expect(sessionStorage.getItem("ipix:copilot:thread:v1:u:planner:h")).toBe("t-2");
   });
 
   it("clears allowlisted operator/copilot storage before navigating to login", async () => {
