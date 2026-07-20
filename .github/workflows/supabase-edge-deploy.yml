@@ -1,0 +1,346 @@
+# IPI-742 · SB-EDGE-CI-001 — Controlled Supabase Edge Function deploy / rollback.
+# Never pull_request_target. Never --prune. Never BI_PROVIDER / AI_PROVIDER.
+# Production secrets only after GitHub Environment `production-edge` approval.
+name: Supabase Edge deploy
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "deploy (normal) or rollback (redeploy from known-good SHA)"
+        required: true
+        type: choice
+        options:
+          - deploy
+          - rollback
+        default: deploy
+      functions:
+        description: "Comma-separated function names (required for rollback; optional for deploy)"
+        required: false
+        type: string
+        default: ""
+      rollback_sha:
+        description: "Known-good git SHA (required when mode=rollback)"
+        required: false
+        type: string
+        default: ""
+      run_edge_test_smoke:
+        description: "Opt-in edge-test smoke (never Brand Intelligence / paid model traffic)"
+        required: false
+        type: boolean
+        default: false
+  push:
+    branches: [main]
+    paths:
+      - "supabase/functions/**"
+      - ".github/workflows/supabase-edge-deploy.yml"
+      - "scripts/resolve-edge-deploy-targets.mjs"
+
+# One production Edge deploy at a time — do not cancel in-flight deploys.
+concurrency:
+  group: supabase-edge-deploy-production
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  SUPABASE_CLI_VERSION: "2.109.1"
+  NODE_VERSION: "22"
+
+jobs:
+  resolve-targets:
+    runs-on: ubuntu-latest
+    outputs:
+      should_deploy: ${{ steps.resolve.outputs.should_deploy }}
+      functions_csv: ${{ steps.resolve.outputs.functions_csv }}
+      reason: ${{ steps.resolve.outputs.reason }}
+      shared_changed: ${{ steps.resolve.outputs.shared_changed }}
+      mode: ${{ steps.meta.outputs.mode }}
+      deploy_sha: ${{ steps.meta.outputs.deploy_sha }}
+      run_edge_test_smoke: ${{ steps.meta.outputs.run_edge_test_smoke }}
+    steps:
+      - name: Reject unsupported events
+        if: github.event_name != 'workflow_dispatch' && github.event_name != 'push'
+        run: |
+          echo "::error::IPI-742 only supports workflow_dispatch and push to main."
+          exit 1
+
+      # Pin: actions/checkout@v4.2.2
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          fetch-depth: 0
+
+      # Pin: actions/setup-node@v4.4.0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Mode / SHA metadata
+        id: meta
+        shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          INPUT_MODE: ${{ github.event.inputs.mode }}
+          INPUT_ROLLBACK_SHA: ${{ github.event.inputs.rollback_sha }}
+          INPUT_EDGE_TEST: ${{ github.event.inputs.run_edge_test_smoke }}
+          SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          if [ "$EVENT_NAME" = "workflow_dispatch" ]; then
+            MODE="${INPUT_MODE:-deploy}"
+            EDGE_TEST="${INPUT_EDGE_TEST:-false}"
+          else
+            MODE="deploy"
+            EDGE_TEST="false"
+          fi
+          if [ "$MODE" = "rollback" ]; then
+            if [ -z "${INPUT_ROLLBACK_SHA:-}" ]; then
+              echo "::error::rollback mode requires rollback_sha."
+              exit 1
+            fi
+            DEPLOY_SHA="$INPUT_ROLLBACK_SHA"
+          else
+            DEPLOY_SHA="$SHA"
+          fi
+          echo "mode=$MODE" >> "$GITHUB_OUTPUT"
+          echo "deploy_sha=$DEPLOY_SHA" >> "$GITHUB_OUTPUT"
+          echo "run_edge_test_smoke=$EDGE_TEST" >> "$GITHUB_OUTPUT"
+
+      - name: Resolve deploy targets
+        id: resolve
+        shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          MODE: ${{ steps.meta.outputs.mode }}
+          INPUT_FUNCTIONS: ${{ github.event.inputs.functions }}
+          BEFORE: ${{ github.event.before }}
+          SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          if [ "$MODE" = "rollback" ]; then
+            if [ -z "${INPUT_FUNCTIONS:-}" ]; then
+              echo "::error::rollback mode requires an explicit functions list."
+              exit 1
+            fi
+            node scripts/resolve-edge-deploy-targets.mjs --github-output --functions "$INPUT_FUNCTIONS"
+            exit 0
+          fi
+
+          if [ -n "${INPUT_FUNCTIONS:-}" ]; then
+            node scripts/resolve-edge-deploy-targets.mjs --github-output --functions "$INPUT_FUNCTIONS"
+            exit 0
+          fi
+
+          if [ "$EVENT_NAME" = "push" ]; then
+            BASE="${BEFORE}"
+            if [ -z "$BASE" ] || [ "$BASE" = "0000000000000000000000000000000000000000" ]; then
+              BASE="$(git rev-parse HEAD~1)"
+            fi
+            node scripts/resolve-edge-deploy-targets.mjs --github-output --from-diff "$BASE" "$SHA"
+            exit 0
+          fi
+
+          # workflow_dispatch without functions: last commit on the ref
+          node scripts/resolve-edge-deploy-targets.mjs --github-output --from-diff HEAD~1 HEAD
+
+  preflight-gates:
+    needs: resolve-targets
+    if: needs.resolve-targets.outputs.should_deploy == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          ref: ${{ needs.resolve-targets.outputs.deploy_sha }}
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Require Deno lockfile
+        run: test -f supabase/functions/deno.lock
+
+      # Pin: denoland/setup-deno@v2.0.5 · Deno 2.9.2
+      - uses: denoland/setup-deno@22d081ff2d3a40755e97629de92e3bcbfa7cf2ed
+        with:
+          deno-version: "2.9.2"
+          cache: true
+          cache-hash: ${{ hashFiles('supabase/functions/deno.lock') }}
+
+      - name: Edge Deno unit tests (frozen lockfile)
+        run: npm run supabase:verify-edge-unit
+
+      - name: Local Edge inventory (repo ↔ config.toml)
+        run: |
+          node scripts/check-edge-inventory.mjs --self-check
+          node scripts/check-edge-inventory.mjs
+
+      - name: Target resolver self-check
+        run: node scripts/resolve-edge-deploy-targets.mjs --self-check
+
+  deploy:
+    needs: [resolve-targets, preflight-gates]
+    if: needs.resolve-targets.outputs.should_deploy == 'true'
+    runs-on: ubuntu-latest
+    environment: production-edge
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_PROJECT_ID: ${{ vars.SUPABASE_PROJECT_ID }}
+      # Smoke: project URL derived from ref; anon key from Environment secret.
+      NEXT_PUBLIC_SUPABASE_URL: https://${{ vars.SUPABASE_PROJECT_ID }}.supabase.co
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+    steps:
+      - name: Require Environment secrets
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -z "${SUPABASE_ACCESS_TOKEN:-}" ] || [ -z "${SUPABASE_PROJECT_ID:-}" ]; then
+            echo "::error::production-edge requires secret SUPABASE_ACCESS_TOKEN and variable SUPABASE_PROJECT_ID."
+            exit 1
+          fi
+          if [ -z "${NEXT_PUBLIC_SUPABASE_ANON_KEY:-}" ]; then
+            echo "::error::production-edge requires secret SUPABASE_ANON_KEY for health smoke."
+            exit 1
+          fi
+
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          ref: ${{ needs.resolve-targets.outputs.deploy_sha }}
+          fetch-depth: 0
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      # Pin: supabase/setup-cli@v2.1.1 (documents @v2; pin commit for supply-chain)
+      - uses: supabase/setup-cli@3c2f5e2ae34c34e428e8e206e2c4d21fa2d20fbf
+        with:
+          version: ${{ env.SUPABASE_CLI_VERSION }}
+
+      - name: Pre-deploy functions list
+        run: |
+          set -euo pipefail
+          supabase functions list \
+            --project-ref "$SUPABASE_PROJECT_ID" \
+            --output-format json \
+            > /tmp/edge-pre-deploy.json
+          test -s /tmp/edge-pre-deploy.json
+          cp /tmp/edge-pre-deploy.json edge-pre-deploy.json
+
+      - name: Deploy named functions only (never --prune)
+        shell: bash
+        env:
+          FUNCTIONS_CSV: ${{ needs.resolve-targets.outputs.functions_csv }}
+        run: |
+          set -euo pipefail
+          IFS=',' read -r -a FNS <<< "$FUNCTIONS_CSV"
+          if [ "${#FNS[@]}" -eq 0 ]; then
+            echo "::error::empty function list — refusing deploy."
+            exit 1
+          fi
+          for fn in "${FNS[@]}"; do
+            fn="$(echo "$fn" | xargs)"
+            [ -n "$fn" ] || continue
+            echo "Deploying $fn from $(git rev-parse HEAD) …"
+            # Named deploy only. Do not pass --prune.
+            supabase functions deploy "$fn" --project-ref "$SUPABASE_PROJECT_ID"
+          done
+
+      - name: Post-deploy functions list
+        run: |
+          set -euo pipefail
+          supabase functions list \
+            --project-ref "$SUPABASE_PROJECT_ID" \
+            --output-format json \
+            > /tmp/edge-post-deploy.json
+          test -s /tmp/edge-post-deploy.json
+          cp /tmp/edge-post-deploy.json edge-post-deploy.json
+
+      - name: Verify ACTIVE + version/update metadata changed
+        env:
+          FUNCTIONS_CSV: ${{ needs.resolve-targets.outputs.functions_csv }}
+        run: |
+          node scripts/resolve-edge-deploy-targets.mjs \
+            --verify-delta \
+            edge-pre-deploy.json \
+            edge-post-deploy.json \
+            "$FUNCTIONS_CSV"
+
+      - name: Remote inventory (repo ↔ config ↔ Management API)
+        run: |
+          node scripts/check-edge-inventory.mjs \
+            --remote \
+            --remote-json edge-post-deploy.json
+
+      - name: Health smoke
+        run: npm run supabase:verify-edge
+
+      - name: Optional edge-test smoke (dispatch opt-in only)
+        if: needs.resolve-targets.outputs.run_edge_test_smoke == 'true'
+        env:
+          REQUIRE_AUTH_EDGE_SMOKE: "1"
+        run: npm run supabase:verify-edge
+
+      # Pin: actions/upload-artifact@v4.6.2
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: edge-deploy-${{ needs.resolve-targets.outputs.mode }}-${{ github.run_id }}
+          path: |
+            edge-pre-deploy.json
+            edge-post-deploy.json
+          if-no-files-found: warn
+
+      - name: Job summary
+        if: always()
+        shell: bash
+        env:
+          MODE: ${{ needs.resolve-targets.outputs.mode }}
+          DEPLOY_SHA: ${{ needs.resolve-targets.outputs.deploy_sha }}
+          FUNCTIONS_CSV: ${{ needs.resolve-targets.outputs.functions_csv }}
+          REASON: ${{ needs.resolve-targets.outputs.reason }}
+          SHARED: ${{ needs.resolve-targets.outputs.shared_changed }}
+          RUN_ID: ${{ github.run_id }}
+        run: |
+          set -euo pipefail
+          {
+            echo "## IPI-742 · Supabase Edge deploy"
+            echo ""
+            echo "| Field | Value |"
+            echo "| --- | --- |"
+            echo "| Mode | \`$MODE\` |"
+            echo "| Commit SHA | \`$DEPLOY_SHA\` |"
+            echo "| Functions | \`$FUNCTIONS_CSV\` |"
+            echo "| Resolve reason | \`$REASON\` |"
+            echo "| \`_shared\` expanded | \`$SHARED\` |"
+            echo "| Pre artifact | \`edge-pre-deploy.json\` |"
+            echo "| Post artifact | \`edge-post-deploy.json\` |"
+            echo "| Artifact bundle | \`edge-deploy-$MODE-$RUN_ID\` |"
+            echo ""
+            echo "### Rollback"
+            echo "1. Actions → **Supabase Edge deploy** → Run workflow"
+            echo "2. mode=\`rollback\`"
+            echo "3. rollback_sha=<known-good SHA>"
+            echo "4. functions=\`$FUNCTIONS_CSV\` (same named list)"
+            echo "5. Approve \`production-edge\`"
+            echo ""
+            echo "Never print secrets. Never \`--prune\`. Never set \`BI_PROVIDER\` / \`AI_PROVIDER\`."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  skip-summary:
+    needs: resolve-targets
+    if: needs.resolve-targets.outputs.should_deploy != 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Nothing to deploy
+        shell: bash
+        env:
+          REASON: ${{ needs.resolve-targets.outputs.reason }}
+        run: |
+          {
+            echo "## IPI-742 · Supabase Edge deploy (skipped)"
+            echo ""
+            echo "No Edge function deploy targets for this event."
+            echo "Reason: \`$REASON\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+          echo "Skipped deploy (reason=$REASON)."
