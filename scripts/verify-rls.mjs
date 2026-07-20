@@ -390,10 +390,17 @@ try {
   // IPI-729: crm_convert_deal inserts crm_activities.created_by → profiles(id).
   // User B later converts as org editor; without a profiles row the RPC fails with FK
   // 23503 on empty/fresh DBs (looks like authz, is actually a missing fixture).
+  // Soft assert alone is not enough — convert probes must not continue after a real seed failure.
   const { error: profileBInsertErr } = await userB.client.from("profiles").insert({
     id: userB.user.id,
     email: emailB,
   });
+  if (profileBInsertErr && profileBInsertErr.code !== "23505") {
+    fail(`user B can insert own profile: ${profileBInsertErr.message}`);
+    throw new Error(
+      `IPI-729: user B profile seed failed (${profileBInsertErr.code}): ${profileBInsertErr.message}`,
+    );
+  }
   assert(!profileBInsertErr || profileBInsertErr.code === "23505", "user B can insert own profile");
 
   const { data: ownProfile, error: ownProfileErr } = await userA.client
