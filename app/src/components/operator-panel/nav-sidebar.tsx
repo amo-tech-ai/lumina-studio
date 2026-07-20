@@ -9,6 +9,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { SignOutButton } from "./sign-out-button";
+import { useMobileRailHidden } from "./use-mobile-rail-hidden";
 import type { UnreadBadgeState } from "./use-unread-notifications";
 import styles from "./nav-sidebar.module.css";
 
@@ -48,6 +49,9 @@ export function NavSidebar({
 }) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
+  // When the rail is CSS-hidden, MobileSignOutBar owns Sign Out (unique testid).
+  const railHidden = useMobileRailHidden();
+  const showSignOutInRail = railHidden !== true;
 
   return (
     <nav
@@ -126,7 +130,7 @@ export function NavSidebar({
             {open && <span className={styles.label}>Threads</span>}
           </button>
         )}
-        <SignOutButton showLabel={open} />
+        {showSignOutInRail && <SignOutButton showLabel={open} />}
       </div>
     </nav>
   );

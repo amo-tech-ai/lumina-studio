@@ -4,7 +4,7 @@
 // Navigates to /auth/signout so Supabase SSR cookies clear on the server
 // (same session the login form established). No new auth architecture.
 
-import { useRef, useState } from "react";
+import { useState } from "react";
 
 import styles from "./nav-sidebar.module.css";
 
@@ -13,13 +13,15 @@ type Props = {
   showLabel?: boolean;
 };
 
+/** Module lock — survives re-renders and multiple SignOutButton instances. */
+let signingOut = false;
+
 export function SignOutButton({ showLabel = false }: Props) {
   const [busy, setBusy] = useState(false);
-  const lock = useRef(false);
 
   function handleSignOut() {
-    if (lock.current) return;
-    lock.current = true;
+    if (signingOut) return;
+    signingOut = true;
     setBusy(true);
     // Full navigation clears CopilotKit in-memory state and hits the server route.
     window.location.assign("/auth/signout");
@@ -43,4 +45,9 @@ export function SignOutButton({ showLabel = false }: Props) {
       )}
     </button>
   );
+}
+
+/** Test-only — reset module lock between unit tests. */
+export function __resetSignOutLockForTests() {
+  signingOut = false;
 }

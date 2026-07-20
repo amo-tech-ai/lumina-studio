@@ -6,10 +6,11 @@ vi.mock("./nav-sidebar.module.css", () => ({
   default: new Proxy({}, { get: (_, k) => String(k) }),
 }));
 
-import { SignOutButton } from "./sign-out-button";
+import { __resetSignOutLockForTests, SignOutButton } from "./sign-out-button";
 
 afterEach(() => {
   cleanup();
+  __resetSignOutLockForTests();
   vi.unstubAllGlobals();
 });
 
@@ -27,13 +28,13 @@ describe("SignOutButton — IPI-725", () => {
     expect(screen.getByRole("button", { name: "Sign out" })).toBeTruthy();
   });
 
-  it("ignores double-clicks while navigating", () => {
+  it("ignores double-clicks across instances via module lock", () => {
     const assign = vi.fn();
     vi.stubGlobal("location", { ...window.location, assign });
-    render(<SignOutButton showLabel />);
-    const btn = screen.getByTestId("operator-sign-out");
-    fireEvent.click(btn);
-    fireEvent.click(btn);
+    const { rerender } = render(<SignOutButton showLabel />);
+    fireEvent.click(screen.getByTestId("operator-sign-out"));
+    rerender(<SignOutButton showLabel />);
+    fireEvent.click(screen.getByTestId("operator-sign-out"));
     expect(assign).toHaveBeenCalledTimes(1);
   });
 });
