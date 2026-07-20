@@ -96,7 +96,7 @@ We are in active development. Always leave the system better than you found it: 
 
 ## Hard rules
 
-- **🚫 NEVER push code directly to `main`.** Before writing a single line of code, create a worktree branch: `npm run worktree:add -- IPI-NNN short-name` (preferred — see Worktree workflow below) or `git worktree add ../wt-ipi-NNN -b ipi/NNN-name` as a fallback. Commit on the branch, push, open a PR with `gh pr create`. Even a one-line fix. Pushing direct to `main` means no PR can be created after the fact (`head == base` error). No exceptions.
+- **🚫 NEVER push code directly to `main`.** Before writing a single line of code, create a worktree branch: `npm run worktree:add -- IPI-NNN short-name` (preferred — see Worktree workflow below) or `git worktree add ../wt-ipi-NNN-short-name -b ipi/NNN-short-name` as a fallback. Commit on the branch, push, open a PR with `gh pr create`. Even a one-line fix. Pushing direct to `main` means no PR can be created after the fact (`head == base` error). No exceptions.
 
 - **🚫 NEVER mix docs and production files in one PR or commit. NEVER mix two different tasks/concerns in one PR or commit. EVER.** One concern per PR *and* per commit — docs-only, code-only, migration-only, CI/config-only, each separate. If a change set spans docs + code (or two tasks), STOP and split before staging. This is the most-enforced rule here (see PR #99 fallout); violating it is a blocking error, not a style nit.
 
@@ -153,7 +153,7 @@ npm run worktree:add -- IPI-NNN short-name
 # raw `git worktree add` will not stop you).
 
 # Fallback (script failure, or a branch that doesn't fit ipi/NNN-slug, e.g. docs/... or fix/...):
-git worktree add ../wt-ipi-NNN -b ipi/NNN-short-name origin/main
+git worktree add ../wt-ipi-NNN-short-name -b ipi/NNN-short-name origin/main
 # then copy .env manually per .worktreeinclude and run npm ci yourself.
 
 # 2. Work, commit, push
