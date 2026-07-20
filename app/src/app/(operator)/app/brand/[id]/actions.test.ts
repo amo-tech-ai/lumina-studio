@@ -329,6 +329,81 @@ describe("reanalyzeBrand — IPI-744 restoreBrandStatus never masks the original
     expect(currentStatus).toBe(BRAND.intake_status); // restored to priorStatus, not stuck at "failed"
   });
 
+  it("restores the brand even when firecrawl-webhook already flipped intake_status to 'crawl_complete' (live-verified — IPI-744 QA run 2026-07-20)", async () => {
+    // firecrawl-webhook's crawl.completed handler independently sets
+    // brands.intake_status = "crawl_complete" (handler.ts:432), same as the
+    // crawl.failed handler sets "failed". A live pre-merge test against a
+    // real Firecrawl crawl (broken domain) reproduced exactly this: the crawl
+    // "completed" with 0 pages, the webhook set intake_status="crawl_complete",
+    // brand-intelligence then rejected the empty content, and the outer-catch
+    // restore had to succeed despite intake_status no longer being
+    // "analysis_running". Confirmed live; this test locks the behavior in.
+    mockGetUser.mockResolvedValue({ data: { user: { id: "user-1" } }, error: null });
+
+    let currentStatus = "analysis_running";
+    const brandsTable = {
+      select: () => ({
+        eq: () => ({ maybeSingle: async () => ({ data: BRAND, error: null }) }),
+      }),
+      update: (patch: Record<string, unknown>) => {
+        const isLockAcquire = patch.intake_status === "analysis_running";
+        if (isLockAcquire) {
+          return {
+            eq: () => ({
+              not: () => ({
+                select: () => ({
+                  maybeSingle: async () => {
+                    currentStatus = "analysis_running";
+                    return { data: { id: BRAND.id }, error: null };
+                  },
+                }),
+              }),
+            }),
+          };
+        }
+        return {
+          eq: () => ({
+            neq: () => ({
+              select: () => ({
+                maybeSingle: async () => {
+                  if (currentStatus === "draft_ready") return { data: null, error: null };
+                  currentStatus = patch.intake_status as string;
+                  return { data: { id: BRAND.id }, error: null };
+                },
+              }),
+            }),
+          }),
+        };
+      },
+    };
+    mockSupabase = {
+      auth: { getUser: mockGetUser },
+      from: (table: string) => {
+        if (table !== "brands") throw new Error(`unexpected table: ${table}`);
+        return brandsTable;
+      },
+      updates: [],
+    };
+
+    mockInvokeStartBrandCrawl.mockResolvedValue({ crawlId: "crawl-1" });
+    mockWaitForCrawlCompletion.mockImplementation(async () => {
+      // The webhook lands before this resolves — job_status is "complete" but
+      // the crawl found 0 pages, and the webhook already wrote crawl_complete.
+      currentStatus = "crawl_complete";
+      return "complete";
+    });
+    mockInvokeBrandIntelligence.mockRejectedValue(
+      new Error("Brand analysis requires Firecrawl page content. Run a brand crawl first."),
+    );
+
+    const { reanalyzeBrand } = await importActions();
+    const result = await reanalyzeBrand(BRAND.id);
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error).toMatch(/requires Firecrawl page content/i);
+    expect(currentStatus).toBe(BRAND.intake_status); // restored to priorStatus, not stuck at "crawl_complete"
+  });
+
   it("does not overwrite a late-arriving draft_ready state when invokeBrandIntelligence's response is lost", async () => {
     // Simulates: brand-intelligence's edge function writes draft_ready
     // server-side, but the client-visible call still throws (e.g. the
