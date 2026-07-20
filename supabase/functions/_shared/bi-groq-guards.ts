@@ -7,10 +7,15 @@ export type GuardedError = {
   status: number;
 };
 
-/** Returns 503 config_error when the active BI provider's API key is missing. */
+/** Returns 503 config_error when the active BI provider's credentials are missing. */
 export function missingBiProviderConfigError(
-  provider: "gemini" | "groq",
-  secrets: { geminiApiKey?: string | null; groqApiKey?: string | null },
+  provider: "gemini" | "groq" | "workers-ai",
+  secrets: {
+    geminiApiKey?: string | null;
+    groqApiKey?: string | null;
+    cloudflareApiToken?: string | null;
+    cloudflareAccountId?: string | null;
+  },
 ): GuardedError | null {
   if (provider === "gemini" && !secrets.geminiApiKey) {
     return {
@@ -26,10 +31,24 @@ export function missingBiProviderConfigError(
       status: 503,
     };
   }
+  if (
+    provider === "workers-ai" &&
+    (!secrets.cloudflareApiToken || !secrets.cloudflareAccountId)
+  ) {
+    return {
+      code: "config_error",
+      message: "Brand intelligence Workers AI is not configured",
+      status: 503,
+    };
+  }
   return null;
 }
 
-/** Groq BI rejects when no crawl markdown exists in raw_data or formatted text. */
+/**
+ * Groq and Workers AI BI both reject when no crawl markdown exists in
+ * raw_data or formatted text — neither has Gemini's live urlContext/search
+ * fallback, so without a prior crawl they have nothing to analyze.
+ */
 export function groqEmptyCrawlError(
   crawlText: string,
   raw?: CrawlRawData | null,
@@ -42,7 +61,7 @@ export function groqEmptyCrawlError(
   return {
     code: "validation_error",
     message:
-      "Groq brand analysis requires Firecrawl page content. Run a brand crawl first or set BI_USE_GEMINI=1.",
+      "Brand analysis requires Firecrawl page content. Run a brand crawl first or set BI_USE_GEMINI=1.",
     status: 422,
   };
 }
@@ -77,11 +96,11 @@ export function groqHasRequiredCrawlContent(crawlText: string): boolean {
 
 /** Whether crawl text was included in the BI LLM request (telemetry + API metadata). */
 export function biUsedCrawlInRequest(
-  provider: "gemini" | "groq",
+  provider: "gemini" | "groq" | "workers-ai",
   raw: CrawlRawData | null | undefined,
   crawlText: string,
 ): boolean {
-  if (provider === "groq") {
+  if (provider === "groq" || provider === "workers-ai") {
     return groqHasRequiredCrawlContent(crawlText);
   }
   return geminiUsesCrawlAnalysis(raw, crawlText);

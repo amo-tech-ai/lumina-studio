@@ -19,6 +19,18 @@ Deno.test("resolveStructuredProviderFromEnv routes bi scope to Groq", () => {
   );
 });
 
+Deno.test("resolveStructuredProviderFromEnv routes bi scope to Workers AI via BI_PROVIDER=cloudflare (IPI-741)", () => {
+  assertEquals(
+    resolveStructuredProviderFromEnv({
+      scope: "bi",
+      aiProvider: "groq",
+      biUseGemini: "0",
+      biProvider: "cloudflare",
+    }),
+    "workers-ai",
+  );
+});
+
 Deno.test("resolveStructuredProviderFromEnv honors BI_USE_GEMINI on bi scope", () => {
   assertEquals(
     resolveStructuredProviderFromEnv({

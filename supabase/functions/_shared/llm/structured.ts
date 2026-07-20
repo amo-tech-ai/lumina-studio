@@ -7,6 +7,7 @@ import {
   resolveAiProvider,
   resolveBiProvider,
   resolveBiProviderFromEnv,
+  resolveCloudflareModel,
   resolveDnaProvider,
   resolveDnaProviderFromEnv,
   resolveGroqModelId,
@@ -17,6 +18,10 @@ import {
   buildStrictJsonRequest,
   groqStructuredCompletion,
 } from "./groq-client.ts";
+import {
+  buildCloudflareStrictJsonRequest,
+  cloudflareStructuredCompletion,
+} from "./cloudflare-client.ts";
 import {
   generateGeminiStructuredContent,
   resolveGeminiModel,
@@ -208,10 +213,69 @@ async function generateGroqStructured<T>(
   };
 }
 
+async function generateCloudflareStructured<T>(
+  options: StructuredGenerationOptions,
+): Promise<StructuredGenerationResult<T>> {
+  const model = resolveCloudflareModel();
+  const request = buildCloudflareStrictJsonRequest(
+    model,
+    options.systemPrompt,
+    options.userContent,
+    options.jsonSchema,
+    options.schemaName ?? "response",
+    options.maxCompletionTokens ?? 4096,
+  );
+
+  let schemaRepairCount = 0;
+  let result = await cloudflareStructuredCompletion({
+    ...request,
+    temperature: options.temperature ?? 0.2,
+  });
+  let aggregatedUsage = result.usage;
+
+  let validation = validateParsedText(result.text);
+
+  if (validation.error) {
+    schemaRepairCount += 1;
+    const repairRequest = buildCloudflareStrictJsonRequest(
+      model,
+      options.systemPrompt,
+      `${options.userContent}${REPAIR_SUFFIX}`,
+      options.jsonSchema,
+      options.schemaName ?? "response",
+      options.maxCompletionTokens ?? 4096,
+    );
+    const repairResult = await cloudflareStructuredCompletion({
+      ...repairRequest,
+      temperature: 0,
+    });
+    aggregatedUsage = mergeGroqUsage(result.usage, repairResult.usage);
+    result = repairResult;
+    validation = validateParsedText(result.text);
+    if (validation.error) {
+      throw new Error(validation.error);
+    }
+  }
+
+  const log: StructuredGenerationLog = {
+    provider: "workers-ai",
+    model: result.model,
+    schemaRepairCount,
+    usage: aggregatedUsage,
+  };
+
+  return {
+    data: validation.payload as T,
+    text: result.text,
+    log,
+  };
+}
+
 export function resolveStructuredProviderFromEnv(env: {
   scope?: StructuredGenerationScope;
   aiProvider?: string;
   biUseGemini?: string;
+  biProvider?: string;
   dnaUseGemini?: string;
 }): AiProvider {
   const scope = env.scope ?? "default";
@@ -219,6 +283,7 @@ export function resolveStructuredProviderFromEnv(env: {
     return resolveBiProviderFromEnv({
       aiProvider: env.aiProvider,
       biUseGemini: env.biUseGemini,
+      biProvider: env.biProvider,
     });
   }
   if (scope === "dna") {
@@ -244,6 +309,7 @@ export function resolveStructuredProvider(
     scope,
     aiProvider: Deno.env.get("AI_PROVIDER"),
     biUseGemini: Deno.env.get("BI_USE_GEMINI"),
+    biProvider: Deno.env.get("BI_PROVIDER"),
     dnaUseGemini: Deno.env.get("DNA_USE_GEMINI"),
   });
 }
@@ -258,6 +324,9 @@ export async function generateStructuredContent<T>(
   }
   if (provider === "groq") {
     return generateGroqStructured<T>(options);
+  }
+  if (provider === "workers-ai") {
+    return generateCloudflareStructured<T>(options);
   }
   throw new Error(`Structured provider "${provider}" is not wired.`);
 }

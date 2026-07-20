@@ -144,6 +144,36 @@ Deno.test("resolveBiProviderFromEnv honors BI_USE_GEMINI override", () => {
   );
 });
 
+Deno.test("resolveBiProviderFromEnv — BI_PROVIDER=cloudflare overrides AI_PROVIDER and BI_USE_GEMINI (IPI-741)", () => {
+  assertEquals(
+    resolveBiProviderFromEnv({ aiProvider: "groq", biProvider: "cloudflare" }),
+    "workers-ai",
+  );
+  assertEquals(
+    resolveBiProviderFromEnv({ aiProvider: "groq", biUseGemini: "1", biProvider: "cloudflare" }),
+    "workers-ai",
+  );
+  assertEquals(
+    resolveBiProviderFromEnv({ aiProvider: "groq", biProvider: "workers-ai" }),
+    "workers-ai",
+  );
+  // No BI_PROVIDER set — existing precedence (BI_USE_GEMINI, then AI_PROVIDER) is untouched.
+  assertEquals(
+    resolveBiProviderFromEnv({ aiProvider: "groq" }),
+    "groq",
+  );
+});
+
+Deno.test("resolveBiProviderFromEnv rejects an invalid BI_PROVIDER value", () => {
+  let threw = false;
+  try {
+    resolveBiProviderFromEnv({ aiProvider: "gemini", biProvider: "openai" });
+  } catch {
+    threw = true;
+  }
+  assertEquals(threw, true);
+});
+
 Deno.test("resolveDnaProviderFromEnv defaults to gemini until golden eval", () => {
   assertEquals(
     resolveDnaProviderFromEnv({ aiProvider: "groq" }),
