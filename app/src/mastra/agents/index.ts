@@ -8,7 +8,7 @@ export { PlannerWorkingMemory };
 
 const MODEL = resolveModel("default");
 
-// Excludes booking/CRM write tools that belong to other agents (booking, crm-assistant) —
+// Excludes booking/CRM tools that belong to other agents (booking, crm-assistant) —
 // production-planner's instructions never mention them, so it shouldn't have unsupervised
 // access to durable write actions like createBookingDraft from a shoot-planning chat.
 // Also excludes the IPI-261 asset-intelligence tools (getAssetDnaEvidence, suggestAssetRetakes,
@@ -22,8 +22,13 @@ const {
   getAssetDnaEvidence: _getAssetDnaEvidence,
   suggestAssetRetakes: _suggestAssetRetakes,
   draftBulkAssetApproval: _draftBulkAssetApproval,
-  // CRM-only tools — keep off Production Planner (IPI-369 Phase A).
+  searchCompanies: _searchCompanies,
+  searchContacts: _searchContacts,
+  logActivity: _logActivity,
+  moveDealStage: _moveDealStage,
   scoreDealHealth: _scoreDealHealth,
+  summarizeRelationship: _summarizeRelationship,
+  draftFollowUp: _draftFollowUp,
   ...productionPlannerTools
 } = agentTools;
 

@@ -72,6 +72,18 @@ describe("operator agents — structure (IPI2-121)", () => {
     expect(toolNames).not.toContain("draftBulkAssetApproval");
   });
 
+  it("production-planner does NOT inherit crm-assistant tools (IPI-369 review)", async () => {
+    const tools = await productionPlannerAgent.listTools();
+    const toolNames = Object.keys(tools ?? {});
+    expect(toolNames).not.toContain("searchCompanies");
+    expect(toolNames).not.toContain("searchContacts");
+    expect(toolNames).not.toContain("logActivity");
+    expect(toolNames).not.toContain("moveDealStage");
+    expect(toolNames).not.toContain("scoreDealHealth");
+    expect(toolNames).not.toContain("summarizeRelationship");
+    expect(toolNames).not.toContain("draftFollowUp");
+  });
+
   it("creative-director carries exactly its 3 asset-intelligence tools (IPI-261), not the full registry", async () => {
     const tools = await creativeDirectorAgent.listTools();
     const toolNames = Object.keys(tools ?? {});
