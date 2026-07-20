@@ -7025,6 +7025,15 @@ export type Database = {
       }
       show_limit: { Args: never; Returns: number }
       show_trgm: { Args: { "": string }; Returns: string[] }
+      take_over_stale_analysis_lock: {
+        Args: {
+          p_brand_id: string
+          p_expected_token: string
+          p_new_token: string
+          p_stale_after_seconds?: number
+        }
+        Returns: boolean
+      }
       toggle_shortlist_item: {
         Args: {
           p_add: boolean
