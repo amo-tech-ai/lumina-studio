@@ -1,0 +1,45 @@
+{
+  "steps": [
+    {
+      "label": "tasks",
+      "ok": true,
+      "error": null
+    },
+    {
+      "label": "assignments",
+      "ok": true,
+      "error": null
+    },
+    {
+      "label": "instances",
+      "ok": true,
+      "error": null
+    },
+    {
+      "label": "workflows",
+      "ok": true,
+      "error": null
+    },
+    {
+      "label": "org_members",
+      "ok": true,
+      "error": null
+    },
+    {
+      "label": "organizations",
+      "ok": true,
+      "error": null
+    },
+    {
+      "label": "user a37a535c-f3dd-4584-8a01-61bc5960a619",
+      "ok": true,
+      "error": null
+    },
+    {
+      "label": "user 37a6315d-54f3-42e8-b8c8-175d1d15e982",
+      "ok": true,
+      "error": null
+    }
+  ],
+  "cleanedAt": "2026-07-20T05:33:50.416Z"
+}

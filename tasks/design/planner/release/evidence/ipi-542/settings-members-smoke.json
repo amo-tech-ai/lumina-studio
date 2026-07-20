@@ -1,0 +1,50 @@
+{
+  "startedAt": "2026-07-20T06:08:52.278Z",
+  "baseUrl": "https://ipix-operator-git-release-ipi-542-staging-mdeai.vercel.app",
+  "settingsPath": "/app/planner/ab4a87bc-a302-4fe1-87a5-88582d5e6d51/settings",
+  "settingsUrl": "https://ipix-operator-git-release-ipi-542-staging-mdeai.vercel.app/app/planner/ab4a87bc-a302-4fe1-87a5-88582d5e6d51/settings",
+  "instanceId": "ab4a87bc-a302-4fe1-87a5-88582d5e6d51",
+  "checks": [
+    {
+      "name": "Settings page loads",
+      "ok": true,
+      "detail": "/app/planner/ab4a87bc-a302-4fe1-87a5-88582d5e6d51/settings"
+    },
+    {
+      "name": "Members tab visible",
+      "ok": true,
+      "detail": "tab role Members"
+    },
+    {
+      "name": "Expected members displayed",
+      "ok": true,
+      "detail": "member table content present"
+    },
+    {
+      "name": "No unexpected critical /api 5xx (excl CopilotKit)",
+      "ok": true,
+      "detail": "[{\"url\":\"https://ipix-operator-git-release-ipi-542-staging-mdeai.vercel.app/api/copilotkit/info\",\"status\":503}]"
+    },
+    {
+      "name": "Unassigned cannot access Settings",
+      "ok": true,
+      "detail": "enumeration-safe deny"
+    }
+  ],
+  "finishedAt": "2026-07-20T06:09:11.931Z",
+  "consoleErrors": [
+    "Failed to load resource: the server responded with a status of 503 ()",
+    "[CopilotKit] Error (runtime_info_fetch_failed): Error: Runtime info request failed with status 503\n    at o3.fetchRuntimeInfo (https://ipix-operator-git-release-ipi-542-staging-mdeai.vercel.app/_next/static/chunks/3f-nggxqrxj59.js:12:37249)\n    at async o3.updateRuntimeConnection (https://ipix-operator-git-release-ipi-542-staging-mdeai.vercel.app/_next/static/chunks/3f-nggxqrxj59.js:12:35166) {runtimeUrl: /api/copilotkit}"
+  ],
+  "networkCritical": [
+    {
+      "url": "https://ipix-operator-git-release-ipi-542-staging-mdeai.vercel.app/api/copilotkit/info",
+      "status": 503
+    }
+  ],
+  "screenshots": [
+    "05-settings-members.png",
+    "05b-settings-unassigned-denied.png"
+  ],
+  "ok": true
+}
