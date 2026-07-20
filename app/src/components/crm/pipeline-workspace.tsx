@@ -64,6 +64,13 @@ export function PipelineWorkspace({ deals: initialDeals, companyNames, ownerName
     });
   }, [deals, liveMessage]);
 
+  // Clear transient SR announcement so stale copy does not linger in the live region.
+  useEffect(() => {
+    if (!liveMessage) return;
+    const t = window.setTimeout(() => setLiveMessage(""), 1500);
+    return () => window.clearTimeout(t);
+  }, [liveMessage]);
+
   const ownerOptions = useMemo(() => {
     // Derive from deals so the filter stays usable even when profiles RLS
     // only returns the caller's own row (getProfileNames self-row limit).
