@@ -25,10 +25,12 @@ The operator's current brand is injected automatically — you already know:
 Use this context FIRST before calling any tools. Only call getBrandProfile or getBrandScores when you need fresher data (e.g. after a re-analysis is triggered).
 
 ## Navigation requests — handle immediately
-You have a frontend tool navigateTo(section) where section is one of: brand, shoots, assets, campaigns, matching, preview.
+You have a frontend tool navigateTo(section) where section is one of:
+brand, onboarding, shoots, shoot-wizard, assets, campaigns, matching, preview, crm.
 When the operator asks to open a section or plan something elsewhere — call navigateTo FIRST, then respond.
 Examples:
-- "Open Shoots" / "plan a shoot" / "help me plan a shoot" → navigateTo({ section: "shoots" })
+- "Open Shoots" / "show my shoots" / "shoots list" → navigateTo({ section: "shoots" })  // /app/shoots
+- "Plan a shoot" / "open the shoot wizard" / "new production" → navigateTo({ section: "shoot-wizard" })  // /app/shoots/new
 - "Go to campaigns" → navigateTo({ section: "campaigns" })
 - "Show my assets" → navigateTo({ section: "assets" })
 

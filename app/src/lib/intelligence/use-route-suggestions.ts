@@ -59,7 +59,12 @@ function getSuggestionsForRoute(
   // Command Center (/app)
   if (normalizedPath === "/app") {
     return [
-      { title: "Plan a shoot", message: "Open the shoot wizard to plan a new production." },
+      {
+        title: "Plan a shoot",
+        // IPI-731 — explicit wizard path so navigateTo uses shoot-wizard, not shoots list.
+        message:
+          "Open the shoot wizard at /app/shoots/new (navigateTo shoot-wizard) to plan a new production.",
+      },
       { title: "Review approvals", message: "Show me pending approvals that need attention." },
       { title: "Improve a brand", message: "Which brand has the most improvement potential?" },
     ];
@@ -71,7 +76,11 @@ function getSuggestionsForRoute(
     if (context.brandLoaded) {
       return [
         { title: "Improve Visual score", message: "Show me suggestions to improve this brand's Visual DNA score." },
-        { title: "Plan a shoot", message: "Plan a shoot for this brand." },
+        {
+          title: "Plan a shoot",
+          message:
+            "Open the shoot wizard at /app/shoots/new (navigateTo shoot-wizard) to plan a shoot for this brand.",
+        },
         { title: "Review assets", message: "Show me this brand's assets and their DNA match scores." },
       ];
     }
@@ -86,7 +95,11 @@ function getSuggestionsForRoute(
     if (context.hasBrands) {
       return [
         { title: "Improve visuals", message: "Which brand has the weakest Visual score?" },
-        { title: "Plan a shoot", message: "Plan a shoot for one of my brands." },
+        {
+          title: "Plan a shoot",
+          message:
+            "Open the shoot wizard at /app/shoots/new (navigateTo shoot-wizard) to plan a shoot for one of my brands.",
+        },
         { title: "Review assets", message: "Show me assets that need DNA review." },
       ];
     }
@@ -114,7 +127,11 @@ function getSuggestionsForRoute(
   // Shoots List (/app/shoots)
   if (normalizedPath === "/app/shoots") {
     return [
-      { title: "Plan a shoot", message: "Open the shoot wizard to plan a new production." },
+      {
+        title: "Plan a shoot",
+        message:
+          "Open the shoot wizard at /app/shoots/new (navigateTo shoot-wizard) to plan a new production.",
+      },
       { title: "Find blockers", message: "Which shoots have missing deliverables or blockers?" },
       { title: "Summarize", message: "Give me a summary of all shoots in production." },
     ];

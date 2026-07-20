@@ -45,28 +45,26 @@ describe("OperatorPanel — agent wiring (IPI-110)", () => {
   });
 });
 
-describe("OperatorPanel — navigateTo frontend tool (IPI2-82)", () => {
-  it("defines SECTIONS aligned with on-disk operator routes", () => {
-    const match = PANEL_SRC.match(
-      /const SECTIONS = (\[[^\]]+\]) as const/,
-    );
-    expect(match).not.toBeNull();
-    const sections = JSON.parse(
-      (match?.[1] ?? "[]").replace(/"/g, '"'),
-    ) as string[];
-    expect(sections).toEqual([...OPERATOR_SECTIONS]);
+describe("OperatorPanel — navigateTo frontend tool (IPI2-82 / IPI-731)", () => {
+  it("wires navigateTo through NAV_TARGETS + resolveNavigateToPath", () => {
+    expect(PANEL_SRC).toMatch(/from "\.\/navigate-to-path"/);
+    expect(PANEL_SRC).toMatch(/section:\s*z\.enum\(NAV_TARGETS\)/);
+    expect(PANEL_SRC).toMatch(/resolveNavigateToPath\(section\)/);
+    expect(PANEL_SRC).toMatch(/shoot-wizard/);
   });
 
-  it("validates section via z.enum(SECTIONS) before navigation", () => {
-    expect(PANEL_SRC).toMatch(
-      /parameters:\s*z\.object\(\{\s*section:\s*z\.enum\(SECTIONS\)\s*\}\)/,
-    );
+  it("documents shoot-wizard vs shoots list in the tool description", () => {
+    expect(PANEL_SRC).toMatch(/shoot-wizard for \/app\/shoots\/new/);
+    expect(PANEL_SRC).toMatch(/section shoots for the shoots list/);
   });
 
-  it("navigates to /app/{section} for each valid workspace", () => {
-    expect(PANEL_SRC).toMatch(/section === "crm" \? "\/app\/crm\/companies" : `\/app\/\$\{section\}`/);
+  it("keeps hub section names in navigate-to-path for route alignment", () => {
+    const navSrc = readFileSync(
+      resolve(fileURLToPath(new URL(".", import.meta.url)), "navigate-to-path.ts"),
+      "utf8",
+    );
     for (const section of OPERATOR_SECTIONS) {
-      expect(PANEL_SRC).toContain(`"${section}"`);
+      expect(navSrc).toContain(`"${section}"`);
     }
   });
 

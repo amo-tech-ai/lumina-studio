@@ -19,6 +19,13 @@ describe("operator agents — structure (IPI2-121)", () => {
     expect(productionPlannerAgent.id).toBe("production-planner");
   });
 
+  it("production-planner teaches shoot-wizard navigation (IPI-731)", () => {
+    const instructions = String(productionPlannerAgent.getInstructions?.() ?? productionPlannerAgent.instructions ?? "");
+    expect(instructions).toMatch(/shoot-wizard/);
+    expect(instructions).toMatch(/\/app\/shoots\/new/);
+    expect(instructions).toMatch(/Do not send operators to the shoots list when they asked for the wizard/);
+  });
+
   it("creative-director is a distinct agent", () => {
     expect(creativeDirectorAgent.id).toBe("creative-director");
     expect(creativeDirectorAgent).not.toBe(productionPlannerAgent);
