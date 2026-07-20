@@ -639,3 +639,66 @@ describe("reanalyzeBrand — IPI-744 token CAS concurrency", () => {
     expect(currentToken).toBeNull();
   });
 });
+
+describe("reanalyzeBrand — IPI-744 success-path token clear is non-critical (Sentry-flagged)", () => {
+  it("still reports ok:true when clearing the lock token after success throws (transient failure)", async () => {
+    // Sentry flagged: the token-clear update on the success path wasn't in
+    // its own try/catch, so a transient failure there fell into the outer
+    // catch and reported the whole action as failed — even though
+    // invokeBrandIntelligence had already succeeded and a draft was created.
+    const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    mockGetUser.mockResolvedValue({ data: { user: { id: "user-1" } }, error: null });
+
+    let updateCallCount = 0;
+    const brandsTable = {
+      select: () => ({
+        eq: () => ({ maybeSingle: async () => ({ data: BRAND, error: null }) }),
+      }),
+      update: (patch: Record<string, unknown>) => {
+        updateCallCount += 1;
+        const isLockAcquire = updateCallCount === 1;
+        if (isLockAcquire) {
+          return {
+            eq: () => ({
+              not: () => ({
+                select: () => ({
+                  maybeSingle: async () => ({ data: { id: BRAND.id }, error: null }),
+                }),
+              }),
+            }),
+          };
+        }
+        // Success-path token clear: throws (simulated transient network blip).
+        return {
+          eq: () => ({
+            eq: () => {
+              throw new Error("transient network blip");
+            },
+          }),
+        };
+      },
+    };
+    mockSupabase = {
+      auth: { getUser: mockGetUser },
+      from: (table: string) => {
+        if (table !== "brands") throw new Error(`unexpected table: ${table}`);
+        return brandsTable;
+      },
+      updates: [],
+    };
+
+    mockInvokeStartBrandCrawl.mockResolvedValue({ crawlId: "crawl-1" });
+    mockWaitForCrawlCompletion.mockResolvedValue("complete");
+    mockInvokeBrandIntelligence.mockResolvedValue({ brandId: BRAND.id });
+
+    const { reanalyzeBrand } = await importActions();
+    const result = await reanalyzeBrand(BRAND.id);
+
+    expect(result).toEqual({ ok: true, hasDraft: true });
+    expect(consoleErrorSpy).toHaveBeenCalledWith(
+      "[reanalyze] failed to clear lock token after success",
+      expect.objectContaining({ brandId: BRAND.id, error: "transient network blip" }),
+    );
+    consoleErrorSpy.mockRestore();
+  });
+});

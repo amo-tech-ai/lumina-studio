@@ -165,11 +165,21 @@ export async function reanalyzeBrand(brandId: string): Promise<ReanalyzeResult> 
     );
 
     // Clear this run's lock token on success (edge may have set draft_ready).
-    await supabase
-      .from("brands")
-      .update({ analysis_lock_token: null, analysis_locked_at: null })
-      .eq("id", brandId)
-      .eq("analysis_lock_token", runToken);
+    // Own try/catch: this is non-critical cleanup after a real success — a
+    // transient failure here must not fall into the outer catch and report
+    // the whole action as failed when the draft was actually created.
+    try {
+      await supabase
+        .from("brands")
+        .update({ analysis_lock_token: null, analysis_locked_at: null })
+        .eq("id", brandId)
+        .eq("analysis_lock_token", runToken);
+    } catch (clearErr) {
+      console.error("[reanalyze] failed to clear lock token after success", {
+        brandId,
+        error: clearErr instanceof Error ? clearErr.message : String(clearErr),
+      });
+    }
 
     revalidatePath(`/app/brand/${brandId}`);
     return { ok: true, hasDraft: true };
