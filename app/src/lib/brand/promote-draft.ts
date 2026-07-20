@@ -30,6 +30,13 @@ export async function promoteBrandDraft(
       ai_profile: cleanDraft,
       ai_profile_draft: null,
       intake_status: "ready",
+      // IPI-744 — clear any lingering reanalyzeBrand lock token here. Without
+      // this, a delayed/failed reanalyzeBrand run whose response was lost
+      // client-side can still own a stale analysis_lock_token; its late
+      // restoreBrandStatus call would then match on token + "not draft_ready"
+      // and silently revert this brand back to an old status after approval.
+      analysis_lock_token: null,
+      analysis_locked_at: null,
       ...(typeof cleanDraft.name === "string" ? { name: cleanDraft.name } : {}),
     })
     .eq("id", brandId)

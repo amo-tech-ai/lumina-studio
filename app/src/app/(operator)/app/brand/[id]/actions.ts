@@ -11,12 +11,56 @@ export type ReanalyzeResult =
   | { ok: true; hasDraft: true }
   | { ok: false; error: string };
 
+// IPI-744 — never throw: a failed restore must not mask the caller's
+// original crawl/analysis error or reject the Server Action. Callers don't
+// need the boolean today; it's here so a future caller (e.g. stale-lock
+// recovery, IPI-745) can react to a failed restore without re-deriving this.
+//
+// Compare-and-swap on analysis_lock_token (migration PR #540): only the run
+// that acquired the lock may restore. A newer reanalyzeBrand overwrites the
+// token, so Run A's late restore is a no-op and cannot clobber Run B's
+// analysis_running / ready / scores_complete.
+//
+// Still skip draft_ready: brand-intelligence may write draft_ready while this
+// client call still errors (lost response). Token alone would still match and
+// could wipe a completed draft — keep the .neq guard.
 async function restoreBrandStatus(
   supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
   brandId: string,
   status: string,
-) {
-  await supabase.from("brands").update({ intake_status: status }).eq("id", brandId);
+  runToken: string,
+): Promise<boolean> {
+  try {
+    const { data, error } = await supabase
+      .from("brands")
+      .update({
+        intake_status: status,
+        analysis_lock_token: null,
+        analysis_locked_at: null,
+      })
+      .eq("id", brandId)
+      .eq("analysis_lock_token", runToken)
+      .neq("intake_status", "draft_ready")
+      .select("id")
+      .maybeSingle();
+
+    if (error) {
+      console.error("[reanalyze] failed to restore brand status", { brandId, code: error.code });
+      return false;
+    }
+    if (!data) {
+      // No row matched — token stolen by a newer run, already draft_ready, or
+      // brand gone. Safe no-op.
+      return false;
+    }
+    return true;
+  } catch (error) {
+    console.error("[reanalyze] status restoration threw", {
+      brandId,
+      error: error instanceof Error ? error.message : String(error),
+    });
+    return false;
+  }
 }
 
 export async function reanalyzeBrand(brandId: string): Promise<ReanalyzeResult> {
@@ -55,10 +99,15 @@ export async function reanalyzeBrand(brandId: string): Promise<ReanalyzeResult> 
   }
 
   const priorStatus = brand.intake_status ?? "ready";
+  const runToken = crypto.randomUUID();
 
   const { data: locked, error: lockErr } = await supabase
     .from("brands")
-    .update({ intake_status: "analysis_running" })
+    .update({
+      intake_status: "analysis_running",
+      analysis_lock_token: runToken,
+      analysis_locked_at: new Date().toISOString(),
+    })
     .eq("id", brandId)
     .not("intake_status", "in", "(crawl_running,analysis_running,draft_ready)")
     .select("id")
@@ -87,14 +136,14 @@ export async function reanalyzeBrand(brandId: string): Promise<ReanalyzeResult> 
 
       const crawlOutcome = await waitForCrawlCompletion(supabase, crawl.crawlId);
       if (crawlOutcome === "failed") {
-        await restoreBrandStatus(supabase, brandId, priorStatus);
+        await restoreBrandStatus(supabase, brandId, priorStatus, runToken);
         return {
           ok: false,
           error: "We couldn't crawl this website. Check the URL is reachable and try again.",
         };
       }
       if (crawlOutcome === "timeout") {
-        await restoreBrandStatus(supabase, brandId, priorStatus);
+        await restoreBrandStatus(supabase, brandId, priorStatus, runToken);
         return {
           ok: false,
           error: "Crawling this website is taking longer than expected. Try Start analysis again in a minute.",
@@ -115,11 +164,28 @@ export async function reanalyzeBrand(brandId: string): Promise<ReanalyzeResult> 
       { draftMode: true, crawlResultId },
     );
 
+    // Clear this run's lock token on success (edge may have set draft_ready).
+    // Own try/catch: this is non-critical cleanup after a real success — a
+    // transient failure here must not fall into the outer catch and report
+    // the whole action as failed when the draft was actually created.
+    try {
+      await supabase
+        .from("brands")
+        .update({ analysis_lock_token: null, analysis_locked_at: null })
+        .eq("id", brandId)
+        .eq("analysis_lock_token", runToken);
+    } catch (clearErr) {
+      console.error("[reanalyze] failed to clear lock token after success", {
+        brandId,
+        error: clearErr instanceof Error ? clearErr.message : String(clearErr),
+      });
+    }
+
     revalidatePath(`/app/brand/${brandId}`);
     return { ok: true, hasDraft: true };
   } catch (err) {
     // Restore prior status so a failed re-analyze doesn't corrupt a healthy brand
-    await restoreBrandStatus(supabase, brandId, priorStatus);
+    await restoreBrandStatus(supabase, brandId, priorStatus, runToken);
     const message = err instanceof Error ? err.message : "Re-analyze failed";
     return { ok: false, error: message };
   }
