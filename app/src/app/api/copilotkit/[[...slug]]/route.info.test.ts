@@ -131,8 +131,33 @@ describe("CopilotKit /info — SSE discovery (IPI-670 · COPILOT-RUNTIME-001)", 
     expect(body.detail).toBe("upstream detail");
   });
 
-  it("preserves safe error detail when wrapping opaque 5xx JSON", async () => {
+  it("does not expose internal error detail to clients in production (IPI-718)", async () => {
     vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("OPERATOR_AUTH_ENABLED", "true");
+    vi.stubEnv("GEMINI_API_KEY", "test-key");
+
+    const upstream = Response.json(
+      { message: "ERR_REQUIRE_ESM: require() of ES Module p-map" },
+      { status: 500, headers: { "content-type": "application/json" } },
+    );
+
+    vi.doMock("@/lib/copilotkit/runtime-v2-fetch", () => ({
+      CopilotRuntime: vi.fn(() => ({})),
+      createCopilotRuntimeHandler: vi.fn(() => async () => upstream),
+      InMemoryAgentRunner: vi.fn(),
+    }));
+
+    const route = await importRouteWithMocks();
+    const response = await route.GET(new Request("http://localhost/api/copilotkit/info"));
+
+    expect(response.status).toBe(503);
+    const body = (await response.json()) as { code?: string; detail?: string };
+    expect(body.code).toBe("runtime_error");
+    expect(body.detail).toBeUndefined();
+  });
+
+  it("exposes safe error detail when wrapping opaque 5xx JSON outside production", async () => {
+    vi.stubEnv("NODE_ENV", "development");
     vi.stubEnv("OPERATOR_AUTH_ENABLED", "true");
     vi.stubEnv("GEMINI_API_KEY", "test-key");
 

@@ -1,5 +1,5 @@
-import { createRequire } from "node:module";
 import { InMemoryStore } from "@mastra/core/storage";
+import * as MastraPg from "@mastra/pg";
 import type { PostgresStore as PostgresStoreType } from "@mastra/pg";
 
 type MastraAppStorage = InMemoryStore | PostgresStoreType;
@@ -126,16 +126,11 @@ export function getMastraStorage(): MastraAppStorage {
       // but no DB call happens until an actual agent turn.
       storage = new InMemoryStore({ id: "mastra-storage-memory" });
     } else {
-      // Lazy createRequire + require: avoid calling createRequire(import.meta.url)
-      // at module init on Workers noop path (Seer). Sync API kept — dynamic import
-      // would force async getMastraStorage(). OpenNext stubs `@mastra/pg` (IPI-490).
-      const require = createRequire(import.meta.url);
-      const mod = require("@mastra/pg") as {
-        IPIX_CF_MASTRA_PG_STUB?: boolean;
-        PostgresStore: typeof import("@mastra/pg").PostgresStore;
-      };
-      assertPostgresStoreModule(mod);
-      storage = new mod.PostgresStore({ id: "mastra-storage", connectionString: url });
+      // IPI-718: static ESM import (Mastra docs). Never CJS-load @mastra/pg —
+      // that throws ERR_REQUIRE_ESM (p-map) on Vercel when the package is externalized.
+      // OpenNext aliases this module to cf-mastra-pg-stub.mjs when IPIX_CF_BUNDLE_STUBS=1.
+      assertPostgresStoreModule(MastraPg);
+      storage = new MastraPg.PostgresStore({ id: "mastra-storage", connectionString: url });
     }
   }
   return storage;

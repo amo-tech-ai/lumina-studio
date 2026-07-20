@@ -121,11 +121,14 @@ async function normalizeRuntimeErrorResponse(response: Response): Promise<Respon
     // body may be null or already consumed
   }
 
+  // IPI-718: log detail server-side; never return raw internals (e.g. ERR_REQUIRE_ESM) to browsers in production.
+  const exposeDetail = process.env.NODE_ENV !== "production";
+
   return Response.json(
     {
       error: "CopilotKit runtime unavailable",
       code: "runtime_error",
-      ...(detail ? { detail } : {}),
+      ...(detail && exposeDetail ? { detail } : {}),
     },
     { status: 503 },
   );
@@ -138,11 +141,12 @@ function requestNeedsDurableStorage(request: Request): boolean {
 }
 
 function storageUnavailableResponse(err: MastraStorageUnavailableError): Response {
+  const exposeDetail = process.env.NODE_ENV !== "production";
   return Response.json(
     {
       error: "Agent persistence unavailable",
       code: "storage_unavailable",
-      detail: err.message,
+      ...(exposeDetail ? { detail: err.message } : {}),
       degraded: true,
     },
     { status: 503 },

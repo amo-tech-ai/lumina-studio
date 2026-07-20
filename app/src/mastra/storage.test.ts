@@ -181,3 +181,50 @@ describe("Cloudflare @mastra/pg stub (IPI-490)", () => {
     expect(pkg.scripts.preview).toMatch(/npm run build:cf/);
   });
 });
+
+describe("IPI-718 · ESM-safe Postgres loading", () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it("storage.ts does not use createRequire / require('@mastra/pg')", async () => {
+    const { readFileSync } = await import("node:fs");
+    const { resolve } = await import("node:path");
+    const src = readFileSync(resolve(__dirname, "./storage.ts"), "utf8");
+    expect(src).not.toMatch(/from ["']node:module["']/);
+    expect(src).not.toMatch(/createRequire\s*\(/);
+    expect(src).not.toMatch(/require\(["']@mastra\/pg["']\)/);
+    expect(src).toMatch(/import \* as MastraPg from ["']@mastra\/pg["']/);
+  });
+
+  it("next.config does not externalize @mastra/pg (native require → ERR_REQUIRE_ESM)", async () => {
+    const { readFileSync } = await import("node:fs");
+    const { resolve } = await import("node:path");
+    const src = readFileSync(resolve(__dirname, "../../next.config.ts"), "utf8");
+    expect(src).toMatch(/serverExternalPackages/);
+    // Must not appear as a list entry (commented mentions OK if quoted carefully).
+    expect(src).not.toMatch(/^\s*"@mastra\/pg",?\s*$/m);
+    expect(src).toMatch(/"pg"/);
+  });
+
+  it("constructs PostgresStore under Vercel prod when DATABASE_URL is set (no ERR_REQUIRE_ESM)", async () => {
+    vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("VERCEL", "1");
+    vi.stubEnv("CI", "");
+    // Unreachable host — constructor must not throw ERR_REQUIRE_ESM; no live DB required.
+    vi.stubEnv(
+      "DATABASE_URL",
+      "postgresql://postgres:postgres@127.0.0.1:1/postgres?sslmode=disable",
+    );
+    vi.resetModules();
+    const { getMastraStorage: freshGet } = await import("./storage");
+    let store: unknown;
+    expect(() => {
+      store = freshGet();
+    }).not.toThrow(/ERR_REQUIRE_ESM|require\(\) of ES Module/);
+    expect(store).toBeTruthy();
+    expect((store as { constructor: { name: string } }).constructor.name).toMatch(
+      /PostgresStore/,
+    );
+  });
+});
