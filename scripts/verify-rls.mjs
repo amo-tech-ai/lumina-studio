@@ -3408,6 +3408,200 @@ try {
       admin.from("organizations").delete().eq("id", orgBId),
     );
   }
+
+  // ── IPI-721 SHOOT-REG-001 — shoot org-membership visibility ──
+  // Regression coverage for: public.shoot_portfolio_view and public.get_shoot_detail(uuid) —
+  // both previously gated on brands.user_id = auth.uid() (personal ownership), now
+  // public.is_org_member(org_id). Fully self-contained fixtures (own org/brand/users)
+  // so this block doesn't depend on shared state ordering elsewhere in this script.
+  //
+  // The six shoot.* SELECT policies (shoots, shoot_assets, shot_list, shoot_deliverables,
+  // shoot_crew, shot_deliverable_links) received the identical predicate change in the
+  // same migration but are NOT independently probed here: `shoot` is not in
+  // supabase/config.toml's exposed `schemas` list (only public/graphql_public/planner
+  // are), so no supabase-js client — anon, authenticated, or service-role — can reach
+  // `shoot.*` tables directly via PostgREST (confirmed: even the admin/service-role
+  // client gets "The schema must be one of the following: public, graphql_public,
+  // planner" on `.schema("shoot")`). This matches production exactly: the app itself
+  // never queries shoot.* directly either, only through this view and this RPC. Those
+  // six policies were verified with `SET ROLE authenticated` + `set_config('request.jwt.claims', ...)`
+  // impersonation directly in SQL during implementation (session record, 2026-07-20) —
+  // not reproducible from this Node/PostgREST-only script.
+  //
+  // Mirrors the real production bug: the shoot's creator (userShootEditor) is a
+  // different person than the brand's user_id (userShootOwner) — both in the same
+  // org. Before the fix, userShootEditor could not see the shoot they just created.
+  //
+  // Seeding uses public.commit_shoot_draft (service-role only — matches the real
+  // /api/shoots/commit write path, which also runs server-side under the service
+  // role). Cleanup deletes only the brand: shoot.shoots.brand_id is
+  // ON DELETE CASCADE (confirmed via pg_constraint), so the shoot and its shot_list
+  // row are removed automatically — no direct shoot-schema access needed for
+  // cleanup either.
+  if (admin) {
+    const emailShootOwner = `plt002-rls-shoot-owner-${stamp}@example.com`;
+    const emailShootEditor = `plt002-rls-shoot-editor-${stamp}@example.com`;
+    const emailShootViewer = `plt002-rls-shoot-viewer-${stamp}@example.com`;
+    const emailShootOutsider = `plt002-rls-shoot-outsider-${stamp}@example.com`;
+    let userShootOwner, userShootEditor, userShootViewer, userShootOutsider;
+    let shootOrgId, shootBrandId, shootId;
+    try {
+      userShootOwner = await createTestUser(emailShootOwner);
+
+      const { data: shootOrg, error: shootOrgErr } = await userShootOwner.client
+        .from("organizations")
+        .insert({
+          name: `RLS Shoot Org ${stamp}`,
+          slug: `rls-shoot-org-${stamp}`,
+          owner_id: userShootOwner.user.id,
+          type: "brand",
+        })
+        .select("id")
+        .single();
+      assert(!shootOrgErr && shootOrg?.id, "IPI-721: create dedicated org for shoot fixture");
+      shootOrgId = shootOrg?.id;
+
+      const { data: shootBrand, error: shootBrandErr } = await userShootOwner.client
+        .from("brands")
+        .insert({ name: `RLS Shoot Brand ${stamp}`, user_id: userShootOwner.user.id, org_id: shootOrgId })
+        .select("id")
+        .single();
+      assert(!shootBrandErr && shootBrand?.id, "IPI-721: brand owner creates brand in own org");
+      shootBrandId = shootBrand?.id;
+
+      userShootEditor = await createTestUser(emailShootEditor);
+      userShootViewer = await createTestUser(emailShootViewer);
+      userShootOutsider = await createTestUser(emailShootOutsider);
+
+      const { error: editorMemberErr } = await admin
+        .from("org_members")
+        .insert({ org_id: shootOrgId, user_id: userShootEditor.user.id, role: "editor" });
+      assert(!editorMemberErr, "IPI-721: seed shoot editor as org member (service role)");
+
+      const { error: viewerMemberErr } = await admin
+        .from("org_members")
+        .insert({ org_id: shootOrgId, user_id: userShootViewer.user.id, role: "viewer" });
+      assert(!viewerMemberErr, "IPI-721: seed shoot viewer as org member (service role)");
+      // userShootOutsider deliberately gets no org_members row — cross-org negative fixture.
+
+      // Shoot created by the editor for the owner's brand, via the real production
+      // write path (service-role only — matches /api/shoots/commit).
+      const { data: draftResult, error: draftErr } = await admin.rpc("commit_shoot_draft", {
+        p_brand_id: shootBrandId,
+        p_name: `RLS Shoot ${stamp}`,
+        p_created_by: userShootEditor.user.id,
+        p_shots: [{ description: "RLS shot list probe", order: 0 }],
+      });
+      assert(!draftErr && draftResult?.shoot_id, "IPI-721: seed shoot via commit_shoot_draft (created_by=editor)");
+      shootId = draftResult?.shoot_id;
+
+      // 1. Legacy case: brand owner (not the shoot's creator) can still read.
+      const { data: ownerViewRows, error: ownerViewErr } = await userShootOwner.client
+        .from("shoot_portfolio_view")
+        .select("id")
+        .eq("id", shootId);
+      assert(
+        !ownerViewErr && (ownerViewRows ?? []).length === 1,
+        "IPI-721: brand owner reads shoot via shoot_portfolio_view",
+      );
+
+      // 2. The actual bug: same-org editor who created the shoot but doesn't own
+      // the brands row must now see it (was 0 rows before this migration).
+      const { data: editorViewRows, error: editorViewErr } = await userShootEditor.client
+        .from("shoot_portfolio_view")
+        .select("id, shot_count")
+        .eq("id", shootId);
+      assert(
+        !editorViewErr && editorViewRows?.[0]?.id === shootId && editorViewRows?.[0]?.shot_count === 1,
+        "IPI-721: same-org non-owner editor reads their own shoot via shoot_portfolio_view",
+      );
+
+      const { data: editorDetail, error: editorDetailErr } = await userShootEditor.client.rpc(
+        "get_shoot_detail",
+        { p_shoot_id: shootId },
+      );
+      assert(
+        !editorDetailErr && editorDetail?.shoot?.id === shootId,
+        "IPI-721: same-org non-owner editor reads get_shoot_detail for their own shoot",
+      );
+
+      // 3. Same-org viewer (read-only role) can also read — this is a read
+      // path, not a write, so viewer-admitting org_member semantics are correct here.
+      const { data: viewerViewRows, error: viewerViewErr } = await userShootViewer.client
+        .from("shoot_portfolio_view")
+        .select("id")
+        .eq("id", shootId);
+      assert(
+        !viewerViewErr && (viewerViewRows ?? []).length === 1,
+        "IPI-721: same-org viewer reads shoot via shoot_portfolio_view",
+      );
+      const { data: viewerDetail, error: viewerDetailErr } = await userShootViewer.client.rpc(
+        "get_shoot_detail",
+        { p_shoot_id: shootId },
+      );
+      assert(
+        !viewerDetailErr && viewerDetail?.shoot?.id === shootId,
+        "IPI-721: same-org viewer reads get_shoot_detail",
+      );
+
+      // 4. Cross-org outsider — zero rows / not_found, enumeration-safe (no error
+      // leaking existence, just an empty result / not_found exception).
+      const { data: outsiderViewRows, error: outsiderViewErr } = await userShootOutsider.client
+        .from("shoot_portfolio_view")
+        .select("id")
+        .eq("id", shootId);
+      assert(
+        !outsiderViewErr && (outsiderViewRows ?? []).length === 0,
+        "IPI-721: cross-org outsider sees zero rows for the shoot via the view",
+      );
+
+      const { error: outsiderDetailErr } = await userShootOutsider.client.rpc("get_shoot_detail", {
+        p_shoot_id: shootId,
+      });
+      assert(
+        !!outsiderDetailErr && outsiderDetailErr.message.includes("not_found"),
+        "IPI-721: cross-org outsider gets not_found from get_shoot_detail",
+      );
+
+      // 5. Unauthenticated caller — no grants at all on the view (revoked from
+      // anon in this migration) or the RPC.
+      const { error: anonViewErr } = await anon.from("shoot_portfolio_view").select("id").eq("id", shootId);
+      assert(!!anonViewErr, "IPI-721: anon cannot select shoot_portfolio_view (grants revoked)");
+
+      const { error: anonDetailErr } = await anon.rpc("get_shoot_detail", { p_shoot_id: shootId });
+      assert(!!anonDetailErr, "IPI-721: anon cannot execute get_shoot_detail (grants revoked)");
+    } finally {
+      if (shootBrandId) {
+        // Cascades: shoot.shoots.brand_id -> brands(id) ON DELETE CASCADE, and every
+        // shoot.* child table -> shoot.shoots(id) ON DELETE CASCADE — removes the
+        // seeded shoot + shot_list row without any direct shoot-schema access.
+        await checkedCleanup(
+          "IPI-721 shoot brand (cascades to shoot + shot_list)",
+          admin.from("brands").delete().eq("id", shootBrandId),
+        );
+      }
+      if (shootOrgId) {
+        await checkedCleanup(
+          "IPI-721 shoot org_members",
+          admin.from("org_members").delete().eq("org_id", shootOrgId),
+        );
+        await checkedCleanup(
+          "IPI-721 shoot org",
+          admin.from("organizations").delete().eq("id", shootOrgId),
+        );
+      }
+      for (const u of [userShootOwner, userShootEditor, userShootViewer, userShootOutsider]) {
+        if (u?.user?.id) {
+          const { error } = await deleteAuthUser(u.user.id);
+          if (error) trackCleanupError(`IPI-721 shoot test user ${u.user.id}: ${error.message}`);
+        }
+      }
+      pass("IPI-721: cleaned up shoot org-visibility test fixtures (service role)");
+    }
+  } else {
+    pass("IPI-721: shoot org-visibility block skipped (no service role key — cannot seed shoot rows)");
+  }
+
 } catch (err) {
   fail(err instanceof Error ? err.message : String(err));
 } finally {
