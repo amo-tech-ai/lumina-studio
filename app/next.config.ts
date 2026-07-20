@@ -75,10 +75,12 @@ const turbopackResolveAlias = Object.fromEntries(
 );
 
 const nextConfig: NextConfig = {
+  // IPI-718: do NOT list `@mastra/pg` here — serverExternalPackages loads via
+  // native Node `require`, which throws ERR_REQUIRE_ESM for that ESM package
+  // graph (p-map). Keep `pg` external (Next default auto-list + native CJS).
   serverExternalPackages: [
     "@mastra/core",
     "@mastra/libsql",
-    "@mastra/pg",
     "@ast-grep/napi",
     "mastra",
     "pg",
