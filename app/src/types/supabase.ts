@@ -1602,6 +1602,8 @@ export type Database = {
         Row: {
           ai_profile: Json
           ai_profile_draft: Json | null
+          analysis_lock_token: string | null
+          analysis_locked_at: string | null
           approved_profile_at: string | null
           brand_url: string | null
           created_at: string
@@ -1618,6 +1620,8 @@ export type Database = {
         Insert: {
           ai_profile?: Json
           ai_profile_draft?: Json | null
+          analysis_lock_token?: string | null
+          analysis_locked_at?: string | null
           approved_profile_at?: string | null
           brand_url?: string | null
           created_at?: string
@@ -1634,6 +1638,8 @@ export type Database = {
         Update: {
           ai_profile?: Json
           ai_profile_draft?: Json | null
+          analysis_lock_token?: string | null
+          analysis_locked_at?: string | null
           approved_profile_at?: string | null
           brand_url?: string | null
           created_at?: string
