@@ -71,6 +71,17 @@ async function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
   }
 }
 
+/** Workers AI text models usually return `{ response }` or a bare string. */
+function extractGeneratedText(result: unknown): string {
+  if (typeof result === "string") return result.trim();
+  if (!result || typeof result !== "object") return "";
+  const o = result as Record<string, unknown>;
+  if (typeof o.response === "string") return o.response.trim();
+  if (typeof o.text === "string") return o.text.trim();
+  if (typeof o.result === "string") return o.result.trim();
+  return "";
+}
+
 async function pollGatewayLog(
   ai: AiBinding,
   logId: string,
@@ -148,8 +159,9 @@ export async function POST(request: Request) {
   }
 
   const started = Date.now();
+  let runResult: unknown;
   try {
-    await withTimeout(
+    runResult = await withTimeout(
       ai.run(
         SMOKE_MODEL,
         { prompt: SMOKE_PROMPT },
@@ -173,22 +185,54 @@ export async function POST(request: Request) {
   }
 
   const latencyMs = Date.now() - started;
+  const generatedText = extractGeneratedText(runResult);
+  if (!generatedText) {
+    return json(502, {
+      ok: false,
+      error: "empty_model_output",
+      detail: "AI.run resolved but produced no usable text",
+      requestId,
+      cfRay,
+      latencyMs,
+      gatewayId: GATEWAY_ID,
+      model: SMOKE_MODEL,
+    });
+  }
+
   const aiGatewayLogId =
-    typeof ai.aiGatewayLogId === "string" ? ai.aiGatewayLogId : null;
+    typeof ai.aiGatewayLogId === "string" && ai.aiGatewayLogId.length > 0
+      ? ai.aiGatewayLogId
+      : null;
 
-  let logPoll:
-    | { status: "ok"; hasLog: true }
-    | { status: "skipped"; reason: string }
-    | { status: "pending"; reason: string } = {
-    status: "skipped",
-    reason: "no aiGatewayLogId",
-  };
+  if (!aiGatewayLogId) {
+    return json(502, {
+      ok: false,
+      error: "gateway_log_missing",
+      detail: "AI.run succeeded but aiGatewayLogId was not provided",
+      requestId,
+      cfRay,
+      latencyMs,
+      gatewayId: GATEWAY_ID,
+      model: SMOKE_MODEL,
+      generatedTextLength: generatedText.length,
+    });
+  }
 
-  if (aiGatewayLogId) {
-    const polled = await pollGatewayLog(ai, aiGatewayLogId);
-    logPoll = polled.ok
-      ? { status: "ok", hasLog: true }
-      : { status: "pending", reason: polled.error };
+  const polled = await pollGatewayLog(ai, aiGatewayLogId);
+  if (!polled.ok) {
+    return json(502, {
+      ok: false,
+      error: "gateway_log_unconfirmed",
+      detail: polled.error,
+      requestId,
+      cfRay,
+      aiGatewayLogId,
+      latencyMs,
+      gatewayId: GATEWAY_ID,
+      model: SMOKE_MODEL,
+      generatedTextLength: generatedText.length,
+      logPoll: { status: "pending", reason: polled.error },
+    });
   }
 
   return json(200, {
@@ -199,6 +243,7 @@ export async function POST(request: Request) {
     latencyMs,
     gatewayId: GATEWAY_ID,
     model: SMOKE_MODEL,
-    logPoll,
+    generatedTextLength: generatedText.length,
+    logPoll: { status: "ok", hasLog: true },
   });
 }

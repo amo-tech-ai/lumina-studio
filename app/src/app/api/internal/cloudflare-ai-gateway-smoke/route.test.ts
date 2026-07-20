@@ -112,6 +112,7 @@ describe("POST /api/internal/cloudflare-ai-gateway-smoke", () => {
     expect(body.cfRay).toBe("ray-test-1");
     expect(body.gatewayId).toBe("ipix-prod");
     expect(body.model).toBe("@cf/moonshotai/kimi-k2.6");
+    expect(body.generatedTextLength).toBe(2);
     expect(typeof body.latencyMs).toBe("number");
     expect(body.logPoll).toEqual({ status: "ok", hasLog: true });
     expect(run).toHaveBeenCalledWith(
@@ -122,7 +123,47 @@ describe("POST /api/internal/cloudflare-ai-gateway-smoke", () => {
     expect(getLog).toHaveBeenCalledWith("gw-log-abc");
   });
 
-  it("keeps structured JSON when gateway() throws after a successful run", async () => {
+  it("fails when model output is empty", async () => {
+    const run = vi.fn().mockResolvedValue({ response: "   " });
+    getCloudflareContext.mockResolvedValue({
+      env: {
+        ENABLE_CF_AI_SMOKE: "true",
+        INTERNAL_WEBHOOK_SECRET: "expected",
+        AI: {
+          run,
+          aiGatewayLogId: "gw-log-abc",
+          gateway: () => ({ getLog: vi.fn() }),
+        },
+      },
+    });
+
+    const res = await POST(req({ "X-Internal-Secret": "expected" }));
+    const body = await res.json();
+
+    expect(res.status).toBe(502);
+    expect(body.ok).toBe(false);
+    expect(body.error).toBe("empty_model_output");
+  });
+
+  it("fails when aiGatewayLogId is missing", async () => {
+    const run = vi.fn().mockResolvedValue({ response: "ok" });
+    getCloudflareContext.mockResolvedValue({
+      env: {
+        ENABLE_CF_AI_SMOKE: "true",
+        INTERNAL_WEBHOOK_SECRET: "expected",
+        AI: { run },
+      },
+    });
+
+    const res = await POST(req({ "X-Internal-Secret": "expected" }));
+    const body = await res.json();
+
+    expect(res.status).toBe(502);
+    expect(body.ok).toBe(false);
+    expect(body.error).toBe("gateway_log_missing");
+  });
+
+  it("fails when gateway() throws after a successful run", async () => {
     const run = vi.fn().mockResolvedValue({ response: "ok" });
     getCloudflareContext.mockResolvedValue({
       env: {
@@ -141,8 +182,9 @@ describe("POST /api/internal/cloudflare-ai-gateway-smoke", () => {
     const res = await POST(req({ "X-Internal-Secret": "expected" }));
     const body = await res.json();
 
-    expect(res.status).toBe(200);
-    expect(body.ok).toBe(true);
+    expect(res.status).toBe(502);
+    expect(body.ok).toBe(false);
+    expect(body.error).toBe("gateway_log_unconfirmed");
     expect(body.logPoll).toEqual({ status: "pending", reason: "gateway boom" });
   });
 
