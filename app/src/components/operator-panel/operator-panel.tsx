@@ -34,8 +34,7 @@ import { resolveAgentId } from "@/lib/route-agent-map";
 import { routeBrandId, routeShootId } from "@/lib/intelligence/normalize-route-path";
 import { useRouteWelcome } from "@/lib/intelligence/use-route-welcome";
 import { useRouteSuggestions } from "@/lib/intelligence/use-route-suggestions";
-
-const SECTIONS = ["brand", "onboarding", "shoots", "assets", "campaigns", "matching", "preview", "crm"] as const;
+import { NAV_TARGETS, resolveNavigateToPath } from "./navigate-to-path";
 
 const CRM_PAGES = ["companies", "contacts", "pipeline"] as const;
 
@@ -148,10 +147,13 @@ function OperatorShell({
 
   useFrontendTool({
     name: "navigateTo",
-    description: "Open an operator workspace section.",
-    parameters: z.object({ section: z.enum(SECTIONS) }),
+    description:
+      "Open an operator workspace section or the shoot wizard. " +
+      "Use section shoot-wizard for /app/shoots/new (plan a new production). " +
+      "Use section shoots for the shoots list (/app/shoots).",
+    parameters: z.object({ section: z.enum(NAV_TARGETS) }),
     handler: async ({ section }) => {
-      router.push(section === "crm" ? "/app/crm/companies" : `/app/${section}`);
+      router.push(resolveNavigateToPath(section));
       return `Opening ${section}.`;
     },
   });
