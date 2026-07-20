@@ -22,6 +22,8 @@ const {
   getAssetDnaEvidence: _getAssetDnaEvidence,
   suggestAssetRetakes: _suggestAssetRetakes,
   draftBulkAssetApproval: _draftBulkAssetApproval,
+  // CRM-only tools — keep off Production Planner (IPI-369 Phase A).
+  scoreDealHealth: _scoreDealHealth,
   ...productionPlannerTools
 } = agentTools;
 
