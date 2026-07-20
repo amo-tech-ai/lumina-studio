@@ -4,6 +4,10 @@ import { NextRequest } from "next/server";
 const BOOKING_ID = "11111111-1111-4111-8111-111111111111";
 const ORG_ID = "22222222-2222-4222-8222-222222222222";
 const TALENT_ID = "33333333-3333-4333-8333-333333333333";
+// Deterministic QA/demo seed org id — no RFC4122 version/variant nibble, but a real
+// value PostgreSQL's uuid type accepts. Regression coverage for BOOK-REG-001: this
+// exact id previously 400'd with "brand_org_id must be a valid UUID."
+const QA_ORG_ID = "00000000-0000-0000-0000-000000000001";
 
 const VALID_CREATE_BODY = {
   brand_org_id: ORG_ID,
@@ -151,6 +155,62 @@ describe("POST /api/bookings", () => {
         talent_profile_id: TALENT_ID,
       }),
     );
+  });
+
+  it("accepts the deterministic QA organization id and returns 201 with the booking id (BOOK-REG-001)", async () => {
+    const { POST } = await importRoute();
+    const res = await POST(makePost({ ...VALID_CREATE_BODY, brand_org_id: QA_ORG_ID }));
+    expect(res.status).toBe(201);
+    const body = await res.json();
+    expect(body.booking_id).toBe(BOOKING_ID);
+    expect(mockCreateBookingRequest).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ brand_org_id: QA_ORG_ID }),
+    );
+  });
+
+  it("still rejects a cross-organization request even with a validly-formatted QA org id — validation does not weaken RPC authorization", async () => {
+    // Format validation now passes for QA_ORG_ID, but create_booking_request's own
+    // `is_org_member(p_brand_org_id)` check is what actually gates access — simulate
+    // that RPC-level rejection here to prove the two layers are independent.
+    mockCreateBookingRequest.mockResolvedValueOnce({
+      ok: false,
+      status: 403,
+      code: "FORBIDDEN",
+      message: "You are not a member of this organization.",
+    });
+    const { POST } = await importRoute();
+    const res = await POST(makePost({ ...VALID_CREATE_BODY, brand_org_id: QA_ORG_ID }));
+    expect(res.status).toBe(403);
+    expect(await res.json()).toEqual({
+      error: {
+        code: "FORBIDDEN",
+        message: "You are not a member of this organization.",
+      },
+    });
+  });
+
+  it("submitting the same booking request twice creates two independent requests, not a silent dedup", async () => {
+    mockCreateBookingRequest
+      .mockResolvedValueOnce({
+        ok: true,
+        data: { booking_id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa", status: "requested", version: 1, expires_at: "2026-08-04T12:00:00Z" },
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        data: { booking_id: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb", status: "requested", version: 1, expires_at: "2026-08-04T12:00:00Z" },
+      });
+    const { POST } = await importRoute();
+    const body = { ...VALID_CREATE_BODY, brand_org_id: QA_ORG_ID };
+
+    const first = await POST(makePost(body));
+    const second = await POST(makePost(body));
+
+    expect(first.status).toBe(201);
+    expect(second.status).toBe(201);
+    const [firstJson, secondJson] = await Promise.all([first.json(), second.json()]);
+    expect(firstJson.booking_id).not.toBe(secondJson.booking_id);
+    expect(mockCreateBookingRequest).toHaveBeenCalledTimes(2);
   });
 });
 

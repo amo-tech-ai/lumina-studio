@@ -1,7 +1,12 @@
 import type { ApiErrorCode } from "@/lib/api/error-envelope";
 
-export const UUID_RE =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+/** Matches PostgreSQL's own `uuid` type grammar (8-4-4-4-12 hex groups) —
+ *  deliberately not RFC4122-strict (no version/variant nibble check). The
+ *  old RFC4122-only pattern rejected valid Postgres uuids like the seeded
+ *  demo org id `00000000-0000-0000-0000-000000000001`, which has no version
+ *  bits set but is accepted by `'...'::uuid` and stored in real rows. */
+export const CANONICAL_UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -29,7 +34,7 @@ export type ParseFailure = {
 };
 
 export function isUuid(value: unknown): value is string {
-  return typeof value === "string" && UUID_RE.test(value);
+  return typeof value === "string" && CANONICAL_UUID_RE.test(value);
 }
 
 export function isIsoDate(value: unknown): value is string {
