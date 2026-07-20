@@ -16,34 +16,30 @@ export type ReanalyzeResult =
 // need the boolean today; it's here so a future caller (e.g. stale-lock
 // recovery, IPI-745) can react to a failed restore without re-deriving this.
 //
-// The update is conditional on intake_status NOT already being "draft_ready"
-// (checked via .select("id").maybeSingle() to prove whether a row actually
-// matched) — draft_ready is the one state that must never be clobbered: a
-// late-arriving brand-intelligence success (edge function writes draft_ready
-// server-side, but the client-visible invokeBrandIntelligence call still
-// errors — e.g. the response is lost) must not have this cleanup blindly
-// overwrite it back to priorStatus, hiding a completed draft behind a stale
-// error.
+// Compare-and-swap on analysis_lock_token (migration PR #540): only the run
+// that acquired the lock may restore. A newer reanalyzeBrand overwrites the
+// token, so Run A's late restore is a no-op and cannot clobber Run B's
+// analysis_running / ready / scores_complete.
 //
-// This is deliberately NOT `.eq("intake_status", "analysis_running")":
-// firecrawl-webhook's crawl.failed/crawl.completed handlers (using the
-// service-role client) can independently flip intake_status to "failed" or
-// "crawl_complete" *before* this restore runs — that's the common case for a
-// real crawl failure, not an edge case, since the webhook typically lands
-// well within waitForCrawlCompletion's 2.5s poll interval. Requiring the
-// status to still equal "analysis_running" made restore silently no-op on
-// exactly the failure path it exists to handle. Everything except
-// draft_ready is safe to restore over.
+// Still skip draft_ready: brand-intelligence may write draft_ready while this
+// client call still errors (lost response). Token alone would still match and
+// could wipe a completed draft — keep the .neq guard.
 async function restoreBrandStatus(
   supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
   brandId: string,
   status: string,
+  runToken: string,
 ): Promise<boolean> {
   try {
     const { data, error } = await supabase
       .from("brands")
-      .update({ intake_status: status })
+      .update({
+        intake_status: status,
+        analysis_lock_token: null,
+        analysis_locked_at: null,
+      })
       .eq("id", brandId)
+      .eq("analysis_lock_token", runToken)
       .neq("intake_status", "draft_ready")
       .select("id")
       .maybeSingle();
@@ -53,9 +49,8 @@ async function restoreBrandStatus(
       return false;
     }
     if (!data) {
-      // No row matched — status is already draft_ready (a real success
-      // landed) or the brand id doesn't exist. Nothing to restore; not a
-      // failure.
+      // No row matched — token stolen by a newer run, already draft_ready, or
+      // brand gone. Safe no-op.
       return false;
     }
     return true;
@@ -104,10 +99,15 @@ export async function reanalyzeBrand(brandId: string): Promise<ReanalyzeResult> 
   }
 
   const priorStatus = brand.intake_status ?? "ready";
+  const runToken = crypto.randomUUID();
 
   const { data: locked, error: lockErr } = await supabase
     .from("brands")
-    .update({ intake_status: "analysis_running" })
+    .update({
+      intake_status: "analysis_running",
+      analysis_lock_token: runToken,
+      analysis_locked_at: new Date().toISOString(),
+    })
     .eq("id", brandId)
     .not("intake_status", "in", "(crawl_running,analysis_running,draft_ready)")
     .select("id")
@@ -136,14 +136,14 @@ export async function reanalyzeBrand(brandId: string): Promise<ReanalyzeResult> 
 
       const crawlOutcome = await waitForCrawlCompletion(supabase, crawl.crawlId);
       if (crawlOutcome === "failed") {
-        await restoreBrandStatus(supabase, brandId, priorStatus);
+        await restoreBrandStatus(supabase, brandId, priorStatus, runToken);
         return {
           ok: false,
           error: "We couldn't crawl this website. Check the URL is reachable and try again.",
         };
       }
       if (crawlOutcome === "timeout") {
-        await restoreBrandStatus(supabase, brandId, priorStatus);
+        await restoreBrandStatus(supabase, brandId, priorStatus, runToken);
         return {
           ok: false,
           error: "Crawling this website is taking longer than expected. Try Start analysis again in a minute.",
@@ -164,11 +164,18 @@ export async function reanalyzeBrand(brandId: string): Promise<ReanalyzeResult> 
       { draftMode: true, crawlResultId },
     );
 
+    // Clear this run's lock token on success (edge may have set draft_ready).
+    await supabase
+      .from("brands")
+      .update({ analysis_lock_token: null, analysis_locked_at: null })
+      .eq("id", brandId)
+      .eq("analysis_lock_token", runToken);
+
     revalidatePath(`/app/brand/${brandId}`);
     return { ok: true, hasDraft: true };
   } catch (err) {
     // Restore prior status so a failed re-analyze doesn't corrupt a healthy brand
-    await restoreBrandStatus(supabase, brandId, priorStatus);
+    await restoreBrandStatus(supabase, brandId, priorStatus, runToken);
     const message = err instanceof Error ? err.message : "Re-analyze failed";
     return { ok: false, error: message };
   }
