@@ -48,10 +48,10 @@ function makeSupabase(brand: BrandRow, restoreMode: RestoreMode = "success") {
           }),
         };
       }
-      // restoreBrandStatus's conditional update: .eq("id", ...).eq("intake_status", "analysis_running")
+      // restoreBrandStatus's conditional update: .eq("id", ...).neq("intake_status", "draft_ready")
       return {
         eq: () => ({
-          eq: () => ({
+          neq: () => ({
             select: () => ({
               maybeSingle: async () => {
                 if (restoreMode === "throw") throw new Error("network blip");
@@ -239,7 +239,7 @@ describe("reanalyzeBrand — IPI-744 restoreBrandStatus never masks the original
     consoleErrorSpy.mockRestore();
   });
 
-  it("treats zero affected rows as a non-error no-op, preserving the original error", async () => {
+  it("treats zero affected rows (e.g. status is already draft_ready) as a non-error no-op, preserving the original error", async () => {
     const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
     mockGetUser.mockResolvedValue({ data: { user: { id: "user-1" } }, error: null });
     mockSupabase = makeSupabase(BRAND, "no-match");
@@ -251,10 +251,82 @@ describe("reanalyzeBrand — IPI-744 restoreBrandStatus never masks the original
 
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.error).toMatch(/couldn't crawl/i);
-    // Zero matched rows is an expected outcome (status already moved on), not a
-    // failure — it must not be logged as one.
+    // Zero matched rows is an expected outcome (status is already draft_ready), not
+    // a failure — it must not be logged as one.
     expect(consoleErrorSpy).not.toHaveBeenCalled();
     consoleErrorSpy.mockRestore();
+  });
+
+  it("restores the brand even when firecrawl-webhook already flipped intake_status to 'failed' first (Sentry-flagged regression)", async () => {
+    // firecrawl-webhook's crawl.failed handler (service-role client, independent
+    // of this Server Action) sets brands.intake_status = "failed" directly, and
+    // typically lands well before waitForCrawlCompletion's poll notices — this is
+    // the COMMON case for a real crawl failure, not an edge case. Restore must
+    // still succeed here; a guard requiring intake_status to still be
+    // "analysis_running" would silently no-op on exactly this path.
+    mockGetUser.mockResolvedValue({ data: { user: { id: "user-1" } }, error: null });
+
+    let currentStatus = "analysis_running";
+    const brandsTable = {
+      select: () => ({
+        eq: () => ({ maybeSingle: async () => ({ data: BRAND, error: null }) }),
+      }),
+      update: (patch: Record<string, unknown>) => {
+        const isLockAcquire = patch.intake_status === "analysis_running";
+        if (isLockAcquire) {
+          return {
+            eq: () => ({
+              not: () => ({
+                select: () => ({
+                  maybeSingle: async () => {
+                    currentStatus = "analysis_running";
+                    return { data: { id: BRAND.id }, error: null };
+                  },
+                }),
+              }),
+            }),
+          };
+        }
+        // restoreBrandStatus's conditional update — must succeed unless the
+        // current status is draft_ready.
+        return {
+          eq: () => ({
+            neq: () => ({
+              select: () => ({
+                maybeSingle: async () => {
+                  if (currentStatus === "draft_ready") return { data: null, error: null };
+                  currentStatus = patch.intake_status as string;
+                  return { data: { id: BRAND.id }, error: null };
+                },
+              }),
+            }),
+          }),
+        };
+      },
+    };
+    mockSupabase = {
+      auth: { getUser: mockGetUser },
+      from: (table: string) => {
+        if (table !== "brands") throw new Error(`unexpected table: ${table}`);
+        return brandsTable;
+      },
+      updates: [],
+    };
+
+    mockInvokeStartBrandCrawl.mockResolvedValue({ crawlId: "crawl-1" });
+    mockWaitForCrawlCompletion.mockImplementation(async () => {
+      // The webhook lands before this resolves — by the time waitForCrawlCompletion
+      // returns "failed", brands.intake_status is already "failed" too.
+      currentStatus = "failed";
+      return "failed";
+    });
+
+    const { reanalyzeBrand } = await importActions();
+    const result = await reanalyzeBrand(BRAND.id);
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error).toMatch(/couldn't crawl/i);
+    expect(currentStatus).toBe(BRAND.intake_status); // restored to priorStatus, not stuck at "failed"
   });
 
   it("does not overwrite a late-arriving draft_ready state when invokeBrandIntelligence's response is lost", async () => {
@@ -285,14 +357,14 @@ describe("reanalyzeBrand — IPI-744 restoreBrandStatus never masks the original
             }),
           };
         }
-        // restoreBrandStatus's conditional update — only "wins" if the row is
-        // still analysis_running at the moment it runs.
+        // restoreBrandStatus's conditional update — only "wins" unless the row
+        // is already draft_ready at the moment it runs.
         return {
           eq: () => ({
-            eq: () => ({
+            neq: () => ({
               select: () => ({
                 maybeSingle: async () => {
-                  if (currentStatus !== "analysis_running") return { data: null, error: null };
+                  if (currentStatus === "draft_ready") return { data: null, error: null };
                   currentStatus = patch.intake_status as string;
                   return { data: { id: BRAND.id }, error: null };
                 },

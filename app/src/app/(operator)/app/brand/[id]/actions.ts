@@ -16,13 +16,24 @@ export type ReanalyzeResult =
 // need the boolean today; it's here so a future caller (e.g. stale-lock
 // recovery, IPI-745) can react to a failed restore without re-deriving this.
 //
-// The update is conditional on intake_status still being "analysis_running"
+// The update is conditional on intake_status NOT already being "draft_ready"
 // (checked via .select("id").maybeSingle() to prove whether a row actually
-// matched). Without that guard, a late-arriving brand-intelligence success
-// (edge function writes draft_ready server-side, but the client-visible
-// invokeBrandIntelligence call still errors — e.g. the response is lost)
-// would have this cleanup blindly clobber draft_ready back to priorStatus,
-// hiding a completed draft behind a stale error.
+// matched) — draft_ready is the one state that must never be clobbered: a
+// late-arriving brand-intelligence success (edge function writes draft_ready
+// server-side, but the client-visible invokeBrandIntelligence call still
+// errors — e.g. the response is lost) must not have this cleanup blindly
+// overwrite it back to priorStatus, hiding a completed draft behind a stale
+// error.
+//
+// This is deliberately NOT `.eq("intake_status", "analysis_running")":
+// firecrawl-webhook's crawl.failed/crawl.completed handlers (using the
+// service-role client) can independently flip intake_status to "failed" or
+// "crawl_complete" *before* this restore runs — that's the common case for a
+// real crawl failure, not an edge case, since the webhook typically lands
+// well within waitForCrawlCompletion's 2.5s poll interval. Requiring the
+// status to still equal "analysis_running" made restore silently no-op on
+// exactly the failure path it exists to handle. Everything except
+// draft_ready is safe to restore over.
 async function restoreBrandStatus(
   supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
   brandId: string,
@@ -33,7 +44,7 @@ async function restoreBrandStatus(
       .from("brands")
       .update({ intake_status: status })
       .eq("id", brandId)
-      .eq("intake_status", "analysis_running")
+      .neq("intake_status", "draft_ready")
       .select("id")
       .maybeSingle();
 
@@ -42,8 +53,9 @@ async function restoreBrandStatus(
       return false;
     }
     if (!data) {
-      // No row matched — status already moved on (e.g. to draft_ready) before
-      // this ran. Nothing to restore; not a failure.
+      // No row matched — status is already draft_ready (a real success
+      // landed) or the brand id doesn't exist. Nothing to restore; not a
+      // failure.
       return false;
     }
     return true;
