@@ -96,7 +96,7 @@ We are in active development. Always leave the system better than you found it: 
 
 ## Hard rules
 
-- **🚫 NEVER push code directly to `main`.** Before writing a single line of code, create a worktree branch: `git worktree add ../wt-ipi-NNN -b ipi/NNN-name`. Commit on the branch, push, open a PR with `gh pr create`. Even a one-line fix. Pushing direct to `main` means no PR can be created after the fact (`head == base` error). No exceptions.
+- **🚫 NEVER push code directly to `main`.** Before writing a single line of code, create a worktree branch: `npm run worktree:add -- IPI-NNN short-name` (preferred — see Worktree workflow below) or `git worktree add ../wt-ipi-NNN -b ipi/NNN-name` as a fallback. Commit on the branch, push, open a PR with `gh pr create`. Even a one-line fix. Pushing direct to `main` means no PR can be created after the fact (`head == base` error). No exceptions.
 
 - **🚫 NEVER mix docs and production files in one PR or commit. NEVER mix two different tasks/concerns in one PR or commit. EVER.** One concern per PR *and* per commit — docs-only, code-only, migration-only, CI/config-only, each separate. If a change set spans docs + code (or two tasks), STOP and split before staging. This is the most-enforced rule here (see PR #99 fallout); violating it is a blocking error, not a style nit.
 
@@ -142,24 +142,36 @@ git worktree remove <path>
 This is not the same as the periodic "weekly ritual" in `.claude/commands/worktree.md` — it's a mandatory pre-check for *this* task, every time, not a background chore. Evidence this is a real failure mode, not a hypothetical: a single session on IPI-536 created `wt-ipi-536-foundation` (implementation) and later `wt-ipi-536-qa` (QA pass) without removing the first once its PR merged — two worktrees open for one ticket, unbounded growth across a long session if repeated.
 
 ```bash
-# 1. Create branch + worktree before any code change
-git worktree add ../wt-ipi-NNN -b ipi/NNN-short-name
+# 1. Create branch + worktree before any code change — preferred: the repo script
+npm run worktree:add -- IPI-NNN short-name
+# Wraps scripts/worktree-add.mjs: creates the branch (ipi/NNN-short-name) + worktree
+# (../wt-ipi-NNN-short-name) off origin/main, copies .env/.env.local per
+# .worktreeinclude, and runs npm ci — one command instead of three manual steps.
+# IMPORTANT: run this from the main /home/sk/ipix checkout, not from app/ or any
+# other subdirectory — a relative `../` from the wrong cwd nests the new worktree
+# inside the repo instead of as a sibling (the script itself refuses to do this;
+# raw `git worktree add` will not stop you).
 
-# 2. Copy .env (untracked files don't transfer automatically)
-#    .worktreeinclude at repo root handles this automatically for listed files.
-#    Check it includes .env and .env.local.
+# Fallback (script failure, or a branch that doesn't fit ipi/NNN-slug, e.g. docs/... or fix/...):
+git worktree add ../wt-ipi-NNN -b ipi/NNN-short-name origin/main
+# then copy .env manually per .worktreeinclude and run npm ci yourself.
 
-# 3. Work, commit, push
-cd ../wt-ipi-NNN
+# 2. Work, commit, push
+cd ../wt-ipi-NNN-short-name
 # ... make changes ...
 git add <files> && git commit -m "feat(ipi-NNN): ..."
 git push -u origin ipi/NNN-short-name
 
-# 4. Open PR
-gh pr create --title "..." --body "..."
+# 3. Open PR — include "Fixes IPI-NNN" (or Closes/Resolves) in the body so Linear's
+#    GitHub integration auto-links the PR and auto-closes the issue on merge —
+#    no separate Linear MCP call needed (confirm the GitHub app is installed on
+#    amo-tech-ai/lumina-studio first if relying on this).
+gh pr create --title "..." --body "Fixes IPI-NNN
 
-# 5. Clean up after merge
-git worktree remove ../wt-ipi-NNN
+..."
+
+# 4. Clean up after merge
+git worktree remove ../wt-ipi-NNN-short-name
 ```
 
 **Branch naming:** `ipi/<issue-number>-<short-name>` — e.g. `ipi/130-brand-agent`
@@ -200,6 +212,17 @@ If it fails, fix the root cause. `--no-verify` is only acceptable for **docs-onl
 
 Full gate adds `npm run build` (~5min). Use before opening a PR.
 
+**Before pushing — don't duplicate the hook.** Run focused checks, then let the hook run the full suite once:
+
+```bash
+npm test -- --changed origin/main   # runs only tests touching files that differ from origin/main
+npm run typecheck
+npm run lint
+git commit ... && git push          # pre-push hook now runs typecheck + full test suite once
+```
+
+Don't also run the full `npm test` manually right before pushing — the hook runs the identical thing seconds later. Run the full suite manually (in addition to the hook) only when: the change touches shared infrastructure, you're modifying the pre-push hook itself, you're debugging a flaky test, you're assembling final evidence before a `--no-verify` bypass, or the task explicitly asks for a local full-suite result as evidence.
+
 ## Mastra — known gotchas
 
 - **`DATABASE_URL` at build time:** Next.js imports Mastra modules during `next build` even for `force-dynamic` routes. `getMastraStorage()` throws if `NODE_ENV=production` and `DATABASE_URL` is unset. Fix: guard with `&& !process.env.CI` so the no-op stub is used during CI builds.
@@ -209,12 +232,16 @@ Full gate adds `npm run build` (~5min). Use before opening a PR.
 ## Key scripts (app/)
 
 ```bash
-npm run typecheck   # tsc --noEmit (~15s)
-npm test            # vitest run (~30s)
-npm run build       # next build (~2-3min)
-npm run lint        # eslint
-npm run dev         # next dev --turbopack + mastra dev
+npm run typecheck              # tsc --noEmit (~15s) — already incremental (tsconfig.json)
+npm test                       # vitest run (~30s)
+npm test -- --changed origin/main  # only tests touching files that differ from origin/main
+npm run build                  # next build (~2-3min)
+npm run lint                   # eslint
+npm run lint -- --cache        # skips files unchanged since the last cached run
+npm run dev                    # next dev --turbopack + mastra dev
 ```
+
+`--changed` walks the static import graph, so a dynamically-loaded module (path built from a variable, not a literal import) can be missed — fall back to the full `npm test` for that case.
 
 ## Stack
 
