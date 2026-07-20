@@ -538,8 +538,8 @@ function selfCheck() {
     fromEmpty = { ok: false, error: String(err) };
   }
   check(
-    "from-diff empty-tree base does not throw",
-    fromEmpty.ok !== undefined && !String(fromEmpty.error ?? "").includes("not a commit"),
+    "from-diff empty-tree base succeeds",
+    fromEmpty.ok === true,
     JSON.stringify(fromEmpty),
   );
 
