@@ -3602,6 +3602,122 @@ try {
     pass("IPI-721: shoot org-visibility block skipped (no service role key — cannot seed shoot rows)");
   }
 
+  // ── IPI-727 SHOOT-SEC-001 — commit_shoot_draft defense-in-depth org check ──
+  // public.commit_shoot_draft is SECURITY DEFINER and, before this migration, trusted
+  // p_brand_id/p_created_by with zero internal authorization check. Its only real
+  // caller (POST /api/shoots/commit) already enforces org membership via RLS on
+  // brands before invoking the RPC, so this is defense-in-depth, not a live-bug
+  // regression test — but it proves the RPC itself now fails closed if some future
+  // caller forgets that check.
+  //
+  // Called directly via `admin` (service role), same as the real app does — there is
+  // no user-JWT context here (auth.uid() is NULL on this call path), which is exactly
+  // why the fix validates the explicit p_created_by parameter instead of auth.uid().
+  if (admin) {
+    const emailCommitOwner = `plt002-rls-commit-owner-${stamp}@example.com`;
+    const emailCommitEditor = `plt002-rls-commit-editor-${stamp}@example.com`;
+    const emailCommitOutsider = `plt002-rls-commit-outsider-${stamp}@example.com`;
+    let userCommitOwner, userCommitEditor, userCommitOutsider;
+    let commitOrgId, commitBrandId;
+    const seededShootIds = [];
+    try {
+      userCommitOwner = await createTestUser(emailCommitOwner);
+
+      const { data: commitOrg, error: commitOrgErr } = await userCommitOwner.client
+        .from("organizations")
+        .insert({
+          name: `RLS Commit Org ${stamp}`,
+          slug: `rls-commit-org-${stamp}`,
+          owner_id: userCommitOwner.user.id,
+          type: "brand",
+        })
+        .select("id")
+        .single();
+      assert(!commitOrgErr && commitOrg?.id, "IPI-727: create dedicated org for commit_shoot_draft fixture");
+      commitOrgId = commitOrg?.id;
+
+      const { data: commitBrand, error: commitBrandErr } = await userCommitOwner.client
+        .from("brands")
+        .insert({ name: `RLS Commit Brand ${stamp}`, user_id: userCommitOwner.user.id, org_id: commitOrgId })
+        .select("id")
+        .single();
+      assert(!commitBrandErr && commitBrand?.id, "IPI-727: brand owner creates brand in own org");
+      commitBrandId = commitBrand?.id;
+
+      userCommitEditor = await createTestUser(emailCommitEditor);
+      userCommitOutsider = await createTestUser(emailCommitOutsider);
+
+      const { error: commitEditorMemberErr } = await admin
+        .from("org_members")
+        .insert({ org_id: commitOrgId, user_id: userCommitEditor.user.id, role: "editor" });
+      assert(!commitEditorMemberErr, "IPI-727: seed commit editor as org member (service role)");
+      // userCommitOutsider deliberately gets no org_members row.
+
+      // 1. Same-org member as p_created_by — allowed (matches real production usage).
+      const { data: positiveResult, error: positiveErr } = await admin.rpc("commit_shoot_draft", {
+        p_brand_id: commitBrandId,
+        p_name: `RLS commit authz positive ${stamp}`,
+        p_created_by: userCommitEditor.user.id,
+      });
+      assert(
+        !positiveErr && positiveResult?.shoot_id,
+        "IPI-727: commit_shoot_draft succeeds when p_created_by is a member of p_brand_id's org",
+      );
+      if (positiveResult?.shoot_id) seededShootIds.push(positiveResult.shoot_id);
+
+      // 2. Outsider spoofing p_created_by — rejected (the actual gap this closes).
+      const { error: negativeErr } = await admin.rpc("commit_shoot_draft", {
+        p_brand_id: commitBrandId,
+        p_name: `RLS commit authz negative ${stamp}`,
+        p_created_by: userCommitOutsider.user.id,
+      });
+      assert(
+        !!negativeErr && negativeErr.message.includes("unauthorized"),
+        "IPI-727: commit_shoot_draft rejects p_created_by with no relationship to p_brand_id's org",
+      );
+
+      // 3. p_created_by omitted (NULL) — still succeeds, preserving the local-dev
+      // auth-disabled fallback behavior (never reachable in production — see
+      // withOperatorAuth's own doc comment).
+      const { data: nullActorResult, error: nullActorErr } = await admin.rpc("commit_shoot_draft", {
+        p_brand_id: commitBrandId,
+        p_name: `RLS commit authz null-actor ${stamp}`,
+      });
+      assert(
+        !nullActorErr && nullActorResult?.shoot_id,
+        "IPI-727: commit_shoot_draft still succeeds with p_created_by omitted (local-dev fallback preserved)",
+      );
+      if (nullActorResult?.shoot_id) seededShootIds.push(nullActorResult.shoot_id);
+    } finally {
+      if (commitBrandId) {
+        // Cascades: shoot.shoots.brand_id -> brands(id) ON DELETE CASCADE.
+        await checkedCleanup(
+          "IPI-727 commit_shoot_draft brand (cascades to shoots)",
+          admin.from("brands").delete().eq("id", commitBrandId),
+        );
+      }
+      if (commitOrgId) {
+        await checkedCleanup(
+          "IPI-727 commit_shoot_draft org_members",
+          admin.from("org_members").delete().eq("org_id", commitOrgId),
+        );
+        await checkedCleanup(
+          "IPI-727 commit_shoot_draft org",
+          admin.from("organizations").delete().eq("id", commitOrgId),
+        );
+      }
+      for (const u of [userCommitOwner, userCommitEditor, userCommitOutsider]) {
+        if (u?.user?.id) {
+          const { error } = await deleteAuthUser(u.user.id);
+          if (error) trackCleanupError(`IPI-727 commit test user ${u.user.id}: ${error.message}`);
+        }
+      }
+      pass("IPI-727: cleaned up commit_shoot_draft authz test fixtures (service role)");
+    }
+  } else {
+    pass("IPI-727: commit_shoot_draft authz block skipped (no service role key)");
+  }
+
 } catch (err) {
   fail(err instanceof Error ? err.message : String(err));
 } finally {
