@@ -583,4 +583,59 @@ describe("reanalyzeBrand — IPI-744 token CAS concurrency", () => {
       expect(currentToken).toBe("other-run");
     }
   });
+
+  it("delayed Run A cleanup cannot overwrite 'ready' after approval clears Run A's own token (promoteBrandDraft/discardBrandDraft, IPI-744)", async () => {
+    // Mirrors what promote-draft.ts / discard-draft.ts now do: on approval or
+    // rejection, they clear analysis_lock_token/analysis_locked_at as part of
+    // the same update that moves intake_status off draft_ready. Without that,
+    // a Run A whose invokeBrandIntelligence response was lost could still own
+    // a stale token and, days later, have its outer-catch restore match on
+    // that token + "not draft_ready" (now "ready") and clobber it back to
+    // priorStatus. Simulated here as the operator approving mid-flight.
+    mockGetUser.mockResolvedValue({ data: { user: { id: "user-1" } }, error: null });
+
+    let currentStatus = "analysis_running";
+    let currentToken: string | null = null;
+    const brandsTable = makeTokenAwareBrandsTable({
+      brand: BRAND,
+      getStatus: () => currentStatus,
+      setStatus: (s) => {
+        currentStatus = s;
+      },
+      getToken: () => currentToken,
+      setToken: (t) => {
+        currentToken = t;
+      },
+    });
+    mockSupabase = {
+      auth: { getUser: mockGetUser },
+      from: (table: string) => {
+        if (table !== "brands") throw new Error(`unexpected table: ${table}`);
+        return brandsTable;
+      },
+      updates: [],
+      getHeldToken: () => currentToken,
+      setHeldToken: (t) => {
+        currentToken = t;
+      },
+    };
+
+    mockInvokeStartBrandCrawl.mockResolvedValue({ crawlId: "crawl-1" });
+    mockWaitForCrawlCompletion.mockResolvedValue("complete");
+    mockInvokeBrandIntelligence.mockImplementation(async () => {
+      // Edge fn writes draft_ready, but Run A's own client call errors —
+      // then, before Run A's outer catch runs, the operator approves: this
+      // is exactly what promoteBrandDraft's fixed update now does.
+      currentStatus = "ready";
+      currentToken = null;
+      throw new Error("network error reading response");
+    });
+
+    const { reanalyzeBrand } = await importActions();
+    const result = await reanalyzeBrand(BRAND.id);
+
+    expect(result).toEqual({ ok: false, error: "network error reading response" });
+    expect(currentStatus).toBe("ready"); // NOT clobbered back to priorStatus
+    expect(currentToken).toBeNull();
+  });
 });

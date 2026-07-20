@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { promoteBrandDraft } from "./promote-draft";
+import { discardBrandDraft } from "./discard-draft";
 
 function mockSupabase(brand: Record<string, unknown> | null, selectErr?: { message: string }) {
   const updateCalls: Record<string, unknown>[] = [];
@@ -25,33 +25,38 @@ function mockSupabase(brand: Record<string, unknown> | null, selectErr?: { messa
             }),
           };
         }),
-        upsert: vi.fn(async () => ({ error: null })),
       })),
     } as never,
     updateCalls,
   };
 }
 
-describe("promoteBrandDraft", () => {
-  it("returns ok when draft already promoted (HITL ran before workflow resume)", async () => {
-    const { sb } = mockSupabase({ id: "b1", ai_profile_draft: null, intake_status: "ready" });
-    const result = await promoteBrandDraft(sb, "b1");
-    expect(result).toEqual({ ok: true });
+describe("discardBrandDraft", () => {
+  it("returns an error when the brand is not found", async () => {
+    const { sb } = mockSupabase(null);
+    const result = await discardBrandDraft(sb, "b1");
+    expect(result).toEqual({ ok: false, error: "Brand not found" });
   });
 
-  it("returns error when no draft and brand is not ready", async () => {
-    const { sb } = mockSupabase({ id: "b1", ai_profile_draft: null, intake_status: "draft_ready" });
-    const result = await promoteBrandDraft(sb, "b1");
-    expect(result).toEqual({ ok: false, error: "No draft to apply" });
-  });
-
-  it("IPI-744 — clears analysis_lock_token/analysis_locked_at on approval, so a delayed reanalyzeBrand restore can't later overwrite 'ready'", async () => {
+  it("restores to brand_created when there was no prior scores_complete profile", async () => {
     const { sb, updateCalls } = mockSupabase({
       id: "b1",
-      ai_profile_draft: { headline: "Nike" },
+      ai_profile: null,
       intake_status: "draft_ready",
     });
-    const result = await promoteBrandDraft(sb, "b1");
+    const result = await discardBrandDraft(sb, "b1");
+
+    expect(result).toEqual({ ok: true });
+    expect(updateCalls[0]).toMatchObject({ intake_status: "brand_created" });
+  });
+
+  it("IPI-744 — clears analysis_lock_token/analysis_locked_at on rejection, so a delayed reanalyzeBrand restore can't later overwrite the restored status", async () => {
+    const { sb, updateCalls } = mockSupabase({
+      id: "b1",
+      ai_profile: { _lifecycle: "scores_complete" },
+      intake_status: "draft_ready",
+    });
+    const result = await discardBrandDraft(sb, "b1");
 
     expect(result).toEqual({ ok: true });
     expect(updateCalls).toHaveLength(1);
