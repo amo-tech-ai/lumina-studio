@@ -73,18 +73,37 @@ describe("SignOutButton — IPI-725", () => {
     expect(screen.getByText("Sign out")).toBeTruthy();
   });
 
-  it("navigates to login after a successful redirect response", async () => {
+  it("does not pass redirect:manual (opaque Location would mask failures)", async () => {
+    const fetchMock = vi.fn(() =>
+      Promise.resolve({
+        ok: true,
+        redirected: true,
+        url: "http://localhost:3002/login",
+        status: 200,
+      } as Response),
+    );
+    vi.stubGlobal("location", { ...window.location, assign: vi.fn() });
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<SignOutButton />);
+    fireEvent.submit(screen.getByTestId("operator-sign-out").closest("form")!);
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalled());
+    expect(fetchMock.mock.calls[0][1]).not.toMatchObject({ redirect: "manual" });
+  });
+
+  it("navigates to the followed redirect URL (login on success)", async () => {
     const assign = vi.fn();
     vi.stubGlobal("location", { ...window.location, assign });
     vi.stubGlobal(
       "fetch",
       vi.fn(() =>
-        Promise.resolve(
-          new Response(null, {
-            status: 303,
-            headers: { Location: "/login" },
-          }),
-        ),
+        Promise.resolve({
+          ok: true,
+          redirected: true,
+          url: "http://localhost:3002/login",
+          status: 200,
+        } as Response),
       ),
     );
 
@@ -92,7 +111,30 @@ describe("SignOutButton — IPI-725", () => {
     fireEvent.submit(screen.getByTestId("operator-sign-out").closest("form")!);
 
     await waitFor(() => {
-      expect(assign).toHaveBeenCalledWith("/login");
+      expect(assign).toHaveBeenCalledWith("http://localhost:3002/login");
+    });
+  });
+
+  it("navigates to signoutError URL when the server signals failure", async () => {
+    const assign = vi.fn();
+    vi.stubGlobal("location", { ...window.location, assign });
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() =>
+        Promise.resolve({
+          ok: true,
+          redirected: true,
+          url: "http://localhost:3002/app?signoutError=1",
+          status: 200,
+        } as Response),
+      ),
+    );
+
+    render(<SignOutButton showLabel />);
+    fireEvent.submit(screen.getByTestId("operator-sign-out").closest("form")!);
+
+    await waitFor(() => {
+      expect(assign).toHaveBeenCalledWith("http://localhost:3002/app?signoutError=1");
     });
   });
 });

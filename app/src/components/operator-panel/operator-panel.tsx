@@ -13,6 +13,7 @@ import {
 } from "@copilotkit/react-core/v2";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useMemo, useState } from "react";
+import { toast } from "sonner";
 import { z } from "zod";
 
 import { useHideInternalToolCalls } from "@/components/copilot/copilot-tool-presentation";
@@ -85,8 +86,19 @@ function OperatorShell({
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const skip = searchParams.get("skip");
+  const signoutError = searchParams.get("signoutError");
   const devSkip = isDevSkipMode(skip);
   const [threadsOpen, setThreadsOpen] = useState(false);
+
+  // IPI-725 — /auth/signout redirects here on failure; surface it (do not land on /login).
+  useEffect(() => {
+    if (signoutError !== "1") return;
+    toast.error("Sign out failed. Your session may still be active — try again.");
+    const next = new URLSearchParams(searchParams.toString());
+    next.delete("signoutError");
+    const q = next.toString();
+    router.replace(q ? `${pathname}?${q}` : pathname);
+  }, [signoutError, searchParams, pathname, router]);
   const { activeBrandId, setActiveBrandId } = useActiveBrand();
   const { brands, brandsRef, brandsLoadingRef } = useOperatorBrands(devSkip);
   const unreadNotifications = useUnreadNotifications();

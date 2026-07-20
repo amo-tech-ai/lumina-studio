@@ -31,24 +31,20 @@ export function SignOutButton({ showLabel = false }: Props) {
     setBusy(true);
 
     try {
+      // Follow redirects (default). Do NOT use redirect:"manual" — same-origin
+      // manual redirects become opaqueredirect with no readable Location header,
+      // which forced a /login fallback and masked /app?signoutError=1 failures.
       const res = await fetch("/auth/signout", {
         method: "POST",
         credentials: "same-origin",
-        redirect: "manual",
       });
 
-      // 303 → login (or fail URL). Opaque/0 also means the browser got a redirect.
-      const redirected =
-        res.type === "opaqueredirect" ||
-        res.status === 0 ||
-        (res.status >= 300 && res.status < 400);
-
-      if (redirected || res.ok) {
-        const location = res.headers.get("Location");
-        window.location.assign(location || "/login");
+      if (res.redirected && res.url) {
+        window.location.assign(res.url);
         return;
       }
 
+      // Unexpected non-redirect response — allow retry; do not fake success.
       unlockSignOut();
       setBusy(false);
     } catch {
