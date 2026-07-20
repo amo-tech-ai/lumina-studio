@@ -16,10 +16,10 @@ import { DealStageControl } from "./deal-stage-control";
 
 const DEAL_ID = "d1";
 
-function mockFetchOk(stage: string) {
+function mockFetchOk(stage: string, updatedAt = "2026-07-20T12:00:00.000Z") {
   return vi.fn().mockResolvedValue({
     ok: true,
-    json: async () => ({ ok: true, dealId: DEAL_ID, stage }),
+    json: async () => ({ ok: true, dealId: DEAL_ID, stage, updatedAt }),
   });
 }
 
@@ -59,15 +59,32 @@ describe("DealStageControl", () => {
     const fetchMock = mockFetchOk("negotiation");
     vi.stubGlobal("fetch", fetchMock);
     const onStageChange = vi.fn();
-    render(<DealStageControl dealId={DEAL_ID} stage="lead" onStageChange={onStageChange} />);
+    render(
+      <DealStageControl
+        dealId={DEAL_ID}
+        stage="lead"
+        updatedAt="2026-07-20T11:00:00.000Z"
+        onStageChange={onStageChange}
+      />,
+    );
     fireEvent.click(screen.getByText("Negotiation"));
 
-    await waitFor(() => expect(onStageChange).toHaveBeenCalledWith("negotiation"));
+    await waitFor(() =>
+      expect(onStageChange).toHaveBeenCalledWith(
+        "negotiation",
+        undefined,
+        "2026-07-20T12:00:00.000Z",
+      ),
+    );
     expect(fetchMock).toHaveBeenCalledWith(
       `/api/crm/deals/${DEAL_ID}/stage`,
       expect.objectContaining({
         method: "PATCH",
-        body: JSON.stringify({ stage: "negotiation", expectedStage: "lead" }),
+        body: JSON.stringify({
+          stage: "negotiation",
+          expectedStage: "lead",
+          expectedUpdatedAt: "2026-07-20T11:00:00.000Z",
+        }),
       }),
     );
     // No approval dialog for a non-terminal move.
@@ -95,7 +112,7 @@ describe("DealStageControl", () => {
 
     await waitFor(() => expect(screen.getByText("Negotiation").closest("button")).toHaveProperty("disabled", true));
 
-    resolveFetch({ ok: true, json: async () => ({ ok: true, dealId: DEAL_ID, stage: "negotiation" }) });
+    resolveFetch({ ok: true, json: async () => ({ ok: true, dealId: DEAL_ID, stage: "negotiation", updatedAt: "2026-07-20T12:00:00.000Z" }) });
   });
 
   it("skips the PATCH entirely when clicking the already-active stage", () => {
