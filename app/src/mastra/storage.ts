@@ -95,15 +95,76 @@ export function isMastraStorageDegraded(): boolean {
  * Prefer `MASTRA_DATABASE_URL` (transaction pooler :6543) so session/direct
  * `DATABASE_URL` / `SUPABASE_DB_URL` stay usable for psql + CI (IPI-678).
  */
+export type MastraDatabaseUrlSource = "mastra" | "database" | "none";
+
 export function resolveMastraDatabaseUrl(env: NodeJS.ProcessEnv = process.env): string {
+  return resolveMastraDatabaseUrlWithSource(env).url;
+}
+
+export function resolveMastraDatabaseUrlWithSource(
+  env: NodeJS.ProcessEnv = process.env,
+): { url: string; source: MastraDatabaseUrlSource } {
   const preferred = (env.MASTRA_DATABASE_URL ?? "").trim();
-  if (preferred) return preferred;
-  return (env.DATABASE_URL ?? "").trim();
+  if (preferred) return { url: preferred, source: "mastra" };
+  const fallback = (env.DATABASE_URL ?? "").trim();
+  if (fallback) return { url: fallback, source: "database" };
+  return { url: "", source: "none" };
+}
+
+/** True when URL looks like Supabase session pooler / direct (port 5432). */
+export function isLikelySessionModePostgresUrl(url: string): boolean {
+  try {
+    const parsed = new URL(url);
+    const port = parsed.port || (parsed.protocol === "postgresql:" || parsed.protocol === "postgres:" ? "5432" : "");
+    return port === "5432";
+  } catch {
+    return /:(?:5432)(?:\/|\?|$)/.test(url);
+  }
 }
 
 function resolveMastraPgPoolMax(env: NodeJS.ProcessEnv = process.env): number {
   const parsed = Number(env.MASTRA_PG_POOL_MAX ?? String(DEFAULT_PG_POOL_MAX));
   return Number.isFinite(parsed) && parsed > 0 ? parsed : DEFAULT_PG_POOL_MAX;
+}
+
+/**
+ * Loud once-per-process when Mastra would open a session-mode pool.
+ * next + mastra are separate OS processes → worst case 2×max clients (IPI-740).
+ * Does not throw — keep DATABASE_URL fallback for CI / gradual rollout.
+ */
+export function warnIfMastraSessionPoolFallback(
+  opts: {
+    url: string;
+    source: MastraDatabaseUrlSource;
+    poolMax: number;
+  },
+  env: NodeJS.ProcessEnv = process.env,
+  log: { warn: (msg: string) => void } = console,
+): void {
+  const g = globalThis as IpixMastraGlobal & { __ipixMastraSessionPoolWarned?: boolean };
+  if (g.__ipixMastraSessionPoolWarned) return;
+  if (opts.source === "none" || !opts.url) return;
+
+  const sessionPort = isLikelySessionModePostgresUrl(opts.url);
+  const usingDatabaseFallback = opts.source === "database";
+  if (!usingDatabaseFallback && !sessionPort) return;
+
+  g.__ipixMastraSessionPoolWarned = true;
+  const reasons: string[] = [];
+  if (usingDatabaseFallback) {
+    reasons.push("MASTRA_DATABASE_URL unset — falling back to DATABASE_URL");
+  }
+  if (sessionPort) {
+    reasons.push("connection port is 5432 (session/direct), not transaction 6543");
+  }
+  log.warn(
+    `[mastra] IPI-740 session-pool risk: ${reasons.join("; ")}. ` +
+      `Set MASTRA_DATABASE_URL to the Supabase transaction pooler (:6543). ` +
+      `next dev + mastra dev are separate processes — up to 2×${opts.poolMax} clients ` +
+      `if both hit session :5432 (pool_size 15 → EMAXCONNSESSION). ` +
+      `Keep DATABASE_URL on session for psql/CI (IPI-678).` +
+      (env.CI ? " (CI may ignore — prefer setting MASTRA_DATABASE_URL in Infisical/Vercel.)" : ""),
+  );
 }
 
 function requireProductionDatabaseUrl(env: NodeJS.ProcessEnv = process.env): void {
@@ -139,7 +200,7 @@ export function getMastraStorage(): MastraAppStorage {
     throw cachedStorageUnavailableError;
   }
   if (!storage) {
-    const url = resolveMastraDatabaseUrl();
+    const { url, source } = resolveMastraDatabaseUrlWithSource();
 
     if (shouldSkipMastraPostgresStorage()) {
       if (url) {
@@ -167,6 +228,8 @@ export function getMastraStorage(): MastraAppStorage {
       // that throws ERR_REQUIRE_ESM (p-map) on Vercel when the package is externalized.
       // OpenNext aliases this module to cf-mastra-pg-stub.mjs when IPIX_CF_BUNDLE_STUBS=1.
       assertPostgresStoreModule(MastraPg);
+      const poolMax = resolveMastraPgPoolMax();
+      warnIfMastraSessionPoolFallback({ url, source, poolMax });
       const g = globalThis as IpixMastraGlobal;
       // Dev HMR: Next can re-eval this module; reuse one pool inside this process.
       if (process.env.NODE_ENV !== "production" && g.__ipixMastraPgStore) {

@@ -239,10 +239,11 @@ describe("IPI-740 · Mastra pool + URL split", () => {
     vi.unstubAllEnvs();
     vi.doUnmock("@mastra/pg");
     delete (globalThis as { __ipixMastraPgStore?: unknown }).__ipixMastraPgStore;
+    delete (globalThis as { __ipixMastraSessionPoolWarned?: unknown }).__ipixMastraSessionPoolWarned;
   });
 
   it("resolveMastraDatabaseUrl prefers MASTRA_DATABASE_URL over DATABASE_URL", async () => {
-    const { resolveMastraDatabaseUrl } = await import("./storage");
+    const { resolveMastraDatabaseUrl, resolveMastraDatabaseUrlWithSource } = await import("./storage");
     expect(
       resolveMastraDatabaseUrl({
         MASTRA_DATABASE_URL: "postgresql://mastra@host:6543/db",
@@ -259,6 +260,63 @@ describe("IPI-740 · Mastra pool + URL split", () => {
       }),
     ).toBe("postgresql://session@host:5432/db");
     expect(resolveMastraDatabaseUrl({})).toBe("");
+    expect(
+      resolveMastraDatabaseUrlWithSource({
+        DATABASE_URL: "postgresql://session@host:5432/db",
+      }),
+    ).toEqual({ url: "postgresql://session@host:5432/db", source: "database" });
+    expect(
+      resolveMastraDatabaseUrlWithSource({
+        MASTRA_DATABASE_URL: "postgresql://mastra@host:6543/db",
+      }),
+    ).toEqual({ url: "postgresql://mastra@host:6543/db", source: "mastra" });
+  });
+
+  it("warns once when falling back to session DATABASE_URL (:5432)", async () => {
+    const { warnIfMastraSessionPoolFallback, isLikelySessionModePostgresUrl } = await import(
+      "./storage"
+    );
+    expect(isLikelySessionModePostgresUrl("postgresql://u@h:5432/db")).toBe(true);
+    expect(isLikelySessionModePostgresUrl("postgresql://u@h:6543/db")).toBe(false);
+
+    const warn = vi.fn();
+    warnIfMastraSessionPoolFallback(
+      {
+        url: "postgresql://session@127.0.0.1:5432/postgres",
+        source: "database",
+        poolMax: 4,
+      },
+      {},
+      { warn },
+    );
+    warnIfMastraSessionPoolFallback(
+      {
+        url: "postgresql://session@127.0.0.1:5432/postgres",
+        source: "database",
+        poolMax: 4,
+      },
+      {},
+      { warn },
+    );
+    expect(warn).toHaveBeenCalledTimes(1);
+    expect(warn.mock.calls[0][0]).toMatch(/MASTRA_DATABASE_URL unset/);
+    expect(warn.mock.calls[0][0]).toMatch(/2×4/);
+    expect(warn.mock.calls[0][0]).toMatch(/:6543/);
+  });
+
+  it("does not warn when MASTRA_DATABASE_URL points at transaction :6543", async () => {
+    const { warnIfMastraSessionPoolFallback } = await import("./storage");
+    const warn = vi.fn();
+    warnIfMastraSessionPoolFallback(
+      {
+        url: "postgresql://mastra@127.0.0.1:6543/postgres",
+        source: "mastra",
+        poolMax: 4,
+      },
+      {},
+      { warn },
+    );
+    expect(warn).not.toHaveBeenCalled();
   });
 
   it("passes MASTRA_DATABASE_URL, max, and idleTimeoutMillis to PostgresStore", async () => {
@@ -301,9 +359,12 @@ describe("IPI-740 · Mastra pool + URL split", () => {
     vi.stubEnv("MASTRA_DATABASE_URL", "");
     vi.stubEnv("MASTRA_PG_POOL_MAX", "");
     vi.resetModules();
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
     const { getMastraStorage: freshGet } = await import("./storage");
     freshGet();
     expect(ctor).toHaveBeenCalledWith(expect.objectContaining({ max: 4, idleTimeoutMillis: 10_000 }));
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringMatching(/session-pool risk/));
+    warnSpy.mockRestore();
   });
 
   it("reuses globalThis PostgresStore across module reloads in development", async () => {
