@@ -1,5 +1,9 @@
 -- IPI-343 · MG-5 — per-user notification read model + RPC tests.
+-- IPI-733 · MODEL-TEST-001 — UUID fixture emails + cleanup (parallel-CI safe).
 -- Run: psql -v ON_ERROR_STOP=1 "$DATABASE_URL" -f scripts/test-notification-reads-rls.sql
+--
+-- Cleanup must run in its own DO after tests: re-raising inside a PL/pgSQL
+-- EXCEPTION handler aborts that DO and rolls back deletes done in the handler.
 
 drop table if exists ipi343_ctx;
 create temp table ipi343_ctx (
@@ -11,9 +15,47 @@ create temp table ipi343_ctx (
   notification_id uuid not null
 );
 
+drop table if exists ipi343_run;
+create temp table ipi343_run (
+  ok boolean not null,
+  err text
+);
+
+create or replace function pg_temp.cleanup_ipi343_fixtures()
+returns void
+language plpgsql
+as $$
+declare
+  c record;
+begin
+  select * into c from ipi343_ctx limit 1;
+  if not found then
+    raise warning 'IPI-343 cleanup: ipi343_ctx empty — nothing to delete';
+    return;
+  end if;
+
+  delete from public.notification_reads where notification_id = c.notification_id;
+  delete from public.notifications where id = c.notification_id;
+  delete from talent.talent_profiles where id = c.talent_id;
+  delete from public.brands where org_id = c.org_id;
+  delete from public.org_members where org_id = c.org_id;
+  delete from public.organizations where id = c.org_id;
+  delete from auth.users
+  where id in (c.brand_user, c.talent_user, c.outsider_user);
+
+  if exists (
+    select 1 from auth.users
+    where id in (c.brand_user, c.talent_user, c.outsider_user)
+  ) then
+    raise exception 'IPI-343 cleanup: auth.users rows still present after delete';
+  end if;
+end;
+$$;
+
 do $seed$
 declare
-  v_stamp bigint := extract(epoch from clock_timestamp())::bigint;
+  -- Collision-safe: epoch-second stamps collide under parallel CI (users_email_partial_key).
+  v_stamp text := replace(gen_random_uuid()::text, '-', '');
   v_brand_user uuid := gen_random_uuid();
   v_talent_user uuid := gen_random_uuid();
   v_outsider uuid := gen_random_uuid();
@@ -53,6 +95,16 @@ begin
   insert into ipi343_ctx values (
     v_brand_user, v_talent_user, v_outsider, v_org_id, v_talent_id, v_notification_id
   );
+exception
+  when others then
+    begin
+      delete from auth.users
+      where id in (v_brand_user, v_talent_user, v_outsider);
+    exception
+      when others then
+        raise warning 'IPI-343 seed auth.users cleanup failed: %', sqlerrm;
+    end;
+    raise;
 end;
 $seed$;
 
@@ -157,13 +209,32 @@ begin
     'too many notification ids',
     'select public.mark_notifications_read(array(select gen_random_uuid() from generate_series(1, 101)), false)'
   );
+
+  execute 'reset role';
+  insert into ipi343_run values (true, null);
+exception
+  when others then
+    -- Swallow here so a later cleanup DO can commit; re-raise in $gate$.
+    begin
+      execute 'reset role';
+      insert into ipi343_run values (false, sqlerrm);
+    exception
+      when others then
+        raise warning 'IPI-343 could not record failure in ipi343_run: %', sqlerrm;
+    end;
 end;
 $tests$;
 
 do $rls$
 declare
   c record;
+  v_prev record;
 begin
+  select * into v_prev from ipi343_run limit 1;
+  if not found or v_prev.ok is distinct from true then
+    return;
+  end if;
+
   select * into c from ipi343_ctx limit 1;
 
   perform set_config('request.jwt.claim.sub', c.brand_user::text, true);
@@ -178,7 +249,41 @@ begin
         raise;
       end if;
   end;
+  execute 'reset role';
+exception
+  when others then
+    begin
+      execute 'reset role';
+      update ipi343_run set ok = false, err = sqlerrm;
+    exception
+      when others then
+        raise warning 'IPI-343 could not record RLS failure in ipi343_run: %', sqlerrm;
+    end;
 end;
 $rls$;
+
+do $cleanup$
+begin
+  execute 'reset role';
+  perform pg_temp.cleanup_ipi343_fixtures();
+exception
+  when others then
+    raise exception 'IPI-343 fixture cleanup failed: %', sqlerrm;
+end;
+$cleanup$;
+
+do $gate$
+declare
+  r record;
+begin
+  select * into r from ipi343_run limit 1;
+  if not found then
+    raise exception 'FAIL: ipi343_run missing — tests did not record a result';
+  end if;
+  if not r.ok then
+    raise exception '%', r.err;
+  end if;
+end;
+$gate$;
 
 select 'IPI-343 notification_reads + RPC tests passed' as result;

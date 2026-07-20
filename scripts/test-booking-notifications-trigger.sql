@@ -1,4 +1,5 @@
 -- IPI-343 · MG-5 — booking trigger still inserts notifications after read-model migration.
+-- IPI-733 · MODEL-TEST-001 — UUID fixture stamp (parallel-CI email uniqueness).
 -- Run: psql -v ON_ERROR_STOP=1 "$DATABASE_URL" -f scripts/test-booking-notifications-trigger.sql
 
 drop table if exists ipi343_trig_ctx;
@@ -11,7 +12,7 @@ create temp table ipi343_trig_ctx (
 
 do $seed$
 declare
-  v_stamp bigint := extract(epoch from clock_timestamp())::bigint;
+  v_stamp text := replace(gen_random_uuid()::text, '-', '');
   v_brand_user uuid := gen_random_uuid();
   v_talent_user uuid := gen_random_uuid();
   v_org_id uuid;
