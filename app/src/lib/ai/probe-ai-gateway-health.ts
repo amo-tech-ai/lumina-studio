@@ -3,8 +3,12 @@ import {
   DEFAULT_AI_GATEWAY_URL,
 } from "@/lib/ai/provider-adapter";
 
-/** Service-binding fetch target — host is ignored; Worker routes by binding. */
-export const AI_GATEWAY_HEALTH_REQUEST_URL = "https://ai-gateway/health";
+/**
+ * Service-binding fetch target — hostname is a placeholder (never DNS-resolved);
+ * Workers route by the `AI_GATEWAY` binding. Prefer `http://` per Cloudflare docs.
+ * @see https://developers.cloudflare.com/workers/cache/cache-keys/#service-binding-url
+ */
+export const AI_GATEWAY_HEALTH_REQUEST_URL = "http://ai-gateway/health";
 
 export type AiGatewayHealthBody = {
   status: "ok" | "gateway_error" | "gateway_unreachable";
@@ -40,10 +44,12 @@ export async function probeAiGatewayHealth(
   const probeVia = useBinding ? "service_binding" : "url";
 
   try {
+    // Prefer string URL + init.signal (CF docs + Fetch convention). Request.signal
+    // is also valid, but init is the clearer timeout path for binding Fetcher.
     const response = useBinding
-      ? await input.gatewayFetcher!.fetch(
-          new Request(AI_GATEWAY_HEALTH_REQUEST_URL, { signal: input.signal }),
-        )
+      ? await input.gatewayFetcher!.fetch(AI_GATEWAY_HEALTH_REQUEST_URL, {
+          signal: input.signal,
+        })
       : await fetch(`${gatewayUrl.replace(/\/$/, "")}/health`, {
           signal: input.signal,
         });

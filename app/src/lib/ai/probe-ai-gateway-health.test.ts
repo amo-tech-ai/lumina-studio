@@ -31,12 +31,28 @@ describe("probeAiGatewayHealth", () => {
     expect(result.httpStatus).toBe(200);
     expect(result.body.status).toBe("ok");
     expect(result.body.probeVia).toBe("service_binding");
+    expect(result.body.hasApiKey).toBe(true);
     expect(result.body.gateway).toEqual({ status: "ok", service: "ai-gateway" });
     expect(fetchMock).toHaveBeenCalledTimes(1);
-    const req = fetchMock.mock.calls[0][0] as Request;
-    expect(req).toBeInstanceOf(Request);
-    expect(req.url).toBe(AI_GATEWAY_HEALTH_REQUEST_URL);
+    expect(fetchMock).toHaveBeenCalledWith(
+      AI_GATEWAY_HEALTH_REQUEST_URL,
+      expect.objectContaining({ signal: undefined }),
+    );
     expect(JSON.stringify(result.body)).not.toContain("test-key");
+  });
+
+  it("returns 502 when service binding returns upstream 500", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: false, status: 500 });
+
+    const result = await probeAiGatewayHealth({
+      gatewayFetcher: { fetch: fetchMock },
+    });
+
+    expect(result.httpStatus).toBe(502);
+    expect(result.body.status).toBe("gateway_error");
+    expect(result.body.httpStatus).toBe(500);
+    expect(result.body.probeVia).toBe("service_binding");
+    expect(result.body.hasApiKey).toBe(true);
   });
 
   it("falls back to AI_GATEWAY_URL when no binding", async () => {
