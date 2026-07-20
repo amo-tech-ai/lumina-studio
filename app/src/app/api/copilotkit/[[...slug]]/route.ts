@@ -94,13 +94,74 @@ function extractSafeRuntimeErrorDetail(bodyText: string, contentType: string): s
   return trimmed;
 }
 
+function shouldExposeRuntimeErrorDetail(): boolean {
+  return process.env.NODE_ENV !== "production";
+}
+
+/** True when a client-facing string looks like a raw Node/bundler internal. */
+function isUnsafeClientErrorText(text: string): boolean {
+  return /ERR_REQUIRE_ESM|require\(\) of ES Module|node_modules|\.cjs\b|at\s+\S+\s+\(/i.test(
+    text,
+  );
+}
+
+function clientSafeErrorLabel(raw: unknown, fallback: string): string {
+  if (typeof raw !== "string" || !raw.trim()) return fallback;
+  const trimmed = raw.trim();
+  if (!shouldExposeRuntimeErrorDetail() && isUnsafeClientErrorText(trimmed)) {
+    return fallback;
+  }
+  return trimmed;
+}
+
 /** CopilotKit may return opaque 500s when agent discovery fails — normalize for the UI. */
 async function normalizeRuntimeErrorResponse(response: Response): Promise<Response> {
   if (response.status < 500) return response;
 
   const contentType = response.headers.get("content-type") ?? "";
+  const exposeDetail = shouldExposeRuntimeErrorDetail();
+
+  // IPI-718: even upstream 503 JSON can carry raw internals (detail/message/error) — redact in production.
   if (response.status === 503 && contentType.includes("application/json")) {
-    return response;
+    let parsed: {
+      error?: unknown;
+      code?: unknown;
+      detail?: unknown;
+      message?: unknown;
+      degraded?: unknown;
+    } = {};
+    try {
+      parsed = JSON.parse(await response.clone().text()) as typeof parsed;
+    } catch (err) {
+      console.error("[copilotkit] failed to parse upstream 503 JSON", err);
+    }
+
+    const detail = extractSafeRuntimeErrorDetail(
+      JSON.stringify(parsed),
+      "application/json",
+    );
+    if (detail) {
+      console.error("[copilotkit] runtime 503 detail:", detail);
+    }
+
+    try {
+      response.body?.cancel().catch(() => {});
+    } catch {
+      // body may be null or already consumed
+    }
+
+    const code = typeof parsed.code === "string" && parsed.code.trim() ? parsed.code : "runtime_error";
+    const error = clientSafeErrorLabel(parsed.error, "CopilotKit runtime unavailable");
+
+    return Response.json(
+      {
+        error,
+        code,
+        ...(detail && exposeDetail ? { detail } : {}),
+        ...(parsed.degraded === true ? { degraded: true } : {}),
+      },
+      { status: 503 },
+    );
   }
 
   let detail: string | undefined;
@@ -121,9 +182,6 @@ async function normalizeRuntimeErrorResponse(response: Response): Promise<Respon
     // body may be null or already consumed
   }
 
-  // IPI-718: log detail server-side; never return raw internals (e.g. ERR_REQUIRE_ESM) to browsers in production.
-  const exposeDetail = process.env.NODE_ENV !== "production";
-
   return Response.json(
     {
       error: "CopilotKit runtime unavailable",
@@ -141,7 +199,7 @@ function requestNeedsDurableStorage(request: Request): boolean {
 }
 
 function storageUnavailableResponse(err: MastraStorageUnavailableError): Response {
-  const exposeDetail = process.env.NODE_ENV !== "production";
+  const exposeDetail = shouldExposeRuntimeErrorDetail();
   return Response.json(
     {
       error: "Agent persistence unavailable",

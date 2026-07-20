@@ -106,7 +106,7 @@ describe("CopilotKit /info — SSE discovery (IPI-670 · COPILOT-RUNTIME-001)", 
     expect(body.code).toBe("runtime_error");
   });
 
-  it("passes through an existing 503 JSON response without double-wrapping", async () => {
+  it("keeps upstream 503 JSON code/error but redacts detail in production (IPI-718)", async () => {
     vi.stubEnv("NODE_ENV", "production");
     vi.stubEnv("OPERATOR_AUTH_ENABLED", "true");
     vi.stubEnv("GEMINI_API_KEY", "test-key");
@@ -126,9 +126,48 @@ describe("CopilotKit /info — SSE discovery (IPI-670 · COPILOT-RUNTIME-001)", 
     const response = await route.GET(new Request("http://localhost/api/copilotkit/info"));
 
     expect(response.status).toBe(503);
-    const body = (await response.json()) as { error?: string; detail?: string };
+    const body = (await response.json()) as { error?: string; code?: string; detail?: string };
     expect(body.error).toBe("already normalized");
-    expect(body.detail).toBe("upstream detail");
+    expect(body.code).toBe("runtime_error");
+    expect(body.detail).toBeUndefined();
+  });
+
+  it("redacts unsafe internals from upstream 503 JSON in production", async () => {
+    vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("OPERATOR_AUTH_ENABLED", "true");
+    vi.stubEnv("GEMINI_API_KEY", "test-key");
+
+    const existing = Response.json(
+      {
+        error: "ERR_REQUIRE_ESM: require() of ES Module p-map",
+        code: "runtime_error",
+        detail: "Failed to load external module @mastra/pg",
+        message: "require() of ES Module",
+      },
+      { status: 503 },
+    );
+
+    vi.doMock("@/lib/copilotkit/runtime-v2-fetch", () => ({
+      CopilotRuntime: vi.fn(() => ({})),
+      createCopilotRuntimeHandler: vi.fn(() => async () => existing),
+      InMemoryAgentRunner: vi.fn(),
+    }));
+
+    const route = await importRouteWithMocks();
+    const response = await route.GET(new Request("http://localhost/api/copilotkit/info"));
+
+    expect(response.status).toBe(503);
+    const body = (await response.json()) as {
+      error?: string;
+      code?: string;
+      detail?: string;
+      message?: string;
+    };
+    expect(body.code).toBe("runtime_error");
+    expect(body.error).toBe("CopilotKit runtime unavailable");
+    expect(body.detail).toBeUndefined();
+    expect(body.message).toBeUndefined();
+    expect(JSON.stringify(body)).not.toMatch(/ERR_REQUIRE_ESM|p-map|@mastra\/pg/);
   });
 
   it("does not expose internal error detail to clients in production (IPI-718)", async () => {
