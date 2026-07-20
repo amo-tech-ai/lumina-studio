@@ -88,8 +88,8 @@ Happy both green · app up Worker down · missing `AI_GATEWAY_*` · wrong API ke
 |-------|--------|
 | Unit | 🟡 |
 | Local Runtime | 🟢 (repeated in audits) |
-| Remote Preview | ⚪ |
-| Production | ⚪ |
+| Remote Preview | 🟡 partial — see `../tests/ipi-510-health/2026-07-20-preview-health.json` (`AI_GATEWAY_URL` set; same-zone fetch 404) |
+| Production | ⚪ (still Vercel) |
 
 ## 9. Success criteria
 
@@ -112,9 +112,11 @@ Happy both green · app up Worker down · missing `AI_GATEWAY_*` · wrong API ke
 
 ## 11. Failure points and blockers
 
-- **IPI-472 · INFRA-001 — Cloudflare Worker Deployment Pipeline**  
+- Preview Worker → `ai-gateway` via public `*.workers.dev` URL returns **404** without a **service binding** (Cloudflare same-zone rule)  
+- Unset `AI_GATEWAY_URL` falls back to `http://localhost:8787`  
 - Health may not reflect Mastra module-load env  
 - Dual registries  
+- Green health ≠ CopilotKit browser proof (still need J08 / IPI-632 residuals)  
 
 ## 12. Automation opportunities
 

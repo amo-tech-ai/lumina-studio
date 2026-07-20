@@ -1,0 +1,76 @@
+{
+  "task": "IPI-510 · CF-UJ-011 — Journey Test: AI Health / Readiness",
+  "date": "2026-07-20",
+  "verification_level": "Remote Preview Verified",
+  "code_pr": "https://github.com/amo-tech-ai/lumina-studio/pull/512",
+  "code_commit_sha": "b40dca210c587d2784e690e2d4e181ee33d8f230",
+  "preview_url": "https://ipix-operator-preview.sk-498.workers.dev",
+  "preview_worker": "ipix-operator-preview",
+  "preview_version_id": "591796f7-d070-44f2-ae7c-d9ae1a4a2bda",
+  "preview_deployed_at": "2026-07-20T03:19:43.225Z",
+  "gateway_worker": "ai-gateway",
+  "gateway_public_url": "https://ai-gateway.sk-498.workers.dev",
+  "health_contract": {
+    "route": "GET /api/ai/health",
+    "ok": {
+      "http": 200,
+      "status": "ok",
+      "gatewayUrl": "string",
+      "hasApiKey": "boolean",
+      "adapterAvailable": "boolean",
+      "probeVia": "service_binding | url",
+      "gateway": "object (gateway /health JSON)"
+    },
+    "gateway_error": {
+      "http": 502,
+      "status": "gateway_error",
+      "httpStatus": "upstream status"
+    },
+    "gateway_unreachable": {
+      "http": 503,
+      "status": "gateway_unreachable",
+      "error": "string"
+    },
+    "secrets_in_body": false
+  },
+  "checks": {
+    "ai_gateway_public_health": {
+      "url": "https://ai-gateway.sk-498.workers.dev/health",
+      "status": 200,
+      "body": { "status": "ok", "service": "ai-gateway" },
+      "pass": true
+    },
+    "preview_ai_health_service_binding": {
+      "url": "https://ipix-operator-preview.sk-498.workers.dev/api/ai/health",
+      "status": 200,
+      "cf_ray": "a1ded4aa6ab267b4-MIA",
+      "body": {
+        "status": "ok",
+        "gatewayUrl": "https://ai-gateway.sk-498.workers.dev",
+        "hasApiKey": true,
+        "adapterAvailable": true,
+        "probeVia": "service_binding",
+        "gateway": { "status": "ok", "service": "ai-gateway" }
+      },
+      "pass": true,
+      "note": "OpenNext preview uses wrangler services binding AI_GATEWAY → ai-gateway; probe prefers env.AI_GATEWAY.fetch"
+    },
+    "secret_leakage": {
+      "pass": true,
+      "note": "Response exposes hasApiKey boolean only; no AI_GATEWAY_API_KEY or other secret values"
+    },
+    "prior_url_only_blocked": {
+      "pass": false,
+      "status": 502,
+      "httpStatus": 404,
+      "note": "Historical: same-zone *.workers.dev fetch without service binding returned 404 (pre-PR #512)"
+    }
+  },
+  "does_not_prove": [
+    "CopilotKit browser chat",
+    "Mastra tool calls through gateway",
+    "Production DNS cutover (IPI-631)",
+    "Deployment security proof (IPI-627)",
+    "Protected preview smoke (IPI-632)"
+  ]
+}
