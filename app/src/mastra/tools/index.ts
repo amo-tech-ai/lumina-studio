@@ -26,6 +26,8 @@ import {
   logActivity,
   moveDealStage,
   scoreDealHealth,
+  summarizeRelationship,
+  draftFollowUp,
 } from "./crm";
 import { checkTalentAvailability, draftBookingQuote, createBookingDraft } from "./booking-tools";
 import { getAssetDnaEvidence } from "./getAssetDnaEvidence";
@@ -57,6 +59,8 @@ export const agentTools = {
   logActivity,
   moveDealStage,
   scoreDealHealth,
+  summarizeRelationship,
+  draftFollowUp,
   checkTalentAvailability,
   draftBookingQuote,
   createBookingDraft,
