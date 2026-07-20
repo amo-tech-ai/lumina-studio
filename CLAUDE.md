@@ -94,6 +94,16 @@ We are in active development. Always leave the system better than you found it: 
 - Rank improvements by payoff per unit effort, not by how impressive they sound. Name the single highest-leverage next move.
 - This does **not** override the one-concern-per-PR rule below. Spot an out-of-scope improvement → log it / flag it as its own task, don't bolt it onto the current change.
 
+## Efficiency self-check — ongoing, not a one-time audit
+
+Periodically ask "is this still the leanest way to finish this?" while working — especially mid-way through a long stretch (a multi-file audit, a review-fix pass, a live-verification loop) — not only when the user asks. This does not relax "verify before asserting" or any other rule above; it's about cutting wasted motion, not wasted rigor.
+
+- **Will this tool's output actually get used?** Don't run a big, expensive lookup as due-diligence theater if a cheaper check already answers the question — either use what it returns or skip the call. (Real example: calling Supabase's `get_advisors` when `verify-rls.mjs` plus a direct `pg_policies` query had already settled the question — the advisors output was never read.)
+- **Trust the harness's own signals.** An Edit/Write result that says the file state is already current in context means don't `Read` it back "to be sure" — that note exists specifically to save the round trip.
+- **Batch discovery before editing.** Touching several tests/files for one fix → grep every affected location first, plan every edit, then apply them — not grep → edit → grep → edit in a loop.
+- **Don't guess an ID a tool is about to hand you.** If a Linear/GitHub call will return the real number, get it before naming a branch, file, or commit after it — not the other way around (redoing a worktree because you branched on a guessed IPI number is pure waste).
+- **On a transient failure** (permission-classifier block, OOM, flaky network) **retry once with a plan for what happens if it fails again** — not a blind repeat past that, and not silent abandonment either.
+
 ## Hard rules
 
 - **🚫 NEVER push code directly to `main`.** Before writing a single line of code, create a worktree branch: `npm run worktree:add -- IPI-NNN short-name` (preferred — see Worktree workflow below) or `git worktree add ../wt-ipi-NNN-short-name -b ipi/NNN-short-name` as a fallback. Commit on the branch, push, open a PR with `gh pr create`. Even a one-line fix. Pushing direct to `main` means no PR can be created after the fact (`head == base` error). No exceptions.
