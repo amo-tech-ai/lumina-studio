@@ -45,10 +45,7 @@ vi.mock("sonner", () => ({
 
 vi.mock("@/app/(operator)/app/brand/[id]/actions", () => ({
   applyDraft: vi.fn(),
-}));
-
-vi.mock("@/app/(operator)/app/brand/[id]/actions", () => ({
-  applyDraft: vi.fn(),
+  reanalyzeBrand: vi.fn(),
 }));
 
 vi.mock("@/lib/intelligence/use-intelligence-panel", () => ({
