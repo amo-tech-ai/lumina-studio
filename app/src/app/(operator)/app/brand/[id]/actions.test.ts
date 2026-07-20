@@ -216,13 +216,16 @@ describe("reanalyzeBrand — IPI-738 crawl-first path", () => {
       expect.objectContaining({ draftMode: true, crawlResultId: "crawl-1" }),
     );
     expect(result).toEqual({ ok: true, hasDraft: true });
+    // analysis_locked_at is intentionally NOT in the update payload — the
+    // brands_stamp_analysis_locked_at DB trigger stamps it from Postgres
+    // now(), not the app-server clock (review fix, PR #548).
     expect(mockSupabase.updates[0]).toEqual(
       expect.objectContaining({
         intake_status: "analysis_running",
         analysis_lock_token: expect.any(String),
-        analysis_locked_at: expect.any(String),
       }),
     );
+    expect(mockSupabase.updates[0]).not.toHaveProperty("analysis_locked_at");
   });
 
   it("returns a specific actionable error when the crawl fails, without calling brand-intelligence", async () => {
@@ -718,13 +721,17 @@ describe("reanalyzeBrand — IPI-745 stale-lock recovery (wiring-level)", () => 
       analysis_locked_at: opts.lockedAt,
     };
     const rpcCalls: Record<string, unknown>[] = [];
+    const updateCalls: unknown[] = [];
     return {
       auth: { getUser: mockGetUser },
       from: (table: string) => {
         if (table !== "brands") throw new Error(`unexpected table: ${table}`);
         return {
           select: () => ({ eq: () => ({ maybeSingle: async () => ({ data: brand, error: null }) }) }),
-          update: () => ({ eq: () => ({ eq: async () => ({ data: null, error: null }) }) }),
+          update: (patch: unknown) => {
+            updateCalls.push(patch);
+            return { eq: () => ({ eq: async () => ({ data: null, error: null }) }) };
+          },
         };
       },
       rpc: (name: string, args: Record<string, unknown>) => {
@@ -733,22 +740,28 @@ describe("reanalyzeBrand — IPI-745 stale-lock recovery (wiring-level)", () => 
         return Promise.resolve(opts.rpcResult);
       },
       rpcCalls,
+      updateCalls,
     };
   }
 
-  it("returns 'already in progress' for a fresh lock, without calling invokeBrandIntelligence", async () => {
+  it("returns 'already in progress' for a fresh lock, without calling invokeBrandIntelligence or attempting any brand UPDATE", async () => {
     mockGetUser.mockResolvedValue({ data: { user: { id: "user-1" } }, error: null });
-    mockSupabase = makeLockedSupabase({
+    const supabase = makeLockedSupabase({
       lockedAt: new Date().toISOString(),
       lockToken: "fresh-token",
       rpcResult: { data: false, error: null }, // RPC's own now()-based check says still fresh
-    }) as never;
+    });
+    mockSupabase = supabase as never;
 
     const { reanalyzeBrand } = await importActions();
     const result = await reanalyzeBrand(BRAND.id);
 
     expect(result).toEqual({ ok: false, error: "Analysis already in progress" });
     expect(mockInvokeBrandIntelligence).not.toHaveBeenCalled();
+    // Regression: a bug where the RPC is called but its false result is
+    // ignored (falling through to an UPDATE anyway) would still leave the
+    // brand's lock columns untouched here, since RPC already returned false.
+    expect(supabase.updateCalls).toHaveLength(0);
   });
 
   it("takes over a stale lock and proceeds with analysis using a new runToken", async () => {

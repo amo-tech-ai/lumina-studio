@@ -58,6 +58,21 @@ describe("tryAcquireAnalysisLock — fresh acquire", () => {
     if (result.ok) expect(result.priorStatus).toBe("ready");
   });
 
+  it("ignores a stray leftover analysis_lock_token when intake_status isn't analysis_running (missing previous status)", async () => {
+    // A row whose intake_status is null/non-locking but still carries a
+    // leftover token from some other bug must take the fresh-acquire path,
+    // not the RPC path — status is the only thing that gates which branch
+    // runs. The mock has no .rpc(), so calling it would throw and fail loudly.
+    const supabase = makeAcquireSupabase({
+      id: BRAND_ID,
+      intake_status: null,
+      analysis_lock_token: "stray-leftover-token",
+      analysis_locked_at: null,
+    });
+    const result = await tryAcquireAnalysisLock(supabase as never, BRAND_ID);
+    expect(result).toEqual({ ok: true, runToken: expect.any(String), priorStatus: "ready", tookOverStale: false });
+  });
+
   it("rejects crawl_running without attempting acquire", async () => {
     const supabase = makeAcquireSupabase(freshBrand("crawl_running"));
     const result = await tryAcquireAnalysisLock(supabase as never, BRAND_ID);
@@ -176,13 +191,54 @@ describe("tryAcquireAnalysisLock — stale takeover (IPI-745)", () => {
     consoleErrorSpy.mockRestore();
   });
 
-  it("fails closed when locked as analysis_running but missing a token (pre-IPI-744 row)", async () => {
+  it("recovers a legacy pre-IPI-744 row with no token or timestamp at all (null-tolerant takeover)", async () => {
+    // Missing lock token entirely — a row locked before IPI-744 shipped, or
+    // corrupted by some other bug, must still be recoverable. The RPC
+    // matches a NULL token via IS NOT DISTINCT FROM and treats a NULL
+    // analysis_locked_at as maximally stale, so this is NOT fail-closed
+    // forever (review fix, PR #548).
     const supabase = makeRpcSupabase(
       { id: BRAND_ID, intake_status: "analysis_running", analysis_lock_token: null, analysis_locked_at: null },
-      async () => {
-        throw new Error("rpc should not be called");
+      async (args) => {
+        expect(args).toEqual(expect.objectContaining({ p_expected_token: null }));
+        return { data: true, error: null };
       },
     );
+    const result = await tryAcquireAnalysisLock(supabase as never, BRAND_ID);
+    expect(result).toEqual({ ok: true, runToken: expect.any(String), priorStatus: "failed", tookOverStale: true });
+  });
+
+  it("recovers a corrupted row that has a token but a missing analysis_locked_at timestamp", async () => {
+    const supabase = makeRpcSupabase(
+      { id: BRAND_ID, intake_status: "analysis_running", analysis_lock_token: "orphan-token", analysis_locked_at: null },
+      async (args) => {
+        expect(args).toEqual(expect.objectContaining({ p_expected_token: "orphan-token" }));
+        return { data: true, error: null };
+      },
+    );
+    const result = await tryAcquireAnalysisLock(supabase as never, BRAND_ID);
+    expect(result).toEqual({ ok: true, runToken: expect.any(String), priorStatus: "failed", tookOverStale: true });
+  });
+
+  it("treats an already-cleared lock as not recoverable (RPC returns false — intake_status moved on before the write)", async () => {
+    // Distinct from "still fresh": here the row was already restored/promoted
+    // by someone else between this caller's read and its RPC call, so the
+    // RPC's own intake_status = 'analysis_running' WHERE clause no longer
+    // matches at all — same false result, different real-world reason.
+    const supabase = makeRpcSupabase(LOCKED(), async () => ({ data: false, error: null }));
+    const result = await tryAcquireAnalysisLock(supabase as never, BRAND_ID);
+    expect(result).toEqual({ ok: false, error: "Analysis already in progress" });
+  });
+
+  it("treats a token ownership mismatch as not recoverable (observed token no longer matches the live row)", async () => {
+    // The caller's read observed one token, but by the time the RPC's atomic
+    // UPDATE runs, a different request already won and changed it — the
+    // RPC's analysis_lock_token match fails, proving this caller can never
+    // take over a lock it doesn't actually own.
+    const supabase = makeRpcSupabase(LOCKED(), async (args) => {
+      expect(args.p_expected_token).toBe("old-token");
+      return { data: false, error: null }; // live token is no longer "old-token"
+    });
     const result = await tryAcquireAnalysisLock(supabase as never, BRAND_ID);
     expect(result).toEqual({ ok: false, error: "Analysis already in progress" });
   });
@@ -271,6 +327,36 @@ describe("restoreAnalysisStatusIfOwned", () => {
     expect(consoleErrorSpy).not.toHaveBeenCalled();
     consoleErrorSpy.mockRestore();
   });
+
+  it("never restores a lock currently owned by a different request's token", async () => {
+    // Stateful: the row is actually held by "run-b-token". Our caller passes
+    // its own stale "run-a-token" — the CAS .eq("analysis_lock_token", ...)
+    // must fail to match, and the row must not change.
+    const currentOwnerToken = "run-b-token";
+    let rowTouched = false;
+    const supabase = {
+      from: () => ({
+        update: () => ({
+          eq: () => ({
+            eq: (_col: string, token: string) => ({
+              neq: () => ({
+                select: () => ({
+                  maybeSingle: async () => {
+                    if (token !== currentOwnerToken) return { data: null, error: null };
+                    rowTouched = true;
+                    return { data: { id: BRAND_ID }, error: null };
+                  },
+                }),
+              }),
+            }),
+          }),
+        }),
+      }),
+    };
+    const result = await restoreAnalysisStatusIfOwned(supabase as never, BRAND_ID, "ready", "run-a-token");
+    expect(result).toBe(false);
+    expect(rowTouched).toBe(false);
+  });
 });
 
 describe("releaseAnalysisLockIfOwned", () => {
@@ -284,6 +370,20 @@ describe("releaseAnalysisLockIfOwned", () => {
     await releaseAnalysisLockIfOwned(supabase as never, BRAND_ID, "tok");
 
     expect(updateSpy).toHaveBeenCalledWith({ analysis_lock_token: null, analysis_locked_at: null });
+  });
+
+  it("scopes the clear to the caller's own token, never a different request's", async () => {
+    const tokenEqSpy = vi.fn().mockResolvedValue({ data: null, error: null });
+    const idEqSpy = vi.fn().mockReturnValue({ eq: tokenEqSpy });
+    const supabase = { from: () => ({ update: vi.fn().mockReturnValue({ eq: idEqSpy }) }) };
+
+    await releaseAnalysisLockIfOwned(supabase as never, BRAND_ID, "run-a-token");
+
+    expect(idEqSpy).toHaveBeenCalledWith("id", BRAND_ID);
+    // The CAS filter must carry exactly this call's own token — not a
+    // hardcoded/shared value — so it can never clear another request's
+    // (e.g. "run-b-token") lock.
+    expect(tokenEqSpy).toHaveBeenCalledWith("analysis_lock_token", "run-a-token");
   });
 
   it("swallows a thrown error and logs instead of propagating", async () => {

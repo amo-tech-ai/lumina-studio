@@ -45,12 +45,15 @@ export async function tryAcquireAnalysisLock(
 
   if (brand.intake_status !== "analysis_running") {
     const priorStatus = brand.intake_status ?? "ready";
+    // analysis_locked_at is intentionally omitted — the brands_stamp_analysis_locked_at
+    // trigger stamps it from Postgres now() whenever analysis_lock_token is set,
+    // so this always uses the same DB clock as the stale-takeover RPC's own
+    // staleness check (no app-server/DB clock-skew risk).
     const { data: locked, error: lockErr } = await supabase
       .from("brands")
       .update({
         intake_status: "analysis_running",
         analysis_lock_token: runToken,
-        analysis_locked_at: new Date().toISOString(),
       })
       .eq("id", brandId)
       .not("intake_status", "in", "(crawl_running,analysis_running,draft_ready)")
@@ -65,12 +68,12 @@ export async function tryAcquireAnalysisLock(
     return { ok: true, runToken, priorStatus, tookOverStale: false };
   }
 
-  // Locked as analysis_running — no token means it predates IPI-744 or was
-  // corrupted; fail closed rather than guess.
-  if (!brand.analysis_lock_token || !brand.analysis_locked_at) {
-    return { ok: false, error: "Analysis already in progress" };
-  }
-
+  // Locked as analysis_running. A NULL analysis_lock_token/analysis_locked_at
+  // here means a pre-IPI-744 legacy row or a corrupted partial write — still
+  // attempt the RPC rather than fail closed forever: it matches a NULL token
+  // via IS NOT DISTINCT FROM and treats a NULL timestamp as maximally stale,
+  // so a permanently-stuck legacy brand can still recover (IPI-745's whole
+  // purpose). Passing a real token still lets the RPC prove ownership via CAS.
   try {
     const { data: tookOver, error: rpcErr } = await supabase.rpc("take_over_stale_analysis_lock", {
       p_brand_id: brandId,

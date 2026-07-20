@@ -31,7 +31,7 @@ export async function reanalyzeBrand(brandId: string): Promise<ReanalyzeResult> 
 
   const { data: brand, error: brandErr } = await supabase
     .from("brands")
-    .select("id, name, brand_url, intake_status")
+    .select("id, name, brand_url")
     .eq("id", brandId)
     .maybeSingle();
 
