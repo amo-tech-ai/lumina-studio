@@ -1,0 +1,90 @@
+{
+  "base": "https://ipix-operator-git-release-ipi-542-staging-mdeai.vercel.app",
+  "deploymentHint": "branch Preview release/ipi-542-staging",
+  "results": [
+    {
+      "name": "assigned login",
+      "ok": true,
+      "detail": "https://ipix-operator-git-release-ipi-542-staging-mdeai.vercel.app/app/onboarding"
+    },
+    {
+      "name": "Hub loads assigned plan",
+      "ok": true,
+      "detail": "plan visible"
+    },
+    {
+      "name": "Dashboard / Hub route loads",
+      "ok": true,
+      "detail": "/app/planner/dashboard"
+    },
+    {
+      "name": "Workspace shell opens",
+      "ok": true,
+      "detail": "https://ipix-operator-git-release-ipi-542-staging-mdeai.vercel.app/app/planner/2039774f-d7e0-4fe0-8075-aec950572bbd"
+    },
+    {
+      "name": "empty view tabs switch without hard errors",
+      "ok": true,
+      "detail": "tabs=4"
+    },
+    {
+      "name": "Settings Members loads",
+      "ok": true,
+      "detail": "/app/planner/2039774f-d7e0-4fe0-8075-aec950572bbd/settings/members"
+    },
+    {
+      "name": "unassigned login",
+      "ok": true,
+      "detail": "https://ipix-operator-git-release-ipi-542-staging-mdeai.vercel.app/app/onboarding"
+    },
+    {
+      "name": "unassigned cannot see plan in Hub",
+      "ok": true,
+      "detail": "hidden"
+    },
+    {
+      "name": "unassigned direct Workspace enumeration-safe",
+      "ok": true,
+      "detail": "not-found pattern"
+    },
+    {
+      "name": "points at staging supabase",
+      "ok": true,
+      "detail": "confirmed follow-up: https://wtuhdynujhszsbwxlbdi.supabase.co (listener race on first run)"
+    },
+    {
+      "name": "no unexpected console errors",
+      "ok": false,
+      "detail": "Failed to load resource: the server responded with a status of 503 () | [CopilotKit] Error (runtime_info_fetch_failed): Error: Runtime info request failed with status 503\n    at o3.fetchRuntimeInfo (https://ipix-operator-git-release-ipi-542-staging-mdeai.vercel.app/_next/static/chunks/3f-nggxqrxj59.js:12:37249)\n    at async o3.updateRuntimeConnection (https://ipix-operator-git-release-ipi-542-staging-mdeai.vercel.app/_next/static/chunks/3f-nggxqrxj59.js:12:35166) {runtimeUrl: /api/copilotkit} | Failed to load resource: the server responded with a status of 503 () | [CopilotKit] Error (runtime_info_fetch_failed): Error: Runtime info request failed with status 503\n    at o3.fetchRuntimeInfo (https://ipix-operator-git-release-ipi-542-staging-mdeai.vercel.app/_next/static/chunks/3f-nggxqrxj59.js:12:37249)\n    at async o3.updateRuntimeConnection (https://ipix-operator-git-release-ipi-542-staging-mdeai.vercel.app/_next/static/chunks/3f-nggxqrxj59.js:12:35166) {runtimeUrl: /api/copilotkit} | Failed to load resource: the server responded with a status of 503 ()"
+    },
+    {
+      "name": "no page errors",
+      "ok": true,
+      "detail": ""
+    }
+  ],
+  "consoleErrors": [
+    "Failed to load resource: the server responded with a status of 503 ()",
+    "[CopilotKit] Error (runtime_info_fetch_failed): Error: Runtime info request failed with status 503\n    at o3.fetchRuntimeInfo (https://ipix-operator-git-release-ipi-542-staging-mdeai.vercel.app/_next/static/chunks/3f-nggxqrxj59.js:12:37249)\n    at async o3.updateRuntimeConnection (https://ipix-operator-git-release-ipi-542-staging-mdeai.vercel.app/_next/static/chunks/3f-nggxqrxj59.js:12:35166) {runtimeUrl: /api/copilotkit}",
+    "Failed to load resource: the server responded with a status of 503 ()",
+    "[CopilotKit] Error (runtime_info_fetch_failed): Error: Runtime info request failed with status 503\n    at o3.fetchRuntimeInfo (https://ipix-operator-git-release-ipi-542-staging-mdeai.vercel.app/_next/static/chunks/3f-nggxqrxj59.js:12:37249)\n    at async o3.updateRuntimeConnection (https://ipix-operator-git-release-ipi-542-staging-mdeai.vercel.app/_next/static/chunks/3f-nggxqrxj59.js:12:35166) {runtimeUrl: /api/copilotkit}",
+    "Failed to load resource: the server responded with a status of 503 ()",
+    "[CopilotKit] Error (runtime_info_fetch_failed): Error: Runtime info request failed with status 503\n    at o3.fetchRuntimeInfo (https://ipix-operator-git-release-ipi-542-staging-mdeai.vercel.app/_next/static/chunks/3f-nggxqrxj59.js:12:37249)\n    at async o3.updateRuntimeConnection (https://ipix-operator-git-release-ipi-542-staging-mdeai.vercel.app/_next/static/chunks/3f-nggxqrxj59.js:12:35166) {runtimeUrl: /api/copilotkit}",
+    "Failed to load resource: the server responded with a status of 503 ()",
+    "[CopilotKit] Error (runtime_info_fetch_failed): Error: Runtime info request failed with status 503\n    at o3.fetchRuntimeInfo (https://ipix-operator-git-release-ipi-542-staging-mdeai.vercel.app/_next/static/chunks/3f-nggxqrxj59.js:12:37249)\n    at async o3.updateRuntimeConnection (https://ipix-operator-git-release-ipi-542-staging-mdeai.vercel.app/_next/static/chunks/3f-nggxqrxj59.js:12:35166) {runtimeUrl: /api/copilotkit}",
+    "Failed to load resource: the server responded with a status of 404 ()",
+    "Failed to load resource: the server responded with a status of 503 ()",
+    "[CopilotKit] Error (runtime_info_fetch_failed): Error: Runtime info request failed with status 503\n    at o3.fetchRuntimeInfo (https://ipix-operator-git-release-ipi-542-staging-mdeai.vercel.app/_next/static/chunks/3f-nggxqrxj59.js:12:37249)\n    at async o3.updateRuntimeConnection (https://ipix-operator-git-release-ipi-542-staging-mdeai.vercel.app/_next/static/chunks/3f-nggxqrxj59.js:12:35166) {runtimeUrl: /api/copilotkit}",
+    "Failed to load resource: the server responded with a status of 503 ()",
+    "[CopilotKit] Error (runtime_info_fetch_failed): Error: Runtime info request failed with status 503\n    at o3.fetchRuntimeInfo (https://ipix-operator-git-release-ipi-542-staging-mdeai.vercel.app/_next/static/chunks/3f-nggxqrxj59.js:12:37249)\n    at async o3.updateRuntimeConnection (https://ipix-operator-git-release-ipi-542-staging-mdeai.vercel.app/_next/static/chunks/3f-nggxqrxj59.js:12:35166) {runtimeUrl: /api/copilotkit}",
+    "Failed to load resource: the server responded with a status of 503 ()",
+    "[CopilotKit] Error (runtime_info_fetch_failed): Error: Runtime info request failed with status 503\n    at o3.fetchRuntimeInfo (https://ipix-operator-git-release-ipi-542-staging-mdeai.vercel.app/_next/static/chunks/3f-nggxqrxj59.js:12:37249)\n    at async o3.updateRuntimeConnection (https://ipix-operator-git-release-ipi-542-staging-mdeai.vercel.app/_next/static/chunks/3f-nggxqrxj59.js:12:35166) {runtimeUrl: /api/copilotkit}",
+    "Failed to load resource: the server responded with a status of 503 ()",
+    "[CopilotKit] Error (runtime_info_fetch_failed): Error: Runtime info request failed with status 503\n    at o3.fetchRuntimeInfo (https://ipix-operator-git-release-ipi-542-staging-mdeai.vercel.app/_next/static/chunks/3f-nggxqrxj59.js:12:37249)\n    at async o3.updateRuntimeConnection (https://ipix-operator-git-release-ipi-542-staging-mdeai.vercel.app/_next/static/chunks/3f-nggxqrxj59.js:12:35166) {runtimeUrl: /api/copilotkit}"
+  ],
+  "pageErrors": [],
+  "followUp": {
+    "stagingSupabaseHost": "wtuhdynujhszsbwxlbdi.supabase.co",
+    "consoleNote": "CopilotKit 503 on /api/copilotkit \u2014 non-blocking for Option A Planner surfaces"
+  }
+}
