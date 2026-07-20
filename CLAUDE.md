@@ -4,16 +4,20 @@
 
 **The final application is what matters.** The goal is to be innovative — nothing here is set in stone. We are constantly experimenting, improving, and raising the quality of the user experience throughout the development process. Treat every doc, diagram, schema, and component as a draft that can be made better, not a fixed contract. When a change serves a better end-product UX, propose it — even if it means rethinking something already built. Ship, learn, refine.
 
-## Communication style — explain with real iPix examples, not abstractions
+## Communication style — plain language, real iPix examples, every response
 
-When explaining a concept, decision, tradeoff, or finding, ground it in something concrete from this repo — a real screen, ticket, table, or file — instead of a generic description. The reader should be able to go look at the actual thing, not imagine a hypothetical one.
+Every response — not just audit findings — should be easy to follow on a first read and grounded in something concrete from this repo (a real screen, ticket, table, file, or PR) instead of a generic abstraction. Prefer plain language over jargon, short sentences over long ones, and tables/checklists over dense prose. When a finding is technical, add a one-line plain-English translation of why it matters. The reader should be able to click into or grep for the real thing, not imagine a hypothetical one.
 
 - ❌ "A reusable filter component" → ✅ "the Owner filter button on the Pipeline board (`pipeline-workspace.tsx:128`) — already built, just disabled"
 - ❌ "A foreign key without proper scoping" → ✅ "like `crm_deals.company_id` — a plain FK with no org check, which is exactly how a mismatched cross-org company slipped through in PR #337"
 - ❌ "Improve error handling" → ✅ "stop string-matching the server's exception text in `convert-deal.ts` — a migration wording change silently turned a 403 into a 500"
 - ❌ "A screen that hasn't been built yet" → ✅ "the Planner Hub (`/app/planner`, IPI-526) — designed, zero code, 404 today"
+- ❌ "The RPC has no authorization check" → ✅ "`commit_shoot_draft` (IPI-727) trusted `p_brand_id` with zero check of its own — safe today only because its one caller, `/api/shoots/commit`, already checks `brands`' RLS before invoking it"
+- ❌ "A migration fixed the RLS visibility gap" → ✅ "IPI-721 swapped `brands.user_id = auth.uid()` for `is_org_member(org_id)` on `shoot_portfolio_view` — the exact line that made `qa@ipix.test`'s own shoot invisible to them moments after creating it"
 
-This applies to explanations, audit findings, and status summaries alike — not just code comments. A real example a teammate can click into or grep for is worth more than a correct-but-abstract sentence.
+**Never cite a bare issue or PR number.** `IPI-582` or `#337` means nothing to a reader without Linear/GitHub open — always pair the number with its actual title on first mention, e.g. `IPI-582 (Task Detail and Safe Mutations)` or [PR #337](https://github.com/amo-tech-ai/lumina-studio/pull/337).
+
+Organize long outputs (todos, audits, roadmaps, verification reports) so a new team member could follow them without prior context. This applies uniformly across every kind of output — explanations, audit findings, status summaries, PR descriptions, code comments, and casual replies alike — not just formal reports.
 
 ## UX principles (apply to every user-facing change)
 
@@ -270,10 +274,3 @@ For automated browser testing (`npm run dev` on port 3002):
 | Password | See `.env.local` (`QA_PASSWORD`) or ask the team lead |
 
 These are test-only accounts with no real data. Safe to use in browser automation, Playwright, and MCP browser tools.
-
-## Response style — clarity first
-
-Audit reports, plans, and explanations must be easy to understand, not just complete. Prefer plain language over jargon, short sentences over long ones, and tables/checklists over dense prose. When a finding is technical, add a one-line plain-English translation of why it matters. Organize long outputs (todos, audits, roadmaps) so a new team member could follow them without needing prior context.
-
-- **Use real iPix examples, not generic ones.** When an abstract point needs illustrating, ground it in this repo's own screens, tickets, or code — e.g. "like IPI-536's `permissions.ts` wrapper," not "like a typical service wrapper."
-- **Never cite a bare issue number.** `IPI-582` or `IPI-483` means nothing to a reader without Linear open. Always pair the number with its actual title on first mention — e.g. `IPI-582 (Task Detail and Safe Mutations)` — the same rule applies to any PR number.
