@@ -293,6 +293,12 @@ export function resolveFromDiff(base, head) {
 
 /**
  * Compare pre/post `functions list` JSON for deployed slugs.
+ *
+ * Hard fail: missing slug or not ACTIVE.
+ * Soft warn: identical source redeploy may not bump Management API
+ * version/updated_at (observed on no-op `health` deploy) — CLI deploy
+ * success + ACTIVE is enough.
+ *
  * @param {string} preRaw
  * @param {string} postRaw
  * @param {string[]} functions
@@ -302,6 +308,8 @@ export function verifyDeployDelta(preRaw, postRaw, functions) {
   const post = indexBySlug(parseListJson(postRaw));
   /** @type {string[]} */
   const errors = [];
+  /** @type {string[]} */
+  const warnings = [];
   /** @type {object[]} */
   const rows = [];
 
@@ -327,13 +335,13 @@ export function verifyDeployDelta(preRaw, postRaw, functions) {
       after: metaAfter,
     });
     if (!changed) {
-      errors.push(
-        `${slug}: version/update metadata unchanged after deploy (before=${metaBefore})`,
+      warnings.push(
+        `${slug}: list metadata unchanged after deploy (identical bundle no-op is OK; before=${metaBefore})`,
       );
     }
   }
 
-  return { ok: errors.length === 0, errors, rows };
+  return { ok: errors.length === 0, errors, warnings, rows };
 }
 
 /**
@@ -478,9 +486,22 @@ function selfCheck() {
     { slug: "health", status: "ACTIVE", id: "1", updated_at: "2026-07-20T12:00:00Z" },
   ]);
   let d = verifyDeployDelta(pre, postSame, ["health"]);
-  check("delta fails when unchanged", !d.ok);
+  check(
+    "delta warns but ok when metadata unchanged (identical bundle)",
+    d.ok && d.warnings.length === 1 && d.errors.length === 0,
+    JSON.stringify(d),
+  );
   d = verifyDeployDelta(pre, postNew, ["health"]);
-  check("delta ok when updated_at changes", d.ok);
+  check(
+    "delta ok when updated_at changes",
+    d.ok && d.warnings.length === 0,
+    JSON.stringify(d),
+  );
+  const postInactive = JSON.stringify([
+    { slug: "health", status: "REMOVED", id: "1", updated_at: "2026-07-20T12:00:00Z" },
+  ]);
+  d = verifyDeployDelta(pre, postInactive, ["health"]);
+  check("delta fails when not ACTIVE", !d.ok, JSON.stringify(d));
 
   if (failed) {
     console.error(`\nself-check: ${failed} failure(s)`);
@@ -549,6 +570,9 @@ function main() {
       functions,
     );
     console.log(JSON.stringify(result, null, 2));
+    for (const w of result.warnings ?? []) {
+      console.warn(`::warning::${w}`);
+    }
     if (!result.ok) process.exit(1);
     return;
   }
