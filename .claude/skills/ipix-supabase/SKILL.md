@@ -207,7 +207,7 @@ Do **not** rewrite applied remote history. **PLT-010** (squash / local Docker) i
 
 ---
 
-## iPix edge functions (as-built — post PR #3)
+## iPix edge functions (as-built — verified live 2026-07-20)
 
 | Function | Purpose |
 |----------|---------|
@@ -215,12 +215,33 @@ Do **not** rewrite applied remote history. **PLT-010** (squash / local Docker) i
 | `edge-test` | Authenticated Gemini smoke (replaces legacy `gemini-ping`) |
 | `brand-intelligence` | URL → brand profile (Gemini + urlContext + responseSchema) |
 | `start-brand-crawl` | Firecrawl v2 crawl job start (IPI-24) |
+| `capture-lead` | Public lead capture from the marketing chatbot (WEB-015.2) -- writes `chatbot_conversations`/`chatbot_messages`/`lead_intake_drafts` |
 | `firecrawl-webhook` | Firecrawl signed webhook → `brand_crawls` / `brand_crawl_results` |
-| `audit-asset-dna` | Image DNA scoring — **not shipped** (DNA-001 / AI-010) |
+| `audit-asset-dna` | Image DNA scoring — writes `assets.dna_score`/`dna_status`/`dna_pillars` |
 
 **Do not** copy Medellín/mde edge functions from MCP inventory — different product.
 
-After adding functions: update `supabase/config.toml` + [references/edge-functions/edge-functions-inventory.md](references/edge-functions/edge-functions-inventory.md) → run [scripts/verify-edge-inventory.sh](scripts/verify-edge-inventory.sh).
+Full per-function detail (verify_jwt, models, secrets): [references/edge-functions/edge-functions-inventory.md](references/edge-functions/edge-functions-inventory.md). After adding functions: also update `supabase/config.toml` → run [scripts/verify-edge-inventory.sh](scripts/verify-edge-inventory.sh).
+
+### Two separate Gemini call paths -- do not conflate them
+
+This repo has **two independent routes to Gemini**, not one:
+
+```mermaid
+flowchart LR
+    subgraph nextjs["Next.js operator app"]
+        MA["Mastra agents"] -->|AI_GATEWAY_URL| CFW["Cloudflare AI Gateway Worker<br/>services/cloudflare-worker/"]
+        CFW --> LLM1["Gemini / Groq"]
+    end
+    subgraph edge["Supabase edge functions"]
+        BI["brand-intelligence /<br/>audit-asset-dna"] -->|"GEMINI_API_KEY, direct SDK call"| LLM2["Gemini"]
+    end
+```
+
+- **Mastra agents** (the Next.js operator app) call out through the Cloudflare AI Gateway Worker -- see `app/src/lib/ai/provider-adapter.ts` (`AI_GATEWAY_URL`) and CLAUDE.md's Cloudflare section.
+- **Supabase edge functions** (`brand-intelligence`, `audit-asset-dna`) call Gemini **directly** via the `GoogleGenAI` SDK + the `GEMINI_API_KEY` secret (`supabase/functions/_shared/gemini.ts`) -- they do **not** go through the Cloudflare Worker at all.
+
+Don't assume Cloudflare AI Gateway guidance applies to edge functions, or that edge-function Gemini calls show up in Cloudflare AI Gateway logs -- they won't.
 
 ---
 
