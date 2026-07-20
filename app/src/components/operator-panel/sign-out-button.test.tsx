@@ -137,4 +137,34 @@ describe("SignOutButton — IPI-725", () => {
       expect(assign).toHaveBeenCalledWith("http://localhost:3002/app?signoutError=1");
     });
   });
+
+  it("clears allowlisted operator/copilot storage before navigating to login", async () => {
+    const assign = vi.fn();
+    localStorage.setItem("ipix:copilot:thread:v1:u:default:h", "t-1");
+    localStorage.setItem("ipix_anon_id", "keep-me");
+    sessionStorage.setItem("ipix:copilot:thread:v1:u:planner:h", "t-2");
+
+    vi.stubGlobal("location", { ...window.location, assign });
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() =>
+        Promise.resolve({
+          ok: true,
+          redirected: true,
+          url: "http://localhost:3002/login",
+          status: 200,
+        } as Response),
+      ),
+    );
+
+    render(<SignOutButton showLabel />);
+    fireEvent.submit(screen.getByTestId("operator-sign-out").closest("form")!);
+
+    await waitFor(() => {
+      expect(assign).toHaveBeenCalledWith("http://localhost:3002/login");
+    });
+    expect(localStorage.getItem("ipix:copilot:thread:v1:u:default:h")).toBeNull();
+    expect(sessionStorage.getItem("ipix:copilot:thread:v1:u:planner:h")).toBeNull();
+    expect(localStorage.getItem("ipix_anon_id")).toBe("keep-me");
+  });
 });

@@ -6,6 +6,8 @@
 
 import { useState, type FormEvent } from "react";
 
+import { clearOperatorClientStorage } from "@/lib/operator/clear-operator-client-storage";
+
 import styles from "./nav-sidebar.module.css";
 
 type Props = {
@@ -40,6 +42,8 @@ export function SignOutButton({ showLabel = false }: Props) {
       });
 
       if (res.redirected && res.url) {
+        // Allowlisted Copilot/operator keys only — never Storage.clear(), never ipix_anon_id.
+        clearOperatorClientStorage();
         window.location.assign(res.url);
         return;
       }
