@@ -256,7 +256,7 @@ jobs:
           test -s /tmp/edge-post-deploy.json
           cp /tmp/edge-post-deploy.json edge-post-deploy.json
 
-      - name: Verify ACTIVE + version/update metadata changed
+      - name: Verify ACTIVE (metadata change optional for identical bundles)
         env:
           FUNCTIONS_CSV: ${{ needs.resolve-targets.outputs.functions_csv }}
         run: |
