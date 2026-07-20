@@ -1,3 +1,11 @@
-# Copy to .dev.vars for local `wrangler dev` / OpenNext preview (no secrets).
+# Copy to .dev.vars for local `wrangler dev` / OpenNext preview.
 # https://opennext.js.org/cloudflare/get-started
 NEXTJS_ENV=development
+
+# Non-secret Worker vars (see WRANGLER_VAR_NAMES in cloudflare-secret-allowlist.mjs).
+# In CI these come from GitHub environment variables → upload --var passthrough.
+INTELLIGENCE_API_URL=http://localhost:4201
+INTELLIGENCE_GATEWAY_WS_URL=ws://localhost:4401
+AI_GATEWAY_URL=http://localhost:8787
+CLOUDINARY_CLOUD_NAME=dzqy2ixl0
+CLOUDINARY_API_KEY=

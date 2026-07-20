@@ -5,10 +5,17 @@ import { resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
   BUILD_TIME_SECRET_NAMES,
+  CI_ONLY_SECRET_NAMES,
   RUNTIME_SECRET_NAMES,
+  RUNTIME_OPTIONAL_SECRET_NAMES,
+  WRANGLER_VAR_NAMES,
+  WRANGLER_REQUIRED_VAR_NAMES,
+  RUNTIME_REQUIRED_SECRET_NAMES,
   assertInfisicalWranglerEnvPair,
   assertNoForbiddenSecrets,
+  buildWranglerVarCliArgs,
   collectRuntimeSecretsFromEnv,
+  collectWranglerVarsFromEnv,
   diffSecretNames,
   runtimeSecretNamesForWranglerEnv,
   wranglerCliEnvArgs,
@@ -21,11 +28,46 @@ import {
 } from "./sync-wrangler-secrets-from-infisical.mjs";
 
 describe("cloudflare-secret-allowlist", () => {
-  it("keeps build-time and runtime allowlists disjoint", () => {
+  it("keeps build-time, runtime, and wrangler var allowlists disjoint", () => {
     const runtimeSet = new Set(RUNTIME_SECRET_NAMES);
+    const varSet = new Set(WRANGLER_VAR_NAMES);
     for (const name of BUILD_TIME_SECRET_NAMES) {
       expect(runtimeSet.has(name)).toBe(false);
+      expect(varSet.has(name)).toBe(false);
       expect(name.startsWith("NEXT_PUBLIC_")).toBe(true);
+    }
+    for (const name of WRANGLER_VAR_NAMES) {
+      expect(runtimeSet.has(name)).toBe(false);
+    }
+  });
+
+  it("rejects wrangler var names in runtime sync", () => {
+    expect(() => assertNoForbiddenSecrets(["INTELLIGENCE_API_URL"], "runtime")).toThrow(
+      /wrangler\.jsonc vars/,
+    );
+  });
+
+  it("RUNTIME_REQUIRED_SECRET_NAMES matches wrangler secrets.required (fail-closed pair only)", () => {
+    expect(RUNTIME_REQUIRED_SECRET_NAMES).toEqual([
+      "GEMINI_API_KEY",
+      "SUPABASE_SERVICE_ROLE_KEY",
+    ]);
+  });
+
+  it("COPILOTKIT_LICENSE_TOKEN is allowlisted optional, not bootstrap-required", () => {
+    expect(RUNTIME_SECRET_NAMES).toContain("COPILOTKIT_LICENSE_TOKEN");
+    expect(RUNTIME_OPTIONAL_SECRET_NAMES).toContain("COPILOTKIT_LICENSE_TOKEN");
+    expect(RUNTIME_REQUIRED_SECRET_NAMES).not.toContain("COPILOTKIT_LICENSE_TOKEN");
+  });
+
+  it("keeps CI-only, runtime, build-time, and wrangler-var allowlists disjoint", () => {
+    const runtimeSet = new Set(RUNTIME_SECRET_NAMES);
+    const buildSet = new Set(BUILD_TIME_SECRET_NAMES);
+    const varSet = new Set(WRANGLER_VAR_NAMES);
+    for (const name of CI_ONLY_SECRET_NAMES) {
+      expect(runtimeSet.has(name)).toBe(false);
+      expect(buildSet.has(name)).toBe(false);
+      expect(varSet.has(name)).toBe(false);
     }
   });
 
@@ -60,6 +102,40 @@ describe("cloudflare-secret-allowlist", () => {
     expect(present.GEMINI_API_KEY).toBe("secret-value-should-not-appear-in-test-output");
     expect(missing.length).toBeGreaterThan(0);
     expect(missing).not.toContain("GEMINI_API_KEY");
+  });
+
+  it("collectWranglerVarsFromEnv returns only allowlisted present keys", () => {
+    const { present, missing } = collectWranglerVarsFromEnv({
+      INTELLIGENCE_API_URL: "https://intel.example/api",
+      INTELLIGENCE_GATEWAY_WS_URL: "wss://intel.example/ws",
+      GEMINI_API_KEY: "must-not-appear",
+    });
+
+    expect(Object.keys(present).sort()).toEqual([
+      "INTELLIGENCE_API_URL",
+      "INTELLIGENCE_GATEWAY_WS_URL",
+    ]);
+    expect(missing).toContain("AI_GATEWAY_URL");
+  });
+
+  it("buildWranglerVarCliArgs emits sorted --var pairs", () => {
+    expect(
+      buildWranglerVarCliArgs({
+        INTELLIGENCE_API_URL: "https://a",
+        AI_GATEWAY_URL: "http://localhost:8787",
+      }),
+    ).toEqual([
+      "--var",
+      "AI_GATEWAY_URL:http://localhost:8787",
+      "--var",
+      "INTELLIGENCE_API_URL:https://a",
+    ]);
+  });
+
+  it("WRANGLER_REQUIRED_VAR_NAMES is subset of WRANGLER_VAR_NAMES", () => {
+    for (const name of WRANGLER_REQUIRED_VAR_NAMES) {
+      expect(WRANGLER_VAR_NAMES).toContain(name);
+    }
   });
 
   it("diffSecretNames reports extra and missing by name only", () => {
@@ -203,11 +279,16 @@ describe("sync-wrangler-secrets-from-infisical", () => {
     expect(() => statSync(filePath)).toThrow();
   });
 
-  it("wrangler.jsonc declares secrets.required per named env", () => {
+  it("wrangler.jsonc declares secrets.required per named env and static vars only", () => {
     const wranglerPath = resolve(dirname(fileURLToPath(import.meta.url)), "../wrangler.jsonc");
     const wrangler = readFileSync(wranglerPath, "utf8");
-    expect(wrangler).toMatch(/"preview"[\s\S]*"secrets"[\s\S]*"required"[\s\S]*GEMINI_API_KEY/);
-    expect(wrangler).toMatch(/"production"[\s\S]*"secrets"[\s\S]*"required"[\s\S]*GEMINI_API_KEY/);
+    for (const key of RUNTIME_REQUIRED_SECRET_NAMES) {
+      expect(wrangler).toMatch(new RegExp(`"preview"[\\s\\S]*"required"[\\s\\S]*${key}`));
+      expect(wrangler).toMatch(new RegExp(`"production"[\\s\\S]*"required"[\\s\\S]*${key}`));
+    }
+    expect(wrangler).toMatch(/"preview"[\s\S]*MASTRA_STORAGE_MODE/);
+    expect(wrangler).not.toMatch(/"preview"[\s\S]*INTELLIGENCE_API_URL/);
+    expect(wrangler).not.toMatch(/"DATABASE_URL"/);
   });
 
   it("sync script header documents secrets-file upload not secret bulk", async () => {
@@ -224,6 +305,27 @@ describe("sync-wrangler-secrets-from-infisical", () => {
 });
 
 describe("upload-opennext-with-secrets", () => {
+  it("places --var and --secrets-file after OpenNext -- passthrough", async () => {
+    const { buildOpenNextCliArgs } = await import("./upload-opennext-with-secrets.mjs");
+    const varArgs = buildWranglerVarCliArgs({
+      INTELLIGENCE_API_URL: "https://intel.example/api",
+      AI_GATEWAY_URL: "https://gateway.example",
+    });
+    const args = buildOpenNextCliArgs("upload", "preview", "/tmp/secrets.json", varArgs);
+    const sep = args.indexOf("--");
+    expect(sep).toBeGreaterThan(0);
+    expect(args.slice(0, sep)).toEqual(["upload", "--env", "preview"]);
+    expect(args.slice(sep)).toEqual([
+      "--",
+      "--var",
+      "AI_GATEWAY_URL:https://gateway.example",
+      "--var",
+      "INTELLIGENCE_API_URL:https://intel.example/api",
+      "--secrets-file",
+      "/tmp/secrets.json",
+    ]);
+  });
+
   it("parseWorkerVersionId extracts UUID from wrangler output", async () => {
     const { parseWorkerVersionId } = await import("./upload-opennext-with-secrets.mjs");
     expect(
@@ -254,5 +356,82 @@ describe("upload-opennext-with-secrets", () => {
     expect(r.stdout).toContain("GEMINI_API_KEY");
     expect(r.stdout).not.toContain("super-secret-gemini-key-12345");
     delete process.env.GEMINI_API_KEY;
+  });
+
+  it("dry-run without COPILOTKIT_LICENSE_TOKEN succeeds (optional Intelligence)", () => {
+    const scriptPath = resolve(
+      dirname(fileURLToPath(import.meta.url)),
+      "upload-opennext-with-secrets.mjs",
+    );
+    const r = spawnSync(
+      process.execPath,
+      [scriptPath, "--wrangler-env", "preview", "--infisical-env", "dev", "--dry-run"],
+      {
+        env: {
+          PATH: process.env.PATH,
+          GEMINI_API_KEY: "gemini-test",
+          SUPABASE_SERVICE_ROLE_KEY: "service-role-test",
+        },
+        encoding: "utf8",
+      },
+    );
+    expect(r.status).toBe(0);
+    expect(r.stdout).toContain("GEMINI_API_KEY");
+    expect(r.stdout).toContain("SUPABASE_SERVICE_ROLE_KEY");
+    expect(r.stdout).not.toMatch(/runtime secrets \(.*\):.*COPILOTKIT_LICENSE_TOKEN/);
+    expect(r.stderr + r.stdout).toMatch(/optional allowlisted secrets unset[\s\S]*COPILOTKIT_LICENSE_TOKEN/);
+  });
+
+  it("dry-run with COPILOTKIT_LICENSE_TOKEN includes it without printing the value", () => {
+    const scriptPath = resolve(
+      dirname(fileURLToPath(import.meta.url)),
+      "upload-opennext-with-secrets.mjs",
+    );
+    const license = "ck_super_secret_license_token_value";
+    const r = spawnSync(
+      process.execPath,
+      [scriptPath, "--wrangler-env", "preview", "--infisical-env", "dev", "--dry-run"],
+      {
+        env: {
+          PATH: process.env.PATH,
+          GEMINI_API_KEY: "gemini-test",
+          SUPABASE_SERVICE_ROLE_KEY: "service-role-test",
+          COPILOTKIT_LICENSE_TOKEN: license,
+        },
+        encoding: "utf8",
+      },
+    );
+    expect(r.status).toBe(0);
+    expect(r.stdout).toMatch(/runtime secrets \(.*\):.*COPILOTKIT_LICENSE_TOKEN/);
+    expect(r.stdout).not.toContain(license);
+    const optionalWarn = (r.stderr + r.stdout)
+      .split("\n")
+      .find((line) => line.includes("optional allowlisted secrets unset"));
+    expect(optionalWarn ?? "").not.toContain("COPILOTKIT_LICENSE_TOKEN");
+  });
+
+  it("live upload without COPILOTKIT does not fail on required-secret check", () => {
+    const scriptPath = resolve(
+      dirname(fileURLToPath(import.meta.url)),
+      "upload-opennext-with-secrets.mjs",
+    );
+    const r = spawnSync(
+      process.execPath,
+      [scriptPath, "--wrangler-env", "preview", "--infisical-env", "dev"],
+      {
+        env: {
+          PATH: process.env.PATH,
+          GEMINI_API_KEY: "gemini-test",
+          SUPABASE_SERVICE_ROLE_KEY: "service-role-test",
+          INTELLIGENCE_API_URL: "https://intel.example/api",
+          INTELLIGENCE_GATEWAY_WS_URL: "wss://intel.example/ws",
+        },
+        encoding: "utf8",
+      },
+    );
+    // Must pass required-secret + required-var gates; fail later on missing CF credentials.
+    expect(r.stderr + r.stdout).not.toMatch(/required runtime secrets missing.*COPILOTKIT/);
+    expect(r.stderr + r.stdout).toMatch(/CLOUDFLARE_API_TOKEN|CLOUDFLARE_ACCOUNT_ID|no allowlisted|Error:/);
+    expect(r.status).not.toBe(0);
   });
 });

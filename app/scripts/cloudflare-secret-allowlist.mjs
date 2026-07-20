@@ -16,7 +16,27 @@ export const BUILD_TIME_SECRET_NAMES = Object.freeze([
 ]);
 
 /**
- * Worker runtime secrets synced via `wrangler secret put` / `secret bulk`.
+ * Non-secret Worker config — plain text at runtime (`process.env`).
+ * Committed defaults live in `wrangler.jsonc` (`MASTRA_STORAGE_MODE`, etc.).
+ * Environment-specific values (URLs, public ids) are injected at deploy via
+ * GitHub environment **variables** → upload script `--var` passthrough — not Dashboard edits.
+ */
+export const WRANGLER_VAR_NAMES = Object.freeze([
+  "INTELLIGENCE_API_URL",
+  "INTELLIGENCE_GATEWAY_WS_URL",
+  "AI_GATEWAY_URL",
+  "CLOUDINARY_CLOUD_NAME",
+  "CLOUDINARY_API_KEY",
+]);
+
+/** Required on live bootstrap upload — CopilotKit Intelligence and smoke routes. */
+export const WRANGLER_REQUIRED_VAR_NAMES = Object.freeze([
+  "INTELLIGENCE_API_URL",
+  "INTELLIGENCE_GATEWAY_WS_URL",
+]);
+
+/**
+ * Worker runtime secrets synced via `wrangler secret put` / `secret bulk` / `--secrets-file`.
  * Same names in preview and production; values differ per Infisical environment.
  */
 export const RUNTIME_SECRET_NAMES = Object.freeze([
@@ -25,18 +45,33 @@ export const RUNTIME_SECRET_NAMES = Object.freeze([
   "OPENAI_API_KEY",
   "DATABASE_URL",
   "SUPABASE_SERVICE_ROLE_KEY",
-  "CLOUDINARY_CLOUD_NAME",
-  "CLOUDINARY_API_KEY",
   "CLOUDINARY_API_SECRET",
   "CLOUDINARY_NOTIFICATION_API_SECRET",
   "COPILOTKIT_LICENSE_TOKEN",
   "INTELLIGENCE_API_KEY",
-  "INTELLIGENCE_API_URL",
-  "INTELLIGENCE_GATEWAY_WS_URL",
   "FIRECRAWL_API_KEY",
-  "AI_GATEWAY_URL",
   "AI_GATEWAY_API_KEY",
   "INTERNAL_WEBHOOK_SECRET",
+  "CAPTURE_LEAD_PROXY_SECRET",
+]);
+
+/**
+ * CI-only / other deployment surfaces — NOT synced to Worker runtime secrets.
+ *
+ * - FIRECRAWL_WEBHOOK_SECRET — Supabase edge function only (Infisical `/ipix/edge`)
+ * - SENTRY_AUTH_TOKEN — build-time source map upload (Sentry webpack plugin)
+ * - CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID — GitHub Actions deploy credentials
+ * - INFISICAL_CLIENT_ID, INFISICAL_CLIENT_SECRET — bootstrap Universal Auth (rotate after OIDC)
+ * - NEXT_PUBLIC_* — OpenNext build inputs from GitHub environment **variables**
+ *   (preferred) with secrets fallback in cloudflare-secrets-sync.yml — never Worker secrets
+ */
+export const CI_ONLY_SECRET_NAMES = Object.freeze([
+  "FIRECRAWL_WEBHOOK_SECRET",
+  "SENTRY_AUTH_TOKEN",
+  "CLOUDFLARE_API_TOKEN",
+  "CLOUDFLARE_ACCOUNT_ID",
+  "INFISICAL_CLIENT_ID",
+  "INFISICAL_CLIENT_SECRET",
 ]);
 
 /** Per wrangler env — extend when preview/production diverge on secret *names*. */
@@ -52,8 +87,16 @@ export const INFISICAL_TO_WRANGLER_ENV = Object.freeze({
   prod: "production",
 });
 
-/** Must be present in Infisical env before a non-dry-run sync. */
-export const RUNTIME_REQUIRED_SECRET_NAMES = Object.freeze(["GEMINI_API_KEY"]);
+/**
+ * Must be present before a non-dry-run sync/upload.
+ * Matches `secrets.required` in wrangler.jsonc — fail closed for truly required only.
+ * COPILOTKIT_LICENSE_TOKEN stays in RUNTIME_SECRET_NAMES (optional): CopilotKit route
+ * warns and runs without thread persistence when absent (SSE mode).
+ */
+export const RUNTIME_REQUIRED_SECRET_NAMES = Object.freeze([
+  "GEMINI_API_KEY",
+  "SUPABASE_SERVICE_ROLE_KEY",
+]);
 
 /** Allowlisted but optional — warn when absent; omit from upload JSON. */
 export const RUNTIME_OPTIONAL_SECRET_NAMES = Object.freeze(
@@ -74,6 +117,9 @@ export function assertNoForbiddenSecrets(names, surface) {
     if (surface === "runtime") {
       if (name.startsWith(FORBIDDEN_IN_RUNTIME_PREFIX)) {
         violations.push(`${name}: NEXT_PUBLIC_* must not sync to wrangler runtime secrets`);
+      }
+      if (WRANGLER_VAR_NAMES.includes(name)) {
+        violations.push(`${name}: use wrangler.jsonc vars, not runtime secrets`);
       }
     }
     if (surface === "build") {
@@ -132,6 +178,40 @@ export function collectRuntimeSecretsFromEnv(env, wranglerEnv) {
   }
 
   return { present, missing };
+}
+
+/**
+ * Collect wrangler `--var` values from process.env for allowlisted names only.
+ * @param {NodeJS.ProcessEnv} env
+ * @returns {{ present: Record<string, string>; missing: string[] }}
+ */
+export function collectWranglerVarsFromEnv(env) {
+  /** @type {Record<string, string>} */
+  const present = {};
+  /** @type {string[]} */
+  const missing = [];
+
+  for (const name of WRANGLER_VAR_NAMES) {
+    const value = env[name]?.trim();
+    if (value) {
+      present[name] = value;
+    } else {
+      missing.push(name);
+    }
+  }
+
+  return { present, missing };
+}
+
+/**
+ * Build wrangler CLI `--var KEY:VALUE` args (placed after OpenNext `--` passthrough).
+ * @param {Record<string, string>} vars
+ * @returns {string[]}
+ */
+export function buildWranglerVarCliArgs(vars) {
+  return Object.keys(vars)
+    .sort()
+    .flatMap((name) => ["--var", `${name}:${vars[name]}`]);
 }
 
 /**

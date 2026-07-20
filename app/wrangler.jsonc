@@ -23,6 +23,8 @@
     "enabled": true
   },
   // IPI-468: deployed Worker must fail closed; CopilotKit thread gating reads this flag at runtime.
+  // CF-SEC-010: committed vars are static flags only. Environment-specific URLs/ids are injected
+  // at deploy via GitHub environment variables → upload script `--var` (Wrangler is SSOT).
   "vars": {
     "MASTRA_STORAGE_MODE": "noop",
     "OPERATOR_AUTH_ENABLED": "true"
@@ -76,7 +78,8 @@
         }
       ],
       "secrets": {
-        "required": ["GEMINI_API_KEY"]
+        // COPILOTKIT_LICENSE_TOKEN is optional — synced when present; SSE mode without it.
+        "required": ["GEMINI_API_KEY", "SUPABASE_SERVICE_ROLE_KEY"]
       }
     },
     "production": {
@@ -95,7 +98,8 @@
         }
       ],
       "secrets": {
-        "required": ["GEMINI_API_KEY"]
+        // COPILOTKIT_LICENSE_TOKEN is optional — synced when present; SSE mode without it.
+        "required": ["GEMINI_API_KEY", "SUPABASE_SERVICE_ROLE_KEY"]
       }
     }
   }
