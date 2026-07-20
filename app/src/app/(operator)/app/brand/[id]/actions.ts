@@ -43,10 +43,9 @@ export async function reanalyzeBrand(brandId: string): Promise<ReanalyzeResult> 
     return { ok: false, error: "Brand has no website URL to analyze" };
   }
 
-  // IPI-745 — fresh-vs-stale-aware lock acquire. A brand already locked as
-  // analysis_running is not an automatic rejection: if that lock is older
-  // than STALE_LOCK_THRESHOLD_SECONDS, this atomically takes it over instead
-  // of leaving the brand stuck forever behind an abandoned run.
+  // Rejects if already locked (crawl_running/analysis_running/draft_ready).
+  // A brand stuck in analysis_running forever recovers via IPI-745's
+  // pg_cron sweep (expire_stale_brand_analysis), not synchronously here.
   const acquired = await tryAcquireAnalysisLock(supabase, brandId);
   if (!acquired.ok) {
     return { ok: false, error: acquired.error };

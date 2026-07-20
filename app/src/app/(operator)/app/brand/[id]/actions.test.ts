@@ -706,21 +706,21 @@ describe("reanalyzeBrand — IPI-744 success-path token clear is non-critical (S
   });
 });
 
-describe("reanalyzeBrand — IPI-745 stale-lock recovery (wiring-level)", () => {
-  function makeLockedSupabase(opts: {
-    lockedAt: string;
-    lockToken: string;
-    rpcResult: { data: unknown; error: unknown };
-  }) {
+describe("reanalyzeBrand — IPI-745 stuck-analysis recovery (wiring-level)", () => {
+  // A brand already analysis_running is rejected outright here, with no RPC
+  // involved at all — a separate pg_cron sweep (expire_stale_brand_analysis)
+  // resets truly-abandoned rows on a schedule, so a stuck brand's next
+  // reanalyzeBrand call naturally hits the normal fresh-acquire path once
+  // the sweep has run. This replaced an earlier synchronous RPC-takeover
+  // wiring here (dropped): that RPC's null-tolerant predicate could take
+  // over a brand mid-analysis via a writer that never set a lock token.
+  function makeLockedSupabase() {
     const brand = {
       id: BRAND.id,
       name: BRAND.name,
       brand_url: BRAND.brand_url,
       intake_status: "analysis_running",
-      analysis_lock_token: opts.lockToken,
-      analysis_locked_at: opts.lockedAt,
     };
-    const rpcCalls: Record<string, unknown>[] = [];
     const updateCalls: unknown[] = [];
     return {
       auth: { getUser: mockGetUser },
@@ -734,23 +734,13 @@ describe("reanalyzeBrand — IPI-745 stale-lock recovery (wiring-level)", () => 
           },
         };
       },
-      rpc: (name: string, args: Record<string, unknown>) => {
-        if (name !== "take_over_stale_analysis_lock") throw new Error(`unexpected rpc: ${name}`);
-        rpcCalls.push(args);
-        return Promise.resolve(opts.rpcResult);
-      },
-      rpcCalls,
       updateCalls,
     };
   }
 
-  it("returns 'already in progress' for a fresh lock, without calling invokeBrandIntelligence or attempting any brand UPDATE", async () => {
+  it("returns 'already in progress' for a brand already analysis_running, without calling invokeBrandIntelligence or attempting any brand UPDATE", async () => {
     mockGetUser.mockResolvedValue({ data: { user: { id: "user-1" } }, error: null });
-    const supabase = makeLockedSupabase({
-      lockedAt: new Date().toISOString(),
-      lockToken: "fresh-token",
-      rpcResult: { data: false, error: null }, // RPC's own now()-based check says still fresh
-    });
+    const supabase = makeLockedSupabase();
     mockSupabase = supabase as never;
 
     const { reanalyzeBrand } = await importActions();
@@ -758,32 +748,6 @@ describe("reanalyzeBrand — IPI-745 stale-lock recovery (wiring-level)", () => 
 
     expect(result).toEqual({ ok: false, error: "Analysis already in progress" });
     expect(mockInvokeBrandIntelligence).not.toHaveBeenCalled();
-    // Regression: a bug where the RPC is called but its false result is
-    // ignored (falling through to an UPDATE anyway) would still leave the
-    // brand's lock columns untouched here, since RPC already returned false.
     expect(supabase.updateCalls).toHaveLength(0);
-  });
-
-  it("takes over a stale lock and proceeds with analysis using a new runToken", async () => {
-    mockGetUser.mockResolvedValue({ data: { user: { id: "user-1" } }, error: null });
-    const supabase = makeLockedSupabase({
-      lockedAt: "2020-01-01T00:00:00.000Z",
-      lockToken: "stale-token",
-      rpcResult: { data: true, error: null },
-    });
-    mockSupabase = supabase as never;
-    mockInvokeStartBrandCrawl.mockResolvedValue({ crawlId: "crawl-1" });
-    mockWaitForCrawlCompletion.mockResolvedValue("complete");
-    mockInvokeBrandIntelligence.mockResolvedValue({ brandId: BRAND.id });
-
-    const { reanalyzeBrand } = await importActions();
-    const result = await reanalyzeBrand(BRAND.id);
-
-    expect(result).toEqual({ ok: true, hasDraft: true });
-    expect(supabase.rpcCalls).toEqual([
-      expect.objectContaining({ p_brand_id: BRAND.id, p_expected_token: "stale-token" }),
-    ]);
-    // The winning takeover's new token must not be the abandoned run's token.
-    expect(supabase.rpcCalls[0].p_new_token).not.toBe("stale-token");
   });
 });
