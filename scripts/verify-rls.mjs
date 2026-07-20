@@ -397,11 +397,14 @@ try {
   });
   if (profileBInsertErr && profileBInsertErr.code !== "23505") {
     fail(`user B can insert own profile: ${profileBInsertErr.message}`);
-    throw new Error(
+    // alreadyCounted: outer catch must not fail() again for the same seed error.
+    const abort = new Error(
       `IPI-729: user B profile seed failed (${profileBInsertErr.code}): ${profileBInsertErr.message}`,
     );
+    abort.alreadyCounted = true;
+    throw abort;
   }
-  assert(!profileBInsertErr || profileBInsertErr.code === "23505", "user B can insert own profile");
+  pass("user B can insert own profile");
 
   const { data: ownProfile, error: ownProfileErr } = await userA.client
     .from("profiles")
@@ -3881,7 +3884,9 @@ try {
   }
 
 } catch (err) {
-  fail(err instanceof Error ? err.message : String(err));
+  if (!(err && typeof err === "object" && err.alreadyCounted)) {
+    fail(err instanceof Error ? err.message : String(err));
+  }
 } finally {
   await cleanupRlsTestData({
     orgId: orgAId,
