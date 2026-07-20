@@ -210,6 +210,15 @@ function migrationNameStatusDiff() {
   });
 }
 
+/**
+ * IPI-728 · SB-MIG-002 — one-time portability exception only.
+ * Allow Modify of this single historical file (existence-guarded REVOKE).
+ * Do not grow this set into a general rewrite bypass.
+ */
+const IPI728_PORTABILITY_AMEND_FILES = new Set([
+  "supabase/migrations/20260719010000_ipi680_revoke_anon_graphql_execute.sql",
+]);
+
 /** Fail closed if an already-tracked migration file is edited, deleted, or renamed. */
 function assertNoMutationOfExistingMigrations() {
   const violations = [];
@@ -222,6 +231,14 @@ function assertNoMutationOfExistingMigrations() {
     // Only newly Added files are allowed. M/D/R/C/T rewrite history.
     if (code === "A") continue;
     if (code === "M" || code === "D" || code === "R" || code === "C" || code === "T") {
+      const path = parts[parts.length - 1] ?? "";
+      // IPI-728: allow Modify of the single named revoke migration only.
+      if (code === "M" && IPI728_PORTABILITY_AMEND_FILES.has(path)) {
+        console.log(
+          `IPI-728: allowing documented portability amend of ${path}`,
+        );
+        continue;
+      }
       violations.push(trimmed);
     }
   }

@@ -33,7 +33,9 @@ begin
     v_reg := to_regprocedure(v_sig);
 
     if v_reg is null then
-      if v_has_pg_graphql and v_sig like 'graphql.%' then
+      -- When the extension is present, every listed signature must resolve.
+      -- (Includes graphql_public.* — do not narrow to graphql.% only.)
+      if v_has_pg_graphql then
         raise exception
           'IPI-728: pg_graphql is installed but % did not resolve — check signature',
           v_sig;
