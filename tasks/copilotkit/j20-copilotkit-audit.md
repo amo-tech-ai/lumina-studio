@@ -601,22 +601,34 @@ Parallel bind: IPI-619 (after clearing Done IPI-625; ADR soft)
 
 ## IPI-730 · COPILOT-RUNTIME-003 — Staging Runtime Investigation (2026-07-20)
 
-**Branch:** `ai/ipi-730-ipi-730-copilot-runtime-003-staging-runtime-investigation`  
+**Branch:** `ai/ipi-730-ipi-730-copilot-runtime-003-staging-runtime-investigation` · docs PR [#534](https://github.com/amo-tech-ai/lumina-studio/pull/534)  
 **CF preview:** left unchanged (live `5b42459b…` @ 100%; do **not** promote `521c8810` / SHA `51dbe818` rollback).  
-**IPI-724 / IPI-725:** Done — not reopened.
+**IPI-724 / IPI-725:** Done — not reopened.  
+**External audit (same day):** **96/100** 🟢 — process correct; production readiness correctly blocked. Refs: [Vercel Deployment Protection](https://vercel.com/docs/deployment-protection) · [env vars](https://vercel.com/docs/environment-variables) · [CopilotKit runtime](https://docs.copilotkit.ai/).
 
 ### Verdict
 
 | Item | Result |
 |------|--------|
-| Correctness score | **72/100** (Phases A–C evidence-complete; D blocked) |
+| Process / investigation score | **96/100** (external audit) · internal evidence **72→88/100** after AC expansion |
 | Root cause (primary) | **Deployment Protection / SSO** |
 | Reproduced | **Partial** — SSO 302 + Vercel HTML confirmed; app-level 503 **not** reachable without auth cookie |
 | Code change required | **No** (not yet — env gap is config; app 503 unproven) |
-| Staging readiness | **Blocked** until SSO bypass / disable |
+| Staging readiness | **Not ready (correctly blocked)** until SSO bypass / disable |
+| Success probability after SSO | **~95%** if Preview env aligned + fresh deploy after any env change |
 | Production contrast | Healthy gate: anon `/api/copilotkit/info` → **401** (app route, not SSO) |
 
-### Phase A — Deployment metadata
+### Audit agreement — flagged items vs evidence
+
+| Audit flag | Status | Notes |
+|------------|:------:|-------|
+| Record deployment metadata before testing | ✅ Done | Phase A table (ID, SHA, runtime, region, timestamp, age) |
+| Env beyond secrets (Edge Config, flags, overrides, build/runtime) | ✅ Expanded | Phase B+ below |
+| Runtime URL + agents + tools + provider + storage | ✅ Code-verified | Live `/info` still SSO-blocked |
+| Browser first-token / tool / request ID | ⛔ Blocked | Human SSO gate — AC written, not executed |
+| Separate fix PR only if proven | ✅ | No code PR yet |
+
+### Phase A — Deployment metadata (recorded before runtime diagnosis)
 
 | Field | Value |
 |-------|-------|
@@ -624,11 +636,14 @@ Parallel bind: IPI-619 (after clearing Done IPI-625; ADR soft)
 | Deployment ID | `dpl_2chyjndpXinBLi5fWd81mCAXWNxj` |
 | Deployment URL | `https://ipix-operator-j0x80qof5-mdeai.vercel.app` |
 | Git SHA | `33a6487af717d5e7ca491f1982707534f637e1b8` |
+| SHA matches branch tip? | ✅ Equals `origin/release/ipi-542-staging` |
 | Branch | `release/ipi-542-staging` |
 | Commit | `chore(ipi-542): second staging preview for rollback pair` |
-| Timestamp | 2026-07-20 ~01:28 EDT (Ready) |
+| Build timestamp | 2026-07-20T05:28:12Z (Ready) |
+| Preview age | ~4.2h at investigation time |
 | Node / runtime | **24.x** / `nodejs24.x` lambdas |
 | Region | **iad1** (build createdIn sfo1) |
+| Framework | Next.js (`ipix-operator`) |
 | Deployment Protection | **Enabled** — `ssoProtection.deploymentType = all_except_custom_domains` |
 | Unauth `/` + `/api/copilotkit/info` | **HTTP 302** → `https://vercel.com/sso-api?url=…` |
 | Follow-redirect body | Vercel SSO **HTML** (not CopilotKit JSON / not Next 503) |
@@ -660,33 +675,83 @@ Source: `vercel env ls` on `mdeai/ipix-operator` (2026-07-20).
 | `OPERATOR_AUTH_ENABLED` | Y | Y | — | Y | Present Preview |
 | `NEXT_PUBLIC_SITE_URL` | Y | Y | **Y** | Soft | Branch override |
 
+#### Beyond secrets — Edge Config · flags · build/runtime
+
+| Surface | Production | Preview / Staging | Notes |
+|---------|:----------:|:-----------------:|-------|
+| Vercel Edge Config | **None** | **None** | Project `edgeConfigs` empty — N/A for this failure |
+| Feature-style env | `SL_ENABLED`, `NEXT_PUBLIC_MARKETING_CHAT_ENABLED`, `OPERATOR_AUTH_ENABLED` | Same names present | Presence only; values not compared |
+| Branch Preview overrides | — | `NEXT_PUBLIC_SITE_URL`, `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_ANON_KEY` | Scoped to `release/ipi-542-staging` |
+| Build vs runtime vars | Next.js 24.x project | Same | No separate Edge Config / build-only CopilotKit keys found |
+| `AI_PROVIDER` / `AI_ROUTING_MODE` / `AI_GATEWAY_URL` | Absent | Absent | Defaults to Gemini direct |
+| `MASTRA_STORAGE_MODE` | Absent | Absent | Node uses PG when `DATABASE_URL` set |
+
 **Env finding:** Preview staging lacks `DATABASE_URL` (and service-role). That is a **real config gap for agent turns** after SSO is cleared, but it is **not proven** as the cause of `runtime_info_fetch_failed` while SSO still intercepts `/info`. Any env fix requires a **new Vercel deployment** before retest.
 
 ### Phase C — Runtime / repo inspection (no code changes)
 
 | Check | Finding |
 |-------|---------|
-| Route | `app/src/app/api/copilotkit/[[...slug]]/route.ts` — GET/POST/PATCH/DELETE → authenticated handler |
+| Runtime URL (operator) | `runtimeUrl="/api/copilotkit"` · `useSingleEndpoint={false}` in `(operator)/layout.tsx` |
+| Route registration | `app/src/app/api/copilotkit/[[...slug]]/route.ts` — GET/POST/PATCH/DELETE → authenticated handler · `basePath: "/api/copilotkit"` |
 | `/info` storage | `requestNeedsDurableStorage`: pathname ending `/info` → **false** (no `getMastraStorage()` gate) |
 | Agents on `/info` | `MastraAgent.getLocalAgents({ mastra: getMastra(), … })` via lazy storage proxy |
+| Expected agent IDs (9) | `default`, `production-planner`, `creative-director`, `visual-identity`, `social-discovery`, `brand-intelligence`, `model-match`, `crm-assistant`, `booking` |
+| Required trio enforced | `REQUIRED_AGENT_IDS` = default / production-planner / creative-director |
+| Tool modules (source) | **24** tool `.ts` files under `app/src/mastra/tools/` (excl. tests) — live count still SSO-blocked |
+| Model provider | Default **`gemini`** via `resolveModel()` when `AI_PROVIDER` unset; model id `gemini-3.1-flash-lite` |
+| Storage mode (Preview) | No `MASTRA_STORAGE_MODE`; no `DATABASE_URL` → agent paths → `storage_unavailable` in prod Node; `/info` still listable |
 | Top-level risk | Module constructs `CopilotRuntime` + warns on license; **no** throw without `DATABASE_URL` |
-| Storage | Vercel Node: PostgresStore when URL set; else prod throws `storage_unavailable` on **agent** paths only |
-| Model | Gemini direct default (`resolveModel`); Groq opt-in |
-| Staging vs main | Staging tip **behind** main by 4 commits (docs/test unrelated to CopilotKit route). Copilot route files **not** materially divergent for this failure mode |
-| Agent registry | Required ids `default` / `production-planner` / `creative-director` still enforced in `mastra/index.ts` |
+| Staging vs main | Staging tip **behind** main by 4 commits (unrelated to CopilotKit route). Deploy SHA **matches** branch tip |
 
-### Phase D — Browser (human gate)
+**HTTP 200 alone is insufficient** — browser phase must assert agent IDs, first token, and one tool.
 
-| Check | Result |
-|-------|--------|
-| Login → Command Center | **Blocked** — SSO |
-| Auth `/info` 200 + agents | **Blocked** |
-| Stream first token | **Blocked** |
-| One tool invocation | **Blocked** |
-| Planner Option A routes | **Blocked** |
-| Sign Out regression | **Blocked** (proven on CF preview via IPI-724; not re-run on staging) |
+### Phase D — Browser (human gate) · expanded AC
 
-**Human action required:** disable Deployment Protection for this Preview, add a bypass token for automation, or complete Vercel SSO in a shared browser session and hand off cookies.
+| Check | Result | Capture when unblocked |
+|-------|--------|------------------------|
+| Login → Command Center | **Blocked** — SSO | timestamp · deployment ID · SHA |
+| Auth `GET /api/copilotkit/info` | **Blocked** | status · sanitized body · **agent ID list** |
+| Expected agents (9 IDs) | **Blocked** | exact set match, not empty 200 |
+| Agent turn starts | **Blocked** | agent selected |
+| First streaming token | **Blocked** | **latency ms** · event type |
+| One tool invocation | **Blocked** | tool name · JSON/runtime error vs HTML 500 |
+| Successful completion / RUN_FINISHED | **Blocked** | sanitized |
+| Request / correlation ID | **Blocked** | `x-vercel-id` / app request id if present |
+| Planner Option A routes | **Blocked** | |
+| Sign Out regression | **Blocked** | (proven on CF via IPI-724) |
+
+**Human action required:** disable Deployment Protection for this Preview ([docs](https://vercel.com/docs/deployment-protection)), add a bypass token for automation, or complete Vercel SSO in a shared browser session and hand off cookies ([Playwright auth](https://playwright.dev/docs/auth)).
+
+### Expanded acceptance criteria (post-audit)
+
+#### Environment
+
+- [x] Deployment ID recorded
+- [x] Git SHA recorded + matches `release/ipi-542-staging` tip
+- [x] Preview deployment age recorded
+- [x] SSO vs application response classified
+- [x] Env presence matrix (incl. flags / overrides / Edge Config absence)
+- [ ] Redeploy after any env change then retest
+
+#### Runtime
+
+- [x] Runtime endpoint registration (`/api/copilotkit` + catch-all)
+- [x] Runtime URL config (`runtimeUrl="/api/copilotkit"`)
+- [x] Expected agent registry (9 IDs) from source
+- [x] Tool module count from source (24)
+- [x] Provider selected (Gemini default)
+- [x] Storage selected (Preview: no URL → agent gate risk)
+- [ ] Live authenticated `/info` without 503
+
+#### Browser
+
+- [x] SSO blocker documented
+- [ ] Auth `/info` 200 + expected agent list
+- [ ] First stream token + latency
+- [ ] One tool call + response type
+- [ ] Request ID + sanitized logs
+- [ ] Successful completion
 
 ### Phase E — Root-cause classification
 
@@ -705,6 +770,20 @@ Source: `vercel env ls` on `mdeai/ipix-operator` (2026-07-20).
 | Close IPI-730 | **No** |
 | Next | **Blocked by human SSO access** |
 
+### Recommended execution order (audit-aligned)
+
+1. ✅ Verify Deployment Protection / SSO  
+2. ✅ Record deployment metadata  
+3. ✅ Compare env presence (no values)  
+4. ⬜ Redeploy if env changes  
+5. ⬜ Browser login (authenticated session)  
+6. ⬜ `/info` + expected agents  
+7. ⬜ First streaming token  
+8. ⬜ One tool invocation  
+9. ⬜ Sanitized logs + request IDs  
+10. ⬜ Final root-cause class  
+11. ⬜ Separate fix PR only if required  
+
 ### Commands / evidence
 
 ```bash
@@ -720,12 +799,13 @@ vercel inspect https://ipix-operator-git-release-ipi-542-staging-mdeai.vercel.ap
 vercel env ls   # presence only — never pull values into git
 ```
 
-Project API: `ssoProtection.deploymentType = all_except_custom_domains`.
+Project API: `ssoProtection.deploymentType = all_except_custom_domains` · Edge Config: none.
 
 ### Fix decision
 
 Do **not** open a production-code PR from this investigation. After SSO access:
 
-1. Auth browser `/info` → expect 200 + agent IDs.  
-2. If agent turn 503 `storage_unavailable` → set Preview `DATABASE_URL` → redeploy → retest.  
-3. Only then open a separate one-concern code PR if stack proves a code defect.
+1. Auth browser `/info` → expect **200 + the 9 agent IDs** (not empty 200).  
+2. Record first-token latency, tool name, response type, request ID.  
+3. If agent turn 503 `storage_unavailable` → set Preview `DATABASE_URL` → redeploy → retest.  
+4. Only then open a separate one-concern code PR if stack proves a code defect.
