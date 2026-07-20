@@ -1,4 +1,5 @@
 -- IPI-347 · MG-9 — EXCLUDE constraint blocks overlapping confirmed bookings.
+-- IPI-733 · MODEL-TEST-001 — UUID fixture stamp (parallel-CI email uniqueness).
 -- Run: psql -v ON_ERROR_STOP=1 "$DATABASE_URL" -f scripts/test-booking-exclude-constraint.sql
 --
 -- Proves bookings_no_overlap_when_confirmed rejects a second confirm for the same
@@ -16,7 +17,7 @@ create temp table ipi347_ctx (
 
 do $seed$
 declare
-  v_stamp bigint := extract(epoch from clock_timestamp())::bigint;
+  v_stamp text := replace(gen_random_uuid()::text, '-', '');
   v_brand_user uuid := gen_random_uuid();
   v_talent_user uuid := gen_random_uuid();
   v_org_id uuid;

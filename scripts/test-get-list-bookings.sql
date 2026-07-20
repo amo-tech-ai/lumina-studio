@@ -1,4 +1,5 @@
 -- IPI-342 · MG-5 — get_booking + list_bookings integration tests.
+-- IPI-733 · MODEL-TEST-001 — UUID fixture stamp (parallel-CI email uniqueness).
 -- Run: psql -v ON_ERROR_STOP=1 "$DATABASE_URL" -f scripts/test-get-list-bookings.sql
 
 drop table if exists ipi342_ctx;
@@ -12,7 +13,7 @@ create temp table ipi342_ctx (
 
 do $seed$
 declare
-  v_stamp bigint := extract(epoch from clock_timestamp())::bigint;
+  v_stamp text := replace(gen_random_uuid()::text, '-', '');
   v_brand_user uuid := gen_random_uuid();
   v_talent_user uuid := gen_random_uuid();
   v_outsider uuid := gen_random_uuid();

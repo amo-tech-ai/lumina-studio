@@ -1,4 +1,5 @@
 -- IPI-348 · MG-10 — check_talent_availability RPC smoke test.
+-- IPI-733 · MODEL-TEST-001 — UUID fixture stamp (parallel-CI email uniqueness).
 -- Run: psql -v ON_ERROR_STOP=1 "$DATABASE_URL" -f scripts/test-check-talent-availability.sql
 
 select pg_catalog.pg_get_function_identity_arguments(p.oid) as args
@@ -15,7 +16,7 @@ create temp table ipi348_ctx (
 
 do $seed$
 declare
-  v_stamp bigint := extract(epoch from clock_timestamp())::bigint;
+  v_stamp text := replace(gen_random_uuid()::text, '-', '');
   v_brand_user uuid := gen_random_uuid();
   v_org_id uuid;
   v_talent_id uuid;
