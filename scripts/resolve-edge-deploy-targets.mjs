@@ -279,11 +279,23 @@ export function resolveFromExplicit(csv) {
  * @param {string} head
  */
 export function resolveFromDiff(base, head) {
-  const out = execFileSync(
-    "git",
-    ["diff", "--name-only", `${base}...${head}`],
-    { cwd: ROOT, encoding: "utf8" },
-  );
+  // Three-dot (`A...B`) needs commit-ish on both sides (uses merge-base).
+  // Empty-tree / bare tree SHAs (root-commit fallback) must use two-dot.
+  let baseType = "";
+  try {
+    baseType = execFileSync("git", ["cat-file", "-t", base], {
+      cwd: ROOT,
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "pipe"],
+    }).trim();
+  } catch {
+    baseType = "";
+  }
+  const diffArgs =
+    baseType === "tree"
+      ? ["diff", "--name-only", base, head]
+      : ["diff", "--name-only", `${base}...${head}`];
+  const out = execFileSync("git", diffArgs, { cwd: ROOT, encoding: "utf8" });
   const paths = out
     .split("\n")
     .map((l) => l.trim())
@@ -512,6 +524,23 @@ function selfCheck() {
     "delta fails when status missing (fail-closed)",
     !d.ok && d.errors.some((e) => e.includes("UNKNOWN")),
     JSON.stringify(d),
+  );
+
+  // Empty-tree base (root-commit / zero-SHA fallback) must not use three-dot
+  const emptyTree = execFileSync("git", ["hash-object", "-t", "tree", "/dev/null"], {
+    cwd: ROOT,
+    encoding: "utf8",
+  }).trim();
+  let fromEmpty;
+  try {
+    fromEmpty = resolveFromDiff(emptyTree, "HEAD");
+  } catch (err) {
+    fromEmpty = { ok: false, error: String(err) };
+  }
+  check(
+    "from-diff empty-tree base does not throw",
+    fromEmpty.ok !== undefined && !String(fromEmpty.error ?? "").includes("not a commit"),
+    JSON.stringify(fromEmpty),
   );
 
   if (failed) {
