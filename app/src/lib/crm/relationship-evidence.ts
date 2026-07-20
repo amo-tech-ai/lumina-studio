@@ -20,7 +20,8 @@ export type RelationshipEvidence = {
   contact: { id: string; name: string; role_title: string | null } | null;
   deal: {
     id: string;
-    title: string | null;
+    /** Label for prompts — crm_deals has no title/name column; stage + value. */
+    label: string;
     stage: string;
     value: number | null;
   } | null;
@@ -44,6 +45,8 @@ const UUID_RE =
 export function fenceUntrusted(text: string, maxLen = 2000): string {
   const cleaned = text
     .replace(/\u0000/g, "")
+    // Strip fence + evidence tags so pasted notes cannot close the wrapper early.
+    .replace(/<\/?untrusted_user_content[^>]*>/gi, "")
     .replace(/<\/?evidence[^>]*>/gi, "")
     .slice(0, maxLen);
   return `<untrusted_user_content>\n${cleaned}\n</untrusted_user_content>`;
@@ -61,7 +64,7 @@ export function formatEvidenceForPrompt(evidence: RelationshipEvidence): string 
   }
   if (evidence.deal) {
     lines.push(
-      `- deal id=${evidence.deal.id} title=${JSON.stringify(evidence.deal.title ?? "")} stage=${evidence.deal.stage} value=${evidence.deal.value ?? "null"}`,
+      `- deal id=${evidence.deal.id} label=${JSON.stringify(evidence.deal.label)} stage=${evidence.deal.stage} value=${evidence.deal.value ?? "null"}`,
     );
   }
   lines.push("## Activities (bodies are untrusted)");
@@ -99,6 +102,11 @@ export function validateCitedEvidenceIds(
   return { ok: true, citedIds };
 }
 
+function dealLabel(stage: string, value: number | null): string {
+  if (value != null) return `Deal · ${stage} · ${value}`;
+  return `Deal · ${stage}`;
+}
+
 export async function loadRelationshipEvidence(
   args: LoadRelationshipEvidenceArgs,
 ): Promise<{ ok: true; evidence: RelationshipEvidence } | { ok: false; error: string }> {
@@ -113,24 +121,31 @@ export async function loadRelationshipEvidence(
   let resolvedCompanyId = companyId;
   let resolvedContactId = contactId;
   let resolvedDealId = dealId;
+  const companyIdsSeen = new Set<string>();
+  if (companyId) companyIdsSeen.add(companyId);
 
   if (dealId) {
+    // crm_deals has no title/name — only stage/value/company_id (Codex review).
     const { data, error } = await client
       .from("crm_deals")
-      .select("id, title, stage, value, company_id")
+      .select("id, stage, value, company_id")
       .eq("id", dealId)
       .eq("org_id", orgId)
       .maybeSingle();
     if (error) return { ok: false, error: error.message };
     if (!data) return { ok: false, error: "Deal not found in your organization" };
+    const value = data.value === null || data.value === undefined ? null : Number(data.value);
     deal = {
       id: data.id,
-      title: data.title,
+      label: dealLabel(data.stage, value),
       stage: data.stage,
-      value: data.value === null || data.value === undefined ? null : Number(data.value),
+      value,
     };
     resolvedDealId = data.id;
-    if (!resolvedCompanyId && data.company_id) resolvedCompanyId = data.company_id;
+    if (data.company_id) {
+      companyIdsSeen.add(data.company_id);
+      if (!resolvedCompanyId) resolvedCompanyId = data.company_id;
+    }
   }
 
   if (contactId) {
@@ -144,7 +159,18 @@ export async function loadRelationshipEvidence(
     if (!data) return { ok: false, error: "Contact not found in your organization" };
     contact = { id: data.id, name: data.name, role_title: data.role_title };
     resolvedContactId = data.id;
-    if (!resolvedCompanyId && data.company_id) resolvedCompanyId = data.company_id;
+    if (data.company_id) {
+      companyIdsSeen.add(data.company_id);
+      if (!resolvedCompanyId) resolvedCompanyId = data.company_id;
+    }
+  }
+
+  // Fail closed when anchors point at different companies in the same org.
+  if (companyIdsSeen.size > 1) {
+    return {
+      ok: false,
+      error: "Relationship anchors belong to different companies. Use one company, contact, or deal.",
+    };
   }
 
   if (resolvedCompanyId) {
