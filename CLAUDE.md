@@ -162,11 +162,15 @@ cd ../wt-ipi-NNN-short-name
 git add <files> && git commit -m "feat(ipi-NNN): ..."
 git push -u origin ipi/NNN-short-name
 
-# 3. Open PR — include "Fixes IPI-NNN" (or Closes/Resolves) in the body so Linear's
-#    GitHub integration auto-links the PR and auto-closes the issue on merge —
-#    no separate Linear MCP call needed (confirm the GitHub app is installed on
-#    amo-tech-ai/lumina-studio first if relying on this).
+# 3. Open PR — include "Fixes IPI-NNN" in the body so Linear's GitHub integration
+#    auto-links the PR (confirm the GitHub app is installed on amo-tech-ai/lumina-studio
+#    first if relying on this). Whether merge also auto-closes the issue depends on
+#    the team's configured GitHub automation in Linear settings — don't assume it
+#    always does. If this PR has a separate follow-up ticket, reference it as
+#    "Related to IPI-MMM" (non-closing magic word) on its own line — never "Fixes" —
+#    so merging this PR can't accidentally close the follow-up.
 gh pr create --title "..." --body "Fixes IPI-NNN
+Related to IPI-MMM
 
 ..."
 
@@ -215,6 +219,7 @@ Full gate adds `npm run build` (~5min). Use before opening a PR.
 **Before pushing — don't duplicate the hook.** Run focused checks, then let the hook run the full suite once:
 
 ```bash
+git fetch origin main
 npm test -- --changed origin/main   # runs only tests touching files that differ from origin/main
 npm run typecheck
 npm run lint
@@ -232,16 +237,18 @@ Don't also run the full `npm test` manually right before pushing — the hook ru
 ## Key scripts (app/)
 
 ```bash
-npm run typecheck              # tsc --noEmit (~15s) — already incremental (tsconfig.json)
-npm test                       # vitest run (~30s)
-npm test -- --changed origin/main  # only tests touching files that differ from origin/main
-npm run build                  # next build (~2-3min)
-npm run lint                   # eslint
-npm run lint -- --cache        # skips files unchanged since the last cached run
-npm run dev                    # next dev --turbopack + mastra dev
+npm run typecheck                                   # tsc --noEmit (~15s) — already incremental (tsconfig.json)
+npm test                                            # vitest run (~30s)
+git fetch origin main && npm test -- --changed origin/main  # only tests touching files that differ from origin/main
+npm run build                                       # next build (~2-3min)
+npm run lint                                        # eslint
+npm run lint -- --cache --cache-location .cache/eslint  # skips files unchanged since the last cached run
+npm run dev                                         # next dev --turbopack + mastra dev
 ```
 
-`--changed` walks the static import graph, so a dynamically-loaded module (path built from a variable, not a literal import) can be missed — fall back to the full `npm test` for that case.
+`--changed` walks the static import graph via `vitest run` (the `test` script already runs in `run` mode, not watch) — a dynamically-loaded module (path built from a variable, not a literal import) can be missed, so fall back to the full `npm test` for config/plugin-registry/runtime-loaded changes. `git fetch origin main` first so the diff target is current. Calling Vitest directly instead of via `npm test`? Use `npx vitest run --changed origin/main` — `vitest --changed` alone (no `run`) enters watch mode.
+
+`--cache-location .cache/eslint` needs `.cache/` added to `.gitignore`. Local-dev speedup only — GitHub Actions runners are ephemeral, so this cache doesn't help CI unless the directory is deliberately persisted with an Actions cache step.
 
 ## Stack
 
