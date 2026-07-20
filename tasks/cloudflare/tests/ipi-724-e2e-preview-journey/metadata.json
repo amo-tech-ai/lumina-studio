@@ -1,0 +1,208 @@
+{
+  "task": "IPI-724 \u00b7 CF-UJ-018 \u2014 End-to-End Preview User Journey Validation",
+  "preview_url": "https://ipix-operator-preview.sk-498.workers.dev",
+  "worker": "ipix-operator-preview",
+  "worker_version_id": "591796f7-d070-44f2-ae7c-d9ae1a4a2bda",
+  "cf_ray_health": "a1df76eb1ffe0c83-MIA",
+  "region_guess": "MIA",
+  "browser": {
+    "name": "chromium",
+    "version": "149.0.7827.55"
+  },
+  "playwright_version": "1.61.1",
+  "started_at": "2026-07-20T05:11:10.277Z",
+  "finished_at": "2026-07-20T05:12:57.721Z",
+  "performance": {
+    "command_center_ms": 7711,
+    "command_center_budget_ms": 5000,
+    "copilot_init_ms": 12,
+    "copilot_init_budget_ms": 3000,
+    "first_stream_token_ms": 1338,
+    "first_stream_token_budget_ms": 5000
+  },
+  "ai_health": {
+    "status": "ok",
+    "gatewayUrl": "https://ai-gateway.sk-498.workers.dev",
+    "hasApiKey": true,
+    "adapterAvailable": true,
+    "probeVia": "service_binding",
+    "gateway": {
+      "status": "ok",
+      "service": "ai-gateway"
+    }
+  },
+  "adapterAvailable_note": "Preview returned adapterAvailable:true at evidence time (cosmetic; removed on main in #512). Redeploy HEAD before claiming current Worker code.",
+  "criteria": {
+    "01_login": {
+      "pass": true,
+      "note": "landed https://ipix-operator-preview.sk-498.workers.dev/app"
+    },
+    "02_app_loads": {
+      "pass": true,
+      "note": "url=https://ipix-operator-preview.sk-498.workers.dev/app"
+    },
+    "03_widgets": {
+      "pass": true,
+      "note": "navLinks=9 chatDock=true mainChars=681"
+    },
+    "perf_command_center": {
+      "pass": false,
+      "note": "7711ms (budget 5000ms soft)",
+      "ms": 7711,
+      "budgetMs": 5000,
+      "soft": true
+    },
+    "04_copilot_init": {
+      "pass": true,
+      "note": "dock=true composer=true 12ms"
+    },
+    "perf_copilot_init": {
+      "pass": true,
+      "note": "12ms (budget 3000ms soft)",
+      "ms": 12,
+      "budgetMs": 3000,
+      "soft": true
+    },
+    "05_copilotkit_info": {
+      "pass": true,
+      "note": "status=200 mode=sse agents=9",
+      "status": 200,
+      "body": {
+        "version": "1.61.0",
+        "agents": {
+          "default": {
+            "name": "default",
+            "description": "",
+            "className": "e3"
+          },
+          "production-planner": {
+            "name": "production-planner",
+            "description": "",
+            "className": "e3"
+          },
+          "creative-director": {
+            "name": "creative-director",
+            "description": "",
+            "className": "e3"
+          },
+          "visual-identity": {
+            "name": "visual-identity",
+            "description": "",
+            "className": "e3"
+          },
+          "social-discovery": {
+            "name": "social-discovery",
+            "description": "",
+            "className": "e3"
+          },
+          "brand-intelligence": {
+            "name": "brand-intelligence",
+            "description": "",
+            "className": "e3"
+          },
+          "model-match": {
+            "name": "model-match",
+            "description": "",
+            "className": "e3"
+          },
+          "crm-assistant": {
+            "name": "crm-assistant",
+            "description": "",
+            "className": "e3"
+          },
+          "booking": {
+            "name": "booking",
+            "description": "",
+            "className": "e3"
+          }
+        },
+        "audioFileTranscriptionEnabled": false,
+        "mode": "sse",
+        "a2uiEnabled": false,
+        "openGenerativeUIEnabled": false,
+        "telemetryDisabled": false
+      }
+    },
+    "06_ai_health": {
+      "pass": true,
+      "note": "status=200 probeVia=service_binding hasApiKey=true",
+      "status": 200,
+      "body": {
+        "status": "ok",
+        "gatewayUrl": "https://ai-gateway.sk-498.workers.dev",
+        "hasApiKey": true,
+        "adapterAvailable": true,
+        "probeVia": "service_binding",
+        "gateway": {
+          "status": "ok",
+          "service": "ai-gateway"
+        }
+      },
+      "cfRay": "a1df76eb1ffe0c83-MIA"
+    },
+    "07_chat_send": {
+      "pass": true,
+      "note": "POST status=200 ct=text/event-stream firstByte~1338ms"
+    },
+    "08_stream": {
+      "pass": true,
+      "note": "stream started and completed with new assistant content",
+      "streaming": true,
+      "streamComplete": true,
+      "streamInterrupted": false,
+      "sample": "Reply with exactly: preview journey ok\n\npreview journey ok\n\nPlan a shoot\nReview approvals\nImprove a brand\nAI can make mistakes. Please verify important information."
+    },
+    "perf_first_token": {
+      "pass": true,
+      "note": "1338ms (budget 5000ms soft)",
+      "ms": 1338,
+      "budgetMs": 5000,
+      "soft": true
+    },
+    "09_console_network": {
+      "pass": true,
+      "note": "blockingConsole=0 criticalFailedApis=0 warnings=16",
+      "blockingConsole": [],
+      "criticalFailed": []
+    },
+    "12_signout_ui": {
+      "pass": false,
+      "note": "NO Sign out / Log out control in operator UI \u2014 product gap; using cookie clear for anonymous check"
+    },
+    "13_anon_info_401": {
+      "pass": true,
+      "note": "status=401",
+      "status": 401
+    },
+    "13b_protected_redirect": {
+      "pass": true,
+      "note": "url=https://ipix-operator-preview.sk-498.workers.dev/login?redirect=%2Fapp status=200"
+    }
+  },
+  "overall_pass": false,
+  "soft_perf_pass": false,
+  "hard_ac_pass": false,
+  "recommendation": "Needs Fix \u2014 missing Sign out UI (hard AC; blocked on IPI-725 / PR #519)",
+  "evidence_policy": {
+    "har": "minimal + content omit + urlFilter **/api/**; deleted after run \u2014 never commit",
+    "preferred": "network-summary.json (host/path/method/status/latency/cf-ray only)",
+    "ignoreHTTPSErrors": false,
+    "secret_scan": "assertNoSecrets in run-e2e.mjs before write",
+    "qa_rotation_required": true
+  },
+  "security_note": "No session.har in this PR tip. If any prior full HAR was exposed outside this tip, rotate qa@ipix.test and revoke sessions before treating evidence as safe.",
+  "deployment_id": "9f5a35e4-4721-416a-9b8f-8fe6c9c37117",
+  "worker_version_created_on": "2026-07-20T03:19:43.225217Z",
+  "identity_source": "wrangler deployments list --env preview --json (latest by created_on) \u2014 patched post-audit",
+  "identity_error": null,
+  "evidence_runner_git_sha": "0f73c7d7c58fea1a1737f2cbf88b298cbfa8a1df",
+  "deployment_git_sha": null,
+  "deployment_git_sha_note": "Cloudflare Workers versions API does not expose git SHA; do not invent origin/main tip.",
+  "evidence_class": "historical_partial \u2014 hard AC failed (missing Sign out UI); regenerate after IPI-725/#519 merges + optional preview redeploy",
+  "runner_audit_fixes": {
+    "har": "minimal + omit + urlFilter **/api/**; always deleted; not in git",
+    "exit_semantics": "process.exit(hard_ac_pass ? 0 : 1) \u2014 no special-case for missing sign-out",
+    "deployment_identity": "resolved via wrangler at run time",
+    "network_summary": "host/path/method/status/latency/cf-ray only (no query, cookies, bodies)"
+  }
+}
