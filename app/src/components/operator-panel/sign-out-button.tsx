@@ -16,17 +16,46 @@ type Props = {
 /** Module lock — survives re-renders and multiple SignOutButton instances. */
 let signingOut = false;
 
+function unlockSignOut() {
+  signingOut = false;
+}
+
 export function SignOutButton({ showLabel = false }: Props) {
   const [busy, setBusy] = useState(false);
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    if (signingOut) {
-      event.preventDefault();
-      return;
-    }
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (signingOut) return;
+
     signingOut = true;
     setBusy(true);
-    // Native form POST navigates; server clears cookies and redirects.
+
+    try {
+      const res = await fetch("/auth/signout", {
+        method: "POST",
+        credentials: "same-origin",
+        redirect: "manual",
+      });
+
+      // 303 → login (or fail URL). Opaque/0 also means the browser got a redirect.
+      const redirected =
+        res.type === "opaqueredirect" ||
+        res.status === 0 ||
+        (res.status >= 300 && res.status < 400);
+
+      if (redirected || res.ok) {
+        const location = res.headers.get("Location");
+        window.location.assign(location || "/login");
+        return;
+      }
+
+      unlockSignOut();
+      setBusy(false);
+    } catch {
+      // Network failure — allow retry without a full page refresh.
+      unlockSignOut();
+      setBusy(false);
+    }
   }
 
   return (
@@ -57,5 +86,5 @@ export function SignOutButton({ showLabel = false }: Props) {
 
 /** Test-only — reset module lock between unit tests. */
 export function __resetSignOutLockForTests() {
-  signingOut = false;
+  unlockSignOut();
 }
