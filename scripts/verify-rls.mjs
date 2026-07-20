@@ -387,6 +387,22 @@ try {
   });
   assert(!profileInsertErr || profileInsertErr.code === "23505", "user A can insert own profile");
 
+  // IPI-729: crm_convert_deal inserts crm_activities.created_by → profiles(id).
+  // User B later converts as org editor; without a profiles row the RPC fails with FK
+  // 23503 on empty/fresh DBs (looks like authz, is actually a missing fixture).
+  // Soft assert alone is not enough — convert probes must not continue after a real seed failure.
+  const { error: profileBInsertErr } = await userB.client.from("profiles").insert({
+    id: userB.user.id,
+    email: emailB,
+  });
+  if (profileBInsertErr && profileBInsertErr.code !== "23505") {
+    fail(`user B can insert own profile: ${profileBInsertErr.message}`);
+    throw new Error(
+      `IPI-729: user B profile seed failed (${profileBInsertErr.code}): ${profileBInsertErr.message}`,
+    );
+  }
+  assert(!profileBInsertErr || profileBInsertErr.code === "23505", "user B can insert own profile");
+
   const { data: ownProfile, error: ownProfileErr } = await userA.client
     .from("profiles")
     .select("id, email")
@@ -573,6 +589,9 @@ try {
       !editorConvertErr && editorConvert?.brand_id,
       "org A editor converts a deal to won, creates a brand",
     );
+    if (editorConvertErr) {
+      console.error(`  detail: crm_convert_deal(won): ${editorConvertErr.message}`);
+    }
     if (editorConvert?.brand_id) crmConvertBrandIds.push(editorConvert.brand_id);
 
     const { data: convertedCompany, error: convertedCompanyErr } = await admin
@@ -3893,6 +3912,17 @@ if (cleanupFailures > 0) {
 }
 
 const ok = failures === 0;
+
+// IPI-729 · SB-TEST-003 — domain result banners (separate from overall exit).
+console.log("\nDomain summaries");
+console.log(
+  "  CRM: convert-deal + crm_* probes in this script (editor convert needs profiles row)",
+);
+console.log("  Planner: planner.* probes in this script (fail-closed, no soft skip)");
+console.log("  booking: notifications / talent booking probes in this script");
+console.log(
+  "  chatbot: grant asserts run in CI workflow (chatbot-grants.sql), not this Node process",
+);
 console.log(
   `\n${ok ? "RLS verification passed" : `RLS verification failed (${failures})`}` +
     (cleanupFailures ? ` · cleanupFailures=${cleanupFailures}` : ""),
