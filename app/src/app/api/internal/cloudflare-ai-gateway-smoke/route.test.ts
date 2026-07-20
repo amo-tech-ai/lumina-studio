@@ -117,10 +117,35 @@ describe("POST /api/internal/cloudflare-ai-gateway-smoke", () => {
     expect(body.logPoll).toEqual({ status: "ok", hasLog: true });
     expect(run).toHaveBeenCalledWith(
       "@cf/moonshotai/kimi-k2.6",
-      { prompt: "Fixed server smoke" },
+      { messages: [{ role: "user", content: "Fixed server smoke" }] },
       { gateway: { id: "ipix-prod", skipCache: true } },
     );
     expect(getLog).toHaveBeenCalledWith("gw-log-abc");
+  });
+
+  it("accepts OpenAI-shaped choices[].message.content (kimi-k2.6)", async () => {
+    const run = vi.fn().mockResolvedValue({
+      choices: [{ message: { content: "pong" } }],
+    });
+    const getLog = vi.fn().mockResolvedValue({ id: "log-1" });
+    getCloudflareContext.mockResolvedValue({
+      env: {
+        ENABLE_CF_AI_SMOKE: "true",
+        INTERNAL_WEBHOOK_SECRET: "expected",
+        AI: {
+          run,
+          aiGatewayLogId: "gw-log-choices",
+          gateway: () => ({ getLog }),
+        },
+      },
+    });
+
+    const res = await POST(req({ "X-Internal-Secret": "expected" }));
+    const body = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(body.ok).toBe(true);
+    expect(body.generatedTextLength).toBe(4);
   });
 
   it("fails when model output is empty", async () => {

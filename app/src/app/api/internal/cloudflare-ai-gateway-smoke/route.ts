@@ -20,7 +20,7 @@ const LOG_POLL_DELAY_MS = 400;
 type AiBinding = {
   run: (
     model: string,
-    input: { prompt: string },
+    input: { prompt?: string; messages?: { role: string; content: string }[] },
     options?: { gateway?: { id: string; skipCache?: boolean } },
   ) => Promise<unknown>;
   aiGatewayLogId?: string | null;
@@ -71,7 +71,7 @@ async function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
   }
 }
 
-/** Workers AI text models usually return `{ response }` or a bare string. */
+/** Workers AI: classic `{ response }` or OpenAI-shaped `{ choices[].message.content }` (kimi-k2.6). */
 function extractGeneratedText(result: unknown): string {
   if (typeof result === "string") return result.trim();
   if (!result || typeof result !== "object") return "";
@@ -79,6 +79,13 @@ function extractGeneratedText(result: unknown): string {
   if (typeof o.response === "string") return o.response.trim();
   if (typeof o.text === "string") return o.text.trim();
   if (typeof o.result === "string") return o.result.trim();
+  if (Array.isArray(o.choices) && o.choices[0] && typeof o.choices[0] === "object") {
+    const msg = (o.choices[0] as Record<string, unknown>).message;
+    if (msg && typeof msg === "object") {
+      const content = (msg as Record<string, unknown>).content;
+      if (typeof content === "string") return content.trim();
+    }
+  }
   return "";
 }
 
@@ -164,7 +171,8 @@ export async function POST(request: Request) {
     runResult = await withTimeout(
       ai.run(
         SMOKE_MODEL,
-        { prompt: SMOKE_PROMPT },
+        // kimi-k2.6 docs use messages; prompt alone can resolve with empty classic `response`.
+        { messages: [{ role: "user", content: SMOKE_PROMPT }] },
         { gateway: { id: GATEWAY_ID, skipCache: true } },
       ),
       RUN_TIMEOUT_MS,
