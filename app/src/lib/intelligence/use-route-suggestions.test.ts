@@ -92,6 +92,21 @@ describe("useRouteSuggestions", () => {
     });
   });
 
+  describe("Shoot Wizard (/app/shoots/new) — IPI-731", () => {
+    it("shows wizard-context suggestions, not generic fallback", () => {
+      const { result } = renderHook(() =>
+        useRouteSuggestions({ pathname: "/app/shoots/new" }),
+      );
+
+      expect(result.current.map((c) => c.title)).toEqual([
+        "Pick channels",
+        "Suggest shoot type",
+        "View shoots list",
+      ]);
+      expect(result.current.map((c) => c.title)).not.toContain("Brands");
+    });
+  });
+
   describe("Shoot Detail (/app/shoots/[id])", () => {
     const SHOOT_ID = "11111111-1111-1111-1111-111111111111";
 

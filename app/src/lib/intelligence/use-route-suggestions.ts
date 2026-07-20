@@ -109,6 +109,24 @@ function getSuggestionsForRoute(
     ];
   }
 
+  // Shoot Wizard (/app/shoots/new) — IPI-731; must not fall through to generic fallback
+  if (normalizedPath === "/app/shoots/new") {
+    return [
+      {
+        title: "Pick channels",
+        message: "Help me choose deliverable channels for this new shoot.",
+      },
+      {
+        title: "Suggest shoot type",
+        message: "Recommend a shoot type and brief for this brand.",
+      },
+      {
+        title: "View shoots list",
+        message: "Open the shoots list at /app/shoots (navigateTo shoots).",
+      },
+    ];
+  }
+
   // Shoot Detail (/app/shoots/[id])
   const shootId = routeShootId(pathname);
   if (shootId) {
