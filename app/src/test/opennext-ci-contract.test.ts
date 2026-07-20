@@ -29,6 +29,10 @@ describe("OpenNext CI contract (IPI-472)", () => {
     expect(wrangler).toMatch(/MASTRA_STORAGE_MODE.*noop/);
     expect(wrangler).toMatch(/OPERATOR_AUTH_ENABLED.*true/);
     expect(wrangler).toMatch(/"images"\s*:\s*\{\s*"binding"\s*:\s*"IMAGES"/);
+    // IPI-586 · CF-AI-003 — Workers AI binding (no remote:true on production config)
+    expect(wrangler).toMatch(/"ai"\s*:\s*\{\s*"binding"\s*:\s*"AI"/);
+    expect(wrangler).not.toMatch(/"ai"\s*:\s*\{[^}]*"remote"\s*:\s*true/);
+    expect(wrangler).toMatch(/ENABLE_CF_AI_SMOKE.*false/);
     expect(wrangler).not.toMatch(/"DATABASE_URL"/);
   });
 
