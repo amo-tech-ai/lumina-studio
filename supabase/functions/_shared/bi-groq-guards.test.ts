@@ -79,6 +79,21 @@ Deno.test("missingBiProviderConfigError returns 503 when Workers AI credentials 
     }),
     null,
   );
+
+  assertEquals(
+    missingBiProviderConfigError("workers-ai", {
+      cloudflareApiToken: "   ",
+      cloudflareAccountId: "acct-1",
+    })?.status,
+    503,
+  );
+  assertEquals(
+    missingBiProviderConfigError("workers-ai", {
+      cloudflareApiToken: "token-1",
+      cloudflareAccountId: "   ",
+    })?.status,
+    503,
+  );
 });
 
 Deno.test("biUsedCrawlInRequest treats workers-ai like groq — requires non-empty crawl text (IPI-741)", () => {

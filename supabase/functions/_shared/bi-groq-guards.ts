@@ -7,6 +7,11 @@ export type GuardedError = {
   status: number;
 };
 
+/** Truthy after trim — whitespace-only secrets count as missing. */
+function hasConfiguredSecret(value?: string | null): boolean {
+  return Boolean(value?.trim());
+}
+
 /** Returns 503 config_error when the active BI provider's credentials are missing. */
 export function missingBiProviderConfigError(
   provider: "gemini" | "groq" | "workers-ai",
@@ -17,14 +22,14 @@ export function missingBiProviderConfigError(
     cloudflareAccountId?: string | null;
   },
 ): GuardedError | null {
-  if (provider === "gemini" && !secrets.geminiApiKey) {
+  if (provider === "gemini" && !hasConfiguredSecret(secrets.geminiApiKey)) {
     return {
       code: "config_error",
       message: "Brand intelligence is not configured",
       status: 503,
     };
   }
-  if (provider === "groq" && !secrets.groqApiKey) {
+  if (provider === "groq" && !hasConfiguredSecret(secrets.groqApiKey)) {
     return {
       code: "config_error",
       message: "Brand intelligence Groq is not configured",
@@ -33,7 +38,8 @@ export function missingBiProviderConfigError(
   }
   if (
     provider === "workers-ai" &&
-    (!secrets.cloudflareApiToken || !secrets.cloudflareAccountId)
+    (!hasConfiguredSecret(secrets.cloudflareApiToken) ||
+      !hasConfiguredSecret(secrets.cloudflareAccountId))
   ) {
     return {
       code: "config_error",

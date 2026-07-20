@@ -276,10 +276,13 @@ export async function handleBrandIntelligenceRequest(req: Request): Promise<Resp
     if (isCallerFailure(caller)) return caller.response;
 
     const biProvider = resolveBiProvider();
+    // Same preference as resolveCloudflareCredentials; whitespace GATEWAY falls through to API.
     const configError = missingBiProviderConfigError(biProvider, {
       geminiApiKey: getOptionalSecret("GEMINI_API_KEY"),
       groqApiKey: getOptionalSecret("GROQ_API_KEY"),
-      cloudflareApiToken: getOptionalSecret("CLOUDFLARE_API_TOKEN"),
+      cloudflareApiToken:
+        getOptionalSecret("CLOUDFLARE_AI_GATEWAY_TOKEN")?.trim() ||
+        getOptionalSecret("CLOUDFLARE_API_TOKEN"),
       cloudflareAccountId: getOptionalSecret("CLOUDFLARE_ACCOUNT_ID"),
     });
     if (configError) {
