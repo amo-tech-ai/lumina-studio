@@ -225,7 +225,8 @@
   border-color: var(--color-border-strong);
 }
 
-.cardMove :global(p) {
+/* Hide only the Move stage hint — not Won/Lost approval copy in <p>s. */
+.cardMove :global([data-stage-hint]) {
   display: none;
 }
 

@@ -75,5 +75,8 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
     return apiErrorResponse(result.code, result.status, result.message);
   }
 
-  return NextResponse.json({ ok: true, dealId: result.dealId, stage: result.stage }, { status: 200 });
+  return NextResponse.json(
+    { ok: true, dealId: result.dealId, stage: result.stage, updatedAt: result.updatedAt },
+    { status: 200 },
+  );
 }

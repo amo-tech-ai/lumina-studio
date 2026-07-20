@@ -64,13 +64,23 @@ export function PipelineWorkspace({ deals: initialDeals, companyNames, ownerName
     });
   }, [deals, liveMessage]);
 
-  const ownerOptions = useMemo(
-    () =>
-      Object.entries(ownerNames)
-        .map(([id, name]) => ({ id, name }))
-        .sort((a, b) => a.name.localeCompare(b.name)),
-    [ownerNames],
-  );
+  const ownerOptions = useMemo(() => {
+    // Derive from deals so the filter stays usable even when profiles RLS
+    // only returns the caller's own row (getProfileNames self-row limit).
+    const byId = new Map<string, string>();
+    for (const d of deals) {
+      if (!d.owner) continue;
+      if (!byId.has(d.owner)) {
+        byId.set(d.owner, ownerNames[d.owner] ?? `Teammate · ${d.owner.slice(0, 8)}`);
+      }
+    }
+    for (const [id, name] of Object.entries(ownerNames)) {
+      byId.set(id, name);
+    }
+    return [...byId.entries()]
+      .map(([id, name]) => ({ id, name }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }, [deals, ownerNames]);
 
   const visibleDeals = useMemo(() => {
     let list = deals;
@@ -98,8 +108,14 @@ export function PipelineWorkspace({ deals: initialDeals, companyNames, ownerName
     return map;
   }, [visibleDeals]);
 
-  function handleStageChange(dealId: string, newStage: CrmDealStage) {
-    setDeals((prev) => prev.map((d) => (d.id === dealId ? { ...d, stage: newStage } : d)));
+  function handleStageChange(dealId: string, newStage: CrmDealStage, updatedAt?: string) {
+    setDeals((prev) =>
+      prev.map((d) =>
+        d.id === dealId
+          ? { ...d, stage: newStage, ...(updatedAt ? { updated_at: updatedAt } : {}) }
+          : d,
+      ),
+    );
     focusDealIdRef.current = dealId;
     setLiveMessage(`Moved to ${crmDealStageLabel(newStage)}`);
     router.refresh();
@@ -225,7 +241,9 @@ export function PipelineWorkspace({ deals: initialDeals, companyNames, ownerName
                               dealId={deal.id}
                               stage={knownStage}
                               updatedAt={deal.updated_at}
-                              onStageChange={(next) => handleStageChange(deal.id, next)}
+                              onStageChange={(next, _brandId, nextUpdatedAt) =>
+                                handleStageChange(deal.id, next, nextUpdatedAt)
+                              }
                             />
                           </div>
                         ) : null}

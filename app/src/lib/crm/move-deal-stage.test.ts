@@ -26,9 +26,9 @@ describe("NON_TERMINAL_DEAL_STAGES / isNonTerminalDealStage", () => {
 
 describe("moveDealStage", () => {
   it("scopes the update by id and org, returning the confirmed stage", async () => {
-    const sb = mockSingleTable({ id: "d1", stage: "negotiation" });
+    const sb = mockSingleTable({ id: "d1", stage: "negotiation", updated_at: "2026-07-20T12:00:00.000Z" });
     const result = await moveDealStage({ dealId: "d1", orgId: "org-1", stage: "negotiation" }, sb as never);
-    expect(result).toEqual({ ok: true, dealId: "d1", stage: "negotiation" });
+    expect(result).toEqual({ ok: true, dealId: "d1", stage: "negotiation", updatedAt: "2026-07-20T12:00:00.000Z" });
     expect((sb as unknown as { _builder: { update: ReturnType<typeof vi.fn> } })._builder.update).toHaveBeenCalledWith({
       stage: "negotiation",
     });

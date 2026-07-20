@@ -26,7 +26,7 @@ export type MoveDealStageFailure = {
   message: string;
 };
 export type MoveDealStageResult =
-  | { ok: true; dealId: string; stage: string }
+  | { ok: true; dealId: string; stage: string; updatedAt: string }
   | MoveDealStageFailure;
 
 /** Org-scoped, allow-list-guarded deal stage update. `stage` is typed to
@@ -58,7 +58,7 @@ export async function moveDealStage(
   let q = client.from("crm_deals").update({ stage }).eq("id", dealId).eq("org_id", orgId);
   if (expectedStage != null) q = q.eq("stage", expectedStage);
   if (expectedUpdatedAt != null) q = q.eq("updated_at", expectedUpdatedAt);
-  const { data, error } = await q.select("id, stage").single();
+  const { data, error } = await q.select("id, stage, updated_at").single();
   if (error) {
     // PGRST116 = no row matched — either missing deal (404) or CAS miss (409).
     if (error.code === "PGRST116") {
@@ -77,5 +77,7 @@ export async function moveDealStage(
     console.error("[crm/move-deal-stage] update failed:", error.message);
     return { ok: false, status: 500, code: "INTERNAL_ERROR", message: "Failed to update deal stage." };
   }
-  return { ok: true, dealId: data.id, stage: data.stage };
+  // Return the new updated_at so the next CAS PATCH can use a fresh token
+  // (IPI-563) — stage-only responses left parents stuck on a stale timestamp.
+  return { ok: true, dealId: data.id, stage: data.stage, updatedAt: data.updated_at };
 }

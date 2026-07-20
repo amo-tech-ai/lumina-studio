@@ -31,7 +31,12 @@ beforeEach(() => {
   });
   mockGetUser.mockResolvedValue({ data: { user: { id: "user-1" } } });
   mockGetCurrentOrgId.mockResolvedValue("org-1");
-  mockMoveDealStage.mockResolvedValue({ ok: true, dealId: DEAL_ID, stage: "negotiation" });
+  mockMoveDealStage.mockResolvedValue({
+    ok: true,
+    dealId: DEAL_ID,
+    stage: "negotiation",
+    updatedAt: "2026-07-20T12:00:00.000Z",
+  });
 });
 
 afterEach(() => {
@@ -108,7 +113,12 @@ describe("PATCH /api/crm/deals/[id]/stage", () => {
     const { PATCH } = await importRoute();
     const res = await PATCH(makePatch({ stage: "negotiation" }), routeContext);
     expect(res.status).toBe(200);
-    expect(await res.json()).toEqual({ ok: true, dealId: DEAL_ID, stage: "negotiation" });
+    expect(await res.json()).toEqual({
+      ok: true,
+      dealId: DEAL_ID,
+      stage: "negotiation",
+      updatedAt: "2026-07-20T12:00:00.000Z",
+    });
     expect(mockMoveDealStage).toHaveBeenCalledWith(
       {
         dealId: DEAL_ID,
