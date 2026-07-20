@@ -1,25 +1,27 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-/** IPI-745 — matches waitForCrawlCompletion's ~50s timeout plus headroom. */
-export const STALE_LOCK_THRESHOLD_SECONDS = 300;
-
 export type AcquireLockResult =
-  | { ok: true; runToken: string; priorStatus: string; tookOverStale: boolean }
+  | { ok: true; runToken: string; priorStatus: string }
   | { ok: false; error: string };
 
 type BrandLockRow = {
   id: string;
   intake_status: string | null;
-  analysis_lock_token: string | null;
-  analysis_locked_at: string | null;
 };
 
 /**
- * Acquire the analysis_running lock on a brand. Fresh (no existing lock, or
- * lock in a terminal/non-locking status) acquires directly. A lock already
- * held as analysis_running is only taken over if it is stale — via the
- * take_over_stale_analysis_lock RPC, which re-checks staleness against
- * Postgres now() atomically at write time (IPI-745).
+ * Acquire the analysis_running lock on a brand. Atomically rejects if the
+ * brand is already locked (crawl_running/analysis_running/draft_ready).
+ *
+ * A brand stuck in analysis_running forever (e.g. a crashed run) is not
+ * recovered here — IPI-745's pg_cron sweep (expire_stale_brand_analysis,
+ * 20260720163043) resets truly-abandoned analysis_running rows on a
+ * schedule instead, so this function sees intake_status move on within the
+ * sweep window and a fresh acquire succeeds normally. That replaced an
+ * earlier synchronous takeover RPC here (take_over_stale_analysis_lock,
+ * dropped): its null-tolerant predicate let any brand mid-analysis be taken
+ * over as if abandoned, because two live writers (brand-intelligence edge
+ * function, brand-intelligence-workflow) never set the lock columns at all.
  */
 export async function tryAcquireAnalysisLock(
   supabase: SupabaseClient,
@@ -27,7 +29,7 @@ export async function tryAcquireAnalysisLock(
 ): Promise<AcquireLockResult> {
   const { data: brand, error: fetchErr } = await supabase
     .from("brands")
-    .select("id, intake_status, analysis_lock_token, analysis_locked_at")
+    .select("id, intake_status")
     .eq("id", brandId)
     .maybeSingle<BrandLockRow>();
 
@@ -37,69 +39,37 @@ export async function tryAcquireAnalysisLock(
   }
   if (!brand) return { ok: false, error: "Brand not found" };
 
-  if (brand.intake_status === "crawl_running" || brand.intake_status === "draft_ready") {
+  if (
+    brand.intake_status === "crawl_running" ||
+    brand.intake_status === "analysis_running" ||
+    brand.intake_status === "draft_ready"
+  ) {
     return { ok: false, error: "Analysis already in progress" };
   }
 
+  const priorStatus = brand.intake_status ?? "ready";
   const runToken = crypto.randomUUID();
 
-  if (brand.intake_status !== "analysis_running") {
-    const priorStatus = brand.intake_status ?? "ready";
-    // analysis_locked_at is intentionally omitted — the brands_stamp_analysis_locked_at
-    // trigger stamps it from Postgres now() whenever analysis_lock_token is set,
-    // so this always uses the same DB clock as the stale-takeover RPC's own
-    // staleness check (no app-server/DB clock-skew risk).
-    const { data: locked, error: lockErr } = await supabase
-      .from("brands")
-      .update({
-        intake_status: "analysis_running",
-        analysis_lock_token: runToken,
-      })
-      .eq("id", brandId)
-      .not("intake_status", "in", "(crawl_running,analysis_running,draft_ready)")
-      .select("id")
-      .maybeSingle();
+  // analysis_locked_at is intentionally omitted — the brands_stamp_analysis_locked_at
+  // trigger stamps it from Postgres now() whenever analysis_lock_token is set,
+  // keeping it on the same DB clock the cron sweep compares against.
+  const { data: locked, error: lockErr } = await supabase
+    .from("brands")
+    .update({
+      intake_status: "analysis_running",
+      analysis_lock_token: runToken,
+    })
+    .eq("id", brandId)
+    .not("intake_status", "in", "(crawl_running,analysis_running,draft_ready)")
+    .select("id")
+    .maybeSingle();
 
-    if (lockErr) {
-      console.error("[analysis-lock] failed to acquire lock", { brandId, code: lockErr.code });
-      return { ok: false, error: "Could not start analysis" };
-    }
-    if (!locked) return { ok: false, error: "Analysis already in progress" };
-    return { ok: true, runToken, priorStatus, tookOverStale: false };
+  if (lockErr) {
+    console.error("[analysis-lock] failed to acquire lock", { brandId, code: lockErr.code });
+    return { ok: false, error: "Could not start analysis" };
   }
-
-  // Locked as analysis_running. A NULL analysis_lock_token/analysis_locked_at
-  // here means a pre-IPI-744 legacy row or a corrupted partial write — still
-  // attempt the RPC rather than fail closed forever: it matches a NULL token
-  // via IS NOT DISTINCT FROM and treats a NULL timestamp as maximally stale,
-  // so a permanently-stuck legacy brand can still recover (IPI-745's whole
-  // purpose). Passing a real token still lets the RPC prove ownership via CAS.
-  try {
-    const { data: tookOver, error: rpcErr } = await supabase.rpc("take_over_stale_analysis_lock", {
-      p_brand_id: brandId,
-      p_expected_token: brand.analysis_lock_token,
-      p_new_token: runToken,
-      p_stale_after_seconds: STALE_LOCK_THRESHOLD_SECONDS,
-    });
-
-    if (rpcErr) {
-      console.error("[analysis-lock] stale takeover rpc failed", { brandId, code: rpcErr.code });
-      return { ok: false, error: "Analysis already in progress" };
-    }
-    if (!tookOver) return { ok: false, error: "Analysis already in progress" };
-
-    // The abandoned run's true prior status is lost — it was overwritten by
-    // its own acquire. "failed" is a safe, visible restore target if this
-    // takeover run also fails, rather than guessing "ready" for a brand that
-    // may have been mid-onboarding.
-    return { ok: true, runToken, priorStatus: "failed", tookOverStale: true };
-  } catch (error) {
-    console.error("[analysis-lock] stale takeover threw", {
-      brandId,
-      error: error instanceof Error ? error.message : String(error),
-    });
-    return { ok: false, error: "Analysis already in progress" };
-  }
+  if (!locked) return { ok: false, error: "Analysis already in progress" };
+  return { ok: true, runToken, priorStatus };
 }
 
 // IPI-744 — never throw: a failed restore must not mask the caller's
