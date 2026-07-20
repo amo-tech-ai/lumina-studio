@@ -22,7 +22,7 @@ vi.mock("@/lib/brand/promote-draft", () => ({ promoteBrandDraft: vi.fn() }));
 
 type BrandRow = { id: string; name: string; brand_url: string | null; intake_status: string | null };
 
-type RestoreMode = "success" | "db-error" | "throw";
+type RestoreMode = "success" | "db-error" | "throw" | "no-match";
 
 function makeSupabase(brand: BrandRow, restoreMode: RestoreMode = "success") {
   const updates: Record<string, unknown>[] = [];
@@ -48,15 +48,20 @@ function makeSupabase(brand: BrandRow, restoreMode: RestoreMode = "success") {
           }),
         };
       }
-      // restoreBrandStatus update
+      // restoreBrandStatus's conditional update: .eq("id", ...).eq("intake_status", "analysis_running")
       return {
-        eq: () => {
-          if (restoreMode === "throw") throw new Error("network blip");
-          if (restoreMode === "db-error") {
-            return Promise.resolve({ data: null, error: { code: "23505", message: "db error" } });
-          }
-          return Promise.resolve({ data: null, error: null });
-        },
+        eq: () => ({
+          eq: () => ({
+            select: () => ({
+              maybeSingle: async () => {
+                if (restoreMode === "throw") throw new Error("network blip");
+                if (restoreMode === "db-error") return { data: null, error: { code: "23505", message: "db error" } };
+                if (restoreMode === "no-match") return { data: null, error: null };
+                return { data: { id: brand.id }, error: null };
+              },
+            }),
+          }),
+        }),
       };
     },
   };
@@ -232,5 +237,93 @@ describe("reanalyzeBrand — IPI-744 restoreBrandStatus never masks the original
 
     expect(result).toEqual({ ok: false, error: "brand-intelligence unavailable" });
     consoleErrorSpy.mockRestore();
+  });
+
+  it("treats zero affected rows as a non-error no-op, preserving the original error", async () => {
+    const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    mockGetUser.mockResolvedValue({ data: { user: { id: "user-1" } }, error: null });
+    mockSupabase = makeSupabase(BRAND, "no-match");
+    mockInvokeStartBrandCrawl.mockResolvedValue({ crawlId: "crawl-1" });
+    mockWaitForCrawlCompletion.mockResolvedValue("failed");
+
+    const { reanalyzeBrand } = await importActions();
+    const result = await reanalyzeBrand(BRAND.id);
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error).toMatch(/couldn't crawl/i);
+    // Zero matched rows is an expected outcome (status already moved on), not a
+    // failure — it must not be logged as one.
+    expect(consoleErrorSpy).not.toHaveBeenCalled();
+    consoleErrorSpy.mockRestore();
+  });
+
+  it("does not overwrite a late-arriving draft_ready state when invokeBrandIntelligence's response is lost", async () => {
+    // Simulates: brand-intelligence's edge function writes draft_ready
+    // server-side, but the client-visible call still throws (e.g. the
+    // response is lost) — landing in the outer catch, which must not clobber
+    // the real draft_ready result back to priorStatus.
+    mockGetUser.mockResolvedValue({ data: { user: { id: "user-1" } }, error: null });
+
+    let currentStatus = "analysis_running";
+    const brandsTable = {
+      select: () => ({
+        eq: () => ({ maybeSingle: async () => ({ data: BRAND, error: null }) }),
+      }),
+      update: (patch: Record<string, unknown>) => {
+        const isLockAcquire = patch.intake_status === "analysis_running";
+        if (isLockAcquire) {
+          return {
+            eq: () => ({
+              not: () => ({
+                select: () => ({
+                  maybeSingle: async () => {
+                    currentStatus = "analysis_running";
+                    return { data: { id: BRAND.id }, error: null };
+                  },
+                }),
+              }),
+            }),
+          };
+        }
+        // restoreBrandStatus's conditional update — only "wins" if the row is
+        // still analysis_running at the moment it runs.
+        return {
+          eq: () => ({
+            eq: () => ({
+              select: () => ({
+                maybeSingle: async () => {
+                  if (currentStatus !== "analysis_running") return { data: null, error: null };
+                  currentStatus = patch.intake_status as string;
+                  return { data: { id: BRAND.id }, error: null };
+                },
+              }),
+            }),
+          }),
+        };
+      },
+    };
+    mockSupabase = {
+      auth: { getUser: mockGetUser },
+      from: (table: string) => {
+        if (table !== "brands") throw new Error(`unexpected table: ${table}`);
+        return brandsTable;
+      },
+      updates: [],
+    };
+
+    mockInvokeStartBrandCrawl.mockResolvedValue({ crawlId: "crawl-1" });
+    mockWaitForCrawlCompletion.mockResolvedValue("complete");
+    mockInvokeBrandIntelligence.mockImplementation(async () => {
+      // The edge function's write already landed server-side...
+      currentStatus = "draft_ready";
+      // ...but the client-visible call still fails.
+      throw new Error("network error reading response");
+    });
+
+    const { reanalyzeBrand } = await importActions();
+    const result = await reanalyzeBrand(BRAND.id);
+
+    expect(result).toEqual({ ok: false, error: "network error reading response" });
+    expect(currentStatus).toBe("draft_ready"); // restore did NOT clobber it back to priorStatus
   });
 });

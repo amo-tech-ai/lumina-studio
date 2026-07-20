@@ -15,22 +15,42 @@ export type ReanalyzeResult =
 // original crawl/analysis error or reject the Server Action. Callers don't
 // need the boolean today; it's here so a future caller (e.g. stale-lock
 // recovery, IPI-745) can react to a failed restore without re-deriving this.
+//
+// The update is conditional on intake_status still being "analysis_running"
+// (checked via .select("id").maybeSingle() to prove whether a row actually
+// matched). Without that guard, a late-arriving brand-intelligence success
+// (edge function writes draft_ready server-side, but the client-visible
+// invokeBrandIntelligence call still errors — e.g. the response is lost)
+// would have this cleanup blindly clobber draft_ready back to priorStatus,
+// hiding a completed draft behind a stale error.
 async function restoreBrandStatus(
   supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
   brandId: string,
   status: string,
 ): Promise<boolean> {
   try {
-    const { error } = await supabase.from("brands").update({ intake_status: status }).eq("id", brandId);
+    const { data, error } = await supabase
+      .from("brands")
+      .update({ intake_status: status })
+      .eq("id", brandId)
+      .eq("intake_status", "analysis_running")
+      .select("id")
+      .maybeSingle();
+
     if (error) {
       console.error("[reanalyze] failed to restore brand status", { brandId, code: error.code });
+      return false;
+    }
+    if (!data) {
+      // No row matched — status already moved on (e.g. to draft_ready) before
+      // this ran. Nothing to restore; not a failure.
       return false;
     }
     return true;
   } catch (error) {
     console.error("[reanalyze] status restoration threw", {
       brandId,
-      error: error instanceof Error ? error.message : "Unknown error",
+      error: error instanceof Error ? error.message : String(error),
     });
     return false;
   }
