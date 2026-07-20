@@ -21,7 +21,7 @@
     "supabase:verify-edge-inventory": "node scripts/check-edge-inventory.mjs",
     "supabase:verify-edge-inventory:self-check": "node scripts/check-edge-inventory.mjs --self-check",
     "supabase:verify-brand-intelligence": "node scripts/verify-brand-intelligence.mjs",
-    "supabase:verify-edge-unit": "cd supabase/functions && deno test --frozen --allow-env _shared/bi-groq-guards.test.ts _shared/resolve-caller.test.ts _shared/llm/llm.test.ts _shared/llm/structured.test.ts brand-intelligence/handler.test.ts audit-asset-dna/handler.test.ts capture-lead/handler.test.ts firecrawl-webhook/handler.test.ts start-brand-crawl/handler.test.ts",
+    "supabase:verify-edge-unit": "cd supabase/functions && deno test --frozen --allow-env _shared/bi-groq-guards.test.ts _shared/resolve-caller.test.ts _shared/llm/llm.test.ts _shared/llm/structured.test.ts _shared/llm/cloudflare-client.test.ts brand-intelligence/handler.test.ts audit-asset-dna/handler.test.ts capture-lead/handler.test.ts firecrawl-webhook/handler.test.ts start-brand-crawl/handler.test.ts",
     "supabase:verify-edge-groq": "npm run supabase:verify-edge-unit",
     "seed:sample-brand": "node scripts/seed-sample-brand.mjs",
     "worktree:audit": "node scripts/worktree-audit.mjs",
