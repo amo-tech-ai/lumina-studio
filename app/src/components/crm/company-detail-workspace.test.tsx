@@ -5,11 +5,19 @@ import { render, screen, cleanup, fireEvent } from "@testing-library/react";
 vi.mock("./company-detail-workspace.module.css", () => ({ default: new Proxy({}, { get: (_, k) => String(k) }) }));
 vi.mock("./crm-detail-shell.module.css", () => ({ default: new Proxy({}, { get: (_, k) => String(k) }) }));
 vi.mock("./crm-avatar.module.css", () => ({ default: new Proxy({}, { get: (_, k) => String(k) }) }));
+vi.mock("./crm-create-dialog.module.css", () => ({ default: new Proxy({}, { get: (_, k) => String(k) }) }));
 vi.mock("./activity-timeline.module.css", () => ({ default: new Proxy({}, { get: (_, k) => String(k) }) }));
+vi.mock("./crm-list-workspace.module.css", () => ({ default: new Proxy({}, { get: (_, k) => String(k) }) }));
 vi.mock("../ui/entity-list.module.css", () => ({ default: new Proxy({}, { get: (_, k) => String(k) }) }));
 vi.mock("../ui/empty-state.module.css", () => ({ default: new Proxy({}, { get: (_, k) => String(k) }) }));
 vi.mock("../ui/error-state.module.css", () => ({ default: new Proxy({}, { get: (_, k) => String(k) }) }));
 vi.mock("../ui/status-chip.module.css", () => ({ default: new Proxy({}, { get: (_, k) => String(k) }) }));
+
+vi.mock("@/app/(operator)/app/crm/actions", () => ({
+  createCompanyAction: vi.fn(),
+  createContactAction: vi.fn(),
+  createDealAction: vi.fn(),
+}));
 
 const refresh = vi.fn();
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh }) }));
@@ -152,6 +160,12 @@ describe("CompanyDetailWorkspace", () => {
     fireEvent.click(screen.getByRole("tab", { name: /Deals/ }));
     expect(screen.getByText("Proposal")).toBeDefined();
     expect(screen.getByText("£8,000")).toBeDefined();
+  });
+
+  it("offers New deal on the Deals tab (IPI-562 Phase 2)", () => {
+    render(<CompanyDetailWorkspace data={payload({ deals: [] })} fetchError={null} />);
+    fireEvent.click(screen.getByRole("tab", { name: /Deals/ }));
+    expect(screen.getByRole("button", { name: "New deal" })).toBeDefined();
   });
 
   it("shows an honest EmptyState for a tab with no data", () => {

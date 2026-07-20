@@ -2,21 +2,9 @@
 
 import { useRouter } from "next/navigation";
 import { useMemo, useState, type ReactNode } from "react";
-import { Plus } from "lucide-react";
 
 import { EntityList } from "@/components/ui/entity-list";
 import styles from "./crm-list-workspace.module.css";
-
-/** Empty-state "add" CTA shared by CompaniesWorkspace + ContactsWorkspace — both
- *  were byte-identical apart from the label (CodeRabbit nitpick on PR #270). */
-export function ComingSoonButton({ label }: { label: string }) {
-  return (
-    <button type="button" disabled title="Coming soon" className={styles.newBtn}>
-      <Plus size={15} aria-hidden />
-      {label}
-    </button>
-  );
-}
 
 /** Shared chrome for CompaniesWorkspace + ContactsWorkspace (RF-03) — header,
  *  filter row, search state, and the EntityList wrapper are identical across
@@ -24,8 +12,8 @@ export function ComingSoonButton({ label }: { label: string }) {
 export function CrmListWorkspace<T extends { id: string }>({
   title,
   countLabel,
-  newLabel,
-  filterLabels,
+  newAction,
+  filters,
   items,
   searchPlaceholder,
   filterItems,
@@ -37,8 +25,8 @@ export function CrmListWorkspace<T extends { id: string }>({
 }: {
   title: string;
   countLabel: (count: number) => string;
-  newLabel: string;
-  filterLabels: string[];
+  newAction: ReactNode;
+  filters: ReactNode;
   items: T[];
   searchPlaceholder: string;
   filterItems: (items: T[], term: string) => T[];
@@ -65,15 +53,9 @@ export function CrmListWorkspace<T extends { id: string }>({
             <h1 className={styles.title}>{title}</h1>
             <p className={styles.count}>{countLabel(items.length)}</p>
           </div>
-          <ComingSoonButton label={newLabel} />
+          {newAction}
         </div>
-        <div className={styles.filterRow}>
-          {filterLabels.map((label) => (
-            <button key={label} type="button" disabled title="Coming soon" className={styles.filterBtn}>
-              {label}
-            </button>
-          ))}
-        </div>
+        <div className={styles.filterRow}>{filters}</div>
       </div>
 
       <div className={styles.body}>
@@ -93,5 +75,46 @@ export function CrmListWorkspace<T extends { id: string }>({
         </div>
       </div>
     </div>
+  );
+}
+
+/** Client-side chip that cycles All → each option → All. Options come from
+ *  already-loaded rows (IPI-562 Phase 2 — no new list API). */
+export function CrmFilterChip({
+  label,
+  value,
+  options,
+  onChange,
+}: {
+  label: string;
+  value: string | null;
+  options: { value: string; label: string }[];
+  onChange: (next: string | null) => void;
+}) {
+  const active = value !== null;
+  const display = active ? (options.find((o) => o.value === value)?.label ?? value) : label;
+
+  function cycle() {
+    if (options.length === 0) return;
+    if (value === null) {
+      onChange(options[0].value);
+      return;
+    }
+    const idx = options.findIndex((o) => o.value === value);
+    if (idx < 0 || idx >= options.length - 1) onChange(null);
+    else onChange(options[idx + 1].value);
+  }
+
+  return (
+    <button
+      type="button"
+      className={active ? `${styles.filterBtn} ${styles.filterBtnActive}` : styles.filterBtn}
+      aria-pressed={active}
+      onClick={cycle}
+      disabled={options.length === 0}
+      title={options.length === 0 ? "No values to filter" : `Filter by ${label}`}
+    >
+      {display}
+    </button>
   );
 }

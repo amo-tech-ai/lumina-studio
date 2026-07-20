@@ -13,6 +13,7 @@ import type { ContactRow } from "@/lib/crm/queries";
 import { crmStatusDotToken, crmStatusLabel } from "@/lib/crm/status-tokens";
 import { ActivityTimeline } from "./activity-timeline";
 import { CrmAvatar } from "./crm-avatar";
+import { CrmCreateDialog } from "./crm-create-dialog";
 import { CrmDetailShell, DealsTab, OverviewFields } from "./crm-detail-shell";
 import styles from "./company-detail-workspace.module.css";
 import shellStyles from "./crm-detail-shell.module.css";
@@ -101,7 +102,14 @@ export function CompanyDetailWorkspace({ data, fetchError }: Props) {
     >
       {tab === "overview" ? <OverviewTab company={company} ownerName={ownerName} /> : null}
       {tab === "contacts" ? <ContactsTab contacts={contacts} /> : null}
-      {tab === "deals" ? <DealsTab deals={deals} /> : null}
+      {tab === "deals" ? (
+        <div className={styles.dealsTab}>
+          <div className={styles.dealsTabHeader}>
+            <CrmCreateDialog kind="deal" triggerLabel="New deal" companyId={company.id} />
+          </div>
+          <DealsTab deals={deals} />
+        </div>
+      ) : null}
       {tab === "activity" ? <ActivityTimeline activities={activities} /> : null}
     </CrmDetailShell>
   );
