@@ -21,6 +21,11 @@ create temp table ipi343_run (
   err text
 );
 
+drop table if exists ipi343_cleanup_err;
+create temp table ipi343_cleanup_err (
+  err text not null
+);
+
 create or replace function pg_temp.cleanup_ipi343_fixtures()
 returns void
 language plpgsql
@@ -97,13 +102,7 @@ begin
   );
 exception
   when others then
-    begin
-      delete from auth.users
-      where id in (v_brand_user, v_talent_user, v_outsider);
-    exception
-      when others then
-        raise warning 'IPI-343 seed auth.users cleanup failed: %', sqlerrm;
-    end;
+    -- Same-DO inserts roll back with this re-raise; no manual auth.users cleanup.
     raise;
 end;
 $seed$;
@@ -268,13 +267,16 @@ begin
   perform pg_temp.cleanup_ipi343_fixtures();
 exception
   when others then
-    raise exception 'IPI-343 fixture cleanup failed: %', sqlerrm;
+    -- Defer hard-fail to $gate$ so assertion results are still reported.
+    insert into ipi343_cleanup_err values (sqlerrm);
+    raise warning 'IPI-343 fixture cleanup failed: %', sqlerrm;
 end;
 $cleanup$;
 
 do $gate$
 declare
   r record;
+  v_cleanup text;
 begin
   select * into r from ipi343_run limit 1;
   if not found then
@@ -282,6 +284,11 @@ begin
   end if;
   if not r.ok then
     raise exception '%', r.err;
+  end if;
+
+  select err into v_cleanup from ipi343_cleanup_err limit 1;
+  if found then
+    raise exception 'IPI-343 fixture cleanup failed: %', v_cleanup;
   end if;
 end;
 $gate$;
