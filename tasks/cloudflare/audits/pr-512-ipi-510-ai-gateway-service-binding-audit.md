@@ -47,11 +47,11 @@ Original draft said “~85% … will succeed after preview redeploy.” **Correc
 
 ## Suggested improvements (ranked)
 
-1. **Do:** Add `it("returns 503 when service binding fetch rejects", …)` in `probe-ai-gateway-health.test.ts`.
-2. **Optional / YAGNI:** Drop `adapterAvailable` from the health body — only consumed inside the probe module today; removing is a contract change for any external monitors.
-3. **Skip commit:** Do not add `cloudflare-env.d.ts` to git; keep hand-rolled type or narrow cast.
-4. **Nice:** Top-level `AI_GATEWAY` in `wrangler.jsonc` for no-`--env` `wrangler dev`.
-5. **Done enough:** PR title already `IPI-510 · CF-UJ-011 — …`; sibling docs PR #510 is the number collision — table in PR body already links it.
+1. ~~**Do:** Add binding-fetch-rejects → 503 test.~~ **Done** in `fef8913c`.
+2. ~~Drop always-true `adapterAvailable`.~~ **Done** in `fef8913c` (confirmed unused in `app/src` before delete).
+3. **Skip commit:** Do not add `cloudflare-env.d.ts` to git; keep hand-rolled type or narrow cast. (`cf-typegen` is local-only.)
+4. **Nice (DX):** Top-level `AI_GATEWAY` in `wrangler.jsonc` **or** document `wrangler dev --env preview` — not an implementation error.
+5. **Done enough:** PR title already `IPI-510 · CF-UJ-011 — …`; sibling docs PR #510 linked in body.
 
 ---
 
@@ -74,9 +74,47 @@ Original draft said “~85% … will succeed after preview redeploy.” **Correc
 
 **Yes.** Code path is correct and **Remote Preview Verified**. Before merge:
 
-1. Tick PR #512 test-plan checkboxes (redeploy + evidence — evidence lives in #510).
+1. ~~Tick PR #512 test-plan checkboxes~~ (done).
 2. Dismiss CodeRabbit false alarms (E1/E2).
 3. Do **not** block on B2 Supabase/RLS CI noise.
-4. Optional follow-up commit: binding-reject unit test (+ top-level `services` if local-dev pain shows up).
+4. Optional: preview redeploy so live JSON drops `adapterAvailable` (HEAD already removed it; preview still on older version).
+5. Optional DX: top-level `services` / local-dev note — not merge-blocking.
 
 **Verification level:** Remote Preview Verified (not Production Verified — Vercel prod untouched, as intended).
+
+---
+
+## Meta-review acceptance (2026-07-20) — 94/100 🟢
+
+Second-pass review of this audit. **Accepted with minor severity wording tweaks.**
+
+| Category | Score | Notes |
+|---|---:|---|
+| Technical accuracy | 96% | E1/E2 false alarms correct; B1 resolved after live binding 200 |
+| Cloudflare best practices | 95% | Placeholder URL + `services[]` schema match CF docs |
+| OpenNext guidance | 95% | `getCloudflareContext({ async: true })` correct |
+| Test coverage review | 92% | Binding-reject path now covered (`fef8913c`) |
+| Severity classification | 90% | E3 = maintainability debt; E4 = DX, not a defect |
+| **Overall** | **94%** | Quality leftovers, not architectural blockers |
+
+### Severity reclassification (accepted)
+
+| Item | Original | Revised |
+|---|---|---|
+| E3 hand-rolled `EnvWithAiGateway` | Low issue | **Technical debt / maintainability** (gitignored types by policy) |
+| E4 top-level `services` | Low issue | **Developer experience** — only if team uses bare `wrangler dev` |
+| B1 preview AC | Blocker (historical) | **Resolved** — live `probeVia: service_binding` + status ok |
+| B3 ai-gateway exists | Risk | **Operational prerequisite** — verified same account (`ai-gateway` /health 200) |
+| AbortSignal mid-flight test | Missing | **Low / nice-to-have** — do not block merge |
+| Remove `adapterAvailable` | Suggested | **Done** after consumer check — field was always-true false signal |
+
+### Still open (non-blocking)
+
+- Preview redeploy to pick up `fef8913c` (drop `adapterAvailable` from live JSON).
+- Short local-dev note: `wrangler dev --env preview` + `ai-gateway` running or remote binding.
+- Refresh evidence JSON SHA/version on next docs touch.
+- Optional smoke script: deploy preview → curl health → save JSON + cf-ray + Worker version (reproducibility).
+
+### Merge path
+
+Merge code PR **#512** + attach evidence/docs PR **#510**. Then reuse the same preview Worker for **IPI-632 · CF-MIG-220 — Protected Preview Runtime Smoke Validation** and **IPI-627 · CF-SEC-020 — Deployment Security Proof** without another deployment (unless HEAD changes require redeploy).
