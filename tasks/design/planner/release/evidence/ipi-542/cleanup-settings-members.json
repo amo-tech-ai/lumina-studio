@@ -1,0 +1,47 @@
+{
+  "cleanedAt": "2026-07-20T06:09:22.496Z",
+  "steps": [
+    {
+      "label": "tasks",
+      "ok": true,
+      "error": null
+    },
+    {
+      "label": "instance_assignments",
+      "ok": false,
+      "error": "Could not find the table 'planner.instance_assignments' in the schema cache"
+    },
+    {
+      "label": "instances",
+      "ok": true,
+      "error": null
+    },
+    {
+      "label": "workflows",
+      "ok": true,
+      "error": null
+    },
+    {
+      "label": "org_members",
+      "ok": true,
+      "error": null
+    },
+    {
+      "label": "organizations",
+      "ok": true,
+      "error": null
+    },
+    {
+      "label": "user assigned",
+      "ok": true,
+      "error": null
+    },
+    {
+      "label": "user unassigned",
+      "ok": true,
+      "error": null
+    }
+  ],
+  "orgId": "8a99641c-8bb0-4b5e-af68-5d2a8d62f982",
+  "instanceId": "ab4a87bc-a302-4fe1-87a5-88582d5e6d51"
+}

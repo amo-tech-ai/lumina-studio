@@ -1,8 +1,8 @@
 # IPI-542 · PLN-REL-001 — Release readiness report
 
 **Issue:** [IPI-542 · PLN-REL-001 — Planner Staging Deployment, Rollback, and Production Verification](https://linear.app/amo100/issue/IPI-542)  
-**Report updated (UTC):** 2026-07-20T05:55:00Z  
-**Evidence base:** live Linear · `origin/main` @ `c640f01e` · staging Supabase `wtuhdynujhszsbwxlbdi` · Vercel Preview `release/ipi-542-staging` · Playwright desktop smoke + alias rollback  
+**Report updated (UTC):** 2026-07-20T06:10:00Z  
+**Evidence base:** live Linear · `origin/main` @ `c640f01e` · staging Supabase `wtuhdynujhszsbwxlbdi` · Vercel Preview `release/ipi-542-staging` · Playwright desktop smoke + alias rollback + Settings Members correct-route re-smoke  
 **Scope of this document:** docs / evidence only — **no production deploy, no production Supabase, no application code change in the evidence PR.**
 
 ---
@@ -11,12 +11,12 @@
 
 | Decision | Result |
 | --- | --- |
-| **Option A staging drill** | **GO** |
-| **IPI-542 Option A acceptance criteria** | **Complete after evidence PR #521 merges** |
+| **Option A staging drill** | **GO** (conditional on required CI green for PR #521) |
+| **IPI-542 Option A acceptance criteria** | **Complete after evidence PR #521 merges** (Settings Members correct-route smoke ✅) |
 | **Production release / cutover** | **NO-GO** — this result does **not** approve a production cutover |
 | **Readiness score** | **90 / 100** |
 
-Option A (desktop read-only Planner Phase 1) staging drill completed on a dedicated Vercel Preview branch and a separate Supabase staging project. Hub, Dashboard, Workspace shell, assignment visibility, and Vercel **website-only** rollback passed with disposable fixtures. CopilotKit Preview 503 is **outside** the reduced Planner gate. Database recovery requires a **new forward migration**; **never** revert **IPI-647 · PLN-SEC-002** assignment-aware RLS.
+Option A (desktop read-only Planner Phase 1) staging drill completed on a dedicated Vercel Preview branch and a separate Supabase staging project. Hub, Dashboard, Workspace shell, **Settings Members** (`/app/planner/[instanceId]/settings`), assignment visibility, and Vercel **website-only** rollback passed with disposable fixtures. CopilotKit Preview 503 is **outside** the reduced Planner gate. Database recovery requires a **new forward migration**; **never** revert **IPI-647 · PLN-SEC-002** assignment-aware RLS.
 
 ---
 
@@ -37,7 +37,7 @@ Verified in this drill:
 - Planner Hub
 - Planner Dashboard
 - Planner Workspace shell + empty view tabs
-- Planner Settings route presence (see smoke matrix note on Members path)
+- Planner Settings Members (`/app/planner/[instanceId]/settings`)
 - Assigned / unassigned visibility
 - Role / assignment permission behavior (**IPI-647 · PLN-SEC-002**)
 - **IPI-544** function-security migrations present on staging ledger (via full migration push)
@@ -142,7 +142,7 @@ Base: branch URL · smoke RC deploy `dpl_J1Gu4kVmwmGJrcQtqWnRkUjMFYJx` · SHA `e
 | 3 | Dashboard loads | ✅ `/app/planner/dashboard` |
 | 4 | Workspace shell opens | ✅ `/app/planner/{instanceId}` |
 | 5 | Empty view tabs switch | ✅ 4 tabs, no page errors |
-| 6 | Settings / Members | ⚠️ **Evidence correction:** harness first hit `/settings/members` (no such App Router page; only `/settings` exists for **IPI-577**). `05-settings-members.png` is a marketing **404**, not the Settings UI — false pass because harness accepted HTTP &lt; 500. Members UI was **not** screenshot-verified; Settings route code exists at `/app/planner/[instanceId]/settings`. Residual: re-smoke `/settings` only. |
+| 6 | Settings / Members | ✅ **Correct-route re-smoke 2026-07-20T06:08:52Z** — `/app/planner/{instanceId}/settings` loads Settings heading, Members tab, owner row (`05-settings-members.png`). Unassigned → Plan not found (`05b-settings-unassigned-denied.png`). Details: `settings-members-smoke.json`. Prior `/settings/members` 404 evidence superseded. |
 | 7 | Unassigned cannot see plan in Hub | ✅ hidden (`07-hub-unassigned.png` — 0 plans) |
 | 8 | Unassigned direct Workspace URL | ✅ enumeration-safe not-found pattern |
 | 9 | Staging Supabase traffic | ✅ `staging-host-probe.json` |
@@ -211,10 +211,10 @@ Evidence: `09-post-rollback-hub-*.png`, `post-rollback-smoke.json`.
 1. **IPI-680 GraphQL revoke migration** not replay-clean on empty projects — repaired forward for staging. Security outcome of **IPI-680 · SB-SEC-002** remains **Done**; do not reopen. Fresh-project compatibility is a separate follow-up.
 2. **`supabase:verify-rls`** not fully green on fresh staging (CRM convert-deal path lacks fixtures). Planner assignment RLS proven via dedicated fixtures + UI. Follow-up under **SB-TEST-003** (not a reopen of **IPI-668 · SB-TEST-001**).
 3. **CopilotKit 503** on Preview `/api/copilotkit` — **outside** reduced Planner gate; Planner Hub/Dashboard/Workspace remained usable.
-4. **Settings Members screenshot false positive** — see smoke matrix row 6.
-5. **Onboarding redirect** after login for disposable users — expected; operators still reached Planner routes.
-6. **Protection bypass secret** on Vercel project for automation — rotate/revoke when staging disposition says so.
-7. **Secret near-miss (local only):** an unpushed worktree checkpoint briefly staged `.local-staging-*` / `.local-vercel-*` files; commit was **hard-reset and never pushed**. Those paths are **not** on `origin` or in PR #521.
+4. **Onboarding redirect** after login for disposable users — expected; operators still reached Planner routes.
+5. **Protection bypass secret** on Vercel project for automation — rotate/revoke when staging disposition says so.
+6. **Secret near-miss (local only):** an unpushed worktree checkpoint briefly staged `.local-staging-*` / `.local-vercel-*` files; commit was **hard-reset and never pushed**. Those paths are **not** on `origin` or in PR #521.
+7. **CI note (PR #521):** `booking-gate` Model Gate failed once on `scripts/test-notification-reads-rls.sql` — `users_email_partial_key` duplicate for `ipi343-brand-<epoch>@test.local` (second-resolution stamp race / leftover). Unrelated to docs/evidence. Rerun in progress; if deterministic, track separately (do not fix in this PR).
 
 ---
 
@@ -223,8 +223,6 @@ Evidence: `09-post-rollback-hub-*.png`, `post-rollback-smoke.json`.
 - Staging Preview still shares non-Supabase Preview secrets (Gemini/Groq/etc.) with other Preview deploys — only Supabase URL/keys were branch-scoped.
 - Fresh staging DB lacks production edge-function wiring; not required for Option A read paths.
 - Phase 1.1 views/mutations/approvals still open — do not market as “full Planner Phase 1 complete.”
-- Settings Members UI needs a clean re-smoke against `/app/planner/{id}/settings` only.
-
 ---
 
 ## Residual follow-ups (tracking)
@@ -273,15 +271,17 @@ Evidence: `09-post-rollback-hub-*.png`, `post-rollback-smoke.json`.
 | Staging host probe | `…/evidence/ipi-542/staging-host-probe.json` | `wtuhdynujhszsbwxlbdi.supabase.co` |
 | Post-rollback smoke | `…/evidence/ipi-542/post-rollback-smoke.json` | assigned/unassigned + appLoaded |
 | Cleanup log | `…/evidence/ipi-542/cleanup.json` | fixtures deleted `2026-07-20T05:33:50Z` |
-| Screenshots | `…/evidence/ipi-542/*.png` | `05-*.png` is marketing 404 (see matrix) |
+| Screenshots | `…/evidence/ipi-542/*.png` | `05-settings-members.png` = correct Settings/Members; `05b-*.png` = unassigned deny |
+| Settings Members smoke | `…/evidence/ipi-542/settings-members-smoke.json` | Correct-route AC proof |
+| Settings fixture cleanup | `…/evidence/ipi-542/cleanup-settings-members.json` | Re-smoke fixtures deleted |
 
-**Not in git (local only):** `.env.staging.local`, `.local-staging-*`, `.local-vercel-bypass-*`, fixture passwords. **No** passwords, tokens, cookies, Authorization headers, service-role keys, or DB URLs in committed evidence.
+**Not in git (local only):** `.env.staging.local`, `.local-staging-*`, `.local-vercel-bypass-*`, fixture passwords, local smoke harness scripts. **No** passwords, tokens, cookies, Authorization headers, service-role keys, or DB URLs in committed evidence.
 
 ---
 
 ## Cleanup results
 
-Disposable staging fixtures (org, workflow, instance, tasks, assignments, both users) **deleted** — see `cleanup.json` (`cleanedAt: 2026-07-20T05:33:50.416Z`).
+Disposable staging fixtures (org, workflow, instance, tasks, assignments, both users) **deleted** — see `cleanup.json` (`cleanedAt: 2026-07-20T05:33:50.416Z`). Settings Members re-smoke fixtures deleted — see `cleanup-settings-members.json` (`cleanedAt: 2026-07-20T06:09:22.496Z`).
 
 ---
 
@@ -292,6 +292,6 @@ Disposable staging fixtures (org, workflow, instance, tasks, assignments, both u
 | IPI-526 Hub | ✅ exercised |
 | IPI-576 Dashboard | ✅ exercised (approvals stub OK for Option A) |
 | IPI-578 Workspace shell | ✅ exercised |
-| IPI-577 Settings Members | ⚠️ route exists at `/settings`; Members screenshot evidence invalid (404 path) |
+| IPI-577 Settings Members | ✅ exercised on `/app/planner/{id}/settings` (correct-route re-smoke) |
 | IPI-647 assignment RLS | ✅ exercised |
 | IPI-579/580/581/582/557/483 runtime | Deferred — remain open |

@@ -29,8 +29,8 @@
     },
     {
       "name": "Settings Members loads",
-      "ok": false,
-      "detail": "FALSE_POSITIVE_CORRECTED: harness accepted marketing 404 on /settings/members (no App Router page). Real Settings UI is /settings only; screenshot 05 is not Settings Members. Re-smoke required."
+      "ok": true,
+      "detail": "CORRECT_ROUTE_2026-07-20T06:08:52Z: /app/planner/ab4a87bc-a302-4fe1-87a5-88582d5e6d51/settings — Settings heading + Members tab + owner row; see settings-members-smoke.json + 05-settings-members.png. Unassigned deny: 05b-settings-unassigned-denied.png (Plan not found)."
     },
     {
       "name": "unassigned login",
