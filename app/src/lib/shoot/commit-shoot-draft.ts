@@ -178,9 +178,29 @@ export async function commitShootDraft(opts: {
   const { brand_id, shoot_name, brief, shots, approved_budget, budget_breakdown, run_id } = input;
   const { safeChannels, safeDeliverables } = validated;
 
-  const { error: brandErr } = await userSb.from("brands").select("id").eq("id", brand_id).single();
-  if (brandErr) {
+  const { data: brand, error: brandErr } = await userSb
+    .from("brands")
+    .select("id, org_id")
+    .eq("id", brand_id)
+    .single();
+  if (brandErr || !brand) {
     return { ok: false, status: 403, error: "Brand not found or access denied" };
+  }
+
+  // IPI-732 — org-scoped brands require owner/editor role to create a shoot;
+  // personal (org_id IS NULL) brands rely on the brands_select_org ownership
+  // check above, which already restricted this to the brand's own creator.
+  if (brand.org_id) {
+    const { data: canCreate, error: roleErr } = await userSb.rpc("is_org_editor_or_above", {
+      p_org_id: brand.org_id,
+    });
+    if (roleErr || !canCreate) {
+      return {
+        ok: false,
+        status: 403,
+        error: "You must be an organization owner or editor to create a shoot for this brand",
+      };
+    }
   }
 
   const createdBy = /^[0-9a-f-]{36}$/i.test(operatorId) ? operatorId : null;
@@ -212,6 +232,17 @@ export async function commitShootDraft(opts: {
 
   if (rpcErr || !shoot_id) {
     console.error("[commit] rpc commit_shoot_draft:", rpcErr);
+    // IPI-732 — commit_shoot_draft raises 42501 (insufficient_privilege) for
+    // an unauthorized actor; surface that as a clean 403 rather than a
+    // generic 500. Covers a role-change race between the check above and
+    // this RPC call, since the RPC re-checks independently.
+    if (rpcErr?.code === "42501") {
+      return {
+        ok: false,
+        status: 403,
+        error: "You must be an organization owner or editor to create a shoot for this brand",
+      };
+    }
     return { ok: false, status: 500, error: RPC_FAIL_MESSAGE };
   }
 
