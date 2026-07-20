@@ -1,7 +1,18 @@
 # supabase/ — Database & Edge planning
 
-**Open first:** [`PLAN.md`](./PLAN.md) → [`todo.md`](./todo.md)  
+**Open first:** [`PLAN.md`](./PLAN.md) → [`todo`](./todo) (execution queue) → [`STATUS.md`](./STATUS.md) (Linear summary)  
 Remote-only policy — never `supabase start` for schema truth.
+
+## Document responsibilities
+
+| Document | Responsibility |
+|---|---|
+| [`PLAN.md`](./PLAN.md) | Architecture, goals, decisions, roadmap |
+| [`todo`](./todo) | **Single ordered execution queue** (Prime master) |
+| [`STATUS.md`](./STATUS.md) | Small Linear-sourced progress summary |
+| [`j20-supabase-audit.md`](./j20-supabase-audit.md) | J20 audit (2026-07-20, rev 2) — evidence + scores |
+| [`supabase-plan.md`](./supabase-plan.md) | Long-form legacy (has dated correction header) |
+| [Linear Supabase view](https://linear.app/amo100/view/supabase-2d1d1d63cb9c) | **Final authority** for status and dependencies |
 
 ## Linear (active)
 

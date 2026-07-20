@@ -1,7 +1,9 @@
 # Supabase — Domain plan (PRD + roadmap)
 
-**Updated:** 2026-07-18  
-**Authority:** Linear · progress [`todo.md`](./todo.md) · long-form supporting: [`../prime/supabase-plan.md`](../prime/supabase-plan.md) (when present)
+**Updated:** 2026-07-20 (J20 audit rev 2)  
+**Authority:** Linear · status summary [`STATUS.md`](./STATUS.md) · execution queue [`todo`](./todo) · audit [`j20-supabase-audit.md`](./j20-supabase-audit.md) · long-form supporting: [`./supabase-plan.md`](./supabase-plan.md)
+
+> **J20 audit corrections (2026-07-20):** Migration ledger is **216/216 zero drift** at HEAD `c640f01e` (was 208). IPI-680, IPI-684, IPI-692, IPI-647, IPI-665 are all **Done**. IPI-682 stale `blockedBy IPI2-14` removed in Linear. Plan self-score adjusted from 96 → **66/100** (unweighted mean of 9 category scores — see audit). Foundation is **stable**; cost controls, Cloudflare routing, canary, and DR drill remain open. Full details in [`j20-supabase-audit.md`](./j20-supabase-audit.md).
 
 ## Linear (active)
 
