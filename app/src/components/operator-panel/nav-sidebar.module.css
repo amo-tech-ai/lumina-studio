@@ -210,6 +210,11 @@
 
 .footer .item { width: 100%; }
 
+/* Form wrapper for POST /auth/signout — layout stays on the button. */
+.signOutForm {
+  display: contents;
+}
+
 .signOutItem {
   color: var(--muted-foreground);
 }

@@ -1,10 +1,10 @@
 "use client";
 
 // IPI-725 · AUTH-UI-001 — Operator Sign Out.
-// Navigates to /auth/signout so Supabase SSR cookies clear on the server
-// (same session the login form established). No new auth architecture.
+// POSTs to /auth/signout (Supabase SSR cookie clear). No GET logout —
+// avoids CSRF-via-navigation. No new auth architecture.
 
-import { useState } from "react";
+import { useState, type FormEvent } from "react";
 
 import styles from "./nav-sidebar.module.css";
 
@@ -19,31 +19,39 @@ let signingOut = false;
 export function SignOutButton({ showLabel = false }: Props) {
   const [busy, setBusy] = useState(false);
 
-  function handleSignOut() {
-    if (signingOut) return;
+  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    if (signingOut) {
+      event.preventDefault();
+      return;
+    }
     signingOut = true;
     setBusy(true);
-    // Full navigation clears CopilotKit in-memory state and hits the server route.
-    window.location.assign("/auth/signout");
+    // Native form POST navigates; server clears cookies and redirects.
   }
 
   return (
-    <button
-      type="button"
-      className={`${styles.item} ${styles.signOutItem}`}
-      onClick={handleSignOut}
-      disabled={busy}
-      data-testid="operator-sign-out"
-      aria-label="Sign out"
-      title="Sign out"
+    <form
+      action="/auth/signout"
+      method="post"
+      onSubmit={handleSubmit}
+      className={styles.signOutForm}
     >
-      <span className={styles.icon} aria-hidden="true">
-        ⎋
-      </span>
-      {showLabel && (
-        <span className={styles.label}>{busy ? "Signing out…" : "Sign out"}</span>
-      )}
-    </button>
+      <button
+        type="submit"
+        className={`${styles.item} ${styles.signOutItem}`}
+        disabled={busy}
+        data-testid="operator-sign-out"
+        aria-label="Sign out"
+        title="Sign out"
+      >
+        <span className={styles.icon} aria-hidden="true">
+          ⎋
+        </span>
+        {showLabel && (
+          <span className={styles.label}>{busy ? "Signing out…" : "Sign out"}</span>
+        )}
+      </button>
+    </form>
   );
 }
 

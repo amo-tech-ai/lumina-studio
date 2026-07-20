@@ -11,16 +11,15 @@ import { __resetSignOutLockForTests, SignOutButton } from "./sign-out-button";
 afterEach(() => {
   cleanup();
   __resetSignOutLockForTests();
-  vi.unstubAllGlobals();
 });
 
 describe("SignOutButton — IPI-725", () => {
-  it("navigates to /auth/signout on click", () => {
-    const assign = vi.fn();
-    vi.stubGlobal("location", { ...window.location, assign });
+  it("posts to /auth/signout via a form", () => {
     render(<SignOutButton showLabel />);
-    fireEvent.click(screen.getByTestId("operator-sign-out"));
-    expect(assign).toHaveBeenCalledWith("/auth/signout");
+    const form = screen.getByRole("button", { name: "Sign out" }).closest("form");
+    expect(form).toBeTruthy();
+    expect(form?.getAttribute("action")).toBe("/auth/signout");
+    expect(form?.getAttribute("method")).toBe("post");
   });
 
   it("exposes an accessible name", () => {
@@ -28,13 +27,21 @@ describe("SignOutButton — IPI-725", () => {
     expect(screen.getByRole("button", { name: "Sign out" })).toBeTruthy();
   });
 
-  it("ignores double-clicks across instances via module lock", () => {
-    const assign = vi.fn();
-    vi.stubGlobal("location", { ...window.location, assign });
+  it("ignores double-submit across instances via module lock", () => {
     const { rerender } = render(<SignOutButton showLabel />);
-    fireEvent.click(screen.getByTestId("operator-sign-out"));
+    const button = screen.getByTestId("operator-sign-out") as HTMLButtonElement;
+    const form = button.closest("form")!;
+
+    fireEvent.submit(form);
+    expect(button.disabled).toBe(true);
+
     rerender(<SignOutButton showLabel />);
-    fireEvent.click(screen.getByTestId("operator-sign-out"));
-    expect(assign).toHaveBeenCalledTimes(1);
+    const button2 = screen.getByTestId("operator-sign-out") as HTMLButtonElement;
+    const form2 = button2.closest("form")!;
+    const preventSpy = vi.spyOn(Event.prototype, "preventDefault");
+    fireEvent.submit(form2);
+    expect(preventSpy).toHaveBeenCalled();
+    preventSpy.mockRestore();
+    expect(button2.disabled).toBe(true);
   });
 });
