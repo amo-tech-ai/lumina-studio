@@ -10,6 +10,9 @@ import {
  */
 export const AI_GATEWAY_HEALTH_REQUEST_URL = "http://ai-gateway/health";
 
+/** Response `gatewayUrl` when probing via binding and no AI_GATEWAY_URL is configured. */
+export const AI_GATEWAY_BINDING_LABEL = "binding:AI_GATEWAY";
+
 export type AiGatewayHealthBody = {
   status: "ok" | "gateway_error" | "gateway_unreachable";
   gatewayUrl: string;
@@ -36,11 +39,17 @@ export type ProbeAiGatewayHealthInput = {
 export async function probeAiGatewayHealth(
   input: ProbeAiGatewayHealthInput = {},
 ): Promise<{ httpStatus: number; body: AiGatewayHealthBody }> {
-  const gatewayUrl = input.gatewayUrl ?? process.env.AI_GATEWAY_URL ?? DEFAULT_AI_GATEWAY_URL;
-  const hasApiKey = input.hasApiKey ?? Boolean(process.env.AI_GATEWAY_API_KEY);
-  const adapter = createProviderAdapter({ baseUrl: gatewayUrl });
-  const adapterAvailable = typeof adapter.chat === "function";
+  const configuredUrl = (input.gatewayUrl ?? process.env.AI_GATEWAY_URL)?.trim() || undefined;
   const useBinding = Boolean(input.gatewayFetcher);
+  // Binding path: never claim DEFAULT localhost — that was not the probe target.
+  const gatewayUrl = useBinding
+    ? (configuredUrl ?? AI_GATEWAY_BINDING_LABEL)
+    : (configuredUrl ?? DEFAULT_AI_GATEWAY_URL);
+  const hasApiKey = input.hasApiKey ?? Boolean(process.env.AI_GATEWAY_API_KEY);
+  const adapter = createProviderAdapter({
+    baseUrl: configuredUrl ?? DEFAULT_AI_GATEWAY_URL,
+  });
+  const adapterAvailable = typeof adapter.chat === "function";
   const probeVia = useBinding ? "service_binding" : "url";
 
   try {

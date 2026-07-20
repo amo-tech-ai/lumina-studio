@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import {
+  AI_GATEWAY_BINDING_LABEL,
   AI_GATEWAY_HEALTH_REQUEST_URL,
   probeAiGatewayHealth,
 } from "./probe-ai-gateway-health";
@@ -53,6 +54,37 @@ describe("probeAiGatewayHealth", () => {
     expect(result.body.httpStatus).toBe(500);
     expect(result.body.probeVia).toBe("service_binding");
     expect(result.body.hasApiKey).toBe(true);
+  });
+
+  it("reports binding label (not DEFAULT localhost) when binding and AI_GATEWAY_URL unset", async () => {
+    vi.stubEnv("AI_GATEWAY_URL", undefined);
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({ status: "ok", service: "ai-gateway" }),
+    });
+
+    const result = await probeAiGatewayHealth({
+      gatewayFetcher: { fetch: fetchMock },
+    });
+
+    expect(result.body.probeVia).toBe("service_binding");
+    expect(result.body.gatewayUrl).toBe(AI_GATEWAY_BINDING_LABEL);
+    expect(result.body.gatewayUrl).not.toContain("localhost");
+  });
+
+  it("keeps configured AI_GATEWAY_URL in body when probing via binding", async () => {
+    vi.stubEnv("AI_GATEWAY_URL", "https://ai-gateway.example.workers.dev");
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({ status: "ok" }),
+    });
+
+    const result = await probeAiGatewayHealth({
+      gatewayFetcher: { fetch: fetchMock },
+    });
+
+    expect(result.body.probeVia).toBe("service_binding");
+    expect(result.body.gatewayUrl).toBe("https://ai-gateway.example.workers.dev");
   });
 
   it("falls back to AI_GATEWAY_URL when no binding", async () => {
