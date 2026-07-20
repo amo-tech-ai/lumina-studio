@@ -4,10 +4,17 @@ import { render, screen, fireEvent, cleanup } from "@testing-library/react";
 
 vi.mock("./crm-list-workspace.module.css", () => ({ default: new Proxy({}, { get: (_, k) => String(k) }) }));
 vi.mock("./crm-avatar.module.css", () => ({ default: new Proxy({}, { get: (_, k) => String(k) }) }));
+vi.mock("./crm-create-dialog.module.css", () => ({ default: new Proxy({}, { get: (_, k) => String(k) }) }));
 vi.mock("../ui/entity-list.module.css", () => ({ default: new Proxy({}, { get: (_, k) => String(k) }) }));
 vi.mock("../ui/empty-state.module.css", () => ({ default: new Proxy({}, { get: (_, k) => String(k) }) }));
 vi.mock("../ui/error-state.module.css", () => ({ default: new Proxy({}, { get: (_, k) => String(k) }) }));
 vi.mock("../ui/status-chip.module.css", () => ({ default: new Proxy({}, { get: (_, k) => String(k) }) }));
+
+vi.mock("@/app/(operator)/app/crm/actions", () => ({
+  createCompanyAction: vi.fn(),
+  createContactAction: vi.fn(),
+  createDealAction: vi.fn(),
+}));
 
 const refresh = vi.fn();
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh }) }));
@@ -73,12 +80,12 @@ describe("CompaniesWorkspace", () => {
     expect(screen.queryByText("Acme Athletic")).toBeNull();
   });
 
-  it("shows a genuine EmptyState with a disabled Add-a-company CTA (DC parity — no create flow wired yet)", () => {
+  it("shows a genuine EmptyState with an Add-a-company create CTA", () => {
     render(<CompaniesWorkspace companies={[]} ownerNames={{}} fetchError={null} />);
     expect(screen.getByText("No companies yet")).toBeDefined();
     const cta = screen.getByRole("button", { name: /Add a company/ });
     expect(cta).toBeDefined();
-    expect(cta).toHaveProperty("disabled", true);
+    expect(cta).toHaveProperty("disabled", false);
   });
 
   it("shows a distinct no-match state when a search yields zero — not the same copy as genuine empty, no Add-a-company CTA", () => {
@@ -96,14 +103,22 @@ describe("CompaniesWorkspace", () => {
     expect(refresh).toHaveBeenCalledOnce();
   });
 
-  it("renders Phase 2 write actions as disabled with a tooltip, not fake-functional", () => {
-    render(<CompaniesWorkspace companies={[]} ownerNames={{}} fetchError={null} />);
+  it("enables New organization and Status/Owner filter chips (IPI-562 Phase 2)", () => {
+    render(
+      <CompaniesWorkspace
+        companies={[company(), company({ id: "c2", status: "prospect", owner: "owner-uuid-2", name: "Beta" })]}
+        ownerNames={{ ...OWNER_NAMES, "owner-uuid-2": "A. Lee" }}
+        fetchError={null}
+      />,
+    );
     const newBtn = screen.getByRole("button", { name: "New organization" });
-    expect(newBtn.hasAttribute("disabled")).toBe(true);
-    expect(newBtn.getAttribute("title")).toBe("Coming soon");
-    for (const label of ["Type", "Status", "Owner"]) {
-      const btn = screen.getByRole("button", { name: label });
-      expect(btn.hasAttribute("disabled")).toBe(true);
-    }
+    expect(newBtn.hasAttribute("disabled")).toBe(false);
+    expect(newBtn.getAttribute("title")).not.toBe("Coming soon");
+
+    const statusBtn = screen.getByRole("button", { name: "Status" });
+    fireEvent.click(statusBtn);
+    expect(screen.getByRole("button", { name: "Active" }).getAttribute("aria-pressed")).toBe("true");
+    expect(screen.getByText("Acme Athletic")).toBeDefined();
+    expect(screen.queryByText("Beta")).toBeNull();
   });
 });
