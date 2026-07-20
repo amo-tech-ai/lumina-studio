@@ -64,7 +64,13 @@ export function useCrmDraftFollowUpRender() {
         );
       }
 
-      return <FollowUpDraftCard initialSubject={parsed.subject ?? ""} initialDraft={parsed.draft ?? ""} />;
+      return (
+        <FollowUpDraftCard
+          initialSubject={parsed.subject ?? ""}
+          initialDraft={parsed.draft ?? ""}
+          evidenceIds={parsed.evidenceIds ?? []}
+        />
+      );
     },
   });
 }
@@ -72,9 +78,11 @@ export function useCrmDraftFollowUpRender() {
 function FollowUpDraftCard({
   initialSubject,
   initialDraft,
+  evidenceIds,
 }: {
   initialSubject: string;
   initialDraft: string;
+  evidenceIds: string[];
 }) {
   const [subject, setSubject] = useState(initialSubject);
   const [draft, setDraft] = useState(initialDraft);
@@ -134,6 +142,11 @@ function FollowUpDraftCard({
         onChange={(e) => setDraft(e.target.value)}
         data-testid="crm-follow-up-body"
       />
+      {evidenceIds.length > 0 ? (
+        <p className="mt-2 text-xs text-muted-foreground" data-testid="crm-follow-up-evidence-ids">
+          Grounded on {evidenceIds.length} CRM record{evidenceIds.length === 1 ? "" : "s"} (internal IDs kept out of the draft body).
+        </p>
+      ) : null}
       <ApprovalActions
         className="mt-3 flex justify-end gap-2"
         state="idle"
