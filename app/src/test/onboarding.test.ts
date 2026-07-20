@@ -1,6 +1,13 @@
 import { describe, it, expect, vi } from "vitest";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { validateUrl, slugify, createOrgAndBrand, buildShellAiProfile, invokeBrandIntelligence } from "@/lib/onboarding";
+import {
+  validateUrl,
+  slugify,
+  createOrgAndBrand,
+  buildShellAiProfile,
+  invokeBrandIntelligence,
+  waitForCrawlCompletion,
+} from "@/lib/onboarding";
 
 // IPI-46 — onboarding unit tests
 
@@ -186,6 +193,42 @@ describe("invokeBrandIntelligence", () => {
     await expect(invokeBrandIntelligence(supabase, "brand-1", FORM)).rejects.toThrow(
       "mismatched brandId",
     );
+  });
+});
+
+describe("waitForCrawlCompletion — IPI-738", () => {
+  const makeCrawlSupabase = (statuses: string[]) => {
+    let call = 0;
+    const maybeSingle = vi.fn(() => {
+      const status = statuses[Math.min(call, statuses.length - 1)];
+      call += 1;
+      return Promise.resolve({ data: { job_status: status }, error: null });
+    });
+    return {
+      supabase: {
+        from: vi.fn(() => ({ select: () => ({ eq: () => ({ maybeSingle }) }) })),
+      } as unknown as SupabaseClient,
+      maybeSingle,
+    };
+  };
+
+  it("returns complete as soon as job_status flips to complete", async () => {
+    const { supabase, maybeSingle } = makeCrawlSupabase(["running", "complete"]);
+    const result = await waitForCrawlCompletion(supabase, "crawl-1", { pollIntervalMs: 1, timeoutMs: 1000 });
+    expect(result).toBe("complete");
+    expect(maybeSingle).toHaveBeenCalledTimes(2);
+  });
+
+  it("returns failed without waiting out the full timeout", async () => {
+    const { supabase } = makeCrawlSupabase(["failed"]);
+    const result = await waitForCrawlCompletion(supabase, "crawl-1", { pollIntervalMs: 1, timeoutMs: 1000 });
+    expect(result).toBe("failed");
+  });
+
+  it("returns timeout when job_status never resolves within the window", async () => {
+    const { supabase } = makeCrawlSupabase(["queued", "running"]);
+    const result = await waitForCrawlCompletion(supabase, "crawl-1", { pollIntervalMs: 5, timeoutMs: 30 });
+    expect(result).toBe("timeout");
   });
 });
 

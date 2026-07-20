@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { discardBrandDraft } from "@/lib/brand/discard-draft";
 import { processBrandIntelligenceDraftApproval } from "@/app/api/_lib/process-draft-approval";
 import { promoteBrandDraft } from "@/lib/brand/promote-draft";
-import { invokeBrandIntelligence } from "@/lib/onboarding";
+import { invokeBrandIntelligence, invokeStartBrandCrawl, waitForCrawlCompletion } from "@/lib/onboarding";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export type ReanalyzeResult =
@@ -72,12 +72,47 @@ export async function reanalyzeBrand(brandId: string): Promise<ReanalyzeResult> 
   }
 
   try {
+    // IPI-738 — a brand with no prior crawl has no content for Groq
+    // brand-intelligence to work from, and 422s immediately. Mirror the
+    // onboarding flow (app/src/app/(operator)/app/onboarding/page.tsx):
+    // start the crawl first, wait for it, then analyze with its content.
+    // idempotencyKey is stable per brand, so a retry after a timeout reuses
+    // the same in-flight crawl instead of starting a duplicate.
+    let crawlResultId: string | undefined;
+    try {
+      const crawl = await invokeStartBrandCrawl(supabase, brandId, brand.brand_url, {
+        idempotencyKey: `reanalyze-${brandId}`,
+      });
+      crawlResultId = crawl.crawlId;
+
+      const crawlOutcome = await waitForCrawlCompletion(supabase, crawl.crawlId);
+      if (crawlOutcome === "failed") {
+        await restoreBrandStatus(supabase, brandId, priorStatus);
+        return {
+          ok: false,
+          error: "We couldn't crawl this website. Check the URL is reachable and try again.",
+        };
+      }
+      if (crawlOutcome === "timeout") {
+        await restoreBrandStatus(supabase, brandId, priorStatus);
+        return {
+          ok: false,
+          error: "Crawling this website is taking longer than expected. Try Start analysis again in a minute.",
+        };
+      }
+    } catch (crawlErr) {
+      // Firecrawl itself couldn't be reached (e.g. not configured) — proceed
+      // without crawl context. Gemini can still analyze from the URL alone;
+      // Groq will return its own specific "requires Firecrawl content" error.
+      console.warn("[reanalyze] start-brand-crawl failed, continuing without crawl context:", crawlErr);
+    }
+
     // draft_mode: true → edge fn writes ai_profile_draft, not ai_profile; skips scores upsert
     await invokeBrandIntelligence(
       supabase,
       brandId,
       { brandName: brand.name, websiteUrl: brand.brand_url, instagramHandle: "", industry: "", goal: "" },
-      { draftMode: true },
+      { draftMode: true, crawlResultId },
     );
 
     revalidatePath(`/app/brand/${brandId}`);
