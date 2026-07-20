@@ -6,8 +6,11 @@
  * Run: npm run supabase:verify-rls
  */
 import { readFileSync, existsSync } from "node:fs";
+import { createRequire } from "node:module";
 import { resolve } from "node:path";
 import { createClient } from "@supabase/supabase-js";
+
+const requireFromApp = createRequire(resolve(import.meta.dirname, "../app/package.json"));
 
 const root = resolve(import.meta.dirname, "..");
 const envPath = resolve(root, ".env.local");
@@ -95,6 +98,121 @@ function assertSelectDenied(error, data, message) {
     return;
   }
   pass(message);
+}
+
+/**
+ * IPI-647 — catalog assert: SELECT policies must require is_at_least (assignment).
+ * Uses direct Postgres when SUPABASE_DB_URL / DATABASE_URL is set (never service_role JWT).
+ */
+async function assertPlannerAssignmentSelectCatalog() {
+  const dbUrl = process.env.SUPABASE_DB_URL ?? process.env.DATABASE_URL;
+  if (!dbUrl) {
+    // CI verify-rls often has service_role JWT but no direct Postgres URL.
+    // Behavioral JWT matrix below remains mandatory; catalog is best-effort.
+    console.warn(
+      "warn: IPI-647 catalog assert skipped — SUPABASE_DB_URL/DATABASE_URL unset (JWT matrix still required)",
+    );
+    return;
+  }
+
+  let Client;
+  try {
+    ({ Client } = requireFromApp("pg"));
+  } catch (err) {
+    fail(`IPI-647 catalog assert: cannot load pg (${err instanceof Error ? err.message : err})`);
+    return;
+  }
+
+  const client = new Client({ connectionString: dbUrl, ssl: { rejectUnauthorized: false } });
+  try {
+    await client.connect();
+    const { rows } = await client.query(`
+      select tablename, policyname, permissive, coalesce(roles::text, '') as roles, qual
+      from pg_policies
+      where schemaname = 'planner'
+        and tablename in ('instances', 'tasks', 'dependencies')
+        and cmd = 'SELECT'
+      order by tablename, policyname
+    `);
+
+    const expected = {
+      instances: "instances_select_org",
+      tasks: "tasks_select_org",
+      dependencies: "dependencies_select_org",
+    };
+
+    for (const [table, policy] of Object.entries(expected)) {
+      const matches = rows.filter((r) => r.tablename === table);
+      assert(
+        matches.length === 1 && matches[0].policyname === policy,
+        `IPI-647 catalog: exactly one SELECT policy ${policy} on planner.${table}`,
+      );
+      const row = matches[0];
+      if (!row) continue;
+      assert(row.permissive === "PERMISSIVE", `IPI-647 catalog: ${policy} is PERMISSIVE`);
+      assert(
+        String(row.qual ?? "").includes("is_at_least"),
+        `IPI-647 catalog: ${policy} qual requires is_at_least (assignment)`,
+      );
+      assert(
+        String(row.qual ?? "").includes("is_org_member"),
+        `IPI-647 catalog: ${policy} qual requires is_org_member`,
+      );
+      // Org-only path would be qual that has is_org_member but not is_at_least — already covered.
+    }
+
+    assert(
+      !rows.some(
+        (r) =>
+          String(r.qual ?? "").includes("is_org_member") &&
+          !String(r.qual ?? "").includes("is_at_least"),
+      ),
+      "IPI-647 catalog: no permissive org-only SELECT path remains on instances/tasks/dependencies",
+    );
+
+    const { rows: volRows } = await client.query(`
+      select p.provolatile
+      from pg_proc p
+      join pg_namespace n on n.oid = p.pronamespace
+      where n.nspname = 'planner'
+        and p.proname = 'is_at_least'
+        and pg_get_function_identity_arguments(p.oid) = 'p_instance_id uuid, p_min_role text'
+    `);
+    assert(
+      volRows[0]?.provolatile === "v",
+      "IPI-647 catalog: planner.is_at_least is VOLATILE (INSERT...RETURNING + bootstrap assignment)",
+    );
+
+    const { rows: trigRows } = await client.query(`
+      select t.tgtype & 2 = 2 as is_before
+      from pg_trigger t
+      join pg_class c on c.oid = t.tgrelid
+      join pg_namespace n on n.oid = c.relnamespace
+      where n.nspname = 'planner'
+        and c.relname = 'instances'
+        and t.tgname = 'instances_bootstrap_owner'
+        and not t.tgisinternal
+    `);
+    assert(
+      trigRows[0]?.is_before === true,
+      "IPI-647 catalog: instances_bootstrap_owner is BEFORE INSERT",
+    );
+
+    const { rows: fkRows } = await client.query(`
+      select condeferrable, condeferred
+      from pg_constraint
+      where conname = 'assignments_instance_id_fkey'
+        and conrelid = 'planner.assignments'::regclass
+    `);
+    assert(
+      fkRows[0]?.condeferrable === true && fkRows[0]?.condeferred === true,
+      "IPI-647 catalog: assignments_instance_id_fkey is DEFERRABLE INITIALLY DEFERRED",
+    );
+  } catch (err) {
+    fail(`IPI-647 catalog assert query failed: ${err instanceof Error ? err.message : err}`);
+  } finally {
+    await client.end().catch(() => {});
+  }
 }
 
 const anon = createClient(url, anonKey, {
@@ -1502,6 +1620,299 @@ try {
   });
   assert(!viewerAssignErr, "owner can assign viewer on planner instance");
 
+  // ── IPI-647 · PLN-SEC-002 — assignment-aware SELECT (direct Data API) ──
+  // These probes bypass app helpers and hit PostgREST on planner.* tables.
+  // Negative cases must use authenticated JWTs — never service_role.
+  await assertPlannerAssignmentSelectCatalog();
+
+  const { data: depProbeTask, error: depProbeTaskErr } = await plannerA
+    .from("tasks")
+    .insert({
+      instance_id: instA.id,
+      title: `RLS Dep Probe ${stamp}`,
+      status: "todo",
+      priority: "medium",
+      sort_order: 99,
+    })
+    .select("id")
+    .single();
+  assert(!depProbeTaskErr && depProbeTask?.id, "owner creates second task for dependency SELECT probe");
+
+  // assert() does not throw — guard before .id so a failed fixture create
+  // fails closed with FAIL counts instead of an unhandled TypeError.
+  const { data: depProbe, error: depProbeErr } = depProbeTask?.id
+    ? await plannerA
+        .from("dependencies")
+        .insert({
+          instance_id: instA.id,
+          from_task_id: taskA.id,
+          to_task_id: depProbeTask.id,
+          dep_type: "finish_to_start",
+          lag_days: 0,
+        })
+        .select("id")
+        .single()
+    : { data: null, error: { message: "depProbeTask missing after create assert" } };
+  assert(!depProbeErr && depProbe?.id, "owner creates dependency for SELECT probe");
+
+  const { data: assignedInstA, error: assignedInstAErr } = await plannerA
+    .from("instances")
+    .select("id")
+    .eq("id", instA.id);
+  assert(
+    !assignedInstAErr && (assignedInstA ?? []).length === 1,
+    "IPI-647 assigned owner can SELECT planner.instances",
+  );
+
+  const { data: assignedInstB, error: assignedInstBErr } = await plannerB
+    .from("instances")
+    .select("id")
+    .eq("id", instA.id);
+  assert(
+    !assignedInstBErr && (assignedInstB ?? []).length === 1,
+    "IPI-647 assigned viewer can SELECT planner.instances",
+  );
+
+  const { data: assignedTaskB, error: assignedTaskBErr } = await plannerB
+    .from("tasks")
+    .select("id")
+    .eq("id", taskA.id);
+  assert(
+    !assignedTaskBErr && (assignedTaskB ?? []).length === 1,
+    "IPI-647 assigned viewer can SELECT planner.tasks",
+  );
+
+  const { data: assignedDepB, error: assignedDepBErr } = depProbe?.id
+    ? await plannerB.from("dependencies").select("id").eq("id", depProbe.id)
+    : { data: [], error: { message: "depProbe missing" } };
+  assert(
+    !assignedDepBErr && (assignedDepB ?? []).length === 1,
+    "IPI-647 assigned viewer can SELECT planner.dependencies",
+  );
+
+  // Same-org unassigned member — org membership alone must not grant SELECT.
+  const emailUnassigned = `plt002-rls-unassigned-${stamp}@example.com`;
+  let userUnassigned;
+  try {
+    userUnassigned = await createTestUser(emailUnassigned);
+    const { error: seedUnassignedErr } = await admin.from("org_members").insert({
+      org_id: orgAId,
+      user_id: userUnassigned.user.id,
+      role: "editor",
+    });
+    assert(!seedUnassignedErr, "seed same-org unassigned user for IPI-647");
+
+    const plannerUnassigned = userUnassigned.client.schema("planner");
+    const { data: unInst, error: unInstErr } = await plannerUnassigned
+      .from("instances")
+      .select("id")
+      .eq("id", instA.id);
+    assertSelectDenied(
+      unInstErr,
+      unInst,
+      "IPI-647 same-org unassigned cannot SELECT planner.instances",
+    );
+
+    const { data: unTasks, error: unTasksErr } = await plannerUnassigned
+      .from("tasks")
+      .select("id")
+      .eq("id", taskA.id);
+    assertSelectDenied(
+      unTasksErr,
+      unTasks,
+      "IPI-647 same-org unassigned cannot SELECT planner.tasks",
+    );
+
+    const { data: unDeps, error: unDepsErr } = depProbe?.id
+      ? await plannerUnassigned.from("dependencies").select("id").eq("id", depProbe.id)
+      : { data: [{ id: "fixture-missing" }], error: null };
+    assertSelectDenied(
+      unDepsErr,
+      unDeps,
+      "IPI-647 same-org unassigned cannot SELECT planner.dependencies",
+    );
+  } finally {
+    if (userUnassigned?.user?.id) {
+      await checkedCleanup(
+        "org_members unassigned IPI-647",
+        admin.from("org_members").delete().eq("org_id", orgAId).eq("user_id", userUnassigned.user.id),
+      );
+      const { error } = await deleteAuthUser(userUnassigned.user.id);
+      if (error) trackCleanupError(`user unassigned IPI-647: ${error.message}`);
+      else pass("cleaned up unassigned IPI-647 user");
+    }
+  }
+
+  // Org admin / owner without planner assignment — no bypass.
+  const emailOrgAdmin = `plt002-rls-orgadmin-${stamp}@example.com`;
+  let userOrgAdmin;
+  try {
+    userOrgAdmin = await createTestUser(emailOrgAdmin);
+    const { error: seedOrgAdminErr } = await admin.from("org_members").insert({
+      org_id: orgAId,
+      user_id: userOrgAdmin.user.id,
+      role: "owner",
+    });
+    assert(!seedOrgAdminErr, "seed org owner without planner assignment for IPI-647");
+
+    const plannerOrgAdmin = userOrgAdmin.client.schema("planner");
+    const { data: adminInst, error: adminInstErr } = await plannerOrgAdmin
+      .from("instances")
+      .select("id")
+      .eq("id", instA.id);
+    assertSelectDenied(
+      adminInstErr,
+      adminInst,
+      "IPI-647 org owner without assignment cannot SELECT planner.instances",
+    );
+
+    const { data: adminTasks, error: adminTasksErr } = await plannerOrgAdmin
+      .from("tasks")
+      .select("id")
+      .eq("id", taskA.id);
+    assertSelectDenied(
+      adminTasksErr,
+      adminTasks,
+      "IPI-647 org owner without assignment cannot SELECT planner.tasks",
+    );
+
+    const { data: adminDeps, error: adminDepsErr } = depProbe?.id
+      ? await plannerOrgAdmin.from("dependencies").select("id").eq("id", depProbe.id)
+      : { data: [{ id: "fixture-missing" }], error: null };
+    assertSelectDenied(
+      adminDepsErr,
+      adminDeps,
+      "IPI-647 org owner without assignment cannot SELECT planner.dependencies",
+    );
+  } finally {
+    if (userOrgAdmin?.user?.id) {
+      await checkedCleanup(
+        "org_members orgadmin IPI-647",
+        admin.from("org_members").delete().eq("org_id", orgAId).eq("user_id", userOrgAdmin.user.id),
+      );
+      const { error } = await deleteAuthUser(userOrgAdmin.user.id);
+      if (error) trackCleanupError(`user orgadmin IPI-647: ${error.message}`);
+      else pass("cleaned up orgadmin IPI-647 user");
+    }
+  }
+
+  // Revoked = DELETE assignment row (no revoked_at). Temporarily revoke B, then restore.
+  const { error: revokeBErr } = await plannerA
+    .from("assignments")
+    .delete()
+    .eq("instance_id", instA.id)
+    .eq("user_id", userB.user.id);
+  assert(!revokeBErr, "IPI-647 owner can DELETE assignment (revoke)");
+
+  const { data: revokedInst, error: revokedInstErr } = await plannerB
+    .from("instances")
+    .select("id")
+    .eq("id", instA.id);
+  assertSelectDenied(
+    revokedInstErr,
+    revokedInst,
+    "IPI-647 revoked (deleted) assignment cannot SELECT planner.instances",
+  );
+
+  const { data: revokedTasks, error: revokedTasksErr } = await plannerB
+    .from("tasks")
+    .select("id")
+    .eq("id", taskA.id);
+  assertSelectDenied(
+    revokedTasksErr,
+    revokedTasks,
+    "IPI-647 revoked (deleted) assignment cannot SELECT planner.tasks",
+  );
+
+  const { data: revokedDeps, error: revokedDepsErr } = depProbe?.id
+    ? await plannerB.from("dependencies").select("id").eq("id", depProbe.id)
+    : { data: [{ id: "fixture-missing" }], error: null };
+  assertSelectDenied(
+    revokedDepsErr,
+    revokedDeps,
+    "IPI-647 revoked (deleted) assignment cannot SELECT planner.dependencies",
+  );
+
+  const { error: restoreViewerErr } = await plannerA.from("assignments").insert({
+    instance_id: instA.id,
+    user_id: userB.user.id,
+    role: "viewer",
+  });
+  assert(!restoreViewerErr, "IPI-647 restore viewer assignment after revoke probe");
+
+  // Cross-org: org A member must not see org B instance/tasks/deps.
+  const entityB647 = crypto.randomUUID();
+  const { data: instB647, error: instB647Err } = await plannerB
+    .from("instances")
+    .insert({
+      org_id: orgBId,
+      workflow_id: wfB.id,
+      entity_type: "shoot",
+      entity_id: entityB647,
+      name: `RLS Plan B647 ${stamp}`,
+      status: "draft",
+    })
+    .select("id")
+    .single();
+  assert(!instB647Err && instB647?.id, "org B owner inserts planner.instances for IPI-647 cross-org probe");
+
+  // No separate userB647 — reuses userB / orgB; rows cascade when org B is deleted below.
+  const { data: taskB647, error: taskB647Err } = instB647?.id
+    ? await plannerB
+        .from("tasks")
+        .insert({
+          instance_id: instB647.id,
+          title: `RLS Task B647 ${stamp}`,
+          status: "todo",
+          priority: "medium",
+          sort_order: 0,
+        })
+        .select("id")
+        .single()
+    : { data: null, error: { message: "instB647 missing after create assert" } };
+  assert(!taskB647Err && taskB647?.id, "org B owner inserts task for IPI-647 cross-org probe");
+
+  const { data: crossInst647, error: crossInst647Err } = instB647?.id
+    ? await plannerA.from("instances").select("id").eq("id", instB647.id)
+    : { data: [{ id: "fixture-missing" }], error: null };
+  assertSelectDenied(
+    crossInst647Err,
+    crossInst647,
+    "IPI-647 cross-org cannot SELECT planner.instances",
+  );
+
+  const { data: crossTasks647, error: crossTasks647Err } = taskB647?.id
+    ? await plannerA.from("tasks").select("id").eq("id", taskB647.id)
+    : { data: [{ id: "fixture-missing" }], error: null };
+  assertSelectDenied(
+    crossTasks647Err,
+    crossTasks647,
+    "IPI-647 cross-org cannot SELECT planner.tasks",
+  );
+
+  // service_role trusted backend — bypasses RLS; must still read for ops paths.
+  const { data: svcInst, error: svcInstErr } = await plannerAdmin
+    .from("instances")
+    .select("id")
+    .eq("id", instA.id);
+  assert(
+    !svcInstErr && (svcInst ?? []).length === 1,
+    "IPI-647 service_role can SELECT planner.instances (trusted backend unchanged)",
+  );
+
+  // Mutation regression: assigned owner UPDATE still works after SELECT tighten.
+  const { error: mutInstErr } = await plannerA
+    .from("instances")
+    .update({ name: `RLS Plan Mut ${stamp}` })
+    .eq("id", instA.id);
+  assert(!mutInstErr, "IPI-647 assigned owner can still UPDATE planner.instances");
+
+  const { error: mutTaskErr } = await plannerA
+    .from("tasks")
+    .update({ title: `RLS Task Mut ${stamp}` })
+    .eq("id", taskA.id);
+  assert(!mutTaskErr, "IPI-647 assigned owner can still UPDATE planner.tasks");
+
   // IPI-536 · PR #347 review fix — planner_get_my_assignment RPC probes.
   // assignments_select_org (this file, above) gates SELECT on planner.assignments
   // behind manager+ — a viewer/contributor querying the table directly for their
@@ -2258,7 +2669,10 @@ try {
     );
     const ciInstanceId = ciCreateResult?.instanceId;
 
-    const { data: ciInstanceRow, error: ciInstanceRowErr } = await plannerA
+    // IPI-647: JWT negative cases use authenticated clients above. Fixture
+    // inspection for create_instance results uses service_role because the
+    // org-owner session (plannerA) is intentionally unassigned to those rows.
+    const { data: ciInstanceRow, error: ciInstanceRowErr } = await plannerAdmin
       .from("instances")
       .select("owner_user_id")
       .eq("id", ciInstanceId)
@@ -2268,7 +2682,7 @@ try {
       "planner_create_instance defaults owner_user_id to the calling actor when p_owner_user_id is omitted",
     );
 
-    const { data: ciTasks, error: ciTasksErr } = await plannerA
+    const { data: ciTasks, error: ciTasksErr } = await plannerAdmin
       .from("tasks")
       .select("phase_id, start_date, end_date, sort_order")
       .eq("instance_id", ciInstanceId)
@@ -2285,7 +2699,7 @@ try {
       "planner_create_instance persists exactly the caller-supplied tasks with correct sort_order",
     );
 
-    const { data: ciDeps, error: ciDepsErr } = await plannerA
+    const { data: ciDeps, error: ciDepsErr } = await plannerAdmin
       .from("dependencies")
       .select("id")
       .eq("instance_id", ciInstanceId);
@@ -2380,7 +2794,7 @@ try {
       !ciExplicitOwnerErr && ciExplicitOwnerResult?.ok === true,
       "planner_create_instance accepts an explicit p_owner_user_id that is a real org member",
     );
-    const { data: ciExplicitOwnerRow, error: ciExplicitOwnerRowErr } = await plannerA
+    const { data: ciExplicitOwnerRow, error: ciExplicitOwnerRowErr } = await plannerAdmin
       .from("instances")
       .select("owner_user_id")
       .eq("id", ciExplicitOwnerResult?.instanceId)
@@ -2527,7 +2941,7 @@ try {
     // real instance for. Validating every task field before any write
     // (round-7) means none of them could have left a phantom row — the
     // count must still be exactly the one real instance from #5.
-    const { data: ciNoResidualInstance, error: ciNoResidualInstanceErr } = await plannerA
+    const { data: ciNoResidualInstance, error: ciNoResidualInstanceErr } = await plannerAdmin
       .from("instances")
       .select("id")
       .eq("org_id", orgAId)
