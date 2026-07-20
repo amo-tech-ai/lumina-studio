@@ -300,7 +300,7 @@ describe("reanalyzeBrand — IPI-744 restoreBrandStatus never masks the original
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.error).toMatch(/couldn't crawl/i);
     expect(consoleErrorSpy).toHaveBeenCalledWith(
-      "[reanalyze] failed to restore brand status",
+      "[analysis-lock] failed to restore brand status",
       expect.objectContaining({ brandId: BRAND.id, code: "23505" }),
     );
     consoleErrorSpy.mockRestore();
@@ -319,7 +319,7 @@ describe("reanalyzeBrand — IPI-744 restoreBrandStatus never masks the original
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.error).toMatch(/taking longer than expected/i);
     expect(consoleErrorSpy).toHaveBeenCalledWith(
-      "[reanalyze] status restoration threw",
+      "[analysis-lock] status restoration threw",
       expect.objectContaining({ brandId: BRAND.id, error: "network blip" }),
     );
     consoleErrorSpy.mockRestore();
@@ -696,9 +696,81 @@ describe("reanalyzeBrand — IPI-744 success-path token clear is non-critical (S
 
     expect(result).toEqual({ ok: true, hasDraft: true });
     expect(consoleErrorSpy).toHaveBeenCalledWith(
-      "[reanalyze] failed to clear lock token after success",
+      "[analysis-lock] failed to clear lock token after success",
       expect.objectContaining({ brandId: BRAND.id, error: "transient network blip" }),
     );
     consoleErrorSpy.mockRestore();
+  });
+});
+
+describe("reanalyzeBrand — IPI-745 stale-lock recovery (wiring-level)", () => {
+  function makeLockedSupabase(opts: {
+    lockedAt: string;
+    lockToken: string;
+    rpcResult: { data: unknown; error: unknown };
+  }) {
+    const brand = {
+      id: BRAND.id,
+      name: BRAND.name,
+      brand_url: BRAND.brand_url,
+      intake_status: "analysis_running",
+      analysis_lock_token: opts.lockToken,
+      analysis_locked_at: opts.lockedAt,
+    };
+    const rpcCalls: Record<string, unknown>[] = [];
+    return {
+      auth: { getUser: mockGetUser },
+      from: (table: string) => {
+        if (table !== "brands") throw new Error(`unexpected table: ${table}`);
+        return {
+          select: () => ({ eq: () => ({ maybeSingle: async () => ({ data: brand, error: null }) }) }),
+          update: () => ({ eq: () => ({ eq: async () => ({ data: null, error: null }) }) }),
+        };
+      },
+      rpc: (name: string, args: Record<string, unknown>) => {
+        if (name !== "take_over_stale_analysis_lock") throw new Error(`unexpected rpc: ${name}`);
+        rpcCalls.push(args);
+        return Promise.resolve(opts.rpcResult);
+      },
+      rpcCalls,
+    };
+  }
+
+  it("returns 'already in progress' for a fresh lock, without calling invokeBrandIntelligence", async () => {
+    mockGetUser.mockResolvedValue({ data: { user: { id: "user-1" } }, error: null });
+    mockSupabase = makeLockedSupabase({
+      lockedAt: new Date().toISOString(),
+      lockToken: "fresh-token",
+      rpcResult: { data: false, error: null }, // RPC's own now()-based check says still fresh
+    }) as never;
+
+    const { reanalyzeBrand } = await importActions();
+    const result = await reanalyzeBrand(BRAND.id);
+
+    expect(result).toEqual({ ok: false, error: "Analysis already in progress" });
+    expect(mockInvokeBrandIntelligence).not.toHaveBeenCalled();
+  });
+
+  it("takes over a stale lock and proceeds with analysis using a new runToken", async () => {
+    mockGetUser.mockResolvedValue({ data: { user: { id: "user-1" } }, error: null });
+    const supabase = makeLockedSupabase({
+      lockedAt: "2020-01-01T00:00:00.000Z",
+      lockToken: "stale-token",
+      rpcResult: { data: true, error: null },
+    });
+    mockSupabase = supabase as never;
+    mockInvokeStartBrandCrawl.mockResolvedValue({ crawlId: "crawl-1" });
+    mockWaitForCrawlCompletion.mockResolvedValue("complete");
+    mockInvokeBrandIntelligence.mockResolvedValue({ brandId: BRAND.id });
+
+    const { reanalyzeBrand } = await importActions();
+    const result = await reanalyzeBrand(BRAND.id);
+
+    expect(result).toEqual({ ok: true, hasDraft: true });
+    expect(supabase.rpcCalls).toEqual([
+      expect.objectContaining({ p_brand_id: BRAND.id, p_expected_token: "stale-token" }),
+    ]);
+    // The winning takeover's new token must not be the abandoned run's token.
+    expect(supabase.rpcCalls[0].p_new_token).not.toBe("stale-token");
   });
 });
