@@ -5,6 +5,7 @@
  * Disabled by default via ENABLE_CF_AI_SMOKE=false; enable only for preview proof.
  */
 import { NextResponse } from "next/server";
+import { timingSafeEqual } from "node:crypto";
 import { getCloudflareContext } from "@opennextjs/cloudflare";
 
 export const dynamic = "force-dynamic";
@@ -35,8 +36,17 @@ type SmokeEnv = {
 };
 
 function isSmokeEnabled(envFlag: string | undefined): boolean {
-  // Wrangler/ProcessEnv literal-type the committed default as "false"; coerce before compare.
-  return [envFlag, process.env.ENABLE_CF_AI_SMOKE].some((v) => String(v) === "true");
+  // Wrangler binding wins (fail closed). process.env only when context has no flag.
+  // Coerce: Wrangler/ProcessEnv literal-type the committed default as "false".
+  const flag = envFlag ?? process.env.ENABLE_CF_AI_SMOKE;
+  return String(flag) === "true";
+}
+
+function secretsEqual(provided: string, expected: string): boolean {
+  const a = Buffer.from(provided);
+  const b = Buffer.from(expected);
+  if (a.length !== b.length) return false;
+  return timingSafeEqual(a, b);
 }
 
 function json(
@@ -65,7 +75,15 @@ async function pollGatewayLog(
   ai: AiBinding,
   logId: string,
 ): Promise<{ ok: true; log: unknown } | { ok: false; error: string }> {
-  const gateway = ai.gateway?.(GATEWAY_ID);
+  let gateway: ReturnType<NonNullable<AiBinding["gateway"]>> | undefined;
+  try {
+    gateway = ai.gateway?.(GATEWAY_ID);
+  } catch (err) {
+    return {
+      ok: false,
+      error: err instanceof Error ? err.message : "gateway() failed",
+    };
+  }
   if (!gateway?.getLog) {
     return { ok: false, error: "gateway.getLog unavailable" };
   }
@@ -114,7 +132,7 @@ export async function POST(request: Request) {
   }
 
   const provided = request.headers.get("X-Internal-Secret");
-  if (!provided || provided !== expectedSecret) {
+  if (!provided || !secretsEqual(provided, expectedSecret)) {
     return json(401, { ok: false, error: "unauthorized", requestId, cfRay });
   }
 

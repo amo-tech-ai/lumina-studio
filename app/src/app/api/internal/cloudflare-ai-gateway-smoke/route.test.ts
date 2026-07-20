@@ -41,6 +41,20 @@ describe("POST /api/internal/cloudflare-ai-gateway-smoke", () => {
     );
   });
 
+  it("keeps route dark when Wrangler flag is false even if process.env is true", async () => {
+    vi.stubEnv("ENABLE_CF_AI_SMOKE", "true");
+    getCloudflareContext.mockResolvedValue({
+      env: {
+        ENABLE_CF_AI_SMOKE: "false",
+        INTERNAL_WEBHOOK_SECRET: "expected",
+        AI: { run: vi.fn() },
+      },
+    });
+
+    const res = await POST(req({ "X-Internal-Secret": "expected" }));
+    expect(res.status).toBe(404);
+  });
+
   it("returns 401 when secret is wrong", async () => {
     getCloudflareContext.mockResolvedValue({
       env: {
@@ -106,6 +120,30 @@ describe("POST /api/internal/cloudflare-ai-gateway-smoke", () => {
       { gateway: { id: "ipix-prod", skipCache: true } },
     );
     expect(getLog).toHaveBeenCalledWith("gw-log-abc");
+  });
+
+  it("keeps structured JSON when gateway() throws after a successful run", async () => {
+    const run = vi.fn().mockResolvedValue({ response: "ok" });
+    getCloudflareContext.mockResolvedValue({
+      env: {
+        ENABLE_CF_AI_SMOKE: "true",
+        INTERNAL_WEBHOOK_SECRET: "expected",
+        AI: {
+          run,
+          aiGatewayLogId: "gw-log-abc",
+          gateway: () => {
+            throw new Error("gateway boom");
+          },
+        },
+      },
+    });
+
+    const res = await POST(req({ "X-Internal-Secret": "expected" }));
+    const body = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(body.ok).toBe(true);
+    expect(body.logPoll).toEqual({ status: "pending", reason: "gateway boom" });
   });
 
   it("returns 504 when AI.run times out", async () => {
