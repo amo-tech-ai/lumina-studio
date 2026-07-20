@@ -4,16 +4,20 @@
 
 **The final application is what matters.** The goal is to be innovative — nothing here is set in stone. We are constantly experimenting, improving, and raising the quality of the user experience throughout the development process. Treat every doc, diagram, schema, and component as a draft that can be made better, not a fixed contract. When a change serves a better end-product UX, propose it — even if it means rethinking something already built. Ship, learn, refine.
 
-## Communication style — explain with real iPix examples, not abstractions
+## Communication style — plain language, real iPix examples, every response
 
-When explaining a concept, decision, tradeoff, or finding, ground it in something concrete from this repo — a real screen, ticket, table, or file — instead of a generic description. The reader should be able to go look at the actual thing, not imagine a hypothetical one.
+Every response — not just audit findings — should be easy to follow on a first read and grounded in something concrete from this repo (a real screen, ticket, table, file, or PR) instead of a generic abstraction. Prefer plain language over jargon, short sentences over long ones, and tables/checklists over dense prose. When a finding is technical, add a one-line plain-English translation of why it matters. The reader should be able to click into or grep for the real thing, not imagine a hypothetical one.
 
 - ❌ "A reusable filter component" → ✅ "the Owner filter button on the Pipeline board (`pipeline-workspace.tsx:128`) — already built, just disabled"
 - ❌ "A foreign key without proper scoping" → ✅ "like `crm_deals.company_id` — a plain FK with no org check, which is exactly how a mismatched cross-org company slipped through in PR #337"
 - ❌ "Improve error handling" → ✅ "stop string-matching the server's exception text in `convert-deal.ts` — a migration wording change silently turned a 403 into a 500"
 - ❌ "A screen that hasn't been built yet" → ✅ "the Planner Hub (`/app/planner`, IPI-526) — designed, zero code, 404 today"
+- ❌ "The RPC has no authorization check" → ✅ "`commit_shoot_draft` (IPI-727) trusted `p_brand_id` with zero check of its own — safe today only because its one caller, `/api/shoots/commit`, already checks `brands`' RLS before invoking it"
+- ❌ "A migration fixed the RLS visibility gap" → ✅ "IPI-721 swapped `brands.user_id = auth.uid()` for `is_org_member(org_id)` on `shoot_portfolio_view` — the exact line that made `qa@ipix.test`'s own shoot invisible to them moments after creating it"
 
-This applies to explanations, audit findings, and status summaries alike — not just code comments. A real example a teammate can click into or grep for is worth more than a correct-but-abstract sentence.
+**Never cite a bare issue or PR number.** `IPI-582` or `#337` means nothing to a reader without Linear/GitHub open — always pair the number with its actual title on first mention, e.g. `IPI-582 (Task Detail and Safe Mutations)` or [PR #337](https://github.com/amo-tech-ai/lumina-studio/pull/337).
+
+Organize long outputs (todos, audits, roadmaps, verification reports) so a new team member could follow them without prior context. This applies uniformly across every kind of output — explanations, audit findings, status summaries, PR descriptions, code comments, and casual replies alike — not just formal reports.
 
 ## UX principles (apply to every user-facing change)
 
@@ -90,9 +94,19 @@ We are in active development. Always leave the system better than you found it: 
 - Rank improvements by payoff per unit effort, not by how impressive they sound. Name the single highest-leverage next move.
 - This does **not** override the one-concern-per-PR rule below. Spot an out-of-scope improvement → log it / flag it as its own task, don't bolt it onto the current change.
 
+## Efficiency self-check — ongoing, not a one-time audit
+
+Periodically ask "is this still the leanest way to finish this?" while working — especially mid-way through a long stretch (a multi-file audit, a review-fix pass, a live-verification loop) — not only when the user asks. This does not relax "verify before asserting" or any other rule above; it's about cutting wasted motion, not wasted rigor.
+
+- **Will this tool's output actually get used?** Don't run a big, expensive lookup as due-diligence theater if a cheaper check already answers the question — either use what it returns or skip the call. (Real example: calling Supabase's `get_advisors` when `verify-rls.mjs` plus a direct `pg_policies` query had already settled the question — the advisors output was never read.)
+- **Trust the harness's own signals.** An Edit/Write result that says the file state is already current in context means don't `Read` it back "to be sure" — that note exists specifically to save the round trip.
+- **Batch discovery before editing.** Touching several tests/files for one fix → grep every affected location first, plan every edit, then apply them — not grep → edit → grep → edit in a loop.
+- **Don't guess an ID a tool is about to hand you.** If a Linear/GitHub call will return the real number, get it before naming a branch, file, or commit after it — not the other way around (redoing a worktree because you branched on a guessed IPI number is pure waste).
+- **On a transient failure** (permission-classifier block, OOM, flaky network) **retry once with a plan for what happens if it fails again** — not a blind repeat past that, and not silent abandonment either.
+
 ## Hard rules
 
-- **🚫 NEVER push code directly to `main`.** Before writing a single line of code, create a worktree branch: `git worktree add ../wt-ipi-NNN -b ipi/NNN-name`. Commit on the branch, push, open a PR with `gh pr create`. Even a one-line fix. Pushing direct to `main` means no PR can be created after the fact (`head == base` error). No exceptions.
+- **🚫 NEVER push code directly to `main`.** Before writing a single line of code, create a worktree branch: `npm run worktree:add -- IPI-NNN short-name` (preferred — see Worktree workflow below) or `git worktree add ../wt-ipi-NNN-short-name -b ipi/NNN-short-name` as a fallback. Commit on the branch, push, open a PR with `gh pr create`. Even a one-line fix. Pushing direct to `main` means no PR can be created after the fact (`head == base` error). No exceptions.
 
 - **🚫 NEVER mix docs and production files in one PR or commit. NEVER mix two different tasks/concerns in one PR or commit. EVER.** One concern per PR *and* per commit — docs-only, code-only, migration-only, CI/config-only, each separate. If a change set spans docs + code (or two tasks), STOP and split before staging. This is the most-enforced rule here (see PR #99 fallout); violating it is a blocking error, not a style nit.
 
@@ -138,24 +152,40 @@ git worktree remove <path>
 This is not the same as the periodic "weekly ritual" in `.claude/commands/worktree.md` — it's a mandatory pre-check for *this* task, every time, not a background chore. Evidence this is a real failure mode, not a hypothetical: a single session on IPI-536 created `wt-ipi-536-foundation` (implementation) and later `wt-ipi-536-qa` (QA pass) without removing the first once its PR merged — two worktrees open for one ticket, unbounded growth across a long session if repeated.
 
 ```bash
-# 1. Create branch + worktree before any code change
-git worktree add ../wt-ipi-NNN -b ipi/NNN-short-name
+# 1. Create branch + worktree before any code change — preferred: the repo script
+npm run worktree:add -- IPI-NNN short-name
+# Wraps scripts/worktree-add.mjs: creates the branch (ipi/NNN-short-name) + worktree
+# (../wt-ipi-NNN-short-name) off origin/main, copies .env/.env.local per
+# .worktreeinclude, and runs npm ci — one command instead of three manual steps.
+# IMPORTANT: run this from the main /home/sk/ipix checkout, not from app/ or any
+# other subdirectory — a relative `../` from the wrong cwd nests the new worktree
+# inside the repo instead of as a sibling (the script itself refuses to do this;
+# raw `git worktree add` will not stop you).
 
-# 2. Copy .env (untracked files don't transfer automatically)
-#    .worktreeinclude at repo root handles this automatically for listed files.
-#    Check it includes .env and .env.local.
+# Fallback (script failure, or a branch that doesn't fit ipi/NNN-slug, e.g. docs/... or fix/...):
+git worktree add ../wt-ipi-NNN-short-name -b ipi/NNN-short-name origin/main
+# then copy .env manually per .worktreeinclude and run npm ci yourself.
 
-# 3. Work, commit, push
-cd ../wt-ipi-NNN
+# 2. Work, commit, push
+cd ../wt-ipi-NNN-short-name
 # ... make changes ...
 git add <files> && git commit -m "feat(ipi-NNN): ..."
 git push -u origin ipi/NNN-short-name
 
-# 4. Open PR
-gh pr create --title "..." --body "..."
+# 3. Open PR — include "Fixes IPI-NNN" in the body so Linear's GitHub integration
+#    auto-links the PR (confirm the GitHub app is installed on amo-tech-ai/lumina-studio
+#    first if relying on this). Whether merge also auto-closes the issue depends on
+#    the team's configured GitHub automation in Linear settings — don't assume it
+#    always does. If this PR has a separate follow-up ticket, reference it as
+#    "Related to IPI-MMM" (non-closing magic word) on its own line — never "Fixes" —
+#    so merging this PR can't accidentally close the follow-up.
+gh pr create --title "..." --body "Fixes IPI-NNN
+Related to IPI-MMM
 
-# 5. Clean up after merge
-git worktree remove ../wt-ipi-NNN
+..."
+
+# 4. Clean up after merge
+git worktree remove ../wt-ipi-NNN-short-name
 ```
 
 **Branch naming:** `ipi/<issue-number>-<short-name>` — e.g. `ipi/130-brand-agent`
@@ -196,6 +226,18 @@ If it fails, fix the root cause. `--no-verify` is only acceptable for **docs-onl
 
 Full gate adds `npm run build` (~5min). Use before opening a PR.
 
+**Before pushing — don't duplicate the hook.** Run focused checks, then let the hook run the full suite once:
+
+```bash
+git fetch origin main
+npm test -- --changed origin/main   # runs only tests touching files that differ from origin/main
+npm run typecheck
+npm run lint
+git commit ... && git push          # pre-push hook now runs typecheck + full test suite once
+```
+
+Don't also run the full `npm test` manually right before pushing — the hook runs the identical thing seconds later. Run the full suite manually (in addition to the hook) only when: the change touches shared infrastructure, you're modifying the pre-push hook itself, you're debugging a flaky test, you're assembling final evidence before a `--no-verify` bypass, or the task explicitly asks for a local full-suite result as evidence.
+
 ## Mastra — known gotchas
 
 - **`DATABASE_URL` at build time:** Next.js imports Mastra modules during `next build` even for `force-dynamic` routes. `getMastraStorage()` throws if `NODE_ENV=production` and `DATABASE_URL` is unset. Fix: guard with `&& !process.env.CI` so the no-op stub is used during CI builds.
@@ -205,12 +247,18 @@ Full gate adds `npm run build` (~5min). Use before opening a PR.
 ## Key scripts (app/)
 
 ```bash
-npm run typecheck   # tsc --noEmit (~15s)
-npm test            # vitest run (~30s)
-npm run build       # next build (~2-3min)
-npm run lint        # eslint
-npm run dev         # next dev --turbopack + mastra dev
+npm run typecheck                                   # tsc --noEmit (~15s) — already incremental (tsconfig.json)
+npm test                                            # vitest run (~30s)
+git fetch origin main && npm test -- --changed origin/main  # only tests touching files that differ from origin/main
+npm run build                                       # next build (~2-3min)
+npm run lint                                        # eslint
+npm run lint -- --cache --cache-location .cache/eslint  # skips files unchanged since the last cached run
+npm run dev                                         # next dev --turbopack + mastra dev
 ```
+
+`--changed` walks the static import graph via `vitest run` (the `test` script already runs in `run` mode, not watch) — a dynamically-loaded module (path built from a variable, not a literal import) can be missed, so fall back to the full `npm test` for config/plugin-registry/runtime-loaded changes. `git fetch origin main` first so the diff target is current. Calling Vitest directly instead of via `npm test`? Use `npx vitest run --changed origin/main` — `vitest --changed` alone (no `run`) enters watch mode.
+
+`--cache-location .cache/eslint` needs `.cache/` added to `.gitignore`. Local-dev speedup only — GitHub Actions runners are ephemeral, so this cache doesn't help CI unless the directory is deliberately persisted with an Actions cache step.
 
 ## Stack
 
@@ -270,10 +318,3 @@ For automated browser testing (`npm run dev` on port 3002):
 | Password | See `.env.local` (`QA_PASSWORD`) or ask the team lead |
 
 These are test-only accounts with no real data. Safe to use in browser automation, Playwright, and MCP browser tools.
-
-## Response style — clarity first
-
-Audit reports, plans, and explanations must be easy to understand, not just complete. Prefer plain language over jargon, short sentences over long ones, and tables/checklists over dense prose. When a finding is technical, add a one-line plain-English translation of why it matters. Organize long outputs (todos, audits, roadmaps) so a new team member could follow them without needing prior context.
-
-- **Use real iPix examples, not generic ones.** When an abstract point needs illustrating, ground it in this repo's own screens, tickets, or code — e.g. "like IPI-536's `permissions.ts` wrapper," not "like a typical service wrapper."
-- **Never cite a bare issue number.** `IPI-582` or `IPI-483` means nothing to a reader without Linear open. Always pair the number with its actual title on first mention — e.g. `IPI-582 (Task Detail and Safe Mutations)` — the same rule applies to any PR number.
