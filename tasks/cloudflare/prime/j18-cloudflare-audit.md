@@ -1,9 +1,12 @@
 # J18 Cloudflare Hosting Audit — Coordinator Summary
 
+> **Superseded for status/% by [j19-cloudflare-audit.md](j19-cloudflare-audit.md) (2026-07-20).**  
+> Keep for historical context. Execution order → corrected [`j18-cloudflare-plan.md`](j18-cloudflare-plan.md).
+
 **Date:** 2026-07-18  
-**Full audit:** [`docs/audits/cloudflare-hosting-implementation-audit.md`](../../docs/audits/cloudflare-hosting-implementation-audit.md)  
+**Full audit (moved):** [`../audits/cloudflare-hosting-implementation-audit.md`](../audits/cloudflare-hosting-implementation-audit.md)  
 **Execution plan:** [`j18-cloudflare-plan.md`](j18-cloudflare-plan.md)  
-**Prior plan (still valid):** [`04-plan-hosting.md`](04-plan-hosting.md)
+**Prior plan (architecture OK):** [`04-plan-hosting.md`](04-plan-hosting.md)
 
 ---
 
