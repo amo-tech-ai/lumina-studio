@@ -20,6 +20,15 @@ export default defineConfig({
     timeout: 120_000,
     env: {
       NEXT_PUBLIC_E2E_UPLOAD_POLL_MAX_MS: "3000",
+      // Prefer no Next.js dev portal overlay during Playwright (actionability).
+      NEXT_DISABLE_DEV_OVERLAY: "1",
+      // IPI-725 sign-out e2e needs the same fail-closed gate as Cloudflare preview.
+      ...(process.env.OPERATOR_AUTH_ENABLED
+        ? { OPERATOR_AUTH_ENABLED: process.env.OPERATOR_AUTH_ENABLED }
+        : {}),
+      ...(process.env.REQUIRE_OPERATOR_SIGNOUT_E2E === "true"
+        ? { OPERATOR_AUTH_ENABLED: "true" }
+        : {}),
     },
   },
   use: {

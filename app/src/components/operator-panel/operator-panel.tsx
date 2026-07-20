@@ -13,6 +13,7 @@ import {
 } from "@copilotkit/react-core/v2";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useMemo, useState } from "react";
+import { toast } from "sonner";
 import { z } from "zod";
 
 import { useHideInternalToolCalls } from "@/components/copilot/copilot-tool-presentation";
@@ -25,6 +26,7 @@ import { DEV_PREVIEW_HERO_BRAND_ID, isDevPreviewBrandId, isDevSkipMode } from ".
 import { IntelligenceDetailProvider } from "@/context/intelligence-detail-context";
 import { NavSidebar } from "./nav-sidebar";
 import { OperatorChatDock } from "./operator-chat-dock";
+import { MobileSignOutBar } from "./mobile-sign-out-bar";
 import { useOperatorBrands } from "./use-operator-brands";
 import { useUnreadNotifications } from "./use-unread-notifications";
 import styles from "./operator-shell.module.css";
@@ -84,8 +86,19 @@ function OperatorShell({
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const skip = searchParams.get("skip");
+  const signoutError = searchParams.get("signoutError");
   const devSkip = isDevSkipMode(skip);
   const [threadsOpen, setThreadsOpen] = useState(false);
+
+  // IPI-725 — /auth/signout redirects here on failure; surface it (do not land on /login).
+  useEffect(() => {
+    if (signoutError !== "1") return;
+    toast.error("Sign out failed. Your session may still be active — try again.");
+    const next = new URLSearchParams(searchParams.toString());
+    next.delete("signoutError");
+    const q = next.toString();
+    router.replace(q ? `${pathname}?${q}` : pathname);
+  }, [signoutError, searchParams, pathname, router]);
   const { activeBrandId, setActiveBrandId } = useActiveBrand();
   const { brands, brandsRef, brandsLoadingRef } = useOperatorBrands(devSkip);
   const unreadNotifications = useUnreadNotifications();
@@ -218,6 +231,8 @@ function OperatorShell({
 
       {/* Center — page content + bottom chat dock (DC PersistentChatDock) */}
       <main className={styles.content}>
+        {/* IPI-725 — nav rail is display:none below 768px; keep Sign out reachable */}
+        <MobileSignOutBar />
         <div className={styles.contentScroll}>{children}</div>
         <OperatorChatDock welcomeText={welcomeText} />
       </main>

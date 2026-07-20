@@ -1,14 +1,53 @@
 // @vitest-environment jsdom
 // No @testing-library/jest-dom in this repo — assert with plain DOM/vitest, not toBeInTheDocument().
-import { afterEach, describe, expect, it, vi } from "vitest";
-import { cleanup, render, screen } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
 
 vi.mock("./nav-sidebar.module.css", () => ({ default: new Proxy({}, { get: (_, k) => String(k) }) }));
-vi.mock("next/navigation", () => ({ usePathname: () => "/app" }));
+vi.mock("next/navigation", () => ({
+  usePathname: () => "/app",
+}));
 
 import { NavSidebar } from "./nav-sidebar";
 
+function stubMatchMedia(matches: boolean) {
+  Object.defineProperty(window, "matchMedia", {
+    writable: true,
+    configurable: true,
+    value: vi.fn().mockImplementation((query: string) => ({
+      matches,
+      media: query,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    })),
+  });
+}
+
 afterEach(cleanup);
+
+describe("NavSidebar — Sign out (IPI-725)", () => {
+  beforeEach(() => stubMatchMedia(false));
+
+  it("renders a Sign out control on desktop rail", async () => {
+    render(<NavSidebar />);
+    await waitFor(() => {
+      expect(screen.getByTestId("operator-sign-out")).toBeTruthy();
+    });
+    expect(screen.getByRole("button", { name: "Sign out" })).toBeTruthy();
+  });
+
+  it("omits Sign out from the rail when mobile CSS would hide the nav", async () => {
+    stubMatchMedia(true);
+    render(<NavSidebar />);
+    await act(async () => {});
+    await waitFor(() => {
+      expect(screen.queryByTestId("operator-sign-out")).toBeNull();
+    });
+  });
+});
 
 describe("NavSidebar — Inbox unread badge", () => {
   it("shows no badge when count is 0", () => {
