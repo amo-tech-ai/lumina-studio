@@ -39,14 +39,15 @@ const DEAL_STAGE_LABEL: Record<CrmDealStage, string> = {
   lost: "Lost",
 };
 
-// Pipeline reads cold → warm → closed: muted → info → warning → approved/blocked.
+// SCR-30 stage dots: Lead grey-500, Qualified blue, Proposal purple
+// (--color-published), Negotiation amber, Won green, Lost red-700.
 const DEAL_STAGE_DOT: Record<CrmDealStage, string> = {
-  lead: "var(--color-text-muted)",
+  lead: "var(--color-crm-lead)",
   qualified: "var(--color-info)",
-  proposal: "var(--color-info)",
+  proposal: "var(--color-published)",
   negotiation: "var(--color-warning-text)",
   won: "var(--color-approved)",
-  lost: "var(--color-blocked)",
+  lost: "var(--color-crm-lost)",
 };
 
 const DEAL_STAGES = new Set<string>(Object.keys(DEAL_STAGE_LABEL));

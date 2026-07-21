@@ -217,10 +217,19 @@ export function PipelineWorkspace({ deals: initialDeals, companyNames, ownerName
             return (
               <div key={stage} className={styles.column}>
                 <div className={styles.columnHeader}>
-                  <span className={styles.stageDot} style={{ background: crmDealStageDotToken(stage) }} aria-hidden />
-                  <span className={styles.stageLabel}>{crmDealStageLabel(stage)}</span>
-                  <span className={styles.stageCount}>{stageDeals.length}</span>
-                  {locked ? <Lock size={12} aria-hidden className={styles.lockIcon} /> : null}
+                  <div className={styles.columnHeaderTop}>
+                    <div className={styles.columnHeaderLabel}>
+                      <span className={styles.stageDot} style={{ background: crmDealStageDotToken(stage) }} aria-hidden />
+                      <span className={styles.stageLabel}>{crmDealStageLabel(stage)}</span>
+                      {locked ? <Lock size={12} aria-hidden className={styles.lockIcon} /> : null}
+                    </div>
+                    <span className={styles.stageCount}>{stageDeals.length}</span>
+                  </div>
+                  <div className={styles.columnTotal}>
+                    {stageTotals.size > 0
+                      ? [...stageTotals.entries()].map(([cur, sum]) => formatMoney(sum, cur)).join(" + ")
+                      : "—"}
+                  </div>
                 </div>
                 {locked ? <div className={styles.lockedBadge}>Enter via approval only</div> : null}
 
@@ -259,12 +268,6 @@ export function PipelineWorkspace({ deals: initialDeals, companyNames, ownerName
                     );
                   })}
                   {stageDeals.length === 0 ? <div className={styles.columnEmpty}>No deals</div> : null}
-                </div>
-
-                <div className={styles.columnTotal}>
-                  {stageTotals.size > 0
-                    ? [...stageTotals.entries()].map(([cur, sum]) => formatMoney(sum, cur)).join(" + ")
-                    : "—"}
                 </div>
               </div>
             );
