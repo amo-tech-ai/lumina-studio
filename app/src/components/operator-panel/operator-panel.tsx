@@ -18,6 +18,7 @@ import { z } from "zod";
 
 import { useHideInternalToolCalls } from "@/components/copilot/copilot-tool-presentation";
 import { useCrmDraftFollowUpRender } from "@/components/crm/follow-up-draft-card";
+import { CrmMobileTabBar } from "@/components/crm/crm-mobile-tab-bar";
 import { IntelligencePanel } from "@/components/intelligence-panel";
 import { ThreadsDrawer } from "@/components/threads-drawer";
 import { ThreadsPanelGate } from "@/components/threads-drawer/locked-state";
@@ -242,8 +243,10 @@ function OperatorShell({
   const activeBrandName =
     brands.find((b) => b.id === activeBrandId)?.name ?? (devSkip ? "Nike" : null);
 
+  const isCrmRoute = pathname.startsWith("/app/crm");
+
   return (
-    <div className={styles.shell}>
+    <div className={isCrmRoute ? `${styles.shell} ${styles.shellWithCrmTabs}` : styles.shell}>
       {/* Left nav rail — brand switcher + section nav */}
       <NavSidebar
         onThreadsClick={() => setThreadsOpen((v) => !v)}
@@ -259,6 +262,8 @@ function OperatorShell({
         <MobileSignOutBar />
         <div className={styles.contentScroll}>{children}</div>
         <OperatorChatDock welcomeText={welcomeText} />
+        {/* IPI-572 — CRM tabs under chat dock (hidden ≥1025px via CSS) */}
+        {isCrmRoute ? <CrmMobileTabBar /> : null}
       </main>
 
       {/* Right — IntelligencePanel only (320px) — no CopilotSidebar */}
