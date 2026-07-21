@@ -350,19 +350,129 @@ describe("useRouteWelcome", () => {
     });
   });
 
-  describe("CRM routes (IPI-368)", () => {
-    it("welcomes on companies list", () => {
+  describe("CRM routes (IPI-368 + IPI-374)", () => {
+    it("welcomes on companies list with static fallback", () => {
       const { result } = renderHook(() =>
         useRouteWelcome({ pathname: "/app/crm/companies" }),
       );
-      expect(result.current).toContain("Companies");
+      expect(result.current).toBe("Companies — search prospects and review relationship status");
     });
 
-    it("welcomes on pipeline detail", () => {
+    it("welcomes on companies list with company count", () => {
       const { result } = renderHook(() =>
-        useRouteWelcome({ pathname: "/app/crm/pipeline/" + "550e8400-e29b-41d4-a716-446655440000" }),
+        useRouteWelcome({
+          pathname: "/app/crm/companies",
+          context: { companyCount: 12, openDealsCount: 5 },
+        }),
       );
-      expect(result.current).toContain("Deal detail");
+      expect(result.current).toBe(
+        "12 companies · 5 open deals — search prospects and review relationship status",
+      );
+    });
+
+    it("welcomes on company detail with static fallback", () => {
+      const { result } = renderHook(() =>
+        useRouteWelcome({ pathname: "/app/crm/companies/550e8400-e29b-41d4-a716-446655440000" }),
+      );
+      expect(result.current).toBe(
+        "Company record — log activities, review contacts, and track deals",
+      );
+    });
+
+    it("welcomes on company detail with record context", () => {
+      const { result } = renderHook(() =>
+        useRouteWelcome({
+          pathname: "/app/crm/companies/550e8400-e29b-41d4-a716-446655440000",
+          context: {
+            companyName: "Acme Athletic",
+            dealStage: "Proposal",
+            lastActivityDays: 3,
+          },
+        }),
+      );
+      expect(result.current).toBe(
+        "Acme Athletic · Proposal stage · last touch 3d ago — log activities, review contacts, and track deals",
+      );
+    });
+
+    it("welcomes on contacts list with static fallback", () => {
+      const { result } = renderHook(() =>
+        useRouteWelcome({ pathname: "/app/crm/contacts" }),
+      );
+      expect(result.current).toBe("Contacts — find people and review communication history");
+    });
+
+    it("welcomes on contacts list with contact count", () => {
+      const { result } = renderHook(() =>
+        useRouteWelcome({
+          pathname: "/app/crm/contacts",
+          context: { contactCount: 24 },
+        }),
+      );
+      expect(result.current).toBe("24 contacts — find people and review communication history");
+    });
+
+    it("welcomes on contact detail with static fallback", () => {
+      const { result } = renderHook(() =>
+        useRouteWelcome({ pathname: "/app/crm/contacts/550e8400-e29b-41d4-a716-446655440001" }),
+      );
+      expect(result.current).toBe("Contact record — log touchpoints and link to companies");
+    });
+
+    it("welcomes on contact detail with record context", () => {
+      const { result } = renderHook(() =>
+        useRouteWelcome({
+          pathname: "/app/crm/contacts/550e8400-e29b-41d4-a716-446655440001",
+          context: { contactName: "Jane Doe", companyName: "Acme Athletic" },
+        }),
+      );
+      expect(result.current).toBe(
+        "Jane Doe at Acme Athletic — log touchpoints and link to companies",
+      );
+    });
+
+    it("welcomes on pipeline with static fallback", () => {
+      const { result } = renderHook(() =>
+        useRouteWelcome({ pathname: "/app/crm/pipeline" }),
+      );
+      expect(result.current).toBe("Pipeline — review deals by stage and move non-terminal stages");
+    });
+
+    it("welcomes on pipeline with value and at-risk count", () => {
+      const { result } = renderHook(() =>
+        useRouteWelcome({
+          pathname: "/app/crm/pipeline",
+          context: { pipelineValue: "$1,200,000", atRiskCount: 3 },
+        }),
+      );
+      expect(result.current).toBe(
+        "$1,200,000 pipeline · 3 at risk — review deals by stage and move non-terminal stages",
+      );
+    });
+
+    it("welcomes on pipeline detail with static fallback", () => {
+      const { result } = renderHook(() =>
+        useRouteWelcome({ pathname: "/app/crm/pipeline/550e8400-e29b-41d4-a716-446655440000" }),
+      );
+      expect(result.current).toBe(
+        "Deal detail — review stage and move non-terminal stages via the assistant",
+      );
+    });
+
+    it("welcomes on pipeline detail with deal context", () => {
+      const { result } = renderHook(() =>
+        useRouteWelcome({
+          pathname: "/app/crm/pipeline/550e8400-e29b-41d4-a716-446655440000",
+          context: {
+            dealName: "Acme Athletic deal",
+            dealStage: "Proposal",
+            value: "$50,000",
+          },
+        }),
+      );
+      expect(result.current).toBe(
+        "Acme Athletic deal — Proposal · $50,000 — review stage and move non-terminal stages via the assistant",
+      );
     });
   });
 

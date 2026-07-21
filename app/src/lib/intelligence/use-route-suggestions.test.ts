@@ -327,12 +327,85 @@ describe("useRouteSuggestions", () => {
     });
   });
 
-  describe("CRM routes (IPI-368)", () => {
+  describe("CRM routes (IPI-368 + IPI-374)", () => {
     it("suggests search on companies list", () => {
       const { result } = renderHook(() =>
         useRouteSuggestions({ pathname: "/app/crm/companies" }),
       );
       expect(result.current[0].title).toBe("Search companies");
+    });
+
+    it("personalizes pipeline suggestion on companies list when at-risk deals exist", () => {
+      const { result } = renderHook(() =>
+        useRouteSuggestions({
+          pathname: "/app/crm/companies",
+          context: { atRiskCount: 2 },
+        }),
+      );
+      expect(result.current[2].message).toContain("2 deals at risk");
+    });
+
+    it("suggests company actions on company detail", () => {
+      const { result } = renderHook(() =>
+        useRouteSuggestions({
+          pathname: "/app/crm/companies/550e8400-e29b-41d4-a716-446655440000",
+        }),
+      );
+      expect(result.current[0].title).toBe("Log a note");
+      expect(result.current[0].message).toBe("Log a note on this company.");
+    });
+
+    it("personalizes company detail suggestions with company name", () => {
+      const { result } = renderHook(() =>
+        useRouteSuggestions({
+          pathname: "/app/crm/companies/550e8400-e29b-41d4-a716-446655440000",
+          context: { companyName: "Acme Athletic" },
+        }),
+      );
+      expect(result.current[0].message).toBe("Log a note on Acme Athletic.");
+    });
+
+    it("suggests contact search on contacts list", () => {
+      const { result } = renderHook(() =>
+        useRouteSuggestions({ pathname: "/app/crm/contacts" }),
+      );
+      expect(result.current[0].title).toBe("Search contacts");
+    });
+
+    it("suggests contact actions on contact detail", () => {
+      const { result } = renderHook(() =>
+        useRouteSuggestions({
+          pathname: "/app/crm/contacts/550e8400-e29b-41d4-a716-446655440001",
+        }),
+      );
+      expect(result.current[0].title).toBe("Log a call");
+    });
+
+    it("personalizes contact detail suggestions with contact name", () => {
+      const { result } = renderHook(() =>
+        useRouteSuggestions({
+          pathname: "/app/crm/contacts/550e8400-e29b-41d4-a716-446655440001",
+          context: { contactName: "Jane Doe" },
+        }),
+      );
+      expect(result.current[0].message).toBe("Log a call with Jane Doe.");
+    });
+
+    it("suggests pipeline summary on pipeline list", () => {
+      const { result } = renderHook(() =>
+        useRouteSuggestions({ pathname: "/app/crm/pipeline" }),
+      );
+      expect(result.current[0].title).toBe("Summarize pipeline");
+    });
+
+    it("personalizes stale-deal suggestion when at-risk count known", () => {
+      const { result } = renderHook(() =>
+        useRouteSuggestions({
+          pathname: "/app/crm/pipeline",
+          context: { atRiskCount: 3 },
+        }),
+      );
+      expect(result.current[1].message).toBe("Which 3 at-risk deals need attention?");
     });
 
     it("suggests stage moves on pipeline detail", () => {
@@ -342,6 +415,16 @@ describe("useRouteSuggestions", () => {
         }),
       );
       expect(result.current[0].title).toBe("Move stage");
+    });
+
+    it("personalizes pipeline detail suggestions with deal name", () => {
+      const { result } = renderHook(() =>
+        useRouteSuggestions({
+          pathname: "/app/crm/pipeline/550e8400-e29b-41d4-a716-446655440000",
+          context: { dealName: "Acme Athletic deal" },
+        }),
+      );
+      expect(result.current[0].message).toBe("Move Acme Athletic deal to the next non-terminal stage.");
     });
   });
 

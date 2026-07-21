@@ -2,8 +2,14 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { CheckCircle, ExternalLink } from "lucide-react";
+
+import { useSetCrmChatContext } from "@/context/crm-chat-context";
+import {
+  dealDisplayName,
+  formatDealValue,
+} from "@/lib/crm/derive-crm-chat-context";
 
 import { ErrorState } from "@/components/ui/error-state";
 import { StatusChip } from "@/components/ui/status-chip";
@@ -77,6 +83,19 @@ export function DealDetailWorkspace({ data, fetchError }: Props) {
     if (updatedAt) setConfirmedUpdatedAt(updatedAt);
   }
 
+  const chatContext = useMemo(() => {
+    if (fetchError || !data) return {};
+    const stage = confirmedStage ?? toKnownStage(data.deal.stage);
+    const displayTitle = dealDisplayName(data.companyName);
+    return {
+      dealName: displayTitle,
+      dealStage: crmDealStageLabel(stage),
+      value: formatDealValue(data.deal),
+      crmRecordLoaded: true,
+    };
+  }, [confirmedStage, data, fetchError]);
+  useSetCrmChatContext(chatContext);
+
   if (fetchError || !data) {
     return (
       <div className={shellStyles.stateRoot}>
@@ -88,7 +107,7 @@ export function DealDetailWorkspace({ data, fetchError }: Props) {
   const { deal, companyName, companyBrandId, activities } = data;
   const stage = confirmedStage ?? toKnownStage(deal.stage);
   const brandId = confirmedBrandId !== undefined ? confirmedBrandId : companyBrandId;
-  const displayTitle = `${companyName ?? "Untitled company"} deal`;
+  const displayTitle = dealDisplayName(companyName);
 
   return (
     <div className={styles.root}>

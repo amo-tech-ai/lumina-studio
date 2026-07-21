@@ -25,6 +25,7 @@ import { useActiveBrand } from "@/context/active-brand-context";
 import { useHeroBrandSync } from "@/lib/active-brand/use-hero-brand-sync";
 import { DEV_PREVIEW_HERO_BRAND_ID, isDevPreviewBrandId, isDevSkipMode } from "./dev-skip-fixture";
 import { IntelligenceDetailProvider } from "@/context/intelligence-detail-context";
+import { CrmChatProvider, useCrmChatContext } from "@/context/crm-chat-context";
 import { NavSidebar } from "./nav-sidebar";
 import { OperatorChatDock } from "./operator-chat-dock";
 import { MobileSignOutBar } from "./mobile-sign-out-bar";
@@ -46,15 +47,17 @@ export function OperatorPanel({ children }: { children: React.ReactNode }) {
   useEffect(() => { setThreadId(undefined); }, [agentId]);
   return (
     <IntelligenceDetailProvider>
-      <CopilotChatConfigurationProvider agentId={agentId} threadId={threadId}>
-        <div data-agent-id={agentId} style={{ display: "contents" }}>
-          <Suspense fallback={<OperatorShellFallback agentId={agentId} />}>
-            <OperatorShell agentId={agentId} threadId={threadId} onThreadChange={setThreadId}>
-              {children}
-            </OperatorShell>
-          </Suspense>
-        </div>
-      </CopilotChatConfigurationProvider>
+      <CrmChatProvider>
+        <CopilotChatConfigurationProvider agentId={agentId} threadId={threadId}>
+          <div data-agent-id={agentId} style={{ display: "contents" }}>
+            <Suspense fallback={<OperatorShellFallback agentId={agentId} />}>
+              <OperatorShell agentId={agentId} threadId={threadId} onThreadChange={setThreadId}>
+                {children}
+              </OperatorShell>
+            </Suspense>
+          </div>
+        </CopilotChatConfigurationProvider>
+      </CrmChatProvider>
     </IntelligenceDetailProvider>
   );
 }
@@ -127,6 +130,7 @@ function OperatorShell({
     () => brands.find((b) => b.id === routeBrandIdFromPath)?.name,
     [brands, routeBrandIdFromPath],
   );
+  const crmChat = useCrmChatContext();
 
   // Keep active brand aligned with brand detail URLs
   useEffect(() => {
@@ -201,6 +205,17 @@ function OperatorShell({
       brandName: routeBrandName,
       brandCount: brands.length,
       hasBrands: brands.length > 0,
+      companyCount: crmChat.companyCount,
+      openDealsCount: crmChat.openDealsCount,
+      companyName: crmChat.companyName,
+      dealStage: crmChat.dealStage,
+      lastActivityDays: crmChat.lastActivityDays,
+      contactCount: crmChat.contactCount,
+      contactName: crmChat.contactName,
+      pipelineValue: crmChat.pipelineValue,
+      atRiskCount: crmChat.atRiskCount,
+      dealName: crmChat.dealName,
+      value: crmChat.value,
     },
   });
 
@@ -211,6 +226,11 @@ function OperatorShell({
       hasBrands: brands.length > 0,
       brandLoaded: Boolean(routeBrandIdFromPath),
       shootLoaded: Boolean(routeShootIdFromPath),
+      crmRecordLoaded: crmChat.crmRecordLoaded,
+      companyName: crmChat.companyName,
+      contactName: crmChat.contactName,
+      dealName: crmChat.dealName,
+      atRiskCount: crmChat.atRiskCount,
     },
   });
 

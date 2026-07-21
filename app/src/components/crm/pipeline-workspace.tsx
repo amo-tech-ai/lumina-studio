@@ -7,7 +7,9 @@ import { Inbox, Lock } from "lucide-react";
 
 import { EmptyState } from "@/components/ui/empty-state";
 import { ErrorState } from "@/components/ui/error-state";
+import { useSetCrmChatContext } from "@/context/crm-chat-context";
 import type { DealRow } from "@/lib/crm/queries";
+import { countAtRiskDeals, formatPipelineValue } from "@/lib/crm/derive-crm-chat-context";
 import { crmDealStageDotToken, crmDealStageLabel, type CrmDealStage } from "@/lib/crm/status-tokens";
 import { formatMoney } from "@/lib/format";
 import { DealStageControl } from "./deal-stage-control";
@@ -115,6 +117,18 @@ export function PipelineWorkspace({ deals: initialDeals, companyNames, ownerName
     }
     return map;
   }, [visibleDeals]);
+
+  const chatContext = useMemo(
+    () =>
+      fetchError
+        ? {}
+        : {
+            pipelineValue: formatPipelineValue(deals),
+            atRiskCount: countAtRiskDeals(deals, now),
+          },
+    [deals, fetchError, now],
+  );
+  useSetCrmChatContext(chatContext);
 
   function handleStageChange(dealId: string, newStage: CrmDealStage, updatedAt?: string) {
     setDeals((prev) =>

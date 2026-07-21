@@ -2,8 +2,15 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { ChevronRight, ExternalLink } from "lucide-react";
+
+import { useSetCrmChatContext } from "@/context/crm-chat-context";
+import {
+  countOpenDeals,
+  daysSinceLastActivity,
+  primaryOpenDealStageLabel,
+} from "@/lib/crm/derive-crm-chat-context";
 
 import { EntityList } from "@/components/ui/entity-list";
 import { ErrorState } from "@/components/ui/error-state";
@@ -48,6 +55,19 @@ type Props = {
 export function CompanyDetailWorkspace({ data, fetchError }: Props) {
   const router = useRouter();
   const [tab, setTab] = useState<TabId>("overview");
+
+  const chatContext = useMemo(() => {
+    if (fetchError || !data) return {};
+    const { company, deals, activities } = data;
+    return {
+      companyName: company.name,
+      dealStage: primaryOpenDealStageLabel(deals),
+      lastActivityDays: daysSinceLastActivity(activities),
+      openDealsCount: countOpenDeals(deals),
+      crmRecordLoaded: true,
+    };
+  }, [data, fetchError]);
+  useSetCrmChatContext(chatContext);
 
   if (fetchError || !data) {
     return (

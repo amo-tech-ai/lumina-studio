@@ -21,6 +21,12 @@ interface SuggestionsContext {
   campaignLoaded?: boolean;
   creatorLoaded?: boolean;
   channelLoaded?: boolean;
+  // CRM (IPI-374)
+  crmRecordLoaded?: boolean;
+  companyName?: string;
+  contactName?: string;
+  dealName?: string;
+  atRiskCount?: number;
 }
 
 interface UseRouteSuggestionsOptions {
@@ -46,6 +52,11 @@ export function useRouteSuggestions({
       context.campaignLoaded,
       context.creatorLoaded,
       context.channelLoaded,
+      context.crmRecordLoaded,
+      context.companyName,
+      context.contactName,
+      context.dealName,
+      context.atRiskCount,
     ],
   );
 }
@@ -223,25 +234,53 @@ function getSuggestionsForRoute(
     ];
   }
 
-  // CRM — Relationship Hub (IPI-368)
+  // CRM — Relationship Hub (IPI-368 + IPI-374 personalization)
   if (normalizedPath.startsWith("/app/crm/companies/")) {
+    const company = context.companyName;
     return [
-      { title: "Log a note", message: "Log a note on this company." },
-      { title: "Find contacts", message: "Search contacts linked to this company." },
-      { title: "View pipeline", message: "Show deals for this company." },
+      {
+        title: "Log a note",
+        message: company ? `Log a note on ${company}.` : "Log a note on this company.",
+      },
+      {
+        title: "Find contacts",
+        message: company
+          ? `Search contacts linked to ${company}.`
+          : "Search contacts linked to this company.",
+      },
+      {
+        title: "View pipeline",
+        message: company ? `Show deals for ${company}.` : "Show deals for this company.",
+      },
     ];
   }
   if (normalizedPath === "/app/crm/companies" || normalizedPath === "/app/crm") {
+    const atRisk = context.atRiskCount;
     return [
       { title: "Search companies", message: "Search companies in our CRM." },
       { title: "Open contacts", message: "Open the contacts list." },
-      { title: "View pipeline", message: "Open the deal pipeline." },
+      {
+        title: "View pipeline",
+        message:
+          atRisk !== undefined && atRisk > 0
+            ? `Open the deal pipeline — ${atRisk} deal${atRisk !== 1 ? "s" : ""} at risk.`
+            : "Open the deal pipeline.",
+      },
     ];
   }
   if (normalizedPath.startsWith("/app/crm/contacts/")) {
+    const contact = context.contactName;
     return [
-      { title: "Log a call", message: "Log a call with this contact." },
-      { title: "Find company", message: "Which company is this contact linked to?" },
+      {
+        title: "Log a call",
+        message: contact ? `Log a call with ${contact}.` : "Log a call with this contact.",
+      },
+      {
+        title: "Find company",
+        message: contact
+          ? `Which company is ${contact} linked to?`
+          : "Which company is this contact linked to?",
+      },
     ];
   }
   if (normalizedPath === "/app/crm/contacts") {
@@ -251,15 +290,31 @@ function getSuggestionsForRoute(
     ];
   }
   if (normalizedPath.startsWith("/app/crm/pipeline/")) {
+    const deal = context.dealName;
     return [
-      { title: "Move stage", message: "Move this deal to the next non-terminal stage." },
-      { title: "Log activity", message: "Log an activity on this deal." },
+      {
+        title: "Move stage",
+        message: deal
+          ? `Move ${deal} to the next non-terminal stage.`
+          : "Move this deal to the next non-terminal stage.",
+      },
+      {
+        title: "Log activity",
+        message: deal ? `Log an activity on ${deal}.` : "Log an activity on this deal.",
+      },
     ];
   }
   if (normalizedPath === "/app/crm/pipeline") {
+    const atRisk = context.atRiskCount;
     return [
       { title: "Summarize pipeline", message: "Summarize deals by stage." },
-      { title: "Find stale deals", message: "Which deals have been stuck the longest?" },
+      {
+        title: "Find stale deals",
+        message:
+          atRisk !== undefined && atRisk > 0
+            ? `Which ${atRisk} at-risk deal${atRisk !== 1 ? "s" : ""} need attention?`
+            : "Which deals have been stuck the longest?",
+      },
     ];
   }
 
