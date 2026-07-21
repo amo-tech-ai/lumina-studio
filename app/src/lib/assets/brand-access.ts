@@ -51,5 +51,8 @@ export async function isBrandAccessible(
   if (!data) {
     return { ok: false, status: 403, message: "Brand not accessible to caller" };
   }
+  if (!data.org_id) {
+    return { ok: false, status: 403, message: "Legacy personal brands not supported" };
+  }
   return { ok: true, orgId: data.org_id };
 }

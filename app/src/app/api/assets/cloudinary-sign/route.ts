@@ -89,5 +89,12 @@ export async function POST(request: Request) {
 
   const signature = signCloudinaryParams(paramsForSignature, apiSecret);
 
-  return NextResponse.json({ signature });
+  return NextResponse.json({
+    signature,
+    apiKey: process.env.NEXT_PUBLIC_CLOUDINARY_API_KEY,
+    uploadPreset: paramsForSignature.upload_preset,
+    uploadSignatureTimestamp: paramsForSignature.timestamp,
+    folder: paramsForSignature.folder,
+    context: paramsForSignature.context,
+  });
 }

@@ -293,6 +293,27 @@ export function AssetUploadPanel({ brands = [], defaultBrandId, onReady }: Props
     resourceType: "auto",
     context: { brand_id: brandId },
     folder: `ipix/brands/${brandId}/products`,
+    prepareUploadParams: (cb: (result: unknown) => void, params: unknown) => {
+      const batch = Array.isArray(params) ? params : [params];
+      Promise.all(
+        batch.map((p: unknown) =>
+          fetch("/api/assets/cloudinary-sign", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ paramsToSign: p }),
+          }).then((r) => {
+            if (!r.ok) throw new Error("Signing failed");
+            return r.json() as Promise<Record<string, unknown>>;
+          }),
+        ),
+      )
+        .then((results) => {
+          cb(batch.length === 1 ? results[0] : results);
+        })
+        .catch(() => {
+          cb({ cancel: true });
+        });
+    },
   };
 
   return (
@@ -318,7 +339,6 @@ export function AssetUploadPanel({ brands = [], defaultBrandId, onReady }: Props
           key={brandId}
           config={{ cloud: { cloudName, apiKey } }}
           uploadPreset={CLOUDINARY_UPLOAD_PRESET}
-          signatureEndpoint="/api/assets/cloudinary-sign"
           options={uploadOptions}
           onUploadAdded={(result) => {
             const info = result?.info ?? result;

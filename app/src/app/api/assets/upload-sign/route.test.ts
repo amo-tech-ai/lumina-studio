@@ -54,7 +54,7 @@ beforeEach(() => {
   vi.stubEnv("CLOUDINARY_API_KEY", "test-api-key");
   vi.stubEnv("CLOUDINARY_API_SECRET", "test-api-secret");
   mockWithOperatorAuth.mockResolvedValue({ id: "44444444-4444-4444-4444-444444444444", name: "QA" });
-  mockMaybeSingle.mockResolvedValue({ data: { id: VALID_BRAND_ID }, error: null });
+  mockMaybeSingle.mockResolvedValue({ data: { id: VALID_BRAND_ID, org_id: "44444444-4444-4444-4444-444444444444" }, error: null });
   mockCampaignMaybeSingle.mockResolvedValue({ data: { id: VALID_CAMPAIGN_ID }, error: null });
   mockCreateOperatorSupabaseClient.mockResolvedValue(supabaseClientStub());
 });
