@@ -20,6 +20,17 @@ const LOCKED_STAGES = new Set<CrmDealStage>(["won", "lost"]);
 const OPEN_STAGES = new Set<CrmDealStage>(["lead", "qualified", "proposal", "negotiation"]);
 const PIPELINE_NARROW_MQ = "(max-width: 1024px)";
 
+/** IPI-572 — exclusive `<details name>` fires close+open in one tick.
+ *  Functional reduce so a stale close cannot wipe the stage that just opened. */
+export function resolvePipelineAccordionStage(
+  current: CrmDealStage | null,
+  stage: CrmDealStage,
+  nextOpen: boolean,
+): CrmDealStage | null {
+  if (nextOpen) return stage;
+  return current === stage ? null : current;
+}
+
 /** IPI-572 — when columns stack (≤1024), use native <details name="crm-pipeline">.
  *  Desktop kanban keeps plain column divs (exclusive accordion would collapse siblings). */
 function usePipelineNarrow(): boolean {
@@ -326,8 +337,8 @@ export function PipelineWorkspace({ deals: initialDeals, companyNames, ownerName
                   open={openStage === stage}
                   data-stage={stage}
                   onToggle={(event) => {
-                    if (event.currentTarget.open) setOpenStage(stage);
-                    else if (openStage === stage) setOpenStage(null);
+                    const nextOpen = event.currentTarget.open;
+                    setOpenStage((current) => resolvePipelineAccordionStage(current, stage, nextOpen));
                   }}
                 >
                   <summary className={styles.columnHeader}>{header}</summary>
