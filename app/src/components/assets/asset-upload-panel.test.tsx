@@ -12,12 +12,15 @@ vi.mock("@/lib/assets/upload-poll", () => ({
   pollUntilMirrorTerminal: (...args: unknown[]) => pollUntilMirrorTerminal(...args),
 }));
 
+type WidgetOptions = Record<string, unknown>;
+
 const widgetCallbacks = vi.hoisted(() => ({
   onSuccess: null as
     | ((result: { info: object }, ctx: { widget: { close: () => void } }) => void)
     | null,
   onUploadAdded: null as ((result: { info: object }) => void) | null,
   onQueuesEnd: null as ((result: unknown, ctx: { widget: { close: () => void } }) => void) | null,
+  options: null as WidgetOptions | null,
 }));
 
 vi.mock("next-cloudinary", () => ({
@@ -25,16 +28,19 @@ vi.mock("next-cloudinary", () => ({
     onSuccess,
     onUploadAdded,
     onQueuesEnd,
+    options,
     children,
   }: {
     onSuccess?: typeof widgetCallbacks.onSuccess;
     onUploadAdded?: typeof widgetCallbacks.onUploadAdded;
     onQueuesEnd?: typeof widgetCallbacks.onQueuesEnd;
+    options?: WidgetOptions;
     children: (args: { open: () => void }) => React.ReactNode;
   }) => {
     widgetCallbacks.onSuccess = onSuccess ?? null;
     widgetCallbacks.onUploadAdded = onUploadAdded ?? null;
     widgetCallbacks.onQueuesEnd = onQueuesEnd ?? null;
+    widgetCallbacks.options = options ?? null;
     return <div>{children({ open: vi.fn() })}</div>;
   },
 }));
@@ -52,6 +58,7 @@ afterEach(() => {
   widgetCallbacks.onSuccess = null;
   widgetCallbacks.onUploadAdded = null;
   widgetCallbacks.onQueuesEnd = null;
+  widgetCallbacks.options = null;
   sessionStorage.clear();
   vi.unstubAllEnvs();
 });
@@ -173,6 +180,95 @@ describe("AssetUploadPanel", () => {
       expect(screen.getByText("big-video.mp4")).toBeTruthy();
     });
     expect(screen.getByText(/uploading/i)).toBeTruthy();
+  });
+
+  describe("prepareUploadParams", () => {
+    afterEach(() => {
+      vi.restoreAllMocks();
+    });
+
+    function prepareUploadParams():
+      | ((cb: (result: unknown) => void, params: unknown) => void)
+      | undefined {
+      return (widgetCallbacks.options as Record<string, unknown>)
+        ?.prepareUploadParams as
+        | ((cb: (result: unknown) => void, params: unknown) => void)
+        | undefined;
+    }
+
+    it("signs a single params object and calls cb with the result directly", async () => {
+      const SIGNING_RESULT = { signature: "abc", apiKey: "key" };
+      vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
+        new Response(JSON.stringify(SIGNING_RESULT), { status: 200 }),
+      );
+
+      render(
+        <AssetUploadPanel
+          brands={[{ id: "brand-1", name: "Brand One" }]}
+          defaultBrandId="brand-1"
+        />,
+      );
+
+      const cb = vi.fn();
+      const fn = prepareUploadParams();
+      expect(fn).toBeDefined();
+      fn!(cb, { timestamp: 123 });
+
+      await waitFor(() => {
+        expect(cb).toHaveBeenCalledWith(SIGNING_RESULT);
+      });
+    });
+
+    it("signs a batch of params and calls cb with the full array", async () => {
+      vi.spyOn(globalThis, "fetch")
+        .mockResolvedValueOnce(
+          new Response(JSON.stringify({ signature: "abc" }), { status: 200 }),
+        )
+        .mockResolvedValueOnce(
+          new Response(JSON.stringify({ signature: "def" }), { status: 200 }),
+        );
+
+      render(
+        <AssetUploadPanel
+          brands={[{ id: "brand-1", name: "Brand One" }]}
+          defaultBrandId="brand-1"
+        />,
+      );
+
+      const cb = vi.fn();
+      const fn = prepareUploadParams();
+      expect(fn).toBeDefined();
+      fn!(cb, [{ timestamp: 123 }, { timestamp: 456 }]);
+
+      await waitFor(() => {
+        expect(cb).toHaveBeenCalledWith([
+          { signature: "abc" },
+          { signature: "def" },
+        ]);
+      });
+    });
+
+    it("calls cb with { cancel: true } on HTTP error", async () => {
+      vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
+        new Response("Unauthorized", { status: 401 }),
+      );
+
+      render(
+        <AssetUploadPanel
+          brands={[{ id: "brand-1", name: "Brand One" }]}
+          defaultBrandId="brand-1"
+        />,
+      );
+
+      const cb = vi.fn();
+      const fn = prepareUploadParams();
+      expect(fn).toBeDefined();
+      fn!(cb, { timestamp: 123 });
+
+      await waitFor(() => {
+        expect(cb).toHaveBeenCalledWith({ cancel: true });
+      });
+    });
   });
 
   it("hides the widget when the public API key is missing", () => {
