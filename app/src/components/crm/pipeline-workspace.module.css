@@ -151,6 +151,17 @@
   border-bottom: 1px solid var(--color-border);
 }
 
+/* IPI-572 mobile accordion — summary replaces the static header block. */
+summary.columnHeader {
+  list-style: none;
+  cursor: pointer;
+  min-height: 2.75rem; /* ≥44px touch target */
+}
+
+summary.columnHeader::-webkit-details-marker {
+  display: none;
+}
+
 .columnHeaderTop {
   display: flex;
   align-items: center;
@@ -297,9 +308,8 @@
   color: var(--color-text-muted);
 }
 
-/* Stack columns ≤1024 (tablet + phone). Vertical stack = accordion substitute
-   for this ticket — no collapse/expand chrome (IPI-572 owns shared mobile shell).
-   DnD deferred; Move stage control is primary. */
+/* IPI-572: ≤1024 stacks columns; React switches to <details name="crm-pipeline">
+   accordion (see pipeline-workspace.tsx). DnD deferred; Move is primary. */
 @media (max-width: 1024px) {
   .board {
     flex-direction: column;
