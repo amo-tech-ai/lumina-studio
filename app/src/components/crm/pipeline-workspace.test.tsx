@@ -316,6 +316,59 @@ describe("PipelineWorkspace", () => {
     expect(open).toBe("qualified");
   });
 
+  it("opens the destination stage after a non-terminal move on narrow viewports (IPI-572)", async () => {
+    stubMatchMedia(true);
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(JSON.stringify({ stage: "qualified", updated_at: "2026-07-08T12:00:01.000Z" }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+
+    const { container } = render(
+      <PipelineWorkspace
+        deals={[deal({ id: "d-move", stage: "lead", value: 1000 })]}
+        companyNames={COMPANY_NAMES}
+        ownerNames={OWNER_NAMES}
+        fetchError={null}
+        now={NOW}
+      />,
+    );
+
+    const lead = container.querySelector("details[data-stage='lead']") as HTMLDetailsElement;
+    const qualified = container.querySelector("details[data-stage='qualified']") as HTMLDetailsElement;
+    await waitFor(() => expect(lead.open).toBe(true));
+
+    fireEvent.click(screen.getByRole("button", { name: "Qualified" }));
+    await waitFor(() => expect(qualified.open).toBe(true));
+    expect(lead.open).toBe(false);
+  });
+
+  it("retargets the accordion to the first filtered stage with deals (IPI-572)", async () => {
+    stubMatchMedia(true);
+
+    const { container } = render(
+      <PipelineWorkspace
+        deals={[
+          deal({ id: "d-lead", stage: "lead", value: 1000, owner: "u2" }),
+          deal({ id: "d-prop", stage: "proposal", value: 8000, owner: "u1" }),
+        ]}
+        companyNames={COMPANY_NAMES}
+        ownerNames={{ u1: "Alex Owner", u2: "Other Owner" }}
+        fetchError={null}
+        now={NOW}
+      />,
+    );
+
+    const lead = container.querySelector("details[data-stage='lead']") as HTMLDetailsElement;
+    const proposal = container.querySelector("details[data-stage='proposal']") as HTMLDetailsElement;
+    await waitFor(() => expect(lead.open).toBe(true));
+
+    fireEvent.change(screen.getByRole("combobox", { name: "Owner" }), { target: { value: "u1" } });
+    await waitFor(() => expect(proposal.open).toBe(true));
+    expect(lead.open).toBe(false);
+  });
+
   it("shows a locked badge on Won and Lost columns only", () => {
     render(<PipelineWorkspace deals={[deal()]} companyNames={COMPANY_NAMES} ownerNames={OWNER_NAMES} fetchError={null} now={NOW} />);
     expect(screen.getAllByText("Enter via approval only")).toHaveLength(2);

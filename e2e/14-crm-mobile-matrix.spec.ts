@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 import {
+  CRM_MOBILE_DETAIL_ENTRY,
   CRM_MOBILE_ROUTES,
   CRM_MOBILE_VIEWPORTS,
   assertNoHorizontalOverflow,
@@ -30,6 +31,23 @@ test.describe("IPI-572 — CRM mobile matrix (SCR-26–31)", () => {
         expect(await assertNoHorizontalOverflow(page), `horizontal overflow on ${route} @ ${vp.name}`).toBe(
           true,
         );
+      });
+    }
+
+    for (const entry of CRM_MOBILE_DETAIL_ENTRY) {
+      test(`${entry.list} → detail @ ${vp.name}px — no overflow + CRM tab bar`, async ({ page }) => {
+        await page.setViewportSize({ width: vp.width, height: vp.height });
+        await page.goto(entry.list, { waitUntil: "networkidle" });
+
+        const hrefs = await page.$$eval("a[href]", (as) => as.map((a) => a.getAttribute("href") || ""));
+        const detailHref = hrefs.find((h) => entry.linkName.test(h));
+        test.skip(!detailHref, `no seeded detail row on ${entry.list}`);
+
+        const res = await page.goto(detailHref!, { waitUntil: "networkidle" });
+        expect(res?.status()).toBeLessThan(500);
+        await expect(page.locator("body")).not.toContainText("Internal Server Error");
+        await expect(page.getByTestId("crm-mobile-tab-bar")).toBeVisible();
+        expect(await assertNoHorizontalOverflow(page), `horizontal overflow on ${detailHref}`).toBe(true);
       });
     }
 

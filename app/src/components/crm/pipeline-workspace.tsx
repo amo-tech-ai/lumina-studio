@@ -31,17 +31,27 @@ export function resolvePipelineAccordionStage(
   return current === stage ? null : current;
 }
 
+function subscribePipelineNarrow(onStoreChange: () => void) {
+  const mq = window.matchMedia(PIPELINE_NARROW_MQ);
+  mq.addEventListener("change", onStoreChange);
+  return () => mq.removeEventListener("change", onStoreChange);
+}
+
+function getPipelineNarrowSnapshot() {
+  return window.matchMedia(PIPELINE_NARROW_MQ).matches;
+}
+
+function getPipelineNarrowServerSnapshot() {
+  return false;
+}
+
 /** IPI-572 — when columns stack (≤1024), use native <details name="crm-pipeline">.
  *  Desktop kanban keeps plain column divs (exclusive accordion would collapse siblings). */
 function usePipelineNarrow(): boolean {
   return useSyncExternalStore(
-    (onStoreChange) => {
-      const mq = window.matchMedia(PIPELINE_NARROW_MQ);
-      mq.addEventListener("change", onStoreChange);
-      return () => mq.removeEventListener("change", onStoreChange);
-    },
-    () => window.matchMedia(PIPELINE_NARROW_MQ).matches,
-    () => false,
+    subscribePipelineNarrow,
+    getPipelineNarrowSnapshot,
+    getPipelineNarrowServerSnapshot,
   );
 }
 
@@ -83,19 +93,6 @@ export function PipelineWorkspace({ deals: initialDeals, companyNames, ownerName
   useEffect(() => {
     setDeals(initialDeals);
   }, [initialDeals]);
-
-  // Seed accordion to the first stage that has deals (else Lead) once we know
-  // we're on a narrow layout — uncontrolled defaultOpen is not a React DOM prop.
-  useEffect(() => {
-    if (!narrow) {
-      setOpenStage(null);
-      return;
-    }
-    setOpenStage((current) => {
-      if (current) return current;
-      return STAGES.find((s) => deals.some((d) => d.stage === s)) ?? "lead";
-    });
-  }, [narrow, deals]);
 
   useEffect(() => {
     const id = focusDealIdRef.current;
@@ -171,6 +168,21 @@ export function PipelineWorkspace({ deals: initialDeals, companyNames, ownerName
   );
   useSetCrmChatContext(chatContext);
 
+  // Seed / retarget accordion from filtered buckets (IPI-572).
+  useEffect(() => {
+    if (!narrow) {
+      setOpenStage(null);
+      return;
+    }
+    setOpenStage((current) => {
+      const firstWithDeals = STAGES.find((s) => (byStage.get(s)?.length ?? 0) > 0) ?? "lead";
+      if (!current) return firstWithDeals;
+      if ((byStage.get(current)?.length ?? 0) > 0) return current;
+      return firstWithDeals;
+    });
+  }, [narrow, byStage]);
+
+
   function handleStageChange(dealId: string, newStage: CrmDealStage, updatedAt?: string) {
     setDeals((prev) =>
       prev.map((d) =>
@@ -179,6 +191,9 @@ export function PipelineWorkspace({ deals: initialDeals, companyNames, ownerName
           : d,
       ),
     );
+    // Keep the destination stage open on mobile so the moved card (and focus
+    // restore) stay visible inside the accordion.
+    if (narrow) setOpenStage(newStage);
     focusDealIdRef.current = dealId;
     setLiveMessage(`Moved to ${crmDealStageLabel(newStage)}`);
     router.refresh();
