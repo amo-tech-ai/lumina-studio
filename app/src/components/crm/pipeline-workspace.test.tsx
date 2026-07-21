@@ -221,6 +221,21 @@ describe("PipelineWorkspace", () => {
     expect(screen.getAllByText("—")).toHaveLength(5);
   });
 
+  it("renders each stage money total inside the column header (SCR-30), not below the cards", () => {
+    const { container } = render(
+      <PipelineWorkspace deals={[deal()]} companyNames={COMPANY_NAMES} ownerNames={OWNER_NAMES} fetchError={null} now={NOW} />,
+    );
+    const headers = container.querySelectorAll(".columnHeader");
+    expect(headers).toHaveLength(6);
+    for (const header of headers) {
+      expect(header.querySelector(".columnTotal")).not.toBeNull();
+    }
+    for (const col of container.querySelectorAll(".column")) {
+      const orphanTotals = [...col.children].filter((el) => el.classList.contains("columnTotal"));
+      expect(orphanTotals).toHaveLength(0);
+    }
+  });
+
   it("shows a locked badge on Won and Lost columns only", () => {
     render(<PipelineWorkspace deals={[deal()]} companyNames={COMPANY_NAMES} ownerNames={OWNER_NAMES} fetchError={null} now={NOW} />);
     expect(screen.getAllByText("Enter via approval only")).toHaveLength(2);
