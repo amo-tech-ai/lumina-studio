@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
-import { describe, expect, it, afterEach, vi } from "vitest";
-import { render, screen, cleanup, fireEvent } from "@testing-library/react";
+import { describe, expect, it, afterEach, beforeEach, vi } from "vitest";
+import { render, screen, cleanup, fireEvent, waitFor } from "@testing-library/react";
 
 vi.mock("./pipeline-workspace.module.css", () => ({ default: new Proxy({}, { get: (_, k) => String(k) }) }));
 vi.mock("./deal-stage-control.module.css", () => ({ default: new Proxy({}, { get: (_, k) => String(k) }) }));
@@ -18,8 +18,6 @@ import type { DealRow } from "@/lib/crm/queries";
 // Passed explicitly as the `now` prop (never Date.now() inside the
 // component) — see the hydration-mismatch fix in pipeline-workspace.tsx.
 const NOW = new Date("2026-07-08T12:00:00.000Z").getTime();
-
-afterEach(() => cleanup());
 
 function deal(overrides: Partial<DealRow> = {}): DealRow {
   return {
@@ -43,7 +41,29 @@ function deal(overrides: Partial<DealRow> = {}): DealRow {
 const COMPANY_NAMES = { c1: "Acme Athletic", c2: "Vega Studios" };
 const OWNER_NAMES = { u1: "Alex Owner" };
 
+function stubMatchMedia(matches: boolean) {
+  return vi.spyOn(window, "matchMedia").mockImplementation((query) => ({
+    matches,
+    media: String(query),
+    addEventListener: vi.fn(),
+    removeEventListener: vi.fn(),
+    addListener: vi.fn(),
+    removeListener: vi.fn(),
+    dispatchEvent: vi.fn(),
+    onchange: null,
+  }) as unknown as MediaQueryList);
+}
+
 describe("PipelineWorkspace", () => {
+  beforeEach(() => {
+    stubMatchMedia(false);
+  });
+
+  afterEach(() => {
+    cleanup();
+    vi.restoreAllMocks();
+  });
+
   it("renders all 6 stage columns with correct labels", () => {
     render(<PipelineWorkspace deals={[deal()]} companyNames={COMPANY_NAMES} ownerNames={OWNER_NAMES} fetchError={null} now={NOW} />);
     for (const label of ["Lead", "Qualified", "Proposal", "Negotiation", "Won", "Lost"]) {
@@ -240,6 +260,41 @@ describe("PipelineWorkspace", () => {
       expect(orphanTotals).toHaveLength(0);
       expect(col.querySelector(".cards .columnTotal")).toBeNull();
     }
+  });
+
+  it("uses native details accordion with exclusive name on narrow viewports (IPI-572)", async () => {
+    stubMatchMedia(true);
+
+    const { container } = render(
+      <PipelineWorkspace
+        deals={[deal({ stage: "proposal" }), deal({ id: "d2", stage: "lead", value: 1000 })]}
+        companyNames={COMPANY_NAMES}
+        ownerNames={OWNER_NAMES}
+        fetchError={null}
+        now={NOW}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(container.querySelectorAll("details[name='crm-pipeline']")).toHaveLength(6);
+    });
+
+    expect(container.querySelector("[data-pipeline-layout='accordion']")).not.toBeNull();
+
+    const lead = container.querySelector("details[data-stage='lead']") as HTMLDetailsElement;
+    const proposal = container.querySelector("details[data-stage='proposal']") as HTMLDetailsElement;
+
+    // Seed opens first stage with deals (Lead).
+    await waitFor(() => {
+      expect(lead.open).toBe(true);
+    });
+    expect(proposal.open).toBe(false);
+
+    for (const el of container.querySelectorAll("details[name='crm-pipeline']")) {
+      expect(el.getAttribute("name")).toBe("crm-pipeline");
+    }
+    expect(lead.querySelector("summary.columnHeader")).not.toBeNull();
+    expect(lead.querySelector(".cards")).not.toBeNull();
   });
 
   it("shows a locked badge on Won and Lost columns only", () => {
