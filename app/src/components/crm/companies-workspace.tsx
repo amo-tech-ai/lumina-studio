@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 
+import { useSetCrmChatContext } from "@/context/crm-chat-context";
+
 import { StatusChip } from "@/components/ui/status-chip";
 import { crmStatusDotToken, crmStatusLabel } from "@/lib/crm/status-tokens";
 import type { CompanyRow } from "@/lib/crm/queries";
@@ -54,6 +56,12 @@ export function CompaniesWorkspace({
       return true;
     });
   }, [companies, statusFilter, ownerFilter]);
+
+  const chatContext = useMemo(
+    () => (fetchError ? {} : { companyCount: companies.length }),
+    [companies.length, fetchError],
+  );
+  useSetCrmChatContext(chatContext);
 
   const createDialog = <CrmCreateDialog kind="company" triggerLabel="New organization" />;
 

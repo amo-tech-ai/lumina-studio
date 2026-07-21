@@ -25,6 +25,18 @@ interface WelcomeContext {
   kpiSummary?: string;
   pendingApprovals?: number;
   hasBrands?: boolean;
+  // CRM (IPI-374) — interpolated when workspaces publish page data
+  companyCount?: number;
+  openDealsCount?: number;
+  companyName?: string;
+  dealStage?: string;
+  lastActivityDays?: number;
+  contactCount?: number;
+  contactName?: string;
+  pipelineValue?: string;
+  atRiskCount?: number;
+  dealName?: string;
+  value?: string;
 }
 
 interface UseRouteWelcomeOptions {
@@ -62,6 +74,17 @@ export function useRouteWelcome({
       context.kpiSummary,
       context.pendingApprovals,
       context.hasBrands,
+      context.companyCount,
+      context.openDealsCount,
+      context.companyName,
+      context.dealStage,
+      context.lastActivityDays,
+      context.contactCount,
+      context.contactName,
+      context.pipelineValue,
+      context.atRiskCount,
+      context.dealName,
+      context.value,
     ],
   );
 }
@@ -185,23 +208,61 @@ function getWelcomeMessage(
     return "Complete brand onboarding to unlock intelligence features";
   }
 
-  // CRM — Relationship Hub (IPI-368)
+  // CRM — Relationship Hub (IPI-368 + IPI-374 personalization)
   if (normalizedPath.startsWith("/app/crm/companies/")) {
+    if (context.companyName) {
+      const stageNote = context.dealStage ? ` · ${context.dealStage} stage` : "";
+      const activityNote =
+        context.lastActivityDays !== undefined
+          ? ` · last touch ${context.lastActivityDays === 0 ? "today" : `${context.lastActivityDays}d ago`}`
+          : "";
+      return `${context.companyName}${stageNote}${activityNote} — log activities, review contacts, and track deals`;
+    }
     return "Company record — log activities, review contacts, and track deals";
   }
   if (normalizedPath === "/app/crm/companies" || normalizedPath === "/app/crm") {
+    if (context.companyCount !== undefined) {
+      const count = context.companyCount;
+      const dealsNote =
+        context.openDealsCount !== undefined
+          ? ` · ${context.openDealsCount} open deal${context.openDealsCount !== 1 ? "s" : ""}`
+          : "";
+      return `${count} ${count === 1 ? "company" : "companies"}${dealsNote} — search prospects and review relationship status`;
+    }
     return "Companies — search prospects and review relationship status";
   }
   if (normalizedPath.startsWith("/app/crm/contacts/")) {
+    if (context.contactName) {
+      const orgNote = context.companyName ? ` at ${context.companyName}` : "";
+      return `${context.contactName}${orgNote} — log touchpoints and link to companies`;
+    }
     return "Contact record — log touchpoints and link to companies";
   }
   if (normalizedPath === "/app/crm/contacts") {
+    if (context.contactCount !== undefined) {
+      const count = context.contactCount;
+      return `${count} ${count === 1 ? "contact" : "contacts"} — find people and review communication history`;
+    }
     return "Contacts — find people and review communication history";
   }
   if (normalizedPath.startsWith("/app/crm/pipeline/")) {
+    if (context.dealName || context.dealStage || context.value) {
+      const name = context.dealName ?? "Deal";
+      const stageNote = context.dealStage ? ` — ${context.dealStage}` : "";
+      const valueNote = context.value ? ` · ${context.value}` : "";
+      return `${name}${stageNote}${valueNote} — review stage and move non-terminal stages via the assistant`;
+    }
     return "Deal detail — review stage and move non-terminal stages via the assistant";
   }
   if (normalizedPath === "/app/crm/pipeline") {
+    if (context.pipelineValue !== undefined || context.atRiskCount !== undefined) {
+      const valueNote = context.pipelineValue ? `${context.pipelineValue} pipeline` : "Pipeline";
+      const riskNote =
+        context.atRiskCount !== undefined && context.atRiskCount > 0
+          ? ` · ${context.atRiskCount} at risk`
+          : "";
+      return `${valueNote}${riskNote} — review deals by stage and move non-terminal stages`;
+    }
     return "Pipeline — review deals by stage and move non-terminal stages";
   }
 

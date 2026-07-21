@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 
+import { useSetCrmChatContext } from "@/context/crm-chat-context";
+
 import { getPrimaryEntry, normalizeContactFields } from "@/lib/crm/jsonb-contact-fields";
 import type { ContactRow } from "@/lib/crm/queries";
 import { CrmAvatar } from "./crm-avatar";
@@ -71,6 +73,12 @@ export function ContactsWorkspace({
       return true;
     });
   }, [contacts, orgFilter, roleFilter]);
+
+  const chatContext = useMemo(
+    () => (fetchError ? {} : { contactCount: contacts.length }),
+    [contacts.length, fetchError],
+  );
+  useSetCrmChatContext(chatContext);
 
   return (
     <CrmListWorkspace
