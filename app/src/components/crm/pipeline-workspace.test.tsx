@@ -12,8 +12,9 @@ vi.mock("sonner", () => ({ toast: { error: vi.fn() } }));
 const refresh = vi.fn();
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh }) }));
 
-import { PipelineWorkspace } from "./pipeline-workspace";
+import { PipelineWorkspace, resolvePipelineAccordionStage } from "./pipeline-workspace";
 import type { DealRow } from "@/lib/crm/queries";
+import type { CrmDealStage } from "@/lib/crm/status-tokens";
 
 // Passed explicitly as the `now` prop (never Date.now() inside the
 // component) — see the hydration-mismatch fix in pipeline-workspace.tsx.
@@ -289,6 +290,24 @@ describe("PipelineWorkspace", () => {
     }
     expect(lead.querySelector("summary.columnHeader")).not.toBeNull();
     expect(lead.querySelector(".cards")).not.toBeNull();
+  });
+
+  it("resolvePipelineAccordionStage keeps the newly opened stage when a stale close arrives last (IPI-572)", () => {
+    // Simulates React functional updates for open(proposal) then close(lead)
+    // in one batch — the bug path was close writing null from a stale closure.
+    let open: CrmDealStage | null = "lead";
+    open = resolvePipelineAccordionStage(open, "proposal", true);
+    open = resolvePipelineAccordionStage(open, "lead", false);
+    expect(open).toBe("proposal");
+
+    // Close-only still collapses the active stage.
+    open = resolvePipelineAccordionStage(open, "proposal", false);
+    expect(open).toBeNull();
+
+    // Close for a different stage is a no-op.
+    open = "qualified";
+    open = resolvePipelineAccordionStage(open, "lead", false);
+    expect(open).toBe("qualified");
   });
 
   it("shows a locked badge on Won and Lost columns only", () => {
