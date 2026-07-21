@@ -100,30 +100,16 @@ const WIDGET_SIGN_BLOCKLIST = new Set([
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-/** Parse `org_id` from Cloudinary upload context (string or object). */
-export function parseOrgIdFromCloudinaryContext(context: unknown): string | undefined {
-  if (typeof context === "object" && context !== null && !Array.isArray(context)) {
-    const value = (context as Record<string, unknown>).org_id;
-    if (typeof value === "string" && UUID_RE.test(value)) return value;
-  }
-  if (typeof context !== "string" || !context.includes("org_id=")) return undefined;
-  for (const part of context.split("|")) {
-    const [key, value] = part.split("=");
-    if (key === "org_id" && value && UUID_RE.test(value)) return value;
-  }
-  return undefined;
-}
-
 function contextStringForSigning(
   context: unknown,
   brandId: string,
-  orgId?: string,
+  orgId?: string | null,
 ): string {
   const parsed = parseBrandIdFromCloudinaryContext(context);
   const parts = [`brand_id=${parsed ?? brandId}`];
-  const resolvedOrg =
-    orgId && UUID_RE.test(orgId) ? orgId : parseOrgIdFromCloudinaryContext(context);
-  if (resolvedOrg) parts.push(`org_id=${resolvedOrg}`);
+  if (orgId && UUID_RE.test(orgId)) {
+    parts.push(`org_id=${orgId}`);
+  }
   return parts.join("|");
 }
 
