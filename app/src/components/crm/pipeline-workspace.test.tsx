@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, expect, it, afterEach, beforeEach, vi } from "vitest";
-import { render, screen, cleanup, fireEvent, waitFor } from "@testing-library/react";
+import { render, screen, cleanup, fireEvent, waitFor, within } from "@testing-library/react";
 
 vi.mock("./pipeline-workspace.module.css", () => ({ default: new Proxy({}, { get: (_, k) => String(k) }) }));
 vi.mock("./deal-stage-control.module.css", () => ({ default: new Proxy({}, { get: (_, k) => String(k) }) }));
@@ -367,6 +367,45 @@ describe("PipelineWorkspace", () => {
     fireEvent.change(screen.getByRole("combobox", { name: "Owner" }), { target: { value: "u1" } });
     await waitFor(() => expect(proposal.open).toBe(true));
     expect(lead.open).toBe(false);
+  });
+
+  it("keeps destination open after move when at-risk filter hides the moved deal (IPI-572)", async () => {
+    stubMatchMedia(true);
+    const fresh = "2026-07-08T12:00:01.000Z";
+    const stale = "2026-06-01T00:00:00.000Z"; // ≥14d before NOW → at risk
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(JSON.stringify({ stage: "qualified", updated_at: fresh }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+
+    const { container } = render(
+      <PipelineWorkspace
+        deals={[
+          deal({ id: "d-move", stage: "lead", value: 1000, updated_at: stale }),
+          deal({ id: "d-prop", stage: "proposal", value: 2000, updated_at: stale }),
+        ]}
+        companyNames={COMPANY_NAMES}
+        ownerNames={OWNER_NAMES}
+        fetchError={null}
+        now={NOW}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "At risk only" }));
+
+    const lead = container.querySelector("details[data-stage='lead']") as HTMLDetailsElement;
+    const qualified = container.querySelector("details[data-stage='qualified']") as HTMLDetailsElement;
+    const proposal = container.querySelector("details[data-stage='proposal']") as HTMLDetailsElement;
+    await waitFor(() => expect(lead.open).toBe(true));
+
+    const moveToQualified = within(lead).getByRole("button", { name: "Qualified" });
+    fireEvent.click(moveToQualified);
+    // Destination must stay open even though the fresh updated_at drops the card
+    // from the at-risk filter (byStage empty) — otherwise we jump to Proposal.
+    await waitFor(() => expect(qualified.open).toBe(true));
+    expect(proposal.open).toBe(false);
   });
 
   it("shows a locked badge on Won and Lost columns only", () => {

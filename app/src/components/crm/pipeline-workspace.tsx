@@ -168,7 +168,10 @@ export function PipelineWorkspace({ deals: initialDeals, companyNames, ownerName
   );
   useSetCrmChatContext(chatContext);
 
-  // Seed / retarget accordion from filtered buckets (IPI-572).
+  // Seed / retarget accordion when layout or filters change (IPI-572).
+  // Do not list `byStage` as a dependency: a deal move that empties the destination
+  // under "At risk only" (fresh updated_at) must not yank openStage off the stage
+  // the operator just moved into. Filter/narrow changes still retarget via those deps.
   useEffect(() => {
     if (!narrow) {
       setOpenStage(null);
@@ -180,7 +183,8 @@ export function PipelineWorkspace({ deals: initialDeals, companyNames, ownerName
       if ((byStage.get(current)?.length ?? 0) > 0) return current;
       return firstWithDeals;
     });
-  }, [narrow, byStage]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional: filters/narrow only
+  }, [narrow, ownerFilter, atRiskOnly]);
 
 
   function handleStageChange(dealId: string, newStage: CrmDealStage, updatedAt?: string) {
