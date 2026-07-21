@@ -4,9 +4,19 @@
  * Application-level only: does not construct models or read cfEnv (IPI-750).
  * Precedence for later consumers: per-agent flag → default legacy.
  * Independent of global AI_ROUTING_MODE (direct | gateway).
+ *
+ * Deploy: list these names in `app/scripts/cloudflare-secret-allowlist.mjs`
+ * `WRANGLER_VAR_NAMES` (plain Worker vars — not secrets).
  */
 
 export type AgentRoutingMode = "native" | "legacy";
+
+/**
+ * Which CopilotKit registry `default` belongs to.
+ * - operator: `/api/copilotkit` — `default` → production-planner
+ * - marketing: `/api/marketing-chat` — `default` → public-marketing
+ */
+export type AgentRoutingSurface = "operator" | "marketing";
 
 /** Explicit env keys — no kebab→SNAKE auto-conversion (avoids deploy-name drift). */
 export const AGENT_ROUTING_KEYS = {
@@ -33,6 +43,8 @@ export type AgentRoutingReason =
 
 export type AgentRoutingOutcome = {
   agentId: string;
+  /** Id used for the env key lookup after surface-aware `default` resolution. */
+  canonicalAgentId?: RoutableAgentId;
   mode: AgentRoutingMode;
   reason: AgentRoutingReason;
   envKey?: string;
@@ -40,15 +52,34 @@ export type AgentRoutingOutcome = {
 
 type EnvLike = Record<string, string | undefined>;
 
-/** CopilotKit `default` is the production-planner durable alias — same switch. */
-export function resolveAgentRoutingEnvKey(agentId: string): string | undefined {
+export type ResolveAgentRoutingOptions = {
+  env?: EnvLike;
+  surface?: AgentRoutingSurface;
+};
+
+/**
+ * Map CopilotKit agentId (+ surface) to the routable registry id.
+ * `default` is context-specific — never hard-code one product path.
+ */
+export function resolveCanonicalRoutableAgentId(
+  agentId: string,
+  surface: AgentRoutingSurface = "operator",
+): RoutableAgentId | undefined {
   if (agentId === "default") {
-    return AGENT_ROUTING_KEYS["production-planner"];
+    return surface === "marketing" ? "public-marketing" : "production-planner";
   }
   if (Object.prototype.hasOwnProperty.call(AGENT_ROUTING_KEYS, agentId)) {
-    return AGENT_ROUTING_KEYS[agentId as RoutableAgentId];
+    return agentId as RoutableAgentId;
   }
   return undefined;
+}
+
+export function resolveAgentRoutingEnvKey(
+  agentId: string,
+  surface: AgentRoutingSurface = "operator",
+): string | undefined {
+  const canonical = resolveCanonicalRoutableAgentId(agentId, surface);
+  return canonical ? AGENT_ROUTING_KEYS[canonical] : undefined;
 }
 
 export function listAgentRoutingEnvKeys(): readonly string[] {
@@ -74,36 +105,45 @@ export function resetAgentRoutingWarnState(): void {
 
 export function resolveAgentRoutingOutcome(
   agentId: string,
-  env: EnvLike = process.env,
+  options: ResolveAgentRoutingOptions = {},
 ): AgentRoutingOutcome {
-  const envKey = resolveAgentRoutingEnvKey(agentId);
-  if (!envKey) {
+  const env = options.env ?? process.env;
+  const surface = options.surface ?? "operator";
+  const canonicalAgentId = resolveCanonicalRoutableAgentId(agentId, surface);
+  if (!canonicalAgentId) {
     return { agentId, mode: "legacy", reason: "unknown_agent" };
   }
 
+  const envKey = AGENT_ROUTING_KEYS[canonicalAgentId];
   const raw = env[envKey];
   if (raw === undefined) {
-    return { agentId, mode: "legacy", reason: "unset", envKey };
+    return { agentId, canonicalAgentId, mode: "legacy", reason: "unset", envKey };
   }
 
   const normalized = raw.trim().toLowerCase();
   if (normalized === "") {
-    return { agentId, mode: "legacy", reason: "empty", envKey };
+    return { agentId, canonicalAgentId, mode: "legacy", reason: "empty", envKey };
   }
   if (normalized === "native") {
-    return { agentId, mode: "native", reason: "native", envKey };
+    return { agentId, canonicalAgentId, mode: "native", reason: "native", envKey };
   }
   if (normalized === "legacy") {
-    return { agentId, mode: "legacy", reason: "legacy_explicit", envKey };
+    return {
+      agentId,
+      canonicalAgentId,
+      mode: "legacy",
+      reason: "legacy_explicit",
+      envKey,
+    };
   }
 
   warnInvalidOnce(agentId, envKey, normalized);
-  return { agentId, mode: "legacy", reason: "invalid", envKey };
+  return { agentId, canonicalAgentId, mode: "legacy", reason: "invalid", envKey };
 }
 
 export function resolveAgentRoutingMode(
   agentId: string,
-  env: EnvLike = process.env,
+  options: ResolveAgentRoutingOptions = {},
 ): AgentRoutingMode {
-  return resolveAgentRoutingOutcome(agentId, env).mode;
+  return resolveAgentRoutingOutcome(agentId, options).mode;
 }

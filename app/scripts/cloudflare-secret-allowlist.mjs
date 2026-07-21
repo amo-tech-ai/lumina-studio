@@ -29,6 +29,17 @@ export const WRANGLER_VAR_NAMES = Object.freeze([
   "CLOUDINARY_API_KEY",
   // IPI-586 — optional; set GitHub env var to "true" for preview smoke only.
   "ENABLE_CF_AI_SMOKE",
+  // IPI-607 · CF-MIG-230-FLAGS — per-agent native|legacy (plain vars, not secrets).
+  // Unset → legacy in resolveAgentRoutingOutcome. Do not require on bootstrap.
+  "AI_ROUTING_AGENT_PUBLIC_MARKETING",
+  "AI_ROUTING_AGENT_PRODUCTION_PLANNER",
+  "AI_ROUTING_AGENT_CREATIVE_DIRECTOR",
+  "AI_ROUTING_AGENT_VISUAL_IDENTITY",
+  "AI_ROUTING_AGENT_SOCIAL_DISCOVERY",
+  "AI_ROUTING_AGENT_BRAND_INTELLIGENCE",
+  "AI_ROUTING_AGENT_MODEL_MATCH",
+  "AI_ROUTING_AGENT_CRM_ASSISTANT",
+  "AI_ROUTING_AGENT_BOOKING",
 ]);
 
 /** Required on live bootstrap upload — CopilotKit Intelligence and smoke routes. */
