@@ -60,7 +60,7 @@ export async function POST(request: Request) {
   }
 
   // Prefer RLS-backed org_id from brands — never trust client context for org.
-  let orgId: string | undefined;
+  let orgId: string | null | undefined;
   if (operator.id !== "dev-unauthenticated") {
     const supabase = await createOperatorSupabaseClient(request);
     const brandCheck = await isBrandAccessible(supabase, brandId);
