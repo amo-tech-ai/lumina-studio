@@ -42,7 +42,7 @@ beforeEach(() => {
   mockWithOperatorAuth.mockResolvedValue({ id: "user-1", name: "QA" });
   mockCreateOperatorSupabaseClient.mockResolvedValue({});
   mockCreateSupabaseAdminClient.mockReturnValue(adminClientStub());
-  mockIsBrandAccessible.mockResolvedValue({ ok: true });
+  mockIsBrandAccessible.mockResolvedValue({ ok: true, orgId: "22222222-2222-2222-2222-222222222222" });
 });
 
 afterEach(() => {

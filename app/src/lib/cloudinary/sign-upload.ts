@@ -98,18 +98,44 @@ const WIDGET_SIGN_BLOCKLIST = new Set([
   "resource_type",
 ]);
 
-function contextStringForSigning(context: unknown, brandId: string): string {
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/** Parse `org_id` from Cloudinary upload context (string or object). */
+export function parseOrgIdFromCloudinaryContext(context: unknown): string | undefined {
+  if (typeof context === "object" && context !== null && !Array.isArray(context)) {
+    const value = (context as Record<string, unknown>).org_id;
+    if (typeof value === "string" && UUID_RE.test(value)) return value;
+  }
+  if (typeof context !== "string" || !context.includes("org_id=")) return undefined;
+  for (const part of context.split("|")) {
+    const [key, value] = part.split("=");
+    if (key === "org_id" && value && UUID_RE.test(value)) return value;
+  }
+  return undefined;
+}
+
+function contextStringForSigning(
+  context: unknown,
+  brandId: string,
+  orgId?: string,
+): string {
   const parsed = parseBrandIdFromCloudinaryContext(context);
-  return `brand_id=${parsed ?? brandId}`;
+  const parts = [`brand_id=${parsed ?? brandId}`];
+  const resolvedOrg =
+    orgId && UUID_RE.test(orgId) ? orgId : parseOrgIdFromCloudinaryContext(context);
+  if (resolvedOrg) parts.push(`org_id=${resolvedOrg}`);
+  return parts.join("|");
 }
 
 /**
  * Sanitize widget paramsToSign then sign exactly those fields — Cloudinary validates
  * the signature against the params the widget uploads, not a server-rebuilt superset.
+ * Prefer server-resolved `opts.orgId` (from brand access) over client context.
  */
 export function sanitizeWidgetParamsToSign(
   clientParams: Record<string, unknown>,
   brandId: string,
+  opts?: { orgId?: string },
 ): Record<string, string | number> {
   const out: Record<string, string | number> = {};
 
@@ -134,7 +160,7 @@ export function sanitizeWidgetParamsToSign(
 
   out.upload_preset = CLOUDINARY_UPLOAD_PRESET;
   out.folder = assetFolderFor(brandId);
-  out.context = contextStringForSigning(clientParams.context, brandId);
+  out.context = contextStringForSigning(clientParams.context, brandId, opts?.orgId);
 
   return out;
 }

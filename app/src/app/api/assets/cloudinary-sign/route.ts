@@ -59,12 +59,15 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Invalid brand_id in context" }, { status: 400 });
   }
 
+  // Prefer RLS-backed org_id from brands — never trust client context for org.
+  let orgId: string | undefined;
   if (operator.id !== "dev-unauthenticated") {
     const supabase = await createOperatorSupabaseClient(request);
     const brandCheck = await isBrandAccessible(supabase, brandId);
     if (!brandCheck.ok) {
       return NextResponse.json({ error: brandCheck.message }, { status: brandCheck.status });
     }
+    orgId = brandCheck.orgId;
   }
 
   const timestamp =
@@ -82,7 +85,7 @@ export async function POST(request: Request) {
   }
 
   // Sign sanitized widget params — must match what CldUploadWidget uploads (not a rebuilt superset).
-  const paramsForSignature = sanitizeWidgetParamsToSign(params, brandId);
+  const paramsForSignature = sanitizeWidgetParamsToSign(params, brandId, { orgId });
 
   const signature = signCloudinaryParams(paramsForSignature, apiSecret);
 
