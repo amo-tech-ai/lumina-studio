@@ -5,9 +5,13 @@
  * Precedence for later consumers: per-agent flag → default legacy.
  * Independent of global AI_ROUTING_MODE (direct | gateway).
  *
- * Deploy: list these names in `app/scripts/cloudflare-secret-allowlist.mjs`
- * `WRANGLER_VAR_NAMES` (plain Worker vars — not secrets).
+ * Env key names live in `agent-routing-keys.mjs` (SSOT shared with Worker var allowlist).
  */
+
+import {
+  AGENT_ROUTING_ENV_KEYS,
+  AGENT_ROUTING_KEYS as AGENT_ROUTING_KEYS_TABLE,
+} from "./agent-routing-keys.mjs";
 
 export type AgentRoutingMode = "native" | "legacy";
 
@@ -19,17 +23,17 @@ export type AgentRoutingMode = "native" | "legacy";
 export type AgentRoutingSurface = "operator" | "marketing";
 
 /** Explicit env keys — no kebab→SNAKE auto-conversion (avoids deploy-name drift). */
-export const AGENT_ROUTING_KEYS = {
-  "public-marketing": "AI_ROUTING_AGENT_PUBLIC_MARKETING",
-  "production-planner": "AI_ROUTING_AGENT_PRODUCTION_PLANNER",
-  "creative-director": "AI_ROUTING_AGENT_CREATIVE_DIRECTOR",
-  "visual-identity": "AI_ROUTING_AGENT_VISUAL_IDENTITY",
-  "social-discovery": "AI_ROUTING_AGENT_SOCIAL_DISCOVERY",
-  "brand-intelligence": "AI_ROUTING_AGENT_BRAND_INTELLIGENCE",
-  "model-match": "AI_ROUTING_AGENT_MODEL_MATCH",
-  "crm-assistant": "AI_ROUTING_AGENT_CRM_ASSISTANT",
-  booking: "AI_ROUTING_AGENT_BOOKING",
-} as const;
+export const AGENT_ROUTING_KEYS = AGENT_ROUTING_KEYS_TABLE as {
+  readonly "public-marketing": "AI_ROUTING_AGENT_PUBLIC_MARKETING";
+  readonly "production-planner": "AI_ROUTING_AGENT_PRODUCTION_PLANNER";
+  readonly "creative-director": "AI_ROUTING_AGENT_CREATIVE_DIRECTOR";
+  readonly "visual-identity": "AI_ROUTING_AGENT_VISUAL_IDENTITY";
+  readonly "social-discovery": "AI_ROUTING_AGENT_SOCIAL_DISCOVERY";
+  readonly "brand-intelligence": "AI_ROUTING_AGENT_BRAND_INTELLIGENCE";
+  readonly "model-match": "AI_ROUTING_AGENT_MODEL_MATCH";
+  readonly "crm-assistant": "AI_ROUTING_AGENT_CRM_ASSISTANT";
+  readonly booking: "AI_ROUTING_AGENT_BOOKING";
+};
 
 export type RoutableAgentId = keyof typeof AGENT_ROUTING_KEYS;
 
@@ -83,7 +87,7 @@ export function resolveAgentRoutingEnvKey(
 }
 
 export function listAgentRoutingEnvKeys(): readonly string[] {
-  return Object.values(AGENT_ROUTING_KEYS);
+  return AGENT_ROUTING_ENV_KEYS;
 }
 
 const warnedInvalid = new Set<string>();

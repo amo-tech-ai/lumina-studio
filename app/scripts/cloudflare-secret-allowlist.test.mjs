@@ -20,6 +20,7 @@ import {
   runtimeSecretNamesForWranglerEnv,
   wranglerCliEnvArgs,
 } from "./cloudflare-secret-allowlist.mjs";
+import { AGENT_ROUTING_ENV_KEYS } from "../src/lib/ai/agent-routing-keys.mjs";
 import {
   buildVersionsUploadArgs,
   parseArgs,
@@ -139,20 +140,21 @@ describe("cloudflare-secret-allowlist", () => {
   });
 
   it("WRANGLER_VAR_NAMES includes IPI-607 per-agent routing flags (optional)", () => {
-    const routingFlags = [
-      "AI_ROUTING_AGENT_PUBLIC_MARKETING",
-      "AI_ROUTING_AGENT_PRODUCTION_PLANNER",
-      "AI_ROUTING_AGENT_CREATIVE_DIRECTOR",
-      "AI_ROUTING_AGENT_VISUAL_IDENTITY",
-      "AI_ROUTING_AGENT_SOCIAL_DISCOVERY",
-      "AI_ROUTING_AGENT_BRAND_INTELLIGENCE",
-      "AI_ROUTING_AGENT_MODEL_MATCH",
-      "AI_ROUTING_AGENT_CRM_ASSISTANT",
-      "AI_ROUTING_AGENT_BOOKING",
-    ];
-    for (const name of routingFlags) {
+    expect(AGENT_ROUTING_ENV_KEYS.length).toBeGreaterThan(0);
+    for (const name of AGENT_ROUTING_ENV_KEYS) {
       expect(WRANGLER_VAR_NAMES).toContain(name);
       expect(WRANGLER_REQUIRED_VAR_NAMES).not.toContain(name);
+    }
+  });
+
+  it("cloudflare-secrets-sync.yml exports every agent-routing env key", () => {
+    const workflowPath = resolve(
+      dirname(fileURLToPath(import.meta.url)),
+      "../../.github/workflows/cloudflare-secrets-sync.yml",
+    );
+    const yaml = readFileSync(workflowPath, "utf8");
+    for (const name of AGENT_ROUTING_ENV_KEYS) {
+      expect(yaml).toContain(`${name}: \${{ vars.${name} }}`);
     }
   });
 
