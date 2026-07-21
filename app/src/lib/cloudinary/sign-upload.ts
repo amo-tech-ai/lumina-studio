@@ -121,7 +121,7 @@ function contextStringForSigning(
 export function sanitizeWidgetParamsToSign(
   clientParams: Record<string, unknown>,
   brandId: string,
-  opts?: { orgId?: string },
+  opts?: { orgId?: string | null },
 ): Record<string, string | number> {
   const out: Record<string, string | number> = {};
 
