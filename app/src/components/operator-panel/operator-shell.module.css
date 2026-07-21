@@ -120,6 +120,10 @@
     grid-template-columns: auto minmax(0, 1fr);
     padding-bottom: env(safe-area-inset-bottom, 0);
   }
+  /* IPI-572 — CRM tab bar already pads safe-area; avoid double inset. */
+  .shellWithCrmTabs {
+    padding-bottom: 0;
+  }
   .intelligencePanel {
     display: none;
   }
@@ -130,5 +134,6 @@
   .chatDock {
     padding-left: 1rem;
     padding-right: 1rem;
+    padding-bottom: 0.75rem;
   }
 }
