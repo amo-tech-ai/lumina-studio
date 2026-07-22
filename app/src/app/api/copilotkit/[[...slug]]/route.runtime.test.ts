@@ -274,4 +274,33 @@ describe("IPI-760 — emitInterruptOutcome survives CopilotKit's per-request clo
     const clonedAgain = cloned.clone();
     expect(clonedAgain.emitInterruptOutcome).toBe(false);
   });
+
+  it("warns (and does not throw) when getLocalAgents returns a non-MastraAgent entry, and still fixes the real agents", async () => {
+    // Simulates a future @ag-ui/mastra shape change where getLocalAgents() returns
+    // something that isn't a MastraAgent instance for one entry. Today this never
+    // happens (getLocalAgents() only ever constructs MastraAgent instances), but the
+    // route's `else` branch exists specifically to fail loud instead of silently
+    // leaving that agent's emitInterruptOutcome at the vulnerable `true` default.
+    const notAnAgent = { agentId: "rogue-agent", emitInterruptOutcome: true };
+    const realAgent = new FakeMastraAgentWithRealCloneSemantics({ agentId: "test-agent" });
+    vi.doMock("@ag-ui/mastra", () => ({
+      MastraAgent: Object.assign(FakeMastraAgentWithRealCloneSemantics, {
+        getLocalAgents: () => ({ "test-agent": realAgent, "rogue-agent": notAnAgent }),
+      }),
+    }));
+
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const route = await import("@/app/api/copilotkit/[[...slug]]/route");
+
+    await expect(route.GET(new Request("http://localhost/api/copilotkit"))).resolves.toBeInstanceOf(
+      Response,
+    );
+
+    expect(realAgent.emitInterruptOutcome).toBe(false);
+    expect(notAnAgent.emitInterruptOutcome).toBe(true); // untouched — confirms it was actually skipped
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("rogue-agent"));
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("IPI-760"));
+
+    warnSpy.mockRestore();
+  });
 });

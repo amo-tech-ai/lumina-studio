@@ -83,7 +83,7 @@ const runtime = new CopilotRuntime({
     // the default on strands every Mastra HITL interrupt/resume with "Thread has
     // N pending interrupt(s) not addressed by resume". Keep false until
     // CopilotKit is bumped to >=1.61.2 (separate, larger decision — see IPI-760).
-    for (const agent of Object.values(agents)) {
+    for (const [agentId, agent] of Object.entries(agents)) {
       if (agent instanceof MastraAgent) {
         agent.emitInterruptOutcome = false;
         // `config` is typed `private` in @ag-ui/mastra's declarations, but it's a
@@ -91,6 +91,18 @@ const runtime = new CopilotRuntime({
         // is intentional, not a type-safety hole: see the comment above for why
         // clone() requires mutating it directly.
         (agent as any).config.emitInterruptOutcome = false;
+      } else {
+        // getLocalAgents() only ever constructs MastraAgent instances today (see
+        // the `y()` helper decompiled in the comment above), so this branch isn't
+        // expected to run — but if a future @ag-ui/mastra version changes that, an
+        // agent silently skipped here means it keeps the emitInterruptOutcome:
+        // true default and strands HITL interrupts for exactly that agent, with
+        // no visible signal. Fail loud instead of failing silent.
+        console.warn(
+          `[copilotkit] agent "${agentId}" from getLocalAgents() is not a MastraAgent instance ` +
+            "(unexpected @ag-ui/mastra shape) — emitInterruptOutcome was NOT set to false for it; " +
+            "HITL interrupt/resume may strand for this agent. See IPI-760.",
+        );
       }
     }
     return agents;
