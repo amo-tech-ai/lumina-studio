@@ -98,18 +98,30 @@ const WIDGET_SIGN_BLOCKLIST = new Set([
   "resource_type",
 ]);
 
-function contextStringForSigning(context: unknown, brandId: string): string {
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+function contextStringForSigning(
+  context: unknown,
+  brandId: string,
+  orgId?: string | null,
+): string {
   const parsed = parseBrandIdFromCloudinaryContext(context);
-  return `brand_id=${parsed ?? brandId}`;
+  const parts = [`brand_id=${parsed ?? brandId}`];
+  if (orgId && UUID_RE.test(orgId)) {
+    parts.push(`org_id=${orgId}`);
+  }
+  return parts.join("|");
 }
 
 /**
  * Sanitize widget paramsToSign then sign exactly those fields — Cloudinary validates
  * the signature against the params the widget uploads, not a server-rebuilt superset.
+ * Prefer server-resolved `opts.orgId` (from brand access) over client context.
  */
 export function sanitizeWidgetParamsToSign(
   clientParams: Record<string, unknown>,
   brandId: string,
+  opts?: { orgId?: string | null },
 ): Record<string, string | number> {
   const out: Record<string, string | number> = {};
 
@@ -134,7 +146,7 @@ export function sanitizeWidgetParamsToSign(
 
   out.upload_preset = CLOUDINARY_UPLOAD_PRESET;
   out.folder = assetFolderFor(brandId);
-  out.context = contextStringForSigning(clientParams.context, brandId);
+  out.context = contextStringForSigning(clientParams.context, brandId, opts?.orgId);
 
   return out;
 }

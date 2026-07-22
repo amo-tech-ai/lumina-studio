@@ -27,15 +27,23 @@ export function parseBrandIdFromCloudinaryContext(context: unknown): string | un
  * This helper must run with `createOperatorSupabaseClient` (cookie or Bearer) so RLS
  * applies. Do not use the service-role client here — a missing policy would fail open.
  */
+export type BrandAccessResult =
+  | { ok: true; orgId: string | null }
+  | { ok: false; status: 403 | 500; message: string };
+
 export async function isBrandAccessible(
   supabase: SupabaseClient<Database>,
   brandId: string,
-): Promise<{ ok: true } | { ok: false; status: 403 | 500; message: string }> {
+): Promise<BrandAccessResult> {
   if (!UUID_RE.test(brandId)) {
     return { ok: false, status: 403, message: "Invalid brand" };
   }
 
-  const { data, error } = await supabase.from("brands").select("id").eq("id", brandId).maybeSingle();
+  const { data, error } = await supabase
+    .from("brands")
+    .select("id, org_id")
+    .eq("id", brandId)
+    .maybeSingle();
   if (error) {
     console.error("[brand-access] brands lookup failed:", error.message);
     return { ok: false, status: 500, message: "Internal error" };
@@ -43,5 +51,5 @@ export async function isBrandAccessible(
   if (!data) {
     return { ok: false, status: 403, message: "Brand not accessible to caller" };
   }
-  return { ok: true };
+  return { ok: true, orgId: data.org_id };
 }

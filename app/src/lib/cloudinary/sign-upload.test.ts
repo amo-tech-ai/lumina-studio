@@ -13,6 +13,50 @@ async function importSignUpload() {
   return import("./sign-upload");
 }
 
+describe("contextStringForSigning", () => {
+  it("uses server-resolved orgId when provided as valid UUID", async () => {
+    const { sanitizeWidgetParamsToSign } = await importSignUpload();
+    const ORG_ID = "22222222-2222-2222-2222-222222222222";
+    const sanitized = sanitizeWidgetParamsToSign(
+      {
+        timestamp: 1_784_000_000,
+        upload_preset: "ipix-signed-upload",
+        context: { brand_id: VALID_BRAND_ID },
+      },
+      VALID_BRAND_ID,
+      { orgId: ORG_ID },
+    );
+    expect(sanitized.context).toBe(`brand_id=${VALID_BRAND_ID}|org_id=${ORG_ID}`);
+  });
+
+  it("omits org_id when opts.orgId is null (brand has no org)", async () => {
+    const { sanitizeWidgetParamsToSign } = await importSignUpload();
+    const sanitized = sanitizeWidgetParamsToSign(
+      {
+        timestamp: 1_784_000_000,
+        upload_preset: "ipix-signed-upload",
+        context: { brand_id: VALID_BRAND_ID, org_id: "22222222-2222-2222-2222-222222222222" },
+      },
+      VALID_BRAND_ID,
+      { orgId: null },
+    );
+    expect(sanitized.context).toBe(`brand_id=${VALID_BRAND_ID}`);
+  });
+
+  it("never trusts client-supplied org_id in context when opts omitted", async () => {
+    const { sanitizeWidgetParamsToSign } = await importSignUpload();
+    const sanitized = sanitizeWidgetParamsToSign(
+      {
+        timestamp: 1_784_000_000,
+        upload_preset: "ipix-signed-upload",
+        context: { brand_id: VALID_BRAND_ID, org_id: "forged-org-id" },
+      },
+      VALID_BRAND_ID,
+    );
+    expect(sanitized.context).toBe(`brand_id=${VALID_BRAND_ID}`);
+  });
+});
+
 describe("sanitizeWidgetParamsToSign", () => {
   it("matches Cloudinary api_sign_request for realistic widget paramsToSign", async () => {
     const { sanitizeWidgetParamsToSign, signCloudinaryParams } = await importSignUpload();

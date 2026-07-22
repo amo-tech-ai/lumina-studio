@@ -240,6 +240,22 @@ export function AssetUploadPanel({ brands = [], defaultBrandId, onReady }: Props
     return () => window.removeEventListener("ipi433-e2e-simulate", onSimulate);
   }, [onUploadSuccess]);
 
+  /** Mark in-flight rows failed when the widget cancels before Cloudinary accepts them. */
+  const failUnsignedUploads = useCallback((message: string) => {
+    setQueue((prev) => {
+      const failedIds = new Set<string>();
+      const next = prev.map((item) => {
+        if (item.state !== "uploading" || item.cloudinary_asset_id) return item;
+        failedIds.add(item.id);
+        return { ...item, state: "client_failed" as const, message };
+      });
+      for (const [key, id] of uploadKeyToItemId.current) {
+        if (failedIds.has(id)) uploadKeyToItemId.current.delete(key);
+      }
+      return next;
+    });
+  }, []);
+
   const cancelItem = useCallback(
     (itemId: string) => {
       abortByItem.current.get(itemId)?.abort();
@@ -293,6 +309,31 @@ export function AssetUploadPanel({ brands = [], defaultBrandId, onReady }: Props
     resourceType: "auto",
     context: { brand_id: brandId },
     folder: `ipix/brands/${brandId}/products`,
+    prepareUploadParams: (cb: (result: unknown) => void, params: unknown) => {
+      const batch = Array.isArray(params) ? params : [params];
+      Promise.all(
+        batch.map((p: unknown) =>
+          fetch("/api/assets/cloudinary-sign", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ paramsToSign: p }),
+          }).then((r) => {
+            if (!r.ok) throw new Error("Signing failed");
+            return r.json() as Promise<Record<string, unknown>>;
+          }),
+        ),
+      )
+        .then((results) => {
+          // Canonical Cloudinary pattern: unwrap singleton batches.
+          // https://cloudinary.com/documentation/upload_widget#generate_signature_for_signed_upload
+          cb(results.length === 1 ? results[0] : results);
+        })
+        .catch(() => {
+          // onUploadAdded already queued rows; cancel alone leaves them stuck "uploading".
+          failUnsignedUploads("Could not sign upload — try Upload again");
+          cb({ cancel: true });
+        });
+    },
   };
 
   return (
@@ -318,7 +359,6 @@ export function AssetUploadPanel({ brands = [], defaultBrandId, onReady }: Props
           key={brandId}
           config={{ cloud: { cloudName, apiKey } }}
           uploadPreset={CLOUDINARY_UPLOAD_PRESET}
-          signatureEndpoint="/api/assets/cloudinary-sign"
           options={uploadOptions}
           onUploadAdded={(result) => {
             const info = result?.info ?? result;
