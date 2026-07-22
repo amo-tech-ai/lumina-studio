@@ -46,10 +46,21 @@ async function copyText(value: string): Promise<boolean> {
   }
 }
 
+function PreviewFallback({ assetType }: { assetType: AssetDetail["asset_type"] }) {
+  return (
+    <div className={styles.iconFallback} aria-hidden>
+      {assetType === "video" ? <Video size={40} /> : <FileText size={40} />}
+    </div>
+  );
+}
+
 /** Slim asset detail — IPI-436. Reads mirrored Supabase fields only. */
 export function AssetDetailWorkspace({ data, fetchError }: Props) {
   const router = useRouter();
   const [copyFlash, setCopyFlash] = useState<string | null>(null);
+  // Same pattern as AssetCard (IPI-757): when Cloudinary 404s but the row remains,
+  // swap to the icon fallback and hide delivery actions that would also 404.
+  const [failedUrl, setFailedUrl] = useState<string | null>(null);
 
   async function onCopy(label: string, value: string) {
     const ok = await copyText(value);
@@ -88,6 +99,15 @@ export function AssetDetailWorkspace({ data, fetchError }: Props) {
   const dims = formatDims(width, height);
   const sizeLabel = formatBytes(bytes);
   const tags = (data.tags ?? []).filter(Boolean);
+
+  const displayUrl =
+    typeof data.displayUrl === "string" && data.displayUrl.length > 0 ? data.displayUrl : null;
+  const downloadUrl =
+    typeof data.downloadUrl === "string" && data.downloadUrl.length > 0 ? data.downloadUrl : null;
+  const previewFailed = displayUrl !== null && failedUrl === displayUrl;
+  const showImagePreview = data.asset_type === "image" && displayUrl && !previewFailed;
+  // Hide delivery actions when preview media is gone (stale Cloudinary delete).
+  const mediaActionsOk = !previewFailed;
 
   const identityRows: Array<{ label: string; value: string }> = [];
   if (publicId) identityRows.push({ label: "public_id", value: publicId });
@@ -132,37 +152,31 @@ export function AssetDetailWorkspace({ data, fetchError }: Props) {
 
       <div className={styles.body}>
         <section className={styles.preview} aria-label="Preview">
-          {data.asset_type === "video" ? (
-            <div className={styles.iconFallback} aria-hidden>
-              <Video size={40} />
-            </div>
-          ) : data.asset_type === "document" ? (
-            <div className={styles.iconFallback} aria-hidden>
-              <FileText size={40} />
-            </div>
-          ) : data.displayUrl ? (
-            isAuthenticatedDeliveryUrl(data.displayUrl) ? (
+          {data.asset_type === "video" || data.asset_type === "document" ? (
+            <PreviewFallback assetType={data.asset_type} />
+          ) : showImagePreview ? (
+            isAuthenticatedDeliveryUrl(displayUrl) ? (
               <img
-                src={data.displayUrl}
+                src={displayUrl}
                 alt=""
                 className={styles.previewImageDirect}
                 data-testid="asset-detail-preview"
+                onError={() => setFailedUrl(displayUrl)}
               />
             ) : (
               <Image
-                src={data.displayUrl}
+                src={displayUrl}
                 alt=""
                 width={width ?? 1600}
                 height={height ?? 1200}
                 className={styles.previewImage}
                 sizes="(max-width: 880px) 100vw, 60vw"
                 data-testid="asset-detail-preview"
+                onError={() => setFailedUrl(displayUrl)}
               />
             )
           ) : (
-            <div className={styles.iconFallback} aria-hidden>
-              <FileText size={40} />
-            </div>
+            <PreviewFallback assetType={data.asset_type} />
           )}
         </section>
 
@@ -248,16 +262,16 @@ export function AssetDetailWorkspace({ data, fetchError }: Props) {
               Actions
             </h2>
             <div className={styles.actions}>
-              {data.displayUrl ? (
-                <a className={styles.actionBtn} href={data.displayUrl} download target="_blank" rel="noreferrer">
+              {mediaActionsOk && downloadUrl ? (
+                <a className={styles.actionBtn} href={downloadUrl} target="_blank" rel="noreferrer">
                   Download
                 </a>
               ) : null}
-              {data.displayUrl ? (
+              {mediaActionsOk && displayUrl ? (
                 <button
                   type="button"
                   className={styles.actionBtnSecondary}
-                  onClick={() => onCopy("Delivery URL", data.displayUrl!)}
+                  onClick={() => onCopy("Delivery URL", displayUrl)}
                 >
                   Copy delivery URL
                 </button>

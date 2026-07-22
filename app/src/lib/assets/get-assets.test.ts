@@ -5,6 +5,8 @@ import {
   getAssetDetail,
   listAssets,
   quotePostgrestValue,
+  resolveCloudinaryPublicId,
+  resolveCloudinaryResourceType,
 } from "./get-assets";
 
 function mockClient(response: { data: unknown; error: { message: string } | null }) {
@@ -188,6 +190,35 @@ describe("listAssets", () => {
   });
 });
 
+describe("resolveCloudinaryPublicId", () => {
+  it("prefers mirror public_id when assets.cloudinary_public_id is still null", () => {
+    expect(
+      resolveCloudinaryPublicId(
+        { cloudinary_public_id: null },
+        { public_id: "fashionos/assets/071f9316" },
+      ),
+    ).toBe("fashionos/assets/071f9316");
+  });
+
+  it("falls back to assets.cloudinary_public_id when mirror is absent", () => {
+    expect(resolveCloudinaryPublicId({ cloudinary_public_id: "brand/look-01" }, null)).toBe(
+      "brand/look-01",
+    );
+  });
+});
+
+describe("resolveCloudinaryResourceType", () => {
+  it("uses mirror resource_type when present", () => {
+    expect(
+      resolveCloudinaryResourceType({ asset_type: "image" }, { resource_type: "video" }),
+    ).toBe("video");
+  });
+
+  it("maps document asset_type to raw when mirror resource_type is missing", () => {
+    expect(resolveCloudinaryResourceType({ asset_type: "document" }, null)).toBe("raw");
+  });
+});
+
 describe("getAssetDetail", () => {
   it("returns 404 when the asset is missing (or RLS hides it)", async () => {
     const client = mockDetailClient({ data: null, error: null });
@@ -294,6 +325,8 @@ describe("getAssetDetail", () => {
     expect(result.data.mirror?.version).toBeNull();
     expect(result.data.displayUrl).toContain("brand/look-01");
     expect(result.data.displayUrl).toContain("w_1600");
+    expect(result.data.downloadUrl).toBeTruthy();
+    expect(result.data.downloadUrl).not.toContain("w_1600");
     expect(result.data.consoleUrl).toContain("media_library/search");
     expect(result.data.consoleUrl).toContain(encodeURIComponent("public_id=brand/look-01"));
     expect(result.data.whereUsed).toEqual([
@@ -301,5 +334,109 @@ describe("getAssetDetail", () => {
       { kind: "event", id: "event-9", label: "Event · event-9", href: null },
       { kind: "product", id: "prod-42", label: "Product · prod-42", href: null },
     ]);
+  });
+
+  it("signs from mirror public_id when assets.cloudinary_public_id is still null", async () => {
+    vi.stubEnv("CLOUDINARY_CLOUD_NAME", "dzqy2ixl0");
+    vi.stubEnv("CLOUDINARY_API_KEY", "test-api-key");
+    vi.stubEnv("CLOUDINARY_API_SECRET", "test-api-secret");
+
+    const client = mockDetailClient({
+      data: {
+        id: "071f9316-c08c-4d12-9b41-b523218891b2",
+        brand_id: "b1",
+        brand: { name: "Acme" },
+        asset_type: "image",
+        cloudinary_public_id: null,
+        url: null,
+        thumbnail_url: null,
+        shoot_id: null,
+        tags: null,
+        width: null,
+        height: null,
+        file_size: null,
+        mime_type: null,
+        status: "ready",
+        dna_score: null,
+        dna_status: null,
+        dna_pillars: {},
+        created_at: "2026-07-01T00:00:00.000Z",
+        updated_at: "2026-07-01T00:00:00.000Z",
+        mirror: {
+          public_id: "fashionos/assets/071f9316",
+          cloudinary_asset_id: null,
+          version: null,
+          delivery_type: "authenticated",
+          width: null,
+          height: null,
+          bytes: null,
+          format: null,
+          resource_type: "image",
+          folder: "fashionos/assets",
+        },
+        asset_links: [],
+        commerce_product_links: [],
+      },
+      error: null,
+    });
+
+    const result = await getAssetDetail(client, "071f9316-c08c-4d12-9b41-b523218891b2");
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.data.displayUrl).toContain("fashionos/assets/071f9316");
+    expect(result.data.consoleUrl).toContain(encodeURIComponent("public_id=fashionos/assets/071f9316"));
+    expect(result.data.downloadUrl).toContain("fl_attachment");
+  });
+
+  it("signs video assets under /video/authenticated (no image transforms)", async () => {
+    vi.stubEnv("CLOUDINARY_CLOUD_NAME", "dzqy2ixl0");
+    vi.stubEnv("CLOUDINARY_API_KEY", "test-api-key");
+    vi.stubEnv("CLOUDINARY_API_SECRET", "test-api-secret");
+
+    const client = mockDetailClient({
+      data: {
+        id: "v1",
+        brand_id: "b1",
+        brand: { name: "Acme" },
+        asset_type: "video",
+        cloudinary_public_id: "brand/clip-01",
+        url: null,
+        thumbnail_url: null,
+        shoot_id: null,
+        tags: null,
+        width: null,
+        height: null,
+        file_size: null,
+        mime_type: "video/mp4",
+        status: "ready",
+        dna_score: null,
+        dna_status: null,
+        dna_pillars: {},
+        created_at: "2026-07-01T00:00:00.000Z",
+        updated_at: "2026-07-01T00:00:00.000Z",
+        mirror: {
+          public_id: "brand/clip-01",
+          cloudinary_asset_id: null,
+          version: null,
+          delivery_type: "authenticated",
+          width: null,
+          height: null,
+          bytes: null,
+          format: "mp4",
+          resource_type: "video",
+          folder: "brand",
+        },
+        asset_links: [],
+        commerce_product_links: [],
+      },
+      error: null,
+    });
+
+    const result = await getAssetDetail(client, "v1");
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.data.displayUrl).toMatch(/\/video\/authenticated\//);
+    expect(result.data.displayUrl).not.toContain("w_1600");
+    expect(result.data.downloadUrl).toContain("attachment");
   });
 });

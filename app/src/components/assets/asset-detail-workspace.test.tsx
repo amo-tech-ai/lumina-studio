@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 
 vi.mock("./asset-detail-workspace.module.css", () => ({
   default: new Proxy({}, { get: (_, k) => String(k) }),
@@ -76,6 +76,8 @@ function detail(overrides: Partial<AssetDetail> = {}): AssetDetail {
       { kind: "shoot", id: "shoot-1", label: "Shoot · shoot-1", href: "/app/shoots/shoot-1" },
     ],
     consoleUrl: "https://console.cloudinary.com/example",
+    downloadUrl:
+      "https://res.cloudinary.com/dzqy2ixl0/image/authenticated/s--abc--/fl_attachment/brand/look-01",
     ...overrides,
   };
 }
@@ -127,5 +129,21 @@ describe("AssetDetailWorkspace", () => {
     render(<AssetDetailWorkspace data={null} fetchError="Sign in to view this asset." />);
     expect(screen.getByText("Couldn't load asset")).toBeDefined();
     expect(screen.getByText("Sign in to view this asset.")).toBeDefined();
+  });
+
+  it("uses downloadUrl for Download (not the preview transform)", () => {
+    render(<AssetDetailWorkspace data={detail()} fetchError={null} />);
+    const download = screen.getByRole("link", { name: "Download" });
+    expect(download.getAttribute("href")).toContain("fl_attachment");
+    expect(download.getAttribute("href")).not.toContain("w_1600");
+  });
+
+  it("falls back to the icon and hides delivery actions when preview 404s", () => {
+    render(<AssetDetailWorkspace data={detail()} fetchError={null} />);
+    fireEvent.error(screen.getByTestId("asset-detail-preview"));
+    expect(screen.queryByTestId("asset-detail-preview")).toBeNull();
+    expect(screen.queryByRole("link", { name: "Download" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Copy delivery URL" })).toBeNull();
+    expect(screen.getByRole("button", { name: "Copy public_id" })).toBeDefined();
   });
 });

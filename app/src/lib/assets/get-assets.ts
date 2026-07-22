@@ -6,7 +6,12 @@ import {
   withCloudinaryPreset,
   type CloudinaryPresetName,
 } from "@/lib/cloudinary/url";
-import { cloudinarySignedPresetUrl } from "@/app/api/_lib/cloudinary-signed-url";
+import {
+  cloudinarySignedDownloadUrl,
+  cloudinarySignedPresetUrl,
+  type CloudinaryDeliveryType,
+  type CloudinaryResourceType,
+} from "@/app/api/_lib/cloudinary-signed-url";
 import {
   DEFAULT_ASSETS_PAGE_LIMIT,
   MAX_ASSETS_PAGE_LIMIT,
@@ -57,6 +62,8 @@ export type AssetDetail = AssetRow & {
   whereUsed: WhereUsedItem[];
   /** Media Library search deep link when a public_id is known — never invent one. */
   consoleUrl: string | null;
+  /** Signed original/attachment URL — not the preview transform. */
+  downloadUrl: string | null;
 };
 
 export type GetAssetDetailResult =
@@ -82,6 +89,75 @@ function resolveDisplayUrl(
   }
   const raw = row.thumbnail_url ?? row.url;
   return isDeliverableCover(raw) ? withCloudinaryPreset(raw, preset) : null;
+}
+
+/** Prefer mirror public_id (webhook may land before assets-row sync). */
+export function resolveCloudinaryPublicId(
+  row: Pick<AssetDbRow, "cloudinary_public_id">,
+  mirror: Pick<AssetMirrorFields, "public_id"> | null,
+): string | null {
+  return mirror?.public_id?.trim() || row.cloudinary_public_id?.trim() || null;
+}
+
+export function resolveCloudinaryResourceType(
+  row: Pick<AssetDbRow, "asset_type">,
+  mirror: Pick<AssetMirrorFields, "resource_type"> | null,
+): CloudinaryResourceType {
+  const fromMirror = mirror?.resource_type?.trim();
+  if (fromMirror === "image" || fromMirror === "video" || fromMirror === "raw") {
+    return fromMirror;
+  }
+  if (row.asset_type === "video") return "video";
+  if (row.asset_type === "document") return "raw";
+  return "image";
+}
+
+export function resolveCloudinaryDeliveryType(
+  mirror: Pick<AssetMirrorFields, "delivery_type"> | null,
+): CloudinaryDeliveryType {
+  const fromMirror = mirror?.delivery_type?.trim();
+  if (fromMirror === "upload" || fromMirror === "authenticated" || fromMirror === "private") {
+    return fromMirror;
+  }
+  return "authenticated";
+}
+
+function resolveDetailUrls(
+  row: AssetDbRow,
+  mirror: AssetMirrorFields | null,
+  preset: CloudinaryPresetName,
+): { displayUrl: string | null; downloadUrl: string | null; publicId: string | null } {
+  const publicId = resolveCloudinaryPublicId(row, mirror);
+  if (!publicId) {
+    return {
+      displayUrl: resolveDisplayUrl(row, preset),
+      downloadUrl: null,
+      publicId: null,
+    };
+  }
+
+  const resourceType = resolveCloudinaryResourceType(row, mirror);
+  const deliveryType = resolveCloudinaryDeliveryType(mirror);
+  const signOpts = { resourceType, deliveryType };
+
+  let displayUrl: string | null = null;
+  try {
+    displayUrl = cloudinarySignedPresetUrl(publicId, preset, signOpts);
+  } catch (err) {
+    console.error("[assets] signed detail URL failed for", publicId, err);
+  }
+
+  let downloadUrl: string | null = null;
+  try {
+    downloadUrl = cloudinarySignedDownloadUrl(publicId, {
+      ...signOpts,
+      format: mirror?.format ?? null,
+    });
+  } catch (err) {
+    console.error("[assets] signed download URL failed for", publicId, err);
+  }
+
+  return { displayUrl, downloadUrl, publicId };
 }
 
 function cloudinaryConsoleUrl(publicId: string): string {
@@ -329,16 +405,20 @@ export async function getAssetDetail(
   const mirrorRaw = row.mirror;
   const mirror = Array.isArray(mirrorRaw) ? (mirrorRaw[0] ?? null) : mirrorRaw;
 
-  const publicId = mirror?.public_id?.trim() || row.cloudinary_public_id?.trim() || null;
-
   const { mirror: _m, asset_links, commerce_product_links, ...assetFields } = row;
+  const { displayUrl, downloadUrl, publicId } = resolveDetailUrls(row, mirror, "asset-detail");
 
   return {
     ok: true,
     data: {
       ...(assetFields as AssetDbRow & { brand: { name: string } | null }),
-      displayUrl: resolveDisplayUrl(row, "asset-detail"),
+      displayUrl,
+      downloadUrl,
       mirror,
+      // Parent `assets.shoot_id` is visible under org-aware assets RLS.
+      // Child embeds (`asset_links`, `commerce_product_links`) need matching
+      // org-aware SELECT policies — sibling IPI-770 · CLD-WHERE-USED-RLS-001 —
+      // or org members silently get empty Where Used for those relations.
       whereUsed: buildWhereUsed({
         shootId: row.shoot_id,
         links: asset_links,
