@@ -4,6 +4,20 @@
 
 **Method:** 5 dependency chains investigated in parallel by independent subagents, each required to verify every claim against real `npm explain`/`npm ls` output in `/home/sk/ipix/app` and live official sources (npm registry, GitHub advisories, changelogs) — not trust the pasted draft. This is the same rigor that caught the earlier shell-quote plan's central error (it claimed `npm audit fix` would fix a CVE it structurally could not). Several of these 5 had the same class of error.
 
+**Linear:** [IPI-758](https://linear.app/amo100/issue/IPI-758) · [IPI-759](https://linear.app/amo100/issue/IPI-759) · [IPI-760](https://linear.app/amo100/issue/IPI-760) · [IPI-761](https://linear.app/amo100/issue/IPI-761) · [IPI-762](https://linear.app/amo100/issue/IPI-762) — all Backlog, nothing implemented.
+
+---
+
+## task-verifier pass (2026-07-22)
+
+Re-verified every package/file/command claim below against a fresh `npm ls`/`npm explain` pass — never trust a doc that's a few hours old without re-checking disk.
+
+**🔴 Finding — `app/node_modules` was found completely empty (0 packages) during this pass.** `package.json`/`package-lock.json` were untouched and correct (the shell-quote override + `@opennextjs/cloudflare` pin from PR #570 were intact), but `node_modules` itself had been wiped — likely a side effect of the prior turn's 5 parallel read-only investigations (each was instructed not to run `npm install`/`npm ci`/anything mutating, but one plausibly ran a "does `npm ci` succeed from clean" check by actually deleting `node_modules` first). No disk-space issue (24% used), no npm log evidence of a completed install/ci at the time of deletion — consistent with a bare `rm -rf node_modules` that was never followed by a real reinstall.
+
+**Fix applied:** `npm install` — restored cleanly, `40 vulnerabilities (10 low, 21 moderate, 9 high, 0 critical)`, matching the exact state PR #570 left. All 5 chains' dependency claims below re-confirmed against the restored tree and found accurate — no drift.
+
+**Lesson:** when instructing parallel agents to do "read-only" investigation in a shared working directory, forbid `rm -rf node_modules` explicitly, not just "don't run install/ci" — an agent can satisfy the letter of that instruction while still destroying the tree.
+
 ---
 
 ## Verified findings table
@@ -44,6 +58,17 @@ Do not combine any of the 4 upgrade chains into one PR. Each has its own rollbac
 
 **Problem:** `@opennextjs/cloudflare` is pinned to exactly `1.20.1` because `1.20.2` requires `next >=16.2.11`, one patch above this repo's pinned `16.2.10`. Separately, Next.js bundles its own internal `postcss@8.4.31` (moderate XSS advisory, GHSA-qx2v-qp2m-jg93, fixed at `8.5.10`) — no stable Next.js release ships the fix yet.
 
+```mermaid
+flowchart TD
+    A["next@16.2.10 (exact pin)"] -->|blocks| B["@opennextjs/cloudflare 1.20.2\npeer needs next >=16.2.11"]
+    A -->|bundles| C["nested postcss@8.4.31\nGHSA-qx2v-qp2m-jg93"]
+    D["Bump together:\nnext -> 16.2.11\n@opennextjs/cloudflare -> 1.20.2"] --> E["Peer conflict cleared\n(dry-run verified)"]
+    C -->|no stable Next release fixes it| F["overrides: next.postcss -> 8.5.10"]
+    F --> G["PostCSS advisory cleared"]
+    E --> H[SAFE NOW]
+    G --> H
+```
+
 **AC:**
 - A — Clean install: `npm ci` exits 0. proof: `cd app && npm ci`
 - B — Peer conflict resolved: `npm ls @opennextjs/cloudflare next` shows `1.20.2`/`16.2.11`, no UNMET peer
@@ -62,6 +87,17 @@ Do not combine any of the 4 upgrade chains into one PR. Each has its own rollbac
 **Branch:** `ipi/759-sharp-override` · **PR:** dependency-only.
 
 **Problem:** `sharp` resolves to `0.34.5` (GHSA-f88m-g3jw-g9cj, CVSS 7.0 High, fixed at `0.35.0`) via `wrangler → miniflare` and via `next`'s own optional peer request. No released wrangler/miniflare version — checked every one from the last ~7 weeks — has adopted the fix. Real-world exposure is lower than "High" suggests: sharp only runs inside local `wrangler dev`/miniflare (Cloudflare Images-binding emulation), never in the production Worker, and only triggers on untrusted GIF/TIFF/VIPS input.
+
+```mermaid
+flowchart TD
+    W["wrangler@4.110.0"] --> M["miniflare@4.20260708.1"]
+    M --> S["sharp@0.34.5\nGHSA-f88m-g3jw-g9cj"]
+    N["next@16.2.10"] -->|optional peer| S
+    S -->|checked every miniflare release\n2026-06-01 -> latest| X["No fix in any release"]
+    X --> O["overrides: sharp -> 0.35.0"]
+    O --> V["Verify wrangler types,\nOpenNext build, local preview"]
+    V --> D[SAFE NOW - override justified]
+```
 
 **AC:**
 - A — sharp resolves >=0.35.0 everywhere: `npm ls sharp` — no version <0.35.0
@@ -83,6 +119,18 @@ Do not combine any of the 4 upgrade chains into one PR. Each has its own rollbac
 
 **Problem:** `@ag-ui/mastra` runs an unreleased beta (`0.2.1-beta.2`) while stable `1.1.1` has been out for a while, and is verified compatible with the installed `@copilotkit/runtime@1.61.0`/`@mastra/core@1.41.0` (dry-run clean, exactly 1 package changes). Separately, a moderate uuid CVE (GHSA-w5hq-g745-h8pq) is nested in `@copilotkit/runtime`'s own `uuid@^10.0.0` — verified this **cannot** be fixed by any CopilotKit upgrade (latest `1.63.1` still ships it) or by downgrading to `1.54.1` (a real feature regression — missing `ws`/`express`/MCP-middleware/channels support the installed version has).
 
+```mermaid
+flowchart TD
+    A["@ag-ui/mastra@0.2.1-beta.2\n(unreleased beta)"] -->|dry-run verified\ncompatible| B["Bump to 1.1.1 stable\n1 package changes, no ERESOLVE"]
+    B --> C[SAFE NOW]
+
+    D["@copilotkit/runtime@1.61.0..1.63.1"] -->|every version checked| E["uuid@^10.0.0\nGHSA-w5hq-g745-h8pq"]
+    E -->|no release drops it| F["Downgrade to 1.54.1?"]
+    F -->|missing ws, express,\nmcp-middleware, channels-core| G["Real regression - rejected"]
+    E --> H["Low exploitability:\nonly custom-buffer v3/v5/v6,\ndefault v4 unaffected"]
+    H --> I[MONITOR ONLY]
+```
+
 **AC:**
 - A — AG-UI on stable: `npm ls @ag-ui/mastra` shows `1.1.1`
 - B — Clean install: `npm ci` succeeds, no ERESOLVE
@@ -103,6 +151,20 @@ Do not combine any of the 4 upgrade chains into one PR. Each has its own rollbac
 
 **Problem:** `@ai-sdk/provider-utils <=3.0.97` (GHSA-866g-f22w-33x8, CVE-2026-8769, Low, uncontrolled resource consumption in JSON response parsing) resolves at 2 vulnerable versions in this repo. One path (`@ag-ui/mastra → @ai-sdk/ui-utils@1.2.11`) is genuinely frozen — no newer `@ai-sdk/ui-utils` release exists. The other (`@ai-sdk/openai-compatible@1.0.42`, a **direct** dependency used in `src/lib/ai/provider.ts`) does have a fix upstream (`3.0.14`) but it's a major bump — explicitly deferred, not part of this task. Existing `AbortController` timeout handling covers response *time* but not response *size* — no size guard exists anywhere in `src/lib/ai/` today (verified via grep).
 
+```mermaid
+flowchart TD
+    AG["@ag-ui/mastra"] --> UI["@ai-sdk/ui-utils@1.2.11\n(latest, frozen)"]
+    UI --> PU1["provider-utils@2.2.8\nGHSA-866g-f22w-33x8"]
+    PU1 -->|no newer ui-utils exists| OV["overrides:\nprovider-utils -> 4.0.30\n(already resolved elsewhere in tree)"]
+    OV --> SAFE1[SAFE NOW]
+
+    OC["@ai-sdk/openai-compatible@1.0.42\n(direct dependency,\nsrc/lib/ai/provider.ts)"] --> PU2["provider-utils@3.0.28\n(also vulnerable)"]
+    PU2 -->|latest openai-compatible\nis 3.0.14, fixes it| MAJOR["Major version bump -\nneeds its own review"]
+    MAJOR --> DEFER["BLOCKED - deferred,\ncross-linked to DEP-COPILOT-001/DEP-MASTRA-001"]
+
+    SAFE1 --> GUARD["+ response-size guard\nin src/lib/ai/\n(AbortController covers time,\nnot size - gap found via grep)"]
+```
+
 **AC:**
 - A — Frozen path cleared: `overrides["@ai-sdk/provider-utils"]` forces `4.0.30` (a version already resolved elsewhere in this exact tree — not a new, unvetted version); `npm ls @ai-sdk/provider-utils` shows no instance <=3.0.97
 - B — `npm audit --omit=dev` no longer lists this advisory
@@ -121,6 +183,22 @@ Do not combine any of the 4 upgrade chains into one PR. Each has its own rollbac
 **Branch:** none — tracking issue only, no code expected.
 
 **Problem:** `@hono/node-server@1.19.14` (3 real paths: `@copilotkit/runtime` direct, `@hono/node-ws` via the `mastra` CLI, `@modelcontextprotocol/sdk` via `@mastra/core`) has a moderate, Windows-only path-traversal advisory (GHSA-frvp-7c67-39w9, fixed at `2.0.5`). iPix runs Linux + Cloudflare Workers — real production exposure is low. No current release of any of the 3 consumers accepts Hono 2.x. The `mastra` CLI is far behind stable (`1.1.0-alpha.3` vs `1.19.0`) but bumping it is **not independent** — it forces `@mastra/core` from `1.41.0` to `>=1.50.0-0`, a full runtime-SDK jump with its own agent/workflow/memory regression surface, well beyond a "dependency hygiene" task.
+
+```mermaid
+flowchart TD
+    CLI["mastra CLI@1.1.0-alpha.3"] -->|npm install mastra@1.19.0 --dry-run| FAIL["ERESOLVE:\nrequires @mastra/core >=1.50.0-0"]
+    CORE["@mastra/core@1.41.0\n(pinned, real runtime SDK)"] --> FAIL
+    FAIL --> BLOCK1["CLI bump blocked -\ncascades into full core upgrade"]
+
+    H1["@copilotkit/runtime -> hono/node-server"] --> V["@hono/node-server@1.19.14\nGHSA-frvp-7c67-39w9"]
+    H2["mastra CLI -> hono/node-ws -> hono/node-server"] --> V
+    H3["@mastra/core -> MCP SDK -> hono/node-server"] --> V
+    V -->|checked all 3 consumers @ latest| N["None accept hono 2.x"]
+    N --> BLOCK2["No official fix path"]
+
+    BLOCK1 --> M[MONITOR ONLY]
+    BLOCK2 --> M
+```
 
 **AC:**
 - A — Advisory tracked, not silently dropped: this issue stays open/labeled, linked from `npm audit` triage notes
