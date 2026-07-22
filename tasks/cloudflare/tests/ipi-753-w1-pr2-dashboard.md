@@ -2,7 +2,8 @@
 
 **Date:** 2026-07-22  
 **Issue:** [IPI-753 · CF-MIG-230-W1 — Migrate Public Marketing Agent](https://linear.app/amo100/issue/IPI-753)  
-**Sibling code PR:** [#593](https://github.com/amo-tech-ai/lumina-studio/pull/593) (W1 PR1 — `resolveAgentModel` wire-up; flag stays legacy)  
+**Sibling code PR:** [#593](https://github.com/amo-tech-ai/lumina-studio/pull/593) (W1 PR1 — wires `model: ({ requestContext }) => resolveAgentModel({ agentId: "public-marketing", tier: "fast", requestContext })`; ships with flag **legacy**/unset)  
+**Flag note:** `AI_ROUTING_AGENT_PUBLIC_MARKETING` is read by `resolveAgentModel` **after #593 merges**. On `origin/main` today the agent still uses static `resolveModel("fast")` — do not flip the flag until PR1 is live.  
 **Code modified:** **No** — Dashboard / ops evidence only  
 **Platform SSOT:** Cloudflare AI Gateway → `ipix-prod` → Logs / Analytics  
 **Official:** [AI Gateway logging](https://developers.cloudflare.com/ai-gateway/observability/logging/) · [Auth — bindings pre-authenticated](https://developers.cloudflare.com/ai-gateway/configuration/authentication/)
