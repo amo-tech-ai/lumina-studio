@@ -69,6 +69,35 @@ function splitCsv(raw: string | undefined): string[] {
     .filter(Boolean);
 }
 
+/**
+ * Tags are a Postgres `text[]` — elements may contain commas. URL form keeps a
+ * single `tags=` key for shareability, so each tag is encodeURIComponent'd
+ * before join. Legacy unencoded CSV (`editorial,approved`) still parses.
+ */
+export function encodeTagsQueryValue(tags: string[]): string {
+  return tags
+    .map((t) => normalizeAssetTag(t))
+    .filter(Boolean)
+    .map((t) => encodeURIComponent(t))
+    .join(",");
+}
+
+export function decodeTagsQueryValue(raw: string | undefined): string[] {
+  if (!raw) return [];
+  return raw
+    .split(",")
+    .map((part) => {
+      const trimmed = part.trim();
+      if (!trimmed) return "";
+      try {
+        return normalizeAssetTag(decodeURIComponent(trimmed));
+      } catch {
+        return normalizeAssetTag(trimmed);
+      }
+    })
+    .filter(Boolean);
+}
+
 /** Lowercase + collapse internal whitespace — used for tags filter + tag text match. */
 export function normalizeAssetTag(tag: string): string {
   return tag.trim().toLowerCase().replace(/\s+/g, " ");
@@ -118,7 +147,12 @@ export function parseAssetsLibraryParams(raw: RawAssetsSearchParams): ParseAsset
     }
   }
 
-  const tags = splitCsv(firstValue(raw.tags)).map(normalizeAssetTag).filter(Boolean);
+  // Prefer a single tags= blob (encoded CSV). If the framework already split
+  // repeated tags= keys into an array, treat each entry as one tag value.
+  const tagsRaw = raw.tags;
+  const tags = Array.isArray(tagsRaw)
+    ? tagsRaw.flatMap((entry) => decodeTagsQueryValue(entry))
+    : decodeTagsQueryValue(firstValue(tagsRaw));
 
   const sortRaw = firstValue(raw.sort);
   let sort: AssetsLibrarySort = "newest";
@@ -195,7 +229,9 @@ export function buildAssetsLibraryUrl(
   if (filters.brandId) params.set("brand", filters.brandId);
   if (filters.query) params.set("q", filters.query);
   if (filters.status && filters.status.length > 0) params.set("status", filters.status.join(","));
-  if (filters.tags && filters.tags.length > 0) params.set("tags", filters.tags.join(","));
+  if (filters.tags && filters.tags.length > 0) {
+    params.set("tags", encodeTagsQueryValue(filters.tags));
+  }
   if (filters.sort && filters.sort !== "newest") params.set("sort", filters.sort);
   if (filters.limit && filters.limit !== DEFAULT_ASSETS_PAGE_LIMIT) {
     params.set("limit", String(filters.limit));

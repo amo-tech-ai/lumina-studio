@@ -3,7 +3,9 @@ import { describe, expect, it } from "vitest";
 import {
   buildAssetsLibraryUrl,
   decodeAssetsCursor,
+  decodeTagsQueryValue,
   encodeAssetsCursor,
+  encodeTagsQueryValue,
   normalizeAssetTag,
   parseAssetsLibraryParams,
   toListAssetsInput,
@@ -96,5 +98,30 @@ describe("buildAssetsLibraryUrl", () => {
 describe("normalizeAssetTag", () => {
   it("lowercases and collapses whitespace", () => {
     expect(normalizeAssetTag("  Editorial  Shoot ")).toBe("editorial shoot");
+  });
+});
+
+describe("tag query codec", () => {
+  it("round-trips tags that contain commas", () => {
+    const encoded = encodeTagsQueryValue(["Brand, Inc.", "editorial"]);
+    expect(decodeTagsQueryValue(encoded)).toEqual(["brand, inc.", "editorial"]);
+  });
+
+  it("still parses legacy unencoded CSV tags", () => {
+    expect(decodeTagsQueryValue("Editorial, Approved")).toEqual(["editorial", "approved"]);
+  });
+
+  it("buildAssetsLibraryUrl encodes commas so parse does not split a single tag", () => {
+    const url = buildAssetsLibraryUrl({ tags: ["Brand, Inc.", "runway"] });
+    const qs = url.split("?")[1] ?? "";
+    const tagsParam = new URLSearchParams(qs).get("tags");
+    expect(tagsParam).toBeTruthy();
+    // URLSearchParams may percent-encode further; decode once then use codec.
+    expect(decodeTagsQueryValue(tagsParam ?? "")).toEqual(["brand, inc.", "runway"]);
+
+    const parsed = parseAssetsLibraryParams({ tags: tagsParam ?? undefined });
+    expect(parsed.ok).toBe(true);
+    if (!parsed.ok) return;
+    expect(parsed.data.tags).toEqual(["brand, inc.", "runway"]);
   });
 });
