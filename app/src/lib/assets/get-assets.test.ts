@@ -1,6 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { encodeAssetsCursor } from "./list-assets-params";
-import { escapeIlikePattern, listAssets, quotePostgrestValue } from "./get-assets";
+import {
+  escapeIlikePattern,
+  getAssetDetail,
+  listAssets,
+  quotePostgrestValue,
+} from "./get-assets";
 
 function mockClient(response: { data: unknown; error: { message: string } | null }) {
   const builder = {
@@ -11,6 +16,15 @@ function mockClient(response: { data: unknown; error: { message: string } | null
     or: vi.fn().mockReturnThis(),
     order: vi.fn().mockReturnThis(),
     limit: vi.fn(async () => response),
+  };
+  return { from: vi.fn(() => builder), _builder: builder } as never;
+}
+
+function mockDetailClient(response: { data: unknown; error: { message: string } | null }) {
+  const builder = {
+    select: vi.fn().mockReturnThis(),
+    eq: vi.fn().mockReturnThis(),
+    maybeSingle: vi.fn(async () => response),
   };
   return { from: vi.fn(() => builder), _builder: builder } as never;
 }
@@ -171,5 +185,121 @@ describe("listAssets", () => {
     const client = mockClient({ data: rows, error: null });
     const [result] = (await listAssets(client)).items;
     expect(result.displayUrl).toBeNull();
+  });
+});
+
+describe("getAssetDetail", () => {
+  it("returns 404 when the asset is missing (or RLS hides it)", async () => {
+    const client = mockDetailClient({ data: null, error: null });
+    await expect(getAssetDetail(client, "missing")).resolves.toEqual({ ok: false, status: 404 });
+  });
+
+  it("returns 500 when the query errors", async () => {
+    const client = mockDetailClient({ data: null, error: { message: "boom" } });
+    await expect(getAssetDetail(client, "a1")).resolves.toEqual({ ok: false, status: 500 });
+  });
+
+  it("omits invented identity when the Cloudinary mirror is absent", async () => {
+    const client = mockDetailClient({
+      data: {
+        id: "a1",
+        brand_id: "b1",
+        brand: { name: "Acme" },
+        asset_type: "image",
+        cloudinary_public_id: null,
+        url: "https://example.com/x.jpg",
+        thumbnail_url: null,
+        shoot_id: null,
+        tags: ["runway"],
+        width: null,
+        height: null,
+        file_size: null,
+        mime_type: null,
+        status: "ready",
+        dna_score: null,
+        dna_status: null,
+        dna_pillars: {},
+        created_at: "2026-07-01T00:00:00.000Z",
+        updated_at: "2026-07-01T00:00:00.000Z",
+        mirror: null,
+        asset_links: [],
+        commerce_product_links: [],
+      },
+      error: null,
+    });
+
+    const result = await getAssetDetail(client, "a1");
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.data.mirror).toBeNull();
+    expect(result.data.consoleUrl).toBeNull();
+    expect(result.data.whereUsed).toEqual([]);
+    expect(result.data.tags).toEqual(["runway"]);
+  });
+
+  it("maps optional mirror identity + Where Used joins without inventing missing fields", async () => {
+    vi.stubEnv("CLOUDINARY_CLOUD_NAME", "dzqy2ixl0");
+    vi.stubEnv("CLOUDINARY_API_KEY", "test-api-key");
+    vi.stubEnv("CLOUDINARY_API_SECRET", "test-api-secret");
+    vi.stubEnv("NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME", "dzqy2ixl0");
+
+    const client = mockDetailClient({
+      data: {
+        id: "a1",
+        brand_id: "b1",
+        brand: { name: "Acme" },
+        asset_type: "image",
+        cloudinary_public_id: "brand/look-01",
+        url: "https://example.com/unused.jpg",
+        thumbnail_url: null,
+        shoot_id: "shoot-1",
+        tags: null,
+        width: 10,
+        height: 10,
+        file_size: 70,
+        mime_type: "image/png",
+        status: "ready",
+        dna_score: 88,
+        dna_status: "approved",
+        dna_pillars: {},
+        created_at: "2026-07-01T00:00:00.000Z",
+        updated_at: "2026-07-01T00:00:00.000Z",
+        mirror: {
+          public_id: "brand/look-01",
+          cloudinary_asset_id: null,
+          version: null,
+          delivery_type: "authenticated",
+          width: 1,
+          height: 1,
+          bytes: 70,
+          format: "png",
+          resource_type: "image",
+          folder: "brand",
+        },
+        asset_links: [
+          { entity_type: "shoot", entity_id: "shoot-1" },
+          { entity_type: "event", entity_id: "event-9" },
+        ],
+        commerce_product_links: [{ medusa_product_id: "prod-42" }],
+      },
+      error: null,
+    });
+
+    const result = await getAssetDetail(client, "a1");
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+
+    expect(result.data.mirror?.delivery_type).toBe("authenticated");
+    expect(result.data.mirror?.cloudinary_asset_id).toBeNull();
+    expect(result.data.mirror?.version).toBeNull();
+    expect(result.data.displayUrl).toContain("brand/look-01");
+    expect(result.data.displayUrl).toContain("w_1600");
+    expect(result.data.consoleUrl).toContain("media_library/search");
+    expect(result.data.consoleUrl).toContain(encodeURIComponent("public_id=brand/look-01"));
+    expect(result.data.whereUsed).toEqual([
+      { kind: "shoot", id: "shoot-1", label: "Shoot · shoot-1", href: "/app/shoots/shoot-1" },
+      { kind: "event", id: "event-9", label: "Event · event-9", href: null },
+      { kind: "product", id: "prod-42", label: "Product · prod-42", href: null },
+    ]);
   });
 });

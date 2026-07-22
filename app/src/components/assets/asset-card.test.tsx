@@ -5,7 +5,26 @@ import { render, screen, cleanup, fireEvent } from "@testing-library/react";
 vi.mock("./assets-workspace.module.css", () => ({ default: new Proxy({}, { get: (_, k) => String(k) }) }));
 vi.mock("../ui/status-chip.module.css", () => ({ default: new Proxy({}, { get: (_, k) => String(k) }) }));
 vi.mock("next/image", () => ({
-  default: (props: { alt: string; src: string }) => <img alt={props.alt} src={props.src} />,
+  default: (props: { alt: string; src: string; onError?: () => void }) => (
+    <img alt={props.alt} src={props.src} onError={props.onError} />
+  ),
+}));
+vi.mock("next/link", () => ({
+  default: ({
+    href,
+    children,
+    ...rest
+  }: {
+    href: string;
+    children: React.ReactNode;
+    className?: string;
+    "data-testid"?: string;
+    "data-asset-id"?: string;
+  }) => (
+    <a href={href} {...rest}>
+      {children}
+    </a>
+  ),
 }));
 
 import { AssetCard } from "./asset-card";
@@ -47,6 +66,11 @@ function asset(overrides: Partial<AssetRow> = {}): AssetRow {
 }
 
 describe("AssetCard", () => {
+  it("links the tile to the asset detail route", () => {
+    render(<AssetCard asset={asset()} />);
+    expect(screen.getByTestId("asset-card").getAttribute("href")).toBe("/app/assets/a1");
+  });
+
   it("renders the real asset type and date — never a fabricated name", () => {
     render(<AssetCard asset={asset()} />);
     expect(screen.getByTestId("asset-card").getAttribute("data-asset-id")).toBe("a1");

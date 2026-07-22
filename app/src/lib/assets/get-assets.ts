@@ -1,7 +1,11 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import type { Database } from "@/types/supabase";
-import { isDeliverableCover, withCloudinaryPreset } from "@/lib/cloudinary/url";
+import {
+  isDeliverableCover,
+  withCloudinaryPreset,
+  type CloudinaryPresetName,
+} from "@/lib/cloudinary/url";
 import { cloudinarySignedPresetUrl } from "@/app/api/_lib/cloudinary-signed-url";
 import {
   DEFAULT_ASSETS_PAGE_LIMIT,
@@ -13,6 +17,7 @@ import {
 
 type Db = SupabaseClient<Database>;
 type AssetDbRow = Database["public"]["Tables"]["assets"]["Row"];
+type CloudinaryMirrorRow = Database["public"]["Tables"]["cloudinary_assets"]["Row"];
 
 export type AssetRow = AssetDbRow & {
   brand: { name: string } | null;
@@ -25,6 +30,39 @@ export type AssetRow = AssetDbRow & {
   displayUrl: string | null;
 };
 
+/** Read-optimized Cloudinary mirror fields — all optional at render time. */
+export type AssetMirrorFields = Pick<
+  CloudinaryMirrorRow,
+  | "public_id"
+  | "cloudinary_asset_id"
+  | "version"
+  | "delivery_type"
+  | "width"
+  | "height"
+  | "bytes"
+  | "format"
+  | "resource_type"
+  | "folder"
+>;
+
+export type WhereUsedItem = {
+  kind: "shoot" | "event" | "product" | "other";
+  id: string;
+  label: string;
+  href: string | null;
+};
+
+export type AssetDetail = AssetRow & {
+  mirror: AssetMirrorFields | null;
+  whereUsed: WhereUsedItem[];
+  /** Media Library search deep link when a public_id is known — never invent one. */
+  consoleUrl: string | null;
+};
+
+export type GetAssetDetailResult =
+  | { ok: true; data: AssetDetail }
+  | { ok: false; status: 404 | 500 };
+
 export type ListAssetsPage = {
   items: AssetRow[];
   nextCursor: string | null;
@@ -32,17 +70,92 @@ export type ListAssetsPage = {
 
 function resolveDisplayUrl(
   row: Pick<AssetDbRow, "cloudinary_public_id" | "url" | "thumbnail_url">,
+  preset: CloudinaryPresetName = "asset-masonry",
 ): string | null {
   if (row.cloudinary_public_id) {
     try {
-      return cloudinarySignedPresetUrl(row.cloudinary_public_id, "asset-masonry");
+      return cloudinarySignedPresetUrl(row.cloudinary_public_id, preset);
     } catch (err) {
       console.error("[assets] signed URL failed for", row.cloudinary_public_id, err);
       return null;
     }
   }
   const raw = row.thumbnail_url ?? row.url;
-  return isDeliverableCover(raw) ? withCloudinaryPreset(raw, "asset-masonry") : null;
+  return isDeliverableCover(raw) ? withCloudinaryPreset(raw, preset) : null;
+}
+
+function cloudinaryConsoleUrl(publicId: string): string {
+  // Media Library global search — operator lands with public_id prefilled.
+  // No Admin API; console deep-link only when public_id is already known.
+  const q = encodeURIComponent(`public_id=${publicId}`);
+  return `https://console.cloudinary.com/console/media_library/search?q=${q}`;
+}
+
+function shortId(id: string): string {
+  return id.length > 8 ? `${id.slice(0, 8)}…` : id;
+}
+
+function buildWhereUsed(args: {
+  shootId: string | null;
+  links: Array<{ entity_type: string; entity_id: string }> | null;
+  products: Array<{ medusa_product_id: string }> | null;
+}): WhereUsedItem[] {
+  const items: WhereUsedItem[] = [];
+  const seen = new Set<string>();
+
+  const push = (item: WhereUsedItem) => {
+    const key = `${item.kind}:${item.id}`;
+    if (seen.has(key)) return;
+    seen.add(key);
+    items.push(item);
+  };
+
+  if (args.shootId) {
+    push({
+      kind: "shoot",
+      id: args.shootId,
+      label: `Shoot · ${shortId(args.shootId)}`,
+      href: `/app/shoots/${args.shootId}`,
+    });
+  }
+
+  for (const link of args.links ?? []) {
+    if (link.entity_type === "shoot") {
+      push({
+        kind: "shoot",
+        id: link.entity_id,
+        label: `Shoot · ${shortId(link.entity_id)}`,
+        href: `/app/shoots/${link.entity_id}`,
+      });
+      continue;
+    }
+    if (link.entity_type === "event") {
+      push({
+        kind: "event",
+        id: link.entity_id,
+        label: `Event · ${shortId(link.entity_id)}`,
+        href: null,
+      });
+      continue;
+    }
+    push({
+      kind: "other",
+      id: link.entity_id,
+      label: `${link.entity_type} · ${shortId(link.entity_id)}`,
+      href: null,
+    });
+  }
+
+  for (const product of args.products ?? []) {
+    push({
+      kind: "product",
+      id: product.medusa_product_id,
+      label: `Product · ${shortId(product.medusa_product_id)}`,
+      href: null,
+    });
+  }
+
+  return items;
 }
 
 /** Escape `%` / `_` / `\` so user query text is literal under ILIKE. */
@@ -173,5 +286,65 @@ export async function listAssets(
       displayUrl: resolveDisplayUrl(row),
     })) as AssetRow[],
     nextCursor,
+  };
+}
+
+type AssetDetailQueryRow = AssetDbRow & {
+  brand: { name: string } | null;
+  mirror: AssetMirrorFields | AssetMirrorFields[] | null;
+  asset_links: Array<{ entity_type: string; entity_id: string }> | null;
+  commerce_product_links: Array<{ medusa_product_id: string }> | null;
+};
+
+/**
+ * Single-asset detail for `/app/assets/[id]` (IPI-436).
+ * Reads the authenticated Supabase mirror only — no Cloudinary Admin API.
+ * Identity / media fields may be null; callers must omit, not invent.
+ */
+export async function getAssetDetail(
+  client: Db,
+  assetId: string,
+): Promise<GetAssetDetailResult> {
+  const { data, error } = await client
+    .from("assets")
+    .select(
+      [
+        "*",
+        "brand:brands(name)",
+        "mirror:cloudinary_assets(public_id, cloudinary_asset_id, version, delivery_type, width, height, bytes, format, resource_type, folder)",
+        "asset_links(entity_type, entity_id)",
+        "commerce_product_links(medusa_product_id)",
+      ].join(", "),
+    )
+    .eq("id", assetId)
+    .maybeSingle();
+
+  if (error) {
+    console.error("[assets] getAssetDetail failed:", error.message);
+    return { ok: false, status: 500 };
+  }
+  if (!data) return { ok: false, status: 404 };
+
+  const row = data as unknown as AssetDetailQueryRow;
+  const mirrorRaw = row.mirror;
+  const mirror = Array.isArray(mirrorRaw) ? (mirrorRaw[0] ?? null) : mirrorRaw;
+
+  const publicId = mirror?.public_id?.trim() || row.cloudinary_public_id?.trim() || null;
+
+  const { mirror: _m, asset_links, commerce_product_links, ...assetFields } = row;
+
+  return {
+    ok: true,
+    data: {
+      ...(assetFields as AssetDbRow & { brand: { name: string } | null }),
+      displayUrl: resolveDisplayUrl(row, "asset-detail"),
+      mirror,
+      whereUsed: buildWhereUsed({
+        shootId: row.shoot_id,
+        links: asset_links,
+        products: commerce_product_links,
+      }),
+      consoleUrl: publicId ? cloudinaryConsoleUrl(publicId) : null,
+    },
   };
 }
