@@ -16,6 +16,7 @@ import { createWorkersAI } from "workers-ai-provider";
 import type { RequestContext } from "@mastra/core/request-context";
 
 import { resolveAgentRoutingOutcome } from "./agent-routing";
+import { AGENT_ROUTING_ENV_KEYS } from "./agent-routing-keys.mjs";
 import { resolveWorkersAiTierCapability } from "./model-capabilities";
 import { resolveModel } from "./provider";
 import type { GroqModelTier } from "./types";
@@ -29,6 +30,30 @@ import type { GroqModelTier } from "./types";
  */
 type WorkersAiBinding = Parameters<typeof createWorkersAI>[0]["binding"];
 type CfEnvLike = Record<string, string | undefined> & { AI?: WorkersAiBinding };
+
+/**
+ * Builds the minimal object routes should store as `cfEnv` on RequestContext
+ * — the AI binding plus only the AI_ROUTING_AGENT_* flags this resolver
+ * actually reads. Never pass the full Cloudflare `env` object through:
+ * RequestContext is JSON-serializable and Mastra's observability tracing
+ * (`requestContextKeys`) and durable workflow snapshots can persist/log it,
+ * and the full env carries live secrets (GEMINI_API_KEY,
+ * SUPABASE_SERVICE_ROLE_KEY, ...).
+ */
+export function pickCfEnv(env: object & { AI?: WorkersAiBinding }): CfEnvLike {
+  // Real Cloudflare env types (CloudflareEnv, and this structural type too)
+  // are closed interfaces with no index signature, so TS won't let a caller
+  // pass one where `Record<string, unknown>` is required directly — cast
+  // internally instead of loosening the public parameter type.
+  const record = env as Record<string, unknown>;
+  const picked: CfEnvLike = {};
+  if (record.AI) picked.AI = record.AI as WorkersAiBinding;
+  for (const key of AGENT_ROUTING_ENV_KEYS) {
+    const value = record[key];
+    if (typeof value === "string") picked[key] = value;
+  }
+  return picked;
+}
 
 export type CloudflareModelReason =
   | "no_cf_env"

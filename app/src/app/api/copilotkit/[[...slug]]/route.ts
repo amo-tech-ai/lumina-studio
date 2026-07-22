@@ -7,6 +7,7 @@ import {
 import { MastraAgent } from "@ag-ui/mastra";
 import { RequestContext } from "@mastra/core/request-context";
 import { getCloudflareContext } from "@opennextjs/cloudflare";
+import { pickCfEnv } from "@/lib/ai/cloudflare-models";
 import { getMastra } from "@/mastra";
 import { getMastraStorage, MastraStorageUnavailableError } from "@/mastra/storage";
 import { type OperatorUser, extractAccessToken } from "@/lib/auth";
@@ -47,10 +48,10 @@ const runtime = new CopilotRuntime({
     const requestContext = new RequestContext();
     requestContext.set("userId", user.id);
     if (user.email) requestContext.set("email", user.email);
-    // IPI-750: binding ref only, never persisted. Throws off-Cloudflare (expected).
+    // IPI-750: sync — no Wrangler spin-up off-Cloudflare. Minimal cfEnv (pickCfEnv).
     try {
-      const { env } = await getCloudflareContext({ async: true });
-      requestContext.set("cfEnv", env);
+      const { env } = getCloudflareContext();
+      requestContext.set("cfEnv", pickCfEnv(env));
     } catch {
       // Vercel/Node — cfEnv stays unset, cloudflare-models.ts falls back to legacy.
     }

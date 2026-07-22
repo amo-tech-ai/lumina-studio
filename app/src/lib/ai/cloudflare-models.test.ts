@@ -3,7 +3,7 @@ import { RequestContext } from "@mastra/core/request-context";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { resetAgentRoutingWarnState } from "./agent-routing";
-import { resolveAgentModel, resolveAgentModelOutcome } from "./cloudflare-models";
+import { pickCfEnv, resolveAgentModel, resolveAgentModelOutcome } from "./cloudflare-models";
 
 function contextWithCfEnv(env: Record<string, unknown> | undefined): RequestContext {
   const requestContext = new RequestContext();
@@ -157,5 +157,39 @@ describe("IPI-750 cloudflare-models resolver", () => {
     } finally {
       if (previous !== undefined) process.env.AI_ROUTING_AGENT_PRODUCTION_PLANNER = previous;
     }
+  });
+});
+
+describe("pickCfEnv — never leak the full Cloudflare env into RequestContext", () => {
+  it("keeps the AI binding and known routing flags, drops everything else", () => {
+    const picked = pickCfEnv({
+      AI: fakeAiBinding,
+      AI_ROUTING_AGENT_PRODUCTION_PLANNER: "native",
+      AI_ROUTING_AGENT_PUBLIC_MARKETING: "legacy",
+      GEMINI_API_KEY: "secret-gemini-key",
+      SUPABASE_SERVICE_ROLE_KEY: "secret-service-role-key",
+      MASTRA_STORAGE_MODE: "noop",
+      SOME_UNRELATED_VAR: "whatever",
+    });
+    expect(picked.AI).toBe(fakeAiBinding);
+    expect(picked.AI_ROUTING_AGENT_PRODUCTION_PLANNER).toBe("native");
+    expect(picked.AI_ROUTING_AGENT_PUBLIC_MARKETING).toBe("legacy");
+    expect(picked).not.toHaveProperty("GEMINI_API_KEY");
+    expect(picked).not.toHaveProperty("SUPABASE_SERVICE_ROLE_KEY");
+    expect(picked).not.toHaveProperty("MASTRA_STORAGE_MODE");
+    expect(picked).not.toHaveProperty("SOME_UNRELATED_VAR");
+  });
+
+  it("omits AI when absent, never crashes on a sparse env", () => {
+    const picked = pickCfEnv({ AI_ROUTING_AGENT_BOOKING: "native" });
+    expect(picked.AI).toBeUndefined();
+    expect(picked.AI_ROUTING_AGENT_BOOKING).toBe("native");
+  });
+
+  it("ignores non-string values on routing-flag keys instead of leaking them through", () => {
+    const picked = pickCfEnv({
+      AI_ROUTING_AGENT_BOOKING: { unexpected: "object" },
+    });
+    expect(picked.AI_ROUTING_AGENT_BOOKING).toBeUndefined();
   });
 });

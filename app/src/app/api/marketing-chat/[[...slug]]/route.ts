@@ -7,6 +7,7 @@ import { MastraAgent } from "@ag-ui/mastra";
 import { Mastra } from "@mastra/core/mastra";
 import { RequestContext } from "@mastra/core/request-context";
 import { getCloudflareContext } from "@opennextjs/cloudflare";
+import { pickCfEnv } from "@/lib/ai/cloudflare-models";
 import { publicMarketingAgent } from "@/mastra/agents/public-marketing-agent";
 
 // ponytail: isolated Mastra instance — only public-marketing exposed.
@@ -30,8 +31,10 @@ const runtime = new CopilotRuntime({
     // the same agent under the "default" key.
     const requestContext = new RequestContext();
     try {
-      const { env } = await getCloudflareContext({ async: true });
-      requestContext.set("cfEnv", env);
+      // Sync call — throws immediately off-Cloudflare, no Wrangler proxy
+      // spin-up on the Vercel/Node hot path. Minimal cfEnv (see pickCfEnv).
+      const { env } = getCloudflareContext();
+      requestContext.set("cfEnv", pickCfEnv(env));
     } catch {
       // Expected on Vercel / Node — leave cfEnv unset, legacy routing applies.
     }
