@@ -1,6 +1,6 @@
 # cloudflare/ — Platform migration
 
-**Open first:** [`PLAN.md`](./PLAN.md) (roadmap) → [`todo.md`](./todo.md) (progress)  
+**Open first:** [`index.md`](./index.md) (full doc map) → [`todo.md`](./todo.md) (progress) → [`PLAN.md`](./PLAN.md) (roadmap)  
 **Parent epic (historical Done):** [IPI-487 · CLOUDFLARE-EPIC — Cloudflare Platform Migration](https://linear.app/amo100/issue/IPI-487) — children still drive work.
 
 ## Linear (active)
@@ -14,22 +14,26 @@
 
 ### Related active issues
 
-- [IPI-606 · CF-SEC-010 — Connect Infisical Secrets to Cloudflare Deployment](https://linear.app/amo100/issue/IPI-606)
-- [IPI-632 · CF-MIG-220 — Protected Preview Runtime Smoke Validation](https://linear.app/amo100/issue/IPI-632)
-- [IPI-627 · CF-SEC-020 — Deployment Security Proof](https://linear.app/amo100/issue/IPI-627)
-- Historical completed parent: [IPI-487 · CLOUDFLARE-EPIC — Cloudflare Platform Migration](https://linear.app/amo100/issue/IPI-487) (Done — children still drive work)
+- [IPI-607 · CF-MIG-230-FLAGS — Per-agent Cloudflare routing flags](https://linear.app/amo100/issue/IPI-607) (**Do next**)
+- [IPI-750 · CF-MIG-230-W0](https://linear.app/amo100/issue/IPI-750) (after flags)
+- Historical completed parent: [IPI-487 · CLOUDFLARE-EPIC](https://linear.app/amo100/issue/IPI-487) (Done — children still drive work)
 
 ## Navigation
 
 | Doc | Role |
 |-----|------|
-| [`PLAN.md`](./PLAN.md) | **Active** domain PRD + roadmap |
+| [`index.md`](./index.md) | **Full folder index** — SSOT vs historical vs scratch |
 | [`todo.md`](./todo.md) | **Active** evidence-based progress tracker |
-| [`prime/04-plan-hosting.md`](./prime/04-plan-hosting.md) | Supporting hosting execution notes |
+| [`PLAN.md`](./PLAN.md) | **Active** domain PRD + roadmap |
+| [`audit/j21-todo-audit.md`](./audit/j21-todo-audit.md) | Latest todo accuracy audit |
 | [`user-journeys/00-index.md`](./user-journeys/00-index.md) | Journey test plans |
 | [`tests/`](./tests/) | Evidence packs |
-| [`plan/`](./plan/) | Historical research — **not** active PLAN SSOT |
-| `notes/` · `draft/` | Scratch — not execution SSOT |
+| [`adr/`](./adr/) | Architecture decision records |
+| [`audits/`](./audits/) | Topic audits |
+| [`prime/04-plan-hosting.md`](./prime/04-plan-hosting.md) | Supporting hosting execution notes |
+| [`archive/`](./archive/) | Historical research, scratch notes/drafts/prompts, superseded root docs — **not** SSOT |
 | [`Tasks/archive/`](./Tasks/archive/) | Historical — do not implement from these |
 
 Official-first ladder: Dashboard → Wrangler → bindings → OpenNext → GitHub Actions → official repos → custom last.
+
+**Status authority:** Linear first. Root board: [`../../todo.md`](../../todo.md).
