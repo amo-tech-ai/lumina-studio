@@ -1,4 +1,11 @@
 {
+  "autoMode": {
+    "allow": [
+      "$defaults",
+      "Creating, modifying, or removing GitHub branch protection rules or rulesets on amo-tech-ai/lumina-studio (e.g. via `gh api .../branches/*/protection` or the rulesets API) when the user has explicitly requested a branch-protection change in the current conversation",
+      "Calling mcp__morph-mcp__edit_file to edit files within this repository (amo-tech-ai/lumina-studio) when the user has asked to use Morph for a code edit, or when testing/demonstrating the Morph MCP tool at the user's request"
+    ]
+  },
   "permissions": {
     "allow": [
       "Bash(graphify query *)",
