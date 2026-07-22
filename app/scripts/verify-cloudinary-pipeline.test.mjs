@@ -363,13 +363,21 @@ describe("isTestPublicId — test-prefix deletion guard", () => {
 });
 
 describe("testScopeForBrand — isolated per brand", () => {
-  it("returns a brand-scoped folder and prefix without mutating defaults", () => {
-    const a = testScopeForBrand("brand-a");
-    const b = testScopeForBrand("brand-b");
-    expect(a.testFolder).toBe("ipix/brands/brand-a/cld105-test");
-    expect(a.testPublicIdPrefix).toBe("ipix/brands/brand-a/cld105-test/cld105-");
+  it("returns a taxonomy-shaped folder and prefix without mutating defaults", () => {
+    const orgA = "org-a";
+    const orgB = "org-b";
+    const a = testScopeForBrand("brand-a", orgA, "dev");
+    const b = testScopeForBrand("brand-b", orgB, "dev");
+    expect(a.testFolder).toBe("ipix/dev/org-a/brand-a/qa-fixtures");
+    expect(a.testPublicIdPrefix).toBe("ipix/dev/org-a/brand-a/qa-fixtures/cld105-");
+    expect(a.workType).toBe("qa-fixtures");
     expect(b.testPublicIdPrefix).toContain("brand-b");
     expect(TEST_PUBLIC_ID_PREFIX).toBe("ipix/cld105-test/cld105-");
+  });
+
+  it("requires orgId", () => {
+    expect(() => testScopeForBrand("brand-a")).toThrow(/orgId/);
+    expect(() => testScopeForBrand("brand-a", "")).toThrow(/orgId/);
   });
 });
 
@@ -503,7 +511,9 @@ describe("cleanup — fallback by asset_id", () => {
   it("uses the fixture-scoped prefix so a different brand scope does not refuse cleanup", async () => {
     const cld = fakeCloudinary();
     const supabase = fakeSupabase();
-    const { testPublicIdPrefix } = testScopeForBrand("db1f728d-bee1-430e-a3e7-0c601da74ce7");
+    const orgId = "22222222-2222-2222-2222-222222222222";
+    const brandId = "db1f728d-bee1-430e-a3e7-0c601da74ce7";
+    const { testPublicIdPrefix } = testScopeForBrand(brandId, orgId, "dev");
     const publicId = `${testPublicIdPrefix}run-1`;
     const summary = await cleanup({
       cloudinary: cld,

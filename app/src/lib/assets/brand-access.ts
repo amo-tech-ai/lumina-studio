@@ -26,6 +26,9 @@ export function parseBrandIdFromCloudinaryContext(context: unknown): string | un
  *
  * This helper must run with `createOperatorSupabaseClient` (cookie or Bearer) so RLS
  * applies. Do not use the service-role client here — a missing policy would fail open.
+ *
+ * Taxonomy uploads require a non-null org_id (folder path). Access still succeeds for
+ * null-org legacy brands — callers that need taxonomy folders must 400 separately.
  */
 export type BrandAccessResult =
   | { ok: true; orgId: string | null }

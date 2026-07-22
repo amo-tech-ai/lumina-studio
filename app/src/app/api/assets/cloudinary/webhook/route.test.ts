@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const BRAND_ID = "11111111-1111-1111-1111-111111111111";
+const ORG_ID = "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa";
 const VALID_TIMESTAMP = () => Math.floor(Date.now() / 1000);
 
 const mockConfig = vi.fn();
@@ -43,6 +44,7 @@ function mockUpdateEqResult(result: { data: null; error: unknown }) {
 const cloudinaryAssetsUpdate = vi.fn(() => ({ eq: cloudinaryAssetsUpdateEq }));
 const aiAgentLogsInsert = vi.fn();
 const campaignsSelectMaybeSingle = vi.fn();
+const brandsSelectMaybeSingle = vi.fn();
 
 const mockFrom = vi.fn((table: string) => {
   if (table === "assets") {
@@ -66,6 +68,11 @@ const mockFrom = vi.fn((table: string) => {
   if (table === "campaigns") {
     return {
       select: vi.fn(() => ({ eq: vi.fn(() => ({ maybeSingle: campaignsSelectMaybeSingle })) })),
+    };
+  }
+  if (table === "brands") {
+    return {
+      select: vi.fn(() => ({ eq: vi.fn(() => ({ maybeSingle: brandsSelectMaybeSingle })) })),
     };
   }
   throw new Error(`unexpected table: ${table}`);
@@ -126,6 +133,7 @@ beforeEach(() => {
   mockUpdateEqResult({ data: null, error: null });
   aiAgentLogsInsert.mockResolvedValue({ data: null, error: null });
   campaignsSelectMaybeSingle.mockResolvedValue({ data: null, error: null });
+  brandsSelectMaybeSingle.mockResolvedValue({ data: { id: BRAND_ID, org_id: ORG_ID }, error: null });
   mockFetch.mockReset();
   mockFetch.mockResolvedValue({ ok: true, text: () => Promise.resolve("") });
   vi.stubGlobal("fetch", mockFetch);
@@ -988,6 +996,175 @@ describe("POST /api/assets/cloudinary/webhook", () => {
       expect(eagerRes.status).toBe(200);
       expect(assetsInsertSingle).toHaveBeenCalledTimes(1);
       expect(assetsUpdateEq).toHaveBeenCalledWith("id", "asset-1");
+    });
+  });
+
+  describe("IPI-60 — taxonomy + context ownership resolution", () => {
+    const CAMPAIGN_WORK_ID = "33333333-3333-3333-3333-333333333333";
+    const SHOOT_WORK_ID = "55555555-5555-5555-5555-555555555555";
+    const OTHER_ORG = "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb";
+
+    function taxonomyPublicId(workType: string, workId?: string, file = "abc123") {
+      const base = `ipix/dev/${ORG_ID}/${BRAND_ID}/${workType}`;
+      return workId ? `${base}/${workId}/${file}` : `${base}/${file}`;
+    }
+
+    it("resolves brand_id from a new taxonomy products folder", async () => {
+      const { POST } = await importRoute();
+      const public_id = taxonomyPublicId("products");
+      const res = await POST(makeRequest({ ...UPLOAD_PAYLOAD, public_id, folder: `ipix/dev/${ORG_ID}/${BRAND_ID}/products` }));
+      expect(res.status).toBe(200);
+      expect(cloudinaryAssetsUpsert).toHaveBeenCalledWith(
+        expect.objectContaining({ brand_id: BRAND_ID }),
+        { onConflict: "public_id" },
+      );
+      expect(aiAgentLogsInsert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          input: expect.objectContaining({ resolution_reason: "taxonomy_folder_resolved" }),
+        }),
+      );
+    });
+
+    it("resolves brand_id from a taxonomy campaigns folder without campaigns table lookup", async () => {
+      const { POST } = await importRoute();
+      const public_id = taxonomyPublicId("campaigns", CAMPAIGN_WORK_ID);
+      const res = await POST(makeRequest({ ...UPLOAD_PAYLOAD, public_id }));
+      expect(res.status).toBe(200);
+      expect(campaignsSelectMaybeSingle).not.toHaveBeenCalled();
+      expect(cloudinaryAssetsUpsert).toHaveBeenCalledWith(
+        expect.objectContaining({ brand_id: BRAND_ID }),
+        { onConflict: "public_id" },
+      );
+    });
+
+    it("resolves brand_id from a taxonomy shoots folder (brand is in the path)", async () => {
+      const { POST } = await importRoute();
+      const public_id = taxonomyPublicId("shoots", SHOOT_WORK_ID);
+      const res = await POST(makeRequest({ ...UPLOAD_PAYLOAD, public_id }));
+      expect(res.status).toBe(200);
+      expect(cloudinaryAssetsUpsert).toHaveBeenCalledWith(
+        expect.objectContaining({ brand_id: BRAND_ID }),
+        { onConflict: "public_id" },
+      );
+      expect(aiAgentLogsInsert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          input: expect.objectContaining({ resolution_reason: "taxonomy_folder_resolved" }),
+        }),
+      );
+    });
+
+    it("resolves brand_id from structured context.custom (validated against brands)", async () => {
+      const { POST } = await importRoute();
+      const res = await POST(
+        makeRequest({
+          ...UPLOAD_PAYLOAD,
+          public_id: "uploads/no-folder-signal/abc",
+          context: { custom: { brand_id: BRAND_ID, org_id: ORG_ID } },
+        }),
+      );
+      expect(res.status).toBe(200);
+      expect(brandsSelectMaybeSingle).toHaveBeenCalled();
+      expect(cloudinaryAssetsUpsert).toHaveBeenCalledWith(
+        expect.objectContaining({ brand_id: BRAND_ID }),
+        { onConflict: "public_id" },
+      );
+      expect(aiAgentLogsInsert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          input: expect.objectContaining({ resolution_reason: "context_brand_resolved" }),
+        }),
+      );
+    });
+
+    it("resolves brand_id from a pipe-separated context string", async () => {
+      const { POST } = await importRoute();
+      const res = await POST(
+        makeRequest({
+          ...UPLOAD_PAYLOAD,
+          public_id: "uploads/no-folder-signal/abc",
+          context: `brand_id=${BRAND_ID}|org_id=${ORG_ID}|work_type=products`,
+        }),
+      );
+      expect(res.status).toBe(200);
+      expect(cloudinaryAssetsUpsert).toHaveBeenCalledWith(
+        expect.objectContaining({ brand_id: BRAND_ID }),
+        { onConflict: "public_id" },
+      );
+    });
+
+    it("falls back to legacy brand folder when taxonomy/context are absent", async () => {
+      const { POST } = await importRoute();
+      const res = await POST(makeRequest(UPLOAD_PAYLOAD));
+      expect(res.status).toBe(200);
+      expect(cloudinaryAssetsUpsert).toHaveBeenCalledWith(
+        expect.objectContaining({ brand_id: BRAND_ID }),
+        { onConflict: "public_id" },
+      );
+      expect(aiAgentLogsInsert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          input: expect.objectContaining({ resolution_reason: "brand_folder_resolved" }),
+        }),
+      );
+    });
+
+    it("rejects context brand when org_id does not match brands.org_id", async () => {
+      brandsSelectMaybeSingle.mockResolvedValue({ data: { id: BRAND_ID, org_id: ORG_ID }, error: null });
+      const { POST } = await importRoute();
+      const res = await POST(
+        makeRequest({
+          ...UPLOAD_PAYLOAD,
+          public_id: "uploads/no-folder-signal/abc",
+          context: { brand_id: BRAND_ID, org_id: OTHER_ORG },
+        }),
+      );
+      expect(res.status).toBe(200);
+      expect(cloudinaryAssetsUpsert).toHaveBeenCalledWith(
+        expect.objectContaining({ brand_id: null }),
+        { onConflict: "public_id" },
+      );
+      expect(aiAgentLogsInsert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          input: expect.objectContaining({ resolution_reason: "context_org_mismatch" }),
+        }),
+      );
+    });
+
+    it("leaves brand_id null for unresolved paths (no_ownership_signal)", async () => {
+      const { POST } = await importRoute();
+      const res = await POST(
+        makeRequest({ ...UPLOAD_PAYLOAD, public_id: "misc/random/folder/abc123" }),
+      );
+      expect(res.status).toBe(200);
+      expect(cloudinaryAssetsUpsert).toHaveBeenCalledWith(
+        expect.objectContaining({ brand_id: null }),
+        { onConflict: "public_id" },
+      );
+      expect(aiAgentLogsInsert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          input: expect.objectContaining({ resolution_reason: "no_ownership_signal" }),
+        }),
+      );
+    });
+
+    it("parseOwnershipFromCloudinaryContext reads custom + pipe shapes", async () => {
+      const { parseOwnershipFromCloudinaryContext } = await importRoute();
+      expect(
+        parseOwnershipFromCloudinaryContext({ custom: { brand_id: BRAND_ID, org_id: ORG_ID } }),
+      ).toEqual({ brandId: BRAND_ID, orgId: ORG_ID });
+      expect(
+        parseOwnershipFromCloudinaryContext(`brand_id=${BRAND_ID}|org_id=${ORG_ID}`),
+      ).toEqual({ brandId: BRAND_ID, orgId: ORG_ID });
+      expect(parseOwnershipFromCloudinaryContext(null)).toEqual({});
+    });
+
+    it("parseTaxonomyBrandId extracts brand from taxonomy paths only", async () => {
+      const { parseTaxonomyBrandId } = await importRoute();
+      expect(parseTaxonomyBrandId(taxonomyPublicId("products"))).toEqual({
+        brandId: BRAND_ID,
+        orgId: ORG_ID,
+        workType: "products",
+      });
+      expect(parseTaxonomyBrandId(`ipix/brands/${BRAND_ID}/products/x`)).toBeNull();
+      expect(parseTaxonomyBrandId(`ipix/dev/${ORG_ID}/${BRAND_ID}/not-a-work-type/x`)).toBeNull();
     });
   });
 });

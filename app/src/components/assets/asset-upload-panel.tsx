@@ -308,7 +308,7 @@ export function AssetUploadPanel({ brands = [], defaultBrandId, onReady }: Props
     clientAllowedFormats: ["jpg", "jpeg", "png", "webp", "mp4", "mov"],
     resourceType: "auto",
     context: { brand_id: brandId },
-    folder: `ipix/brands/${brandId}/products`,
+    // Server (/api/assets/cloudinary-sign) is the sole authority for taxonomy folder.
     prepareUploadParams: (cb: (result: unknown) => void, params: unknown) => {
       const batch = Array.isArray(params) ? params : [params];
       Promise.all(
