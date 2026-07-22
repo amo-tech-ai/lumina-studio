@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { encodeAssetsCursor } from "./list-assets-params";
-import { escapeIlikePattern, listAssets } from "./get-assets";
+import { escapeIlikePattern, listAssets, quotePostgrestValue } from "./get-assets";
 
 function mockClient(response: { data: unknown; error: { message: string } | null }) {
   const builder = {
@@ -26,6 +26,13 @@ afterEach(() => {
 describe("escapeIlikePattern", () => {
   it("escapes ILIKE wildcards", () => {
     expect(escapeIlikePattern("a%b_c\\d")).toBe("a\\%b\\_c\\\\d");
+  });
+});
+
+describe("quotePostgrestValue", () => {
+  it("wraps values and doubles embedded quotes", () => {
+    expect(quotePostgrestValue("%spring, summer%")).toBe('"%spring, summer%"');
+    expect(quotePostgrestValue('say "hi"')).toBe('"say ""hi"""');
   });
 });
 
@@ -79,14 +86,26 @@ describe("listAssets", () => {
     expect(builder.eq).toHaveBeenCalledWith("brand_id", "11111111-1111-4111-8111-111111111111");
     expect(builder.in).toHaveBeenCalledWith("status", ["ready", "final"]);
     expect(builder.contains).toHaveBeenCalledWith("tags", ["editorial"]);
-    expect(builder.or).toHaveBeenCalledWith(expect.stringContaining("cloudinary_public_id.ilike.%runway%"));
-    expect(builder.or).toHaveBeenCalledWith(
-      expect.stringContaining(
-        "created_at.gt.2026-07-20T12:00:00.000Z,and(created_at.eq.2026-07-20T12:00:00.000Z,id.gt.33333333-3333-4333-8333-333333333333)",
-      ),
+    // One combined .or() so search is not dropped when cursor is present.
+    expect(builder.or).toHaveBeenCalledTimes(1);
+    const orArg = builder.or.mock.calls[0][0] as string;
+    expect(orArg).toContain('and(or(');
+    expect(orArg).toContain('cloudinary_public_id.ilike."%runway%"');
+    expect(orArg).toContain(
+      'created_at.gt."2026-07-20T12:00:00.000Z",and(created_at.eq."2026-07-20T12:00:00.000Z",id.gt."33333333-3333-4333-8333-333333333333")',
     );
     expect(builder.order).toHaveBeenCalledWith("created_at", { ascending: true });
     expect(builder.limit).toHaveBeenCalledWith(11);
+  });
+
+  it("quotes commas inside free-text search so PostgREST .or() does not split the pattern", async () => {
+    const client = mockClient({ data: [], error: null });
+    await listAssets(client, { query: "spring, summer" });
+    const builder = (client as unknown as { _builder: { or: ReturnType<typeof vi.fn> } })._builder;
+    expect(builder.or).toHaveBeenCalledTimes(1);
+    const orArg = builder.or.mock.calls[0][0] as string;
+    expect(orArg).toContain('cloudinary_public_id.ilike."%spring, summer%"');
+    expect(orArg).not.toMatch(/ilike\.%spring, summer%/);
   });
 
   it("emits nextCursor when more than limit rows return", async () => {

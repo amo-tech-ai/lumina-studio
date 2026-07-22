@@ -50,12 +50,50 @@ export function escapeIlikePattern(value: string): string {
   return value.replace(/\\/g, "\\\\").replace(/%/g, "\\%").replace(/_/g, "\\_");
 }
 
+/**
+ * Wrap a PostgREST filter value in double quotes so reserved `.or()` / `.and()`
+ * delimiters (commas, parentheses, periods) stay inside one operand.
+ * Embedded `"` → `""` per PostgREST double-quoted value rules.
+ */
+export function quotePostgrestValue(value: string): string {
+  return `"${value.replace(/"/g, '""')}"`;
+}
+
 function normalizeLimit(limit: number | undefined): number {
   const n = limit ?? DEFAULT_ASSETS_PAGE_LIMIT;
   if (!Number.isInteger(n) || n < 1 || n > MAX_ASSETS_PAGE_LIMIT) {
     throw new Error(`Asset page limit must be between 1 and ${MAX_ASSETS_PAGE_LIMIT}.`);
   }
   return n;
+}
+
+function buildSearchOrFilter(rawQuery: string): string {
+  const pattern = quotePostgrestValue(`%${escapeIlikePattern(rawQuery)}%`);
+  const tagExact = normalizeAssetTag(rawQuery);
+  const parts = [
+    `cloudinary_public_id.ilike.${pattern}`,
+    `metadata->>original_filename.ilike.${pattern}`,
+    `metadata->>title.ilike.${pattern}`,
+    `metadata->>alt_text.ilike.${pattern}`,
+    `metadata->>alt.ilike.${pattern}`,
+  ];
+  if (tagExact) {
+    // PostgREST array contains; quote the JSON array literal so commas in tags stay intact.
+    parts.push(`tags.cs.${quotePostgrestValue(`{"${tagExact.replace(/"/g, "")}"}`)}`);
+  }
+  return parts.join(",");
+}
+
+function buildCursorOrFilter(
+  cursor: { createdAt: string; id: string },
+  ascending: boolean,
+): string {
+  const createdAt = quotePostgrestValue(cursor.createdAt);
+  const id = quotePostgrestValue(cursor.id);
+  if (ascending) {
+    return `created_at.gt.${createdAt},and(created_at.eq.${createdAt},id.gt.${id})`;
+  }
+  return `created_at.lt.${createdAt},and(created_at.eq.${createdAt},id.lt.${id})`;
 }
 
 /**
@@ -72,6 +110,10 @@ function normalizeLimit(limit: number | undefined): number {
  * - `metadata.original_filename` / `metadata.title` / `metadata.alt_text` /
  *   `metadata.alt` when present (schema has no dedicated filename/title cols yet)
  * - exact normalized tag equality
+ *
+ * Search + cursor must share one `.or()` payload. Chaining two `.or()` calls is
+ * fragile across PostgREST parsers; we AND the groups explicitly as
+ * `or=(and(or(search…),or(cursor…)))`.
  */
 export async function listAssets(
   client: Db,
@@ -98,34 +140,15 @@ export async function listAssets(
   }
 
   const rawQuery = input.query?.trim();
-  if (rawQuery) {
-    const pattern = `%${escapeIlikePattern(rawQuery)}%`;
-    const tagExact = normalizeAssetTag(rawQuery);
-    const parts = [
-      `cloudinary_public_id.ilike.${pattern}`,
-      `metadata->>original_filename.ilike.${pattern}`,
-      `metadata->>title.ilike.${pattern}`,
-      `metadata->>alt_text.ilike.${pattern}`,
-      `metadata->>alt.ilike.${pattern}`,
-    ];
-    if (tagExact) {
-      // PostgREST array contains: tags.cs.{"value"}
-      parts.push(`tags.cs.{"${tagExact.replace(/"/g, "")}"}`);
-    }
-    query = query.or(parts.join(","));
-  }
+  const searchOr = rawQuery ? buildSearchOrFilter(rawQuery) : null;
+  const cursorOr = input.cursor ? buildCursorOrFilter(input.cursor, ascending) : null;
 
-  if (input.cursor) {
-    const { createdAt, id } = input.cursor;
-    if (ascending) {
-      query = query.or(
-        `created_at.gt.${createdAt},and(created_at.eq.${createdAt},id.gt.${id})`,
-      );
-    } else {
-      query = query.or(
-        `created_at.lt.${createdAt},and(created_at.eq.${createdAt},id.lt.${id})`,
-      );
-    }
+  if (searchOr && cursorOr) {
+    query = query.or(`and(or(${searchOr}),or(${cursorOr}))`);
+  } else if (searchOr) {
+    query = query.or(searchOr);
+  } else if (cursorOr) {
+    query = query.or(cursorOr);
   }
 
   const { data, error } = await query
