@@ -97,7 +97,9 @@ export function resolveAgentModelOutcome({
     return { model: resolveModel(tier), mode: "legacy", reason: "unsupported_tier" };
   }
 
-  const workersAi = createWorkersAI({ binding: cfEnv.AI });
+  // Locked runtime pattern (tasks/cloudflare/todo.md, IPI-586) — every
+  // Workers AI call in this app routes through the ipix-prod gateway.
+  const workersAi = createWorkersAI({ binding: cfEnv.AI, gateway: { id: "ipix-prod" } });
   return { model: workersAi(capability.modelId), mode: "native", reason: "native" };
 }
 

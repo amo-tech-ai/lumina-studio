@@ -9,7 +9,7 @@
 import type { GroqModelTier } from "./types";
 
 export type WorkersAiTierCapability = {
-  /** Workers AI catalog model id, e.g. "@cf/meta/llama-3.1-8b-instruct". */
+  /** Workers AI catalog model id, e.g. "@cf/moonshotai/kimi-k2.6". */
   modelId: string;
   supportsTools: boolean;
   supportsStreaming: boolean;
@@ -25,9 +25,12 @@ export const WORKERS_AI_TIER_CAPABILITIES: Partial<
     supportsStreaming: true,
   },
   // Tool-free marketing path — matches provider.ts's existing "fast" tier framing.
+  // @cf/meta/llama-3.1-8b-instruct is deprecated (Cloudflare docs: 5/30/2026,
+  // already past) — the -fast variant replaces it and does support tool_calls[]
+  // per Cloudflare's own model docs, unlike the model this replaces.
   fast: {
-    modelId: "@cf/meta/llama-3.1-8b-instruct",
-    supportsTools: false,
+    modelId: "@cf/meta/llama-3.1-8b-instruct-fast",
+    supportsTools: true,
     supportsStreaming: true,
   },
 };
