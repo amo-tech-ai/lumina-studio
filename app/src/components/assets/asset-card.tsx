@@ -1,4 +1,7 @@
+"use client";
+
 import Image from "next/image";
+import { useState } from "react";
 import { FileText, Video } from "lucide-react";
 
 import { StatusChip } from "@/components/ui/status-chip";
@@ -20,6 +23,14 @@ function formatShortDate(iso: string): string {
   return date.toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
 }
 
+function ImageFallback() {
+  return (
+    <div className={styles.iconFallback} aria-hidden>
+      <FileText size={22} />
+    </div>
+  );
+}
+
 /** Masonry tile for one `assets` row — no name/title column exists on the
  *  table (see get-assets.ts), so this never fabricates one: only the real
  *  type, date, and (when present) DNA status/score are shown. */
@@ -27,6 +38,10 @@ export function AssetCard({ asset }: { asset: AssetRow }) {
   const ratio = asset.width && asset.height ? asset.width / asset.height : 1;
   const dnaLabel = assetDnaStatusLabel(asset.dna_status);
   const dnaDot = assetDnaStatusDotToken(asset.dna_status);
+  // IPI-757 A2 — if Cloudinary media was deleted but the assets row remains,
+  // swap to the icon fallback instead of leaving a broken <img> (console 404).
+  const [thumbFailed, setThumbFailed] = useState(false);
+  const showImage = Boolean(asset.displayUrl) && !thumbFailed;
 
   return (
     <div className={styles.card} data-testid="asset-card" data-asset-id={asset.id}>
@@ -36,22 +51,21 @@ export function AssetCard({ asset }: { asset: AssetRow }) {
             <Video size={22} />
           </div>
         ) : asset.asset_type === "document" ? (
-          <div className={styles.iconFallback} aria-hidden>
-            <FileText size={22} />
-          </div>
-        ) : asset.displayUrl ? (
-          isAuthenticatedDeliveryUrl(asset.displayUrl) ? (
+          <ImageFallback />
+        ) : showImage ? (
+          isAuthenticatedDeliveryUrl(asset.displayUrl!) ? (
             // Signed authenticated URLs 404 through /_next/image — load directly.
             <img
-              src={asset.displayUrl}
+              src={asset.displayUrl!}
               alt=""
               loading="lazy"
               decoding="async"
               className={styles.thumbImageDirect}
+              onError={() => setThumbFailed(true)}
             />
           ) : (
             <Image
-              src={asset.displayUrl}
+              src={asset.displayUrl!}
               alt=""
               fill
               // Mirrors assets-workspace.module.css's .masonry column breakpoints
@@ -59,12 +73,11 @@ export function AssetCard({ asset }: { asset: AssetRow }) {
               // real rendered width on tablet/mobile, so next/image picked too-small candidates.
               sizes="(max-width: 560px) 100vw, (max-width: 880px) 50vw, (max-width: 1280px) 33vw, 25vw"
               className={styles.thumbImage}
+              onError={() => setThumbFailed(true)}
             />
           )
         ) : (
-          <div className={styles.iconFallback} aria-hidden>
-            <FileText size={22} />
-          </div>
+          <ImageFallback />
         )}
         {dnaLabel && dnaDot ? (
           <span className={styles.dnaBadge}>

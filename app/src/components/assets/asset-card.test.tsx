@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, expect, it, afterEach, vi } from "vitest";
-import { render, screen, cleanup } from "@testing-library/react";
+import { render, screen, cleanup, fireEvent } from "@testing-library/react";
 
 vi.mock("./assets-workspace.module.css", () => ({ default: new Proxy({}, { get: (_, k) => String(k) }) }));
 vi.mock("../ui/status-chip.module.css", () => ({ default: new Proxy({}, { get: (_, k) => String(k) }) }));
@@ -87,6 +87,22 @@ describe("AssetCard", () => {
     expect(container.querySelector("img")?.getAttribute("src")).toBe(
       "https://res.cloudinary.com/dzqy2ixl0/image/authenticated/s--abc123--/c_limit,w_600,f_auto,q_auto/real-upload-01",
     );
+  });
+
+  it("swaps to the icon fallback when an authenticated thumb fails to load (IPI-757 A2)", () => {
+    const { container } = render(
+      <AssetCard
+        asset={asset({
+          displayUrl:
+            "https://res.cloudinary.com/dzqy2ixl0/image/authenticated/s--abc123--/c_limit,w_600,f_auto,q_auto/missing-upload",
+        })}
+      />,
+    );
+    const img = container.querySelector("img");
+    expect(img).not.toBeNull();
+    fireEvent.error(img!);
+    expect(container.querySelector("img")).toBeNull();
+    expect(container.querySelector(".iconFallback")).not.toBeNull();
   });
 
   it("falls back to a file icon (never a broken <img>) when displayUrl is null", () => {
