@@ -2,6 +2,7 @@ import { RequestContext } from "@mastra/core/request-context";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { resetAgentRoutingWarnState } from "@/lib/ai/agent-routing";
+import * as cloudflareModels from "@/lib/ai/cloudflare-models";
 import { resolveAgentModelOutcome } from "@/lib/ai/cloudflare-models";
 import { PUBLIC_MARKETING_INSTRUCTIONS } from "@/mastra/prompts/public-marketing";
 import {
@@ -133,6 +134,24 @@ describe("publicMarketingAgent — IPI-753 W1 routing (fail-closed)", () => {
     });
     expect(rolledBack.mode).toBe("legacy");
     expect(rolledBack.reason).toBe("legacy_flag");
+  });
+
+  it("getModel with native cfEnv returns a model via agent wiring (agentId + tier: fast)", async () => {
+    // CodeRabbit nit: exercise publicMarketingAgent.getModel, not only resolveAgentModelOutcome.
+    const spy = vi.spyOn(cloudflareModels, "resolveAgentModel");
+    const requestContext = contextWithCfEnv({
+      AI_ROUTING_AGENT_PUBLIC_MARKETING: "native",
+      AI: fakeAiBinding,
+    });
+
+    const model = await publicMarketingAgent.getModel({ requestContext });
+
+    expect(model).toBeDefined();
+    expect(spy).toHaveBeenCalledWith({
+      agentId: "public-marketing",
+      tier: "fast",
+      requestContext,
+    });
   });
 });
 
