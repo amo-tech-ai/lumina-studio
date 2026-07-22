@@ -55,11 +55,29 @@ const runtime = new CopilotRuntime({
     } catch {
       // Vercel/Node — cfEnv stays unset, cloudflare-models.ts falls back to legacy.
     }
-    return MastraAgent.getLocalAgents({
+    const agents = MastraAgent.getLocalAgents({
       mastra: getMastra(),
       resourceId: user.id,
       requestContext,
     });
+    // IPI-760: `getLocalAgents()` does NOT accept `emitInterruptOutcome` in its
+    // options (verified against @ag-ui/mastra@1.1.1's compiled source — the bulk
+    // helper only forwards mastra/resourceId/requestContext/untilIdle/
+    // observationalMemory/tracingOptions to each constructed MastraAgent; passing
+    // it there is both a TS2353 type error and a silent no-op at runtime). Set it
+    // directly on each returned instance instead — it's a public, mutable field
+    // on MastraAgent (see MastraAgentConfig.emitInterruptOutcome).
+    //
+    // 1.1.1 defaults this to true, which requires a CopilotKit client >=1.61.2 to
+    // resume structured interrupts. This repo runs @copilotkit/runtime@1.61.0 —
+    // explicitly named as an affected version in AG-UI's own README — so leaving
+    // the default on strands every Mastra HITL interrupt/resume with "Thread has
+    // N pending interrupt(s) not addressed by resume". Keep false until
+    // CopilotKit is bumped to >=1.61.2 (separate, larger decision — see IPI-760).
+    for (const agent of Object.values(agents)) {
+      if (agent instanceof MastraAgent) agent.emitInterruptOutcome = false;
+    }
+    return agents;
   },
   runner: new InMemoryAgentRunner(),
   // Intelligence mode requires `intelligence: new CopilotKitIntelligence(...)` — not licenseToken alone.
