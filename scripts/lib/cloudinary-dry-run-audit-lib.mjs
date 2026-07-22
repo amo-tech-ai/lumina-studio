@@ -20,7 +20,7 @@ export const WORK_TYPES = [
 export const DELIVERY_TYPE = "authenticated";
 export const METADATA_SCHEMA_VERSION = "1";
 
-// Mirrors WORK_TYPES_REQUIRING_WORK_ID in app/src/app/api/assets/upload-sign/route.ts
+// Mirrors WORK_TYPES_REQUIRING_WORK_ID in app/src/lib/cloudinary/taxonomy.ts
 export const WORK_TYPES_REQUIRING_WORK_ID = ["shoots", "campaigns"];
 
 // Only these context keys are universally required on every new-format asset.

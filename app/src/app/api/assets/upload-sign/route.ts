@@ -119,7 +119,7 @@ export async function POST(request: Request) {
     if (!brandCheck.ok) {
       return NextResponse.json({ error: brandCheck.message }, { status: brandCheck.status });
     }
-    if (!brandCheck.orgId) {
+    if (!brandCheck.orgId || !UUID_RE.test(brandCheck.orgId)) {
       return NextResponse.json(
         {
           error:

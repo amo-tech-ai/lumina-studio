@@ -5,6 +5,7 @@ import {
   ENVIRONMENTS,
   METADATA_SCHEMA_VERSION,
   WORK_TYPES,
+  WORK_TYPES_REQUIRING_WORK_ID,
 } from "./taxonomy";
 import {
   DAM_ROOT as AUDIT_DAM_ROOT,
@@ -12,6 +13,7 @@ import {
   ENVIRONMENTS as AUDIT_ENVIRONMENTS,
   METADATA_SCHEMA_VERSION as AUDIT_METADATA_SCHEMA_VERSION,
   WORK_TYPES as AUDIT_WORK_TYPES,
+  WORK_TYPES_REQUIRING_WORK_ID as AUDIT_WORK_TYPES_REQUIRING_WORK_ID,
 } from "../../../../scripts/lib/cloudinary-dry-run-audit-lib.mjs";
 
 // scripts/cloudinary-dry-run-audit.mjs runs outside the Next.js build (plain
@@ -29,6 +31,12 @@ describe("dry-run audit taxonomy parity", () => {
 
   it("WORK_TYPES matches", () => {
     expect(AUDIT_WORK_TYPES).toEqual([...WORK_TYPES]);
+  });
+
+  it("WORK_TYPES_REQUIRING_WORK_ID matches", () => {
+    expect([...AUDIT_WORK_TYPES_REQUIRING_WORK_ID].sort()).toEqual(
+      [...WORK_TYPES_REQUIRING_WORK_ID].sort(),
+    );
   });
 
   it("DELIVERY_TYPE matches", () => {

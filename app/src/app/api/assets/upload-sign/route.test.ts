@@ -306,6 +306,14 @@ describe("POST /api/assets/upload-sign — folder override rejection", () => {
     expect(data.params.asset_folder).toContain(VALID_ORG_ID);
   });
 
+  it("rejects non-UUID orgId from brand access", async () => {
+    mockIsBrandAccessible.mockResolvedValueOnce({ ok: true, orgId: "not-a-uuid" });
+    const res = await post(uploadBody());
+    expect(res.status).toBe(400);
+    const data = await res.json();
+    expect(data.error).toMatch(/org_id/i);
+  });
+
   it("rejects client-supplied orgId (ignored in favor of server-derived)", async () => {
     const res = await post(
       uploadBody({ orgId: "99999999-9999-9999-9999-999999999999" } as Record<string, unknown>),
