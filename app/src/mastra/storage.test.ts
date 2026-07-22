@@ -319,7 +319,7 @@ describe("IPI-740 · Mastra pool + URL split", () => {
     expect(warn).not.toHaveBeenCalled();
   });
 
-  it("passes MASTRA_DATABASE_URL, max, and idleTimeoutMillis to PostgresStore", async () => {
+  it("passes MASTRA_DATABASE_URL (tagged with application_name), max, and idleTimeoutMillis to PostgresStore", async () => {
     const ctor = vi.fn(function FakePostgresStore(this: { id: string }, config: { id: string }) {
       this.id = config.id;
     });
@@ -340,14 +340,19 @@ describe("IPI-740 · Mastra pool + URL split", () => {
     expect(ctor).toHaveBeenCalledWith(
       expect.objectContaining({
         id: "mastra-storage",
-        connectionString: "postgresql://mastra@127.0.0.1:6543/postgres",
+        connectionString:
+          "postgresql://mastra@127.0.0.1:6543/postgres?application_name=ipix-mastra",
         max: 3,
         idleTimeoutMillis: 10_000,
       }),
     );
   });
 
-  it("defaults ssl to false when DATABASE_SSL is unset", async () => {
+  it("does not pass an explicit ssl override when DATABASE_SSL is unset (preserves connection-string sslmode)", async () => {
+    // IPI-777 regression: @mastra/pg's own buildConnectionStringPoolConfig() spreads
+    // config.ssl AFTER parse(connectionString) whenever config.ssl !== undefined — an
+    // explicit `ssl: false` would silently downgrade a `?sslmode=require` connection
+    // string to plaintext. Only `undefined` here is safe; do not regress to `false`.
     const ctor = vi.fn(function FakePostgresStore() {});
     vi.doMock("@mastra/pg", () => ({
       PostgresStore: ctor,
@@ -362,7 +367,7 @@ describe("IPI-740 · Mastra pool + URL split", () => {
     vi.resetModules();
     const { getMastraStorage: freshGet } = await import("./storage");
     freshGet();
-    expect(ctor).toHaveBeenCalledWith(expect.objectContaining({ ssl: false }));
+    expect(ctor).toHaveBeenCalledWith(expect.objectContaining({ ssl: undefined }));
   });
 
   it("passes ssl:{rejectUnauthorized:false} when DATABASE_SSL=true", async () => {
@@ -400,7 +405,71 @@ describe("IPI-740 · Mastra pool + URL split", () => {
     vi.resetModules();
     const { getMastraStorage: freshGet } = await import("./storage");
     freshGet();
-    expect(ctor).toHaveBeenCalledWith(expect.objectContaining({ ssl: false }));
+    expect(ctor).toHaveBeenCalledWith(expect.objectContaining({ ssl: undefined }));
+  });
+
+  it("preserves an existing ?sslmode=require on the connection string untouched", async () => {
+    const ctor = vi.fn(function FakePostgresStore() {});
+    vi.doMock("@mastra/pg", () => ({
+      PostgresStore: ctor,
+      IPIX_CF_MASTRA_PG_STUB: undefined,
+    }));
+    vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("VERCEL", "1");
+    vi.stubEnv("CI", "");
+    vi.stubEnv(
+      "MASTRA_DATABASE_URL",
+      "postgresql://mastra@127.0.0.1:6543/postgres?sslmode=require",
+    );
+    vi.stubEnv("DATABASE_URL", "");
+    vi.stubEnv("DATABASE_SSL", "");
+    vi.resetModules();
+    const { getMastraStorage: freshGet } = await import("./storage");
+    freshGet();
+    expect(ctor).toHaveBeenCalledWith(
+      expect.objectContaining({
+        connectionString: expect.stringContaining("sslmode=require"),
+        ssl: undefined,
+      }),
+    );
+  });
+});
+
+describe("withMastraApplicationName", () => {
+  it("appends application_name when absent", async () => {
+    const { withMastraApplicationName } = await import("./storage");
+    expect(withMastraApplicationName("postgresql://u@h:6543/db")).toBe(
+      "postgresql://u@h:6543/db?application_name=ipix-mastra",
+    );
+  });
+
+  it("preserves existing query params (e.g. sslmode)", async () => {
+    const { withMastraApplicationName } = await import("./storage");
+    expect(withMastraApplicationName("postgresql://u@h:6543/db?sslmode=require")).toBe(
+      "postgresql://u@h:6543/db?sslmode=require&application_name=ipix-mastra",
+    );
+  });
+
+  it("does not override an operator-set application_name", async () => {
+    const { withMastraApplicationName } = await import("./storage");
+    expect(
+      withMastraApplicationName("postgresql://u@h:6543/db?application_name=already-set"),
+    ).toBe("postgresql://u@h:6543/db?application_name=already-set");
+  });
+
+  it("passes through malformed input unchanged instead of throwing", async () => {
+    const { withMastraApplicationName } = await import("./storage");
+    expect(withMastraApplicationName("")).toBe("");
+    expect(withMastraApplicationName("/var/run/postgresql")).toBe("/var/run/postgresql");
+  });
+});
+
+describe("IPI-740 · Mastra pool + URL split (cont.)", () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    vi.doUnmock("@mastra/pg");
+    delete (globalThis as { __ipixMastraPgStore?: unknown }).__ipixMastraPgStore;
+    delete (globalThis as { __ipixMastraSessionPoolWarned?: unknown }).__ipixMastraSessionPoolWarned;
   });
 
   it("defaults pool max to 4 when MASTRA_PG_POOL_MAX is unset", async () => {

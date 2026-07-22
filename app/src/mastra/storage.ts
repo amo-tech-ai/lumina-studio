@@ -128,16 +128,52 @@ function resolveMastraPgPoolMax(env: NodeJS.ProcessEnv = process.env): number {
 }
 
 /**
- * IPI-777: explicit SSL opt-in, matching the Mastra docs' own conditional pattern.
- * A `sslmode=` already present on the connection string always wins over this —
- * `pg-connection-string`'s `parse()` output is merged in *after* explicit config
- * (see `pg/lib/connection-parameters.js`), so this is a same-or-safer default,
- * never a way to accidentally downgrade a connection string that already opts in.
+ * IPI-777: explicit SSL opt-in, matching the Mastra docs' own conditional pattern —
+ * but returning `undefined` (not `false`) for the non-opt-in case is load-bearing.
+ *
+ * `@mastra/pg`'s `PostgresStore` does its OWN connection-string merge in
+ * `buildConnectionStringPoolConfig()` (not the raw `pg` driver's):
+ *   { ...parse(connectionString), ...(config.ssl !== undefined ? { ssl: config.ssl } : {}) }
+ * An explicit `ssl` key — including `false` — always wins over whatever the
+ * connection string's own `sslmode=` parsed to, because it's spread last.
+ * Passing `ssl: false` unconditionally would silently downgrade to plaintext
+ * any connection string that already opts in via `?sslmode=require`. Only
+ * return a real value when explicitly forcing SSL on; otherwise return
+ * `undefined` so `config.ssl !== undefined` is false and the connection
+ * string's own `sslmode=` (or its absence) passes through unmodified.
  */
 function resolveMastraPgSslOption(
   env: NodeJS.ProcessEnv = process.env,
-): { rejectUnauthorized: boolean } | false {
-  return env.DATABASE_SSL === "true" ? { rejectUnauthorized: false } : false;
+): { rejectUnauthorized: boolean } | undefined {
+  return env.DATABASE_SSL === "true" ? { rejectUnauthorized: false } : undefined;
+}
+
+const MASTRA_PG_APPLICATION_NAME = "ipix-mastra";
+
+/**
+ * IPI-777: tag every Mastra Postgres connection with a stable `application_name`
+ * so `pg_stat_activity` can isolate this app's connections from Supabase's own
+ * internal/management sessions when auditing SSL, pool usage, etc. `PostgresStore`
+ * has no code-level `application_name` option (unlike `ssl`/`max`), so it must be
+ * carried on the connection string itself — `pg-connection-string`'s `parse()`
+ * picks up any query param generically and it flows through to the Pool config.
+ * Never overrides an operator-set `application_name` already on the URL.
+ */
+export function withMastraApplicationName(
+  url: string,
+  appName: string = MASTRA_PG_APPLICATION_NAME,
+): string {
+  if (!url) return url;
+  try {
+    const parsed = new URL(url);
+    if (!parsed.searchParams.has("application_name")) {
+      parsed.searchParams.set("application_name", appName);
+    }
+    return parsed.toString();
+  } catch {
+    // Malformed/non-standard connection string (e.g. unix socket) — pass through untouched.
+    return url;
+  }
 }
 
 /**
@@ -202,7 +238,7 @@ function createPostgresStore(url: string, env: NodeJS.ProcessEnv = process.env):
   // MASTRA_DATABASE_URL (:6543) + per-process max is the real fix.
   return new MastraPg.PostgresStore({
     id: "mastra-storage",
-    connectionString: url,
+    connectionString: withMastraApplicationName(url),
     max: resolveMastraPgPoolMax(env),
     idleTimeoutMillis: PG_IDLE_TIMEOUT_MS,
     ssl: resolveMastraPgSslOption(env),
