@@ -85,6 +85,17 @@ Shift from **Create → Check → Fix** to **Guide → Prevent → Confirm** —
   Use `chrome-devtools-mcp` skills when diagnosing a named problem (a11y, LCP/memory leaks).
   Use `playwright` for scripted multi-step QA flows.
   Do not invoke more than one for the same task.
+- **Code search / edit — Graphify vs ripgrep vs Context7 vs Morph MCP (`morph-mcp`):**
+  Decided 2026-07-22 after live-testing `morph-mcp`'s `codebase_search` against this repo (it correctly traced [IPI-750](https://linear.app/amo100/issue/IPI-750)'s future wiring point to `app/src/app/api/copilotkit/[[...slug]]/route.ts`'s `agents:` factory, unprompted).
+  | Need | Use |
+  |---|---|
+  | Architecture / "what connects to what" | Graphify (still mandatory before reading source — see below) |
+  | Exact known file/string | `ripgrep` |
+  | Official library/framework docs | Context7 |
+  | How an *upstream* dependency (Next.js, Mastra, Wrangler) actually works internally | Morph `github_codebase_search` — no other connected tool searches external repo source, only docs |
+  | Fuzzy "where would this live?" when Graphify's query is too structured | Morph `codebase_search` — fallback only, not a Graphify replacement |
+  | Large mechanical edit spanning 3+ files | Morph `edit_file` — **not yet verified working**: blocked by the Claude Code auto-mode permission classifier on first attempt (2026-07-22); needs an explicit allow-rule before relying on it |
+  Do not run more than one for the same lookup.
 
 ## Guiding principle — continuous improvement
 
