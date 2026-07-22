@@ -390,15 +390,33 @@ CREATE UNIQUE INDEX IF NOT EXISTS "mastra_idx_prompt_block_versions_block_versio
 "updatedAtZ" TIMESTAMPTZ DEFAULT NOW()
             );
             
+            -- IPI-628 fix (external review, 2026-07-22): the original generated
+            -- guard skipped adding the constraint entirely if *either* a
+            -- same-named pg_constraint row *or* a same-named index already
+            -- existed — so a leftover index from an earlier partial apply
+            -- silently left this table with no formal UNIQUE constraint,
+            -- even though Mastra's INSERT ... ON CONFLICT (workflow_name,
+            -- run_id) depends on one. Live-verified this had already
+            -- happened: production has the index but no named constraint.
+            -- Fixed to only skip when the constraint itself already exists;
+            -- if a same-named index is present without it, promote that
+            -- index into a real constraint (instant, reuses the index, no
+            -- table rewrite) instead of silently doing nothing.
             DO $$ BEGIN
               IF NOT EXISTS (
                 SELECT 1 FROM pg_constraint WHERE conname = lower('mastra_mastra_workflow_snapshot_workflow_name_run_id_key') AND connamespace = (SELECT oid FROM pg_namespace WHERE nspname = 'mastra')
-              ) AND NOT EXISTS (
-                SELECT 1 FROM pg_indexes WHERE indexname = lower('mastra_mastra_workflow_snapshot_workflow_name_run_id_key') AND schemaname = 'mastra'
               ) THEN
-                ALTER TABLE "mastra"."mastra_workflow_snapshot"
-                ADD CONSTRAINT mastra_mastra_workflow_snapshot_workflow_name_run_id_key
-                UNIQUE (workflow_name, run_id);
+                IF EXISTS (
+                  SELECT 1 FROM pg_indexes WHERE indexname = lower('mastra_mastra_workflow_snapshot_workflow_name_run_id_key') AND schemaname = 'mastra'
+                ) THEN
+                  ALTER TABLE "mastra"."mastra_workflow_snapshot"
+                  ADD CONSTRAINT mastra_mastra_workflow_snapshot_workflow_name_run_id_key
+                  UNIQUE USING INDEX mastra_mastra_workflow_snapshot_workflow_name_run_id_key;
+                ELSE
+                  ALTER TABLE "mastra"."mastra_workflow_snapshot"
+                  ADD CONSTRAINT mastra_mastra_workflow_snapshot_workflow_name_run_id_key
+                  UNIQUE (workflow_name, run_id);
+                END IF;
               END IF;
               IF EXISTS (
                 SELECT 1 FROM pg_index i
