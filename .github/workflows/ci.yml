@@ -87,6 +87,36 @@ jobs:
           NEXT_PUBLIC_SUPABASE_ANON_KEY: placeholder
         run: npm run build:cf
 
+  # IPI-763 · CF-CI-001 — the custom AI Gateway Worker (services/cloudflare-worker/)
+  # is frozen for new features but still carries real production AI traffic
+  # (see tasks/cloudflare/todo.md decision log, 2026-07-14) until IPI-592 deletes
+  # it. Its 98-test @cloudflare/vitest-pool-workers suite runs fully local via
+  # Miniflare — no CLOUDFLARE_API_TOKEN, account ID, or Wrangler auth needed
+  # (https://developers.cloudflare.com/workers/testing/vitest-integration/).
+  # No path filter, same as every other job in this file — a required check
+  # gated on changed paths can go permanently "pending" on PRs that never
+  # touch it and block merges (GitHub Actions required-status-check trap).
+  cloudflare-worker-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: services/cloudflare-worker
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: services/cloudflare-worker/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Worker tests (Vitest + vitest-pool-workers, local Miniflare)
+        run: npm test
+
   # IPI-347 · Model Gate capstone — remote SQL + RLS when DATABASE_URL secret is set.
   # secrets.* cannot gate job-level if: — use a probe job (actions/runner#520).
   booking-gate-check:
