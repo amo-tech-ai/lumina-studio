@@ -44,7 +44,17 @@ const mastraPgStub = path.join(appDir, "scripts/cf-mastra-pg-stub.mjs");
  * Shiki aliases point at `cf-shiki-stub.mjs`: noop on the server (size gate),
  * jsDelivr ESM load in the browser (syntax highlighting preserved).
  *
- * `@mastra/pg` / `pg` are server storage only.
+ * `@mastra/pg` is stubbed here (its `PostgresStore` always throws in this
+ * Worker build path anyway — IPI-490 — so its own transitive `pg` usage is
+ * dead weight). `pg`/`pg-cloudflare` are deliberately NOT aliased here
+ * (IPI-620A): `pg-cloudflare` ships its own `workerd`-conditional export map
+ * (real TCP-socket impl under workerd, an already-empty stub everywhere
+ * else) — that's the officially-documented mechanism (see Cloudflare's own
+ * node-postgres + Hyperdrive example), not something a bundler alias needs
+ * to reimplement. Both are already in `serverExternalPackages` below, which
+ * is what lets OpenNext's build step apply the `workerd` condition
+ * correctly; aliasing them here would only shadow that and break real
+ * consumers like `src/lib/db/hyperdrive-query.ts`.
  * Wrangler `alias` alone is insufficient: OpenNext pre-bundles into handler.mjs.
  */
 const cfBundleStubAliases =
@@ -58,8 +68,6 @@ const cfBundleStubAliases =
         "@shikijs/engine-oniguruma": shikiStub,
         "@shikijs/vscode-textmate": shikiStub,
         "@mastra/pg": mastraPgStub,
-        pg: mastraPgStub,
-        "pg-cloudflare": mastraPgStub,
       } as const)
     : ({} as const);
 
