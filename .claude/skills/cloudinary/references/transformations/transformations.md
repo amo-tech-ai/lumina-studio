@@ -1,10 +1,16 @@
 ---
 name: cloudinary-transformations
-description: Create and debug Cloudinary transformation URLs from natural language instructions. Use when building Cloudinary delivery URLs, applying image/video transformations, optimizing media, or debugging transformation syntax errors.
+description: >
+  Create and debug Cloudinary transformation URLs from natural language. Use when
+  building delivery URLs, applying image/video transforms, optimizing media, or
+  debugging transformation syntax. Part of the cloudinary hub — load via
+  references/transformations/transformations.md.
 license: MIT
 metadata:
   author: cloudinary
-  version: '1.0.2'
+  hub: cloudinary
+  topic: transformations
+  version: '1.0.4'
 ---
 
 # Cloudinary Transformation Rules
@@ -283,11 +289,13 @@ l_logo/c_scale,fl_relative,w_0.25/fl_layer_apply,g_north_west,x_10,y_10  # Logo 
 l_docs:one_black_pixel/c_scale,fl_relative,h_1.0,w_1.0/o_50/fl_layer_apply # Full-image semi-transparent overlay
 co_yellow,l_text:Arial_40:Hello%20World/fl_layer_apply,g_south            # Text overlay
 u_background/e_background_removal                                          # Custom background
+c_fill,h_400,w_300/l_same_image/c_fill,e_grayscale,h_400,w_300/fl_layer_apply,g_west,x_300 # Side-by-side (600×400)
 ```
 
 **Important**: 
 - Color (`co_`) is a qualifier — use in the **same component** as text overlay declaration
 - **Always use `fl_relative`** when you want overlay dimensions as a percentage of the base image
+- **Side-by-side / canvas extension**: to place an overlay *beside* the base, offset it past the base edge — the canvas auto-expands. Use `g_west,x_<base_width>` for horizontal or `g_north,y_<base_height>` for vertical.
 
 ### Borders & Rounding
 
@@ -336,6 +344,19 @@ a_-2                    # Straighten slight tilt
 a_hflip                 # Mirror horizontally
 a_auto_right            # Auto-fix from EXIF
 ```
+
+### Asset Type Matters (Image vs. Video)
+
+Many flags and parameters apply to only one asset type. Applying one to the wrong base often **fails silently** — the URL still returns a valid `200` with no `X-Cld-Error`, just the wrong output. This goes both ways: video-only syntax on an image, and image-only syntax on a video. Always verify the actual output (dimensions, duration, frame count) rather than assuming it worked.
+
+**Common video-only examples** (this is *not* an exhaustive list — ~35 parameters are video-only):
+- **`fl_splice`** (flag) - Concatenate a clip/image onto the video timeline (no image equivalent — to place media side-by-side, offset the overlay to extend the canvas: `fl_layer_apply,g_west,x_<base_width>`)
+- **`du_`, `so_`, `eo_`** - Trim/seek by time (duration, start offset, end offset)
+- **`fps_`** - Set frame rate
+- **`vc_`, `ac_`** - Video / audio codec
+- **`e_boomerang`, `e_progressbar`** - Video-only effects
+
+**When unsure whether a flag or parameter supports your asset type, check the [Transformation Reference](https://cloudinary.com/documentation/transformation_reference.md?install_source=skillspack&referrer=trans-skill) before applying it.**
 
 ## Named Transformations
 
@@ -424,6 +445,8 @@ For complete syntax, arithmetic operations, nested conditionals, and real-world 
 7. ✅ **`g_auto` compatibility** (only works with `c_fill`, `c_lfill`, `c_crop`, `c_thumb`, `c_auto`)
 8. ✅ **Background as qualifier** (use with pad crop: `b_color,c_pad,w_X`, not `/b_color/`)
 9. ✅ **Format/quality at end** (prefer `f_auto/q_auto` as final components)
+10. ✅ **Flags/parameters match the base asset type** (asset-type-specific syntax — e.g. video-only `fl_splice`, `du_`, `fps_`, `vc_` — often no-ops silently on the wrong base, in either direction; verify the output and check the Asset Type Matters section above)
+11. ✅ **Transformation parameters are valid** (don't make up any parameter names - check against [Transformation Reference](https://cloudinary.com/documentation/transformation_reference.md?install_source=skillspack&referrer=trans-skill))
 
 **Quick syntax check:**
 - Commas separate parameters within a component: `c_fill,g_auto,w_400`
@@ -479,9 +502,9 @@ fetch('https://res.cloudinary.com/demo/image/upload/w_abc/sample.jpg')
 - `Resource not found` - Asset doesn't exist or public ID is incorrect
 - `Transformation limit exceeded` - Account transformation quota reached
 
-**Online tool:** Use the [X-Cld-Error Inspector](https://cloudinary.com/documentation/advanced_url_delivery_options?install_source=skillspack&referrer=trans-skill#x_cld_error_inspector_tool) to check any Cloudinary URL
+**Online tool:** Use the [X-Cld-Error Inspector](https://cloudinary.com/documentation/advanced_url_delivery_options.md?install_source=skillspack&referrer=trans-skill#x_cld_error_inspector_tool) to check any Cloudinary URL
 
-For more details, see [Error Handling](https://cloudinary.com/documentation/advanced_url_delivery_options?install_source=skillspack&referrer=trans-skill#error_handling)
+For more details, see [Error Handling](https://cloudinary.com/documentation/advanced_url_delivery_options.md?install_source=skillspack&referrer=trans-skill#error_handling)
 
 ## Transformation Costs
 
@@ -494,7 +517,7 @@ For complete cost details and cost reduction strategies, see [references/transfo
 ### Skill References (Progressive Disclosure)
 - [references/debugging.md](references/debugging.md) - Use when transformations return errors or unexpected results
 - [references/ai-transformations.md](references/ai-transformations.md) - Use when you need AI transformation prompt syntax, cost details, or complex AI combinations
-- [references/video-transformations.md](references/video-transformations.md) - Use when working with video codecs, trimming strategies, or concatenation
+- [references/video-transformations.md](references/video-transformations.md) - Use when working with video codecs, trimming strategies, concatenation, or creating animated images from videos
 - [references/advanced-features.md](references/advanced-features.md) - Use when building complex logic with variables, conditionals, or arithmetic
 - [references/responsive-images.md](references/responsive-images.md) - Use when implementing responsive images, configuring Client Hints, or using dpr_auto/w_auto
 - [references/transformation-costs.md](references/transformation-costs.md) - Use when optimizing for cost or explaining cost implications to users

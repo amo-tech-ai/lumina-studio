@@ -1,0 +1,39 @@
+{
+  "version": 1,
+  "skills": {
+    "cloudinary": {
+      "source": "local",
+      "sourceType": "local",
+      "skillPath": ".claude/skills/cloudinary/SKILL.md",
+      "computedHash": "local-v3-hub"
+    },
+    "cloudinary-docs": {
+      "source": "local",
+      "sourceType": "local",
+      "skillPath": ".claude/skills/cloudinary-docs/SKILL.md",
+      "computedHash": "redirect-to-cloudinary-hub",
+      "note": "Redirect stub → cloudinary hub references/docs/"
+    },
+    "cloudinary-next": {
+      "source": "local",
+      "sourceType": "local",
+      "skillPath": ".claude/skills/cloudinary-next/SKILL.md",
+      "computedHash": "redirect-to-cloudinary-hub",
+      "note": "Redirect stub → cloudinary hub references/nextjs/"
+    },
+    "cloudinary-react": {
+      "source": "local",
+      "sourceType": "local",
+      "skillPath": ".claude/skills/cloudinary-react/SKILL.md",
+      "computedHash": "redirect-to-cloudinary-hub",
+      "note": "Redirect stub → cloudinary hub references/react/"
+    },
+    "cloudinary-transformations": {
+      "source": "local",
+      "sourceType": "local",
+      "skillPath": ".claude/skills/cloudinary-transformations/SKILL.md",
+      "computedHash": "redirect-to-cloudinary-hub",
+      "note": "Redirect stub → cloudinary hub references/transformations/"
+    }
+  }
+}
