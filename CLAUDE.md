@@ -117,6 +117,12 @@ Periodically ask "is this still the leanest way to finish this?" while working �
 - **Don't guess an ID a tool is about to hand you.** If a Linear/GitHub call will return the real number, get it before naming a branch, file, or commit after it — not the other way around (redoing a worktree because you branched on a guessed IPI number is pure waste).
 - **On a transient failure** (permission-classifier block, OOM, flaky network) **retry once with a plan for what happens if it fails again** — not a blind repeat past that, and not silent abandonment either.
 
+## Claude Code auto-mode config — repo-scoped rules don't work, by design
+
+If Claude Code's auto-mode classifier blocks an action (branch protection, MCP write tools, etc.), don't add an `autoMode` block to this repo's `.claude/settings.json` or `.claude/settings.local.json` — the classifier ignores both. Confirmed 2026-07-22 (PR [#586](https://github.com/amo-tech-ai/lumina-studio/pull/586), closed) against the official docs (`code.claude.com/docs/en/auto-mode-config`): `autoMode` is only read from `~/.claude/settings.json` (personal, all repos), managed/org settings, or the `--settings` flag. This is a deliberate security boundary — a checked-in repo file could otherwise pre-authorize dangerous actions for anyone who clones it. There is no way to make `autoMode` both repo-scoped and shared via git.
+
+If a classifier block is a recurring problem for the team, the actual fix is managed/org settings, not a repo file.
+
 ## Hard rules
 
 - **🚫 NEVER push code directly to `main`.** Before writing a single line of code, create a worktree branch: `npm run worktree:add -- IPI-NNN short-name` (preferred — see Worktree workflow below) or `git worktree add ../wt-ipi-NNN-short-name -b ipi/NNN-short-name` as a fallback. Commit on the branch, push, open a PR with `gh pr create`. Even a one-line fix. Pushing direct to `main` means no PR can be created after the fact (`head == base` error). No exceptions.
