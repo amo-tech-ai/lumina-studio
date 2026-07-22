@@ -3,6 +3,8 @@
  * Names only — never import or log secret values in this module.
  */
 
+import { AGENT_ROUTING_ENV_KEYS } from "../src/lib/ai/agent-routing-keys.mjs";
+
 /** @typedef {"build" | "runtime"} SecretSurface */
 
 /** Build-time / CI export — NEXT_PUBLIC_* only (inlined by Next.js / OpenNext). */
@@ -29,6 +31,8 @@ export const WRANGLER_VAR_NAMES = Object.freeze([
   "CLOUDINARY_API_KEY",
   // IPI-586 — optional; set GitHub env var to "true" for preview smoke only.
   "ENABLE_CF_AI_SMOKE",
+  // IPI-607 — from agent-routing-keys.mjs SSOT (optional; unset → legacy).
+  ...AGENT_ROUTING_ENV_KEYS,
 ]);
 
 /** Required on live bootstrap upload — CopilotKit Intelligence and smoke routes. */
