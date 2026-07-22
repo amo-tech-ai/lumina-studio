@@ -44,6 +44,9 @@
     "OPERATOR_AUTH_ENABLED": "true",
     // IPI-586: internal smoke route stays dark until explicitly flipped for a preview proof.
     "ENABLE_CF_AI_SMOKE": "false",
+    // IPI-620 (Part B): PostgresStore + Hyperdrive compatibility spike route stays dark
+    // until explicitly flipped for a preview proof — see cloudflare-workflow smoke pattern.
+    "ENABLE_HYPERDRIVE_PG_SMOKE": "false",
     // IPI-60: Cloudinary DAM env for detectEnv() — Workers lack VERCEL_ENV; fail-closed without this.
     "DAM_ENV": "staging"
   },
@@ -80,6 +83,7 @@
   // IPI-606 · CF-SEC-010 — secrets.required for cf-typegen + local dev validation.
   // vars, images, services, secrets, ai, hyperdrive must repeat per named env (Wrangler: not inherited).
   // Hyperdrive binding (IPI-619) — no connection strings/secrets here; Wrangler resolves the ID at deploy.
+  // IPI-620B smoke route uses HYPERDRIVE_FRESH; fails closed until ENABLE_HYPERDRIVE_PG_SMOKE=true.
   "env": {
     "preview": {
       "name": "ipix-operator-preview",
@@ -87,6 +91,7 @@
         "MASTRA_STORAGE_MODE": "noop",
         "OPERATOR_AUTH_ENABLED": "true",
         "ENABLE_CF_AI_SMOKE": "false",
+        "ENABLE_HYPERDRIVE_PG_SMOKE": "false",
         "DAM_ENV": "staging"
       },
       "ai": {
@@ -114,7 +119,8 @@
       ],
       "secrets": {
         // COPILOTKIT_LICENSE_TOKEN is optional — synced when present; SSE mode without it.
-        // INTERNAL_WEBHOOK_SECRET optional — required only when ENABLE_CF_AI_SMOKE=true (IPI-586).
+        // INTERNAL_WEBHOOK_SECRET optional — required only when ENABLE_CF_AI_SMOKE=true (IPI-586)
+        // or ENABLE_HYPERDRIVE_PG_SMOKE=true (IPI-620B).
         "required": ["GEMINI_API_KEY", "SUPABASE_SERVICE_ROLE_KEY"]
       }
     },
@@ -124,6 +130,7 @@
         "MASTRA_STORAGE_MODE": "noop",
         "OPERATOR_AUTH_ENABLED": "true",
         "ENABLE_CF_AI_SMOKE": "false",
+        "ENABLE_HYPERDRIVE_PG_SMOKE": "false",
         "DAM_ENV": "prod"
       },
       "ai": {
