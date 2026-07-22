@@ -299,6 +299,16 @@ async function assertMastraRuntimeRoleProbe(onFixtureReady) {
 
   const client = new Client({ connectionString: runtimeUrl, ssl: { rejectUnauthorized: false } });
   const probeId = `rls-probe-ipi245-${Date.now()}`;
+  // Guards onFixtureReady so it runs exactly once regardless of where a failure
+  // hits below — never zero times. A connect()/INSERT failure must not silently
+  // skip the anon/authenticated negative probes it gates (they'd otherwise never
+  // run at all, with no failure recorded for the omission itself).
+  let fixtureReadyCalled = false;
+  const runFixtureReadyOnce = async () => {
+    if (fixtureReadyCalled || !onFixtureReady) return;
+    fixtureReadyCalled = true;
+    await onFixtureReady();
+  };
   try {
     await client.connect();
 
@@ -318,7 +328,7 @@ async function assertMastraRuntimeRoleProbe(onFixtureReady) {
       "hyperdrive_mastra_runtime can INSERT into mastra.mastra_threads",
     );
 
-    if (onFixtureReady) await onFixtureReady();
+    await runFixtureReadyOnce();
 
     const { rows: selRows } = await client.query(
       `select id, title from mastra.mastra_threads where id = $1`,
@@ -339,6 +349,13 @@ async function assertMastraRuntimeRoleProbe(onFixtureReady) {
     );
   } catch (err) {
     fail(`IPI-245 runtime-role probe: ${err instanceof Error ? err.message : err}`);
+    // Fixture row may not exist (connect()/INSERT never succeeded) — same
+    // weaker-but-still-run fallback already used when HYPERDRIVE_DATABASE_URL
+    // is unset or `pg` fails to load above: run the negative probes anyway
+    // rather than skip them silently. An empty result is ambiguous in this
+    // path (no fixture row vs. real denial), but that's strictly better than
+    // never running the assertion at all.
+    await runFixtureReadyOnce();
   } finally {
     try {
       const { rowCount } = await client.query(
