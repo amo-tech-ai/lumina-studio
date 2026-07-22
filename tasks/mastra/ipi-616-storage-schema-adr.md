@@ -35,6 +35,12 @@ Why:
 
 Rejected: keep `public`. This is what's live today and is exactly the state IPI-628 needs to migrate away from — it's the reason a single overly-broad grant can currently touch both Mastra internals and product data in one statement.
 
+**Also rejected: Cloudflare-native storage (`@mastra/cloudflare`), instead of Postgres at all.** Mastra ships a first-party Cloudflare storage package (`stores/cloudflare` in the Mastra monorepo, `@mastra/cloudflare@1.3.3-alpha.1`) exporting `CloudflareKVStorage` (backed by a KV namespace) and `CloudflareDOStorage` (backed by a Durable Object's `SqlStorage`) — neither is installed in `app/package.json` today. Both were considered and rejected for two concrete reasons, not just "we didn't look":
+- **No observability domain support.** `@mastra/core`'s `StorageDomains` type defines an optional `observability` key (the trace/span store IPI-628's `mastra_ai_spans` table backs via `@mastra/pg`'s `ObservabilityPG`). Both Cloudflare adapters' `stores` objects only populate `{ memory, workflows, scores, backgroundTasks }` — no `observability` key exists in either. Moving to Cloudflare-native storage today would mean losing agent trace/span data outright, not just re-implementing it elsewhere.
+- **A second persistence system, not a simpler one.** iPix's product data (`brands`, `crm_deals`, `shoots`, ...) already lives in this same Supabase Postgres database, with its own RLS conventions and observability tooling (Supabase MCP `get_advisors`, `get_logs`, `list_tables`). Splitting Mastra's runtime state into KV/Durable Objects would mean maintaining two storage systems with two different security models instead of one, for tables that need no more than what Postgres/RLS already does well.
+
+This alternative was practically resolved before it was explicitly written down here: IPI-620B's PostgresStore/Hyperdrive compatibility spike (PR #609) already proved the Postgres-via-Hyperdrive path works in the Workers runtime, so by the time this gap in the ADR was noticed, the decision had already been made and executed. This note exists for a future reader asking "why not just use Durable Objects" — not to reopen the question.
+
 ## Decision 2 — Table classification: 24 runtime vs 9 excluded
 
 **Chosen: migrate only the 24 tables `exportSchemas('mastra')` generates. Exclude the 9 Studio/feature tables.**
