@@ -250,6 +250,12 @@
   border-radius: var(--radius-lg);
   background: var(--color-bg-card);
   overflow: hidden;
+  text-decoration: none;
+  color: inherit;
+}
+
+.card:hover {
+  border-color: var(--color-text-muted);
 }
 
 .thumbWrap {

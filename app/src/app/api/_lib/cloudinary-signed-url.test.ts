@@ -48,3 +48,49 @@ describe("cloudinarySignedChannelUrl", () => {
     expect(url).toContain("c_fill,w_1080,h_1350,g_auto,f_auto,q_auto");
   });
 });
+
+describe("cloudinarySignedPresetUrl resource_type", () => {
+  it("signs video delivery under /video/ without image crop transforms", async () => {
+    const { cloudinarySignedPresetUrl } = await importSignedUrl();
+    const url = cloudinarySignedPresetUrl("clip-01", "asset-detail", {
+      resourceType: "video",
+      deliveryType: "authenticated",
+    });
+    expect(url).toMatch(/^https:\/\/res\.cloudinary\.com\/dzqy2ixl0\/video\/authenticated\/s--[\w-]+--\//);
+    expect(url).not.toContain("c_limit");
+    expect(url).toContain("clip-01");
+  });
+
+  it("signs raw delivery under /raw/", async () => {
+    const { cloudinarySignedPresetUrl } = await importSignedUrl();
+    const url = cloudinarySignedPresetUrl("docs/brief.pdf", "asset-detail", {
+      resourceType: "raw",
+      deliveryType: "authenticated",
+    });
+    expect(url).toMatch(/^https:\/\/res\.cloudinary\.com\/dzqy2ixl0\/raw\/authenticated\/s--[\w-]+--\//);
+  });
+});
+
+describe("cloudinarySignedDownloadUrl", () => {
+  it("uses private_download_url with attachment when format is known", async () => {
+    const { cloudinarySignedDownloadUrl } = await importSignedUrl();
+    const url = cloudinarySignedDownloadUrl("brand/look-01", {
+      resourceType: "image",
+      deliveryType: "authenticated",
+      format: "png",
+    });
+    expect(url).toContain("api.cloudinary.com");
+    expect(url).toContain("attachment");
+    expect(url).toContain("brand%2Flook-01");
+  });
+
+  it("falls back to signed fl_attachment delivery when format is unknown", async () => {
+    const { cloudinarySignedDownloadUrl } = await importSignedUrl();
+    const url = cloudinarySignedDownloadUrl("brand/look-01", {
+      resourceType: "image",
+      deliveryType: "authenticated",
+    });
+    expect(url).toMatch(/^https:\/\/res\.cloudinary\.com\/dzqy2ixl0\/image\/authenticated\/s--[\w-]+--\//);
+    expect(url).toContain("fl_attachment");
+  });
+});

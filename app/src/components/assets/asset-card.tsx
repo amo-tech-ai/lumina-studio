@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
 import { useState } from "react";
 import { FileText, Video } from "lucide-react";
 
@@ -52,7 +53,12 @@ export function AssetCard({ asset }: { asset: AssetRow }) {
   const thumbFailed = displayUrl !== null && failedUrl === displayUrl;
 
   return (
-    <div className={styles.card} data-testid="asset-card" data-asset-id={asset.id}>
+    <Link
+      href={`/app/assets/${asset.id}`}
+      className={styles.card}
+      data-testid="asset-card"
+      data-asset-id={asset.id}
+    >
       <div className={styles.thumbWrap} style={{ aspectRatio: ratio }}>
         {asset.asset_type === "video" ? (
           <div className={styles.iconFallback} aria-hidden>
@@ -100,6 +106,6 @@ export function AssetCard({ asset }: { asset: AssetRow }) {
         ) : null}
         <span className={styles.cardDate}>{formatShortDate(asset.created_at)}</span>
       </div>
-    </div>
+    </Link>
   );
 }
