@@ -347,6 +347,62 @@ describe("IPI-740 · Mastra pool + URL split", () => {
     );
   });
 
+  it("defaults ssl to false when DATABASE_SSL is unset", async () => {
+    const ctor = vi.fn(function FakePostgresStore() {});
+    vi.doMock("@mastra/pg", () => ({
+      PostgresStore: ctor,
+      IPIX_CF_MASTRA_PG_STUB: undefined,
+    }));
+    vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("VERCEL", "1");
+    vi.stubEnv("CI", "");
+    vi.stubEnv("MASTRA_DATABASE_URL", "postgresql://mastra@127.0.0.1:6543/postgres");
+    vi.stubEnv("DATABASE_URL", "");
+    vi.stubEnv("DATABASE_SSL", "");
+    vi.resetModules();
+    const { getMastraStorage: freshGet } = await import("./storage");
+    freshGet();
+    expect(ctor).toHaveBeenCalledWith(expect.objectContaining({ ssl: false }));
+  });
+
+  it("passes ssl:{rejectUnauthorized:false} when DATABASE_SSL=true", async () => {
+    const ctor = vi.fn(function FakePostgresStore() {});
+    vi.doMock("@mastra/pg", () => ({
+      PostgresStore: ctor,
+      IPIX_CF_MASTRA_PG_STUB: undefined,
+    }));
+    vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("VERCEL", "1");
+    vi.stubEnv("CI", "");
+    vi.stubEnv("MASTRA_DATABASE_URL", "postgresql://mastra@127.0.0.1:6543/postgres");
+    vi.stubEnv("DATABASE_URL", "");
+    vi.stubEnv("DATABASE_SSL", "true");
+    vi.resetModules();
+    const { getMastraStorage: freshGet } = await import("./storage");
+    freshGet();
+    expect(ctor).toHaveBeenCalledWith(
+      expect.objectContaining({ ssl: { rejectUnauthorized: false } }),
+    );
+  });
+
+  it("does not treat DATABASE_SSL=false or any non-'true' value as SSL opt-in", async () => {
+    const ctor = vi.fn(function FakePostgresStore() {});
+    vi.doMock("@mastra/pg", () => ({
+      PostgresStore: ctor,
+      IPIX_CF_MASTRA_PG_STUB: undefined,
+    }));
+    vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("VERCEL", "1");
+    vi.stubEnv("CI", "");
+    vi.stubEnv("MASTRA_DATABASE_URL", "postgresql://mastra@127.0.0.1:6543/postgres");
+    vi.stubEnv("DATABASE_URL", "");
+    vi.stubEnv("DATABASE_SSL", "false");
+    vi.resetModules();
+    const { getMastraStorage: freshGet } = await import("./storage");
+    freshGet();
+    expect(ctor).toHaveBeenCalledWith(expect.objectContaining({ ssl: false }));
+  });
+
   it("defaults pool max to 4 when MASTRA_PG_POOL_MAX is unset", async () => {
     const ctor = vi.fn(function FakePostgresStore() {});
     vi.doMock("@mastra/pg", () => ({

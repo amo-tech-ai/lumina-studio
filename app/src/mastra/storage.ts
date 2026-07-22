@@ -128,6 +128,19 @@ function resolveMastraPgPoolMax(env: NodeJS.ProcessEnv = process.env): number {
 }
 
 /**
+ * IPI-777: explicit SSL opt-in, matching the Mastra docs' own conditional pattern.
+ * A `sslmode=` already present on the connection string always wins over this —
+ * `pg-connection-string`'s `parse()` output is merged in *after* explicit config
+ * (see `pg/lib/connection-parameters.js`), so this is a same-or-safer default,
+ * never a way to accidentally downgrade a connection string that already opts in.
+ */
+function resolveMastraPgSslOption(
+  env: NodeJS.ProcessEnv = process.env,
+): { rejectUnauthorized: boolean } | false {
+  return env.DATABASE_SSL === "true" ? { rejectUnauthorized: false } : false;
+}
+
+/**
  * Loud once-per-process when Mastra would open a session-mode pool.
  * next + mastra are separate OS processes → worst case 2×max clients (IPI-740).
  * Does not throw — keep DATABASE_URL fallback for CI / gradual rollout.
@@ -192,6 +205,7 @@ function createPostgresStore(url: string, env: NodeJS.ProcessEnv = process.env):
     connectionString: url,
     max: resolveMastraPgPoolMax(env),
     idleTimeoutMillis: PG_IDLE_TIMEOUT_MS,
+    ssl: resolveMastraPgSslOption(env),
   });
 }
 
