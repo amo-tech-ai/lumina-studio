@@ -156,6 +156,34 @@ describe("providerAdapter / createProviderAdapter", () => {
         message: expect.stringContaining("chat completion failed: 503"),
       });
     });
+
+    it("throws when Content-Length exceeds the response-size guard (IPI-762)", async () => {
+      globalThis.fetch = vi.fn().mockResolvedValue({
+        ok: true,
+        headers: new Headers({ "content-length": String(11 * 1024 * 1024) }),
+        json: () => Promise.resolve({ choices: [{ message: { content: "too big" } }] }),
+      });
+
+      await expect(providerAdapter.chat("test")).rejects.toMatchObject({
+        name: "AiGatewayError",
+        message: expect.stringContaining("response too large"),
+      });
+    });
+
+    it("allows a response under the size guard, and one with no Content-Length at all", async () => {
+      globalThis.fetch = vi.fn().mockResolvedValue({
+        ok: true,
+        headers: new Headers({ "content-length": "1024" }),
+        json: () => Promise.resolve({ choices: [{ message: { content: "fine" } }] }),
+      });
+      await expect(providerAdapter.chat("test")).resolves.toMatchObject({ text: "fine" });
+
+      globalThis.fetch = vi.fn().mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve({ choices: [{ message: { content: "fine" } }] }),
+      });
+      await expect(providerAdapter.chat("test")).resolves.toMatchObject({ text: "fine" });
+    });
   });
 
   describe("chatStream", () => {

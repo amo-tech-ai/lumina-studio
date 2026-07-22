@@ -232,8 +232,28 @@ async function assertOk(response: Response, label: string): Promise<void> {
   }
 }
 
+/**
+ * Defense-in-depth cap on JSON response bodies (GHSA-866g-f22w-33x8, IPI-762: uncontrolled
+ * resource consumption in JSON response parsing). `withTimeout` above bounds request *time*;
+ * this bounds response *size* before it's buffered into `response.json()`. Content-Length is
+ * set by the AI Gateway Worker's OpenAI-compat responses; a missing header (chunked encoding)
+ * is not itself a violation, so this only rejects a length the server told us about upfront.
+ */
+const MAX_RESPONSE_BYTES = 10 * 1024 * 1024; // 10MB — comfortably above real chat/embedding payloads
+
+function assertResponseSizeWithinLimit(response: Response, label: string): void {
+  const contentLength = Number(response.headers?.get("content-length"));
+  if (contentLength > MAX_RESPONSE_BYTES) {
+    throw new AiGatewayError(
+      `${label} response too large: ${contentLength} bytes exceeds ${MAX_RESPONSE_BYTES} byte limit`,
+      { code: "provider_error", httpStatus: response.status },
+    );
+  }
+}
+
 async function readChatResult(response: Response, label: string): Promise<ChatResult> {
   await assertOk(response, label);
+  assertResponseSizeWithinLimit(response, label);
   const data = (await response.json()) as {
     choices?: { message: { content: string } }[];
     usage?: GatewayChatUsage;
@@ -408,6 +428,7 @@ export function createProviderAdapter(options: ProviderAdapterOptions = {}): AiP
         });
 
         await assertOk(response, "structured completion");
+        assertResponseSizeWithinLimit(response, "structured completion");
         const data = (await response.json()) as {
           choices?: { message: { content: string } }[];
           usage?: GatewayChatUsage;
@@ -434,6 +455,7 @@ export function createProviderAdapter(options: ProviderAdapterOptions = {}): AiP
         });
 
         await assertOk(response, "embedding");
+        assertResponseSizeWithinLimit(response, "embedding");
 
         const data = (await response.json()) as {
           data: { embedding: number[] }[];
