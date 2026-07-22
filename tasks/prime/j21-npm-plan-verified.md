@@ -20,6 +20,22 @@ Re-verified every package/file/command claim below against a fresh `npm ls`/`npm
 
 ---
 
+## Second external review, verified (2026-07-22)
+
+An external critique of the 5 tasks was checked claim-by-claim, same rule as everything else in this doc: verify before applying, don't accept because it sounds authoritative.
+
+| Task | Claim | Result |
+|---|---|---|
+| IPI-758 | "Next maintainers said this isn't a real Next.js vulnerability, lower to P2" | ❌ **Rejected** — checked the live upstream thread (`gh issue view 93604 --repo vercel/next.js`) directly; no maintainer comment says this. Fix landed in canary `16.3.0-canary.6+` (PR #93288), no stable release yet as of 2026-07-01. A real user confirms the same override workaround has run in production "for a good while now." Priority kept as-is. |
+| IPI-759 | "Exposure is local-dev-only" was already wrong in the original write-up | ✅ **Confirmed correction** — `next.config.ts` sets no custom/disabled image loader, so Next's default image pipeline calls `sharp` server-side, and **this app's actual current production is Vercel** (not yet cut over to Cloudflare Workers) — real production exposure today, not just a dev-machine risk. |
+| IPI-759 | "Use sharp 0.35.3, the advisory recommends it, not 0.35.0" | ❌ **Rejected** — `gh api /advisories/GHSA-f88m-g3jw-g9cj` returns `"first_patched_version": "0.35.0"` directly from GitHub's structured data. `0.35.0` was already correct. |
+| IPI-760 | `@ag-ui/mastra@1.1.1` + installed CopilotKit `1.61.0` will strand HITL interrupts (`emitInterruptOutcome` defaults `true`, needs CopilotKit `>=1.61.2`) | ✅ **Confirmed, critical, previously missed.** Verified directly against the AG-UI GitHub repo's own README — `1.61.0` is explicitly named as an affected version. This is a real bug the original investigation missed (it only checked semver peer ranges, not documented runtime behavior). Fix: `emitInterruptOutcome: false` at the real `MastraAgent` construction site, `app/src/app/api/copilotkit/[[...slug]]/route.ts:49`. |
+| IPI-762 | Forcing `@ai-sdk/provider-utils` across 2 major versions via `overrides` is unsafe, remove it | 🟡 **Partially accepted** — the general caution is fair, so checked the specific case: `@ai-sdk/ui-utils@1.2.11` only imports 3 stable low-level primitives (`generateId`, `safeParseJSON`, `validatorSymbol`) from provider-utils, all present with matching shape in the target version. Override kept, but AC strengthened to verify the actual functions work, not just that `npm audit` goes quiet. |
+
+All 4 corrected issues pushed to Linear (IPI-758, 759, 760, 762). IPI-761 was not disputed by this review.
+
+---
+
 ## Verified findings table
 
 | Task | Draft's claim | Verified reality | Advisory actually clears? | Verdict |
