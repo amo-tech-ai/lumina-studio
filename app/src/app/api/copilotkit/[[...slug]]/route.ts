@@ -64,9 +64,18 @@ const runtime = new CopilotRuntime({
     // options (verified against @ag-ui/mastra@1.1.1's compiled source — the bulk
     // helper only forwards mastra/resourceId/requestContext/untilIdle/
     // observationalMemory/tracingOptions to each constructed MastraAgent; passing
-    // it there is both a TS2353 type error and a silent no-op at runtime). Set it
-    // directly on each returned instance instead — it's a public, mutable field
-    // on MastraAgent (see MastraAgentConfig.emitInterruptOutcome).
+    // it there is both a TS2353 type error and a silent no-op at runtime).
+    //
+    // Setting only the instance field is NOT enough: CopilotKit's runtime clones
+    // the agent per request (`cloneAgentForRequest` -> `agents[agentId].clone()`,
+    // see @copilotkit/runtime/dist/v2/runtime/handlers/shared/agent-utils.cjs),
+    // and MastraAgent.clone() rebuilds `new MastraAgent(this.config)` from the
+    // ORIGINAL config object, not the live instance — so a post-construction
+    // `agent.emitInterruptOutcome = false` is silently discarded on every real
+    // request before the agent ever runs (confirmed empirically: cloning after an
+    // instance-only mutation returns `emitInterruptOutcome: true` again). Mutating
+    // `agent.config` too — the same object `clone()` reconstructs from — makes it
+    // survive cloning, including repeated clone-of-clone.
     //
     // 1.1.1 defaults this to true, which requires a CopilotKit client >=1.61.2 to
     // resume structured interrupts. This repo runs @copilotkit/runtime@1.61.0 —
@@ -75,7 +84,14 @@ const runtime = new CopilotRuntime({
     // N pending interrupt(s) not addressed by resume". Keep false until
     // CopilotKit is bumped to >=1.61.2 (separate, larger decision — see IPI-760).
     for (const agent of Object.values(agents)) {
-      if (agent instanceof MastraAgent) agent.emitInterruptOutcome = false;
+      if (agent instanceof MastraAgent) {
+        agent.emitInterruptOutcome = false;
+        // `config` is typed `private` in @ag-ui/mastra's declarations, but it's a
+        // plain runtime field (TS `private` isn't enforced at runtime) — the cast
+        // is intentional, not a type-safety hole: see the comment above for why
+        // clone() requires mutating it directly.
+        (agent as any).config.emitInterruptOutcome = false;
+      }
     }
     return agents;
   },

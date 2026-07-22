@@ -176,3 +176,102 @@ describe("CF-MIG-210 — Workers-safe runtime (no hono/vercel)", () => {
     );
   });
 });
+
+// IPI-760 regression guard. Real @ag-ui/mastra@1.1.1 behavior (confirmed against its
+// compiled source, not assumed): MastraAgent.clone() rebuilds `new MastraAgent(this.config)`
+// from the ORIGINAL config object — it does not copy live instance fields. CopilotKit's
+// runtime clones the agent per request (`cloneAgentForRequest`), so setting
+// `agent.emitInterruptOutcome = false` alone is silently discarded before every real
+// request runs. This fake reproduces that exact clone() shape so the test fails the way
+// production would if the route regresses to instance-only mutation.
+class FakeMastraAgentWithRealCloneSemantics {
+  config: { emitInterruptOutcome?: boolean; [key: string]: unknown };
+  emitInterruptOutcome: boolean;
+
+  constructor(config: { emitInterruptOutcome?: boolean; [key: string]: unknown }) {
+    this.config = config;
+    this.emitInterruptOutcome = config.emitInterruptOutcome ?? true;
+  }
+
+  clone() {
+    return new FakeMastraAgentWithRealCloneSemantics(this.config);
+  }
+}
+
+describe("IPI-760 — emitInterruptOutcome survives CopilotKit's per-request clone", () => {
+  beforeEach(async () => {
+    vi.stubEnv("NODE_ENV", "development");
+
+    vi.doMock("@/mastra", () => ({ getMastra: () => ({}) }));
+    vi.doMock("@/lib/auth", () => ({
+      resolveOperatorUser: vi.fn(),
+      extractAccessToken: vi.fn().mockReturnValue("test-token"),
+    }));
+    vi.doMock("@/lib/request-token", () => ({
+      requestToken: { run: vi.fn((_v: string, fn: () => unknown) => fn()), getStore: vi.fn() },
+    }));
+    const OperatorAuthErrorClass = class extends Error {
+      constructor(m: string) {
+        super(m);
+        this.name = "OperatorAuthError";
+      }
+    };
+    vi.doMock("@/lib/operator-gate", () => ({
+      withOperatorAuth: vi.fn().mockResolvedValue({ id: "user-1", email: "u@test.com", name: "U" }),
+      OperatorAuthError: OperatorAuthErrorClass,
+      isOperatorAuthEnforced: vi.fn(() => false),
+    }));
+
+    // getLocalAgents must return the SAME instance on every call — real @ag-ui/mastra
+    // constructs fresh instances per call too, but the route only calls it once per
+    // request; the test needs a stable reference to inspect what the route mutated,
+    // same as reading the actual agent instance a real request would hand to CopilotKit.
+    const sharedAgent = new FakeMastraAgentWithRealCloneSemantics({ agentId: "test-agent" });
+    vi.doMock("@ag-ui/mastra", () => ({
+      MastraAgent: Object.assign(FakeMastraAgentWithRealCloneSemantics, {
+        getLocalAgents: () => ({ "test-agent": sharedAgent }),
+      }),
+    }));
+
+    let capturedFactory: (() => unknown) | undefined;
+    vi.doMock("@/lib/copilotkit/runtime-v2-fetch", () => ({
+      CopilotRuntime: vi.fn((config: { agents: () => unknown }) => {
+        capturedFactory = config.agents;
+        return {};
+      }),
+      createCopilotRuntimeHandler: vi.fn(() => async () => {
+        const agents = capturedFactory
+          ? ((await capturedFactory()) as Record<string, FakeMastraAgentWithRealCloneSemantics>)
+          : {};
+        return Response.json({ agentIds: Object.keys(agents) });
+      }),
+      InMemoryAgentRunner: vi.fn(),
+    }));
+  });
+
+  it("keeps emitInterruptOutcome false after CopilotKit clones the agent for a request", async () => {
+    const route = await import("@/app/api/copilotkit/[[...slug]]/route");
+    const { MastraAgent } = await import("@ag-ui/mastra");
+
+    const agents = MastraAgent.getLocalAgents({ mastra: {}, resourceId: "user-1" }) as Record<
+      string,
+      FakeMastraAgentWithRealCloneSemantics
+    >;
+    const agent = agents["test-agent"];
+
+    // Route sets this on construction — verify it did.
+    await route.GET(new Request("http://localhost/api/copilotkit"));
+    expect(agent.emitInterruptOutcome).toBe(false);
+
+    // The regression: CopilotKit clones this exact instance before running it on every
+    // real request. If the fix only mutated the instance field, the clone reverts to the
+    // default `true` and every HITL interrupt/resume strands in production.
+    const cloned = agent.clone();
+    expect(cloned.emitInterruptOutcome).toBe(false);
+
+    // And it must survive being cloned again (CopilotKit may clone more than once per
+    // request lifecycle) — proves the fix mutated `config`, not just this one instance.
+    const clonedAgain = cloned.clone();
+    expect(clonedAgain.emitInterruptOutcome).toBe(false);
+  });
+});
