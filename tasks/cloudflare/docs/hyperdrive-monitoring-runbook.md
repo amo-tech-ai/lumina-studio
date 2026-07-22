@@ -25,7 +25,7 @@
 
 ## 1. Reading Hyperdrive pool metrics (Dashboard + GraphQL)
 
-Per current official docs ([Metrics and analytics](https://developers.cloudflare.com/hyperdrive/observability/metrics/), [Analytics](https://developers.cloudflare.com/hyperdrive/observability/analytics/), and the 2026-05-15 changelog for pool-size metrics), Hyperdrive exposes **connection pool** metrics, not per-query timing — it's a connection pooler, not a query-level proxy, so it never sees or logs individual query text or duration.
+**Correction (2026-07-22, second review pass):** an earlier version of this doc said Hyperdrive exposes only connection-pool metrics, no per-query timing. That was wrong — verified against the current official docs ([Metrics and analytics](https://developers.cloudflare.com/hyperdrive/observability/metrics/)): Hyperdrive exposes **two** GraphQL Analytics datasets, not one.
 
 **Dashboard (zero code, do this first):**
 
@@ -36,19 +36,35 @@ Per current official docs ([Metrics and analytics](https://developers.cloudflare
    - **Pool size maximum** — your configured `origin_connection_limit`.
 3. **Contention signal:** a spike in waiting clients, or open connections sitting at the maximum consistently. Section 3 below reproduces exactly this signal on demand.
 
-**GraphQL Analytics API (for scripted checks / future dashboarding):** dataset `hyperdrivePoolSizesAdaptiveGroups`.
+**GraphQL Analytics API — two datasets, check both, `configId` is required on both:**
+
+`hyperdrivePoolSizesAdaptiveGroups` — pool-level: current/available pool slots, waiting clients, max pool size. Use this for the connection-exhaustion signal (§8's runbook).
 
 ```bash
 curl -sS -X POST https://api.cloudflare.com/client/v4/graphql \
   -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
-    "query": "query($accountTag: string!, $since: Time!, $until: Time!) { viewer { accounts(filter: {accountTag: $accountTag}) { hyperdrivePoolSizesAdaptiveGroups(limit: 100, filter: {datetime_geq: $since, datetime_leq: $until}) { avg { currentPoolSize availablePoolSlots waitingClients } max { maxPoolSize currentPoolSize waitingClients } dimensions { datetimeMinute } } } } }",
-    "variables": { "accountTag": "4984b9bad07bc1da9f097dc8c1da24e0", "since": "2026-07-22T00:00:00Z", "until": "2026-07-22T23:59:59Z" }
+    "query": "query($accountTag: string!, $configId: string!, $since: Time!, $until: Time!) { viewer { accounts(filter: {accountTag: $accountTag}) { hyperdrivePoolSizesAdaptiveGroups(limit: 100, filter: {configId: $configId, datetime_geq: $since, datetime_leq: $until}) { avg { currentPoolSize availablePoolSlots waitingClients } max { maxPoolSize currentPoolSize waitingClients } dimensions { datetimeMinute } } } } }",
+    "variables": { "accountTag": "4984b9bad07bc1da9f097dc8c1da24e0", "configId": "f59421821941436593f4c88416fb1601", "since": "2026-07-22T00:00:00Z", "until": "2026-07-22T23:59:59Z" }
   }'
 ```
 
-Needs an API token with `Account Analytics: Read`. The token used by `wrangler`/the Cloudflare MCP server in this environment could list and read the Hyperdrive config (`hyperdrive_configs_list`, `hyperdrive_config_get` both succeeded) but does **not** have Hyperdrive write scope — see the permission gap noted in §4.
+`hyperdriveQueriesAdaptiveGroups` — **per-query timing** (this is the dataset the earlier version of this doc incorrectly claimed didn't exist): query volume, cache hit/miss status, query and result size in bytes, **query latency and connection-establishment latency in ms**, and success/failure status. **Check this dataset first when investigating slow Hyperdrive responses** — it's the native, per-config latency series; don't jump straight to Postgres/Sentry (§5) before ruling this out.
+
+```bash
+curl -sS -X POST https://api.cloudflare.com/client/v4/graphql \
+  -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "query": "query($accountTag: string!, $configId: string!, $since: Time!, $until: Time!) { viewer { accounts(filter: {accountTag: $accountTag}) { hyperdriveQueriesAdaptiveGroups(limit: 100, filter: {configId: $configId, datetime_geq: $since, datetime_leq: $until}) { avg { queryDurationMs connectDurationMs } max { queryDurationMs connectDurationMs } dimensions { datetimeMinute cacheStatus } } } } }",
+    "variables": { "accountTag": "4984b9bad07bc1da9f097dc8c1da24e0", "configId": "f59421821941436593f4c88416fb1601", "since": "2026-07-22T00:00:00Z", "until": "2026-07-22T23:59:59Z" }
+  }'
+```
+
+(Field names above are illustrative of the dataset's shape per the docs — confirm exact field names against the live GraphQL schema via an introspection query before scripting against this, since Cloudflare's Analytics GraphQL field names occasionally shift between dataset versions.)
+
+Both queries need an API token with `Account Analytics: Read`. The token used by `wrangler`/the Cloudflare MCP server in this environment could list and read the Hyperdrive config (`hyperdrive_configs_list`, `hyperdrive_config_get` both succeeded) but does **not** have Hyperdrive write scope — see the permission gap noted in §4.
 
 No new dashboard was built for this ticket. The native chart above **is** "metrics visible in an observability dashboard" — building a second one (Grafana, custom page) would duplicate what Cloudflare already ships, which is exactly the kind of custom-code-before-checking-native-capability this ticket's own instructions warn against.
 
@@ -142,7 +158,7 @@ Snapshot during the burst: `hd_conns=5` (Hyperdrive-origin), `total_conns=22` (a
 ### Interpretation
 
 - **5 is a real, measurable bottleneck** at even modest concurrency (20 simultaneous callers). Any operator-chat burst (e.g. several planners hitting Gate 1 at once) that lands on this Hyperdrive path once IPI-623 ships will queue the same way.
-- **There is no Supabase capacity reason to stay at 5.** Baseline usage across all roles sits at ~17–22 connections out of 60. Even the documented free-tier Hyperdrive default of 20 origin connections leaves the account at ~40/60 in the worst case (20 Hyperdrive + ~20 everything else), well under the 80%-of-60 = 48 alert threshold in §7.
+- **There is no Supabase capacity reason to stay at 5.** Baseline usage across all roles sits at ~17–22 connections out of 60. The documented free-tier Hyperdrive default of 20 origin connections leaves the account at ~40/60 in the *nominal* worst case (20 Hyperdrive + ~20 everything else) — but that's not the true ceiling. **Correction (2026-07-22, second review pass):** Cloudflare documents `origin_connection_limit` as a **soft limit** — Hyperdrive may open connections *beyond* the configured number during network failures, specifically to preserve availability ([Tuning the connection pool](https://developers.cloudflare.com/hyperdrive/configuration/tune-connection-pool/)). So "20 Hyperdrive + ~20 everything else = 40/60" understates the real worst case; treat 20 as *nominal* headroom, not a hard ceiling, and either reserve extra margin below the 48-connection alert threshold (§7) or set that threshold lower than 80% until real overshoot behavior has been observed under a network-failure condition.
 
 ---
 
@@ -187,19 +203,41 @@ if (durationMs > 5000) {
 
 This isn't added in this PR because `hyperdrive-query.ts` belongs to IPI-620, which hasn't merged yet — editing someone else's unmerged file here would mix two tasks in one PR (repo hard rule). Flagged as the concrete next step instead.
 
-**Until that instrumentation lands, use the Postgres-native check** (works today, no app code needed):
+**Until that instrumentation lands, use the Postgres-native check** (works today, no app code needed) — **with a correction from the second review pass**:
 
+`pg_stat_statements` is **cumulative since the last reset** ([official docs](https://www.postgresql.org/docs/current/pgstatstatements.html)), not a record of activity in just the current schedule window. A naive `mean_exec_time > 5000` query run every few minutes via `pg_cron` would re-report the *same* old slow query on every single run forever, and can't tell "this just crossed 5s" from "this has always been slow" — it would page continuously on one known-slow, already-triaged query instead of surfacing new problems.
+
+Two corrected options:
+
+**Option A — snapshot + delta (detects *newly* slow queries, keeps history):**
 ```sql
--- Run on a schedule (pg_cron, already enabled) or ad hoc via Supabase MCP/SQL editor.
--- pg_stat_statements is already enabled on this project.
-select query, calls, mean_exec_time, max_exec_time
-from pg_stat_statements
-where mean_exec_time > 5000  -- ms
-order by mean_exec_time desc
-limit 20;
+-- Run on a schedule (pg_cron). Requires a small tracking table — not in this PR,
+-- flagged as the concrete follow-up alongside the queryFresh() Sentry hook above.
+-- Snapshot: create table hyperdrive_slow_query_snapshots (queryid bigint, calls bigint, total_exec_time double precision, snapshot_at timestamptz default now());
+-- Each run: compare current pg_stat_statements.calls/total_exec_time against the
+-- last snapshot per queryid; alert only on queries whose delta mean_exec_time
+-- (total_exec_time delta / calls delta) crosses 5000ms since the last snapshot.
+-- Then upsert the new snapshot. This is genuinely new schema (a tracking table),
+-- so it needs its own migration-only PR, not bundled into this docs-only one.
 ```
 
-`pg_net` (needed to fire an HTTP webhook straight from a `pg_cron` job) is **not enabled** on this project — that's a real gap, not an oversight to route around silently. Until it's enabled, the practical path is: run the query above from the Supabase SQL editor or a scheduled Supabase Edge Function (already the repo's edge-function pattern, see `ipix-supabase` skill), and forward any hit to Sentry via `Sentry.captureMessage` from that function. Enabling `pg_net` is a one-line `create extension pg_net;` migration if the team wants true in-Postgres webhook alerting later — not in scope here since it's a schema change (would need its own migration-only PR per the repo's one-concern rule).
+**Option B — currently-running queries only (works today, no new schema, narrower scope):**
+```sql
+-- pg_stat_activity shows in-flight queries, not historical aggregates — no
+-- cumulative-counter problem, but only catches a slow query while it's still
+-- running, not ones that already finished.
+select pid, usename, now() - query_start as duration, left(query, 80) as query
+from pg_stat_activity
+where usename = 'hyperdrive_mastra_runtime'
+  and state = 'active'
+  and now() - query_start > interval '5 seconds';
+```
+
+Recommend Option B as the immediate, no-new-schema check; Option A as the real follow-up once someone's ready to add the tracking table.
+
+`pg_net` (needed to fire an HTTP webhook straight from a `pg_cron` job) is **not enabled** on this project — that's a real gap, not an oversight to route around silently.
+
+**Correction (2026-07-22, second review pass) — the Supabase Edge Function fallback below is not actually a "no new integration" option today.** A repo-wide check confirms Sentry is only configured in `app/` (`@sentry/nextjs`) — there is no Sentry SDK or DSN configured anywhere under `supabase/functions`. Before a scheduled Edge Function can call `Sentry.captureMessage`, someone needs to add a Deno-compatible Sentry client (e.g. `@sentry/deno` or Sentry's Deno-relay approach) and a DSN secret to that function's environment — this is real setup work, not a zero-cost reuse of the existing `app/` integration. Until that's done, the practical zero-setup path is: run Option B's query ad hoc via the Supabase SQL editor or MCP `execute_sql` when investigating a reported slowness, not as an automated alert. Enabling `pg_net` is a one-line `create extension pg_net;` migration if the team wants true in-Postgres webhook alerting later — not in scope here since it's a schema change (would need its own migration-only PR per the repo's one-concern rule).
 
 ---
 
@@ -229,7 +267,7 @@ order by query_start;
 
 ## 7. Alerting on `max_connections` headroom
 
-`max_connections = 60` (confirmed live via `current_setting('max_connections')`). Recommended alert threshold: **80% = 48 total connections**, checked the same way as §6 but without the `usename` filter:
+`max_connections = 60` (confirmed live via `current_setting('max_connections')`). Recommended alert threshold: **80% = 48 total connections** — but per the soft-limit correction in §4, this is a *nominal* threshold assuming Hyperdrive stays within its configured `origin_connection_limit`. Since Hyperdrive can exceed that limit during network failures, prefer erring toward a lower threshold (e.g. 70%/42) or building in extra margin once real overshoot behavior is observed, rather than treating 48 as a precise cutoff. Checked the same way as §6 but without the `usename` filter:
 
 ```sql
 select count(*) as total_connections, current_setting('max_connections')::int as max_connections,
