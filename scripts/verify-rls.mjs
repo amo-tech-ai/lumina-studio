@@ -266,6 +266,7 @@ async function cleanupRlsTestData({
   notificationId,
   crmNotificationId,
   assetId,
+  rlsEventId,
   userAId,
   userBId,
 }) {
@@ -285,6 +286,10 @@ async function cleanupRlsTestData({
 
   if (assetId) {
     await checkedCleanup(`asset ${assetId}`, admin.from("assets").delete().eq("id", assetId));
+  }
+
+  if (rlsEventId) {
+    await checkedCleanup(`event ${rlsEventId}`, admin.from("events").delete().eq("id", rlsEventId));
   }
 
   // Order matters: crm_companies.brand_id → brands has no ON DELETE action,
@@ -364,6 +369,8 @@ let orgAId;
 let notificationId;
 let crmNotificationId;
 let assetId;
+let assetLinkBrandId;
+let rlsEventId;
 let crmConvertBrandIds = [];
 
 try {
@@ -977,6 +984,80 @@ try {
         assetReadNonMember,
         "non-org-member cannot read brand asset (pre-membership)",
       );
+
+      // IPI-770 — asset_links SELECT via brand (owner / outsider) + event organizer
+      const { data: alBrand, error: alBrandErr } = await admin
+        .from("asset_links")
+        .insert({
+          asset_id: assetId,
+          entity_type: "shoot",
+          entity_id: "00000000-0000-4000-8000-000000000770",
+          role: "gallery",
+        })
+        .select("id")
+        .single();
+      assert(!alBrandErr && alBrand?.id, "service role inserts asset_link for brand-path RLS probe");
+      assetLinkBrandId = alBrand?.id;
+
+      if (assetLinkBrandId) {
+        const { data: alOwner, error: alOwnerErr } = await userA.client
+          .from("asset_links")
+          .select("id")
+          .eq("id", assetLinkBrandId);
+        assert(
+          !alOwnerErr && (alOwner ?? []).length === 1,
+          "brand owner reads asset_link on org brand asset — IPI-770",
+        );
+
+        const { data: alOutsider, error: alOutsiderErr } = await userB.client
+          .from("asset_links")
+          .select("id")
+          .eq("id", assetLinkBrandId);
+        assertSelectDenied(
+          alOutsiderErr,
+          alOutsider,
+          "outsider cannot read asset_link on org brand asset — IPI-770",
+        );
+      }
+
+      const { data: rlsEvent, error: rlsEventErr } = await admin
+        .from("events")
+        .insert({
+          organizer_id: userB.user.id,
+          title: `RLS IPI-770 event ${stamp}`,
+          slug: `rls-ipi770-${stamp}`,
+          start_time: new Date(stamp).toISOString(),
+          status: "draft",
+        })
+        .select("id")
+        .single();
+      assert(!rlsEventErr && rlsEvent?.id, "service role inserts event for asset_links organizer probe");
+      rlsEventId = rlsEvent?.id;
+
+      if (rlsEventId) {
+        const { data: alEvent, error: alEventErr } = await admin
+          .from("asset_links")
+          .insert({
+            asset_id: assetId,
+            entity_type: "event",
+            entity_id: rlsEventId,
+            role: "promo",
+          })
+          .select("id")
+          .single();
+        assert(!alEventErr && alEvent?.id, "service role inserts asset_link entity_type=event");
+
+        if (alEvent?.id) {
+          const { data: alOrgRead, error: alOrgReadErr } = await userB.client
+            .from("asset_links")
+            .select("id")
+            .eq("id", alEvent.id);
+          assert(
+            !alOrgReadErr && (alOrgRead ?? []).length === 1,
+            "event organizer reads asset_link when entity_type=event — IPI-770",
+          );
+        }
+      }
     }
   }
 
@@ -1346,6 +1427,29 @@ try {
     assert(
       !assetReadMemberErr && (assetReadMember ?? []).length === 1,
       "org member (viewer role) reads brand asset after joining — IPI-499",
+    );
+  }
+
+  // IPI-770 — Where Used children: org member SELECT after join (outsider deny above)
+  if (linkA?.id) {
+    const { data: memberLinks, error: memberLinksErr } = await userB.client
+      .from("commerce_product_links")
+      .select("id")
+      .eq("id", linkA.id);
+    assert(
+      !memberLinksErr && (memberLinks ?? []).length === 1,
+      "org member reads commerce_product_links after joining — IPI-770",
+    );
+  }
+
+  if (admin && assetLinkBrandId) {
+    const { data: alMember, error: alMemberErr } = await userB.client
+      .from("asset_links")
+      .select("id")
+      .eq("id", assetLinkBrandId);
+    assert(
+      !alMemberErr && (alMember ?? []).length === 1,
+      "org member reads asset_link on org brand asset after joining — IPI-770",
     );
   }
 
@@ -3843,6 +3947,7 @@ try {
     notificationId,
     crmNotificationId,
     assetId,
+    rlsEventId,
     userAId: userA?.user?.id,
     userBId: userB?.user?.id,
   });
