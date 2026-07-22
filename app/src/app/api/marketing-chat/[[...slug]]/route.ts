@@ -21,14 +21,10 @@ const publicMastra = new Mastra({
 
 const runtime = new CopilotRuntime({
   agents: async () => {
-    // IPI-750 · CF-MIG-230-W0 — this route never built a RequestContext
-    // before; it's needed now purely to carry cfEnv, matching the
-    // CopilotKit route's pattern. Zero agents flip to native in this PR —
-    // publicMarketingAgent's `model:` field is untouched. When a future
-    // wave (W1) wires resolveAgentModel() into it, pass a hardcoded
-    // agentId: "public-marketing" (not "default"), so no surface-aware
-    // alias resolution is needed even though this registry also exposes
-    // the same agent under the "default" key.
+    // IPI-750 · CF-MIG-230-W0 + IPI-753 · W1 — RequestContext carries
+    // minimal cfEnv for resolveAgentModel() on publicMarketingAgent.
+    // Hardcode agentId "public-marketing" (not "default") even though this
+    // registry also exposes the same agent under the "default" key.
     const requestContext = new RequestContext();
     try {
       // Sync call — throws immediately off-Cloudflare, no Wrangler proxy
