@@ -91,6 +91,9 @@
     "@ag-ui/core": "0.0.57",
     "@ag-ui/encoder": "0.0.57",
     "@ag-ui/proto": "0.0.57",
-    "shell-quote": "1.9.0"
+    "shell-quote": "1.9.0",
+    "next": {
+      "postcss": "8.5.10"
+    }
   }
 }
