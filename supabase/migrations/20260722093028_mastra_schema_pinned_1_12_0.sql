@@ -1,9 +1,20 @@
 -- IPI-628 · MASTRA-SUPABASE-002 — Version-pinned Mastra schema migration.
 --
--- Creates the private "mastra" schema + the 24-table runtime subset, generated
--- verbatim by the installed @mastra/pg@1.12.0 package's exportSchemas('mastra')
--- function (see IPI-616 ADR, tasks/mastra/ipi-616-storage-schema-adr.md,
--- Decision 1 + 2) — not hand-written DDL.
+-- Creates the private "mastra" schema + the 24-table runtime subset. NOT
+-- reproducible by re-running the installed @mastra/pg@1.12.0 package's
+-- exportSchemas('mastra') alone: a fresh call to that function today emits
+-- "organizationId" on only 1 table (mastra_ai_spans), but this file has it
+-- on 7 (mastra_ai_spans, mastra_scorers, mastra_scorer_definitions,
+-- mastra_datasets, mastra_dataset_items, mastra_experiments,
+-- mastra_experiment_results) — plus projectId/batchId/datasetId/
+-- datasetItemId/candidateKey/candidateId/externalId/toolMocks/
+-- toolMockReport, none of which the generator (or @mastra/core's own
+-- EXPERIMENTS_SCHEMA/DATASETS_SCHEMA/SCORERS_SCHEMA constants) define.
+-- These 21 extra columns match the live remote's already-existing structure
+-- exactly (verified via information_schema.columns) — this file records
+-- reality, generated-then-reconciled against the live schema, not purely
+-- generated. See IPI-616 ADR, tasks/mastra/ipi-616-storage-schema-adr.md,
+-- Decision 1 + 2, and PR #601's discussion thread for the full verification.
 --
 -- Excludes 9 Mastra Studio/agent-builder tables (MCP clients/servers, Skills,
 -- Workspaces) that iPix's production agents never use.
