@@ -1,7 +1,11 @@
 import { describe, it, expect, vi } from "vitest";
+import { mkdtempSync, writeFileSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import {
   parseDotenv,
   stripQuotes,
+  loadEnvFile,
   assertSafeBearerToken,
   gatewayUrl,
   interpretTokenHealth,
@@ -30,6 +34,29 @@ describe("stripQuotes / parseDotenv", () => {
     expect(map.CLOUDFLARE_ACCOUNT_ID).toBe("4984b9bad07bc1da9f097dc8c1da24e0");
     expect(map.CLOUDFLARE_API_TOKEN).toBe("tok_value");
     expect(map.OTHER).toBe("1");
+  });
+
+  it("trims keys when spaces surround =", () => {
+    const map = parseDotenv("KEY = VALUE\n  PADDED = x ");
+    expect(map.KEY).toBe("VALUE");
+    expect(map.PADDED).toBe("x");
+    expect(map["KEY "]).toBeUndefined();
+  });
+});
+
+describe("loadEnvFile", () => {
+  it("does not overwrite an intentionally empty string", () => {
+    const dir = mkdtempSync(join(tmpdir(), "cf-gw-env-"));
+    const path = join(dir, ".env.local");
+    try {
+      writeFileSync(path, "EMPTY=\nFROM_FILE=yes\n", "utf8");
+      const env = { EMPTY: "" };
+      loadEnvFile(path, env);
+      expect(env.EMPTY).toBe("");
+      expect(env.FROM_FILE).toBe("yes");
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
   });
 });
 

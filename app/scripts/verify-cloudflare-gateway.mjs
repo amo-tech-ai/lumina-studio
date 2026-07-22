@@ -48,8 +48,9 @@ export function parseDotenv(text) {
     if (!trimmed || trimmed.startsWith("#")) continue;
     const eq = trimmed.indexOf("=");
     if (eq === -1) continue;
-    const key = trimmed.slice(0, eq);
-    out[key] = stripQuotes(trimmed.slice(eq + 1));
+    const key = trimmed.slice(0, eq).trim();
+    if (!key) continue;
+    out[key] = stripQuotes(trimmed.slice(eq + 1).trim());
   }
   return out;
 }
@@ -58,7 +59,8 @@ export function loadEnvFile(path, env = process.env) {
   if (!existsSync(path)) return;
   const parsed = parseDotenv(readFileSync(path, "utf8"));
   for (const [key, val] of Object.entries(parsed)) {
-    if (!env[key]) env[key] = val;
+    // Preserve intentionally empty shell exports (`KEY=` → "").
+    if (env[key] === undefined) env[key] = val;
   }
 }
 
@@ -159,13 +161,20 @@ export async function probeUserTokenVerify({ apiToken, fetchImpl = fetch }) {
 async function main() {
   loadEnvFile(resolve(appRoot, ".env.local"));
 
-  const apiToken = process.env.CLOUDFLARE_API_TOKEN;
-  const accountId = process.env.CLOUDFLARE_ACCOUNT_ID;
+  let apiToken;
+  let accountId;
   const gatewayId = process.env.CLOUDFLARE_AI_GATEWAY_ID || DEFAULT_GATEWAY_ID;
 
   try {
-    assertSafeBearerToken(apiToken, "CLOUDFLARE_API_TOKEN");
-    assertSafeBearerToken(accountId, "CLOUDFLARE_ACCOUNT_ID");
+    // Use trimmed returns for probes + sha12 (not the raw env strings).
+    apiToken = assertSafeBearerToken(
+      process.env.CLOUDFLARE_API_TOKEN,
+      "CLOUDFLARE_API_TOKEN",
+    );
+    accountId = assertSafeBearerToken(
+      process.env.CLOUDFLARE_ACCOUNT_ID,
+      "CLOUDFLARE_ACCOUNT_ID",
+    );
   } catch (err) {
     console.error(`❌ ${err.message}`);
     process.exit(1);
