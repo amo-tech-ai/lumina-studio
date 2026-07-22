@@ -1,12 +1,12 @@
 # Cloudflare Platform — Progress Task Tracker
 
-**Last reviewed:** 2026-07-21  
+**Last reviewed:** 2026-07-22 (re-probed against live systems during IPI-607 PR review — see [Verified facts](#verified-facts-origin-main--2026-07-22))  
 **SSOT hierarchy:** **Linear status** → this file (**evidence + open work**) → root [`todo.md`](../../todo.md) (pointer only) → dated audits  
 **Doc map:** [`index.md`](./index.md) · **Audit:** [`audit/j21-todo-audit.md`](./audit/j21-todo-audit.md)
 
 | Lane | Progress | Bar |
 |------|---------|-----|
-| Native AI | ~12% | `██░░░░░░░░` |
+| Native AI | Early implementation stage (~10–15%) — only the first milestone (IPI-586) is complete; treat the % as a rough estimate, not a measured value | `██░░░░░░░░` |
 | Hosting | ~85% | `████████░░` |
 | Edge | ~95% | `█████████░` |
 
@@ -22,8 +22,8 @@ Edge:    695 ✅ → 697 ✅ → 699 ✅ → 742 ✅ · 698 parked
 
 | # | Task | Plain English | Why |
 |--:|------|---------------|-----|
-| 1 | [IPI-607 · FLAGS](https://linear.app/amo100/issue/IPI-607) 🟡 | Per-agent Cloudflare vs legacy switch | [PR #565](https://github.com/amo-tech-ai/lumina-studio/pull/565) MERGEABLE — **merge** |
-| 2 | [IPI-750 · W0](https://linear.app/amo100/issue/IPI-750) ⚪ | Attach `cfEnv`; flip **zero** agents | After #565 |
+| 1 | [IPI-607 · FLAGS](https://linear.app/amo100/issue/IPI-607) 🟡 | Per-agent Cloudflare vs legacy switch | [PR #565](https://github.com/amo-tech-ai/lumina-studio/pull/565) — `mergeable: MERGEABLE`, `mergeStateStatus: CLEAN`, no failing checks (verified 2026-07-22). No technical blocker found in review; `reviewDecision` is empty (no formal GitHub "Approved" review recorded) — **needs an explicit approval, not just a merge click** |
+| 2 | [IPI-750 · W0](https://linear.app/amo100/issue/IPI-750) ⚪ | Attach `cfEnv`; flip **zero** agents | After #565. ⚠️ Must pass `env: getCloudflareContext().env` explicitly to `resolveAgentRoutingOutcome`/`resolveAgentRoutingMode` — the default (`process.env`) is only guaranteed populated in local dev per OpenNext docs, not on the deployed Worker. Noted on [IPI-750](https://linear.app/amo100/issue/IPI-750) directly. |
 | 3 | W1 → W2 → W3 → [IPI-591](https://linear.app/amo100/issue/IPI-591) | Canary → planner → tool proof | Serial; do not skip 591 |
 | Park | [IPI-698](https://linear.app/amo100/issue/IPI-698) · [IPI-631](https://linear.app/amo100/issue/IPI-631) · IPI-730 | DNA / DNS / SSO | Not next |
 
@@ -63,8 +63,43 @@ Keep `BI_PROVIDER` **ABSENT** until product flips Brand Hub.
 | — | [IPI-590](https://linear.app/amo100/issue/IPI-590)+ hardening | Cache / rate / spend | ⚪ | 0 | After canaries |
 | — | [IPI-698](https://linear.app/amo100/issue/IPI-698) DNA | Vision eval | ⚪ | 0 | Parked |
 | — | [IPI-631](https://linear.app/amo100/issue/IPI-631) DNS | Production hostname | ⚪ | 0 | After native+Edge stable |
+| — | [IPI-763 · CF-CI-001](https://linear.app/amo100/issue/IPI-763) | Run `services/cloudflare-worker` tests in CI | ⚪ | 0 | Found 2026-07-22: 98/98 tests exist but aren't wired into `.github/workflows/ci.yml` — the Worker still carries real production AI traffic while frozen |
 
 Parent [IPI-594](https://linear.app/amo100/issue/IPI-594): do **not** implement as one mega-issue.
+
+---
+
+## Per-agent migration dashboard
+
+Tracks each of the 9 agents individually through the wave chain. All 9 are on `legacy` today — [IPI-607](https://linear.app/amo100/issue/IPI-607) adds the switches (this table's columns), it does not flip any of them.
+
+| Agent | Wave | Legacy | Native | Canary | 100% |
+|---|:---:|:---:|:---:|:---:|:---:|
+| `public-marketing` | [W1 · IPI-753](https://linear.app/amo100/issue/IPI-753) | ✅ | ⬜ | ⬜ | ⬜ |
+| `visual-identity` | [W2 · IPI-751](https://linear.app/amo100/issue/IPI-751) | ✅ | ⬜ | ⬜ | ⬜ |
+| `social-discovery` | [W2 · IPI-751](https://linear.app/amo100/issue/IPI-751) | ✅ | ⬜ | ⬜ | ⬜ |
+| `model-match` | [W2 · IPI-751](https://linear.app/amo100/issue/IPI-751) | ✅ | ⬜ | ⬜ | ⬜ |
+| `booking` | [W2 · IPI-751](https://linear.app/amo100/issue/IPI-751) | ✅ | ⬜ | ⬜ | ⬜ |
+| `production-planner` (+ `default`) | [W3 · IPI-752](https://linear.app/amo100/issue/IPI-752) | ✅ | ⬜ | ⬜ | ⬜ |
+| `creative-director` | [W4 · IPI-754](https://linear.app/amo100/issue/IPI-754) | ✅ | ⬜ | ⬜ | ⬜ |
+| `brand-intelligence` | [W4 · IPI-754](https://linear.app/amo100/issue/IPI-754) | ✅ | ⬜ | ⬜ | ⬜ |
+| `crm-assistant` | [W5 · IPI-755](https://linear.app/amo100/issue/IPI-755) | ✅ | ⬜ | ⬜ | ⬜ |
+
+Env keys already exist for all 9 (`app/src/lib/ai/agent-routing-keys.mjs`, shipped in IPI-607) — flipping any one is a config change (`AI_ROUTING_AGENT_<NAME>=native`), not a code change, once its wave's PR lands.
+
+## Rollback criteria (per wave)
+
+Applies to every wave (W1–W6). Roll a wave's agent(s) back to `legacy` (unset or `=legacy` the flag — no deploy needed) if, during its canary window, **any** of:
+
+| Trigger | Threshold |
+|---|---|
+| Error rate | Routing-related 5xx above baseline |
+| Latency regression | p95 exceeds legacy baseline by more than 20% |
+| Golden-eval quality | Worse than baseline tolerance (response-quality parity check) |
+| Tenant isolation / privacy failure | Any occurrence — immediate rollback, not threshold-based |
+| Canary duration | Minimum 50 requests or 24 hours before promoting past canary, whichever comes later |
+
+Source: the standard canary gate already defined per-wave in [IPI-594](https://linear.app/amo100/issue/IPI-594) and [IPI-753](https://linear.app/amo100/issue/IPI-753) — consolidated here so it isn't re-derived per wave.
 
 ---
 
@@ -92,16 +127,18 @@ Parent [IPI-594](https://linear.app/amo100/issue/IPI-594): do **not** implement 
 
 ---
 
-## Verified facts (`origin/main` · 2026-07-21)
+## Verified facts (`origin/main` · 2026-07-22)
 
 | Check | Result |
 |-------|--------|
-| `wrangler` `ai` binding | 🟢 Yes (PR #550) |
+| `wrangler` `ai` binding | 🟢 Yes — confirmed live via `git show origin/main:app/wrangler.jsonc`, present ×3 (top-level, preview, production) |
 | IPI-586 smoke route | 🟢 Gated internal route |
 | Agents on native CF | 🔴 0% (still `resolveModel()` / legacy) |
 | Edge `cloudflare-client.ts` | 🟢 Present |
 | `BI_PROVIDER` | 🟢 ABSENT (post-canary) |
-| Custom Worker | 🟡 Frozen, still legacy path |
+| Custom Worker (`services/cloudflare-worker/`) | 🟡 Frozen, still legacy path — **98/98 tests pass** (ran fresh 2026-07-22) but **not wired into CI** ([IPI-763](https://linear.app/amo100/issue/IPI-763)) |
+| `www.ipix.co/app` hosting | 🟢 Confirmed Vercel (`curl -sI` → `server: Vercel`, `x-vercel-id`), correctly redirects unauthenticated requests to `/login` |
+| PR #565 mergeability | 🟡 `mergeable: MERGEABLE`, `mergeStateStatus: CLEAN`, no failing checks — but `reviewDecision` empty, no formal approval recorded |
 
 ---
 
