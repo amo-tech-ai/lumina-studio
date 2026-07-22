@@ -1,0 +1,68 @@
+diff --git a/node_modules/workers-ai-provider/dist/index.mjs b/node_modules/workers-ai-provider/dist/index.mjs
+index 6bd4682..a16281f 100644
+--- a/node_modules/workers-ai-provider/dist/index.mjs
++++ b/node_modules/workers-ai-provider/dist/index.mjs
+@@ -688,10 +688,14 @@ function getMappedStream(response, salvageContext) {
+ 			if (choiceFinishReason != null) finishReason = mapWorkersAIFinishReason(choiceFinishReason);
+ 			else if (directFinishReason != null) finishReason = mapWorkersAIFinishReason(directFinishReason);
+ 			const nativeResponse = chunk.response;
++			// IPI-771: dual-format SSE sets both `response` and `choices[0].delta.content`
++			let emittedNativeText = false;
+ 			if (nativeResponse != null && nativeResponse !== "") {
+ 				const responseText = String(nativeResponse);
+-				if (responseText.length > 0) if (bufferContentForSalvage) contentBuffer += responseText;
+-				else {
++				if (responseText.length > 0) {
++					emittedNativeText = true;
++					if (bufferContentForSalvage) contentBuffer += responseText;
++					else {
+ 					if (reasoningId) {
+ 						controller.enqueue({
+ 							type: "reasoning-end",
+@@ -711,6 +715,7 @@ function getMappedStream(response, salvageContext) {
+ 						id: textId,
+ 						delta: responseText
+ 					});
++					}
+ 				}
+ 			}
+ 			if (Array.isArray(chunk.tool_calls)) {
+@@ -741,8 +746,8 @@ function getMappedStream(response, salvageContext) {
+ 					});
+ 				}
+ 				const textDelta = delta.content;
+-				if (textDelta && textDelta.length > 0) if (bufferContentForSalvage) contentBuffer += textDelta;
+-				else {
++				if (textDelta && textDelta.length > 0 && !emittedNativeText) if (bufferContentForSalvage) contentBuffer += textDelta;
++				else if (textDelta && textDelta.length > 0 && !emittedNativeText) {
+ 					if (reasoningId) {
+ 						controller.enqueue({
+ 							type: "reasoning-end",
+diff --git a/node_modules/workers-ai-provider/src/streaming.ts b/node_modules/workers-ai-provider/src/streaming.ts
+index f1937cf..d6baad1 100644
+--- a/node_modules/workers-ai-provider/src/streaming.ts
++++ b/node_modules/workers-ai-provider/src/streaming.ts
+@@ -165,9 +165,14 @@ export function getMappedStream(
+ 
+ 				// --- Native format: top-level `response` field ---
+ 				const nativeResponse = chunk.response;
++				// When both `response` and `choices[0].delta.content` are set to the
++				// same token (AI Gateway / Workers AI dual-format SSE), emitting both
++				// doubles downstream text (IPI-771). Prefer native when present.
++				let emittedNativeText = false;
+ 				if (nativeResponse != null && nativeResponse !== "") {
+ 					const responseText = String(nativeResponse);
+ 					if (responseText.length > 0) {
++						emittedNativeText = true;
+ 						if (bufferContentForSalvage) {
+ 							contentBuffer += responseText;
+ 						} else {
+@@ -222,7 +227,7 @@ export function getMappedStream(
+ 					}
+ 
+ 					const textDelta = delta.content as string | undefined;
+-					if (textDelta && textDelta.length > 0) {
++					if (textDelta && textDelta.length > 0 && !emittedNativeText) {
+ 						if (bufferContentForSalvage) {
+ 							contentBuffer += textDelta;
+ 						} else {
