@@ -95,6 +95,9 @@
     "next": {
       "postcss": "8.5.10"
     },
-    "sharp": "0.35.3"
+    "sharp": "0.35.3",
+    "@ag-ui/mastra": {
+      "@ai-sdk/provider-utils": "4.0.30"
+    }
   }
 }
