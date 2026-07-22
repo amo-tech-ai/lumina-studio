@@ -233,6 +233,14 @@ describe("validateNotificationUrl", () => {
     expect(validateNotificationUrl("https://192.168.1.1/hook")).toMatch(/not allowed/);
   });
 
+  it("rejects bracketed IPv6 loopback, link-local, and unique-local hosts", async () => {
+    const { validateNotificationUrl } = await importSignUpload();
+    expect(validateNotificationUrl("https://[::1]/hook")).toMatch(/not allowed/);
+    expect(validateNotificationUrl("https://[fe80::1]/hook")).toMatch(/not allowed/);
+    expect(validateNotificationUrl("https://[fc00::1]/hook")).toMatch(/not allowed/);
+    expect(validateNotificationUrl("https://[fd12:3456:789a::1]/hook")).toMatch(/not allowed/);
+  });
+
   it("rejects the cloud metadata link-local address", async () => {
     const { validateNotificationUrl } = await importSignUpload();
     expect(validateNotificationUrl("https://169.254.169.254/latest/meta-data")).toMatch(/not allowed/);

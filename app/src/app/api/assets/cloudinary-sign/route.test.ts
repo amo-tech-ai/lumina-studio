@@ -1,6 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const VALID_BRAND_ID = "11111111-1111-1111-1111-111111111111";
+const VALID_ORG_ID = "22222222-2222-2222-2222-222222222222";
+const VALID_WORK_ID = "33333333-3333-3333-3333-333333333333";
 
 const mockWithOperatorAuth = vi.fn();
 const mockMaybeSingle = vi.fn();
@@ -21,8 +23,11 @@ vi.mock("@/lib/supabase/operator-client", () => ({
 }));
 
 function supabaseClientStub() {
-  const eq1 = vi.fn(() => ({ maybeSingle: mockMaybeSingle }));
-  const select = vi.fn(() => ({ eq: eq1 }));
+  const builder: { eq: ReturnType<typeof vi.fn>; maybeSingle: typeof mockMaybeSingle } = {
+    eq: vi.fn(() => builder),
+    maybeSingle: mockMaybeSingle,
+  };
+  const select = vi.fn(() => builder);
   return { from: vi.fn(() => ({ select })) };
 }
 
@@ -31,7 +36,7 @@ beforeEach(() => {
   vi.stubEnv("CLOUDINARY_API_SECRET", "test-api-secret");
   vi.stubEnv("NEXT_PUBLIC_CLOUDINARY_API_KEY", "test-api-key");
   mockWithOperatorAuth.mockResolvedValue({ id: "user-1", name: "QA" });
-  mockMaybeSingle.mockResolvedValue({ data: { id: VALID_BRAND_ID, org_id: "22222222-2222-2222-2222-222222222222" }, error: null });
+  mockMaybeSingle.mockResolvedValue({ data: { id: VALID_BRAND_ID, org_id: VALID_ORG_ID }, error: null });
   mockCreateOperatorSupabaseClient.mockResolvedValue(supabaseClientStub());
 });
 
@@ -83,7 +88,7 @@ describe("POST /api/assets/cloudinary-sign", () => {
     expect(data.uploadSignatureTimestamp).toBe(1_784_000_000);
     expect(data.uploadPreset).toBe("ipix-signed-upload");
     expect(data.folder).toBe(
-      `ipix/dev/22222222-2222-2222-2222-222222222222/${VALID_BRAND_ID}/products`,
+      `ipix/dev/${VALID_ORG_ID}/${VALID_BRAND_ID}/products`,
     );
     expect(data.context).toContain(`brand_id=${VALID_BRAND_ID}`);
     expect(JSON.stringify(data)).not.toContain("test-api-secret");
@@ -111,7 +116,7 @@ describe("POST /api/assets/cloudinary-sign", () => {
     expect(typeof data.apiKey).toBe("string");
     expect(data.apiKey.length).toBeGreaterThan(0);
     expect(data.folder).toBe(
-      `ipix/dev/22222222-2222-2222-2222-222222222222/${VALID_BRAND_ID}/products`,
+      `ipix/dev/${VALID_ORG_ID}/${VALID_BRAND_ID}/products`,
     );
     expect(data.context).toContain(`brand_id=${VALID_BRAND_ID}`);
   });
@@ -159,7 +164,7 @@ describe("POST /api/assets/cloudinary-sign", () => {
 
   it("ignores forged client org_id and signs with the server-verified brand org", async () => {
     const FORGED_ORG_B = "99999999-9999-9999-9999-999999999999";
-    const REAL_ORG_A = "22222222-2222-2222-2222-222222222222";
+    const REAL_ORG_A = VALID_ORG_ID;
     mockMaybeSingle.mockResolvedValueOnce({
       data: { id: VALID_BRAND_ID, org_id: REAL_ORG_A },
       error: null,
@@ -237,5 +242,82 @@ describe("POST /api/assets/cloudinary-sign", () => {
       }),
     );
     expect(res.status).toBe(403);
+  });
+
+  it("returns 403 when shoot workId does not belong to the brand", async () => {
+    mockMaybeSingle
+      .mockResolvedValueOnce({ data: { id: VALID_BRAND_ID, org_id: VALID_ORG_ID }, error: null })
+      .mockResolvedValueOnce({ data: null, error: null });
+    const { POST } = await importRoute();
+    const res = await POST(
+      new Request("http://localhost/api/assets/cloudinary-sign", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          paramsToSign: {
+            timestamp: 1_784_000_000,
+            upload_preset: "ipix-signed-upload",
+            context: { brand_id: VALID_BRAND_ID },
+          },
+          workType: "shoots",
+          workId: VALID_WORK_ID,
+        }),
+      }),
+    );
+    expect(res.status).toBe(403);
+    const data = await res.json();
+    expect(data.error).toMatch(/shoot/i);
+  });
+
+  it("returns 403 when campaign workId does not belong to the brand", async () => {
+    mockMaybeSingle
+      .mockResolvedValueOnce({ data: { id: VALID_BRAND_ID, org_id: VALID_ORG_ID }, error: null })
+      .mockResolvedValueOnce({ data: null, error: null });
+    const { POST } = await importRoute();
+    const res = await POST(
+      new Request("http://localhost/api/assets/cloudinary-sign", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          paramsToSign: {
+            timestamp: 1_784_000_000,
+            upload_preset: "ipix-signed-upload",
+            context: { brand_id: VALID_BRAND_ID },
+          },
+          workType: "campaigns",
+          workId: VALID_WORK_ID,
+        }),
+      }),
+    );
+    expect(res.status).toBe(403);
+    const data = await res.json();
+    expect(data.error).toMatch(/campaign/i);
+  });
+
+  it("signs shoots workId when ownership check passes", async () => {
+    mockMaybeSingle
+      .mockResolvedValueOnce({ data: { id: VALID_BRAND_ID, org_id: VALID_ORG_ID }, error: null })
+      .mockResolvedValueOnce({ data: { id: VALID_WORK_ID }, error: null });
+    const { POST } = await importRoute();
+    const res = await POST(
+      new Request("http://localhost/api/assets/cloudinary-sign", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          paramsToSign: {
+            timestamp: 1_784_000_000,
+            upload_preset: "ipix-signed-upload",
+            context: { brand_id: VALID_BRAND_ID },
+          },
+          workType: "shoots",
+          workId: VALID_WORK_ID,
+        }),
+      }),
+    );
+    expect(res.status).toBe(200);
+    const data = await res.json();
+    expect(data.folder).toBe(
+      `ipix/dev/${VALID_ORG_ID}/${VALID_BRAND_ID}/shoots/${VALID_WORK_ID}`,
+    );
   });
 });

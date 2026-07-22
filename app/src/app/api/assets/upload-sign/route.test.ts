@@ -53,7 +53,6 @@ beforeEach(() => {
   vi.stubEnv("CLOUDINARY_API_SECRET", "test-secret");
   vi.stubEnv("VERCEL_ENV", "dev");
   mockWithOperatorAuth.mockResolvedValue({ id: "user-1", name: "QA" });
-  mockMaybeSingle.mockResolvedValue({ data: { id: VALID_BRAND_ID, org_id: VALID_ORG_ID }, error: null });
   mockCreateOperatorSupabaseClient.mockResolvedValue(supabaseClientStub());
   mockIsBrandAccessible.mockResolvedValue({ ok: true, orgId: VALID_ORG_ID });
   mockMaybeSingle.mockResolvedValue({ data: { id: VALID_CAMPAIGN_WORK_ID }, error: null });

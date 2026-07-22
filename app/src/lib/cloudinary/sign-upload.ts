@@ -108,7 +108,11 @@ export function isAllowedResourceType(value: string): boolean {
 const NOTIFICATION_ALLOWED_HOSTS_ENV = "CLOUDINARY_NOTIFICATION_ALLOWED_HOSTS";
 
 function isPrivateOrLoopbackHost(hostname: string): boolean {
-  const h = hostname.toLowerCase();
+  // WHATWG URL.hostname keeps brackets on IPv6 literals ("[::1]").
+  const h =
+    hostname.startsWith("[") && hostname.endsWith("]")
+      ? hostname.slice(1, -1).toLowerCase()
+      : hostname.toLowerCase();
   if (h === "localhost" || h.endsWith(".localhost") || h === "0.0.0.0" || h === "::1" || h === "::") {
     return true;
   }

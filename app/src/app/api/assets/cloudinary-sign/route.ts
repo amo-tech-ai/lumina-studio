@@ -95,6 +95,39 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: brandCheck.message }, { status: brandCheck.status });
     }
     orgId = brandCheck.orgId;
+
+    // Mirror upload-sign: shoots/campaigns workId must belong to this brand.
+    if (workType === "shoots" && workId) {
+      const { data: shoot, error: shootErr } = await supabase
+        .from("shoot_portfolio_view")
+        .select("id")
+        .eq("id", workId)
+        .eq("brand_id", brandId)
+        .maybeSingle();
+      if (shootErr) {
+        console.error("[assets/cloudinary-sign] shoot ownership query failed:", shootErr.message);
+        return NextResponse.json({ error: "Internal error" }, { status: 500 });
+      }
+      if (!shoot) {
+        return NextResponse.json({ error: "Shoot does not belong to the requested brand" }, { status: 403 });
+      }
+    }
+
+    if (workType === "campaigns" && workId) {
+      const { data: campaign, error: campaignErr } = await supabase
+        .from("campaigns")
+        .select("id")
+        .eq("id", workId)
+        .eq("brand_id", brandId)
+        .maybeSingle();
+      if (campaignErr) {
+        console.error("[assets/cloudinary-sign] campaign ownership query failed:", campaignErr.message);
+        return NextResponse.json({ error: "Internal error" }, { status: 500 });
+      }
+      if (!campaign) {
+        return NextResponse.json({ error: "Campaign does not belong to the requested brand" }, { status: 403 });
+      }
+    }
   } else {
     const devOrg = process.env.DAM_DEV_ORG_ID;
     orgId = typeof devOrg === "string" && UUID_RE.test(devOrg) ? devOrg : null;
