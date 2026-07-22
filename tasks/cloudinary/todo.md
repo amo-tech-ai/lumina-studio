@@ -7,6 +7,7 @@
 | Surface | Link |
 |---------|------|
 | **Project** | [Cloudinary — Media Platform](https://linear.app/amo100/project/cloudinary-media-platform-a44602c2c36f) |
+| **IPI-60 · CLD-004** | ✅ **Done** 2026-07-20 — DAM Structure (folder taxonomy, taxonomy module, signer alignment, tests, audit script, verify) |
 | **Overview** | [Cloudinary — Overview](https://linear.app/amo100/document/cloudinary-overview-7461d13600cf) |
 | **Product Plan and Roadmap** | [Cloudinary — Product Plan and Roadmap](https://linear.app/amo100/document/cloudinary-product-plan-and-roadmap-7f263c42ae23) |
 | **Progress Tracker** | [Cloudinary — Progress Tracker](https://linear.app/amo100/document/cloudinary-progress-tracker-34bf8fa188cd) |
@@ -353,6 +354,7 @@ Later    IPI-444, IPI-439, IPI-640, IPI-448, IPI-637, IPI-434,
 | IPI-641 CLD-ID-001 | 🟢 Complete |
 | IPI-643 SHOOT-DATA-002A | 🟢 Complete — 49 rows |
 | IPI-645 SHOOT-DATA-002B | 🟢 Complete — lookupShotReferences |
+| IPI-60 CLD-004 | 🟢 Complete — DAM taxonomy module, signer alignment, dry-run audit script |
 
 ### Active status corrections
 
