@@ -39,6 +39,7 @@ Official-first ladder: Dashboard → Wrangler → bindings → OpenNext → GitH
 | [`audit/`](./audit/) | 1 | **Current** dated audits | ✅ |
 | [`audits/`](./audits/) | 7 | Topic audits (hosting, bundle, secrets, …) | ✅ evidence |
 | [`adr/`](./adr/) | 1 | Architecture decision records | ✅ |
+| [`docs/`](./docs/) | 1 | Operational runbooks (Hyperdrive monitoring, etc.) | ✅ |
 | [`user-journeys/`](./user-journeys/) | 12 | Journey test plans | ✅ |
 | [`tests/`](./tests/) | 13+ md + JSON packs | Runtime / PR evidence | ✅ |
 | [`Tasks/`](./Tasks/) | 28 active specs | Spec sheets (may lag Linear — trust Linear) | 🟡 |
