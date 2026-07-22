@@ -6,6 +6,7 @@ import {
   decodeTagsQueryValue,
   encodeAssetsCursor,
   encodeTagsQueryValue,
+  formatTagsDraft,
   normalizeAssetTag,
   parseAssetsLibraryParams,
   toListAssetsInput,
@@ -109,6 +110,15 @@ describe("tag query codec", () => {
 
   it("still parses legacy unencoded CSV tags", () => {
     expect(decodeTagsQueryValue("Editorial, Approved")).toEqual(["editorial", "approved"]);
+  });
+
+  it("formatTagsDraft encodes only when a tag contains a comma", () => {
+    expect(formatTagsDraft(["Editorial", "Approved"])).toBe("editorial, approved");
+    expect(formatTagsDraft(["Brand, Inc.", "runway"])).toBe(encodeTagsQueryValue(["Brand, Inc.", "runway"]));
+    expect(decodeTagsQueryValue(formatTagsDraft(["Brand, Inc.", "runway"]))).toEqual([
+      "brand, inc.",
+      "runway",
+    ]);
   });
 
   it("buildAssetsLibraryUrl encodes commas so parse does not split a single tag", () => {

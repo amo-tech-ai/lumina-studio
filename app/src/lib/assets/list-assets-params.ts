@@ -98,6 +98,16 @@ export function decodeTagsQueryValue(raw: string | undefined): string[] {
     .filter(Boolean);
 }
 
+/**
+ * Draft input text for the tags field. Plain CSV when safe; encoded when any
+ * tag contains a comma so resubmit via decodeTagsQueryValue does not split it.
+ */
+export function formatTagsDraft(tags: string[]): string {
+  if (tags.length === 0) return "";
+  if (tags.some((t) => t.includes(","))) return encodeTagsQueryValue(tags);
+  return tags.map(normalizeAssetTag).filter(Boolean).join(", ");
+}
+
 /** Lowercase + collapse internal whitespace — used for tags filter + tag text match. */
 export function normalizeAssetTag(tag: string): string {
   return tag.trim().toLowerCase().replace(/\s+/g, " ");

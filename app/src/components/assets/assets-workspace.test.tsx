@@ -28,6 +28,7 @@ vi.mock("next/navigation", () => ({
 import { AssetsWorkspace } from "./assets-workspace";
 import type { AssetRow } from "@/lib/assets/get-assets";
 import {
+  decodeTagsQueryValue,
   parseAssetsLibraryParams,
   type AssetsLibraryFilters,
 } from "@/lib/assets/list-assets-params";
@@ -312,6 +313,25 @@ describe("AssetsWorkspace", () => {
     fireEvent.change(screen.getByTestId("assets-tags-input"), { target: { value: "Editorial, Approved" } });
     fireEvent.submit(screen.getByRole("search"));
     expect(push).toHaveBeenCalledWith("/app/assets?q=runway&tags=editorial%2Capproved");
+  });
+
+  it("resubmits comma-containing tags without splitting them", () => {
+    render(
+      <AssetsWorkspace
+        {...defaultProps}
+        filters={filters({ tags: encodeURIComponent("Brand, Inc.") })}
+        assets={[asset()]}
+        isAuthenticated
+      />,
+    );
+    // Draft is restored via formatTagsDraft (encoded when commas are present).
+    const input = screen.getByTestId("assets-tags-input") as HTMLInputElement;
+    expect(input.value).toContain("%2C");
+    fireEvent.submit(screen.getByRole("search"));
+    expect(push).toHaveBeenCalledWith(expect.stringMatching(/tags=/));
+    const url = String(push.mock.calls[0][0]);
+    const tagsParam = new URLSearchParams(url.split("?")[1] ?? "").get("tags");
+    expect(decodeTagsQueryValue(tagsParam ?? "")).toEqual(["brand, inc."]);
   });
 
   it("renders Next page when nextCursor is present", () => {

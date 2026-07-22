@@ -11,6 +11,8 @@ import type { AssetRow } from "@/lib/assets/get-assets";
 import {
   ASSET_STATUS_VALUES,
   buildAssetsLibraryUrl,
+  decodeTagsQueryValue,
+  formatTagsDraft,
   hasServerAssetsFilters,
   type AssetsLibraryFilters,
 } from "@/lib/assets/list-assets-params";
@@ -95,13 +97,13 @@ export function AssetsWorkspace({
   const [dateFilter, setDateFilter] = useState<DateBucket>("all");
   const [sortByMatch, setSortByMatch] = useState(false);
   const [draftQuery, setDraftQuery] = useState(filters.query);
-  const [draftTags, setDraftTags] = useState(filters.tags.join(", "));
+  const [draftTags, setDraftTags] = useState(() => formatTagsDraft(filters.tags));
 
   // Server navigation updates `filters` without remounting — keep draft inputs in sync
   // so a copied URL / back-forward restore shows the same search text.
   useEffect(() => {
     setDraftQuery(filters.query);
-    setDraftTags(filters.tags.join(", "));
+    setDraftTags(formatTagsDraft(filters.tags));
   }, [filters.query, filters.tags]);
 
   const brandOptions = useMemo(() => {
@@ -144,13 +146,10 @@ export function AssetsWorkspace({
 
   function onSearchSubmit(event: FormEvent) {
     event.preventDefault();
-    const tags = draftTags
-      .split(",")
-      .map((t) => t.trim().toLowerCase())
-      .filter(Boolean);
     navigate({
       query: draftQuery.trim(),
-      tags,
+      // Same codec as the shareable URL — plain CSV or percent-encoded tags.
+      tags: decodeTagsQueryValue(draftTags),
     });
   }
 
