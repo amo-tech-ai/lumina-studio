@@ -60,6 +60,23 @@ if (requireServiceRole && !serviceKey) {
   process.exit(1);
 }
 
+// IPI-245 — same pattern as REQUIRE_SERVICE_ROLE above. Without this flag, a CI
+// job that never wires HYPERDRIVE_DATABASE_URL as a secret gets a silent
+// console.warn skip on the one probe that actually exercises
+// hyperdrive_mastra_runtime's grants/RLS — "verify-rls passed" would be true
+// without that role ever having been checked. Set REQUIRE_HYPERDRIVE_RUNTIME_PROBE=1
+// on any CI job that is supposed to enforce this (not set by default here —
+// wiring the actual secret into that workflow is a separate ops action).
+const requireHyperdriveRuntimeProbe =
+  process.env.REQUIRE_HYPERDRIVE_RUNTIME_PROBE === "1" ||
+  process.env.REQUIRE_HYPERDRIVE_RUNTIME_PROBE === "true";
+if (requireHyperdriveRuntimeProbe && !process.env.HYPERDRIVE_DATABASE_URL) {
+  console.error(
+    "REQUIRE_HYPERDRIVE_RUNTIME_PROBE=1 but HYPERDRIVE_DATABASE_URL is missing — refuse to run",
+  );
+  process.exit(1);
+}
+
 const stamp = Date.now();
 const password = "RlsTestPass123!";
 const emailA = `plt002-rls-a-${stamp}@example.com`;
@@ -254,13 +271,20 @@ async function assertPlannerAssignmentSelectCatalog() {
  * Soft-skips (does not fail) when HYPERDRIVE_DATABASE_URL is unset — this repo's CI
  * does not yet wire that secret (only DATABASE_URL, a different role), mirroring how
  * the IPI-647 catalog assert above treats its own missing connection string.
+ *
+ * `onFixtureReady` (optional) runs after the INSERT lands but before this probe's
+ * own SELECT/UPDATE — it lets the caller point the anon/authenticated negative
+ * probes at a row that genuinely exists, so an empty result from those probes is a
+ * real denial proof, not just "the table happened to be empty" (the two are
+ * indistinguishable from an empty read alone).
  */
-async function assertMastraRuntimeRoleProbe() {
+async function assertMastraRuntimeRoleProbe(onFixtureReady) {
   const runtimeUrl = process.env.HYPERDRIVE_DATABASE_URL;
   if (!runtimeUrl) {
     console.warn(
-      "warn: IPI-245 runtime-role probe skipped — HYPERDRIVE_DATABASE_URL unset (anon/authenticated negative probes still ran)",
+      "warn: IPI-245 runtime-role probe skipped — HYPERDRIVE_DATABASE_URL unset (anon/authenticated negative probes ran against a possibly-empty table)",
     );
+    if (onFixtureReady) await onFixtureReady();
     return;
   }
 
@@ -269,6 +293,7 @@ async function assertMastraRuntimeRoleProbe() {
     ({ Client } = requireFromApp("pg"));
   } catch (err) {
     fail(`IPI-245 runtime-role probe: cannot load pg (${err instanceof Error ? err.message : err})`);
+    if (onFixtureReady) await onFixtureReady();
     return;
   }
 
@@ -292,6 +317,8 @@ async function assertMastraRuntimeRoleProbe() {
       insRows[0]?.id === probeId,
       "hyperdrive_mastra_runtime can INSERT into mastra.mastra_threads",
     );
+
+    if (onFixtureReady) await onFixtureReady();
 
     const { rows: selRows } = await client.query(
       `select id, title from mastra.mastra_threads where id = $1`,
@@ -513,17 +540,28 @@ try {
   // still gets through. Cross-org negative tests are out of scope here — IPI-621.
   const mastraProbeTables = ["mastra_threads", "mastra_agents", "mastra_ai_spans"];
 
-  for (const t of mastraProbeTables) {
-    const { data, error } = await anon.schema("mastra").from(t).select("id").limit(1);
-    assertNoMastraAccess(error, data, `anon cannot access mastra.${t}`);
-  }
+  // select("*") — not a specific column name. mastra_ai_spans has no `id` column
+  // (composite PK on traceId/spanId); a column-not-found error would otherwise get
+  // misread by assertNoMastraAccess as a valid denial when it's actually just a
+  // malformed query unrelated to authorization.
+  await assertMastraRuntimeRoleProbe(async () => {
+    // Runs after IPI-245's own INSERT lands on mastra.mastra_threads, so the anon/
+    // authenticated probe against that table sees a row that genuinely exists —
+    // an empty result here is then a real denial proof, not a coincidence of the
+    // table being empty. mastra_agents/mastra_ai_spans stay unseeded (no cheap
+    // fixture insert available for them here); their zero-access proof still rests
+    // on the schema-not-exposed / revoked-grants layer documented on
+    // assertNoMastraAccess, same as before this fix.
+    for (const t of mastraProbeTables) {
+      const { data, error } = await anon.schema("mastra").from(t).select("*").limit(1);
+      assertNoMastraAccess(error, data, `anon cannot access mastra.${t}`);
+    }
 
-  for (const t of mastraProbeTables) {
-    const { data, error } = await userA.client.schema("mastra").from(t).select("id").limit(1);
-    assertNoMastraAccess(error, data, `authenticated cannot access mastra.${t}`);
-  }
-
-  await assertMastraRuntimeRoleProbe();
+    for (const t of mastraProbeTables) {
+      const { data, error } = await userA.client.schema("mastra").from(t).select("*").limit(1);
+      assertNoMastraAccess(error, data, `authenticated cannot access mastra.${t}`);
+    }
+  });
 
   // profiles — own read/write
   const { error: profileInsertErr } = await userA.client.from("profiles").insert({
