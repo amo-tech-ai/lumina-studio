@@ -11,9 +11,18 @@ import {
   signCloudinaryParams,
   validateParamsToSign,
 } from "@/lib/cloudinary/sign-upload";
+import { isDamWorkType, type WorkType } from "@/lib/cloudinary/taxonomy";
 import { createOperatorSupabaseClient } from "@/lib/supabase/operator-client";
 
 export const dynamic = "force-dynamic";
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+type SignBody = {
+  paramsToSign?: unknown;
+  workType?: unknown;
+  workId?: unknown;
+};
 
 export async function POST(request: Request) {
   let operator;
@@ -39,10 +48,11 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
   }
 
-  const paramsToSign =
+  const body =
     parsed && typeof parsed === "object" && !Array.isArray(parsed)
-      ? (parsed as { paramsToSign?: unknown }).paramsToSign
+      ? (parsed as SignBody)
       : undefined;
+  const paramsToSign = body?.paramsToSign;
 
   if (!paramsToSign || typeof paramsToSign !== "object" || Array.isArray(paramsToSign)) {
     return NextResponse.json({ error: "paramsToSign is required" }, { status: 400 });
@@ -59,8 +69,25 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Invalid brand_id in context" }, { status: 400 });
   }
 
+  let workType: WorkType | undefined;
+  if (body?.workType !== undefined && body.workType !== null) {
+    if (!isDamWorkType(body.workType)) {
+      return NextResponse.json({ error: "Invalid workType" }, { status: 400 });
+    }
+    workType = body.workType;
+  }
+
+  let workId: string | undefined;
+  if (body?.workId !== undefined && body.workId !== null) {
+    if (typeof body.workId !== "string" || !UUID_RE.test(body.workId)) {
+      return NextResponse.json({ error: "Invalid workId" }, { status: 400 });
+    }
+    workId = body.workId;
+  }
+
   // Prefer RLS-backed org_id from brands — never trust client context for org.
-  let orgId: string | null | undefined;
+  // Taxonomy folders require a real org UUID (no "null"/"unknown" path segments).
+  let orgId: string | null = null;
   if (operator.id !== "dev-unauthenticated") {
     const supabase = await createOperatorSupabaseClient(request);
     const brandCheck = await isBrandAccessible(supabase, brandId);
@@ -68,6 +95,19 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: brandCheck.message }, { status: brandCheck.status });
     }
     orgId = brandCheck.orgId;
+  } else {
+    const devOrg = process.env.DAM_DEV_ORG_ID;
+    orgId = typeof devOrg === "string" && UUID_RE.test(devOrg) ? devOrg : null;
+  }
+
+  if (!orgId || !UUID_RE.test(orgId)) {
+    return NextResponse.json(
+      {
+        error:
+          "Brand has no organization — DAM taxonomy uploads require org_id. Assign the brand to an org first.",
+      },
+      { status: 400 },
+    );
   }
 
   const timestamp =
@@ -84,8 +124,11 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Invalid resource_type" }, { status: 400 });
   }
 
-  // Sign sanitized widget params — must match what CldUploadWidget uploads (not a rebuilt superset).
-  const paramsForSignature = sanitizeWidgetParamsToSign(params, brandId, { orgId });
+  const paramsForSignature = sanitizeWidgetParamsToSign(params, brandId, {
+    orgId,
+    workType,
+    workId,
+  });
 
   const signature = signCloudinaryParams(paramsForSignature, apiSecret);
 

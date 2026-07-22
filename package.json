@@ -30,10 +30,13 @@
     "worktree:health:all": "node scripts/worktree-health.mjs --all",
     "worktree:pre-delete": "node scripts/worktree-health.mjs --pre-delete",
     "worktree:health:test": "node --test scripts/lib/worktree-health-checks.test.mjs",
-    "supabase:verify-planner": "node --experimental-strip-types scripts/verify-planner-scenario.mjs"
+    "supabase:verify-planner": "node --experimental-strip-types scripts/verify-planner-scenario.mjs",
+    "cloudinary:dry-run-audit": "node scripts/cloudinary-dry-run-audit.mjs",
+    "cloudinary:dry-run-audit:test": "node --test scripts/lib/cloudinary-dry-run-audit-lib.test.mjs"
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2.108.2"
+    "@supabase/supabase-js": "^2.108.2",
+    "cloudinary": "^2.10.0"
   },
   "devDependencies": {
     "@playwright/test": "^1.52.0"
