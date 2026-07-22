@@ -56,10 +56,14 @@ SET LOCAL lock_timeout = '5s';
 SET LOCAL statement_timeout = '60s';
 
 -- ============================================================================
--- Step 1: Pre-flight assertion — abort if any mastra.* table unexpectedly has
--- rows. If something started writing to the empty mastra-schema tables between
--- PR #601 applying and this migration running, that data must NOT be silently
--- dropped by step 2 below.
+-- Step 1: Pre-flight assertions.
+--   1a. Fail closed if a source table is missing — silently skipping a
+--       missing table would leave a partially migrated schema while the
+--       deployment continues, which is worse than aborting loudly.
+--   1b. Abort if any mastra.* destination table unexpectedly has rows. If
+--       something started writing to the empty mastra-schema tables between
+--       PR #601 applying and this migration running, that data must NOT be
+--       silently dropped by step 2 below.
 -- ============================================================================
 DO $$
 DECLARE
@@ -76,6 +80,15 @@ BEGIN
       'mastra_threads','mastra_workflow_snapshot'
     ]) AS tablename
   LOOP
+    IF NOT EXISTS (
+      SELECT 1 FROM pg_tables WHERE schemaname = 'public' AND tablename = r.tablename
+    ) THEN
+      RAISE EXCEPTION
+        'IPI-784 pre-flight failed: required source table public.% is missing. '
+        'Aborting — refusing to proceed with an incomplete source set.',
+        r.tablename;
+    END IF;
+
     IF EXISTS (
       SELECT 1 FROM pg_tables WHERE schemaname = 'mastra' AND tablename = r.tablename
     ) THEN
@@ -149,11 +162,18 @@ ALTER TABLE public.mastra_workflow_snapshot SET SCHEMA mastra;
 
 -- ============================================================================
 -- Step 4: Re-apply PR #602 (IPI-629)'s grant/RLS/policy treatment to the moved
--- tables, PLUS explicitly strip the legacy public-schema grants (service_role,
--- PUBLIC) that rode along with the move. This loop's anon/authenticated/grant/
--- RLS/policy logic is copied verbatim from supabase/migrations/20260722094055_
--- mastra_runtime_grants_and_rls.sql — schema-driven via pg_tables, so it
--- re-applies identically to the tables just moved in.
+-- tables ONLY, PLUS explicitly strip the legacy public-schema grants
+-- (service_role, PUBLIC) that rode along with the move. This loop's
+-- anon/authenticated/grant/RLS/policy logic is copied from supabase/
+-- migrations/20260722094055_mastra_runtime_grants_and_rls.sql, but scoped to
+-- the same explicit 18-table array used in step 1's pre-flight — NOT a broad
+-- `LIKE 'mastra\_%'` scan. The 6 structurally-divergent tables excluded above
+-- (mastra_datasets, mastra_dataset_items, mastra_experiments,
+-- mastra_experiment_results, mastra_scorer_definitions, mastra_scorers)
+-- already exist in the mastra schema and already got PR #602's grant/RLS
+-- treatment when that migration applied — this step must not touch them
+-- again, so it can't silently override a future, deliberately different
+-- access decision on those 6 without anyone noticing.
 --
 -- The moved tables already have RLS enabled (carried over from public.mastra_*
 -- per IPI-227's earlier hardening) — ENABLE ROW LEVEL SECURITY is a safe no-op.
@@ -170,7 +190,14 @@ BEGIN
     SELECT tablename
     FROM pg_tables
     WHERE schemaname = 'mastra'
-      AND tablename LIKE 'mastra\_%'
+      AND tablename = ANY (ARRAY[
+        'mastra_agent_versions','mastra_agents','mastra_ai_spans','mastra_background_tasks',
+        'mastra_channel_config','mastra_channel_installations','mastra_dataset_versions',
+        'mastra_favorites','mastra_messages','mastra_observational_memory',
+        'mastra_prompt_block_versions','mastra_prompt_blocks','mastra_resources',
+        'mastra_schedule_triggers','mastra_schedules','mastra_scorer_definition_versions',
+        'mastra_threads','mastra_workflow_snapshot'
+      ])
     ORDER BY tablename
   LOOP
     -- Strip every non-owner grant this table may carry (legacy public grants,
