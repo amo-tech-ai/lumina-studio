@@ -25,7 +25,8 @@
     "check:cf-types": "wrangler types cloudflare-env.d.ts --env-interface CloudflareEnv --include-runtime=false --check",
     "check:worker-bundle": "node scripts/check-worker-bundle-size.mjs",
     "verify:cloudinary-pipeline": "node scripts/verify-cloudinary-pipeline.mjs",
-    "verify:cloudinary-webhook-live": "node scripts/verify-cloudinary-webhook-live.mjs"
+    "verify:cloudinary-webhook-live": "node scripts/verify-cloudinary-webhook-live.mjs",
+    "verify:cloudflare-gateway": "node scripts/verify-cloudflare-gateway.mjs"
   },
   "dependencies": {
     "@ag-ui/client": "0.0.57",
