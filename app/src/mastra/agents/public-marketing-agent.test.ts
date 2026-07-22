@@ -1,5 +1,9 @@
-import { describe, expect, it } from "vitest";
-import { publicMarketingAgent } from "./public-marketing-agent";
+import { RequestContext } from "@mastra/core/request-context";
+import { afterEach, describe, expect, it, vi } from "vitest";
+
+import { resetAgentRoutingWarnState } from "@/lib/ai/agent-routing";
+import * as cloudflareModels from "@/lib/ai/cloudflare-models";
+import { resolveAgentModelOutcome } from "@/lib/ai/cloudflare-models";
 import { PUBLIC_MARKETING_INSTRUCTIONS } from "@/mastra/prompts/public-marketing";
 import {
   LeadPayload,
@@ -7,6 +11,15 @@ import {
   SERVICE_SLUGS,
   LeadReadiness,
 } from "@/mastra/types/marketing-lead";
+import { publicMarketingAgent } from "./public-marketing-agent";
+
+function contextWithCfEnv(env: Record<string, unknown> | undefined): RequestContext {
+  const requestContext = new RequestContext();
+  if (env) requestContext.set("cfEnv", env);
+  return requestContext;
+}
+
+const fakeAiBinding = { run: vi.fn() };
 
 // ─── Agent structure ────────────────────────────────────────────────────────
 
@@ -15,10 +28,10 @@ describe("publicMarketingAgent — structure", () => {
     expect(publicMarketingAgent.id).toBe("public-marketing");
   });
 
-  it("uses resolveModel() default (gemini-3.1-flash-lite, never preview ids in instructions)", () => {
-    // Model comes from resolveModel() → resolveGeminiModel(); default is lite (IPI-223).
-    // We can't inspect the model id through the Agent interface, but we verify
-    // instructions contain no legacy/preview model references.
+  it("instructions never mention preview/experimental model ids (IPI-223)", () => {
+    // Model is resolveAgentModel(..., tier: "fast") — legacy path still uses
+    // resolveModel("fast"). We can't inspect the LanguageModel id through Agent;
+    // assert the public prompt stays free of preview/experimental refs.
     expect(PUBLIC_MARKETING_INSTRUCTIONS).not.toMatch(/\bpreview\b|\bexperimental\b|gemini-2\.0/i);
   });
 
@@ -26,6 +39,119 @@ describe("publicMarketingAgent — structure", () => {
     // @ts-expect-error tools is internal but we want to assert it's absent/empty
     const tools = publicMarketingAgent.tools;
     expect(tools == null || Object.keys(tools).length === 0).toBe(true);
+  });
+});
+
+// ─── IPI-753 · CF-MIG-230-W1 — fail-closed routing (tier: fast) ─────────────
+
+describe("publicMarketingAgent — IPI-753 W1 routing (fail-closed)", () => {
+  afterEach(() => {
+    resetAgentRoutingWarnState();
+    vi.restoreAllMocks();
+  });
+
+  it("flag unset / no cfEnv → legacy (ship default)", () => {
+    const outcome = resolveAgentModelOutcome({
+      agentId: "public-marketing",
+      tier: "fast",
+      requestContext: contextWithCfEnv(undefined),
+    });
+    expect(outcome.mode).toBe("legacy");
+    expect(outcome.reason).toBe("no_cf_env");
+  });
+
+  it("flag legacy + AI binding → legacy", () => {
+    const outcome = resolveAgentModelOutcome({
+      agentId: "public-marketing",
+      tier: "fast",
+      requestContext: contextWithCfEnv({
+        AI_ROUTING_AGENT_PUBLIC_MARKETING: "legacy",
+        AI: fakeAiBinding,
+      }),
+    });
+    expect(outcome.mode).toBe("legacy");
+    expect(outcome.reason).toBe("legacy_flag");
+  });
+
+  it("flag native + cfEnv.AI → native Workers AI path", () => {
+    const outcome = resolveAgentModelOutcome({
+      agentId: "public-marketing",
+      tier: "fast",
+      requestContext: contextWithCfEnv({
+        AI_ROUTING_AGENT_PUBLIC_MARKETING: "native",
+        AI: fakeAiBinding,
+      }),
+    });
+    expect(outcome.mode).toBe("native");
+    expect(outcome.reason).toBe("native");
+    expect(outcome.model).toBeDefined();
+  });
+
+  it("invalid flag → fail-closed legacy", () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const outcome = resolveAgentModelOutcome({
+      agentId: "public-marketing",
+      tier: "fast",
+      requestContext: contextWithCfEnv({
+        AI_ROUTING_AGENT_PUBLIC_MARKETING: "banana",
+        AI: fakeAiBinding,
+      }),
+    });
+    expect(outcome.mode).toBe("legacy");
+    expect(warn).toHaveBeenCalled();
+  });
+
+  it("native flag but missing AI binding → legacy", () => {
+    const outcome = resolveAgentModelOutcome({
+      agentId: "public-marketing",
+      tier: "fast",
+      requestContext: contextWithCfEnv({
+        AI_ROUTING_AGENT_PUBLIC_MARKETING: "native",
+      }),
+    });
+    expect(outcome.mode).toBe("legacy");
+    expect(outcome.reason).toBe("missing_ai_binding");
+  });
+
+  it("rollback: native → AI_ROUTING_AGENT_PUBLIC_MARKETING=legacy → legacy", () => {
+    const native = resolveAgentModelOutcome({
+      agentId: "public-marketing",
+      tier: "fast",
+      requestContext: contextWithCfEnv({
+        AI_ROUTING_AGENT_PUBLIC_MARKETING: "native",
+        AI: fakeAiBinding,
+      }),
+    });
+    expect(native.mode).toBe("native");
+
+    const rolledBack = resolveAgentModelOutcome({
+      agentId: "public-marketing",
+      tier: "fast",
+      requestContext: contextWithCfEnv({
+        AI_ROUTING_AGENT_PUBLIC_MARKETING: "legacy",
+        AI: fakeAiBinding,
+      }),
+    });
+    expect(rolledBack.mode).toBe("legacy");
+    expect(rolledBack.reason).toBe("legacy_flag");
+  });
+
+  it("getModel with native cfEnv returns a model via agent wiring (agentId + tier: fast)", async () => {
+    // CodeRabbit nit: exercise publicMarketingAgent.getModel, not only resolveAgentModelOutcome.
+    const spy = vi.spyOn(cloudflareModels, "resolveAgentModel");
+    const requestContext = contextWithCfEnv({
+      AI_ROUTING_AGENT_PUBLIC_MARKETING: "native",
+      AI: fakeAiBinding,
+    });
+
+    const model = await publicMarketingAgent.getModel({ requestContext });
+
+    expect(model).toBeDefined();
+    expect(spy).toHaveBeenCalledWith({
+      agentId: "public-marketing",
+      tier: "fast",
+      requestContext,
+    });
   });
 });
 
