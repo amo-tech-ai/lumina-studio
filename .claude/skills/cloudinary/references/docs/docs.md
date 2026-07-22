@@ -1,9 +1,11 @@
 ---
 name: cloudinary-docs
-description: Looks up implementation details in the latest Cloudinary docs via the relevant llms.txt file. Use when building code or answering questions relating to image or video uploads, management, SDKs, APIs, webhooks, or integrations. For topics covered by a specialized Cloudinary skill, prefer that skill. Use this skill alongside it when the full use-case requires capabilities outside that skill's scope.
+description: Looks up implementation details in the latest Cloudinary docs via the relevant llms.txt file. Use when building code or answering questions relating to image or video uploads, management, SDKs, APIs, webhooks, or integrations. Part of the cloudinary hub. Prefer transformations/nextjs/node/react topic guides first; use this docs guide for DAM, MediaFlows, webhooks, integrations, and llms.txt lookup.
 license: MIT
 metadata:
   author: cloudinary
+  hub: cloudinary
+  topic: docs
   version: '1.1.0'
 ---
 

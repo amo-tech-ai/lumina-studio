@@ -57,7 +57,7 @@ Shift from **Create → Check → Fix** to **Guide → Prevent → Confirm** —
 | `pr-review-toolkit` | `/review-pr` + 6 subagents (code-reviewer, code-simplifier, comment-analyzer, pr-test-analyzer, silent-failure-hunter, type-design-analyzer) | Comprehensive pre-merge PR review — style, error-handling, test coverage, type design, comment rot, in one pass |
 | `code-review` | `/code-review` (plugin's own) | See "Overlaps" below before reaching for this one |
 | `supabase` | `supabase` + `supabase-postgres-best-practices` skills | Generic Postgres/Supabase patterns *not* already covered by this repo's own `ipix-supabase` skill — see "Overlaps" |
-| `cloudinary` | `cloudinary-docs`, `cloudinary-transformations` | Narrow doc lookups / debugging a transformation URL — the project's own `cloudinary` skill is still the primary hub for asset/photography work here |
+| `cloudinary` | (plugin stubs redirect) | Single hub: `.claude/skills/cloudinary` — transformations, Next.js (`next-cloudinary`), Node, React, docs. Former `cloudinary-docs` / `cloudinary-next` / `cloudinary-react` / `cloudinary-transformations` are redirect stubs only |
 | `codspeed` | `codspeed-optimize`, `codspeed-setup-harness` | Only after benchmarks exist — repo has no `codspeed.yml` yet, so `-setup-harness` comes first, `-optimize` has nothing to act on until then |
 | `github` | GitHub Copilot MCP (Model Context Protocol) server (issues/PRs as structured tool calls) | Prefer over shell `gh` output-parsing when you need structured JSON back. **Needs `GITHUB_PERSONAL_ACCESS_TOKEN` set + reload before it does anything** |
 | `playwright` | Raw browser-automation MCP tools (navigate, click, snapshot, network requests) | Scripted end-to-end flows / QA runs — see "Overlaps" below |

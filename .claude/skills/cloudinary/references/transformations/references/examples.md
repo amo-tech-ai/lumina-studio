@@ -337,9 +337,9 @@ c_fill,g_auto,h_630,w_1200/co_white,l_text:Arial_80_bold:Breaking%20News/b_black
 
 ### Before/After Comparison
 ```
-c_fill,h_400,w_300/l_same_image/c_fill,e_grayscale,h_400,w_300/fl_layer_apply,fl_splice,g_east/f_auto/q_auto
+c_fill,h_400,w_300/l_same_image/c_fill,e_grayscale,h_400,w_300/fl_layer_apply,g_west,x_300/f_auto/q_auto
 ```
-Creates side-by-side comparison with grayscale version.
+Creates a true side-by-side comparison (600×400) with a grayscale version. Offset the overlay past the base edge to make the canvas auto-expand — set `x_<base_width>` for horizontal (or `y_<base_height>` to stack vertically).
 
 ## Video Transformations
 
@@ -677,7 +677,7 @@ Automatic quality with low setting for smaller files.
 
 ## DPR and Responsive
 
-**Important:** `dpr_auto` and `w_auto` parameters only work on Chromium-based browsers (Chrome, Edge, Opera, Samsung Internet) with Client Hints enabled. They do NOT work inside named transformations. For broader browser support, see the [Responsive Images documentation](https://cloudinary.com/documentation/responsive_images?install_source=skillspack&referrer=trans-skill).
+**Important:** `dpr_auto` and `w_auto` parameters only work on Chromium-based browsers (Chrome, Edge, Opera, Samsung Internet) with Client Hints enabled. They do NOT work inside named transformations. For broader browser support, see the [Responsive Images documentation](https://cloudinary.com/documentation/responsive_images.md?install_source=skillspack&referrer=trans-skill).
 
 ### Specific DPR
 ```
