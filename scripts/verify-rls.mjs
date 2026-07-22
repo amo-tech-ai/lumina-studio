@@ -13,10 +13,11 @@ import { createClient } from "@supabase/supabase-js";
 const requireFromApp = createRequire(resolve(import.meta.dirname, "../app/package.json"));
 
 const root = resolve(import.meta.dirname, "..");
-const envPath = resolve(root, ".env.local");
 
-if (existsSync(envPath)) {
-  for (const line of readFileSync(envPath, "utf8").split("\n")) {
+/** Load KEY=VALUE lines from a dotenv-style file into process.env (first writer wins). */
+function loadEnvFile(path) {
+  if (!existsSync(path)) return;
+  for (const line of readFileSync(path, "utf8").split("\n")) {
     const trimmed = line.trim();
     if (!trimmed || trimmed.startsWith("#")) continue;
     const eq = trimmed.indexOf("=");
@@ -26,6 +27,12 @@ if (existsSync(envPath)) {
     if (!process.env[key]) process.env[key] = val;
   }
 }
+
+loadEnvFile(resolve(root, ".env.local"));
+// IPI-245 — HYPERDRIVE_DATABASE_URL (the hyperdrive_mastra_runtime credential) lives
+// in app/.env.local, not the root file. Merge it in so the runtime-role probe below
+// can find it locally without duplicating the secret into a second file.
+loadEnvFile(resolve(root, "app", ".env.local"));
 
 const url =
   process.env.VITE_SUPABASE_URL ??
@@ -98,6 +105,27 @@ function assertSelectDenied(error, data, message) {
     return;
   }
   pass(message);
+}
+
+/**
+ * IPI-245 — anon/authenticated negative probe against the private `mastra` schema.
+ * Unlike assertSelectDenied (RLS silently filters rows on exposed `public`/`planner`
+ * tables, so a denied read still returns 200 + []), the `mastra` schema itself isn't
+ * in PostgREST's exposed-schema list (supabase/config.toml `db.schemas`), so
+ * .schema('mastra') requests fail before RLS even runs — any error here (PGRST106
+ * schema-not-exposed, or a 42501 permission error) is just as valid a zero-access
+ * proof as an empty row set.
+ */
+function assertNoMastraAccess(error, data, message) {
+  if (error) {
+    pass(`${message} (denied: ${error.code ?? "?"} ${error.message})`);
+    return;
+  }
+  if ((data ?? []).length === 0) {
+    pass(message);
+    return;
+  }
+  fail(`${message} (expected denial, got ${data.length} row(s))`);
 }
 
 /**
@@ -211,6 +239,95 @@ async function assertPlannerAssignmentSelectCatalog() {
   } catch (err) {
     fail(`IPI-647 catalog assert query failed: ${err instanceof Error ? err.message : err}`);
   } finally {
+    await client.end().catch(() => {});
+  }
+}
+
+/**
+ * IPI-245 / IPI-227B — runtime-role positive probe.
+ * `hyperdrive_mastra_runtime` is a direct-Postgres role (the Hyperdrive/Mastra
+ * storage connection) — it has no PostgREST/anon-key surface, so it can't be
+ * exercised via supabase-js like the anon/authenticated probes above. Reuses the
+ * same pg.Client mechanism as assertPlannerAssignmentSelectCatalog (IPI-647): connect
+ * directly with HYPERDRIVE_DATABASE_URL, round-trip a clearly-test-marked row through
+ * insert/select/update/delete on mastra.mastra_threads, always clean up.
+ * Soft-skips (does not fail) when HYPERDRIVE_DATABASE_URL is unset — this repo's CI
+ * does not yet wire that secret (only DATABASE_URL, a different role), mirroring how
+ * the IPI-647 catalog assert above treats its own missing connection string.
+ */
+async function assertMastraRuntimeRoleProbe() {
+  const runtimeUrl = process.env.HYPERDRIVE_DATABASE_URL;
+  if (!runtimeUrl) {
+    console.warn(
+      "warn: IPI-245 runtime-role probe skipped — HYPERDRIVE_DATABASE_URL unset (anon/authenticated negative probes still ran)",
+    );
+    return;
+  }
+
+  let Client;
+  try {
+    ({ Client } = requireFromApp("pg"));
+  } catch (err) {
+    fail(`IPI-245 runtime-role probe: cannot load pg (${err instanceof Error ? err.message : err})`);
+    return;
+  }
+
+  const client = new Client({ connectionString: runtimeUrl, ssl: { rejectUnauthorized: false } });
+  const probeId = `rls-probe-ipi245-${Date.now()}`;
+  try {
+    await client.connect();
+
+    const { rows: whoRows } = await client.query("select current_user");
+    assert(
+      whoRows[0]?.current_user === "hyperdrive_mastra_runtime",
+      "IPI-245 runtime probe connects as hyperdrive_mastra_runtime",
+    );
+
+    const { rows: insRows } = await client.query(
+      `insert into mastra.mastra_threads (id, "resourceId", title, "createdAt", "updatedAt")
+       values ($1, $2, $3, now(), now()) returning id`,
+      [probeId, `rls-probe-resource-${Date.now()}`, "IPI-245 RLS probe (throwaway)"],
+    );
+    assert(
+      insRows[0]?.id === probeId,
+      "hyperdrive_mastra_runtime can INSERT into mastra.mastra_threads",
+    );
+
+    const { rows: selRows } = await client.query(
+      `select id, title from mastra.mastra_threads where id = $1`,
+      [probeId],
+    );
+    assert(
+      selRows.length === 1 && selRows[0].title === "IPI-245 RLS probe (throwaway)",
+      "hyperdrive_mastra_runtime can SELECT its own mastra.mastra_threads row",
+    );
+
+    const { rows: updRows } = await client.query(
+      `update mastra.mastra_threads set title = $2, "updatedAt" = now() where id = $1 returning title`,
+      [probeId, "IPI-245 RLS probe (updated)"],
+    );
+    assert(
+      updRows[0]?.title === "IPI-245 RLS probe (updated)",
+      "hyperdrive_mastra_runtime can UPDATE its own mastra.mastra_threads row",
+    );
+  } catch (err) {
+    fail(`IPI-245 runtime-role probe: ${err instanceof Error ? err.message : err}`);
+  } finally {
+    try {
+      const { rowCount } = await client.query(
+        `delete from mastra.mastra_threads where id = $1`,
+        [probeId],
+      );
+      if (rowCount > 0) {
+        pass("hyperdrive_mastra_runtime can DELETE its own mastra.mastra_threads row (cleanup)");
+      }
+    } catch (cleanupErr) {
+      trackCleanupError(
+        `IPI-245 mastra_threads probe row ${probeId}: ${
+          cleanupErr instanceof Error ? cleanupErr.message : cleanupErr
+        }`,
+      );
+    }
     await client.end().catch(() => {});
   }
 }
@@ -386,6 +503,27 @@ try {
     .from("platforms")
     .insert({ slug: "rls-probe", name: "RLS Probe", category: "social" });
   assert(!!refInsertErr, "authenticated cannot insert platforms (no write policy)");
+
+  // IPI-245 / IPI-227B — Mastra database authorization probes. IPI-628 created a
+  // private `mastra` Postgres schema (24 mastra_* tables); IPI-629 granted
+  // hyperdrive_mastra_runtime DML + one RLS policy per table and revoked
+  // anon/authenticated on all 24. anon/authenticated negative probes below prove
+  // zero access via the public API surface (supabase-js); the runtime-role positive
+  // probe (assertMastraRuntimeRoleProbe, direct Postgres) proves the intended role
+  // still gets through. Cross-org negative tests are out of scope here — IPI-621.
+  const mastraProbeTables = ["mastra_threads", "mastra_agents", "mastra_ai_spans"];
+
+  for (const t of mastraProbeTables) {
+    const { data, error } = await anon.schema("mastra").from(t).select("id").limit(1);
+    assertNoMastraAccess(error, data, `anon cannot access mastra.${t}`);
+  }
+
+  for (const t of mastraProbeTables) {
+    const { data, error } = await userA.client.schema("mastra").from(t).select("id").limit(1);
+    assertNoMastraAccess(error, data, `authenticated cannot access mastra.${t}`);
+  }
+
+  await assertMastraRuntimeRoleProbe();
 
   // profiles — own read/write
   const { error: profileInsertErr } = await userA.client.from("profiles").insert({
