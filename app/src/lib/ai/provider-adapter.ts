@@ -235,29 +235,64 @@ async function assertOk(response: Response, label: string): Promise<void> {
 /**
  * Defense-in-depth cap on JSON response bodies (GHSA-866g-f22w-33x8, IPI-762: uncontrolled
  * resource consumption in JSON response parsing). `withTimeout` above bounds request *time*;
- * this bounds response *size* before it's buffered into `response.json()`. Content-Length is
- * set by the AI Gateway Worker's OpenAI-compat responses; a missing header (chunked encoding)
- * is not itself a violation, so this only rejects a length the server told us about upfront.
+ * this bounds response *size* before it's buffered into a JSON parse.
+ *
+ * A Content-Length header check alone is NOT sufficient: `Response.json()` (used by this
+ * app's own AI Gateway Worker for chat/structured/embed replies) never sets Content-Length
+ * (confirmed: `Response.json({...}).headers.get("content-length")` is `null` in this
+ * runtime), so a header-only guard silently passes every response on the exact path it's
+ * meant to protect. This reads the body stream with a running byte counter instead, so the
+ * limit is enforced regardless of whether the server declared a length upfront.
  */
 const MAX_RESPONSE_BYTES = 10 * 1024 * 1024; // 10MB — comfortably above real chat/embedding payloads
 
-function assertResponseSizeWithinLimit(response: Response, label: string): void {
-  const contentLength = Number(response.headers?.get("content-length"));
-  if (contentLength > MAX_RESPONSE_BYTES) {
+async function readJsonWithSizeLimit<T>(response: Response, label: string): Promise<T> {
+  const declaredLength = Number(response.headers?.get("content-length"));
+  if (declaredLength > MAX_RESPONSE_BYTES) {
     throw new AiGatewayError(
-      `${label} response too large: ${contentLength} bytes exceeds ${MAX_RESPONSE_BYTES} byte limit`,
+      `${label} response too large: ${declaredLength} bytes exceeds ${MAX_RESPONSE_BYTES} byte limit`,
       { code: "provider_error", httpStatus: response.status },
     );
   }
+  if (!response.body) {
+    return (await response.json()) as T;
+  }
+
+  const reader = response.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+  try {
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      total += value.byteLength;
+      if (total > MAX_RESPONSE_BYTES) {
+        throw new AiGatewayError(
+          `${label} response exceeded ${MAX_RESPONSE_BYTES} byte limit while streaming`,
+          { code: "provider_error", httpStatus: response.status },
+        );
+      }
+      chunks.push(value);
+    }
+  } finally {
+    reader.releaseLock();
+  }
+
+  const body = new Uint8Array(total);
+  let offset = 0;
+  for (const chunk of chunks) {
+    body.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  return JSON.parse(new TextDecoder().decode(body)) as T;
 }
 
 async function readChatResult(response: Response, label: string): Promise<ChatResult> {
   await assertOk(response, label);
-  assertResponseSizeWithinLimit(response, label);
-  const data = (await response.json()) as {
+  const data = await readJsonWithSizeLimit<{
     choices?: { message: { content: string } }[];
     usage?: GatewayChatUsage;
-  };
+  }>(response, label);
   return {
     text: data.choices?.[0]?.message?.content ?? "",
     usage: mapChatUsage(data.usage),
@@ -428,11 +463,10 @@ export function createProviderAdapter(options: ProviderAdapterOptions = {}): AiP
         });
 
         await assertOk(response, "structured completion");
-        assertResponseSizeWithinLimit(response, "structured completion");
-        const data = (await response.json()) as {
+        const data = await readJsonWithSizeLimit<{
           choices?: { message: { content: string } }[];
           usage?: GatewayChatUsage;
-        };
+        }>(response, "structured completion");
 
         return {
           object: parseJsonObject(data.choices?.[0]?.message?.content ?? ""),
@@ -455,12 +489,10 @@ export function createProviderAdapter(options: ProviderAdapterOptions = {}): AiP
         });
 
         await assertOk(response, "embedding");
-        assertResponseSizeWithinLimit(response, "embedding");
-
-        const data = (await response.json()) as {
+        const data = await readJsonWithSizeLimit<{
           data: { embedding: number[] }[];
           usage?: { prompt_tokens: number };
-        };
+        }>(response, "embedding");
 
         return {
           embeddings: data.data.map((d) => d.embedding),
