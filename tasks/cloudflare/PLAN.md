@@ -140,4 +140,4 @@ Legacy services/cloudflare-worker (ai-gateway) → delete only after IPI-609
 
 Detailed hosting notes: [`prime/04-plan-hosting.md`](./prime/04-plan-hosting.md).
 
-Historical research under [`plan/`](./plan/) (e.g. `simplify-ai-setup-plan.md`) — **not** the active `PLAN.md`.
+Historical research under [`archive/plan/`](./archive/plan/) (e.g. `simplify-ai-setup-plan.md`) — **not** the active `PLAN.md`.
