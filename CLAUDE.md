@@ -15,6 +15,8 @@ Every response — not just audit findings — should be easy to follow on a fir
 - ❌ "The RPC has no authorization check" → ✅ "`commit_shoot_draft` (IPI-727) trusted `p_brand_id` with zero check of its own — safe today only because its one caller, `/api/shoots/commit`, already checks `brands`' RLS before invoking it"
 - ❌ "A migration fixed the RLS visibility gap" → ✅ "IPI-721 swapped `brands.user_id = auth.uid()` for `is_org_member(org_id)` on `shoot_portfolio_view` — the exact line that made `qa@ipix.test`'s own shoot invisible to them moments after creating it"
 
+**Every PR description gets this treatment too, not just an abstract diff recap.** Open with a plain-English summary and a real-world analogy for what changed and why it matters, then follow with the technical before/after (versions, test counts, audit numbers) — the analogy is in addition to the specifics, not instead of them. ❌ "Removed unused dependency `@morphllm/morphsdk`" → ✅ "Removed a package nobody uses — like returning a toolbox that was never opened, and it happened to have a rusty nail in it (a critical CVE). 41 vulnerabilities → 40, 1 critical → 0."
+
 **Never cite a bare issue or PR number.** `IPI-582` or `#337` means nothing to a reader without Linear/GitHub open — always pair the number with its actual title on first mention, e.g. `IPI-582 (Task Detail and Safe Mutations)` or [PR #337](https://github.com/amo-tech-ai/lumina-studio/pull/337).
 
 Organize long outputs (todos, audits, roadmaps, verification reports) so a new team member could follow them without prior context. This applies uniformly across every kind of output — explanations, audit findings, status summaries, PR descriptions, code comments, and casual replies alike — not just formal reports.
