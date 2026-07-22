@@ -93,6 +93,20 @@ Verified via Supabase MCP against `nvdlhrodvevgwdsneplk`:
 - **Connection limit**: don't drop from 20 → 5 blindly. Measure real concurrent usage under operator traffic first (baseline is 20, ceiling is `max_connections=60`).
 - **Caching**: keep Hyperdrive caching disabled for all Mastra persistence — no read-after-write invalidation guarantee, and Mastra memory/threads/workflow snapshots need read-your-own-write correctness.
 
+### Second audit pass (2026-07-22, same day) — verdict 91/100 → 97/100 after corrections
+
+A follow-up review of this plan (not the Linear graph) was checked the same way — live Linear reads, not assumption:
+
+| Claim | Verdict | Evidence |
+| -- | -- | -- |
+| "Native routing is In Progress, not 'not started'" | ✅ Confirmed — **this doc was stale**, fixed below | IPI-586 Done, IPI-607 Done, IPI-750 Done (all three shipped *during this session*), IPI-753 · W1 In Progress (PR1 #593 + PR2 #595 merged, PR3 canary active) |
+| "Mark IPI-632 Done" | ✅ Already Done live | `completedAt: 2026-07-20`, no doc claimed otherwise |
+| "IPI-714 should run now, parallel with 616/628" | ✅ Reasonable — it's genuinely unblocked | `blockedBy: []` live, priority High, reproducible pool-exhaustion bug already documented in the ticket. Roadmap step 7 below moved earlier |
+| "IPI-624 starts too late — begin monitoring right after IPI-619" | ✅ Already true live, only the roadmap *narrative* implied otherwise | `blockedBy: [IPI-618]` (Done) — IPI-624 is unblocked today, same as IPI-622 |
+| "`client.end()` in `finally` is written as a hard requirement — soften it" | ✅ Confirmed via official docs, comment posted on IPI-620 | Cloudflare's own [Hyperdrive troubleshooting guide](https://developers.cloudflare.com/hyperdrive/observability/troubleshooting/) frames the fix as "create a new Client inside your handler" (never global/cached) — connections are cleaned up automatically at invocation end. `.end()` in `finally` is fine practice, not a documented hard requirement |
+| "IPI-620 combines two concerns, split A/B" | ✅ Already structured that way live | IPI-620's description already has `### A. Shared query helper` and `### B. PostgresStore compatibility spike` as separate scope sections — the recommendation is to keep them as separate commits/PRs when implementing, not a missing split |
+
+No further Linear relation edits were needed this pass — only one clarifying comment (IPI-620) and this doc's stale status line.
 
 ## Purpose
 
@@ -110,7 +124,7 @@ Run iPix operator agents (Production Planner, Creative Director, CRM assistant, 
 - Agents registered in `app/src/mastra/` (operator set + `public-marketing`).
 - Local/preview often use `MASTRA_STORAGE_MODE=noop` for Workers safety.
 - Storage pool / schema work still open (IPI-628/629/630, IPI-714).
-- Native routing (IPI-594) not started.
+- Native routing (IPI-594) **In Progress**: IPI-586, IPI-607, IPI-750 (W0) Done; IPI-753 (W1, public-marketing) In Progress — PR1/PR2 merged, PR3 canary active.
 
 ## Target architecture
 
@@ -164,14 +178,14 @@ CopilotKit route → getMastra() (handler only)
 ## Roadmap
 
 ```text
-1. IPI-616 ADR (In Progress) — schema placement, table classification
+1. IPI-616 ADR (In Progress) + IPI-714 pool diagnosis — run together, both unblocked today
 2. IPI-619 bind (parallel with 3) — Hyperdrive binding only, no storage flip
 3. IPI-628 → IPI-629 → IPI-630 — schema/grants/init (IPI-245 parallel after 629)
-4. IPI-620 spike (helper + PostgresStore compat) — gates 621/622/624
-5. IPI-621 tenant/RLS tests, IPI-622 benchmark, IPI-624 monitoring
-6. IPI-623 — migrate one Mastra workload to Hyperdrive (does NOT gate DNS cutover)
-7. IPI-714 — pool diagnosis (as needed, independent of the chain above)
-8. IPI-586 → IPI-594 — native routing
+4. IPI-622 baseline + IPI-624 monitoring — both unblocked as soon as IPI-619 lands, don't wait for 620
+5. IPI-620 spike (A: helper, B: PostgresStore compat — separate commits/PRs) — gates 621/623
+6. IPI-621 tenant/RLS tests — full IPI-622 benchmark + IPI-624 alert thresholds finalized after 620
+7. IPI-623 — migrate one Mastra workload to Hyperdrive (does NOT gate DNS cutover)
+8. Native routing (IPI-594): IPI-586 ✅ → IPI-607 ✅ → IPI-750 ✅ → IPI-753 W1 (in progress) → IPI-769 → W2 → W3 → later waves
 ```
 
 Full corrected dependency graph + live-verification evidence: see "Storage → Hyperdrive chain audit" above.
