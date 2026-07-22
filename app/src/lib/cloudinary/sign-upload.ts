@@ -4,7 +4,6 @@ import {
   CLOUDINARY_EAGER_PRESETS,
   CLOUDINARY_UPLOAD_PRESET,
   presetTransformString,
-  CLOUDINARY_METADATA_SCHEMA_VERSION,
 } from "@/lib/cloudinary/url";
 import { parseBrandIdFromCloudinaryContext } from "@/lib/assets/brand-access";
 import {
