@@ -41,7 +41,12 @@ export function AssetCard({ asset }: { asset: AssetRow }) {
   // IPI-757 A2 — if Cloudinary media was deleted but the assets row remains,
   // swap to the icon fallback instead of leaving a broken <img> (console 404).
   const [thumbFailed, setThumbFailed] = useState(false);
-  const showImage = Boolean(asset.displayUrl) && !thumbFailed;
+  // Narrow once: empty string / null / undefined all take the icon path — never
+  // render <img src="">. Truthy check also lets TypeScript drop the `!` asserts.
+  const displayUrl =
+    typeof asset.displayUrl === "string" && asset.displayUrl.length > 0
+      ? asset.displayUrl
+      : null;
 
   return (
     <div className={styles.card} data-testid="asset-card" data-asset-id={asset.id}>
@@ -52,11 +57,11 @@ export function AssetCard({ asset }: { asset: AssetRow }) {
           </div>
         ) : asset.asset_type === "document" ? (
           <ImageFallback />
-        ) : showImage ? (
-          isAuthenticatedDeliveryUrl(asset.displayUrl!) ? (
+        ) : displayUrl && !thumbFailed ? (
+          isAuthenticatedDeliveryUrl(displayUrl) ? (
             // Signed authenticated URLs 404 through /_next/image — load directly.
             <img
-              src={asset.displayUrl!}
+              src={displayUrl}
               alt=""
               loading="lazy"
               decoding="async"
@@ -65,7 +70,7 @@ export function AssetCard({ asset }: { asset: AssetRow }) {
             />
           ) : (
             <Image
-              src={asset.displayUrl!}
+              src={displayUrl}
               alt=""
               fill
               // Mirrors assets-workspace.module.css's .masonry column breakpoints

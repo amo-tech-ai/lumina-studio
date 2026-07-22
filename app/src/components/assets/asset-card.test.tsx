@@ -110,6 +110,12 @@ describe("AssetCard", () => {
     expect(container.querySelector("img")).toBeNull();
   });
 
+  it("falls back to a file icon when displayUrl is an empty string (never src=\"\")", () => {
+    const { container } = render(<AssetCard asset={asset({ displayUrl: "" })} />);
+    expect(container.querySelector("img")).toBeNull();
+    expect(container.querySelector(".iconFallback")).not.toBeNull();
+  });
+
   it("renders a video icon fallback instead of an image for video assets", () => {
     const { container } = render(<AssetCard asset={asset({ asset_type: "video" })} />);
     expect(screen.getByText("Video")).toBeDefined();
