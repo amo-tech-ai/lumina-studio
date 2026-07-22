@@ -43,6 +43,28 @@ Real browser path succeeded end-to-end. Console `upload-sign` 400/403 lines were
 
 ## Happy-path evidence (widget — not upload-sign)
 
+```mermaid
+sequenceDiagram
+    participant Op as Operator
+    participant UI as Assets upload panel
+    participant Sign as POST /api/assets/cloudinary-sign
+    participant CLD as Cloudinary upload
+    participant WH as POST /api/assets/cloudinary/webhook
+    participant DB as Supabase mirror
+    participant St as GET /api/assets/status
+
+    Op->>UI: Pick brand + Upload
+    UI->>Sign: paramsToSign + brand_id context
+    Sign-->>UI: signature + folder ipix/prod/{org}/{brand}/products
+    UI->>CLD: signed auto/upload
+    CLD-->>UI: 200 asset_id + public_id
+    CLD->>WH: notification
+    WH->>DB: upsert cloudinary_assets + assets
+    UI->>St: poll cloudinaryAssetId
+    St-->>UI: 404 then 200 ready
+    UI->>Op: Queue ready · library count +1
+```
+
 ```text
 POST /api/assets/cloudinary-sign          200
 POST api.cloudinary.com/.../auto/upload  200
@@ -53,6 +75,47 @@ UI   "ipi-60-cld-004b-postmerge-…" → ready · 12 assets
 - **public_id:** `ipix/prod/00000000-0000-0000-0000-000000000001/db1f728d-bee1-430e-a3e7-0c601da74ce7/products/ipi-60-cld-004b-postmerge-1784688471_jc04eg`
 - **cloudinary asset_id:** `7de8b6abf4c51097ea25fbc2330a6c7c`
 - **delivery type:** `authenticated`
+
+## Failure points (code + live)
+
+```mermaid
+flowchart TD
+    A[Client requests sign] --> B{Auth?}
+    B -->|no| E401[401]
+    B -->|yes| C{Valid brand + org?}
+    C -->|no| E400[400]
+    C -->|yes| E{workType / workId pair}
+    E -->|invalid| E400b[400]
+    E -->|ok| F{Ownership match?}
+    F -->|no| E403[403]
+    F -->|ok| G[Sign 200 → Cloudinary]
+    G --> H{Webhook ownership}
+    H -->|unresolved / FK fail| N[brand_id null mirror]
+    H -->|ok| I[status 200 ready]
+```
+
+| # | Failure | Effect | Severity |
+|---|---|---|---|
+| 1 | Pair / brand / org validation on sign routes | **400** | Expected guard |
+| 2 | Shoot/campaign not owned by brand | **403** | Expected guard (#543) |
+| 3 | Webhook no ownership / FK retry | `cloudinary_assets.brand_id` **null** | 🟡 hygiene |
+| 4 | Status before webhook / after cleanup | **404** | Expected |
+| 5 | Cloudinary destroy leaves placeholder | Ghost listing | 🟡 IPI-757 A1 |
+| 6 | Duplicate ownership queries on `upload-sign` | Extra DB round-trip | 🟡 IPI-757 B1 |
+
+## Live Supabase (`nvdlhrodvevgwdsneplk` · 2026-07-22)
+
+| Check | Result |
+|---|---|
+| Project | ACTIVE_HEALTHY |
+| `brands.org_id` null | **0** |
+| QA brand + org | present |
+| CLD-004B fixture rows | **0** (cleaned) |
+| Orphan brand FK on `cloudinary_assets` | **0** |
+| `cloudinary_assets` | **9** total · **2** with brand · **7** null brand |
+| `anon_select_cloudinary_assets` | `USING false` (deny — not a leak) |
+
+Null-brand inventory: 4× legacy `fashionos/assets/*` (`processing`), 2× fake `11111111-…` proof folders, 1× archived `ipi-60-realworld-fixture-…` under taxonomy `qa-fixtures`. Tracked as **IPI-757 C2**.
 
 ## Console 400/403 — not a regression
 
