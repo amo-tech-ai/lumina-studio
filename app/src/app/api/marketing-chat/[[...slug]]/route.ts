@@ -5,6 +5,8 @@ import {
 } from "@/lib/copilotkit/runtime-v2-fetch";
 import { MastraAgent } from "@ag-ui/mastra";
 import { Mastra } from "@mastra/core/mastra";
+import { RequestContext } from "@mastra/core/request-context";
+import { getCloudflareContext } from "@opennextjs/cloudflare";
 import { publicMarketingAgent } from "@/mastra/agents/public-marketing-agent";
 
 // ponytail: isolated Mastra instance — only public-marketing exposed.
@@ -17,7 +19,28 @@ const publicMastra = new Mastra({
 });
 
 const runtime = new CopilotRuntime({
-  agents: async () => MastraAgent.getLocalAgents({ mastra: publicMastra, resourceId: "public" }),
+  agents: async () => {
+    // IPI-750 · CF-MIG-230-W0 — this route never built a RequestContext
+    // before; it's needed now purely to carry cfEnv, matching the
+    // CopilotKit route's pattern. Zero agents flip to native in this PR —
+    // publicMarketingAgent's `model:` field is untouched. When a future
+    // wave (W1) wires resolveAgentModel() into it, pass a hardcoded
+    // agentId: "public-marketing" (not "default"), so no surface-aware
+    // alias resolution is needed even though this registry also exposes
+    // the same agent under the "default" key.
+    const requestContext = new RequestContext();
+    try {
+      const { env } = await getCloudflareContext({ async: true });
+      requestContext.set("cfEnv", env);
+    } catch {
+      // Expected on Vercel / Node — leave cfEnv unset, legacy routing applies.
+    }
+    return MastraAgent.getLocalAgents({
+      mastra: publicMastra,
+      resourceId: "public",
+      requestContext,
+    });
+  },
   runner: new InMemoryAgentRunner(),
 });
 
