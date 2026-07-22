@@ -5,17 +5,40 @@
 -- moving back — no data loss, including any rows written to mastra.* after
 -- the original cutover ran.
 --
--- Sequencing: revert the app's schemaName back to "public" (or unset it) in
--- the SAME window as running this, for the same reason the forward migration
--- required lockstep timing — do not run this while the app is still pointed
--- at "mastra".
+-- Sequencing (same lockstep requirement as the forward migration):
+--   1. Pause Mastra-writing traffic (schedulers, background tasks, Next.js/
+--      Mastra Studio dev pools) — same set the forward migration paused.
+--   2. Run this rollback transaction.
+--   3. Deploy the app with schemaName back to "public" (or unset) — do NOT
+--      run this while the app is still configured for "mastra" and actively
+--      writing; that produces a "relation does not exist" window the moment
+--      this transaction commits and the tables disappear out from under it.
+--   4. Resume traffic, then smoke-test.
 --
--- NOT included: restoring the legacy service_role/anon grants stripped by the
+-- NOT auto-restored: the legacy service_role/anon grants stripped by the
 -- forward migration's Step 4. Re-adding overly broad legacy grants on a
--- rollback is deliberately not automated — if a rollback is needed for a
--- reason unrelated to security posture, re-grant explicitly and deliberately,
--- don't silently widen access back via a rollback script no one is reading
--- closely at 2am.
+-- rollback is deliberately not automated as part of the transaction above —
+-- don't silently widen access back via a script no one is reading closely at
+-- 2am. But if the app's normal access path after rollback IS service_role
+-- (its grants on these 18 tables were revoked by the forward migration and
+-- are NOT restored by moving schema back), it will get permission-denied
+-- errors on `public.mastra_*` until you deliberately run this, matching what
+-- these tables granted before the cutover (live-verified pre-migration):
+--
+--   DO $$
+--   DECLARE t text;
+--   BEGIN
+--     FOREACH t IN ARRAY ARRAY[
+--       'mastra_agent_versions','mastra_agents','mastra_ai_spans','mastra_background_tasks',
+--       'mastra_channel_config','mastra_channel_installations','mastra_dataset_versions',
+--       'mastra_favorites','mastra_messages','mastra_observational_memory',
+--       'mastra_prompt_block_versions','mastra_prompt_blocks','mastra_resources',
+--       'mastra_schedule_triggers','mastra_schedules','mastra_scorer_definition_versions',
+--       'mastra_threads','mastra_workflow_snapshot'
+--     ] LOOP
+--       EXECUTE format('GRANT ALL ON TABLE public.%I TO service_role', t);
+--     END LOOP;
+--   END $$;
 
 BEGIN;
 SET LOCAL lock_timeout = '5s';

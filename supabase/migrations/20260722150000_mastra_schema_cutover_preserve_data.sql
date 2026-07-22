@@ -92,6 +92,11 @@ BEGIN
     IF EXISTS (
       SELECT 1 FROM pg_tables WHERE schemaname = 'mastra' AND tablename = r.tablename
     ) THEN
+      -- Close the gap between "checked empty" and "dropped": lock the table
+      -- ACCESS EXCLUSIVE before counting, and hold it through step 2's DROP
+      -- below (same transaction). Without this, a write could commit after
+      -- the count returns 0 but before the DROP runs, and be silently lost.
+      EXECUTE format('LOCK TABLE mastra.%I IN ACCESS EXCLUSIVE MODE', r.tablename);
       EXECUTE format('SELECT count(*) FROM mastra.%I', r.tablename) INTO unexpected_count;
       IF unexpected_count > 0 THEN
         RAISE EXCEPTION
