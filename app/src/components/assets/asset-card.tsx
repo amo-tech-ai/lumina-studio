@@ -40,13 +40,16 @@ export function AssetCard({ asset }: { asset: AssetRow }) {
   const dnaDot = assetDnaStatusDotToken(asset.dna_status);
   // IPI-757 A2 — if Cloudinary media was deleted but the assets row remains,
   // swap to the icon fallback instead of leaving a broken <img> (console 404).
-  const [thumbFailed, setThumbFailed] = useState(false);
+  // Key failure by URL so router.refresh() with a new displayUrl can recover
+  // without remounting the card (AssetsWorkspace keys tiles by asset.id).
+  const [failedUrl, setFailedUrl] = useState<string | null>(null);
   // Narrow once: empty string / null / undefined all take the icon path — never
   // render <img src="">. Truthy check also lets TypeScript drop the `!` asserts.
   const displayUrl =
     typeof asset.displayUrl === "string" && asset.displayUrl.length > 0
       ? asset.displayUrl
       : null;
+  const thumbFailed = displayUrl !== null && failedUrl === displayUrl;
 
   return (
     <div className={styles.card} data-testid="asset-card" data-asset-id={asset.id}>
@@ -66,7 +69,7 @@ export function AssetCard({ asset }: { asset: AssetRow }) {
               loading="lazy"
               decoding="async"
               className={styles.thumbImageDirect}
-              onError={() => setThumbFailed(true)}
+              onError={() => setFailedUrl(displayUrl)}
             />
           ) : (
             <Image
@@ -78,7 +81,7 @@ export function AssetCard({ asset }: { asset: AssetRow }) {
               // real rendered width on tablet/mobile, so next/image picked too-small candidates.
               sizes="(max-width: 560px) 100vw, (max-width: 880px) 50vw, (max-width: 1280px) 33vw, 25vw"
               className={styles.thumbImage}
-              onError={() => setThumbFailed(true)}
+              onError={() => setFailedUrl(displayUrl)}
             />
           )
         ) : (

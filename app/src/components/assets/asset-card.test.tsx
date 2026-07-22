@@ -105,6 +105,19 @@ describe("AssetCard", () => {
     expect(container.querySelector(".iconFallback")).not.toBeNull();
   });
 
+  it("retries the thumb when displayUrl changes after a prior load failure (same asset.id)", () => {
+    const broken =
+      "https://res.cloudinary.com/dzqy2ixl0/image/authenticated/s--abc123--/c_limit,w_600,f_auto,q_auto/missing-upload";
+    const recovered =
+      "https://res.cloudinary.com/dzqy2ixl0/image/authenticated/s--abc123--/c_limit,w_600,f_auto,q_auto/recovered-upload";
+    const { container, rerender } = render(<AssetCard asset={asset({ displayUrl: broken })} />);
+    fireEvent.error(container.querySelector("img")!);
+    expect(container.querySelector("img")).toBeNull();
+
+    rerender(<AssetCard asset={asset({ displayUrl: recovered })} />);
+    expect(container.querySelector("img")?.getAttribute("src")).toBe(recovered);
+  });
+
   it("falls back to a file icon (never a broken <img>) when displayUrl is null", () => {
     const { container } = render(<AssetCard asset={asset({ displayUrl: null })} />);
     expect(container.querySelector("img")).toBeNull();
