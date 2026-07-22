@@ -23,6 +23,23 @@
 -- Does not touch the existing public.mastra_* tables or their pre-existing
 -- partial grants (found live during the IPI-616 audit) — that's a separate
 -- cutover concern once the app is fully wired to the new schema (IPI-630).
+--
+-- Ordering dependency: this migration assumes the "mastra" schema and the
+-- hyperdrive_mastra_runtime role already exist. The schema comes from
+-- IPI-628 (supabase/migrations/20260722093028_mastra_schema_pinned_1_12_0.sql)
+-- — that migration must apply first. The role is NOT created by any
+-- migration in this repo; it was provisioned directly against the database
+-- by IPI-617 (predates this chain) and is already live. Applying this file
+-- alone against a database that has never run IPI-628's migration will fail
+-- at the GRANT USAGE line below with "schema mastra does not exist".
+--
+-- DRIFT WARNING for future maintainers: the CREATE POLICY below intentionally
+-- grants hyperdrive_mastra_runtime unrestricted USING(true)/WITH CHECK(true)
+-- access, because no table in this schema has a tenant/organization column
+-- to scope by (see IPI-616 ADR, Decision 4). If a future migration ever adds
+-- an organization_id (or similar tenant) column to any mastra.* table, this
+-- blanket policy will silently continue applying to it unless explicitly
+-- revisited — re-check this policy loop before adding tenant columns here.
 
 GRANT USAGE ON SCHEMA mastra TO hyperdrive_mastra_runtime;
 
