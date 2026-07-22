@@ -367,6 +367,8 @@ describe("IPI-740 · Mastra pool + URL split", () => {
         id: "mastra-storage",
         connectionString:
           "postgresql://mastra@127.0.0.1:6543/postgres?application_name=ipix-mastra",
+        schemaName: "mastra",
+        disableInit: true,
         max: 3,
         idleTimeoutMillis: 10_000,
       }),

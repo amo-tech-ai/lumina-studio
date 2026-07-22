@@ -236,9 +236,13 @@ function createPostgresStore(url: string, env: NodeJS.ProcessEnv = process.env):
   // IPI-740: Cap pool size. next dev and mastra dev are separate OS processes —
   // each gets its own pool (worst case 2× max on session :5432). Transaction
   // MASTRA_DATABASE_URL (:6543) + per-process max is the real fix.
+  // IPI-630: `mastra` private schema (IPI-616 ADR) + disableInit — tables are
+  // migrated by IPI-628, not auto-created at runtime (was the 42501 cause).
   return new MastraPg.PostgresStore({
     id: "mastra-storage",
     connectionString: withMastraApplicationName(url),
+    schemaName: "mastra",
+    disableInit: true,
     max: resolveMastraPgPoolMax(env),
     idleTimeoutMillis: PG_IDLE_TIMEOUT_MS,
     ssl: resolveMastraPgSslOption(env),
