@@ -238,6 +238,12 @@ function createPostgresStore(url: string, env: NodeJS.ProcessEnv = process.env):
   // MASTRA_DATABASE_URL (:6543) + per-process max is the real fix.
   // IPI-630: `mastra` private schema (IPI-616 ADR) + disableInit — tables are
   // migrated by IPI-628, not auto-created at runtime (was the 42501 cause).
+  // Deploy-order dependency: IPI-628's migration (supabase/migrations/
+  // 20260722093028_mastra_schema_pinned_1_12_0.sql) must be applied to the
+  // target database BEFORE this code ships there. Without it, `mastra` doesn't
+  // exist and the first storage call fails with a missing-relation error
+  // instead of falling back to the old public.mastra_* tables (disableInit
+  // means no auto-create safety net). Land/apply #601 first.
   return new MastraPg.PostgresStore({
     id: "mastra-storage",
     connectionString: withMastraApplicationName(url),
