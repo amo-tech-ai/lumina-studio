@@ -92,6 +92,29 @@ export function isDamWorkType(value: unknown): value is WorkType {
   return typeof value === "string" && (WORK_TYPES as readonly string[]).includes(value);
 }
 
+/** Shoots/campaigns nest under `…/{workType}/{workId}` — pair must be complete. */
+export const WORK_TYPES_REQUIRING_WORK_ID: ReadonlySet<WorkType> = new Set([
+  "shoots",
+  "campaigns",
+]);
+
+/** Returns a 400 message when workType/workId pairing is inconsistent, else null. */
+export function workTypeWorkIdPairError(
+  workType: WorkType | undefined,
+  workId: string | undefined,
+): string | null {
+  if (workType && WORK_TYPES_REQUIRING_WORK_ID.has(workType) && !workId) {
+    return `workId is required for workType "${workType}"`;
+  }
+  if (!workType && workId) {
+    return "workId is not allowed without a workType";
+  }
+  if (workType && !WORK_TYPES_REQUIRING_WORK_ID.has(workType) && workId) {
+    return `workId is not allowed for workType "${workType}"`;
+  }
+  return null;
+}
+
 function escapeContextValue(value: string): string {
   return value.replace(/[\\|=]/g, "_");
 }

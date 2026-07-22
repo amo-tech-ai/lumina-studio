@@ -11,6 +11,7 @@ import {
   damTags,
   detectEnv,
   isDamWorkType,
+  workTypeWorkIdPairError,
 } from "./taxonomy";
 
 const BRAND_ID = "11111111-1111-1111-1111-111111111111";
@@ -226,6 +227,32 @@ describe("isDamWorkType", () => {
       const _typed: import("./taxonomy").WorkType = value;
       expect(_typed).toBe("shoots");
     }
+  });
+});
+
+describe("workTypeWorkIdPairError", () => {
+  const WORK_ID = "33333333-3333-3333-3333-333333333333";
+
+  it("requires workId for shoots and campaigns", () => {
+    expect(workTypeWorkIdPairError("shoots", undefined)).toContain("workId is required");
+    expect(workTypeWorkIdPairError("campaigns", undefined)).toContain("workId is required");
+  });
+
+  it("rejects workId without workType", () => {
+    expect(workTypeWorkIdPairError(undefined, WORK_ID)).toContain(
+      "workId is not allowed without a workType",
+    );
+  });
+
+  it("rejects workId for types that nest without an id segment", () => {
+    expect(workTypeWorkIdPairError("products", WORK_ID)).toContain("workId is not allowed");
+    expect(workTypeWorkIdPairError("dna-assets", WORK_ID)).toContain("workId is not allowed");
+  });
+
+  it("allows valid pairs and omitted pair", () => {
+    expect(workTypeWorkIdPairError(undefined, undefined)).toBeNull();
+    expect(workTypeWorkIdPairError("products", undefined)).toBeNull();
+    expect(workTypeWorkIdPairError("shoots", WORK_ID)).toBeNull();
   });
 });
 

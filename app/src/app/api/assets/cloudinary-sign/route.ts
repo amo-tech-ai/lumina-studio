@@ -11,7 +11,11 @@ import {
   signCloudinaryParams,
   validateParamsToSign,
 } from "@/lib/cloudinary/sign-upload";
-import { isDamWorkType, type WorkType } from "@/lib/cloudinary/taxonomy";
+import {
+  isDamWorkType,
+  workTypeWorkIdPairError,
+  type WorkType,
+} from "@/lib/cloudinary/taxonomy";
 import { createOperatorSupabaseClient } from "@/lib/supabase/operator-client";
 
 export const dynamic = "force-dynamic";
@@ -83,6 +87,12 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Invalid workId" }, { status: 400 });
     }
     workId = body.workId;
+  }
+
+  // Mirror upload-sign: shoots/campaigns require workId; other types forbid it.
+  const pairError = workTypeWorkIdPairError(workType, workId);
+  if (pairError) {
+    return NextResponse.json({ error: pairError }, { status: 400 });
   }
 
   // Prefer RLS-backed org_id from brands — never trust client context for org.

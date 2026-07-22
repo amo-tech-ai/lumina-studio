@@ -12,15 +12,17 @@ import {
   signCloudinaryParams,
   validateNotificationUrl,
 } from "@/lib/cloudinary/sign-upload";
-import { isDamWorkType, type WorkType } from "@/lib/cloudinary/taxonomy";
+import {
+  isDamWorkType,
+  workTypeWorkIdPairError,
+  type WorkType,
+} from "@/lib/cloudinary/taxonomy";
 import { createOperatorSupabaseClient } from "@/lib/supabase/operator-client";
 
 export const dynamic = "force-dynamic";
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const SIGNATURE_TTL_SECONDS = 300;
-
-const WORK_TYPES_REQUIRING_WORK_ID: ReadonlySet<WorkType> = new Set(["shoots", "campaigns"]);
 
 type UploadSignBody = {
   brandId?: string;
@@ -96,23 +98,9 @@ export async function POST(request: Request) {
     workId = rawWorkId;
   }
 
-  if (workType && WORK_TYPES_REQUIRING_WORK_ID.has(workType) && !workId) {
-    return NextResponse.json(
-      { error: `workId is required for workType "${workType}"` },
-      { status: 400 },
-    );
-  }
-  if (!workType && workId) {
-    return NextResponse.json(
-      { error: "workId is not allowed without a workType" },
-      { status: 400 },
-    );
-  }
-  if (workType && !WORK_TYPES_REQUIRING_WORK_ID.has(workType) && workId) {
-    return NextResponse.json(
-      { error: `workId is not allowed for workType "${workType}"` },
-      { status: 400 },
-    );
+  const pairError = workTypeWorkIdPairError(workType, workId);
+  if (pairError) {
+    return NextResponse.json({ error: pairError }, { status: 400 });
   }
 
   if (notificationUrl) {

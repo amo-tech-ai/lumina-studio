@@ -321,3 +321,50 @@ describe("POST /api/assets/cloudinary-sign", () => {
     );
   });
 });
+
+describe("POST /api/assets/cloudinary-sign — pair consistency", () => {
+  const baseParams = {
+    timestamp: 1_784_000_000,
+    upload_preset: "ipix-signed-upload",
+    context: { brand_id: VALID_BRAND_ID },
+  };
+
+  async function post(extra: Record<string, unknown>) {
+    const { POST } = await importRoute();
+    return POST(
+      new Request("http://localhost/api/assets/cloudinary-sign", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ paramsToSign: baseParams, ...extra }),
+      }),
+    );
+  }
+
+  it("requires workId for shoots", async () => {
+    const res = await post({ workType: "shoots" });
+    expect(res.status).toBe(400);
+    const data = await res.json();
+    expect(data.error).toContain("workId is required");
+  });
+
+  it("requires workId for campaigns", async () => {
+    const res = await post({ workType: "campaigns" });
+    expect(res.status).toBe(400);
+    const data = await res.json();
+    expect(data.error).toContain("workId is required");
+  });
+
+  it("rejects workId for products workType", async () => {
+    const res = await post({ workType: "products", workId: VALID_WORK_ID });
+    expect(res.status).toBe(400);
+    const data = await res.json();
+    expect(data.error).toContain("workId is not allowed");
+  });
+
+  it("rejects workId when workType is omitted", async () => {
+    const res = await post({ workId: VALID_WORK_ID });
+    expect(res.status).toBe(400);
+    const data = await res.json();
+    expect(data.error).toContain("workId is not allowed without a workType");
+  });
+});
