@@ -11,7 +11,7 @@ import type { AssetRow } from "@/lib/assets/get-assets";
 import {
   ASSET_STATUS_VALUES,
   buildAssetsLibraryUrl,
-  decodeTagsQueryValue,
+  decodeTags,
   formatTagsDraft,
   hasServerAssetsFilters,
   type AssetsLibraryFilters,
@@ -149,7 +149,7 @@ export function AssetsWorkspace({
     navigate({
       query: draftQuery.trim(),
       // Same codec as the shareable URL — plain CSV or percent-encoded tags.
-      tags: decodeTagsQueryValue(draftTags),
+      tags: decodeTags(draftTags),
     });
   }
 

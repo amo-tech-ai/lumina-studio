@@ -70,11 +70,16 @@ function splitCsv(raw: string | undefined): string[] {
 }
 
 /**
- * Tags are a Postgres `text[]` — elements may contain commas. URL form keeps a
- * single `tags=` key for shareability, so each tag is encodeURIComponent'd
- * before join. Legacy unencoded CSV (`editorial,approved`) still parses.
+ * Tag list codec (SSOT).
+ *
+ * `assets.tags` is Postgres `text[]` — elements may contain commas. We keep a
+ * single `tags=` query/draft string by encodeURIComponent'ing each tag before
+ * joining. Legacy unencoded CSV (`editorial,approved`) still decodes.
+ *
+ * Always go through encodeTags / decodeTags / formatTagsDraft — do not
+ * reinvent join/split at call sites.
  */
-export function encodeTagsQueryValue(tags: string[]): string {
+export function encodeTags(tags: string[]): string {
   return tags
     .map((t) => normalizeAssetTag(t))
     .filter(Boolean)
@@ -82,7 +87,7 @@ export function encodeTagsQueryValue(tags: string[]): string {
     .join(",");
 }
 
-export function decodeTagsQueryValue(raw: string | undefined): string[] {
+export function decodeTags(raw: string | undefined): string[] {
   if (!raw) return [];
   return raw
     .split(",")
@@ -98,14 +103,9 @@ export function decodeTagsQueryValue(raw: string | undefined): string[] {
     .filter(Boolean);
 }
 
-/**
- * Draft input text for the tags field. Plain CSV when safe; encoded when any
- * tag contains a comma so resubmit via decodeTagsQueryValue does not split it.
- */
+/** Draft/search textbox value — same escaping rules as encodeTags (symmetric). */
 export function formatTagsDraft(tags: string[]): string {
-  if (tags.length === 0) return "";
-  if (tags.some((t) => t.includes(","))) return encodeTagsQueryValue(tags);
-  return tags.map(normalizeAssetTag).filter(Boolean).join(", ");
+  return encodeTags(tags);
 }
 
 /** Lowercase + collapse internal whitespace — used for tags filter + tag text match. */
@@ -161,8 +161,8 @@ export function parseAssetsLibraryParams(raw: RawAssetsSearchParams): ParseAsset
   // repeated tags= keys into an array, treat each entry as one tag value.
   const tagsRaw = raw.tags;
   const tags = Array.isArray(tagsRaw)
-    ? tagsRaw.flatMap((entry) => decodeTagsQueryValue(entry))
-    : decodeTagsQueryValue(firstValue(tagsRaw));
+    ? tagsRaw.flatMap((entry) => decodeTags(entry))
+    : decodeTags(firstValue(tagsRaw));
 
   const sortRaw = firstValue(raw.sort);
   let sort: AssetsLibrarySort = "newest";
@@ -240,7 +240,7 @@ export function buildAssetsLibraryUrl(
   if (filters.query) params.set("q", filters.query);
   if (filters.status && filters.status.length > 0) params.set("status", filters.status.join(","));
   if (filters.tags && filters.tags.length > 0) {
-    params.set("tags", encodeTagsQueryValue(filters.tags));
+    params.set("tags", encodeTags(filters.tags));
   }
   if (filters.sort && filters.sort !== "newest") params.set("sort", filters.sort);
   if (filters.limit && filters.limit !== DEFAULT_ASSETS_PAGE_LIMIT) {

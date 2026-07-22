@@ -3,9 +3,9 @@ import { describe, expect, it } from "vitest";
 import {
   buildAssetsLibraryUrl,
   decodeAssetsCursor,
-  decodeTagsQueryValue,
+  decodeTags,
   encodeAssetsCursor,
-  encodeTagsQueryValue,
+  encodeTags,
   formatTagsDraft,
   normalizeAssetTag,
   parseAssetsLibraryParams,
@@ -102,32 +102,55 @@ describe("normalizeAssetTag", () => {
   });
 });
 
-describe("tag query codec", () => {
-  it("round-trips tags that contain commas", () => {
-    const encoded = encodeTagsQueryValue(["Brand, Inc.", "editorial"]);
-    expect(decodeTagsQueryValue(encoded)).toEqual(["brand, inc.", "editorial"]);
+describe("tag codec SSOT (encodeTags / decodeTags / formatTagsDraft)", () => {
+  function roundTrip(tags: string[]): string[] {
+    return decodeTags(formatTagsDraft(tags));
+  }
+
+  it("keeps a single plain tag unchanged", () => {
+    expect(roundTrip(["Nike"])).toEqual(["nike"]);
+    expect(formatTagsDraft(["Nike"])).toBe(encodeTags(["Nike"]));
   });
 
-  it("still parses legacy unencoded CSV tags", () => {
-    expect(decodeTagsQueryValue("Editorial, Approved")).toEqual(["editorial", "approved"]);
+  it("treats typed CSV as two tags", () => {
+    expect(decodeTags("Nike, Adidas")).toEqual(["nike", "adidas"]);
   });
 
-  it("formatTagsDraft encodes only when a tag contains a comma", () => {
-    expect(formatTagsDraft(["Editorial", "Approved"])).toBe("editorial, approved");
-    expect(formatTagsDraft(["Brand, Inc.", "runway"])).toBe(encodeTagsQueryValue(["Brand, Inc.", "runway"]));
-    expect(decodeTagsQueryValue(formatTagsDraft(["Brand, Inc.", "runway"]))).toEqual([
-      "brand, inc.",
-      "runway",
-    ]);
+  it("keeps a single comma-containing tag intact", () => {
+    expect(roundTrip(["Brand, Inc."])).toEqual(["brand, inc."]);
   });
 
-  it("buildAssetsLibraryUrl encodes commas so parse does not split a single tag", () => {
+  it("preserves mixed comma and non-comma tags", () => {
+    expect(roundTrip(["Brand, Inc.", "Nike"])).toEqual(["brand, inc.", "nike"]);
+  });
+
+  it("is identical after encode → draft → decode (reload → submit)", () => {
+    const original = ["brand, inc.", "nike"];
+    const draft = formatTagsDraft(original);
+    const afterSubmit = decodeTags(draft);
+    expect(afterSubmit).toEqual(original);
+    expect(decodeTags(encodeTags(afterSubmit))).toEqual(original);
+  });
+
+  it("ignores empty tag segments", () => {
+    expect(decodeTags("nike,, ,adidas")).toEqual(["nike", "adidas"]);
+    expect(roundTrip(["", "  ", "nike"])).toEqual(["nike"]);
+  });
+
+  it("preserves duplicate tags (no silent dedupe)", () => {
+    expect(roundTrip(["nike", "nike"])).toEqual(["nike", "nike"]);
+  });
+
+  it("formatTagsDraft always uses encodeTags escaping", () => {
+    const tags = ["Brand, Inc.", "runway"];
+    expect(formatTagsDraft(tags)).toBe(encodeTags(tags));
+    expect(formatTagsDraft(["editorial", "approved"])).toBe(encodeTags(["editorial", "approved"]));
+  });
+
+  it("buildAssetsLibraryUrl round-trips comma tags through parse", () => {
     const url = buildAssetsLibraryUrl({ tags: ["Brand, Inc.", "runway"] });
-    const qs = url.split("?")[1] ?? "";
-    const tagsParam = new URLSearchParams(qs).get("tags");
-    expect(tagsParam).toBeTruthy();
-    // URLSearchParams may percent-encode further; decode once then use codec.
-    expect(decodeTagsQueryValue(tagsParam ?? "")).toEqual(["brand, inc.", "runway"]);
+    const tagsParam = new URLSearchParams(url.split("?")[1] ?? "").get("tags");
+    expect(decodeTags(tagsParam ?? "")).toEqual(["brand, inc.", "runway"]);
 
     const parsed = parseAssetsLibraryParams({ tags: tagsParam ?? undefined });
     expect(parsed.ok).toBe(true);

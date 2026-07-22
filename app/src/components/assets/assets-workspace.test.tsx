@@ -28,7 +28,7 @@ vi.mock("next/navigation", () => ({
 import { AssetsWorkspace } from "./assets-workspace";
 import type { AssetRow } from "@/lib/assets/get-assets";
 import {
-  decodeTagsQueryValue,
+  decodeTags,
   parseAssetsLibraryParams,
   type AssetsLibraryFilters,
 } from "@/lib/assets/list-assets-params";
@@ -324,14 +324,14 @@ describe("AssetsWorkspace", () => {
         isAuthenticated
       />,
     );
-    // Draft is restored via formatTagsDraft (encoded when commas are present).
+    // Draft is restored via formatTagsDraft (= encodeTags).
     const input = screen.getByTestId("assets-tags-input") as HTMLInputElement;
     expect(input.value).toContain("%2C");
     fireEvent.submit(screen.getByRole("search"));
     expect(push).toHaveBeenCalledWith(expect.stringMatching(/tags=/));
     const url = String(push.mock.calls[0][0]);
     const tagsParam = new URLSearchParams(url.split("?")[1] ?? "").get("tags");
-    expect(decodeTagsQueryValue(tagsParam ?? "")).toEqual(["brand, inc."]);
+    expect(decodeTags(tagsParam ?? "")).toEqual(["brand, inc."]);
   });
 
   it("renders Next page when nextCursor is present", () => {
