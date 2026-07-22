@@ -248,7 +248,7 @@ describe("AssetUploadPanel", () => {
       });
     });
 
-    it("calls cb with { cancel: true } on HTTP error", async () => {
+    it("calls cb with { cancel: true } on HTTP 401 and fails queued uploading rows", async () => {
       vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
         new Response("Unauthorized", { status: 401 }),
       );
@@ -260,6 +260,14 @@ describe("AssetUploadPanel", () => {
         />,
       );
 
+      widgetCallbacks.onUploadAdded?.({
+        info: { id: "upload-auth", file: { name: "auth.jpg", lastModified: 1, size: 10 } },
+      });
+      await waitFor(() => {
+        expect(screen.getByText("auth.jpg")).toBeTruthy();
+        expect(screen.getByText(/uploading/i)).toBeTruthy();
+      });
+
       const cb = vi.fn();
       const fn = prepareUploadParams();
       expect(fn).toBeDefined();
@@ -267,7 +275,69 @@ describe("AssetUploadPanel", () => {
 
       await waitFor(() => {
         expect(cb).toHaveBeenCalledWith({ cancel: true });
+        expect(screen.getByText(/client failed/i)).toBeTruthy();
+        expect(screen.getByText(/could not sign upload/i)).toBeTruthy();
       });
+    });
+
+    it("calls cb with { cancel: true } on HTTP 500 and fails queued uploading rows", async () => {
+      vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
+        new Response("Internal Server Error", { status: 500 }),
+      );
+
+      render(
+        <AssetUploadPanel
+          brands={[{ id: "brand-1", name: "Brand One" }]}
+          defaultBrandId="brand-1"
+        />,
+      );
+
+      widgetCallbacks.onUploadAdded?.({
+        info: { id: "upload-500", file: { name: "server.jpg", lastModified: 2, size: 20 } },
+      });
+      await waitFor(() => {
+        expect(screen.getByText("server.jpg")).toBeTruthy();
+      });
+
+      const cb = vi.fn();
+      prepareUploadParams()!(cb, { timestamp: 456 });
+
+      await waitFor(() => {
+        expect(cb).toHaveBeenCalledWith({ cancel: true });
+        expect(screen.getByText(/client failed/i)).toBeTruthy();
+        expect(screen.getByText(/could not sign upload/i)).toBeTruthy();
+      });
+    });
+
+    it("does not fail queue rows when signing succeeds", async () => {
+      vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
+        new Response(JSON.stringify({ signature: "ok", apiKey: "key" }), { status: 200 }),
+      );
+
+      render(
+        <AssetUploadPanel
+          brands={[{ id: "brand-1", name: "Brand One" }]}
+          defaultBrandId="brand-1"
+        />,
+      );
+
+      widgetCallbacks.onUploadAdded?.({
+        info: { id: "upload-ok", file: { name: "ok.jpg", lastModified: 3, size: 30 } },
+      });
+      await waitFor(() => {
+        expect(screen.getByText("ok.jpg")).toBeTruthy();
+        expect(screen.getByText(/uploading/i)).toBeTruthy();
+      });
+
+      const cb = vi.fn();
+      prepareUploadParams()!(cb, { timestamp: 789 });
+
+      await waitFor(() => {
+        expect(cb).toHaveBeenCalledWith({ signature: "ok", apiKey: "key" });
+      });
+      expect(screen.getByText(/uploading/i)).toBeTruthy();
+      expect(screen.queryByText(/could not sign upload/i)).toBeNull();
+      expect(screen.queryByText(/client failed/i)).toBeNull();
     });
   });
 
