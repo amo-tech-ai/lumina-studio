@@ -1,0 +1,21 @@
+{
+  "name": "ipi-622-hyperdrive-benchmark",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Standalone throwaway Worker + runner for IPI-622 (CF-DB-008) Hyperdrive vs Supabase Data API benchmarking. Not part of the app build.",
+  "type": "module",
+  "scripts": {
+    "deploy": "wrangler deploy -c wrangler.jsonc",
+    "deploy:placement": "wrangler deploy -c wrangler.placement.jsonc",
+    "delete": "wrangler delete -c wrangler.jsonc",
+    "delete:placement": "wrangler delete -c wrangler.placement.jsonc",
+    "bench": "node run-bench.mjs"
+  },
+  "devDependencies": {
+    "wrangler": "^4.113.0"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.45.0",
+    "pg": "^8.13.0"
+  }
+}

@@ -1,0 +1,19 @@
+{
+  // IPI-622 · CF-DB-008 — throwaway benchmark Worker. Not the app Worker.
+  // Same Hyperdrive config id as HYPERDRIVE_FRESH (app/wrangler.jsonc, IPI-619/PR #600) —
+  // multiple Workers can bind to one Hyperdrive config, so this needs no dependency on that PR merging.
+  // No `placement` block here — see wrangler.placement.jsonc for the A/B variant.
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "ipix-bench-hyperdrive",
+  "main": "src/worker.js",
+  "compatibility_date": "2026-07-08",
+  "compatibility_flags": ["nodejs_compat"],
+  "account_id": "4984b9bad07bc1da9f097dc8c1da24e0",
+  "workers_dev": true,
+  "hyperdrive": [
+    {
+      "binding": "HYPERDRIVE_FRESH",
+      "id": "f59421821941436593f4c88416fb1601"
+    }
+  ]
+}
