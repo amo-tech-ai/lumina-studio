@@ -1,13 +1,21 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
+import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { ImageOff } from "lucide-react";
 
 import { EmptyState } from "@/components/ui/empty-state";
 import { ErrorState } from "@/components/ui/error-state";
 import type { AssetRow } from "@/lib/assets/get-assets";
+import {
+  ASSET_STATUS_VALUES,
+  buildAssetsLibraryUrl,
+  decodeTags,
+  formatTagsDraft,
+  hasServerAssetsFilters,
+  type AssetsLibraryFilters,
+} from "@/lib/assets/list-assets-params";
 
 import { AssetCard } from "./asset-card";
 import { AssetUploadPanel, type UploadBrandOption } from "./asset-upload-panel";
@@ -58,9 +66,6 @@ function matchesDateFilter(asset: AssetRow, bucket: DateBucket, now: number): bo
   return now - created <= days * 24 * 60 * 60 * 1000;
 }
 
-// DC's header is a single computed {{ countLabel }} string ("1,240 assets · avg DNA
-// match 86%") — mirrored here from two real fields (count, avg of non-null dna_score).
-// Omits the match segment entirely when no asset has a score, rather than showing 0%.
 function countLabel(assets: AssetRow[]): string {
   const base = `${assets.length} asset${assets.length === 1 ? "" : "s"}`;
   const scored = assets.map((a) => a.dna_score).filter((s): s is number => s != null);
@@ -72,65 +77,89 @@ function countLabel(assets: AssetRow[]): string {
 type Props = {
   assets: AssetRow[];
   brands?: UploadBrandOption[];
+  filters: AssetsLibraryFilters;
+  nextCursor: string | null;
   isAuthenticated: boolean;
   fetchError?: string | null;
 };
 
-/** Read-only asset masonry — ported from Assets.v2.image-first.dc.html
- *  (SCR-08). Upload, bulk select/drag, table view, free-text search (DC's
- *  search implies a `name`/`filename` field the schema doesn't have), and
- *  the rights-&-usage IntelligencePanel content are out of scope for this PR
- *  (see tasks/screens/SCR-08-assets.md's "Out of scope") — those need real
- *  backing data (rights records, usage history, channel-readiness scores)
- *  that doesn't exist in the schema yet. The DC "DNA match" sort control
- *  *is* in scope — it's real (`dna_score`), no fabrication needed. */
-export function AssetsWorkspace({ assets, brands = [], isAuthenticated, fetchError }: Props) {
-  // Brand Detail's "Review assets" link and the command-center quick action both
-  // deep-link as `/app/assets?brand=<id>` (brand-detail-workspace.tsx, quick-action-chips.tsx)
-  // — honor it as the initial filter so multi-brand operators land scoped, not on "All brands".
+/** Asset masonry — SCR-08 + IPI-435 server-backed search/filters/URL state. */
+export function AssetsWorkspace({
+  assets,
+  brands = [],
+  filters,
+  nextCursor,
+  isAuthenticated,
+  fetchError,
+}: Props) {
   const router = useRouter();
-  const searchParams = useSearchParams();
   const [filter, setFilter] = useState<AssetFilter>("all");
-  const [brandFilter, setBrandFilter] = useState<string>(() => searchParams.get("brand") ?? "all");
   const [dateFilter, setDateFilter] = useState<DateBucket>("all");
   const [sortByMatch, setSortByMatch] = useState(false);
+  const [draftQuery, setDraftQuery] = useState(filters.query);
+  const [draftTags, setDraftTags] = useState(() => formatTagsDraft(filters.tags));
 
-  // The useState initializer above only runs on first mount — client-side
-  // navigation between two /app/assets?brand=<id> URLs (or browser back/forward)
-  // updates searchParams without remounting this component, so brandFilter needs
-  // its own sync or it silently shows the previous brand's assets under a new URL.
+  // Server navigation updates `filters` without remounting — keep draft inputs in sync
+  // so a copied URL / back-forward restore shows the same search text.
   useEffect(() => {
-    setBrandFilter(searchParams.get("brand") ?? "all");
-  }, [searchParams]);
+    setDraftQuery(filters.query);
+    setDraftTags(formatTagsDraft(filters.tags));
+  }, [filters.query, filters.tags]);
 
   const brandOptions = useMemo(() => {
     const byId = new Map<string, string>();
+    for (const b of brands) byId.set(b.id, b.name);
     for (const a of assets) {
       if (a.brand_id && a.brand?.name) byId.set(a.brand_id, a.brand.name);
     }
     return [...byId.entries()].sort((a, b) => a[1].localeCompare(b[1]));
-  }, [assets]);
+  }, [assets, brands]);
 
   const filteredAssets = useMemo(() => {
     const now = Date.now();
     const matched = assets.filter(
-      (a) =>
-        matchesTypeFilter(a, filter) &&
-        (brandFilter === "all" || a.brand_id === brandFilter) &&
-        matchesDateFilter(a, dateFilter, now),
+      (a) => matchesTypeFilter(a, filter) && matchesDateFilter(a, dateFilter, now),
     );
     if (!sortByMatch) return matched;
-    // DC's "DNA match" sort button — real dna_score desc, nulls (no score yet) last.
     return [...matched].sort((a, b) => (b.dna_score ?? -1) - (a.dna_score ?? -1));
-  }, [assets, filter, brandFilter, dateFilter, sortByMatch]);
+  }, [assets, filter, dateFilter, sortByMatch]);
 
-  const hasActiveFilter = filter !== "all" || brandFilter !== "all" || dateFilter !== "all";
+  const hasClientFilter = filter !== "all" || dateFilter !== "all" || sortByMatch;
+  const hasActiveFilter = hasServerAssetsFilters(filters) || hasClientFilter;
+  const isPastFirstPage = Boolean(filters.cursor);
+
+  function navigate(patch: Partial<AssetsLibraryFilters>) {
+    // `"key" in patch` so callers can clear optional fields (e.g. brandId).
+    // Cursor is only kept when the patch sets one (Next page); filter edits drop it.
+    router.push(
+      buildAssetsLibraryUrl({
+        brandId: "brandId" in patch ? patch.brandId : filters.brandId,
+        query: "query" in patch ? (patch.query ?? "") : filters.query,
+        status: "status" in patch ? (patch.status ?? []) : filters.status,
+        tags: "tags" in patch ? (patch.tags ?? []) : filters.tags,
+        sort: "sort" in patch ? (patch.sort ?? "newest") : filters.sort,
+        limit: "limit" in patch ? (patch.limit ?? filters.limit) : filters.limit,
+        cursor: "cursor" in patch ? patch.cursor : undefined,
+      }),
+    );
+  }
+
+  function onSearchSubmit(event: FormEvent) {
+    event.preventDefault();
+    navigate({
+      query: draftQuery.trim(),
+      // Same codec as the shareable URL — plain CSV or percent-encoded tags.
+      tags: decodeTags(draftTags),
+    });
+  }
 
   function clearFilters() {
     setFilter("all");
-    setBrandFilter("all");
     setDateFilter("all");
     setSortByMatch(false);
+    setDraftQuery("");
+    setDraftTags("");
+    router.push("/app/assets");
   }
 
   if (!isAuthenticated) {
@@ -149,10 +178,17 @@ export function AssetsWorkspace({ assets, brands = [], isAuthenticated, fetchErr
     );
   }
 
+  // Only seed upload from URL brand when that id is in the caller's brand list
+  // (RLS-visible). A stale/inaccessible ?brand= UUID must not reach signing.
+  const uploadDefaultBrandId =
+    filters.brandId && brands.some((b) => b.id === filters.brandId)
+      ? filters.brandId
+      : undefined;
+
   const uploadPanel = (
     <AssetUploadPanel
       brands={brands}
-      defaultBrandId={brandFilter !== "all" ? brandFilter : undefined}
+      defaultBrandId={uploadDefaultBrandId}
       onReady={() => router.refresh()}
     />
   );
@@ -177,7 +213,7 @@ export function AssetsWorkspace({ assets, brands = [], isAuthenticated, fetchErr
     );
   }
 
-  if (assets.length === 0) {
+  if (assets.length === 0 && !hasServerAssetsFilters(filters) && !isPastFirstPage) {
     return (
       <div className={styles.workspace}>
         <header className={styles.header}>
@@ -203,10 +239,41 @@ export function AssetsWorkspace({ assets, brands = [], isAuthenticated, fetchErr
       <header className={styles.header}>
         <div>
           <h1 className={styles.title}>Assets</h1>
-          <p className={styles.subtitle}>{countLabel(assets)}</p>
+          <p className={styles.subtitle}>{countLabel(filteredAssets)}</p>
         </div>
         {uploadPanel}
       </header>
+
+      <form className={styles.searchRow} onSubmit={onSearchSubmit} role="search">
+        <label className={styles.searchField}>
+          <span className="sr-only">Search assets</span>
+          <input
+            className={styles.searchInput}
+            type="search"
+            name="q"
+            value={draftQuery}
+            onChange={(e) => setDraftQuery(e.target.value)}
+            placeholder="Search filename, public id, title, tags…"
+            maxLength={100}
+            data-testid="assets-search-input"
+          />
+        </label>
+        <label className={styles.searchField}>
+          <span className="sr-only">Filter by tags</span>
+          <input
+            className={styles.searchInput}
+            type="text"
+            name="tags"
+            value={draftTags}
+            onChange={(e) => setDraftTags(e.target.value)}
+            placeholder="Tags (comma-separated)"
+            data-testid="assets-tags-input"
+          />
+        </label>
+        <button type="submit" className={styles.searchBtn}>
+          Search
+        </button>
+      </form>
 
       <div className={styles.filterRow} role="group" aria-label="Filter assets">
         <button
@@ -238,8 +305,13 @@ export function AssetsWorkspace({ assets, brands = [], isAuthenticated, fetchErr
             <span className="sr-only">Filter by brand</span>
             <select
               className={styles.filterSelect}
-              value={brandFilter}
-              onChange={(e) => setBrandFilter(e.target.value)}
+              value={filters.brandId ?? "all"}
+              onChange={(e) =>
+                navigate({
+                  brandId: e.target.value === "all" ? undefined : e.target.value,
+                })
+              }
+              data-testid="assets-brand-filter"
             >
               <option value="all">All brands</option>
               {brandOptions.map(([id, name]) => (
@@ -250,6 +322,44 @@ export function AssetsWorkspace({ assets, brands = [], isAuthenticated, fetchErr
             </select>
           </label>
         ) : null}
+
+        <label className={styles.filterSelectLabel}>
+          <span className="sr-only">Filter by status</span>
+          <select
+            className={styles.filterSelect}
+            value={filters.status[0] ?? "all"}
+            onChange={(e) =>
+              navigate({
+                status: e.target.value === "all" ? [] : [e.target.value],
+              })
+            }
+            data-testid="assets-status-filter"
+          >
+            <option value="all">Any status</option>
+            {ASSET_STATUS_VALUES.map((s) => (
+              <option key={s} value={s}>
+                {s}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        <label className={styles.filterSelectLabel}>
+          <span className="sr-only">Sort by upload date</span>
+          <select
+            className={styles.filterSelect}
+            value={filters.sort}
+            onChange={(e) =>
+              navigate({
+                sort: e.target.value as AssetsLibraryFilters["sort"],
+              })
+            }
+            data-testid="assets-sort-filter"
+          >
+            <option value="newest">Newest first</option>
+            <option value="oldest">Oldest first</option>
+          </select>
+        </label>
 
         <label className={styles.filterSelectLabel}>
           <span className="sr-only">Filter by upload date</span>
@@ -265,6 +375,12 @@ export function AssetsWorkspace({ assets, brands = [], isAuthenticated, fetchErr
             ))}
           </select>
         </label>
+
+        {hasActiveFilter ? (
+          <button type="button" className={styles.clearFilterBtn} onClick={clearFilters}>
+            Clear filters
+          </button>
+        ) : null}
       </div>
 
       <div className={styles.body}>
@@ -287,6 +403,27 @@ export function AssetsWorkspace({ assets, brands = [], isAuthenticated, fetchErr
             ))}
           </div>
         )}
+
+        {isPastFirstPage || nextCursor ? (
+          <nav className={styles.pagination} aria-label="Asset pages">
+            {isPastFirstPage ? (
+              <Link
+                href={buildAssetsLibraryUrl({ ...filters, cursor: undefined })}
+                className={styles.paginationBtnSecondary}
+              >
+                First page
+              </Link>
+            ) : null}
+            {nextCursor ? (
+              <Link
+                href={buildAssetsLibraryUrl({ ...filters, cursor: nextCursor })}
+                className={styles.paginationBtnPrimary}
+              >
+                Next page
+              </Link>
+            ) : null}
+          </nav>
+        ) : null}
       </div>
     </div>
   );

@@ -105,8 +105,18 @@ type Props = {
   onReady?: () => void;
 };
 
+function resolveUploadBrandId(
+  brands: UploadBrandOption[],
+  defaultBrandId?: string,
+): string {
+  if (defaultBrandId && brands.some((b) => b.id === defaultBrandId)) {
+    return defaultBrandId;
+  }
+  return brands[0]?.id ?? "";
+}
+
 export function AssetUploadPanel({ brands = [], defaultBrandId, onReady }: Props) {
-  const [brandId, setBrandId] = useState(defaultBrandId ?? brands[0]?.id ?? "");
+  const [brandId, setBrandId] = useState(() => resolveUploadBrandId(brands, defaultBrandId));
   const [queue, setQueue] = useState<UploadQueueItem[]>(() => readPersistedQueue());
   const abortByItem = useRef(new Map<string, AbortController>());
   const seenSuccess = useRef(new Set<string>());
@@ -117,8 +127,8 @@ export function AssetUploadPanel({ brands = [], defaultBrandId, onReady }: Props
   }, [queue]);
 
   useEffect(() => {
-    if (defaultBrandId) setBrandId(defaultBrandId);
-  }, [defaultBrandId]);
+    setBrandId(resolveUploadBrandId(brands, defaultBrandId));
+  }, [brands, defaultBrandId]);
 
   const updateItem = useCallback((id: string, patch: Partial<UploadQueueItem>) => {
     setQueue((prev) => prev.map((item) => (item.id === id ? { ...item, ...patch } : item)));

@@ -3,6 +3,13 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/types/supabase";
 import { isDeliverableCover, withCloudinaryPreset } from "@/lib/cloudinary/url";
 import { cloudinarySignedPresetUrl } from "@/app/api/_lib/cloudinary-signed-url";
+import {
+  DEFAULT_ASSETS_PAGE_LIMIT,
+  MAX_ASSETS_PAGE_LIMIT,
+  encodeAssetsCursor,
+  normalizeAssetTag,
+  type ListAssetsInput,
+} from "@/lib/assets/list-assets-params";
 
 type Db = SupabaseClient<Database>;
 type AssetDbRow = Database["public"]["Tables"]["assets"]["Row"];
@@ -16,6 +23,11 @@ export type AssetRow = AssetDbRow & {
    *  until a future approval flow exists, so an unsigned public delivery URL
    *  404s/401s for every real (non-fixture) asset. */
   displayUrl: string | null;
+};
+
+export type ListAssetsPage = {
+  items: AssetRow[];
+  nextCursor: string | null;
 };
 
 function resolveDisplayUrl(
@@ -33,25 +45,133 @@ function resolveDisplayUrl(
   return isDeliverableCover(raw) ? withCloudinaryPreset(raw, "asset-masonry") : null;
 }
 
-/** Read-only asset library list (SCR-08). No explicit brand/user filter —
- *  `assets_select_via_brand` RLS already scopes to assets whose brand is
- *  owned by the current user (`public.brands.user_id = auth.uid()`), the
- *  same ownership model brand/page.tsx's plain `.from("brands")` query
- *  trusts for the brand list. Joins `brands.name` (via `assets_brand_id_fkey`)
- *  so the workspace can offer an honest brand filter — real column, not
- *  fabricated — matching SCR-08's DoD ("filter by brand").
+/** Escape `%` / `_` / `\` so user query text is literal under ILIKE. */
+export function escapeIlikePattern(value: string): string {
+  return value.replace(/\\/g, "\\\\").replace(/%/g, "\\%").replace(/_/g, "\\_");
+}
+
+/**
+ * Wrap a PostgREST filter value in double quotes so reserved `.or()` / `.and()`
+ * delimiters (commas, parentheses, periods) stay inside one operand.
+ * Embedded `"` → `""` per PostgREST double-quoted value rules.
+ */
+export function quotePostgrestValue(value: string): string {
+  return `"${value.replace(/"/g, '""')}"`;
+}
+
+function normalizeLimit(limit: number | undefined): number {
+  const n = limit ?? DEFAULT_ASSETS_PAGE_LIMIT;
+  if (!Number.isInteger(n) || n < 1 || n > MAX_ASSETS_PAGE_LIMIT) {
+    throw new Error(`Asset page limit must be between 1 and ${MAX_ASSETS_PAGE_LIMIT}.`);
+  }
+  return n;
+}
+
+function buildSearchOrFilter(rawQuery: string): string {
+  const pattern = quotePostgrestValue(`%${escapeIlikePattern(rawQuery)}%`);
+  const tagExact = normalizeAssetTag(rawQuery);
+  const parts = [
+    `cloudinary_public_id.ilike.${pattern}`,
+    `metadata->>original_filename.ilike.${pattern}`,
+    `metadata->>title.ilike.${pattern}`,
+    `metadata->>alt_text.ilike.${pattern}`,
+    `metadata->>alt.ilike.${pattern}`,
+  ];
+  if (tagExact) {
+    // PostgREST array contains; quote the JSON array literal so commas in tags stay intact.
+    parts.push(`tags.cs.${quotePostgrestValue(`{"${tagExact.replace(/"/g, "")}"}`)}`);
+  }
+  return parts.join(",");
+}
+
+function buildCursorOrFilter(
+  cursor: { createdAt: string; id: string },
+  ascending: boolean,
+): string {
+  const createdAt = quotePostgrestValue(cursor.createdAt);
+  const id = quotePostgrestValue(cursor.id);
+  if (ascending) {
+    return `created_at.gt.${createdAt},and(created_at.eq.${createdAt},id.gt.${id})`;
+  }
+  return `created_at.lt.${createdAt},and(created_at.eq.${createdAt},id.lt.${id})`;
+}
+
+/**
+ * Read-only asset library list (SCR-08 / IPI-435).
  *
- *  Known gaps (tracked, not fixed here — both need an RLS/migration change,
- *  out of scope per SCR-08-assets.md's own "Out of scope: Backend migrations"):
- *  org-shared brands (non-owner org members get 0 assets — `assets_select_via_brand`
- *  isn't org-aware like `brands_select_org`), and shoot-scoped assets living in
- *  `shoot.shoot_assets` (only `get_brand_assets(brand_id)`, a brand-scoped RPC,
- *  currently unions them — this is a brand-agnostic library query). */
-export async function listAssets(client: Db): Promise<AssetRow[]> {
-  const { data, error } = await client
-    .from("assets")
-    .select("*, brand:brands(name)")
-    .order("created_at", { ascending: false });
+ * No service-role reads — callers pass the authenticated Supabase client so
+ * `assets_select_via_brand` RLS (org-aware) stays active. Filters run in
+ * Postgres before the page is returned. Cloudinary Search is intentionally
+ * out of scope for v1 (future optional discovery for native dimensions /
+ * EXIF / visual similarity, intersected with authorized Supabase ids).
+ *
+ * v1 free-text (`query`) matches:
+ * - `cloudinary_public_id` (partial)
+ * - `metadata.original_filename` / `metadata.title` / `metadata.alt_text` /
+ *   `metadata.alt` when present (schema has no dedicated filename/title cols yet)
+ * - exact normalized tag equality
+ *
+ * Search + cursor must share one `.or()` payload. Chaining two `.or()` calls is
+ * fragile across PostgREST parsers; we AND the groups explicitly as
+ * `or=(and(or(search…),or(cursor…)))`.
+ */
+export async function listAssets(
+  client: Db,
+  input: ListAssetsInput = {},
+): Promise<ListAssetsPage> {
+  const limit = normalizeLimit(input.limit);
+  const sort = input.sort ?? "newest";
+  const ascending = sort === "oldest";
+
+  let query = client.from("assets").select("*, brand:brands(name)");
+
+  if (input.brandId) {
+    query = query.eq("brand_id", input.brandId);
+  }
+  if (input.status && input.status.length > 0) {
+    query = query.in("status", input.status);
+  }
+  if (input.tags && input.tags.length > 0) {
+    const normalized = input.tags.map(normalizeAssetTag).filter(Boolean);
+    if (normalized.length > 0) {
+      // AND semantics: asset must include every requested tag.
+      query = query.contains("tags", normalized);
+    }
+  }
+
+  const rawQuery = input.query?.trim();
+  const searchOr = rawQuery ? buildSearchOrFilter(rawQuery) : null;
+  const cursorOr = input.cursor ? buildCursorOrFilter(input.cursor, ascending) : null;
+
+  if (searchOr && cursorOr) {
+    query = query.or(`and(or(${searchOr}),or(${cursorOr}))`);
+  } else if (searchOr) {
+    query = query.or(searchOr);
+  } else if (cursorOr) {
+    query = query.or(cursorOr);
+  }
+
+  const { data, error } = await query
+    .order("created_at", { ascending })
+    .order("id", { ascending })
+    .limit(limit + 1);
+
   if (error) throw error;
-  return (data ?? []).map((row) => ({ ...row, displayUrl: resolveDisplayUrl(row) })) as AssetRow[];
+
+  const rows = (data ?? []) as AssetDbRow[];
+  const hasMore = rows.length > limit;
+  const pageRows = rows.slice(0, limit);
+  const last = pageRows.at(-1);
+  const nextCursor =
+    hasMore && last
+      ? encodeAssetsCursor({ createdAt: last.created_at, id: last.id })
+      : null;
+
+  return {
+    items: pageRows.map((row) => ({
+      ...row,
+      displayUrl: resolveDisplayUrl(row),
+    })) as AssetRow[],
+    nextCursor,
+  };
 }
