@@ -156,6 +156,80 @@ describe("providerAdapter / createProviderAdapter", () => {
         message: expect.stringContaining("chat completion failed: 503"),
       });
     });
+
+    it("throws when Content-Length exceeds the response-size guard (IPI-762)", async () => {
+      globalThis.fetch = vi.fn().mockResolvedValue({
+        ok: true,
+        headers: new Headers({ "content-length": String(11 * 1024 * 1024) }),
+        json: () => Promise.resolve({ choices: [{ message: { content: "too big" } }] }),
+      });
+
+      await expect(providerAdapter.chat("test")).rejects.toMatchObject({
+        name: "AiGatewayError",
+        message: expect.stringContaining("response too large"),
+      });
+    });
+
+    it("allows a response under the size guard, and one with no Content-Length at all", async () => {
+      globalThis.fetch = vi.fn().mockResolvedValue({
+        ok: true,
+        headers: new Headers({ "content-length": "1024" }),
+        json: () => Promise.resolve({ choices: [{ message: { content: "fine" } }] }),
+      });
+      await expect(providerAdapter.chat("test")).resolves.toMatchObject({ text: "fine" });
+
+      globalThis.fetch = vi.fn().mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve({ choices: [{ message: { content: "fine" } }] }),
+      });
+      await expect(providerAdapter.chat("test")).resolves.toMatchObject({ text: "fine" });
+    });
+
+    // Regression guard: `Response.json()` never sets Content-Length in this runtime
+    // (verified directly against Node's Response implementation) — the AI Gateway
+    // Worker's real chat/structured/embed replies use exactly this pattern, so a
+    // header-only size check silently passes an oversized body on the one path it's
+    // meant to protect. This test uses a real ReadableStream body with no
+    // content-length header at all, so it only passes if the guard actually counts
+    // bytes as they stream in.
+    it("rejects an oversized body streamed with no Content-Length header (IPI-762)", async () => {
+      const oversizedChunk = new TextEncoder().encode("x".repeat(11 * 1024 * 1024));
+      const body = new ReadableStream<Uint8Array>({
+        start(controller) {
+          controller.enqueue(oversizedChunk);
+          controller.close();
+        },
+      });
+      globalThis.fetch = vi.fn().mockResolvedValue({
+        ok: true,
+        headers: new Headers(),
+        body,
+        json: () => Promise.reject(new Error("should not call .json() on an oversized stream")),
+      });
+
+      await expect(providerAdapter.chat("test")).rejects.toMatchObject({
+        name: "AiGatewayError",
+        message: expect.stringContaining("byte limit while streaming"),
+      });
+    });
+
+    it("still parses a normal streamed body with no Content-Length header", async () => {
+      const payload = JSON.stringify({ choices: [{ message: { content: "streamed fine" } }] });
+      const body = new ReadableStream<Uint8Array>({
+        start(controller) {
+          controller.enqueue(new TextEncoder().encode(payload));
+          controller.close();
+        },
+      });
+      globalThis.fetch = vi.fn().mockResolvedValue({
+        ok: true,
+        headers: new Headers(),
+        body,
+        json: () => Promise.reject(new Error("should read the stream, not .json()")),
+      });
+
+      await expect(providerAdapter.chat("test")).resolves.toMatchObject({ text: "streamed fine" });
+    });
   });
 
   describe("chatStream", () => {
