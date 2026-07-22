@@ -223,9 +223,28 @@ describe("AssetsWorkspace", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Video" }));
     expect(screen.getAllByTestId("asset-card")).toHaveLength(1);
+    // Subtitle must track the visible grid, not the full server page.
+    expect(screen.getByText("1 asset")).toBeDefined();
+    expect(screen.queryByText("2 assets")).toBeNull();
 
     fireEvent.click(screen.getByRole("button", { name: "All" }));
     expect(screen.getAllByTestId("asset-card")).toHaveLength(2);
+    expect(screen.getByText("2 assets")).toBeDefined();
+  });
+
+  it("does not seed upload with a URL brand id the caller cannot access", () => {
+    render(
+      <AssetsWorkspace
+        {...defaultProps}
+        filters={filters({ brand: "99999999-9999-4999-8999-999999999999" })}
+        assets={[]}
+        brands={[{ id: "11111111-1111-4111-8111-111111111111", name: "Acme" }]}
+        isAuthenticated
+        fetchError="Unable to load assets."
+      />,
+    );
+    const select = screen.getByLabelText("Upload to brand") as HTMLSelectElement;
+    expect(select.value).toBe("11111111-1111-4111-8111-111111111111");
   });
 
   it("shows a no-match state instead of a fake grid when a filter matches nothing, with a working clear button", () => {

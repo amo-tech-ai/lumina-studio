@@ -53,6 +53,12 @@ const AssetsPage = async ({
     name: b.name,
   }));
 
+  // Valid UUID in ?brand= can still be inaccessible under RLS. Drop it so the
+  // library filter + upload default never seed a brand the user cannot use.
+  if (filters.brandId && !brands.some((b) => b.id === filters.brandId)) {
+    redirect(buildAssetsLibraryUrl({ ...filters, brandId: undefined }));
+  }
+
   try {
     const page = await listAssets(supabase, toListAssetsInput(filters));
     return (

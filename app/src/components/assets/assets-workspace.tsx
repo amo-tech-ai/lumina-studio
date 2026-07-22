@@ -179,10 +179,17 @@ export function AssetsWorkspace({
     );
   }
 
+  // Only seed upload from URL brand when that id is in the caller's brand list
+  // (RLS-visible). A stale/inaccessible ?brand= UUID must not reach signing.
+  const uploadDefaultBrandId =
+    filters.brandId && brands.some((b) => b.id === filters.brandId)
+      ? filters.brandId
+      : undefined;
+
   const uploadPanel = (
     <AssetUploadPanel
       brands={brands}
-      defaultBrandId={filters.brandId}
+      defaultBrandId={uploadDefaultBrandId}
       onReady={() => router.refresh()}
     />
   );
@@ -233,7 +240,7 @@ export function AssetsWorkspace({
       <header className={styles.header}>
         <div>
           <h1 className={styles.title}>Assets</h1>
-          <p className={styles.subtitle}>{countLabel(assets)}</p>
+          <p className={styles.subtitle}>{countLabel(filteredAssets)}</p>
         </div>
         {uploadPanel}
       </header>
