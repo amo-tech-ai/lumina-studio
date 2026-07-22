@@ -7,27 +7,42 @@ vi.mock("../ui/status-chip.module.css", () => ({ default: new Proxy({}, { get: (
 vi.mock("../ui/empty-state.module.css", () => ({ default: new Proxy({}, { get: (_, k) => String(k) }) }));
 vi.mock("../ui/error-state.module.css", () => ({ default: new Proxy({}, { get: (_, k) => String(k) }) }));
 vi.mock("next/image", () => ({ default: (props: { alt: string }) => <img alt={props.alt} /> }));
-
-const { useSearchParamsMock } = vi.hoisted(() => ({
-  useSearchParamsMock: vi.fn(() => new URLSearchParams("")),
+vi.mock("next/link", () => ({
+  default: ({ href, children, ...rest }: { href: string; children: React.ReactNode }) => (
+    <a href={href} {...rest}>
+      {children}
+    </a>
+  ),
 }));
+
 const refresh = vi.fn();
+const push = vi.fn();
 vi.mock("next-cloudinary", () => ({
   CldUploadWidget: ({ children }: { children: (args: { open: () => void }) => React.ReactNode }) =>
     children({ open: vi.fn() }),
 }));
 vi.mock("next/navigation", () => ({
-  useSearchParams: useSearchParamsMock,
-  useRouter: () => ({ refresh }),
+  useRouter: () => ({ refresh, push }),
 }));
 
 import { AssetsWorkspace } from "./assets-workspace";
 import type { AssetRow } from "@/lib/assets/get-assets";
+import {
+  parseAssetsLibraryParams,
+  type AssetsLibraryFilters,
+} from "@/lib/assets/list-assets-params";
 
 afterEach(() => {
   cleanup();
-  useSearchParamsMock.mockReturnValue(new URLSearchParams(""));
+  refresh.mockClear();
+  push.mockClear();
 });
+
+function filters(overrides: Record<string, string | string[] | undefined> = {}): AssetsLibraryFilters {
+  const parsed = parseAssetsLibraryParams(overrides);
+  if (!parsed.ok) throw new Error(parsed.error);
+  return parsed.data;
+}
 
 function asset(overrides: Partial<AssetRow> = {}): AssetRow {
   return {
@@ -62,14 +77,22 @@ function asset(overrides: Partial<AssetRow> = {}): AssetRow {
   };
 }
 
+const defaultProps = {
+  filters: filters(),
+  nextCursor: null as string | null,
+  brands: [] as { id: string; name: string }[],
+};
+
 describe("AssetsWorkspace", () => {
   it("shows a sign-in prompt when unauthenticated — no query attempted", () => {
-    render(<AssetsWorkspace assets={[]} brands={[]} isAuthenticated={false} />);
+    render(<AssetsWorkspace {...defaultProps} assets={[]} isAuthenticated={false} />);
     expect(screen.getByText(/Sign in to view your asset library/)).toBeDefined();
   });
 
   it("shows a retryable error state instead of the grid when the fetch failed", () => {
-    render(<AssetsWorkspace assets={[]} brands={[]} isAuthenticated fetchError="Unable to load assets." />);
+    render(
+      <AssetsWorkspace {...defaultProps} assets={[]} isAuthenticated fetchError="Unable to load assets." />,
+    );
     expect(screen.getByRole("alert")).toBeDefined();
     expect(screen.getByText("Unable to load assets.")).toBeDefined();
   });
@@ -77,6 +100,7 @@ describe("AssetsWorkspace", () => {
   it("keeps the upload panel available when the asset list fetch failed", () => {
     render(
       <AssetsWorkspace
+        {...defaultProps}
         assets={[]}
         brands={[{ id: "b1", name: "Acme" }]}
         isAuthenticated
@@ -88,48 +112,46 @@ describe("AssetsWorkspace", () => {
   });
 
   it("retry re-runs the server fetch via router.refresh(), not a no-op link", () => {
-    refresh.mockClear();
-    render(<AssetsWorkspace assets={[]} brands={[]} isAuthenticated fetchError="Unable to load assets." />);
+    render(
+      <AssetsWorkspace {...defaultProps} assets={[]} isAuthenticated fetchError="Unable to load assets." />,
+    );
     fireEvent.click(screen.getByRole("button", { name: "Try again" }));
     expect(refresh).toHaveBeenCalledTimes(1);
   });
 
-  it("re-syncs the brand filter when the URL's ?brand= changes without remounting (client-side nav / back-forward)", () => {
-    useSearchParamsMock.mockReturnValue(new URLSearchParams("brand=b1"));
-    const { rerender } = render(
+  it("navigates with a brand URL when the brand select changes (server-side filter)", () => {
+    render(
       <AssetsWorkspace
-        assets={[
-          asset({ id: "a1", brand_id: "b1", brand: { name: "Acme" } }),
-          asset({ id: "a2", brand_id: "b2", brand: { name: "Zeta" } }),
+        {...defaultProps}
+        assets={[asset({ id: "a1", brand_id: "b1", brand: { name: "Acme" } })]}
+        brands={[
+          { id: "11111111-1111-4111-8111-111111111111", name: "Acme" },
+          { id: "22222222-2222-4222-8222-222222222222", name: "Zeta" },
         ]}
-        brands={[]}
         isAuthenticated
       />,
     );
-    expect(screen.getAllByTestId("asset-card")).toHaveLength(1);
-
-    useSearchParamsMock.mockReturnValue(new URLSearchParams("brand=b2"));
-    rerender(
-      <AssetsWorkspace
-        assets={[
-          asset({ id: "a1", brand_id: "b1", brand: { name: "Acme" } }),
-          asset({ id: "a2", brand_id: "b2", brand: { name: "Zeta" } }),
-        ]}
-        brands={[]}
-        isAuthenticated
-      />,
+    fireEvent.change(screen.getByTestId("assets-brand-filter"), {
+      target: { value: "22222222-2222-4222-8222-222222222222" },
+    });
+    expect(push).toHaveBeenCalledWith(
+      "/app/assets?brand=22222222-2222-4222-8222-222222222222",
     );
-    expect(screen.getByLabelText("Filter by brand")).toHaveProperty("value", "b2");
-    expect(screen.getAllByTestId("asset-card")).toHaveLength(1);
   });
 
   it("shows an honest empty state when there are no assets", () => {
-    render(<AssetsWorkspace assets={[]} brands={[]} isAuthenticated />);
+    render(<AssetsWorkspace {...defaultProps} assets={[]} isAuthenticated />);
     expect(screen.getByText("No assets yet")).toBeDefined();
   });
 
   it("renders one card per asset with a real count", () => {
-    render(<AssetsWorkspace assets={[asset({ id: "a1" }), asset({ id: "a2" })]} brands={[]} isAuthenticated />);
+    render(
+      <AssetsWorkspace
+        {...defaultProps}
+        assets={[asset({ id: "a1" }), asset({ id: "a2" })]}
+        isAuthenticated
+      />,
+    );
     expect(screen.getByText("2 assets")).toBeDefined();
     expect(screen.getAllByTestId("asset-card")).toHaveLength(2);
   });
@@ -137,8 +159,8 @@ describe("AssetsWorkspace", () => {
   it("shows the real avg DNA match in the header when at least one asset has a score", () => {
     render(
       <AssetsWorkspace
+        {...defaultProps}
         assets={[asset({ id: "a1", dna_score: 80 }), asset({ id: "a2", dna_score: 60 })]}
-        brands={[]}
         isAuthenticated
       />,
     );
@@ -146,7 +168,9 @@ describe("AssetsWorkspace", () => {
   });
 
   it("omits the avg DNA match segment entirely when no asset has a score — never shows a fake 0%", () => {
-    render(<AssetsWorkspace assets={[asset({ id: "a1", dna_score: null })]} brands={[]} isAuthenticated />);
+    render(
+      <AssetsWorkspace {...defaultProps} assets={[asset({ id: "a1", dna_score: null })]} isAuthenticated />,
+    );
     expect(screen.getByText("1 asset")).toBeDefined();
     expect(screen.queryByText(/avg DNA match/)).toBeNull();
   });
@@ -154,12 +178,12 @@ describe("AssetsWorkspace", () => {
   it("sorts by real dna_score (desc, nulls last) when the DNA match sort is toggled on", () => {
     render(
       <AssetsWorkspace
+        {...defaultProps}
         assets={[
           asset({ id: "a1", dna_score: 40 }),
           asset({ id: "a2", dna_score: 95 }),
           asset({ id: "a3", dna_score: null }),
         ]}
-        brands={[]}
         isAuthenticated
       />,
     );
@@ -169,11 +193,11 @@ describe("AssetsWorkspace", () => {
     expect(cards[1].textContent).toContain("40%");
   });
 
-  it("clearing filters also turns off the DNA match sort toggle", () => {
+  it("clearing filters also turns off the DNA match sort toggle and resets the URL", () => {
     render(
       <AssetsWorkspace
+        {...defaultProps}
         assets={[asset({ id: "a1", asset_type: "image" }), asset({ id: "a2", asset_type: "video" })]}
-        brands={[]}
         isAuthenticated
       />,
     );
@@ -182,15 +206,16 @@ describe("AssetsWorkspace", () => {
     expect(screen.getByRole("button", { name: "DNA match" }).getAttribute("aria-pressed")).toBe("true");
     expect(screen.getByTestId("assets-no-match")).toBeDefined();
 
-    fireEvent.click(screen.getByRole("button", { name: "Clear filters" }));
+    fireEvent.click(screen.getAllByRole("button", { name: "Clear filters" })[0]);
     expect(screen.getByRole("button", { name: "DNA match" }).getAttribute("aria-pressed")).toBe("false");
+    expect(push).toHaveBeenCalledWith("/app/assets");
   });
 
   it("filters the grid client-side by asset_type", () => {
     render(
       <AssetsWorkspace
+        {...defaultProps}
         assets={[asset({ id: "a1", asset_type: "image" }), asset({ id: "a2", asset_type: "video" })]}
-        brands={[]}
         isAuthenticated
       />,
     );
@@ -204,24 +229,26 @@ describe("AssetsWorkspace", () => {
   });
 
   it("shows a no-match state instead of a fake grid when a filter matches nothing, with a working clear button", () => {
-    render(<AssetsWorkspace assets={[asset({ asset_type: "image" })]} brands={[]} isAuthenticated />);
+    render(
+      <AssetsWorkspace {...defaultProps} assets={[asset({ asset_type: "image" })]} isAuthenticated />,
+    );
     fireEvent.click(screen.getByRole("button", { name: "Video" }));
     expect(screen.getByTestId("assets-no-match")).toBeDefined();
     expect(screen.queryByTestId("assets-grid")).toBeNull();
 
-    fireEvent.click(screen.getByRole("button", { name: "Clear filters" }));
+    fireEvent.click(screen.getAllByRole("button", { name: "Clear filters" })[0]);
     expect(screen.getByTestId("assets-grid")).toBeDefined();
   });
 
   it("filters by real dna_score < 70 for the Low match chip — never a fabricated match tier", () => {
     render(
       <AssetsWorkspace
+        {...defaultProps}
         assets={[
           asset({ id: "a1", dna_score: 92 }),
           asset({ id: "a2", dna_score: 40 }),
           asset({ id: "a3", dna_score: null }),
         ]}
-        brands={[]}
         isAuthenticated
       />,
     );
@@ -229,39 +256,57 @@ describe("AssetsWorkspace", () => {
     expect(screen.getAllByTestId("asset-card")).toHaveLength(1);
   });
 
-  it("only renders the brand filter when a real brand is present on at least one asset", () => {
-    render(<AssetsWorkspace assets={[asset({ brand_id: null, brand: null })]} brands={[]} isAuthenticated />);
-    expect(screen.queryByText("Filter by brand")).toBeNull();
-  });
-
-  it("initializes the brand filter from a ?brand= deep link (Brand Detail / command-center quick action)", () => {
-    useSearchParamsMock.mockReturnValue(new URLSearchParams("brand=b2"));
+  it("shows the brand filter from brands prop even when the current page has no brand rows", () => {
     render(
       <AssetsWorkspace
-        assets={[
-          asset({ id: "a1", brand_id: "b1", brand: { name: "Acme" } }),
-          asset({ id: "a2", brand_id: "b2", brand: { name: "Zeta" } }),
-        ]}
-        brands={[]}
+        {...defaultProps}
+        assets={[asset({ brand_id: null, brand: null })]}
+        brands={[{ id: "11111111-1111-4111-8111-111111111111", name: "Acme" }]}
         isAuthenticated
       />,
     );
-    expect(screen.getAllByTestId("asset-card")).toHaveLength(1);
-    expect(screen.getByLabelText("Filter by brand")).toHaveProperty("value", "b2");
+    expect(screen.getByTestId("assets-brand-filter")).toBeDefined();
   });
 
-  it("filters client-side by brand_id when brands are present", () => {
+  it("honors server filters.brandId in the brand select (deep link)", () => {
     render(
       <AssetsWorkspace
-        assets={[
-          asset({ id: "a1", brand_id: "b1", brand: { name: "Acme" } }),
-          asset({ id: "a2", brand_id: "b2", brand: { name: "Zeta" } }),
+        {...defaultProps}
+        filters={filters({ brand: "22222222-2222-4222-8222-222222222222" })}
+        assets={[asset({ id: "a2", brand_id: "22222222-2222-4222-8222-222222222222", brand: { name: "Zeta" } })]}
+        brands={[
+          { id: "11111111-1111-4111-8111-111111111111", name: "Acme" },
+          { id: "22222222-2222-4222-8222-222222222222", name: "Zeta" },
         ]}
-        brands={[]}
         isAuthenticated
       />,
     );
-    fireEvent.change(screen.getByLabelText("Filter by brand"), { target: { value: "b2" } });
-    expect(screen.getAllByTestId("asset-card")).toHaveLength(1);
+    expect(screen.getByTestId("assets-brand-filter")).toHaveProperty(
+      "value",
+      "22222222-2222-4222-8222-222222222222",
+    );
+  });
+
+  it("submits search + tags into the shareable URL", () => {
+    render(<AssetsWorkspace {...defaultProps} assets={[asset()]} isAuthenticated />);
+    fireEvent.change(screen.getByTestId("assets-search-input"), { target: { value: "runway" } });
+    fireEvent.change(screen.getByTestId("assets-tags-input"), { target: { value: "Editorial, Approved" } });
+    fireEvent.submit(screen.getByRole("search"));
+    expect(push).toHaveBeenCalledWith("/app/assets?q=runway&tags=editorial%2Capproved");
+  });
+
+  it("renders Next page when nextCursor is present", () => {
+    render(
+      <AssetsWorkspace
+        {...defaultProps}
+        assets={[asset()]}
+        nextCursor="abc"
+        isAuthenticated
+      />,
+    );
+    expect(screen.getByRole("link", { name: "Next page" })).toHaveProperty(
+      "href",
+      expect.stringContaining("cursor=abc"),
+    );
   });
 });

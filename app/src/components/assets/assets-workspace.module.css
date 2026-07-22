@@ -52,6 +52,77 @@
   background: var(--color-action-hover);
 }
 
+.searchRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+  padding: 0 2.25rem;
+  margin-bottom: 0.75rem;
+}
+
+.searchField {
+  flex: 1 1 12rem;
+  min-width: 10rem;
+}
+
+.searchInput {
+  width: 100%;
+  height: 2.25rem;
+  padding: 0 0.75rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-bg-card);
+  color: var(--color-text-primary);
+  font-size: var(--font-size-sm);
+}
+
+.searchBtn {
+  height: 2.25rem;
+  padding: 0 1rem;
+  border: none;
+  border-radius: var(--radius-md);
+  background: var(--color-action);
+  color: var(--color-action-text);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  cursor: pointer;
+}
+
+.searchBtn:hover {
+  background: var(--color-action-hover);
+}
+
+.pagination {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: flex-end;
+  margin-top: 1rem;
+}
+
+.paginationBtnPrimary,
+.paginationBtnSecondary {
+  display: inline-flex;
+  align-items: center;
+  height: 2.25rem;
+  padding: 0 1rem;
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  text-decoration: none;
+}
+
+.paginationBtnPrimary {
+  background: var(--color-action);
+  color: var(--color-action-text);
+}
+
+.paginationBtnSecondary {
+  border: 1px solid var(--color-border);
+  background: var(--color-bg-card);
+  color: var(--color-text-primary);
+}
+
 .filterRow {
   display: flex;
   gap: 0.5rem;
