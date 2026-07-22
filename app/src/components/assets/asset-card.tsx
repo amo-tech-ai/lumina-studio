@@ -1,4 +1,7 @@
+"use client";
+
 import Image from "next/image";
+import { useState } from "react";
 import { FileText, Video } from "lucide-react";
 
 import { StatusChip } from "@/components/ui/status-chip";
@@ -20,6 +23,14 @@ function formatShortDate(iso: string): string {
   return date.toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
 }
 
+function ImageFallback() {
+  return (
+    <div className={styles.iconFallback} aria-hidden>
+      <FileText size={22} />
+    </div>
+  );
+}
+
 /** Masonry tile for one `assets` row — no name/title column exists on the
  *  table (see get-assets.ts), so this never fabricates one: only the real
  *  type, date, and (when present) DNA status/score are shown. */
@@ -27,6 +38,18 @@ export function AssetCard({ asset }: { asset: AssetRow }) {
   const ratio = asset.width && asset.height ? asset.width / asset.height : 1;
   const dnaLabel = assetDnaStatusLabel(asset.dna_status);
   const dnaDot = assetDnaStatusDotToken(asset.dna_status);
+  // IPI-757 A2 — if Cloudinary media was deleted but the assets row remains,
+  // swap to the icon fallback instead of leaving a broken <img> (console 404).
+  // Key failure by URL so router.refresh() with a new displayUrl can recover
+  // without remounting the card (AssetsWorkspace keys tiles by asset.id).
+  const [failedUrl, setFailedUrl] = useState<string | null>(null);
+  // Narrow once: empty string / null / undefined all take the icon path — never
+  // render <img src="">. Truthy check also lets TypeScript drop the `!` asserts.
+  const displayUrl =
+    typeof asset.displayUrl === "string" && asset.displayUrl.length > 0
+      ? asset.displayUrl
+      : null;
+  const thumbFailed = displayUrl !== null && failedUrl === displayUrl;
 
   return (
     <div className={styles.card} data-testid="asset-card" data-asset-id={asset.id}>
@@ -36,22 +59,21 @@ export function AssetCard({ asset }: { asset: AssetRow }) {
             <Video size={22} />
           </div>
         ) : asset.asset_type === "document" ? (
-          <div className={styles.iconFallback} aria-hidden>
-            <FileText size={22} />
-          </div>
-        ) : asset.displayUrl ? (
-          isAuthenticatedDeliveryUrl(asset.displayUrl) ? (
+          <ImageFallback />
+        ) : displayUrl && !thumbFailed ? (
+          isAuthenticatedDeliveryUrl(displayUrl) ? (
             // Signed authenticated URLs 404 through /_next/image — load directly.
             <img
-              src={asset.displayUrl}
+              src={displayUrl}
               alt=""
               loading="lazy"
               decoding="async"
               className={styles.thumbImageDirect}
+              onError={() => setFailedUrl(displayUrl)}
             />
           ) : (
             <Image
-              src={asset.displayUrl}
+              src={displayUrl}
               alt=""
               fill
               // Mirrors assets-workspace.module.css's .masonry column breakpoints
@@ -59,12 +81,11 @@ export function AssetCard({ asset }: { asset: AssetRow }) {
               // real rendered width on tablet/mobile, so next/image picked too-small candidates.
               sizes="(max-width: 560px) 100vw, (max-width: 880px) 50vw, (max-width: 1280px) 33vw, 25vw"
               className={styles.thumbImage}
+              onError={() => setFailedUrl(displayUrl)}
             />
           )
         ) : (
-          <div className={styles.iconFallback} aria-hidden>
-            <FileText size={22} />
-          </div>
+          <ImageFallback />
         )}
         {dnaLabel && dnaDot ? (
           <span className={styles.dnaBadge}>
