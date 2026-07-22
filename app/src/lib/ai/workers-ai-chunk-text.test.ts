@@ -32,6 +32,17 @@ describe("IPI-771 workers-ai dual-format chunk text", () => {
     expect(pickWorkersAiChunkText({ response: "hi" })).toBe("hi");
   });
 
+  it("skips empty dual-format role/bootstrap chunks (no text to emit)", () => {
+    // Real Gateway streams often start with response:"" + delta.content:"" (role only).
+    // Skipping is correct — not a missing empty-string handler.
+    expect(
+      pickWorkersAiChunkText({
+        response: "",
+        choices: [{ delta: { content: "" } }],
+      }),
+    ).toBeUndefined();
+  });
+
   it("reconstructs dual-format stream without doubled tokens", () => {
     const chunks: WorkersAiStreamChunk[] = [
       { response: "", choices: [{ delta: { content: "" } }] },

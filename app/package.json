@@ -24,7 +24,7 @@
     "cf-typegen": "wrangler types cloudflare-env.d.ts --env-interface CloudflareEnv --include-runtime=false",
     "check:cf-types": "wrangler types cloudflare-env.d.ts --env-interface CloudflareEnv --include-runtime=false --check",
     "check:worker-bundle": "node scripts/check-worker-bundle-size.mjs",
-    "postinstall": "patch-package",
+    "postinstall": "patch-package --error-on-fail",
     "verify:cloudinary-pipeline": "node scripts/verify-cloudinary-pipeline.mjs",
     "verify:cloudinary-webhook-live": "node scripts/verify-cloudinary-webhook-live.mjs",
     "verify:cloudflare-gateway": "node scripts/verify-cloudflare-gateway.mjs"
