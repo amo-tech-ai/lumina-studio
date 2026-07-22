@@ -148,6 +148,21 @@ describe("auditAsset", () => {
     assert.ok(result.issues.some((i) => i.includes('missing required context key "work_id"')));
   });
 
+  it("flags missing work_id from folder workType when context omits work_type", () => {
+    const result = auditAsset(
+      compliantAsset({
+        folder: `ipix/dev/${ORG_ID}/${BRAND_ID}/shoots/${WORK_ID}`,
+        context: { env: "dev", org_id: ORG_ID, brand_id: BRAND_ID },
+      }),
+    );
+    assert.equal(result.classification, "malformed");
+    assert.ok(result.issues.some((i) => i.includes('missing required context key "work_type"')));
+    assert.ok(
+      result.issues.some((i) => i.includes('missing required context key "work_id"')),
+      `expected work_id issue, got: ${JSON.stringify(result.issues)}`,
+    );
+  });
+
   it("passes a shoots asset that has work_id", () => {
     const result = auditAsset(
       compliantAsset({

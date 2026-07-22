@@ -126,7 +126,9 @@ export function auditAsset(asset) {
   if (!score.valid) {
     issues.push(`folder "${folder}": ${score.reason}`);
   } else {
-    for (const key of requiredContextKeysFor(ctx.work_type)) {
+    // Folder workType is authoritative when the path is valid — if context omits
+    // work_type, still require work_id for shoots/campaigns folders.
+    for (const key of requiredContextKeysFor(score.workType)) {
       if (!(key in ctx)) issues.push(`missing required context key "${key}"`);
     }
     if (ctx.env && ctx.env !== score.env) {
