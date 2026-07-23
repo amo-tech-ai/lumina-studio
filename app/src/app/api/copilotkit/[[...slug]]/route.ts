@@ -55,11 +55,57 @@ const runtime = new CopilotRuntime({
     } catch {
       // Vercel/Node — cfEnv stays unset, cloudflare-models.ts falls back to legacy.
     }
-    return MastraAgent.getLocalAgents({
+    const agents = MastraAgent.getLocalAgents({
       mastra: getMastra(),
       resourceId: user.id,
       requestContext,
     });
+    // IPI-760: `getLocalAgents()` does NOT accept `emitInterruptOutcome` in its
+    // options (verified against @ag-ui/mastra@1.1.1's compiled source — the bulk
+    // helper only forwards mastra/resourceId/requestContext/untilIdle/
+    // observationalMemory/tracingOptions to each constructed MastraAgent; passing
+    // it there is both a TS2353 type error and a silent no-op at runtime).
+    //
+    // Setting only the instance field is NOT enough: CopilotKit's runtime clones
+    // the agent per request (`cloneAgentForRequest` -> `agents[agentId].clone()`,
+    // see @copilotkit/runtime/dist/v2/runtime/handlers/shared/agent-utils.cjs),
+    // and MastraAgent.clone() rebuilds `new MastraAgent(this.config)` from the
+    // ORIGINAL config object, not the live instance — so a post-construction
+    // `agent.emitInterruptOutcome = false` is silently discarded on every real
+    // request before the agent ever runs (confirmed empirically: cloning after an
+    // instance-only mutation returns `emitInterruptOutcome: true` again). Mutating
+    // `agent.config` too — the same object `clone()` reconstructs from — makes it
+    // survive cloning, including repeated clone-of-clone.
+    //
+    // 1.1.1 defaults this to true, which requires a CopilotKit client >=1.61.2 to
+    // resume structured interrupts. This repo runs @copilotkit/runtime@1.61.0 —
+    // explicitly named as an affected version in AG-UI's own README — so leaving
+    // the default on strands every Mastra HITL interrupt/resume with "Thread has
+    // N pending interrupt(s) not addressed by resume". Keep false until
+    // CopilotKit is bumped to >=1.61.2 (separate, larger decision — see IPI-760).
+    for (const [agentId, agent] of Object.entries(agents)) {
+      if (agent instanceof MastraAgent) {
+        agent.emitInterruptOutcome = false;
+        // `config` is typed `private` in @ag-ui/mastra's declarations, but it's a
+        // plain runtime field (TS `private` isn't enforced at runtime) — the cast
+        // is intentional, not a type-safety hole: see the comment above for why
+        // clone() requires mutating it directly.
+        (agent as any).config.emitInterruptOutcome = false;
+      } else {
+        // getLocalAgents() only ever constructs MastraAgent instances today (see
+        // the `y()` helper decompiled in the comment above), so this branch isn't
+        // expected to run — but if a future @ag-ui/mastra version changes that, an
+        // agent silently skipped here means it keeps the emitInterruptOutcome:
+        // true default and strands HITL interrupts for exactly that agent, with
+        // no visible signal. Fail loud instead of failing silent.
+        console.warn(
+          `[copilotkit] agent "${agentId}" from getLocalAgents() is not a MastraAgent instance ` +
+            "(unexpected @ag-ui/mastra shape) — emitInterruptOutcome was NOT set to false for it; " +
+            "HITL interrupt/resume may strand for this agent. See IPI-760.",
+        );
+      }
+    }
+    return agents;
   },
   runner: new InMemoryAgentRunner(),
   // Intelligence mode requires `intelligence: new CopilotKitIntelligence(...)` — not licenseToken alone.
