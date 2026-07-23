@@ -177,8 +177,14 @@ CREATE INDEX IF NOT EXISTS "mastra_mastra_messages_thread_id_createdat_idx" ON "
             END $$;
             
           
+-- search_path pinned (public + pg_temp) — same hardening as
+-- 20260121084425_fix_function_search_path_dynamic.sql. Empty search_path
+-- would break unqualified NOW() / TG_OP in this body.
 CREATE OR REPLACE FUNCTION "mastra".trigger_set_timestamps()
-RETURNS TRIGGER AS $$
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SET search_path = public, pg_temp
+AS $$
 BEGIN
     IF TG_OP = 'INSERT' THEN
         NEW."createdAt" = NOW();
@@ -193,7 +199,7 @@ BEGIN
     END IF;
     RETURN NEW;
 END;
-$$ LANGUAGE plpgsql;
+$$;
 
 DROP TRIGGER IF EXISTS "mastra_ai_spans_timestamps" ON "mastra"."mastra_ai_spans";
 
