@@ -433,6 +433,32 @@ describe("IPI-740 · Mastra pool + URL split", () => {
       }),
     );
   });
+
+  it("preserves ?sslmode=disable when DATABASE_SSL is unset (no explicit ssl override)", async () => {
+    const ctor = vi.fn(function FakePostgresStore() {});
+    vi.doMock("@mastra/pg", () => ({
+      PostgresStore: ctor,
+      IPIX_CF_MASTRA_PG_STUB: undefined,
+    }));
+    vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("VERCEL", "1");
+    vi.stubEnv("CI", "");
+    vi.stubEnv(
+      "MASTRA_DATABASE_URL",
+      "postgresql://mastra@127.0.0.1:6543/postgres?sslmode=disable",
+    );
+    vi.stubEnv("DATABASE_URL", "");
+    vi.stubEnv("DATABASE_SSL", "");
+    vi.resetModules();
+    const { getMastraStorage: freshGet } = await import("./storage");
+    freshGet();
+    expect(ctor).toHaveBeenCalledWith(
+      expect.objectContaining({
+        connectionString: expect.stringContaining("sslmode=disable"),
+        ssl: undefined,
+      }),
+    );
+  });
 });
 
 describe("withMastraApplicationName", () => {

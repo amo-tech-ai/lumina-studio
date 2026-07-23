@@ -144,7 +144,7 @@ function resolveMastraPgPoolMax(env: NodeJS.ProcessEnv = process.env): number {
  */
 function resolveMastraPgSslOption(
   env: NodeJS.ProcessEnv = process.env,
-): { rejectUnauthorized: boolean } | undefined {
+): { rejectUnauthorized: false } | undefined {
   return env.DATABASE_SSL === "true" ? { rejectUnauthorized: false } : undefined;
 }
 
