@@ -39,14 +39,15 @@ index 6bd4682..fa18376 100644
  						controller.enqueue({
  							type: "reasoning-end",
 diff --git a/node_modules/workers-ai-provider/src/streaming.ts b/node_modules/workers-ai-provider/src/streaming.ts
-index f1937cf..c7f97f0 100644
+index f1937cf..7e983aa 100644
 --- a/node_modules/workers-ai-provider/src/streaming.ts
 +++ b/node_modules/workers-ai-provider/src/streaming.ts
-@@ -165,9 +165,13 @@ export function getMappedStream(
+@@ -165,9 +165,14 @@ export function getMappedStream(
  
  				// --- Native format: top-level `response` field ---
  				const nativeResponse = chunk.response;
-+				// IPI-771: dual-format SSE may set both `response` and
++				// IPI-771 · CF-MIG-230-W1 — dual-format SSE text dedup:
++				// dual-format SSE may set both `response` and
 +				// `choices[0].delta.content`. Skip OpenAI delta only when identical.
 +				let nativeText: string | undefined;
  				if (nativeResponse != null && nativeResponse !== "") {
@@ -56,7 +57,7 @@ index f1937cf..c7f97f0 100644
  						if (bufferContentForSalvage) {
  							contentBuffer += responseText;
  						} else {
-@@ -222,7 +226,9 @@ export function getMappedStream(
+@@ -222,7 +227,9 @@ export function getMappedStream(
  					}
  
  					const textDelta = delta.content as string | undefined;
