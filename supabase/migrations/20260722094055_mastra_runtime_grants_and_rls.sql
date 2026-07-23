@@ -78,6 +78,12 @@ BEGIN
 
     EXECUTE format('ALTER TABLE mastra.%I ENABLE ROW LEVEL SECURITY', r.tablename);
 
+    -- Idempotent: recovery / mid-flight re-run must not fail on "policy already exists".
+    -- Matches repo pattern (DROP POLICY IF EXISTS before CREATE POLICY).
+    EXECUTE format(
+      'DROP POLICY IF EXISTS hyperdrive_mastra_runtime_all ON mastra.%I',
+      r.tablename
+    );
     EXECUTE format(
       'CREATE POLICY hyperdrive_mastra_runtime_all ON mastra.%I
          FOR ALL
