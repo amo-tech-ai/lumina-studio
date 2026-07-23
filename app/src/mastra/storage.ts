@@ -14,7 +14,6 @@ type IpixMastraGlobal = typeof globalThis & {
 
 let storage: MastraAppStorage | undefined;
 let lazyStorageProxy: MastraAppStorage | undefined;
-let storageDegraded = false;
 let cachedStorageUnavailableError: MastraStorageUnavailableError | undefined;
 
 /** Thrown when durable storage is required but DATABASE_URL is unset in production. */
@@ -87,7 +86,7 @@ export function assertPostgresStoreModule(mod: {
 
 /** True when Mastra storage init failed in production — safe for health/degraded signals (no secrets). */
 export function isMastraStorageDegraded(): boolean {
-  return storageDegraded;
+  return cachedStorageUnavailableError !== undefined;
 }
 
 /**
@@ -220,7 +219,6 @@ function requireProductionDatabaseUrl(env: NodeJS.ProcessEnv = process.env): voi
   if (env.NODE_ENV !== "production" || env.CI) return;
 
   const target = isVercelRuntime(env) ? "Vercel production" : "production";
-  storageDegraded = true;
   console.error(
     `[mastra] MASTRA_DATABASE_URL / DATABASE_URL missing in ${target} — durable storage unavailable. ` +
       "CopilotKit /info may still list agents; agent runs requiring memory return 503 " +
@@ -247,7 +245,15 @@ function createPostgresStore(url: string, env: NodeJS.ProcessEnv = process.env):
 
 export function getMastraStorage(): MastraAppStorage {
   if (cachedStorageUnavailableError) {
-    throw cachedStorageUnavailableError;
+    const { url } = resolveMastraDatabaseUrlWithSource();
+    if (!url) {
+      throw cachedStorageUnavailableError;
+    }
+    // Scope: missing-env-var only. Transient connection errors bubble; do not latch.
+    cachedStorageUnavailableError = undefined;
+    console.warn(
+      "[mastra] IPI-778: MASTRA_DATABASE_URL / DATABASE_URL now set — clearing storage degraded latch.",
+    );
   }
   if (!storage) {
     const { url, source } = resolveMastraDatabaseUrlWithSource();

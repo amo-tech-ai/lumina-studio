@@ -128,6 +128,19 @@ describe("getMastraStorage (noop mode)", () => {
     expect(mod.isMastraStorageDegraded()).toBe(true);
   });
 
+  it("keeps throwing when URL stays missing after latch trip", async () => {
+    vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("VERCEL", "1");
+    vi.stubEnv("CI", "");
+    vi.stubEnv("DATABASE_URL", "");
+    vi.stubEnv("MASTRA_DATABASE_URL", "");
+    vi.resetModules();
+    const { getMastraStorage: freshGetMastraStorage, MastraStorageUnavailableError } =
+      await import("./storage");
+    expect(() => freshGetMastraStorage()).toThrow(MastraStorageUnavailableError);
+    expect(() => freshGetMastraStorage()).toThrow(MastraStorageUnavailableError);
+  });
+
   it("uses InMemoryStore in CI builds when DATABASE_URL is unset", async () => {
     vi.stubEnv("NODE_ENV", "production");
     vi.stubEnv("CI", "true");
@@ -537,5 +550,74 @@ describe("IPI-740 · Mastra pool + URL split (cont.)", () => {
     const second = mod2.getMastraStorage();
     expect(first).toBe(second);
     expect(ctor).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("IPI-778 · degraded latch recovery", () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    vi.doUnmock("@mastra/pg");
+  });
+
+  it("recovers when MASTRA_DATABASE_URL appears after prod latch trip", async () => {
+    const ctor = vi.fn(function FakePostgresStore(this: { id: string }, config: { id: string }) {
+      this.id = config.id;
+    });
+    vi.doMock("@mastra/pg", () => ({
+      PostgresStore: ctor,
+      IPIX_CF_MASTRA_PG_STUB: undefined,
+    }));
+    vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("VERCEL", "1");
+    vi.stubEnv("CI", "");
+    vi.stubEnv("DATABASE_URL", "");
+    vi.stubEnv("MASTRA_DATABASE_URL", "");
+    vi.resetModules();
+    const mod = await import("./storage");
+    expect(() => mod.getMastraStorage()).toThrow(/Vercel production/);
+    expect(mod.isMastraStorageDegraded()).toBe(true);
+
+    vi.stubEnv("MASTRA_DATABASE_URL", "postgresql://mastra@127.0.0.1:6543/postgres");
+    expect(mod.isMastraStorageDegraded()).toBe(true);
+
+    const store = mod.getMastraStorage();
+    expect(mod.isMastraStorageDegraded()).toBe(false);
+    expect(ctor).toHaveBeenCalledTimes(1);
+    expect(store).toBe(mod.getMastraStorage());
+    expect(ctor).toHaveBeenCalledTimes(1);
+  });
+
+  it("recovers when only DATABASE_URL appears after prod latch trip", async () => {
+    const ctor = vi.fn(function FakePostgresStore(this: { id: string }, config: { id: string }) {
+      this.id = config.id;
+    });
+    vi.doMock("@mastra/pg", () => ({
+      PostgresStore: ctor,
+      IPIX_CF_MASTRA_PG_STUB: undefined,
+    }));
+    vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("VERCEL", "1");
+    vi.stubEnv("CI", "");
+    vi.stubEnv("DATABASE_URL", "");
+    vi.stubEnv("MASTRA_DATABASE_URL", "");
+    vi.resetModules();
+    const mod = await import("./storage");
+    expect(() => mod.getMastraStorage()).toThrow(/Vercel production/);
+
+    vi.stubEnv("DATABASE_URL", "postgresql://session@127.0.0.1:5432/postgres");
+    expect(mod.isMastraStorageDegraded()).toBe(true);
+    mod.getMastraStorage();
+    expect(mod.isMastraStorageDegraded()).toBe(false);
+    expect(ctor).toHaveBeenCalledTimes(1);
+  });
+
+  it("leaves Worker noop mode unchanged when latch never tripped", async () => {
+    vi.stubEnv("MASTRA_STORAGE_MODE", "noop");
+    vi.stubEnv("MASTRA_DATABASE_URL", "postgresql://mastra@127.0.0.1:6543/postgres");
+    vi.resetModules();
+    const mod = await import("./storage");
+    const store = mod.getMastraStorage();
+    expect(store).toBeInstanceOf(InMemoryStore);
+    expect(mod.isMastraStorageDegraded()).toBe(false);
   });
 });
