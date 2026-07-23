@@ -7,7 +7,7 @@ allowed-tools: ["Bash"]
 
 **Inspired by:** [Anthropic commit-commands /clean_gone](https://github.com/anthropics/claude-plugins-official/tree/main/plugins/commit-commands)
 
-**Rule:** `@pr-review-loop` · maintenance only — no product code changes.
+**Rule:** `@pr-workflow` · maintenance only — no product code changes.
 
 ---
 

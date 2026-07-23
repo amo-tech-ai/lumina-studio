@@ -10,7 +10,7 @@ allowed-tools: ["Bash", "Glob", "Grep", "Read", "Task"]
 
 **Arguments:** `$ARGUMENTS` — optional subcommand + PR reference.
 
-**Rules:** `@pr-review-loop` · `@pr-workflow` · `@pr-fix` · `/worktree`
+**Rules:** `@pr-workflow` · `@pr-fix` · `/worktree` (`@pr-review-loop` referenced here previously — no such rule file exists anywhere in the repo, removed)
 
 **Principle:** One command you run 95% of the time. It **detects state**, **reports findings**, **delegates** to focused subcommands — and **never commits, pushes, or resolves without explicit user approval** unless subcommand is `ship` (user invoked ship explicitly).
 

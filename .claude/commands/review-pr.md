@@ -10,7 +10,7 @@ allowed-tools: ["Bash", "Glob", "Grep", "Read", "Task"]
 
 **Inspired by:** [Anthropic pr-review-toolkit](https://github.com/anthropics/claude-plugins-official/tree/main/plugins/pr-review-toolkit)
 
-**Rule:** `@pr-review-loop` · Do **not** commit or push. Humans decide; report findings only.
+**Rule:** Do **not** commit or push. Humans decide; report findings only. (`@pr-review-loop` was referenced here in an earlier revision — no such rule file exists anywhere in the repo; removed rather than left dangling. `.claude/commands/pr-fix.md`'s "Comment taxonomy" section is the closest real equivalent if you need the merge-blocker source of truth.)
 
 ---
 
@@ -33,17 +33,23 @@ allowed-tools: ["Bash", "Glob", "Grep", "Read", "Task"]
 
 2. **Determine scope** — review `git diff main...HEAD` (or unstaged if pre-commit on feature branch).
 
-3. **Select agents** (Task subagent or pr-review-toolkit equivalents):
+3. **Load the matching domain skill first** (read `SKILL.md`, not memory), then **select agents**:
 
-   | Signal in diff | Agent / focus |
-   |----------------|---------------|
-   | Always | **code-reviewer** — CLAUDE.md, AGENTS.md, iPix defaults (confidence ≥80 only) |
-   | `*.test.ts`, new logic | **pr-test-analyzer** — gaps rated 8–10 = blocker |
-   | `catch`, fallbacks, API routes, edge fn | **silent-failure-hunter** |
-   | New types / Zod schemas | **type-design-analyzer** |
-   | Comment/doc changes | **comment-analyzer** (advisory only) |
-   | iPix paths | **migration-reviewer** · **security-reviewer** · **qa-reviewer** · **mastra-agent-reviewer** as applicable |
-   | After 0 Critical/Important | **code-simplifier** (optional polish) |
+   | Signal in diff | Skill to load | Agent |
+   |----------------|---------------|-------|
+   | Always | — | **code-reviewer** — CLAUDE.md, AGENTS.md, iPix defaults (confidence ≥80 only) |
+   | `*.test.ts`, new logic | — | **pr-test-analyzer** — gaps rated 8–10 = blocker |
+   | `catch`, fallbacks, API routes, edge fn, RLS-adjacent DB reads | — | **silent-failure-hunter** — catches errors swallowed as "not found" (e.g. IPI-536/PR #347's P1) |
+   | New types / Zod schemas / changed function signatures | — | **type-design-analyzer** — catches unused/misleading params before a bot does |
+   | Comment/doc changes | — | **comment-analyzer** (advisory only) |
+   | `app/src/mastra/**` | `mastra` | **mastra-agent-reviewer** — known iPix Mastra gotchas (top-level `getMastra()`, `mastra dev` proxy pattern, registry wiring) |
+   | `app/src/app/api/copilotkit/**`, CopilotKit provider/chat components | `copilotkit` | **copilotkit-v1-guard** — deprecated v1 imports the eslint guard misses |
+   | `supabase/migrations/**`, `*.sql`, any new/changed RLS policy | `ipix-supabase` | **rls-policy-auditor** — adversarial check against the proven ownership pattern; this is the real, existing agent — do not look for a "migration-reviewer," it isn't in the available agent list |
+   | Root `src/` (legacy Vite) touched | — | **vite-drift-auditor** — flags new functionality landing in the retiring Vite tree instead of `app/` |
+   | `app/src/app/api/**/route.ts` or `supabase/functions/**` added/removed/changed shape | — | **api-documenter** — keeps `app/AGENTS.md` route/function docs in sync |
+   | After 0 Critical/Important | — | **code-simplifier** (optional polish) |
+
+   **Note:** "security-reviewer" and "qa-reviewer" referenced in older docs are aspirational — they are not real subagent types. Use `rls-policy-auditor` + `code-reviewer`'s security checklist for security-adjacent diffs instead of looking for those names.
 
 4. **Launch reviews** — sequential by default; parallel if user passed `parallel`.
 

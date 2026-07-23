@@ -68,7 +68,7 @@ Shift from **Create → Check → Fix** to **Guide → Prevent → Confirm** —
 
 - **PR/code review — repo commands + plugins:**
   - **Orchestrator:** `/pr` (`.claude/commands/pr.md`) — auto-detect; ask before commit
-  - **Before PR (author):** `/pr new` or `/review-pr` + `@pr-review-loop`
+  - **Before PR (author):** `/pr new` or `/review-pr` + `@pr-workflow`
   - **After PR feedback:** `/pr fix` → `/pr ship` · `/pr resolve` · `/pr ready`
   - **Plugin breadth:** `pr-review-toolkit`'s `/review-pr` (6 subagents) — use for comprehensive pre-merge pass; repo command adds iPix path→agent matrix
   - **Bot findings:** Cursor Bugbot on PR — not a substitute for pre-PR `/review-pr`
@@ -135,6 +135,12 @@ If a classifier block is a recurring problem for the team, the actual fix is man
 - All Gemini/AI calls go through Mastra agents or Supabase Edge Functions (server-side only).
 - `GEMINI_API_KEY` is server-only — used exclusively in `app/src/mastra/` and `supabase/functions/`.
 - **Never skip the pre-push hook** (`--no-verify`). If it fails, fix the underlying issue — don't bypass it.
+
+- **Run `/review-pr` before `gh pr create`; run `/review-pr all` before marking ready.**
+- Typecheck/lint/tests miss silent-failure patterns.
+- `/review-pr` Critical/Important findings block merge.
+- IPI (Internal Project Issue) is this repo's Linear issue-ID prefix.
+- [IPI-536](https://linear.app/amo100/issue/IPI-536) — 5 bugs found post-merge after skipping `/review-pr`.
 
 ## Graphify — mandatory before reading source files
 

@@ -10,7 +10,7 @@ allowed-tools: ["Bash"]
 
 **Use when:** Fixes are already pushed; threads need reply + GraphQL resolve only.
 
-**Rule:** `@pr-review-loop` · `@pr-fix` (Phase 4 resolve protocol)
+**Rule:** `@pr-fix` (Phase 4 resolve protocol) — `@pr-review-loop` referenced here previously, no such rule file exists anywhere in the repo, removed
 
 **Do not** commit, stage, or edit code unless user explicitly asks.
 
