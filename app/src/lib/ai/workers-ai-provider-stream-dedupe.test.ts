@@ -74,6 +74,13 @@ describe("IPI-771 workers-ai-provider dual-format stream dedup (real provider en
     expect(textDeltas(parts)).toEqual(["We", " offer"]);
   });
 
+  it("empty native bootstrap does not suppress an OpenAI delta", async () => {
+    const parts = await streamWorkersAiChunks([
+      { response: "", choices: [{ delta: { content: "We" } }] },
+    ]);
+    expect(textDeltas(parts)).toEqual(["We"]);
+  });
+
   it("the same token repeated across two separate chunks is not deduped — both deltas survive", async () => {
     const parts = await streamWorkersAiChunks([{ response: "the" }, { response: "the" }]);
     expect(textDeltas(parts)).toEqual(["the", "the"]);
