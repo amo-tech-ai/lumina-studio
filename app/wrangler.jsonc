@@ -24,6 +24,15 @@
   "ai": {
     "binding": "AI"
   },
+  // IPI-619 · CF-DB-005 — bind-only; Hyperdrive config "ipix-supabase-fresh" provisioned by IPI-618.
+  // Access exclusively via getCloudflareContext().env.HYPERDRIVE_FRESH — no other access pattern.
+  // Query helper is out of scope here (IPI-620). No placement block, no second binding.
+  "hyperdrive": [
+    {
+      "binding": "HYPERDRIVE_FRESH",
+      "id": "f59421821941436593f4c88416fb1601"
+    }
+  ],
   "observability": {
     "enabled": true
   },
@@ -68,8 +77,8 @@
   },
   // IPI-472 · INFRA-001 — SSOT for preview vs production Worker names.
   // IPI-606 · CF-SEC-010 — secrets.required for cf-typegen + local dev validation.
-  // vars, images, services, secrets must repeat per named env (Wrangler: not inherited).
-  // No DATABASE_URL here until Hyperdrive (IPI-619). Runtime values via Infisical sync.
+  // vars, images, services, secrets, ai, hyperdrive must repeat per named env (Wrangler: not inherited).
+  // Hyperdrive binding (IPI-619) — no connection strings/secrets here; Wrangler resolves the ID at deploy.
   "env": {
     "preview": {
       "name": "ipix-operator-preview",
@@ -82,6 +91,12 @@
       "ai": {
         "binding": "AI"
       },
+      "hyperdrive": [
+        {
+          "binding": "HYPERDRIVE_FRESH",
+          "id": "f59421821941436593f4c88416fb1601"
+        }
+      ],
       "images": {
         "binding": "IMAGES"
       },
@@ -113,6 +128,12 @@
       "ai": {
         "binding": "AI"
       },
+      "hyperdrive": [
+        {
+          "binding": "HYPERDRIVE_FRESH",
+          "id": "f59421821941436593f4c88416fb1601"
+        }
+      ],
       "images": {
         "binding": "IMAGES"
       },
