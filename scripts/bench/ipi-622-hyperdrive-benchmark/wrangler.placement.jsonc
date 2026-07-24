@@ -1,0 +1,20 @@
+{
+  // Placement A/B variant of wrangler.jsonc — identical Worker code, "placement": smart added.
+  // Deployed as a separate Worker name so both can be measured side by side.
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "ipix-bench-hyperdrive-placement",
+  "main": "src/worker.js",
+  "compatibility_date": "2026-07-08",
+  "compatibility_flags": ["nodejs_compat"],
+  "account_id": "4984b9bad07bc1da9f097dc8c1da24e0",
+  "workers_dev": true,
+  "placement": {
+    "mode": "smart"
+  },
+  "hyperdrive": [
+    {
+      "binding": "HYPERDRIVE_FRESH",
+      "id": "f59421821941436593f4c88416fb1601"
+    }
+  ]
+}
