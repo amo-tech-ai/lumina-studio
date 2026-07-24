@@ -367,10 +367,39 @@ describe("IPI-740 · Mastra pool + URL split", () => {
         id: "mastra-storage",
         connectionString:
           "postgresql://mastra@127.0.0.1:6543/postgres?application_name=ipix-mastra",
+        schemaName: "public",
+        disableInit: true,
         max: 3,
         idleTimeoutMillis: 10_000,
       }),
     );
+  });
+
+  it("uses MASTRA_SCHEMA=mastra when set (Path A / IPI-792 recovery activation)", async () => {
+    const ctor = vi.fn(function FakePostgresStore() {});
+    vi.doMock("@mastra/pg", () => ({
+      PostgresStore: ctor,
+      IPIX_CF_MASTRA_PG_STUB: undefined,
+    }));
+    vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("VERCEL", "1");
+    vi.stubEnv("CI", "");
+    vi.stubEnv("MASTRA_DATABASE_URL", "postgresql://mastra@127.0.0.1:6543/postgres");
+    vi.stubEnv("DATABASE_URL", "");
+    vi.stubEnv("MASTRA_SCHEMA", "mastra");
+    vi.resetModules();
+    const { getMastraStorage: freshGet } = await import("./storage");
+    freshGet();
+    expect(ctor).toHaveBeenCalledWith(
+      expect.objectContaining({ schemaName: "mastra", disableInit: true }),
+    );
+  });
+
+  it("resolveMastraSchemaName defaults public and trims empty to public", async () => {
+    const { resolveMastraSchemaName } = await import("./storage");
+    expect(resolveMastraSchemaName({})).toBe("public");
+    expect(resolveMastraSchemaName({ MASTRA_SCHEMA: "  mastra  " })).toBe("mastra");
+    expect(resolveMastraSchemaName({ MASTRA_SCHEMA: "   " })).toBe("public");
   });
 
   it("does not pass an explicit ssl override when DATABASE_SSL is unset (preserves connection-string sslmode)", async () => {

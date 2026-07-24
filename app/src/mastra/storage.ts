@@ -149,6 +149,20 @@ function resolveMastraPgSslOption(
   return env.DATABASE_SSL === "true" ? { rejectUnauthorized: false } : undefined;
 }
 
+/**
+ * IPI-630 — which Postgres schema Mastra PostgresStore targets.
+ * Default **public** for local/dev without an explicit env (safe when tables
+ * still live in public). Linked/prod Path A recovery (IPI-792): after #614
+ * `20260722150000` moved data into `mastra.*`, set `MASTRA_SCHEMA=mastra` on
+ * the deploy target so CopilotKit threads hit the live schema — not empty public.
+ * DDL stays migration-owned (`disableInit: true`); do not flip env without a
+ * writer pause + backup (see IPI-792 / IPI-793).
+ */
+export function resolveMastraSchemaName(env: NodeJS.ProcessEnv = process.env): string {
+  const raw = (env.MASTRA_SCHEMA ?? "public").trim();
+  return raw.length > 0 ? raw : "public";
+}
+
 const MASTRA_PG_APPLICATION_NAME = "ipix-mastra";
 
 /**
@@ -236,9 +250,14 @@ function createPostgresStore(url: string, env: NodeJS.ProcessEnv = process.env):
   // IPI-740: Cap pool size. next dev and mastra dev are separate OS processes —
   // each gets its own pool (worst case 2× max on session :5432). Transaction
   // MASTRA_DATABASE_URL (:6543) + per-process max is the real fix.
+  // IPI-630: disableInit always — tables come from migrations (IPI-628/784),
+  // never runtime DDL. schemaName from MASTRA_SCHEMA (default public); Path A
+  // recovery sets MASTRA_SCHEMA=mastra after #614 data is in mastra.*.
   return new MastraPg.PostgresStore({
     id: "mastra-storage",
     connectionString: withMastraApplicationName(url),
+    schemaName: resolveMastraSchemaName(env),
+    disableInit: true,
     max: resolveMastraPgPoolMax(env),
     idleTimeoutMillis: PG_IDLE_TIMEOUT_MS,
     ssl: resolveMastraPgSslOption(env),
