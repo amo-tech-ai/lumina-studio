@@ -13,6 +13,11 @@ describe("mastra-tenant-scope (IPI-621 · CF-DB-007)", () => {
     expect(requireResourceId("org-acme")).toBe("org-acme");
   });
 
+  it("returns the canonical trimmed tenant key", () => {
+    expect(requireResourceId("  org-acme  ")).toBe("org-acme");
+    expect(requireThreadId("\tthread-1\n")).toBe("thread-1");
+  });
+
   it("fail-closed: missing resourceId", () => {
     expect(() => requireResourceId(undefined)).toThrow(TenantContextError);
     expect(() => requireResourceId(null)).toThrow(/Missing resourceId/);
@@ -31,6 +36,42 @@ describe("mastra-tenant-scope (IPI-621 · CF-DB-007)", () => {
     );
   });
 
+  it("fail-closed: null after on rewrite uses Missing validation error", () => {
+    expect(() => rejectTenantKeyRewrite("tenant-a", null)).toThrow(
+      /Missing resourceId/,
+    );
+    expect(() => rejectTenantKeyRewrite("tenant-a", null)).toThrow(
+      TenantContextError,
+    );
+  });
+
+  it("fail-closed: blank after on rewrite uses Missing validation error", () => {
+    expect(() => rejectTenantKeyRewrite("tenant-a", "")).toThrow(
+      /Missing resourceId/,
+    );
+    expect(() => rejectTenantKeyRewrite("tenant-a", "   ")).toThrow(
+      /Missing resourceId/,
+    );
+  });
+
+  it("fail-closed: null/blank after with threadId name", () => {
+    expect(() =>
+      rejectTenantKeyRewrite("thread-a", null, "threadId"),
+    ).toThrow(/Missing threadId/);
+    expect(() =>
+      rejectTenantKeyRewrite("thread-a", "  ", "threadId"),
+    ).toThrow(/Missing threadId/);
+    expect(() =>
+      rejectTenantKeyRewrite("thread-a", "thread-b", "threadId"),
+    ).toThrow(/threadId rewrite denied/);
+  });
+
+  it("padded after that trims to the same key is allowed", () => {
+    expect(() =>
+      rejectTenantKeyRewrite("tenant-a", "  tenant-a  "),
+    ).not.toThrow();
+  });
+
   it("allows update that does not touch the tenant key", () => {
     expect(() => rejectTenantKeyRewrite("tenant-a", undefined)).not.toThrow();
   });
@@ -41,6 +82,10 @@ describe("mastra-tenant-scope (IPI-621 · CF-DB-007)", () => {
 
   it("bindTenantScope requires resourceId and optional threadId", () => {
     expect(bindTenantScope("org-1", "thread-1")).toEqual({
+      resourceId: "org-1",
+      threadId: "thread-1",
+    });
+    expect(bindTenantScope("  org-1  ", "  thread-1  ")).toEqual({
       resourceId: "org-1",
       threadId: "thread-1",
     });

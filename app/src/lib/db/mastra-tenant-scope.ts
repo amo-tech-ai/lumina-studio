@@ -7,7 +7,13 @@
  * (and `threadId` when reading a thread) as a parameterized SQL bind.
  *
  * Missing / blank / rewrite attempts fail closed **before** any query runs.
- * IPI-146 (memory wiring) and IPI-775 (WITH CHECK org scoping) are out of scope.
+ *
+ * ponytail: USING(true) role gate is not multi-tenant isolation — ceiling is
+ * app-layer resourceId/threadId binds. Upgrade path:
+ * **IPI-146 · MASTRA-GOV-002 — Multi-tenant memory isolation** (wire resourceId
+ * into Mastra memory) and **IPI-775 · Add WITH CHECK org-scoping to the 7
+ * organizationId-bearing mastra.* tables** (RLS WITH CHECK when org fields
+ * are populated).
  */
 
 export class TenantContextError extends Error {
@@ -21,14 +27,26 @@ export class TenantContextError extends Error {
 
 export type TenantKeyName = "resourceId" | "threadId";
 
-/** Fail closed when tenant key is missing, non-string, or blank. */
+/**
+ * Fail closed when tenant key is missing, non-string, or blank (after trim).
+ *
+ * Contract: returns the **canonical** key (`value.trim()`). Callers must use
+ * the returned string for binds/comparisons so padded inputs cannot leak.
+ * Error shape matches other helpers: `Missing ${name}: refuse query (fail closed)`.
+ */
 export function requireTenantKey(value: unknown, name: TenantKeyName): string {
-  if (typeof value !== "string" || value.trim() === "") {
+  if (typeof value !== "string") {
     throw new TenantContextError(
       `Missing ${name}: refuse query (fail closed)`,
     );
   }
-  return value;
+  const canonical = value.trim();
+  if (canonical === "") {
+    throw new TenantContextError(
+      `Missing ${name}: refuse query (fail closed)`,
+    );
+  }
+  return canonical;
 }
 
 /** Same as requireTenantKey for the canonical Mastra persistence key. */
@@ -43,6 +61,8 @@ export function requireThreadId(threadId: unknown): string {
 /**
  * Fail closed when a caller tries to rewrite the tenant key on update/upsert.
  * `after` omitted/undefined means "not touching the key" (allowed).
+ * `null` / blank / padded-blank `after` fail closed via requireTenantKey.
+ * Comparisons use canonical (trimmed) values.
  */
 export function rejectTenantKeyRewrite(
   before: string,
@@ -62,7 +82,7 @@ export function rejectTenantKeyRewrite(
 /**
  * Bind verified tenant scope for parameterized SQL.
  * Callers must place `resourceId` (and optional `threadId`) in the WHERE/VALUES
- * clauses — this only validates and returns the bind values.
+ * clauses — this only validates and returns the canonical bind values.
  */
 export function bindTenantScope(
   resourceId: unknown,

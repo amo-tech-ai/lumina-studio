@@ -8,19 +8,29 @@
 -- Honest about live policies: mastra.* today is USING(true)/WITH CHECK(true)
 -- for hyperdrive_mastra_runtime — a **role gate**, not multi-tenant org RLS.
 -- One assertion below proves an unscoped list still sees both tenants under
--- that role (so IPI-146 / callers must always bind resourceId). This file does
--- NOT ship IPI-775 WITH CHECK, IPI-146 memory wiring, or SET LOCAL tenant GUCs.
+-- that role (so callers must always bind resourceId). This file does NOT ship
+-- WITH CHECK org scoping or Mastra memory wiring.
 --
--- Plan math: 3 catalog + 8 scoped CRUD/list + 1 role-gate documentation = 12
+-- ponytail: USING(true) role gate is not multi-tenant isolation — ceiling is
+-- app-layer resourceId/threadId binds. Upgrade path:
+-- **IPI-146 · MASTRA-GOV-002 — Multi-tenant memory isolation** and
+-- **IPI-775 · Add WITH CHECK org-scoping to the 7 organizationId-bearing
+-- mastra.* tables**.
+--
+-- Plan math: 4 catalog + 8 scoped CRUD/list + 1 role-gate documentation = 13
 
 set search_path to public, extensions;
 
 begin;
-select plan(12);
+select plan(13);
 
 -- 1) Runtime role must not bypass RLS (defense in depth).
 select is(
-  (select rolbypassrls from pg_roles where rolname = 'hyperdrive_mastra_runtime'),
+  (
+    select rolbypassrls
+    from pg_roles
+    where rolname = 'hyperdrive_mastra_runtime'
+  ),
   false,
   'hyperdrive_mastra_runtime has rolbypassrls=false'
 );
@@ -48,6 +58,18 @@ select is(
   ),
   'true',
   'mastra_threads policy USING is true (role gate — app resourceId is the tenant contract)'
+);
+
+-- 4) RLS must be enabled on mastra_threads (role gate only works when RLS is on).
+select ok(
+  (
+    select c.relrowsecurity
+    from pg_class c
+    join pg_namespace n on n.oid = c.relnamespace
+    where n.nspname = 'mastra'
+      and c.relname = 'mastra_threads'
+  ),
+  'mastra.mastra_threads has relrowsecurity enabled'
 );
 
 -- Seed two tenants as the connecting (bypass) session; rolled back at end.
@@ -81,7 +103,7 @@ values
 
 set local role hyperdrive_mastra_runtime;
 
--- 4) Same-tenant scoped SELECT succeeds.
+-- 5) Same-tenant scoped SELECT succeeds.
 select results_eq(
   $$ select count(*)::bigint from mastra.mastra_threads
      where "resourceId" = 'pgtap-621-tenant-a'
@@ -90,7 +112,7 @@ select results_eq(
   'same-tenant resourceId SELECT returns own thread'
 );
 
--- 5) Forged / other-tenant resourceId → 0 rows (fail closed when app filters).
+-- 6) Forged / other-tenant resourceId → 0 rows (fail closed when app filters).
 select results_eq(
   $$ select count(*)::bigint from mastra.mastra_threads
      where "resourceId" = 'pgtap-621-forged-tenant'
@@ -99,7 +121,7 @@ select results_eq(
   'forged resourceId SELECT returns 0 rows'
 );
 
--- 6) Forged thread id under correct resourceId → 0 rows.
+-- 7) Forged thread id under correct resourceId → 0 rows.
 select results_eq(
   $$ select count(*)::bigint from mastra.mastra_threads
      where id = 'pgtap-621-forged-thread'
@@ -108,7 +130,7 @@ select results_eq(
   'forged threadId SELECT returns 0 rows'
 );
 
--- 7) Cross-tenant thread id + wrong resourceId → 0 (no leak via id alone).
+-- 8) Cross-tenant thread id + wrong resourceId → 0 (no leak via id alone).
 select results_eq(
   $$ select count(*)::bigint from mastra.mastra_threads
      where id = 'pgtap-621-thread-b'
@@ -117,7 +139,7 @@ select results_eq(
   'other-tenant threadId with own resourceId returns 0 rows'
 );
 
--- 8) Messages: forged thread_id under own resourceId → 0.
+-- 9) Messages: forged thread_id under own resourceId → 0.
 select results_eq(
   $$ select count(*)::bigint from mastra.mastra_messages
      where thread_id = 'pgtap-621-forged-thread'
@@ -126,7 +148,7 @@ select results_eq(
   'forged message thread_id SELECT returns 0 rows'
 );
 
--- 9) Scoped UPDATE by resourceId succeeds.
+-- 10) Scoped UPDATE by resourceId succeeds.
 select results_eq(
   $$ update mastra.mastra_threads
      set title = 'tenant A thread (updated)', "updatedAt" = now()
@@ -137,7 +159,7 @@ select results_eq(
   'same-tenant resourceId UPDATE returns 1 row'
 );
 
--- 10) UPDATE with forged resourceId affects 0 rows (fail closed when filtered).
+-- 11) UPDATE with forged resourceId affects 0 rows (fail closed when filtered).
 select results_eq(
   $$ with u as (
        update mastra.mastra_threads
@@ -151,7 +173,7 @@ select results_eq(
   'forged resourceId UPDATE affects 0 rows'
 );
 
--- 11) Scoped DELETE by resourceId succeeds (cleanup inside txn).
+-- 12) Scoped DELETE by resourceId succeeds (cleanup inside txn).
 select results_eq(
   $$ with d as (
        delete from mastra.mastra_messages
@@ -164,13 +186,17 @@ select results_eq(
   'same-tenant resourceId DELETE returns 1 row'
 );
 
--- 12) Role-gate documentation: unscoped list still sees remaining fixture rows.
---     Green for "RLS alone is not tenant isolation" — app must always bind resourceId.
+-- 13) TEMPORARY tenant-isolation gap (not desired end-state): unscoped list
+--     still sees both fixture rows while mastra.* policies use USING(true).
+--     Expectation `2::bigint` is valid only until
+--     **IPI-775 · Add WITH CHECK org-scoping to the 7 organizationId-bearing
+--     mastra.* tables** lands real tenant RLS. Until then the app must always
+--     bind resourceId (**IPI-146 · MASTRA-GOV-002 — Multi-tenant memory isolation**).
 select results_eq(
   $$ select count(*)::bigint from mastra.mastra_threads
      where id like 'pgtap-621-%' $$,
   $$ values (2::bigint) $$,
-  'unscoped list under role gate still sees both tenants — app resourceId filter required'
+  'TEMPORARY gap: unscoped list under USING(true) still sees both tenants — app resourceId filter required until IPI-775'
 );
 
 reset role;

@@ -127,4 +127,30 @@ describe("queryFresh (IPI-620 Part A)", () => {
     expect(client.connect).not.toHaveBeenCalled();
     expect(client.query).not.toHaveBeenCalled();
   });
+
+  it("queryFreshByResourceId fail-closed: missing hyperdrive connectionString never connects", async () => {
+    const client = {
+      connect: vi.fn().mockResolvedValue(undefined),
+      query: vi.fn(),
+      end: vi.fn().mockResolvedValue(undefined),
+    };
+    const { queryFreshByResourceId } = await loadHelper(client);
+
+    await expect(
+      queryFreshByResourceId(
+        { connectionString: "" },
+        "org-acme",
+        "select 1 where false",
+      ),
+    ).rejects.toThrow(/Invalid Hyperdrive binding/);
+    await expect(
+      queryFreshByResourceId(
+        null as unknown as { connectionString: string },
+        "org-acme",
+        "select 1 where false",
+      ),
+    ).rejects.toThrow(/Invalid Hyperdrive binding/);
+    expect(client.connect).not.toHaveBeenCalled();
+  });
 });
+

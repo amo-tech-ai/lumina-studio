@@ -351,6 +351,12 @@ async function assertMastraRuntimeRoleProbe(onFixtureReady) {
  *
  * Soft-skips when no runtime URL (same as assertMastraRuntimeRoleProbe) unless
  * REQUIRE_HYPERDRIVE_RUNTIME_PROBE=1.
+ *
+ * ponytail: USING(true) role gate is not multi-tenant isolation — ceiling is
+ * app-layer resourceId/threadId binds. Upgrade path:
+ * **IPI-146 · MASTRA-GOV-002 — Multi-tenant memory isolation** and
+ * **IPI-775 · Add WITH CHECK org-scoping to the 7 organizationId-bearing
+ * mastra.* tables**.
  */
 async function assertMastraTenantContractProbe() {
   const runtimeUrl = resolveMastraRuntimeProbeUrl();
@@ -374,6 +380,13 @@ async function assertMastraTenantContractProbe() {
     return;
   }
 
+  // Default: verify TLS certs. Opt out only for local self-signed setups.
+  const pgSsl =
+    process.env.VERIFY_RLS_PG_INSECURE_SSL === "1" ||
+    process.env.NODE_TLS_REJECT_UNAUTHORIZED === "0"
+      ? { rejectUnauthorized: false }
+      : { rejectUnauthorized: true };
+
   const stamp = Date.now();
   const tenantA = `ipi621-tenant-a-${stamp}`;
   const tenantB = `ipi621-tenant-b-${stamp}`;
@@ -385,7 +398,7 @@ async function assertMastraTenantContractProbe() {
   async function withRuntimeClient(fn) {
     const client = new Client({
       connectionString: runtimeUrl,
-      ssl: { rejectUnauthorized: false },
+      ssl: pgSsl,
       connectionTimeoutMillis: 10_000,
       query_timeout: 15_000,
     });
@@ -539,18 +552,25 @@ async function assertMastraTenantContractProbe() {
       "IPI-621 forged resourceId UPDATE affects 0 rows (fail closed)",
     );
 
-    // Unscoped list still sees both — role gate, not org RLS (document contract).
+    // TEMPORARY tenant-isolation gap (not desired end-state): unscoped list
+    // still sees both while mastra.* policies use USING(true). Valid only until
+    // **IPI-775 · Add WITH CHECK org-scoping to the 7 organizationId-bearing
+    // mastra.* tables**. Until then app must bind resourceId
+    // (**IPI-146 · MASTRA-GOV-002 — Multi-tenant memory isolation**).
     const { rows: unscoped } = await client.query(
       `select id from mastra.mastra_threads where id like $1 order by id`,
       [`ipi621-%${stamp}%`],
     );
     assert(
       unscoped.length === 2,
-      "IPI-621 unscoped list under role gate sees both tenants (app must bind resourceId)",
+      "IPI-621 TEMPORARY gap: unscoped list under USING(true) sees both tenants (app must bind resourceId until IPI-775)",
     );
 
-    // Tenant-key rewrite at SQL layer is NOT denied by USING(true) — app helper must.
-    // Prove rewrite is possible under the role so we never claim RLS alone blocks it.
+    // TEMPORARY gap: tenant-key rewrite at SQL is NOT denied by USING(true) —
+    // not desired end-state. Expectation rewriteCount === 1 is valid only while
+    // mastra.* policies use USING(true); app rejectTenantKeyRewrite is required
+    // until **IPI-775 · Add WITH CHECK org-scoping to the 7 organizationId-bearing
+    // mastra.* tables**.
     const { rowCount: rewriteCount } = await client.query(
       `update mastra.mastra_threads set "resourceId" = $2, "updatedAt" = now()
        where id = $1`,
@@ -558,7 +578,7 @@ async function assertMastraTenantContractProbe() {
     );
     assert(
       rewriteCount === 1,
-      "IPI-621 role-gate allows resourceId rewrite at SQL — app rejectTenantKeyRewrite required",
+      "IPI-621 TEMPORARY gap: USING(true) allows resourceId rewrite at SQL — app rejectTenantKeyRewrite required until IPI-775",
     );
     // Restore for cleanup clarity
     await client.query(
@@ -579,20 +599,23 @@ async function assertMastraTenantContractProbe() {
   {
     const client1 = new Client({
       connectionString: runtimeUrl,
-      ssl: { rejectUnauthorized: false },
+      ssl: pgSsl,
       connectionTimeoutMillis: 10_000,
       query_timeout: 15_000,
     });
     const client2 = new Client({
       connectionString: runtimeUrl,
-      ssl: { rejectUnauthorized: false },
+      ssl: pgSsl,
       connectionTimeoutMillis: 10_000,
       query_timeout: 15_000,
     });
     const poolThread = `ipi621-pool-${stamp}`;
+    const connected = new Set();
     try {
       await client1.connect();
+      connected.add(client1);
       await client2.connect();
+      connected.add(client2);
       for (const c of [client1, client2]) {
         const { rows } = await c.query("select current_user");
         if (rows[0]?.current_user !== "hyperdrive_mastra_runtime") {
@@ -634,12 +657,14 @@ async function assertMastraTenantContractProbe() {
       );
     } finally {
       for (const c of [client1, client2]) {
-        try {
-          await c.query(`delete from mastra.mastra_threads where id = $1`, [
-            poolThread,
-          ]);
-        } catch {
-          /* ignore */
+        if (connected.has(c)) {
+          try {
+            await c.query(`delete from mastra.mastra_threads where id = $1`, [
+              poolThread,
+            ]);
+          } catch {
+            /* ignore */
+          }
         }
         try {
           await c.end();
