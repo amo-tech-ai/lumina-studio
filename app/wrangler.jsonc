@@ -33,8 +33,13 @@
       "id": "f59421821941436593f4c88416fb1601"
     }
   ],
+  // IPI-709 · CF-OBS-001 — Workers Logs baseline. head_sampling_rate 1 = log 100% of
+  // requests (explicit, not just the default) — traffic is low; revisit before scale-up.
+  // Repeated per named env below: env blocks do not inherit this key.
+  // Official: https://developers.cloudflare.com/workers/observability/logs/workers-logs/
   "observability": {
-    "enabled": true
+    "enabled": true,
+    "head_sampling_rate": 1
   },
   // IPI-468: deployed Worker must fail closed; CopilotKit thread gating reads this flag at runtime.
   // CF-SEC-010: committed vars are static flags only. Environment-specific URLs/ids are injected
@@ -85,6 +90,11 @@
   "env": {
     "preview": {
       "name": "ipix-operator-preview",
+      // IPI-709: explicit per-env observability — see top-level block for rationale.
+      "observability": {
+        "enabled": true,
+        "head_sampling_rate": 1
+      },
       "vars": {
         "MASTRA_STORAGE_MODE": "noop",
         "OPERATOR_AUTH_ENABLED": "true",
@@ -124,6 +134,11 @@
     },
     "production": {
       "name": "ipix-operator",
+      // IPI-709: explicit per-env observability — see top-level block for rationale.
+      "observability": {
+        "enabled": true,
+        "head_sampling_rate": 1
+      },
       "vars": {
         "MASTRA_STORAGE_MODE": "noop",
         "OPERATOR_AUTH_ENABLED": "true",
