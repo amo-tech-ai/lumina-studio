@@ -76,6 +76,13 @@ jobs:
         if: steps.gate.outputs.mode == 'run'
         run: npm ci --omit=dev
 
+      # IPI-245 runtime probe loads `pg` via createRequire(app/package.json).
+      # Root npm ci does not populate app/node_modules.
+      - name: Install app deps (pg for Mastra runtime probe)
+        if: steps.gate.outputs.mode == 'run'
+        working-directory: app
+        run: npm ci --omit=dev
+
       - name: Install postgresql-client
         if: steps.gate.outputs.mode == 'run'
         run: |
