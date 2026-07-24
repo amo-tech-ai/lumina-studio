@@ -38,14 +38,20 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # IPI-625 · CF-BASE-001 — Node 22 is the iPix toolchain standard (CI parity with
-      # booking-gate / planner verify). Wrangler supports maintained Node releases; 22 is
-      # not a universal Cloudflare platform requirement.
+      # IPI-789 · NODE-CI-001 / IPI-791 · NODE-RUNTIME-001 — Node 24 + npm 11 match
+      # Vercel production (avoids the IPI-788 class of lockfile drift from CI on npm 10).
       - uses: actions/setup-node@v4
         with:
           node-version-file: app/.nvmrc
           cache: npm
           cache-dependency-path: app/package-lock.json
+
+      - name: Assert Node 24 and npm 11
+        run: |
+          node --version
+          npm --version
+          test "$(node -p "process.versions.node.split('.')[0]")" = "24"
+          test "$(npm --version | cut -d. -f1)" = "11"
 
       # Fail fast if a server secret leaked into client code (app/src). Runs from
       # repo root since the scanner lives there; pure Node stdlib, no install needed.
@@ -54,7 +60,7 @@ jobs:
         run: node scripts/check-client-env.mjs
 
       - name: Install dependencies
-        run: npm ci
+        run: npm ci --no-audit --no-fund
 
       - name: Lint
         run: npm run lint
@@ -141,11 +147,12 @@ jobs:
       - uses: actions/checkout@v4
 
       # @supabase/supabase-js's realtime-js client requires native WebSocket
-      # support (stable from Node 22) — this job constructs a real
+      # support (stable from Node 22+) — this job constructs a real
       # createClient() against the live project, unlike the other jobs.
+      # Follows app/.nvmrc (Node 24) with the operator toolchain pin.
       - uses: actions/setup-node@v4
         with:
-          node-version: "22"
+          node-version-file: app/.nvmrc
           cache: npm
           cache-dependency-path: |
             package-lock.json
@@ -170,7 +177,7 @@ jobs:
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
         run: npm run supabase:verify-booking-gate
 
-      # IPI-476 · PLAN-CI-001 — planner scenario + Realtime (needs Node 22 WebSocket)
+      # IPI-476 · PLAN-CI-001 — planner scenario + Realtime (needs Node 22+ WebSocket)
       - name: Planner scenario + Realtime verification
         env:
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
