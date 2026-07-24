@@ -1,4 +1,5 @@
--- IPI-796 · MASTRA-PG-010 follow-up — effective privilege postflight
+-- IPI-796 · MASTRA-PG-010 — Create the 9 Missing mastra.* Tables via Migration
+-- follow-up — effective privilege postflight
 --
 -- 20260724092825 already applied on nvdlhrodvevgwdsneplk — do not rewrite it.
 -- CodeRabbit: role_table_grants omits PUBLIC and can miss enabled-role edge cases.
@@ -29,7 +30,9 @@ DECLARE
 BEGIN
   FOREACH t IN ARRAY expected LOOP
     IF to_regclass(format('mastra.%I', t)) IS NULL THEN
-      RAISE EXCEPTION 'IPI-796 effective-priv: missing mastra.%', t;
+      RAISE EXCEPTION
+        'IPI-796 · MASTRA-PG-010 — Create the 9 Missing mastra.* Tables via Migration: effective-priv missing mastra.%',
+        t;
     END IF;
 
     -- hyperdrive_mastra_runtime must retain full DML
@@ -40,7 +43,7 @@ BEGIN
         priv
       ) THEN
         RAISE EXCEPTION
-          'IPI-796 effective-priv: hyperdrive_mastra_runtime missing % on mastra.%',
+          'IPI-796 · MASTRA-PG-010 — Create the 9 Missing mastra.* Tables via Migration: hyperdrive_mastra_runtime missing % on mastra.%',
           priv, t;
       END IF;
     END LOOP;
@@ -55,7 +58,9 @@ BEGIN
       END LOOP;
     END LOOP;
     IF bad IS NOT NULL THEN
-      RAISE EXCEPTION 'IPI-796 effective-priv: unexpected grants on mastra.%: %', t, bad;
+      RAISE EXCEPTION
+        'IPI-796 · MASTRA-PG-010 — Create the 9 Missing mastra.* Tables via Migration: unexpected grants on mastra.%: %',
+        t, bad;
     END IF;
 
     -- PUBLIC (acl grantee 0) must not appear on relacl
@@ -70,7 +75,7 @@ BEGIN
 
     IF public_priv IS NOT NULL THEN
       RAISE EXCEPTION
-        'IPI-796 effective-priv: PUBLIC privileges on mastra.%: %',
+        'IPI-796 · MASTRA-PG-010 — Create the 9 Missing mastra.* Tables via Migration: PUBLIC privileges on mastra.%: %',
         t, public_priv;
     END IF;
   END LOOP;

@@ -1,4 +1,5 @@
--- IPI-245 · SB-TEST-002 — mastra schema (IPI-628/629 + IPI-796): RLS + grant/policy
+-- IPI-245 · SB-TEST-002 — mastra schema (IPI-628/629 + IPI-796 · MASTRA-PG-010 —
+-- Create the 9 Missing mastra.* Tables via Migration): RLS + grant/policy
 -- proof for the 33 mastra_* tables and the hyperdrive_mastra_runtime role.
 --
 -- hyperdrive_mastra_runtime carries no JWT identity (unlike anon/authenticated), so
@@ -22,11 +23,14 @@ select plan(139);
 
 create temporary table mastra_tables (tablename text) on commit drop;
 insert into mastra_tables (tablename)
-select tablename from pg_tables where schemaname = 'mastra' order by tablename;
+select tablename
+from pg_tables
+where schemaname = 'mastra'
+order by tablename;
 
 select is(
   (select count(*) from mastra_tables), 33::bigint,
-  'mastra schema has the expected 33 tables (IPI-616 + IPI-796) — update this file if that count changes on purpose'
+  'mastra schema has the expected 33 tables (IPI-616 + IPI-796 · MASTRA-PG-010 — Create the 9 Missing mastra.* Tables via Migration) — update this file if that count changes on purpose'
 );
 
 -- RLS enabled per mastra table (33).
