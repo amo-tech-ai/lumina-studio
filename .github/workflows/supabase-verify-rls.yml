@@ -51,6 +51,11 @@ jobs:
           fi
 
           # Prefer DATABASE_URL; accept SUPABASE_DB_URL as the same connection string.
+          if [ -n "${DATABASE_URL:-}" ] && [ -n "${SUPABASE_DB_URL:-}" ] \
+            && [ "$DATABASE_URL" != "$SUPABASE_DB_URL" ]; then
+            echo "::error::DATABASE_URL and SUPABASE_DB_URL both set but differ — refuse ambiguous DB target"
+            exit 1
+          fi
           if [ -z "${DATABASE_URL:-}" ] && [ -n "${SUPABASE_DB_URL:-}" ]; then
             DATABASE_URL="$SUPABASE_DB_URL"
           fi
@@ -64,6 +69,11 @@ jobs:
             echo "Trusted CI missing required secrets: ${missing[*]}"
             exit 1
           fi
+          # Canonical URL for later steps (psql + pgTAP). Keep alias in sync.
+          {
+            echo "DATABASE_URL=$DATABASE_URL"
+            echo "SUPABASE_DB_URL=$DATABASE_URL"
+          } >> "$GITHUB_ENV"
           echo "mode=run" >> "$GITHUB_OUTPUT"
 
       - uses: actions/setup-node@v4
@@ -90,35 +100,38 @@ jobs:
           sudo apt-get update -qq
           sudo apt-get install -y -qq postgresql-client
 
+      # Pin action commit (supply-chain); CLI binary still pinned via version below.
+      # SHA = tip of supabase/setup-cli@v1 as of 2026-05-21 (ab058987).
+      - uses: supabase/setup-cli@ab058987d8d6c725971f6cf9d0b5c98467e30bd1
+        if: steps.gate.outputs.mode == 'run'
+        with:
+          # Pin to the CLI version used for the linked gates job (IPI-665).
+          version: 2.109.1
+
+      # DB URL from gate → GITHUB_ENV (canonical DATABASE_URL = SUPABASE_DB_URL).
       - name: Chatbot / lead_intake grant assertions
         if: steps.gate.outputs.mode == 'run'
-        env:
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
-          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
         run: |
           set -euo pipefail
-          DB_URL="${DATABASE_URL:-${SUPABASE_DB_URL:-}}"
-          psql "$DB_URL" -v ON_ERROR_STOP=1 -f supabase/tests/security/chatbot-grants.sql
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/tests/security/chatbot-grants.sql
 
       - name: SECURITY DEFINER RPC grant assertions (IPI-679)
         if: steps.gate.outputs.mode == 'run'
-        env:
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
-          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
         run: |
           set -euo pipefail
-          DB_URL="${DATABASE_URL:-${SUPABASE_DB_URL:-}}"
-          psql "$DB_URL" -v ON_ERROR_STOP=1 -f supabase/tests/security/definer-grants.sql
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/tests/security/definer-grants.sql
 
       - name: Default EXECUTE privileges on new functions (IPI-684)
         if: steps.gate.outputs.mode == 'run'
-        env:
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
-          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
         run: |
           set -euo pipefail
-          DB_URL="${DATABASE_URL:-${SUPABASE_DB_URL:-}}"
-          psql "$DB_URL" -v ON_ERROR_STOP=1 -f supabase/tests/security/default-execute-privileges.sql
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/tests/security/default-execute-privileges.sql
+
+      - name: pgTAP — RLS/grant/policy structural tests (IPI-245 · SB-TEST-002)
+        if: steps.gate.outputs.mode == 'run'
+        run: |
+          set -euo pipefail
+          supabase test db --db-url "$DATABASE_URL" supabase/tests/database
 
       - name: verify-rls (fail-closed service role)
         if: steps.gate.outputs.mode == 'run'

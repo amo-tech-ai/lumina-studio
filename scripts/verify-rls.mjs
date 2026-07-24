@@ -169,121 +169,13 @@ function assertNoMastraAccess(error, data, message) {
   fail(`${message} (expected denial, got ${data.length} row(s))`);
 }
 
-/**
- * IPI-647 — catalog assert: SELECT policies must require is_at_least (assignment).
- * Uses direct Postgres when SUPABASE_DB_URL / DATABASE_URL is set (never service_role JWT).
- */
-async function assertPlannerAssignmentSelectCatalog() {
-  const dbUrl = process.env.SUPABASE_DB_URL ?? process.env.DATABASE_URL;
-  if (!dbUrl) {
-    // CI verify-rls often has service_role JWT but no direct Postgres URL.
-    // Behavioral JWT matrix below remains mandatory; catalog is best-effort.
-    console.warn(
-      "warn: IPI-647 catalog assert skipped — SUPABASE_DB_URL/DATABASE_URL unset (JWT matrix still required)",
-    );
-    return;
-  }
-
-  let Client;
-  try {
-    ({ Client } = requireFromApp("pg"));
-  } catch (err) {
-    fail(`IPI-647 catalog assert: cannot load pg (${err instanceof Error ? err.message : err})`);
-    return;
-  }
-
-  const client = new Client({ connectionString: dbUrl, ssl: { rejectUnauthorized: false } });
-  try {
-    await client.connect();
-    const { rows } = await client.query(`
-      select tablename, policyname, permissive, coalesce(roles::text, '') as roles, qual
-      from pg_policies
-      where schemaname = 'planner'
-        and tablename in ('instances', 'tasks', 'dependencies')
-        and cmd = 'SELECT'
-      order by tablename, policyname
-    `);
-
-    const expected = {
-      instances: "instances_select_org",
-      tasks: "tasks_select_org",
-      dependencies: "dependencies_select_org",
-    };
-
-    for (const [table, policy] of Object.entries(expected)) {
-      const matches = rows.filter((r) => r.tablename === table);
-      assert(
-        matches.length === 1 && matches[0].policyname === policy,
-        `IPI-647 catalog: exactly one SELECT policy ${policy} on planner.${table}`,
-      );
-      const row = matches[0];
-      if (!row) continue;
-      assert(row.permissive === "PERMISSIVE", `IPI-647 catalog: ${policy} is PERMISSIVE`);
-      assert(
-        String(row.qual ?? "").includes("is_at_least"),
-        `IPI-647 catalog: ${policy} qual requires is_at_least (assignment)`,
-      );
-      assert(
-        String(row.qual ?? "").includes("is_org_member"),
-        `IPI-647 catalog: ${policy} qual requires is_org_member`,
-      );
-      // Org-only path would be qual that has is_org_member but not is_at_least — already covered.
-    }
-
-    assert(
-      !rows.some(
-        (r) =>
-          String(r.qual ?? "").includes("is_org_member") &&
-          !String(r.qual ?? "").includes("is_at_least"),
-      ),
-      "IPI-647 catalog: no permissive org-only SELECT path remains on instances/tasks/dependencies",
-    );
-
-    const { rows: volRows } = await client.query(`
-      select p.provolatile
-      from pg_proc p
-      join pg_namespace n on n.oid = p.pronamespace
-      where n.nspname = 'planner'
-        and p.proname = 'is_at_least'
-        and pg_get_function_identity_arguments(p.oid) = 'p_instance_id uuid, p_min_role text'
-    `);
-    assert(
-      volRows[0]?.provolatile === "v",
-      "IPI-647 catalog: planner.is_at_least is VOLATILE (INSERT...RETURNING + bootstrap assignment)",
-    );
-
-    const { rows: trigRows } = await client.query(`
-      -- tgtype bit 2 = BEFORE, bit 4 = INSERT; require both (matches "BEFORE INSERT")
-      select (t.tgtype & 6) = 6 as is_before_insert
-      from pg_trigger t
-      join pg_class c on c.oid = t.tgrelid
-      join pg_namespace n on n.oid = c.relnamespace
-      where n.nspname = 'planner'
-        and c.relname = 'instances'
-        and t.tgname = 'instances_bootstrap_owner'
-        and not t.tgisinternal
-    `);
-    assert(
-      trigRows[0]?.is_before_insert === true,
-      "IPI-647 catalog: instances_bootstrap_owner is BEFORE INSERT",
-    );
-
-    const { rows: fkRows } = await client.query(`
-      select condeferrable, condeferred
-      from pg_constraint
-      where conname = 'assignments_instance_id_fkey'
-        and conrelid = 'planner.assignments'::regclass
-    `);
-    assert(
-      fkRows[0]?.condeferrable === true && fkRows[0]?.condeferred === true,
-      "IPI-647 catalog: assignments_instance_id_fkey is DEFERRABLE INITIALLY DEFERRED",
-    );
-  } catch (err) {
-    fail(`IPI-647 catalog assert query failed: ${err instanceof Error ? err.message : err}`);
-  } finally {
-    await client.end().catch(() => {});
-  }
-}
+// IPI-647 — catalog assert (SELECT policies on planner.instances/tasks/dependencies
+// require is_at_least; is_at_least is VOLATILE; instances_bootstrap_owner is BEFORE
+// INSERT; assignments_instance_id_fkey is DEFERRABLE INITIALLY DEFERRED) moved to
+// supabase/tests/database/001_rls_enabled_and_policies.sql (IPI-245 · SB-TEST-002).
+// Pure pg_policies/pg_proc/pg_trigger/pg_constraint introspection, no JWT, no
+// fixtures — pgTAP's sweet spot, and it no longer soft-skips when
+// SUPABASE_DB_URL/DATABASE_URL is unset the way the Node version did.
 
 /**
  * IPI-245 / IPI-227B — runtime-role positive probe.
@@ -572,29 +464,8 @@ async function cleanupRlsTestData({
 
 console.log("PLT-002 RLS verification\n");
 
-// Anonymous: no authenticated policies — expect empty reads, blocked writes
-const { data: anonProfiles, error: anonProfilesErr } = await anon
-  .from("profiles")
-  .select("id")
-  .limit(1);
-assert(!anonProfilesErr, "anon profiles select does not error");
-assert((anonProfiles ?? []).length === 0, "anon cannot read profiles rows");
-
-const { data: anonBrands } = await anon.from("brands").select("id").limit(1);
-assert((anonBrands ?? []).length === 0, "anon cannot read brands rows");
-
-const { error: anonBrandInsertErr } = await anon.from("brands").insert({
-  name: "anon brand",
-  user_id: "00000000-0000-0000-0000-000000000001",
-});
-assert(!!anonBrandInsertErr, "anon cannot insert brands");
-
-// Global reference tables (MI-01): authenticated read-only, no anon policy.
-const refTables = ["platforms", "image_type_defs", "image_specs", "recommendation_rules"];
-for (const t of refTables) {
-  const { data } = await anon.from(t).select("id").limit(1);
-  assert((data ?? []).length === 0, `anon cannot read ${t} rows`);
-}
+// Anon denial on profiles/brands/reference tables moved to
+// supabase/tests/database/003_anon_authenticated_access.sql (IPI-245 · SB-TEST-002).
 
 let userA;
 let userB;
@@ -611,6 +482,9 @@ try {
   userA = await createTestUser(emailA);
   userB = await createTestUser(emailB);
 
+  // Global reference tables (MI-01): authenticated read-only, no anon policy.
+  // Anon denial for these tables lives in pgTAP 003_anon_authenticated_access.sql.
+  const refTables = ["platforms", "image_type_defs", "image_specs", "recommendation_rules"];
   // Global reference tables (MI-01): authenticated reads seeded rows, writes denied.
   for (const t of refTables) {
     const { data, error } = await userA.client.from(t).select("id").limit(1);
@@ -1959,8 +1833,9 @@ try {
 
   // ── IPI-647 · PLN-SEC-002 — assignment-aware SELECT (direct Data API) ──
   // These probes bypass app helpers and hit PostgREST on planner.* tables.
-  // Negative cases must use authenticated JWTs — never service_role.
-  await assertPlannerAssignmentSelectCatalog();
+  // Negative cases must use authenticated JWTs — never service_role. The catalog
+  // assert that used to run here moved to pgTAP — see
+  // supabase/tests/database/001_rls_enabled_and_policies.sql.
 
   const { data: depProbeTask, error: depProbeTaskErr } = await plannerA
     .from("tasks")
