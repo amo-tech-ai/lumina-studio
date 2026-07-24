@@ -14,7 +14,6 @@ type IpixMastraGlobal = typeof globalThis & {
 
 let storage: MastraAppStorage | undefined;
 let lazyStorageProxy: MastraAppStorage | undefined;
-let storageDegraded = false;
 let cachedStorageUnavailableError: MastraStorageUnavailableError | undefined;
 
 /** Thrown when durable storage is required but DATABASE_URL is unset in production. */
@@ -87,7 +86,7 @@ export function assertPostgresStoreModule(mod: {
 
 /** True when Mastra storage init failed in production — safe for health/degraded signals (no secrets). */
 export function isMastraStorageDegraded(): boolean {
-  return storageDegraded;
+  return cachedStorageUnavailableError !== undefined;
 }
 
 /**
@@ -220,7 +219,6 @@ function requireProductionDatabaseUrl(env: NodeJS.ProcessEnv = process.env): voi
   if (env.NODE_ENV !== "production" || env.CI) return;
 
   const target = isVercelRuntime(env) ? "Vercel production" : "production";
-  storageDegraded = true;
   console.error(
     `[mastra] MASTRA_DATABASE_URL / DATABASE_URL missing in ${target} — durable storage unavailable. ` +
       "CopilotKit /info may still list agents; agent runs requiring memory return 503 " +
@@ -246,13 +244,15 @@ function createPostgresStore(url: string, env: NodeJS.ProcessEnv = process.env):
 }
 
 export function getMastraStorage(): MastraAppStorage {
-  if (cachedStorageUnavailableError) {
-    throw cachedStorageUnavailableError;
-  }
-  if (!storage) {
-    const { url, source } = resolveMastraDatabaseUrlWithSource();
-
-    if (shouldSkipMastraPostgresStorage()) {
+  // Worker / explicit noop first — never run missing-URL latch recovery into Postgres.
+  // Once this process chose InMemory for Workers (IPI-490), keep that backend.
+  if (shouldSkipMastraPostgresStorage()) {
+    if (cachedStorageUnavailableError) {
+      // Durable PG is not used here; drop a prior missing-URL latch so health is not sticky.
+      cachedStorageUnavailableError = undefined;
+    }
+    if (!storage) {
+      const { url } = resolveMastraDatabaseUrlWithSource();
       if (url) {
         console.warn(
           "[mastra] Using InMemoryStore on Workers (IPI-490: PostgresStore/pg.Pool hangs). " +
@@ -261,7 +261,24 @@ export function getMastraStorage(): MastraAppStorage {
       }
       // Real Mastra store (getStore("memory") etc.) — bare stubs break agent.stream after RUN_STARTED.
       storage = new InMemoryStore({ id: "mastra-storage-memory" });
-    } else if (!url) {
+    }
+    return storage;
+  }
+
+  // Scope: missing-env-var only. Transient connection errors bubble; do not latch.
+  // Keep the latch until durable PostgresStore init succeeds so health does not
+  // flip "recovered" while createPostgresStore / assertPostgresStoreModule still throws.
+  const recoveringFromMissingUrlLatch = Boolean(cachedStorageUnavailableError);
+  if (cachedStorageUnavailableError) {
+    const { url } = resolveMastraDatabaseUrlWithSource();
+    if (!url) {
+      throw cachedStorageUnavailableError;
+    }
+  }
+  if (!storage) {
+    const { url, source } = resolveMastraDatabaseUrlWithSource();
+
+    if (!url) {
       try {
         requireProductionDatabaseUrl();
       } catch (err) {
@@ -289,6 +306,12 @@ export function getMastraStorage(): MastraAppStorage {
         if (process.env.NODE_ENV !== "production") {
           g.__ipixMastraPgStore = storage as PostgresStoreType;
         }
+      }
+      if (recoveringFromMissingUrlLatch) {
+        cachedStorageUnavailableError = undefined;
+        console.warn(
+          "[mastra] IPI-778: MASTRA_DATABASE_URL / DATABASE_URL now set — clearing storage degraded latch.",
+        );
       }
     }
   }
