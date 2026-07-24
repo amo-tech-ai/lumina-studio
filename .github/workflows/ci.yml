@@ -40,7 +40,8 @@ jobs:
 
       # IPI-789 · NODE-CI-001 / IPI-791 · NODE-RUNTIME-001 — Node 24 + npm 11 match
       # Vercel production (avoids the IPI-788 class of lockfile drift from CI on npm 10).
-      - uses: actions/setup-node@v4
+      # Pin: actions/setup-node@v4.4.0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with:
           node-version-file: app/.nvmrc
           cache: npm
@@ -150,7 +151,8 @@ jobs:
       # support (stable from Node 22+) — this job constructs a real
       # createClient() against the live project, unlike the other jobs.
       # Follows app/.nvmrc (Node 24) with the operator toolchain pin.
-      - uses: actions/setup-node@v4
+      # Pin: actions/setup-node@v4.4.0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with:
           node-version-file: app/.nvmrc
           cache: npm
