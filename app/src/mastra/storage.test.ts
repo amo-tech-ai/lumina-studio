@@ -675,4 +675,39 @@ describe("IPI-778 · degraded latch recovery", () => {
     expect(a).toBe(b);
     expect(ctor).toHaveBeenCalledTimes(1);
   });
+
+  it("keeps degraded latch until PostgresStore ctor succeeds (failed init does not clear health)", async () => {
+    const ctor = vi
+      .fn()
+      .mockImplementationOnce(function () {
+        throw new Error("ECONNREFUSED simulated");
+      })
+      .mockImplementation(function FakePostgresStore(this: { id: string }, config: { id: string }) {
+        this.id = config.id;
+      });
+    vi.doMock("@mastra/pg", () => ({
+      PostgresStore: ctor,
+      IPIX_CF_MASTRA_PG_STUB: undefined,
+    }));
+    vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("VERCEL", "1");
+    vi.stubEnv("CI", "");
+    vi.stubEnv("DATABASE_URL", "");
+    vi.stubEnv("MASTRA_DATABASE_URL", "");
+    vi.resetModules();
+    const mod = await import("./storage");
+    expect(() => mod.getMastraStorage()).toThrow(/Vercel production/);
+    expect(mod.isMastraStorageDegraded()).toBe(true);
+
+    vi.stubEnv("MASTRA_DATABASE_URL", "postgresql://mastra@127.0.0.1:6543/postgres");
+    expect(() => mod.getMastraStorage()).toThrow(/ECONNREFUSED simulated/);
+    // Latch must stay set — health must not claim recovery before durable init works.
+    expect(mod.isMastraStorageDegraded()).toBe(true);
+    expect(ctor).toHaveBeenCalledTimes(1);
+
+    const store = mod.getMastraStorage();
+    expect(mod.isMastraStorageDegraded()).toBe(false);
+    expect(ctor).toHaveBeenCalledTimes(2);
+    expect(store).toBe(mod.getMastraStorage());
+  });
 });

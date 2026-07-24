@@ -265,18 +265,15 @@ export function getMastraStorage(): MastraAppStorage {
     return storage;
   }
 
+  // Scope: missing-env-var only. Transient connection errors bubble; do not latch.
+  // Keep the latch until durable PostgresStore init succeeds so health does not
+  // flip "recovered" while createPostgresStore / assertPostgresStoreModule still throws.
+  const recoveringFromMissingUrlLatch = Boolean(cachedStorageUnavailableError);
   if (cachedStorageUnavailableError) {
     const { url } = resolveMastraDatabaseUrlWithSource();
     if (!url) {
       throw cachedStorageUnavailableError;
     }
-    // Scope: missing-env-var only. Transient connection errors bubble; do not latch.
-    // Clear only after URL is confirmed; init below is sync so concurrent callers
-    // re-enter after `storage` is set and reuse the same instance.
-    cachedStorageUnavailableError = undefined;
-    console.warn(
-      "[mastra] IPI-778: MASTRA_DATABASE_URL / DATABASE_URL now set — clearing storage degraded latch.",
-    );
   }
   if (!storage) {
     const { url, source } = resolveMastraDatabaseUrlWithSource();
@@ -309,6 +306,12 @@ export function getMastraStorage(): MastraAppStorage {
         if (process.env.NODE_ENV !== "production") {
           g.__ipixMastraPgStore = storage as PostgresStoreType;
         }
+      }
+      if (recoveringFromMissingUrlLatch) {
+        cachedStorageUnavailableError = undefined;
+        console.warn(
+          "[mastra] IPI-778: MASTRA_DATABASE_URL / DATABASE_URL now set — clearing storage degraded latch.",
+        );
       }
     }
   }
