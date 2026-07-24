@@ -166,7 +166,7 @@ describe("Cloudflare @mastra/pg stub (IPI-490)", () => {
     const mod = await import("../../scripts/cf-mastra-pg-stub.mjs");
     expect(mod.IPIX_CF_MASTRA_PG_STUB).toBe(true);
     expect(() => assertPostgresStoreModule(mod)).toThrow(
-      /MASTRA_STORAGE_MODE=pg is unavailable in this Worker bundle/,
+      /MASTRA_STORAGE_MODE=pg is unavailable.*cf-mastra-pg-stub/,
     );
   });
 
@@ -178,13 +178,25 @@ describe("Cloudflare @mastra/pg stub (IPI-490)", () => {
   });
 
   it("OpenNext buildCommand sets noop alongside stubs (Node build is not Workers)", async () => {
-    // Regression for Bugbot: IPIX_CF_BUNDLE_STUBS alone stubs PostgresStore to throw,
-    // but Node next build keeps shouldSkipMastraPostgresStorage=false when mode unset.
+    // Regression: IPIX_CF_BUNDLE_STUBS=1 is still set for Shiki size gates;
+    // MASTRA_STORAGE_MODE=noop keeps Workers Mastra on InMemoryStore even when
+    // the real `@mastra/pg` package is bundled (IPI-620B).
     const { readFileSync } = await import("node:fs");
     const { resolve } = await import("node:path");
     const src = readFileSync(resolve(__dirname, "../../open-next.config.ts"), "utf8");
     expect(src).toMatch(/IPIX_CF_BUNDLE_STUBS=1/);
     expect(src).toMatch(/MASTRA_STORAGE_MODE=noop/);
+  });
+
+  it("next.config / wrangler do not alias @mastra/pg to the size stub (IPI-620B)", async () => {
+    const { readFileSync } = await import("node:fs");
+    const { resolve } = await import("node:path");
+    const nextConfig = readFileSync(resolve(__dirname, "../../next.config.ts"), "utf8");
+    const wrangler = readFileSync(resolve(__dirname, "../../wrangler.jsonc"), "utf8");
+    expect(nextConfig).not.toMatch(/"@mastra\/pg"\s*:\s*mastraPgStub/);
+    expect(nextConfig).not.toMatch(/\bpg:\s*mastraPgStub/);
+    expect(wrangler).not.toMatch(/"@mastra\/pg"\s*:\s*"\.\/scripts\/cf-mastra-pg-stub\.mjs"/);
+    expect(wrangler).not.toMatch(/"pg"\s*:\s*"\.\/scripts\/cf-mastra-pg-stub\.mjs"/);
   });
 
   it("release scripts run check:worker-bundle before deploy/upload", async () => {

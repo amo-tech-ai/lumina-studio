@@ -9,11 +9,13 @@
  *
  * Follows the same disabled-by-default / secret-gated pattern as the IPI-586 AI Gateway
  * smoke route (src/app/api/internal/cloudflare-ai-gateway-smoke/route.ts).
+ *
+ * @see https://developers.cloudflare.com/hyperdrive/examples/connect-to-postgres/postgres-drivers-and-libraries/node-postgres/
+ * @see https://developers.cloudflare.com/hyperdrive/concepts/connection-lifecycle/
  */
 import { NextResponse } from "next/server";
 import { createHash, timingSafeEqual } from "node:crypto";
 import { getCloudflareContext } from "@opennextjs/cloudflare";
-import { PostgresStore } from "@mastra/pg";
 import type { StorageThreadType } from "@mastra/core/memory";
 
 export const dynamic = "force-dynamic";
@@ -28,6 +30,31 @@ type SmokeEnv = {
   HYPERDRIVE_FRESH?: HyperdriveBinding;
   ENABLE_HYPERDRIVE_PG_SMOKE?: string;
   INTERNAL_WEBHOOK_SECRET?: string;
+};
+
+type RoundtripResult = {
+  ok: boolean;
+  threadId: string;
+  matched: boolean;
+  cleanedUp: boolean;
+  latencyMs: number;
+  error?: string;
+};
+
+type PostgresStoreCtor = new (config: {
+  id: string;
+  connectionString: string;
+  schemaName: string;
+  disableInit: boolean;
+  max: number;
+  idleTimeoutMillis: number;
+}) => {
+  getStore: (name: "memory") => Promise<{
+    saveThread: (args: { thread: StorageThreadType }) => Promise<unknown>;
+    getThreadById: (args: { threadId: string }) => Promise<{ id: string } | null>;
+    deleteThread: (args: { threadId: string }) => Promise<unknown>;
+  } | null>;
+  close: () => Promise<void>;
 };
 
 function isSmokeEnabled(envFlag: string | undefined): boolean {
@@ -45,21 +72,36 @@ function json(status: number, body: Record<string, unknown>) {
   return NextResponse.json(body, { status });
 }
 
-type RoundtripResult = {
-  ok: boolean;
-  threadId: string;
-  matched: boolean;
-  latencyMs: number;
-  error?: string;
-};
+/** Dynamic import so Vitest can `vi.doMock("@mastra/pg")` and so we can detect the CF stub marker. */
+async function loadPostgresStore(): Promise<PostgresStoreCtor> {
+  const mod = (await import("@mastra/pg")) as {
+    IPIX_CF_MASTRA_PG_STUB?: boolean;
+    PostgresStore?: PostgresStoreCtor;
+  };
+  if (mod.IPIX_CF_MASTRA_PG_STUB === true) {
+    throw new Error(
+      "stubbed_mastra_pg: Worker still aliases @mastra/pg to cf-mastra-pg-stub.mjs — cannot prove Hyperdrive",
+    );
+  }
+  if (typeof mod.PostgresStore !== "function") {
+    throw new Error("missing_postgres_store: @mastra/pg did not export PostgresStore");
+  }
+  return mod.PostgresStore;
+}
 
 /**
- * One thread create + read roundtrip against a fresh, request-scoped `PostgresStore`.
+ * One thread create + read + delete against a fresh, request-scoped `PostgresStore`.
  * Never cached at module/global scope — a new store (and its internal `pg.Pool`) is
  * created and closed within this single call, per Cloudflare's documented rule against
  * global-scope DB clients in Workers.
+ *
+ * `PostgresStore` is passed in (loaded once per request) so concurrent probes share the
+ * same real package binding without re-import races under Vitest.
  */
-async function threadRoundtrip(hyperdrive: HyperdriveBinding): Promise<RoundtripResult> {
+async function threadRoundtrip(
+  hyperdrive: HyperdriveBinding,
+  PostgresStore: PostgresStoreCtor,
+): Promise<RoundtripResult> {
   const threadId = `ipi-620b-smoke-${crypto.randomUUID()}`;
   const started = Date.now();
   const store = new PostgresStore({
@@ -70,6 +112,14 @@ async function threadRoundtrip(hyperdrive: HyperdriveBinding): Promise<Roundtrip
     max: 1,
     idleTimeoutMillis: 5_000,
   });
+
+  const result: RoundtripResult = {
+    ok: false,
+    threadId,
+    matched: false,
+    cleanedUp: false,
+    latencyMs: 0,
+  };
 
   try {
     const memory = await store.getStore("memory");
@@ -85,28 +135,39 @@ async function threadRoundtrip(hyperdrive: HyperdriveBinding): Promise<Roundtrip
     };
     await memory.saveThread({ thread });
     const read = await memory.getThreadById({ threadId });
-    // Best-effort cleanup so repeated smoke runs don't accumulate rows in `mastra.mastra_threads`.
-    await memory.deleteThread({ threadId }).catch(() => {});
-
-    return {
-      ok: true,
-      threadId,
-      matched: read?.id === threadId,
-      latencyMs: Date.now() - started,
-    };
+    result.matched = read?.id === threadId;
+    result.ok = result.matched;
   } catch (error) {
-    return {
-      ok: false,
-      threadId,
-      matched: false,
-      latencyMs: Date.now() - started,
-      error: error instanceof Error ? error.message : "unknown error",
-    };
+    console.error(
+      "hyperdrive-postgresstore-smoke: roundtrip failed",
+      error instanceof Error ? error.message : error,
+    );
+    result.error = "roundtrip_failed";
   } finally {
-    // Graceful cleanup (recommended, not a hard CF requirement — Workers free
-    // sockets at invocation end regardless).
+    try {
+      const memory = await store.getStore("memory");
+      if (memory) {
+        await memory.deleteThread({ threadId });
+        result.cleanedUp = true;
+      }
+    } catch {
+      result.cleanedUp = false;
+    }
     await store.close().catch(() => {});
+    result.latencyMs = Date.now() - started;
   }
+
+  return result;
+}
+
+function proofFields(stubbed = false) {
+  return {
+    adapter: "@mastra/pg" as const,
+    transport: "hyperdrive" as const,
+    schemaName: "mastra" as const,
+    disableInit: true as const,
+    stubbed,
+  };
 }
 
 export async function POST(request: Request) {
@@ -152,6 +213,21 @@ export async function POST(request: Request) {
     });
   }
 
+  let PostgresStore: PostgresStoreCtor;
+  try {
+    PostgresStore = await loadPostgresStore();
+  } catch (error) {
+    return json(502, {
+      ok: false,
+      error: "stubbed_or_missing_mastra_pg",
+      detail: error instanceof Error ? error.message : "unknown",
+      requestId,
+      cfRay,
+      roundtrip: false,
+      ...proofFields(true),
+    });
+  }
+
   let body: { mode?: string; concurrency?: number } = {};
   try {
     body = await request.json();
@@ -163,13 +239,16 @@ export async function POST(request: Request) {
   const started = Date.now();
 
   if (mode === "single") {
-    const result = await threadRoundtrip(hyperdrive);
-    return json(result.ok && result.matched ? 200 : 502, {
-      ok: result.ok && result.matched,
+    const result = await threadRoundtrip(hyperdrive, PostgresStore);
+    const roundtrip = result.ok && result.matched && result.cleanedUp;
+    return json(roundtrip ? 200 : 502, {
+      ok: roundtrip,
       requestId,
       cfRay,
       mode,
       latencyMs: Date.now() - started,
+      roundtrip,
+      ...proofFields(),
       result,
     });
   }
@@ -179,12 +258,13 @@ export async function POST(request: Request) {
     MAX_CONCURRENCY,
   );
   const results = await Promise.all(
-    Array.from({ length: concurrency }, () => threadRoundtrip(hyperdrive)),
+    Array.from({ length: concurrency }, () => threadRoundtrip(hyperdrive, PostgresStore)),
   );
-  const failures = results.filter((r) => !r.ok || !r.matched);
+  const failures = results.filter((r) => !r.ok || !r.matched || !r.cleanedUp);
+  const roundtrip = failures.length === 0;
 
-  return json(failures.length === 0 ? 200 : 502, {
-    ok: failures.length === 0,
+  return json(roundtrip ? 200 : 502, {
+    ok: roundtrip,
     requestId,
     cfRay,
     mode,
@@ -192,6 +272,8 @@ export async function POST(request: Request) {
     latencyMs: Date.now() - started,
     successCount: results.length - failures.length,
     failureCount: failures.length,
+    roundtrip,
+    ...proofFields(),
     results,
   });
 }

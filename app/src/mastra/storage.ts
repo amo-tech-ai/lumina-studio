@@ -53,9 +53,11 @@ export function isVercelRuntime(env: NodeJS.ProcessEnv = process.env): boolean {
  * - wrangler `vars.MASTRA_STORAGE_MODE=noop` on ipix-operator (preview/deploy)
  * - auto on Cloudflare Workers unless MASTRA_STORAGE_MODE=pg
  *
- * OpenNext Worker builds alias `@mastra/pg` to `cf-mastra-pg-stub.mjs` (IPI-490).
- * In that bundle `MASTRA_STORAGE_MODE=pg` cannot load the real provider —
- * {@link assertPostgresStoreModule} rejects the override with a clear error.
+ * OpenNext used to alias `@mastra/pg` → `cf-mastra-pg-stub.mjs` (IPI-490).
+ * IPI-620A/B removed that alias so Hyperdrive spikes can load the real package.
+ * Production Workers still default to noop via `MASTRA_STORAGE_MODE` / this skip —
+ * {@link assertPostgresStoreModule} still rejects a reintroduced stub if someone
+ * asks for `MASTRA_STORAGE_MODE=pg` against a stubbed bundle.
  */
 export function shouldSkipMastraPostgresStorage(
   env: NodeJS.ProcessEnv = process.env,
@@ -75,8 +77,8 @@ export function assertPostgresStoreModule(mod: {
 }): asserts mod is { PostgresStore: typeof import("@mastra/pg").PostgresStore } {
   if (mod?.IPIX_CF_MASTRA_PG_STUB) {
     throw new Error(
-      "MASTRA_STORAGE_MODE=pg is unavailable in this Worker bundle (IPI-490). " +
-        "`@mastra/pg` is stubbed for gzip size; use MASTRA_STORAGE_MODE=noop until Hyperdrive (IPI-619/623).",
+      "MASTRA_STORAGE_MODE=pg is unavailable: `@mastra/pg` resolved to cf-mastra-pg-stub.mjs (IPI-490). " +
+        "Remove the Worker alias (IPI-620B) or keep MASTRA_STORAGE_MODE=noop until Hyperdrive proof (IPI-623).",
     );
   }
   if (typeof mod?.PostgresStore !== "function") {
@@ -293,7 +295,8 @@ export function getMastraStorage(): MastraAppStorage {
     } else {
       // IPI-718: static ESM import (Mastra docs). Never CJS-load @mastra/pg —
       // that throws ERR_REQUIRE_ESM (p-map) on Vercel when the package is externalized.
-      // OpenNext aliases this module to cf-mastra-pg-stub.mjs when IPIX_CF_BUNDLE_STUBS=1.
+      // IPI-620B: OpenNext no longer aliases this to cf-mastra-pg-stub; assert still
+      // guards if a stub is reintroduced under MASTRA_STORAGE_MODE=pg.
       assertPostgresStoreModule(MastraPg);
       const poolMax = resolveMastraPgPoolMax();
       warnIfMastraSessionPoolFallback({ url, source, poolMax });

@@ -32,7 +32,6 @@ const copilotkitRuntimeInternalAliases = {
 } as const;
 
 const shikiStub = path.join(appDir, "scripts/cf-shiki-stub.mjs");
-const mastraPgStub = path.join(appDir, "scripts/cf-mastra-pg-stub.mjs");
 
 /**
  * IPI-490 · CF-MIG-210 — OpenNext-only stubs (IPIX_CF_BUNDLE_STUBS=1).
@@ -44,17 +43,13 @@ const mastraPgStub = path.join(appDir, "scripts/cf-mastra-pg-stub.mjs");
  * Shiki aliases point at `cf-shiki-stub.mjs`: noop on the server (size gate),
  * jsDelivr ESM load in the browser (syntax highlighting preserved).
  *
- * `@mastra/pg` is stubbed here (its `PostgresStore` always throws in this
- * Worker build path anyway — IPI-490 — so its own transitive `pg` usage is
- * dead weight). `pg`/`pg-cloudflare` are deliberately NOT aliased here
- * (IPI-620A): `pg-cloudflare` ships its own `workerd`-conditional export map
- * (real TCP-socket impl under workerd, an already-empty stub everywhere
- * else) — that's the officially-documented mechanism (see Cloudflare's own
- * node-postgres + Hyperdrive example), not something a bundler alias needs
- * to reimplement. Both are already in `serverExternalPackages` below, which
- * is what lets OpenNext's build step apply the `workerd` condition
- * correctly; aliasing them here would only shadow that and break real
- * consumers like `src/lib/db/hyperdrive-query.ts`.
+ * IPI-620A/B: do NOT alias `@mastra/pg`, `pg`, or `pg-cloudflare` here.
+ * - Bare `pg` needs real `Client` for Hyperdrive `queryFresh` (IPI-620A).
+ * - `@mastra/pg` must be the real package for the IPI-620B PostgresStore spike.
+ * Production Mastra storage stays InMemory via wrangler `MASTRA_STORAGE_MODE=noop`
+ * (`shouldSkipMastraPostgresStorage`) — bundling the real package ≠ enabling it.
+ * `pg`/`pg-cloudflare` use workerd-conditional exports (Cloudflare Hyperdrive recipe);
+ * both stay in `serverExternalPackages` so OpenNext applies the `workerd` condition.
  * Wrangler `alias` alone is insufficient: OpenNext pre-bundles into handler.mjs.
  */
 const cfBundleStubAliases =
@@ -67,7 +62,6 @@ const cfBundleStubAliases =
         "@shikijs/core": shikiStub,
         "@shikijs/engine-oniguruma": shikiStub,
         "@shikijs/vscode-textmate": shikiStub,
-        "@mastra/pg": mastraPgStub,
       } as const)
     : ({} as const);
 
