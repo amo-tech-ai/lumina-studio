@@ -149,6 +149,17 @@ function resolveMastraPgSslOption(
   return env.DATABASE_SSL === "true" ? { rejectUnauthorized: false } : undefined;
 }
 
+/**
+ * IPI-630 — which Postgres schema Mastra PostgresStore targets.
+ * Default **public** until Wave E: set `MASTRA_SCHEMA=mastra` only in the same
+ * deploy window as IPI-784 / #614 (after SET SCHEMA cutover). Activating early
+ * points the app at empty mastra.* while history still lives in public.mastra_*.
+ */
+export function resolveMastraSchemaName(env: NodeJS.ProcessEnv = process.env): string {
+  const raw = (env.MASTRA_SCHEMA ?? "public").trim();
+  return raw.length > 0 ? raw : "public";
+}
+
 const MASTRA_PG_APPLICATION_NAME = "ipix-mastra";
 
 /**
@@ -236,16 +247,13 @@ function createPostgresStore(url: string, env: NodeJS.ProcessEnv = process.env):
   // IPI-740: Cap pool size. next dev and mastra dev are separate OS processes —
   // each gets its own pool (worst case 2× max on session :5432). Transaction
   // MASTRA_DATABASE_URL (:6543) + per-process max is the real fix.
-  // IPI-630: `mastra` private schema (IPI-616 ADR) + disableInit — tables are
-  // migrated by IPI-628 (#601 merged on main), not auto-created at runtime.
-  // Fresh envs must apply supabase/migrations/20260722093028_mastra_schema_pinned_1_12_0.sql
-  // before this code runs; disableInit means no auto-create fallback. Remote DB already
-  // has mastra.* (24 tables). Wave E: ship with IPI-784 / #614 same window — operator
-  // history still lives in public.mastra_* until SET SCHEMA cutover.
+  // IPI-630: disableInit always — tables come from migrations (IPI-628), never
+  // runtime DDL. schemaName stays "public" until Wave E sets MASTRA_SCHEMA=mastra
+  // in the same window as IPI-784 / #614 SET SCHEMA cutover (do not activate early).
   return new MastraPg.PostgresStore({
     id: "mastra-storage",
     connectionString: withMastraApplicationName(url),
-    schemaName: "mastra",
+    schemaName: resolveMastraSchemaName(env),
     disableInit: true,
     max: resolveMastraPgPoolMax(env),
     idleTimeoutMillis: PG_IDLE_TIMEOUT_MS,
