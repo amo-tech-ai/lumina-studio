@@ -164,11 +164,11 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y postgresql-client
 
       - name: Install root dependencies (scripts/verify-rls.mjs needs @supabase/supabase-js)
-        run: npm ci --omit=dev
+        run: npm ci --omit=dev --no-audit --no-fund
 
       - name: Install app dependencies (typecheck + API tests in gate script)
         working-directory: app
-        run: npm ci
+        run: npm ci --no-audit --no-fund
 
       - name: Model Gate verification
         env:
