@@ -247,7 +247,8 @@ async function assertPlannerAssignmentSelectCatalog() {
     );
 
     const { rows: trigRows } = await client.query(`
-      select t.tgtype & 2 = 2 as is_before
+      -- tgtype bit 2 = BEFORE, bit 4 = INSERT; require both (matches "BEFORE INSERT")
+      select (t.tgtype & 6) = 6 as is_before_insert
       from pg_trigger t
       join pg_class c on c.oid = t.tgrelid
       join pg_namespace n on n.oid = c.relnamespace
@@ -257,7 +258,7 @@ async function assertPlannerAssignmentSelectCatalog() {
         and not t.tgisinternal
     `);
     assert(
-      trigRows[0]?.is_before === true,
+      trigRows[0]?.is_before_insert === true,
       "IPI-647 catalog: instances_bootstrap_owner is BEFORE INSERT",
     );
 
