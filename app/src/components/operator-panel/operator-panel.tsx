@@ -11,6 +11,7 @@ import {
   useFrontendTool,
   CopilotChatConfigurationProvider,
 } from "@copilotkit/react-core/v2";
+import dynamic from "next/dynamic";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
@@ -27,7 +28,6 @@ import { DEV_PREVIEW_HERO_BRAND_ID, isDevPreviewBrandId, isDevSkipMode } from ".
 import { IntelligenceDetailProvider } from "@/context/intelligence-detail-context";
 import { CrmChatProvider, useCrmChatContext } from "@/context/crm-chat-context";
 import { NavSidebar } from "./nav-sidebar";
-import { OperatorChatDock } from "./operator-chat-dock";
 import { MobileSignOutBar } from "./mobile-sign-out-bar";
 import { useOperatorBrands } from "./use-operator-brands";
 import { useUnreadNotifications } from "./use-unread-notifications";
@@ -39,6 +39,16 @@ import { useRouteSuggestions } from "@/lib/intelligence/use-route-suggestions";
 import { NAV_TARGETS, resolveNavigateToPath } from "./navigate-to-path";
 
 const CRM_PAGES = ["companies", "contacts", "pipeline"] as const;
+
+// IPI-706 · CF-BUNDLE-220 — client-only import boundary for the Worker bundle-size
+// gate. OperatorChatDock renders <CopilotChat>, which drags @copilotkit/react-core/v2's
+// message-view rendering (-> streamdown -> mermaid/cytoscape/katex, ~1.2-1.5 MiB
+// uncompressed) into the server bundle. ssr:false excludes that import from the server
+// compilation; `loading` mirrors .chatDock's box so the dock doesn't visibly pop in.
+const OperatorChatDock = dynamic(
+  () => import("./operator-chat-dock").then((m) => m.OperatorChatDock),
+  { ssr: false, loading: () => <div className={styles.chatDockSkeleton} aria-hidden="true" /> },
+);
 
 export function OperatorPanel({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();

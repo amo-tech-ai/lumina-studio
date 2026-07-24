@@ -53,6 +53,15 @@
   min-height: 0;
 }
 
+/* IPI-706 — placeholder while OperatorChatDock's dynamic(ssr:false) chunk loads,
+   sized to roughly match the collapsed dock so it doesn't visibly pop in. */
+.chatDockSkeleton {
+  flex-shrink: 0;
+  min-height: 3.5rem;
+  border-top: 1px solid var(--border);
+  background: var(--background);
+}
+
 /* DC L306–317 — compact input row; CopilotChat supplies the full dock chrome */
 .chatDockInner :global(.copilotKitChat) {
   min-height: 0 !important;
