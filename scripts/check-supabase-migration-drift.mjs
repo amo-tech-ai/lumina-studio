@@ -274,9 +274,22 @@ function prIntroducedVersions() {
   return versions;
 }
 
+function stripAnsi(s) {
+  // CLI may bold pending filenames: " • \x1b[1m2026…sql\x1b[22m" (IPI-784 / #614).
+  return s.replace(/\x1b\[[0-9;]*m/g, "");
+}
+
 function parseDryRunPending(raw) {
+  const text = stripAnsi(raw);
   const pending = [];
-  for (const line of raw.split("\n")) {
+  // JSON envelope from newer CLI: {"migrations":["2026…sql"],"dryRun":true,...}
+  const jsonMig = /"migrations"\s*:\s*\[([^\]]*)\]/.exec(text);
+  if (jsonMig) {
+    for (const m of jsonMig[1].matchAll(/"(\d{14}_[\w.-]+\.sql)"/g)) {
+      pending.push(m[1]);
+    }
+  }
+  for (const line of text.split("\n")) {
     const m = /[•*]\s+(\d{14}_[\w.-]+\.sql)/.exec(line);
     if (m) pending.push(m[1]);
     const m2 = /^\s*(\d{14}_[\w.-]+\.sql)\s*$/.exec(line.trim());
@@ -286,7 +299,7 @@ function parseDryRunPending(raw) {
     if (m3) pending.push(m3[1]);
   }
   const unique = [...new Set(pending)];
-  const upToDate = /Remote database is up to date/i.test(raw);
+  const upToDate = /Remote database is up to date/i.test(text);
   // Contradictory CLI noise must not look like a clean empty pending set.
   if (upToDate && unique.length) {
     throw new Error(
@@ -381,6 +394,16 @@ if (args.includes("--self-check")) {
     "Would push migration 20230108110451_this_should_fail.sql...\n",
   );
   assert.deepEqual(wouldOnly, ["20230108110451_this_should_fail.sql"]);
+
+  // Colored bullet + JSON migrations array (supabase CLI dry-run shapes).
+  const ansiBullet = parseDryRunPending(
+    ' {"upToDate":false,"dryRun":true,"migrations":["20260722150000_mastra_schema_cutover_preserve_data.sql"],"seeds":[],"roles":[],"message":"Finished supabase db push."}\n' +
+      "Would push these migrations:\n" +
+      " • \x1b[1m20260722150000_mastra_schema_cutover_preserve_data.sql\x1b[22m\n",
+  );
+  assert.deepEqual(ansiBullet, [
+    "20260722150000_mastra_schema_cutover_preserve_data.sql",
+  ]);
 
   assert.equal(dryRunIsUsable({ ok: false, out: "auth failed", status: 1 }), false);
   assert.equal(
