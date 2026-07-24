@@ -90,4 +90,41 @@ describe("queryFresh (IPI-620 Part A)", () => {
     expect(client.query).not.toHaveBeenCalled();
     expect(client.end).not.toHaveBeenCalled();
   });
+
+  it("queryFreshByResourceId prepends verified resourceId as $1", async () => {
+    const client = {
+      connect: vi.fn().mockResolvedValue(undefined),
+      query: vi.fn().mockResolvedValue({ rows: [{ id: "t1" }] }),
+      end: vi.fn().mockResolvedValue(undefined),
+    };
+    const { queryFreshByResourceId } = await loadHelper(client);
+
+    const rows = await queryFreshByResourceId(
+      FAKE_HYPERDRIVE,
+      "org-acme",
+      `select id from mastra.mastra_threads where "resourceId" = $1 and id = $2`,
+      ["thread-1"],
+    );
+
+    expect(client.query).toHaveBeenCalledWith(
+      `select id from mastra.mastra_threads where "resourceId" = $1 and id = $2`,
+      ["org-acme", "thread-1"],
+    );
+    expect(rows).toEqual([{ id: "t1" }]);
+  });
+
+  it("queryFreshByResourceId fail-closed: missing resourceId never connects", async () => {
+    const client = {
+      connect: vi.fn().mockResolvedValue(undefined),
+      query: vi.fn(),
+      end: vi.fn().mockResolvedValue(undefined),
+    };
+    const { queryFreshByResourceId } = await loadHelper(client);
+
+    await expect(
+      queryFreshByResourceId(FAKE_HYPERDRIVE, "", "select 1 where false"),
+    ).rejects.toThrow(/Missing resourceId/);
+    expect(client.connect).not.toHaveBeenCalled();
+    expect(client.query).not.toHaveBeenCalled();
+  });
 });

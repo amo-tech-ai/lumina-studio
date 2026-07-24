@@ -340,6 +340,321 @@ async function assertMastraRuntimeRoleProbe(onFixtureReady) {
   }
 }
 
+/**
+ * IPI-621 · CF-DB-007 — tenant contract probe (resourceId / threadId fail-closed).
+ *
+ * Extends the IPI-245 runtime-role CRUD probe with the required matrix:
+ * same-tenant CRUD/upsert, forged/missing resourceId, forged threadId,
+ * unscoped list still visible under role-gate RLS (documents app must filter),
+ * rolbypassrls=false, and pooled connection reuse with no session-tenant GUC
+ * (fresh Client per hop — no SET LOCAL; Hyperdrive RESET is the pool model).
+ *
+ * Soft-skips when no runtime URL (same as assertMastraRuntimeRoleProbe) unless
+ * REQUIRE_HYPERDRIVE_RUNTIME_PROBE=1.
+ */
+async function assertMastraTenantContractProbe() {
+  const runtimeUrl = resolveMastraRuntimeProbeUrl();
+  if (!runtimeUrl) {
+    console.warn(
+      "warn: IPI-621 tenant-contract probe skipped — no Mastra runtime DB URL " +
+        "(HYPERDRIVE_DATABASE_URL / MASTRA_DATABASE_URL / DATABASE_URL / SUPABASE_DB_URL)",
+    );
+    return;
+  }
+
+  let Client;
+  try {
+    ({ Client } = requireFromApp("pg"));
+  } catch (err) {
+    fail(
+      `IPI-621 tenant-contract probe: cannot load pg (${
+        err instanceof Error ? err.message : err
+      })`,
+    );
+    return;
+  }
+
+  const stamp = Date.now();
+  const tenantA = `ipi621-tenant-a-${stamp}`;
+  const tenantB = `ipi621-tenant-b-${stamp}`;
+  const threadA = `ipi621-thread-a-${stamp}`;
+  const threadB = `ipi621-thread-b-${stamp}`;
+  const forgedTenant = `ipi621-forged-${stamp}`;
+  const forgedThread = `ipi621-forged-thread-${stamp}`;
+
+  async function withRuntimeClient(fn) {
+    const client = new Client({
+      connectionString: runtimeUrl,
+      ssl: { rejectUnauthorized: false },
+      connectionTimeoutMillis: 10_000,
+      query_timeout: 15_000,
+    });
+    let connected = false;
+    try {
+      await client.connect();
+      connected = true;
+      const { rows: whoRows } = await client.query(
+        "select current_user, session_user",
+      );
+      let role = whoRows[0]?.current_user;
+      if (role !== "hyperdrive_mastra_runtime") {
+        await client.query("set role hyperdrive_mastra_runtime");
+        const { rows: afterSet } = await client.query("select current_user");
+        role = afterSet[0]?.current_user;
+      }
+      if (role !== "hyperdrive_mastra_runtime") {
+        fail(
+          `IPI-621 tenant probe session is not hyperdrive_mastra_runtime (current_user=${role})`,
+        );
+        return;
+      }
+      await fn(client);
+    } catch (err) {
+      fail(
+        `IPI-621 tenant-contract probe: ${
+          err instanceof Error ? err.message : err
+        }`,
+      );
+    } finally {
+      if (connected) {
+        try {
+          await client.query(
+            `delete from mastra.mastra_messages where id like $1`,
+            [`ipi621-%${stamp}%`],
+          );
+          await client.query(
+            `delete from mastra.mastra_threads where id like $1`,
+            [`ipi621-%${stamp}%`],
+          );
+        } catch (cleanupErr) {
+          trackCleanupError(
+            `IPI-621 tenant fixtures: ${
+              cleanupErr instanceof Error ? cleanupErr.message : cleanupErr
+            }`,
+          );
+        }
+      }
+      try {
+        await Promise.race([
+          client.end(),
+          new Promise((_, reject) =>
+            setTimeout(() => reject(new Error("client.end() timed out")), 5_000),
+          ),
+        ]);
+      } catch {
+        try {
+          client.connection?.stream?.destroy?.();
+        } catch {
+          /* ignore */
+        }
+      }
+    }
+  }
+
+  // Catalog: rolbypassrls (may run as postgres before SET ROLE — fine).
+  await withRuntimeClient(async (client) => {
+    // Prefer a privileged catalog read: if SET ROLE already applied, postgres
+    // tableowner checks still work via has_table_privilege introspection.
+    const { rows: bypassRows } = await client.query(
+      `select rolbypassrls from pg_roles where rolname = 'hyperdrive_mastra_runtime'`,
+    );
+    assert(
+      bypassRows[0]?.rolbypassrls === false,
+      "IPI-621 catalog: hyperdrive_mastra_runtime has rolbypassrls=false",
+    );
+
+    // Insert two tenants (same connection — role gate allows both).
+    await client.query(
+      `insert into mastra.mastra_threads (id, "resourceId", title, "createdAt", "updatedAt")
+       values ($1, $2, $3, now(), now()), ($4, $5, $6, now(), now())`,
+      [threadA, tenantA, "IPI-621 A", threadB, tenantB, "IPI-621 B"],
+    );
+    pass("IPI-621 same-tenant INSERT (two resourceIds under role gate)");
+
+    // Upsert scoped by resourceId (ON CONFLICT id).
+    const { rows: upsertRows } = await client.query(
+      `insert into mastra.mastra_threads (id, "resourceId", title, "createdAt", "updatedAt")
+       values ($1, $2, $3, now(), now())
+       on conflict (id) do update
+         set title = excluded.title, "updatedAt" = now()
+         where mastra.mastra_threads."resourceId" = $2
+       returning title`,
+      [threadA, tenantA, "IPI-621 A upserted"],
+    );
+    assert(
+      upsertRows[0]?.title === "IPI-621 A upserted",
+      "IPI-621 same-tenant UPSERT scoped by resourceId",
+    );
+
+    const { rows: sameRows } = await client.query(
+      `select id from mastra.mastra_threads where "resourceId" = $1 and id = $2`,
+      [tenantA, threadA],
+    );
+    assert(
+      sameRows.length === 1,
+      "IPI-621 same-tenant resourceId SELECT returns 1 row",
+    );
+
+    const { rows: forgedRes } = await client.query(
+      `select id from mastra.mastra_threads where "resourceId" = $1 and id like $2`,
+      [forgedTenant, `ipi621-%${stamp}%`],
+    );
+    assert(
+      forgedRes.length === 0,
+      "IPI-621 forged resourceId SELECT returns 0 rows (fail closed)",
+    );
+
+    const { rows: forgedTid } = await client.query(
+      `select id from mastra.mastra_threads where id = $1 and "resourceId" = $2`,
+      [forgedThread, tenantA],
+    );
+    assert(
+      forgedTid.length === 0,
+      "IPI-621 forged threadId SELECT returns 0 rows (fail closed)",
+    );
+
+    const { rows: cross } = await client.query(
+      `select id from mastra.mastra_threads where id = $1 and "resourceId" = $2`,
+      [threadB, tenantA],
+    );
+    assert(
+      cross.length === 0,
+      "IPI-621 other-tenant threadId + own resourceId returns 0 rows",
+    );
+
+    const { rowCount: updOk } = await client.query(
+      `update mastra.mastra_threads set title = $3, "updatedAt" = now()
+       where id = $1 and "resourceId" = $2`,
+      [threadA, tenantA, "IPI-621 A updated"],
+    );
+    assert(updOk === 1, "IPI-621 same-tenant resourceId UPDATE returns 1");
+
+    const { rowCount: updForged } = await client.query(
+      `update mastra.mastra_threads set title = $3, "updatedAt" = now()
+       where id = $1 and "resourceId" = $2`,
+      [threadA, forgedTenant, "should not stick"],
+    );
+    assert(
+      updForged === 0,
+      "IPI-621 forged resourceId UPDATE affects 0 rows (fail closed)",
+    );
+
+    // Unscoped list still sees both — role gate, not org RLS (document contract).
+    const { rows: unscoped } = await client.query(
+      `select id from mastra.mastra_threads where id like $1 order by id`,
+      [`ipi621-%${stamp}%`],
+    );
+    assert(
+      unscoped.length === 2,
+      "IPI-621 unscoped list under role gate sees both tenants (app must bind resourceId)",
+    );
+
+    // Tenant-key rewrite at SQL layer is NOT denied by USING(true) — app helper must.
+    // Prove rewrite is possible under the role so we never claim RLS alone blocks it.
+    const { rowCount: rewriteCount } = await client.query(
+      `update mastra.mastra_threads set "resourceId" = $2, "updatedAt" = now()
+       where id = $1`,
+      [threadA, tenantB],
+    );
+    assert(
+      rewriteCount === 1,
+      "IPI-621 role-gate allows resourceId rewrite at SQL — app rejectTenantKeyRewrite required",
+    );
+    // Restore for cleanup clarity
+    await client.query(
+      `update mastra.mastra_threads set "resourceId" = $2 where id = $1`,
+      [threadA, tenantA],
+    );
+
+    const { rowCount: delOk } = await client.query(
+      `delete from mastra.mastra_threads where id = $1 and "resourceId" = $2`,
+      [threadB, tenantB],
+    );
+    assert(delOk === 1, "IPI-621 same-tenant resourceId DELETE returns 1");
+  });
+
+  // Pool reuse / no session leak: two fresh Clients (Hyperdrive model = new Client
+  // per queryFresh). Client-1 seeds tenant A only; Client-2 must not see A when
+  // filtering by tenant B — and must not depend on any SET LOCAL tenant GUC.
+  {
+    const client1 = new Client({
+      connectionString: runtimeUrl,
+      ssl: { rejectUnauthorized: false },
+      connectionTimeoutMillis: 10_000,
+      query_timeout: 15_000,
+    });
+    const client2 = new Client({
+      connectionString: runtimeUrl,
+      ssl: { rejectUnauthorized: false },
+      connectionTimeoutMillis: 10_000,
+      query_timeout: 15_000,
+    });
+    const poolThread = `ipi621-pool-${stamp}`;
+    try {
+      await client1.connect();
+      await client2.connect();
+      for (const c of [client1, client2]) {
+        const { rows } = await c.query("select current_user");
+        if (rows[0]?.current_user !== "hyperdrive_mastra_runtime") {
+          await c.query("set role hyperdrive_mastra_runtime");
+        }
+      }
+      await client1.query(
+        `insert into mastra.mastra_threads (id, "resourceId", title, "createdAt", "updatedAt")
+         values ($1, $2, $3, now(), now())`,
+        [poolThread, tenantA, "pool A"],
+      );
+      const { rows: bView } = await client2.query(
+        `select id from mastra.mastra_threads where "resourceId" = $1 and id = $2`,
+        [tenantB, poolThread],
+      );
+      assert(
+        bView.length === 0,
+        "IPI-621 pool reuse: client-2 forged/other resourceId sees 0 rows (no leak)",
+      );
+      const { rows: aView } = await client2.query(
+        `select id from mastra.mastra_threads where "resourceId" = $1 and id = $2`,
+        [tenantA, poolThread],
+      );
+      assert(
+        aView.length === 1,
+        "IPI-621 pool reuse: client-2 same-tenant resourceId sees 1 row",
+      );
+      // No SET LOCAL tenant GUC used — prove current_setting has nothing custom.
+      const { rows: guc } = await client2.query(
+        `select current_setting('app.current_tenant', true) as tenant_guc`,
+      );
+      assert(
+        guc[0]?.tenant_guc == null || guc[0]?.tenant_guc === "",
+        "IPI-621 pool reuse: no app.current_tenant session GUC (no SET LOCAL tenant path)",
+      );
+    } catch (err) {
+      fail(
+        `IPI-621 pool-reuse probe: ${err instanceof Error ? err.message : err}`,
+      );
+    } finally {
+      for (const c of [client1, client2]) {
+        try {
+          await c.query(`delete from mastra.mastra_threads where id = $1`, [
+            poolThread,
+          ]);
+        } catch {
+          /* ignore */
+        }
+        try {
+          await c.end();
+        } catch {
+          try {
+            c.connection?.stream?.destroy?.();
+          } catch {
+            /* ignore */
+          }
+        }
+      }
+    }
+  }
+}
+
 
 const anon = createClient(url, anonKey, {
   auth: { persistSession: false, autoRefreshToken: false },
@@ -501,7 +816,7 @@ try {
   // anon/authenticated on all 24. anon/authenticated negative probes below prove
   // zero access via the public API surface (supabase-js); the runtime-role positive
   // probe (assertMastraRuntimeRoleProbe, direct Postgres) proves the intended role
-  // still gets through. Cross-org negative tests are out of scope here — IPI-621.
+  // still gets through. IPI-621 adds the resourceId/threadId fail-closed matrix.
   const mastraProbeTables = ["mastra_threads", "mastra_agents", "mastra_ai_spans"];
 
   // select("*") — not a specific column name. mastra_ai_spans has no `id` column
@@ -523,6 +838,9 @@ try {
       assertNoMastraAccess(error, data, `authenticated cannot access mastra.${t}`);
     }
   });
+
+  // IPI-621 · CF-DB-007 — tenant contract (resourceId/threadId fail-closed matrix).
+  await assertMastraTenantContractProbe();
 
   // profiles — own read/write
   const { error: profileInsertErr } = await userA.client.from("profiles").insert({
