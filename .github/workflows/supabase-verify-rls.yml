@@ -147,6 +147,9 @@ jobs:
           HYPERDRIVE_DATABASE_URL: ${{ secrets.HYPERDRIVE_DATABASE_URL }}
           MASTRA_DATABASE_URL: ${{ secrets.MASTRA_DATABASE_URL }}
           REQUIRE_HYPERDRIVE_RUNTIME_PROBE: "1"
+          # Supabase pooler presents a self-signed chain; scripts/verify-rls.mjs
+          # defaults to cert verification and opts out only via this flag.
+          VERIFY_RLS_PG_INSECURE_SSL: "1"
         run: |
           set -euo pipefail
           npm run supabase:verify-rls
