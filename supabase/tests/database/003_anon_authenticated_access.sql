@@ -10,6 +10,12 @@
 -- policy admit or deny this role", and the audit that kicked this off scoped pgTAP
 -- to "schema, grant, role and policy checks" only. They stay in verify-rls.mjs.
 --
+-- CI note (honest): supabase-verify-rls runs
+--   supabase test db --db-url "$DATABASE_URL" supabase/tests/database
+-- against the shared remote project (structural gate), not a fresh local stack from
+-- `supabase start` + migrations. Fixtures below are still self-contained so the
+-- suite does not depend on ambient seed rows (and so a future local job can reuse it).
+--
 -- Fixture note: the connecting role for `supabase test db --db-url` bypasses RLS
 -- (superuser/owner), so plain INSERTs below seed real rows without needing SET ROLE
 -- first. Everything rolls back at the end — no fixture escapes to the live table.
@@ -19,10 +25,9 @@ set search_path to public, extensions;
 begin;
 select plan(13);
 
--- Reused fixture owner: seed-organizer@fashionos.com, already present in auth.users
--- on every environment this suite runs against (see CI DATABASE_URL target) — no
--- need to insert a new auth.users row (finicky schema, out of scope here) just to
--- get a real, FK-satisfying user id.
+-- Self-contained owner: insert auth.users inside this transaction (rolled back).
+-- Do NOT use seed.sql org id 00000000-0000-0000-0000-000000000001 — that is Acme
+-- Corp (organizations.id), not an auth user. Seed users are …0101 / …0102 / …0103.
 create temporary table fixture_ids (
   owner_id uuid,
   attacker_id uuid,
@@ -32,19 +37,45 @@ create temporary table fixture_ids (
   deal_id uuid
 ) on commit drop;
 
--- ponytail: fixed UUID depends on auth.users row from supabase/seed.sql (or equiv).
--- Fresh/local DBs must load that seed before profiles INSERT or FK fails.
 insert into fixture_ids (owner_id, attacker_id)
-values ('00000000-0000-0000-0000-000000000001', gen_random_uuid());
+values (gen_random_uuid(), gen_random_uuid());
+
+-- Mirror supabase/seed.sql auth.users columns (pgcrypto crypt available via extensions).
+insert into auth.users (
+  id,
+  email,
+  encrypted_password,
+  email_confirmed_at,
+  confirmation_sent_at,
+  raw_app_meta_data,
+  raw_user_meta_data,
+  created_at,
+  updated_at,
+  role
+)
+select
+  owner_id,
+  'pgtap-probe-owner-' || replace(owner_id::text, '-', '') || '@example.com',
+  crypt('pgtap-probe-not-a-login', gen_salt('bf')),
+  now(),
+  now(),
+  '{}'::jsonb,
+  '{}'::jsonb,
+  now(),
+  now(),
+  'authenticated'
+from fixture_ids;
 
 -- Temp tables are owned by the connecting (superuser) role — SET LOCAL ROLE below
 -- switches the session to authenticated, which needs an explicit grant to read this
 -- fixture table back, same as any other cross-role table access.
 grant select on fixture_ids to authenticated, anon;
 
+-- handle_new_user() trigger already inserts public.profiles on auth.users INSERT.
+-- Touch email only if the row exists; never hard-fail on the trigger race.
 insert into public.profiles (id, email)
 select owner_id, 'pgtap-probe-owner@example.com' from fixture_ids
-on conflict (id) do nothing;
+on conflict (id) do update set email = excluded.email;
 
 with new_org as (
   insert into public.organizations (name, slug, owner_id, type)
@@ -53,6 +84,8 @@ with new_org as (
   returning id
 )
 update fixture_ids set org_id = new_org.id from new_org;
+
+-- organizations insert trigger adds org_members for owner_id (IPI-16 org layer).
 
 with new_brand as (
   insert into public.brands (name, user_id, org_id)
@@ -91,7 +124,10 @@ select results_eq(
 );
 
 select throws_ok(
-  $$ insert into public.brands (name, user_id) values ('anon brand', '00000000-0000-0000-0000-000000000001') $$,
+  format(
+    $$ insert into public.brands (name, user_id) values ('anon brand', %L::uuid) $$,
+    (select owner_id from fixture_ids)
+  ),
   '42501',
   null,
   'anon cannot insert into brands'
@@ -143,6 +179,7 @@ select results_eq(
 reset role;
 
 -- ── authenticated: an unrelated user's JWT must not see the same rows ──
+-- attacker_id need not exist in auth.users — RLS compares auth.uid() from JWT only.
 set local role authenticated;
 select set_config('request.jwt.claim.sub', (select attacker_id::text from fixture_ids), true);
 
