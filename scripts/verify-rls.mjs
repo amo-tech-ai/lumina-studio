@@ -13,10 +13,11 @@ import { createClient } from "@supabase/supabase-js";
 const requireFromApp = createRequire(resolve(import.meta.dirname, "../app/package.json"));
 
 const root = resolve(import.meta.dirname, "..");
-const envPath = resolve(root, ".env.local");
 
-if (existsSync(envPath)) {
-  for (const line of readFileSync(envPath, "utf8").split("\n")) {
+/** Load KEY=VALUE lines from a dotenv-style file into process.env (first writer wins). */
+function loadEnvFile(path) {
+  if (!existsSync(path)) return;
+  for (const line of readFileSync(path, "utf8").split("\n")) {
     const trimmed = line.trim();
     if (!trimmed || trimmed.startsWith("#")) continue;
     const eq = trimmed.indexOf("=");
@@ -26,6 +27,12 @@ if (existsSync(envPath)) {
     if (!process.env[key]) process.env[key] = val;
   }
 }
+
+loadEnvFile(resolve(root, ".env.local"));
+// IPI-245 — HYPERDRIVE_DATABASE_URL (the hyperdrive_mastra_runtime credential) lives
+// in app/.env.local, not the root file. Merge it in so the runtime-role probe below
+// can find it locally without duplicating the secret into a second file.
+loadEnvFile(resolve(root, "app", ".env.local"));
 
 const url =
   process.env.VITE_SUPABASE_URL ??
@@ -49,6 +56,35 @@ if (!url || !anonKey) {
 if (requireServiceRole && !serviceKey) {
   console.error(
     "REQUIRE_SERVICE_ROLE=1 but SUPABASE_SERVICE_ROLE_KEY is missing — refuse to run",
+  );
+  process.exit(1);
+}
+
+// IPI-245 — resolve the Mastra runtime Postgres URL the same way the app does
+// (app/src/mastra/storage.ts): prefer HYPERDRIVE_DATABASE_URL, then
+// MASTRA_DATABASE_URL, then DATABASE_URL / SUPABASE_DB_URL. When the URL is a
+// privileged role (e.g. postgres in CI), the probe SET ROLEs into
+// hyperdrive_mastra_runtime (IPI-776 granted SET to postgres).
+function resolveMastraRuntimeProbeUrl() {
+  return (
+    process.env.HYPERDRIVE_DATABASE_URL ||
+    process.env.MASTRA_DATABASE_URL ||
+    process.env.DATABASE_URL ||
+    process.env.SUPABASE_DB_URL ||
+    null
+  );
+}
+
+// Same pattern as REQUIRE_SERVICE_ROLE: without this flag, a CI job that never
+// wires a usable Postgres URL gets a silent console.warn skip on the one probe
+// that actually exercises hyperdrive_mastra_runtime's grants/RLS.
+const requireHyperdriveRuntimeProbe =
+  process.env.REQUIRE_HYPERDRIVE_RUNTIME_PROBE === "1" ||
+  process.env.REQUIRE_HYPERDRIVE_RUNTIME_PROBE === "true";
+if (requireHyperdriveRuntimeProbe && !resolveMastraRuntimeProbeUrl()) {
+  console.error(
+    "REQUIRE_HYPERDRIVE_RUNTIME_PROBE=1 but no Mastra runtime DB URL is set " +
+      "(HYPERDRIVE_DATABASE_URL / MASTRA_DATABASE_URL / DATABASE_URL / SUPABASE_DB_URL) — refuse to run",
   );
   process.exit(1);
 }
@@ -101,17 +137,88 @@ function assertSelectDenied(error, data, message) {
 }
 
 /**
- * IPI-647 — catalog assert: SELECT policies must require is_at_least (assignment).
- * Uses direct Postgres when SUPABASE_DB_URL / DATABASE_URL is set (never service_role JWT).
+ * IPI-245 — anon/authenticated negative probe against the private `mastra` schema.
+ * Unlike assertSelectDenied (RLS silently filters rows on exposed `public`/`planner`
+ * tables, so a denied read still returns 200 + []), the `mastra` schema itself isn't
+ * in PostgREST's exposed-schema list (supabase/config.toml `db.schemas`), so
+ * .schema('mastra') requests fail before RLS even runs. Only the documented denial
+ * codes count as proof: PGRST106 (schema not exposed) or 42501 (insufficient privilege).
+ * Any other error is an unexpected failure — do not treat it as a successful deny.
  */
-async function assertPlannerAssignmentSelectCatalog() {
-  const dbUrl = process.env.SUPABASE_DB_URL ?? process.env.DATABASE_URL;
-  if (!dbUrl) {
-    // CI verify-rls often has service_role JWT but no direct Postgres URL.
-    // Behavioral JWT matrix below remains mandatory; catalog is best-effort.
-    console.warn(
-      "warn: IPI-647 catalog assert skipped — SUPABASE_DB_URL/DATABASE_URL unset (JWT matrix still required)",
+function assertNoMastraAccess(error, data, message) {
+  // Intended invariant: zero PostgREST access to the private `mastra` schema.
+  // An empty 200 is NOT sufficient — if the schema were accidentally exposed and
+  // the table happened to be empty, that would look identical to a denial.
+  if (error) {
+    const code = String(error.code ?? "");
+    if (code === "PGRST106" || code === "42501") {
+      pass(`${message} (denied: ${code} ${error.message})`);
+      return;
+    }
+    fail(
+      `${message} (unexpected error ${code || "?"}: ${error.message})`,
     );
+    return;
+  }
+  if ((data ?? []).length === 0) {
+    fail(
+      `${message} (expected denial error such as PGRST106; got empty 200 — schema may be exposed)`,
+    );
+    return;
+  }
+  fail(`${message} (expected denial, got ${data.length} row(s))`);
+}
+
+// IPI-647 — catalog assert (SELECT policies on planner.instances/tasks/dependencies
+// require is_at_least; is_at_least is VOLATILE; instances_bootstrap_owner is BEFORE
+// INSERT; assignments_instance_id_fkey is DEFERRABLE INITIALLY DEFERRED) moved to
+// supabase/tests/database/001_rls_enabled_and_policies.sql (IPI-245 · SB-TEST-002).
+// Pure pg_policies/pg_proc/pg_trigger/pg_constraint introspection, no JWT, no
+// fixtures — pgTAP's sweet spot, and it no longer soft-skips when
+// SUPABASE_DB_URL/DATABASE_URL is unset the way the Node version did.
+
+/**
+ * IPI-245 / IPI-227B — runtime-role positive probe.
+ * `hyperdrive_mastra_runtime` is a direct-Postgres role (the Hyperdrive/Mastra
+ * storage connection) — it has no PostgREST/anon-key surface, so it can't be
+ * exercised via supabase-js like the anon/authenticated probes above.
+ *
+ * URL resolution matches the app (`resolveMastraRuntimeProbeUrl`):
+ * HYPERDRIVE_DATABASE_URL → MASTRA_DATABASE_URL → DATABASE_URL → SUPABASE_DB_URL.
+ * If the session user is not already `hyperdrive_mastra_runtime`, we `SET ROLE`
+ * into it (postgres has SET via IPI-776) so CI can use the linked DATABASE_URL.
+ *
+ * Schema target is `mastra.mastra_threads` — the same private schema IPI-630 /
+ * #604 configures via PostgresStore `schemaName: "mastra"` (not `public`).
+ *
+ * Soft-skips (does not fail) when no URL is set — unless
+ * REQUIRE_HYPERDRIVE_RUNTIME_PROBE=1 (fail-closed at process start above).
+ *
+ * `onFixtureReady` (optional) runs after the INSERT lands (or on connect/insert
+ * failure) so anon/authenticated negative probes still execute.
+ */
+async function assertMastraRuntimeRoleProbe(onFixtureReady) {
+  const runtimeUrl = resolveMastraRuntimeProbeUrl();
+  /** Same fail() wrapping as the connected-path catch — never leave onFixtureReady uncaught. */
+  const runFixtureReadySafe = async (context) => {
+    if (!onFixtureReady) return;
+    try {
+      await onFixtureReady();
+    } catch (err) {
+      fail(
+        `IPI-245 runtime-role probe fixture callback (${context}): ${
+          err instanceof Error ? err.message : err
+        }`,
+      );
+    }
+  };
+
+  if (!runtimeUrl) {
+    console.warn(
+      "warn: IPI-245 runtime-role probe skipped — no Mastra runtime DB URL " +
+        "(HYPERDRIVE_DATABASE_URL / MASTRA_DATABASE_URL / DATABASE_URL / SUPABASE_DB_URL)",
+    );
+    await runFixtureReadySafe("no-runtime-url");
     return;
   }
 
@@ -119,101 +226,120 @@ async function assertPlannerAssignmentSelectCatalog() {
   try {
     ({ Client } = requireFromApp("pg"));
   } catch (err) {
-    fail(`IPI-647 catalog assert: cannot load pg (${err instanceof Error ? err.message : err})`);
+    fail(`IPI-245 runtime-role probe: cannot load pg (${err instanceof Error ? err.message : err})`);
+    await runFixtureReadySafe("pg-load-failure");
     return;
   }
 
-  const client = new Client({ connectionString: dbUrl, ssl: { rejectUnauthorized: false } });
+  // connectionTimeoutMillis: fail fast if the host is unreachable.
+  // query_timeout: bound every client.query in the try block (CI-safe; pg cancels the query).
+  const client = new Client({
+    connectionString: runtimeUrl,
+    ssl: { rejectUnauthorized: false },
+    connectionTimeoutMillis: 10_000,
+    query_timeout: 15_000,
+  });
+  const probeId = `rls-probe-ipi245-${Date.now()}`;
+  let connected = false;
+  // Guards onFixtureReady so it runs exactly once regardless of where a failure
+  // hits below — never zero times.
+  let fixtureReadyCalled = false;
+  const runFixtureReadyOnce = async () => {
+    if (fixtureReadyCalled || !onFixtureReady) return;
+    fixtureReadyCalled = true;
+    await runFixtureReadySafe("connected-path");
+  };
   try {
     await client.connect();
-    const { rows } = await client.query(`
-      select tablename, policyname, permissive, coalesce(roles::text, '') as roles, qual
-      from pg_policies
-      where schemaname = 'planner'
-        and tablename in ('instances', 'tasks', 'dependencies')
-        and cmd = 'SELECT'
-      order by tablename, policyname
-    `);
+    connected = true;
 
-    const expected = {
-      instances: "instances_select_org",
-      tasks: "tasks_select_org",
-      dependencies: "dependencies_select_org",
-    };
-
-    for (const [table, policy] of Object.entries(expected)) {
-      const matches = rows.filter((r) => r.tablename === table);
-      assert(
-        matches.length === 1 && matches[0].policyname === policy,
-        `IPI-647 catalog: exactly one SELECT policy ${policy} on planner.${table}`,
-      );
-      const row = matches[0];
-      if (!row) continue;
-      assert(row.permissive === "PERMISSIVE", `IPI-647 catalog: ${policy} is PERMISSIVE`);
-      assert(
-        String(row.qual ?? "").includes("is_at_least"),
-        `IPI-647 catalog: ${policy} qual requires is_at_least (assignment)`,
-      );
-      assert(
-        String(row.qual ?? "").includes("is_org_member"),
-        `IPI-647 catalog: ${policy} qual requires is_org_member`,
-      );
-      // Org-only path would be qual that has is_org_member but not is_at_least — already covered.
+    const { rows: whoRows } = await client.query(
+      "select current_user, session_user",
+    );
+    let role = whoRows[0]?.current_user;
+    if (role !== "hyperdrive_mastra_runtime") {
+      // CI / local often connect as postgres (DATABASE_URL). IPI-776 granted
+      // `GRANT hyperdrive_mastra_runtime TO postgres WITH SET TRUE`.
+      await client.query("set role hyperdrive_mastra_runtime");
+      const { rows: afterSet } = await client.query("select current_user");
+      role = afterSet[0]?.current_user;
     }
-
     assert(
-      !rows.some(
-        (r) =>
-          String(r.qual ?? "").includes("is_org_member") &&
-          !String(r.qual ?? "").includes("is_at_least"),
-      ),
-      "IPI-647 catalog: no permissive org-only SELECT path remains on instances/tasks/dependencies",
+      role === "hyperdrive_mastra_runtime",
+      "IPI-245 runtime probe session is hyperdrive_mastra_runtime " +
+        `(current_user=${role}, session_user=${whoRows[0]?.session_user})`,
     );
 
-    const { rows: volRows } = await client.query(`
-      select p.provolatile
-      from pg_proc p
-      join pg_namespace n on n.oid = p.pronamespace
-      where n.nspname = 'planner'
-        and p.proname = 'is_at_least'
-        and pg_get_function_identity_arguments(p.oid) = 'p_instance_id uuid, p_min_role text'
-    `);
+    const { rows: insRows } = await client.query(
+      `insert into mastra.mastra_threads (id, "resourceId", title, "createdAt", "updatedAt")
+       values ($1, $2, $3, now(), now()) returning id`,
+      [probeId, `rls-probe-resource-${Date.now()}`, "IPI-245 RLS probe (throwaway)"],
+    );
     assert(
-      volRows[0]?.provolatile === "v",
-      "IPI-647 catalog: planner.is_at_least is VOLATILE (INSERT...RETURNING + bootstrap assignment)",
+      insRows[0]?.id === probeId,
+      "hyperdrive_mastra_runtime can INSERT into mastra.mastra_threads",
     );
 
-    const { rows: trigRows } = await client.query(`
-      select t.tgtype & 2 = 2 as is_before
-      from pg_trigger t
-      join pg_class c on c.oid = t.tgrelid
-      join pg_namespace n on n.oid = c.relnamespace
-      where n.nspname = 'planner'
-        and c.relname = 'instances'
-        and t.tgname = 'instances_bootstrap_owner'
-        and not t.tgisinternal
-    `);
+    await runFixtureReadyOnce();
+
+    const { rows: selRows } = await client.query(
+      `select id, title from mastra.mastra_threads where id = $1`,
+      [probeId],
+    );
     assert(
-      trigRows[0]?.is_before === true,
-      "IPI-647 catalog: instances_bootstrap_owner is BEFORE INSERT",
+      selRows.length === 1 && selRows[0].title === "IPI-245 RLS probe (throwaway)",
+      "hyperdrive_mastra_runtime can SELECT its own mastra.mastra_threads row",
     );
 
-    const { rows: fkRows } = await client.query(`
-      select condeferrable, condeferred
-      from pg_constraint
-      where conname = 'assignments_instance_id_fkey'
-        and conrelid = 'planner.assignments'::regclass
-    `);
+    const { rows: updRows } = await client.query(
+      `update mastra.mastra_threads set title = $2, "updatedAt" = now() where id = $1 returning title`,
+      [probeId, "IPI-245 RLS probe (updated)"],
+    );
     assert(
-      fkRows[0]?.condeferrable === true && fkRows[0]?.condeferred === true,
-      "IPI-647 catalog: assignments_instance_id_fkey is DEFERRABLE INITIALLY DEFERRED",
+      updRows[0]?.title === "IPI-245 RLS probe (updated)",
+      "hyperdrive_mastra_runtime can UPDATE its own mastra.mastra_threads row",
     );
   } catch (err) {
-    fail(`IPI-647 catalog assert query failed: ${err instanceof Error ? err.message : err}`);
+    fail(`IPI-245 runtime-role probe: ${err instanceof Error ? err.message : err}`);
+    await runFixtureReadyOnce();
   } finally {
-    await client.end().catch(() => {});
+    // Sentry: if connect() failed, client.query() in finally queues forever on an
+    // unconnected client. Only cleanup when connect succeeded; always end/destroy.
+    if (connected) {
+      try {
+        const { rowCount } = await client.query(
+          `delete from mastra.mastra_threads where id = $1`,
+          [probeId],
+        );
+        if (rowCount > 0) {
+          pass("hyperdrive_mastra_runtime can DELETE its own mastra.mastra_threads row (cleanup)");
+        }
+      } catch (cleanupErr) {
+        trackCleanupError(
+          `IPI-245 mastra_threads probe row ${probeId}: ${
+            cleanupErr instanceof Error ? cleanupErr.message : cleanupErr
+          }`,
+        );
+      }
+    }
+    try {
+      await Promise.race([
+        client.end(),
+        new Promise((_, reject) =>
+          setTimeout(() => reject(new Error("client.end() timed out")), 5_000),
+        ),
+      ]);
+    } catch {
+      // Force-destroy if end() hangs after a failed connect or stuck socket.
+      try {
+        client.connection?.stream?.destroy?.();
+      } catch {
+        /* ignore */
+      }
+    }
   }
 }
+
 
 const anon = createClient(url, anonKey, {
   auth: { persistSession: false, autoRefreshToken: false },
@@ -338,29 +464,8 @@ async function cleanupRlsTestData({
 
 console.log("PLT-002 RLS verification\n");
 
-// Anonymous: no authenticated policies — expect empty reads, blocked writes
-const { data: anonProfiles, error: anonProfilesErr } = await anon
-  .from("profiles")
-  .select("id")
-  .limit(1);
-assert(!anonProfilesErr, "anon profiles select does not error");
-assert((anonProfiles ?? []).length === 0, "anon cannot read profiles rows");
-
-const { data: anonBrands } = await anon.from("brands").select("id").limit(1);
-assert((anonBrands ?? []).length === 0, "anon cannot read brands rows");
-
-const { error: anonBrandInsertErr } = await anon.from("brands").insert({
-  name: "anon brand",
-  user_id: "00000000-0000-0000-0000-000000000001",
-});
-assert(!!anonBrandInsertErr, "anon cannot insert brands");
-
-// Global reference tables (MI-01): authenticated read-only, no anon policy.
-const refTables = ["platforms", "image_type_defs", "image_specs", "recommendation_rules"];
-for (const t of refTables) {
-  const { data } = await anon.from(t).select("id").limit(1);
-  assert((data ?? []).length === 0, `anon cannot read ${t} rows`);
-}
+// Anon denial on profiles/brands/reference tables moved to
+// supabase/tests/database/003_anon_authenticated_access.sql (IPI-245 · SB-TEST-002).
 
 let userA;
 let userB;
@@ -377,6 +482,9 @@ try {
   userA = await createTestUser(emailA);
   userB = await createTestUser(emailB);
 
+  // Global reference tables (MI-01): authenticated read-only, no anon policy.
+  // Anon denial for these tables lives in pgTAP 003_anon_authenticated_access.sql.
+  const refTables = ["platforms", "image_type_defs", "image_specs", "recommendation_rules"];
   // Global reference tables (MI-01): authenticated reads seeded rows, writes denied.
   for (const t of refTables) {
     const { data, error } = await userA.client.from(t).select("id").limit(1);
@@ -386,6 +494,35 @@ try {
     .from("platforms")
     .insert({ slug: "rls-probe", name: "RLS Probe", category: "social" });
   assert(!!refInsertErr, "authenticated cannot insert platforms (no write policy)");
+
+  // IPI-245 / IPI-227B — Mastra database authorization probes. IPI-628 created a
+  // private `mastra` Postgres schema (24 mastra_* tables); IPI-629 granted
+  // hyperdrive_mastra_runtime DML + one RLS policy per table and revoked
+  // anon/authenticated on all 24. anon/authenticated negative probes below prove
+  // zero access via the public API surface (supabase-js); the runtime-role positive
+  // probe (assertMastraRuntimeRoleProbe, direct Postgres) proves the intended role
+  // still gets through. Cross-org negative tests are out of scope here — IPI-621.
+  const mastraProbeTables = ["mastra_threads", "mastra_agents", "mastra_ai_spans"];
+
+  // select("*") — not a specific column name. mastra_ai_spans has no `id` column
+  // (composite PK on traceId/spanId); a column-not-found error would otherwise get
+  // misread by assertNoMastraAccess as a valid denial when it's actually just a
+  // malformed query unrelated to authorization.
+  await assertMastraRuntimeRoleProbe(async () => {
+    // assertNoMastraAccess now requires a denial *error* (PGRST106 / permission),
+    // not an empty 200 — so seeding is optional for the denial proof. We still
+    // insert a fixture row above so a misconfigured exposed+RLS path that returns
+    // rows would fail loudly if PostgREST ever stopped erroring on the schema.
+    for (const t of mastraProbeTables) {
+      const { data, error } = await anon.schema("mastra").from(t).select("*").limit(1);
+      assertNoMastraAccess(error, data, `anon cannot access mastra.${t}`);
+    }
+
+    for (const t of mastraProbeTables) {
+      const { data, error } = await userA.client.schema("mastra").from(t).select("*").limit(1);
+      assertNoMastraAccess(error, data, `authenticated cannot access mastra.${t}`);
+    }
+  });
 
   // profiles — own read/write
   const { error: profileInsertErr } = await userA.client.from("profiles").insert({
@@ -1696,8 +1833,9 @@ try {
 
   // ── IPI-647 · PLN-SEC-002 — assignment-aware SELECT (direct Data API) ──
   // These probes bypass app helpers and hit PostgREST on planner.* tables.
-  // Negative cases must use authenticated JWTs — never service_role.
-  await assertPlannerAssignmentSelectCatalog();
+  // Negative cases must use authenticated JWTs — never service_role. The catalog
+  // assert that used to run here moved to pgTAP — see
+  // supabase/tests/database/001_rls_enabled_and_policies.sql.
 
   const { data: depProbeTask, error: depProbeTaskErr } = await plannerA
     .from("tasks")
