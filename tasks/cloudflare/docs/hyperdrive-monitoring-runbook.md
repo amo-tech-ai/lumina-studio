@@ -184,7 +184,7 @@ This session's `CLOUDFLARE_API_TOKEN` can **read** Hyperdrive config (`wrangler 
 
 ## 5. Slow query alerting (>5s)
 
-Cloudflare has **no native alert for Hyperdrive query duration** — verified via `search_cloudflare_documentation` against the Notifications product and the Hyperdrive analytics docs. Hyperdrive's own Analytics dataset (`hyperdrivePoolSizesAdaptiveGroups`) only reports pool-size numbers, never per-query text or duration, because Hyperdrive doesn't parse query content. So this has to be built on the Postgres side, reusing what's already installed rather than adding a new service:
+Cloudflare has **no native alert/notification hook for Hyperdrive query duration** — verified via `search_cloudflare_documentation` against the Notifications product and the Hyperdrive analytics docs. That is separate from **observability**: per-query latency **is** available in GraphQL via `hyperdriveQueriesAdaptiveGroups` (`queryDurationMs` / `connectDurationMs`) — check that first when investigating slow Hyperdrive responses (see §1). Pool contention still comes from `hyperdrivePoolSizesAdaptiveGroups`. Hyperdrive does not expose query *text*, so SQL-level triage still needs Postgres/`pg_stat_*`. For **push alerting** (>5s → email/Slack), reuse what's already installed rather than adding a new service:
 
 **Named delivery channel: existing Sentry project** (`javascript-nextjs`, org `amo-2b`, already wired via `@sentry/nextjs` in `app/package.json` and `.env.example`). Sentry natively supports routing captured events to email, Slack, or PagerDuty via its own Alert Rules — no new integration needed, just a rule on this existing project.
 
