@@ -13,6 +13,7 @@ import {
 import {
   assertMastraSchemaForObservabilityExporter,
   getMastraStorageLazy,
+  isMastraObservabilityExporterEnabled,
 } from "./storage";
 
 const VALID_LOG_LEVELS: LogLevel[] = ["debug", "info", "warn", "error"];
@@ -50,11 +51,17 @@ let _mastra: Mastra | undefined;
 
 export function getMastra(): Mastra {
   if (!_mastra) {
-    // Fail closed: exporter must not boot against public.mastra_* shadows.
-    assertMastraSchemaForObservabilityExporter();
     const logger = new ConsoleLogger({
       level: LOG_LEVEL,
     });
+    // ponytail: exporter + mastra-schema assert are opt-in via
+    // MASTRA_OBSERVABILITY_EXPORTER=1 (+ MASTRA_SCHEMA=mastra). Default boot
+    // keeps pre-cutover behavior (no Postgres span exporter). Full prod cutover
+    // = set both flags in Infisical/Vercel after rehearsal evidence.
+    const exporterEnabled = isMastraObservabilityExporterEnabled();
+    if (exporterEnabled) {
+      assertMastraSchemaForObservabilityExporter();
+    }
     _mastra = new Mastra({
       agents,
       storage: getMastraStorageLazy(),
@@ -63,27 +70,32 @@ export function getMastra(): Mastra {
         "brand-intelligence": brandIntelligenceWorkflow,
       },
       logger,
-      // Instance required — plain config objects are rejected at boot.
-      // Postgres prefers batch-with-updates; retention/prune is IPI-780.
-      observability: new Observability({
-        configs: {
-          default: {
-            serviceName: "ipix-operator",
-            exporters: [
-              // ponytail: MastraStorageExporterConfig already retries with
-              // maxRetries=4 / retryDelayMs=500 (exp backoff); after that the
-              // batch is dropped. No custom retry loop — logger surfaces
-              // logStorageFailure via the official BaseExporterConfig API.
-              new MastraStorageExporter({
-                strategy: "batch-with-updates",
-                logger,
-                logLevel: LOG_LEVEL,
-              }),
-            ],
-            spanOutputProcessors: [new SensitiveDataFilter()],
-          },
-        },
-      }),
+      ...(exporterEnabled
+        ? {
+            // Instance required — plain config objects are rejected at boot.
+            // Postgres prefers batch-with-updates; retention/prune is
+            // IPI-780 · MASTRA-PG-004 — Implement safe Mastra retention using official prune API.
+            observability: new Observability({
+              configs: {
+                default: {
+                  serviceName: "ipix-operator",
+                  exporters: [
+                    // ponytail: MastraStorageExporterConfig already retries with
+                    // maxRetries=4 / retryDelayMs=500 (exp backoff); after that the
+                    // batch is dropped. No custom retry loop — logger surfaces
+                    // logStorageFailure via the official BaseExporterConfig API.
+                    new MastraStorageExporter({
+                      strategy: "batch-with-updates",
+                      logger,
+                      logLevel: LOG_LEVEL,
+                    }),
+                  ],
+                  spanOutputProcessors: [new SensitiveDataFilter()],
+                },
+              },
+            }),
+          }
+        : {}),
     });
   }
   return _mastra;

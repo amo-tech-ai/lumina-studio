@@ -164,7 +164,22 @@ export function resolveMastraSchemaName(env: NodeJS.ProcessEnv = process.env): s
 }
 
 /**
- * IPI-781 — MastraStorageExporter must target `mastra.mastra_ai_spans`, not
+ * **IPI-781 · MASTRA-PG-005 — Wire MastraStorageExporter for observability traces**
+ *
+ * Explicit opt-in for the Postgres span exporter. Default off so getMastra()
+ * does not activate mastra-schema writes as an implicit production cutover.
+ * Same `"1"` latch style as `AI_GATEWAY_ALLOW_TOOL_TIERS`.
+ */
+export function isMastraObservabilityExporterEnabled(
+  env: NodeJS.ProcessEnv = process.env,
+): boolean {
+  return (env.MASTRA_OBSERVABILITY_EXPORTER ?? "").trim() === "1";
+}
+
+/**
+ * **IPI-781 · MASTRA-PG-005 — Wire MastraStorageExporter for observability traces**
+ *
+ * When the exporter flag is on, spans must target `mastra.mastra_ai_spans`, not
  * `public.mastra_*` shadows. Fail closed before wiring the exporter when the
  * schema is anything other than `mastra` (PostgresStore defaults to public).
  */
@@ -176,7 +191,8 @@ export function assertMastraSchemaForObservabilityExporter(
     throw new Error(
       `[mastra] MastraStorageExporter requires MASTRA_SCHEMA=mastra (got "${schema}"). ` +
         "Without it, PostgresStore defaults to public and batch spans write to " +
-        "public.mastra_* shadows instead of mastra.mastra_ai_spans (IPI-781).",
+        "public.mastra_* shadows instead of mastra.mastra_ai_spans " +
+        "(IPI-781 · MASTRA-PG-005 — Wire MastraStorageExporter for observability traces).",
     );
   }
   return schema;

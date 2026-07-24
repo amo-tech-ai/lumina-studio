@@ -8,8 +8,8 @@ let mastra: ReturnType<typeof import("./index").getMastra>;
 
 describe("agent workflow bindings (Studio + chat discovery)", () => {
   beforeAll(async () => {
-    // IPI-781: getMastra() fail-closes unless cutover schema is set.
-    vi.stubEnv("MASTRA_SCHEMA", "mastra");
+    // IPI-781 · MASTRA-PG-005 — Wire MastraStorageExporter for observability traces:
+    // exporter is opt-in (MASTRA_OBSERVABILITY_EXPORTER=1); default boot needs no schema stub.
     mod = await import("./index");
     durableMod = await import("./durable");
     mastra = mod.getMastra();
