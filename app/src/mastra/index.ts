@@ -5,6 +5,11 @@ import { brandIntelligenceAgent } from "./agents/brand-intelligence-agent";
 import { durableAgents } from "./durable";
 import { shootWizardWorkflow, brandIntelligenceWorkflow } from "./workflows";
 import { ConsoleLogger, LogLevel } from "@mastra/core/logger";
+import {
+  Observability,
+  MastraStorageExporter,
+  SensitiveDataFilter,
+} from "@mastra/observability";
 import { getMastraStorageLazy } from "./storage";
 
 const VALID_LOG_LEVELS: LogLevel[] = ["debug", "info", "warn", "error"];
@@ -51,6 +56,19 @@ export function getMastra(): Mastra {
       },
       logger: new ConsoleLogger({
         level: LOG_LEVEL,
+      }),
+      // Instance required — plain config objects are rejected at boot.
+      // Postgres prefers batch-with-updates; retention/prune is IPI-780.
+      observability: new Observability({
+        configs: {
+          default: {
+            serviceName: "ipix-operator",
+            exporters: [
+              new MastraStorageExporter({ strategy: "batch-with-updates" }),
+            ],
+            spanOutputProcessors: [new SensitiveDataFilter()],
+          },
+        },
       }),
     });
   }
