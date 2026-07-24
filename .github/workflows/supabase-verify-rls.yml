@@ -90,6 +90,12 @@ jobs:
           sudo apt-get update -qq
           sudo apt-get install -y -qq postgresql-client
 
+      - uses: supabase/setup-cli@v1
+        if: steps.gate.outputs.mode == 'run'
+        with:
+          # Pin to the CLI version used for the linked gates job (IPI-665).
+          version: 2.109.1
+
       - name: Chatbot / lead_intake grant assertions
         if: steps.gate.outputs.mode == 'run'
         env:
@@ -119,6 +125,16 @@ jobs:
           set -euo pipefail
           DB_URL="${DATABASE_URL:-${SUPABASE_DB_URL:-}}"
           psql "$DB_URL" -v ON_ERROR_STOP=1 -f supabase/tests/security/default-execute-privileges.sql
+
+      - name: pgTAP — RLS/grant/policy structural tests (IPI-245 · SB-TEST-002)
+        if: steps.gate.outputs.mode == 'run'
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          set -euo pipefail
+          DB_URL="${DATABASE_URL:-${SUPABASE_DB_URL:-}}"
+          supabase test db --db-url "$DB_URL" supabase/tests/database
 
       - name: verify-rls (fail-closed service role)
         if: steps.gate.outputs.mode == 'run'
