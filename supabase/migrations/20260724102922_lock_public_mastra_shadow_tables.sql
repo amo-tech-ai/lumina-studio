@@ -60,6 +60,9 @@ DECLARE
   deny_roles text[] := ARRAY['anon', 'authenticated', 'service_role'];
   r text;
   priv text;
+  -- Postflight vocabulary expanded in forward migration 20260724103700
+  -- (MAINTAIN + WITH GRANT OPTION + aclexplode deny-role ACL). Do not amend
+  -- this already-applied migration's live effect; keep the original check set.
   check_privs text[] := ARRAY[
     'SELECT', 'INSERT', 'UPDATE', 'DELETE', 'TRUNCATE', 'REFERENCES', 'TRIGGER'
   ];

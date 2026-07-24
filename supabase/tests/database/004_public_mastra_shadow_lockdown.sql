@@ -1,16 +1,17 @@
 -- IPI-801 · MASTRA-PG-011 — Retire Recreated public.mastra_* Shadow Tables
 -- Phase A lockdown proof for the 33 public.mastra_* shadow tables.
 --
--- Asserts: tables still exist (not dropped), RLS on, zero policies, and
--- anon / authenticated / service_role have zero effective table privileges.
--- PUBLIC ACL (grantee 0) must be absent.
+-- Asserts: tables still exist (not dropped), RLS on, zero policies,
+-- deny-role + PUBLIC ACLs empty (all privilege_type / grantable bits),
+-- and ownership is not a PostgREST role (DROP OWNED BY is not used —
+-- deny roles own zero public.mastra_* objects; owner is postgres).
 --
--- Plan math: 1 count + 33×(exists + rls + policies + 3 role denies + public) = 1 + 33×7 = 232
+-- Plan math: 1 count + 33×(exists + rls + policies + deny_acl + public_acl + owner) = 199
 
 set search_path to public, extensions;
 
 begin;
-select plan(232);
+select plan(199);
 
 create temporary table public_mastra_shadows (tablename text) on commit drop;
 
@@ -85,32 +86,20 @@ select is(
 from public_mastra_shadows t
 order by t.tablename;
 
+-- ACL fail-closed for anon/authenticated/service_role (any privilege_type / grantable).
 select ok(
-    not has_table_privilege('anon', format('public.%I', t.tablename), 'SELECT')
-    and not has_table_privilege('anon', format('public.%I', t.tablename), 'INSERT')
-    and not has_table_privilege('anon', format('public.%I', t.tablename), 'UPDATE')
-    and not has_table_privilege('anon', format('public.%I', t.tablename), 'DELETE'),
-    format('anon has zero DML on public.%I', t.tablename)
-  )
-from public_mastra_shadows t
-order by t.tablename;
-
-select ok(
-    not has_table_privilege('authenticated', format('public.%I', t.tablename), 'SELECT')
-    and not has_table_privilege('authenticated', format('public.%I', t.tablename), 'INSERT')
-    and not has_table_privilege('authenticated', format('public.%I', t.tablename), 'UPDATE')
-    and not has_table_privilege('authenticated', format('public.%I', t.tablename), 'DELETE'),
-    format('authenticated has zero DML on public.%I', t.tablename)
-  )
-from public_mastra_shadows t
-order by t.tablename;
-
-select ok(
-    not has_table_privilege('service_role', format('public.%I', t.tablename), 'SELECT')
-    and not has_table_privilege('service_role', format('public.%I', t.tablename), 'INSERT')
-    and not has_table_privilege('service_role', format('public.%I', t.tablename), 'UPDATE')
-    and not has_table_privilege('service_role', format('public.%I', t.tablename), 'DELETE'),
-    format('service_role has zero DML on public.%I', t.tablename)
+    not exists(
+      select 1
+      from pg_class c
+      join pg_namespace n on n.oid = c.relnamespace
+      cross join lateral aclexplode(c.relacl) as acl
+      join pg_roles gr on gr.oid = acl.grantee
+      where n.nspname = 'public'
+        and c.relname = t.tablename
+        and c.relacl is not null
+        and gr.rolname in ('anon', 'authenticated', 'service_role')
+    ),
+    format('deny roles have zero ACL entries on public.%I', t.tablename)
   )
 from public_mastra_shadows t
 order by t.tablename;
@@ -127,6 +116,19 @@ select ok(
         and acl.grantee = 0
     ),
     format('PUBLIC has no ACL entries on public.%I', t.tablename)
+  )
+from public_mastra_shadows t
+order by t.tablename;
+
+select ok(
+    (
+      select r.rolname
+      from pg_class c
+      join pg_namespace n on n.oid = c.relnamespace
+      join pg_roles r on r.oid = c.relowner
+      where n.nspname = 'public' and c.relname = t.tablename
+    ) not in ('anon', 'authenticated', 'service_role'),
+    format('public.%I is not owned by a PostgREST role (no DROP OWNED BY needed)', t.tablename)
   )
 from public_mastra_shadows t
 order by t.tablename;
