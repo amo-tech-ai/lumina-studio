@@ -1,9 +1,9 @@
 /**
- * Alias stub — IPI-490 · CF-MIG-210.
+ * Alias stub — IPI-490 · CF-MIG-210 (narrowed in IPI-620A).
  *
- * `@mastra/pg` + `pg` are proven in the Worker bundle (~0.6 MiB) via
- * `src/mastra/storage.ts`, but `wrangler.jsonc` sets `MASTRA_STORAGE_MODE=noop`
- * and Workers default to InMemoryStore (IPI-633).
+ * Used only for `@mastra/pg` (PostgresStore). Bare `pg` / `pg-cloudflare` must
+ * NOT point here — Hyperdrive `queryFresh` needs real `pg.Client` via workerd
+ * conditional exports.
  *
  * Instantiating PostgresStore from this stub always throws — never silent fake.
  * Node `next dev` / Vitest without IPIX_CF_BUNDLE_STUBS keep the real package.

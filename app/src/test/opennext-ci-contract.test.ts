@@ -34,6 +34,20 @@ describe("OpenNext CI contract (IPI-472)", () => {
     expect(wrangler).not.toMatch(/"ai"\s*:\s*\{[^}]*"remote"\s*:\s*true/);
     expect(wrangler).toMatch(/ENABLE_CF_AI_SMOKE.*false/);
     expect(wrangler).not.toMatch(/"DATABASE_URL"/);
+    // IPI-620A — bare pg must reach workerd conditional exports (real Client).
+    // Stubbing `@mastra/pg` alone is fine; aliasing `pg` breaks queryFresh.
+    expect(wrangler).toMatch(/"@mastra\/pg"\s*:\s*"\.\/scripts\/cf-mastra-pg-stub\.mjs"/);
+    expect(wrangler).not.toMatch(/"pg"\s*:\s*"\.\/scripts\/cf-mastra-pg-stub\.mjs"/);
+    expect(wrangler).not.toMatch(/"pg-cloudflare"\s*:\s*"\.\/scripts\/cf-mastra-pg-stub\.mjs"/);
+  });
+
+  it("next.config CF stubs do not alias bare pg / pg-cloudflare (IPI-620A)", () => {
+    const nextConfig = readFileSync(resolve(__dirname, "../../next.config.ts"), "utf8");
+    // Stub block may still name @mastra/pg; bare pg must stay external / unaliased.
+    expect(nextConfig).toMatch(/@mastra\/pg/);
+    expect(nextConfig).toMatch(/deliberately NOT aliased/);
+    expect(nextConfig).not.toMatch(/"pg"\s*:\s*mastraPgStub/);
+    expect(nextConfig).not.toMatch(/"pg-cloudflare"\s*:\s*mastraPgStub/);
   });
 
   it("check-worker-bundle-size.mjs enforces 8.5 MiB warn and 9.0 MiB fail gates", () => {
