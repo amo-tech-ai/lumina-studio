@@ -482,6 +482,9 @@ try {
   userA = await createTestUser(emailA);
   userB = await createTestUser(emailB);
 
+  // Global reference tables (MI-01): authenticated read-only, no anon policy.
+  // Anon denial for these tables lives in pgTAP 003_anon_authenticated_access.sql.
+  const refTables = ["platforms", "image_type_defs", "image_specs", "recommendation_rules"];
   // Global reference tables (MI-01): authenticated reads seeded rows, writes denied.
   for (const t of refTables) {
     const { data, error } = await userA.client.from(t).select("id").limit(1);
