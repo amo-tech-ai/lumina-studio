@@ -244,21 +244,15 @@ function createPostgresStore(url: string, env: NodeJS.ProcessEnv = process.env):
 }
 
 export function getMastraStorage(): MastraAppStorage {
-  if (cachedStorageUnavailableError) {
-    const { url } = resolveMastraDatabaseUrlWithSource();
-    if (!url) {
-      throw cachedStorageUnavailableError;
+  // Worker / explicit noop first — never run missing-URL latch recovery into Postgres.
+  // Once this process chose InMemory for Workers (IPI-490), keep that backend.
+  if (shouldSkipMastraPostgresStorage()) {
+    if (cachedStorageUnavailableError) {
+      // Durable PG is not used here; drop a prior missing-URL latch so health is not sticky.
+      cachedStorageUnavailableError = undefined;
     }
-    // Scope: missing-env-var only. Transient connection errors bubble; do not latch.
-    cachedStorageUnavailableError = undefined;
-    console.warn(
-      "[mastra] IPI-778: MASTRA_DATABASE_URL / DATABASE_URL now set — clearing storage degraded latch.",
-    );
-  }
-  if (!storage) {
-    const { url, source } = resolveMastraDatabaseUrlWithSource();
-
-    if (shouldSkipMastraPostgresStorage()) {
+    if (!storage) {
+      const { url } = resolveMastraDatabaseUrlWithSource();
       if (url) {
         console.warn(
           "[mastra] Using InMemoryStore on Workers (IPI-490: PostgresStore/pg.Pool hangs). " +
@@ -267,7 +261,27 @@ export function getMastraStorage(): MastraAppStorage {
       }
       // Real Mastra store (getStore("memory") etc.) — bare stubs break agent.stream after RUN_STARTED.
       storage = new InMemoryStore({ id: "mastra-storage-memory" });
-    } else if (!url) {
+    }
+    return storage;
+  }
+
+  if (cachedStorageUnavailableError) {
+    const { url } = resolveMastraDatabaseUrlWithSource();
+    if (!url) {
+      throw cachedStorageUnavailableError;
+    }
+    // Scope: missing-env-var only. Transient connection errors bubble; do not latch.
+    // Clear only after URL is confirmed; init below is sync so concurrent callers
+    // re-enter after `storage` is set and reuse the same instance.
+    cachedStorageUnavailableError = undefined;
+    console.warn(
+      "[mastra] IPI-778: MASTRA_DATABASE_URL / DATABASE_URL now set — clearing storage degraded latch.",
+    );
+  }
+  if (!storage) {
+    const { url, source } = resolveMastraDatabaseUrlWithSource();
+
+    if (!url) {
       try {
         requireProductionDatabaseUrl();
       } catch (err) {

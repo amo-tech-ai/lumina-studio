@@ -620,4 +620,59 @@ describe("IPI-778 · degraded latch recovery", () => {
     expect(store).toBeInstanceOf(InMemoryStore);
     expect(mod.isMastraStorageDegraded()).toBe(false);
   });
+
+  it("does not init PostgresStore when noop is set after a prod latch trip (even if URL appears)", async () => {
+    const ctor = vi.fn(function FakePostgresStore(this: { id: string }, config: { id: string }) {
+      this.id = config.id;
+    });
+    vi.doMock("@mastra/pg", () => ({
+      PostgresStore: ctor,
+      IPIX_CF_MASTRA_PG_STUB: undefined,
+    }));
+    vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("VERCEL", "1");
+    vi.stubEnv("CI", "");
+    vi.stubEnv("DATABASE_URL", "");
+    vi.stubEnv("MASTRA_DATABASE_URL", "");
+    vi.stubEnv("MASTRA_STORAGE_MODE", "");
+    vi.resetModules();
+    const mod = await import("./storage");
+    expect(() => mod.getMastraStorage()).toThrow(/Vercel production/);
+    expect(mod.isMastraStorageDegraded()).toBe(true);
+
+    vi.stubEnv("MASTRA_STORAGE_MODE", "noop");
+    vi.stubEnv("MASTRA_DATABASE_URL", "postgresql://mastra@127.0.0.1:6543/postgres");
+    const store = mod.getMastraStorage();
+    expect(store).toBeInstanceOf(InMemoryStore);
+    expect(ctor).not.toHaveBeenCalled();
+    expect(mod.isMastraStorageDegraded()).toBe(false);
+    expect(mod.getMastraStorage()).toBe(store);
+  });
+
+  it("constructs PostgresStore exactly once when two callers recover after URL appears", async () => {
+    const ctor = vi.fn(function FakePostgresStore(this: { id: string }, config: { id: string }) {
+      this.id = config.id;
+    });
+    vi.doMock("@mastra/pg", () => ({
+      PostgresStore: ctor,
+      IPIX_CF_MASTRA_PG_STUB: undefined,
+    }));
+    vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("VERCEL", "1");
+    vi.stubEnv("CI", "");
+    vi.stubEnv("DATABASE_URL", "");
+    vi.stubEnv("MASTRA_DATABASE_URL", "");
+    vi.resetModules();
+    const mod = await import("./storage");
+    expect(() => mod.getMastraStorage()).toThrow(/Vercel production/);
+
+    vi.stubEnv("MASTRA_DATABASE_URL", "postgresql://mastra@127.0.0.1:6543/postgres");
+    // Concurrent request paths (handlers) — init remains sync so both share one store.
+    const [a, b] = await Promise.all([
+      Promise.resolve().then(() => mod.getMastraStorage()),
+      Promise.resolve().then(() => mod.getMastraStorage()),
+    ]);
+    expect(a).toBe(b);
+    expect(ctor).toHaveBeenCalledTimes(1);
+  });
 });
