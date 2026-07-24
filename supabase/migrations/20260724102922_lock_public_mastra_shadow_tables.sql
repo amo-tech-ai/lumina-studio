@@ -11,26 +11,8 @@
 --   * REVOKE ALL from PUBLIC, anon, authenticated, service_role
 --   * ENABLE ROW LEVEL SECURITY
 --   * creates NO policies (default-deny for non-bypass roles)
---   * drops any policies that drifted onto shadows (fail-closed)
---   * does NOT DROP tables or mutate rows
---   * Recovery (if intentional policies existed): restore grants + disable RLS
---     + recreate only those policies that were intentional drift (unexpected
---     policies on shadows are not part of the intended fail-closed state)
+--   * does NOT DROP tables or mutate rows (rollback = restore grants / disable RLS)
 --   * does NOT touch mastra.* or unrelated public tables
---
--- Catalog fail-closed (no unexpected public.mastra_* beyond the 33-name
--- allowlist) is enforced in postflight below for fresh replays, and on the
--- live project by forward migration 20260724173755 (this file already applied).
---
--- Recurring drift check (Mastra auto-init can recreate grants after this one-shot):
---   * supabase/tests/database/004_public_mastra_shadow_lockdown.sql re-asserts
---     existence + RLS + zero policies + deny-role/PUBLIC ACLs + owner + allow-path
---     count(*) for all 33 tables on every trusted CI run of
---     .github/workflows/supabase-verify-rls.yml (`supabase test db …/database`).
---   * Local: same suite via `supabase test db --db-url "$DATABASE_URL" supabase/tests/database`
---     (also covered when running the verify-rls workflow path).
---   * Phase B (DROP) must not proceed while 004 fails — that is the live-project
---     grant/RLS regression gate until shadows are removed.
 --
 -- Phase B (DROP + supabase gen types) stays blocked until soak + backup/PITR.
 
@@ -78,9 +60,6 @@ DECLARE
   deny_roles text[] := ARRAY['anon', 'authenticated', 'service_role'];
   r text;
   priv text;
-  -- Postflight vocabulary expanded in forward migration 20260724103700
-  -- (MAINTAIN + WITH GRANT OPTION + aclexplode deny-role ACL). Do not amend
-  -- this already-applied migration's live effect; keep the original check set.
   check_privs text[] := ARRAY[
     'SELECT', 'INSERT', 'UPDATE', 'DELETE', 'TRUNCATE', 'REFERENCES', 'TRIGGER'
   ];
@@ -184,22 +163,4 @@ BEGIN
         t, public_priv;
     END IF;
   END LOOP;
-
-  -- Fail closed if catalog has any public.mastra_% table/view outside allowlist
-  -- (Mastra auto-init can recreate new shadows; fixed inventory alone misses them).
-  -- Live project already applied this migration: see 20260724173755 for the same gate.
-  SELECT string_agg(c.relname, ', ' ORDER BY c.relname)
-  INTO bad
-  FROM pg_class c
-  JOIN pg_namespace n ON n.oid = c.relnamespace
-  WHERE n.nspname = 'public'
-    AND c.relkind IN ('r', 'p', 'v', 'm', 'f')
-    AND c.relname LIKE 'mastra\_%' ESCAPE '\'
-    AND NOT (c.relname = ANY (expected));
-
-  IF bad IS NOT NULL THEN
-    RAISE EXCEPTION
-      'IPI-801 · MASTRA-PG-011 — Retire Recreated public.mastra_* Shadow Tables: unexpected public.mastra_* relation(s) not in allowlist: %',
-      bad;
-  END IF;
 END $$;

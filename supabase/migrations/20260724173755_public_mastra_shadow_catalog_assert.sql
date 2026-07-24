@@ -1,14 +1,14 @@
 -- IPI-801 · MASTRA-PG-011 — Retire Recreated public.mastra_* Shadow Tables
--- Phase A follow-up — catalog fail-closed for unexpected public.mastra_* (forward-only).
+-- Phase A follow-up — SSOT catalog fail-closed for unexpected public.mastra_* (forward-only).
 --
+-- Catalog drift gate lives ONLY here (not in already-applied 20260724102922).
 -- 20260724102922 + 20260724103700 already applied on nvdlhrodvevgwdsneplk —
 -- do not rewrite their live effect. Privilege assert (103700) covers the listed
 -- 33 tables; this migration fails if any additional public.mastra_% table/view
 -- appears outside that allowlist (Mastra auto-init can recreate new shadows).
 --
--- Recovery note (also on 20260724102922 header): lockdown drops drifted policies.
--- Restore = grants + disable RLS + recreate policies only if they were intentional.
--- Lockdown itself is fail-closed (zero policies on shadows).
+-- Recurring CI check: supabase/tests/database/004_public_mastra_shadow_lockdown.sql
+-- (allowlist + catalog extras). Lockdown itself is fail-closed (zero policies).
 
 DO $$
 DECLARE
