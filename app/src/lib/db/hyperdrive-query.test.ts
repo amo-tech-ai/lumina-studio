@@ -42,9 +42,11 @@ describe("queryFresh (IPI-620 Part A)", () => {
     expect(client.connect).toHaveBeenCalledTimes(1);
     expect(client.query).toHaveBeenCalledWith("SELECT * FROM brands WHERE id = $1", [1]);
     expect(rows).toEqual([{ id: 1, name: "brand" }]);
+    // Workers auto-clean Hyperdrive edge clients — do not call end().
+    expect(client.end).not.toHaveBeenCalled();
   });
 
-  it("closes the client in finally even when the query succeeds", async () => {
+  it("does not call client.end() after a successful query", async () => {
     const client = {
       connect: vi.fn().mockResolvedValue(undefined),
       query: vi.fn().mockResolvedValue({ rows: [] }),
@@ -54,10 +56,10 @@ describe("queryFresh (IPI-620 Part A)", () => {
 
     await queryFresh(FAKE_HYPERDRIVE, "SELECT 1");
 
-    expect(client.end).toHaveBeenCalledTimes(1);
+    expect(client.end).not.toHaveBeenCalled();
   });
 
-  it("sanitizes the error message and still closes the client on query failure", async () => {
+  it("sanitizes the error message and does not call end() on query failure", async () => {
     const client = {
       connect: vi.fn().mockResolvedValue(undefined),
       query: vi.fn().mockRejectedValue(
@@ -72,10 +74,10 @@ describe("queryFresh (IPI-620 Part A)", () => {
       "Database query failed",
     );
     await expect(queryFresh(FAKE_HYPERDRIVE, "SELECT * FORM brands")).rejects.not.toThrow(/secret/);
-    expect(client.end).toHaveBeenCalled();
+    expect(client.end).not.toHaveBeenCalled();
   });
 
-  it("still closes the client when connect() itself fails", async () => {
+  it("does not call end() when connect() itself fails", async () => {
     const client = {
       connect: vi.fn().mockRejectedValue(new Error("connection refused")),
       query: vi.fn(),
@@ -86,6 +88,6 @@ describe("queryFresh (IPI-620 Part A)", () => {
 
     await expect(queryFresh(FAKE_HYPERDRIVE, "SELECT 1")).rejects.toThrow("Database query failed");
     expect(client.query).not.toHaveBeenCalled();
-    expect(client.end).toHaveBeenCalledTimes(1);
+    expect(client.end).not.toHaveBeenCalled();
   });
 });

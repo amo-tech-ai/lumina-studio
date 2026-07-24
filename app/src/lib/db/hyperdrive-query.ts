@@ -2,19 +2,16 @@
  * IPI-620 (Part A) · CF-DB-006 — shared Hyperdrive query helper.
  *
  * Follows the official Cloudflare recipe exactly:
- * @see https://developers.cloudflare.com/hyperdrive/examples/connect-to-postgres/postgres-database-providers/supabase/
+ * @see https://developers.cloudflare.com/hyperdrive/examples/connect-to-postgres/postgres-drivers-and-libraries/node-postgres/
+ * @see https://developers.cloudflare.com/hyperdrive/concepts/connection-lifecycle/
  *
- * - `new Client()`, never `new Pool()` — Hyperdrive itself is the pool, so a
- *   second pool on top is redundant (and wrong per the docs above).
- * - The client is created fresh **inside** the caller's request handler and
- *   passed in as `hyperdrive` — never cached at module/global scope. A
- *   client cached in a global is Cloudflare's #1 documented cause of
- *   Workers connection errors.
- * - Minimal structural type (`HyperdriveBinding`), not the generated
- *   `CloudflareEnv` ambient global — same reason as `CfEnvLike` in
- *   `src/lib/ai/cloudflare-models.ts`: `cloudflare-env.d.ts` doesn't exist
- *   until `npm run cf-typegen` runs, and this file is part of the first
- *   (non-Cloudflare-scoped) tsc pass.
+ * - `new Client()`, never `new Pool()` — Hyperdrive itself is the pool.
+ * - Fresh client **inside** each call — never cached at module/global scope.
+ * - No `client.end()` — Workers-to-Hyperdrive connections are cleaned up when
+ *   the request/invocation ends; calling `end()` after a failed `connect()` can
+ *   hang/exit in node-postgres and is unnecessary on Workers.
+ * - Minimal structural type (`HyperdriveBinding`), not generated `CloudflareEnv`
+ *   (same reason as `CfEnvLike` in `src/lib/ai/cloudflare-models.ts`).
  */
 import { Client, type QueryResultRow } from "pg";
 
@@ -42,9 +39,5 @@ export async function queryFresh<T extends QueryResultRow = QueryResultRow>(
     // Log the real cause server-side only; never rethrow it to the caller.
     console.error("queryFresh: query failed", error instanceof Error ? error.message : error);
     throw new Error("Database query failed");
-  } finally {
-    // Not a hard CF requirement (Workers auto-clean connections at
-    // invocation end) but still good practice for graceful cleanup.
-    await client.end().catch(() => {});
   }
 }

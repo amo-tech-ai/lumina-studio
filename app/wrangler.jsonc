@@ -70,10 +70,11 @@
     "@shikijs/core": "./scripts/cf-shiki-stub.mjs",
     "@shikijs/engine-oniguruma": "./scripts/cf-shiki-stub.mjs",
     "@shikijs/vscode-textmate": "./scripts/cf-shiki-stub.mjs",
-    // Default Worker storage is InMemoryStore (MASTRA_STORAGE_MODE=noop)
-    "@mastra/pg": "./scripts/cf-mastra-pg-stub.mjs",
-    "pg": "./scripts/cf-mastra-pg-stub.mjs",
-    "pg-cloudflare": "./scripts/cf-mastra-pg-stub.mjs"
+    // Default Worker storage is InMemoryStore (MASTRA_STORAGE_MODE=noop).
+    // Stub `@mastra/pg` only — do NOT alias bare `pg` / `pg-cloudflare` here
+    // (IPI-620A). `queryFresh` needs real `pg.Client`; those packages use
+    // workerd-conditional exports (see Cloudflare node-postgres + Hyperdrive).
+    "@mastra/pg": "./scripts/cf-mastra-pg-stub.mjs"
   },
   // IPI-472 · INFRA-001 — SSOT for preview vs production Worker names.
   // IPI-606 · CF-SEC-010 — secrets.required for cf-typegen + local dev validation.
