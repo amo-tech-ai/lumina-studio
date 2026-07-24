@@ -3,15 +3,20 @@
 --
 -- Asserts: tables still exist (not dropped), RLS on, zero policies,
 -- deny-role + PUBLIC ACLs empty (all privilege_type / grantable bits),
--- and ownership is not a PostgREST role (DROP OWNED BY is not used —
--- deny roles own zero public.mastra_* objects; owner is postgres).
+-- ownership is not a PostgREST role (DROP OWNED BY is not used —
+-- deny roles own zero public.mastra_* objects; owner is postgres),
+-- and allow-path: owning/bypass session can count(*) without error
+-- (rows preserved for rollback/inspection — counts only, no row payloads).
 --
--- Plan math: 1 count + 33×(exists + rls + policies + deny_acl + public_acl + owner) = 199
+-- Plan math:
+--   1 count
+--   + 33×(exists + rls + policies + deny_acl + public_acl + owner + allow_count)
+--   = 232
 
 set search_path to public, extensions;
 
 begin;
-select plan(199);
+select plan(232);
 
 create temporary table public_mastra_shadows (tablename text) on commit drop;
 
@@ -129,6 +134,19 @@ select ok(
       where n.nspname = 'public' and c.relname = t.tablename
     ) not in ('anon', 'authenticated', 'service_role'),
     format('public.%I is not owned by a PostgREST role (no DROP OWNED BY needed)', t.tablename)
+  )
+from public_mastra_shadows t
+order by t.tablename;
+
+-- Allow path: session is owner/bypass (postgres in CI). Prove SELECT count(*)
+-- still works after lockdown — rows preserved for rollback/inspection.
+-- lives_ok: no error, no row payloads printed into the TAP stream.
+select lives_ok(
+    format('select count(*)::bigint from public.%I', t.tablename),
+    format(
+      'owner/bypass can count(*) public.%I (rows preserved; allow path)',
+      t.tablename
+    )
   )
 from public_mastra_shadows t
 order by t.tablename;

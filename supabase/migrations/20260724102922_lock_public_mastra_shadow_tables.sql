@@ -14,6 +14,16 @@
 --   * does NOT DROP tables or mutate rows (rollback = restore grants / disable RLS)
 --   * does NOT touch mastra.* or unrelated public tables
 --
+-- Recurring drift check (Mastra auto-init can recreate grants after this one-shot):
+--   * supabase/tests/database/004_public_mastra_shadow_lockdown.sql re-asserts
+--     existence + RLS + zero policies + deny-role/PUBLIC ACLs + owner + allow-path
+--     count(*) for all 33 tables on every trusted CI run of
+--     .github/workflows/supabase-verify-rls.yml (`supabase test db …/database`).
+--   * Local: same suite via `supabase test db --db-url "$DATABASE_URL" supabase/tests/database`
+--     (also covered when running the verify-rls workflow path).
+--   * Phase B (DROP) must not proceed while 004 fails — that is the live-project
+--     grant/RLS regression gate until shadows are removed.
+--
 -- Phase B (DROP + supabase gen types) stays blocked until soak + backup/PITR.
 
 DO $$
