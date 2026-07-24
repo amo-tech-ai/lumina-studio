@@ -1,20 +1,27 @@
 # Cloudflare Platform — Progress Task Tracker
 
-**Last reviewed:** 2026-07-22 (re-probed against live systems during IPI-607 PR review — see [Verified facts](#verified-facts-origin-main--2026-07-22))  
+**Last reviewed:** 2026-07-24 (Hosting lane re-verified live against Linear/GitHub/Cloudflare/code — see [`prime/j24-cloudflare-plan.md`](./prime/j24-cloudflare-plan.md) full audit and [`prime/j24-progress-tracker.md`](./prime/j24-progress-tracker.md) for the latest re-check. Native AI lane last re-probed 2026-07-22 during IPI-607 PR review — see [Verified facts](#verified-facts-origin-main--2026-07-22).)  
 **SSOT hierarchy:** **Linear status** → this file (**evidence + open work**) → root [`todo.md`](../../todo.md) (pointer only) → dated audits  
-**Doc map:** [`index.md`](./index.md) · **Audit:** [`audit/j21-todo-audit.md`](./audit/j21-todo-audit.md)
+**Doc map:** [`index.md`](./index.md) · **Audit:** [`audit/j21-todo-audit.md`](./audit/j21-todo-audit.md) · J22 token: [`audit/j22-cloudflare-token.md`](./audit/j22-cloudflare-token.md) · **Hosting migration:** [`prime/j24-cloudflare-plan.md`](./prime/j24-cloudflare-plan.md) + [`prime/j24-progress-tracker.md`](./prime/j24-progress-tracker.md) · **Changelog:** [`changelog.md`](./changelog.md)
 
 | Lane | Progress | Bar |
 |------|---------|-----|
 | Native AI | Early implementation stage (~10–15%) — only the first milestone (IPI-586) is complete; treat the % as a rough estimate, not a measured value | `██░░░░░░░░` |
-| Hosting | ~85% | `████████░░` |
+| Hosting (Vercel→Cloudflare cutover) | ~70% — architecture + preview proven; four cutover-safety gates (rollback, observability, automated smoke, branch protection) at 0% for 6 days. See `prime/j24-progress-tracker.md` for the row-by-row breakdown | `███████░░░` |
 | Edge | ~95% | `█████████░` |
 
 ```text
 Native:  586 ✅ → 607 🟡 → 750 → W1–W3 → 591 → W4–W6 → 609 → 592
-Hosting: 472 ✅ → 632 ✅ → 631 (DNS later)
+Hosting: 472 ✅ → 632 ✅ → 788 ✅ (Vercel unblocked) → 706 🟡 (bundle, In Progress) → 708+709+707+763 (all 🔴 0%) → 631 (DNS, blocked on those four)
 Edge:    695 ✅ → 697 ✅ → 699 ✅ → 742 ✅ · 698 parked
 ```
+
+### Hosting lane — what changed 2026-07-24
+
+- 🟢 **IPI-788 fixed** — the `main`-branch Vercel `npm ci` lockfile drift (PR #620, merged, production deployment confirmed `Ready`). This was blocking every Vercel deploy including the rollback target the DNS cutover plan depends on.
+- 🟡 **IPI-706 (bundle size) In Progress** — gzip bundle hit **8.985 MiB**, 0.015 MiB from the 9.0 MiB hard-fail CI gate (was 8.799 MiB hours earlier, 8.25 MiB at last full audit). Root cause traced to `@copilotkit/react-core → streamdown → mermaid/cytoscape/katex` plus `@copilotkit/web-inspector`, none of which are directly used anywhere in `src` — being fixed via `next/dynamic(..., {ssr:false})` to move them out of the server SSR bundle.
+- 🔴 **Still untouched, 6 days stale:** IPI-708 (rollback rehearsal), IPI-709 (observability baseline + Sentry CI token), IPI-707 (automated Playwright preview smoke), IPI-763's branch-protection residual (zero protection on `main`, confirmed via `gh api .../branches/main/protection` → 404). These four block IPI-631 (DNS cutover) — do not start 631 before they're Done.
+- 🟡 **IPI-595 (AI Gateway auth)** — both acceptance criteria have live evidence (PR #616, Cloudflare Gateway logs) but Linear still shows `In Progress`. Needs a status flip, not more work.
 
 ---
 
@@ -59,11 +66,16 @@ Keep `BI_PROVIDER` **ABSENT** until product flips Brand Hub.
 | 10 | [IPI-609](https://linear.app/amo100/issue/IPI-609) soak | Zero legacy | ⛔ | 0 | After W6 |
 | 11 | [IPI-592](https://linear.app/amo100/issue/IPI-592) delete Worker | Remove frozen Worker | ⚪ | 0 | **Last** |
 | — | [IPI-594](https://linear.app/amo100/issue/IPI-594) parent | Tracker only | 🟡 | ~12 | Do children, not parent |
-| — | [IPI-595](https://linear.app/amo100/issue/IPI-595) gateway auth | Dashboard auth proof | ⚪ | 25 | After FLAGS |
+| — | [IPI-595](https://linear.app/amo100/issue/IPI-595) gateway auth | Anon + account-auth-only rejected, full auth succeeds | 🟡 | 90 | Evidence complete (PR #616, live Gateway logs) — Linear status flip pending, not more work |
 | — | [IPI-590](https://linear.app/amo100/issue/IPI-590)+ hardening | Cache / rate / spend | ⚪ | 0 | After canaries |
 | — | [IPI-698](https://linear.app/amo100/issue/IPI-698) DNA | Vision eval | ⚪ | 0 | Parked |
-| — | [IPI-631](https://linear.app/amo100/issue/IPI-631) DNS | Production hostname | ⚪ | 0 | After native+Edge stable |
-| — | [IPI-763 · CF-CI-001](https://linear.app/amo100/issue/IPI-763) | Run `services/cloudflare-worker` tests in CI | ⚪ | 0 | Found 2026-07-22: 98/98 tests exist but aren't wired into `.github/workflows/ci.yml` — the Worker still carries real production AI traffic while frozen |
+| — | [IPI-788 · VERCEL-CI-001](https://linear.app/amo100/issue/IPI-788) | Repair `npm ci` lockfile drift blocking all Vercel deploys | 🟢 | 100 | Done 2026-07-24 — PR #620 merged, production `Ready`, `/` and `/app` smoke-tested |
+| — | [IPI-706 · CF-BUNDLE-220](https://linear.app/amo100/issue/IPI-706) | Reduce Worker bundle ≤7.5 MiB | 🟡 | In progress | 8.985 MiB, 0.015 MiB from the 9.0 MiB hard-fail gate — fixing `streamdown`/mermaid/katex/cytoscape/web-inspector leaking into the server SSR bundle |
+| — | [IPI-708 · CF-ROLLBACK-001](https://linear.app/amo100/issue/IPI-708) | Rollback rehearsal | 🔴 | 0 | Blocks IPI-631 — never run once, Backlog since 2026-07-18 |
+| — | [IPI-709 · CF-OBS-001](https://linear.app/amo100/issue/IPI-709) | Observability baseline | 🔴 | 0 | Blocks IPI-631 — Sentry CI auth token still missing from `ci.yml`, confirmed 2026-07-24 |
+| — | [IPI-707 · CF-SMOKE-001](https://linear.app/amo100/issue/IPI-707) | Automated Playwright preview smoke | 🔴 | 0 | Backlog since 2026-07-18, zero activity |
+| — | [IPI-631](https://linear.app/amo100/issue/IPI-631) DNS | Production hostname | 🔴 | 0 | Blocked on IPI-708 + IPI-709 above — do not start early |
+| — | [IPI-763 · CF-CI-001](https://linear.app/amo100/issue/IPI-763) | Run `services/cloudflare-worker` tests in CI | 🟡 | 90 | CI job Done (PR #577/#583) — branch-protection residual still open: `main` has zero protection rules (`gh api .../branches/main/protection` → 404, confirmed 2026-07-24), needs a repo-admin action |
 
 Parent [IPI-594](https://linear.app/amo100/issue/IPI-594): do **not** implement as one mega-issue.
 
