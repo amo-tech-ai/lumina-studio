@@ -32,13 +32,16 @@
     "worktree:health:test": "node --test scripts/lib/worktree-health-checks.test.mjs",
     "supabase:verify-planner": "node --experimental-strip-types scripts/verify-planner-scenario.mjs",
     "cloudinary:dry-run-audit": "node scripts/cloudinary-dry-run-audit.mjs",
-    "cloudinary:dry-run-audit:test": "node --test scripts/lib/cloudinary-dry-run-audit-lib.test.mjs"
+    "cloudinary:dry-run-audit:test": "node --test scripts/lib/cloudinary-dry-run-audit-lib.test.mjs",
+    "bench": "vitest bench --run"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.108.2",
     "cloudinary": "^2.10.0"
   },
   "devDependencies": {
-    "@playwright/test": "^1.52.0"
+    "@codspeed/vitest-plugin": "^5.7.1",
+    "@playwright/test": "^1.52.0",
+    "vitest": "^4.1.10"
   }
 }
