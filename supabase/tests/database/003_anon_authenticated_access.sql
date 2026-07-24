@@ -32,6 +32,8 @@ create temporary table fixture_ids (
   deal_id uuid
 ) on commit drop;
 
+-- ponytail: fixed UUID depends on auth.users row from supabase/seed.sql (or equiv).
+-- Fresh/local DBs must load that seed before profiles INSERT or FK fails.
 insert into fixture_ids (owner_id, attacker_id)
 values ('00000000-0000-0000-0000-000000000001', gen_random_uuid());
 

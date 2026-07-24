@@ -84,7 +84,7 @@ order by t.schemaname, t.tablename;
 -- ── IPI-647 · PLN-SEC-002 catalog assert — ported 1:1 from
 -- scripts/verify-rls.mjs's assertPlannerAssignmentSelectCatalog() (removed there,
 -- see PR description). Pure pg_policies/pg_proc/pg_trigger/pg_constraint
--- introspection — no JWT, no fixtures, exactly pgTAP's sweet spot. (14)
+-- introspection — no JWT, no fixtures, exactly pgTAP's sweet spot. (19)
 
 create temporary table plan_select_policies as
 select tablename, policyname, permissive, qual
@@ -163,7 +163,8 @@ select ok(
       and c.relname = 'instances'
       and t.tgname = 'instances_bootstrap_owner'
       and not t.tgisinternal
-      and (t.tgtype & 2) = 2
+      -- tgtype: bit1 BEFORE (2) + bit2 INSERT (4) → both required
+      and (t.tgtype & 6) = 6
   ),
   'planner.instances_bootstrap_owner is BEFORE INSERT'
 );
