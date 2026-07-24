@@ -60,19 +60,31 @@ if (requireServiceRole && !serviceKey) {
   process.exit(1);
 }
 
-// IPI-245 — same pattern as REQUIRE_SERVICE_ROLE above. Without this flag, a CI
-// job that never wires HYPERDRIVE_DATABASE_URL as a secret gets a silent
-// console.warn skip on the one probe that actually exercises
-// hyperdrive_mastra_runtime's grants/RLS — "verify-rls passed" would be true
-// without that role ever having been checked. Set REQUIRE_HYPERDRIVE_RUNTIME_PROBE=1
-// on any CI job that is supposed to enforce this (not set by default here —
-// wiring the actual secret into that workflow is a separate ops action).
+// IPI-245 — resolve the Mastra runtime Postgres URL the same way the app does
+// (app/src/mastra/storage.ts): prefer HYPERDRIVE_DATABASE_URL, then
+// MASTRA_DATABASE_URL, then DATABASE_URL / SUPABASE_DB_URL. When the URL is a
+// privileged role (e.g. postgres in CI), the probe SET ROLEs into
+// hyperdrive_mastra_runtime (IPI-776 granted SET to postgres).
+function resolveMastraRuntimeProbeUrl() {
+  return (
+    process.env.HYPERDRIVE_DATABASE_URL ||
+    process.env.MASTRA_DATABASE_URL ||
+    process.env.DATABASE_URL ||
+    process.env.SUPABASE_DB_URL ||
+    null
+  );
+}
+
+// Same pattern as REQUIRE_SERVICE_ROLE: without this flag, a CI job that never
+// wires a usable Postgres URL gets a silent console.warn skip on the one probe
+// that actually exercises hyperdrive_mastra_runtime's grants/RLS.
 const requireHyperdriveRuntimeProbe =
   process.env.REQUIRE_HYPERDRIVE_RUNTIME_PROBE === "1" ||
   process.env.REQUIRE_HYPERDRIVE_RUNTIME_PROBE === "true";
-if (requireHyperdriveRuntimeProbe && !process.env.HYPERDRIVE_DATABASE_URL) {
+if (requireHyperdriveRuntimeProbe && !resolveMastraRuntimeProbeUrl()) {
   console.error(
-    "REQUIRE_HYPERDRIVE_RUNTIME_PROBE=1 but HYPERDRIVE_DATABASE_URL is missing — refuse to run",
+    "REQUIRE_HYPERDRIVE_RUNTIME_PROBE=1 but no Mastra runtime DB URL is set " +
+      "(HYPERDRIVE_DATABASE_URL / MASTRA_DATABASE_URL / DATABASE_URL / SUPABASE_DB_URL) — refuse to run",
   );
   process.exit(1);
 }
@@ -134,12 +146,18 @@ function assertSelectDenied(error, data, message) {
  * proof as an empty row set.
  */
 function assertNoMastraAccess(error, data, message) {
+  // Intended invariant: zero PostgREST access to the private `mastra` schema.
+  // An empty 200 is NOT sufficient — if the schema were accidentally exposed and
+  // the table happened to be empty, that would look identical to a denial.
+  // Require an expected denial error (PGRST106 schema-not-exposed, 42501, etc.).
   if (error) {
     pass(`${message} (denied: ${error.code ?? "?"} ${error.message})`);
     return;
   }
   if ((data ?? []).length === 0) {
-    pass(message);
+    fail(
+      `${message} (expected denial error such as PGRST106; got empty 200 — schema may be exposed)`,
+    );
     return;
   }
   fail(`${message} (expected denial, got ${data.length} row(s))`);
@@ -264,25 +282,28 @@ async function assertPlannerAssignmentSelectCatalog() {
  * IPI-245 / IPI-227B — runtime-role positive probe.
  * `hyperdrive_mastra_runtime` is a direct-Postgres role (the Hyperdrive/Mastra
  * storage connection) — it has no PostgREST/anon-key surface, so it can't be
- * exercised via supabase-js like the anon/authenticated probes above. Reuses the
- * same pg.Client mechanism as assertPlannerAssignmentSelectCatalog (IPI-647): connect
- * directly with HYPERDRIVE_DATABASE_URL, round-trip a clearly-test-marked row through
- * insert/select/update/delete on mastra.mastra_threads, always clean up.
- * Soft-skips (does not fail) when HYPERDRIVE_DATABASE_URL is unset — this repo's CI
- * does not yet wire that secret (only DATABASE_URL, a different role), mirroring how
- * the IPI-647 catalog assert above treats its own missing connection string.
+ * exercised via supabase-js like the anon/authenticated probes above.
  *
- * `onFixtureReady` (optional) runs after the INSERT lands but before this probe's
- * own SELECT/UPDATE — it lets the caller point the anon/authenticated negative
- * probes at a row that genuinely exists, so an empty result from those probes is a
- * real denial proof, not just "the table happened to be empty" (the two are
- * indistinguishable from an empty read alone).
+ * URL resolution matches the app (`resolveMastraRuntimeProbeUrl`):
+ * HYPERDRIVE_DATABASE_URL → MASTRA_DATABASE_URL → DATABASE_URL → SUPABASE_DB_URL.
+ * If the session user is not already `hyperdrive_mastra_runtime`, we `SET ROLE`
+ * into it (postgres has SET via IPI-776) so CI can use the linked DATABASE_URL.
+ *
+ * Schema target is `mastra.mastra_threads` — the same private schema IPI-630 /
+ * #604 configures via PostgresStore `schemaName: "mastra"` (not `public`).
+ *
+ * Soft-skips (does not fail) when no URL is set — unless
+ * REQUIRE_HYPERDRIVE_RUNTIME_PROBE=1 (fail-closed at process start above).
+ *
+ * `onFixtureReady` (optional) runs after the INSERT lands (or on connect/insert
+ * failure) so anon/authenticated negative probes still execute.
  */
 async function assertMastraRuntimeRoleProbe(onFixtureReady) {
-  const runtimeUrl = process.env.HYPERDRIVE_DATABASE_URL;
+  const runtimeUrl = resolveMastraRuntimeProbeUrl();
   if (!runtimeUrl) {
     console.warn(
-      "warn: IPI-245 runtime-role probe skipped — HYPERDRIVE_DATABASE_URL unset (anon/authenticated negative probes ran against a possibly-empty table)",
+      "warn: IPI-245 runtime-role probe skipped — no Mastra runtime DB URL " +
+        "(HYPERDRIVE_DATABASE_URL / MASTRA_DATABASE_URL / DATABASE_URL / SUPABASE_DB_URL)",
     );
     if (onFixtureReady) await onFixtureReady();
     return;
@@ -297,12 +318,16 @@ async function assertMastraRuntimeRoleProbe(onFixtureReady) {
     return;
   }
 
-  const client = new Client({ connectionString: runtimeUrl, ssl: { rejectUnauthorized: false } });
+  // connectionTimeoutMillis: fail fast instead of hanging CI when the host is unreachable.
+  const client = new Client({
+    connectionString: runtimeUrl,
+    ssl: { rejectUnauthorized: false },
+    connectionTimeoutMillis: 10_000,
+  });
   const probeId = `rls-probe-ipi245-${Date.now()}`;
+  let connected = false;
   // Guards onFixtureReady so it runs exactly once regardless of where a failure
-  // hits below — never zero times. A connect()/INSERT failure must not silently
-  // skip the anon/authenticated negative probes it gates (they'd otherwise never
-  // run at all, with no failure recorded for the omission itself).
+  // hits below — never zero times.
   let fixtureReadyCalled = false;
   const runFixtureReadyOnce = async () => {
     if (fixtureReadyCalled || !onFixtureReady) return;
@@ -311,11 +336,23 @@ async function assertMastraRuntimeRoleProbe(onFixtureReady) {
   };
   try {
     await client.connect();
+    connected = true;
 
-    const { rows: whoRows } = await client.query("select current_user");
+    const { rows: whoRows } = await client.query(
+      "select current_user, session_user",
+    );
+    let role = whoRows[0]?.current_user;
+    if (role !== "hyperdrive_mastra_runtime") {
+      // CI / local often connect as postgres (DATABASE_URL). IPI-776 granted
+      // `GRANT hyperdrive_mastra_runtime TO postgres WITH SET TRUE`.
+      await client.query("set role hyperdrive_mastra_runtime");
+      const { rows: afterSet } = await client.query("select current_user");
+      role = afterSet[0]?.current_user;
+    }
     assert(
-      whoRows[0]?.current_user === "hyperdrive_mastra_runtime",
-      "IPI-245 runtime probe connects as hyperdrive_mastra_runtime",
+      role === "hyperdrive_mastra_runtime",
+      "IPI-245 runtime probe session is hyperdrive_mastra_runtime " +
+        `(current_user=${role}, session_user=${whoRows[0]?.session_user})`,
     );
 
     const { rows: insRows } = await client.query(
@@ -349,32 +386,45 @@ async function assertMastraRuntimeRoleProbe(onFixtureReady) {
     );
   } catch (err) {
     fail(`IPI-245 runtime-role probe: ${err instanceof Error ? err.message : err}`);
-    // Fixture row may not exist (connect()/INSERT never succeeded) — same
-    // weaker-but-still-run fallback already used when HYPERDRIVE_DATABASE_URL
-    // is unset or `pg` fails to load above: run the negative probes anyway
-    // rather than skip them silently. An empty result is ambiguous in this
-    // path (no fixture row vs. real denial), but that's strictly better than
-    // never running the assertion at all.
     await runFixtureReadyOnce();
   } finally {
-    try {
-      const { rowCount } = await client.query(
-        `delete from mastra.mastra_threads where id = $1`,
-        [probeId],
-      );
-      if (rowCount > 0) {
-        pass("hyperdrive_mastra_runtime can DELETE its own mastra.mastra_threads row (cleanup)");
+    // Sentry: if connect() failed, client.query() in finally queues forever on an
+    // unconnected client. Only cleanup when connect succeeded; always end/destroy.
+    if (connected) {
+      try {
+        const { rowCount } = await client.query(
+          `delete from mastra.mastra_threads where id = $1`,
+          [probeId],
+        );
+        if (rowCount > 0) {
+          pass("hyperdrive_mastra_runtime can DELETE its own mastra.mastra_threads row (cleanup)");
+        }
+      } catch (cleanupErr) {
+        trackCleanupError(
+          `IPI-245 mastra_threads probe row ${probeId}: ${
+            cleanupErr instanceof Error ? cleanupErr.message : cleanupErr
+          }`,
+        );
       }
-    } catch (cleanupErr) {
-      trackCleanupError(
-        `IPI-245 mastra_threads probe row ${probeId}: ${
-          cleanupErr instanceof Error ? cleanupErr.message : cleanupErr
-        }`,
-      );
     }
-    await client.end().catch(() => {});
+    try {
+      await Promise.race([
+        client.end(),
+        new Promise((_, reject) =>
+          setTimeout(() => reject(new Error("client.end() timed out")), 5_000),
+        ),
+      ]);
+    } catch {
+      // Force-destroy if end() hangs after a failed connect or stuck socket.
+      try {
+        client.connection?.stream?.destroy?.();
+      } catch {
+        /* ignore */
+      }
+    }
   }
 }
+
 
 const anon = createClient(url, anonKey, {
   auth: { persistSession: false, autoRefreshToken: false },
@@ -562,13 +612,10 @@ try {
   // misread by assertNoMastraAccess as a valid denial when it's actually just a
   // malformed query unrelated to authorization.
   await assertMastraRuntimeRoleProbe(async () => {
-    // Runs after IPI-245's own INSERT lands on mastra.mastra_threads, so the anon/
-    // authenticated probe against that table sees a row that genuinely exists —
-    // an empty result here is then a real denial proof, not a coincidence of the
-    // table being empty. mastra_agents/mastra_ai_spans stay unseeded (no cheap
-    // fixture insert available for them here); their zero-access proof still rests
-    // on the schema-not-exposed / revoked-grants layer documented on
-    // assertNoMastraAccess, same as before this fix.
+    // assertNoMastraAccess now requires a denial *error* (PGRST106 / permission),
+    // not an empty 200 — so seeding is optional for the denial proof. We still
+    // insert a fixture row above so a misconfigured exposed+RLS path that returns
+    // rows would fail loudly if PostgREST ever stopped erroring on the schema.
     for (const t of mastraProbeTables) {
       const { data, error } = await anon.schema("mastra").from(t).select("*").limit(1);
       assertNoMastraAccess(error, data, `anon cannot access mastra.${t}`);

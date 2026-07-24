@@ -120,6 +120,13 @@ jobs:
           NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           REQUIRE_SERVICE_ROLE: "1"
+          # IPI-245 — fail-closed runtime-role probe. Prefers HYPERDRIVE_DATABASE_URL when
+          # present; otherwise uses DATABASE_URL + SET ROLE hyperdrive_mastra_runtime.
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+          HYPERDRIVE_DATABASE_URL: ${{ secrets.HYPERDRIVE_DATABASE_URL }}
+          MASTRA_DATABASE_URL: ${{ secrets.MASTRA_DATABASE_URL }}
+          REQUIRE_HYPERDRIVE_RUNTIME_PROBE: "1"
         run: |
           set -euo pipefail
           npm run supabase:verify-rls
