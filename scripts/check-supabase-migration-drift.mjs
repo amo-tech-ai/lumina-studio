@@ -22,7 +22,7 @@
  *   node scripts/check-supabase-migration-drift.mjs [--pr|--main] [--base <sha>]
  *   node scripts/check-supabase-migration-drift.mjs --self-check
  */
-import { execFileSync } from "node:child_process";
+import { execFileSync, spawnSync } from "node:child_process";
 import { readdirSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -69,23 +69,19 @@ function run(cmd, cmdArgs, { allowFail = false } = {}) {
   }
 }
 
-/** Capture stdout/stderr and exit status without exiting the process. */
+/** Capture stdout+stderr and exit status without exiting the process. */
 function runCapture(cmd, cmdArgs) {
-  try {
-    const out = execFileSync(cmd, cmdArgs, {
-      cwd: root,
-      encoding: "utf8",
-      env: process.env,
-      stdio: ["ignore", "pipe", "pipe"],
-    });
-    return { ok: true, out, status: 0 };
-  } catch (err) {
-    return {
-      ok: false,
-      out: `${err.stdout ?? ""}${err.stderr ?? ""}`,
-      status: err.status ?? 1,
-    };
-  }
+  // supabase CLI prints dry-run pending migrations on stderr; stdout is often
+  // only "Finished supabase db push." Merge both or PR linked-gates false-fail
+  // when a new migration is correctly pending (IPI-784 / #614).
+  const r = spawnSync(cmd, cmdArgs, {
+    cwd: root,
+    encoding: "utf8",
+    env: process.env,
+  });
+  const out = `${r.stdout ?? ""}${r.stderr ?? ""}`;
+  const status = r.status ?? 1;
+  return { ok: status === 0, out, status };
 }
 
 function versionFromFilename(name) {
