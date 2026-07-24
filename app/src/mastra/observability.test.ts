@@ -1,4 +1,4 @@
-import { describe, expect, it, beforeAll } from "vitest";
+import { describe, expect, it, beforeAll, vi } from "vitest";
 import { Observability, MastraStorageExporter, SensitiveDataFilter } from "@mastra/observability";
 
 // Lazily loaded — same cold-import pattern as agent-workflow-bindings.test.ts
@@ -6,6 +6,8 @@ let getMastra: typeof import("./index").getMastra;
 
 describe("Mastra observability wiring (IPI-781)", () => {
   beforeAll(async () => {
+    // Exporter fail-closed: getMastra() requires cutover schema (not public shadows).
+    vi.stubEnv("MASTRA_SCHEMA", "mastra");
     ({ getMastra } = await import("./index"));
   }, 15_000);
 
@@ -26,5 +28,27 @@ describe("Mastra observability wiring (IPI-781)", () => {
 
     const processors = instance!.spanOutputProcessors ?? [];
     expect(processors.some((p) => p instanceof SensitiveDataFilter)).toBe(true);
+  });
+});
+
+describe("assertMastraSchemaForObservabilityExporter (IPI-781)", () => {
+  it("accepts MASTRA_SCHEMA=mastra", async () => {
+    const { assertMastraSchemaForObservabilityExporter } = await import("./storage");
+    expect(
+      assertMastraSchemaForObservabilityExporter({ MASTRA_SCHEMA: "mastra" }),
+    ).toBe("mastra");
+    expect(
+      assertMastraSchemaForObservabilityExporter({ MASTRA_SCHEMA: "  mastra  " }),
+    ).toBe("mastra");
+  });
+
+  it("fails closed when schema is public or unset", async () => {
+    const { assertMastraSchemaForObservabilityExporter } = await import("./storage");
+    expect(() => assertMastraSchemaForObservabilityExporter({})).toThrow(
+      /MASTRA_SCHEMA=mastra/,
+    );
+    expect(() =>
+      assertMastraSchemaForObservabilityExporter({ MASTRA_SCHEMA: "public" }),
+    ).toThrow(/got "public"/);
   });
 });

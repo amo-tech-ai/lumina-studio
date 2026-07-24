@@ -10,7 +10,10 @@ import {
   MastraStorageExporter,
   SensitiveDataFilter,
 } from "@mastra/observability";
-import { getMastraStorageLazy } from "./storage";
+import {
+  assertMastraSchemaForObservabilityExporter,
+  getMastraStorageLazy,
+} from "./storage";
 
 const VALID_LOG_LEVELS: LogLevel[] = ["debug", "info", "warn", "error"];
 const rawLogLevel = process.env.LOG_LEVEL;
@@ -47,6 +50,11 @@ let _mastra: Mastra | undefined;
 
 export function getMastra(): Mastra {
   if (!_mastra) {
+    // Fail closed: exporter must not boot against public.mastra_* shadows.
+    assertMastraSchemaForObservabilityExporter();
+    const logger = new ConsoleLogger({
+      level: LOG_LEVEL,
+    });
     _mastra = new Mastra({
       agents,
       storage: getMastraStorageLazy(),
@@ -54,9 +62,7 @@ export function getMastra(): Mastra {
         "shoot-wizard": shootWizardWorkflow,
         "brand-intelligence": brandIntelligenceWorkflow,
       },
-      logger: new ConsoleLogger({
-        level: LOG_LEVEL,
-      }),
+      logger,
       // Instance required — plain config objects are rejected at boot.
       // Postgres prefers batch-with-updates; retention/prune is IPI-780.
       observability: new Observability({
@@ -64,7 +70,15 @@ export function getMastra(): Mastra {
           default: {
             serviceName: "ipix-operator",
             exporters: [
-              new MastraStorageExporter({ strategy: "batch-with-updates" }),
+              // ponytail: MastraStorageExporterConfig already retries with
+              // maxRetries=4 / retryDelayMs=500 (exp backoff); after that the
+              // batch is dropped. No custom retry loop — logger surfaces
+              // logStorageFailure via the official BaseExporterConfig API.
+              new MastraStorageExporter({
+                strategy: "batch-with-updates",
+                logger,
+                logLevel: LOG_LEVEL,
+              }),
             ],
             spanOutputProcessors: [new SensitiveDataFilter()],
           },
