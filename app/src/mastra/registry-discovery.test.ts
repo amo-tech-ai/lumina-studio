@@ -12,6 +12,7 @@ afterEach(() => {
 describe("IPI-718 · unmocked Mastra registry discovery", () => {
   it("getLocalAgents returns required operator agents without mocking @/mastra", async () => {
     vi.stubEnv("MASTRA_STORAGE_MODE", "noop");
+    vi.stubEnv("MASTRA_SCHEMA", "mastra");
     vi.stubEnv("NODE_ENV", "production");
     vi.stubEnv("VERCEL", "1");
     vi.stubEnv(

@@ -163,6 +163,25 @@ export function resolveMastraSchemaName(env: NodeJS.ProcessEnv = process.env): s
   return raw.length > 0 ? raw : "public";
 }
 
+/**
+ * IPI-781 — MastraStorageExporter must target `mastra.mastra_ai_spans`, not
+ * `public.mastra_*` shadows. Fail closed before wiring the exporter when the
+ * schema is anything other than `mastra` (PostgresStore defaults to public).
+ */
+export function assertMastraSchemaForObservabilityExporter(
+  env: NodeJS.ProcessEnv = process.env,
+): "mastra" {
+  const schema = resolveMastraSchemaName(env);
+  if (schema !== "mastra") {
+    throw new Error(
+      `[mastra] MastraStorageExporter requires MASTRA_SCHEMA=mastra (got "${schema}"). ` +
+        "Without it, PostgresStore defaults to public and batch spans write to " +
+        "public.mastra_* shadows instead of mastra.mastra_ai_spans (IPI-781).",
+    );
+  }
+  return schema;
+}
+
 const MASTRA_PG_APPLICATION_NAME = "ipix-mastra";
 
 /**
