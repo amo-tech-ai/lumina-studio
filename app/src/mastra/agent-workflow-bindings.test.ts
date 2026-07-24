@@ -1,4 +1,4 @@
-import { describe, expect, it, beforeAll } from "vitest";
+import { describe, expect, it, beforeAll, vi } from "vitest";
 
 // Lazily loaded in beforeAll rather than as top-level imports — see registry.test.ts
 // for why (same ./index cold-import cost, same fix).
@@ -8,6 +8,8 @@ let mastra: ReturnType<typeof import("./index").getMastra>;
 
 describe("agent workflow bindings (Studio + chat discovery)", () => {
   beforeAll(async () => {
+    // IPI-781: getMastra() fail-closes unless cutover schema is set.
+    vi.stubEnv("MASTRA_SCHEMA", "mastra");
     mod = await import("./index");
     durableMod = await import("./durable");
     mastra = mod.getMastra();
