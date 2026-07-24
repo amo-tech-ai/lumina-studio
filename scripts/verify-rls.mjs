@@ -141,17 +141,23 @@ function assertSelectDenied(error, data, message) {
  * Unlike assertSelectDenied (RLS silently filters rows on exposed `public`/`planner`
  * tables, so a denied read still returns 200 + []), the `mastra` schema itself isn't
  * in PostgREST's exposed-schema list (supabase/config.toml `db.schemas`), so
- * .schema('mastra') requests fail before RLS even runs — any error here (PGRST106
- * schema-not-exposed, or a 42501 permission error) is just as valid a zero-access
- * proof as an empty row set.
+ * .schema('mastra') requests fail before RLS even runs. Only the documented denial
+ * codes count as proof: PGRST106 (schema not exposed) or 42501 (insufficient privilege).
+ * Any other error is an unexpected failure — do not treat it as a successful deny.
  */
 function assertNoMastraAccess(error, data, message) {
   // Intended invariant: zero PostgREST access to the private `mastra` schema.
   // An empty 200 is NOT sufficient — if the schema were accidentally exposed and
   // the table happened to be empty, that would look identical to a denial.
-  // Require an expected denial error (PGRST106 schema-not-exposed, 42501, etc.).
   if (error) {
-    pass(`${message} (denied: ${error.code ?? "?"} ${error.message})`);
+    const code = String(error.code ?? "");
+    if (code === "PGRST106" || code === "42501") {
+      pass(`${message} (denied: ${code} ${error.message})`);
+      return;
+    }
+    fail(
+      `${message} (unexpected error ${code || "?"}: ${error.message})`,
+    );
     return;
   }
   if ((data ?? []).length === 0) {
@@ -301,12 +307,26 @@ async function assertPlannerAssignmentSelectCatalog() {
  */
 async function assertMastraRuntimeRoleProbe(onFixtureReady) {
   const runtimeUrl = resolveMastraRuntimeProbeUrl();
+  /** Same fail() wrapping as the connected-path catch — never leave onFixtureReady uncaught. */
+  const runFixtureReadySafe = async (context) => {
+    if (!onFixtureReady) return;
+    try {
+      await onFixtureReady();
+    } catch (err) {
+      fail(
+        `IPI-245 runtime-role probe fixture callback (${context}): ${
+          err instanceof Error ? err.message : err
+        }`,
+      );
+    }
+  };
+
   if (!runtimeUrl) {
     console.warn(
       "warn: IPI-245 runtime-role probe skipped — no Mastra runtime DB URL " +
         "(HYPERDRIVE_DATABASE_URL / MASTRA_DATABASE_URL / DATABASE_URL / SUPABASE_DB_URL)",
     );
-    if (onFixtureReady) await onFixtureReady();
+    await runFixtureReadySafe("no-runtime-url");
     return;
   }
 
@@ -315,15 +335,17 @@ async function assertMastraRuntimeRoleProbe(onFixtureReady) {
     ({ Client } = requireFromApp("pg"));
   } catch (err) {
     fail(`IPI-245 runtime-role probe: cannot load pg (${err instanceof Error ? err.message : err})`);
-    if (onFixtureReady) await onFixtureReady();
+    await runFixtureReadySafe("pg-load-failure");
     return;
   }
 
-  // connectionTimeoutMillis: fail fast instead of hanging CI when the host is unreachable.
+  // connectionTimeoutMillis: fail fast if the host is unreachable.
+  // query_timeout: bound every client.query in the try block (CI-safe; pg cancels the query).
   const client = new Client({
     connectionString: runtimeUrl,
     ssl: { rejectUnauthorized: false },
     connectionTimeoutMillis: 10_000,
+    query_timeout: 15_000,
   });
   const probeId = `rls-probe-ipi245-${Date.now()}`;
   let connected = false;
@@ -333,7 +355,7 @@ async function assertMastraRuntimeRoleProbe(onFixtureReady) {
   const runFixtureReadyOnce = async () => {
     if (fixtureReadyCalled || !onFixtureReady) return;
     fixtureReadyCalled = true;
-    await onFixtureReady();
+    await runFixtureReadySafe("connected-path");
   };
   try {
     await client.connect();
