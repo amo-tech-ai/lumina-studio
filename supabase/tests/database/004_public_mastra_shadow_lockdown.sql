@@ -9,14 +9,16 @@
 -- (rows preserved for rollback/inspection — counts only, no row payloads).
 --
 -- Plan math:
---   1 count
+--   1 allowlist count
+--   + 1 catalog count (no unexpected public.mastra_%)
+--   + 1 extras count (allowlist membership)
 --   + 33×(exists + rls + policies + deny_acl + public_acl + owner + allow_count)
---   = 232
+--   = 234
 
 set search_path to public, extensions;
 
 begin;
-select plan(232);
+select plan(234);
 
 create temporary table public_mastra_shadows (tablename text) on commit drop;
 
@@ -60,6 +62,34 @@ select is(
   (select count(*) from public_mastra_shadows),
   33::bigint,
   'IPI-801 · MASTRA-PG-011 — Retire Recreated public.mastra_* Shadow Tables: expected 33 public shadow names'
+);
+
+-- Fail closed: catalog must have exactly the allowlist — no new Mastra auto-init shadows.
+select is(
+  (
+    select count(*)::bigint
+    from pg_class c
+    join pg_namespace n on n.oid = c.relnamespace
+    where n.nspname = 'public'
+      and c.relkind in ('r', 'p', 'v', 'm', 'f')
+      and c.relname like 'mastra\_%' escape '\'
+  ),
+  33::bigint,
+  'IPI-801 · MASTRA-PG-011 — catalog has exactly 33 public.mastra_* relations (no extras)'
+);
+
+select is(
+  (
+    select count(*)::bigint
+    from pg_class c
+    join pg_namespace n on n.oid = c.relnamespace
+    where n.nspname = 'public'
+      and c.relkind in ('r', 'p', 'v', 'm', 'f')
+      and c.relname like 'mastra\_%' escape '\'
+      and c.relname not in (select tablename from public_mastra_shadows)
+  ),
+  0::bigint,
+  'IPI-801 · MASTRA-PG-011 — no public.mastra_* relation outside the 33-name allowlist'
 );
 
 select ok(

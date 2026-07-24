@@ -11,8 +11,16 @@
 --   * REVOKE ALL from PUBLIC, anon, authenticated, service_role
 --   * ENABLE ROW LEVEL SECURITY
 --   * creates NO policies (default-deny for non-bypass roles)
---   * does NOT DROP tables or mutate rows (rollback = restore grants / disable RLS)
+--   * drops any policies that drifted onto shadows (fail-closed)
+--   * does NOT DROP tables or mutate rows
+--   * Recovery (if intentional policies existed): restore grants + disable RLS
+--     + recreate only those policies that were intentional drift (unexpected
+--     policies on shadows are not part of the intended fail-closed state)
 --   * does NOT touch mastra.* or unrelated public tables
+--
+-- Catalog fail-closed (no unexpected public.mastra_* beyond the 33-name
+-- allowlist) is enforced in postflight below for fresh replays, and on the
+-- live project by forward migration 20260724173755 (this file already applied).
 --
 -- Recurring drift check (Mastra auto-init can recreate grants after this one-shot):
 --   * supabase/tests/database/004_public_mastra_shadow_lockdown.sql re-asserts
@@ -176,4 +184,22 @@ BEGIN
         t, public_priv;
     END IF;
   END LOOP;
+
+  -- Fail closed if catalog has any public.mastra_% table/view outside allowlist
+  -- (Mastra auto-init can recreate new shadows; fixed inventory alone misses them).
+  -- Live project already applied this migration: see 20260724173755 for the same gate.
+  SELECT string_agg(c.relname, ', ' ORDER BY c.relname)
+  INTO bad
+  FROM pg_class c
+  JOIN pg_namespace n ON n.oid = c.relnamespace
+  WHERE n.nspname = 'public'
+    AND c.relkind IN ('r', 'p', 'v', 'm', 'f')
+    AND c.relname LIKE 'mastra\_%' ESCAPE '\'
+    AND NOT (c.relname = ANY (expected));
+
+  IF bad IS NOT NULL THEN
+    RAISE EXCEPTION
+      'IPI-801 · MASTRA-PG-011 — Retire Recreated public.mastra_* Shadow Tables: unexpected public.mastra_* relation(s) not in allowlist: %',
+      bad;
+  END IF;
 END $$;
