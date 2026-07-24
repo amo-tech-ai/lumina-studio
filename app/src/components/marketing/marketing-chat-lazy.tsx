@@ -12,7 +12,9 @@ import dynamic from "next/dynamic";
 // import itself from the server compilation. CopilotPopup is a fixed-position floating
 // widget (not in document flow), so there is no layout-shift to guard against — no
 // `loading` fallback needed.
-export const MarketingChat = dynamic(
+const MarketingChat = dynamic(
   () => import("./marketing-chat").then((m) => m.MarketingChat),
   { ssr: false },
 );
+
+export default MarketingChat;

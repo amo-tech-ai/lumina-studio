@@ -6,7 +6,7 @@ import { PortfolioSection } from "@/components/marketing/portfolio-section";
 import { ProcessSection } from "@/components/marketing/process-section";
 import { ClientsSection } from "@/components/marketing/clients-section";
 import { CTASection } from "@/components/marketing/cta-section";
-import { MarketingChat } from "@/components/marketing/marketing-chat-lazy";
+import MarketingChat from "@/components/marketing/marketing-chat-lazy";
 
 export const metadata: Metadata = {
   title: { absolute: "iPix — AI-Powered Content Studio for Fashion Brands" },
@@ -24,8 +24,10 @@ export const metadata: Metadata = {
 // WEB-002 — Home page: 6 sections (parity with Vite Index.tsx composition).
 // WEB-015.5 — MarketingChat mounts as a client island (feature-flag gated, no SSR).
 // IPI-706 · CF-BUNDLE-220 — imported via marketing-chat-lazy (next/dynamic ssr:false)
-// so @copilotkit/react-core/v2 + streamdown/mermaid/katex/cytoscape drop out of the
-// Worker's server bundle entirely, not just out of the SSR render.
+// to remove MarketingChat's direct contribution from the Worker's server bundle.
+// Note: this does NOT remove streamdown/mermaid/katex/cytoscape entirely — the shared
+// @copilotkit/react-core/v2 vendor chunk still retains them via always-mounted
+// CopilotKit hooks elsewhere in the app (see PR #624 metafile evidence).
 export default function HomePage() {
   return (
     <>
