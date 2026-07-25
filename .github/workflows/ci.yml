@@ -177,6 +177,9 @@ jobs:
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
           NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          # Trust Supabase pooler CA (scripts/certs/supabase-prod-ca-2021.crt).
+          # Do not set VERIFY_RLS_PG_INSECURE_SSL in CI (IPI-621).
+          PGSSLROOTCERT: ${{ github.workspace }}/scripts/certs/supabase-prod-ca-2021.crt
         run: npm run supabase:verify-booking-gate
 
       # IPI-476 · PLAN-CI-001 — planner scenario + Realtime (needs Node 22+ WebSocket)

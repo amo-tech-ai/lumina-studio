@@ -14,8 +14,19 @@
  *   (same reason as `CfEnvLike` in `src/lib/ai/cloudflare-models.ts`).
  */
 import { Client, type QueryResultRow } from "pg";
+import { requireResourceId } from "./mastra-tenant-scope";
 
 export type HyperdriveBinding = { connectionString: string };
+
+function requireHyperdriveConnectionString(
+  hyperdrive: HyperdriveBinding | null | undefined,
+): string {
+  const cs = hyperdrive?.connectionString;
+  if (typeof cs !== "string" || cs.trim() === "") {
+    throw new Error("Invalid Hyperdrive binding: missing connectionString");
+  }
+  return cs;
+}
 
 /**
  * Run one parameterized query against the Hyperdrive-fronted Postgres
@@ -30,7 +41,8 @@ export async function queryFresh<T extends QueryResultRow = QueryResultRow>(
   sql: string,
   params: unknown[] = [],
 ): Promise<T[]> {
-  const client = new Client({ connectionString: hyperdrive.connectionString });
+  const connectionString = requireHyperdriveConnectionString(hyperdrive);
+  const client = new Client({ connectionString });
   try {
     await client.connect();
     const result = await client.query<T>(sql, params);
@@ -40,4 +52,23 @@ export async function queryFresh<T extends QueryResultRow = QueryResultRow>(
     console.error("queryFresh: query failed", error instanceof Error ? error.message : error);
     throw new Error("Database query failed");
   }
+}
+
+/**
+ * IPI-621 · CF-DB-007 — fail-closed tenant-scoped query.
+ *
+ * Rejects missing/blank `resourceId` and invalid Hyperdrive bindings **before**
+ * connect. Prepends the verified key as `$1`; `sql` must bind
+ * `"resourceId" = $1` (or equivalent) and use `$2…` for any further params.
+ * No SET LOCAL / session tenant GUC.
+ */
+export async function queryFreshByResourceId<T extends QueryResultRow = QueryResultRow>(
+  hyperdrive: HyperdriveBinding,
+  resourceId: unknown,
+  sql: string,
+  params: unknown[] = [],
+): Promise<T[]> {
+  requireHyperdriveConnectionString(hyperdrive);
+  const rid = requireResourceId(resourceId);
+  return queryFresh<T>(hyperdrive, sql, [rid, ...params]);
 }
