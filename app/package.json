@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "engines": {
-    "node": ">=22"
+    "node": "24.x"
   },
   "scripts": {
     "build": "NEXT_PRIVATE_WORKER_THREADS=false next build",
