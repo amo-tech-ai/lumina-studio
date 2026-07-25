@@ -173,7 +173,8 @@ export function resolveMastraSchemaName(env: NodeJS.ProcessEnv = process.env): s
 export function isMastraObservabilityExporterEnabled(
   env: NodeJS.ProcessEnv = process.env,
 ): boolean {
-  return (env.MASTRA_OBSERVABILITY_EXPORTER ?? "").trim() === "1";
+  // Exact "1" only — no trim (malformed " 1 " must stay off).
+  return (env.MASTRA_OBSERVABILITY_EXPORTER ?? "") === "1";
 }
 
 /**

@@ -74,10 +74,13 @@ describe("assertMastraSchemaForObservabilityExporter (IPI-781 Â· MASTRA-PG-005 â
     ).toThrow(/got "public"/);
   });
 
-  it("isMastraObservabilityExporterEnabled latches only on \"1\"", async () => {
+  it("isMastraObservabilityExporterEnabled latches only on exact \"1\"", async () => {
     const { isMastraObservabilityExporterEnabled } = await import("./storage");
     expect(isMastraObservabilityExporterEnabled({})).toBe(false);
     expect(isMastraObservabilityExporterEnabled({ MASTRA_OBSERVABILITY_EXPORTER: "true" })).toBe(
+      false,
+    );
+    expect(isMastraObservabilityExporterEnabled({ MASTRA_OBSERVABILITY_EXPORTER: " 1 " })).toBe(
       false,
     );
     expect(isMastraObservabilityExporterEnabled({ MASTRA_OBSERVABILITY_EXPORTER: "1" })).toBe(
