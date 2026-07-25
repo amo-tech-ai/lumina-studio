@@ -9,12 +9,16 @@ import { RequestContext } from "@mastra/core/request-context";
 import { getCloudflareContext } from "@opennextjs/cloudflare";
 import { pickCfEnv } from "@/lib/ai/cloudflare-models";
 import { getMastra } from "@/mastra";
+import { getMastraMemory, makeMemoryResourceId } from "@/mastra/memory";
 import { getMastraStorage, MastraStorageUnavailableError } from "@/mastra/storage";
 import { type OperatorUser, extractAccessToken } from "@/lib/auth";
 import { isOperatorAuthEnforced, OperatorAuthError, withOperatorAuth } from "@/lib/operator-gate";
 import { isCopilotIntelligenceEnvComplete, isCopilotKitThreadsEnabled } from "@/lib/copilotkit/intelligence-config";
 import { requestToken } from "@/lib/request-token";
 import { withStreamIdleTimeout } from "@/lib/copilotkit/stream-idle-timeout";
+import { createUserScopedClient } from "@/lib/shoot/commit-shoot-draft";
+import { getCurrentOrgId } from "@/lib/crm/queries";
+import { rejectTenantKeyRewrite, TenantContextError } from "@/lib/db/mastra-tenant-scope";
 
 // See stream-idle-timeout.ts for why this exists — bounds a stalled agent
 // turn (e.g. a hung PostgresStore query) to a controlled RUN_ERROR instead
@@ -26,7 +30,90 @@ const STREAM_IDLE_TIMEOUT_MS = 20_000;
 // CopilotKit may invoke with a wrapped copy of the original Request object.
 const _requestUser = new AsyncLocalStorage<OperatorUser>();
 
+// IPI-146 · MASTRA-GOV-002 — org-scoped Mastra `resourceId`, resolved once per
+// request in `handler()` (before `endpoint(request)` runs) and read by the
+// `agents` factory below. Resolving it here — outside CopilotKit's internals —
+// means a missing org fails the request with a clean 403 instead of whatever
+// CopilotKit's own error handling would do with a thrown error from a factory
+// callback it doesn't know how to interpret.
+const _requestResourceId = new AsyncLocalStorage<string>();
+
 const UNKNOWN_USER: OperatorUser = { id: "unknown", name: "unknown" };
+
+/** Thrown when an authenticated operator has no organization membership, or
+ *  when a request targets a thread owned by a different organization. Both
+ *  are "fail closed" cases per IPI-146 — never fall back to a bare `user.id`. */
+class MastraOrgScopeError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "MastraOrgScopeError";
+  }
+}
+
+/**
+ * Resolves the org-scoped Mastra `resourceId` for the authenticated operator.
+ * Reuses the same `org_members` lookup as `/api/org/current`
+ * (`app/src/app/api/org/current/route.ts`) and the same token-propagation
+ * pattern already combined once in `getCrmUserClient()`
+ * (`app/src/mastra/tools/crm/_shared.ts`) — no second org model, no new
+ * Supabase client shape.
+ *
+ * Fails closed: throws `MastraOrgScopeError` when the operator has no
+ * organization membership, rather than falling back to a bare `user.id`
+ * (the pre-IPI-146 behavior, which isolated by user but not by org).
+ */
+async function resolveOrgScopedResourceId(user: OperatorUser, accessToken: string): Promise<string> {
+  const client = createUserScopedClient(accessToken);
+  const orgId = await getCurrentOrgId(user.id, client);
+  if (!orgId) {
+    throw new MastraOrgScopeError(`No organization membership for operator ${user.id}`);
+  }
+  return makeMemoryResourceId(orgId, user.id);
+}
+
+/**
+ * IPI-146 · MASTRA-GOV-002 — thread ownership check. `RunAgentInput.threadId`
+ * (AG-UI protocol, see `@ag-ui/core`) is client-supplied, so a forged or
+ * cross-org `threadId` must be rejected before the agent turn runs — Mastra's
+ * `Memory` does not enforce this itself (alpha `@mastra/memory` API; see
+ * IPI-779 for the future upgrade, out of scope here).
+ *
+ * Migration strategy A (compat read, chosen over one-shot migrate/orphan —
+ * see PR body): threads created before this change have `resourceId ===
+ * user.id` (bare, not org-scoped). Those are still accepted when the caller
+ * IS that same user — this doesn't weaken anything (bare-`user.id` scoping
+ * was already the full guarantee those threads ever had), it just avoids
+ * a data migration and avoids stranding every existing conversation on
+ * deploy. Only brand-new threads get the stronger org-scoped guarantee.
+ */
+async function assertThreadOwnership(
+  threadId: string,
+  expectedResourceId: string,
+  legacyUserId: string,
+): Promise<void> {
+  const thread = await getMastraMemory().getThreadById({ threadId });
+  if (!thread) return; // No existing thread — Mastra will create one under expectedResourceId.
+  if (thread.resourceId === legacyUserId) return; // Migration strategy A — see docstring above.
+  rejectTenantKeyRewrite(thread.resourceId, expectedResourceId);
+}
+
+/** Extracts `threadId` from a CopilotKit `agent/run`-style POST body without
+ *  consuming the original request stream (`request.clone()`), so `endpoint(request)`
+ *  can still read it normally afterward. Returns undefined for anything that
+ *  isn't a same-origin JSON POST with a non-blank string `threadId` — malformed
+ *  bodies are left for CopilotKit's own parser to reject with the right error. */
+async function extractThreadIdFromBody(request: Request): Promise<string | undefined> {
+  if (request.method !== "POST") return undefined;
+  const contentType = request.headers.get("content-type") ?? "";
+  if (!contentType.includes("application/json")) return undefined;
+  try {
+    const body = (await request.clone().json()) as { threadId?: unknown } | null;
+    const threadId = body?.threadId;
+    return typeof threadId === "string" && threadId.trim() ? threadId : undefined;
+  } catch {
+    return undefined;
+  }
+}
 
 if (!process.env.COPILOTKIT_LICENSE_TOKEN) {
   console.warn(
@@ -55,9 +142,20 @@ const runtime = new CopilotRuntime({
     } catch {
       // Vercel/Node — cfEnv stays unset, cloudflare-models.ts falls back to legacy.
     }
+    // IPI-146: resolved in handler() before endpoint(request) runs — a missing
+    // org already returned 403 by this point, so this store is always
+    // populated on any real request. The throw below is a defensive
+    // fail-closed guard (never silently fall back to bare user.id), not an
+    // expected runtime path.
+    const resourceId = _requestResourceId.getStore();
+    if (!resourceId) {
+      throw new MastraOrgScopeError(
+        "resourceId not resolved before agents() ran — refusing to start agent (fail closed)",
+      );
+    }
     const agents = MastraAgent.getLocalAgents({
       mastra: getMastra(),
-      resourceId: user.id,
+      resourceId,
       requestContext,
     });
     // IPI-760: `getLocalAgents()` does NOT accept `emitInterruptOutcome` in its
@@ -289,13 +387,39 @@ const handler = async (request: Request): Promise<Response> => {
     }
   }
 
+  const token = extractAccessToken(request) ?? "";
+
   try {
-    const token = extractAccessToken(request) ?? "";
+    // IPI-146: resolve the org-scoped resourceId, then (if this request
+    // targets an existing thread) verify that thread belongs to it — both
+    // BEFORE endpoint(request) runs, so a failure here never reaches
+    // CopilotKit's internals as an opaque thrown error.
+    const resourceId = await resolveOrgScopedResourceId(user, token);
+
+    const threadId = await extractThreadIdFromBody(request);
+    if (threadId) {
+      await assertThreadOwnership(threadId, resourceId, user.id);
+    }
+
     const response = await _requestUser.run(user, () =>
-      requestToken.run(token, () => endpoint(request)),
+      _requestResourceId.run(resourceId, () => requestToken.run(token, () => endpoint(request))),
     );
     return withStreamIdleTimeout(await normalizeRuntimeErrorResponse(response), STREAM_IDLE_TIMEOUT_MS);
   } catch (err) {
+    if (err instanceof MastraOrgScopeError) {
+      console.error("[copilotkit] org resolution failed — refusing request (fail closed)", err.message);
+      return Response.json(
+        { error: "No organization membership for this operator", code: "org_required" },
+        { status: 403 },
+      );
+    }
+    if (err instanceof TenantContextError) {
+      console.error("[copilotkit] thread ownership check failed — refusing request (fail closed)", err.message);
+      return Response.json(
+        { error: "Thread not found or access denied", code: "thread_forbidden" },
+        { status: 403 },
+      );
+    }
     if (err instanceof MastraStorageUnavailableError) {
       console.error("[copilotkit] persistence unavailable", err);
       return storageUnavailableResponse(err);

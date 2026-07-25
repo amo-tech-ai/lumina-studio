@@ -15,6 +15,20 @@ afterEach(() => {
   vi.resetModules();
 });
 
+/** IPI-146 · MASTRA-GOV-002 — org resolution runs on every request now; these
+ *  /info + SSE-normalization tests care about downstream behavior, not org
+ *  scoping itself, so default to a successful org lookup unless a test
+ *  overrides it. Thread ownership isn't exercised here (no `threadId` in any
+ *  request body below). */
+function mockOrgScopeDeps() {
+  vi.doMock("@/lib/shoot/commit-shoot-draft", () => ({
+    createUserScopedClient: vi.fn(() => ({})),
+  }));
+  vi.doMock("@/lib/crm/queries", () => ({
+    getCurrentOrgId: vi.fn().mockResolvedValue("org-info-test"),
+  }));
+}
+
 async function importRouteWithMocks() {
   vi.doMock("@/lib/operator-gate", async () => {
     const actual = await vi.importActual<typeof import("@/lib/operator-gate")>(
@@ -40,6 +54,8 @@ async function importRouteWithMocks() {
   vi.doMock("@/mastra", () => ({
     getMastra: vi.fn(() => ({ agents: mockAgents })),
   }));
+
+  mockOrgScopeDeps();
 
   return import("@/app/api/copilotkit/[[...slug]]/route");
 }
@@ -94,6 +110,8 @@ describe("CopilotKit /info — SSE discovery (IPI-670 · COPILOT-RUNTIME-001)", 
     vi.doMock("@/mastra", () => ({
       getMastra: vi.fn(() => ({})),
     }));
+
+    mockOrgScopeDeps();
 
     const route = await import("@/app/api/copilotkit/[[...slug]]/route");
     const response = await route.GET(
