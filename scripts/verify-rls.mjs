@@ -75,6 +75,37 @@ function resolveMastraRuntimeProbeUrl() {
   );
 }
 
+/**
+ * TLS for privileged pg probes against the Supabase pooler.
+ *
+ * Default: rejectUnauthorized:true + Supabase Root 2021 CA
+ * (scripts/certs/supabase-prod-ca-2021.crt — same trust anchor as Dashboard
+ * "SSL Configuration" / prod-ca-2021.crt). Override path via PGSSLROOTCERT or
+ * VERIFY_RLS_PG_SSLROOTCERT. Local-only escape hatch:
+ * VERIFY_RLS_PG_INSECURE_SSL=1 (never set in CI).
+ *
+ * @see https://supabase.com/docs/guides/platform/ssl-enforcement
+ */
+function resolvePgSsl() {
+  if (
+    process.env.VERIFY_RLS_PG_INSECURE_SSL === "1" ||
+    process.env.NODE_TLS_REJECT_UNAUTHORIZED === "0"
+  ) {
+    return { rejectUnauthorized: false };
+  }
+  const caPath =
+    process.env.PGSSLROOTCERT ||
+    process.env.VERIFY_RLS_PG_SSLROOTCERT ||
+    resolve(root, "scripts/certs/supabase-prod-ca-2021.crt");
+  if (existsSync(caPath)) {
+    return {
+      rejectUnauthorized: true,
+      ca: readFileSync(caPath, "utf8"),
+    };
+  }
+  return { rejectUnauthorized: true };
+}
+
 // Same pattern as REQUIRE_SERVICE_ROLE: without this flag, a CI job that never
 // wires a usable Postgres URL gets a silent console.warn skip on the one probe
 // that actually exercises hyperdrive_mastra_runtime's grants/RLS.
@@ -235,7 +266,7 @@ async function assertMastraRuntimeRoleProbe(onFixtureReady) {
   // query_timeout: bound every client.query in the try block (CI-safe; pg cancels the query).
   const client = new Client({
     connectionString: runtimeUrl,
-    ssl: { rejectUnauthorized: false },
+    ssl: resolvePgSsl(),
     connectionTimeoutMillis: 10_000,
     query_timeout: 15_000,
   });
@@ -380,12 +411,8 @@ async function assertMastraTenantContractProbe() {
     return;
   }
 
-  // Default: verify TLS certs. Opt out only for local self-signed setups.
-  const pgSsl =
-    process.env.VERIFY_RLS_PG_INSECURE_SSL === "1" ||
-    process.env.NODE_TLS_REJECT_UNAUTHORIZED === "0"
-      ? { rejectUnauthorized: false }
-      : { rejectUnauthorized: true };
+  // Default: verified TLS + Supabase Root CA (see resolvePgSsl).
+  const pgSsl = resolvePgSsl();
 
   const stamp = Date.now();
   const tenantA = `ipi621-tenant-a-${stamp}`;

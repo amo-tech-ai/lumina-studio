@@ -17,12 +17,12 @@
 -- **IPI-775 · Add WITH CHECK org-scoping to the 7 organizationId-bearing
 -- mastra.* tables**.
 --
--- Plan math: 4 catalog + 8 scoped CRUD/list + 1 role-gate documentation = 13
+-- Plan math: 5 catalog + 8 scoped CRUD/list + 1 role-gate documentation = 14
 
 set search_path to public, extensions;
 
 begin;
-select plan(13);
+select plan(14);
 
 -- 1) Runtime role must not bypass RLS (defense in depth).
 select is(
@@ -60,7 +60,20 @@ select is(
   'mastra_threads policy USING is true (role gate — app resourceId is the tenant contract)'
 );
 
--- 4) RLS must be enabled on mastra_threads (role gate only works when RLS is on).
+-- 4) Policy TO role must be hyperdrive_mastra_runtime only (not PUBLIC).
+select is(
+  (
+    select roles
+    from pg_policies
+    where schemaname = 'mastra'
+      and tablename = 'mastra_threads'
+      and policyname = 'hyperdrive_mastra_runtime_all'
+  ),
+  '{hyperdrive_mastra_runtime}',
+  'mastra_threads policy roles is only hyperdrive_mastra_runtime (not PUBLIC)'
+);
+
+-- 5) RLS must be enabled on mastra_threads (role gate only works when RLS is on).
 select ok(
   (
     select c.relrowsecurity
@@ -103,7 +116,7 @@ values
 
 set local role hyperdrive_mastra_runtime;
 
--- 5) Same-tenant scoped SELECT succeeds.
+-- 6) Same-tenant scoped SELECT succeeds.
 select results_eq(
   $$ select count(*)::bigint from mastra.mastra_threads
      where "resourceId" = 'pgtap-621-tenant-a'
@@ -112,7 +125,7 @@ select results_eq(
   'same-tenant resourceId SELECT returns own thread'
 );
 
--- 6) Forged / other-tenant resourceId → 0 rows (fail closed when app filters).
+-- 7) Forged / other-tenant resourceId → 0 rows (fail closed when app filters).
 select results_eq(
   $$ select count(*)::bigint from mastra.mastra_threads
      where "resourceId" = 'pgtap-621-forged-tenant'
@@ -121,7 +134,7 @@ select results_eq(
   'forged resourceId SELECT returns 0 rows'
 );
 
--- 7) Forged thread id under correct resourceId → 0 rows.
+-- 8) Forged thread id under correct resourceId → 0 rows.
 select results_eq(
   $$ select count(*)::bigint from mastra.mastra_threads
      where id = 'pgtap-621-forged-thread'
@@ -130,7 +143,7 @@ select results_eq(
   'forged threadId SELECT returns 0 rows'
 );
 
--- 8) Cross-tenant thread id + wrong resourceId → 0 (no leak via id alone).
+-- 9) Cross-tenant thread id + wrong resourceId → 0 (no leak via id alone).
 select results_eq(
   $$ select count(*)::bigint from mastra.mastra_threads
      where id = 'pgtap-621-thread-b'
@@ -139,7 +152,7 @@ select results_eq(
   'other-tenant threadId with own resourceId returns 0 rows'
 );
 
--- 9) Messages: forged thread_id under own resourceId → 0.
+-- 10) Messages: forged thread_id under own resourceId → 0.
 select results_eq(
   $$ select count(*)::bigint from mastra.mastra_messages
      where thread_id = 'pgtap-621-forged-thread'
@@ -148,7 +161,7 @@ select results_eq(
   'forged message thread_id SELECT returns 0 rows'
 );
 
--- 10) Scoped UPDATE by resourceId succeeds.
+-- 11) Scoped UPDATE by resourceId succeeds.
 select results_eq(
   $$ update mastra.mastra_threads
      set title = 'tenant A thread (updated)', "updatedAt" = now()
@@ -159,7 +172,7 @@ select results_eq(
   'same-tenant resourceId UPDATE returns 1 row'
 );
 
--- 11) UPDATE with forged resourceId affects 0 rows (fail closed when filtered).
+-- 12) UPDATE with forged resourceId affects 0 rows (fail closed when filtered).
 select results_eq(
   $$ with u as (
        update mastra.mastra_threads
@@ -173,7 +186,7 @@ select results_eq(
   'forged resourceId UPDATE affects 0 rows'
 );
 
--- 12) Scoped DELETE by resourceId succeeds (cleanup inside txn).
+-- 13) Scoped DELETE by resourceId succeeds (cleanup inside txn).
 select results_eq(
   $$ with d as (
        delete from mastra.mastra_messages
@@ -186,7 +199,7 @@ select results_eq(
   'same-tenant resourceId DELETE returns 1 row'
 );
 
--- 13) TEMPORARY tenant-isolation gap (not desired end-state): unscoped list
+-- 14) TEMPORARY tenant-isolation gap (not desired end-state): unscoped list
 --     still sees both fixture rows while mastra.* policies use USING(true).
 --     Expectation `2::bigint` is valid only until
 --     **IPI-775 · Add WITH CHECK org-scoping to the 7 organizationId-bearing
