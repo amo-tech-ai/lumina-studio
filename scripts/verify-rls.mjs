@@ -84,6 +84,10 @@ function resolveMastraRuntimeProbeUrl() {
  * VERIFY_RLS_PG_SSLROOTCERT. Local-only escape hatch:
  * VERIFY_RLS_PG_INSECURE_SSL=1 (never set in CI).
  *
+ * Pair with {@link sanitizePgConnectionString}: node-postgres replaces a
+ * supplied `ssl` object when the connection string still carries sslmode /
+ * sslrootcert / sslcert / sslkey (see https://node-postgres.com/features/ssl).
+ *
  * @see https://supabase.com/docs/guides/platform/ssl-enforcement
  */
 function resolvePgSsl() {
@@ -104,6 +108,19 @@ function resolvePgSsl() {
     };
   }
   return { rejectUnauthorized: true };
+}
+
+/** Strip SSL query params so a Client `ssl` option is not overwritten. */
+function sanitizePgConnectionString(connectionString) {
+  try {
+    const u = new URL(connectionString);
+    for (const key of ["sslmode", "sslrootcert", "sslcert", "sslkey"]) {
+      u.searchParams.delete(key);
+    }
+    return u.toString();
+  } catch {
+    return connectionString;
+  }
 }
 
 // Same pattern as REQUIRE_SERVICE_ROLE: without this flag, a CI job that never
@@ -265,7 +282,7 @@ async function assertMastraRuntimeRoleProbe(onFixtureReady) {
   // connectionTimeoutMillis: fail fast if the host is unreachable.
   // query_timeout: bound every client.query in the try block (CI-safe; pg cancels the query).
   const client = new Client({
-    connectionString: runtimeUrl,
+    connectionString: sanitizePgConnectionString(runtimeUrl),
     ssl: resolvePgSsl(),
     connectionTimeoutMillis: 10_000,
     query_timeout: 15_000,
@@ -412,7 +429,9 @@ async function assertMastraTenantContractProbe() {
   }
 
   // Default: verified TLS + Supabase Root CA (see resolvePgSsl).
+  // Sanitize URL first so sslmode=… in secrets cannot replace `ssl`.
   const pgSsl = resolvePgSsl();
+  const sanitizedRuntimeUrl = sanitizePgConnectionString(runtimeUrl);
 
   const stamp = Date.now();
   const tenantA = `ipi621-tenant-a-${stamp}`;
@@ -424,7 +443,7 @@ async function assertMastraTenantContractProbe() {
 
   async function withRuntimeClient(fn) {
     const client = new Client({
-      connectionString: runtimeUrl,
+      connectionString: sanitizedRuntimeUrl,
       ssl: pgSsl,
       connectionTimeoutMillis: 10_000,
       query_timeout: 15_000,
@@ -625,13 +644,13 @@ async function assertMastraTenantContractProbe() {
   // filtering by tenant B — and must not depend on any SET LOCAL tenant GUC.
   {
     const client1 = new Client({
-      connectionString: runtimeUrl,
+      connectionString: sanitizedRuntimeUrl,
       ssl: pgSsl,
       connectionTimeoutMillis: 10_000,
       query_timeout: 15_000,
     });
     const client2 = new Client({
-      connectionString: runtimeUrl,
+      connectionString: sanitizedRuntimeUrl,
       ssl: pgSsl,
       connectionTimeoutMillis: 10_000,
       query_timeout: 15_000,

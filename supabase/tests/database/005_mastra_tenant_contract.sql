@@ -17,12 +17,12 @@
 -- **IPI-775 · Add WITH CHECK org-scoping to the 7 organizationId-bearing
 -- mastra.* tables**.
 --
--- Plan math: 5 catalog + 8 scoped CRUD/list + 1 role-gate documentation = 14
+-- Plan math: 5 catalog + 9 scoped CRUD/list + 1 role-gate documentation = 15
 
 set search_path to public, extensions;
 
 begin;
-select plan(14);
+select plan(15);
 
 -- 1) Runtime role must not bypass RLS (defense in depth).
 select is(
@@ -161,7 +161,16 @@ select results_eq(
   'forged message thread_id SELECT returns 0 rows'
 );
 
--- 11) Scoped UPDATE by resourceId succeeds.
+-- 11) Messages: seeded other-tenant thread_id under own resourceId → 0.
+select results_eq(
+  $$ select count(*)::bigint from mastra.mastra_messages
+     where thread_id = 'pgtap-621-thread-b'
+       and "resourceId" = 'pgtap-621-tenant-a' $$,
+  $$ values (0::bigint) $$,
+  'cross-tenant message thread_id with own resourceId returns 0 rows'
+);
+
+-- 12) Scoped UPDATE by resourceId succeeds.
 select results_eq(
   $$ update mastra.mastra_threads
      set title = 'tenant A thread (updated)', "updatedAt" = now()
@@ -172,7 +181,7 @@ select results_eq(
   'same-tenant resourceId UPDATE returns 1 row'
 );
 
--- 12) UPDATE with forged resourceId affects 0 rows (fail closed when filtered).
+-- 13) UPDATE with forged resourceId affects 0 rows (fail closed when filtered).
 select results_eq(
   $$ with u as (
        update mastra.mastra_threads
@@ -186,7 +195,7 @@ select results_eq(
   'forged resourceId UPDATE affects 0 rows'
 );
 
--- 13) Scoped DELETE by resourceId succeeds (cleanup inside txn).
+-- 14) Scoped DELETE by resourceId succeeds (cleanup inside txn).
 select results_eq(
   $$ with d as (
        delete from mastra.mastra_messages
@@ -199,7 +208,7 @@ select results_eq(
   'same-tenant resourceId DELETE returns 1 row'
 );
 
--- 14) TEMPORARY tenant-isolation gap (not desired end-state): unscoped list
+-- 15) TEMPORARY tenant-isolation gap (not desired end-state): unscoped list
 --     still sees both fixture rows while mastra.* policies use USING(true).
 --     Expectation `2::bigint` is valid only until
 --     **IPI-775 · Add WITH CHECK org-scoping to the 7 organizationId-bearing
