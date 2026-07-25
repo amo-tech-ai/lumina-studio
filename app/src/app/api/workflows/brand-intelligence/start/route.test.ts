@@ -167,5 +167,9 @@ describe("POST /api/workflows/brand-intelligence/start", () => {
     const res = await post();
     expect(res.status).toBe(403);
     expect(mockStartAsync).not.toHaveBeenCalled();
+    // A personal brand has no roles — don't tell the caller to become an org editor.
+    const { error } = (await res.json()) as { error: string };
+    expect(error).toMatch(/own this brand/);
+    expect(error).not.toMatch(/organization/);
   });
 });

@@ -87,8 +87,10 @@ export async function POST(request: Request) {
       );
     }
   } else if (brand.user_id !== actorId) {
+    // Personal brand (no org): ownership is the only path in, so the org-role
+    // wording above would be misleading here.
     return NextResponse.json(
-      { error: "You must be an organization owner or editor to start a brand analysis" },
+      { error: "You must own this brand to start a brand analysis" },
       { status: 403 },
     );
   }
