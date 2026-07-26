@@ -223,21 +223,37 @@ export type CreateThreadImmediateReadOpts = {
   resourceId: unknown;
   /** When set, deterministic threadId; skip save if thread already exists for same resource. */
   idempotencyKey?: string;
+  /**
+   * Keep a newly written Idempotency-Key row after the probe (for cross-request replay).
+   * Default false so unique soak keys do not permanently accumulate `mastra_threads` rows.
+   * Opt in only when intentionally testing replay (fixed probe key).
+   */
+  retainForReplay?: boolean;
   timeoutMs?: number;
   cleanup?: boolean;
+};
+
+/** Outcome of a canary attempt — callers must schedule `backgroundWork` with waitUntil/after. */
+export type CreateThreadCanaryOutcome = {
+  result: ThreadCanaryResult;
+  /**
+   * Present on the client-timeout path: settle orphan DB work, cleanup/close, release slot.
+   * Must be registered with Cloudflare `ExecutionContext.waitUntil` or Next.js `after()`
+   * before the HTTP response is returned — otherwise the Worker may cancel it.
+   */
+  backgroundWork?: Promise<void>;
 };
 
 /**
  * Locked IPI-623 workload: create one Mastra thread, immediately read it back.
  * Tenant fail-closed via `requireResourceId`. Optional cleanup after proof.
- * Cleanup only deletes non-keyed ephemeral threads this invocation wrote
- * (never cross-tenant / never Idempotency-Key rows — those must survive for replay).
+ * Cleanup deletes threads this invocation wrote unless `retainForReplay` (never cross-tenant).
  */
 export async function createThreadImmediateRead(
   hyperdrive: HyperdriveBinding,
   PostgresStore: PostgresStoreCtor,
   opts: CreateThreadImmediateReadOpts,
-): Promise<ThreadCanaryResult> {
+): Promise<CreateThreadCanaryOutcome> {
   const resourceId = requireResourceId(opts.resourceId);
   const threadId =
     opts.idempotencyKey != null
@@ -245,7 +261,9 @@ export async function createThreadImmediateRead(
       : `ipi-623-canary-${crypto.randomUUID()}`;
   const timeoutMs = opts.timeoutMs ?? HD_THREAD_CANARY_TIMEOUT_MS;
   const cleanup = opts.cleanup !== false;
-  const preserveForReplay = opts.idempotencyKey != null;
+  // Keyed rows are cleaned by default; opt into retention for intentional replay probes.
+  const preserveForReplay =
+    opts.idempotencyKey != null && opts.retainForReplay === true;
   const started = Date.now();
 
   const result: ThreadCanaryResult = {
@@ -266,7 +284,7 @@ export async function createThreadImmediateRead(
     result.errorClass = "retryable";
     result.error = "concurrency_saturated";
     result.latencyMs = Date.now() - started;
-    return result;
+    return { result };
   }
 
   const slotEpoch = g.__ipixHdThreadCanarySlotEpoch ?? 0;
@@ -392,11 +410,12 @@ export async function createThreadImmediateRead(
   };
 
   if (timedOut) {
-    // Return timeout to the caller immediately; slot stays held until settle/orphan + cleanup.
-    void finishCleanupAndRelease();
-    return { ...result };
+    // Return timeout immediately; caller must waitUntil/after(backgroundWork) so
+    // settle + close + releaseSlot still run after the HTTP response is sent.
+    const backgroundWork = finishCleanupAndRelease();
+    return { result: { ...result }, backgroundWork };
   }
 
   await finishCleanupAndRelease();
-  return result;
+  return { result };
 }
