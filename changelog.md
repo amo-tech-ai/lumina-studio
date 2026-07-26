@@ -8,6 +8,28 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### 2026-07-26 — IPI-823 · CF-DB-009c: Harden HD Thread Canary Post-Merge Findings
+
+**PR #642 — merge `fd5a534`. Single concern: `app/src/lib/db/hyperdrive-thread-canary` hardening (does not wire `ENABLE_HYPERDRIVE_THREAD_CANARY` — that is IPI-822 · CF-DB-009b, separate).**
+
+Hardens the IPI-623 · CF-DB-009 Hyperdrive Mastra thread create→read canary (#640) so preview soak signals stay trustworthy:
+
+- **Slot retention on timeout:** a timed-out create→read now returns immediately, but the isolate semaphore slot stays held until the underlying DB roundtrip settles or a new `HD_THREAD_CANARY_ORPHAN_TIMEOUT_MS` (5s) elapses — cleanup/close/release runs as `backgroundWork`, registered via Cloudflare `ctx.waitUntil` or Next.js `after()` in the route handler. Prevents timed-out requests from freeing a slot while Postgres work keeps running (stacked pools).
+- **Idempotent cleanup:** keyed canary rows are deleted by default after a successful write; replay now requires body `retainForReplay: true` plus a stable `Idempotency-Key`, otherwise unique soak keys no longer accumulate `mastra_threads` rows.
+- **Latency accuracy:** `latencyMs` is recorded before cleanup/close; new optional `cleanupLatencyMs` separates probe latency from cleanup cost so soak p95 isn't inflated by delete/close time.
+- **New error class:** unmatched immediate reads now classify as `roundtrip_failed` instead of a generic bucket.
+- **Deferred (ponytail):** `duplicateWrite` detection stays `false` until `PostgresStore` exposes insert-vs-upsert.
+
+**Files changed:** `app/src/lib/db/hyperdrive-thread-canary.ts`, `app/src/lib/db/hyperdrive-thread-canary.test.ts`, `app/src/app/api/internal/hyperdrive-thread-canary/route.ts`, `app/src/app/api/internal/hyperdrive-thread-canary/route.test.ts`.
+
+**Tests:** `vitest run` on both canary suites — 25 passed; `npm run typecheck` green; pre-push hook full suite green.
+
+**Production impact:** none — canary route stays behind `ENABLE_HYPERDRIVE_THREAD_CANARY` (still unwired) and the isolate circuit-breaker; no wrangler/workflow/allowlist changes; does not reopen #640.
+
+**Known limitations:** if the underlying save is still in flight past the orphan bound, `createdByUs` can still read `false` while the write later lands, so a unique soak-key row can leak past cleanup — flagged in-code for a future best-effort delete-after-orphan or a sweeper on the `ipi-623-canary-` prefix. `duplicateWrite` remains hardcoded `false` pending store API support.
+
+**Reviewer follow-up (open in PR):** confirm timeout path returns quickly with cleanup scheduled via `waitUntil`/`after`; confirm keyed rows delete by default; confirm replay requires both `retainForReplay: true` and a stable `Idempotency-Key`. Soft-CI `supabase-linked-gates` drift on this PR is unrelated and was not treated as a failure.
+
 ### 2026-07-26 — IPI-815: Fix Racy NewPlanDialog Idempotency-Key Tests Blocking the Pre-Push Gate
 
 **PR #634 — merge `aa5d433`. Test-only; no production component changed.**
