@@ -22,6 +22,52 @@ function edgeFnUrl(fn: string) {
   return `${url}/functions/v1/${fn}`;
 }
 
+/** Upper bound on upstream text copied into a workflow error. */
+const FAILURE_DETAIL_LIMIT = 500;
+
+/**
+ * Flatten and cap untrusted upstream text before it goes into an Error message.
+ *
+ * The edge fn body is not guaranteed to be small or safe to echo — a gateway can return a
+ * multi-megabyte HTML page, and the workflow error is persisted in Mastra run state and read
+ * back into the UI, so an unbounded copy is both a storage and a disclosure problem (see
+ * IPI-817 on keeping credentials out of brand analysis snapshots). Whitespace is collapsed so
+ * a stack trace or HTML block cannot smuggle newlines into a single-line log record.
+ */
+function boundDetail(raw: string): string {
+  const flat = raw.replace(/\s+/g, " ").trim();
+  if (!flat) return "(empty response body)";
+  return flat.length > FAILURE_DETAIL_LIMIT
+    ? `${flat.slice(0, FAILURE_DETAIL_LIMIT)}… [truncated, ${flat.length} chars]`
+    : flat;
+}
+
+/**
+ * Record the analysis as failed, then build the error to throw.
+ *
+ * Returns rather than throws so callers keep an explicit `throw`, which is what makes the
+ * control flow readable at the call site. If the status write itself fails, that is surfaced
+ * alongside the original cause instead of replacing it — losing the upstream reason would
+ * make the failure much harder to diagnose, and silently reporting "marked failed" when the
+ * write did not land is exactly the kind of lie this step used to tell.
+ */
+async function failAnalysis(
+  sb: ReturnType<typeof adminClient>,
+  brandId: string,
+  summary: string,
+  detail: string,
+): Promise<Error> {
+  const { error: writeErr } = await sb
+    .from("brands")
+    .update({ intake_status: "failed", updated_at: new Date().toISOString() })
+    .eq("id", brandId);
+  const parts = [`${summary}: ${boundDetail(detail)}`];
+  if (writeErr) {
+    parts.push(`intake_status=failed was NOT recorded: ${boundDetail(writeErr.message)}`);
+  }
+  return new Error(parts.join(" — "));
+}
+
 // Step 1: validate brand exists and return basic info
 export const validateBrand = createStep({
   id: "validate-brand",
@@ -167,15 +213,30 @@ export const extractProfile = createStep({
     // Use service role key — user JWT may be expired after a long crawl (>1h)
     const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
     if (!serviceKey) throw new Error("SUPABASE_SERVICE_ROLE_KEY not set");
-    const res = await fetch(edgeFnUrl("brand-intelligence"), {
-      method: "POST",
-      signal: AbortSignal.timeout(120_000),
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${serviceKey}`,
-      },
-      body: JSON.stringify({ brandId, url: brand.brand_url, crawlResultId: inputData.crawlId, draft_mode: true }),
-    });
+    let res: Response;
+    try {
+      res = await fetch(edgeFnUrl("brand-intelligence"), {
+        method: "POST",
+        signal: AbortSignal.timeout(120_000),
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${serviceKey}`,
+        },
+        body: JSON.stringify({ brandId, url: brand.brand_url, crawlResultId: inputData.crawlId, draft_mode: true }),
+      });
+    } catch (cause) {
+      // A refused connection, a DNS failure or the 120s AbortSignal.timeout firing all land
+      // here. The product outcome is identical to a non-2xx — the analysis did not happen —
+      // but this path used to skip the status write entirely and leave the brand pinned at
+      // "analysis_running" forever, which reads as "still working" in the UI and blocks the
+      // start guard from ever allowing a retry.
+      throw await failAnalysis(
+        sb,
+        brandId,
+        "brand-intelligence edge fn unreachable",
+        cause instanceof Error ? `${cause.name}: ${cause.message}` : String(cause),
+      );
+    }
     // On success, the edge fn sets intake_status: "draft_ready" itself — don't overwrite.
     //
     // IPI-807 P0b — a non-2xx aborts the run. This previously warned, marked the brand
@@ -193,12 +254,8 @@ export const extractProfile = createStep({
     // on. Presenting a clearly-marked incomplete draft is a real feature (persisted flag
     // plus brand detail UI) and is tracked separately.
     if (!res.ok) {
-      const msg = await res.text().catch(() => res.statusText);
-      await sb
-        .from("brands")
-        .update({ intake_status: "failed", updated_at: new Date().toISOString() })
-        .eq("id", brandId);
-      throw new Error(`brand-intelligence edge fn ${res.status}: ${msg}`);
+      const detail = await res.text().catch(() => res.statusText);
+      throw await failAnalysis(sb, brandId, `brand-intelligence edge fn ${res.status}`, detail);
     }
     return { ok: true };
   },
