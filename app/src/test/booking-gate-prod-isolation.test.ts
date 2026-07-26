@@ -34,25 +34,77 @@ function bookingGateJob(): string {
 }
 
 /**
- * Literals that are falsy in a GitHub Actions expression, so can never survive as the middle
- * operand of `a && b || c` — the chain always falls through to `c`.
+ * Is `operand` a literal that GitHub Actions evaluates as falsy?
+ *
+ * Non-numeric spellings are a closed set. Numbers are *evaluated* rather than enumerated —
+ * GitHub accepts JSON number syntax, so `0.00`, `-0.0`, `0e0` and `.0` are all zero and all
+ * falsy. An earlier version of this file listed `0`, `-0` and `0.0` by hand and let `0.00`
+ * through, which is exactly the silent-fallthrough this scan exists to prevent.
+ *
+ * Quoted strings stay truthy unless empty: `'0'` is a non-empty string, so it survives as a
+ * middle operand and must not be flagged.
  * https://docs.github.com/actions/learn-github-actions/expressions
  */
-const FALSY_LITERALS = new Set(["''", '""', "false", "null", "0", "-0", "0.0"]);
+function isFalsyOperand(operand: string): boolean {
+  if (!operand) return false;
+  if (operand === "''" || operand === '""' || operand === "false" || operand === "null") {
+    return true;
+  }
+  // Only bare numerics reach Number() as a finite value; `secrets.X`, `true` and `'0'` are NaN.
+  const asNumber = Number(operand);
+  return Number.isFinite(asNumber) && asNumber === 0;
+}
 
 /**
- * Every `${{ … }}` expression in `text` whose `a && b || c` middle operand is a falsy literal.
+ * Every `${{ … }}` expression in `text` whose `a && b || c` middle operand is falsy.
  *
- * Parses the operand rather than matching one spelling: the original version tested
- * `/&& ''/` and silently accepted `&& false`, `&& null` and `&& 0`, which fail identically.
- * The operand pattern stops at `&` and `|` so it cannot run past its own operators.
+ * Parses the operand rather than matching one spelling: the first version tested `/&& ''/` and
+ * silently accepted `&& false`, `&& null` and `&& 0`, which fail identically. The operand
+ * pattern stops at `&` and `|` so it cannot run past its own operators.
  */
 function findFalsyMiddleOperands(text: string): string[] {
   return [...text.matchAll(/\$\{\{[^}]*\}\}/g)]
     .map((m) => m[0])
     .filter((expr) =>
-      [...expr.matchAll(/&&\s*([^&|]+?)\s*\|\|/g)].some((m) => FALSY_LITERALS.has(m[1].trim())),
+      [...expr.matchAll(/&&\s*([^&|]+?)\s*\|\|/g)].some((m) => isFalsyOperand(m[1].trim())),
     );
+}
+
+/**
+ * Every `run:` scalar in `jobText`, including `run: |` and `run: >` block bodies.
+ *
+ * Matching `run:` lines alone misses the common block form, where the expansion sits on a
+ * continuation line — which would let the exact template-injection shape this file prohibits
+ * pass unnoticed. A block body is every following line indented deeper than the `run:` key.
+ */
+function runScalars(jobText: string): string[] {
+  const lines = jobText.split("\n");
+  const scalars: string[] = [];
+
+  for (let i = 0; i < lines.length; i++) {
+    const match = /^(\s*)run:\s*(.*)$/.exec(lines[i]);
+    if (!match) continue;
+
+    const indent = match[1].length;
+    const inline = match[2].trim();
+    if (inline && !/^[|>]/.test(inline)) {
+      scalars.push(inline);
+      continue;
+    }
+
+    const body: string[] = [];
+    for (let j = i + 1; j < lines.length; j++) {
+      if (lines[j].trim() === "") {
+        body.push(lines[j]);
+        continue;
+      }
+      if (lines[j].length - lines[j].trimStart().length <= indent) break;
+      body.push(lines[j]);
+    }
+    scalars.push(body.join("\n"));
+  }
+
+  return scalars;
 }
 
 /** A named step's text, from its `- name:` line to the end of the job. */
@@ -84,13 +136,16 @@ describe("booking-gate production isolation (IPI-810)", () => {
   // and would have waved through `&& false`, `&& null` and `&& 0`, each of which is equally
   // falsy in a GitHub expression and falls through to the fallback in exactly the same way.
   it("flags every falsy literal as a middle operand, not just the empty string", () => {
-    for (const falsy of ["''", '""', "false", "null", "0", "-0"]) {
+    // Numeric zero has many spellings and GitHub accepts JSON number syntax, so these are
+    // evaluated rather than enumerated. `0.00` slipped past the hand-written list.
+    for (const falsy of ["''", '""', "false", "null", "0", "-0", "0.0", "0.00", "-0.0", "0e0", ".0"]) {
       const expr = `\${{ github.event_name == 'pull_request' && ${falsy} || secrets.PROD_URL }}`;
       expect(findFalsyMiddleOperands(expr), `${falsy} must be flagged`).toHaveLength(1);
     }
     // Truthy middle operands are the correct shape and must not be flagged — including
-    // ci.yml's own `&& '--skip-api'`, and the secret-in-the-middle credential form.
-    for (const truthy of ["secrets.PROD_URL", "'--skip-api'", "'1'", "true"]) {
+    // ci.yml's own `&& '--skip-api'`, and the secret-in-the-middle credential form. `'0'` is a
+    // non-empty string, so it is truthy despite looking like zero.
+    for (const truthy of ["secrets.PROD_URL", "'--skip-api'", "'1'", "'0'", "true", "1"]) {
       const expr = `\${{ github.event_name != 'pull_request' && ${truthy} || '' }}`;
       expect(findFalsyMiddleOperands(expr), `${truthy} must not be flagged`).toHaveLength(0);
     }
@@ -130,14 +185,27 @@ describe("booking-gate production isolation (IPI-810)", () => {
   // the shell. Not exploitable for a fixed literal, but the whole booking-gate job handles
   // credentials, so the shape stays out of `run:` entirely — values come through `env:`.
   it("never interpolates a GitHub expression directly into a run: script", () => {
-    const offenders = job
-      .split("\n")
-      .filter((line) => /^\s*run:.*\$\{\{/.test(line))
-      .map((line) => line.trim());
+    const offenders = runScalars(job).filter((scalar) => scalar.includes("${{"));
     expect(
       offenders,
       "pass the value through env: and reference it as a shell variable instead",
     ).toEqual([]);
+  });
+
+  // The scanner above is only as good as its YAML handling. The booking-gate job already uses
+  // `run: |` for the target guard, so a body-line expansion is the realistic way this rule gets
+  // violated — and a line-by-line filter cannot see it.
+  it("detects an expression on a run: block body line, not just the run: line", () => {
+    const inlineForm = `      - name: x\n        run: echo \${{ secrets.TOKEN }}\n`;
+    const blockForm = `      - name: y\n        run: |\n          echo "start"\n          echo \${{ secrets.TOKEN }}\n`;
+    const safeBlock = `      - name: z\n        run: |\n          echo "$TOKEN"\n`;
+
+    expect(runScalars(inlineForm).filter((s) => s.includes("${{"))).toHaveLength(1);
+    expect(
+      runScalars(blockForm).filter((s) => s.includes("${{")),
+      "a ${{ }} on a block-scalar body line must be caught",
+    ).toHaveLength(1);
+    expect(runScalars(safeBlock).filter((s) => s.includes("${{"))).toHaveLength(0);
   });
 
   it("runs the planner scenario on push only", () => {
