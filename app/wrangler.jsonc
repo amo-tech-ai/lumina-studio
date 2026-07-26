@@ -52,6 +52,8 @@
     // IPI-620 (Part B): PostgresStore + Hyperdrive compatibility spike route stays dark
     // until explicitly flipped for a preview proof — see cloudflare-workflow smoke pattern.
     "ENABLE_HYPERDRIVE_PG_SMOKE": "false",
+    // IPI-822 · CF-DB-009b — thread canary stays dark in Git; preview-only flip via GitHub env var.
+    "ENABLE_HYPERDRIVE_THREAD_CANARY": "false",
     // IPI-60: Cloudinary DAM env for detectEnv() — Workers lack VERCEL_ENV; fail-closed without this.
     "DAM_ENV": "staging"
   },
@@ -100,6 +102,7 @@
         "OPERATOR_AUTH_ENABLED": "true",
         "ENABLE_CF_AI_SMOKE": "false",
         "ENABLE_HYPERDRIVE_PG_SMOKE": "false",
+        "ENABLE_HYPERDRIVE_THREAD_CANARY": "false",
         "DAM_ENV": "staging"
       },
       "ai": {
@@ -144,6 +147,7 @@
         "OPERATOR_AUTH_ENABLED": "true",
         "ENABLE_CF_AI_SMOKE": "false",
         "ENABLE_HYPERDRIVE_PG_SMOKE": "false",
+        "ENABLE_HYPERDRIVE_THREAD_CANARY": "false",
         "DAM_ENV": "prod"
       },
       "ai": {

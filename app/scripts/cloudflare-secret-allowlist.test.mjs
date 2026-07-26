@@ -158,6 +158,53 @@ describe("cloudflare-secret-allowlist", () => {
     }
   });
 
+  it("IPI-822 wires ENABLE_HYPERDRIVE_THREAD_CANARY (allowlist + workflow + wrangler false)", () => {
+    expect(WRANGLER_VAR_NAMES).toContain("ENABLE_HYPERDRIVE_THREAD_CANARY");
+    expect(WRANGLER_REQUIRED_VAR_NAMES).not.toContain("ENABLE_HYPERDRIVE_THREAD_CANARY");
+
+    const workflowPath = resolve(
+      dirname(fileURLToPath(import.meta.url)),
+      "../../.github/workflows/cloudflare-secrets-sync.yml",
+    );
+    const yaml = readFileSync(workflowPath, "utf8");
+    expect(yaml).toContain(
+      "ENABLE_HYPERDRIVE_THREAD_CANARY: ${{ vars.ENABLE_HYPERDRIVE_THREAD_CANARY }}",
+    );
+
+    const wranglerPath = resolve(dirname(fileURLToPath(import.meta.url)), "../wrangler.jsonc");
+    const wrangler = readFileSync(wranglerPath, "utf8");
+    // Top-level vars + env.preview.vars + env.production.vars (non-inheritable).
+    const falseDecls = wrangler.match(
+      /"ENABLE_HYPERDRIVE_THREAD_CANARY"\s*:\s*"false"/g,
+    );
+    expect(falseDecls?.length).toBe(3);
+    expect(wrangler).not.toMatch(/"ENABLE_HYPERDRIVE_THREAD_CANARY"\s*:\s*"true"/);
+  });
+
+  it("IPI-824 maps Hyperdrive local connection string from DATABASE_URL (not Worker secrets)", () => {
+    // Wrangler system env — must not enter runtime allowlist / secrets-file.
+    expect(RUNTIME_SECRET_NAMES).not.toContain(
+      "CLOUDFLARE_HYPERDRIVE_LOCAL_CONNECTION_STRING_HYPERDRIVE_FRESH",
+    );
+    expect(WRANGLER_VAR_NAMES).not.toContain(
+      "CLOUDFLARE_HYPERDRIVE_LOCAL_CONNECTION_STRING_HYPERDRIVE_FRESH",
+    );
+
+    const workflowPath = resolve(
+      dirname(fileURLToPath(import.meta.url)),
+      "../../.github/workflows/cloudflare-secrets-sync.yml",
+    );
+    const yaml = readFileSync(workflowPath, "utf8");
+    expect(yaml).toContain(
+      "CLOUDFLARE_HYPERDRIVE_LOCAL_CONNECTION_STRING_HYPERDRIVE_FRESH: ${{ secrets.DATABASE_URL }}",
+    );
+    // Present on both GitHub-source dry-run and live upload steps.
+    const mappings = yaml.match(
+      /CLOUDFLARE_HYPERDRIVE_LOCAL_CONNECTION_STRING_HYPERDRIVE_FRESH:\s*\$\{\{\s*secrets\.DATABASE_URL\s*\}\}/g,
+    );
+    expect(mappings?.length).toBeGreaterThanOrEqual(2);
+  });
+
   it("diffSecretNames reports extra and missing by name only", () => {
     const allowlist = runtimeSecretNamesForWranglerEnv("production");
     const deployed = allowlist.filter((n) => n !== "FIRECRAWL_API_KEY");
