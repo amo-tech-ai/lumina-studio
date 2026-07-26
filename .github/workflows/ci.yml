@@ -252,7 +252,17 @@ jobs:
           # Trust Supabase pooler CA (scripts/certs/supabase-prod-ca-2021.crt).
           # Do not set VERIFY_RLS_PG_INSECURE_SSL in CI (IPI-621).
           PGSSLROOTCERT: ${{ github.workspace }}/scripts/certs/supabase-prod-ca-2021.crt
-        run: npm run supabase:verify-booking-gate -- ${{ github.event_name == 'pull_request' && '--skip-api' || '' }}
+          # Resolved here rather than interpolated into `run:` below. A ${{ }} expansion inside
+          # a shell script is the template-injection shape zizmor flags, and this repo already
+          # states the rule for QA_PASSWORD in shoot-wizard-e2e: read the value through env so
+          # the shell never re-parses it. The value is a fixed literal keyed on
+          # github.event_name, so it was not exploitable — but the shape is worth not teaching.
+          # Middle operand is truthy ('--skip-api'), which is the correct spelling; see the
+          # credential note above for why a falsy middle operand would invert the meaning.
+          SKIP_API_FLAG: ${{ github.event_name == 'pull_request' && '--skip-api' || '' }}
+        # Unquoted so an empty value disappears via word-splitting instead of becoming an
+        # empty argv entry.
+        run: npm run supabase:verify-booking-gate -- ${SKIP_API_FLAG}
 
       # IPI-476 · PLAN-CI-001 — planner scenario + Realtime (needs Node 22+ WebSocket)
       # IPI-810 phase 2 — push only. This step never had a target guard at all: it takes

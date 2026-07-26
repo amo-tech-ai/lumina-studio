@@ -33,6 +33,28 @@ function bookingGateJob(): string {
   return next === -1 ? rest : rest.slice(0, next);
 }
 
+/**
+ * Literals that are falsy in a GitHub Actions expression, so can never survive as the middle
+ * operand of `a && b || c` — the chain always falls through to `c`.
+ * https://docs.github.com/actions/learn-github-actions/expressions
+ */
+const FALSY_LITERALS = new Set(["''", '""', "false", "null", "0", "-0", "0.0"]);
+
+/**
+ * Every `${{ … }}` expression in `text` whose `a && b || c` middle operand is a falsy literal.
+ *
+ * Parses the operand rather than matching one spelling: the original version tested
+ * `/&& ''/` and silently accepted `&& false`, `&& null` and `&& 0`, which fail identically.
+ * The operand pattern stops at `&` and `|` so it cannot run past its own operators.
+ */
+function findFalsyMiddleOperands(text: string): string[] {
+  return [...text.matchAll(/\$\{\{[^}]*\}\}/g)]
+    .map((m) => m[0])
+    .filter((expr) =>
+      [...expr.matchAll(/&&\s*([^&|]+?)\s*\|\|/g)].some((m) => FALSY_LITERALS.has(m[1].trim())),
+    );
+}
+
 /** A named step's text, from its `- name:` line to the end of the job. */
 function stepBlock(job: string, name: string): string {
   const i = job.indexOf(`- name: ${name}`);
@@ -49,16 +71,29 @@ describe("booking-gate production isolation (IPI-810)", () => {
   // secret in the middle operand and the empty string last. Scanned across the whole file,
   // not just this job, because the trap is not job-specific.
   it("contains no falsy-middle-operand ternary anywhere in ci.yml", () => {
-    const offenders = [...ciYml.matchAll(/\$\{\{[^}]*\}\}/g)]
-      .map((m) => m[0])
-      .filter((expr) => /&&\s*''/.test(expr));
-
     expect(
-      offenders,
+      findFalsyMiddleOperands(ciYml),
       "GitHub's `a && b || c` returns operand values: a falsy middle operand always falls " +
         "through to c, so these expressions resolve to their fallback on every event. " +
         "Invert the condition and put the empty string last.",
     ).toEqual([]);
+  });
+
+  // The scanner is the thing standing between a one-character edit and production credentials
+  // reaching a pull request, so it gets its own test. The first version matched only `&& ''`
+  // and would have waved through `&& false`, `&& null` and `&& 0`, each of which is equally
+  // falsy in a GitHub expression and falls through to the fallback in exactly the same way.
+  it("flags every falsy literal as a middle operand, not just the empty string", () => {
+    for (const falsy of ["''", '""', "false", "null", "0", "-0"]) {
+      const expr = `\${{ github.event_name == 'pull_request' && ${falsy} || secrets.PROD_URL }}`;
+      expect(findFalsyMiddleOperands(expr), `${falsy} must be flagged`).toHaveLength(1);
+    }
+    // Truthy middle operands are the correct shape and must not be flagged — including
+    // ci.yml's own `&& '--skip-api'`, and the secret-in-the-middle credential form.
+    for (const truthy of ["secrets.PROD_URL", "'--skip-api'", "'1'", "true"]) {
+      const expr = `\${{ github.event_name != 'pull_request' && ${truthy} || '' }}`;
+      expect(findFalsyMiddleOperands(expr), `${truthy} must not be flagged`).toHaveLength(0);
+    }
   });
 
   it("withholds all three production API credentials from the Model Gate step on pull requests", () => {
@@ -83,10 +118,26 @@ describe("booking-gate production isolation (IPI-810)", () => {
   });
 
   it("passes --skip-api to the gate script on pull requests", () => {
-    // Truthy middle operand here, so this ternary is correct as written.
-    expect(job).toMatch(
-      /npm run supabase:verify-booking-gate -- \$\{\{ github\.event_name == 'pull_request' && '--skip-api'/,
+    const modelGate = stepBlock(job, "Model Gate verification");
+    // Truthy middle operand here, so this ternary is the correct shape.
+    expect(modelGate).toMatch(
+      /SKIP_API_FLAG: \$\{\{ github\.event_name == 'pull_request' && '--skip-api' \|\| '' \}\}/,
     );
+    expect(modelGate).toMatch(/run: npm run supabase:verify-booking-gate -- \$\{SKIP_API_FLAG\}/);
+  });
+
+  // zizmor's template-injection rule: a ${{ }} expansion inside a shell `run:` is re-parsed by
+  // the shell. Not exploitable for a fixed literal, but the whole booking-gate job handles
+  // credentials, so the shape stays out of `run:` entirely — values come through `env:`.
+  it("never interpolates a GitHub expression directly into a run: script", () => {
+    const offenders = job
+      .split("\n")
+      .filter((line) => /^\s*run:.*\$\{\{/.test(line))
+      .map((line) => line.trim());
+    expect(
+      offenders,
+      "pass the value through env: and reference it as a shell variable instead",
+    ).toEqual([]);
   });
 
   it("runs the planner scenario on push only", () => {
