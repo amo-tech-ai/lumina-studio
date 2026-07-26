@@ -3,7 +3,7 @@ import {
   clampCanaryConcurrency,
   classifyCanaryError,
   createThreadImmediateRead,
-  HD_THREAD_CANARY_CLEANUP_TIMEOUT_MS,
+  getCanaryInFlightForTests,
   HD_THREAD_CANARY_FAILURE_THRESHOLD,
   HD_THREAD_CANARY_IDEMPOTENCY_KEY_MAX,
   HD_THREAD_CANARY_MAX_CONCURRENCY,
@@ -17,7 +17,7 @@ import {
 
 const FAKE_HD = { connectionString: "postgres://user:pass@127.0.0.1:5432/db" };
 
-describe("hyperdrive-thread-canary helpers (IPI-623)", () => {
+describe("hyperdrive-thread-canary helpers (IPI-623 / IPI-823)", () => {
   beforeEach(() => {
     resetCanaryCircuitForTests();
   });
@@ -75,7 +75,7 @@ describe("hyperdrive-thread-canary helpers (IPI-623)", () => {
   });
 });
 
-describe("createThreadImmediateRead (IPI-623)", () => {
+describe("createThreadImmediateRead (IPI-623 / IPI-823)", () => {
   beforeEach(() => {
     resetCanaryCircuitForTests();
   });
@@ -168,6 +168,96 @@ describe("createThreadImmediateRead (IPI-623)", () => {
     expect(memory.deleteThread).not.toHaveBeenCalled();
   });
 
+  it("preserves newly created idempotent thread so a second call skips save", async () => {
+    const key = "idem-preserve";
+    let saved: { id: string; resourceId: string } | null = null;
+    const memory = {
+      saveThread: vi.fn(async ({ thread }: { thread: { id: string; resourceId: string } }) => {
+        saved = { id: thread.id, resourceId: thread.resourceId };
+        return thread;
+      }),
+      getThreadById: vi.fn(async ({ threadId }: { threadId: string }) => {
+        if (!saved || saved.id !== threadId) return null;
+        return saved;
+      }),
+      deleteThread: vi.fn(async () => {
+        saved = null;
+      }),
+    };
+    const PostgresStore = fakeStore(memory);
+
+    const first = await createThreadImmediateRead(FAKE_HD, PostgresStore, {
+      resourceId: "org-a",
+      idempotencyKey: key,
+    });
+    expect(first.ok).toBe(true);
+    expect(first.wrote).toBe(true);
+    expect(first.cleanedUp).toBe(false);
+    expect(memory.deleteThread).not.toHaveBeenCalled();
+    expect(saved).not.toBeNull();
+
+    const second = await createThreadImmediateRead(FAKE_HD, PostgresStore, {
+      resourceId: "org-a",
+      idempotencyKey: key,
+    });
+    expect(second.ok).toBe(true);
+    expect(second.wrote).toBe(false);
+    expect(second.matched).toBe(true);
+    expect(memory.saveThread).toHaveBeenCalledTimes(1);
+    expect(memory.deleteThread).not.toHaveBeenCalled();
+  });
+
+  it("classifies unmatched immediate read as roundtrip_failed", async () => {
+    const memory = {
+      saveThread: vi.fn(async ({ thread }: { thread: { id: string; resourceId: string } }) => thread),
+      getThreadById: vi.fn(async () => null),
+      deleteThread: vi.fn(async () => undefined),
+    };
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    const PostgresStore = fakeStore(memory);
+
+    const result = await createThreadImmediateRead(FAKE_HD, PostgresStore, {
+      resourceId: "org-a",
+    });
+
+    expect(result.ok).toBe(false);
+    expect(result.matched).toBe(false);
+    expect(result.wrote).toBe(true);
+    expect(result.errorClass).toBe("roundtrip_failed");
+    expect(result.error).toBe("roundtrip_failed");
+    expect(result.errorClass).not.toBe("none");
+  });
+
+  it("records latencyMs before slow cleanup", async () => {
+    let saved: { id: string; resourceId: string } | null = null;
+    const memory = {
+      saveThread: vi.fn(async ({ thread }: { thread: { id: string; resourceId: string } }) => {
+        saved = { id: thread.id, resourceId: thread.resourceId };
+        return thread;
+      }),
+      getThreadById: vi.fn(async ({ threadId }: { threadId: string }) => {
+        if (!saved || saved.id !== threadId) return null;
+        return saved;
+      }),
+      deleteThread: vi.fn(async () => {
+        await new Promise((r) => setTimeout(r, 200));
+        saved = null;
+      }),
+    };
+    const PostgresStore = fakeStore(memory);
+    const wallStart = Date.now();
+    const result = await createThreadImmediateRead(FAKE_HD, PostgresStore, {
+      resourceId: "org-a",
+    });
+    const wallMs = Date.now() - wallStart;
+
+    expect(result.ok).toBe(true);
+    expect(result.cleanedUp).toBe(true);
+    expect(result.latencyMs).toBeLessThan(150);
+    expect(result.latencyMs).toBeLessThan(wallMs);
+    expect(result.cleanupLatencyMs ?? 0).toBeGreaterThanOrEqual(180);
+  });
+
   it("fails closed on cross-tenant resourceId mismatch and does not delete", async () => {
     const key = "idem-x";
     const expectedId = threadIdFromIdempotencyKey(key, "org-a");
@@ -229,9 +319,80 @@ describe("createThreadImmediateRead (IPI-623)", () => {
     expect(result.error).toBe("timeout");
     expect(result.wrote).toBe(false);
     expect(memory.deleteThread).not.toHaveBeenCalled();
-    // Main timeout + bounded close; must not wait forever on hung save.
-    expect(wallMs).toBeLessThan(timeoutMs + HD_THREAD_CANARY_CLEANUP_TIMEOUT_MS + 500);
-    expect(result.latencyMs).toBeLessThan(timeoutMs + HD_THREAD_CANARY_CLEANUP_TIMEOUT_MS + 500);
+    // Timeout path returns immediately; cleanup/orphan runs in background.
+    expect(wallMs).toBeLessThan(timeoutMs + 500);
+    expect(result.latencyMs).toBeLessThan(timeoutMs + 500);
+  });
+
+  it("keeps semaphore slot until hung work settles after timeout", async () => {
+    let resolveSave!: (value: unknown) => void;
+    const saveGate = new Promise((resolve) => {
+      resolveSave = resolve;
+    });
+    let saveCalls = 0;
+    const memory = {
+      saveThread: vi.fn(() => {
+        saveCalls += 1;
+        // First call hangs until we release; later calls hang forever (cap fillers).
+        if (saveCalls === 1) return saveGate;
+        return new Promise(() => {});
+      }),
+      getThreadById: vi.fn(async () => null),
+      deleteThread: vi.fn(async () => undefined),
+    };
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    const PostgresStore = fakeStore(memory);
+
+    const pending = createThreadImmediateRead(FAKE_HD, PostgresStore, {
+      resourceId: "org-a",
+      timeoutMs: 40,
+    });
+
+    await vi.waitFor(() => {
+      expect(getCanaryInFlightForTests()).toBe(1);
+    });
+
+    const result = await pending;
+    expect(result.errorClass).toBe("timeout");
+    // Slot still held while underlying save is in flight.
+    expect(getCanaryInFlightForTests()).toBe(1);
+
+    // Fill remaining slots with forever-hung work so the cap is real.
+    const fillers = Array.from({ length: HD_THREAD_CANARY_MAX_CONCURRENCY - 1 }, () =>
+      createThreadImmediateRead(FAKE_HD, PostgresStore, {
+        resourceId: "org-a",
+        timeoutMs: 40,
+      }),
+    );
+    await vi.waitFor(() => {
+      expect(getCanaryInFlightForTests()).toBe(HD_THREAD_CANARY_MAX_CONCURRENCY);
+    });
+    const saturatedWhileHeld = await createThreadImmediateRead(FAKE_HD, PostgresStore, {
+      resourceId: "org-a",
+      timeoutMs: 20,
+    });
+    expect(saturatedWhileHeld.error).toBe("concurrency_saturated");
+
+    // Settling the original hung save frees one slot (fillers still hold the rest until orphan).
+    resolveSave({});
+    await vi.waitFor(() => {
+      expect(getCanaryInFlightForTests()).toBe(HD_THREAD_CANARY_MAX_CONCURRENCY - 1);
+    });
+
+    // A new acquire can proceed only after that settle freed a slot.
+    const afterSettle = createThreadImmediateRead(FAKE_HD, PostgresStore, {
+      resourceId: "org-a",
+      timeoutMs: 40,
+    });
+    await vi.waitFor(() => {
+      expect(getCanaryInFlightForTests()).toBe(HD_THREAD_CANARY_MAX_CONCURRENCY);
+    });
+    await afterSettle;
+
+    await Promise.all(fillers);
+    // Reset clears background orphans for subsequent tests (epoch-guarded release).
+    resetCanaryCircuitForTests();
+    expect(getCanaryInFlightForTests()).toBe(0);
   });
 
   it("returns concurrency_saturated without opening another PostgresStore", async () => {
