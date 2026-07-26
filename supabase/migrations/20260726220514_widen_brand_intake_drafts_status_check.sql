@@ -12,9 +12,22 @@
 -- `status text not null default 'pending'`. Without IF EXISTS this breaks every environment
 -- that never received the out-of-band constraint.
 --
+-- The drop targets a constraint *by name*, which covers the two cases that matter: the name
+-- is absent (no-op, then the add creates it) or present with any definition (dropped, then
+-- replaced with the known-good one). It would not remove a CHECK on status carried under a
+-- different name. That is not the situation on the remote — the live catalogue holds exactly
+-- one check constraint on this table, and Postgres's own generated name for an inline column
+-- CHECK is this same `<table>_<column>_check` — but if some environment ever grew a
+-- second, differently-named status CHECK, this migration would succeed while that constraint
+-- kept rejecting 'pending_approval'. The pgTAP lives_ok() on 'pending_approval' is what
+-- surfaces that, so treat a failure there as "look for a stray constraint", not "re-run this".
+--
 -- Deliberately not used here:
---   * NOT VALID / VALIDATE CONSTRAINT — the table holds 27 rows, all status='pending', so a
---     plain validating ADD is instant and leaves no unvalidated constraint behind.
+--   * NOT VALID / VALIDATE CONSTRAINT — a plain ADD CONSTRAINT does take a brief ACCESS
+--     EXCLUSIVE lock and scan every row to validate it, so it is not free. At 27 rows the
+--     scan and the lock window are negligible, and a plain add leaves nothing unvalidated
+--     behind. Reach for NOT VALID plus a later VALIDATE CONSTRAINT when the table is large
+--     enough that blocking writes for the scan actually matters — not the case here.
 --   * a Postgres enum — ALTER TYPE ... ADD VALUE cannot run inside a transaction block,
 --     which is exactly how Supabase's migration runner executes these files.
 --
@@ -28,6 +41,14 @@
 -- workflow in .github/workflows applies migrations at all; DDL reaches the remote
 -- out-of-band, which is how the original constraint came to be missing from the chain. The
 -- statements below are idempotent regardless: drop-if-exists followed by add.
+--
+-- Reverting is NOT a blind mirror of this file. Widening is append-only; narrowing can fail.
+-- Re-adding the four-value constraint while any row still holds 'pending_approval' aborts
+-- with 23514, so the rows must be reconciled first — decide per row whether it belongs in
+-- 'pending' (still awaiting a human) or 'rejected'/'expired' (abandon the draft), e.g.
+--   update public.brand_intake_drafts set status = 'pending' where status = 'pending_approval';
+-- and only then drop and re-add the narrower constraint. Do not add a down migration that
+-- narrows unconditionally; it would fail exactly when the feature has been used.
 --
 -- All four readers already agree on the value:
 --   app/src/mastra/workflows/brand-intelligence-workflow.ts:250  writer
