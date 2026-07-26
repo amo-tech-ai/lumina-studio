@@ -1,5 +1,6 @@
 /**
  * IPI-623 · CF-DB-009 — Hyperdrive Mastra thread canary (create → immediate-read).
+ * IPI-823 · CF-DB-009c — post-merge harden: slot retention, idempotent cleanup, latency.
  *
  * Reuses IPI-619 binding (`HYPERDRIVE_FRESH`) + IPI-620 patterns:
  * request-scoped `PostgresStore` (`max: 1`, `disableInit: true`, schema `mastra`).
@@ -7,6 +8,11 @@
  *
  * Hard caps: concurrency ≤3; feature-flag + isolate circuit-breaker rollback.
  * Thread ids from Idempotency-Key are scoped by resourceId (Mastra createThread ownership).
+ *
+ * Timeout + semaphore: on client timeout the HTTP path returns immediately, but the
+ * isolate slot stays held until the in-flight roundtrip settles or
+ * `HD_THREAD_CANARY_ORPHAN_TIMEOUT_MS` elapses (whichever first), then cleanup/close.
+ * That prevents stacked PostgresStore pools past the concurrency cap.
  */
 import { createHash } from "node:crypto";
 import type { StorageThreadType } from "@mastra/core/memory";
@@ -18,11 +24,21 @@ export const HD_THREAD_CANARY_DEFAULT_CONCURRENCY = 1;
 export const HD_THREAD_CANARY_TIMEOUT_MS = 15_000;
 /** Bound cleanup/close so a hung delete cannot outlive the request. */
 export const HD_THREAD_CANARY_CLEANUP_TIMEOUT_MS = 2_000;
+/**
+ * After a client-facing timeout, keep the semaphore slot until the underlying
+ * DB work settles — or this orphan bound elapses, whichever first.
+ */
+export const HD_THREAD_CANARY_ORPHAN_TIMEOUT_MS = 5_000;
 export const HD_THREAD_CANARY_IDEMPOTENCY_KEY_MAX = 256;
 /** Consecutive isolate failures before auto-disable (in-memory; wrangler var is durable kill). */
 export const HD_THREAD_CANARY_FAILURE_THRESHOLD = 3;
 
-export type CanaryErrorClass = "timeout" | "retryable" | "fatal" | "none";
+export type CanaryErrorClass =
+  | "timeout"
+  | "retryable"
+  | "fatal"
+  | "roundtrip_failed"
+  | "none";
 
 export type ThreadCanaryResult = {
   ok: boolean;
@@ -32,7 +48,10 @@ export type ThreadCanaryResult = {
   wrote: boolean;
   duplicateWrite: boolean;
   cleanedUp: boolean;
+  /** Create→read roundtrip only (excludes cleanup/close). */
   latencyMs: number;
+  /** Time spent in delete/close after roundtrip (when cleanup ran). */
+  cleanupLatencyMs?: number;
   errorClass: CanaryErrorClass;
   error?: string;
   crossTenant: boolean;
@@ -63,6 +82,8 @@ type CircuitState = { consecutiveFailures: number; rolledBack: boolean };
 const g = globalThis as typeof globalThis & {
   __ipixHdThreadCanaryCircuit?: CircuitState;
   __ipixHdThreadCanaryInFlight?: number;
+  /** Bumped by test resets so fire-and-forget releases do not double-decrement. */
+  __ipixHdThreadCanarySlotEpoch?: number;
 };
 
 function circuit(): CircuitState {
@@ -95,10 +116,17 @@ export function recordCanaryFailure(): void {
 export function resetCanaryCircuitForTests(): void {
   g.__ipixHdThreadCanaryCircuit = { consecutiveFailures: 0, rolledBack: false };
   g.__ipixHdThreadCanaryInFlight = 0;
+  g.__ipixHdThreadCanarySlotEpoch = (g.__ipixHdThreadCanarySlotEpoch ?? 0) + 1;
 }
 
 export function resetCanaryConcurrencyForTests(): void {
   g.__ipixHdThreadCanaryInFlight = 0;
+  g.__ipixHdThreadCanarySlotEpoch = (g.__ipixHdThreadCanarySlotEpoch ?? 0) + 1;
+}
+
+/** Test helper: current isolate semaphore occupancy. */
+export function getCanaryInFlightForTests(): number {
+  return g.__ipixHdThreadCanaryInFlight ?? 0;
 }
 
 function tryAcquireCanarySlot(): boolean {
@@ -179,24 +207,59 @@ function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
   });
 }
 
+function settleOrOrphan(work: Promise<unknown>, orphanMs: number): Promise<void> {
+  // Mirror withTimeout: clear the orphan timer when work settles first so we do
+  // not retain a live timer after the race winner is already known.
+  return new Promise<void>((resolve) => {
+    const timer = setTimeout(() => resolve(), orphanMs);
+    work.then(
+      () => {
+        clearTimeout(timer);
+        resolve();
+      },
+      () => {
+        clearTimeout(timer);
+        resolve();
+      },
+    );
+  });
+}
+
 export type CreateThreadImmediateReadOpts = {
   resourceId: unknown;
   /** When set, deterministic threadId; skip save if thread already exists for same resource. */
   idempotencyKey?: string;
+  /**
+   * Keep a newly written Idempotency-Key row after the probe (for cross-request replay).
+   * Default false so unique soak keys do not permanently accumulate `mastra_threads` rows.
+   * Opt in only when intentionally testing replay (fixed probe key).
+   */
+  retainForReplay?: boolean;
   timeoutMs?: number;
   cleanup?: boolean;
+};
+
+/** Outcome of a canary attempt — callers must schedule `backgroundWork` with waitUntil/after. */
+export type CreateThreadCanaryOutcome = {
+  result: ThreadCanaryResult;
+  /**
+   * Present on the client-timeout path: settle orphan DB work, cleanup/close, release slot.
+   * Must be registered with Cloudflare `ExecutionContext.waitUntil` or Next.js `after()`
+   * before the HTTP response is returned — otherwise the Worker may cancel it.
+   */
+  backgroundWork?: Promise<void>;
 };
 
 /**
  * Locked IPI-623 workload: create one Mastra thread, immediately read it back.
  * Tenant fail-closed via `requireResourceId`. Optional cleanup after proof.
- * Cleanup only deletes threads this invocation wrote (never cross-tenant / idempotent replay).
+ * Cleanup deletes threads this invocation wrote unless `retainForReplay` (never cross-tenant).
  */
 export async function createThreadImmediateRead(
   hyperdrive: HyperdriveBinding,
   PostgresStore: PostgresStoreCtor,
   opts: CreateThreadImmediateReadOpts,
-): Promise<ThreadCanaryResult> {
+): Promise<CreateThreadCanaryOutcome> {
   const resourceId = requireResourceId(opts.resourceId);
   const threadId =
     opts.idempotencyKey != null
@@ -204,6 +267,9 @@ export async function createThreadImmediateRead(
       : `ipi-623-canary-${crypto.randomUUID()}`;
   const timeoutMs = opts.timeoutMs ?? HD_THREAD_CANARY_TIMEOUT_MS;
   const cleanup = opts.cleanup !== false;
+  // Keyed rows are cleaned by default; opt into retention for intentional replay probes.
+  const preserveForReplay =
+    opts.idempotencyKey != null && opts.retainForReplay === true;
   const started = Date.now();
 
   const result: ThreadCanaryResult = {
@@ -212,6 +278,7 @@ export async function createThreadImmediateRead(
     resourceId,
     matched: false,
     wrote: false,
+    // ponytail: cannot distinguish ON CONFLICT upsert from insert via PostgresStore API; upgrade when store exposes created|updated
     duplicateWrite: false,
     cleanedUp: false,
     latencyMs: 0,
@@ -223,14 +290,24 @@ export async function createThreadImmediateRead(
     result.errorClass = "retryable";
     result.error = "concurrency_saturated";
     result.latencyMs = Date.now() - started;
-    return result;
+    return { result };
   }
+
+  const slotEpoch = g.__ipixHdThreadCanarySlotEpoch ?? 0;
+  let slotReleased = false;
+  const releaseSlot = () => {
+    if (slotReleased) return;
+    slotReleased = true;
+    // Test resets bump epoch so orphaned fire-and-forget must not double-decrement.
+    if ((g.__ipixHdThreadCanarySlotEpoch ?? 0) !== slotEpoch) return;
+    releaseCanarySlot();
+  };
 
   let store: InstanceType<PostgresStoreCtor> | undefined;
   /** True only after this invocation successfully persisted the thread. */
   let createdByUs = false;
 
-  try {
+  const roundtripWork = (async () => {
     store = new PostgresStore({
       id: `mastra-storage-canary-${threadId}`,
       connectionString: hyperdrive.connectionString,
@@ -240,46 +317,50 @@ export async function createThreadImmediateRead(
       idleTimeoutMillis: 5_000,
     });
 
-    await withTimeout(
-      (async () => {
-        const memory = await store!.getStore("memory");
-        if (!memory) throw new Error("memory domain unavailable on PostgresStore");
+    const memory = await store.getStore("memory");
+    if (!memory) throw new Error("memory domain unavailable on PostgresStore");
 
-        const existing = await memory.getThreadById({ threadId });
-        if (existing) {
-          if (existing.resourceId && existing.resourceId !== resourceId) {
-            result.crossTenant = true;
-            throw new Error("cross_tenant: thread resourceId mismatch");
-          }
-          result.matched = existing.id === threadId;
-          result.ok = result.matched;
-          result.wrote = false;
-          result.duplicateWrite = false;
-          return;
-        }
+    const existing = await memory.getThreadById({ threadId });
+    if (existing) {
+      if (existing.resourceId && existing.resourceId !== resourceId) {
+        result.crossTenant = true;
+        throw new Error("cross_tenant: thread resourceId mismatch");
+      }
+      result.matched = existing.id === threadId;
+      result.ok = result.matched;
+      result.wrote = false;
+      result.duplicateWrite = false;
+      return;
+    }
 
-        const thread: StorageThreadType = {
-          id: threadId,
-          resourceId,
-          title: "IPI-623 Hyperdrive thread canary",
-          createdAt: new Date(),
-          updatedAt: new Date(),
-          metadata: { canary: "ipi-623", idempotencyKey: opts.idempotencyKey ?? null },
-        };
-        await memory.saveThread({ thread });
-        createdByUs = true;
-        result.wrote = true;
+    const thread: StorageThreadType = {
+      id: threadId,
+      resourceId,
+      title: "IPI-623 Hyperdrive thread canary",
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      metadata: { canary: "ipi-623", idempotencyKey: opts.idempotencyKey ?? null },
+    };
+    await memory.saveThread({ thread });
+    createdByUs = true;
+    result.wrote = true;
 
-        const read = await memory.getThreadById({ threadId });
-        if (read?.resourceId && read.resourceId !== resourceId) {
-          result.crossTenant = true;
-          throw new Error("cross_tenant: read resourceId mismatch");
-        }
-        result.matched = read?.id === threadId;
-        result.ok = result.matched;
-      })(),
-      timeoutMs,
-    );
+    const read = await memory.getThreadById({ threadId });
+    if (read?.resourceId && read.resourceId !== resourceId) {
+      result.crossTenant = true;
+      throw new Error("cross_tenant: read resourceId mismatch");
+    }
+    result.matched = read?.id === threadId;
+    result.ok = result.matched;
+    if (!result.matched) {
+      result.errorClass = "roundtrip_failed";
+      result.error = "roundtrip_failed";
+    }
+  })();
+
+  let timedOut = false;
+  try {
+    await withTimeout(roundtripWork, timeoutMs);
   } catch (error) {
     console.error(
       "hyperdrive-thread-canary: create→read failed",
@@ -293,32 +374,58 @@ export async function createThreadImmediateRead(
           ? "cross_tenant"
           : "roundtrip_failed";
     result.ok = false;
-  } finally {
-    if (store && cleanup && createdByUs && !result.crossTenant) {
-      try {
-        await withTimeout(
-          (async () => {
-            const memory = await store!.getStore("memory");
-            if (memory) {
-              await memory.deleteThread({ threadId });
-              result.cleanedUp = true;
-            }
-          })(),
-          HD_THREAD_CANARY_CLEANUP_TIMEOUT_MS,
-        );
-      } catch {
-        result.cleanedUp = false;
-      }
-    }
-
-    if (store) {
-      // Bound close so a hung pool cannot stall the response after timeout.
-      await withTimeout(store.close(), HD_THREAD_CANARY_CLEANUP_TIMEOUT_MS).catch(() => {});
-    }
-
-    releaseCanarySlot();
-    result.latencyMs = Date.now() - started;
+    timedOut = result.errorClass === "timeout";
   }
 
-  return result;
+  // Roundtrip latency only — capture before cleanup/close so soak p95 is not inflated.
+  result.latencyMs = Date.now() - started;
+
+  const finishCleanupAndRelease = async () => {
+    const cleanupStarted = Date.now();
+    try {
+      if (timedOut) {
+        await settleOrOrphan(roundtripWork, HD_THREAD_CANARY_ORPHAN_TIMEOUT_MS);
+      }
+
+      // ponytail: if save is still in flight past the orphan bound, createdByUs may
+      // still be false here while the write later lands — unique soak-key rows can
+      // leak. Upgrade: best-effort delete after orphan expiry, or a sweeper on the
+      // `ipi-623-canary-` prefix.
+      // Delete only threads this invocation wrote (unless retainForReplay opt-in).
+      if (store && cleanup && createdByUs && !result.crossTenant && !preserveForReplay) {
+        try {
+          await withTimeout(
+            (async () => {
+              const memory = await store!.getStore("memory");
+              if (memory) {
+                await memory.deleteThread({ threadId });
+                result.cleanedUp = true;
+              }
+            })(),
+            HD_THREAD_CANARY_CLEANUP_TIMEOUT_MS,
+          );
+        } catch {
+          result.cleanedUp = false;
+        }
+      }
+
+      if (store) {
+        // Bound close so a hung pool cannot stall forever after timeout.
+        await withTimeout(store.close(), HD_THREAD_CANARY_CLEANUP_TIMEOUT_MS).catch(() => {});
+      }
+    } finally {
+      result.cleanupLatencyMs = Date.now() - cleanupStarted;
+      releaseSlot();
+    }
+  };
+
+  if (timedOut) {
+    // Return timeout immediately; caller must waitUntil/after(backgroundWork) so
+    // settle + close + releaseSlot still run after the HTTP response is sent.
+    const backgroundWork = finishCleanupAndRelease();
+    return { result: { ...result }, backgroundWork };
+  }
+
+  await finishCleanupAndRelease();
+  return { result };
 }
