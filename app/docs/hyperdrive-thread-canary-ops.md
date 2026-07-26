@@ -83,9 +83,15 @@ Expect `matched: true`, `crossTenant: false`. Wrong secret → `401`.
 ## Disable → upload → promote → verify 404
 
 1. GitHub preview env: `ENABLE_HYPERDRIVE_THREAD_CANARY=false`.
-2. Re-run secrets-sync (`wrangler_env=preview`, `dry_run=false`, `promote_preview=true`).
-3. Confirm new version @100%.
-4. Same curl → HTTP `404` with `"error":"not_found"`.
+2. Re-run secrets-sync:
+   - `wrangler_env=preview`
+   - `dry_run=false`
+   - `promote_preview=true` (after IPI-825; otherwise promote manually — step 3)
+3. If promote was skipped:  
+   `npx wrangler versions deploy "<worker_version_id>@100" --env preview --yes`  
+   (Upload alone does **not** move traffic — without this step the previous enabled version can stay at 100%.)
+4. Confirm the **new** (flag-off) version is @100% (`deployments list`).
+5. Same curl → HTTP `404` with `"error":"not_found"`.
 
 ## Soak notes (from IPI-623)
 
