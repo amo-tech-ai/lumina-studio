@@ -1,4 +1,7 @@
-// IPI-812 — resolve a route's actor from the caller's own Supabase JWT.
+// IPI-812 · BRAND-REG-003 — Authenticate Brand Analysis at the Request Boundary
+// and Enforce Editor/Owner Permission.
+//
+// Resolve a route's actor from the caller's own Supabase JWT.
 //
 // Lives here rather than in @/lib/auth because src/middleware.ts imports that
 // module and is documented Edge-safe; pulling commit-shoot-draft (and the whole
