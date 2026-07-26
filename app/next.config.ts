@@ -82,7 +82,6 @@ const nextConfig: NextConfig = {
   // graph (p-map). Keep `pg` external (Next default auto-list + native CJS).
   serverExternalPackages: [
     "@mastra/core",
-    "@mastra/libsql",
     "@ast-grep/napi",
     "mastra",
     "pg",
