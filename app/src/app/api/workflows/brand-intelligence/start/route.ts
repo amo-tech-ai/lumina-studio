@@ -2,8 +2,7 @@
 // POST { brandId: string }
 import { NextResponse } from "next/server";
 import { withOperatorAuth, OperatorAuthError } from "@/lib/operator-gate";
-import { extractAccessToken } from "@/lib/auth";
-import { createUserScopedClient } from "@/lib/shoot/commit-shoot-draft";
+import { resolveJwtActor } from "@/lib/jwt-actor";
 import { getMastra } from "@/mastra";
 
 export const dynamic = "force-dynamic";
@@ -35,25 +34,13 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "brandId must be a valid UUID" }, { status: 400 });
   }
 
-  const accessToken = extractAccessToken(request);
-  if (!accessToken) {
-    return NextResponse.json({ error: "Access token required" }, { status: 401 });
+  // Verified JWT subject + a caller-scoped client (populates auth.uid(), so RLS
+  // and the is_org_* helpers apply).
+  const actor = await resolveJwtActor(request);
+  if (!actor.ok) {
+    return NextResponse.json({ error: actor.error }, { status: actor.status });
   }
-
-  // Caller-scoped client: populates auth.uid(), so RLS and is_org_* helpers apply.
-  const userSb = createUserScopedClient(accessToken);
-  const {
-    data: { user },
-    error: userErr,
-  } = await userSb.auth.getUser();
-  if (userErr || !user) {
-    return NextResponse.json({ error: "Invalid or expired session" }, { status: 401 });
-  }
-  // Shape guard: rejects any non-UUID actor, not one hard-coded sentinel.
-  const actorId = UUID_RE.test(user.id) ? user.id : null;
-  if (!actorId) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const { userId: actorId, accessToken, client: userSb } = actor;
 
   // Visibility via RLS (brands_select_org). Check `error` before `!brand` so a real
   // DB/RLS failure is not reported as "not found".
