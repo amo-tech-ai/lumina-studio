@@ -50,7 +50,35 @@ describe("POST /api/internal/hyperdrive-thread-canary", () => {
     expect(body.error).toBe("not_found");
   });
 
-  it("returns 503 canary_rolled_back when isolate circuit is open", async () => {
+  it("returns 401 when X-Internal-Secret is missing or wrong (never exposes rolledBack)", async () => {
+    getCloudflareContext.mockResolvedValue({
+      env: {
+        ENABLE_HYPERDRIVE_THREAD_CANARY: "true",
+        INTERNAL_WEBHOOK_SECRET: "expected",
+        HYPERDRIVE_FRESH: { connectionString: "postgres://user:pass@127.0.0.1:5432/db" },
+      },
+    });
+    for (let i = 0; i < HD_THREAD_CANARY_FAILURE_THRESHOLD; i++) {
+      recordCanaryFailure();
+    }
+    const { POST } = await import("./route");
+
+    const missing = await POST(req({ resourceId: "org-a" }));
+    const missingBody = await missing.json();
+    expect(missing.status).toBe(401);
+    expect(missingBody.error).toBe("unauthorized");
+    expect(missingBody.rolledBack).toBeUndefined();
+
+    const wrong = await POST(
+      req({ resourceId: "org-a" }, { "X-Internal-Secret": "wrong" }),
+    );
+    const wrongBody = await wrong.json();
+    expect(wrong.status).toBe(401);
+    expect(wrongBody.error).toBe("unauthorized");
+    expect(wrongBody.rolledBack).toBeUndefined();
+  });
+
+  it("returns 503 canary_rolled_back when isolate circuit is open (after auth)", async () => {
     getCloudflareContext.mockResolvedValue({
       env: {
         ENABLE_HYPERDRIVE_THREAD_CANARY: "true",
@@ -91,6 +119,26 @@ describe("POST /api/internal/hyperdrive-thread-canary", () => {
     expect(res.status).toBe(400);
   });
 
+  it("returns 400 resource_id_required for null JSON body", async () => {
+    getCloudflareContext.mockResolvedValue({
+      env: {
+        ENABLE_HYPERDRIVE_THREAD_CANARY: "true",
+        INTERNAL_WEBHOOK_SECRET: "expected",
+        HYPERDRIVE_FRESH: { connectionString: "postgres://user:pass@127.0.0.1:5432/db" },
+      },
+    });
+    vi.doMock("@mastra/pg", () => ({
+      PostgresStore: vi.fn(),
+      IPIX_CF_MASTRA_PG_STUB: false,
+    }));
+    const { POST } = await import("./route");
+
+    const res = await POST(req(null, { "X-Internal-Secret": "expected" }));
+    const body = await res.json();
+    expect(res.status).toBe(400);
+    expect(body.error).toBe("resource_id_required");
+  });
+
   it("returns 503 when Hyperdrive binding is missing", async () => {
     getCloudflareContext.mockResolvedValue({
       env: {
@@ -120,16 +168,7 @@ describe("POST /api/internal/hyperdrive-thread-canary", () => {
 
     const closeSpy = vi.fn(async () => undefined);
     const ctor = vi.fn(function FakePostgresStore(this: unknown) {});
-    ctor.prototype.getStore = vi.fn(async () => ({
-      saveThread: vi.fn(async ({ thread }: { thread: { id: string; resourceId: string } }) => thread),
-      getThreadById: vi.fn(async ({ threadId }: { threadId: string }) => {
-        // First call in createThreadImmediateRead is existence check — null;
-        // after save, read returns the thread. Use call count per memory instance.
-        return null;
-      }),
-      deleteThread: vi.fn(async () => undefined),
-    }));
-    // Fix memory mock: each getStore returns a fresh memory that tracks save
+    // Each getStore returns a fresh memory that tracks save
     ctor.prototype.getStore = vi.fn(async () => {
       let saved: { id: string; resourceId: string } | null = null;
       return {

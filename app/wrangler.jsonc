@@ -52,9 +52,6 @@
     // IPI-620 (Part B): PostgresStore + Hyperdrive compatibility spike route stays dark
     // until explicitly flipped for a preview proof — see cloudflare-workflow smoke pattern.
     "ENABLE_HYPERDRIVE_PG_SMOKE": "false",
-    // IPI-623 · CF-DB-009: create-thread → immediate-read canary stays dark until preview proof.
-    // Durable rollback: set false (or Worker version rollback). Isolate circuit also auto-disables.
-    "ENABLE_HYPERDRIVE_THREAD_CANARY": "false",
     // IPI-60: Cloudinary DAM env for detectEnv() — Workers lack VERCEL_ENV; fail-closed without this.
     "DAM_ENV": "staging"
   },
@@ -103,7 +100,6 @@
         "OPERATOR_AUTH_ENABLED": "true",
         "ENABLE_CF_AI_SMOKE": "false",
         "ENABLE_HYPERDRIVE_PG_SMOKE": "false",
-        "ENABLE_HYPERDRIVE_THREAD_CANARY": "false",
         "DAM_ENV": "staging"
       },
       "ai": {
@@ -131,8 +127,8 @@
       ],
       "secrets": {
         // COPILOTKIT_LICENSE_TOKEN is optional — synced when present; SSE mode without it.
-        // INTERNAL_WEBHOOK_SECRET optional — required only when ENABLE_CF_AI_SMOKE=true (IPI-586),
-        // ENABLE_HYPERDRIVE_PG_SMOKE=true (IPI-620B), or ENABLE_HYPERDRIVE_THREAD_CANARY=true (IPI-623).
+        // INTERNAL_WEBHOOK_SECRET optional — required only when ENABLE_CF_AI_SMOKE=true (IPI-586)
+        // or ENABLE_HYPERDRIVE_PG_SMOKE=true (IPI-620B).
         "required": ["GEMINI_API_KEY", "SUPABASE_SERVICE_ROLE_KEY"]
       }
     },
@@ -148,7 +144,6 @@
         "OPERATOR_AUTH_ENABLED": "true",
         "ENABLE_CF_AI_SMOKE": "false",
         "ENABLE_HYPERDRIVE_PG_SMOKE": "false",
-        "ENABLE_HYPERDRIVE_THREAD_CANARY": "false",
         "DAM_ENV": "prod"
       },
       "ai": {

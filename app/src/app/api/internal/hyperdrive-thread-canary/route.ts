@@ -1,13 +1,13 @@
 /**
  * IPI-623 · CF-DB-009 — Hyperdrive thread canary (create → immediate-read).
  *
- * Disabled by default via ENABLE_HYPERDRIVE_THREAD_CANARY=false.
+ * Disabled by default via ENABLE_HYPERDRIVE_THREAD_CANARY=false (env / process.env).
  * Reuses HYPERDRIVE_FRESH (IPI-619) + PostgresStore spike pattern (IPI-620B).
  * Does **not** change production `MASTRA_STORAGE_MODE` (stays noop).
  *
  * Concurrency hard-capped at 3 (IPI-620 spike: 3 PASS / 5 FAIL).
  * Isolate circuit-breaker auto-rolls back after consecutive failures;
- * durable kill remains the wrangler var (set false / version rollback).
+ * durable kill remains the env flag (set false / version rollback).
  */
 import { NextResponse } from "next/server";
 import { createHash, timingSafeEqual } from "node:crypto";
@@ -16,9 +16,11 @@ import type { HyperdriveBinding } from "@/lib/db/hyperdrive-query";
 import {
   clampCanaryConcurrency,
   createThreadImmediateRead,
+  HD_THREAD_CANARY_MAX_CONCURRENCY,
   isCanaryCircuitOpen,
   recordCanaryFailure,
   recordCanarySuccess,
+  threadIdFromIdempotencyKey,
   type PostgresStoreCtor,
   type ThreadCanaryResult,
 } from "@/lib/db/hyperdrive-thread-canary";
@@ -31,6 +33,12 @@ type CanaryEnv = {
   INTERNAL_WEBHOOK_SECRET?: string;
 };
 
+type CanaryBody = {
+  mode?: string;
+  concurrency?: number;
+  resourceId?: string;
+};
+
 function isCanaryEnabled(envFlag: string | undefined): boolean {
   const flag = envFlag ?? process.env.ENABLE_HYPERDRIVE_THREAD_CANARY;
   return String(flag) === "true";
@@ -40,6 +48,10 @@ function secretsEqual(provided: string, expected: string): boolean {
   const a = createHash("sha256").update(provided).digest();
   const b = createHash("sha256").update(expected).digest();
   return timingSafeEqual(a, b);
+}
+
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === "object" && !Array.isArray(value);
 }
 
 function json(status: number, body: Record<string, unknown>) {
@@ -69,7 +81,7 @@ function proofFields(stubbed = false) {
     schemaName: "mastra" as const,
     disableInit: true as const,
     workload: "create_thread_immediate_read" as const,
-    maxConcurrency: 3 as const,
+    maxConcurrency: HD_THREAD_CANARY_MAX_CONCURRENCY,
     stubbed,
   };
 }
@@ -79,6 +91,11 @@ function p95LatencyMs(results: ThreadCanaryResult[]): number | null {
   const sorted = results.map((r) => r.latencyMs).toSorted((a, b) => a - b);
   const idx = Math.min(sorted.length - 1, Math.ceil(sorted.length * 0.95) - 1);
   return sorted[Math.max(0, idx)] ?? null;
+}
+
+function isConcurrencySaturated(results: ThreadCanaryResult | ThreadCanaryResult[]): boolean {
+  const list = Array.isArray(results) ? results : [results];
+  return list.some((r) => r.error === "concurrency_saturated");
 }
 
 export async function POST(request: Request) {
@@ -94,21 +111,9 @@ export async function POST(request: Request) {
     // Node / Vitest
   }
 
+  // Order: enabled → auth → circuit. Unauth must never see rolledBack.
   if (!isCanaryEnabled(env?.ENABLE_HYPERDRIVE_THREAD_CANARY)) {
     return json(404, { ok: false, error: "not_found", requestId, cfRay });
-  }
-
-  if (isCanaryCircuitOpen()) {
-    return json(503, {
-      ok: false,
-      error: "canary_rolled_back",
-      detail:
-        "Isolate circuit open after consecutive failures — set ENABLE_HYPERDRIVE_THREAD_CANARY=false (durable) or wait for new isolate",
-      rolledBack: true,
-      requestId,
-      cfRay,
-      ...proofFields(),
-    });
   }
 
   const expectedSecret = env?.INTERNAL_WEBHOOK_SECRET ?? process.env.INTERNAL_WEBHOOK_SECRET;
@@ -125,6 +130,19 @@ export async function POST(request: Request) {
   const provided = request.headers.get("X-Internal-Secret");
   if (!provided || !secretsEqual(provided, expectedSecret)) {
     return json(401, { ok: false, error: "unauthorized", requestId, cfRay });
+  }
+
+  if (isCanaryCircuitOpen()) {
+    return json(503, {
+      ok: false,
+      error: "canary_rolled_back",
+      detail:
+        "Isolate circuit open after consecutive failures — set ENABLE_HYPERDRIVE_THREAD_CANARY=false (durable) or wait for new isolate",
+      rolledBack: true,
+      requestId,
+      cfRay,
+      ...proofFields(),
+    });
   }
 
   const hyperdrive = env?.HYPERDRIVE_FRESH;
@@ -154,11 +172,14 @@ export async function POST(request: Request) {
     });
   }
 
-  let body: { mode?: string; concurrency?: number; resourceId?: string } = {};
+  let body: CanaryBody = {};
   try {
-    body = await request.json();
+    const parsed: unknown = await request.json();
+    if (isPlainObject(parsed)) {
+      body = parsed as CanaryBody;
+    }
   } catch {
-    // empty body
+    // empty / invalid JSON → treat as missing resourceId
   }
 
   const resourceId = body.resourceId;
@@ -172,6 +193,20 @@ export async function POST(request: Request) {
     });
   }
 
+  if (idempotencyKey != null) {
+    try {
+      threadIdFromIdempotencyKey(idempotencyKey, resourceId.trim());
+    } catch {
+      return json(400, {
+        ok: false,
+        error: "invalid_idempotency_key",
+        detail: "Idempotency-Key must be non-empty after trim and ≤256 chars",
+        requestId,
+        cfRay,
+      });
+    }
+  }
+
   const mode = body.mode === "concurrent" ? "concurrent" : "single";
   const started = Date.now();
 
@@ -180,6 +215,19 @@ export async function POST(request: Request) {
       resourceId,
       idempotencyKey,
     });
+
+    if (isConcurrencySaturated(result)) {
+      return json(503, {
+        ok: false,
+        error: "concurrency_saturated",
+        detail: "Isolate canary concurrency cap reached — retry shortly",
+        requestId,
+        cfRay,
+        ...proofFields(),
+        result,
+      });
+    }
+
     const roundtrip = result.ok && result.matched && !result.crossTenant;
     if (roundtrip) recordCanarySuccess();
     else recordCanaryFailure();
@@ -206,6 +254,21 @@ export async function POST(request: Request) {
       createThreadImmediateRead(hyperdrive, PostgresStore, { resourceId }),
     ),
   );
+
+  if (isConcurrencySaturated(results)) {
+    return json(503, {
+      ok: false,
+      error: "concurrency_saturated",
+      detail: "Isolate canary concurrency cap reached — retry shortly",
+      requestId,
+      cfRay,
+      mode,
+      concurrency,
+      ...proofFields(),
+      results,
+    });
+  }
+
   const failures = results.filter((r) => !r.ok || !r.matched || r.crossTenant);
   const roundtrip = failures.length === 0;
   if (roundtrip) recordCanarySuccess();
