@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { makeMemoryResourceId } from "@/mastra/memory";
 
 const getLocalAgentsCalls: Array<{ resourceId: string }> = [];
 
@@ -11,6 +12,38 @@ afterEach(() => {
   vi.unstubAllEnvs();
   vi.resetModules();
 });
+
+/** IPI-146 · MASTRA-GOV-002 — mocks shared by every describe block below.
+ *  `getCurrentOrgId` defaults to a fixed org so pre-existing (pre-IPI-146)
+ *  assertions about *shape* (isolation, single-call-per-request, etc.) don't
+ *  all need to separately wire org resolution — tests that care about org
+ *  resolution itself override `getCurrentOrgId`/`getThreadById` per case. */
+function mockOrgScopeDeps(opts?: { orgId?: string | null; threadResourceId?: string | null }) {
+  const orgId = opts?.orgId === undefined ? "org-default" : opts.orgId;
+  const threadResourceId = opts?.threadResourceId ?? null;
+  // Hoisted so tests can assert call count (e.g. subscribe/clear must never look up).
+  const getThreadById = vi.fn().mockResolvedValue(
+    threadResourceId === null ? null : { resourceId: threadResourceId },
+  );
+
+  vi.doMock("@/lib/shoot/commit-shoot-draft", () => ({
+    createUserScopedClient: vi.fn(() => ({})),
+  }));
+  vi.doMock("@/lib/crm/queries", () => ({
+    getCurrentOrgId: vi.fn().mockResolvedValue(orgId),
+  }));
+  vi.doMock("@/mastra/memory", async () => {
+    const actual = await vi.importActual<typeof import("@/mastra/memory")>("@/mastra/memory");
+    return {
+      ...actual,
+      getMastraMemory: vi.fn(() => ({
+        getThreadById,
+      })),
+    };
+  });
+
+  return { getThreadById };
+}
 
 async function setupMocks() {
   vi.doMock("@/mastra", () => ({ getMastra: () => ({}) }));
@@ -61,6 +94,8 @@ async function setupMocks() {
     }),
     InMemoryAgentRunner: vi.fn(),
   }));
+
+  mockOrgScopeDeps();
 }
 
 describe("IPI2-127 — two-user isolation (runtime)", () => {
@@ -69,7 +104,7 @@ describe("IPI2-127 — two-user isolation (runtime)", () => {
     await setupMocks();
   });
 
-  it("produces different resourceId for User A vs User B in getLocalAgents", async () => {
+  it("produces different org-scoped resourceId for User A vs User B in getLocalAgents", async () => {
     const route = await import("@/app/api/copilotkit/[[...slug]]/route");
     const withOperatorAuth = vi.mocked((await import("@/lib/operator-gate")).withOperatorAuth);
 
@@ -80,8 +115,8 @@ describe("IPI2-127 — two-user isolation (runtime)", () => {
     await route.GET(new Request("http://localhost/api/copilotkit"));
 
     expect(getLocalAgentsCalls).toHaveLength(2);
-    expect(getLocalAgentsCalls[0].resourceId).toBe("user-a-uuid");
-    expect(getLocalAgentsCalls[1].resourceId).toBe("user-b-uuid");
+    expect(getLocalAgentsCalls[0].resourceId).toBe(makeMemoryResourceId("org-default", "user-a-uuid"));
+    expect(getLocalAgentsCalls[1].resourceId).toBe(makeMemoryResourceId("org-default", "user-b-uuid"));
     expect(getLocalAgentsCalls[0].resourceId).not.toBe(getLocalAgentsCalls[1].resourceId);
   });
 
@@ -158,7 +193,9 @@ describe("C3 — single auth resolution per request (runtime)", () => {
     expect(withOperatorAuth).toHaveBeenCalledTimes(2);
     expect(resolveOperatorUser).not.toHaveBeenCalled();
     expect(getLocalAgentsCalls).toHaveLength(2);
-    expect(getLocalAgentsCalls.every((c) => c.resourceId === "cached-user")).toBe(true);
+    expect(
+      getLocalAgentsCalls.every((c) => c.resourceId === makeMemoryResourceId("org-default", "cached-user")),
+    ).toBe(true);
   });
 });
 
@@ -174,6 +211,309 @@ describe("CF-MIG-210 — Workers-safe runtime (no hono/vercel)", () => {
     expect(createCopilotRuntimeHandler).toHaveBeenCalledWith(
       expect.objectContaining({ basePath: "/api/copilotkit" }),
     );
+  });
+});
+
+// IPI-146 · MASTRA-GOV-002 — org resolution + thread ownership fail-closed behavior.
+describe("IPI-146 — org-scoped resourceId + thread ownership (runtime)", () => {
+  beforeEach(async () => {
+    vi.stubEnv("NODE_ENV", "development");
+    await setupMocks();
+  });
+
+  it("returns 401 (not 403 org_required) when extractAccessToken finds no token at all", async () => {
+    vi.doMock("@/lib/auth", () => ({
+      resolveOperatorUser: vi.fn(),
+      extractAccessToken: vi.fn().mockReturnValue(undefined),
+    }));
+
+    const route = await import("@/app/api/copilotkit/[[...slug]]/route");
+    const withOperatorAuth = vi.mocked((await import("@/lib/operator-gate")).withOperatorAuth);
+    withOperatorAuth.mockResolvedValue({ id: "user-a", email: "a@test.com", name: "A" });
+
+    const response = await route.GET(new Request("http://localhost/api/copilotkit"));
+
+    expect(response.status).toBe(401);
+    expect(await response.text()).toBe("Unauthorized");
+    expect(getLocalAgentsCalls).toHaveLength(0);
+  });
+
+  it("fails closed with 403 when the operator has no organization membership", async () => {
+    vi.doMock("@/lib/crm/queries", () => ({
+      getCurrentOrgId: vi.fn().mockResolvedValue(null),
+    }));
+
+    const route = await import("@/app/api/copilotkit/[[...slug]]/route");
+    const withOperatorAuth = vi.mocked((await import("@/lib/operator-gate")).withOperatorAuth);
+    withOperatorAuth.mockResolvedValue({ id: "orgless-user", email: "x@test.com", name: "X" });
+
+    const response = await route.GET(new Request("http://localhost/api/copilotkit"));
+
+    expect(response.status).toBe(403);
+    const body = (await response.json()) as { code?: string };
+    expect(body.code).toBe("org_required");
+    expect(getLocalAgentsCalls).toHaveLength(0);
+  });
+
+  it("does not fall back to bare user.id when org resolution fails", async () => {
+    vi.doMock("@/lib/crm/queries", () => ({
+      getCurrentOrgId: vi.fn().mockResolvedValue(null),
+    }));
+
+    const route = await import("@/app/api/copilotkit/[[...slug]]/route");
+    const withOperatorAuth = vi.mocked((await import("@/lib/operator-gate")).withOperatorAuth);
+    withOperatorAuth.mockResolvedValue({ id: "orgless-user", email: "x@test.com", name: "X" });
+
+    await route.GET(new Request("http://localhost/api/copilotkit"));
+
+    // getLocalAgents must never be reached — no bare-user.id fallback resourceId.
+    expect(getLocalAgentsCalls).toHaveLength(0);
+  });
+
+  it("allows a run against a brand-new threadId (no existing thread row)", async () => {
+    mockOrgScopeDeps({ orgId: "org-acme", threadResourceId: null });
+
+    const route = await import("@/app/api/copilotkit/[[...slug]]/route");
+    const withOperatorAuth = vi.mocked((await import("@/lib/operator-gate")).withOperatorAuth);
+    withOperatorAuth.mockResolvedValue({ id: "user-a", email: "a@test.com", name: "A" });
+
+    const response = await route.POST(
+      new Request("http://localhost/api/copilotkit/agent/production-planner/run", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ threadId: "brand-new-thread", messages: [] }),
+      }),
+    );
+
+    expect(response.status).toBe(200);
+    expect(getLocalAgentsCalls).toHaveLength(1);
+    expect(getLocalAgentsCalls[0].resourceId).toBe(makeMemoryResourceId("org-acme", "user-a"));
+  });
+
+  it("allows a run against a thread already owned by the same org-scoped resourceId", async () => {
+    const resourceId = makeMemoryResourceId("org-acme", "user-a");
+    mockOrgScopeDeps({ orgId: "org-acme", threadResourceId: resourceId });
+
+    const route = await import("@/app/api/copilotkit/[[...slug]]/route");
+    const withOperatorAuth = vi.mocked((await import("@/lib/operator-gate")).withOperatorAuth);
+    withOperatorAuth.mockResolvedValue({ id: "user-a", email: "a@test.com", name: "A" });
+
+    const response = await route.POST(
+      new Request("http://localhost/api/copilotkit/agent/production-planner/run", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ threadId: "existing-thread", messages: [] }),
+      }),
+    );
+
+    expect(response.status).toBe(200);
+    expect(getLocalAgentsCalls).toHaveLength(1);
+  });
+
+  it("migration strategy A: accepts a legacy pre-IPI-146 thread whose resourceId is the caller's own bare user.id", async () => {
+    mockOrgScopeDeps({ orgId: "org-acme", threadResourceId: "user-a" });
+
+    const route = await import("@/app/api/copilotkit/[[...slug]]/route");
+    const withOperatorAuth = vi.mocked((await import("@/lib/operator-gate")).withOperatorAuth);
+    withOperatorAuth.mockResolvedValue({ id: "user-a", email: "a@test.com", name: "A" });
+
+    const response = await route.POST(
+      new Request("http://localhost/api/copilotkit/agent/production-planner/run", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ threadId: "legacy-thread", messages: [] }),
+      }),
+    );
+
+    expect(response.status).toBe(200);
+    expect(getLocalAgentsCalls).toHaveLength(1);
+  });
+
+  it("denies (403) a cross-org threadId — thread owned by a different org's resourceId", async () => {
+    mockOrgScopeDeps({ orgId: "org-acme", threadResourceId: makeMemoryResourceId("org-widgets", "user-b") });
+
+    const route = await import("@/app/api/copilotkit/[[...slug]]/route");
+    const withOperatorAuth = vi.mocked((await import("@/lib/operator-gate")).withOperatorAuth);
+    withOperatorAuth.mockResolvedValue({ id: "user-a", email: "a@test.com", name: "A" });
+
+    const response = await route.POST(
+      new Request("http://localhost/api/copilotkit/agent/production-planner/run", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ threadId: "someone-elses-thread", messages: [] }),
+      }),
+    );
+
+    expect(response.status).toBe(403);
+    const body = (await response.json()) as { code?: string };
+    expect(body.code).toBe("thread_forbidden");
+    expect(getLocalAgentsCalls).toHaveLength(0);
+  });
+
+  it("denies (403) a forged threadId belonging to a different user in the same org", async () => {
+    mockOrgScopeDeps({ orgId: "org-acme", threadResourceId: makeMemoryResourceId("org-acme", "user-b") });
+
+    const route = await import("@/app/api/copilotkit/[[...slug]]/route");
+    const withOperatorAuth = vi.mocked((await import("@/lib/operator-gate")).withOperatorAuth);
+    withOperatorAuth.mockResolvedValue({ id: "user-a", email: "a@test.com", name: "A" });
+
+    const response = await route.POST(
+      new Request("http://localhost/api/copilotkit/agent/production-planner/run", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ threadId: "forged-thread-id", messages: [] }),
+      }),
+    );
+
+    expect(response.status).toBe(403);
+    const body = (await response.json()) as { code?: string };
+    expect(body.code).toBe("thread_forbidden");
+    expect(getLocalAgentsCalls).toHaveLength(0);
+  });
+
+  // GET/PATCH/DELETE thread routes carry no JSON body — threadId only ever
+  // appears in the URL path (`/threads/:id`, `/threads/:id/state`, etc., per
+  // CopilotKit's fetch-router). These prove extractThreadIdFromUrl closes
+  // that gap instead of only checking the POST-body path above.
+  it("denies (403) a GET to /threads/:id/state owned by a different org (URL-based check)", async () => {
+    mockOrgScopeDeps({ orgId: "org-acme", threadResourceId: makeMemoryResourceId("org-widgets", "user-b") });
+
+    const route = await import("@/app/api/copilotkit/[[...slug]]/route");
+    const withOperatorAuth = vi.mocked((await import("@/lib/operator-gate")).withOperatorAuth);
+    withOperatorAuth.mockResolvedValue({ id: "user-a", email: "a@test.com", name: "A" });
+
+    const response = await route.GET(
+      new Request("http://localhost/api/copilotkit/threads/someone-elses-thread/state"),
+    );
+
+    expect(response.status).toBe(403);
+    const body = (await response.json()) as { code?: string };
+    expect(body.code).toBe("thread_forbidden");
+  });
+
+  it("allows a GET to /threads/:id/state owned by the caller's own org-scoped resourceId", async () => {
+    const resourceId = makeMemoryResourceId("org-acme", "user-a");
+    mockOrgScopeDeps({ orgId: "org-acme", threadResourceId: resourceId });
+
+    const route = await import("@/app/api/copilotkit/[[...slug]]/route");
+    const withOperatorAuth = vi.mocked((await import("@/lib/operator-gate")).withOperatorAuth);
+    withOperatorAuth.mockResolvedValue({ id: "user-a", email: "a@test.com", name: "A" });
+
+    const response = await route.GET(
+      new Request("http://localhost/api/copilotkit/threads/existing-thread/state"),
+    );
+
+    expect(response.status).toBe(200);
+  });
+
+  it("denies (403) a DELETE for a thread the caller doesn't own — no JSON body, URL-only", async () => {
+    mockOrgScopeDeps({ orgId: "org-acme", threadResourceId: makeMemoryResourceId("org-widgets", "user-b") });
+
+    const route = await import("@/app/api/copilotkit/[[...slug]]/route");
+    const withOperatorAuth = vi.mocked((await import("@/lib/operator-gate")).withOperatorAuth);
+    withOperatorAuth.mockResolvedValue({ id: "user-a", email: "a@test.com", name: "A" });
+
+    const response = await route.DELETE(
+      new Request("http://localhost/api/copilotkit/threads/someone-elses-thread", { method: "DELETE" }),
+    );
+
+    expect(response.status).toBe(403);
+  });
+
+  it("does not treat /threads/subscribe or /threads/clear as a threadId (no false-positive ownership check)", async () => {
+    // These are CopilotKit's own list-level routes, not thread-scoped ones —
+    // getThreadById must never be asked to look up "subscribe" or "clear" as
+    // if they were a threadId. Assert call count (not only 200): with
+    // threadResourceId:null the mock returns no thread, so a 200 alone would
+    // still pass if extractThreadIdFromUrl wrongly treated those segments as IDs.
+    const { getThreadById } = mockOrgScopeDeps({ orgId: "org-acme", threadResourceId: null });
+
+    const route = await import("@/app/api/copilotkit/[[...slug]]/route");
+    const withOperatorAuth = vi.mocked((await import("@/lib/operator-gate")).withOperatorAuth);
+    withOperatorAuth.mockResolvedValue({ id: "user-a", email: "a@test.com", name: "A" });
+
+    const subscribeResponse = await route.GET(
+      new Request("http://localhost/api/copilotkit/threads/subscribe"),
+    );
+    const clearResponse = await route.POST(
+      new Request("http://localhost/api/copilotkit/threads/clear", { method: "POST" }),
+    );
+
+    expect(subscribeResponse.status).toBe(200);
+    expect(clearResponse.status).toBe(200);
+    expect(getThreadById).not.toHaveBeenCalled();
+  });
+});
+
+// IPI-146 · MASTRA-GOV-002 — proves the POST-body threadId read (via
+// extractThreadIdFromBody) does not consume the request stream: the endpoint
+// still receives the exact original body afterward. Uses its own mocks
+// (not setupMocks()) because it needs createCopilotRuntimeHandler's returned
+// handler to actually read the forwarded Request instead of ignoring it.
+describe("IPI-146 — POST body is read once and forwarded intact (no request.clone())", () => {
+  beforeEach(async () => {
+    vi.stubEnv("NODE_ENV", "development");
+
+    vi.doMock("@/mastra", () => ({ getMastra: () => ({}) }));
+    vi.doMock("@/lib/auth", () => ({
+      resolveOperatorUser: vi.fn(),
+      extractAccessToken: vi.fn().mockReturnValue("test-token"),
+    }));
+    vi.doMock("@/lib/request-token", () => ({
+      requestToken: { run: vi.fn((_v: string, fn: () => unknown) => fn()), getStore: vi.fn() },
+    }));
+    vi.doMock("@/lib/operator-gate", () => ({
+      withOperatorAuth: vi.fn().mockResolvedValue({ id: "user-a", email: "a@test.com", name: "A" }),
+      OperatorAuthError: class extends Error {},
+      isOperatorAuthEnforced: vi.fn(() => false),
+    }));
+    mockOrgScopeDeps({ orgId: "org-acme", threadResourceId: null });
+    vi.doMock("@ag-ui/mastra", () => ({
+      MastraAgent: { getLocalAgents: vi.fn(() => ({})) },
+    }));
+    vi.doMock("@/lib/copilotkit/runtime-v2-fetch", () => ({
+      CopilotRuntime: vi.fn(() => ({})),
+      createCopilotRuntimeHandler: vi.fn(
+        () => async (request: Request) => {
+          const echoedBody = await request.text();
+          return Response.json({ echoedBody, contentType: request.headers.get("content-type") });
+        },
+      ),
+      InMemoryAgentRunner: vi.fn(),
+    }));
+  });
+
+  it("endpoint(request) still receives the full original JSON body after threadId extraction", async () => {
+    const route = await import("@/app/api/copilotkit/[[...slug]]/route");
+    const payload = { threadId: "brand-new-thread", messages: [{ role: "user", content: "hi" }] };
+
+    const response = await route.POST(
+      new Request("http://localhost/api/copilotkit/agent/production-planner/run", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(payload),
+      }),
+    );
+
+    const result = (await response.json()) as { echoedBody: string; contentType: string };
+    expect(JSON.parse(result.echoedBody)).toEqual(payload);
+    expect(result.contentType).toBe("application/json");
+  });
+
+  it("passes non-JSON POST bodies through unchanged", async () => {
+    const route = await import("@/app/api/copilotkit/[[...slug]]/route");
+
+    const response = await route.POST(
+      new Request("http://localhost/api/copilotkit/transcribe", {
+        method: "POST",
+        headers: { "content-type": "audio/wav" },
+        body: "raw-audio-bytes",
+      }),
+    );
+
+    const result = (await response.json()) as { echoedBody: string; contentType: string };
+    expect(result.echoedBody).toBe("raw-audio-bytes");
+    expect(result.contentType).toBe("audio/wav");
   });
 });
 
@@ -221,6 +561,9 @@ describe("IPI-760 — emitInterruptOutcome survives CopilotKit's per-request clo
       OperatorAuthError: OperatorAuthErrorClass,
       isOperatorAuthEnforced: vi.fn(() => false),
     }));
+    // IPI-146: org resolution runs on every request now — this describe block
+    // doesn't call setupMocks(), so it needs its own copy of these mocks too.
+    mockOrgScopeDeps();
 
     // getLocalAgents must return the SAME instance on every call — real @ag-ui/mastra
     // constructs fresh instances per call too, but the route only calls it once per
