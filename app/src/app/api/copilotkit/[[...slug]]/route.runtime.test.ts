@@ -21,6 +21,10 @@ afterEach(() => {
 function mockOrgScopeDeps(opts?: { orgId?: string | null; threadResourceId?: string | null }) {
   const orgId = opts?.orgId === undefined ? "org-default" : opts.orgId;
   const threadResourceId = opts?.threadResourceId ?? null;
+  // Hoisted so tests can assert call count (e.g. subscribe/clear must never look up).
+  const getThreadById = vi.fn().mockResolvedValue(
+    threadResourceId === null ? null : { resourceId: threadResourceId },
+  );
 
   vi.doMock("@/lib/shoot/commit-shoot-draft", () => ({
     createUserScopedClient: vi.fn(() => ({})),
@@ -33,12 +37,12 @@ function mockOrgScopeDeps(opts?: { orgId?: string | null; threadResourceId?: str
     return {
       ...actual,
       getMastraMemory: vi.fn(() => ({
-        getThreadById: vi.fn().mockResolvedValue(
-          threadResourceId === null ? null : { resourceId: threadResourceId },
-        ),
+        getThreadById,
       })),
     };
   });
+
+  return { getThreadById };
 }
 
 async function setupMocks() {
@@ -419,8 +423,10 @@ describe("IPI-146 — org-scoped resourceId + thread ownership (runtime)", () =>
   it("does not treat /threads/subscribe or /threads/clear as a threadId (no false-positive ownership check)", async () => {
     // These are CopilotKit's own list-level routes, not thread-scoped ones —
     // getThreadById must never be asked to look up "subscribe" or "clear" as
-    // if they were a threadId.
-    mockOrgScopeDeps({ orgId: "org-acme", threadResourceId: null });
+    // if they were a threadId. Assert call count (not only 200): with
+    // threadResourceId:null the mock returns no thread, so a 200 alone would
+    // still pass if extractThreadIdFromUrl wrongly treated those segments as IDs.
+    const { getThreadById } = mockOrgScopeDeps({ orgId: "org-acme", threadResourceId: null });
 
     const route = await import("@/app/api/copilotkit/[[...slug]]/route");
     const withOperatorAuth = vi.mocked((await import("@/lib/operator-gate")).withOperatorAuth);
@@ -435,6 +441,7 @@ describe("IPI-146 — org-scoped resourceId + thread ownership (runtime)", () =>
 
     expect(subscribeResponse.status).toBe(200);
     expect(clearResponse.status).toBe(200);
+    expect(getThreadById).not.toHaveBeenCalled();
   });
 });
 

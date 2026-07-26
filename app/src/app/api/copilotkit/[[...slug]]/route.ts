@@ -158,6 +158,9 @@ async function extractThreadIdFromBody(
     method: request.method,
     headers: request.headers,
     body: rawBody,
+    // Preserve client disconnect so endpoint() can cancel the agent turn
+    // instead of running until idle timeout on the SSE path.
+    signal: request.signal,
   });
 
   let threadId: string | undefined;
