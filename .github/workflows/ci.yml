@@ -207,7 +207,9 @@ jobs:
         shell: bash
         env:
           RESOLVED_DB_URL: ${{ github.event_name == 'pull_request' && secrets.QA_DATABASE_URL || secrets.DATABASE_URL }}
-          RESOLVED_API_URL: ${{ github.event_name == 'pull_request' && '' || secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          # Inverted for the same reason as the Model Gate step below: a falsy middle operand
+          # would resolve to the production URL here and fail every pull request.
+          RESOLVED_API_URL: ${{ github.event_name != 'pull_request' && secrets.NEXT_PUBLIC_SUPABASE_URL || '' }}
           EVENT_NAME: ${{ github.event_name }}
         run: |
           PROD_REF="nvdlhrodvevgwdsneplk"
@@ -237,18 +239,31 @@ jobs:
         env:
           REQUIRE_BOOKING_SQL: "1"
           DATABASE_URL: ${{ github.event_name == 'pull_request' && secrets.QA_DATABASE_URL || secrets.DATABASE_URL }}
-          NEXT_PUBLIC_SUPABASE_URL: ${{ github.event_name == 'pull_request' && '' || secrets.NEXT_PUBLIC_SUPABASE_URL }}
-          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ github.event_name == 'pull_request' && '' || secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
-          SUPABASE_SERVICE_ROLE_KEY: ${{ github.event_name == 'pull_request' && '' || secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          # The condition is INVERTED so the secret sits in the middle operand. GitHub's
+          # `a && b || c` returns operand values, not booleans, so a falsy middle operand
+          # (`== 'pull_request' && ''`) always falls through to c — that spelling hands pull
+          # requests the production secret, the exact opposite of the intent. Written this
+          # way a pull request yields '' and only a push resolves the secret.
+          # booking-gate-prod-isolation.test.ts fails the build on a falsy middle operand in
+          # any ${{ }} expression in this file (comments like this one are not scanned).
+          NEXT_PUBLIC_SUPABASE_URL: ${{ github.event_name != 'pull_request' && secrets.NEXT_PUBLIC_SUPABASE_URL || '' }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ github.event_name != 'pull_request' && secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY || '' }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ github.event_name != 'pull_request' && secrets.SUPABASE_SERVICE_ROLE_KEY || '' }}
           # Trust Supabase pooler CA (scripts/certs/supabase-prod-ca-2021.crt).
           # Do not set VERIFY_RLS_PG_INSECURE_SSL in CI (IPI-621).
           PGSSLROOTCERT: ${{ github.workspace }}/scripts/certs/supabase-prod-ca-2021.crt
         run: npm run supabase:verify-booking-gate -- ${{ github.event_name == 'pull_request' && '--skip-api' || '' }}
 
       # IPI-476 · PLAN-CI-001 — planner scenario + Realtime (needs Node 22+ WebSocket)
-      # IPI-810 phase 2 — push only. This step never had a target guard at all: it
-      # takes production API credentials directly and verify-planner-scenario.mjs
-      # writes fixtures, so on a pull request it is not run.
+      # IPI-810 phase 2 — push only. This step never had a target guard at all: it takes
+      # production API credentials directly and verify-planner-scenario.mjs writes fixtures,
+      # so on a pull request it is not run.
+      #
+      # The credentials below are deliberately left unconditional, unlike the Model Gate
+      # step's: the `if:` means this step never executes on a pull request, so there is no
+      # pull-request value for them to resolve to. Do not "make it consistent" by adding an
+      # event ternary here — that would imply this step can run on a pull request. If the
+      # `if:` is ever removed, these must become conditional in the same edit.
       - name: Planner scenario + Realtime verification
         if: github.event_name != 'pull_request'
         env:
