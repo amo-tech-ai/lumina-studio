@@ -40,7 +40,6 @@
     "@libsql/client": "^0.15.15",
     "@mastra/client-js": "1.23.2",
     "@mastra/core": "1.41.0",
-    "@mastra/libsql": "1.1.0-alpha.2",
     "@mastra/memory": "1.0.1-alpha.1",
     "@mastra/observability": "1.16.2",
     "@mastra/pg": "1.12.0",
