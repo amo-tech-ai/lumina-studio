@@ -208,15 +208,21 @@ function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
 }
 
 function settleOrOrphan(work: Promise<unknown>, orphanMs: number): Promise<void> {
-  return Promise.race([
+  // Mirror withTimeout: clear the orphan timer when work settles first so we do
+  // not retain a live timer after the race winner is already known.
+  return new Promise<void>((resolve) => {
+    const timer = setTimeout(() => resolve(), orphanMs);
     work.then(
-      () => undefined,
-      () => undefined,
-    ),
-    new Promise<void>((resolve) => {
-      setTimeout(resolve, orphanMs);
-    }),
-  ]);
+      () => {
+        clearTimeout(timer);
+        resolve();
+      },
+      () => {
+        clearTimeout(timer);
+        resolve();
+      },
+    );
+  });
 }
 
 export type CreateThreadImmediateReadOpts = {
@@ -381,7 +387,11 @@ export async function createThreadImmediateRead(
         await settleOrOrphan(roundtripWork, HD_THREAD_CANARY_ORPHAN_TIMEOUT_MS);
       }
 
-      // Idempotent keyed rows must survive so the next identical key hits the existing-thread branch.
+      // ponytail: if save is still in flight past the orphan bound, createdByUs may
+      // still be false here while the write later lands — unique soak-key rows can
+      // leak. Upgrade: best-effort delete after orphan expiry, or a sweeper on the
+      // `ipi-623-canary-` prefix.
+      // Delete only threads this invocation wrote (unless retainForReplay opt-in).
       if (store && cleanup && createdByUs && !result.crossTenant && !preserveForReplay) {
         try {
           await withTimeout(

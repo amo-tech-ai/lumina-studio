@@ -7,6 +7,7 @@ import {
   HD_THREAD_CANARY_FAILURE_THRESHOLD,
   HD_THREAD_CANARY_IDEMPOTENCY_KEY_MAX,
   HD_THREAD_CANARY_MAX_CONCURRENCY,
+  HD_THREAD_CANARY_ORPHAN_TIMEOUT_MS,
   isCanaryCircuitOpen,
   recordCanaryFailure,
   recordCanarySuccess,
@@ -354,8 +355,16 @@ describe("createThreadImmediateRead (IPI-623 / IPI-823)", () => {
     // Timeout path returns immediately; cleanup/orphan is in backgroundWork.
     expect(wallMs).toBeLessThan(timeoutMs + 500);
     expect(result.latencyMs).toBeLessThan(timeoutMs + 500);
+    // Drain backgroundWork (orphan bound when save never settles) so the suite
+    // does not leave a pending settleOrOrphan timer / slot release.
+    await Promise.race([
+      backgroundWork!,
+      new Promise<void>((resolve) =>
+        setTimeout(resolve, HD_THREAD_CANARY_ORPHAN_TIMEOUT_MS + 500),
+      ),
+    ]);
     resetCanaryCircuitForTests();
-  });
+  }, HD_THREAD_CANARY_ORPHAN_TIMEOUT_MS + 2_000);
 
   it("keeps semaphore slot until hung work settles after timeout", async () => {
     let resolveSave!: (value: unknown) => void;

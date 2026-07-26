@@ -197,35 +197,44 @@ describe("POST /api/internal/hyperdrive-thread-canary", () => {
 
   it("registers timeout cleanup with ctx.waitUntil", async () => {
     const backgroundWork = Promise.resolve();
+    const createThreadImmediateRead = vi.fn(async () => ({
+      result: {
+        ok: false,
+        threadId: "t1",
+        resourceId: "org-a",
+        matched: false,
+        wrote: false,
+        duplicateWrite: false,
+        cleanedUp: false,
+        latencyMs: 40,
+        errorClass: "timeout" as const,
+        error: "timeout",
+        crossTenant: false,
+      },
+      backgroundWork,
+    }));
     vi.doMock("@/lib/db/hyperdrive-thread-canary", async (importOriginal) => {
       const actual = await importOriginal<typeof import("@/lib/db/hyperdrive-thread-canary")>();
       return {
         ...actual,
-        createThreadImmediateRead: vi.fn(async () => ({
-          result: {
-            ok: false,
-            threadId: "t1",
-            resourceId: "org-a",
-            matched: false,
-            wrote: false,
-            duplicateWrite: false,
-            cleanedUp: false,
-            latencyMs: 40,
-            errorClass: "timeout" as const,
-            error: "timeout",
-            crossTenant: false,
-          },
-          backgroundWork,
-        })),
+        createThreadImmediateRead,
       };
     });
     mockCfEnv(enabledEnv);
     const { POST } = await import("./route");
     const res = await POST(
-      req({ resourceId: "org-a" }, { "X-Internal-Secret": "expected" }),
+      req(
+        { resourceId: "org-a", retainForReplay: true },
+        { "X-Internal-Secret": "expected" },
+      ),
     );
     expect(res.status).toBe(502);
     expect(waitUntil).toHaveBeenCalledTimes(1);
     expect(waitUntil.mock.calls[0]?.[0]).toBeInstanceOf(Promise);
+    expect(createThreadImmediateRead).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.anything(),
+      expect.objectContaining({ retainForReplay: true }),
+    );
   });
 });
