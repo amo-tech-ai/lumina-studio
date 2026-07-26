@@ -9,7 +9,7 @@
  * Isolate circuit-breaker auto-rolls back after consecutive failures;
  * durable kill remains the env flag (set false / version rollback).
  */
-import { NextResponse } from "next/server";
+import { after, NextResponse } from "next/server";
 import { createHash, timingSafeEqual } from "node:crypto";
 import { getCloudflareContext } from "@opennextjs/cloudflare";
 import type { HyperdriveBinding } from "@/lib/db/hyperdrive-query";
@@ -37,7 +37,26 @@ type CanaryBody = {
   mode?: string;
   concurrency?: number;
   resourceId?: string;
+  /** Opt-in: keep Idempotency-Key rows for cross-request replay (default cleans them). */
+  retainForReplay?: boolean;
 };
+
+type WaitUntilFn = (promise: Promise<unknown>) => void;
+
+/** Keep timeout cleanup alive after the response (Worker waitUntil, else Next after). */
+function scheduleCanaryBackground(work: Promise<void>, waitUntil?: WaitUntilFn) {
+  const safe = work.catch((err) => {
+    console.error(
+      "hyperdrive-thread-canary: background cleanup failed",
+      err instanceof Error ? err.message : err,
+    );
+  });
+  if (waitUntil) {
+    waitUntil(safe);
+    return;
+  }
+  after(() => safe);
+}
 
 function isCanaryEnabled(envFlag: string | undefined): boolean {
   const flag = envFlag ?? process.env.ENABLE_HYPERDRIVE_THREAD_CANARY;
@@ -104,9 +123,14 @@ export async function POST(request: Request) {
   const idempotencyKey = request.headers.get("Idempotency-Key") ?? undefined;
 
   let env: CanaryEnv | undefined;
+  let waitUntil: WaitUntilFn | undefined;
   try {
-    const ctx = await getCloudflareContext({ async: true });
-    env = ctx.env as CanaryEnv | undefined;
+    const cf = await getCloudflareContext({ async: true });
+    env = cf.env as CanaryEnv | undefined;
+    const cfCtx = (cf as { ctx?: { waitUntil?: WaitUntilFn } }).ctx;
+    if (typeof cfCtx?.waitUntil === "function") {
+      waitUntil = cfCtx.waitUntil.bind(cfCtx);
+    }
   } catch {
     // Node / Vitest
   }
@@ -210,11 +234,19 @@ export async function POST(request: Request) {
   const mode = body.mode === "concurrent" ? "concurrent" : "single";
   const started = Date.now();
 
+  const retainForReplay = body.retainForReplay === true;
+
   if (mode === "single") {
-    const result = await createThreadImmediateRead(hyperdrive, PostgresStore, {
-      resourceId,
-      idempotencyKey,
-    });
+    const { result, backgroundWork } = await createThreadImmediateRead(
+      hyperdrive,
+      PostgresStore,
+      {
+        resourceId,
+        idempotencyKey,
+        retainForReplay,
+      },
+    );
+    if (backgroundWork) scheduleCanaryBackground(backgroundWork, waitUntil);
 
     if (isConcurrencySaturated(result)) {
       return json(503, {
@@ -249,11 +281,17 @@ export async function POST(request: Request) {
 
   // Concurrent: unique thread ids per attempt (idempotency key only applies to single mode).
   const concurrency = clampCanaryConcurrency(body.concurrency);
-  const results = await Promise.all(
+  const outcomes = await Promise.all(
     Array.from({ length: concurrency }, () =>
       createThreadImmediateRead(hyperdrive, PostgresStore, { resourceId }),
     ),
   );
+  for (const outcome of outcomes) {
+    if (outcome.backgroundWork) {
+      scheduleCanaryBackground(outcome.backgroundWork, waitUntil);
+    }
+  }
+  const results = outcomes.map((o) => o.result);
 
   if (isConcurrencySaturated(results)) {
     return json(503, {
