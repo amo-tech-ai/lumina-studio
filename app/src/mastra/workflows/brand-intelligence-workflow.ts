@@ -142,7 +142,8 @@ const waitForCrawl = createStep({
 });
 
 // Step 4: run Gemini profile + scoring via brand-intelligence edge fn
-const extractProfile = createStep({
+// Exported for unit tests (edge-fn non-2xx must abort the run).
+export const extractProfile = createStep({
   id: "extract-profile",
   inputSchema: z.object({ crawlId: z.string() }),
   outputSchema: z.object({ ok: z.boolean() }),
@@ -175,17 +176,31 @@ const extractProfile = createStep({
       },
       body: JSON.stringify({ brandId, url: brand.brand_url, crawlResultId: inputData.crawlId, draft_mode: true }),
     });
-    // ponytail: non-2xx logged but not fatal — brand might still be partially useful.
     // On success, the edge fn sets intake_status: "draft_ready" itself — don't overwrite.
+    //
+    // IPI-807 P0b — a non-2xx aborts the run. This previously warned, marked the brand
+    // failed and returned { ok: false }, on the stated grounds that a partial brand
+    // "might still be partially useful". It never delivered that:
+    //   * save-draft-and-wait (step 6) then set intake_status: "draft_ready", overwriting
+    //     the "failed" written here, so the failure signal was erased and the update
+    //     below was dead code;
+    //   * the draft it filed read ai_profile_draft, which only the edge fn writes — so on
+    //     failure the profile was empty, or worse, stale output from an earlier
+    //     successful run, because the upsert keys on brand_id;
+    //   * the { ok } flag was never read — fan-out-enrichment accepts it and ignores it.
+    // So the operator saw "draft ready" with nothing behind it. Failing closed keeps
+    // "failed" visible, files no draft, and gives IPI-813's onError hook something to fire
+    // on. Presenting a clearly-marked incomplete draft is a real feature (persisted flag
+    // plus brand detail UI) and is tracked separately.
     if (!res.ok) {
       const msg = await res.text().catch(() => res.statusText);
-      console.warn(`brand-intelligence edge fn ${res.status}: ${msg}`);
       await sb
         .from("brands")
         .update({ intake_status: "failed", updated_at: new Date().toISOString() })
         .eq("id", brandId);
+      throw new Error(`brand-intelligence edge fn ${res.status}: ${msg}`);
     }
-    return { ok: res.ok };
+    return { ok: true };
   },
 });
 
