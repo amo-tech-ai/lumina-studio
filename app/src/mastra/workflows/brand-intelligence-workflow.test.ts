@@ -298,6 +298,19 @@ describe("validate-brand authorization", () => {
     await expect(run(EDITOR_ID)).rejects.toThrow("Not authorized");
   });
 
+  // A failed membership *query* is not a membership *denial*. Both produce
+  // `member === null`, so without this the non-member case above would happily
+  // pass while a database outage was being reported to the operator as a
+  // permissions problem. Same guarantee the brand read below already has.
+  it("reports an org_members lookup failure as a failure, not as a rejection", async () => {
+    vi.mocked(createClient).mockReturnValue(
+      makeClient({ member: null, memberError: { message: "connection reset" } }),
+    );
+    const err = (await run(EDITOR_ID).catch((e: unknown) => e)) as Error;
+    expect(err.message).toContain("Failed to check org membership");
+    expect(err.message).not.toContain("Not authorized");
+  });
+
   it("reports a read failure as a failure, not as 'not found'", async () => {
     vi.mocked(createClient).mockReturnValue(
       makeClient({ brand: null, brandError: { message: "connection reset" } }),

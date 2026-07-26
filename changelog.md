@@ -8,6 +8,34 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### 2026-07-26 — IPI-815: Fix Racy NewPlanDialog Idempotency-Key Tests Blocking the Pre-Push Gate
+
+**PR #634 — merge `aa5d433`. Test-only; no production component changed.**
+
+Two `new-plan-dialog.test.tsx` idempotency-key tests failed intermittently — 6 of 7 full-suite runs under load, but always passed in isolation, so the pre-push gate blocked unpredictably.
+
+- **Cause:** the tests awaited the error alert, then ran a *synchronous* `getByRole("button", { name: "Create plan" })`. The submit button's accessible name flips to `Creating…` while `useTransition`'s `isSaving` is pending, and `setError` / `isSaving` are separate React updates — so React could commit the alert while the button still read `Creating…`, and the synchronous query threw.
+- **Fix:** wait on the button returning to `Create plan` via `findByRole`, which retries. The button's own name *is* the signal that the transition settled; the rendered alert was a weaker proxy.
+- Removed 3 ineffective `{ timeout: … }` workarounds and stale comments that misattributed the race to mock timing.
+- **Verified:** 5 isolated runs (16/16 each) + 2 full-suite runs, 0 failures.
+
+Two unrelated load-sensitive tests (`mastra/registry-discovery.test.ts`, `api/copilotkit/[[...slug]]/route.info.test.ts`) were found during verification and deliberately left alone — different, still-unknown cause. Tracked as IPI-819 · TEST-STABILITY-001.
+
+### 2026-07-26 — IPI-812 · BRAND-REG-003: Authenticate Brand Analysis at the Request Boundary and Enforce Editor/Owner Permission
+
+**PR #633 — merge `ea816a9`. Root cause of all 5 failed production `brand-intelligence` runs.**
+
+Every real workflow run died at step 1 of 7 with `Brand not found or not owned by this user: …202`, while a valid `qa@ipix.test` JWT sat unused in the same payload.
+
+- **Defect 1 — identity was a placeholder.** `withOperatorAuth` (`operator-gate.ts:24-34`) returns `"dev-unauthenticated"` whenever the operator gate is off, **without inspecting the request**. The start route passed that string into the workflow as the actor. A string sentinel can never equal a uuid column, so the check failed 100% of the time.
+- **Defect 2 — owner-only check rejected editors.** `validate-brand` filtered `.eq("user_id", userId)` on a service-role client that bypasses RLS. Now checks org membership (owner/editor), matching the IPI-732 precedent for shoot creation. Viewers keep read access via `brands_select_org` but cannot start an analysis — it spends Firecrawl/LLM budget.
+- **Third instance found and fixed:** the same defect in `brand-intelligence/approve` would have made every draft approval 403 once the start route was fixed.
+- **New:** `app/src/lib/jwt-actor.ts` — shared `resolveJwtActor()`. Placed outside `@/lib/auth` deliberately: `src/middleware.ts` imports that module and is documented Edge-safe, so pulling in the shoot-commit path would drag it into the middleware bundle. Also wraps client construction in try/catch, so a misconfigured deploy returns a JSON 500 instead of Next's generic HTML 500.
+- **Schema:** workflow input `userId: z.string()` → `actorId: z.string().uuid()`, making the `"dev-unauthenticated"` bug class unrepresentable.
+- **Verified:** 232 files / 2298 passed, typecheck + build green, `supabase:verify-rls` independently confirms `is_org_editor_or_above()` is true for owner/editor and false for viewer.
+
+**Known limitation:** `accessToken` is still passed into workflow input and therefore persisted in `mastra.mastra_workflow_snapshot`. It cannot be removed here — `start-brand-crawl` has `verify_jwt = true` and records `started_by`, so a service-role call 401s. Tracked as IPI-817 · SEC-WF-001. Scrubbing the 5 historical token-bearing rows awaits production-data sign-off.
+
 ### 2026-06-24 — IPI2-167 complete: lead capture wired + edge fn hardened
 
 **WEB-015.8 Lead Capture Workflow — commits `2c8affb`, `f7f00b8`, `0e0f8c1`**

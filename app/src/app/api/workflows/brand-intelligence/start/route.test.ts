@@ -107,6 +107,16 @@ describe("POST /api/workflows/brand-intelligence/start", () => {
     expect(mockStartAsync).not.toHaveBeenCalled();
   });
 
+  // A failed role *check* is not a role *denial*. Same call as the viewer case above,
+  // but `error` set instead of `data: false` — 403 here would tell the caller they
+  // lack permission when the truth is the database could not answer.
+  it("returns 500, not 403, when the role RPC itself fails", async () => {
+    mockRpc.mockResolvedValue({ data: null, error: { message: "connection reset" } });
+    const res = await post();
+    expect(res.status).toBe(500);
+    expect(mockStartAsync).not.toHaveBeenCalled();
+  });
+
   it("returns 401 when no access token is present", async () => {
     mockExtractAccessToken.mockReturnValue(null);
     const res = await post();
