@@ -45,6 +45,20 @@ async function importRouteWithMocks() {
     };
   });
 
+  // IPI-146: route.ts now fails closed with 401 before org resolution when
+  // extractAccessToken finds no token — these tests bypass real auth via the
+  // withOperatorAuth mock above and never set a real Authorization header, so
+  // extractAccessToken needs its own mock too (same pattern as
+  // route.runtime.test.ts). These /info + SSE-normalization tests care about
+  // downstream behavior, not the token itself.
+  vi.doMock("@/lib/auth", async () => {
+    const actual = await vi.importActual<typeof import("@/lib/auth")>("@/lib/auth");
+    return {
+      ...actual,
+      extractAccessToken: vi.fn().mockReturnValue("info-test-token"),
+    };
+  });
+
   vi.doMock("@ag-ui/mastra", () => ({
     MastraAgent: {
       getLocalAgents: vi.fn().mockResolvedValue(mockAgents),

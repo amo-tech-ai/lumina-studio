@@ -97,22 +97,79 @@ async function assertThreadOwnership(
   rejectTenantKeyRewrite(thread.resourceId, expectedResourceId);
 }
 
-/** Extracts `threadId` from a CopilotKit `agent/run`-style POST body without
- *  consuming the original request stream (`request.clone()`), so `endpoint(request)`
- *  can still read it normally afterward. Returns undefined for anything that
- *  isn't a same-origin JSON POST with a non-blank string `threadId` — malformed
- *  bodies are left for CopilotKit's own parser to reject with the right error. */
-async function extractThreadIdFromBody(request: Request): Promise<string | undefined> {
-  if (request.method !== "POST") return undefined;
-  const contentType = request.headers.get("content-type") ?? "";
-  if (!contentType.includes("application/json")) return undefined;
-  try {
-    const body = (await request.clone().json()) as { threadId?: unknown } | null;
-    const threadId = body?.threadId;
-    return typeof threadId === "string" && threadId.trim() ? threadId : undefined;
-  } catch {
-    return undefined;
+/** Extracts a `threadId` from CopilotKit's REST-style thread routes —
+ *  `/threads/:id`, `/threads/:id/messages|events|state|archive`, and
+ *  `/agent/:agentId/stop/:id` — so GET/PATCH/DELETE thread-scoped requests
+ *  (which carry no JSON body) still go through `assertThreadOwnership`
+ *  instead of only the POST-body path below. Mirrors the segment shapes
+ *  matched by `@copilotkit/runtime`'s fetch-router (`matchSegments` in
+ *  `dist/v2/runtime/core/fetch-router.mjs`) without importing its internals —
+ *  a version bump there needs a matching update here. */
+function extractThreadIdFromUrl(request: Request): string | undefined {
+  const { pathname } = new URL(request.url);
+  const segments = pathname.split("/").filter(Boolean);
+  const len = segments.length;
+  const decode = (s: string): string | undefined => {
+    try {
+      return decodeURIComponent(s);
+    } catch {
+      return undefined;
+    }
+  };
+
+  if (
+    len >= 3 &&
+    segments[len - 3] === "threads" &&
+    ["messages", "events", "state", "archive"].includes(segments[len - 1])
+  ) {
+    return decode(segments[len - 2]);
   }
+  if (len >= 4 && segments[len - 4] === "agent" && segments[len - 2] === "stop") {
+    return decode(segments[len - 1]);
+  }
+  if (
+    len >= 2 &&
+    segments[len - 2] === "threads" &&
+    !["subscribe", "clear"].includes(segments[len - 1])
+  ) {
+    return decode(segments[len - 1]);
+  }
+  return undefined;
+}
+
+/** Extracts `threadId` from a CopilotKit `agent/run`-style JSON POST body and
+ *  returns a reconstructed `Request` carrying the original body + headers, so
+ *  `endpoint(request)` can still read it normally afterward — reading the
+ *  stream once via `request.text()` instead of `request.clone()` (a clone's
+ *  unread branch forces the runtime to buffer the full body in memory to
+ *  keep it alive). Returns the original `request` unchanged for non-POST or
+ *  non-JSON requests — no reconstruction cost on the common GET path.
+ *  Malformed bodies are left for CopilotKit's own parser to reject with the
+ *  right error. */
+async function extractThreadIdFromBody(
+  request: Request,
+): Promise<{ threadId: string | undefined; request: Request }> {
+  if (request.method !== "POST") return { threadId: undefined, request };
+  const contentType = request.headers.get("content-type") ?? "";
+  if (!contentType.includes("application/json")) return { threadId: undefined, request };
+
+  const rawBody = await request.text();
+  const forwardedRequest = new Request(request.url, {
+    method: request.method,
+    headers: request.headers,
+    body: rawBody,
+  });
+
+  let threadId: string | undefined;
+  try {
+    const parsed = rawBody.trim() ? (JSON.parse(rawBody) as { threadId?: unknown } | null) : null;
+    const candidate = parsed?.threadId;
+    threadId = typeof candidate === "string" && candidate.trim() ? candidate : undefined;
+  } catch {
+    threadId = undefined;
+  }
+
+  return { threadId, request: forwardedRequest };
 }
 
 if (!process.env.COPILOTKIT_LICENSE_TOKEN) {
@@ -387,22 +444,36 @@ const handler = async (request: Request): Promise<Response> => {
     }
   }
 
-  const token = extractAccessToken(request) ?? "";
+  const token = extractAccessToken(request);
+  if (!token) {
+    // No Supabase access token at all is an authentication failure (401), not
+    // an authorization one — don't let it fall through to
+    // resolveOrgScopedResourceId() and come back out as a misleading
+    // `org_required` 403.
+    console.error("[copilotkit] no access token on request — refusing (401, fail closed)");
+    return new Response("Unauthorized", { status: 401 });
+  }
 
   try {
     // IPI-146: resolve the org-scoped resourceId, then (if this request
-    // targets an existing thread) verify that thread belongs to it — both
-    // BEFORE endpoint(request) runs, so a failure here never reaches
-    // CopilotKit's internals as an opaque thrown error.
+    // targets an existing thread — via URL path or JSON POST body) verify
+    // that thread belongs to it — both BEFORE endpoint(request) runs, so a
+    // failure here never reaches CopilotKit's internals as an opaque thrown
+    // error.
     const resourceId = await resolveOrgScopedResourceId(user, token);
 
-    const threadId = await extractThreadIdFromBody(request);
-    if (threadId) {
-      await assertThreadOwnership(threadId, resourceId, user.id);
+    const urlThreadId = extractThreadIdFromUrl(request);
+    if (urlThreadId) {
+      await assertThreadOwnership(urlThreadId, resourceId, user.id);
+    }
+
+    const { threadId: bodyThreadId, request: forwardedRequest } = await extractThreadIdFromBody(request);
+    if (bodyThreadId) {
+      await assertThreadOwnership(bodyThreadId, resourceId, user.id);
     }
 
     const response = await _requestUser.run(user, () =>
-      _requestResourceId.run(resourceId, () => requestToken.run(token, () => endpoint(request))),
+      _requestResourceId.run(resourceId, () => requestToken.run(token, () => endpoint(forwardedRequest))),
     );
     return withStreamIdleTimeout(await normalizeRuntimeErrorResponse(response), STREAM_IDLE_TIMEOUT_MS);
   } catch (err) {

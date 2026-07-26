@@ -45,7 +45,16 @@ async function createTestThread(resourceId: string): Promise<StorageThreadType> 
 afterAll(async () => {
   if (!hasDb) return;
   await Promise.all(
-    createdThreadIds.map((id) => getMastraMemory().deleteThread(id).catch(() => {})),
+    createdThreadIds.map((id) =>
+      getMastraMemory()
+        .deleteThread(id)
+        .catch((err) => {
+          // Teardown must never fail the suite on a leftover row — but a
+          // silent catch here means a real `mastra_threads` cleanup bug
+          // (e.g. schema drift) would never surface. Log and keep going.
+          console.error(`[ipi-146 test cleanup] failed to delete thread ${id}:`, err);
+        }),
+    ),
   );
 }, 15_000);
 
