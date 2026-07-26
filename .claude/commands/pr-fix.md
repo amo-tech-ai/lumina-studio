@@ -32,9 +32,11 @@ Act as a senior GitHub PR reviewer and fixer for the iPix / Lumina Studio codeba
 ## Injected context
 
 - PR: !`gh pr view $ARGUMENTS --json number,url,headRefName,headRefOid,isDraft 2>/dev/null || echo "set PR in arguments"`
-- Git status: !`git status -sb`
-- Diff stat: !`git diff --stat HEAD`
-- Branch diff: !`git diff main...HEAD --stat 2>/dev/null || echo "n/a"`
+- Git status (first 20): !`git status -sb | head -20`
+- Changed files (total): !`git status --porcelain | wc -l`
+- Diff stat (first 20): !`git diff --stat HEAD | head -20`
+- Diff totals: !`git diff --shortstat HEAD`
+- Branch diff (first 20): !`{ git diff main...HEAD --stat 2>/dev/null || echo "n/a"; } | head -20`
 - Recent commits: !`git log -5 --oneline`
 - Local HEAD: !`git rev-parse HEAD`
 - Branch: !`git branch --show-current`
