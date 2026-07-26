@@ -10,18 +10,24 @@
 --
 -- pgTAP 1.2.0 is already installed on the remote, so no create extension here.
 --
--- Fixtures are created inside the transaction and discarded by the rollback. auth.users
--- needs only `id` (is_sso_user / is_anonymous carry defaults), and brand_id is left null so
--- the unique constraint from 20260715000000 is not engaged — Postgres treats nulls as
+-- Fixtures are created inside the transaction and discarded by the rollback. brand_id is left
+-- null so the unique constraint from 20260715000000 is not engaged — Postgres treats nulls as
 -- distinct, so the fixture drafts can coexist.
+--
+-- `email` is supplied even though auth.users itself does not need it (id is its only NOT NULL
+-- column without a default). The on_auth_user_created trigger runs handle_new_user, which
+-- inserts into public.profiles where email is NOT NULL. That function traps its own failure
+-- and downgrades it to a WARNING, so omitting email still let this file report ok while
+-- printing `handle_new_user failed: null value in column "email"` into every CI run. Supplying
+-- it keeps the fixture consistent with a real signup and the output clean.
 
 set search_path to public, extensions;
 
 begin;
 select plan(6);
 
-insert into auth.users (id)
-values ('00000000-0000-4000-8000-000000000807');
+insert into auth.users (id, email)
+values ('00000000-0000-4000-8000-000000000807', 'pgtap-807@example.test');
 
 -- 1) The value the workflow actually writes. This is the bug being fixed:
 --    brand-intelligence-workflow.ts:250 has always written it, and it has always failed.
