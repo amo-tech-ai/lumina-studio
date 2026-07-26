@@ -131,13 +131,33 @@ jobs:
     outputs:
       db_configured: ${{ steps.check.outputs.configured }}
     steps:
+      # IPI-810 · DB-TEST-001 — a pull request must never receive the production
+      # credential. These scripts create fixtures and their teardown is *non-atomic*
+      # (trailing statements), so any failed, timed-out or cancelled run orphans
+      # auth.users / organizations rows in production permanently. ~5,653 of the
+      # 5,671 rows in `brands` arrived this way.
+      #
+      # Pull requests therefore probe QA_DATABASE_URL only. If that secret is unset
+      # the gate reports not-configured and the whole booking-gate job skips —
+      # it must never quietly fall back to production.
       - id: check
         shell: bash
+        env:
+          PR_DB_URL: ${{ secrets.QA_DATABASE_URL }}
+          PUSH_DB_URL: ${{ secrets.DATABASE_URL }}
+          EVENT_NAME: ${{ github.event_name }}
         run: |
-          if [ -n "${{ secrets.DATABASE_URL }}" ]; then
-            echo "configured=true" >> $GITHUB_OUTPUT
+          if [ "$EVENT_NAME" = "pull_request" ]; then
+            CANDIDATE="$PR_DB_URL"
           else
-            echo "configured=false" >> $GITHUB_OUTPUT
+            CANDIDATE="$PUSH_DB_URL"
+          fi
+
+          if [ -n "$CANDIDATE" ]; then
+            echo "configured=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::booking-gate skipped — no database credential for event '$EVENT_NAME'. Set QA_DATABASE_URL to run it on pull requests."
           fi
 
   booking-gate:
@@ -170,10 +190,31 @@ jobs:
         working-directory: app
         run: npm ci --no-audit --no-fund
 
+      # IPI-810 · DB-TEST-001 — belt and braces. The expression below uses GitHub's
+      # `cond && a || b` idiom, and an *unset secret is falsy*, so if QA_DATABASE_URL
+      # is missing the expression silently yields the production URL. This step is
+      # what makes that safe: on a pull request, a connection string pointing at the
+      # production project is a hard failure, not a fallback.
+      #
+      # Do not remove this because "the check job already handles it" — the check job
+      # guards which credential is *probed*; this guards which one is actually *used*.
+      - name: Refuse the production project on pull requests
+        shell: bash
+        env:
+          RESOLVED_DB_URL: ${{ github.event_name == 'pull_request' && secrets.QA_DATABASE_URL || secrets.DATABASE_URL }}
+          EVENT_NAME: ${{ github.event_name }}
+        run: |
+          PROD_REF="nvdlhrodvevgwdsneplk"
+          if [ "$EVENT_NAME" = "pull_request" ] && printf '%s' "$RESOLVED_DB_URL" | grep -q "$PROD_REF"; then
+            echo "::error::booking-gate resolved to the PRODUCTION project ($PROD_REF) on a pull request. Refusing — these tests write fixtures with non-atomic teardown. Set QA_DATABASE_URL to a QA project or Supabase branch."
+            exit 1
+          fi
+          echo "Target check passed for event '$EVENT_NAME' (production ref not present on a pull request)."
+
       - name: Model Gate verification
         env:
           REQUIRE_BOOKING_SQL: "1"
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          DATABASE_URL: ${{ github.event_name == 'pull_request' && secrets.QA_DATABASE_URL || secrets.DATABASE_URL }}
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
           NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
