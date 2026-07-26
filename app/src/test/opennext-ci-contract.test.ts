@@ -33,6 +33,8 @@ describe("OpenNext CI contract (IPI-472)", () => {
     expect(wrangler).toMatch(/"ai"\s*:\s*\{\s*"binding"\s*:\s*"AI"/);
     expect(wrangler).not.toMatch(/"ai"\s*:\s*\{[^}]*"remote"\s*:\s*true/);
     expect(wrangler).toMatch(/ENABLE_CF_AI_SMOKE.*false/);
+    // IPI-623 · CF-DB-009 — thread canary flag stays dark by default (flag rollback).
+    expect(wrangler).toMatch(/ENABLE_HYPERDRIVE_THREAD_CANARY.*false/);
     expect(wrangler).not.toMatch(/"DATABASE_URL"/);
     // IPI-620A/B — bare pg and @mastra/pg must reach workerd (queryFresh + PostgresStore smoke).
     // Production storage stays InMemory via MASTRA_STORAGE_MODE=noop — no bundler stubs.
