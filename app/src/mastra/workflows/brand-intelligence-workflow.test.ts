@@ -11,6 +11,7 @@ import { createClient } from "@supabase/supabase-js";
 import { socialDiscoveryAgent, visualIdentityAgent } from "../agents";
 import {
   brandIntelligenceWorkflow,
+  extractProfile,
   fanOutEnrichment,
   saveDraftAndWait,
   validateBrand,
@@ -74,6 +75,155 @@ describe("fan-out-enrichment", () => {
     social.mockResolvedValue({} as never);
     visual.mockRejectedValue(new Error("visual boom"));
     expect((await fanOutEnrichment.execute(ctx)).enriched).toBe(true);
+  });
+});
+
+// IPI-807 P0b — a non-2xx from the brand-intelligence edge fn must abort the run.
+// Before this, the step warned, set intake_status="failed" and returned { ok: false };
+// save-draft-and-wait then overwrote that with "draft_ready" and filed an approval draft
+// whose profile was empty (or stale, since the upsert keys on brand_id). The operator saw
+// "draft ready" with nothing behind it. It must fail closed instead.
+describe("extract-profile edge-fn failure", () => {
+  const BRAND_ID = "44444444-4444-4444-8444-444444444444";
+  const ctx = {
+    inputData: { crawlId: "crawl-1" },
+    getInitData: () => ({ brandId: BRAND_ID }),
+  } as never;
+
+  /**
+   * Mock client that records every brands.update payload.
+   * `failStatusWriteFor` makes the update for that intake_status return an error, so the
+   * "we could not even record the failure" branch can be exercised.
+   */
+  function makeRecordingClient(failStatusWriteFor?: string) {
+    const updates: Record<string, unknown>[] = [];
+    return {
+      client: {
+        from: vi.fn(() => ({
+          select: vi.fn().mockReturnThis(),
+          eq: vi.fn().mockReturnThis(),
+          single: vi.fn().mockResolvedValue({
+            data: { brand_url: "https://example.com", ai_profile_draft: null },
+            error: null,
+          }),
+          update: vi.fn((payload: Record<string, unknown>) => {
+            updates.push(payload);
+            const shouldFail =
+              failStatusWriteFor !== undefined && payload.intake_status === failStatusWriteFor;
+            return {
+              eq: vi.fn().mockResolvedValue({
+                data: null,
+                error: shouldFail ? { message: "row level security violation" } : null,
+              }),
+            };
+          }),
+        })),
+      } as never,
+      updates,
+    };
+  }
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://test.supabase.co");
+    vi.stubEnv("SUPABASE_SERVICE_ROLE_KEY", "test-service-role-key");
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    vi.unstubAllGlobals();
+  });
+
+  it("throws on a non-2xx instead of continuing to the draft step", async () => {
+    const { client } = makeRecordingClient();
+    vi.mocked(createClient).mockReturnValue(client);
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({ ok: false, status: 502, text: async () => "upstream boom" }),
+    );
+
+    await expect(extractProfile.execute(ctx)).rejects.toThrow(/502/);
+  });
+
+  it("marks the brand failed before throwing, so the status survives", async () => {
+    const { client, updates } = makeRecordingClient();
+    vi.mocked(createClient).mockReturnValue(client);
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({ ok: false, status: 500, text: async () => "boom" }),
+    );
+
+    await expect(extractProfile.execute(ctx)).rejects.toThrow();
+    // analysis_running is written first; the failure must be recorded after it.
+    expect(updates.map((u) => u.intake_status)).toEqual(["analysis_running", "failed"]);
+  });
+
+  // A refused connection / DNS failure rejects the fetch rather than returning a response.
+  // This path previously skipped the status write entirely, pinning the brand at
+  // "analysis_running" — which reads as "still working" and blocks the start guard from
+  // permitting a retry.
+  it("marks the brand failed and throws when fetch is rejected outright", async () => {
+    const { client, updates } = makeRecordingClient();
+    vi.mocked(createClient).mockReturnValue(client);
+    vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new TypeError("fetch failed")));
+
+    await expect(extractProfile.execute(ctx)).rejects.toThrow(/unreachable/);
+    expect(updates.map((u) => u.intake_status)).toEqual(["analysis_running", "failed"]);
+  });
+
+  // AbortSignal.timeout(120_000) firing surfaces as an AbortError rejection — same outcome.
+  it("marks the brand failed and throws on an abort/timeout", async () => {
+    const { client, updates } = makeRecordingClient();
+    vi.mocked(createClient).mockReturnValue(client);
+    const abort = Object.assign(new Error("The operation was aborted"), { name: "AbortError" });
+    vi.stubGlobal("fetch", vi.fn().mockRejectedValue(abort));
+
+    await expect(extractProfile.execute(ctx)).rejects.toThrow(/AbortError/);
+    expect(updates.map((u) => u.intake_status)).toEqual(["analysis_running", "failed"]);
+  });
+
+  // Claiming the brand was marked failed when the write was rejected is the same class of
+  // lie this step used to tell. Both the upstream cause and the write error must survive.
+  it("reports the status write failing without losing the original cause", async () => {
+    const { client } = makeRecordingClient("failed");
+    vi.mocked(createClient).mockReturnValue(client);
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({ ok: false, status: 503, text: async () => "gateway down" }),
+    );
+
+    await expect(extractProfile.execute(ctx)).rejects.toThrow(
+      /503.*gateway down.*NOT recorded.*row level security/s,
+    );
+  });
+
+  // The edge fn body is untrusted and the error is persisted into workflow run state, so it
+  // must not copy an unbounded upstream page in verbatim.
+  it("bounds and flattens a huge upstream body in the error", async () => {
+    const { client } = makeRecordingClient();
+    vi.mocked(createClient).mockReturnValue(client);
+    const huge = `<html>\n${"x".repeat(5000)}\n</html>`;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({ ok: false, status: 500, text: async () => huge }),
+    );
+
+    const err = await extractProfile.execute(ctx).catch((e: Error) => e);
+    expect(err).toBeInstanceOf(Error);
+    const msg = (err as Error).message;
+    expect(msg).toMatch(/truncated, \d+ chars/);
+    expect(msg).not.toContain("\n");
+    expect(msg.length).toBeLessThan(700);
+  });
+
+  it("resolves ok on a 2xx and leaves intake_status to the edge fn", async () => {
+    const { client, updates } = makeRecordingClient();
+    vi.mocked(createClient).mockReturnValue(client);
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: true, status: 200, text: async () => "" }));
+
+    await expect(extractProfile.execute(ctx)).resolves.toEqual({ ok: true });
+    // The edge fn sets draft_ready itself — this step must not overwrite it.
+    expect(updates.map((u) => u.intake_status)).toEqual(["analysis_running"]);
   });
 });
 
