@@ -31,6 +31,8 @@ export const WRANGLER_VAR_NAMES = Object.freeze([
   "CLOUDINARY_API_KEY",
   // IPI-586 — optional; set GitHub env var to "true" for preview smoke only.
   "ENABLE_CF_AI_SMOKE",
+  // IPI-822 · CF-DB-009b — optional; set preview GitHub env var to "true" for thread canary only.
+  "ENABLE_HYPERDRIVE_THREAD_CANARY",
   // IPI-607 — from agent-routing-keys.mjs SSOT (optional; unset → legacy).
   ...AGENT_ROUTING_ENV_KEYS,
 ]);
