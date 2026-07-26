@@ -193,38 +193,79 @@ jobs:
       # IPI-810 · DB-TEST-001 — belt and braces. The expression below uses GitHub's
       # `cond && a || b` idiom, and an *unset secret is falsy*, so if QA_DATABASE_URL
       # is missing the expression silently yields the production URL. This step is
-      # what makes that safe: on a pull request, a connection string pointing at the
+      # what makes that safe: on a pull request, a credential pointing at the
       # production project is a hard failure, not a fallback.
       #
       # Do not remove this because "the check job already handles it" — the check job
       # guards which credential is *probed*; this guards which one is actually *used*.
+      #
+      # IPI-810 phase 2 — this originally checked the Postgres URL only, which left the
+      # API path open: verify-rls.mjs writes through NEXT_PUBLIC_SUPABASE_URL plus the
+      # service-role key, so a run could be refused on the connection string and still
+      # create production rows over HTTP. Both credentials are checked now.
       - name: Refuse the production project on pull requests
         shell: bash
         env:
           RESOLVED_DB_URL: ${{ github.event_name == 'pull_request' && secrets.QA_DATABASE_URL || secrets.DATABASE_URL }}
+          # Inverted for the same reason as the Model Gate step below: a falsy middle operand
+          # would resolve to the production URL here and fail every pull request.
+          RESOLVED_API_URL: ${{ github.event_name != 'pull_request' && secrets.NEXT_PUBLIC_SUPABASE_URL || '' }}
           EVENT_NAME: ${{ github.event_name }}
         run: |
           PROD_REF="nvdlhrodvevgwdsneplk"
-          if [ "$EVENT_NAME" = "pull_request" ] && printf '%s' "$RESOLVED_DB_URL" | grep -q "$PROD_REF"; then
-            echo "::error::booking-gate resolved to the PRODUCTION project ($PROD_REF) on a pull request. Refusing — these tests write fixtures with non-atomic teardown. Set QA_DATABASE_URL to a QA project or Supabase branch."
-            exit 1
-          fi
-          echo "Target check passed for event '$EVENT_NAME' (production ref not present on a pull request)."
+          [ "$EVENT_NAME" = "pull_request" ] || {
+            echo "Target check skipped for event '$EVENT_NAME' (production is the intended target)."
+            exit 0
+          }
+          for pair in "Postgres URL:$RESOLVED_DB_URL" "Supabase API URL:$RESOLVED_API_URL"; do
+            label="${pair%%:*}"
+            value="${pair#*:}"
+            if printf '%s' "$value" | grep -q "$PROD_REF"; then
+              echo "::error::booking-gate resolved the PRODUCTION project ($PROD_REF) in the $label on a pull request. Refusing — these tests write fixtures with non-atomic teardown. Point QA_DATABASE_URL at a QA project or Supabase branch; production API credentials are never routed to pull requests."
+              exit 1
+            fi
+          done
+          echo "Target check passed: production ref absent from both the Postgres URL and the Supabase API URL."
 
+      # IPI-810 phase 2 — routing DATABASE_URL to QA is not sufficient on its own.
+      # scripts/verify-booking-gate.mjs also spawns scripts/verify-rls.mjs, which
+      # builds a createClient() from the *API* credentials below and creates real
+      # auth.users / organizations / brands rows. Those secrets have no QA variant,
+      # so on a pull request they are withheld entirely and the probe is skipped via
+      # --skip-api. Withholding and skipping are deliberately both applied: the skip
+      # states the intent, the empty credentials make it structural, so a future edit
+      # that re-enables the probe still cannot reach production.
       - name: Model Gate verification
         env:
           REQUIRE_BOOKING_SQL: "1"
           DATABASE_URL: ${{ github.event_name == 'pull_request' && secrets.QA_DATABASE_URL || secrets.DATABASE_URL }}
-          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
-          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
-          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          # The condition is INVERTED so the secret sits in the middle operand. GitHub's
+          # `a && b || c` returns operand values, not booleans, so a falsy middle operand
+          # (`== 'pull_request' && ''`) always falls through to c — that spelling hands pull
+          # requests the production secret, the exact opposite of the intent. Written this
+          # way a pull request yields '' and only a push resolves the secret.
+          # booking-gate-prod-isolation.test.ts fails the build on a falsy middle operand in
+          # any ${{ }} expression in this file (comments like this one are not scanned).
+          NEXT_PUBLIC_SUPABASE_URL: ${{ github.event_name != 'pull_request' && secrets.NEXT_PUBLIC_SUPABASE_URL || '' }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ github.event_name != 'pull_request' && secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY || '' }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ github.event_name != 'pull_request' && secrets.SUPABASE_SERVICE_ROLE_KEY || '' }}
           # Trust Supabase pooler CA (scripts/certs/supabase-prod-ca-2021.crt).
           # Do not set VERIFY_RLS_PG_INSECURE_SSL in CI (IPI-621).
           PGSSLROOTCERT: ${{ github.workspace }}/scripts/certs/supabase-prod-ca-2021.crt
-        run: npm run supabase:verify-booking-gate
+        run: npm run supabase:verify-booking-gate -- ${{ github.event_name == 'pull_request' && '--skip-api' || '' }}
 
       # IPI-476 · PLAN-CI-001 — planner scenario + Realtime (needs Node 22+ WebSocket)
+      # IPI-810 phase 2 — push only. This step never had a target guard at all: it takes
+      # production API credentials directly and verify-planner-scenario.mjs writes fixtures,
+      # so on a pull request it is not run.
+      #
+      # The credentials below are deliberately left unconditional, unlike the Model Gate
+      # step's: the `if:` means this step never executes on a pull request, so there is no
+      # pull-request value for them to resolve to. Do not "make it consistent" by adding an
+      # event ternary here — that would imply this step can run on a pull request. If the
+      # `if:` is ever removed, these must become conditional in the same edit.
       - name: Planner scenario + Realtime verification
+        if: github.event_name != 'pull_request'
         env:
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
           NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
