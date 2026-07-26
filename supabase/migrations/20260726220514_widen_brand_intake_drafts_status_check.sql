@@ -28,8 +28,10 @@
 --     scan and the lock window are negligible, and a plain add leaves nothing unvalidated
 --     behind. Reach for NOT VALID plus a later VALIDATE CONSTRAINT when the table is large
 --     enough that blocking writes for the scan actually matters — not the case here.
---   * a Postgres enum — ALTER TYPE ... ADD VALUE cannot run inside a transaction block,
---     which is exactly how Supabase's migration runner executes these files.
+--   * a Postgres enum — converting this existing text column to an enum would expand the
+--     migration into a column-type conversion plus dependency and rollback work. A CHECK
+--     constraint is the smallest compatible fix. Modern PostgreSQL can add enum values in a
+--     transaction, but a newly added value cannot be used until that transaction commits.
 --
 -- There is no RLS leg: intake_drafts_select_org_or_owner (20260626000005) does not reference
 -- status at all. The only other status-aware object is the partial index in 20260715010000,
