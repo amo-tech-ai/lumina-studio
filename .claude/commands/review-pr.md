@@ -17,9 +17,11 @@ allowed-tools: ["Bash", "Glob", "Grep", "Read", "Task"]
 ## Injected context
 
 - Current branch: !`git branch --show-current`
-- Git status: !`git status -sb`
-- Diff vs main (stat): !`git diff main...HEAD --stat 2>/dev/null || git diff --stat HEAD`
-- Changed paths: !`git diff main...HEAD --name-only 2>/dev/null || git diff --name-only HEAD`
+- Git status (first 20): !`git status -sb | head -20`
+- Changed files (total): !`git status --porcelain | wc -l`
+- Diff vs main (stat, first 20): !`{ git diff main...HEAD --stat 2>/dev/null || git diff --stat HEAD; } | head -20`
+- Changed paths (first 40): !`{ git diff main...HEAD --name-only 2>/dev/null || git diff --name-only HEAD; } | head -40`
+- Changed paths (total): !`{ git diff main...HEAD --name-only 2>/dev/null || git diff --name-only HEAD; } | wc -l`
 - Recent commits: !`git log -5 --oneline`
 - Open PR (if any): !`gh pr view --json number,url,headRefOid,isDraft 2>/dev/null || echo "no open PR"`
 
