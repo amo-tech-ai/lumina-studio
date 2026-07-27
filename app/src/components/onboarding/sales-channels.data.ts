@@ -1,5 +1,6 @@
 /**
- * IPI-833 — sales channel marks for screen 5.
+ * IPI-833 · ONB2-UI-001 — Standalone Onboarding Route, Screens, and Deterministic State Machine
+ * sales channel marks for screen 5.
  *
  * These hex values are third-party BRAND colours (Instagram's gradient, Shopify
  * green, and so on). They are deliberately not design tokens: aliasing someone
