@@ -3,7 +3,7 @@
 import { useId } from "react";
 
 import { OnboardingCard } from "@/components/onboarding/onboarding-card";
-import { validateUrl } from "@/lib/onboarding";
+import { validateUrl } from "@/lib/onboarding/validate-url";
 
 /**
  * IPI-833 — screen 4. Brand name (required) and website (optional here).

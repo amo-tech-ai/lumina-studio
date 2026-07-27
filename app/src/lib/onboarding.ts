@@ -1,12 +1,10 @@
 // IPI-46 — onboarding shell + orchestration helpers (pure functions, testable in node)
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-export const validateUrl = (url: string): string | null => {
-  if (!url.trim()) return "Website URL is required";
-  if (!/^https?:\/\/.+\..+/.test(url.trim()))
-    return "Enter a valid URL starting with http:// or https://";
-  return null;
-};
+// IPI-833 — moved to ./onboarding/validate-url so the onboarding UI can import
+// the rule without pulling this module's Supabase work into the Worker bundle.
+// Re-exported here so every existing caller is unchanged.
+export { validateUrl } from "./onboarding/validate-url";
 
 export const slugify = (s: string): string =>
   `${s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 50)}-${Math.random().toString(36).slice(2, 7)}`;

@@ -11,7 +11,7 @@
 
 // The one URL rule in the codebase. Reused rather than re-expressed here — a
 // second regex would drift from the one the field itself validates against.
-import { validateUrl } from "@/lib/onboarding";
+import { validateUrl } from "./validate-url";
 
 export const FIRST_SCREEN = 1;
 export const LAST_SCREEN = 13;

@@ -20,7 +20,6 @@ import {
   type OnboardingAnswers,
   ctaDisabled,
   nextScreen,
-  previousScreen,
 } from "@/lib/onboarding/navigation";
 import { useScreenHistory } from "@/lib/onboarding/use-screen-history";
 
@@ -40,7 +39,7 @@ export function OnboardingFlow({
   initialScreen?: number;
 }) {
   const router = useRouter();
-  const { screen, goToScreen, replaceScreen } = useScreenHistory(initialScreen);
+  const { screen, goToScreen, replaceScreen, goBack } = useScreenHistory(initialScreen);
   const [answers, setAnswers] = useState<OnboardingAnswers>(EMPTY_ANSWERS);
 
   const screenRegionRef = useRef<HTMLDivElement>(null);
@@ -87,7 +86,6 @@ export function OnboardingFlow({
     goToScreen(nextScreen(screen));
   }, [goToScreen, router, screen]);
 
-  const goBack = useCallback(() => goToScreen(previousScreen(screen)), [goToScreen, screen]);
 
   const renderScreen = () => {
     switch (screen) {

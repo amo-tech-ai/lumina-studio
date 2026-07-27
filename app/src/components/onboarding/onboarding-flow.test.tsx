@@ -374,17 +374,42 @@ describe("design tokens", () => {
     expect(tokens).toContain("--onboarding-on-accent");
   });
 
-  it("scopes the brand fonts instead of inheriting Arial from globals.css", () => {
-    // globals.css sets `font-family: Arial, Helvetica, sans-serif` on body, and
-    // AGENTS.md forbids generic system fonts. The shell must opt in.
-    const layout = readFileSync(resolve(ONBOARDING_ROUTE, "onboarding/layout.tsx"), "utf8");
-    expect(layout).toMatch(/className="[^"]*\bonboarding\b/);
-    expect(layout).toContain("onboarding.css");
+  it("scopes a real font instead of inheriting Arial from globals.css", () => {
+    // globals.css:106 sets `font-family: Arial, Helvetica, sans-serif` on body.
+    // Inheriting that is the defect; the shell must opt in to something.
+    const routeEntry = readFileSync(resolve(ONBOARDING_ROUTE, "onboarding/page.tsx"), "utf8");
+    expect(routeEntry).toMatch(/\bonboarding\b/);
+    expect(routeEntry).toContain("onboarding.css");
 
-    const css = readFileSync(resolve(ONBOARDING_ROUTE, "onboarding.css"), "utf8");
-    expect(css).toContain("--font-outfit");
-    expect(css).toContain("--font-cormorant");
+    // Comments stripped: the file names Arial on purpose, explaining what it
+    // exists to override. The ban is on declaring it, not mentioning it.
+    const css = codeWithoutComments(readFileSync(resolve(ONBOARDING_ROUTE, "onboarding.css"), "utf8"));
+    expect(css).not.toMatch(/Arial|Helvetica/);
+    expect(css).toMatch(/\.onboarding\s*\{/);
     expect(css).toMatch(/\.onboarding\s+h1/);
+  });
+
+  it("uses the AGENTS.md brand fonts, not the comp's Inter", () => {
+    // AGENTS.md forbids Inter, Roboto and generic system fonts. The design comp
+    // specifies Inter; the repository rules take priority.
+    const css = codeWithoutComments(
+      readFileSync(resolve(ONBOARDING_ROUTE, "onboarding.css"), "utf8"),
+    );
+    expect(css).toContain("var(--font-outfit)");
+    expect(css).toContain("var(--font-cormorant)");
+    expect(css).not.toMatch(/\bInter\b|\bRoboto\b/);
+
+    // Loaded once on <body> by the root layout — this route only scopes them, so
+    // it adds nothing to the Cloudflare Worker bundle.
+    const rootLayout = readFileSync(resolve(SRC, "app/layout.tsx"), "utf8");
+    expect(rootLayout).toContain("--font-outfit");
+    expect(rootLayout).toContain("--font-cormorant");
+    // Comments stripped: page.tsx names next/font on purpose, to explain where
+    // the fonts DO come from. The ban is on calling it, not mentioning it.
+    const routeEntry = codeWithoutComments(
+      readFileSync(resolve(ONBOARDING_ROUTE, "onboarding/page.tsx"), "utf8"),
+    );
+    expect(routeEntry, "the route must not load a second font").not.toContain("next/font");
   });
 
   it("stops onboarding animations under reduced motion", () => {
