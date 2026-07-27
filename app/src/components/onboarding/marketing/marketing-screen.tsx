@@ -12,7 +12,8 @@ import {
 import { OnboardingCard } from "@/components/onboarding/onboarding-card";
 
 /**
- * IPI-833 — the seven marketing interstitials.
+ * IPI-833 · ONB2-UI-001 — Standalone Onboarding Route, Screens, and Deterministic State Machine
+ * the seven marketing interstitials.
  *
  * Shared shell, distinct bodies. The heading and subcopy live here; the visual
  * belongs to its own component so the seven cannot drift into one another.
@@ -77,5 +78,3 @@ export function MarketingScreen({ screen }: { screen: number }) {
     </OnboardingCard>
   );
 }
-
-export const MARKETING_CONTENT_SCREENS = Object.keys(MARKETING_CONTENT).map(Number);
