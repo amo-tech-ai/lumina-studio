@@ -24,11 +24,13 @@ import {
 import { useScreenHistory } from "@/lib/onboarding/use-screen-history";
 
 /**
- * IPI-833 · ONB2-UI-001 — the 13-screen onboarding flow.
+ * IPI-833 · ONB2-UI-001 — Standalone Onboarding Route, Screens, and Deterministic State Machine
+ * the 13-screen onboarding flow.
  *
- * Local state only: no network, no Supabase, no AI, no persistence. IPI-835
- * replaces the answer store with a real onboarding session and the screen-12
- * placeholder with live crawl progress.
+ * Local state only: no network, no Supabase, no AI, no persistence.
+ * IPI-835 · ONB2-INT-001 — Real Session, Crawl, Realtime Progress, and Approval
+ * Integration With Recovery replaces the answer store with a real onboarding
+ * session and the screen-12 placeholder with live crawl progress.
  *
  * `initialScreen` exists so tests can mount any screen directly without walking
  * twelve clicks to reach it.
@@ -43,16 +45,15 @@ export function OnboardingFlow({
   const [answers, setAnswers] = useState<OnboardingAnswers>(EMPTY_ANSWERS);
 
   const screenRegionRef = useRef<HTMLDivElement>(null);
-  const hasRendered = useRef(false);
+  const previousScreenRef = useRef(screen);
 
-  // Move focus to the new screen's heading. Without this a screen-reader user
-  // stays parked on the Continue button they just pressed while the entire page
-  // changes underneath them.
+  // Move focus only when the screen value actually changes. Tracking the prior
+  // value avoids focusing on initial mount and during StrictMode's repeated
+  // effect invocation while preserving the screen-reader transition cue.
   useEffect(() => {
-    if (!hasRendered.current) {
-      hasRendered.current = true;
-      return;
-    }
+    if (previousScreenRef.current === screen) return;
+    previousScreenRef.current = screen;
+
     const heading = screenRegionRef.current?.querySelector<HTMLElement>("h1");
     if (!heading) return;
     heading.tabIndex = -1;
@@ -86,6 +87,21 @@ export function OnboardingFlow({
     goToScreen(nextScreen(screen));
   }, [goToScreen, router, screen]);
 
+  const skipCurrentScreen = useCallback(() => {
+    setAnswers((current) => {
+      switch (screen) {
+        case 4:
+          return { ...current, brandName: "", websiteUrl: "" };
+        case 5:
+          return { ...current, listed: {} };
+        case 7:
+          return { ...current, grow: null };
+        default:
+          return current;
+      }
+    });
+    goNext();
+  }, [goNext, screen]);
 
   const renderScreen = () => {
     switch (screen) {
@@ -142,7 +158,7 @@ export function OnboardingFlow({
           continueDisabled={ctaDisabled(screen, answers)}
           continueLabel={screen === LAST_SCREEN ? "Open FashionOS" : "Continue"}
           onBack={goBack}
-          onSkip={goNext}
+          onSkip={skipCurrentScreen}
           onContinue={goNext}
         />
       )}
