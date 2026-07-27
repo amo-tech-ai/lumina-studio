@@ -19,10 +19,8 @@ import { OnboardingFlow } from "./onboarding-flow";
 import { LAST_SCREEN, MARKETING_SCREENS } from "@/lib/onboarding/navigation";
 import type { OnboardingHistoryState } from "@/lib/onboarding/use-screen-history";
 
-// IPI-833 · ONB2-UI-001 — Standalone Onboarding Route, Screens, and Deterministic State Machine
+// IPI-833 · ONB2-UI-001 — standalone onboarding UI.
 
-// jsdom does not expose import.meta.url as a file: URL, so anchor on the
-// Vitest root instead (vitest.config.ts lives in app/).
 const SRC = resolve(process.cwd(), "src");
 const HERE = resolve(SRC, "components/onboarding");
 const ONBOARDING_ROUTE = resolve(SRC, "app/(onboarding)");
@@ -41,16 +39,10 @@ function sourceFilesUnder(dir: string): string[] {
 
 const SOURCE_FILES = [...sourceFilesUnder(HERE), ...sourceFilesUnder(ONBOARDING_ROUTE)];
 
-/**
- * Strip comments before scanning for forbidden strings. The comp's fabricated
- * "47 pages found" is quoted in a doc comment on purpose, so future readers know
- * what was deliberately not ported — the ban is on rendering it, not naming it.
- */
 function codeWithoutComments(source: string): string {
   return source.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
 }
 
-/** A fresh render with no leftover hash — the hash intentionally wins over the prop. */
 function renderAt(node: React.ReactElement) {
   window.history.replaceState(null, "", "/onboarding");
   return render(node);
@@ -87,9 +79,6 @@ describe("every screen renders", () => {
 });
 
 describe("the seven marketing screens are distinct", () => {
-  // Guards the shared-shell refactor: merging them into one copy-driven
-  // component would still render a card, so asserting "a card exists" proves
-  // nothing. Each body must be its own element.
   it("renders a different body component on each marketing screen", () => {
     const seen = new Set<string>();
 
@@ -407,7 +396,7 @@ describe("design tokens", () => {
     expect(tokens).toContain("--onboarding-on-accent");
   });
 
-  it("uses the loaded brand fonts without generic fallbacks", () => {
+  it("scopes a real font instead of inheriting Arial from globals.css", () => {
     const routeEntry = readFileSync(resolve(ONBOARDING_ROUTE, "onboarding/page.tsx"), "utf8");
     expect(routeEntry).toMatch(/\bonboarding\b/);
     expect(routeEntry).toContain("onboarding.css");
@@ -415,14 +404,26 @@ describe("design tokens", () => {
     const css = codeWithoutComments(
       readFileSync(resolve(ONBOARDING_ROUTE, "onboarding.css"), "utf8"),
     );
+    expect(css).not.toMatch(/Arial|Helvetica/);
+    expect(css).toMatch(/\.onboarding\s*\{/);
+    expect(css).toMatch(/\.onboarding\s+h1/);
+  });
+
+  it("uses the AGENTS.md brand fonts, not the comp's Inter", () => {
+    const css = codeWithoutComments(
+      readFileSync(resolve(ONBOARDING_ROUTE, "onboarding.css"), "utf8"),
+    );
     expect(css).toContain("var(--font-outfit)");
     expect(css).toContain("var(--font-cormorant)");
-    expect(css).not.toMatch(/Arial|Helvetica|system-ui|sans-serif|Times New Roman|serif/);
     expect(css).not.toMatch(/\bInter\b|\bRoboto\b/);
 
     const rootLayout = readFileSync(resolve(SRC, "app/layout.tsx"), "utf8");
     expect(rootLayout).toContain("--font-outfit");
     expect(rootLayout).toContain("--font-cormorant");
+    const routeEntry = codeWithoutComments(
+      readFileSync(resolve(ONBOARDING_ROUTE, "onboarding/page.tsx"), "utf8"),
+    );
+    expect(routeEntry, "the route must not load a second font").not.toContain("next/font");
   });
 
   it("stops onboarding animations under reduced motion", () => {
