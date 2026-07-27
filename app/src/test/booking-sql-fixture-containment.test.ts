@@ -73,9 +73,17 @@ describe("booking SQL fixtures roll back (IPI-810 · DB-TEST-001)", () => {
 
     // `begin;` on its own line is a transaction start. plpgsql `begin` inside a DO block is
     // never followed by a semicolon on the same line, so this does not collide with it.
+    //
+    // Position matters, not just presence: a file could write rows, THEN open a transaction and
+    // roll it back, and a presence-only check would pass while the earlier writes persisted.
+    expect(
+      statements[0],
+      `${rel} must open with 'begin;' as its very first statement — anything executed before it commits directly`,
+    ).toBe("begin;");
+
     expect(
       statements.filter((l) => l === "begin;").length,
-      `${rel} must open with a top-level 'begin;' — otherwise its fixtures COMMIT into whatever database CI targets`,
+      `${rel} has more than one top-level 'begin;' — nested transaction starts are a mistake here`,
     ).toBe(1);
 
     expect(
@@ -83,8 +91,10 @@ describe("booking SQL fixtures roll back (IPI-810 · DB-TEST-001)", () => {
       `${rel} must end with 'rollback;' so its fixtures never persist`,
     ).toBe("rollback;");
 
+    // Matched by shape rather than exact equality: `commit;`, `COMMIT ;`, and
+    // `commit; -- note` are all the same defect, and an exact === check misses the last two.
     expect(
-      statements.filter((l) => l === "commit;"),
+      statements.filter((l) => /^commit\s*;/.test(l)),
       `${rel} contains a top-level 'commit;' — that defeats the rollback and persists fixtures`,
     ).toEqual([]);
   });
