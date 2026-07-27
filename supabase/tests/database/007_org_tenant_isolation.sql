@@ -5,6 +5,15 @@
 -- INSERT ... RETURNING is projected against the SELECT policy before the AFTER INSERT
 -- membership trigger fires. A test that only proves isolation would let that regression ship.
 --
+-- Pre-merge CI strategy (approach B — transactional apply + assert + rollback):
+--   supabase-verify-rls runs `supabase test db --db-url $DATABASE_URL` against the linked
+--   remote. That DB does not have unmerged migrations applied (remote-only; no supabase
+--   start / ephemeral clone in this job). So this file applies the same DDL as
+--   20260727020000_org_tenant_isolation.sql at the top of its BEGIN…ROLLBACK session.
+--   Postgres transactional DDL rolls the policy DROP/CREATE back with the fixtures — the
+--   linked project is unchanged after the test. Idempotent drop of orgs_select_owner first
+--   so the file still passes after supabase:push lands the real migration.
+--
 -- pgTAP 1.2.0 is already installed on the remote, so no create extension here.
 --
 -- Fixtures live inside the transaction and are discarded by the rollback. auth.users needs
@@ -18,6 +27,13 @@ set search_path to public, extensions;
 
 begin;
 select plan(4);
+
+-- Mirror 20260727020000 (must run as the DB owner role, before SET ROLE authenticated).
+drop policy if exists "authenticated can view organizations" on public.organizations;
+drop policy if exists "orgs_select_owner" on public.organizations;
+create policy "orgs_select_owner"
+  on public.organizations for select to authenticated
+  using ((select auth.uid()) = owner_id);
 
 insert into auth.users (id, email) values
   ('00000000-0000-4000-8000-000000000a01', 'ipi809-owner@test.local'),
