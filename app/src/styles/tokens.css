@@ -441,7 +441,14 @@
   --onboarding-accent:       #16e07d;   /* --onb-accent */
   --onboarding-accent-tint:  #e8fbf1;   /* --onb-accent-tint */
   --onboarding-accent-line:  #9be9c4;   /* --onb-accent-line */
-  --onboarding-accent-ink:   #0b7a43;   /* --onb-accent-ink — text on tint */
+
+  /* Text on the LIGHT tint only — 5.03:1 on --onboarding-accent-tint. */
+  --onboarding-accent-ink:   #0b7a43;   /* --onb-accent-ink */
+
+  /* Text on the SOLID accent. --onboarding-accent-ink scores only 3.09:1 there,
+     below the 4.5:1 needed for normal-sized text, and the badges using it are
+     0.7rem. This dark forest green is 10.2:1 on the same background. */
+  --onboarding-on-accent:    #0e1a12;
 
   /* Actions and warnings */
   --onboarding-cta:          #000000;   /* --onb-cta — primary button */

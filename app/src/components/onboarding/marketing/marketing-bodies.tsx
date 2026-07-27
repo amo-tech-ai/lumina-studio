@@ -43,7 +43,7 @@ export function ScoreComparisonBody() {
         <p className="mt-1 text-xs font-bold">32</p>
       </div>
       <div className="basis-[38%] text-center">
-        <span className="inline-block rounded-[var(--radius-pill)] bg-[var(--onboarding-accent)] px-3 py-1 text-[0.7rem] font-bold text-[var(--onboarding-accent-ink)]">
+        <span className="inline-block rounded-[var(--radius-pill)] bg-[var(--onboarding-accent)] px-3 py-1 text-[0.7rem] font-bold text-[var(--onboarding-on-accent)]">
           After
         </span>
         <div className="mt-2 h-32 rounded-t-[var(--radius-md)] bg-[var(--onboarding-accent)]" />
@@ -160,7 +160,7 @@ export function ContentPackBody() {
   return (
     <div data-testid="marketing-body-content-pack" className="mt-5 flex gap-2.5">
       <div className="flex basis-1/3 flex-col justify-center">
-        <span className="mb-2 self-center rounded-[var(--radius-pill)] bg-[var(--onboarding-accent)] px-3 py-1 text-[0.7rem] font-bold text-[var(--onboarding-accent-ink)]">
+        <span className="mb-2 self-center rounded-[var(--radius-pill)] bg-[var(--onboarding-accent)] px-3 py-1 text-[0.7rem] font-bold text-[var(--onboarding-on-accent)]">
           Your photo
         </span>
         <div className="relative aspect-[3/4] overflow-hidden rounded-[var(--radius-md)]">

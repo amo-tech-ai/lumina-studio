@@ -2,7 +2,7 @@
 import { readFileSync, readdirSync, statSync } from "node:fs";
 import { resolve } from "node:path";
 
-import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("next/image", () => ({
@@ -261,6 +261,67 @@ describe("accessibility", () => {
   });
 });
 
+describe("automatic completion does not trap the user", () => {
+  // Screen 12 advances on its own. If that pushed a history entry, Back from the
+  // payoff screen would land on the loader, restart its timer, and get pushed
+  // forward again — trapping the user unless they pressed Back twice inside the
+  // timer window.
+  it("replaces rather than pushes when the analysis screen completes", () => {
+    vi.useFakeTimers();
+    try {
+      renderAt(<OnboardingFlow initialScreen={12} />);
+      const pushSpy = vi.spyOn(window.history, "pushState");
+      const replaceSpy = vi.spyOn(window.history, "replaceState");
+
+      // Two advances, not one: the settle timer is only scheduled by the effect
+      // that runs after React commits percent === 100, which cannot happen
+      // while we are still inside the first advance.
+      act(() => {
+        vi.advanceTimersByTime(40 * 110);
+      });
+      act(() => {
+        vi.advanceTimersByTime(700);
+      });
+
+      expect(screen.getByTestId("onboarding-screen-13")).toBeTruthy();
+      expect(pushSpy, "auto-completion must not add a history entry").not.toHaveBeenCalled();
+      expect(replaceSpy).toHaveBeenCalled();
+      pushSpy.mockRestore();
+      replaceSpy.mockRestore();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("leaves the loader out of history so Back skips past it", () => {
+    vi.useFakeTimers();
+    try {
+      renderAt(<OnboardingFlow initialScreen={11} />);
+      act(() => {
+        fireEvent.click(screen.getByRole("button", { name: "Continue" }));
+      });
+      expect(screen.getByTestId("onboarding-screen-12")).toBeTruthy();
+
+      act(() => {
+        vi.advanceTimersByTime(40 * 110);
+      });
+      act(() => {
+        vi.advanceTimersByTime(700);
+      });
+      expect(screen.getByTestId("onboarding-screen-13")).toBeTruthy();
+
+      // The entry the loader occupied now holds screen 13, so the browser's
+      // previous entry is screen 11 — not the loader.
+      act(() => {
+        fireEvent.popState(window, { state: { onboardingScreen: 11 } });
+      });
+      expect(screen.getByTestId("onboarding-screen-11")).toBeTruthy();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+});
+
 describe("no fabricated results", () => {
   it("never renders the design comp's hardcoded crawl summary", () => {
     render(<OnboardingFlow initialScreen={4} />);
@@ -290,6 +351,40 @@ describe("design tokens", () => {
       const hexes = src.match(/#[0-9a-fA-F]{3,8}\b/g) ?? [];
       expect(hexes, `${file} should resolve colours through tokens.css`).toEqual([]);
     }
+  });
+
+  // 0.7rem text is "normal sized" for WCAG, so it needs 4.5:1.
+  // --onboarding-accent-ink scores 3.09:1 on the solid accent and 5.03:1 on the
+  // light tint; it is defined for the tint. --onboarding-on-accent is 10.2:1 on
+  // the solid.
+  it("never puts the tint ink on the solid accent", () => {
+    for (const file of SOURCE_FILES) {
+      const src = readFileSync(file, "utf8");
+      const offenders = (src.match(/class[nN]ame="[^"]*"/g) ?? []).filter(
+        (cls) =>
+          cls.includes("bg-[var(--onboarding-accent)]") &&
+          cls.includes("text-[var(--onboarding-accent-ink)]"),
+      );
+      expect(offenders, `${file} pairs tint ink with the solid accent`).toEqual([]);
+    }
+  });
+
+  it("defines a dedicated ink for the solid accent", () => {
+    const tokens = readFileSync(TOKENS, "utf8");
+    expect(tokens).toContain("--onboarding-on-accent");
+  });
+
+  it("scopes the brand fonts instead of inheriting Arial from globals.css", () => {
+    // globals.css sets `font-family: Arial, Helvetica, sans-serif` on body, and
+    // AGENTS.md forbids generic system fonts. The shell must opt in.
+    const layout = readFileSync(resolve(ONBOARDING_ROUTE, "onboarding/layout.tsx"), "utf8");
+    expect(layout).toMatch(/className="[^"]*\bonboarding\b/);
+    expect(layout).toContain("onboarding.css");
+
+    const css = readFileSync(resolve(ONBOARDING_ROUTE, "onboarding.css"), "utf8");
+    expect(css).toContain("--font-outfit");
+    expect(css).toContain("--font-cormorant");
+    expect(css).toMatch(/\.onboarding\s+h1/);
   });
 
   it("stops onboarding animations under reduced motion", () => {

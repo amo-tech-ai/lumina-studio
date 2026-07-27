@@ -1,0 +1,25 @@
+/**
+ * IPI-833 — brand typography for the standalone onboarding flow.
+ *
+ * Without this the shell inherits `font-family: Arial, Helvetica, sans-serif`
+ * from globals.css:106, which AGENTS.md explicitly forbids ("Do NOT use Inter,
+ * Roboto, or generic system fonts"). The design comp itself specifies Inter,
+ * which is also on that list — AGENTS.md is the repo contract, so it wins.
+ *
+ * The font variables are already loaded once on <body> by the root layout via
+ * next/font. This only scopes them, exactly as (marketing)/marketing.css does
+ * for the marketing surface. No second font load.
+ */
+
+.onboarding {
+  font-family: var(--font-outfit), system-ui, -apple-system, sans-serif;
+}
+
+.onboarding h1,
+.onboarding h2,
+.onboarding h3,
+.onboarding h4 {
+  font-family: var(--font-cormorant), Georgia, "Times New Roman", serif;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}

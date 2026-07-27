@@ -40,7 +40,7 @@ export function OnboardingFlow({
   initialScreen?: number;
 }) {
   const router = useRouter();
-  const { screen, goToScreen } = useScreenHistory(initialScreen);
+  const { screen, goToScreen, replaceScreen } = useScreenHistory(initialScreen);
   const [answers, setAnswers] = useState<OnboardingAnswers>(EMPTY_ANSWERS);
 
   const screenRegionRef = useRef<HTMLDivElement>(null);
@@ -111,7 +111,9 @@ export function OnboardingFlow({
           <GrowthPreferenceQuestion value={answers.grow} onChange={(v) => update("grow", v)} />
         );
       case ANALYSIS_SCREEN:
-        return <AnalysisProgressScreen onComplete={() => goToScreen(LAST_SCREEN)} />;
+        // replace, not push: the loader must not stay in history, or Back from
+        // the payoff screen restarts the timer and bounces the user forward again.
+        return <AnalysisProgressScreen onComplete={() => replaceScreen(LAST_SCREEN)} />;
       case LAST_SCREEN:
         return <BrandDnaPayoffScreen />;
       default:

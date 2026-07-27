@@ -58,6 +58,7 @@ export function useScreenHistory(initialScreen: number = FIRST_SCREEN) {
     return () => window.removeEventListener("popstate", onPopState);
   }, [apply]);
 
+  /** A transition the user asked for. Adds a history entry so Back undoes it. */
   const goToScreen = useCallback(
     (next: number) => {
       const target = clampScreen(next);
@@ -68,5 +69,27 @@ export function useScreenHistory(initialScreen: number = FIRST_SCREEN) {
     [apply],
   );
 
-  return { screen, goToScreen };
+  /**
+   * A transition the flow made on its own. Overwrites the current entry instead
+   * of adding one.
+   *
+   * This matters for the analysis screen. If automatic completion pushed, the
+   * loader would stay in history: Back from the payoff screen returns to it, the
+   * timer restarts, and completion pushes forward again — truncating the forward
+   * entry each time. The user is then trapped bouncing between the two unless
+   * they press Back twice inside the timer window. Replacing removes the loader
+   * from history entirely, which is also what you want: there is nothing useful
+   * to go "back" to in a screen that only waits.
+   */
+  const replaceScreen = useCallback(
+    (next: number) => {
+      const target = clampScreen(next);
+      if (target === screenRef.current) return;
+      window.history.replaceState({ onboardingScreen: target }, "", `#${target}`);
+      apply(target);
+    },
+    [apply],
+  );
+
+  return { screen, goToScreen, replaceScreen };
 }

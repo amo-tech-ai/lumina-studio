@@ -28,28 +28,24 @@ export function AnalysisProgressScreen({ onComplete }: { onComplete: () => void 
   const onCompleteRef = useRef(onComplete);
   onCompleteRef.current = onComplete;
 
+  // Started once, here. The design comp starts it from both goScreen() and
+  // componentDidUpdate and relies on clearInterval to paper over the double
+  // start — that bug is not ported.
   useEffect(() => {
-    // Started once, here. The design comp starts it from both goScreen() and
-    // componentDidUpdate and relies on clearInterval to paper over the double
-    // start — that bug is not ported.
-    let settleTimer: ReturnType<typeof setTimeout> | undefined;
-
     const interval = setInterval(() => {
-      setPercent((current) => {
-        const next = Math.min(100, current + STEP_PERCENT);
-        if (next >= 100 && current < 100) {
-          clearInterval(interval);
-          settleTimer = setTimeout(() => onCompleteRef.current(), SETTLE_MS);
-        }
-        return next;
-      });
+      setPercent((current) => Math.min(100, current + STEP_PERCENT));
     }, TICK_MS);
-
-    return () => {
-      clearInterval(interval);
-      if (settleTimer) clearTimeout(settleTimer);
-    };
+    return () => clearInterval(interval);
   }, []);
+
+  // Completion is its own effect rather than a branch inside the updater above.
+  // State updaters must be pure — React may call them more than once, which
+  // would schedule the settle timer twice and fire onComplete twice.
+  useEffect(() => {
+    if (percent < 100) return;
+    const settleTimer = setTimeout(() => onCompleteRef.current(), SETTLE_MS);
+    return () => clearTimeout(settleTimer);
+  }, [percent]);
 
   return (
     <OnboardingCard>

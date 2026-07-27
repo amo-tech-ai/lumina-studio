@@ -97,6 +97,24 @@ describe("ctaDisabled", () => {
     expect(ctaDisabled(4, withAnswers({ brandName: "   " }))).toBe(true);
   });
 
+  // The website field is optional, but the screen shows a validation error for a
+  // malformed value. Enabling Continue at the same time would tell the user their
+  // input is wrong and accept it anyway.
+  it("allows an empty optional website but blocks a malformed one", () => {
+    const named = { brandName: "Maison Noir" };
+    expect(ctaDisabled(4, withAnswers({ ...named, websiteUrl: "" }))).toBe(false);
+    expect(ctaDisabled(4, withAnswers({ ...named, websiteUrl: "   " }))).toBe(false);
+    expect(ctaDisabled(4, withAnswers({ ...named, websiteUrl: "not-a-url" }))).toBe(true);
+    expect(ctaDisabled(4, withAnswers({ ...named, websiteUrl: "maisonnoir" }))).toBe(true);
+    expect(
+      ctaDisabled(4, withAnswers({ ...named, websiteUrl: "https://maisonnoir.com" })),
+    ).toBe(false);
+  });
+
+  it("still blocks on a missing brand name even when the URL is valid", () => {
+    expect(ctaDisabled(4, withAnswers({ websiteUrl: "https://maisonnoir.com" }))).toBe(true);
+  });
+
   it("never blocks a marketing, analysis or payoff screen", () => {
     const nonQuestion = ALL_SCREENS.filter(
       (s) => !(QUESTION_SCREENS as readonly number[]).includes(s),

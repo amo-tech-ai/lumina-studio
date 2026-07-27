@@ -9,6 +9,10 @@
  * Design source: Universal-design-prompt-4/Pages/Onboarding.v2.zeely.dc.html
  */
 
+// The one URL rule in the codebase. Reused rather than re-expressed here — a
+// second regex would drift from the one the field itself validates against.
+import { validateUrl } from "@/lib/onboarding";
+
 export const FIRST_SCREEN = 1;
 export const LAST_SCREEN = 13;
 
@@ -72,13 +76,21 @@ export function canSkip(screen: number): boolean {
 /**
  * DC line 451. Only the four question screens can block Continue; every
  * marketing, analysis and payoff screen is always advanceable.
+ *
+ * Screen 4 also gates on the website field. The URL is optional, so blank is
+ * fine — but a non-blank value that fails validation must block, or the screen
+ * would show an error and let the user carry it forward at the same time.
+ * Telling someone their input is wrong and then accepting it is worse than
+ * either alone.
  */
 export function ctaDisabled(screen: number, answers: OnboardingAnswers): boolean {
   switch (screen) {
     case 2:
       return answers.build === null;
     case 4:
-      return answers.brandName.trim() === "";
+      if (answers.brandName.trim() === "") return true;
+      // Optional field: only validate once they have actually typed something.
+      return answers.websiteUrl.trim() !== "" && validateUrl(answers.websiteUrl) !== null;
     case 5:
       return Object.keys(answers.listed).length === 0;
     case 7:
