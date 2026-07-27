@@ -18,24 +18,28 @@ import { copyResponseCookies, updateSession } from "@/lib/supabase/session";
 // All matched routes also run updateSession() so OAuth PKCE cookies refresh
 // correctly across marketing + operator surfaces.
 export async function middleware(request: NextRequest) {
-  const { response: sessionResponse, user } = await updateSession(request);
+  const sessionResponse = await updateSession(request);
 
   if (!isOperatorAuthEnforced()) {
     return sessionResponse;
   }
 
-  // IPI-833 · ONB2-UI-001 — Standalone Onboarding Route, Screens, and
-  // Deterministic State Machine: /onboarding is a sibling of (operator), so it
-  // does not inherit the /app prefix and needs its own protected-route clause.
-  // Unlike the legacy /app gate, onboarding requires the trusted getUser result
-  // returned by updateSession; a JWT-shaped cookie alone is not authorization.
-  // Data authorization still remains with RLS and API route guards.
+  // IPI-833: /onboarding lives in its own (onboarding) route group — a sibling of
+  // (operator), not a child — so it does not inherit the /app prefix. Gate it
+  // identically or the standalone flow would be the one unauthenticated hole in
+  // an otherwise closed surface.
+  //
+  // This is UI protection only. Data authorization stays with RLS and the API
+  // route guards (withOperatorAuth / resolveJwtActor); a middleware redirect is
+  // not an authorization control.
   const { pathname } = request.nextUrl;
-  const isOnboardingRoute =
-    pathname === "/onboarding" || pathname.startsWith("/onboarding/");
-  const isAppRoute = pathname === "/app" || pathname.startsWith("/app/");
+  const isProtectedRoute =
+    pathname === "/app" ||
+    pathname.startsWith("/app/") ||
+    pathname === "/onboarding" ||
+    pathname.startsWith("/onboarding/");
 
-  if (!isAppRoute && !isOnboardingRoute) {
+  if (!isProtectedRoute) {
     return sessionResponse;
   }
 
@@ -44,8 +48,7 @@ export async function middleware(request: NextRequest) {
     .map((c) => `${c.name}=${c.value}`)
     .join("; ");
   const token = accessTokenFromCookieString(cookieString);
-  const hasJwtShapedSession = !!token && token.split(".").length === 3;
-  const hasValidSession = isOnboardingRoute ? Boolean(user) : hasJwtShapedSession;
+  const hasValidSession = !!token && token.split(".").length === 3;
 
   if (!hasValidSession) {
     const url = request.nextUrl.clone();
