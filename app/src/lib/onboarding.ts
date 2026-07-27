@@ -1,9 +1,7 @@
-// IPI-46 · IPI-BI-P0 — Fix Brand Onboarding Orchestration and Profile Persistence
-// onboarding shell + orchestration helpers (pure functions, testable in node)
+// IPI-46 — onboarding shell + orchestration helpers (pure functions, testable in node)
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-// IPI-833 · ONB2-UI-001 — Standalone Onboarding Route, Screens, and Deterministic State Machine
-// moved validateUrl to ./onboarding/validate-url so the onboarding UI can import
+// IPI-833 — moved to ./onboarding/validate-url so the onboarding UI can import
 // the rule without pulling this module's Supabase work into the Worker bundle.
 // Re-exported here so every existing caller is unchanged.
 export { validateUrl } from "./onboarding/validate-url";
