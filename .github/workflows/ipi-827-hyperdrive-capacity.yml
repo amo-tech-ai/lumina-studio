@@ -26,9 +26,17 @@ on:
         description: Highest external concurrency to test (1–3)
         required: false
         default: "3"
+      canary_url:
+        description: Full canary POST URL (default preview Worker)
+        required: false
+        default: "https://ipix-operator-preview.sk-498.workers.dev/api/internal/hyperdrive-thread-canary"
 
 permissions:
   contents: read
+
+concurrency:
+  group: ipi-827-hyperdrive-capacity
+  cancel-in-progress: false
 
 jobs:
   capacity-matrix:
@@ -39,10 +47,23 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Probe canary enabled (expect 401 with dummy secret)
+      - name: Preflight INTERNAL_WEBHOOK_SECRET
+        env:
+          INTERNAL_WEBHOOK_SECRET: ${{ secrets.INTERNAL_WEBHOOK_SECRET }}
         run: |
-          code=$(curl -sS -o /tmp/probe.json -w '%{http_code}' -X POST \
-            "https://ipix-operator-preview.sk-498.workers.dev/api/internal/hyperdrive-thread-canary" \
+          if [ -z "${INTERNAL_WEBHOOK_SECRET}" ]; then
+            echo "::error::INTERNAL_WEBHOOK_SECRET is missing or empty in the preview environment."
+            exit 1
+          fi
+          echo "INTERNAL_WEBHOOK_SECRET is set (length withheld)."
+
+      - name: Probe canary enabled (expect 401 with dummy secret)
+        env:
+          CANARY_URL: ${{ inputs.canary_url }}
+        run: |
+          code=$(curl -sS --connect-timeout 5 --max-time 20 \
+            -o /tmp/probe.json -w '%{http_code}' -X POST \
+            "${CANARY_URL}" \
             -H 'content-type: application/json' \
             -H 'X-Internal-Secret: not-the-real-secret' \
             -H 'user-agent: ipix-ipi-827-capacity/1.0' \
@@ -64,7 +85,7 @@ jobs:
           WARMUP: ${{ inputs.warmup }}
           COOLDOWN_SEC: ${{ inputs.cooldown_sec }}
           MAX_CONCURRENCY: ${{ inputs.max_concurrency }}
-          CANARY_URL: https://ipix-operator-preview.sk-498.workers.dev/api/internal/hyperdrive-thread-canary
+          CANARY_URL: ${{ inputs.canary_url }}
         run: |
           node <<'NODE'
           const fs = require("fs");
@@ -74,10 +95,24 @@ jobs:
             console.error("INTERNAL_WEBHOOK_SECRET missing");
             process.exit(1);
           }
-          const iterations = Math.max(1, Number(process.env.ITERATIONS || 50));
-          const warmup = Math.max(1, Number(process.env.WARMUP || 8));
-          const cooldownSec = Math.max(0, Number(process.env.COOLDOWN_SEC || 30));
-          const maxConcurrency = Math.min(3, Math.max(1, Number(process.env.MAX_CONCURRENCY || 3)));
+          if (!url) {
+            console.error("CANARY_URL missing");
+            process.exit(1);
+          }
+
+          function finiteInt(raw, fallback, { min, max }) {
+            const n = Number(raw);
+            if (!Number.isFinite(n)) return fallback;
+            let v = Math.trunc(n);
+            if (min != null) v = Math.max(min, v);
+            if (max != null) v = Math.min(max, v);
+            return v;
+          }
+
+          const iterations = finiteInt(process.env.ITERATIONS, 50, { min: 1 });
+          const warmup = finiteInt(process.env.WARMUP, 8, { min: 1 });
+          const cooldownSec = finiteInt(process.env.COOLDOWN_SEC, 30, { min: 0 });
+          const maxConcurrency = finiteInt(process.env.MAX_CONCURRENCY, 3, { min: 1, max: 3 });
           const body = JSON.stringify({ mode: "single", resourceId: "org_capacity_test" });
 
           function percentile(sorted, p) {
@@ -103,6 +138,7 @@ jobs:
                   "user-agent": "ipix-ipi-827-capacity/1.0",
                 },
                 body,
+                signal: AbortSignal.timeout(30_000),
               });
               status = res.status;
               const text = await res.text();
@@ -110,8 +146,9 @@ jobs:
               try {
                 const j = JSON.parse(text);
                 error = j.error ?? null;
-                matched = typeof j.matched === "boolean" ? j.matched : null;
-                crossTenant = typeof j.crossTenant === "boolean" ? j.crossTenant : null;
+                const r = j.result ?? j;
+                matched = typeof r.matched === "boolean" ? r.matched : null;
+                crossTenant = typeof r.crossTenant === "boolean" ? r.crossTenant : null;
                 requestId = j.requestId ?? null;
               } catch {
                 error = status === 503 ? "empty_or_non_json_503" : "non_json_body";
@@ -153,7 +190,7 @@ jobs:
               byError[key] = (byError[key] || 0) + 1;
               if (r.status >= 200 && r.status < 300 && r.matched === true && r.crossTenant === false) ok++;
               if (r.crossTenant === true) crossTenant++;
-              if (r.status === 503 || r.status === 0 || r.status >= 500) {
+              if (r.status === 401 || r.status === 403 || r.status === 503 || r.status === 0 || r.status >= 500) {
                 failures.push({
                   i: r.i,
                   status: r.status,
@@ -187,8 +224,18 @@ jobs:
 
             console.log(`warmup n=${warmup} concurrency=1`);
             const warm = await runPool("warmup", warmup, 1);
-            stages.push(summarize("warmup", 1, warm));
-            console.log(JSON.stringify(stages[stages.length - 1], null, 0));
+            const warmSummary = summarize("warmup", 1, warm);
+            stages.push(warmSummary);
+            console.log(JSON.stringify(warmSummary, null, 0));
+
+            const unauthorized =
+              (warmSummary.byStatus[401] || 0) + (warmSummary.byStatus[403] || 0);
+            if (unauthorized === warmSummary.n && warmSummary.n > 0) {
+              console.error(
+                "Warm-up returned only 401/403 — INTERNAL_WEBHOOK_SECRET is stale or wrong for this Worker. Aborting matrix."
+              );
+              process.exit(1);
+            }
 
             for (let c = 1; c <= maxConcurrency; c++) {
               if (c === 3 && cooldownSec > 0) {
@@ -217,19 +264,21 @@ jobs:
 
             // Capacity decision heuristic (documented; final decision after Observability)
             let accepted = 1;
+            let appSemaphoreOnlyAt = null;
             for (const s of stages) {
               if (!/^c\d+$/.test(s.label)) continue;
               const resourceFail = (s.byError.empty_or_non_json_503 || 0) + (s.byError.non_json_body || 0);
               const appSat = s.byError.concurrency_saturated || 0;
               const other503 = (s.byStatus[503] || 0) - appSat - resourceFail;
               const hardFail = resourceFail + Math.max(0, other503) + (s.byStatus[0] || 0);
-              if (s.fail === 0 && s.crossTenant === 0) accepted = s.concurrency;
-              else if (hardFail === 0 && appSat > 0 && s.crossTenant === 0) {
-                // App semaphore only — still not production-safe above serial unless 0 fail
-                break;
-              } else {
-                break;
+              if (s.fail === 0 && s.crossTenant === 0) {
+                accepted = s.concurrency;
+                continue;
               }
+              if (hardFail === 0 && appSat > 0 && s.crossTenant === 0) {
+                appSemaphoreOnlyAt = s.concurrency;
+              }
+              break;
             }
 
             const report = {
@@ -244,13 +293,16 @@ jobs:
               maxConcurrency,
               stages,
               preliminary_concurrency_accepted_for_ipi_803: accepted,
+              app_semaphore_only_at: appSemaphoreOnlyAt,
               note:
-                "Correlate 503 failures with Workers Observability (exceededCpu/exceededMemory) before final capacity decision. App concurrency_saturated is Case A.",
+                "Correlate 503 failures with Workers Observability (exceededCpu/exceededMemory) before final capacity decision. App concurrency_saturated is Case A (recorded in app_semaphore_only_at when hardFail=0).",
             };
             fs.mkdirSync("artifacts", { recursive: true });
             fs.writeFileSync("artifacts/ipi-827-capacity-report.json", JSON.stringify(report, null, 2));
             console.log(
-              "PRELIMINARY_CAPACITY=" + accepted + " total_failures=" +
+              "PRELIMINARY_CAPACITY=" + accepted +
+                " app_semaphore_only_at=" + appSemaphoreOnlyAt +
+                " total_failures=" +
                 stages.reduce((n, s) => n + s.failures.length, 0)
             );
           })().catch((e) => {
