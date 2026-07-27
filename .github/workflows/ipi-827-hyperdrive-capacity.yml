@@ -44,6 +44,10 @@ jobs:
     # Default matrix worst-case (~50.5m at 30s request timeout) needs headroom past 45m.
     timeout-minutes: 60
     environment: preview
+    # SSOT for allowlisted canary path (security control). workflow_dispatch input default
+    # cannot reference job env — keep that literal identical to this value.
+    env:
+      ALLOWED_CANARY_URL: https://ipix-operator-preview.sk-498.workers.dev/api/internal/hyperdrive-thread-canary
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -62,11 +66,10 @@ jobs:
         env:
           CANARY_URL: ${{ inputs.canary_url }}
         run: |
-          ALLOWED='https://ipix-operator-preview.sk-498.workers.dev/api/internal/hyperdrive-thread-canary'
-          if [ "${CANARY_URL}" != "${ALLOWED}" ]; then
+          if [ "${CANARY_URL}" != "${ALLOWED_CANARY_URL}" ]; then
             echo "::error::canary_url must exactly match the allowlisted preview Worker canary path."
             echo "got=${CANARY_URL}"
-            echo "allowed=${ALLOWED}"
+            echo "allowed=${ALLOWED_CANARY_URL}"
             exit 1
           fi
           echo "canary_url allowlist OK (preview Worker path)."
@@ -75,8 +78,7 @@ jobs:
         env:
           CANARY_URL: ${{ inputs.canary_url }}
         run: |
-          ALLOWED='https://ipix-operator-preview.sk-498.workers.dev/api/internal/hyperdrive-thread-canary'
-          if [ "${CANARY_URL}" != "${ALLOWED}" ]; then
+          if [ "${CANARY_URL}" != "${ALLOWED_CANARY_URL}" ]; then
             echo "::error::canary_url failed allowlist re-check before probe."
             exit 1
           fi
@@ -108,10 +110,9 @@ jobs:
         run: |
           node <<'NODE'
           const fs = require("fs");
-          const ALLOWED_CANARY_URL =
-            "https://ipix-operator-preview.sk-498.workers.dev/api/internal/hyperdrive-thread-canary";
           const url = process.env.CANARY_URL;
           const secret = process.env.INTERNAL_WEBHOOK_SECRET;
+          const ALLOWED_CANARY_URL = process.env.ALLOWED_CANARY_URL;
           if (!secret) {
             console.error("INTERNAL_WEBHOOK_SECRET missing");
             process.exit(1);
@@ -120,7 +121,7 @@ jobs:
             console.error("CANARY_URL missing");
             process.exit(1);
           }
-          if (url !== ALLOWED_CANARY_URL) {
+          if (!ALLOWED_CANARY_URL || url !== ALLOWED_CANARY_URL) {
             console.error(
               "CANARY_URL is not on the allowlist (exact HTTPS preview Worker path required)."
             );
@@ -136,8 +137,8 @@ jobs:
             return v;
           }
 
-          const iterations = finiteInt(process.env.ITERATIONS, 50, { min: 1 });
-          const warmup = finiteInt(process.env.WARMUP, 8, { min: 1 });
+          const iterations = finiteInt(process.env.ITERATIONS, 50, { min: 1, max: 200 });
+          const warmup = finiteInt(process.env.WARMUP, 8, { min: 1, max: 50 });
           const cooldownSec = finiteInt(process.env.COOLDOWN_SEC, 30, { min: 0 });
           const maxConcurrency = finiteInt(process.env.MAX_CONCURRENCY, 3, { min: 1, max: 3 });
           const body = JSON.stringify({ mode: "single", resourceId: "org_capacity_test" });
@@ -298,21 +299,13 @@ jobs:
             let appSemaphoreOnlyAt = null;
             for (const s of stages) {
               if (!/^c\d+$/.test(s.label)) continue;
-              const resourceFail = (s.byError.empty_or_non_json_503 || 0) + (s.byError.non_json_body || 0);
               const appSat = s.byError.concurrency_saturated || 0;
-              const other503 = (s.byStatus[503] || 0) - appSat - resourceFail;
-              const hardFail = resourceFail + Math.max(0, other503) + (s.byStatus[0] || 0);
               if (s.fail === 0 && s.crossTenant === 0) {
                 accepted = s.concurrency;
                 continue;
               }
-              // Case A only when every failure is app concurrency_saturated (no 502/404/network mix).
-              if (
-                hardFail === 0 &&
-                appSat > 0 &&
-                s.fail === appSat &&
-                s.crossTenant === 0
-              ) {
+              // Case A: every failure is app concurrency_saturated (fail count === appSat).
+              if (appSat > 0 && s.fail === appSat && s.crossTenant === 0) {
                 appSemaphoreOnlyAt = s.concurrency;
               }
               break;
@@ -332,7 +325,7 @@ jobs:
               preliminary_concurrency_accepted_for_ipi_803: accepted,
               app_semaphore_only_at: appSemaphoreOnlyAt,
               note:
-                "Correlate 503 failures with Workers Observability (exceededCpu/exceededMemory) before final capacity decision. App concurrency_saturated is Case A (recorded in app_semaphore_only_at when hardFail=0).",
+                "Correlate 503 failures with Workers Observability (exceededCpu/exceededMemory) before final capacity decision. App concurrency_saturated is Case A (recorded in app_semaphore_only_at when fail === concurrency_saturated count).",
             };
             fs.mkdirSync("artifacts", { recursive: true });
             fs.writeFileSync("artifacts/ipi-827-capacity-report.json", JSON.stringify(report, null, 2));
