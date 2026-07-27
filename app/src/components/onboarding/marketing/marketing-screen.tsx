@@ -30,7 +30,7 @@ const MARKETING_CONTENT: Record<number, MarketingContent> = {
     body: <ProofTilesBody />,
   },
   3: {
-    heading: "FashionOS builds your Brand DNA fast",
+    heading: "iPix builds your Brand DNA fast",
     subcopy: "Trained on top fashion houses — watch your identity score climb.",
     body: <ScoreComparisonBody />,
   },
@@ -50,7 +50,7 @@ const MARKETING_CONTENT: Record<number, MarketingContent> = {
   },
   10: {
     heading: "Go viral on socials and 10× your orders",
-    subcopy: "FashionOS taps into social algorithms to turn attention into customers.",
+    subcopy: "iPix taps into social algorithms to turn attention into customers.",
     body: <SocialFunnelBody />,
   },
   11: {

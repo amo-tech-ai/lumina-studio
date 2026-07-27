@@ -24,8 +24,8 @@ const GROWTH_OPTIONS = [
   },
   {
     id: "fashionos",
-    label: "No plan yet — FashionOS decides",
-    affirmation: "No problem — FashionOS will pick the highest-ROI mix for you.",
+    label: "No plan yet — iPix decides",
+    affirmation: "No problem — iPix will pick the highest-ROI mix for you.",
   },
 ] as const;
 

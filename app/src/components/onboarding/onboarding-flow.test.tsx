@@ -426,6 +426,21 @@ describe("design tokens", () => {
     expect(routeEntry, "the route must not load a second font").not.toContain("next/font");
   });
 
+  it("makes the step indicator visible against the black shell", () => {
+    // `className` on Progress reaches only its root; the filled indicator is
+    // hardcoded to bg-primary (near-black). Unstyled, the bar reads as empty at
+    // every step because it is black on the black onboarding background.
+    renderAt(<OnboardingFlow initialScreen={5} />);
+    const bars = screen.getAllByRole("progressbar", { hidden: true });
+    expect(bars.length).toBeGreaterThanOrEqual(3);
+    for (const bar of bars.slice(0, 3)) {
+      expect(
+        bar.className,
+        "segment fill must be recoloured or it is invisible on the shell",
+      ).toContain("[&>*]:bg-[var(--onboarding-accent)]");
+    }
+  });
+
   it("stops onboarding animations under reduced motion", () => {
     const tokens = readFileSync(TOKENS, "utf8");
     const reducedMotionBlock = tokens.slice(tokens.indexOf("@media (prefers-reduced-motion"));

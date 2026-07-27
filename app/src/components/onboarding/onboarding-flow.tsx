@@ -156,7 +156,7 @@ export function OnboardingFlow({
         <FlowFooter
           screen={screen}
           continueDisabled={ctaDisabled(screen, answers)}
-          continueLabel={screen === LAST_SCREEN ? "Open FashionOS" : "Continue"}
+          continueLabel={screen === LAST_SCREEN ? "Open iPix" : "Continue"}
           onBack={goBack}
           onSkip={skipCurrentScreen}
           onContinue={goNext}

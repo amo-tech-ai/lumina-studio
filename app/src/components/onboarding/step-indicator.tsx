@@ -21,7 +21,14 @@ export function StepIndicator({ screen }: { screen: number }) {
           <Progress
             key={`${segment.from}-${segment.to}`}
             value={segmentPercent(screen, segment.from, segment.to)}
-            className="h-1 flex-1 bg-[var(--onboarding-hair)]/25"
+            // The child selector is load-bearing. `className` reaches only the
+            // Progress root; the filled indicator inside it is hardcoded to
+            // `bg-primary` (progress.tsx:22), which is oklch(0.205 0 0) — near
+            // black. On this route that fill sits on the black onboarding shell,
+            // so the bar reads as empty at every step. Recolour the indicator
+            // here rather than editing the shared primitive, which is correct as
+            // it stands for every light-background caller.
+            className="h-1 flex-1 bg-[var(--onboarding-hair)]/25 [&>*]:bg-[var(--onboarding-accent)]"
           />
         ))}
       </div>
