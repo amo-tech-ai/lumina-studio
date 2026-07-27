@@ -3,8 +3,7 @@ import type { ReactNode } from "react";
 import { cn } from "@/lib/utils";
 
 /**
- * IPI-833 · ONB2-UI-001 — Standalone Onboarding Route, Screens, and Deterministic State Machine
- * the shared card every onboarding screen sits in.
+ * IPI-833 — the shared card every onboarding screen sits in.
  *
  * All 13 screens use identical card chrome in the design comp: 480px max width,
  * 28px radius, 32px padding, white on the black page. Only the body differs —
