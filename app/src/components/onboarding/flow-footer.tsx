@@ -3,7 +3,8 @@
 import { canBack, canSkip } from "@/lib/onboarding/navigation";
 
 /**
- * IPI-833 — Back / Skip / Continue.
+ * IPI-833 · ONB2-UI-001 — Standalone Onboarding Route, Screens, and Deterministic State Machine
+ * Back / Skip / Continue controls.
  *
  * Continue takes a real `disabled` attribute rather than a greyed-out style
  * that still submits. The current /app/onboarding page has no `disabled` on
