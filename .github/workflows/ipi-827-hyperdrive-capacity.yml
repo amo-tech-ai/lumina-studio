@@ -41,7 +41,8 @@ concurrency:
 jobs:
   capacity-matrix:
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    # Default matrix worst-case (~50.5m at 30s request timeout) needs headroom past 45m.
+    timeout-minutes: 60
     environment: preview
     steps:
       - name: Checkout
@@ -57,10 +58,28 @@ jobs:
           fi
           echo "INTERNAL_WEBHOOK_SECRET is set (length withheld)."
 
+      - name: Allowlist canary URL (fail closed)
+        env:
+          CANARY_URL: ${{ inputs.canary_url }}
+        run: |
+          ALLOWED='https://ipix-operator-preview.sk-498.workers.dev/api/internal/hyperdrive-thread-canary'
+          if [ "${CANARY_URL}" != "${ALLOWED}" ]; then
+            echo "::error::canary_url must exactly match the allowlisted preview Worker canary path."
+            echo "got=${CANARY_URL}"
+            echo "allowed=${ALLOWED}"
+            exit 1
+          fi
+          echo "canary_url allowlist OK (preview Worker path)."
+
       - name: Probe canary enabled (expect 401 with dummy secret)
         env:
           CANARY_URL: ${{ inputs.canary_url }}
         run: |
+          ALLOWED='https://ipix-operator-preview.sk-498.workers.dev/api/internal/hyperdrive-thread-canary'
+          if [ "${CANARY_URL}" != "${ALLOWED}" ]; then
+            echo "::error::canary_url failed allowlist re-check before probe."
+            exit 1
+          fi
           code=$(curl -sS --connect-timeout 5 --max-time 20 \
             -o /tmp/probe.json -w '%{http_code}' -X POST \
             "${CANARY_URL}" \
@@ -89,6 +108,8 @@ jobs:
         run: |
           node <<'NODE'
           const fs = require("fs");
+          const ALLOWED_CANARY_URL =
+            "https://ipix-operator-preview.sk-498.workers.dev/api/internal/hyperdrive-thread-canary";
           const url = process.env.CANARY_URL;
           const secret = process.env.INTERNAL_WEBHOOK_SECRET;
           if (!secret) {
@@ -97,6 +118,12 @@ jobs:
           }
           if (!url) {
             console.error("CANARY_URL missing");
+            process.exit(1);
+          }
+          if (url !== ALLOWED_CANARY_URL) {
+            console.error(
+              "CANARY_URL is not on the allowlist (exact HTTPS preview Worker path required)."
+            );
             process.exit(1);
           }
 
@@ -145,8 +172,9 @@ jobs:
               bodyPreview = text.slice(0, 240);
               try {
                 const j = JSON.parse(text);
-                error = j.error ?? null;
                 const r = j.result ?? j;
+                // 502 failed roundtrips put reason in result.error (no top-level error).
+                error = j.error ?? r.error ?? null;
                 matched = typeof r.matched === "boolean" ? r.matched : null;
                 crossTenant = typeof r.crossTenant === "boolean" ? r.crossTenant : null;
                 requestId = j.requestId ?? null;
@@ -186,11 +214,12 @@ jobs:
             const failures = [];
             for (const r of results) {
               byStatus[r.status] = (byStatus[r.status] || 0) + 1;
-              const key = r.error || (r.status >= 200 && r.status < 300 ? "ok" : `http_${r.status}`);
+              const success =
+                r.status >= 200 && r.status < 300 && r.matched === true && r.crossTenant === false;
+              const key = r.error || (success ? "ok" : `http_${r.status}`);
               byError[key] = (byError[key] || 0) + 1;
-              if (r.status >= 200 && r.status < 300 && r.matched === true && r.crossTenant === false) ok++;
-              if (r.crossTenant === true) crossTenant++;
-              if (r.status === 401 || r.status === 403 || r.status === 503 || r.status === 0 || r.status >= 500) {
+              if (success) ok++;
+              else {
                 failures.push({
                   i: r.i,
                   status: r.status,
@@ -200,6 +229,7 @@ jobs:
                   bodyPreview: r.bodyPreview,
                 });
               }
+              if (r.crossTenant === true) crossTenant++;
             }
             return {
               label,
@@ -263,7 +293,8 @@ jobs:
             }
 
             // Capacity decision heuristic (documented; final decision after Observability)
-            let accepted = 1;
+            // 0 until a stage fully succeeds — never claim concurrency 1 when baseline fails.
+            let accepted = 0;
             let appSemaphoreOnlyAt = null;
             for (const s of stages) {
               if (!/^c\d+$/.test(s.label)) continue;
@@ -275,7 +306,13 @@ jobs:
                 accepted = s.concurrency;
                 continue;
               }
-              if (hardFail === 0 && appSat > 0 && s.crossTenant === 0) {
+              // Case A only when every failure is app concurrency_saturated (no 502/404/network mix).
+              if (
+                hardFail === 0 &&
+                appSat > 0 &&
+                s.fail === appSat &&
+                s.crossTenant === 0
+              ) {
                 appSemaphoreOnlyAt = s.concurrency;
               }
               break;
