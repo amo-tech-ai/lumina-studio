@@ -6,8 +6,7 @@ import { OnboardingCard } from "@/components/onboarding/onboarding-card";
 import { validateUrl } from "@/lib/onboarding/validate-url";
 
 /**
- * IPI-833 · ONB2-UI-001 — Standalone Onboarding Route, Screens, and Deterministic State Machine
- * screen 4. Brand name is required and website is optional.
+ * IPI-833 — screen 4. Brand name (required) and website (optional here).
  *
  * The design comp renders a fabricated crawl summary under the URL field:
  *
@@ -16,8 +15,7 @@ import { validateUrl } from "@/lib/onboarding/validate-url";
  * "47 pages found" is hardcoded, before any crawl exists. It is NOT ported —
  * showing an invented result is exactly the failure the project's UX rules
  * forbid. The URL is echoed back and nothing more; real page counts arrive with
- * IPI-835 · ONB2-INT-001 — Real Session, Crawl, Realtime Progress, and Approval
- * Integration With Recovery.
+ * the crawl in IPI-835.
  */
 export function BrandDetailsQuestion({
   brandName,
