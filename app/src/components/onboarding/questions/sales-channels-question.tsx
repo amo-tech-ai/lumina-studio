@@ -5,7 +5,8 @@ import { SALES_CHANNELS } from "@/components/onboarding/sales-channels.data";
 import { cn } from "@/lib/utils";
 
 /**
- * IPI-833 — screen 5. Multi-select; Continue is blocked while nothing is picked.
+ * IPI-833 · ONB2-UI-001 — Standalone Onboarding Route, Screens, and Deterministic State Machine
+ * screen 5. Multi-select; Continue is blocked while nothing is picked.
  *
  * Real checkboxes rather than aria-pressed buttons: the semantics are "choose
  * any number of these", and a checkbox group announces that correctly without
