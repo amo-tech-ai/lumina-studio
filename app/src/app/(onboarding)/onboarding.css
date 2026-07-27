@@ -1,6 +1,5 @@
 /**
- * IPI-833 · ONB2-UI-001 — Standalone Onboarding Route, Screens, and Deterministic State Machine
- * brand typography for the standalone onboarding flow.
+ * IPI-833 — brand typography for the standalone onboarding flow.
  *
  * Without this the shell inherits `font-family: Arial, Helvetica, sans-serif`
  * from globals.css:106 — a generic system font, which AGENTS.md forbids
@@ -14,21 +13,17 @@
  * next/font. This only scopes them, exactly as (marketing)/marketing.css does
  * for the marketing surface — no second font load, and nothing added to the
  * Cloudflare Worker bundle.
- *
- * The Next app does not expose the legacy Vite `--font-sans` / `--font-serif`
- * aliases: its Tailwind `--font-sans` maps to Geist and `--font-serif` is absent.
- * Use the loaded brand variables directly instead of changing global aliases.
  */
 
 .onboarding {
-  font-family: var(--font-outfit);
+  font-family: var(--font-outfit), system-ui, -apple-system, sans-serif;
 }
 
 .onboarding h1,
 .onboarding h2,
 .onboarding h3,
 .onboarding h4 {
-  font-family: var(--font-cormorant);
+  font-family: var(--font-cormorant), Georgia, "Times New Roman", serif;
   font-weight: 600;
   letter-spacing: -0.01em;
 }
