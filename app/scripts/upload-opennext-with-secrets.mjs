@@ -19,6 +19,8 @@ import {
   buildWranglerVarCliArgs,
   collectRuntimeSecretsFromEnv,
   collectWranglerVarsFromEnv,
+  ensureHyperdriveLocalConnectionSsl,
+  HYPERDRIVE_LOCAL_CONNECTION_ENV,
   RUNTIME_REQUIRED_SECRET_NAMES,
   WRANGLER_REQUIRED_VAR_NAMES,
   runtimeSecretNamesForWranglerEnv,
@@ -174,6 +176,25 @@ function main() {
 
   if (infisicalEnv) {
     assertInfisicalWranglerEnvPair(infisicalEnv, opts.wranglerEnv);
+  }
+
+  // IPI-824 / IPI-826 — Wrangler Hyperdrive local connection (system env, not Worker secret).
+  // Force TLS-required sslmode (append or upgrade disable/allow/prefer); never print the string.
+  const hdSsl = ensureHyperdriveLocalConnectionSsl(process.env);
+  if (!hdSsl.ok) {
+    const unsetMsg = `${HYPERDRIVE_LOCAL_CONNECTION_ENV} unset (need DATABASE_URL for Hyperdrive local upload)`;
+    if (opts.dryRun) {
+      console.warn(`warn: ${unsetMsg}`);
+    } else {
+      console.error(`Error: ${unsetMsg}.`);
+      process.exit(1);
+    }
+  } else {
+    console.log(
+      hdSsl.appended
+        ? "hyperdrive_local_sslmode=appended_require"
+        : "hyperdrive_local_sslmode=already_present",
+    );
   }
 
   runtimeSecretNamesForWranglerEnv(opts.wranglerEnv);

@@ -275,3 +275,132 @@ export function diffSecretNames(deployedNames, wranglerEnv) {
 
   return { extra, missing };
 }
+
+/**
+ * Wrangler system env for Hyperdrive binding `HYPERDRIVE_FRESH` (IPI-824 / IPI-826).
+ * Not a Worker runtime secret — never allowlist / secrets-file this name.
+ */
+export const HYPERDRIVE_LOCAL_CONNECTION_ENV =
+  "CLOUDFLARE_HYPERDRIVE_LOCAL_CONNECTION_STRING_HYPERDRIVE_FRESH";
+
+/**
+ * Postgres sslmodes that require TLS (libpq). Prefer/allow/disable do not guarantee TLS.
+ * @see https://www.postgresql.org/docs/current/libpq-ssl.html
+ */
+export const POSTGRES_TLS_REQUIRED_SSLMODES = Object.freeze([
+  "require",
+  "verify-ca",
+  "verify-full",
+]);
+
+/**
+ * Effective `sslmode` per libpq: last non-empty query value wins when repeated.
+ * @see https://www.postgresql.org/docs/current/libpq-connect.html
+ * @param {string} connectionString
+ * @returns {string | null} lowercase sslmode value, or null if unset
+ */
+export function getSslMode(connectionString) {
+  if (typeof connectionString !== "string" || connectionString.length === 0) {
+    return null;
+  }
+  const matches = connectionString.matchAll(/[?&]sslmode=([^&]*)/gi);
+  let last = null;
+  for (const match of matches) {
+    let raw = match[1];
+    try {
+      raw = decodeURIComponent(raw);
+    } catch {
+      // keep raw
+    }
+    const trimmed = raw.trim();
+    if (trimmed.length > 0) {
+      last = trimmed.toLowerCase();
+    }
+  }
+  return last;
+}
+
+/** @param {string} connectionString */
+function countSslModeParams(connectionString) {
+  return [...connectionString.matchAll(/[?&]sslmode=/gi)].length;
+}
+
+/**
+ * Remove all `sslmode=` query params; tidy leftover `?` / `&` separators.
+ * @param {string} connectionString
+ * @returns {string}
+ */
+function stripSslModeParams(connectionString) {
+  let out = connectionString.replace(/([?&])sslmode=[^&]*/gi, "$1");
+  out = out.replace(/\?&+/g, "?").replace(/&&+/g, "&");
+  out = out.replace(/[?&]+$/g, "");
+  return out;
+}
+
+/** @param {string} connectionString @param {string} mode */
+function appendSslModeParam(connectionString, mode) {
+  const sep = connectionString.includes("?") ? "&" : "?";
+  return `${connectionString}${sep}sslmode=${mode}`;
+}
+
+/**
+ * True when the connection string's effective sslmode requires TLS.
+ * @param {string} connectionString
+ * @returns {boolean}
+ */
+export function connectionStringRequiresTls(connectionString) {
+  const mode = getSslMode(connectionString);
+  return mode !== null && POSTGRES_TLS_REQUIRED_SSLMODES.includes(mode);
+}
+
+/**
+ * Ensure a TLS-required `sslmode` for Hyperdrive local upload (IPI-826 · CF-DB-009e).
+ * Uses libpq’s last-non-empty `sslmode` when the param is repeated.
+ * - Absent → append `sslmode=require`
+ * - Effective non-TLS (`disable` / `allow` / `prefer` / unknown) → strip all sslmode, append `require`
+ * - Effective TLS with a single param → leave unchanged (`require` / `verify-ca` / `verify-full`)
+ * - Effective TLS with duplicates → canonicalize to one param (keeps the effective mode)
+ * Never logs the string. Avoids `new URL()` so password encoding is preserved.
+ * @param {string} connectionString
+ * @returns {string}
+ */
+export function withSslModeRequire(connectionString) {
+  if (typeof connectionString !== "string" || connectionString.length === 0) {
+    return connectionString;
+  }
+  const mode = getSslMode(connectionString);
+  if (mode !== null && POSTGRES_TLS_REQUIRED_SSLMODES.includes(mode)) {
+    if (countSslModeParams(connectionString) <= 1) {
+      return connectionString;
+    }
+    return appendSslModeParam(stripSslModeParams(connectionString), mode);
+  }
+  if (mode !== null) {
+    return appendSslModeParam(stripSslModeParams(connectionString), "require");
+  }
+  return appendSslModeParam(connectionString, "require");
+}
+
+/**
+ * Derive Wrangler Hyperdrive local-connection env from `CLOUDFLARE_…` or `DATABASE_URL`,
+ * forcing a TLS-required sslmode (IPI-826). Mutates `env` in place. Never logs values.
+ *
+ * @param {NodeJS.ProcessEnv | Record<string, string | undefined>} env
+ * @returns {{ ok: boolean; appended: boolean }}
+ */
+export function ensureHyperdriveLocalConnectionSsl(env) {
+  const existing = env[HYPERDRIVE_LOCAL_CONNECTION_ENV];
+  const fromExisting =
+    typeof existing === "string" && existing.length > 0 ? existing : null;
+  const fromDatabase =
+    typeof env.DATABASE_URL === "string" && env.DATABASE_URL.length > 0
+      ? env.DATABASE_URL
+      : null;
+  const src = fromExisting ?? fromDatabase;
+  if (!src) {
+    return { ok: false, appended: false };
+  }
+  const next = withSslModeRequire(src);
+  env[HYPERDRIVE_LOCAL_CONNECTION_ENV] = next;
+  return { ok: connectionStringRequiresTls(next), appended: next !== src };
+}

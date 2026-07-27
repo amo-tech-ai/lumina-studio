@@ -11,13 +11,18 @@ import {
   WRANGLER_VAR_NAMES,
   WRANGLER_REQUIRED_VAR_NAMES,
   RUNTIME_REQUIRED_SECRET_NAMES,
+  HYPERDRIVE_LOCAL_CONNECTION_ENV,
   assertInfisicalWranglerEnvPair,
   assertNoForbiddenSecrets,
   buildWranglerVarCliArgs,
   collectRuntimeSecretsFromEnv,
   collectWranglerVarsFromEnv,
+  connectionStringRequiresTls,
   diffSecretNames,
+  ensureHyperdriveLocalConnectionSsl,
+  getSslMode,
   runtimeSecretNamesForWranglerEnv,
+  withSslModeRequire,
   wranglerCliEnvArgs,
 } from "./cloudflare-secret-allowlist.mjs";
 import { AGENT_ROUTING_ENV_KEYS } from "../src/lib/ai/agent-routing-keys.mjs";
@@ -181,28 +186,112 @@ describe("cloudflare-secret-allowlist", () => {
     expect(wrangler).not.toMatch(/"ENABLE_HYPERDRIVE_THREAD_CANARY"\s*:\s*"true"/);
   });
 
-  it("IPI-824 maps Hyperdrive local connection string from DATABASE_URL (not Worker secrets)", () => {
+  it("IPI-824 / IPI-826 — Hyperdrive local connection from DATABASE_URL + TLS (not Worker secrets)", () => {
     // Wrangler system env — must not enter runtime allowlist / secrets-file.
-    expect(RUNTIME_SECRET_NAMES).not.toContain(
-      "CLOUDFLARE_HYPERDRIVE_LOCAL_CONNECTION_STRING_HYPERDRIVE_FRESH",
-    );
-    expect(WRANGLER_VAR_NAMES).not.toContain(
-      "CLOUDFLARE_HYPERDRIVE_LOCAL_CONNECTION_STRING_HYPERDRIVE_FRESH",
-    );
+    expect(RUNTIME_SECRET_NAMES).not.toContain(HYPERDRIVE_LOCAL_CONNECTION_ENV);
+    expect(WRANGLER_VAR_NAMES).not.toContain(HYPERDRIVE_LOCAL_CONNECTION_ENV);
 
     const workflowPath = resolve(
       dirname(fileURLToPath(import.meta.url)),
       "../../.github/workflows/cloudflare-secrets-sync.yml",
     );
     const yaml = readFileSync(workflowPath, "utf8");
+    // IPI-824: workflow still seeds the Wrangler system env from DATABASE_URL.
     expect(yaml).toContain(
       "CLOUDFLARE_HYPERDRIVE_LOCAL_CONNECTION_STRING_HYPERDRIVE_FRESH: ${{ secrets.DATABASE_URL }}",
     );
-    // Present on both GitHub-source dry-run and live upload steps.
-    const mappings = yaml.match(
-      /CLOUDFLARE_HYPERDRIVE_LOCAL_CONNECTION_STRING_HYPERDRIVE_FRESH:\s*\$\{\{\s*secrets\.DATABASE_URL\s*\}\}/g,
+    // IPI-826: TLS upgrade lives in the upload script (scripts-only PR — not workflow).
+    const uploadScript = readFileSync(
+      resolve(dirname(fileURLToPath(import.meta.url)), "upload-opennext-with-secrets.mjs"),
+      "utf8",
     );
-    expect(mappings?.length).toBeGreaterThanOrEqual(2);
+    expect(uploadScript).toContain("ensureHyperdriveLocalConnectionSsl");
+  });
+
+  it("IPI-826 appends sslmode=require when absent; upgrades non-TLS modes; keeps TLS modes", () => {
+    expect(withSslModeRequire("postgresql://u:p@h:5432/db")).toBe(
+      "postgresql://u:p@h:5432/db?sslmode=require",
+    );
+    expect(withSslModeRequire("postgresql://u:p@h:5432/db?application_name=x")).toBe(
+      "postgresql://u:p@h:5432/db?application_name=x&sslmode=require",
+    );
+    expect(withSslModeRequire("postgresql://u:p@h:5432/db?sslmode=require")).toBe(
+      "postgresql://u:p@h:5432/db?sslmode=require",
+    );
+    expect(withSslModeRequire("postgresql://u:p@h:5432/db?sslmode=verify-full")).toBe(
+      "postgresql://u:p@h:5432/db?sslmode=verify-full",
+    );
+    // P1: disable/allow/prefer must not survive — TLS is the guarantee.
+    expect(withSslModeRequire("postgresql://u:p@h:5432/db?sslmode=disable")).toBe(
+      "postgresql://u:p@h:5432/db?sslmode=require",
+    );
+    // Strip+append places the canonical sslmode last (libpq order-safe).
+    expect(withSslModeRequire("postgresql://u:p@h:5432/db?sslmode=prefer&x=1")).toBe(
+      "postgresql://u:p@h:5432/db?x=1&sslmode=require",
+    );
+    expect(withSslModeRequire("postgresql://u:p@h:5432/db?foo=1&sslmode=allow")).toBe(
+      "postgresql://u:p@h:5432/db?foo=1&sslmode=require",
+    );
+    expect(connectionStringRequiresTls("postgresql://u@h/db?sslmode=disable")).toBe(false);
+    expect(connectionStringRequiresTls("postgresql://u@h/db?sslmode=require")).toBe(true);
+  });
+
+  it("IPI-826 uses libpq last-non-empty sslmode when the param is repeated", () => {
+    // First=require, last=disable → effective disable (not TLS-safe).
+    expect(getSslMode("postgresql://u:p@h:5432/db?sslmode=require&sslmode=disable")).toBe(
+      "disable",
+    );
+    expect(
+      connectionStringRequiresTls("postgresql://u:p@h:5432/db?sslmode=require&sslmode=disable"),
+    ).toBe(false);
+    expect(withSslModeRequire("postgresql://u:p@h:5432/db?sslmode=require&sslmode=disable")).toBe(
+      "postgresql://u:p@h:5432/db?sslmode=require",
+    );
+
+    // First=disable, last=require → effective require; canonicalize duplicates to one param.
+    expect(getSslMode("postgresql://u:p@h:5432/db?sslmode=disable&sslmode=require")).toBe(
+      "require",
+    );
+    expect(
+      connectionStringRequiresTls("postgresql://u:p@h:5432/db?sslmode=disable&sslmode=require"),
+    ).toBe(true);
+    expect(withSslModeRequire("postgresql://u:p@h:5432/db?sslmode=disable&sslmode=require")).toBe(
+      "postgresql://u:p@h:5432/db?sslmode=require",
+    );
+
+    // Empty values are skipped (libpq last non-empty).
+    expect(getSslMode("postgresql://u:p@h:5432/db?sslmode=&sslmode=verify-full")).toBe(
+      "verify-full",
+    );
+    expect(
+      withSslModeRequire("postgresql://u:p@h:5432/db?foo=1&sslmode=require&sslmode=disable"),
+    ).toBe("postgresql://u:p@h:5432/db?foo=1&sslmode=require");
+  });
+
+  it("IPI-826 ensureHyperdriveLocalConnectionSsl derives from DATABASE_URL without logging values", () => {
+    const fakeUrl = "postgresql://user:super-secret-password@db.example:5432/postgres";
+    const env = { DATABASE_URL: fakeUrl };
+    const result = ensureHyperdriveLocalConnectionSsl(env);
+    expect(result).toEqual({ ok: true, appended: true });
+    expect(env[HYPERDRIVE_LOCAL_CONNECTION_ENV]).toBe(`${fakeUrl}?sslmode=require`);
+    expect(connectionStringRequiresTls(env[HYPERDRIVE_LOCAL_CONNECTION_ENV])).toBe(true);
+
+    // Idempotent when TLS-required sslmode already present on CLOUDFLARE_ env.
+    const again = ensureHyperdriveLocalConnectionSsl(env);
+    expect(again).toEqual({ ok: true, appended: false });
+
+    // Upgrades sslmode=disable → require (ok must not be true merely because substring exists).
+    const disabled = {
+      DATABASE_URL: "postgresql://user:super-secret-password@db.example:5432/postgres?sslmode=disable",
+    };
+    const upgraded = ensureHyperdriveLocalConnectionSsl(disabled);
+    expect(upgraded).toEqual({ ok: true, appended: true });
+    expect(disabled[HYPERDRIVE_LOCAL_CONNECTION_ENV]).toBe(
+      "postgresql://user:super-secret-password@db.example:5432/postgres?sslmode=require",
+    );
+
+    // Shape-only: unset returns ok:false (caller fails live upload).
+    expect(ensureHyperdriveLocalConnectionSsl({})).toEqual({ ok: false, appended: false });
   });
 
   it("diffSecretNames reports extra and missing by name only", () => {
@@ -490,15 +579,45 @@ describe("upload-opennext-with-secrets", () => {
           PATH: process.env.PATH,
           GEMINI_API_KEY: "gemini-test",
           SUPABASE_SERVICE_ROLE_KEY: "service-role-test",
+          // IPI-826 — seed Hyperdrive local connection so the early TLS gate passes and
+          // this test still exercises required-secret / required-var / CF credential gates.
+          DATABASE_URL: "postgresql://u:p@127.0.0.1:5432/db",
           INTELLIGENCE_API_URL: "https://intel.example/api",
           INTELLIGENCE_GATEWAY_WS_URL: "wss://intel.example/ws",
         },
         encoding: "utf8",
       },
     );
-    // Must pass required-secret + required-var gates; fail later on missing CF credentials.
-    expect(r.stderr + r.stdout).not.toMatch(/required runtime secrets missing.*COPILOTKIT/);
-    expect(r.stderr + r.stdout).toMatch(/CLOUDFLARE_API_TOKEN|CLOUDFLARE_ACCOUNT_ID|no allowlisted|Error:/);
+    const combined = r.stderr + r.stdout;
+    // Must pass Hyperdrive TLS + required-secret + required-var gates; fail on missing CF credentials.
+    expect(combined).not.toMatch(/required runtime secrets missing.*COPILOTKIT/);
+    expect(combined).not.toMatch(/HYPERDRIVE_LOCAL_CONNECTION|Hyperdrive local upload/);
+    expect(combined).toMatch(/hyperdrive_local_sslmode=appended_require/);
+    expect(combined).toMatch(/Missing Cloudflare credentials|CLOUDFLARE_API_TOKEN|CLOUDFLARE_ACCOUNT_ID/);
     expect(r.status).not.toBe(0);
+  });
+
+  it("dry-run without DATABASE_URL warns about Hyperdrive local connection (no values)", () => {
+    const scriptPath = resolve(
+      dirname(fileURLToPath(import.meta.url)),
+      "upload-opennext-with-secrets.mjs",
+    );
+    const r = spawnSync(
+      process.execPath,
+      [scriptPath, "--wrangler-env", "preview", "--infisical-env", "dev", "--dry-run"],
+      {
+        env: {
+          PATH: process.env.PATH,
+          GEMINI_API_KEY: "gemini-test",
+          SUPABASE_SERVICE_ROLE_KEY: "service-role-test",
+        },
+        encoding: "utf8",
+      },
+    );
+    expect(r.status).toBe(0);
+    expect(r.stderr + r.stdout).toMatch(
+      /warn:.*CLOUDFLARE_HYPERDRIVE_LOCAL_CONNECTION_STRING_HYPERDRIVE_FRESH unset/,
+    );
+    expect(r.stderr + r.stdout).not.toMatch(/postgresql:\/\//);
   });
 });
