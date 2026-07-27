@@ -1,19 +1,9 @@
-import type { User } from "@supabase/supabase-js";
-import { NextRequest, NextResponse } from "next/server";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-
-vi.mock("@/lib/supabase/session", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("@/lib/supabase/session")>();
-  return { ...actual, updateSession: vi.fn() };
-});
-
-import { updateSession } from "@/lib/supabase/session";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { NextRequest } from "next/server";
 import { config, middleware } from "./middleware";
 
-const updateSessionMock = vi.mocked(updateSession);
-
-// A minimally valid Supabase session cookie value for the legacy /app gate:
-// base64-encoded JSON whose first element is a JWT-shaped access token.
+// A minimally valid Supabase session cookie value: base64-encoded JSON array
+// whose first element is a JWT-shaped (3-part) access token.
 function sessionCookieValue(jwt = "header.payload.signature"): string {
   return `base64-${btoa(JSON.stringify([jwt]))}`;
 }
@@ -29,22 +19,8 @@ function appRequest(
   return req;
 }
 
-function sessionResult(request: NextRequest, user: User | null = null) {
-  return {
-    response: NextResponse.next({ request }),
-    user,
-  };
-}
-
 describe("middleware — operator auth gate (IPI2-127)", () => {
-  beforeEach(() => {
-    updateSessionMock.mockImplementation(async (request) => sessionResult(request));
-  });
-
-  afterEach(() => {
-    vi.unstubAllEnvs();
-    vi.clearAllMocks();
-  });
+  afterEach(() => vi.unstubAllEnvs());
 
   it("passes through in local dev when OPERATOR_AUTH_ENABLED is not true", async () => {
     vi.stubEnv("NODE_ENV", "development");
@@ -166,9 +142,8 @@ describe("middleware — operator auth gate (IPI2-127)", () => {
     expect(res.headers.get("location")).toBeNull();
   });
 
-  // IPI-833 · ONB2-UI-001 — Standalone Onboarding Route, Screens, and
-  // Deterministic State Machine: /onboarding is a sibling route group, so it
-  // does not inherit the /app prefix and needs its own trusted-session gate.
+  // IPI-833 — /onboarding is a sibling route group, so it does not inherit the
+  // /app prefix and needs its own clause in the gate.
   it("redirects unauthenticated /onboarding to /login with redirect param", async () => {
     vi.stubEnv("OPERATOR_AUTH_ENABLED", "true");
     const res = await middleware(appRequest("/onboarding"));
@@ -185,34 +160,22 @@ describe("middleware — operator auth gate (IPI2-127)", () => {
     expect(res.headers.get("location")).toContain("/login");
   });
 
-  it("preserves the onboarding query string in the redirect param", async () => {
+  it("preserves the onboarding step hash-free query string in the redirect param", async () => {
     vi.stubEnv("OPERATOR_AUTH_ENABLED", "true");
     const res = await middleware(appRequest("/onboarding?source=email"));
     const location = decodeURIComponent(res.headers.get("location") ?? "");
     expect(location).toContain("redirect=/onboarding?source=email");
   });
 
-  it("allows /onboarding only when updateSession returns a trusted user", async () => {
-    vi.stubEnv("OPERATOR_AUTH_ENABLED", "true");
-    const request = appRequest("/onboarding");
-    updateSessionMock.mockResolvedValueOnce(
-      sessionResult(request, { id: "user-123" } as User),
-    );
-
-    const res = await middleware(request);
-    expect(res.status).toBe(200);
-    expect(res.headers.get("location")).toBeNull();
-  });
-
-  it("rejects a JWT-shaped onboarding cookie when getUser did not validate it", async () => {
+  it("allows /onboarding when a valid Supabase session cookie is present", async () => {
     vi.stubEnv("OPERATOR_AUTH_ENABLED", "true");
     const res = await middleware(
       appRequest("/onboarding", [
         { name: "sb-proj-auth-token", value: sessionCookieValue() },
       ]),
     );
-    expect(res.status).toBe(307);
-    expect(res.headers.get("location")).toContain("/login");
+    expect(res.status).toBe(200);
+    expect(res.headers.get("location")).toBeNull();
   });
 
   it("does not gate /onboardingx (prefix is not /onboarding/)", async () => {
