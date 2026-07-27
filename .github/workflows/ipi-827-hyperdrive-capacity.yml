@@ -8,9 +8,6 @@
 name: IPI-827 Hyperdrive capacity matrix
 
 on:
-  pull_request:
-    paths:
-      - '.github/workflows/ipi-827-hyperdrive-capacity.yml'
   workflow_dispatch:
     inputs:
       iterations:
