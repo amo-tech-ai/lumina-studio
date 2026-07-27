@@ -1,7 +1,8 @@
 import Image from "next/image";
 
 /**
- * IPI-833 — the seven marketing screen bodies.
+ * IPI-833 · ONB2-UI-001 — Standalone Onboarding Route, Screens, and Deterministic State Machine
+ * the seven marketing screen bodies.
  *
  * COMPONENTS.md suggests these could be one copy-driven component. They cannot:
  * they share the card, the heading and the subcopy, but the bodies are seven
