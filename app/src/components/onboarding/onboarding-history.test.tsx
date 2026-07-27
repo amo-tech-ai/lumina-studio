@@ -12,7 +12,8 @@ vi.mock("next/navigation", () => ({
 import { OnboardingFlow } from "./onboarding-flow";
 
 /**
- * IPI-833 — real browser-history navigation.
+ * IPI-833 · ONB2-UI-001 — Standalone Onboarding Route, Screens, and Deterministic State Machine
+ * real browser-history navigation.
  *
  * This lives in its own file on purpose. jsdom gives each test FILE a fresh
  * window, but not each test, and there is no API to reset the session history
@@ -87,7 +88,7 @@ describe("mixed in-page and browser navigation", () => {
     ).toBe(2);
 
     // The visible Back button must POP, not push. If it pushed, the stack would
-    // grow to four and screen 3 would still sit ahead of us.
+    // grow to four and screen 10 would still sit ahead of us.
     const lengthBeforeBack = window.history.length;
     await navigate(() => clickVisibleBack());
     expect(currentScreen(), "visible Back should land on screen 9").toBe("9");
@@ -143,7 +144,7 @@ describe("mixed in-page and browser navigation", () => {
     expect((screen.getByLabelText(/brand name/i) as HTMLInputElement).value).toBe("Maison Noir");
   });
 
-  it("does not leave the flow when Back is pressed on a deep-linked entry", async () => {
+  it("does not leave the flow when Back is pressed on a deep-linked entry", () => {
     // Depth 0: the user landed on #7 directly, so there is no entry of ours
     // behind them. history.back() here would exit onboarding entirely.
     mount("#7", <OnboardingFlow />);
@@ -155,5 +156,17 @@ describe("mixed in-page and browser navigation", () => {
     expect(currentScreen(), "should move within the flow, not out of it").toBe("6");
     expect(window.history.length, "must not add an entry either").toBe(lengthBefore);
     expect(window.location.hash).toBe("#6");
+  });
+
+  it.each(["#12", "#13"])("deep-linked %s Back skips the transient analysis screen", (hash) => {
+    const { unmount } = mount(hash, <OnboardingFlow />);
+    expect(currentScreen()).toBe(hash.slice(1));
+
+    clickVisibleBack();
+
+    expect(currentScreen()).toBe("11");
+    expect(window.location.hash).toBe("#11");
+    expect(screen.queryByTestId("analysis-status")).toBeNull();
+    unmount();
   });
 });
