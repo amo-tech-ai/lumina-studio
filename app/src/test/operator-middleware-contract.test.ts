@@ -31,22 +31,24 @@ describe("operator middleware — wiring contract (IPI2-127 / CF-MIG-110)", () =
     expect(config.matcher).toEqual(MATCHER);
   });
 
-  it("middleware.ts exports a broad matcher and an async handler", () => {
+  it("middleware.ts exports a broad matcher and consumes the trusted session result", () => {
     const src = readFileSync(SRC_MIDDLEWARE, "utf8");
     expect(src).toMatch(/export async function middleware/);
     expect(src).toMatch(
-      /const\s+sessionResponse\s*=\s*await\s+updateSession\s*\(\s*request\s*\)/,
+      /const\s*\{\s*response:\s*sessionResponse,\s*user\s*\}\s*=\s*await\s+updateSession\s*\(\s*request\s*\)/,
     );
   });
 
-  // IPI-833 — /onboarding is a sibling route group of (operator), so it does not
-  // inherit the /app prefix. Behavioural coverage lives in
-  // src/middleware-auth-gate.test.ts; this is the wiring guard that fails if the
-  // clause is ever dropped from the source.
-  it("gates /onboarding alongside /app", () => {
+  // IPI-833 · ONB2-UI-001 — Standalone Onboarding Route, Screens, and
+  // Deterministic State Machine: /onboarding is a sibling route group of
+  // (operator), so it does not inherit the /app prefix. Behavioural coverage
+  // lives in src/middleware-auth-gate.test.ts; this guard fails if the clause or
+  // trusted-user requirement is dropped from the source.
+  it("gates /onboarding alongside /app and requires the trusted user", () => {
     const src = readFileSync(SRC_MIDDLEWARE, "utf8");
     expect(src).toMatch(/pathname === "\/onboarding"/);
     expect(src).toMatch(/pathname\.startsWith\("\/onboarding\/"\)/);
+    expect(src).toMatch(/isOnboardingRoute \? Boolean\(user\) : hasJwtShapedSession/);
   });
 
   it("the matcher does not exclude /onboarding from session refresh", () => {
