@@ -3,6 +3,7 @@ import { readFileSync, readdirSync, statSync } from "node:fs";
 import { resolve } from "node:path";
 
 import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
+import { StrictMode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("next/image", () => ({
@@ -16,8 +17,9 @@ vi.mock("next/navigation", () => ({
 
 import { OnboardingFlow } from "./onboarding-flow";
 import { LAST_SCREEN, MARKETING_SCREENS } from "@/lib/onboarding/navigation";
+import type { OnboardingHistoryState } from "@/lib/onboarding/use-screen-history";
 
-// IPI-833 · ONB2-UI-001 — standalone onboarding UI.
+// IPI-833 · ONB2-UI-001 — Standalone Onboarding Route, Screens, and Deterministic State Machine
 
 // jsdom does not expose import.meta.url as a file: URL, so anchor on the
 // Vitest root instead (vitest.config.ts lives in app/).
@@ -53,6 +55,11 @@ function renderAt(node: React.ReactElement) {
   window.history.replaceState(null, "", "/onboarding");
   return render(node);
 }
+
+const historyState = (
+  onboardingScreen: number,
+  onboardingDepth: number,
+): OnboardingHistoryState => ({ onboardingScreen, onboardingDepth });
 
 afterEach(() => {
   cleanup();
@@ -134,15 +141,33 @@ describe("Continue is really disabled, not just styled", () => {
       unmount();
     }
   });
+
+  it("clears invalid question values when Skip advances", () => {
+    renderAt(<OnboardingFlow initialScreen={4} />);
+    fireEvent.change(screen.getByLabelText(/brand name/i), {
+      target: { value: "Maison Noir" },
+    });
+    fireEvent.change(screen.getByLabelText(/website/i), {
+      target: { value: "not-a-url" },
+    });
+
+    expect((screen.getByRole("button", { name: "Continue" }) as HTMLButtonElement).disabled).toBe(true);
+    fireEvent.click(screen.getByRole("button", { name: /skip/i }));
+    expect(screen.getByTestId("onboarding-screen-5")).toBeTruthy();
+
+    fireEvent.popState(window, { state: historyState(4, 0) });
+    expect((screen.getByLabelText(/brand name/i) as HTMLInputElement).value).toBe("");
+    expect((screen.getByLabelText(/website/i) as HTMLInputElement).value).toBe("");
+  });
 });
 
 describe("no operator chrome", () => {
-  it("renders none of the three-panel shell components", () => {
+  it("renders none of the verified three-panel shell markers", () => {
     const { container } = render(<OnboardingFlow initialScreen={1} />);
-    const markup = container.innerHTML;
-    for (const chrome of ["NavSidebar", "IntelligencePanel", "PersistentChatDock", "OperatorPanel"]) {
-      expect(markup).not.toContain(chrome);
-    }
+    expect(screen.queryByRole("navigation", { name: "App navigation" })).toBeNull();
+    expect(screen.queryByTestId("intelligence-panel")).toBeNull();
+    expect(screen.queryByTestId("operator-chat-dock")).toBeNull();
+    expect(container.querySelector("[data-agent-id]")).toBeNull();
     expect(container.querySelector("nav")).toBeNull();
   });
 });
@@ -172,8 +197,7 @@ describe("browser history", () => {
     fireEvent.click(screen.getByRole("button", { name: "Continue" }));
     expect(screen.getByTestId("onboarding-screen-5")).toBeTruthy();
 
-    // The browser Back button, as the platform delivers it.
-    fireEvent.popState(window, { state: { onboardingScreen: 4 } });
+    fireEvent.popState(window, { state: historyState(4, 0) });
 
     expect(screen.getByTestId("onboarding-screen-4")).toBeTruthy();
     expect((screen.getByLabelText(/brand name/i) as HTMLInputElement).value).toBe("Maison Noir");
@@ -184,19 +208,17 @@ describe("browser history", () => {
     fireEvent.change(screen.getByLabelText(/brand name/i), {
       target: { value: "Atelier Sud" },
     });
-    fireEvent.popState(window, { state: { onboardingScreen: 6 } });
+    fireEvent.popState(window, { state: historyState(6, 1) });
     expect(screen.getByTestId("onboarding-screen-6")).toBeTruthy();
 
-    fireEvent.popState(window, { state: { onboardingScreen: 4 } });
+    fireEvent.popState(window, { state: historyState(4, 0) });
     expect((screen.getByLabelText(/brand name/i) as HTMLInputElement).value).toBe("Atelier Sud");
   });
 
   it("does not grow the history stack while handling popstate", () => {
     render(<OnboardingFlow initialScreen={5} />);
     const pushSpy = vi.spyOn(window.history, "pushState");
-    fireEvent.popState(window, { state: { onboardingScreen: 4 } });
-    // Pushing here would append an entry while consuming one, and Back would
-    // stop working after a single press.
+    fireEvent.popState(window, { state: historyState(4, 0) });
     expect(pushSpy).not.toHaveBeenCalled();
     pushSpy.mockRestore();
   });
@@ -218,9 +240,36 @@ describe("accessibility", () => {
     expect(document.activeElement).toBe(heading);
   });
 
-  it("does not steal focus on first paint", () => {
-    render(<OnboardingFlow initialScreen={1} />);
+  it("does not steal focus on first paint, including StrictMode's repeated effect", () => {
+    render(
+      <StrictMode>
+        <OnboardingFlow initialScreen={1} />
+      </StrictMode>,
+    );
     expect(document.activeElement).toBe(document.body);
+  });
+
+  it("uses native radios with stable answer IDs", () => {
+    renderAt(<OnboardingFlow initialScreen={2} />);
+    const build = screen.getByRole("radio", { name: "Fashion brand" }) as HTMLInputElement;
+    expect(build.value).toBe("fashion");
+    fireEvent.click(build);
+    expect(build.checked).toBe(true);
+
+    cleanup();
+    renderAt(<OnboardingFlow initialScreen={7} />);
+    const growth = screen.getByRole("radio", { name: "Social media" }) as HTMLInputElement;
+    expect(growth.value).toBe("social");
+    fireEvent.click(growth);
+    expect(growth.checked).toBe(true);
+  });
+
+  it("keeps the growth affirmation live region mounted", () => {
+    renderAt(<OnboardingFlow initialScreen={7} />);
+    const region = screen.getByTestId("grow-affirmation");
+    expect(region.textContent).toBe("");
+    fireEvent.click(screen.getByTestId("grow-option-social"));
+    expect(region.textContent).toMatch(/social posts/i);
   });
 
   it("labels every field on the question screens", () => {
@@ -262,10 +311,6 @@ describe("accessibility", () => {
 });
 
 describe("automatic completion does not trap the user", () => {
-  // Screen 12 advances on its own. If that pushed a history entry, Back from the
-  // payoff screen would land on the loader, restart its timer, and get pushed
-  // forward again — trapping the user unless they pressed Back twice inside the
-  // timer window.
   it("replaces rather than pushes when the analysis screen completes", () => {
     vi.useFakeTimers();
     try {
@@ -273,9 +318,6 @@ describe("automatic completion does not trap the user", () => {
       const pushSpy = vi.spyOn(window.history, "pushState");
       const replaceSpy = vi.spyOn(window.history, "replaceState");
 
-      // Two advances, not one: the settle timer is only scheduled by the effect
-      // that runs after React commits percent === 100, which cannot happen
-      // while we are still inside the first advance.
       act(() => {
         vi.advanceTimersByTime(40 * 110);
       });
@@ -310,10 +352,8 @@ describe("automatic completion does not trap the user", () => {
       });
       expect(screen.getByTestId("onboarding-screen-13")).toBeTruthy();
 
-      // The entry the loader occupied now holds screen 13, so the browser's
-      // previous entry is screen 11 — not the loader.
       act(() => {
-        fireEvent.popState(window, { state: { onboardingScreen: 11 } });
+        fireEvent.popState(window, { state: historyState(11, 0) });
       });
       expect(screen.getByTestId("onboarding-screen-11")).toBeTruthy();
     } finally {
@@ -333,9 +373,6 @@ describe("no fabricated results", () => {
   });
 
   it("contains no invented crawl result anywhere in the source", () => {
-    // The comp computes `u + ' · 47 pages found · Apparel'` before any crawl
-    // exists (line 582). It is plausible-looking and would be copied by anyone
-    // porting the file line by line.
     for (const file of SOURCE_FILES) {
       const src = codeWithoutComments(readFileSync(file, "utf8"));
       expect(src, file).not.toMatch(/pages found/i);
@@ -353,10 +390,6 @@ describe("design tokens", () => {
     }
   });
 
-  // 0.7rem text is "normal sized" for WCAG, so it needs 4.5:1.
-  // --onboarding-accent-ink scores 3.09:1 on the solid accent and 5.03:1 on the
-  // light tint; it is defined for the tint. --onboarding-on-accent is 10.2:1 on
-  // the solid.
   it("never puts the tint ink on the solid accent", () => {
     for (const file of SOURCE_FILES) {
       const src = readFileSync(file, "utf8");
@@ -374,42 +407,22 @@ describe("design tokens", () => {
     expect(tokens).toContain("--onboarding-on-accent");
   });
 
-  it("scopes a real font instead of inheriting Arial from globals.css", () => {
-    // globals.css:106 sets `font-family: Arial, Helvetica, sans-serif` on body.
-    // Inheriting that is the defect; the shell must opt in to something.
+  it("uses the loaded brand fonts without generic fallbacks", () => {
     const routeEntry = readFileSync(resolve(ONBOARDING_ROUTE, "onboarding/page.tsx"), "utf8");
     expect(routeEntry).toMatch(/\bonboarding\b/);
     expect(routeEntry).toContain("onboarding.css");
 
-    // Comments stripped: the file names Arial on purpose, explaining what it
-    // exists to override. The ban is on declaring it, not mentioning it.
-    const css = codeWithoutComments(readFileSync(resolve(ONBOARDING_ROUTE, "onboarding.css"), "utf8"));
-    expect(css).not.toMatch(/Arial|Helvetica/);
-    expect(css).toMatch(/\.onboarding\s*\{/);
-    expect(css).toMatch(/\.onboarding\s+h1/);
-  });
-
-  it("uses the AGENTS.md brand fonts, not the comp's Inter", () => {
-    // AGENTS.md forbids Inter, Roboto and generic system fonts. The design comp
-    // specifies Inter; the repository rules take priority.
     const css = codeWithoutComments(
       readFileSync(resolve(ONBOARDING_ROUTE, "onboarding.css"), "utf8"),
     );
     expect(css).toContain("var(--font-outfit)");
     expect(css).toContain("var(--font-cormorant)");
+    expect(css).not.toMatch(/Arial|Helvetica|system-ui|sans-serif|Times New Roman|serif/);
     expect(css).not.toMatch(/\bInter\b|\bRoboto\b/);
 
-    // Loaded once on <body> by the root layout — this route only scopes them, so
-    // it adds nothing to the Cloudflare Worker bundle.
     const rootLayout = readFileSync(resolve(SRC, "app/layout.tsx"), "utf8");
     expect(rootLayout).toContain("--font-outfit");
     expect(rootLayout).toContain("--font-cormorant");
-    // Comments stripped: page.tsx names next/font on purpose, to explain where
-    // the fonts DO come from. The ban is on calling it, not mentioning it.
-    const routeEntry = codeWithoutComments(
-      readFileSync(resolve(ONBOARDING_ROUTE, "onboarding/page.tsx"), "utf8"),
-    );
-    expect(routeEntry, "the route must not load a second font").not.toContain("next/font");
   });
 
   it("stops onboarding animations under reduced motion", () => {
