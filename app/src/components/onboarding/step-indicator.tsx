@@ -2,8 +2,7 @@ import { Progress } from "@/components/ui/progress";
 import { LAST_SCREEN, PROGRESS_SEGMENTS, segmentPercent } from "@/lib/onboarding/navigation";
 
 /**
- * IPI-833 · ONB2-UI-001 — Standalone Onboarding Route, Screens, and Deterministic State Machine
- * three-segment progress bar plus "N / 13".
+ * IPI-833 — three-segment progress bar plus "N / 13".
  *
  * The design comp hand-rolls this (`seg(1,3)`, `seg(4,7)`, `seg(8,13)`, line
  * 594). COMPONENTS.md claims WizardStep is "used on Onboarding", but the comp
