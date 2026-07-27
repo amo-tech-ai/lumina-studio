@@ -1,5 +1,4 @@
 import { createServerClient } from "@supabase/ssr";
-import type { User } from "@supabase/supabase-js";
 import { NextResponse, type NextRequest } from "next/server";
 
 /** Copy Set-Cookie headers from one NextResponse onto another (e.g. redirect). */
@@ -16,22 +15,16 @@ function supabaseEnv() {
   };
 }
 
-export type SessionUpdate = {
-  response: NextResponse;
-  user: User | null;
-};
-
 /**
- * Refresh the Supabase session on every matched request and return the trusted
- * user result from `auth.getUser()` for routes that require server validation.
+ * Refresh the Supabase session on every matched request (SSR cookie pattern).
  * @see https://supabase.com/docs/guides/auth/server-side/nextjs
  */
-export async function updateSession(request: NextRequest): Promise<SessionUpdate> {
+export async function updateSession(request: NextRequest): Promise<NextResponse> {
   let supabaseResponse = NextResponse.next({ request });
 
   const { url, anonKey } = supabaseEnv();
   if (!url || !anonKey) {
-    return { response: supabaseResponse, user: null };
+    return supabaseResponse;
   }
 
   const supabase = createServerClient(url, anonKey, {
@@ -55,14 +48,10 @@ export async function updateSession(request: NextRequest): Promise<SessionUpdate
   });
 
   try {
-    const { data, error } = await supabase.auth.getUser();
-    return {
-      response: supabaseResponse,
-      user: error ? null : data.user,
-    };
+    await supabase.auth.getUser();
   } catch {
-    // Transient refresh failures must not break the request; protected routes
-    // that require a trusted user will fail closed in middleware.
-    return { response: supabaseResponse, user: null };
+    // Transient refresh failures must not break the request.
   }
+
+  return supabaseResponse;
 }
