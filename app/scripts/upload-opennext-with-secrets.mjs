@@ -179,7 +179,7 @@ function main() {
   }
 
   // IPI-824 / IPI-826 — Wrangler Hyperdrive local connection (system env, not Worker secret).
-  // Append sslmode=require when absent; never print the connection string.
+  // Force TLS-required sslmode (append or upgrade disable/allow/prefer); never print the string.
   const hdSsl = ensureHyperdriveLocalConnectionSsl(process.env);
   if (!hdSsl.ok && !opts.dryRun) {
     console.error(

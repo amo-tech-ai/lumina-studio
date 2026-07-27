@@ -284,8 +284,48 @@ export const HYPERDRIVE_LOCAL_CONNECTION_ENV =
   "CLOUDFLARE_HYPERDRIVE_LOCAL_CONNECTION_STRING_HYPERDRIVE_FRESH";
 
 /**
- * Append `sslmode=require` when absent (IPI-826 · CF-DB-009e).
- * Idempotent when `sslmode=` is already present. Never logs the string.
+ * Postgres sslmodes that require TLS (libpq). Prefer/allow/disable do not guarantee TLS.
+ * @see https://www.postgresql.org/docs/current/libpq-ssl.html
+ */
+export const POSTGRES_TLS_REQUIRED_SSLMODES = Object.freeze([
+  "require",
+  "verify-ca",
+  "verify-full",
+]);
+
+/**
+ * @param {string} connectionString
+ * @returns {string | null} lowercase sslmode value, or null if unset
+ */
+export function getSslMode(connectionString) {
+  if (typeof connectionString !== "string" || connectionString.length === 0) {
+    return null;
+  }
+  const match = connectionString.match(/[?&]sslmode=([^&]*)/i);
+  if (!match) return null;
+  try {
+    return decodeURIComponent(match[1]).toLowerCase();
+  } catch {
+    return match[1].toLowerCase();
+  }
+}
+
+/**
+ * True when the connection string's sslmode requires TLS.
+ * @param {string} connectionString
+ * @returns {boolean}
+ */
+export function connectionStringRequiresTls(connectionString) {
+  const mode = getSslMode(connectionString);
+  return mode !== null && POSTGRES_TLS_REQUIRED_SSLMODES.includes(mode);
+}
+
+/**
+ * Ensure `sslmode=require` for Hyperdrive local upload (IPI-826 · CF-DB-009e).
+ * - Absent → append `sslmode=require`
+ * - Non-TLS modes (`disable` / `allow` / `prefer` / unknown) → replace with `require`
+ * - Already TLS-required (`require` / `verify-ca` / `verify-full`) → leave unchanged
+ * Never logs the string. Avoids `new URL()` so password encoding is preserved.
  * @param {string} connectionString
  * @returns {string}
  */
@@ -293,8 +333,12 @@ export function withSslModeRequire(connectionString) {
   if (typeof connectionString !== "string" || connectionString.length === 0) {
     return connectionString;
   }
-  if (connectionString.includes("sslmode=")) {
+  const mode = getSslMode(connectionString);
+  if (mode !== null && POSTGRES_TLS_REQUIRED_SSLMODES.includes(mode)) {
     return connectionString;
+  }
+  if (mode !== null) {
+    return connectionString.replace(/([?&])sslmode=[^&]*/i, "$1sslmode=require");
   }
   const sep = connectionString.includes("?") ? "&" : "?";
   return `${connectionString}${sep}sslmode=require`;
@@ -302,8 +346,7 @@ export function withSslModeRequire(connectionString) {
 
 /**
  * Derive Wrangler Hyperdrive local-connection env from `CLOUDFLARE_…` or `DATABASE_URL`,
- * ensuring TLS (`sslmode=require`) when the secret has no sslmode (IPI-826).
- * Mutates `env` in place. Never logs connection-string values.
+ * forcing a TLS-required sslmode (IPI-826). Mutates `env` in place. Never logs values.
  *
  * @param {NodeJS.ProcessEnv | Record<string, string | undefined>} env
  * @returns {{ ok: boolean; appended: boolean }}
@@ -322,5 +365,5 @@ export function ensureHyperdriveLocalConnectionSsl(env) {
   }
   const next = withSslModeRequire(src);
   env[HYPERDRIVE_LOCAL_CONNECTION_ENV] = next;
-  return { ok: next.includes("sslmode="), appended: next !== src };
+  return { ok: connectionStringRequiresTls(next), appended: next !== src };
 }
