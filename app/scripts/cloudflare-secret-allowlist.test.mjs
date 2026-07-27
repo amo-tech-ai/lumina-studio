@@ -545,15 +545,45 @@ describe("upload-opennext-with-secrets", () => {
           PATH: process.env.PATH,
           GEMINI_API_KEY: "gemini-test",
           SUPABASE_SERVICE_ROLE_KEY: "service-role-test",
+          // IPI-826 — seed Hyperdrive local connection so the early TLS gate passes and
+          // this test still exercises required-secret / required-var / CF credential gates.
+          DATABASE_URL: "postgresql://u:p@127.0.0.1:5432/db",
           INTELLIGENCE_API_URL: "https://intel.example/api",
           INTELLIGENCE_GATEWAY_WS_URL: "wss://intel.example/ws",
         },
         encoding: "utf8",
       },
     );
-    // Must pass required-secret + required-var gates; fail later on missing CF credentials.
-    expect(r.stderr + r.stdout).not.toMatch(/required runtime secrets missing.*COPILOTKIT/);
-    expect(r.stderr + r.stdout).toMatch(/CLOUDFLARE_API_TOKEN|CLOUDFLARE_ACCOUNT_ID|no allowlisted|Error:/);
+    const combined = r.stderr + r.stdout;
+    // Must pass Hyperdrive TLS + required-secret + required-var gates; fail on missing CF credentials.
+    expect(combined).not.toMatch(/required runtime secrets missing.*COPILOTKIT/);
+    expect(combined).not.toMatch(/HYPERDRIVE_LOCAL_CONNECTION|Hyperdrive local upload/);
+    expect(combined).toMatch(/hyperdrive_local_sslmode=appended_require/);
+    expect(combined).toMatch(/Missing Cloudflare credentials|CLOUDFLARE_API_TOKEN|CLOUDFLARE_ACCOUNT_ID/);
     expect(r.status).not.toBe(0);
+  });
+
+  it("dry-run without DATABASE_URL warns about Hyperdrive local connection (no values)", () => {
+    const scriptPath = resolve(
+      dirname(fileURLToPath(import.meta.url)),
+      "upload-opennext-with-secrets.mjs",
+    );
+    const r = spawnSync(
+      process.execPath,
+      [scriptPath, "--wrangler-env", "preview", "--infisical-env", "dev", "--dry-run"],
+      {
+        env: {
+          PATH: process.env.PATH,
+          GEMINI_API_KEY: "gemini-test",
+          SUPABASE_SERVICE_ROLE_KEY: "service-role-test",
+        },
+        encoding: "utf8",
+      },
+    );
+    expect(r.status).toBe(0);
+    expect(r.stderr + r.stdout).toMatch(
+      /warn:.*CLOUDFLARE_HYPERDRIVE_LOCAL_CONNECTION_STRING_HYPERDRIVE_FRESH unset/,
+    );
+    expect(r.stderr + r.stdout).not.toMatch(/postgresql:\/\//);
   });
 });

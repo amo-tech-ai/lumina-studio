@@ -181,13 +181,15 @@ function main() {
   // IPI-824 / IPI-826 — Wrangler Hyperdrive local connection (system env, not Worker secret).
   // Force TLS-required sslmode (append or upgrade disable/allow/prefer); never print the string.
   const hdSsl = ensureHyperdriveLocalConnectionSsl(process.env);
-  if (!hdSsl.ok && !opts.dryRun) {
-    console.error(
-      `Error: ${HYPERDRIVE_LOCAL_CONNECTION_ENV} unset (need DATABASE_URL for Hyperdrive local upload).`,
-    );
-    process.exit(1);
-  }
-  if (hdSsl.ok) {
+  if (!hdSsl.ok) {
+    const unsetMsg = `${HYPERDRIVE_LOCAL_CONNECTION_ENV} unset (need DATABASE_URL for Hyperdrive local upload)`;
+    if (opts.dryRun) {
+      console.warn(`warn: ${unsetMsg}`);
+    } else {
+      console.error(`Error: ${unsetMsg}.`);
+      process.exit(1);
+    }
+  } else {
     console.log(
       hdSsl.appended
         ? "hyperdrive_local_sslmode=appended_require"
