@@ -275,3 +275,52 @@ export function diffSecretNames(deployedNames, wranglerEnv) {
 
   return { extra, missing };
 }
+
+/**
+ * Wrangler system env for Hyperdrive binding `HYPERDRIVE_FRESH` (IPI-824 / IPI-826).
+ * Not a Worker runtime secret — never allowlist / secrets-file this name.
+ */
+export const HYPERDRIVE_LOCAL_CONNECTION_ENV =
+  "CLOUDFLARE_HYPERDRIVE_LOCAL_CONNECTION_STRING_HYPERDRIVE_FRESH";
+
+/**
+ * Append `sslmode=require` when absent (IPI-826 · CF-DB-009e).
+ * Idempotent when `sslmode=` is already present. Never logs the string.
+ * @param {string} connectionString
+ * @returns {string}
+ */
+export function withSslModeRequire(connectionString) {
+  if (typeof connectionString !== "string" || connectionString.length === 0) {
+    return connectionString;
+  }
+  if (connectionString.includes("sslmode=")) {
+    return connectionString;
+  }
+  const sep = connectionString.includes("?") ? "&" : "?";
+  return `${connectionString}${sep}sslmode=require`;
+}
+
+/**
+ * Derive Wrangler Hyperdrive local-connection env from `CLOUDFLARE_…` or `DATABASE_URL`,
+ * ensuring TLS (`sslmode=require`) when the secret has no sslmode (IPI-826).
+ * Mutates `env` in place. Never logs connection-string values.
+ *
+ * @param {NodeJS.ProcessEnv | Record<string, string | undefined>} env
+ * @returns {{ ok: boolean; appended: boolean }}
+ */
+export function ensureHyperdriveLocalConnectionSsl(env) {
+  const existing = env[HYPERDRIVE_LOCAL_CONNECTION_ENV];
+  const fromExisting =
+    typeof existing === "string" && existing.length > 0 ? existing : null;
+  const fromDatabase =
+    typeof env.DATABASE_URL === "string" && env.DATABASE_URL.length > 0
+      ? env.DATABASE_URL
+      : null;
+  const src = fromExisting ?? fromDatabase;
+  if (!src) {
+    return { ok: false, appended: false };
+  }
+  const next = withSslModeRequire(src);
+  env[HYPERDRIVE_LOCAL_CONNECTION_ENV] = next;
+  return { ok: next.includes("sslmode="), appended: next !== src };
+}

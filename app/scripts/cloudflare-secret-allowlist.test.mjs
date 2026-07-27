@@ -11,13 +11,16 @@ import {
   WRANGLER_VAR_NAMES,
   WRANGLER_REQUIRED_VAR_NAMES,
   RUNTIME_REQUIRED_SECRET_NAMES,
+  HYPERDRIVE_LOCAL_CONNECTION_ENV,
   assertInfisicalWranglerEnvPair,
   assertNoForbiddenSecrets,
   buildWranglerVarCliArgs,
   collectRuntimeSecretsFromEnv,
   collectWranglerVarsFromEnv,
   diffSecretNames,
+  ensureHyperdriveLocalConnectionSsl,
   runtimeSecretNamesForWranglerEnv,
+  withSslModeRequire,
   wranglerCliEnvArgs,
 } from "./cloudflare-secret-allowlist.mjs";
 import { AGENT_ROUTING_ENV_KEYS } from "../src/lib/ai/agent-routing-keys.mjs";
@@ -181,28 +184,60 @@ describe("cloudflare-secret-allowlist", () => {
     expect(wrangler).not.toMatch(/"ENABLE_HYPERDRIVE_THREAD_CANARY"\s*:\s*"true"/);
   });
 
-  it("IPI-824 maps Hyperdrive local connection string from DATABASE_URL (not Worker secrets)", () => {
+  it("IPI-824 / IPI-826 — Hyperdrive local connection from DATABASE_URL + TLS (not Worker secrets)", () => {
     // Wrangler system env — must not enter runtime allowlist / secrets-file.
-    expect(RUNTIME_SECRET_NAMES).not.toContain(
-      "CLOUDFLARE_HYPERDRIVE_LOCAL_CONNECTION_STRING_HYPERDRIVE_FRESH",
-    );
-    expect(WRANGLER_VAR_NAMES).not.toContain(
-      "CLOUDFLARE_HYPERDRIVE_LOCAL_CONNECTION_STRING_HYPERDRIVE_FRESH",
-    );
+    expect(RUNTIME_SECRET_NAMES).not.toContain(HYPERDRIVE_LOCAL_CONNECTION_ENV);
+    expect(WRANGLER_VAR_NAMES).not.toContain(HYPERDRIVE_LOCAL_CONNECTION_ENV);
 
     const workflowPath = resolve(
       dirname(fileURLToPath(import.meta.url)),
       "../../.github/workflows/cloudflare-secrets-sync.yml",
     );
     const yaml = readFileSync(workflowPath, "utf8");
-    expect(yaml).toContain(
-      "CLOUDFLARE_HYPERDRIVE_LOCAL_CONNECTION_STRING_HYPERDRIVE_FRESH: ${{ secrets.DATABASE_URL }}",
+    // GitHub source steps pass DATABASE_URL; upload script derives CLOUDFLARE_… + sslmode.
+    expect(yaml).toMatch(/DATABASE_URL:\s*\$\{\{\s*secrets\.DATABASE_URL\s*\}\}/);
+    expect(yaml).toContain("IPI-826");
+    // Must not assign the Wrangler env raw from secrets (TLS append happens in script).
+    expect(yaml).not.toMatch(
+      /CLOUDFLARE_HYPERDRIVE_LOCAL_CONNECTION_STRING_HYPERDRIVE_FRESH:\s*\$\{\{\s*secrets\.DATABASE_URL\s*\}\}/,
     );
-    // Present on both GitHub-source dry-run and live upload steps.
-    const mappings = yaml.match(
-      /CLOUDFLARE_HYPERDRIVE_LOCAL_CONNECTION_STRING_HYPERDRIVE_FRESH:\s*\$\{\{\s*secrets\.DATABASE_URL\s*\}\}/g,
+
+    const uploadScript = readFileSync(
+      resolve(dirname(fileURLToPath(import.meta.url)), "upload-opennext-with-secrets.mjs"),
+      "utf8",
     );
-    expect(mappings?.length).toBeGreaterThanOrEqual(2);
+    expect(uploadScript).toContain("ensureHyperdriveLocalConnectionSsl");
+  });
+
+  it("IPI-826 appends sslmode=require when absent; preserves existing sslmode", () => {
+    expect(withSslModeRequire("postgresql://u:p@h:5432/db")).toBe(
+      "postgresql://u:p@h:5432/db?sslmode=require",
+    );
+    expect(withSslModeRequire("postgresql://u:p@h:5432/db?application_name=x")).toBe(
+      "postgresql://u:p@h:5432/db?application_name=x&sslmode=require",
+    );
+    expect(withSslModeRequire("postgresql://u:p@h:5432/db?sslmode=require")).toBe(
+      "postgresql://u:p@h:5432/db?sslmode=require",
+    );
+    expect(withSslModeRequire("postgresql://u:p@h:5432/db?sslmode=disable")).toBe(
+      "postgresql://u:p@h:5432/db?sslmode=disable",
+    );
+  });
+
+  it("IPI-826 ensureHyperdriveLocalConnectionSsl derives from DATABASE_URL without logging values", () => {
+    const fakeUrl = "postgresql://user:super-secret-password@db.example:5432/postgres";
+    const env = { DATABASE_URL: fakeUrl };
+    const result = ensureHyperdriveLocalConnectionSsl(env);
+    expect(result).toEqual({ ok: true, appended: true });
+    expect(env[HYPERDRIVE_LOCAL_CONNECTION_ENV]).toBe(`${fakeUrl}?sslmode=require`);
+    expect(env[HYPERDRIVE_LOCAL_CONNECTION_ENV]).toContain("sslmode=require");
+
+    // Idempotent when sslmode already present on CLOUDFLARE_ env.
+    const again = ensureHyperdriveLocalConnectionSsl(env);
+    expect(again).toEqual({ ok: true, appended: false });
+
+    // Shape-only: unset returns ok:false (caller fails live upload).
+    expect(ensureHyperdriveLocalConnectionSsl({})).toEqual({ ok: false, appended: false });
   });
 
   it("diffSecretNames reports extra and missing by name only", () => {
