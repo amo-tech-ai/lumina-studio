@@ -6,18 +6,23 @@ import { OnboardingCard } from "@/components/onboarding/onboarding-card";
 import { Progress } from "@/components/ui/progress";
 
 /**
- * IPI-833 — screen 12.
+ * IPI-833 · ONB2-UI-001 — Standalone Onboarding Route, Screens, and Deterministic State Machine
+ * screen 12.
+ *
+ * ponytail: This timer is the smallest UI-only placeholder that preserves the
+ * design-comp transition. Its known ceiling is that elapsed time is not backend
+ * progress and cannot decide success or failure. IPI-835 · ONB2-INT-001 — Real
+ * Session, Crawl, Realtime Progress, and Approval Integration With Recovery
+ * replaces it with real `brand_crawls` progress and a server-owned terminal state.
  *
  * ⚠️ This bar is a PLACEHOLDER, and deliberately so. The design comp advances it
  * on a timer (line 438: setInterval 110ms, +2.5% a tick), which is not progress
  * — it is an animation that would keep filling while the backend was on fire.
  *
- * IPI-835 replaces this entirely with real `brand_crawls` page counts and a
- * server-owned terminal state. Nothing here may survive that: no client timer
- * can be allowed to decide a run succeeded or failed.
- *
- * Until then it advertises what it is ("Setting things up"), never claims a
- * measured result, and hands control back through onComplete.
+ * Nothing here may survive the IPI-835 upgrade: no client timer can be allowed
+ * to decide a run succeeded or failed. Until then it advertises what it is
+ * ("Setting things up"), never claims a measured result, and hands control back
+ * through onComplete.
  */
 const TICK_MS = 110;
 const STEP_PERCENT = 2.5;
