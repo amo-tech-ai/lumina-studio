@@ -2,9 +2,15 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 
-import { FIRST_SCREEN, clampScreen, parseScreenFromHash, previousScreen } from "./navigation";
+import {
+  ANALYSIS_SCREEN,
+  FIRST_SCREEN,
+  clampScreen,
+  parseScreenFromHash,
+  previousScreen,
+} from "./navigation";
 
-type OnboardingHistoryState = {
+export type OnboardingHistoryState = {
   onboardingScreen: number;
   /** How many entries this flow has pushed onto the stack since it was entered. */
   onboardingDepth: number;
@@ -24,7 +30,8 @@ function readState(value: unknown): OnboardingHistoryState | null {
 }
 
 /**
- * IPI-833 — screen state backed by browser history.
+ * IPI-833 · ONB2-UI-001 — Standalone Onboarding Route, Screens, and Deterministic State Machine
+ * screen state backed by browser history.
  *
  * The design comp has no history integration at all (one `history.` reference in
  * 615 lines, and it is the final exit redirect), so a phone Back gesture would
@@ -150,8 +157,12 @@ export function useScreenHistory(initialScreen: number = FIRST_SCREEN) {
       return;
     }
     // Depth 0: a direct or deep-linked entry, with nothing of ours behind us.
-    // Going back would leave the flow, so move within it by replacing.
-    const target = previousScreen(screenRef.current);
+    // Going back would leave the flow, so move within it by replacing. The
+    // analysis screen is transient, so a direct #13 entry skips it and lands on
+    // the last useful screen instead of restarting its timer.
+    const predecessor = previousScreen(screenRef.current);
+    const target =
+      predecessor === ANALYSIS_SCREEN ? previousScreen(ANALYSIS_SCREEN) : predecessor;
     if (target === screenRef.current) return;
     window.history.replaceState(
       { onboardingScreen: target, onboardingDepth: 0 } satisfies OnboardingHistoryState,
