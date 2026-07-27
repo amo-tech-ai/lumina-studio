@@ -15,10 +15,12 @@ const BUILD_OPTIONS = [
 ] as const;
 
 /**
- * IPI-833 — screen 2. Single-select; Continue is blocked while `build` is null.
+ * IPI-833 · ONB2-UI-001 — Standalone Onboarding Route, Screens, and Deterministic State Machine
+ * screen 2. Single-select; Continue is blocked while `build` is null.
  *
- * A radiogroup rather than a list of buttons so arrow keys work and the choice
- * is announced as one of five, not five unrelated toggles.
+ * Native radios supply the browser's arrow-key and form semantics without a
+ * custom keyboard handler. The stable option ID is stored; the label is display
+ * copy only and can change without changing persisted answers.
  */
 export function BuildTypeQuestion({
   value,
@@ -36,25 +38,30 @@ export function BuildTypeQuestion({
         This shapes the Brand DNA we generate for you.
       </p>
 
-      <div role="radiogroup" aria-label="What are you building?" className="mt-6 grid gap-2.5">
+      <fieldset className="mt-6 grid gap-2.5 border-0 p-0">
+        <legend className="sr-only">What are you building?</legend>
         {BUILD_OPTIONS.map((option) => {
-          const selected = value === option.label;
+          const selected = value === option.id;
           return (
-            <button
+            <label
               key={option.id}
-              type="button"
-              role="radio"
-              aria-checked={selected}
-              onClick={() => onChange(option.label)}
-              data-testid={`build-option-${option.id}`}
               className={cn(
-                "flex items-center gap-3 rounded-[var(--radius-lg)] border p-2.5 text-left",
-                "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--onboarding-accent)]",
+                "flex cursor-pointer items-center gap-3 rounded-[var(--radius-lg)] border p-2.5 text-left",
+                "focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-[var(--onboarding-accent)]",
                 selected
                   ? "border-[var(--onboarding-accent-line)] bg-[var(--onboarding-accent-tint)]"
                   : "border-[var(--onboarding-hair)] bg-transparent",
               )}
             >
+              <input
+                type="radio"
+                name="build"
+                value={option.id}
+                checked={selected}
+                onChange={() => onChange(option.id)}
+                data-testid={`build-option-${option.id}`}
+                className="sr-only"
+              />
               <Image
                 src={`/onboarding/${option.image}-fashionos.jpeg`}
                 alt=""
@@ -63,10 +70,10 @@ export function BuildTypeQuestion({
                 className="h-11 w-11 rounded-[var(--radius-md)] object-cover"
               />
               <span className="text-sm font-semibold">{option.label}</span>
-            </button>
+            </label>
           );
         })}
-      </div>
+      </fieldset>
     </OnboardingCard>
   );
 }
