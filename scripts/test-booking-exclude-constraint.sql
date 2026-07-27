@@ -5,6 +5,16 @@
 -- Proves bookings_no_overlap_when_confirmed rejects a second confirm for the same
 -- talent with overlapping dates (SQLSTATE 23P01 via confirm_booking).
 
+-- IPI-810 · DB-TEST-001 — wrapped in a transaction that always rolls back.
+-- These fixtures used to write into whichever database CI pointed at (on main,
+-- that is production). Without an outer rollback, orphaned auth.users /
+-- organizations / brands rows could persist after a failed or cancelled run.
+-- The ~16 orgs/merge operational figure includes other paths (e.g. verify-rls.mjs);
+-- these SQL scripts alone are not that whole count.
+-- The assertions below are unchanged and still fail loudly via `raise exception`;
+-- ON_ERROR_STOP aborts psql, and an aborted transaction rolls back too, so a failing
+-- run now also leaves nothing behind. Same containment pgTAP already relies on.
+begin;
 drop table if exists ipi347_ctx;
 create temp table ipi347_ctx (
   brand_user uuid not null,
@@ -99,3 +109,5 @@ begin
   raise notice 'ok: only one confirmed booking remains';
 end;
 $tests$;
+
+rollback;
