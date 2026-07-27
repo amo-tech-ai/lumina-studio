@@ -38,8 +38,8 @@ export function useScreenHistory(initialScreen: number = FIRST_SCREEN) {
     const start = window.location.hash ? fromHash : clampScreen(initialScreen);
     apply(start);
     window.history.replaceState({ onboardingScreen: start }, "", `#${start}`);
-    // Mount only — re-running would clobber the user's position.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // Mount only. `initialScreen` is deliberately not a dependency: re-running
+    // this would clobber wherever the user has navigated to since.
   }, []);
 
   useEffect(() => {
