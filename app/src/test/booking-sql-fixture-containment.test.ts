@@ -3,6 +3,8 @@ import { resolve } from "node:path";
 
 import { describe, expect, it } from "vitest";
 
+import { BOOKING_SQL_TESTS } from "../../../scripts/booking-sql-tests.mjs";
+
 /**
  * IPI-810 · DB-TEST-001 — every mutating booking SQL fixture must roll back.
  *
@@ -11,16 +13,14 @@ import { describe, expect, it } from "vitest";
  * organizations / brands rows behind permanently.
  *
  * Wrapping each file in `begin; … rollback;` fixes that, but nothing stops a ninth file being
- * added to the sqlTests array later without the wrapper — which would silently restore the
- * leak. This test is that guard.
+ * added to the shared BOOKING_SQL_TESTS list later without the wrapper — which would silently
+ * restore the leak. This test is that guard.
  *
- * It reads the sqlTests array out of the runner rather than hard-coding a list, so a newly
- * added file is covered the moment it is registered.
+ * It imports BOOKING_SQL_TESTS (same module the runner uses) rather than regex-parsing the
+ * runner source, so a newly registered file is covered the moment it is added to the list.
  */
 
 const repoRoot = resolve(__dirname, "../../..");
-const runnerPath = resolve(repoRoot, "scripts/verify-booking-gate.mjs");
-const runner = readFileSync(runnerPath, "utf8");
 
 /**
  * Files that legitimately need no transaction wrapper because they never write.
@@ -28,14 +28,12 @@ const runner = readFileSync(runnerPath, "utf8");
  */
 const READ_ONLY_ALLOWLIST = new Set(["scripts/test-create-booking-request.sql"]);
 
-/** The sqlTests array as the runner actually defines it. */
-function registeredSqlTests(): string[] {
-  const block = /const\s+sqlTests\s*=\s*\[([\s\S]*?)\]/.exec(runner);
-  expect(block, "could not find the sqlTests array in verify-booking-gate.mjs").not.toBeNull();
-  const files = [...block![1].matchAll(/["'`]([^"'`]+\.sql)["'`]/g)].map((m) => m[1]);
-  expect(files.length, "sqlTests parsed as empty — the array shape changed").toBeGreaterThan(0);
-  return files;
-}
+/**
+ * Allowlisted files must be exactly this shape: a pg_catalog identity-args lookup.
+ * Absence of INSERT/UPDATE is not enough — SELECT public.some_rpc(...) or CALL could still write.
+ */
+const PERMITTED_CATALOG_QUERY =
+  /^select\s+pg_catalog\.pg_get_function_identity_arguments\(p\.oid\)\s+as\s+args\s+from\s+pg_proc\s+p\s+join\s+pg_namespace\s+n\s+on\s+n\.oid\s*=\s+p\.pronamespace\s+where\s+n\.nspname\s*=\s+'public'\s+and\s+p\.proname\s*=\s+'[a-z0-9_]+'\s*;$/;
 
 /** Statement-position lines only — ignores comments and plpgsql DO-block keywords. */
 function topLevelStatements(sql: string): string[] {
@@ -46,7 +44,7 @@ function topLevelStatements(sql: string): string[] {
 }
 
 describe("booking SQL fixtures roll back (IPI-810 · DB-TEST-001)", () => {
-  const files = registeredSqlTests();
+  const files = BOOKING_SQL_TESTS;
 
   it("finds every registered SQL test on disk", () => {
     for (const rel of files) {
@@ -60,14 +58,12 @@ describe("booking SQL fixtures roll back (IPI-810 · DB-TEST-001)", () => {
     const statements = topLevelStatements(sql);
 
     if (READ_ONLY_ALLOWLIST.has(rel)) {
-      // An allowlisted file must actually stay read-only, or the allowlist is a lie.
-      const writes = statements.filter((l) =>
-        /^(insert\s+into|update\s+|delete\s+from|truncate|create\s+(table|temp)|drop\s+table)\b/.test(l),
-      );
+      // Narrow permit: only the documented catalog query — not "no known write prefixes".
+      const body = statements.join(" ").replace(/\s+/g, " ").trim();
       expect(
-        writes,
-        `${rel} is allowlisted as read-only but contains write statements — wrap it or remove it from the allowlist`,
-      ).toEqual([]);
+        body,
+        `${rel} is allowlisted as read-only but is not the permitted pg_catalog identity-args query — wrap it or remove it from the allowlist`,
+      ).toMatch(PERMITTED_CATALOG_QUERY);
       return;
     }
 
@@ -102,7 +98,7 @@ describe("booking SQL fixtures roll back (IPI-810 · DB-TEST-001)", () => {
   it("keeps the read-only allowlist minimal and honest", () => {
     // Every allowlisted path must still be registered; a stale entry hides a real gap.
     for (const allowed of READ_ONLY_ALLOWLIST) {
-      expect(files, `${allowed} is allowlisted but no longer registered in sqlTests`).toContain(
+      expect(files, `${allowed} is allowlisted but no longer registered in BOOKING_SQL_TESTS`).toContain(
         allowed,
       );
     }

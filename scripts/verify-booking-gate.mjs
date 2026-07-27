@@ -9,6 +9,8 @@ import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
+import { BOOKING_SQL_TESTS as sqlTests } from "./booking-sql-tests.mjs";
+
 const root = resolve(import.meta.dirname, "..");
 const envPath = resolve(root, ".env.local");
 
@@ -37,17 +39,6 @@ function run(label, cmd, args, opts = {}) {
   }
   console.log(`✓ ${label}`);
 }
-
-const sqlTests = [
-  "scripts/test-create-booking-request.sql",
-  "scripts/test-check-talent-availability.sql",
-  "scripts/test-booking-transition-fsm.sql",
-  "scripts/test-booking-transition-concurrency.sql",
-  "scripts/test-booking-exclude-constraint.sql",
-  "scripts/test-get-list-bookings.sql",
-  "scripts/test-notification-reads-rls.sql",
-  "scripts/test-booking-notifications-trigger.sql",
-];
 
 const skipSql = process.argv.includes("--skip-sql");
 // IPI-810 phase 2 — verify-rls.mjs creates real auth.users / organizations / brands
