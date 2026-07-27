@@ -24,11 +24,22 @@ export async function middleware(request: NextRequest) {
     return sessionResponse;
   }
 
-  const isOperatorRoute =
-    request.nextUrl.pathname === "/app" ||
-    request.nextUrl.pathname.startsWith("/app/");
+  // IPI-833: /onboarding lives in its own (onboarding) route group — a sibling of
+  // (operator), not a child — so it does not inherit the /app prefix. Gate it
+  // identically or the standalone flow would be the one unauthenticated hole in
+  // an otherwise closed surface.
+  //
+  // This is UI protection only. Data authorization stays with RLS and the API
+  // route guards (withOperatorAuth / resolveJwtActor); a middleware redirect is
+  // not an authorization control.
+  const { pathname } = request.nextUrl;
+  const isProtectedRoute =
+    pathname === "/app" ||
+    pathname.startsWith("/app/") ||
+    pathname === "/onboarding" ||
+    pathname.startsWith("/onboarding/");
 
-  if (!isOperatorRoute) {
+  if (!isProtectedRoute) {
     return sessionResponse;
   }
 
