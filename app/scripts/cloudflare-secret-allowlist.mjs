@@ -294,6 +294,8 @@ export const POSTGRES_TLS_REQUIRED_SSLMODES = Object.freeze([
 ]);
 
 /**
+ * Effective `sslmode` per libpq: last non-empty query value wins when repeated.
+ * @see https://www.postgresql.org/docs/current/libpq-connect.html
  * @param {string} connectionString
  * @returns {string | null} lowercase sslmode value, or null if unset
  */
@@ -301,17 +303,48 @@ export function getSslMode(connectionString) {
   if (typeof connectionString !== "string" || connectionString.length === 0) {
     return null;
   }
-  const match = connectionString.match(/[?&]sslmode=([^&]*)/i);
-  if (!match) return null;
-  try {
-    return decodeURIComponent(match[1]).toLowerCase();
-  } catch {
-    return match[1].toLowerCase();
+  const matches = connectionString.matchAll(/[?&]sslmode=([^&]*)/gi);
+  let last = null;
+  for (const match of matches) {
+    let raw = match[1];
+    try {
+      raw = decodeURIComponent(raw);
+    } catch {
+      // keep raw
+    }
+    const trimmed = raw.trim();
+    if (trimmed.length > 0) {
+      last = trimmed.toLowerCase();
+    }
   }
+  return last;
+}
+
+/** @param {string} connectionString */
+function countSslModeParams(connectionString) {
+  return [...connectionString.matchAll(/[?&]sslmode=/gi)].length;
 }
 
 /**
- * True when the connection string's sslmode requires TLS.
+ * Remove all `sslmode=` query params; tidy leftover `?` / `&` separators.
+ * @param {string} connectionString
+ * @returns {string}
+ */
+function stripSslModeParams(connectionString) {
+  let out = connectionString.replace(/([?&])sslmode=[^&]*/gi, "$1");
+  out = out.replace(/\?&+/g, "?").replace(/&&+/g, "&");
+  out = out.replace(/[?&]+$/g, "");
+  return out;
+}
+
+/** @param {string} connectionString @param {string} mode */
+function appendSslModeParam(connectionString, mode) {
+  const sep = connectionString.includes("?") ? "&" : "?";
+  return `${connectionString}${sep}sslmode=${mode}`;
+}
+
+/**
+ * True when the connection string's effective sslmode requires TLS.
  * @param {string} connectionString
  * @returns {boolean}
  */
@@ -321,10 +354,12 @@ export function connectionStringRequiresTls(connectionString) {
 }
 
 /**
- * Ensure `sslmode=require` for Hyperdrive local upload (IPI-826 · CF-DB-009e).
+ * Ensure a TLS-required `sslmode` for Hyperdrive local upload (IPI-826 · CF-DB-009e).
+ * Uses libpq’s last-non-empty `sslmode` when the param is repeated.
  * - Absent → append `sslmode=require`
- * - Non-TLS modes (`disable` / `allow` / `prefer` / unknown) → replace with `require`
- * - Already TLS-required (`require` / `verify-ca` / `verify-full`) → leave unchanged
+ * - Effective non-TLS (`disable` / `allow` / `prefer` / unknown) → strip all sslmode, append `require`
+ * - Effective TLS with a single param → leave unchanged (`require` / `verify-ca` / `verify-full`)
+ * - Effective TLS with duplicates → canonicalize to one param (keeps the effective mode)
  * Never logs the string. Avoids `new URL()` so password encoding is preserved.
  * @param {string} connectionString
  * @returns {string}
@@ -335,13 +370,15 @@ export function withSslModeRequire(connectionString) {
   }
   const mode = getSslMode(connectionString);
   if (mode !== null && POSTGRES_TLS_REQUIRED_SSLMODES.includes(mode)) {
-    return connectionString;
+    if (countSslModeParams(connectionString) <= 1) {
+      return connectionString;
+    }
+    return appendSslModeParam(stripSslModeParams(connectionString), mode);
   }
   if (mode !== null) {
-    return connectionString.replace(/([?&])sslmode=[^&]*/i, "$1sslmode=require");
+    return appendSslModeParam(stripSslModeParams(connectionString), "require");
   }
-  const sep = connectionString.includes("?") ? "&" : "?";
-  return `${connectionString}${sep}sslmode=require`;
+  return appendSslModeParam(connectionString, "require");
 }
 
 /**

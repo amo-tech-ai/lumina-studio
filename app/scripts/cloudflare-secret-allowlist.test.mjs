@@ -20,6 +20,7 @@ import {
   connectionStringRequiresTls,
   diffSecretNames,
   ensureHyperdriveLocalConnectionSsl,
+  getSslMode,
   runtimeSecretNamesForWranglerEnv,
   withSslModeRequire,
   wranglerCliEnvArgs,
@@ -224,14 +225,47 @@ describe("cloudflare-secret-allowlist", () => {
     expect(withSslModeRequire("postgresql://u:p@h:5432/db?sslmode=disable")).toBe(
       "postgresql://u:p@h:5432/db?sslmode=require",
     );
+    // Strip+append places the canonical sslmode last (libpq order-safe).
     expect(withSslModeRequire("postgresql://u:p@h:5432/db?sslmode=prefer&x=1")).toBe(
-      "postgresql://u:p@h:5432/db?sslmode=require&x=1",
+      "postgresql://u:p@h:5432/db?x=1&sslmode=require",
     );
     expect(withSslModeRequire("postgresql://u:p@h:5432/db?foo=1&sslmode=allow")).toBe(
       "postgresql://u:p@h:5432/db?foo=1&sslmode=require",
     );
     expect(connectionStringRequiresTls("postgresql://u@h/db?sslmode=disable")).toBe(false);
     expect(connectionStringRequiresTls("postgresql://u@h/db?sslmode=require")).toBe(true);
+  });
+
+  it("IPI-826 uses libpq last-non-empty sslmode when the param is repeated", () => {
+    // First=require, last=disable → effective disable (not TLS-safe).
+    expect(getSslMode("postgresql://u:p@h:5432/db?sslmode=require&sslmode=disable")).toBe(
+      "disable",
+    );
+    expect(
+      connectionStringRequiresTls("postgresql://u:p@h:5432/db?sslmode=require&sslmode=disable"),
+    ).toBe(false);
+    expect(withSslModeRequire("postgresql://u:p@h:5432/db?sslmode=require&sslmode=disable")).toBe(
+      "postgresql://u:p@h:5432/db?sslmode=require",
+    );
+
+    // First=disable, last=require → effective require; canonicalize duplicates to one param.
+    expect(getSslMode("postgresql://u:p@h:5432/db?sslmode=disable&sslmode=require")).toBe(
+      "require",
+    );
+    expect(
+      connectionStringRequiresTls("postgresql://u:p@h:5432/db?sslmode=disable&sslmode=require"),
+    ).toBe(true);
+    expect(withSslModeRequire("postgresql://u:p@h:5432/db?sslmode=disable&sslmode=require")).toBe(
+      "postgresql://u:p@h:5432/db?sslmode=require",
+    );
+
+    // Empty values are skipped (libpq last non-empty).
+    expect(getSslMode("postgresql://u:p@h:5432/db?sslmode=&sslmode=verify-full")).toBe(
+      "verify-full",
+    );
+    expect(
+      withSslModeRequire("postgresql://u:p@h:5432/db?foo=1&sslmode=require&sslmode=disable"),
+    ).toBe("postgresql://u:p@h:5432/db?foo=1&sslmode=require");
   });
 
   it("IPI-826 ensureHyperdriveLocalConnectionSsl derives from DATABASE_URL without logging values", () => {
