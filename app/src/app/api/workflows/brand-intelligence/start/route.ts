@@ -87,19 +87,16 @@ export async function POST(request: Request) {
     return await withMastraWorkersPgStorage(async () => {
       const workflow = getMastra().getWorkflow("brand-intelligence");
       const run = await workflow.createRun();
-      // startAsync: fire-and-forget, workflow suspends at wait-for-crawl.
+      // start (not startAsync): await through the first suspend so the
+      // request-scoped Hyperdrive store stays open for checkpoint persistence.
+      // startAsync returns before background steps finish and would close the pool early (IPI-803).
       // actorId is the verified JWT subject — never the operator-gate fallback (IPI-812).
       // accessToken is still required: start-crawl (step 2) calls the start-brand-crawl
       // edge function, whose resolveAuth() does auth.getUser(token) and records
       // started_by — a service-role key would 401 there. It is persisted in
       // mastra.mastra_workflow_snapshot for the life of the run; scrubbing that is
       // tracked separately (see PR notes).
-      //
-      // IPI-803: request-scoped Hyperdrive store wraps this handler. If startAsync
-      // continues writing checkpoints after the HTTP response without waitUntil
-      // holding the store open, treat that as a hard-stop compat issue — do not
-      // work around with a module-global Pool.
-      await run.startAsync({
+      await run.start({
         inputData: {
           brandId,
           actorId,

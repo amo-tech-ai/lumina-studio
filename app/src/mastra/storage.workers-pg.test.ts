@@ -156,7 +156,128 @@ describe("IPI-803 Workers request-scoped PostgresStore", () => {
       const store = getMastraStorage();
       return store.constructor.name;
     });
-    expect(out).toMatch(/InMemoryStore|Object/);
+    expect(out).toBe("InMemoryStore");
     expect(ctor).not.toHaveBeenCalled();
+  });
+
+  it("nested withMastraWorkersPgStorage reuses the outer store (one create)", async () => {
+    const closes: Array<ReturnType<typeof vi.fn>> = [];
+    const ctor = vi.fn(function FakePostgresStore(this: {
+      close: ReturnType<typeof vi.fn>;
+    }) {
+      const close = vi.fn(async () => {});
+      closes.push(close);
+      this.close = close;
+    });
+    vi.doMock("@mastra/pg", () => ({
+      PostgresStore: ctor,
+      IPIX_CF_MASTRA_PG_STUB: undefined,
+    }));
+    vi.stubEnv("MASTRA_STORAGE_MODE", "pg");
+    vi.stubEnv("MASTRA_SCHEMA", "mastra");
+    vi.resetModules();
+
+    const {
+      withMastraWorkersPgStorage,
+      getMastraStorage,
+      resetWorkersPgStoreCreateCountForTests,
+      getWorkersPgStoreCreateCount,
+    } = await import("./storage");
+    resetWorkersPgStoreCreateCountForTests();
+
+    await withMastraWorkersPgStorage(
+      async () => {
+        const outer = getMastraStorage();
+        await withMastraWorkersPgStorage(async () => {
+          expect(getMastraStorage()).toBe(outer);
+        });
+      },
+      { connectionString: HD_URL },
+    );
+
+    expect(ctor).toHaveBeenCalledTimes(1);
+    expect(getWorkersPgStoreCreateCount()).toBe(1);
+    expect(closes[0]).toHaveBeenCalledTimes(1);
+  });
+
+  it("defers store.close until Response body completes (SSE lifecycle)", async () => {
+    const close = vi.fn(async () => {});
+    const ctor = vi.fn(function FakePostgresStore(this: { close: typeof close }) {
+      this.close = close;
+    });
+    vi.doMock("@mastra/pg", () => ({
+      PostgresStore: ctor,
+      IPIX_CF_MASTRA_PG_STUB: undefined,
+    }));
+    vi.stubEnv("MASTRA_STORAGE_MODE", "pg");
+    vi.stubEnv("MASTRA_SCHEMA", "mastra");
+    vi.resetModules();
+
+    const { withMastraWorkersPgStorage, getMastraStorage } = await import("./storage");
+
+    let sawOpenWhileStreaming = false;
+    const response = await withMastraWorkersPgStorage(
+      async () => {
+        getMastraStorage();
+        const stream = new ReadableStream<Uint8Array>({
+          start(controller) {
+            queueMicrotask(() => {
+              // Pool must still be open while SSE body is in flight.
+              sawOpenWhileStreaming = close.mock.calls.length === 0;
+              controller.enqueue(new TextEncoder().encode("data: ok\n\n"));
+              controller.close();
+            });
+          },
+        });
+        return new Response(stream, {
+          headers: { "content-type": "text/event-stream" },
+        });
+      },
+      { connectionString: HD_URL },
+    );
+
+    expect(close).not.toHaveBeenCalled();
+    const text = await response.text();
+    expect(text).toContain("data: ok");
+    expect(sawOpenWhileStreaming).toBe(true);
+    // Drain may settle close on a microtask after text() resolves.
+    await vi.waitFor(() => expect(close).toHaveBeenCalledTimes(1));
+  });
+
+  it("keeps store open through awaited start-style work before close (workflow suspend)", async () => {
+    const close = vi.fn(async () => {});
+    const ctor = vi.fn(function FakePostgresStore(this: { close: typeof close }) {
+      this.close = close;
+    });
+    vi.doMock("@mastra/pg", () => ({
+      PostgresStore: ctor,
+      IPIX_CF_MASTRA_PG_STUB: undefined,
+    }));
+    vi.stubEnv("MASTRA_STORAGE_MODE", "pg");
+    vi.stubEnv("MASTRA_SCHEMA", "mastra");
+    vi.resetModules();
+
+    const { withMastraWorkersPgStorage, getMastraStorage } = await import("./storage");
+    const checkpointWrites: string[] = [];
+
+    const result = await withMastraWorkersPgStorage(
+      async () => {
+        // Mimic run.start(): await through suspend/checkpoint before returning JSON.
+        await new Promise<void>((resolve) => {
+          queueMicrotask(() => {
+            const store = getMastraStorage();
+            checkpointWrites.push(String(Reflect.get(store, "id", store) ?? "ok"));
+            resolve();
+          });
+        });
+        expect(close).not.toHaveBeenCalled();
+        return { runId: "run-suspended", status: "suspended" };
+      },
+      { connectionString: HD_URL },
+    );
+
+    expect(result).toEqual({ runId: "run-suspended", status: "suspended" });
+    expect(checkpointWrites).toHaveLength(1);
+    expect(close).toHaveBeenCalledTimes(1);
   });
 });

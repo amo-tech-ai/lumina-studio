@@ -394,11 +394,70 @@ export type WithMastraWorkersPgStorageOpts = {
   env?: NodeJS.ProcessEnv;
 };
 
+async function closeWorkersPgStore(store: PostgresStoreType): Promise<void> {
+  try {
+    await store.close();
+  } catch (err) {
+    console.warn(
+      "[mastra] Workers PostgresStore.close() failed (IPI-803 Hyperdrive pool cleanup):",
+      err instanceof Error ? err.message : err,
+    );
+  }
+}
+
+/**
+ * Keep the Hyperdrive store open until the response body finishes or is cancelled.
+ * CopilotKit SSE returns a Response before the agent turn completes; closing in
+ * `finally` on response *creation* races checkpoint/memory writes still in flight.
+ */
+function deferWorkersPgStoreUntilResponseDone(
+  response: Response,
+  store: PostgresStoreType,
+): Response {
+  const body = response.body;
+  if (!body) {
+    void closeWorkersPgStore(store);
+    return response;
+  }
+
+  const { readable, writable } = new TransformStream<Uint8Array, Uint8Array>();
+  const done = body
+    .pipeTo(writable)
+    .catch(() => {
+      /* client cancel / upstream error — still close the pool */
+    })
+    .finally(() => closeWorkersPgStore(store));
+
+  // Worker: hold the isolate until body + close finish. Node/tests: void is enough
+  // when the consumer drains `readable`.
+  void getCloudflareContext({ async: true })
+    .then((cf) => {
+      const waitUntil = (cf as { ctx?: { waitUntil?: (p: Promise<unknown>) => void } })?.ctx
+        ?.waitUntil;
+      if (typeof waitUntil === "function") {
+        waitUntil(done);
+        return;
+      }
+      void done;
+    })
+    .catch(() => {
+      void done;
+    });
+
+  return new Response(readable, {
+    status: response.status,
+    statusText: response.statusText,
+    headers: response.headers,
+  });
+}
+
 /**
  * IPI-803 — enter request-scoped Hyperdrive PostgresStore for one Worker invocation.
  *
  * - noop / Node / Vercel: passthrough (existing module-cache path unchanged).
- * - Workers + `MASTRA_STORAGE_MODE=pg`: create store → ALS → `fn` → `close()`.
+ * - Workers + `MASTRA_STORAGE_MODE=pg`: create store → ALS → `fn` → `close()`
+ *   (or defer close until a returned Response body completes — SSE / streams).
+ * - Nested calls reuse the outer ALS store (one Hyperdrive connection per request).
  *
  * Mastra keeps `getMastraStorageLazy()`; Memory must also use the lazy proxy so
  * each storage method reads the ALS store for the current request.
@@ -412,13 +471,29 @@ export async function withMastraWorkersPgStorage<T>(
     return await fn();
   }
 
+  // Nested draft-approval / tool calls during an already-scoped Copilot turn.
+  if (workersPgRequestScope.getStore()) {
+    return await fn();
+  }
+
   const connectionString =
     opts.connectionString?.trim() || (await resolveHyperdriveFreshConnectionString());
   const store = createWorkersHyperdrivePostgresStore(connectionString, env);
+  let deferredClose = false;
   try {
-    return await workersPgRequestScope.run({ store }, fn);
+    const result = await workersPgRequestScope.run({ store }, async () => {
+      const out = await fn();
+      if (out instanceof Response) {
+        deferredClose = true;
+        return deferWorkersPgStoreUntilResponseDone(out, store) as T;
+      }
+      return out;
+    });
+    return result;
   } finally {
-    await store.close().catch(() => {});
+    if (!deferredClose) {
+      await closeWorkersPgStore(store);
+    }
   }
 }
 

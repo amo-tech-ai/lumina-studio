@@ -451,9 +451,10 @@ const handler = async (request: Request): Promise<Response> => {
 
   try {
     // IPI-803: Workers + pg → request-scoped Hyperdrive PostgresStore (ALS).
-    // Covers thread ownership + agent turn so Memory/Mastra never reuse a
-    // cross-request Pool. Passthrough when noop / Node / Vercel.
-    return await withMastraWorkersPgStorage(async () => {
+    // Skip the wrapper for /info so agent discovery still works when Hyperdrive
+    // is missing (requestNeedsDurableStorage exemption must run before store create).
+    // Passthrough when noop / Node / Vercel.
+    const runCopilot = async (): Promise<Response> => {
       if (requestNeedsDurableStorage(request)) {
         try {
           getMastraStorage();
@@ -496,7 +497,12 @@ const handler = async (request: Request): Promise<Response> => {
         await normalizeRuntimeErrorResponse(response),
         STREAM_IDLE_TIMEOUT_MS,
       );
-    });
+    };
+
+    if (!requestNeedsDurableStorage(request)) {
+      return await runCopilot();
+    }
+    return await withMastraWorkersPgStorage(runCopilot);
   } catch (err) {
     if (err instanceof MastraOrgScopeError) {
       console.error("[copilotkit] org resolution failed — refusing request (fail closed)", err.message);
