@@ -61,14 +61,36 @@ export function hashFileSha256(filePath) {
   return createHash("sha256").update(readFileSync(filePath)).digest("hex");
 }
 
-export function readPackageVersions(pkgJsonPath = path.join(appDir, "package.json")) {
-  const pkg = JSON.parse(readFileSync(pkgJsonPath, "utf8"));
-  const dep = (name) =>
-    pkg.dependencies?.[name] ?? pkg.devDependencies?.[name] ?? null;
+/** Installed version from node_modules/<name>/package.json, or null. */
+export function readInstalledVersion(name, appRoot = appDir) {
+  const pkgPath = path.join(appRoot, "node_modules", ...name.split("/"), "package.json");
+  if (!existsSync(pkgPath)) return null;
+  try {
+    const version = JSON.parse(readFileSync(pkgPath, "utf8")).version;
+    return typeof version === "string" ? version : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Prefer installed versions (lockfile reality). Fall back to package.json
+ * dependency / devDependency ranges only when node_modules is missing.
+ *
+ * @param {string} [appRoot]
+ */
+export function readPackageVersions(appRoot = appDir) {
+  const fromManifest = (name) => {
+    const pkgJsonPath = path.join(appRoot, "package.json");
+    if (!existsSync(pkgJsonPath)) return null;
+    const pkg = JSON.parse(readFileSync(pkgJsonPath, "utf8"));
+    return pkg.dependencies?.[name] ?? pkg.devDependencies?.[name] ?? null;
+  };
+  const pick = (name) => readInstalledVersion(name, appRoot) ?? fromManifest(name);
   return {
-    opennext: dep("@opennextjs/cloudflare"),
-    wrangler: dep("wrangler"),
-    next: dep("next"),
+    opennext: pick("@opennextjs/cloudflare"),
+    wrangler: pick("wrangler"),
+    next: pick("next"),
   };
 }
 
@@ -162,7 +184,14 @@ function reportLocalStartup(dryOut) {
   }
 }
 
-function loadBaseGzipKiB(baseReportPath) {
+/**
+ * Load base gzip from a prior report. Must run before writing the current report
+ * when base and output paths can resolve to the same file.
+ *
+ * @param {string | null | undefined} baseReportPath
+ * @returns {{ gzipKiB: number, gitSha: string | null, path: string } | null}
+ */
+export function loadBaseGzipKiB(baseReportPath) {
   if (!baseReportPath) return null;
   if (!existsSync(baseReportPath)) {
     console.warn(`WARN (delta): base report not found at ${baseReportPath} — skipping delta`);
@@ -202,7 +231,29 @@ export function main(argv = process.argv.slice(2)) {
 
   const gzipMiB = sizes.gzipKiB / 1024;
   const metafileHash = hashFileSha256(metafilePath);
-  const versions = readPackageVersions();
+
+  // Load base BEFORE writing the current report — same-path reuse would otherwise
+  // overwrite the base JSON and silently report +0.00 KiB.
+  let base = null;
+  if (baseReport) {
+    const resolvedBase = path.resolve(baseReport);
+    const resolvedOut = path.resolve(reportPath);
+    if (resolvedBase === resolvedOut) {
+      console.warn(
+        `WARN (delta): --base-report resolves to the same path as the output report (${resolvedOut}) — loading base before write`,
+      );
+    }
+    base = loadBaseGzipKiB(baseReport);
+  }
+
+  let versions = { opennext: null, wrangler: null, next: null };
+  try {
+    versions = readPackageVersions();
+  } catch (err) {
+    console.warn(
+      `WARN: could not read package.json versions: ${err instanceof Error ? err.message : err}`,
+    );
+  }
   const report = buildWorkerBundleReport({ sizes, metafileHash, versions });
 
   try {
@@ -223,7 +274,6 @@ export function main(argv = process.argv.slice(2)) {
     console.warn(`WARN: metafile missing at ${metafilePath}`);
   }
 
-  const base = loadBaseGzipKiB(baseReport);
   if (base) {
     const { deltaKiB, warn } = evaluateGzipDelta({
       gzipKiB: sizes.gzipKiB,

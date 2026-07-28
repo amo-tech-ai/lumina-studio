@@ -91,5 +91,13 @@ describe("OpenNext CI contract (IPI-472)", () => {
     const ci = readFileSync(resolve(__dirname, "../../../.github/workflows/ci.yml"), "utf8");
     expect(ci).toMatch(/worker-bundle-report\.json/);
     expect(ci).toMatch(/Upload worker bundle report/);
+    expect(ci).toMatch(/include-hidden-files:\s*true/);
+  });
+
+  it("ci.yml fetches a base report and sets WORKER_BUNDLE_BASE_REPORT on PRs (IPI-706 Phase 1A)", () => {
+    const ci = readFileSync(resolve(__dirname, "../../../.github/workflows/ci.yml"), "utf8");
+    expect(ci).toMatch(/Fetch base worker bundle report/);
+    expect(ci).toMatch(/WORKER_BUNDLE_BASE_REPORT:\s*\$\{\{\s*steps\.base-report\.outputs\.path\s*\}\}/);
+    expect(ci).toMatch(/gh run download/);
   });
 });

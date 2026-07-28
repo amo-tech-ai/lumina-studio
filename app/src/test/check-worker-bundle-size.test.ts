@@ -1,3 +1,6 @@
+import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
   DELTA_WARN_KIB,
@@ -5,7 +8,10 @@ import {
   WARN_MIB,
   buildWorkerBundleReport,
   evaluateGzipDelta,
+  loadBaseGzipKiB,
   parseGzipKiB,
+  readInstalledVersion,
+  readPackageVersions,
 } from "../../scripts/check-worker-bundle-size.mjs";
 
 describe("check-worker-bundle-size helpers (IPI-706 Phase 1A)", () => {
@@ -34,7 +40,7 @@ describe("check-worker-bundle-size helpers (IPI-706 Phase 1A)", () => {
     const report = buildWorkerBundleReport({
       sizes: { uploadKiB: 46384.44, gzipKiB: 9213.13 },
       metafileHash: "abc123",
-      versions: { opennext: "1.20.2", wrangler: "^4.107.1", next: "16.2.11" },
+      versions: { opennext: "1.20.2", wrangler: "4.113.0", next: "16.2.11" },
       gitSha: "deadbeef",
       createdAt: "2026-07-28T00:00:00.000Z",
     });
@@ -48,5 +54,75 @@ describe("check-worker-bundle-size helpers (IPI-706 Phase 1A)", () => {
     });
     expect(report.metafileSha256).toBe("abc123");
     expect(report.gitSha).toBe("deadbeef");
+  });
+
+  it("loadBaseGzipKiB covers no-path, missing, invalid JSON, bad gzipKiB, valid", () => {
+    expect(loadBaseGzipKiB(null)).toBeNull();
+    expect(loadBaseGzipKiB("")).toBeNull();
+    expect(loadBaseGzipKiB(join(tmpdir(), "no-such-worker-bundle-report.json"))).toBeNull();
+
+    const dir = mkdtempSync(join(tmpdir(), "bundle-base-"));
+    const badJson = join(dir, "bad.json");
+    writeFileSync(badJson, "{not-json", "utf8");
+    expect(loadBaseGzipKiB(badJson)).toBeNull();
+
+    const missingField = join(dir, "missing.json");
+    writeFileSync(missingField, JSON.stringify({ gitSha: "abc" }), "utf8");
+    expect(loadBaseGzipKiB(missingField)).toBeNull();
+
+    const badType = join(dir, "bad-type.json");
+    writeFileSync(badType, JSON.stringify({ gzipKiB: "9213" }), "utf8");
+    expect(loadBaseGzipKiB(badType)).toBeNull();
+
+    const valid = join(dir, "valid.json");
+    writeFileSync(valid, JSON.stringify({ gzipKiB: 9213.13, gitSha: "deadbeef" }), "utf8");
+    expect(loadBaseGzipKiB(valid)).toEqual({
+      gzipKiB: 9213.13,
+      gitSha: "deadbeef",
+      path: valid,
+    });
+  });
+
+  it("readPackageVersions prefers installed versions over package.json ranges", () => {
+    const root = mkdtempSync(join(tmpdir(), "bundle-versions-"));
+    writeFileSync(
+      join(root, "package.json"),
+      JSON.stringify({
+        dependencies: { next: "16.2.11", "@opennextjs/cloudflare": "1.20.2" },
+        devDependencies: { wrangler: "^4.107.1" },
+      }),
+      "utf8",
+    );
+    mkdirSync(join(root, "node_modules", "wrangler"), { recursive: true });
+    writeFileSync(
+      join(root, "node_modules", "wrangler", "package.json"),
+      JSON.stringify({ name: "wrangler", version: "4.113.0" }),
+      "utf8",
+    );
+
+    expect(readInstalledVersion("wrangler", root)).toBe("4.113.0");
+    expect(readInstalledVersion("next", root)).toBeNull();
+
+    const versions = readPackageVersions(root);
+    expect(versions.wrangler).toBe("4.113.0");
+    expect(versions.next).toBe("16.2.11");
+    expect(versions.opennext).toBe("1.20.2");
+  });
+
+  it("readPackageVersions falls back to dependencies then devDependencies", () => {
+    const root = mkdtempSync(join(tmpdir(), "bundle-manifest-"));
+    writeFileSync(
+      join(root, "package.json"),
+      JSON.stringify({
+        dependencies: { next: "16.0.0" },
+        devDependencies: { wrangler: "^4.107.1", "@opennextjs/cloudflare": "1.20.2" },
+      }),
+      "utf8",
+    );
+
+    const versions = readPackageVersions(root);
+    expect(versions.next).toBe("16.0.0");
+    expect(versions.wrangler).toBe("^4.107.1");
+    expect(versions.opennext).toBe("1.20.2");
   });
 });

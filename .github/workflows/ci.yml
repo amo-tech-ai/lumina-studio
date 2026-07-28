@@ -86,6 +86,45 @@ jobs:
       - name: Unit tests
         run: npm run test
 
+      # IPI-706 · CF-BUNDLE-220 Phase 1A — fetch base-branch report so the 25 KiB
+      # delta WARNING can fire on PRs. Soft-skip when no artifact exists yet
+      # (first runs after this lands, forks without artifact access, etc.).
+      - name: Fetch base worker bundle report (PR delta)
+        id: base-report
+        if: github.event_name == 'pull_request'
+        continue-on-error: true
+        working-directory: ${{ github.workspace }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          OUT_DIR="app/.open-next-base"
+          OUT_FILE="${OUT_DIR}/worker-bundle-report.json"
+          mkdir -p "${OUT_DIR}"
+          RUN_ID="$(gh run list --workflow=ci.yml --branch="${{ github.base_ref }}" --event=push --status=success --limit=10 --json databaseId --jq '.[0].databaseId // empty')"
+          if [ -z "${RUN_ID}" ]; then
+            echo "No successful base-branch CI run — delta will be skipped"
+            exit 0
+          fi
+          TMP="$(mktemp -d)"
+          BASE_SHA="${{ github.event.pull_request.base.sha }}"
+          if ! gh run download "${RUN_ID}" -D "${TMP}" -n "worker-bundle-report-${BASE_SHA}" 2>/dev/null; then
+            ARTIFACT="$(gh api "repos/${{ github.repository }}/actions/runs/${RUN_ID}/artifacts" --jq '[.artifacts[] | select(.name | startswith("worker-bundle-report-")) | .name][0] // empty')"
+            if [ -z "${ARTIFACT}" ]; then
+              echo "No worker-bundle-report artifact on run ${RUN_ID} — delta will be skipped"
+              exit 0
+            fi
+            gh run download "${RUN_ID}" -D "${TMP}" -n "${ARTIFACT}"
+          fi
+          FOUND="$(find "${TMP}" -name 'worker-bundle-report.json' -print -quit)"
+          if [ -z "${FOUND}" ]; then
+            echo "Downloaded artifact missing worker-bundle-report.json — delta will be skipped"
+            exit 0
+          fi
+          cp "${FOUND}" "${OUT_FILE}"
+          echo "path=${{ github.workspace }}/${OUT_FILE}" >> "${GITHUB_OUTPUT}"
+          echo "Fetched base report from run ${RUN_ID} → ${OUT_FILE}"
+
       # IPI-472 · INFRA-001 — OpenNext Worker build + dry-run gzip gate (8.5 warn / 9.0 fail MiB).
       # IPI-706 Phase 1A — also emits .open-next/worker-bundle-report.json (artifact below).
       # Placeholder public Supabase vars — sufficient for bundle gate; fork PRs lack repo secrets.
@@ -93,16 +132,20 @@ jobs:
         env:
           NEXT_PUBLIC_SUPABASE_URL: https://example.supabase.co
           NEXT_PUBLIC_SUPABASE_ANON_KEY: placeholder
+          WORKER_BUNDLE_BASE_REPORT: ${{ steps.base-report.outputs.path }}
         run: npm run build:cf
 
       # IPI-706 · CF-BUNDLE-220 Phase 1A — machine-readable gzip report for base vs PR deltas.
       # Delta is WARNING-only until variance is measured; do not hard-fail on growth yet.
+      # include-hidden-files: report lives under .open-next/ (hidden); without this,
+      # upload-artifact ignores it and if-no-files-found: ignore keeps the job green.
       - name: Upload worker bundle report
         if: always() && hashFiles('app/.open-next/worker-bundle-report.json') != ''
         uses: actions/upload-artifact@v4
         with:
           name: worker-bundle-report-${{ github.sha }}
           path: app/.open-next/worker-bundle-report.json
+          include-hidden-files: true
           if-no-files-found: ignore
           retention-days: 30
 
