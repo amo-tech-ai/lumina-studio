@@ -92,11 +92,8 @@ export async function processBrandIntelligenceDraftApproval(params: {
     // brand-intelligence-agent.ts, which @/mastra's index.ts registers — a
     // top-level import here would cycle straight back to @/mastra.
     const { getMastra } = await import("@/mastra");
-    const { withMastraWorkersPgStorage } = await import("@/mastra/storage");
-    await withMastraWorkersPgStorage(async () => {
-      const run = await getMastra().getWorkflow("brand-intelligence").createRun({ runId });
-      await run.resume({ step: "save-draft-and-wait", resumeData: { approved } });
-    });
+    const run = await getMastra().getWorkflow("brand-intelligence").createRun({ runId });
+    await run.resume({ step: "save-draft-and-wait", resumeData: { approved } });
   } catch (resumeErr) {
     // Best-effort: profile already promoted/discarded — do not rollback draft row.
     console.error("[process-draft-approval] resume failed (profile already applied):", resumeErr);

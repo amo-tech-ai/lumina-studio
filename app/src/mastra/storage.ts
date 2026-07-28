@@ -1,38 +1,30 @@
-import { AsyncLocalStorage } from "node:async_hooks";
 import { InMemoryStore } from "@mastra/core/storage";
 import * as MastraPg from "@mastra/pg";
 import type { PostgresStore as PostgresStoreType } from "@mastra/pg";
-import { getCloudflareContext } from "@opennextjs/cloudflare";
 
 type MastraAppStorage = InMemoryStore | PostgresStoreType;
 
 const DEFAULT_PG_POOL_MAX = 4;
 const PG_IDLE_TIMEOUT_MS = 10_000;
-/** IPI-803 / canary: Workers Hyperdrive PostgresStore always max:1 until IPI-839 evidence. */
-export const WORKERS_MASTRA_PG_POOL_MAX = 1;
-const WORKERS_PG_IDLE_TIMEOUT_MS = 5_000;
 
 type IpixMastraGlobal = typeof globalThis & {
   /** Dev HMR: reuse one PostgresStore per Node process (IPI-740). */
   __ipixMastraPgStore?: PostgresStoreType;
 };
 
-type WorkersPgRequestScope = {
-  store: PostgresStoreType;
-};
-
-/**
- * IPI-803 · CF-DB-012 — request-scoped Workers PostgresStore (not module-global).
- * Cloudflare: create DB clients inside each invocation; never reuse across requests.
- * @see https://developers.cloudflare.com/hyperdrive/concepts/connection-lifecycle/
- */
-const workersPgRequestScope = new AsyncLocalStorage<WorkersPgRequestScope>();
-
 let storage: MastraAppStorage | undefined;
 let lazyStorageProxy: MastraAppStorage | undefined;
 let cachedStorageUnavailableError: MastraStorageUnavailableError | undefined;
-/** Test/observability: how many Workers Hyperdrive stores were constructed this isolate. */
-let workersPgStoreCreateCount = 0;
+
+/** Sync ALS bridge — set when `mastra-workers-pg-scope` loads (IPI-803). */
+let workersPgScopedStoreGetter: (() => PostgresStoreType | undefined) | undefined;
+
+/** Called by route-layer Workers PG scope so {@link getMastraStorage} can read ALS sync. */
+export function registerWorkersPgScopedStoreGetter(
+  getter: () => PostgresStoreType | undefined,
+): void {
+  workersPgScopedStoreGetter = getter;
+}
 
 /** Thrown when durable storage is required but DATABASE_URL is unset in production. */
 export class MastraStorageUnavailableError extends Error {
@@ -318,185 +310,6 @@ function createPostgresStore(url: string, env: NodeJS.ProcessEnv = process.env):
   });
 }
 
-/**
- * IPI-803 — Workers Hyperdrive PostgresStore (mirrors `createThreadImmediateRead` canary).
- * Never cache the returned store at module/global scope.
- */
-export function createWorkersHyperdrivePostgresStore(
-  connectionString: string,
-  env: NodeJS.ProcessEnv = process.env,
-): PostgresStoreType {
-  assertPostgresStoreModule(MastraPg);
-  assertMastraSchemaForWorkersPg(env);
-  workersPgStoreCreateCount += 1;
-  return new MastraPg.PostgresStore({
-    id: `mastra-storage-workers-${workersPgStoreCreateCount}`,
-    connectionString: withMastraApplicationName(connectionString),
-    schemaName: resolveMastraSchemaName(env),
-    disableInit: true,
-    max: WORKERS_MASTRA_PG_POOL_MAX,
-    idleTimeoutMillis: WORKERS_PG_IDLE_TIMEOUT_MS,
-    ssl: resolveMastraPgSslOption(env),
-  });
-}
-
-/** Fail closed: Workers `pg` mode must target `mastra.*`, not empty `public`. */
-export function assertMastraSchemaForWorkersPg(
-  env: NodeJS.ProcessEnv = process.env,
-): "mastra" {
-  const schema = resolveMastraSchemaName(env);
-  if (schema !== "mastra") {
-    throw new MastraStorageUnavailableError(
-      `[mastra] Workers MASTRA_STORAGE_MODE=pg requires MASTRA_SCHEMA=mastra (got "${schema}"). ` +
-        "Without it, PostgresStore defaults to public and writes land in public.mastra_* shadows " +
-        "(IPI-803 · CF-DB-012 — Activate Durable Mastra Postgres Storage on the Production Cloudflare Worker).",
-    );
-  }
-  return schema;
-}
-
-/**
- * Resolve `HYPERDRIVE_FRESH.connectionString` from the OpenNext Cloudflare binding.
- * Only valid on Workers — callers must gate with {@link isCloudflareWorkersRuntime}.
- */
-export async function resolveHyperdriveFreshConnectionString(): Promise<string> {
-  let env: { HYPERDRIVE_FRESH?: { connectionString?: string } } | undefined;
-  try {
-    const cf = await getCloudflareContext({ async: true });
-    env = cf?.env as typeof env;
-  } catch (err) {
-    throw new MastraStorageUnavailableError(
-      `[mastra] getCloudflareContext failed while resolving HYPERDRIVE_FRESH (IPI-803): ` +
-        (err instanceof Error ? err.message : String(err)),
-    );
-  }
-  const cs = env?.HYPERDRIVE_FRESH?.connectionString;
-  if (typeof cs !== "string" || cs.trim() === "") {
-    throw new MastraStorageUnavailableError(
-      "[mastra] env.HYPERDRIVE_FRESH.connectionString unavailable — confirm IPI-619 binding + Worker runtime (IPI-803).",
-    );
-  }
-  return cs.trim();
-}
-
-export function getWorkersPgStoreCreateCount(): number {
-  return workersPgStoreCreateCount;
-}
-
-/** Test-only: reset create counter (does not close live stores). */
-export function resetWorkersPgStoreCreateCountForTests(): void {
-  workersPgStoreCreateCount = 0;
-}
-
-export type WithMastraWorkersPgStorageOpts = {
-  /** Inject connection string in unit tests (skips getCloudflareContext). */
-  connectionString?: string;
-  env?: NodeJS.ProcessEnv;
-};
-
-async function closeWorkersPgStore(store: PostgresStoreType): Promise<void> {
-  try {
-    await store.close();
-  } catch (err) {
-    console.warn(
-      "[mastra] Workers PostgresStore.close() failed (IPI-803 Hyperdrive pool cleanup):",
-      err instanceof Error ? err.message : err,
-    );
-  }
-}
-
-/**
- * Keep the Hyperdrive store open until the response body finishes or is cancelled.
- * CopilotKit SSE returns a Response before the agent turn completes; closing in
- * `finally` on response *creation* races checkpoint/memory writes still in flight.
- */
-function deferWorkersPgStoreUntilResponseDone(
-  response: Response,
-  store: PostgresStoreType,
-): Response {
-  const body = response.body;
-  if (!body) {
-    void closeWorkersPgStore(store);
-    return response;
-  }
-
-  const { readable, writable } = new TransformStream<Uint8Array, Uint8Array>();
-  const done = body
-    .pipeTo(writable)
-    .catch(() => {
-      /* client cancel / upstream error — still close the pool */
-    })
-    .finally(() => closeWorkersPgStore(store));
-
-  // Worker: hold the isolate until body + close finish. Node/tests: void is enough
-  // when the consumer drains `readable`.
-  void getCloudflareContext({ async: true })
-    .then((cf) => {
-      const waitUntil = (cf as { ctx?: { waitUntil?: (p: Promise<unknown>) => void } })?.ctx
-        ?.waitUntil;
-      if (typeof waitUntil === "function") {
-        waitUntil(done);
-        return;
-      }
-      void done;
-    })
-    .catch(() => {
-      void done;
-    });
-
-  return new Response(readable, {
-    status: response.status,
-    statusText: response.statusText,
-    headers: response.headers,
-  });
-}
-
-/**
- * IPI-803 — enter request-scoped Hyperdrive PostgresStore for one Worker invocation.
- *
- * - noop / Node / Vercel: passthrough (existing module-cache path unchanged).
- * - Workers + `MASTRA_STORAGE_MODE=pg`: create store → ALS → `fn` → `close()`
- *   (or defer close until a returned Response body completes — SSE / streams).
- * - Nested calls reuse the outer ALS store (one Hyperdrive connection per request).
- *
- * Mastra keeps `getMastraStorageLazy()`; Memory must also use the lazy proxy so
- * each storage method reads the ALS store for the current request.
- */
-export async function withMastraWorkersPgStorage<T>(
-  fn: () => T | Promise<T>,
-  opts: WithMastraWorkersPgStorageOpts = {},
-): Promise<T> {
-  const env = opts.env ?? process.env;
-  if (!isCloudflareWorkersRuntime() || shouldSkipMastraPostgresStorage(env)) {
-    return await fn();
-  }
-
-  // Nested draft-approval / tool calls during an already-scoped Copilot turn.
-  if (workersPgRequestScope.getStore()) {
-    return await fn();
-  }
-
-  const connectionString =
-    opts.connectionString?.trim() || (await resolveHyperdriveFreshConnectionString());
-  const store = createWorkersHyperdrivePostgresStore(connectionString, env);
-  let deferredClose = false;
-  try {
-    const result = await workersPgRequestScope.run({ store }, async () => {
-      const out = await fn();
-      if (out instanceof Response) {
-        deferredClose = true;
-        return deferWorkersPgStoreUntilResponseDone(out, store) as T;
-      }
-      return out;
-    });
-    return result;
-  } finally {
-    if (!deferredClose) {
-      await closeWorkersPgStore(store);
-    }
-  }
-}
-
 export function getMastraStorage(): MastraAppStorage {
   // Worker / explicit noop first — never run missing-URL latch recovery into Postgres.
   // Once this process chose InMemory for Workers (IPI-490), keep that backend.
@@ -521,13 +334,10 @@ export function getMastraStorage(): MastraAppStorage {
 
   // IPI-803: Workers + pg → request-scoped ALS only. Never reuse module-cached Pool.
   if (isCloudflareWorkersRuntime()) {
-    const scoped = workersPgRequestScope.getStore();
-    if (scoped?.store) return scoped.store;
+    const scoped = workersPgScopedStoreGetter?.();
+    if (scoped) return scoped;
     throw new MastraStorageUnavailableError(
-      "[mastra] Workers MASTRA_STORAGE_MODE=pg requires withMastraWorkersPgStorage() " +
-        "around the request (request-scoped Hyperdrive PostgresStore). " +
-        "Do not cache PostgresStore / pg.Pool across Worker invocations " +
-        "(IPI-803 · CF-DB-012). If Mastra cannot run under this scope, stop and file a narrow compat task — do not work around with a global pool.",
+      "[mastra] Workers pg requires withMastraWorkersPgStorage() request scope (IPI-803)",
     );
   }
 

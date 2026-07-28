@@ -3,7 +3,6 @@
 // POST { runId: string, crawlId: string }
 import { NextResponse } from "next/server";
 import { getMastra } from "@/mastra";
-import { withMastraWorkersPgStorage } from "@/mastra/storage";
 
 export const dynamic = "force-dynamic";
 
@@ -40,15 +39,13 @@ export async function POST(request: Request) {
   const error = typeof body.error === "string" ? body.error : undefined;
 
   try {
-    return await withMastraWorkersPgStorage(async () => {
-      const workflow = getMastra().getWorkflow("brand-intelligence");
-      const run = await workflow.createRun({ runId });
-      await run.resume({
-        step: "wait-for-crawl",
-        resumeData: { crawlId, ...(failed ? { failed: true, ...(error ? { error } : {}) } : {}) },
-      });
-      return NextResponse.json({ ok: true });
+    const workflow = getMastra().getWorkflow("brand-intelligence");
+    const run = await workflow.createRun({ runId });
+    await run.resume({
+      step: "wait-for-crawl",
+      resumeData: { crawlId, ...(failed ? { failed: true, ...(error ? { error } : {}) } : {}) },
     });
+    return NextResponse.json({ ok: true });
   } catch (e) {
     console.error("[brand-intelligence/resume]", e);
     return NextResponse.json(

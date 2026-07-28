@@ -13,7 +13,8 @@ import { getMastraMemory, makeMemoryResourceId } from "@/mastra/memory";
 import {
   getMastraStorage,
   MastraStorageUnavailableError,
-  withMastraWorkersPgStorage,
+  isCloudflareWorkersRuntime,
+  shouldSkipMastraPostgresStorage,
 } from "@/mastra/storage";
 import { type OperatorUser, extractAccessToken } from "@/lib/auth";
 import { isOperatorAuthEnforced, OperatorAuthError, withOperatorAuth } from "@/lib/operator-gate";
@@ -505,7 +506,15 @@ const handler = async (request: Request): Promise<Response> => {
     if (!requestNeedsDurableStorage(request)) {
       return await runCopilot();
     }
-    return await withMastraWorkersPgStorage(runCopilot);
+    // Bundle gate: only load Hyperdrive scope when Workers + pg (noop stays lean).
+    // Workflow routes intentionally unwrap here — wire them when flipping MASTRA_STORAGE_MODE=pg.
+    if (isCloudflareWorkersRuntime() && !shouldSkipMastraPostgresStorage()) {
+      const { withMastraWorkersPgStorage } = await import(
+        "@/lib/db/mastra-workers-pg-scope"
+      );
+      return await withMastraWorkersPgStorage(runCopilot);
+    }
+    return await runCopilot();
   } catch (err) {
     if (err instanceof MastraOrgScopeError) {
       console.error("[copilotkit] org resolution failed — refusing request (fail closed)", err.message);

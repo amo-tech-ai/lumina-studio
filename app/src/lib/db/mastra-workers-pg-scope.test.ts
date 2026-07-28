@@ -44,7 +44,7 @@ describe("IPI-803 Workers request-scoped PostgresStore", () => {
     vi.resetModules();
 
     const { createWorkersHyperdrivePostgresStore, WORKERS_MASTRA_PG_POOL_MAX } =
-      await import("./storage");
+      await import("./mastra-workers-pg-scope");
     createWorkersHyperdrivePostgresStore(HD_URL, {
       MASTRA_SCHEMA: "mastra",
       MASTRA_PG_POOL_MAX: "4",
@@ -63,8 +63,8 @@ describe("IPI-803 Workers request-scoped PostgresStore", () => {
 
   it("assertMastraSchemaForWorkersPg fails closed when schema is not mastra", async () => {
     vi.resetModules();
-    const { assertMastraSchemaForWorkersPg, MastraStorageUnavailableError } =
-      await import("./storage");
+    const { assertMastraSchemaForWorkersPg } = await import("./mastra-workers-pg-scope");
+    const { MastraStorageUnavailableError } = await import("@/mastra/storage");
     expect(() => assertMastraSchemaForWorkersPg({ MASTRA_SCHEMA: "public" })).toThrow(
       MastraStorageUnavailableError,
     );
@@ -74,7 +74,7 @@ describe("IPI-803 Workers request-scoped PostgresStore", () => {
     vi.stubEnv("MASTRA_STORAGE_MODE", "pg");
     vi.stubEnv("MASTRA_SCHEMA", "mastra");
     vi.resetModules();
-    const { getMastraStorage, MastraStorageUnavailableError } = await import("./storage");
+    const { getMastraStorage, MastraStorageUnavailableError } = await import("@/mastra/storage");
     expect(() => getMastraStorage()).toThrow(MastraStorageUnavailableError);
     expect(() => getMastraStorage()).toThrow(/withMastraWorkersPgStorage/);
   });
@@ -98,13 +98,12 @@ describe("IPI-803 Workers request-scoped PostgresStore", () => {
     vi.stubEnv("MASTRA_SCHEMA", "mastra");
     vi.resetModules();
 
+    const { getMastraStorage, getMastraStorageLazy } = await import("@/mastra/storage");
     const {
       withMastraWorkersPgStorage,
-      getMastraStorage,
-      getMastraStorageLazy,
       getWorkersPgStoreCreateCount,
       resetWorkersPgStoreCreateCountForTests,
-    } = await import("./storage");
+    } = await import("./mastra-workers-pg-scope");
 
     resetWorkersPgStoreCreateCountForTests();
     const seen: unknown[] = [];
@@ -151,7 +150,8 @@ describe("IPI-803 Workers request-scoped PostgresStore", () => {
     vi.stubEnv("MASTRA_STORAGE_MODE", "noop");
     vi.resetModules();
 
-    const { withMastraWorkersPgStorage, getMastraStorage } = await import("./storage");
+    const { getMastraStorage } = await import("@/mastra/storage");
+    const { withMastraWorkersPgStorage } = await import("./mastra-workers-pg-scope");
     const out = await withMastraWorkersPgStorage(async () => {
       const store = getMastraStorage();
       return store.constructor.name;
@@ -177,12 +177,12 @@ describe("IPI-803 Workers request-scoped PostgresStore", () => {
     vi.stubEnv("MASTRA_SCHEMA", "mastra");
     vi.resetModules();
 
+    const { getMastraStorage } = await import("@/mastra/storage");
     const {
       withMastraWorkersPgStorage,
-      getMastraStorage,
       resetWorkersPgStoreCreateCountForTests,
       getWorkersPgStoreCreateCount,
-    } = await import("./storage");
+    } = await import("./mastra-workers-pg-scope");
     resetWorkersPgStoreCreateCountForTests();
 
     await withMastraWorkersPgStorage(
@@ -213,7 +213,8 @@ describe("IPI-803 Workers request-scoped PostgresStore", () => {
     vi.stubEnv("MASTRA_SCHEMA", "mastra");
     vi.resetModules();
 
-    const { withMastraWorkersPgStorage, getMastraStorage } = await import("./storage");
+    const { getMastraStorage } = await import("@/mastra/storage");
+    const { withMastraWorkersPgStorage } = await import("./mastra-workers-pg-scope");
 
     let sawOpenWhileStreaming = false;
     const response = await withMastraWorkersPgStorage(
@@ -257,7 +258,7 @@ describe("IPI-803 Workers request-scoped PostgresStore", () => {
     vi.stubEnv("MASTRA_SCHEMA", "mastra");
     vi.resetModules();
 
-    const { withMastraWorkersPgStorage } = await import("./storage");
+    const { withMastraWorkersPgStorage } = await import("./mastra-workers-pg-scope");
     const response = await withMastraWorkersPgStorage(
       async () =>
         new Response(
@@ -290,7 +291,8 @@ describe("IPI-803 Workers request-scoped PostgresStore", () => {
     vi.stubEnv("MASTRA_SCHEMA", "mastra");
     vi.resetModules();
 
-    const { withMastraWorkersPgStorage, getMastraStorage } = await import("./storage");
+    const { getMastraStorage } = await import("@/mastra/storage");
+    const { withMastraWorkersPgStorage } = await import("./mastra-workers-pg-scope");
     const checkpointWrites: string[] = [];
 
     const result = await withMastraWorkersPgStorage(
