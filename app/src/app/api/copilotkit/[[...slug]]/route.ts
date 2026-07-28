@@ -10,7 +10,11 @@ import { getCloudflareContext } from "@opennextjs/cloudflare";
 import { pickCfEnv } from "@/lib/ai/cloudflare-models";
 import { getMastra } from "@/mastra";
 import { getMastraMemory, makeMemoryResourceId } from "@/mastra/memory";
-import { getMastraStorage, MastraStorageUnavailableError } from "@/mastra/storage";
+import {
+  getMastraStorage,
+  MastraStorageUnavailableError,
+  withMastraWorkersPgStorage,
+} from "@/mastra/storage";
 import { type OperatorUser, extractAccessToken } from "@/lib/auth";
 import { isOperatorAuthEnforced, OperatorAuthError, withOperatorAuth } from "@/lib/operator-gate";
 import { isCopilotIntelligenceEnvComplete, isCopilotKitThreadsEnabled } from "@/lib/copilotkit/intelligence-config";
@@ -435,18 +439,6 @@ const handler = async (request: Request): Promise<Response> => {
     throw err;
   }
 
-  if (requestNeedsDurableStorage(request)) {
-    try {
-      getMastraStorage();
-    } catch (err) {
-      if (err instanceof MastraStorageUnavailableError) {
-        console.error("[copilotkit] agent run blocked — durable storage unavailable", err.message);
-        return storageUnavailableResponse(err);
-      }
-      throw err;
-    }
-  }
-
   const token = extractAccessToken(request);
   if (!token) {
     // No Supabase access token at all is an authentication failure (401), not
@@ -458,27 +450,53 @@ const handler = async (request: Request): Promise<Response> => {
   }
 
   try {
-    // IPI-146: resolve the org-scoped resourceId, then (if this request
-    // targets an existing thread — via URL path or JSON POST body) verify
-    // that thread belongs to it — both BEFORE endpoint(request) runs, so a
-    // failure here never reaches CopilotKit's internals as an opaque thrown
-    // error.
-    const resourceId = await resolveOrgScopedResourceId(user, token);
+    // IPI-803: Workers + pg → request-scoped Hyperdrive PostgresStore (ALS).
+    // Covers thread ownership + agent turn so Memory/Mastra never reuse a
+    // cross-request Pool. Passthrough when noop / Node / Vercel.
+    return await withMastraWorkersPgStorage(async () => {
+      if (requestNeedsDurableStorage(request)) {
+        try {
+          getMastraStorage();
+        } catch (err) {
+          if (err instanceof MastraStorageUnavailableError) {
+            console.error(
+              "[copilotkit] agent run blocked — durable storage unavailable",
+              err.message,
+            );
+            return storageUnavailableResponse(err);
+          }
+          throw err;
+        }
+      }
 
-    const urlThreadId = extractThreadIdFromUrl(request);
-    if (urlThreadId) {
-      await assertThreadOwnership(urlThreadId, resourceId, user.id);
-    }
+      // IPI-146: resolve the org-scoped resourceId, then (if this request
+      // targets an existing thread — via URL path or JSON POST body) verify
+      // that thread belongs to it — both BEFORE endpoint(request) runs, so a
+      // failure here never reaches CopilotKit's internals as an opaque thrown
+      // error.
+      const resourceId = await resolveOrgScopedResourceId(user, token);
 
-    const { threadId: bodyThreadId, request: forwardedRequest } = await extractThreadIdFromBody(request);
-    if (bodyThreadId) {
-      await assertThreadOwnership(bodyThreadId, resourceId, user.id);
-    }
+      const urlThreadId = extractThreadIdFromUrl(request);
+      if (urlThreadId) {
+        await assertThreadOwnership(urlThreadId, resourceId, user.id);
+      }
 
-    const response = await _requestUser.run(user, () =>
-      _requestResourceId.run(resourceId, () => requestToken.run(token, () => endpoint(forwardedRequest))),
-    );
-    return withStreamIdleTimeout(await normalizeRuntimeErrorResponse(response), STREAM_IDLE_TIMEOUT_MS);
+      const { threadId: bodyThreadId, request: forwardedRequest } =
+        await extractThreadIdFromBody(request);
+      if (bodyThreadId) {
+        await assertThreadOwnership(bodyThreadId, resourceId, user.id);
+      }
+
+      const response = await _requestUser.run(user, () =>
+        _requestResourceId.run(resourceId, () =>
+          requestToken.run(token, () => endpoint(forwardedRequest)),
+        ),
+      );
+      return withStreamIdleTimeout(
+        await normalizeRuntimeErrorResponse(response),
+        STREAM_IDLE_TIMEOUT_MS,
+      );
+    });
   } catch (err) {
     if (err instanceof MastraOrgScopeError) {
       console.error("[copilotkit] org resolution failed — refusing request (fail closed)", err.message);

@@ -46,6 +46,9 @@
   // at deploy via GitHub environment variables → upload script `--var` (Wrangler is SSOT).
   "vars": {
     "MASTRA_STORAGE_MODE": "noop",
+    // IPI-803A: schema + pool caps staged; mode stays noop until A1+A2 green (A3 flip).
+    "MASTRA_SCHEMA": "mastra",
+    "MASTRA_PG_POOL_MAX": "1",
     "OPERATOR_AUTH_ENABLED": "true",
     // IPI-586: internal smoke route stays dark until explicitly flipped for a preview proof.
     "ENABLE_CF_AI_SMOKE": "false",
@@ -99,6 +102,9 @@
       },
       "vars": {
         "MASTRA_STORAGE_MODE": "noop",
+        // IPI-803A A2: exact preview config ready before A3 flip (mode stays noop until A1+A2 green).
+        "MASTRA_SCHEMA": "mastra",
+        "MASTRA_PG_POOL_MAX": "1",
         "OPERATOR_AUTH_ENABLED": "true",
         "ENABLE_CF_AI_SMOKE": "false",
         "ENABLE_HYPERDRIVE_PG_SMOKE": "false",
@@ -144,6 +150,9 @@
       },
       "vars": {
         "MASTRA_STORAGE_MODE": "noop",
+        // IPI-803B stays noop until 803A A3; schema/max staged for eventual flip (still max:1).
+        "MASTRA_SCHEMA": "mastra",
+        "MASTRA_PG_POOL_MAX": "1",
         "OPERATOR_AUTH_ENABLED": "true",
         "ENABLE_CF_AI_SMOKE": "false",
         "ENABLE_HYPERDRIVE_PG_SMOKE": "false",
