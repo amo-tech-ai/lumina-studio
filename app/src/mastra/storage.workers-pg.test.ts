@@ -244,6 +244,39 @@ describe("IPI-803 Workers request-scoped PostgresStore", () => {
     await vi.waitFor(() => expect(close).toHaveBeenCalledTimes(1));
   });
 
+  it("closes the store when the SSE client cancels mid-stream", async () => {
+    const close = vi.fn(async () => {});
+    const ctor = vi.fn(function FakePostgresStore(this: { close: typeof close }) {
+      this.close = close;
+    });
+    vi.doMock("@mastra/pg", () => ({
+      PostgresStore: ctor,
+      IPIX_CF_MASTRA_PG_STUB: undefined,
+    }));
+    vi.stubEnv("MASTRA_STORAGE_MODE", "pg");
+    vi.stubEnv("MASTRA_SCHEMA", "mastra");
+    vi.resetModules();
+
+    const { withMastraWorkersPgStorage } = await import("./storage");
+    const response = await withMastraWorkersPgStorage(
+      async () =>
+        new Response(
+          new ReadableStream<Uint8Array>({
+            start(controller) {
+              controller.enqueue(new TextEncoder().encode("data: ok\n\n"));
+              // never closed — in-flight agent turn until client disconnects
+            },
+          }),
+          { headers: { "content-type": "text/event-stream" } },
+        ),
+      { connectionString: HD_URL },
+    );
+
+    expect(close).not.toHaveBeenCalled();
+    await response.body!.cancel();
+    await vi.waitFor(() => expect(close).toHaveBeenCalledTimes(1));
+  });
+
   it("keeps store open through awaited start-style work before close (workflow suspend)", async () => {
     const close = vi.fn(async () => {});
     const ctor = vi.fn(function FakePostgresStore(this: { close: typeof close }) {

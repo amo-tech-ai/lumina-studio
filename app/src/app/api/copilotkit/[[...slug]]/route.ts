@@ -412,7 +412,10 @@ async function normalizeRuntimeErrorResponse(response: Response): Promise<Respon
 function requestNeedsDurableStorage(request: Request): boolean {
   const { pathname } = new URL(request.url);
   if (pathname.endsWith("/info")) return false;
-  return pathname.includes("/agent/");
+  // Agent turns + thread CRUD both read Mastra memory (assertThreadOwnership /
+  // checkpoints). Base /api/copilotkit and other non-memory routes stay exempt
+  // so discovery/passthrough still works when Hyperdrive is unavailable.
+  return pathname.includes("/agent/") || pathname.includes("/threads/");
 }
 
 function storageUnavailableResponse(err: MastraStorageUnavailableError): Response {
