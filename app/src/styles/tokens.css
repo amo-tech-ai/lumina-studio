@@ -398,4 +398,87 @@
   [class*="animate-pulse"] {
     animation: none;
   }
+
+  /* IPI-833 — onboarding's four keyframe effects. The flow is full-bleed and
+     these are purely decorative, so they stop entirely rather than shorten. */
+  .onb-float,
+  .onb-pulse,
+  .onb-slide,
+  .onb-blink {
+    animation: none;
+  }
 }
+
+/* ============================================================
+   COMPONENT TOKENS — Onboarding (IPI-833 · ONB2-UI-001)
+
+   The standalone onboarding flow is a black full-bleed surface carrying white
+   cards — a deliberate break from the v3 white-page system, and the only place
+   in the app that looks like this. Its 13 `--onb-*` values come from
+   Universal-design-prompt-4/Pages/Onboarding.v2.zeely.dc.html (:root, line 15).
+
+   Seven map onto existing semantic tokens. The other six are a brand accent
+   family (a mint green) with no equivalent anywhere else in the system, so they
+   are declared here as raw values rather than invented as false aliases of
+   --primitive-green-*, which is the status green and must not drift toward this.
+   ============================================================ */
+
+:root {
+  /* Surfaces */
+  --onboarding-bg:           #000000;              /* --onb-bg — full-bleed page */
+  --onboarding-motif:        #0e1a12;              /* --onb-motif — background motif */
+  --onboarding-card:         var(--color-bg-card); /* --onb-card #FFFFFF */
+
+  /* Text — the DC's #0A0A0A / #5C5C5C / #9E9E9E resolve to the v3 text ramp */
+  --onboarding-ink:          var(--color-text-primary);   /* --onb-ink */
+  --onboarding-sub:          var(--color-text-secondary); /* --onb-sub */
+  --onboarding-muted:        var(--color-text-muted);     /* --onb-muted */
+
+  /* Hairline — the DC's #ECECEC is --primitive-grey-150 within 1/255 */
+  --onboarding-hair:         var(--color-border-subtle);  /* --onb-hair */
+
+  /* Accent family — onboarding-only mint. Not the status green. */
+  --onboarding-accent:       #16e07d;   /* --onb-accent */
+  --onboarding-accent-tint:  #e8fbf1;   /* --onb-accent-tint */
+  --onboarding-accent-line:  #9be9c4;   /* --onb-accent-line */
+
+  /* Text on the LIGHT tint only — 5.03:1 on --onboarding-accent-tint. */
+  --onboarding-accent-ink:   #0b7a43;   /* --onb-accent-ink */
+
+  /* Text on the SOLID accent. --onboarding-accent-ink scores only 3.09:1 there,
+     below the 4.5:1 needed for normal-sized text, and the badges using it are
+     0.7rem. This dark forest green is 10.2:1 on the same background. */
+  --onboarding-on-accent:    #0e1a12;
+
+  /* Actions and warnings */
+  --onboarding-cta:          #000000;   /* --onb-cta — primary button */
+  --onboarding-weak:         #b45309;   /* --onb-weak — weak-signal warning */
+
+  /* Layout constants the DC repeats on every card */
+  --onboarding-card-width:   30rem;     /* 480px */
+  --onboarding-card-radius:  1.75rem;   /* 28px — wider than --radius-xl by design */
+  --onboarding-card-pad:     var(--space-8);
+}
+
+/* Onboarding keyframes — named to match the DC so parity checks are greppable. */
+@keyframes onb-slide {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes onb-pulse {
+  0%, 100% { opacity: 0.35; transform: scale(0.8); }
+  50%      { opacity: 1;    transform: scale(1); }
+}
+@keyframes onb-float {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-7px); }
+}
+@keyframes onb-blink {
+  0%, 49%   { opacity: 1; }
+  50%, 100% { opacity: 0; }
+}
+
+.onb-slide { animation: onb-slide var(--duration-normal, 240ms) ease-out both; }
+.onb-pulse { animation: onb-pulse 1.4s ease-in-out infinite; }
+.onb-float { animation: onb-float 3s ease-in-out infinite; }
+.onb-blink { animation: onb-blink 1s step-end infinite; }

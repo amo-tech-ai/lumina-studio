@@ -142,6 +142,49 @@ describe("middleware — operator auth gate (IPI2-127)", () => {
     expect(res.headers.get("location")).toBeNull();
   });
 
+  // IPI-833 — /onboarding is a sibling route group, so it does not inherit the
+  // /app prefix and needs its own clause in the gate.
+  it("redirects unauthenticated /onboarding to /login with redirect param", async () => {
+    vi.stubEnv("OPERATOR_AUTH_ENABLED", "true");
+    const res = await middleware(appRequest("/onboarding"));
+    expect(res.status).toBe(307);
+    const location = res.headers.get("location");
+    expect(location).toContain("/login");
+    expect(location).toContain("redirect=%2Fonboarding");
+  });
+
+  it("redirects /onboarding on production when OPERATOR_AUTH_ENABLED is missing (fail closed)", async () => {
+    vi.stubEnv("NODE_ENV", "production");
+    const res = await middleware(appRequest("/onboarding"));
+    expect(res.status).toBe(307);
+    expect(res.headers.get("location")).toContain("/login");
+  });
+
+  it("preserves the onboarding step hash-free query string in the redirect param", async () => {
+    vi.stubEnv("OPERATOR_AUTH_ENABLED", "true");
+    const res = await middleware(appRequest("/onboarding?source=email"));
+    const location = decodeURIComponent(res.headers.get("location") ?? "");
+    expect(location).toContain("redirect=/onboarding?source=email");
+  });
+
+  it("allows /onboarding when a valid Supabase session cookie is present", async () => {
+    vi.stubEnv("OPERATOR_AUTH_ENABLED", "true");
+    const res = await middleware(
+      appRequest("/onboarding", [
+        { name: "sb-proj-auth-token", value: sessionCookieValue() },
+      ]),
+    );
+    expect(res.status).toBe(200);
+    expect(res.headers.get("location")).toBeNull();
+  });
+
+  it("does not gate /onboardingx (prefix is not /onboarding/)", async () => {
+    vi.stubEnv("OPERATOR_AUTH_ENABLED", "true");
+    const res = await middleware(appRequest("/onboardingx"));
+    expect(res.status).toBe(200);
+    expect(res.headers.get("location")).toBeNull();
+  });
+
   it("matches all app routes except static assets for session refresh", () => {
     expect(config.matcher).toEqual([
       "/((?!monitoring|_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",

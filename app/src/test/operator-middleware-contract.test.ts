@@ -38,4 +38,22 @@ describe("operator middleware — wiring contract (IPI2-127 / CF-MIG-110)", () =
       /const\s+sessionResponse\s*=\s*await\s+updateSession\s*\(\s*request\s*\)/,
     );
   });
+
+  // IPI-833 — /onboarding is a sibling route group of (operator), so it does not
+  // inherit the /app prefix. Behavioural coverage lives in
+  // src/middleware-auth-gate.test.ts; this is the wiring guard that fails if the
+  // clause is ever dropped from the source.
+  it("gates /onboarding alongside /app", () => {
+    const src = readFileSync(SRC_MIDDLEWARE, "utf8");
+    expect(src).toMatch(/pathname === "\/onboarding"/);
+    expect(src).toMatch(/pathname\.startsWith\("\/onboarding\/"\)/);
+  });
+
+  it("the matcher does not exclude /onboarding from session refresh", () => {
+    const [pattern] = config.matcher;
+    // The matcher is a negative lookahead of excluded prefixes; /onboarding must
+    // not appear among them or the gate above would never run.
+    expect(pattern).not.toContain("onboarding");
+    expect(new RegExp(pattern.replace(/^\//, "^/")).test("/onboarding")).toBe(true);
+  });
 });

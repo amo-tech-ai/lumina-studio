@@ -1,0 +1,29 @@
+/**
+ * IPI-833 — brand typography for the standalone onboarding flow.
+ *
+ * Without this the shell inherits `font-family: Arial, Helvetica, sans-serif`
+ * from globals.css:106 — a generic system font, which AGENTS.md forbids
+ * ("Do NOT use Inter, Roboto, or generic system fonts").
+ *
+ * The design comp specifies Inter, which is on that same forbidden list. The
+ * repository rules take priority over the comp: headings use Cormorant
+ * Garamond, body uses Outfit. Do not "correct" this back toward the comp.
+ *
+ * Both variables are already loaded once on <body> by the root layout via
+ * next/font. This only scopes them, exactly as (marketing)/marketing.css does
+ * for the marketing surface — no second font load, and nothing added to the
+ * Cloudflare Worker bundle.
+ */
+
+.onboarding {
+  font-family: var(--font-outfit), system-ui, -apple-system, sans-serif;
+}
+
+.onboarding h1,
+.onboarding h2,
+.onboarding h3,
+.onboarding h4 {
+  font-family: var(--font-cormorant), Georgia, "Times New Roman", serif;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
