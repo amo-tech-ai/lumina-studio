@@ -16,7 +16,7 @@ vi.mock("next/navigation", () => ({
 }));
 
 import { OnboardingFlow } from "./onboarding-flow";
-import { LAST_SCREEN, MARKETING_SCREENS } from "@/lib/onboarding/navigation";
+import { LAST_SCREEN, MARKETING_SCREENS, ctaLabel } from "@/lib/onboarding/navigation";
 import type { OnboardingHistoryState } from "@/lib/onboarding/use-screen-history";
 
 // IPI-833 · ONB2-UI-001 — standalone onboarding UI.
@@ -125,7 +125,7 @@ describe("Continue is really disabled, not just styled", () => {
   it("never disables Continue on a marketing screen", () => {
     for (const s of MARKETING_SCREENS) {
       const { unmount } = renderAt(<OnboardingFlow initialScreen={s} />);
-      const cta = screen.getByRole("button", { name: "Continue" }) as HTMLButtonElement;
+      const cta = screen.getByRole("button", { name: ctaLabel(s) }) as HTMLButtonElement;
       expect(cta.disabled, `screen ${s}`).toBe(false);
       unmount();
     }
@@ -173,7 +173,7 @@ describe("browser history", () => {
   it("pushes one entry per user-driven transition", () => {
     render(<OnboardingFlow initialScreen={1} />);
     const pushSpy = vi.spyOn(window.history, "pushState");
-    fireEvent.click(screen.getByRole("button", { name: "Continue" }));
+    fireEvent.click(screen.getByRole("button", { name: ctaLabel(1) }));
     expect(pushSpy).toHaveBeenCalledTimes(1);
     pushSpy.mockRestore();
   });
@@ -222,7 +222,7 @@ describe("browser history", () => {
 describe("accessibility", () => {
   it("moves focus to the new screen heading after a transition", () => {
     render(<OnboardingFlow initialScreen={1} />);
-    fireEvent.click(screen.getByRole("button", { name: "Continue" }));
+    fireEvent.click(screen.getByRole("button", { name: ctaLabel(1) }));
     const heading = within(screen.getByTestId("onboarding-screen-2")).getByRole("heading", {
       level: 1,
     });

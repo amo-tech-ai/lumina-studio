@@ -11,6 +11,7 @@ import {
   canSkip,
   clampScreen,
   ctaDisabled,
+  ctaLabel,
   nextScreen,
   parseScreenFromHash,
   previousScreen,
@@ -168,6 +169,19 @@ describe("screen inventory", () => {
   it("has four question screens and seven marketing screens", () => {
     expect(QUESTION_SCREENS).toHaveLength(4);
     expect(MARKETING_SCREENS).toHaveLength(7);
+  });
+});
+
+describe("ctaLabel", () => {
+  it("opens with Get started and exits with Open iPix", () => {
+    expect(ctaLabel(FIRST_SCREEN)).toBe("Get started");
+    expect(ctaLabel(LAST_SCREEN)).toBe("Open iPix");
+  });
+
+  it("says Continue on every screen in between", () => {
+    for (let s = FIRST_SCREEN + 1; s < LAST_SCREEN; s += 1) {
+      expect(ctaLabel(s), `screen ${s}`).toBe("Continue");
+    }
   });
 });
 

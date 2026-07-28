@@ -74,6 +74,20 @@ export function canSkip(screen: number): boolean {
 }
 
 /**
+ * The primary button's label. Screen 1 opens the flow and screen 13 leaves it,
+ * so neither reads "Continue" — there is nothing to continue from on the first
+ * screen, and the last one exits rather than advances.
+ *
+ * Here rather than inline in the component so tests can assert against the
+ * label the flow actually renders instead of hardcoding one per call site.
+ */
+export function ctaLabel(screen: number): string {
+  if (screen === FIRST_SCREEN) return "Get started";
+  if (screen === PAYOFF_SCREEN) return "Open iPix";
+  return "Continue";
+}
+
+/**
  * DC line 451. Only the four question screens can block Continue; every
  * marketing, analysis and payoff screen is always advanceable.
  *

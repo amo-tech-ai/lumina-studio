@@ -26,7 +26,11 @@ type MarketingContent = {
 
 const MARKETING_CONTENT: Record<number, MarketingContent> = {
   1: {
-    heading: "We've helped 10,000+ fashion brands launch",
+    // The comp opened with "We've helped 10,000+ fashion brands launch". There is
+    // no source for that number, so it says what the product does instead.
+    heading: "Build your fashion brand with AI",
+    subcopy:
+      "Answer a few quick questions and iPix will create your Brand DNA, positioning, and personalized next steps.",
     body: <ProofTilesBody />,
   },
   3: {

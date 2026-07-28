@@ -19,6 +19,7 @@ import {
   LAST_SCREEN,
   type OnboardingAnswers,
   ctaDisabled,
+  ctaLabel,
   nextScreen,
 } from "@/lib/onboarding/navigation";
 import { useScreenHistory } from "@/lib/onboarding/use-screen-history";
@@ -156,7 +157,7 @@ export function OnboardingFlow({
         <FlowFooter
           screen={screen}
           continueDisabled={ctaDisabled(screen, answers)}
-          continueLabel={screen === LAST_SCREEN ? "Open iPix" : "Continue"}
+          continueLabel={ctaLabel(screen)}
           onBack={goBack}
           onSkip={skipCurrentScreen}
           onContinue={goNext}
