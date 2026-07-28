@@ -86,6 +86,24 @@ describe("OpenNext CI contract (IPI-472)", () => {
     expect(script).toMatch(/deploy.*--dry-run/);
   });
 
+  // Script-only Phase 1A contract (CI artifact/base wiring is a separate CI/config PR).
+  it("check-worker-bundle-size.mjs emits JSON report and delta WARNING only (IPI-706 Phase 1A)", () => {
+    const script = readFileSync(
+      resolve(__dirname, "../../scripts/check-worker-bundle-size.mjs"),
+      "utf8",
+    );
+
+    expect(script).toMatch(/DELTA_WARN_KIB\s*=\s*25/);
+    expect(script).toMatch(/worker-bundle-report\.json/);
+    expect(script).toMatch(/WORKER_BUNDLE_BASE_REPORT/);
+    expect(script).toMatch(/WARN \(delta\)/);
+    // Phase 1A: delta must not hard-fail — absolute FAIL_MIB remains the only size exit-1.
+    expect(script).not.toMatch(/FAIL \(delta\)/);
+    expect(script).toMatch(/not a hard fail \(IPI-706 Phase 1A\)/);
+    expect(script).toMatch(/export function loadBaseGzipKiB/);
+    expect(script).toMatch(/readInstalledVersion/);
+  });
+
   it("ci.yml wires build:cf with placeholder NEXT_PUBLIC_SUPABASE build-time vars", () => {
     const ci = readFileSync(resolve(__dirname, "../../../.github/workflows/ci.yml"), "utf8");
 
