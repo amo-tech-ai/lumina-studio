@@ -63,6 +63,21 @@ describe("OpenNext CI contract (IPI-472)", () => {
     expect(script).toMatch(/deploy.*--dry-run/);
   });
 
+  it("check-worker-bundle-size.mjs emits JSON report and delta WARNING only (IPI-706 Phase 1A)", () => {
+    const script = readFileSync(
+      resolve(__dirname, "../../scripts/check-worker-bundle-size.mjs"),
+      "utf8",
+    );
+
+    expect(script).toMatch(/DELTA_WARN_KIB\s*=\s*25/);
+    expect(script).toMatch(/worker-bundle-report\.json/);
+    expect(script).toMatch(/WORKER_BUNDLE_BASE_REPORT/);
+    expect(script).toMatch(/WARN \(delta\)/);
+    // Phase 1A: delta must not hard-fail — absolute FAIL_MIB remains the only size exit-1.
+    expect(script).not.toMatch(/FAIL \(delta\)/);
+    expect(script).toMatch(/not a hard fail \(IPI-706 Phase 1A\)/);
+  });
+
   it("ci.yml wires build:cf with placeholder NEXT_PUBLIC_SUPABASE build-time vars", () => {
     const ci = readFileSync(resolve(__dirname, "../../../.github/workflows/ci.yml"), "utf8");
 
@@ -70,5 +85,11 @@ describe("OpenNext CI contract (IPI-472)", () => {
     expect(ci).toMatch(/NEXT_PUBLIC_SUPABASE_URL:\s*https:\/\/example\.supabase\.co/);
     expect(ci).toMatch(/NEXT_PUBLIC_SUPABASE_ANON_KEY:\s*placeholder/);
     expect(ci).toMatch(/check:cf-types/);
+  });
+
+  it("ci.yml uploads worker-bundle-report artifact after build:cf (IPI-706 Phase 1A)", () => {
+    const ci = readFileSync(resolve(__dirname, "../../../.github/workflows/ci.yml"), "utf8");
+    expect(ci).toMatch(/worker-bundle-report\.json/);
+    expect(ci).toMatch(/Upload worker bundle report/);
   });
 });

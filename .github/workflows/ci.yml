@@ -87,12 +87,24 @@ jobs:
         run: npm run test
 
       # IPI-472 · INFRA-001 — OpenNext Worker build + dry-run gzip gate (8.5 warn / 9.0 fail MiB).
+      # IPI-706 Phase 1A — also emits .open-next/worker-bundle-report.json (artifact below).
       # Placeholder public Supabase vars — sufficient for bundle gate; fork PRs lack repo secrets.
       - name: OpenNext Cloudflare build + bundle gate (build:cf)
         env:
           NEXT_PUBLIC_SUPABASE_URL: https://example.supabase.co
           NEXT_PUBLIC_SUPABASE_ANON_KEY: placeholder
         run: npm run build:cf
+
+      # IPI-706 · CF-BUNDLE-220 Phase 1A — machine-readable gzip report for base vs PR deltas.
+      # Delta is WARNING-only until variance is measured; do not hard-fail on growth yet.
+      - name: Upload worker bundle report
+        if: always() && hashFiles('app/.open-next/worker-bundle-report.json') != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: worker-bundle-report-${{ github.sha }}
+          path: app/.open-next/worker-bundle-report.json
+          if-no-files-found: ignore
+          retention-days: 30
 
   # IPI-763 · CF-CI-001 — the custom AI Gateway Worker (services/cloudflare-worker/)
   # is frozen for new features but still carries real production AI traffic
