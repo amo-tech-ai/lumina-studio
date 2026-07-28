@@ -38,7 +38,7 @@ former `create-migration` skill.
    CREATE INDEX ON public.<table>(<fk_column_id>);
    ```
 
-5. **Review before push** — migration-reviewer subagent or `@migration-reviewer` on new files in
+5. **Review before push** — rls-policy-auditor subagent or `@rls-policy-auditor` on new files in
    `supabase/migrations/`.
 
 6. **Push and regen types:**

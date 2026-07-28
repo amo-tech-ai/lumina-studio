@@ -10,7 +10,7 @@ allowed-tools: ["Bash", "Read"]
 
 **Use when:** Local verify passed, fixes pushed, ready for full Bugbot/CodeRabbit + human review.
 
-**Rule:** `@pr-review-loop` · `@pr-workflow`
+**Rule:** `@pr-workflow` (`@pr-review-loop` referenced here previously — no such rule file exists anywhere in the repo, removed)
 
 **Do not** commit code unless user separately asks. This command orchestrates PR state + checks only.
 

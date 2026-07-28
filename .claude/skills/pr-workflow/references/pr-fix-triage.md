@@ -29,7 +29,7 @@ gh pr view <N> --json number,title,body,headRefName,files
 | `app/src/mastra/**` | `mastra`, `gemini` | Mastra docs search |
 | `app/src/lib/supabase/**`, auth, onboarding, `proxy.ts` | `ipix-supabase`, `nextjs-developer` (auth → `references/auth/nextjs.md`) | Supabase MCP |
 | App Router pages/layouts (non-auth) | `nextjs-developer` | Next.js DevTools MCP (`cd app && npm run dev` first) |
-| `supabase/migrations/**`, `*.sql` | `ipix-supabase` | Supabase MCP + **migration-reviewer** subagent |
+| `supabase/migrations/**`, `*.sql` | `ipix-supabase` | Supabase MCP + **rls-policy-auditor** subagent |
 | `supabase/functions/**` | `ipix-supabase`, `gemini` | Supabase MCP (`list_edge_functions`, `get_edge_function`) |
 | Edge AI / prompts / structured output | `gemini` | Gemini API docs |
 | Cloudinary / media pipeline | `cloudinary` | Cloudinary MCP plugins |

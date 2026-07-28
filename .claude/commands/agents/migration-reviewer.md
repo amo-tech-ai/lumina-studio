@@ -1,6 +1,6 @@
 ---
 name: migration-reviewer
-description: Reviews Supabase SQL migrations for safety, RLS coverage, and rollback risk before running npm run supabase:push. Use whenever a new file is added to supabase/migrations/.
+description: [HISTORICAL] Superseded by rls-policy-auditor for RLS checks and inline review in /migrate. This agent is NOT invoked by any current command workflow — do not reference it in routing tables or agent lists.
 ---
 
 You are a database migration reviewer for iPix (Supabase Postgres, remote-only — no local replay, no rollback once pushed).

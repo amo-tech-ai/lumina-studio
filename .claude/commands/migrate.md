@@ -42,16 +42,16 @@ Run every DB schema change through this safe migration pipeline. Never apply to 
 
 ---
 
-## Step 3 — migration-reviewer agent
+## Step 3 — rls-policy-auditor agent
 
-Invoke the `migration-reviewer` sub-agent to review the SQL before applying:
+Invoke the `rls-policy-auditor` sub-agent to review the SQL before applying:
 
 ```
-Agent: migration-reviewer
+Agent: rls-policy-auditor
 Input: path to supabase/migrations/<file>.sql + context of what the migration does
 ```
 
-**Do not proceed if migration-reviewer raises a blocking issue.**
+**Do not proceed if rls-policy-auditor raises a blocking issue.**
 
 ---
 
@@ -130,7 +130,7 @@ What changed:
   - <table/column/policy/index>
 
 Gates:
-  migration-reviewer  <✅ approved | ⚠️  warnings noted>
+  rls-policy-auditor  <✅ approved | ⚠️  warnings noted>
   apply               ✅ applied
   verify SQL          ✅ rows/schema confirmed
   types               <✅ regenerated | skipped — no schema change>
@@ -152,4 +152,4 @@ Follow-up:
 - Altering `auth.*` tables — never touch GoTrue internals
 - Removing an RLS policy without a replacement — leaves table unprotected
 - Migration touches >3 tables — split into separate migrations
-- `migration-reviewer` raises a blocking issue
+- `rls-policy-auditor` raises a blocking issue

@@ -34,7 +34,7 @@ infisical run -- npm run test
 | `supabase/functions/**` (edge) | `npm run supabase:verify-edge` |
 | AI / Gemini agents, Brand Intelligence pipeline | `npm run supabase:verify-brand-intelligence` |
 | DNA scoring (`audit-asset-dna`) | `npm run supabase:verify-dna` |
-| `supabase/migrations/**`, `*.sql` | `infisical run -- npm run supabase:verify-rls` (+ `supabase:push` if it's a new migration) — route through **migration-reviewer** subagent first |
+| `supabase/migrations/**`, `*.sql` | `infisical run -- npm run supabase:verify-rls` (+ `supabase:push` if it's a new migration) — route through **rls-policy-auditor** subagent first |
 | Vite env / client bootstrap (`src/**`) | `npm run check:env` |
 | Commerce checkout touched | `node scripts/commerce/paid-order-smoke.mjs` |
 
@@ -47,7 +47,7 @@ the fix should be, but never skip the re-run to save time.
 ## Fix touches a migration
 
 Stop and report instead of pushing — migrations need `create-migration` +
-**migration-reviewer** subagent review before they go out, even for a one-line fix found in
+**rls-policy-auditor** subagent review before they go out, even for a one-line fix found in
 review.
 
 ## Spec compliance (PR closes an IPI issue)
