@@ -64,6 +64,17 @@ describe("OpenNext CI contract (IPI-472)", () => {
     expect(wrangler).toMatch(/"katex"\s*:\s*"\.\/scripts\/cf-katex-stub\.mjs"/);
   });
 
+  it("IPI-844 CF stubs alias Workers PG scope under IPIX_CF_BUNDLE_STUBS (noop builds)", () => {
+    const nextConfig = readFileSync(resolve(__dirname, "../../next.config.ts"), "utf8");
+    const openNext = readFileSync(resolve(__dirname, "../../open-next.config.ts"), "utf8");
+    expect(nextConfig).toMatch(
+      /"@\/lib\/db\/mastra-workers-pg-scope"\s*:\s*mastraWorkersPgScopeStub/,
+    );
+    expect(nextConfig).toMatch(/cf-mastra-workers-pg-scope-stub\.mjs/);
+    expect(openNext).toMatch(/cf-mastra-workers-pg-scope-stub\.mjs/);
+    expect(openNext).toMatch(/IPIX_CF_BUNDLE_STUBS=1/);
+  });
+
   it("check-worker-bundle-size.mjs enforces 8.5 MiB warn and 9.0 MiB fail gates", () => {
     const script = readFileSync(
       resolve(__dirname, "../../scripts/check-worker-bundle-size.mjs"),
