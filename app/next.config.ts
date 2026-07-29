@@ -34,6 +34,7 @@ const copilotkitRuntimeInternalAliases = {
 const shikiStub = path.join(appDir, "scripts/cf-shiki-stub.mjs");
 const mermaidStub = path.join(appDir, "scripts/cf-mermaid-stub.mjs");
 const katexStub = path.join(appDir, "scripts/cf-katex-stub.mjs");
+const mastraWorkersPgScopeStub = path.join(appDir, "scripts/cf-mastra-workers-pg-scope-stub.mjs");
 
 /**
  * IPI-490 · CF-MIG-210 — OpenNext-only stubs (IPIX_CF_BUNDLE_STUBS=1).
@@ -49,6 +50,11 @@ const katexStub = path.join(appDir, "scripts/cf-katex-stub.mjs");
  * jsDelivr ESM load in the browser (syntax highlighting preserved).
  * Mermaid/KaTeX stubs are plain-text fallbacks (no CDN yet) — diagrams/math in
  * chat markdown degrade gracefully; size gate is the product requirement.
+ *
+ * IPI-844 / post-#658: stub Workers PG scope while MASTRA_STORAGE_MODE=noop —
+ * the real module re-duplicates OpenNext/@mastra/pg into the Worker and left
+ * main CI over the 9 MiB fail gate (9.012 MiB). Drop the alias when rebuilding
+ * for a pg flip (803A A3).
  *
  * IPI-620A/B: do NOT alias `@mastra/pg`, `pg`, or `pg-cloudflare` here.
  * - Bare `pg` needs real `Client` for Hyperdrive `queryFresh` (IPI-620A).
@@ -71,6 +77,7 @@ const cfBundleStubAliases =
         "@shikijs/vscode-textmate": shikiStub,
         mermaid: mermaidStub,
         katex: katexStub,
+        "@/lib/db/mastra-workers-pg-scope": mastraWorkersPgScopeStub,
       } as const)
     : ({} as const);
 

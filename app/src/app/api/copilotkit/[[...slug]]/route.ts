@@ -507,12 +507,29 @@ const handler = async (request: Request): Promise<Response> => {
       return await runCopilot();
     }
     // Bundle gate: only load Hyperdrive scope when Workers + pg (noop stays lean).
-    // Workflow routes intentionally unwrap here — wire them when flipping MASTRA_STORAGE_MODE=pg.
+    // Scope is OpenNext-free; CF builds stub it via IPIX_CF_BUNDLE_STUBS (IPI-844).
+    // Pass HYPERDRIVE_FRESH connectionString when calling under real pg (803A A3).
     if (isCloudflareWorkersRuntime() && !shouldSkipMastraPostgresStorage()) {
       const { withMastraWorkersPgStorage } = await import(
         "@/lib/db/mastra-workers-pg-scope"
       );
-      return await withMastraWorkersPgStorage(runCopilot);
+      const cf = (await getCloudflareContext({ async: true })) as {
+        env?: { HYPERDRIVE_FRESH?: { connectionString?: string } };
+        ctx?: { waitUntil?: (promise: Promise<unknown>) => void };
+      };
+      const connectionString = cf.env?.HYPERDRIVE_FRESH?.connectionString?.trim();
+      if (!connectionString) {
+        throw new MastraStorageUnavailableError(
+          "[mastra] HYPERDRIVE_FRESH.connectionString unavailable (IPI-803)",
+        );
+      }
+      return await withMastraWorkersPgStorage(runCopilot, {
+        connectionString,
+        waitUntil:
+          typeof cf.ctx?.waitUntil === "function"
+            ? cf.ctx.waitUntil.bind(cf.ctx)
+            : undefined,
+      });
     }
     return await runCopilot();
   } catch (err) {
