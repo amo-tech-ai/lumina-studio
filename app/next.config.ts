@@ -32,16 +32,23 @@ const copilotkitRuntimeInternalAliases = {
 } as const;
 
 const shikiStub = path.join(appDir, "scripts/cf-shiki-stub.mjs");
+const mermaidStub = path.join(appDir, "scripts/cf-mermaid-stub.mjs");
+const katexStub = path.join(appDir, "scripts/cf-katex-stub.mjs");
 
 /**
  * IPI-490 · CF-MIG-210 — OpenNext-only stubs (IPIX_CF_BUNDLE_STUBS=1).
+ * IPI-706 · CF-BUNDLE-220 — also stub mermaid + katex (streamdown diagram/math).
  *
- * Proven bloat: `@shikijs/langs` ~7.6 MiB via CopilotKit → streamdown.
+ * Proven bloat: `@shikijs/langs` ~7.6 MiB via CopilotKit → streamdown;
+ * mermaid+cytoscape ~2.7 MiB + katex ~0.25 MiB still in Worker after Shiki stub
+ * because operator `CopilotKit` `/v2` SSR keeps the Streamdown graph.
  * Next 16 OpenNext builds use Turbopack; resolveAlias is not server-scoped, and
  * `next build --webpack` fails on CopilotKit `export *` in a client boundary.
  *
  * Shiki aliases point at `cf-shiki-stub.mjs`: noop on the server (size gate),
  * jsDelivr ESM load in the browser (syntax highlighting preserved).
+ * Mermaid/KaTeX stubs are plain-text fallbacks (no CDN yet) — diagrams/math in
+ * chat markdown degrade gracefully; size gate is the product requirement.
  *
  * IPI-620A/B: do NOT alias `@mastra/pg`, `pg`, or `pg-cloudflare` here.
  * - Bare `pg` needs real `Client` for Hyperdrive `queryFresh` (IPI-620A).
@@ -62,6 +69,8 @@ const cfBundleStubAliases =
         "@shikijs/core": shikiStub,
         "@shikijs/engine-oniguruma": shikiStub,
         "@shikijs/vscode-textmate": shikiStub,
+        mermaid: mermaidStub,
+        katex: katexStub,
       } as const)
     : ({} as const);
 
