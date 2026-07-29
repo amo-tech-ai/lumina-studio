@@ -34,6 +34,8 @@
     "node_modules",
     "**/*.test.ts",
     "**/*.test.tsx",
-    "cloudflare-bindings.assert.ts"
+    "cloudflare-bindings.assert.ts",
+    ".next",
+    ".open-next"
   ]
 }
