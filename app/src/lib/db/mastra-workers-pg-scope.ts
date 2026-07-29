@@ -94,42 +94,30 @@ async function closeWorkersPgStore(store: PostgresStoreType): Promise<void> {
   }
 }
 
-async function resolveHyperdriveFreshConnectionString(): Promise<string> {
-  const { getCloudflareContext } = await import("@opennextjs/cloudflare");
-  let env: { HYPERDRIVE_FRESH?: { connectionString?: string } } | undefined;
-  try {
-    const cf = await getCloudflareContext({ async: true });
-    env = (cf as { env?: typeof env }).env;
-  } catch (err) {
+/**
+ * Hyperdrive URL must be passed by the route (e.g. CopilotKit via getCloudflareContext).
+ * Do **not** import `@opennextjs/cloudflare` or `cloudflare:workers` here — either
+ * path duplicates across OpenNext route chunks and blows the 9 MiB gzip gate (IPI-844).
+ */
+function requireWorkersHyperdriveConnectionString(
+  opts: WithMastraWorkersPgStorageOpts,
+): string {
+  const cs = opts.connectionString?.trim();
+  if (!cs) {
     throw new MastraStorageUnavailableError(
-      `[mastra] getCloudflareContext failed for HYPERDRIVE_FRESH (IPI-803): ` +
-        (err instanceof Error ? err.message : String(err)),
+      "[mastra] Workers pg requires opts.connectionString (HYPERDRIVE_FRESH) (IPI-803/IPI-844)",
     );
   }
-  const cs = env?.HYPERDRIVE_FRESH?.connectionString;
-  if (typeof cs !== "string" || cs.trim() === "") {
-    throw new MastraStorageUnavailableError(
-      "[mastra] HYPERDRIVE_FRESH.connectionString unavailable (IPI-803)",
-    );
-  }
-  return cs.trim();
+  return cs;
 }
 
 async function resolveWaitUntil(
   explicit?: (promise: Promise<unknown>) => void,
 ): Promise<((promise: Promise<unknown>) => void) | undefined> {
+  // Routes that already hold OpenNext ctx may pass waitUntil; otherwise we still
+  // close after the body drains (void done) — fine for non-streaming JSON routes.
   if (typeof explicit === "function") return explicit;
-  try {
-    const { getCloudflareContext } = await import("@opennextjs/cloudflare");
-    const cf = (await getCloudflareContext({ async: true })) as {
-      ctx?: { waitUntil?: (promise: Promise<unknown>) => void };
-    };
-    return typeof cf?.ctx?.waitUntil === "function"
-      ? cf.ctx.waitUntil.bind(cf.ctx)
-      : undefined;
-  } catch {
-    return undefined;
-  }
+  return undefined;
 }
 
 function deferWorkersPgStoreUntilResponseDone(
@@ -169,8 +157,7 @@ async function runWithMastraWorkersPgStorage<T>(
     return await fn();
   }
 
-  const connectionString =
-    opts.connectionString?.trim() || (await resolveHyperdriveFreshConnectionString());
+  const connectionString = requireWorkersHyperdriveConnectionString(opts);
   const waitUntil = await resolveWaitUntil(opts.waitUntil);
   const store = createWorkersHyperdrivePostgresStore(connectionString, env);
   let deferredClose = false;
