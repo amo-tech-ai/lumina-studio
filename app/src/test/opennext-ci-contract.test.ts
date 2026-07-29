@@ -55,8 +55,9 @@ describe("OpenNext CI contract (IPI-472)", () => {
   it("IPI-706 CF stubs alias mermaid + katex under IPIX_CF_BUNDLE_STUBS (streamdown size)", () => {
     const nextConfig = readFileSync(resolve(__dirname, "../../next.config.ts"), "utf8");
     const wrangler = readFileSync(resolve(__dirname, "../../wrangler.jsonc"), "utf8");
-    expect(nextConfig).toMatch(/mermaidStub/);
-    expect(nextConfig).toMatch(/katexStub/);
+    // Require the actual alias mappings (not just that stub symbols exist somewhere).
+    expect(nextConfig).toMatch(/mermaid\s*:\s*mermaidStub/);
+    expect(nextConfig).toMatch(/katex\s*:\s*katexStub/);
     expect(nextConfig).toMatch(/cf-mermaid-stub\.mjs/);
     expect(nextConfig).toMatch(/cf-katex-stub\.mjs/);
     expect(wrangler).toMatch(/"mermaid"\s*:\s*"\.\/scripts\/cf-mermaid-stub\.mjs"/);
