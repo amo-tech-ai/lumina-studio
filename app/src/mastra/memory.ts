@@ -1,6 +1,6 @@
 import { Memory } from "@mastra/memory";
 import { z } from "zod";
-import { getMastraStorage } from "./storage";
+import { getMastraStorageLazy } from "./storage";
 import { requireResourceId } from "@/lib/db/mastra-tenant-scope";
 
 let _memory: Memory | undefined;
@@ -29,7 +29,9 @@ export function getMastraMemory(): Memory {
     _memory = createLazyMemory(
       () =>
         new Memory({
-          storage: getMastraStorage(),
+          // IPI-803: lazy proxy so Workers request-scoped ALS storage is re-read
+          // per method — never pin a module-cached PostgresStore across invocations.
+          storage: getMastraStorageLazy(),
           options: {
             lastMessages: 40,
             // ponytail: semantic recall + observational memory deferred to IPI-136 / Phase 2
@@ -57,7 +59,7 @@ export function getPlannerMemory(): Memory {
     _plannerMemory = createLazyMemory(
       () =>
         new Memory({
-          storage: getMastraStorage(),
+          storage: getMastraStorageLazy(),
           options: {
             lastMessages: 40,
             workingMemory: {

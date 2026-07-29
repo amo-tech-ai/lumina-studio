@@ -10,7 +10,12 @@ import { getCloudflareContext } from "@opennextjs/cloudflare";
 import { pickCfEnv } from "@/lib/ai/cloudflare-models";
 import { getMastra } from "@/mastra";
 import { getMastraMemory, makeMemoryResourceId } from "@/mastra/memory";
-import { getMastraStorage, MastraStorageUnavailableError } from "@/mastra/storage";
+import {
+  getMastraStorage,
+  MastraStorageUnavailableError,
+  isCloudflareWorkersRuntime,
+  shouldSkipMastraPostgresStorage,
+} from "@/mastra/storage";
 import { type OperatorUser, extractAccessToken } from "@/lib/auth";
 import { isOperatorAuthEnforced, OperatorAuthError, withOperatorAuth } from "@/lib/operator-gate";
 import { isCopilotIntelligenceEnvComplete, isCopilotKitThreadsEnabled } from "@/lib/copilotkit/intelligence-config";
@@ -408,7 +413,10 @@ async function normalizeRuntimeErrorResponse(response: Response): Promise<Respon
 function requestNeedsDurableStorage(request: Request): boolean {
   const { pathname } = new URL(request.url);
   if (pathname.endsWith("/info")) return false;
-  return pathname.includes("/agent/");
+  // Agent turns + thread CRUD both read Mastra memory (assertThreadOwnership /
+  // checkpoints). Base /api/copilotkit and other non-memory routes stay exempt
+  // so discovery/passthrough still works when Hyperdrive is unavailable.
+  return pathname.includes("/agent/") || pathname.includes("/threads/");
 }
 
 function storageUnavailableResponse(err: MastraStorageUnavailableError): Response {
@@ -435,18 +443,6 @@ const handler = async (request: Request): Promise<Response> => {
     throw err;
   }
 
-  if (requestNeedsDurableStorage(request)) {
-    try {
-      getMastraStorage();
-    } catch (err) {
-      if (err instanceof MastraStorageUnavailableError) {
-        console.error("[copilotkit] agent run blocked — durable storage unavailable", err.message);
-        return storageUnavailableResponse(err);
-      }
-      throw err;
-    }
-  }
-
   const token = extractAccessToken(request);
   if (!token) {
     // No Supabase access token at all is an authentication failure (401), not
@@ -458,27 +454,67 @@ const handler = async (request: Request): Promise<Response> => {
   }
 
   try {
-    // IPI-146: resolve the org-scoped resourceId, then (if this request
-    // targets an existing thread — via URL path or JSON POST body) verify
-    // that thread belongs to it — both BEFORE endpoint(request) runs, so a
-    // failure here never reaches CopilotKit's internals as an opaque thrown
-    // error.
-    const resourceId = await resolveOrgScopedResourceId(user, token);
+    // IPI-803: Workers + pg → request-scoped Hyperdrive PostgresStore (ALS).
+    // Skip the wrapper for /info so agent discovery still works when Hyperdrive
+    // is missing (requestNeedsDurableStorage exemption must run before store create).
+    // Passthrough when noop / Node / Vercel.
+    const runCopilot = async (): Promise<Response> => {
+      if (requestNeedsDurableStorage(request)) {
+        try {
+          getMastraStorage();
+        } catch (err) {
+          if (err instanceof MastraStorageUnavailableError) {
+            console.error(
+              "[copilotkit] agent run blocked — durable storage unavailable",
+              err.message,
+            );
+            return storageUnavailableResponse(err);
+          }
+          throw err;
+        }
+      }
 
-    const urlThreadId = extractThreadIdFromUrl(request);
-    if (urlThreadId) {
-      await assertThreadOwnership(urlThreadId, resourceId, user.id);
+      // IPI-146: resolve the org-scoped resourceId, then (if this request
+      // targets an existing thread — via URL path or JSON POST body) verify
+      // that thread belongs to it — both BEFORE endpoint(request) runs, so a
+      // failure here never reaches CopilotKit's internals as an opaque thrown
+      // error.
+      const resourceId = await resolveOrgScopedResourceId(user, token);
+
+      const urlThreadId = extractThreadIdFromUrl(request);
+      if (urlThreadId) {
+        await assertThreadOwnership(urlThreadId, resourceId, user.id);
+      }
+
+      const { threadId: bodyThreadId, request: forwardedRequest } =
+        await extractThreadIdFromBody(request);
+      if (bodyThreadId) {
+        await assertThreadOwnership(bodyThreadId, resourceId, user.id);
+      }
+
+      const response = await _requestUser.run(user, () =>
+        _requestResourceId.run(resourceId, () =>
+          requestToken.run(token, () => endpoint(forwardedRequest)),
+        ),
+      );
+      return withStreamIdleTimeout(
+        await normalizeRuntimeErrorResponse(response),
+        STREAM_IDLE_TIMEOUT_MS,
+      );
+    };
+
+    if (!requestNeedsDurableStorage(request)) {
+      return await runCopilot();
     }
-
-    const { threadId: bodyThreadId, request: forwardedRequest } = await extractThreadIdFromBody(request);
-    if (bodyThreadId) {
-      await assertThreadOwnership(bodyThreadId, resourceId, user.id);
+    // Bundle gate: only load Hyperdrive scope when Workers + pg (noop stays lean).
+    // Workflow routes intentionally unwrap here — wire them when flipping MASTRA_STORAGE_MODE=pg.
+    if (isCloudflareWorkersRuntime() && !shouldSkipMastraPostgresStorage()) {
+      const { withMastraWorkersPgStorage } = await import(
+        "@/lib/db/mastra-workers-pg-scope"
+      );
+      return await withMastraWorkersPgStorage(runCopilot);
     }
-
-    const response = await _requestUser.run(user, () =>
-      _requestResourceId.run(resourceId, () => requestToken.run(token, () => endpoint(forwardedRequest))),
-    );
-    return withStreamIdleTimeout(await normalizeRuntimeErrorResponse(response), STREAM_IDLE_TIMEOUT_MS);
+    return await runCopilot();
   } catch (err) {
     if (err instanceof MastraOrgScopeError) {
       console.error("[copilotkit] org resolution failed — refusing request (fail closed)", err.message);

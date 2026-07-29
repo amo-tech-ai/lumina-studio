@@ -16,6 +16,16 @@ let storage: MastraAppStorage | undefined;
 let lazyStorageProxy: MastraAppStorage | undefined;
 let cachedStorageUnavailableError: MastraStorageUnavailableError | undefined;
 
+/** Sync ALS bridge — set when `mastra-workers-pg-scope` loads (IPI-803). */
+let workersPgScopedStoreGetter: (() => PostgresStoreType | undefined) | undefined;
+
+/** Called by route-layer Workers PG scope so {@link getMastraStorage} can read ALS sync. */
+export function registerWorkersPgScopedStoreGetter(
+  getter: () => PostgresStoreType | undefined,
+): void {
+  workersPgScopedStoreGetter = getter;
+}
+
 /** Thrown when durable storage is required but DATABASE_URL is unset in production. */
 export class MastraStorageUnavailableError extends Error {
   readonly code = "storage_unavailable" as const;
@@ -320,6 +330,15 @@ export function getMastraStorage(): MastraAppStorage {
       storage = new InMemoryStore({ id: "mastra-storage-memory" });
     }
     return storage;
+  }
+
+  // IPI-803: Workers + pg → request-scoped ALS only. Never reuse module-cached Pool.
+  if (isCloudflareWorkersRuntime()) {
+    const scoped = workersPgScopedStoreGetter?.();
+    if (scoped) return scoped;
+    throw new MastraStorageUnavailableError(
+      "[mastra] Workers pg requires withMastraWorkersPgStorage() request scope (IPI-803)",
+    );
   }
 
   // Scope: missing-env-var only. Transient connection errors bubble; do not latch.

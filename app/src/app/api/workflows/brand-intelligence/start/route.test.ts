@@ -12,7 +12,7 @@ const mockCreateUserScopedClient = vi.fn();
 const mockGetUser = vi.fn();
 const mockMaybeSingle = vi.fn();
 const mockRpc = vi.fn();
-const mockStartAsync = vi.fn();
+const mockStart = vi.fn();
 
 vi.mock("@/lib/operator-gate", () => ({
   withOperatorAuth: (...args: unknown[]) => mockWithOperatorAuth(...args),
@@ -35,7 +35,7 @@ vi.mock("@/lib/shoot/commit-shoot-draft", () => ({
 vi.mock("@/mastra", () => ({
   getMastra: () => ({
     getWorkflow: () => ({
-      createRun: async () => ({ runId: "run-1", startAsync: mockStartAsync }),
+      createRun: async () => ({ runId: "run-1", start: mockStart }),
     }),
   }),
 }));
@@ -59,7 +59,7 @@ beforeEach(() => {
     error: null,
   });
   mockRpc.mockResolvedValue({ data: true, error: null });
-  mockStartAsync.mockResolvedValue(undefined);
+  mockStart.mockResolvedValue({ status: "suspended" });
   mockCreateUserScopedClient.mockReturnValue({
     auth: { getUser: mockGetUser },
     from: () => ({
@@ -85,14 +85,32 @@ describe("POST /api/workflows/brand-intelligence/start", () => {
 
     expect(res.status).toBe(200);
     await expect(res.json()).resolves.toEqual({ runId: "run-1" });
-    expect(mockStartAsync).toHaveBeenCalledTimes(1);
+    expect(mockStart).toHaveBeenCalledTimes(1);
 
-    const { inputData } = mockStartAsync.mock.calls[0][0];
+    const { inputData } = mockStart.mock.calls[0][0];
     expect(inputData.actorId).toBe(EDITOR_ID);
     expect(inputData.actorId).not.toBe("dev-unauthenticated");
     expect(inputData.brandId).toBe(BRAND_ID);
     // No `userId` key survives — validate-brand reads actorId only.
     expect(inputData).not.toHaveProperty("userId");
+  });
+
+  it("awaits run.start (not startAsync) so storage stays open through suspend", async () => {
+    let resolveStart!: () => void;
+    mockStart.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          resolveStart = () => resolve({ status: "suspended" });
+        }),
+    );
+
+    const pending = post();
+    // start must still be in flight before the HTTP response settles.
+    await vi.waitFor(() => expect(mockStart).toHaveBeenCalledTimes(1));
+    resolveStart();
+    const res = await pending;
+    expect(res.status).toBe(200);
+    await expect(res.json()).resolves.toEqual({ runId: "run-1" });
   });
 
   it("authorizes against the brand's org, not brand ownership", async () => {
@@ -104,7 +122,7 @@ describe("POST /api/workflows/brand-intelligence/start", () => {
     mockRpc.mockResolvedValue({ data: false, error: null });
     const res = await post();
     expect(res.status).toBe(403);
-    expect(mockStartAsync).not.toHaveBeenCalled();
+    expect(mockStart).not.toHaveBeenCalled();
   });
 
   // A failed role *check* is not a role *denial*. Same call as the viewer case above,
@@ -114,21 +132,21 @@ describe("POST /api/workflows/brand-intelligence/start", () => {
     mockRpc.mockResolvedValue({ data: null, error: { message: "connection reset" } });
     const res = await post();
     expect(res.status).toBe(500);
-    expect(mockStartAsync).not.toHaveBeenCalled();
+    expect(mockStart).not.toHaveBeenCalled();
   });
 
   it("returns 401 when no access token is present", async () => {
     mockExtractAccessToken.mockReturnValue(null);
     const res = await post();
     expect(res.status).toBe(401);
-    expect(mockStartAsync).not.toHaveBeenCalled();
+    expect(mockStart).not.toHaveBeenCalled();
   });
 
   it("returns 401 when the JWT is invalid or expired", async () => {
     mockGetUser.mockResolvedValue({ data: { user: null }, error: { message: "bad jwt" } });
     const res = await post();
     expect(res.status).toBe(401);
-    expect(mockStartAsync).not.toHaveBeenCalled();
+    expect(mockStart).not.toHaveBeenCalled();
   });
 
   it("returns 401 when the enforced gate rejects the caller", async () => {
@@ -136,13 +154,13 @@ describe("POST /api/workflows/brand-intelligence/start", () => {
     mockWithOperatorAuth.mockRejectedValue(new OperatorAuthError("Unauthorized"));
     const res = await post();
     expect(res.status).toBe(401);
-    expect(mockStartAsync).not.toHaveBeenCalled();
+    expect(mockStart).not.toHaveBeenCalled();
   });
 
   it("returns 400 for a non-UUID brandId", async () => {
     const res = await post({ brandId: "not-a-uuid" });
     expect(res.status).toBe(400);
-    expect(mockStartAsync).not.toHaveBeenCalled();
+    expect(mockStart).not.toHaveBeenCalled();
   });
 
   it("returns 404 when the brand is invisible to the caller", async () => {
@@ -156,7 +174,7 @@ describe("POST /api/workflows/brand-intelligence/start", () => {
     mockMaybeSingle.mockResolvedValue({ data: null, error: { message: "connection reset" } });
     const res = await post();
     expect(res.status).toBe(500);
-    expect(mockStartAsync).not.toHaveBeenCalled();
+    expect(mockStart).not.toHaveBeenCalled();
   });
 
   it("falls back to owner check for a personal brand with no org", async () => {
@@ -176,7 +194,7 @@ describe("POST /api/workflows/brand-intelligence/start", () => {
     });
     const res = await post();
     expect(res.status).toBe(403);
-    expect(mockStartAsync).not.toHaveBeenCalled();
+    expect(mockStart).not.toHaveBeenCalled();
     // A personal brand has no roles — don't tell the caller to become an org editor.
     const { error } = (await res.json()) as { error: string };
     expect(error).toMatch(/own this brand/);

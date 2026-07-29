@@ -85,14 +85,15 @@ export async function POST(request: Request) {
   try {
     const workflow = getMastra().getWorkflow("brand-intelligence");
     const run = await workflow.createRun();
-    // startAsync: fire-and-forget, workflow suspends at wait-for-crawl.
+    // start (not startAsync): await through the first suspend so checkpoint
+    // persistence completes before the response. startAsync returns early (IPI-803).
     // actorId is the verified JWT subject — never the operator-gate fallback (IPI-812).
     // accessToken is still required: start-crawl (step 2) calls the start-brand-crawl
     // edge function, whose resolveAuth() does auth.getUser(token) and records
     // started_by — a service-role key would 401 there. It is persisted in
     // mastra.mastra_workflow_snapshot for the life of the run; scrubbing that is
     // tracked separately (see PR notes).
-    await run.startAsync({
+    await run.start({
       inputData: {
         brandId,
         actorId,
