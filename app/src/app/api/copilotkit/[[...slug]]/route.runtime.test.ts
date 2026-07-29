@@ -155,6 +155,24 @@ describe("IPI2-127 — anonymous → 401 when auth enabled (runtime)", () => {
     expect(await response.text()).toBe("Unauthorized");
   });
 
+  it("returns 401 (not 503) when gate returns the local-dev sentinel (IPI-846)", async () => {
+    const withOperatorAuth = vi.mocked((await import("@/lib/operator-gate")).withOperatorAuth);
+    withOperatorAuth.mockResolvedValue({
+      id: "dev-unauthenticated",
+      name: "Dev (auth disabled)",
+    });
+
+    const route = await import("@/app/api/copilotkit/[[...slug]]/route");
+    const response = await route.GET(
+      new Request("http://localhost/api/copilotkit", {
+        headers: { authorization: "Bearer stale.jwt" },
+      }),
+    );
+
+    expect(response.status).toBe(401);
+    expect(await response.text()).toBe("Unauthorized");
+  });
+
   it("passes through to CopilotRuntime when auth succeeds and propagates token via requestToken ALS", async () => {
     const withOperatorAuth = vi.mocked((await import("@/lib/operator-gate")).withOperatorAuth);
     withOperatorAuth.mockResolvedValue({ id: "real-user", email: "op@test.com", name: "Op" });

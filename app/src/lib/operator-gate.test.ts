@@ -8,6 +8,13 @@ import {
 
 vi.mock("./auth", () => ({
   resolveOperatorUser: vi.fn(),
+  extractAccessToken: (request: Request) => {
+    const authHeader = request.headers.get("authorization");
+    if (authHeader && /^Bearer\s+/i.test(authHeader)) {
+      return authHeader.replace(/^Bearer\s+/i, "").trim() || undefined;
+    }
+    return undefined;
+  },
 }));
 
 import { resolveOperatorUser } from "./auth";
@@ -69,7 +76,7 @@ describe("withOperatorAuth — CopilotKit HTTP boundary (IPI2-127, IPI-468)", ()
     vi.clearAllMocks();
   });
 
-  it("returns dev identity in local dev when OPERATOR_AUTH_ENABLED is not true", async () => {
+  it("returns dev identity in local dev when OPERATOR_AUTH_ENABLED is not true and no token", async () => {
     vi.stubEnv("NODE_ENV", "development");
     vi.stubEnv("OPERATOR_AUTH_ENABLED", "false");
 
@@ -80,6 +87,43 @@ describe("withOperatorAuth — CopilotKit HTTP boundary (IPI2-127, IPI-468)", ()
     expect(user.id).toBe("dev-unauthenticated");
     expect(user.name).toContain("Dev (auth disabled)");
     expect(resolveOperatorUserMock).not.toHaveBeenCalled();
+  });
+
+  it("prefers real session UUID when auth is disabled but a token is present (IPI-846)", async () => {
+    vi.stubEnv("NODE_ENV", "development");
+    vi.stubEnv("OPERATOR_AUTH_ENABLED", "false");
+    const expectedUser = {
+      id: "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
+      name: "QA Operator",
+    };
+    resolveOperatorUserMock.mockResolvedValue(expectedUser);
+
+    const user = await withOperatorAuth(
+      new Request("http://localhost/api/copilotkit", {
+        headers: { authorization: "Bearer valid.jwt" },
+      }),
+    );
+
+    expect(user).toEqual(expectedUser);
+    expect(resolveOperatorUserMock).toHaveBeenCalled();
+  });
+
+  it("keeps sentinel when auth is disabled and resolve returns a non-uuid demo id (IPI-846)", async () => {
+    vi.stubEnv("NODE_ENV", "development");
+    vi.stubEnv("OPERATOR_AUTH_ENABLED", "false");
+    resolveOperatorUserMock.mockResolvedValue({
+      id: "demo-user",
+      name: "Demo User (dev fallback)",
+    });
+
+    const user = await withOperatorAuth(
+      new Request("http://localhost/api/copilotkit", {
+        headers: { authorization: "Bearer stale.jwt" },
+      }),
+    );
+
+    expect(user.id).toBe("dev-unauthenticated");
+    expect(resolveOperatorUserMock).toHaveBeenCalled();
   });
 
   it("throws 401 on production when OPERATOR_AUTH_ENABLED is missing and session invalid", async () => {
