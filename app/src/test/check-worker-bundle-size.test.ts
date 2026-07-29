@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -8,6 +9,7 @@ import {
   WARN_MIB,
   buildWorkerBundleReport,
   evaluateGzipDelta,
+  hashFileSha256,
   loadBaseGzipKiB,
   parseGzipKiB,
   readInstalledVersion,
@@ -54,6 +56,18 @@ describe("check-worker-bundle-size helpers (IPI-706 Phase 1A)", () => {
     });
     expect(report.metafileSha256).toBe("abc123");
     expect(report.gitSha).toBe("deadbeef");
+  });
+
+  it("hashFileSha256 returns null for missing files and the digest for existing files", () => {
+    expect(hashFileSha256(join(tmpdir(), "no-such-worker-bundle-metafile.json"))).toBeNull();
+
+    const dir = mkdtempSync(join(tmpdir(), "bundle-hash-"));
+    const filePath = join(dir, "metafile.json");
+    const contents = '{"inputs":{},"outputs":{}}';
+    writeFileSync(filePath, contents, "utf8");
+    expect(hashFileSha256(filePath)).toBe(
+      createHash("sha256").update(contents).digest("hex"),
+    );
   });
 
   it("loadBaseGzipKiB covers no-path, missing, invalid JSON, bad gzipKiB, valid", () => {
