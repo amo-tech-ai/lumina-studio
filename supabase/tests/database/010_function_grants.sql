@@ -1,22 +1,23 @@
--- IPI-809 · SEC-ONB-001 PR 2 — org helper / trigger EXECUTE grants
+-- IPI-809 · SEC-ONB-001 — Stop Any Logged-In User From Seeing Every Organization
+-- (function-grant half) — org helper / trigger EXECUTE grants
 --
--- Persistent regression guard for migration
--- 20260730220000_ipi809_revoke_org_function_execute.sql.
+-- Persistent regression guard for
+-- supabase/migrations/20260730220000_ipi809_revoke_org_function_execute.sql
+-- (merged via GitHub PR “IPI-809 · SEC-ONB-001 — Revoke PUBLIC/anon EXECUTE on
+-- org helpers (migration)”; must be applied on the linked remote before CI is green).
 --
 -- Asserts LIVE privileges only. Does NOT REVOKE/GRANT first — rewriting
 -- grants would make CI pass against a drifted remote and roll the bad
 -- state back, so the suite would never catch a missing/incorrect migration.
---
--- Requires the migration applied on the linked remote (merge #681 +
--- supabase:push) before this file is green in CI.
 --
 -- PUBLIC EXECUTE is not checked via has_function_privilege('public', …):
 -- PUBLIC is a pseudo-role, not a pg_roles entry. anon denial already fails
 -- if PUBLIC EXECUTE remains (anon inherits PUBLIC).
 --
 -- Out of scope here (owned elsewhere):
---   · PR 1 orgs SELECT → 007_org_tenant_isolation.sql
---   · IPI-684 default EXECUTE → tests/security/default-execute-privileges.sql
+--   · organizations SELECT tenant isolation → 007_org_tenant_isolation.sql
+--   · IPI-684 · SB-SEC-001B — revoke default EXECUTE on new functions
+--     → tests/security/default-execute-privileges.sql
 --
 -- Plan math:
 --   3 helpers × (anon F, auth T, service_role T) = 9
