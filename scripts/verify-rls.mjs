@@ -4584,6 +4584,131 @@ try {
     pass("IPI-861: event_rehearsals anon probe skipped (no service role key)");
   }
 
+  // ---------------------------------------------------------------------------
+  // IPI-861 · model_availability_select — regression cover
+  //
+  // 20260730060000 removed a blanket `(event_id IS NULL)` branch that let ANY
+  // authenticated user read every row with a null event_id. Per the table
+  // comment those are the personal availability *blocks*, so the unrestricted
+  // branch exposed the more sensitive half of the table.
+  //
+  // Access matrix this pins:
+  //                          block (event_id NULL)   booking (event_id set)
+  //   model owner                    YES                     YES
+  //   organizer of that event        no                      YES
+  //   unrelated authenticated        no                      no
+  //
+  // The unrelated-user + null-event cell is the one the old policy got wrong.
+  // ---------------------------------------------------------------------------
+  if (serviceKey && userA?.user?.id && userB?.user?.id) {
+    let maProfileId;
+    let maEventId;
+    let maOutsider;
+    try {
+      const maStamp = Date.now();
+      maOutsider = await createTestUser(`plt002-rls-ma-${maStamp}@example.com`);
+
+      // Model profile owned by userA.
+      const { data: mp, error: mpErr } = await admin
+        .from("model_profiles")
+        .insert({ name: `RLS model ${maStamp}`, profile_id: userA.user.id })
+        .select("id")
+        .single();
+      assert(!mpErr && mp?.id, "service role inserts model_profile for model_availability probe");
+      maProfileId = mp?.id;
+
+      // Event organized by userB (a different user from the model owner).
+      const { data: maEv, error: maEvErr } = await admin
+        .from("events")
+        .insert({
+          organizer_id: userB.user.id,
+          title: `RLS model-availability event ${maStamp}`,
+          slug: `rls-ma-${maStamp}`,
+          start_time: new Date(maStamp).toISOString(),
+          status: "draft",
+        })
+        .select("id")
+        .single();
+      assert(!maEvErr && maEv?.id, "service role inserts event for model_availability probe");
+      maEventId = maEv?.id;
+
+      if (maProfileId && maEventId) {
+        const mkRow = async (eventId, label) => {
+          const { data, error } = await admin
+            .from("model_availability")
+            .insert({
+              model_profile_id: maProfileId,
+              event_id: eventId,
+              start_time: new Date(maStamp).toISOString(),
+              end_time: new Date(maStamp + 3600000).toISOString(),
+            })
+            .select("id")
+            .single();
+          assert(!error && data?.id, `service role inserts model_availability ${label} row`);
+          return data?.id;
+        };
+        const blockId = await mkRow(null, "block (event_id null)");
+        const bookingId = await mkRow(maEventId, "booking (event_id set)");
+        const bothIds = [blockId, bookingId].filter(Boolean);
+
+        const seenBy = async (client) => {
+          const { data, error } = await client
+            .from("model_availability")
+            .select("id")
+            .in("id", bothIds);
+          return { error, ids: Array.isArray(data) ? data.map((r) => r.id) : [] };
+        };
+
+        // Model owner sees both their block and their booking.
+        const ownerSaw = await seenBy(userA.client);
+        assert(
+          !ownerSaw.error && ownerSaw.ids.length === bothIds.length,
+          "IPI-861: model owner CAN read their own availability rows (block + booking)",
+        );
+
+        // Event organizer sees the booking for their event, but not the block.
+        const orgSaw = await seenBy(userB.client);
+        assert(
+          !orgSaw.error &&
+            bookingId && orgSaw.ids.includes(bookingId) &&
+            (!blockId || !orgSaw.ids.includes(blockId)),
+          "IPI-861: event organizer CAN read the booking for their event but NOT the null-event block",
+        );
+
+        // Unrelated authenticated user sees neither — this is the cell the old
+        // (event_id IS NULL) branch got wrong.
+        const outsiderSaw = await seenBy(maOutsider.client);
+        assert(
+          !outsiderSaw.error && outsiderSaw.ids.length === 0,
+          "IPI-861: unrelated authenticated user is DENIED all model_availability rows, including the null-event block",
+        );
+      }
+    } finally {
+      if (maProfileId) {
+        await checkedCleanup(
+          `IPI-861 model_availability for profile ${maProfileId}`,
+          admin.from("model_availability").delete().eq("model_profile_id", maProfileId),
+        );
+        await checkedCleanup(
+          `IPI-861 model_profile ${maProfileId}`,
+          admin.from("model_profiles").delete().eq("id", maProfileId),
+        );
+      }
+      if (maEventId) {
+        await checkedCleanup(
+          `IPI-861 model-availability probe event ${maEventId}`,
+          admin.from("events").delete().eq("id", maEventId),
+        );
+      }
+      if (maOutsider?.user?.id) {
+        const { error } = await deleteAuthUser(maOutsider.user.id);
+        if (error) trackCleanupError(`IPI-861 model_availability outsider ${maOutsider.user.id}: ${error.message}`);
+      }
+    }
+  } else {
+    pass("IPI-861: model_availability probe skipped (no service role key)");
+  }
+
 } catch (err) {
   if (!(err && typeof err === "object" && err.alreadyCounted)) {
     fail(err instanceof Error ? err.message : String(err));
