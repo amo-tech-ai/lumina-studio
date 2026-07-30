@@ -19,18 +19,18 @@ begin;
 select plan(34);
 
 -- Mirror 20260730220000 (must run as DB owner before privilege asserts).
-revoke all on function public.is_org_member(uuid) from public, anon, authenticated;
-revoke all on function public.is_org_owner(uuid) from public, anon, authenticated;
-revoke all on function public.is_org_editor_or_above(uuid) from public, anon, authenticated;
+revoke all on function public.is_org_member(uuid) from public, anon, authenticated, service_role;
+revoke all on function public.is_org_owner(uuid) from public, anon, authenticated, service_role;
+revoke all on function public.is_org_editor_or_above(uuid) from public, anon, authenticated, service_role;
 grant execute on function public.is_org_member(uuid) to authenticated, service_role;
 grant execute on function public.is_org_owner(uuid) to authenticated, service_role;
 grant execute on function public.is_org_editor_or_above(uuid) to authenticated, service_role;
 
-revoke all on function public.auto_add_org_owner() from public, anon, authenticated;
-revoke all on function public.handle_new_user() from public, anon, authenticated;
-revoke all on function public.block_brand_org_change() from public, anon, authenticated;
-revoke all on function public.check_campaign_org_consistency() from public, anon, authenticated;
-revoke all on function public.create_default_event_phases() from public, anon, authenticated;
+revoke all on function public.auto_add_org_owner() from public, anon, authenticated, service_role;
+revoke all on function public.handle_new_user() from public, anon, authenticated, service_role;
+revoke all on function public.block_brand_org_change() from public, anon, authenticated, service_role;
+revoke all on function public.check_campaign_org_consistency() from public, anon, authenticated, service_role;
+revoke all on function public.create_default_event_phases() from public, anon, authenticated, service_role;
 grant execute on function public.auto_add_org_owner() to service_role;
 grant execute on function public.handle_new_user() to service_role;
 grant execute on function public.block_brand_org_change() to service_role;
@@ -128,20 +128,42 @@ select is(
 );
 
 -- ── IPI-684: new public functions must not inherit anon/authenticated EXECUTE ───────────────
-create or replace function public._ipi809_default_execute_probe()
-returns integer
-language sql
-stable
-as $$ select 1 $$;
+-- DROP IF EXISTS bookends + EXCEPTION cleanup so a mid-probe error cannot leave the
+-- function behind even if the outer ROLLBACK is skipped. Outer BEGIN/ROLLBACK still
+-- undoes CREATE on the happy path / normal abort.
+drop function if exists public._ipi809_default_execute_probe();
 
-select ok(
-  not has_function_privilege('anon', 'public._ipi809_default_execute_probe()', 'EXECUTE')
-  and not has_function_privilege('authenticated', 'public._ipi809_default_execute_probe()', 'EXECUTE')
-  and has_function_privilege('service_role', 'public._ipi809_default_execute_probe()', 'EXECUTE'),
+do $probe$
+declare
+  defaults_ok boolean;
+begin
+  create function public._ipi809_default_execute_probe()
+  returns integer
+  language sql
+  stable
+  as $f$ select 1 $f$;
+
+  defaults_ok :=
+    not has_function_privilege('anon', 'public._ipi809_default_execute_probe()', 'EXECUTE')
+    and not has_function_privilege('authenticated', 'public._ipi809_default_execute_probe()', 'EXECUTE')
+    and has_function_privilege('service_role', 'public._ipi809_default_execute_probe()', 'EXECUTE');
+
+  drop function if exists public._ipi809_default_execute_probe();
+
+  if not defaults_ok then
+    raise exception
+      'IPI-684 defaults: new function unexpectedly executable by anon/authenticated, or service_role lost EXECUTE';
+  end if;
+exception
+  when others then
+    drop function if exists public._ipi809_default_execute_probe();
+    raise;
+end
+$probe$;
+
+select pass(
   'IPI-684 defaults: new function not executable by anon/authenticated; service_role retained'
 );
-
-drop function public._ipi809_default_execute_probe();
 
 select * from finish();
 rollback;
