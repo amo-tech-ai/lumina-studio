@@ -1,10 +1,12 @@
 # OpenNext Worker Size Audit & Optimization (IPI-706)
 
-**Date:** 2026-07-29  
-**Ticket:** **IPI-706 · CF-BUNDLE-220 — Restore OpenNext Worker Bundle Headroom**  
-**Related:** **IPI-803 · CF-DB-012** ([PR #658](https://github.com/amo-tech-ai/lumina-studio/pull/658)) tipped CI over the fail gate  
-**Sibling PRs:** Phase 1A code [#660](https://github.com/amo-tech-ai/lumina-studio/pull/660) · Phase 1A CI [#661](https://github.com/amo-tech-ai/lumina-studio/pull/661)  
-**Phase 1B branch:** `ipi/706-bundle-headless` → merged as [#663](https://github.com/amo-tech-ai/lumina-studio/pull/663)  
+**Date:** 2026-07-29 (status section updated 2026-07-30)  
+**Ticket:** [IPI-706 · CF-BUNDLE-220 — Restore OpenNext Worker Bundle Headroom](https://linear.app/amo100/issue/IPI-706)  
+**Related:** [IPI-803 · CF-DB-012 — Activate Durable Mastra Postgres Storage on the Production Cloudflare Worker](https://linear.app/amo100/issue/IPI-803), shipped as [PR #658 (Request-safe Hyperdrive Mastra storage — preview path)](https://github.com/amo-tech-ai/lumina-studio/pull/658), tipped CI over the fail gate  
+**Sibling PRs:**
+[PR #660 (Phase 1A code — Worker bundle JSON report helpers)](https://github.com/amo-tech-ai/lumina-studio/pull/660) ·
+[PR #661 (Phase 1A CI — Worker bundle report artifact + PR delta)](https://github.com/amo-tech-ai/lumina-studio/pull/661)  
+**Phase 1B:** branch `ipi/706-bundle-headless` → merged as [PR #663 (Stub Mermaid/KaTeX to restore Worker headroom)](https://github.com/amo-tech-ai/lumina-studio/pull/663)  
 **Method:** Platform-first (official Cloudflare / OpenNext / CopilotKit / ESBuild docs) → repo `rg` → installed package exports → metafile analysis. **No guesses without evidence.**
 
 ---
@@ -16,25 +18,52 @@ It is deliberately preserved as written. This section is the current state.**
 
 | Item | Current |
 | --- | --- |
-| Size emergency | **Closed.** [#663](https://github.com/amo-tech-ai/lumina-studio/pull/663) (Mermaid/KaTeX stubs, `9c88179f`) took `main` from **9.012 → 7.826 MiB** |
+| Size emergency | **Closed.** [PR #663 (Stub Mermaid/KaTeX to restore Worker headroom)](https://github.com/amo-tech-ai/lumina-studio/pull/663), commit `9c88179f`, took `main` from **9.012 → 7.826 MiB** |
 | `main` today | **7.806 MiB** gzip @ `aae84bc0` — `OK: gzip below 8.5 MiB warn gate` ([CI run 30499164983](https://github.com/amo-tech-ai/lumina-studio/actions/runs/30499164983)) |
 | Headroom | **1.19 MiB** below the 9.0 fail gate · **2.19 MiB** below Cloudflare's 10 MB Paid ceiling |
-| Trend | `9.012` (#658) → `7.826` (#663) → `7.807` (#664) → `7.806` (#666) |
-| Still open | #660 Phase 1A code · #661 Phase 1A CI — both needed a **rebase**, not a fix: they were measuring the pre-#663 bundle |
+| Trend | `9.012` ([PR #658](https://github.com/amo-tech-ai/lumina-studio/pull/658)) → `7.826` ([PR #663](https://github.com/amo-tech-ai/lumina-studio/pull/663)) → `7.807` ([PR #664 — IPI-844 · CF-DB-012a, Restore Worker gzip headroom](https://github.com/amo-tech-ai/lumina-studio/pull/664)) → `7.806` ([PR #666 — IPI-851 · DEVX-TS-001, Exclude OpenNext/.next from the TypeScript program](https://github.com/amo-tech-ai/lumina-studio/pull/666)) |
+| Still open | [PR #660](https://github.com/amo-tech-ai/lumina-studio/pull/660) Phase 1A code · [PR #661](https://github.com/amo-tech-ai/lumina-studio/pull/661) Phase 1A CI — both needed a **rebase**, not a fix: they were measuring the pre-#663 bundle |
 | Section 9 blocker table | **Historical.** The `gzip ≥ 9.0 on main` blocker no longer applies |
+| Section 1 executive summary | **Historical.** Its "CI is red" verdict describes 2026-07-29, not today |
 
-**Downstream consumers, read this first:** [IPI-848 · CF-BUNDLE-223](https://linear.app/amo100/issue/IPI-848)'s metafile
-ban list is derived from the composition numbers in section 6 below. Those were measured **before**
-#663 and #664 merged. **IPI-848 must re-measure before writing its ban list** — see section 6's
-"Re-measured" note for the current figures.
+### Is IPI-706 actually done? Two conflicting targets
+
+The two tracking surfaces disagree, so this audit states both rather than picking silently:
+
+| Surface | Target | 7.806 MiB verdict |
+| --- | --- | --- |
+| [IPI-706](https://linear.app/amo100/issue/IPI-706) acceptance criteria (authoritative) | gzip **< 8.5 MiB**, "preferred ≤8.30" | ✅ **Met** |
+| `tasks/cloudflare/todo.md` row | "Reduce Worker bundle **≤7.5 MiB**" | ❌ **0.31 MiB short** |
+
+The Linear AC is the ticket's contract, so the size goal is met. But **do not treat the `todo.md`
+figure as satisfied** — reconcile the two before marking IPI-706 Done. Named remaining cuts if the
+≤7.5 MiB target is kept: `@copilotkit/web-inspector` (~0.12 MiB gzip,
+[IPI-849](https://linear.app/amo100/issue/IPI-849)) and Sentry (~1,400 KiB raw, unticketed).
+
+### ⚠️ `tasks/cloudflare/todo.md` is stale as of this audit
+
+That file is the live SSOT for the Cloudflare track, and its IPI-706 rows still say **8.985 MiB**
+with `next/dynamic(..., {ssr:false})` as the remedy. Both are superseded: the measured figure is
+**7.806 MiB** and the fix that worked was **build-time stub aliases**, not `next/dynamic`. Updating
+`todo.md` is deliberately **not** in this PR (docs SSOT for the whole track — its own change), but an
+agent following the tracker without reading section 0 here will work from stale instructions.
+
+**Downstream consumers, read this first:** [IPI-848 · CF-BUNDLE-223 — Metafile regression gate + Worker bundle composition CI](https://linear.app/amo100/issue/IPI-848)
+derives its metafile ban list from the composition numbers in **section 4** below. Those were
+measured **before** PR #663 and PR #664 merged. The **"Re-measured 2026-07-30" subsection of
+section 4** carries the current figures, and confirms the ban-list premise still holds
+(`mermaid` 0 · `katex` 0 · `cytoscape` 0 · `web-inspector` 1) — so no further re-measurement is
+required before IPI-848 starts.
 
 ---
 
 ## 1. Executive summary
 
-| Item | Result |
+**⚠️ Historical — state on 2026-07-29 while `main` was red. See section 0 for current status.**
+
+| Item | Result (2026-07-29) |
 | --- | --- |
-| **Verdict** | CI is red because Worker gzip is **~9.01–9.015 MiB ≥ 9.0 MiB** iPix fail gate |
+| **Verdict** | CI was red because Worker gzip was **~9.01–9.015 MiB ≥ 9.0 MiB** iPix fail gate. **Resolved** — see section 0 |
 | **Acute trigger** | `main` after #658: **9.012 MiB** FAIL (was ~8.988 MiB WARN) |
 | **Chronic cause** | CopilotKit **`/v2` barrel** imported from many hook-only + UI-helper modules → SSR chunks include **Mermaid / Cytoscape / KaTeX** |
 | **Smallest safe fix (measured)** | Extend **IPI-490** OpenNext stubs: alias `mermaid` + `katex` under `IPIX_CF_BUNDLE_STUBS=1` → **gzip 7.832 MiB** (was 9.012). Headless imports = follow-up hygiene (alone did **not** drop size while layout mounts `CopilotKit` `/v2`) |
@@ -254,20 +283,31 @@ Yes — use the **prebuilt** `/v2/headless` export and OpenNext’s **official**
 
 ## 11. Prioritized plan
 
+Step 2 previously read "headless + MessageView isolation" only. Corrected: section 8.1 measures
+headless-only at **9.012 MiB FAIL**, so a PR built to that step could not have satisfied step 3.
+The stub aliases are the measured passing path and belong in the same code PR.
+
 ```text
 1. Docs PR (this file) — AGENTS #1 docs-only
-2. Code PR Phase 1B headless + MessageView isolation
+2. Code PR Phase 1B — mermaid/katex stub aliases under IPIX_CF_BUNDLE_STUBS  <- the measured fix
+      (optional, same PR: /v2/headless + MessageView isolation — hygiene, 0 MiB on its own)
 3. build:cf green (<9.0; target <8.5)
 4. Rebase/merge Phase 1A #660 then #661
 5. If still ≥8.5: second measured cut or Phase 2 multi-worker child
-6. Do NOT mark IPI-706 Done until AC met
+6. Do NOT mark IPI-706 Done until AC met — and note the two conflicting
+      size targets recorded in section 0 (Linear <8.5 vs todo.md ≤7.5)
 ```
+
+**What actually shipped:** step 2 landed as [PR #663](https://github.com/amo-tech-ai/lumina-studio/pull/663)
+with the stubs only; the `/v2/headless` hygiene was split out to
+[IPI-845 · CF-BUNDLE-220b — CopilotKit /v2/headless import hygiene](https://linear.app/amo100/issue/IPI-845).
 
 ---
 
 ## 12. Official link index
 
 ### Cloudflare
+
 - https://developers.cloudflare.com/workers/
 - https://developers.cloudflare.com/workers/platform/limits/
 - https://developers.cloudflare.com/workers/framework-guides/web-apps/nextjs/
@@ -278,6 +318,7 @@ Yes — use the **prebuilt** `/v2/headless` export and OpenNext’s **official**
 - https://github.com/cloudflare/workers-sdk
 
 ### OpenNext
+
 - https://opennext.js.org/cloudflare
 - https://opennext.js.org/cloudflare/troubleshooting
 - https://opennext.js.org/cloudflare/cli
@@ -287,6 +328,7 @@ Yes — use the **prebuilt** `/v2/headless` export and OpenNext’s **official**
 - https://github.com/opennextjs/opennextjs-cloudflare
 
 ### CopilotKit / ESBuild / Next.js
+
 - https://docs.copilotkit.ai/
 - https://github.com/CopilotKit/CopilotKit
 - https://github.com/CopilotKit/CopilotKit/blob/main/packages/react-core/src/v2/headless.ts
@@ -303,8 +345,7 @@ Yes — use the **prebuilt** `/v2/headless` export and OpenNext’s **official**
 | **Next code PR** | Phase 1B on `ipi/706-bundle-headless` |
 | **Authoring rule** | AGENTS.md #1 — do not commit this doc with Phase 1B code |
 
-
-## 11. Test results (this pass)
+## 14. Test results (this pass)
 
 | Check | Result |
 | --- | --- |
