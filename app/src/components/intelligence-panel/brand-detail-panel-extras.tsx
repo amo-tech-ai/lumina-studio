@@ -2,9 +2,13 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
 import { ArrowRight } from "lucide-react";
+import { toast } from "sonner";
 
 import type { IntelligencePanelData } from "@/lib/intelligence/panel-contract";
+import { reanalyzeBrand } from "@/app/(operator)/app/brand/[id]/actions";
 
 import styles from "./intelligence-panel.module.css";
 
@@ -151,15 +155,48 @@ export function BrandDetailPanelExtras({
   );
 }
 
-export function BrandDetailNoDnaBlock({ brandName }: { brandName: string }) {
+/** IPI-722 — this button previously had no onClick at all (a genuinely dead
+ *  button, not just a swallowed error). Mirrors BrandDetailWorkspace's
+ *  startAnalysis: same reanalyzeBrand call, same toast.error on failure,
+ *  same router.refresh() on success. */
+export function BrandDetailNoDnaBlock({
+  brandId,
+  brandName,
+}: {
+  brandId: string | null;
+  brandName: string;
+}) {
+  const router = useRouter();
+  const [starting, setStarting] = useState(false);
+
+  async function handleAnalyse() {
+    if (!brandId || starting) return;
+    setStarting(true);
+    try {
+      const result = await reanalyzeBrand(brandId);
+      if (result.ok) {
+        router.refresh();
+      } else {
+        toast.error(result.error);
+      }
+    } finally {
+      setStarting(false);
+    }
+  }
+
   return (
     <div className={styles.noDnaBlock}>
       <p className={styles.noDnaCopy}>
         Run Brand Intelligence to build {brandName}&apos;s DNA profile — palette, voice, and
         imagery.
       </p>
-      <button type="button" className={styles.noDnaBtn}>
-        Analyse brand
+      <button
+        type="button"
+        className={styles.noDnaBtn}
+        onClick={handleAnalyse}
+        disabled={!brandId || starting}
+      >
+        {starting ? "Starting…" : "Analyse brand"}
       </button>
     </div>
   );

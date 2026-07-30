@@ -1,0 +1,74 @@
+/**
+ * IPI-620 (Part A) · CF-DB-006 — shared Hyperdrive query helper.
+ *
+ * Follows the official Cloudflare recipe exactly:
+ * @see https://developers.cloudflare.com/hyperdrive/examples/connect-to-postgres/postgres-drivers-and-libraries/node-postgres/
+ * @see https://developers.cloudflare.com/hyperdrive/concepts/connection-lifecycle/
+ *
+ * - `new Client()`, never `new Pool()` — Hyperdrive itself is the pool.
+ * - Fresh client **inside** each call — never cached at module/global scope.
+ * - No `client.end()` — Workers-to-Hyperdrive connections are cleaned up when
+ *   the request/invocation ends; calling `end()` after a failed `connect()` can
+ *   hang/exit in node-postgres and is unnecessary on Workers.
+ * - Minimal structural type (`HyperdriveBinding`), not generated `CloudflareEnv`
+ *   (same reason as `CfEnvLike` in `src/lib/ai/cloudflare-models.ts`).
+ */
+import { Client, type QueryResultRow } from "pg";
+import { requireResourceId } from "./mastra-tenant-scope";
+
+export type HyperdriveBinding = { connectionString: string };
+
+function requireHyperdriveConnectionString(
+  hyperdrive: HyperdriveBinding | null | undefined,
+): string {
+  const cs = hyperdrive?.connectionString;
+  if (typeof cs !== "string" || cs.trim() === "") {
+    throw new Error("Invalid Hyperdrive binding: missing connectionString");
+  }
+  return cs;
+}
+
+/**
+ * Run one parameterized query against the Hyperdrive-fronted Postgres
+ * connection and return the result rows. Always use `$1, $2, ...`
+ * placeholders — never interpolate values into `sql`.
+ *
+ * Errors are sanitized before leaving this function: callers never see the
+ * connection string or the raw driver error (which can include query text).
+ */
+export async function queryFresh<T extends QueryResultRow = QueryResultRow>(
+  hyperdrive: HyperdriveBinding,
+  sql: string,
+  params: unknown[] = [],
+): Promise<T[]> {
+  const connectionString = requireHyperdriveConnectionString(hyperdrive);
+  const client = new Client({ connectionString });
+  try {
+    await client.connect();
+    const result = await client.query<T>(sql, params);
+    return result.rows;
+  } catch (error) {
+    // Log the real cause server-side only; never rethrow it to the caller.
+    console.error("queryFresh: query failed", error instanceof Error ? error.message : error);
+    throw new Error("Database query failed");
+  }
+}
+
+/**
+ * IPI-621 · CF-DB-007 — fail-closed tenant-scoped query.
+ *
+ * Rejects missing/blank `resourceId` and invalid Hyperdrive bindings **before**
+ * connect. Prepends the verified key as `$1`; `sql` must bind
+ * `"resourceId" = $1` (or equivalent) and use `$2…` for any further params.
+ * No SET LOCAL / session tenant GUC.
+ */
+export async function queryFreshByResourceId<T extends QueryResultRow = QueryResultRow>(
+  hyperdrive: HyperdriveBinding,
+  resourceId: unknown,
+  sql: string,
+  params: unknown[] = [],
+): Promise<T[]> {
+  requireHyperdriveConnectionString(hyperdrive);
+  const rid = requireResourceId(resourceId);
+  return queryFresh<T>(hyperdrive, sql, [rid, ...params]);
+}

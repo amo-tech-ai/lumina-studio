@@ -2,15 +2,22 @@
 import { NextResponse, after } from "next/server";
 import { v2 as cloudinary } from "cloudinary";
 import { createSupabaseAdminClient } from "@/app/api/_lib/supabase-admin";
+import { ENVIRONMENTS, WORK_TYPES } from "@/lib/cloudinary/taxonomy";
 
 export const dynamic = "force-dynamic";
 
 // Spec: SDK default valid_for is 7200s (2h); IPI-257 §3 tightens the replay window to 300s.
 const REPLAY_WINDOW_SECONDS = 300;
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const BRAND_FOLDER_RE = /ipix\/brands\/([0-9a-f-]{36})(?:\/|$)/i;
 const CAMPAIGN_FOLDER_RE = /ipix\/campaigns\/([0-9a-f-]{36})(?:\/|$)/i;
 const SHOOT_FOLDER_RE = /ipix\/shoots\/([0-9a-f-]{36})(?:\/|$)/i;
+/** New DAM taxonomy: ipix/{env}/{orgId}/{brandId}/{workType}[/{workId}/...] */
+const TAXONOMY_FOLDER_RE =
+  /^ipix\/(dev|staging|prod)\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\/([a-z0-9-]+)(?:\/|$)/i;
 const ASSETS_BRAND_FK = "assets_brand_id_fkey";
+const ENV_SET = new Set<string>(ENVIRONMENTS);
+const WORK_TYPE_SET = new Set<string>(WORK_TYPES);
 
 type CloudinaryNotification = {
   notification_type?: string;
@@ -31,6 +38,11 @@ type CloudinaryNotification = {
   asset_id?: string;
   folder?: string;
   asset_folder?: string;
+  /**
+   * Upload context — pipe string (`brand_id=…|org_id=…`) or object
+   * (`{ brand_id }` / `{ custom: { brand_id } }`).
+   */
+  context?: unknown;
   /** API key id used to sign the notification (may differ from CLOUDINARY_API_KEY). */
   signature_key?: string;
   /** Delete notifications often omit top-level public_id and use resources[]. */
@@ -99,18 +111,105 @@ function resourceTypeToAssetType(resourceType: string): "image" | "video" | "doc
   return "document";
 }
 
-// IPI-513: brand-folder and campaign-folder uploads resolve to a real brand_id.
-// Shoot-folder uploads (ipix/shoots/{id}/raw) stay unresolved — assets.shoot_id's FK
-// targets the legacy public.shoots table, which has no brand_id column at all; the
-// schema that does (shoot.shoots) isn't what assets.shoot_id references, and the
-// Cloudinary webhook never writes to shoot.shoot_assets either. This is an
-// architecture decision, not a missing lookup — tracked in IPI-524
-// (SHOOT-ARCH-001) rather than patched here.
-async function resolveBrandId(
+function readContextField(bag: Record<string, unknown>, key: string): string | undefined {
+  const value = bag[key];
+  return typeof value === "string" && UUID_RE.test(value) ? value : undefined;
+}
+
+/**
+ * Extract brand_id / org_id from Cloudinary upload context.
+ * Supports pipe strings, flat objects, and Cloudinary's `{ custom: { … } }` shape.
+ */
+export function parseOwnershipFromCloudinaryContext(context: unknown): {
+  brandId?: string;
+  orgId?: string;
+} {
+  if (context == null) return {};
+
+  if (typeof context === "string") {
+    const out: { brandId?: string; orgId?: string } = {};
+    for (const part of context.split("|")) {
+      const eq = part.indexOf("=");
+      if (eq < 0) continue;
+      const key = part.slice(0, eq);
+      const value = part.slice(eq + 1);
+      if (!UUID_RE.test(value)) continue;
+      if (key === "brand_id") out.brandId = value;
+      else if (key === "org_id") out.orgId = value;
+    }
+    return out;
+  }
+
+  if (typeof context !== "object" || Array.isArray(context)) return {};
+
+  const root = context as Record<string, unknown>;
+  const custom =
+    typeof root.custom === "object" && root.custom !== null && !Array.isArray(root.custom)
+      ? (root.custom as Record<string, unknown>)
+      : undefined;
+
+  return {
+    brandId: readContextField(root, "brand_id") ?? (custom ? readContextField(custom, "brand_id") : undefined),
+    orgId: readContextField(root, "org_id") ?? (custom ? readContextField(custom, "org_id") : undefined),
+  };
+}
+
+/** Parse brand_id from new taxonomy path `ipix/{env}/{orgId}/{brandId}/{workType}...`. */
+export function parseTaxonomyBrandId(path: string): { brandId: string; orgId: string; workType: string } | null {
+  const match = TAXONOMY_FOLDER_RE.exec(path);
+  if (!match) return null;
+  const [, env, orgId, brandId, workType] = match;
+  if (!ENV_SET.has(env.toLowerCase())) return null;
+  if (!WORK_TYPE_SET.has(workType.toLowerCase())) return null;
+  return { brandId, orgId, workType: workType.toLowerCase() };
+}
+
+async function validateContextBrand(
+  db: ReturnType<typeof createSupabaseAdminClient>,
+  brandId: string,
+  orgId?: string,
+): Promise<{ brandId: string | null; reason: string }> {
+  const { data, error } = await db
+    .from("brands")
+    .select("id, org_id")
+    .eq("id", brandId)
+    .maybeSingle();
+  if (error) {
+    console.error("[cloudinary/webhook] brand lookup failed:", error.message);
+    return { brandId: null, reason: "context_brand_lookup_failed" };
+  }
+  if (!data) return { brandId: null, reason: "context_brand_not_found" };
+  if (orgId && data.org_id && data.org_id !== orgId) {
+    return { brandId: null, reason: "context_org_mismatch" };
+  }
+  return { brandId: data.id, reason: "context_brand_resolved" };
+}
+
+// Ownership resolution order (IPI-60):
+// 1. trusted context brand_id (+ optional org_id cross-check via brands table)
+// 2. new taxonomy folder ipix/{env}/{orgId}/{brandId}/{workType}...
+// 3. legacy brand / campaign / shoot folder parsers
+// 4. unresolved → no_ownership_signal
+//
+// Legacy shoot folders (ipix/shoots/{id}) stay unresolved — tracked in IPI-524.
+// New taxonomy shoot paths include brand_id in the folder and resolve normally.
+export async function resolveBrandId(
   db: ReturnType<typeof createSupabaseAdminClient>,
   folder: string,
   publicId: string,
+  context?: unknown,
 ): Promise<{ brandId: string | null; reason: string }> {
+  const fromContext = parseOwnershipFromCloudinaryContext(context);
+  if (fromContext.brandId) {
+    return validateContextBrand(db, fromContext.brandId, fromContext.orgId);
+  }
+
+  const taxonomy =
+    parseTaxonomyBrandId(folder) ?? parseTaxonomyBrandId(publicId);
+  if (taxonomy) {
+    return { brandId: taxonomy.brandId, reason: "taxonomy_folder_resolved" };
+  }
+
   const brandMatch = BRAND_FOLDER_RE.exec(folder) ?? BRAND_FOLDER_RE.exec(publicId);
   if (brandMatch) return { brandId: brandMatch[1], reason: "brand_folder_resolved" };
 
@@ -668,7 +767,7 @@ async function handleUpload(
   }
 
   const folder = payload.folder ?? payload.asset_folder ?? publicId;
-  const { brandId, reason } = await resolveBrandId(db, folder, publicId);
+  const { brandId, reason } = await resolveBrandId(db, folder, publicId, payload.context);
   const identity = mapProviderIdentity(payload);
 
   let priorLookup: MirrorLookup = identity.cloudinary_asset_id

@@ -2,8 +2,15 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { ChevronRight, ExternalLink } from "lucide-react";
+
+import { useSetCrmChatContext } from "@/context/crm-chat-context";
+import {
+  countOpenDeals,
+  daysSinceLastActivity,
+  primaryOpenDealStageLabel,
+} from "@/lib/crm/derive-crm-chat-context";
 
 import { EntityList } from "@/components/ui/entity-list";
 import { ErrorState } from "@/components/ui/error-state";
@@ -13,6 +20,7 @@ import type { ContactRow } from "@/lib/crm/queries";
 import { crmStatusDotToken, crmStatusLabel } from "@/lib/crm/status-tokens";
 import { ActivityTimeline } from "./activity-timeline";
 import { CrmAvatar } from "./crm-avatar";
+import { CrmCreateDialog } from "./crm-create-dialog";
 import { CrmDetailShell, DealsTab, OverviewFields } from "./crm-detail-shell";
 import styles from "./company-detail-workspace.module.css";
 import shellStyles from "./crm-detail-shell.module.css";
@@ -47,6 +55,19 @@ type Props = {
 export function CompanyDetailWorkspace({ data, fetchError }: Props) {
   const router = useRouter();
   const [tab, setTab] = useState<TabId>("overview");
+
+  const chatContext = useMemo(() => {
+    if (fetchError || !data) return {};
+    const { company, deals, activities } = data;
+    return {
+      companyName: company.name,
+      dealStage: primaryOpenDealStageLabel(deals),
+      lastActivityDays: daysSinceLastActivity(activities),
+      openDealsCount: countOpenDeals(deals),
+      crmRecordLoaded: true,
+    };
+  }, [data, fetchError]);
+  useSetCrmChatContext(chatContext);
 
   if (fetchError || !data) {
     return (
@@ -101,7 +122,14 @@ export function CompanyDetailWorkspace({ data, fetchError }: Props) {
     >
       {tab === "overview" ? <OverviewTab company={company} ownerName={ownerName} /> : null}
       {tab === "contacts" ? <ContactsTab contacts={contacts} /> : null}
-      {tab === "deals" ? <DealsTab deals={deals} /> : null}
+      {tab === "deals" ? (
+        <div className={styles.dealsTab}>
+          <div className={styles.dealsTabHeader}>
+            <CrmCreateDialog kind="deal" triggerLabel="New deal" companyId={company.id} />
+          </div>
+          <DealsTab deals={deals} />
+        </div>
+      ) : null}
       {tab === "activity" ? <ActivityTimeline activities={activities} /> : null}
     </CrmDetailShell>
   );

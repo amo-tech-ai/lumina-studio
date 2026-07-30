@@ -153,7 +153,10 @@ function CommandCenterAndDetailSections({
   return (
     <>
       {showOverview && brandDetailMode && !scores ? (
-        <BrandDetailNoDnaBlock brandName={data.brand?.name ?? "This brand"} />
+        <BrandDetailNoDnaBlock
+          brandId={activeBrandId ?? data.brand?.id ?? null}
+          brandName={data.brand?.name ?? "This brand"}
+        />
       ) : null}
 
       {showOverview && health && scores ? (

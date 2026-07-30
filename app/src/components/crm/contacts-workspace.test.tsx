@@ -4,9 +4,16 @@ import { render, screen, fireEvent, cleanup } from "@testing-library/react";
 
 vi.mock("./crm-list-workspace.module.css", () => ({ default: new Proxy({}, { get: (_, k) => String(k) }) }));
 vi.mock("./crm-avatar.module.css", () => ({ default: new Proxy({}, { get: (_, k) => String(k) }) }));
+vi.mock("./crm-create-dialog.module.css", () => ({ default: new Proxy({}, { get: (_, k) => String(k) }) }));
 vi.mock("../ui/entity-list.module.css", () => ({ default: new Proxy({}, { get: (_, k) => String(k) }) }));
 vi.mock("../ui/empty-state.module.css", () => ({ default: new Proxy({}, { get: (_, k) => String(k) }) }));
 vi.mock("../ui/error-state.module.css", () => ({ default: new Proxy({}, { get: (_, k) => String(k) }) }));
+
+vi.mock("@/app/(operator)/app/crm/actions", () => ({
+  createCompanyAction: vi.fn(),
+  createContactAction: vi.fn(),
+  createDealAction: vi.fn(),
+}));
 
 const refresh = vi.fn();
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh }) }));
@@ -102,14 +109,12 @@ describe("ContactsWorkspace", () => {
     expect(screen.queryByText("Kit Rho")).toBeNull();
   });
 
-  it("shows a genuine EmptyState with a disabled New-person CTA (DC parity — no create flow wired yet)", () => {
+  it("shows a genuine EmptyState with an enabled New-person create CTA", () => {
     render(<ContactsWorkspace contacts={[]} companyNames={{}} fetchError={null} />);
     expect(screen.getByText("No contacts yet")).toBeDefined();
-    // Two "New person" buttons exist now: the header's (already-existing) and the
-    // new empty-state CTA. Both are disabled — assert on the pair, not just one.
     const ctas = screen.getAllByRole("button", { name: /New person/ });
-    expect(ctas).toHaveLength(2);
-    for (const cta of ctas) expect(cta).toHaveProperty("disabled", true);
+    expect(ctas.length).toBeGreaterThanOrEqual(1);
+    for (const cta of ctas) expect(cta).toHaveProperty("disabled", false);
   });
 
   it("shows ErrorState with a working retry that re-runs the server fetch", () => {
@@ -117,5 +122,23 @@ describe("ContactsWorkspace", () => {
     expect(screen.getByRole("alert")).toBeDefined();
     fireEvent.click(screen.getByRole("button", { name: "Try again" }));
     expect(refresh).toHaveBeenCalledOnce();
+  });
+
+  it("filters by Organization and Role chips from loaded rows (IPI-562 Phase 2)", () => {
+    const contacts = [
+      contact({ id: "p1", name: "Dana Vale", company_id: "c1", role_title: "Brand Director" }),
+      contact({ id: "p2", name: "Kit Rho", company_id: "c2", role_title: "Photographer" }),
+    ];
+    render(
+      <ContactsWorkspace
+        contacts={contacts}
+        companyNames={{ c1: "Acme Athletic", c2: "Vega Studios" }}
+        fetchError={null}
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Role" }));
+    expect(screen.getByRole("button", { name: "Brand Director" }).getAttribute("aria-pressed")).toBe("true");
+    expect(screen.getByText("Dana Vale")).toBeDefined();
+    expect(screen.queryByText("Kit Rho")).toBeNull();
   });
 });

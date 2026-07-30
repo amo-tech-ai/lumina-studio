@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { Calendar, ChevronRight, Zap } from "lucide-react";
+import { toast } from "sonner";
 
 import { BrandDetailAnalysingCard } from "@/components/brand-hub/brand-detail-analysing-card";
 import { AnalysisProgressBanner } from "@/components/brand-hub/analysis-progress-banner";
@@ -116,7 +117,14 @@ export function BrandDetailWorkspace({
     setStartingAnalysis(true);
     try {
       const result = await reanalyzeBrand(brandId);
-      if (result.ok) router.refresh();
+      if (result.ok) {
+        router.refresh();
+      } else {
+        // IPI-722 — a real, server-returned failure (e.g. no website URL,
+        // analysis already running) was previously discarded here, leaving
+        // the button silently doing nothing. Never a silent no-op.
+        toast.error(result.error);
+      }
     } finally {
       setStartingAnalysis(false);
     }

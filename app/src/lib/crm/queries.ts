@@ -130,12 +130,14 @@ export async function listDeals(
     orgId,
     stage,
     companyId,
-  }: { orgId: string; stage?: string; companyId?: string },
+    owner,
+  }: { orgId: string; stage?: string; companyId?: string; owner?: string },
   client: Db,
 ): Promise<DealRow[]> {
   let q = client.from("crm_deals").select("*").eq("org_id", orgId);
   if (stage) q = q.eq("stage", stage);
   if (companyId) q = q.eq("company_id", companyId);
+  if (owner) q = q.eq("owner", owner);
   const { data, error } = await q.order("created_at", { ascending: false });
   if (error) throw error;
   return data ?? [];

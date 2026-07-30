@@ -11,11 +11,14 @@ import {
   useFrontendTool,
   CopilotChatConfigurationProvider,
 } from "@copilotkit/react-core/v2";
+import dynamic from "next/dynamic";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useMemo, useState } from "react";
+import { toast } from "sonner";
 import { z } from "zod";
 
 import { useHideInternalToolCalls } from "@/components/copilot/copilot-tool-presentation";
+import { useCrmDraftFollowUpRender } from "@/components/crm/follow-up-draft-card";
 import { IntelligencePanel } from "@/components/intelligence-panel";
 import { ThreadsDrawer } from "@/components/threads-drawer";
 import { ThreadsPanelGate } from "@/components/threads-drawer/locked-state";
@@ -23,8 +26,9 @@ import { useActiveBrand } from "@/context/active-brand-context";
 import { useHeroBrandSync } from "@/lib/active-brand/use-hero-brand-sync";
 import { DEV_PREVIEW_HERO_BRAND_ID, isDevPreviewBrandId, isDevSkipMode } from "./dev-skip-fixture";
 import { IntelligenceDetailProvider } from "@/context/intelligence-detail-context";
+import { CrmChatProvider, useCrmChatContext } from "@/context/crm-chat-context";
 import { NavSidebar } from "./nav-sidebar";
-import { OperatorChatDock } from "./operator-chat-dock";
+import { MobileSignOutBar } from "./mobile-sign-out-bar";
 import { useOperatorBrands } from "./use-operator-brands";
 import { useUnreadNotifications } from "./use-unread-notifications";
 import styles from "./operator-shell.module.css";
@@ -32,10 +36,19 @@ import { resolveAgentId } from "@/lib/route-agent-map";
 import { routeBrandId, routeShootId } from "@/lib/intelligence/normalize-route-path";
 import { useRouteWelcome } from "@/lib/intelligence/use-route-welcome";
 import { useRouteSuggestions } from "@/lib/intelligence/use-route-suggestions";
-
-const SECTIONS = ["brand", "onboarding", "shoots", "assets", "campaigns", "matching", "preview", "crm"] as const;
+import { NAV_TARGETS, resolveNavigateToPath } from "./navigate-to-path";
 
 const CRM_PAGES = ["companies", "contacts", "pipeline"] as const;
+
+// IPI-706 · CF-BUNDLE-220 — client-only import boundary for the Worker bundle-size
+// gate. OperatorChatDock renders <CopilotChat>, which drags @copilotkit/react-core/v2's
+// message-view rendering (-> streamdown -> mermaid/cytoscape/katex, ~1.2-1.5 MiB
+// uncompressed) into the server bundle. ssr:false excludes that import from the server
+// compilation; `loading` mirrors .chatDock's box so the dock doesn't visibly pop in.
+const OperatorChatDock = dynamic(
+  () => import("./operator-chat-dock").then((m) => m.OperatorChatDock),
+  { ssr: false, loading: () => <div className={styles.chatDockSkeleton} aria-hidden="true" /> },
+);
 
 export function OperatorPanel({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -44,15 +57,17 @@ export function OperatorPanel({ children }: { children: React.ReactNode }) {
   useEffect(() => { setThreadId(undefined); }, [agentId]);
   return (
     <IntelligenceDetailProvider>
-      <CopilotChatConfigurationProvider agentId={agentId} threadId={threadId}>
-        <div data-agent-id={agentId} style={{ display: "contents" }}>
-          <Suspense fallback={<OperatorShellFallback agentId={agentId} />}>
-            <OperatorShell agentId={agentId} threadId={threadId} onThreadChange={setThreadId}>
-              {children}
-            </OperatorShell>
-          </Suspense>
-        </div>
-      </CopilotChatConfigurationProvider>
+      <CrmChatProvider>
+        <CopilotChatConfigurationProvider agentId={agentId} threadId={threadId}>
+          <div data-agent-id={agentId} style={{ display: "contents" }}>
+            <Suspense fallback={<OperatorShellFallback agentId={agentId} />}>
+              <OperatorShell agentId={agentId} threadId={threadId} onThreadChange={setThreadId}>
+                {children}
+              </OperatorShell>
+            </Suspense>
+          </div>
+        </CopilotChatConfigurationProvider>
+      </CrmChatProvider>
     </IntelligenceDetailProvider>
   );
 }
@@ -84,8 +99,19 @@ function OperatorShell({
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const skip = searchParams.get("skip");
+  const signoutError = searchParams.get("signoutError");
   const devSkip = isDevSkipMode(skip);
   const [threadsOpen, setThreadsOpen] = useState(false);
+
+  // IPI-725 — /auth/signout redirects here on failure; surface it (do not land on /login).
+  useEffect(() => {
+    if (signoutError !== "1") return;
+    toast.error("Sign out failed. Your session may still be active — try again.");
+    const next = new URLSearchParams(searchParams.toString());
+    next.delete("signoutError");
+    const q = next.toString();
+    router.replace(q ? `${pathname}?${q}` : pathname);
+  }, [signoutError, searchParams, pathname, router]);
   const { activeBrandId, setActiveBrandId } = useActiveBrand();
   const { brands, brandsRef, brandsLoadingRef } = useOperatorBrands(devSkip);
   const unreadNotifications = useUnreadNotifications();
@@ -106,6 +132,7 @@ function OperatorShell({
   }, [devSkip, activeBrandId, setActiveBrandId]);
 
   useHideInternalToolCalls();
+  useCrmDraftFollowUpRender();
 
   const routeBrandIdFromPath = useMemo(() => routeBrandId(pathname), [pathname]);
   const routeShootIdFromPath = useMemo(() => routeShootId(pathname), [pathname]);
@@ -113,6 +140,7 @@ function OperatorShell({
     () => brands.find((b) => b.id === routeBrandIdFromPath)?.name,
     [brands, routeBrandIdFromPath],
   );
+  const crmChat = useCrmChatContext();
 
   // Keep active brand aligned with brand detail URLs
   useEffect(() => {
@@ -135,10 +163,13 @@ function OperatorShell({
 
   useFrontendTool({
     name: "navigateTo",
-    description: "Open an operator workspace section.",
-    parameters: z.object({ section: z.enum(SECTIONS) }),
+    description:
+      "Open an operator workspace section or the shoot wizard. " +
+      "Use section shoot-wizard for /app/shoots/new (plan a new production). " +
+      "Use section shoots for the shoots list (/app/shoots).",
+    parameters: z.object({ section: z.enum(NAV_TARGETS) }),
     handler: async ({ section }) => {
-      router.push(section === "crm" ? "/app/crm/companies" : `/app/${section}`);
+      router.push(resolveNavigateToPath(section));
       return `Opening ${section}.`;
     },
   });
@@ -184,6 +215,17 @@ function OperatorShell({
       brandName: routeBrandName,
       brandCount: brands.length,
       hasBrands: brands.length > 0,
+      companyCount: crmChat.companyCount,
+      openDealsCount: crmChat.openDealsCount,
+      companyName: crmChat.companyName,
+      dealStage: crmChat.dealStage,
+      lastActivityDays: crmChat.lastActivityDays,
+      contactCount: crmChat.contactCount,
+      contactName: crmChat.contactName,
+      pipelineValue: crmChat.pipelineValue,
+      atRiskCount: crmChat.atRiskCount,
+      dealName: crmChat.dealName,
+      value: crmChat.value,
     },
   });
 
@@ -194,6 +236,11 @@ function OperatorShell({
       hasBrands: brands.length > 0,
       brandLoaded: Boolean(routeBrandIdFromPath),
       shootLoaded: Boolean(routeShootIdFromPath),
+      crmRecordLoaded: crmChat.crmRecordLoaded,
+      companyName: crmChat.companyName,
+      contactName: crmChat.contactName,
+      dealName: crmChat.dealName,
+      atRiskCount: crmChat.atRiskCount,
     },
   });
 
@@ -218,6 +265,8 @@ function OperatorShell({
 
       {/* Center — page content + bottom chat dock (DC PersistentChatDock) */}
       <main className={styles.content}>
+        {/* IPI-725 — nav rail is display:none below 768px; keep Sign out reachable */}
+        <MobileSignOutBar />
         <div className={styles.contentScroll}>{children}</div>
         <OperatorChatDock welcomeText={welcomeText} />
       </main>

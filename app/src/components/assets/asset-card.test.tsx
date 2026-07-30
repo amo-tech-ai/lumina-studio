@@ -1,11 +1,30 @@
 // @vitest-environment jsdom
 import { describe, expect, it, afterEach, vi } from "vitest";
-import { render, screen, cleanup } from "@testing-library/react";
+import { render, screen, cleanup, fireEvent } from "@testing-library/react";
 
 vi.mock("./assets-workspace.module.css", () => ({ default: new Proxy({}, { get: (_, k) => String(k) }) }));
 vi.mock("../ui/status-chip.module.css", () => ({ default: new Proxy({}, { get: (_, k) => String(k) }) }));
 vi.mock("next/image", () => ({
-  default: (props: { alt: string; src: string }) => <img alt={props.alt} src={props.src} />,
+  default: (props: { alt: string; src: string; onError?: () => void }) => (
+    <img alt={props.alt} src={props.src} onError={props.onError} />
+  ),
+}));
+vi.mock("next/link", () => ({
+  default: ({
+    href,
+    children,
+    ...rest
+  }: {
+    href: string;
+    children: React.ReactNode;
+    className?: string;
+    "data-testid"?: string;
+    "data-asset-id"?: string;
+  }) => (
+    <a href={href} {...rest}>
+      {children}
+    </a>
+  ),
 }));
 
 import { AssetCard } from "./asset-card";
@@ -47,6 +66,11 @@ function asset(overrides: Partial<AssetRow> = {}): AssetRow {
 }
 
 describe("AssetCard", () => {
+  it("links the tile to the asset detail route", () => {
+    render(<AssetCard asset={asset()} />);
+    expect(screen.getByTestId("asset-card").getAttribute("href")).toBe("/app/assets/a1");
+  });
+
   it("renders the real asset type and date — never a fabricated name", () => {
     render(<AssetCard asset={asset()} />);
     expect(screen.getByTestId("asset-card").getAttribute("data-asset-id")).toBe("a1");
@@ -89,9 +113,44 @@ describe("AssetCard", () => {
     );
   });
 
+  it("swaps to the icon fallback when an authenticated thumb fails to load (IPI-757 A2)", () => {
+    const { container } = render(
+      <AssetCard
+        asset={asset({
+          displayUrl:
+            "https://res.cloudinary.com/dzqy2ixl0/image/authenticated/s--abc123--/c_limit,w_600,f_auto,q_auto/missing-upload",
+        })}
+      />,
+    );
+    const img = container.querySelector("img");
+    expect(img).not.toBeNull();
+    fireEvent.error(img!);
+    expect(container.querySelector("img")).toBeNull();
+    expect(container.querySelector(".iconFallback")).not.toBeNull();
+  });
+
+  it("retries the thumb when displayUrl changes after a prior load failure (same asset.id)", () => {
+    const broken =
+      "https://res.cloudinary.com/dzqy2ixl0/image/authenticated/s--abc123--/c_limit,w_600,f_auto,q_auto/missing-upload";
+    const recovered =
+      "https://res.cloudinary.com/dzqy2ixl0/image/authenticated/s--abc123--/c_limit,w_600,f_auto,q_auto/recovered-upload";
+    const { container, rerender } = render(<AssetCard asset={asset({ displayUrl: broken })} />);
+    fireEvent.error(container.querySelector("img")!);
+    expect(container.querySelector("img")).toBeNull();
+
+    rerender(<AssetCard asset={asset({ displayUrl: recovered })} />);
+    expect(container.querySelector("img")?.getAttribute("src")).toBe(recovered);
+  });
+
   it("falls back to a file icon (never a broken <img>) when displayUrl is null", () => {
     const { container } = render(<AssetCard asset={asset({ displayUrl: null })} />);
     expect(container.querySelector("img")).toBeNull();
+  });
+
+  it("falls back to a file icon when displayUrl is an empty string (never src=\"\")", () => {
+    const { container } = render(<AssetCard asset={asset({ displayUrl: "" })} />);
+    expect(container.querySelector("img")).toBeNull();
+    expect(container.querySelector(".iconFallback")).not.toBeNull();
   });
 
   it("renders a video icon fallback instead of an image for video assets", () => {

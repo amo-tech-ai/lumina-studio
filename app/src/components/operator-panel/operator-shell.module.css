@@ -22,6 +22,17 @@
   background: var(--background);
 }
 
+/* IPI-725 — Sign out bar when MobileSignOutBar mounts (≤768px). */
+.mobileAuthBar {
+  display: flex;
+  flex-shrink: 0;
+  justify-content: flex-end;
+  align-items: center;
+  padding: 0.375rem 0.75rem;
+  border-bottom: 1px solid var(--border);
+  background: var(--background);
+}
+
 .contentScroll {
   flex: 1;
   min-height: 0;
@@ -40,6 +51,15 @@
   max-width: 51.25rem;
   margin: 0 auto;
   min-height: 0;
+}
+
+/* IPI-706 — placeholder while OperatorChatDock's dynamic(ssr:false) chunk loads,
+   sized to roughly match the collapsed dock so it doesn't visibly pop in. */
+.chatDockSkeleton {
+  flex-shrink: 0;
+  min-height: 3.5rem;
+  border-top: 1px solid var(--border);
+  background: var(--background);
 }
 
 /* DC L306–317 — compact input row; CopilotChat supplies the full dock chrome */

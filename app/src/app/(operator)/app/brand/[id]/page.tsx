@@ -7,6 +7,11 @@ import { computeDnaScore } from "@/lib/brand-scores";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
+// IPI-738 — reanalyzeBrand can now wait up to ~50s for a first-time Firecrawl
+// crawl before calling brand-intelligence (whose own Gemini/Groq call has up
+// to a 55s timeout). Default serverless duration limits are too short for
+// that combined path.
+export const maxDuration = 120;
 
 interface Props {
   params: Promise<{ id: string }>;

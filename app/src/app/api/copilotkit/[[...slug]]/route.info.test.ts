@@ -15,6 +15,20 @@ afterEach(() => {
   vi.resetModules();
 });
 
+/** IPI-146 · MASTRA-GOV-002 — org resolution runs on every request now; these
+ *  /info + SSE-normalization tests care about downstream behavior, not org
+ *  scoping itself, so default to a successful org lookup unless a test
+ *  overrides it. Thread ownership isn't exercised here (no `threadId` in any
+ *  request body below). */
+function mockOrgScopeDeps() {
+  vi.doMock("@/lib/shoot/commit-shoot-draft", () => ({
+    createUserScopedClient: vi.fn(() => ({})),
+  }));
+  vi.doMock("@/lib/crm/queries", () => ({
+    getCurrentOrgId: vi.fn().mockResolvedValue("org-info-test"),
+  }));
+}
+
 async function importRouteWithMocks() {
   vi.doMock("@/lib/operator-gate", async () => {
     const actual = await vi.importActual<typeof import("@/lib/operator-gate")>(
@@ -31,6 +45,20 @@ async function importRouteWithMocks() {
     };
   });
 
+  // IPI-146: route.ts now fails closed with 401 before org resolution when
+  // extractAccessToken finds no token — these tests bypass real auth via the
+  // withOperatorAuth mock above and never set a real Authorization header, so
+  // extractAccessToken needs its own mock too (same pattern as
+  // route.runtime.test.ts). These /info + SSE-normalization tests care about
+  // downstream behavior, not the token itself.
+  vi.doMock("@/lib/auth", async () => {
+    const actual = await vi.importActual<typeof import("@/lib/auth")>("@/lib/auth");
+    return {
+      ...actual,
+      extractAccessToken: vi.fn().mockReturnValue("info-test-token"),
+    };
+  });
+
   vi.doMock("@ag-ui/mastra", () => ({
     MastraAgent: {
       getLocalAgents: vi.fn().mockResolvedValue(mockAgents),
@@ -40,6 +68,8 @@ async function importRouteWithMocks() {
   vi.doMock("@/mastra", () => ({
     getMastra: vi.fn(() => ({ agents: mockAgents })),
   }));
+
+  mockOrgScopeDeps();
 
   return import("@/app/api/copilotkit/[[...slug]]/route");
 }
@@ -94,6 +124,8 @@ describe("CopilotKit /info — SSE discovery (IPI-670 · COPILOT-RUNTIME-001)", 
     vi.doMock("@/mastra", () => ({
       getMastra: vi.fn(() => ({})),
     }));
+
+    mockOrgScopeDeps();
 
     const route = await import("@/app/api/copilotkit/[[...slug]]/route");
     const response = await route.GET(

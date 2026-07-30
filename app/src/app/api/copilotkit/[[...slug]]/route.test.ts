@@ -18,9 +18,13 @@ describe("CopilotKit route — operator auth boundary (IPI2-127)", () => {
     }
   });
 
-  it("passes resourceId from the resolved operator identity to getLocalAgents", () => {
+  it("passes the org-scoped resourceId (IPI-146), not bare user.id, to getLocalAgents", () => {
     const src = readFileSync(ROUTE, "utf8");
-    expect(src).toMatch(/resourceId:\s*user\.id/);
+    // Post-IPI-146: resourceId is resolved via makeMemoryResourceId(orgId, user.id)
+    // in handler() and read from ALS in the factory — never `resourceId: user.id`.
+    expect(src).toMatch(/const resourceId = _requestResourceId\.getStore\(\)/);
+    expect(src).toMatch(/resourceId,\s*\n\s*requestContext,/);
+    expect(src).not.toMatch(/resourceId:\s*user\.id/);
   });
 
   it("passes requestContext with userId and email via RequestContext.set()", () => {
@@ -86,7 +90,7 @@ describe("CopilotKit route — Mastra resourceId isolation (IPI2-127)", () => {
     const src = readFileSync(ROUTE, "utf8");
     // The only getLocalAgents call is inside the factory, after reading the ALS store
     const factoryStart = src.indexOf("agents: async");
-    const factoryBlock = src.slice(factoryStart, factoryStart + 600);
+    const factoryBlock = src.slice(factoryStart, factoryStart + 1500);
     const alsReadPos = factoryBlock.indexOf("_requestUser.getStore");
     const agentsPos = factoryBlock.indexOf("getLocalAgents");
     expect(alsReadPos).toBeGreaterThan(-1);
@@ -106,13 +110,28 @@ describe("CopilotKit route — Mastra resourceId isolation (IPI2-127)", () => {
     expect(beforeFactory).not.toMatch(/getLocalAgents/);
   });
 
-  it("resourceId is derived from server-validated user.id, not a fallback", () => {
+  it("resourceId is org-scoped (IPI-146), derived from server-validated user.id + org, not a fallback", () => {
     const src = readFileSync(ROUTE, "utf8");
-    expect(src).toMatch(/resourceId:\s*user\.id/);
+    expect(src).toMatch(/makeMemoryResourceId\(orgId, user\.id\)/);
+    expect(src).not.toMatch(/resourceId:\s*user\.id/);
     // No anonymous or shared resource id
     expect(src).not.toMatch(/resourceId:\s*["']shared["']/);
     expect(src).not.toMatch(/resourceId:\s*["']demo["']/);
     expect(src).not.toMatch(/resourceId:\s*["']anonymous["']/);
+  });
+
+  it("fails closed (403) when the operator has no organization membership — no bare user.id fallback", () => {
+    const src = readFileSync(ROUTE, "utf8");
+    expect(src).toMatch(/No organization membership for operator/);
+    expect(src).toMatch(/status:\s*403/);
+    expect(src).toMatch(/org_required/);
+  });
+
+  it("rejects a thread whose stored resourceId doesn't match the caller's org-scoped resourceId (IPI-146)", () => {
+    const src = readFileSync(ROUTE, "utf8");
+    expect(src).toMatch(/assertThreadOwnership/);
+    expect(src).toMatch(/rejectTenantKeyRewrite/);
+    expect(src).toMatch(/thread_forbidden/);
   });
 
   it("rejects anonymous requests with 401 when OPERATOR_AUTH_ENABLED is true", () => {

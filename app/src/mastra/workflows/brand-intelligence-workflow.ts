@@ -23,10 +23,11 @@ function edgeFnUrl(fn: string) {
 }
 
 // Step 1: validate brand exists and return basic info
-const validateBrand = createStep({
+export const validateBrand = createStep({
   id: "validate-brand",
   inputSchema: z.object({
     brandId: z.string().uuid(),
+    actorId: z.string().uuid(),
     accessToken: z.string(),
   }),
   outputSchema: z.object({
@@ -35,15 +36,36 @@ const validateBrand = createStep({
     brandName: z.string(),
   }),
   execute: async ({ inputData, getInitData }) => {
-    const { userId } = getInitData<{ userId: string }>();
+    // actorId is verified at the request boundary; re-checked here as defense in
+    // depth so a run can never outlive the caller's authorization (IPI-812).
+    const { actorId } = getInitData<{ actorId: string }>();
     const sb = adminClient();
     const { data: brand, error } = await sb
       .from("brands")
-      .select("id, brand_url, name")
+      .select("id, brand_url, name, org_id, user_id")
       .eq("id", inputData.brandId)
-      .eq("user_id", userId)
-      .single();
-    if (error || !brand) throw new Error(`Brand not found or not owned by this user: ${inputData.brandId}`);
+      .maybeSingle();
+    // Split the two cases: a DB/network failure must not be reported as "not found".
+    if (error) throw new Error(`Failed to read brand ${inputData.brandId}: ${error.message}`);
+    if (!brand) throw new Error(`Brand not found: ${inputData.brandId}`);
+
+    // Service role bypasses RLS and auth.uid() is NULL here, so is_org_editor_or_above
+    // would always return false — check membership against actorId directly instead.
+    if (brand.org_id) {
+      const { data: member, error: memberErr } = await sb
+        .from("org_members")
+        .select("role")
+        .eq("org_id", brand.org_id)
+        .eq("user_id", actorId)
+        .maybeSingle();
+      if (memberErr) throw new Error(`Failed to check org membership: ${memberErr.message}`);
+      if (!member || !["owner", "editor"].includes(member.role)) {
+        throw new Error("Not authorized to analyze this brand");
+      }
+    } else if (brand.user_id !== actorId) {
+      throw new Error("Not authorized to analyze this brand");
+    }
+
     if (!brand.brand_url) throw new Error("Brand has no website URL");
     // Atomic guard: only proceed if brand is not already in a running/ready state.
     // Mirrors the reanalyzeBrand action pattern to prevent concurrent run corruption.
@@ -195,9 +217,9 @@ export const saveDraftAndWait = createStep({
   resumeSchema: z.object({ approved: z.boolean() }),
   suspendSchema: z.object({ brandId: z.string(), draftId: z.string() }),
   execute: async ({ suspend, resumeData, suspendData, getInitData, runId }) => {
-    const { brandId, userId } = getInitData<{
+    const { brandId, actorId } = getInitData<{
       brandId: string;
-      userId: string;
+      actorId: string;
     }>();
 
     if (!resumeData) {
@@ -223,7 +245,7 @@ export const saveDraftAndWait = createStep({
         .upsert(
           {
             brand_id: brandId,
-            user_id: userId,
+            user_id: actorId,
             source_url: brandRow?.brand_url ?? "",
             status: "pending_approval",
             approved_at: null,
@@ -305,7 +327,9 @@ export const brandIntelligenceWorkflow = createWorkflow({
   description: "Crawl → profile → enrichment → HITL approval → commit",
   inputSchema: z.object({
     brandId: z.string().uuid(),
-    userId: z.string(),
+    // Verified JWT subject. Must be a real UUID — the old `userId: z.string()`
+    // accepted the "dev-unauthenticated" operator-gate fallback (IPI-812).
+    actorId: z.string().uuid(),
     brandUrl: z.string().optional(),
     accessToken: z.string(),
   }),

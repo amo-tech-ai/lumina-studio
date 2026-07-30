@@ -1,6 +1,7 @@
 /** User-facing tools that must stay visible even if name matches an internal pattern. */
 export const USER_VISIBLE_TOOL_NAMES = new Set([
   "capture_lead",
+  "draftFollowUp",
 ]);
 
 const INTERNAL_TOOL_EXACT = new Set([

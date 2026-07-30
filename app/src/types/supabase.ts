@@ -1602,6 +1602,8 @@ export type Database = {
         Row: {
           ai_profile: Json
           ai_profile_draft: Json | null
+          analysis_lock_token: string | null
+          analysis_locked_at: string | null
           approved_profile_at: string | null
           brand_url: string | null
           created_at: string
@@ -1618,6 +1620,8 @@ export type Database = {
         Insert: {
           ai_profile?: Json
           ai_profile_draft?: Json | null
+          analysis_lock_token?: string | null
+          analysis_locked_at?: string | null
           approved_profile_at?: string | null
           brand_url?: string | null
           created_at?: string
@@ -1634,6 +1638,8 @@ export type Database = {
         Update: {
           ai_profile?: Json
           ai_profile_draft?: Json | null
+          analysis_lock_token?: string | null
+          analysis_locked_at?: string | null
           approved_profile_at?: string | null
           brand_url?: string | null
           created_at?: string
@@ -2133,20 +2139,6 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "crm_activities_company_id_fkey"
-            columns: ["company_id"]
-            isOneToOne: false
-            referencedRelation: "crm_companies"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "crm_activities_contact_id_fkey"
-            columns: ["contact_id"]
-            isOneToOne: false
-            referencedRelation: "crm_contacts"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "crm_activities_created_by_fkey"
             columns: ["created_by"]
             isOneToOne: false
@@ -2154,11 +2146,25 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "crm_activities_deal_id_fkey"
-            columns: ["deal_id"]
+            foreignKeyName: "crm_activities_org_company_fkey"
+            columns: ["org_id", "company_id"]
+            isOneToOne: false
+            referencedRelation: "crm_companies"
+            referencedColumns: ["org_id", "id"]
+          },
+          {
+            foreignKeyName: "crm_activities_org_contact_fkey"
+            columns: ["org_id", "contact_id"]
+            isOneToOne: false
+            referencedRelation: "crm_contacts"
+            referencedColumns: ["org_id", "id"]
+          },
+          {
+            foreignKeyName: "crm_activities_org_deal_fkey"
+            columns: ["org_id", "deal_id"]
             isOneToOne: false
             referencedRelation: "crm_deals"
-            referencedColumns: ["id"]
+            referencedColumns: ["org_id", "id"]
           },
           {
             foreignKeyName: "crm_activities_org_id_fkey"
@@ -2272,11 +2278,11 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "crm_contacts_company_id_fkey"
-            columns: ["company_id"]
+            foreignKeyName: "crm_contacts_org_company_fkey"
+            columns: ["org_id", "company_id"]
             isOneToOne: false
             referencedRelation: "crm_companies"
-            referencedColumns: ["id"]
+            referencedColumns: ["org_id", "id"]
           },
           {
             foreignKeyName: "crm_contacts_org_id_fkey"
@@ -2342,11 +2348,11 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "crm_deals_company_id_fkey"
-            columns: ["company_id"]
+            foreignKeyName: "crm_deals_org_company_fkey"
+            columns: ["org_id", "company_id"]
             isOneToOne: false
             referencedRelation: "crm_companies"
-            referencedColumns: ["id"]
+            referencedColumns: ["org_id", "id"]
           },
           {
             foreignKeyName: "crm_deals_org_id_fkey"
@@ -6822,6 +6828,7 @@ export type Database = {
         Returns: undefined
       }
       expire_stale_bookings: { Args: never; Returns: number }
+      expire_stale_brand_analysis: { Args: never; Returns: number }
       get_booking: { Args: { p_booking_id: string }; Returns: Json }
       get_brand_assets: {
         Args: { p_brand_id: string; p_shoot_id?: string }

@@ -50,10 +50,18 @@ const sqlTests = [
 ];
 
 const skipSql = process.argv.includes("--skip-sql");
+// IPI-810 phase 2 — verify-rls.mjs creates real auth.users / organizations / brands
+// through the Supabase API and its teardown is non-atomic. There is no QA variant of the
+// API credentials, so pull requests pass --skip-api instead of writing to production.
+const skipApi = process.argv.includes("--skip-api");
 const requireSql = process.env.REQUIRE_BOOKING_SQL === "1";
 const dbUrl = process.env.DATABASE_URL;
 
-run("supabase:verify-rls", "node", ["scripts/verify-rls.mjs"]);
+if (skipApi) {
+  console.log("\n▶ supabase:verify-rls skipped (--skip-api) — no QA API project");
+} else {
+  run("supabase:verify-rls", "node", ["scripts/verify-rls.mjs"]);
+}
 
 if (skipSql) {
   console.log("\n▶ SQL integration skipped (--skip-sql)");

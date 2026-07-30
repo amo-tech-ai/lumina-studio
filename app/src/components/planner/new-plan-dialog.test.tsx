@@ -142,14 +142,15 @@ describe("NewPlanDialog", () => {
     await fillValidForm(user);
 
     await user.click(screen.getByRole("button", { name: "Create plan" }));
-    // Waiting on the mock's call count alone is too early: it increments the
-    // instant startTransition's callback starts running, before the awaited
-    // promise settles and isSaving flips back to false (button text still
-    // reads "Creating…", disabled) — wait for the rendered error instead,
-    // which only appears once the first attempt has actually finished.
-    await screen.findByRole("alert", {}, { timeout: 5000 });
-    await user.click(screen.getByRole("button", { name: "Create plan" }));
-    await waitFor(() => expect(createInstanceAction).toHaveBeenCalledTimes(2), { timeout: 5000 });
+    // The submit button's accessible name flips to "Creating…" while the transition
+    // is pending (new-plan-dialog.tsx:278-279), so waiting for it to read "Create plan"
+    // again IS the signal that the first attempt finished. The rendered error is a
+    // weaker proxy: setError and useTransition's isSaving are separate updates, and
+    // React can commit the alert while the transition is still pending — leaving the
+    // button named "Creating…" and a synchronous getByRole below to throw. findByRole
+    // retries, so it settles instead of racing.
+    await user.click(await screen.findByRole("button", { name: "Create plan" }));
+    await waitFor(() => expect(createInstanceAction).toHaveBeenCalledTimes(2));
 
     const firstKey = vi.mocked(createInstanceAction).mock.calls[0][1];
     const secondKey = vi.mocked(createInstanceAction).mock.calls[1][1];
@@ -167,9 +168,9 @@ describe("NewPlanDialog", () => {
     await openDialog(user);
     await fillValidForm(user);
     await user.click(screen.getByRole("button", { name: "Create plan" }));
-    // Same reasoning as the retry test above — wait for the error to render
-    // (attempt actually finished), not just the mock call count.
-    await screen.findByRole("alert", {}, { timeout: 5000 });
+    // Same signal as the retry test above — the button returning to "Create plan"
+    // means the transition settled, so the first call's key is safe to read.
+    await screen.findByRole("button", { name: "Create plan" });
     const firstKey = vi.mocked(createInstanceAction).mock.calls[0][1];
 
     await user.click(screen.getByRole("button", { name: "Cancel" }));
@@ -177,8 +178,8 @@ describe("NewPlanDialog", () => {
 
     await openDialog(user);
     await fillValidForm(user);
-    await user.click(screen.getByRole("button", { name: "Create plan" }));
-    await waitFor(() => expect(createInstanceAction).toHaveBeenCalledTimes(2), { timeout: 3000 });
+    await user.click(await screen.findByRole("button", { name: "Create plan" }));
+    await waitFor(() => expect(createInstanceAction).toHaveBeenCalledTimes(2));
     const secondKey = vi.mocked(createInstanceAction).mock.calls[1][1];
 
     expect(secondKey).not.toBe(firstKey);

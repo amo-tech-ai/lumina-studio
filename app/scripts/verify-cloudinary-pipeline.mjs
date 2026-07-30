@@ -34,6 +34,7 @@
  *   - CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET
  *   - NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
  *   - CLD105_BRAND_ID (a brand owned by the test operator)
+ *   - CLD105_ORG_ID (optional — org for taxonomy folder; if unset, derived from brands.org_id)
  *   - CLD105_OPERATOR_COOKIE (session cookie) OR CLD105_OPERATOR_EMAIL +
  *     CLD105_OPERATOR_PASSWORD (signed in via Supabase Auth). If neither is set,
  *     relies on OPERATOR_AUTH_ENABLED=false dev bypass.
@@ -88,14 +89,55 @@ export const ASSET_MASONRY_TRANSFORM = "c_limit,w_600,f_auto,q_auto";
 const REQUEST_TIMEOUT_MS = 15_000;
 
 // Default test scope for unit tests (no brand). Live fixtures use
-// testScopeForBrand(brandId) and pass the prefix into cleanup — never mutate these.
+// testScopeForBrand(brandId, orgId) and pass the prefix into cleanup — never mutate these.
+// Legacy flat folder — unit-test default for isTestPublicId only (not used by live taxonomy path).
 export const TEST_FOLDER = "ipix/cld105-test";
 export const TEST_PUBLIC_ID_PREFIX = `${TEST_FOLDER}/cld105-`;
 
-/** Brand-scoped folder + public_id prefix for a disposable fixture run. */
-export function testScopeForBrand(brandId) {
-  const testFolder = `ipix/brands/${brandId}/cld105-test`;
-  return { testFolder, testPublicIdPrefix: `${testFolder}/cld105-` };
+/** Mirror of taxonomy.ts detectEnv — plain .mjs can't import the TS module. */
+const DAM_ENVIRONMENTS = ["dev", "staging", "prod"];
+export const FIXTURE_WORK_TYPE = "qa-fixtures";
+
+export function detectDamEnv() {
+  for (const key of ["VERCEL_ENV", "NEXT_PUBLIC_VERCEL_ENV"]) {
+    const val = process.env[key];
+    if (val === "production") return "prod";
+    if (val === "preview" || val === "staging") return "staging";
+  }
+  const override = process.env.DAM_ENV;
+  if (override) {
+    if (DAM_ENVIRONMENTS.includes(override)) return override;
+    throw new Error(
+      `detectDamEnv(): invalid DAM_ENV="${override}" — must be one of ${DAM_ENVIRONMENTS.join(", ")}`,
+    );
+  }
+  if (process.env.NODE_ENV === "production") {
+    throw new Error(
+      'detectDamEnv(): NODE_ENV=production but no VERCEL_ENV/DAM_ENV — refusing to fall back to "dev"',
+    );
+  }
+  return "dev";
+}
+
+/**
+ * Brand-scoped taxonomy folder + public_id prefix for a disposable fixture run.
+ * Shape mirrors taxonomy assetFolderFor: ipix/{env}/{orgId}/{brandId}/qa-fixtures
+ * Live runs: pass orgId from CLD105_ORG_ID or brands.org_id — never hardcode prod orgs.
+ */
+export function testScopeForBrand(brandId, orgId, env) {
+  if (!orgId) {
+    throw new Error(
+      "testScopeForBrand requires orgId (set CLD105_ORG_ID or derive from brands.org_id)",
+    );
+  }
+  const resolvedEnv = env ?? detectDamEnv();
+  const testFolder = `ipix/${resolvedEnv}/${orgId}/${brandId}/${FIXTURE_WORK_TYPE}`;
+  return {
+    testFolder,
+    testPublicIdPrefix: `${testFolder}/cld105-`,
+    workType: FIXTURE_WORK_TYPE,
+    env: resolvedEnv,
+  };
 }
 
 // --- Pure helpers (exported for unit testing) ----------------------------------
@@ -620,6 +662,7 @@ async function signAndUploadTestPng({
   appBaseUrl,
   authHeader,
   brandId,
+  workType,
   testFolder,
   testPublicIdPrefix,
   runId,
@@ -627,11 +670,12 @@ async function signAndUploadTestPng({
   notificationUrl,
   push,
 }) {
+  // upload-sign ignores client folder; workType drives taxonomy asset_folder.
   const signBody = {
     brandId,
     resourceType: "image",
     filename: `${runId}.png`,
-    folder: testFolder,
+    workType: workType ?? FIXTURE_WORK_TYPE,
     ...(notificationUrl ? { notificationUrl } : {}),
   };
   const signRes = await timedFetch(`${appBaseUrl}/api/assets/upload-sign`, {
@@ -648,6 +692,15 @@ async function signAndUploadTestPng({
     throw new Error("upload-signature failed");
   }
   const signed = await signRes.json();
+  // Guard: signed folder must match our fixture scope (taxonomy path).
+  if (signed.assetFolder && signed.assetFolder !== testFolder) {
+    push(
+      "upload-signature",
+      false,
+      `assetFolder=${signed.assetFolder} !== expected ${testFolder}`,
+    );
+    throw new Error("upload-signature folder mismatch");
+  }
   push("upload-signature", true, `folder=${signed.assetFolder}`);
 
   const form = new FormData();
@@ -774,7 +827,6 @@ export async function createDisposableFixture({ skipDna = false, log = true, pro
     "CLD105_BRAND_ID",
     process.env.CLD105_BRAND_ID || DEFAULT_QA_BRAND_ID,
   );
-  const { testFolder, testPublicIdPrefix } = testScopeForBrand(brandId);
 
   const { v2: cloudinary } = requireDep("cloudinary");
   cloudinary.config({
@@ -788,6 +840,24 @@ export async function createDisposableFixture({ skipDna = false, log = true, pro
   const supabaseFactory = (url, key, opts) =>
     createClient(url, key, { auth: { persistSession: false }, ...opts });
   const admin = supabaseFactory(supabaseUrl, serviceRoleKey, {});
+
+  // Taxonomy folder needs orgId. Prefer CLD105_ORG_ID; else brands.org_id for this brand.
+  let orgId = process.env.CLD105_ORG_ID?.trim() || "";
+  if (!orgId) {
+    const { data: brandRow, error: brandErr } = await admin
+      .from("brands")
+      .select("org_id")
+      .eq("id", brandId)
+      .maybeSingle();
+    if (brandErr) throw new Error(`resolve org_id for brand: ${brandErr.message}`);
+    orgId = brandRow?.org_id ?? "";
+  }
+  if (!orgId) {
+    throw new Error(
+      "CLD105_ORG_ID unset and brands.org_id missing — set CLD105_ORG_ID for live taxonomy fixtures",
+    );
+  }
+  const { testFolder, testPublicIdPrefix, workType } = testScopeForBrand(brandId, orgId);
 
   let publicId;
   let assetId;
@@ -829,6 +899,7 @@ export async function createDisposableFixture({ skipDna = false, log = true, pro
     appBaseUrl,
     authHeader,
     brandId,
+    workType,
     testFolder,
     testPublicIdPrefix,
     runId: RUN_ID,

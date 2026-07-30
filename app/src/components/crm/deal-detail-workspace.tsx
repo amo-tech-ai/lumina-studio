@@ -2,8 +2,14 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { CheckCircle, ExternalLink } from "lucide-react";
+
+import { useSetCrmChatContext } from "@/context/crm-chat-context";
+import {
+  dealDisplayName,
+  formatDealValue,
+} from "@/lib/crm/derive-crm-chat-context";
 
 import { ErrorState } from "@/components/ui/error-state";
 import { StatusChip } from "@/components/ui/status-chip";
@@ -68,11 +74,27 @@ export function DealDetailWorkspace({ data, fetchError }: Props) {
   // null) so WonBanner never shows a stale "not yet linked" state while
   // router.refresh() is still in flight — see DealStageControl's Props doc.
   const [confirmedBrandId, setConfirmedBrandId] = useState<string | null | undefined>(undefined);
+  // Fresh CAS token from the last successful non-terminal PATCH (IPI-563).
+  const [confirmedUpdatedAt, setConfirmedUpdatedAt] = useState<string | null>(null);
 
-  function handleStageChange(newStage: CrmDealStage, brandId?: string | null) {
+  function handleStageChange(newStage: CrmDealStage, brandId?: string | null, updatedAt?: string) {
     setConfirmedStage(newStage);
     if (brandId !== undefined) setConfirmedBrandId(brandId);
+    if (updatedAt) setConfirmedUpdatedAt(updatedAt);
   }
+
+  const chatContext = useMemo(() => {
+    if (fetchError || !data) return {};
+    const stage = confirmedStage ?? toKnownStage(data.deal.stage);
+    const displayTitle = dealDisplayName(data.companyName);
+    return {
+      dealName: displayTitle,
+      dealStage: crmDealStageLabel(stage),
+      value: formatDealValue(data.deal),
+      crmRecordLoaded: true,
+    };
+  }, [confirmedStage, data, fetchError]);
+  useSetCrmChatContext(chatContext);
 
   if (fetchError || !data) {
     return (
@@ -85,7 +107,7 @@ export function DealDetailWorkspace({ data, fetchError }: Props) {
   const { deal, companyName, companyBrandId, activities } = data;
   const stage = confirmedStage ?? toKnownStage(deal.stage);
   const brandId = confirmedBrandId !== undefined ? confirmedBrandId : companyBrandId;
-  const displayTitle = `${companyName ?? "Untitled company"} deal`;
+  const displayTitle = dealDisplayName(companyName);
 
   return (
     <div className={styles.root}>
@@ -96,7 +118,12 @@ export function DealDetailWorkspace({ data, fetchError }: Props) {
           <DealOverview deal={deal} companyName={companyName} />
 
           <div className={styles.stageLabel}>Stage</div>
-          <DealStageControl dealId={deal.id} stage={stage} onStageChange={handleStageChange} />
+          <DealStageControl
+            dealId={deal.id}
+            stage={stage}
+            updatedAt={confirmedUpdatedAt ?? deal.updated_at}
+            onStageChange={handleStageChange}
+          />
 
           {stage === "won" ? <WonBanner companyBrandId={brandId} /> : null}
 

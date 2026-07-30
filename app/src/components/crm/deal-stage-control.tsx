@@ -15,15 +15,18 @@ const TERMINAL = new Set<CrmDealStage>(["won", "lost"]);
 type Props = {
   dealId: string;
   stage: CrmDealStage;
+  /** Optional CAS token — forwarded as `expectedUpdatedAt` on non-terminal PATCH. */
+  updatedAt?: string;
   /** Called with the server-confirmed stage after a successful non-terminal
    *  PATCH — `brandId` is `undefined` for these calls, never optimistic.
+   *  `updatedAt` is the fresh CAS token from the PATCH response (when present).
    *  Called again after a successful won/lost approval with the real
    *  `brandId` from the same response — `null` for lost or won-with-no-brand,
    *  a real id for won. The parent must use this value directly rather than
    *  waiting on its own RSC refresh, or `WonBanner` renders a stale
    *  "not yet linked" state for the length of that refresh even though the
    *  server already returned the real brand id. */
-  onStageChange: (stage: CrmDealStage, brandId?: string | null) => void;
+  onStageChange: (stage: CrmDealStage, brandId?: string | null, updatedAt?: string) => void;
 };
 
 /** Deal stage selector + Won/Lost approval gate — ported from
@@ -48,13 +51,20 @@ type Props = {
  *    server-confirmed 200 — a failed response reverts and shows an honest
  *    error, per IPI-367's own acceptance criterion, never an optimistic
  *    success state. */
-export function DealStageControl({ dealId, stage, onStageChange }: Props) {
+export function DealStageControl({ dealId, stage, updatedAt, onStageChange }: Props) {
   const router = useRouter();
   const [pending, setPending] = useState<CrmDealStage | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [approving, setApproving] = useState(false);
+  // Keep a local CAS token so two quick non-terminal moves don't reuse the
+  // prop's stale updated_at before the parent re-renders (IPI-563 review).
+  const [casUpdatedAt, setCasUpdatedAt] = useState(updatedAt);
   const cancelRef = useRef<HTMLButtonElement>(null);
   const approveRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    setCasUpdatedAt(updatedAt);
+  }, [updatedAt]);
 
   useEffect(() => {
     if (pending) cancelRef.current?.focus();
@@ -74,12 +84,13 @@ export function DealStageControl({ dealId, stage, onStageChange }: Props) {
     }
     setSubmitting(true);
     try {
-      const result = await patchDealStage(dealId, target);
+      const result = await patchDealStage(dealId, target, stage, casUpdatedAt);
       if (!result.ok) {
         toast.error(result.error);
         return;
       }
-      onStageChange(result.stage);
+      if (result.updatedAt) setCasUpdatedAt(result.updatedAt);
+      onStageChange(result.stage, undefined, result.updatedAt);
     } finally {
       setSubmitting(false);
     }
@@ -173,7 +184,7 @@ export function DealStageControl({ dealId, stage, onStageChange }: Props) {
           );
         })}
       </div>
-      <p className={styles.stageHint}>
+      <p className={styles.stageHint} data-stage-hint>
         Lead through Negotiation update immediately. Won / Lost open an approval gate.
       </p>
     </div>
@@ -187,18 +198,28 @@ export function DealStageControl({ dealId, stage, onStageChange }: Props) {
 async function patchDealStage(
   dealId: string,
   stage: CrmDealStage,
-): Promise<{ ok: true; stage: CrmDealStage } | { ok: false; error: string }> {
+  expectedStage: CrmDealStage,
+  expectedUpdatedAt?: string,
+): Promise<{ ok: true; stage: CrmDealStage; updatedAt?: string } | { ok: false; error: string }> {
   try {
     const res = await fetch(`/api/crm/deals/${dealId}/stage`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ stage }),
+      body: JSON.stringify({
+        stage,
+        expectedStage,
+        ...(expectedUpdatedAt ? { expectedUpdatedAt } : {}),
+      }),
     });
     const body = await res.json();
     if (!res.ok) {
       return { ok: false, error: body?.error?.message ?? "Could not update the stage." };
     }
-    return { ok: true, stage: body.stage as CrmDealStage };
+    return {
+      ok: true,
+      stage: body.stage as CrmDealStage,
+      updatedAt: typeof body.updatedAt === "string" ? body.updatedAt : undefined,
+    };
   } catch {
     return { ok: false, error: "Network error — the stage was not changed." };
   }

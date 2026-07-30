@@ -1,0 +1,27 @@
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-top: 8px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.label {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-secondary);
+}
+
+.error {
+  color: var(--color-destructive, #b91c1c);
+  font-size: var(--font-size-sm);
+}
+
+.triggerWrap {
+  display: inline-flex;
+}

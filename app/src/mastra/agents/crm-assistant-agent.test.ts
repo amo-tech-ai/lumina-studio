@@ -18,10 +18,18 @@ describe("crm-assistant agent (IPI-368)", () => {
     expect(REQUIRED_AGENT_IDS).not.toContain("crm-assistant");
   });
 
-  it("wires wave-1 CRM tools only", async () => {
+  it("wires wave-1 + wave-2 CRM tools (IPI-369)", async () => {
     const tools = await crmAssistantAgent.listTools();
     expect(Object.keys(tools ?? {}).sort()).toEqual(
-      ["logActivity", "moveDealStage", "searchCompanies", "searchContacts"].sort(),
+      [
+        "draftFollowUp",
+        "logActivity",
+        "moveDealStage",
+        "scoreDealHealth",
+        "searchCompanies",
+        "searchContacts",
+        "summarizeRelationship",
+      ].sort(),
     );
   });
 });

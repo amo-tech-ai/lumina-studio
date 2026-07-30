@@ -1,0 +1,253 @@
+/* IPI-436 · CLD-103 — slim asset detail */
+
+.workspace {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  min-height: 100%;
+  background: var(--color-bg-page);
+}
+
+.header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1.5rem 2.25rem 0;
+  margin-bottom: 1.25rem;
+}
+
+.backLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin-bottom: 0.5rem;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  text-decoration: none;
+}
+
+.backLink:hover {
+  color: var(--color-text-primary);
+}
+
+.title {
+  margin: 0;
+  max-width: 48rem;
+  font-size: var(--font-size-2xl);
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: -0.01em;
+  color: var(--color-text-primary);
+  word-break: break-word;
+}
+
+.subtitle {
+  margin: 0.35rem 0 0;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+}
+
+.body {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(18rem, 1fr);
+  gap: 1.5rem;
+  padding: 0 2.25rem 2rem;
+  align-items: start;
+}
+
+.preview {
+  position: relative;
+  min-height: 16rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-bg-subtle);
+  overflow: hidden;
+}
+
+.previewImage {
+  width: 100%;
+  height: auto;
+  display: block;
+  object-fit: contain;
+}
+
+.previewImageDirect {
+  width: 100%;
+  height: auto;
+  max-height: min(70vh, 52rem);
+  display: block;
+  object-fit: contain;
+  margin: 0 auto;
+}
+
+.iconFallback {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 16rem;
+  color: var(--color-text-muted);
+}
+
+.panels {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.section {
+  padding: 1rem 1.125rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-bg-card);
+}
+
+.sectionTitle {
+  margin: 0 0 0.75rem;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--color-text-secondary);
+}
+
+.dl {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.dlRow {
+  display: grid;
+  grid-template-columns: 8.5rem minmax(0, 1fr);
+  gap: 0.5rem;
+  font-size: var(--font-size-sm);
+}
+
+.dlRow dt {
+  margin: 0;
+  color: var(--color-text-muted);
+}
+
+.dlRow dd {
+  margin: 0;
+  color: var(--color-text-primary);
+  word-break: break-word;
+}
+
+.code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.8125rem;
+}
+
+.emptyHint {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+}
+
+.tagList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.375rem;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.tag {
+  padding: 0.2rem 0.55rem;
+  border-radius: var(--radius-md);
+  background: var(--color-bg-subtle);
+  border: 1px solid var(--color-border);
+  font-size: var(--font-size-xs);
+  color: var(--color-text-primary);
+}
+
+.linkList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  font-size: var(--font-size-sm);
+}
+
+.whereLink {
+  color: var(--color-action);
+  text-decoration: none;
+}
+
+.whereLink:hover {
+  text-decoration: underline;
+}
+
+.wherePlain {
+  color: var(--color-text-primary);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.actionBtn,
+.actionBtnSecondary {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  height: 2.25rem;
+  padding: 0 0.875rem;
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  text-decoration: none;
+  cursor: pointer;
+  border: none;
+}
+
+.actionBtn {
+  background: var(--color-action);
+  color: var(--color-action-text);
+}
+
+.actionBtn:hover {
+  background: var(--color-action-hover);
+}
+
+.actionBtnSecondary {
+  background: var(--color-bg-subtle);
+  color: var(--color-text-primary);
+  border: 1px solid var(--color-border);
+}
+
+.actionBtnSecondary:hover {
+  background: var(--color-bg-muted);
+}
+
+.copyFlash {
+  margin: 0.75rem 0 0;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+}
+
+@media (max-width: 880px) {
+  .body {
+    grid-template-columns: 1fr;
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+
+  .header {
+    flex-direction: column;
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+
+  .dlRow {
+    grid-template-columns: 1fr;
+    gap: 0.15rem;
+  }
+}

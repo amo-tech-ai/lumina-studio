@@ -220,6 +220,12 @@ describe("listDeals", () => {
     expect(sb._builder.eq).toHaveBeenCalledWith("company_id", "c1");
   });
 
+  it("filters by owner when given", async () => {
+    const sb = mockListTable([{ id: "d1", owner: "u1" }]);
+    await listDeals({ orgId: "org-1", owner: "u1" }, sb as never);
+    expect(sb._builder.eq).toHaveBeenCalledWith("owner", "u1");
+  });
+
   it("returns an empty array when there are no rows", async () => {
     const sb = mockListTable(null);
     expect(await listDeals({ orgId: "org-1" }, sb as never)).toEqual([]);

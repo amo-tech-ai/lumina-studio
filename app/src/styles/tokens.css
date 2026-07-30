@@ -52,6 +52,7 @@
   --primitive-red-100: #fee2e2;
   --primitive-red-500: #ef4444;
   --primitive-red-600: #dc2626;
+  --primitive-red-700: #b91c1c; /* SCR-30 Lost stage */
 
   /* Status — blue (informational) */
   --primitive-blue-100: #dbeafe;
@@ -121,6 +122,11 @@
   --color-info-bg:        var(--primitive-blue-100);     /* #DBEAFE */
   --color-published:      var(--primitive-purple-700);   /* #7C3AED */
   --color-published-bg:   var(--primitive-purple-100);   /* #EDE9FE */
+
+  /* CRM deal-stage dots (SCR-30) — semantic aliases over existing primitives.
+     Proposal reuses --color-published (same #7C3AED). */
+  --color-crm-lead:       var(--primitive-grey-500);     /* #6B7280 */
+  --color-crm-lost:       var(--primitive-red-700);      /* #B91C1C */
 
   /* --- DNA score thresholds (data viz — unchanged hues) --- */
   --color-dna-high:       var(--primitive-green-600);    /* ≥ 80 */

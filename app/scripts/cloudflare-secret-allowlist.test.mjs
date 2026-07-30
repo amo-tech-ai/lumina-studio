@@ -20,6 +20,7 @@ import {
   runtimeSecretNamesForWranglerEnv,
   wranglerCliEnvArgs,
 } from "./cloudflare-secret-allowlist.mjs";
+import { AGENT_ROUTING_ENV_KEYS } from "../src/lib/ai/agent-routing-keys.mjs";
 import {
   buildVersionsUploadArgs,
   parseArgs,
@@ -135,6 +136,25 @@ describe("cloudflare-secret-allowlist", () => {
   it("WRANGLER_REQUIRED_VAR_NAMES is subset of WRANGLER_VAR_NAMES", () => {
     for (const name of WRANGLER_REQUIRED_VAR_NAMES) {
       expect(WRANGLER_VAR_NAMES).toContain(name);
+    }
+  });
+
+  it("WRANGLER_VAR_NAMES includes IPI-607 per-agent routing flags (optional)", () => {
+    expect(AGENT_ROUTING_ENV_KEYS.length).toBeGreaterThan(0);
+    for (const name of AGENT_ROUTING_ENV_KEYS) {
+      expect(WRANGLER_VAR_NAMES).toContain(name);
+      expect(WRANGLER_REQUIRED_VAR_NAMES).not.toContain(name);
+    }
+  });
+
+  it("cloudflare-secrets-sync.yml exports every agent-routing env key", () => {
+    const workflowPath = resolve(
+      dirname(fileURLToPath(import.meta.url)),
+      "../../.github/workflows/cloudflare-secrets-sync.yml",
+    );
+    const yaml = readFileSync(workflowPath, "utf8");
+    for (const name of AGENT_ROUTING_ENV_KEYS) {
+      expect(yaml).toContain(`${name}: \${{ vars.${name} }}`);
     }
   });
 

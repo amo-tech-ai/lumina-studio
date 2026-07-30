@@ -143,6 +143,40 @@ export const invokeStartBrandCrawl = async (
   return inner;
 };
 
+export type WaitForCrawlResult = "complete" | "failed" | "timeout";
+
+/**
+ * Step 2b (IPI-738): poll a brand_crawls row until Firecrawl's webhook marks it
+ * complete/failed, or timeoutMs elapses. Groq brand-intelligence hard-requires
+ * crawl content (see supabase/functions/_shared/bi-groq-guards.ts); calling it
+ * before the crawl lands 422s immediately. Gemini doesn't strictly need this,
+ * but crawl content only enriches its prompt — waiting is harmless there too.
+ */
+export const waitForCrawlCompletion = async (
+  supabase: SupabaseClient,
+  crawlId: string,
+  options?: { pollIntervalMs?: number; timeoutMs?: number },
+): Promise<WaitForCrawlResult> => {
+  const pollIntervalMs = options?.pollIntervalMs ?? 2500;
+  const timeoutMs = options?.timeoutMs ?? 50_000;
+  const deadline = Date.now() + timeoutMs;
+
+  while (Date.now() < deadline) {
+    const { data, error } = await supabase
+      .from("brand_crawls")
+      .select("job_status")
+      .eq("id", crawlId)
+      .maybeSingle();
+
+    if (!error && data?.job_status === "complete") return "complete";
+    if (!error && data?.job_status === "failed") return "failed";
+
+    await new Promise((resolve) => setTimeout(resolve, pollIntervalMs));
+  }
+
+  return "timeout";
+};
+
 /** Step 2: invoke edge fn with existing brandId (scores + profile persisted server-side). */
 export const invokeBrandIntelligence = async (
   supabase: SupabaseClient,

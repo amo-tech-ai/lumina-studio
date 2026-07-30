@@ -2,9 +2,11 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState, type ReactNode } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import { Mail, Phone } from "lucide-react";
 import { toast } from "sonner";
+
+import { useSetCrmChatContext } from "@/context/crm-chat-context";
 
 import { ErrorState } from "@/components/ui/error-state";
 import type { ContactDetailPayload } from "@/lib/crm/get-contact-detail";
@@ -45,6 +47,16 @@ type Props = {
 export function ContactDetailWorkspace({ data, fetchError }: Props) {
   const router = useRouter();
   const [tab, setTab] = useState<TabId>("overview");
+
+  const chatContext = useMemo(() => {
+    if (fetchError || !data) return {};
+    return {
+      contactName: data.contact.name,
+      companyName: data.companyName ?? undefined,
+      crmRecordLoaded: true,
+    };
+  }, [data, fetchError]);
+  useSetCrmChatContext(chatContext);
 
   if (fetchError || !data) {
     return (

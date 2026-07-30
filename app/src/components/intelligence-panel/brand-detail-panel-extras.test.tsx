@@ -2,9 +2,9 @@
  * @vitest-environment jsdom
  */
 import { describe, expect, it, vi, afterEach } from "vitest";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 
-import { BrandDetailPanelExtras } from "./brand-detail-panel-extras";
+import { BrandDetailNoDnaBlock, BrandDetailPanelExtras } from "./brand-detail-panel-extras";
 
 vi.mock("./intelligence-panel.module.css", () => ({
   default: new Proxy({}, { get: (_t, key) => String(key) }),
@@ -14,7 +14,25 @@ vi.mock("next/image", () => ({
   default: ({ alt }: { alt: string }) => <img alt={alt} />,
 }));
 
-afterEach(() => cleanup());
+const mockReanalyzeBrand = vi.fn();
+vi.mock("@/app/(operator)/app/brand/[id]/actions", () => ({
+  reanalyzeBrand: (...args: unknown[]) => mockReanalyzeBrand(...args),
+}));
+const mockRouterRefresh = vi.fn();
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ refresh: mockRouterRefresh }),
+}));
+const mockToastError = vi.fn();
+vi.mock("sonner", () => ({
+  toast: { error: (...args: unknown[]) => mockToastError(...args) },
+}));
+
+afterEach(() => {
+  cleanup();
+  mockReanalyzeBrand.mockReset();
+  mockRouterRefresh.mockReset();
+  mockToastError.mockReset();
+});
 
 describe("BrandDetailPanelExtras", () => {
   it("renders visual identity without DNA history", () => {
@@ -62,5 +80,39 @@ describe("BrandDetailPanelExtras", () => {
 
     expect(screen.getByText("DNA history")).toBeTruthy();
     expect(screen.getByText("Baseline crawl")).toBeTruthy();
+  });
+});
+
+// IPI-722 — this button previously had no onClick at all (a genuinely dead
+// button, distinct from BrandDetailWorkspace's swallowed-error bug).
+describe("BrandDetailNoDnaBlock", () => {
+  it("calls reanalyzeBrand and refreshes on success", async () => {
+    mockReanalyzeBrand.mockResolvedValue({ ok: true, hasDraft: true });
+
+    render(<BrandDetailNoDnaBlock brandId="nike-id" brandName="Nike" />);
+    fireEvent.click(screen.getByRole("button", { name: "Analyse brand" }));
+
+    await waitFor(() => expect(mockReanalyzeBrand).toHaveBeenCalledWith("nike-id"));
+    await waitFor(() => expect(mockRouterRefresh).toHaveBeenCalled());
+    expect(mockToastError).not.toHaveBeenCalled();
+  });
+
+  it("shows a toast error and does not refresh on failure", async () => {
+    mockReanalyzeBrand.mockResolvedValue({
+      ok: false,
+      error: "Brand has no website URL to analyze",
+    });
+
+    render(<BrandDetailNoDnaBlock brandId="nike-id" brandName="Nike" />);
+    fireEvent.click(screen.getByRole("button", { name: "Analyse brand" }));
+
+    await waitFor(() => expect(mockToastError).toHaveBeenCalledWith("Brand has no website URL to analyze"));
+    expect(mockRouterRefresh).not.toHaveBeenCalled();
+  });
+
+  it("disables the button when there is no active brand id", () => {
+    render(<BrandDetailNoDnaBlock brandId={null} brandName="Nike" />);
+    const button = screen.getByRole("button", { name: "Analyse brand" }) as HTMLButtonElement;
+    expect(button.disabled).toBe(true);
   });
 });

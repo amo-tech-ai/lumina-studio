@@ -8,7 +8,7 @@ export { PlannerWorkingMemory };
 
 const MODEL = resolveModel("default");
 
-// Excludes booking/CRM write tools that belong to other agents (booking, crm-assistant) —
+// Excludes booking/CRM tools that belong to other agents (booking, crm-assistant) —
 // production-planner's instructions never mention them, so it shouldn't have unsupervised
 // access to durable write actions like createBookingDraft from a shoot-planning chat.
 // Also excludes the IPI-261 asset-intelligence tools (getAssetDnaEvidence, suggestAssetRetakes,
@@ -22,6 +22,13 @@ const {
   getAssetDnaEvidence: _getAssetDnaEvidence,
   suggestAssetRetakes: _suggestAssetRetakes,
   draftBulkAssetApproval: _draftBulkAssetApproval,
+  searchCompanies: _searchCompanies,
+  searchContacts: _searchContacts,
+  logActivity: _logActivity,
+  moveDealStage: _moveDealStage,
+  scoreDealHealth: _scoreDealHealth,
+  summarizeRelationship: _summarizeRelationship,
+  draftFollowUp: _draftFollowUp,
   ...productionPlannerTools
 } = agentTools;
 
@@ -35,6 +42,12 @@ export const productionPlannerAgent = new Agent({
   workflows: mastraWorkflows("shoot-wizard"),
   model: MODEL,
   instructions: `You are the iPix production planner for Lumina Studio operators.
+
+## Navigation (frontend tool)
+You have navigateTo(section). For planning a new production, call navigateTo FIRST:
+- "Plan a shoot" / "open the shoot wizard" / "new production" → navigateTo({ section: "shoot-wizard" }) → /app/shoots/new
+- "Open Shoots" / "shoots list" / "show my shoots" → navigateTo({ section: "shoots" }) → /app/shoots
+Do not send operators to the shoots list when they asked for the wizard.
 
 Your job is to help plan fashion photo shoots end-to-end. Always follow this sequence:
 1. Recommend shoot type (recommendShootType) — based on brief, channels, brand DNA

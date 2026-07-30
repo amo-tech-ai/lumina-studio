@@ -29,7 +29,27 @@ describe("OpenNext CI contract (IPI-472)", () => {
     expect(wrangler).toMatch(/MASTRA_STORAGE_MODE.*noop/);
     expect(wrangler).toMatch(/OPERATOR_AUTH_ENABLED.*true/);
     expect(wrangler).toMatch(/"images"\s*:\s*\{\s*"binding"\s*:\s*"IMAGES"/);
+    // IPI-586 · CF-AI-003 — Workers AI binding (no remote:true on production config)
+    expect(wrangler).toMatch(/"ai"\s*:\s*\{\s*"binding"\s*:\s*"AI"/);
+    expect(wrangler).not.toMatch(/"ai"\s*:\s*\{[^}]*"remote"\s*:\s*true/);
+    expect(wrangler).toMatch(/ENABLE_CF_AI_SMOKE.*false/);
+    // IPI-623 flag reads env/process.env (same pattern as ENABLE_HYPERDRIVE_PG_SMOKE —
+    // wrangler allowlist wiring is a config-only sibling, not this canary code PR).
     expect(wrangler).not.toMatch(/"DATABASE_URL"/);
+    // IPI-620A/B — bare pg and @mastra/pg must reach workerd (queryFresh + PostgresStore smoke).
+    // Production storage stays InMemory via MASTRA_STORAGE_MODE=noop — no bundler stubs.
+    expect(wrangler).not.toMatch(/"@mastra\/pg"\s*:\s*"\.\/scripts\/cf-mastra-pg-stub\.mjs"/);
+    expect(wrangler).not.toMatch(/"pg"\s*:\s*"\.\/scripts\/cf-mastra-pg-stub\.mjs"/);
+    expect(wrangler).not.toMatch(/"pg-cloudflare"\s*:\s*"\.\/scripts\/cf-mastra-pg-stub\.mjs"/);
+  });
+
+  it("next.config CF stubs do not alias @mastra/pg / pg / pg-cloudflare (IPI-620A/B)", () => {
+    const nextConfig = readFileSync(resolve(__dirname, "../../next.config.ts"), "utf8");
+    expect(nextConfig).toMatch(/@mastra\/pg/);
+    expect(nextConfig).toMatch(/do NOT alias/);
+    expect(nextConfig).not.toMatch(/"@mastra\/pg"\s*:\s*mastraPgStub/);
+    expect(nextConfig).not.toMatch(/"pg"\s*:\s*mastraPgStub/);
+    expect(nextConfig).not.toMatch(/"pg-cloudflare"\s*:\s*mastraPgStub/);
   });
 
   it("check-worker-bundle-size.mjs enforces 8.5 MiB warn and 9.0 MiB fail gates", () => {

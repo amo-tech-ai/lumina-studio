@@ -19,15 +19,41 @@
   "images": {
     "binding": "IMAGES"
   },
+  // IPI-586 · CF-AI-003 — Workers AI binding (no remote:true; that is local-dev only).
+  // Official: https://developers.cloudflare.com/ai-gateway/integrations/aig-workers-ai-binding/
+  "ai": {
+    "binding": "AI"
+  },
+  // IPI-619 · CF-DB-005 — bind-only; Hyperdrive config "ipix-supabase-fresh" provisioned by IPI-618.
+  // Access exclusively via getCloudflareContext().env.HYPERDRIVE_FRESH — no other access pattern.
+  // Query helper is out of scope here (IPI-620). No placement block, no second binding.
+  "hyperdrive": [
+    {
+      "binding": "HYPERDRIVE_FRESH",
+      "id": "f59421821941436593f4c88416fb1601"
+    }
+  ],
+  // IPI-709 · CF-OBS-001 — Workers Logs baseline. head_sampling_rate 1 = log 100% of
+  // requests (explicit, not just the default) — traffic is low; revisit before scale-up.
+  // Repeated per named env below: env blocks do not inherit this key.
+  // Official: https://developers.cloudflare.com/workers/observability/logs/workers-logs/
   "observability": {
-    "enabled": true
+    "enabled": true,
+    "head_sampling_rate": 1
   },
   // IPI-468: deployed Worker must fail closed; CopilotKit thread gating reads this flag at runtime.
   // CF-SEC-010: committed vars are static flags only. Environment-specific URLs/ids are injected
   // at deploy via GitHub environment variables → upload script `--var` (Wrangler is SSOT).
   "vars": {
     "MASTRA_STORAGE_MODE": "noop",
-    "OPERATOR_AUTH_ENABLED": "true"
+    "OPERATOR_AUTH_ENABLED": "true",
+    // IPI-586: internal smoke route stays dark until explicitly flipped for a preview proof.
+    "ENABLE_CF_AI_SMOKE": "false",
+    // IPI-620 (Part B): PostgresStore + Hyperdrive compatibility spike route stays dark
+    // until explicitly flipped for a preview proof — see cloudflare-workflow smoke pattern.
+    "ENABLE_HYPERDRIVE_PG_SMOKE": "false",
+    // IPI-60: Cloudinary DAM env for detectEnv() — Workers lack VERCEL_ENV; fail-closed without this.
+    "DAM_ENV": "staging"
   },
   // Wrangler-only aliases (do not affect Node next-dev / Vitest).
   // IPI-490 · CF-MIG-210: stub packages proven in dry-run Worker graph but unused
@@ -51,23 +77,40 @@
     "@shikijs/themes": "./scripts/cf-shiki-stub.mjs",
     "@shikijs/core": "./scripts/cf-shiki-stub.mjs",
     "@shikijs/engine-oniguruma": "./scripts/cf-shiki-stub.mjs",
-    "@shikijs/vscode-textmate": "./scripts/cf-shiki-stub.mjs",
-    // Default Worker storage is InMemoryStore (MASTRA_STORAGE_MODE=noop)
-    "@mastra/pg": "./scripts/cf-mastra-pg-stub.mjs",
-    "pg": "./scripts/cf-mastra-pg-stub.mjs",
-    "pg-cloudflare": "./scripts/cf-mastra-pg-stub.mjs"
+    "@shikijs/vscode-textmate": "./scripts/cf-shiki-stub.mjs"
+    // IPI-620A/B: do NOT alias `@mastra/pg` / `pg` / `pg-cloudflare` — real
+    // packages required for Hyperdrive queryFresh + PostgresStore smoke.
+    // Production Mastra storage stays InMemory via MASTRA_STORAGE_MODE=noop.
   },
   // IPI-472 · INFRA-001 — SSOT for preview vs production Worker names.
   // IPI-606 · CF-SEC-010 — secrets.required for cf-typegen + local dev validation.
-  // vars, images, services, secrets must repeat per named env (Wrangler: not inherited).
-  // No DATABASE_URL here until Hyperdrive (IPI-619). Runtime values via Infisical sync.
+  // vars, images, services, secrets, ai, hyperdrive must repeat per named env (Wrangler: not inherited).
+  // Hyperdrive binding (IPI-619) — no connection strings/secrets here; Wrangler resolves the ID at deploy.
+  // IPI-620B smoke route uses HYPERDRIVE_FRESH; fails closed until ENABLE_HYPERDRIVE_PG_SMOKE=true.
   "env": {
     "preview": {
       "name": "ipix-operator-preview",
+      // IPI-709: explicit per-env observability — see top-level block for rationale.
+      "observability": {
+        "enabled": true,
+        "head_sampling_rate": 1
+      },
       "vars": {
         "MASTRA_STORAGE_MODE": "noop",
-        "OPERATOR_AUTH_ENABLED": "true"
+        "OPERATOR_AUTH_ENABLED": "true",
+        "ENABLE_CF_AI_SMOKE": "false",
+        "ENABLE_HYPERDRIVE_PG_SMOKE": "false",
+        "DAM_ENV": "staging"
       },
+      "ai": {
+        "binding": "AI"
+      },
+      "hyperdrive": [
+        {
+          "binding": "HYPERDRIVE_FRESH",
+          "id": "f59421821941436593f4c88416fb1601"
+        }
+      ],
       "images": {
         "binding": "IMAGES"
       },
@@ -84,15 +127,34 @@
       ],
       "secrets": {
         // COPILOTKIT_LICENSE_TOKEN is optional — synced when present; SSE mode without it.
+        // INTERNAL_WEBHOOK_SECRET optional — required only when ENABLE_CF_AI_SMOKE=true (IPI-586)
+        // or ENABLE_HYPERDRIVE_PG_SMOKE=true (IPI-620B).
         "required": ["GEMINI_API_KEY", "SUPABASE_SERVICE_ROLE_KEY"]
       }
     },
     "production": {
       "name": "ipix-operator",
+      // IPI-709: explicit per-env observability — see top-level block for rationale.
+      "observability": {
+        "enabled": true,
+        "head_sampling_rate": 1
+      },
       "vars": {
         "MASTRA_STORAGE_MODE": "noop",
-        "OPERATOR_AUTH_ENABLED": "true"
+        "OPERATOR_AUTH_ENABLED": "true",
+        "ENABLE_CF_AI_SMOKE": "false",
+        "ENABLE_HYPERDRIVE_PG_SMOKE": "false",
+        "DAM_ENV": "prod"
       },
+      "ai": {
+        "binding": "AI"
+      },
+      "hyperdrive": [
+        {
+          "binding": "HYPERDRIVE_FRESH",
+          "id": "f59421821941436593f4c88416fb1601"
+        }
+      ],
       "images": {
         "binding": "IMAGES"
       },

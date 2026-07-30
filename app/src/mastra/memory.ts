@@ -1,6 +1,7 @@
 import { Memory } from "@mastra/memory";
 import { z } from "zod";
 import { getMastraStorage } from "./storage";
+import { requireResourceId } from "@/lib/db/mastra-tenant-scope";
 
 let _memory: Memory | undefined;
 let _plannerMemory: Memory | undefined;
@@ -81,4 +82,21 @@ export function makeThreadId(
 ): string {
   const enc = (s: string) => encodeURIComponent(s);
   return `${enc(orgId)}/${workspace}/${enc(entityId)}`;
+}
+
+/**
+ * IPI-146 · MASTRA-GOV-002 — Org-scoped Mastra `resourceId`. Format:
+ * `org:{orgId}::user:{userId}` (segments percent-encoded to prevent
+ * collisions between tenants whose ids contain `:`).
+ *
+ * `Memory`/`getLocalAgents({ resourceId })` use this as the tenant partition
+ * key for thread history — passing a bare `userId` (pre-IPI-146 behavior)
+ * isolates by user only, not by org. Fails closed (throws `TenantContextError`)
+ * on a blank/non-string orgId or userId, reusing IPI-621's validator so this
+ * doesn't reinvent that check — see `app/src/lib/db/mastra-tenant-scope.ts`.
+ */
+export function makeMemoryResourceId(orgId: string, userId: string): string {
+  const org = requireResourceId(orgId);
+  const user = requireResourceId(userId);
+  return `org:${encodeURIComponent(org)}::user:${encodeURIComponent(user)}`;
 }

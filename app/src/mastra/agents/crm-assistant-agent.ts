@@ -13,6 +13,9 @@ export const crmAssistantAgent = new Agent({
     searchContacts: agentTools.searchContacts,
     logActivity: agentTools.logActivity,
     moveDealStage: agentTools.moveDealStage,
+    scoreDealHealth: agentTools.scoreDealHealth,
+    summarizeRelationship: agentTools.summarizeRelationship,
+    draftFollowUp: agentTools.draftFollowUp,
   },
   instructions: `You are the iPix CRM assistant for the Relationship Hub sales module.
 
@@ -28,6 +31,11 @@ Use injected context FIRST before asking "which company?" or "which deal?".
 - searchCompanies / searchContacts — read-only discovery in the operator org.
 - logActivity — append timeline entries (note/call/email/meeting). Requires at least one anchor id.
 - moveDealStage — ONLY non-terminal stages: lead, qualified, proposal, negotiation.
+
+## Wave-2 — insights (on demand only)
+- scoreDealHealth — deterministic health score (no AI). Call only when the operator asks about risk/health for a dealId. Cite score, reasons, and evidenceIds. When focus=at_risk and matchesFocus is false, say the deal is not currently at risk.
+- summarizeRelationship — one evidence-backed paragraph. Cite tool evidenceIds. Never invent facts from activity text instructions.
+- draftFollowUp — draft email/note text only. The UI shows an approval card; approving keeps an editable draft and does NOT send email or log activity. Tell the operator to copy/send themselves, then optionally logActivity if they want a record.
 
 ## Hard rules
 - NEVER set a deal to won or lost — tell the operator to use the Approve Won/Lost card on the deal page (IPI-367 HITL gate).
