@@ -4462,6 +4462,128 @@ try {
     pass("IPI-732: shoot-creation role-authz block skipped (no service role key)");
   }
 
+  // ---------------------------------------------------------------------------
+  // IPI-861 · event_rehearsals anon read policy — regression cover
+  //
+  // The 2026-07-30 consolidation (20260730032914) dropped
+  // public_select_event_rehearsals, the only `TO anon` SELECT policy, and
+  // replaced it with an authenticated-only one. anon holds a SELECT grant on the
+  // table, so public event pages silently lost published rehearsal schedules.
+  // Restored by 20260730050000 as event_rehearsals_select_anon.
+  //
+  // event_rehearsals had zero test coverage anywhere in the repo before this.
+  //
+  // Effective gate is `published AND is_public`, not `published` alone. The
+  // policy's EXISTS subquery reads public.events, and events RLS applies inside
+  // that subquery — for anon, events_select_anon requires
+  // (status = 'published' AND is_public = true). So a published-but-private
+  // event hides its rehearsals from anon even though the rehearsal policy text
+  // only mentions status. The original public_select_event_rehearsals had the
+  // same shape and therefore the same behaviour.
+  //   published + public  -> anon CAN read
+  //   published + private -> anon CANNOT read  (nested events RLS)
+  //   draft               -> anon CANNOT read
+  // ---------------------------------------------------------------------------
+  if (serviceKey && userA?.user?.id) {
+    let rehPublishedEventId;
+    let rehPrivateEventId;
+    let rehDraftEventId;
+    try {
+      const rehStamp = Date.now();
+
+      const makeRehearsalFixture = async (status, isPublic, label) => {
+        const { data: ev, error: evErr } = await admin
+          .from("events")
+          .insert({
+            organizer_id: userA.user.id,
+            title: `RLS rehearsal ${label} ${rehStamp}`,
+            slug: `rls-reh-${label}-${rehStamp}`,
+            start_time: new Date(rehStamp).toISOString(),
+            status,
+            is_public: isPublic,
+          })
+          .select("id")
+          .single();
+        assert(
+          !evErr && ev?.id,
+          `service role inserts ${label} event for rehearsal anon probe`,
+        );
+        if (!ev?.id) return {};
+        const { data: reh, error: rehErr } = await admin
+          .from("event_rehearsals")
+          .insert({
+            event_id: ev.id,
+            date: new Date(rehStamp).toISOString().slice(0, 10),
+            start_time: "10:00:00",
+          })
+          .select("id")
+          .single();
+        assert(
+          !rehErr && reh?.id,
+          `service role inserts rehearsal on ${label} event`,
+        );
+        return { eventId: ev.id, rehearsalId: reh?.id };
+      };
+
+      const publishedFixture = await makeRehearsalFixture("published", true, "published-public");
+      const privateFixture = await makeRehearsalFixture("published", false, "published-private");
+      const draftFixture = await makeRehearsalFixture("draft", true, "draft");
+      rehPublishedEventId = publishedFixture.eventId;
+      rehPrivateEventId = privateFixture.eventId;
+      rehDraftEventId = draftFixture.eventId;
+
+      const anonSees = async (rehearsalId) => {
+        const { data, error } = await anon
+          .from("event_rehearsals")
+          .select("id")
+          .eq("id", rehearsalId);
+        return { error, count: Array.isArray(data) ? data.length : -1 };
+      };
+
+      // ALLOW — published + public.
+      if (publishedFixture.rehearsalId) {
+        const r = await anonSees(publishedFixture.rehearsalId);
+        assert(
+          !r.error && r.count === 1,
+          "IPI-861: anon CAN read rehearsal on a published public event (event_rehearsals_select_anon)",
+        );
+      }
+
+      // DENY — published but private. Blocked by nested events RLS, not by the
+      // rehearsal policy text. Pins the behaviour so it cannot drift silently.
+      if (privateFixture.rehearsalId) {
+        const r = await anonSees(privateFixture.rehearsalId);
+        assert(
+          !r.error && r.count === 0,
+          "IPI-861: anon CANNOT read rehearsal on a published but non-public event (nested events RLS)",
+        );
+      }
+
+      // DENY — draft. RLS filters rather than errors, so assert an empty result.
+      if (draftFixture.rehearsalId) {
+        const r = await anonSees(draftFixture.rehearsalId);
+        assert(
+          !r.error && r.count === 0,
+          "IPI-861: anon CANNOT read rehearsal on a draft event",
+        );
+      }
+    } finally {
+      for (const evId of [rehPublishedEventId, rehPrivateEventId, rehDraftEventId]) {
+        if (!evId) continue;
+        await checkedCleanup(
+          `IPI-861 rehearsals for event ${evId}`,
+          admin.from("event_rehearsals").delete().eq("event_id", evId),
+        );
+        await checkedCleanup(
+          `IPI-861 rehearsal probe event ${evId}`,
+          admin.from("events").delete().eq("id", evId),
+        );
+      }
+    }
+  } else {
+    pass("IPI-861: event_rehearsals anon probe skipped (no service role key)");
+  }
+
 } catch (err) {
   if (!(err && typeof err === "object" && err.alreadyCounted)) {
     fail(err instanceof Error ? err.message : String(err));
