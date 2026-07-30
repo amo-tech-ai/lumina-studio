@@ -86,7 +86,8 @@ describe("OpenNext CI contract (IPI-472)", () => {
     expect(script).toMatch(/deploy.*--dry-run/);
   });
 
-  // Script-only Phase 1A contract (CI artifact/base wiring is a separate CI/config PR).
+  // Script-side Phase 1A contract. The ci.yml wiring that consumes it is asserted
+  // separately below — this PR is where that wiring lands.
   it("check-worker-bundle-size.mjs emits JSON report and delta WARNING only (IPI-706 Phase 1A)", () => {
     const script = readFileSync(
       resolve(__dirname, "../../scripts/check-worker-bundle-size.mjs"),
@@ -111,5 +112,32 @@ describe("OpenNext CI contract (IPI-472)", () => {
     expect(ci).toMatch(/NEXT_PUBLIC_SUPABASE_URL:\s*https:\/\/example\.supabase\.co/);
     expect(ci).toMatch(/NEXT_PUBLIC_SUPABASE_ANON_KEY:\s*placeholder/);
     expect(ci).toMatch(/check:cf-types/);
+  });
+
+  /**
+   * The Phase 1A delta gate is WARNING-only by design, so if this wiring is
+   * removed or renamed nothing in CI turns red — the feature just silently stops
+   * working. These assertions are the only thing that notices.
+   */
+  it("ci.yml wires the Phase 1A bundle report artifact and base delta (IPI-706)", () => {
+    const ci = readFileSync(resolve(__dirname, "../../../.github/workflows/ci.yml"), "utf8");
+
+    // build:cf must receive the fetched base report, or no delta is ever computed.
+    expect(ci).toMatch(/WORKER_BUNDLE_BASE_REPORT:\s*\$\{\{\s*steps\.base-report\.outputs\.path\s*\}\}/);
+
+    // Artifact is keyed by sha so a PR can locate its own base commit's report.
+    expect(ci).toMatch(/uses:\s*actions\/upload-artifact@v4/);
+    expect(ci).toMatch(/name:\s*worker-bundle-report-\$\{\{\s*github\.sha\s*\}\}/);
+    expect(ci).toMatch(/path:\s*app\/\.open-next\/worker-bundle-report\.json/);
+
+    // .open-next/ is a dotfile dir — upload-artifact@v4 skips hidden paths without
+    // this, which combined with if-no-files-found:error would fail the job.
+    expect(ci).toMatch(/include-hidden-files:\s*true/);
+    // A silently-missing report is worse than a red job.
+    expect(ci).toMatch(/if-no-files-found:\s*error/);
+
+    // The base fetch must never fail the build (forks have no artifact read access).
+    expect(ci).toMatch(/id:\s*base-report/);
+    expect(ci).toMatch(/continue-on-error:\s*true/);
   });
 });
