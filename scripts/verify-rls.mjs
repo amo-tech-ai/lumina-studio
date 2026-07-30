@@ -4580,8 +4580,15 @@ try {
         );
       }
     }
+  } else if (!serviceKey) {
+    pass("IPI-861 · event_rehearsals anon read policy — regression cover skipped (no service role key)");
   } else {
-    pass("IPI-861: event_rehearsals anon probe skipped (no service role key)");
+    // serviceKey present but the shared user fixture is missing: that is broken
+    // setup, not an environment we may soft-skip. Throwing beats a misleading
+    // "skipped (no service role key)" pass — see IPI-668.
+    throw new Error(
+      "IPI-861 · event_rehearsals anon read policy — regression cover: userA fixture unavailable",
+    );
   }
 
   // ---------------------------------------------------------------------------
@@ -4705,8 +4712,14 @@ try {
         if (error) trackCleanupError(`IPI-861 model_availability outsider ${maOutsider.user.id}: ${error.message}`);
       }
     }
+  } else if (!serviceKey) {
+    pass("IPI-861 · model_availability_select — regression cover skipped (no service role key)");
   } else {
-    pass("IPI-861: model_availability probe skipped (no service role key)");
+    // serviceKey present but userA/userB missing: broken setup, not a skippable
+    // environment. Fail loudly instead of reporting a no-key pass — see IPI-668.
+    throw new Error(
+      "IPI-861 · model_availability_select — regression cover: userA/userB fixtures unavailable",
+    );
   }
 
 } catch (err) {
