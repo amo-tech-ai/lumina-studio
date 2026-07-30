@@ -1,12 +1,43 @@
 # iPix / FashionOS — Build Priority Order
 
-**Updated:** 2026-07-18 · Lane B re-verified against live Linear + production (`ipix.co/app`, real operator login); Lane A last re-verified 2026-07-12 (spot-checked 2026-07-18: IPI-562/IPI-369 still accurate) · Source of truth: [`progress-tracker.md`](progress-tracker.md) (forensic, verified against `app/` code) + live Linear state, not assumed from ticket titles or a prior snapshot of this file.
+**Updated:** 2026-07-30 — all four lanes re-verified against live Linear, `origin/main` @ `3e653702`, and live production/staging Supabase. **The 2026-07-18 pass claimed "IPI-562/IPI-369 still accurate"; both had shipped by 2026-07-20 and this file was never updated — see the corrections table below.** Prior header, kept for traceability: *Updated 2026-07-18 · Lane B re-verified against live Linear + production (`ipix.co/app`, real operator login); Lane A last re-verified 2026-07-12* · Source of truth: [`progress-tracker.md`](progress-tracker.md) (forensic, verified against `app/` code) + live Linear state, not assumed from ticket titles or a prior snapshot of this file.
 
 **Legend:** 🟢 done · 🟡 in progress/partial · 🔴 not started (Todo) · ⚫ not started (Backlog, lower priority tier than Todo) · ⚪ not ticketed yet
 
 > **Lane D (Onboarding v2) added 2026-07-30** — see the bottom of this file. It is the active DESIGN V2 lane and carries its own four-dot legend, because that tracker distinguishes *failed verification* from *not started*, which the legend above does not.
 
 > Old content below this point (10-screen prototype tracker) is 97% shipped and no longer "near-term" — see `git log` for it if needed. This file now tracks the two active build lanes: CRM completion and Planner foundation.
+
+---
+
+## ⭐ What is actually left to complete — read this first
+
+**Verified 2026-07-30** against live Linear, `origin/main` @ `3e653702`, and live production/staging Supabase. **Lane A was 5 rows stale** — IPI-369, IPI-562, IPI-563, IPI-374 and IPI-566 all shipped 2026-07-20/21 while still listed here as Todo/Backlog. Lane B was 1 row stale (IPI-542). Those rows are corrected in place below and marked `[corrected 2026-07-30]`.
+
+| Lane | Shipped | What is *actually* left | Consequence today |
+|---|---|---|---|
+| **A · CRM** | 🟢 **9 of 10 rows Done** | Two items, both already **In Progress**: [IPI-370](https://linear.app/amo100/issue/IPI-370) MVP acceptance QA · [IPI-572](https://linear.app/amo100/issue/IPI-572) phone layouts | CRM is feature-complete. It needs sign-off, not building |
+| **B · Planner** | 🟡 **4 of 8 surfaces** | [IPI-579](https://linear.app/amo100/issue/IPI-579) Timeline → [IPI-580](https://linear.app/amo100/issue/IPI-580) Kanban+List → [IPI-581](https://linear.app/amo100/issue/IPI-581) Calendar → [IPI-582](https://linear.app/amo100/issue/IPI-582) Task Detail — **all four still Backlog** | `/app/planner/[id]` renders the literal string *"{label} view — content ships in a later Planner ticket"* (`planner-workspace-shell.tsx:25`, verified live). The Planner is a working shell around three empty tabs |
+| **C · Cross-app mobile** | ⚪ not ticketed | Still unscoped as an initiative | No deliberate mobile strategy outside CRM |
+| **D · Onboarding v2** | 🟡 **1 of 12 children** | 10 tickets at 0%. Full tracker at the bottom of this file | A new brand cannot self-serve. `/onboarding` writes nothing to the database |
+| **— · Security** | 🔴 **half-shipped** | [IPI-809](https://linear.app/amo100/issue/IPI-809) **PR 2 never landed** — `is_org_member`, `is_org_owner`, `is_org_editor_or_above`, `auto_add_org_owner`, `handle_new_user` all still hold **PUBLIC + anon EXECUTE** (verified live) | The ticket reads Done. [IPI-836](https://linear.app/amo100/issue/IPI-836)'s production gate #11 says *"both its PRs merged"* — it would pass on the status field alone |
+
+### The single highest-leverage next move
+
+**[IPI-809](https://linear.app/amo100/issue/IPI-809) PR 2 — the function-grant revokes.** One migration, closes a live security hole, and it is the only row in this file where the doc and the database disagree about whether something is finished. Everything else here is additive feature work.
+
+### Then, in this order
+
+```text
+1. IPI-809 PR 2                          security · one migration · unblocks Lane D's production gate
+2. IPI-579 → 580 → 581 → 582             Planner views · the biggest functional hole in the product
+   ∥ IPI-829 ∥ 834 ∥ 837 ∥ 840/841/842   Onboarding day-0 work · no blockers, runs in parallel
+3. IPI-832 → IPI-835                     Onboarding session RPC + real integration
+4. IPI-370 · IPI-572                     CRM sign-off + phones (both already In Progress)
+5. IPI-843 → IPI-836                     Onboarding QA → controlled production proof
+```
+
+**Do not** treat Lane A rows 3–6 or 10 as open work — they shipped 2026-07-20/21. **Do not** cite `IPI-528` for the Matching→Booking button; [`index.md`](../index.md) line 262 already records that as a miscitation (IPI-528 is a CI-linter / Gemini ticket, not a booking one).
 
 ---
 
@@ -26,14 +57,15 @@ Also confirmed correct, unchanged: your CRM percentages (Companies 80 / Company 
 |--:|---|---|:--:|---|
 | 1 | Matching→Booking "Request booking" button re-enable | [IPI-528](https://linear.app/amo100/issue/IPI-528) | 🟡 **In Progress** | Unrelated to CRM but a one-toggle fix blocking a working flow. Already started (2026-07-12) — finish this first, it's nearly free. |
 | 2 | ~~Won/Lost HITL gate + brand conversion route~~ | [IPI-367](https://linear.app/amo100/issue/IPI-367) | 🟢 **Done** (2026-07-12) | Shipped. PRs #337 + #341, all 12 acceptance criteria checked, live-verified via `verify-rls.mjs` + real browser journeys (won/lost, cross-org rejection, race conditions, retry). This was the real Deal Detail blocker — now cleared. |
-| 3 | Companies + Contacts: enable New/Filter actions | [IPI-562](https://linear.app/amo100/issue/IPI-562) | ⚫ Backlog | Downgraded from Todo to Backlog in Linear since the last pass. IPI-363/364 are marked Done, but `progress-tracker.md` shows New/Filter still disabled on both lists. One ticket, not two — same shape, same fix, same PR-sized unit. |
-| 4 | Pipeline UX polish — owner filter, keyboard/button move (a11y, flagged P1 in `crm/crm-audit.md`), mobile stage-accordion | [IPI-563](https://linear.app/amo100/issue/IPI-563) | ⚫ Backlog | Also downgraded to Backlog. `risk_score`/`stage_entered_at` columns don't exist — don't re-promise "real risk logic" here, that's IPI-369's `scoreDealHealth`. This ticket is UI polish only. |
-| 5 | crm-assistant wave 2 — health scoring, relationship summaries, follow-up drafts, IntelligencePanel sections | [IPI-369](https://linear.app/amo100/issue/IPI-369) | 🔴 Todo | **Now the actual next CRM ticket** — #2 (its hard blocker) is done. Restores the AI panels dropped from Deal/Company/Contact/Pipeline ("not yet wired" labels). Its at-risk filter and health score are what #4's Pipeline polish should surface once revisited. |
-| 6 | CRM route welcome + suggestion chips | [IPI-374](https://linear.app/amo100/issue/IPI-374) | 🔴 Todo | Small, can run in parallel with #5 |
-| 7 | Notification Center UI (bell/panel) | [IPI-527](https://linear.app/amo100/issue/IPI-527) | ⚫ Backlog | Downgraded from Todo to Backlog. Backend + API fully built and tested, zero UI consumers — still a small lift, high visibility whenever picked up. |
-| 8 | CRM MVP acceptance verification | [IPI-370](https://linear.app/amo100/issue/IPI-370) | 🔴 Todo, blocked by #5 only now | **Unblocked from #2** — IPI-367 shipped, so this is now gated solely on IPI-369 (#5). Owns the cross-org RLS pen test + final 6-screen browser sign-off (no-silent-won-lost / no-orphaned-won-deals tests already live in IPI-367's `verify-rls.mjs`). |
+| 3 | Companies + Contacts: enable New/Filter actions | [IPI-562](https://linear.app/amo100/issue/IPI-562) | 🟢 **Done** (2026-07-20) | **[corrected 2026-07-30]** — was listed ⚫ Backlog. Shipped 2026-07-20T17:35Z. |
+| 4 | Pipeline UX polish — owner filter, keyboard/button move (a11y, flagged P1 in `crm/crm-audit.md`), mobile stage-accordion | [IPI-563](https://linear.app/amo100/issue/IPI-563) | 🟢 **Done** (2026-07-20) | **[corrected 2026-07-30]** — was listed ⚫ Backlog. Shipped 2026-07-20T17:37Z. See also [IPI-571](https://linear.app/amo100/issue/IPI-571) (pipeline colors/totals, Done 2026-07-21). |
+| 5 | crm-assistant wave 2 — health scoring, relationship summaries, follow-up drafts, IntelligencePanel sections | [IPI-369](https://linear.app/amo100/issue/IPI-369) | 🟢 **Done** (2026-07-20) | **[corrected 2026-07-30]** — was listed 🔴 Todo and called "the actual next CRM ticket." It shipped 2026-07-20T17:38Z. This was the last real CRM feature blocker; nothing in Lane A is gated on it now. |
+| 6 | CRM route welcome + suggestion chips | [IPI-374](https://linear.app/amo100/issue/IPI-374) | 🟢 **Done** (2026-07-21) | **[corrected 2026-07-30]** — was listed 🔴 Todo. Shipped 2026-07-21T22:26Z. |
+| 7 | Notification Center UI (bell/panel) | [IPI-407](https://linear.app/amo100/issue/IPI-407) | 🟢 **Done** (2026-07-19) | **[corrected 2026-07-30]** — was listed against `IPI-527` as ⚫ Backlog with "zero UI consumers." The inbox shipped as **IPI-407 · SCR-15** (commit `47154523`); `/app/inbox` exists on `main` with `page.tsx` + `loading.tsx`. `IPI-527` could not be resolved in Linear this pass — treat that ID as suspect, same class as the IPI-528 miscitation. |
+| 8 | CRM MVP acceptance verification | [IPI-370](https://linear.app/amo100/issue/IPI-370) | 🟡 **In Progress** | **[corrected 2026-07-30]** — was 🔴 Todo "blocked by #5." **Its blocker is gone** (IPI-369 Done) and the ticket is already started. Owns the cross-org RLS pen test + final 6-screen browser sign-off. **This is one of only two open items in Lane A.** |
 | 9 | CRM Hub scope decision | — no ticket needed | 🟢 done | Keep the redirect (`/app/crm` → `/app/crm/companies`). No product ask for KPIs/recent-activity/AI-recommendations surface exists — building one now would be exactly the scope creep `crm-plan.md` §20 already ruled against. Revisit only if Product asks. |
-| 10 | Regenerate `types/supabase.ts` for `crm_convert_deal` | [IPI-566](https://linear.app/amo100/issue/IPI-566) | ⚫ Backlog, Low priority | New from the IPI-367 audit trail. `convert-deal.ts` works around the missing types with a documented cast — not urgent, cheap whenever someone's already touching a full type regen for another reason. |
+| 10 | Regenerate `types/supabase.ts` for `crm_convert_deal` | [IPI-566](https://linear.app/amo100/issue/IPI-566) | 🟢 **Done** (2026-07-21) | **[corrected 2026-07-30]** — was listed ⚫ Backlog/Low. Shipped 2026-07-21T20:06Z, alongside [IPI-373](https://linear.app/amo100/issue/IPI-373) (Deal Detail design sign-off, also Done 2026-07-21 — the "paperwork" note below is now historical). |
+| 11 | Make SCR-26–31 CRM usable on phones | [IPI-572](https://linear.app/amo100/issue/IPI-572) | 🟡 **In Progress** | **[added 2026-07-30]** — was missing from this table entirely. **The other of Lane A's two open items.** |
 
 **Not on the critical path, no action needed:** IPI-373 (design sign-off for 02f) is paperwork tracking a screen that already shipped — don't let it block anything, same lesson as the cancelled Planner docs ticket. CRM-POST-*/CRM-ADV-* backlog items (journey replay, digital twin, relationship graph, market intelligence, etc.) are correctly sitting in Backlog, not Todo — leave them there; `crm-plan.md` §20 already triaged them as Future.
 
@@ -66,7 +98,8 @@ Backend is done ([IPI-476](https://linear.app/amo100/issue/IPI-476), [IPI-477](h
 | 10b | Workspace — Task Detail + Safe Mutations (wires `ApprovalCard` to IPI-483's contract; 3 mutation classes, only `shiftTask` drag-based) | [IPI-582](https://linear.app/amo100/issue/IPI-582) | ⚪ Backlog, blocked by `IPI-579`/`IPI-580`/`IPI-581`/`IPI-483` only | Linear — added 2026-07-18 pass 2. **Corrected pass 3:** its mutation-foundation blocker (`IPI-649`, row 9b) is Done, not Backlog — the issue's own Linear description is stale on this point (still says "IPI-649 (Backlog...)"), worth a quick fix there too. This is the ticket that actually makes Timeline/Kanban/Calendar's cards editable once their read-only views (8/9/10) land. |
 | 11 | Settings + Invite | [IPI-577](https://linear.app/amo100/issue/IPI-577) | 🟢 Done (2026-07-14) | Linear + live: `/app/planner/[id]/settings` — Members tab live with real member row; Notifications/Workflow/Danger-zone tabs visibly disabled |
 | 12 | Mobile/tablet layouts | [IPI-557](https://linear.app/amo100/issue/IPI-557) | ⚪ Backlog | Linear |
-| 13 | Staging deploy / rollback / production verification (release gate) | [IPI-542](https://linear.app/amo100/issue/IPI-542) | ⚫ Backlog | Linear — blocked by #4 (now done), not yet run |
+| 13 | Staging deploy / rollback / production verification (release gate) | [IPI-542](https://linear.app/amo100/issue/IPI-542) | 🟢 **Done** (2026-07-20) | **[corrected 2026-07-30]** — was listed ⚫ Backlog "not yet run." Shipped 2026-07-20T06:45Z. |
+| 14 | Also Done since this table was written, not previously listed | [IPI-535](https://linear.app/amo100/issue/IPI-535) engine integration · [IPI-551](https://linear.app/amo100/issue/IPI-551) adaptive context panel · [IPI-647](https://linear.app/amo100/issue/IPI-647) instance-assignment read policies · [IPI-650](https://linear.app/amo100/issue/IPI-650) create-instance flow · [IPI-653](https://linear.app/amo100/issue/IPI-653) instance creation service | 🟢 **Done** | **[added 2026-07-30]** — the Planner data + engine + security layers are complete. What is missing is purely the four workspace **views**, rows 8/9/10/10b. |
 
 Note: old row 3 ("Shared components & hooks," previously cited as IPI-542) tracked a dead mapping — the actual component tickets (IPI-546 PlannerHeader/Toolbar, IPI-548 StatusChip, IPI-550 Empty/Loading/Error states, IPI-540 state-mgmt ADR) were Canceled 2026-07-12 and folded into Foundation (#1) instead of shipping standalone. IPI-542 was later repurposed to the release-gate ticket now in row 13.
 
@@ -93,7 +126,9 @@ The mutation *foundation* (`IPI-649`) is already done — it's the read-only vie
 
 ## Lane C — Cross-app mobile (future initiative, not yet ticketed)
 
-Zero deliberate mobile-responsive strategy exists anywhere in the operator app today (confirmed: no `useMediaQuery`/`matchMedia`/`BottomSheet` in `app/src`). Command Center, Brand, Shoots, and CRM are all untracked for mobile. Scope this as its own initiative once Lane A + B ship — don't assume it "comes along" with each screen ticket.
+Zero deliberate mobile-responsive strategy exists anywhere in the operator app today. Command Center, Brand, Shoots, and CRM are all untracked for mobile. Scope this as its own initiative once Lane A + B ship — don't assume it "comes along" with each screen ticket.
+
+**[re-verified 2026-07-30]** — `useMediaQuery` **0 files**, `BottomSheet` **0 files**, but `matchMedia` is now in **2 files** (was 0). The "zero strategy" claim still holds directionally, but it is no longer literally zero — CRM's phone work ([IPI-572](https://linear.app/amo100/issue/IPI-572), In Progress) is introducing the first usages. Re-check before quoting this line as evidence.
 
 ---
 
