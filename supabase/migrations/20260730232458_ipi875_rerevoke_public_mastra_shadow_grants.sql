@@ -1,14 +1,27 @@
 -- IPI-875 · MASTRA-PG-013 — Re-revoke anon/authenticated SELECT on public.mastra_* shadows
 --
--- After IPI-801 Phase A lockdown (20260724102922 / PR #628), deny-role ACLs drifted:
+-- After IPI-801 · MASTRA-PG-011 — Remove Leftover public.mastra_* Tables After Soak
+-- (Phase A lockdown, migration 20260724102922 / PR #628 — Lock public.mastra_*
+-- shadows from PostgREST), deny-role ACLs drifted:
 -- anon + authenticated regained SELECT on all 33 public.mastra_* shadows.
 -- pgTAP 004_public_mastra_shadow_lockdown.sql fails tests 103–135.
 --
--- Idempotent re-lock only (no DROP — Phase B stays on IPI-801):
+-- Idempotent re-lock only (no DROP — Phase B stays on
+-- IPI-801 · MASTRA-PG-011 — Remove Leftover public.mastra_* Tables After Soak):
 --   * REVOKE ALL from PUBLIC, anon, authenticated, service_role
 --   * ENABLE RLS, drop any browser policies
 --   * postflight: zero effective privileges for deny roles + PUBLIC
+--     (has_table_privilege incl. MAINTAIN + aclexplode deny-role scan)
 -- Does not touch mastra.* or app PostgresStore wiring.
+--
+-- Rollback: privilege-only, no data change. Prefer re-running this DO block
+-- (idempotent). Intentional undo would re-GRANT SELECT on public.mastra_* to
+-- anon/authenticated — avoid; that reopens Data API read. Root-cause of
+-- re-drift is tracked separately as IPI-876 · MASTRA-PG-014 — Stop
+-- public.mastra_* grant re-drift after lockdown.
+
+SET lock_timeout = '5s';
+SET statement_timeout = '60s';
 
 DO $$
 DECLARE
@@ -52,11 +65,22 @@ DECLARE
   deny_roles text[] := ARRAY['anon', 'authenticated', 'service_role'];
   r text;
   priv text;
+  -- Full has_table_privilege vocabulary (PG17+ includes MAINTAIN) + grant options.
+  -- Mirrors 20260724103700_public_mastra_shadow_privilege_assert.sql.
   check_privs text[] := ARRAY[
-    'SELECT', 'INSERT', 'UPDATE', 'DELETE', 'TRUNCATE', 'REFERENCES', 'TRIGGER'
+    'SELECT', 'INSERT', 'UPDATE', 'DELETE', 'TRUNCATE', 'REFERENCES', 'TRIGGER', 'MAINTAIN',
+    'SELECT WITH GRANT OPTION',
+    'INSERT WITH GRANT OPTION',
+    'UPDATE WITH GRANT OPTION',
+    'DELETE WITH GRANT OPTION',
+    'TRUNCATE WITH GRANT OPTION',
+    'REFERENCES WITH GRANT OPTION',
+    'TRIGGER WITH GRANT OPTION',
+    'MAINTAIN WITH GRANT OPTION'
   ];
   bad text;
   public_priv text;
+  deny_acl text;
   policy_count bigint;
   rowsecurity boolean;
 BEGIN
@@ -135,6 +159,28 @@ BEGIN
         t, bad;
     END IF;
 
+    -- ACL-level fail-closed: any privilege_type / is_grantable for deny roles.
+    SELECT string_agg(
+             format('%s:%s%s', gr.rolname, acl.privilege_type,
+                    CASE WHEN acl.is_grantable THEN '(grantable)' ELSE '' END),
+             ', ' ORDER BY gr.rolname, acl.privilege_type
+           )
+    INTO deny_acl
+    FROM pg_class c
+    JOIN pg_namespace n ON n.oid = c.relnamespace
+    CROSS JOIN LATERAL aclexplode(c.relacl) AS acl
+    JOIN pg_roles gr ON gr.oid = acl.grantee
+    WHERE n.nspname = 'public'
+      AND c.relname = t
+      AND c.relacl IS NOT NULL
+      AND gr.rolname = ANY (deny_roles);
+
+    IF deny_acl IS NOT NULL THEN
+      RAISE EXCEPTION
+        'IPI-875 · MASTRA-PG-013: deny-role ACL on public.%: %',
+        t, deny_acl;
+    END IF;
+
     SELECT string_agg(acl.privilege_type, ', ' ORDER BY acl.privilege_type)
     INTO public_priv
     FROM pg_class c
@@ -152,3 +198,6 @@ BEGIN
     END IF;
   END LOOP;
 END $$;
+
+RESET lock_timeout;
+RESET statement_timeout;
