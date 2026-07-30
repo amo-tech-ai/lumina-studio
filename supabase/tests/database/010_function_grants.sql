@@ -1,47 +1,32 @@
 -- IPI-809 · SEC-ONB-001 PR 2 — org helper / trigger EXECUTE grants
 --
--- Guards migration 20260730220000_ipi809_revoke_org_function_execute.sql.
+-- Persistent regression guard for migration
+-- 20260730220000_ipi809_revoke_org_function_execute.sql.
 --
--- Pre-merge CI strategy (same as 007_org_tenant_isolation.sql):
---   BEGIN → apply the same REVOKE/GRANT DDL → assert → ROLLBACK.
---   Linked remote is unchanged after the test. Idempotent after real push.
+-- Asserts LIVE privileges only. Does NOT REVOKE/GRANT first — rewriting
+-- grants would make CI pass against a drifted remote and roll the bad
+-- state back, so the suite would never catch a missing/incorrect migration.
+--
+-- Requires the migration applied on the linked remote (merge #681 +
+-- supabase:push) before this file is green in CI.
 --
 -- PUBLIC EXECUTE is not checked via has_function_privilege('public', …):
--- PostgreSQL's PUBLIC grant target is a pseudo-role, not a pg_roles entry, so
--- that call raises `role "public" does not exist` and aborts the suite.
--- anon EXECUTE denial already fails if PUBLIC EXECUTE is still granted
--- (anon inherits PUBLIC).
+-- PUBLIC is a pseudo-role, not a pg_roles entry. anon denial already fails
+-- if PUBLIC EXECUTE remains (anon inherits PUBLIC).
+--
+-- Out of scope here (owned elsewhere):
+--   · PR 1 orgs SELECT → 007_org_tenant_isolation.sql
+--   · IPI-684 default EXECUTE → tests/security/default-execute-privileges.sql
 --
 -- Plan math:
 --   3 helpers × (anon F, auth T, service_role T) = 9
 --   5 triggers × (anon F, auth F, service_role T) = 15
---   PR 1 regression (orgs SELECT USING true = 0) = 1
---   IPI-684 default ACL probe = 1
---   Total = 26
+--   Total = 24
 
 set search_path to public, extensions;
 
 begin;
-select plan(26);
-
--- Mirror 20260730220000 (must run as DB owner before privilege asserts).
-revoke all on function public.is_org_member(uuid) from public, anon, authenticated, service_role;
-revoke all on function public.is_org_owner(uuid) from public, anon, authenticated, service_role;
-revoke all on function public.is_org_editor_or_above(uuid) from public, anon, authenticated, service_role;
-grant execute on function public.is_org_member(uuid) to authenticated, service_role;
-grant execute on function public.is_org_owner(uuid) to authenticated, service_role;
-grant execute on function public.is_org_editor_or_above(uuid) to authenticated, service_role;
-
-revoke all on function public.auto_add_org_owner() from public, anon, authenticated, service_role;
-revoke all on function public.handle_new_user() from public, anon, authenticated, service_role;
-revoke all on function public.block_brand_org_change() from public, anon, authenticated, service_role;
-revoke all on function public.check_campaign_org_consistency() from public, anon, authenticated, service_role;
-revoke all on function public.create_default_event_phases() from public, anon, authenticated, service_role;
-grant execute on function public.auto_add_org_owner() to service_role;
-grant execute on function public.handle_new_user() to service_role;
-grant execute on function public.block_brand_org_change() to service_role;
-grant execute on function public.check_campaign_org_consistency() to service_role;
-grant execute on function public.create_default_event_phases() to service_role;
+select plan(24);
 
 -- ── Helpers: anon denied; authenticated + service_role allowed ──────────────────────────────
 select is(has_function_privilege('anon', 'is_org_member(uuid)', 'EXECUTE'), false,
@@ -100,60 +85,6 @@ select is(has_function_privilege('authenticated', 'create_default_event_phases()
   'authenticated must not EXECUTE create_default_event_phases()');
 select is(has_function_privilege('service_role', 'create_default_event_phases()', 'EXECUTE'), true,
   'service_role must EXECUTE create_default_event_phases()');
-
--- ── PR 1 regression: organizations SELECT must not be USING (true) ──────────────────────────
-select is(
-  (
-    select count(*)::int
-    from pg_policy p
-    join pg_class c on c.oid = p.polrelid
-    join pg_namespace n on n.oid = c.relnamespace
-    where n.nspname = 'public'
-      and c.relname = 'organizations'
-      and p.polcmd = 'r'
-      and coalesce(pg_get_expr(p.polqual, p.polrelid), '') = 'true'
-  ),
-  0,
-  'PR1: no organizations SELECT policy with USING (true)'
-);
-
--- ── IPI-684: new public functions must not inherit anon/authenticated EXECUTE ───────────────
--- DROP IF EXISTS bookends + EXCEPTION cleanup so a mid-probe error cannot leave the
--- function behind even if the outer ROLLBACK is skipped. Outer BEGIN/ROLLBACK still
--- undoes CREATE on the happy path / normal abort.
-drop function if exists public._ipi809_default_execute_probe();
-
-do $probe$
-declare
-  defaults_ok boolean;
-begin
-  create function public._ipi809_default_execute_probe()
-  returns integer
-  language sql
-  stable
-  as $f$ select 1 $f$;
-
-  defaults_ok :=
-    not has_function_privilege('anon', 'public._ipi809_default_execute_probe()', 'EXECUTE')
-    and not has_function_privilege('authenticated', 'public._ipi809_default_execute_probe()', 'EXECUTE')
-    and has_function_privilege('service_role', 'public._ipi809_default_execute_probe()', 'EXECUTE');
-
-  drop function if exists public._ipi809_default_execute_probe();
-
-  if not defaults_ok then
-    raise exception
-      'IPI-684 defaults: new function unexpectedly executable by anon/authenticated, or service_role lost EXECUTE';
-  end if;
-exception
-  when others then
-    drop function if exists public._ipi809_default_execute_probe();
-    raise;
-end
-$probe$;
-
-select pass(
-  'IPI-684 defaults: new function not executable by anon/authenticated; service_role retained'
-);
 
 select * from finish();
 rollback;
