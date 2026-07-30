@@ -3,9 +3,30 @@
 **Date:** 2026-07-29  
 **Ticket:** **IPI-706 · CF-BUNDLE-220 — Restore OpenNext Worker Bundle Headroom**  
 **Related:** **IPI-803 · CF-DB-012** ([PR #658](https://github.com/amo-tech-ai/lumina-studio/pull/658)) tipped CI over the fail gate  
-**Sibling PRs:** Phase 1A code [#660](https://github.com/amo-tech-ai/lumina-studio/pull/660) · Phase 1A CI [#661](https://github.com/amo-tech-ai/lumina-studio/pull/661) (blocked until gzip &lt; 9.0)  
-**Phase 1B branch:** `ipi/706-bundle-headless` (code-only, separate from this docs PR)  
+**Sibling PRs:** Phase 1A code [#660](https://github.com/amo-tech-ai/lumina-studio/pull/660) · Phase 1A CI [#661](https://github.com/amo-tech-ai/lumina-studio/pull/661)  
+**Phase 1B branch:** `ipi/706-bundle-headless` → merged as [#663](https://github.com/amo-tech-ai/lumina-studio/pull/663)  
 **Method:** Platform-first (official Cloudflare / OpenNext / CopilotKit / ESBuild docs) → repo `rg` → installed package exports → metafile analysis. **No guesses without evidence.**
+
+---
+
+## 0. Status — emergency resolved 2026-07-29
+
+**Everything below section 1 is a forensic snapshot of 2026-07-29, taken while `main` was red.
+It is deliberately preserved as written. This section is the current state.**
+
+| Item | Current |
+| --- | --- |
+| Size emergency | **Closed.** [#663](https://github.com/amo-tech-ai/lumina-studio/pull/663) (Mermaid/KaTeX stubs, `9c88179f`) took `main` from **9.012 → 7.826 MiB** |
+| `main` today | **7.806 MiB** gzip @ `aae84bc0` — `OK: gzip below 8.5 MiB warn gate` ([CI run 30499164983](https://github.com/amo-tech-ai/lumina-studio/actions/runs/30499164983)) |
+| Headroom | **1.19 MiB** below the 9.0 fail gate · **2.19 MiB** below Cloudflare's 10 MB Paid ceiling |
+| Trend | `9.012` (#658) → `7.826` (#663) → `7.807` (#664) → `7.806` (#666) |
+| Still open | #660 Phase 1A code · #661 Phase 1A CI — both needed a **rebase**, not a fix: they were measuring the pre-#663 bundle |
+| Section 9 blocker table | **Historical.** The `gzip ≥ 9.0 on main` blocker no longer applies |
+
+**Downstream consumers, read this first:** [IPI-848 · CF-BUNDLE-223](https://linear.app/amo100/issue/IPI-848)'s metafile
+ban list is derived from the composition numbers in section 6 below. Those were measured **before**
+#663 and #664 merged. **IPI-848 must re-measure before writing its ban list** — see section 6's
+"Re-measured" note for the current figures.
 
 ---
 
@@ -20,7 +41,7 @@
 | **Do not** | Raise 9.0 · multi-worker yet · mix docs+code in one PR |
 | **OpenNext / Wrangler** | Already on latest `@opennextjs/cloudflare@1.20.2` (= npm latest) |
 
-**Plain English:** The suitcase was already almost full of CopilotKit markdown/diagram libraries. Hyperdrive storage (#658) added a little more weight and the zipper broke. A better scale (#660/#661) does not remove weight — **`/v2/headless` does.**
+**Plain English:** The suitcase was already almost full of CopilotKit markdown/diagram libraries. Hyperdrive storage (#658) added a little more weight and the zipper broke. A better scale (#660/#661) does not remove weight — **stubbing Mermaid/KaTeX at build time does** (#663, measured 9.012 → 7.826 MiB). Switching hook-only files to `/v2/headless` was tried first and measured **no reduction** while the operator layout still mounts `CopilotKit` `/v2` — see section 8. It remains useful hygiene against re-pinning ([IPI-845](https://linear.app/amo100/issue/IPI-845)), not a size fix.
 
 ---
 
@@ -104,6 +125,42 @@ Official package source: https://github.com/CopilotKit/CopilotKit/blob/main/pack
 | **katex** | **~0.25 MiB** | Same |
 | `@copilotkit` (direct) | ~0.57 MiB | Includes `web-inspector` ~579 KiB |
 
+### Re-measured 2026-07-30, post-#663/#664/#666 — authoritative
+
+The table above is the **pre-fix** capture. Re-measured on `ipi/706-bundle-report-code`
+rebased onto `main` @ `aae84bc0`, gzip **7.807 MiB**, metafile
+sha256 `cd21f7432c86…`, **1,799 inputs**:
+
+| Package | Input hits | Size |
+| --- | --- | --- |
+| `node_modules/mermaid` | **0** | — (stubbed by #663) |
+| `node_modules/katex` | **0** | — (stubbed by #663) |
+| `node_modules/cytoscape` | **0** | — (was transitive via mermaid only) |
+| `@copilotkit/web-inspector` | **1** | **578.8 KiB** |
+
+Exact input path:
+
+```text
+.open-next/server-functions/default/.next/server/chunks/ssr/
+  node_modules_@copilotkit_web-inspector_dist_index_mjs_150addu._.js   578.8 KiB
+```
+
+**This confirms `~579 KiB` above and corrects the `~593 KiB` figure carried in
+[IPI-848](https://linear.app/amo100/issue/IPI-848) and
+[IPI-849](https://linear.app/amo100/issue/IPI-849).** This doc is the SSOT; **578.8 KiB** is the number.
+
+Two clarifications for IPI-849, which describes this as a *"Worker output chunk raw (incl. inlined Lit deps)"*:
+
+- The metafile has exactly **1 output** (the bundled `handler.mjs`). There is no separate
+  web-inspector *output* chunk — 578.8 KiB is a **pre-bundle input**, the Next.js SSR chunk.
+- Because it is an input, it measures what esbuild was *given*, not what survived tree-shaking.
+  The gzip saving from removing it stays as IPI-849 states: **~0.12 MiB (≈1.5%)**, derived from the
+  package's own 196 KiB raw → 42 KiB gzip ratio. Removing 578.8 KiB of input does **not** free 578.8 KiB of upload.
+
+**IPI-848's ban-list premise is verified by this measurement:** hard-failing
+`mermaid` / `katex` / `cytoscape` is safe today (all 0), and `web-inspector` must stay
+**WARN** until IPI-849 removes it (still 1 hit). No re-measurement needed before IPI-848 starts.
+
 ---
 
 ## 5. Build & configuration audit
@@ -177,13 +234,15 @@ Wire in `next.config.ts` (Turbopack + webpack server) and `wrangler.jsonc` (defe
 
 ## 9. Errors / red flags / blockers
 
-| Severity | Issue | Fix |
-| --- | --- | --- |
-| 🔴 Blocker | gzip ≥ 9.0 on `main` | Phase 1B before merging #660/#661 |
-| 🔴 Blocker | Shared presentation file pinned MessageView into OperatorPanel | Split module |
-| 🟠 Risk | Mocks still on `/v2` after migrate | Dual/update mocks |
-| 🟡 Debt | `@mastra/core` still huge | Separate ticket after &lt;9.0 |
-| ⚪ Skip | OpenNext upgrade / raise gate | N/A / forbidden |
+**State as of 2026-07-29 while `main` was red. See section 0 for current status.**
+
+| Severity | Issue | Fix | Status now |
+| --- | --- | --- | --- |
+| 🔴 Blocker | gzip ≥ 9.0 on `main` | Phase 1B before merging #660/#661 | ⚪ **Resolved** — #663 merged; `main` 7.806 MiB |
+| 🔴 Blocker | Shared presentation file pinned MessageView into OperatorPanel | Split module | 🟡 Open — folded into [IPI-845](https://linear.app/amo100/issue/IPI-845) |
+| 🟠 Risk | Mocks still on `/v2` after migrate | Dual/update mocks | 🟡 Open — [IPI-845](https://linear.app/amo100/issue/IPI-845) |
+| 🟡 Debt | `@mastra/core` still huge | Separate ticket after &lt;9.0 | 🟡 Open — **~6.4 MiB, largest remaining bucket, still unticketed.** Measure via IPI-848's top-25 before filing |
+| ⚪ Skip | OpenNext upgrade / raise gate | N/A / forbidden | ⚪ Still forbidden — gates unchanged at 8.5 / 9.0 |
 
 ---
 
