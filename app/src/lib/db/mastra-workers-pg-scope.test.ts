@@ -74,6 +74,8 @@ describe("IPI-803 Workers request-scoped PostgresStore", () => {
     vi.stubEnv("MASTRA_STORAGE_MODE", "pg");
     vi.stubEnv("MASTRA_SCHEMA", "mastra");
     vi.resetModules();
+    // Import mastra-workers-pg-scope to register the getter
+    await import("./mastra-workers-pg-scope");
     const { getMastraStorage, MastraStorageUnavailableError } = await import("@/mastra/storage");
     expect(() => getMastraStorage()).toThrow(MastraStorageUnavailableError);
     expect(() => getMastraStorage()).toThrow(/withMastraWorkersPgStorage/);
