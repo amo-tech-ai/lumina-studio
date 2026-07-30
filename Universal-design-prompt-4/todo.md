@@ -1,12 +1,10 @@
 # iPix / FashionOS — Build Priority Order
 
-**Updated:** 2026-07-30 — all four lanes re-verified against live Linear, `origin/main` @ `3e653702`, and live production/staging Supabase. **The 2026-07-18 pass claimed "IPI-562/IPI-369 still accurate"; both had shipped by 2026-07-20 and this file was never updated — see the corrections table below.** Prior header, kept for traceability: *Updated 2026-07-18 · Lane B re-verified against live Linear + production (`ipix.co/app`, real operator login); Lane A last re-verified 2026-07-12* · Source of truth: [`progress-tracker.md`](progress-tracker.md) (forensic, verified against `app/` code) + live Linear state, not assumed from ticket titles or a prior snapshot of this file.
+**Updated:** 2026-07-30 (pass 2) — added **Lane E · Mastra / Cloudflare** verified against live Linear ([AI Platform — LLM Providers](https://linear.app/amo100/project/ai-platform-llm-providers-8088f63224f2), [Supabase](https://linear.app/amo100/project/supabase-ef69e2ba931b), [DESIGN V2](https://linear.app/amo100/project/design-v2-operator-react-parity-e276f28e26a0)), `origin/main` @ `4f69f4f3`, live Supabase `nvdlhrodvevgwdsneplk`, and Cloudflare Workers account. Prior pass (Lane A–D) used `3e653702`. No status copied from a Linear field alone.
 
-**Legend:** 🟢 done · 🟡 in progress/partial · 🔴 not started (Todo) · ⚫ not started (Backlog, lower priority tier than Todo) · ⚪ not ticketed yet
+**Legend:** 🟢 done · 🟡 in progress/partial · 🔴 failed verification (marked Done but evidence fails) · ⚫ Backlog · ⚪ not started
 
-> **Lane D (Onboarding v2) added 2026-07-30** — see the bottom of this file. It is the active DESIGN V2 lane and carries its own four-dot legend, because that tracker distinguishes *failed verification* from *not started*, which the legend above does not.
-
-> Old content below this point (10-screen prototype tracker) is 97% shipped and no longer "near-term" — see `git log` for it if needed. This file now tracks the two active build lanes: CRM completion and Planner foundation.
+> **Lane D** = Onboarding v2 · **Lane E** = Mastra / Cloudflare. Both use 🟢🟡🔴⚪ (failed vs not-started). `tasks/cloudflare/todo.md` is stale (last reviewed 2026-07-26) — Lane E below supersedes its "Next" table until that file is refreshed in a separate PR.
 
 ---
 
@@ -19,8 +17,9 @@
 | **A · CRM** | 🟢 **9 of 10 rows Done** | Two items, both already **In Progress**: [IPI-370](https://linear.app/amo100/issue/IPI-370) MVP acceptance QA · [IPI-572](https://linear.app/amo100/issue/IPI-572) phone layouts | CRM is feature-complete. It needs sign-off, not building |
 | **B · Planner** | 🟡 **4 of 8 surfaces** | [IPI-579](https://linear.app/amo100/issue/IPI-579) Timeline → [IPI-580](https://linear.app/amo100/issue/IPI-580) Kanban+List → [IPI-581](https://linear.app/amo100/issue/IPI-581) Calendar → [IPI-582](https://linear.app/amo100/issue/IPI-582) Task Detail — **all four still Backlog** | `/app/planner/[id]` renders the literal string *"{label} view — content ships in a later Planner ticket"* (`planner-workspace-shell.tsx:25`, verified live). The Planner is a working shell around three empty tabs |
 | **C · Cross-app mobile** | ⚪ not ticketed | Still unscoped as an initiative | No deliberate mobile strategy outside CRM |
-| **D · Onboarding v2** | 🟡 **1 of 12 children** | 10 tickets at 0%. Full tracker at the bottom of this file | A new brand cannot self-serve. `/onboarding` writes nothing to the database |
-| **— · Security** | 🔴 **half-shipped** | [IPI-809](https://linear.app/amo100/issue/IPI-809) **PR 2 never landed** — `is_org_member`, `is_org_owner`, `is_org_editor_or_above`, `auto_add_org_owner`, `handle_new_user` all still hold **PUBLIC + anon EXECUTE** (verified live) | The ticket reads Done. [IPI-836](https://linear.app/amo100/issue/IPI-836)'s production gate #11 says *"both its PRs merged"* — it would pass on the status field alone |
+| **D · Onboarding v2** | 🟡 **1 of 12 children** | 10 tickets at 0%. Full tracker below | A new brand cannot self-serve. `/onboarding` writes nothing to the database |
+| **E · Mastra / Cloudflare** | 🟡 **~55% platform, 0% DNS cutover** | Durable Worker storage still `noop`; HD canary flag defaults `false`; agent-wave W2+ Backlog; DNS cutover blocked | App still on **Vercel**; custom `ai-gateway` Worker still carries prod AI; OpenNext preview exists but is not `ipix.co` |
+| **— · Security** | 🔴 **half-shipped** | [IPI-809](https://linear.app/amo100/issue/IPI-809) PR 2 — **reopened to Todo** 2026-07-30; live grants still PUBLIC+anon EXECUTE | Do not let [IPI-836](https://linear.app/amo100/issue/IPI-836) gate #11 pass on Linear status alone |
 
 ### The single highest-leverage next move
 
@@ -175,9 +174,9 @@ The `/onboarding` route is a **working, local-state-only prototype**. It writes 
 
 | # | Finding | Impact | Action |
 |--:|---|---|---|
-| 13 | 🔴 **IPI-809 is marked Done but only half shipped.** PR 2 (function grants) never landed. Live: `is_org_member`, `is_org_owner`, `is_org_editor_or_above`, `auto_add_org_owner`, `handle_new_user` **all still hold PUBLIC and anon EXECUTE** | IPI-836's production gate #11 reads "IPI-809 is Done — **both** its PRs merged." That gate will pass on a Linear status field while the second half of the security work is still open | Reopen IPI-809 for PR 2, or split PR 2 into its own ticket and re-point IPI-836's gate at it. Do not let the flag flip on the current reading |
-| 14 | 🟡 **IPI-840 is describing a bug that no longer exists.** The QA note was taken against a pre-merge build; the fix is in the merged commit | A Low-priority ticket is carrying a "hostile hash in address bar" framing that will send whoever picks it up hunting for a defect that is already fixed | Rescope to "add the missing regression test + sync the popstate branch." It is a ~10-line change, not an investigation |
-| 15 | 🟡 **Repo migration ledger is behind production.** Production's latest applied migration is `20260730032949`; the newest file in `supabase/migrations/` on `main` is `20260727020000_org_tenant_isolation.sql` | IPI-829 step 2 says "expect 25 pending — a different count means staging has drifted, stop." That check will trip on repo-vs-production drift, not staging drift, and read as a false alarm | Land the in-flight IPI-854 / IPI-861 ledger reconciliation before starting IPI-829, or re-baseline IPI-829's expected count |
+| 13 | 🔴 **IPI-809 PR 2 still open** (Linear reopened → Todo 2026-07-30). Live: eight org helpers/triggers still PUBLIC+anon EXECUTE | IPI-836 gate #11 must check live SQL, not Linear Done | Ship PR 2 from rewritten ticket Steps 0–4 |
+| 14 | 🟡 **IPI-840 is describing a bug that no longer exists.** The QA note was taken against a pre-merge build; the fix is in the merged commit | A Low-priority ticket will send people hunting a fixed defect | Rescope to regression test + popstate `replaceState` (~10 lines) |
+| 15 | ⚪ **Ledger drift (repo vs prod) largely cleared** on `main` @ `4f69f4f3` — migrations through `20260730032949` + follow-ups landed via IPI-861 | Staging (`wtuhdynujhszsbwxlbdi`) may still lag — re-baseline IPI-829 step 2 against staging, not "repo vs prod" | Re-probe staging before starting IPI-829 |
 
 ### Staged verification plan — prove each stage before starting the next
 
@@ -193,3 +192,65 @@ Each stage has an exit gate that is a **command or a query**, not a judgement. D
 | **5** | **IPI-836** slice C — controlled production run. **No PR. Explicit human go-ahead required** | Re-run (do not quote) `select count(*) from pg_policy p join pg_class c on c.oid=p.polrelid where c.relname='organizations' and p.polcmd='r' and pg_get_expr(p.polqual,p.polrelid)='true'` → **0** · flag defaults **off** · rollback rehearsed before the flip, not after |
 
 **Non-negotiable across every stage:** no test writes to production (`echo "$QA_DATABASE_URL" \| grep -c nvdlhrodvevgwdsneplk` → **0**, in CI, not in someone's memory) · every SQL fixture wrapped `begin; … rollback;` · a client-side timeout never marks a backend workflow failed.
+
+---
+
+## Lane E — Mastra / Cloudflare progress tracker (AI Platform · IPI-487)
+
+**Verified:** 2026-07-30 against `origin/main` @ `4f69f4f3`, live Supabase `nvdlhrodvevgwdsneplk` (`mastra` schema = **33** tables, `public.mastra_*` shadows = **33**), Cloudflare Workers (`ipix-operator-preview`, `ai-gateway`, HD probes), and Linear projects above. Companion SSOT until refreshed: [`tasks/cloudflare/todo.md`](../tasks/cloudflare/todo.md) (stale as of 2026-07-26).
+
+**Section legend:** 🟢 complete · 🟡 in progress · 🔴 failed verification · ⚪ not started
+
+### Headline
+
+Platform plumbing is largely built; **production operator app is still on Vercel**. OpenNext Worker preview exists; Mastra on that Worker still runs **`MASTRA_STORAGE_MODE=noop`** (InMemory) despite Linear marking durable-storage tickets Done. Custom Worker `ai-gateway` remains the live AI path. Native agent-wave migration stopped after marketing (W1).
+
+### Tracker (implementation order)
+
+| # | Task | Ticket | Dot | % | Verified evidence |
+|--:|---|---|:--:|--:|---|
+| 1 | OpenNext CI + deploy pipeline | [IPI-472](https://linear.app/amo100/issue/IPI-472) | 🟢 | 100% | Pipeline shipped; Worker `ipix-operator-preview` live in CF account |
+| 2 | Worker bundle size gate | [IPI-490](https://linear.app/amo100/issue/IPI-490) · [IPI-706](https://linear.app/amo100/issue/IPI-706) · [IPI-844](https://linear.app/amo100/issue/IPI-844) | 🟢 | 100% | Linear Done; `cf-mastra-*-stub` + gzip headroom path on `main` |
+| 3 | Workers AI via `ipix-prod` gateway (one call) | [IPI-586](https://linear.app/amo100/issue/IPI-586) | 🟢 | 100% | Native `env.AI` + gateway id path documented; Edge REST via [IPI-697](https://linear.app/amo100/issue/IPI-697) |
+| 4 | Edge Deno → AI Gateway REST (Brand Intelligence) | [IPI-695](https://linear.app/amo100/issue/IPI-695) · [IPI-697](https://linear.app/amo100/issue/IPI-697) · [IPI-699](https://linear.app/amo100/issue/IPI-699) | 🟢 | 100% | CF-EDGE track Done |
+| 5 | Mastra schema cutover `public` → `mastra` | [IPI-628](https://linear.app/amo100/issue/IPI-628) · [IPI-792](https://linear.app/amo100/issue/IPI-792) · [IPI-796](https://linear.app/amo100/issue/IPI-796) | 🟢 | 100% | Live: `mastra` = 33 tables |
+| 6 | Mastra RLS / runtime grants | [IPI-629](https://linear.app/amo100/issue/IPI-629) · [IPI-621](https://linear.app/amo100/issue/IPI-621) | 🟢 | 100% | Linear Done; pgTAP path exists |
+| 7 | Lock `public.mastra_*` shadows (Phase A) | [IPI-801](https://linear.app/amo100/issue/IPI-801) Phase A | 🟢 | 50% of ticket | Lock migrations on `main`; **33 shadow tables still present** |
+| 8 | DROP `public.mastra_*` after soak (Phase B) | [IPI-801](https://linear.app/amo100/issue/IPI-801) | 🟡 | 50% | Linear **In Progress**; live `public` still has 33 `mastra_*` — **do not DROP yet** |
+| 9 | Hyperdrive binding + helpers + canary wire | [IPI-619](https://linear.app/amo100/issue/IPI-619) · [IPI-620](https://linear.app/amo100/issue/IPI-620) · [IPI-622](https://linear.app/amo100/issue/IPI-622)–[IPI-624](https://linear.app/amo100/issue/IPI-624) · [IPI-822](https://linear.app/amo100/issue/IPI-822)–[IPI-828](https://linear.app/amo100/issue/IPI-828) | 🟢 | 100% | Flag + docs + allowlist tests on `main` |
+| 10 | HD thread canary **enabled** in preview | [IPI-623](https://linear.app/amo100/issue/IPI-623) runtime AC | 🟡 | 75% | Code Done; `wrangler.jsonc` still `"ENABLE_HYPERDRIVE_THREAD_CANARY": "false"` (all envs) |
+| 11 | Durable Mastra Postgres on CF Worker | [IPI-803](https://linear.app/amo100/issue/IPI-803) | 🔴 | 25% | Linear **Done** — but `app/wrangler.jsonc` still `MASTRA_STORAGE_MODE=noop` on every env. Storage is InMemory, not durable |
+| 12 | Worker memory under concurrent load | [IPI-839](https://linear.app/amo100/issue/IPI-839) | ⚪ | 0% | Todo — blocks trusting Worker Mastra at scale |
+| 13 | Migrate public marketing agent (W1) | [IPI-753](https://linear.app/amo100/issue/IPI-753) | 🟢 | 100% | Done |
+| 14 | Agent-wave harness + W2/W3 operator agents | [IPI-769](https://linear.app/amo100/issue/IPI-769) · [IPI-751](https://linear.app/amo100/issue/IPI-751) · [IPI-752](https://linear.app/amo100/issue/IPI-752) | ⚪ | 0% | Todo / Backlog — next native-AI code after storage truth |
+| 15 | Multi-turn tools + W4–W6 + zero-legacy soak | [IPI-591](https://linear.app/amo100/issue/IPI-591) · [IPI-609](https://linear.app/amo100/issue/IPI-609) | ⚪ | 0% | Backlog — after W2/W3 |
+| 16 | Delete custom `ai-gateway` Worker | [IPI-592](https://linear.app/amo100/issue/IPI-592) | ⚪ | 0% | Blocked until zero-legacy; Worker still deployed |
+| 17 | Preview smoke / rollback / branch rules / obs confirm | [IPI-707](https://linear.app/amo100/issue/IPI-707) · [IPI-708](https://linear.app/amo100/issue/IPI-708) · [IPI-794](https://linear.app/amo100/issue/IPI-794) · [IPI-709](https://linear.app/amo100/issue/IPI-709) | ⚪/🟡 | ~25% | 709 Done in Linear (ops confirm still needed); 707/708/794 Backlog |
+| 18 | DNS cutover `ipix.co` → Workers + Vercel fallback | [IPI-631](https://linear.app/amo100/issue/IPI-631) | ⚪ | 0% | Backlog — **last**. App remains on Vercel today |
+| 19 | Full integration convergence | [IPI-787](https://linear.app/amo100/issue/IPI-787) | ⚪ | 0% | After durable storage is *actually* on |
+| 20 | Onboarding Brand DNA Mastra contract (product) | [IPI-834](https://linear.app/amo100/issue/IPI-834) | ⚪ | 0% | DESIGN V2 — see Lane D; fail-open `ok: boolean` still on `main` |
+| — | **Lane E rollup** | [IPI-487](https://linear.app/amo100/issue/IPI-487) | 🟡 | **~55%** | Scaffold + HD + schema ✅ · durable Worker storage 🔴 · agent waves ⚪ · DNS ⚪ |
+
+### Needs attention
+
+| # | Finding | Impact | Action |
+|--:|---|---|---|
+| E1 | 🔴 **IPI-803 Done but Worker storage is still `noop`** | Claiming "durable Mastra on CF" is false; concurrent runs lose memory; IPI-839 is the symptom | Reopen or split "prove `MASTRA_STORAGE_MODE≠noop` on preview" AC; do not start IPI-631 |
+| E2 | 🟡 **HD canary wired but off** (`false` in wrangler) | Code path unexercised in default deploys | Flip preview env only after soak checklist in `app/docs/hyperdrive-thread-canary-ops.md` |
+| E3 | 🟡 **`tasks/cloudflare/todo.md` is 4+ days stale** | Engineers will start IPI-822/623 as if open | Separate docs PR to sync that file to Lane E |
+| E4 | 🟡 **33/33 public shadows remain** (IPI-801) | Dual catalog drift risk | Finish soak → Phase B DROP; not a CF Worker change |
+
+### Staged plan (exit gates = commands)
+
+| Stage | Work | Exit gate |
+|:--:|---|---|
+| **0** | Reconcile IPI-803 truth · keep IPI-801 Phase B gated · refresh `tasks/cloudflare/todo.md` (own PR) | `rg 'MASTRA_STORAGE_MODE.: ."noop"' app/wrangler.jsonc` still documents reality · Linear IPI-803 AC matches wrangler |
+| **1** | Prove HD canary on **preview only** (IPI-623 soak) ∥ fix Worker memory (IPI-839) ∥ agent harness (IPI-769) | Preview: canary `true` + one thread create/read via HD · memory repro closed or ticketed with evidence · harness tests green |
+| **2** | Flip durable storage off `noop` on preview (real IPI-803 AC) | Preview wrangler/env `MASTRA_STORAGE_MODE` ≠ `noop` · Mastra thread survives Worker isolate recycle |
+| **3** | W2 → W3 agent native path (IPI-751 → IPI-752) | Flags + contract tests; planner tools still work |
+| **4** | Hosting gates: IPI-707 smoke · IPI-708 rollback · IPI-794 ruleset · IPI-709 alert proof | Each has a dated run log in PR/Linear |
+| **5** | IPI-631 DNS cutover — **human go-ahead** · then IPI-609 → IPI-592 | `ipix.co` on Workers with tested Vercel fallback; custom Worker deleted only after zero legacy AI traffic |
+
+**Parallel OK today:** Stage 1 three tracks (HD soak · IPI-839 · IPI-769) + Lane D day-0 tickets + IPI-809 PR 2 — separate PRs.
+
+**Do not start:** IPI-631, IPI-592, IPI-801 DROP, global `AI_PROVIDER` / `BI_PROVIDER` flips.
