@@ -19,8 +19,9 @@ metadata:
 # Cloudinary Skills Hub
 
 **Single skill** for all Cloudinary work. Load the matching `references/` entry on demand —
-do not paste reference bodies into context. Former satellites (`cloudinary-docs`,
-`cloudinary-next`, `cloudinary-react`, `cloudinary-transformations`) redirect here.
+do not paste reference bodies into context. The former `cloudinary-docs`, `cloudinary-next`,
+`cloudinary-react`, and `cloudinary-transformations` skills were redirect stubs and have been
+deleted — everything they pointed at lives in `references/` here.
 
 ---
 
