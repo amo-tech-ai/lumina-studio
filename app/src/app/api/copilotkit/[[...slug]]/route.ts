@@ -453,6 +453,16 @@ const handler = async (request: Request): Promise<Response> => {
     return new Response("Unauthorized", { status: 401 });
   }
 
+  // IPI-846: never pass the local-dev sentinel/demo id into getCurrentOrgId
+  // (Postgres 22P02 → opaque 503 / runtime_info_fetch_failed). Prefer a clean 401.
+  if (user.id === "dev-unauthenticated" || user.id === "demo-user") {
+    console.error(
+      "[copilotkit] sentinel/demo operator id after auth gate — refusing (401, fail closed)",
+      user.id,
+    );
+    return new Response("Unauthorized", { status: 401 });
+  }
+
   try {
     // IPI-803: Workers + pg → request-scoped Hyperdrive PostgresStore (ALS).
     // Skip the wrapper for /info so agent discovery still works when Hyperdrive
