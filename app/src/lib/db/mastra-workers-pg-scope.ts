@@ -12,7 +12,10 @@ import {
   MastraStorageUnavailableError,
   assertPostgresStoreModule,
   isCloudflareWorkersRuntime,
+  registerWorkersPgScopedStoreGetter,
+  resolveMastraSchemaName,
   shouldSkipMastraPostgresStorage,
+  withMastraApplicationName,
 } from "@/mastra/storage";
 
 /** IPI-803 / canary: Workers Hyperdrive PostgresStore always max:1 until IPI-839 evidence. */
@@ -33,25 +36,7 @@ type WorkersPgRequestScope = {
 const workersPgRequestScope = new AsyncLocalStorage<WorkersPgRequestScope>();
 let workersPgStoreCreateCount = 0;
 
-// registerWorkersPgScopedStoreGetter removed - not exported from storage module
-
-/** Resolve Mastra schema name from environment. */
-function resolveMastraSchemaName(env: NodeJS.ProcessEnv = process.env): string {
-  return (env.MASTRA_SCHEMA ?? "public").trim();
-}
-
-/** Add application name to connection string for connection pooling. */
-function withMastraApplicationName(connectionString: string): string {
-  try {
-    const url = new URL(connectionString);
-    url.searchParams.set("application_name", "ipix-operator-workers");
-    return url.toString();
-  } catch {
-    // If not a valid URL, append as query param
-    const separator = connectionString.includes("?") ? "&" : "?";
-    return `${connectionString}${separator}application_name=ipix-operator-workers`;
-  }
-}
+registerWorkersPgScopedStoreGetter(() => workersPgRequestScope.getStore()?.store);
 
 function resolveWorkersPgSslOption(
   env: NodeJS.ProcessEnv = process.env,
