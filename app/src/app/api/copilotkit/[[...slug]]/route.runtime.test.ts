@@ -155,23 +155,30 @@ describe("IPI2-127 — anonymous → 401 when auth enabled (runtime)", () => {
     expect(await response.text()).toBe("Unauthorized");
   });
 
-  it("returns 401 (not 503) when gate returns the local-dev sentinel (IPI-846)", async () => {
-    const withOperatorAuth = vi.mocked((await import("@/lib/operator-gate")).withOperatorAuth);
-    withOperatorAuth.mockResolvedValue({
-      id: "dev-unauthenticated",
-      name: "Dev (auth disabled)",
-    });
+  // Both sentinel ids the handler rejects. `demo-user` is unreachable through
+  // withOperatorAuth today (its UUID shape guard collapses it to
+  // `dev-unauthenticated`), so this covers the handler's own defence-in-depth
+  // branch — not a path the gate can currently produce.
+  it.each(["dev-unauthenticated", "demo-user"])(
+    "returns 401 (not 503) when gate returns the %s sentinel id (IPI-846)",
+    async (sentinelId) => {
+      const withOperatorAuth = vi.mocked((await import("@/lib/operator-gate")).withOperatorAuth);
+      withOperatorAuth.mockResolvedValue({
+        id: sentinelId,
+        name: "Dev (auth disabled)",
+      });
 
-    const route = await import("@/app/api/copilotkit/[[...slug]]/route");
-    const response = await route.GET(
-      new Request("http://localhost/api/copilotkit", {
-        headers: { authorization: "Bearer stale.jwt" },
-      }),
-    );
+      const route = await import("@/app/api/copilotkit/[[...slug]]/route");
+      const response = await route.GET(
+        new Request("http://localhost/api/copilotkit", {
+          headers: { authorization: "Bearer stale.jwt" },
+        }),
+      );
 
-    expect(response.status).toBe(401);
-    expect(await response.text()).toBe("Unauthorized");
-  });
+      expect(response.status).toBe(401);
+      expect(await response.text()).toBe("Unauthorized");
+    },
+  );
 
   it("passes through to CopilotRuntime when auth succeeds and propagates token via requestToken ALS", async () => {
     const withOperatorAuth = vi.mocked((await import("@/lib/operator-gate")).withOperatorAuth);

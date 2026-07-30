@@ -6,15 +6,13 @@ import {
   withOperatorAuth,
 } from "./operator-gate";
 
-vi.mock("./auth", () => ({
+// Partial mock: stub only resolveOperatorUser (it calls Supabase). extractAccessToken
+// stays REAL so these tests exercise the same Bearer *and* cookie parsing production
+// uses — a hand-copied stub silently drops the cookie branch, which is the path a
+// signed-in browser actually takes (IPI-846).
+vi.mock("./auth", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("./auth")>()),
   resolveOperatorUser: vi.fn(),
-  extractAccessToken: (request: Request) => {
-    const authHeader = request.headers.get("authorization");
-    if (authHeader && /^Bearer\s+/i.test(authHeader)) {
-      return authHeader.replace(/^Bearer\s+/i, "").trim() || undefined;
-    }
-    return undefined;
-  },
 }));
 
 import { resolveOperatorUser } from "./auth";
@@ -101,6 +99,29 @@ describe("withOperatorAuth — CopilotKit HTTP boundary (IPI2-127, IPI-468)", ()
     const user = await withOperatorAuth(
       new Request("http://localhost/api/copilotkit", {
         headers: { authorization: "Bearer valid.jwt" },
+      }),
+    );
+
+    expect(user).toEqual(expectedUser);
+    expect(resolveOperatorUserMock).toHaveBeenCalled();
+  });
+
+  it("prefers real session UUID from the sb-*-auth-token cookie, not just Bearer (IPI-846)", async () => {
+    vi.stubEnv("NODE_ENV", "development");
+    vi.stubEnv("OPERATOR_AUTH_ENABLED", "false");
+    const expectedUser = {
+      id: "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
+      name: "QA Operator",
+    };
+    resolveOperatorUserMock.mockResolvedValue(expectedUser);
+    // Supabase SSR stores the session as a JSON array; a browser sends this, not a
+    // Bearer header — the exact shape the IPI-846 "/app looks signed in but chat
+    // 503s" report came from.
+    const session = encodeURIComponent(JSON.stringify(["cookie.jwt", "refresh"]));
+
+    const user = await withOperatorAuth(
+      new Request("http://localhost/api/copilotkit", {
+        headers: { cookie: `sb-abcdefgh-auth-token=${session}` },
       }),
     );
 
