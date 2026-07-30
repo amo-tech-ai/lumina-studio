@@ -8,6 +8,33 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### 2026-07-30 — IPI-861 (SB-PERF-004): Backfill 27 Applied Migrations from Remote Ledger
+
+**PR #674 — merge `d372064`. Migrations + RLS-regression fixes; supersedes closed PR #671.**
+
+**Purpose:** the 2026-07-30 migration batch (IPI-854 / IPI-858 / IPI-861) had been applied directly to the remote database but never committed, so `supabase migration list` showed 27 remote-only versions and the repo had drifted from production. This PR backfills those 27 files verbatim from `supabase_migrations.schema_migrations.statements` so local and remote agree, and adds two forward-only follow-up migrations plus regression tests for issues found while reviewing the backfill.
+
+**Files / systems changed:**
+- 27 backfilled migrations (`20260730032222` … `20260730032949`) — duplicate-index cleanup on `brand_scores` and RLS permissive-policy consolidations across `organizations`, `profiles`, `payments`, `registrations`, `task_assignees`, `ticket_tiers`, `organizer_team_members`, `model_availability`, `model_profiles`, `stakeholders`, `talent.talent_availability`, `fashion_show_designer_profiles`, `events`, `event_designers`, `event_phases`, `event_schedules`, `event_sponsors`, `event_stakeholders`, `event_models`, `assets`, `brand_crawl_results`, `call_times`, `event_assets`, `event_rehearsals`.
+- 2 **new, not-yet-applied** migrations written during review, not part of the ledger backfill: `20260730050000_fix_consolidation_regressions.sql` (adds `public.is_organizer_team_member()` SECURITY DEFINER helper to break RLS self-recursion on `organizer_team_members`, restores the `brand_scores_brand_id_score_type_key` unique index, restores anon SELECT on published `event_rehearsals`, restores organizer UPDATE on `fashion_show_designer_profiles`) and `20260730060000_tighten_model_availability_and_wrap_auth.sql` (removes the unrestricted `event_id IS NULL` branch from `model_availability_select`; wraps bare `auth.uid()` in `events_select`, `ticket_tiers_select`, `event_designers_select`, `call_times_select`, `event_phases_insert`).
+- `scripts/verify-rls.mjs` — new regression coverage for `event_rehearsals` anon read (published+public / published+private / draft matrix) and `model_availability_select` (owner / organizer / unrelated-user matrix).
+- `app/src/types/supabase.ts` — regenerated (`is_organizer_team_member` added), verified against the gate's exact `supabase gen types` invocation to avoid spurious drift.
+
+**Tests / CI:** `supabase migration list --db-url` reports `local == remote` for all 27 backfilled versions; pre-push gate green (typecheck + 2,511 tests / 244 files); `git diff --cached --name-only | grep -cv "^supabase/migrations/"` → 0, confirming the backfill commit itself touched only migration files.
+
+**Production impact:** the 27 backfilled files are documentation-only for this PR — they were already applied to the remote database, so committing them changes no live behavior. The two new migrations (`20260730050000`, `20260730060000`) contain real, unapplied SQL fixing an RLS infinite-recursion bug on `organizer_team_members`, a lost anon-read regression on `event_rehearsals`, a lost organizer-UPDATE regression on `fashion_show_designer_profiles`, a missing unique index needed by `brand_scores` upserts, and an over-broad `model_availability` read branch — these require a `supabase db push` (or equivalent) to take effect in production and have not been confirmed deployed by this record.
+
+**Known limitations (carried over from PR body, follow-ups not fixed here):**
+1. `20260730032032_wrap_auth_rls_initplan` is a no-op (comments only) despite being recorded as applied — IPI-854 is not actually complete; 131 policies still use unwrapped `auth.*`.
+2. `20260730032222` dropped `brand_scores_brand_id_score_type_uidx`, leaving `..._key` as the only unique index on `(brand_id, score_type)` — confirms PR #672 (which proposed dropping `_key`) would be destructive.
+3. Consolidations used `DROP POLICY` + `CREATE POLICY` (25 drops / 20 creates, 0 alters), opening a brief no-policy window and requiring re-specification of `FOR <cmd> TO <roles>`; no damage found on verification.
+4. `payments`, `registrations`, `task_assignees`, `ticket_tiers` policies still use bare `auth.uid()` rather than `(select auth.uid())`; `organizations` was wrapped. None of the 27 backfilled migrations recorded a `rollback` array.
+5. `model_availability` INSERT/UPDATE/DELETE policies still carry the same unrestricted branch tightened only for SELECT here.
+
+**Rollback / cleanup notes:** the 27 backfilled migrations are historical and immutable (already live) — do not edit them; any correction must be a new forward-only migration, as demonstrated by `20260730050000` and `20260730060000`. `20260730032032` (the no-op wrap-initplan migration) is a candidate for `supabase migration repair --status reverted`, but that mutates production ledger state and needs an explicit human decision, not an automated cleanup.
+
+**Follow-up tasks:** IPI-864 / IPI-865 (wrap remaining bare `auth.uid()` calls with corrected `ALTER POLICY` form, 13-policy iPix-core scope), IPI-868 (SB-SEC-008 — tighten `model_availability` INSERT/UPDATE/DELETE plus `designer_availability`/`venue_availability` siblings), and a human decision on repairing `20260730032032`'s ledger status. PR #672 should be closed as superseded/destructive per finding 2 above.
+
 ### 2026-07-26 — IPI-815: Fix Racy NewPlanDialog Idempotency-Key Tests Blocking the Pre-Push Gate
 
 **PR #634 — merge `aa5d433`. Test-only; no production component changed.**
