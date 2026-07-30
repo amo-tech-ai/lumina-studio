@@ -4462,6 +4462,266 @@ try {
     pass("IPI-732: shoot-creation role-authz block skipped (no service role key)");
   }
 
+  // ---------------------------------------------------------------------------
+  // IPI-861 · event_rehearsals anon read policy — regression cover
+  //
+  // The 2026-07-30 consolidation (20260730032914) dropped
+  // public_select_event_rehearsals, the only `TO anon` SELECT policy, and
+  // replaced it with an authenticated-only one. anon holds a SELECT grant on the
+  // table, so public event pages silently lost published rehearsal schedules.
+  // Restored by 20260730050000 as event_rehearsals_select_anon.
+  //
+  // event_rehearsals had zero test coverage anywhere in the repo before this.
+  //
+  // Effective gate is `published AND is_public`, not `published` alone. The
+  // policy's EXISTS subquery reads public.events, and events RLS applies inside
+  // that subquery — for anon, events_select_anon requires
+  // (status = 'published' AND is_public = true). So a published-but-private
+  // event hides its rehearsals from anon even though the rehearsal policy text
+  // only mentions status. The original public_select_event_rehearsals had the
+  // same shape and therefore the same behaviour.
+  //   published + public  -> anon CAN read
+  //   published + private -> anon CANNOT read  (nested events RLS)
+  //   draft               -> anon CANNOT read
+  // ---------------------------------------------------------------------------
+  if (serviceKey && userA?.user?.id) {
+    let rehPublishedEventId;
+    let rehPrivateEventId;
+    let rehDraftEventId;
+    try {
+      const rehStamp = Date.now();
+
+      const makeRehearsalFixture = async (status, isPublic, label) => {
+        const { data: ev, error: evErr } = await admin
+          .from("events")
+          .insert({
+            organizer_id: userA.user.id,
+            title: `RLS rehearsal ${label} ${rehStamp}`,
+            slug: `rls-reh-${label}-${rehStamp}`,
+            start_time: new Date(rehStamp).toISOString(),
+            status,
+            is_public: isPublic,
+          })
+          .select("id")
+          .single();
+        assert(
+          !evErr && ev?.id,
+          `service role inserts ${label} event for rehearsal anon probe`,
+        );
+        if (!ev?.id) return {};
+        const { data: reh, error: rehErr } = await admin
+          .from("event_rehearsals")
+          .insert({
+            event_id: ev.id,
+            date: new Date(rehStamp).toISOString().slice(0, 10),
+            start_time: "10:00:00",
+          })
+          .select("id")
+          .single();
+        assert(
+          !rehErr && reh?.id,
+          `service role inserts rehearsal on ${label} event`,
+        );
+        return { eventId: ev.id, rehearsalId: reh?.id };
+      };
+
+      const publishedFixture = await makeRehearsalFixture("published", true, "published-public");
+      const privateFixture = await makeRehearsalFixture("published", false, "published-private");
+      const draftFixture = await makeRehearsalFixture("draft", true, "draft");
+      rehPublishedEventId = publishedFixture.eventId;
+      rehPrivateEventId = privateFixture.eventId;
+      rehDraftEventId = draftFixture.eventId;
+
+      const anonSees = async (rehearsalId) => {
+        const { data, error } = await anon
+          .from("event_rehearsals")
+          .select("id")
+          .eq("id", rehearsalId);
+        return { error, count: Array.isArray(data) ? data.length : -1 };
+      };
+
+      // ALLOW — published + public.
+      if (publishedFixture.rehearsalId) {
+        const r = await anonSees(publishedFixture.rehearsalId);
+        assert(
+          !r.error && r.count === 1,
+          "IPI-861: anon CAN read rehearsal on a published public event (event_rehearsals_select_anon)",
+        );
+      }
+
+      // DENY — published but private. Blocked by nested events RLS, not by the
+      // rehearsal policy text. Pins the behaviour so it cannot drift silently.
+      if (privateFixture.rehearsalId) {
+        const r = await anonSees(privateFixture.rehearsalId);
+        assert(
+          !r.error && r.count === 0,
+          "IPI-861: anon CANNOT read rehearsal on a published but non-public event (nested events RLS)",
+        );
+      }
+
+      // DENY — draft. RLS filters rather than errors, so assert an empty result.
+      if (draftFixture.rehearsalId) {
+        const r = await anonSees(draftFixture.rehearsalId);
+        assert(
+          !r.error && r.count === 0,
+          "IPI-861: anon CANNOT read rehearsal on a draft event",
+        );
+      }
+    } finally {
+      for (const evId of [rehPublishedEventId, rehPrivateEventId, rehDraftEventId]) {
+        if (!evId) continue;
+        await checkedCleanup(
+          `IPI-861 rehearsals for event ${evId}`,
+          admin.from("event_rehearsals").delete().eq("event_id", evId),
+        );
+        await checkedCleanup(
+          `IPI-861 rehearsal probe event ${evId}`,
+          admin.from("events").delete().eq("id", evId),
+        );
+      }
+    }
+  } else if (!serviceKey) {
+    pass("IPI-861 · event_rehearsals anon read policy — regression cover skipped (no service role key)");
+  } else {
+    // serviceKey present but the shared user fixture is missing: that is broken
+    // setup, not an environment we may soft-skip. Throwing beats a misleading
+    // "skipped (no service role key)" pass — see IPI-668.
+    throw new Error(
+      "IPI-861 · event_rehearsals anon read policy — regression cover: userA fixture unavailable",
+    );
+  }
+
+  // ---------------------------------------------------------------------------
+  // IPI-861 · model_availability_select — regression cover
+  //
+  // 20260730060000 removed a blanket `(event_id IS NULL)` branch that let ANY
+  // authenticated user read every row with a null event_id. Per the table
+  // comment those are the personal availability *blocks*, so the unrestricted
+  // branch exposed the more sensitive half of the table.
+  //
+  // Access matrix this pins:
+  //                          block (event_id NULL)   booking (event_id set)
+  //   model owner                    YES                     YES
+  //   organizer of that event        no                      YES
+  //   unrelated authenticated        no                      no
+  //
+  // The unrelated-user + null-event cell is the one the old policy got wrong.
+  // ---------------------------------------------------------------------------
+  if (serviceKey && userA?.user?.id && userB?.user?.id) {
+    let maProfileId;
+    let maEventId;
+    let maOutsider;
+    try {
+      const maStamp = Date.now();
+      maOutsider = await createTestUser(`plt002-rls-ma-${maStamp}@example.com`);
+
+      // Model profile owned by userA.
+      const { data: mp, error: mpErr } = await admin
+        .from("model_profiles")
+        .insert({ name: `RLS model ${maStamp}`, profile_id: userA.user.id })
+        .select("id")
+        .single();
+      assert(!mpErr && mp?.id, "service role inserts model_profile for model_availability probe");
+      maProfileId = mp?.id;
+
+      // Event organized by userB (a different user from the model owner).
+      const { data: maEv, error: maEvErr } = await admin
+        .from("events")
+        .insert({
+          organizer_id: userB.user.id,
+          title: `RLS model-availability event ${maStamp}`,
+          slug: `rls-ma-${maStamp}`,
+          start_time: new Date(maStamp).toISOString(),
+          status: "draft",
+        })
+        .select("id")
+        .single();
+      assert(!maEvErr && maEv?.id, "service role inserts event for model_availability probe");
+      maEventId = maEv?.id;
+
+      if (maProfileId && maEventId) {
+        const mkRow = async (eventId, label) => {
+          const { data, error } = await admin
+            .from("model_availability")
+            .insert({
+              model_profile_id: maProfileId,
+              event_id: eventId,
+              start_time: new Date(maStamp).toISOString(),
+              end_time: new Date(maStamp + 3600000).toISOString(),
+            })
+            .select("id")
+            .single();
+          assert(!error && data?.id, `service role inserts model_availability ${label} row`);
+          return data?.id;
+        };
+        const blockId = await mkRow(null, "block (event_id null)");
+        const bookingId = await mkRow(maEventId, "booking (event_id set)");
+        const bothIds = [blockId, bookingId].filter(Boolean);
+
+        const seenBy = async (client) => {
+          const { data, error } = await client
+            .from("model_availability")
+            .select("id")
+            .in("id", bothIds);
+          return { error, ids: Array.isArray(data) ? data.map((r) => r.id) : [] };
+        };
+
+        // Model owner sees both their block and their booking.
+        const ownerSaw = await seenBy(userA.client);
+        assert(
+          !ownerSaw.error && ownerSaw.ids.length === bothIds.length,
+          "IPI-861: model owner CAN read their own availability rows (block + booking)",
+        );
+
+        // Event organizer sees the booking for their event, but not the block.
+        const orgSaw = await seenBy(userB.client);
+        assert(
+          !orgSaw.error &&
+            bookingId && orgSaw.ids.includes(bookingId) &&
+            (!blockId || !orgSaw.ids.includes(blockId)),
+          "IPI-861: event organizer CAN read the booking for their event but NOT the null-event block",
+        );
+
+        // Unrelated authenticated user sees neither — this is the cell the old
+        // (event_id IS NULL) branch got wrong.
+        const outsiderSaw = await seenBy(maOutsider.client);
+        assert(
+          !outsiderSaw.error && outsiderSaw.ids.length === 0,
+          "IPI-861: unrelated authenticated user is DENIED all model_availability rows, including the null-event block",
+        );
+      }
+    } finally {
+      if (maProfileId) {
+        await checkedCleanup(
+          `IPI-861 model_availability for profile ${maProfileId}`,
+          admin.from("model_availability").delete().eq("model_profile_id", maProfileId),
+        );
+        await checkedCleanup(
+          `IPI-861 model_profile ${maProfileId}`,
+          admin.from("model_profiles").delete().eq("id", maProfileId),
+        );
+      }
+      if (maEventId) {
+        await checkedCleanup(
+          `IPI-861 model-availability probe event ${maEventId}`,
+          admin.from("events").delete().eq("id", maEventId),
+        );
+      }
+      if (maOutsider?.user?.id) {
+        const { error } = await deleteAuthUser(maOutsider.user.id);
+        if (error) trackCleanupError(`IPI-861 model_availability outsider ${maOutsider.user.id}: ${error.message}`);
+      }
+    }
+  } else if (!serviceKey) {
+    pass("IPI-861 · model_availability_select — regression cover skipped (no service role key)");
+  } else {
+    // serviceKey present but userA/userB missing: broken setup, not a skippable
+    // environment. Fail loudly instead of reporting a no-key pass — see IPI-668.
+    throw new Error(
+      "IPI-861 · model_availability_select — regression cover: userA/userB fixtures unavailable",
+    );
+  }
+
 } catch (err) {
   if (!(err && typeof err === "object" && err.alreadyCounted)) {
     fail(err instanceof Error ? err.message : String(err));
