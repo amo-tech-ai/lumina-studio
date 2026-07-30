@@ -6870,6 +6870,10 @@ export type Database = {
       is_org_editor_or_above: { Args: { p_org_id: string }; Returns: boolean }
       is_org_member: { Args: { p_org_id: string }; Returns: boolean }
       is_org_owner: { Args: { p_org_id: string }; Returns: boolean }
+      is_organizer_team_member: {
+        Args: { p_team_id: string }
+        Returns: boolean
+      }
       list_bookings: {
         Args: {
           p_cursor?: string
