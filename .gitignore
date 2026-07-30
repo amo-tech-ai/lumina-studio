@@ -77,3 +77,6 @@ pr9-storefront-test/
 # Design source files — not committed, copied into worktrees via .worktreeinclude
 Universal design prompt/
 Universal design prompt*.zip
+
+# verify-before-stop.sh pre-existing-error baseline (machine-local)
+.claude/.typecheck-baseline

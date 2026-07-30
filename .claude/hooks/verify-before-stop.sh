@@ -76,19 +76,69 @@ fi
 TYPECHECK_OUT=$(npm run typecheck 2>&1)
 TYPECHECK_STATUS=$?
 
-# Convert repo-root-relative paths (app/src/...) to app-relative (src/...) for eslint
-LINT_FILES=$(echo "$CHANGED" | sed -n 's#^app/##p' | grep -E '\.(ts|tsx|js|jsx)$')
+# `git status` lists staged-added-then-deleted paths (XY = "AD") that no longer
+# exist on disk. Passing one to eslint aborts the whole run with
+# "No files matching the pattern ... were found", so a half-finished restructure
+# turned every lint invocation into a hard failure regardless of the real files.
+# Filter to paths that actually exist before invoking eslint.
+LINT_FILES=""
+while IFS= read -r rel; do
+  [ -n "$rel" ] || continue
+  [ -f "$rel" ] && LINT_FILES="${LINT_FILES}${rel}"$'\n'
+done <<EOF
+$(echo "$CHANGED" | sed -n 's#^app/##p' | grep -E '\.(ts|tsx|js|jsx)$')
+EOF
+
 LINT_OUT=""
 LINT_STATUS=0
 if [ -n "$LINT_FILES" ]; then
-  LINT_OUT=$(echo "$LINT_FILES" | xargs npx eslint 2>&1)
+  LINT_OUT=$(printf '%s' "$LINT_FILES" | xargs npx eslint 2>&1)
   LINT_STATUS=$?
 fi
 
-if [ "$TYPECHECK_STATUS" -ne 0 ] || [ "$LINT_STATUS" -ne 0 ]; then
+# Only block on typecheck errors this session could have caused.
+#
+# `npm run typecheck` is whole-project, so a branch parked mid-restructure (broken
+# imports, untracked WIP) makes it fail on every turn forever — including turns
+# that never touched app/src. That is noise, not a gate: it blocks constantly, so
+# it stops being read, which is worse than not running at all.
+#
+# Fix: keep a baseline of already-known errors and block only on NEW ones. The
+# first failing run records the baseline and lets the turn finish. Delete the file
+# to re-baseline after cleaning a branch up.
+BASELINE="$REPO_ROOT/.claude/.typecheck-baseline"
+
+# Normalize to file + rule + message, dropping (line,col) so unrelated edits
+# above an error don't look like a new error.
+error_signatures() {
+  grep -E '^[^[:space:]]+\([0-9]+,[0-9]+\): error TS' | sed -E 's/\([0-9]+,[0-9]+\)//' | sort -u
+}
+
+TYPECHECK_BLOCKS=0
+if [ "$TYPECHECK_STATUS" -ne 0 ]; then
+  CURRENT_ERRS=$(printf '%s\n' "$TYPECHECK_OUT" | error_signatures)
+  if [ -z "$CURRENT_ERRS" ]; then
+    # Non-zero exit with no parseable TS error (tsc crash, cf-typegen failure,
+    # OOM). Never silently swallow that.
+    TYPECHECK_BLOCKS=1
+  elif [ -f "$BASELINE" ]; then
+    NEW_ERRS=$(comm -23 <(printf '%s\n' "$CURRENT_ERRS") <(sort -u "$BASELINE"))
+    if [ -n "$NEW_ERRS" ]; then
+      TYPECHECK_BLOCKS=1
+      TYPECHECK_OUT="New errors not in .claude/.typecheck-baseline:"$'\n'"$NEW_ERRS"
+    else
+      echo "verify-before-stop: $(printf '%s\n' "$CURRENT_ERRS" | wc -l | tr -d ' ') pre-existing typecheck error(s) match the baseline — not blocking. Delete .claude/.typecheck-baseline to re-baseline." >&2
+    fi
+  else
+    printf '%s\n' "$CURRENT_ERRS" > "$BASELINE"
+    echo "verify-before-stop: recorded $(printf '%s\n' "$CURRENT_ERRS" | wc -l | tr -d ' ') pre-existing typecheck error(s) to .claude/.typecheck-baseline and allowing this turn. Future turns block only on NEW errors." >&2
+  fi
+fi
+
+if [ "$TYPECHECK_BLOCKS" -ne 0 ] || [ "$LINT_STATUS" -ne 0 ]; then
   REASON="Pre-stop verification failed on changed app/src files."
   NL=$'\n'
-  [ "$TYPECHECK_STATUS" -ne 0 ] && REASON="$REASON${NL}${NL}typecheck:${NL}$TYPECHECK_OUT"
+  [ "$TYPECHECK_BLOCKS" -ne 0 ] && REASON="$REASON${NL}${NL}typecheck:${NL}$TYPECHECK_OUT"
   [ "$LINT_STATUS" -ne 0 ] && REASON="$REASON${NL}${NL}lint:${NL}$LINT_OUT"
   jq -n --arg reason "$REASON" '{"decision":"block","reason":$reason}'
   exit 0
