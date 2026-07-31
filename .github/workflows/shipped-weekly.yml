@@ -48,13 +48,27 @@ jobs:
           # midnight, but the previous Friday run already covered through 16:00 — so a
           # date-only lower bound puts every PR merged 00:00–16:00 on a Friday into two
           # consecutive scaffolds.
+          #
+          # ANCHOR is the END of the covered period, and the week heading is derived
+          # from it — NOT from SINCE. A Friday cron covering "7 days ago" straddles two
+          # Mondays, so anchoring the heading on SINCE returns the *previous* Monday:
+          # the first real run (2026-08-07) would emit "## Week of 2026-07-27", a
+          # section SHIPPED.md already contains. Anchoring on the period end gives
+          # 08-07 -> 08-03, 08-14 -> 08-10, 08-21 -> 08-17 — distinct every week.
           if [ -n "${SINCE_INPUT:-}" ]; then
             SINCE="${SINCE_INPUT}T00:00:00Z"
+            ANCHOR="$(date -u -d "${SINCE_INPUT} + 7 days" +%F)"
           else
             SINCE="$(date -u -d '7 days ago' +%Y-%m-%dT%H:%M:%SZ)"
+            ANCHOR="$(date -u +%F)"
           fi
+
+          # Monday of ANCHOR's week. %u is 1..7 (Mon..Sun), so subtracting %u and
+          # adding 1 lands on that week's Monday for every day of the week.
+          WEEK="$(date -u -d "$ANCHOR - $(date -u -d "$ANCHOR" +%u) days + 1 day" +%F)"
+
           echo "since=$SINCE" >> "$GITHUB_OUTPUT"
-          echo "week=$(date -u -d "$SINCE" +%Y-%m-%d)" >> "$GITHUB_OUTPUT"
+          echo "week=$WEEK" >> "$GITHUB_OUTPUT"
 
           # merged:>=DATE is the reliable signal — the REST `merged` field is false
           # for squash merges, so filtering on it silently drops everything.
@@ -66,10 +80,38 @@ jobs:
             --json number,title,url,mergedAt \
             > /tmp/prs.json
 
-          echo "count=$(jq length /tmp/prs.json)" >> "$GITHUB_OUTPUT"
+          COUNT="$(jq length /tmp/prs.json)"
+          echo "count=$COUNT" >> "$GITHUB_OUTPUT"
+
+          # One gate for both downstream steps. Deciding here rather than in `if:`
+          # expressions matters: if the scaffold step short-circuits on its own, the
+          # PR step still runs, `git add SHIPPED.md` stages nothing, and `git commit`
+          # exits non-zero under `set -e` — a red job for a no-op week.
+          proceed=true
+          reason=""
+
+          if [ ! -f SHIPPED.md ]; then
+            # Not hypothetical: SHIPPED.md arrived in a later PR than this workflow,
+            # so a scheduled run in that window would have hit `awk: can't open file`
+            # and exited 2 under `set -e`.
+            proceed=false
+            reason="SHIPPED.md is not present on this branch"
+          elif [ "$COUNT" = "0" ]; then
+            proceed=false
+            reason="no PRs merged since $SINCE"
+          elif grep -qxF "## Week of $WEEK" SHIPPED.md; then
+            # The awk below inserts unconditionally, so without this a re-run — or a
+            # backfill dispatch whose period lands on an already-written week — appends
+            # a second "## Week of <same date>" section.
+            proceed=false
+            reason="week of $WEEK is already recorded in SHIPPED.md"
+          fi
+
+          echo "proceed=$proceed"  >> "$GITHUB_OUTPUT"
+          echo "reason=$reason"    >> "$GITHUB_OUTPUT"
 
       - name: Build scaffold
-        if: steps.collect.outputs.count != '0'
+        if: steps.collect.outputs.proceed == 'true'
         run: |
           set -euo pipefail
           WEEK="${{ steps.collect.outputs.week }}"
@@ -99,6 +141,11 @@ jobs:
             echo "### Fixed"
             echo "### Security"
             echo
+            # Trailing rule. Every hand-written pair of weeks in SHIPPED.md is
+            # `---`-separated; without this the generated section abuts the one
+            # below it.
+            echo "---"
+            echo
           } > /tmp/entry.md
 
           # Insert directly beneath the intro rule, above the newest existing entry.
@@ -109,7 +156,7 @@ jobs:
           ' SHIPPED.md > /tmp/SHIPPED.md && mv /tmp/SHIPPED.md SHIPPED.md
 
       - name: Open draft PR
-        if: steps.collect.outputs.count != '0'
+        if: steps.collect.outputs.proceed == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -121,21 +168,31 @@ jobs:
           # pushed the branch but `gh pr create` then failed (transient API error,
           # missing label, permissions), treating branch-existence as "done" would
           # strand that week forever — every rerun would exit here and never retry.
-          if gh pr list --head "$BRANCH" --state all --json number --jq 'length' \
-               | grep -qv '^0$'; then
+          #
+          # Assigned, then tested — not piped into `grep -q`. `grep -q` exits on its
+          # first match and can SIGPIPE the upstream `gh`, which `pipefail` then
+          # reports as a failed pipeline. Here that would fail *open*: an existing PR
+          # goes undetected and a duplicate is attempted.
+          existing="$(gh pr list --head "$BRANCH" --state all --json number --jq 'length')"
+          if [ "$existing" != "0" ]; then
             echo "::notice::A PR already exists for $BRANCH — nothing to do."
             exit 0
           fi
 
-          git config user.name  "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-
           if git ls-remote --exit-code --heads origin "$BRANCH" >/dev/null 2>&1; then
-            # Branch exists with no PR — a previous run got half-way. Resume from it.
-            echo "::notice::$BRANCH exists without a PR — resuming PR creation."
-            git fetch origin "$BRANCH"
-            git checkout "$BRANCH"
+            # Branch exists with no PR — a previous run pushed it, then failed before
+            # opening the PR. Open the PR against the remote branch as it stands.
+            #
+            # Do NOT check it out. The scaffold step above has already modified
+            # SHIPPED.md in the working tree, and the remote branch carries a
+            # different committed SHIPPED.md, so `git checkout "$BRANCH"` aborts with
+            # "local changes would be overwritten" and `set -e` kills the job — every
+            # time, on the exact recovery path this branch exists to serve.
+            # `gh pr create --head` needs no local checkout.
+            echo "::notice::$BRANCH exists without a PR — opening the PR against it."
           else
+            git config user.name  "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
             git checkout -b "$BRANCH"
             git add SHIPPED.md
             git commit -m "docs(shipped): scaffold week of $WEEK"
@@ -153,6 +210,18 @@ jobs:
             printf -- '---\n_Generated by [Claude Code](https://claude.ai/code)_\n'
           } > /tmp/pr-body.md
 
+          # Requires the repository setting "Allow GitHub Actions to create and
+          # approve pull requests" (Settings -> Actions -> General). Without it this
+          # call fails 403 regardless of the `permissions:` block above — that toggle
+          # is repo/org scope and a job-level grant cannot override it.
+          #
+          # Known limitation, not a defect: a PR opened with GITHUB_TOKEN triggers no
+          # `on: pull_request` workflows, so this PR has zero check runs. Harmless
+          # while `main` is unprotected. Once IPI-794 (CF-GOV-001 — Protect Main with
+          # a GitHub Ruleset) lands and changelog-staleness becomes a required check,
+          # this PR becomes unmergeable — and the `no-changelog` label will not help,
+          # because the job never runs to read it. Fix then, not now: push with a
+          # PAT/App token from secrets, or land one manual empty commit to get checks.
           gh pr create \
             --draft \
             --base main \
@@ -161,6 +230,6 @@ jobs:
             --title "docs(shipped): week of $WEEK" \
             --body-file /tmp/pr-body.md
 
-      - name: Nothing merged
-        if: steps.collect.outputs.count == '0'
-        run: echo "::notice::No PRs merged since ${{ steps.collect.outputs.since }} — no scaffold opened."
+      - name: Nothing to do
+        if: steps.collect.outputs.proceed != 'true'
+        run: echo "::notice::No scaffold opened — ${{ steps.collect.outputs.reason }}."
