@@ -28,15 +28,13 @@ For the plain-language weekly digest, see [`SHIPPED.md`](./SHIPPED.md).
 - **`changelog.md`** — the header no longer claims to follow Keep a Changelog. It doesn't: entries group by ticket, there are no versions, and SemVer isn't claimed. The format is deliberate; the label was wrong.
 - **`docs/changelog/PRACTICE.md`** (new) — the review behind all of the above: whether to install one of the six competing changelog skills (no — ours pulls Linear context, none of them do), and how to make the cadence stick.
 
-**The enforcement design changed under review, and that's the interesting part.** The first draft was the obvious gate: *this PR must change `changelog.md`.* It was thrown away because it makes this repo's most-enforced rule unsatisfiable — `AGENTS.md` forbids mixing docs and production files in one PR, so a per-PR gate would force every code PR to bundle a docs file, and the only way out is a skip label. A smoke alarm wired to the light switch gets disabled on day two. What replaced it measures **`main`**, not your diff: if `changelog.md` falls more than 12 commits behind, every PR goes red until someone lands a docs-only changelog PR — which is exactly the shape the rules want. That gate ships in a separate config PR.
+**The enforcement design changed under review, and that's the interesting part.** The first draft was the obvious gate: *this PR must change `changelog.md`.* It was thrown away because it makes this repo's most-enforced rule unsatisfiable — `AGENTS.md` forbids mixing docs and production files in one PR, so a per-PR gate would force every code PR to bundle a docs file, and the only way out is a skip label. A smoke alarm wired to the light switch gets disabled on day two. What replaced it measures **`main`**, not your diff: if `changelog.md` falls more than 12 commits behind, every PR goes red until someone lands a docs-only changelog PR — which is exactly the shape the rules want. That gate shipped separately in PR [#692 — *CHLOG-002 — Enforce Changelog Freshness With a Staleness Gate*](https://github.com/amo-tech-ai/lumina-studio/pull/692).
+
+**The gate's escape hatch got tested for real on day one, by accident.** #692 merged *before* this PR, against the documented order. `main` was 38 commits behind a budget of 12, so `changelog-staleness` went red across all 13 other open PRs the moment it landed. This PR was unaffected, because the carve-out is exactly for this case: a PR that touches `changelog.md` passes regardless of budget, so the one PR that can clear the debt is never the one the gate blocks. Merging this entry resets the count to zero and clears the check for every open PR at once. The design held; the merge order still mattered, and the cost of getting it wrong was one red check on thirteen PRs rather than a stuck repository.
 
 ### 2026-07-31 — docs/stack: tech stack scorecard and build-vs-buy plan
 
-**PR [#691](https://github.com/amo-tech-ai/lumina-studio/pull/691) — docs-only. No production files touched.**
-
-> 📌 This entry describes files that arrive with #691. **Merge #691 before #693**,
-> or this entry and `docs/changelog/PRACTICE.md`'s `../stack/…` links point at a
-> tree that doesn't exist yet.
+**PR [#691 — *STACK-DOCS-001 — iPix Technology-Stack Scorecard, Verification Prompts, and Ten Mini-Reports*](https://github.com/amo-tech-ai/lumina-studio/pull/691) — docs-only. No production files touched.**
 
 A scored view of every stack layer, the prompts to keep it current, and a build-vs-buy pass. New tree under `docs/stack/`: `README.md` (scorecard + 24-row tracker), `BUILD-VS-BUY.md`, `PROMPTS.md` (11 re-verify prompts), `TEMPLATE.md`, and `reports/00–09`.
 
