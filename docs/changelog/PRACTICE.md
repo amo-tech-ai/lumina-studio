@@ -58,7 +58,7 @@ works. It's that nothing *asks*.
 | Reads git history | ✅ | ✅ |
 | Categorises changes | ✅ Features / Improvements / Fixes | ✅ by theme |
 | Translates tech → user language | ✅ | 🟡 stays technical by design |
-| **Pulls Linear issue context** | ❌ | ✅ — turns `IPI-812` into what changed and why |
+| **Pulls Linear issue context** | ❌ | ✅ — turns a bare `IPI-812` into *IPI-812 · BRAND-REG-003 — Authenticate Brand Analysis at the Request Boundary*, plus what changed and why |
 | **Matches this repo's voice** | ❌ generic | ✅ explicitly instructed to |
 | **Knows our docs-only PR rule** | ❌ | ✅ |
 | Style config file | ✅ `CHANGELOG_STYLE.md` | ❌ |
@@ -138,7 +138,8 @@ routine entries, where Linear context is the thing that makes an entry useful.
 
 ## 4. Our changelog is excellent — and it isn't a changelog
 
-Look at a real entry (2026-07-26, IPI-812):
+Look at a real entry — *IPI-812 · BRAND-REG-003 — Authenticate Brand Analysis at
+the Request Boundary and Enforce Editor/Owner Permission*, 2026-07-26:
 
 > *"`withOperatorAuth` returns `"dev-unauthenticated"` whenever the operator gate is
 > off, **without inspecting the request**. A string sentinel can never equal a uuid

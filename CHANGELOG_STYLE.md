@@ -32,10 +32,25 @@ claimed. KaC's six types are used in `SHIPPED.md`, where they fit.
    migration id, test counts.
 4. **Group by theme, never one entry per commit.** Nine Hyperdrive commits are one
    Hyperdrive paragraph.
-5. **Pair every ticket id with its title on first mention** — `IPI-812 · BRAND-REG-003`,
-   never a bare number. (Repo-wide rule, `CLAUDE.md`.)
+5. **Pair every ticket id with its title on first mention.** The full form is
+   `{ID} · {SPEC} — {Plain English title}`:
+
+   | ❌ | ✅ |
+   |---|---|
+   | `IPI-812` | `IPI-812 · BRAND-REG-003 — Authenticate Brand Analysis at the Request Boundary` |
+   | `IPI-812 · BRAND-REG-003` | *(same as above — the spec code is not a title)* |
+   | `### IPI-815: Fix Racy Tests` | `### IPI-815 — Fix Racy NewPlanDialog Idempotency-Key Tests Blocking the Pre-Push Gate` |
+
+   Drop the ` · {SPEC}` segment when the ticket genuinely has no spec code — do
+   not invent one. A missing spec code is fine; a fabricated one is a lie a
+   future reader will try to grep for.
+
+   A bare number and an ID+SPEC pair fail this rule the same way: neither tells a
+   reader what the ticket was about without opening Linear. (Repo-wide rule,
+   `CLAUDE.md`.)
 6. **Record what you deliberately did not fix,** and where it's tracked. The
-   IPI-817 note in the IPI-812 entry is the model.
+   *IPI-817 · SEC-WF-001 — accessToken persisted in the workflow snapshot* note
+   inside the IPI-812 entry is the model.
 7. **State how it was verified.** *"232 files / 2298 passed, typecheck + build
    green."* No verification line means the entry is a claim, not a record.
 8. **Prefer the schema-level fix.** When a change makes a bug class
@@ -47,7 +62,7 @@ claimed. KaC's six types are used in `SHIPPED.md`, where they fit.
 |---|---|
 | "Various bug fixes and improvements" | Name them, or omit the entry |
 | Pasted `git log` output | Group by theme, write prose. KaC: *"don't let your friends dump git logs into changelogs"* |
-| "Fixed IPI-812" | What broke, why, and how it's prevented |
+| "Fixed IPI-812" | The full name on first mention, then what broke, why, and how it's prevented |
 | Passive voice hiding the actor | "The start route passed that string into the workflow" |
 | An entry with no hash, PR, or file reference | Unverifiable |
 

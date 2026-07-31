@@ -65,7 +65,7 @@ Scoring is `(Core × 0.6) + (Advanced × 0.4)` and measures **feature adoption, 
 **🔒 Access-control hardening — the dominant theme**
 
 - **IPI-809 · SEC-ONB-001 — Stop Any Logged-In User From Seeing Every Organization** (PR [#655](https://github.com/amo-tech-ai/lumina-studio/pull/655), merged 07-27). Followed by *Revoke PUBLIC/anon EXECUTE on org helpers (migration)* (`f3462bb`, PR [#681](https://github.com/amo-tech-ai/lumina-studio/pull/681)) and *pgTAP for org helper/trigger EXECUTE grants* (`94953b6`, PR [#682](https://github.com/amo-tech-ai/lumina-studio/pull/682)). The migration follows the IPI-544 pattern — `REVOKE ALL` from every role that might hold a grant, then `GRANT EXECUTE` to the intended roles only, leaving no leftover ACL ambiguity. Trigger-only functions (`handle_new_user`, `auto_add_org_owner`, `block_brand_org_change`, …) end up `service_role`-only.
-- **IPI-872 · SB-HYGIENE-003 — Re-revoke `chatbot_*` SELECT from anon/authenticated** (`63e836a`, PR [#686](https://github.com/amo-tech-ai/lumina-studio/pull/686), merged 07-30). Ships three migrations: the `chatbot_*` re-revoke, a `lead_intake_drafts` grant reaffirm, and **IPI-875 · MASTRA-PG-013** re-revoking all 33 `public.mastra_*` shadows.
+- **IPI-872 · SB-HYGIENE-003 — Re-revoke `chatbot_*` SELECT from anon/authenticated** (`63e836a`, PR [#686](https://github.com/amo-tech-ai/lumina-studio/pull/686), merged 07-30). Ships three migrations: the `chatbot_*` re-revoke, a `lead_intake_drafts` grant reaffirm, and **IPI-875 · MASTRA-PG-013 — Re-revoke the 33 `public.mastra_*` shadow-table grants** (migration `20260730232458_ipi875_rerevoke_public_mastra_shadow_grants`).
 
   > ⚠️ **This is the third ACL drift, not the second.** All three table groups had been deliberately locked and all three came undone:
   >
@@ -76,7 +76,7 @@ Scoring is `(Core × 0.6) + (Advanced × 0.4)` and measures **feature adoption, 
   > | `lead_intake_drafts` | IPI-677 (`20260718180000`) | **IPI-872 companion** — PR [#687](https://github.com/amo-tech-ai/lumina-studio/pull/687) (IPI-874) covered the same ground and was closed unmerged as redundant |
   >
   > pgTAP caught every one — `chatbot-grants.sql` and `004_public_mastra_shadow_lockdown.sql` tests 103–135. **Root cause is still unknown**, tracked as **IPI-876 · MASTRA-PG-014 — Stop `public.mastra_*` grant re-drift after lockdown**. Three independent table groups regaining `SELECT` after deliberate lockdown points at something systemic: a blanket `GRANT ... ON ALL TABLES IN SCHEMA public`, or `ALTER DEFAULT PRIVILEGES` re-applying. Re-revoke migrations are symptom fixes.
-- **IPI-146 · MASTRA-GOV-002** (`cd3c809`, PR [#635](https://github.com/amo-tech-ai/lumina-studio/pull/635)) — organization-scoped Mastra memory and thread authorization.
+- **IPI-146 · MASTRA-GOV-002 — Organization-scoped Mastra memory and thread authorization** (`cd3c809`, PR [#635](https://github.com/amo-tech-ai/lumina-studio/pull/635)).
 - **Stop CI creating fake companies in the live database on every pull request** (`b9cea07`, PR [#641](https://github.com/amo-tech-ai/lumina-studio/pull/641)) — booking-gate CI was writing fixtures straight to production. Follow-up rolled back the fixture SQL rather than committing it (`c12ade3`, PR [#654](https://github.com/amo-tech-ai/lumina-studio/pull/654)).
 - **Withhold production API credentials from pull request CI** (`72a7cd2`, PR [#643](https://github.com/amo-tech-ai/lumina-studio/pull/643)); the credential scan now catches every falsy middle operand, not just the empty string (`8c400c6`, PR [#650](https://github.com/amo-tech-ai/lumina-studio/pull/650)).
 
@@ -102,7 +102,7 @@ Scoring is `(Core × 0.6) + (Advanced × 0.4)` and measures **feature adoption, 
 
 `4f69f4f` backfilled 27 applied migrations and repaired consolidation regressions (IPI-861) · `b9cea07` + `c12ade3` stopped booking-gate CI writing fixtures to production · `aae84bc` excluded `.next`/`.open-next` from the TypeScript program (IPI-851) · `a513ad2` prefer the real session when `OPERATOR_AUTH_ENABLED=false` (IPI-846) · `0718639` removed the unused `@mastra/libsql` dependency (IPI-782) · `3c8b0e0` trimmed `CLAUDE.md` from 3,978 to 1,790 words and added rule precedence · `c8ef0df` dropped graphify advisory hooks and Cloudinary redirect stubs · `af6b82b` bounded unbounded git output in slash commands · plus tracker re-verification docs (`fbfd7ec`, `0e58eac`, `d19392a`, `54be81c`).
 
-### 2026-07-26 — IPI-815: Fix Racy NewPlanDialog Idempotency-Key Tests Blocking the Pre-Push Gate
+### 2026-07-26 — IPI-815 — Fix Racy NewPlanDialog Idempotency-Key Tests Blocking the Pre-Push Gate
 
 **PR #634 — merge `aa5d433`. Test-only; no production component changed.**
 
@@ -113,7 +113,7 @@ Two `new-plan-dialog.test.tsx` idempotency-key tests failed intermittently — 6
 - Removed 3 ineffective `{ timeout: … }` workarounds and stale comments that misattributed the race to mock timing.
 - **Verified:** 5 isolated runs (16/16 each) + 2 full-suite runs, 0 failures.
 
-Two unrelated load-sensitive tests (`mastra/registry-discovery.test.ts`, `api/copilotkit/[[...slug]]/route.info.test.ts`) were found during verification and deliberately left alone — different, still-unknown cause. Tracked as IPI-819 · TEST-STABILITY-001.
+Two unrelated load-sensitive tests (`mastra/registry-discovery.test.ts`, `api/copilotkit/[[...slug]]/route.info.test.ts`) were found during verification and deliberately left alone — different, still-unknown cause. Tracked as *IPI-819 · TEST-STABILITY-001 — Diagnose the remaining load-sensitive test failures*.
 
 ### 2026-07-26 — IPI-812 · BRAND-REG-003: Authenticate Brand Analysis at the Request Boundary and Enforce Editor/Owner Permission
 
@@ -128,7 +128,7 @@ Every real workflow run died at step 1 of 7 with `Brand not found or not owned b
 - **Schema:** workflow input `userId: z.string()` → `actorId: z.string().uuid()`, making the `"dev-unauthenticated"` bug class unrepresentable.
 - **Verified:** 232 files / 2298 passed, typecheck + build green, `supabase:verify-rls` independently confirms `is_org_editor_or_above()` is true for owner/editor and false for viewer.
 
-**Known limitation:** `accessToken` is still passed into workflow input and therefore persisted in `mastra.mastra_workflow_snapshot`. It cannot be removed here — `start-brand-crawl` has `verify_jwt = true` and records `started_by`, so a service-role call 401s. Tracked as IPI-817 · SEC-WF-001. Scrubbing the 5 historical token-bearing rows awaits production-data sign-off.
+**Known limitation:** `accessToken` is still passed into workflow input and therefore persisted in `mastra.mastra_workflow_snapshot`. It cannot be removed here — `start-brand-crawl` has `verify_jwt = true` and records `started_by`, so a service-role call 401s. Tracked as *IPI-817 · SEC-WF-001 — Stop persisting `accessToken` in the workflow snapshot*. Scrubbing the 5 historical token-bearing rows awaits production-data sign-off.
 
 ### 2026-06-24 — IPI2-167 complete: lead capture wired + edge fn hardened
 
