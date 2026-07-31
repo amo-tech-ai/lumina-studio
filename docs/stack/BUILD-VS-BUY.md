@@ -59,7 +59,7 @@ and 6+ days stale, and they block IPI-631 (DNS cutover).**
 | `check-worker-bundle-size.mjs` | No prebuilt equivalent — genuinely ours | ✅ Keep |
 | `sync-wrangler-secrets-from-infisical.mjs`, `upload-opennext-with-secrets.mjs`, `cloudflare-secret-allowlist.mjs` | `wrangler secret bulk` + GitHub Actions OIDC | 🟡 Simplify |
 | `verify-cloudflare-gateway.mjs` | AI Gateway dashboard analytics + logs | 🟡 Keep the CI gate, drop the reporting half |
-| Rollback plan (IPI-708, unwritten) | **Wrangler `versions rollback`** — built in, instant | 🔴 **Use it.** Don't design a rollback process |
+| Rollback plan (IPI-708, unwritten) | **Wrangler `rollback <VERSION_ID>`** — built in, instant | 🔴 **Use it.** Rehearse on `--env preview`; do not design a rollback process |
 | Observability baseline (IPI-709, 0%) | Workers Logs — **already configured** at `head_sampling_rate: 1` | 🟢 Mostly done, needs the Sentry CI token |
 | Playwright preview smoke (IPI-707, 0%) | [`cloudflare/templates`](https://github.com/cloudflare/templates) ships a Playwright E2E suite that validates templates in both local and live mode | 🔴 **Copy it** |
 | Branch protection (IPI-763) | GitHub repo settings — one screen | 🔴 **Click it today** |
@@ -80,8 +80,8 @@ and 6+ days stale, and they block IPI-631 (DNS cutover).**
 | # | Task | Tool | Effort |
 |:-:|------|------|:------:|
 | 1 | Enable branch protection on `main` | Dashboard | 5 min |
-| 2 | Adopt `wrangler versions rollback` as the IPI-708 answer | CLI | 30 min |
-| 3 | Fix the bundle with `next/dynamic`, then delete the 4 stub files | Config | M |
+| 2 | Rehearse `wrangler rollback <VERSION_ID> --env preview` as the IPI-708 answer | CLI | 30 min |
+| 3 | Fix the bundle with `next/dynamic`. It retires at most the **3 rendering** stubs of 6 — the runtime stubs are unrelated ([03](./reports/03-cloudflare.md#7-next-5-tasks)) | Config | M |
 | 4 | Copy the Playwright harness from `cloudflare/templates` for IPI-707 | Template | M |
 | 5 | Replace `wait-for-crawl` with a Cloudflare Workflow | `workflows-starter` | M |
 
@@ -291,7 +291,7 @@ there is 0.015 MiB of headroom.
 | 1 | Branch protection on `main` | GitHub | Dashboard | 5 min |
 | 2 | Stripe Sync Engine | Supabase | Dashboard | 5 min |
 | 3 | Mastra observability exporter on | Mastra | 2 env vars | 15 min |
-| 4 | `wrangler versions rollback` → close IPI-708 | Cloudflare | CLI | 30 min |
+| 4 | `wrangler rollback <VERSION_ID> --env preview` → close IPI-708 | Cloudflare | CLI | 30 min |
 | 5 | Dashboard review: IPI-637/639/642 vs MediaFlows | Cloudinary | Dashboard | 30 min |
 | 6 | `get_advisors` as a CI gate | Supabase | MCP | 1 hr |
 

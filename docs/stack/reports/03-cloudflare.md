@@ -90,7 +90,28 @@ protection** — confirmed via `gh api .../branches/main/protection` → 404. So
 nothing. That is a one-screen dashboard fix and the highest-value item in this
 report.
 
-**IPI-708 needs no design work either:** `wrangler versions rollback` is built in.
+**IPI-708 needs no tooling built, but it does need a written procedure.** The
+mechanism ships with Wrangler — [`wrangler rollback [<VERSION_ID>]`](https://developers.cloudflare.com/workers/wrangler/commands/workers/#rollback)
+(**not** `wrangler versions rollback`, which is not a command). Rehearse it
+against preview only:
+
+```bash
+cd app
+npx wrangler versions list --env preview          # copy the target VERSION_ID
+npx wrangler rollback <VERSION_ID> --env preview --message "IPI-708 rehearsal"
+npx wrangler deployments status --env preview     # confirm the active version
+```
+
+⚠️ **Two things the docs are explicit about, and a rehearsal must cover:**
+
+1. A rollback **immediately becomes the active deployment across every route and
+   domain** for that Worker. Always pass an explicit `VERSION_ID` — with the
+   argument omitted it silently targets "the version before the latest."
+2. **Rollback is refused if bindings changed** between the two versions — a
+   deleted/modified KV namespace, R2 bucket, queue, or Durable Object class
+   lifecycle change blocks it. Since this repo's whole cutover is about adding
+   bindings, that is the failure mode the rehearsal exists to find.
+
 See [`BUILD-VS-BUY.md`](../BUILD-VS-BUY.md) §1.
 
 ---
@@ -136,14 +157,14 @@ what Cloudflare Workflows exists to replace: durable, resumable, automatic retry
 
 | ID | Task | | % | Examine | Verify | Blocker |
 |----|------|:-:|--:|---------|--------|---------|
-| CF-01 | AI Gateway Worker | 🟢 | 90 | `services/cloudflare-worker/` | `npm run verify:cloudflare-gateway` | frozen for new features |
+| CF-01 | AI Gateway Worker | 🟢 | 90 | `services/cloudflare-worker/` | `cd app && npm run verify:cloudflare-gateway` | frozen for new features |
 | CF-02 | Workers AI binding | 🟡 | 60 | `wrangler.jsonc` `ai` | `ENABLE_CF_AI_SMOKE=1` | — |
-| CF-03 | OpenNext build | 🟡 | 55 | `npm run build:cf` | local run | never in CI |
+| CF-03 | OpenNext build | 🟡 | 55 | `cd app && npm run build:cf` | local run | never in CI |
 | CF-04 | Worker bundle size (IPI-706) | 🔴 | 20 | `check-worker-bundle-size.mjs` | `npm run check:worker-bundle` | **8.985 / 9.0 MiB** — 0.015 headroom |
 | CF-11 | Branch protection on `main` (IPI-763) | 🔴 | 0 | GitHub settings | `gh api .../branches/main/protection` → 404 | none — one dashboard screen |
-| CF-12 | Rollback rehearsal (IPI-708) | 🔴 | 0 | — | `wrangler versions rollback` | blocks IPI-631 |
+| CF-12 | Rollback rehearsal (IPI-708) | 🔴 | 0 | §3 above | `wrangler rollback <VERSION_ID> --env preview` | blocks IPI-631 |
 | CF-05 | Hyperdrive query path | 🔴 | 45 | `HYPERDRIVE_FRESH` | `ENABLE_HYPERDRIVE_PG_SMOKE=1` | IPI-620 |
-| CF-06 | Preview deploy | 🔴 | 0 | `npm run preview` | — | — |
+| CF-06 | Preview deploy | 🔴 | 0 | `cd app && npm run preview` | — | — |
 | CF-07 | CI deploy job | 🟡 | 40 | `cloudflare-secrets-sync.yml` — `build:cf`, Worker upload, optional promote | `workflow_dispatch` | Manual only, not PR CI |
 | CF-08 | Secrets sync | 🟡 | 60 | `cloudflare-secrets-sync.yml` | workflow run | — |
 | CF-09 | Workflows adoption | ⚪ | 0 | — | — | not scoped |
@@ -156,10 +177,30 @@ what Cloudflare Workflows exists to replace: durable, resumable, automatic retry
 | # | Task | Effort | Why |
 |:-:|------|:------:|-----|
 | 1 | **Enable branch protection on `main` (IPI-763)** | 5 min | A hard rule with zero enforcement; also a cutover gate |
-| 2 | Close IPI-708 with `wrangler versions rollback` | 30 min | Built-in. No rollback process to design |
-| 3 | Bundle fix via `next/dynamic`, then delete the 4 `cf-*-stub.mjs` files | M | 0.015 MiB of headroom; the stubs are config debt |
+| 2 | Close IPI-708 by rehearsing `wrangler rollback <VERSION_ID> --env preview` and writing down the result | 30 min | The mechanism is built in — what's missing is a rehearsed, written procedure |
+| 3 | Bundle fix via `next/dynamic`, then retire the **3 rendering** stubs | M | 0.015 MiB of headroom. See the caveat below |
 | 4 | Copy the Playwright harness from `cloudflare/templates` for IPI-707 | M | Don't write an E2E suite the vendor ships |
 | 5 | Cloudflare go / no-go decision, written down | S | Unblocks a dozen docs that currently hedge |
+
+### ⚠️ `next/dynamic` does not delete the stubs — and there are six, not four
+
+`app/scripts/` holds **6** `cf-*-stub.mjs` files, in two unrelated groups:
+
+| Group | Files | Wired in | Would `next/dynamic` retire it? |
+|-------|-------|----------|:-------------------------------:|
+| **Rendering** | `cf-shiki-stub.mjs`, `cf-mermaid-stub.mjs`, `cf-katex-stub.mjs` | `next.config.ts:34-36` | 🟡 Only if the client graph stops importing them |
+| **Runtime** | `cf-mastra-pg-stub.mjs`, `cf-mastra-workers-pg-scope-stub.mjs`, `cf-ast-grep-stub.mjs` | `wrangler.jsonc:64-66`, `open-next.config.ts` | ❌ **No.** These exist because the packages can't run on workerd at all |
+
+`next/dynamic(..., {ssr:false})` moves a module out of the *server* bundle. It
+does not remove it from the *client* graph — `@copilotkit/react-core →
+streamdown → mermaid/cytoscape/katex` is a client-side import chain, so the
+dependency survives the change. Retiring the rendering stubs needs the import
+chain broken, not just deferred.
+
+And these stubs are **not** free config debt: `cf-katex-stub.mjs` is explicit
+that with it in place, "math renders as escaped text." Deleting a stub without
+first removing the dependency restores a real feature; leaving it in keeps a
+real degradation. Either way it is a product decision, not cleanup.
 
 ---
 

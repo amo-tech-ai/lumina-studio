@@ -102,15 +102,37 @@ touching our stored DNA score. That's a new capability, not a rewrite.
 
 | ID | Task | | % | Examine | Verify | Blocker |
 |----|------|:-:|--:|---------|--------|---------|
-| CD-01 | Upload + delivery | 🟢 | 80 | `next-cloudinary` | `npm run verify:cloudinary-pipeline` | — |
+| CD-01 | Upload + delivery | 🟢 | 80 | `next-cloudinary` | `cd app && npm run verify:cloudinary-pipeline` | — |
 | CD-02 | Signed uploads | 🟢 | 85 | server SDK | pipeline verify | — |
-| CD-03 | Webhooks | 🟡 | 55 | `verify-cloudinary-webhook-live.mjs` | live run | needs prod creds |
+| CD-03 | Webhooks | 🟡 | 55 | `verify-cloudinary-webhook-live.mjs` | see ⚠️ below — **not** a casual run | overridden target + cleanup |
 | CD-04 | Named transformations | ⚪ | 0 | `media_size_specs` in PG | — | not scoped |
-| CD-05 | Upload presets | ⚪ | 0 | — | — | not scoped |
+| CD-05 | Upload presets | 🟡 | 40 | `ipix-signed-upload` on the operator path (`asset-upload-panel.tsx:371`, `cloudinary-sign/route.ts:181`) | `grep -rn upload_preset app/src` | 1 of 3 upload paths |
 | CD-06 | Structured metadata | ⚪ | 0 | mirrored to PG instead | — | not scoped |
 | CD-07 | MediaFlows | ⚪ | 0 | — | — | not scoped |
 | CD-08 | MCP servers | ⚪ | 0 | — | — | needs Mastra MCP client |
 | CD-09 | Video | ⚪ | 0 | — | — | not in MVP |
+
+### ⚠️ CD-03 — do not run the live webhook verifier casually
+
+`verify-cloudinary-webhook-live.mjs` is not a smoke test. Read its header before
+running it: it performs **real uploads and real deletes** via the Cloudinary Admin
+API, writes to Supabase with `SUPABASE_SERVICE_ROLE_KEY`, and its webhook target
+**defaults to production** — `https://www.ipix.co/.../webhook`.
+
+That combination is exactly the shape of IPI-810 · DB-TEST-001, where non-atomic
+fixture teardown orphaned rows in production permanently (~5,653 of 5,671 rows in
+`brands` arrived that way). Before running it:
+
+| | Requirement |
+|---|---|
+| **Target** | Set `CLD105_WEBHOOK_BASE_URL` to a preview deployment. Never leave it at the default |
+| **Database** | Point `NEXT_PUBLIC_SUPABASE_URL` / `SUPABASE_SERVICE_ROLE_KEY` at a Supabase branch, not `fashionos` |
+| **Brand** | `CLD105_BRAND_ID` must be a throwaway brand on that branch |
+| **Cleanup** | Record the `public_id`s it creates and delete them, including on a failed or cancelled run — teardown is not atomic |
+| **Approval** | If any of the above cannot be satisfied, the run needs a named owner's sign-off first. It is not a self-serve command |
+
+For routine CI coverage, `verify:cloudinary-pipeline` (IPI-432 synthetic smoke) is
+the safe one and is what the pipeline should keep using.
 
 ---
 
@@ -119,7 +141,7 @@ touching our stored DNA score. That's a new capability, not a rewrite.
 | # | Task | Effort | Why |
 |:-:|------|:------:|-----|
 | 1 | Move channel specs to named transformations; keep `media_size_specs` as a read-through cache | M | Deletes the most-duplicated logic in the media path |
-| 2 | Upload presets for the 3 upload paths (operator, agent screenshot, webhook) | S | Declarative contract; shrinks `verify-cloudinary-pipeline.mjs` |
+| 2 | Extend the `ipix-signed-upload` preset pattern to the other 2 upload paths (agent screenshot, webhook) | S | Operator uploads already use one — these two don't. Declarative contract; shrinks `verify-cloudinary-pipeline.mjs` |
 | 3 | Replace the raw Firecrawl `fetch` in `visual-identity.ts` with a proper tool | S | Currently fails silently to `null` on any error |
 | 4 | Spike the Cloudinary Analysis MCP server against `creative-director` | M | Highest-value new capability; needs the Mastra MCP client |
 | 5 | Evaluate MediaFlows for post-shoot asset triage | L | Directly matches the fashion-production triage workflow |

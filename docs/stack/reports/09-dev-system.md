@@ -46,7 +46,6 @@ fire without someone remembering to invoke them.
 | Agent | Catches | Enforced? |
 |-------|---------|:---------:|
 | `rls-policy-auditor` | Bad RLS policies | ❌ manual |
-| `migration-reviewer` | Unsafe migrations | ❌ manual |
 | `mastra-agent-reviewer` | Mastra gotchas | ❌ manual |
 | `copilotkit-v1-guard` | v1 imports ESLint misses | 🟡 partly via ESLint |
 | `vite-drift-auditor` | New code in dead `src/` | ❌ manual |
@@ -69,7 +68,7 @@ diff` check, not a judgement call.
 | "Never push to `main`" | | ✅ | No branch-protection check locally |
 | "Never mix docs and code in one PR" | | ✅ | **Most-enforced rule in CLAUDE.md, zero automation** |
 | "Never call `getMastra()` at module top-level" | | ✅ | Lint rule would catch it |
-| "No `NEXT_PUBLIC_*_API_KEY`" | 🟡 | ✅ | `check:env` exists — not in CI |
+| "No `NEXT_PUBLIC_*_API_KEY`" | ✅ | | Already a CI gate — `ci.yml` "Env guard (client secret scan)" in `app-build` |
 | `worktree:audit` before new worktree | | ✅ | Human memory |
 | `rls-policy-auditor` | | ✅ | Could gate on migrations touching `create policy` |
 | `vite-drift-auditor` | | ✅ | Could be a `git diff` CI check |
@@ -89,13 +88,35 @@ Cost of catching a bug, cheapest first:
 | Stage | Cost | What belongs here | What's there now |
 |-------|:----:|-------------------|------------------|
 | **Editor / hook** | ~0 | Protected paths, shared-fn dupes, local-Supabase | ✅ 4 hooks |
-| **Pre-commit** | seconds | Lint changed files, `check:env`, docs/code mix | ❌ **nothing** |
-| **Pre-push** | ~1 min | typecheck + full vitest | ✅ |
+| **Pre-commit** | seconds | Lint changed files, docs/code mix | ❌ **nothing** |
+| **Pre-push** | ~1 min | typecheck + full vitest | 🔴 **documented, not installed** |
 | **CI** | ~10 min | build, e2e, RLS, edge inventory | ✅ 23 jobs |
 | **Review** | hours | Architecture, UX, naming | ✅ PR-Agent + humans |
 
-**The pre-commit stage is empty.** That's the single biggest structural gap: every
-cheap mechanical check currently waits for pre-push (slow) or CI (slower).
+### 🔴 The pre-push hook does not exist
+
+`CLAUDE.md` has a whole section built on it — *"The pre-push hook runs typecheck →
+vitest. Don't duplicate it"* and *"Never skip the pre-push hook (`--no-verify`)."*
+Checked four ways, it isn't there:
+
+```bash
+ls .husky                      # no such directory
+git config core.hooksPath      # unset
+ls .git/hooks | grep -v sample # empty — only the shipped .sample files
+grep -n '"prepare"' package.json app/package.json   # no install step
+```
+
+**Plain English:** everyone has been told not to bypass a gate that never runs.
+Nothing local checks anything before a push; CI is the first gate that fires. The
+practical cost is a slower feedback loop, not unsafe merges — but it also means
+`CLAUDE.md`'s advice to skip `npm test` locally *because the hook will run it* is
+advice to skip testing entirely.
+
+This is the same failure as IPI-763 (a hard rule with no enforcement) and belongs
+next to it: **two of the repo's documented safety nets are prose only.**
+
+**Two stages are effectively empty, then** — pre-commit by design, pre-push by
+accident. Every cheap mechanical check currently waits for CI.
 
 Three checks that belong there and cost seconds:
 
@@ -157,13 +178,13 @@ needs the full suite.
 
 | ID | Task | | % | Examine | Verify | Blocker |
 |----|------|:-:|--:|---------|--------|---------|
-| DV-01 | Pre-push hook | 🟢 | 90 | `typecheck → vitest` | `git push` | — |
+| DV-01 | Pre-push hook | 🔴 | 0 | `CLAUDE.md` describes it | `ls .git/hooks \| grep -v sample` → empty | **not installed** |
 | DV-02 | Claude hooks | 🟢 | 75 | `.claude/hooks/` (4) | trigger one | — |
 | DV-03 | Pre-commit stage | ⚪ | 0 | — | — | **empty** |
 | DV-04 | Docs/code-mix guard | ⚪ | 0 | `CLAUDE.md` rule | — | manual only |
 | DV-05 | Subagents in CI | ⚪ | 0 | `.claude/agents/` (5) | — | manual only |
 | DV-06 | Skill routing tests | ⚪ | 0 | 46 skills | — | not scoped |
-| DV-07 | `check:env` in CI | 🔴 | 20 | `scripts/check-client-env.mjs` | `npm run check:env` | not wired |
+| DV-07 | `check:env` in CI | 🟢 | 90 | `ci.yml` `app-build` → "Env guard (client secret scan)" | `npm run check:env` (repo root) | — |
 | DV-08 | Cursor rules parity | ⚪ | 0 | — | — | not scoped |
 | DV-09 | CI suite | 🟢 | 85 | 23 jobs | `gh run list` | — |
 
@@ -173,8 +194,9 @@ needs the full suite.
 
 | # | Task | Effort | Why |
 |:-:|------|:------:|-----|
-| 1 | Pre-commit hook: docs/code-mix + `check:env` + lint-changed | S | Fills the empty stage; automates the most-enforced rule |
-| 2 | Run `rls-policy-auditor` + `migration-reviewer` in CI on migration PRs | M | Highest blast radius, currently manual |
+| 1 | **Install the pre-push hook `CLAUDE.md` already documents** (husky + a `prepare` script) | S | The docs promise a gate that isn't there |
+| 1b | Pre-commit hook: docs/code-mix guard + lint-changed | S | Fills the other empty stage; automates the most-enforced rule |
+| 2 | Run `rls-policy-auditor` in CI on migration PRs | M | Highest blast radius, currently manual |
 | 3 | Convert `vite-drift-auditor` to a `git diff` CI check | S | It's a mechanical rule, not a judgement |
 | 4 | Skill routing test — 10 prompts, assert the loaded skill | M | 46 skills with no routing evidence |
 | 5 | Mirror `CLAUDE.md` hard rules into Cursor rules | S | Cursor users bypass all of it today |
