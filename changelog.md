@@ -8,6 +8,22 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### 2026-07-30 — IPI-872 · SB-HYGIENE-003: Re-revoke chatbot_* SELECT from anon/authenticated
+
+**PR #686 — merge `63e836a`. Ledger-completion for two already-applied migrations; no new production apply.**
+
+`chatbot-grants.sql` was failing on `main`: `anon`/`authenticated` had drifted back to `SELECT` on `chatbot_conversations`/`chatbot_messages`/`chatbot_events` (likely via PUBLIC / default ACLs) after IPI-664's original revoke, and `anon` had regained `SELECT` on `lead_intake_drafts` after IPI-677.
+
+- **`20260730223430_ipi872_rerevoke_chatbot_anon_authenticated_grants.sql`** — `REVOKE ALL` on the three chatbot tables from `anon`, `authenticated`, `public`; re-grants `service_role` explicit `SELECT`/`INSERT`/`UPDATE`/`DELETE` (unchanged WEB-015 DML contract).
+- **`20260730223528_ipi872_rereaffirm_lead_intake_draft_grants.sql`** — `REVOKE ALL` on `lead_intake_drafts` from `anon`, `authenticated`, `PUBLIC`; re-grants `authenticated` `SELECT` only. `service_role` DML untouched.
+- Both migrations were already applied to remote directly; this PR lands the files so the local migration ledger matches remote state — no chatbot RLS policy, capture-lead logic, or Mastra ACL changes.
+
+**Verified:** `check-supabase-migration-drift.mjs --pr` clean; `chatbot-grants.sql` green (local + CI); CI `supabase-linked-gates` and `supabase-web015` green; `supabase-verify-rls` chatbot step green (remaining failure on that gate was unrelated `public.mastra_*` shadow-table drift, fixed separately in IPI-875 · PR #688, merged after this PR per stated order).
+
+**Known limitation:** `service_role` keeps full `SELECT`/`INSERT`/`UPDATE`/`DELETE` on the chatbot tables — matches the existing WEB-015 contract and is asserted by `chatbot-grants.sql`; narrowing it is out of scope here and would need a separate ticket.
+
+**Rollback:** privilege-only, idempotent. If `anon`/`authenticated` regain `SELECT` again, re-run the two migration files' `REVOKE`/`GRANT` statements, then re-run `chatbot-grants.sql`. Do not edit the applied IPI-664 (`20260718120000`) or IPI-677 (`20260718180000`) migration files.
+
 ### 2026-07-26 — IPI-815: Fix Racy NewPlanDialog Idempotency-Key Tests Blocking the Pre-Push Gate
 
 **PR #634 — merge `aa5d433`. Test-only; no production component changed.**
