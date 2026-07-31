@@ -67,7 +67,7 @@ relatedTrackers:
 | Indexes | 494 | 🟢 | ~2.8 per table |
 | RLS policies | 353 | 🟢 | |
 | Tables with RLS **off** | **0** | 🟢 | Nothing is publicly readable by accident |
-| Tables with RLS on but **0 policies** | **37** | 🔴 | Enabled + empty = denies everyone, including the app |
+| Tables with RLS on but **0 policies** | **37** | 🟢 | **Intentional** — 33 locked `public.mastra_*` shadows (IPI-801 Phase A) + 3 `chatbot_*` + 1 webhook dedupe. All service-role-only by design, with pgTAP coverage |
 | Triggers | 67 | 🟢 | |
 | Postgres functions (`public`) | 393 | 🟡 | 30 flagged `authenticated_security_definer_function_executable` |
 | Realtime tables | **2** | 🟡 | Only `brand_crawls`, `brand_crawl_results` |
@@ -86,7 +86,7 @@ relatedTrackers:
 | ID | Stack | | % | Examine | Verify | Blocker |
 |----|-------|:-:|--:|---------|--------|---------|
 | **ST-01** | Supabase — schema, RLS, indexes | 🟢 | 88 | `supabase/migrations/` (277) | `npm run supabase:verify-rls` | — |
-| **ST-02** | Supabase — 37 RLS-no-policy tables | 🔴 | 0 | `chatbot_*`, `mastra_*` in `public` | `get_advisors security` | Decide: policy, move schema, or drop |
+| **ST-02** | Supabase — grant re-drift root cause (IPI-876) | 🔴 | 0 | `public.mastra_*`, `chatbot_*` | pgTAP `004_public_mastra_shadow_lockdown` | ⚠️ Two re-revokes already needed |
 | **ST-03** | Supabase — pgvector semantic search | 🔴 | 20 | 4 `vector(768)` columns | `\d brands` | No embedding write path |
 | **ST-04** | Supabase — Realtime | 🟡 | 25 | 2 tables in publication | `pg_publication_tables` | Shoots/assets/bookings not subscribed |
 | **ST-05** | Supabase Auth | 🟢 | 85 | `@supabase/ssr`, `org_members` | QA login `qa@ipix.test` | MFA + SSO unused |
@@ -116,13 +116,13 @@ relatedTrackers:
 
 | # | Risk | Where | Impact | Fix |
 |---|------|-------|--------|-----|
-| 1 | **37 tables: RLS on, 0 policies** | `chatbot_*`, most `public.mastra_*` | Any query returns empty — silent data loss, not an error | One migration: policy, or move to a non-API schema |
+| 1 | **Table grants silently re-drift after lockdown** | `public.mastra_*` (33), `chatbot_*` (3) | `anon`/`authenticated` regained `SELECT` on deliberately-locked tables — **twice, on unrelated table groups**. Caught by pgTAP both times; root cause unknown | **IPI-876** — find the source. Re-revoke migrations are symptom fixes |
 | 2 | **No agent evals** | all 9 agents | A prompt edit can silently make an agent worse. No signal | Add Mastra scorers to 2 agents + a CI gate |
 | 3 | **Stripe absent from operator app** | `app/src` | Cannot charge for a shoot. Launch blocker if monetised | Create STR Linear issues; decide Stripe-in-`app/` vs storefront-only |
 | 4 | **HITL is convention, not enforcement** | tool prompts | Only the *prompt* stops a silent write. A model that ignores it, writes | Move approvals to CopilotKit HITL primitives |
 | 5 | **Cloudflare half-migrated** | `app/wrangler.jsonc` | Two mental models; docs constantly wrong about what's live | Decide: cut over or freeze and label it clearly |
 | 6 | **pgvector paid for, unused** | 4 `vector(768)` columns | Storage + index cost with zero search benefit | Wire one query path (talent match) or drop the columns |
-| 7 | **30 SECURITY DEFINER funcs executable by `authenticated`** | `public` | Privilege escalation surface | Audit + `REVOKE EXECUTE` where not needed |
+| 7 | **30 SECURITY DEFINER funcs executable by `authenticated`** | `public` | Privilege escalation surface | 🟡 **Half done** — IPI-809 covered org helpers + triggers (PR #681, pgTAP #682). Remaining RPCs need the same pass |
 | 8 | **Realtime on 2 tables only** | `brand_crawls*` | Shoot/booking/asset screens poll or go stale | Add publication + subscribe on the 3 hot tables |
 | 9 | **No Linear cycles / MVP labels** | Linear IPI | "What ships next" is a markdown file a human must read | Enable cycles, add `mvp`/`p0` labels |
 | 10 | **`docs/index-docs.md` self-declares stale** | `docs/` | New contributors follow dead links | Adopt the archive policy in [`TEMPLATE.md`](./TEMPLATE.md) |
@@ -138,8 +138,8 @@ relatedTrackers:
 
 | Order | Task | Stack | Why it's before the next one |
 |:-----:|------|-------|------------------------------|
-| 1 | Resolve 37 RLS-no-policy tables | Supabase | Anything you build on those tables silently returns nothing |
-| 2 | Revoke over-granted SECURITY DEFINER funcs | Supabase | Security gate before external users |
+| 1 | **IPI-876 — root-cause the grant re-drift** | Supabase | Two lockdowns already came undone. A third will too |
+| 2 | Finish IPI-809 across the remaining SECURITY DEFINER RPCs | Supabase | Security gate before external users; half done |
 | 3 | Decide Stripe scope + open STR issues | Stripe | Determines whether shoots are billable at launch |
 | 4 | Add scorers to `production-planner` + `brand-intelligence` | Mastra | Gives every later prompt change a pass/fail |
 | 5 | Move one HITL gate to CopilotKit primitives | CopilotKit | Proves the pattern before porting the rest |

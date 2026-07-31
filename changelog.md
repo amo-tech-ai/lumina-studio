@@ -2,7 +2,16 @@
 
 All notable changes to the iPix monorepo. Newest first.
 
-Format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
+**Audience: engineers.** Entries carry root causes, commit hashes, and `file:line`
+so a future debugger can reconstruct *why*, not just *what*. Style rules:
+[`CHANGELOG_STYLE.md`](./CHANGELOG_STYLE.md).
+
+For the plain-language weekly digest, see [`SHIPPED.md`](./SHIPPED.md).
+
+> Previously described as "loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)."
+> It doesn't — entries group by ticket rather than KaC's six change types, there are
+> no versions, and SemVer isn't claimed. The format is deliberate; the label was
+> wrong. KaC's structure is used in `SHIPPED.md`, where it fits.
 
 ---
 
@@ -35,6 +44,38 @@ Scoring is `(Core × 0.6) + (Advanced × 0.4)` and measures **feature adoption, 
 **And one thing the first pass missed entirely:** `main` has **zero branch protection** (`gh api .../branches/main/protection` → 404, IPI-763). `CLAUDE.md`'s first hard rule — never push directly to `main` — is enforced by nothing. Added as red-flag row 0, ahead of the other ten, because it is one dashboard screen.
 
 `BUILD-VS-BUY.md` measures 47 custom scripts (10,564 LOC in root alone) against what each platform ships prebuilt. Sharpest finding: three of four active Cloudinary tickets (IPI-637, IPI-639, IPI-642) describe capabilities MediaFlows and the DAM may already provide, and IPI-708 needs no design work at all — `wrangler versions rollback` is built in.
+
+### 2026-07-26 → 07-31 — Backfill: 39 commits across security hardening, Hyperdrive, and the Worker bundle
+
+**Backfilled 2026-07-31.** These landed on `main` between the IPI-815 entry and today and were never logged — the gap this backfill closes is exactly what the new `changelog-check` gate is meant to prevent. Grouped by theme rather than one entry per commit.
+
+**🔒 Access-control hardening — the dominant theme**
+
+- **IPI-809 · SEC-ONB-001** — *any logged-in user could see every organization* (PR [#655](https://github.com/amo-tech-ai/lumina-studio/pull/655)). Follow-ups revoked `PUBLIC`/`anon` EXECUTE on org helpers and trigger functions (`f3462bb`, PR [#681](https://github.com/amo-tech-ai/lumina-studio/pull/681)) and added pgTAP coverage so it can't silently regress (`94953b6`, PR [#682](https://github.com/amo-tech-ai/lumina-studio/pull/682)). Pattern is `REVOKE ALL` from every role, then `GRANT EXECUTE` to the intended ones only — the IPI-544 precedent, which leaves no leftover ACL ambiguity.
+- **IPI-872 · SB-HYGIENE-003 + IPI-875 · MASTRA-PG-013** (`63e836a`, PR [#686](https://github.com/amo-tech-ai/lumina-studio/pull/686)) — **re-**revoked `anon`/`authenticated` grants on `chatbot_*` and all 33 `public.mastra_*` shadows. Both had been locked before (IPI-664, IPI-801 Phase A) and both drifted back. pgTAP caught each: `chatbot-grants.sql` and `004_public_mastra_shadow_lockdown.sql` tests 103–135.
+  > ⚠️ **Root cause still unknown.** Tracked as **IPI-876 · MASTRA-PG-014**. Two independent table groups regaining `SELECT` after deliberate lockdown points at something systemic — a blanket `GRANT ... ON ALL TABLES IN SCHEMA public`, or default privileges re-applying. Until it's found, expect a third re-revoke.
+- **IPI-146 · MASTRA-GOV-002** (`cd3c809`, PR [#635](https://github.com/amo-tech-ai/lumina-studio/pull/635)) — organization-scoped Mastra memory and thread authorization.
+- CI credential hygiene: production API credentials withheld from PR CI (`72a7cd2`, PR [#643](https://github.com/amo-tech-ai/lumina-studio/pull/643)); the credential scan now catches every falsy middle operand, not just the empty string (`8c400c6`, PR [#650](https://github.com/amo-tech-ai/lumina-studio/pull/650)).
+
+**☁️ Hyperdrive — the Mastra-on-Workers path**
+
+`47ad97c` create→read canary (IPI-623) · `1d6a190` request-safe Hyperdrive Mastra storage on the preview path (IPI-803) · `d0e5265` `ENABLE_HYPERDRIVE_THREAD_CANARY` wiring (IPI-822) · `fd5a534` canary hardening (IPI-823) · `c987d43` local connection string for preview upload (IPI-824) · `1256a90` TLS required for the local upload connection (IPI-826) · `38a27e8` preview canary capacity matrix (IPI-827) · `64f9019` ops runbook (IPI-828) · `c19580c` auto-promote uploaded preview Worker versions (IPI-825).
+
+**📦 Worker bundle — IPI-706 · CF-BUNDLE-220**
+
+`2feade8` OpenNext size audit · `3e65370` JSON report helpers · `9c88179` Mermaid/KaTeX stubs to claw back headroom · `8ed9d35` restore gzip headroom after #658 (IPI-844) · `c70c4bf` bundle audit docs. The measured number is **8.985 MiB gzip against a 9.0 MiB hard-fail gate** — 0.015 MiB of margin, root-caused to `@copilotkit/react-core → streamdown → mermaid/cytoscape/katex` plus `@copilotkit/web-inspector`, none used directly in `src`.
+
+**🧠 Brand intelligence reliability**
+
+`3fee13b` a database outage no longer tells a brand-analysis user they lack permission (PR [#637](https://github.com/amo-tech-ai/lumina-studio/pull/637)) · `d31c0bf` fail closed when the edge function returns non-2xx (PR [#645](https://github.com/amo-tech-ai/lumina-studio/pull/645)) · `b7126fd` unblock Brand DNA drafts by accepting `pending_approval` in `brand_intake_drafts.status` (PR [#644](https://github.com/amo-tech-ai/lumina-studio/pull/644)) · `97c4789` pgTAP for the widened CHECK constraint.
+
+**✨ Onboarding**
+
+`0209387` (IPI-833, PR [#657](https://github.com/amo-tech-ai/lumina-studio/pull/657)) — standalone onboarding route, 13 screens, deterministic navigation.
+
+**🔧 Migrations, CI, and DX**
+
+`4f69f4f` backfilled 27 applied migrations and repaired consolidation regressions (IPI-861) · `b9cea07` + `c12ade3` stopped booking-gate CI writing fixtures to production · `aae84bc` excluded `.next`/`.open-next` from the TypeScript program (IPI-851) · `a513ad2` prefer the real session when `OPERATOR_AUTH_ENABLED=false` (IPI-846) · `0718639` removed the unused `@mastra/libsql` dependency (IPI-782) · `3c8b0e0` trimmed `CLAUDE.md` from 3,978 to 1,790 words and added rule precedence · `c8ef0df` dropped graphify advisory hooks and Cloudinary redirect stubs · `af6b82b` bounded unbounded git output in slash commands · plus tracker re-verification docs (`fbfd7ec`, `0e58eac`, `d19392a`, `54be81c`).
 
 ### 2026-07-26 — IPI-815: Fix Racy NewPlanDialog Idempotency-Key Tests Blocking the Pre-Push Gate
 

@@ -277,16 +277,20 @@ later costs hours and produces worse entries, because the *why* is gone.
 
 ### Do this, in order
 
-| # | Task | Effort | Enforcement | Why now |
-|:-:|------|:------:|-------------|---------|
-| 1 | **`changelog-check` CI job + `no-changelog` label** | S | **Real** | Stops the gap re-opening. Everything else is cleanup |
-| 2 | Fix line 5 of `changelog.md` — name our own style, not KaC | XS | — | We don't follow 3 of 7 KaC principles |
-| 3 | `CHANGELOG_STYLE.md` at root; point `release-notes` at it | S | — | Voice rules in the repo, not inside a skill |
-| 4 | Backfill the 41 commits as **one** grouped entry | M | — | Don't write 41 entries. Group by theme |
-| 5 | `SHIPPED.md` using KaC's six change types | S | — | The user-facing half that doesn't exist |
-| 6 | Friday workflow drafting `SHIPPED.md` → docs-only PR | M | **Automatic** | Makes it a ritual, not a memory test |
-| 7 | Archive the 4 secondary changelogs | S | — | Six files is the six-SSOTs problem |
-| 8 | Update `release-notes` for the two-file split | S | — | Last, once the shape is settled |
+| # | Task | Effort | Enforcement | Status |
+|:-:|------|:------:|-------------|:------:|
+| 1 | **`changelog-check` CI job + `no-changelog` label** | S | **Real** | ⚪ config PR |
+| 2 | Fix line 5 of `changelog.md` — name our own style, not KaC | XS | — | 🟢 **done** |
+| 3 | `CHANGELOG_STYLE.md` at root | S | — | 🟢 **done** |
+| 4 | Backfill the 41 commits as **one** grouped entry | M | — | 🟢 **done** |
+| 5 | `SHIPPED.md` using KaC's six change types | S | — | 🟢 **done** |
+| 6 | Friday workflow drafting `SHIPPED.md` → docs-only PR | M | **Automatic** | ⚪ config PR |
+| 7 | Archive the 4 secondary changelogs | S | — | ⚪ needs link sweep |
+| 8 | Point `release-notes` at `CHANGELOG_STYLE.md` + the two-file split | S | — | ⚪ skill PR |
+
+Tasks 2–5 shipped in PR [#691](https://github.com/amo-tech-ai/lumina-studio/pull/691).
+1, 6 and 8 are config/skill changes and need their own PR per the one-concern rule.
+7 needs an inbound-link sweep first (`grep -rn "tasks/changelog.md" docs tasks *.md`).
 
 **Tasks 1 and 6 are the whole point.** The rest is setup. Without the gate and the
 schedule, this document becomes the 47th thing that describes good practice without

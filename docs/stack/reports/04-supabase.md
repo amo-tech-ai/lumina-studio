@@ -58,62 +58,98 @@ with a `public.registrations` policy. Most Supabase projects never do this.
 
 ---
 
-## 3. 🔴 Finding 1 — 37 tables: RLS on, zero policies
+## 3. ✅ Finding 1 — 37 tables RLS-on-zero-policies is **intentional**, not neglect
+
+> **Corrected 2026-07-31.** My first pass read this as accidental lockout. It is
+> not. Every one of the 37 is a deliberate service-role-only lockdown with
+> migrations, pgTAP coverage, and tracked follow-ups. The real finding is narrower
+> and more interesting — see §3b.
 
 RLS enabled with no policy means **deny-all** for `anon` and `authenticated`.
-`service_role` bypasses RLS, so server-side code still works — which is exactly
-why this has gone unnoticed.
+`service_role` bypasses RLS, so server-side code still works. That is the design.
 
-| Group | Count | Tables |
-|-------|------:|--------|
-| Mastra storage duplicates in `public` | 33 | `mastra_agents`, `mastra_threads`, `mastra_messages`, `mastra_workflow_snapshot`, `mastra_ai_spans`, `mastra_scorers`, `mastra_skills`, `mastra_workspaces`, … (all 33) |
-| Chatbot | 3 | `chatbot_conversations`, `chatbot_events`, `chatbot_messages` |
-| Webhook dedupe | 1 | `processed_firecrawl_webhooks` |
+| Group | Count | Deliberate? | Evidence |
+|-------|------:|:-----------:|----------|
+| `public.mastra_*` **shadows** | 33 | ✅ | `20260724102922` Phase A lockdown (PR #628) · `20260730232458_ipi875_rerevoke_public_mastra_shadow_grants.sql` · pgTAP `004_public_mastra_shadow_lockdown.sql` |
+| `chatbot_*` | 3 | ✅ | IPI-664 · re-asserted by IPI-872 (`20260730223430`) · test `supabase/tests/security/chatbot-grants.sql` |
+| `processed_firecrawl_webhooks` | 1 | ✅ | server-written dedupe table |
 
-**The 33 `mastra_*` ones are the interesting part.** The same 33 table names exist
-in *both* `public` and the `mastra` schema — and the `mastra` schema copies each
-have exactly 1 policy. That is the fingerprint of a half-finished schema move
-(see `tasks/mastra/ipi-616-storage-schema-adr.md`, and the `MASTRA_SCHEMA=mastra`
-opt-in flag in `app/src/mastra/index.ts`).
+**And the `mastra_*` question I raised is already answered.** IPI-875's migration
+header calls them *"shadows"* explicitly, and names the plan:
 
-⚠️ **Do not drop them yet.** Which set is authoritative depends on whether
-`MASTRA_SCHEMA=mastra` is set in the deployed environment. Verify first:
+> *"After IPI-801 · MASTRA-PG-011 — Remove Leftover `public.mastra_*` Tables After
+> Soak (Phase A lockdown… ) … Phase B stays on IPI-801."*
 
-```sql
-select 'public' s, count(*) from public.mastra_threads
-union all select 'mastra', count(*) from mastra.mastra_threads;
-```
-
-| If | Then |
-|----|------|
-| `public` has the live rows | Keep it, add policies (or accept service-role-only and document it) |
-| `mastra` has the live rows | `public.mastra_*` are stale — archive in one migration |
-| Both have rows | Data is split across two schemas. Highest priority on this list |
-
-The 3 `chatbot_*` tables and `processed_firecrawl_webhooks` are simpler: they are
-server-written only, so either add a service-role-only comment or add policies.
-Right now their intent is unreadable from the schema.
+So: the `mastra` schema is authoritative, `public.mastra_*` are locked shadows
+awaiting a soak period, and Phase B drops them. No investigation needed — it's
+planned work with a ticket.
 
 ---
 
-## 4. 🟡 Finding 2 — 30 SECURITY DEFINER functions executable by `authenticated`
+## 3b. 🔴 The real finding — the lockdown keeps drifting
+
+`ipi875` exists *because* the earlier lockdown came undone. From its own header:
+
+> *"deny-role ACLs drifted: anon + authenticated regained SELECT on all 33
+> `public.mastra_*` shadows. pgTAP `004_public_mastra_shadow_lockdown.sql` fails
+> tests 103–135."*
+
+The same thing happened to `chatbot_*`: IPI-664 revoked the grants, and IPI-872
+had to **re-revoke** them because `chatbot-grants.sql` was failing on `main`.
+
+| Ticket | What it did | Why it existed |
+|--------|-------------|----------------|
+| IPI-801 | Phase A lockdown of 33 shadows | Original |
+| **IPI-875** | **Re-revoke** the same 33 | Grants drifted back |
+| IPI-664 | Revoke `chatbot_*` DML | Original |
+| **IPI-872** | **Re-revoke** the same 3 | Grants drifted back |
+| **IPI-876** | Find out *why* it drifts | ⚠️ **Root cause — still open** |
+
+**Plain English:** something is silently re-granting `SELECT` to `anon` and
+`authenticated` on tables that were deliberately locked. It has happened at least
+twice, on two unrelated table groups. The team caught both via pgTAP — the tests
+are doing their job — but a re-revoke migration is a symptom fix.
+
+**IPI-876 is the real priority here, not the 37 tables.** Until the drift source is
+found, expect a third re-revoke. Likely suspects worth checking first: a
+`GRANT ... ON ALL TABLES IN SCHEMA public` somewhere in the migration history, or
+default privileges (`ALTER DEFAULT PRIVILEGES`) that re-apply on table recreation.
+
+---
+
+## 4. 🟡 Finding 2 — SECURITY DEFINER audit is **already in flight**
+
+> **Corrected 2026-07-31.** I wrote that nobody was auditing these. IPI-809 ·
+> SEC-ONB-001 is exactly that audit, and two PRs have already landed.
 
 `get_advisors(security)` returns 38 WARN / 37 INFO / **0 ERROR**:
 
-| Lint | Count | Level | Meaning |
-|------|------:|-------|---------|
-| `rls_enabled_no_policy` | 37 | INFO | Finding 1 above |
-| `authenticated_security_definer_function_executable` | 30 | WARN | A logged-in user can call a function that runs as its owner |
-| `function_search_path_mutable` | 3 | WARN | `search_path` not pinned — schema-shadowing risk |
-| `extension_in_public` | 3 | WARN | `vector`, `pg_trgm`, `btree_gist` in `public` |
+| Lint | Count | Level | Status |
+|------|------:|-------|--------|
+| `rls_enabled_no_policy` | 37 | INFO | ✅ Intentional — §3 |
+| `authenticated_security_definer_function_executable` | 30 | WARN | 🟡 **IPI-809 in progress** |
+| `function_search_path_mutable` | 3 | WARN | 🔴 Open |
+| `extension_in_public` | 3 | WARN | 🟢 Low — `vector`, `pg_trgm`, `btree_gist` |
 
-`SECURITY DEFINER` + `EXECUTE` granted to `authenticated` is the standard
-privilege-escalation path in Postgres. Most of the 30 are probably fine (RPCs are
-meant to be called), but "probably" isn't an audit. `get_brand_assets` appears
-twice, which suggests an overload pair worth checking first.
+**What already shipped** (`20260730220000_ipi809_revoke_org_function_execute.sql`,
+PR #681) — and note the pattern, which is the right one:
 
-**Fix shape:** one migration that `REVOKE EXECUTE ... FROM authenticated` on
-everything not deliberately an RPC, plus `SET search_path = ''` on the 3 flagged.
+```sql
+-- REVOKE ALL from every role that might hold grants, then GRANT only the intended
+REVOKE ALL ON FUNCTION public.is_org_member(uuid) FROM public, anon, authenticated, service_role;
+GRANT EXECUTE ON FUNCTION public.is_org_member(uuid) TO authenticated, service_role;
+-- Trigger-only functions: service_role and nothing else
+REVOKE ALL ON FUNCTION public.handle_new_user() FROM public, anon, authenticated, service_role;
+GRANT EXECUTE ON FUNCTION public.handle_new_user() TO service_role;
+```
+
+Revoke-then-grant leaves no leftover ACL ambiguity — the IPI-544 precedent. PR #682
+added pgTAP coverage so it can't silently regress, and PR #655 (IPI-809) fixed the
+underlying issue: *any logged-in user could see every organization*.
+
+**What's left:** the audit covered org helpers and trigger functions. The advisor
+still reports 30, so the remaining RPCs need the same pass. `get_brand_assets`
+appears twice — an overload pair worth checking first.
 
 ---
 
@@ -200,9 +236,11 @@ function finished. That is UX principle #1 ("remove waiting") failing quietly.
 | ID | Task | | % | Examine | Verify | Blocker |
 |----|------|:-:|--:|---------|--------|---------|
 | SB-01 | Schema + migrations | 🟢 | 95 | `supabase/migrations/` | `npm run supabase:migrations` | — |
-| SB-02 | RLS policy coverage | 🟡 | 70 | `pg_policies` | `npm run supabase:verify-rls` | 37 tables |
-| SB-03 | Resolve 37 RLS-no-policy | 🔴 | 0 | `public.mastra_*` + `chatbot_*` | row-count query in §3 | Which schema is live? |
-| SB-04 | SECURITY DEFINER audit | 🔴 | 0 | 30 functions | `get_advisors security` | — |
+| SB-02 | RLS policy coverage | 🟢 | 90 | `pg_policies` | `npm run supabase:verify-rls` | — |
+| SB-03 | `public.mastra_*` shadow drop (IPI-801 Phase B) | 🟡 | 60 | Phase A locked | pgTAP `004_public_mastra_shadow_lockdown` | Soak period |
+| SB-03b | **Grant re-drift root cause (IPI-876)** | 🔴 | 0 | 2 re-revokes already needed | pgTAP failures | ⚠️ **Open — expect a third** |
+| SB-04 | SECURITY DEFINER audit (IPI-809) | 🟡 | 45 | org helpers + triggers done | `get_advisors security` | Remaining RPCs |
+| SB-04b | `function_search_path_mutable` × 3 | 🔴 | 0 | 3 functions | `get_advisors security` | — |
 | SB-05 | pgvector query path | 🔴 | 20 | 4 vector columns | `grep -rn "<=>" app supabase` | No embedding write path |
 | SB-06 | Realtime expansion | 🔴 | 25 | `pg_publication_tables` | SQL in §6 | — |
 | SB-07 | Auth core | 🟢 | 85 | `@supabase/ssr` | QA login | — |
@@ -216,11 +254,11 @@ function finished. That is UX principle #1 ("remove waiting") failing quietly.
 
 | # | Task | Effort | Why first |
 |:-:|------|:------:|-----------|
-| 1 | Determine which `mastra_*` schema is live, then policy-or-archive the other | S | Everything else on that data is ambiguous until resolved |
-| 2 | `REVOKE EXECUTE` audit on the 30 SECURITY DEFINER functions + pin 3 `search_path` | M | Security gate before external users |
-| 3 | Add RLS policies (or documented service-role-only comments) to `chatbot_*` + `processed_firecrawl_webhooks` | S | Makes intent readable from the schema |
-| 4 | Publish `shoots`, `talent.bookings`, `assets` to realtime + subscribe in the UI | M | Directly serves UX principle #1 |
-| 5 | Wire `talent_profiles.ai_embedding` into talent search (+ HNSW index) | M | Converts a known MVP limitation into a shipped feature |
+| 1 | **IPI-876 — find why grants re-drift** | M | Two re-revokes already needed on unrelated tables. Without the root cause there will be a third |
+| 2 | Finish IPI-809 across the remaining SECURITY DEFINER RPCs + pin the 3 `search_path` | M | Half done; the advisor still reports 30 |
+| 3 | Publish `shoots`, `talent.bookings`, `assets` to realtime + subscribe in the UI | M | Directly serves UX principle #1 |
+| 4 | Wire `talent_profiles.ai_embedding` into talent search (+ HNSW index) | M | Converts a documented MVP limitation into a shipped feature |
+| 5 | IPI-801 Phase B — drop the 33 shadows once the soak completes | S | Already planned; removes the duplicate-schema confusion for good |
 
 ---
 
