@@ -35,6 +35,19 @@ export function LoginForm() {
 
   async function handleGoogle() {
     setOauthError(null);
+    // IPI-837 · AUTH-OAUTH-001 — Option B: stash validated redirect in HttpOnly cookie
+    // before the Google round-trip (exact Supabase callback allowlist has no query).
+    const redirect = new URLSearchParams(window.location.search).get("redirect");
+    try {
+      await fetch("/api/auth/oauth-next", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
+        body: JSON.stringify({ redirect }),
+      });
+    } catch {
+      // Cookie best-effort; callback still defaults to /app if unset.
+    }
     const supabase = createSupabaseBrowserClient();
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",

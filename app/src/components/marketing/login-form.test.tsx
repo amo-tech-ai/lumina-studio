@@ -3,15 +3,30 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
-const { push, refresh, signInWithPassword, signUp, createSupabaseBrowserClient } = vi.hoisted(() => {
+const {
+  push,
+  refresh,
+  signInWithPassword,
+  signUp,
+  signInWithOAuth,
+  createSupabaseBrowserClient,
+} = vi.hoisted(() => {
   const push = vi.fn();
   const refresh = vi.fn();
   const signInWithPassword = vi.fn();
   const signUp = vi.fn();
+  const signInWithOAuth = vi.fn();
   const createSupabaseBrowserClient = vi.fn(() => ({
-    auth: { signInWithPassword, signUp },
+    auth: { signInWithPassword, signUp, signInWithOAuth },
   }));
-  return { push, refresh, signInWithPassword, signUp, createSupabaseBrowserClient };
+  return {
+    push,
+    refresh,
+    signInWithPassword,
+    signUp,
+    signInWithOAuth,
+    createSupabaseBrowserClient,
+  };
 });
 
 vi.mock("next/navigation", () => ({
@@ -30,11 +45,18 @@ describe("LoginForm — Supabase auth wiring (IPI2-127)", () => {
     refresh.mockReset();
     signInWithPassword.mockReset();
     signUp.mockReset();
+    signInWithOAuth.mockReset();
+    signInWithOAuth.mockResolvedValue({ error: null });
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(new Response(null, { status: 204 })),
+    );
     window.history.replaceState({}, "", "/login");
   });
 
   afterEach(() => {
     cleanup();
+    vi.unstubAllGlobals();
   });
 
   async function submitCredentials(email = "op@example.com", password = "secret12") {
@@ -219,6 +241,28 @@ describe("LoginForm — Supabase auth wiring (IPI2-127)", () => {
 
     await waitFor(() => {
       expect(push).toHaveBeenCalledWith("/app/brand");
+    });
+  });
+
+  it("posts oauth_next carrier then starts Google OAuth with bare /auth/callback", async () => {
+    window.history.replaceState({}, "", "/login?redirect=/onboarding");
+    const user = userEvent.setup();
+
+    render(<LoginForm />);
+    await user.click(screen.getByRole("button", { name: /sign in with google/i }));
+
+    await waitFor(() => {
+      expect(fetch).toHaveBeenCalledWith(
+        "/api/auth/oauth-next",
+        expect.objectContaining({
+          method: "POST",
+          body: JSON.stringify({ redirect: "/onboarding" }),
+        }),
+      );
+      expect(signInWithOAuth).toHaveBeenCalledWith({
+        provider: "google",
+        options: { redirectTo: `${window.location.origin}/auth/callback` },
+      });
     });
   });
 });

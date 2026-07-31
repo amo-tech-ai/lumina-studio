@@ -17,7 +17,10 @@ describe("GET /auth/callback", () => {
   beforeEach(async () => {
     vi.resetModules();
     exchangeCodeForSession.mockReset();
-    createServerClient.mockClear();
+    createServerClient.mockReset();
+    createServerClient.mockImplementation(() => ({
+      auth: { exchangeCodeForSession },
+    }));
     vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://proj.supabase.co");
     vi.stubEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY", "public-anon-key");
     vi.stubEnv("NODE_ENV", "production");
@@ -35,9 +38,16 @@ describe("GET /auth/callback", () => {
   function callbackRequest(
     query = "code=abc123",
     headers: Record<string, string> = {},
+    cookies: Record<string, string> = {},
   ): NextRequest {
+    const cookieHeader = Object.entries(cookies)
+      .map(([name, value]) => `${name}=${encodeURIComponent(value)}`)
+      .join("; ");
     return new NextRequest(`https://www.ipix.co/auth/callback?${query}`, {
-      headers,
+      headers: {
+        ...headers,
+        ...(cookieHeader ? { cookie: cookieHeader } : {}),
+      },
     });
   }
 
@@ -200,6 +210,72 @@ describe("GET /auth/callback", () => {
     const res = await GET(callbackRequest(""));
 
     expect(res.headers.get("location")).toBe("https://www.ipix.co/login?error=auth");
+    expect(exchangeCodeForSession).not.toHaveBeenCalled();
+    consoleSpy.mockRestore();
+  });
+
+  it("honors oauth_next cookie and lands on /onboarding after success", async () => {
+    exchangeCodeForSession.mockResolvedValue({ error: null });
+    const GET = await loadGet();
+
+    const res = await GET(
+      callbackRequest("code=abc123", {}, { oauth_next: "/onboarding" }),
+    );
+
+    expect(res.headers.get("location")).toBe("https://www.ipix.co/onboarding");
+    expect(res.cookies.get("oauth_next")?.value).toBe("");
+  });
+
+  it("preserves query strings from oauth_next", async () => {
+    exchangeCodeForSession.mockResolvedValue({ error: null });
+    const GET = await loadGet();
+
+    const res = await GET(
+      callbackRequest("code=abc123", {}, { oauth_next: "/app/brands?tab=dna" }),
+    );
+
+    expect(res.headers.get("location")).toBe("https://www.ipix.co/app/brands?tab=dna");
+  });
+
+  it("ignores unsafe oauth_next and falls back to /app", async () => {
+    exchangeCodeForSession.mockResolvedValue({ error: null });
+    const GET = await loadGet();
+
+    const res = await GET(
+      callbackRequest("code=abc123", {}, { oauth_next: "javascript:alert(1)" }),
+    );
+
+    expect(res.headers.get("location")).toBe("https://www.ipix.co/app");
+  });
+
+  it("keeps redirect= on login when exchange fails and oauth_next is safe", async () => {
+    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    exchangeCodeForSession.mockResolvedValue({
+      error: { message: "invalid flow state", status: 400, name: "AuthApiError" },
+    });
+    const GET = await loadGet();
+
+    const res = await GET(
+      callbackRequest("code=abc123", {}, { oauth_next: "/onboarding" }),
+    );
+
+    expect(res.headers.get("location")).toBe(
+      "https://www.ipix.co/login?error=auth&redirect=%2Fonboarding",
+    );
+    consoleSpy.mockRestore();
+  });
+
+  it("keeps redirect= on provider error when oauth_next is safe", async () => {
+    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const GET = await loadGet();
+
+    const res = await GET(
+      callbackRequest("error=access_denied", {}, { oauth_next: "/onboarding" }),
+    );
+
+    expect(res.headers.get("location")).toBe(
+      "https://www.ipix.co/login?error=auth&redirect=%2Fonboarding",
+    );
     expect(exchangeCodeForSession).not.toHaveBeenCalled();
     consoleSpy.mockRestore();
   });

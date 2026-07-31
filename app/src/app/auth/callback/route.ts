@@ -1,5 +1,10 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import {
+  OAUTH_NEXT_COOKIE,
+  oauthNextCookieOptions,
+} from "@/lib/oauth-next-cookie";
+import { parseSafeRedirect } from "@/lib/safe-redirect";
 import { SITE_URL } from "@/lib/site";
 import { copyResponseCookies } from "@/lib/supabase/session";
 
@@ -79,34 +84,57 @@ function redirectOrigin(request: Request): string {
   return `${forwardedProto}://${forwardedHost}`;
 }
 
+function clearOAuthNext(response: NextResponse) {
+  const secure = process.env.NODE_ENV === "production";
+  response.cookies.set(OAUTH_NEXT_COOKIE, "", {
+    ...oauthNextCookieOptions(secure),
+    maxAge: 0,
+  });
+}
+
+function loginErrorUrl(origin: string, safeTarget: string | null): string {
+  const url = new URL("/login", origin);
+  url.searchParams.set("error", "auth");
+  if (safeTarget) url.searchParams.set("redirect", safeTarget);
+  return url.toString();
+}
+
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const origin = redirectOrigin(request);
   const code = searchParams.get("code");
   const oauthError = searchParams.get("error");
   const oauthDescription = searchParams.get("error_description");
+  const safeTarget = parseSafeRedirect(request.cookies.get(OAUTH_NEXT_COOKIE)?.value);
 
   if (oauthError) {
     console.error("[auth/callback] OAuth provider error", {
       oauthError,
       oauthDescription,
     });
-    return NextResponse.redirect(`${origin}/login?error=auth`);
+    const response = NextResponse.redirect(loginErrorUrl(origin, safeTarget));
+    clearOAuthNext(response);
+    return response;
   }
 
   if (!code) {
     console.error("[auth/callback] Missing authorization code in callback URL");
-    return NextResponse.redirect(`${origin}/login?error=auth`);
+    const response = NextResponse.redirect(loginErrorUrl(origin, safeTarget));
+    clearOAuthNext(response);
+    return response;
   }
 
   const { url, anonKey } = supabaseEnv();
   if (!url || !anonKey) {
     console.error("[auth/callback] Supabase is not configured on the server");
-    return NextResponse.redirect(`${origin}/login?error=auth`);
+    const response = NextResponse.redirect(loginErrorUrl(origin, safeTarget));
+    clearOAuthNext(response);
+    return response;
   }
 
-  const successUrl = `${origin}/app`;
+  const successUrl = `${origin}${safeTarget ?? "/app"}`;
   let response = NextResponse.redirect(successUrl);
+  clearOAuthNext(response);
 
   const supabase = createServerClient(url, anonKey, {
     cookies: {
@@ -134,8 +162,9 @@ export async function GET(request: NextRequest) {
       status: error.status,
       name: error.name,
     });
-    const errorResponse = NextResponse.redirect(`${origin}/login?error=auth`);
+    const errorResponse = NextResponse.redirect(loginErrorUrl(origin, safeTarget));
     copyResponseCookies(response, errorResponse);
+    clearOAuthNext(errorResponse);
     return errorResponse;
   }
 
