@@ -58,7 +58,7 @@ unexplained binding is the kind of thing that gets "fixed" by someone later.
 | 1 | Install `@opennextjs/cloudflare` + `wrangler` | 🟢 | done — 1.20.2 / ^4.107.1 |
 | 2 | `wrangler.jsonc` with `nodejs_compat` + compat date | 🟢 | done — `2026-07-08` |
 | 3 | `open-next.config.ts` | 🟡 | verify incremental cache config |
-| 4 | **Worker bundle under limit** | 🔴 | 3 MiB free / 10 MiB paid. `check-worker-bundle-size.mjs` exists — run it and publish the number |
+| 4 | **Worker bundle under limit** | 🔴 | **Measured: 8.985 MiB gzip against a 9.0 MiB hard-fail CI gate** — 0.015 MiB of headroom (`tasks/cloudflare/todo.md`, 2026-07-24, IPI-706 🟡). Root cause: `@copilotkit/react-core → streamdown → mermaid/cytoscape/katex` + `@copilotkit/web-inspector`, none used directly in `src`. Fix in flight via `next/dynamic(..., {ssr:false})` |
 | 5 | Mastra + `@mastra/pg` in Workers runtime | 🔴 | Postgres driver on `nodejs_compat`; this is why Hyperdrive was provisioned |
 | 6 | Supabase SSR auth on Workers | 🟡 | cookie handling differs from Node |
 | 7 | Env/secrets parity | 🟡 | `cloudflare-secrets-sync.yml` exists (`worker-bootstrap` job) |
@@ -69,6 +69,29 @@ unexplained binding is the kind of thing that gets "fixed" by someone later.
 **Fastest honest path:** steps 4 and 5 decide everything. If the bundle can't fit
 or `@mastra/pg` won't run, the answer is "stay on Vercel and stop hedging in the
 docs" — which is a perfectly good outcome, just one nobody has written down.
+
+### 🔴 Four cutover gates at 0%, and one that isn't on this list
+
+`tasks/cloudflare/todo.md` (2026-07-24) scores the **hosting lane at ~70%** —
+architecture and preview are proven. What's stalled is the safety work:
+
+| Issue | Gate | State |
+|-------|------|:-----:|
+| IPI-708 | Rollback rehearsal | 🔴 0%, 6+ days stale |
+| IPI-709 | Observability baseline + Sentry CI token | 🔴 0% |
+| IPI-707 | Automated Playwright preview smoke | 🔴 0% |
+| IPI-763 | Branch protection residual | 🔴 0% |
+
+All four block **IPI-631 (DNS cutover)**. Do not start 631 before they're Done.
+
+⚠️ **IPI-763 is worse than a cutover gate.** `main` currently has **zero branch
+protection** — confirmed via `gh api .../branches/main/protection` → 404. So
+`CLAUDE.md`'s first hard rule ("🚫 NEVER push directly to `main`") is enforced by
+nothing. That is a one-screen dashboard fix and the highest-value item in this
+report.
+
+**IPI-708 needs no design work either:** `wrangler versions rollback` is built in.
+See [`BUILD-VS-BUY.md`](../BUILD-VS-BUY.md) §1.
 
 ---
 
@@ -116,7 +139,9 @@ what Cloudflare Workflows exists to replace: durable, resumable, automatic retry
 | CF-01 | AI Gateway Worker | 🟢 | 90 | `services/cloudflare-worker/` | `npm run verify:cloudflare-gateway` | frozen for new features |
 | CF-02 | Workers AI binding | 🟡 | 60 | `wrangler.jsonc` `ai` | `ENABLE_CF_AI_SMOKE=1` | — |
 | CF-03 | OpenNext build | 🟡 | 55 | `npm run build:cf` | local run | never in CI |
-| CF-04 | Worker bundle size | 🔴 | 20 | `check-worker-bundle-size.mjs` | `npm run check:worker-bundle` | number not published |
+| CF-04 | Worker bundle size (IPI-706) | 🔴 | 20 | `check-worker-bundle-size.mjs` | `npm run check:worker-bundle` | **8.985 / 9.0 MiB** — 0.015 headroom |
+| CF-11 | Branch protection on `main` (IPI-763) | 🔴 | 0 | GitHub settings | `gh api .../branches/main/protection` → 404 | none — one dashboard screen |
+| CF-12 | Rollback rehearsal (IPI-708) | 🔴 | 0 | — | `wrangler versions rollback` | blocks IPI-631 |
 | CF-05 | Hyperdrive query path | 🔴 | 45 | `HYPERDRIVE_FRESH` | `ENABLE_HYPERDRIVE_PG_SMOKE=1` | IPI-620 |
 | CF-06 | Preview deploy | 🔴 | 0 | `npm run preview` | — | — |
 | CF-07 | CI deploy job | ⚪ | 0 | `.github/workflows/` | — | — |
@@ -130,11 +155,11 @@ what Cloudflare Workflows exists to replace: durable, resumable, automatic retry
 
 | # | Task | Effort | Why |
 |:-:|------|:------:|-----|
-| 1 | Run `check:worker-bundle` and publish the number in `tasks/cloudflare/todo.md` | S | Every migration decision depends on this one number |
-| 2 | Preview-deploy once and smoke `/app` + `/api/copilotkit` | M | Turns 6 hypothetical blockers into a real list |
-| 3 | Cloudflare go / no-go decision, written down | S | Unblocks a dozen docs that currently hedge |
-| 4 | Replace `wait-for-crawl` polling with a Cloudflare Workflow | M | Textbook fit; removes a fragile step |
-| 5 | Resolve the unused `IMAGES` binding | S | Drop it or document why it's reserved |
+| 1 | **Enable branch protection on `main` (IPI-763)** | 5 min | A hard rule with zero enforcement; also a cutover gate |
+| 2 | Close IPI-708 with `wrangler versions rollback` | 30 min | Built-in. No rollback process to design |
+| 3 | Bundle fix via `next/dynamic`, then delete the 4 `cf-*-stub.mjs` files | M | 0.015 MiB of headroom; the stubs are config debt |
+| 4 | Copy the Playwright harness from `cloudflare/templates` for IPI-707 | M | Don't write an E2E suite the vendor ships |
+| 5 | Cloudflare go / no-go decision, written down | S | Unblocks a dozen docs that currently hedge |
 
 ---
 

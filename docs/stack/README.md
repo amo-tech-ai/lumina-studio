@@ -126,6 +126,11 @@ relatedTrackers:
 | 8 | **Realtime on 2 tables only** | `brand_crawls*` | Shoot/booking/asset screens poll or go stale | Add publication + subscribe on the 3 hot tables |
 | 9 | **No Linear cycles / MVP labels** | Linear IPI | "What ships next" is a markdown file a human must read | Enable cycles, add `mvp`/`p0` labels |
 | 10 | **`docs/index-docs.md` self-declares stale** | `docs/` | New contributors follow dead links | Adopt the archive policy in [`TEMPLATE.md`](./TEMPLATE.md) |
+| **0** | **`main` has zero branch protection** | GitHub · IPI-763 | `CLAUDE.md`'s first hard rule ("never push to `main`") is enforced by nothing. Confirmed `gh api .../branches/main/protection` → 404 | One dashboard screen. **Do this first** |
+
+> Row 0 was found by reading `tasks/cloudflare/todo.md` after the initial pass — see
+> [`BUILD-VS-BUY.md`](./BUILD-VS-BUY.md) §0 for the two scorecard corrections that
+> came out of the same read.
 
 ---
 
@@ -152,6 +157,7 @@ relatedTrackers:
 |-----|--------------|
 | **[README.md](./README.md)** (this file) | Scorecard, live facts, tracker, red flags, launch order |
 | **[PROMPTS.md](./PROMPTS.md)** | Copy-paste multistep prompts — one per stack, plus the Linear verify prompt |
+| **[BUILD-VS-BUY.md](./BUILD-VS-BUY.md)** | **Check before coding.** Per platform: what we hand-built vs what ships prebuilt (dashboard / CLI / MCP / template / sample repo), with links |
 | **[TEMPLATE.md](./TEMPLATE.md)** | The template every new stack doc + tracker uses. Archive policy |
 | [reports/00-agents.md](./reports/00-agents.md) | 9 agents — use cases, scores, gaps |
 | [reports/01-mastra.md](./reports/01-mastra.md) | Mastra core vs advanced, templates to steal |
