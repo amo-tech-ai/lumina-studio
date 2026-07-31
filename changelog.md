@@ -139,6 +139,7 @@ Every real workflow run died at step 1 of 7 with `Brand not found or not owned b
 **WEB-015.8 Lead Capture Workflow — commits `2c8affb`, `f7f00b8`, `0e0f8c1`**
 
 **IPI2-167 — 3 blockers resolved:**
+
 - **B1 (prompt):** `public-marketing-agent` prompt now instructs agent to call `capture_lead` tool at `ready_to_submit` before responding to visitor.
 - **B2 (DB):** Confirmed via Supabase MCP — all 4 tables live on remote; migration `20260623000000_web015_chatbot_lead_drafts` applied. B2 was a stale claim.
 - **B3 (cookie):** `claimToken` returned server-to-server from edge fn to Next.js proxy; proxy sets `HttpOnly; Secure; SameSite=Strict; Max-Age=604800` cookie. Token never reaches browser JS.
@@ -146,6 +147,7 @@ Every real workflow run died at step 1 of 7 with `Brand not found or not owned b
 - **`status="ready"`:** edge fn now inserts `status: "ready"` (was `"draft"`).
 
 **`capture-lead` v3 — security hardening (`f7f00b8`):**
+
 - Proxy secret gate: `claimToken` only returned when `x-ipix-proxy-secret` header matches `CAPTURE_LEAD_PROXY_SECRET` env var
 - Idempotency: updates existing draft for a conversation instead of creating duplicates
 - `conversation_id` ownership verified against `anon_id` (prevents cross-session attachment)
@@ -155,6 +157,7 @@ Every real workflow run died at step 1 of 7 with `Brand not found or not owned b
 - Payload size enforced after body parse (fallback when `content-length` absent)
 
 **`brand-intelligence` v8 — security hardening (`0e0f8c1`):**
+
 - SSRF: 8 private IP/hostname patterns blocked (localhost, 127.x, 10.x, 172.16-31.x, 192.168.x, 169.254.x, ::1, fc00/fe80)
 - Ownership: brand fetch + update now filter by `user_id` (defense-in-depth vs RLS)
 - Scores: replaced `delete + insert` with `upsert` on `(brand_id, score_type)` — no data loss on insert failure
