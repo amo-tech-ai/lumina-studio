@@ -54,9 +54,18 @@ and 6+ days stale, and they block IPI-631 (DNS cutover).**
 
 | What we hand-built | Prebuilt alternative | Verdict |
 |--------------------|---------------------|---------|
-| `app/scripts/cf-mermaid-stub.mjs`, `cf-katex-stub.mjs`, `cf-shiki-stub.mjs`, `cf-ast-grep-stub.mjs` — 4 stub files to strip unused deps from the bundle | `next/dynamic(..., {ssr:false})` + `serverExternalPackages`. The tracker already names this as the fix | 🔴 **Replace** — 4 files solving a config problem |
-| `cf-mastra-pg-stub.mjs`, `cf-mastra-workers-pg-scope-stub.mjs` | Hyperdrive (already provisioned, `HYPERDRIVE_FRESH`) | 🟡 Revisit after IPI-620 |
+| `cf-mermaid-stub.mjs`, `cf-katex-stub.mjs`, `cf-shiki-stub.mjs` — 3 **rendering** stubs, aliased in `next.config.ts:34-36` to keep unused deps out of the Worker | `next/dynamic(..., {ssr:false})` — but see ⚠️ below. **Not** `serverExternalPackages`, which does not touch the client graph | 🟡 **Keep for now.** Replaceable only once the import chain is gone, not merely deferred |
+| `cf-mastra-pg-stub.mjs`, `cf-mastra-workers-pg-scope-stub.mjs`, `cf-ast-grep-stub.mjs` — 3 **runtime** stubs (`wrangler.jsonc:64-66`, `open-next.config.ts`) | Nothing. These exist because the packages cannot run on workerd at all | 🟢 Keep. Revisit the Mastra pair after IPI-620 |
 | `check-worker-bundle-size.mjs` | No prebuilt equivalent — genuinely ours | ✅ Keep |
+
+⚠️ **Do not treat the rendering stubs as config debt to delete.** `ssr: false`
+removes only the *server* import; `@copilotkit/react-core → streamdown →
+mermaid / katex / cytoscape` is a **client** import chain, and
+`serverExternalPackages` does not affect the client graph either. The stubs stay
+until a Worker bundle artifact shows those dependencies actually absent. They
+also carry a real behavioural cost — `cf-katex-stub.mjs` states that with it in
+place, math renders as escaped text — so removing one is a product decision, not
+cleanup. Detail in [`reports/03-cloudflare.md`](./reports/03-cloudflare.md#7-next-5-tasks).
 | `sync-wrangler-secrets-from-infisical.mjs`, `upload-opennext-with-secrets.mjs`, `cloudflare-secret-allowlist.mjs` | `wrangler secret bulk` + GitHub Actions OIDC | 🟡 Simplify |
 | `verify-cloudflare-gateway.mjs` | AI Gateway dashboard analytics + logs | 🟡 Keep the CI gate, drop the reporting half |
 | Rollback plan (IPI-708, unwritten) | **Wrangler `rollback <VERSION_ID>`** — built in, instant | 🔴 **Use it.** Rehearse on `--env preview`; do not design a rollback process |
@@ -303,7 +312,7 @@ process risk, and may cancel three Cloudinary tickets outright.
 | # | Task | Source |
 |:-:|------|--------|
 | 7 | Playwright preview smoke (IPI-707) | `cloudflare/templates` E2E suite |
-| 8 | Bundle fix via `next/dynamic`, delete 4 stub files | Tracker already names the fix |
+| 8 | Bundle fix via `next/dynamic` — breaks the client import chain; the 3 rendering stubs can only go once a bundle artifact proves those deps absent | Tracker already names the fix |
 | 9 | Channel specs → named transformations | Cloudinary dashboard |
 | 10 | Faithfulness scorer on `production-planner` | Mastra built-in |
 | 11 | Firecrawl tool from the Mastra template | `mastra.ai/templates` |

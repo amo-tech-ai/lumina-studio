@@ -58,7 +58,7 @@ unexplained binding is the kind of thing that gets "fixed" by someone later.
 | 1 | Install `@opennextjs/cloudflare` + `wrangler` | 🟢 | done — 1.20.2 / ^4.107.1 |
 | 2 | `wrangler.jsonc` with `nodejs_compat` + compat date | 🟢 | done — `2026-07-08` |
 | 3 | `open-next.config.ts` | 🟡 | verify incremental cache config |
-| 4 | **Worker bundle under limit** | 🔴 | **Measured: 8.985 MiB gzip against a 9.0 MiB hard-fail CI gate** — 0.015 MiB of headroom (`tasks/cloudflare/todo.md`, 2026-07-24, IPI-706 🟡). Root cause: `@copilotkit/react-core → streamdown → mermaid/cytoscape/katex` + `@copilotkit/web-inspector`, none used directly in `src`. Fix in flight via `next/dynamic(..., {ssr:false})` |
+| 4 | **Worker bundle under limit** | 🔴 | **Measured: 8.985 MiB gzip against a 9.0 MiB hard-fail CI gate** — 0.015 MiB of headroom (`tasks/cloudflare/todo.md`, 2026-07-24, IPI-706 🟡). Root cause: `@copilotkit/react-core → streamdown → mermaid/cytoscape/katex` + `@copilotkit/web-inspector`, none used directly in `src`. Fix in flight via `next/dynamic(..., {ssr:false})` — see the §7 caveat: that defers the server import, it does not remove the client one |
 | 5 | Mastra + `@mastra/pg` in Workers runtime | 🔴 | Postgres driver on `nodejs_compat`; this is why Hyperdrive was provisioned |
 | 6 | Supabase SSR auth on Workers | 🟡 | cookie handling differs from Node |
 | 7 | Env/secrets parity | 🟡 | `cloudflare-secrets-sync.yml` exists (`worker-bootstrap` job) |
