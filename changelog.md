@@ -2,11 +2,105 @@
 
 All notable changes to the iPix monorepo. Newest first.
 
-Format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
+**Audience: engineers.** Entries carry root causes, commit hashes, and `file:line`
+so a future debugger can reconstruct *why*, not just *what*. Style rules:
+[`CHANGELOG_STYLE.md`](./CHANGELOG_STYLE.md).
+
+For the plain-language weekly digest, see [`SHIPPED.md`](./SHIPPED.md).
+
+> Previously described as "loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)."
+> It doesn't — entries group by ticket rather than KaC's six change types, there are
+> no versions, and SemVer isn't claimed. The format is deliberate; the label was
+> wrong. KaC's structure is used in `SHIPPED.md`, where it fits.
 
 ---
 
 ## [Unreleased]
+
+### 2026-07-31 — changelog: two-file split, written style rules, and a 36-commit backfill
+
+**PR TBD — docs-only. No production files touched.**
+
+`changelog.md` had gone **36 commits** without an entry (`git rev-list --count 3fee13b..origin/main`), on top of a 32-day hole before that. The skill to write entries already existed and worked; nothing ever asked anyone to run it. Four changes, all documentation:
+
+- **`CHANGELOG_STYLE.md`** (new) — voice rules extracted from the entries that already read well, so they live in the repo rather than inside a skill prompt.
+- **`SHIPPED.md`** (new) — a plain-language weekly digest for humans who don't read git, using Keep a Changelog's six change types, which fit a digest far better than they fit this file.
+- **`changelog.md`** — the header no longer claims to follow Keep a Changelog. It doesn't: entries group by ticket, there are no versions, and SemVer isn't claimed. The format is deliberate; the label was wrong.
+- **`docs/changelog/PRACTICE.md`** (new) — the review behind all of the above: whether to install one of the six competing changelog skills (no — ours pulls Linear context, none of them do), and how to make the cadence stick.
+
+**The enforcement design changed under review, and that's the interesting part.** The first draft was the obvious gate: *this PR must change `changelog.md`.* It was thrown away because it makes this repo's most-enforced rule unsatisfiable — `AGENTS.md` forbids mixing docs and production files in one PR, so a per-PR gate would force every code PR to bundle a docs file, and the only way out is a skip label. A smoke alarm wired to the light switch gets disabled on day two. What replaced it measures **`main`**, not your diff: if `changelog.md` falls more than 12 merges behind, every PR goes red until someone lands a docs-only changelog PR — which is exactly the shape the rules want. That gate ships in a separate config PR.
+
+### 2026-07-31 — docs/stack: tech stack scorecard and build-vs-buy plan
+
+**PR [#691](https://github.com/amo-tech-ai/lumina-studio/pull/691) — docs-only. No production files touched.**
+
+A scored view of every stack layer, the prompts to keep it current, and a build-vs-buy pass. New tree under `docs/stack/`: `README.md` (scorecard + 24-row tracker), `BUILD-VS-BUY.md`, `PROMPTS.md` (11 re-verify prompts), `TEMPLATE.md`, and `reports/00–09`.
+
+Scoring is `(Core × 0.6) + (Advanced × 0.4)` and measures **feature adoption, not product completeness** — a red score means we hand-wrote something the vendor ships, not that the feature is broken. Stated explicitly because the repo already tracks readiness separately (`tasks/plan/todo.md` → `stackReadiness: 68/100`).
+
+**Verified against live systems, not other docs:**
+
+- Supabase `fashionos`: 174 tables · 494 indexes · 353 policies · 67 triggers · 393 `public` functions · **0** tables with RLS off.
+- **37 tables have RLS enabled with zero policies** — deny-all for `anon`/`authenticated`, invisible because `service_role` bypasses RLS. 33 are duplicate `public.mastra_*` tables from the IPI-616 schema move; the same names exist in the `mastra` schema *with* policies. All 37 named in `reports/04-supabase.md`, with the row-count query to settle which set is authoritative **before** anything is dropped.
+- Advisors: 38 WARN / 37 INFO / **0 ERROR**. 30 are `authenticated_security_definer_function_executable`.
+- pgvector 0.8.0 installed, 4 `vector(768)` columns, 3 indexes, **no `<=>` query in the codebase** — `model-match-agent` documents the resulting limitation in its own instructions.
+- Realtime publishes **2** tables. Cloudflare: **0** D1 databases (API-verified), KV commented out, Hyperdrive bind-only.
+- CopilotKit HITL: `useInterrupt` / `useHumanInTheLoop` appear in **3 places, all comments**. Approvals are enforced by prompt text plus per-tool `operatorConfirmed` flags, not framework primitives.
+- Mastra: no scorers, processors, networks, or MCP client. `mastra_scorers` exists and is empty.
+- Stripe: zero references in `app/src`.
+
+**Two corrections made in the second commit**, after reading the per-stack task trackers rather than only the top-level ones:
+
+- Worker bundle size is **not** unpublished as first written — `tasks/cloudflare/todo.md` (2026-07-24) records **8.985 MiB gzip against a 9.0 MiB hard-fail gate**, 0.015 MiB of headroom, root-caused to `@copilotkit/react-core → streamdown → mermaid/cytoscape/katex` + `@copilotkit/web-inspector`.
+- The Cloudflare **hosting lane is ~70%**, not the 34 the overall service-adoption score implies.
+
+**And one thing the first pass missed entirely:** `main` has **zero branch protection** (`gh api .../branches/main/protection` → 404, IPI-763). `CLAUDE.md`'s first hard rule — never push directly to `main` — is enforced by nothing. Added as red-flag row 0, ahead of the other ten, because it is one dashboard screen.
+
+`BUILD-VS-BUY.md` measures 47 custom scripts (10,564 LOC in root alone) against what each platform ships prebuilt. Sharpest finding: three of four active Cloudinary tickets (IPI-637, IPI-639, IPI-642) describe capabilities MediaFlows and the DAM may already provide, and IPI-708 needs no design work at all — `wrangler versions rollback` is built in.
+
+### 2026-07-26 → 07-31 — Backfill: 36 commits across security hardening, Hyperdrive, and the Worker bundle
+
+**Backfilled 2026-07-31**, reconstructed from the **merged PRs**, their bodies, and the migrations — not commit subjects. Grouped by theme rather than one entry per commit. Only PRs with a `merged_at` are included; several same-ticket PRs were superseded and closed unmerged (#659, #679, #684, #685, #687) and are deliberately not listed as shipped.
+
+**🔒 Access-control hardening — the dominant theme**
+
+- **IPI-809 · SEC-ONB-001 — Stop Any Logged-In User From Seeing Every Organization** (PR [#655](https://github.com/amo-tech-ai/lumina-studio/pull/655), merged 07-27). Followed by *Revoke PUBLIC/anon EXECUTE on org helpers (migration)* (`f3462bb`, PR [#681](https://github.com/amo-tech-ai/lumina-studio/pull/681)) and *pgTAP for org helper/trigger EXECUTE grants* (`94953b6`, PR [#682](https://github.com/amo-tech-ai/lumina-studio/pull/682)). The migration follows the IPI-544 pattern — `REVOKE ALL` from every role that might hold a grant, then `GRANT EXECUTE` to the intended roles only, leaving no leftover ACL ambiguity. Trigger-only functions (`handle_new_user`, `auto_add_org_owner`, `block_brand_org_change`, …) end up `service_role`-only.
+- **IPI-872 · SB-HYGIENE-003 — Re-revoke `chatbot_*` SELECT from anon/authenticated** (`63e836a`, PR [#686](https://github.com/amo-tech-ai/lumina-studio/pull/686), merged 07-30). Ships three migrations: the `chatbot_*` re-revoke, a `lead_intake_drafts` grant reaffirm, and **IPI-875 · MASTRA-PG-013** re-revoking all 33 `public.mastra_*` shadows.
+
+  > ⚠️ **This is the third ACL drift, not the second.** All three table groups had been deliberately locked and all three came undone:
+  >
+  > | Group | Original lock | Had to be re-locked |
+  > |---|---|---|
+  > | `public.mastra_*` (33 shadows) | IPI-801 Phase A (`20260724102922`, PR #628) | **IPI-875** |
+  > | `chatbot_*` (3) | IPI-664 (`20260718120000`) | **IPI-872** |
+  > | `lead_intake_drafts` | IPI-677 (`20260718180000`) | **IPI-872 companion** — PR [#687](https://github.com/amo-tech-ai/lumina-studio/pull/687) (IPI-874) covered the same ground and was closed unmerged as redundant |
+  >
+  > pgTAP caught every one — `chatbot-grants.sql` and `004_public_mastra_shadow_lockdown.sql` tests 103–135. **Root cause is still unknown**, tracked as **IPI-876 · MASTRA-PG-014 — Stop `public.mastra_*` grant re-drift after lockdown**. Three independent table groups regaining `SELECT` after deliberate lockdown points at something systemic: a blanket `GRANT ... ON ALL TABLES IN SCHEMA public`, or `ALTER DEFAULT PRIVILEGES` re-applying. Re-revoke migrations are symptom fixes.
+- **IPI-146 · MASTRA-GOV-002** (`cd3c809`, PR [#635](https://github.com/amo-tech-ai/lumina-studio/pull/635)) — organization-scoped Mastra memory and thread authorization.
+- **Stop CI creating fake companies in the live database on every pull request** (`b9cea07`, PR [#641](https://github.com/amo-tech-ai/lumina-studio/pull/641)) — booking-gate CI was writing fixtures straight to production. Follow-up rolled back the fixture SQL rather than committing it (`c12ade3`, PR [#654](https://github.com/amo-tech-ai/lumina-studio/pull/654)).
+- **Withhold production API credentials from pull request CI** (`72a7cd2`, PR [#643](https://github.com/amo-tech-ai/lumina-studio/pull/643)); the credential scan now catches every falsy middle operand, not just the empty string (`8c400c6`, PR [#650](https://github.com/amo-tech-ai/lumina-studio/pull/650)).
+
+**☁️ Hyperdrive — the Mastra-on-Workers path**
+
+`47ad97c` create→read canary (IPI-623) · `1d6a190` request-safe Hyperdrive Mastra storage on the preview path (IPI-803) · `d0e5265` `ENABLE_HYPERDRIVE_THREAD_CANARY` wiring (IPI-822) · `fd5a534` canary hardening (IPI-823) · `c987d43` local connection string for preview upload (IPI-824) · `1256a90` TLS required for the local upload connection (IPI-826) · `38a27e8` preview canary capacity matrix (IPI-827) · `64f9019` ops runbook (IPI-828) · `c19580c` auto-promote uploaded preview Worker versions (IPI-825).
+
+**📦 Worker bundle — IPI-706 · CF-BUNDLE-220**
+
+`2feade8` OpenNext size audit · `3e65370` JSON report helpers · `9c88179` Mermaid/KaTeX stubs to claw back headroom · `8ed9d35` restore gzip headroom after #658 (IPI-844) · `c70c4bf` bundle audit docs. The measured number is **8.985 MiB gzip against a 9.0 MiB hard-fail gate** — 0.015 MiB of margin, root-caused to `@copilotkit/react-core → streamdown → mermaid/cytoscape/katex` plus `@copilotkit/web-inspector`, none used directly in `src`.
+
+**🧠 Brand intelligence reliability**
+
+`3fee13b` a database outage no longer tells a brand-analysis user they lack permission (PR [#637](https://github.com/amo-tech-ai/lumina-studio/pull/637)) · `d31c0bf` fail closed when the edge function returns non-2xx (PR [#645](https://github.com/amo-tech-ai/lumina-studio/pull/645)) · `b7126fd` unblock Brand DNA drafts by accepting `pending_approval` in `brand_intake_drafts.status` (PR [#644](https://github.com/amo-tech-ai/lumina-studio/pull/644)) · `97c4789` pgTAP for the widened CHECK constraint.
+
+**✨ Onboarding**
+
+**IPI-833 — standalone onboarding route and deterministic navigation** (`0209387`, PR [#657](https://github.com/amo-tech-ai/lumina-studio/pull/657), merged 07-28). New `app/src/app/(onboarding)/` route group, separate from `(operator)`, with its own `onboarding.css`. Screens live in `app/src/components/onboarding/{questions,marketing}` — build-type, brand-details, sales-channels and growth-preference questions, an analysis-progress screen, and a brand-DNA payoff screen, plus `step-indicator` / `flow-footer` chrome.
+
+> The PR title says "13 screens." The merged tree has ~7 distinct screen components plus shared chrome, so the count depends on what you call a screen. Left unasserted here rather than repeating a number the code doesn't plainly show.
+
+**🔧 Migrations, CI, and DX**
+
+`4f69f4f` backfilled 27 applied migrations and repaired consolidation regressions (IPI-861) · `b9cea07` + `c12ade3` stopped booking-gate CI writing fixtures to production · `aae84bc` excluded `.next`/`.open-next` from the TypeScript program (IPI-851) · `a513ad2` prefer the real session when `OPERATOR_AUTH_ENABLED=false` (IPI-846) · `0718639` removed the unused `@mastra/libsql` dependency (IPI-782) · `3c8b0e0` trimmed `CLAUDE.md` from 3,978 to 1,790 words and added rule precedence · `c8ef0df` dropped graphify advisory hooks and Cloudinary redirect stubs · `af6b82b` bounded unbounded git output in slash commands · plus tracker re-verification docs (`fbfd7ec`, `0e58eac`, `d19392a`, `54be81c`).
 
 ### 2026-07-26 — IPI-815: Fix Racy NewPlanDialog Idempotency-Key Tests Blocking the Pre-Push Gate
 
