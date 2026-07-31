@@ -11,8 +11,22 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  # Keeps changelog.md from drifting. Exists because it went 36 commits and 32 days
-  # without an entry: the release-notes skill worked fine, nothing ever asked.
+  # Keeps changelog.md from drifting. Exists because it went 39 commits and 32 days
+  # without covering anything new: the release-notes skill worked fine, nothing asked.
+  #
+  # KNOWN LIMITATION, stated so nobody rediscovers it as a bug. This measures when
+  # changelog.md was last *committed*, not the newest change it *covers*. The two
+  # differ: as of 2026-07-31 the file was last touched 36 commits back (3fee13b)
+  # while the newest change any entry described was 39 back (aa5d433). It therefore
+  # under-reports, never over-reports.
+  #
+  # The exploitable version: draft a changelog PR, let N code PRs land while it
+  # sits in review, merge it unchanged -> `behind` resets to 0 with those N
+  # unrecorded. The fix is to rebase a changelog PR onto current main before
+  # merging, which is exactly GitHub's "Require branches to be up to date before
+  # merging" — part of the branch protection this repo does not yet have
+  # (IPI-763 · Branch protection residual). Parsing a coverage marker out of each
+  # entry would make it exact; not worth the format requirement at a drift of 3.
   #
   # This measures the BASE BRANCH, not your diff — deliberately.
   #
@@ -42,7 +56,7 @@ jobs:
           BASE_REF: ${{ github.base_ref }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
           GH_TOKEN: ${{ github.token }}
-          # Anchored to the gap this gate exists because of: 36 commits.
+          # Anchored to the gap this gate exists because of: 39 commits.
           # Roughly a fortnight at this repo's merge rate. Tune after a month —
           # a threshold nobody hits is decoration, one that fires weekly is a tax.
           MAX_BEHIND: "12"
