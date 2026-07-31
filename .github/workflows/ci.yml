@@ -67,7 +67,7 @@ jobs:
           # Anchored to the gap this gate exists because of: 39 commits.
           # Roughly a fortnight at this repo's merge rate. Tune after a month —
           # a threshold nobody hits is decoration, one that fires weekly is a tax.
-          MAX_BEHIND: "12"
+          MAX_BEHIND: "0"
         run: |
           set -euo pipefail
 
