@@ -25,7 +25,7 @@ jobs:
   # unrecorded. The fix is to rebase a changelog PR onto current main before
   # merging, which is exactly GitHub's "Require branches to be up to date before
   # merging" — part of the branch protection this repo does not yet have
-  # (IPI-763 · Branch protection residual). Parsing a coverage marker out of each
+  # (IPI-794 · CF-GOV-001 — Protect Main with a GitHub Ruleset). Parsing a marker
   # entry would make it exact; not worth the format requirement at a drift of 3.
   #
   # This measures the BASE BRANCH, not your diff — deliberately.
@@ -45,6 +45,14 @@ jobs:
   # The push-to-main case is handled by the `github.event_name` guard below instead.
   changelog-staleness:
     runs-on: ubuntu-latest
+    # Scoped explicitly rather than inherited. The label read below works today only
+    # because this repo is public — a restricted default gives `pull-requests: none`,
+    # and then `gh pr view --json labels` returns nothing, the grep finds no match,
+    # and the break-glass label silently stops working while the gate fires anyway.
+    # Job-level, not top-level: a top-level block would narrow all 8 jobs at once.
+    permissions:
+      contents: read
+      pull-requests: read
     steps:
       - uses: actions/checkout@v4
         with:
@@ -69,8 +77,16 @@ jobs:
           # no re-trigger, and a manual re-run replays the same stale payload" — a red
           # check with no way to clear it. Asking the API makes "label, then re-run"
           # work without re-running all 8 jobs on every label change.
-          if gh pr view "$PR_NUMBER" --json labels --jq '.labels[].name' \
-               | grep -qx 'no-changelog'; then
+          #
+          # Assigned, then tested — not piped into `grep -q`. Under `pipefail`,
+          # `grep -q` exits on its first match and can SIGPIPE the upstream `gh`,
+          # which the shell then reports as a failed pipeline even though the match
+          # succeeded. Latent rather than observed here (the output is a few bytes
+          # and fits the pipe buffer), but the failure is silent, so it is not worth
+          # relying on a buffer size. `|| labels=""` keeps a `gh` failure from
+          # aborting the job before the measurement it guards.
+          labels=$(gh pr view "$PR_NUMBER" --json labels --jq '.labels[].name') || labels=""
+          if grep -qx 'no-changelog' <<<"$labels"; then
             echo "::notice::'no-changelog' label present — skipping."
             exit 0
           fi
@@ -87,8 +103,10 @@ jobs:
           # from a check it does not satisfy, and merging it leaves `behind` exactly
           # where it was. The weekly SHIPPED draft is already handled properly — the
           # shipped-weekly workflow applies the `no-changelog` label to its own PR.
-          if git diff --name-only "origin/$BASE_REF...HEAD" \
-               | grep -qE '^changelog\.md$'; then
+          #
+          # Assign-then-test for the same reason as the label read above.
+          changed=$(git diff --name-only "origin/$BASE_REF...HEAD")
+          if grep -qxF 'changelog.md' <<<"$changed"; then
             echo "✅ this PR updates changelog.md"
             exit 0
           fi
