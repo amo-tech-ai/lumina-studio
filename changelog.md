@@ -19,7 +19,7 @@ For the plain-language weekly digest, see [`SHIPPED.md`](./SHIPPED.md).
 
 ### 2026-07-31 — changelog: two-file split, written style rules, and a 39-commit backfill
 
-**PR [#693](https://github.com/amo-tech-ai/lumina-studio/pull/693) — docs-only. No production files touched.**
+**PR [#693 — *CHLOG-001 — Changelog Governance: The Two-Audience Split*](https://github.com/amo-tech-ai/lumina-studio/pull/693) — docs-only. No production files touched.**
 
 `changelog.md` had gone **39 commits** without covering anything new (`git rev-list --count aa5d433..origin/main` — `aa5d433` is the newest commit any existing entry described). The file itself was last *touched* 36 commits back, at `3fee13b`; the three-commit difference is why the staleness gate under-reports, documented in `docs/changelog/PRACTICE.md` §6. On top of that, a 32-day hole before it. The skill to write entries already existed and worked; nothing ever asked anyone to run it. Four changes, all documentation:
 
@@ -28,7 +28,7 @@ For the plain-language weekly digest, see [`SHIPPED.md`](./SHIPPED.md).
 - **`changelog.md`** — the header no longer claims to follow Keep a Changelog. It doesn't: entries group by ticket, there are no versions, and SemVer isn't claimed. The format is deliberate; the label was wrong.
 - **`docs/changelog/PRACTICE.md`** (new) — the review behind all of the above: whether to install one of the six competing changelog skills (no — ours pulls Linear context, none of them do), and how to make the cadence stick.
 
-**The enforcement design changed under review, and that's the interesting part.** The first draft was the obvious gate: *this PR must change `changelog.md`.* It was thrown away because it makes this repo's most-enforced rule unsatisfiable — `AGENTS.md` forbids mixing docs and production files in one PR, so a per-PR gate would force every code PR to bundle a docs file, and the only way out is a skip label. A smoke alarm wired to the light switch gets disabled on day two. What replaced it measures **`main`**, not your diff: if `changelog.md` falls more than 12 merges behind, every PR goes red until someone lands a docs-only changelog PR — which is exactly the shape the rules want. That gate ships in a separate config PR.
+**The enforcement design changed under review, and that's the interesting part.** The first draft was the obvious gate: *this PR must change `changelog.md`.* It was thrown away because it makes this repo's most-enforced rule unsatisfiable — `AGENTS.md` forbids mixing docs and production files in one PR, so a per-PR gate would force every code PR to bundle a docs file, and the only way out is a skip label. A smoke alarm wired to the light switch gets disabled on day two. What replaced it measures **`main`**, not your diff: if `changelog.md` falls more than 12 commits behind, every PR goes red until someone lands a docs-only changelog PR — which is exactly the shape the rules want. That gate ships in a separate config PR.
 
 ### 2026-07-31 — docs/stack: tech stack scorecard and build-vs-buy plan
 

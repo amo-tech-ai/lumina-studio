@@ -3,11 +3,13 @@
 Voice rules for [`changelog.md`](./changelog.md) and [`SHIPPED.md`](./SHIPPED.md).
 
 > ⏳ The `release-notes` skill **will** read this file once the skill update in
-> PR #692 lands. Until then the skill still drafts only `changelog.md` in its own
+> PR [#692 — *CHLOG-002 — Changelog Staleness Gate, Weekly SHIPPED Draft Job, and
+> Release-Notes Skill Update*](https://github.com/amo-tech-ai/lumina-studio/pull/692)
+> lands. Until then the skill still drafts only `changelog.md` in its own
 > embedded style, so following this document by hand is correct and running the
 > skill will produce the older shape. The point of the split is that rules live
 > here rather than inside the skill — but that is a statement of intent until
-> #692 merges.
+> that PR merges.
 
 ---
 

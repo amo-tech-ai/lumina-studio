@@ -204,7 +204,7 @@ Ranked by how well they actually work:
 | "Remember to update the changelog" in `CLAUDE.md` | None | ❌ This is the status quo. 39 commits |
 | PR template checkbox | Honour system | 🟡 Better than nothing |
 | CI check: **every PR** must touch `changelog.md` or carry a `no-changelog` label | Real | ❌ **Rejected** — see below |
-| **CI check: `main`'s changelog may not fall more than N merges behind** | **Real** | ✅ **Recommended** |
+| **CI check: `main`'s changelog may not fall more than N commits behind** | **Real** | ✅ **Recommended** |
 | Conventional commits + `release-please` | Full automation | 🟡 See below |
 | Weekly scheduled job that drafts `SHIPPED.md` | Automatic | ✅ **Recommended, paired** |
 
@@ -259,9 +259,9 @@ changelog-staleness:
       run: |
         set -euo pipefail
         git fetch --no-tags origin "${{ github.base_ref }}"
-        # A PR that updates the changelog is always mergeable.
+        # changelog.md only — a SHIPPED-only PR does not satisfy this gate.
         if git diff --name-only "origin/${{ github.base_ref }}...HEAD" \
-             | grep -qE '^(changelog\.md|SHIPPED\.md)$'; then exit 0; fi
+             | grep -qE '^changelog\.md$'; then exit 0; fi
         last=$(git log -1 --format=%H "origin/${{ github.base_ref }}" -- changelog.md)
         behind=$(git rev-list --count "$last..origin/${{ github.base_ref }}")
         [ "$behind" -le "$MAX_BEHIND" ] || { echo "::error::$behind behind"; exit 1; }
@@ -274,7 +274,9 @@ anyone can clear it for everyone with one docs PR.
 ⚠️ **`if: github.event_name == 'pull_request'` is not optional.** `ci.yml` also
 runs on pushes to `main`, and `github.base_ref` is empty for push events — without
 the guard this expands to `git fetch --no-tags origin ""` and every post-merge run
-fails. The shipped job in PR #692 has the guard; do not copy the snippet without it.
+fails. The shipped job in PR [#692 — *CHLOG-002 — Changelog Staleness Gate, Weekly
+SHIPPED Draft Job, and Release-Notes Skill Update*](https://github.com/amo-tech-ai/lumina-studio/pull/692)
+has the guard; do not copy the snippet without it.
 
 ### ⚠️ Known limitation: it measures the last *touch*, not the last *commit covered*
 
