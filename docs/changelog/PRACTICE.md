@@ -184,7 +184,7 @@ Don't rewrite `changelog.md`. Add the missing one.
 Same fact. One tells you how to fix it next time; the other tells you what changed
 for the person using it.
 
-**Retire the other four.** `tasks/changelog.md`, `tasks/cloudflare/changelog.md`,
+**Retire the other five.** `tasks/changelog.md`, `tasks/cloudflare/changelog.md`,
 `linear/changelog.md` and the two design ones become sections or get archived per
 [`TEMPLATE.md`](../stack/TEMPLATE.md). Six changelogs is the same problem as two SSOTs.
 
@@ -280,7 +280,7 @@ weekly is a tax.
 
 **B. Weekly draft — makes it a ritual**
 
-A Friday scheduled workflow runs the `release-notes` skill over the week's merges
+A Friday-scheduled workflow runs the `release-notes` skill over the week's merges
 and opens a docs-only PR with a `SHIPPED.md` draft. A human edits and merges. The
 writing burden drops to reviewing prose, which is the part humans are good at.
 

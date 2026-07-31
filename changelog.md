@@ -19,7 +19,7 @@ For the plain-language weekly digest, see [`SHIPPED.md`](./SHIPPED.md).
 
 ### 2026-07-31 — changelog: two-file split, written style rules, and a 36-commit backfill
 
-**PR TBD — docs-only. No production files touched.**
+**PR [#693](https://github.com/amo-tech-ai/lumina-studio/pull/693) — docs-only. No production files touched.**
 
 `changelog.md` had gone **36 commits** without an entry (`git rev-list --count 3fee13b..origin/main`), on top of a 32-day hole before that. The skill to write entries already existed and worked; nothing ever asked anyone to run it. Four changes, all documentation:
 

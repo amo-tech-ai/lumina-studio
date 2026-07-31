@@ -1,7 +1,13 @@
 # Changelog Style
 
 Voice rules for [`changelog.md`](./changelog.md) and [`SHIPPED.md`](./SHIPPED.md).
-The `release-notes` skill reads this file — keep rules here, not inside the skill.
+
+> ⏳ The `release-notes` skill **will** read this file once the skill update in
+> PR #692 lands. Until then the skill still drafts only `changelog.md` in its own
+> embedded style, so following this document by hand is correct and running the
+> skill will produce the older shape. The point of the split is that rules live
+> here rather than inside the skill — but that is a statement of intent until
+> #692 merges.
 
 ---
 
@@ -41,7 +47,7 @@ claimed. KaC's six types are used in `SHIPPED.md`, where they fit.
    | `IPI-812 · BRAND-REG-003` | *(same as above — the spec code is not a title)* |
    | `### IPI-815: Fix Racy Tests` | `### IPI-815 — Fix Racy NewPlanDialog Idempotency-Key Tests Blocking the Pre-Push Gate` |
 
-   Drop the ` · {SPEC}` segment when the ticket genuinely has no spec code — do
+   Drop the `· {SPEC}` segment when the ticket genuinely has no spec code — do
    not invent one. A missing spec code is fine; a fabricated one is a lie a
    future reader will try to grep for.
 

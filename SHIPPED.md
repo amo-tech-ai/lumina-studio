@@ -11,11 +11,13 @@ Voice rules: [`CHANGELOG_STYLE.md`](./CHANGELOG_STYLE.md).
 ## Week of 2026-07-27
 
 ### Added
+
 - **Onboarding is now its own guided flow**, with predictable back/next
   navigation instead of a route that behaved differently depending on how you
   arrived.
 
 ### Fixed
+
 - **Brand DNA drafts stopped getting stuck.** Drafts awaiting your approval were
   being rejected by a database rule that hadn't been updated to know about that
   state.
@@ -27,6 +29,7 @@ Voice rules: [`CHANGELOG_STYLE.md`](./CHANGELOG_STYLE.md).
   you.
 
 ### Security
+
 - **Organisations are properly separated again.** Any signed-in user could
   previously see every organisation in the system. Now you see only your own.
 - **Tightened who can call internal database functions.** Helper functions used
@@ -38,17 +41,16 @@ Voice rules: [`CHANGELOG_STYLE.md`](./CHANGELOG_STYLE.md).
 - **Production credentials no longer reachable from pull-request builds.**
 
 ### Changed
-- **Faster, lighter app builds.** Trimmed unused charting and maths libraries that
-  were being bundled on every page load.
-- Removed an unused database dependency.
+
+- **Pages load lighter.** Charting and maths libraries nobody was using were
+  being downloaded on every page view. They aren't any more.
 
 ---
 
 ## Week of 2026-07-20
 
-*Backfilled — see [`changelog.md`](./changelog.md) for the engineering record of
-this period. Hyperdrive groundwork and Worker bundle reduction, both internal
-infrastructure with no user-visible change.*
+*No user-facing changes shipped this week — the work was internal infrastructure.
+The engineering record is in [`changelog.md`](./changelog.md).*
 
 ---
 
@@ -58,6 +60,7 @@ NEW ENTRY TEMPLATE — copy below, newest at the top.
 ## Week of YYYY-MM-DD
 
 ### Added
+
 - User-facing outcome, one line. No ticket ids, no hashes, no file paths.
 
 ### Changed
