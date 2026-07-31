@@ -48,28 +48,100 @@ jobs:
           # midnight, but the previous Friday run already covered through 16:00 — so a
           # date-only lower bound puts every PR merged 00:00–16:00 on a Friday into two
           # consecutive scaffolds.
+          #
+          # ANCHOR is the END of the covered period, and the week heading is derived
+          # from it — NOT from SINCE. A Friday cron covering "7 days ago" straddles two
+          # Mondays, so anchoring the heading on SINCE returns the *previous* Monday:
+          # the first real run (2026-08-07) would emit "## Week of 2026-07-27", a
+          # section SHIPPED.md already contains. Anchoring on the period end gives
+          # 08-07 -> 08-03, 08-14 -> 08-10, 08-21 -> 08-17 — distinct every week.
+          # RANGE must match the label. A manual dispatch names only a START date, so
+          # an unbounded `merged:>=$SINCE` collects everything through *now* while the
+          # heading claims a single week: dispatching on Aug 21 with since=2026-08-03
+          # gathers 18 days of merges and files them under "Week of 2026-08-10". Worse,
+          # if that heading already exists the duplicate guard skips the run and the
+          # later changes are silently dropped. So a dispatch gets an explicit upper
+          # bound and is a real seven-day window; only the cron run — whose period
+          # genuinely ends now — is left open-ended.
           if [ -n "${SINCE_INPUT:-}" ]; then
             SINCE="${SINCE_INPUT}T00:00:00Z"
+            ANCHOR="$(date -u -d "${SINCE_INPUT} + 7 days" +%F)"
+            RANGE="$SINCE..${ANCHOR}T00:00:00Z"
           else
             SINCE="$(date -u -d '7 days ago' +%Y-%m-%dT%H:%M:%SZ)"
+            ANCHOR="$(date -u +%F)"
+            RANGE=">=$SINCE"
           fi
-          echo "since=$SINCE" >> "$GITHUB_OUTPUT"
-          echo "week=$(date -u -d "$SINCE" +%Y-%m-%d)" >> "$GITHUB_OUTPUT"
 
-          # merged:>=DATE is the reliable signal — the REST `merged` field is false
-          # for squash merges, so filtering on it silently drops everything.
+          # Monday of ANCHOR's week. %u is 1..7 (Mon..Sun), so subtracting %u and
+          # adding 1 lands on that week's Monday for every day of the week.
+          WEEK="$(date -u -d "$ANCHOR - $(date -u -d "$ANCHOR" +%u) days + 1 day" +%F)"
+
+          echo "since=$SINCE" >> "$GITHUB_OUTPUT"
+          echo "week=$WEEK" >> "$GITHUB_OUTPUT"
+
+          # merged: is the reliable signal — the REST `merged` field is false for
+          # squash merges, so filtering on it silently drops everything. RANGE is
+          # ">=START" for cron and "START..END" for a dispatch (see above).
+          echo "collecting merges in range: $RANGE (labelled: week of $WEEK)"
           gh pr list \
             --state merged \
             --base main \
-            --search "merged:>=$SINCE" \
+            --search "merged:$RANGE" \
             --limit 100 \
             --json number,title,url,mergedAt \
             > /tmp/prs.json
 
-          echo "count=$(jq length /tmp/prs.json)" >> "$GITHUB_OUTPUT"
+          COUNT="$(jq length /tmp/prs.json)"
+          echo "count=$COUNT" >> "$GITHUB_OUTPUT"
+
+          # One gate for both downstream steps. Deciding here rather than in `if:`
+          # expressions matters: if the scaffold step short-circuits on its own, the
+          # PR step still runs, `git add SHIPPED.md` stages nothing, and `git commit`
+          # exits non-zero under `set -e` — a red job for a no-op week.
+          proceed=true
+          reason=""
+
+          if [ ! -f SHIPPED.md ]; then
+            # Not hypothetical: SHIPPED.md arrived in a later PR than this workflow,
+            # so a scheduled run in that window would have hit `awk: can't open file`
+            # and exited 2 under `set -e`.
+            proceed=false
+            reason="SHIPPED.md is not present on this branch"
+          elif [ "$COUNT" = "0" ]; then
+            proceed=false
+            reason="no PRs merged since $SINCE"
+          elif grep -qxF "## Week of $WEEK" SHIPPED.md; then
+            # The awk below inserts unconditionally, so without this a re-run — or a
+            # backfill dispatch whose period lands on an already-written week — appends
+            # a second "## Week of <same date>" section.
+            #
+            # But do NOT silently drop the merges just collected. Folding them into the
+            # existing section cannot be automated safely: the scaffold's `#NNN` list is
+            # deleted by design as soon as a human rewrites it into prose, so there is no
+            # reliable way to tell which of these are already represented. Guessing would
+            # either duplicate entries or hide real ones. Fail with the list instead.
+            echo "::error::Week of $WEEK is already recorded in SHIPPED.md. Refusing to append a duplicate section — and refusing to discard the $COUNT merge(s) listed below."
+            jq -r '.[] | "  #\(.number) \(.title)"' /tmp/prs.json
+            cat <<MSG
+
+          Recovery — pick one:
+            * Already covered by the existing section? Nothing to do; ignore this run.
+            * Not covered? Add the entries above to the existing "## Week of $WEEK"
+              section by hand, or re-dispatch with a 'since' whose week is unwritten.
+
+          The weekly cron cannot reach this: consecutive Friday runs always map to
+          different Mondays. Hitting it means a manual dispatch overlapped a week
+          that is already written.
+          MSG
+            exit 1
+          fi
+
+          echo "proceed=$proceed"  >> "$GITHUB_OUTPUT"
+          echo "reason=$reason"    >> "$GITHUB_OUTPUT"
 
       - name: Build scaffold
-        if: steps.collect.outputs.count != '0'
+        if: steps.collect.outputs.proceed == 'true'
         run: |
           set -euo pipefail
           WEEK="${{ steps.collect.outputs.week }}"
@@ -99,6 +171,11 @@ jobs:
             echo "### Fixed"
             echo "### Security"
             echo
+            # Trailing rule. Every hand-written pair of weeks in SHIPPED.md is
+            # `---`-separated; without this the generated section abuts the one
+            # below it.
+            echo "---"
+            echo
           } > /tmp/entry.md
 
           # Insert directly beneath the intro rule, above the newest existing entry.
@@ -109,7 +186,7 @@ jobs:
           ' SHIPPED.md > /tmp/SHIPPED.md && mv /tmp/SHIPPED.md SHIPPED.md
 
       - name: Open draft PR
-        if: steps.collect.outputs.count != '0'
+        if: steps.collect.outputs.proceed == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -121,9 +198,19 @@ jobs:
           # pushed the branch but `gh pr create` then failed (transient API error,
           # missing label, permissions), treating branch-existence as "done" would
           # strand that week forever — every rerun would exit here and never retry.
-          if gh pr list --head "$BRANCH" --state all --json number --jq 'length' \
-               | grep -qv '^0$'; then
-            echo "::notice::A PR already exists for $BRANCH — nothing to do."
+          #
+          # Assigned, then tested — not piped into `grep -q`. `grep -q` exits on its
+          # first match and can SIGPIPE the upstream `gh`, which `pipefail` then
+          # reports as a failed pipeline. Here that would fail *open*: an existing PR
+          # goes undetected and a duplicate is attempted.
+          # `--state open`, not `--state all`. A closed or merged PR for this branch is
+          # history, not an obstacle: with `all`, one merged weekly PR would block the
+          # branch name forever, and a PR closed unmerged could never be regenerated.
+          # The merged case is already handled upstream — once it lands, `main` carries
+          # the "## Week of" heading and the duplicate check stops the run earlier.
+          existing="$(gh pr list --head "$BRANCH" --state open --json number --jq 'length')"
+          if [ "$existing" != "0" ]; then
+            echo "::notice::An open PR already exists for $BRANCH — nothing to do."
             exit 0
           fi
 
@@ -131,10 +218,28 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
           if git ls-remote --exit-code --heads origin "$BRANCH" >/dev/null 2>&1; then
-            # Branch exists with no PR — a previous run got half-way. Resume from it.
-            echo "::notice::$BRANCH exists without a PR — resuming PR creation."
-            git fetch origin "$BRANCH"
-            git checkout "$BRANCH"
+            # Branch exists with no open PR — a previous run pushed it, then failed
+            # before opening the PR. Refresh it with the scaffold THIS run just built;
+            # opening the PR against the branch as-is would ship whatever that earlier
+            # partial run left behind, which may predate merges collected since.
+            #
+            # Do NOT `git checkout "$BRANCH"` here. The scaffold step has already
+            # modified SHIPPED.md in this workspace, so checkout aborts with "local
+            # changes would be overwritten" and `set -e` kills the job — the exact
+            # failure this path exists to recover from. An isolated worktree updates
+            # the branch without touching this workspace.
+            echo "::notice::$BRANCH exists without an open PR — refreshing it with the current scaffold."
+            git fetch --no-tags origin "$BRANCH"
+            git worktree add /tmp/shipped-resume "origin/$BRANCH" >/dev/null
+            cp SHIPPED.md /tmp/shipped-resume/SHIPPED.md
+            git -C /tmp/shipped-resume add SHIPPED.md
+            if git -C /tmp/shipped-resume diff --cached --quiet; then
+              echo "::notice::remote branch already matches this scaffold — nothing to push."
+            else
+              git -C /tmp/shipped-resume commit -m "docs(shipped): refresh scaffold for week of $WEEK"
+              git -C /tmp/shipped-resume push origin "HEAD:$BRANCH"
+            fi
+            git worktree remove /tmp/shipped-resume --force
           else
             git checkout -b "$BRANCH"
             git add SHIPPED.md
@@ -153,6 +258,29 @@ jobs:
             printf -- '---\n_Generated by [Claude Code](https://claude.ai/code)_\n'
           } > /tmp/pr-body.md
 
+          # Requires the repository setting "Allow GitHub Actions to create and
+          # approve pull requests" (Settings -> Actions -> General). Without it this
+          # call fails 403 regardless of the `permissions:` block above — that toggle
+          # is repo/org scope and a job-level grant cannot override it.
+          #
+          # Known limitation, not a defect. A PR opened with GITHUB_TOKEN does not
+          # trigger `on: pull_request` GitHub Actions workflows at all — that is
+          # recursion prevention, not a pending approval, so there is nothing for a
+          # maintainer to click. Third-party App checks are unaffected and still run.
+          #
+          # Measured on PR #696 (run 30667545213, the acceptance test for this file):
+          #   3 checks present — Vercel Preview Comments, Vercel deploy, Supabase
+          #     Preview. All GitHub Apps, each on its own installation token.
+          #   0 GitHub Actions runs on the branch — no app-build, no e2e, and in
+          #     particular no changelog-staleness.
+          #
+          # So the risk is specific: the checks that appear are the ones that cannot
+          # be made *required*, and the Actions jobs that would be required never run.
+          # Harmless while `main` is unprotected. Once IPI-794 (CF-GOV-001 — Protect
+          # Main with a GitHub Ruleset) makes changelog-staleness required, this PR is
+          # unmergeable, and the `no-changelog` label cannot help because the job never
+          # runs to read it. Fix then, not now: push with a GitHub App installation
+          # token or a PAT stored as a secret, which does trigger workflows normally.
           gh pr create \
             --draft \
             --base main \
@@ -161,6 +289,6 @@ jobs:
             --title "docs(shipped): week of $WEEK" \
             --body-file /tmp/pr-body.md
 
-      - name: Nothing merged
-        if: steps.collect.outputs.count == '0'
-        run: echo "::notice::No PRs merged since ${{ steps.collect.outputs.since }} — no scaffold opened."
+      - name: Nothing to do
+        if: steps.collect.outputs.proceed != 'true'
+        run: echo "::notice::No scaffold opened — ${{ steps.collect.outputs.reason }}."
