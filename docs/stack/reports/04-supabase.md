@@ -224,9 +224,14 @@ appears twice — an overload pair worth checking first.
 | `public.agent_context_snapshots` | `embedding` | `vector(768)` | ✅ `agent_context_snapshots_embedding_idx` |
 | `talent.talent_profiles` | `ai_embedding` | `vector(768)` | ❌ none |
 
-Four columns, three indexes, and **no code path that runs a `<=>` similarity
-query**. We pay storage and index-maintenance cost for a feature that returns
-nothing to a user.
+Four columns, three indexes, **and the SQL side is already built**: `search_brands`
+(`20260625155519_brand_graph_tables_and_rpcs.sql:134-177`) and a second similarity
+query (`20260621000000_context_engineering.sql:109-114`) both use `<=>`.
+
+> **Corrected 2026-07-31.** I first wrote "no code path runs `<=>`". Wrong — the
+> RPCs exist and are granted. The true, narrower gap: **no application code calls
+> them.** `search_brands` appears only in generated types
+> (`app/src/types/supabase.ts:6987`). This is wiring, not building.
 
 **Real iPix example:** `model-match-agent.ts` says in its own instructions —
 *"Matching is filter-based for MVP, not embedding similarity — don't claim a

@@ -28,8 +28,8 @@ what an agent was thinking when it produced a bad answer.
 | `SensitiveDataFilter` on spans | 🟢 | wired when the exporter is on |
 | Supabase logs | 🟢 | `get_logs` via MCP |
 | `pg_stat_statements` | 🟢 | installed |
-| Sentry tracing / performance | ⚪ | not configured |
-| Sentry session replay | ⚪ | not configured |
+| Sentry tracing / performance | 🟢 | **Configured** — `tracesSampleRate: 0.1` (`instrumentation-client.ts:9`, `sentry.server.config.ts:7`) |
+| Sentry session replay | 🟢 | **Configured** — `replaysSessionSampleRate: 0.1` + `Sentry.replayIntegration()` (`instrumentation-client.ts:11,16`) |
 | Sentry Seer (AI triage) | ⚪ | MCP available, unused |
 | Grafana | ⚪ | not present |
 | Uptime / synthetic checks | ⚪ | none |
@@ -65,8 +65,7 @@ This is the cheapest fix on this page: two environment variables.
 | Gap | Consequence | Fix |
 |-----|-------------|-----|
 | Mastra exporter off | No agent traces at all | 2 env vars |
-| No Sentry tracing | Can't see a slow `/api/copilotkit` request end-to-end | `tracesSampleRate` |
-| No session replay | "The approval card didn't work" is unreproducible | Sentry Replay |
+| Trace/replay sampled at 10% | Configured — open question is whether 10% catches rare failures | Assess prod capture rate; do **not** reconfigure |
 | No Seer triage | Manual issue triage | Sentry MCP `analyze_issue_with_seer` |
 | No uptime checks | We learn about downtime from users | Cron ping on `/api/health` |
 | Edge function logs unaggregated | 8 functions, separate log stream | Supabase logs → Sentry |
@@ -109,13 +108,13 @@ read which step failed and why. Three manual steps collapse into one.
 | ID | Task | | % | Examine | Verify | Blocker |
 |----|------|:-:|--:|---------|--------|---------|
 | OB-01 | Sentry error capture | 🟢 | 80 | `@sentry/nextjs` | trigger a test error | — |
-| OB-02 | Sentry tracing | ⚪ | 0 | config | — | not scoped |
-| OB-03 | Sentry session replay | ⚪ | 0 | config | — | not scoped |
+| OB-02 | Sentry tracing | 🟢 | 75 | `instrumentation-client.ts:9` | `grep tracesSampleRate` | verify prod capture rate |
+| OB-03 | Sentry session replay | 🟢 | 75 | `instrumentation-client.ts:11,16` | `grep replayIntegration` | verify prod capture rate |
 | OB-04 | Sentry Seer | ⚪ | 0 | MCP | `analyze_issue_with_seer` | not scoped |
 | OB-05 | Mastra span exporter | 🟡 | 50 | `index.ts` | set both flags | rehearsal evidence |
 | OB-06 | Workers Logs | 🟢 | 85 | `wrangler.jsonc` | dashboard | — |
 | OB-07 | Supabase logs | 🟢 | 70 | MCP `get_logs` | — | not aggregated |
-| OB-08 | Uptime checks | ⚪ | 0 | `/api/health` exists | — | not scoped |
+| OB-08 | Uptime checks | ⚪ | 0 | **`/api/ai/health`** — `/api/health` is not a route | — | not scoped |
 | OB-09 | Grafana | ⚪ | 0 | — | — | **deliberately deferred** |
 
 ---
@@ -125,9 +124,9 @@ read which step failed and why. Three manual steps collapse into one.
 | # | Task | Effort | Why |
 |:-:|------|:------:|-----|
 | 1 | Turn on `MASTRA_OBSERVABILITY_EXPORTER=1` + `MASTRA_SCHEMA=mastra` in prod | S | Built, tested, gated. Two variables |
-| 2 | Sentry `tracesSampleRate` on `/api/copilotkit` | S | The slowest and most important route |
-| 3 | Sentry session replay on operator routes only | S | Makes "the card didn't work" reproducible |
-| 4 | Uptime check on `/api/health` + the `ai-gateway` worker | S | Currently users are the monitor |
+| 2 | Verify the existing 10% sampling actually captures prod failures | S | Both configured — the question is coverage, not setup |
+| 3 | Uptime check on **`/api/ai/health`** | S | `/api/health` does not exist |
+| 4 | Uptime check on `/api/ai/health` + the `ai-gateway` worker | S | Currently users are the monitor |
 | 5 | Wire Sentry Seer into PR triage | M | Sentry MCP is already connected |
 
 ---

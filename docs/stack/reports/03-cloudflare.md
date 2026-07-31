@@ -25,7 +25,7 @@ Bindings are configured, the adapter is installed, CI never deploys it.
 
 | Piece | Platform | Live? | Evidence |
 |-------|----------|:-----:|----------|
-| `ai-gateway` Worker | Cloudflare | 🟢 | `services/cloudflare-worker/wrangler.jsonc` — every AI call routes through it |
+| `ai-gateway` Worker | Cloudflare | 🟡 | Deployed, but **opt-in**: `AI_ROUTING_MODE` defaults to `direct` (`app/src/lib/ai/provider.ts:90`). Even in `gateway` mode only the `fast` tier routes by default — tool tiers need `AI_GATEWAY_ALLOW_TOOL_TIERS=1`, vision stays direct. Production routing value unverified |
 | Operator app | **Vercel** | 🟢 | no Workers deploy job in `.github/workflows/ci.yml` |
 | OpenNext build | Cloudflare | 🔴 | `npm run build:cf` works; nothing runs it in CI |
 | Workers AI binding | Cloudflare | 🟡 | bound as `AI`, used via `workers-ai-provider` |
@@ -144,7 +144,7 @@ what Cloudflare Workflows exists to replace: durable, resumable, automatic retry
 | CF-12 | Rollback rehearsal (IPI-708) | 🔴 | 0 | — | `wrangler versions rollback` | blocks IPI-631 |
 | CF-05 | Hyperdrive query path | 🔴 | 45 | `HYPERDRIVE_FRESH` | `ENABLE_HYPERDRIVE_PG_SMOKE=1` | IPI-620 |
 | CF-06 | Preview deploy | 🔴 | 0 | `npm run preview` | — | — |
-| CF-07 | CI deploy job | ⚪ | 0 | `.github/workflows/` | — | — |
+| CF-07 | CI deploy job | 🟡 | 40 | `cloudflare-secrets-sync.yml` — `build:cf`, Worker upload, optional promote | `workflow_dispatch` | Manual only, not PR CI |
 | CF-08 | Secrets sync | 🟡 | 60 | `cloudflare-secrets-sync.yml` | workflow run | — |
 | CF-09 | Workflows adoption | ⚪ | 0 | — | — | not scoped |
 | CF-10 | Queues adoption | ⚪ | 0 | — | — | not scoped |
