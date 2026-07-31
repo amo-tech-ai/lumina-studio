@@ -482,3 +482,5 @@ The project is not production-ready. Build/test/env/lint checks pass and local c
 | Documentation | 70 |
 
 **Launch readiness:** Not ready. The product should not be represented as launch-ready until lint, live commerce, Stripe paid order, DNA scoring, product links, deploy, and monitoring are proven.
+
+<!-- IPI-885 D4 probe — reverted in the next commit -->
