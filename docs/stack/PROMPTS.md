@@ -144,8 +144,15 @@ Project id: nvdlhrodvevgwdsneplk.
 1. Structure: count tables per schema, indexes, policies, triggers, functions,
    realtime publication tables, installed extensions. Use SQL, not guesses.
 2. Security: run get_advisors(security) and get_advisors(performance). Group
-   findings by lint name with counts. Call out every table with RLS enabled and
-   zero policies BY NAME — that is a functional break, not a warning.
+   findings by lint name with counts. Name every affected table.
+   MANDATORY before you characterise any finding: read the migrations that touch
+   those objects.
+     git log --oneline -20 -- supabase/migrations/
+     grep -rl "<table_name>" supabase/migrations/ | tail -3
+   Migration headers in this repo state intent, plan, rollback, and the follow-up
+   ticket. A table with RLS on and zero policies may be a deliberate
+   service-role-only lockdown, not a break — check before calling it either.
+   Also check supabase/tests/ for pgTAP covering it; a test means it is intended.
 3. Auth: what is configured (providers, SSR client, org_members model, MFA, SSO)?
    Check app/src for @supabase/ssr usage and the org scoping pattern.
 4. pgvector: list every vector column and its index. Then grep the codebase for a
@@ -161,7 +168,10 @@ Project id: nvdlhrodvevgwdsneplk.
 Output: structure table, security-findings table (grouped + named), auth table,
 pgvector table, realtime table, suggested-features table, next-5-tasks.
 
-Rules: name the 37 tables. A count without names is not actionable.
+Rules: name every table. A count without names is not actionable. Never call a
+configuration "wrong" or "neglected" before reading its migration and checking for
+a pgTAP test — both corrections in this report's history came from skipping that.
+If a lockdown had to be re-applied, the finding is the DRIFT, not the tables.
 ```
 
 ---
@@ -342,6 +352,7 @@ Rules: docs-only PR — never mix with production files (repo hard rule).
 
 | Rule | Why |
 |------|-----|
+| **Read the source of truth closest to the code** | Both corrections in this doc set came from reading top-level trackers and live state but not migrations / per-stack todos. `tasks/<stack>/todo.md` and `supabase/migrations/*` headers are the most accurate documents in this repo |
 | Number the steps | Ungrouped prose gets partially executed |
 | Name the exact output file | Otherwise findings land in chat and evaporate |
 | Specify the table columns | Comparable reports over time |
