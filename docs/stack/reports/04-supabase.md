@@ -12,8 +12,9 @@ scores: { core: 90, advanced: 45, overall: 72 }
 
 # Supabase — 72/100 (B−) 🟡
 
-**One-line problem:** 37 tables have RLS switched **on with zero policies** — that
-denies everyone, including the app. Not a leak; a lockout.
+**One-line problem:** deliberately locked tables keep **silently unlocking**.
+Three independent groups have regained `anon`/`authenticated` `SELECT` after being
+closed on purpose. pgTAP caught every one; the cause is still unknown (IPI-876).
 
 ---
 
@@ -23,7 +24,7 @@ denies everyone, including the app. Not a leak; a lockout.
 |------|------:|:---:|-------|
 | Schema & migrations | 95 | 🟢 | 174 tables, 277 migrations, clean multi-schema split |
 | Indexes | 90 | 🟢 | 494 indexes, ~2.8/table |
-| RLS coverage | 70 | 🟡 | 353 policies, 0 tables unprotected — but 37 sealed shut |
+| RLS coverage | 75 | 🟡 | 353 policies, 0 tables unprotected; the 37 policy-less are deliberate lockdowns — but they keep drifting open |
 | Triggers | 85 | 🟢 | 67 non-internal |
 | Postgres functions | 65 | 🟡 | 393 in `public`; 30 over-granted |
 | Edge Functions | 85 | 🟢 | 8 deployed, Deno-tested in CI |
@@ -97,23 +98,57 @@ planned work with a ticket.
 The same thing happened to `chatbot_*`: IPI-664 revoked the grants, and IPI-872
 had to **re-revoke** them because `chatbot-grants.sql` was failing on `main`.
 
-| Ticket | What it did | Why it existed |
-|--------|-------------|----------------|
-| IPI-801 | Phase A lockdown of 33 shadows | Original |
-| **IPI-875** | **Re-revoke** the same 33 | Grants drifted back |
-| IPI-664 | Revoke `chatbot_*` DML | Original |
-| **IPI-872** | **Re-revoke** the same 3 | Grants drifted back |
-| **IPI-876** | Find out *why* it drifts | ⚠️ **Root cause — still open** |
+| Table group | Original lock | Had to be **re-**locked | Evidence |
+|-------------|---------------|------------------------|----------|
+| `public.mastra_*` (33 shadows) | IPI-801 Phase A · `20260724102922` · PR #628 | **IPI-875** | pgTAP `004_public_mastra_shadow_lockdown` tests 103-135 failing |
+| `chatbot_*` (3) | IPI-664 · `20260718120000` | **IPI-872** | `supabase/tests/security/chatbot-grants.sql` failing on `main` |
+| `lead_intake_drafts` | IPI-677 · `20260718180000` | **IPI-872 companion** | PR [#687](https://github.com/amo-tech-ai/lumina-studio/pull/687): *"after `anon` regained `SELECT`"* |
+| - | - | **IPI-876** | ⚠️ **Root cause - still open** |
 
-**Plain English:** something is silently re-granting `SELECT` to `anon` and
-`authenticated` on tables that were deliberately locked. It has happened at least
-twice, on two unrelated table groups. The team caught both via pgTAP — the tests
-are doing their job — but a re-revoke migration is a symptom fix.
+**Three groups, not two.** PR #687 (IPI-874 · SB-HYGIENE-004) states it plainly:
+*"Restores the `lead_intake_drafts` privilege matrix after `anon` regained
+`SELECT`."* It was closed unmerged because IPI-872's companion migration covered the
+same ground - but the drift it describes is a third independent instance.
 
-**IPI-876 is the real priority here, not the 37 tables.** Until the drift source is
-found, expect a third re-revoke. Likely suspects worth checking first: a
-`GRANT ... ON ALL TABLES IN SCHEMA public` somewhere in the migration history, or
-default privileges (`ALTER DEFAULT PRIVILEGES`) that re-apply on table recreation.
+**Plain English:** something silently re-grants `SELECT` to `anon` and
+`authenticated` on tables that were deliberately locked. It has now happened to
+three unrelated table groups. pgTAP caught every one - the tests are doing their
+job - but a re-revoke migration treats the symptom.
+
+**IPI-876 is the real priority here, not the 37 tables.** Three independent groups
+rules out a one-off mistake and points at something systemic. Check first:
+
+### Investigation run 2026-07-31 — one suspect eliminated, one lead found
+
+| Suspect | Checked | Result |
+|---------|---------|--------|
+| Blanket `GRANT ... ON ALL TABLES IN SCHEMA public` | `grep -rn "ON ALL TABLES IN SCHEMA" supabase/migrations/` → 7 hits | ❌ **Ruled out.** Every hit targets `planner`, `talent`, or `shoot`. **None target `public`** |
+| `ALTER DEFAULT PRIVILEGES` granting in `public` | `grep -rn "DEFAULT PRIVILEGES"` → 18 hits | ❌ **Ruled out.** The `public` ones (`ipi679`, `ipi684`) *revoke*. The granting ones are `talent` / `shoot` / `planner` |
+| Mastra recreating tables in `public` | `app/src/mastra/storage.ts:172` | 🟡 **Lead** — see below |
+
+**The lead.** `resolveMastraSchemaName()` defaults to **`public`** when
+`MASTRA_SCHEMA` is unset:
+
+```ts
+const raw = (env.MASTRA_SCHEMA ?? "public").trim();   // storage.ts:172
+```
+
+So every environment that hasn't set the flag — local dev, CI, a fresh preview
+Worker — points `PostgresStore` at `public.mastra_*`, not the `mastra` schema.
+That is also why Phase B can't drop them yet.
+
+⚠️ **Not proven.** `storage.ts:300` states the store does *"never runtime DDL,"*
+which argues against table recreation being the vector. Treat this as the next
+thing to test, not the answer.
+
+**Next steps for IPI-876,** in order of cost:
+
+| # | Step |
+|:-:|------|
+| 1 | Capture the current ACL: `select grantee, privilege_type from information_schema.role_table_grants where table_schema='public' and table_name like 'mastra%'` |
+| 2 | Re-run after a deploy, a preview boot, and a migration push. Whichever one moves it is the vector |
+| 3 | Check whether the drift timestamps line up with **IPI-861's 27-migration ledger backfill** (PR #674) |
+| 4 | If nothing in-repo reproduces it, raise with Supabase — a platform-level grant refresh on `public` would explain all three groups and no code hit |
 
 ---
 
@@ -238,7 +273,7 @@ function finished. That is UX principle #1 ("remove waiting") failing quietly.
 | SB-01 | Schema + migrations | 🟢 | 95 | `supabase/migrations/` | `npm run supabase:migrations` | — |
 | SB-02 | RLS policy coverage | 🟢 | 90 | `pg_policies` | `npm run supabase:verify-rls` | — |
 | SB-03 | `public.mastra_*` shadow drop (IPI-801 Phase B) | 🟡 | 60 | Phase A locked | pgTAP `004_public_mastra_shadow_lockdown` | Soak period |
-| SB-03b | **Grant re-drift root cause (IPI-876)** | 🔴 | 0 | 2 re-revokes already needed | pgTAP failures | ⚠️ **Open — expect a third** |
+| SB-03b | **Grant re-drift root cause (IPI-876)** | 🔴 | 0 | **3 table groups** already re-locked | pgTAP failures | ⚠️ **Open — cause unknown** |
 | SB-04 | SECURITY DEFINER audit (IPI-809) | 🟡 | 45 | org helpers + triggers done | `get_advisors security` | Remaining RPCs |
 | SB-04b | `function_search_path_mutable` × 3 | 🔴 | 0 | 3 functions | `get_advisors security` | — |
 | SB-05 | pgvector query path | 🔴 | 20 | 4 vector columns | `grep -rn "<=>" app supabase` | No embedding write path |
@@ -254,7 +289,7 @@ function finished. That is UX principle #1 ("remove waiting") failing quietly.
 
 | # | Task | Effort | Why first |
 |:-:|------|:------:|-----------|
-| 1 | **IPI-876 — find why grants re-drift** | M | Two re-revokes already needed on unrelated tables. Without the root cause there will be a third |
+| 1 | **IPI-876 — find why grants re-drift** | M | Three unrelated table groups have already re-opened. Three rules out a one-off; start with `grep -rn "ON ALL TABLES IN SCHEMA" supabase/migrations/` and correlate against IPI-861's 27-migration backfill |
 | 2 | Finish IPI-809 across the remaining SECURITY DEFINER RPCs + pin the 3 `search_path` | M | Half done; the advisor still reports 30 |
 | 3 | Publish `shoots`, `talent.bookings`, `assets` to realtime + subscribe in the UI | M | Directly serves UX principle #1 |
 | 4 | Wire `talent_profiles.ai_embedding` into talent search (+ HNSW index) | M | Converts a documented MVP limitation into a shipped feature |

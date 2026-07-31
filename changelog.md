@@ -47,15 +47,25 @@ Scoring is `(Core × 0.6) + (Advanced × 0.4)` and measures **feature adoption, 
 
 ### 2026-07-26 → 07-31 — Backfill: 39 commits across security hardening, Hyperdrive, and the Worker bundle
 
-**Backfilled 2026-07-31.** These landed on `main` between the IPI-815 entry and today and were never logged — the gap this backfill closes is exactly what the new `changelog-check` gate is meant to prevent. Grouped by theme rather than one entry per commit.
+**Backfilled 2026-07-31**, reconstructed from the **merged PRs**, their bodies, and the migrations — not commit subjects. Grouped by theme rather than one entry per commit. Only PRs with a `merged_at` are included; several same-ticket PRs were superseded and closed unmerged (#659, #679, #684, #685, #687) and are deliberately not listed as shipped.
 
 **🔒 Access-control hardening — the dominant theme**
 
-- **IPI-809 · SEC-ONB-001** — *any logged-in user could see every organization* (PR [#655](https://github.com/amo-tech-ai/lumina-studio/pull/655)). Follow-ups revoked `PUBLIC`/`anon` EXECUTE on org helpers and trigger functions (`f3462bb`, PR [#681](https://github.com/amo-tech-ai/lumina-studio/pull/681)) and added pgTAP coverage so it can't silently regress (`94953b6`, PR [#682](https://github.com/amo-tech-ai/lumina-studio/pull/682)). Pattern is `REVOKE ALL` from every role, then `GRANT EXECUTE` to the intended ones only — the IPI-544 precedent, which leaves no leftover ACL ambiguity.
-- **IPI-872 · SB-HYGIENE-003 + IPI-875 · MASTRA-PG-013** (`63e836a`, PR [#686](https://github.com/amo-tech-ai/lumina-studio/pull/686)) — **re-**revoked `anon`/`authenticated` grants on `chatbot_*` and all 33 `public.mastra_*` shadows. Both had been locked before (IPI-664, IPI-801 Phase A) and both drifted back. pgTAP caught each: `chatbot-grants.sql` and `004_public_mastra_shadow_lockdown.sql` tests 103–135.
-  > ⚠️ **Root cause still unknown.** Tracked as **IPI-876 · MASTRA-PG-014**. Two independent table groups regaining `SELECT` after deliberate lockdown points at something systemic — a blanket `GRANT ... ON ALL TABLES IN SCHEMA public`, or default privileges re-applying. Until it's found, expect a third re-revoke.
+- **IPI-809 · SEC-ONB-001 — Stop Any Logged-In User From Seeing Every Organization** (PR [#655](https://github.com/amo-tech-ai/lumina-studio/pull/655), merged 07-27). Followed by *Revoke PUBLIC/anon EXECUTE on org helpers (migration)* (`f3462bb`, PR [#681](https://github.com/amo-tech-ai/lumina-studio/pull/681)) and *pgTAP for org helper/trigger EXECUTE grants* (`94953b6`, PR [#682](https://github.com/amo-tech-ai/lumina-studio/pull/682)). The migration follows the IPI-544 pattern — `REVOKE ALL` from every role that might hold a grant, then `GRANT EXECUTE` to the intended roles only, leaving no leftover ACL ambiguity. Trigger-only functions (`handle_new_user`, `auto_add_org_owner`, `block_brand_org_change`, …) end up `service_role`-only.
+- **IPI-872 · SB-HYGIENE-003 — Re-revoke `chatbot_*` SELECT from anon/authenticated** (`63e836a`, PR [#686](https://github.com/amo-tech-ai/lumina-studio/pull/686), merged 07-30). Ships three migrations: the `chatbot_*` re-revoke, a `lead_intake_drafts` grant reaffirm, and **IPI-875 · MASTRA-PG-013** re-revoking all 33 `public.mastra_*` shadows.
+
+  > ⚠️ **This is the third ACL drift, not the second.** All three table groups had been deliberately locked and all three came undone:
+  >
+  > | Group | Original lock | Had to be re-locked |
+  > |---|---|---|
+  > | `public.mastra_*` (33 shadows) | IPI-801 Phase A (`20260724102922`, PR #628) | **IPI-875** |
+  > | `chatbot_*` (3) | IPI-664 (`20260718120000`) | **IPI-872** |
+  > | `lead_intake_drafts` | IPI-677 (`20260718180000`) | **IPI-872 companion** — PR [#687](https://github.com/amo-tech-ai/lumina-studio/pull/687) (IPI-874) covered the same ground and was closed unmerged as redundant |
+  >
+  > pgTAP caught every one — `chatbot-grants.sql` and `004_public_mastra_shadow_lockdown.sql` tests 103–135. **Root cause is still unknown**, tracked as **IPI-876 · MASTRA-PG-014 — Stop `public.mastra_*` grant re-drift after lockdown**. Three independent table groups regaining `SELECT` after deliberate lockdown points at something systemic: a blanket `GRANT ... ON ALL TABLES IN SCHEMA public`, or `ALTER DEFAULT PRIVILEGES` re-applying. Re-revoke migrations are symptom fixes.
 - **IPI-146 · MASTRA-GOV-002** (`cd3c809`, PR [#635](https://github.com/amo-tech-ai/lumina-studio/pull/635)) — organization-scoped Mastra memory and thread authorization.
-- CI credential hygiene: production API credentials withheld from PR CI (`72a7cd2`, PR [#643](https://github.com/amo-tech-ai/lumina-studio/pull/643)); the credential scan now catches every falsy middle operand, not just the empty string (`8c400c6`, PR [#650](https://github.com/amo-tech-ai/lumina-studio/pull/650)).
+- **Stop CI creating fake companies in the live database on every pull request** (`b9cea07`, PR [#641](https://github.com/amo-tech-ai/lumina-studio/pull/641)) — booking-gate CI was writing fixtures straight to production. Follow-up rolled back the fixture SQL rather than committing it (`c12ade3`, PR [#654](https://github.com/amo-tech-ai/lumina-studio/pull/654)).
+- **Withhold production API credentials from pull request CI** (`72a7cd2`, PR [#643](https://github.com/amo-tech-ai/lumina-studio/pull/643)); the credential scan now catches every falsy middle operand, not just the empty string (`8c400c6`, PR [#650](https://github.com/amo-tech-ai/lumina-studio/pull/650)).
 
 **☁️ Hyperdrive — the Mastra-on-Workers path**
 
@@ -71,7 +81,9 @@ Scoring is `(Core × 0.6) + (Advanced × 0.4)` and measures **feature adoption, 
 
 **✨ Onboarding**
 
-`0209387` (IPI-833, PR [#657](https://github.com/amo-tech-ai/lumina-studio/pull/657)) — standalone onboarding route, 13 screens, deterministic navigation.
+**IPI-833 — standalone onboarding route and deterministic navigation** (`0209387`, PR [#657](https://github.com/amo-tech-ai/lumina-studio/pull/657), merged 07-28). New `app/src/app/(onboarding)/` route group, separate from `(operator)`, with its own `onboarding.css`. Screens live in `app/src/components/onboarding/{questions,marketing}` — build-type, brand-details, sales-channels and growth-preference questions, an analysis-progress screen, and a brand-DNA payoff screen, plus `step-indicator` / `flow-footer` chrome.
+
+> The PR title says "13 screens." The merged tree has ~7 distinct screen components plus shared chrome, so the count depends on what you call a screen. Left unasserted here rather than repeating a number the code doesn't plainly show.
 
 **🔧 Migrations, CI, and DX**
 
