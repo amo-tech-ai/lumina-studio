@@ -78,12 +78,18 @@ jobs:
           # No --depth here: a shallow fetch would truncate the history this job counts.
           git fetch --no-tags origin "$BASE_REF"
 
-          # A PR that updates the changelog always passes, even when the base branch
+          # A PR that updates changelog.md always passes, even when the base branch
           # is already over budget. Otherwise the one PR that can clear the debt is
           # the one PR the gate blocks.
+          #
+          # changelog.md ONLY. SHIPPED.md was in this pattern and was wrong: this job
+          # measures changelog.md staleness, so a SHIPPED-only PR would be exempted
+          # from a check it does not satisfy, and merging it leaves `behind` exactly
+          # where it was. The weekly SHIPPED draft is already handled properly — the
+          # shipped-weekly workflow applies the `no-changelog` label to its own PR.
           if git diff --name-only "origin/$BASE_REF...HEAD" \
-               | grep -qE '^(changelog\.md|SHIPPED\.md)$'; then
-            echo "✅ this PR updates the changelog"
+               | grep -qE '^changelog\.md$'; then
+            echo "✅ this PR updates changelog.md"
             exit 0
           fi
 

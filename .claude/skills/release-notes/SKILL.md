@@ -75,7 +75,8 @@ behind — so the red check on someone's PR is almost never about that PR.
 | Situation | Do |
 |-----------|-----|
 | A PR is red and its diff is unrelated to the changelog | **Do not add a changelog entry to that PR.** Open a separate docs-only PR that catches `changelog.md` up. That clears the check for every open PR at once |
-| You are writing that catch-up PR | Draft it with this skill. `git log --oneline <last-changelog-commit>..origin/main` is the work list |
+| You are writing that catch-up PR | Draft it with this skill. `git log --oneline <last-changelog-commit>..origin/main` is the work list. **Rebase onto current `main` before merging** — the gate counts from when `changelog.md` was last committed, so a stale draft resets the budget without covering what landed while it sat in review |
+| You are writing a `SHIPPED.md`-only PR | It will **not** satisfy this gate — the gate measures `changelog.md`. Use the `no-changelog` label, which the weekly workflow already applies to its own draft |
 | Genuinely must merge before the debt can be paid | Apply the `no-changelog` label — break-glass, not routine |
 
 Bundling a changelog entry into a code PR to turn the check green breaks `AGENTS.md`'s
