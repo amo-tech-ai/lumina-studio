@@ -42,6 +42,7 @@ that one thing and the whole column moves.
 ## 2. Real use cases
 
 ### `production-planner` — 82 🟢
+
 > **Operator types:** *"Plan a spring campaign shoot for Aureli, IG and Amazon."*
 >
 > `navigateTo({section:"shoot-wizard"})` → `recommendShootType` → `planDeliverables`
@@ -57,6 +58,7 @@ tools **out** so a shoot chat can't create a booking.
 invent shot angle names"* and nothing verifies that.
 
 ### `brand-intelligence` — 78 🟡
+
 > **Opens with:** *"You're viewing Aureli — DNA score 71/100. Consistency is your
 > weakest pillar. Ready to: [Plan a shoot] · [Create a campaign]"*
 
@@ -66,6 +68,7 @@ handled (`draft_ready`, `analysis_running`), score bands defined (<50 / 50–70 
 **Missing:** working memory (re-derives brand context every turn) and durability.
 
 ### `crm-assistant` — 76 🟡
+
 > *"Is the Aureli deal at risk?"* → `scoreDealHealth(dealId)` → cites score,
 > reasons, `evidenceIds`.
 
@@ -75,6 +78,7 @@ won/lost, that's the human Approve card (IPI-367)* — is the right shape.
 That's a faithfulness scorer waiting to happen.
 
 ### `creative-director` — 74 🟡
+
 > *"Why is this asset flagged?"* → `getAssetDnaEvidence` → `suggestAssetRetakes`
 
 Only 3 tools, deliberately (IPI-261 · DESIGN-077). Explicitly forbidden from
@@ -83,6 +87,7 @@ re-scoring, because a re-audit would overwrite the operator's stored score.
 to "reason from context" until IPI-156. Half of its route is unimplemented.
 
 ### `booking` — 72 🟡
+
 > *"Book Mira for the 14th"* → `checkTalentAvailability` → `draftBookingQuote` →
 > operator confirms → `createBookingDraft({operatorConfirmed:true})`
 
@@ -92,6 +97,7 @@ as UX warnings and names the DB `EXCLUDE` constraint as the real guarantee.
 **Missing:** no memory, so a multi-turn negotiation loses context.
 
 ### `model-match` — 68 🟡
+
 > *"Find me editorial models in Toronto under $2k"* → `searchTalentByFilters` →
 > `computeTalentMatchScore` → `manageShortlist` (only if asked)
 
@@ -101,6 +107,7 @@ actual filters that matched."*
 unused. Wire it and the honesty caveat becomes unnecessary.
 
 ### `visual-identity` — 64 🟡
+
 > Homepage URL → Firecrawl screenshot → Cloudinary → Gemini vision → structured
 > `{primaryColors, typographyStyle, brandMood, …}`
 
@@ -111,6 +118,7 @@ clears a golden-eval gate — good discipline.
 on any error.
 
 ### `public-marketing` — 62 🟡
+
 > Prospect on the marketing site asks *"do you shoot for Shopify?"*
 
 Zero tools, zero memory, unauthenticated — correct by design. Dynamic model
@@ -119,6 +127,7 @@ Cloudflare Workers candidate.
 **Missing:** no safety/tone scorer on the one agent facing the public.
 
 ### `social-discovery` — 48 🔴
+
 > `brandId` → `discoverSocialChannels` → writes to `brand_social_channels`
 
 A one-line instruction, one tool, **no route** (it was removed from `/app/matching`

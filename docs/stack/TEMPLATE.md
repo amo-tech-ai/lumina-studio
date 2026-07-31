@@ -86,7 +86,7 @@ column that is empty in most rows is decoration.
 
 ## 4. Scoring model
 
-```
+```text
 Overall = (Core × 0.6) + (Advanced × 0.4)
 ```
 
@@ -136,7 +136,7 @@ the work and moved on.
 
 ## 6. Per-stack folder layout
 
-```
+```text
 docs/stack/
 ├── README.md              # master scorecard — the only cross-stack SSOT
 ├── PROMPTS.md             # one prompt per stack

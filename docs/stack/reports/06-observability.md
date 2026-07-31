@@ -81,6 +81,7 @@ app, one database, one worker. Sentry + Supabase logs + Workers Logs already cov
 that surface, and adding Grafana now means maintaining a dashboard nobody opens.
 
 **Revisit when** either of these becomes true:
+
 - The Cloudflare migration lands and there are Workers + Vercel + Supabase metrics to correlate
 - Mastra AI spans are flowing and we want cost/latency per agent over time
 
