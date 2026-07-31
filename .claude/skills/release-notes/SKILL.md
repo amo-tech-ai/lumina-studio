@@ -56,7 +56,14 @@ in `SHIPPED.md` only.
    most accurate documents in this repo, and skipping them has produced wrong entries before.
 4. **Pull closed Linear context.** For each `IPI-NNN`/`IPI2-NNN` id, look up the issue (via the `linear` skill or MCP) for its title and acceptance criteria. Always pair an id with its title on first mention — `IPI-812 · BRAND-REG-003`, never a bare number.
 5. **Group by theme, not by commit.** Nine Hyperdrive commits are one Hyperdrive paragraph. Commit hash inline (`` `2c8affb` ``), PR linked. Never paste `git log` output.
-6. **Draft under `[Unreleased]`**, above existing entries (newest first).
+6. **Insert in the right place — the two files differ.**
+
+   | File | Where |
+   |------|-------|
+   | `changelog.md` | Under `## [Unreleased]`, above the existing dated entries |
+   | `SHIPPED.md` | Directly beneath the intro `---` rule, as a new `## Week of YYYY-MM-DD` section — there is **no** `[Unreleased]` heading in this file |
+
+   `SHIPPED.md`'s structure is also written by `.github/workflows/shipped-weekly.yml`; keep the two in step.
 7. **Show the user the draft before writing it** — prose describing shipped work, not a mechanical transform.
 
 ## Unblocking `changelog-check`

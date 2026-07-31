@@ -44,7 +44,15 @@ jobs:
           SINCE_INPUT: ${{ inputs.since }}
         run: |
           set -euo pipefail
-          SINCE="${SINCE_INPUT:-$(date -u -d '7 days ago' +%Y-%m-%d)}"
+          # Timestamp bound, not date-only. `date -d '7 days ago' +%F` truncates to
+          # midnight, but the previous Friday run already covered through 16:00 — so a
+          # date-only lower bound puts every PR merged 00:00–16:00 on a Friday into two
+          # consecutive scaffolds.
+          if [ -n "${SINCE_INPUT:-}" ]; then
+            SINCE="${SINCE_INPUT}T00:00:00Z"
+          else
+            SINCE="$(date -u -d '7 days ago' +%Y-%m-%dT%H:%M:%SZ)"
+          fi
           echo "since=$SINCE" >> "$GITHUB_OUTPUT"
           echo "week=$(date -u -d "$SINCE" +%Y-%m-%d)" >> "$GITHUB_OUTPUT"
 
@@ -102,17 +110,30 @@ jobs:
           WEEK="${{ steps.collect.outputs.week }}"
           BRANCH="chore/shipped-$WEEK"
 
-          if git ls-remote --exit-code --heads origin "$BRANCH" >/dev/null 2>&1; then
-            echo "::notice::$BRANCH already exists — nothing to do."
+          # Check for an existing PR, not just an existing branch. If a previous run
+          # pushed the branch but `gh pr create` then failed (transient API error,
+          # missing label, permissions), treating branch-existence as "done" would
+          # strand that week forever — every rerun would exit here and never retry.
+          if gh pr list --head "$BRANCH" --state all --json number --jq 'length' \
+               | grep -qv '^0$'; then
+            echo "::notice::A PR already exists for $BRANCH — nothing to do."
             exit 0
           fi
 
           git config user.name  "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git checkout -b "$BRANCH"
-          git add SHIPPED.md
-          git commit -m "docs(shipped): scaffold week of $WEEK"
-          git push -u origin "$BRANCH"
+
+          if git ls-remote --exit-code --heads origin "$BRANCH" >/dev/null 2>&1; then
+            # Branch exists with no PR — a previous run got half-way. Resume from it.
+            echo "::notice::$BRANCH exists without a PR — resuming PR creation."
+            git fetch origin "$BRANCH"
+            git checkout "$BRANCH"
+          else
+            git checkout -b "$BRANCH"
+            git add SHIPPED.md
+            git commit -m "docs(shipped): scaffold week of $WEEK"
+            git push -u origin "$BRANCH"
+          fi
 
           # Body via file — a column-0 heredoc terminator would break this YAML block scalar.
           {
