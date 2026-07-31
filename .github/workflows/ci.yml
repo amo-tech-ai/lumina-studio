@@ -32,11 +32,21 @@ jobs:
         if: github.event_name == 'pull_request'
         env:
           BASE_REF: ${{ github.base_ref }}
-          HAS_LABEL: ${{ contains(github.event.pull_request.labels.*.name, 'no-changelog') }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
 
-          if [ "$HAS_LABEL" = "true" ]; then
+          # Query labels live rather than reading github.event.pull_request.labels.
+          # The event payload is frozen at trigger time, and `on: pull_request`
+          # defaults to opened/synchronize/reopened — no `labeled`. So a payload
+          # read would mean: add the label, get no re-trigger, and a manual re-run
+          # replays the same stale payload. The developer would be stuck with a red
+          # check and no way to clear it. Asking the API makes "add label, re-run"
+          # work, without adding `labeled` to the trigger and re-running all 8 jobs
+          # on every label change.
+          if gh pr view "$PR_NUMBER" --json labels --jq '.labels[].name' \
+               | grep -qx 'no-changelog'; then
             echo "::notice::'no-changelog' label present — skipping."
             exit 0
           fi
