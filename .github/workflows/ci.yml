@@ -11,6 +11,58 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # Requires every PR to record what shipped, or to say explicitly that it didn't.
+  # Exists because changelog.md went 41 commits and 32 days without an entry: the
+  # release-notes skill worked fine, nothing ever asked anyone to run it.
+  #
+  # Escape hatch: apply the `no-changelog` label. Use it for pure CI/config,
+  # dependency bumps, and revert commits — anything a future debugger won't search for.
+  #
+  # No `paths:` filter, deliberately. A required check gated on changed paths can go
+  # permanently "pending" on PRs that never touch them and block the merge (CLAUDE.md).
+  # The push-to-main case is handled by the `github.event_name` guard below instead.
+  changelog-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Require a changelog entry
+        if: github.event_name == 'pull_request'
+        env:
+          BASE_REF: ${{ github.base_ref }}
+          HAS_LABEL: ${{ contains(github.event.pull_request.labels.*.name, 'no-changelog') }}
+        run: |
+          set -euo pipefail
+
+          if [ "$HAS_LABEL" = "true" ]; then
+            echo "::notice::'no-changelog' label present — skipping."
+            exit 0
+          fi
+
+          git fetch --no-tags --depth=1 origin "$BASE_REF"
+          changed=$(git diff --name-only "origin/$BASE_REF...HEAD")
+
+          if printf '%s\n' "$changed" | grep -qE '^(changelog\.md|SHIPPED\.md)$'; then
+            echo "✅ changelog.md or SHIPPED.md updated"
+            exit 0
+          fi
+
+          echo "::error::No changelog entry in this PR."
+          cat <<'MSG'
+
+          Add an entry to changelog.md describing what changed and why, or apply the
+          'no-changelog' label if this PR genuinely has nothing worth recording.
+
+            Style rules ......... CHANGELOG_STYLE.md
+            Draft one for me .... ask Claude to "use the release-notes skill"
+
+          Write it now, while the reasoning is fresh. Reconstructing it later costs
+          hours and produces a worse entry, because the *why* is gone.
+          MSG
+          exit 1
+
   # WEB-015.1 (IPI2-160) — proves the chatbot/lead-draft RLS + claim_lead_draft
   # behavior on an ephemeral Postgres (run.sh spins postgres:16, applies only this
   # migration — not a full historical replay). Independent of build so a Docker

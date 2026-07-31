@@ -1,29 +1,75 @@
 ---
 name: release-notes
 description: >
-  Draft a changelog.md entry from git log + closed Linear IPI issues since the last entry.
-  Use after a batch of commits lands or before tagging a release, when you need human-readable
-  release notes rather than the /release gate checklist (which checks readiness, not prose).
-  Triggers: "write release notes", "update the changelog", "draft changelog entry",
-  "summarize what shipped". Do NOT use for the pre-merge gate check — that's `/release`.
+  Draft a changelog.md or SHIPPED.md entry from merged PRs + closed Linear IPI issues
+  since the last entry. Use after a batch of commits lands, before tagging a release, or
+  when the changelog-check CI job blocks a PR. Triggers: "write release notes",
+  "update the changelog", "draft changelog entry", "summarize what shipped",
+  "changelog-check is failing". Do NOT use for the pre-merge gate check — that's `/release`.
 ---
 
 # Release Notes
 
-Draft a new entry for root `changelog.md` — this repo already maintains one by hand, in
-[Keep a Changelog](https://keepachangelog.com/en/1.1.0/) style with commit hashes and technical
-detail (see the existing `[Unreleased]` section for the exact voice to match). This skill drafts
-the next entry in that same style; it does not invent a new format or location.
+**Read [`CHANGELOG_STYLE.md`](../../../CHANGELOG_STYLE.md) first** — it holds the voice rules,
+the anti-pattern table, and the two-audience split. This skill applies those rules; it does not
+restate or override them.
+
+Two files, two readers:
+
+| File | Reader | Cadence | Grouping |
+|------|--------|---------|----------|
+| `changelog.md` | An engineer debugging this in six months | Every merged PR | By ticket / theme |
+| `SHIPPED.md` | Teammate, stakeholder, prospect | Weekly | Keep a Changelog's six change types |
+
+Ask which one is wanted if the request is ambiguous. "Update the changelog" almost always
+means `changelog.md`.
+
+⚠️ `changelog.md` does **not** follow Keep a Changelog, despite what an older header claimed —
+entries group by ticket, there are no versions, SemVer isn't asserted. KaC's structure is used
+in `SHIPPED.md` only.
 
 **Announce at start:** "I'm using the release-notes skill to draft the next changelog entry."
 
 ## Steps
 
-1. **Find the range.** Read `changelog.md`'s most recent dated entry to find the last commit it covered. Get everything since: `git log --oneline <last-known-commit>..HEAD`.
-2. **Pull closed Linear context.** For each commit referencing an `IPI-NNN`/`IPI2-NNN` id, look up that issue (via the `linear` skill or MCP) for its title and acceptance criteria — this is what turns a commit subject into a real description of *what changed and why*, matching the existing entries' level of technical detail (bug root causes, security hardening specifics, migration ids).
-3. **Group by theme, not by commit.** Match the existing file's structure: a dated header naming the ticket/feature, then sub-bullets per commit with the commit hash inline (`` `2c8affb` ``), same as the current `[Unreleased]` section. Don't just paste `git log` output — synthesize what a reader who wasn't in the room needs to know.
-4. **Draft under `[Unreleased]`**, above the existing entries (newest first, matching the file's stated order).
-5. **Show the user the draft entry before writing it** — this is prose describing shipped work, not a mechanical transform; get a sanity check before it goes in.
+1. **Find the range.** Read the most recent dated entry to find the last commit it covered, then `git log --oneline --no-merges <last-known-commit>..HEAD`.
+
+2. **Read the merged PRs, not just the commits.** This is the step that decides whether the
+   entry is any good. PR titles and bodies carry the *why*; commit subjects carry a squashed
+   *what*.
+
+   ```
+   gh pr list --state merged --base main --search "merged:>=YYYY-MM-DD" \
+     --limit 100 --json number,title,url,mergedAt,body
+   ```
+
+   - Filter on `merged:>=` in the search, **not** on the REST `merged` field — that field is
+     `false` for squash merges and silently drops everything.
+   - A PR with no `mergedAt` did **not** ship. Superseded/duplicate PRs are common here; never
+     list one as shipped.
+   - Real example: commit subject *"stop booking-gate CI writing fixtures to production"* vs PR
+     title *"Stop CI creating fake companies in the live database on every pull request"* (#641).
+     Use the second.
+
+3. **Read the migrations for anything touching the database.** Headers in
+   `supabase/migrations/` state intent, plan, rollback, and the follow-up ticket. They are the
+   most accurate documents in this repo, and skipping them has produced wrong entries before.
+4. **Pull closed Linear context.** For each `IPI-NNN`/`IPI2-NNN` id, look up the issue (via the `linear` skill or MCP) for its title and acceptance criteria. Always pair an id with its title on first mention — `IPI-812 · BRAND-REG-003`, never a bare number.
+5. **Group by theme, not by commit.** Nine Hyperdrive commits are one Hyperdrive paragraph. Commit hash inline (`` `2c8affb` ``), PR linked. Never paste `git log` output.
+6. **Draft under `[Unreleased]`**, above existing entries (newest first).
+7. **Show the user the draft before writing it** — prose describing shipped work, not a mechanical transform.
+
+## Unblocking `changelog-check`
+
+The CI job fails when a PR touches neither `changelog.md` nor `SHIPPED.md`. Two valid fixes:
+
+| Situation | Do |
+|-----------|-----|
+| The PR changed something a future debugger would search for | Draft the entry with this skill |
+| Pure CI/config, dependency bump, or revert | Apply the `no-changelog` label |
+
+Never add an empty or filler entry to get past the gate — that defeats the point and pollutes
+the record.
 
 ## What this skill does NOT do
 
@@ -33,4 +79,5 @@ the next entry in that same style; it does not invent a new format or location.
 
 ## Save to
 
-`changelog.md` (repo root) — edit in place, inserting the new entry at the top of `[Unreleased]`. This is a docs-only change per the repo's one-concern-per-PR rule — don't bundle it with code changes.
+`changelog.md` or `SHIPPED.md` (repo root) — edit in place, newest entry first. Docs-only per
+the one-concern-per-PR rule; never bundle with code changes.
