@@ -72,6 +72,69 @@ works. It's that nothing *asks*.
 
 ---
 
+## 3b. We claim Keep a Changelog. We don't follow it.
+
+`changelog.md` line 5 says *"Format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)."*
+Checked against the actual 1.1.0 spec:
+
+| KaC 1.1.0 rule | Us | |
+|----------------|-----|:-:|
+| Changelogs are for humans, not machines | Yes — very much so | 🟢 |
+| Latest version first | Yes | 🟢 |
+| Release date displayed | Yes, dated headers | 🟢 |
+| Versions and sections linkable | PR links, no anchors | 🟡 |
+| **Group by the six change types** — `Added` · `Changed` · `Deprecated` · `Removed` · `Fixed` · `Security` | **No.** We group by ticket | 🔴 |
+| An entry for every version | No versions at all — permanent `[Unreleased]` | 🔴 |
+| State whether you follow SemVer | Not stated | 🔴 |
+
+So "loosely follows" is doing heavy lifting. Three of seven principles aren't met.
+
+**That's a fork in the road, and it's worth being deliberate:**
+
+| Option | What it means | Verdict |
+|--------|---------------|---------|
+| **A. Conform to KaC properly** | Add the six change-type headings under each dated entry; adopt versions | 🟡 Real work, and the six types fit a library better than a pre-launch app |
+| **B. Stop claiming it** | Change line 5 to name our own documented style in `CHANGELOG_STYLE.md` | ✅ **Recommended for `changelog.md`** — the format works, the claim is what's wrong |
+| **C. Apply KaC to `SHIPPED.md` only** | The six types are a good fit for a weekly user-facing digest | ✅ **Recommended for `SHIPPED.md`** |
+
+B + C together: the engineering journal keeps its ticket-shaped format and stops
+mislabelling itself; the new weekly file gets the standard structure, where it
+genuinely helps a reader scan.
+
+⚠️ KaC's headline warning is *"don't let your friends dump git logs into
+changelogs."* Every automated tool in §3c does exactly that unless a human edits
+the output. That is the whole argument against full automation, stated by the spec
+we already cite.
+
+---
+
+## 3c. The tool landscape — and why more tools is the wrong answer
+
+Searching for changelog skills returns at least six competing options:
+
+| Tool | What it is | Verdict for iPix |
+|------|-----------|:----------------:|
+| **Our `release-notes` skill** | Git log + **Linear context** + repo voice + shows draft first | ✅ **Keep. Best fit** |
+| [Composio `changelog-generator`](https://github.com/ComposioHQ/awesome-claude-skills/blob/master/changelog-generator/SKILL.md) | Git log → categorised, user-friendly | ❌ Strict subset of ours |
+| [`ai-changelog-generator`](https://github.com/entro314-labs/AI-Changelog-Generator) (CLI + **MCP server**) | Diffs any two git refs, AI-cleans messages, multi-provider incl. local models | 🟡 **The one genuinely new capability** — see below |
+| [MCPmarket `changelog-writer`](https://mcpmarket.com/tools/skills/mp-changelog-writer-chlg0001) | Skill | ❌ Duplicate |
+| [MCPmarket `git-changelog-generator`](https://mcpmarket.com/tools/skills/git-changelog-generator-5) | Skill | ❌ Duplicate |
+| [MCPmarket `automated-changelog-release-management`](https://mcpmarket.com/tools/skills/automated-changelog-release-management) | Skill | ❌ Duplicate |
+| [Common Changelog](https://common-changelog.org/) | A *style guide*, not a tool — stricter KaC variant | 🟡 Worth reading before writing `CHANGELOG_STYLE.md` |
+
+**Installing any of the duplicates makes things worse.** [`reports/09-dev-system.md`](./reports/09-dev-system.md)
+already flags the problem: **46 skills with no routing test.** Add three more with
+overlapping descriptions and "which skill fires for *update the changelog*" becomes
+a coin flip. The skill that loses that coin flip is ours — the only one that knows
+about Linear, our voice, and the docs-only PR rule.
+
+**The one worth a second look** is `ai-changelog-generator`, and only for its MCP
+server: it diffs arbitrary git refs and can run against a **local model**. For the
+41-commit backfill that's attractive — a bulk, low-stakes, cheap pass. Not for
+routine entries, where Linear context is the thing that makes an entry useful.
+
+---
+
 ## 4. Our changelog is excellent — and it isn't a changelog
 
 Look at a real entry (2026-07-26, IPI-812):
@@ -204,29 +267,58 @@ real work that currently looks, to anyone not reading git, like a quiet month.
 
 ---
 
-## 8. Do this
+## 8. The most efficient path
 
-| # | Task | Effort | Enforcement |
-|:-:|------|:------:|-------------|
-| 1 | Backfill an entry for the 41 unlogged commits | M | — |
-| 2 | Add `CHANGELOG_STYLE.md` at root; point the skill at it | S | — |
-| 3 | Add the `changelog-check` CI job + `no-changelog` label | S | **Real** |
-| 4 | Create `SHIPPED.md` with the Features/Improvements/Fixes structure | S | — |
-| 5 | Weekly Friday workflow drafting `SHIPPED.md` | M | **Automatic** |
-| 6 | Archive the 4 secondary changelogs | S | — |
-| 7 | Update the `release-notes` skill: two-file split + style file | S | — |
+**Install nothing.** Use what's here, add one gate and one schedule.
 
-**Tasks 3 and 5 are the whole point.** 1, 2, 4, 6 and 7 are setup; without the gate
-and the schedule, this document becomes the 47th thing that describes good practice
-without causing it.
+The efficiency argument in one line: writing a changelog entry costs ~5 minutes at
+PR time when the change is fresh in your head. Reconstructing 41 commits' worth
+later costs hours and produces worse entries, because the *why* is gone.
+
+### Do this, in order
+
+| # | Task | Effort | Enforcement | Why now |
+|:-:|------|:------:|-------------|---------|
+| 1 | **`changelog-check` CI job + `no-changelog` label** | S | **Real** | Stops the gap re-opening. Everything else is cleanup |
+| 2 | Fix line 5 of `changelog.md` — name our own style, not KaC | XS | — | We don't follow 3 of 7 KaC principles |
+| 3 | `CHANGELOG_STYLE.md` at root; point `release-notes` at it | S | — | Voice rules in the repo, not inside a skill |
+| 4 | Backfill the 41 commits as **one** grouped entry | M | — | Don't write 41 entries. Group by theme |
+| 5 | `SHIPPED.md` using KaC's six change types | S | — | The user-facing half that doesn't exist |
+| 6 | Friday workflow drafting `SHIPPED.md` → docs-only PR | M | **Automatic** | Makes it a ritual, not a memory test |
+| 7 | Archive the 4 secondary changelogs | S | — | Six files is the six-SSOTs problem |
+| 8 | Update `release-notes` for the two-file split | S | — | Last, once the shape is settled |
+
+**Tasks 1 and 6 are the whole point.** The rest is setup. Without the gate and the
+schedule, this document becomes the 47th thing that describes good practice without
+causing it — which is precisely the failure mode the 41-commit gap already proves.
+
+### Effort, honestly
+
+| | Time | Result |
+|---|:----:|--------|
+| Tasks 1–3 | **~1 hour** | Gap can't silently re-open; the format claim becomes true |
+| Task 4 | ~1 hour | History is whole again |
+| Tasks 5–8 | ~half a day | The weekly ritual runs itself |
+
+### What we are explicitly not doing
+
+| Not doing | Because |
+|-----------|---------|
+| Installing a second changelog skill | 46 skills, no routing test. A duplicate description makes ours lose the coin flip |
+| Conventional commits + `release-please` for `changelog.md` | KaC's own warning: don't dump git logs. Our entries carry root causes no commit subject holds |
+| Rewriting existing entries to KaC's six types | They're good. The claim was wrong, not the format |
+| A public-facing changelog site | Later. Get the internal ritual first — that's Linear's own sequence |
 
 ---
 
 ## 9. Sources
 
+- [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/) — the format `changelog.md` **claims** to follow; conformance checked in §3b
 - [Linear — Startups, Write Changelogs](https://linear.app/now/startups-write-changelogs) · [Medium mirror](https://medium.com/linear-app/startups-write-changelogs-c6a1d2ff4820)
 - [Composio changelog-generator SKILL.md](https://github.com/ComposioHQ/awesome-claude-skills/blob/master/changelog-generator/SKILL.md)
-- [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/) — the format `changelog.md` already follows
+- [entro314-labs/AI-Changelog-Generator](https://github.com/entro314-labs/AI-Changelog-Generator) — CLI + MCP server, multi-provider, local models
+- [MCPmarket changelog skills](https://mcpmarket.com/tools/skills/ai-changelog-generator) — four overlapping options, see §3c
+- [Common Changelog](https://common-changelog.org/) · [vweevers/common-changelog](https://github.com/vweevers/common-changelog) — stricter style guide; read before writing `CHANGELOG_STYLE.md`
 - [How Linear used a public changelog to drive growth](https://lastrelease.io/blog/how-linear-uses-a-public-changelog)
 - [Changelog generation in GitHub Actions](https://oneuptime.com/blog/post/2025-12-20-changelog-generation-github-actions/view)
 - [semantic-release vs changesets vs release-it, 2026](https://www.pkgpulse.com/guides/semantic-release-vs-changesets-vs-release-it-release-2026)
