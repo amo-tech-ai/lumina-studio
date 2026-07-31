@@ -27,8 +27,29 @@ app cannot take money for a shoot.
 | `supabase/` | 🟡 | `payments` (9 cols) + `shoot_payments` (7 cols) tables exist, **no rows** |
 | Linear | ❌ | `tasks/todo.md` lists STR-001–003 with the note *"No Linear issues"* |
 
-The database is ready and the code is not. `shoot_payments` was designed for
-exactly this and has never been written to.
+### ⚠️ "The database is ready" is not true — check the columns
+
+`shoot_payments` exists and has never been written to, but it is **not** a
+schema you could ship Connect against. All 7 columns, from
+`information_schema` on `fashionos`:
+
+```text
+id · shoot_id · user_id · amount(numeric) · provider_payment_id(text)
+status(enum) · created_at
+```
+
+| Missing | Why it blocks the model recommended below |
+|---------|-------------------------------------------|
+| `currency` | `amount` is a bare `numeric`. A payments table without a currency is a defect waiting for the first non-CAD booking |
+| Capture state | Manual-capture Payment Intents need `authorized` / `captured` / `expired` distinguished. One `status` enum holding both intent and payout state will collapse them |
+| `transfer_id` / `destination_account` | Connect pays talent from a transfer. Without these there is no record of who got paid |
+| `application_fee_amount` | The platform fee is the business model. It isn't stored |
+| Idempotency key | Stripe requires one per intent to make retries safe |
+
+**Plain English:** the table is a placeholder someone sketched, not a design. Treat
+"add the missing columns" as step 0 of STR-001, not as a detail — building the
+integration first and migrating the table under live payment rows afterwards is the
+expensive order to do it in.
 
 ---
 
@@ -44,8 +65,8 @@ Two models are possible:
 **Recommendation: B, with Stripe Connect.**
 
 iPix's product is a two-sided fashion-production marketplace — brands on one side,
-models and crew on the other. `talent.bookings` and `shoot_payments` already model
-that. Connect is built for exactly this shape: the platform takes a fee, talent
+models and crew on the other. `talent.bookings` and `shoot_payments` gesture at
+that shape, though `shoot_payments` needs the columns above before it can carry it. Connect is built for exactly this shape: the platform takes a fee, talent
 gets paid out, and iPix never holds funds directly.
 
 The shoot lifecycle also maps cleanly onto Stripe primitives already:
@@ -109,7 +130,7 @@ agent-native, but it's a 2027 conversation — deposits and Connect come first.
 | ID | Task | | % | Examine | Verify | Blocker |
 |----|------|:-:|--:|---------|--------|---------|
 | ST-01 | Stripe in operator app | ⚪ | 0 | `app/src` | `grep -ri stripe app/src` | No decision |
-| ST-02 | `payments` / `shoot_payments` schema | 🟢 | 80 | Supabase | table inspect | Unused |
+| ST-02 | `payments` / `shoot_payments` schema | 🔴 | 25 | Supabase `information_schema.columns` | see §1 column list | **No currency, capture state, transfer id, fee, or idempotency key** |
 | ST-03 | Storefront checkout | 🟡 | 60 | `b2c-storefront/` | commerce proofs 1–5 | Separate app |
 | ST-04 | Marketplace payouts | 🟡 | 40 | `my-marketplace/` | Mercur config | — |
 | ST-05 | Connect onboarding | ⚪ | 0 | — | — | Model decision |

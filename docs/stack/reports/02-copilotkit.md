@@ -13,8 +13,10 @@ scores: { core: 65, advanced: 10, overall: 43 }
 # CopilotKit — 43/100 (C−) 🟡
 
 **One-line problem:** iPix's central UX rule is *"AI drafts, humans decide."*
-CopilotKit ships human-in-the-loop primitives for exactly that. We use **none of
-them** — HITL is enforced by prompt text and hand-built approval cards.
+CopilotKit ships human-in-the-loop primitives for exactly that, and we use **none
+of them**. The approval gates we hand-built are real server-side checks, not
+prompt text — the cost is that each one is bespoke, so every new write path has to
+re-implement them correctly.
 
 ---
 
@@ -59,7 +61,7 @@ Mastra via `@ag-ui/mastra` 1.1.1.
 
 ---
 
-## 3. 🔴 The HITL finding
+## 3. 🟡 The HITL finding
 
 Searching `app/src` for `useHumanInTheLoop`, `renderAndWaitForResponse`,
 `useCopilotAction`, `useCoAgent`, and `useInterrupt` returns **three matches — all
@@ -76,12 +78,31 @@ So today the safety model is:
 1. Tool instructions say "never write without approval"
 2. Write tools require an explicit flag (`operatorConfirmed: true`)
 3. Custom approval cards live in the page UI
+4. **The approval handler itself re-checks everything, server-side**
 
-**Why that's fragile.** Layers 1 and 3 are the model's cooperation and a separate
-React component. Only layer 2 is a real gate, and it's per-tool — every new write
-tool has to remember to add it. CopilotKit's HITL primitive makes the *framework*
+**Layer 4 is stronger than a first read suggests, and the report originally
+undersold it.** `app/src/app/api/_lib/process-draft-approval.ts` is not a
+rubber stamp — it independently verifies ownership and makes double-approval
+structurally impossible:
+
+| Line | Check | Effect |
+|-----:|-------|--------|
+| 52 | `draft.user_id !== operatorId` | `Forbidden` — the caller's claimed identity is not trusted |
+| 55 | `draft.brand_id !== expectedBrandId` | Rejects a cross-brand approval |
+| 68 | `.eq("status", PENDING_DRAFT_STATUS)` on the **update** | A second approve hits zero rows → *"Draft already processed"*. Not a read-then-write race |
+| 78, 84 | `rollbackDraftRow` on promote/discard failure | No half-approved state |
+
+That is a genuine gate, shared by the API route, server actions, and the Mastra
+tool. **The finding is not "approvals are unenforced."**
+
+**The actual weakness is that it's bespoke.** Layers 1 and 3 are the model's
+cooperation and a separate React component; layers 2 and 4 are real but written by
+hand, per flow. `process-draft-approval.ts` covers brand-intelligence drafts and
+nothing else — a new write path gets these guarantees only if its author
+reimplements all four checks. CopilotKit's HITL primitive makes the *framework*
 hold the tool call open until a human answers, so a forgetful tool author can't
-create a silent-write path.
+create a silent-write path in the first place. The gap is **uniformity, not
+safety.**
 
 **Real iPix example.** `booking-agent.ts` says *"You NEVER confirm or approve a
 booking — no confirm_booking tool exists."* That's genuinely safe, because safety

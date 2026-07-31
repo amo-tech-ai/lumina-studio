@@ -31,12 +31,12 @@ relatedTrackers:
 | 2 | **Linear process** | 70 | 40 | **58** | C+ | 🟡 | No cycles, no MVP labels — order lives in a markdown file, not Linear | [→](./reports/08-linear-process.md) |
 | 3 | **Mastra** | 75 | 15 | **51** | C | 🟡 | Zero scorers, zero evals — no way to prove an agent got better | [→](./reports/01-mastra.md) |
 | 4 | **Cloudinary** | 70 | 20 | **50** | C | 🟡 | Custom upload/transform code where MediaFlows + presets would do | [→](./reports/05-cloudinary.md) |
-| 5 | **Dev system** (Claude/Cursor) | 55 | 30 | **45** | C− | 🟡 | Skills describe process but don't *block* the error before it ships | [→](./reports/09-dev-system.md) |
-| 6 | **Sentry** | 75 | 30 | **57** | C | 🟡 | Errors, traces and replay all captured — the agent layer is dark | [→](./reports/06-observability.md) |
+| 5 | **Dev system** (Claude/Cursor) | 55 | 30 | **45** | C | 🟡 | Skills describe process but don't *block* the error — and the pre-push hook they rely on isn't installed | [→](./reports/09-dev-system.md) |
+| 6 | **Sentry** | 75 | 30 | **57** | C+ | 🟡 | Errors, traces and replay all captured — the agent layer is dark | [→](./reports/06-observability.md) |
 | 7 | **CopilotKit** | 65 | 10 | **43** | C− | 🟡 | HITL is hand-built — the framework's HITL primitives are unused | [→](./reports/02-copilotkit.md) |
 | 8 | **Cloudflare** | 40 | 25 | **34** | D | 🔴 | App still on Vercel; bindings configured but never cut over | [→](./reports/03-cloudflare.md) |
 | 9 | **Stripe / payments** | 25 | 0 | **15** | F | 🔴 | Not present in `app/` at all — only in `b2c-storefront/` | [→](./reports/07-stripe-payments.md) |
-| — | **AI Agents (9)** | 80 | 20 | **56** | C+ | 🟡 | All 9 exist and route correctly; none are measured | [→](./reports/00-agents.md) |
+| — | **AI Agents (9)** | 80 | 20 | **56** | C+ | 🟡 | 8 of 9 are reachable from a route; none are measured | [→](./reports/00-agents.md) |
 
 **Weighted stack adoption: 46 / 100 🟡**
 

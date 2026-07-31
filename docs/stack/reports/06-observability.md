@@ -10,7 +10,7 @@ verifiedAt: "2026-07-31"
 scores: { core: 75, advanced: 30, overall: 57 }
 ---
 
-# Observability — 57/100 (C) 🟡
+# Observability — 57/100 (C+) 🟡
 
 **One-line problem:** errors, traces and replays are all captured — but the agent
 layer is dark. The Mastra span exporter is built, tested, and switched off, so when

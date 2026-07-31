@@ -10,7 +10,7 @@ verifiedAt: "2026-07-31"
 scores: { core: 55, advanced: 30, overall: 45 }
 ---
 
-# Dev System — 45/100 (C−) 🟡
+# Dev System — 45/100 (C) 🟡
 
 **One-line problem:** 46 skills describe the right process. 4 hooks actually stop
 you doing the wrong thing. The ratio is backwards.
@@ -26,7 +26,7 @@ you doing the wrong thing. The ratio is backwards.
 | Claude hooks (`.claude/hooks/`) | **4** | **Blocking** |
 | Verify scripts (`scripts/`) | ~16 | Blocking when run |
 | CI workflows | 9 files, 23 jobs | **Blocking on merge** |
-| Pre-push hook | 1 | **Blocking** — `typecheck → vitest run` |
+| Pre-push hook | **0** | 🔴 `CLAUDE.md` documents one; it is not installed — see §3 |
 | ESLint rules | incl. CopilotKit v1 guard | **Blocking** |
 
 ### The 4 hooks that actually prevent errors
@@ -61,7 +61,7 @@ diff` check, not a judgement call.
 
 | Skill / rule | Prevents | Describes | Gap |
 |--------------|:--------:|:---------:|-----|
-| Pre-push hook (typecheck + tests) | ✅ | | — |
+| Pre-push hook (typecheck + tests) | | ✅ | 🔴 Described in `CLAUDE.md`, never installed — §3 |
 | ESLint CopilotKit v1 guard | ✅ | | — |
 | `block-local-supabase.sh` | ✅ | | — |
 | `guard-protected-writes.sh` | ✅ | | — |
@@ -159,8 +159,8 @@ Three checks that belong there and cost seconds:
 | When | Run | Why |
 |------|-----|-----|
 | While editing | Nothing — hooks handle it | Speed |
-| Pre-commit | `check:env`, lint changed, docs/code-mix guard | Seconds |
-| Pre-push | `typecheck` + `vitest run` (existing hook) | Catches 90% |
+| Pre-commit | lint changed, docs/code-mix guard | Seconds |
+| Pre-push | `typecheck` + `vitest run` — **run these by hand until the hook is installed** | Catches 90% |
 | Migration PR | `supabase:verify-rls` + `rls-policy-auditor` | RLS is the highest-blast-radius change |
 | Mastra PR | `npm test` full — `--changed` misses dynamic imports | Registry is runtime-loaded |
 | Edge function PR | `supabase:verify-edge-unit` (Deno) | Different runtime |

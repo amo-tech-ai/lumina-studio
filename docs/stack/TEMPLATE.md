@@ -22,6 +22,8 @@ lastUpdated: "YYYY-MM-DD"
 status: Active | Archive
 purpose: "One sentence. What question does this doc answer?"
 ssot: ../../tasks/plan/todo.md   # the doc that wins if this one disagrees
+                                 # depth-sensitive: ../../ from docs/stack/,
+                                 # ../../../ from docs/stack/reports/
 verifiedAgainst: "files + live systems checked"
 verifiedAt: "YYYY-MM-DD"
 scores:
@@ -60,10 +62,15 @@ do not invent a new one.
 ```markdown
 **Legend:** 🟢 complete · 🟡 in progress · 🔴 failed / attention · ⚪ not started
 
-| ID | Task | | % | Examine | Verify | Proof | Blocker |
-|----|------|:-:|--:|---------|--------|-------|---------|
-| ST-01 | Short task name | 🟡 | 45 | where to look | the command | link/PR | what stops it |
+| ID | Task | | % | Examine | Verify | Blocker |
+|----|------|:-:|--:|---------|--------|---------|
+| ST-01 | Short task name | 🟡 | 45 | where to look | the command | what stops it |
 ```
+
+`Examine` and `Verify` are required — a row without both is an opinion, not a
+tracker entry. Add an optional `Proof` column (link or PR) only where a row's
+evidence is a merged change rather than a command you can re-run; leaving a
+column that is empty in most rows is decoration.
 
 | Column | Rule |
 |--------|------|
@@ -88,8 +95,10 @@ Overall = (Core × 0.6) + (Advanced × 0.4)
 | 90–100 | A | 🟢 | Using the platform as designed |
 | 80–89 | B+ | 🟢 | Solid, minor gaps |
 | 70–79 | B− | 🟡 | Works, but hand-rolling some of it |
-| 60–69 | C+ | 🟡 | Meaningful custom code the platform would replace |
-| 40–59 | C | 🟡 | Core only. Advanced surface untouched |
+| 60–69 | C++ | 🟡 | Meaningful custom code the platform would replace |
+| 55–59 | C+ | 🟡 | Core solid, advanced barely started |
+| 45–54 | C | 🟡 | Core only. Advanced surface untouched |
+| 40–44 | C− | 🟡 | Core has real holes too |
 | 25–39 | D | 🔴 | Configured but not really adopted |
 | 0–24 | F | 🔴 | Absent or non-functional |
 

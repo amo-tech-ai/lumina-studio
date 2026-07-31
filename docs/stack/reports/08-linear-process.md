@@ -10,7 +10,7 @@ verifiedAt: "2026-07-31"
 scores: { core: 70, advanced: 40, overall: 58 }
 ---
 
-# Linear & Process — 58/100 (C+) 🟡
+# Linear & Process — 58/100 (C+) 🟡 — *Linear side unverified*
 
 **One-line problem:** the answer to "what do we build next" lives in a 400-line
 markdown file that a human must read and keep in sync by hand.
@@ -111,15 +111,20 @@ does not.
 
 ## 6. Progress tracker
 
+**Read the `?` rows as claims, not measurements.** Any row whose only evidence is a
+Linear MCP call is marked `?` — the MCP was never queried in this session, so its
+`%` is inferred from the repo's silence about the feature, which is weak evidence.
+Run [`PROMPTS.md` §8](../PROMPTS.md) to replace them with real numbers.
+
 | ID | Task | | % | Examine | Verify | Blocker |
 |----|------|:-:|--:|---------|--------|---------|
-| LN-01 | Team + projects | 🟢 | 90 | Linear IPI | `list_teams` | — |
+| LN-01 | Team + projects | 🟢 | 90 | `docs/linear/issues/`, PR titles | `list_teams` | — |
 | LN-02 | Per-issue acceptance docs | 🟢 | 85 | `docs/linear/issues/` | `ls` | — |
 | LN-03 | Branch/PR linkage | 🟢 | 90 | `worktree:add` | branch names | — |
-| LN-04 | Cycles | 🔴 | 0 | — | `list_cycles` | not enabled |
-| LN-05 | Milestones | 🔴 | 10 | — | `list_milestones` | not populated |
-| LN-06 | `mvp` / `p0` labels | 🔴 | 0 | markdown priority | `list_issue_labels` | not created |
-| LN-07 | STR issues filed | 🔴 | 0 | `tasks/todo.md` | `list_issues` | blocks payments tracking |
+| LN-04 | Cycles | 🔴 | **?** | no repo reference | `list_cycles` | **unverified — MCP not queried** |
+| LN-05 | Milestones | 🔴 | **?** | no repo reference | `list_milestones` | **unverified — MCP not queried** |
+| LN-06 | `mvp` / `p0` labels | 🔴 | **?** | priority lives in markdown | `list_issue_labels` | **unverified — MCP not queried** |
+| LN-07 | STR issues filed | 🔴 | **?** | `tasks/todo.md` says *"No Linear issues"* | `list_issues` | **unverified — MCP not queried** |
 | LN-08 | Code-verified statuses | 🔴 | 20 | `tasks/plan/todo.md` | PROMPTS §8 | manual |
 | LN-09 | Tracker freshness | 🟡 | 50 | `verifiedAt: 2026-07-02` | frontmatter | 4 weeks stale |
 

@@ -10,7 +10,7 @@ usage: "Paste one prompt per Claude session. Do not run two stack prompts in the
 
 **How these are written.** Every prompt follows the same shape so results are comparable:
 
-```
+```text
 ROLE → SCOPE (files + live systems) → STEPS (numbered, verifiable) → OUTPUT (exact doc + table shape) → RULES (no guessing)
 ```
 
@@ -20,7 +20,7 @@ ROLE → SCOPE (files + live systems) → STEPS (numbered, verifiable) → OUTPU
 
 ## §0 — The 15-minute full re-verify (run weekly)
 
-```
+```text
 Re-verify the iPix stack scorecard in docs/stack/README.md against the live system.
 
 1. Run these and record the raw numbers:
@@ -46,17 +46,19 @@ as if it were fresh.
 
 ## §1 — Mastra deep report
 
-```
+```text
 Produce a Mastra feature-adoption report for iPix. Write to
 docs/stack/reports/01-mastra.md, replacing the file.
 
 1. Inventory what we use: read app/src/mastra/{index,durable,memory,storage,
    models,agent-workflows}.ts, agents/*, tools/index.ts, workflows/*. List every
    Mastra API we call.
-2. Inventory what exists: use the Mastra MCP knowledge tool (or WebSearch
-   mastra.ai/docs) for the current feature surface — agents, tools, workflows,
-   memory (working / semantic recall / observational), scorers, processors,
-   networks, MCP client+server, task lists, Studio, Agent Builder, deployers.
+2. Inventory what exists. Source order matters: the Mastra MCP knowledge tool
+   first, then Context7 for official library docs (CLAUDE.md: Context7 beats web
+   search for this), and WebSearch last — only for blog posts and templates.
+   Cover the current feature surface: agents, tools, workflows, memory (working /
+   semantic recall / observational), scorers, processors, networks, MCP
+   client+server, task lists, Studio, Agent Builder, deployers.
 3. Diff them. For every unused feature answer: would it replace custom code we
    already wrote? Name the file it would replace.
 4. Review https://mastra.ai/templates and pick the 3 closest to iPix
@@ -75,7 +77,7 @@ without a docs link.
 
 ## §2 — CopilotKit deep report
 
-```
+```text
 Produce a CopilotKit feature-adoption report for iPix. Write to
 docs/stack/reports/02-copilotkit.md.
 
@@ -104,7 +106,7 @@ say so explicitly — that is a finding, not a usage.
 
 ## §3 — Cloudflare migration + services report
 
-```
+```text
 Produce a Cloudflare report for iPix. Write to docs/stack/reports/03-cloudflare.md.
 Load the cloudflare-workflow skill first (project rule).
 
@@ -137,7 +139,7 @@ Do not say the app is on Workers — it is on Vercel. Cite config file lines.
 
 ## §4 — Supabase deep report
 
-```
+```text
 Produce a Supabase report for iPix. Write to docs/stack/reports/04-supabase.md.
 Project id: nvdlhrodvevgwdsneplk.
 
@@ -178,7 +180,7 @@ If a lockdown had to be re-applied, the finding is the DRIFT, not the tables.
 
 ## §5 — Cloudinary report
 
-```
+```text
 Produce a Cloudinary report for iPix. Write to docs/stack/reports/05-cloudinary.md.
 
 1. Inventory usage: grep app/src for next-cloudinary and the node SDK. Read the
@@ -206,7 +208,7 @@ so explicitly when both exist.
 
 ## §6 — Stripe / payments report
 
-```
+```text
 Produce a payments report for iPix. Write to
 docs/stack/reports/07-stripe-payments.md.
 
@@ -237,7 +239,7 @@ three options.
 
 ## §7 — Agents report
 
-```
+```text
 Produce an AI agent report for iPix. Write to docs/stack/reports/00-agents.md.
 
 1. Read app/src/mastra/index.ts, durable.ts, agents/*, and lib/route-agent-map.ts.
@@ -267,7 +269,7 @@ whether it needs one.
 > Linear MCP requires interactive approval. Run this in a normal Claude Code
 > session, not a headless one.
 
-```
+```text
 Connect to Linear (team IPI) and verify the backlog against the live codebase.
 
 1. List all non-Done issues in team IPI with: identifier, title, status, priority,
@@ -298,7 +300,7 @@ with its title.
 
 ## §9 — Dev system / skills audit
 
-```
+```text
 Audit the iPix Claude Code development system. Write to
 docs/stack/reports/09-dev-system.md.
 
@@ -326,7 +328,7 @@ enforces it.
 
 ## §10 — Docs reorganisation
 
-```
+```text
 Reorganise the iPix documentation using docs/stack/TEMPLATE.md.
 
 1. Inventory every tracker: root *.md, docs/**, tasks/**. For each record: title,
