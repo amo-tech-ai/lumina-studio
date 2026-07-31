@@ -8,6 +8,34 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### 2026-07-31 — docs/stack: tech stack scorecard, build-vs-buy plan, changelog practice
+
+**PR [#691](https://github.com/amo-tech-ai/lumina-studio/pull/691) — docs-only. No production files touched.**
+
+A scored view of every stack layer, the prompts to keep it current, and a build-vs-buy pass. New tree under `docs/stack/`: `README.md` (scorecard + 24-row tracker), `BUILD-VS-BUY.md`, `PROMPTS.md` (11 re-verify prompts), `TEMPLATE.md`, `CHANGELOG-PRACTICE.md`, and `reports/00–09`.
+
+Scoring is `(Core × 0.6) + (Advanced × 0.4)` and measures **feature adoption, not product completeness** — a red score means we hand-wrote something the vendor ships, not that the feature is broken. Stated explicitly because the repo already tracks readiness separately (`tasks/plan/todo.md` → `stackReadiness: 68/100`).
+
+**Verified against live systems, not other docs:**
+
+- Supabase `fashionos`: 174 tables · 494 indexes · 353 policies · 67 triggers · 393 `public` functions · **0** tables with RLS off.
+- **37 tables have RLS enabled with zero policies** — deny-all for `anon`/`authenticated`, invisible because `service_role` bypasses RLS. 33 are duplicate `public.mastra_*` tables from the IPI-616 schema move; the same names exist in the `mastra` schema *with* policies. All 37 named in `reports/04-supabase.md`, with the row-count query to settle which set is authoritative **before** anything is dropped.
+- Advisors: 38 WARN / 37 INFO / **0 ERROR**. 30 are `authenticated_security_definer_function_executable`.
+- pgvector 0.8.0 installed, 4 `vector(768)` columns, 3 indexes, **no `<=>` query in the codebase** — `model-match-agent` documents the resulting limitation in its own instructions.
+- Realtime publishes **2** tables. Cloudflare: **0** D1 databases (API-verified), KV commented out, Hyperdrive bind-only.
+- CopilotKit HITL: `useInterrupt` / `useHumanInTheLoop` appear in **3 places, all comments**. Approvals are enforced by prompt text plus per-tool `operatorConfirmed` flags, not framework primitives.
+- Mastra: no scorers, processors, networks, or MCP client. `mastra_scorers` exists and is empty.
+- Stripe: zero references in `app/src`.
+
+**Two corrections made in the second commit**, after reading the per-stack task trackers rather than only the top-level ones:
+
+- Worker bundle size is **not** unpublished as first written — `tasks/cloudflare/todo.md` (2026-07-24) records **8.985 MiB gzip against a 9.0 MiB hard-fail gate**, 0.015 MiB of headroom, root-caused to `@copilotkit/react-core → streamdown → mermaid/cytoscape/katex` + `@copilotkit/web-inspector`.
+- The Cloudflare **hosting lane is ~70%**, not the 34 the overall service-adoption score implies.
+
+**And one thing the first pass missed entirely:** `main` has **zero branch protection** (`gh api .../branches/main/protection` → 404, IPI-763). `CLAUDE.md`'s first hard rule — never push directly to `main` — is enforced by nothing. Added as red-flag row 0, ahead of the other ten, because it is one dashboard screen.
+
+`BUILD-VS-BUY.md` measures 47 custom scripts (10,564 LOC in root alone) against what each platform ships prebuilt. Sharpest finding: three of four active Cloudinary tickets (IPI-637, IPI-639, IPI-642) describe capabilities MediaFlows and the DAM may already provide, and IPI-708 needs no design work at all — `wrangler versions rollback` is built in.
+
 ### 2026-07-26 — IPI-815: Fix Racy NewPlanDialog Idempotency-Key Tests Blocking the Pre-Push Gate
 
 **PR #634 — merge `aa5d433`. Test-only; no production component changed.**

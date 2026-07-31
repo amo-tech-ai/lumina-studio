@@ -159,6 +159,7 @@ relatedTrackers:
 | **[PROMPTS.md](./PROMPTS.md)** | Copy-paste multistep prompts — one per stack, plus the Linear verify prompt |
 | **[BUILD-VS-BUY.md](./BUILD-VS-BUY.md)** | **Check before coding.** Per platform: what we hand-built vs what ships prebuilt (dashboard / CLI / MCP / template / sample repo), with links |
 | **[TEMPLATE.md](./TEMPLATE.md)** | The template every new stack doc + tracker uses. Archive policy |
+| **[CHANGELOG-PRACTICE.md](./CHANGELOG-PRACTICE.md)** | Why the changelog has a 41-commit gap, and the CI gate + weekly job that fix it |
 | [reports/00-agents.md](./reports/00-agents.md) | 9 agents — use cases, scores, gaps |
 | [reports/01-mastra.md](./reports/01-mastra.md) | Mastra core vs advanced, templates to steal |
 | [reports/02-copilotkit.md](./reports/02-copilotkit.md) | CopilotKit features used vs available, examples to adapt |
