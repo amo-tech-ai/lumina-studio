@@ -26,7 +26,8 @@ the last changelog entry**, and there's a month-shaped hole before that.
 | `tasks/changelog.md` | Docs/tracker changes |
 | `tasks/cloudflare/changelog.md` | Cloudflare lane |
 | `linear/changelog.md` | Linear sync |
-| `Universal-design-prompt-4/changelog.md` ×2 | Design imports |
+| `Universal-design-prompt-4/changelog.md` | Design import |
+| `Universal-design-prompt-4/design-patched/changelog.md` | Design import, patched copy |
 
 **Six changelogs.** Nobody knows which one to update, so the default is none.
 
@@ -321,7 +322,7 @@ later costs hours and produces worse entries, because the *why* is gone.
 | 4 | Backfill the 36 commits as **one** grouped entry | M | — | 🟢 **done** |
 | 5 | `SHIPPED.md` using KaC's six change types | S | — | 🟢 **done** |
 | 6 | Friday workflow drafting `SHIPPED.md` → docs-only PR | M | **Automatic** | ⚪ config PR |
-| 7 | Archive the 4 secondary changelogs | S | — | ⚪ needs link sweep |
+| 7 | Archive the **5** secondary changelogs | S | — | ⚪ needs link sweep |
 | 8 | Point `release-notes` at `CHANGELOG_STYLE.md` + the two-file split | S | — | ⚪ skill PR |
 
 Tasks 2–5 ship in this PR (docs-only). 1, 6 and 8 are config/skill changes in a
