@@ -141,6 +141,33 @@ That is also why Phase B can't drop them yet.
 which argues against table recreation being the vector. Treat this as the next
 thing to test, not the answer.
 
+### Baseline captured 2026-07-31 07:15 UTC — the lockdown is currently **holding**
+
+```sql
+select grantee, privilege_type, count(*) as tables
+from information_schema.role_table_grants
+where table_schema='public'
+  and (table_name like 'mastra%' or table_name like 'chatbot%' or table_name='lead_intake_drafts')
+  and grantee in ('anon','authenticated','PUBLIC','service_role')
+group by 1,2 order by 1,2;
+```
+
+| Grantee | Privileges | Tables | Expected? |
+|---------|-----------|-------:|:---------:|
+| `anon` | **none** | 0 | ✅ correct |
+| `PUBLIC` | **none** | 0 | ✅ correct |
+| `authenticated` | `SELECT` | **1** | ✅ correct — `lead_intake_drafts` only, per IPI-872's `grant select ... to authenticated` |
+| `service_role` | full DML | 4 | ✅ correct — 3 `chatbot_*` + `lead_intake_drafts` |
+| *(33 `public.mastra_*`)* | **none, to anyone** | 33 | ✅ fully locked |
+
+**This is the most useful thing in this section.** Current state matches intent
+exactly, which means the drift is **episodic, not continuous** — something re-grants,
+gets caught, gets reverted. So the vector is an *event*, and the way to find it is to
+diff this query across events rather than to read more migrations.
+
+Re-run the query above and compare. Any row appearing for `anon` or `PUBLIC`, or
+`authenticated` on more than one table, is the drift reproducing.
+
 **Next steps for IPI-876,** in order of cost:
 
 | # | Step |
