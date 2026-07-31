@@ -162,7 +162,7 @@ what Cloudflare Workflows exists to replace: durable, resumable, automatic retry
 | CF-03 | OpenNext build | 🟡 | 55 | `cd app && npm run build:cf` | local run | never in CI |
 | CF-04 | Worker bundle size (IPI-706) | 🔴 | 20 | `check-worker-bundle-size.mjs` | `npm run check:worker-bundle` | **8.985 / 9.0 MiB** — 0.015 headroom |
 | CF-11 | Branch protection on `main` (IPI-763) | 🔴 | 0 | GitHub settings | `gh api .../branches/main/protection` → 404 | none — one dashboard screen |
-| CF-12 | Rollback rehearsal (IPI-708) | 🔴 | 0 | §3 above | `wrangler rollback <VERSION_ID> --env preview` | blocks IPI-631 |
+| CF-12 | Rollback rehearsal (IPI-708) | 🔴 | 0 | §3 above | `npx wrangler versions list --env preview` (read-only) — the rollback itself is a rehearsal step, not a check | blocks IPI-631 |
 | CF-05 | Hyperdrive query path | 🔴 | 45 | `HYPERDRIVE_FRESH` | `ENABLE_HYPERDRIVE_PG_SMOKE=1` | IPI-620 |
 | CF-06 | Preview deploy | 🔴 | 0 | `cd app && npm run preview` | — | — |
 | CF-07 | CI deploy job | 🟡 | 40 | `cloudflare-secrets-sync.yml` — `build:cf`, Worker upload, optional promote | `workflow_dispatch` | Manual only, not PR CI |
