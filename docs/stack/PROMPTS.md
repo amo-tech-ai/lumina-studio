@@ -288,8 +288,15 @@ Connect to Linear (team IPI) and verify the backlog against the live codebase.
 5. Propose the fix as a concrete list of Linear operations — labels to create,
    cycles to enable, issues to file — not as advice.
 
-Output: one summary table (Issue | Title | Status | Evidence | Verdict | Launch?),
-a process-gap table, and an ordered "do these in this order" table.
+Output: write the result to docs/stack/reports/08-linear-process.md, replacing
+§6's tracker and adding a new "§9 Verified backlog" section. Every other prompt
+here writes to a tracked file; a verification whose output lives only in a chat
+transcript cannot be re-checked or diffed next month.
+
+Structure it as one summary table (Issue | Title | Status | Evidence | Verdict |
+Launch?), a process-gap table, and an ordered "do these in this order" table.
+Replace the `?` cells in LN-04..LN-07 with the real numbers, and set
+`verifiedAt` in the frontmatter to the date you ran it.
 
 Rules: never mark an issue verified from its own description. Only code, PR, or a
 passing test counts as evidence. Cite a bare issue number never — always pair it
