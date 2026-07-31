@@ -115,8 +115,26 @@ jobs:
             # The awk below inserts unconditionally, so without this a re-run — or a
             # backfill dispatch whose period lands on an already-written week — appends
             # a second "## Week of <same date>" section.
-            proceed=false
-            reason="week of $WEEK is already recorded in SHIPPED.md"
+            #
+            # But do NOT silently drop the merges just collected. Folding them into the
+            # existing section cannot be automated safely: the scaffold's `#NNN` list is
+            # deleted by design as soon as a human rewrites it into prose, so there is no
+            # reliable way to tell which of these are already represented. Guessing would
+            # either duplicate entries or hide real ones. Fail with the list instead.
+            echo "::error::Week of $WEEK is already recorded in SHIPPED.md. Refusing to append a duplicate section — and refusing to discard the $COUNT merge(s) listed below."
+            jq -r '.[] | "  #\(.number) \(.title)"' /tmp/prs.json
+            cat <<MSG
+
+          Recovery — pick one:
+            * Already covered by the existing section? Nothing to do; ignore this run.
+            * Not covered? Add the entries above to the existing "## Week of $WEEK"
+              section by hand, or re-dispatch with a 'since' whose week is unwritten.
+
+          The weekly cron cannot reach this: consecutive Friday runs always map to
+          different Mondays. Hitting it means a manual dispatch overlapped a week
+          that is already written.
+          MSG
+            exit 1
           fi
 
           echo "proceed=$proceed"  >> "$GITHUB_OUTPUT"
@@ -185,26 +203,44 @@ jobs:
           # first match and can SIGPIPE the upstream `gh`, which `pipefail` then
           # reports as a failed pipeline. Here that would fail *open*: an existing PR
           # goes undetected and a duplicate is attempted.
-          existing="$(gh pr list --head "$BRANCH" --state all --json number --jq 'length')"
+          # `--state open`, not `--state all`. A closed or merged PR for this branch is
+          # history, not an obstacle: with `all`, one merged weekly PR would block the
+          # branch name forever, and a PR closed unmerged could never be regenerated.
+          # The merged case is already handled upstream — once it lands, `main` carries
+          # the "## Week of" heading and the duplicate check stops the run earlier.
+          existing="$(gh pr list --head "$BRANCH" --state open --json number --jq 'length')"
           if [ "$existing" != "0" ]; then
-            echo "::notice::A PR already exists for $BRANCH — nothing to do."
+            echo "::notice::An open PR already exists for $BRANCH — nothing to do."
             exit 0
           fi
 
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
           if git ls-remote --exit-code --heads origin "$BRANCH" >/dev/null 2>&1; then
-            # Branch exists with no PR — a previous run pushed it, then failed before
-            # opening the PR. Open the PR against the remote branch as it stands.
+            # Branch exists with no open PR — a previous run pushed it, then failed
+            # before opening the PR. Refresh it with the scaffold THIS run just built;
+            # opening the PR against the branch as-is would ship whatever that earlier
+            # partial run left behind, which may predate merges collected since.
             #
-            # Do NOT check it out. The scaffold step above has already modified
-            # SHIPPED.md in the working tree, and the remote branch carries a
-            # different committed SHIPPED.md, so `git checkout "$BRANCH"` aborts with
-            # "local changes would be overwritten" and `set -e` kills the job — every
-            # time, on the exact recovery path this branch exists to serve.
-            # `gh pr create --head` needs no local checkout.
-            echo "::notice::$BRANCH exists without a PR — opening the PR against it."
+            # Do NOT `git checkout "$BRANCH"` here. The scaffold step has already
+            # modified SHIPPED.md in this workspace, so checkout aborts with "local
+            # changes would be overwritten" and `set -e` kills the job — the exact
+            # failure this path exists to recover from. An isolated worktree updates
+            # the branch without touching this workspace.
+            echo "::notice::$BRANCH exists without an open PR — refreshing it with the current scaffold."
+            git fetch --no-tags origin "$BRANCH"
+            git worktree add /tmp/shipped-resume "origin/$BRANCH" >/dev/null
+            cp SHIPPED.md /tmp/shipped-resume/SHIPPED.md
+            git -C /tmp/shipped-resume add SHIPPED.md
+            if git -C /tmp/shipped-resume diff --cached --quiet; then
+              echo "::notice::remote branch already matches this scaffold — nothing to push."
+            else
+              git -C /tmp/shipped-resume commit -m "docs(shipped): refresh scaffold for week of $WEEK"
+              git -C /tmp/shipped-resume push origin "HEAD:$BRANCH"
+            fi
+            git worktree remove /tmp/shipped-resume --force
           else
-            git config user.name  "github-actions[bot]"
-            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
             git checkout -b "$BRANCH"
             git add SHIPPED.md
             git commit -m "docs(shipped): scaffold week of $WEEK"
@@ -227,13 +263,24 @@ jobs:
           # call fails 403 regardless of the `permissions:` block above — that toggle
           # is repo/org scope and a job-level grant cannot override it.
           #
-          # Known limitation, not a defect: a PR opened with GITHUB_TOKEN triggers no
-          # `on: pull_request` workflows, so this PR has zero check runs. Harmless
-          # while `main` is unprotected. Once IPI-794 (CF-GOV-001 — Protect Main with
-          # a GitHub Ruleset) lands and changelog-staleness becomes a required check,
-          # this PR becomes unmergeable — and the `no-changelog` label will not help,
-          # because the job never runs to read it. Fix then, not now: push with a
-          # PAT/App token from secrets, or land one manual empty commit to get checks.
+          # Known limitation, not a defect. A PR opened with GITHUB_TOKEN does not
+          # trigger `on: pull_request` GitHub Actions workflows at all — that is
+          # recursion prevention, not a pending approval, so there is nothing for a
+          # maintainer to click. Third-party App checks are unaffected and still run.
+          #
+          # Measured on PR #696 (run 30667545213, the acceptance test for this file):
+          #   3 checks present — Vercel Preview Comments, Vercel deploy, Supabase
+          #     Preview. All GitHub Apps, each on its own installation token.
+          #   0 GitHub Actions runs on the branch — no app-build, no e2e, and in
+          #     particular no changelog-staleness.
+          #
+          # So the risk is specific: the checks that appear are the ones that cannot
+          # be made *required*, and the Actions jobs that would be required never run.
+          # Harmless while `main` is unprotected. Once IPI-794 (CF-GOV-001 — Protect
+          # Main with a GitHub Ruleset) makes changelog-staleness required, this PR is
+          # unmergeable, and the `no-changelog` label cannot help because the job never
+          # runs to read it. Fix then, not now: push with a GitHub App installation
+          # token or a PAT stored as a secret, which does trigger workflows normally.
           gh pr create \
             --draft \
             --base main \
