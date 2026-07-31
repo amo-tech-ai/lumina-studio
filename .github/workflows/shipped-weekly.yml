@@ -87,8 +87,15 @@ jobs:
             jq -r '.[] | "  #\(.number) \(.title)"' /tmp/prs.json
             echo "-->"
             echo
+            # All six Keep a Changelog types, in KaC order — the same contract
+            # SHIPPED.md's own template and the release-notes skill declare.
+            # Emitting four left Deprecated and Removed changes with nowhere to
+            # go in the draft. Delete the headings you don't fill; CHANGELOG_STYLE.md
+            # rule 5 is explicit that padding destroys the signal.
             echo "### Added"
             echo "### Changed"
+            echo "### Deprecated"
+            echo "### Removed"
             echo "### Fixed"
             echo "### Security"
             echo
