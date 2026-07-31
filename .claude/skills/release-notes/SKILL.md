@@ -3,9 +3,9 @@ name: release-notes
 description: >
   Draft a changelog.md or SHIPPED.md entry from merged PRs + closed Linear IPI issues
   since the last entry. Use after a batch of commits lands, before tagging a release, or
-  when the changelog-check CI job blocks a PR. Triggers: "write release notes",
+  when the changelog-staleness CI job blocks a PR. Triggers: "write release notes",
   "update the changelog", "draft changelog entry", "summarize what shipped",
-  "changelog-check is failing". Do NOT use for the pre-merge gate check — that's `/release`.
+  "changelog-staleness is failing". Do NOT use for the pre-merge gate check — that's `/release`.
 ---
 
 # Release Notes
@@ -66,17 +66,21 @@ in `SHIPPED.md` only.
    `SHIPPED.md`'s structure is also written by `.github/workflows/shipped-weekly.yml`; keep the two in step.
 7. **Show the user the draft before writing it** — prose describing shipped work, not a mechanical transform.
 
-## Unblocking `changelog-check`
+## Unblocking `changelog-staleness`
 
-The CI job fails when a PR touches neither `changelog.md` nor `SHIPPED.md`. Two valid fixes:
+**Read the failure before acting on it.** The job measures the *base branch*, not the PR it
+runs on. It fails when `changelog.md` on `main` has fallen more than `MAX_BEHIND` commits
+behind — so the red check on someone's PR is almost never about that PR.
 
 | Situation | Do |
 |-----------|-----|
-| The PR changed something a future debugger would search for | Draft the entry with this skill |
-| Pure CI/config, dependency bump, or revert | Apply the `no-changelog` label |
+| A PR is red and its diff is unrelated to the changelog | **Do not add a changelog entry to that PR.** Open a separate docs-only PR that catches `changelog.md` up. That clears the check for every open PR at once |
+| You are writing that catch-up PR | Draft it with this skill. `git log --oneline <last-changelog-commit>..origin/main` is the work list |
+| Genuinely must merge before the debt can be paid | Apply the `no-changelog` label — break-glass, not routine |
 
-Never add an empty or filler entry to get past the gate — that defeats the point and pollutes
-the record.
+Bundling a changelog entry into a code PR to turn the check green breaks `AGENTS.md`'s
+one-concern rule, and the gate is designed so you never need to. Never add an empty or filler
+entry either — that defeats the point and pollutes the record.
 
 ## What this skill does NOT do
 

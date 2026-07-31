@@ -11,65 +11,96 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  # Requires every PR to record what shipped, or to say explicitly that it didn't.
-  # Exists because changelog.md went 41 commits and 32 days without an entry: the
-  # release-notes skill worked fine, nothing ever asked anyone to run it.
+  # Keeps changelog.md from drifting. Exists because it went 36 commits and 32 days
+  # without an entry: the release-notes skill worked fine, nothing ever asked.
   #
-  # Escape hatch: apply the `no-changelog` label. Use it for pure CI/config,
-  # dependency bumps, and revert commits — anything a future debugger won't search for.
+  # This measures the BASE BRANCH, not your diff — deliberately.
+  #
+  # The obvious design ("this PR must touch changelog.md") was written first and
+  # rejected. AGENTS.md forbids mixing docs and production files in one PR, so a
+  # per-PR gate makes that rule unsatisfiable: every code PR would have to bundle a
+  # docs file, and the only way out is a skip label. A gate whose normal resolution
+  # is "apply the skip label" is enforcement-shaped nothing.
+  #
+  # Measuring `main` instead means your code PR stays code-only. The debt belongs to
+  # the branch everyone shares, and anyone can clear it for everyone with a single
+  # docs-only changelog PR — which is exactly the PR shape the rules want.
   #
   # No `paths:` filter, deliberately. A required check gated on changed paths can go
   # permanently "pending" on PRs that never touch them and block the merge (CLAUDE.md).
   # The push-to-main case is handled by the `github.event_name` guard below instead.
-  changelog-check:
+  changelog-staleness:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 0
+          fetch-depth: 0 # full history — the job walks changelog.md's commits
 
-      - name: Require a changelog entry
+      - name: changelog.md must not fall behind the base branch
         if: github.event_name == 'pull_request'
         env:
           BASE_REF: ${{ github.base_ref }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
           GH_TOKEN: ${{ github.token }}
+          # Anchored to the gap this gate exists because of: 36 commits.
+          # Roughly a fortnight at this repo's merge rate. Tune after a month —
+          # a threshold nobody hits is decoration, one that fires weekly is a tax.
+          MAX_BEHIND: "12"
         run: |
           set -euo pipefail
 
-          # Query labels live rather than reading github.event.pull_request.labels.
-          # The event payload is frozen at trigger time, and `on: pull_request`
-          # defaults to opened/synchronize/reopened — no `labeled`. So a payload
-          # read would mean: add the label, get no re-trigger, and a manual re-run
-          # replays the same stale payload. The developer would be stuck with a red
-          # check and no way to clear it. Asking the API makes "add label, re-run"
-          # work, without adding `labeled` to the trigger and re-running all 8 jobs
-          # on every label change.
+          # Break-glass. Read live rather than from github.event.pull_request.labels:
+          # the event payload is frozen at trigger time and `on: pull_request` has no
+          # `labeled` activity type, so a payload read would mean "add the label, get
+          # no re-trigger, and a manual re-run replays the same stale payload" — a red
+          # check with no way to clear it. Asking the API makes "label, then re-run"
+          # work without re-running all 8 jobs on every label change.
           if gh pr view "$PR_NUMBER" --json labels --jq '.labels[].name' \
                | grep -qx 'no-changelog'; then
             echo "::notice::'no-changelog' label present — skipping."
             exit 0
           fi
 
-          git fetch --no-tags --depth=1 origin "$BASE_REF"
-          changed=$(git diff --name-only "origin/$BASE_REF...HEAD")
+          # No --depth here: a shallow fetch would truncate the history this job counts.
+          git fetch --no-tags origin "$BASE_REF"
 
-          if printf '%s\n' "$changed" | grep -qE '^(changelog\.md|SHIPPED\.md)$'; then
-            echo "✅ changelog.md or SHIPPED.md updated"
+          # A PR that updates the changelog always passes, even when the base branch
+          # is already over budget. Otherwise the one PR that can clear the debt is
+          # the one PR the gate blocks.
+          if git diff --name-only "origin/$BASE_REF...HEAD" \
+               | grep -qE '^(changelog\.md|SHIPPED\.md)$'; then
+            echo "✅ this PR updates the changelog"
             exit 0
           fi
 
-          echo "::error::No changelog entry in this PR."
-          cat <<'MSG'
+          last=$(git log -1 --format=%H "origin/$BASE_REF" -- changelog.md)
+          if [ -z "$last" ]; then
+            echo "::warning::changelog.md has no history on $BASE_REF — nothing to measure."
+            exit 0
+          fi
 
-          Add an entry to changelog.md describing what changed and why, or apply the
-          'no-changelog' label if this PR genuinely has nothing worth recording.
+          behind=$(git rev-list --count "$last..origin/$BASE_REF")
+          echo "changelog.md last changed at $last — $behind commit(s) ago on $BASE_REF (budget: $MAX_BEHIND)"
 
+          if [ "$behind" -le "$MAX_BEHIND" ]; then
+            echo "✅ within budget"
+            exit 0
+          fi
+
+          echo "::error::changelog.md is $behind commits behind $BASE_REF (budget $MAX_BEHIND)."
+          cat <<MSG
+
+          This is not about your PR — your diff is fine, and bundling a docs file
+          into it would break the one-concern rule. $BASE_REF is what's stale.
+
+          To clear it for everyone, open a docs-only PR that brings changelog.md
+          up to date:
+
+            Draft one ........... ask Claude to "use the release-notes skill"
             Style rules ......... CHANGELOG_STYLE.md
-            Draft one for me .... ask Claude to "use the release-notes skill"
+            What's missing ...... git log --oneline $last..origin/$BASE_REF
 
-          Write it now, while the reasoning is fresh. Reconstructing it later costs
-          hours and produces a worse entry, because the *why* is gone.
+          Genuinely blocked and need to merge now? Apply the 'no-changelog' label.
           MSG
           exit 1
 
