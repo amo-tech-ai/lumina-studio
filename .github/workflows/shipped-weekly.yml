@@ -55,12 +55,22 @@ jobs:
           # the first real run (2026-08-07) would emit "## Week of 2026-07-27", a
           # section SHIPPED.md already contains. Anchoring on the period end gives
           # 08-07 -> 08-03, 08-14 -> 08-10, 08-21 -> 08-17 — distinct every week.
+          # RANGE must match the label. A manual dispatch names only a START date, so
+          # an unbounded `merged:>=$SINCE` collects everything through *now* while the
+          # heading claims a single week: dispatching on Aug 21 with since=2026-08-03
+          # gathers 18 days of merges and files them under "Week of 2026-08-10". Worse,
+          # if that heading already exists the duplicate guard skips the run and the
+          # later changes are silently dropped. So a dispatch gets an explicit upper
+          # bound and is a real seven-day window; only the cron run — whose period
+          # genuinely ends now — is left open-ended.
           if [ -n "${SINCE_INPUT:-}" ]; then
             SINCE="${SINCE_INPUT}T00:00:00Z"
             ANCHOR="$(date -u -d "${SINCE_INPUT} + 7 days" +%F)"
+            RANGE="$SINCE..${ANCHOR}T00:00:00Z"
           else
             SINCE="$(date -u -d '7 days ago' +%Y-%m-%dT%H:%M:%SZ)"
             ANCHOR="$(date -u +%F)"
+            RANGE=">=$SINCE"
           fi
 
           # Monday of ANCHOR's week. %u is 1..7 (Mon..Sun), so subtracting %u and
@@ -70,12 +80,14 @@ jobs:
           echo "since=$SINCE" >> "$GITHUB_OUTPUT"
           echo "week=$WEEK" >> "$GITHUB_OUTPUT"
 
-          # merged:>=DATE is the reliable signal — the REST `merged` field is false
-          # for squash merges, so filtering on it silently drops everything.
+          # merged: is the reliable signal — the REST `merged` field is false for
+          # squash merges, so filtering on it silently drops everything. RANGE is
+          # ">=START" for cron and "START..END" for a dispatch (see above).
+          echo "collecting merges in range: $RANGE (labelled: week of $WEEK)"
           gh pr list \
             --state merged \
             --base main \
-            --search "merged:>=$SINCE" \
+            --search "merged:$RANGE" \
             --limit 100 \
             --json number,title,url,mergedAt \
             > /tmp/prs.json
