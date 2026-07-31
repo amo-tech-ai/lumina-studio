@@ -7,13 +7,14 @@ purpose: "What we can see when something breaks in production, and what we canno
 ssot: ../../../tasks/plan/todo.md
 verifiedAgainst: "app/package.json · app/src/mastra/index.ts observability block · app/wrangler.jsonc observability · .github/workflows/"
 verifiedAt: "2026-07-31"
-scores: { core: 60, advanced: 20, overall: 44 }
+scores: { core: 75, advanced: 30, overall: 57 }
 ---
 
-# Observability — 44/100 (C−) 🟡
+# Observability — 57/100 (C) 🟡
 
-**One-line problem:** we capture errors. We can't replay them, trace them, or see
-what an agent was thinking when it produced a bad answer.
+**One-line problem:** errors, traces and replays are all captured — but the agent
+layer is dark. The Mastra span exporter is built, tested, and switched off, so when
+an agent produces a wrong answer there is no trace to inspect.
 
 ---
 
@@ -43,7 +44,7 @@ what an agent was thinking when it produced a bad answer.
 `Observability` → `MastraStorageExporter` (batch-with-updates) →
 `SensitiveDataFilter`. It's gated behind two env flags:
 
-```
+```env
 MASTRA_OBSERVABILITY_EXPORTER=1
 MASTRA_SCHEMA=mastra
 ```
@@ -67,7 +68,7 @@ This is the cheapest fix on this page: two environment variables.
 | Mastra exporter off | No agent traces at all | 2 env vars |
 | Trace/replay sampled at 10% | Configured — open question is whether 10% catches rare failures | Assess prod capture rate; do **not** reconfigure |
 | No Seer triage | Manual issue triage | Sentry MCP `analyze_issue_with_seer` |
-| No uptime checks | We learn about downtime from users | Cron ping on `/api/health` |
+| No uptime checks | We learn about downtime from users | Cron ping on `/api/ai/health` |
 | Edge function logs unaggregated | 8 functions, separate log stream | Supabase logs → Sentry |
 | No agent quality metrics | Can't tell a bad answer from a bad day | Mastra scorers |
 
@@ -125,8 +126,8 @@ read which step failed and why. Three manual steps collapse into one.
 |:-:|------|:------:|-----|
 | 1 | Turn on `MASTRA_OBSERVABILITY_EXPORTER=1` + `MASTRA_SCHEMA=mastra` in prod | S | Built, tested, gated. Two variables |
 | 2 | Verify the existing 10% sampling actually captures prod failures | S | Both configured — the question is coverage, not setup |
-| 3 | Uptime check on **`/api/ai/health`** | S | `/api/health` does not exist |
-| 4 | Uptime check on `/api/ai/health` + the `ai-gateway` worker | S | Currently users are the monitor |
+| 3 | Uptime check on `/api/ai/health` + the `ai-gateway` worker | S | Currently users are the monitor. Note `/api/health` does not exist |
+| 4 | Aggregate the 8 edge-function log streams into Sentry | M | Today each is checked separately |
 | 5 | Wire Sentry Seer into PR triage | M | Sentry MCP is already connected |
 
 ---
