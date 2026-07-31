@@ -1,0 +1,166 @@
+name: Weekly SHIPPED draft
+
+# Opens a docs-only PR every Friday with a scaffold of the week's merged PRs, for a
+# human (or Claude via the release-notes skill) to turn into prose.
+#
+# Deliberately NOT an AI step and NOT an auto-merge. Keep a Changelog's own warning
+# is "don't let your friends dump git logs into changelogs" — this produces a
+# scaffold, explicitly labelled as one, and a person writes the entry.
+#
+# Exists because the changelog went 32 days without an entry. A skill nobody
+# remembers to run has the same failure mode as no skill at all.
+
+on:
+  schedule:
+    # Fridays 16:00 UTC. Cron is UTC-only; adjust if the team's week ends elsewhere.
+    - cron: '0 16 * * 5'
+  workflow_dispatch:
+    inputs:
+      since:
+        description: 'Start date (YYYY-MM-DD). Defaults to 7 days ago.'
+        required: false
+        type: string
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: shipped-weekly
+  cancel-in-progress: false
+
+jobs:
+  draft:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Collect merged PRs
+        id: collect
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SINCE_INPUT: ${{ inputs.since }}
+        run: |
+          set -euo pipefail
+          # Timestamp bound, not date-only. `date -d '7 days ago' +%F` truncates to
+          # midnight, but the previous Friday run already covered through 16:00 — so a
+          # date-only lower bound puts every PR merged 00:00–16:00 on a Friday into two
+          # consecutive scaffolds.
+          if [ -n "${SINCE_INPUT:-}" ]; then
+            SINCE="${SINCE_INPUT}T00:00:00Z"
+          else
+            SINCE="$(date -u -d '7 days ago' +%Y-%m-%dT%H:%M:%SZ)"
+          fi
+          echo "since=$SINCE" >> "$GITHUB_OUTPUT"
+          echo "week=$(date -u -d "$SINCE" +%Y-%m-%d)" >> "$GITHUB_OUTPUT"
+
+          # merged:>=DATE is the reliable signal — the REST `merged` field is false
+          # for squash merges, so filtering on it silently drops everything.
+          gh pr list \
+            --state merged \
+            --base main \
+            --search "merged:>=$SINCE" \
+            --limit 100 \
+            --json number,title,url,mergedAt \
+            > /tmp/prs.json
+
+          echo "count=$(jq length /tmp/prs.json)" >> "$GITHUB_OUTPUT"
+
+      - name: Build scaffold
+        if: steps.collect.outputs.count != '0'
+        run: |
+          set -euo pipefail
+          WEEK="${{ steps.collect.outputs.week }}"
+
+          {
+            echo "## Week of $WEEK"
+            echo
+            echo "<!-- SCAFFOLD — NOT PUBLISHABLE."
+            echo "Rewrite each line as a user outcome, then delete this block."
+            echo "  ❌ 'validate-brand now checks is_org_editor_or_above()'"
+            echo "  ✅ 'Editors can now run brand analysis — previously only the creator could.'"
+            echo "Drop anything with no user-visible effect (refactors, CI, dep bumps);"
+            echo "those live in changelog.md only. Rules: CHANGELOG_STYLE.md"
+            echo
+            jq -r '.[] | "  #\(.number) \(.title)"' /tmp/prs.json
+            echo "-->"
+            echo
+            # All six Keep a Changelog types, in KaC order — the same contract
+            # SHIPPED.md's own template and the release-notes skill declare.
+            # Emitting four left Deprecated and Removed changes with nowhere to
+            # go in the draft. Delete the headings you don't fill; CHANGELOG_STYLE.md
+            # rule 5 is explicit that padding destroys the signal.
+            echo "### Added"
+            echo "### Changed"
+            echo "### Deprecated"
+            echo "### Removed"
+            echo "### Fixed"
+            echo "### Security"
+            echo
+          } > /tmp/entry.md
+
+          # Insert directly beneath the intro rule, above the newest existing entry.
+          awk '
+            !done && /^---$/ && seen_header { print; print ""; while ((getline line < "/tmp/entry.md") > 0) print line; done=1; next }
+            /^# Shipped$/ { seen_header=1 }
+            { print }
+          ' SHIPPED.md > /tmp/SHIPPED.md && mv /tmp/SHIPPED.md SHIPPED.md
+
+      - name: Open draft PR
+        if: steps.collect.outputs.count != '0'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          WEEK="${{ steps.collect.outputs.week }}"
+          BRANCH="chore/shipped-$WEEK"
+
+          # Check for an existing PR, not just an existing branch. If a previous run
+          # pushed the branch but `gh pr create` then failed (transient API error,
+          # missing label, permissions), treating branch-existence as "done" would
+          # strand that week forever — every rerun would exit here and never retry.
+          if gh pr list --head "$BRANCH" --state all --json number --jq 'length' \
+               | grep -qv '^0$'; then
+            echo "::notice::A PR already exists for $BRANCH — nothing to do."
+            exit 0
+          fi
+
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          if git ls-remote --exit-code --heads origin "$BRANCH" >/dev/null 2>&1; then
+            # Branch exists with no PR — a previous run got half-way. Resume from it.
+            echo "::notice::$BRANCH exists without a PR — resuming PR creation."
+            git fetch origin "$BRANCH"
+            git checkout "$BRANCH"
+          else
+            git checkout -b "$BRANCH"
+            git add SHIPPED.md
+            git commit -m "docs(shipped): scaffold week of $WEEK"
+            git push -u origin "$BRANCH"
+          fi
+
+          # Body via file — a column-0 heredoc terminator would break this YAML block scalar.
+          {
+            printf 'Automated scaffold of the %s PRs merged since %s.\n\n' \
+              "${{ steps.collect.outputs.count }}" "${{ steps.collect.outputs.since }}"
+            printf '**This is not publishable as-is.** Rewrite each line as a user outcome,\n'
+            printf 'delete the scaffold comment, then mark ready for review.\n'
+            printf 'Rules live in `CHANGELOG_STYLE.md`.\n\n'
+            printf 'Carrying `no-changelog` because this PR *is* the changelog work.\n\n'
+            printf -- '---\n_Generated by [Claude Code](https://claude.ai/code)_\n'
+          } > /tmp/pr-body.md
+
+          gh pr create \
+            --draft \
+            --base main \
+            --head "$BRANCH" \
+            --label no-changelog \
+            --title "docs(shipped): week of $WEEK" \
+            --body-file /tmp/pr-body.md
+
+      - name: Nothing merged
+        if: steps.collect.outputs.count == '0'
+        run: echo "::notice::No PRs merged since ${{ steps.collect.outputs.since }} — no scaffold opened."

@@ -11,6 +11,119 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # Keeps changelog.md from drifting. Exists because it went 39 commits and 32 days
+  # without covering anything new: the release-notes skill worked fine, nothing asked.
+  #
+  # KNOWN LIMITATION, stated so nobody rediscovers it as a bug. This measures when
+  # changelog.md was last *committed*, not the newest change it *covers*. The two
+  # differ: as of 2026-07-31 the file was last touched 36 commits back (3fee13b)
+  # while the newest change any entry described was 39 back (aa5d433). It therefore
+  # under-reports, never over-reports.
+  #
+  # The exploitable version: draft a changelog PR, let N code PRs land while it
+  # sits in review, merge it unchanged -> `behind` resets to 0 with those N
+  # unrecorded. The fix is to rebase a changelog PR onto current main before
+  # merging, which is exactly GitHub's "Require branches to be up to date before
+  # merging" — part of the branch protection this repo does not yet have
+  # (IPI-763 · Branch protection residual). Parsing a coverage marker out of each
+  # entry would make it exact; not worth the format requirement at a drift of 3.
+  #
+  # This measures the BASE BRANCH, not your diff — deliberately.
+  #
+  # The obvious design ("this PR must touch changelog.md") was written first and
+  # rejected. AGENTS.md forbids mixing docs and production files in one PR, so a
+  # per-PR gate makes that rule unsatisfiable: every code PR would have to bundle a
+  # docs file, and the only way out is a skip label. A gate whose normal resolution
+  # is "apply the skip label" is enforcement-shaped nothing.
+  #
+  # Measuring `main` instead means your code PR stays code-only. The debt belongs to
+  # the branch everyone shares, and anyone can clear it for everyone with a single
+  # docs-only changelog PR — which is exactly the PR shape the rules want.
+  #
+  # No `paths:` filter, deliberately. A required check gated on changed paths can go
+  # permanently "pending" on PRs that never touch them and block the merge (CLAUDE.md).
+  # The push-to-main case is handled by the `github.event_name` guard below instead.
+  changelog-staleness:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # full history — the job walks changelog.md's commits
+
+      - name: changelog.md must not fall behind the base branch
+        if: github.event_name == 'pull_request'
+        env:
+          BASE_REF: ${{ github.base_ref }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          GH_TOKEN: ${{ github.token }}
+          # Anchored to the gap this gate exists because of: 39 commits.
+          # Roughly a fortnight at this repo's merge rate. Tune after a month —
+          # a threshold nobody hits is decoration, one that fires weekly is a tax.
+          MAX_BEHIND: "12"
+        run: |
+          set -euo pipefail
+
+          # Break-glass. Read live rather than from github.event.pull_request.labels:
+          # the event payload is frozen at trigger time and `on: pull_request` has no
+          # `labeled` activity type, so a payload read would mean "add the label, get
+          # no re-trigger, and a manual re-run replays the same stale payload" — a red
+          # check with no way to clear it. Asking the API makes "label, then re-run"
+          # work without re-running all 8 jobs on every label change.
+          if gh pr view "$PR_NUMBER" --json labels --jq '.labels[].name' \
+               | grep -qx 'no-changelog'; then
+            echo "::notice::'no-changelog' label present — skipping."
+            exit 0
+          fi
+
+          # No --depth here: a shallow fetch would truncate the history this job counts.
+          git fetch --no-tags origin "$BASE_REF"
+
+          # A PR that updates changelog.md always passes, even when the base branch
+          # is already over budget. Otherwise the one PR that can clear the debt is
+          # the one PR the gate blocks.
+          #
+          # changelog.md ONLY. SHIPPED.md was in this pattern and was wrong: this job
+          # measures changelog.md staleness, so a SHIPPED-only PR would be exempted
+          # from a check it does not satisfy, and merging it leaves `behind` exactly
+          # where it was. The weekly SHIPPED draft is already handled properly — the
+          # shipped-weekly workflow applies the `no-changelog` label to its own PR.
+          if git diff --name-only "origin/$BASE_REF...HEAD" \
+               | grep -qE '^changelog\.md$'; then
+            echo "✅ this PR updates changelog.md"
+            exit 0
+          fi
+
+          last=$(git log -1 --format=%H "origin/$BASE_REF" -- changelog.md)
+          if [ -z "$last" ]; then
+            echo "::warning::changelog.md has no history on $BASE_REF — nothing to measure."
+            exit 0
+          fi
+
+          behind=$(git rev-list --count "$last..origin/$BASE_REF")
+          echo "changelog.md last changed at $last — $behind commit(s) ago on $BASE_REF (budget: $MAX_BEHIND)"
+
+          if [ "$behind" -le "$MAX_BEHIND" ]; then
+            echo "✅ within budget"
+            exit 0
+          fi
+
+          echo "::error::changelog.md is $behind commits behind $BASE_REF (budget $MAX_BEHIND)."
+          cat <<MSG
+
+          This is not about your PR — your diff is fine, and bundling a docs file
+          into it would break the one-concern rule. $BASE_REF is what's stale.
+
+          To clear it for everyone, open a docs-only PR that brings changelog.md
+          up to date:
+
+            Draft one ........... ask Claude to "use the release-notes skill"
+            Style rules ......... CHANGELOG_STYLE.md
+            What's missing ...... git log --oneline $last..origin/$BASE_REF
+
+          Genuinely blocked and need to merge now? Apply the 'no-changelog' label.
+          MSG
+          exit 1
+
   # WEB-015.1 (IPI2-160) — proves the chatbot/lead-draft RLS + claim_lead_draft
   # behavior on an ephemeral Postgres (run.sh spins postgres:16, applies only this
   # migration — not a full historical replay). Independent of build so a Docker
