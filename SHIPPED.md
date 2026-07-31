@@ -40,10 +40,8 @@ Voice rules: [`CHANGELOG_STYLE.md`](./CHANGELOG_STYLE.md).
   it has now happened three times.)*
 - **Production credentials no longer reachable from pull-request builds.**
 
-### Changed
-
-- **Pages load lighter.** Charting and maths libraries nobody was using were
-  being downloaded on every page view. They aren't any more.
+*Nothing else this week was user-facing. The build, dependency and
+infrastructure work is in [`changelog.md`](./changelog.md).*
 
 ---
 

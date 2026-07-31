@@ -12,7 +12,7 @@ verifiedAt: "2026-07-31"
 # Changelog Practice
 
 **Short answer:** don't install the Composio skill — we already have a better one.
-The problem isn't tooling, it's cadence. **36 commits have landed on `main` since
+The problem isn't tooling, it's cadence. **39 commits have landed on `main` since
 the last changelog entry**, and there's a month-shaped hole before that.
 
 ---
@@ -38,7 +38,8 @@ the last changelog entry**, and there's a month-shaped hole before that.
 | Metric | Value |
 |--------|-------|
 | Last entry | **2026-07-26** |
-| Commits since | **36** — `git rev-list --count 3fee13b..origin/main`, measured 2026-07-31 |
+| Commits since the file was last **touched** | **36** — `git rev-list --count 3fee13b..origin/main` |
+| Commits since the last change actually **covered** | **39** — `git rev-list --count aa5d433..origin/main` |
 | Gap before that | 2026-06-24 → 2026-07-26 — **32 days, zero entries** |
 | Entries in the last 12 months | ~15 |
 | Linear's rate | **50+** |
@@ -131,7 +132,7 @@ about Linear, our voice, and the docs-only PR rule.
 
 **The one worth a second look** is `ai-changelog-generator`, and only for its MCP
 server: it diffs arbitrary git refs and can run against a **local model**. For the
-36-commit backfill that's attractive — a bulk, low-stakes, cheap pass. Not for
+39-commit backfill that's attractive — a bulk, low-stakes, cheap pass. Not for
 routine entries, where Linear context is the thing that makes an entry useful.
 
 ---
@@ -200,7 +201,7 @@ Ranked by how well they actually work:
 
 | Option | Enforcement | Verdict |
 |--------|:-----------:|---------|
-| "Remember to update the changelog" in `CLAUDE.md` | None | ❌ This is the status quo. 36 commits |
+| "Remember to update the changelog" in `CLAUDE.md` | None | ❌ This is the status quo. 39 commits |
 | PR template checkbox | Honour system | 🟡 Better than nothing |
 | CI check: **every PR** must touch `changelog.md` or carry a `no-changelog` label | Real | ❌ **Rejected** — see below |
 | **CI check: `main`'s changelog may not fall more than N merges behind** | **Real** | ✅ **Recommended** |
@@ -251,6 +252,8 @@ changelog-staleness:
     - uses: actions/checkout@v4
       with: { fetch-depth: 0 }
     - name: changelog.md must not fall behind main
+      # Required — ci.yml also runs on push to main, where base_ref is empty.
+      if: github.event_name == 'pull_request'
       env:
         MAX_BEHIND: "12"
       run: |
@@ -268,11 +271,52 @@ changelog-staleness:
 property of the branch everyone shares, so the branch is what gets measured — and
 anyone can clear it for everyone with one docs PR.
 
+⚠️ **`if: github.event_name == 'pull_request'` is not optional.** `ci.yml` also
+runs on pushes to `main`, and `github.base_ref` is empty for push events — without
+the guard this expands to `git fetch --no-tags origin ""` and every post-merge run
+fails. The shipped job in PR #692 has the guard; do not copy the snippet without it.
+
+### ⚠️ Known limitation: it measures the last *touch*, not the last *commit covered*
+
+`git log -1 -- changelog.md` answers "when was this file last modified", which is
+a proxy for "how current is it" — a good one, but not an exact one. The gap:
+
+> Draft a changelog PR at commit N. Ten code PRs land while it sits in review.
+> Merge the unchanged draft. Its merge commit becomes `last`, `behind` resets to
+> zero, and those ten changes were never recorded.
+
+This repo's own numbers show the same distinction. As of 2026-07-31:
+
+| Question | Command | Answer |
+|---|---|---|
+| When was `changelog.md` last touched? | `git rev-list --count 3fee13b..origin/main` | **36** |
+| What's the last change it actually covers? | `git rev-list --count aa5d433..origin/main` | **39** |
+
+`3fee13b` modified the file; `aa5d433` is the newest commit any entry describes.
+Three commits sit between them. The gate would report 36 while the honest content
+gap is 39 — it under-reports, never over-reports.
+
+**Two mitigations, in order of cost:**
+
+1. **Rebase the changelog PR onto current `main` before merging.** This closes the
+   hole completely, and GitHub has a switch for it: *"Require branches to be up to
+   date before merging."* That setting lives in branch protection — which this repo
+   does not have (**IPI-763 · Branch protection residual**, `gh api
+   .../branches/main/protection` → 404). So the gate's soundness currently rests on
+   the same missing control as the never-push-to-`main` rule.
+2. **Parse a marker instead of a mtime** — have each entry record the newest commit
+   it covers and count from that. Exact, but it adds a format requirement to every
+   entry and a parser to the gate. Not worth it unless mitigation 1 proves
+   insufficient in practice.
+
+Documented rather than fixed on purpose: a proxy that under-reports by three, with
+a one-checkbox fix already on the backlog, does not justify a parser.
+
 ⚠️ **No `paths:` filter on the job** — `CLAUDE.md` is explicit that a path-gated
 required check can hang permanently "pending" and block merges.
 
 **Threshold, honestly.** `MAX_BEHIND: 12` is a guess anchored to one real number:
-the gap this document exists because of was **36 commits** (measured
+the gap this document exists because of was **39 commits** (measured
 2026-07-31 — last `changelog.md` commit on `main` was `3fee13b`, 2026-07-26).
 Twelve is roughly a fortnight at this repo's merge rate. Tune it after one month
 of living with it; a threshold nobody ever hits is decoration, and one that fires
@@ -310,7 +354,7 @@ real work that currently looks, to anyone not reading git, like a quiet month.
 **Install nothing.** Use what's here, add one gate and one schedule.
 
 The efficiency argument in one line: writing a changelog entry costs ~5 minutes at
-PR time when the change is fresh in your head. Reconstructing 36 commits' worth
+PR time when the change is fresh in your head. Reconstructing 39 commits' worth
 later costs hours and produces worse entries, because the *why* is gone.
 
 ### Do this, in order
@@ -320,7 +364,7 @@ later costs hours and produces worse entries, because the *why* is gone.
 | 1 | **`changelog-staleness` CI job** (measures `main`, not your diff) | S | **Real** | ⚪ config PR |
 | 2 | Fix line 5 of `changelog.md` — name our own style, not KaC | XS | — | 🟢 **done** |
 | 3 | `CHANGELOG_STYLE.md` at root | S | — | 🟢 **done** |
-| 4 | Backfill the 36 commits as **one** grouped entry | M | — | 🟢 **done** |
+| 4 | Backfill the 39 commits as **one** grouped entry | M | — | 🟢 **done** |
 | 5 | `SHIPPED.md` using KaC's six change types | S | — | 🟢 **done** |
 | 6 | Friday workflow drafting `SHIPPED.md` → docs-only PR | M | **Automatic** | ⚪ config PR |
 | 7 | Archive the **5** secondary changelogs | S | — | ⚪ needs link sweep |
@@ -328,12 +372,29 @@ later costs hours and produces worse entries, because the *why* is gone.
 
 Tasks 2–5 ship in this PR (docs-only). 1, 6 and 8 are config/skill changes in a
 separate PR, per the one-concern rule — which is also why they are *not* bundled
-here. 7 needs an inbound-link sweep first
-(`grep -rn "tasks/changelog.md" docs tasks *.md`).
+here.
+
+**Task 7 needs a sweep that catches relative links, not just full paths.** Grepping
+for `tasks/changelog.md` misses `tasks/cloudflare/todo.md:5`, which links to its
+lane changelog as `./changelog.md` — archiving on that basis would silently break
+it. Sweep by basename from each file's own directory:
+
+```bash
+# every inbound link, however it's written
+grep -rn "changelog\.md" --include="*.md" . | grep -v node_modules
+
+# and resolve each relative link against its containing file before deleting anything
+for f in tasks/changelog.md tasks/cloudflare/changelog.md linear/changelog.md \
+         Universal-design-prompt-4/changelog.md \
+         Universal-design-prompt-4/design-patched/changelog.md; do
+  echo "== $f"; grep -rln "$(basename "$(dirname "$f")")/changelog\.md\|\./changelog\.md" \
+    --include="*.md" "$(dirname "$f")" .
+done
+```
 
 **Tasks 1 and 6 are the whole point.** The rest is setup. Without the gate and the
 schedule, this document becomes the 47th thing that describes good practice without
-causing it — which is precisely the failure mode the 36-commit gap already proves.
+causing it — which is precisely the failure mode the 39-commit gap already proves.
 
 ### Effort, honestly
 

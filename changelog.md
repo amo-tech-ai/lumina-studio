@@ -17,11 +17,11 @@ For the plain-language weekly digest, see [`SHIPPED.md`](./SHIPPED.md).
 
 ## [Unreleased]
 
-### 2026-07-31 — changelog: two-file split, written style rules, and a 36-commit backfill
+### 2026-07-31 — changelog: two-file split, written style rules, and a 39-commit backfill
 
 **PR [#693](https://github.com/amo-tech-ai/lumina-studio/pull/693) — docs-only. No production files touched.**
 
-`changelog.md` had gone **36 commits** without an entry (`git rev-list --count 3fee13b..origin/main`), on top of a 32-day hole before that. The skill to write entries already existed and worked; nothing ever asked anyone to run it. Four changes, all documentation:
+`changelog.md` had gone **39 commits** without covering anything new (`git rev-list --count aa5d433..origin/main` — `aa5d433` is the newest commit any existing entry described). The file itself was last *touched* 36 commits back, at `3fee13b`; the three-commit difference is why the staleness gate under-reports, documented in `docs/changelog/PRACTICE.md` §6. On top of that, a 32-day hole before it. The skill to write entries already existed and worked; nothing ever asked anyone to run it. Four changes, all documentation:
 
 - **`CHANGELOG_STYLE.md`** (new) — voice rules extracted from the entries that already read well, so they live in the repo rather than inside a skill prompt.
 - **`SHIPPED.md`** (new) — a plain-language weekly digest for humans who don't read git, using Keep a Changelog's six change types, which fit a digest far better than they fit this file.
@@ -34,6 +34,10 @@ For the plain-language weekly digest, see [`SHIPPED.md`](./SHIPPED.md).
 
 **PR [#691](https://github.com/amo-tech-ai/lumina-studio/pull/691) — docs-only. No production files touched.**
 
+> 📌 This entry describes files that arrive with #691. **Merge #691 before #693**,
+> or this entry and `docs/changelog/PRACTICE.md`'s `../stack/…` links point at a
+> tree that doesn't exist yet.
+
 A scored view of every stack layer, the prompts to keep it current, and a build-vs-buy pass. New tree under `docs/stack/`: `README.md` (scorecard + 24-row tracker), `BUILD-VS-BUY.md`, `PROMPTS.md` (11 re-verify prompts), `TEMPLATE.md`, and `reports/00–09`.
 
 Scoring is `(Core × 0.6) + (Advanced × 0.4)` and measures **feature adoption, not product completeness** — a red score means we hand-wrote something the vendor ships, not that the feature is broken. Stated explicitly because the repo already tracks readiness separately (`tasks/plan/todo.md` → `stackReadiness: 68/100`).
@@ -45,7 +49,7 @@ Scoring is `(Core × 0.6) + (Advanced × 0.4)` and measures **feature adoption, 
 - Advisors: 38 WARN / 37 INFO / **0 ERROR**. 30 are `authenticated_security_definer_function_executable`.
 - pgvector 0.8.0 installed, 4 `vector(768)` columns, 3 indexes, **no `<=>` query in the codebase** — `model-match-agent` documents the resulting limitation in its own instructions.
 - Realtime publishes **2** tables. Cloudflare: **0** D1 databases (API-verified), KV commented out, Hyperdrive bind-only.
-- CopilotKit HITL: `useInterrupt` / `useHumanInTheLoop` appear in **3 places, all comments**. Approvals are enforced by prompt text plus per-tool `operatorConfirmed` flags, not framework primitives.
+- CopilotKit HITL: `useInterrupt` / `useHumanInTheLoop` appear in **3 places, all comments**. Approvals are enforced by a real server-side gate (`process-draft-approval.ts` — ownership check plus `.eq("status", PENDING)` on the update, so double-approval matches zero rows), not by framework primitives. The gap is uniformity: that handler covers one flow, so every new write path must reimplement it.
 - Mastra: no scorers, processors, networks, or MCP client. `mastra_scorers` exists and is empty.
 - Stripe: zero references in `app/src`.
 
@@ -56,9 +60,9 @@ Scoring is `(Core × 0.6) + (Advanced × 0.4)` and measures **feature adoption, 
 
 **And one thing the first pass missed entirely:** `main` has **zero branch protection** (`gh api .../branches/main/protection` → 404, IPI-763). `CLAUDE.md`'s first hard rule — never push directly to `main` — is enforced by nothing. Added as red-flag row 0, ahead of the other ten, because it is one dashboard screen.
 
-`BUILD-VS-BUY.md` measures 47 custom scripts (10,564 LOC in root alone) against what each platform ships prebuilt. Sharpest finding: three of four active Cloudinary tickets (IPI-637, IPI-639, IPI-642) describe capabilities MediaFlows and the DAM may already provide, and IPI-708 needs no design work at all — `wrangler versions rollback` is built in.
+`BUILD-VS-BUY.md` measures 47 custom scripts (10,564 LOC in root alone) against what each platform ships prebuilt. Sharpest finding: three of four active Cloudinary tickets (IPI-637, IPI-639, IPI-642) describe capabilities MediaFlows and the DAM may already provide, and IPI-708 needs no tooling built — `wrangler rollback <VERSION_ID>` is built in (note: `wrangler versions rollback` is not a command). What it needs is a rehearsed, written procedure.
 
-### 2026-07-26 → 07-31 — Backfill: 36 commits across security hardening, Hyperdrive, and the Worker bundle
+### 2026-07-26 → 07-31 — Backfill: 39 commits across security hardening, Hyperdrive, and the Worker bundle
 
 **Backfilled 2026-07-31**, reconstructed from the **merged PRs**, their bodies, and the migrations — not commit subjects. Grouped by theme rather than one entry per commit. Only PRs with a `merged_at` are included; several same-ticket PRs were superseded and closed unmerged (#659, #679, #684, #685, #687) and are deliberately not listed as shipped.
 
