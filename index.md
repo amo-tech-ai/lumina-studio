@@ -302,7 +302,7 @@ Active skills present on disk but missing from at least the root catalog (uninde
 | iPix router | [`.claude/skills/ipix/`](./.claude/skills/ipix/) | Domain routing | Yes | None material | Keep |
 | Task lifecycle | [`.claude/skills/ipix-task-lifecycle/`](./.claude/skills/ipix-task-lifecycle/) | Delivery workflow | Yes | Some older references | Update links |
 | Graphify | [`.claude/skills/graphify/`](./.claude/skills/graphify/) | Knowledge graph | Yes | Graph absent in fresh worktrees | Document shared graph fallback |
-| Cloudflare | [`.claude/skills/cloudflare/`](./.claude/skills/cloudflare/) | Platform hub | Yes | Large reference tree | Keep |
+| Cloudflare | [`.claude/skills/cloudflare-ipix/`](./.claude/skills/cloudflare-ipix/) | Platform hub | Yes | Large reference tree | Keep |
 | Cloudflare workflow | [`.claude/skills/cloudflare-workflow/`](./.claude/skills/cloudflare-workflow/) | Accuracy gate | Yes | Some old endpoint terminology | Update `/compat` wording |
 | Mastra | [`.claude/skills/mastra/`](./.claude/skills/mastra/) | Agent guidance | Yes | Agent ID list incomplete; live Groq reference | Amend |
 | CopilotKit | [`.claude/skills/copilotkit/`](./.claude/skills/copilotkit/) | v2 integration | Yes | Current | Keep |

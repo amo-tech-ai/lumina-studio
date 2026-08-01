@@ -35,7 +35,7 @@
 | Mastra CF deploy: web framework path preferred over standalone deployer | [Mastra deploy CF](https://mastra.ai/guides/deployment/cloudflare) | 🟢 — supports OpenNext in-process SSOT |
 | CopilotKit v2 + Mastra in-process | [CopilotKit Mastra integration](https://docs.copilotkit.ai/mastra) | 🟢 — operator path blocked by CF-MIG-210 |
 
-**MCP note:** No dedicated **Cloudflare MCP** is enabled in this workspace (`mcps/` has Supabase, Linear, Mastra, CopilotKit — not Cloudflare). Verification used **official Cloudflare docs (WebFetch)** + **`.claude/skills/cloudflare/references/`** + repo forensic. **Mastra MCP** (`searchMastraDocs`) returned no Cloudflare deployment hits in `app/node_modules` — use [mastra.ai/llms.txt](https://mastra.ai/llms.txt) for deploy guidance.
+**MCP note:** No dedicated **Cloudflare MCP** is enabled in this workspace (`mcps/` has Supabase, Linear, Mastra, CopilotKit — not Cloudflare). Verification used **official Cloudflare docs (WebFetch)** + **`.claude/skills/cloudflare-ipix/references/`** + repo forensic. **Mastra MCP** (`searchMastraDocs`) returned no Cloudflare deployment hits in `app/node_modules` — use [mastra.ai/llms.txt](https://mastra.ai/llms.txt) for deploy guidance.
 
 **Do not:**
 
@@ -643,7 +643,7 @@ Cloudflare marks `/compat/chat/completions` deprecated; existing integrations ma
 - Audit: [`mastra-audit.md`](./mastra-audit.md)
 - CF spine: [`../todo.md`](../todo.md), [`../migration/startup.md`](../migration/startup.md)
 - Verification: [`../audits/ipi-454-457-462-463-verification.md`](../audits/ipi-454-457-462-463-verification.md)
-- Skills: `.claude/skills/mastra/SKILL.md`, `.claude/skills/cloudflare/references/ai-gateway/`
+- Skills: `.claude/skills/mastra/SKILL.md`, `.claude/skills/cloudflare-ipix/references/ai-gateway/`
 - Linear: [IPI-485](https://linear.app/amo100/issue/IPI-485) · [IPI-454](https://linear.app/amo100/issue/IPI-454) · [IPI-457](https://linear.app/amo100/issue/IPI-457)
 
 ---

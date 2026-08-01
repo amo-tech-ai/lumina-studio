@@ -1,5 +1,5 @@
 ---
-name: cloudflare
+name: cloudflare-ipix
 description: >
   Cloudflare platform hub — Workers, Pages, Wrangler CLI, D1/R2/KV, Durable Objects,
   Workers AI, Agents SDK, AI Gateway, Vectorize, Workflows, Tunnel, WAF, Terraform/Pulumi,
@@ -8,8 +8,8 @@ description: >
   `wrangler.jsonc`, Hyperdrive, or iPix Cloudflare tasks under `tasks/cloudflare/` — even if
   they do not say "Cloudflare" explicitly. NOT for Cloudinary media (→ cloudinary) or Supabase
   Postgres/RLS (→ ipix-supabase).
-version: 1.0.0
 metadata:
+  version: "1.0.0"
   priority: 2
 ---
 

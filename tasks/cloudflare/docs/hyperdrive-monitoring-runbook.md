@@ -164,7 +164,7 @@ Snapshot during the burst: `hd_conns=5` (Hyperdrive-origin), `total_conns=22` (a
 
 ## 4. Connection-limit decision
 
-**Recommendation: raise `origin_connection_limit` from 5 → 20** (not the 5→lower direction the ticket warned about; the opposite correction is what the evidence supports). 20 is not an arbitrary number — it's the documented Cloudflare free-tier default (`.claude/skills/cloudflare/references/hyperdrive/gotchas.md` limits table: "Max origin connections — Free ~20 / Paid ~100") and matches the number the ticket itself assumed was already live.
+**Recommendation: raise `origin_connection_limit` from 5 → 20** (not the 5→lower direction the ticket warned about; the opposite correction is what the evidence supports). 20 is not an arbitrary number — it's the documented Cloudflare free-tier default (`.claude/skills/cloudflare-ipix/references/hyperdrive/gotchas.md` limits table: "Max origin connections — Free ~20 / Paid ~100") and matches the number the ticket itself assumed was already live.
 
 This is a **baseline for when IPI-623 lands real traffic**, not a final production number — re-measure with actual Mastra workload concurrency once that ships, per the mermaid flow in the Linear ticket (`Run realistic operator traffic → pg_stat_activity + Hyperdrive analytics → exhaustion? → keep/lower or raise`).
 

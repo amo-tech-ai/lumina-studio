@@ -11,7 +11,7 @@ You are implementing **IPI-NNN** under epic **IPI-694 · CF-EDGE-AI** (Supabase 
 1. `tasks/cloudflare/agent/5-cf-edge-plan.md`
 2. Matching task file under `tasks/cloudflare/Tasks/061`–`065` (or epic `060`)
 3. Linear issue IPI-NNN (full description — steps + success criteria)
-4. Skills: `.claude/skills/cloudflare/SKILL.md`, `cloudflare-workflow`, `ipix-supabase`, `ipix-task-lifecycle`
+4. Skills: `.claude/skills/cloudflare-ipix/SKILL.md`, `cloudflare-workflow`, `ipix-supabase`, `ipix-task-lifecycle`
 
 ## Architecture lock (do not violate)
 

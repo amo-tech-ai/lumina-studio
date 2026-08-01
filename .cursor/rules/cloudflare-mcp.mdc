@@ -115,7 +115,7 @@ async () => cloudflare.request({
 
 ## When MCP is unavailable
 
-`.claude/skills/cloudflare/references/**` → [developers.cloudflare.com](https://developers.cloudflare.com) → `wrangler` CLI. Do not block **IPI-487 · CLOUDFLARE-EPIC — Cloudflare Platform Migration** on MCP.
+`.claude/skills/cloudflare-ipix/references/**` → [developers.cloudflare.com](https://developers.cloudflare.com) → `wrangler` CLI. Do not block **IPI-487 · CLOUDFLARE-EPIC — Cloudflare Platform Migration** on MCP.
 
 ## Troubleshooting
 

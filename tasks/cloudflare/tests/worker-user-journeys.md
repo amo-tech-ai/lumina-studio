@@ -2,7 +2,7 @@
 
 **Purpose:** Prove the AI Gateway Worker works **inside real iPix product flows**, not only in isolated unit tests.  
 **Rule:** `.cursor/rules/cloudflare-workflow.mdc`  
-**Product hub:** `.claude/skills/cloudflare`  
+**Product hub:** `.claude/skills/cloudflare-ipix`  
 **Related:** **IPI-454 · CF-AI-001** AC-J · **IPI-492 · CF-AI-004c** embed contracts · **IPI-461 · CF-AI-004** adapter
 
 ---

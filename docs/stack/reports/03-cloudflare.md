@@ -208,4 +208,4 @@ real degradation. Either way it is a product decision, not cleanup.
 
 - [Workers](https://developers.cloudflare.com/workers/) · [Workers AI](https://developers.cloudflare.com/workers-ai/) · [Next.js framework guide](https://developers.cloudflare.com/workers/framework-guides/web-apps/nextjs/)
 - [OpenNext Cloudflare](https://opennext.js.org/cloudflare) · [get started](https://opennext.js.org/cloudflare/get-started) · [opennextjs/opennextjs-cloudflare](https://github.com/opennextjs/opennextjs-cloudflare)
-- Local SSOT: `tasks/cloudflare/todo.md` · skill: `/cloudflare`
+- Local SSOT: `tasks/cloudflare/todo.md` · skill: `/cloudflare-ipix`
