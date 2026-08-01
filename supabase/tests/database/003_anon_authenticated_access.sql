@@ -33,15 +33,34 @@ select plan(16);
 -- PostgREST's schema cache. This grant has drifted back once already after
 -- 20260718200000_ipi692 revoked it at creation.
 --
--- table_privs_are is exhaustive: the empty array fails if ANY privilege is
--- present, so a future INSERT/UPDATE re-grant is caught too, not just SELECT.
-select table_privs_are(
-  'public', 'processed_firecrawl_webhooks', 'anon', array[]::text[],
-  'anon has no privileges on processed_firecrawl_webhooks'
+-- Two assertions, because there are two distinct ways this can re-drift.
+--
+-- Deliberately NOT table_privs_are per role. It filters
+-- information_schema.table_privileges by exact grantee, and a grant made to
+-- PUBLIC lands under grantee 'PUBLIC' — so table_privs_are(...,'anon',{}) still
+-- passes while anon reads the table through PUBLIC inheritance. Measured on the
+-- live project: after `grant select ... to public`, information_schema shows
+-- only `PUBLIC=SELECT`, yet has_table_privilege('anon',...,'SELECT') is true.
+-- The per-role form would have reported green on a readable table.
+--
+-- (1) Direct rows — covers all three grantees and every privilege type, so a
+-- future INSERT/UPDATE re-grant fails too, not just SELECT. Same grantee filter
+-- as supabase/tests/security/chatbot-grants.sql.
+select is_empty(
+  $$ select grantee, privilege_type
+       from information_schema.table_privileges
+      where table_schema = 'public'
+        and table_name = 'processed_firecrawl_webhooks'
+        and grantee in ('anon', 'authenticated', 'PUBLIC') $$,
+  'no anon/authenticated/PUBLIC privileges on processed_firecrawl_webhooks'
 );
-select table_privs_are(
-  'public', 'processed_firecrawl_webhooks', 'authenticated', array[]::text[],
-  'authenticated has no privileges on processed_firecrawl_webhooks'
+
+-- (2) Effective access — follows every inheritance path, so it still holds if
+-- the role hierarchy changes in a way the grantee list above does not anticipate.
+select ok(
+  not has_table_privilege('anon', 'public.processed_firecrawl_webhooks', 'SELECT')
+    and not has_table_privilege('authenticated', 'public.processed_firecrawl_webhooks', 'SELECT'),
+  'neither deny role has effective SELECT via any grant path'
 );
 -- Writer role must survive the revoke — guards against an over-broad
 -- `revoke ... from public` cascading and breaking the webhook handler.
