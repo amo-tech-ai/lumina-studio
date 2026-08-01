@@ -28,7 +28,7 @@ _Generated: 2026-06-21 | Validated against actual repo state_
 
 | Component | Detail |
 |-----------|--------|
-| Graphify hooks | PreToolUse fires on Bash (grep/find) and Read/Glob — path fixed to `docs/graphify/graphify-out/graph.json` |
+| Graphify hooks | PreToolUse fires on Bash (grep/find) and Read/Glob — path fixed to `graphify-out/graph.json` |
 | Plugins | `linear` · `supabase` · `code-review` · `coderabbit` · `commit-commands` · `ponytail` · `stripe` · `claude-code-setup` |
 | Skills | 40 active dirs · 7 consolidated hubs · `index-skills.md` inventory |
 | Playwright agents | Global: `playwright-test-generator` · `playwright-test-healer` · `playwright-test-planner` |
