@@ -10,12 +10,22 @@
 // for, with no error to explain it.
 const ALLOWED_PREFIXES = ["/app", "/onboarding"] as const;
 
-export function safeRedirect(path: string | null | undefined): string {
-  if (!path || path.startsWith("//")) return "/app";
+/** Returns the path when allowlisted; otherwise `null` (absent / unsafe). */
+export function parseSafeRedirect(path: string | null | undefined): string | null {
+  if (!path || path.startsWith("//")) return null;
   for (const prefix of ALLOWED_PREFIXES) {
-    if (path === prefix || path.startsWith(`${prefix}/`) || path.startsWith(`${prefix}?`)) {
+    if (
+      path === prefix ||
+      path.startsWith(`${prefix}/`) ||
+      path.startsWith(`${prefix}?`) ||
+      path.startsWith(`${prefix}#`)
+    ) {
       return path;
     }
   }
-  return "/app";
+  return null;
+}
+
+export function safeRedirect(path: string | null | undefined): string {
+  return parseSafeRedirect(path) ?? "/app";
 }

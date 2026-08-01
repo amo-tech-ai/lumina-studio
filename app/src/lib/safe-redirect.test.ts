@@ -1,5 +1,20 @@
 import { describe, it, expect } from "vitest";
-import { safeRedirect } from "./safe-redirect";
+import { parseSafeRedirect, safeRedirect } from "./safe-redirect";
+
+describe("parseSafeRedirect", () => {
+  it("returns null for absent or unsafe targets", () => {
+    expect(parseSafeRedirect(null)).toBeNull();
+    expect(parseSafeRedirect("//evil.com")).toBeNull();
+    expect(parseSafeRedirect("javascript:alert(1)")).toBeNull();
+    expect(parseSafeRedirect("/login")).toBeNull();
+  });
+
+  it("returns allowlisted paths", () => {
+    expect(parseSafeRedirect("/onboarding")).toBe("/onboarding");
+    expect(parseSafeRedirect("/app/brands?tab=dna")).toBe("/app/brands?tab=dna");
+    expect(parseSafeRedirect("/onboarding#step2")).toBe("/onboarding#step2");
+  });
+});
 
 describe("safeRedirect", () => {
   it("keeps /app and /app/* paths (with query)", () => {
@@ -28,6 +43,8 @@ describe("safeRedirect", () => {
     expect(safeRedirect("/onboarding")).toBe("/onboarding");
     expect(safeRedirect("/onboarding/")).toBe("/onboarding/");
     expect(safeRedirect("/onboarding?source=email")).toBe("/onboarding?source=email");
+    expect(safeRedirect("/onboarding#step2")).toBe("/onboarding#step2");
+    expect(safeRedirect("/onboarding#1")).toBe("/onboarding#1");
   });
 
   it("rejects same-origin paths outside the protected routes", () => {
