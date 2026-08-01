@@ -46,14 +46,23 @@ select table_privs_are(
 -- Writer role must survive the revoke — guards against an over-broad
 -- `revoke ... from public` cascading and breaking the webhook handler.
 --
--- No MAINTAIN in this list even though relacl carries the PG17 'm' bit:
--- table_privs_are resolves through information_schema.table_privileges, which
--- does not report MAINTAIN on pgTAP 1.2.0. Verified against the live project —
--- including it fails the assertion.
-select table_privs_are(
-  'public', 'processed_firecrawl_webhooks', 'service_role',
-  array['SELECT', 'INSERT', 'UPDATE', 'DELETE', 'TRUNCATE', 'REFERENCES', 'TRIGGER'],
-  'service_role retains full privileges on processed_firecrawl_webhooks'
+-- Deliberately NOT table_privs_are here. That assertion is exhaustive, and the
+-- migration grants only SELECT/INSERT/UPDATE. The other live privileges
+-- (DELETE/TRUNCATE/REFERENCES/TRIGGER) come from the creation-time default ACL,
+-- not from any migration — so asserting all seven passes against the live
+-- project but fails on a database rebuilt from migrations alone.
+--
+-- Exhaustiveness earns its keep on anon/authenticated, where *any* privilege is
+-- a finding. On the writer role the only question is whether it still has what
+-- supabase/functions/firecrawl-webhook/handler.ts uses — SELECT, INSERT, UPDATE
+-- (lines 37, 66, 79, 88, 107). Extra privileges there are not a security
+-- regression. Same has_table_privilege style as
+-- supabase/tests/security/chatbot-grants.sql.
+select ok(
+  has_table_privilege('service_role', 'public.processed_firecrawl_webhooks', 'SELECT')
+    and has_table_privilege('service_role', 'public.processed_firecrawl_webhooks', 'INSERT')
+    and has_table_privilege('service_role', 'public.processed_firecrawl_webhooks', 'UPDATE'),
+  'service_role retains SELECT/INSERT/UPDATE for the firecrawl webhook handler'
 );
 
 -- Self-contained owner: insert auth.users inside this transaction (rolled back).

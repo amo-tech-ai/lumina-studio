@@ -20,7 +20,24 @@
 -- exposed through PostgREST's schema cache. Defense-in-depth, not an incident.
 --
 -- Idempotent: safe to re-run.
+--
+-- Lock impact, measured on the live project rather than assumed: a table-level
+-- REVOKE takes NO lock on the target relation. Probing pg_locks inside the same
+-- transaction as a real REVOKE returned only AccessShareLock on pg_class (from
+-- the probe's own catalog read) — nothing on processed_firecrawl_webhooks. ACL
+-- changes are a pg_class row update, so readers and writers are never blocked.
+-- The timeouts below are cheap insurance and consistency with the sibling
+-- re-revoke migration 20260730232458_ipi875, not mitigation of a known stall.
 
+set lock_timeout = '5s';
+set statement_timeout = '60s';
+
+-- PUBLIC is listed deliberately and is NOT redundant with anon/authenticated.
+-- Revoking from a member role does not remove a grant held by PUBLIC — the
+-- member keeps access through the PUBLIC grant. Both must be revoked. Same
+-- reasoning as 20260730223430_ipi872 ("Also revoke from PUBLIC so
+-- information_schema.table_privileges stays clean under inherited grants") and
+-- 20260730232458_ipi875, which revokes from PUBLIC for the same reason.
 revoke all on table public.processed_firecrawl_webhooks from anon, authenticated, public;
 
 -- Re-assert the writer role so this file declares the full intended end state
