@@ -48,7 +48,7 @@ Last reviewed: **2026-07-06** (Next.js hub consolidation).
 | **Active (excl. symlinks)** | **34** |
 
 **Active hubs (14):** `ipix` · `ipix-task-lifecycle` · `ipix-supabase` · `design-to-production` ·
-`fashion-production` · `copilotkit` · `mastra` · `cloudinary` · `cloudflare` · `infisical` ·
+`fashion-production` · `copilotkit` · `mastra` · `cloudinary` · `cloudflare-ipix` · `infisical` ·
 `firecrawl` · `linear` · `mercur` · `frontend-design`
 
 ---
@@ -88,7 +88,7 @@ See [`tasks/skills/jul6-audit.md`](tasks/skills/jul6-audit.md). Remaining deep r
 | `copilotkit` | 116 | 93 | 🔴 | Single plugin hub |
 | `mastra` | 79 | 33 | 🔴 | Agent registry |
 | `cloudinary` | 94 | 15 | ✅ | Media hub |
-| `cloudflare` | 175 | 340+ | ✅ | Platform hub (Workers, Wrangler, Agents SDK) |
+| `cloudflare-ipix` | 175 | 340+ | ✅ | Platform hub (Workers, Wrangler, Agents SDK) |
 | `infisical` | 79 | — | ✅ | Secrets |
 | `firecrawl` | 100 | — | ✅ | Web crawl/scrape |
 | `linear` | 153 | 29 | ✅ | Issue MCP |

@@ -7,11 +7,11 @@ alwaysApply: false
 # Cloudflare workflow — accuracy-first (Cursor)
 
 **What this rule is:** process gates for Cloudflare / AI Gateway / OpenNext work.  
-**What it is not:** product API docs (→ `.claude/skills/cloudflare`), MCP setup (→ `cloudflare-mcp.mdc`), or generic evidence stages (→ `task-accuracy.mdc`).
+**What it is not:** product API docs (→ `.claude/skills/cloudflare-ipix`), MCP setup (→ `cloudflare-mcp.mdc`), or generic evidence stages (→ `task-accuracy.mdc`).
 
 **Long-form SSOT (humans):** `tasks/cloudflare/ENGINEERING-WORKFLOW.md`  
 **User-journey tests (most important):** [`tasks/cloudflare/tests/worker-user-journeys.md`](../../tasks/cloudflare/tests/worker-user-journeys.md)  
-**Product hub:** `.claude/skills/cloudflare/SKILL.md` + `references/` on demand  
+**Product hub:** `.claude/skills/cloudflare-ipix/SKILL.md` + `references/` on demand  
 **Secrets:** `infisical.mdc`
 
 Do **not** load this for pure Mastra/CopilotKit/Supabase work unless the change crosses a Cloudflare boundary (Worker, wrangler, OpenNext, AI Gateway client, bindings).
@@ -171,5 +171,5 @@ Any Fail = blocker unless explicitly waived with reason in the PR.
 | Lifecycle / worktree / PR | `lean.mdc` |
 | Smallest diff | `ponytail.mdc` |
 | Cloudflare MCP servers | `cloudflare-mcp.mdc` |
-| Workers / Wrangler / AI Gateway APIs | `.claude/skills/cloudflare` |
+| Workers / Wrangler / AI Gateway APIs | `.claude/skills/cloudflare-ipix` |
 | Mastra app agents (no Worker) | `.claude/skills/mastra` — not this rule |
