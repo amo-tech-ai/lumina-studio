@@ -34,11 +34,13 @@ const copilotkitRuntimeInternalAliases = {
 const shikiStub = path.join(appDir, "scripts/cf-shiki-stub.mjs");
 const mermaidStub = path.join(appDir, "scripts/cf-mermaid-stub.mjs");
 const katexStub = path.join(appDir, "scripts/cf-katex-stub.mjs");
+const webInspectorStub = path.join(appDir, "scripts/cf-web-inspector-stub.mjs");
 const mastraWorkersPgScopeStub = path.join(appDir, "scripts/cf-mastra-workers-pg-scope-stub.mjs");
 
 /**
  * IPI-490 · CF-MIG-210 — OpenNext-only stubs (IPIX_CF_BUNDLE_STUBS=1).
  * IPI-706 · CF-BUNDLE-220 — also stub mermaid + katex (streamdown diagram/math).
+ * IPI-849 · CF-BUNDLE-222 — stub @copilotkit/web-inspector (Lit AG-UI inspector).
  *
  * Proven bloat: `@shikijs/langs` ~7.6 MiB via CopilotKit → streamdown;
  * mermaid+cytoscape ~2.7 MiB + katex ~0.25 MiB still in Worker after Shiki stub
@@ -50,6 +52,8 @@ const mastraWorkersPgScopeStub = path.join(appDir, "scripts/cf-mastra-workers-pg
  * jsDelivr ESM load in the browser (syntax highlighting preserved).
  * Mermaid/KaTeX stubs are plain-text fallbacks (no CDN yet) — diagrams/math in
  * chat markdown degrade gracefully; size gate is the product requirement.
+ * Web-inspector stub: CopilotKitInspector dynamic-imports the real package
+ * unconditionally in source; `showDevConsole={false}` only skips mounting.
  *
  * IPI-844 / post-#658: stub Workers PG scope while MASTRA_STORAGE_MODE=noop —
  * the real module re-duplicates OpenNext/@mastra/pg into the Worker and left
@@ -77,6 +81,7 @@ const cfBundleStubAliases =
         "@shikijs/vscode-textmate": shikiStub,
         mermaid: mermaidStub,
         katex: katexStub,
+        "@copilotkit/web-inspector": webInspectorStub,
         "@/lib/db/mastra-workers-pg-scope": mastraWorkersPgScopeStub,
       } as const)
     : ({} as const);
