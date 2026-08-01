@@ -24,6 +24,11 @@ import { describe, expect, it } from "vitest";
 
 const ciYml = readFileSync(resolve(__dirname, "../../../.github/workflows/ci.yml"), "utf8");
 
+const verifyRlsYml = readFileSync(
+  resolve(__dirname, "../../../.github/workflows/supabase-verify-rls.yml"),
+  "utf8",
+);
+
 /** The `booking-gate:` job body, sliced to the next top-level job key. */
 function bookingGateJob(): string {
   const start = ciYml.indexOf("\n  booking-gate:\n");
@@ -274,5 +279,146 @@ describe("booking-gate production isolation (IPI-810)", () => {
     expect(script).toMatch(/if \(skipApi\)[\s\S]*?\} else \{[\s\S]*?verify-rls\.mjs/);
     // And skipping it must not short-circuit the SQL tests that follow.
     expect(script).not.toMatch(/if \(skipApi\)[\s\S]{0,200}process\.exit/);
+  });
+});
+
+/**
+ * IPI-898 · CI-QA-NET-002 — the same isolation rule, for the other workflow that holds
+ * production credentials.
+ *
+ * `supabase-verify-rls` resolved `secrets.DATABASE_URL` on pull requests, so every PR ran
+ * its assertions against production. That alone was survivable — most of its steps are
+ * read-only psql. The `verify-rls (fail-closed service role)` step is not: it runs
+ * verify-rls.mjs, which calls `auth.admin.createUser()`, `signUp()`, and inserts into
+ * brands / assets / events / notifications with non-atomic teardown — the same mechanism
+ * that left ~5,653 of the 5,671 rows in `brands` behind and prompted IPI-810.
+ *
+ * What made it invisible: a step-level `env:` block overrides GITHUB_ENV, and that step
+ * redeclared credentials from `secrets.*`. So the gate could be fixed, the psql steps
+ * would move to QA, and this one step would keep writing to production while every check
+ * reported green. API keys now arrive only via `steps.gate.outputs` (never GITHUB_ENV /
+ * `npm ci`); the redeclaration + Hyperdrive/Mastra tests below lock that shape.
+ *
+ * It surfaced on PR #725, where the check went red and merged anyway because `main`'s
+ * ruleset has no required status checks (IPI-895 · CI-GOV-001).
+ */
+describe("supabase-verify-rls production isolation (IPI-898)", () => {
+  /** A named step's text, from its `- name:` line to the next step at the same indent. */
+  function step(name: string): string {
+    const i = verifyRlsYml.indexOf(`- name: ${name}`);
+    expect(i, `step "${name}" not found in supabase-verify-rls.yml`).toBeGreaterThanOrEqual(0);
+    const rest = verifyRlsYml.slice(i + 1);
+    const next = rest.search(/\n {6}- (name|uses):/);
+    return next === -1 ? rest : rest.slice(0, next);
+  }
+
+  const gate = step("Trust + secrets gate");
+
+  it("contains no falsy-middle-operand ternary anywhere in the workflow", () => {
+    expect(
+      findFalsyMiddleOperands(verifyRlsYml),
+      "a falsy middle operand falls through to the fallback on every event — here that " +
+        "fallback is the production credential",
+    ).toEqual([]);
+  });
+
+  it("offers the gate a QA candidate and a production candidate as separate variables", () => {
+    // Selected in bash, never with `event_name == 'pull_request' && secrets.QA_X || secrets.X`:
+    // an unset QA secret is falsy, so that spelling resolves to production in exactly the
+    // case the guard exists for.
+    for (const [envVar, secret] of [
+      ["PR_SUPABASE_URL", "QA_SUPABASE_URL"],
+      ["PR_SUPABASE_ANON_KEY", "QA_SUPABASE_ANON_KEY"],
+      ["PR_SERVICE_ROLE_KEY", "QA_SUPABASE_SERVICE_ROLE_KEY"],
+      ["PR_DATABASE_URL", "QA_DATABASE_URL"],
+    ] as const) {
+      expect(gate, `${envVar} must come from secrets.${secret}`).toMatch(
+        new RegExp(`${envVar}: \\$\\{\\{ secrets\\.${secret} \\}\\}`),
+      );
+    }
+    expect(gate).toMatch(/if \[ "\$EVENT_NAME" = "pull_request" \]; then/);
+  });
+
+  // The regression that made the original bug invisible. Any of these redeclared as a bare
+  // `secrets.*` inside the step re-pins that one step to production.
+  it("never redeclares a resolved credential from secrets.* inside the verify-rls step", () => {
+    const probe = step("verify-rls (fail-closed service role)");
+    for (const secret of [
+      "NEXT_PUBLIC_SUPABASE_URL",
+      "NEXT_PUBLIC_SUPABASE_ANON_KEY",
+      "SUPABASE_SERVICE_ROLE_KEY",
+      "DATABASE_URL",
+      "SUPABASE_DB_URL",
+    ]) {
+      // `secrets.X` on an assignment line — comments naming the variable are fine.
+      // Escape so a crafted secret name cannot widen the RegExp (static allow-list above).
+      const escaped = secret.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      const offender = probe
+        .split("\n")
+        .find((l) => new RegExp(`^\\s+${escaped}: .*secrets\\.`).test(l));
+      expect(
+        offender,
+        `${secret} must come from the gate (GITHUB_ENV for DB, steps.gate.outputs for API), ` +
+          `not be re-derived from secrets.* — that would re-pin this step to production`,
+      ).toBeUndefined();
+    }
+    // API keys must be scoped to this step via gate outputs — not secrets.*.
+    expect(probe).toMatch(
+      /NEXT_PUBLIC_SUPABASE_URL:\s*\$\{\{\s*steps\.gate\.outputs\.supabase_url\s*\}\}/,
+    );
+    expect(probe).toMatch(
+      /SUPABASE_SERVICE_ROLE_KEY:\s*\$\{\{\s*steps\.gate\.outputs\.service_role_key\s*\}\}/,
+    );
+  });
+
+  // Production-only DB URLs must stay empty on PRs. findFalsyMiddleOperands cannot
+  // catch a dropped event_name guard here (middle operand is secrets.X, which is truthy).
+  it("keeps HYPERDRIVE_DATABASE_URL and MASTRA_DATABASE_URL empty on pull requests", () => {
+    const probe = step("verify-rls (fail-closed service role)");
+    for (const name of ["HYPERDRIVE_DATABASE_URL", "MASTRA_DATABASE_URL"]) {
+      const line = probe.split("\n").find((l) => l.trim().startsWith(`${name}:`));
+      expect(line, `${name} missing from verify-rls step`).toBeDefined();
+      expect(
+        line,
+        `${name} must be gated empty on pull_request (secret in middle, '' last)`,
+      ).toMatch(
+        /github\.event_name != 'pull_request' && secrets\.\w+ \|\| ''/,
+      );
+    }
+  });
+
+  it("keeps the service-role key out of GITHUB_ENV", () => {
+    // Only Postgres URLs go global; API keys ride steps.gate.outputs into verify-rls.
+    expect(gate).toMatch(/echo "DATABASE_URL=\$DATABASE_URL"/);
+    expect(gate).toMatch(/echo "service_role_key=\$SERVICE_ROLE_KEY"/);
+    expect(gate).not.toMatch(/echo "SUPABASE_SERVICE_ROLE_KEY=\$SERVICE_ROLE_KEY"/);
+    expect(gate).not.toMatch(
+      /echo "NEXT_PUBLIC_SUPABASE_URL=\$SUPABASE_URL"\s*>>\s*"\$GITHUB_ENV"/,
+    );
+  });
+
+  it("refuses the production project ref on a pull request, over both the DB and API URL", () => {
+    expect(gate).toMatch(/PROD_REF="nvdlhrodvevgwdsneplk"/);
+    // Both paths, because verify-rls.mjs writes over HTTP as well as over psql.
+    expect(gate).toMatch(/Postgres URL:\$DATABASE_URL/);
+    expect(gate).toMatch(/Supabase API URL:\$\{SUPABASE_URL:-\}/);
+    expect(gate).toMatch(/::error::supabase-verify-rls resolved the PRODUCTION project/);
+  });
+
+  it("skips instead of falling back to production when any QA credential is unset", () => {
+    // Must still complete and post a conclusion — a job that never starts leaves a required
+    // check pending forever (IPI-895). Gate all four PR candidates, not only DATABASE_URL.
+    expect(gate).toMatch(
+      /if \[ -z "\$\{SUPABASE_URL:-\}" \] \|\| \[ -z "\$\{SUPABASE_ANON_KEY:-\}" \][\s\S]{0,120}\|\| \[ -z "\$\{SERVICE_ROLE_KEY:-\}" \] \|\| \[ -z "\$\{DATABASE_URL:-\}" \]; then[\s\S]{0,200}mode=skip/,
+    );
+    expect(gate).not.toMatch(/DATABASE_URL="\$PUSH_DATABASE_URL"[\s\S]{0,80}pull_request/);
+  });
+
+  it("never interpolates a GitHub expression directly into a run: script", () => {
+    const offenders = runScalars(verifyRlsYml).filter((scalar) => scalar.includes("${{"));
+    expect(
+      offenders,
+      "pass the value through env: and reference it as a shell variable instead",
+    ).toEqual([]);
   });
 });
