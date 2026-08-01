@@ -50,4 +50,4 @@ Official deploy: [GitHub Action](https://docs.pr-agent.ai/installation/github/#r
 
 ## Related
 
-[pr-workflow](../pr-workflow/SKILL.md) · [sentry-pr-code-review](../sentry-pr-code-review/SKILL.md) · [task-verifier](../task-verifier/SKILL.md)
+[pr-workflow](../pr-workflow/SKILL.md) · [task-verifier](../task-verifier/SKILL.md) · [sentry-pr-code-review](../archive/sentry-pr-code-review/SKILL.md) (archived)

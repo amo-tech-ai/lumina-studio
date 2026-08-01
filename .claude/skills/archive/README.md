@@ -18,6 +18,23 @@ Update [`index-skills.md`](../../index-skills.md) when restoring.
 | `medusa` | Superseded by active `mercur/` |
 | `accessibility`, `agent-browser`, `social-media`, … | Off-domain or defer |
 
+**Archived 2026-08-01** — audit [`.claude/tests/skills-audit-2026-08-01.md`](../../tests/skills-audit-2026-08-01.md):
+
+| Skill | Why | Evidence |
+|-------|-----|----------|
+| `migrate-radix-to-base` | Migration never started | `app/package.json` has 6 `@radix-ui/*` and 0 `@base-ui*` |
+| `sentry-pr-code-review` | Never wired up | 0 references in `.github/workflows/`; `pr-workflow` + `pr-agent` cover PR review |
+| `senior-prompt-engineer` | Top-level copy was a duplicate | Was byte-identical to `archive/senior-prompt-engineer/SKILL.md`; only the duplicate was removed |
+
+All three had **0 invocations** across 51 project transcripts / 210 recorded skill calls.
+
+**Deliberately kept despite 0 invocations** — a zero measures explicit `Skill` calls, not worth:
+
+| Skill | Why |
+|-------|-----|
+| `pr-agent`, `amazon-bedrock` | `pr_agent_job` runs green in CI; `.pr_agent.toml` sets `model = "bedrock/qwen.qwen3-coder-next"` |
+| `design-md` (symlink) | **Mandatory** prerequisite of `design-to-production` (`SKILL.md:30`); named in 5 live routing tables. Loaded as a doc, so it never shows a `Skill` call |
+
 **Restored 2026-07-01:** `firecrawl`, `infisical`, `fashion-production` (active again).
 
 **Removed 2026-07-01:** `archive/mercur/` (duplicate of active `mercur/`).
