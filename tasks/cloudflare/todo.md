@@ -4,6 +4,15 @@
 **SSOT hierarchy:** **Linear status** → this file (**evidence + open work**) → root [`todo.md`](../../todo.md) (pointer only) → dated audits  
 **Doc map:** [`index.md`](./index.md) · **Audit:** [`audit/j21-todo-audit.md`](./audit/j21-todo-audit.md) · J22 token: [`audit/j22-cloudflare-token.md`](./audit/j22-cloudflare-token.md) · **Hosting migration:** [`prime/j24-cloudflare-plan.md`](./prime/j24-cloudflare-plan.md) + [`prime/j24-progress-tracker.md`](./prime/j24-progress-tracker.md) · **Changelog:** [`changelog.md`](./changelog.md)
 
+### Hosting cutover tracker (2026-08-01) — read this first
+
+Vercel → Workers cutover status lives in **[`prime/01-cloudflare-hosting.md` § Progress tracker](./prime/01-cloudflare-hosting.md#progress-tracker--vercel--cloudflare-workers-cutover-2026-08-01)** (+ GO/HOLD scores in [`prime/04-plan-hosting.md`](./prime/04-plan-hosting.md)).
+
+- 🔴 **HOLD** on **IPI-631** — `ipix.co` still Vercel; prod Worker 404.
+- 🟡 **IPI-849** — #716 merged (~7.68 MiB gzip in CI); #722 still open.
+- Next critical path: **IPI-848 → IPI-734 → prod bootstrap → IPI-707 → IPI-708 → (re-verify IPI-709) → IPI-627 re-proof → IPI-794 → IPI-631 → 48h soak**.
+- Rows below (2026-07-24) for IPI-706 / cutover gates are **stale** vs that tracker — do not start work from the 8.985 MiB figures.
+
 | Lane | Progress | Bar |
 |------|---------|-----|
 | Native AI | Early implementation stage (~10–15%) — only the first milestone (IPI-586) is complete; treat the % as a rough estimate, not a measured value | `██░░░░░░░░` |

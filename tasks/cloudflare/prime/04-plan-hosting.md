@@ -3,7 +3,8 @@
 **J18 audit (2026-07-18):** [`j18-cloudflare-audit.md`](j18-cloudflare-audit.md) · [`j18-cloudflare-plan.md`](j18-cloudflare-plan.md)  
 **Full forensic audit:** [`docs/audits/cloudflare-hosting-implementation-audit.md`](../../docs/audits/cloudflare-hosting-implementation-audit.md)  
 **Prior audit:** [`docs/audits/cloudflare-migration-audit.md`](../../docs/audits/cloudflare-migration-audit.md)  
-**Task inventory:** [`01-cloudflare-hosting.md`](01-cloudflare-hosting.md) · **Official links:** [`02-links.md`](02-links.md)
+**Task inventory:** [`01-cloudflare-hosting.md`](01-cloudflare-hosting.md) · **Official links:** [`02-links.md`](02-links.md)  
+**Live cutover tracker (2026-08-01):** [`01-cloudflare-hosting.md` § Progress tracker](01-cloudflare-hosting.md#progress-tracker--vercel--cloudflare-workers-cutover-2026-08-01)
 
 ---
 
@@ -11,12 +12,16 @@
 
 | Lens | Score | Notes |
 |------|------:|-------|
-| **Architecture & official alignment** | **94/100** | OpenNext + `--secrets-file` + versions model — correct |
-| **Operational readiness** | **72/100** | Smoke, auto verification, bundle headroom still open |
-| **Likelihood of preview success** | **95%** | After env vars + #475 + IPI-632 |
-| **Likelihood of production cutover** | **65%** | After journeys + rollback rehearsal |
+| **Architecture & official alignment** | **94/100** | OpenNext + `--secrets-file` + versions model — correct (unchanged) |
+| **Operational readiness** | **78/100** | Preview Worker live (`sk-498`); #716 dropped gzip ~7.68 MiB; 707/708/794 + prod bootstrap still open |
+| **Likelihood of preview success** | **95%** | Preview `200` + `x-opennext: 1` verified 2026-08-01 |
+| **Likelihood of production cutover** | **55%** | Prod host still Vercel; prod Worker 404; IPI-631 HARD HOLD |
 
-**Verdict:** ✅ Architecture sound · 🟡 Operational validation remaining
+**Scores dated:** 2026-08-01 (probe pass; no local `build:cf`)
+
+**GO/HOLD (2026-08-01):** 🔴 **HOLD** — do not start **IPI-631 · CF-MIG-810 — Production DNS Cutover and Rollback**. Next gate: finish **IPI-849** (#722) → **IPI-848** WARN→FAIL → critical path in the [01 progress tracker](01-cloudflare-hosting.md#progress-tracker--vercel--cloudflare-workers-cutover-2026-08-01).
+
+**Verdict:** ✅ Architecture sound · 🟡 Preview proven · 🔴 Production cutover **HOLD**
 
 ---
 
