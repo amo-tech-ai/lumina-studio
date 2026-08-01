@@ -222,6 +222,29 @@ describe("booking-gate production isolation (IPI-810)", () => {
     expect(guard).toMatch(/Supabase API URL:\$RESOLVED_API_URL/);
   });
 
+  // IPI-892 · CI-QA-NET-001 — `db.<ref>.supabase.co` is IPv6-only and GitHub runners have no
+  // IPv6 route, so psql fails at TCP connect with "Network is unreachable" and names neither
+  // cause nor fix. It is also the first hostname the Supabase dashboard shows, so it is the
+  // default mistake: QA_DATABASE_URL was wired that way and every supabase/**-touching pull
+  // request went red. The pattern is read out of ci.yml rather than restated, so an edit that
+  // breaks the match fails here instead of at the next connection attempt.
+  it("refuses a direct IPv6-only database host but allows the pooler", () => {
+    const guard = stepBlock(job, "Refuse an IPv6-only direct database host");
+    const pattern = /grep -qE '([^']+)'/.exec(guard);
+    expect(pattern, "host-check grep pattern not found").not.toBeNull();
+    const hostRe = new RegExp(pattern![1]);
+
+    expect(hostRe.test("postgresql://postgres:pw@db.wtuhdynujhszsbwxlbdi.supabase.co:5432/postgres")).toBe(true);
+    expect(
+      hostRe.test(
+        "postgresql://postgres.wtuhdynujhszsbwxlbdi:pw@aws-1-us-east-2.pooler.supabase.com:5432/postgres?sslmode=require",
+      ),
+      "the Supavisor pooler host is the fix, not the failure",
+    ).toBe(false);
+    // An unset secret means the job was already gated off upstream — not this step's call.
+    expect(hostRe.test("")).toBe(false);
+  });
+
   it("gates the verify-rls probe behind --skip-api in the gate script", () => {
     const script = readFileSync(
       resolve(__dirname, "../../../scripts/verify-booking-gate.mjs"),
