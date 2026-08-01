@@ -50,11 +50,11 @@ The index's self-assessment of **88/100** is not supportable against disk.
 | Dimension | Weight | Score | Evidence |
 |---|---:|---:|---|
 | Frontmatter validity (official spec) | 15 | 92 | 43/43 parse; 43/43 have `name`+`description`; 43/43 `name` == directory |
-| Validator correctness | 10 | 70 | 5 failures, **2 are validator bugs**; `background` gap latent |
+| Validator correctness | 10 | 70 | 5 failures — **1 is a validator bug**, 4 genuine; `background` gap latent |
 | Link integrity | 15 | 65 | 358 dead relative links; 281 in one vendored skill |
 | Usage / necessity | 15 | 55 | 23/43 never invoked in 51 transcripts |
 | Catalog accuracy | 10 | 35 | 7 missing, 4 phantom, counts wrong, 4 weeks stale |
-| Size discipline | 10 | 80 | 2 skills over the repo's own 500-line rule |
+| Size discipline | 10 | 80 | 2 skills over the Agent Skills spec's 500-line guidance |
 | Duplication / overlap | 15 | 65 | 1 command/skill collision, 2 archive dupes, 2 symlinks, 3 clusters |
 | Progressive disclosure | 10 | 85 | 33/43 use `references/`; hubs follow the pattern |
 
@@ -76,15 +76,15 @@ Every row loads: all 43 have parseable frontmatter and a resolvable `SKILL.md`.
 | `design-to-production` | DC HTML → Next parity | **12** | ✅ | 🟡 | 7 dead links | **Keep** |
 | `ipix-task-lifecycle` | 5-phase IPI orchestrator | **9** | ✅ | 🔴 | 17 dead links | **Keep**, fix links |
 | `mermaid-diagrams` | Diagram syntax | 9 | ✅ | 🟢 | 1 dead link | **Keep** |
-| `lean` | Dev-speed audit | 6 | ✅ | 🟡 | **Validator false positive** | **Keep**, fix validator |
+| `lean` | Dev-speed audit | 6 | ✅ | 🟢 | **Validator false positive** (angle brackets) | **Keep** — fixed in #727 |
 | `worktrees` | Branch isolation | 5 | ✅ | 🟢 | — | **Keep** |
 | `pr-workflow` | PR lifecycle | 5 | ✅ | 🟢 | — | **Keep** |
 | `mastra` | Agent registry (`paths:` scoped) | 4 | ✅ | 🔴 | validator FAIL, 12 dead links | **Keep**, clean frontmatter |
 | `linear` | Issue MCP hub | 3 | ✅ | 🔴 | validator FAIL, **`/linear` collision** | **Keep**, resolve collision |
 | `release-notes` | changelog/SHIPPED drafting | 2 | ✅ | 🟢 | — | **Keep** — index wrongly calls it nonexistent |
 | `cloudinary` | Media hub | 2 | ✅ | 🔴 | **281 dead links** (vendored) | **Keep**, prune vendored docs |
-| `skill-creator` | Authoring + validator | 2 | ✅ | 🔴 | **ships the buggy validator** | **Keep**, fix `quick_validate.py` |
-| `architecture-brief` | "Build X" scoping | 1 | ✅ | 🟡 | **Validator false positive** | **Keep**, fix validator |
+| `skill-creator` | Authoring + validator | 2 | ✅ | 🟡 | ships the validator — rule fixed + self-test added in #727 | **Keep** |
+| `architecture-brief` | "Build X" scoping | 1 | ✅ | 🔴 | description 1,059 chars — over the spec's 1,024 | **Keep**, shorten description |
 | `frontend-design` | UI hub | 1 | ✅ | 🟢 | — | **Keep** |
 | `shadcn` | Component patterns | 1 | ✅ | 🟢 | — | **Keep** |
 | `ipix-wireframe` | Operator wireframes | 1 | ✅ | 🟢 | — | **Keep** |
@@ -228,7 +228,7 @@ Checked against the official reference at `https://code.claude.com/docs/en/skill
 | 3 | **Documented `background` field missing from the allow-list.** Any skill using `context: fork` + `background: false` will be reported invalid | `quick_validate.py:46-55` | **Medium** (latent) |
 | 4 | **Command/skill name collision on `/linear`** | `.claude/commands/linear.md` + `.claude/skills/linear/` | **High** |
 | 5 | Non-standard frontmatter keys ignored by the runtime | `mastra` (`impact`,`impactDescription`,`tags`,`title`), `linear` (`impact`,`tags`), `firecrawl` (`inputs`,`references`) | Low |
-| 6 | Repo's own "<500 lines" rule violated | `cloudflare-workers-testing` (814), `cloudflare-workflow` (568) | Medium |
+| 6 | Agent Skills spec's "keep under 500 lines" guidance exceeded | `cloudflare-workers-testing` (814), `cloudflare-workflow` (568) | Medium |
 | 7 | Active skills that are symlinks into `archive/` — ambiguous status | `accessibility`, `design-md` | Medium |
 | 8 | Catalog contradicts disk | `index-skills.md` throughout | **High** |
 
@@ -262,7 +262,7 @@ Checked against the official reference at `https://code.claude.com/docs/en/skill
 | # | Failure | Trigger | Blast radius |
 |---|---|---|---|
 | 1 | `/linear` resolves to whichever of command-or-skill wins; the loser is silently invisible | Any `/linear` invocation | Silent wrong-behaviour. This is precisely the #711 failure mode |
-| 2 | A valid skill is deleted or "fixed" because the validator called it invalid | Anyone running `quick_validate.py` before committing | **Already happened once** — PR #708, closed unmerged |
+| 2 | A valid skill is deleted or "fixed" because the validator called it invalid | Anyone running `quick_validate.py` before committing | **Already happened once** — PR #708, closed unmerged. Now pinned by `test_quick_validate.py` (#727) |
 | 3 | Someone loads a skill from `index-skills.md` that does not exist | Reading the index | 4 phantom names |
 | 4 | Someone does *not* load a skill because the index omits it | Reading the index | 7 omitted, incl. `cloudflare-workflow` (23 invocations — the 3rd most-used skill in the repo) |
 | 5 | Editing `accessibility`/`design-md` silently edits `archive/` | Any edit through the symlink | Archive content mutated without intent |
