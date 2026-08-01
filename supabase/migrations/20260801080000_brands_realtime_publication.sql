@@ -8,6 +8,12 @@
 -- of every Realtime payload. PK id must be included so UPDATE events keep row identity
 -- (PostgreSQL 15+ column lists).
 --
+-- attnames ambiguity: pg_publication_tables.attnames is NULL both when the table is
+-- absent (no row → NOT FOUND) and when it is published with all columns (no column
+-- list). Detect absence with IF NOT FOUND; treat attnames IS NULL as wrong-shape
+-- (full-table) and DROP+ADD to the safe column set. Never SET TABLE on
+-- supabase_realtime (that would drop sibling tables).
+--
 -- Rollback:
 --   alter publication supabase_realtime drop table public.brands;
 
@@ -23,19 +29,20 @@ begin
     and schemaname = 'public'
     and tablename = 'brands';
 
-  if current_cols is null then
+  if not found then
     alter publication supabase_realtime
       add table public.brands (id, intake_status, updated_at);
     return;
   end if;
 
   -- Already present with the exact column set — no-op (idempotent re-apply).
-  if current_cols @> wanted and wanted @> current_cols then
+  if current_cols is not null
+     and current_cols @> wanted
+     and wanted @> current_cols then
     return;
   end if;
 
-  -- Wrong shape (e.g. full-table publish) — replace this table only.
-  -- Never use SET TABLE on supabase_realtime (that would drop sibling tables).
+  -- Wrong shape: full-table publish (attnames NULL) or a different column list.
   alter publication supabase_realtime drop table public.brands;
   alter publication supabase_realtime
     add table public.brands (id, intake_status, updated_at);

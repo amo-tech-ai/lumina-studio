@@ -7,6 +7,9 @@
 -- Plan math: 5 asserts
 --   published(1) + exact columns(1) + no draft leak(1) + no lock leak(1)
 --   + sibling brand_crawls still published(1)
+--
+-- Mirror must use IF NOT FOUND for absence: attnames is NULL for full-table
+-- publish as well as for a missing row, so `IF current_cols IS NULL` is wrong.
 
 set search_path to public, extensions;
 
@@ -26,16 +29,19 @@ begin
     and schemaname = 'public'
     and tablename = 'brands';
 
-  if current_cols is null then
+  if not found then
     alter publication supabase_realtime
       add table public.brands (id, intake_status, updated_at);
     return;
   end if;
 
-  if current_cols @> wanted and wanted @> current_cols then
+  if current_cols is not null
+     and current_cols @> wanted
+     and wanted @> current_cols then
     return;
   end if;
 
+  -- Wrong shape: full-table (attnames NULL) or mismatched column list.
   alter publication supabase_realtime drop table public.brands;
   alter publication supabase_realtime
     add table public.brands (id, intake_status, updated_at);
