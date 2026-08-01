@@ -20,7 +20,7 @@ transcripts (210 recorded `Skill` calls).
 | Dimension | Score | Notes |
 |-----------|------:|-------|
 | Frontmatter validity | 92 | 40/40 parse; all carry `name` + `description`; all match their directory |
-| Validator correctness | 70 | 3 skills fail on non-standard keys; 2 false positives fixed in #727 |
+| Validator correctness | 70 | 4 genuine failures; 1 false positive (angle brackets) fixed in #727 |
 | Link integrity | 65 | 358 dead relative links — 281 of them in `cloudinary`'s vendored docs |
 | Usage | 55 | 18/40 never invoked |
 | Catalog accuracy | 35 → **fixed here** | Was 4 weeks stale: 7 skills missing, 4 phantom |
@@ -31,9 +31,12 @@ transcripts (210 recorded `Skill` calls).
 **The previous entry claimed A- (88/100). That was not supportable against disk** — it counted 33
 skills when there were 41, and listed 4 that did not exist.
 
-> ⚠️ **No maximum `SKILL.md` size is documented by Anthropic.** The 500-line rule below is a house
-> convention. The documented limit is on the *listing*: `description` + `when_to_use` truncate at
-> **1,536 characters** — truncation, not rejection.
+> ⚠️ **Two documents govern skills, and they set different limits.** The
+> [Agent Skills standard](https://agentskills.io/specification) that Claude Code implements sets
+> `description` at **max 1024 characters**, recommends keeping `SKILL.md` **under 500 lines**, and
+> requires `name` to match the directory. [Claude Code's own docs](https://code.claude.com/docs/en/skills)
+> add its extensions (`paths`, `context`, `background`, …) and a **1,536-character** budget on
+> `description` + `when_to_use` in the listing — that one truncates rather than rejects.
 
 ---
 
@@ -74,7 +77,7 @@ skills when there were 41, and listed 4 that did not exist.
 |-------|--------|
 | Frontmatter `name` + `description` on every `SKILL.md` | ✅ 40/40 |
 | `name` matches directory slug | ✅ 40/40 (the spec only requires this for plugin skills) |
-| `quick_validate.py` passes | 🔴 37/40 — `mastra`, `linear`, `firecrawl` carry non-standard keys |
+| `quick_validate.py` passes | 🔴 36/40 — `architecture-brief` description is 1,059 > 1,024; `mastra`, `linear`, `firecrawl` carry non-standard keys |
 | Hub `SKILL.md` under house 500-line rule | 🔴 `cloudflare-workers-testing` 814, `cloudflare-workflow` 568 |
 | Progressive disclosure (`references/` on demand) | ✅ 31/40 |
 | Cross-skill / doc links resolve | 🔴 358 dead |
@@ -127,7 +130,7 @@ skills when there were 41, and listed 4 that did not exist.
 | Skill | Lines | Inv | Health | Note |
 |-------|------:|----:|:------:|------|
 | `mermaid-diagrams` | 55 | 9 | 🟢 | Diagram syntax |
-| `architecture-brief` | 108 | 1 | 🟢 | One-shot "build X" scoping |
+| `architecture-brief` | 108 | 1 | 🔴 | One-shot "build X" scoping — description 1,059 chars, over the spec's 1,024 |
 | `refactor-plan` | 66 | 1 | 🟢 | Refactor scoping — merge candidate |
 | `writing-plans` | 121 | 1 | 🟢 | Implementation plans |
 | `gen-test` | 50 | 0 | 🟢 | Vitest `app/` only — merge candidate |
@@ -161,9 +164,10 @@ real directories is a follow-up, not an archive action.
 
 ### 🔴 High
 
-1. ~~Validator rejects valid skills~~ — **in flight, [#727](https://github.com/amo-tech-ai/lumina-studio/pull/727)**.
-   `quick_validate.py` enforced an undocumented 1,024-char description cap and an angle-bracket
-   ban; neither is in the spec. Also adds the documented `background` field and a self-test.
+1. ~~Validator rejects a valid skill~~ — **in flight, [#727](https://github.com/amo-tech-ai/lumina-studio/pull/727)**.
+   `quick_validate.py` banned angle brackets in `description`, a rule in neither spec, which failed
+   `lean`. Also adds the documented `background` field and a self-test. The 1,024-char cap is
+   **real** (Agent Skills spec) and stays.
 2. ~~`/linear` bound by both a command and a skill~~ — **in flight,
    [#728](https://github.com/amo-tech-ai/lumina-studio/pull/728)** (renamed to `/linear-enrich`).
 3. Fix [`README.md`](README.md) — it points at `./cloudflare/SKILL.md` (renamed in #711) and
@@ -175,8 +179,9 @@ real directories is a follow-up, not an archive action.
    `design-to-production` (7), `ipix-supabase` (6).
 5. Promote or drop the two archive symlinks.
 6. Split `cloudflare-workers-testing` (814) and `cloudflare-workflow` (568) into `references/`.
-7. Strip non-standard frontmatter keys from `mastra`, `linear`, `firecrawl` — the 3 remaining
-   validator failures.
+7. Shorten `architecture-brief`'s description to ≤1,024 chars, and move the non-standard keys in
+   `mastra`, `linear` and `firecrawl` under `metadata:` (a spec field that accepts arbitrary
+   keys) — the 4 remaining validator failures.
 
 ### 🟢 Low
 
@@ -200,7 +205,7 @@ real directories is a follow-up, not an archive action.
 | Removed 4 phantom entries | `infisical`, `groq-inference`, `cloudflare`, `linear/references/pm` |
 | Added the 7 missing skills | `amazon-bedrock`, `cloudflare-ipix`, `cloudflare-workflow`, `cloudflare-workers-testing`, `pr-agent`, plus `senior-prompt-engineer` / `sentry-pr-code-review` (both now archived) |
 | Reinstated `release-notes` | This index recorded it as "never existed on disk". It exists, has 2 invocations, and drafted [#724](https://github.com/amo-tech-ai/lumina-studio/pull/724) |
-| Validator re-run **by exit code** | 5 failures — 2 of them validator bugs, fixed in #727 |
+| Validator re-run **by exit code** | 5 failures — 1 was a validator bug (fixed in #727), 4 are genuine |
 | Usage measured from 51 transcripts | 18/38 never invoked |
 | Overall grade **C+ (69/100)** | Was self-graded A- (88/100) |
 

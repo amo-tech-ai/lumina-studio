@@ -27,10 +27,9 @@ ago. Anyone using it to decide what to load is being actively misled.
 [#712](https://github.com/amo-tech-ai/lumina-studio/pull/712) repaired `quick_validate.py`'s
 frontmatter allow-list after a false positive sent PR
 [#708](https://github.com/amo-tech-ai/lumina-studio/pull/708) deleting deliberate `paths:` scoping.
-That fix was correct and incomplete. Two invented rules remain — a 1,024-character description cap
-and a ban on angle brackets — **neither of which appears anywhere in the official Claude Code
-skills documentation**. They fail two healthy skills today (`architecture-brief`, `lean`). A third
-gap is latent: the documented `background` field is absent from the allow-list, so the next skill
+That fix was correct and incomplete. One invented rule remains — a ban on angle brackets in
+`description`, which appears in **neither** governing document and fails `lean`, whose description
+legitimately uses `>10 files`, `>2min` and `>60s` as trigger phrases. A second gap is latent: the documented `background` field is absent from the allow-list, so the next skill
 that uses `context: fork` correctly will be reported as invalid. This is the same bug class, in
 the same file, that already cost the repo one closed PR.
 
@@ -224,8 +223,8 @@ Checked against the official reference at `https://code.claude.com/docs/en/skill
 
 | # | Violation | Where | Severity |
 |---|---|---|---|
-| 1 | **Validator enforces an undocumented 1,024-char description cap.** Official docs specify **1,536 characters** for `description` + `when_to_use` combined, and describe it as *truncation in the listing*, not a validation error | `quick_validate.py:95-97` | **High** |
-| 2 | **Validator bans angle brackets in `description`.** No such rule exists in the official docs. `lean` legitimately uses `>10 files`, `>2min`, `>60s` as trigger phrases | `quick_validate.py:92-94` | **High** |
+| 1 | **Validator bans angle brackets in `description`.** This rule exists in neither the Agent Skills spec nor the Claude Code docs. `lean` legitimately uses `>10 files`, `>2min`, `>60s` as trigger phrases | `quick_validate.py:92-94` | **High** |
+| 2 | **`architecture-brief`'s description is 1,059 characters**, over the Agent Skills spec's documented max of 1,024. A genuine violation — see the correction note below | `architecture-brief/SKILL.md` | Medium |
 | 3 | **Documented `background` field missing from the allow-list.** Any skill using `context: fork` + `background: false` will be reported invalid | `quick_validate.py:46-55` | **Medium** (latent) |
 | 4 | **Command/skill name collision on `/linear`** | `.claude/commands/linear.md` + `.claude/skills/linear/` | **High** |
 | 5 | Non-standard frontmatter keys ignored by the runtime | `mastra` (`impact`,`impactDescription`,`tags`,`title`), `linear` (`impact`,`tags`), `firecrawl` (`inputs`,`references`) | Low |
@@ -233,12 +232,28 @@ Checked against the official reference at `https://code.claude.com/docs/en/skill
 | 7 | Active skills that are symlinks into `archive/` — ambiguous status | `accessibility`, `design-md` | Medium |
 | 8 | Catalog contradicts disk | `index-skills.md` throughout | **High** |
 
-Note on #6: **no maximum SKILL.md size is documented by Anthropic.** The 500-line rule is a repo
-convention from `index-skills.md:19`. Treat it as a house style, not a spec violation.
-
-Note on `name`: the official docs state that in a *personal or project* skill, `name` sets only the
-display label and the command comes from the directory name. So `name` ≠ directory is not fatal —
-but all 43 match anyway, so this is a clean pass either way.
+> ### ⚠️ Correction, applied 2026-08-01 after this section was first written
+>
+> The original draft of this audit called the validator's **1,024-character description cap**
+> invented, on the strength of Claude Code's own docs stating 1,536. That was wrong, and the
+> two numbers are not the same rule:
+>
+> | Source | Limit | Nature |
+> |---|---|---|
+> | [agentskills.io/specification](https://agentskills.io/specification) — the Agent Skills standard Claude Code implements | `description` **max 1024** | **Hard cap** |
+> | [code.claude.com/docs/en/skills](https://code.claude.com/docs/en/skills) | `description` + `when_to_use` **1,536** | **Listing truncation**, not rejection |
+>
+> So `architecture-brief` at 1,059 chars is a **real violation**, not a false positive. Only the
+> angle-bracket rule was invented. Corrected in
+> [#727](https://github.com/amo-tech-ai/lumina-studio/pull/727).
+>
+> Two further claims in the first draft are corrected by the same source:
+>
+> - **SKILL.md size:** the Agent Skills spec *does* say "Keep your main `SKILL.md` under 500
+>   lines." It is a documented recommendation, not merely a house convention — so
+>   `cloudflare-workers-testing` (814) and `cloudflare-workflow` (568) are over a real guideline.
+> - **`name` matching the directory:** the spec states `name` "Must match the parent directory
+>   name" for all skills, not only plugin skills. All 43 match, so this passes either way.
 
 ---
 
@@ -348,7 +363,7 @@ repairs, archive/merge sweep.
 ### H1 — `.claude/skills/skill-creator/scripts/quick_validate.py:92-97`
 
 ```python
-# Current — both rules are invented; neither is in the official spec
+# Only the FIRST of these two is invented. The second is the Agent Skills spec.
         # Check for angle brackets
         if '<' in description or '>' in description:
             return False, "Description cannot contain angle brackets (< or >)"
@@ -357,9 +372,9 @@ repairs, archive/merge sweep.
             return False, f"Description is too long ({len(description)} characters). Maximum is 1024 characters."
 ```
 
-**Fix:** delete the angle-bracket check entirely. Replace the cap with the documented behaviour —
-`description` + `when_to_use` are **truncated at 1,536 characters** in the listing, which is a
-warning condition, not an error:
+**Fix:** delete the angle-bracket check. **Keep** the 1,024 cap — it is the Agent Skills standard's
+documented maximum — and name its source in the code. Then add the Claude Code listing budget as a
+separate, softer signal that warns rather than fails:
 
 ```python
         # https://code.claude.com/docs/en/skills — description + when_to_use are
@@ -371,7 +386,9 @@ warning condition, not an error:
                   f"the listing truncates at 1536")
 ```
 
-**Clears:** `architecture-brief` (1,059 chars — valid), `lean` (`>10 files`, `>2min`, `>60s` — valid).
+**Clears:** `lean` (`>10 files`, `>2min`, `>60s` — valid). **Does not clear**
+`architecture-brief` (1,059 chars), which is a genuine spec violation and needs its description
+shortened in its own PR.
 
 ### H4 — `.claude/skills/skill-creator/scripts/quick_validate.py:46-55`
 
@@ -433,8 +450,11 @@ Two dead links: `./cloudflare/SKILL.md` → `./cloudflare-ipix/SKILL.md` (post-#
 - **Validator:** `quick_validate.py` run per skill, judged on **exit code**. An earlier pass in
   this audit judged on stdout keywords and wrongly reported 0 failures; the exit-code run found 5.
   Corrected before reporting.
-- **Official docs:** fetched live from `https://code.claude.com/docs/en/skills`. The 1,536 figure
-  and the absence of any angle-bracket rule or size limit were read from that page, not recalled.
+- **Official docs:** fetched live from **both** `https://code.claude.com/docs/en/skills` (Claude
+  Code's own extensions and the 1,536 listing budget) and `https://agentskills.io/specification`
+  (the Agent Skills standard Claude Code implements — `description` max 1024, the 500-line
+  guidance, and the name-matches-directory rule). Reading only the first produced a wrong
+  conclusion, corrected in §7; **checking a single source is what caused it**.
 - **Usage:** 51 JSONL transcripts in `~/.claude/projects/-home-sk-ipix/`, 210 `Skill` tool calls.
   **Limit:** covers only this project's retained transcripts and only explicit Skill invocations.
   A `paths:`-scoped auto-load leaves no Skill call, so `ipix-supabase`, `mastra` and `nextjs-16`
