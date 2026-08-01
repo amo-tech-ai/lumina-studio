@@ -91,27 +91,44 @@ If a hotfix genuinely had to go straight to production, capture it immediately �
 between "applied" and "file on `main`" is the window every other PR is blocked.
 
 1. **Identify the version and its name:**
-   ```bash
-   supabase migration list --linked --output-format json   # find the remote-only version
-   ```
-2. **Extract statements losslessly** — `statements` is `text[]`, not a ready-to-paste file.
-   Copying the array literal from a GUI/client can drop commas, quotes, or dollar-quoted bodies.
-   Write the file with ordered join (psql tuples-only / unaligned):
 
    ```bash
-   VERSION=<version>   # e.g. 20260801091009
+   # --output-format is a global CLI flag (CI pin 2.109.1; same as drift script)
+   supabase migration list --linked --output-format json   # find the remote-only version
+   ```
+
+2. **Extract statements losslessly** — `statements` is `text[]`, not a ready-to-paste file.
+   Copying the array literal from a GUI/client can drop commas, quotes, or dollar-quoted bodies.
+   `array_to_string(statements, E'\n\n')` joins in array order (postgres array indices are
+   ordinal). Worked check on prod `20260801091009`: 4 statements, `order_preserved = true`.
+   Write the file with ordered join (psql tuples-only / unaligned), fail closed:
+
+   ```bash
+   set -euo pipefail
+   VERSION=<version>   # e.g. 20260801091009 — must be exactly 14 digits
    NAME=<name>         # e.g. ipi896_revoke_default_table_privileges
+   [[ "$VERSION" =~ ^[0-9]{14}$ ]] || { echo "VERSION must be exactly 14 digits"; exit 1; }
    OUT="supabase/migrations/${VERSION}_${NAME}.sql"
-   psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -Atc \
+   tmp_out="$(mktemp)"
+   trap 'rm -f "$tmp_out"' EXIT
+   # :'migration_version' = literal-quoted psql var (do not interpolate VERSION into SQL)
+   psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -v migration_version="$VERSION" -Atc \
      "select array_to_string(statements, E'\n\n')
       from supabase_migrations.schema_migrations
-      where version = '${VERSION}';" > "$OUT"
-   test -s "$OUT"
-   # sanity: statement count in ledger vs non-empty file
-   psql "$DATABASE_URL" -Atc \
+      where version = :'migration_version';" > "$tmp_out"
+   test -s "$tmp_out"
+   row_n="$(psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -v migration_version="$VERSION" -Atc \
+     "select count(*)::int
+      from supabase_migrations.schema_migrations
+      where version = :'migration_version';")"
+   [[ "$row_n" = "1" ]] || { echo "expected exactly 1 ledger row, got ${row_n:-empty}"; exit 1; }
+   ledger_n="$(psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -v migration_version="$VERSION" -Atc \
      "select cardinality(statements)
       from supabase_migrations.schema_migrations
-      where version = '${VERSION}';"
+      where version = :'migration_version';")"
+   [[ "$ledger_n" =~ ^[1-9][0-9]*$ ]] || { echo "bad statement cardinality: ${ledger_n:-empty}"; exit 1; }
+   mv "$tmp_out" "$OUT"
+   echo "captured $OUT ($ledger_n statements)"
    ```
 
    The filename timestamp **must** equal the remote version, or the ledgers still will not match.
