@@ -25,6 +25,8 @@ build/
 __pycache__/
 *.log
 *.lock
+package-lock.json
+.claude/worktrees/
 .agents/
 .design-sync/
 .obsidian/
