@@ -37,7 +37,7 @@ CrewAI ships two products:
 
 - **Crews** — multi-agent orchestration. Use `CrewAIAgent` from `@ag-ui/crewai`.
 - **Flows** — event-driven pipelines. Use the generic `HttpAgent` from `@ag-ui/client`
-  (there's no framework-specific wrapper). See [crewai-flows.md](crewai-flows.md).
+  (there's no framework-specific wrapper). See [crewai-flows.md](wiring-crewai-flows.md).
 
 ## Gotcha — trailing slash
 

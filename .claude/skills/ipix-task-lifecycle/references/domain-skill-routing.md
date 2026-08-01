@@ -119,4 +119,4 @@ Rules:
 | Spec template header | [linear-spec-template.md](linear-spec-template.md) |
 | Phase 1 coordinator | [planning.md](../planning.md) |
 | Phase 3 implement routing | [implementation.md](../implementation.md) |
-| Skill index | [`index-skills.md`](../../../index-skills.md) |
+| Skill index | [`index-skills.md`](../../index-skills.md) |
