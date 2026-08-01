@@ -25,6 +25,9 @@ const OnboardingPage = () => {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [shell, setShell] = useState<{ orgId: string; brandId: string } | null>(null);
+  // Stable per mount — retries / double-taps hit the same materialize idempotency key.
+  // Cross-visit resume uses localStorage in IPI-835; this unblocks the RPC path now.
+  const [idempotencyKey] = useState(() => crypto.randomUUID());
 
   const setField = (field: keyof OnboardingForm, value: string) => {
     setForm((f) => ({ ...f, [field]: value }));
@@ -51,7 +54,7 @@ const OnboardingPage = () => {
 
       let brandId = shell?.brandId;
       if (!brandId) {
-        const created = await createOrgAndBrand(supabase, user.id, form);
+        const created = await createOrgAndBrand(supabase, user.id, form, { idempotencyKey });
         brandId = created.brandId;
         setShell(created);
       }

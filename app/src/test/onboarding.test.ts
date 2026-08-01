@@ -9,7 +9,7 @@ import {
   waitForCrawlCompletion,
 } from "@/lib/onboarding";
 
-// IPI-46 — onboarding unit tests
+// IPI-46 / IPI-832 — onboarding unit tests
 
 describe("validateUrl", () => {
   it("accepts https URLs", () => {
@@ -33,30 +33,21 @@ describe("validateUrl", () => {
 
 describe("slugify", () => {
   it("lowercases and replaces spaces with hyphens", () => {
-    const slug = slugify("My Brand Name");
-    expect(slug).toMatch(/^my-brand-name-[a-z0-9]{5}$/);
+    expect(slugify("My Brand Name")).toBe("my-brand-name");
   });
 
   it("strips leading/trailing hyphens", () => {
-    const slug = slugify("  Brand  ");
-    expect(slug).toMatch(/^brand-/);
+    expect(slugify("  Brand  ")).toBe("brand");
   });
 
-  it("appends 5-char random suffix for uniqueness", () => {
-    const rand = vi.spyOn(Math, "random").mockReturnValueOnce(0.111111).mockReturnValueOnce(0.999999);
-    try {
-      const slugA = slugify("test");
-      const slugB = slugify("test");
-      expect(slugA).not.toBe(slugB);
-    } finally {
-      rand.mockRestore();
-    }
+  it("accepts an optional deterministic suffix (no Math.random)", () => {
+    expect(slugify("test", "abc12")).toBe("test-abc12");
+    expect(slugify("test", "abc12")).toBe(slugify("test", "abc12"));
   });
 
-  it("truncates to 50 chars before suffix", () => {
+  it("truncates base to 50 chars", () => {
     const long = "a".repeat(80);
-    const slug = slugify(long);
-    expect(slug.length).toBeLessThanOrEqual(56);
+    expect(slugify(long).length).toBe(50);
   });
 });
 
@@ -78,49 +69,6 @@ describe("buildShellAiProfile", () => {
   });
 });
 
-type DbError = { message: string } | null;
-
-const makeSingle = (data: { id: string } | null, error: DbError = null) =>
-  ({ data, error });
-
-const makeSupabaseMock = ({
-  orgId = "org-123",
-  brandId = "brand-456",
-  orgError = null,
-  brandError = null,
-}: {
-  orgId?: string;
-  brandId?: string;
-  orgError?: DbError;
-  brandError?: DbError;
-} = {}) => {
-  const orgInsert = vi.fn(() => chainOrg);
-  const brandInsert = vi.fn(() => chainBrand);
-
-  const chainOrg = {
-    insert: orgInsert,
-    select: () => chainOrg,
-    single: () => Promise.resolve(makeSingle(orgError ? null : { id: orgId }, orgError)),
-    delete: () => ({ eq: () => Promise.resolve({ error: null }) }),
-  };
-
-  const chainBrand = {
-    insert: brandInsert,
-    select: () => chainBrand,
-    single: () => Promise.resolve(makeSingle(brandError ? null : { id: brandId }, brandError)),
-  };
-
-  return {
-    from: vi.fn((table: string) => {
-      if (table === "organizations") return chainOrg;
-      if (table === "brands") return chainBrand;
-      throw new Error(`unexpected table: ${table}`);
-    }),
-    orgInsert,
-    brandInsert,
-  };
-};
-
 const FORM = {
   brandName: "Test Brand",
   websiteUrl: "https://testbrand.com",
@@ -129,38 +77,102 @@ const FORM = {
   goal: "All of the above",
 };
 
+const KEY = "idem-test-key";
+
+const ORG_ID = "11111111-1111-4111-8111-111111111111";
+const BRAND_ID = "22222222-2222-4222-8222-222222222222";
+
+const makeMaterializeMock = ({
+  orgId = ORG_ID,
+  brandId = BRAND_ID,
+  sessionError = null as { message: string; code?: string } | null,
+  rpcError = null as { message: string } | null,
+  rpcData = null as { organization_id: string; brand_id: string } | null,
+} = {}) => {
+  const maybeSingle = vi.fn().mockResolvedValue({
+    data: sessionError ? null : null,
+    error: sessionError,
+  });
+  // First select: no existing session → insert path
+  const selectChain = {
+    eq: vi.fn().mockReturnThis(),
+    maybeSingle,
+    single: vi.fn().mockResolvedValue({
+      data: {
+        id: "sess-1",
+        user_id: "user-123",
+        idempotency_key: KEY,
+        status: "draft",
+        current_screen: 1,
+        draft_answers: {},
+        organization_id: null,
+        brand_id: null,
+      },
+      error: null,
+    }),
+  };
+
+  const insert = vi.fn().mockReturnValue({
+    select: () => selectChain,
+  });
+
+  const from = vi.fn((table: string) => {
+    if (table !== "onboarding_sessions") throw new Error(`unexpected table: ${table}`);
+    return {
+      select: () => selectChain,
+      insert,
+    };
+  });
+
+  const rpc = vi.fn().mockResolvedValue({
+    data: rpcError
+      ? null
+      : (rpcData ?? { organization_id: orgId, brand_id: brandId }),
+    error: rpcError,
+  });
+
+  return { from, rpc, insert, selectChain } as unknown as SupabaseClient & {
+    from: ReturnType<typeof vi.fn>;
+    rpc: ReturnType<typeof vi.fn>;
+    insert: ReturnType<typeof vi.fn>;
+  };
+};
+
 describe("createOrgAndBrand", () => {
-  it("creates org and brand shell, returns their IDs", async () => {
-    const supabase = makeSupabaseMock({ orgId: "org-1", brandId: "brand-2" });
-    const result = await createOrgAndBrand(supabase as unknown as SupabaseClient, "user-123", FORM);
-    expect(result.orgId).toBe("org-1");
-    expect(result.brandId).toBe("brand-2");
+  it("ensures a draft session then materializes via RPC", async () => {
+    const supabase = makeMaterializeMock();
+    const result = await createOrgAndBrand(supabase, "user-123", FORM, { idempotencyKey: KEY });
+    expect(result.orgId).toBe(ORG_ID);
+    expect(result.brandId).toBe(BRAND_ID);
+    expect(supabase.rpc).toHaveBeenCalledWith("materialize_onboarding_session", {
+      p_idempotency_key: KEY,
+      p_brand_name: FORM.brandName,
+      p_brand_url: FORM.websiteUrl,
+    });
+    expect(supabase.from).toHaveBeenCalledWith("onboarding_sessions");
+    expect(supabase.from).not.toHaveBeenCalledWith("organizations");
+    expect(supabase.from).not.toHaveBeenCalledWith("brands");
   });
 
-  it("inserts org with owner_id, brand with org_id and shell ai_profile", async () => {
-    const supabase = makeSupabaseMock({ orgId: "org-abc" });
-    await createOrgAndBrand(supabase as unknown as SupabaseClient, "user-abc", FORM);
-    expect(supabase.orgInsert).toHaveBeenCalledWith(expect.objectContaining({ owner_id: "user-abc" }));
-    expect(supabase.brandInsert).toHaveBeenCalledWith(expect.objectContaining({
-      org_id: "org-abc",
-      brand_url: FORM.websiteUrl,
-      ai_profile: expect.objectContaining({ industry: FORM.industry, goal: FORM.goal, _lifecycle: "brand_created" }),
-    }));
-    expect(supabase.from).not.toHaveBeenCalledWith("brand_scores");
-  });
-
-  it("throws if org creation fails", async () => {
-    const supabase = makeSupabaseMock({ orgError: { message: "unique violation" } });
+  it("throws if the materialize RPC fails", async () => {
+    const supabase = makeMaterializeMock({ rpcError: { message: "session not found" } });
     await expect(
-      createOrgAndBrand(supabase as unknown as SupabaseClient, "user-abc", FORM),
-    ).rejects.toThrow("unique violation");
+      createOrgAndBrand(supabase, "user-abc", FORM, { idempotencyKey: KEY }),
+    ).rejects.toThrow("session not found");
   });
 
-  it("throws if brand creation fails", async () => {
-    const supabase = makeSupabaseMock({ brandError: { message: "brand insert fail" } });
+  it("throws if RPC returns an unexpected payload", async () => {
+    const supabase = makeMaterializeMock({
+      rpcData: { organization_id: "not-a-uuid", brand_id: "also-bad" } as never,
+    });
+    // Override rpc to return garbage
+    supabase.rpc = vi.fn().mockResolvedValue({
+      data: { organization_id: "x", brand_id: "y" },
+      error: null,
+    });
     await expect(
-      createOrgAndBrand(supabase as unknown as SupabaseClient, "user-abc", FORM),
-    ).rejects.toThrow("brand insert fail");
+      createOrgAndBrand(supabase, "user-abc", FORM, { idempotencyKey: KEY }),
+    ).rejects.toThrow("unexpected payload");
   });
 });
 

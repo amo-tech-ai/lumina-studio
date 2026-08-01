@@ -1,20 +1,35 @@
-// IPI-46 — onboarding shell + orchestration helpers (pure functions, testable in node)
+// IPI-46 / IPI-832 — onboarding shell + orchestration helpers (pure functions, testable in node)
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-// IPI-833 — moved to ./onboarding/validate-url so the onboarding UI can import
-// the rule without pulling this module's Supabase work into the Worker bundle.
-// Re-exported here so every existing caller is unchanged.
-export { validateUrl } from "./onboarding/validate-url";
+import {
+  materializeResultSchema,
+  type OnboardingForm,
+  type OnboardingSession,
+} from "./schema";
 
-export const slugify = (s: string): string =>
-  `${s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 50)}-${Math.random().toString(36).slice(2, 7)}`;
+export { validateUrl } from "./validate-url";
+export {
+  onboardingFormSchema,
+  onboardingSessionSchema,
+  onboardingSessionStatusSchema,
+  materializeResultSchema,
+  type OnboardingForm,
+  type OnboardingSession,
+  type OnboardingSessionStatus,
+  type MaterializeResult,
+} from "./schema";
 
-export type OnboardingForm = {
-  brandName: string;
-  websiteUrl: string;
-  instagramHandle: string;
-  industry: string;
-  goal: string;
+/**
+ * Deterministic slug helper (tests + non-RPC callers).
+ * Materialize RPC builds its own slug from the pre-generated org UUID — no Math.random.
+ */
+export const slugify = (s: string, uniqueSuffix = ""): string => {
+  const base = s
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "")
+    .slice(0, 50);
+  return uniqueSuffix ? `${base}-${uniqueSuffix}` : base;
 };
 
 export type CreateBrandResult = { orgId: string; brandId: string };
@@ -29,69 +44,111 @@ export const buildShellAiProfile = (form: OnboardingForm): Record<string, unknow
   _lifecycle: "brand_created",
 });
 
-const insertOrganization = async (
+/**
+ * Get-or-create a draft session for a stable browser idempotency_key.
+ * Prefer one key per browser (localStorage) so refresh resumes the same draft.
+ */
+export const getOrCreateOnboardingSession = async (
   supabase: SupabaseClient,
   userId: string,
-  form: OnboardingForm,
-) => {
-  const { data: org, error: orgErr } = await supabase
-    .from("organizations")
-    .insert({
-      name: form.brandName,
-      slug: slugify(form.brandName),
-      owner_id: userId,
-      type: "brand",
-    })
-    .select("id")
-    .single();
+  idempotencyKey: string,
+): Promise<OnboardingSession> => {
+  const { data: existing, error: selectErr } = await supabase
+    .from("onboarding_sessions")
+    .select(
+      "id, user_id, idempotency_key, status, current_screen, draft_answers, organization_id, brand_id",
+    )
+    .eq("user_id", userId)
+    .eq("idempotency_key", idempotencyKey)
+    .maybeSingle();
 
-  if (orgErr || !org?.id) {
-    throw new Error(orgErr?.message ?? "Failed to create organization");
+  if (selectErr) {
+    throw new Error(selectErr.message ?? "Failed to load onboarding session");
+  }
+  if (existing) {
+    return existing as OnboardingSession;
   }
 
-  return org.id;
-};
-
-const insertBrandShell = async (
-  supabase: SupabaseClient,
-  userId: string,
-  orgId: string,
-  form: OnboardingForm,
-) => {
-  const { data: brand, error: brandErr } = await supabase
-    .from("brands")
+  const { data: created, error: insertErr } = await supabase
+    .from("onboarding_sessions")
     .insert({
-      name: form.brandName,
-      brand_url: form.websiteUrl.trim(),
       user_id: userId,
-      org_id: orgId,
-      ai_profile: buildShellAiProfile(form),
+      idempotency_key: idempotencyKey,
+      status: "draft",
+      current_screen: 1,
+      draft_answers: {},
     })
-    .select("id")
+    .select(
+      "id, user_id, idempotency_key, status, current_screen, draft_answers, organization_id, brand_id",
+    )
     .single();
 
-  if (brandErr || !brand?.id) {
-    throw new Error(brandErr?.message ?? "Failed to create brand");
+  if (insertErr || !created) {
+    // Concurrent insert: unique (user_id, idempotency_key) — re-select.
+    if (insertErr?.code === "23505") {
+      const { data: raced, error: raceErr } = await supabase
+        .from("onboarding_sessions")
+        .select(
+          "id, user_id, idempotency_key, status, current_screen, draft_answers, organization_id, brand_id",
+        )
+        .eq("user_id", userId)
+        .eq("idempotency_key", idempotencyKey)
+        .single();
+      if (raceErr || !raced) {
+        throw new Error(raceErr?.message ?? "Failed to load onboarding session after conflict");
+      }
+      return raced as OnboardingSession;
+    }
+    throw new Error(insertErr?.message ?? "Failed to create onboarding session");
   }
 
-  return brand.id;
+  return created as OnboardingSession;
 };
 
-/** Step 1 of onboarding: org + brand shell only — no edge fn, no score rows. */
+/** Thin autosave for draft_answers + current_screen (IPI-835 resume depends on this). */
+export const updateOnboardingSessionDraft = async (
+  supabase: SupabaseClient,
+  sessionId: string,
+  patch: { current_screen?: number; draft_answers?: Record<string, unknown> },
+): Promise<void> => {
+  const { error } = await supabase
+    .from("onboarding_sessions")
+    .update({ ...patch, updated_at: new Date().toISOString() })
+    .eq("id", sessionId);
+
+  if (error) {
+    throw new Error(error.message ?? "Failed to update onboarding session");
+  }
+};
+
+/**
+ * Step 1 of onboarding: ensure draft session, then materialize org+brand via one INVOKER RPC.
+ * Callers must pass a stable idempotencyKey (browser localStorage / in-memory for the attempt).
+ */
 export const createOrgAndBrand = async (
   supabase: SupabaseClient,
   userId: string,
   form: OnboardingForm,
+  options: { idempotencyKey: string },
 ): Promise<CreateBrandResult> => {
-  const orgId = await insertOrganization(supabase, userId, form);
+  await getOrCreateOnboardingSession(supabase, userId, options.idempotencyKey);
 
-  try {
-    const brandId = await insertBrandShell(supabase, userId, orgId, form);
-    return { orgId, brandId };
-  } catch (err) {
-    await supabase.from("organizations").delete().eq("id", orgId);
-    throw err;
+  const { data, error } = await supabase.rpc("materialize_onboarding_session", {
+    p_idempotency_key: options.idempotencyKey,
+    p_brand_name: form.brandName,
+    p_brand_url: form.websiteUrl.trim(),
+  });
+
+  if (error) {
+    throw new Error(error.message ?? "Failed to materialize onboarding session");
   }
+
+  const parsed = materializeResultSchema.safeParse(data);
+  if (!parsed.success) {
+    throw new Error("materialize_onboarding_session returned an unexpected payload");
+  }
+
+  return { orgId: parsed.data.organization_id, brandId: parsed.data.brand_id };
 };
 
 export type BrandIntelligenceResponse = {
