@@ -1,10 +1,10 @@
-# /linear — iPix Linear Issue Lifecycle with Full Enrichment
+# /linear-enrich — iPix Linear Issue Lifecycle with Full Enrichment
 
 **Purpose:** Complete Linear issue lifecycle with automatic Phase 1 enrichment (mermaid diagrams, wireframes, API wiring, user stories, design references).
 
 **Usage:**
 ```
-/linear IPI-NNN [IPI-MMM ...]
+/linear-enrich IPI-NNN [IPI-MMM ...]
 ```
 
 ---
@@ -286,7 +286,7 @@ NEXT STEPS:
    /task IPI-NNN
 
 3. Or continue planning:
-   - Add more user stories: /linear IPI-NNN --stories
+   - Add more user stories: /linear-enrich IPI-NNN --stories
    - Update diagrams: /mermaid-diagrams
    - Refine wireframe: /ipix-wireframe
 
@@ -445,7 +445,7 @@ If new tool/agent:
 ## Example Invocation
 
 ```bash
-/linear IPI-284
+/linear-enrich IPI-284
 
 # Output:
 # Loading IPI-284 from Linear...
@@ -479,11 +479,11 @@ If new tool/agent:
 ## Flags (Optional)
 
 ```bash
-/linear IPI-NNN --stories        # Generate 5 additional user stories
-/linear IPI-NNN --diagrams       # Regenerate all mermaid diagrams
-/linear IPI-NNN --wireframe      # Regenerate wireframes only
-/linear IPI-NNN --sync           # Sync spec to Linear (no regeneration)
-/linear IPI-NNN --dependencies   # Deep-check all dependencies
+/linear-enrich IPI-NNN --stories        # Generate 5 additional user stories
+/linear-enrich IPI-NNN --diagrams       # Regenerate all mermaid diagrams
+/linear-enrich IPI-NNN --wireframe      # Regenerate wireframes only
+/linear-enrich IPI-NNN --sync           # Sync spec to Linear (no regeneration)
+/linear-enrich IPI-NNN --dependencies   # Deep-check all dependencies
 ```
 
 ---
