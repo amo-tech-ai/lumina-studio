@@ -4,17 +4,59 @@
 -- Mirrors the publication DDL inside begin…rollback so CI can pass before
 -- supabase:push (same pattern as 008_onboarding_sessions.sql).
 --
--- Plan math: 5 asserts
---   published(1) + exact columns(1) + no draft leak(1) + no lock leak(1)
---   + sibling brand_crawls still published(1)
+-- Plan math: 6 asserts
+--   wrong-shape setup(1) + published(1) + exact columns(1) + no draft leak(1)
+--   + no lock leak(1) + sibling brand_crawls still published(1)
 --
 -- Mirror must use IF NOT FOUND for absence: attnames is NULL for full-table
 -- publish as well as for a missing row, so `IF current_cols IS NULL` is wrong.
+-- Setup forces full-table membership so the DO hits DROP+ADD, not the no-op
+-- path that would run after a successful real migration apply.
 
 set search_path to public, extensions;
 
 begin;
-select plan(5);
+select plan(6);
+
+-- Force wrong-shape: brands in supabase_realtime with no column list.
+-- Only touch brands — leave brand_crawls (and any other siblings) alone.
+do $$
+begin
+  if exists (
+    select 1
+    from pg_publication_tables
+    where pubname = 'supabase_realtime'
+      and schemaname = 'public'
+      and tablename = 'brands'
+  ) then
+    alter publication supabase_realtime drop table public.brands;
+  end if;
+
+  alter publication supabase_realtime add table public.brands;
+end $$;
+
+select ok(
+  exists(
+    select 1
+    from pg_publication_tables
+    where pubname = 'supabase_realtime'
+      and schemaname = 'public'
+      and tablename = 'brands'
+  )
+  and coalesce(
+    (
+      select array_agg(col order by col)
+      from pg_publication_tables p
+      cross join lateral unnest(p.attnames) as col
+      where p.pubname = 'supabase_realtime'
+        and p.schemaname = 'public'
+        and p.tablename = 'brands'
+    ),
+    array[]::name[]
+  )
+  is distinct from array['id', 'intake_status', 'updated_at']::name[],
+  'setup: brands is published in a wrong shape before repair'
+);
 
 -- Mirror 20260801080000 (transactional; rolled back with fixtures).
 do $$
@@ -68,7 +110,7 @@ select is(
       and p.tablename = 'brands'
   ),
   array['id', 'intake_status', 'updated_at']::name[],
-  'brands publication attnames are exactly {id, intake_status, updated_at}'
+  'repair path: brands attnames are exactly {id, intake_status, updated_at}'
 );
 
 select ok(
