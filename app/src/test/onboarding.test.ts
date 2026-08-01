@@ -138,10 +138,11 @@ const makeMaterializeMock = ({
     error: rpcError,
   });
 
-  return { from, rpc, insert, selectChain } as unknown as SupabaseClient & {
+  return { from, rpc, insert, selectChain, brandUpdate } as unknown as SupabaseClient & {
     from: ReturnType<typeof vi.fn>;
     rpc: ReturnType<typeof vi.fn>;
     insert: ReturnType<typeof vi.fn>;
+    brandUpdate: ReturnType<typeof vi.fn>;
   };
 };
 
@@ -159,6 +160,14 @@ describe("createOrgAndBrand", () => {
     expect(supabase.from).toHaveBeenCalledWith("onboarding_sessions");
     expect(supabase.from).toHaveBeenCalledWith("brands");
     expect(supabase.from).not.toHaveBeenCalledWith("organizations");
+    expect(supabase.brandUpdate).toHaveBeenCalledWith({
+      ai_profile: {
+        instagram_handle: "testbrand",
+        industry: FORM.industry,
+        goal: FORM.goal,
+        _lifecycle: "brand_created",
+      },
+    });
   });
 
   it("throws if the materialize RPC fails", async () => {
