@@ -1,18 +1,11 @@
 ---
 name: mastra
-description: "Mastra framework: docs lookup (links.md, mastraDocs MCP, embedded docs), agents, workflows, streaming, browser, tools, memory, RAG, processors, CopilotKit guide. Verify from installed docs — never trust training-data APIs. NOT for: product intent routing (mastra-routing), Managed Agents API harness (mde-agents), non-Mastra frameworks. Load when editing src/mastra/**, Mastra tools/workflows, memory, streaming/events, browser automation, or Mastra doc URLs."
-title: Mastra framework guide
-impact: HIGH
-impactDescription: Docs routing, agents/workflows, embedded vs remote APIs
-tags: mastra, agents, workflows, tools, memory, rag, typescript
+description: "Mastra framework: docs lookup (links.md, mastraDocs MCP, embedded docs), agents, workflows, streaming, browser, tools, memory, RAG, processors, CopilotKit guide. Verify from installed docs — never trust training-data APIs. NOT for: product intent routing (mastra-routing), Managed Agents API harness (mde-agents), non-Mastra frameworks. Load when editing app/src/mastra/** or any *mastra* file, Mastra tools/workflows, memory, streaming/events, browser automation, or Mastra doc URLs."
 license: Apache-2.0
 metadata:
   author: Mastra
   version: "2.1.0"
   repository: https://github.com/mastra-ai/skills
-paths:
-  - "app/src/mastra/**"
-  - "**/*mastra*"
 ---
 
 # Mastra Framework Guide

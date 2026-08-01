@@ -5,15 +5,11 @@ description: >
   functions, storage, Realtime, verify-rls. Consolidates edge-functions, generic
   Supabase SQL/RLS/migrations, the Supabase CLI, and Postgres performance best-practices
   into one skill with on-demand references. Use for ANY Supabase work
-  in this repo. NOT for Mercur commerce tables or legacy Medellín/FashionOS edge functions.
-version: "1.4.0"
-paths:
-  - "supabase/**"
-  - "**/*.sql"
-  - "app/src/lib/supabase*"
-  - "app/src/lib/onboarding.ts"
-  - "src/lib/supabase*"
-  - "src/services/profileService.ts"
+  in this repo — including anything under supabase/**, any *.sql file, app/src/lib/supabase*,
+  app/src/lib/onboarding.ts, src/lib/supabase*, or src/services/profileService.ts.
+  NOT for Mercur commerce tables or legacy Medellín/FashionOS edge functions.
+metadata:
+  version: "1.4.0"
 ---
 
 # ipix-supabase — Supabase hub
