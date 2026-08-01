@@ -38,8 +38,21 @@ def validate_skill(skill_path):
     except yaml.YAMLError as e:
         return False, f"Invalid YAML in frontmatter: {e}"
 
-    # Define allowed properties
-    ALLOWED_PROPERTIES = {'name', 'description', 'license', 'allowed-tools', 'metadata', 'compatibility'}
+    # Allowed properties — mirrors the frontmatter reference table in the bundled
+    # Claude Code docs (.claude/skills/archive/claude-code-docs/references/skills.md).
+    # Keep in sync when that table changes; an out-of-date list here reports false
+    # positives on valid skills (it flagged the supported `paths` key as unknown,
+    # which sent PR #708 chasing a bug that did not exist).
+    ALLOWED_PROPERTIES = {
+        'name', 'description', 'when_to_use', 'argument-hint', 'arguments',
+        'disable-model-invocation', 'user-invocable', 'allowed-tools',
+        'disallowed-tools', 'model', 'effort', 'context', 'agent', 'hooks',
+        'paths', 'shell', 'license', 'metadata', 'compatibility',
+        # Not in the docs table, but used by 14 skills here and ignored by the
+        # runtime. Kept as an accepted repo-local convention rather than churning
+        # every SKILL.md.
+        'version',
+    }
 
     # Check for unexpected properties (excluding nested keys under metadata)
     unexpected_keys = set(frontmatter.keys()) - ALLOWED_PROPERTIES
