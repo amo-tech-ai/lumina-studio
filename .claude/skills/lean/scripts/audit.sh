@@ -2,7 +2,12 @@
 # lean audit.sh — safe, read-only repo + environment scan
 # Run from repo root: bash .claude/skills/lean/scripts/audit.sh
 
-set -euo pipefail
+# No `pipefail`: this script pipes long listings into `head`, which exits early and
+# SIGPIPEs the producer. Under pipefail that surfaces as exit 141, and `set -e` then
+# aborts the whole audit partway through with no error message. The pipelines here
+# are read-only diagnostics — a failing stage shows up in the output; silently
+# losing five of the seven audit sections does not.
+set -eu
 REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
 cd "$REPO_ROOT"
 
