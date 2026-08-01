@@ -25,13 +25,17 @@ const OnboardingPage = () => {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [shell, setShell] = useState<{ orgId: string; brandId: string } | null>(null);
-  // Stable per mount — retries / double-taps hit the same materialize idempotency key.
-  // Cross-visit resume uses localStorage in IPI-835; this unblocks the RPC path now.
-  const [idempotencyKey] = useState(() => crypto.randomUUID());
+  // Stable for retries / double-taps on the same identity. Rotate when brand identity
+  // fields change so Edit details cannot reuse a prior materialize/crawl key.
+  // Cross-visit resume uses localStorage in IPI-835.
+  const [idempotencyKey, setIdempotencyKey] = useState(() => crypto.randomUUID());
 
   const setField = (field: keyof OnboardingForm, value: string) => {
     setForm((f) => ({ ...f, [field]: value }));
     setShell(null);
+    if (field === "brandName" || field === "websiteUrl") {
+      setIdempotencyKey(crypto.randomUUID());
+    }
     if (field === "websiteUrl") setUrlError(null);
     if (field === "brandName") setNameError(null);
   };

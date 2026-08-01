@@ -116,7 +116,14 @@ const makeMaterializeMock = ({
     select: () => selectChain,
   });
 
+  const brandUpdate = vi.fn().mockReturnValue({
+    eq: vi.fn().mockResolvedValue({ data: null, error: null }),
+  });
+
   const from = vi.fn((table: string) => {
+    if (table === "brands") {
+      return { update: brandUpdate };
+    }
     if (table !== "onboarding_sessions") throw new Error(`unexpected table: ${table}`);
     return {
       select: () => selectChain,
@@ -150,8 +157,8 @@ describe("createOrgAndBrand", () => {
       p_brand_url: FORM.websiteUrl,
     });
     expect(supabase.from).toHaveBeenCalledWith("onboarding_sessions");
+    expect(supabase.from).toHaveBeenCalledWith("brands");
     expect(supabase.from).not.toHaveBeenCalledWith("organizations");
-    expect(supabase.from).not.toHaveBeenCalledWith("brands");
   });
 
   it("throws if the materialize RPC fails", async () => {

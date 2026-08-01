@@ -40,6 +40,14 @@ describe("onboarding orchestration (IPI-46 / IPI-832)", () => {
 
     const supabase = {
       from: (table: string) => {
+        if (table === "brands") {
+          order.push("shell_ai_profile");
+          return {
+            update: () => ({
+              eq: () => Promise.resolve({ data: null, error: null }),
+            }),
+          };
+        }
         if (table !== "onboarding_sessions") throw new Error(`unexpected table ${table}`);
         return {
           select: () => selectChain,
@@ -78,7 +86,13 @@ describe("onboarding orchestration (IPI-46 / IPI-832)", () => {
     });
     await invokeBrandIntelligence(supabase, brandId, FORM, { crawlResultId: "crawl-1" });
 
-    expect(order).toEqual(["session", "materialize_onboarding_session", "crawl", "edge"]);
+    expect(order).toEqual([
+      "session",
+      "materialize_onboarding_session",
+      "shell_ai_profile",
+      "crawl",
+      "edge",
+    ]);
     expect(supabase.rpc).toHaveBeenCalledWith("materialize_onboarding_session", {
       p_idempotency_key: KEY,
       p_brand_name: FORM.brandName,
@@ -183,5 +197,6 @@ describe("onboarding orchestration (IPI-46 / IPI-832)", () => {
     expect(runBlock).toMatch(/start-brand-crawl failed, continuing with brand intelligence/);
     expect(src).not.toMatch(/invoke\("brand-intelligence"/);
     expect(src).toMatch(/setShell/);
+    expect(src).toMatch(/setIdempotencyKey/);
   });
 });

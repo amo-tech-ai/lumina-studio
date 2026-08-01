@@ -148,7 +148,19 @@ export const createOrgAndBrand = async (
     throw new Error("materialize_onboarding_session returned an unexpected payload");
   }
 
-  return { orgId: parsed.data.organization_id, brandId: parsed.data.brand_id };
+  const { organization_id: orgId, brand_id: brandId } = parsed.data;
+
+  // Shell metadata (industry/goal/IG) lived on brands.ai_profile before the RPC move.
+  // Edge brand-intelligence merges priorProfile — without this write those fields vanish.
+  const { error: shellErr } = await supabase
+    .from("brands")
+    .update({ ai_profile: buildShellAiProfile(form) })
+    .eq("id", brandId);
+  if (shellErr) {
+    throw new Error(shellErr.message ?? "Failed to persist onboarding shell ai_profile");
+  }
+
+  return { orgId, brandId };
 };
 
 export type BrandIntelligenceResponse = {
