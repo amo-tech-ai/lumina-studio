@@ -4,7 +4,10 @@
 -- Same pre-merge pattern as 007_org_tenant_isolation.sql: apply the migration DDL
 -- inside begin…rollback so CI passes before supabase:push lands the real objects.
 --
--- Plan math: 12 asserts (unique + check + RLS + grants + invoker + atomicity)
+-- Plan math: 17 asserts
+--   unique(2) + check(1) + RLS shape(1) + stranger deny(1) + owner allow(1)
+--   + null-auth(1) + invoker(1) + grants(3) + success/replay/status/org/brand(5)
+--   + atomic fail(2)
 
 set search_path to public, extensions;
 
@@ -27,13 +30,52 @@ create table if not exists public.onboarding_sessions (
   constraint onboarding_sessions_user_key unique (user_id, idempotency_key)
 );
 
+drop trigger if exists onboarding_sessions_set_updated_at on public.onboarding_sessions;
+create trigger onboarding_sessions_set_updated_at
+  before update on public.onboarding_sessions
+  for each row execute function public.set_updated_at();
+
 alter table public.onboarding_sessions enable row level security;
 
 drop policy if exists "onboarding_sessions_own" on public.onboarding_sessions;
-create policy "onboarding_sessions_own" on public.onboarding_sessions
-  for all to authenticated
-  using ((select auth.uid()) = user_id)
-  with check ((select auth.uid()) = user_id);
+drop policy if exists "onboarding_sessions_select_own" on public.onboarding_sessions;
+drop policy if exists "onboarding_sessions_insert_own" on public.onboarding_sessions;
+drop policy if exists "onboarding_sessions_update_own" on public.onboarding_sessions;
+drop policy if exists "onboarding_sessions_delete_own" on public.onboarding_sessions;
+
+create policy "onboarding_sessions_select_own" on public.onboarding_sessions
+  for select to authenticated
+  using ((select auth.uid()) = user_id);
+
+create policy "onboarding_sessions_insert_own" on public.onboarding_sessions
+  for insert to authenticated
+  with check (
+    (select auth.uid()) = user_id
+    and status = 'draft'
+    and organization_id is null
+    and brand_id is null
+  );
+
+create policy "onboarding_sessions_update_own" on public.onboarding_sessions
+  for update to authenticated
+  using (
+    (select auth.uid()) = user_id
+    and (
+      status = 'draft'
+      or current_setting('app.onboarding_materializing', true) = 'on'
+    )
+  )
+  with check (
+    (select auth.uid()) = user_id
+    and (
+      (status = 'draft' and organization_id is null and brand_id is null)
+      or current_setting('app.onboarding_materializing', true) = 'on'
+    )
+  );
+
+create policy "onboarding_sessions_delete_own" on public.onboarding_sessions
+  for delete to authenticated
+  using ((select auth.uid()) = user_id);
 
 create or replace function public.materialize_onboarding_session(
   p_idempotency_key text,
@@ -80,11 +122,12 @@ begin
   insert into public.brands (id, name, org_id, user_id, brand_url)
   values (v_brand_id, p_brand_name, v_org_id, v_uid, p_brand_url);
 
+  perform set_config('app.onboarding_materializing', 'on', true);
+
   update public.onboarding_sessions
      set status = 'materialized',
          organization_id = v_org_id,
-         brand_id = v_brand_id,
-         updated_at = now()
+         brand_id = v_brand_id
    where id = v_session.id;
 
   return jsonb_build_object('organization_id', v_org_id, 'brand_id', v_brand_id);
@@ -93,7 +136,7 @@ end $$;
 revoke execute on function public.materialize_onboarding_session(text, text, text) from public, anon;
 grant  execute on function public.materialize_onboarding_session(text, text, text) to authenticated;
 
-select plan(12);
+select plan(17);
 
 insert into auth.users (id, email) values
   ('00000000-0000-4000-8000-000000000c01', 'ipi832-owner@test.local'),
@@ -135,7 +178,7 @@ select throws_ok(
   'current_screen outside 1-13 raises check_violation'
 );
 
--- ── 4) RLS enabled; exactly one policy scoped to (select auth.uid()) = user_id ─────────────
+-- ── 4) RLS enabled; four own-row policies (select/insert/update/delete) ─────────────────────
 select ok(
   (select c.relrowsecurity
      from pg_class c
@@ -145,14 +188,14 @@ select ok(
          from pg_policy p
          join pg_class c on c.oid = p.polrelid
          join pg_namespace n on n.oid = c.relnamespace
-        where n.nspname = 'public' and c.relname = 'onboarding_sessions') = 1
-  and (select coalesce(pg_get_expr(p.polqual, p.polrelid), '')
+        where n.nspname = 'public' and c.relname = 'onboarding_sessions') = 4
+  and (select bool_and(coalesce(pg_get_expr(p.polqual, p.polrelid), pg_get_expr(p.polwithcheck, p.polrelid), '')
+                         like '%auth.uid()%user_id%')
          from pg_policy p
          join pg_class c on c.oid = p.polrelid
          join pg_namespace n on n.oid = c.relnamespace
-        where n.nspname = 'public' and c.relname = 'onboarding_sessions'
-        limit 1) like '%auth.uid()%user_id%',
-  'RLS enabled with one own-row policy using (select auth.uid()) = user_id'
+        where n.nspname = 'public' and c.relname = 'onboarding_sessions'),
+  'RLS enabled with four own-row policies using (select auth.uid()) = user_id'
 );
 
 -- ── 5) user A selecting user B's session → 0 rows ──────────────────────────────────────────
@@ -174,9 +217,19 @@ select is(
   'a stranger reads zero rows for another user''s onboarding session'
 );
 
--- ── 6) RPC with auth.uid() null raises 42501 ───────────────────────────────────────────────
--- Test 5 left request.jwt.claim.sub = stranger; reset role alone does not clear it, so
--- auth.uid() stayed non-null and the RPC raised P0002 (session not found) instead of 42501.
+-- ── 6) owner reads own row (allow path) ────────────────────────────────────────────────────
+set local request.jwt.claims = '{"sub":"00000000-0000-4000-8000-000000000c01","role":"authenticated"}';
+set local request.jwt.claim.sub = '00000000-0000-4000-8000-000000000c01';
+
+select is(
+  (select count(*)::int from public.onboarding_sessions
+     where id = '00000000-0000-4000-8000-000000000d01'),
+  1,
+  'the owner reads their own onboarding session'
+);
+
+-- ── 7) RPC with auth.uid() null raises 42501 ───────────────────────────────────────────────
+-- Test 5/6 left request.jwt.claim.sub set; reset role alone does not clear it.
 reset role;
 set local request.jwt.claims = '{}';
 set local request.jwt.claim.sub = '';
@@ -187,7 +240,7 @@ select throws_ok(
   'materialize_onboarding_session without auth.uid() raises insufficient_privilege'
 );
 
--- ── 7) RPC is security invoker with search_path = public ───────────────────────────────────
+-- ── 8) RPC is security invoker with search_path = public ───────────────────────────────────
 select ok(
   (select not p.prosecdef
         and coalesce(array_to_string(p.proconfig, ','), '') like '%search_path=public%'
@@ -195,12 +248,12 @@ select ok(
      join pg_namespace n on n.oid = p.pronamespace
     where n.nspname = 'public'
       and p.proname = 'materialize_onboarding_session'
-      and pg_get_function_identity_arguments(p.oid) = 'text, text, text'),
+      and pg_get_function_identity_arguments(p.oid)
+          = 'p_idempotency_key text, p_brand_name text, p_brand_url text'),
   'materialize_onboarding_session is SECURITY INVOKER with search_path=public'
 );
 
--- ── 8–10) EXECUTE grants: PUBLIC/anon denied, authenticated allowed ────────────────────────
--- PUBLIC is a pseudo-role (not in pg_roles); probe ACL directly (see 010 note).
+-- ── 9–11) EXECUTE grants: PUBLIC/anon denied, authenticated allowed ────────────────────────
 select is(
   coalesce((
     select bool_or(a.privilege_type = 'EXECUTE')
@@ -228,8 +281,49 @@ select is(
   'authenticated must EXECUTE materialize_onboarding_session'
 );
 
--- ── 11) forced brand-insert failure leaves 0 organizations ─────────────────────────────────
--- Temporary trigger aborts brand insert; whole RPC transaction must roll back the org row.
+-- ── 12–16) success path, status, org/brand counts, replay idempotency ──────────────────────
+insert into public.onboarding_sessions (user_id, idempotency_key)
+values ('00000000-0000-4000-8000-000000000c01', 'ipi832-key-ok');
+
+set local request.jwt.claims = '{"sub":"00000000-0000-4000-8000-000000000c01","role":"authenticated"}';
+set local request.jwt.claim.sub = '00000000-0000-4000-8000-000000000c01';
+set local role authenticated;
+
+create temporary table _ipi832_result on commit drop as
+select public.materialize_onboarding_session(
+  'ipi832-key-ok', 'IPI832 Happy Brand', 'https://happy.test'
+) as first_call;
+
+select is(
+  (select public.materialize_onboarding_session(
+     'ipi832-key-ok', 'IPI832 Happy Brand', 'https://happy.test')),
+  (select first_call from _ipi832_result),
+  'replay returns the identical organization_id and brand_id'
+);
+
+select is(
+  (select status from public.onboarding_sessions
+     where user_id = '00000000-0000-4000-8000-000000000c01'
+       and idempotency_key = 'ipi832-key-ok'),
+  'materialized',
+  'successful materialize sets status = materialized'
+);
+
+reset role;
+
+select is(
+  (select count(*)::int from public.organizations where name = 'IPI832 Happy Brand'),
+  1,
+  'materialization creates exactly one organization'
+);
+
+select is(
+  (select count(*)::int from public.brands where name = 'IPI832 Happy Brand'),
+  1,
+  'materialization creates exactly one brand'
+);
+
+-- ── 16–17) forced brand-insert failure leaves 0 organizations ──────────────────────────────
 create or replace function public._ipi832_fail_brand_insert()
 returns trigger
 language plpgsql

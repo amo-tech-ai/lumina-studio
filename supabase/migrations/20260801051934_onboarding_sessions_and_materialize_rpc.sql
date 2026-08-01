@@ -7,8 +7,12 @@
 -- Unique (user_id, idempotency_key) is the duplicate-prevention primitive; app uses a
 -- stable browser idempotency_key (localStorage / in-memory) so get-or-create hits one draft.
 --
+-- Clients may write draft columns only. Outcome columns (status, organization_id, brand_id)
+-- flip only when the RPC sets transaction-local app.onboarding_materializing=on.
+--
 -- Rollback:
 --   drop function public.materialize_onboarding_session(text, text, text);
+--   drop trigger if exists onboarding_sessions_set_updated_at on public.onboarding_sessions;
 --   drop table public.onboarding_sessions;
 
 create table public.onboarding_sessions (
@@ -31,12 +35,47 @@ create table public.onboarding_sessions (
   constraint onboarding_sessions_user_key unique (user_id, idempotency_key)
 );
 
+create trigger onboarding_sessions_set_updated_at
+  before update on public.onboarding_sessions
+  for each row execute function public.set_updated_at();
+
 alter table public.onboarding_sessions enable row level security;
 
-create policy "onboarding_sessions_own" on public.onboarding_sessions
-  for all to authenticated
-  using ((select auth.uid()) = user_id)
-  with check ((select auth.uid()) = user_id);
+-- Ownership preserved; draft-shaped writes only. RPC sets app.onboarding_materializing
+-- for the single UPDATE that writes outcome columns (keeps SECURITY INVOKER for org/brand).
+create policy "onboarding_sessions_select_own" on public.onboarding_sessions
+  for select to authenticated
+  using ((select auth.uid()) = user_id);
+
+create policy "onboarding_sessions_insert_own" on public.onboarding_sessions
+  for insert to authenticated
+  with check (
+    (select auth.uid()) = user_id
+    and status = 'draft'
+    and organization_id is null
+    and brand_id is null
+  );
+
+create policy "onboarding_sessions_update_own" on public.onboarding_sessions
+  for update to authenticated
+  using (
+    (select auth.uid()) = user_id
+    and (
+      status = 'draft'
+      or current_setting('app.onboarding_materializing', true) = 'on'
+    )
+  )
+  with check (
+    (select auth.uid()) = user_id
+    and (
+      (status = 'draft' and organization_id is null and brand_id is null)
+      or current_setting('app.onboarding_materializing', true) = 'on'
+    )
+  );
+
+create policy "onboarding_sessions_delete_own" on public.onboarding_sessions
+  for delete to authenticated
+  using ((select auth.uid()) = user_id);
 
 create or replace function public.materialize_onboarding_session(
   p_idempotency_key text,
@@ -89,11 +128,13 @@ begin
   insert into public.brands (id, name, org_id, user_id, brand_url)
   values (v_brand_id, p_brand_name, v_org_id, v_uid, p_brand_url);
 
+  -- Transaction-local; lets UPDATE with check accept outcome columns. Not exposed via PostgREST.
+  perform set_config('app.onboarding_materializing', 'on', true);
+
   update public.onboarding_sessions
      set status = 'materialized',
          organization_id = v_org_id,
-         brand_id = v_brand_id,
-         updated_at = now()
+         brand_id = v_brand_id
    where id = v_session.id;
 
   return jsonb_build_object('organization_id', v_org_id, 'brand_id', v_brand_id);
