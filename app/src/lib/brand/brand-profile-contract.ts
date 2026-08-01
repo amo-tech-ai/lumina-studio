@@ -4,14 +4,14 @@
  * SSOT: supabase/functions/_shared/schemas/brand-profile.schema.json
  * Runtime rules mirror Edge validateBrandProfilePayload (parity-tested).
  * Do NOT add a hand-maintained Zod field list here.
+ *
+ * ponytail: do not static-import the JSON from outside app/ — Turbopack
+ * cannot resolve ../../../../supabase/... during next build. Parity tests
+ * read the SSOT via fs; this module only needs the shared validation rules.
  */
 import { z } from "zod";
-import brandProfileSchema from "../../../../supabase/functions/_shared/schemas/brand-profile.schema.json";
 
 export const BRAND_PROFILE_SCHEMA_VERSION = 2 as const;
-
-/** Canonical JSON Schema document (imported — not re-authored). */
-export const brandProfileJsonSchema = brandProfileSchema;
 
 const QUOTE_MAX = 500;
 const VALUE_MAX = 2000;

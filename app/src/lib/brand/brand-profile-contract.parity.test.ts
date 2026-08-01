@@ -5,27 +5,39 @@ import { describe, expect, it } from "vitest";
 import {
   assertBrandProfile,
   brandProfileContractSchema,
-  brandProfileJsonSchema,
   validateBrandProfilePayload,
 } from "./brand-profile-contract";
 
-const fixturesDir = join(
+const schemasDir = join(
   dirname(fileURLToPath(import.meta.url)),
-  "../../../../supabase/functions/_shared/schemas/fixtures",
+  "../../../../supabase/functions/_shared/schemas",
 );
+const fixturesDir = join(schemasDir, "fixtures");
 
 function loadFixture(name: string): Record<string, unknown> {
   return JSON.parse(readFileSync(join(fixturesDir, name), "utf8")) as Record<string, unknown>;
 }
 
+function loadCanonicalSchema(): {
+  title?: string;
+  $defs?: Record<string, unknown>;
+  required?: string[];
+  properties?: Record<string, unknown>;
+} {
+  return JSON.parse(
+    readFileSync(join(schemasDir, "brand-profile.schema.json"), "utf8"),
+  ) as ReturnType<typeof loadCanonicalSchema>;
+}
+
 describe("Brand DNA JSON Schema SSOT", () => {
-  it("exports the canonical schema with claim/evidence defs", () => {
-    expect(brandProfileJsonSchema.title).toBe("BrandProfile");
-    expect(brandProfileJsonSchema.$defs?.claim).toBeDefined();
-    expect(brandProfileJsonSchema.$defs?.evidence).toBeDefined();
-    expect(brandProfileJsonSchema.required).toContain("schemaVersion");
-    expect(brandProfileJsonSchema.required).not.toContain("evidenceSources");
-    expect(brandProfileJsonSchema.properties?.tagline).toEqual({
+  it("canonical Edge schema has claim/evidence defs", () => {
+    const schema = loadCanonicalSchema();
+    expect(schema.title).toBe("BrandProfile");
+    expect(schema.$defs?.claim).toBeDefined();
+    expect(schema.$defs?.evidence).toBeDefined();
+    expect(schema.required).toContain("schemaVersion");
+    expect(schema.required).not.toContain("evidenceSources");
+    expect(schema.properties?.tagline).toEqual({
       $ref: "#/$defs/claim",
       description: "Short brand tagline",
     });
