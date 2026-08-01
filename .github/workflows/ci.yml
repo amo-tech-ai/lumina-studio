@@ -381,7 +381,14 @@ jobs:
       # "Network is unreachable" — a message that names no cause and no fix. It is
       # also the exact hostname the Supabase dashboard shows first, so this is the
       # default mistake, not an exotic one: QA_DATABASE_URL was wired that way on
-      # 2026-08-01 and every pull request touching supabase/** went red.
+      # 2026-08-01 and took every open pull request red with it.
+      #
+      # Blast radius is the whole repo, not just supabase/** PRs. booking-gate has no
+      # paths: filter — booking-gate-check gates it on QA_DATABASE_URL being non-empty,
+      # nothing else. Before that secret existed the job skipped everywhere, which is
+      # why this looked path-scoped; the moment it was set, every PR started running
+      # it. This PR's own run is the proof: it touches no supabase/** file and
+      # booking-gate still failed.
       #
       # The Supavisor pooler (aws-N-<region>.pooler.supabase.com) is the IPv4 path.
       # Port 5432 is session mode, which these scripts need — 6543 is transaction

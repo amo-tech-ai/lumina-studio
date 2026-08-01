@@ -225,8 +225,9 @@ describe("booking-gate production isolation (IPI-810)", () => {
   // IPI-892 · CI-QA-NET-001 — `db.<ref>.supabase.co` is IPv6-only and GitHub runners have no
   // IPv6 route, so psql fails at TCP connect with "Network is unreachable" and names neither
   // cause nor fix. It is also the first hostname the Supabase dashboard shows, so it is the
-  // default mistake: QA_DATABASE_URL was wired that way and every supabase/**-touching pull
-  // request went red. The pattern is read out of ci.yml rather than restated, so an edit that
+  // default mistake: QA_DATABASE_URL was wired that way and took every open pull request red
+  // with it — booking-gate has no paths: filter, so this is repo-wide, not scoped to PRs that
+  // touch supabase/**. The pattern is read out of ci.yml rather than restated, so an edit that
   // breaks the match fails here instead of at the next connection attempt.
   it("refuses a direct IPv6-only database host but allows the pooler", () => {
     const guard = stepBlock(job, "Refuse an IPv6-only direct database host");
