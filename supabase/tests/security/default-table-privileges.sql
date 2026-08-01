@@ -38,7 +38,7 @@ begin
 
   if bad is not null then
     raise exception
-      'IPI-896: a new public table inherited privileges (%) — default privileges not applied. Re-run 20260801075030_ipi896_revoke_default_table_privileges.sql',
+      'IPI-896: a new public table inherited privileges (%) — default privileges not applied. Re-run 20260801091009_ipi896_revoke_default_table_privileges.sql',
       bad;
   end if;
 
