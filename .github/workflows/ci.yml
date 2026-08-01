@@ -376,6 +376,39 @@ jobs:
           done
           echo "Target check passed: production ref absent from both the Postgres URL and the Supabase API URL."
 
+      # IPI-892 · CI-QA-NET-001 — `db.<ref>.supabase.co` resolves to IPv6 only, and
+      # GitHub-hosted runners have no IPv6 route, so psql dies at TCP connect with
+      # "Network is unreachable" — a message that names no cause and no fix. It is
+      # also the exact hostname the Supabase dashboard shows first, so this is the
+      # default mistake, not an exotic one: QA_DATABASE_URL was wired that way on
+      # 2026-08-01 and took every open pull request red with it.
+      #
+      # Blast radius is the whole repo, not just supabase/** PRs. booking-gate has no
+      # paths: filter — booking-gate-check gates it on QA_DATABASE_URL being non-empty,
+      # nothing else. Before that secret existed the job skipped everywhere, which is
+      # why this looked path-scoped; the moment it was set, every PR started running
+      # it. This PR's own run is the proof: it touches no supabase/** file and
+      # booking-gate still failed.
+      #
+      # The Supavisor pooler (aws-N-<region>.pooler.supabase.com) is the IPv4 path.
+      # Port 5432 is session mode, which these scripts need — 6543 is transaction
+      # mode and drops SET ROLE / advisory locks between statements.
+      - name: Refuse an IPv6-only direct database host
+        shell: bash
+        env:
+          RESOLVED_DB_URL: ${{ github.event_name == 'pull_request' && secrets.QA_DATABASE_URL || secrets.DATABASE_URL }}
+        run: |
+          # -i because hostnames are case-insensitive: a pasted `db.REF.supabase.co`
+          # is the same unreachable host, but a case-sensitive match waves it through
+          # and the guard fails silently — the exact outcome it exists to prevent.
+          # The ([:/]|$) boundary keeps it from also matching `supabase.com` or a
+          # lookalike like `db.ref.supabase.co.example.net`, which are not this host.
+          if printf '%s' "$RESOLVED_DB_URL" | grep -qiE '@db\.[a-z0-9]+\.supabase\.co([:/]|$)'; then
+            echo "::error::booking-gate's database URL uses the direct host db.<ref>.supabase.co, which is IPv6-only and unreachable from GitHub runners. Use the Supavisor pooler instead: postgresql://postgres.<ref>:<password>@aws-1-us-east-2.pooler.supabase.com:5432/postgres?sslmode=require"
+            exit 1
+          fi
+          echo "Host check passed: database URL is not a direct IPv6-only host."
+
       # IPI-810 phase 2 — routing DATABASE_URL to QA is not sufficient on its own.
       # scripts/verify-booking-gate.mjs also spawns scripts/verify-rls.mjs, which
       # builds a createClient() from the *API* credentials below and creates real
