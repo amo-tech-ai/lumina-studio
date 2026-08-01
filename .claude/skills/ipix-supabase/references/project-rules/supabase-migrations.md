@@ -9,9 +9,10 @@ You are a Postgres Expert who loves creating secure database schemas.
 
 This project uses the migrations provided by the Supabase CLI.
 
-## Order of operations — local first, always
+## Order of operations — file first, always
 
-**Write the file → commit → review → merge → then apply to the remote.** Never the reverse.
+**Write the file → verify against the linked remote → commit → review → merge → apply →
+regenerate types when the exposed schema changed.** Never apply before the file is on `main`.
 
 Applying a migration to the live project before its file is on `main` creates a *remote-only
 migration*: the remote ledger has a version the repo cannot account for. The
@@ -19,29 +20,70 @@ migration*: the remote ledger has a version the repo cannot account for. The
 remote-first push turns **every open PR red**, not just yours. The person who applied it usually
 never sees the failure; everyone else does.
 
+This repo is **remote-only** for Postgres: do **not** run `supabase start` / `supabase db reset`.
+Historical migrations do not replay cleanly on a fresh local Docker DB (see `AGENTS.md`). Verify
+against the linked project the same way CI does.
+
 | Step | Command |
 |------|---------|
 | 1. Create the file | `supabase migration new <short_description>` |
-| 2. Verify locally | `supabase db reset` (local stack) or `supabase test db` for pgTAP |
+| 2. Verify (linked, not local Docker) | See **Verify before opening the PR** below |
 | 3. Commit + open a PR | one migration concern per PR |
-| 4. Merge to `main` | CI must be green |
-| 5. **Then** apply | `supabase db push --linked` |
+| 4. Merge to `main` | PR CI must be green (`--pr` drift mode allows this branch's new file) |
+| 5. **Immediately** apply | `supabase db push --linked` in the same session as the merge |
+| 6. Types (if schema changed) | `npm run supabase:types` → commit `app/src/types/supabase.ts` in a **follow-up PR the same day** |
 
 Never use the Dashboard SQL editor for schema changes. It writes straight to the remote with no
 file, which is the same failure with no paper trail.
 
-### Checking for drift
+### Verify before opening the PR
+
+Unmerged migrations are intentionally **local-only**. Use **PR mode** for the drift script — never
+`--main` on a branch that still has pending files (CI's push-to-`main` job uses `--main` and exits
+nonzero on any local-only version).
 
 ```bash
-node scripts/check-supabase-migration-drift.mjs --main   # local set vs remote ledger
-supabase migration list --linked                          # raw local/remote table
+git fetch origin main
+# Allows local-only versions that this branch *adds* vs origin/main
+node scripts/check-supabase-migration-drift.mjs --pr --base origin/main
+supabase db push --linked --dry-run          # should list this migration as pending
+supabase db lint --linked \
+  -s public,planner \
+  --level warning \
+  --fail-on error
 ```
 
-The first is what CI runs, as the `supabase-linked-gates` job in
-`.github/workflows/supabase-linked-gates.yml`. Run it from an **up-to-date checkout** — it
-compares the remote ledger against the `supabase/migrations/` files on disk, so a stale local
-branch reports drift that does not exist. Confirm `git log -1` matches `origin/main` before
-believing a failure.
+Structural RLS / grant probes run in CI (`supabase-verify-rls` → linked `psql` +
+`supabase test db --db-url "$DATABASE_URL"`). Do **not** substitute `supabase db reset` or a
+local `supabase test db` against Docker.
+
+### After merge — apply before `main` can stay green
+
+Merging at step 4 puts a **local-only** version on `main` until step 5 finishes. Every push to
+`main` runs `check-supabase-migration-drift.mjs --main`, which fails while that gap exists
+(`.github/workflows/supabase-linked-gates.yml`). Treat apply as part of the merge, not a later
+chore:
+
+1. Squash-merge the migration PR.
+2. From an up-to-date `main` checkout: `supabase db push --linked`.
+3. If the migration changes an exposed schema (`public` / `planner` / `graphql_public`):
+   `npm run supabase:types`, open a types-only follow-up PR, merge it. `db push` does **not**
+   refresh `app/src/types/supabase.ts`; the next linked-gates types-diff step will fail until you do.
+
+### Checking for drift (mode matters)
+
+```bash
+# On a clean, up-to-date main checkout — what push-to-main CI runs
+node scripts/check-supabase-migration-drift.mjs --main
+
+# On a PR / feature branch that introduces migrations — what pull_request CI runs
+node scripts/check-supabase-migration-drift.mjs --pr --base origin/main
+
+supabase migration list --linked   # raw local/remote table
+```
+
+Confirm `git rev-parse HEAD` matches `origin/main` before trusting a `--main` failure (stale
+disk = false drift).
 
 ### Emergency: a migration was already applied remotely
 
@@ -52,26 +94,42 @@ between "applied" and "file on `main`" is the window every other PR is blocked.
    ```bash
    supabase migration list --linked --output-format json   # find the remote-only version
    ```
-   ```sql
-   -- the remote ledger stores the applied statements
-   select version, name, statements
-   from supabase_migrations.schema_migrations
-   where version = '<version>';
+2. **Extract statements losslessly** — `statements` is `text[]`, not a ready-to-paste file.
+   Copying the array literal from a GUI/client can drop commas, quotes, or dollar-quoted bodies.
+   Write the file with ordered join (psql tuples-only / unaligned):
+
+   ```bash
+   VERSION=<version>   # e.g. 20260801091009
+   NAME=<name>         # e.g. ipi896_revoke_default_table_privileges
+   OUT="supabase/migrations/${VERSION}_${NAME}.sql"
+   psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -Atc \
+     "select array_to_string(statements, E'\n\n')
+      from supabase_migrations.schema_migrations
+      where version = '${VERSION}';" > "$OUT"
+   test -s "$OUT"
+   # sanity: statement count in ledger vs non-empty file
+   psql "$DATABASE_URL" -Atc \
+     "select cardinality(statements)
+      from supabase_migrations.schema_migrations
+      where version = '${VERSION}';"
    ```
-2. **Recreate the file at that exact version** — the filename timestamp must equal the remote
-   version, or the ledgers still will not match:
-   `supabase/migrations/<version>_<name>.sql`
+
+   The filename timestamp **must** equal the remote version, or the ledgers still will not match.
 3. **Do not re-apply it.** The remote already has it. The file exists to make the ledgers agree.
-4. **Open a capture PR the same day**, referencing the incident. Merging it clears the red check
-   for every open PR at once.
-5. Confirm with `node scripts/check-supabase-migration-drift.mjs --main` → `ok: main ledger
-   aligned; dry-run up to date`.
+4. **Open a capture PR the same day**, referencing the incident.
+5. After the capture merges, confirm from up-to-date `main`:
+   `node scripts/check-supabase-migration-drift.mjs --main` → `ok: main ledger aligned; dry-run up to date`.
+6. **Stale open PRs stay red until they refresh.** Merging the capture only greens *new* runs on
+   an updated base. Every PR that failed drift against the remote-only version must
+   `git fetch origin main && git rebase origin/main` (or merge `main`) and push so
+   `supabase-linked-gates` re-runs on the new HEAD. A green push-to-`main` suite does not clear
+   an old PR check suite.
 
 **Real incident, 2026-08-01.** `20260801091009_ipi896_revoke_default_table_privileges` was applied
 to the remote at 09:10:09; PR [#719](https://github.com/amo-tech-ai/lumina-studio/pull/719) merged
 its file at 09:20:32. For those ten minutes `supabase-linked-gates` failed on every open PR. The
-process worked — the file did land — but the ordering was backwards, and a stale base branch kept
-the false failure visible for another quarter of an hour after it was actually fixed.
+file landed, but the ordering was backwards — and PRs that never rebased kept showing the stale
+red check after `main` was already fixed.
 
 ## Creating a migration file
 
