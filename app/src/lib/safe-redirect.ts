@@ -14,7 +14,12 @@ const ALLOWED_PREFIXES = ["/app", "/onboarding"] as const;
 export function parseSafeRedirect(path: string | null | undefined): string | null {
   if (!path || path.startsWith("//")) return null;
   for (const prefix of ALLOWED_PREFIXES) {
-    if (path === prefix || path.startsWith(`${prefix}/`) || path.startsWith(`${prefix}?`)) {
+    if (
+      path === prefix ||
+      path.startsWith(`${prefix}/`) ||
+      path.startsWith(`${prefix}?`) ||
+      path.startsWith(`${prefix}#`)
+    ) {
       return path;
     }
   }

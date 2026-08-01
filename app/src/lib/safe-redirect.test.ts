@@ -12,6 +12,7 @@ describe("parseSafeRedirect", () => {
   it("returns allowlisted paths", () => {
     expect(parseSafeRedirect("/onboarding")).toBe("/onboarding");
     expect(parseSafeRedirect("/app/brands?tab=dna")).toBe("/app/brands?tab=dna");
+    expect(parseSafeRedirect("/onboarding#step2")).toBe("/onboarding#step2");
   });
 });
 
@@ -42,6 +43,8 @@ describe("safeRedirect", () => {
     expect(safeRedirect("/onboarding")).toBe("/onboarding");
     expect(safeRedirect("/onboarding/")).toBe("/onboarding/");
     expect(safeRedirect("/onboarding?source=email")).toBe("/onboarding?source=email");
+    expect(safeRedirect("/onboarding#step2")).toBe("/onboarding#step2");
+    expect(safeRedirect("/onboarding#1")).toBe("/onboarding#1");
   });
 
   it("rejects same-origin paths outside the protected routes", () => {

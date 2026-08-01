@@ -2,6 +2,7 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import {
   OAUTH_NEXT_COOKIE,
+  isOAuthCookieSecure,
   oauthNextCookieOptions,
 } from "@/lib/oauth-next-cookie";
 import { parseSafeRedirect } from "@/lib/safe-redirect";
@@ -85,9 +86,8 @@ function redirectOrigin(request: Request): string {
 }
 
 function clearOAuthNext(response: NextResponse) {
-  const secure = process.env.NODE_ENV === "production";
   response.cookies.set(OAUTH_NEXT_COOKIE, "", {
-    ...oauthNextCookieOptions(secure),
+    ...oauthNextCookieOptions(isOAuthCookieSecure()),
     maxAge: 0,
   });
 }

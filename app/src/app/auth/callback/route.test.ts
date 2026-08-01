@@ -262,6 +262,7 @@ describe("GET /auth/callback", () => {
     expect(res.headers.get("location")).toBe(
       "https://www.ipix.co/login?error=auth&redirect=%2Fonboarding",
     );
+    expect(res.cookies.get("oauth_next")?.value).toBe("");
     consoleSpy.mockRestore();
   });
 
@@ -276,6 +277,7 @@ describe("GET /auth/callback", () => {
     expect(res.headers.get("location")).toBe(
       "https://www.ipix.co/login?error=auth&redirect=%2Fonboarding",
     );
+    expect(res.cookies.get("oauth_next")?.value).toBe("");
     expect(exchangeCodeForSession).not.toHaveBeenCalled();
     consoleSpy.mockRestore();
   });

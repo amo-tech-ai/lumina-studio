@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import {
   OAUTH_NEXT_COOKIE,
+  isOAuthCookieSecure,
   oauthNextCookieOptions,
 } from "@/lib/oauth-next-cookie";
 import { parseSafeRedirect } from "@/lib/safe-redirect";
@@ -9,7 +10,7 @@ export const dynamic = "force-dynamic";
 
 /**
  * Sets (or clears) the HttpOnly `oauth_next` cookie before Google OAuth.
- * Client components cannot set HttpOnly cookies — IPI-837 · AUTH-OAUTH-001 Option B.
+ * Client components cannot set HttpOnly cookies — IPI-837.
  */
 export async function POST(request: NextRequest) {
   let raw: unknown;
@@ -21,7 +22,7 @@ export async function POST(request: NextRequest) {
   }
 
   const target = parseSafeRedirect(typeof raw === "string" ? raw : null);
-  const secure = process.env.NODE_ENV === "production";
+  const secure = isOAuthCookieSecure();
   const response = new NextResponse(null, { status: 204 });
 
   if (target) {
