@@ -111,7 +111,7 @@ Use `ripgrep` directly for an exact known file or string, and Context7 for offic
 
 ## Cloudflare
 
-Load the `cloudflare-workflow` skill (`/cloudflare`) for **any** Cloudflare work — Workers, OpenNext, AI Gateway, Workers AI, Durable Objects, Queues, KV, Vectorize, Hyperdrive, D1, R2, bindings, deployment, or anything crossing Cloudflare + Supabase/Mastra/CopilotKit.
+Load the `cloudflare-workflow` skill (`/cloudflare-workflow`) for **any** Cloudflare work — Workers, OpenNext, AI Gateway, Workers AI, Durable Objects, Queues, KV, Vectorize, Hyperdrive, D1, R2, bindings, deployment, or anything crossing Cloudflare + Supabase/Mastra/CopilotKit.
 
 **Runtime split — the single most misread fact in this repo.** `tasks/cloudflare/todo.md` is the live SSOT; check it before trusting any snapshot. As of the last verification: the Next.js operator app (`ipix.co/app`) runs on **Vercel** — the OpenNext/Workers cutover has not happened. But the custom `services/cloudflare-worker/` AI Gateway Worker, though frozen for new features, is **still the only real production AI path**. So don't say "Cloudflare is 0% live" — say "the whole-app migration hasn't cut over, but the AI-gateway piece already has."
 
