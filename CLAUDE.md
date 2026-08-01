@@ -129,9 +129,9 @@ No job carries a path filter, deliberately — a required check gated on changed
 
 **Before starting — three questions, in order:**
 
-1. **Does something in this repo already do this?** Reach for the existing tool before doing it by hand. (Real case: three skills — `ipix-supabase`, `mastra`, `nextjs-16` — silently never loaded. Reading their frontmatter by eye found nothing; `.claude/skills/skill-creator/scripts/quick_validate.py` named the cause in one command — an unsupported `paths:` key. PR [#708](https://github.com/amo-tech-ai/lumina-studio/pull/708).)
-2. **Does this change need the full ceremony?** Worktree + PR is mandatory for anything tracked in git — but a gitignored file like `.claude/settings.local.json` needs neither. Don't build a branch for a change git will never see.
-3. **Is the whole approach right?** For anything beyond a one-liner, run `/fastest` (has a vendor or platform already solved this — managed feature → official CLI/SDK → official repo) or `/efficient` (does this codebase already have it — reuse inventory + ranked approaches) **before** writing code. Both are read-only.
+1. **Does something in this repo already do this?** Reach for the existing tool before doing it by hand — then check its verdict against authoritative docs before acting on it. A repo tool can be stale in a way that reads as authoritative. (Real case: `quick_validate.py` reported the *supported* `paths:` frontmatter key as invalid, because its allow-list was 11 fields behind the documented reference. That single false positive sent PR [#708](https://github.com/amo-tech-ai/lumina-studio/pull/708) deleting deliberate skill scoping — closed unmerged; validator fixed in [#712](https://github.com/amo-tech-ai/lumina-studio/pull/712).)
+2. **Does this change need the full ceremony?** The worktree + PR rule above is absolute for **anything tracked in git**. It does not reach a gitignored file like `.claude/settings.local.json`, which no branch can ever carry — edit those in place.
+3. **Is the whole approach right?** Judge by **risk, not line count**: run `/fastest` (has a vendor or platform already solved this — managed feature → official CLI/SDK → official repo) or `/efficient` (does this codebase already have it — reuse inventory + ranked approaches) before writing code for anything touching a migration, auth/RLS, an AI provider, production config, or 3+ files. A one-line RLS policy change still needs the pass; a typo fix does not.
 
 **While working:**
 
