@@ -73,9 +73,20 @@ function branchTracking(branch) {
   return { gone: /\[gone\]/.test(vv) };
 }
 
-function prForBranch(branch, prLookup) {
+function prForBranch(branch, prLookup, repoName) {
   if (!branch) return null;
-  return prLookup?.get(branch) ?? null;
+  if (prLookup?.has(branch)) return prLookup.get(branch);
+  // The bulk `gh pr list` below is a cache, not the source of truth — a worktree
+  // whose PR is older than that window would otherwise look like it has no PR at
+  // all, and never be classified as merged/safe to delete. Query the one branch
+  // directly on a miss so the window size can never silently hide a stale
+  // worktree again. Bounded by worktree count, not by how many PRs the repo has.
+  const found = runJson(
+    `gh pr list --repo "${repoName}" --head "${branch}" --state all --limit 1 --json number,state,url,isDraft,headRefName`,
+  );
+  const pr = (Array.isArray(found) ? found[0] : null) ?? null;
+  prLookup?.set(branch, pr); // cache misses too — one lookup per branch per run
+  return pr;
 }
 
 function lastCommitAge(wtPath) {
@@ -95,6 +106,12 @@ function classify(entry, pr, tracking, age, isMain, dirty) {
 
   if ((pr?.state === "MERGED" || tracking.gone) && dirty === 0) {
     return { status: "merged", emoji: "⚪", safeToDelete: true, score: 90 };
+  }
+  // Merged PR but uncommitted files: not safe to auto-delete, but not active work
+  // either. Without this it fell through to "active" 🟢 and looked identical to a
+  // branch someone is still on — which is how finished worktrees accumulated.
+  if (pr?.state === "MERGED") {
+    return { status: "merged-dirty", emoji: "🟠", safeToDelete: false, score: 45 };
   }
   if (tracking.gone && dirty > 0) {
     return { status: "stale-dirty", emoji: "🔴", safeToDelete: false, score: 30 };
@@ -126,7 +143,7 @@ function buildReport() {
     run("gh repo view --json nameWithOwner --jq .nameWithOwner 2>/dev/null", { allowFail: true }) ||
     repoFromGitRemote() ||
     "amo-tech-ai/lumina-studio";
-  const allPrs = runJson(`gh pr list --repo "${repoName}" --limit 100 --state all --json number,state,url,isDraft,headRefName`) || [];
+  const allPrs = runJson(`gh pr list --repo "${repoName}" --limit 400 --state all --json number,state,url,isDraft,headRefName`) || [];
   const prLookup = new Map(allPrs.filter(Boolean).map((p) => [p.headRefName, p]));
   const entries = parseWorktreeList();
   const mainPath = path.resolve(REPO_ROOT);
@@ -135,7 +152,7 @@ function buildReport() {
     const isMain = path.resolve(entry.path) === mainPath;
     const branch = entry.branch;
     const tracking = branchTracking(branch);
-    const pr = prForBranch(branch, prLookup);
+    const pr = prForBranch(branch, prLookup, repoName);
     const age = lastCommitAge(entry.path);
     const dirty = dirtyCount(entry.path);
     const cls = classify(entry, pr, tracking, age, isMain, dirty);
