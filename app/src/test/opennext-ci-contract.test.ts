@@ -94,7 +94,7 @@ describe("OpenNext CI contract (IPI-472)", () => {
     // Official CopilotKit disable — props must live on the <CopilotKit> opening tag
     // (comments above the JSX also mention these strings; loose match is insufficient)
     expect(operatorLayout).toMatch(
-      /<CopilotKit(?:\s[^>]*)?\senableInspector=\{false\}(?:\s[^>]*)?\sshowDevConsole=\{false\}(?:\s[^>]*)?>/,
+      /<CopilotKit\b(?=[^>]*\benableInspector=\{false\})(?=[^>]*\bshowDevConsole=\{false\})[^>]*>/,
     );
   });
 
