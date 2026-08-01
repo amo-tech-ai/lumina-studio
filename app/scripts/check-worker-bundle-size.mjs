@@ -41,8 +41,10 @@ export const FAIL_MIB = 9.0;
 /** Provisional growth warn (KiB). Not a hard fail — Phase 1A. */
 export const DELTA_WARN_KIB = 25;
 /**
- * Hard-fail if any metafile input path contains these substrings.
- * Scoped under node_modules/ so CF stubs (scripts_cf-*-stub) never match.
+ * Hard-fail if any metafile input path matches these package needles.
+ * Slash form = real source paths; underscore form = OpenNext/Turbopack chunk
+ * encodings (`node_modules_@copilotkit_web-inspector_dist_…`).
+ * CF stubs (`scripts_cf-*-stub`) match neither form.
  */
 export const BANNED_METAFILE_SUBSTRINGS = Object.freeze([
   "node_modules/mermaid",
@@ -55,6 +57,18 @@ export const WARN_METAFILE_SUBSTRINGS = Object.freeze([]);
 /** Local diagnostic bands only — not hard fails. */
 const WARN_STARTUP_MS = 500;
 const FAIL_STARTUP_MS = 750;
+
+/** OpenNext chunk encoding: `node_modules/@scope/pkg` → `node_modules_@scope_pkg`. */
+export function encodedMetafileNeedle(slashPath) {
+  return slashPath.replaceAll("/", "_");
+}
+
+/** True when input path matches slash OR OpenNext-encoded form of a ban needle. */
+export function pathMatchesMetafileNeedle(inputPath, needle) {
+  if (inputPath.includes(needle)) return true;
+  const encoded = encodedMetafileNeedle(needle);
+  return encoded !== needle && inputPath.includes(encoded);
+}
 
 /** OpenNext default metafile, or WORKER_BUNDLE_METAFILE override. */
 export function resolveMetafilePath(appRoot = appDir) {
@@ -132,6 +146,7 @@ export function evaluateGzipDelta({ gzipKiB, baseGzipKiB, warnKiB = DELTA_WARN_K
 
 /**
  * Scan esbuild/OpenNext metafile inputs for banned / warn path substrings.
+ * Matches both `node_modules/<pkg>` and OpenNext `node_modules_<pkg>_…` encodings.
  * @param {{ inputs?: Record<string, unknown> } | null | undefined} metafile
  * @param {{ hard?: readonly string[], warn?: readonly string[] }} [opts]
  * @returns {{ hardHits: { path: string, ban: string }[], warnHits: { path: string, ban: string }[] }}
@@ -145,13 +160,13 @@ export function scanMetafileInputs(
   const warnHits = [];
   for (const inputPath of paths) {
     for (const ban of hard) {
-      if (inputPath.includes(ban)) {
+      if (pathMatchesMetafileNeedle(inputPath, ban)) {
         hardHits.push({ path: inputPath, ban });
         break;
       }
     }
     for (const soft of warn) {
-      if (inputPath.includes(soft)) {
+      if (pathMatchesMetafileNeedle(inputPath, soft)) {
         warnHits.push({ path: inputPath, ban: soft });
         break;
       }
@@ -201,6 +216,32 @@ export function loadMetafile(filePath) {
   } catch {
     return null;
   }
+}
+
+/**
+ * Fail-closed gate: missing / malformed / empty-inputs metafile cannot prove
+ * banned packages are absent (IPI-848).
+ * @param {unknown} metafile
+ * @returns {{ ok: true, metafile: { inputs: Record<string, { bytes?: number }> } } | { ok: false, reason: string }}
+ */
+export function validateMetafileForScan(metafile) {
+  if (metafile == null) {
+    return { ok: false, reason: "missing or unreadable" };
+  }
+  if (typeof metafile !== "object" || Array.isArray(metafile)) {
+    return { ok: false, reason: "not a JSON object" };
+  }
+  if (!("inputs" in metafile)) {
+    return { ok: false, reason: "missing inputs key" };
+  }
+  const inputs = /** @type {{ inputs?: unknown }} */ (metafile).inputs;
+  if (typeof inputs !== "object" || inputs === null || Array.isArray(inputs)) {
+    return { ok: false, reason: "inputs is not an object" };
+  }
+  if (Object.keys(inputs).length === 0) {
+    return { ok: false, reason: "inputs is empty" };
+  }
+  return { ok: true, metafile: /** @type {{ inputs: Record<string, { bytes?: number }> }} */ (metafile) };
 }
 
 export function buildWorkerBundleReport({
@@ -341,11 +382,14 @@ export function main(argv = process.argv.slice(2)) {
 
   const gzipMiB = sizes.gzipKiB / 1024;
   const metafileHash = hashFileSha256(metafilePath);
-  const metafile = loadMetafile(metafilePath);
-  const composition = metafile
-    ? scanMetafileInputs(metafile)
+  const loaded = loadMetafile(metafilePath);
+  const scannable = validateMetafileForScan(loaded);
+  const composition = scannable.ok
+    ? scanMetafileInputs(scannable.metafile)
     : { hardHits: [], warnHits: [] };
-  const topPackages = metafile ? summarizeTopPackages(metafile, { limit: 25 }) : [];
+  const topPackages = scannable.ok
+    ? summarizeTopPackages(scannable.metafile, { limit: 25 })
+    : [];
 
   // Load base BEFORE writing the current report — same-path reuse would otherwise
   // overwrite the base JSON and silently report +0.00 KiB.
@@ -391,8 +435,11 @@ export function main(argv = process.argv.slice(2)) {
   );
   if (metafileHash) {
     console.log(`Metafile sha256: ${metafileHash.slice(0, 12)}… (${metafilePath})`);
-  } else {
-    console.warn(`WARN: metafile missing at ${metafilePath}`);
+  }
+  if (!scannable.ok) {
+    console.error(
+      `FAIL (composition): metafile not scannable at ${metafilePath} — ${scannable.reason}`,
+    );
   }
 
   if (topPackages.length > 0) {
@@ -448,7 +495,9 @@ export function main(argv = process.argv.slice(2)) {
     }
   }
 
-  if (composition.hardHits.length > 0) {
+  if (!scannable.ok) {
+    exit = 1;
+  } else if (composition.hardHits.length > 0) {
     console.error(
       `FAIL (composition): ${composition.hardHits.length} banned metafile path hit(s) (IPI-848)`,
     );
@@ -456,7 +505,7 @@ export function main(argv = process.argv.slice(2)) {
       console.error(`  · ${hit.ban} ← ${hit.path}`);
     }
     exit = 1;
-  } else if (metafile) {
+  } else {
     console.log(
       `OK (composition): no banned paths (${BANNED_METAFILE_SUBSTRINGS.join(", ")})`,
     );

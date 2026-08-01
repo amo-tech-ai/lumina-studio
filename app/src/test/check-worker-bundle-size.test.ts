@@ -33,6 +33,23 @@ function stubDryRun(gzipKiB: number, uploadKiB = gzipKiB * 5) {
   });
 }
 
+/** Minimal scannable metafile so composition fail-closed does not mask size/delta tests. */
+function stubCleanMetafile(dir: string) {
+  const metaPath = join(dir, "handler.mjs.meta.json");
+  writeFileSync(
+    metaPath,
+    JSON.stringify({
+      inputs: {
+        "scripts_cf-web-inspector-stub_mjs_clean._.js": { bytes: 100 },
+        "node_modules/@mastra/core/dist/index.js": { bytes: 1000 },
+      },
+    }),
+    "utf8",
+  );
+  process.env.WORKER_BUNDLE_METAFILE = metaPath;
+  return metaPath;
+}
+
 describe("check-worker-bundle-size helpers (IPI-706 Phase 1A)", () => {
   it("parses wrangler dry-run Total Upload / gzip line", () => {
     const sizes = parseGzipKiB(
@@ -169,6 +186,7 @@ describe("main() report/delta ordering (IPI-706 Phase 1A)", () => {
   afterEach(() => {
     vi.restoreAllMocks();
     spawnSyncMock.mockReset();
+    delete process.env.WORKER_BUNDLE_METAFILE;
   });
 
   /**
@@ -183,6 +201,7 @@ describe("main() report/delta ordering (IPI-706 Phase 1A)", () => {
    */
   it("reads the base report before overwriting it when both paths are the same file", () => {
     const dir = mkdtempSync(join(tmpdir(), "bundle-main-samepath-"));
+    stubCleanMetafile(dir);
     const sharedPath = join(dir, "worker-bundle-report.json");
     writeFileSync(
       sharedPath,
@@ -210,6 +229,7 @@ describe("main() report/delta ordering (IPI-706 Phase 1A)", () => {
 
   it("warns past the delta threshold and still exits 0 (delta never hard-fails)", () => {
     const dir = mkdtempSync(join(tmpdir(), "bundle-main-delta-"));
+    stubCleanMetafile(dir);
     const basePath = join(dir, "base.json");
     const outPath = join(dir, "out.json");
     writeFileSync(basePath, JSON.stringify({ schemaVersion: 1, gzipKiB: 8000 }), "utf8");
@@ -230,6 +250,7 @@ describe("main() report/delta ordering (IPI-706 Phase 1A)", () => {
 
   it("hard-fails on the absolute gate regardless of a healthy delta", () => {
     const dir = mkdtempSync(join(tmpdir(), "bundle-main-fail-"));
+    stubCleanMetafile(dir);
     const basePath = join(dir, "base.json");
     const failKiB = FAIL_MIB * 1024 + 10;
     writeFileSync(basePath, JSON.stringify({ schemaVersion: 1, gzipKiB: failKiB - 1 }), "utf8");

@@ -151,8 +151,11 @@ describe("OpenNext CI contract (IPI-472)", () => {
     expect(script).toMatch(/node_modules\/@copilotkit\/web-inspector/);
     expect(script).toMatch(/export function scanMetafileInputs/);
     expect(script).toMatch(/export function summarizeTopPackages/);
+    expect(script).toMatch(/export function pathMatchesMetafileNeedle/);
+    expect(script).toMatch(/export function validateMetafileForScan/);
     expect(script).toMatch(/schemaVersion:\s*2/);
     expect(script).toMatch(/FAIL \(composition\)/);
+    expect(script).toMatch(/metafile not scannable/);
     // Bare web-inspector would false-fail scripts_cf-web-inspector-stub_…
     expect(script).not.toMatch(/BANNED_METAFILE_SUBSTRINGS[\s\S]*?"web-inspector"/);
   });

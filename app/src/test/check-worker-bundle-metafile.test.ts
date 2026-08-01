@@ -10,10 +10,13 @@ import {
   BANNED_METAFILE_SUBSTRINGS,
   WARN_METAFILE_SUBSTRINGS,
   buildWorkerBundleReport,
+  encodedMetafileNeedle,
   main,
   packageKeyFromInputPath,
+  pathMatchesMetafileNeedle,
   scanMetafileInputs,
   summarizeTopPackages,
+  validateMetafileForScan,
 } from "../../scripts/check-worker-bundle-size.mjs";
 
 function stubDryRun(gzipKiB: number, uploadKiB = gzipKiB * 5) {
@@ -38,14 +41,37 @@ describe("metafile composition helpers (IPI-848 · CF-BUNDLE-223)", () => {
     expect(BANNED_METAFILE_SUBSTRINGS.some((s) => s === "web-inspector")).toBe(false);
   });
 
-  it("scanMetafileInputs hard-fails banned packages and ignores the web-inspector stub path", () => {
+  it("encodes slash ban needles the OpenNext chunk way", () => {
+    expect(encodedMetafileNeedle("node_modules/@copilotkit/web-inspector")).toBe(
+      "node_modules_@copilotkit_web-inspector",
+    );
+    expect(
+      pathMatchesMetafileNeedle(
+        ".next/server/chunks/ssr/node_modules_@copilotkit_web-inspector_dist_index_mjs_150addu._.js",
+        "node_modules/@copilotkit/web-inspector",
+      ),
+    ).toBe(true);
+    expect(
+      pathMatchesMetafileNeedle(
+        "scripts_cf-web-inspector-stub_mjs_0c6u9j5._.js",
+        "node_modules/@copilotkit/web-inspector",
+      ),
+    ).toBe(false);
+  });
+
+  it("scanMetafileInputs hard-fails slash + OpenNext-encoded paths; ignores stubs", () => {
     const metafile = {
       inputs: {
         "node_modules/mermaid/dist/mermaid.core.mjs": { bytes: 1000 },
-        "node_modules/katex/dist/katex.mjs": { bytes: 500 },
-        "node_modules/cytoscape/dist/cytoscape.esm.mjs": { bytes: 800 },
-        "../../node_modules/@copilotkit/web-inspector/dist/index.js": { bytes: 900 },
-        "scripts_cf-web-inspector-stub_mjs-ABCDEF.js": { bytes: 200 },
+        ".next/server/chunks/ssr/node_modules_katex_dist_katex_mjs_xxxx._.js": { bytes: 500 },
+        ".next/server/chunks/ssr/node_modules_cytoscape_dist_cytoscape_esm_mjs_yy._.js": {
+          bytes: 800,
+        },
+        // Recorded OpenNext shape from 2026-07-29 audit (pre-stub regression).
+        ".next/server/chunks/ssr/node_modules_@copilotkit_web-inspector_dist_index_mjs_150addu._.js": {
+          bytes: 900,
+        },
+        "scripts_cf-web-inspector-stub_mjs_0c6u9j5._.js": { bytes: 200 },
         "node_modules/zod/lib/index.js": { bytes: 50 },
       },
     };
@@ -68,9 +94,19 @@ describe("metafile composition helpers (IPI-848 · CF-BUNDLE-223)", () => {
         "scripts_cf-katex-stub_mjs-BBB.js": { bytes: 100 },
         "scripts_cf-web-inspector-stub_mjs-CCC.js": { bytes: 100 },
         "node_modules/@mastra/core/dist/index.js": { bytes: 5000 },
+        ".next/server/chunks/ssr/node_modules_next_dist_0alesp5._.js": { bytes: 2000 },
       },
     };
     expect(scanMetafileInputs(metafile)).toEqual({ hardHits: [], warnHits: [] });
+  });
+
+  it("validateMetafileForScan fails closed on missing/malformed/empty inputs", () => {
+    expect(validateMetafileForScan(null).ok).toBe(false);
+    expect(validateMetafileForScan({}).ok).toBe(false);
+    expect(validateMetafileForScan({ inputs: null }).ok).toBe(false);
+    expect(validateMetafileForScan({ inputs: [] }).ok).toBe(false);
+    expect(validateMetafileForScan({ inputs: {} }).ok).toBe(false);
+    expect(validateMetafileForScan({ inputs: { "a.js": { bytes: 1 } } }).ok).toBe(true);
   });
 
   it("summarizeTopPackages orders by bytes desc and respects limit", () => {
@@ -119,14 +155,15 @@ describe("main() composition hard-fail (IPI-848)", () => {
     delete process.env.WORKER_BUNDLE_METAFILE;
   });
 
-  it("exits 1 when metafile contains banned packages even under size OK", () => {
+  it("exits 1 when metafile contains OpenNext-encoded banned packages under size OK", () => {
     const dir = mkdtempSync(join(tmpdir(), "bundle-meta-ban-"));
     const metaPath = join(dir, "handler.mjs.meta.json");
     writeFileSync(
       metaPath,
       JSON.stringify({
         inputs: {
-          "node_modules/mermaid/dist/mermaid.core.mjs": { bytes: 999 },
+          ".next/server/chunks/ssr/node_modules_@copilotkit_web-inspector_dist_index_mjs_150addu._.js":
+            { bytes: 999 },
         },
       }),
       "utf8",
@@ -171,5 +208,22 @@ describe("main() composition hard-fail (IPI-848)", () => {
     const logged = logSpy.mock.calls.map((c) => String(c[0])).join("\n");
     expect(logged).toMatch(/OK \(composition\): no banned paths/);
     expect(exitSpy).toHaveBeenCalledWith(0);
+  });
+
+  it("exits 1 when metafile is missing (fail closed)", () => {
+    const dir = mkdtempSync(join(tmpdir(), "bundle-meta-missing-"));
+    process.env.WORKER_BUNDLE_METAFILE = join(dir, "no-such-meta.json");
+
+    stubDryRun(7000);
+    const exitSpy = vi.spyOn(process, "exit").mockImplementation(() => undefined as never);
+    vi.spyOn(console, "log").mockImplementation(() => {});
+    const errSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    main([`--report-path=${join(dir, "out.json")}`]);
+
+    expect(errSpy.mock.calls.map((c) => String(c[0])).join("\n")).toMatch(
+      /FAIL \(composition\): metafile not scannable/,
+    );
+    expect(exitSpy).toHaveBeenCalledWith(1);
   });
 });
