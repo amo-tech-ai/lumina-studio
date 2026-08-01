@@ -15,7 +15,15 @@ const OperatorLayout = ({
 }: Readonly<{ children: React.ReactNode }>) => {
   return (
     // Force REST transport so runtime-info + threads both hit the multi-route endpoint.
-    <CopilotKit runtimeUrl="/api/copilotkit" useSingleEndpoint={false}>
+    // showDevConsole={false}: official CopilotKit disable (IPI-849). Default is
+    // already false, but be explicit — props alone do not drop the package from
+    // the Worker graph (CopilotKitInspector still has a static dynamic-import
+    // string); CF builds alias @copilotkit/web-inspector via IPIX_CF_BUNDLE_STUBS.
+    <CopilotKit
+      runtimeUrl="/api/copilotkit"
+      useSingleEndpoint={false}
+      showDevConsole={false}
+    >
       <ActiveBrandProvider>
         <OperatorPanel>{children}</OperatorPanel>
       </ActiveBrandProvider>

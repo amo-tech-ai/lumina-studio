@@ -64,6 +64,30 @@ describe("OpenNext CI contract (IPI-472)", () => {
     expect(wrangler).toMatch(/"katex"\s*:\s*"\.\/scripts\/cf-katex-stub\.mjs"/);
   });
 
+  it("IPI-849 CF stubs alias @copilotkit/web-inspector under IPIX_CF_BUNDLE_STUBS", () => {
+    const nextConfig = readFileSync(resolve(__dirname, "../../next.config.ts"), "utf8");
+    const wrangler = readFileSync(resolve(__dirname, "../../wrangler.jsonc"), "utf8");
+    const stub = readFileSync(
+      resolve(__dirname, "../../scripts/cf-web-inspector-stub.mjs"),
+      "utf8",
+    );
+    const operatorLayout = readFileSync(
+      resolve(__dirname, "../app/(operator)/layout.tsx"),
+      "utf8",
+    );
+    expect(nextConfig).toMatch(/"@copilotkit\/web-inspector"\s*:\s*webInspectorStub/);
+    expect(nextConfig).toMatch(/cf-web-inspector-stub\.mjs/);
+    expect(wrangler).toMatch(
+      /"@copilotkit\/web-inspector"\s*:\s*"\.\/scripts\/cf-web-inspector-stub\.mjs"/,
+    );
+    // Surface used by CopilotKitInspector dynamic import
+    expect(stub).toMatch(/export function defineWebInspector/);
+    expect(stub).toMatch(/export const WEB_INSPECTOR_TAG/);
+    expect(stub).toMatch(/export class WebInspectorElement/);
+    // Official CopilotKit disable (props alone do not drop the package from CF graph)
+    expect(operatorLayout).toMatch(/showDevConsole=\{false\}/);
+  });
+
   it("IPI-844 CF stubs alias Workers PG scope under IPIX_CF_BUNDLE_STUBS (noop builds)", () => {
     const nextConfig = readFileSync(resolve(__dirname, "../../next.config.ts"), "utf8");
     const openNext = readFileSync(resolve(__dirname, "../../open-next.config.ts"), "utf8");

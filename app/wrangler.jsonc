@@ -82,7 +82,9 @@
     "@shikijs/vscode-textmate": "./scripts/cf-shiki-stub.mjs",
     // IPI-706 · CF-BUNDLE-220 — streamdown diagram/math (OpenNext also stubs via next.config).
     "mermaid": "./scripts/cf-mermaid-stub.mjs",
-    "katex": "./scripts/cf-katex-stub.mjs"
+    "katex": "./scripts/cf-katex-stub.mjs",
+    // IPI-849 · CF-BUNDLE-222 — CopilotKit Lit inspector (OpenNext also stubs via next.config).
+    "@copilotkit/web-inspector": "./scripts/cf-web-inspector-stub.mjs"
     // IPI-620A/B: do NOT alias `@mastra/pg` / `pg` / `pg-cloudflare` — real
     // packages required for Hyperdrive queryFresh + PostgresStore smoke.
     // Production Mastra storage stays InMemory via MASTRA_STORAGE_MODE=noop.
