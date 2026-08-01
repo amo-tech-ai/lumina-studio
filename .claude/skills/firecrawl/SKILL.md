@@ -7,19 +7,6 @@ metadata:
   version: "1.0.0"
   homepage: https://www.firecrawl.dev
   source: https://github.com/firecrawl/skills
-inputs:
-  - name: FIRECRAWL_API_KEY
-    description: Firecrawl API key for hosted Firecrawl requests.
-    required: true
-  - name: FIRECRAWL_API_URL
-    description: Optional base URL for self-hosted Firecrawl deployments.
-    required: false
-references:
-  - references/onboarding.md
-  - references/search.md
-  - references/scrape.md
-  - references/interact.md
-  - references/research-index.md
 ---
 
 # Firecrawl
@@ -89,6 +76,13 @@ Read the agent source-of-truth page for the project language **before** writing 
 ## Live Web Tooling During Development
 
 For ad-hoc web work in the current session (not app code), use the Firecrawl CLI skills installed alongside this skill (`firecrawl search`, `firecrawl scrape`, etc.) or the Firecrawl MCP server when available.
+
+## Environment
+
+| Variable | Required | Purpose |
+|----------|----------|---------|
+| `FIRECRAWL_API_KEY` | Yes | API key for hosted Firecrawl requests |
+| `FIRECRAWL_API_URL` | No | Base URL override for self-hosted Firecrawl deployments |
 
 ## After Setup Checklist
 
