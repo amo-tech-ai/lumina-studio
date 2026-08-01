@@ -126,7 +126,6 @@ See [`tasks/skills/jul6-audit.md`](tasks/skills/jul6-audit.md). Remaining deep r
 | `architecture-brief` | 108 | ✅ | One-shot “build X” scoping |
 | `mermaid-diagrams` | 55 | ✅ | Linear/issue diagrams |
 | `refactor-plan` | 66 | ✅ | Refactor scoping before multi-file edits |
-| `migrate-radix-to-base` | 173 | ✅ | Radix → Base UI migration |
 | `groq-inference` | 201 | ✅ | Groq API patterns |
 | `nextjs-developer` | ~95 | ✅ | **Next.js hub** — RSC, routing, actions; refs include ipix-16 |
 | `nextjs-16` | ~30 | ✅ | **Satellite** — path trigger for proxy/config/caching |
@@ -144,6 +143,11 @@ See [`tasks/skills/jul6-audit.md`](tasks/skills/jul6-audit.md). Remaining deep r
 |---------|--------|
 | `accessibility` | `archive/accessibility` |
 | `design-md` | `archive/design-md` — prefer root [`design.md`](design.md) |
+
+> ⚠️ Both symlinks resolve **into `archive/`**, so editing them silently mutates archived content.
+> Neither can be archived as unused: `design-md` is a **mandatory** prerequisite of
+> `design-to-production` (`design-to-production/SKILL.md:30`) and is named in 5 live routing
+> tables. Promoting them to real directories is tracked as a follow-up, not an archive action.
 
 **Restore from archive:** `mv .claude/skills/archive/<name> .claude/skills/<name>`
 
