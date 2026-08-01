@@ -195,27 +195,39 @@ Postgres no longer hands one out for you. As of IPI-896 · SB-SEC-008 (migration
 `authenticated` get nothing.
 
 RLS is now the *second* gate, not the first. Enabling it is still required; it is no longer
-sufficient.
+sufficient. Grant only the operations you also cover with policies — table privileges do **not**
+bypass RLS.
 
 ```sql
 create table public.thing (
   id bigint generated always as identity primary key,
-  org_id uuid not null references public.orgs(id)
+  org_id uuid not null references public.organizations(id)
 );
 
 alter table public.thing enable row level security;
 
+-- Tenant check = public.is_org_member(uuid) via org_members (not a top-level JWT org_id claim)
 create policy thing_select_own on public.thing
   for select to authenticated
-  using (org_id = (select auth.jwt() ->> 'org_id')::uuid);
+  using (is_org_member(org_id));
 
--- ← required, not optional. Without this the policy above never gets consulted.
+create policy thing_insert_own on public.thing
+  for insert to authenticated
+  with check (is_org_member(org_id));
+
+create policy thing_update_own on public.thing
+  for update to authenticated
+  using (is_org_member(org_id))
+  with check (is_org_member(org_id));
+
+-- ← required, not optional. Without this the policies above never get consulted.
 grant select, insert, update on table public.thing to authenticated;
 ```
 
-**Skip the `grant` and the symptom looks exactly like a broken RLS policy** — an empty array or a
-`401` — so the instinct is to go rewrite the policy, which is the wrong file. Check the grant
-first:
+**Missing grant ≠ empty RLS.** On an authenticated Data API read, a missing table privilege is
+an insufficient-privilege failure (Postgres `42501` / HTTP 403). A SELECT policy that admits no
+rows is a successful empty array (`[]`). `scripts/verify-rls.mjs` treats denial errors and empty
+200s as different outcomes — check the grant before rewriting the policy:
 
 ```sql
 select has_table_privilege('authenticated', 'public.thing', 'SELECT');  -- f = missing grant
@@ -223,14 +235,17 @@ select has_table_privilege('authenticated', 'public.thing', 'SELECT');  -- f = m
 
 Two related traps:
 
-- A `serial` column needs its sequence granted separately
-  (`grant usage, select on sequence public.thing_id_seq to authenticated;`).
-  `generated always as identity` does not — prefer it.
+- A `serial` column needs its sequence granted separately — `USAGE` alone is enough for
+  `nextval` on insert (`grant usage on sequence public.thing_id_seq to authenticated;`). Do not
+  add `SELECT` unless the app must inspect sequence state. Prefer
+  `generated always as identity` (no separate sequence grant).
 - The same rule has applied to **functions** since IPI-684 · SB-SEC-001b: a new function in
   `public` is not executable by `anon`/`authenticated` without an explicit `grant execute`.
 
 Standing guard: `supabase/tests/security/default-table-privileges.sql`, run by
-`.github/workflows/supabase-verify-rls.yml` on every PR. It creates a throwaway table and
+`.github/workflows/supabase-verify-rls.yml` on **trusted internal PRs and pushes to `main`**
+(when the workflow gate returns `mode=run`). Fork / Dependabot PRs skip remote probes
+(`mode=skip`) — do not treat a skipped check as remote proof. It creates a throwaway table and
 sequence inside a rolled-back transaction and fails if these defaults are ever restored.
 
 Other schemas differ — `planner`, `talent`, and `shoot` still grant `authenticated` by default
