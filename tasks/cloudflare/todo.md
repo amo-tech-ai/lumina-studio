@@ -6,12 +6,12 @@
 
 ### Hosting cutover tracker (2026-08-01) — read this first
 
-Vercel → Workers cutover status lives in **[`prime/01-cloudflare-hosting.md` § Progress tracker](./prime/01-cloudflare-hosting.md#progress-tracker--vercel--cloudflare-workers-cutover-2026-08-01)** (+ GO/HOLD scores in [`prime/04-plan-hosting.md`](./prime/04-plan-hosting.md)).
+SSOT: **[`prime/01-cloudflare-hosting.md` § Progress tracker](./prime/01-cloudflare-hosting.md#progress-tracker--vercel--cloudflare-workers-cutover-2026-08-01)** · scores [`prime/04-plan-hosting.md`](./prime/04-plan-hosting.md) · docs PR [#736](https://github.com/amo-tech-ai/lumina-studio/pull/736).
 
-- 🔴 **HOLD** on **IPI-631** — `ipix.co` still Vercel; prod Worker 404.
-- 🟡 **IPI-849** — #716 merged (~7.68 MiB gzip in CI); #722 still open.
-- Next critical path: **IPI-848 → IPI-734 → prod bootstrap → IPI-707 → IPI-708 → (re-verify IPI-709) → IPI-627 re-proof → IPI-794 → IPI-631 → 48h soak**.
-- Rows below (2026-07-24) for IPI-706 / cutover gates are **stale** vs that tracker — do not start work from the 8.985 MiB figures.
+- 🔴 **HOLD** on **IPI-631** — prod Vercel; hosting lane **~72%** / cutover readiness **~20%**.
+- 🟡 **IPI-849** — #716 merged; #722 OPEN merge-ready (7.677 MiB in PR body).
+- Critical path: **IPI-848 → IPI-734 → prod bootstrap → IPI-707 → IPI-708 → (709 re-verify) → 627 re-proof → IPI-794 → IPI-631 → 48h soak** (734∥848 after 849; 850∥848; 847 deferred).
+- Rows below (2026-07-24) are **stale** (8.985 MiB / 595 In Progress / 709 Backlog) — use the 01 tracker.
 
 | Lane | Progress | Bar |
 |------|---------|-----|

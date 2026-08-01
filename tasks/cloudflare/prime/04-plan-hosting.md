@@ -13,15 +13,16 @@
 | Lens | Score | Notes |
 |------|------:|-------|
 | **Architecture & official alignment** | **94/100** | OpenNext + `--secrets-file` + versions model — correct (unchanged) |
-| **Operational readiness** | **78/100** | Preview Worker live (`sk-498`); #716 dropped gzip ~7.68 MiB; 707/708/794 + prod bootstrap still open |
+| **Hosting lane (preview + secrets + bundle)** | **~72%** | Preview live; IPI-472/606/595/706 Done; IPI-849 @90% awaiting #722 |
+| **Operational cutover readiness** | **~20%** | 707/708/794 + prod bootstrap open; IPI-709 Done but prod alert re-proof pending |
 | **Likelihood of preview success** | **95%** | Preview `200` + `x-opennext: 1` verified 2026-08-01 |
-| **Likelihood of production cutover** | **55%** | Prod host still Vercel; prod Worker 404; IPI-631 HARD HOLD |
+| **Likelihood of production cutover** | **55%** | Prod still Vercel; prod Worker not serving; IPI-631 HARD HOLD |
 
-**Scores dated:** 2026-08-01 (probe pass; no local `build:cf`)
+**Scores dated:** 2026-08-01 (lean probe; no local `build:cf`) · Tracker: [01 § Progress tracker](01-cloudflare-hosting.md#progress-tracker--vercel--cloudflare-workers-cutover-2026-08-01)
 
-**GO/HOLD (2026-08-01):** 🔴 **HOLD** — do not start **IPI-631 · CF-MIG-810 — Production DNS Cutover and Rollback**. Next gate: finish **IPI-849** (#722) → **IPI-848** WARN→FAIL → critical path in the [01 progress tracker](01-cloudflare-hosting.md#progress-tracker--vercel--cloudflare-workers-cutover-2026-08-01).
+**GO/HOLD (2026-08-01):** 🔴 **HOLD** — do not start **IPI-631 · CF-MIG-810 — Production DNS Cutover and Rollback**. Next: merge **IPI-849** [#722](https://github.com/amo-tech-ai/lumina-studio/pull/722) → **IPI-848** metafile WARN→FAIL → critical path in the tracker.
 
-**Verdict:** ✅ Architecture sound · 🟡 Preview proven · 🔴 Production cutover **HOLD**
+**Verdict:** ✅ Architecture sound · 🟡 Preview proven (~72% hosting lane) · 🔴 Production cutover **HOLD** (~20% cutover readiness)
 
 ---
 
