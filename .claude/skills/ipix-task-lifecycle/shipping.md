@@ -11,7 +11,7 @@ Coordinator for **closing the loop** — PR, Linear, [`tasks/plan/todo.md`](../.
 | | Criterion |
 |---|---|
 | **Entry** | Phase 4 verify matrix green. Proofs captured. |
-| **Exit** | **Never mark Done unless** Done gate in [SKILL.md](../SKILL.md) is satisfied. PR merged (or waived) · threads resolved · `tasks/plan/todo.md` 🟢 · commit · user informed. |
+| **Exit** | **Never mark Done unless** Done gate in [SKILL.md](SKILL.md) is satisfied. PR merged (or waived) · threads resolved · `tasks/plan/todo.md` 🟢 · commit · user informed. |
 
 ---
 

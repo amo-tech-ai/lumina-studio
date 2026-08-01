@@ -2,7 +2,7 @@
 
 Use during Phase 2 research and Phase 3 implementation before any schema change.
 
-**Also load:** [supabase/README.md](../../../supabase/README.md) · [ipix-supabase/supabase](../../ipix-supabase/supabase/SKILL.md) · [ipix-supabase/postgres](../../ipix-supabase/postgres/SKILL.md)
+**Also load:** [supabase/README.md](../../../../supabase/README.md) · [ipix-supabase/supabase](../../ipix-supabase/SKILL.md) · [ipix-supabase/postgres](../../ipix-supabase/SKILL.md)
 
 ---
 
