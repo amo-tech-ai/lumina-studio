@@ -17,7 +17,7 @@
 
 Adds the database half of a fix for orphan organizations created by the legacy `/app/onboarding` create path (two hand-rolled inserts with manual undo). Introduces a draft `onboarding_sessions` table and a single atomic RPC that converts a draft into exactly one organization + brand pair.
 
-**Single concern:** migration + pgTAP only. No application wiring (slice B = [#703](https://github.com/amo-tech-ai/lumina-studio/pull/703), merged same day).
+**Single concern:** migration + pgTAP only. No application wiring in this PR — that was [IPI-832 · ONB2-DB-001 slice B / #703](https://github.com/amo-tech-ai/lumina-studio/pull/703) (`f06c7917`, merged same day).
 
 ## Files / systems changed
 
@@ -31,8 +31,8 @@ Adds the database half of a fix for orphan organizations created by the legacy `
 - Local pgTAP `008_onboarding_sessions.sql` — **17/17 PASS** (pre-merge on slice-A worktree)
 - Required-ish CI: `supabase-web015`, `supabase-verify-rls`, `app-build` — green
 - Soft infra fails (documented on PR, tracked outside this PR):
-  - `supabase-linked-gates` — remote-only `20260801051614` (= IPI-888 / [#702](https://github.com/amo-tech-ai/lumina-studio/pull/702)) → [IPI-891](https://linear.app/amo100/issue/IPI-891)
-  - `booking-gate` — QA IPv6 unreachable → [IPI-892](https://linear.app/amo100/issue/IPI-892)
+  - `supabase-linked-gates` — remote-only `20260801051614` (= [IPI-888 · SB-HYGIENE-004 — Revoke lingering anon/authenticated SELECT on processed_firecrawl_webhooks](https://linear.app/amo100/issue/IPI-888) / [#702](https://github.com/amo-tech-ai/lumina-studio/pull/702)) → [IPI-891 · SB-DRIFT-001](https://linear.app/amo100/issue/IPI-891)
+  - `booking-gate` — QA IPv6 unreachable → [IPI-892 · CI-QA-NET-001](https://linear.app/amo100/issue/IPI-892)
 
 ## Production impact (post-apply)
 
@@ -47,18 +47,29 @@ Adds the database half of a fix for orphan organizations created by the legacy `
 
 ## Known limitations
 
-- Slice A only in this PR — app wiring was slice B (#703)
+- Slice A only in this PR — app wiring was slice B ([#703](https://github.com/amo-tech-ai/lumina-studio/pull/703))
 - `onboarding_sessions.status` independent of `brands.intake_status` by design
 - pgTAP mirrors DDL inside `begin…rollback` (same pattern as `007`)
+- Race concurrency proof deferred to [IPI-894 · ONB2-DB-001c](https://linear.app/amo100/issue/IPI-894)
 
-## Rollback
+## Rollback (unsafe after slice B without app revert)
+
+> **Do not run these DROP statements on environments that still run [#703](https://github.com/amo-tech-ai/lumina-studio/pull/703) app code.** Live `/app/onboarding` selects `onboarding_sessions` and calls `materialize_onboarding_session`; dropping them causes create failures and can leave session history unreadable.
+>
+> **Order if you must undo schema after B:**
+> 1. Deploy (or revert to) an application build that does **not** call the RPC / table (pre-`f06c7917` create path, or a temporary feature-flagged stub).
+> 2. Decide retention: export or accept loss of `onboarding_sessions` draft rows; org/brand rows created via materialize are **not** deleted by the drops below (`ON DELETE SET NULL` only clears FKs on the session side).
+> 3. Then DDL rollback:
 
 ```sql
+-- Only after app no longer depends on this schema:
 drop function public.materialize_onboarding_session(text, text, text);
 drop trigger if exists onboarding_sessions_set_updated_at on public.onboarding_sessions;
 drop table public.onboarding_sessions;
 ```
 
+Pre-slice-B (DDL-only) environments: the three statements alone were sufficient.
+
 ## Follow-ups
 
-See [`pr-701-follow-up.md`](./pr-701-follow-up.md).
+See [`pr-701-follow-up.md`](./pr-701-follow-up.md) — **IPI-893** (pgTAP edges), **IPI-894** (QA race), **IPI-891** / **IPI-892** (CI soft fails).
