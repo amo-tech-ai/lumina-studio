@@ -8,11 +8,11 @@
       "Bash(npm test)",
       "Bash(npm run lint)",
       "Bash(npx tsc --noEmit)",
-      "mcp__claude_ai_Supabase__list_tables",
-      "mcp__claude_ai_Supabase__get_advisors",
-      "mcp__claude_ai_Supabase__get_logs",
-      "mcp__claude_ai_Supabase__list_migrations",
-      "mcp__claude_ai_Supabase__list_edge_functions"
+      "mcp__plugin_supabase_supabase__list_tables",
+      "mcp__plugin_supabase_supabase__get_advisors",
+      "mcp__plugin_supabase_supabase__get_logs",
+      "mcp__plugin_supabase_supabase__list_migrations",
+      "mcp__plugin_supabase_supabase__list_edge_functions"
     ]
   },
   "hooks": {
