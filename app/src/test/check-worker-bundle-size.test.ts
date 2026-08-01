@@ -55,7 +55,7 @@ describe("check-worker-bundle-size helpers (IPI-706 Phase 1A)", () => {
     expect(over).toEqual({ deltaKiB: 30, warn: true });
   });
 
-  it("builds a machine-readable report with schemaVersion 1", () => {
+  it("builds a machine-readable report with schemaVersion 2 (additive composition)", () => {
     const report = buildWorkerBundleReport({
       sizes: { uploadKiB: 46384.44, gzipKiB: 9213.13 },
       metafileHash: "abc123",
@@ -63,7 +63,7 @@ describe("check-worker-bundle-size helpers (IPI-706 Phase 1A)", () => {
       gitSha: "deadbeef",
       createdAt: "2026-07-28T00:00:00.000Z",
     });
-    expect(report.schemaVersion).toBe(1);
+    expect(report.schemaVersion).toBe(2);
     expect(report.gzipKiB).toBe(9213.13);
     expect(report.gzipMiB).toBeCloseTo(8.997, 3);
     expect(report.gates).toEqual({
@@ -73,6 +73,13 @@ describe("check-worker-bundle-size helpers (IPI-706 Phase 1A)", () => {
     });
     expect(report.metafileSha256).toBe("abc123");
     expect(report.gitSha).toBe("deadbeef");
+    expect(report.topPackages).toEqual([]);
+    expect(report.composition).toEqual({
+      hardHitCount: 0,
+      warnHitCount: 0,
+      hardHits: [],
+      warnHits: [],
+    });
   });
 
   it("hashFileSha256 returns null for missing files and the digest for existing files", () => {

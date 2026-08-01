@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 /**
- * IPI-490 · CF-MIG-210 / IPI-706 · CF-BUNDLE-220 — OpenNext Worker gzip gate.
+ * IPI-490 · CF-MIG-210 / IPI-706 · CF-BUNDLE-220 / IPI-848 · CF-BUNDLE-223 —
+ * OpenNext Worker gzip + metafile composition gate.
  *
  * Prerequisites: `opennextjs-cloudflare build` already run in app/.
  *
@@ -8,12 +9,19 @@
  *   warn  ≥ 8.5 MiB · fail ≥ 9.0 MiB
  *   (Cloudflare Paid Worker compressed limit = 10 MB)
  *
+ * Composition (IPI-848): hard-fail when OpenNext metafile inputs contain banned
+ * `node_modules/<pkg>` path substrings (Mermaid stack + real web-inspector).
+ * Match `node_modules/@copilotkit/web-inspector` — not bare `web-inspector` —
+ * so the CF stub path (`scripts_cf-web-inspector-stub_…`) does not false-fail.
+ *
  * Phase 1A (IPI-706): also emit `.open-next/worker-bundle-report.json` and,
  * when a base report is supplied, print a per-PR gzip **delta WARNING**.
  * Delta never hard-fails until variance is measured (do not promote yet).
  *
  * Base report (optional):
  *   --base-report=<path>  or  WORKER_BUNDLE_BASE_REPORT=<path>
+ * Metafile override (tests / custom layouts):
+ *   WORKER_BUNDLE_METAFILE=<path>
  *
  * Startup: `wrangler check startup` is local diagnostic only — never a hard fail.
  */
@@ -27,21 +35,40 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const appDir = path.resolve(__dirname, "..");
 const localWrangler = path.join(appDir, "node_modules", ".bin", "wrangler");
 const defaultReportPath = path.join(appDir, ".open-next", "worker-bundle-report.json");
-const metafilePath = path.join(
-  appDir,
-  ".open-next",
-  "server-functions",
-  "default",
-  "handler.mjs.meta.json",
-);
 
 export const WARN_MIB = 8.5;
 export const FAIL_MIB = 9.0;
 /** Provisional growth warn (KiB). Not a hard fail — Phase 1A. */
 export const DELTA_WARN_KIB = 25;
+/**
+ * Hard-fail if any metafile input path contains these substrings.
+ * Scoped under node_modules/ so CF stubs (scripts_cf-*-stub) never match.
+ */
+export const BANNED_METAFILE_SUBSTRINGS = Object.freeze([
+  "node_modules/mermaid",
+  "node_modules/katex",
+  "node_modules/cytoscape",
+  "node_modules/@copilotkit/web-inspector",
+]);
+/** Soft composition warnings (empty today — reserved for future soft bans). */
+export const WARN_METAFILE_SUBSTRINGS = Object.freeze([]);
 /** Local diagnostic bands only — not hard fails. */
 const WARN_STARTUP_MS = 500;
 const FAIL_STARTUP_MS = 750;
+
+/** OpenNext default metafile, or WORKER_BUNDLE_METAFILE override. */
+export function resolveMetafilePath(appRoot = appDir) {
+  if (process.env.WORKER_BUNDLE_METAFILE) {
+    return path.resolve(process.env.WORKER_BUNDLE_METAFILE);
+  }
+  return path.join(
+    appRoot,
+    ".open-next",
+    "server-functions",
+    "default",
+    "handler.mjs.meta.json",
+  );
+}
 
 export function parseGzipKiB(text) {
   const m = text.match(/Total Upload:\s*([\d.]+)\s*KiB\s*\/\s*gzip:\s*([\d.]+)\s*KiB/i);
@@ -103,16 +130,91 @@ export function evaluateGzipDelta({ gzipKiB, baseGzipKiB, warnKiB = DELTA_WARN_K
   return { deltaKiB, warn: deltaKiB > warnKiB };
 }
 
+/**
+ * Scan esbuild/OpenNext metafile inputs for banned / warn path substrings.
+ * @param {{ inputs?: Record<string, unknown> } | null | undefined} metafile
+ * @param {{ hard?: readonly string[], warn?: readonly string[] }} [opts]
+ * @returns {{ hardHits: { path: string, ban: string }[], warnHits: { path: string, ban: string }[] }}
+ */
+export function scanMetafileInputs(
+  metafile,
+  { hard = BANNED_METAFILE_SUBSTRINGS, warn = WARN_METAFILE_SUBSTRINGS } = {},
+) {
+  const paths = Object.keys(metafile?.inputs ?? {});
+  const hardHits = [];
+  const warnHits = [];
+  for (const inputPath of paths) {
+    for (const ban of hard) {
+      if (inputPath.includes(ban)) {
+        hardHits.push({ path: inputPath, ban });
+        break;
+      }
+    }
+    for (const soft of warn) {
+      if (inputPath.includes(soft)) {
+        warnHits.push({ path: inputPath, ban: soft });
+        break;
+      }
+    }
+  }
+  return { hardHits, warnHits };
+}
+
+/** Best-effort package key from a metafile input path. */
+export function packageKeyFromInputPath(inputPath) {
+  const scoped = inputPath.match(/node_modules\/(@[^/]+\/[^/]+)/);
+  if (scoped) return scoped[1];
+  const unscoped = inputPath.match(/node_modules\/([^/@][^/]*)/);
+  if (unscoped) return unscoped[1];
+  return "(other)";
+}
+
+/**
+ * Top-N packages by summed input bytes (composition snapshot).
+ * @param {{ inputs?: Record<string, { bytes?: number }> } | null | undefined} metafile
+ * @param {{ limit?: number }} [opts]
+ * @returns {{ name: string, bytes: number, kib: number }[]}
+ */
+export function summarizeTopPackages(metafile, { limit = 25 } = {}) {
+  const inputs = metafile?.inputs ?? {};
+  /** @type {Map<string, number>} */
+  const totals = new Map();
+  for (const [inputPath, meta] of Object.entries(inputs)) {
+    const bytes = typeof meta?.bytes === "number" ? meta.bytes : 0;
+    const key = packageKeyFromInputPath(inputPath);
+    totals.set(key, (totals.get(key) ?? 0) + bytes);
+  }
+  return [...totals.entries()]
+    .map(([name, bytes]) => ({ name, bytes, kib: Number((bytes / 1024).toFixed(2)) }))
+    .sort((a, b) => b.bytes - a.bytes || a.name.localeCompare(b.name))
+    .slice(0, limit);
+}
+
+/**
+ * @param {string} filePath
+ * @returns {{ inputs?: Record<string, { bytes?: number }> } | null}
+ */
+export function loadMetafile(filePath) {
+  if (!existsSync(filePath)) return null;
+  try {
+    return JSON.parse(readFileSync(filePath, "utf8"));
+  } catch {
+    return null;
+  }
+}
+
 export function buildWorkerBundleReport({
   sizes,
   metafileHash,
   versions,
+  topPackages = [],
+  composition = { hardHits: [], warnHits: [] },
   gitSha = process.env.GITHUB_SHA ?? null,
   createdAt = new Date().toISOString(),
 }) {
   const gzipMiB = sizes.gzipKiB / 1024;
   return {
-    schemaVersion: 1,
+    schemaVersion: 2,
     createdAt,
     gitSha,
     uploadKiB: sizes.uploadKiB,
@@ -121,6 +223,13 @@ export function buildWorkerBundleReport({
     gates: { warnMiB: WARN_MIB, failMiB: FAIL_MIB, deltaWarnKiB: DELTA_WARN_KIB },
     metafileSha256: metafileHash,
     versions,
+    topPackages,
+    composition: {
+      hardHitCount: composition.hardHits?.length ?? 0,
+      warnHitCount: composition.warnHits?.length ?? 0,
+      hardHits: (composition.hardHits ?? []).slice(0, 20),
+      warnHits: (composition.warnHits ?? []).slice(0, 20),
+    },
   };
 }
 
@@ -214,6 +323,7 @@ export function loadBaseGzipKiB(baseReportPath) {
 
 export function main(argv = process.argv.slice(2)) {
   const { baseReport, reportPath } = parseArgs(argv);
+  const metafilePath = resolveMetafilePath();
 
   const dry = runWrangler(["deploy", "--dry-run"]);
   if (dry.error) {
@@ -231,6 +341,11 @@ export function main(argv = process.argv.slice(2)) {
 
   const gzipMiB = sizes.gzipKiB / 1024;
   const metafileHash = hashFileSha256(metafilePath);
+  const metafile = loadMetafile(metafilePath);
+  const composition = metafile
+    ? scanMetafileInputs(metafile)
+    : { hardHits: [], warnHits: [] };
+  const topPackages = metafile ? summarizeTopPackages(metafile, { limit: 25 }) : [];
 
   // Load base BEFORE writing the current report — same-path reuse would otherwise
   // overwrite the base JSON and silently report +0.00 KiB.
@@ -254,7 +369,13 @@ export function main(argv = process.argv.slice(2)) {
       `WARN: could not read package.json versions: ${err instanceof Error ? err.message : err}`,
     );
   }
-  const report = buildWorkerBundleReport({ sizes, metafileHash, versions });
+  const report = buildWorkerBundleReport({
+    sizes,
+    metafileHash,
+    versions,
+    topPackages,
+    composition,
+  });
 
   try {
     writeFileSync(reportPath, `${JSON.stringify(report, null, 2)}\n`, "utf8");
@@ -272,6 +393,16 @@ export function main(argv = process.argv.slice(2)) {
     console.log(`Metafile sha256: ${metafileHash.slice(0, 12)}… (${metafilePath})`);
   } else {
     console.warn(`WARN: metafile missing at ${metafilePath}`);
+  }
+
+  if (topPackages.length > 0) {
+    console.log("Top packages by metafile input bytes (≤25):");
+    for (const row of topPackages.slice(0, 10)) {
+      console.log(`  ${row.kib.toFixed(2).padStart(10)} KiB  ${row.name}`);
+    }
+    if (topPackages.length > 10) {
+      console.log(`  … +${topPackages.length - 10} more (see report.topPackages)`);
+    }
   }
 
   if (base) {
@@ -306,6 +437,29 @@ export function main(argv = process.argv.slice(2)) {
     console.warn(`WARN: gzip ${gzipMiB.toFixed(3)} MiB ≥ ${WARN_MIB} MiB iPix warn gate`);
   } else {
     console.log(`OK: gzip below ${WARN_MIB} MiB warn gate`);
+  }
+
+  if (composition.warnHits.length > 0) {
+    console.warn(
+      `WARN (composition): ${composition.warnHits.length} soft-ban path hit(s) — not a hard fail`,
+    );
+    for (const hit of composition.warnHits.slice(0, 5)) {
+      console.warn(`  · ${hit.ban} ← ${hit.path}`);
+    }
+  }
+
+  if (composition.hardHits.length > 0) {
+    console.error(
+      `FAIL (composition): ${composition.hardHits.length} banned metafile path hit(s) (IPI-848)`,
+    );
+    for (const hit of composition.hardHits.slice(0, 10)) {
+      console.error(`  · ${hit.ban} ← ${hit.path}`);
+    }
+    exit = 1;
+  } else if (metafile) {
+    console.log(
+      `OK (composition): no banned paths (${BANNED_METAFILE_SUBSTRINGS.join(", ")})`,
+    );
   }
 
   if (dry.code !== 0) {
