@@ -4,17 +4,46 @@ import brandProfileStrictJsonSchemaDoc from "./brand-profile.schema.json" with {
   type: "json",
 };
 
-/** Gemini `@google/genai` responseSchema (existing BI path). */
+/** Brand DNA contract version (IPI-834). */
+export const BRAND_PROFILE_SCHEMA_VERSION = 2 as const;
+
+const QUOTE_MAX = 500;
+const VALUE_MAX = 2000;
+const URL_MAX = 2048;
+
+/** Gemini `@google/genai` responseSchema — claim shape mirrors JSON Schema SSOT. */
+const claimResponseSchema = {
+  type: Type.OBJECT,
+  properties: {
+    value: { type: Type.STRING, description: "Claim text" },
+    evidence: {
+      type: Type.ARRAY,
+      items: {
+        type: Type.OBJECT,
+        properties: {
+          sourceUrl: { type: Type.STRING, description: "Supporting page URL" },
+          quote: { type: Type.STRING, description: "Non-empty excerpt from the source" },
+          crawlResultId: { type: Type.STRING, description: "Optional crawl result UUID" },
+        },
+        required: ["sourceUrl", "quote"],
+      },
+      description: "At least one citation; quotes are untrusted display data",
+    },
+  },
+  required: ["value", "evidence"],
+};
+
 export const brandProfileResponseSchema = {
   type: Type.OBJECT,
   properties: {
-    name: { type: Type.STRING, description: "Brand display name" },
-    tagline: { type: Type.STRING, description: "Short brand tagline" },
-    overview: { type: Type.STRING, description: "A brief overview of the brand" },
-    category: {
-      type: Type.STRING,
-      description: "Fashion or retail category, e.g. DTC apparel",
+    schemaVersion: {
+      type: Type.NUMBER,
+      description: "Must be 2 (Brand DNA evidence contract)",
     },
+    name: { type: Type.STRING, description: "Brand display name" },
+    tagline: claimResponseSchema,
+    overview: claimResponseSchema,
+    category: claimResponseSchema,
     visualIdentity: {
       type: Type.OBJECT,
       properties: {
@@ -27,17 +56,14 @@ export const brandProfileResponseSchema = {
       },
       required: ["colors", "mood"],
     },
-    targetAudience: { type: Type.STRING },
+    targetAudience: claimResponseSchema,
     sourceUrl: { type: Type.STRING },
     contentPillars: {
       type: Type.ARRAY,
       items: { type: Type.STRING },
       description: "3-5 recurring content themes",
     },
-    brandVoice: {
-      type: Type.STRING,
-      description: "Tone descriptors e.g. playful, minimal, editorial",
-    },
+    brandVoice: claimResponseSchema,
     recommendedServices: {
       type: Type.ARRAY,
       items: { type: Type.STRING },
@@ -48,23 +74,18 @@ export const brandProfileResponseSchema = {
       type: Type.NUMBER,
       description: "0-100 readiness for professional content shoot",
     },
-    mission: { type: Type.STRING },
-    vision: { type: Type.STRING },
+    mission: claimResponseSchema,
+    vision: claimResponseSchema,
     values: {
       type: Type.ARRAY,
       items: { type: Type.STRING },
     },
-    uvp: { type: Type.STRING, description: "Unique value proposition" },
-    positioning: { type: Type.STRING },
-    brandPersonality: { type: Type.STRING },
+    uvp: claimResponseSchema,
+    positioning: claimResponseSchema,
+    brandPersonality: claimResponseSchema,
     confidenceScore: {
       type: Type.NUMBER,
       description: "0-100 confidence in extracted profile",
-    },
-    evidenceSources: {
-      type: Type.ARRAY,
-      items: { type: Type.STRING },
-      description: "Page titles or URLs supporting key claims",
     },
     competitorSignals: {
       type: Type.ARRAY,
@@ -98,6 +119,7 @@ export const brandProfileResponseSchema = {
     },
   },
   required: [
+    "schemaVersion",
     "name",
     "tagline",
     "category",
@@ -111,26 +133,37 @@ export const brandProfileResponseSchema = {
 /** Groq strict JSON Schema (`additionalProperties: false`, all fields required). */
 export const brandProfileStrictJsonSchema = brandProfileStrictJsonSchemaDoc;
 
+export type BrandClaimEvidence = {
+  sourceUrl: string;
+  quote: string;
+  crawlResultId?: string;
+};
+
+export type BrandClaim = {
+  value: string;
+  evidence: BrandClaimEvidence[];
+};
+
 export type BrandProfilePayload = {
+  schemaVersion: typeof BRAND_PROFILE_SCHEMA_VERSION;
   name: string;
-  tagline: string;
-  overview?: string;
-  category: string;
+  tagline: BrandClaim;
+  overview?: BrandClaim;
+  category: BrandClaim;
   visualIdentity: { colors: string[]; mood: string };
-  targetAudience: string;
+  targetAudience: BrandClaim;
   sourceUrl: string;
   contentPillars?: string[];
-  brandVoice?: string;
+  brandVoice?: BrandClaim;
   recommendedServices?: string[];
   productionReadiness?: number;
-  mission?: string;
-  vision?: string;
+  mission?: BrandClaim;
+  vision?: BrandClaim;
   values?: string[];
-  uvp?: string;
-  positioning?: string;
-  brandPersonality?: string;
+  uvp?: BrandClaim;
+  positioning?: BrandClaim;
+  brandPersonality?: BrandClaim;
   confidenceScore?: number;
-  evidenceSources?: string[];
   competitorSignals?: string[];
   scores: {
     visual: number;
@@ -147,6 +180,17 @@ export type BrandProfilePayload = {
     evidence?: string[];
   };
 };
+
+const REQUIRED_CLAIMS = ["tagline", "category", "targetAudience"] as const;
+const OPTIONAL_CLAIMS = [
+  "overview",
+  "brandVoice",
+  "mission",
+  "vision",
+  "uvp",
+  "positioning",
+  "brandPersonality",
+] as const;
 
 export function clampScore(n: number): number {
   if (!Number.isFinite(n)) return 0;
@@ -172,13 +216,71 @@ function optionalStringArray(value: unknown, max: number): string[] | undefined 
   return items.length > 0 ? items.slice(0, max) : undefined;
 }
 
+function isHttpUrl(value: string): boolean {
+  try {
+    const parsed = new URL(value);
+    return parsed.protocol === "http:" || parsed.protocol === "https:";
+  } catch {
+    return false;
+  }
+}
+
+/** Returns null when valid; otherwise a short error message. */
+export function validateClaim(claim: unknown, field: string): string | null {
+  if (!claim || typeof claim !== "object" || Array.isArray(claim)) {
+    return `Claim "${field}" must be { value, evidence[] }`;
+  }
+  const record = claim as Record<string, unknown>;
+  const value = trimmedString(record.value);
+  if (!value) return `Claim "${field}" requires a non-empty value`;
+  if (value.length > VALUE_MAX) return `Claim "${field}" value exceeds ${VALUE_MAX} chars`;
+  if (!Array.isArray(record.evidence) || record.evidence.length === 0) {
+    return `Claim "${field}" requires at least one evidence entry`;
+  }
+  if (record.evidence.length > 10) {
+    return `Claim "${field}" has too many evidence entries`;
+  }
+  for (let i = 0; i < record.evidence.length; i++) {
+    const ev = record.evidence[i];
+    if (!ev || typeof ev !== "object" || Array.isArray(ev)) {
+      return `Claim "${field}" evidence[${i}] must be an object`;
+    }
+    const entry = ev as Record<string, unknown>;
+    const sourceUrl = trimmedString(entry.sourceUrl);
+    if (!sourceUrl || sourceUrl.length > URL_MAX || !isHttpUrl(sourceUrl)) {
+      return `Claim "${field}" evidence[${i}] needs a valid http(s) sourceUrl`;
+    }
+    const quote = trimmedString(entry.quote);
+    if (!quote) return `Claim "${field}" evidence[${i}] needs a non-empty quote`;
+    if (quote.length > QUOTE_MAX) {
+      return `Claim "${field}" evidence[${i}] quote exceeds ${QUOTE_MAX} chars`;
+    }
+    if (entry.crawlResultId !== undefined) {
+      const id = trimmedString(entry.crawlResultId);
+      if (!id) return `Claim "${field}" evidence[${i}] crawlResultId is empty`;
+    }
+  }
+  return null;
+}
+
+function normalizeClaim(claim: BrandClaim): BrandClaim {
+  return {
+    value: claim.value.trim().slice(0, VALUE_MAX),
+    evidence: claim.evidence.slice(0, 10).map((ev) => ({
+      sourceUrl: ev.sourceUrl.trim().slice(0, URL_MAX),
+      quote: ev.quote.trim().slice(0, QUOTE_MAX),
+      ...(trimmedString(ev.crawlResultId)
+        ? { crawlResultId: trimmedString(ev.crawlResultId)! }
+        : {}),
+    })),
+  };
+}
+
 export function buildAiProfileFromPayload(
   profile: BrandProfilePayload,
   sourceUrl: string,
 ): Record<string, unknown> {
   const name = trimmedString(profile.name)!;
-  const tagline = trimmedString(profile.tagline)!;
-  const category = trimmedString(profile.category)!;
   const mood = trimmedString(profile.visualIdentity?.mood)!;
   const colors = Array.isArray(profile.visualIdentity?.colors)
     ? profile.visualIdentity.colors
@@ -189,43 +291,37 @@ export function buildAiProfileFromPayload(
     : [];
 
   return {
+    schemaVersion: BRAND_PROFILE_SCHEMA_VERSION,
     name,
-    tagline,
-    category,
+    tagline: normalizeClaim(profile.tagline),
+    category: normalizeClaim(profile.category),
     visualIdentity: { colors, mood },
-    targetAudience: trimmedString(profile.targetAudience)!,
+    targetAudience: normalizeClaim(profile.targetAudience),
     sourceUrl,
     analyzedAt: new Date().toISOString(),
+    ...(profile.overview ? { overview: normalizeClaim(profile.overview) } : {}),
     ...(optionalStringArray(profile.contentPillars, 8)
       ? { contentPillars: optionalStringArray(profile.contentPillars, 8) }
       : {}),
-    ...(optionalTrim(profile.overview) ? { overview: optionalTrim(profile.overview) } : {}),
-    ...(optionalTrim(profile.brandVoice)
-      ? { brandVoice: optionalTrim(profile.brandVoice) }
-      : {}),
+    ...(profile.brandVoice ? { brandVoice: normalizeClaim(profile.brandVoice) } : {}),
     ...(optionalStringArray(profile.recommendedServices, 10)
       ? { recommendedServices: optionalStringArray(profile.recommendedServices, 10) }
       : {}),
     ...(typeof profile.productionReadiness === "number"
       ? { productionReadiness: clampScore(profile.productionReadiness) }
       : {}),
-    ...(optionalTrim(profile.mission) ? { mission: optionalTrim(profile.mission) } : {}),
-    ...(optionalTrim(profile.vision) ? { vision: optionalTrim(profile.vision) } : {}),
+    ...(profile.mission ? { mission: normalizeClaim(profile.mission) } : {}),
+    ...(profile.vision ? { vision: normalizeClaim(profile.vision) } : {}),
     ...(optionalStringArray(profile.values, 12)
       ? { values: optionalStringArray(profile.values, 12) }
       : {}),
-    ...(optionalTrim(profile.uvp) ? { uvp: optionalTrim(profile.uvp) } : {}),
-    ...(optionalTrim(profile.positioning)
-      ? { positioning: optionalTrim(profile.positioning) }
-      : {}),
-    ...(optionalTrim(profile.brandPersonality)
-      ? { brandPersonality: optionalTrim(profile.brandPersonality) }
+    ...(profile.uvp ? { uvp: normalizeClaim(profile.uvp) } : {}),
+    ...(profile.positioning ? { positioning: normalizeClaim(profile.positioning) } : {}),
+    ...(profile.brandPersonality
+      ? { brandPersonality: normalizeClaim(profile.brandPersonality) }
       : {}),
     ...(typeof profile.confidenceScore === "number"
       ? { confidenceScore: clampScore(profile.confidenceScore) }
-      : {}),
-    ...(optionalStringArray(profile.evidenceSources, 20)
-      ? { evidenceSources: optionalStringArray(profile.evidenceSources, 20) }
       : {}),
     ...(optionalStringArray(profile.competitorSignals, 12)
       ? { competitorSignals: optionalStringArray(profile.competitorSignals, 12) }
@@ -233,25 +329,48 @@ export function buildAiProfileFromPayload(
   };
 }
 
+/**
+ * Fail-closed Brand DNA contract check (Edge + Mastra parity).
+ * Returns null when valid; otherwise a short error message.
+ */
 export function validateBrandProfilePayload(
-  profile: BrandProfilePayload,
+  profile: BrandProfilePayload | Record<string, unknown>,
 ): string | null {
-  if (!trimmedString(profile.name)) return "Could not extract a brand name";
+  const record = profile as Record<string, unknown>;
+
+  if (record.schemaVersion !== BRAND_PROFILE_SCHEMA_VERSION) {
+    return `schemaVersion must be ${BRAND_PROFILE_SCHEMA_VERSION}`;
+  }
+  if (!trimmedString(record.name)) return "Could not extract a brand name";
+  if (!trimmedString(record.sourceUrl) || !isHttpUrl(String(record.sourceUrl).trim())) {
+    return "sourceUrl must be a valid http(s) URL";
+  }
+
+  const visual = record.visualIdentity as { colors?: unknown; mood?: unknown } | undefined;
   if (
-    !trimmedString(profile.tagline) ||
-    !trimmedString(profile.category) ||
-    !trimmedString(profile.targetAudience) ||
-    !trimmedString(profile.visualIdentity?.mood) ||
-    !Array.isArray(profile.visualIdentity?.colors)
+    !trimmedString(visual?.mood) ||
+    !Array.isArray(visual?.colors)
   ) {
     return "Incomplete brand profile returned";
   }
+
+  for (const field of REQUIRED_CLAIMS) {
+    const err = validateClaim(record[field], field);
+    if (err) return err;
+  }
+  for (const field of OPTIONAL_CLAIMS) {
+    if (record[field] === undefined || record[field] === null) continue;
+    const err = validateClaim(record[field], field);
+    if (err) return err;
+  }
+
+  const scores = record.scores as Record<string, unknown> | undefined;
   if (
-    !profile.scores ||
-    typeof profile.scores.visual !== "number" ||
-    typeof profile.scores.audience !== "number" ||
-    typeof profile.scores.consistency !== "number" ||
-    typeof profile.scores.commerce_readiness !== "number"
+    !scores ||
+    typeof scores.visual !== "number" ||
+    typeof scores.audience !== "number" ||
+    typeof scores.consistency !== "number" ||
+    typeof scores.commerce_readiness !== "number"
   ) {
     return "Incomplete scores returned";
   }

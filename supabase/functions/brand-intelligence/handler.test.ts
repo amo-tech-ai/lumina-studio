@@ -13,12 +13,20 @@ import {
 const BRAND_ID = "11111111-1111-1111-1111-111111111111";
 const TEST_URL = "https://example.com";
 
+function claim(value: string, quote = value): BrandProfilePayload["tagline"] {
+  return {
+    value,
+    evidence: [{ sourceUrl: `${TEST_URL}/`, quote }],
+  };
+}
+
 const mockProfile: BrandProfilePayload = {
+  schemaVersion: 2,
   name: "Example Brand",
-  tagline: "Clean essentials",
-  category: "DTC apparel",
+  tagline: claim("Clean essentials", "Clean essentials for modern living"),
+  category: claim("DTC apparel", "apparel collections"),
   visualIdentity: { colors: ["#111111"], mood: "minimal" },
-  targetAudience: "Urban professionals",
+  targetAudience: claim("Urban professionals", "designed for urban professionals"),
   sourceUrl: TEST_URL,
   scores: {
     visual: 80,

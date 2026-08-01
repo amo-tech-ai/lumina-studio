@@ -4,6 +4,14 @@ import { createStep, createWorkflow } from "@mastra/core/workflows";
 import { createClient } from "@supabase/supabase-js";
 import { z } from "zod";
 import { socialDiscoveryAgent, visualIdentityAgent } from "../agents";
+import {
+  assertBrandProfile,
+  brandProfileContractSchema,
+  brandProfileStepOutputSchema,
+  enrichmentStepOutputSchema,
+  stripBrandProfileMeta,
+  type BrandProfilePayload,
+} from "@/lib/brand/brand-profile-contract";
 import { discardBrandDraft } from "@/lib/brand/discard-draft";
 import { promoteBrandDraft } from "@/lib/brand/promote-draft";
 
@@ -189,10 +197,11 @@ const waitForCrawl = createStep({
 
 // Step 4: run Gemini profile + scoring via brand-intelligence edge fn
 // Exported for unit tests (edge-fn non-2xx must abort the run).
+// IPI-834 — output is the validated Brand DNA contract (not { ok: boolean }).
 export const extractProfile = createStep({
   id: "extract-profile",
   inputSchema: z.object({ crawlId: z.string() }),
-  outputSchema: z.object({ ok: z.boolean() }),
+  outputSchema: brandProfileStepOutputSchema,
   execute: async ({ inputData, getInitData }) => {
     const { brandId } = getInitData<{ brandId: string }>();
     const sb = adminClient();
@@ -257,18 +266,44 @@ export const extractProfile = createStep({
       const detail = await res.text().catch(() => res.statusText);
       throw await failAnalysis(sb, brandId, `brand-intelligence edge fn ${res.status}`, detail);
     }
-    return { ok: true };
+
+    // IPI-834 — re-read draft and fail closed on contract mismatch. Do not rewrite
+    // ai_profile_draft here (leave Edge's write untouched on invalid shapes).
+    const { data: draftRow, error: draftReadErr } = await sb
+      .from("brands")
+      .select("ai_profile_draft")
+      .eq("id", brandId)
+      .single();
+    if (draftReadErr) {
+      throw await failAnalysis(sb, brandId, "Failed to read ai_profile_draft", draftReadErr.message);
+    }
+    const stripped = stripBrandProfileMeta(
+      draftRow?.ai_profile_draft as Record<string, unknown> | null,
+    );
+    try {
+      const profile = assertBrandProfile(stripped);
+      return { profile };
+    } catch (cause) {
+      throw await failAnalysis(
+        sb,
+        brandId,
+        "Brand DNA contract validation failed",
+        cause instanceof Error ? cause.message : String(cause),
+      );
+    }
   },
 });
 
 // Step 5: parallel social + visual enrichment (best-effort)
-// Exported for unit tests (enriched-result branches).
+// Exported for unit tests. IPI-834 — passes the validated profile through (not { enriched }).
 export const fanOutEnrichment = createStep({
   id: "fan-out-enrichment",
-  inputSchema: z.object({ ok: z.boolean() }),
-  outputSchema: z.object({ enriched: z.boolean() }),
-  execute: async ({ getInitData }) => {
+  inputSchema: brandProfileStepOutputSchema,
+  outputSchema: enrichmentStepOutputSchema,
+  execute: async ({ inputData, getInitData }) => {
     const { brandId } = getInitData<{ brandId: string }>();
+    // Re-assert at the step boundary so a corrupted upstream cannot skip the contract.
+    const profile = assertBrandProfile(inputData.profile);
     const prompt = `Discover and save enrichment data for brandId: ${brandId}`;
     // ponytail: allSettled — enrichment failure must not block HITL approval
     const [social, visual] = await Promise.allSettled([
@@ -277,24 +312,33 @@ export const fanOutEnrichment = createStep({
     ]);
     if (social.status === "rejected") console.warn("social-discovery failed:", social.reason);
     if (visual.status === "rejected") console.warn("visual-identity failed:", visual.reason);
-    return { enriched: social.status === "fulfilled" || visual.status === "fulfilled" };
+    return {
+      profile,
+      enrichment: {
+        socialOk: social.status === "fulfilled",
+        visualOk: visual.status === "fulfilled",
+      },
+    };
   },
 });
 
 // Step 6: write draft record and suspend for HITL approval
 export const saveDraftAndWait = createStep({
   id: "save-draft-and-wait",
-  inputSchema: z.object({ enriched: z.boolean() }),
+  inputSchema: enrichmentStepOutputSchema,
   outputSchema: z.object({ draftId: z.string() }),
   resumeSchema: z.object({ approved: z.boolean() }),
   suspendSchema: z.object({ brandId: z.string(), draftId: z.string() }),
-  execute: async ({ suspend, resumeData, suspendData, getInitData, runId }) => {
+  execute: async ({ inputData, suspend, resumeData, suspendData, getInitData, runId }) => {
     const { brandId, actorId } = getInitData<{
       brandId: string;
       actorId: string;
     }>();
 
     if (!resumeData) {
+      // Contract already enforced upstream — re-check so invalid agent output never upserts.
+      assertBrandProfile(inputData.profile);
+
       const sb = adminClient();
       const { data: brandRow, error: brandRowErr } = await sb
         .from("brands")
@@ -305,6 +349,11 @@ export const saveDraftAndWait = createStep({
       // edge fn writes ai_profile_draft + embeds _draft_scores when draft_mode:true
       const draftProfile = brandRow?.ai_profile_draft as Record<string, unknown> | null ?? null;
       const scores = Array.isArray(draftProfile?._draft_scores) ? draftProfile._draft_scores : [];
+
+      // Fail closed before upsert when the stored draft no longer matches the contract.
+      const storedContract = stripBrandProfileMeta(draftProfile);
+      assertBrandProfile(storedContract);
+
       // Strip _draft_scores from profile — it belongs in the dedicated column.
       const cleanDraftProfile =
         draftProfile && typeof draftProfile === "object"
@@ -348,6 +397,10 @@ export const saveDraftAndWait = createStep({
     return { draftId: suspendData.draftId };
   },
 });
+
+// Re-export for structuredOutput / callers that want the JSON-Schema-backed Zod wrapper.
+export { brandProfileContractSchema };
+export type { BrandProfilePayload };
 
 // Step 7: commit (approved → promote) or reject (discard) — idempotent with HITL handlers
 const commitOrReject = createStep({
