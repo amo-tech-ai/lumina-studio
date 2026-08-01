@@ -186,3 +186,56 @@ Write Postgres-compatible SQL code for Supabase migration files that:
   - Include comments explaining the rationale and intended behavior of each security policy
 
 The generated SQL code should be production-ready, well-documented, and aligned with Supabase's best practices.
+
+## New tables and sequences need an explicit `grant`
+
+Postgres no longer hands one out for you. As of IPI-896 · SB-SEC-008 (migration
+`20260801091009_ipi896_revoke_default_table_privileges.sql`), the default privileges for role
+`postgres` in schema `public` grant new tables and sequences to `service_role` only — `anon` and
+`authenticated` get nothing.
+
+RLS is now the *second* gate, not the first. Enabling it is still required; it is no longer
+sufficient.
+
+```sql
+create table public.thing (
+  id bigint generated always as identity primary key,
+  org_id uuid not null references public.orgs(id)
+);
+
+alter table public.thing enable row level security;
+
+create policy thing_select_own on public.thing
+  for select to authenticated
+  using (org_id = (select auth.jwt() ->> 'org_id')::uuid);
+
+-- ← required, not optional. Without this the policy above never gets consulted.
+grant select, insert, update on table public.thing to authenticated;
+```
+
+**Skip the `grant` and the symptom looks exactly like a broken RLS policy** — an empty array or a
+`401` — so the instinct is to go rewrite the policy, which is the wrong file. Check the grant
+first:
+
+```sql
+select has_table_privilege('authenticated', 'public.thing', 'SELECT');  -- f = missing grant
+```
+
+Two related traps:
+
+- A `serial` column needs its sequence granted separately
+  (`grant usage, select on sequence public.thing_id_seq to authenticated;`).
+  `generated always as identity` does not — prefer it.
+- The same rule has applied to **functions** since IPI-684 · SB-SEC-001b: a new function in
+  `public` is not executable by `anon`/`authenticated` without an explicit `grant execute`.
+
+Standing guard: `supabase/tests/security/default-table-privileges.sql`, run by
+`.github/workflows/supabase-verify-rls.yml` on every PR. It creates a throwaway table and
+sequence inside a rolled-back transaction and fails if these defaults are ever restored.
+
+Other schemas differ — `planner`, `talent`, and `shoot` still grant `authenticated` by default
+(IPI-897 · SB-SEC-009 tracks closing that gap for `planner`). Verify rather than assume:
+
+```sql
+select defaclnamespace::regnamespace, defaclobjtype, defaclacl::text from pg_default_acl;
+```
