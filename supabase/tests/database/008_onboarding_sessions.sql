@@ -175,7 +175,11 @@ select is(
 );
 
 -- ── 6) RPC with auth.uid() null raises 42501 ───────────────────────────────────────────────
+-- Test 5 left request.jwt.claim.sub = stranger; reset role alone does not clear it, so
+-- auth.uid() stayed non-null and the RPC raised P0002 (session not found) instead of 42501.
 reset role;
+set local request.jwt.claims = '{}';
+set local request.jwt.claim.sub = '';
 select throws_ok(
   $$ select public.materialize_onboarding_session('ipi832-key-rls', 'Brand', 'https://x.test') $$,
   '42501',
