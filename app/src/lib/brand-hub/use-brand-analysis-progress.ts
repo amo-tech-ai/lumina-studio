@@ -92,11 +92,14 @@ export function useBrandAnalysisProgress({
 
   useEffect(() => {
     setIntakeStatus(initialStatus ?? "brand_created");
-  }, [initialStatus]);
+    bumpActivity();
+  }, [initialStatus, bumpActivity]);
 
   useEffect(() => {
     setCrawl(initialCrawlPages ?? null);
-  }, [initialCrawlPages]);
+    // Server prop refresh is activity too — reset quiet-gap (counts already update via setCrawl).
+    bumpActivity();
+  }, [initialCrawlPages, bumpActivity]);
 
   useEffect(() => {
     const supabase = createSupabaseBrowserClient();
@@ -158,10 +161,9 @@ export function useBrandAnalysisProgress({
       clearQuietTimer();
       supabase.removeChannel(channel);
     };
-    // bumpActivity/clearQuietTimer are stable (empty/ref deps); omit to avoid re-subscribe churn.
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- reconnectTick + brandId own the lifecycle
-  }, [brandId, reconnectTick]);
+  }, [brandId, reconnectTick, bumpActivity, clearQuietTimer]);
 
+  // After reconnect: show live (not still_working). Quiet gap restarts on SUBSCRIBED.
   const reconnect = useCallback(() => {
     setConnectionLost(false);
     setStillWorking(false);
