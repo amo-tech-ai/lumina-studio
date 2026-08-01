@@ -25,10 +25,17 @@ const OnboardingPage = () => {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [shell, setShell] = useState<{ orgId: string; brandId: string } | null>(null);
+  // Stable for retries / double-taps on the same identity. Rotate when brand identity
+  // fields change so Edit details cannot reuse a prior materialize/crawl key.
+  // Cross-visit resume uses localStorage in IPI-835.
+  const [idempotencyKey, setIdempotencyKey] = useState(() => crypto.randomUUID());
 
   const setField = (field: keyof OnboardingForm, value: string) => {
     setForm((f) => ({ ...f, [field]: value }));
     setShell(null);
+    if (field === "brandName" || field === "websiteUrl") {
+      setIdempotencyKey(crypto.randomUUID());
+    }
     if (field === "websiteUrl") setUrlError(null);
     if (field === "brandName") setNameError(null);
   };
@@ -51,7 +58,7 @@ const OnboardingPage = () => {
 
       let brandId = shell?.brandId;
       if (!brandId) {
-        const created = await createOrgAndBrand(supabase, user.id, form);
+        const created = await createOrgAndBrand(supabase, user.id, form, { idempotencyKey });
         brandId = created.brandId;
         setShell(created);
       }

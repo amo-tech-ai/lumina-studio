@@ -5489,6 +5489,60 @@ export type Database = {
           },
         ]
       }
+      onboarding_sessions: {
+        Row: {
+          brand_id: string | null
+          created_at: string
+          current_screen: number
+          draft_answers: Json
+          id: string
+          idempotency_key: string
+          organization_id: string | null
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          brand_id?: string | null
+          created_at?: string
+          current_screen?: number
+          draft_answers?: Json
+          id?: string
+          idempotency_key: string
+          organization_id?: string | null
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          brand_id?: string | null
+          created_at?: string
+          current_screen?: number
+          draft_answers?: Json
+          id?: string
+          idempotency_key?: string
+          organization_id?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "onboarding_sessions_brand_id_fkey"
+            columns: ["brand_id"]
+            isOneToOne: false
+            referencedRelation: "brands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "onboarding_sessions_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       org_members: {
         Row: {
           joined_at: string
@@ -6891,6 +6945,14 @@ export type Database = {
       }
       mark_notifications_read: {
         Args: { p_mark_all?: boolean; p_notification_ids?: string[] }
+        Returns: Json
+      }
+      materialize_onboarding_session: {
+        Args: {
+          p_brand_name: string
+          p_brand_url: string
+          p_idempotency_key: string
+        }
         Returns: Json
       }
       notification_row_to_jsonb: {

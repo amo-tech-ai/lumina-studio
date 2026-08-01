@@ -10,39 +10,57 @@ const FORM = {
   goal: "Brand Intelligence",
 };
 
-describe("onboarding orchestration (IPI-46)", () => {
-  it("creates shell before edge invoke — single brand row path", async () => {
+const KEY = "orch-idem-key";
+const ORG_ID = "11111111-1111-4111-8111-111111111111";
+const BRAND_ID = "22222222-2222-4222-8222-222222222222";
+
+const sessionRow = {
+  id: "33333333-3333-4333-8333-333333333333",
+  user_id: "44444444-4444-4444-8444-444444444444",
+  idempotency_key: KEY,
+  status: "draft" as const,
+  current_screen: 1,
+  draft_answers: {},
+  organization_id: null,
+  brand_id: null,
+};
+
+describe("onboarding orchestration (IPI-46 / IPI-832)", () => {
+  it("materializes via RPC before edge invoke — single brand row path", async () => {
     const order: string[] = [];
+
+    const selectChain = {
+      eq: vi.fn().mockReturnThis(),
+      maybeSingle: () => Promise.resolve({ data: null, error: null }),
+      single: () => {
+        order.push("session");
+        return Promise.resolve({ data: sessionRow, error: null });
+      },
+    };
 
     const supabase = {
       from: (table: string) => {
-        if (table === "organizations") {
-          return {
-            insert: () => ({
-              select: () => ({
-                single: () => {
-                  order.push("org");
-                  return Promise.resolve({ data: { id: "org-1" }, error: null });
-                },
-              }),
-            }),
-            delete: () => ({ eq: () => Promise.resolve({ error: null }) }),
-          };
-        }
         if (table === "brands") {
+          order.push("shell_ai_profile");
           return {
-            insert: () => ({
-              select: () => ({
-                single: () => {
-                  order.push("brand");
-                  return Promise.resolve({ data: { id: "brand-1" }, error: null });
-                },
-              }),
+            update: () => ({
+              eq: () => Promise.resolve({ data: null, error: null }),
             }),
           };
         }
-        throw new Error(`unexpected table ${table}`);
+        if (table !== "onboarding_sessions") throw new Error(`unexpected table ${table}`);
+        return {
+          select: () => selectChain,
+          insert: () => ({ select: () => selectChain }),
+        };
       },
+      rpc: vi.fn((name: string) => {
+        order.push(name);
+        return Promise.resolve({
+          data: { organization_id: ORG_ID, brand_id: BRAND_ID },
+          error: null,
+        });
+      }),
       functions: {
         invoke: vi.fn((name: string) => {
           order.push(name === "start-brand-crawl" ? "crawl" : "edge");
@@ -53,25 +71,38 @@ describe("onboarding orchestration (IPI-46)", () => {
             });
           }
           return Promise.resolve({
-            data: { ok: true, data: { brandId: "brand-1", scores: [] } },
+            data: { ok: true, data: { brandId: BRAND_ID, scores: [] } },
             error: null,
           });
         }),
       },
     } as unknown as SupabaseClient;
 
-    const { brandId } = await createOrgAndBrand(supabase, "user-1", FORM);
+    const { brandId } = await createOrgAndBrand(supabase, sessionRow.user_id, FORM, {
+      idempotencyKey: KEY,
+    });
     await invokeStartBrandCrawl(supabase, brandId, FORM.websiteUrl, {
       idempotencyKey: `onboarding-${brandId}`,
     });
     await invokeBrandIntelligence(supabase, brandId, FORM, { crawlResultId: "crawl-1" });
 
-    expect(order).toEqual(["org", "brand", "crawl", "edge"]);
+    expect(order).toEqual([
+      "session",
+      "materialize_onboarding_session",
+      "shell_ai_profile",
+      "crawl",
+      "edge",
+    ]);
+    expect(supabase.rpc).toHaveBeenCalledWith("materialize_onboarding_session", {
+      p_idempotency_key: KEY,
+      p_brand_name: FORM.brandName,
+      p_brand_url: FORM.websiteUrl,
+    });
     expect(supabase.functions.invoke).toHaveBeenCalledWith("start-brand-crawl", {
       body: {
-        brandId: "brand-1",
+        brandId: BRAND_ID,
         websiteUrl: FORM.websiteUrl,
-        idempotencyKey: "onboarding-brand-1",
+        idempotencyKey: `onboarding-${BRAND_ID}`,
         workflowId: undefined,
         requestId: undefined,
       },
@@ -79,38 +110,32 @@ describe("onboarding orchestration (IPI-46)", () => {
     expect(supabase.functions.invoke).toHaveBeenCalledWith("brand-intelligence", {
       body: {
         url: FORM.websiteUrl,
-        brandId: "brand-1",
+        brandId: BRAND_ID,
         brand_name: FORM.brandName,
         crawlResultId: "crawl-1",
       },
     });
   });
 
-  it("does not call edge when shell creation fails", async () => {
+  it("does not call edge when materialize RPC fails", async () => {
     const invoke = vi.fn();
+    const selectChain = {
+      eq: vi.fn().mockReturnThis(),
+      maybeSingle: () => Promise.resolve({ data: sessionRow, error: null }),
+      single: () => Promise.resolve({ data: sessionRow, error: null }),
+    };
     const supabase = {
-      from: (table: string) => {
-        if (table === "organizations") {
-          return {
-            insert: () => ({
-              select: () => ({
-                single: () => Promise.resolve({ data: null, error: { message: "org fail" } }),
-              }),
-            }),
-          };
-        }
-        return {
-          insert: () => ({
-            select: () => ({
-              single: () => Promise.resolve({ data: null, error: null }),
-            }),
-          }),
-        };
-      },
+      from: () => ({
+        select: () => selectChain,
+        insert: () => ({ select: () => selectChain }),
+      }),
+      rpc: vi.fn().mockResolvedValue({ data: null, error: { message: "session not found" } }),
       functions: { invoke },
     } as unknown as SupabaseClient;
 
-    await expect(createOrgAndBrand(supabase, "user-1", FORM)).rejects.toThrow("org fail");
+    await expect(
+      createOrgAndBrand(supabase, "user-1", FORM, { idempotencyKey: KEY }),
+    ).rejects.toThrow("session not found");
     expect(invoke).not.toHaveBeenCalled();
   });
 
@@ -148,7 +173,7 @@ describe("onboarding orchestration (IPI-46)", () => {
     expect(order).toEqual(["start-brand-crawl", "brand-intelligence"]);
   });
 
-  it("page calls createOrgAndBrand before invokeBrandIntelligence", async () => {
+  it("page calls createOrgAndBrand (RPC) before invokeBrandIntelligence", async () => {
     const { readFileSync } = await import("node:fs");
     const { resolve } = await import("node:path");
     const { fileURLToPath } = await import("node:url");
@@ -168,8 +193,10 @@ describe("onboarding orchestration (IPI-46)", () => {
     expect(shellIdx).toBeGreaterThan(-1);
     expect(crawlIdx).toBeGreaterThan(shellIdx);
     expect(edgeIdx).toBeGreaterThan(crawlIdx);
+    expect(runBlock).toMatch(/idempotencyKey/);
     expect(runBlock).toMatch(/start-brand-crawl failed, continuing with brand intelligence/);
     expect(src).not.toMatch(/invoke\("brand-intelligence"/);
     expect(src).toMatch(/setShell/);
+    expect(src).toMatch(/setIdempotencyKey/);
   });
 });
