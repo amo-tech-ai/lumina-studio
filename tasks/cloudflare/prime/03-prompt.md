@@ -33,7 +33,7 @@ docs/audits/cloudflare-migration-audit.md
 Read these skills before performing the audit:
 
 ```text
-/home/sk/ipix/.claude/skills/cloudflare
+/home/sk/ipix/.claude/skills/cloudflare-ipix
 /home/sk/ipix/.claude/skills/cloudflare-workflow
 /home/sk/ipix/.claude/skills/ipix-supabase
 /home/sk/ipix/.claude/skills/mastra
