@@ -23,7 +23,38 @@
 set search_path to public, extensions;
 
 begin;
-select plan(13);
+select plan(16);
+
+-- ── IPI-888 · SB-HYGIENE-004 — grant-level lockdown on processed_firecrawl_webhooks ──
+-- Catalog assertions, so they run before any SET ROLE and need no fixtures.
+--
+-- RLS-with-zero-policies already denies every row, so these are not row-access
+-- tests — they assert the *grant* is gone, which is what keeps the table out of
+-- PostgREST's schema cache. This grant has drifted back once already after
+-- 20260718200000_ipi692 revoked it at creation.
+--
+-- table_privs_are is exhaustive: the empty array fails if ANY privilege is
+-- present, so a future INSERT/UPDATE re-grant is caught too, not just SELECT.
+select table_privs_are(
+  'public', 'processed_firecrawl_webhooks', 'anon', array[]::text[],
+  'anon has no privileges on processed_firecrawl_webhooks'
+);
+select table_privs_are(
+  'public', 'processed_firecrawl_webhooks', 'authenticated', array[]::text[],
+  'authenticated has no privileges on processed_firecrawl_webhooks'
+);
+-- Writer role must survive the revoke — guards against an over-broad
+-- `revoke ... from public` cascading and breaking the webhook handler.
+--
+-- No MAINTAIN in this list even though relacl carries the PG17 'm' bit:
+-- table_privs_are resolves through information_schema.table_privileges, which
+-- does not report MAINTAIN on pgTAP 1.2.0. Verified against the live project —
+-- including it fails the assertion.
+select table_privs_are(
+  'public', 'processed_firecrawl_webhooks', 'service_role',
+  array['SELECT', 'INSERT', 'UPDATE', 'DELETE', 'TRUNCATE', 'REFERENCES', 'TRIGGER'],
+  'service_role retains full privileges on processed_firecrawl_webhooks'
+);
 
 -- Self-contained owner: insert auth.users inside this transaction (rolled back).
 -- Do NOT use seed.sql org id 00000000-0000-0000-0000-000000000001 — that is Acme
