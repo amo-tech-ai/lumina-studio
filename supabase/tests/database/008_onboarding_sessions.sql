@@ -23,8 +23,8 @@ create table if not exists public.onboarding_sessions (
   current_screen  smallint not null default 1
                     check (current_screen between 1 and 13),
   draft_answers   jsonb not null default '{}'::jsonb,
-  organization_id uuid references public.organizations(id),
-  brand_id        uuid references public.brands(id),
+  organization_id uuid references public.organizations(id) on delete set null,
+  brand_id        uuid references public.brands(id) on delete set null,
   created_at      timestamptz not null default now(),
   updated_at      timestamptz not null default now(),
   constraint onboarding_sessions_user_key unique (user_id, idempotency_key)
