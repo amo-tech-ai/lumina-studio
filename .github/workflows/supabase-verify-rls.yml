@@ -127,6 +127,15 @@ jobs:
           set -euo pipefail
           psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/tests/security/default-execute-privileges.sql
 
+      # IPI-896 · SB-SEC-008 — the table/sequence counterpart of the step above.
+      # Runs inside a transaction that always rolls back, so a failing assertion
+      # cannot leak its probe objects into the shared remote project.
+      - name: Default table/sequence privileges on new objects (IPI-896)
+        if: steps.gate.outputs.mode == 'run'
+        run: |
+          set -euo pipefail
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/tests/security/default-table-privileges.sql
+
       - name: pgTAP — RLS/grant/policy structural tests (IPI-245 · SB-TEST-002)
         if: steps.gate.outputs.mode == 'run'
         run: |
