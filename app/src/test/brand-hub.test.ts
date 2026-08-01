@@ -130,6 +130,21 @@ describe("brand-hub helpers", () => {
     expect(hasMeaningfulProfile(parseAiProfile({ visualIdentity: {} }))).toBe(false);
   });
 
+  it("parseAiProfile unwraps IPI-834 claim objects to string fields", () => {
+    const profile = parseAiProfile({
+      tagline: {
+        value: "Luxury made daily",
+        evidence: [{ sourceUrl: "https://example.com", quote: "tagline" }],
+      },
+      category: {
+        value: "Fashion",
+        evidence: [{ sourceUrl: "https://example.com", quote: "category" }],
+      },
+    });
+    expect(profile.tagline).toBe("Luxury made daily");
+    expect(profile.category).toBe("Fashion");
+  });
+
   it("parseAiProfile drops non-array chip fields from malformed LLM output", () => {
     const profile = parseAiProfile({
       values: "Sustainability",

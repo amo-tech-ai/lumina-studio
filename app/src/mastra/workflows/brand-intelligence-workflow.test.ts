@@ -7,8 +7,12 @@ vi.mock("../agents", () => ({
 
 vi.mock("@supabase/supabase-js", () => ({ createClient: vi.fn() }));
 
+import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { createClient } from "@supabase/supabase-js";
 import { socialDiscoveryAgent, visualIdentityAgent } from "../agents";
+import type { BrandProfilePayload } from "@/lib/brand/brand-profile-contract";
 import {
   brandIntelligenceWorkflow,
   extractProfile,
@@ -17,7 +21,26 @@ import {
   validateBrand,
 } from "./brand-intelligence-workflow";
 
-function makeMockClient() {
+const validProfile = JSON.parse(
+  readFileSync(
+    join(
+      dirname(fileURLToPath(import.meta.url)),
+      "../../../../supabase/functions/_shared/schemas/fixtures/brand-profile-valid.json",
+    ),
+    "utf8",
+  ),
+) as BrandProfilePayload;
+
+function draftWithMeta(profile: BrandProfilePayload = validProfile) {
+  return {
+    ...profile,
+    analyzedAt: "2026-08-01T00:00:00.000Z",
+    _lifecycle: "scores_complete",
+    _draft_scores: [{ score_type: "visual", score: 80 }],
+  };
+}
+
+function makeMockClient(aiProfileDraft: Record<string, unknown> | null = draftWithMeta()) {
   const upsertPayload: Record<string, unknown>[] = [];
   const mockUpsert = vi.fn((payload: Record<string, unknown>) => {
     upsertPayload.push(payload);
@@ -30,7 +53,7 @@ function makeMockClient() {
           select: vi.fn().mockReturnThis(),
           eq: vi.fn().mockReturnThis(),
           single: vi.fn().mockResolvedValue({
-            data: { brand_url: "https://example.com", ai_profile_draft: null },
+            data: { brand_url: "https://example.com", ai_profile_draft: aiProfileDraft },
             error: null,
           }),
           update: vi.fn().mockReturnValue({
@@ -56,25 +79,42 @@ describe("brand-intelligence workflow", () => {
   });
 });
 
-// Enrichment is best-effort: a failing agent must not block HITL approval, but the
-// step must report whether anything actually succeeded (not a blanket enriched:true).
+// Enrichment is best-effort: a failing agent must not block HITL approval.
+// IPI-834 — step output is the validated profile contract + enrichment flags.
 describe("fan-out-enrichment", () => {
   const social = vi.mocked(socialDiscoveryAgent.generate);
   const visual = vi.mocked(visualIdentityAgent.generate);
-  const ctx = { getInitData: () => ({ brandId: "b1" }) } as never;
+  const ctx = {
+    inputData: { profile: validProfile },
+    getInitData: () => ({ brandId: "b1" }),
+  } as never;
 
   beforeEach(() => vi.clearAllMocks());
 
-  it("reports enriched=false when both agents reject", async () => {
+  it("passes the profile through and reports both agents failed", async () => {
     social.mockRejectedValue(new Error("social boom"));
     visual.mockRejectedValue(new Error("visual boom"));
-    expect((await fanOutEnrichment.execute(ctx)).enriched).toBe(false);
+    const out = await fanOutEnrichment.execute(ctx);
+    expect(out.profile.tagline.value).toBe("Clean essentials");
+    expect(out.enrichment).toEqual({ socialOk: false, visualOk: false });
   });
 
-  it("reports enriched=true when at least one agent succeeds", async () => {
+  it("reports socialOk when at least one agent succeeds", async () => {
     social.mockResolvedValue({} as never);
     visual.mockRejectedValue(new Error("visual boom"));
-    expect((await fanOutEnrichment.execute(ctx)).enriched).toBe(true);
+    const out = await fanOutEnrichment.execute(ctx);
+    expect(out.enrichment).toEqual({ socialOk: true, visualOk: false });
+  });
+
+  it("throws when the upstream profile fails the DNA contract", async () => {
+    social.mockResolvedValue({} as never);
+    visual.mockResolvedValue({} as never);
+    await expect(
+      fanOutEnrichment.execute({
+        inputData: { profile: { ...validProfile, tagline: { value: "x", evidence: [] } } },
+        getInitData: () => ({ brandId: "b1" }),
+      } as never),
+    ).rejects.toThrow(/at least one evidence/);
   });
 });
 
@@ -95,7 +135,10 @@ describe("extract-profile edge-fn failure", () => {
    * `failStatusWriteFor` makes the update for that intake_status return an error, so the
    * "we could not even record the failure" branch can be exercised.
    */
-  function makeRecordingClient(failStatusWriteFor?: string) {
+  function makeRecordingClient(
+    failStatusWriteFor?: string,
+    aiProfileDraft: Record<string, unknown> | null = draftWithMeta(),
+  ) {
     const updates: Record<string, unknown>[] = [];
     return {
       client: {
@@ -103,7 +146,7 @@ describe("extract-profile edge-fn failure", () => {
           select: vi.fn().mockReturnThis(),
           eq: vi.fn().mockReturnThis(),
           single: vi.fn().mockResolvedValue({
-            data: { brand_url: "https://example.com", ai_profile_draft: null },
+            data: { brand_url: "https://example.com", ai_profile_draft: aiProfileDraft },
             error: null,
           }),
           update: vi.fn((payload: Record<string, unknown>) => {
@@ -216,14 +259,37 @@ describe("extract-profile edge-fn failure", () => {
     expect(msg.length).toBeLessThan(700);
   });
 
-  it("resolves ok on a 2xx and leaves intake_status to the edge fn", async () => {
+  it("returns a validated profile on 2xx and leaves intake_status to the edge fn", async () => {
     const { client, updates } = makeRecordingClient();
     vi.mocked(createClient).mockReturnValue(client);
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: true, status: 200, text: async () => "" }));
 
-    await expect(extractProfile.execute(ctx)).resolves.toEqual({ ok: true });
+    const out = await extractProfile.execute(ctx);
+    expect(out.profile.name).toBe("Example Brand");
+    expect(out.profile.tagline.evidence[0]?.quote).toMatch(/Clean essentials/);
     // The edge fn sets draft_ready itself — this step must not overwrite it.
     expect(updates.map((u) => u.intake_status)).toEqual(["analysis_running"]);
+  });
+
+  it("throws and marks failed when the draft fails the DNA contract (draft untouched)", async () => {
+    const badDraft = {
+      schemaVersion: 2,
+      name: "Bad",
+      tagline: { value: "x", evidence: [] },
+      category: validProfile.category,
+      visualIdentity: validProfile.visualIdentity,
+      targetAudience: validProfile.targetAudience,
+      sourceUrl: "https://example.com",
+      scores: validProfile.scores,
+    };
+    const { client, updates } = makeRecordingClient(undefined, badDraft);
+    vi.mocked(createClient).mockReturnValue(client);
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: true, status: 200, text: async () => "" }));
+
+    await expect(extractProfile.execute(ctx)).rejects.toThrow(/contract validation failed/);
+    expect(updates.map((u) => u.intake_status)).toEqual(["analysis_running", "failed"]);
+    // failAnalysis only writes intake_status — never patches ai_profile_draft.
+    expect(updates.every((u) => !("ai_profile_draft" in u))).toBe(true);
   });
 });
 
@@ -241,13 +307,18 @@ describe("save-draft-and-wait stale-timestamp clearing", () => {
     vi.unstubAllEnvs();
   });
 
+  const enrichmentInput = {
+    profile: validProfile,
+    enrichment: { socialOk: true, visualOk: false },
+  };
+
   it("clears approved_at, rejected_at, and expires_at on upsert", async () => {
     const mockClient = makeMockClient();
     vi.mocked(createClient).mockReturnValue(mockClient);
 
     await saveDraftAndWait.execute(
       {
-        enriched: true,
+        inputData: enrichmentInput,
         suspend: vi.fn().mockResolvedValue(undefined),
         getInitData: () => ({ brandId: BRAND_ID, actorId: ACTOR_ID }),
         runId: RUN_ID,
@@ -266,38 +337,16 @@ describe("save-draft-and-wait stale-timestamp clearing", () => {
   });
 
   it("stores profile fields at the top level of draft_profile", async () => {
-    const aiProfileDraft = {
+    const aiProfileDraft = draftWithMeta({
+      ...validProfile,
       name: "Test Brand",
-      tagline: "A test",
-      overview: "Just testing",
-      _draft_scores: [{ score_type: "visual_identity", score: 85, rationale: "Solid" }],
-    };
-    const mockClient = makeMockClient();
-    // Return an ai_profile_draft with actual profile data
-    mockClient.from = vi.fn((table: string) => {
-      if (table === "brands") {
-        return {
-          select: vi.fn().mockReturnThis(),
-          eq: vi.fn().mockReturnThis(),
-          single: vi.fn().mockResolvedValue({
-            data: { brand_url: "https://example.com", ai_profile_draft: aiProfileDraft },
-            error: null,
-          }),
-          update: vi.fn().mockReturnValue({
-            eq: vi.fn().mockResolvedValue({ data: null, error: null }),
-          }),
-        } as never;
-      }
-      if (table === "brand_intake_drafts") {
-        return { upsert: mockClient._upsertSpy };
-      }
-      return {};
     });
+    const mockClient = makeMockClient(aiProfileDraft);
     vi.mocked(createClient).mockReturnValue(mockClient);
 
     await saveDraftAndWait.execute(
       {
-        enriched: true,
+        inputData: enrichmentInput,
         suspend: vi.fn().mockResolvedValue(undefined),
         getInitData: () => ({ brandId: BRAND_ID, actorId: ACTOR_ID }),
         runId: RUN_ID,
@@ -306,10 +355,8 @@ describe("save-draft-and-wait stale-timestamp clearing", () => {
 
     const p = mockClient._upsertPayload[0] as Record<string, unknown>;
     const df = p.draft_profile as Record<string, unknown>;
-    // Profile fields at top level
     expect(df.name).toBe("Test Brand");
-    expect(df.tagline).toBe("A test");
-    expect(df.overview).toBe("Just testing");
+    expect((df.tagline as { value: string }).value).toBe("Clean essentials");
     // _draft_scores stripped from draft_profile
     expect(df).not.toHaveProperty("_draft_scores");
     // _workflow_run_id present
@@ -318,32 +365,13 @@ describe("save-draft-and-wait stale-timestamp clearing", () => {
 
   it("populates draft_scores column", async () => {
     const scores = [{ score_type: "visual_identity", score: 85, rationale: "Solid" }];
-    const aiProfileDraft = { name: "Test", _draft_scores: scores };
-    const mockClient = makeMockClient();
-    mockClient.from = vi.fn((table: string) => {
-      if (table === "brands") {
-        return {
-          select: vi.fn().mockReturnThis(),
-          eq: vi.fn().mockReturnThis(),
-          single: vi.fn().mockResolvedValue({
-            data: { brand_url: "https://example.com", ai_profile_draft: aiProfileDraft },
-            error: null,
-          }),
-          update: vi.fn().mockReturnValue({
-            eq: vi.fn().mockResolvedValue({ data: null, error: null }),
-          }),
-        } as never;
-      }
-      if (table === "brand_intake_drafts") {
-        return { upsert: mockClient._upsertSpy };
-      }
-      return {};
-    });
+    const aiProfileDraft = { ...draftWithMeta(), _draft_scores: scores };
+    const mockClient = makeMockClient(aiProfileDraft);
     vi.mocked(createClient).mockReturnValue(mockClient);
 
     await saveDraftAndWait.execute(
       {
-        enriched: true,
+        inputData: enrichmentInput,
         suspend: vi.fn().mockResolvedValue(undefined),
         getInitData: () => ({ brandId: BRAND_ID, actorId: ACTOR_ID }),
         runId: RUN_ID,
@@ -354,6 +382,33 @@ describe("save-draft-and-wait stale-timestamp clearing", () => {
     expect(Array.isArray(p.draft_scores)).toBe(true);
     expect(p.draft_scores).toHaveLength(1);
     expect((p.draft_scores as Array<Record<string, unknown>>)[0].score_type).toBe("visual_identity");
+  });
+
+  it("throws before upsert when stored draft fails the DNA contract", async () => {
+    const badDraft = {
+      schemaVersion: 2,
+      name: "Bad",
+      tagline: { value: "x", evidence: [] },
+      category: validProfile.category,
+      visualIdentity: validProfile.visualIdentity,
+      targetAudience: validProfile.targetAudience,
+      sourceUrl: "https://example.com",
+      scores: validProfile.scores,
+    };
+    const mockClient = makeMockClient(badDraft);
+    vi.mocked(createClient).mockReturnValue(mockClient);
+
+    await expect(
+      saveDraftAndWait.execute(
+        {
+          inputData: enrichmentInput,
+          suspend: vi.fn().mockResolvedValue(undefined),
+          getInitData: () => ({ brandId: BRAND_ID, actorId: ACTOR_ID }),
+          runId: RUN_ID,
+        } as never,
+      ),
+    ).rejects.toThrow(/at least one evidence/);
+    expect(mockClient._upsertPayload).toHaveLength(0);
   });
 });
 

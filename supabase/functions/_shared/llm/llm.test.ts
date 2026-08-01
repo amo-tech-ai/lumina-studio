@@ -119,6 +119,14 @@ Deno.test("brandProfileStrictJsonSchema is strict object schema", () => {
     brandProfileStrictJsonSchema.required.includes("scores"),
     true,
   );
+  assertEquals(
+    brandProfileStrictJsonSchema.required.includes("schemaVersion"),
+    true,
+  );
+  assertEquals(
+    brandProfileStrictJsonSchema.required.includes("evidenceSources"),
+    false,
+  );
 });
 
 Deno.test("resolveBiProviderFromEnv honors BI_USE_GEMINI override", () => {

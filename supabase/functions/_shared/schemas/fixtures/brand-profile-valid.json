@@ -1,0 +1,119 @@
+{
+  "schemaVersion": 2,
+  "name": "Example Brand",
+  "tagline": {
+    "value": "Clean essentials",
+    "evidence": [
+      {
+        "sourceUrl": "https://example.com/",
+        "quote": "Clean essentials for modern living"
+      }
+    ]
+  },
+  "overview": {
+    "value": "A DTC apparel brand focused on everyday staples.",
+    "evidence": [
+      {
+        "sourceUrl": "https://example.com/about",
+        "quote": "everyday staples for urban professionals"
+      }
+    ]
+  },
+  "category": {
+    "value": "DTC apparel",
+    "evidence": [
+      {
+        "sourceUrl": "https://example.com/collections",
+        "quote": "apparel collections for daily wear"
+      }
+    ]
+  },
+  "visualIdentity": {
+    "colors": ["#111111", "#F5F5F5"],
+    "mood": "minimal"
+  },
+  "targetAudience": {
+    "value": "Urban professionals",
+    "evidence": [
+      {
+        "sourceUrl": "https://example.com/about",
+        "quote": "designed for urban professionals"
+      }
+    ]
+  },
+  "sourceUrl": "https://example.com",
+  "contentPillars": ["essentials", "craft", "city life"],
+  "brandVoice": {
+    "value": "calm, confident, minimal",
+    "evidence": [
+      {
+        "sourceUrl": "https://example.com/",
+        "quote": "calm confidence in every stitch"
+      }
+    ]
+  },
+  "recommendedServices": ["fashion-photography", "ecommerce"],
+  "productionReadiness": 72,
+  "mission": {
+    "value": "Make everyday dressing effortless",
+    "evidence": [
+      {
+        "sourceUrl": "https://example.com/about",
+        "quote": "effortless everyday dressing"
+      }
+    ]
+  },
+  "vision": {
+    "value": "A wardrobe of fewer, better pieces",
+    "evidence": [
+      {
+        "sourceUrl": "https://example.com/about",
+        "quote": "fewer, better pieces"
+      }
+    ]
+  },
+  "values": ["quality", "simplicity"],
+  "uvp": {
+    "value": "Premium basics without the markup theater",
+    "evidence": [
+      {
+        "sourceUrl": "https://example.com/",
+        "quote": "premium basics"
+      }
+    ]
+  },
+  "positioning": {
+    "value": "Between fast fashion and luxury logos",
+    "evidence": [
+      {
+        "sourceUrl": "https://example.com/about",
+        "quote": "not fast fashion, not logo luxury"
+      }
+    ]
+  },
+  "brandPersonality": {
+    "value": "Quietly confident",
+    "evidence": [
+      {
+        "sourceUrl": "https://example.com/",
+        "quote": "quietly confident"
+      }
+    ]
+  },
+  "confidenceScore": 81,
+  "competitorSignals": ["Everlane", "COS"],
+  "scores": {
+    "visual": 80,
+    "audience": 75,
+    "consistency": 70,
+    "commerce_readiness": 85,
+    "brand_clarity": 78,
+    "content_strength": 66,
+    "social_presence": 60,
+    "digital_experience": 74,
+    "sustainability_signal": 55,
+    "photography_readiness": 70,
+    "confidence": 80,
+    "evidence": ["Homepage hero states brand promise clearly"]
+  }
+}
