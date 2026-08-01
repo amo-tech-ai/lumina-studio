@@ -23,7 +23,66 @@
 set search_path to public, extensions;
 
 begin;
-select plan(13);
+select plan(16);
+
+-- ── IPI-888 · SB-HYGIENE-004 — grant-level lockdown on processed_firecrawl_webhooks ──
+-- Catalog assertions, so they run before any SET ROLE and need no fixtures.
+--
+-- RLS-with-zero-policies already denies every row, so these are not row-access
+-- tests — they assert the *grant* is gone, which is what keeps the table out of
+-- PostgREST's schema cache. This grant has drifted back once already after
+-- 20260718200000_ipi692 revoked it at creation.
+--
+-- Two assertions, because there are two distinct ways this can re-drift.
+--
+-- Deliberately NOT table_privs_are per role. It filters
+-- information_schema.table_privileges by exact grantee, and a grant made to
+-- PUBLIC lands under grantee 'PUBLIC' — so table_privs_are(...,'anon',{}) still
+-- passes while anon reads the table through PUBLIC inheritance. Measured on the
+-- live project: after `grant select ... to public`, information_schema shows
+-- only `PUBLIC=SELECT`, yet has_table_privilege('anon',...,'SELECT') is true.
+-- The per-role form would have reported green on a readable table.
+--
+-- (1) Direct rows — covers all three grantees and every privilege type, so a
+-- future INSERT/UPDATE re-grant fails too, not just SELECT. Same grantee filter
+-- as supabase/tests/security/chatbot-grants.sql.
+select is_empty(
+  $$ select grantee, privilege_type
+       from information_schema.table_privileges
+      where table_schema = 'public'
+        and table_name = 'processed_firecrawl_webhooks'
+        and grantee in ('anon', 'authenticated', 'PUBLIC') $$,
+  'no anon/authenticated/PUBLIC privileges on processed_firecrawl_webhooks'
+);
+
+-- (2) Effective access — follows every inheritance path, so it still holds if
+-- the role hierarchy changes in a way the grantee list above does not anticipate.
+select ok(
+  not has_table_privilege('anon', 'public.processed_firecrawl_webhooks', 'SELECT')
+    and not has_table_privilege('authenticated', 'public.processed_firecrawl_webhooks', 'SELECT'),
+  'neither deny role has effective SELECT via any grant path'
+);
+-- Writer role must survive the revoke — guards against an over-broad
+-- `revoke ... from public` cascading and breaking the webhook handler.
+--
+-- Deliberately NOT table_privs_are here. That assertion is exhaustive, and the
+-- migration grants only SELECT/INSERT/UPDATE. The other live privileges
+-- (DELETE/TRUNCATE/REFERENCES/TRIGGER) come from the creation-time default ACL,
+-- not from any migration — so asserting all seven passes against the live
+-- project but fails on a database rebuilt from migrations alone.
+--
+-- Exhaustiveness earns its keep on anon/authenticated, where *any* privilege is
+-- a finding. On the writer role the only question is whether it still has what
+-- supabase/functions/firecrawl-webhook/handler.ts uses — SELECT, INSERT, UPDATE
+-- (lines 37, 66, 79, 88, 107). Extra privileges there are not a security
+-- regression. Same has_table_privilege style as
+-- supabase/tests/security/chatbot-grants.sql.
+select ok(
+  has_table_privilege('service_role', 'public.processed_firecrawl_webhooks', 'SELECT')
+    and has_table_privilege('service_role', 'public.processed_firecrawl_webhooks', 'INSERT')
+    and has_table_privilege('service_role', 'public.processed_firecrawl_webhooks', 'UPDATE'),
+  'service_role retains SELECT/INSERT/UPDATE for the firecrawl webhook handler'
+);
 
 -- Self-contained owner: insert auth.users inside this transaction (rolled back).
 -- Do NOT use seed.sql org id 00000000-0000-0000-0000-000000000001 — that is Acme
