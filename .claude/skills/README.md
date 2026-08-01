@@ -11,14 +11,13 @@
 |-----|---------|
 | [`ipix`](./ipix/SKILL.md) | Domain router · workflow map |
 | [`ipix-task-lifecycle`](./ipix-task-lifecycle/SKILL.md) | IPI plan → ship |
-| [`ipix-supabase`](./ipix-supabase/SKILL.md) | Schema, RLS, edge — routes to [`firecrawl`](./firecrawl/SKILL.md), [`infisical`](./infisical/SKILL.md). ⚠️ `Skill("ipix-supabase")` may fail with "Unknown skill" — `Read` the file directly until harness gap is fixed. 🔴 6 stale doc links — see inventory. |
+| [`ipix-supabase`](./ipix-supabase/SKILL.md) | Schema, RLS, edge — routes to [`firecrawl`](./firecrawl/SKILL.md). ⚠️ `Skill("ipix-supabase")` may fail with "Unknown skill" — `Read` the file directly until harness gap is fixed. 🔴 6 stale doc links — see inventory. |
 | [`design-to-production`](./design-to-production/SKILL.md) | DESIGN V2: DC HTML → Next.js parity (execute + verify) |
 | [`fashion-production`](./fashion-production/SKILL.md) | Shoot pipeline (13 phases). 🔴 link to `fashion-styling` |
 | [`copilotkit`](./copilotkit/SKILL.md) | CopilotKit v2 single plugin. 🔴 1 stale doc link |
 | [`mastra`](./mastra/SKILL.md) | Agents + tools. 🔴 missing `references/full-guide.md` |
 | [`cloudinary`](./cloudinary/SKILL.md) | Media pipeline |
-| [`cloudflare`](./cloudflare/SKILL.md) | Workers, Wrangler, Agents SDK, platform refs |
-| [`infisical`](./infisical/SKILL.md) | Secrets |
+| [`cloudflare-ipix`](./cloudflare-ipix/SKILL.md) | Workers, Wrangler, Agents SDK, platform refs |
 | [`firecrawl`](./firecrawl/SKILL.md) | Web crawl/scrape/search |
 | [`linear`](./linear/SKILL.md) | Issues MCP |
 | `mercur` | `my-marketplace/` commerce. ✅ `name:` slug fixed 2026-07-06 |
