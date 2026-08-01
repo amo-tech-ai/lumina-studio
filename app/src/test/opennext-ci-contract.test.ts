@@ -138,6 +138,28 @@ describe("OpenNext CI contract (IPI-472)", () => {
     expect(script).toMatch(/readInstalledVersion/);
   });
 
+  it("check-worker-bundle-size.mjs hard-bans metafile composition (IPI-848 · CF-BUNDLE-223)", () => {
+    const script = readFileSync(
+      resolve(__dirname, "../../scripts/check-worker-bundle-size.mjs"),
+      "utf8",
+    );
+
+    expect(script).toMatch(/BANNED_METAFILE_SUBSTRINGS/);
+    expect(script).toMatch(/node_modules\/mermaid/);
+    expect(script).toMatch(/node_modules\/katex/);
+    expect(script).toMatch(/node_modules\/cytoscape/);
+    expect(script).toMatch(/node_modules\/@copilotkit\/web-inspector/);
+    expect(script).toMatch(/export function scanMetafileInputs/);
+    expect(script).toMatch(/export function summarizeTopPackages/);
+    expect(script).toMatch(/export function pathMatchesMetafileNeedle/);
+    expect(script).toMatch(/export function validateMetafileForScan/);
+    expect(script).toMatch(/schemaVersion:\s*2/);
+    expect(script).toMatch(/FAIL \(composition\)/);
+    expect(script).toMatch(/metafile not scannable/);
+    // Bare web-inspector would false-fail scripts_cf-web-inspector-stub_…
+    expect(script).not.toMatch(/BANNED_METAFILE_SUBSTRINGS[\s\S]*?"web-inspector"/);
+  });
+
   it("ci.yml wires build:cf with placeholder NEXT_PUBLIC_SUPABASE build-time vars", () => {
     const ci = readFileSync(resolve(__dirname, "../../../.github/workflows/ci.yml"), "utf8");
 

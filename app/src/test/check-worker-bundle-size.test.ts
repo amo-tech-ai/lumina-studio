@@ -33,6 +33,23 @@ function stubDryRun(gzipKiB: number, uploadKiB = gzipKiB * 5) {
   });
 }
 
+/** Minimal scannable metafile so composition fail-closed does not mask size/delta tests. */
+function stubCleanMetafile(dir: string) {
+  const metaPath = join(dir, "handler.mjs.meta.json");
+  writeFileSync(
+    metaPath,
+    JSON.stringify({
+      inputs: {
+        "scripts_cf-web-inspector-stub_mjs_clean._.js": { bytes: 100 },
+        "node_modules/@mastra/core/dist/index.js": { bytes: 1000 },
+      },
+    }),
+    "utf8",
+  );
+  process.env.WORKER_BUNDLE_METAFILE = metaPath;
+  return metaPath;
+}
+
 describe("check-worker-bundle-size helpers (IPI-706 Phase 1A)", () => {
   it("parses wrangler dry-run Total Upload / gzip line", () => {
     const sizes = parseGzipKiB(
@@ -55,7 +72,7 @@ describe("check-worker-bundle-size helpers (IPI-706 Phase 1A)", () => {
     expect(over).toEqual({ deltaKiB: 30, warn: true });
   });
 
-  it("builds a machine-readable report with schemaVersion 1", () => {
+  it("builds a machine-readable report with schemaVersion 2 (additive composition)", () => {
     const report = buildWorkerBundleReport({
       sizes: { uploadKiB: 46384.44, gzipKiB: 9213.13 },
       metafileHash: "abc123",
@@ -63,7 +80,7 @@ describe("check-worker-bundle-size helpers (IPI-706 Phase 1A)", () => {
       gitSha: "deadbeef",
       createdAt: "2026-07-28T00:00:00.000Z",
     });
-    expect(report.schemaVersion).toBe(1);
+    expect(report.schemaVersion).toBe(2);
     expect(report.gzipKiB).toBe(9213.13);
     expect(report.gzipMiB).toBeCloseTo(8.997, 3);
     expect(report.gates).toEqual({
@@ -73,6 +90,13 @@ describe("check-worker-bundle-size helpers (IPI-706 Phase 1A)", () => {
     });
     expect(report.metafileSha256).toBe("abc123");
     expect(report.gitSha).toBe("deadbeef");
+    expect(report.topPackages).toEqual([]);
+    expect(report.composition).toEqual({
+      hardHitCount: 0,
+      warnHitCount: 0,
+      hardHits: [],
+      warnHits: [],
+    });
   });
 
   it("hashFileSha256 returns null for missing files and the digest for existing files", () => {
@@ -162,6 +186,7 @@ describe("main() report/delta ordering (IPI-706 Phase 1A)", () => {
   afterEach(() => {
     vi.restoreAllMocks();
     spawnSyncMock.mockReset();
+    delete process.env.WORKER_BUNDLE_METAFILE;
   });
 
   /**
@@ -176,6 +201,7 @@ describe("main() report/delta ordering (IPI-706 Phase 1A)", () => {
    */
   it("reads the base report before overwriting it when both paths are the same file", () => {
     const dir = mkdtempSync(join(tmpdir(), "bundle-main-samepath-"));
+    stubCleanMetafile(dir);
     const sharedPath = join(dir, "worker-bundle-report.json");
     writeFileSync(
       sharedPath,
@@ -203,6 +229,7 @@ describe("main() report/delta ordering (IPI-706 Phase 1A)", () => {
 
   it("warns past the delta threshold and still exits 0 (delta never hard-fails)", () => {
     const dir = mkdtempSync(join(tmpdir(), "bundle-main-delta-"));
+    stubCleanMetafile(dir);
     const basePath = join(dir, "base.json");
     const outPath = join(dir, "out.json");
     writeFileSync(basePath, JSON.stringify({ schemaVersion: 1, gzipKiB: 8000 }), "utf8");
@@ -223,6 +250,7 @@ describe("main() report/delta ordering (IPI-706 Phase 1A)", () => {
 
   it("hard-fails on the absolute gate regardless of a healthy delta", () => {
     const dir = mkdtempSync(join(tmpdir(), "bundle-main-fail-"));
+    stubCleanMetafile(dir);
     const basePath = join(dir, "base.json");
     const failKiB = FAIL_MIB * 1024 + 10;
     writeFileSync(basePath, JSON.stringify({ schemaVersion: 1, gzipKiB: failKiB - 1 }), "utf8");
