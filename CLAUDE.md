@@ -125,7 +125,15 @@ No job carries a path filter, deliberately — a required check gated on changed
 
 ## Efficiency self-check
 
-Ask "is this still the leanest way to finish this?" *while* working, especially mid-way through a long stretch — not only when asked. This does not relax "verify before asserting"; it cuts wasted motion, not rigor.
+**Always verify you are using the most efficient way to complete a task — then use it.** Run this check *before* starting and again *while* working, not only when asked. It cuts wasted motion, not rigor: "verify before asserting" still applies in full.
+
+**Before starting — three questions, in order:**
+
+1. **Does something in this repo already do this?** Reach for the existing tool before doing it by hand. (Real case: three skills — `ipix-supabase`, `mastra`, `nextjs-16` — silently never loaded. Reading their frontmatter by eye found nothing; `.claude/skills/skill-creator/scripts/quick_validate.py` named the cause in one command — an unsupported `paths:` key. PR [#708](https://github.com/amo-tech-ai/lumina-studio/pull/708).)
+2. **Does this change need the full ceremony?** Worktree + PR is mandatory for anything tracked in git — but a gitignored file like `.claude/settings.local.json` needs neither. Don't build a branch for a change git will never see.
+3. **Is the whole approach right?** For anything beyond a one-liner, run `/fastest` (has a vendor or platform already solved this — managed feature → official CLI/SDK → official repo) or `/efficient` (does this codebase already have it — reuse inventory + ranked approaches) **before** writing code. Both are read-only.
+
+**While working:**
 
 - **Will this tool's output actually get used?** Don't run an expensive lookup as due-diligence theater when a cheaper check already answers the question. (Real case: calling Supabase `get_advisors` when `verify-rls.mjs` plus a `pg_policies` query had already settled it — the advisors output was never read.)
 - **Trust the harness's signals.** An Edit/Write result saying the file state is already current means don't `Read` it back.
