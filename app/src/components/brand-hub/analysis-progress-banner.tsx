@@ -1,10 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
-import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { formatCrawlProgressShort } from "@/lib/brand-hub/format-crawl-progress";
+import { useBrandAnalysisProgress } from "@/lib/brand-hub/use-brand-analysis-progress";
 
 type CrawlInfo = { pages_crawled: number | null; pages_found: number | null } | null;
 
@@ -13,6 +12,8 @@ export type AnalysisProgressBannerProps = {
   initialStatus: string | null;
   initialCrawlPages?: CrawlInfo;
   errorMessage?: string;
+  /** Forwarded to the shared hook; `0` disables still-working (tests). */
+  quietGapMs?: number;
 };
 
 const PROGRESS_MESSAGES: Record<string, string> = {
@@ -20,7 +21,7 @@ const PROGRESS_MESSAGES: Record<string, string> = {
   crawl_running: "Crawling website…",
   crawl_complete: "Crawl complete — starting AI analysis…",
   analysis_running: "Gemini is analysing brand profile…",
-  scores_complete: "Scores ready — refreshing…",
+  scores_complete: "Scores ready — finishing up…",
 };
 
 export const AnalysisProgressBanner = ({
@@ -28,70 +29,21 @@ export const AnalysisProgressBanner = ({
   initialStatus,
   initialCrawlPages,
   errorMessage,
+  quietGapMs,
 }: AnalysisProgressBannerProps) => {
-  const [status, setStatus] = useState(initialStatus ?? "brand_created");
-  const [crawl, setCrawl] = useState<CrawlInfo>(initialCrawlPages ?? null);
   const router = useRouter();
+  const { intakeStatus, crawl, phase, reconnect } = useBrandAnalysisProgress({
+    brandId,
+    initialStatus,
+    initialCrawlPages,
+    quietGapMs,
+    onReady: () => router.refresh(),
+  });
 
-  // Sync when server re-renders with updated props (e.g. after router.refresh())
-  useEffect(() => {
-    setStatus(initialStatus ?? "brand_created");
-  }, [initialStatus]);
+  // Terminal / handled-elsewhere — no banner
+  if (phase === "ready" || phase === "idle") return null;
 
-  useEffect(() => {
-    setCrawl(initialCrawlPages ?? null);
-  }, [initialCrawlPages]);
-
-  useEffect(() => {
-    const supabase = createSupabaseBrowserClient();
-
-    const channel = supabase
-      .channel(`brand-progress-${brandId}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "UPDATE",
-          schema: "public",
-          table: "brands",
-          filter: `id=eq.${brandId}`,
-        },
-        (payload: { new: Record<string, unknown> }) => {
-          const next = payload.new.intake_status as string;
-          setStatus(next);
-          if (next === "ready" || next === "scores_complete") {
-            router.refresh();
-          }
-        },
-      )
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "brand_crawls",
-          filter: `brand_id=eq.${brandId}`,
-        },
-        (payload: { new: Record<string, unknown> | null }) => {
-          const row = payload.new;
-          if (row) {
-            setCrawl({
-              pages_crawled: row.pages_crawled as number | null,
-              pages_found: row.pages_found as number | null,
-            });
-          }
-        },
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [brandId, router]);
-
-  // Terminal / handled-elsewhere states — no banner
-  if (status === "ready" || status === "draft_ready" || status === "scores_complete") return null;
-
-  if (status === "failed") {
+  if (phase === "failed") {
     return (
       <div
         className="rounded-xl border border-[#FECACA] bg-[#FEF2F2] px-4 py-3"
@@ -106,9 +58,34 @@ export const AnalysisProgressBanner = ({
     );
   }
 
-  const message = PROGRESS_MESSAGES[status] ?? `Status: ${status}`;
+  if (phase === "connection_lost") {
+    return (
+      <div
+        className="rounded-xl border border-[#FDE68A] bg-[#FFFBEB] px-4 py-3"
+        role="status"
+        aria-live="polite"
+      >
+        <p className="font-sans text-sm font-medium text-[#92400E]">Connection lost</p>
+        <p className="mt-1 font-sans text-xs text-[#92400E]">
+          Analysis may still be running on the server. Reconnect to resume live progress.
+        </p>
+        <button
+          type="button"
+          onClick={reconnect}
+          className="mt-2 font-sans text-xs font-medium text-[#D97706] underline underline-offset-2"
+        >
+          Reconnect
+        </button>
+      </div>
+    );
+  }
+
+  const message =
+    phase === "still_working"
+      ? "Still working — analysis is taking longer than usual…"
+      : (PROGRESS_MESSAGES[intakeStatus] ?? `Status: ${intakeStatus}`);
   const showCrawlCount =
-    status === "crawl_running" && crawl?.pages_crawled != null;
+    intakeStatus === "crawl_running" && crawl?.pages_crawled != null;
 
   return (
     <div
@@ -123,7 +100,7 @@ export const AnalysisProgressBanner = ({
         />
         <p className="font-sans text-sm text-[#92400E]">
           {message}
-          {showCrawlCount && (
+          {showCrawlCount && phase === "live" && (
             <span className="ml-1 text-[#D97706]">
               ({formatCrawlProgressShort(crawl!.pages_crawled!, crawl!.pages_found)})
             </span>
