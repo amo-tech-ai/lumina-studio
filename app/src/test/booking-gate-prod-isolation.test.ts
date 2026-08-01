@@ -307,7 +307,7 @@ describe("supabase-verify-rls production isolation (IPI-898)", () => {
   function step(name: string): string {
     const i = verifyRlsYml.indexOf(`- name: ${name}`);
     expect(i, `step "${name}" not found in supabase-verify-rls.yml`).toBeGreaterThanOrEqual(0);
-    const rest = verifyRlsYml.slice(i + 1);
+    const rest = verifyRlsYml.slice(i);
     const next = rest.search(/\n {6}- (name|uses):/);
     return next === -1 ? rest : rest.slice(0, next);
   }
