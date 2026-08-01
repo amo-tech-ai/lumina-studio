@@ -10,7 +10,8 @@ allowed-tools: ["Bash", "Glob", "Grep", "Read", "Task"]
 
 **Inspired by:** [Anthropic pr-review-toolkit](https://github.com/anthropics/claude-plugins-official/tree/main/plugins/pr-review-toolkit)
 
-**Rule:** `@pr-review-loop` · Do **not** commit or push. Humans decide; report findings only.
+**Rules:** [`pr-workflow` skill](../skills/pr-workflow/SKILL.md) · Do **not** commit or push.
+Humans decide; report findings only.
 
 ---
 
