@@ -231,19 +231,37 @@ describe("booking-gate production isolation (IPI-810)", () => {
   // breaks the match fails here instead of at the next connection attempt.
   it("refuses a direct IPv6-only database host but allows the pooler", () => {
     const guard = stepBlock(job, "Refuse an IPv6-only direct database host");
-    const pattern = /grep -qE '([^']+)'/.exec(guard);
+    // Capture grep's flags too, not just the pattern. The guard uses `-i` because
+    // hostnames are case-insensitive, and a JS RegExp built without the matching
+    // flag would disagree with the shell — the test would pass while the real
+    // guard behaved differently, which is worse than no test.
+    const pattern = /grep -q([a-zA-Z]*)E '([^']+)'/.exec(guard);
     expect(pattern, "host-check grep pattern not found").not.toBeNull();
-    const hostRe = new RegExp(pattern![1]);
+    const hostRe = new RegExp(pattern![2], pattern![1].includes("i") ? "i" : "");
 
-    expect(hostRe.test("postgresql://postgres:pw@db.wtuhdynujhszsbwxlbdi.supabase.co:5432/postgres")).toBe(true);
-    expect(
-      hostRe.test(
-        "postgresql://postgres.wtuhdynujhszsbwxlbdi:pw@aws-1-us-east-2.pooler.supabase.com:5432/postgres?sslmode=require",
-      ),
-      "the Supavisor pooler host is the fix, not the failure",
-    ).toBe(false);
-    // An unset secret means the job was already gated off upstream — not this step's call.
-    expect(hostRe.test("")).toBe(false);
+    // Refused: the direct host, in every spelling that reaches the same address.
+    for (const url of [
+      "postgresql://postgres:pw@db.wtuhdynujhszsbwxlbdi.supabase.co:5432/postgres",
+      // Uppercase resolves to the identical IPv6-only host. A case-sensitive
+      // guard let this through, so the cryptic "Network is unreachable" returned.
+      "postgresql://postgres:pw@db.WTUHDYNUJHSZSBWXLBDI.supabase.co:5432/postgres",
+      "postgresql://postgres:pw@db.ref.SUPABASE.CO:5432/postgres",
+      "postgresql://postgres:pw@db.ref.supabase.co/postgres", // no port
+      "postgresql://postgres:pw@db.ref.supabase.co", // end of input
+    ]) {
+      expect(hostRe.test(url), `must refuse: ${url}`).toBe(true);
+    }
+
+    // Allowed: anything that is not that host. The ([:/]|$) boundary is what
+    // separates the real host from names that merely start the same way.
+    for (const url of [
+      "postgresql://postgres.wtuhdynujhszsbwxlbdi:pw@aws-1-us-east-2.pooler.supabase.com:5432/postgres?sslmode=require",
+      "postgresql://postgres:pw@db.ref.supabase.co.example.net:5432/postgres", // suffixed lookalike
+      "postgresql://postgres:pw@db.ref.supabase.com:5432/postgres", // .com, not .co
+      "", // secret unset — the job was already gated off upstream, not this step's call
+    ]) {
+      expect(hostRe.test(url), `must allow: ${url || "<empty>"}`).toBe(false);
+    }
   });
 
   it("gates the verify-rls probe behind --skip-api in the gate script", () => {

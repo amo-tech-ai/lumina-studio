@@ -398,7 +398,12 @@ jobs:
         env:
           RESOLVED_DB_URL: ${{ github.event_name == 'pull_request' && secrets.QA_DATABASE_URL || secrets.DATABASE_URL }}
         run: |
-          if printf '%s' "$RESOLVED_DB_URL" | grep -qE '@db\.[a-z0-9]+\.supabase\.co'; then
+          # -i because hostnames are case-insensitive: a pasted `db.REF.supabase.co`
+          # is the same unreachable host, but a case-sensitive match waves it through
+          # and the guard fails silently — the exact outcome it exists to prevent.
+          # The ([:/]|$) boundary keeps it from also matching `supabase.com` or a
+          # lookalike like `db.ref.supabase.co.example.net`, which are not this host.
+          if printf '%s' "$RESOLVED_DB_URL" | grep -qiE '@db\.[a-z0-9]+\.supabase\.co([:/]|$)'; then
             echo "::error::booking-gate's database URL uses the direct host db.<ref>.supabase.co, which is IPv6-only and unreachable from GitHub runners. Use the Supavisor pooler instead: postgresql://postgres.<ref>:<password>@aws-1-us-east-2.pooler.supabase.com:5432/postgres?sslmode=require"
             exit 1
           fi
