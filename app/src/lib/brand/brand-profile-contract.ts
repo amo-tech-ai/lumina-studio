@@ -196,8 +196,8 @@ export function assertBrandProfile(payload: unknown): BrandProfilePayload {
 }
 
 /**
- * Mastra step boundary — Zod wrapper around the JSON Schema contract.
- * Not a second SSOT: only delegates to validateBrandProfilePayload.
+ * Mastra step boundary — thin Zod wrapper around validateBrandProfilePayload
+ * (same fail-closed rules as Edge). Not a second JSON-Schema SSOT.
  */
 export const brandProfileContractSchema = z.custom<BrandProfilePayload>(
   (data) => validateBrandProfilePayload(data as Record<string, unknown>) === null,

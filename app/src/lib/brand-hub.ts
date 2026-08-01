@@ -145,6 +145,15 @@ export const intakeStatusColor = (status: BrandIntakeStatus | string | null | un
 const coerceOptionalString = (value: unknown): string | undefined =>
   typeof value === "string" && value.trim().length > 0 ? value : undefined;
 
+/** String fields, or IPI-834 claim objects `{ value, evidence[] }` (Brand Hub reads value only). */
+const coerceClaimOrString = (value: unknown): string | undefined => {
+  if (typeof value === "string") return coerceOptionalString(value);
+  if (value && typeof value === "object" && !Array.isArray(value)) {
+    return coerceOptionalString((value as { value?: unknown }).value);
+  }
+  return undefined;
+};
+
 const coerceStringArray = (value: unknown): string[] | undefined => {
   if (!Array.isArray(value)) return undefined;
   const items = value.filter(
@@ -175,26 +184,26 @@ export const parseAiProfile = (raw: unknown): AiProfile => {
 
   return {
     name: coerceOptionalString(row.name),
-    tagline: coerceOptionalString(row.tagline),
-    overview: coerceOptionalString(row.overview),
-    category: coerceOptionalString(row.category),
+    tagline: coerceClaimOrString(row.tagline),
+    overview: coerceClaimOrString(row.overview),
+    category: coerceClaimOrString(row.category),
     visualIdentity: coerceVisualIdentity(row.visualIdentity),
-    targetAudience: coerceOptionalString(row.targetAudience),
+    targetAudience: coerceClaimOrString(row.targetAudience),
     sourceUrl: coerceOptionalString(row.sourceUrl),
     contentPillars: coerceStringArray(row.contentPillars),
-    brandVoice: coerceOptionalString(row.brandVoice),
+    brandVoice: coerceClaimOrString(row.brandVoice),
     recommendedServices: coerceStringArray(row.recommendedServices),
     productionReadiness:
       typeof row.productionReadiness === "number" && Number.isFinite(row.productionReadiness)
         ? row.productionReadiness
         : undefined,
     analyzedAt: coerceOptionalString(row.analyzedAt),
-    mission: coerceOptionalString(row.mission),
-    vision: coerceOptionalString(row.vision),
+    mission: coerceClaimOrString(row.mission),
+    vision: coerceClaimOrString(row.vision),
     values: coerceStringArray(row.values),
-    uvp: coerceOptionalString(row.uvp),
-    positioning: coerceOptionalString(row.positioning),
-    brandPersonality: coerceOptionalString(row.brandPersonality),
+    uvp: coerceClaimOrString(row.uvp),
+    positioning: coerceClaimOrString(row.positioning),
+    brandPersonality: coerceClaimOrString(row.brandPersonality),
     confidenceScore:
       typeof row.confidenceScore === "number" && Number.isFinite(row.confidenceScore)
         ? row.confidenceScore

@@ -326,6 +326,38 @@ export function buildAiProfileFromPayload(
     ...(optionalStringArray(profile.competitorSignals, 12)
       ? { competitorSignals: optionalStringArray(profile.competitorSignals, 12) }
       : {}),
+    // Keep scores on the draft JSON so Mastra assertBrandProfile / stripBrandProfileMeta
+    // still see them after `_draft_scores` (applyDraft rows) is stripped.
+    scores: {
+      visual: clampScore(profile.scores.visual),
+      audience: clampScore(profile.scores.audience),
+      consistency: clampScore(profile.scores.consistency),
+      commerce_readiness: clampScore(profile.scores.commerce_readiness),
+      ...(typeof profile.scores.brand_clarity === "number"
+        ? { brand_clarity: clampScore(profile.scores.brand_clarity) }
+        : {}),
+      ...(typeof profile.scores.content_strength === "number"
+        ? { content_strength: clampScore(profile.scores.content_strength) }
+        : {}),
+      ...(typeof profile.scores.social_presence === "number"
+        ? { social_presence: clampScore(profile.scores.social_presence) }
+        : {}),
+      ...(typeof profile.scores.digital_experience === "number"
+        ? { digital_experience: clampScore(profile.scores.digital_experience) }
+        : {}),
+      ...(typeof profile.scores.sustainability_signal === "number"
+        ? { sustainability_signal: clampScore(profile.scores.sustainability_signal) }
+        : {}),
+      ...(typeof profile.scores.photography_readiness === "number"
+        ? { photography_readiness: clampScore(profile.scores.photography_readiness) }
+        : {}),
+      ...(typeof profile.scores.confidence === "number"
+        ? { confidence: clampScore(profile.scores.confidence) }
+        : {}),
+      ...(optionalStringArray(profile.scores.evidence, 20)
+        ? { evidence: optionalStringArray(profile.scores.evidence, 20) }
+        : {}),
+    },
   };
 }
 

@@ -174,23 +174,10 @@
     "schemaVersion",
     "name",
     "tagline",
-    "overview",
     "category",
     "visualIdentity",
     "targetAudience",
     "sourceUrl",
-    "contentPillars",
-    "brandVoice",
-    "recommendedServices",
-    "productionReadiness",
-    "mission",
-    "vision",
-    "values",
-    "uvp",
-    "positioning",
-    "brandPersonality",
-    "confidenceScore",
-    "competitorSignals",
     "scores"
   ]
 }

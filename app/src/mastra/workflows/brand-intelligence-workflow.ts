@@ -398,7 +398,8 @@ export const saveDraftAndWait = createStep({
   },
 });
 
-// Re-export for structuredOutput / callers that want the JSON-Schema-backed Zod wrapper.
+// Re-export for structuredOutput / callers that want the fail-closed Zod wrapper
+// (delegates to validateBrandProfilePayload — same rules as Edge).
 export { brandProfileContractSchema };
 export type { BrandProfilePayload };
 
