@@ -9,8 +9,14 @@ import re
 import yaml
 from pathlib import Path
 
-# https://code.claude.com/docs/en/skills — `description` + `when_to_use` are truncated
-# at this length in the skill listing. A budget to warn on, NOT a hard limit to fail on.
+# Two different limits, from two different documents. Do not collapse them.
+#
+# Hard cap, enforced: the Agent Skills standard that Claude Code implements sets
+# `description` at "Max 1024 characters" — https://agentskills.io/specification
+DESCRIPTION_MAX = 1024
+# Soft budget, warned on: Claude Code truncates `description` + `when_to_use` at this
+# length in the skill listing — https://code.claude.com/docs/en/skills. Truncation, not
+# rejection, so this must never fail a skill.
 SKILL_LISTING_BUDGET = 1536
 
 
@@ -98,14 +104,18 @@ def validate_skill(skill_path):
         return False, f"Description must be a string, got {type(description).__name__}"
     description = description.strip()
     if description:
-        # No angle-bracket rule and no hard length cap exist in the spec — both were
-        # invented here and both rejected valid skills (`lean` legitimately uses
-        # ">10 files", ">2min", ">60s" as trigger phrases; `architecture-brief` runs
-        # 1,059 chars). What the docs DO specify is a listing budget:
-        # https://code.claude.com/docs/en/skills — "the combined `description` and
-        # `when_to_use` text is truncated at 1,536 characters in the skill listing".
-        # That is truncation, not rejection: the skill still loads, the tail just
-        # stops influencing when Claude picks it. So warn, never fail.
+        # There is NO angle-bracket rule in either spec. It was invented here, and it
+        # rejects valid skills — `lean` legitimately uses ">10 files", ">2min" and
+        # ">60s" as trigger phrases. Removed.
+        #
+        # The length cap IS real, so it stays: see DESCRIPTION_MAX above.
+        if len(description) > DESCRIPTION_MAX:
+            return False, (
+                f"Description is too long ({len(description)} characters). "
+                f"Maximum is {DESCRIPTION_MAX} (Agent Skills spec)."
+            )
+
+        # Separate, softer Claude Code limit — warns, never fails.
         listing_len = len(description) + len(str(frontmatter.get('when_to_use', '') or ''))
         if listing_len > SKILL_LISTING_BUDGET:
             print(

@@ -1,17 +1,28 @@
 #!/usr/bin/env python3
 """Self-check for quick_validate.py — run: python3 test_quick_validate.py
 
-Exists because this validator has twice rejected valid skills, and a false
+Exists because this validator has rejected valid skills before, and a false
 positive here is expensive: PR #708 deleted deliberate `paths:` scoping from
-three skills on the strength of one. Every case below is a rule the validator
-must NOT invent, pinned against https://code.claude.com/docs/en/skills.
+three skills on the strength of one.
+
+Pinned against BOTH sources, which define different things:
+  * https://agentskills.io/specification — the Agent Skills standard Claude Code
+    implements. Owns `name`, `description` (max 1024), `license`,
+    `compatibility`, `metadata`, `allowed-tools`.
+  * https://code.claude.com/docs/en/skills — Claude Code's own extensions
+    (`paths`, `context`, `background`, `model`, `effort`, …) and the 1,536-char
+    listing budget.
+
+Rules in neither document must never fail a skill.
 """
 import sys
 import tempfile
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
-from quick_validate import validate_skill, SKILL_LISTING_BUDGET  # noqa: E402
+from quick_validate import (  # noqa: E402
+    validate_skill, SKILL_LISTING_BUDGET, DESCRIPTION_MAX,
+)
 
 
 def check(frontmatter, *, valid, why):
@@ -39,12 +50,18 @@ for field in ('paths: "src/**"', 'context: fork', 'background: false',
     check(f"name: ok\ndescription: x.\n{field}", valid=True,
           why=f"`{field.split(':')[0]}` is documented and must be accepted")
 
-# --- rules the spec does NOT define: must never fail a skill --------------
-check("name: ok\ndescription: Trigger on >10 files, <2min builds.", valid=True,
-      why="no angle-bracket rule exists; `lean` relies on '>10 files'")
-check(f"name: ok\ndescription: {'x' * 1100}", valid=True,
-      why="no 1024 cap exists; `architecture-brief` is 1,059 chars")
-check(f"name: ok\ndescription: {'x' * (SKILL_LISTING_BUDGET + 100)}", valid=True,
-      why=f"over {SKILL_LISTING_BUDGET} truncates the listing — warn, never fail")
+# --- the description cap IS in the spec: enforce it -----------------------
+check(f"name: ok\ndescription: {'x' * DESCRIPTION_MAX}", valid=True,
+      why=f"exactly {DESCRIPTION_MAX} is allowed — the cap is inclusive")
+check(f"name: ok\ndescription: {'x' * (DESCRIPTION_MAX + 1)}", valid=False,
+      why=f"over {DESCRIPTION_MAX} violates the Agent Skills spec")
 
-print(f"all checks passed (listing budget = {SKILL_LISTING_BUDGET})")
+# --- rules in NEITHER spec: must never fail a skill -----------------------
+check("name: ok\ndescription: Trigger on >10 files, <2min builds.", valid=True,
+      why="no angle-bracket rule exists anywhere; `lean` relies on '>10 files'")
+check(f"name: ok\ndescription: {'x' * 900}\nwhen_to_use: {'y' * 800}", valid=True,
+      why=f"description is legal and the {SKILL_LISTING_BUDGET} listing budget only "
+          f"truncates — it must warn, never fail")
+
+print(f"all checks passed (description max {DESCRIPTION_MAX}, "
+      f"listing budget {SKILL_LISTING_BUDGET})")
