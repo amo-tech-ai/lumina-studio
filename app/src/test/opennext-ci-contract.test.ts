@@ -91,9 +91,11 @@ describe("OpenNext CI contract (IPI-472)", () => {
         ɵCpkThreadDetails: expect.any(Object),
       }),
     );
-    // Official CopilotKit disable (props alone do not drop the package from CF graph)
-    expect(operatorLayout).toMatch(/enableInspector=\{false\}/);
-    expect(operatorLayout).toMatch(/showDevConsole=\{false\}/);
+    // Official CopilotKit disable — props must live on the <CopilotKit> opening tag
+    // (comments above the JSX also mention these strings; loose match is insufficient)
+    expect(operatorLayout).toMatch(
+      /<CopilotKit(?:\s[^>]*)?\senableInspector=\{false\}(?:\s[^>]*)?\sshowDevConsole=\{false\}(?:\s[^>]*)?>/,
+    );
   });
 
   it("IPI-844 CF stubs alias Workers PG scope under IPIX_CF_BUNDLE_STUBS (noop builds)", () => {
