@@ -75,7 +75,7 @@ Run in order — skip only when scope is a single known file:
 
 ```bash
 # 1. Graph (multi-file or unknown blast radius)
-graphify query "<feature topic>" --graph docs/graphify/graphify-out/graph.json
+graphify query "<feature topic>"
 
 # 2. Existing patterns (copy before inventing)
 grep -r "<keyword>" app/src supabase/functions --include="*.ts" -l | head -15
