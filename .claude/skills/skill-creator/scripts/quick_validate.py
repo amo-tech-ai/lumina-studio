@@ -9,6 +9,11 @@ import re
 import yaml
 from pathlib import Path
 
+# https://code.claude.com/docs/en/skills — `description` + `when_to_use` are truncated
+# at this length in the skill listing. A budget to warn on, NOT a hard limit to fail on.
+SKILL_LISTING_BUDGET = 1536
+
+
 def validate_skill(skill_path):
     """Basic validation of a skill"""
     skill_path = Path(skill_path)
@@ -38,15 +43,19 @@ def validate_skill(skill_path):
     except yaml.YAMLError as e:
         return False, f"Invalid YAML in frontmatter: {e}"
 
-    # Allowed properties — mirrors the frontmatter reference table in the bundled
-    # Claude Code docs (.claude/skills/archive/claude-code-docs/references/skills.md).
-    # Keep in sync when that table changes; an out-of-date list here reports false
-    # positives on valid skills (it flagged the supported `paths` key as unknown,
-    # which sent PR #708 chasing a bug that did not exist).
+    # Allowed properties — mirrors the frontmatter reference table in the LIVE docs at
+    # https://code.claude.com/docs/en/skills, not the bundled snapshot under
+    # .claude/skills/archive/claude-code-docs/ (that copy is a point-in-time capture and
+    # is what let this list fall behind in the first place). Keep in sync with the live
+    # table; an out-of-date list here reports false positives on valid skills — it once
+    # flagged the supported `paths` key as unknown, which sent PR #708 chasing a bug
+    # that did not exist.
     ALLOWED_PROPERTIES = {
         'name', 'description', 'when_to_use', 'argument-hint', 'arguments',
         'disable-model-invocation', 'user-invocable', 'allowed-tools',
         'disallowed-tools', 'model', 'effort', 'context', 'agent', 'hooks',
+        # `background` pairs with `context: fork` (Claude Code >= 2.1.218).
+        'background',
         'paths', 'shell', 'license', 'metadata', 'compatibility',
         # Not in the docs table, but used by 14 skills here and ignored by the
         # runtime. Kept as an accepted repo-local convention rather than churning
@@ -89,12 +98,21 @@ def validate_skill(skill_path):
         return False, f"Description must be a string, got {type(description).__name__}"
     description = description.strip()
     if description:
-        # Check for angle brackets
-        if '<' in description or '>' in description:
-            return False, "Description cannot contain angle brackets (< or >)"
-        # Check description length (max 1024 characters per spec)
-        if len(description) > 1024:
-            return False, f"Description is too long ({len(description)} characters). Maximum is 1024 characters."
+        # No angle-bracket rule and no hard length cap exist in the spec — both were
+        # invented here and both rejected valid skills (`lean` legitimately uses
+        # ">10 files", ">2min", ">60s" as trigger phrases; `architecture-brief` runs
+        # 1,059 chars). What the docs DO specify is a listing budget:
+        # https://code.claude.com/docs/en/skills — "the combined `description` and
+        # `when_to_use` text is truncated at 1,536 characters in the skill listing".
+        # That is truncation, not rejection: the skill still loads, the tail just
+        # stops influencing when Claude picks it. So warn, never fail.
+        listing_len = len(description) + len(str(frontmatter.get('when_to_use', '') or ''))
+        if listing_len > SKILL_LISTING_BUDGET:
+            print(
+                f"warning: description + when_to_use is {listing_len} characters; "
+                f"the skill listing truncates at {SKILL_LISTING_BUDGET}, so the tail "
+                f"will not affect when this skill is selected"
+            )
 
     # Validate compatibility field if present (optional)
     compatibility = frontmatter.get('compatibility', '')
