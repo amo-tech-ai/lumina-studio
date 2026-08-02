@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { promoteBrandDraft } from "./promote-draft";
+import { promoteBrandDraft, resolvePromoteScoreRows } from "./promote-draft";
 
 function mockSupabase(brand: Record<string, unknown> | null, selectErr?: { message: string }) {
   const updateCalls: Record<string, unknown>[] = [];
@@ -71,6 +71,28 @@ describe("promoteBrandDraft", () => {
     const result = await promoteBrandDraft(sb, "b1");
     expect(result).toEqual({ ok: false, error: "Brand DNA is incomplete or invalid" });
     expect(updateCalls).toHaveLength(0);
+  });
+
+  it("IPI-835 · D — refuses promote when base scores are missing", async () => {
+    const draft = validDraft();
+    delete (draft as { scores?: unknown }).scores;
+    const { sb, updateCalls } = mockSupabase({
+      id: "b1",
+      ai_profile_draft: draft,
+      intake_status: "draft_ready",
+    });
+    // Contract also fails without scores — either message is a refuse.
+    const result = await promoteBrandDraft(sb, "b1");
+    expect(result.ok).toBe(false);
+    expect(updateCalls).toHaveLength(0);
+  });
+
+  it("resolvePromoteScoreRows falls back from contract scores when _draft_scores is absent", () => {
+    const rows = resolvePromoteScoreRows(validDraft());
+    expect(rows).not.toBeNull();
+    expect(rows?.map((r) => r.score_type).sort()).toEqual(
+      ["audience", "commerce_readiness", "consistency", "visual"].sort(),
+    );
   });
 });
 

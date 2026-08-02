@@ -73,6 +73,10 @@ function runIdFromDraftProfile(draftProfile: unknown): string | null {
  * Edge draft_mode writes `ai_profile_draft` + `draft_ready` but does not create
  * the intake-draft / `_workflow_run_id` the approve path needs. Mastra workflow
  * start cannot run after Slice C already claimed crawl_running/crawl_complete.
+ *
+ * Admin upsert is required (table has SELECT RLS only). Writes are gated by:
+ * 1) user JWT brand SELECT (RLS), 2) owner/editor authZ, 3) no steal of another
+ * operator's pending draft, 4) upsert bound only to the RLS-validated brand id.
  */
 export async function ensureOnboardingIntakeDraft(
   brandId: string,
@@ -90,7 +94,7 @@ export async function ensureOnboardingIntakeDraft(
     // Visibility via RLS — non-members get not-found, not a draft leak.
     const { data: brand, error: brandErr } = await supabase
       .from("brands")
-      .select("id, name, brand_url, intake_status, ai_profile, ai_profile_draft")
+      .select("id, name, brand_url, intake_status, ai_profile, ai_profile_draft, org_id, user_id")
       .eq("id", brandId)
       .maybeSingle();
     if (brandErr) {
@@ -98,6 +102,23 @@ export async function ensureOnboardingIntakeDraft(
       return { ok: false, error: SAFE_LOAD_ERROR };
     }
     if (!brand) return { ok: false, error: "Brand not found" };
+
+    // Viewers can SELECT brands but must not register an approvable draft.
+    if (brand.org_id) {
+      const { data: canEdit, error: roleErr } = await supabase.rpc("is_org_editor_or_above", {
+        p_org_id: brand.org_id,
+      });
+      if (roleErr) {
+        console.error("[ensureOnboardingIntakeDraft] role check", roleErr);
+        return { ok: false, error: SAFE_LOAD_ERROR };
+      }
+      if (!canEdit) return { ok: false, error: "Forbidden" };
+    } else if (brand.user_id !== user.id) {
+      return { ok: false, error: "Forbidden" };
+    }
+
+    // Only ever write against the id that passed the user-scoped SELECT.
+    const trustedBrandId = brand.id as string;
 
     const intakeStatus =
       typeof brand.intake_status === "string" ? brand.intake_status : "brand_created";
@@ -136,8 +157,18 @@ export async function ensureOnboardingIntakeDraft(
     const { data: existing } = await admin
       .from("brand_intake_drafts")
       .select("id, status, user_id, draft_profile")
-      .eq("brand_id", brandId)
+      .eq("brand_id", trustedBrandId)
       .maybeSingle();
+
+    // Do not steal / overwrite another operator's pending HITL draft.
+    if (
+      existing &&
+      existing.status === "pending_approval" &&
+      existing.user_id &&
+      existing.user_id !== user.id
+    ) {
+      return { ok: false, error: "Forbidden" };
+    }
 
     const existingRunId =
       existing?.status === "pending_approval" ? runIdFromDraftProfile(existing.draft_profile) : null;
@@ -160,7 +191,7 @@ export async function ensureOnboardingIntakeDraft(
 
     const { error: upsertErr } = await admin.from("brand_intake_drafts").upsert(
       {
-        brand_id: brandId,
+        brand_id: trustedBrandId,
         user_id: user.id,
         source_url: brand.brand_url ?? "",
         status: "pending_approval",

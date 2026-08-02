@@ -60,9 +60,19 @@ async function resolveIdempotentApproval(params: {
       .select("intake_status")
       .eq("id", existing.brand_id)
       .maybeSingle();
-    if (brand?.intake_status !== "ready") {
-      return { ok: false, error: "Draft already processed — possible duplicate approve request" };
+    if (brand?.intake_status === "ready") {
+      return { ok: true, approved: true, brandId: existing.brand_id };
     }
+    // Draft row already approved but promote never landed — retry once, never
+    // report success until intake_status is durably ready.
+    const promoteResult = await promoteBrandDraft(sb, existing.brand_id);
+    if (promoteResult.ok) {
+      return { ok: true, approved: true, brandId: existing.brand_id };
+    }
+    return {
+      ok: false,
+      error: promoteResult.error || "Draft already processed — brand is not ready yet",
+    };
   }
 
   return { ok: true, approved, brandId: existing.brand_id };

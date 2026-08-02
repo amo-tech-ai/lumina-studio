@@ -85,6 +85,80 @@ describe("processBrandIntelligenceDraftApproval idempotency (IPI-835 · D)", () 
     expect(mockPromote).not.toHaveBeenCalled();
   });
 
+  it("retries promote when draft is approved but brand is not yet ready", async () => {
+    let draftsCalls = 0;
+    mockFrom.mockImplementation((table: string) => {
+      if (table === "brand_intake_drafts") {
+        draftsCalls += 1;
+        if (draftsCalls === 1) {
+          return chain({ data: null, error: { message: "not found" } });
+        }
+        return chain({
+          data: {
+            id: "d1",
+            brand_id: BRAND,
+            user_id: OPERATOR,
+            status: "approved",
+          },
+          error: null,
+        });
+      }
+      if (table === "brands") {
+        return chain({ data: { intake_status: "draft_ready" }, error: null });
+      }
+      return chain({ data: null, error: null });
+    });
+    mockPromote.mockResolvedValue({ ok: true });
+
+    const { processBrandIntelligenceDraftApproval } = await import("./process-draft-approval");
+    const result = await processBrandIntelligenceDraftApproval({
+      runId: RUN,
+      approved: true,
+      operatorId: OPERATOR,
+      expectedBrandId: BRAND,
+    });
+    expect(result).toEqual({ ok: true, approved: true, brandId: BRAND });
+    expect(mockPromote).toHaveBeenCalledWith(expect.anything(), BRAND);
+  });
+
+  it("does not return success when approved draft cannot be promoted to ready", async () => {
+    let draftsCalls = 0;
+    mockFrom.mockImplementation((table: string) => {
+      if (table === "brand_intake_drafts") {
+        draftsCalls += 1;
+        if (draftsCalls === 1) {
+          return chain({ data: null, error: { message: "not found" } });
+        }
+        return chain({
+          data: {
+            id: "d1",
+            brand_id: BRAND,
+            user_id: OPERATOR,
+            status: "approved",
+          },
+          error: null,
+        });
+      }
+      if (table === "brands") {
+        return chain({ data: { intake_status: "draft_ready" }, error: null });
+      }
+      return chain({ data: null, error: null });
+    });
+    mockPromote.mockResolvedValue({ ok: false, error: "Brand DNA is incomplete or invalid" });
+
+    const { processBrandIntelligenceDraftApproval } = await import("./process-draft-approval");
+    const result = await processBrandIntelligenceDraftApproval({
+      runId: RUN,
+      approved: true,
+      operatorId: OPERATOR,
+      expectedBrandId: BRAND,
+    });
+    expect(result).toEqual({
+      ok: false,
+      error: "Brand DNA is incomplete or invalid",
+    });
+  });
+
   it("rejects a non-owner on the idempotent path", async () => {
     let draftsCalls = 0;
     mockFrom.mockImplementation((table: string) => {

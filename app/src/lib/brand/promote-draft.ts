@@ -4,6 +4,74 @@ import {
   stripBrandProfileMeta,
   validateBrandProfilePayload,
 } from "@/lib/brand/brand-profile-contract";
+import { BASE_SCORE_TYPES } from "@/lib/brand-scores";
+
+/** Build brand_scores rows from embedded `_draft_scores` or contract `scores`. */
+export function resolvePromoteScoreRows(
+  draft: Record<string, unknown>,
+): Array<Record<string, unknown>> | null {
+  const byType = new Map<string, number>();
+
+  if (Array.isArray(draft._draft_scores)) {
+    for (const row of draft._draft_scores) {
+      if (!row || typeof row !== "object" || Array.isArray(row)) continue;
+      const rec = row as Record<string, unknown>;
+      const type = typeof rec.score_type === "string" ? rec.score_type : null;
+      const score = typeof rec.score === "number" && Number.isFinite(rec.score) ? rec.score : null;
+      if (type && score != null) byType.set(type, score);
+    }
+  }
+
+  const profileScores =
+    draft.scores && typeof draft.scores === "object" && !Array.isArray(draft.scores)
+      ? (draft.scores as Record<string, unknown>)
+      : null;
+  if (profileScores) {
+    for (const type of BASE_SCORE_TYPES) {
+      if (byType.has(type)) continue;
+      const score = profileScores[type];
+      if (typeof score === "number" && Number.isFinite(score)) byType.set(type, score);
+    }
+  }
+
+  for (const type of BASE_SCORE_TYPES) {
+    if (!byType.has(type)) return null;
+  }
+
+  const embedded = Array.isArray(draft._draft_scores)
+    ? (draft._draft_scores as Array<Record<string, unknown>>)
+    : [];
+  const embeddedTypes = new Set(
+    embedded
+      .map((row) =>
+        row && typeof row === "object" && !Array.isArray(row)
+          ? (row as Record<string, unknown>).score_type
+          : null,
+      )
+      .filter((t): t is string => typeof t === "string"),
+  );
+
+  // Prefer full embedded rows when they already cover the base set.
+  if (BASE_SCORE_TYPES.every((t) => embeddedTypes.has(t))) {
+    return embedded.filter((row) => {
+      if (!row || typeof row !== "object" || Array.isArray(row)) return false;
+      const rec = row as Record<string, unknown>;
+      return (
+        typeof rec.score_type === "string" &&
+        typeof rec.score === "number" &&
+        Number.isFinite(rec.score)
+      );
+    });
+  }
+
+  return BASE_SCORE_TYPES.map((score_type) => ({
+    score_type,
+    score: byType.get(score_type),
+    score_version: 1,
+    source: "promote",
+    details: { source: "promoteBrandDraft" },
+  }));
+}
 
 /** Promote ai_profile_draft → ai_profile and upsert draft scores. Caller must enforce auth. */
 export async function promoteBrandDraft(
@@ -30,9 +98,12 @@ export async function promoteBrandDraft(
     return { ok: false, error: "Brand DNA is incomplete or invalid" };
   }
 
-  const draftScores = Array.isArray(draft._draft_scores)
-    ? (draft._draft_scores as Array<Record<string, unknown>>)
-    : [];
+  // Command Center DNA badge reads brand_scores — refuse ready without the four base scores.
+  const draftScores = resolvePromoteScoreRows(draft);
+  if (!draftScores) {
+    return { ok: false, error: "Brand DNA is incomplete or invalid" };
+  }
+
   const { _draft_scores: _removed, ...cleanDraft } = draft;
 
   const { data: updated, error } = await supabase
