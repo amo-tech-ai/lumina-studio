@@ -100,4 +100,27 @@ describe("PlannerWorkspaceShell", () => {
     expect(screen.queryByTestId("real-timeline-content")).toBeNull();
     expect(screen.getByTestId("planner-workspace-placeholder-list")).toBeDefined();
   });
+
+  it("renders server-built Kanban and List nodes in their tabs — IPI-580", async () => {
+    const user = userEvent.setup();
+    render(
+      <PlannerWorkspaceShell
+        instanceId={INSTANCE_ID}
+        timeline={<div data-testid="real-timeline-content">Timeline</div>}
+        kanban={<div data-testid="real-kanban-content">Kanban</div>}
+        list={<div data-testid="real-list-content">List</div>}
+      />,
+    );
+
+    await user.click(screen.getByRole("tab", { name: /Kanban/ }));
+    expect(screen.getByTestId("real-kanban-content")).toBeDefined();
+    expect(screen.queryByTestId("planner-workspace-placeholder-kanban")).toBeNull();
+
+    await user.click(screen.getByRole("tab", { name: /List/ }));
+    expect(screen.getByTestId("real-list-content")).toBeDefined();
+    expect(screen.queryByTestId("planner-workspace-placeholder-list")).toBeNull();
+
+    await user.click(screen.getByRole("tab", { name: /Calendar/ }));
+    expect(screen.getByTestId("planner-workspace-placeholder-calendar")).toBeDefined();
+  });
 });
