@@ -16,8 +16,11 @@ import { Skeleton } from "@/components/ui/skeleton";
  * `ssr: false` cannot be set from a Server Component, which is why this thin
  * client wrapper exists rather than the dynamic() call living in page.tsx.
  */
-const OnboardingFlow = dynamic(
-  () => import("@/components/onboarding/onboarding-flow").then((m) => m.OnboardingFlow),
+const OnboardingSessionGate = dynamic(
+  () =>
+    import("@/components/onboarding/onboarding-session-gate").then(
+      (m) => m.OnboardingSessionGate,
+    ),
   {
     ssr: false,
     loading: () => (
@@ -29,5 +32,5 @@ const OnboardingFlow = dynamic(
 );
 
 export function OnboardingFlowLoader() {
-  return <OnboardingFlow />;
+  return <OnboardingSessionGate />;
 }
