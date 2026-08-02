@@ -521,3 +521,169 @@ export async function createInstance(
 
   return { ok: true, data: { replayed: result.replayed, instanceId: result.instanceId } };
 }
+
+// IPI-483 · PLN-ENG-002 (PR2) — gate approve/discard adapters. Same jsonb
+// `{ok,code}` mapping idiom as shiftTask/updateTask: the SECURITY DEFINER RPC
+// owns authz, CAS, idempotency, and atomicity; this layer only maps codes.
+// idempotencyKey is caller-owned (retries must reuse the same key).
+
+export type GateChangedTask = {
+  taskId: string;
+  expectedUpdatedAt: string;
+  newStartDate: string;
+  newEndDate: string;
+};
+
+export type GateDependencyEdge = {
+  fromTaskId: string;
+  toTaskId: string;
+  lagDays?: number;
+};
+
+export type ApproveGateResult = {
+  replayed: boolean;
+  status: "approved";
+  phaseId: string;
+  approvalId: string;
+  approvedAt: string;
+  approvedBy: string;
+  changedTasks: Array<{ taskId: string; updatedAt: string }>;
+};
+
+export type DiscardGateResult = {
+  replayed: boolean;
+  status: "discarded";
+  phaseId: string;
+  approvalId: string;
+};
+
+const GATE_MUTATION_MESSAGES: Record<string, string> = {
+  UNAUTHENTICATED: "Sign in to review this gate.",
+  FORBIDDEN: "You don't have permission to approve this gate.",
+  NOT_FOUND: "This gate could not be found.",
+  STALE_VERSION: "This plan changed since you last viewed it. Refresh and try again.",
+  DEPENDENCY_CHANGED: "This plan's schedule changed since you last viewed it. Refresh and try again.",
+  DEPENDENCY_CYCLE: "That dependency change would create a cycle. Adjust the proposal and try again.",
+  IDEMPOTENCY_CONFLICT: "This request conflicts with one already in progress. Refresh and try again.",
+  INVALID_INPUT: "That request wasn't valid.",
+  INSTANCE_TERMINAL: "This plan is archived or cancelled and can no longer be edited.",
+  GATE_LOCKED: "This gate isn't ready yet — finish the required tasks first.",
+  GATE_ALREADY_APPROVED: "This gate was already approved.",
+};
+
+function gateMutationError(fn: string, code: string): MutationResult<never> {
+  const message = GATE_MUTATION_MESSAGES[code];
+  if (!message) {
+    console.error(`[planner/mutations] ${fn} rpc failed:`, code);
+    return { ok: false, error: { code: "UNKNOWN_ERROR", message: "The request could not be completed." } };
+  }
+  return { ok: false, error: { code, message } };
+}
+
+export async function approveGate(
+  {
+    instanceId,
+    phaseId,
+    idempotencyKey,
+    changedTasks,
+    expectedDependencyEdges,
+    proposedDependencyEdges,
+  }: {
+    instanceId: string;
+    phaseId: string;
+    idempotencyKey: string;
+    changedTasks: GateChangedTask[];
+    expectedDependencyEdges: GateDependencyEdge[];
+    /** null/omit = date-only approval (RPC skips cycle detection). */
+    proposedDependencyEdges?: GateDependencyEdge[] | null;
+  },
+  client: Db,
+): Promise<MutationResult<ApproveGateResult>> {
+  if (!idempotencyKey.trim()) {
+    return gateMutationError("planner_approve_gate", "INVALID_INPUT");
+  }
+
+  const { data, error } = await client.rpc("planner_approve_gate", {
+    p_instance_id: instanceId,
+    p_phase_id: phaseId,
+    p_idempotency_key: idempotencyKey,
+    p_changed_tasks: changedTasks as unknown as Json,
+    p_expected_dependency_edges: expectedDependencyEdges as unknown as Json,
+    ...(proposedDependencyEdges !== undefined
+      ? { p_proposed_dependency_edges: proposedDependencyEdges as unknown as Json }
+      : {}),
+  });
+
+  if (error || !data) {
+    console.error("[planner/mutations] planner_approve_gate rpc failed:", error?.message ?? "empty response");
+    return { ok: false, error: { code: "UNKNOWN_ERROR", message: "The request could not be completed." } };
+  }
+
+  type ApproveGateRpcResult =
+    | ({ ok: true; replayed: boolean } & ApproveGateResult)
+    | { ok: false; code: string; conflicts?: unknown };
+
+  const result = data as ApproveGateRpcResult;
+  if (!result.ok) return gateMutationError("planner_approve_gate", result.code);
+
+  return {
+    ok: true,
+    data: {
+      replayed: result.replayed,
+      status: "approved",
+      phaseId: result.phaseId,
+      approvalId: result.approvalId,
+      approvedAt: result.approvedAt,
+      approvedBy: result.approvedBy,
+      changedTasks: result.changedTasks ?? [],
+    },
+  };
+}
+
+export async function discardGate(
+  {
+    instanceId,
+    phaseId,
+    idempotencyKey,
+    reason,
+  }: {
+    instanceId: string;
+    phaseId: string;
+    idempotencyKey: string;
+    reason?: string | null;
+  },
+  client: Db,
+): Promise<MutationResult<DiscardGateResult>> {
+  if (!idempotencyKey.trim()) {
+    return gateMutationError("planner_discard_gate", "INVALID_INPUT");
+  }
+
+  const { data, error } = await client.rpc("planner_discard_gate", {
+    p_instance_id: instanceId,
+    p_phase_id: phaseId,
+    p_idempotency_key: idempotencyKey,
+    ...(reason != null ? { p_reason: reason } : {}),
+  });
+
+  if (error || !data) {
+    console.error("[planner/mutations] planner_discard_gate rpc failed:", error?.message ?? "empty response");
+    return { ok: false, error: { code: "UNKNOWN_ERROR", message: "The request could not be completed." } };
+  }
+
+  type DiscardGateRpcResult =
+    | ({ ok: true; replayed: boolean } & DiscardGateResult)
+    | { ok: false; code: string };
+
+  const result = data as DiscardGateRpcResult;
+  if (!result.ok) return gateMutationError("planner_discard_gate", result.code);
+
+  return {
+    ok: true,
+    data: {
+      replayed: result.replayed,
+      status: "discarded",
+      phaseId: result.phaseId,
+      approvalId: result.approvalId,
+    },
+  };
+}

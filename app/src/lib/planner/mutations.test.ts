@@ -15,7 +15,9 @@ vi.mock("./permissions", () => ({
 }));
 
 import {
+  approveGate,
   createInstance,
+  discardGate,
   inviteMember,
   removeAssignment,
   setViewConfig,
@@ -1009,4 +1011,182 @@ describe("createInstance", () => {
     expect(consoleError).toHaveBeenCalled();
     consoleError.mockRestore();
   });
+});
+
+// IPI-483 · PLN-ENG-002 (PR2) — approveGate / discardGate adapters.
+describe("approveGate", () => {
+  const BASE_APPROVE = {
+    instanceId: "i1",
+    phaseId: "ph-cast",
+    idempotencyKey: "idem-gate-1",
+    changedTasks: [
+      {
+        taskId: "t1",
+        expectedUpdatedAt: "2026-08-02T00:00:00.000Z",
+        newStartDate: "2026-08-11",
+        newEndDate: "2026-08-12",
+      },
+    ],
+    expectedDependencyEdges: [{ fromTaskId: "t1", toTaskId: "t2", lagDays: 0 }],
+  };
+
+  it("calls planner_approve_gate with the typed payload and maps ok:true", async () => {
+    const { client, rpcMock } = mockRpcJson({
+      ok: true,
+      replayed: false,
+      status: "approved",
+      phaseId: "ph-cast",
+      approvalId: "ga-1",
+      approvedAt: "2026-08-02T12:00:00.000Z",
+      approvedBy: "u1",
+      changedTasks: [{ taskId: "t1", updatedAt: "2026-08-02T12:00:00.000Z" }],
+      conflicts: [],
+    });
+
+    const result = await approveGate(BASE_APPROVE, client);
+
+    expect(result).toEqual({
+      ok: true,
+      data: {
+        replayed: false,
+        status: "approved",
+        phaseId: "ph-cast",
+        approvalId: "ga-1",
+        approvedAt: "2026-08-02T12:00:00.000Z",
+        approvedBy: "u1",
+        changedTasks: [{ taskId: "t1", updatedAt: "2026-08-02T12:00:00.000Z" }],
+      },
+    });
+    expect(rpcMock).toHaveBeenCalledWith("planner_approve_gate", {
+      p_instance_id: "i1",
+      p_phase_id: "ph-cast",
+      p_idempotency_key: "idem-gate-1",
+      p_changed_tasks: BASE_APPROVE.changedTasks,
+      p_expected_dependency_edges: BASE_APPROVE.expectedDependencyEdges,
+    });
+  });
+
+  it("forwards proposedDependencyEdges when provided (edge-changing approve)", async () => {
+    const proposed = [{ fromTaskId: "t2", toTaskId: "t3", lagDays: 1 }];
+    const { client, rpcMock } = mockRpcJson({
+      ok: true,
+      replayed: false,
+      status: "approved",
+      phaseId: "ph-cast",
+      approvalId: "ga-1",
+      approvedAt: "2026-08-02T12:00:00.000Z",
+      approvedBy: "u1",
+      changedTasks: [],
+    });
+
+    await approveGate({ ...BASE_APPROVE, proposedDependencyEdges: proposed }, client);
+
+    expect(rpcMock.mock.calls[0][1]).toMatchObject({
+      p_proposed_dependency_edges: proposed,
+    });
+  });
+
+  it("surfaces replayed:true from an idempotent retry", async () => {
+    const { client } = mockRpcJson({
+      ok: true,
+      replayed: true,
+      status: "approved",
+      phaseId: "ph-cast",
+      approvalId: "ga-1",
+      approvedAt: "2026-08-02T12:00:00.000Z",
+      approvedBy: "u1",
+      changedTasks: [],
+    });
+
+    const result = await approveGate(BASE_APPROVE, client);
+    expect(result.ok).toBe(true);
+    if (result.ok) expect(result.data.replayed).toBe(true);
+  });
+
+  it.each([
+    "STALE_VERSION",
+    "IDEMPOTENCY_CONFLICT",
+    "FORBIDDEN",
+    "GATE_LOCKED",
+    "GATE_ALREADY_APPROVED",
+    "DEPENDENCY_CYCLE",
+    "DEPENDENCY_CHANGED",
+    "INSTANCE_TERMINAL",
+    "UNAUTHENTICATED",
+    "NOT_FOUND",
+    "INVALID_INPUT",
+  ])("maps RPC-returned %s to a typed error", async (code) => {
+    const { client } = mockRpcJson({ ok: false, code });
+    const result = await approveGate({ ...BASE_APPROVE, idempotencyKey: `idem-${code}` }, client);
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error.code).toBe(code);
+  });
+
+  it("rejects an empty idempotency key before calling the RPC", async () => {
+    const { client, rpcMock } = mockRpcJson({ ok: true, replayed: false });
+    const result = await approveGate({ ...BASE_APPROVE, idempotencyKey: "   " }, client);
+    expect(result).toEqual({
+      ok: false,
+      error: { code: "INVALID_INPUT", message: "That request wasn't valid." },
+    });
+    expect(rpcMock).not.toHaveBeenCalled();
+  });
+
+  it("never forwards a raw unrecognized RPC code", async () => {
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
+    const { client } = mockRpcJson({ ok: false, code: "WEIRD_NEW_CODE" });
+    const result = await approveGate(BASE_APPROVE, client);
+    expect(result).toEqual({
+      ok: false,
+      error: { code: "UNKNOWN_ERROR", message: "The request could not be completed." },
+    });
+    expect(consoleError).toHaveBeenCalled();
+    consoleError.mockRestore();
+  });
+});
+
+describe("discardGate", () => {
+  const BASE_DISCARD = {
+    instanceId: "i1",
+    phaseId: "ph-cast",
+    idempotencyKey: "idem-discard-1",
+  };
+
+  it("calls planner_discard_gate and maps ok:true", async () => {
+    const { client, rpcMock } = mockRpcJson({
+      ok: true,
+      replayed: false,
+      status: "discarded",
+      phaseId: "ph-cast",
+      approvalId: "ga-2",
+    });
+
+    const result = await discardGate({ ...BASE_DISCARD, reason: "changed mind" }, client);
+
+    expect(result).toEqual({
+      ok: true,
+      data: {
+        replayed: false,
+        status: "discarded",
+        phaseId: "ph-cast",
+        approvalId: "ga-2",
+      },
+    });
+    expect(rpcMock).toHaveBeenCalledWith("planner_discard_gate", {
+      p_instance_id: "i1",
+      p_phase_id: "ph-cast",
+      p_idempotency_key: "idem-discard-1",
+      p_reason: "changed mind",
+    });
+  });
+
+  it.each(["FORBIDDEN", "GATE_ALREADY_APPROVED", "IDEMPOTENCY_CONFLICT", "INSTANCE_TERMINAL"])(
+    "maps RPC-returned %s to a typed error",
+    async (code) => {
+      const { client } = mockRpcJson({ ok: false, code });
+      const result = await discardGate({ ...BASE_DISCARD, idempotencyKey: `d-${code}` }, client);
+      expect(result.ok).toBe(false);
+      if (!result.ok) expect(result.error.code).toBe(code);
+    },
+  );
 });
