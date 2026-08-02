@@ -17,16 +17,29 @@
 import { revalidatePath } from "next/cache";
 
 import {
+  approveGate,
+  discardGate,
   setViewConfig,
   shiftTask,
   updateTask,
+  type ApproveGateResult,
+  type DiscardGateResult,
+  type GateChangedTask,
   type ShiftTaskResult,
   type UpdateTaskResult,
 } from "@/lib/planner/mutations";
+import { listDependencies } from "@/lib/planner/queries";
 import type { PersistedViewType, PlannerTaskStatus } from "@/lib/planner/types";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 import type { MutationResult } from "@/lib/planner/types";
+
+/** Client-proposed date shifts for Approve — server stamps expectedUpdatedAt. */
+export type GateProposedChange = {
+  taskId: string;
+  newStartDate: string;
+  newEndDate: string;
+};
 
 async function authenticatedClient(): Promise<MutationResult<Awaited<ReturnType<typeof createSupabaseServerClient>>>> {
   const supabase = await createSupabaseServerClient();
@@ -96,6 +109,97 @@ export async function setViewConfigAction(
   if (!client.ok) return client;
 
   const result = await setViewConfig({ instanceId, ...input }, client.data);
+  if (result.ok) revalidatePath(`/app/planner/${instanceId}`);
+  return result;
+}
+
+// IPI-483 · PLN-ENG-002 (PR3) — thin wrappers around approveGate / discardGate.
+// Auth here; authz + CAS + atomicity stay in the SECURITY DEFINER RPCs.
+
+export async function approveGateAction(
+  instanceId: string,
+  phaseId: string,
+  idempotencyKey: string,
+  proposedChanges: GateProposedChange[] = [],
+): Promise<MutationResult<ApproveGateResult>> {
+  const client = await authenticatedClient();
+  if (!client.ok) return client;
+
+  const depsResult = await listDependencies(instanceId);
+  if (!depsResult.ok) return { ok: false, error: depsResult.error };
+
+  let changedTasks: GateChangedTask[] = [];
+  if (proposedChanges.length > 0) {
+    const taskIds = proposedChanges.map((c) => c.taskId);
+    const { data: freshRows, error: freshError } = await client.data
+      .schema("planner")
+      .from("tasks")
+      .select("id, updated_at")
+      .in("id", taskIds);
+
+    if (freshError || !freshRows) {
+      return {
+        ok: false,
+        error: { code: "NOT_FOUND", message: "This gate could not be found." },
+      };
+    }
+
+    const freshById = new Map(freshRows.map((row) => [row.id, row.updated_at]));
+    for (const change of proposedChanges) {
+      const expectedUpdatedAt = freshById.get(change.taskId);
+      if (!expectedUpdatedAt) {
+        return {
+          ok: false,
+          error: { code: "NOT_FOUND", message: "This gate could not be found." },
+        };
+      }
+      changedTasks.push({
+        taskId: change.taskId,
+        expectedUpdatedAt,
+        newStartDate: change.newStartDate,
+        newEndDate: change.newEndDate,
+      });
+    }
+  }
+
+  const changedIds = new Set(changedTasks.map((c) => c.taskId));
+  const expectedDependencyEdges = depsResult.data
+    .filter((dep) => changedIds.size === 0 || changedIds.has(dep.fromTaskId) || changedIds.has(dep.toTaskId))
+    .map((dep) => ({
+      fromTaskId: dep.fromTaskId,
+      toTaskId: dep.toTaskId,
+      lagDays: dep.lagDays,
+    }));
+
+  // Date-only (or no-shift) approve: empty edges when nothing changes — RPC
+  // skips cycle detection when proposedDependencyEdges is omitted.
+  const result = await approveGate(
+    {
+      instanceId,
+      phaseId,
+      idempotencyKey,
+      changedTasks,
+      expectedDependencyEdges: changedTasks.length === 0 ? [] : expectedDependencyEdges,
+    },
+    client.data,
+  );
+  if (result.ok) revalidatePath(`/app/planner/${instanceId}`);
+  return result;
+}
+
+export async function discardGateAction(
+  instanceId: string,
+  phaseId: string,
+  idempotencyKey: string,
+  reason?: string | null,
+): Promise<MutationResult<DiscardGateResult>> {
+  const client = await authenticatedClient();
+  if (!client.ok) return client;
+
+  const result = await discardGate(
+    { instanceId, phaseId, idempotencyKey, reason },
+    client.data,
+  );
   if (result.ok) revalidatePath(`/app/planner/${instanceId}`);
   return result;
 }

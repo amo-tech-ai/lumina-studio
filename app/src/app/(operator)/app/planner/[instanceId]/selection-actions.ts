@@ -25,10 +25,15 @@
 // including an unexpected error — resolves to `{ ok: false }`.
 
 import { getEffectivePermissions } from "@/lib/planner/permissions";
-import { getInstanceDetail, listMembers, listWorkflowPhases } from "@/lib/planner/queries";
+import {
+  getInstanceDetail,
+  listInstanceGates,
+  listMembers,
+  listWorkflowPhases,
+} from "@/lib/planner/queries";
 import { resolvePhaseSelection } from "@/lib/planner/planner-phase-selection";
 import type { PlannerSelectionType } from "@/lib/planner/selection";
-import type { PlannerMember, PlannerPhase, PlannerTask } from "@/lib/planner/types";
+import type { InstanceGate, PlannerMember, PlannerPhase, PlannerTask } from "@/lib/planner/types";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export type PlannerAssigneeOption = {
@@ -46,7 +51,14 @@ export type ResolvedPlannerSelection =
       assigneesUnavailable?: boolean;
     }
   | { kind: "member"; member: PlannerMember }
-  | { kind: "phase"; phase: PlannerPhase; tasks: PlannerTask[] };
+  | {
+      kind: "phase";
+      phase: PlannerPhase;
+      tasks: PlannerTask[];
+      /** IPI-483 — persisted gate visibility for ApprovalCard; null when phase has no gate. */
+      gate: InstanceGate | null;
+      instanceId: string;
+    };
 
 type ActionResult =
   | { ok: true; data: ResolvedPlannerSelection }
@@ -126,7 +138,10 @@ export async function resolvePlannerSelectionAction(
     if (selection.type === "phase") {
       const instanceResult = await getInstanceDetail(instanceId);
       if (!instanceResult.ok) return { ok: false };
-      const phasesResult = await listWorkflowPhases(instanceResult.data.workflowId);
+      const [phasesResult, gatesResult] = await Promise.all([
+        listWorkflowPhases(instanceResult.data.workflowId),
+        listInstanceGates(instanceId),
+      ]);
       if (!phasesResult.ok) return { ok: false };
       const resolved = resolvePhaseSelection(
         phasesResult.data,
@@ -134,7 +149,14 @@ export async function resolvePlannerSelectionAction(
         selection.id,
       );
       if (!resolved) return { ok: false };
-      return { ok: true, data: { kind: "phase", ...resolved } };
+      const gate =
+        gatesResult.ok
+          ? (gatesResult.data.find((g) => g.phaseId === selection.id) ?? null)
+          : null;
+      return {
+        ok: true,
+        data: { kind: "phase", ...resolved, gate, instanceId },
+      };
     }
 
     // Any other type — always fails closed, same code path as any other

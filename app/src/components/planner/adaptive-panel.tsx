@@ -149,8 +149,10 @@ export function AdaptivePanel({ instanceId }: { instanceId: string }) {
     if (state.result.kind === "phase") {
       return (
         <PlannerPhaseDetail
+          instanceId={state.result.instanceId}
           phase={state.result.phase}
           tasks={state.result.tasks}
+          gate={state.result.gate}
           onClose={deselect}
         />
       );

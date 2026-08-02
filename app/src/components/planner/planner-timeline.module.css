@@ -272,6 +272,12 @@
   background: var(--color-bg-card);
 }
 
+.gateDiscarded {
+  border-color: var(--color-text-muted);
+  background: color-mix(in srgb, var(--color-text-muted) 18%, transparent);
+  border-style: dashed;
+}
+
 .milestone {
   position: absolute;
   top: 12px;

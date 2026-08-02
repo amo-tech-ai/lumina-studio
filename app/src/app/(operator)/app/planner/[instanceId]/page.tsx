@@ -10,7 +10,9 @@
 // client-side so Previous/Today/Next stay local.
 // IPI-588 · PLN-S1G — Now & Next uses the same tasks + phase names; viewer
 // id comes from the session (settings-page pattern).
-// Mutations ship in IPI-582.
+// IPI-483 · PLN-ENG-002 (PR3) — listInstanceGates overlays Timeline/Kanban
+// diamonds and feeds Now & Next + AdaptivePanel ApprovalCard.
+// Mutations ship in IPI-582 / IPI-483 adapters.
 //
 // Loading/error states are the route's loading.tsx/error.tsx — a failed
 // read (including RLS denying access) throws and lands in
@@ -23,12 +25,18 @@ import { PlannerKanban } from "@/components/planner/planner-kanban";
 import { PlannerList } from "@/components/planner/planner-list";
 import { PlannerTimeline } from "@/components/planner/planner-timeline";
 import { PlannerWorkspaceShell } from "@/components/planner/planner-workspace-shell";
+import { applyInstanceGates } from "@/lib/planner/gate-visual";
 import {
   buildKanbanModel,
   buildTaskViews,
   buildTimelineModel,
 } from "@/lib/planner/planner-view-model";
-import { getInstanceDetail, getViewConfig, listWorkflowPhases } from "@/lib/planner/queries";
+import {
+  getInstanceDetail,
+  getViewConfig,
+  listInstanceGates,
+  listWorkflowPhases,
+} from "@/lib/planner/queries";
 import type { ViewType } from "@/lib/planner/types";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
@@ -75,7 +83,15 @@ export default async function PlannerWorkspacePage({
   const tasks = instanceResult.data.tasks;
   const status = instanceResult.data.status;
 
-  const timelineModel = buildTimelineModel(phases, tasks, todayIso, status);
+  // IPI-483 — overlay persisted gate_approvals so Approved/Discarded win
+  // over the task-completion heuristic (never claim Approved from tasks alone).
+  const gatesResult = await listInstanceGates(instanceId);
+  const gates = gatesResult.ok ? gatesResult.data : [];
+
+  const timelineModel = applyInstanceGates(
+    buildTimelineModel(phases, tasks, todayIso, status),
+    gates,
+  );
   const kanbanModel = buildKanbanModel(timelineModel, tasks);
   const listRows = buildTaskViews(phases, tasks);
 
@@ -93,6 +109,7 @@ export default async function PlannerWorkspacePage({
       viewerId={user.id}
       phaseNames={phaseNames}
       today={todayIso}
+      gates={gates}
     />
   );
 }

@@ -24,6 +24,7 @@ import {
   updateTaskAction,
 } from "@/app/(operator)/app/planner/[instanceId]/actions";
 import type { PlannerAssigneeOption } from "@/app/(operator)/app/planner/[instanceId]/selection-actions";
+import { GATE_STATUS_LABEL, gateUiToVisual } from "@/lib/planner/gate-visual";
 import {
   addPlanDays,
   daysBetween,
@@ -36,12 +37,15 @@ import {
   type GateVisualState,
 } from "@/lib/planner/planner-view-model";
 import type {
+  InstanceGate,
   PlannerMember,
   PlannerPhase,
   PlannerRole,
   PlannerTask,
   PlannerTaskStatus,
 } from "@/lib/planner/types";
+
+import { GateApprovalCard } from "./gate-approval-card";
 
 // Duplicated from member-table.tsx's ACCESS_LABEL (not exported there, and
 // this component shouldn't widen that file's public surface just to reuse
@@ -774,6 +778,7 @@ const GATE_LABEL: Record<GateVisualState, string> = {
   approved: "Approved",
   ready: "Ready for approval",
   locked: "Locked",
+  discarded: "Discarded",
 };
 
 const ROLE_LABEL: Record<string, string> = {
@@ -794,17 +799,21 @@ function gateColor(state: GateVisualState): string {
   }
 }
 
-// IPI-579 — read-only phase Detail: the phase's date range, status,
-// gate state + required role, and its task list. Pure presentation of data
-// already resolved by resolvePlannerSelectionAction; nothing here mutates.
+// IPI-579 — phase Detail: date range, gate, tasks.
+// IPI-483 — when AdaptivePanel supplies a persisted InstanceGate, render
+// GateApprovalCard (Approve / Edit / Discard) instead of a read-only label.
 export function PlannerPhaseDetail({
   phase,
   tasks,
   onClose,
+  gate = null,
+  instanceId,
 }: {
   phase: PlannerPhase;
   tasks: PlannerTask[];
   onClose: () => void;
+  gate?: InstanceGate | null;
+  instanceId?: string;
 }) {
   const { range, invalid } = rangeForPhase(tasks);
   const rangeLabel = invalid
@@ -812,8 +821,12 @@ export function PlannerPhaseDetail({
     : range
       ? `${planDateToISO(range.start)} → ${planDateToISO(range.end)}`
       : "Unscheduled";
-  // Phase 1: no persisted approval — never claim Approved from task status.
-  const gateState = resolveGateVisualState(phase, tasks);
+  // Prefer persisted InstanceGate; fall back to task-completion heuristic
+  // (never Approved) for unit tests that omit the gate prop.
+  const gateState = gate
+    ? gateUiToVisual(gate.status)
+    : resolveGateVisualState(phase, tasks);
+  const gateLabel = gate ? GATE_STATUS_LABEL[gate.status] : gateState ? GATE_LABEL[gateState] : null;
 
   return (
     <div data-testid="planner-detail-phase">
@@ -823,7 +836,9 @@ export function PlannerPhaseDetail({
         <span style={labelStyle}>Date range: </span>
         {rangeLabel}
       </div>
-      {phase.gateType && gateState ? (
+      {gate && instanceId ? (
+        <GateApprovalCard instanceId={instanceId} gate={gate} tasks={tasks} />
+      ) : phase.gateType && gateState && gateLabel ? (
         <>
           <div style={rowStyle}>
             <span style={labelStyle}>Gate: </span>
@@ -832,7 +847,7 @@ export function PlannerPhaseDetail({
           </div>
           <div style={rowStyle} data-testid="planner-detail-gate-state">
             <span style={labelStyle}>Gate state: </span>
-            <span style={{ color: gateColor(gateState), fontWeight: 600 }}>{GATE_LABEL[gateState]}</span>
+            <span style={{ color: gateColor(gateState), fontWeight: 600 }}>{gateLabel}</span>
           </div>
         </>
       ) : null}
