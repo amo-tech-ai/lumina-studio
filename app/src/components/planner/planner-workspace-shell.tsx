@@ -27,19 +27,20 @@ function WorkspacePlaceholder({ view, label }: { view: ViewType; label: string }
   );
 }
 
-// IPI-579 / IPI-580 — the page (RSC) passes server-built view nodes through
-// `timeline` / `kanban` / `list`. Calendar keeps its stable placeholder until
-// IPI-581. Missing nodes fall back to the placeholder so the shell stays
-// self-contained for tests.
+// IPI-579 / IPI-580 / IPI-581 — the page (RSC) passes server-built view nodes
+// through `timeline` / `kanban` / `calendar` / `list`. Missing nodes fall back
+// to the placeholder so the shell stays self-contained for tests.
 export function PlannerWorkspaceShell({
   instanceId,
   timeline,
   kanban,
+  calendar,
   list,
 }: {
   instanceId: string;
   timeline?: ReactNode;
   kanban?: ReactNode;
+  calendar?: ReactNode;
   list?: ReactNode;
 }) {
   const [view, setView] = useState<ViewType>("timeline");
@@ -47,6 +48,7 @@ export function PlannerWorkspaceShell({
   const contentFor = (key: ViewType, label: string): ReactNode => {
     if (key === "timeline") return timeline ?? <WorkspacePlaceholder view={key} label={label} />;
     if (key === "kanban") return kanban ?? <WorkspacePlaceholder view={key} label={label} />;
+    if (key === "calendar") return calendar ?? <WorkspacePlaceholder view={key} label={label} />;
     if (key === "list") return list ?? <WorkspacePlaceholder view={key} label={label} />;
     return <WorkspacePlaceholder view={key} label={label} />;
   };

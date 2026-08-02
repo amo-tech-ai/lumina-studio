@@ -31,6 +31,10 @@ vi.mock("@/components/planner/planner-list", () => ({
   PlannerList: () => null,
 }));
 
+vi.mock("@/components/planner/planner-calendar", () => ({
+  PlannerCalendar: () => null,
+}));
+
 vi.mock("@/components/planner/planner-workspace-shell", () => ({
   PlannerWorkspaceShell: () => null,
 }));
