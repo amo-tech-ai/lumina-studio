@@ -100,6 +100,22 @@ gh pr checks <N> --watch=false
 # unresolved inline threads (GraphQL) — see @pr-fix
 ```
 
+**GraphQL thread count (before routing):**
+
+```bash
+REPO="$(gh repo view --json nameWithOwner --jq '.nameWithOwner' 2>/dev/null || echo 'amo-tech-ai/lumina-studio')"
+OWNER="${REPO%%/*}"
+NAME="${REPO#*/}"
+gh api graphql -f query='
+query { repository(owner:"'$OWNER'", name:"'$NAME'") {
+  pullRequest(number:<N>) {
+    reviewThreads(first:100) {
+      nodes { id isResolved }
+    }
+  }
+}}' --jq '[.data.repository.pullRequest.reviewThreads.nodes[] | select(.isResolved==false)] | length'
+```
+
 ---
 
 ## Auto-detect decision tree (`/pr` with no args)
@@ -122,6 +138,10 @@ Run Phase 0, then pick **one** path. Execute that path only — **do not chain c
 ├── CI failing on open PR?
 │      → Report failed checks + logs hint
 │      → Fix if code issue; else STOP with CI link
+│
+├── CI pending on open PR?
+│      → Report pending checks + estimated wait
+│      → STOP; re-run /pr after CI completes
 │
 ├── Uncommitted changes + open PR + threads = 0?
 │      → Show diff summary. Ask: "Commit? → /pr ship" or "Discard?"
