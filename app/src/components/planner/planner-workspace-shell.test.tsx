@@ -123,4 +123,20 @@ describe("PlannerWorkspaceShell", () => {
     await user.click(screen.getByRole("tab", { name: /Calendar/ }));
     expect(screen.getByTestId("planner-workspace-placeholder-calendar")).toBeDefined();
   });
+
+  it("renders the Calendar node in the Calendar tab when provided — IPI-581", async () => {
+    const user = userEvent.setup();
+    render(
+      <PlannerWorkspaceShell
+        instanceId={INSTANCE_ID}
+        calendar={<div data-testid="real-calendar-content">Calendar content</div>}
+      />,
+    );
+
+    expect(screen.getByTestId("planner-workspace-placeholder-timeline")).toBeDefined();
+
+    await user.click(screen.getByRole("tab", { name: /Calendar/ }));
+    expect(screen.getByTestId("real-calendar-content")).toBeDefined();
+    expect(screen.queryByTestId("planner-workspace-placeholder-calendar")).toBeNull();
+  });
 });

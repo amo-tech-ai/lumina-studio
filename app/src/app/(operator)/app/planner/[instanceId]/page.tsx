@@ -5,7 +5,10 @@
 //
 // IPI-579 · PLN-S1B — Timeline ships here from one getInstanceDetail() read.
 // IPI-580 · PLN-S1C — Kanban + List reuse that same payload (no view-level
-// Supabase calls). Calendar ships in IPI-581; mutations in IPI-582.
+// Supabase calls).
+// IPI-581 · PLN-S1D — Calendar: same tasks payload; month matrix builds
+// client-side so Previous/Today/Next stay local.
+// Mutations ship in IPI-582.
 //
 // Loading/error states are the route's loading.tsx/error.tsx — a failed
 // read (including RLS denying access) throws and lands in
@@ -13,6 +16,7 @@
 
 import { notFound } from "next/navigation";
 
+import { PlannerCalendar } from "@/components/planner/planner-calendar";
 import { PlannerKanban } from "@/components/planner/planner-kanban";
 import { PlannerList } from "@/components/planner/planner-list";
 import { PlannerTimeline } from "@/components/planner/planner-timeline";
@@ -57,6 +61,7 @@ export default async function PlannerWorkspacePage({
       instanceId={instanceId}
       timeline={<PlannerTimeline model={timelineModel} />}
       kanban={<PlannerKanban model={kanbanModel} />}
+      calendar={<PlannerCalendar tasks={tasks} />}
       list={<PlannerList rows={listRows} />}
     />
   );
