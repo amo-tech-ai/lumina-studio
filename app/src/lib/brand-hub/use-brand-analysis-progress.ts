@@ -31,7 +31,10 @@ export type UseBrandAnalysisProgressOptions = {
   initialCrawlPages?: CrawlPages;
   /** Quiet gap before "still working" (ms). Default 30s. */
   quietGapMs?: number;
-  /** Called when intake reaches terminal `ready` (not scores_complete). */
+  /**
+   * Refresh server-rendered parents when intake hits a layout-changing status.
+   * UX success remains `phase === "ready"` only — this is not a success signal.
+   */
   onReady?: () => void;
 };
 
@@ -95,16 +98,37 @@ export function useBrandAnalysisProgress({
     bumpActivity();
   }, [initialStatus, bumpActivity]);
 
+  const crawlCrawled = initialCrawlPages?.pages_crawled ?? null;
+  const crawlFound = initialCrawlPages?.pages_found ?? null;
+
   useEffect(() => {
-    setCrawl(initialCrawlPages ?? null);
+    setCrawl(
+      crawlCrawled == null && crawlFound == null
+        ? null
+        : { pages_crawled: crawlCrawled, pages_found: crawlFound },
+    );
     // Server prop refresh is activity too — reset quiet-gap (counts already update via setCrawl).
     bumpActivity();
-  }, [initialCrawlPages, bumpActivity]);
+    // Depend on primitives so a new object identity with the same counts does not reset Realtime.
+  }, [crawlCrawled, crawlFound, bumpActivity]);
 
   useEffect(() => {
     const supabase = createSupabaseBrowserClient();
+    let active = true;
     setConnectionLost(false);
     bumpActivity();
+
+    const notifyLayoutRefresh = (next: string) => {
+      // Layout-changing statuses — not the same as UX "success" (ready only).
+      if (
+        next === "ready" ||
+        next === "failed" ||
+        next === "draft_ready" ||
+        next === "scores_complete"
+      ) {
+        onReadyRef.current?.();
+      }
+    };
 
     const channel = supabase
       .channel(`brand-progress-${brandId}-${reconnectTick}`)
@@ -117,13 +141,11 @@ export function useBrandAnalysisProgress({
           filter: `id=eq.${brandId}`,
         },
         (payload: { new: Record<string, unknown> }) => {
+          if (!active) return;
           bumpActivity();
           const next = payload.new.intake_status as string;
           setIntakeStatus(next);
-          // Terminal success is ready only — scores_complete is mid-pipeline, not success.
-          if (next === "ready") {
-            onReadyRef.current?.();
-          }
+          notifyLayoutRefresh(next);
         },
       )
       .on(
@@ -135,6 +157,7 @@ export function useBrandAnalysisProgress({
           filter: `brand_id=eq.${brandId}`,
         },
         (payload: { new: Record<string, unknown> | null }) => {
+          if (!active) return;
           const row = payload.new;
           if (!row) return;
           bumpActivity();
@@ -145,6 +168,7 @@ export function useBrandAnalysisProgress({
         },
       )
       .subscribe((status) => {
+        if (!active) return;
         if (
           status === "CHANNEL_ERROR" ||
           status === "TIMED_OUT" ||
@@ -165,15 +189,17 @@ export function useBrandAnalysisProgress({
             .eq("id", brandId)
             .maybeSingle()
             .then(({ data }) => {
+              if (!active) return;
               const next = data?.intake_status;
               if (typeof next !== "string") return;
               setIntakeStatus(next);
-              if (next === "ready") onReadyRef.current?.();
+              notifyLayoutRefresh(next);
             });
         }
       });
 
     return () => {
+      active = false;
       clearQuietTimer();
       supabase.removeChannel(channel);
     };

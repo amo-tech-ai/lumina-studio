@@ -154,7 +154,7 @@ describe("useBrandAnalysisProgress", () => {
     unmount();
   });
 
-  it("onReady fires for ready only — not scores_complete", () => {
+  it("onReady refreshes layout on scores_complete but phase stays live (not success)", () => {
     const onReady = vi.fn();
     const { result, unmount } = renderHook(() =>
       useBrandAnalysisProgress({
@@ -164,17 +164,18 @@ describe("useBrandAnalysisProgress", () => {
         ...noQuiet,
       }),
     );
+    expect(capturedCallbacks).toHaveLength(2);
     act(() => {
-      capturedCallbacks[0]?.({ new: { intake_status: "scores_complete" } });
+      capturedCallbacks[0]({ new: { intake_status: "scores_complete" } });
     });
-    expect(onReady).not.toHaveBeenCalled();
+    expect(onReady).toHaveBeenCalledTimes(1);
     expect(result.current.intakeStatus).toBe("scores_complete");
     expect(result.current.phase).toBe("live");
 
     act(() => {
-      capturedCallbacks[0]?.({ new: { intake_status: "ready" } });
+      capturedCallbacks[0]({ new: { intake_status: "ready" } });
     });
-    expect(onReady).toHaveBeenCalledTimes(1);
+    expect(onReady).toHaveBeenCalledTimes(2);
     expect(result.current.phase).toBe("ready");
     unmount();
   });

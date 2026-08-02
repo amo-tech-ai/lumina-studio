@@ -134,13 +134,13 @@ describe("AnalysisProgressBanner", () => {
     expect(screen.getByRole("alert").textContent).toContain("Use Re-analyze to retry");
   });
 
-  it("does not refresh on scores_complete", () => {
+  it("refreshes layout on scores_complete but keeps progress copy (not success)", () => {
     render(<AnalysisProgressBanner {...props} initialStatus="crawl_running" />);
     expect(capturedCallbacks).toHaveLength(2);
     act(() => {
       capturedCallbacks[0]({ new: { intake_status: "scores_complete" } });
     });
-    expect(mockRefresh).not.toHaveBeenCalled();
+    expect(mockRefresh).toHaveBeenCalled();
     expect(screen.getByText(/Scores ready/)).toBeTruthy();
   });
 
