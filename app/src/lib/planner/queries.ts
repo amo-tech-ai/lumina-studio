@@ -5,10 +5,13 @@ import { getCompanyNames } from "@/lib/crm/queries";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import type { Database } from "@/types/supabase";
 
+import { PlannerEngine } from "./engine";
 import { getEffectivePermissions, type EffectivePermissions } from "./permissions";
 
 import type {
   EntityType,
+  GateUiStatus,
+  InstanceGate,
   PersistedViewType,
   PlannerAssignment,
   PlannerDependency,
@@ -20,6 +23,8 @@ import type {
   PlannerTaskStatus,
   PlannerViewConfig,
 } from "./types";
+
+const gateEngine = new PlannerEngine();
 
 type PlannerClient = PostgrestClient<
   Database,
@@ -660,6 +665,139 @@ export async function listWorkflowPhases(
   }
 
   return { ok: true, data: (data ?? []).map(toPhase) };
+}
+
+const GATE_APPROVAL_COLUMNS =
+  "id, instance_id, phase_id, status, approved_by, approved_at";
+
+type GateApprovalRow = {
+  id: string;
+  phase_id: string;
+  status: string;
+  approved_by: string | null;
+  approved_at: string | null;
+};
+
+// Pure status resolution — unit-tested without a Supabase mock. Approved only
+// when a persisted row says so; tasks-done alone never yields Approved.
+export function resolveInstanceGates(
+  instance: PlannerInstance,
+  phases: PlannerPhase[],
+  assignments: PlannerAssignment[],
+  userId: string,
+  approvals: GateApprovalRow[],
+): InstanceGate[] {
+  const approvalByPhase = new Map(approvals.map((row) => [row.phase_id, row]));
+  const gates: InstanceGate[] = [];
+
+  for (const phase of phases) {
+    if (!phase.gateType) continue;
+
+    const persisted = approvalByPhase.get(phase.id);
+    let status: GateUiStatus;
+    let reason: string | undefined;
+
+    if (persisted?.status === "approved") {
+      status = "approved";
+    } else {
+      // Discarded proposals can be regenerated: if conditions still pass, surface
+      // Reachable again (RPC allows re-approve after discard).
+      const check = gateEngine.checkGate(
+        instance,
+        phase,
+        instance.tasks,
+        assignments,
+        userId,
+      );
+      if (check.passed) {
+        status = "reachable";
+      } else if (persisted?.status === "discarded") {
+        status = "discarded";
+        reason = check.reason;
+      } else {
+        status = "locked";
+        reason = check.reason;
+      }
+    }
+
+    gates.push({
+      phaseId: phase.id,
+      phaseName: phase.name,
+      phaseSlug: phase.slug,
+      orderIndex: phase.orderIndex,
+      gateType: phase.gateType,
+      requiredRole: phase.requiredRole,
+      status,
+      reason,
+      approvalId: persisted?.id ?? null,
+      approvedAt: persisted?.approved_at ?? null,
+      approvedBy: persisted?.approved_by ?? null,
+    });
+  }
+
+  return gates.sort((a, b) => a.orderIndex - b.orderIndex);
+}
+
+// IPI-483 · PLN-ENG-002 (PR2) — gate visibility for SCR-32.
+export async function listInstanceGates(
+  instanceId: string,
+): Promise<PlannerQueryResult<InstanceGate[]>> {
+  const context = await authenticatedPlannerClient();
+  if (!context.ok) return context;
+
+  const detailResult = await getInstanceDetail(instanceId);
+  if (!detailResult.ok) return detailResult;
+
+  const instance = detailResult.data;
+  const [phasesResult, assignmentRes, approvalsRes] = await Promise.all([
+    listWorkflowPhases(instance.workflowId),
+    context.data.base.rpc("planner_get_my_assignment", { p_instance_id: instanceId }),
+    context.data.client
+      .from("gate_approvals")
+      .select(GATE_APPROVAL_COLUMNS)
+      .eq("instance_id", instanceId),
+  ]);
+
+  if (!phasesResult.ok) return phasesResult;
+  if (assignmentRes.error) {
+    return failure("QUERY_FAILED", "Gate approvals could not be loaded.");
+  }
+  if (approvalsRes.error) {
+    return failure("QUERY_FAILED", "Gate approvals could not be loaded.");
+  }
+
+  const assignmentRow = assignmentRes.data?.[0];
+  const assignments: PlannerAssignment[] = assignmentRow
+    ? [
+        {
+          id: assignmentRow.id,
+          instanceId: assignmentRow.instance_id,
+          userId: assignmentRow.user_id,
+          role: assignmentRow.role as PlannerAssignment["role"],
+          permissions: assignmentRow.permissions as Record<string, unknown> | null,
+        },
+      ]
+    : [];
+
+  return {
+    ok: true,
+    data: resolveInstanceGates(
+      instance,
+      phasesResult.data,
+      assignments,
+      context.data.userId,
+      (approvalsRes.data ?? []) as GateApprovalRow[],
+    ),
+  };
+}
+
+/** Reachable-only view of listInstanceGates (Ready for approval). */
+export async function listReachableGates(
+  instanceId: string,
+): Promise<PlannerQueryResult<InstanceGate[]>> {
+  const result = await listInstanceGates(instanceId);
+  if (!result.ok) return result;
+  return { ok: true, data: result.data.filter((g) => g.status === "reachable") };
 }
 
 // IPI-574 · PLN-DATA-001B correction #1 (2026-07-16) — identity is
