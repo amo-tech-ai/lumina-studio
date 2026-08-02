@@ -123,6 +123,25 @@ Jobs live in `.github/workflows/ci.yml`. No merge to `main` without green. `gh r
 
 No job carries a path filter, deliberately — a required check gated on changed paths can go permanently "pending" on PRs that never touch it and block merges. If path filtering ever becomes necessary, use `paths-ignore` on the workflow **trigger**, never a job-level `if:`.
 
+### Protect main (IPI-895 · CI-GOV-001)
+
+Ruleset **Protect main** (`20153938`) requires these status checks (strict — branch must be up to date with `main`):
+
+| Required check | Why it is stable enough to require |
+|---|---|
+| `app-build` | Always runs on every PR (no path filter) |
+| `supabase-web015` | Always reports on every PR |
+| `cloudflare-worker-tests` | Always reports; local Miniflare, no secrets |
+| `supabase-verify-rls` | Always reports; fork/Dependabot/`mode=skip` still exits 0 so the check never stays pending |
+
+**Not required (phase 2):** `booking-gate`, `supabase-linked-gates` — secret-gated; confirm fork skip never leaves them pending before promoting.
+
+**Review policy:** `required_approving_review_count` stays **0** until a second human reviewer is a standing part of the merge path. Pair review is still encouraged; GitHub does not hard-require it yet.
+
+**Verification:** use the ruleset API (`gh api repos/amo-tech-ai/lumina-studio/rulesets/20153938`), not classic `/branches/main/protection` (404 by design).
+
+**Stale check runs:** re-running an old failed workflow does **not** prove a fix against current `main` — rebase or update the PR first.
+
 ## Efficiency self-check
 
 **Always verify you are using the most efficient way to complete a task — then use it.** Run this check *before* starting and again *while* working, not only when asked. It cuts wasted motion, not rigor: "verify before asserting" still applies in full.
