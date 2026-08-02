@@ -20,7 +20,7 @@
 set search_path to public, extensions;
 
 begin;
-select plan(79);
+select plan(81);
 
 -- One row per (schema, table) that verify-rls.mjs checks RLS on today.
 create temporary table rls_tables (schemaname text, tablename text) on commit drop;
@@ -51,6 +51,7 @@ insert into rls_tables (schemaname, tablename) values
   ('planner', 'assignments'),
   ('planner', 'dependencies'),
   ('planner', 'events'),
+  ('planner', 'gate_approvals'),
   ('planner', 'instances'),
   ('planner', 'phases'),
   ('planner', 'tasks'),
