@@ -42,6 +42,8 @@ export type ResolvedPlannerSelection =
       task: PlannerTask;
       canUpdateTasks: boolean;
       assignees: PlannerAssigneeOption[];
+      /** True when planner_get_member_names failed — do not treat [] as valid. */
+      assigneesUnavailable?: boolean;
     }
   | { kind: "member"; member: PlannerMember }
   | { kind: "phase"; phase: PlannerPhase; tasks: PlannerTask[] };
@@ -84,19 +86,30 @@ export async function resolvePlannerSelectionAction(
       }
 
       let assignees: PlannerAssigneeOption[] = [];
+      let assigneesUnavailable = false;
       if (canUpdateTasks) {
         // planner_get_member_names is assignment-scoped (viewer+) and does not
         // require manager-only assignments_select_org — safe for contributors.
-        const { data: names } = await supabase.rpc("planner_get_member_names", {
-          p_instance_id: instanceId,
-        });
-        assignees = (names ?? []).map((n: { user_id: string; display_name: string }) => ({
-          userId: n.user_id,
-          displayName: n.display_name?.trim() ? n.display_name : "Unnamed member",
-        }));
+        const { data: names, error: namesError } = await supabase.rpc(
+          "planner_get_member_names",
+          { p_instance_id: instanceId },
+        );
+        if (namesError) {
+          // Empty list would look like "no members" and mis-render the assignee
+          // select as Unassigned — fail closed for reassignment only.
+          assigneesUnavailable = true;
+        } else {
+          assignees = (names ?? []).map((n: { user_id: string; display_name: string }) => ({
+            userId: n.user_id,
+            displayName: n.display_name?.trim() ? n.display_name : "Unnamed member",
+          }));
+        }
       }
 
-      return { ok: true, data: { kind: "task", task, canUpdateTasks, assignees } };
+      return {
+        ok: true,
+        data: { kind: "task", task, canUpdateTasks, assignees, assigneesUnavailable },
+      };
     }
 
     if (selection.type === "member") {

@@ -17,7 +17,7 @@
 // resolvePlannerSelectionAction, which itself only calls existing typed
 // contracts (getInstanceDetail/listMembers/listWorkflowPhases).
 
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 
 import { resolvePlannerSelectionAction, type ResolvedPlannerSelection } from "@/app/(operator)/app/planner/[instanceId]/selection-actions";
 import { useSetIntelligenceDetail } from "@/context/intelligence-detail-context";
@@ -38,6 +38,10 @@ const IDLE_STATE: ResolutionState = { status: "idle", result: null };
 export function AdaptivePanel({ instanceId }: { instanceId: string }) {
   const { selection, deselect } = usePlannerSelection();
   const [state, setState] = useState<ResolutionState>(IDLE_STATE);
+  // Latest selection for in-flight refreshTaskSelection — same staleness
+  // concern as the cancelled-flag resolve effect above.
+  const selectionRef = useRef(selection);
+  selectionRef.current = selection;
 
   // Resolve the current selection against the real entity, same
   // cancelled-flag idiom as use-intelligence-panel.ts's fetch effects — a
@@ -96,16 +100,28 @@ export function AdaptivePanel({ instanceId }: { instanceId: string }) {
   // IPI-582 — re-resolve the current task selection without clearing Detail.
   // Used after a successful updateTask and for STALE_VERSION Reload/Review.
   const refreshTaskSelection = useCallback(async () => {
-    if (selection === null || selection.type !== "task") return null;
-    const result = await resolvePlannerSelectionAction(instanceId, selection);
+    const requested = selectionRef.current;
+    if (requested === null || requested.type !== "task") return null;
+    const result = await resolvePlannerSelectionAction(instanceId, requested);
+    const current = selectionRef.current;
+    // Discard late results after the operator closed/switched selection.
+    if (
+      current === null ||
+      current.type !== "task" ||
+      current.id !== requested.id
+    ) {
+      return null;
+    }
     if (!result.ok || result.data.kind !== "task") return null;
+    if (result.data.task.id !== requested.id) return null;
     setState({ status: "resolved", result: result.data });
     return {
       task: result.data.task,
       canUpdateTasks: result.data.canUpdateTasks,
       assignees: result.data.assignees,
+      assigneesUnavailable: result.data.assigneesUnavailable,
     };
-  }, [selection, instanceId]);
+  }, [instanceId]);
 
   // Memoized, not rebuilt every render: AdaptivePanel is itself a consumer of
   // IntelligenceDetailContext (via useSetIntelligenceDetail -> useIntelligenceDetail
@@ -120,9 +136,11 @@ export function AdaptivePanel({ instanceId }: { instanceId: string }) {
     if (state.result.kind === "task") {
       return (
         <PlannerTaskDetail
+          key={state.result.task.id}
           task={state.result.task}
           canUpdateTasks={state.result.canUpdateTasks}
           assignees={state.result.assignees}
+          assigneesUnavailable={state.result.assigneesUnavailable}
           onClose={deselect}
           onRefreshSelection={refreshTaskSelection}
         />

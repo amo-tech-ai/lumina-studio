@@ -146,7 +146,7 @@ describe("PlannerTaskDetail — IPI-582 updateTask form", () => {
   it("Viewer (canUpdateTasks=false) sees read-only detail with no Save control", () => {
     render(
       <PlannerTaskDetail
-        task={task({ status: "todo", title: "Confirm talent" })}
+        task={task({ status: "todo", title: "Confirm talent", assigneeRole: "producer" })}
         onClose={() => {}}
         canUpdateTasks={false}
       />,
@@ -156,6 +156,7 @@ describe("PlannerTaskDetail — IPI-582 updateTask form", () => {
     expect(screen.queryByTestId("planner-task-save")).toBeNull();
     expect(screen.getByText(/View only/i)).toBeDefined();
     expect(screen.getByText("Confirm talent")).toBeDefined();
+    expect(screen.getByText(/Role · producer/i)).toBeDefined();
   });
 
   it("authorized user can save via updateTaskAction with a stable idempotency key", async () => {
@@ -291,5 +292,105 @@ describe("PlannerTaskDetail — IPI-582 updateTask form", () => {
     );
     expect(screen.queryByLabelText(/^Priority$/i)).toBeNull();
     expect(screen.getByText(/critical/i)).toBeDefined();
+  });
+
+  it("resyncs the form when switching tasks that share the same updatedAt", () => {
+    const sharedUpdatedAt = "2026-03-01T12:00:00.000Z";
+    const { rerender } = render(
+      <PlannerTaskDetail
+        task={task({ id: "t-a", title: "Task A", updatedAt: sharedUpdatedAt })}
+        onClose={() => {}}
+        canUpdateTasks
+      />,
+    );
+
+    expect((screen.getByTestId("planner-task-title") as HTMLInputElement).value).toBe("Task A");
+
+    rerender(
+      <PlannerTaskDetail
+        task={task({ id: "t-b", title: "Task B", updatedAt: sharedUpdatedAt })}
+        onClose={() => {}}
+        canUpdateTasks
+      />,
+    );
+
+    expect((screen.getByTestId("planner-task-title") as HTMLInputElement).value).toBe("Task B");
+  });
+
+  it("keeps the current assignee visible when they are missing from the options list", () => {
+    render(
+      <PlannerTaskDetail
+        task={task({
+          status: "todo",
+          assigneeUserId: "u-missing",
+          title: "Has assignee",
+        })}
+        onClose={() => {}}
+        canUpdateTasks
+        assignees={[{ userId: "u-other", displayName: "Other" }]}
+      />,
+    );
+
+    const select = screen.getByTestId("planner-task-assignee") as HTMLSelectElement;
+    expect(select.value).toBe("u-missing");
+    expect(screen.getByRole("option", { name: "Assigned member" })).toBeDefined();
+  });
+
+  it("does not show a misleading Unassigned select for role-only assignments", () => {
+    render(
+      <PlannerTaskDetail
+        task={task({
+          status: "todo",
+          assigneeUserId: null,
+          assigneeRole: "producer",
+        })}
+        onClose={() => {}}
+        canUpdateTasks
+        assignees={[{ userId: "u-jordan", displayName: "Jordan" }]}
+      />,
+    );
+
+    expect(screen.queryByTestId("planner-task-assignee")).toBeNull();
+    expect(screen.getByTestId("planner-task-assignee-role").textContent).toMatch(/Role · producer/i);
+  });
+
+  it("surfaces UNKNOWN_ERROR when updateTaskAction rejects (transport failure)", async () => {
+    const user = userEvent.setup();
+    updateTaskAction.mockRejectedValue(new Error("network down"));
+
+    render(
+      <PlannerTaskDetail task={task({ status: "todo" })} onClose={() => {}} canUpdateTasks />,
+    );
+
+    await user.click(screen.getByTestId("planner-task-save"));
+    await waitFor(() => expect(screen.getByTestId("planner-task-action-error")).toBeDefined());
+    expect(screen.getByTestId("planner-task-action-error").textContent).toMatch(
+      /could not be completed/i,
+    );
+
+    // Idempotency key preserved for retry
+    updateTaskAction.mockResolvedValue({
+      ok: true,
+      data: { replayed: false, taskId: "t-1", updatedAt: "2026-03-02T00:00:00.000Z" },
+    });
+    const firstKey = updateTaskAction.mock.calls[0][4];
+    await user.click(screen.getByTestId("planner-task-save"));
+    await waitFor(() => expect(updateTaskAction).toHaveBeenCalledTimes(2));
+    expect(updateTaskAction.mock.calls[1][4]).toBe(firstKey);
+  });
+
+  it("disables reassignment when assignee options failed to load", () => {
+    render(
+      <PlannerTaskDetail
+        task={task({ status: "todo", assigneeUserId: "u-jordan" })}
+        onClose={() => {}}
+        canUpdateTasks
+        assignees={[]}
+        assigneesUnavailable
+      />,
+    );
+
+    expect((screen.getByTestId("planner-task-assignee") as HTMLSelectElement).disabled).toBe(true);
+    expect(screen.getByText(/Assignee list unavailable/i)).toBeDefined();
   });
 });

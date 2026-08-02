@@ -122,7 +122,25 @@ function DetailHeader({ title, onClose }: { title: string; onClose: () => void }
   );
 }
 
-function TaskReadOnlyBody({ task }: { task: PlannerTask }) {
+function formatTaskAssigneeLabel(
+  task: Pick<PlannerTask, "assigneeUserId" | "assigneeRole">,
+  assignees: PlannerAssigneeOption[],
+): string {
+  if (task.assigneeUserId) {
+    const named = assignees.find((m) => m.userId === task.assigneeUserId);
+    return named?.displayName ?? "Assigned member";
+  }
+  if (task.assigneeRole) return `Role · ${task.assigneeRole}`;
+  return "Unassigned";
+}
+
+function TaskReadOnlyBody({
+  task,
+  assignees = [],
+}: {
+  task: PlannerTask;
+  assignees?: PlannerAssigneeOption[];
+}) {
   return (
     <>
       <h3 style={{ margin: "0 0 0.5rem" }}>{task.title}</h3>
@@ -136,6 +154,10 @@ function TaskReadOnlyBody({ task }: { task: PlannerTask }) {
       <div style={rowStyle}>
         <span style={labelStyle}>Priority: </span>
         {task.priority}
+      </div>
+      <div style={rowStyle}>
+        <span style={labelStyle}>Assignee: </span>
+        {formatTaskAssigneeLabel(task, assignees)}
       </div>
       {task.startDate ? (
         <div style={rowStyle}>
@@ -157,6 +179,7 @@ export type TaskSelectionRefresh = {
   task: PlannerTask;
   canUpdateTasks: boolean;
   assignees: PlannerAssigneeOption[];
+  assigneesUnavailable?: boolean;
 };
 
 export type PlannerTaskDetailProps = {
@@ -165,6 +188,8 @@ export type PlannerTaskDetailProps = {
   /** When false/omitted, Viewer (and fail-closed) see read-only detail. */
   canUpdateTasks?: boolean;
   assignees?: PlannerAssigneeOption[];
+  /** Member-name RPC failed — disable reassignment; do not treat [] as truth. */
+  assigneesUnavailable?: boolean;
   /** Re-resolve the selected task (after save or STALE_VERSION Reload). */
   onRefreshSelection?: () => Promise<TaskSelectionRefresh | null>;
 };
@@ -190,6 +215,7 @@ export function PlannerTaskDetail({
   onClose,
   canUpdateTasks = false,
   assignees = [],
+  assigneesUnavailable = false,
   onRefreshSelection,
 }: PlannerTaskDetailProps) {
   const router = useRouter();
@@ -202,16 +228,20 @@ export function PlannerTaskDetail({
   // Mint once per submit attempt; reuse on retry of the same attempt. Cleared
   // on success or when the draft changes (new logical mutation).
   const idempotencyKeyRef = useRef<string | null>(null);
-  // Sync draft only when the parent task CAS token advances (AdaptivePanel
-  // re-resolve). Do not key this on local expectedUpdatedAt — Reload updates
-  // that before props catch up and would otherwise wipe the reloaded draft.
+  // Sync draft when the selected task identity changes, or when the parent
+  // CAS token advances (AdaptivePanel re-resolve). Do not key this on local
+  // expectedUpdatedAt — Reload updates that before props catch up.
+  const taskIdRef = useRef(task.id);
   const taskUpdatedAtRef = useRef(task.updatedAt);
 
   useEffect(() => {
-    if (!task.updatedAt || task.updatedAt === taskUpdatedAtRef.current) return;
+    const sameId = task.id === taskIdRef.current;
+    const sameUpdatedAt = task.updatedAt === taskUpdatedAtRef.current;
+    if (sameId && sameUpdatedAt) return;
+    taskIdRef.current = task.id;
     taskUpdatedAtRef.current = task.updatedAt;
     setDraft(draftFromTask(task));
-    setExpectedUpdatedAt(task.updatedAt);
+    setExpectedUpdatedAt(task.updatedAt ?? "");
     setFieldError(null);
     setActionError(null);
     idempotencyKeyRef.current = null;
@@ -228,6 +258,7 @@ export function PlannerTaskDetail({
     startTransition(async () => {
       const refreshed = onRefreshSelection ? await onRefreshSelection() : null;
       if (refreshed) {
+        taskIdRef.current = refreshed.task.id;
         taskUpdatedAtRef.current = refreshed.task.updatedAt;
         setDraft(draftFromTask(refreshed.task));
         setExpectedUpdatedAt(refreshed.task.updatedAt ?? "");
@@ -257,17 +288,22 @@ export function PlannerTaskDetail({
       return;
     }
 
+    // Role-only assignments are not editable via user select — omit assignee
+    // from the patch so we never send null and leave a stale role attached.
+    const roleOnlyAssignment = Boolean(task.assigneeRole && !task.assigneeUserId);
     const patch: {
       title: string;
       description: string | null;
       status: PlannerTaskStatus;
-      assigneeUserId: string | null;
+      assigneeUserId?: string | null;
     } = {
       title,
       description: draft.description.trim() ? draft.description.trim() : null,
       status: draft.status,
-      assigneeUserId: draft.assigneeUserId || null,
     };
+    if (!roleOnlyAssignment && !assigneesUnavailable) {
+      patch.assigneeUserId = draft.assigneeUserId || null;
+    }
 
     idempotencyKeyRef.current ??= crypto.randomUUID();
     const idempotencyKey = idempotencyKeyRef.current;
@@ -275,25 +311,34 @@ export function PlannerTaskDetail({
     setActionError(null);
 
     startTransition(async () => {
-      const result = await updateTaskAction(
-        task.instanceId,
-        task.id,
-        expectedUpdatedAt,
-        patch,
-        idempotencyKey,
-      );
+      try {
+        const result = await updateTaskAction(
+          task.instanceId,
+          task.id,
+          expectedUpdatedAt,
+          patch,
+          idempotencyKey,
+        );
 
-      if (!result.ok) {
-        setActionError({ code: result.error.code, message: result.error.message });
-        return;
+        if (!result.ok) {
+          setActionError({ code: result.error.code, message: result.error.message });
+          return;
+        }
+
+        idempotencyKeyRef.current = null;
+        taskIdRef.current = task.id;
+        taskUpdatedAtRef.current = result.data.updatedAt;
+        setExpectedUpdatedAt(result.data.updatedAt);
+        if (onRefreshSelection) await onRefreshSelection();
+        // revalidatePath alone does not update mounted client views — refresh RSC props.
+        router.refresh();
+      } catch {
+        // Transport / server-action rejection — keep idempotency key for retry.
+        setActionError({
+          code: "UNKNOWN_ERROR",
+          message: "The request could not be completed.",
+        });
       }
-
-      idempotencyKeyRef.current = null;
-      taskUpdatedAtRef.current = result.data.updatedAt;
-      setExpectedUpdatedAt(result.data.updatedAt);
-      if (onRefreshSelection) await onRefreshSelection();
-      // revalidatePath alone does not update mounted client views — refresh RSC props.
-      router.refresh();
     });
   }
 
@@ -301,7 +346,7 @@ export function PlannerTaskDetail({
     return (
       <div data-testid="planner-detail-task" data-readonly="true">
         <DetailHeader title="Task" onClose={onClose} />
-        <TaskReadOnlyBody task={task} />
+        <TaskReadOnlyBody task={task} assignees={assignees} />
         <p style={{ ...mutedStyle, marginTop: "0.75rem" }} role="status">
           View only — you cannot edit this task.
         </p>
@@ -315,6 +360,10 @@ export function PlannerTaskDetail({
   const assigneeId = `${formId}-assignee`;
   const errorId = `${formId}-error`;
   const isStale = actionError?.code === "STALE_VERSION";
+  const roleOnlyAssignment = Boolean(task.assigneeRole && !task.assigneeUserId);
+  const assigneeMissingFromOptions =
+    Boolean(draft.assigneeUserId) &&
+    !assignees.some((member) => member.userId === draft.assigneeUserId);
 
   return (
     <div data-testid="planner-detail-task" data-readonly="false">
@@ -379,22 +428,39 @@ export function PlannerTaskDetail({
           <label htmlFor={assigneeId} style={labelStyle}>
             Assignee
           </label>
-          <select
-            id={assigneeId}
-            name="assignee"
-            value={draft.assigneeUserId}
-            onChange={(e) => updateDraft("assigneeUserId", e.target.value)}
-            disabled={isPending}
-            style={inputStyle}
-            data-testid="planner-task-assignee"
-          >
-            <option value="">Unassigned</option>
-            {assignees.map((member) => (
-              <option key={member.userId} value={member.userId}>
-                {member.displayName}
-              </option>
-            ))}
-          </select>
+          {roleOnlyAssignment ? (
+            <div id={assigneeId} data-testid="planner-task-assignee-role" style={mutedStyle}>
+              {formatTaskAssigneeLabel(task, assignees)}
+              <span style={{ display: "block", marginTop: "0.25rem" }}>
+                Role assignment — pick a person from Timeline/Settings to change ownership.
+              </span>
+            </div>
+          ) : (
+            <select
+              id={assigneeId}
+              name="assignee"
+              value={draft.assigneeUserId}
+              onChange={(e) => updateDraft("assigneeUserId", e.target.value)}
+              disabled={isPending || assigneesUnavailable}
+              style={inputStyle}
+              data-testid="planner-task-assignee"
+            >
+              <option value="">Unassigned</option>
+              {assigneeMissingFromOptions ? (
+                <option value={draft.assigneeUserId}>Assigned member</option>
+              ) : null}
+              {assignees.map((member) => (
+                <option key={member.userId} value={member.userId}>
+                  {member.displayName}
+                </option>
+              ))}
+            </select>
+          )}
+          {assigneesUnavailable && !roleOnlyAssignment ? (
+            <p style={{ ...mutedStyle, margin: "0.25rem 0 0" }} role="status">
+              Assignee list unavailable — other fields can still be saved.
+            </p>
+          ) : null}
         </div>
 
         {/* Priority is display-only — updateTask has no priority patch. */}
