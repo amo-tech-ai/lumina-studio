@@ -9,6 +9,33 @@ vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }),
 }));
 
+// Slice C: progress screen unit-tested separately — auto-complete when brandId set.
+vi.mock("./analysis-progress-screen", async () => {
+  const React = await import("react");
+  return {
+    AnalysisProgressScreen: ({
+      onComplete,
+      brandId,
+    }: {
+      onComplete: () => void;
+      brandId: string | null;
+    }) => {
+      React.useEffect(() => {
+        if (!brandId) return;
+        const timer = setTimeout(onComplete, 20);
+        return () => clearTimeout(timer);
+      }, [brandId, onComplete]);
+      return (
+        <div data-testid="onboarding-card">
+          <p data-testid="analysis-status" aria-live="polite">
+            Preparing your workspace…
+          </p>
+        </div>
+      );
+    },
+  };
+});
+
 import { OnboardingFlow } from "./onboarding-flow";
 
 /**
@@ -167,10 +194,7 @@ describe("mixed in-page and browser navigation", () => {
       expect(currentScreen()).toBe("12");
 
       act(() => {
-        vi.advanceTimersByTime(40 * 110);
-      });
-      act(() => {
-        vi.advanceTimersByTime(700);
+        vi.advanceTimersByTime(20);
       });
       expect(currentScreen()).toBe("13");
 
