@@ -27,19 +27,29 @@ function WorkspacePlaceholder({ view, label }: { view: ViewType; label: string }
   );
 }
 
-// IPI-579 · PLN-S1B — the page (RSC) passes the server-built Timeline node
-// through `timeline`; the shell renders it in the Timeline tab. Other views
-// keep their stable placeholder ids (AC-F extension points) until their own
-// tickets ship. No timeline node → the timeline placeholder renders, so the
-// shell stays self-contained for tests and future views.
+// IPI-579 / IPI-580 — the page (RSC) passes server-built view nodes through
+// `timeline` / `kanban` / `list`. Calendar keeps its stable placeholder until
+// IPI-581. Missing nodes fall back to the placeholder so the shell stays
+// self-contained for tests.
 export function PlannerWorkspaceShell({
   instanceId,
   timeline,
+  kanban,
+  list,
 }: {
   instanceId: string;
   timeline?: ReactNode;
+  kanban?: ReactNode;
+  list?: ReactNode;
 }) {
   const [view, setView] = useState<ViewType>("timeline");
+
+  const contentFor = (key: ViewType, label: string): ReactNode => {
+    if (key === "timeline") return timeline ?? <WorkspacePlaceholder view={key} label={label} />;
+    if (key === "kanban") return kanban ?? <WorkspacePlaceholder view={key} label={label} />;
+    if (key === "list") return list ?? <WorkspacePlaceholder view={key} label={label} />;
+    return <WorkspacePlaceholder view={key} label={label} />;
+  };
 
   return (
     <div style={{ padding: "2rem" }}>
@@ -64,11 +74,7 @@ export function PlannerWorkspaceShell({
 
         {VIEWS.map(({ key, label }) => (
           <TabsContent key={key} value={key} style={{ marginTop: "1rem", width: "100%" }}>
-            {key === "timeline" ? (
-              timeline ?? <WorkspacePlaceholder view={key} label={label} />
-            ) : (
-              <WorkspacePlaceholder view={key} label={label} />
-            )}
+            {contentFor(key, label)}
           </TabsContent>
         ))}
       </Tabs>

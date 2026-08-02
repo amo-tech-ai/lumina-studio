@@ -1,21 +1,27 @@
 // IPI-578 — Workspace route. Existence/UUID guard lives in the sibling
 // layout.tsx (shared with settings/page.tsx). Server Component with zero
 // view-switching logic — all interactive behavior lives in
-// PlannerWorkspaceShell. Real view content (Timeline/Kanban/Calendar/List)
-// ships in PLN-S1B–D (IPI-579/580/581); mutations ship in PLN-S1E (IPI-582).
+// PlannerWorkspaceShell.
 //
-// IPI-579 · PLN-S1B — the Timeline ships here: the RSC loads the instance
-// detail + workflow phases, builds the read-only TimelineModel server-side,
-// and hands it to the shell as the Timeline tab's content. Loading/error
-// states are the route's loading.tsx/error.tsx — a failed read (including
-// RLS denying access) throws and lands in PlannerErrorBoundary, so the
-// timeline component itself never fetches.
+// IPI-579 · PLN-S1B — Timeline ships here from one getInstanceDetail() read.
+// IPI-580 · PLN-S1C — Kanban + List reuse that same payload (no view-level
+// Supabase calls). Calendar ships in IPI-581; mutations in IPI-582.
+//
+// Loading/error states are the route's loading.tsx/error.tsx — a failed
+// read (including RLS denying access) throws and lands in
+// PlannerErrorBoundary, so view components never fetch.
 
 import { notFound } from "next/navigation";
 
+import { PlannerKanban } from "@/components/planner/planner-kanban";
+import { PlannerList } from "@/components/planner/planner-list";
 import { PlannerTimeline } from "@/components/planner/planner-timeline";
 import { PlannerWorkspaceShell } from "@/components/planner/planner-workspace-shell";
-import { buildTimelineModel } from "@/lib/planner/planner-view-model";
+import {
+  buildKanbanModel,
+  buildTaskViews,
+  buildTimelineModel,
+} from "@/lib/planner/planner-view-model";
 import { getInstanceDetail, listWorkflowPhases } from "@/lib/planner/queries";
 
 export default async function PlannerWorkspacePage({
@@ -37,17 +43,21 @@ export default async function PlannerWorkspacePage({
     throw new Error(phasesResult.error.message);
   }
 
-  const model = buildTimelineModel(
-    phasesResult.data,
-    instanceResult.data.tasks,
-    new Date().toISOString().slice(0, 10),
-    instanceResult.data.status,
-  );
+  const todayIso = new Date().toISOString().slice(0, 10);
+  const phases = phasesResult.data;
+  const tasks = instanceResult.data.tasks;
+  const status = instanceResult.data.status;
+
+  const timelineModel = buildTimelineModel(phases, tasks, todayIso, status);
+  const kanbanModel = buildKanbanModel(timelineModel, tasks);
+  const listRows = buildTaskViews(phases, tasks);
 
   return (
     <PlannerWorkspaceShell
       instanceId={instanceId}
-      timeline={<PlannerTimeline model={model} />}
+      timeline={<PlannerTimeline model={timelineModel} />}
+      kanban={<PlannerKanban model={kanbanModel} />}
+      list={<PlannerList rows={listRows} />}
     />
   );
 }
