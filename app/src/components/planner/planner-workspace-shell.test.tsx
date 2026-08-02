@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
-import { describe, expect, it, afterEach, vi } from "vitest";
-import { render, screen, cleanup } from "@testing-library/react";
+import { describe, expect, it, afterEach, beforeEach, vi } from "vitest";
+import { render, screen, cleanup, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 import type { PlannerTask } from "@/lib/planner/types";
@@ -21,6 +21,11 @@ vi.mock("./adaptive-panel", () => ({
   AdaptivePanel: () => null,
 }));
 
+const setViewConfigAction = vi.fn();
+vi.mock("@/app/(operator)/app/planner/[instanceId]/actions", () => ({
+  setViewConfigAction: (...args: unknown[]) => setViewConfigAction(...args),
+}));
+
 const setSelection = vi.fn();
 vi.mock("@/lib/planner/use-planner-selection", () => ({
   usePlannerSelection: () => ({
@@ -35,6 +40,11 @@ import { PlannerWorkspaceShell } from "./planner-workspace-shell";
 afterEach(() => {
   cleanup();
   setSelection.mockClear();
+  setViewConfigAction.mockReset();
+});
+
+beforeEach(() => {
+  setViewConfigAction.mockResolvedValue({ ok: true, data: { instanceId: INSTANCE_ID } });
 });
 
 const INSTANCE_ID = "i1";
@@ -237,6 +247,57 @@ describe("PlannerWorkspaceShell", () => {
     it("does not mount the bar without the shared payload — AC-G", () => {
       render(<PlannerWorkspaceShell instanceId={INSTANCE_ID} />);
       expect(screen.queryByTestId("planner-now-next-bar")).toBeNull();
+    });
+  });
+
+  describe("IPI-582 setViewConfig persistence", () => {
+    it("persists timeline/kanban/calendar switches and skips list", async () => {
+      const user = userEvent.setup();
+      render(<PlannerWorkspaceShell instanceId={INSTANCE_ID} />);
+
+      await user.click(screen.getByRole("tab", { name: /Kanban/ }));
+      await waitFor(() => expect(setViewConfigAction).toHaveBeenCalledTimes(1));
+      expect(setViewConfigAction).toHaveBeenLastCalledWith(INSTANCE_ID, { defaultView: "kanban" });
+
+      await user.click(screen.getByRole("tab", { name: /List/ }));
+      expect(screen.getByRole("tab", { name: /List/ }).getAttribute("aria-selected")).toBe("true");
+      expect(setViewConfigAction).toHaveBeenCalledTimes(1);
+
+      await user.click(screen.getByRole("tab", { name: /Calendar/ }));
+      await waitFor(() => expect(setViewConfigAction).toHaveBeenCalledTimes(2));
+      expect(setViewConfigAction).toHaveBeenLastCalledWith(INSTANCE_ID, { defaultView: "calendar" });
+    });
+
+    it("no-ops when re-selecting the already-persisted view", async () => {
+      const user = userEvent.setup();
+      render(<PlannerWorkspaceShell instanceId={INSTANCE_ID} initialView="kanban" />);
+
+      await user.click(screen.getByRole("tab", { name: /Calendar/ }));
+      await waitFor(() => expect(setViewConfigAction).toHaveBeenCalledTimes(1));
+
+      await user.click(screen.getByRole("tab", { name: /List/ }));
+      await user.click(screen.getByRole("tab", { name: /Calendar/ }));
+      // Still one write — Calendar was already the last persisted value.
+      expect(setViewConfigAction).toHaveBeenCalledTimes(1);
+    });
+
+    it("keeps the session view and shows a warning when persistence fails", async () => {
+      const user = userEvent.setup();
+      setViewConfigAction.mockResolvedValueOnce({
+        ok: false,
+        error: { code: "UNKNOWN_ERROR", message: "Your view preference could not be saved." },
+      });
+
+      render(<PlannerWorkspaceShell instanceId={INSTANCE_ID} />);
+      await user.click(screen.getByRole("tab", { name: /Kanban/ }));
+
+      expect(screen.getByRole("tab", { name: /Kanban/ }).getAttribute("aria-selected")).toBe("true");
+      await waitFor(() => expect(screen.getByTestId("planner-view-persist-warning")).toBeDefined());
+    });
+
+    it("initializes from initialView (getViewConfig)", () => {
+      render(<PlannerWorkspaceShell instanceId={INSTANCE_ID} initialView="calendar" />);
+      expect(screen.getByRole("tab", { name: /Calendar/ }).getAttribute("aria-selected")).toBe("true");
     });
   });
 });
