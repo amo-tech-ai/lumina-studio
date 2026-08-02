@@ -59,7 +59,7 @@ export function OnboardingFlow({
   const [brandId, setBrandId] = useState<string | null>(initialBrandId);
   const [commitError, setCommitError] = useState<string | null>(null);
   const [committing, setCommitting] = useState(false);
-  /** IPI-835 · D — Open iPix only after durable intake_status=ready. */
+  /** IPI-835 · D — Open iPix only after durable ready|scores_complete. */
   const [dnaReady, setDnaReady] = useState(false);
   const draftRef = useRef(onDraftChange);
   draftRef.current = onDraftChange;

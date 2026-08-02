@@ -118,6 +118,27 @@ describe("BrandDnaPayoffScreen (IPI-835 · D)", () => {
     await waitFor(() => expect(onReadyChange).toHaveBeenCalledWith(true));
   });
 
+  it("advances when Realtime reports legacy scores_complete", async () => {
+    const onReadyChange = vi.fn();
+    mockProgress.mockReturnValue({
+      intakeStatus: "scores_complete",
+      crawl: null,
+      phase: "done",
+      reconnect: vi.fn(),
+    });
+    mockEnsure.mockResolvedValue({
+      ok: true,
+      intakeStatus: "draft_ready",
+      runId: "run-1",
+      brandName: "Maison",
+      pillars: PILLARS,
+    });
+
+    render(<BrandDnaPayoffScreen brandId="brand-1" onReadyChange={onReadyChange} />);
+    await waitFor(() => expect(onReadyChange).toHaveBeenCalledWith(true));
+    await waitFor(() => expect(screen.getByTestId("dna-ready")).toBeTruthy());
+  });
+
   it("treats already_processed as success when brand is ready", async () => {
     mockApprove.mockResolvedValue({ ok: false, error: "already_processed" });
     mockEnsure
@@ -140,5 +161,54 @@ describe("BrandDnaPayoffScreen (IPI-835 · D)", () => {
     await waitFor(() => expect(screen.getByTestId("approve-brand-dna")).toBeTruthy());
     fireEvent.click(screen.getByTestId("approve-brand-dna"));
     await waitFor(() => expect(screen.getByTestId("dna-ready")).toBeTruthy());
+  });
+
+  it("treats already_processed as success when brand is scores_complete", async () => {
+    mockApprove.mockResolvedValue({ ok: false, error: "already_processed" });
+    mockEnsure
+      .mockResolvedValueOnce({
+        ok: true,
+        intakeStatus: "draft_ready",
+        runId: "run-1",
+        brandName: "Maison",
+        pillars: PILLARS,
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        intakeStatus: "scores_complete",
+        runId: null,
+        brandName: "Maison",
+        pillars: PILLARS,
+      });
+
+    render(<BrandDnaPayoffScreen brandId="brand-1" />);
+    await waitFor(() => expect(screen.getByTestId("approve-brand-dna")).toBeTruthy());
+    fireEvent.click(screen.getByTestId("approve-brand-dna"));
+    await waitFor(() => expect(screen.getByTestId("dna-ready")).toBeTruthy());
+  });
+
+  it("enables ready UI when approve confirm re-read is scores_complete", async () => {
+    const onReadyChange = vi.fn();
+    mockEnsure
+      .mockResolvedValueOnce({
+        ok: true,
+        intakeStatus: "draft_ready",
+        runId: "run-1",
+        brandName: "Maison",
+        pillars: PILLARS,
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        intakeStatus: "scores_complete",
+        runId: null,
+        brandName: "Maison",
+        pillars: PILLARS,
+      });
+
+    render(<BrandDnaPayoffScreen brandId="brand-1" onReadyChange={onReadyChange} />);
+    await waitFor(() => expect(screen.getByTestId("approve-brand-dna")).toBeTruthy());
+    fireEvent.click(screen.getByTestId("approve-brand-dna"));
+    await waitFor(() => expect(screen.getByTestId("dna-ready")).toBeTruthy());
+    expect(onReadyChange).toHaveBeenCalledWith(true);
   });
 });

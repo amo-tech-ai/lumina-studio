@@ -8,6 +8,7 @@ import {
   validateBrandProfilePayload,
 } from "@/lib/brand/brand-profile-contract";
 import { parseAiProfile } from "@/lib/brand-hub";
+import { isDurableIntakeReady } from "@/lib/brand-list-filters";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export type OnboardingDnaPillar = {
@@ -126,7 +127,7 @@ export async function ensureOnboardingIntakeDraft(
     const liveRaw = (brand.ai_profile as Record<string, unknown> | null) ?? null;
 
     // Already past HITL (ready) or legacy edge live-write (scores_complete).
-    if (intakeStatus === "ready" || intakeStatus === "scores_complete") {
+    if (isDurableIntakeReady(intakeStatus)) {
       return {
         ok: true,
         intakeStatus,
@@ -205,7 +206,7 @@ export async function ensureOnboardingIntakeDraft(
     }
     const intakeNow =
       typeof brandNow?.intake_status === "string" ? brandNow.intake_status : intakeStatus;
-    if (intakeNow === "ready" || intakeNow === "scores_complete") {
+    if (isDurableIntakeReady(intakeNow)) {
       return {
         ok: true,
         intakeStatus: intakeNow,

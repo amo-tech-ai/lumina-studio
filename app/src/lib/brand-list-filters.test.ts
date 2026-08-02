@@ -4,6 +4,7 @@ import {
   matchesBrandListFilter,
   brandListCountLabel,
   isAnalysingIntakeStatus,
+  isDurableIntakeReady,
 } from "./brand-list-filters";
 
 describe("brand-list-filters", () => {
@@ -11,6 +12,13 @@ describe("brand-list-filters", () => {
     expect(matchesBrandListFilter("active", "ready", true)).toBe(true);
     expect(matchesBrandListFilter("active", "scores_complete", true)).toBe(true);
     expect(matchesBrandListFilter("active", "ready", false)).toBe(false);
+  });
+
+  it("treats ready and scores_complete as durable intake ready", () => {
+    expect(isDurableIntakeReady("ready")).toBe(true);
+    expect(isDurableIntakeReady("scores_complete")).toBe(true);
+    expect(isDurableIntakeReady("draft_ready")).toBe(false);
+    expect(isDurableIntakeReady(null)).toBe(false);
   });
 
   it("maps analysing filter to pipeline statuses", () => {

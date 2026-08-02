@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 
 import { OnboardingCard } from "@/components/onboarding/onboarding-card";
 import { approveWorkflowDraft } from "@/app/(operator)/app/brand/[id]/actions";
+import { isDurableIntakeReady } from "@/lib/brand-list-filters";
 import { useBrandAnalysisProgress } from "@/lib/brand-hub/use-brand-analysis-progress";
 import {
   ensureOnboardingIntakeDraft,
@@ -11,7 +12,7 @@ import {
 } from "@/lib/onboarding/ensure-onboarding-intake-draft";
 export type BrandDnaPayoffScreenProps = {
   brandId: string | null;
-  /** Fired when durable intake_status is `ready` (or already was). */
+  /** Fired when durable intake is ready / scores_complete (or already was). */
   onReadyChange?: (ready: boolean) => void;
 };
 
@@ -19,7 +20,7 @@ const SAFE_APPROVE_ERROR = "We couldn’t approve your Brand DNA. Please try aga
 
 /**
  * IPI-835 · D — screen 13: load generated Brand DNA, approve via existing
- * workflow approve path, advance UI only after durable `ready`.
+ * workflow approve path, advance UI only after durable ready|scores_complete.
  */
 export function BrandDnaPayoffScreen({ brandId, onReadyChange }: BrandDnaPayoffScreenProps) {
   if (!brandId) {
@@ -82,7 +83,7 @@ function BrandDnaPayoffLive({
       setPillars(result.pillars);
       setBrandName(result.brandName);
       setRunId(result.runId);
-      if (result.intakeStatus === "ready" || result.intakeStatus === "scores_complete") {
+      if (isDurableIntakeReady(result.intakeStatus)) {
         setDurableReady(true);
         onReadyChangeRef.current?.(true);
       }
@@ -96,7 +97,7 @@ function BrandDnaPayoffLive({
 
   // Realtime (or poll) truth — never treat client success alone as ready.
   useEffect(() => {
-    if (intakeStatus !== "ready") return;
+    if (!isDurableIntakeReady(intakeStatus)) return;
     setDurableReady(true);
     onReadyChangeRef.current?.(true);
   }, [intakeStatus]);
@@ -111,7 +112,7 @@ function BrandDnaPayoffLive({
         if (result.error === "already_processed") {
           // Refresh draft/status — idempotent path may already be ready.
           const again = await ensureOnboardingIntakeDraft(brandId);
-          if (again.ok && again.intakeStatus === "ready") {
+          if (again.ok && isDurableIntakeReady(again.intakeStatus)) {
             setDurableReady(true);
             onReadyChangeRef.current?.(true);
             return;
@@ -126,7 +127,7 @@ function BrandDnaPayoffLive({
       }
       // Promote ran server-side — wait for Realtime/re-read before enabling Open iPix.
       const confirm = await ensureOnboardingIntakeDraft(brandId);
-      if (confirm.ok && confirm.intakeStatus === "ready") {
+      if (confirm.ok && isDurableIntakeReady(confirm.intakeStatus)) {
         setDurableReady(true);
         onReadyChangeRef.current?.(true);
       }
