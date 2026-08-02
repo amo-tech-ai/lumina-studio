@@ -105,8 +105,8 @@
   }
 }
 
-/* AdaptivePanel lives in .intelligencePanel, which operator-shell hides at
-   ≤1024px. Suppress View until IPI-557 ships a mobile detail surface. */
+/* ponytail: AdaptivePanel lives in .intelligencePanel, which operator-shell
+   hides at ≤1024px. Suppress View until IPI-557 ships a mobile detail surface. */
 @media (max-width: 1024px) {
   .viewButton {
     display: none;
