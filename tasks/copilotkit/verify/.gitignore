@@ -1,0 +1,5 @@
+# Live evidence may contain session artifacts — never commit.
+evidence/
+evidence-*/
+summary.json
+ipi-724-metadata.json
