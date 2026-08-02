@@ -36,6 +36,13 @@ export const SUMMARY_SCHEMA_VERSION = 1;
 export const INFO_TIMEOUT_MS = 15_000;
 
 const PROD_HOST_RE = /^(?:www\.)?ipix\.co$/i;
+/** Local smoke may use plain HTTP; everything else must be HTTPS before network. */
+const LOCAL_HTTP_HOST_RE = /^(?:localhost|127\.0\.0\.1|\[::1\])$/i;
+/** RFC 7230 token for header field-name (no CR/LF/colon). */
+const HEADER_NAME_RE = /^[!#$%&'*+\-.^_`|~0-9A-Za-z]+$/;
+const MAX_HEADER_NAME_LEN = 256;
+const MAX_HEADER_VALUE_LEN = 8_192;
+const MAX_SPAWN_LOG_CHARS = 32_000;
 
 export function parseArgs(argv) {
   const opts = {
@@ -77,9 +84,34 @@ export function hostnameOf(baseUrl) {
   }
 }
 
-/** Prod hosts require --readonly before any browser / network beyond the guard. */
+/**
+ * URL + prod guard before any network / Playwright.
+ * - HTTPS required except localhost / 127.0.0.1 / ::1
+ * - Prod hosts (ipix.co / www) require --readonly
+ */
 export function assertReadonlyGuard({ baseUrl, readonly }) {
-  const host = hostnameOf(baseUrl);
+  let parsed;
+  try {
+    parsed = new URL(baseUrl);
+  } catch {
+    return {
+      ok: false,
+      message: `FAIL (url): invalid --base-url (not a URL): ${baseUrl}`,
+    };
+  }
+
+  const host = parsed.hostname.toLowerCase();
+  const isLocalHttpOk = LOCAL_HTTP_HOST_RE.test(host);
+  if (parsed.protocol !== "https:" && !(parsed.protocol === "http:" && isLocalHttpOk)) {
+    return {
+      ok: false,
+      message:
+        `FAIL (url): --base-url must use HTTPS before network access ` +
+        `(got ${parsed.protocol}//${host}; http only allowed for localhost). ` +
+        `Aborting before Playwright.`,
+    };
+  }
+
   if (PROD_HOST_RE.test(host) && !readonly) {
     return {
       ok: false,
@@ -94,7 +126,7 @@ export function assertReadonlyGuard({ baseUrl, readonly }) {
 
 /**
  * Parse repeated `--header='Name: value'` into one object used by preflight + Playwright.
- * Malformed entries throw before any network access.
+ * Malformed / unsafe entries throw before any network access.
  */
 export function headersToObject(headerArgs) {
   const out = {};
@@ -108,6 +140,19 @@ export function headersToObject(headerArgs) {
     const value = raw.slice(idx + 1).trim();
     if (!name) throw new Error(`Invalid --header name: ${raw}`);
     if (!value) throw new Error(`Invalid --header value (empty): ${raw}`);
+    if (name.length > MAX_HEADER_NAME_LEN) {
+      throw new Error(`Invalid --header name (too long, max ${MAX_HEADER_NAME_LEN})`);
+    }
+    if (value.length > MAX_HEADER_VALUE_LEN) {
+      throw new Error(`Invalid --header value (too long, max ${MAX_HEADER_VALUE_LEN})`);
+    }
+    if (!HEADER_NAME_RE.test(name)) {
+      throw new Error(`Invalid --header name (illegal characters): ${name}`);
+    }
+    // Reject CR/LF / NUL and other controls — header injection / log corruption.
+    if (/[\u0000-\u001f\u007f]/.test(value)) {
+      throw new Error(`Invalid --header value (control characters not allowed): ${name}`);
+    }
     out[name] = value;
   }
   return out;
@@ -142,6 +187,26 @@ export function redactForEvidence(value, depth = 0) {
     return out;
   }
   return value;
+}
+
+/**
+ * Redact credential-like substrings from child-process console output before logging.
+ * Kept separate from redactForEvidence so multi-line runner logs stay readable.
+ */
+export function redactConsoleOutput(text) {
+  if (text == null || text === "") return "";
+  let s = String(text);
+  s = s.replace(/Bearer\s+[A-Za-z0-9._\-+\/=]+/gi, "Bearer [redacted]");
+  s = s.replace(/\bsbp_[A-Za-z0-9]+/g, "sbp_[redacted]");
+  s = s.replace(/\beyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+/g, "[redacted-jwt]");
+  s = s.replace(
+    /(authorization|cookie|password|api[_-]?key|token)\s*[:=]\s*[^\s,;]+/gi,
+    "$1=[redacted]",
+  );
+  if (s.length > MAX_SPAWN_LOG_CHARS) {
+    s = `${s.slice(0, MAX_SPAWN_LOG_CHARS)}\n…[truncated ${s.length - MAX_SPAWN_LOG_CHARS} chars]`;
+  }
+  return s;
 }
 
 export async function preflightInfo(baseUrl, headers = {}, { timeoutMs = INFO_TIMEOUT_MS, fetchImpl = fetch } = {}) {
@@ -189,7 +254,9 @@ Options:
   --base-url=<URL>           Target host (required unless --help)
   --readonly                 Required for production hosts (ipix.co / www.ipix.co)
                              Read-only = no mutate tools / destructive prompts
+                             Remote URLs must be HTTPS (http only for localhost)
   --header='Name: value'     Repeatable; same object for /info preflight + Playwright
+                             Names/values validated (no CR/LF, size caps) before network
   --expect-version=<id>      Fail if X-iPix-Worker-Version missing or mismatched
   --browser=chromium         Hard: chromium only (FF/WebKit soft / scheduled elsewhere)
   --out=<dir>                Evidence dir (default: tasks/copilotkit/verify/evidence)
@@ -348,18 +415,29 @@ export async function main(argv = process.argv.slice(2), deps = {}) {
   }
 
   console.log(`delegate → IPI-724 run-e2e.mjs (BASE_URL=${baseUrl})`);
+  // Capture child I/O so credentials in runner output are redacted before logging.
   const result = spawn(process.execPath, [RUNNER], {
     cwd: REPO_ROOT,
     env,
-    stdio: "inherit",
+    encoding: "utf8",
+    maxBuffer: 10 * 1024 * 1024,
+    stdio: ["inherit", "pipe", "pipe"],
   });
 
+  const childOut = redactConsoleOutput(
+    `${result.stdout || ""}${result.stderr ? `\n${result.stderr}` : ""}`,
+  );
+  if (childOut.trim()) {
+    process.stdout.write(childOut.endsWith("\n") ? childOut : `${childOut}\n`);
+  }
+
   if (result.error) {
-    console.error(`FAIL (spawn): ${result.error.message}`);
+    const msg = redactConsoleOutput(String(result.error.message));
+    console.error(`FAIL (spawn): ${msg}`);
     writeSummary(outDir, {
       pass: false,
       stage: "browser_delegate",
-      message: String(result.error.message),
+      message: msg,
       baseUrl,
       info,
     });
