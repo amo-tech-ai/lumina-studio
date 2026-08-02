@@ -46,7 +46,11 @@ async function resolveIdempotentApproval(params: {
   if (expectedBrandId) {
     query = query.eq("brand_id", expectedBrandId);
   }
-  const { data: existing } = await query.maybeSingle();
+  const { data: existing, error: existingErr } = await query.maybeSingle();
+  if (existingErr) {
+    console.error("[process-draft-approval] idempotent draft lookup", existingErr);
+    return { ok: false, error: "Failed to load draft" };
+  }
   if (!existing) {
     return { ok: false, error: "No pending draft found for this workflow run" };
   }
@@ -54,13 +58,21 @@ async function resolveIdempotentApproval(params: {
     return { ok: false, error: "Forbidden" };
   }
 
+  const { data: brand, error: brandErr } = await sb
+    .from("brands")
+    .select("intake_status")
+    .eq("id", existing.brand_id)
+    .maybeSingle();
+  if (brandErr) {
+    console.error("[process-draft-approval] idempotent brand lookup", brandErr);
+    return { ok: false, error: "Failed to load brand status" };
+  }
+  if (!brand) {
+    return { ok: false, error: "Brand not found" };
+  }
+
   if (approved) {
-    const { data: brand } = await sb
-      .from("brands")
-      .select("intake_status")
-      .eq("id", existing.brand_id)
-      .maybeSingle();
-    if (brand?.intake_status === "ready") {
+    if (brand.intake_status === "ready") {
       return { ok: true, approved: true, brandId: existing.brand_id };
     }
     // Draft row already approved but promote never landed — retry once, never
@@ -77,13 +89,9 @@ async function resolveIdempotentApproval(params: {
 
   // Reject path: draft row may already be `rejected` while discard is still
   // in flight (or failed + rolled back). Never report success until the brand
-  // is no longer waiting on draft_ready.
-  const { data: brand } = await sb
-    .from("brands")
-    .select("intake_status")
-    .eq("id", existing.brand_id)
-    .maybeSingle();
-  if (brand?.intake_status !== "draft_ready") {
+  // is no longer waiting on draft_ready — and never treat a lookup failure as
+  // “already discarded”.
+  if (brand.intake_status !== "draft_ready") {
     return { ok: true, approved: false, brandId: existing.brand_id };
   }
   const discardResult = await discardBrandDraft(sb, existing.brand_id);

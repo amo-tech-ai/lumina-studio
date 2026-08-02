@@ -319,6 +319,83 @@ describe("processBrandIntelligenceDraftApproval idempotency (IPI-835 · D)", () 
     expect(result).toEqual({ ok: false, error: "discard failed" });
   });
 
+  it("does not treat idempotent draft lookup errors as not-found", async () => {
+    let draftsCalls = 0;
+    mockFrom.mockImplementation((table: string) => {
+      if (table === "brand_intake_drafts") {
+        draftsCalls += 1;
+        if (draftsCalls === 1) {
+          return chain({
+            data: null,
+            error: {
+              code: "PGRST116",
+              message: "JSON object requested, multiple (or no) rows returned",
+            },
+          });
+        }
+        return chain({
+          data: null,
+          error: { code: "57014", message: "statement timeout" },
+        });
+      }
+      return chain({ data: null, error: null });
+    });
+
+    const { processBrandIntelligenceDraftApproval } = await import("./process-draft-approval");
+    const result = await processBrandIntelligenceDraftApproval({
+      runId: RUN,
+      approved: true,
+      operatorId: OPERATOR,
+      expectedBrandId: BRAND,
+    });
+    expect(result).toEqual({ ok: false, error: "Failed to load draft" });
+    expect(mockPromote).not.toHaveBeenCalled();
+  });
+
+  it("does not report reject success when brand intake_status lookup fails", async () => {
+    let draftsCalls = 0;
+    mockFrom.mockImplementation((table: string) => {
+      if (table === "brand_intake_drafts") {
+        draftsCalls += 1;
+        if (draftsCalls === 1) {
+          return chain({
+            data: null,
+            error: {
+              code: "PGRST116",
+              message: "JSON object requested, multiple (or no) rows returned",
+            },
+          });
+        }
+        return chain({
+          data: {
+            id: "d1",
+            brand_id: BRAND,
+            user_id: OPERATOR,
+            status: "rejected",
+          },
+          error: null,
+        });
+      }
+      if (table === "brands") {
+        return chain({
+          data: null,
+          error: { code: "57014", message: "statement timeout" },
+        });
+      }
+      return chain({ data: null, error: null });
+    });
+
+    const { processBrandIntelligenceDraftApproval } = await import("./process-draft-approval");
+    const result = await processBrandIntelligenceDraftApproval({
+      runId: RUN,
+      approved: false,
+      operatorId: OPERATOR,
+      expectedBrandId: BRAND,
+    });
+    expect(result).toEqual({ ok: false, error: "Failed to load brand status" });
+    expect(mockDiscard).not.toHaveBeenCalled();
+  });
+
   it("rejects a non-owner on the pending path", async () => {
     mockFrom.mockImplementation((table: string) => {
       if (table === "brand_intake_drafts") {
