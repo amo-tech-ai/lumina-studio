@@ -139,8 +139,14 @@ describe("mixed in-page and browser navigation", () => {
     expect(window.location.hash).toBe("#6");
   });
 
-  it("deep-linked #13 Back skips the transient analysis screen", () => {
+  it("deep-linked #13 without a brand bounces before analysis (IPI-903)", () => {
     mount("#13", <OnboardingFlow />);
+    expect(currentScreen()).toBe("11");
+    expect(screen.queryByTestId("analysis-status")).toBeNull();
+  });
+
+  it("deep-linked #13 with a brand Back skips the transient analysis screen", () => {
+    mount("#13", <OnboardingFlow initialBrandId="brand-test" />);
     clickVisibleBack();
 
     expect(currentScreen()).toBe("11");
@@ -148,10 +154,16 @@ describe("mixed in-page and browser navigation", () => {
     expect(screen.queryByTestId("analysis-status")).toBeNull();
   });
 
+  it("deep-linked #12 without a brand never starts analysis (IPI-903)", () => {
+    mount("#12", <OnboardingFlow />);
+    expect(currentScreen()).toBe("11");
+    expect(screen.queryByTestId("analysis-status")).toBeNull();
+  });
+
   it("deep-linked #12 completion does not restart analysis when Back is pressed", () => {
     vi.useFakeTimers();
     try {
-      mount("#12", <OnboardingFlow />);
+      mount("#12", <OnboardingFlow initialBrandId="brand-test" />);
       expect(currentScreen()).toBe("12");
 
       act(() => {

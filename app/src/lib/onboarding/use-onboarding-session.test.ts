@@ -3,6 +3,8 @@ import { act, cleanup, renderHook, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { useOnboardingSession } from "./use-onboarding-session";
+import { ANALYSIS_SCREEN } from "./navigation";
+import { ONBOARDING_BRAND_NAME_REQUIRED } from "./onboarding-errors";
 
 const USER_ID = "11111111-1111-4111-8111-111111111111";
 const SESSION_ID = "22222222-2222-4222-8222-222222222222";
@@ -27,7 +29,9 @@ const sessionRow = {
 
 function makeClient(overrides?: {
   rpcData?: { organization_id: string; brand_id: string };
+  rpcError?: { message: string } | null;
   update?: ReturnType<typeof vi.fn>;
+  getUserError?: Error | null;
 }) {
   const update = overrides?.update ?? vi.fn().mockReturnValue({
     eq: () => Promise.resolve({ data: null, error: null }),
@@ -39,7 +43,11 @@ function makeClient(overrides?: {
   };
   return {
     auth: {
-      getUser: vi.fn().mockResolvedValue({ data: { user: { id: USER_ID } }, error: null }),
+      getUser: vi.fn().mockResolvedValue(
+        overrides?.getUserError
+          ? { data: { user: null }, error: { message: overrides.getUserError.message } }
+          : { data: { user: { id: USER_ID } }, error: null },
+      ),
     },
     from: (table: string) => {
       if (table === "brands") {
@@ -56,11 +64,13 @@ function makeClient(overrides?: {
       };
     },
     rpc: vi.fn().mockResolvedValue({
-      data: overrides?.rpcData ?? {
-        organization_id: "33333333-3333-4333-8333-333333333333",
-        brand_id: "44444444-4444-4444-8444-444444444444",
-      },
-      error: null,
+      data: overrides?.rpcError
+        ? null
+        : (overrides?.rpcData ?? {
+            organization_id: "33333333-3333-4333-8333-333333333333",
+            brand_id: "44444444-4444-4444-8444-444444444444",
+          }),
+      error: overrides?.rpcError ?? null,
     }),
   } as unknown as SupabaseClient;
 }
@@ -123,8 +133,11 @@ describe("useOnboardingSession", () => {
     expect(patch.draft_answers.listed).toEqual({ shopify: true });
   });
 
-  it("materialize flushes draft then calls createOrgAndBrand RPC", async () => {
-    const client = makeClient();
+  it("materialize flushes draft answers then calls createOrgAndBrand RPC", async () => {
+    const update = vi.fn().mockReturnValue({
+      eq: () => Promise.resolve({ data: null, error: null }),
+    });
+    const client = makeClient({ update });
     const { result } = renderHook(() =>
       useOnboardingSession({
         createClient: () => client,
@@ -149,5 +162,128 @@ describe("useOnboardingSession", () => {
       p_brand_name: "Maison",
       p_brand_url: "https://maison.test",
     });
+    // Pre-RPC flush must not advance the stored screen to analysis.
+    for (const call of update.mock.calls) {
+      expect(call[0].current_screen).not.toBe(ANALYSIS_SCREEN);
+      expect(call[0].current_screen).not.toBe(12);
+    }
+  });
+
+  it("materialize failure does not persist analysis screen", async () => {
+    const update = vi.fn().mockReturnValue({
+      eq: () => Promise.resolve({ data: null, error: null }),
+    });
+    const client = makeClient({
+      update,
+      rpcError: { message: "duplicate key value violates unique constraint" },
+    });
+    const { result } = renderHook(() =>
+      useOnboardingSession({
+        createClient: () => client,
+        getIdempotencyKey: () => KEY,
+      }),
+    );
+    await waitFor(() => expect(result.current.status).toBe("ready"));
+
+    await expect(
+      act(async () => {
+        await result.current.materialize({
+          build: "DTC",
+          brandName: "Maison",
+          websiteUrl: "https://maison.test",
+          listed: {},
+          grow: "Scale",
+        });
+      }),
+    ).rejects.toThrow();
+
+    for (const call of update.mock.calls) {
+      expect(call[0].current_screen).not.toBe(ANALYSIS_SCREEN);
+      expect(call[0].current_screen).not.toBe(12);
+    }
+  });
+
+  it("rejects an empty brand name before calling the RPC", async () => {
+    const update = vi.fn().mockReturnValue({
+      eq: () => Promise.resolve({ data: null, error: null }),
+    });
+    const client = makeClient({ update });
+    const { result } = renderHook(() =>
+      useOnboardingSession({
+        createClient: () => client,
+        getIdempotencyKey: () => KEY,
+      }),
+    );
+    await waitFor(() => expect(result.current.status).toBe("ready"));
+
+    await expect(
+      act(async () => {
+        await result.current.materialize({
+          build: null,
+          brandName: "   ",
+          websiteUrl: "https://maison.test",
+          listed: {},
+          grow: null,
+        });
+      }),
+    ).rejects.toThrow(ONBOARDING_BRAND_NAME_REQUIRED);
+
+    expect(client.rpc).not.toHaveBeenCalled();
+    expect(update).not.toHaveBeenCalled();
+  });
+
+  it("routes createClient failures into the retryable error state", async () => {
+    const createClient = vi.fn(() => {
+      throw new Error("Missing NEXT_PUBLIC_SUPABASE_URL");
+    });
+    const { result } = renderHook(() =>
+      useOnboardingSession({
+        createClient,
+        getIdempotencyKey: () => KEY,
+      }),
+    );
+
+    await waitFor(() => expect(result.current.status).toBe("error"));
+    if (result.current.status !== "error") throw new Error("expected error");
+    expect(result.current.message).not.toMatch(/NEXT_PUBLIC_SUPABASE_URL|Missing/i);
+    expect(result.current.message).toMatch(/try again/i);
+    expect(typeof result.current.retry).toBe("function");
+    expect(createClient).toHaveBeenCalledTimes(1);
+  });
+
+  it("surfaces a safe message on bootstrap failure and retry recovers", async () => {
+    let failOnce = true;
+    const client = makeClient();
+    const getUser = vi.fn().mockImplementation(() => {
+      if (failOnce) {
+        failOnce = false;
+        return Promise.resolve({
+          data: { user: null },
+          error: { message: 'relation "pg_something" does not exist' },
+        });
+      }
+      return Promise.resolve({ data: { user: { id: USER_ID } }, error: null });
+    });
+    (client as { auth: { getUser: typeof getUser } }).auth.getUser = getUser;
+
+    const createClient = vi.fn(() => client);
+    const { result } = renderHook(() =>
+      useOnboardingSession({
+        createClient,
+        getIdempotencyKey: () => KEY,
+      }),
+    );
+
+    await waitFor(() => expect(result.current.status).toBe("error"));
+    if (result.current.status !== "error") throw new Error("expected error");
+    expect(result.current.message).not.toMatch(/pg_something|relation/i);
+    expect(result.current.message).toMatch(/try again/i);
+
+    await act(async () => {
+      result.current.retry();
+    });
+    await waitFor(() => expect(result.current.status).toBe("ready"));
+    // One GoTrueClient per hook lifetime — retry must not call the factory again.
+    expect(createClient).toHaveBeenCalledTimes(1);
   });
 });

@@ -12,6 +12,7 @@ import { BuildTypeQuestion } from "@/components/onboarding/questions/build-type-
 import { GrowthPreferenceQuestion } from "@/components/onboarding/questions/growth-preference-question";
 import { SalesChannelsQuestion } from "@/components/onboarding/questions/sales-channels-question";
 import { StepIndicator } from "@/components/onboarding/step-indicator";
+import { toUserFacingOnboardingError } from "@/lib/onboarding/onboarding-errors";
 import {
   ANALYSIS_SCREEN,
   EMPTY_ANSWERS,
@@ -21,6 +22,7 @@ import {
   ctaDisabled,
   ctaLabel,
   nextScreen,
+  previousScreen,
 } from "@/lib/onboarding/navigation";
 import { useScreenHistory } from "@/lib/onboarding/use-screen-history";
 
@@ -28,33 +30,39 @@ import { useScreenHistory } from "@/lib/onboarding/use-screen-history";
  * IPI-833 · ONB2-UI-001 — Standalone Onboarding Route, Screens, and Deterministic State Machine
  * the 13-screen onboarding flow.
  *
- * Persistence (IPI-835 · B1) is optional via callbacks so unit tests stay offline.
+ * Persistence (IPI-835 · B1 / IPI-903) is optional via callbacks so unit tests stay offline.
  * Production mounts this through `OnboardingSessionGate`.
  *
- * `initialScreen` / `initialAnswers` exist so tests (and resume) can mount any
- * screen without walking twelve clicks.
+ * `initialScreen` / `initialAnswers` / `initialBrandId` exist so tests (and resume) can mount
+ * any screen without walking twelve clicks.
  */
 export function OnboardingFlow({
   initialScreen = FIRST_SCREEN,
   initialAnswers = EMPTY_ANSWERS,
+  initialBrandId = null,
   onDraftChange,
   onCommitAnalysis,
 }: {
   initialScreen?: number;
   initialAnswers?: OnboardingAnswers;
+  /** Resume: brand already materialized on the session. */
+  initialBrandId?: string | null;
   onDraftChange?: (screen: number, answers: OnboardingAnswers) => void;
-  /** Called once when entering screen 12 — materialize org+brand. Crawl is Slice C. */
+  /** Called once when entering screen 12 — must return materialized org+brand ids. */
   onCommitAnalysis?: (
     answers: OnboardingAnswers,
-  ) => Promise<{ orgId: string; brandId: string } | void>;
+  ) => Promise<{ orgId: string; brandId: string }>;
 }) {
   const router = useRouter();
   const { screen, goToScreen, replaceScreen, goBack } = useScreenHistory(initialScreen);
   const [answers, setAnswers] = useState<OnboardingAnswers>(initialAnswers);
+  const [brandId, setBrandId] = useState<string | null>(initialBrandId);
   const [commitError, setCommitError] = useState<string | null>(null);
   const [committing, setCommitting] = useState(false);
   const draftRef = useRef(onDraftChange);
   draftRef.current = onDraftChange;
+  const screenRef = useRef(screen);
+  screenRef.current = screen;
 
   const screenRegionRef = useRef<HTMLDivElement>(null);
   const previousScreenRef = useRef(screen);
@@ -76,6 +84,14 @@ export function OnboardingFlow({
   useEffect(() => {
     draftRef.current?.(screen, answers);
   }, [screen, answers]);
+
+  // IPI-903: deep link to analysis/payoff without a materialized brand must not run
+  // the timer or DNA payoff. Bounce to the pre-analysis screen until Continue materializes.
+  useEffect(() => {
+    if (brandId) return;
+    if (screen < ANALYSIS_SCREEN) return;
+    replaceScreen(previousScreen(ANALYSIS_SCREEN));
+  }, [brandId, screen, replaceScreen]);
 
   const update = useCallback(
     <K extends keyof OnboardingAnswers>(key: K, value: OnboardingAnswers[K]) => {
@@ -103,13 +119,23 @@ export function OnboardingFlow({
     }
     const target = nextScreen(screen);
     if (target === ANALYSIS_SCREEN && onCommitAnalysis) {
+      const startedFrom = screen;
       setCommitting(true);
       setCommitError(null);
       try {
-        await onCommitAnalysis(answers);
+        const created = await onCommitAnalysis(answers);
+        // User backed out (or navigated) while the request was in flight — drop the transition.
+        if (screenRef.current !== startedFrom) return;
+        // Without a brand id the deep-link gate would bounce 12→11 in a loop.
+        if (!created?.brandId) {
+          setCommitError(toUserFacingOnboardingError(new Error("missing brand"), "setup"));
+          return;
+        }
+        setBrandId(created.brandId);
         goToScreen(ANALYSIS_SCREEN);
       } catch (err) {
-        setCommitError(err instanceof Error ? err.message : "Could not start analysis");
+        if (screenRef.current !== startedFrom) return;
+        setCommitError(toUserFacingOnboardingError(err, "setup"));
       } finally {
         setCommitting(false);
       }
@@ -119,6 +145,7 @@ export function OnboardingFlow({
   }, [answers, goToScreen, onCommitAnalysis, router, screen]);
 
   const skipCurrentScreen = useCallback(() => {
+    if (committing) return;
     setAnswers((current) => {
       switch (screen) {
         case 4:
@@ -132,7 +159,7 @@ export function OnboardingFlow({
       }
     });
     void goNext();
-  }, [goNext, screen]);
+  }, [committing, goNext, screen]);
 
   const renderScreen = () => {
     switch (screen) {
@@ -192,8 +219,16 @@ export function OnboardingFlow({
       ) : (
         <FlowFooter
           screen={screen}
-          continueDisabled={committing || ctaDisabled(screen, answers)}
+          continueDisabled={
+            committing ||
+            ctaDisabled(screen, answers) ||
+            // Skip on screen 4 can clear the name; block commit until it's filled.
+            (Boolean(onCommitAnalysis) &&
+              nextScreen(screen) === ANALYSIS_SCREEN &&
+              answers.brandName.trim() === "")
+          }
           continueLabel={committing ? "Starting…" : ctaLabel(screen)}
+          navigationDisabled={committing}
           onBack={goBack}
           onSkip={skipCurrentScreen}
           onContinue={() => {
