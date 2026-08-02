@@ -3,7 +3,7 @@ import {
   buildRestartAttemptKey,
   detectRestartStage,
   normalizeAnalysisUrl,
-  pickLatestCrawlForUrl,
+  pickBestCrawlForUrl,
   urlFingerprint,
 } from "./restart-stage";
 
@@ -17,12 +17,21 @@ describe("normalizeAnalysisUrl", () => {
     expect(normalizeAnalysisUrl(raw)).toBe(expected);
   });
 
-  it.each(["", "   ", "ftp://bad.com", "not-a-url", "https://exa mple.com"])(
-    "rejects %s",
-    (raw) => {
-      expect(normalizeAnalysisUrl(raw)).toBeNull();
-    },
-  );
+  it.each([
+    "",
+    "   ",
+    "ftp://bad.com",
+    "not-a-url",
+    "https://exa mple.com",
+    "http://localhost/",
+    "https://127.0.0.1/",
+    "https://10.0.0.1/",
+    "https://192.168.1.1/",
+    "https://app.internal/",
+    "https://user:pass@example.com/",
+  ])("rejects %s", (raw) => {
+    expect(normalizeAnalysisUrl(raw)).toBeNull();
+  });
 });
 
 describe("buildRestartAttemptKey", () => {
@@ -114,22 +123,33 @@ describe("detectRestartStage — stage table", () => {
   });
 });
 
-describe("pickLatestCrawlForUrl", () => {
-  it("returns the first matching normalized source_url (newest-first order)", () => {
+describe("pickBestCrawlForUrl", () => {
+  it("prefers an older active crawl over a newer failed match", () => {
     const crawls = [
-      { id: "new", job_status: "failed", source_url: "https://Other.com/" },
-      { id: "match", job_status: "complete", source_url: "https://AURELIAJEWELRY.COM/shop/" },
-      { id: "old", job_status: "complete", source_url: "https://aureliajewelry.com/shop" },
+      { id: "new-fail", job_status: "failed", source_url: "https://aureliajewelry.com/" },
+      { id: "old-active", job_status: "running", source_url: "https://aureliajewelry.com/" },
+      { id: "other", job_status: "complete", source_url: "https://other.com/" },
     ];
-    expect(pickLatestCrawlForUrl(crawls, "https://aureliajewelry.com/shop")).toEqual({
-      id: "match",
+    expect(pickBestCrawlForUrl(crawls, "https://aureliajewelry.com/")).toEqual({
+      id: "old-active",
+      job_status: "running",
+    });
+  });
+
+  it("prefers complete over failed when no active crawl", () => {
+    const crawls = [
+      { id: "new-fail", job_status: "failed", source_url: "https://aureliajewelry.com/shop" },
+      { id: "old-done", job_status: "complete", source_url: "https://AURELIAJEWELRY.COM/shop/" },
+    ];
+    expect(pickBestCrawlForUrl(crawls, "https://aureliajewelry.com/shop")).toEqual({
+      id: "old-done",
       job_status: "complete",
     });
   });
 
   it("returns null when no crawl matches the restart URL", () => {
     expect(
-      pickLatestCrawlForUrl(
+      pickBestCrawlForUrl(
         [{ id: "x", job_status: "complete", source_url: "https://other.com/" }],
         "https://aureliajewelry.com/",
       ),

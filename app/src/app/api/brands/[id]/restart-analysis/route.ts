@@ -31,7 +31,7 @@ export async function POST(
   const { id: brandId } = await params;
   if (!UUID_RE.test(brandId)) {
     return NextResponse.json(
-      { ok: false, code: "not_found", message: "Brand not found." },
+      { ok: false, code: "invalid_url", message: "brandId must be a valid UUID." },
       { status: 400 },
     );
   }
@@ -44,14 +44,34 @@ export async function POST(
     );
   }
 
+  const rawBody = await request.text();
   let websiteUrl: string | undefined;
-  try {
-    const body = (await request.json()) as { websiteUrl?: unknown };
-    if (typeof body.websiteUrl === "string" && body.websiteUrl.trim()) {
-      websiteUrl = body.websiteUrl.trim();
+  if (rawBody.trim()) {
+    let body: unknown;
+    try {
+      body = JSON.parse(rawBody) as unknown;
+    } catch {
+      return NextResponse.json(
+        { ok: false, code: "invalid_url", message: "Request body must be valid JSON." },
+        { status: 400 },
+      );
     }
-  } catch {
-    // Empty body is fine — brand.brand_url is used.
+    if (body === null || typeof body !== "object" || Array.isArray(body)) {
+      return NextResponse.json(
+        { ok: false, code: "invalid_url", message: "Request body must be a JSON object." },
+        { status: 400 },
+      );
+    }
+    const websiteUrlRaw = (body as { websiteUrl?: unknown }).websiteUrl;
+    if (websiteUrlRaw !== undefined && typeof websiteUrlRaw !== "string") {
+      return NextResponse.json(
+        { ok: false, code: "invalid_url", message: "websiteUrl must be a string." },
+        { status: 400 },
+      );
+    }
+    if (typeof websiteUrlRaw === "string" && websiteUrlRaw.trim()) {
+      websiteUrl = websiteUrlRaw.trim();
+    }
   }
 
   const result = await restartFailedBrandAnalysis({

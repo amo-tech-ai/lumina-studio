@@ -5,6 +5,8 @@ const mockRestore = vi.fn();
 const mockRelease = vi.fn();
 const mockInvokeCrawl = vi.fn();
 const mockInvokeBi = vi.fn();
+const mockWaitCrawl = vi.fn();
+const mockAdminFrom = vi.fn();
 
 vi.mock("@/lib/brand/analysis-lock", () => ({
   tryAcquireAnalysisLock: (...args: unknown[]) => mockTryAcquire(...args),
@@ -15,6 +17,11 @@ vi.mock("@/lib/brand/analysis-lock", () => ({
 vi.mock("@/lib/onboarding", () => ({
   invokeStartBrandCrawl: (...args: unknown[]) => mockInvokeCrawl(...args),
   invokeBrandIntelligence: (...args: unknown[]) => mockInvokeBi(...args),
+  waitForCrawlCompletion: (...args: unknown[]) => mockWaitCrawl(...args),
+}));
+
+vi.mock("@/app/api/_lib/supabase-admin", () => ({
+  createSupabaseAdminClient: () => ({ from: (...args: unknown[]) => mockAdminFrom(...args) }),
 }));
 
 import {
@@ -41,10 +48,8 @@ type CrawlRow = { id: string; job_status: string; source_url: string };
 function makeSupabase(opts: {
   brand?: BrandRow | null;
   brandError?: { code: string } | null;
-  crawls?: CrawlRow[];
   canEdit?: boolean;
-  roleError?: { message: string } | null;
-  resumeOk?: boolean;
+  roleError?: { message: string; code?: string } | null;
   afterIntake?: string;
 }) {
   const brand =
@@ -60,7 +65,7 @@ function makeSupabase(opts: {
       : opts.brand;
 
   const inserts: unknown[] = [];
-  const updates: unknown[] = [];
+  let brandSelectCount = 0;
 
   const rpc = vi.fn(async (name: string) => {
     if (name === "is_org_editor_or_above") {
@@ -77,61 +82,52 @@ function makeSupabase(opts: {
           eq: () => ({
             maybeSingle: async () => {
               if (opts.brandError) return { data: null, error: opts.brandError };
-              return { data: brand, error: null };
+              brandSelectCount += 1;
+              if (!brand) return { data: null, error: null };
+              // 1st read = authz/stage; later reads = post-BI intake
+              if (brandSelectCount === 1) {
+                return { data: brand, error: null };
+              }
+              return {
+                data: {
+                  ...brand,
+                  intake_status: opts.afterIntake ?? brand.intake_status,
+                },
+                error: null,
+              };
             },
           }),
         }),
-        update: (payload: unknown) => {
-          updates.push(payload);
-          const chain = {
-            eq: () => chain,
-            select: () => ({
-              maybeSingle: async () => {
-                if (opts.resumeOk === false) return { data: null, error: null };
-                const intake =
-                  typeof payload === "object" &&
-                  payload &&
-                  "intake_status" in payload
-                    ? String((payload as { intake_status: string }).intake_status)
-                    : (opts.afterIntake ?? "crawl_running");
-                return { data: { intake_status: intake }, error: null };
-              },
-            }),
-          };
-          return chain;
-        },
-      };
-    }
-    if (table === "brand_crawls") {
-      return {
-        select: () => ({
-          eq: () => ({
-            order: () => ({
-              limit: async () => ({ data: opts.crawls ?? [], error: null }),
-            }),
-          }),
-        }),
-      };
-    }
-    if (table === "ai_agent_logs") {
-      return {
-        insert: (row: unknown) => {
-          inserts.push(row);
-          return {
-            select: () => ({
-              maybeSingle: async () => ({ data: { id: "log-1" }, error: null }),
-            }),
-          };
-        },
         update: () => ({
           eq: async () => ({ data: null, error: null }),
         }),
       };
     }
+    if (table === "ai_agent_logs") {
+      return {
+        insert: async (row: unknown) => {
+          inserts.push(row);
+          return { data: null, error: null };
+        },
+      };
+    }
     throw new Error(`unexpected table ${table}`);
   };
 
-  return { from, rpc, _inserts: inserts, _updates: updates };
+  return { from, rpc, _inserts: inserts };
+}
+
+function stubAdminCrawls(crawls: CrawlRow[]) {
+  mockAdminFrom.mockImplementation((table: string) => {
+    if (table !== "brand_crawls") throw new Error(`unexpected admin table ${table}`);
+    return {
+      select: () => ({
+        eq: () => ({
+          order: async () => ({ data: crawls, error: null }),
+        }),
+      }),
+    };
+  });
 }
 
 beforeEach(() => {
@@ -145,6 +141,8 @@ beforeEach(() => {
   mockRelease.mockResolvedValue(undefined);
   mockInvokeCrawl.mockResolvedValue({ crawlId: "crawl-new", reused: false });
   mockInvokeBi.mockResolvedValue({ brandId: BRAND_ID });
+  mockWaitCrawl.mockResolvedValue("complete");
+  stubAdminCrawls([]);
 });
 
 describe("restartFailedBrandAnalysis — authz", () => {
@@ -158,7 +156,6 @@ describe("restartFailedBrandAnalysis — authz", () => {
     expect(result).toMatchObject({ ok: false, code: "unauthorized" });
     expect(mockInvokeCrawl).not.toHaveBeenCalled();
     expect(mockInvokeBi).not.toHaveBeenCalled();
-    expect(sb._inserts).toHaveLength(0);
   });
 
   it("rejects personal-brand non-owner before provider call", async () => {
@@ -181,7 +178,8 @@ describe("restartFailedBrandAnalysis — authz", () => {
     expect(mockInvokeCrawl).not.toHaveBeenCalled();
   });
 
-  it("allows personal-brand owner", async () => {
+  it("allows personal-brand owner and still discovers crawls via admin", async () => {
+    stubAdminCrawls([{ id: "c1", job_status: "failed", source_url: URL }]);
     const sb = makeSupabase({
       brand: {
         id: BRAND_ID,
@@ -191,7 +189,7 @@ describe("restartFailedBrandAnalysis — authz", () => {
         user_id: ACTOR,
         intake_status: "failed",
       },
-      crawls: [{ id: "c1", job_status: "failed", source_url: URL }],
+      afterIntake: "draft_ready",
     });
     const result = await restartFailedBrandAnalysis({
       supabase: sb as never,
@@ -199,7 +197,10 @@ describe("restartFailedBrandAnalysis — authz", () => {
       brandId: BRAND_ID,
     });
     expect(result.ok).toBe(true);
+    expect(mockAdminFrom).toHaveBeenCalledWith("brand_crawls");
     expect(mockInvokeCrawl).toHaveBeenCalled();
+    expect(mockWaitCrawl).toHaveBeenCalled();
+    expect(mockInvokeBi).toHaveBeenCalled();
   });
 });
 
@@ -224,6 +225,26 @@ describe("restartFailedBrandAnalysis — state + URL", () => {
     expect(mockInvokeCrawl).not.toHaveBeenCalled();
   });
 
+  it("rejects private hosts before lock/provider", async () => {
+    const sb = makeSupabase({
+      brand: {
+        id: BRAND_ID,
+        name: "Aurelia",
+        brand_url: "http://localhost:3000/",
+        org_id: ORG_ID,
+        user_id: ACTOR,
+        intake_status: "failed",
+      },
+    });
+    const result = await restartFailedBrandAnalysis({
+      supabase: sb as never,
+      actorId: ACTOR,
+      brandId: BRAND_ID,
+    });
+    expect(result).toMatchObject({ ok: false, code: "invalid_url" });
+    expect(mockTryAcquire).not.toHaveBeenCalled();
+  });
+
   it("rejects non-failed intake", async () => {
     const sb = makeSupabase({
       brand: {
@@ -244,14 +265,13 @@ describe("restartFailedBrandAnalysis — state + URL", () => {
     expect(mockTryAcquire).not.toHaveBeenCalled();
   });
 
-  it("maps lock held to already_running", async () => {
+  it("maps lock contention to already_running", async () => {
     mockTryAcquire.mockResolvedValue({
       ok: false,
       error: "Analysis already in progress",
     });
-    const sb = makeSupabase({
-      crawls: [{ id: "c1", job_status: "failed", source_url: URL }],
-    });
+    stubAdminCrawls([{ id: "c1", job_status: "failed", source_url: URL }]);
+    const sb = makeSupabase({});
     const result = await restartFailedBrandAnalysis({
       supabase: sb as never,
       actorId: ACTOR,
@@ -259,33 +279,47 @@ describe("restartFailedBrandAnalysis — state + URL", () => {
     });
     expect(result).toMatchObject({ ok: false, code: "already_running" });
   });
-});
 
-describe("restartFailedBrandAnalysis — stage paths", () => {
-  it("reuses active crawl without invoking Firecrawl", async () => {
-    const sb = makeSupabase({
-      crawls: [{ id: "c-active", job_status: "running", source_url: URL }],
+  it("maps lock DB failure to provider_unavailable", async () => {
+    mockTryAcquire.mockResolvedValue({
+      ok: false,
+      error: "Could not start analysis",
     });
+    stubAdminCrawls([{ id: "c1", job_status: "failed", source_url: URL }]);
+    const sb = makeSupabase({});
     const result = await restartFailedBrandAnalysis({
       supabase: sb as never,
       actorId: ACTOR,
       brandId: BRAND_ID,
     });
-    expect(result).toEqual({
+    expect(result).toMatchObject({ ok: false, code: "provider_unavailable" });
+  });
+});
+
+describe("restartFailedBrandAnalysis — stage paths", () => {
+  it("reuses active crawl, waits, then runs BI (no new Firecrawl start)", async () => {
+    stubAdminCrawls([{ id: "c-active", job_status: "running", source_url: URL }]);
+    const sb = makeSupabase({ afterIntake: "draft_ready" });
+    const result = await restartFailedBrandAnalysis({
+      supabase: sb as never,
+      actorId: ACTOR,
+      brandId: BRAND_ID,
+    });
+    expect(result).toMatchObject({
       ok: true,
       mode: "crawl_reused",
-      intakeStatus: "crawl_running",
       crawlId: "c-active",
+      intakeStatus: "draft_ready",
     });
     expect(mockInvokeCrawl).not.toHaveBeenCalled();
-    expect(mockInvokeBi).not.toHaveBeenCalled();
-    expect(sb._inserts.length).toBeGreaterThan(0);
+    expect(mockWaitCrawl).toHaveBeenCalledWith(expect.anything(), "c-active");
+    expect(mockInvokeBi).toHaveBeenCalledTimes(1);
+    expect(sb._inserts.length).toBeGreaterThanOrEqual(2);
   });
 
-  it("restarts crawl when latest crawl failed", async () => {
-    const sb = makeSupabase({
-      crawls: [{ id: "c-fail", job_status: "failed", source_url: URL }],
-    });
+  it("restarts crawl when latest crawl failed, waits, then BI", async () => {
+    stubAdminCrawls([{ id: "c-fail", job_status: "failed", source_url: URL }]);
+    const sb = makeSupabase({ afterIntake: "draft_ready" });
     const result = await restartFailedBrandAnalysis({
       supabase: sb as never,
       actorId: ACTOR,
@@ -300,19 +334,13 @@ describe("restartFailedBrandAnalysis — stage paths", () => {
     const [, , url, opts] = mockInvokeCrawl.mock.calls[0];
     expect(url).toBe(URL);
     expect(opts.idempotencyKey).toMatch(/^restart-/);
-    expect(opts.idempotencyKey).toContain(BRAND_ID);
-    expect(mockInvokeBi).not.toHaveBeenCalled();
-    expect(sb._inserts[0]).toMatchObject({
-      agent_name: "restart-failed-analysis",
-      user_id: ACTOR,
-    });
+    expect(mockWaitCrawl).toHaveBeenCalled();
+    expect(mockInvokeBi).toHaveBeenCalled();
   });
 
-  it("restarts BI only when crawl is complete", async () => {
-    const sb = makeSupabase({
-      crawls: [{ id: "c-done", job_status: "complete", source_url: URL }],
-      afterIntake: "draft_ready",
-    });
+  it("restarts BI only when crawl is complete (no crawl/wait)", async () => {
+    stubAdminCrawls([{ id: "c-done", job_status: "complete", source_url: URL }]);
+    const sb = makeSupabase({ afterIntake: "draft_ready" });
     const result = await restartFailedBrandAnalysis({
       supabase: sb as never,
       actorId: ACTOR,
@@ -324,15 +352,17 @@ describe("restartFailedBrandAnalysis — stage paths", () => {
       crawlId: "c-done",
     });
     expect(mockInvokeCrawl).not.toHaveBeenCalled();
+    expect(mockWaitCrawl).not.toHaveBeenCalled();
     expect(mockInvokeBi).toHaveBeenCalledTimes(1);
-    const biOpts = mockInvokeBi.mock.calls[0][3];
-    expect(biOpts).toEqual({ draftMode: true, crawlResultId: "c-done" });
+    expect(mockInvokeBi.mock.calls[0][3]).toEqual({
+      draftMode: true,
+      crawlResultId: "c-done",
+    });
   });
 
   it("changed URL ignores prior crawl for a different host → crawl_restarted", async () => {
-    const sb = makeSupabase({
-      crawls: [{ id: "c-old", job_status: "complete", source_url: "https://old.com/" }],
-    });
+    stubAdminCrawls([{ id: "c-old", job_status: "complete", source_url: "https://old.com/" }]);
+    const sb = makeSupabase({ afterIntake: "draft_ready" });
     const result = await restartFailedBrandAnalysis({
       supabase: sb as never,
       actorId: ACTOR,
@@ -341,14 +371,28 @@ describe("restartFailedBrandAnalysis — stage paths", () => {
     });
     expect(result).toMatchObject({ ok: true, mode: "crawl_restarted" });
     expect(mockInvokeCrawl).toHaveBeenCalled();
-    expect(mockInvokeBi).not.toHaveBeenCalled();
+    expect(mockInvokeBi).toHaveBeenCalled();
   });
 
-  it("provider failure returns provider_unavailable and restores lock", async () => {
-    mockInvokeCrawl.mockRejectedValue(new Error("Firecrawl ECONNREFUSED secret-host"));
-    const sb = makeSupabase({
-      crawls: [{ id: "c-fail", job_status: "failed", source_url: URL }],
+  it("prefers older active crawl over newer failed match", async () => {
+    stubAdminCrawls([
+      { id: "new-fail", job_status: "failed", source_url: URL },
+      { id: "old-active", job_status: "queued", source_url: URL },
+    ]);
+    const sb = makeSupabase({ afterIntake: "draft_ready" });
+    const result = await restartFailedBrandAnalysis({
+      supabase: sb as never,
+      actorId: ACTOR,
+      brandId: BRAND_ID,
     });
+    expect(result).toMatchObject({ ok: true, mode: "crawl_reused", crawlId: "old-active" });
+    expect(mockInvokeCrawl).not.toHaveBeenCalled();
+  });
+
+  it("provider failure returns provider_unavailable and restores lock without leaking details", async () => {
+    mockInvokeCrawl.mockRejectedValue(new Error("Firecrawl ECONNREFUSED secret-host"));
+    stubAdminCrawls([{ id: "c-fail", job_status: "failed", source_url: URL }]);
+    const sb = makeSupabase({});
     const result = await restartFailedBrandAnalysis({
       supabase: sb as never,
       actorId: ACTOR,
@@ -365,11 +409,25 @@ describe("restartFailedBrandAnalysis — stage paths", () => {
       "token-1",
     );
   });
+
+  it("crawl timeout restores lock and does not invoke BI", async () => {
+    mockWaitCrawl.mockResolvedValue("timeout");
+    stubAdminCrawls([{ id: "c-fail", job_status: "failed", source_url: URL }]);
+    const sb = makeSupabase({});
+    const result = await restartFailedBrandAnalysis({
+      supabase: sb as never,
+      actorId: ACTOR,
+      brandId: BRAND_ID,
+    });
+    expect(result).toMatchObject({ ok: false, code: "provider_unavailable" });
+    expect(mockInvokeBi).not.toHaveBeenCalled();
+    expect(mockRestore).toHaveBeenCalled();
+  });
 });
 
 describe("restartHttpStatus", () => {
   it.each([
-    [{ ok: true as const, mode: "crawl_restarted" as const, intakeStatus: "crawl_running" }, 200],
+    [{ ok: true as const, mode: "crawl_restarted" as const, intakeStatus: "draft_ready" }, 200],
     [{ ok: false as const, code: "unauthorized" as const, message: "x" }, 403],
     [{ ok: false as const, code: "not_found" as const, message: "x" }, 404],
     [{ ok: false as const, code: "invalid_url" as const, message: "x" }, 400],

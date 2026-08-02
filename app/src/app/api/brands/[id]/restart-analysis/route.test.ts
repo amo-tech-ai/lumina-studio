@@ -31,12 +31,16 @@ vi.mock("@/lib/brand/restart-failed-analysis", async () => {
   };
 });
 
-function req(body?: unknown) {
-  return new Request(`http://localhost/api/brands/${BRAND_ID}/restart-analysis`, {
-    method: "POST",
-    body: body === undefined ? undefined : JSON.stringify(body),
-    headers: body === undefined ? undefined : { "content-type": "application/json" },
-  });
+function req(body?: unknown, raw?: string) {
+  const init: RequestInit = { method: "POST" };
+  if (raw !== undefined) {
+    init.body = raw;
+    init.headers = { "content-type": "application/json" };
+  } else if (body !== undefined) {
+    init.body = JSON.stringify(body);
+    init.headers = { "content-type": "application/json" };
+  }
+  return new Request(`http://localhost/api/brands/${BRAND_ID}/restart-analysis`, init);
 }
 
 beforeEach(() => {
@@ -51,7 +55,7 @@ beforeEach(() => {
   mockRestart.mockResolvedValue({
     ok: true,
     mode: "crawl_restarted",
-    intakeStatus: "crawl_running",
+    intakeStatus: "draft_ready",
     crawlId: "c1",
   });
 });
@@ -72,6 +76,33 @@ describe("POST /api/brands/[id]/restart-analysis", () => {
     });
   });
 
+  it("allows empty body (uses stored brand_url)", async () => {
+    const { POST } = await import("./route");
+    const res = await POST(req(), { params: Promise.resolve({ id: BRAND_ID }) });
+    expect(res.status).toBe(200);
+    expect(mockRestart).toHaveBeenCalledWith(
+      expect.objectContaining({ websiteUrl: undefined }),
+    );
+  });
+
+  it("rejects malformed JSON with 400 and does not start recovery", async () => {
+    const { POST } = await import("./route");
+    const res = await POST(req(undefined, "{not-json"), {
+      params: Promise.resolve({ id: BRAND_ID }),
+    });
+    expect(res.status).toBe(400);
+    expect(mockRestart).not.toHaveBeenCalled();
+  });
+
+  it("rejects null JSON body with 400", async () => {
+    const { POST } = await import("./route");
+    const res = await POST(req(undefined, "null"), {
+      params: Promise.resolve({ id: BRAND_ID }),
+    });
+    expect(res.status).toBe(400);
+    expect(mockRestart).not.toHaveBeenCalled();
+  });
+
   it("returns 401 when operator gate rejects", async () => {
     const { OperatorAuthError } = await import("@/lib/operator-gate");
     mockWithOperatorAuth.mockRejectedValue(new OperatorAuthError("Unauthorized"));
@@ -81,10 +112,15 @@ describe("POST /api/brands/[id]/restart-analysis", () => {
     expect(mockRestart).not.toHaveBeenCalled();
   });
 
-  it("returns 400 for non-UUID brand id", async () => {
+  it("returns 400 invalid_url for non-UUID brand id", async () => {
     const { POST } = await import("./route");
     const res = await POST(req(), { params: Promise.resolve({ id: "not-uuid" }) });
     expect(res.status).toBe(400);
+    await expect(res.json()).resolves.toMatchObject({
+      ok: false,
+      code: "invalid_url",
+      message: "brandId must be a valid UUID.",
+    });
     expect(mockRestart).not.toHaveBeenCalled();
   });
 

@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+import { createSupabaseAdminClient } from "@/app/api/_lib/supabase-admin";
 import {
   releaseAnalysisLockIfOwned,
   restoreAnalysisStatusIfOwned,
@@ -9,14 +10,20 @@ import {
   buildRestartAttemptKey,
   detectRestartStage,
   normalizeAnalysisUrl,
-  pickLatestCrawlForUrl,
+  pickBestCrawlForUrl,
   urlFingerprint,
 } from "@/lib/brand/restart-stage";
-import { invokeBrandIntelligence, invokeStartBrandCrawl } from "@/lib/onboarding";
+import {
+  invokeBrandIntelligence,
+  invokeStartBrandCrawl,
+  waitForCrawlCompletion,
+} from "@/lib/onboarding";
 
 /**
  * IPI-905 · ONB2-INT-001d — protected server recovery for failed Brand Analysis.
  * Stage-aware: reuse active crawl, restart failed crawl, or BI-only after complete crawl.
+ * Crawl paths wait for completion then continue into Brand Intelligence (webhook has no
+ * workflow_id on this path, so BI must be started here).
  */
 
 export type RestartErrorCode =
@@ -55,20 +62,21 @@ function fail(code: RestartErrorCode): RestartResult {
 
 const AGENT_NAME = "restart-failed-analysis";
 
+type AttemptInput = {
+  actorId: string;
+  brandId: string;
+  stage: string;
+  attemptKey: string;
+  urlFingerprint: string;
+  websiteUrl: string;
+};
+
 async function recordAttempt(
   supabase: SupabaseClient,
-  input: {
-    actorId: string;
-    brandId: string;
-    stage: string;
-    attemptKey: string;
-    urlFingerprint: string;
-    websiteUrl: string;
-  },
-): Promise<string | null> {
-  const { data, error } = await supabase
-    .from("ai_agent_logs")
-    .insert({
+  input: AttemptInput,
+): Promise<boolean> {
+  try {
+    const { error } = await supabase.from("ai_agent_logs").insert({
       agent_name: AGENT_NAME,
       user_id: input.actorId,
       brand_id: input.brandId,
@@ -80,35 +88,52 @@ async function recordAttempt(
         websiteUrl: input.websiteUrl,
       },
       output: { phase: "started" },
-    })
-    .select("id")
-    .maybeSingle();
-
-  if (error) {
-    console.error("[restart-failed-analysis] attempt log insert failed", {
-      brandId: input.brandId,
-      code: error.code,
     });
-    return null;
+    if (error) {
+      console.error("[restart-failed-analysis] attempt log insert failed", {
+        brandId: input.brandId,
+        code: error.code,
+      });
+      return false;
+    }
+    return true;
+  } catch {
+    console.error("[restart-failed-analysis] attempt log insert threw", {
+      brandId: input.brandId,
+    });
+    return false;
   }
-  return data?.id ?? null;
 }
 
-async function finalizeAttempt(
+/** INSERT-only finalize — ai_agent_logs has no UPDATE RLS policy for JWT clients. */
+async function recordAttemptResult(
   supabase: SupabaseClient,
-  logId: string | null,
+  input: AttemptInput,
   output: Record<string, unknown>,
 ): Promise<void> {
-  if (!logId) return;
   try {
-    await supabase
-      .from("ai_agent_logs")
-      .update({ output: { phase: "finished", ...output } })
-      .eq("id", logId);
-  } catch (err) {
-    console.error("[restart-failed-analysis] attempt log finalize failed", {
-      logId,
-      error: err instanceof Error ? err.message : String(err),
+    const { error } = await supabase.from("ai_agent_logs").insert({
+      agent_name: AGENT_NAME,
+      user_id: input.actorId,
+      brand_id: input.brandId,
+      input: {
+        brandId: input.brandId,
+        stage: input.stage,
+        attemptKey: input.attemptKey,
+        urlFingerprint: input.urlFingerprint,
+        websiteUrl: input.websiteUrl,
+      },
+      output: { phase: "finished", ...output },
+    });
+    if (error) {
+      console.error("[restart-failed-analysis] attempt result insert failed", {
+        brandId: input.brandId,
+        code: error.code,
+      });
+    }
+  } catch {
+    console.error("[restart-failed-analysis] attempt result insert threw", {
+      brandId: input.brandId,
     });
   }
 }
@@ -123,8 +148,9 @@ async function assertCanRestart(
       p_org_id: brand.org_id,
     });
     if (roleErr) {
-      console.error("[restart-failed-analysis] role check failed", roleErr);
-      // Role *check* failure ≠ role *denial* (mirror BI start route).
+      console.error("[restart-failed-analysis] role check failed", {
+        code: roleErr.code,
+      });
       return fail("provider_unavailable");
     }
     if (!canRestart) return fail("unauthorized");
@@ -132,6 +158,79 @@ async function assertCanRestart(
   }
   if (brand.user_id !== actorId) return fail("unauthorized");
   return null;
+}
+
+async function loadCrawlEvidence(
+  admin: SupabaseClient,
+  brandId: string,
+  normalizedUrl: string,
+): Promise<{ ok: true; crawl: ReturnType<typeof pickBestCrawlForUrl> } | { ok: false }> {
+  // brand_crawls SELECT RLS is org-member-only (no personal-owner branch).
+  // Authz already passed on the user client; use service role for discovery + wait.
+  const { data: crawlRows, error: crawlErr } = await admin
+    .from("brand_crawls")
+    .select("id, job_status, source_url")
+    .eq("brand_id", brandId)
+    .order("created_at", { ascending: false });
+
+  if (crawlErr) {
+    console.error("[restart-failed-analysis] crawl lookup failed", {
+      brandId,
+      code: crawlErr.code,
+    });
+    return { ok: false };
+  }
+
+  return { ok: true, crawl: pickBestCrawlForUrl(crawlRows ?? [], normalizedUrl) };
+}
+
+async function persistBrandUrlIfChanged(
+  supabase: SupabaseClient,
+  brandId: string,
+  currentUrl: string | null,
+  normalizedUrl: string,
+): Promise<void> {
+  const currentNorm = currentUrl ? normalizeAnalysisUrl(currentUrl) : null;
+  if (currentNorm === normalizedUrl) return;
+  const { error } = await supabase
+    .from("brands")
+    .update({ brand_url: normalizedUrl })
+    .eq("id", brandId);
+  if (error) {
+    console.error("[restart-failed-analysis] brand_url persist failed", {
+      brandId,
+      code: error.code,
+    });
+  }
+}
+
+async function runBrandIntelligence(
+  supabase: SupabaseClient,
+  brandId: string,
+  brandName: string,
+  normalizedUrl: string,
+  crawlId: string,
+): Promise<string> {
+  await invokeBrandIntelligence(
+    supabase,
+    brandId,
+    {
+      brandName,
+      websiteUrl: normalizedUrl,
+      instagramHandle: "",
+      industry: "",
+      goal: "",
+    },
+    { draftMode: true, crawlResultId: crawlId },
+  );
+
+  const { data: after } = await supabase
+    .from("brands")
+    .select("intake_status")
+    .eq("id", brandId)
+    .maybeSingle();
+
+  return typeof after?.intake_status === "string" ? after.intake_status : "analysis_running";
 }
 
 export async function restartFailedBrandAnalysis(params: {
@@ -161,164 +260,118 @@ export async function restartFailedBrandAnalysis(params: {
   if (denied) return denied;
 
   const rawUrl = (params.websiteUrl?.trim() || brand.brand_url || "").trim();
+  if (!rawUrl) return fail("invalid_url");
+
   const normalizedUrl = normalizeAnalysisUrl(rawUrl);
   if (!normalizedUrl) return fail("invalid_url");
 
   const attemptKey = buildRestartAttemptKey(brandId, normalizedUrl);
   const fp = urlFingerprint(normalizedUrl);
+  const attemptBase: AttemptInput = {
+    actorId,
+    brandId,
+    stage: "pending",
+    attemptKey,
+    urlFingerprint: fp,
+    websiteUrl: normalizedUrl,
+  };
 
-  // Newest-first; pickLatestCrawlForUrl keeps the first URL match.
-  const { data: crawlRows, error: crawlErr } = await supabase
-    .from("brand_crawls")
-    .select("id, job_status, source_url")
-    .eq("brand_id", brandId)
-    .order("created_at", { ascending: false })
-    .limit(20);
-
-  if (crawlErr) {
-    console.error("[restart-failed-analysis] crawl lookup failed", {
-      brandId,
-      code: crawlErr.code,
-    });
+  let admin: SupabaseClient;
+  try {
+    admin = createSupabaseAdminClient();
+  } catch {
+    console.error("[restart-failed-analysis] admin client unavailable");
     return fail("provider_unavailable");
   }
 
-  const latestCrawl = pickLatestCrawlForUrl(crawlRows ?? [], normalizedUrl);
+  const evidence = await loadCrawlEvidence(admin, brandId, normalizedUrl);
+  if (!evidence.ok) return fail("provider_unavailable");
+
   const decision = detectRestartStage({
     intakeStatus: brand.intake_status,
-    latestCrawl,
+    latestCrawl: evidence.crawl,
   });
 
   if (decision.mode === "already_running") return fail("already_running");
   if (decision.mode === "invalid_state") return fail("invalid_state");
 
-  // --- crawl_reused: no new Firecrawl job; resume Realtime on existing crawl ---
-  if (decision.mode === "crawl_reused") {
-    const logId = await recordAttempt(supabase, {
-      actorId,
-      brandId,
-      stage: decision.mode,
-      attemptKey,
-      urlFingerprint: fp,
-      websiteUrl: normalizedUrl,
-    });
-
-    const { data: resumed, error: resumeErr } = await supabase
-      .from("brands")
-      .update({ intake_status: "crawl_running" })
-      .eq("id", brandId)
-      .eq("intake_status", "failed")
-      .select("intake_status")
-      .maybeSingle();
-
-    if (resumeErr) {
-      console.error("[restart-failed-analysis] crawl_reused resume failed", {
-        brandId,
-        code: resumeErr.code,
-      });
-      await finalizeAttempt(supabase, logId, { ok: false, code: "provider_unavailable" });
-      return fail("provider_unavailable");
-    }
-    if (!resumed) {
-      await finalizeAttempt(supabase, logId, { ok: false, code: "already_running" });
-      return fail("already_running");
-    }
-
-    await finalizeAttempt(supabase, logId, {
-      ok: true,
-      mode: "crawl_reused",
-      crawlId: decision.crawlId,
-    });
-    return {
-      ok: true,
-      mode: "crawl_reused",
-      intakeStatus: "crawl_running",
-      crawlId: decision.crawlId,
-    };
-  }
+  attemptBase.stage = decision.mode;
 
   const acquired = await tryAcquireAnalysisLock(supabase, brandId);
   if (!acquired.ok) {
-    return fail("already_running");
+    if (acquired.error === "Analysis already in progress") {
+      return fail("already_running");
+    }
+    return fail("provider_unavailable");
   }
   const { runToken, priorStatus } = acquired;
 
-  const logId = await recordAttempt(supabase, {
-    actorId,
-    brandId,
-    stage: decision.mode,
-    attemptKey,
-    urlFingerprint: fp,
-    websiteUrl: normalizedUrl,
-  });
+  try {
+    await recordAttempt(supabase, attemptBase);
+  } catch {
+    await restoreAnalysisStatusIfOwned(supabase, brandId, priorStatus, runToken);
+    return fail("provider_unavailable");
+  }
 
   try {
-    if (decision.mode === "crawl_restarted") {
+    let crawlId: string;
+    let mode: "crawl_restarted" | "crawl_reused" | "bi_restarted" = decision.mode;
+
+    if (decision.mode === "bi_restarted") {
+      crawlId = decision.crawlId;
+    } else if (decision.mode === "crawl_reused") {
+      crawlId = decision.crawlId;
+    } else {
       const crawl = await invokeStartBrandCrawl(supabase, brandId, normalizedUrl, {
         idempotencyKey: attemptKey,
       });
-      await releaseAnalysisLockIfOwned(supabase, brandId, runToken);
-      await finalizeAttempt(supabase, logId, {
-        ok: true,
-        mode: crawl.reused ? "crawl_reused" : "crawl_restarted",
-        crawlId: crawl.crawlId,
-      });
-      // Edge may have set crawl_running; report the mode we intended unless reused.
-      const mode = crawl.reused ? ("crawl_reused" as const) : ("crawl_restarted" as const);
-      return {
-        ok: true,
-        mode,
-        intakeStatus: "crawl_running",
-        crawlId: crawl.crawlId,
-      };
+      crawlId = crawl.crawlId;
+      if (crawl.reused) mode = "crawl_reused";
     }
 
-    // bi_restarted — complete crawl exists; do not start another crawl.
-    await invokeBrandIntelligence(
+    if (decision.mode !== "bi_restarted") {
+      // Admin client: personal brands cannot SELECT brand_crawls under RLS.
+      const crawlOutcome = await waitForCrawlCompletion(admin, crawlId);
+      if (crawlOutcome === "failed" || crawlOutcome === "timeout") {
+        await restoreAnalysisStatusIfOwned(supabase, brandId, priorStatus, runToken);
+        await recordAttemptResult(supabase, attemptBase, {
+          ok: false,
+          code: "provider_unavailable",
+          crawlOutcome,
+        });
+        return fail("provider_unavailable");
+      }
+    }
+
+    const intakeStatus = await runBrandIntelligence(
       supabase,
       brandId,
-      {
-        brandName: brand.name ?? "",
-        websiteUrl: normalizedUrl,
-        instagramHandle: "",
-        industry: "",
-        goal: "",
-      },
-      { draftMode: true, crawlResultId: decision.crawlId },
+      brand.name ?? "",
+      normalizedUrl,
+      crawlId,
     );
 
     await releaseAnalysisLockIfOwned(supabase, brandId, runToken);
-
-    const { data: after } = await supabase
-      .from("brands")
-      .select("intake_status")
-      .eq("id", brandId)
-      .maybeSingle();
-
-    const intakeStatus =
-      typeof after?.intake_status === "string" ? after.intake_status : "analysis_running";
-
-    await finalizeAttempt(supabase, logId, {
+    await persistBrandUrlIfChanged(supabase, brandId, brand.brand_url, normalizedUrl);
+    await recordAttemptResult(supabase, attemptBase, {
       ok: true,
-      mode: "bi_restarted",
-      crawlId: decision.crawlId,
+      mode,
+      crawlId,
       intakeStatus,
     });
 
-    return {
-      ok: true,
-      mode: "bi_restarted",
-      intakeStatus,
-      crawlId: decision.crawlId,
-    };
+    return { ok: true, mode, intakeStatus, crawlId };
   } catch (err) {
     console.error("[restart-failed-analysis] provider failed", {
       brandId,
       mode: decision.mode,
-      error: err instanceof Error ? err.message : String(err),
+      name: err instanceof Error ? err.name : "Error",
     });
     await restoreAnalysisStatusIfOwned(supabase, brandId, priorStatus, runToken);
-    await finalizeAttempt(supabase, logId, { ok: false, code: "provider_unavailable" });
+    await recordAttemptResult(supabase, attemptBase, {
+      ok: false,
+      code: "provider_unavailable",
+    });
     return fail("provider_unavailable");
   }
 }

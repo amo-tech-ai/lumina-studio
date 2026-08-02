@@ -20,9 +20,39 @@ export type RestartStageDecision =
 const LOCKED_INTAKE = new Set(["crawl_running", "analysis_running", "draft_ready"]);
 const ACTIVE_CRAWL = new Set(["queued", "running"]);
 
+/** Mirror supabase/functions/brand-intelligence private-host SSRF guard. */
+const PRIVATE_HOST_PATTERNS = [
+  /^localhost$/i,
+  /^127\./,
+  /^10\./,
+  /^172\.(1[6-9]|2\d|3[01])\./,
+  /^192\.168\./,
+  /^169\.254\./,
+  /^0\.0\.0\.0$/i,
+  /^0\./,
+  /^::1$/,
+  /^::ffff:/i,
+  /^fc00:/i,
+  /^fd[0-9a-f]{2}:/i,
+  /^fe[89ab][0-9a-f]:/i,
+  /\.local$/i,
+  /\.internal$/i,
+];
+
+function normalizeHostname(host: string): string {
+  const h = host.toLowerCase();
+  if (h.startsWith("[") && h.endsWith("]")) return h.slice(1, -1);
+  return h;
+}
+
+function isPrivateOrInternalHost(hostname: string): boolean {
+  return PRIVATE_HOST_PATTERNS.some((p) => p.test(normalizeHostname(hostname)));
+}
+
 /**
  * Normalize a website URL for restart identity.
- * Requires http(s), lowercases host, strips hash + trailing slash (except root).
+ * Requires http(s), rejects private/internal hosts, lowercases host,
+ * strips hash + trailing slash (except root).
  */
 export function normalizeAnalysisUrl(raw: string): string | null {
   const trimmed = raw.trim();
@@ -31,6 +61,9 @@ export function normalizeAnalysisUrl(raw: string): string | null {
   try {
     const parsed = new URL(trimmed);
     if (parsed.protocol !== "http:" && parsed.protocol !== "https:") return null;
+    if (isPrivateOrInternalHost(parsed.hostname)) return null;
+    // Never persist credentials into attempt keys / ai_agent_logs.
+    if (parsed.username || parsed.password) return null;
     parsed.hash = "";
     parsed.hostname = parsed.hostname.toLowerCase();
     if (parsed.pathname.length > 1 && parsed.pathname.endsWith("/")) {
@@ -84,18 +117,30 @@ export function detectRestartStage(input: {
 }
 
 /**
- * Pick the newest crawl whose source_url normalizes to the restart URL.
- * Falls back to null when none match (treat as no crawl for this URL).
+ * Prefer an in-flight crawl for the URL, then a complete one, then newest match.
+ * Callers pass rows newest-first.
  */
-export function pickLatestCrawlForUrl(
+export function pickBestCrawlForUrl(
   crawls: Array<{ id: string; job_status: string; source_url: string }>,
   normalizedUrl: string,
 ): CrawlEvidence | null {
+  const matches: CrawlEvidence[] = [];
   for (const row of crawls) {
     const rowUrl = normalizeAnalysisUrl(row.source_url);
     if (rowUrl === normalizedUrl) {
-      return { id: row.id, job_status: row.job_status };
+      matches.push({ id: row.id, job_status: row.job_status });
     }
   }
-  return null;
+  if (matches.length === 0) return null;
+
+  const active = matches.find((m) => ACTIVE_CRAWL.has(m.job_status));
+  if (active) return active;
+
+  const complete = matches.find((m) => m.job_status === "complete");
+  if (complete) return complete;
+
+  return matches[0] ?? null;
 }
+
+/** @deprecated use pickBestCrawlForUrl — kept as alias for older imports/tests. */
+export const pickLatestCrawlForUrl = pickBestCrawlForUrl;
