@@ -10,19 +10,108 @@
  */
 import { chromium } from "playwright";
 import { mkdirSync, writeFileSync, readFileSync, existsSync, unlinkSync } from "node:fs";
-import { dirname, join } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createRequire } from "node:module";
 import { execFileSync, execSync } from "node:child_process";
 import { assertNoSecrets } from "./assert-no-secrets.mjs";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const OUT = __dirname;
+/** IPI-734: verify:copilot sets VERIFY_OUT so artifacts never overwrite the tracked runner dir. */
+const OUT = resolve(process.env.VERIFY_OUT || __dirname);
 const SHOTS = join(OUT, "screenshots");
 const HAR_DIR = join(OUT, "har");
-const PREVIEW = "https://ipix-operator-preview.sk-498.workers.dev";
+const DEFAULT_PREVIEW = "https://ipix-operator-preview.sk-498.workers.dev";
+// IPI-734: verify:copilot sets BASE_URL; default stays the CF preview Worker.
+const PREVIEW = (process.env.BASE_URL || DEFAULT_PREVIEW).replace(/\/$/, "");
+const READONLY = process.env.VERIFY_READONLY === "1";
 const MAX_TRANSIENT_RETRIES = 2;
 const REPO_ROOT = process.cwd();
+const SECRET_HEADER_NAME_RE =
+  /^(?:authorization|proxy-authorization|cookie|set-cookie|x-api-key|x-auth-token)$/i;
+const HEADER_NAME_RE = /^[!#$%&'*+\-.^_`|~0-9A-Za-z]+$/;
+const MAX_HEADER_VALUE_LEN = 8_192;
+
+/** Only these hosts may receive QA credentials (login form phishing guard). */
+export function assertTrustedCredentialTarget(baseUrl) {
+  let u;
+  try {
+    u = new URL(baseUrl);
+  } catch {
+    throw new Error(`Refusing QA credentials: invalid BASE_URL`);
+  }
+  const host = u.hostname.toLowerCase().replace(/\.$/, "");
+  const trusted =
+    /^(?:www\.)?ipix\.co$/.test(host) ||
+    /^ipix-operator-preview(?:\.[a-z0-9-]+)*\.workers\.dev$/.test(host) ||
+    host === "localhost" ||
+    host === "127.0.0.1";
+  if (!trusted) {
+    throw new Error(
+      `Refusing QA credentials for untrusted host "${host}" ` +
+        "(allowlist: ipix.co, ipix-operator-preview*.workers.dev, localhost)",
+    );
+  }
+  const localHttp = host === "localhost" || host === "127.0.0.1";
+  if (u.protocol !== "https:" && !(u.protocol === "http:" && localHttp)) {
+    throw new Error(`Refusing QA credentials over ${u.protocol} (HTTPS required)`);
+  }
+}
+
+/** Optional request headers from verify:copilot (`VERIFY_EXTRA_HEADERS` JSON). */
+function loadExtraHeaders() {
+  const raw = process.env.VERIFY_EXTRA_HEADERS;
+  if (!raw) return undefined;
+  try {
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+      console.warn("WARN: VERIFY_EXTRA_HEADERS must be a JSON object — ignoring");
+      return undefined;
+    }
+    const out = {};
+    for (const [name, value] of Object.entries(parsed)) {
+      if (!HEADER_NAME_RE.test(name) || SECRET_HEADER_NAME_RE.test(name)) {
+        throw new Error(
+          `VERIFY_EXTRA_HEADERS refuses unsafe header name (secret or illegal)`,
+        );
+      }
+      if (value == null || typeof value === "object") {
+        throw new Error(`VERIFY_EXTRA_HEADERS values must be strings (${name})`);
+      }
+      const s = String(value).trim();
+      if (!s || s.length > MAX_HEADER_VALUE_LEN || /[\u0000-\u001f\u007f]/.test(s)) {
+        throw new Error(`VERIFY_EXTRA_HEADERS unsafe value for ${name}`);
+      }
+      out[name] = s;
+    }
+    return Object.keys(out).length ? out : undefined;
+  } catch (e) {
+    if (/VERIFY_EXTRA_HEADERS/.test(String(e?.message || e))) throw e;
+    console.warn("WARN: VERIFY_EXTRA_HEADERS is not valid JSON — ignoring");
+    return undefined;
+  }
+}
+
+/** Attach verify headers only to the target origin (not Supabase / third parties). */
+async function applyOriginScopedHeaders(context, targetUrl, headers) {
+  if (!headers || !Object.keys(headers).length) return;
+  const origin = new URL(targetUrl).origin;
+  await context.route("**/*", async (route) => {
+    const req = route.request();
+    let reqOrigin;
+    try {
+      reqOrigin = new URL(req.url()).origin;
+    } catch {
+      await route.continue();
+      return;
+    }
+    if (reqOrigin === origin) {
+      await route.continue({ headers: { ...req.headers(), ...headers } });
+    } else {
+      await route.continue();
+    }
+  });
+}
 
 const require = createRequire(import.meta.url);
 let playwrightVersion = "unknown";
@@ -39,7 +128,7 @@ try {
 }
 
 /** Live Worker identity from wrangler — never hardcode version/SHA for provenance. */
-function resolvePreviewDeploymentIdentity() {
+function resolvePreviewDeploymentIdentity(targetUrl = PREVIEW) {
   const identity = {
     worker_version_id: null,
     deployment_id: null,
@@ -58,6 +147,14 @@ function resolvePreviewDeploymentIdentity() {
     }).trim();
   } catch {
     identity.evidence_runner_git_sha = null;
+  }
+  const targetHost = new URL(targetUrl).hostname.toLowerCase().replace(/\.$/, "");
+  const defaultHost = new URL(DEFAULT_PREVIEW).hostname.toLowerCase();
+  if (targetHost !== defaultHost) {
+    identity.identity_source = "skipped_non_default_preview_host";
+    identity.identity_error =
+      `wrangler preview identity skipped for host ${targetHost} (not ${defaultHost})`;
+    return identity;
   }
   try {
     const appDir = existsSync(join(REPO_ROOT, "app/wrangler.jsonc"))
@@ -102,9 +199,6 @@ function sanitizeNetworkUrl(url) {
     return { host: null, path: url.split("?")[0] };
   }
 }
-
-mkdirSync(SHOTS, { recursive: true });
-mkdirSync(HAR_DIR, { recursive: true });
 
 function loadQaPassword() {
   if (process.env.QA_PASSWORD) return process.env.QA_PASSWORD;
@@ -161,15 +255,19 @@ function writeEvidence(path, value) {
 }
 
 async function main() {
+  assertTrustedCredentialTarget(PREVIEW);
   const password = loadQaPassword();
   const email = "qa@ipix.test";
+  mkdirSync(SHOTS, { recursive: true });
+  mkdirSync(HAR_DIR, { recursive: true });
   const harPath = join(HAR_DIR, "session.har");
   // Remove any leftover full HAR from a previous unsafe run.
   if (existsSync(harPath)) unlinkSync(harPath);
 
-  const deploymentIdentity = resolvePreviewDeploymentIdentity();
+  const deploymentIdentity = resolvePreviewDeploymentIdentity(PREVIEW);
 
   const browser = await chromium.launch({ headless: true });
+  const extraHTTPHeaders = loadExtraHeaders();
   const context = await browser.newContext({
     // Minimal HAR — API URLs only; never embed bodies/headers with cookies.
     // Prefer network-summary.json; HAR is deleted after the run and must not be committed.
@@ -181,9 +279,14 @@ async function main() {
     },
     viewport: { width: 1440, height: 900 },
     // Real Cloudflare preview TLS must validate (do not mask cert failures).
+    // Headers applied via route (origin-scoped) — not context-wide extraHTTPHeaders.
   });
+  await applyOriginScopedHeaders(context, PREVIEW, extraHTTPHeaders);
   const page = await context.newPage();
   const browserVersion = browser.version();
+  if (READONLY) {
+    console.log("VERIFY_READONLY=1 — read-oriented journey; mutate API POSTs fail the run");
+  }
 
   page.on("console", (msg) => {
     const entry = { type: msg.type(), text: msg.text(), ts: new Date().toISOString() };
@@ -575,13 +678,35 @@ async function main() {
     await browser.close();
   }
 
+  if (READONLY) {
+    const mutateHits = networkLog.filter((n) => {
+      const path = n.path || "";
+      const method = (n.method || "").toUpperCase();
+      return (
+        ["POST", "PUT", "PATCH", "DELETE"].includes(method) &&
+        /\/api\/(?:bookings|crm|deals|shoots)/i.test(path)
+      );
+    });
+    if (mutateHits.length > 0) {
+      throw new Error(
+        `VERIFY_READONLY=1 blocked: saw ${mutateHits.length} mutate API call(s) ` +
+          `(e.g. ${mutateHits[0].method} ${mutateHits[0].path})`,
+      );
+    }
+  }
+
   const finishedAt = new Date().toISOString();
   const region = healthCfRay?.split("-")[1] || "MIA?";
+  const targetHost = new URL(PREVIEW).hostname.toLowerCase().replace(/\.$/, "");
+  const defaultPreviewHost = new URL(DEFAULT_PREVIEW).hostname.toLowerCase();
 
   const metadata = {
     task: "IPI-724 · CF-UJ-018 — End-to-End Preview User Journey Validation",
     preview_url: PREVIEW,
-    worker: "ipix-operator-preview",
+    worker:
+      targetHost === defaultPreviewHost ? "ipix-operator-preview" : `host:${targetHost}`,
+    verify_readonly: READONLY,
+    evidence_out: OUT,
     ...deploymentIdentity,
     cf_ray_health: healthCfRay,
     region_guess: region,
