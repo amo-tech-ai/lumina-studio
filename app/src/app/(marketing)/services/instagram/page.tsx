@@ -1,12 +1,14 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
+import { canonicalUrl } from "@/lib/site";
 import { Camera, Film, ShoppingBag, Layers, Play, ArrowRight } from "lucide-react";
 import { AnimatedSection } from "@/components/marketing/animated-section";
 
 export const metadata: Metadata = {
   title: "Instagram Campaigns",
   description: "Scroll-stopping Instagram content. AI-planned campaigns for Reels, Stories, and feed.",
+  alternates: { canonical: canonicalUrl("/services/instagram") },
   openGraph: {
     title: "Instagram Campaigns | iPix — Scroll-Stopping Content",
     description: "Scroll-stopping Instagram content. AI-planned campaigns for Reels, Stories, and feed.",

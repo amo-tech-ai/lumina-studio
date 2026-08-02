@@ -1,12 +1,14 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
+import { canonicalUrl } from "@/lib/site";
 import { Film, Video, Smartphone, Layers, Play, Clapperboard, ArrowRight } from "lucide-react";
 import { AnimatedSection } from "@/components/marketing/animated-section";
 
 export const metadata: Metadata = {
   title: "Video Production",
   description: "Cinematic fashion video production. AI-planned brand films and social content.",
+  alternates: { canonical: canonicalUrl("/services/video") },
   openGraph: {
     title: "Video Production | iPix — Cinematic Fashion Video",
     description: "Cinematic fashion video production. AI-planned brand films and social content.",
