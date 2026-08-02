@@ -60,6 +60,21 @@ describe("readonly guard / hostname", () => {
     assert.match(r.message, /HTTPS/i);
   });
 
+  it("treats trailing-dot production hosts as prod (readonly required)", () => {
+    assert.equal(
+      assertReadonlyGuard({ baseUrl: "https://ipix.co.", readonly: false }).ok,
+      false,
+    );
+    assert.equal(
+      assertReadonlyGuard({ baseUrl: "https://www.ipix.co./app", readonly: false }).ok,
+      false,
+    );
+    assert.equal(
+      assertReadonlyGuard({ baseUrl: "https://ipix.co.", readonly: true }).ok,
+      true,
+    );
+  });
+
   it("blocks http preview; allows http localhost only", () => {
     assert.equal(
       assertReadonlyGuard({
@@ -106,6 +121,20 @@ describe("headersToObject", () => {
     assert.throws(() => headersToObject([": value"]), /Invalid --header name/);
     assert.throws(() => headersToObject(["Name:"]), /Invalid --header value/);
     assert.throws(() => headersToObject([""]), /empty/);
+  });
+
+  it("does not echo raw malformed header values in errors", () => {
+    try {
+      headersToObject(["Authorization secret-no-colon"]);
+      assert.fail("expected throw");
+    } catch (e) {
+      assert.doesNotMatch(String(e.message), /secret-no-colon/);
+    }
+  });
+
+  it("rejects secret-bearing header names", () => {
+    assert.throws(() => headersToObject(["Authorization: Bearer x"]), /secret-bearing/);
+    assert.throws(() => headersToObject(["Cookie: a=b"]), /secret-bearing/);
   });
 
   it("rejects CR/LF injection and oversized values", () => {
@@ -163,12 +192,19 @@ describe("redactConsoleOutput", () => {
 describe("main() guards", () => {
   it("exits 1 on prod URL without --readonly before fetch", async () => {
     let fetched = false;
-    const code = await main(["--base-url=https://ipix.co", "--skip-browser"], {
-      fetchImpl: async () => {
-        fetched = true;
-        return new Response("{}", { status: 401 });
+    const code = await main(
+      [
+        "--base-url=https://ipix.co",
+        "--skip-browser",
+        "--out=/tmp/verify-copilot-ut-prod",
+      ],
+      {
+        fetchImpl: async () => {
+          fetched = true;
+          return new Response("{}", { status: 401 });
+        },
       },
-    });
+    );
     assert.equal(code, 1);
     assert.equal(fetched, false);
   });
@@ -176,7 +212,12 @@ describe("main() guards", () => {
   it("exits 1 on http prod URL before fetch even with --readonly", async () => {
     let fetched = false;
     const code = await main(
-      ["--base-url=http://www.ipix.co", "--readonly", "--skip-browser"],
+      [
+        "--base-url=http://www.ipix.co",
+        "--readonly",
+        "--skip-browser",
+        "--out=/tmp/verify-copilot-ut-http",
+      ],
       {
         fetchImpl: async () => {
           fetched = true;
@@ -225,7 +266,12 @@ describe("main() guards", () => {
   it("exits 1 on malformed --header before fetch", async () => {
     let fetched = false;
     const code = await main(
-      ["--base-url=https://example.workers.dev", "--header=bad", "--skip-browser"],
+      [
+        "--base-url=https://example.workers.dev",
+        "--header=bad",
+        "--skip-browser",
+        "--out=/tmp/verify-copilot-ut-hdr",
+      ],
       {
         fetchImpl: async () => {
           fetched = true;
@@ -243,6 +289,7 @@ describe("main() guards", () => {
         "--base-url=https://example.workers.dev",
         "--expect-version=ver-1",
         "--skip-browser",
+        "--out=/tmp/verify-copilot-ut-ver",
       ],
       {
         fetchImpl: async () =>
@@ -250,6 +297,25 @@ describe("main() guards", () => {
             status: 401,
             headers: { "content-type": "application/json" },
           }),
+      },
+    );
+    assert.equal(code, 1);
+  });
+
+  it("rejects empty --expect-version (fail closed)", () => {
+    assert.throws(() => parseArgs(["--expect-version="]), /non-empty/);
+  });
+
+  it("fails preflight-only on 302 (inconclusive)", async () => {
+    const code = await main(
+      [
+        "--base-url=https://example.workers.dev",
+        "--skip-browser",
+        "--out=/tmp/verify-copilot-ut-302",
+      ],
+      {
+        fetchImpl: async () =>
+          new Response("", { status: 302, headers: { location: "/login" } }),
       },
     );
     assert.equal(code, 1);

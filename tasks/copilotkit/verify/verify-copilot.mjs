@@ -40,9 +40,19 @@ const PROD_HOST_RE = /^(?:www\.)?ipix\.co$/i;
 const LOCAL_HTTP_HOST_RE = /^(?:localhost|127\.0\.0\.1|\[::1\])$/i;
 /** RFC 7230 token for header field-name (no CR/LF/colon). */
 const HEADER_NAME_RE = /^[!#$%&'*+\-.^_`|~0-9A-Za-z]+$/;
+/** Refuse secret-bearing names — HAR / Playwright must not ingest these via --header. */
+export const SECRET_HEADER_NAME_RE =
+  /^(?:authorization|proxy-authorization|cookie|set-cookie|x-api-key|x-auth-token)$/i;
 const MAX_HEADER_NAME_LEN = 256;
 const MAX_HEADER_VALUE_LEN = 8_192;
 const MAX_SPAWN_LOG_CHARS = 32_000;
+
+function requireArgValue(argv, i, flag) {
+  if (i + 1 >= argv.length || String(argv[i + 1]).startsWith("--")) {
+    throw new Error(`Missing value for ${flag}`);
+  }
+  return argv[i + 1];
+}
 
 export function parseArgs(argv) {
   const opts = {
@@ -53,6 +63,7 @@ export function parseArgs(argv) {
     out: DEFAULT_OUT,
     headers: [],
     expectVersion: null,
+    expectVersionSet: false,
     skipBrowser: false,
   };
   for (let i = 0; i < argv.length; i++) {
@@ -61,24 +72,46 @@ export function parseArgs(argv) {
     else if (a === "--readonly") opts.readonly = true;
     else if (a === "--skip-browser") opts.skipBrowser = true;
     else if (a.startsWith("--base-url=")) opts.baseUrl = a.slice("--base-url=".length);
-    else if (a === "--base-url") opts.baseUrl = argv[++i];
-    else if (a.startsWith("--browser=")) opts.browser = a.slice("--browser=".length);
-    else if (a === "--browser") opts.browser = argv[++i];
-    else if (a.startsWith("--out=")) opts.out = a.slice("--out=".length);
-    else if (a === "--out") opts.out = argv[++i];
-    else if (a.startsWith("--header=")) opts.headers.push(a.slice("--header=".length));
-    else if (a === "--header") opts.headers.push(argv[++i]);
-    else if (a.startsWith("--expect-version="))
+    else if (a === "--base-url") {
+      opts.baseUrl = requireArgValue(argv, i, "--base-url");
+      i++;
+    } else if (a.startsWith("--browser=")) opts.browser = a.slice("--browser=".length);
+    else if (a === "--browser") {
+      opts.browser = requireArgValue(argv, i, "--browser");
+      i++;
+    } else if (a.startsWith("--out=")) opts.out = a.slice("--out=".length);
+    else if (a === "--out") {
+      opts.out = requireArgValue(argv, i, "--out");
+      i++;
+    } else if (a.startsWith("--header=")) opts.headers.push(a.slice("--header=".length));
+    else if (a === "--header") {
+      opts.headers.push(requireArgValue(argv, i, "--header"));
+      i++;
+    } else if (a.startsWith("--expect-version=")) {
       opts.expectVersion = a.slice("--expect-version=".length);
-    else if (a === "--expect-version") opts.expectVersion = argv[++i];
-    else throw new Error(`Unknown argument: ${a}`);
+      opts.expectVersionSet = true;
+    } else if (a === "--expect-version") {
+      opts.expectVersion = requireArgValue(argv, i, "--expect-version");
+      opts.expectVersionSet = true;
+      i++;
+    } else throw new Error(`Unknown argument: ${a}`);
+  }
+  if (opts.expectVersionSet && !String(opts.expectVersion ?? "").trim()) {
+    throw new Error("--expect-version requires a non-empty value");
   }
   return opts;
 }
 
+/** Lowercase hostname with trailing DNS root dot stripped (WHATWG keeps the dot). */
+export function normalizeHostname(hostname) {
+  return String(hostname || "")
+    .toLowerCase()
+    .replace(/\.$/, "");
+}
+
 export function hostnameOf(baseUrl) {
   try {
-    return new URL(baseUrl).hostname.toLowerCase();
+    return normalizeHostname(new URL(baseUrl).hostname);
   } catch {
     return "";
   }
@@ -100,7 +133,7 @@ export function assertReadonlyGuard({ baseUrl, readonly }) {
     };
   }
 
-  const host = parsed.hostname.toLowerCase();
+  const host = normalizeHostname(parsed.hostname);
   const isLocalHttpOk = LOCAL_HTTP_HOST_RE.test(host);
   if (parsed.protocol !== "https:" && !(parsed.protocol === "http:" && isLocalHttpOk)) {
     return {
@@ -127,6 +160,7 @@ export function assertReadonlyGuard({ baseUrl, readonly }) {
 /**
  * Parse repeated `--header='Name: value'` into one object used by preflight + Playwright.
  * Malformed / unsafe entries throw before any network access.
+ * Error messages never echo raw values (may contain secrets).
  */
 export function headersToObject(headerArgs) {
   const out = {};
@@ -135,19 +169,27 @@ export function headersToObject(headerArgs) {
       throw new Error('Invalid --header (empty); need "Name: value"');
     }
     const idx = raw.indexOf(":");
-    if (idx < 0) throw new Error(`Invalid --header (need "Name: value"): ${raw}`);
+    if (idx < 0) {
+      throw new Error('Invalid --header (need "Name: value"; raw argument omitted from logs)');
+    }
     const name = raw.slice(0, idx).trim();
     const value = raw.slice(idx + 1).trim();
-    if (!name) throw new Error(`Invalid --header name: ${raw}`);
-    if (!value) throw new Error(`Invalid --header value (empty): ${raw}`);
+    if (!name) throw new Error("Invalid --header name (empty)");
+    if (!value) throw new Error(`Invalid --header value (empty) for ${name}`);
     if (name.length > MAX_HEADER_NAME_LEN) {
       throw new Error(`Invalid --header name (too long, max ${MAX_HEADER_NAME_LEN})`);
     }
     if (value.length > MAX_HEADER_VALUE_LEN) {
-      throw new Error(`Invalid --header value (too long, max ${MAX_HEADER_VALUE_LEN})`);
+      throw new Error(`Invalid --header value (too long, max ${MAX_HEADER_VALUE_LEN}) for ${name}`);
     }
     if (!HEADER_NAME_RE.test(name)) {
-      throw new Error(`Invalid --header name (illegal characters): ${name}`);
+      throw new Error("Invalid --header name (illegal characters)");
+    }
+    if (SECRET_HEADER_NAME_RE.test(name)) {
+      throw new Error(
+        `Invalid --header: refusing secret-bearing name "${name}" ` +
+          "(use non-secret version-override / CF access headers only)",
+      );
     }
     // Reject CR/LF / NUL and other controls — header injection / log corruption.
     if (/[\u0000-\u001f\u007f]/.test(value)) {
@@ -306,10 +348,11 @@ export async function main(argv = process.argv.slice(2), deps = {}) {
   }
 
   const baseUrl = opts.baseUrl.replace(/\/$/, "");
+  const outDir = resolve(REPO_ROOT, opts.out);
   const guard = assertReadonlyGuard({ baseUrl, readonly: opts.readonly });
   if (!guard.ok) {
     console.error(guard.message);
-    writeSummary(resolve(REPO_ROOT, opts.out), {
+    writeSummary(outDir, {
       pass: false,
       stage: "readonly_guard",
       message: guard.message,
@@ -323,7 +366,7 @@ export async function main(argv = process.argv.slice(2), deps = {}) {
     headerObj = headersToObject(opts.headers);
   } catch (e) {
     console.error(`FAIL: ${e.message}`);
-    writeSummary(resolve(REPO_ROOT, opts.out), {
+    writeSummary(outDir, {
       pass: false,
       stage: "header_parse",
       message: String(e.message),
@@ -339,7 +382,7 @@ export async function main(argv = process.argv.slice(2), deps = {}) {
   } catch (e) {
     const msg = e?.name === "AbortError" ? `timeout after ${INFO_TIMEOUT_MS}ms` : String(e?.message || e);
     console.error(`FAIL (preflight): ${msg}`);
-    writeSummary(resolve(REPO_ROOT, opts.out), {
+    writeSummary(outDir, {
       pass: false,
       stage: "preflight",
       message: msg,
@@ -352,12 +395,21 @@ export async function main(argv = process.argv.slice(2), deps = {}) {
       (info.versionHeader ? ` version=${info.versionHeader}` : ""),
   );
 
-  // Healthy anon contract: 401. 302 = Vercel SSO (document; not Worker preview).
-  if (info.status !== 401 && info.status !== 302) {
-    console.error(
-      `FAIL (preflight): unexpected anon /info status ${info.status} (expect 401; 302 = SSO/Vercel)`,
+  // Healthy anon contract: 401. 302 = Vercel SSO — never a preflight_only pass.
+  if (info.status === 401) {
+    /* ok */
+  } else if (info.status === 302 && !opts.skipBrowser) {
+    console.warn(
+      "WARN (preflight): anon /info 302 (SSO/Vercel) — continuing to browser; not a Worker-preview 401",
     );
-    writeSummary(resolve(REPO_ROOT, opts.out), {
+  } else {
+    console.error(
+      `FAIL (preflight): unexpected anon /info status ${info.status}` +
+        (opts.skipBrowser
+          ? " (preflight-only requires 401; 302 is inconclusive)"
+          : " (expect 401; 302 = SSO/Vercel only with browser)"),
+    );
+    writeSummary(outDir, {
       pass: false,
       stage: "preflight",
       info,
@@ -366,12 +418,12 @@ export async function main(argv = process.argv.slice(2), deps = {}) {
     return 1;
   }
 
-  if (opts.expectVersion) {
+  if (opts.expectVersionSet) {
     if (!versionMatches(info.versionHeader, opts.expectVersion)) {
       console.error(
         `FAIL (expect-version): wanted ${opts.expectVersion}, got ${info.versionHeader ?? "(missing)"}`,
       );
-      writeSummary(resolve(REPO_ROOT, opts.out), {
+      writeSummary(outDir, {
         pass: false,
         stage: "expect_version",
         expected: opts.expectVersion,
@@ -383,7 +435,6 @@ export async function main(argv = process.argv.slice(2), deps = {}) {
     }
   }
 
-  const outDir = resolve(REPO_ROOT, opts.out);
   mkdirSync(outDir, { recursive: true });
 
   if (opts.skipBrowser) {
@@ -409,6 +460,7 @@ export async function main(argv = process.argv.slice(2), deps = {}) {
     ...process.env,
     BASE_URL: baseUrl,
     VERIFY_READONLY: opts.readonly ? "1" : "0",
+    VERIFY_OUT: outDir,
   };
   if (Object.keys(headerObj).length > 0) {
     env.VERIFY_EXTRA_HEADERS = JSON.stringify(headerObj);
@@ -457,18 +509,26 @@ export async function main(argv = process.argv.slice(2), deps = {}) {
 
   const exitCode = typeof result.status === "number" ? result.status : 1;
 
-  const runnerMeta = join(
-    REPO_ROOT,
-    "tasks/cloudflare/tests/ipi-724-e2e-preview-journey/metadata.json",
-  );
+  // Prefer VERIFY_OUT metadata; fall back to legacy runner-dir path.
+  const runnerMetaCandidates = [
+    join(outDir, "metadata.json"),
+    join(
+      REPO_ROOT,
+      "tasks/cloudflare/tests/ipi-724-e2e-preview-journey/metadata.json",
+    ),
+  ];
   let hardAcPass = null;
-  if (existsSync(runnerMeta)) {
+  for (const runnerMeta of runnerMetaCandidates) {
+    if (!existsSync(runnerMeta)) continue;
     try {
       const meta = JSON.parse(readFileSync(runnerMeta, "utf8"));
       hardAcPass = meta.hard_ac_pass ?? null;
-      copyFileSync(runnerMeta, join(outDir, "ipi-724-metadata.json"));
+      if (runnerMeta !== join(outDir, "ipi-724-metadata.json")) {
+        copyFileSync(runnerMeta, join(outDir, "ipi-724-metadata.json"));
+      }
+      break;
     } catch {
-      /* ignore */
+      /* try next */
     }
   }
 
@@ -493,5 +553,10 @@ const isMain =
   resolve(process.argv[1]) === fileURLToPath(import.meta.url);
 
 if (isMain) {
-  main().then((code) => process.exit(code));
+  main()
+    .then((code) => process.exit(code))
+    .catch((err) => {
+      console.error(`FAIL: ${err?.message || err}`);
+      process.exit(1);
+    });
 }
