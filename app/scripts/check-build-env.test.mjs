@@ -107,12 +107,13 @@ describe("loadBuildEnv", () => {
   });
 
   it("treats a missing file as an empty env", () => {
-    const { merged, filePath } = loadBuildEnv({
+    const { merged, filePath, fileFound } = loadBuildEnv({
       env: {},
       envFile: join(tmpdir(), "does-not-exist.env"),
     });
     expect(merged).toEqual({});
-    expect(filePath).toBeNull();
+    expect(filePath).toBe(join(tmpdir(), "does-not-exist.env"));
+    expect(fileFound).toBe(false);
   });
 
   it("expands file references against process.env (missing ref → empty → caught)", () => {
@@ -247,6 +248,13 @@ describe("CLI integration", () => {
     expect(result.status).toBe(1);
     expect(result.stderr).toContain("NEXT_PUBLIC_SUPABASE_URL");
     expect(result.stderr).toContain("NEXT_PUBLIC_SUPABASE_ANON_KEY");
+  });
+
+  it("reports the actual BUILD_ENV_FILE path when it is missing", () => {
+    const missing = join(tmpdir(), "missing-build-env.env");
+    const result = runCli(missing);
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain(missing);
   });
 
   it("still fails when the caller exports the required vars (isolation)", () => {

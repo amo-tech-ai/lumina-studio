@@ -15,7 +15,7 @@
 
 import { readFileSync } from "node:fs";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import { dirname, join } from "node:path";
+import { dirname, join, resolve } from "node:path";
 
 const scriptsDir = dirname(fileURLToPath(import.meta.url));
 const appDir = dirname(scriptsDir);
@@ -130,8 +130,8 @@ function tryReadEnvFile(path) {
  * @param {object} [options]
  * @param {NodeJS.ProcessEnv} [options.env]
  * @param {string} [options.envFile]
- * @returns {{ merged: Record<string, string | undefined>; filePath: string | null }}
- */
+  * @returns {{ merged: Record<string, string | undefined>; filePath: string; fileFound: boolean }}
+  */
 export function loadBuildEnv({ env = process.env, envFile } = {}) {
   const filePath =
     envFile ?? env.BUILD_ENV_FILE ?? join(appDir, ".env.local");
@@ -149,7 +149,7 @@ export function loadBuildEnv({ env = process.env, envFile } = {}) {
       }
     }
   }
-  return { merged, filePath: fileEnv === null ? null : filePath };
+  return { merged, filePath, fileFound: fileEnv !== null };
 }
 
 /**
@@ -210,7 +210,7 @@ export function formatBuildEnvReport(result) {
 }
 
 function main() {
-  const { merged, filePath } = loadBuildEnv();
+  const { merged, filePath, fileFound } = loadBuildEnv();
   const result = checkBuildEnv(merged);
   const report = formatBuildEnvReport(result);
   if (result.ok) {
@@ -218,9 +218,9 @@ function main() {
     return 0;
   }
   console.error(report);
-  if (filePath === null) {
+  if (!fileFound) {
     console.error(
-      `  (no env file at ${join(appDir, ".env.local")} — create it from app/.env.example`,
+      `  (no env file at ${filePath} — create it from app/.env.example`,
       `  and fill the required values, or export them before re-running deploy)`,
     );
   }
@@ -229,7 +229,7 @@ function main() {
 
 const isMain =
   process.argv[1] !== undefined &&
-  import.meta.url === pathToFileURL(process.argv[1]).href;
+  import.meta.url === pathToFileURL(resolve(process.argv[1])).href;
 if (isMain) {
   process.exitCode = main();
 }
