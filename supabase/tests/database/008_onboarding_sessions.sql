@@ -107,6 +107,12 @@ begin
   end if;
 
   if v_session.status = 'materialized' then
+    if v_session.current_screen < 12 then
+      perform set_config('app.onboarding_materializing', 'on', true);
+      update public.onboarding_sessions
+         set current_screen = 12
+       where id = v_session.id;
+    end if;
     return jsonb_build_object('organization_id', v_session.organization_id,
                               'brand_id',        v_session.brand_id);
   end if;
@@ -127,7 +133,8 @@ begin
   update public.onboarding_sessions
      set status = 'materialized',
          organization_id = v_org_id,
-         brand_id = v_brand_id
+         brand_id = v_brand_id,
+         current_screen = 12
    where id = v_session.id;
 
   return jsonb_build_object('organization_id', v_org_id, 'brand_id', v_brand_id);
@@ -136,7 +143,7 @@ end $$;
 revoke execute on function public.materialize_onboarding_session(text, text, text) from public, anon;
 grant  execute on function public.materialize_onboarding_session(text, text, text) to authenticated;
 
-select plan(17);
+select plan(18);
 
 insert into auth.users (id, email) values
   ('00000000-0000-4000-8000-000000000c01', 'ipi832-owner@test.local'),
@@ -307,6 +314,14 @@ select is(
        and idempotency_key = 'ipi832-key-ok'),
   'materialized',
   'successful materialize sets status = materialized'
+);
+
+select is(
+  (select current_screen from public.onboarding_sessions
+     where user_id = '00000000-0000-4000-8000-000000000c01'
+       and idempotency_key = 'ipi832-key-ok'),
+  12::smallint,
+  'successful materialize persists analysis screen (12)'
 );
 
 reset role;
