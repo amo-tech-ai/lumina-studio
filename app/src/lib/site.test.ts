@@ -69,4 +69,17 @@ describe("canonicalUrl (IPI-902 · CF-MKT-002)", () => {
     const { canonicalUrl } = await import("./site");
     expect(canonicalUrl("/services/amazon")).toBe("https://www.ipix.co/services/amazon");
   });
+
+  it("never emits a custom staging domain into canonical URLs", async () => {
+    vi.stubEnv("NEXT_PUBLIC_SITE_URL", "https://preview.fashionos.co");
+    const { canonicalUrl } = await import("./site");
+    expect(canonicalUrl("/services/shopify")).toBe("https://www.ipix.co/services/shopify");
+  });
+
+  it("exposes the immutable production origin used by all SEO outputs", async () => {
+    vi.stubEnv("NEXT_PUBLIC_SITE_URL", "https://preview.fashionos.co");
+    const { PRODUCTION_SITE_URL, SITE_URL } = await import("./site");
+    expect(PRODUCTION_SITE_URL).toBe("https://www.ipix.co");
+    expect(SITE_URL).toBe("https://preview.fashionos.co");
+  });
 });

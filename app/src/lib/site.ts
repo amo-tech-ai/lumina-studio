@@ -31,8 +31,16 @@ export function normalizeSiteUrl(raw: string | undefined): string {
 
 export const SITE_URL = normalizeSiteUrl(process.env.NEXT_PUBLIC_SITE_URL);
 
+// Immutable production origin for all SEO outputs (IPI-902 · CF-MKT-002):
+// canonical tags, sitemap entries, and the robots sitemap reference must always
+// point at https://www.ipix.co. SITE_URL may be overridden per environment for
+// metadataBase (OG image resolution), but SEO URLs never follow it — a custom
+// staging/preview domain (e.g. preview.fashionos.co) or a worker preview host
+// can never leak into search signals.
+export const PRODUCTION_SITE_URL = DEFAULT_SITE_URL;
+
 // Absolute canonical URL for a public marketing route. Always resolves against
-// the canonical production host (SITE_URL) — page files never hardcode a host.
+// the immutable production origin — page files never hardcode a host.
 export function canonicalUrl(path = "/"): string {
-  return new URL(path, SITE_URL).toString();
+  return new URL(path, PRODUCTION_SITE_URL).toString();
 }
