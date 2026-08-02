@@ -45,6 +45,10 @@ begin
   end if;
 
   if v_session.status = 'materialized' then
+    -- Fail closed: org/brand columns are nullable; no CHECK ties them to status.
+    if v_session.organization_id is null or v_session.brand_id is null then
+      raise exception 'materialized session is incomplete' using errcode = 'P0002';
+    end if;
     -- IPI-903: heal sessions stuck below analysis (screen 12).
     if v_session.current_screen < 12 then
       perform set_config('app.onboarding_materializing', 'on', true);
@@ -71,6 +75,9 @@ begin
      where user_id = v_uid and idempotency_key = p_idempotency_key;
 
     if found and v_session.status = 'materialized' then
+      if v_session.organization_id is null or v_session.brand_id is null then
+        raise exception 'materialized session is incomplete' using errcode = 'P0002';
+      end if;
       if v_session.current_screen < 12 then
         perform set_config('app.onboarding_materializing', 'on', true);
         update public.onboarding_sessions
