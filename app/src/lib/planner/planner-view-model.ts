@@ -125,6 +125,168 @@ export function groupTasksByPhase(tasks: PlannerTask[]): Map<string, PlannerTask
   return grouped;
 }
 
+/** Synthetic column key for tasks with null `phase_id` (IPI-580 Unassigned). */
+export const UNASSIGNED_COLUMN_KEY = "__unassigned__";
+
+export type TaskStatusTone = "todo" | "in_progress" | "blocked" | "done" | "cancelled" | "neutral";
+
+export interface TaskStatusChip {
+  label: string;
+  tone: TaskStatusTone;
+}
+
+const TASK_STATUS_CHIPS: Record<PlannerTaskStatus, TaskStatusChip> = {
+  todo: { label: "To Do", tone: "todo" },
+  in_progress: { label: "In Progress", tone: "in_progress" },
+  blocked: { label: "Blocked", tone: "blocked" },
+  done: { label: "Done", tone: "done" },
+  cancelled: { label: "Cancelled", tone: "cancelled" },
+};
+
+/** Status chip for Kanban/List cards — unknown values become a neutral chip. */
+export function resolveTaskStatusChip(status: string): TaskStatusChip {
+  const known = TASK_STATUS_CHIPS[status as PlannerTaskStatus];
+  if (known) return known;
+  return { label: status.trim() ? status : "Unknown", tone: "neutral" };
+}
+
+export interface KanbanColumn {
+  key: string;
+  label: string;
+  phase: PlannerPhase | null;
+  tasks: PlannerTask[];
+  /** Phase aggregate status for the column header dot (SCR-32 `barVis`). */
+  status: PhaseTimelineStatus;
+  gate: GateVisualState | null;
+}
+
+export interface KanbanModel {
+  columns: KanbanColumn[];
+}
+
+function sortTasks(tasks: PlannerTask[]): PlannerTask[] {
+  return [...tasks].sort((a, b) => a.sortOrder - b.sortOrder || a.id.localeCompare(b.id));
+}
+
+/**
+ * IPI-580 · PLN-S1C — Kanban columns = workflow phases (ordered), plus an
+ * Unassigned column when any task has null `phase_id`. Empty phase columns
+ * stay visible (count 0). Takes the TimelineModel so phase status/gate share
+ * one aggregation path with the Timeline (no second transform).
+ */
+export function buildKanbanModel(timeline: TimelineModel, tasks: PlannerTask[]): KanbanModel {
+  const byPhase = groupTasksByPhase(tasks);
+
+  const columns: KanbanColumn[] = timeline.phases.map((row) => ({
+    key: row.phase.id,
+    label: row.phase.name,
+    phase: row.phase,
+    tasks: sortTasks(byPhase.get(row.phase.id) ?? []),
+    status: row.status,
+    gate: row.gate,
+  }));
+
+  const unassigned = sortTasks(tasks.filter((task) => !task.phaseId));
+  if (unassigned.length > 0) {
+    columns.push({
+      key: UNASSIGNED_COLUMN_KEY,
+      label: "Unassigned",
+      phase: null,
+      tasks: unassigned,
+      status: "todo",
+      gate: null,
+    });
+  }
+
+  return { columns };
+}
+
+export interface PlannerTaskView {
+  task: PlannerTask;
+  phaseId: string | null;
+  phaseName: string;
+  status: TaskStatusChip;
+  datesLabel: string;
+  durationLabel: string;
+  priorityLabel: string;
+  ownerLabel: string;
+}
+
+const PRIORITY_LABELS: Record<string, string> = {
+  low: "Low",
+  medium: "Medium",
+  high: "High",
+  critical: "Critical",
+};
+
+/**
+ * Owner avatar initials for Kanban + List.
+ * Prefer assigneeRole; when only assigneeUserId is set (mutation shape without
+ * role/display metadata), show an assigned placeholder — never "—" (unassigned).
+ */
+export function resolveOwnerInitials(
+  task: Pick<PlannerTask, "assigneeRole" | "assigneeUserId">,
+): string {
+  if (task.assigneeRole) {
+    const parts = task.assigneeRole.split(/[\s_-]+/).filter(Boolean);
+    if (parts.length >= 2) return (parts[0]![0]! + parts[1]![0]!).toUpperCase();
+    return task.assigneeRole.slice(0, 2).toUpperCase();
+  }
+  // ponytail: PlannerTask has no assignee displayName — upgrade when payload carries one.
+  if (task.assigneeUserId) return "··";
+  return "—";
+}
+
+function taskDatesLabel(task: PlannerTask): string {
+  const start = parsePlanDate(task.startDate);
+  const end = parsePlanDate(task.endDate);
+  if (!start && !end) return "—";
+  if (start && end) return `${formatPlanDateShort(start)}–${formatPlanDateShort(end)}`;
+  if (start) return formatPlanDateShort(start);
+  return formatPlanDateShort(end!);
+}
+
+function taskDurationLabel(task: PlannerTask): string {
+  if (task.durationDays !== null && task.durationDays !== undefined) {
+    return `${task.durationDays}d`;
+  }
+  const start = parsePlanDate(task.startDate);
+  const end = parsePlanDate(task.endDate);
+  if (start && end) {
+    const span = daysBetween(start, end);
+    if (span >= 0) return `${span + 1}d`;
+  }
+  return "—";
+}
+
+/**
+ * IPI-580 · PLN-S1C — flat List rows from the same phases/tasks payload.
+ * Order: workflow phase order, then task sortOrder; Unassigned last.
+ */
+export function buildTaskViews(phases: PlannerPhase[], tasks: PlannerTask[]): PlannerTaskView[] {
+  const ordered = [...phases].sort((a, b) => a.orderIndex - b.orderIndex);
+  const phaseName = new Map(ordered.map((phase) => [phase.id, phase.name]));
+  const phaseRank = new Map(ordered.map((phase, index) => [phase.id, index]));
+
+  return [...tasks]
+    .sort((a, b) => {
+      const rankA = a.phaseId ? (phaseRank.get(a.phaseId) ?? Number.MAX_SAFE_INTEGER) : Number.MAX_SAFE_INTEGER;
+      const rankB = b.phaseId ? (phaseRank.get(b.phaseId) ?? Number.MAX_SAFE_INTEGER) : Number.MAX_SAFE_INTEGER;
+      if (rankA !== rankB) return rankA - rankB;
+      return a.sortOrder - b.sortOrder || a.id.localeCompare(b.id);
+    })
+    .map((task) => ({
+      task,
+      phaseId: task.phaseId,
+      phaseName: task.phaseId ? (phaseName.get(task.phaseId) ?? "Unknown step") : "Unassigned",
+      status: resolveTaskStatusChip(task.status),
+      datesLabel: taskDatesLabel(task),
+      durationLabel: taskDurationLabel(task),
+      priorityLabel: PRIORITY_LABELS[task.priority] ?? task.priority,
+      ownerLabel: resolveOwnerInitials(task),
+    }));
+}
+
 const INCOMPLETE: ReadonlySet<PlannerTaskStatus> = new Set(["todo", "in_progress", "blocked"]);
 
 function isIncomplete(task: PlannerTask): boolean {

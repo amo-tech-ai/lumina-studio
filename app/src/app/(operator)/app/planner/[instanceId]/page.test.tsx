@@ -15,10 +15,20 @@ vi.mock("@/lib/planner/queries", () => ({
 
 vi.mock("@/lib/planner/planner-view-model", () => ({
   buildTimelineModel: vi.fn(() => ({ phases: [] })),
+  buildKanbanModel: vi.fn(() => ({ columns: [] })),
+  buildTaskViews: vi.fn(() => []),
 }));
 
 vi.mock("@/components/planner/planner-timeline", () => ({
   PlannerTimeline: () => null,
+}));
+
+vi.mock("@/components/planner/planner-kanban", () => ({
+  PlannerKanban: () => null,
+}));
+
+vi.mock("@/components/planner/planner-list", () => ({
+  PlannerList: () => null,
 }));
 
 vi.mock("@/components/planner/planner-workspace-shell", () => ({

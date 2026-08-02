@@ -1,7 +1,15 @@
 import { describe, expect, it } from "vitest";
 
 import type { PlannerPhase, PlannerTask } from "./types";
-import { buildTimelineModel, groupTasksByPhase } from "./planner-view-model";
+import {
+  buildKanbanModel,
+  buildTaskViews,
+  buildTimelineModel,
+  groupTasksByPhase,
+  resolveOwnerInitials,
+  resolveTaskStatusChip,
+  UNASSIGNED_COLUMN_KEY,
+} from "./planner-view-model";
 
 const TODAY = "2026-03-12";
 
@@ -49,6 +57,89 @@ describe("groupTasksByPhase", () => {
     ]);
     expect(grouped.get("ph-1")?.map((t) => t.id)).toEqual(["a", "c"]);
     expect(grouped.get("ph-2")?.map((t) => t.id)).toEqual(["b"]);
+  });
+});
+
+describe("IPI-580 · Kanban/List view-model helpers", () => {
+  const phases = [
+    phase({ id: "ph-brief", slug: "brief", name: "Brief", orderIndex: 1, gateType: null }),
+    phase({
+      id: "ph-casting",
+      slug: "casting",
+      name: "Casting",
+      orderIndex: 2,
+      gateType: "approval",
+      requiredRole: "manager",
+    }),
+    phase({ id: "ph-empty", slug: "empty", name: "Empty step", orderIndex: 3, gateType: null }),
+  ];
+
+  it("buildKanbanModel keeps empty phase columns and puts null phase_id in Unassigned", () => {
+    const tasks = [
+      task({ id: "a", phaseId: "ph-brief", sortOrder: 1, status: "done" }),
+      task({ id: "b", phaseId: "ph-casting", sortOrder: 0, status: "todo" }),
+      task({ id: "c", phaseId: null, title: "Orphan task", sortOrder: 0 }),
+    ];
+    const timeline = buildTimelineModel(phases, tasks, TODAY);
+    const kanban = buildKanbanModel(timeline, tasks);
+
+    expect(kanban.columns.map((c) => c.label)).toEqual([
+      "Brief",
+      "Casting",
+      "Empty step",
+      "Unassigned",
+    ]);
+    expect(kanban.columns.find((c) => c.key === "ph-empty")?.tasks).toEqual([]);
+    expect(kanban.columns.find((c) => c.key === UNASSIGNED_COLUMN_KEY)?.tasks.map((t) => t.id)).toEqual([
+      "c",
+    ]);
+  });
+
+  it("buildKanbanModel preserves workflow orderIndex, not insertion order", () => {
+    const shuffled = [phases[2]!, phases[0]!, phases[1]!];
+    const timeline = buildTimelineModel(shuffled, [], TODAY);
+    const kanban = buildKanbanModel(timeline, []);
+    expect(kanban.columns.map((c) => c.label)).toEqual(["Brief", "Casting", "Empty step"]);
+  });
+
+  it("resolveTaskStatusChip maps known statuses and unknowns to neutral", () => {
+    expect(resolveTaskStatusChip("done")).toEqual({ label: "Done", tone: "done" });
+    expect(resolveTaskStatusChip("weird_status")).toEqual({
+      label: "weird_status",
+      tone: "neutral",
+    });
+  });
+
+  it("buildTaskViews orders by phase then sortOrder and labels Unassigned", () => {
+    const rows = buildTaskViews(phases, [
+      task({ id: "late", phaseId: "ph-casting", sortOrder: 2, title: "Later" }),
+      task({ id: "early", phaseId: "ph-casting", sortOrder: 1, title: "Earlier" }),
+      task({ id: "orphan", phaseId: null, title: "Loose" }),
+      task({ id: "brief", phaseId: "ph-brief", sortOrder: 0, title: "Brief task" }),
+    ]);
+    expect(rows.map((r) => r.task.id)).toEqual(["brief", "early", "late", "orphan"]);
+    expect(rows.find((r) => r.task.id === "orphan")?.phaseName).toBe("Unassigned");
+  });
+});
+
+describe("resolveOwnerInitials", () => {
+  it("derives initials from assigneeRole", () => {
+    expect(resolveOwnerInitials(task({ assigneeRole: "producer" }))).toBe("PR");
+    expect(resolveOwnerInitials(task({ assigneeRole: "creative_director" }))).toBe("CD");
+  });
+
+  it("does not treat user-id-only assignment as unassigned", () => {
+    expect(
+      resolveOwnerInitials(
+        task({ assigneeRole: null, assigneeUserId: "user-abc" }),
+      ),
+    ).toBe("··");
+  });
+
+  it("uses an em dash only when neither role nor user id is set", () => {
+    expect(
+      resolveOwnerInitials(task({ assigneeRole: null, assigneeUserId: null })),
+    ).toBe("—");
   });
 });
 
