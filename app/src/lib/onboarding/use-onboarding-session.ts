@@ -70,19 +70,20 @@ export function useOnboardingSession(deps: Deps = {}): OnboardingSessionState {
     let cancelled = false;
     const getIdempotencyKey =
       depsRef.current.getIdempotencyKey ?? getOrCreateOnboardingIdempotencyKey;
-    // Reuse one browser client across retries — createBrowserClient is not a singleton,
-    // and a second GoTrueClient per retry races auth storage.
-    if (!supabaseRef.current) {
-      const createClient =
-        depsRef.current.createClient ?? createSupabaseBrowserClient;
-      supabaseRef.current = createClient();
-    }
-    const supabase = supabaseRef.current;
     setBootstrap({ status: "loading" });
     sessionRef.current = null;
 
     (async () => {
       try {
+        // Reuse one browser client across retries — createBrowserClient is not a singleton,
+        // and a second GoTrueClient per retry races auth storage. Create inside try so a
+        // missing-env throw becomes the same retryable error state as auth/RPC failures.
+        if (!supabaseRef.current) {
+          const createClient =
+            depsRef.current.createClient ?? createSupabaseBrowserClient;
+          supabaseRef.current = createClient();
+        }
+        const supabase = supabaseRef.current;
         const {
           data: { user },
           error: authErr,

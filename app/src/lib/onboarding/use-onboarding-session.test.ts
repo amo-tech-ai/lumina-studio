@@ -232,6 +232,25 @@ describe("useOnboardingSession", () => {
     expect(update).not.toHaveBeenCalled();
   });
 
+  it("routes createClient failures into the retryable error state", async () => {
+    const createClient = vi.fn(() => {
+      throw new Error("Missing NEXT_PUBLIC_SUPABASE_URL");
+    });
+    const { result } = renderHook(() =>
+      useOnboardingSession({
+        createClient,
+        getIdempotencyKey: () => KEY,
+      }),
+    );
+
+    await waitFor(() => expect(result.current.status).toBe("error"));
+    if (result.current.status !== "error") throw new Error("expected error");
+    expect(result.current.message).not.toMatch(/NEXT_PUBLIC_SUPABASE_URL|Missing/i);
+    expect(result.current.message).toMatch(/try again/i);
+    expect(typeof result.current.retry).toBe("function");
+    expect(createClient).toHaveBeenCalledTimes(1);
+  });
+
   it("surfaces a safe message on bootstrap failure and retry recovers", async () => {
     let failOnce = true;
     const client = makeClient();
