@@ -196,14 +196,102 @@ describe("AnalysisProgressScreen — IPI-835 · C", () => {
     expect(mockStartBi).toHaveBeenCalled();
   });
 
-  it("source has no setInterval success timer", async () => {
-    const { readFileSync } = await import("node:fs");
-    const { resolve } = await import("node:path");
-    const src = readFileSync(
-      resolve(process.cwd(), "src/components/onboarding/analysis-progress-screen.tsx"),
-      "utf8",
+  it("shows crawl warning and starts BI when kickoff returns crawl_failed", async () => {
+    mockKickoff.mockResolvedValue({
+      kind: "crawl_failed",
+      error: "firecrawl down",
+      startBiNow: true,
+    });
+    mockProgress = {
+      intakeStatus: "brand_created",
+      crawl: null,
+      phase: "live",
+      reconnect: mockReconnect,
+    };
+
+    render(
+      <AnalysisProgressScreen
+        brandId="brand-1"
+        answers={answers}
+        onComplete={vi.fn()}
+        quietGapMs={0}
+      />,
     );
-    expect(src).not.toMatch(/setInterval/);
-    expect(src).not.toMatch(/TICK_MS|STEP_PERCENT|SETTLE_MS/);
+
+    expect(await screen.findByText(/Crawl warning: firecrawl down/i)).toBeTruthy();
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    expect(mockStartBi).toHaveBeenCalledTimes(1);
+  });
+
+  it("starts BI once when crawl_complete arrives after deferred kickoff", async () => {
+    mockKickoff.mockResolvedValue({
+      kind: "crawl_started",
+      crawlId: "crawl-deferred",
+      reused: false,
+      startBiNow: false,
+    });
+    mockProgress = {
+      intakeStatus: "crawl_running",
+      crawl: { pages_crawled: 1, pages_found: 5 },
+      phase: "live",
+      reconnect: mockReconnect,
+    };
+
+    const { rerender } = render(
+      <AnalysisProgressScreen
+        brandId="brand-1"
+        answers={answers}
+        onComplete={vi.fn()}
+        quietGapMs={0}
+      />,
+    );
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+    expect(mockStartBi).not.toHaveBeenCalled();
+
+    mockProgress = {
+      intakeStatus: "crawl_complete",
+      crawl: null,
+      phase: "live",
+      reconnect: mockReconnect,
+    };
+    rerender(
+      <AnalysisProgressScreen
+        brandId="brand-1"
+        answers={answers}
+        onComplete={vi.fn()}
+        quietGapMs={0}
+      />,
+    );
+
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    expect(mockStartBi).toHaveBeenCalledTimes(1);
+    expect(mockStartBi.mock.calls[0][3]).toEqual({ crawlResultId: "crawl-deferred" });
+  });
+
+  it("skips crawl and starts BI when website URL is blank", async () => {
+    render(
+      <AnalysisProgressScreen
+        brandId="brand-1"
+        answers={{ ...answers, websiteUrl: "   " }}
+        onComplete={vi.fn()}
+        quietGapMs={0}
+      />,
+    );
+
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    expect(mockKickoff).not.toHaveBeenCalled();
+    expect(mockStartBi).toHaveBeenCalledTimes(1);
   });
 });

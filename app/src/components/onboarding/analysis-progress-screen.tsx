@@ -116,7 +116,8 @@ function AnalysisProgressLive({
     quietGapMs,
   });
 
-  // Idempotent crawl (+ BI when crawl already done / start failed).
+  // Idempotent crawl (+ BI when crawl already done / start failed / no website).
+  // brandId-gated mount: answers read from answersRef so this does not re-run on draft edits.
   useEffect(() => {
     let cancelled = false;
     const supabase = createSupabaseBrowserClient();
@@ -125,6 +126,16 @@ function AnalysisProgressLive({
 
     (async () => {
       try {
+        // Skip/blank website is allowed in onboarding — do not call start-brand-crawl
+        // (it requires HTTP(S)). Go straight to brand-intelligence.
+        if (!websiteUrl) {
+          if (!biStartedRef.current) {
+            biStartedRef.current = true;
+            await startOnboardingBrandIntelligence(supabase, brandId, form);
+          }
+          return;
+        }
+
         const result = await kickoffOnboardingCrawl(supabase, brandId, websiteUrl);
         if (cancelled) return;
 
@@ -166,6 +177,7 @@ function AnalysisProgressLive({
   }, [brandId]);
 
   // When crawl finishes after a deferred kickoff, start BI once.
+  // brandId + intakeStatus only — answers via answersRef (intentional).
   useEffect(() => {
     if (intakeStatus !== "crawl_complete") return;
     if (biStartedRef.current) return;

@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   isAnalysisReviewable,
   kickoffOnboardingCrawl,
+  startOnboardingBrandIntelligence,
 } from "./kickoff-onboarding-analysis";
 
 const mockInvokeStartBrandCrawl = vi.fn();
@@ -25,6 +26,26 @@ function supabaseWithIntake(intake_status: string | null) {
           maybeSingle: vi.fn().mockResolvedValue({
             data: intake_status == null ? null : { intake_status },
             error: null,
+          }),
+        }),
+      }),
+    }),
+  };
+}
+
+/** Claim path: update…eq…in…select…maybeSingle */
+function supabaseWithClaim(claimed: boolean) {
+  return {
+    from: () => ({
+      update: () => ({
+        eq: () => ({
+          in: () => ({
+            select: () => ({
+              maybeSingle: vi.fn().mockResolvedValue({
+                data: claimed ? { id: "brand-1" } : null,
+                error: null,
+              }),
+            }),
           }),
         }),
       }),
@@ -136,5 +157,38 @@ describe("kickoffOnboardingCrawl", () => {
       startBiNow: false,
     });
     expect(mockInvokeStartBrandCrawl).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("startOnboardingBrandIntelligence", () => {
+  const form = {
+    brandName: "Maison",
+    websiteUrl: "https://maison.example",
+    brandType: "fashion",
+  };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockInvokeBrandIntelligence.mockResolvedValue(undefined);
+  });
+
+  it("invokes BI after claiming analysis_running", async () => {
+    const supabase = supabaseWithClaim(true);
+    await startOnboardingBrandIntelligence(supabase as never, "brand-1", form as never, {
+      crawlResultId: "crawl-1",
+    });
+    expect(mockInvokeBrandIntelligence).toHaveBeenCalledTimes(1);
+    expect(mockInvokeBrandIntelligence.mock.calls[0][3]).toEqual({
+      crawlResultId: "crawl-1",
+    });
+  });
+
+  it("skips BI when another tab already claimed the status", async () => {
+    await startOnboardingBrandIntelligence(
+      supabaseWithClaim(false) as never,
+      "brand-1",
+      form as never,
+    );
+    expect(mockInvokeBrandIntelligence).not.toHaveBeenCalled();
   });
 });

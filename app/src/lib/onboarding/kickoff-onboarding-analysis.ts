@@ -77,13 +77,34 @@ export async function kickoffOnboardingCrawl(
   }
 }
 
-/** Start Gemini/Groq brand-intelligence once crawl content is available (or crawl skipped). */
+/**
+ * Start Gemini/Groq brand-intelligence once crawl content is available (or crawl skipped).
+ *
+ * Claims `analysis_running` with a compare-and-swap so two tabs seeing the same
+ * `crawl_complete` Realtime event cannot both invoke the LLM. Losers no-op.
+ */
 export async function startOnboardingBrandIntelligence(
   supabase: SupabaseClient,
   brandId: string,
   form: OnboardingForm,
   options?: { crawlResultId?: string },
 ): Promise<void> {
+  const { data: claimed, error: claimErr } = await supabase
+    .from("brands")
+    .update({ intake_status: "analysis_running" })
+    .eq("id", brandId)
+    .in("intake_status", ["brand_created", "crawl_running", "crawl_complete"])
+    .select("id")
+    .maybeSingle();
+
+  if (claimErr) {
+    throw new Error(claimErr.message || "Failed to claim brand analysis");
+  }
+  if (!claimed) {
+    // Another tab/session already claimed or analysis is past kickoff.
+    return;
+  }
+
   await invokeBrandIntelligence(supabase, brandId, form, {
     ...(options?.crawlResultId ? { crawlResultId: options.crawlResultId } : {}),
   });
