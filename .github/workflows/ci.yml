@@ -187,6 +187,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # IPI-895 disposable fail-proof — remove with this PR. Marker file forces app-build red.
+      - name: IPI-895 controlled failure (disposable)
+        if: hashFiles('app/.ipi-895-fail-proof') != ''
+        run: |
+          echo "::error::IPI-895 controlled failure — prove required checks block merge. DO NOT MERGE."
+          exit 1
+
       # IPI-789 · NODE-CI-001 / IPI-791 · NODE-RUNTIME-001 — Node 24 + npm 11 match
       # Vercel production (avoids the IPI-788 class of lockfile drift from CI on npm 10).
       # Pin: actions/setup-node@v4.4.0
