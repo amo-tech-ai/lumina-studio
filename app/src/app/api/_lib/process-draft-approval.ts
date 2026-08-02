@@ -1,5 +1,8 @@
 import { createSupabaseAdminClient } from "@/app/api/_lib/supabase-admin";
-import { DRAFT_ACTION_DOMAIN } from "@/lib/brand/draft-action-errors";
+import {
+  DRAFT_ACTION_DOMAIN,
+  DRAFT_ACTION_MESSAGES,
+} from "@/lib/brand/draft-action-errors";
 import { discardBrandDraft } from "@/lib/brand/discard-draft";
 import { promoteBrandDraft } from "@/lib/brand/promote-draft";
 
@@ -8,9 +11,40 @@ export const PENDING_DRAFT_STATUS = "pending_approval";
 /** Brand already promoted/discarded — safe to continue without rolling back draft row. */
 const IDEMPOTENT_DRAFT_STATE_ERROR = DRAFT_ACTION_DOMAIN.NOT_DRAFT_READY;
 
+/** Intentional product / already-sanitized helper messages — never raw PostgREST. */
+const SAFE_DRAFT_ACTION_ERRORS = new Set<string>([
+  DRAFT_ACTION_DOMAIN.NO_DRAFT,
+  DRAFT_ACTION_DOMAIN.INVALID_DNA,
+  DRAFT_ACTION_DOMAIN.NOT_DRAFT_READY,
+  DRAFT_ACTION_MESSAGES.NOT_FOUND,
+  DRAFT_ACTION_MESSAGES.FORBIDDEN,
+  DRAFT_ACTION_MESSAGES.CONFLICT,
+]);
+
 export type ProcessDraftApprovalResult =
   | { ok: true; approved: boolean; brandId: string }
   | { ok: false; error: string };
+
+/**
+ * Never forward raw Supabase/PostgREST strings to API / Server Action / UI callers.
+ * Known domain messages pass through; everything else becomes a generic product error.
+ */
+export function sanitizeDraftActionError(
+  operation: "promote" | "discard",
+  brandId: string,
+  error?: string,
+): string {
+  if (error && SAFE_DRAFT_ACTION_ERRORS.has(error)) {
+    return error;
+  }
+  console.error(`[process-draft-approval] ${operation} failed`, {
+    brandId,
+    error: error ?? null,
+  });
+  return operation === "promote"
+    ? "Unable to approve Brand DNA right now"
+    : "Unable to reject Brand DNA right now";
+}
 
 async function rollbackDraftRow(draftId: string) {
   const { error } = await createSupabaseAdminClient()
@@ -84,7 +118,11 @@ async function resolveIdempotentApproval(params: {
     }
     return {
       ok: false,
-      error: promoteResult.error || "Draft already processed — brand is not ready yet",
+      error: sanitizeDraftActionError(
+        "promote",
+        existing.brand_id,
+        promoteResult.error,
+      ),
     };
   }
 
@@ -101,7 +139,11 @@ async function resolveIdempotentApproval(params: {
   }
   return {
     ok: false,
-    error: discardResult.error || "Draft already processed — brand discard incomplete",
+    error: sanitizeDraftActionError(
+      "discard",
+      existing.brand_id,
+      discardResult.error,
+    ),
   };
 }
 
@@ -185,13 +227,19 @@ export async function processBrandIntelligenceDraftApproval(params: {
     const promoteResult = await promoteBrandDraft(sb, draft.brand_id);
     if (!promoteResult.ok && promoteResult.error !== IDEMPOTENT_DRAFT_STATE_ERROR) {
       await rollbackDraftRow(draft.id);
-      return { ok: false, error: promoteResult.error };
+      return {
+        ok: false,
+        error: sanitizeDraftActionError("promote", draft.brand_id, promoteResult.error),
+      };
     }
   } else {
     const discardResult = await discardBrandDraft(sb, draft.brand_id);
     if (!discardResult.ok && discardResult.error !== IDEMPOTENT_DRAFT_STATE_ERROR) {
       await rollbackDraftRow(draft.id);
-      return { ok: false, error: discardResult.error };
+      return {
+        ok: false,
+        error: sanitizeDraftActionError("discard", draft.brand_id, discardResult.error),
+      };
     }
   }
 

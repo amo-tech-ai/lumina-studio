@@ -30,6 +30,7 @@ const RUN = "run-abc";
 function chain(result: { data: unknown; error: unknown }) {
   const self: Record<string, unknown> = {};
   self.select = () => self;
+  self.update = () => self;
   self.eq = () => self;
   self.single = async () => result;
   self.maybeSingle = async () => result;
@@ -316,7 +317,10 @@ describe("processBrandIntelligenceDraftApproval idempotency (IPI-835 · D)", () 
       operatorId: OPERATOR,
       expectedBrandId: BRAND,
     });
-    expect(result).toEqual({ ok: false, error: "discard failed" });
+    expect(result).toEqual({
+      ok: false,
+      error: "Unable to reject Brand DNA right now",
+    });
   });
 
   it("does not treat idempotent draft lookup errors as not-found", async () => {
@@ -415,5 +419,269 @@ describe("processBrandIntelligenceDraftApproval idempotency (IPI-835 · D)", () 
     });
     expect(result).toEqual({ ok: false, error: "Forbidden" });
     expect(mockPromote).not.toHaveBeenCalled();
+  });
+});
+
+describe("sanitizeDraftActionError / no raw Supabase leakage (IPI-835 · D)", () => {
+  const RAW_PROMOTE =
+    'duplicate key value violates unique constraint "brands_pkey" on table brands';
+  const RAW_DISCARD =
+    'update or delete on table "brands" violates foreign key constraint "fk_org"';
+
+  function pendingDraftThenUpdate() {
+    let draftsCalls = 0;
+    mockFrom.mockImplementation((table: string) => {
+      if (table === "brand_intake_drafts") {
+        draftsCalls += 1;
+        if (draftsCalls === 1) {
+          return chain({
+            data: { id: "d1", brand_id: BRAND, user_id: OPERATOR },
+            error: null,
+          });
+        }
+        // status update CAS success
+        return chain({ data: { id: "d1" }, error: null });
+      }
+      return chain({ data: null, error: null });
+    });
+  }
+
+  function idempotentApprovedStillDraftReady() {
+    let draftsCalls = 0;
+    mockFrom.mockImplementation((table: string) => {
+      if (table === "brand_intake_drafts") {
+        draftsCalls += 1;
+        if (draftsCalls === 1) {
+          return chain({
+            data: null,
+            error: {
+              code: "PGRST116",
+              message: "JSON object requested, multiple (or no) rows returned",
+            },
+          });
+        }
+        return chain({
+          data: {
+            id: "d1",
+            brand_id: BRAND,
+            user_id: OPERATOR,
+            status: "approved",
+          },
+          error: null,
+        });
+      }
+      if (table === "brands") {
+        return chain({ data: { intake_status: "draft_ready" }, error: null });
+      }
+      return chain({ data: null, error: null });
+    });
+  }
+
+  function idempotentRejectedStillDraftReady() {
+    let draftsCalls = 0;
+    mockFrom.mockImplementation((table: string) => {
+      if (table === "brand_intake_drafts") {
+        draftsCalls += 1;
+        if (draftsCalls === 1) {
+          return chain({
+            data: null,
+            error: {
+              code: "PGRST116",
+              message: "JSON object requested, multiple (or no) rows returned",
+            },
+          });
+        }
+        return chain({
+          data: {
+            id: "d1",
+            brand_id: BRAND,
+            user_id: OPERATOR,
+            status: "rejected",
+          },
+          error: null,
+        });
+      }
+      if (table === "brands") {
+        return chain({ data: { intake_status: "draft_ready" }, error: null });
+      }
+      return chain({ data: null, error: null });
+    });
+  }
+
+  it("sanitizeDraftActionError preserves known approve domain errors", async () => {
+    const { sanitizeDraftActionError } = await import("./process-draft-approval");
+    expect(
+      sanitizeDraftActionError("promote", BRAND, "No draft to apply"),
+    ).toBe("No draft to apply");
+    expect(
+      sanitizeDraftActionError(
+        "promote",
+        BRAND,
+        "Brand DNA is incomplete or invalid",
+      ),
+    ).toBe("Brand DNA is incomplete or invalid");
+    expect(
+      sanitizeDraftActionError(
+        "promote",
+        BRAND,
+        "Brand is not in draft_ready state",
+      ),
+    ).toBe("Brand is not in draft_ready state");
+  });
+
+  it("sanitizeDraftActionError maps raw SQL to generic approve/reject copy", async () => {
+    const logSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const { sanitizeDraftActionError } = await import("./process-draft-approval");
+    expect(sanitizeDraftActionError("promote", BRAND, RAW_PROMOTE)).toBe(
+      "Unable to approve Brand DNA right now",
+    );
+    expect(sanitizeDraftActionError("discard", BRAND, RAW_DISCARD)).toBe(
+      "Unable to reject Brand DNA right now",
+    );
+    expect(logSpy).toHaveBeenCalled();
+    const logged = JSON.stringify(logSpy.mock.calls);
+    expect(logged).toContain("brands_pkey");
+    expect(logged).toContain(BRAND);
+    logSpy.mockRestore();
+  });
+
+  it("does not return raw Supabase promote error on idempotent approve", async () => {
+    idempotentApprovedStillDraftReady();
+    mockPromote.mockResolvedValue({ ok: false, error: RAW_PROMOTE });
+    const logSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    const { processBrandIntelligenceDraftApproval } = await import("./process-draft-approval");
+    const result = await processBrandIntelligenceDraftApproval({
+      runId: RUN,
+      approved: true,
+      operatorId: OPERATOR,
+      expectedBrandId: BRAND,
+    });
+    expect(result).toEqual({
+      ok: false,
+      error: "Unable to approve Brand DNA right now",
+    });
+    expect(JSON.stringify(result)).not.toMatch(/constraint|brands_pkey|violates/i);
+    expect(logSpy.mock.calls.some((c) => JSON.stringify(c).includes("brands_pkey"))).toBe(
+      true,
+    );
+    logSpy.mockRestore();
+  });
+
+  it("does not return raw Supabase promote error on normal approve", async () => {
+    pendingDraftThenUpdate();
+    mockPromote.mockResolvedValue({ ok: false, error: RAW_PROMOTE });
+    const logSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    const { processBrandIntelligenceDraftApproval } = await import("./process-draft-approval");
+    const result = await processBrandIntelligenceDraftApproval({
+      runId: RUN,
+      approved: true,
+      operatorId: OPERATOR,
+      expectedBrandId: BRAND,
+    });
+    expect(result).toEqual({
+      ok: false,
+      error: "Unable to approve Brand DNA right now",
+    });
+    expect(JSON.stringify(result)).not.toMatch(/constraint|brands_pkey|violates/i);
+    logSpy.mockRestore();
+  });
+
+  it("preserves known safe approve validation error on normal approve", async () => {
+    pendingDraftThenUpdate();
+    mockPromote.mockResolvedValue({
+      ok: false,
+      error: "Brand DNA is incomplete or invalid",
+    });
+
+    const { processBrandIntelligenceDraftApproval } = await import("./process-draft-approval");
+    const result = await processBrandIntelligenceDraftApproval({
+      runId: RUN,
+      approved: true,
+      operatorId: OPERATOR,
+      expectedBrandId: BRAND,
+    });
+    expect(result).toEqual({
+      ok: false,
+      error: "Brand DNA is incomplete or invalid",
+    });
+  });
+
+  it("does not return raw Supabase discard error on idempotent reject", async () => {
+    idempotentRejectedStillDraftReady();
+    mockDiscard.mockResolvedValue({ ok: false, error: RAW_DISCARD });
+    const logSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    const { processBrandIntelligenceDraftApproval } = await import("./process-draft-approval");
+    const result = await processBrandIntelligenceDraftApproval({
+      runId: RUN,
+      approved: false,
+      operatorId: OPERATOR,
+      expectedBrandId: BRAND,
+    });
+    expect(result).toEqual({
+      ok: false,
+      error: "Unable to reject Brand DNA right now",
+    });
+    expect(JSON.stringify(result)).not.toMatch(/foreign key|fk_org|violates/i);
+    logSpy.mockRestore();
+  });
+
+  it("does not return raw Supabase discard error on normal reject", async () => {
+    pendingDraftThenUpdate();
+    mockDiscard.mockResolvedValue({ ok: false, error: RAW_DISCARD });
+    const logSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    const { processBrandIntelligenceDraftApproval } = await import("./process-draft-approval");
+    const result = await processBrandIntelligenceDraftApproval({
+      runId: RUN,
+      approved: false,
+      operatorId: OPERATOR,
+      expectedBrandId: BRAND,
+    });
+    expect(result).toEqual({
+      ok: false,
+      error: "Unable to reject Brand DNA right now",
+    });
+    expect(JSON.stringify(result)).not.toMatch(/foreign key|fk_org|violates/i);
+    logSpy.mockRestore();
+  });
+
+  it("preserves known safe discard message (FORBIDDEN) on reject", async () => {
+    pendingDraftThenUpdate();
+    mockDiscard.mockResolvedValue({
+      ok: false,
+      error: "You do not have permission to perform this action.",
+    });
+
+    const { processBrandIntelligenceDraftApproval } = await import("./process-draft-approval");
+    const result = await processBrandIntelligenceDraftApproval({
+      runId: RUN,
+      approved: false,
+      operatorId: OPERATOR,
+      expectedBrandId: BRAND,
+    });
+    expect(result).toEqual({
+      ok: false,
+      error: "You do not have permission to perform this action.",
+    });
+  });
+
+  it("NOT_DRAFT_READY on discard is soft-success (not an error leak path)", async () => {
+    pendingDraftThenUpdate();
+    mockDiscard.mockResolvedValue({
+      ok: false,
+      error: "Brand is not in draft_ready state",
+    });
+
+    const { processBrandIntelligenceDraftApproval } = await import("./process-draft-approval");
+    const result = await processBrandIntelligenceDraftApproval({
+      runId: RUN,
+      approved: false,
+      operatorId: OPERATOR,
+      expectedBrandId: BRAND,
+    });
+    expect(result).toEqual({ ok: true, approved: false, brandId: BRAND });
   });
 });
