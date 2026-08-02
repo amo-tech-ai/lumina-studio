@@ -119,7 +119,10 @@ export async function startOnboardingBrandIntelligence(
   }
 
   try {
+    // Slice D — draft_mode so AI writes ai_profile_draft + draft_ready (approvable),
+    // not live scores_complete. Screen 13 promotes via the existing approve path.
     await invokeBrandIntelligence(supabase, brandId, form, {
+      draftMode: true,
       ...(options?.crawlResultId ? { crawlResultId: options.crawlResultId } : {}),
     });
   } catch (err) {

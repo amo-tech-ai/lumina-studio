@@ -1,5 +1,10 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+import {
+  stripBrandProfileMeta,
+  validateBrandProfilePayload,
+} from "@/lib/brand/brand-profile-contract";
+
 /** Promote ai_profile_draft → ai_profile and upsert draft scores. Caller must enforce auth. */
 export async function promoteBrandDraft(
   supabase: SupabaseClient,
@@ -19,6 +24,12 @@ export async function promoteBrandDraft(
   }
 
   const draft = brand.ai_profile_draft as Record<string, unknown>;
+  // IPI-835 · D / IPI-834 — refuse promote when DNA fails the evidence-backed contract.
+  const contractPayload = stripBrandProfileMeta(draft);
+  if (!contractPayload || validateBrandProfilePayload(contractPayload) !== null) {
+    return { ok: false, error: "Brand DNA is incomplete or invalid" };
+  }
+
   const draftScores = Array.isArray(draft._draft_scores)
     ? (draft._draft_scores as Array<Record<string, unknown>>)
     : [];

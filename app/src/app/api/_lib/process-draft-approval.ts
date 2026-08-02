@@ -27,6 +27,47 @@ async function rollbackDraftRow(draftId: string) {
   }
 }
 
+/** Same outcome as a successful first approve/reject when the draft was already processed. */
+async function resolveIdempotentApproval(params: {
+  sb: ReturnType<typeof createSupabaseAdminClient>;
+  runId: string;
+  approved: boolean;
+  operatorId: string;
+  expectedBrandId?: string;
+}): Promise<ProcessDraftApprovalResult> {
+  const { sb, runId, approved, operatorId, expectedBrandId } = params;
+  const targetStatus = approved ? "approved" : "rejected";
+
+  let query = sb
+    .from("brand_intake_drafts")
+    .select("id, brand_id, user_id, status")
+    .eq("draft_profile->>_workflow_run_id", runId)
+    .eq("status", targetStatus);
+  if (expectedBrandId) {
+    query = query.eq("brand_id", expectedBrandId);
+  }
+  const { data: existing } = await query.maybeSingle();
+  if (!existing) {
+    return { ok: false, error: "No pending draft found for this workflow run" };
+  }
+  if (existing.user_id !== operatorId) {
+    return { ok: false, error: "Forbidden" };
+  }
+
+  if (approved) {
+    const { data: brand } = await sb
+      .from("brands")
+      .select("intake_status")
+      .eq("id", existing.brand_id)
+      .maybeSingle();
+    if (brand?.intake_status !== "ready") {
+      return { ok: false, error: "Draft already processed — possible duplicate approve request" };
+    }
+  }
+
+  return { ok: true, approved, brandId: existing.brand_id };
+}
+
 /** Shared HITL approve/reject — used by API route, server actions, and Mastra tool. */
 export async function processBrandIntelligenceDraftApproval(params: {
   runId: string;
@@ -47,7 +88,14 @@ export async function processBrandIntelligenceDraftApproval(params: {
   }
   const { data: draft, error: lookupErr } = await draftQuery.single();
   if (lookupErr || !draft) {
-    return { ok: false, error: "No pending draft found for this workflow run" };
+    // IPI-835 · D — idempotent re-approve when the draft was already applied.
+    return resolveIdempotentApproval({
+      sb,
+      runId,
+      approved,
+      operatorId,
+      expectedBrandId,
+    });
   }
   if (draft.user_id !== operatorId) {
     return { ok: false, error: "Forbidden" };
@@ -69,7 +117,14 @@ export async function processBrandIntelligenceDraftApproval(params: {
     .select("id")
     .single();
   if (updateErr || !updatedDraft) {
-    return { ok: false, error: "Draft already processed — possible duplicate approve request" };
+    // Concurrent duplicate approve — treat as success when brand already ready.
+    return resolveIdempotentApproval({
+      sb,
+      runId,
+      approved,
+      operatorId,
+      expectedBrandId: expectedBrandId ?? draft.brand_id,
+    });
   }
 
   if (approved) {

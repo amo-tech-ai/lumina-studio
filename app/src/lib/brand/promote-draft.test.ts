@@ -48,7 +48,7 @@ describe("promoteBrandDraft", () => {
   it("IPI-744 — clears analysis_lock_token/analysis_locked_at on approval, so a delayed reanalyzeBrand restore can't later overwrite 'ready'", async () => {
     const { sb, updateCalls } = mockSupabase({
       id: "b1",
-      ai_profile_draft: { headline: "Nike" },
+      ai_profile_draft: validDraft(),
       intake_status: "draft_ready",
     });
     const result = await promoteBrandDraft(sb, "b1");
@@ -61,4 +61,37 @@ describe("promoteBrandDraft", () => {
       analysis_locked_at: null,
     });
   });
+
+  it("IPI-835 · D — refuses promote when Brand DNA fails the IPI-834 contract", async () => {
+    const { sb, updateCalls } = mockSupabase({
+      id: "b1",
+      ai_profile_draft: { headline: "Nike" },
+      intake_status: "draft_ready",
+    });
+    const result = await promoteBrandDraft(sb, "b1");
+    expect(result).toEqual({ ok: false, error: "Brand DNA is incomplete or invalid" });
+    expect(updateCalls).toHaveLength(0);
+  });
 });
+
+function validDraft() {
+  return {
+    schemaVersion: 2,
+    name: "Nike",
+    sourceUrl: "https://nike.example",
+    tagline: {
+      value: "Just Do It",
+      evidence: [{ sourceUrl: "https://nike.example", quote: "Just Do It" }],
+    },
+    category: {
+      value: "Athletic",
+      evidence: [{ sourceUrl: "https://nike.example", quote: "Athletic" }],
+    },
+    targetAudience: {
+      value: "Athletes",
+      evidence: [{ sourceUrl: "https://nike.example", quote: "Athletes" }],
+    },
+    visualIdentity: { colors: ["#111"], mood: "Bold" },
+    scores: { visual: 80, audience: 80, consistency: 80, commerce_readiness: 70 },
+  };
+}

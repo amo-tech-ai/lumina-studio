@@ -231,6 +231,7 @@ describe("startOnboardingBrandIntelligence", () => {
     });
     expect(mockInvokeBrandIntelligence).toHaveBeenCalledTimes(1);
     expect(mockInvokeBrandIntelligence.mock.calls[0][3]).toEqual({
+      draftMode: true,
       crawlResultId: "crawl-1",
     });
   });
