@@ -9,12 +9,20 @@ import {
 
 describe("normalizeAnalysisUrl", () => {
   it.each([
-    ["https://Example.COM/Path/", "https://example.com/Path"],
-    ["https://example.com/", "https://example.com/"],
-    ["https://example.com/a#frag", "https://example.com/a"],
-    ["  https://ok.com  ", "https://ok.com/"],
-  ])("normalizes %s", (raw, expected) => {
+    ["https://Example.COM/Path/", "https://example.com"],
+    ["https://example.com/", "https://example.com"],
+    ["https://example.com/a#frag", "https://example.com"],
+    ["https://example.com/shop?utm=1&token=secret", "https://example.com"],
+    ["  https://ok.com  ", "https://ok.com"],
+    ["http://brand.example/collections", "http://brand.example"],
+  ])("normalizes %s to origin-only %s", (raw, expected) => {
     expect(normalizeAnalysisUrl(raw)).toBe(expected);
+  });
+
+  it("same origin with different paths share identity", () => {
+    expect(normalizeAnalysisUrl("https://example.com")).toBe(
+      normalizeAnalysisUrl("https://example.com/shop"),
+    );
   });
 
   it.each([
@@ -36,16 +44,28 @@ describe("normalizeAnalysisUrl", () => {
 
 describe("buildRestartAttemptKey", () => {
   it("includes brandId and URL fingerprint (not brandId alone)", () => {
-    const url = "https://aureliajewelry.com/";
+    const url = "https://aureliajewelry.com";
     const key = buildRestartAttemptKey("brand-1", url);
     expect(key).toBe(`restart-brand-1-${urlFingerprint(url)}`);
     expect(key).not.toBe("restart-brand-1");
     expect(key).not.toMatch(/^reanalyze-/);
   });
 
-  it("changes identity when the URL changes", () => {
-    const a = buildRestartAttemptKey("brand-1", "https://a.com/");
-    const b = buildRestartAttemptKey("brand-1", "https://b.com/");
+  it("path/query variants share the same attempt key", () => {
+    const a = buildRestartAttemptKey(
+      "brand-1",
+      normalizeAnalysisUrl("https://a.com/shop?x=1")!,
+    );
+    const b = buildRestartAttemptKey(
+      "brand-1",
+      normalizeAnalysisUrl("https://a.com/")!,
+    );
+    expect(a).toBe(b);
+  });
+
+  it("changes identity when the host changes", () => {
+    const a = buildRestartAttemptKey("brand-1", "https://a.com");
+    const b = buildRestartAttemptKey("brand-1", "https://b.com");
     expect(a).not.toBe(b);
   });
 });
@@ -130,28 +150,28 @@ describe("pickBestCrawlForUrl", () => {
       { id: "old-active", job_status: "running", source_url: "https://aureliajewelry.com/" },
       { id: "other", job_status: "complete", source_url: "https://other.com/" },
     ];
-    expect(pickBestCrawlForUrl(crawls, "https://aureliajewelry.com/")).toEqual({
+    expect(pickBestCrawlForUrl(crawls, "https://aureliajewelry.com")).toEqual({
       id: "old-active",
       job_status: "running",
     });
   });
 
-  it("prefers complete over failed when no active crawl", () => {
+  it("matches crawls by origin even when paths differ (BI parity)", () => {
     const crawls = [
-      { id: "new-fail", job_status: "failed", source_url: "https://aureliajewelry.com/shop" },
-      { id: "old-done", job_status: "complete", source_url: "https://AURELIAJEWELRY.COM/shop/" },
+      { id: "new-fail", job_status: "failed", source_url: "https://aureliajewelry.com/shop?utm=1" },
+      { id: "old-done", job_status: "complete", source_url: "https://AURELIAJEWELRY.COM/" },
     ];
-    expect(pickBestCrawlForUrl(crawls, "https://aureliajewelry.com/shop")).toEqual({
+    expect(pickBestCrawlForUrl(crawls, "https://aureliajewelry.com")).toEqual({
       id: "old-done",
       job_status: "complete",
     });
   });
 
-  it("returns null when no crawl matches the restart URL", () => {
+  it("returns null when no crawl matches the restart origin", () => {
     expect(
       pickBestCrawlForUrl(
         [{ id: "x", job_status: "complete", source_url: "https://other.com/" }],
-        "https://aureliajewelry.com/",
+        "https://aureliajewelry.com",
       ),
     ).toBeNull();
   });

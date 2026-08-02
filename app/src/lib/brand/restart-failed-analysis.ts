@@ -71,37 +71,30 @@ type AttemptInput = {
   websiteUrl: string;
 };
 
+/** Throws on failure so the caller can restore the analysis lock (audit-before-provider). */
 async function recordAttempt(
   supabase: SupabaseClient,
   input: AttemptInput,
-): Promise<boolean> {
-  try {
-    const { error } = await supabase.from("ai_agent_logs").insert({
-      agent_name: AGENT_NAME,
-      user_id: input.actorId,
-      brand_id: input.brandId,
-      input: {
-        brandId: input.brandId,
-        stage: input.stage,
-        attemptKey: input.attemptKey,
-        urlFingerprint: input.urlFingerprint,
-        websiteUrl: input.websiteUrl,
-      },
-      output: { phase: "started" },
-    });
-    if (error) {
-      console.error("[restart-failed-analysis] attempt log insert failed", {
-        brandId: input.brandId,
-        code: error.code,
-      });
-      return false;
-    }
-    return true;
-  } catch {
-    console.error("[restart-failed-analysis] attempt log insert threw", {
+): Promise<void> {
+  const { error } = await supabase.from("ai_agent_logs").insert({
+    agent_name: AGENT_NAME,
+    user_id: input.actorId,
+    brand_id: input.brandId,
+    input: {
       brandId: input.brandId,
+      stage: input.stage,
+      attemptKey: input.attemptKey,
+      urlFingerprint: input.urlFingerprint,
+      websiteUrl: input.websiteUrl,
+    },
+    output: { phase: "started" },
+  });
+  if (error) {
+    console.error("[restart-failed-analysis] attempt log insert failed", {
+      brandId: input.brandId,
+      code: error.code,
     });
-    return false;
+    throw new Error("attempt_log_failed");
   }
 }
 

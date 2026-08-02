@@ -32,7 +32,7 @@ import {
 const BRAND_ID = "00000000-0000-4000-8000-000000000901";
 const ORG_ID = "00000000-0000-4000-8000-000000000902";
 const ACTOR = "00000000-0000-4000-8000-000000000903";
-const URL = "https://aureliajewelry.com/";
+const URL = "https://aureliajewelry.com";
 
 type BrandRow = {
   id: string;
@@ -51,6 +51,7 @@ function makeSupabase(opts: {
   canEdit?: boolean;
   roleError?: { message: string; code?: string } | null;
   afterIntake?: string;
+  attemptLogError?: { code: string } | null;
 }) {
   const brand =
     opts.brand === undefined
@@ -106,6 +107,9 @@ function makeSupabase(opts: {
     if (table === "ai_agent_logs") {
       return {
         insert: async (row: unknown) => {
+          if (opts.attemptLogError) {
+            return { data: null, error: opts.attemptLogError };
+          }
           inserts.push(row);
           return { data: null, error: null };
         },
@@ -293,6 +297,57 @@ describe("restartFailedBrandAnalysis — state + URL", () => {
       brandId: BRAND_ID,
     });
     expect(result).toMatchObject({ ok: false, code: "provider_unavailable" });
+  });
+
+  it("restores lock when attempt logging fails before provider", async () => {
+    stubAdminCrawls([{ id: "c1", job_status: "failed", source_url: URL }]);
+    const sb = makeSupabase({ attemptLogError: { code: "42501" } });
+    const result = await restartFailedBrandAnalysis({
+      supabase: sb as never,
+      actorId: ACTOR,
+      brandId: BRAND_ID,
+    });
+    expect(result).toMatchObject({ ok: false, code: "provider_unavailable" });
+    expect(mockRestore).toHaveBeenCalledWith(
+      expect.anything(),
+      BRAND_ID,
+      "failed",
+      "token-1",
+    );
+    expect(mockInvokeCrawl).not.toHaveBeenCalled();
+  });
+
+  it("path/query variants reuse origin crawl (no duplicate Firecrawl)", async () => {
+    stubAdminCrawls([
+      {
+        id: "c-origin",
+        job_status: "complete",
+        source_url: "https://aureliajewelry.com/shop?utm=secret",
+      },
+    ]);
+    const sb = makeSupabase({
+      brand: {
+        id: BRAND_ID,
+        name: "Aurelia",
+        brand_url: "https://aureliajewelry.com/about",
+        org_id: ORG_ID,
+        user_id: ACTOR,
+        intake_status: "failed",
+      },
+      afterIntake: "draft_ready",
+    });
+    const result = await restartFailedBrandAnalysis({
+      supabase: sb as never,
+      actorId: ACTOR,
+      brandId: BRAND_ID,
+      websiteUrl: "https://aureliajewelry.com/collections?token=abc",
+    });
+    expect(result).toMatchObject({
+      ok: true,
+      mode: "bi_restarted",
+      crawlId: "c-origin",
+    });
+    expect(mockInvokeCrawl).not.toHaveBeenCalled();
   });
 });
 

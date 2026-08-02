@@ -51,8 +51,9 @@ function isPrivateOrInternalHost(hostname: string): boolean {
 
 /**
  * Normalize a website URL for restart identity.
- * Requires http(s), rejects private/internal hosts, lowercases host,
- * strips hash + trailing slash (except root).
+ * Origin-only — matches brand-intelligence `normalizeBrandUrl` so path/query
+ * variants reuse the same crawl and do not leak tokens into attempt keys.
+ * Requires http(s); rejects private/internal hosts and embedded credentials.
  */
 export function normalizeAnalysisUrl(raw: string): string | null {
   const trimmed = raw.trim();
@@ -64,12 +65,7 @@ export function normalizeAnalysisUrl(raw: string): string | null {
     if (isPrivateOrInternalHost(parsed.hostname)) return null;
     // Never persist credentials into attempt keys / ai_agent_logs.
     if (parsed.username || parsed.password) return null;
-    parsed.hash = "";
-    parsed.hostname = parsed.hostname.toLowerCase();
-    if (parsed.pathname.length > 1 && parsed.pathname.endsWith("/")) {
-      parsed.pathname = parsed.pathname.slice(0, -1);
-    }
-    return parsed.href;
+    return parsed.origin.toLowerCase();
   } catch {
     return null;
   }
