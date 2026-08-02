@@ -2,8 +2,12 @@
 /**
  * IPI-894 · ONB2-DB-001c — concurrent materialize_onboarding_session race on QA.
  *
- * Proof target: two in-flight RPCs with the same idempotency key return identical
- * organization_id + brand_id and leave exactly one session / org / brand.
+ * Proof target: two concurrently *launched* RPCs (Promise.all) with the same
+ * idempotency key return identical organization_id + brand_id and leave exactly
+ * one session / org / brand. This proves idempotent concurrent *client* behavior;
+ * it does not guarantee overlapping Postgres transactions (PostgREST may serialize).
+ * After the pair, one sequential replay must return the same IDs, and the session
+ * row must be status=materialized, current_screen=12, with matching stored IDs.
  *
  * Safety:
  *   - Hard-fail unless QA_DATABASE_URL embeds wtuhdynujhszsbwxlbdi
@@ -62,8 +66,11 @@ function parseArgs(argv) {
   for (const arg of argv) {
     if (arg.startsWith("--runs=")) {
       const raw = arg.slice("--runs=".length);
+      if (!/^\d+$/.test(raw)) {
+        refuse(`--runs must be a positive integer, got ${JSON.stringify(raw)}`);
+      }
       const n = Number.parseInt(raw, 10);
-      if (!Number.isFinite(n) || n < 1) {
+      if (n < 1) {
         refuse(`--runs must be a positive integer, got ${JSON.stringify(raw)}`);
       }
       runs = n;
@@ -246,6 +253,8 @@ async function runOnce(runIndex) {
   const clientB = await authedClient();
 
   let draftInserted = false;
+  let runError = null;
+  let cleanupError = null;
 
   try {
     // Draft MUST exist before the race (RPC raises P0002 otherwise).
@@ -312,9 +321,30 @@ async function runOnce(runIndex) {
       fail(`brand mismatch A=${left.brand_id} B=${right.brand_id}`);
     }
 
+    // Sequential replay after the concurrent pair — same IDs required.
+    const replay = await clientA.rpc("materialize_onboarding_session", rpcArgs);
+    if (replay.error) {
+      fail(`sequential replay failed: ${replay.error.message} (${replay.error.code ?? "?"})`);
+    }
+    const replayed = parseRpcPayload(replay.data);
+    if (
+      replayed.organization_id !== left.organization_id ||
+      replayed.brand_id !== left.brand_id
+    ) {
+      fail(
+        `sequential replay mismatch race=${left.organization_id}/${left.brand_id} replay=${replayed.organization_id}/${replayed.brand_id}`,
+      );
+    }
+
     const counts = await withPgClient(async (pg) => {
       const sessions = await pg.query(
         `select count(*)::int as n from public.onboarding_sessions
+          where user_id = $1 and idempotency_key = $2`,
+        [userId, idempotencyKey],
+      );
+      const sessionRow = await pg.query(
+        `select status, current_screen, organization_id, brand_id
+           from public.onboarding_sessions
           where user_id = $1 and idempotency_key = $2`,
         [userId, idempotencyKey],
       );
@@ -342,6 +372,7 @@ async function runOnce(runIndex) {
       );
       return {
         sessions: sessions.rows[0].n,
+        session: sessionRow.rows[0] ?? null,
         linkedRows: linked.rows.length,
         orgsByName: orgsByName.rows[0].n,
         brandsByName: brandsByName.rows[0].n,
@@ -350,6 +381,25 @@ async function runOnce(runIndex) {
 
     if (counts.sessions !== 1) {
       fail(`expected 1 session for key, got ${counts.sessions}`);
+    }
+    if (!counts.session) {
+      fail("session row missing after materialize");
+    }
+    if (counts.session.status !== "materialized") {
+      fail(`expected session status=materialized, got ${counts.session.status}`);
+    }
+    if (Number(counts.session.current_screen) !== 12) {
+      fail(
+        `expected current_screen=12, got ${counts.session.current_screen}`,
+      );
+    }
+    if (
+      counts.session.organization_id !== left.organization_id ||
+      counts.session.brand_id !== left.brand_id
+    ) {
+      fail(
+        `session stored IDs mismatch rpc=${left.organization_id}/${left.brand_id} row=${counts.session.organization_id}/${counts.session.brand_id}`,
+      );
     }
     if (counts.linkedRows !== 1) {
       fail(
@@ -370,11 +420,24 @@ async function runOnce(runIndex) {
         orgId: left.organization_id,
         brandId: left.brand_id,
         idempotencyKey,
-        counts,
+        session: {
+          status: counts.session.status,
+          current_screen: counts.session.current_screen,
+        },
+        sequentialReplay: true,
+        counts: {
+          sessions: counts.sessions,
+          linkedRows: counts.linkedRows,
+          orgsByName: counts.orgsByName,
+          brandsByName: counts.brandsByName,
+        },
         auth: "signInWithPassword",
         qaRef: QA_REF,
+        proof: "concurrent-client-launch+sequential-replay",
       }),
     );
+  } catch (err) {
+    runError = err;
   } finally {
     if (draftInserted) {
       try {
@@ -382,11 +445,17 @@ async function runOnce(runIndex) {
           cleanupFixtures(pg, { userId, idempotencyKey, brandName }),
         );
       } catch (cleanupErr) {
+        cleanupError = cleanupErr;
         console.error(
-          `WARN: cleanup failed for ${idempotencyKey}: ${cleanupErr?.message ?? cleanupErr}`,
+          `FAIL: cleanup failed for ${idempotencyKey}: ${cleanupErr?.message ?? cleanupErr}`,
         );
       }
     }
+  }
+
+  if (runError) throw runError;
+  if (cleanupError) {
+    fail(`cleanup failed: ${cleanupError?.message ?? cleanupError}`);
   }
 }
 
@@ -397,7 +466,7 @@ async function main() {
       starting: true,
       runs,
       qaRef: QA_REF,
-      note: "secrets redacted; race uses authenticated PostgREST path",
+      note: "secrets redacted; concurrent client launch + sequential replay; not a TX-overlap proof",
     }),
   );
 
