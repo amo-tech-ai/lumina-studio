@@ -1,0 +1,419 @@
+#!/usr/bin/env node
+/**
+ * IPI-734 · COPILOT-VERIFY-001 — thin verify:copilot wrapper.
+ *
+ * Owns CLI flags + readonly guard + /info preflight + evidence summary.
+ * Browser journey stays in IPI-724 run-e2e.mjs (no second Playwright suite).
+ *
+ * Usage (repo root):
+ *   npm run verify:copilot -- --help
+ *   npm run verify:copilot -- --base-url=https://ipix.co            # must fail (no --readonly)
+ *   npm run verify:copilot -- --base-url="$PREVIEW" --readonly --out=tasks/copilotkit/verify/evidence
+ *
+ * SSOT (exists on main): tasks/copilotkit/j20-copilotkit-audit.md
+ *
+ * Readonly means: no write/mutate Mastra tools, no destructive prompts, no booking/CRM
+ * mutations. IPI-724 chat send is read-oriented smoke only. Tool-path asserts stay preview-only.
+ *
+ * Version assert: Worker may expose identity via version_metadata / X-iPix-Worker-Version
+ * (wire in bootstrap / IPI-707). This runner fails when --expect-version is set and the
+ * header is missing or mismatched.
+ */
+import { spawnSync } from "node:child_process";
+import { mkdirSync, writeFileSync, readFileSync, existsSync, copyFileSync } from "node:fs";
+import { dirname, join, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const REPO_ROOT = resolve(__dirname, "../../..");
+const RUNNER = join(
+  REPO_ROOT,
+  "tasks/cloudflare/tests/ipi-724-e2e-preview-journey/run-e2e.mjs",
+);
+const DEFAULT_OUT = join(__dirname, "evidence");
+/** Evidence schema for summary.json (bump when additive fields change meaning). */
+export const SUMMARY_SCHEMA_VERSION = 1;
+export const INFO_TIMEOUT_MS = 15_000;
+
+const PROD_HOST_RE = /^(?:www\.)?ipix\.co$/i;
+
+export function parseArgs(argv) {
+  const opts = {
+    help: false,
+    baseUrl: null,
+    readonly: false,
+    browser: "chromium",
+    out: DEFAULT_OUT,
+    headers: [],
+    expectVersion: null,
+    skipBrowser: false,
+  };
+  for (let i = 0; i < argv.length; i++) {
+    const a = argv[i];
+    if (a === "--help" || a === "-h") opts.help = true;
+    else if (a === "--readonly") opts.readonly = true;
+    else if (a === "--skip-browser") opts.skipBrowser = true;
+    else if (a.startsWith("--base-url=")) opts.baseUrl = a.slice("--base-url=".length);
+    else if (a === "--base-url") opts.baseUrl = argv[++i];
+    else if (a.startsWith("--browser=")) opts.browser = a.slice("--browser=".length);
+    else if (a === "--browser") opts.browser = argv[++i];
+    else if (a.startsWith("--out=")) opts.out = a.slice("--out=".length);
+    else if (a === "--out") opts.out = argv[++i];
+    else if (a.startsWith("--header=")) opts.headers.push(a.slice("--header=".length));
+    else if (a === "--header") opts.headers.push(argv[++i]);
+    else if (a.startsWith("--expect-version="))
+      opts.expectVersion = a.slice("--expect-version=".length);
+    else if (a === "--expect-version") opts.expectVersion = argv[++i];
+    else throw new Error(`Unknown argument: ${a}`);
+  }
+  return opts;
+}
+
+export function hostnameOf(baseUrl) {
+  try {
+    return new URL(baseUrl).hostname.toLowerCase();
+  } catch {
+    return "";
+  }
+}
+
+/** Prod hosts require --readonly before any browser / network beyond the guard. */
+export function assertReadonlyGuard({ baseUrl, readonly }) {
+  const host = hostnameOf(baseUrl);
+  if (PROD_HOST_RE.test(host) && !readonly) {
+    return {
+      ok: false,
+      message:
+        `FAIL (readonly): ${host} looks like production — pass --readonly ` +
+        `(read-only smoke: no mutate tools / destructive prompts) or use a preview URL. ` +
+        `Aborting before Playwright.`,
+    };
+  }
+  return { ok: true };
+}
+
+/**
+ * Parse repeated `--header='Name: value'` into one object used by preflight + Playwright.
+ * Malformed entries throw before any network access.
+ */
+export function headersToObject(headerArgs) {
+  const out = {};
+  for (const raw of headerArgs) {
+    if (raw == null || typeof raw !== "string" || !raw.trim()) {
+      throw new Error('Invalid --header (empty); need "Name: value"');
+    }
+    const idx = raw.indexOf(":");
+    if (idx < 0) throw new Error(`Invalid --header (need "Name: value"): ${raw}`);
+    const name = raw.slice(0, idx).trim();
+    const value = raw.slice(idx + 1).trim();
+    if (!name) throw new Error(`Invalid --header name: ${raw}`);
+    if (!value) throw new Error(`Invalid --header value (empty): ${raw}`);
+    out[name] = value;
+  }
+  return out;
+}
+
+/** Fail when expected is set and actual is missing or mismatched. */
+export function versionMatches(actual, expected) {
+  if (!expected) return true;
+  if (actual == null || actual === "") return false;
+  return String(actual) === String(expected);
+}
+
+/** Redact secrets from objects before writing evidence. */
+export function redactForEvidence(value, depth = 0) {
+  if (depth > 8) return "[truncated]";
+  if (value == null) return value;
+  if (typeof value === "string") {
+    if (/^(Bearer\s+|sbp_|eyJ)/i.test(value)) return "[redacted]";
+    if (value.length > 500 && /cookie|authorization|token/i.test(value)) return "[redacted]";
+    return value;
+  }
+  if (Array.isArray(value)) return value.map((v) => redactForEvidence(v, depth + 1));
+  if (typeof value === "object") {
+    const out = {};
+    for (const [k, v] of Object.entries(value)) {
+      if (/authorization|cookie|password|token|secret|api[_-]?key/i.test(k)) {
+        out[k] = "[redacted]";
+      } else {
+        out[k] = redactForEvidence(v, depth + 1);
+      }
+    }
+    return out;
+  }
+  return value;
+}
+
+export async function preflightInfo(baseUrl, headers = {}, { timeoutMs = INFO_TIMEOUT_MS, fetchImpl = fetch } = {}) {
+  const url = `${baseUrl.replace(/\/$/, "")}/api/copilotkit/info`;
+  const ac = new AbortController();
+  const timer = setTimeout(() => ac.abort(), timeoutMs);
+  try {
+    const res = await fetchImpl(url, {
+      headers: { Accept: "application/json", ...headers },
+      redirect: "manual",
+      signal: ac.signal,
+    });
+    const text = await res.text();
+    let json = null;
+    try {
+      json = JSON.parse(text);
+    } catch {
+      /* non-JSON */
+    }
+    const agents = json?.agents ? Object.keys(json.agents) : [];
+    const versionHeader =
+      res.headers.get("x-ipix-worker-version") ||
+      res.headers.get("cf-worker-version") ||
+      null;
+    return {
+      url,
+      status: res.status,
+      agents,
+      agentCount: agents.length,
+      versionHeader,
+      bodySnippet: text.slice(0, 300),
+    };
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+function printHelp() {
+  console.log(`verify:copilot — IPI-734 thin wrapper around IPI-724 run-e2e.mjs
+
+Usage:
+  npm run verify:copilot -- --base-url=<URL> [--readonly] [options]
+
+Options:
+  --base-url=<URL>           Target host (required unless --help)
+  --readonly                 Required for production hosts (ipix.co / www.ipix.co)
+                             Read-only = no mutate tools / destructive prompts
+  --header='Name: value'     Repeatable; same object for /info preflight + Playwright
+  --expect-version=<id>      Fail if X-iPix-Worker-Version missing or mismatched
+  --browser=chromium         Hard: chromium only (FF/WebKit soft / scheduled elsewhere)
+  --out=<dir>                Evidence dir (default: tasks/copilotkit/verify/evidence)
+  --skip-browser             Preflight + guards only (unit / dry)
+  --help                     Show this help
+
+Auth contract (iPix):
+  Anonymous GET /api/copilotkit/info → 401 (healthy). Authenticated → 200 + agents
+  (auth path exercised inside IPI-724 after QA login).
+
+Delegates browser matrix to:
+  tasks/cloudflare/tests/ipi-724-e2e-preview-journey/run-e2e.mjs
+SSOT: tasks/copilotkit/j20-copilotkit-audit.md
+Mastra tool signal: deferred to IPI-850 soft gap / follow-up (not required for 734 Done)
+`);
+}
+
+function writeSummary(outDir, summary) {
+  mkdirSync(outDir, { recursive: true });
+  const path = join(outDir, "summary.json");
+  const payload = redactForEvidence({
+    schemaVersion: SUMMARY_SCHEMA_VERSION,
+    ...summary,
+  });
+  writeFileSync(path, JSON.stringify(payload, null, 2));
+  return path;
+}
+
+export async function main(argv = process.argv.slice(2), deps = {}) {
+  const fetchImpl = deps.fetchImpl || fetch;
+  const spawn = deps.spawnSync || spawnSync;
+
+  const opts = parseArgs(argv);
+  if (opts.help) {
+    printHelp();
+    return 0;
+  }
+  if (!opts.baseUrl) {
+    console.error("FAIL: --base-url is required (see --help)");
+    return 1;
+  }
+  if (opts.browser !== "chromium") {
+    console.error(
+      `FAIL: only --browser=chromium is supported hard-path (got ${opts.browser})`,
+    );
+    return 1;
+  }
+
+  const baseUrl = opts.baseUrl.replace(/\/$/, "");
+  const guard = assertReadonlyGuard({ baseUrl, readonly: opts.readonly });
+  if (!guard.ok) {
+    console.error(guard.message);
+    writeSummary(resolve(REPO_ROOT, opts.out), {
+      pass: false,
+      stage: "readonly_guard",
+      message: guard.message,
+      baseUrl,
+    });
+    return 1;
+  }
+
+  let headerObj;
+  try {
+    headerObj = headersToObject(opts.headers);
+  } catch (e) {
+    console.error(`FAIL: ${e.message}`);
+    writeSummary(resolve(REPO_ROOT, opts.out), {
+      pass: false,
+      stage: "header_parse",
+      message: String(e.message),
+      baseUrl,
+    });
+    return 1;
+  }
+
+  console.log(`preflight GET ${baseUrl}/api/copilotkit/info …`);
+  let info;
+  try {
+    info = await preflightInfo(baseUrl, headerObj, { fetchImpl });
+  } catch (e) {
+    const msg = e?.name === "AbortError" ? `timeout after ${INFO_TIMEOUT_MS}ms` : String(e?.message || e);
+    console.error(`FAIL (preflight): ${msg}`);
+    writeSummary(resolve(REPO_ROOT, opts.out), {
+      pass: false,
+      stage: "preflight",
+      message: msg,
+      baseUrl,
+    });
+    return 1;
+  }
+  console.log(
+    `preflight anon: status=${info.status} agents=${info.agentCount}` +
+      (info.versionHeader ? ` version=${info.versionHeader}` : ""),
+  );
+
+  // Healthy anon contract: 401. 302 = Vercel SSO (document; not Worker preview).
+  if (info.status !== 401 && info.status !== 302) {
+    console.error(
+      `FAIL (preflight): unexpected anon /info status ${info.status} (expect 401; 302 = SSO/Vercel)`,
+    );
+    writeSummary(resolve(REPO_ROOT, opts.out), {
+      pass: false,
+      stage: "preflight",
+      info,
+      baseUrl,
+    });
+    return 1;
+  }
+
+  if (opts.expectVersion) {
+    if (!versionMatches(info.versionHeader, opts.expectVersion)) {
+      console.error(
+        `FAIL (expect-version): wanted ${opts.expectVersion}, got ${info.versionHeader ?? "(missing)"}`,
+      );
+      writeSummary(resolve(REPO_ROOT, opts.out), {
+        pass: false,
+        stage: "expect_version",
+        expected: opts.expectVersion,
+        actual: info.versionHeader,
+        info,
+        baseUrl,
+      });
+      return 1;
+    }
+  }
+
+  const outDir = resolve(REPO_ROOT, opts.out);
+  mkdirSync(outDir, { recursive: true });
+
+  if (opts.skipBrowser) {
+    const summaryPath = writeSummary(outDir, {
+      pass: true,
+      stage: "preflight_only",
+      readonly: opts.readonly,
+      baseUrl,
+      info,
+      runner: RUNNER,
+      note: "--skip-browser: did not spawn IPI-724",
+    });
+    console.log(`PASS (preflight only) → ${summaryPath}`);
+    return 0;
+  }
+
+  if (!existsSync(RUNNER)) {
+    console.error(`FAIL: IPI-724 runner missing at ${RUNNER}`);
+    return 1;
+  }
+
+  const env = {
+    ...process.env,
+    BASE_URL: baseUrl,
+    VERIFY_READONLY: opts.readonly ? "1" : "0",
+  };
+  if (Object.keys(headerObj).length > 0) {
+    env.VERIFY_EXTRA_HEADERS = JSON.stringify(headerObj);
+  }
+
+  console.log(`delegate → IPI-724 run-e2e.mjs (BASE_URL=${baseUrl})`);
+  const result = spawn(process.execPath, [RUNNER], {
+    cwd: REPO_ROOT,
+    env,
+    stdio: "inherit",
+  });
+
+  if (result.error) {
+    console.error(`FAIL (spawn): ${result.error.message}`);
+    writeSummary(outDir, {
+      pass: false,
+      stage: "browser_delegate",
+      message: String(result.error.message),
+      baseUrl,
+      info,
+    });
+    return 1;
+  }
+  if (result.signal) {
+    console.error(`FAIL (spawn): killed by signal ${result.signal}`);
+    writeSummary(outDir, {
+      pass: false,
+      stage: "browser_delegate",
+      signal: result.signal,
+      baseUrl,
+      info,
+    });
+    return 1;
+  }
+
+  const exitCode = typeof result.status === "number" ? result.status : 1;
+
+  const runnerMeta = join(
+    REPO_ROOT,
+    "tasks/cloudflare/tests/ipi-724-e2e-preview-journey/metadata.json",
+  );
+  let hardAcPass = null;
+  if (existsSync(runnerMeta)) {
+    try {
+      const meta = JSON.parse(readFileSync(runnerMeta, "utf8"));
+      hardAcPass = meta.hard_ac_pass ?? null;
+      copyFileSync(runnerMeta, join(outDir, "ipi-724-metadata.json"));
+    } catch {
+      /* ignore */
+    }
+  }
+
+  const pass = exitCode === 0;
+  const summaryPath = writeSummary(outDir, {
+    pass,
+    stage: "browser_delegate",
+    readonly: opts.readonly,
+    baseUrl,
+    info,
+    runner: RUNNER,
+    runnerExitCode: exitCode,
+    hard_ac_pass: hardAcPass,
+    ssot: "tasks/copilotkit/j20-copilotkit-audit.md",
+  });
+  console.log(`${pass ? "PASS" : "FAIL"} verify:copilot → ${summaryPath}`);
+  return pass ? 0 : exitCode || 1;
+}
+
+const isMain =
+  process.argv[1] &&
+  resolve(process.argv[1]) === fileURLToPath(import.meta.url);
+
+if (isMain) {
+  main().then((code) => process.exit(code));
+}

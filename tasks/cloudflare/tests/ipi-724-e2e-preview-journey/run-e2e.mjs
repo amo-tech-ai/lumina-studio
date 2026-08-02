@@ -20,9 +20,27 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const OUT = __dirname;
 const SHOTS = join(OUT, "screenshots");
 const HAR_DIR = join(OUT, "har");
-const PREVIEW = "https://ipix-operator-preview.sk-498.workers.dev";
+// IPI-734: verify:copilot sets BASE_URL; default stays the CF preview Worker.
+const PREVIEW = (
+  process.env.BASE_URL || "https://ipix-operator-preview.sk-498.workers.dev"
+).replace(/\/$/, "");
 const MAX_TRANSIENT_RETRIES = 2;
 const REPO_ROOT = process.cwd();
+
+/** Optional request headers from verify:copilot (`VERIFY_EXTRA_HEADERS` JSON). */
+function loadExtraHeaders() {
+  const raw = process.env.VERIFY_EXTRA_HEADERS;
+  if (!raw) return undefined;
+  try {
+    const parsed = JSON.parse(raw);
+    if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+      return parsed;
+    }
+  } catch {
+    console.warn("WARN: VERIFY_EXTRA_HEADERS is not valid JSON — ignoring");
+  }
+  return undefined;
+}
 
 const require = createRequire(import.meta.url);
 let playwrightVersion = "unknown";
@@ -170,6 +188,7 @@ async function main() {
   const deploymentIdentity = resolvePreviewDeploymentIdentity();
 
   const browser = await chromium.launch({ headless: true });
+  const extraHTTPHeaders = loadExtraHeaders();
   const context = await browser.newContext({
     // Minimal HAR — API URLs only; never embed bodies/headers with cookies.
     // Prefer network-summary.json; HAR is deleted after the run and must not be committed.
@@ -181,6 +200,7 @@ async function main() {
     },
     viewport: { width: 1440, height: 900 },
     // Real Cloudflare preview TLS must validate (do not mask cert failures).
+    ...(extraHTTPHeaders ? { extraHTTPHeaders } : {}),
   });
   const page = await context.newPage();
   const browserVersion = browser.version();
