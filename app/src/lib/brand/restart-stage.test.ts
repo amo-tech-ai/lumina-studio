@@ -35,6 +35,9 @@ describe("normalizeAnalysisUrl", () => {
     "https://127.0.0.1/",
     "https://10.0.0.1/",
     "https://192.168.1.1/",
+    "https://100.64.0.1/",
+    "https://100.127.1.1/",
+    "https://[::]/",
     "https://app.internal/",
     "https://user:pass@example.com/",
   ])("rejects %s", (raw) => {

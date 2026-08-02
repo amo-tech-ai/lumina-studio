@@ -177,17 +177,25 @@ async function loadCrawlEvidence(
   return { ok: true, crawl: pickBestCrawlForUrl(crawlRows ?? [], normalizedUrl) };
 }
 
+/**
+ * Persist operator-supplied websiteUrl when its origin differs from the stored
+ * brand_url. Comparison uses origin-only identity; the stored value keeps the
+ * caller path/query/fragment. No caller URL → no write (never overwrite with origin).
+ */
 async function persistBrandUrlIfChanged(
   supabase: SupabaseClient,
   brandId: string,
   currentUrl: string | null,
   normalizedUrl: string,
+  callerUrl?: string,
 ): Promise<void> {
+  const supplied = callerUrl?.trim();
+  if (!supplied) return;
   const currentNorm = currentUrl ? normalizeAnalysisUrl(currentUrl) : null;
   if (currentNorm === normalizedUrl) return;
   const { error } = await supabase
     .from("brands")
-    .update({ brand_url: normalizedUrl })
+    .update({ brand_url: supplied })
     .eq("id", brandId);
   if (error) {
     console.error("[restart-failed-analysis] brand_url persist failed", {
@@ -344,8 +352,14 @@ export async function restartFailedBrandAnalysis(params: {
       crawlId,
     );
 
+    await persistBrandUrlIfChanged(
+      supabase,
+      brandId,
+      brand.brand_url,
+      normalizedUrl,
+      params.websiteUrl,
+    );
     await releaseAnalysisLockIfOwned(supabase, brandId, runToken);
-    await persistBrandUrlIfChanged(supabase, brandId, brand.brand_url, normalizedUrl);
     await recordAttemptResult(supabase, attemptBase, {
       ok: true,
       mode,

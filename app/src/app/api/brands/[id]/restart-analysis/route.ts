@@ -31,7 +31,7 @@ export async function POST(
   const { id: brandId } = await params;
   if (!UUID_RE.test(brandId)) {
     return NextResponse.json(
-      { ok: false, code: "invalid_url", message: "brandId must be a valid UUID." },
+      { ok: false, code: "invalid_id", message: "brandId must be a valid UUID." },
       { status: 400 },
     );
   }

@@ -52,6 +52,7 @@ function makeSupabase(opts: {
   roleError?: { message: string; code?: string } | null;
   afterIntake?: string;
   attemptLogError?: { code: string } | null;
+  onBrandUpdate?: () => void;
 }) {
   const brand =
     opts.brand === undefined
@@ -66,6 +67,7 @@ function makeSupabase(opts: {
       : opts.brand;
 
   const inserts: unknown[] = [];
+  const brandUpdates: unknown[] = [];
   let brandSelectCount = 0;
 
   const rpc = vi.fn(async (name: string) => {
@@ -99,8 +101,12 @@ function makeSupabase(opts: {
             },
           }),
         }),
-        update: () => ({
-          eq: async () => ({ data: null, error: null }),
+        update: (row: unknown) => ({
+          eq: async () => {
+            brandUpdates.push(row);
+            opts.onBrandUpdate?.();
+            return { data: null, error: null };
+          },
         }),
       };
     }
@@ -118,7 +124,7 @@ function makeSupabase(opts: {
     throw new Error(`unexpected table ${table}`);
   };
 
-  return { from, rpc, _inserts: inserts };
+  return { from, rpc, _inserts: inserts, _brandUpdates: brandUpdates };
 }
 
 function stubAdminCrawls(crawls: CrawlRow[]) {
@@ -348,6 +354,42 @@ describe("restartFailedBrandAnalysis — state + URL", () => {
       crawlId: "c-origin",
     });
     expect(mockInvokeCrawl).not.toHaveBeenCalled();
+    // Same origin → keep stored path; do not write origin-only brand_url.
+    expect(sb._brandUpdates).toEqual([]);
+  });
+
+  it("persists caller URL with path before releasing lock when host changes", async () => {
+    stubAdminCrawls([]);
+    const callOrder: string[] = [];
+    const sb = makeSupabase({
+      brand: {
+        id: BRAND_ID,
+        name: "Aurelia",
+        brand_url: "https://old.example/about",
+        org_id: ORG_ID,
+        user_id: ACTOR,
+        intake_status: "failed",
+      },
+      afterIntake: "draft_ready",
+      onBrandUpdate: () => {
+        callOrder.push("persist");
+      },
+    });
+    mockRelease.mockImplementation(async () => {
+      callOrder.push("release");
+    });
+
+    const result = await restartFailedBrandAnalysis({
+      supabase: sb as never,
+      actorId: ACTOR,
+      brandId: BRAND_ID,
+      websiteUrl: "https://new.example/shop?ref=1#top",
+    });
+    expect(result).toMatchObject({ ok: true, mode: "crawl_restarted" });
+    expect(sb._brandUpdates).toEqual([
+      { brand_url: "https://new.example/shop?ref=1#top" },
+    ]);
+    expect(callOrder).toEqual(["persist", "release"]);
   });
 });
 
@@ -486,6 +528,7 @@ describe("restartHttpStatus", () => {
     [{ ok: false as const, code: "unauthorized" as const, message: "x" }, 403],
     [{ ok: false as const, code: "not_found" as const, message: "x" }, 404],
     [{ ok: false as const, code: "invalid_url" as const, message: "x" }, 400],
+    [{ ok: false as const, code: "invalid_state" as const, message: "x" }, 400],
     [{ ok: false as const, code: "already_running" as const, message: "x" }, 409],
     [{ ok: false as const, code: "provider_unavailable" as const, message: "x" }, 503],
   ])("%j → %i", (result, status) => {

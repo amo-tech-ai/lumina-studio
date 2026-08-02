@@ -28,8 +28,11 @@ const PRIVATE_HOST_PATTERNS = [
   /^172\.(1[6-9]|2\d|3[01])\./,
   /^192\.168\./,
   /^169\.254\./,
+  // Carrier-grade NAT (RFC 6598) 100.64.0.0/10
+  /^100\.(6[4-9]|[7-9]\d|1[01]\d|12[0-7])\./,
   /^0\.0\.0\.0$/i,
   /^0\./,
+  /^::$/,
   /^::1$/,
   /^::ffff:/i,
   /^fc00:/i,
@@ -137,6 +140,3 @@ export function pickBestCrawlForUrl(
 
   return matches[0] ?? null;
 }
-
-/** @deprecated use pickBestCrawlForUrl — kept as alias for older imports/tests. */
-export const pickLatestCrawlForUrl = pickBestCrawlForUrl;

@@ -103,6 +103,24 @@ describe("POST /api/brands/[id]/restart-analysis", () => {
     expect(mockRestart).not.toHaveBeenCalled();
   });
 
+  it("rejects array JSON body with 400 and does not start recovery", async () => {
+    const { POST } = await import("./route");
+    const res = await POST(req(["https://aureliajewelry.com"]), {
+      params: Promise.resolve({ id: BRAND_ID }),
+    });
+    expect(res.status).toBe(400);
+    expect(mockRestart).not.toHaveBeenCalled();
+  });
+
+  it("rejects non-string websiteUrl with 400 and does not start recovery", async () => {
+    const { POST } = await import("./route");
+    const res = await POST(req({ websiteUrl: 42 }), {
+      params: Promise.resolve({ id: BRAND_ID }),
+    });
+    expect(res.status).toBe(400);
+    expect(mockRestart).not.toHaveBeenCalled();
+  });
+
   it("returns 401 when operator gate rejects", async () => {
     const { OperatorAuthError } = await import("@/lib/operator-gate");
     mockWithOperatorAuth.mockRejectedValue(new OperatorAuthError("Unauthorized"));
@@ -112,13 +130,30 @@ describe("POST /api/brands/[id]/restart-analysis", () => {
     expect(mockRestart).not.toHaveBeenCalled();
   });
 
-  it("returns 400 invalid_url for non-UUID brand id", async () => {
+  it("rejects when resolveJwtActor fails without starting recovery", async () => {
+    mockResolveJwtActor.mockResolvedValue({
+      ok: false,
+      status: 401,
+      error: "Unauthorized",
+    });
+    const { POST } = await import("./route");
+    const res = await POST(req(), { params: Promise.resolve({ id: BRAND_ID }) });
+    expect(res.status).toBe(401);
+    await expect(res.json()).resolves.toMatchObject({
+      ok: false,
+      code: "unauthorized",
+      message: "Unauthorized",
+    });
+    expect(mockRestart).not.toHaveBeenCalled();
+  });
+
+  it("returns 400 invalid_id for non-UUID brand id", async () => {
     const { POST } = await import("./route");
     const res = await POST(req(), { params: Promise.resolve({ id: "not-uuid" }) });
     expect(res.status).toBe(400);
     await expect(res.json()).resolves.toMatchObject({
       ok: false,
-      code: "invalid_url",
+      code: "invalid_id",
       message: "brandId must be a valid UUID.",
     });
     expect(mockRestart).not.toHaveBeenCalled();
