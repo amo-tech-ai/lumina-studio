@@ -24,11 +24,17 @@ const mockChannel = {
   },
   subscribe: mockSubscribe,
 };
+const mockMaybeSingle = vi.fn().mockResolvedValue({ data: null, error: null });
 
 vi.mock("@/lib/supabase/client", () => ({
   createSupabaseBrowserClient: () => ({
     channel: () => mockChannel,
     removeChannel: mockRemoveChannel,
+    from: () => ({
+      select: () => ({
+        eq: () => ({ maybeSingle: mockMaybeSingle }),
+      }),
+    }),
   }),
 }));
 
@@ -110,6 +116,41 @@ describe("useBrandAnalysisProgress", () => {
       statusCallback?.("TIMED_OUT");
     });
     expect(result.current.phase).toBe("connection_lost");
+    unmount();
+  });
+
+  it("CLOSED → connection_lost (not failed)", () => {
+    const { result, unmount } = renderHook(() =>
+      useBrandAnalysisProgress({ brandId, initialStatus: "crawl_running", ...noQuiet }),
+    );
+    act(() => {
+      statusCallback?.("CLOSED");
+    });
+    expect(result.current.phase).toBe("connection_lost");
+    unmount();
+  });
+
+  it("SUBSCRIBED re-reads intake and fires onReady for ready", async () => {
+    const onReady = vi.fn();
+    mockMaybeSingle.mockResolvedValueOnce({
+      data: { intake_status: "ready" },
+      error: null,
+    });
+    const { result, unmount } = renderHook(() =>
+      useBrandAnalysisProgress({
+        brandId,
+        initialStatus: "analysis_running",
+        onReady,
+        ...noQuiet,
+      }),
+    );
+    await act(async () => {
+      statusCallback?.("SUBSCRIBED");
+      await Promise.resolve();
+    });
+    expect(result.current.intakeStatus).toBe("ready");
+    expect(result.current.phase).toBe("ready");
+    expect(onReady).toHaveBeenCalledTimes(1);
     unmount();
   });
 

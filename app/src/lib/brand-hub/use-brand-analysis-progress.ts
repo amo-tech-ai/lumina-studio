@@ -145,7 +145,11 @@ export function useBrandAnalysisProgress({
         },
       )
       .subscribe((status) => {
-        if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") {
+        if (
+          status === "CHANNEL_ERROR" ||
+          status === "TIMED_OUT" ||
+          status === "CLOSED"
+        ) {
           setConnectionLost(true);
           clearQuietTimer();
           setStillWorking(false);
@@ -154,6 +158,18 @@ export function useBrandAnalysisProgress({
         if (status === "SUBSCRIBED") {
           setConnectionLost(false);
           bumpActivity();
+          // Missed postgres_changes while disconnected — re-read current intake.
+          void supabase
+            .from("brands")
+            .select("intake_status")
+            .eq("id", brandId)
+            .maybeSingle()
+            .then(({ data }) => {
+              const next = data?.intake_status;
+              if (typeof next !== "string") return;
+              setIntakeStatus(next);
+              if (next === "ready") onReadyRef.current?.();
+            });
         }
       });
 

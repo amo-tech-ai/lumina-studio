@@ -85,7 +85,9 @@ export const AnalysisProgressBanner = ({
       ? "Still working — analysis is taking longer than usual…"
       : (PROGRESS_MESSAGES[intakeStatus] ?? `Status: ${intakeStatus}`);
   const showCrawlCount =
-    intakeStatus === "crawl_running" && crawl?.pages_crawled != null;
+    (phase === "live" || phase === "still_working") &&
+    intakeStatus === "crawl_running" &&
+    crawl?.pages_crawled != null;
 
   return (
     <div
@@ -100,7 +102,7 @@ export const AnalysisProgressBanner = ({
         />
         <p className="font-sans text-sm text-[#92400E]">
           {message}
-          {showCrawlCount && phase === "live" && (
+          {showCrawlCount && (
             <span className="ml-1 text-[#D97706]">
               ({formatCrawlProgressShort(crawl!.pages_crawled!, crawl!.pages_found)})
             </span>

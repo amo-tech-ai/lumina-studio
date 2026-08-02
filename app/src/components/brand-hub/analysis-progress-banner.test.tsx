@@ -30,6 +30,13 @@ vi.mock("@/lib/supabase/client", () => ({
   createSupabaseBrowserClient: () => ({
     channel: () => mockChannel,
     removeChannel: mockRemoveChannel,
+    from: () => ({
+      select: () => ({
+        eq: () => ({
+          maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
+        }),
+      }),
+    }),
   }),
 }));
 
@@ -129,8 +136,9 @@ describe("AnalysisProgressBanner", () => {
 
   it("does not refresh on scores_complete", () => {
     render(<AnalysisProgressBanner {...props} initialStatus="crawl_running" />);
+    expect(capturedCallbacks).toHaveLength(2);
     act(() => {
-      capturedCallbacks[0]?.({ new: { intake_status: "scores_complete" } });
+      capturedCallbacks[0]({ new: { intake_status: "scores_complete" } });
     });
     expect(mockRefresh).not.toHaveBeenCalled();
     expect(screen.getByText(/Scores ready/)).toBeTruthy();
@@ -138,8 +146,9 @@ describe("AnalysisProgressBanner", () => {
 
   it("calls router.refresh() when Realtime fires ready", () => {
     render(<AnalysisProgressBanner {...props} initialStatus="analysis_running" />);
+    expect(capturedCallbacks).toHaveLength(2);
     act(() => {
-      capturedCallbacks[0]?.({ new: { intake_status: "ready" } });
+      capturedCallbacks[0]({ new: { intake_status: "ready" } });
     });
     expect(mockRefresh).toHaveBeenCalled();
   });
@@ -153,19 +162,29 @@ describe("AnalysisProgressBanner", () => {
       />,
     );
     expect(screen.getByText(/2 \/ 10 pages/)).toBeTruthy();
+    expect(capturedCallbacks).toHaveLength(2);
     act(() => {
-      capturedCallbacks[1]?.({ new: { pages_crawled: 7, pages_found: 10 } });
+      capturedCallbacks[1]({ new: { pages_crawled: 7, pages_found: 10 } });
     });
     expect(screen.getByText(/7 \/ 10 pages/)).toBeTruthy();
   });
 
   it("shows connection-lost UI on CHANNEL_ERROR (not failed)", () => {
     render(<AnalysisProgressBanner {...props} initialStatus="analysis_running" />);
+    expect(statusCallback).toBeTruthy();
     act(() => {
-      statusCallback?.("CHANNEL_ERROR");
+      statusCallback!("CHANNEL_ERROR");
     });
     expect(screen.getByText(/Connection lost/)).toBeTruthy();
     expect(screen.queryByText("Analysis failed")).toBeNull();
     expect(screen.getByRole("button", { name: /Reconnect/i })).toBeTruthy();
+  });
+
+  it("shows connection-lost UI on CLOSED", () => {
+    render(<AnalysisProgressBanner {...props} initialStatus="crawl_running" />);
+    act(() => {
+      statusCallback!("CLOSED");
+    });
+    expect(screen.getByText(/Connection lost/)).toBeTruthy();
   });
 });
