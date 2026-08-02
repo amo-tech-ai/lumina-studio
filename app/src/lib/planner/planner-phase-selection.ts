@@ -1,4 +1,4 @@
-// IPI-579 · PLN-S1B — shared phase-selection resolution. Not named
+// IPI-579 — shared phase-selection resolution. Not named
 // `planner-task-selection.ts` because it selects PHASES: given the phase
 // list and an instance's tasks, resolve a `?selection=phase:<uuid>` into the
 // phase plus its tasks for the AdaptivePanel. Pure — shared by the

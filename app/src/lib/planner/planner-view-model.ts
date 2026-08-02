@@ -31,8 +31,12 @@ import {
   parsePlanDate,
   planDateToDays,
   startOfWeekMonday,
+  utcToday,
   type PlanDate,
 } from "./planner-date-utils";
+
+/** Soft cap so a malformed multi-year range cannot materialize unbounded weeks. */
+const MAX_TIMELINE_WEEKS = 104;
 
 // SCR-32's shoot-day milestone flag. The schema has no milestone column —
 // this is the default 5-week workflow's shoot-day phase slug (its task is
@@ -124,18 +128,7 @@ function isCancelled(task: PlannerTask): boolean {
   return task.status === "cancelled";
 }
 
-// A task's own inclusive date range; null when either date is missing or
-// malformed. Reversed (start > end) is a distinct failure the caller
-// escalates — see rangeForPhase.
-function taskRange(task: PlannerTask): TimelinePhaseRange | null {
-  const start = parsePlanDate(task.startDate);
-  const end = parsePlanDate(task.endDate);
-  if (!start || !end) return null;
-  if (daysBetween(start, end) < 0) return null;
-  return { start, end };
-}
-
-function rangeForPhase(tasks: PlannerTask[]): {
+export function rangeForPhase(tasks: PlannerTask[]): {
   range: TimelinePhaseRange | null;
   invalid: boolean;
 } {
@@ -194,21 +187,29 @@ function phaseProgress(tasks: PlannerTask[]): number | null {
   return Math.round((done / eligible.length) * 100);
 }
 
-function phaseGate(phase: PlannerPhase, tasks: PlannerTask[], progress: number | null): GateVisualState | null {
+/**
+ * Gate diamond / Detail label. Phase 1 has no persisted approval decision
+ * (IPI-483), so task completion never yields `approved` — only `ready`.
+ * Cancelled tasks are ignored, matching progress aggregation.
+ */
+export function resolveGateVisualState(
+  phase: PlannerPhase,
+  tasks: PlannerTask[],
+): GateVisualState | null {
   if (!phase.gateType) return null;
-  if (tasks.length === 0) return "locked";
-  if (progress === 100) return "approved";
-  return "ready";
+  const eligible = tasks.filter((task) => !isCancelled(task));
+  if (eligible.length === 0) return "locked";
+  if (eligible.every((task) => task.status === "done")) return "ready";
+  return "locked";
 }
 
 function buildWeeks(rangeStart: PlanDate, rangeEnd: PlanDate): TimelineWeek[] {
   const weeks: TimelineWeek[] = [];
   let monday = startOfWeekMonday(rangeStart);
   const finalSunday = endOfWeekSunday(rangeEnd);
-  const startDay = planDateToDays(monday);
   let weekIndex = 1;
 
-  while (planDateToDays(monday) <= planDateToDays(finalSunday)) {
+  while (planDateToDays(monday) <= planDateToDays(finalSunday) && weeks.length < MAX_TIMELINE_WEEKS) {
     const sunday = addPlanDays(monday, 6);
     weeks.push({
       key: `W${weekIndex}`,
@@ -232,7 +233,7 @@ export function buildTimelineModel(
   tasks: PlannerTask[],
   todayIso: string,
 ): TimelineModel {
-  const today = parsePlanDate(todayIso) ?? utcTodayFallback();
+  const today = parsePlanDate(todayIso) ?? utcToday();
   const byPhase = groupTasksByPhase(tasks);
 
   // Phase rows in workflow order — planner.phases.order_index is the
@@ -255,7 +256,7 @@ export function buildTimelineModel(
       atRisk,
       progress,
       milestone: MILESTONE_PHASE_SLUGS.has(phase.slug),
-      gate: phaseGate(phase, phaseTasks, progress),
+      gate: resolveGateVisualState(phase, phaseTasks),
       gateRequiredRole: phase.requiredRole,
       durationLabel,
       leftPercent: 0,
@@ -289,6 +290,11 @@ export function buildTimelineModel(
     )!;
     rangeStart = startOfWeekMonday(first.start);
     rangeEnd = endOfWeekSunday(last.end);
+    // Bound the visible window before materializing week cells / percents.
+    const maxDays = MAX_TIMELINE_WEEKS * 7;
+    if (daysBetween(rangeStart, rangeEnd) + 1 > maxDays) {
+      rangeEnd = addPlanDays(rangeStart, maxDays - 1);
+    }
   }
 
   const dayCount = rangeStart && rangeEnd ? daysBetween(rangeStart, rangeEnd) + 1 : 0;
@@ -312,17 +318,5 @@ export function buildTimelineModel(
     dayCount,
     today,
     hasScheduled: scheduled.length > 0,
-  };
-}
-
-// parsePlanDate rejects pre-100 years; `today` in practice always comes
-// from the server as a current YYYY-MM-DD, so this fallback only protects
-// against a malformed prop — never a realistic date.
-function utcTodayFallback(): PlanDate {
-  const now = new Date();
-  return {
-    year: now.getUTCFullYear(),
-    month: now.getUTCMonth() + 1,
-    day: now.getUTCDate(),
   };
 }

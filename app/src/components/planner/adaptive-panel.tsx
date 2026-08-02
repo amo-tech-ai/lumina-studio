@@ -10,7 +10,7 @@
 // until IPI-579/580/581/582 (and a follow-up for Settings) wire real click
 // handlers into task/phase/member rows.
 //
-// IPI-579 · PLN-S1B — the Timeline's phase rows are that first real trigger:
+// IPI-579 — the Timeline's phase rows are that first real trigger:
 // a phase selection resolves to the read-only PlannerPhaseDetail.
 //
 // Zero Supabase queries here — resolution is delegated entirely to

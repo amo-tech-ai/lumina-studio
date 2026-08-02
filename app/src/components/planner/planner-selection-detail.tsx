@@ -7,7 +7,12 @@
 
 import type { CSSProperties } from "react";
 
-import type { GateVisualState } from "@/lib/planner/planner-view-model";
+import { formatPlanDateIso } from "@/lib/planner/planner-date-utils";
+import {
+  rangeForPhase,
+  resolveGateVisualState,
+  type GateVisualState,
+} from "@/lib/planner/planner-view-model";
 import type { PlannerMember, PlannerPhase, PlannerRole, PlannerTask } from "@/lib/planner/types";
 
 // Duplicated from member-table.tsx's ACCESS_LABEL (not exported there, and
@@ -128,7 +133,7 @@ function gateColor(state: GateVisualState): string {
   }
 }
 
-// IPI-579 · PLN-S1B — read-only phase Detail: the phase's date range, status,
+// IPI-579 — read-only phase Detail: the phase's date range, status,
 // gate state + required role, and its task list. Pure presentation of data
 // already resolved by resolvePlannerSelectionAction; nothing here mutates.
 export function PlannerPhaseDetail({
@@ -140,15 +145,14 @@ export function PlannerPhaseDetail({
   tasks: PlannerTask[];
   onClose: () => void;
 }) {
-  const dated = tasks.filter((task) => task.startDate && task.endDate);
-  const earliest = dated.reduce<string | null>((min, task) => {
-    if (task.startDate === null) return min;
-    return min === null || task.startDate < min ? task.startDate : min;
-  }, null);
-  const latest = dated.reduce<string | null>((max, task) => {
-    if (task.endDate === null) return max;
-    return max === null || task.endDate > max ? task.endDate : max;
-  }, null);
+  const { range, invalid } = rangeForPhase(tasks);
+  const rangeLabel = invalid
+    ? "Needs correction — task dates are out of order"
+    : range
+      ? `${formatPlanDateIso(range.start)} → ${formatPlanDateIso(range.end)}`
+      : "Unscheduled";
+  // Phase 1: no persisted approval — never claim Approved from task status.
+  const gateState = resolveGateVisualState(phase, tasks);
 
   return (
     <div data-testid="planner-detail-phase">
@@ -156,29 +160,18 @@ export function PlannerPhaseDetail({
       <h3 style={{ margin: "0 0 0.5rem" }}>{phase.name}</h3>
       <div style={rowStyle}>
         <span style={labelStyle}>Date range: </span>
-        {earliest && latest ? `${earliest} → ${latest}` : "Unscheduled"}
+        {rangeLabel}
       </div>
-      {phase.gateType ? (
+      {phase.gateType && gateState ? (
         <>
           <div style={rowStyle}>
             <span style={labelStyle}>Gate: </span>
             {phase.gateType}
             {phase.requiredRole ? ` — requires ${ROLE_LABEL[phase.requiredRole] ?? phase.requiredRole}` : ""}
           </div>
-          <div style={rowStyle}>
+          <div style={rowStyle} data-testid="planner-detail-gate-state">
             <span style={labelStyle}>Gate state: </span>
-            {tasks.length === 0 ? (
-              "Locked"
-            ) : (
-              <span
-                style={{
-                  color: gateColor(tasks.every((task) => task.status === "done") ? "approved" : "ready"),
-                  fontWeight: 600,
-                }}
-              >
-                {tasks.every((task) => task.status === "done") ? GATE_LABEL.approved : GATE_LABEL.ready}
-              </span>
-            )}
+            <span style={{ color: gateColor(gateState), fontWeight: 600 }}>{GATE_LABEL[gateState]}</span>
           </div>
         </>
       ) : null}

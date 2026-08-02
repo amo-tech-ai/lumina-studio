@@ -238,13 +238,25 @@ describe("gates", () => {
     expect(model.phases[0].gateRequiredRole).toBe("manager");
   });
 
-  it("approved when all tasks are done", () => {
+  it("ready when all non-cancelled tasks are done — never approved without persisted approval", () => {
     const model = buildTimelineModel([phase()], [task({ id: "a", status: "done" })], TODAY);
-    expect(model.phases[0].gate).toBe("approved");
+    expect(model.phases[0].gate).toBe("ready");
   });
 
-  it("ready when tasks exist but are not all done", () => {
+  it("locked when tasks exist but are not all done", () => {
     const model = buildTimelineModel([phase()], [task({ id: "a", status: "todo" })], TODAY);
+    expect(model.phases[0].gate).toBe("locked");
+  });
+
+  it("ignores cancelled tasks when deciding ready vs locked", () => {
+    const model = buildTimelineModel(
+      [phase()],
+      [
+        task({ id: "a", status: "done" }),
+        task({ id: "b", status: "cancelled", startDate: "2026-03-07", endDate: "2026-03-08" }),
+      ],
+      TODAY,
+    );
     expect(model.phases[0].gate).toBe("ready");
   });
 });

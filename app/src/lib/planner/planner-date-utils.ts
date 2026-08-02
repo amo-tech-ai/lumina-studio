@@ -143,6 +143,13 @@ export function formatPlanDateShort(date: PlanDate): string {
   return `${MONTH_ABBREVIATIONS[date.month - 1]} ${date.day}`;
 }
 
+/** Canonical YYYY-MM-DD for Detail panels and tests. */
+export function formatPlanDateIso(date: PlanDate): string {
+  const month = String(date.month).padStart(2, "0");
+  const day = String(date.day).padStart(2, "0");
+  return `${date.year}-${month}-${day}`;
+}
+
 // The current UTC date as PlanDate — the single source for the TODAY
 // marker. The app has no org-timezone contract yet (see IPI-579 date
 // behavior); UTC is the documented default, consistent with queries.ts's

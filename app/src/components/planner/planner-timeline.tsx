@@ -61,7 +61,11 @@ function clampPercent(value: number): number {
 /** Day offset of `today` within the visible range, as a 0–100 percent. */
 function todayPercent(model: TimelineModel): number | null {
   if (!model.hasScheduled || !model.rangeStart) return null;
-  return clampPercent(((daysBetween(model.rangeStart, model.today) + 1) / model.dayCount) * 100);
+  const offset = daysBetween(model.rangeStart, model.today);
+  // Outside the visible window there is no honest position for the marker.
+  if (offset < 0 || offset >= model.dayCount) return null;
+  // Same day-start convention as phase bar `leftPercent` (no +1).
+  return clampPercent((offset / model.dayCount) * 100);
 }
 
 function TimelineEmpty() {
@@ -178,7 +182,7 @@ export function PlannerTimeline({ model }: { model: TimelineModel }) {
                   key={row.phase.id}
                   type="button"
                   className={styles.row}
-                  aria-label={`Select ${row.phase.name} phase`}
+                  aria-label={`Select ${row.phase.name} phase, ${row.status.replaceAll("_", " ")}`}
                   aria-pressed={selected}
                   onClick={() => selectPhase(row)}
                   data-testid="planner-timeline-row"

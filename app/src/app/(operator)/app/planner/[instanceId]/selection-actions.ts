@@ -8,7 +8,7 @@
 // never a duplicate access check, since both already fail closed for
 // cross-org/inaccessible/deleted ids.
 //
-// IPI-579 · PLN-S1B — "phase" now resolves: the phase row comes from the
+// IPI-579 — "phase" now resolves: the phase row comes from the
 // instance's workflow template (listWorkflowPhases) and its tasks from the
 // instance detail, via the shared resolvePhaseSelection (same grouping
 // semantics the Timeline renders). Resolution shares the timeline's

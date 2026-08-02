@@ -11,6 +11,8 @@
 // RLS denying access) throws and lands in PlannerErrorBoundary, so the
 // timeline component itself never fetches.
 
+import { notFound } from "next/navigation";
+
 import { PlannerTimeline } from "@/components/planner/planner-timeline";
 import { PlannerWorkspaceShell } from "@/components/planner/planner-workspace-shell";
 import { buildTimelineModel } from "@/lib/planner/planner-view-model";
@@ -25,6 +27,9 @@ export default async function PlannerWorkspacePage({
 
   const instanceResult = await getInstanceDetail(instanceId);
   if (!instanceResult.ok) {
+    // Missing / unreadable plans share INVALID_INPUT with the layout's
+    // notFound() path — do not surface them as a generic error boundary.
+    if (instanceResult.error.code === "INVALID_INPUT") notFound();
     throw new Error(instanceResult.error.message);
   }
   const phasesResult = await listWorkflowPhases(instanceResult.data.workflowId);

@@ -108,16 +108,16 @@ describe("PlannerTimeline — grid structure (SCR-32 parity)", () => {
 
     const rows = screen.getAllByTestId("planner-timeline-row");
     expect(rows).toHaveLength(7);
-    expect(rows[0].getAttribute("aria-label")).toBe("Select Brief confirmation phase");
+    expect(rows[0].getAttribute("aria-label")).toBe("Select Brief confirmation phase, done");
     expect(rows.map((r) => r.getAttribute("aria-label"))).toEqual(
       expect.arrayContaining([
-        "Select Brief confirmation phase",
-        "Select Casting phase",
-        "Select Soft hold phase",
-        "Select Payment scheduling phase",
-        "Select Outfit confirmation phase",
-        "Select Production phase",
-        "Select Product return phase",
+        "Select Brief confirmation phase, done",
+        "Select Casting phase, done",
+        "Select Soft hold phase, in progress",
+        "Select Payment scheduling phase, at risk",
+        "Select Outfit confirmation phase, todo",
+        "Select Production phase, todo",
+        "Select Product return phase, todo",
       ]),
     );
   });
@@ -149,18 +149,30 @@ describe("PlannerTimeline — visual markers", () => {
 
     const badge = screen.getByTestId("planner-timeline-today-badge");
     expect(badge.textContent).toBe("TODAY");
-    // 2026-03-12 is day 11 of the 35-day window (Mon 03-02 .. Sun 04-05).
-    expect(parseFloat((badge as HTMLElement).style.left)).toBeCloseTo((11 / 35) * 100, 5);
+    // 2026-03-12 is day offset 10 of the 35-day window (Mon 03-02 .. Sun 04-05).
+    expect(parseFloat((badge as HTMLElement).style.left)).toBeCloseTo((10 / 35) * 100, 5);
     expect(container.querySelectorAll('[data-testid="planner-timeline-today-line"]').length).toBeGreaterThanOrEqual(1);
+  });
+
+  it("hides the TODAY marker when today is outside the scheduled range", () => {
+    const pastModel = buildTimelineModel(
+      [phase("ph-brief", "brief", "Brief", { orderIndex: 1 })],
+      [task("t-brief", "ph-brief", "2026-01-05", "2026-01-10", { status: "done" })],
+      TODAY,
+    );
+    render(<PlannerTimeline model={pastModel} />);
+    expect(screen.queryByTestId("planner-timeline-today-badge")).toBeNull();
+    expect(screen.queryByTestId("planner-timeline-today-line")).toBeNull();
   });
 
   it("renders a gate diamond for gated phases only", () => {
     const { container } = render(<PlannerTimeline model={fixtureModel()} />);
 
     const gates = container.querySelectorAll('[data-testid="planner-timeline-gate"]');
-    expect(gates).toHaveLength(2); // casting (approved) + outfit (ready)
-    expect(gates[0].getAttribute("title")).toBe("Gate: approved");
-    expect(gates[1].getAttribute("title")).toBe("Gate: ready for approval");
+    // casting (all done → ready) + outfit (incomplete → locked)
+    expect(gates).toHaveLength(2);
+    expect(gates[0].getAttribute("title")).toBe("Gate: ready for approval");
+    expect(gates[1].getAttribute("title")).toBe("Gate: locked");
   });
 
   it("renders the shoot-day milestone flag on the production phase", () => {
