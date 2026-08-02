@@ -75,7 +75,25 @@ async function resolveIdempotentApproval(params: {
     };
   }
 
-  return { ok: true, approved, brandId: existing.brand_id };
+  // Reject path: draft row may already be `rejected` while discard is still
+  // in flight (or failed + rolled back). Never report success until the brand
+  // is no longer waiting on draft_ready.
+  const { data: brand } = await sb
+    .from("brands")
+    .select("intake_status")
+    .eq("id", existing.brand_id)
+    .maybeSingle();
+  if (brand?.intake_status !== "draft_ready") {
+    return { ok: true, approved: false, brandId: existing.brand_id };
+  }
+  const discardResult = await discardBrandDraft(sb, existing.brand_id);
+  if (discardResult.ok) {
+    return { ok: true, approved: false, brandId: existing.brand_id };
+  }
+  return {
+    ok: false,
+    error: discardResult.error || "Draft already processed — brand discard incomplete",
+  };
 }
 
 /** Shared HITL approve/reject — used by API route, server actions, and Mastra tool. */
@@ -97,8 +115,21 @@ export async function processBrandIntelligenceDraftApproval(params: {
     draftQuery = draftQuery.eq("brand_id", expectedBrandId);
   }
   const { data: draft, error: lookupErr } = await draftQuery.single();
-  if (lookupErr || !draft) {
-    // IPI-835 · D — idempotent re-approve when the draft was already applied.
+  if (lookupErr) {
+    // PGRST116 = no pending row — only then try the already-processed path.
+    if (lookupErr.code === "PGRST116") {
+      return resolveIdempotentApproval({
+        sb,
+        runId,
+        approved,
+        operatorId,
+        expectedBrandId,
+      });
+    }
+    console.error("[process-draft-approval] pending draft lookup", lookupErr);
+    return { ok: false, error: "Failed to load draft" };
+  }
+  if (!draft) {
     return resolveIdempotentApproval({
       sb,
       runId,
@@ -127,7 +158,11 @@ export async function processBrandIntelligenceDraftApproval(params: {
     .select("id")
     .single();
   if (updateErr || !updatedDraft) {
-    // Concurrent duplicate approve — treat as success when brand already ready.
+    // Concurrent CAS miss (PGRST116 / no row) — check durable brand outcome.
+    if (updateErr && updateErr.code !== "PGRST116") {
+      console.error("[process-draft-approval] draft status update", updateErr);
+      return { ok: false, error: "Failed to update draft" };
+    }
     return resolveIdempotentApproval({
       sb,
       runId,

@@ -154,20 +154,30 @@ export async function ensureOnboardingIntakeDraft(
     }
 
     const admin = createSupabaseAdminClient();
-    const { data: existing } = await admin
+    const { data: existing, error: existingErr } = await admin
       .from("brand_intake_drafts")
       .select("id, status, user_id, draft_profile")
       .eq("brand_id", trustedBrandId)
       .maybeSingle();
+    if (existingErr) {
+      console.error("[ensureOnboardingIntakeDraft] draft lookup", existingErr);
+      return { ok: false, error: SAFE_LOAD_ERROR };
+    }
 
-    // Do not steal / overwrite another operator's pending HITL draft.
-    if (
-      existing &&
-      existing.status === "pending_approval" &&
-      existing.user_id &&
-      existing.user_id !== user.id
-    ) {
+    // Admin upsert bypasses RLS — never rewrite another operator's row.
+    if (existing?.user_id && existing.user_id !== user.id) {
       return { ok: false, error: "Forbidden" };
+    }
+
+    // Another tab may have approved already — do not demote approved → pending.
+    if (existing?.status === "approved") {
+      return {
+        ok: true,
+        intakeStatus,
+        runId: runIdFromDraftProfile(existing.draft_profile),
+        brandName: brand.name ?? null,
+        pillars,
+      };
     }
 
     const existingRunId =
@@ -178,6 +188,37 @@ export async function ensureOnboardingIntakeDraft(
         ok: true,
         intakeStatus,
         runId: existingRunId,
+        brandName: brand.name ?? null,
+        pillars,
+      };
+    }
+
+    // Race: brand may have been promoted between the first SELECT and this write.
+    const { data: brandNow, error: brandNowErr } = await supabase
+      .from("brands")
+      .select("intake_status")
+      .eq("id", trustedBrandId)
+      .maybeSingle();
+    if (brandNowErr) {
+      console.error("[ensureOnboardingIntakeDraft] brand re-check", brandNowErr);
+      return { ok: false, error: SAFE_LOAD_ERROR };
+    }
+    const intakeNow =
+      typeof brandNow?.intake_status === "string" ? brandNow.intake_status : intakeStatus;
+    if (intakeNow === "ready" || intakeNow === "scores_complete") {
+      return {
+        ok: true,
+        intakeStatus: intakeNow,
+        runId: null,
+        brandName: brand.name ?? null,
+        pillars: pillarsFromDraft(liveRaw ?? draftRaw),
+      };
+    }
+    if (intakeNow !== "draft_ready") {
+      return {
+        ok: true,
+        intakeStatus: intakeNow,
+        runId: null,
         brandName: brand.name ?? null,
         pillars,
       };

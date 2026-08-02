@@ -69,6 +69,11 @@ export function OnboardingFlow({
   const screenRegionRef = useRef<HTMLDivElement>(null);
   const previousScreenRef = useRef(screen);
 
+  // Avoid stale readiness when brandId changes (resume / rematerialize).
+  useEffect(() => {
+    setDnaReady(false);
+  }, [brandId]);
+
   // Move focus only when the screen value actually changes. Tracking the prior
   // value avoids focusing on initial mount and during StrictMode's repeated
   // effect invocation while preserving the screen-reader transition cue.

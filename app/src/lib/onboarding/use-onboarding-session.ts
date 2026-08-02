@@ -102,11 +102,16 @@ export function useOnboardingSession(deps: Deps = {}): OnboardingSessionState {
         // resume screen from brand intake so refresh on DNA review lands on 13.
         let currentScreen = clampScreen(session.current_screen || FIRST_SCREEN);
         if (session.brand_id && session.status === "materialized") {
-          const { data: brand } = await supabase
+          const { data: brand, error: brandErr } = await supabase
             .from("brands")
             .select("intake_status")
             .eq("id", session.brand_id)
             .maybeSingle();
+          if (cancelled) return;
+          if (brandErr) {
+            console.error("[useOnboardingSession] brand intake_status", brandErr);
+            throw brandErr;
+          }
           const intake =
             typeof brand?.intake_status === "string" ? brand.intake_status : null;
           if (isAnalysisReviewable(intake)) {
@@ -122,6 +127,7 @@ export function useOnboardingSession(deps: Deps = {}): OnboardingSessionState {
           }
         }
 
+        if (cancelled) return;
         setBootstrap({
           status: "ready",
           sessionId: session.id,
