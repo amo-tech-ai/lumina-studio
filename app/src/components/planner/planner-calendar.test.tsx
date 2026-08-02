@@ -143,6 +143,21 @@ describe("PlannerCalendar — grid + nav", () => {
     expect(screen.getByText("Needs date")).toBeDefined();
   });
 
+  it("preserves task status on Unscheduled rows (not always todo)", () => {
+    render(
+      <PlannerCalendar
+        initialYear={2026}
+        initialMonth={3}
+        today="2026-03-12"
+        tasks={[task(TUN, null, { title: "Blocked loose", status: "blocked" })]}
+      />,
+    );
+
+    expect(
+      screen.getByRole("button", { name: /Select unscheduled task Blocked loose, blocked/ }),
+    ).toBeDefined();
+  });
+
   it("selects a task into the shared AdaptivePanel selection contract", async () => {
     const user = userEvent.setup();
     render(

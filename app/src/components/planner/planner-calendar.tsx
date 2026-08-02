@@ -12,6 +12,7 @@ import { useEffect, useId, useRef, useState } from "react";
 
 import {
   buildPlannerMonth,
+  normalizeCalendarStatus,
   shiftPlannerMonth,
   splitChipsForOverflow,
   visibleChipLimit,
@@ -115,9 +116,11 @@ function DayCell({
   const overflowOpen = openOverflowIso === day.iso && overflowCount > 0;
   const overflowId = useId();
   const moreRef = useRef<HTMLButtonElement>(null);
+  const overflowRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!overflowOpen) return;
+    overflowRef.current?.focus();
     const onKey = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
         event.stopPropagation();
@@ -168,8 +171,10 @@ function DayCell({
 
       {overflowOpen && (
         <div
+          ref={overflowRef}
           id={overflowId}
           role="dialog"
+          tabIndex={-1}
           aria-label={`More tasks on ${formatPlanDateShort(day.date)}`}
           className={styles.overflow}
           data-testid="planner-calendar-overflow"
@@ -275,8 +280,11 @@ export function PlannerCalendar({
   const selectTask = (taskId: string) => setSelection({ type: "task", id: taskId });
 
   const goToday = () => {
-    setYear(seed.year);
-    setMonth(seed.month);
+    // Re-read "today" at click time so a long-lived tab crossing a UTC
+    // month boundary still lands on the current month.
+    const now = resolveTodaySeed(today);
+    setYear(now.year);
+    setMonth(now.month);
   };
 
   const goPrev = () => {
@@ -328,21 +336,24 @@ export function PlannerCalendar({
           <div className={styles.bandHeading}>
             Unscheduled ({model.unscheduled.length})
           </div>
-          {model.unscheduled.map((task) => (
-            <button
-              key={task.id}
-              type="button"
-              className={styles.bandRow}
-              aria-label={`Select unscheduled task ${task.title}`}
-              aria-pressed={selectedTaskId === task.id}
-              onClick={() => selectTask(task.id)}
-              data-testid="planner-calendar-unscheduled-row"
-            >
-              <span className={`${styles.chipDot} ${DOT_CLASS.todo}`} aria-hidden="true" />
-              <span>{task.title}</span>
-              <span className={styles.bandTag}>No valid start date</span>
-            </button>
-          ))}
+          {model.unscheduled.map((task) => {
+            const status = normalizeCalendarStatus(task.status);
+            return (
+              <button
+                key={task.id}
+                type="button"
+                className={styles.bandRow}
+                aria-label={`Select unscheduled task ${task.title}, ${status.replaceAll("_", " ")}`}
+                aria-pressed={selectedTaskId === task.id}
+                onClick={() => selectTask(task.id)}
+                data-testid="planner-calendar-unscheduled-row"
+              >
+                <span className={`${styles.chipDot} ${DOT_CLASS[status]}`} aria-hidden="true" />
+                <span>{task.title}</span>
+                <span className={styles.bandTag}>No valid start date</span>
+              </button>
+            );
+          })}
         </div>
       )}
     </div>

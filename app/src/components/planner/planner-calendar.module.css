@@ -57,7 +57,8 @@
 .card {
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
-  overflow: hidden;
+  /* visible so sixth-row overflow popovers are not clipped */
+  overflow: visible;
   background: var(--color-bg-card);
 }
 
@@ -256,6 +257,14 @@
   border-radius: var(--radius-md);
   background: var(--color-bg-card);
   box-shadow: var(--shadow-panel);
+}
+
+.overflow:focus {
+  outline: none;
+}
+
+.overflow:focus-visible {
+  box-shadow: var(--shadow-panel), var(--shadow-focus);
 }
 
 .overflowTitle {

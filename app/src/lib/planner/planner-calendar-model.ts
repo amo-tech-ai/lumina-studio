@@ -106,7 +106,7 @@ function resolveToday(today: PlanDate | string | undefined): PlanDate {
   return today;
 }
 
-function normalizeStatus(status: PlannerTaskStatus | string): CalendarChipStatus {
+export function normalizeCalendarStatus(status: PlannerTaskStatus | string): CalendarChipStatus {
   if (KNOWN_STATUSES.has(status as PlannerTaskStatus)) return status as PlannerTaskStatus;
   return "unknown";
 }
@@ -219,7 +219,7 @@ export function buildPlannerMonth(input: BuildPlannerMonthInput): PlannerCalenda
     days[idx].chips.push({
       task,
       startDate: start,
-      status: normalizeStatus(task.status),
+      status: normalizeCalendarStatus(task.status),
       invalidRange,
     });
   }
