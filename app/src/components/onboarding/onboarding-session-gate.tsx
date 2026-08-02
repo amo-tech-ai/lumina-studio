@@ -5,7 +5,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useOnboardingSession } from "@/lib/onboarding/use-onboarding-session";
 
 /**
- * IPI-835 · B1 — loads the real onboarding_sessions draft before mounting the flow.
+ * IPI-835 · B1 / IPI-903 — loads the real onboarding_sessions draft before mounting the flow.
  * Keeps `OnboardingFlow` testable without Supabase.
  */
 export function OnboardingSessionGate() {
@@ -33,6 +33,14 @@ export function OnboardingSessionGate() {
           <p className="font-sans text-sm text-[var(--onboarding-sub)]">
             {session.message}
           </p>
+          <button
+            type="button"
+            onClick={session.retry}
+            data-testid="onboarding-session-retry"
+            className="rounded-full bg-[var(--onboarding-card)] px-5 py-2.5 font-sans text-sm font-semibold text-[var(--onboarding-cta)]"
+          >
+            Try again
+          </button>
         </div>
       </div>
     );
@@ -42,6 +50,7 @@ export function OnboardingSessionGate() {
     <OnboardingFlow
       initialScreen={session.currentScreen}
       initialAnswers={session.answers}
+      initialBrandId={session.brandId}
       onDraftChange={session.saveDraft}
       onCommitAnalysis={session.materialize}
     />

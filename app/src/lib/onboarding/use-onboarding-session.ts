@@ -12,11 +12,16 @@ import {
 } from "@/lib/onboarding";
 import { getOrCreateOnboardingIdempotencyKey } from "./idempotency-key";
 import {
+  ONBOARDING_BRAND_NAME_REQUIRED,
+  toUserFacingOnboardingError,
+} from "./onboarding-errors";
+import {
   answersToOnboardingForm,
   parseDraftAnswers,
   serializeDraftAnswers,
 } from "./session-draft";
 import {
+  ANALYSIS_SCREEN,
   FIRST_SCREEN,
   clampScreen,
   type OnboardingAnswers,
@@ -36,6 +41,8 @@ type SessionBootstrap =
 export type OnboardingSessionState = SessionBootstrap & {
   saveDraft: (screen: number, answers: OnboardingAnswers) => void;
   materialize: (answers: OnboardingAnswers) => Promise<{ orgId: string; brandId: string }>;
+  /** Re-run bootstrap after a load error. */
+  retry: () => void;
 };
 
 const SAVE_DEBOUNCE_MS = 400;
@@ -46,7 +53,7 @@ type Deps = {
 };
 
 /**
- * IPI-835 · B1 — load/create draft session, autosave answers + screen, materialize on commit.
+ * IPI-835 · B1 / IPI-903 — load/create draft session, autosave, materialize on commit.
  */
 export function useOnboardingSession(deps: Deps = {}): OnboardingSessionState {
   // Mount-only deps — inline `() => client` from tests must not re-run the effect.
@@ -54,6 +61,7 @@ export function useOnboardingSession(deps: Deps = {}): OnboardingSessionState {
   depsRef.current = deps;
 
   const [bootstrap, setBootstrap] = useState<SessionBootstrap>({ status: "loading" });
+  const [retryTick, setRetryTick] = useState(0);
   const sessionRef = useRef<OnboardingSession | null>(null);
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const supabaseRef = useRef<SupabaseClient | null>(null);
@@ -66,6 +74,8 @@ export function useOnboardingSession(deps: Deps = {}): OnboardingSessionState {
       depsRef.current.getIdempotencyKey ?? getOrCreateOnboardingIdempotencyKey;
     const supabase = createClient();
     supabaseRef.current = supabase;
+    setBootstrap({ status: "loading" });
+    sessionRef.current = null;
 
     (async () => {
       try {
@@ -91,7 +101,7 @@ export function useOnboardingSession(deps: Deps = {}): OnboardingSessionState {
         if (cancelled) return;
         setBootstrap({
           status: "error",
-          message: err instanceof Error ? err.message : "Failed to load onboarding session",
+          message: toUserFacingOnboardingError(err, "session"),
         });
       }
     })();
@@ -100,12 +110,18 @@ export function useOnboardingSession(deps: Deps = {}): OnboardingSessionState {
       cancelled = true;
       if (saveTimerRef.current != null) clearTimeout(saveTimerRef.current);
     };
+  }, [retryTick]);
+
+  const retry = useCallback(() => {
+    setRetryTick((n) => n + 1);
   }, []);
 
   const saveDraft = useCallback((screen: number, answers: OnboardingAnswers) => {
     const session = sessionRef.current;
     const supabase = supabaseRef.current;
     if (!session || !supabase) return;
+    // Materialized sessions cannot be updated via draft RLS — skip.
+    if (session.status === "materialized") return;
     if (saveTimerRef.current != null) clearTimeout(saveTimerRef.current);
     saveTimerRef.current = setTimeout(() => {
       void updateOnboardingSessionDraft(supabase, session.id, {
@@ -126,14 +142,22 @@ export function useOnboardingSession(deps: Deps = {}): OnboardingSessionState {
     } = await supabase.auth.getUser();
     if (!user) throw new Error("Not authenticated");
 
+    if (!answers.brandName.trim()) {
+      throw new Error(ONBOARDING_BRAND_NAME_REQUIRED);
+    }
+
     if (saveTimerRef.current != null) {
       clearTimeout(saveTimerRef.current);
       saveTimerRef.current = null;
     }
-    await updateOnboardingSessionDraft(supabase, session.id, {
-      current_screen: 12,
-      draft_answers: serializeDraftAnswers(answers),
-    });
+
+    // Flush answers only — do not advance stored screen until materialize succeeds.
+    // Writing ANALYSIS_SCREEN here would strand resume on 12 if the RPC fails.
+    if (session.status === "draft") {
+      await updateOnboardingSessionDraft(supabase, session.id, {
+        draft_answers: serializeDraftAnswers(answers),
+      });
+    }
 
     const result = await createOrgAndBrand(
       supabase,
@@ -141,18 +165,23 @@ export function useOnboardingSession(deps: Deps = {}): OnboardingSessionState {
       answersToOnboardingForm(answers),
       { idempotencyKey: session.idempotency_key },
     );
+
+    // After materialize, draft RLS blocks client updates — keep ANALYSIS_SCREEN local only.
+    // Persisting screen 13 for resume is a separate RPC/policy follow-up (IPI-903 PR2).
     sessionRef.current = {
       ...session,
       status: "materialized",
       brand_id: result.brandId,
       organization_id: result.orgId,
-      current_screen: 12,
+      current_screen: ANALYSIS_SCREEN,
     };
     setBootstrap((prev) =>
-      prev.status === "ready" ? { ...prev, brandId: result.brandId } : prev,
+      prev.status === "ready"
+        ? { ...prev, brandId: result.brandId, currentScreen: ANALYSIS_SCREEN }
+        : prev,
     );
     return result;
   }, []);
 
-  return { ...bootstrap, saveDraft, materialize };
+  return { ...bootstrap, saveDraft, materialize, retry };
 }
