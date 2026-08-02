@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
+import { canonicalUrl } from "@/lib/site";
 import { Camera, Image as ImageIcon, Maximize, Eye, CheckCircle, ArrowRight, TrendingUp, DollarSign } from "lucide-react";
 import { AnimatedSection } from "@/components/marketing/animated-section";
 import { FAQ } from "@/components/marketing/faq";
@@ -8,6 +9,7 @@ import { FAQ } from "@/components/marketing/faq";
 export const metadata: Metadata = {
   title: "Shopify Photography",
   description: "Shopify-optimized product photography. AI-planned imagery that converts.",
+  alternates: { canonical: canonicalUrl("/services/shopify") },
   openGraph: {
     title: "Shopify Photography | iPix — Conversion-Optimized Product Images",
     description: "Shopify-optimized product photography. AI-planned imagery that converts.",

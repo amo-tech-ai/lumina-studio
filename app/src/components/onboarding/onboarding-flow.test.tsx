@@ -65,7 +65,13 @@ beforeEach(() => {
 describe("every screen renders", () => {
   it("renders all 13 screens without throwing", () => {
     for (let s = 1; s <= LAST_SCREEN; s += 1) {
-      const { unmount } = renderAt(<OnboardingFlow initialScreen={s} />);
+      const { unmount } = renderAt(
+        <OnboardingFlow
+          initialScreen={s}
+          // Analysis/payoff require a materialized brand (IPI-903 deep-link gate).
+          initialBrandId={s >= 12 ? "brand-test" : null}
+        />,
+      );
       expect(screen.getByTestId(`onboarding-screen-${s}`), `screen ${s}`).toBeTruthy();
       expect(screen.getByTestId("onboarding-card")).toBeTruthy();
       unmount();
@@ -214,7 +220,8 @@ describe("browser history", () => {
 
   it("clamps a hostile hash instead of rendering an invalid screen", () => {
     window.history.replaceState(null, "", "/onboarding#999");
-    render(<OnboardingFlow />);
+    // Brand required so clamp-to-13 is not bounced by the deep-link materialize gate.
+    render(<OnboardingFlow initialBrandId="brand-test" />);
     expect(screen.getByTestId("onboarding-screen-13")).toBeTruthy();
   });
 });
@@ -288,14 +295,140 @@ describe("accessibility", () => {
   });
 
   it("announces setup status politely on the analysis screen", () => {
-    render(<OnboardingFlow initialScreen={12} />);
+    render(<OnboardingFlow initialScreen={12} initialBrandId="brand-test" />);
     const status = screen.getByTestId("analysis-status");
     expect(status.getAttribute("aria-live")).toBe("polite");
   });
 
   it("hides Back while setup is running", () => {
-    render(<OnboardingFlow initialScreen={12} />);
+    render(<OnboardingFlow initialScreen={12} initialBrandId="brand-test" />);
     expect(screen.queryByRole("button", { name: /go back/i })).toBeNull();
+  });
+});
+
+describe("IPI-903 materialization safety", () => {
+  it("bounces deep-linked analysis without a brand to the pre-analysis screen", () => {
+    renderAt(<OnboardingFlow initialScreen={12} />);
+    expect(screen.getByTestId("onboarding-screen-11")).toBeTruthy();
+    expect(screen.queryByTestId("analysis-status")).toBeNull();
+  });
+
+  it("bounces deep-linked payoff without a brand to the pre-analysis screen", () => {
+    renderAt(<OnboardingFlow initialScreen={13} />);
+    expect(screen.getByTestId("onboarding-screen-11")).toBeTruthy();
+  });
+
+  it("disables Continue on the pre-analysis screen when brand name is empty", () => {
+    renderAt(
+      <OnboardingFlow
+        initialScreen={11}
+        initialAnswers={{
+          build: "DTC",
+          brandName: "   ",
+          websiteUrl: "https://maison.test",
+          listed: {},
+          grow: null,
+        }}
+        onCommitAnalysis={async () => ({ orgId: "org-1", brandId: "brand-1" })}
+      />,
+    );
+    expect(
+      (screen.getByRole("button", { name: "Continue" }) as HTMLButtonElement).disabled,
+    ).toBe(true);
+  });
+
+  it("shows a safe message when materialize fails", async () => {
+    renderAt(
+      <OnboardingFlow
+        initialScreen={11}
+        initialAnswers={{
+          build: "DTC",
+          brandName: "Maison",
+          websiteUrl: "https://maison.test",
+          listed: {},
+          grow: null,
+        }}
+        onCommitAnalysis={async () => {
+          throw new Error('duplicate key value violates unique constraint "x"');
+        }}
+      />,
+    );
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Continue" }));
+      await Promise.resolve();
+    });
+    const alert = screen.getByRole("alert");
+    expect(alert.textContent).not.toMatch(/duplicate key|constraint/i);
+    expect(alert.textContent).toMatch(/try again/i);
+    expect(screen.getByTestId("onboarding-screen-11")).toBeTruthy();
+  });
+
+  it("stays on screen 11 when commit returns no brand id", async () => {
+    renderAt(
+      <OnboardingFlow
+        initialScreen={11}
+        initialAnswers={{
+          build: "DTC",
+          brandName: "Maison",
+          websiteUrl: "https://maison.test",
+          listed: {},
+          grow: null,
+        }}
+        onCommitAnalysis={async () =>
+          undefined as unknown as { orgId: string; brandId: string }
+        }
+      />,
+    );
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Continue" }));
+      await Promise.resolve();
+    });
+    expect(screen.getByTestId("onboarding-screen-11")).toBeTruthy();
+    expect(screen.queryByTestId("analysis-status")).toBeNull();
+    expect(screen.getByRole("alert").textContent).toMatch(/try again/i);
+  });
+
+  it("ignores a late materialize success after the user backs out", async () => {
+    let resolveCommit!: (value: { orgId: string; brandId: string }) => void;
+    const pending = new Promise<{ orgId: string; brandId: string }>((resolve) => {
+      resolveCommit = resolve;
+    });
+
+    renderAt(
+      <OnboardingFlow
+        initialScreen={11}
+        initialAnswers={{
+          build: "DTC",
+          brandName: "Maison",
+          websiteUrl: "https://maison.test",
+          listed: {},
+          grow: null,
+        }}
+        onCommitAnalysis={() => pending}
+      />,
+    );
+
+    act(() => {
+      fireEvent.click(screen.getByRole("button", { name: "Continue" }));
+    });
+    expect(screen.getByRole("button", { name: "Starting…" })).toBeTruthy();
+    expect(
+      (screen.getByRole("button", { name: /go back/i }) as HTMLButtonElement).disabled,
+    ).toBe(true);
+
+    // Simulate leaving screen 11 while the request is still open (e.g. history).
+    act(() => {
+      fireEvent.popState(window, { state: historyState(10, 0) });
+    });
+    expect(screen.getByTestId("onboarding-screen-10")).toBeTruthy();
+
+    await act(async () => {
+      resolveCommit({ orgId: "org-1", brandId: "brand-1" });
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    expect(screen.queryByTestId("onboarding-screen-12")).toBeNull();
+    expect(screen.getByTestId("onboarding-screen-10")).toBeTruthy();
   });
 });
 
@@ -303,7 +436,7 @@ describe("automatic completion does not trap the user", () => {
   it("replaces rather than pushes when the analysis screen completes", () => {
     vi.useFakeTimers();
     try {
-      renderAt(<OnboardingFlow initialScreen={12} />);
+      renderAt(<OnboardingFlow initialScreen={12} initialBrandId="brand-test" />);
       const pushSpy = vi.spyOn(window.history, "pushState");
       const replaceSpy = vi.spyOn(window.history, "replaceState");
 
@@ -324,12 +457,25 @@ describe("automatic completion does not trap the user", () => {
     }
   });
 
-  it("leaves the loader out of history so Back skips past it", () => {
+  it("leaves the loader out of history so Back skips past it", async () => {
     vi.useFakeTimers();
     try {
-      renderAt(<OnboardingFlow initialScreen={11} />);
-      act(() => {
+      renderAt(
+        <OnboardingFlow
+          initialScreen={11}
+          initialAnswers={{
+            build: "DTC",
+            brandName: "Maison",
+            websiteUrl: "https://maison.test",
+            listed: {},
+            grow: null,
+          }}
+          onCommitAnalysis={async () => ({ orgId: "org-1", brandId: "brand-1" })}
+        />,
+      );
+      await act(async () => {
         fireEvent.click(screen.getByRole("button", { name: "Continue" }));
+        await Promise.resolve();
       });
       expect(screen.getByTestId("onboarding-screen-12")).toBeTruthy();
 

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
+import { canonicalUrl } from "@/lib/site";
 import {
   Brain, BarChart3, TrendingUp, Eye, Sliders, ShoppingBag, Instagram, Layers,
   Video, Building, CheckCircle, ArrowRight,
@@ -12,6 +13,7 @@ import { EcommerceExtension } from "@/components/marketing/ecommerce-extension";
 export const metadata: Metadata = {
   title: "eCommerce Photography",
   description: "AI-planned eCommerce photography that drives sales. Marketplace-ready assets.",
+  alternates: { canonical: canonicalUrl("/services/ecommerce-photography") },
   openGraph: {
     title: "eCommerce Photography | iPix — AI-Planned Product Imagery",
     description: "AI-planned eCommerce photography that drives sales. Marketplace-ready assets.",

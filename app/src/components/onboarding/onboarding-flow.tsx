@@ -12,6 +12,7 @@ import { BuildTypeQuestion } from "@/components/onboarding/questions/build-type-
 import { GrowthPreferenceQuestion } from "@/components/onboarding/questions/growth-preference-question";
 import { SalesChannelsQuestion } from "@/components/onboarding/questions/sales-channels-question";
 import { StepIndicator } from "@/components/onboarding/step-indicator";
+import { toUserFacingOnboardingError } from "@/lib/onboarding/onboarding-errors";
 import {
   ANALYSIS_SCREEN,
   EMPTY_ANSWERS,
@@ -21,6 +22,7 @@ import {
   ctaDisabled,
   ctaLabel,
   nextScreen,
+  previousScreen,
 } from "@/lib/onboarding/navigation";
 import { useScreenHistory } from "@/lib/onboarding/use-screen-history";
 
@@ -28,22 +30,39 @@ import { useScreenHistory } from "@/lib/onboarding/use-screen-history";
  * IPI-833 · ONB2-UI-001 — Standalone Onboarding Route, Screens, and Deterministic State Machine
  * the 13-screen onboarding flow.
  *
- * Local state only: no network, no Supabase, no AI, no persistence.
- * IPI-835 · ONB2-INT-001 — Real Session, Crawl, Realtime Progress, and Approval
- * Integration With Recovery replaces the answer store with a real onboarding
- * session and the screen-12 placeholder with live crawl progress.
+ * Persistence (IPI-835 · B1 / IPI-903) is optional via callbacks so unit tests stay offline.
+ * Production mounts this through `OnboardingSessionGate`.
  *
- * `initialScreen` exists so tests can mount any screen directly without walking
- * twelve clicks to reach it.
+ * `initialScreen` / `initialAnswers` / `initialBrandId` exist so tests (and resume) can mount
+ * any screen without walking twelve clicks.
  */
 export function OnboardingFlow({
   initialScreen = FIRST_SCREEN,
+  initialAnswers = EMPTY_ANSWERS,
+  initialBrandId = null,
+  onDraftChange,
+  onCommitAnalysis,
 }: {
   initialScreen?: number;
+  initialAnswers?: OnboardingAnswers;
+  /** Resume: brand already materialized on the session. */
+  initialBrandId?: string | null;
+  onDraftChange?: (screen: number, answers: OnboardingAnswers) => void;
+  /** Called once when entering screen 12 — must return materialized org+brand ids. */
+  onCommitAnalysis?: (
+    answers: OnboardingAnswers,
+  ) => Promise<{ orgId: string; brandId: string }>;
 }) {
   const router = useRouter();
   const { screen, goToScreen, replaceScreen, goBack } = useScreenHistory(initialScreen);
-  const [answers, setAnswers] = useState<OnboardingAnswers>(EMPTY_ANSWERS);
+  const [answers, setAnswers] = useState<OnboardingAnswers>(initialAnswers);
+  const [brandId, setBrandId] = useState<string | null>(initialBrandId);
+  const [commitError, setCommitError] = useState<string | null>(null);
+  const [committing, setCommitting] = useState(false);
+  const draftRef = useRef(onDraftChange);
+  draftRef.current = onDraftChange;
+  const screenRef = useRef(screen);
+  screenRef.current = screen;
 
   const screenRegionRef = useRef<HTMLDivElement>(null);
   const previousScreenRef = useRef(screen);
@@ -60,6 +79,19 @@ export function OnboardingFlow({
     heading.tabIndex = -1;
     heading.focus();
   }, [screen]);
+
+  // Autosave whenever screen or answers change (gate no-ops when unset).
+  useEffect(() => {
+    draftRef.current?.(screen, answers);
+  }, [screen, answers]);
+
+  // IPI-903: deep link to analysis/payoff without a materialized brand must not run
+  // the timer or DNA payoff. Bounce to the pre-analysis screen until Continue materializes.
+  useEffect(() => {
+    if (brandId) return;
+    if (screen < ANALYSIS_SCREEN) return;
+    replaceScreen(previousScreen(ANALYSIS_SCREEN));
+  }, [brandId, screen, replaceScreen]);
 
   const update = useCallback(
     <K extends keyof OnboardingAnswers>(key: K, value: OnboardingAnswers[K]) => {
@@ -80,15 +112,40 @@ export function OnboardingFlow({
     });
   }, []);
 
-  const goNext = useCallback(() => {
+  const goNext = useCallback(async () => {
     if (screen === LAST_SCREEN) {
       router.push("/app");
       return;
     }
-    goToScreen(nextScreen(screen));
-  }, [goToScreen, router, screen]);
+    const target = nextScreen(screen);
+    if (target === ANALYSIS_SCREEN && onCommitAnalysis) {
+      const startedFrom = screen;
+      setCommitting(true);
+      setCommitError(null);
+      try {
+        const created = await onCommitAnalysis(answers);
+        // User backed out (or navigated) while the request was in flight — drop the transition.
+        if (screenRef.current !== startedFrom) return;
+        // Without a brand id the deep-link gate would bounce 12→11 in a loop.
+        if (!created?.brandId) {
+          setCommitError(toUserFacingOnboardingError(new Error("missing brand"), "setup"));
+          return;
+        }
+        setBrandId(created.brandId);
+        goToScreen(ANALYSIS_SCREEN);
+      } catch (err) {
+        if (screenRef.current !== startedFrom) return;
+        setCommitError(toUserFacingOnboardingError(err, "setup"));
+      } finally {
+        setCommitting(false);
+      }
+      return;
+    }
+    goToScreen(target);
+  }, [answers, goToScreen, onCommitAnalysis, router, screen]);
 
   const skipCurrentScreen = useCallback(() => {
+    if (committing) return;
     setAnswers((current) => {
       switch (screen) {
         case 4:
@@ -101,8 +158,8 @@ export function OnboardingFlow({
           return current;
       }
     });
-    goNext();
-  }, [goNext, screen]);
+    void goNext();
+  }, [committing, goNext, screen]);
 
   const renderScreen = () => {
     switch (screen) {
@@ -149,6 +206,12 @@ export function OnboardingFlow({
         {renderScreen()}
       </div>
 
+      {commitError ? (
+        <p className="font-sans text-sm text-destructive" role="alert">
+          {commitError}
+        </p>
+      ) : null}
+
       {screen === ANALYSIS_SCREEN ? (
         // No footer while setup runs — there is nothing useful to press, and a
         // Back button here would strand the flow mid-run.
@@ -156,11 +219,21 @@ export function OnboardingFlow({
       ) : (
         <FlowFooter
           screen={screen}
-          continueDisabled={ctaDisabled(screen, answers)}
-          continueLabel={ctaLabel(screen)}
+          continueDisabled={
+            committing ||
+            ctaDisabled(screen, answers) ||
+            // Skip on screen 4 can clear the name; block commit until it's filled.
+            (Boolean(onCommitAnalysis) &&
+              nextScreen(screen) === ANALYSIS_SCREEN &&
+              answers.brandName.trim() === "")
+          }
+          continueLabel={committing ? "Starting…" : ctaLabel(screen)}
+          navigationDisabled={committing}
           onBack={goBack}
           onSkip={skipCurrentScreen}
-          onContinue={goNext}
+          onContinue={() => {
+            void goNext();
+          }}
         />
       )}
     </div>
