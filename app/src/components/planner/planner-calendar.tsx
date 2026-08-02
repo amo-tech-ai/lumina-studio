@@ -210,16 +210,17 @@ function CalendarGrid({
 
   return (
     <div className={styles.card} data-testid="planner-calendar-grid">
-      <div className={styles.weekdayRow} role="row">
+      {/* Plain markup — incomplete ARIA grid (no gridcell/row structure or
+          keyboard grid nav) is worse for screen readers than no roles. */}
+      <div className={styles.weekdayRow} data-testid="planner-calendar-weekdays">
         {model.weekdays.map((label) => (
-          <div key={label} className={styles.weekday} role="columnheader">
+          <div key={label} className={styles.weekday}>
             {label}
           </div>
         ))}
       </div>
       <div
         className={styles.grid}
-        role="grid"
         aria-label={`${model.label} calendar`}
         data-cell-count={model.days.length}
       >

@@ -75,8 +75,8 @@ describe("PlannerCalendar — grid + nav", () => {
       />,
     );
 
-    const headers = screen.getAllByRole("columnheader");
-    expect(headers.map((h) => h.textContent)).toEqual([
+    const weekdayRow = screen.getByTestId("planner-calendar-weekdays");
+    expect([...weekdayRow.children].map((el) => el.textContent)).toEqual([
       "Mon",
       "Tue",
       "Wed",
@@ -85,6 +85,8 @@ describe("PlannerCalendar — grid + nav", () => {
       "Sat",
       "Sun",
     ]);
+    expect(screen.queryByRole("grid")).toBeNull();
+    expect(screen.queryByRole("columnheader")).toBeNull();
     expect(screen.getAllByTestId("planner-calendar-cell")).toHaveLength(
       PLANNER_CALENDAR_CELL_COUNT,
     );

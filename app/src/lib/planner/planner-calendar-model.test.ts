@@ -250,4 +250,11 @@ describe("shiftPlannerMonth", () => {
     expect(shiftPlannerMonth(2026, 12, 1)).toEqual({ year: 2027, month: 1 });
     expect(shiftPlannerMonth(2026, 3, 0)).toEqual({ year: 2026, month: 3 });
   });
+
+  it("keeps month in 1–12 when absolute month index is negative", () => {
+    // absolute = -1 → JS `-1 % 12 === -1` without positive modulo
+    expect(shiftPlannerMonth(0, 1, -1)).toEqual({ year: -1, month: 12 });
+    expect(shiftPlannerMonth(1, 1, -13)).toEqual({ year: -1, month: 12 });
+    expect(shiftPlannerMonth(1, 1, -12)).toEqual({ year: 0, month: 1 });
+  });
 });

@@ -129,9 +129,10 @@ export function shiftPlannerMonth(
   delta: number,
 ): { year: number; month: number } {
   const absolute = year * 12 + (month - 1) + delta;
+  // Positive modulo: JS `%` keeps the dividend's sign (`-1 % 12 === -1`).
+  const monthIndex = ((absolute % 12) + 12) % 12;
   const nextYear = Math.floor(absolute / 12);
-  const nextMonth = (absolute % 12) + 1;
-  return { year: nextYear, month: nextMonth };
+  return { year: nextYear, month: monthIndex + 1 };
 }
 
 /**
