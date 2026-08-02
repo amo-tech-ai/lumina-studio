@@ -24,9 +24,14 @@ du -sh -- */ 2>/dev/null | sort -rh | awk 'NR <= 15' || echo "No directories fou
 
 echo ""
 echo "── LARGEST FILES (excl. node_modules) ─────"
-find . -not -path '*/node_modules/*' -not -path '*/.git/*' -type f \
+files_output=$(find . -not -path '*/node_modules/*' -not -path '*/.git/*' -type f \
   -printf '%s %p\n' 2>/dev/null | sort -rn | awk 'NR <= 15' \
-  | awk '{cmd="numfmt --to=iec " $1; cmd | getline size; close(cmd); print size, $2}' || echo "No files found"
+  | awk '{cmd="numfmt --to=iec " $1; cmd | getline size; close(cmd); print size, $2}')
+if [ -z "$files_output" ]; then
+  echo "No files found"
+else
+  echo "$files_output"
+fi
 
 echo ""
 echo "── IGNORE FILES ───────────────────────────"
@@ -63,8 +68,8 @@ echo "  manyFiles: $(git config feature.manyFiles 2>/dev/null || echo NOT SET)"
 
 echo ""
 echo -n "Stale merged branches: "
-# grep -v returns exit code 1 when no matches, which is not a failure - just no stale branches
-count=$(git branch --merged main 2>/dev/null | grep -v '^\*\|main\|master\|develop' 2>/dev/null | wc -l | tr -d ' ' || true)
+# Use awk to count, avoiding blanket || true that would mask git failures
+count=$(git branch --merged main 2>/dev/null | awk '!/^\*|main|master|develop/ { n++ } END { print n + 0 }')
 echo "${count:-0}"
 
 echo ""
