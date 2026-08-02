@@ -19,6 +19,11 @@
   "images": {
     "binding": "IMAGES"
   },
+  // IPI-707 · CF-SMOKE-001 — Worker version metadata binding for version verification.
+  // Official: https://developers.cloudflare.com/workers/runtime-apis/bindings/version-metadata/
+  "version_metadata": {
+    "binding": "WORKER_VERSION_METADATA"
+  },
   // IPI-586 · CF-AI-003 — Workers AI binding (no remote:true; that is local-dev only).
   // Official: https://developers.cloudflare.com/ai-gateway/integrations/aig-workers-ai-binding/
   "ai": {

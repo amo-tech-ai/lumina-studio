@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { accessTokenFromCookieString } from "@/lib/auth";
 import { isOperatorAuthEnforced } from "@/lib/operator-gate";
 import { copyResponseCookies, updateSession } from "@/lib/supabase/session";
+import { getCloudflareContext } from "@opennextjs/cloudflare";
 
 // IPI2-127 (AIOR-002b) — operator page gate. Blocks unauthenticated access to
 // /app/* by requiring a Supabase session cookie that DECODES to a JWT-shaped
@@ -21,6 +22,19 @@ export async function middleware(request: NextRequest) {
   const sessionResponse = await updateSession(request);
 
   const { pathname } = request.nextUrl;
+
+  // IPI-707 · CF-SMOKE-001 — Add Worker version header for verification.
+  // Defensive: only add header when metadata exists (Cloudflare runtime).
+  // Wrapped in try/catch to avoid breaking Node-based middleware tests.
+  try {
+    const cfContext = getCloudflareContext();
+    const versionMetadata = cfContext?.env?.WORKER_VERSION_METADATA;
+    if (versionMetadata?.id) {
+      sessionResponse.headers.set("X-Worker-Version", versionMetadata.id);
+    }
+  } catch {
+    // getCloudflareContext() throws in Node runtime; ignore silently.
+  }
 
   // IPI-945 · ONB2-ROUTE-001 — legacy operator-shell wizard → standalone v2.
   // Runs even when the auth gate is off in local `next dev`, so bookmarks never
