@@ -281,4 +281,30 @@ describe("AnalysisProgressScreen — IPI-835 · C", () => {
     expect(mockKickoff).toHaveBeenCalledTimes(2);
     expect(await screen.findByText(/Crawling your website/i)).toBeTruthy();
   });
+
+  it("does not offer Retry when server intake_status is failed", async () => {
+    mockKickoff.mockResolvedValue({
+      kind: "listen_only",
+      intakeStatus: "failed",
+    });
+    mockProgress = {
+      intakeStatus: "failed",
+      crawl: null,
+      phase: "failed",
+      reconnect: mockReconnect,
+    };
+
+    render(
+      <AnalysisProgressScreen
+        brandId="brand-1"
+        answers={answers}
+        onComplete={vi.fn()}
+        quietGapMs={0}
+      />,
+    );
+
+    expect(await screen.findByText(/Analysis failed/i)).toBeTruthy();
+    expect(screen.getByTestId("analysis-status").textContent).toMatch(/Brand Hub/i);
+    expect(screen.queryByRole("button", { name: /Retry/i })).toBeNull();
+  });
 });

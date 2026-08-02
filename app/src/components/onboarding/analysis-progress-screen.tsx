@@ -290,7 +290,8 @@ function AnalysisProgressLive({
     );
   }
 
-  if (phase === "failed" || fatalError) {
+  // Client kickoff/BI start failed — Retry re-runs idempotent kickoff.
+  if (fatalError) {
     return (
       <OnboardingCard>
         <h1 className="m-0 text-[1.75rem] font-extrabold leading-tight tracking-tight">
@@ -302,8 +303,7 @@ function AnalysisProgressLive({
           aria-live="assertive"
           className="mt-2.5 text-sm leading-snug text-destructive"
         >
-          {fatalError ??
-            "Something went wrong while analysing your brand. You can retry here or from Brand Hub."}
+          {fatalError}
         </p>
         <button
           type="button"
@@ -312,6 +312,25 @@ function AnalysisProgressLive({
         >
           Retry
         </button>
+      </OnboardingCard>
+    );
+  }
+
+  // Server terminal failed — kickoff is listen-only; Brand Hub owns explicit retry.
+  if (phase === "failed") {
+    return (
+      <OnboardingCard>
+        <h1 className="m-0 text-[1.75rem] font-extrabold leading-tight tracking-tight">
+          Analysis failed
+        </h1>
+        <p
+          role="alert"
+          data-testid="analysis-status"
+          aria-live="assertive"
+          className="mt-2.5 text-sm leading-snug text-destructive"
+        >
+          Something went wrong while analysing your brand. Open Brand Hub to retry.
+        </p>
       </OnboardingCard>
     );
   }
