@@ -36,6 +36,30 @@ vi.mock("./analysis-progress-screen", async () => {
   };
 });
 
+// Slice D: DNA approve tested in brand-dna-payoff-screen.test.tsx.
+vi.mock("./brand-dna-payoff-screen", async () => {
+  const React = await import("react");
+  return {
+    BrandDnaPayoffScreen: ({
+      brandId,
+      onReadyChange,
+    }: {
+      brandId: string | null;
+      onReadyChange?: (ready: boolean) => void;
+    }) => {
+      React.useEffect(() => {
+        onReadyChange?.(Boolean(brandId));
+      }, [brandId, onReadyChange]);
+      return (
+        <div data-testid="onboarding-card">
+          <h1>Your Brand DNA</h1>
+          <p data-testid="dna-status">Review ready</p>
+        </div>
+      );
+    },
+  };
+});
+
 import { OnboardingFlow } from "./onboarding-flow";
 
 /**
