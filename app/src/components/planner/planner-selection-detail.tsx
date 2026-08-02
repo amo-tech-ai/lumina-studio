@@ -3,10 +3,10 @@
 // IPI-551 · PLN-S4b — presentational Detail views AdaptivePanel publishes
 // into the shared IntelligencePanel via useSetIntelligenceDetail.
 //
-// IPI-582 · PLN-S1E Stage 1 — PlannerTaskDetail gains an editable form for
-// fields updateTask supports (title, description, status, assignee). Priority
-// stays read-only — the IPI-649 adapter has no priority patch. Schedule moves
-// belong to shiftTask (separate PR). No ApprovalCard here (Stage 2 / IPI-483).
+// IPI-582 · PLN-S1E Stage 1 — PlannerTaskDetail: updateTask form + keyboard
+// schedule shift via shiftTask (±1 day / date picker with confirm). Priority
+// stays read-only (adapter has no priority patch). DnD deferred — see PR body.
+// No ApprovalCard here (Stage 2 · IPI-483).
 
 import { useRouter } from "next/navigation";
 import {
@@ -20,10 +20,16 @@ import {
 } from "react";
 
 import {
+  shiftTaskAction,
   updateTaskAction,
 } from "@/app/(operator)/app/planner/[instanceId]/actions";
 import type { PlannerAssigneeOption } from "@/app/(operator)/app/planner/[instanceId]/selection-actions";
-import { planDateToISO } from "@/lib/planner/planner-date-utils";
+import {
+  addPlanDays,
+  daysBetween,
+  parsePlanDate,
+  planDateToISO,
+} from "@/lib/planner/planner-date-utils";
 import {
   rangeForPhase,
   resolveGateVisualState,
@@ -208,6 +214,172 @@ function draftFromTask(task: PlannerTask): Draft {
     status: task.status,
     assigneeUserId: task.assigneeUserId ?? "",
   };
+}
+
+function proposeShift(task: PlannerTask, deltaDays: number): {
+  start: string;
+  end: string | null;
+} | null {
+  const start = parsePlanDate(task.startDate);
+  if (!start) return null;
+  const end = parsePlanDate(task.endDate);
+  return {
+    start: planDateToISO(addPlanDays(start, deltaDays)),
+    end: end ? planDateToISO(addPlanDays(end, deltaDays)) : null,
+  };
+}
+
+function TaskScheduleShift({
+  task,
+  disabled,
+  onShifted,
+}: {
+  task: PlannerTask;
+  disabled: boolean;
+  onShifted: () => Promise<void>;
+}) {
+  const router = useRouter();
+  const [proposedDelta, setProposedDelta] = useState<number | null>(null);
+  const [pickerDate, setPickerDate] = useState(task.startDate ?? "");
+  const [shiftError, setShiftError] = useState<{ code: string; message: string } | null>(null);
+  const [isShifting, startShift] = useTransition();
+  const shiftKeyRef = useRef<string | null>(null);
+
+  const start = parsePlanDate(task.startDate);
+  const canShift = Boolean(start);
+  const preview = proposedDelta !== null ? proposeShift(task, proposedDelta) : null;
+
+  function proposeDelta(delta: number) {
+    shiftKeyRef.current = null;
+    setShiftError(null);
+    setProposedDelta(delta);
+  }
+
+  function proposeFromPicker(iso: string) {
+    setPickerDate(iso);
+    shiftKeyRef.current = null;
+    setShiftError(null);
+    const next = parsePlanDate(iso);
+    if (!start || !next) {
+      setProposedDelta(null);
+      return;
+    }
+    setProposedDelta(daysBetween(start, next));
+  }
+
+  function cancelProposal() {
+    setProposedDelta(null);
+    setShiftError(null);
+    shiftKeyRef.current = null;
+    setPickerDate(task.startDate ?? "");
+  }
+
+  function confirmShift() {
+    if (proposedDelta === null || proposedDelta === 0 || !canShift || isShifting || disabled) return;
+    shiftKeyRef.current ??= crypto.randomUUID();
+    const idempotencyKey = shiftKeyRef.current;
+    setShiftError(null);
+
+    startShift(async () => {
+      const result = await shiftTaskAction(
+        task.instanceId,
+        task.id,
+        proposedDelta,
+        idempotencyKey,
+      );
+      if (!result.ok) {
+        setShiftError({ code: result.error.code, message: result.error.message });
+        return;
+      }
+      shiftKeyRef.current = null;
+      setProposedDelta(null);
+      await onShifted();
+      router.refresh();
+    });
+  }
+
+  if (!canShift) {
+    return (
+      <div style={{ marginTop: "1rem" }} data-testid="planner-task-schedule">
+        <div style={labelStyle}>Schedule</div>
+        <p style={mutedStyle}>Unscheduled — add dates before moving this task.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ marginTop: "1rem" }} data-testid="planner-task-schedule">
+      <div style={{ ...labelStyle, marginBottom: "0.5rem" }}>Schedule</div>
+      <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem", alignItems: "center" }}>
+        <button
+          type="button"
+          disabled={disabled || isShifting}
+          onClick={() => proposeDelta(-1)}
+          data-testid="planner-task-move-earlier"
+        >
+          Move earlier 1 day
+        </button>
+        <button
+          type="button"
+          disabled={disabled || isShifting}
+          onClick={() => proposeDelta(1)}
+          data-testid="planner-task-move-later"
+        >
+          Move later 1 day
+        </button>
+        <label style={{ display: "flex", gap: "0.35rem", alignItems: "center", fontSize: 13 }}>
+          <span>Start date</span>
+          <input
+            type="date"
+            value={pickerDate}
+            disabled={disabled || isShifting}
+            onChange={(e) => proposeFromPicker(e.target.value)}
+            data-testid="planner-task-shift-date"
+          />
+        </label>
+      </div>
+
+      {preview && proposedDelta !== 0 ? (
+        <div
+          style={{ marginTop: "0.75rem", padding: "0.5rem 0", borderTop: "1px solid var(--color-border, #e5e5e5)" }}
+          data-testid="planner-task-shift-preview"
+        >
+          <p style={{ margin: "0 0 0.5rem", fontSize: 13 }}>
+            Proposed: {preview.start}
+            {preview.end ? ` → ${preview.end}` : ""}{" "}
+            <span style={mutedStyle}>
+              ({proposedDelta! > 0 ? "+" : ""}
+              {proposedDelta} day{Math.abs(proposedDelta!) === 1 ? "" : "s"})
+            </span>
+          </p>
+          <div style={{ display: "flex", gap: "0.5rem" }}>
+            <button
+              type="button"
+              disabled={disabled || isShifting}
+              onClick={confirmShift}
+              data-testid="planner-task-shift-confirm"
+            >
+              {isShifting ? "Moving…" : "Confirm move"}
+            </button>
+            <button
+              type="button"
+              disabled={isShifting}
+              onClick={cancelProposal}
+              data-testid="planner-task-shift-cancel"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      ) : null}
+
+      {shiftError ? (
+        <div role="alert" style={{ ...errorStyle, marginTop: "0.5rem" }} data-testid="planner-task-shift-error">
+          <p style={{ margin: 0 }}>{shiftError.message}</p>
+        </div>
+      ) : null}
+    </div>
+  );
 }
 
 export function PlannerTaskDetail({
@@ -517,6 +689,14 @@ export function PlannerTaskDetail({
           {isPending ? "Saving task…" : null}
         </p>
       </form>
+
+      <TaskScheduleShift
+        task={task}
+        disabled={isPending}
+        onShifted={async () => {
+          if (onRefreshSelection) await onRefreshSelection();
+        }}
+      />
     </div>
   );
 }
