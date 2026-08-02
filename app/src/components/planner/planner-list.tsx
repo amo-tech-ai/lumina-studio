@@ -4,6 +4,8 @@
 // Same normalized task rows as Kanban. Row click selects the task's phase
 // (or the task itself when Unassigned). No Actions / mutation menu.
 
+import type { KeyboardEvent } from "react";
+
 import type { PlannerTaskView, TaskStatusTone } from "@/lib/planner/planner-view-model";
 import { usePlannerSelection } from "@/lib/planner/use-planner-selection";
 
@@ -17,6 +19,13 @@ const CHIP_TONE: Record<TaskStatusTone, string> = {
   cancelled: styles.chipCancelled,
   neutral: styles.chipNeutral,
 };
+
+function activateRowKey(event: KeyboardEvent, activate: () => void) {
+  if (event.key === "Enter" || event.key === " ") {
+    event.preventDefault();
+    activate();
+  }
+}
 
 export function PlannerList({ rows }: { rows: PlannerTaskView[] }) {
   const { selection, setSelection } = usePlannerSelection();
@@ -47,45 +56,55 @@ export function PlannerList({ rows }: { rows: PlannerTaskView[] }) {
 
   return (
     <div className={styles.wrap} data-testid="planner-list">
-      <div className={styles.table} aria-label="Planner tasks">
-        <div className={styles.header}>
-          <span>Task</span>
-          <span>Step</span>
-          <span>Owner</span>
-          <span>Dates</span>
-          <span>Dur</span>
-          <span>Priority</span>
-          <span>Status</span>
+      <div className={styles.table} role="table" aria-label="Planner tasks">
+        <div className={styles.header} role="row">
+          <span role="columnheader">Task</span>
+          <span role="columnheader">Step</span>
+          <span role="columnheader">Owner</span>
+          <span role="columnheader">Dates</span>
+          <span role="columnheader">Dur</span>
+          <span role="columnheader">Priority</span>
+          <span role="columnheader">Status</span>
         </div>
         {rows.map((row) => {
           const selected = isSelected(row);
+          const activate = () => selectRow(row);
           return (
-            <button
+            <div
               key={row.task.id}
-              type="button"
+              role="row"
+              tabIndex={0}
               className={`${styles.row} ${selected ? styles.rowSelected : ""}`}
-              aria-label={`Select ${row.task.title}`}
-              aria-pressed={selected}
-              onClick={() => selectRow(row)}
+              aria-selected={selected}
+              onClick={activate}
+              onKeyDown={(event) => activateRowKey(event, activate)}
               data-testid="planner-list-row"
             >
-              <span className={styles.title}>{row.task.title}</span>
-              <span className={styles.phase}>{row.phaseName}</span>
-              <span>
-                <span className={styles.avatar} aria-hidden="true">
-                  {row.ownerLabel}
-                </span>
+              <span role="cell" className={styles.title}>
+                {row.task.title}
               </span>
-              <span className={styles.mono}>{row.datesLabel}</span>
-              <span className={styles.mono}>{row.durationLabel}</span>
-              <span className={styles.priority}>{row.priorityLabel}</span>
-              <span>
+              <span role="cell" className={styles.phase}>
+                {row.phaseName}
+              </span>
+              <span role="cell">
+                <span className={styles.avatar}>{row.ownerLabel}</span>
+              </span>
+              <span role="cell" className={styles.mono}>
+                {row.datesLabel}
+              </span>
+              <span role="cell" className={styles.mono}>
+                {row.durationLabel}
+              </span>
+              <span role="cell" className={styles.priority}>
+                {row.priorityLabel}
+              </span>
+              <span role="cell">
                 <span className={`${styles.chip} ${CHIP_TONE[row.status.tone]}`}>
                   <span className={styles.chipDot} aria-hidden="true" />
                   {row.status.label}
                 </span>
               </span>
-            </button>
+            </div>
           );
         })}
       </div>

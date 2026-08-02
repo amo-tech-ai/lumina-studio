@@ -172,5 +172,10 @@ describe("PlannerKanban — IPI-580", () => {
     // Gate ready (all done) still shows the lock affordance in SCR-32.
     expect(container.querySelector("svg")).not.toBeNull();
     expect(container.innerHTML).not.toMatch(/ondrag|draggable|dnd-kit|react-beautiful-dnd/i);
+    expect(
+      screen.getByRole("region", {
+        name: "Outfit confirmation, 1 tasks, gate ready for approval",
+      }),
+    ).toBeDefined();
   });
 });

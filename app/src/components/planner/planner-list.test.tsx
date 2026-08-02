@@ -96,11 +96,26 @@ describe("PlannerList — IPI-580", () => {
     );
     render(<PlannerList rows={rows} />);
 
-    await user.click(screen.getByRole("button", { name: /Select Phase task/ }));
+    const table = screen.getByRole("table", { name: "Planner tasks" });
+    expect(screen.getAllByRole("columnheader").map((h) => h.textContent)).toEqual([
+      "Task",
+      "Step",
+      "Owner",
+      "Dates",
+      "Dur",
+      "Priority",
+      "Status",
+    ]);
+
+    await user.click(screen.getByRole("row", { name: /Phase task/ }));
     expect(setSelection).toHaveBeenCalledWith({ type: "phase", id: "ph-casting" });
 
-    await user.click(screen.getByRole("button", { name: /Select Orphan task/ }));
+    await user.click(screen.getByRole("row", { name: /Orphan task/ }));
     expect(setSelection).toHaveBeenCalledWith({ type: "task", id: "t-orphan" });
+
+    // Cell text stays in the accessibility tree (no aria-label override on the row).
+    expect(table.textContent).toMatch(/Casting/);
+    expect(table.textContent).toMatch(/Unassigned/);
   });
 
   it("shows Unassigned step label and a neutral chip for unknown status", () => {

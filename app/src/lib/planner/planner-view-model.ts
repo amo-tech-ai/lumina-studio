@@ -219,12 +219,21 @@ const PRIORITY_LABELS: Record<string, string> = {
   critical: "Critical",
 };
 
-function ownerInitials(task: PlannerTask): string {
+/**
+ * Owner avatar initials for Kanban + List.
+ * Prefer assigneeRole; when only assigneeUserId is set (mutation shape without
+ * role/display metadata), show an assigned placeholder — never "—" (unassigned).
+ */
+export function resolveOwnerInitials(
+  task: Pick<PlannerTask, "assigneeRole" | "assigneeUserId">,
+): string {
   if (task.assigneeRole) {
     const parts = task.assigneeRole.split(/[\s_-]+/).filter(Boolean);
     if (parts.length >= 2) return (parts[0]![0]! + parts[1]![0]!).toUpperCase();
     return task.assigneeRole.slice(0, 2).toUpperCase();
   }
+  // ponytail: PlannerTask has no assignee displayName — upgrade when payload carries one.
+  if (task.assigneeUserId) return "··";
   return "—";
 }
 
@@ -274,7 +283,7 @@ export function buildTaskViews(phases: PlannerPhase[], tasks: PlannerTask[]): Pl
       datesLabel: taskDatesLabel(task),
       durationLabel: taskDurationLabel(task),
       priorityLabel: PRIORITY_LABELS[task.priority] ?? task.priority,
-      ownerLabel: ownerInitials(task),
+      ownerLabel: resolveOwnerInitials(task),
     }));
 }
 

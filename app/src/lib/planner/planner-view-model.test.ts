@@ -6,6 +6,7 @@ import {
   buildTaskViews,
   buildTimelineModel,
   groupTasksByPhase,
+  resolveOwnerInitials,
   resolveTaskStatusChip,
   UNASSIGNED_COLUMN_KEY,
 } from "./planner-view-model";
@@ -118,6 +119,27 @@ describe("IPI-580 · Kanban/List view-model helpers", () => {
     ]);
     expect(rows.map((r) => r.task.id)).toEqual(["brief", "early", "late", "orphan"]);
     expect(rows.find((r) => r.task.id === "orphan")?.phaseName).toBe("Unassigned");
+  });
+});
+
+describe("resolveOwnerInitials", () => {
+  it("derives initials from assigneeRole", () => {
+    expect(resolveOwnerInitials(task({ assigneeRole: "producer" }))).toBe("PR");
+    expect(resolveOwnerInitials(task({ assigneeRole: "creative_director" }))).toBe("CD");
+  });
+
+  it("does not treat user-id-only assignment as unassigned", () => {
+    expect(
+      resolveOwnerInitials(
+        task({ assigneeRole: null, assigneeUserId: "user-abc" }),
+      ),
+    ).toBe("··");
+  });
+
+  it("uses an em dash only when neither role nor user id is set", () => {
+    expect(
+      resolveOwnerInitials(task({ assigneeRole: null, assigneeUserId: null })),
+    ).toBe("—");
   });
 });
 

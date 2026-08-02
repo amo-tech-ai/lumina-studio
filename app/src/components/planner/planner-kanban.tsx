@@ -9,6 +9,7 @@ import { Lock } from "lucide-react";
 
 import type { PhaseTimelineStatus } from "@/lib/planner/planner-view-model";
 import {
+  resolveOwnerInitials,
   resolveTaskStatusChip,
   type KanbanColumn,
   type KanbanModel,
@@ -37,17 +38,17 @@ const CHIP_TONE: Record<TaskStatusTone, string> = {
   neutral: styles.chipNeutral,
 };
 
-function ownerLabel(task: PlannerTask): string {
-  if (task.assigneeRole) {
-    const parts = task.assigneeRole.split(/[\s_-]+/).filter(Boolean);
-    if (parts.length >= 2) return (parts[0]![0]! + parts[1]![0]!).toUpperCase();
-    return task.assigneeRole.slice(0, 2).toUpperCase();
-  }
-  return "—";
-}
-
 function columnGated(col: KanbanColumn): boolean {
   return col.gate === "ready" || col.gate === "locked";
+}
+
+/** Match Timeline phaseRowAccessibleName gate phrasing. */
+export function kanbanColumnAccessibleName(col: KanbanColumn): string {
+  const parts = [`${col.label}`, `${col.tasks.length} tasks`];
+  if (col.gate === "ready") parts.push("gate ready for approval");
+  else if (col.gate === "locked") parts.push("gate locked");
+  else if (col.gate === "approved") parts.push("gate approved");
+  return parts.join(", ");
 }
 
 export function PlannerKanban({ model }: { model: KanbanModel }) {
@@ -87,7 +88,7 @@ export function PlannerKanban({ model }: { model: KanbanModel }) {
             className={styles.column}
             data-testid="planner-kanban-column"
             data-phase-key={col.key}
-            aria-label={`${col.label}, ${col.tasks.length} tasks`}
+            aria-label={kanbanColumnAccessibleName(col)}
           >
             <header className={styles.header}>
               <div className={styles.headerLeft}>
@@ -118,7 +119,7 @@ export function PlannerKanban({ model }: { model: KanbanModel }) {
                         {chip.label}
                       </span>
                       <span className={styles.avatar} aria-hidden="true">
-                        {ownerLabel(task)}
+                        {resolveOwnerInitials(task)}
                       </span>
                     </div>
                   </button>
