@@ -128,6 +128,17 @@ describe("formatPlanDateShort", () => {
   });
 });
 
+describe("planDateToISO", () => {
+  it("zero-pads years below 1000 for YYYY-MM-DD round-trip", () => {
+    expect(planDateToISO({ year: 100, month: 1, day: 2 })).toBe("0100-01-02");
+    expect(parsePlanDate(planDateToISO({ year: 100, month: 1, day: 2 }))).toEqual({
+      year: 100,
+      month: 1,
+      day: 2,
+    });
+  });
+});
+
 describe("isValidPlanDate", () => {
   it("validates component-wise bounds", () => {
     expect(isValidPlanDate(2026, 3, 2)).toBe(true);

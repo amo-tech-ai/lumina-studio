@@ -7,7 +7,7 @@
 
 import type { CSSProperties } from "react";
 
-import { formatPlanDateIso } from "@/lib/planner/planner-date-utils";
+import { planDateToISO } from "@/lib/planner/planner-date-utils";
 import {
   rangeForPhase,
   resolveGateVisualState,
@@ -149,7 +149,7 @@ export function PlannerPhaseDetail({
   const rangeLabel = invalid
     ? "Needs correction — task dates are out of order"
     : range
-      ? `${formatPlanDateIso(range.start)} → ${formatPlanDateIso(range.end)}`
+      ? `${planDateToISO(range.start)} → ${planDateToISO(range.end)}`
       : "Unscheduled";
   // Phase 1: no persisted approval — never claim Approved from task status.
   const gateState = resolveGateVisualState(phase, tasks);
