@@ -202,14 +202,8 @@ async function cleanupFixtures(pg, { userId, idempotencyKey, brandName }) {
 async function runOnce(runIndex) {
   const qaUrl = process.env.QA_SUPABASE_URL?.replace(/\/$/, "");
   const qaAnon = process.env.QA_SUPABASE_ANON_KEY;
-  const email =
-    process.env.QA_EMAIL?.trim() ||
-    process.env.Email?.trim() ||
-    "qa@ipix.test";
-  const password =
-    process.env.QA_PASSWORD?.trim() ||
-    process.env.Password?.trim() ||
-    "";
+  const email = process.env.QA_EMAIL?.trim() || "qa@ipix.test";
+  const password = process.env.QA_PASSWORD?.trim() || "";
 
   assertQaOnly("QA_DATABASE_URL", process.env.QA_DATABASE_URL);
   assertQaOnly("QA_SUPABASE_URL", qaUrl);
@@ -289,8 +283,8 @@ async function runOnce(runIndex) {
       p_brand_url: brandUrl,
     };
 
-    // Best-effort concurrency: both HTTP RPCs start before either is awaited.
-    // True TX-overlap proof would need a server-side barrier inside the RPC
+    // ponytail: best-effort concurrency — both HTTP RPCs start before either is
+    // awaited. True TX-overlap proof needs a server-side barrier inside the RPC
     // (out of scope for this harness-only change).
     const started = Date.now();
     const [a, b] = await Promise.all([
