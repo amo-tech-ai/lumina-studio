@@ -8,6 +8,8 @@
 // Supabase calls).
 // IPI-581 · PLN-S1D — Calendar: same tasks payload; month matrix builds
 // client-side so Previous/Today/Next stay local.
+// IPI-588 · PLN-S1G — Now & Next uses the same tasks + phase names; viewer
+// id comes from the session (settings-page pattern).
 // Mutations ship in IPI-582.
 //
 // Loading/error states are the route's loading.tsx/error.tsx — a failed
@@ -27,6 +29,7 @@ import {
   buildTimelineModel,
 } from "@/lib/planner/planner-view-model";
 import { getInstanceDetail, listWorkflowPhases } from "@/lib/planner/queries";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export default async function PlannerWorkspacePage({
   params,
@@ -47,6 +50,16 @@ export default async function PlannerWorkspacePage({
     throw new Error(phasesResult.error.message);
   }
 
+  const supabase = await createSupabaseServerClient();
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser();
+  // Transient Auth/network failures must hit the error boundary (retryable),
+  // not notFound() — only a missing session after a successful Auth call is 404.
+  if (authError) throw new Error(authError.message);
+  if (!user) notFound();
+
   const todayIso = new Date().toISOString().slice(0, 10);
   const phases = phasesResult.data;
   const tasks = instanceResult.data.tasks;
@@ -56,6 +69,8 @@ export default async function PlannerWorkspacePage({
   const kanbanModel = buildKanbanModel(timelineModel, tasks);
   const listRows = buildTaskViews(phases, tasks);
 
+  const phaseNames = Object.fromEntries(phases.map((phase) => [phase.id, phase.name]));
+
   return (
     <PlannerWorkspaceShell
       instanceId={instanceId}
@@ -63,6 +78,10 @@ export default async function PlannerWorkspacePage({
       kanban={<PlannerKanban model={kanbanModel} />}
       calendar={<PlannerCalendar tasks={tasks} />}
       list={<PlannerList rows={listRows} />}
+      tasks={tasks}
+      viewerId={user.id}
+      phaseNames={phaseNames}
+      today={todayIso}
     />
   );
 }
