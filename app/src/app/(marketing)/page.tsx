@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { SITE_URL } from "@/lib/site";
+import { SITE_URL, canonicalUrl } from "@/lib/site";
 import { HeroSection } from "@/components/marketing/hero-section";
 import { ServicesSection } from "@/components/marketing/services-section";
 import { PortfolioSection } from "@/components/marketing/portfolio-section";
@@ -12,6 +12,7 @@ export const metadata: Metadata = {
   title: { absolute: "iPix — AI-Powered Content Studio for Fashion Brands" },
   description:
     "AI-powered platform that plans photoshoots, generates shot lists, and creates on-brand content.",
+  alternates: { canonical: canonicalUrl("/") },
   openGraph: {
     title: "iPix — AI-Powered Content Studio for Fashion Brands",
     description:
