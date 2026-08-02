@@ -589,3 +589,113 @@ jobs:
           name: channel-preview-e2e-failure
           path: test-results/
           retention-days: 7
+
+  # IPI-850 · CF-SMOKE-002 — Worker preview runtime smoke via verify:copilot (IPI-734).
+  # Reuses IPI-724 Playwright journey — no second suite / no e2e/cf-worker-smoke.spec.ts.
+  # Soft gap: named Mastra tool assert deferred (wrapper + this job comment).
+  verify-copilot-preview:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: app/.nvmrc
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            app/package-lock.json
+
+      - name: Verify QA credentials are configured
+        env:
+          QA_PASSWORD: ${{ secrets.QA_PASSWORD }}
+        run: |
+          if [ -z "$QA_PASSWORD" ]; then
+            echo "::error::QA_PASSWORD secret is not set — failing rather than letting this job silently skip the real login."
+            exit 1
+          fi
+
+      - name: Install root dependencies (Playwright + verify:copilot)
+        run: npm ci
+
+      - name: Install app dependencies
+        working-directory: app
+        run: npm ci
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: verify:copilot on Worker preview (chromium, readonly)
+        # One infra retry only (timeouts / 5xx / browser launch). Product assertion
+        # failures (hard_ac_pass false) are not retried.
+        env:
+          QA_PASSWORD: ${{ secrets.QA_PASSWORD }}
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+          # Optional override; default is the live OpenNext Worker preview host.
+          PREVIEW_WORKER_URL: ${{ vars.PREVIEW_WORKER_URL }}
+        run: |
+          set -euo pipefail
+          PREVIEW="${PREVIEW_WORKER_URL:-https://ipix-operator-preview.sk-498.workers.dev}"
+          OUT="tasks/copilotkit/verify/evidence-ci"
+          echo "verify:copilot target=$PREVIEW out=$OUT sha=${GITHUB_SHA}"
+          echo "Mastra tool assert: deferred (IPI-850 soft gap — not a second suite)"
+
+          run_verify() {
+            npm run verify:copilot -- \
+              --base-url="$PREVIEW" \
+              --readonly \
+              --browser=chromium \
+              --out="$OUT" 2>&1 | tee /tmp/verify-copilot-ci.log
+            return "${PIPESTATUS[0]}"
+          }
+
+          set +e
+          run_verify
+          code=$?
+          set -e
+          if [ "$code" -eq 0 ]; then
+            if [ -s "$OUT/summary.json" ]; then
+              exit 0
+            fi
+            echo "::error::verify:copilot exited 0 but wrote no summary.json — treating as failure"
+            exit 1
+          fi
+          if [ -f "$OUT/summary.json" ] &&
+             node -e '
+               const fs = require("fs");
+               const data = JSON.parse(fs.readFileSync(process.argv[1], "utf8"));
+               process.exit(data.hard_ac_pass === false ? 0 : 1);
+             ' "$OUT/summary.json"; then
+            echo "::error::Product acceptance criteria failed — not retrying"
+            exit "$code"
+          fi
+          if grep -qiE 'timeout|Navigation timeout|(^|[^0-9])50[23]([^0-9]|$)|ECONNRESET|browserType\.launch|Executable doesn' /tmp/verify-copilot-ci.log; then
+            echo "::warning::verify:copilot infra failure — retrying once"
+            rm -rf "$OUT"
+            set +e
+            run_verify
+            retry_code=$?
+            set -e
+            exit "$retry_code"
+          fi
+          echo "::error::verify:copilot failed (product assertion or non-infra error) — not retrying"
+          exit "$code"
+
+      - name: Upload sanitized summary.json
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: verify-copilot-summary
+          path: tasks/copilotkit/verify/evidence-ci/summary.json
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Upload failure evidence (screenshots + metadata)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: verify-copilot-preview-failure
+          path: tasks/copilotkit/verify/evidence-ci/
+          retention-days: 7
