@@ -3079,6 +3079,8 @@ try {
   // ── IPI-483 · PLN-ENG-002 — planner_approve_gate / planner_discard_gate
   // Atomic gate approvals: role + conditions inside txn, STALE_VERSION /
   // IDEMPOTENCY_CONFLICT / GATE_LOCKED / DEPENDENCY_CYCLE, events audit.
+  // Uses a dedicated workflow+instance so gated phases never pollute wfA
+  // (IPI-670 create_instance requires a complete phase cover of its workflow).
   {
     async function currentEdgesFor(instanceId) {
       const { data: deps } = await plannerA
@@ -3097,10 +3099,44 @@ try {
         );
     }
 
+    const { data: wfGate, error: wfGateErr } = await plannerA
+      .from("workflows")
+      .insert({
+        org_id: orgAId,
+        name: `RLS Gate WF ${stamp}`,
+        category: "production",
+        version: 1,
+        is_default: false,
+      })
+      .select("id")
+      .single();
+    assert(!wfGateErr && wfGate?.id, "owner creates dedicated workflow for IPI-483 probes");
+
+    const { data: instGate, error: instGateErr } = await plannerA
+      .from("instances")
+      .insert({
+        org_id: orgAId,
+        workflow_id: wfGate.id,
+        entity_type: "shoot",
+        entity_id: crypto.randomUUID(),
+        name: `RLS Gate Plan ${stamp}`,
+        status: "draft",
+      })
+      .select("id")
+      .single();
+    assert(!instGateErr && instGate?.id, "owner creates dedicated instance for IPI-483 probes");
+
+    const { error: gateAssignErr } = await plannerA.from("assignments").insert({
+      instance_id: instGate.id,
+      user_id: userB.user.id,
+      role: "manager",
+    });
+    assert(!gateAssignErr, "owner assigns user B as manager on dedicated gate instance");
+
     const { data: gatePhase, error: gatePhaseErr } = await plannerA
       .from("phases")
       .insert({
-        workflow_id: wfA.id,
+        workflow_id: wfGate.id,
         slug: `gate-casting-${stamp}`,
         name: "Casting gate",
         order_index: 50,
@@ -3115,7 +3151,7 @@ try {
     const { data: gateTask1, error: gateTask1Err } = await plannerA
       .from("tasks")
       .insert({
-        instance_id: instA.id,
+        instance_id: instGate.id,
         phase_id: gatePhase.id,
         title: `Gate task 1 ${stamp}`,
         status: "done",
@@ -3131,7 +3167,7 @@ try {
     const { data: gateTask2, error: gateTask2Err } = await plannerA
       .from("tasks")
       .insert({
-        instance_id: instA.id,
+        instance_id: instGate.id,
         phase_id: gatePhase.id,
         title: `Gate task 2 ${stamp}`,
         status: "done",
@@ -3148,13 +3184,13 @@ try {
     const { error: viewerRoleErr } = await plannerA
       .from("assignments")
       .update({ role: "viewer" })
-      .eq("instance_id", instA.id)
+      .eq("instance_id", instGate.id)
       .eq("user_id", userB.user.id);
     assert(!viewerRoleErr, "demote user B to viewer for gate-approve denial");
 
-    const edgesForViewer = await currentEdgesFor(instA.id);
+    const edgesForViewer = await currentEdgesFor(instGate.id);
     const { data: viewerApprove, error: viewerApproveErr } = await userB.client.rpc("planner_approve_gate", {
-      p_instance_id: instA.id,
+      p_instance_id: instGate.id,
       p_phase_id: gatePhase.id,
       p_idempotency_key: crypto.randomUUID(),
       p_changed_tasks: [],
@@ -3170,7 +3206,7 @@ try {
     const { error: restoreMgrGateErr } = await plannerA
       .from("assignments")
       .update({ role: "manager" })
-      .eq("instance_id", instA.id)
+      .eq("instance_id", instGate.id)
       .eq("user_id", userB.user.id);
     assert(!restoreMgrGateErr, "restore user B to manager for locked-gate probe");
 
@@ -3181,11 +3217,11 @@ try {
     assert(!reopenTaskErr, "reopen gate task 2 so the gate is Locked");
 
     const { data: lockedApprove, error: lockedApproveErr } = await userB.client.rpc("planner_approve_gate", {
-      p_instance_id: instA.id,
+      p_instance_id: instGate.id,
       p_phase_id: gatePhase.id,
       p_idempotency_key: crypto.randomUUID(),
       p_changed_tasks: [],
-      p_expected_dependency_edges: await currentEdgesFor(instA.id),
+      p_expected_dependency_edges: await currentEdgesFor(instGate.id),
       p_proposed_dependency_edges: null,
     });
     assert(
@@ -3214,7 +3250,7 @@ try {
     // 3 — Ready gate approval + date shift (no edge change → no cycle check path).
     const approveKey = crypto.randomUUID();
     const approvePayload = {
-      p_instance_id: instA.id,
+      p_instance_id: instGate.id,
       p_phase_id: gatePhase.id,
       p_idempotency_key: approveKey,
       p_changed_tasks: [
@@ -3225,7 +3261,7 @@ try {
           newEndDate: "2026-09-03",
         },
       ],
-      p_expected_dependency_edges: await currentEdgesFor(instA.id),
+      p_expected_dependency_edges: await currentEdgesFor(instGate.id),
       p_proposed_dependency_edges: null,
     };
     const { data: approve1, error: approve1Err } = await userB.client.rpc("planner_approve_gate", approvePayload);
@@ -3246,7 +3282,7 @@ try {
     const { data: gateEvents } = await plannerA
       .from("events")
       .select("id")
-      .eq("instance_id", instA.id)
+      .eq("instance_id", instGate.id)
       .eq("event_type", "gate_approved")
       .eq("idempotency_key", approveKey);
     assert((gateEvents ?? []).length === 1, "exactly one gate_approved event for the approve idempotency key");
@@ -3263,11 +3299,11 @@ try {
 
     // 6 — Second approve on already-approved gate → GATE_ALREADY_APPROVED.
     const { data: alreadyApproved, error: alreadyApprovedErr } = await userB.client.rpc("planner_approve_gate", {
-      p_instance_id: instA.id,
+      p_instance_id: instGate.id,
       p_phase_id: gatePhase.id,
       p_idempotency_key: crypto.randomUUID(),
       p_changed_tasks: [],
-      p_expected_dependency_edges: await currentEdgesFor(instA.id),
+      p_expected_dependency_edges: await currentEdgesFor(instGate.id),
       p_proposed_dependency_edges: null,
     });
     assert(
@@ -3276,12 +3312,25 @@ try {
     );
 
     // 7 — Cross-org denial (user A cannot approve on org B instance).
+    const { data: wfGateB, error: wfGateBErr } = await plannerB
+      .from("workflows")
+      .insert({
+        org_id: orgBId,
+        name: `RLS Gate WF B ${stamp}`,
+        category: "production",
+        version: 1,
+        is_default: false,
+      })
+      .select("id")
+      .single();
+    assert(!wfGateBErr && wfGateB?.id, "org B owner creates dedicated workflow for cross-org gate probe");
+
     const entityGateB = crypto.randomUUID();
     const { data: instGateB, error: instGateBErr } = await plannerB
       .from("instances")
       .insert({
         org_id: orgBId,
-        workflow_id: wfB.id,
+        workflow_id: wfGateB.id,
         entity_type: "shoot",
         entity_id: entityGateB,
         name: `RLS Gate Plan B ${stamp}`,
@@ -3294,7 +3343,7 @@ try {
     const { data: gatePhaseB, error: gatePhaseBErr } = await plannerB
       .from("phases")
       .insert({
-        workflow_id: wfB.id,
+        workflow_id: wfGateB.id,
         slug: `gate-b-${stamp}`,
         name: "Org B gate",
         order_index: 1,
@@ -3335,7 +3384,7 @@ try {
     const { data: cyclePhase, error: cyclePhaseErr } = await plannerA
       .from("phases")
       .insert({
-        workflow_id: wfA.id,
+        workflow_id: wfGate.id,
         slug: `gate-cycle-${stamp}`,
         name: "Cycle gate",
         order_index: 51,
@@ -3350,7 +3399,7 @@ try {
     const { data: cTaskA, error: cTaskAErr } = await plannerA
       .from("tasks")
       .insert({
-        instance_id: instA.id,
+        instance_id: instGate.id,
         phase_id: cyclePhase.id,
         title: `Cycle A ${stamp}`,
         status: "done",
@@ -3366,7 +3415,7 @@ try {
     const { data: cTaskB, error: cTaskBErr } = await plannerA
       .from("tasks")
       .insert({
-        instance_id: instA.id,
+        instance_id: instGate.id,
         phase_id: cyclePhase.id,
         title: `Cycle B ${stamp}`,
         status: "done",
@@ -3381,9 +3430,9 @@ try {
 
     // Propose a full edge set that includes a 2-cycle. Pass the live graph
     // as expected so CAS passes and cycle detection is what rejects.
-    const liveEdges = await currentEdgesFor(instA.id);
+    const liveEdges = await currentEdgesFor(instGate.id);
     const { data: cycleApprove, error: cycleApproveErr } = await userB.client.rpc("planner_approve_gate", {
-      p_instance_id: instA.id,
+      p_instance_id: instGate.id,
       p_phase_id: cyclePhase.id,
       p_idempotency_key: crypto.randomUUID(),
       p_changed_tasks: [],
@@ -3402,7 +3451,7 @@ try {
     const { data: cycleDeps } = await plannerA
       .from("dependencies")
       .select("id")
-      .eq("instance_id", instA.id)
+      .eq("instance_id", instGate.id)
       .in("from_task_id", [cTaskA.id, cTaskB.id]);
     assert((cycleDeps ?? []).length === 0, "failed cycle approve writes no dependency rows");
 
@@ -3410,7 +3459,7 @@ try {
     const { data: discardPhase, error: discardPhaseErr } = await plannerA
       .from("phases")
       .insert({
-        workflow_id: wfA.id,
+        workflow_id: wfGate.id,
         slug: `gate-discard-${stamp}`,
         name: "Discard gate",
         order_index: 52,
@@ -3423,7 +3472,7 @@ try {
     assert(!discardPhaseErr && discardPhase?.id, "owner inserts phase for discard probe");
 
     const { error: discardTaskErr } = await plannerA.from("tasks").insert({
-      instance_id: instA.id,
+      instance_id: instGate.id,
       phase_id: discardPhase.id,
       title: `Discard task ${stamp}`,
       status: "done",
@@ -3436,7 +3485,7 @@ try {
 
     const discardKey = crypto.randomUUID();
     const { data: discard1, error: discard1Err } = await userB.client.rpc("planner_discard_gate", {
-      p_instance_id: instA.id,
+      p_instance_id: instGate.id,
       p_phase_id: discardPhase.id,
       p_idempotency_key: discardKey,
       p_reason: "operator abandoned proposal",
@@ -3444,7 +3493,7 @@ try {
     assert(!discard1Err && discard1?.ok === true && discard1?.status === "discarded", "manager can discard a gate proposal");
 
     const { data: discardReplay, error: discardReplayErr } = await userB.client.rpc("planner_discard_gate", {
-      p_instance_id: instA.id,
+      p_instance_id: instGate.id,
       p_phase_id: discardPhase.id,
       p_idempotency_key: discardKey,
       p_reason: "operator abandoned proposal",
@@ -3458,7 +3507,7 @@ try {
     const { data: stalePhase, error: stalePhaseErr } = await plannerA
       .from("phases")
       .insert({
-        workflow_id: wfA.id,
+        workflow_id: wfGate.id,
         slug: `gate-stale-${stamp}`,
         name: "Stale gate",
         order_index: 53,
@@ -3473,7 +3522,7 @@ try {
     const { data: staleTask, error: staleTaskErr } = await plannerA
       .from("tasks")
       .insert({
-        instance_id: instA.id,
+        instance_id: instGate.id,
         phase_id: stalePhase.id,
         title: `Stale task ${stamp}`,
         status: "done",
@@ -3493,7 +3542,7 @@ try {
     assert(!bumpStaleErr, "bump task updated_at to stale the proposal");
 
     const { data: staleApprove, error: staleApproveErr } = await userB.client.rpc("planner_approve_gate", {
-      p_instance_id: instA.id,
+      p_instance_id: instGate.id,
       p_phase_id: stalePhase.id,
       p_idempotency_key: crypto.randomUUID(),
       p_changed_tasks: [
@@ -3504,7 +3553,7 @@ try {
           newEndDate: "2026-12-04",
         },
       ],
-      p_expected_dependency_edges: await currentEdgesFor(instA.id),
+      p_expected_dependency_edges: await currentEdgesFor(instGate.id),
       p_proposed_dependency_edges: null,
     });
     assert(
@@ -3516,13 +3565,13 @@ try {
     const { data: approvalRow, error: approvalSelectErr } = await plannerA
       .from("gate_approvals")
       .select("id, status")
-      .eq("instance_id", instA.id)
+      .eq("instance_id", instGate.id)
       .eq("phase_id", gatePhase.id)
       .maybeSingle();
     assert(!approvalSelectErr && approvalRow?.status === "approved", "assigned member can SELECT gate_approvals");
 
     const { error: directInsertErr } = await plannerA.from("gate_approvals").insert({
-      instance_id: instA.id,
+      instance_id: instGate.id,
       phase_id: stalePhase.id,
       status: "approved",
     });
