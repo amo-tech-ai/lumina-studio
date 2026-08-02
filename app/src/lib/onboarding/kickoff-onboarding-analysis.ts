@@ -6,8 +6,11 @@ import {
   type OnboardingForm,
 } from "@/lib/onboarding";
 
-/** Mid-flight analysis — listen only; do not re-invoke edge functions. */
-const LISTEN_ONLY = new Set(["analysis_running"]);
+/**
+ * Terminal / mid-flight — listen only; do not re-invoke edge functions.
+ * `failed` must not auto-restart crawl (Brand Hub owns explicit retry).
+ */
+const LISTEN_ONLY = new Set(["analysis_running", "failed"]);
 
 /** Analysis already finished enough for screen 13 (DNA review). */
 export function isAnalysisReviewable(intakeStatus: string | null | undefined): boolean {
@@ -21,6 +24,8 @@ export function isAnalysisReviewable(intakeStatus: string | null | undefined): b
 export type KickoffOnboardingCrawlResult =
   | { kind: "already_done"; intakeStatus: string }
   | { kind: "listen_only"; intakeStatus: string }
+  /** Website intentionally blank — caller must not start crawl or BI (needs URL). */
+  | { kind: "needs_website" }
   | { kind: "crawl_started"; crawlId: string; reused?: boolean; startBiNow: boolean }
   | { kind: "crawl_failed"; error: string; startBiNow: true };
 
@@ -36,6 +41,11 @@ export async function kickoffOnboardingCrawl(
   brandId: string,
   websiteUrl: string,
 ): Promise<KickoffOnboardingCrawlResult> {
+  const trimmedUrl = websiteUrl.trim();
+  if (!trimmedUrl) {
+    return { kind: "needs_website" };
+  }
+
   const { data: brand, error } = await supabase
     .from("brands")
     .select("intake_status")
@@ -58,7 +68,7 @@ export async function kickoffOnboardingCrawl(
   }
 
   try {
-    const crawl = await invokeStartBrandCrawl(supabase, brandId, websiteUrl, {
+    const crawl = await invokeStartBrandCrawl(supabase, brandId, trimmedUrl, {
       idempotencyKey: `onboarding-${brandId}`,
     });
     return {
@@ -82,6 +92,9 @@ export async function kickoffOnboardingCrawl(
  *
  * Claims `analysis_running` with a compare-and-swap so two tabs seeing the same
  * `crawl_complete` Realtime event cannot both invoke the LLM. Losers no-op.
+ *
+ * If the edge invoke fails after a successful claim, the claim is released so a
+ * later retry can reclaim (client-side recovery; not a durable job queue).
  */
 export async function startOnboardingBrandIntelligence(
   supabase: SupabaseClient,
@@ -105,7 +118,19 @@ export async function startOnboardingBrandIntelligence(
     return;
   }
 
-  await invokeBrandIntelligence(supabase, brandId, form, {
-    ...(options?.crawlResultId ? { crawlResultId: options.crawlResultId } : {}),
-  });
+  try {
+    await invokeBrandIntelligence(supabase, brandId, form, {
+      ...(options?.crawlResultId ? { crawlResultId: options.crawlResultId } : {}),
+    });
+  } catch (err) {
+    // Best-effort release so Retry / remount can reclaim. Prefer crawl_complete when
+    // we had crawl content; otherwise brand_created (no-website / crawl_failed path).
+    const releaseTo = options?.crawlResultId ? "crawl_complete" : "brand_created";
+    await supabase
+      .from("brands")
+      .update({ intake_status: releaseTo })
+      .eq("id", brandId)
+      .eq("intake_status", "analysis_running");
+    throw err;
+  }
 }

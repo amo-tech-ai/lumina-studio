@@ -190,6 +190,7 @@ export function OnboardingFlow({
             brandId={brandId}
             answers={answers}
             onComplete={() => replaceScreen(LAST_SCREEN)}
+            onEditWebsite={() => goToScreen(4)}
           />
         );
       case LAST_SCREEN:

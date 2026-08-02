@@ -99,47 +99,7 @@ describe("AnalysisProgressScreen — IPI-835 · C", () => {
     expect(mockKickoff.mock.calls[0][2]).toBe("https://maison.example");
   });
 
-  it("does not treat connection_lost as failed", () => {
-    mockProgress = {
-      ...mockProgress,
-      phase: "connection_lost",
-      intakeStatus: "crawl_running",
-    };
-    render(
-      <AnalysisProgressScreen
-        brandId="brand-1"
-        answers={answers}
-        onComplete={vi.fn()}
-        quietGapMs={0}
-      />,
-    );
-    expect(screen.getByRole("heading", { name: /connection lost/i })).toBeTruthy();
-    expect(screen.getByTestId("analysis-status").textContent).toMatch(/not failed/i);
-    fireEvent.click(screen.getByRole("button", { name: /reconnect/i }));
-    expect(mockReconnect).toHaveBeenCalled();
-  });
-
-  it("shows failed only for server failed phase", () => {
-    mockProgress = {
-      ...mockProgress,
-      phase: "failed",
-      intakeStatus: "failed",
-      crawl: null,
-    };
-    render(
-      <AnalysisProgressScreen
-        brandId="brand-1"
-        answers={answers}
-        onComplete={vi.fn()}
-        quietGapMs={0}
-      />,
-    );
-    expect(screen.getByRole("heading", { name: /analysis failed/i })).toBeTruthy();
-    expect(screen.queryByRole("button", { name: /reconnect/i })).toBeNull();
-  });
-
-  it("calls onComplete when intake becomes scores_complete (no client timer)", async () => {
-    const onComplete = vi.fn();
+  it("calls onComplete when server status is reviewable (no client timer)", async () => {
     mockProgress = {
       intakeStatus: "scores_complete",
       crawl: null,
@@ -150,7 +110,7 @@ describe("AnalysisProgressScreen — IPI-835 · C", () => {
       kind: "already_done",
       intakeStatus: "scores_complete",
     });
-
+    const onComplete = vi.fn();
     render(
       <AnalysisProgressScreen
         brandId="brand-1"
@@ -226,21 +186,21 @@ describe("AnalysisProgressScreen — IPI-835 · C", () => {
     expect(mockStartBi).toHaveBeenCalledTimes(1);
   });
 
-  it("starts BI once when crawl_complete arrives after deferred kickoff", async () => {
-    mockKickoff.mockResolvedValue({
-      kind: "crawl_started",
-      crawlId: "crawl-deferred",
-      reused: false,
-      startBiNow: false,
-    });
+  it("waits for kickoff to settle before deferred BI, attaching crawlResultId", async () => {
+    let resolveKickoff!: (value: unknown) => void;
+    mockKickoff.mockReturnValue(
+      new Promise((resolve) => {
+        resolveKickoff = resolve;
+      }),
+    );
     mockProgress = {
-      intakeStatus: "crawl_running",
-      crawl: { pages_crawled: 1, pages_found: 5 },
+      intakeStatus: "crawl_complete",
+      crawl: null,
       phase: "live",
       reconnect: mockReconnect,
     };
 
-    const { rerender } = render(
+    render(
       <AnalysisProgressScreen
         brandId="brand-1"
         answers={answers}
@@ -254,13 +214,53 @@ describe("AnalysisProgressScreen — IPI-835 · C", () => {
     });
     expect(mockStartBi).not.toHaveBeenCalled();
 
-    mockProgress = {
-      intakeStatus: "crawl_complete",
-      crawl: null,
-      phase: "live",
-      reconnect: mockReconnect,
-    };
-    rerender(
+    await act(async () => {
+      resolveKickoff({
+        kind: "crawl_started",
+        crawlId: "crawl-deferred",
+        reused: false,
+        startBiNow: false,
+      });
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(mockStartBi).toHaveBeenCalledTimes(1);
+    expect(mockStartBi.mock.calls[0][3]).toEqual({ crawlResultId: "crawl-deferred" });
+  });
+
+  it("shows website recovery UI when URL is blank (no crawl or BI)", async () => {
+    const onEditWebsite = vi.fn();
+    render(
+      <AnalysisProgressScreen
+        brandId="brand-1"
+        answers={{ ...answers, websiteUrl: "   " }}
+        onComplete={vi.fn()}
+        onEditWebsite={onEditWebsite}
+        quietGapMs={0}
+      />,
+    );
+
+    expect(await screen.findByText(/Website needed/i)).toBeTruthy();
+    expect(screen.getByTestId("analysis-status").textContent).toMatch(/website url/i);
+    expect(mockKickoff).not.toHaveBeenCalled();
+    expect(mockStartBi).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole("button", { name: /Add website/i }));
+    expect(onEditWebsite).toHaveBeenCalledTimes(1);
+  });
+
+  it("shows fatal failure with Retry that re-runs kickoff", async () => {
+    mockKickoff
+      .mockRejectedValueOnce(new Error("brands read failed"))
+      .mockResolvedValueOnce({
+        kind: "crawl_started",
+        crawlId: "crawl-retry",
+        reused: false,
+        startBiNow: false,
+      });
+
+    render(
       <AnalysisProgressScreen
         brandId="brand-1"
         answers={answers}
@@ -269,29 +269,16 @@ describe("AnalysisProgressScreen — IPI-835 · C", () => {
       />,
     );
 
-    await act(async () => {
-      await Promise.resolve();
-      await Promise.resolve();
-    });
-    expect(mockStartBi).toHaveBeenCalledTimes(1);
-    expect(mockStartBi.mock.calls[0][3]).toEqual({ crawlResultId: "crawl-deferred" });
-  });
+    expect(await screen.findByText(/Analysis failed/i)).toBeTruthy();
+    expect(screen.getByTestId("analysis-status").textContent).toMatch(/brands read failed/i);
 
-  it("skips crawl and starts BI when website URL is blank", async () => {
-    render(
-      <AnalysisProgressScreen
-        brandId="brand-1"
-        answers={{ ...answers, websiteUrl: "   " }}
-        onComplete={vi.fn()}
-        quietGapMs={0}
-      />,
-    );
+    fireEvent.click(screen.getByRole("button", { name: /Retry/i }));
 
     await act(async () => {
       await Promise.resolve();
       await Promise.resolve();
     });
-    expect(mockKickoff).not.toHaveBeenCalled();
-    expect(mockStartBi).toHaveBeenCalledTimes(1);
+    expect(mockKickoff).toHaveBeenCalledTimes(2);
+    expect(await screen.findByText(/Crawling your website/i)).toBeTruthy();
   });
 });

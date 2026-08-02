@@ -33,23 +33,41 @@ function supabaseWithIntake(intake_status: string | null) {
   };
 }
 
-/** Claim path: update…eq…in…select…maybeSingle */
-function supabaseWithClaim(claimed: boolean) {
+/** Claim (+ optional release) path: update…eq…in|eq…select…maybeSingle */
+function supabaseWithClaim(opts: { claimResults: boolean[] }) {
+  let claimIdx = 0;
+  const release = vi.fn().mockResolvedValue({ data: null, error: null });
+
   return {
     from: () => ({
-      update: () => ({
-        eq: () => ({
-          in: () => ({
-            select: () => ({
-              maybeSingle: vi.fn().mockResolvedValue({
-                data: claimed ? { id: "brand-1" } : null,
-                error: null,
+      update: (payload: { intake_status?: string }) => {
+        if (payload.intake_status === "analysis_running") {
+          return {
+            eq: () => ({
+              in: () => ({
+                select: () => ({
+                  maybeSingle: vi.fn().mockImplementation(async () => {
+                    const claimed = opts.claimResults[claimIdx] ?? false;
+                    claimIdx += 1;
+                    return {
+                      data: claimed ? { id: "brand-1" } : null,
+                      error: null,
+                    };
+                  }),
+                }),
               }),
             }),
+          };
+        }
+        // Release path: update → eq → eq
+        return {
+          eq: () => ({
+            eq: release,
           }),
-        }),
-      }),
+        };
+      },
     }),
+    __release: release,
   };
 }
 
@@ -91,6 +109,40 @@ describe("kickoffOnboardingCrawl", () => {
     );
     expect(result).toEqual({ kind: "listen_only", intakeStatus: "analysis_running" });
     expect(mockInvokeStartBrandCrawl).not.toHaveBeenCalled();
+  });
+
+  it("returns listen_only when intake_status is failed (no auto-restart)", async () => {
+    const result = await kickoffOnboardingCrawl(
+      supabaseWithIntake("failed") as never,
+      "brand-1",
+      "https://example.com",
+    );
+    expect(result).toEqual({ kind: "listen_only", intakeStatus: "failed" });
+    expect(mockInvokeStartBrandCrawl).not.toHaveBeenCalled();
+  });
+
+  it("returns needs_website without calling crawl when URL is blank", async () => {
+    const result = await kickoffOnboardingCrawl(
+      supabaseWithIntake("brand_created") as never,
+      "brand-1",
+      "   ",
+    );
+    expect(result).toEqual({ kind: "needs_website" });
+    expect(mockInvokeStartBrandCrawl).not.toHaveBeenCalled();
+  });
+
+  it("defaults missing intake_status to brand_created and starts crawl", async () => {
+    const supabase = supabaseWithIntake(null);
+    const result = await kickoffOnboardingCrawl(
+      supabase as never,
+      "brand-1",
+      "https://example.com",
+    );
+    expect(result.kind).toBe("crawl_started");
+    if (result.kind === "crawl_started") {
+      expect(result.startBiNow).toBe(false);
+    }
+    expect(mockInvokeStartBrandCrawl).toHaveBeenCalledTimes(1);
   });
 
   it("starts crawl with stable onboarding idempotency key", async () => {
@@ -173,7 +225,7 @@ describe("startOnboardingBrandIntelligence", () => {
   });
 
   it("invokes BI after claiming analysis_running", async () => {
-    const supabase = supabaseWithClaim(true);
+    const supabase = supabaseWithClaim({ claimResults: [true] });
     await startOnboardingBrandIntelligence(supabase as never, "brand-1", form as never, {
       crawlResultId: "crawl-1",
     });
@@ -185,10 +237,31 @@ describe("startOnboardingBrandIntelligence", () => {
 
   it("skips BI when another tab already claimed the status", async () => {
     await startOnboardingBrandIntelligence(
-      supabaseWithClaim(false) as never,
+      supabaseWithClaim({ claimResults: [false] }) as never,
       "brand-1",
       form as never,
     );
     expect(mockInvokeBrandIntelligence).not.toHaveBeenCalled();
+  });
+
+  it("releases claim when BI rejects so a later start recovers once", async () => {
+    mockInvokeBrandIntelligence
+      .mockRejectedValueOnce(new Error("edge 422"))
+      .mockResolvedValueOnce(undefined);
+
+    const supabase = supabaseWithClaim({ claimResults: [true, true] });
+
+    await expect(
+      startOnboardingBrandIntelligence(supabase as never, "brand-1", form as never, {
+        crawlResultId: "crawl-1",
+      }),
+    ).rejects.toThrow("edge 422");
+
+    expect(supabase.__release).toHaveBeenCalled();
+
+    await startOnboardingBrandIntelligence(supabase as never, "brand-1", form as never, {
+      crawlResultId: "crawl-1",
+    });
+    expect(mockInvokeBrandIntelligence).toHaveBeenCalledTimes(2);
   });
 });

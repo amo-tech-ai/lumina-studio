@@ -47,6 +47,8 @@ export type AnalysisProgressScreenProps = {
   brandId: string | null;
   answers: OnboardingAnswers;
   onComplete: () => void;
+  /** Navigate back to Brand Details so the user can enter a website URL. */
+  onEditWebsite?: () => void;
   /** Forwarded to the shared hook; `0` disables still-working (tests). */
   quietGapMs?: number;
 };
@@ -59,6 +61,7 @@ export function AnalysisProgressScreen({
   brandId,
   answers,
   onComplete,
+  onEditWebsite,
   quietGapMs,
 }: AnalysisProgressScreenProps) {
   if (!brandId) {
@@ -84,6 +87,7 @@ export function AnalysisProgressScreen({
       brandId={brandId}
       answers={answers}
       onComplete={onComplete}
+      onEditWebsite={onEditWebsite}
       quietGapMs={quietGapMs}
     />
   );
@@ -93,11 +97,13 @@ function AnalysisProgressLive({
   brandId,
   answers,
   onComplete,
+  onEditWebsite,
   quietGapMs,
 }: {
   brandId: string;
   answers: OnboardingAnswers;
   onComplete: () => void;
+  onEditWebsite?: () => void;
   quietGapMs?: number;
 }) {
   const onCompleteRef = useRef(onComplete);
@@ -105,7 +111,16 @@ function AnalysisProgressLive({
   const answersRef = useRef(answers);
   answersRef.current = answers;
 
-  const [kickoffError, setKickoffError] = useState<string | null>(null);
+  /** Recoverable crawl start warning — BI may still proceed. */
+  const [crawlWarning, setCrawlWarning] = useState<string | null>(null);
+  /** Fatal kickoff / BI start — analysis will not continue without retry. */
+  const [fatalError, setFatalError] = useState<string | null>(null);
+  const [needsWebsite, setNeedsWebsite] = useState(false);
+  /** Bumped by Retry to re-run the brandId-gated kickoff effect. */
+  const [kickoffAttempt, setKickoffAttempt] = useState(0);
+  /** True after kickoff effect settles (success or failure) — gates deferred BI. */
+  const [kickoffSettled, setKickoffSettled] = useState(false);
+
   const biStartedRef = useRef(false);
   const completedRef = useRef(false);
   const crawlIdRef = useRef<string | undefined>(undefined);
@@ -116,22 +131,28 @@ function AnalysisProgressLive({
     quietGapMs,
   });
 
-  // Idempotent crawl (+ BI when crawl already done / start failed / no website).
-  // brandId-gated mount: answers read from answersRef so this does not re-run on draft edits.
+  // Idempotent crawl (+ BI when crawl already done / start failed).
+  // brandId + kickoffAttempt gated; answers via answersRef (intentional).
   useEffect(() => {
     let cancelled = false;
     const supabase = createSupabaseBrowserClient();
     const form = answersToOnboardingForm(answersRef.current);
     const websiteUrl = answersRef.current.websiteUrl.trim();
 
+    setKickoffSettled(false);
+    setCrawlWarning(null);
+    setFatalError(null);
+    setNeedsWebsite(false);
+    biStartedRef.current = false;
+    crawlIdRef.current = undefined;
+
     (async () => {
       try {
-        // Skip/blank website is allowed in onboarding — do not call start-brand-crawl
-        // (it requires HTTP(S)). Go straight to brand-intelligence.
+        // Blank website: BI also requires http(s) — do not dead-end; ask for a URL.
         if (!websiteUrl) {
-          if (!biStartedRef.current) {
-            biStartedRef.current = true;
-            await startOnboardingBrandIntelligence(supabase, brandId, form);
+          if (!cancelled) {
+            setNeedsWebsite(true);
+            setKickoffSettled(true);
           }
           return;
         }
@@ -139,46 +160,80 @@ function AnalysisProgressLive({
         const result = await kickoffOnboardingCrawl(supabase, brandId, websiteUrl);
         if (cancelled) return;
 
+        if (result.kind === "needs_website") {
+          setNeedsWebsite(true);
+          setKickoffSettled(true);
+          return;
+        }
+
         if (result.kind === "already_done") {
           if (!completedRef.current) {
             completedRef.current = true;
             onCompleteRef.current();
           }
+          setKickoffSettled(true);
           return;
         }
 
-        if (result.kind === "listen_only") return;
+        if (result.kind === "listen_only") {
+          setKickoffSettled(true);
+          return;
+        }
 
         if (result.kind === "crawl_started") {
+          // Store crawl id before marking settled so deferred BI can attach it.
           crawlIdRef.current = result.crawlId;
+          setKickoffSettled(true);
           if (result.startBiNow && !biStartedRef.current) {
             biStartedRef.current = true;
-            await startOnboardingBrandIntelligence(supabase, brandId, form, {
-              crawlResultId: result.crawlId,
-            });
+            try {
+              await startOnboardingBrandIntelligence(supabase, brandId, form, {
+                crawlResultId: result.crawlId,
+              });
+            } catch (err) {
+              if (!cancelled) {
+                biStartedRef.current = false;
+                setFatalError(
+                  err instanceof Error ? err.message : "Brand analysis failed to start",
+                );
+              }
+            }
           }
           return;
         }
 
-        setKickoffError(result.error);
+        // crawl_failed — non-blocking; fall through to BI without crawl content.
+        setCrawlWarning(result.error);
+        setKickoffSettled(true);
         if (result.startBiNow && !biStartedRef.current) {
           biStartedRef.current = true;
-          await startOnboardingBrandIntelligence(supabase, brandId, form);
+          try {
+            await startOnboardingBrandIntelligence(supabase, brandId, form);
+          } catch (err) {
+            if (!cancelled) {
+              biStartedRef.current = false;
+              setFatalError(
+                err instanceof Error ? err.message : "Brand analysis failed to start",
+              );
+            }
+          }
         }
       } catch (err) {
         if (cancelled) return;
-        setKickoffError(err instanceof Error ? err.message : "Could not start analysis");
+        setFatalError(err instanceof Error ? err.message : "Could not start analysis");
+        setKickoffSettled(true);
       }
     })();
 
     return () => {
       cancelled = true;
     };
-  }, [brandId]);
+  }, [brandId, kickoffAttempt]);
 
-  // When crawl finishes after a deferred kickoff, start BI once.
-  // brandId + intakeStatus only — answers via answersRef (intentional).
+  // When crawl finishes after a deferred kickoff, start BI once — only after kickoff settled
+  // so crawlIdRef is populated when a crawl already completed on mount.
   useEffect(() => {
+    if (!kickoffSettled) return;
     if (intakeStatus !== "crawl_complete") return;
     if (biStartedRef.current) return;
     biStartedRef.current = true;
@@ -189,9 +244,10 @@ function AnalysisProgressLive({
       answersToOnboardingForm(answersRef.current),
       crawlIdRef.current ? { crawlResultId: crawlIdRef.current } : undefined,
     ).catch((err) => {
-      setKickoffError(err instanceof Error ? err.message : "Brand analysis failed to start");
+      biStartedRef.current = false;
+      setFatalError(err instanceof Error ? err.message : "Brand analysis failed to start");
     });
-  }, [brandId, intakeStatus]);
+  }, [brandId, intakeStatus, kickoffSettled]);
 
   // Advance to DNA review when server says analysis is reviewable.
   useEffect(() => {
@@ -201,7 +257,40 @@ function AnalysisProgressLive({
     onCompleteRef.current();
   }, [intakeStatus]);
 
-  if (phase === "failed") {
+  const retryKickoff = () => {
+    setFatalError(null);
+    setCrawlWarning(null);
+    setKickoffAttempt((n) => n + 1);
+  };
+
+  if (needsWebsite) {
+    return (
+      <OnboardingCard>
+        <h1 className="m-0 text-[1.75rem] font-extrabold leading-tight tracking-tight">
+          Website needed
+        </h1>
+        <p
+          role="alert"
+          data-testid="analysis-status"
+          aria-live="assertive"
+          className="mt-2.5 text-sm leading-snug text-destructive"
+        >
+          Analysis needs a website URL. Add one on Brand Details, then continue again.
+        </p>
+        {onEditWebsite ? (
+          <button
+            type="button"
+            onClick={onEditWebsite}
+            className="mt-5 rounded-full bg-[var(--onboarding-cta)] px-5 py-2.5 font-sans text-sm font-semibold text-[var(--onboarding-card)]"
+          >
+            Add website
+          </button>
+        ) : null}
+      </OnboardingCard>
+    );
+  }
+
+  if (phase === "failed" || fatalError) {
     return (
       <OnboardingCard>
         <h1 className="m-0 text-[1.75rem] font-extrabold leading-tight tracking-tight">
@@ -213,9 +302,16 @@ function AnalysisProgressLive({
           aria-live="assertive"
           className="mt-2.5 text-sm leading-snug text-destructive"
         >
-          {kickoffError ??
-            "Something went wrong while analysing your brand. You can retry from Brand Hub."}
+          {fatalError ??
+            "Something went wrong while analysing your brand. You can retry here or from Brand Hub."}
         </p>
+        <button
+          type="button"
+          onClick={retryKickoff}
+          className="mt-5 rounded-full bg-[var(--onboarding-cta)] px-5 py-2.5 font-sans text-sm font-semibold text-[var(--onboarding-card)]"
+        >
+          Retry
+        </button>
       </OnboardingCard>
     );
   }
@@ -288,9 +384,9 @@ function AnalysisProgressLive({
             </span>
           ) : null}
         </p>
-        {kickoffError ? (
+        {crawlWarning ? (
           <p className="mt-2 text-xs text-[var(--onboarding-weak)]" role="status">
-            Crawl warning: {kickoffError}. Analysis may still continue.
+            Crawl warning: {crawlWarning}. Analysis may still continue.
           </p>
         ) : null}
       </div>
