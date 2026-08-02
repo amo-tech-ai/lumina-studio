@@ -6,7 +6,8 @@
 // IPI-582 · PLN-S1E Stage 1 — PlannerTaskDetail gains an editable form for
 // fields updateTask supports (title, description, status, assignee). Priority
 // stays read-only — the IPI-649 adapter has no priority patch. Schedule moves
-// belong to shiftTask (separate PR). No ApprovalCard here (Stage 2 / IPI-483).
+// use keyboard ±1 day via shiftTask (DnD deferred — no new dependency).
+// No ApprovalCard here (Stage 2 / IPI-483).
 
 import { useRouter } from "next/navigation";
 import {
@@ -20,10 +21,15 @@ import {
 } from "react";
 
 import {
+  shiftTaskAction,
   updateTaskAction,
 } from "@/app/(operator)/app/planner/[instanceId]/actions";
 import type { PlannerAssigneeOption } from "@/app/(operator)/app/planner/[instanceId]/selection-actions";
-import { planDateToISO } from "@/lib/planner/planner-date-utils";
+import {
+  addPlanDays,
+  parsePlanDate,
+  planDateToISO,
+} from "@/lib/planner/planner-date-utils";
 import {
   rangeForPhase,
   resolveGateVisualState,
@@ -185,6 +191,23 @@ function draftFromTask(task: PlannerTask): Draft {
   };
 }
 
+/** Calendar-day preview for ±1 day — matches PlannerEngine.applyDelta. */
+function previewShiftedDate(iso: string | null, deltaDays: number): string | null {
+  if (!iso) return null;
+  const parsed = parsePlanDate(iso);
+  if (!parsed) return null;
+  return planDateToISO(addPlanDays(parsed, deltaDays));
+}
+
+function formatShiftPreview(task: Pick<PlannerTask, "startDate" | "endDate">, deltaDays: number): string {
+  const start = previewShiftedDate(task.startDate, deltaDays);
+  const end = previewShiftedDate(task.endDate, deltaDays);
+  if (start && end) return `${start} → ${end}`;
+  if (start) return start;
+  if (end) return end;
+  return "No scheduled dates to move";
+}
+
 export function PlannerTaskDetail({
   task,
   onClose,
@@ -198,10 +221,15 @@ export function PlannerTaskDetail({
   const [expectedUpdatedAt, setExpectedUpdatedAt] = useState(task.updatedAt ?? "");
   const [fieldError, setFieldError] = useState<string | null>(null);
   const [actionError, setActionError] = useState<{ code: string; message: string } | null>(null);
+  const [shiftError, setShiftError] = useState<{ code: string; message: string } | null>(null);
+  // Null = no pending move. ±1 after the operator picks a direction; Confirm
+  // calls shiftTask. Never optimistic — Timeline stays on server dates until ok.
+  const [proposedDelta, setProposedDelta] = useState<-1 | 1 | null>(null);
   const [isPending, startTransition] = useTransition();
   // Mint once per submit attempt; reuse on retry of the same attempt. Cleared
   // on success or when the draft changes (new logical mutation).
   const idempotencyKeyRef = useRef<string | null>(null);
+  const shiftIdempotencyKeyRef = useRef<string | null>(null);
   // Sync draft only when the parent task CAS token advances (AdaptivePanel
   // re-resolve). Do not key this on local expectedUpdatedAt — Reload updates
   // that before props catch up and would otherwise wipe the reloaded draft.
@@ -214,7 +242,10 @@ export function PlannerTaskDetail({
     setExpectedUpdatedAt(task.updatedAt);
     setFieldError(null);
     setActionError(null);
+    setShiftError(null);
+    setProposedDelta(null);
     idempotencyKeyRef.current = null;
+    shiftIdempotencyKeyRef.current = null;
   }, [task]);
 
   function updateDraft<K extends keyof Draft>(key: K, value: Draft[K]) {
@@ -233,9 +264,62 @@ export function PlannerTaskDetail({
         setExpectedUpdatedAt(refreshed.task.updatedAt ?? "");
         setActionError(null);
         setFieldError(null);
+        setShiftError(null);
+        setProposedDelta(null);
         idempotencyKeyRef.current = null;
+        shiftIdempotencyKeyRef.current = null;
       }
       // Pick up revalidated Timeline/Kanban/List/Now&Next RSC props.
+      router.refresh();
+    });
+  }
+
+  function proposeShift(delta: -1 | 1) {
+    if (!canUpdateTasks || isPending) return;
+    shiftIdempotencyKeyRef.current = null;
+    setShiftError(null);
+    setProposedDelta(delta);
+  }
+
+  function cancelProposedShift() {
+    setProposedDelta(null);
+    setShiftError(null);
+    shiftIdempotencyKeyRef.current = null;
+  }
+
+  function confirmProposedShift() {
+    if (!canUpdateTasks || isPending || proposedDelta === null) return;
+    if (!task.startDate && !task.endDate) {
+      setShiftError({
+        code: "INVALID_INPUT",
+        message: "This task has no scheduled dates to move.",
+      });
+      return;
+    }
+
+    shiftIdempotencyKeyRef.current ??= crypto.randomUUID();
+    const idempotencyKey = shiftIdempotencyKeyRef.current;
+    const deltaDays = proposedDelta;
+    setShiftError(null);
+
+    startTransition(async () => {
+      const result = await shiftTaskAction(
+        task.instanceId,
+        task.id,
+        deltaDays,
+        idempotencyKey,
+      );
+
+      if (!result.ok) {
+        // Preserve selection + proposed preview — no optimistic schedule confirm.
+        setShiftError({ code: result.error.code, message: result.error.message });
+        return;
+      }
+
+      shiftIdempotencyKeyRef.current = null;
+      setProposedDelta(null);
+      setShiftError(null);
+      if (onRefreshSelection) await onRefreshSelection();
       router.refresh();
     });
   }
@@ -414,6 +498,85 @@ export function PlannerTaskDetail({
             {task.endDate}
           </div>
         ) : null}
+
+        {/* Keyboard schedule shift — DnD deferred (no new dependency). */}
+        <fieldset
+          style={{
+            margin: "1rem 0 0",
+            padding: "0.75rem 0 0",
+            border: "none",
+            borderTop: "1px solid var(--color-border, #e5e5e5)",
+          }}
+          data-testid="planner-task-shift"
+        >
+          <legend style={{ ...labelStyle, padding: 0 }}>Move schedule</legend>
+          {proposedDelta === null ? (
+            <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", marginTop: "0.5rem" }}>
+              <button
+                type="button"
+                onClick={() => proposeShift(-1)}
+                disabled={isPending || (!task.startDate && !task.endDate)}
+                data-testid="planner-task-shift-minus"
+              >
+                Move −1 day
+              </button>
+              <button
+                type="button"
+                onClick={() => proposeShift(1)}
+                disabled={isPending || (!task.startDate && !task.endDate)}
+                data-testid="planner-task-shift-plus"
+              >
+                Move +1 day
+              </button>
+            </div>
+          ) : (
+            <div style={{ marginTop: "0.5rem" }} data-testid="planner-task-shift-preview">
+              <p style={{ margin: "0 0 0.5rem" }} role="status">
+                Proposed ({proposedDelta > 0 ? "+1" : "−1"} day):{" "}
+                <strong>{formatShiftPreview(task, proposedDelta)}</strong>
+              </p>
+              <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
+                <button
+                  type="button"
+                  onClick={confirmProposedShift}
+                  disabled={isPending}
+                  data-testid="planner-task-shift-confirm"
+                >
+                  {isPending ? "Moving…" : "Confirm move"}
+                </button>
+                <button
+                  type="button"
+                  onClick={cancelProposedShift}
+                  disabled={isPending}
+                  data-testid="planner-task-shift-cancel"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          )}
+          {shiftError ? (
+            <div
+              role="alert"
+              style={{ ...errorStyle, marginTop: "0.5rem" }}
+              data-testid="planner-task-shift-error"
+            >
+              <p style={{ margin: 0 }}>{shiftError.message}</p>
+              {shiftError.code === "STALE_VERSION" ||
+              shiftError.code === "DEPENDENCY_CHANGED" ? (
+                <button
+                  type="button"
+                  onClick={handleReloadLatest}
+                  disabled={isPending}
+                  style={{ marginTop: "0.5rem" }}
+                  data-testid="planner-task-shift-reload"
+                >
+                  Reload latest
+                </button>
+              ) : null}
+            </div>
+          ) : null}
+        </fieldset>
 
         {fieldError ? (
           <p id={errorId} role="alert" style={errorStyle} data-testid="planner-task-field-error">

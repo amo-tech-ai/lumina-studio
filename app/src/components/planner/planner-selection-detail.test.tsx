@@ -13,8 +13,10 @@ vi.mock("next/navigation", () => ({
 }));
 
 const updateTaskAction = vi.fn();
+const shiftTaskAction = vi.fn();
 vi.mock("@/app/(operator)/app/planner/[instanceId]/actions", () => ({
   updateTaskAction: (...args: unknown[]) => updateTaskAction(...args),
+  shiftTaskAction: (...args: unknown[]) => shiftTaskAction(...args),
 }));
 
 afterEach(() => cleanup());
@@ -140,6 +142,7 @@ describe("PlannerPhaseDetail — task date spans", () => {
 describe("PlannerTaskDetail — IPI-582 updateTask form", () => {
   beforeEach(() => {
     updateTaskAction.mockReset();
+    shiftTaskAction.mockReset();
     refreshMock.mockReset();
   });
 
@@ -154,6 +157,7 @@ describe("PlannerTaskDetail — IPI-582 updateTask form", () => {
 
     expect(screen.getByTestId("planner-detail-task").getAttribute("data-readonly")).toBe("true");
     expect(screen.queryByTestId("planner-task-save")).toBeNull();
+    expect(screen.queryByTestId("planner-task-shift")).toBeNull();
     expect(screen.getByText(/View only/i)).toBeDefined();
     expect(screen.getByText("Confirm talent")).toBeDefined();
   });
@@ -292,4 +296,136 @@ describe("PlannerTaskDetail — IPI-582 updateTask form", () => {
     expect(screen.queryByLabelText(/^Priority$/i)).toBeNull();
     expect(screen.getByText(/critical/i)).toBeDefined();
   });
+});
+
+describe("PlannerTaskDetail — IPI-582 keyboard shiftTask", () => {
+  beforeEach(() => {
+    updateTaskAction.mockReset();
+    shiftTaskAction.mockReset();
+    refreshMock.mockReset();
+  });
+
+  it("shows proposed dates before calling shiftTaskAction; Cancel sends no request", async () => {
+    const user = userEvent.setup();
+    render(
+      <PlannerTaskDetail
+        task={task({ status: "todo", startDate: "2026-03-04", endDate: "2026-03-06" })}
+        onClose={() => {}}
+        canUpdateTasks
+      />,
+    );
+
+    await user.click(screen.getByTestId("planner-task-shift-plus"));
+    expect(screen.getByTestId("planner-task-shift-preview").textContent).toMatch(
+      /2026-03-05 → 2026-03-07/,
+    );
+    expect(shiftTaskAction).not.toHaveBeenCalled();
+
+    await user.click(screen.getByTestId("planner-task-shift-cancel"));
+    expect(screen.queryByTestId("planner-task-shift-preview")).toBeNull();
+    expect(screen.getByTestId("planner-task-shift-plus")).toBeDefined();
+    expect(shiftTaskAction).not.toHaveBeenCalled();
+  });
+
+  it("Confirm move calls shiftTaskAction with +1 day and refreshes on success", async () => {
+    const user = userEvent.setup();
+    shiftTaskAction.mockResolvedValue({
+      ok: true,
+      data: {
+        replayed: false,
+        changedTasks: [{ taskId: "t-1", updatedAt: "2026-03-02T00:00:00.000Z" }],
+      },
+    });
+    const onRefreshSelection = vi.fn().mockResolvedValue({
+      task: task({
+        status: "todo",
+        startDate: "2026-03-05",
+        endDate: "2026-03-07",
+        updatedAt: "2026-03-02T00:00:00.000Z",
+      }),
+      canUpdateTasks: true,
+      assignees: [],
+    });
+
+    render(
+      <PlannerTaskDetail
+        task={task({ status: "todo", startDate: "2026-03-04", endDate: "2026-03-06" })}
+        onClose={() => {}}
+        canUpdateTasks
+        onRefreshSelection={onRefreshSelection}
+      />,
+    );
+
+    await user.click(screen.getByTestId("planner-task-shift-plus"));
+    await user.click(screen.getByTestId("planner-task-shift-confirm"));
+
+    await waitFor(() => expect(shiftTaskAction).toHaveBeenCalledTimes(1));
+    const [instanceId, rootTaskId, deltaDays, idempotencyKey] = shiftTaskAction.mock.calls[0];
+    expect(instanceId).toBe("i-1");
+    expect(rootTaskId).toBe("t-1");
+    expect(deltaDays).toBe(1);
+    expect(typeof idempotencyKey).toBe("string");
+    await waitFor(() => expect(onRefreshSelection).toHaveBeenCalled());
+    expect(refreshMock).toHaveBeenCalled();
+    expect(screen.queryByTestId("planner-task-shift-preview")).toBeNull();
+  });
+
+  it("Move −1 day confirms with deltaDays=-1", async () => {
+    const user = userEvent.setup();
+    shiftTaskAction.mockResolvedValue({
+      ok: true,
+      data: { replayed: false, changedTasks: [] },
+    });
+
+    render(
+      <PlannerTaskDetail
+        task={task({ status: "todo", startDate: "2026-03-04", endDate: "2026-03-06" })}
+        onClose={() => {}}
+        canUpdateTasks
+      />,
+    );
+
+    await user.click(screen.getByTestId("planner-task-shift-minus"));
+    expect(screen.getByTestId("planner-task-shift-preview").textContent).toMatch(
+      /2026-03-03 → 2026-03-05/,
+    );
+    await user.click(screen.getByTestId("planner-task-shift-confirm"));
+
+    await waitFor(() => expect(shiftTaskAction).toHaveBeenCalledTimes(1));
+    expect(shiftTaskAction.mock.calls[0][2]).toBe(-1);
+  });
+
+  it.each([
+    ["STALE_VERSION", "This task changed since you last viewed it."],
+    ["DEPENDENCY_CHANGED", "A dependency conflict blocks this move."],
+    ["FORBIDDEN", "You don't have permission to move this task."],
+  ] as const)(
+    "%s preserves selection and proposed preview — no optimistic confirm",
+    async (code, message) => {
+      const user = userEvent.setup();
+      shiftTaskAction.mockResolvedValue({
+        ok: false,
+        error: { code, message },
+      });
+
+      render(
+        <PlannerTaskDetail
+          task={task({ status: "todo", startDate: "2026-03-04", endDate: "2026-03-06" })}
+          onClose={() => {}}
+          canUpdateTasks
+        />,
+      );
+
+      await user.click(screen.getByTestId("planner-task-shift-plus"));
+      await user.click(screen.getByTestId("planner-task-shift-confirm"));
+
+      await waitFor(() => expect(screen.getByTestId("planner-task-shift-error")).toBeDefined());
+      expect(screen.getByTestId("planner-task-shift-error").textContent).toContain(message);
+      // Selection (detail) and proposed preview stay — dates on screen are still original.
+      expect(screen.getByTestId("planner-detail-task")).toBeDefined();
+      expect(screen.getByTestId("planner-task-shift-preview")).toBeDefined();
+      expect(screen.getByText("2026-03-04")).toBeDefined();
+      expect(refreshMock).not.toHaveBeenCalled();
+    },
+  );
 });
