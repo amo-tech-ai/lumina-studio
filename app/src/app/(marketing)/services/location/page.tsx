@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
+import { canonicalUrl } from "@/lib/site";
 import {
   CheckCircle, Monitor, Instagram, ShoppingBag, Megaphone, Layers, FileCheck,
   Palette, Users, Sparkles, Camera, MapPin, Globe, Zap,
@@ -11,6 +12,7 @@ import { FAQ } from "@/components/marketing/faq";
 export const metadata: Metadata = {
   title: "Location Photography",
   description: "On-location fashion photography. Urban, coastal, and lifestyle shoots.",
+  alternates: { canonical: canonicalUrl("/services/location") },
   openGraph: {
     title: "Location Photography | iPix — On-Location Fashion Shoots",
     description: "On-location fashion photography. Urban, coastal, and lifestyle shoots.",
