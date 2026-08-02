@@ -224,39 +224,139 @@ export async function ensureOnboardingIntakeDraft(
       };
     }
 
-    const runId = existingRunId ?? randomUUID();
+    // Final draft CAS — close the TOCTOU window before any write so we never
+    // demote an `approved` row back to `pending_approval`.
+    const { data: draftNow, error: draftNowErr } = await admin
+      .from("brand_intake_drafts")
+      .select("id, status, user_id, draft_profile")
+      .eq("brand_id", trustedBrandId)
+      .maybeSingle();
+    if (draftNowErr) {
+      console.error("[ensureOnboardingIntakeDraft] draft CAS lookup", draftNowErr);
+      return { ok: false, error: SAFE_LOAD_ERROR };
+    }
+    if (draftNow?.user_id && draftNow.user_id !== user.id) {
+      return { ok: false, error: "Forbidden" };
+    }
+    if (draftNow?.status === "approved") {
+      return {
+        ok: true,
+        intakeStatus: intakeNow,
+        runId: runIdFromDraftProfile(draftNow.draft_profile),
+        brandName: brand.name ?? null,
+        pillars,
+      };
+    }
+    const casRunId =
+      draftNow?.status === "pending_approval"
+        ? runIdFromDraftProfile(draftNow.draft_profile)
+        : null;
+    if (casRunId && draftNow?.user_id === user.id) {
+      return {
+        ok: true,
+        intakeStatus: intakeNow,
+        runId: casRunId,
+        brandName: brand.name ?? null,
+        pillars,
+      };
+    }
+
+    const runId = casRunId ?? existingRunId ?? randomUUID();
     const draftScores = Array.isArray(draftRaw._draft_scores) ? draftRaw._draft_scores : [];
     const cleanDraftProfile = Object.fromEntries(
       Object.entries(draftRaw).filter(([key]) => key !== "_draft_scores"),
     );
-
-    const { error: upsertErr } = await admin.from("brand_intake_drafts").upsert(
-      {
-        brand_id: trustedBrandId,
-        user_id: user.id,
-        source_url: brand.brand_url ?? "",
-        status: "pending_approval",
-        approved_at: null,
-        rejected_at: null,
-        expires_at: null,
-        draft_profile: {
-          ...cleanDraftProfile,
-          _workflow_run_id: runId,
-        },
-        draft_scores: draftScores,
-        updated_at: new Date().toISOString(),
+    const writeRow = {
+      brand_id: trustedBrandId,
+      user_id: user.id,
+      source_url: brand.brand_url ?? "",
+      status: "pending_approval" as const,
+      approved_at: null,
+      rejected_at: null,
+      expires_at: null,
+      draft_profile: {
+        ...cleanDraftProfile,
+        _workflow_run_id: runId,
       },
-      { onConflict: "brand_id" },
-    );
+      draft_scores: draftScores,
+      updated_at: new Date().toISOString(),
+    };
 
-    if (upsertErr) {
-      console.error("[ensureOnboardingIntakeDraft] upsert", upsertErr);
-      return { ok: false, error: SAFE_LOAD_ERROR };
+    if (draftNow?.id) {
+      // CAS update — skip rows that flipped to approved between reads.
+      const { data: updated, error: updateErr } = await admin
+        .from("brand_intake_drafts")
+        .update(writeRow)
+        .eq("id", draftNow.id)
+        .neq("status", "approved")
+        .select("id")
+        .maybeSingle();
+      if (updateErr) {
+        console.error("[ensureOnboardingIntakeDraft] CAS update", updateErr);
+        return { ok: false, error: SAFE_LOAD_ERROR };
+      }
+      if (!updated) {
+        const { data: afterRace } = await admin
+          .from("brand_intake_drafts")
+          .select("status, draft_profile, user_id")
+          .eq("brand_id", trustedBrandId)
+          .maybeSingle();
+        if (afterRace?.status === "approved") {
+          return {
+            ok: true,
+            intakeStatus: intakeNow,
+            runId: runIdFromDraftProfile(afterRace.draft_profile),
+            brandName: brand.name ?? null,
+            pillars,
+          };
+        }
+        return { ok: false, error: SAFE_LOAD_ERROR };
+      }
+    } else {
+      const { error: insertErr } = await admin.from("brand_intake_drafts").insert(writeRow);
+      if (insertErr) {
+        // Unique race: another tab inserted (and may have approved). Never upsert-overwrite.
+        console.error("[ensureOnboardingIntakeDraft] insert", insertErr);
+        const { data: afterInsert, error: afterErr } = await admin
+          .from("brand_intake_drafts")
+          .select("status, draft_profile, user_id")
+          .eq("brand_id", trustedBrandId)
+          .maybeSingle();
+        if (afterErr) {
+          return { ok: false, error: SAFE_LOAD_ERROR };
+        }
+        if (afterInsert?.user_id && afterInsert.user_id !== user.id) {
+          return { ok: false, error: "Forbidden" };
+        }
+        if (afterInsert?.status === "approved") {
+          return {
+            ok: true,
+            intakeStatus: intakeNow,
+            runId: runIdFromDraftProfile(afterInsert.draft_profile),
+            brandName: brand.name ?? null,
+            pillars,
+          };
+        }
+        const pendingRun =
+          afterInsert?.status === "pending_approval"
+            ? runIdFromDraftProfile(afterInsert.draft_profile)
+            : null;
+        if (pendingRun) {
+          return {
+            ok: true,
+            intakeStatus: intakeNow,
+            runId: pendingRun,
+            brandName: brand.name ?? null,
+            pillars,
+          };
+        }
+        return { ok: false, error: SAFE_LOAD_ERROR };
+      }
     }
 
     return {
       ok: true,
-      intakeStatus,
+      intakeStatus: intakeNow,
       runId,
       brandName: brand.name ?? null,
       pillars,
