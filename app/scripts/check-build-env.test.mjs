@@ -12,12 +12,21 @@ import {
   REQUIRED_BUILD_ENV_NAMES,
   WARN_BUILD_ENV_ITEMS,
   parseEnvFile,
+  expandEnvValue,
   loadBuildEnv,
   checkBuildEnv,
   formatBuildEnvReport,
 } from "./check-build-env.mjs";
 
 const scriptPath = resolve(import.meta.dirname, "check-build-env.mjs");
+
+/** Every build-env name the guard may read — removed from CLI children so
+ *  tests are isolated from the caller's exported env (e.g. `infisical run`). */
+const BUILD_ENV_NAMES = [
+  ...REQUIRED_BUILD_ENV_NAMES,
+  ...WARN_BUILD_ENV_ITEMS.map((item) => item.name),
+  ...WARN_BUILD_ENV_ITEMS.flatMap((item) => item.alsoAccept ?? []),
+];
 
 function tempEnvFile(content) {
   const dir = mkdtempSync(join(tmpdir(), "check-build-env-"));
@@ -51,8 +60,12 @@ describe("parseEnvFile", () => {
     });
   });
 
-  it("does not interpolate variables", () => {
-    expect(parseEnvFile("A=x\nB=$A")).toEqual({ A: "x", B: "$A" });
+  it("expands $VAR and ${VAR} references against the merged env", () => {
+    expect(parseEnvFile("A=x\nB=$A\nC=${A}-suffix")).toEqual({
+      A: "x",
+      B: "$A",
+      C: "${A}-suffix",
+    });
   });
 
   it("handles CRLF line endings", () => {
@@ -60,6 +73,20 @@ describe("parseEnvFile", () => {
       FOO: "bar",
       BAZ: "qux",
     });
+  });
+});
+
+describe("expandEnvValue", () => {
+  it("expands $VAR and ${VAR} references", () => {
+    expect(expandEnvValue("$A-${B}", { A: "x", B: "y" })).toBe("x-y");
+  });
+
+  it("expands a missing reference to an empty string (Next loader semantics)", () => {
+    expect(expandEnvValue("$MISSING", {})).toBe("");
+  });
+
+  it("turns $$ into a literal $", () => {
+    expect(expandEnvValue("$$A", { A: "x" })).toBe("$A");
   });
 });
 
@@ -86,6 +113,29 @@ describe("loadBuildEnv", () => {
     });
     expect(merged).toEqual({});
     expect(filePath).toBeNull();
+  });
+
+  it("expands file references against process.env (missing ref → empty → caught)", () => {
+    const filePath = tempEnvFile("NEXT_PUBLIC_SUPABASE_URL=$SUPABASE_URL\n");
+    const { merged } = loadBuildEnv({ env: {}, envFile: filePath });
+    expect(merged.NEXT_PUBLIC_SUPABASE_URL).toBe("");
+    expect(checkBuildEnv(merged).ok).toBe(false);
+  });
+
+  it("expands file references against process.env (present ref → value)", () => {
+    const filePath = tempEnvFile(
+      [
+        "NEXT_PUBLIC_SUPABASE_URL=$SUPABASE_URL",
+        "NEXT_PUBLIC_SUPABASE_ANON_KEY=anon-key",
+        "",
+      ].join("\n"),
+    );
+    const { merged } = loadBuildEnv({
+      env: { SUPABASE_URL: "https://ref.supabase.co" },
+      envFile: filePath,
+    });
+    expect(merged.NEXT_PUBLIC_SUPABASE_URL).toBe("https://ref.supabase.co");
+    expect(checkBuildEnv(merged).ok).toBe(true);
   });
 });
 
@@ -141,6 +191,18 @@ describe("checkBuildEnv", () => {
     expect(warned).not.toContain("NEXT_PUBLIC_CLOUDINARY_API_KEY");
   });
 
+  it("does not warn for cloudinary when the NEXT_CLOUDINARY_API_KEY / CLOUDINARY_CLOUD_NAME fallbacks are present", () => {
+    const result = checkBuildEnv({
+      NEXT_PUBLIC_SUPABASE_URL: "https://x.supabase.co",
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: "anon",
+      CLOUDINARY_CLOUD_NAME: "dzqy2ixl0",
+      NEXT_CLOUDINARY_API_KEY: "key",
+    });
+    const warned = result.warnings.map((w) => w.name);
+    expect(warned).not.toContain("NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME");
+    expect(warned).not.toContain("NEXT_PUBLIC_CLOUDINARY_API_KEY");
+  });
+
   it("keeps required names inside the build-time secret allowlist", () => {
     for (const name of REQUIRED_BUILD_ENV_NAMES) {
       expect(BUILD_TIME_SECRET_NAMES).toContain(name);
@@ -157,8 +219,11 @@ describe("checkBuildEnv", () => {
 
 describe("CLI integration", () => {
   function runCli(envFile) {
+    const childEnv = { ...process.env };
+    for (const name of BUILD_ENV_NAMES) delete childEnv[name];
+    childEnv.BUILD_ENV_FILE = envFile;
     return spawnSync(process.execPath, [scriptPath], {
-      env: { ...process.env, BUILD_ENV_FILE: envFile },
+      env: childEnv,
       encoding: "utf8",
     });
   }
@@ -182,6 +247,32 @@ describe("CLI integration", () => {
     expect(result.status).toBe(1);
     expect(result.stderr).toContain("NEXT_PUBLIC_SUPABASE_URL");
     expect(result.stderr).toContain("NEXT_PUBLIC_SUPABASE_ANON_KEY");
+  });
+
+  it("still fails when the caller exports the required vars (isolation)", () => {
+    const envFile = tempEnvFile("# empty\n");
+    const saved = {
+      url: process.env.NEXT_PUBLIC_SUPABASE_URL,
+      anon: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+    };
+    process.env.NEXT_PUBLIC_SUPABASE_URL = "https://exported.supabase.co";
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = "exported-anon";
+    try {
+      const result = runCli(envFile);
+      expect(result.status).toBe(1);
+      expect(result.stderr).toContain("NEXT_PUBLIC_SUPABASE_URL");
+    } finally {
+      if (saved.url === undefined) {
+        delete process.env.NEXT_PUBLIC_SUPABASE_URL;
+      } else {
+        process.env.NEXT_PUBLIC_SUPABASE_URL = saved.url;
+      }
+      if (saved.anon === undefined) {
+        delete process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+      } else {
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = saved.anon;
+      }
+    }
   });
 
   it("warns about optional env without failing the deploy", () => {

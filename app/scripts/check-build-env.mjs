@@ -67,7 +67,7 @@ export const WARN_BUILD_ENV_ITEMS = Object.freeze([
 
 /**
  * Parse a Next-style .env file: KEY=VALUE lines, `#` comments, optional
- * `export ` prefix, optional surrounding quotes. No variable interpolation.
+ * `export ` prefix, optional surrounding quotes.
  * @param {string} content
  * @returns {Record<string, string>}
  */
@@ -93,6 +93,25 @@ export function parseEnvFile(content) {
     out[key] = value;
   }
   return out;
+}
+
+/**
+ * Expand Next-style `$VAR` / `${VAR}` references against `env` (missing → "").
+ * `$$` escapes a literal `$`. Matches @next/env loader semantics closely enough
+ * that a reference to a missing var degrades to an empty value instead of a
+ * nonempty literal — so `checkBuildEnv` reports it as missing, like Next does.
+ * @param {string} value
+ * @param {Record<string, string | undefined>} env
+ * @returns {string}
+ */
+export function expandEnvValue(value, env) {
+  return value.replace(
+    /\$\$|\$\{([A-Za-z_][A-Za-z0-9_]*)\}|\$([A-Za-z_][A-Za-z0-9_]*)/g,
+    (match, braced, plain) => {
+      if (match === "$$") return "$";
+      return env[braced ?? plain] ?? "";
+    },
+  );
 }
 
 /** @param {string} path */
@@ -121,6 +140,14 @@ export function loadBuildEnv({ env = process.env, envFile } = {}) {
   const merged = fileEnv ? parseEnvFile(fileEnv) : {};
   for (const [key, value] of Object.entries(env)) {
     merged[key] = value;
+  }
+  if (fileEnv) {
+    for (const key of Object.keys(merged)) {
+      const value = merged[key];
+      if (typeof value === "string") {
+        merged[key] = expandEnvValue(value, merged);
+      }
+    }
   }
   return { merged, filePath: fileEnv === null ? null : filePath };
 }
@@ -193,7 +220,8 @@ function main() {
   console.error(report);
   if (filePath === null) {
     console.error(
-      `  (no env file at ${join(appDir, ".env.local")} — copy app/.env.example or export the vars)`,
+      `  (no env file at ${join(appDir, ".env.local")} — create it from app/.env.example`,
+      `  and fill the required values, or export them before re-running deploy)`,
     );
   }
   return 1;
