@@ -1,5 +1,4 @@
 import { insertAgentLog } from "../_shared/agent-log.ts";
-import { isAuthFailure, resolveAuth } from "../_shared/auth.ts";
 import { handleCors } from "../_shared/cors.ts";
 import { getOptionalSecret } from "../_shared/env.ts";
 import { firecrawlStartCrawl } from "../_shared/firecrawl.ts";
@@ -8,9 +7,13 @@ import {
   jsonResponse,
   safeErrorMessage,
 } from "../_shared/response.ts";
-import { createServiceClient, createUserClient } from "../_shared/supabase-client.ts";
+import { isCallerFailure, resolveCaller } from "../_shared/resolve-caller.ts";
+import { createServiceClient } from "../_shared/supabase-client.ts";
+import type { SupabaseClient } from "npm:@supabase/supabase-js@2";
 
 const CRAWL_LIMIT = 10;
+const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 type StartBody = {
   brandId?: string;
@@ -19,6 +22,15 @@ type StartBody = {
   idempotencyKey?: string;
   workflowId?: string;
   requestId?: string;
+  /** Required on the trusted service-role path (IPI-817). Ignored for user JWT. */
+  actorId?: string;
+};
+
+type BrandRow = {
+  id: string;
+  brand_url: string | null;
+  org_id: string | null;
+  user_id: string | null;
 };
 
 export function normalizeUrl(raw: string): string {
@@ -53,7 +65,59 @@ async function findActiveCrawl(
   return data;
 }
 
-/** HTTP handler — exported for Deno unit tests (IPI-686). */
+/**
+ * Service-role callers bypass RLS — authorize the explicit actorId the same way
+ * validate-brand does (org owner/editor, or personal-brand owner).
+ */
+async function authorizeActorForBrand(
+  admin: SupabaseClient,
+  brandId: string,
+  actorId: string,
+): Promise<{ brand: BrandRow } | { response: Response }> {
+  const { data: brand, error: brandErr } = await admin
+    .from("brands")
+    .select("id, brand_url, org_id, user_id")
+    .eq("id", brandId)
+    .maybeSingle();
+
+  if (brandErr) throw new Error(brandErr.message);
+  if (!brand) {
+    return {
+      response: errorResponse("not_found", "Brand not found or access denied", 404),
+    };
+  }
+
+  if (brand.org_id) {
+    const { data: member, error: memberErr } = await admin
+      .from("org_members")
+      .select("role")
+      .eq("org_id", brand.org_id)
+      .eq("user_id", actorId)
+      .maybeSingle();
+    if (memberErr) throw new Error(memberErr.message);
+    if (!member || !["owner", "editor"].includes(member.role as string)) {
+      return {
+        response: errorResponse(
+          "forbidden",
+          "Not authorized to start a crawl for this brand",
+          403,
+        ),
+      };
+    }
+  } else if (brand.user_id !== actorId) {
+    return {
+      response: errorResponse(
+        "forbidden",
+        "Not authorized to start a crawl for this brand",
+        403,
+      ),
+    };
+  }
+
+  return { brand: brand as BrandRow };
+}
+
+/** HTTP handler — exported for Deno unit tests (IPI-686 / IPI-817). */
 export async function handleStartBrandCrawl(req: Request): Promise<Response> {
   const cors = handleCors(req);
   if (cors) return cors;
@@ -67,8 +131,11 @@ export async function handleStartBrandCrawl(req: Request): Promise<Response> {
   }
 
   try {
-    const auth = await resolveAuth(req, { required: true });
-    if (isAuthFailure(auth)) return auth.response;
+    // Dual-auth: user JWT (compat) OR service-role + body.actorId (trusted workflow).
+    // resolveCaller already matches brand-intelligence / audit-asset-dna — service-role
+    // JWTs pass verify_jwt=true at the gateway on this project.
+    const caller = await resolveCaller(req);
+    if (isCallerFailure(caller)) return caller.response;
 
     let body: StartBody;
     try {
@@ -93,22 +160,42 @@ export async function handleStartBrandCrawl(req: Request): Promise<Response> {
       );
     }
 
-    const userClient = createUserClient(auth.accessToken);
-    const { data: brand, error: brandErr } = await userClient
-      .from("brands")
-      .select("id, brand_url, org_id")
-      .eq("id", brandId)
-      .single();
+    const admin = createServiceClient();
+    let startedBy: string;
+    let logClient: SupabaseClient;
 
-    if (brandErr || !brand) {
-      return errorResponse("not_found", "Brand not found or access denied", 404);
+    if (caller.userId === null) {
+      // Trusted service-role path — actorId is the verified operator from the app boundary.
+      const actorId = body.actorId?.trim();
+      if (!actorId || !UUID_RE.test(actorId)) {
+        return errorResponse(
+          "invalid_request",
+          "actorId must be a valid UUID when using the service-role credential",
+          400,
+        );
+      }
+      const authz = await authorizeActorForBrand(admin, brandId, actorId);
+      if ("response" in authz) return authz.response;
+      startedBy = actorId;
+      logClient = admin;
+    } else {
+      // User JWT path — RLS on brands enforces visibility; started_by is the JWT subject.
+      const { data: brand, error: brandErr } = await caller.client
+        .from("brands")
+        .select("id, brand_url, org_id, user_id")
+        .eq("id", brandId)
+        .single();
+
+      if (brandErr || !brand) {
+        return errorResponse("not_found", "Brand not found or access denied", 404);
+      }
+      startedBy = caller.userId;
+      logClient = caller.client;
     }
 
     const idempotencyKey =
       body.idempotencyKey?.trim() ||
       `onboarding-${brandId}-${sourceUrl}`;
-
-    const admin = createServiceClient();
 
     const existing = await findActiveCrawl(admin, brandId, idempotencyKey);
 
@@ -152,7 +239,8 @@ export async function handleStartBrandCrawl(req: Request): Promise<Response> {
           job_status: "queued",
           pipeline_state: "crawl_only",
           idempotency_key: idempotencyKey,
-          started_by: auth.user.id,
+          // Never the service-role UUID — always the verified operator (IPI-817).
+          started_by: startedBy,
           workflow_id: body.workflowId?.trim() || null,
           request_id: requestId,
           started_at: new Date().toISOString(),
@@ -235,9 +323,9 @@ export async function handleStartBrandCrawl(req: Request): Promise<Response> {
       .eq("id", brandId);
 
     try {
-      await insertAgentLog(userClient, {
+      await insertAgentLog(logClient, {
         agentName: "start-brand-crawl",
-        userId: auth.user.id,
+        userId: startedBy,
         brandId,
         input: { sourceUrl, idempotencyKey, requestId },
         output: { crawlId: crawlRowId, firecrawlJobId },
