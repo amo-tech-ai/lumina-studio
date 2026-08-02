@@ -318,6 +318,25 @@ describe("IPI-903 materialization safety", () => {
     expect(screen.getByTestId("onboarding-screen-11")).toBeTruthy();
   });
 
+  it("disables Continue on the pre-analysis screen when brand name is empty", () => {
+    renderAt(
+      <OnboardingFlow
+        initialScreen={11}
+        initialAnswers={{
+          build: "DTC",
+          brandName: "   ",
+          websiteUrl: "https://maison.test",
+          listed: {},
+          grow: null,
+        }}
+        onCommitAnalysis={async () => ({ orgId: "org-1", brandId: "brand-1" })}
+      />,
+    );
+    expect(
+      (screen.getByRole("button", { name: "Continue" }) as HTMLButtonElement).disabled,
+    ).toBe(true);
+  });
+
   it("shows a safe message when materialize fails", async () => {
     renderAt(
       <OnboardingFlow
@@ -342,6 +361,31 @@ describe("IPI-903 materialization safety", () => {
     expect(alert.textContent).not.toMatch(/duplicate key|constraint/i);
     expect(alert.textContent).toMatch(/try again/i);
     expect(screen.getByTestId("onboarding-screen-11")).toBeTruthy();
+  });
+
+  it("stays on screen 11 when commit returns no brand id", async () => {
+    renderAt(
+      <OnboardingFlow
+        initialScreen={11}
+        initialAnswers={{
+          build: "DTC",
+          brandName: "Maison",
+          websiteUrl: "https://maison.test",
+          listed: {},
+          grow: null,
+        }}
+        onCommitAnalysis={async () =>
+          undefined as unknown as { orgId: string; brandId: string }
+        }
+      />,
+    );
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Continue" }));
+      await Promise.resolve();
+    });
+    expect(screen.getByTestId("onboarding-screen-11")).toBeTruthy();
+    expect(screen.queryByTestId("analysis-status")).toBeNull();
+    expect(screen.getByRole("alert").textContent).toMatch(/try again/i);
   });
 
   it("ignores a late materialize success after the user backs out", async () => {
@@ -419,6 +463,13 @@ describe("automatic completion does not trap the user", () => {
       renderAt(
         <OnboardingFlow
           initialScreen={11}
+          initialAnswers={{
+            build: "DTC",
+            brandName: "Maison",
+            websiteUrl: "https://maison.test",
+            listed: {},
+            grow: null,
+          }}
           onCommitAnalysis={async () => ({ orgId: "org-1", brandId: "brand-1" })}
         />,
       );

@@ -247,9 +247,10 @@ describe("useOnboardingSession", () => {
     });
     (client as { auth: { getUser: typeof getUser } }).auth.getUser = getUser;
 
+    const createClient = vi.fn(() => client);
     const { result } = renderHook(() =>
       useOnboardingSession({
-        createClient: () => client,
+        createClient,
         getIdempotencyKey: () => KEY,
       }),
     );
@@ -263,5 +264,7 @@ describe("useOnboardingSession", () => {
       result.current.retry();
     });
     await waitFor(() => expect(result.current.status).toBe("ready"));
+    // One GoTrueClient per hook lifetime — retry must not call the factory again.
+    expect(createClient).toHaveBeenCalledTimes(1);
   });
 });

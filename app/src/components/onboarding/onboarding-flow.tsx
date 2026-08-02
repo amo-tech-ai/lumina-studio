@@ -48,10 +48,10 @@ export function OnboardingFlow({
   /** Resume: brand already materialized on the session. */
   initialBrandId?: string | null;
   onDraftChange?: (screen: number, answers: OnboardingAnswers) => void;
-  /** Called once when entering screen 12 — materialize org+brand. */
+  /** Called once when entering screen 12 — must return materialized org+brand ids. */
   onCommitAnalysis?: (
     answers: OnboardingAnswers,
-  ) => Promise<{ orgId: string; brandId: string } | void>;
+  ) => Promise<{ orgId: string; brandId: string }>;
 }) {
   const router = useRouter();
   const { screen, goToScreen, replaceScreen, goBack } = useScreenHistory(initialScreen);
@@ -126,7 +126,12 @@ export function OnboardingFlow({
         const created = await onCommitAnalysis(answers);
         // User backed out (or navigated) while the request was in flight — drop the transition.
         if (screenRef.current !== startedFrom) return;
-        if (created?.brandId) setBrandId(created.brandId);
+        // Without a brand id the deep-link gate would bounce 12→11 in a loop.
+        if (!created?.brandId) {
+          setCommitError(toUserFacingOnboardingError(new Error("missing brand"), "setup"));
+          return;
+        }
+        setBrandId(created.brandId);
         goToScreen(ANALYSIS_SCREEN);
       } catch (err) {
         if (screenRef.current !== startedFrom) return;
@@ -214,7 +219,14 @@ export function OnboardingFlow({
       ) : (
         <FlowFooter
           screen={screen}
-          continueDisabled={committing || ctaDisabled(screen, answers)}
+          continueDisabled={
+            committing ||
+            ctaDisabled(screen, answers) ||
+            // Skip on screen 4 can clear the name; block commit until it's filled.
+            (Boolean(onCommitAnalysis) &&
+              nextScreen(screen) === ANALYSIS_SCREEN &&
+              answers.brandName.trim() === "")
+          }
           continueLabel={committing ? "Starting…" : ctaLabel(screen)}
           navigationDisabled={committing}
           onBack={goBack}

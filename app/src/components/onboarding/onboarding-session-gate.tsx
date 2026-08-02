@@ -1,5 +1,7 @@
 "use client";
 
+import { useEffect, useRef } from "react";
+
 import { OnboardingFlow } from "@/components/onboarding/onboarding-flow";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useOnboardingSession } from "@/lib/onboarding/use-onboarding-session";
@@ -10,6 +12,17 @@ import { useOnboardingSession } from "@/lib/onboarding/use-onboarding-session";
  */
 export function OnboardingSessionGate() {
   const session = useOnboardingSession();
+  const errorPanelRef = useRef<HTMLDivElement>(null);
+
+  // Match onboarding-flow screen transitions: move focus into the error panel
+  // when bootstrap fails so screen readers announce the alert + retry control.
+  useEffect(() => {
+    if (session.status !== "error") return;
+    const panel = errorPanelRef.current;
+    if (!panel) return;
+    panel.tabIndex = -1;
+    panel.focus();
+  }, [session.status]);
 
   if (session.status === "loading") {
     return (
@@ -22,7 +35,8 @@ export function OnboardingSessionGate() {
   if (session.status === "error") {
     return (
       <div
-        className="flex min-h-full items-center justify-center p-6"
+        ref={errorPanelRef}
+        className="flex min-h-full items-center justify-center p-6 outline-none"
         role="alert"
         data-testid="onboarding-session-error"
       >

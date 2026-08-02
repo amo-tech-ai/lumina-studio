@@ -68,12 +68,16 @@ export function useOnboardingSession(deps: Deps = {}): OnboardingSessionState {
 
   useEffect(() => {
     let cancelled = false;
-    const createClient =
-      depsRef.current.createClient ?? createSupabaseBrowserClient;
     const getIdempotencyKey =
       depsRef.current.getIdempotencyKey ?? getOrCreateOnboardingIdempotencyKey;
-    const supabase = createClient();
-    supabaseRef.current = supabase;
+    // Reuse one browser client across retries — createBrowserClient is not a singleton,
+    // and a second GoTrueClient per retry races auth storage.
+    if (!supabaseRef.current) {
+      const createClient =
+        depsRef.current.createClient ?? createSupabaseBrowserClient;
+      supabaseRef.current = createClient();
+    }
+    const supabase = supabaseRef.current;
     setBootstrap({ status: "loading" });
     sessionRef.current = null;
 
@@ -166,8 +170,8 @@ export function useOnboardingSession(deps: Deps = {}): OnboardingSessionState {
       { idempotencyKey: session.idempotency_key },
     );
 
-    // After materialize, draft RLS blocks client updates — keep ANALYSIS_SCREEN local only.
-    // Persisting screen 13 for resume is a separate RPC/policy follow-up (IPI-903 PR2).
+    // RPC persists current_screen = ANALYSIS_SCREEN atomically (IPI-903 migration).
+    // Screen 13 (payoff) remains local-only until a later authorized write path.
     sessionRef.current = {
       ...session,
       status: "materialized",
