@@ -9,7 +9,8 @@
  *   - Hard-fail unless QA_DATABASE_URL embeds wtuhdynujhszsbwxlbdi
  *   - Hard-fail if QA_SUPABASE_URL / QA_DATABASE_URL looks like prod (nvdlhrodvevgwdsneplk)
  *   - Race uses authenticated supabase-js (anon + password JWT), not service_role
- *   - Cleanup uses QA_DATABASE_URL (postgres) scoped to test-tagged rows only
+ *   - Cleanup uses QA_DATABASE_URL (postgres) scoped to test-tagged / test-named rows only
+ *   - Fixture cleanup runs in `finally` even when assertions fail
  *
  * Usage:
  *   node scripts/ipi-894-materialize-race.mjs
@@ -60,15 +61,26 @@ function parseArgs(argv) {
   let runs = 3;
   for (const arg of argv) {
     if (arg.startsWith("--runs=")) {
-      runs = Math.max(1, Number.parseInt(arg.slice("--runs=".length), 10) || 3);
+      const raw = arg.slice("--runs=".length);
+      const n = Number.parseInt(raw, 10);
+      if (!Number.isFinite(n) || n < 1) {
+        refuse(`--runs must be a positive integer, got ${JSON.stringify(raw)}`);
+      }
+      runs = n;
     }
   }
   return { runs };
 }
 
+/** Fatal preflight — no fixtures yet. */
 function refuse(msg) {
   console.error(`FAIL: ${msg}`);
   process.exit(1);
+}
+
+/** In-run assertion — caught so `finally` can still clean fixtures. */
+function fail(msg) {
+  throw new Error(msg);
 }
 
 function assertQaOnly(label, value) {
@@ -100,14 +112,20 @@ function resolvePgSsl() {
   ) {
     return { rejectUnauthorized: false };
   }
+  const explicitCa =
+    process.env.PGSSLROOTCERT || process.env.VERIFY_RLS_PG_SSLROOTCERT || "";
   const caPath =
-    process.env.PGSSLROOTCERT ||
-    process.env.VERIFY_RLS_PG_SSLROOTCERT ||
-    resolve(ROOT, "scripts/certs/supabase-prod-ca-2021.crt");
-  if (existsSync(caPath)) {
-    return { rejectUnauthorized: true, ca: readFileSync(caPath, "utf8") };
+    explicitCa || resolve(ROOT, "scripts/certs/supabase-prod-ca-2021.crt");
+  if (!existsSync(caPath)) {
+    refuse(
+      `PG SSL CA not found at ${caPath} — refuse insecure fallback` +
+        (explicitCa
+          ? " (fix PGSSLROOTCERT / VERIFY_RLS_PG_SSLROOTCERT)"
+          : "") +
+        "; set VERIFY_RLS_PG_INSECURE_SSL=1 to opt in",
+    );
   }
-  return { rejectUnauthorized: false };
+  return { rejectUnauthorized: true, ca: readFileSync(caPath, "utf8") };
 }
 
 async function withPgClient(fn) {
@@ -131,7 +149,47 @@ function parseRpcPayload(data) {
       brand_id: data.brand_id ?? null,
     };
   }
-  refuse(`unexpected RPC payload: ${typeof data}`);
+  fail(`unexpected RPC payload: ${typeof data}`);
+}
+
+/**
+ * Destructive cleanup is predicate-scoped:
+ *   - sessions: user + idempotency key + draft_answers._ipi894
+ *   - orgs/brands: owner/user + exact unique test name (never bare IDs)
+ */
+async function cleanupFixtures(pg, { userId, idempotencyKey, brandName }) {
+  await pg.query("begin");
+  try {
+    await pg.query(
+      `delete from public.onboarding_sessions
+        where user_id = $1
+          and idempotency_key = $2
+          and (draft_answers->>'_ipi894') = 'true'`,
+      [userId, idempotencyKey],
+    );
+    await pg.query(
+      `delete from public.brands
+        where user_id = $1 and name = $2`,
+      [userId, brandName],
+    );
+    await pg.query(
+      `delete from public.org_members
+        where org_id in (
+          select id from public.organizations
+           where owner_id = $1 and name = $2
+        )`,
+      [userId, brandName],
+    );
+    await pg.query(
+      `delete from public.organizations
+        where owner_id = $1 and name = $2`,
+      [userId, brandName],
+    );
+    await pg.query("commit");
+  } catch (err) {
+    await pg.query("rollback");
+    throw err;
+  }
 }
 
 async function runOnce(runIndex) {
@@ -187,151 +245,149 @@ async function runOnce(runIndex) {
   const clientA = await authedClient();
   const clientB = await authedClient();
 
-  // Draft MUST exist before the race (RPC raises P0002 otherwise).
-  const { error: draftErr } = await clientA.from("onboarding_sessions").insert({
-    user_id: userId,
-    idempotency_key: idempotencyKey,
-    status: "draft",
-    current_screen: 11,
-    draft_answers: { _ipi894: true, brandName, brandUrl },
-  });
-  if (draftErr) {
-    refuse(`draft insert failed: ${draftErr.message} (${draftErr.code ?? "?"})`);
-  }
+  let draftInserted = false;
 
-  // Durability check before race (replica / RLS visibility).
-  const { data: draftRow, error: draftReadErr } = await clientB
-    .from("onboarding_sessions")
-    .select("id, status")
-    .eq("user_id", userId)
-    .eq("idempotency_key", idempotencyKey)
-    .maybeSingle();
-  if (draftReadErr || !draftRow || draftRow.status !== "draft") {
-    refuse(
-      `draft not visible before race: ${draftReadErr?.message ?? "missing/wrong status"}`,
-    );
-  }
+  try {
+    // Draft MUST exist before the race (RPC raises P0002 otherwise).
+    const { error: draftErr } = await clientA.from("onboarding_sessions").insert({
+      user_id: userId,
+      idempotency_key: idempotencyKey,
+      status: "draft",
+      current_screen: 11,
+      draft_answers: { _ipi894: true, brandName, brandUrl },
+    });
+    if (draftErr) {
+      fail(`draft insert failed: ${draftErr.message} (${draftErr.code ?? "?"})`);
+    }
+    draftInserted = true;
 
-  const rpcArgs = {
-    p_idempotency_key: idempotencyKey,
-    p_brand_name: brandName,
-    p_brand_url: brandUrl,
-  };
+    // Durability check before race (replica / RLS visibility).
+    const { data: draftRow, error: draftReadErr } = await clientB
+      .from("onboarding_sessions")
+      .select("id, status")
+      .eq("user_id", userId)
+      .eq("idempotency_key", idempotencyKey)
+      .maybeSingle();
+    if (draftReadErr || !draftRow || draftRow.status !== "draft") {
+      fail(
+        `draft not visible before race: ${draftReadErr?.message ?? "missing/wrong status"}`,
+      );
+    }
 
-  // Fire both without awaiting the first — genuine concurrency.
-  const started = Date.now();
-  const [a, b] = await Promise.all([
-    clientA.rpc("materialize_onboarding_session", rpcArgs),
-    clientB.rpc("materialize_onboarding_session", rpcArgs),
-  ]);
-  const elapsedMs = Date.now() - started;
-
-  if (a.error) refuse(`RPC A failed: ${a.error.message} (${a.error.code ?? "?"})`);
-  if (b.error) {
-    refuse(
-      `RPC B failed: ${b.error.message} (${b.error.code ?? "?"}) after A ok org=${a.data?.organization_id ?? "?"}`,
-    );
-  }
-
-  const left = parseRpcPayload(a.data);
-  const right = parseRpcPayload(b.data);
-
-  if (!left.organization_id || !left.brand_id) {
-    refuse("RPC A missing organization_id/brand_id");
-  }
-  if (left.organization_id !== right.organization_id) {
-    refuse(
-      `org mismatch A=${left.organization_id} B=${right.organization_id}`,
-    );
-  }
-  if (left.brand_id !== right.brand_id) {
-    refuse(`brand mismatch A=${left.brand_id} B=${right.brand_id}`);
-  }
-
-  const counts = await withPgClient(async (pg) => {
-    const sessions = await pg.query(
-      `select count(*)::int as n from public.onboarding_sessions
-        where user_id = $1 and idempotency_key = $2`,
-      [userId, idempotencyKey],
-    );
-    const orgs = await pg.query(
-      `select count(*)::int as n from public.organizations where id = $1`,
-      [left.organization_id],
-    );
-    const brands = await pg.query(
-      `select count(*)::int as n from public.brands where id = $1`,
-      [left.brand_id],
-    );
-    const dupOrgs = await pg.query(
-      `select count(*)::int as n from public.organizations
-        where owner_id = $1 and name = $2`,
-      [userId, brandName],
-    );
-    const dupBrands = await pg.query(
-      `select count(*)::int as n from public.brands
-        where user_id = $1 and name = $2`,
-      [userId, brandName],
-    );
-    return {
-      sessions: sessions.rows[0].n,
-      orgs: orgs.rows[0].n,
-      brands: brands.rows[0].n,
-      orgsByName: dupOrgs.rows[0].n,
-      brandsByName: dupBrands.rows[0].n,
+    const rpcArgs = {
+      p_idempotency_key: idempotencyKey,
+      p_brand_name: brandName,
+      p_brand_url: brandUrl,
     };
-  });
 
-  if (counts.sessions !== 1) {
-    refuse(`expected 1 session for key, got ${counts.sessions}`);
-  }
-  if (counts.orgs !== 1 || counts.orgsByName !== 1) {
-    refuse(
-      `expected 1 organization, got id-count=${counts.orgs} name-count=${counts.orgsByName}`,
-    );
-  }
-  if (counts.brands !== 1 || counts.brandsByName !== 1) {
-    refuse(
-      `expected 1 brand, got id-count=${counts.brands} name-count=${counts.brandsByName}`,
-    );
-  }
+    // Best-effort concurrency: both HTTP RPCs start before either is awaited.
+    // True TX-overlap proof would need a server-side barrier inside the RPC
+    // (out of scope for this harness-only change).
+    const started = Date.now();
+    const [a, b] = await Promise.all([
+      clientA.rpc("materialize_onboarding_session", rpcArgs),
+      clientB.rpc("materialize_onboarding_session", rpcArgs),
+    ]);
+    const elapsedMs = Date.now() - started;
 
-  // Cleanup — postgres role, test-tagged rows only (name/key prefix).
-  await withPgClient(async (pg) => {
-    await pg.query("begin");
-    try {
-      await pg.query(
-        `delete from public.onboarding_sessions
+    if (a.error) fail(`RPC A failed: ${a.error.message} (${a.error.code ?? "?"})`);
+    if (b.error) {
+      fail(
+        `RPC B failed: ${b.error.message} (${b.error.code ?? "?"}) after A ok org=${a.data?.organization_id ?? "?"}`,
+      );
+    }
+
+    const left = parseRpcPayload(a.data);
+    const right = parseRpcPayload(b.data);
+
+    if (!left.organization_id || !left.brand_id) {
+      fail("RPC A missing organization_id/brand_id");
+    }
+    if (left.organization_id !== right.organization_id) {
+      fail(
+        `org mismatch A=${left.organization_id} B=${right.organization_id}`,
+      );
+    }
+    if (left.brand_id !== right.brand_id) {
+      fail(`brand mismatch A=${left.brand_id} B=${right.brand_id}`);
+    }
+
+    const counts = await withPgClient(async (pg) => {
+      const sessions = await pg.query(
+        `select count(*)::int as n from public.onboarding_sessions
           where user_id = $1 and idempotency_key = $2`,
         [userId, idempotencyKey],
       );
-      await pg.query(`delete from public.brands where id = $1`, [left.brand_id]);
-      await pg.query(
-        `delete from public.org_members where org_id = $1`,
-        [left.organization_id],
+      const linked = await pg.query(
+        `select o.id as org_id, b.id as brand_id
+           from public.organizations o
+           join public.brands b on b.org_id = o.id
+          where o.id = $1
+            and b.id = $2
+            and o.owner_id = $3
+            and o.name = $4
+            and b.user_id = $3
+            and b.name = $4`,
+        [left.organization_id, left.brand_id, userId, brandName],
       );
-      await pg.query(`delete from public.organizations where id = $1`, [
-        left.organization_id,
-      ]);
-      await pg.query("commit");
-    } catch (err) {
-      await pg.query("rollback");
-      throw err;
-    }
-  });
+      const orgsByName = await pg.query(
+        `select count(*)::int as n from public.organizations
+          where owner_id = $1 and name = $2`,
+        [userId, brandName],
+      );
+      const brandsByName = await pg.query(
+        `select count(*)::int as n from public.brands
+          where user_id = $1 and name = $2`,
+        [userId, brandName],
+      );
+      return {
+        sessions: sessions.rows[0].n,
+        linkedRows: linked.rows.length,
+        orgsByName: orgsByName.rows[0].n,
+        brandsByName: brandsByName.rows[0].n,
+      };
+    });
 
-  console.log(
-    JSON.stringify({
-      ok: true,
-      run: runIndex,
-      elapsedMs,
-      orgId: left.organization_id,
-      brandId: left.brand_id,
-      idempotencyKey,
-      counts,
-      auth: "signInWithPassword",
-      qaRef: QA_REF,
-    }),
-  );
+    if (counts.sessions !== 1) {
+      fail(`expected 1 session for key, got ${counts.sessions}`);
+    }
+    if (counts.linkedRows !== 1) {
+      fail(
+        `returned org/brand IDs are not the test-named owned row (org=${left.organization_id} brand=${left.brand_id} name=${brandName})`,
+      );
+    }
+    if (counts.orgsByName !== 1 || counts.brandsByName !== 1) {
+      fail(
+        `expected 1 org + 1 brand by test name, got orgs=${counts.orgsByName} brands=${counts.brandsByName}`,
+      );
+    }
+
+    console.log(
+      JSON.stringify({
+        ok: true,
+        run: runIndex,
+        elapsedMs,
+        orgId: left.organization_id,
+        brandId: left.brand_id,
+        idempotencyKey,
+        counts,
+        auth: "signInWithPassword",
+        qaRef: QA_REF,
+      }),
+    );
+  } finally {
+    if (draftInserted) {
+      try {
+        await withPgClient((pg) =>
+          cleanupFixtures(pg, { userId, idempotencyKey, brandName }),
+        );
+      } catch (cleanupErr) {
+        console.error(
+          `WARN: cleanup failed for ${idempotencyKey}: ${cleanupErr?.message ?? cleanupErr}`,
+        );
+      }
+    }
+  }
 }
 
 async function main() {
