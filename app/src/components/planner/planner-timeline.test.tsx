@@ -108,16 +108,18 @@ describe("PlannerTimeline — grid structure (SCR-32 parity)", () => {
 
     const rows = screen.getAllByTestId("planner-timeline-row");
     expect(rows).toHaveLength(7);
-    expect(rows[0].getAttribute("aria-label")).toBe("Select Brief confirmation phase, done");
+    expect(rows[0].getAttribute("aria-label")).toBe(
+      "Select Brief confirmation phase, done, 2d Mar 2 to Mar 3",
+    );
     expect(rows.map((r) => r.getAttribute("aria-label"))).toEqual(
       expect.arrayContaining([
-        "Select Brief confirmation phase, done",
-        "Select Casting phase, done",
-        "Select Soft hold phase, in progress",
-        "Select Payment scheduling phase, at risk",
-        "Select Outfit confirmation phase, todo",
-        "Select Production phase, todo",
-        "Select Product return phase, todo",
+        "Select Brief confirmation phase, done, 2d Mar 2 to Mar 3",
+        "Select Casting phase, done, 3d Mar 4 to Mar 6, gate ready for approval",
+        "Select Soft hold phase, in progress, 5d Mar 9 to Mar 13",
+        "Select Payment scheduling phase, at risk, 2d Mar 10 to Mar 11",
+        "Select Outfit confirmation phase, todo, 3d Mar 16 to Mar 18, gate locked",
+        "Select Production phase, todo, 3d Mar 23 to Mar 25",
+        "Select Product return phase, todo, 3d Mar 30 to Apr 1",
       ]),
     );
   });
@@ -175,11 +177,9 @@ describe("PlannerTimeline — visual markers", () => {
     expect(gates[1].getAttribute("title")).toBe("Gate: locked");
   });
 
-  it("renders the shoot-day milestone flag on the production phase", () => {
+  it("does not render a fabricated shoot-day milestone", () => {
     render(<PlannerTimeline model={fixtureModel()} />);
-
-    const flag = screen.getByTestId("planner-timeline-milestone");
-    expect(flag.getAttribute("title")).toBe("Shoot day");
+    expect(screen.queryByTestId("planner-timeline-milestone")).toBeNull();
   });
 
   it("colors the overdue phase bar at-risk (amber) and the done phase bar approved", () => {

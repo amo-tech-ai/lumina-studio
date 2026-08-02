@@ -41,6 +41,7 @@ export default async function PlannerWorkspacePage({
     phasesResult.data,
     instanceResult.data.tasks,
     new Date().toISOString().slice(0, 10),
+    instanceResult.data.status,
   );
 
   return (

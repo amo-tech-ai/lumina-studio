@@ -22,7 +22,12 @@
 //   outside the positioned grid. Phases are always listed in workflow
 //   order (phase.orderIndex), matching planner.phases' own order_index.
 
-import type { PlannerPhase, PlannerTask, PlannerTaskStatus } from "./types";
+import type {
+  PlannerInstanceStatus,
+  PlannerPhase,
+  PlannerTask,
+  PlannerTaskStatus,
+} from "./types";
 import {
   addPlanDays,
   daysBetween,
@@ -38,11 +43,13 @@ import {
 /** Soft cap so a malformed multi-year range cannot materialize unbounded weeks. */
 const MAX_TIMELINE_WEEKS = 104;
 
-// SCR-32's shoot-day milestone flag. The schema has no milestone column —
-// this is the default 5-week workflow's shoot-day phase slug (its task is
-// the shoot day itself). Custom workflows simply get no flags; a real
-// milestone field is schema work owned by a later ticket.
-const MILESTONE_PHASE_SLUGS: ReadonlySet<string> = new Set(["production"]);
+// Matches Planner hub summary (`isPlannerInstanceAtRisk` in queries.ts):
+// terminal / draft plans must not surface amber overdue risk on the timeline.
+const RISK_ELIGIBLE_STATUSES = new Set<PlannerInstanceStatus>([
+  "planned",
+  "active",
+  "blocked",
+]);
 
 export type PhaseTimelineStatus =
   | "done"
@@ -160,14 +167,17 @@ function phaseStatus(
   tasks: PlannerTask[],
   today: PlanDate,
   progress: number | null,
+  riskEligible: boolean,
 ): { status: PhaseTimelineStatus; atRisk: boolean } {
   if (tasks.length === 0) return { status: "todo", atRisk: false };
 
-  const overdue = tasks.some((task) => {
-    if (!isIncomplete(task)) return false;
-    const end = parsePlanDate(task.endDate);
-    return end !== null && planDateToDays(end) < planDateToDays(today);
-  });
+  const overdue =
+    riskEligible &&
+    tasks.some((task) => {
+      if (!isIncomplete(task)) return false;
+      const end = parsePlanDate(task.endDate);
+      return end !== null && planDateToDays(end) < planDateToDays(today);
+    });
   if (overdue) return { status: "at_risk", atRisk: true };
 
   if (tasks.some((task) => task.status === "blocked")) {
@@ -232,9 +242,14 @@ export function buildTimelineModel(
   phases: PlannerPhase[],
   tasks: PlannerTask[],
   todayIso: string,
+  instanceStatus?: PlannerInstanceStatus,
 ): TimelineModel {
   const today = parsePlanDate(todayIso) ?? utcToday();
   const byPhase = groupTasksByPhase(tasks);
+  // Omit status → keep risk checks (unit fixtures). Explicit status applies
+  // the hub contract so completed/archived/cancelled plans stay calm.
+  const riskEligible =
+    instanceStatus === undefined || RISK_ELIGIBLE_STATUSES.has(instanceStatus);
 
   // Phase rows in workflow order — planner.phases.order_index is the
   // canonical sequence (verified ascending on the live project).
@@ -244,7 +259,7 @@ export function buildTimelineModel(
     const phaseTasks = byPhase.get(phase.id) ?? [];
     const { range, invalid } = rangeForPhase(phaseTasks);
     const progress = phaseProgress(phaseTasks);
-    const { status, atRisk } = phaseStatus(phaseTasks, today, progress);
+    const { status, atRisk } = phaseStatus(phaseTasks, today, progress, riskEligible);
     const durationLabel = range ? `${daysBetween(range.start, range.end) + 1}d` : null;
 
     return {
@@ -255,7 +270,9 @@ export function buildTimelineModel(
       status,
       atRisk,
       progress,
-      milestone: MILESTONE_PHASE_SLUGS.has(phase.slug),
+      // Schema has no milestone date — do not invent “Shoot day” from the
+      // production phase slug (multi-day task ≠ a shoot-day marker).
+      milestone: false,
       gate: resolveGateVisualState(phase, phaseTasks),
       gateRequiredRole: phase.requiredRole,
       durationLabel,

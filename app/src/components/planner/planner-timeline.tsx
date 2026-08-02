@@ -20,7 +20,7 @@
 
 import { AlertTriangle, Flag, Lock } from "lucide-react";
 
-import { daysBetween } from "@/lib/planner/planner-date-utils";
+import { daysBetween, formatPlanDateShort } from "@/lib/planner/planner-date-utils";
 import type { PhaseTimelineStatus, TimelineModel, TimelinePhase } from "@/lib/planner/planner-view-model";
 import { usePlannerSelection } from "@/lib/planner/use-planner-selection";
 
@@ -53,6 +53,25 @@ const GATE_TITLE: Record<"approved" | "ready" | "locked", string> = {
   ready: "Gate: ready for approval",
   locked: "Gate: locked",
 };
+
+/** Accessible name for a phase row — status/dates/gate are otherwise visual-only. */
+export function phaseRowAccessibleName(row: TimelinePhase): string {
+  const parts = [`Select ${row.phase.name} phase`, row.status.replaceAll("_", " ")];
+  if (row.range && row.durationLabel) {
+    parts.push(
+      `${row.durationLabel} ${formatPlanDateShort(row.range.start)} to ${formatPlanDateShort(row.range.end)}`,
+    );
+  } else if (row.invalidRange) {
+    parts.push("needs correction");
+  } else if (!row.range) {
+    parts.push("unscheduled");
+  }
+  if (row.gate === "ready") parts.push("gate ready for approval");
+  else if (row.gate === "locked") parts.push("gate locked");
+  else if (row.gate === "approved") parts.push("gate approved");
+  if (row.milestone) parts.push("shoot day milestone");
+  return parts.join(", ");
+}
 
 function clampPercent(value: number): number {
   return Math.min(100, Math.max(0, value));
@@ -182,7 +201,7 @@ export function PlannerTimeline({ model }: { model: TimelineModel }) {
                   key={row.phase.id}
                   type="button"
                   className={styles.row}
-                  aria-label={`Select ${row.phase.name} phase, ${row.status.replaceAll("_", " ")}`}
+                  aria-label={phaseRowAccessibleName(row)}
                   aria-pressed={selected}
                   onClick={() => selectPhase(row)}
                   data-testid="planner-timeline-row"
@@ -223,7 +242,7 @@ export function PlannerTimeline({ model }: { model: TimelineModel }) {
               key={row.phase.id}
               type="button"
               className={styles.bandRow}
-              aria-label={`Select ${row.phase.name} phase`}
+              aria-label={phaseRowAccessibleName(row)}
               aria-pressed={isSelected(row)}
               onClick={() => selectPhase(row)}
               data-testid="planner-timeline-band-row"
@@ -243,7 +262,7 @@ export function PlannerTimeline({ model }: { model: TimelineModel }) {
               key={row.phase.id}
               type="button"
               className={`${styles.bandRow} ${styles.bandRowInvalid}`}
-              aria-label={`Select ${row.phase.name} phase`}
+              aria-label={phaseRowAccessibleName(row)}
               aria-pressed={isSelected(row)}
               onClick={() => selectPhase(row)}
               data-testid="planner-timeline-band-row"

@@ -262,18 +262,39 @@ describe("gates", () => {
 });
 
 describe("milestones", () => {
-  it("flags the default workflow's production phase (shoot day)", () => {
+  it("does not fabricate a shoot-day milestone from the production phase slug", () => {
     const model = buildTimelineModel(
       [phase({ id: "ph-prod", slug: "production", name: "Production", gateType: null, requiredRole: null })],
-      [task({ id: "a", phaseId: "ph-prod", title: "Shoot day" })],
+      [task({ id: "a", phaseId: "ph-prod", title: "Production" })],
       TODAY,
     );
-    expect(model.phases[0].milestone).toBe(true);
+    expect(model.phases[0].milestone).toBe(false);
+  });
+});
+
+describe("instance status risk eligibility", () => {
+  it("suppresses at_risk for completed / archived / cancelled instances", () => {
+    for (const status of ["completed", "archived", "cancelled"] as const) {
+      const model = buildTimelineModel(
+        [phase()],
+        [task({ id: "a", status: "in_progress", startDate: "2026-03-04", endDate: "2026-03-11" })],
+        TODAY,
+        status,
+      );
+      expect(model.phases[0].atRisk).toBe(false);
+      expect(model.phases[0].status).not.toBe("at_risk");
+    }
   });
 
-  it("does not flag other phases", () => {
-    const model = buildTimelineModel([phase()], [task()], TODAY);
-    expect(model.phases[0].milestone).toBe(false);
+  it("keeps at_risk for active instances with overdue incomplete tasks", () => {
+    const model = buildTimelineModel(
+      [phase()],
+      [task({ id: "a", status: "in_progress", startDate: "2026-03-04", endDate: "2026-03-11" })],
+      TODAY,
+      "active",
+    );
+    expect(model.phases[0].atRisk).toBe(true);
+    expect(model.phases[0].status).toBe("at_risk");
   });
 });
 
