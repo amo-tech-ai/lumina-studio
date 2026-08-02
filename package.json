@@ -19,6 +19,7 @@
     "supabase:verify": "node scripts/verify-supabase.mjs",
     "supabase:verify-rls": "node scripts/verify-rls.mjs",
     "supabase:verify-booking-gate": "node scripts/verify-booking-gate.mjs",
+    "supabase:ipi-894-materialize-race": "node scripts/ipi-894-materialize-race.mjs",
     "supabase:verify-edge": "node scripts/verify-edge-functions.mjs",
     "supabase:verify-edge-inventory": "node scripts/check-edge-inventory.mjs",
     "supabase:verify-edge-inventory:self-check": "node scripts/check-edge-inventory.mjs --self-check",
