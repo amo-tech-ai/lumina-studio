@@ -1,18 +1,60 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+import {
+  DRAFT_ACTION_DOMAIN,
+  type DraftActionResult,
+  failure,
+  isUniqueViolationSignal,
+  mapDraftActionDbError,
+} from "@/lib/brand/draft-action-errors";
+
+async function resolveDiscardUniqueOrCas(
+  supabase: SupabaseClient,
+  brandId: string,
+): Promise<DraftActionResult> {
+  const { data: again, error: againErr } = await supabase
+    .from("brands")
+    .select("intake_status")
+    .eq("id", brandId)
+    .maybeSingle();
+  if (againErr) {
+    const mapped = mapDraftActionDbError("discard", brandId, againErr);
+    if (isUniqueViolationSignal(mapped)) {
+      return failure("CONFLICT");
+    }
+    return mapped;
+  }
+  if (!again) {
+    return failure("NOT_FOUND");
+  }
+  // Already left draft_ready — discard is durably done.
+  if (again.intake_status !== "draft_ready") {
+    return { ok: true, status: "already_completed" };
+  }
+  return failure("CONFLICT", DRAFT_ACTION_DOMAIN.NOT_DRAFT_READY);
+}
+
 /** Clear ai_profile_draft and restore intake_status after rejection. Caller must enforce auth. */
 export async function discardBrandDraft(
   supabase: SupabaseClient,
   brandId: string,
-): Promise<{ ok: true } | { ok: false; error: string }> {
+): Promise<DraftActionResult> {
   const { data: brand, error: selectErr } = await supabase
     .from("brands")
     .select("id, ai_profile, intake_status")
     .eq("id", brandId)
     .maybeSingle();
 
-  if (selectErr) return { ok: false, error: selectErr.message };
-  if (!brand) return { ok: false, error: "Brand not found" };
+  if (selectErr) {
+    const mapped = mapDraftActionDbError("discard", brandId, selectErr);
+    if (isUniqueViolationSignal(mapped)) {
+      return resolveDiscardUniqueOrCas(supabase, brandId);
+    }
+    return mapped;
+  }
+  if (!brand) {
+    return failure("NOT_FOUND");
+  }
 
   const priorProfile = brand.ai_profile as Record<string, unknown> | null;
   const restoreStatus = priorProfile?._lifecycle === "scores_complete" ? "ready" : "brand_created";
@@ -33,8 +75,16 @@ export async function discardBrandDraft(
     .select("id")
     .maybeSingle();
 
-  if (error) return { ok: false, error: error.message };
-  if (!updated) return { ok: false, error: "Brand is not in draft_ready state" };
+  if (error) {
+    const mapped = mapDraftActionDbError("discard", brandId, error);
+    if (isUniqueViolationSignal(mapped)) {
+      return resolveDiscardUniqueOrCas(supabase, brandId);
+    }
+    return mapped;
+  }
+  if (!updated) {
+    return resolveDiscardUniqueOrCas(supabase, brandId);
+  }
 
-  return { ok: true };
+  return { ok: true, status: "completed" };
 }

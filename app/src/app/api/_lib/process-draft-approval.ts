@@ -1,11 +1,12 @@
 import { createSupabaseAdminClient } from "@/app/api/_lib/supabase-admin";
+import { DRAFT_ACTION_DOMAIN } from "@/lib/brand/draft-action-errors";
 import { discardBrandDraft } from "@/lib/brand/discard-draft";
 import { promoteBrandDraft } from "@/lib/brand/promote-draft";
 
 export const PENDING_DRAFT_STATUS = "pending_approval";
 
 /** Brand already promoted/discarded — safe to continue without rolling back draft row. */
-const IDEMPOTENT_DRAFT_STATE_ERROR = "Brand is not in draft_ready state";
+const IDEMPOTENT_DRAFT_STATE_ERROR = DRAFT_ACTION_DOMAIN.NOT_DRAFT_READY;
 
 export type ProcessDraftApprovalResult =
   | { ok: true; approved: boolean; brandId: string }

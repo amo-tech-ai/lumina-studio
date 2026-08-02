@@ -4,6 +4,14 @@ import {
   stripBrandProfileMeta,
   validateBrandProfilePayload,
 } from "@/lib/brand/brand-profile-contract";
+import {
+  DRAFT_ACTION_DOMAIN,
+  type DraftActionResult,
+  failure,
+  isUniqueViolationSignal,
+  logDraftActionError,
+  mapDraftActionDbError,
+} from "@/lib/brand/draft-action-errors";
 import { BASE_SCORE_TYPES } from "@/lib/brand-scores";
 
 /** Build brand_scores rows from embedded `_draft_scores` or contract `scores`. */
@@ -73,35 +81,65 @@ export function resolvePromoteScoreRows(
   }));
 }
 
+async function resolvePromoteUniqueOrCas(
+  supabase: SupabaseClient,
+  brandId: string,
+): Promise<DraftActionResult> {
+  const { data: again, error: againErr } = await supabase
+    .from("brands")
+    .select("intake_status")
+    .eq("id", brandId)
+    .maybeSingle();
+  if (againErr) {
+    const mapped = mapDraftActionDbError("promote", brandId, againErr);
+    if (isUniqueViolationSignal(mapped)) {
+      return failure("CONFLICT");
+    }
+    return mapped;
+  }
+  if (again?.intake_status === "ready") {
+    return { ok: true, status: "already_completed" };
+  }
+  return failure("CONFLICT", DRAFT_ACTION_DOMAIN.NOT_DRAFT_READY);
+}
+
 /** Promote ai_profile_draft → ai_profile and upsert draft scores. Caller must enforce auth. */
 export async function promoteBrandDraft(
   supabase: SupabaseClient,
   brandId: string,
-): Promise<{ ok: true } | { ok: false; error: string }> {
+): Promise<DraftActionResult> {
   const { data: brand, error: selectErr } = await supabase
     .from("brands")
     .select("id, ai_profile_draft, intake_status")
     .eq("id", brandId)
     .maybeSingle();
 
-  if (selectErr) return { ok: false, error: selectErr.message };
+  if (selectErr) {
+    const mapped = mapDraftActionDbError("promote", brandId, selectErr);
+    if (isUniqueViolationSignal(mapped)) {
+      return resolvePromoteUniqueOrCas(supabase, brandId);
+    }
+    return mapped;
+  }
   if (!brand?.ai_profile_draft) {
     // HITL handler (processBrandIntelligenceDraftApproval) may promote before workflow resume.
-    if (brand?.intake_status === "ready") return { ok: true };
-    return { ok: false, error: "No draft to apply" };
+    if (brand?.intake_status === "ready") {
+      return { ok: true, status: "already_completed" };
+    }
+    return failure("NOT_FOUND", DRAFT_ACTION_DOMAIN.NO_DRAFT);
   }
 
   const draft = brand.ai_profile_draft as Record<string, unknown>;
   // IPI-835 · D / IPI-834 — refuse promote when DNA fails the evidence-backed contract.
   const contractPayload = stripBrandProfileMeta(draft);
   if (!contractPayload || validateBrandProfilePayload(contractPayload) !== null) {
-    return { ok: false, error: "Brand DNA is incomplete or invalid" };
+    return failure("CONFLICT", DRAFT_ACTION_DOMAIN.INVALID_DNA);
   }
 
   // Command Center DNA badge reads brand_scores — refuse ready without the four base scores.
   const draftScores = resolvePromoteScoreRows(draft);
   if (!draftScores) {
-    return { ok: false, error: "Brand DNA is incomplete or invalid" };
+    return failure("CONFLICT", DRAFT_ACTION_DOMAIN.INVALID_DNA);
   }
 
   const { _draft_scores: _removed, ...cleanDraft } = draft;
@@ -126,8 +164,16 @@ export async function promoteBrandDraft(
     .select("id")
     .maybeSingle();
 
-  if (error) return { ok: false, error: error.message };
-  if (!updated) return { ok: false, error: "Brand is not in draft_ready state" };
+  if (error) {
+    const mapped = mapDraftActionDbError("promote", brandId, error);
+    if (isUniqueViolationSignal(mapped)) {
+      return resolvePromoteUniqueOrCas(supabase, brandId);
+    }
+    return mapped;
+  }
+  if (!updated) {
+    return resolvePromoteUniqueOrCas(supabase, brandId);
+  }
 
   if (draftScores.length > 0) {
     const scoreRows = draftScores.map((r) => ({ ...r, brand_id: brandId }));
@@ -137,9 +183,9 @@ export async function promoteBrandDraft(
     if (scoresErr) {
       // Profile is already committed — do not fail the approval path (rollback would
       // leave draft pending_approval while brand is ready). Scores can be re-synced.
-      console.error("[promoteBrandDraft] score upsert failed after profile commit:", scoresErr);
+      logDraftActionError("promote", brandId, scoresErr);
     }
   }
 
-  return { ok: true };
+  return { ok: true, status: "completed" };
 }
