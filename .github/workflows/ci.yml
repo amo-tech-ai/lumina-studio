@@ -656,7 +656,11 @@ jobs:
           code=$?
           set -e
           if [ "$code" -eq 0 ]; then
-            exit 0
+            if [ -s "$OUT/summary.json" ]; then
+              exit 0
+            fi
+            echo "::error::verify:copilot exited 0 but wrote no summary.json — treating as failure"
+            exit 1
           fi
           if [ -f "$OUT/summary.json" ] &&
              node -e '
@@ -667,7 +671,7 @@ jobs:
             echo "::error::Product acceptance criteria failed — not retrying"
             exit "$code"
           fi
-          if grep -qiE 'timeout|Navigation timeout|\b502\b|\b503\b|ECONNRESET|browserType\.launch|Executable doesn' /tmp/verify-copilot-ci.log; then
+          if grep -qiE 'timeout|Navigation timeout|(^|[^0-9])50[23]([^0-9]|$)|ECONNRESET|browserType\.launch|Executable doesn' /tmp/verify-copilot-ci.log; then
             echo "::warning::verify:copilot infra failure — retrying once"
             rm -rf "$OUT"
             set +e
