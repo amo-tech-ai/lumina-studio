@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { GanttChart, LayoutGrid, CalendarRange, List as ListIcon } from "lucide-react";
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -27,7 +27,18 @@ function WorkspacePlaceholder({ view, label }: { view: ViewType; label: string }
   );
 }
 
-export function PlannerWorkspaceShell({ instanceId }: { instanceId: string }) {
+// IPI-579 · PLN-S1B — the page (RSC) passes the server-built Timeline node
+// through `timeline`; the shell renders it in the Timeline tab. Other views
+// keep their stable placeholder ids (AC-F extension points) until their own
+// tickets ship. No timeline node → the timeline placeholder renders, so the
+// shell stays self-contained for tests and future views.
+export function PlannerWorkspaceShell({
+  instanceId,
+  timeline,
+}: {
+  instanceId: string;
+  timeline?: ReactNode;
+}) {
   const [view, setView] = useState<ViewType>("timeline");
 
   return (
@@ -53,7 +64,11 @@ export function PlannerWorkspaceShell({ instanceId }: { instanceId: string }) {
 
         {VIEWS.map(({ key, label }) => (
           <TabsContent key={key} value={key} style={{ marginTop: "1rem", width: "100%" }}>
-            <WorkspacePlaceholder view={key} label={label} />
+            {key === "timeline" ? (
+              timeline ?? <WorkspacePlaceholder view={key} label={label} />
+            ) : (
+              <WorkspacePlaceholder view={key} label={label} />
+            )}
           </TabsContent>
         ))}
       </Tabs>
