@@ -17,6 +17,12 @@ For the plain-language weekly digest, see [`SHIPPED.md`](./SHIPPED.md).
 
 ## [Unreleased]
 
+### 2026-08-02 — changelog: catch up 1 commit
+
+**Docs-only.** Clearing the changelog-staleness gate to unblock PRs #720 and #721. Recent commit:
+
+- PR #743 — IPI-817 dual-auth for start-brand-crawl service-role + actorId
+
 ### 2026-08-01 — Onboarding gets an atomic materialize path; the third ACL drift; and seven dead pointers in the agent config
 
 **19 commits across `93d9917..10db146d`.** Written 2026-08-01 to clear `changelog-staleness`,
