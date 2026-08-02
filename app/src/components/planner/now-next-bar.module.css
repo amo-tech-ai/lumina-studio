@@ -1,0 +1,99 @@
+/* IPI-588 · PLN-S1G — SCR-32 Now & Next priority bar (.pl-nownext).
+   Token names map to app/src/styles/tokens.css (not the DC shorthand). */
+
+.bar {
+  flex-shrink: 0;
+  margin-top: 14px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.card {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-bg-card);
+  padding: 12px 14px;
+  display: flex;
+  align-items: flex-start;
+  gap: 11px;
+}
+
+.iconWrap {
+  width: 30px;
+  height: 30px;
+  flex-shrink: 0;
+  border-radius: var(--radius-md);
+  background: var(--color-bg-subtle);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-action);
+}
+
+.iconWrapDone {
+  width: 30px;
+  height: 30px;
+  flex-shrink: 0;
+  border-radius: var(--radius-md);
+  background: #ecfdf3;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-approved);
+}
+
+.body {
+  min-width: 0;
+  flex: 1;
+}
+
+.eyebrow {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--color-text-secondary);
+  font-weight: 700;
+  margin-bottom: 3px;
+}
+
+.title {
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.3;
+  color: var(--color-text);
+}
+
+.sub {
+  font-size: 12px;
+  color: var(--color-text-secondary);
+  line-height: 1.4;
+  margin-top: 2px;
+}
+
+.viewButton {
+  flex-shrink: 0;
+  align-self: center;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 11px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  background: var(--color-bg-card);
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-text);
+  cursor: pointer;
+}
+
+.viewButton:hover {
+  background: var(--color-bg-subtle);
+}
+
+@media (max-width: 767px) {
+  .bar {
+    grid-template-columns: 1fr;
+  }
+}

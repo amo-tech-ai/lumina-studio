@@ -39,6 +39,14 @@ vi.mock("@/components/planner/planner-workspace-shell", () => ({
   PlannerWorkspaceShell: () => null,
 }));
 
+vi.mock("@/lib/supabase/server", () => ({
+  createSupabaseServerClient: vi.fn(async () => ({
+    auth: {
+      getUser: vi.fn(async () => ({ data: { user: { id: "user-1" } }, error: null })),
+    },
+  })),
+}));
+
 import { getInstanceDetail, listWorkflowPhases } from "@/lib/planner/queries";
 import PlannerWorkspacePage from "./page";
 
