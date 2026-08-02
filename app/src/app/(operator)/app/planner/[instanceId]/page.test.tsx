@@ -48,12 +48,19 @@ vi.mock("@/lib/supabase/server", () => ({
 }));
 
 import { getInstanceDetail, listWorkflowPhases } from "@/lib/planner/queries";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
 import PlannerWorkspacePage from "./page";
 
 beforeEach(() => {
   notFound.mockClear();
   vi.mocked(getInstanceDetail).mockReset();
   vi.mocked(listWorkflowPhases).mockReset();
+  vi.mocked(createSupabaseServerClient).mockReset();
+  vi.mocked(createSupabaseServerClient).mockResolvedValue({
+    auth: {
+      getUser: vi.fn(async () => ({ data: { user: { id: "user-1" } }, error: null })),
+    },
+  } as never);
 });
 
 describe("PlannerWorkspacePage — getInstanceDetail failures", () => {
@@ -79,6 +86,30 @@ describe("PlannerWorkspacePage — getInstanceDetail failures", () => {
     await expect(PlannerWorkspacePage({ params: Promise.resolve({ instanceId: "i-1" }) })).rejects.toThrow(
       "database unavailable",
     );
+    expect(notFound).not.toHaveBeenCalled();
+  });
+
+  it("throws auth errors instead of mapping them to notFound()", async () => {
+    vi.mocked(getInstanceDetail).mockResolvedValue({
+      ok: true,
+      data: { workflowId: "wf-1", tasks: [], status: "active" },
+    } as never);
+    vi.mocked(listWorkflowPhases).mockResolvedValue({
+      ok: true,
+      data: [],
+    } as never);
+    vi.mocked(createSupabaseServerClient).mockResolvedValue({
+      auth: {
+        getUser: vi.fn(async () => ({
+          data: { user: null },
+          error: { message: "auth unavailable" },
+        })),
+      },
+    } as never);
+
+    await expect(
+      PlannerWorkspacePage({ params: Promise.resolve({ instanceId: "i-1" }) }),
+    ).rejects.toThrow("auth unavailable");
     expect(notFound).not.toHaveBeenCalled();
   });
 });

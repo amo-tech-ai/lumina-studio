@@ -99,6 +99,22 @@ describe("selectCurrentTaskForViewer", () => {
     expect(selectCurrentTaskForViewer(nearerStart, VIEWER, TODAY)?.id).toBe("near");
   });
 
+  it("when start distances match, nearer end wins before id", () => {
+    const tasks = [
+      task({ id: "far-end", startDate: "2026-03-10", endDate: "2026-03-20" }),
+      task({ id: "near-end", startDate: "2026-03-10", endDate: "2026-03-14" }),
+    ];
+    expect(selectCurrentTaskForViewer(tasks, VIEWER, TODAY)?.id).toBe("near-end");
+  });
+
+  it("breaks undated ties by stable id (infinite distances must not NaN-skip)", () => {
+    const tasks = [task({ id: "z-undated" }), task({ id: "a-undated" })];
+    expect(selectCurrentTaskForViewer(tasks, VIEWER, TODAY)?.id).toBe("a-undated");
+    expect(selectCurrentTaskForViewer([...tasks].reverse(), VIEWER, TODAY)?.id).toBe(
+      "a-undated",
+    );
+  });
+
   it("is deterministic for the same inputs", () => {
     const tasks = [
       task({ id: "z", startDate: "2026-03-10", endDate: "2026-03-14" }),

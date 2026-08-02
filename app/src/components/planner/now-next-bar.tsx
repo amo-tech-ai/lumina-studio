@@ -91,7 +91,7 @@ export function NowNextBar({ tasks, viewerId, phaseNames, today }: NowNextBarPro
         ) : null}
       </div>
 
-      {/* Phase 1: honest empty until IPI-483 — never invent an approval. */}
+      {/* ponytail: Phase 1 honest-empty state until IPI-483 — never invent an approval. */}
       <div className={styles.card} data-testid="planner-next-approval-card">
         <div className={styles.iconWrapDone} aria-hidden="true">
           <CircleCheck style={{ width: 15, height: 15 }} />
