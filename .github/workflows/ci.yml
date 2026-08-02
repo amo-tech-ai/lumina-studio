@@ -658,11 +658,23 @@ jobs:
           if [ "$code" -eq 0 ]; then
             exit 0
           fi
+          if [ -f "$OUT/summary.json" ] &&
+             node -e '
+               const fs = require("fs");
+               const data = JSON.parse(fs.readFileSync(process.argv[1], "utf8"));
+               process.exit(data.hard_ac_pass === false ? 0 : 1);
+             ' "$OUT/summary.json"; then
+            echo "::error::Product acceptance criteria failed — not retrying"
+            exit "$code"
+          fi
           if grep -qiE 'timeout|Navigation timeout|\b502\b|\b503\b|ECONNRESET|browserType\.launch|Executable doesn' /tmp/verify-copilot-ci.log; then
             echo "::warning::verify:copilot infra failure — retrying once"
             rm -rf "$OUT"
+            set +e
             run_verify
-            exit $?
+            retry_code=$?
+            set -e
+            exit "$retry_code"
           fi
           echo "::error::verify:copilot failed (product assertion or non-infra error) — not retrying"
           exit "$code"
