@@ -102,6 +102,8 @@ function AnalysisProgressLive({
 }) {
   const onCompleteRef = useRef(onComplete);
   onCompleteRef.current = onComplete;
+  const answersRef = useRef(answers);
+  answersRef.current = answers;
 
   const [kickoffError, setKickoffError] = useState<string | null>(null);
   const biStartedRef = useRef(false);
@@ -118,14 +120,12 @@ function AnalysisProgressLive({
   useEffect(() => {
     let cancelled = false;
     const supabase = createSupabaseBrowserClient();
+    const form = answersToOnboardingForm(answersRef.current);
+    const websiteUrl = answersRef.current.websiteUrl.trim();
 
     (async () => {
       try {
-        const result = await kickoffOnboardingCrawl(
-          supabase,
-          brandId,
-          answers.websiteUrl.trim(),
-        );
+        const result = await kickoffOnboardingCrawl(supabase, brandId, websiteUrl);
         if (cancelled) return;
 
         if (result.kind === "already_done") {
@@ -142,12 +142,9 @@ function AnalysisProgressLive({
           crawlIdRef.current = result.crawlId;
           if (result.startBiNow && !biStartedRef.current) {
             biStartedRef.current = true;
-            await startOnboardingBrandIntelligence(
-              supabase,
-              brandId,
-              answersToOnboardingForm(answers),
-              { crawlResultId: result.crawlId },
-            );
+            await startOnboardingBrandIntelligence(supabase, brandId, form, {
+              crawlResultId: result.crawlId,
+            });
           }
           return;
         }
@@ -155,11 +152,7 @@ function AnalysisProgressLive({
         setKickoffError(result.error);
         if (result.startBiNow && !biStartedRef.current) {
           biStartedRef.current = true;
-          await startOnboardingBrandIntelligence(
-            supabase,
-            brandId,
-            answersToOnboardingForm(answers),
-          );
+          await startOnboardingBrandIntelligence(supabase, brandId, form);
         }
       } catch (err) {
         if (cancelled) return;
@@ -170,8 +163,6 @@ function AnalysisProgressLive({
     return () => {
       cancelled = true;
     };
-    // Kickoff once per brandId mount — answers captured for this run.
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional mount/brandId gate
   }, [brandId]);
 
   // When crawl finishes after a deferred kickoff, start BI once.
@@ -183,12 +174,11 @@ function AnalysisProgressLive({
     void startOnboardingBrandIntelligence(
       supabase,
       brandId,
-      answersToOnboardingForm(answers),
+      answersToOnboardingForm(answersRef.current),
       crawlIdRef.current ? { crawlResultId: crawlIdRef.current } : undefined,
     ).catch((err) => {
       setKickoffError(err instanceof Error ? err.message : "Brand analysis failed to start");
     });
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- BI once on crawl_complete
   }, [brandId, intakeStatus]);
 
   // Advance to DNA review when server says analysis is reviewable.

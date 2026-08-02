@@ -17,30 +17,31 @@ vi.mock("next/navigation", () => ({
 
 // Slice C: Realtime screen is unit-tested separately. Flow tests only need
 // replace-vs-push + a11y shell behaviour — mock auto-completes when brandId is set.
-vi.mock("./analysis-progress-screen", () => ({
-  AnalysisProgressScreen: ({
-    onComplete,
-    brandId,
-  }: {
-    onComplete: () => void;
-    brandId: string | null;
-  }) => {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const { useEffect } = require("react") as typeof import("react");
-    useEffect(() => {
-      if (!brandId) return;
-      const timer = setTimeout(onComplete, 20);
-      return () => clearTimeout(timer);
-    }, [brandId, onComplete]);
-    return (
-      <div data-testid="onboarding-card">
-        <p data-testid="analysis-status" aria-live="polite">
-          {brandId ? "Preparing your workspace…" : "Brand is not ready yet."}
-        </p>
-      </div>
-    );
-  },
-}));
+vi.mock("./analysis-progress-screen", async () => {
+  const React = await import("react");
+  return {
+    AnalysisProgressScreen: ({
+      onComplete,
+      brandId,
+    }: {
+      onComplete: () => void;
+      brandId: string | null;
+    }) => {
+      React.useEffect(() => {
+        if (!brandId) return;
+        const timer = setTimeout(onComplete, 20);
+        return () => clearTimeout(timer);
+      }, [brandId, onComplete]);
+      return (
+        <div data-testid="onboarding-card">
+          <p data-testid="analysis-status" aria-live="polite">
+            {brandId ? "Preparing your workspace…" : "Brand is not ready yet."}
+          </p>
+        </div>
+      );
+    },
+  };
+});
 
 import { OnboardingFlow } from "./onboarding-flow";
 import { LAST_SCREEN, MARKETING_SCREENS, ctaLabel } from "@/lib/onboarding/navigation";

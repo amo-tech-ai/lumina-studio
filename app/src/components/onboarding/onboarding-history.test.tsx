@@ -10,30 +10,31 @@ vi.mock("next/navigation", () => ({
 }));
 
 // Slice C: progress screen unit-tested separately — auto-complete when brandId set.
-vi.mock("./analysis-progress-screen", () => ({
-  AnalysisProgressScreen: ({
-    onComplete,
-    brandId,
-  }: {
-    onComplete: () => void;
-    brandId: string | null;
-  }) => {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const { useEffect } = require("react") as typeof import("react");
-    useEffect(() => {
-      if (!brandId) return;
-      const timer = setTimeout(onComplete, 20);
-      return () => clearTimeout(timer);
-    }, [brandId, onComplete]);
-    return (
-      <div data-testid="onboarding-card">
-        <p data-testid="analysis-status" aria-live="polite">
-          Preparing your workspace…
-        </p>
-      </div>
-    );
-  },
-}));
+vi.mock("./analysis-progress-screen", async () => {
+  const React = await import("react");
+  return {
+    AnalysisProgressScreen: ({
+      onComplete,
+      brandId,
+    }: {
+      onComplete: () => void;
+      brandId: string | null;
+    }) => {
+      React.useEffect(() => {
+        if (!brandId) return;
+        const timer = setTimeout(onComplete, 20);
+        return () => clearTimeout(timer);
+      }, [brandId, onComplete]);
+      return (
+        <div data-testid="onboarding-card">
+          <p data-testid="analysis-status" aria-live="polite">
+            Preparing your workspace…
+          </p>
+        </div>
+      );
+    },
+  };
+});
 
 import { OnboardingFlow } from "./onboarding-flow";
 
