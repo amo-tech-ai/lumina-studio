@@ -30,7 +30,8 @@ const DrawerHandle = React.forwardRef<
   <DrawerPrimitive.Handle
     ref={ref}
     className={cn(
-      "mx-auto mt-4 h-2 w-[100px] shrink-0 rounded-full bg-muted",
+      // MOB-01: 36×4px handle · border-strong token
+      "mx-auto mt-3 h-1 w-9 shrink-0 rounded-full bg-[var(--color-border-strong)]",
       className
     )}
     {...props}
@@ -44,7 +45,8 @@ const DrawerOverlay = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <DrawerPrimitive.Overlay
     ref={ref}
-    className={cn("fixed inset-0 z-50 bg-black/80", className)}
+    // MOB-01 backdrop: rgba(17,17,17,.4) — not the default Dialog 80% black.
+    className={cn("fixed inset-0 z-50 bg-[rgba(17,17,17,0.4)]", className)}
     {...props}
   />
 ))
@@ -59,7 +61,7 @@ const DrawerContent = React.forwardRef<
     <DrawerPrimitive.Content
       ref={ref}
       className={cn(
-        "fixed inset-x-0 bottom-0 z-50 mt-24 flex h-auto flex-col rounded-t-[18px] border bg-background outline-none motion-reduce:transition-none",
+        "fixed inset-x-0 bottom-0 z-50 mt-24 flex h-auto flex-col rounded-t-[18px] border bg-background outline-none",
         className
       )}
       {...props}

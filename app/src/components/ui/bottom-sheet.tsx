@@ -40,13 +40,30 @@ export const BOTTOM_SHEET_DETENT_TO_SNAP: Record<
   full: 0.9,
 };
 
+/** Match Vaul snap reports that may arrive as strings or float noise. */
 export function snapPointToDetent(
   snap: number | string | null,
 ): BottomSheetDetent | null {
-  if (snap === 0.38) return "peek";
-  if (snap === 0.62) return "half";
-  if (snap === 0.9) return "full";
+  if (snap == null) return null;
+  const value = typeof snap === "number" ? snap : Number.parseFloat(String(snap));
+  if (!Number.isFinite(value)) return null;
+  for (const [detent, target] of Object.entries(BOTTOM_SHEET_DETENT_TO_SNAP) as [
+    BottomSheetDetent,
+    BottomSheetSnapPoint,
+  ][]) {
+    if (Math.abs(value - target) < 0.001) return detent;
+  }
   return null;
+}
+
+/** Vaul `setActiveSnapPoint` → named detent callback (MOB-01 onDetentChange). */
+export function notifyDetentFromSnap(
+  snap: number | string | null,
+  onDetentChange?: (detent: BottomSheetDetent) => void,
+): BottomSheetDetent | null {
+  const next = snapPointToDetent(snap);
+  if (next) onDetentChange?.(next);
+  return next;
 }
 
 export type BottomSheetProps = {
@@ -87,8 +104,7 @@ export function BottomSheet({
   const handleSnapPointChange = React.useCallback(
     (snap: number | string | null) => {
       setActiveSnapPoint(snap);
-      const next = snapPointToDetent(snap);
-      if (next) onDetentChange?.(next);
+      notifyDetentFromSnap(snap, onDetentChange);
     },
     [onDetentChange],
   );

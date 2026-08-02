@@ -7,6 +7,7 @@ import {
   BottomSheet,
   BOTTOM_SHEET_DETENT_TO_SNAP,
   BOTTOM_SHEET_SNAP_POINTS,
+  notifyDetentFromSnap,
   snapPointToDetent,
 } from "./bottom-sheet";
 
@@ -44,7 +45,10 @@ describe("BottomSheet detent contract (MOB-01)", () => {
     expect(snapPointToDetent(0.38)).toBe("peek");
     expect(snapPointToDetent(0.62)).toBe("half");
     expect(snapPointToDetent(0.9)).toBe("full");
+    expect(snapPointToDetent("0.9")).toBe("full");
+    expect(snapPointToDetent(0.9000001)).toBe("full");
     expect(snapPointToDetent(null)).toBeNull();
+    expect(snapPointToDetent("not-a-snap")).toBeNull();
   });
 });
 
@@ -125,16 +129,18 @@ describe("BottomSheet", () => {
     expect(screen.getByRole("button", { name: "Inside action" })).toBeDefined();
   });
 
-  it("notifies onDetentChange when detent prop maps to a snap point", async () => {
+  it("wires Vaul snap reports to onDetentChange (full detent)", () => {
     const onDetentChange = vi.fn();
+    // Same path as Drawer setActiveSnapPoint → handleSnapPointChange.
+    expect(notifyDetentFromSnap(0.9, onDetentChange)).toBe("full");
+    expect(onDetentChange).toHaveBeenCalledWith("full");
+    expect(notifyDetentFromSnap("0.62", onDetentChange)).toBe("half");
+    expect(onDetentChange).toHaveBeenCalledWith("half");
+  });
+
+  it("keeps Vaul snap-point shell when detent prop moves to full", async () => {
     const { rerender } = render(
-      <BottomSheet
-        open
-        onOpenChange={() => {}}
-        title="Detents"
-        detent="peek"
-        onDetentChange={onDetentChange}
-      >
+      <BottomSheet open onOpenChange={() => {}} title="Detents" detent="peek">
         body
       </BottomSheet>,
     );
@@ -144,13 +150,7 @@ describe("BottomSheet", () => {
     expect(dialog.getAttribute("data-vaul-snap-points")).toBe("true");
 
     rerender(
-      <BottomSheet
-        open
-        onOpenChange={() => {}}
-        title="Detents"
-        detent="full"
-        onDetentChange={onDetentChange}
-      >
+      <BottomSheet open onOpenChange={() => {}} title="Detents" detent="full">
         body
       </BottomSheet>,
     );
