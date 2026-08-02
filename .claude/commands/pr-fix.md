@@ -1,6 +1,6 @@
 ---
 description: "Triage and fix PR review comments — inline threads, bot summaries, CI failures"
-argument-hint: "PR number or URL"
+argument-hint: "PR#|URL [fix|resolve|ship|ready]"
 allowed-tools: ["Bash", "Edit", "Write", "Read", "Grep", "Glob", "Task"]
 ---
 
@@ -11,6 +11,15 @@ Act as a senior GitHub PR reviewer and fixer for the iPix / Lumina Studio codeba
 ## Arguments
 
 `$ARGUMENTS` — PR number (e.g. `162`) or full GitHub PR URL. Required.
+
+**Mode (optional):** `fix` (default) · `resolve` · `ship` · `ready`
+
+- `fix`: triage and edit (default when mode omitted)
+- `ship`: triage, edit, verify, commit/push (explicit consent)
+- `resolve`: verify already-pushed fixes, reply, resolve
+- `ready`: inspect only, then undraft if safe
+
+**Reject unknown modes** with usage help. Use `fix` only when the mode is omitted or explicitly `fix`.
 
 ## Workflow hub
 
@@ -244,11 +253,18 @@ gh pr view <N> --json number,title,body,headRefName,files
 
 ## Phase 1 — Fetch & triage
 
-1. Extract PR number from `$ARGUMENTS`.
-2. HEAD gate + fetch unresolved threads (GraphQL) — see `.cursor/rules/pr-fix.mdc`.
-3. Bucket: **Fix** · **Already fixed** · **Out of scope** · **Dismiss**
-4. Assign tier **A | B | C** per thread (see Fix efficiency tiers).
-5. Show triage table before coding.
+**Mode-specific behavior:**
+
+- `fix` and `ship`: Run full triage and edit flow
+- `resolve`: Skip triage/edit; verify already-pushed fixes only
+- `ready`: Report unresolved count only; no edits
+
+1. Extract PR number and mode from `$ARGUMENTS`.
+2. Reject unknown modes with usage help.
+3. HEAD gate + fetch unresolved threads (GraphQL) — see `.cursor/rules/pr-fix.mdc`.
+4. For `fix`/`ship` only: Bucket: **Fix** · **Already fixed** · **Out of scope** · **Dismiss**
+5. For `fix`/`ship` only: Assign tier **A | B | C** per thread (see Fix efficiency tiers).
+6. For `fix`/`ship` only: Show triage table before coding.
 
 ---
 
@@ -306,13 +322,23 @@ gh pr view <N> --json statusCheckRollup
 
 ## Phase 4 — Push & resolve
 
+**Resolve mode preflight (for `resolve` mode only):**
+
+Before attempting to resolve threads in `resolve` mode:
+1. Verify HEAD matches `headRefOid` (HEAD gate)
+2. Fetch unresolved threads count
+3. If count > 0: verify each thread's fix is present at HEAD
+4. If any fix missing: stop and report — do not resolve without verification
+
+**For `fix`/`ship` modes:**
+
 Use GraphQL `addPullRequestReviewThreadReply` + `resolveReviewThread`.  
 Gate: unresolved thread count = 0 **on latest `headRefOid`** (see Comment taxonomy).
 
 After every push: re-fetch unresolved threads (~10s). Do not sign off until count stays 0 on HEAD.  
 Re-trigger Bugbot if material diff.
 
-**Resolve-only path:** use `/pr-fix-resolve` when no local code changes needed.
+**Resolve-only path:** use `/pr resolve` when no local code changes needed.
 
 ---
 
@@ -324,9 +350,9 @@ Output the report template from `.cursor/rules/pr-fix.mdc`.
 
 ## Rules
 
-- **Only unresolved inline threads block merge** — ignore stale “Needs Changes” summaries when GraphQL count = 0
+- **Only unresolved inline threads block merge** — ignore stale "Needs Changes" summaries when GraphQL count = 0
 - Re-fetch thread count after every push; fix sibling files before sign-off
-- Never resolve unread threads
+- Verify the fix at latest HEAD, post the required reply, then resolve the thread (isResolved workflow)
 - Verify "already fixed" at HEAD (+ MCP for DB)
 - Load domain skill before pattern arguments
 - One concern per commit

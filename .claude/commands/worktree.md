@@ -93,8 +93,8 @@ cd ../wt-ipi-286-route-aware-sections
 Then:
 
 1. Implement task
-2. `/pr-process new` → verify → commit
-3. `/pr-process open`
+2. `/pr new` → verify → commit
+3. `/pr open` (uses `@pr-workflow` template body)
 
 ---
 
@@ -158,9 +158,10 @@ git worktree prune
 | Phase | Command |
 |-------|---------|
 | Start task | `/worktree add IPI-XXX slug` |
-| Before PR | `/pr-process new` (in worktree) |
+| Before PR | `/pr new` (in worktree) |
 | After merge | `/worktree clean` |
 | Disk pressure | audit → remove ⚪ merged + orphans |
+| Bot re-review | `/pr fix <N>` → `/pr ship <N>` (fix-and-rerun gate) |
 
 ---
 
