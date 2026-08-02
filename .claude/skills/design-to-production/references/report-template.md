@@ -6,7 +6,7 @@
 
 - File: `Universal design prompt/<name>.v2.image-first.dc.html`
 - DC URL: `http://localhost:8765/...`
-- Screen checklist: [`screen-checklists.md`](../../.claude/skills/design-to-production/references/screen-checklists.md)
+- Screen checklist: [`screen-checklists.md`](screen-checklists.md)
 
 ## Target React Route
 

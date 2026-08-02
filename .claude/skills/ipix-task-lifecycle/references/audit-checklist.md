@@ -17,10 +17,10 @@ Before changing existing code:
 | Check | How |
 |-------|-----|
 | Symbol usage | `Grep -n "<symbol>"`; read every match. |
-| Drift from rules | Compare against [CLAUDE.md](../../../CLAUDE.md), `.cursor/rules/react-vite.mdc`, `.cursor/rules/supabase/` patterns. |
+| Drift from rules | Compare against [CLAUDE.md](../../../../CLAUDE.md), `.cursor/rules/react-vite.mdc`, `.cursor/rules/supabase/` patterns. |
 | Schema reality | Supabase MCP `list_tables` or read `supabase/schemas/` + latest `supabase/migrations/`. |
 | RLS coverage | `npm run supabase:verify-rls` + MCP advisors. |
-| Dependency versions | Read [package.json](../../../package.json); check changelogs for breaking changes. |
+| Dependency versions | Read [package.json](../../../../package.json); check changelogs for breaking changes. |
 | Dead / shadow code | Grep for symbol; zero callers = candidate for removal under a separate task. |
 | Doc/code consistency | If a doc says "the X hook returns Y" and code returns Z, flag and cite both. |
 

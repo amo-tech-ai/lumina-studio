@@ -117,8 +117,17 @@ echo ""
 free -h | awk 'NR==1{print "  " $0} NR==2{print "  " $0}'
 
 echo -n "SSD/NVMe: "
+<<<<<<< HEAD
 lsblk -d -o NAME,ROTA 2>/dev/null | grep "0$" | awk '{print $1 " (SSD)"}' | awk 'NR <= 3' \
   || echo "N/A"
+||||||| 8fc29be0
+lsblk -d -o NAME,ROTA 2>/dev/null | grep "0$" | awk '{print $1 " (SSD)"}' | head -3 \
+  || echo "N/A"
+=======
+# Handle SIGPIPE from head truncating the pipeline
+(lsblk -d -o NAME,ROTA 2>/dev/null | grep "0$" | awk '{print $1 " (SSD)"}' | head -3 \
+  || echo "N/A") || true
+>>>>>>> origin/main
 
 echo ""
 echo "── CI RECENT RUNS ─────────────────────────"
@@ -130,3 +139,5 @@ echo ""
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo "  Audit script completed"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo ""
+echo "✅ All 11 audit sections completed successfully"

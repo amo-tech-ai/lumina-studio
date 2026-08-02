@@ -17,6 +17,178 @@ For the plain-language weekly digest, see [`SHIPPED.md`](./SHIPPED.md).
 
 ## [Unreleased]
 
+### 2026-08-02 — changelog: catch up 1 commit
+
+**Docs-only.** Clearing the changelog-staleness gate to unblock PRs #720 and #721. Recent commit:
+
+- PR #743 — IPI-817 dual-auth for start-brand-crawl service-role + actorId
+
+### 2026-08-01 — Onboarding gets an atomic materialize path; the third ACL drift; and seven dead pointers in the agent config
+
+**19 commits across `93d9917..10db146d`.** Written 2026-08-01 to clear `changelog-staleness`,
+which measures `main` rather than any one PR — it reported 18 commits against a budget of 12 and
+had gone red on every open PR; a 19th (#718) landed while this was being written. Grouped by
+theme; every PR listed here has a `merged_at`.
+
+**🧱 Onboarding — one org + one brand, or nothing**
+
+The legacy `/app/onboarding` create path did **two client inserts** (organization, then brand)
+with a hand-rolled `delete` as its undo. A double-tapped *Continue* on a slow connection, or a
+crash between the two, left an orphan organization behind — and the undo itself was unchecked,
+so a failed rollback was silent. Fixed in three slices, two of which have landed:
+
+- **IPI-832 · ONB2-DB-001 — Onboarding Sessions Table and Atomic Materialize RPC** (slice A,
+  PR [#701](https://github.com/amo-tech-ai/lumina-studio/pull/701), `91bf0395`). Migration
+  `20260801051934_onboarding_sessions_and_materialize_rpc` adds a draft `onboarding_sessions`
+  table plus one `SECURITY INVOKER` RPC, `materialize_onboarding_session`, that produces exactly
+  one org + brand. **The schema-level fix is `unique (user_id, idempotency_key)`** — the double
+  submit can no longer be represented, rather than being caught after the fact. Two details
+  worth stealing: UUIDs are pre-generated rather than read back with `insert … returning` (the
+  same trap proven in IPI-809 · SEC-ONB-001), and clients may write only the draft columns —
+  `status`, `organization_id`, and `brand_id` flip *only* while the RPC has set the
+  transaction-local `app.onboarding_materializing=on`. Session status stays `draft |
+  materialized` and deliberately does not duplicate `brands.intake_status`. pgTAP coverage in
+  `supabase/tests/database/008`, mirroring the DDL inside `begin…rollback` like 007.
+- **IPI-832 slice B — Onboarding module calls the RPC** (PR
+  [#703](https://github.com/amo-tech-ai/lumina-studio/pull/703), `f06c7917`). `app/src/lib/onboarding`
+  now ensures a draft session, then makes one RPC call. Also exposes
+  `getOrCreateOnboardingSession` / `updateOnboardingSessionDraft` so **IPI-835 · ONB2-RT-001**
+  can resume `current_screen` without inventing a second API. `onboarding_sessions` types are
+  **hand-patched** in this commit because the migration was not yet on prod — re-run
+  `npm run supabase:types` now that slice A has been applied.
+- **IPI-835 · ONB2-INT-001a — Publish `brands` Realtime Columns** (slice A, PR
+  [#718](https://github.com/amo-tech-ai/lumina-studio/pull/718), `10db146d`). Brand Hub and
+  onboarding both subscribed to live `intake_status` changes on `brands` — a table Realtime had
+  never published, so an operator watching brand analysis saw a banner that never moved. `brands`
+  is now in `supabase_realtime` with **exactly three columns** (`id`, `intake_status`,
+  `updated_at`) and a pgTAP guard, so draft and lock columns can never ride the wire. Slices B0–E
+  (shared progress hook, screen 12, resume, approval, retiring `/app/onboarding`) are follow-ups.
+- **Deliberately not fixed yet:** slice C, the QA race integration test, is blocked behind
+  **IPI-829**. pgTAP edge cases are **IPI-893**; the QA race itself is **IPI-894**. The merge
+  record and a correction of stale "hold this merge / migration not applied" CI-agent notes are
+  in PR [#705](https://github.com/amo-tech-ai/lumina-studio/pull/705) (`e0706b13`).
+
+**🧬 IPI-834 · ONB2-AI-001 — Evidence-Backed Brand DNA Schema and Mastra Contract**
+(PR [#704](https://github.com/amo-tech-ai/lumina-studio/pull/704), `ce1f8d37`)
+
+Every Brand DNA claim — tagline, voice, mission — must now carry at least one real citation: a
+page URL plus a non-empty quote. Previously a confident string with no provenance reached the
+approval screen looking identical to a sourced one. The Mastra workflow also stopped passing
+`{ ok: true }` / `{ enriched: true }` between steps and now re-validates each draft against the
+same `brand-profile.schema.json` the Edge function uses, throwing on a shape mismatch. Those
+boolean hand-offs were the bug class: a step could report success while emitting a draft nothing
+downstream had checked.
+
+**🔒 IPI-888 · SB-HYGIENE-004 — Revoke Lingering `anon`/`authenticated` SELECT on
+`processed_firecrawl_webhooks`** (PR [#702](https://github.com/amo-tech-ai/lumina-studio/pull/702),
+`5ca09f60`)
+
+Third occurrence of one drift, after **IPI-872 · SB-HYGIENE-003 — Re-Revoke `chatbot_*` SELECT**
+and **IPI-875 · MASTRA-PG-013 — Re-Revoke the `public.mastra_*` Shadow-Table Grants**. The
+creating migration `20260718200000_ipi692` already ran
+`REVOKE ALL … FROM PUBLIC, anon, authenticated` at line 32; live `relacl` showed `anon=r` and
+`authenticated=r` anyway. **Nothing was exposed** — RLS is on with zero policies, so both roles
+read zero rows regardless (verified live: `relrowsecurity = true`, `policy_count = 0`, 4 rows).
+What the grant did do is keep the table in PostgREST's schema cache.
+
+**The root cause is named and deliberately left out of scope:** the live `pg_default_acl`
+auto-grants every new `public` table the *full* `arwdDxtm` set to both `anon` and `authenticated`,
+so a revoke written at creation time was never going to hold on its own. Removing that default
+has a far larger blast radius and became **IPI-896 · SB-SEC-008 — Stop `pg_default_acl`
+Auto-Granting Every New `public` Table to `anon`/`authenticated`** (in progress, PR
+[#719](https://github.com/amo-tech-ai/lumina-studio/pull/719)) — which also found that
+**sequences have the identical defect and zero coverage**, and that IPI-684 · SB-SEC-001b's
+function fix only ever applied to the `postgres` grantor, leaving the `supabase_admin` half open.
+Until that lands, expect a fourth symptom ticket. Lock impact here was measured rather than
+assumed — a table-level `REVOKE` takes no lock on the target relation, probed via `pg_locks` in
+the same transaction.
+
+**🔑 IPI-837 · AUTH-OAUTH-001 — Preserve Safe Redirect Through Google OAuth**
+(PR [#700](https://github.com/amo-tech-ai/lumina-studio/pull/700), `89550800`)
+
+Email/password sign-in honoured `?redirect=`; Google sign-in silently dropped it, so an operator
+finishing the wizard from `/login?redirect=/onboarding` always landed on `/app`. Carrier is a
+short-lived HttpOnly `oauth_next` cookie set before OAuth starts and re-validated through
+`safeRedirect` in the callback — **Option B, chosen over a state parameter because production is
+configured with the exact `/auth/callback` URL** and neither destination should depend on the
+`/**` wildcard staying in Supabase's allowlist. No Google redirect-URI change was needed.
+
+**🧪 IPI-892 · CI-QA-NET-001 — Refuse the IPv6-Only Direct Supabase Host in `booking-gate`**
+(PR [#706](https://github.com/amo-tech-ai/lumina-studio/pull/706), `5020a42d`)
+
+`booking-gate` failed on **every open PR** from the moment `QA_DATABASE_URL` was wired — the job
+carries no `paths:` filter, by design, so this was repo-wide rather than scoped to `supabase/**`.
+The cause: `db.<ref>.supabase.co` resolves **IPv6-only** and GitHub-hosted runners have no IPv6
+route, producing `Network is unreachable` with nothing naming the cause. That host is the first
+one the Supabase dashboard shows, so it is the default mistake, not an exotic one. The job now
+refuses it with an actionable message. Probing the live QA project with a deliberately wrong
+password (so no credential was needed) also established that the pooler prefix is **per-project,
+not per-region** — `aws-1-us-east-2` reached the right tenant where `aws-0` returned
+`ENOTFOUND tenant/user`. This PR does **not** rotate the secret itself.
+
+**📦 IPI-849 · CF-BUNDLE-222 — Remove CopilotKit web-inspector from the Worker**
+(PR [#716](https://github.com/amo-tech-ai/lumina-studio/pull/716), `f4489552`)
+
+The Cloudflare Worker build kept packing `@copilotkit/web-inspector` (the Lit AG-UI debugger)
+even with the console off, because CopilotKit's source always contains a dynamic import string —
+turning the flag off cannot remove what the bundler has already seen. The inspector is now
+disabled explicitly on the operator layout and, **for Cloudflare builds only**, aliased to a stub
+(the pattern already used for mermaid/katex). Measured: gzip **~8.97 MiB → ~7.68 MiB**, under the
+8.5 MiB warn gate, with **0** real web-inspector paths in the metafile. Verified by
+`npx vitest run src/test/opennext-ci-contract.test.ts` plus `npm run build:cf`. Does not move the
+FAIL threshold or touch the DNS cutover (**IPI-631**).
+
+**🧰 Agent config — six dead pointers, one shadowed skill, one 2.3 GB read**
+
+Small diffs, and the reason they are grouped: each one is an instruction that had never worked,
+and none of them failed loudly.
+
+| PR | What was dead | Consequence |
+|---|---|---|
+| [#712](https://github.com/amo-tech-ai/lumina-studio/pull/712) `5aa8d0df` | `quick_validate.py`'s frontmatter allow-list knew **6 of 17** valid fields | Reported the *supported* `paths:` key as invalid. Acting on that false positive, PR [#708](https://github.com/amo-tech-ai/lumina-studio/pull/708) deleted deliberate scoping from `ipix-supabase`, `mastra` and `nextjs-16` — closed unmerged. A validator wrong in the *permissive* direction misses bugs; wrong in this direction it manufactures them |
+| [#711](https://github.com/amo-tech-ai/lumina-studio/pull/711) `9a5662ca` | Two skills both named `cloudflare` — this repo's and the user-global one | The global one won every collision, so the repo's own 343-file Cloudflare hub was invisible in **every** session. Renamed to `cloudflare-ipix` via `git mv` (history preserved), 7 live cross-references updated; 5 archived pointers left alone on purpose |
+| [#715](https://github.com/amo-tech-ai/lumina-studio/pull/715) `879d0c45` | `CLAUDE.md:114` said to load the accuracy gate with `/cloudflare` | No `commands/cloudflare.md` exists, so it resolved to the *user-scope* skill — anyone following the instruction loaded generic platform docs instead of the staged accuracy gate the same sentence describes. Now `/cloudflare-workflow` |
+| [#713](https://github.com/amo-tech-ai/lumina-studio/pull/713) `29c80d36` | `/efficient`'s **mandatory** Phase 1 queried `docs/graphify/graphify-out/graph.json` | That directory does not exist; `AGENTS.md:225` and `.cursor/rules/graphify.mdc` both list it as the path to avoid. Dropped the `--graph` flag — the CLI default is the root graph |
+| [#714](https://github.com/amo-tech-ai/lumina-studio/pull/714) `5337da6e` | Same stale graph path in `claude-setup.md:31` | Split out of #713 rather than shipped with it — #713 changes an executable command, this is docs |
+| [#709](https://github.com/amo-tech-ai/lumina-studio/pull/709) `c513f6c7` | 5 Supabase MCP permission rules named `mcp__claude_ai_Supabase__*` | No such server is connected; the live one is the plugin, `mcp__plugin_supabase_supabase__*`. A rule naming a server that doesn't exist can never match, so five "pre-approved" read-only tools prompted every time. No write tools added |
+| [#717](https://github.com/amo-tech-ai/lumina-studio/pull/717) `8fc29be0` | `.claude/worktrees/` and `package-lock.json` unignored | **2.3 GB / 135,251 files** read on every look inside `.claude/` — a worktree nested *inside* the repo root, on an already-merged branch. More files than everything tracked, by 28×. `*.lock` does not match `package-lock.json`, hence the explicit second line. Two lines; removing the nested worktree, and the `worktree-audit.mjs` bug that never flagged it, are separate follow-ups |
+
+**📋 PR [#710](https://github.com/amo-tech-ai/lumina-studio/pull/710) (`18ecf3d3`) is the rule
+those seven produced.** `CLAUDE.md`'s efficiency self-check covered waste *during* a task and
+said nothing about whether the whole approach was right. Three before-starting questions added to
+the existing section: does something in this repo already do this; does this change need the
+worktree + PR ceremony at all (a gitignored file like `.claude/settings.local.json` needs
+neither); and has `/fastest` or `/efficient` been run for anything beyond a one-liner. The worked
+example is #712 itself — reading the frontmatter by eye found nothing, and the validator the repo
+already ships named the cause in one command.
+
+**📓 Changelog governance — the gate that had never actually measured**
+
+- **IPI-885 · CHLOG-004 — Prove the Changelog-Staleness Gate Measures, and Scope Its Token**
+  (PR [#699](https://github.com/amo-tech-ai/lumina-studio/pull/699), `aa047ad1`). The gate had
+  shown green since #692, and **that green never meant what it looked like**: every run took an
+  early exit — twice on the `no-changelog` label, once on the "this PR updates changelog.md"
+  carve-out, once on a measurement that happened by accident. The branch that decides whether the
+  gate ever *fails* had never executed. All four branches were then driven on purpose with the
+  run logs linked in the PR body, the `::error::` path executing for the first time in the gate's
+  existence. Token permissions narrowed to job-level `contents: read` + `pull-requests: read`.
+- **IPI-884 · CHLOG-003 — Make the Weekly SHIPPED Draft Workflow Actually Run**
+  (PR [#695](https://github.com/amo-tech-ai/lumina-studio/pull/695), `67184d6f`).
+  `shipped-weekly.yml` shipped in #692 and had never completed a run; it would have failed on its
+  first fire and then failed *differently* every week after, on the recovery path that exists to
+  handle the first failure. Three reproduced defects: a week heading derived from `SINCE`, which
+  on a Friday cron straddles two Mondays and emits a `## Week of` section `SHIPPED.md` already
+  contains; a resume path running `git checkout` *after* the scaffold step had already dirtied
+  the working tree, so `set -e` killed it; and a missing trailing `---`. This mattered beyond one
+  workflow — the staleness gate assumes this job produces the weekly catch-up drafts, and it was
+  producing none. Which is exactly the debt this entry is paying.
+
+**Verification.** Range confirmed against the gate's own output (`changelog.md last changed at
+93d99174 — 18 commit(s) ago on main`). Every PR above was read from its merged body, not its
+commit subject; both database changes were read from their migration headers. Only PRs with a
+`merged_at` are listed — #708 is named as closed-unmerged and is not claimed as shipped. Docs-only:
+one file, `changelog.md`.
+
 ### 2026-07-31 — changelog: two-file split, written style rules, and a 39-commit backfill
 
 **PR [#693 — *CHLOG-001 — Changelog Governance: The Two-Audience Split*](https://github.com/amo-tech-ai/lumina-studio/pull/693) — docs-only. No production files touched.**

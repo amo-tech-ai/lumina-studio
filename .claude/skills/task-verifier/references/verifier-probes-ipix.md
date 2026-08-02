@@ -34,7 +34,7 @@ Linear [IPI-126](https://linear.app/amo100/issue/IPI-126) · tracker [`docs/line
 
 ## IPI-26 / IPI-BI-003 (schema v2)
 
-Linear [IPI-26](https://linear.app/amo100/issue/IPI-26) · spec [`IPI-26-IPI-BI-003.md`](../../../docs/linear/issues/IPI-26-IPI-BI-003.md)
+Linear [IPI-26](https://linear.app/amo100/issue/IPI-26) · spec [`IPI-26-IPI-BI-003.md`](../../../../docs/linear/issues/IPI-26-IPI-BI-003.md)
 
 | Probe | Command / check | Pass |
 |-------|-----------------|------|
@@ -55,7 +55,7 @@ Linear [IPI-26](https://linear.app/amo100/issue/IPI-26) · spec [`IPI-26-IPI-BI-
 
 ## IPI-24 / IPI-BI-001 (Firecrawl crawl pipeline)
 
-Linear [IPI-24](https://linear.app/amo100/issue/IPI-24) · spec [`IPI-24-IPI-BI-001.md`](../../../docs/linear/issues/IPI-24-IPI-BI-001.md)
+Linear [IPI-24](https://linear.app/amo100/issue/IPI-24) · spec [`IPI-24-IPI-BI-001.md`](../../../../docs/linear/issues/IPI-24-IPI-BI-001.md)
 
 | Probe | Command / check | Pass |
 |-------|-----------------|------|

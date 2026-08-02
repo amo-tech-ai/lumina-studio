@@ -1,6 +1,6 @@
 # Skills compliance — iPix (Phase 5b)
 
-**Parent:** [../SKILL.md](../SKILL.md) · **Inventory:** [`index-skills.md`](../../../index-skills.md) · **Map:** [`tasks/intelligence/ai/skill-map.md`](../../../../tasks/intelligence/ai/skill-map.md)
+**Parent:** [../SKILL.md](../SKILL.md) · **Inventory:** [`index-skills.md`](../../index-skills.md) · **Map:** [`tasks/intelligence/ai/skill-map.md`](../../../../tasks/intelligence/ai/skill-map.md)
 
 Run **after** Phase 1 (source-of-truth), **before** Phase 4 (scope). Fail closed on 🔴 MUST violations.
 
@@ -37,7 +37,7 @@ test -f .claude/skills/<slug>/SKILL.md && echo OK || echo MISSING
 | Optional missing | 🟡 |
 | Symlink to `archive/` (e.g. `design-md`) | 🟡 — prefer canonical path in task text |
 
-Cross-check [`index-skills.md`](../../../index-skills.md) 🔴 **Degraded** column — if sole authority skill is degraded, flag before Done.
+Cross-check [`index-skills.md`](../../index-skills.md) 🔴 **Degraded** column — if sole authority skill is degraded, flag before Done.
 
 ---
 

@@ -2,14 +2,12 @@
 name: linear
 description: >
   Consolidated Linear hub for linear.app issue/project/cycle/initiative/milestone work, Linear Method planning, issue generation, search, sync, and iPix IPI-### workflows. Use whenever the user mentions Linear, linear.app, IPI-###, PLT-###, COM-###, UI-###, AI-###, DNA-###, issue, project, cycle, roadmap, milestone, backlog, or asks to create/update/search/sync Linear work. Prefer this skill over legacy linear-* skills.
-version: 1.0.0
-impact: HIGH
-tags:
-  - linear
-  - project-management
-  - issues
-  - planning
-  - ipix
+metadata:
+  version: "1.0.0"
+  # Repo authoring fields. Not in the Agent Skills spec's top-level set, so they
+  # live here — `metadata` is explicitly "arbitrary key-value mapping".
+  impact: HIGH
+  tags: linear, project-management, issues, planning, ipix
 ---
 
 # Linear Hub

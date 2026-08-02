@@ -78,16 +78,24 @@ describe("OpenNext CI contract (IPI-472)", () => {
     );
     // Runtime export surface (not just source text) — CopilotKitInspector dynamic import
     const inspectorStub = await import("../../scripts/cf-web-inspector-stub.mjs");
-    expect(inspectorStub).toEqual(
+    expect(inspectorStub.defineWebInspector).toEqual(expect.any(Function));
+    expect(inspectorStub.WEB_INSPECTOR_TAG).toEqual(expect.any(String));
+    expect(inspectorStub.WEB_INSPECTOR_TAG).toBe("cpk-web-inspector");
+    expect(inspectorStub.WebInspectorElement).toEqual(expect.any(Function));
+    expect(inspectorStub.ɵCpkThreadDetails).toEqual(expect.any(Object));
+    expect(inspectorStub.default).toEqual(
       expect.objectContaining({
         defineWebInspector: expect.any(Function),
         WEB_INSPECTOR_TAG: expect.any(String),
         WebInspectorElement: expect.any(Function),
+        ɵCpkThreadDetails: expect.any(Object),
       }),
     );
-    expect(inspectorStub.WEB_INSPECTOR_TAG).toBe("cpk-web-inspector");
-    // Official CopilotKit disable (props alone do not drop the package from CF graph)
-    expect(operatorLayout).toMatch(/showDevConsole=\{false\}/);
+    // Official CopilotKit disable — props must live on the <CopilotKit> opening tag
+    // (comments above the JSX also mention these strings; loose match is insufficient)
+    expect(operatorLayout).toMatch(
+      /<CopilotKit\b(?=[^>]*\benableInspector=\{false\})(?=[^>]*\bshowDevConsole=\{false\})[^>]*>/,
+    );
   });
 
   it("IPI-844 CF stubs alias Workers PG scope under IPIX_CF_BUNDLE_STUBS (noop builds)", () => {
@@ -128,6 +136,28 @@ describe("OpenNext CI contract (IPI-472)", () => {
     expect(script).toMatch(/not a hard fail \(IPI-706 Phase 1A\)/);
     expect(script).toMatch(/export function loadBaseGzipKiB/);
     expect(script).toMatch(/readInstalledVersion/);
+  });
+
+  it("check-worker-bundle-size.mjs hard-bans metafile composition (IPI-848 · CF-BUNDLE-223)", () => {
+    const script = readFileSync(
+      resolve(__dirname, "../../scripts/check-worker-bundle-size.mjs"),
+      "utf8",
+    );
+
+    expect(script).toMatch(/BANNED_METAFILE_SUBSTRINGS/);
+    expect(script).toMatch(/node_modules\/mermaid/);
+    expect(script).toMatch(/node_modules\/katex/);
+    expect(script).toMatch(/node_modules\/cytoscape/);
+    expect(script).toMatch(/node_modules\/@copilotkit\/web-inspector/);
+    expect(script).toMatch(/export function scanMetafileInputs/);
+    expect(script).toMatch(/export function summarizeTopPackages/);
+    expect(script).toMatch(/export function pathMatchesMetafileNeedle/);
+    expect(script).toMatch(/export function validateMetafileForScan/);
+    expect(script).toMatch(/schemaVersion:\s*2/);
+    expect(script).toMatch(/FAIL \(composition\)/);
+    expect(script).toMatch(/metafile not scannable/);
+    // Bare web-inspector would false-fail scripts_cf-web-inspector-stub_…
+    expect(script).not.toMatch(/BANNED_METAFILE_SUBSTRINGS[\s\S]*?"web-inspector"/);
   });
 
   it("ci.yml wires build:cf with placeholder NEXT_PUBLIC_SUPABASE build-time vars", () => {

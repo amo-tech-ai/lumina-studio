@@ -91,7 +91,7 @@ Every skip needs a one-line note in the issue spec **Verify** section.
 |------|-------|
 | Vitest / RTL patterns | [gen-test](../../gen-test/SKILL.md) |
 | Forensic Done gate | [task-verifier](../../task-verifier/SKILL.md) |
-| Edge smoke details | [ipix-supabase/edge-functions](../../ipix-supabase/edge-functions/SKILL.md) |
-| RLS patterns | [ipix-supabase/postgres](../../ipix-supabase/postgres/SKILL.md) |
+| Edge smoke details | [ipix-supabase/edge-functions](../../ipix-supabase/SKILL.md) |
+| RLS patterns | [ipix-supabase/postgres](../../ipix-supabase/SKILL.md) |
 
 Workflow detail: [../testing.md](../testing.md).

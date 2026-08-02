@@ -27,12 +27,24 @@ jobs:
           PR_HEAD_REPO: ${{ github.event.pull_request.head.repo.full_name }}
           REPO: ${{ github.repository }}
           ACTOR: ${{ github.actor }}
-          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
-          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
-          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
-          # Alias some orgs already store as SUPABASE_DB_URL
-          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+          # Pull requests resolve the QA project; only push-to-main resolves production.
+          #
+          # Both candidate sets are passed in as separate variables and chosen in bash.
+          # Do NOT collapse this into `github.event_name == 'pull_request' && secrets.QA_X
+          # || secrets.X`: an unset secret is falsy, so that expression silently resolves
+          # to the PRODUCTION secret exactly when the QA one is missing — the one case the
+          # guard exists for. IPI-810 phase 1 shipped that spelling and it took a second
+          # pass to catch.
+          PR_SUPABASE_URL: ${{ secrets.QA_SUPABASE_URL }}
+          PR_SUPABASE_ANON_KEY: ${{ secrets.QA_SUPABASE_ANON_KEY }}
+          PR_SERVICE_ROLE_KEY: ${{ secrets.QA_SUPABASE_SERVICE_ROLE_KEY }}
+          PR_DATABASE_URL: ${{ secrets.QA_DATABASE_URL }}
+          PUSH_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          PUSH_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+          PUSH_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          PUSH_DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          # Alias some orgs already store as SUPABASE_DB_URL (production only).
+          PUSH_SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
         run: |
           set -euo pipefail
           trusted=false
@@ -50,31 +62,97 @@ jobs:
             exit 0
           fi
 
-          # Prefer DATABASE_URL; accept SUPABASE_DB_URL as the same connection string.
-          if [ -n "${DATABASE_URL:-}" ] && [ -n "${SUPABASE_DB_URL:-}" ] \
-            && [ "$DATABASE_URL" != "$SUPABASE_DB_URL" ]; then
-            echo "::error::DATABASE_URL and SUPABASE_DB_URL both set but differ — refuse ambiguous DB target"
-            exit 1
+          if [ "$EVENT_NAME" = "pull_request" ]; then
+            TARGET="QA"
+            SUPABASE_URL="$PR_SUPABASE_URL"
+            SUPABASE_ANON_KEY="$PR_SUPABASE_ANON_KEY"
+            SERVICE_ROLE_KEY="$PR_SERVICE_ROLE_KEY"
+            DATABASE_URL="$PR_DATABASE_URL"
+          else
+            TARGET="production"
+            SUPABASE_URL="$PUSH_SUPABASE_URL"
+            SUPABASE_ANON_KEY="$PUSH_SUPABASE_ANON_KEY"
+            SERVICE_ROLE_KEY="$PUSH_SERVICE_ROLE_KEY"
+            DATABASE_URL="$PUSH_DATABASE_URL"
+            # Prefer DATABASE_URL; accept SUPABASE_DB_URL as the same connection string.
+            if [ -n "${DATABASE_URL:-}" ] && [ -n "${PUSH_SUPABASE_DB_URL:-}" ] \
+              && [ "$DATABASE_URL" != "$PUSH_SUPABASE_DB_URL" ]; then
+              echo "::error::DATABASE_URL and SUPABASE_DB_URL both set but differ — refuse ambiguous DB target"
+              exit 1
+            fi
+            if [ -z "${DATABASE_URL:-}" ] && [ -n "${PUSH_SUPABASE_DB_URL:-}" ]; then
+              DATABASE_URL="$PUSH_SUPABASE_DB_URL"
+            fi
           fi
-          if [ -z "${DATABASE_URL:-}" ] && [ -n "${SUPABASE_DB_URL:-}" ]; then
-            DATABASE_URL="$SUPABASE_DB_URL"
+
+          # A pull request missing *any* QA credential skips rather than falling back
+          # to production or failing red. booking-gate / changelog note that the API
+          # secrets may not have QA variants yet — if only QA_DATABASE_URL is set, we
+          # must not hard-fail. The job still posts a conclusion, so this stays safe
+          # on a required-checks list (IPI-895).
+          if [ "$EVENT_NAME" = "pull_request" ]; then
+            if [ -z "${SUPABASE_URL:-}" ] || [ -z "${SUPABASE_ANON_KEY:-}" ] \
+              || [ -z "${SERVICE_ROLE_KEY:-}" ] || [ -z "${DATABASE_URL:-}" ]; then
+              echo "mode=skip" >> "$GITHUB_OUTPUT"
+              echo "::notice::supabase-verify-rls skipped — one or more QA_* secrets unset (QA_SUPABASE_URL, QA_SUPABASE_ANON_KEY, QA_SUPABASE_SERVICE_ROLE_KEY, QA_DATABASE_URL). Never falls back to production on a pull request."
+              exit 0
+            fi
+          fi
+
+          # IPI-810 · DB-TEST-001, applied here. `npm run supabase:verify-rls` is not a
+          # read-only probe: verify-rls.mjs calls auth.admin.createUser(), signUp(), and
+          # inserts into brands / assets / events / notifications, with non-atomic
+          # teardown. A cancelled or timed-out run orphans those rows permanently — the
+          # mechanism behind ~5,653 of the 5,671 junk rows in `brands`. Both the Postgres
+          # URL and the Supabase API URL are checked, because the fixtures reach the
+          # database over HTTP as well as over psql.
+          if [ "$EVENT_NAME" = "pull_request" ]; then
+            PROD_REF="nvdlhrodvevgwdsneplk"
+            for pair in "Postgres URL:$DATABASE_URL" "Supabase API URL:${SUPABASE_URL:-}"; do
+              label="${pair%%:*}"
+              value="${pair#*:}"
+              if printf '%s' "$value" | grep -q "$PROD_REF"; then
+                echo "::error::supabase-verify-rls resolved the PRODUCTION project ($PROD_REF) in the $label on a pull request. Refusing — verify-rls.mjs writes fixtures with non-atomic teardown. Point QA_SUPABASE_URL / QA_DATABASE_URL at the QA project."
+                exit 1
+              fi
+            done
+            echo "Target check passed: production ref absent from both the Postgres URL and the Supabase API URL."
           fi
 
           missing=()
-          [ -n "${NEXT_PUBLIC_SUPABASE_URL:-}" ] || missing+=("NEXT_PUBLIC_SUPABASE_URL")
-          [ -n "${NEXT_PUBLIC_SUPABASE_ANON_KEY:-}" ] || missing+=("NEXT_PUBLIC_SUPABASE_ANON_KEY")
-          [ -n "${SUPABASE_SERVICE_ROLE_KEY:-}" ] || missing+=("SUPABASE_SERVICE_ROLE_KEY")
-          [ -n "${DATABASE_URL:-}" ] || missing+=("DATABASE_URL|SUPABASE_DB_URL")
+          [ -n "${SUPABASE_URL:-}" ] || missing+=("SUPABASE_URL")
+          [ -n "${SUPABASE_ANON_KEY:-}" ] || missing+=("SUPABASE_ANON_KEY")
+          [ -n "${SERVICE_ROLE_KEY:-}" ] || missing+=("SERVICE_ROLE_KEY")
+          [ -n "${DATABASE_URL:-}" ] || missing+=("DATABASE_URL")
           if [ "${#missing[@]}" -gt 0 ]; then
-            echo "Trusted CI missing required secrets: ${missing[*]}"
+            echo "Trusted CI missing required $TARGET secrets: ${missing[*]}"
             exit 1
           fi
-          # Canonical URL for later steps (psql + pgTAP). Keep alias in sync.
+
+          # Mask before any output/env write so logs cannot echo them later.
+          echo "::add-mask::$SUPABASE_ANON_KEY"
+          echo "::add-mask::$SERVICE_ROLE_KEY"
+
+          # Only the Postgres URL is global (psql / pgTAP / supabase test db).
+          # API + service-role keys stay OUT of GITHUB_ENV so `npm ci` lifecycle
+          # scripts never see them — they are scoped to the verify-rls step via
+          # step outputs (below).
           {
             echo "DATABASE_URL=$DATABASE_URL"
             echo "SUPABASE_DB_URL=$DATABASE_URL"
           } >> "$GITHUB_ENV"
-          echo "mode=run" >> "$GITHUB_OUTPUT"
+
+          # Single resolution point for API credentials. The verify-rls step reads
+          # these from steps.gate.outputs — never re-derive from secrets.* there
+          # (a step-level secrets.* env: would re-pin that step to production).
+          {
+            echo "supabase_url=$SUPABASE_URL"
+            echo "supabase_anon_key=$SUPABASE_ANON_KEY"
+            echo "service_role_key=$SERVICE_ROLE_KEY"
+            echo "target=$TARGET"
+            echo "mode=run"
+          } >> "$GITHUB_OUTPUT"
+          echo "Resolved target: $TARGET"
 
       - uses: actions/setup-node@v4
         if: steps.gate.outputs.mode == 'run'
@@ -127,6 +205,15 @@ jobs:
           set -euo pipefail
           psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/tests/security/default-execute-privileges.sql
 
+      # IPI-896 · SB-SEC-008 — the table/sequence counterpart of the step above.
+      # Runs inside a transaction that always rolls back, so a failing assertion
+      # cannot leak its probe objects into the shared remote project.
+      - name: Default table/sequence privileges on new objects (IPI-896)
+        if: steps.gate.outputs.mode == 'run'
+        run: |
+          set -euo pipefail
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/tests/security/default-table-privileges.sql
+
       - name: pgTAP — RLS/grant/policy structural tests (IPI-245 · SB-TEST-002)
         if: steps.gate.outputs.mode == 'run'
         run: |
@@ -136,16 +223,23 @@ jobs:
       - name: verify-rls (fail-closed service role)
         if: steps.gate.outputs.mode == 'run'
         env:
-          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
-          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
-          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          # API + service-role from gate outputs only (QA on PR, prod on push).
+          # Do NOT redeclare these as `secrets.*` — that re-pins this step to
+          # production while psql steps stay on the gate's DATABASE_URL.
+          # DATABASE_URL / SUPABASE_DB_URL arrive from GITHUB_ENV (Postgres only).
+          NEXT_PUBLIC_SUPABASE_URL: ${{ steps.gate.outputs.supabase_url }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ steps.gate.outputs.supabase_anon_key }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ steps.gate.outputs.service_role_key }}
           REQUIRE_SERVICE_ROLE: "1"
           # IPI-245 — fail-closed runtime-role probe. Prefers HYPERDRIVE_DATABASE_URL when
           # present; otherwise uses DATABASE_URL + SET ROLE hyperdrive_mastra_runtime.
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
-          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
-          HYPERDRIVE_DATABASE_URL: ${{ secrets.HYPERDRIVE_DATABASE_URL }}
-          MASTRA_DATABASE_URL: ${{ secrets.MASTRA_DATABASE_URL }}
+          # No QA counterpart secret exists, so on a pull request this is empty and the
+          # probe falls back to the QA DATABASE_URL above. `SET ROLE` needs session mode:
+          # QA_DATABASE_URL must stay on the pooler's :5432, not :6543.
+          HYPERDRIVE_DATABASE_URL: ${{ github.event_name != 'pull_request' && secrets.HYPERDRIVE_DATABASE_URL || '' }}
+          # Same reasoning as HYPERDRIVE_DATABASE_URL: production-only, empty on a PR so
+          # the probe uses the QA connection the gate resolved.
+          MASTRA_DATABASE_URL: ${{ github.event_name != 'pull_request' && secrets.MASTRA_DATABASE_URL || '' }}
           REQUIRE_HYPERDRIVE_RUNTIME_PROBE: "1"
           # Trust Supabase pooler CA (Dashboard SSL Configuration / prod-ca-2021).
           # Do not set VERIFY_RLS_PG_INSECURE_SSL in CI (IPI-621).

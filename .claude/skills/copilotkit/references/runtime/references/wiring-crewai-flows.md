@@ -34,7 +34,7 @@ export default { fetch: handler };
 ## Flows vs Crews
 
 Flows is the event-driven pipeline product. For multi-agent Crews orchestration, use
-`CrewAIAgent` from `@ag-ui/crewai` instead — see [crewai-crews.md](crewai-crews.md).
+`CrewAIAgent` from `@ag-ui/crewai` instead — see [crewai-crews.md](wiring-crewai-crews.md).
 
 ## Gotcha — AG-UI compatibility
 

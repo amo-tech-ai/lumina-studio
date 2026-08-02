@@ -7,9 +7,9 @@ description: >
   architecture + database + frontend + backend + APIs + roadmap + risks all in one shot — this
   includes a pasted prompt template with a Requirements/Tasks/Output list, not just a plain-English
   ask. Forces explicit MVP-now-vs-later scoping and a risk section before routing each part of the
-  brief to the skill that already owns it (graphify for analysis, ipix-supabase for schema,
-  mermaid-diagrams for diagrams, frontend-design for UI, mastra for agents, writing-plans for the
-  task breakdown) instead of freelancing a monolithic doc from scratch. Do NOT use for single-file
+  brief to the skill that already owns it — graphify, ipix-supabase, mermaid-diagrams,
+  frontend-design, mastra, writing-plans — instead of freelancing a monolithic doc from scratch.
+  Do NOT use for single-file
   fixes, for iterative back-and-forth design dialogue where the user wants to be asked questions
   one at a time (use brainstorming), or once a Linear IPI issue already has an approved spec (use
   ipix-task-lifecycle).
