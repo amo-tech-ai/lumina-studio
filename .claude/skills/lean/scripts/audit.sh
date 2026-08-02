@@ -2,12 +2,8 @@
 # lean audit.sh — safe, read-only repo + environment scan
 # Run from repo root: bash .claude/skills/lean/scripts/audit.sh
 
-# No `pipefail`: this script pipes long listings into `head`, which exits early and
-# SIGPIPEs the producer. Under pipefail that surfaces as exit 141, and `set -e` then
-# aborts the whole audit partway through with no error message. The pipelines here
-# are read-only diagnostics — a failing stage shows up in the output; silently
-# losing five of the seven audit sections does not.
-set -eu
+# Use pipefail for safety, but avoid SIGPIPE by using awk instead of head
+set -euo pipefail
 REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
 cd "$REPO_ROOT"
 
@@ -17,20 +13,20 @@ echo "━━━━━━━━━━━━━━━━━━━━━━━━�
 
 echo ""
 echo "── REPO SIZE ──────────────────────────────"
-du -sh . --exclude=.git --exclude=node_modules 2>/dev/null || du -sh . 2>/dev/null
+du -sh . --exclude=.git --exclude=node_modules 2>/dev/null || du -sh . 2>/dev/null || echo "du failed"
 echo -n "File count (excl. node_modules/dist/.next): "
 find . -not -path '*/node_modules/*' -not -path '*/.git/*' \
   -not -path '*/dist/*' -not -path '*/.next/*' -type f 2>/dev/null | wc -l
 
 echo ""
 echo "── LARGEST DIRS ───────────────────────────"
-du -sh */ 2>/dev/null | sort -rh | head -15
+du -sh -- */ 2>/dev/null | sort -rh | awk 'NR <= 15' || echo "No directories found"
 
 echo ""
 echo "── LARGEST FILES (excl. node_modules) ─────"
 find . -not -path '*/node_modules/*' -not -path '*/.git/*' -type f \
-  -printf '%s %p\n' 2>/dev/null | sort -rn | head -15 \
-  | awk '{cmd="numfmt --to=iec " $1; cmd | getline size; close(cmd); print size, $2}'
+  -printf '%s %p\n' 2>/dev/null | sort -rn | awk 'NR <= 15' \
+  | awk '{cmd="numfmt --to=iec " $1; cmd | getline size; close(cmd); print size, $2}' || echo "No files found"
 
 echo ""
 echo "── IGNORE FILES ───────────────────────────"
@@ -67,8 +63,9 @@ echo "  manyFiles: $(git config feature.manyFiles 2>/dev/null || echo NOT SET)"
 
 echo ""
 echo -n "Stale merged branches: "
-git branch --merged main 2>/dev/null | grep -v '^\*\|main\|master\|develop' \
-  | wc -l | tr -d ' '
+# grep -v returns exit code 1 when no matches, which is not a failure - just no stale branches
+count=$(git branch --merged main 2>/dev/null | grep -v '^\*\|main\|master\|develop' 2>/dev/null | wc -l | tr -d ' ' || true)
+echo "${count:-0}"
 
 echo ""
 echo "── WORKTREES ──────────────────────────────"
@@ -115,7 +112,7 @@ echo ""
 free -h | awk 'NR==1{print "  " $0} NR==2{print "  " $0}'
 
 echo -n "SSD/NVMe: "
-lsblk -d -o NAME,ROTA 2>/dev/null | grep "0$" | awk '{print $1 " (SSD)"}' | head -3 \
+lsblk -d -o NAME,ROTA 2>/dev/null | grep "0$" | awk '{print $1 " (SSD)"}' | awk 'NR <= 3' \
   || echo "N/A"
 
 echo ""
@@ -126,6 +123,5 @@ gh run list --limit 5 --json status,conclusion,createdAt,updatedAt,name \
 
 echo ""
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-echo "  Audit complete — feed output to Claude"
-echo "  for the scored report and recommendations"
+echo "  Audit script completed"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
