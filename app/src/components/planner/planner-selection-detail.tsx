@@ -28,6 +28,14 @@ const ACCESS_LABEL: Record<PlannerRole, string> = {
 const rowStyle: CSSProperties = { margin: "0.25rem 0" };
 const labelStyle: CSSProperties = { fontWeight: 600 };
 
+/** Phase task list: show whichever bound exists; "(no dates)" only when both absent. */
+function formatTaskDateSpan(task: Pick<PlannerTask, "startDate" | "endDate">): string {
+  if (task.startDate && task.endDate) return ` (${task.startDate} → ${task.endDate})`;
+  if (task.startDate) return ` (${task.startDate})`;
+  if (task.endDate) return ` (${task.endDate})`;
+  return " (no dates)";
+}
+
 function DetailHeader({ title, onClose }: { title: string; onClose: () => void }) {
   return (
     <div
@@ -188,7 +196,7 @@ export function PlannerPhaseDetail({
               <span style={{ color: "var(--color-text-muted)" }}>
                 {" — "}
                 {task.status}
-                {task.startDate && task.endDate ? ` (${task.startDate} → ${task.endDate})` : " (no dates)"}
+                {formatTaskDateSpan(task)}
               </span>
             </li>
           ))}

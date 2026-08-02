@@ -72,3 +72,55 @@ describe("PlannerPhaseDetail — gate state", () => {
     expect(screen.getByText(/Needs correction/i)).toBeDefined();
   });
 });
+
+describe("PlannerPhaseDetail — task date spans", () => {
+  it("renders both dates when present", () => {
+    render(
+      <PlannerPhaseDetail
+        phase={phase({ gateType: null })}
+        tasks={[task({ title: "Both ends", startDate: "2026-03-04", endDate: "2026-03-06" })]}
+        onClose={() => {}}
+      />,
+    );
+    expect(screen.getByText(/Both ends/).closest("li")?.textContent).toContain(
+      "(2026-03-04 → 2026-03-06)",
+    );
+  });
+
+  it("renders start-only without pretending there are no dates", () => {
+    render(
+      <PlannerPhaseDetail
+        phase={phase({ gateType: null })}
+        tasks={[task({ title: "Start only", startDate: "2026-03-04", endDate: null })]}
+        onClose={() => {}}
+      />,
+    );
+    const text = screen.getByText(/Start only/).closest("li")?.textContent ?? "";
+    expect(text).toContain("(2026-03-04)");
+    expect(text).not.toContain("(no dates)");
+  });
+
+  it("renders end-only without pretending there are no dates", () => {
+    render(
+      <PlannerPhaseDetail
+        phase={phase({ gateType: null })}
+        tasks={[task({ title: "End only", startDate: null, endDate: "2026-03-06" })]}
+        onClose={() => {}}
+      />,
+    );
+    const text = screen.getByText(/End only/).closest("li")?.textContent ?? "";
+    expect(text).toContain("(2026-03-06)");
+    expect(text).not.toContain("(no dates)");
+  });
+
+  it("uses (no dates) only when both bounds are absent", () => {
+    render(
+      <PlannerPhaseDetail
+        phase={phase({ gateType: null })}
+        tasks={[task({ title: "Undated", startDate: null, endDate: null })]}
+        onClose={() => {}}
+      />,
+    );
+    expect(screen.getByText(/Undated/).closest("li")?.textContent).toContain("(no dates)");
+  });
+});
