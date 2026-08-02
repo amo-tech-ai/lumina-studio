@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
-import { describe, expect, it, afterEach, vi } from "vitest";
-import { render, screen, cleanup } from "@testing-library/react";
+import { describe, expect, it, afterEach, beforeEach, vi } from "vitest";
+import { render, screen, cleanup, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 import type { PlannerTask } from "@/lib/planner/types";
@@ -21,6 +21,11 @@ vi.mock("./adaptive-panel", () => ({
   AdaptivePanel: () => null,
 }));
 
+const setViewConfigAction = vi.fn();
+vi.mock("@/app/(operator)/app/planner/[instanceId]/actions", () => ({
+  setViewConfigAction: (...args: unknown[]) => setViewConfigAction(...args),
+}));
+
 const setSelection = vi.fn();
 vi.mock("@/lib/planner/use-planner-selection", () => ({
   usePlannerSelection: () => ({
@@ -35,6 +40,11 @@ import { PlannerWorkspaceShell } from "./planner-workspace-shell";
 afterEach(() => {
   cleanup();
   setSelection.mockClear();
+  setViewConfigAction.mockReset();
+});
+
+beforeEach(() => {
+  setViewConfigAction.mockResolvedValue({ ok: true, data: { instanceId: INSTANCE_ID } });
 });
 
 const INSTANCE_ID = "i1";
@@ -237,6 +247,74 @@ describe("PlannerWorkspaceShell", () => {
     it("does not mount the bar without the shared payload — AC-G", () => {
       render(<PlannerWorkspaceShell instanceId={INSTANCE_ID} />);
       expect(screen.queryByTestId("planner-now-next-bar")).toBeNull();
+    });
+  });
+
+  describe("IPI-582 · setViewConfig preference", () => {
+    it("honors initialView from getViewConfig", () => {
+      render(<PlannerWorkspaceShell instanceId={INSTANCE_ID} initialView="calendar" />);
+      expect(screen.getByRole("tab", { name: /Calendar/ }).getAttribute("aria-selected")).toBe(
+        "true",
+      );
+      expect(screen.getByTestId("planner-workspace-placeholder-calendar")).toBeDefined();
+    });
+
+    it("persists a new persisted view via setViewConfigAction", async () => {
+      const user = userEvent.setup();
+      render(<PlannerWorkspaceShell instanceId={INSTANCE_ID} />);
+
+      await user.click(screen.getByRole("tab", { name: /Kanban/ }));
+
+      await waitFor(() => expect(setViewConfigAction).toHaveBeenCalledTimes(1));
+      expect(setViewConfigAction).toHaveBeenCalledWith(INSTANCE_ID, { defaultView: "kanban" });
+      expect(screen.getByRole("tab", { name: /Kanban/ }).getAttribute("aria-selected")).toBe(
+        "true",
+      );
+    });
+
+    it("does not persist List as default_view — session-only", async () => {
+      const user = userEvent.setup();
+      render(<PlannerWorkspaceShell instanceId={INSTANCE_ID} />);
+
+      await user.click(screen.getByRole("tab", { name: /List/ }));
+
+      expect(screen.getByRole("tab", { name: /List/ }).getAttribute("aria-selected")).toBe("true");
+      expect(setViewConfigAction).not.toHaveBeenCalled();
+    });
+
+    it("no-ops when returning to the already-persisted preference", async () => {
+      const user = userEvent.setup();
+      render(<PlannerWorkspaceShell instanceId={INSTANCE_ID} initialView="kanban" />);
+
+      await user.click(screen.getByRole("tab", { name: /List/ }));
+      expect(setViewConfigAction).not.toHaveBeenCalled();
+
+      await user.click(screen.getByRole("tab", { name: /Kanban/ }));
+      // Still the last persisted preference — no redundant write.
+      expect(setViewConfigAction).not.toHaveBeenCalled();
+      expect(screen.getByRole("tab", { name: /Kanban/ }).getAttribute("aria-selected")).toBe(
+        "true",
+      );
+    });
+
+    it("keeps the session view when preference write fails", async () => {
+      const user = userEvent.setup();
+      setViewConfigAction.mockResolvedValue({
+        ok: false,
+        error: { code: "UNKNOWN_ERROR", message: "Your view preference could not be saved." },
+      });
+
+      render(<PlannerWorkspaceShell instanceId={INSTANCE_ID} />);
+
+      await user.click(screen.getByRole("tab", { name: /Calendar/ }));
+
+      await waitFor(() => expect(setViewConfigAction).toHaveBeenCalled());
+      expect(screen.getByRole("tab", { name: /Calendar/ }).getAttribute("aria-selected")).toBe(
+        "true",
+      );
+      expect(screen.getByTestId("planner-view-persist-warning").textContent).toMatch(
+        /Could not save your view preference/i,
+      );
     });
   });
 });

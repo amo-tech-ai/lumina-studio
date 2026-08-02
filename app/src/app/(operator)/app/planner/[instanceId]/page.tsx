@@ -28,7 +28,8 @@ import {
   buildTaskViews,
   buildTimelineModel,
 } from "@/lib/planner/planner-view-model";
-import { getInstanceDetail, listWorkflowPhases } from "@/lib/planner/queries";
+import { getInstanceDetail, getViewConfig, listWorkflowPhases } from "@/lib/planner/queries";
+import type { ViewType } from "@/lib/planner/types";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export default async function PlannerWorkspacePage({
@@ -60,6 +61,15 @@ export default async function PlannerWorkspacePage({
   if (authError) throw new Error(authError.message);
   if (!user) notFound();
 
+  // IPI-582 — per-user preference; failure/missing → Timeline. Never "list"
+  // (PersistedViewType excludes it). Soft-fail: a view_config read error must
+  // not block the workspace.
+  let initialView: ViewType = "timeline";
+  const viewConfigResult = await getViewConfig(instanceId);
+  if (viewConfigResult.ok && viewConfigResult.data?.defaultView) {
+    initialView = viewConfigResult.data.defaultView;
+  }
+
   const todayIso = new Date().toISOString().slice(0, 10);
   const phases = phasesResult.data;
   const tasks = instanceResult.data.tasks;
@@ -74,6 +84,7 @@ export default async function PlannerWorkspacePage({
   return (
     <PlannerWorkspaceShell
       instanceId={instanceId}
+      initialView={initialView}
       timeline={<PlannerTimeline model={timelineModel} />}
       kanban={<PlannerKanban model={kanbanModel} />}
       calendar={<PlannerCalendar tasks={tasks} />}
