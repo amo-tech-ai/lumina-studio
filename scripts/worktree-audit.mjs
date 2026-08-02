@@ -8,7 +8,7 @@
  *   node scripts/worktree-audit.mjs --write   # update docs/development/worktree-tracker.md
  */
 
-import { execSync } from "node:child_process";
+import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -21,10 +21,14 @@ const JSON_OUT = process.argv.includes("--json");
 
 function run(cmd, opts = {}) {
   try {
-    return execSync(cmd, {
+    const args = cmd.split(" ");
+    const command = args[0];
+    const commandArgs = args.slice(1);
+    return execFileSync(command, commandArgs, {
       cwd: REPO_ROOT,
       encoding: "utf8",
       stdio: ["pipe", "pipe", "pipe"],
+      shell: true,
       ...opts,
     }).trim();
   } catch {
@@ -81,8 +85,11 @@ function prForBranch(branch, prLookup, repoName) {
   // all, and never be classified as merged/safe to delete. Query the one branch
   // directly on a miss so the window size can never silently hide a stale
   // worktree again. Bounded by worktree count, not by how many PRs the repo has.
+  // Query OPEN first, then all states, to prioritize active PRs.
   const found = runJson(
-    `gh pr list --repo "${repoName}" --head "${branch}" --state all --limit 1 --json number,state,url,isDraft,headRefName`,
+    `gh pr list --repo "${repoName}" --head "${branch}" --state OPEN --limit 1 --json number,state,url,isDraft,headRefName,createdAt`,
+  ) || runJson(
+    `gh pr list --repo "${repoName}" --head "${branch}" --state all --limit 1 --json number,state,url,isDraft,headRefName,createdAt`,
   );
   const pr = (Array.isArray(found) ? found[0] : null) ?? null;
   prLookup?.set(branch, pr); // cache misses too — one lookup per branch per run
@@ -143,8 +150,24 @@ function buildReport() {
     run("gh repo view --json nameWithOwner --jq .nameWithOwner 2>/dev/null", { allowFail: true }) ||
     repoFromGitRemote() ||
     "amo-tech-ai/lumina-studio";
-  const allPrs = runJson(`gh pr list --repo "${repoName}" --limit 400 --state all --json number,state,url,isDraft,headRefName`) || [];
-  const prLookup = new Map(allPrs.filter(Boolean).map((p) => [p.headRefName, p]));
+  const allPrs = runJson(`gh pr list --repo "${repoName}" --limit 400 --state all --json number,state,url,isDraft,headRefName,createdAt`) || [];
+  // Deduplicate by headRefName: prefer OPEN over MERGED/CLOSED, then newest by createdAt
+  const prLookup = new Map();
+  for (const pr of allPrs.filter(Boolean)) {
+    const existing = prLookup.get(pr.headRefName);
+    if (!existing) {
+      prLookup.set(pr.headRefName, pr);
+    } else {
+      // Prefer OPEN over any other state
+      if (pr.state === "OPEN" && existing.state !== "OPEN") {
+        prLookup.set(pr.headRefName, pr);
+      }
+      // If same state, prefer newer by createdAt
+      else if (pr.state === existing.state && pr.createdAt > existing.createdAt) {
+        prLookup.set(pr.headRefName, pr);
+      }
+    }
+  }
   const entries = parseWorktreeList();
   const mainPath = path.resolve(REPO_ROOT);
 
@@ -336,3 +359,6 @@ if (JSON_OUT) {
 } else {
   console.log(toMarkdown(report));
 }
+
+// Export functions for testing
+export { classify, prForBranch, buildReport };
