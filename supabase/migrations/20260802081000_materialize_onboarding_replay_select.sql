@@ -8,7 +8,12 @@
 -- Fix: plain SELECT (SELECT RLS) first for replay; FOR UPDATE only while draft.
 -- Do not widen the UPDATE policy (keeps IPI-904 column-guard direction intact).
 --
--- Rollback: restore function body from 20260801051934_onboarding_sessions_and_materialize_rpc.sql
+-- Preserves IPI-903 · ONB2-INT-001b1 — current_screen = 12 on materialize +
+-- replay-heal for rows stuck at < 12 (draft RLS blocks client screen writes
+-- after materialize).
+--
+-- Rollback: restore function body from
+-- 20260802043000_ipi903_materialize_persist_analysis_screen.sql
 
 create or replace function public.materialize_onboarding_session(
   p_idempotency_key text,
@@ -40,6 +45,13 @@ begin
   end if;
 
   if v_session.status = 'materialized' then
+    -- IPI-903: heal sessions stuck below analysis (screen 12).
+    if v_session.current_screen < 12 then
+      perform set_config('app.onboarding_materializing', 'on', true);
+      update public.onboarding_sessions
+         set current_screen = 12
+       where id = v_session.id;
+    end if;
     return jsonb_build_object(
       'organization_id', v_session.organization_id,
       'brand_id',        v_session.brand_id
@@ -59,6 +71,12 @@ begin
      where user_id = v_uid and idempotency_key = p_idempotency_key;
 
     if found and v_session.status = 'materialized' then
+      if v_session.current_screen < 12 then
+        perform set_config('app.onboarding_materializing', 'on', true);
+        update public.onboarding_sessions
+           set current_screen = 12
+         where id = v_session.id;
+      end if;
       return jsonb_build_object(
         'organization_id', v_session.organization_id,
         'brand_id',        v_session.brand_id
@@ -85,7 +103,8 @@ begin
   update public.onboarding_sessions
      set status = 'materialized',
          organization_id = v_org_id,
-         brand_id = v_brand_id
+         brand_id = v_brand_id,
+         current_screen = 12
    where id = v_session.id;
 
   return jsonb_build_object('organization_id', v_org_id, 'brand_id', v_brand_id);
