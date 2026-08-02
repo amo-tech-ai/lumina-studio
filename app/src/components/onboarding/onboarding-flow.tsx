@@ -184,8 +184,15 @@ export function OnboardingFlow({
         );
       case ANALYSIS_SCREEN:
         // replace, not push: the loader must not stay in history, or Back from
-        // the payoff screen restarts the timer and bounces the user forward again.
-        return <AnalysisProgressScreen onComplete={() => replaceScreen(LAST_SCREEN)} />;
+        // the payoff screen restarts analysis and bounces the user forward again.
+        return (
+          <AnalysisProgressScreen
+            brandId={brandId}
+            answers={answers}
+            onComplete={() => replaceScreen(LAST_SCREEN)}
+            onEditWebsite={() => goToScreen(4)}
+          />
+        );
       case LAST_SCREEN:
         return <BrandDnaPayoffScreen />;
       default:
