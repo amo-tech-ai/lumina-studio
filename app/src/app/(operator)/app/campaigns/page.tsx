@@ -1,11 +1,5 @@
-import { SectionPlaceholder } from "@/components/section-placeholder";
+import { CampaignsWorkspace } from "@/components/campaigns/campaigns-workspace";
 
 export default function CampaignsPage() {
-  return (
-    <SectionPlaceholder
-      title="Campaigns"
-      blurb="Turn brand DNA into creative briefs, moodboards, and content."
-      issue="IPI2-119 Creative Director"
-    />
-  );
+  return <CampaignsWorkspace />;
 }

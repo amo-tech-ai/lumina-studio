@@ -33,6 +33,7 @@ import { checkTalentAvailability, draftBookingQuote, createBookingDraft } from "
 import { getAssetDnaEvidence } from "./getAssetDnaEvidence";
 import { suggestAssetRetakes } from "./suggestAssetRetakes";
 import { draftBulkAssetApproval } from "./draftBulkAssetApproval";
+import { draftCampaignBrief } from "./draftCampaignBrief";
 
 // IPI-148 — SHOOT-AI-001 + IPI-184 SHOOT-DATA-002: shoot planner tools for production-planner
 // IPI-187 — MI-02: media spec lookup
@@ -40,6 +41,7 @@ import { draftBulkAssetApproval } from "./draftBulkAssetApproval";
 // IPI-348 — MODELGATE-10: Booking Agent tools (wizard, inbox, roster)
 // IPI-261 — DESIGN-077: Creative Director asset-intelligence tools (read-only DNA
 // evidence, deterministic retake suggestions, proposal-only bulk approval draft)
+// IPI-156 — CAMP-001: Creative Director campaign brief draft (proposal-only, no persist)
 export const agentTools = {
   recommendShootType,
   planDeliverables,
@@ -67,6 +69,7 @@ export const agentTools = {
   getAssetDnaEvidence,
   suggestAssetRetakes,
   draftBulkAssetApproval,
+  draftCampaignBrief,
 } as const;
 
 export type AgentToolName = keyof typeof agentTools;
