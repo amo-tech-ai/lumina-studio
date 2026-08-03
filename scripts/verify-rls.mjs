@@ -3236,16 +3236,18 @@ try {
     assert(!reDoneErr, "mark gate task 2 done again for ready-gate probe");
 
     // Fresh timestamps after status updates (tasks_updated_at trigger).
-    const { data: gateTask1Fresh } = await plannerA
+    const { data: gateTask1Fresh, error: gateTask1FreshErr } = await plannerA
       .from("tasks")
       .select("id, updated_at, start_date, end_date")
       .eq("id", gateTask1.id)
       .single();
-    const { data: gateTask2Fresh } = await plannerA
+    assert(!gateTask1FreshErr && gateTask1Fresh?.id, "refetch gate task 1 after status updates");
+    const { data: gateTask2Fresh, error: gateTask2FreshErr } = await plannerA
       .from("tasks")
       .select("id, updated_at, start_date, end_date")
       .eq("id", gateTask2.id)
       .single();
+    assert(!gateTask2FreshErr && gateTask2Fresh?.id, "refetch gate task 2 after status updates");
 
     // 3 — Ready gate approval + date shift (no edge change → no cycle check path).
     const approveKey = crypto.randomUUID();
@@ -3575,7 +3577,10 @@ try {
       phase_id: stalePhase.id,
       status: "approved",
     });
-    assert(!!directInsertErr, "authenticated cannot directly INSERT planner.gate_approvals (RPC-only writes)");
+    assert(
+      !!directInsertErr && ["42501", "PGRST301"].includes(directInsertErr.code),
+      "authenticated cannot directly INSERT planner.gate_approvals (RPC-only writes)",
+    );
   }
 
   // ── IPI-653 · PLN-DATA-003 + IPI-670 · PLN-DATA-003B — planner_create_instance
