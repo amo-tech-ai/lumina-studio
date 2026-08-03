@@ -10,9 +10,12 @@
 // until IPI-579/580/581/582 (and a follow-up for Settings) wire real click
 // handlers into task/phase/member rows.
 //
+// IPI-579 — the Timeline's phase rows are that first real trigger:
+// a phase selection resolves to the read-only PlannerPhaseDetail.
+//
 // Zero Supabase queries here — resolution is delegated entirely to
 // resolvePlannerSelectionAction, which itself only calls existing typed
-// contracts (getInstanceDetail/listMembers).
+// contracts (getInstanceDetail/listMembers/listWorkflowPhases).
 
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 
@@ -21,7 +24,7 @@ import { useSetIntelligenceDetail } from "@/context/intelligence-detail-context"
 import { isEscapeOwnedByNestedOverlay } from "@/lib/planner/escape-ownership";
 import { usePlannerSelection } from "@/lib/planner/use-planner-selection";
 
-import { PlannerMemberDetail, PlannerTaskDetail } from "./planner-selection-detail";
+import { PlannerMemberDetail, PlannerPhaseDetail, PlannerTaskDetail } from "./planner-selection-detail";
 
 type ResolutionStatus = "idle" | "loading" | "resolved" | "not-found";
 
@@ -100,11 +103,19 @@ export function AdaptivePanel({ instanceId }: { instanceId: string }) {
   // (shoots-list-intel-detail.tsx), which memoizes its node for the same reason.
   const node = useMemo<ReactNode | null>(() => {
     if (selection === null || state.status !== "resolved" || !state.result) return null;
-    return state.result.kind === "task" ? (
-      <PlannerTaskDetail task={state.result.task} onClose={deselect} />
-    ) : (
-      <PlannerMemberDetail member={state.result.member} onClose={deselect} />
-    );
+    if (state.result.kind === "task") {
+      return <PlannerTaskDetail task={state.result.task} onClose={deselect} />;
+    }
+    if (state.result.kind === "phase") {
+      return (
+        <PlannerPhaseDetail
+          phase={state.result.phase}
+          tasks={state.result.tasks}
+          onClose={deselect}
+        />
+      );
+    }
+    return <PlannerMemberDetail member={state.result.member} onClose={deselect} />;
   }, [selection, state, deselect]);
 
   useSetIntelligenceDetail(node);

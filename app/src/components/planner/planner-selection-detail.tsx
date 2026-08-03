@@ -7,7 +7,13 @@
 
 import type { CSSProperties } from "react";
 
-import type { PlannerMember, PlannerRole, PlannerTask } from "@/lib/planner/types";
+import { planDateToISO } from "@/lib/planner/planner-date-utils";
+import {
+  rangeForPhase,
+  resolveGateVisualState,
+  type GateVisualState,
+} from "@/lib/planner/planner-view-model";
+import type { PlannerMember, PlannerPhase, PlannerRole, PlannerTask } from "@/lib/planner/types";
 
 // Duplicated from member-table.tsx's ACCESS_LABEL (not exported there, and
 // this component shouldn't widen that file's public surface just to reuse
@@ -21,6 +27,14 @@ const ACCESS_LABEL: Record<PlannerRole, string> = {
 
 const rowStyle: CSSProperties = { margin: "0.25rem 0" };
 const labelStyle: CSSProperties = { fontWeight: 600 };
+
+/** Phase task list: show whichever bound exists; "(no dates)" only when both absent. */
+function formatTaskDateSpan(task: Pick<PlannerTask, "startDate" | "endDate">): string {
+  if (task.startDate && task.endDate) return ` (${task.startDate} → ${task.endDate})`;
+  if (task.startDate) return ` (${task.startDate})`;
+  if (task.endDate) return ` (${task.endDate})`;
+  return " (no dates)";
+}
 
 function DetailHeader({ title, onClose }: { title: string; onClose: () => void }) {
   return (
@@ -99,6 +113,95 @@ export function PlannerMemberDetail({ member, onClose }: { member: PlannerMember
         <span style={labelStyle}>Access: </span>
         {ACCESS_LABEL[member.role]}
       </div>
+    </div>
+  );
+}
+
+const GATE_LABEL: Record<GateVisualState, string> = {
+  approved: "Approved",
+  ready: "Ready for approval",
+  locked: "Locked",
+};
+
+const ROLE_LABEL: Record<string, string> = {
+  owner: "Owner",
+  manager: "Manager",
+  contributor: "Contributor",
+  viewer: "Viewer",
+};
+
+function gateColor(state: GateVisualState): string {
+  switch (state) {
+    case "approved":
+      return "var(--color-approved)";
+    case "ready":
+      return "var(--color-review)";
+    default:
+      return "var(--color-text-muted)";
+  }
+}
+
+// IPI-579 — read-only phase Detail: the phase's date range, status,
+// gate state + required role, and its task list. Pure presentation of data
+// already resolved by resolvePlannerSelectionAction; nothing here mutates.
+export function PlannerPhaseDetail({
+  phase,
+  tasks,
+  onClose,
+}: {
+  phase: PlannerPhase;
+  tasks: PlannerTask[];
+  onClose: () => void;
+}) {
+  const { range, invalid } = rangeForPhase(tasks);
+  const rangeLabel = invalid
+    ? "Needs correction — task dates are out of order"
+    : range
+      ? `${planDateToISO(range.start)} → ${planDateToISO(range.end)}`
+      : "Unscheduled";
+  // Phase 1: no persisted approval — never claim Approved from task status.
+  const gateState = resolveGateVisualState(phase, tasks);
+
+  return (
+    <div data-testid="planner-detail-phase">
+      <DetailHeader title="Phase" onClose={onClose} />
+      <h3 style={{ margin: "0 0 0.5rem" }}>{phase.name}</h3>
+      <div style={rowStyle}>
+        <span style={labelStyle}>Date range: </span>
+        {rangeLabel}
+      </div>
+      {phase.gateType && gateState ? (
+        <>
+          <div style={rowStyle}>
+            <span style={labelStyle}>Gate: </span>
+            {phase.gateType}
+            {phase.requiredRole ? ` — requires ${ROLE_LABEL[phase.requiredRole] ?? phase.requiredRole}` : ""}
+          </div>
+          <div style={rowStyle} data-testid="planner-detail-gate-state">
+            <span style={labelStyle}>Gate state: </span>
+            <span style={{ color: gateColor(gateState), fontWeight: 600 }}>{GATE_LABEL[gateState]}</span>
+          </div>
+        </>
+      ) : null}
+      <div style={{ ...rowStyle, fontWeight: 600 }}>
+        Tasks ({tasks.length})
+      </div>
+      {tasks.length === 0 ? (
+        <div style={rowStyle}>No tasks in this phase yet.</div>
+      ) : (
+        <ul style={{ margin: 0, paddingLeft: "1rem" }}>
+          {tasks.map((task) => (
+            <li key={task.id} style={{ margin: "0.25rem 0", fontSize: 13 }}>
+              <span style={labelStyle}>{task.title}</span>
+              <span style={{ color: "var(--color-text-muted)" }}>
+                {" — "}
+                {task.status}
+                {formatTaskDateSpan(task)}
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   );
 }

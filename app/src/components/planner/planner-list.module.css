@@ -1,0 +1,171 @@
+/* IPI-580 · PLN-S1C — read-only List (SCR-32 fr-ratios table). */
+
+.wrap {
+  overflow: auto;
+}
+
+.table {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  background: var(--color-bg-card);
+  min-width: 720px;
+}
+
+.header,
+.row {
+  display: grid;
+  grid-template-columns: 2.4fr 1.3fr 0.7fr 1.4fr 0.7fr 0.8fr 1fr;
+  align-items: center;
+  padding: 11px 16px;
+  font-size: 12px;
+}
+
+.header {
+  padding: 10px 16px;
+  background: var(--color-bg-subtle);
+  border-bottom: 1px solid var(--color-border);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+.row {
+  width: 100%;
+  border: none;
+  border-bottom: 1px solid var(--color-border-subtle);
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+}
+
+.row:last-child {
+  border-bottom: none;
+}
+
+.row:hover {
+  background: var(--color-bg-muted);
+}
+
+.row:focus-visible {
+  outline: 2px solid var(--color-action);
+  outline-offset: -2px;
+}
+
+.rowSelected {
+  background: var(--color-bg-muted);
+  outline: 1px solid var(--color-action);
+  outline-offset: -1px;
+}
+
+.title {
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.phase,
+.priority {
+  color: var(--color-text-secondary);
+}
+
+.mono {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--color-text-secondary);
+}
+
+.avatar {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--color-bg-muted);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 9px;
+  font-weight: 700;
+  color: var(--color-text-secondary);
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: var(--radius-pill);
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.chipDot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.chipTodo {
+  background: var(--color-bg-muted);
+  color: var(--color-text-secondary);
+}
+
+.chipTodo .chipDot {
+  background: var(--color-text-muted);
+}
+
+.chipInProgress {
+  background: color-mix(in srgb, var(--color-text-primary) 6%, transparent);
+  color: var(--color-action);
+}
+
+.chipInProgress .chipDot {
+  background: var(--color-action);
+}
+
+.chipBlocked {
+  background: var(--color-blocked-bg);
+  color: var(--color-crm-lost);
+}
+
+.chipBlocked .chipDot {
+  background: var(--color-crm-lost);
+}
+
+.chipDone {
+  background: var(--color-approved-bg);
+  color: var(--color-approved);
+}
+
+.chipDone .chipDot {
+  background: var(--color-approved);
+}
+
+.chipCancelled {
+  background: var(--color-bg-muted);
+  color: var(--color-text-muted);
+  text-decoration: line-through;
+}
+
+.chipCancelled .chipDot {
+  background: var(--color-text-muted);
+}
+
+.chipNeutral {
+  background: var(--color-bg-muted);
+  color: var(--color-text-secondary);
+}
+
+.chipNeutral .chipDot {
+  background: var(--color-text-muted);
+}
+
+.empty {
+  padding: 2rem 1rem;
+  text-align: center;
+  color: var(--color-text-muted);
+  font-size: 13px;
+}

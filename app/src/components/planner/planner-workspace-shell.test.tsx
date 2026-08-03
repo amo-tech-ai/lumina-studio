@@ -3,7 +3,13 @@ import { describe, expect, it, afterEach, vi } from "vitest";
 import { render, screen, cleanup } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
+import type { PlannerTask } from "@/lib/planner/types";
+
 vi.mock("./planner-workspace-shell.module.css", () => ({
+  default: new Proxy({}, { get: (_, k) => String(k) }),
+}));
+
+vi.mock("./now-next-bar.module.css", () => ({
   default: new Proxy({}, { get: (_, k) => String(k) }),
 }));
 
@@ -15,11 +21,47 @@ vi.mock("./adaptive-panel", () => ({
   AdaptivePanel: () => null,
 }));
 
+const setSelection = vi.fn();
+vi.mock("@/lib/planner/use-planner-selection", () => ({
+  usePlannerSelection: () => ({
+    selection: null,
+    setSelection,
+    deselect: vi.fn(),
+  }),
+}));
+
 import { PlannerWorkspaceShell } from "./planner-workspace-shell";
 
-afterEach(() => cleanup());
+afterEach(() => {
+  cleanup();
+  setSelection.mockClear();
+});
 
 const INSTANCE_ID = "i1";
+const VIEWER = "user-viewer";
+const TODAY = "2026-03-12";
+
+const TASK_ID = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
+
+function makeTask(overrides: Partial<PlannerTask> = {}): PlannerTask {
+  return {
+    id: TASK_ID,
+    instanceId: INSTANCE_ID,
+    phaseId: "ph-1",
+    parentTaskId: null,
+    title: "Item delivery",
+    description: null,
+    startDate: "2026-03-10",
+    endDate: "2026-03-14",
+    durationDays: 4,
+    status: "in_progress",
+    priority: "medium",
+    assigneeUserId: VIEWER,
+    assigneeRole: null,
+    sortOrder: 0,
+    ...overrides,
+  };
+}
 
 describe("PlannerWorkspaceShell", () => {
   it("renders all 4 views in the correct order with real tab semantics", () => {
@@ -82,5 +124,119 @@ describe("PlannerWorkspaceShell", () => {
 
     expect(screen.getByTestId("planner-workspace-placeholder-calendar")).toBeDefined();
     expect(container.querySelector("h1")).toBe(headingBefore);
+  });
+
+  it("renders the server-built Timeline node in the Timeline tab when provided — IPI-579", async () => {
+    const user = userEvent.setup();
+    render(
+      <PlannerWorkspaceShell
+        instanceId={INSTANCE_ID}
+        timeline={<div data-testid="real-timeline-content">Timeline content</div>}
+      />,
+    );
+
+    expect(screen.getByTestId("real-timeline-content")).toBeDefined();
+    expect(screen.queryByTestId("planner-workspace-placeholder-timeline")).toBeNull();
+
+    await user.click(screen.getByRole("tab", { name: /List/ }));
+    expect(screen.queryByTestId("real-timeline-content")).toBeNull();
+    expect(screen.getByTestId("planner-workspace-placeholder-list")).toBeDefined();
+  });
+
+  it("renders server-built Kanban and List nodes in their tabs — IPI-580", async () => {
+    const user = userEvent.setup();
+    render(
+      <PlannerWorkspaceShell
+        instanceId={INSTANCE_ID}
+        timeline={<div data-testid="real-timeline-content">Timeline</div>}
+        kanban={<div data-testid="real-kanban-content">Kanban</div>}
+        list={<div data-testid="real-list-content">List</div>}
+      />,
+    );
+
+    await user.click(screen.getByRole("tab", { name: /Kanban/ }));
+    expect(screen.getByTestId("real-kanban-content")).toBeDefined();
+    expect(screen.queryByTestId("planner-workspace-placeholder-kanban")).toBeNull();
+
+    await user.click(screen.getByRole("tab", { name: /List/ }));
+    expect(screen.getByTestId("real-list-content")).toBeDefined();
+    expect(screen.queryByTestId("planner-workspace-placeholder-list")).toBeNull();
+
+    await user.click(screen.getByRole("tab", { name: /Calendar/ }));
+    expect(screen.getByTestId("planner-workspace-placeholder-calendar")).toBeDefined();
+  });
+
+  it("renders the Calendar node in the Calendar tab when provided — IPI-581", async () => {
+    const user = userEvent.setup();
+    render(
+      <PlannerWorkspaceShell
+        instanceId={INSTANCE_ID}
+        calendar={<div data-testid="real-calendar-content">Calendar content</div>}
+      />,
+    );
+
+    expect(screen.getByTestId("planner-workspace-placeholder-timeline")).toBeDefined();
+
+    await user.click(screen.getByRole("tab", { name: /Calendar/ }));
+    expect(screen.getByTestId("real-calendar-content")).toBeDefined();
+    expect(screen.queryByTestId("planner-workspace-placeholder-calendar")).toBeNull();
+  });
+
+  describe("IPI-588 · Now & Next bar", () => {
+    const nowNextProps = {
+      tasks: [makeTask()],
+      viewerId: VIEWER,
+      phaseNames: { "ph-1": "Item delivery" },
+      today: TODAY,
+    };
+
+    it("mounts the bar once above all four views — AC-A", async () => {
+      const user = userEvent.setup();
+      render(<PlannerWorkspaceShell instanceId={INSTANCE_ID} {...nowNextProps} />);
+
+      expect(screen.getAllByTestId("planner-now-next-bar")).toHaveLength(1);
+      expect(screen.getByText("Item delivery")).toBeDefined();
+
+      for (const label of ["Kanban", "Calendar", "List", "Timeline"]) {
+        await user.click(screen.getByRole("tab", { name: new RegExp(label) }));
+        expect(screen.getAllByTestId("planner-now-next-bar")).toHaveLength(1);
+      }
+    });
+
+    it("keeps next-approval honestly empty — no Review CTA (IPI-483) — AC-C/E", () => {
+      render(<PlannerWorkspaceShell instanceId={INSTANCE_ID} {...nowNextProps} />);
+
+      const approval = screen.getByTestId("planner-next-approval-card");
+      expect(approval.textContent).toContain("Approvals unavailable");
+      expect(approval.textContent).toContain("IPI-483");
+      expect(screen.queryByRole("button", { name: /Review/i })).toBeNull();
+    });
+
+    it("View selects the task for AdaptivePanel — AC-D", async () => {
+      const user = userEvent.setup();
+      render(<PlannerWorkspaceShell instanceId={INSTANCE_ID} {...nowNextProps} />);
+
+      await user.click(screen.getByTestId("planner-now-view"));
+      expect(setSelection).toHaveBeenCalledWith({ type: "task", id: TASK_ID });
+    });
+
+    it("shows an honest empty Happening now card when nothing matches — AC-E", () => {
+      render(
+        <PlannerWorkspaceShell
+          instanceId={INSTANCE_ID}
+          tasks={[makeTask({ status: "todo" })]}
+          viewerId={VIEWER}
+          today={TODAY}
+        />,
+      );
+
+      expect(screen.getByText("Nothing assigned to you right now")).toBeDefined();
+      expect(screen.queryByTestId("planner-now-view")).toBeNull();
+    });
+
+    it("does not mount the bar without the shared payload — AC-G", () => {
+      render(<PlannerWorkspaceShell instanceId={INSTANCE_ID} />);
+      expect(screen.queryByTestId("planner-now-next-bar")).toBeNull();
+    });
   });
 });

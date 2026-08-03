@@ -8,7 +8,7 @@ tags: ipix-task-lifecycle, skills, planning, IPI
 
 When **creating or enriching** any IPI task, declare and **load** the domain skills from `.claude/skills/` before writing acceptance criteria. Skills are not decoration — they are the implementation contract.
 
-**Always start with:** `ipix-task-lifecycle` (this orchestrator).
+**Always start with:** `ipix-task-lifecycle` (this orchestrator). For non-trivial work, also load **`ai-research`** (or `/research`) before Phase 3.
 
 **Task-specific map (when IPI row exists):** [`tasks/intelligence/ai/skill-map.md`](../../../../tasks/intelligence/ai/skill-map.md)
 

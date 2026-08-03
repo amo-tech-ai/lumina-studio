@@ -32,14 +32,17 @@ function makeClient(overrides?: {
   rpcError?: { message: string } | null;
   update?: ReturnType<typeof vi.fn>;
   getUserError?: Error | null;
+  session?: typeof sessionRow;
+  brandIntakeStatus?: string | null;
 }) {
+  const row = overrides?.session ?? sessionRow;
   const update = overrides?.update ?? vi.fn().mockReturnValue({
     eq: () => Promise.resolve({ data: null, error: null }),
   });
   const selectChain = {
     eq: vi.fn().mockReturnThis(),
-    maybeSingle: () => Promise.resolve({ data: sessionRow, error: null }),
-    single: () => Promise.resolve({ data: sessionRow, error: null }),
+    maybeSingle: () => Promise.resolve({ data: row, error: null }),
+    single: () => Promise.resolve({ data: row, error: null }),
   };
   return {
     auth: {
@@ -52,6 +55,18 @@ function makeClient(overrides?: {
     from: (table: string) => {
       if (table === "brands") {
         return {
+          select: () => ({
+            eq: () => ({
+              maybeSingle: () =>
+                Promise.resolve({
+                  data:
+                    overrides?.brandIntakeStatus === undefined
+                      ? null
+                      : { intake_status: overrides.brandIntakeStatus },
+                  error: null,
+                }),
+            }),
+          }),
           update: () => ({
             eq: () => Promise.resolve({ data: null, error: null }),
           }),
@@ -230,6 +245,30 @@ describe("useOnboardingSession", () => {
 
     expect(client.rpc).not.toHaveBeenCalled();
     expect(update).not.toHaveBeenCalled();
+  });
+
+  it("resumes screen 13 when a materialized brand is already draft_ready", async () => {
+    const brandId = "44444444-4444-4444-8444-444444444444";
+    const client = makeClient({
+      session: {
+        ...sessionRow,
+        status: "materialized",
+        current_screen: ANALYSIS_SCREEN,
+        brand_id: brandId,
+        organization_id: "33333333-3333-4333-8333-333333333333",
+      },
+      brandIntakeStatus: "draft_ready",
+    });
+    const { result } = renderHook(() =>
+      useOnboardingSession({
+        createClient: () => client,
+        getIdempotencyKey: () => KEY,
+      }),
+    );
+    await waitFor(() => expect(result.current.status).toBe("ready"));
+    if (result.current.status !== "ready") throw new Error("expected ready");
+    expect(result.current.brandId).toBe(brandId);
+    expect(result.current.currentScreen).toBe(13);
   });
 
   it("routes createClient failures into the retryable error state", async () => {

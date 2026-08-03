@@ -15,6 +15,58 @@ vi.mock("next/navigation", () => ({
   useRouter: () => ({ push, refresh: vi.fn() }),
 }));
 
+// Slice C: Realtime screen is unit-tested separately. Flow tests only need
+// replace-vs-push + a11y shell behaviour — mock auto-completes when brandId is set.
+vi.mock("./analysis-progress-screen", async () => {
+  const React = await import("react");
+  return {
+    AnalysisProgressScreen: ({
+      onComplete,
+      brandId,
+    }: {
+      onComplete: () => void;
+      brandId: string | null;
+    }) => {
+      React.useEffect(() => {
+        if (!brandId) return;
+        const timer = setTimeout(onComplete, 20);
+        return () => clearTimeout(timer);
+      }, [brandId, onComplete]);
+      return (
+        <div data-testid="onboarding-card">
+          <p data-testid="analysis-status" aria-live="polite">
+            {brandId ? "Preparing your workspace…" : "Brand is not ready yet."}
+          </p>
+        </div>
+      );
+    },
+  };
+});
+
+// Slice D: DNA approve UI tested in brand-dna-payoff-screen.test.tsx.
+vi.mock("./brand-dna-payoff-screen", async () => {
+  const React = await import("react");
+  return {
+    BrandDnaPayoffScreen: ({
+      brandId,
+      onReadyChange,
+    }: {
+      brandId: string | null;
+      onReadyChange?: (ready: boolean) => void;
+    }) => {
+      React.useEffect(() => {
+        onReadyChange?.(Boolean(brandId));
+      }, [brandId, onReadyChange]);
+      return (
+        <div data-testid="onboarding-card">
+          <h1>Your Brand DNA</h1>
+          <p data-testid="dna-status">{brandId ? "Review ready" : "Brand is not ready yet."}</p>
+        </div>
+      );
+    },
+  };
+});
+
 import { OnboardingFlow } from "./onboarding-flow";
 import { LAST_SCREEN, MARKETING_SCREENS, ctaLabel } from "@/lib/onboarding/navigation";
 import type { OnboardingHistoryState } from "@/lib/onboarding/use-screen-history";
@@ -441,10 +493,7 @@ describe("automatic completion does not trap the user", () => {
       const replaceSpy = vi.spyOn(window.history, "replaceState");
 
       act(() => {
-        vi.advanceTimersByTime(40 * 110);
-      });
-      act(() => {
-        vi.advanceTimersByTime(700);
+        vi.advanceTimersByTime(20);
       });
 
       expect(screen.getByTestId("onboarding-screen-13")).toBeTruthy();
@@ -480,10 +529,7 @@ describe("automatic completion does not trap the user", () => {
       expect(screen.getByTestId("onboarding-screen-12")).toBeTruthy();
 
       act(() => {
-        vi.advanceTimersByTime(40 * 110);
-      });
-      act(() => {
-        vi.advanceTimersByTime(700);
+        vi.advanceTimersByTime(20);
       });
       expect(screen.getByTestId("onboarding-screen-13")).toBeTruthy();
 

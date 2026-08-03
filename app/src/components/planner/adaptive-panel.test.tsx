@@ -5,7 +5,7 @@ import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { IntelligenceDetailProvider, useIntelligenceDetail } from "@/context/intelligence-detail-context";
-import type { PlannerMember, PlannerTask } from "@/lib/planner/types";
+import type { PlannerMember, PlannerPhase, PlannerTask } from "@/lib/planner/types";
 
 const resolvePlannerSelectionAction = vi.fn();
 vi.mock("@/app/(operator)/app/planner/[instanceId]/selection-actions", () => ({
@@ -57,6 +57,17 @@ const MEMBER_FIXTURE: PlannerMember = {
   role: "manager",
   permissions: null,
   displayName: "Maya",
+};
+
+const PHASE_FIXTURE: PlannerPhase = {
+  id: PHASE_ID,
+  workflowId: "wf1",
+  slug: "casting",
+  name: "Casting",
+  orderIndex: 2,
+  defaultDurationDays: 3,
+  gateType: "approval",
+  requiredRole: "manager",
 };
 
 /** Small probe rendering the real IntelligenceDetailContext value, so tests
@@ -124,6 +135,25 @@ describe("AdaptivePanel — member selection", () => {
   });
 });
 
+describe("AdaptivePanel — phase selection", () => {
+  it("resolves a valid phase selection and publishes planner-detail-phase with its tasks", async () => {
+    mockSelection = { type: "phase", id: PHASE_ID };
+    resolvePlannerSelectionAction.mockResolvedValue({
+      ok: true,
+      data: { kind: "phase", phase: PHASE_FIXTURE, tasks: [TASK_FIXTURE] },
+    });
+
+    renderPanel();
+
+    expect(await screen.findByTestId("planner-detail-phase")).toBeDefined();
+    expect(screen.getByText("Casting")).toBeDefined();
+    expect(screen.getByText(/requires Manager/)).toBeDefined();
+    expect(screen.getByText(/Tasks \(1\)/)).toBeDefined();
+    expect(screen.queryByTestId("planner-detail-task")).toBeNull();
+    expect(deselect).not.toHaveBeenCalled();
+  });
+});
+
 describe("AdaptivePanel — fails closed to Intelligence mode", () => {
   it("unknown type: falls back, auto-corrects the URL with replace, no detail rendered", async () => {
     mockSelection = { type: "brand", id: TASK_ID };
@@ -136,7 +166,7 @@ describe("AdaptivePanel — fails closed to Intelligence mode", () => {
     expect(screen.queryByTestId("planner-detail-member")).toBeNull();
   });
 
-  it("malformed/not-found id: falls back, auto-corrects the URL with replace, no detail rendered", async () => {
+  it("not-found id: falls back, auto-corrects the URL with replace, no detail rendered", async () => {
     mockSelection = { type: "task", id: "does-not-exist" };
     resolvePlannerSelectionAction.mockResolvedValue({ ok: false });
 
@@ -146,15 +176,14 @@ describe("AdaptivePanel — fails closed to Intelligence mode", () => {
     expect(screen.queryByTestId("planner-detail-task")).toBeNull();
   });
 
-  it("phase selection always fails closed (no per-instance phase contract exists yet)", async () => {
+  it("unknown phase id: falls back, auto-corrects the URL with replace, no detail rendered", async () => {
     mockSelection = { type: "phase", id: PHASE_ID };
     resolvePlannerSelectionAction.mockResolvedValue({ ok: false });
 
     renderPanel();
 
     await vi.waitFor(() => expect(deselect).toHaveBeenCalledWith({ replace: true }));
-    expect(screen.queryByTestId("planner-detail-task")).toBeNull();
-    expect(screen.queryByTestId("planner-detail-member")).toBeNull();
+    expect(screen.queryByTestId("planner-detail-phase")).toBeNull();
   });
 
   it("null selection: publishes null immediately, no resolve call at all", () => {

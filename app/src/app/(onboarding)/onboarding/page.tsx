@@ -18,9 +18,8 @@ import { OnboardingFlowLoader } from "./onboarding-flow-loader";
  * Fonts come from the root layout's next/font variables, scoped by the
  * `onboarding` class (see onboarding.css). Nothing is loaded twice.
  *
- * IPI-835 · B1 wires a real onboarding_sessions draft (localStorage idempotency +
- * autosave). Crawl/Realtime (Slice C) and approval (Slice D) come next.
- * Legacy /app/onboarding stays until Slice E after IPI-836.
+ * IPI-835 · B1+C: real onboarding_sessions draft + screen 12 Realtime crawl progress.
+ * Approval (Slice D) comes next. Legacy /app/onboarding stays until Slice E after IPI-836.
  *
  * Auth is enforced in src/middleware.ts, which gates /onboarding exactly like
  * /app/*. That is UI protection only — data authorization stays with RLS.
