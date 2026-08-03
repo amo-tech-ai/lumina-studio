@@ -319,7 +319,7 @@ describe("shiftTask", () => {
     });
 
     const result = await shiftTask(
-      { instanceId: "i1", rootTaskId: "t1", deltaDays: 2, idempotencyKey: "idem-1" },
+      { instanceId: "i1", rootTaskId: "t1", deltaDays: 2, idempotencyKey: "idem-1", expectedUpdatedAt: "2026-07-10T00:00:00.000Z" },
       client,
     );
 
@@ -351,7 +351,7 @@ describe("shiftTask", () => {
 
     const { client, rpcMock } = mockShiftClient({});
     const result = await shiftTask(
-      { instanceId: "i1", rootTaskId: "t1", deltaDays: 0, idempotencyKey: "idem-2" },
+      { instanceId: "i1", rootTaskId: "t1", deltaDays: 0, idempotencyKey: "idem-2", expectedUpdatedAt: "2026-07-10T00:00:00.000Z" },
       client,
     );
 
@@ -374,7 +374,7 @@ describe("shiftTask", () => {
 
     const { client, rpcMock } = mockShiftClient({});
     const result = await shiftTask(
-      { instanceId: "i1", rootTaskId: "t1", deltaDays: 2, idempotencyKey: "idem-3" },
+      { instanceId: "i1", rootTaskId: "t1", deltaDays: 2, idempotencyKey: "idem-3", expectedUpdatedAt: "2026-07-10T00:00:00.000Z" },
       client,
     );
 
@@ -392,7 +392,7 @@ describe("shiftTask", () => {
 
     const { client, rpcMock } = mockShiftClient({});
     const result = await shiftTask(
-      { instanceId: "missing", rootTaskId: "t1", deltaDays: 1, idempotencyKey: "idem-4" },
+      { instanceId: "missing", rootTaskId: "t1", deltaDays: 1, idempotencyKey: "idem-4", expectedUpdatedAt: "2026-07-10T00:00:00.000Z" },
       client,
     );
 
@@ -406,7 +406,7 @@ describe("shiftTask", () => {
 
     const { client, rpcMock } = mockShiftClient({});
     const result = await shiftTask(
-      { instanceId: "i1", rootTaskId: "ghost", deltaDays: 2, idempotencyKey: "idem-5" },
+      { instanceId: "i1", rootTaskId: "ghost", deltaDays: 2, idempotencyKey: "idem-5", expectedUpdatedAt: "2026-07-10T00:00:00.000Z" },
       client,
     );
 
@@ -423,7 +423,7 @@ describe("shiftTask", () => {
     // deleted/made inaccessible between getInstanceDetail() and this query.
     const { client, rpcMock } = mockShiftClient({ freshRows: [] });
     const result = await shiftTask(
-      { instanceId: "i1", rootTaskId: "t1", deltaDays: 2, idempotencyKey: "idem-missing" },
+      { instanceId: "i1", rootTaskId: "t1", deltaDays: 2, idempotencyKey: "idem-missing", expectedUpdatedAt: "2026-07-10T00:00:00.000Z" },
       client,
     );
 
@@ -449,7 +449,7 @@ describe("shiftTask", () => {
       rpcData: { ok: true, replayed: false, changedTasks: [], conflicts: [] },
     });
 
-    await shiftTask({ instanceId: "i1", rootTaskId: "t1", deltaDays: 2, idempotencyKey: "idem-fresh" }, client);
+    await shiftTask({ instanceId: "i1", rootTaskId: "t1", deltaDays: 2, idempotencyKey: "idem-fresh", expectedUpdatedAt: "2026-07-10T00:00:00.000Z" }, client);
 
     expect(rpcMock).toHaveBeenCalledTimes(1);
     const [, args] = rpcMock.mock.calls[0] as [string, Record<string, unknown>];
@@ -475,7 +475,7 @@ describe("shiftTask", () => {
       rpcData: { ok: true, replayed: false, changedTasks: [{ taskId: "t1", updatedAt: "2026-07-10T00:01:00.000Z" }], conflicts: [] },
     });
 
-    const result = await shiftTask({ instanceId: "i1", rootTaskId: "t1", deltaDays: 2, idempotencyKey: "idem-unrelated" }, client);
+    const result = await shiftTask({ instanceId: "i1", rootTaskId: "t1", deltaDays: 2, idempotencyKey: "idem-unrelated", expectedUpdatedAt: "2026-07-10T00:00:00.000Z" }, client);
 
     expect(result.ok).toBe(true);
     expect(rpcMock).toHaveBeenCalledTimes(1);
@@ -496,13 +496,50 @@ describe("shiftTask", () => {
       });
 
       const result = await shiftTask(
-        { instanceId: "i1", rootTaskId: "t1", deltaDays: 2, idempotencyKey: `idem-${code}` },
+        {
+          instanceId: "i1",
+          rootTaskId: "t1",
+          deltaDays: 2,
+          idempotencyKey: `idem-${code}`,
+          expectedUpdatedAt: "2026-07-10T00:00:00.000Z",
+        },
         client,
       );
       expect(result.ok).toBe(false);
       if (!result.ok) expect(result.error.code).toBe(code);
     },
   );
+
+  it("rejects with STALE_VERSION when the previewed root updatedAt no longer matches", async () => {
+    vi.mocked(getInstanceDetail).mockResolvedValue(instanceDetailOk([BASE_TASK]));
+    vi.mocked(listDependencies).mockResolvedValue({ ok: true, data: [] });
+
+    const { client, rpcMock } = mockShiftClient({
+      freshRows: [
+        {
+          id: "t1",
+          start_date: "2026-07-10",
+          end_date: "2026-07-12",
+          updated_at: "2026-07-10T00:05:00.000Z",
+        },
+      ],
+    });
+
+    const result = await shiftTask(
+      {
+        instanceId: "i1",
+        rootTaskId: "t1",
+        deltaDays: 4,
+        idempotencyKey: "idem-preview-stale",
+        expectedUpdatedAt: "2026-07-10T00:00:00.000Z",
+      },
+      client,
+    );
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error.code).toBe("STALE_VERSION");
+    expect(rpcMock).not.toHaveBeenCalled();
+  });
 
   it("surfaces replayed:true from an idempotent retry rather than treating it as a fresh write", async () => {
     vi.mocked(getInstanceDetail).mockResolvedValue(instanceDetailOk([BASE_TASK]));
@@ -519,7 +556,7 @@ describe("shiftTask", () => {
     });
 
     const result = await shiftTask(
-      { instanceId: "i1", rootTaskId: "t1", deltaDays: 2, idempotencyKey: "idem-retry" },
+      { instanceId: "i1", rootTaskId: "t1", deltaDays: 2, idempotencyKey: "idem-retry", expectedUpdatedAt: "2026-07-10T00:00:00.000Z" },
       client,
     );
     expect(result.ok).toBe(true);
@@ -538,7 +575,7 @@ describe("shiftTask", () => {
     });
 
     const result = await shiftTask(
-      { instanceId: "i1", rootTaskId: "t1", deltaDays: 2, idempotencyKey: "idem-null" },
+      { instanceId: "i1", rootTaskId: "t1", deltaDays: 2, idempotencyKey: "idem-null", expectedUpdatedAt: "2026-07-10T00:00:00.000Z" },
       client,
     );
 
@@ -559,7 +596,7 @@ describe("shiftTask", () => {
     });
 
     const result = await shiftTask(
-      { instanceId: "i1", rootTaskId: "t1", deltaDays: 2, idempotencyKey: "idem-transport-err" },
+      { instanceId: "i1", rootTaskId: "t1", deltaDays: 2, idempotencyKey: "idem-transport-err", expectedUpdatedAt: "2026-07-10T00:00:00.000Z" },
       client,
     );
 
@@ -581,7 +618,7 @@ describe("shiftTask", () => {
     });
 
     const result = await shiftTask(
-      { instanceId: "i1", rootTaskId: "t1", deltaDays: 2, idempotencyKey: "idem-fresh-fail" },
+      { instanceId: "i1", rootTaskId: "t1", deltaDays: 2, idempotencyKey: "idem-fresh-fail", expectedUpdatedAt: "2026-07-10T00:00:00.000Z" },
       client,
     );
 

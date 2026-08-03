@@ -47,12 +47,14 @@ export async function shiftTaskAction(
   rootTaskId: string,
   deltaDays: number,
   idempotencyKey: string,
+  /** CAS token from the task version the operator previewed. */
+  expectedUpdatedAt: string,
 ): Promise<MutationResult<ShiftTaskResult>> {
   const client = await authenticatedClient();
   if (!client.ok) return client;
 
   const result = await shiftTask(
-    { instanceId, rootTaskId, deltaDays, idempotencyKey },
+    { instanceId, rootTaskId, deltaDays, idempotencyKey, expectedUpdatedAt },
     client.data,
   );
   if (result.ok) revalidatePath(`/app/planner/${instanceId}`);
