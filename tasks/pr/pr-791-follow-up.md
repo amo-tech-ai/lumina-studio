@@ -16,7 +16,7 @@
 
 ### Evidence validity vs sibling PR #764
 
-The runner's sign-out checks (`12_signout_ui`, `13c`–`13f`) exercise `POST /auth/signout` and cookie clearing directly; they do not specifically prove the `SignOutButton` component's `keepalive: true` behavior from PR #764. `deployment_git_sha` is intentionally null (Workers versions API limitation), so nothing in the evidence cryptographically proves the deployed preview Worker includes #764's fix at capture time — only that a click-triggered signout worked after #764 had merged.
+**#764 was not covered.** Recorded `worker_version_created_on` (`2026-08-02T04:46:48Z`) predates #764's merge (`2026-08-03T20:14:31Z`). The runner's checks exercise `POST /auth/signout` / cookies but do not prove `SignOutButton` `keepalive: true`. Re-run evidence only against a preview Worker deployed from post-#764 `main`.
 
 ### Stale fallback messaging in the runner
 
@@ -32,11 +32,16 @@ for any future `12_signout_ui` failure. That message references a ticket/PR pair
 
 ## Missing tests
 
-### No CI wiring
+### CI wiring gap is narrower than “manual-only”
 
-`run-e2e.mjs` is invoked manually against the live preview Worker; PR #791 does not add a scheduled or PR-triggered CI job to rerun it automatically. A future sign-out regression would only surface on the next manual evidence pass.
+`.github/workflows/ci.yml` already has **`verify-copilot-preview`**, which runs `npm run verify:copilot` and delegates to this IPI-724 `run-e2e.mjs` for same-repo pushes/PRs. So **IPI-938 must not claim “no PR CI”** — that would duplicate existing coverage.
 
-Related existing issues: **IPI-238 · FIX — Playwright E2E in CI pipeline** (backlog), **IPI-850 · Test Cloudflare Preview** (Done — stub path only).
+Genuine gaps (if still desired):
+- scheduled / nightly preview evidence refresh;
+- fork-PR / Dependabot paths where the job is skipped or cannot use secrets;
+- asserting the **final** `13f` manual-redirect contract against freshly regenerated evidence (current checked-in `metadata.json` still shows `status: 200` follow-redirect capture under runner SHA `5a708fa5…`).
+
+Related: **IPI-238 · FIX — Playwright E2E in CI pipeline** (backlog), **IPI-850 · Test Cloudflare Preview** (Done — stub path).
 
 ### No test locks in `ai_health.adapterAvailable` removal
 
@@ -63,7 +68,11 @@ Evidence only carries an advisory note when `adapterAvailable` reappears. There 
 
 ## Cleanup tasks
 
-None beyond the documentation-drift item above; no dead code, unused variables, or leftover debug artifacts were found in the merged diff.
+### Credential rotation (do not drop)
+
+Predecessor evidence runs recorded `qa_rotation_required: true` / instructions to rotate `qa@ipix.test` and revoke sessions if a full HAR escaped a PR tip. The #791 capture removed those security/audit fields without citing a completed rotation. **Keep this open until rotation is confirmed externally** — do not classify it as stale cleanup.
+
+Other cleanup: documentation-drift item above only; no dead code found in the merged diff.
 
 ---
 
@@ -74,7 +83,7 @@ None beyond the documentation-drift item above; no dead code, unused variables, 
 | Issue | Title |
 |-------|-------|
 | [IPI-937](https://linear.app/amo100/issue/IPI-937) | **IPI-937 · PERF-DEBT — Investigate Command Center Preview Load Regression (~14s vs 5s Soft Budget)** — relates to **IPI-726** |
-| [IPI-938](https://linear.app/amo100/issue/IPI-938) | **IPI-938 · CI-GATE — Wire IPI-724 Preview E2E Runner into Scheduled/PR CI** |
+| [IPI-938](https://linear.app/amo100/issue/IPI-938) | **IPI-938 · CI-GATE — Scheduled / fork-PR coverage for IPI-724 preview E2E** (narrow scope — `verify-copilot-preview` already covers same-repo PRs) |
 | [IPI-939](https://linear.app/amo100/issue/IPI-939) | **IPI-939 · EVIDENCE-DRIFT — Update Stale Sign-out Failure Message and Verify PR #764 Deployment Coverage in Preview Evidence** |
 
 **Related merged PRs:**
