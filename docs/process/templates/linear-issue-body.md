@@ -151,6 +151,8 @@
 
 **QA login:** `qa@ipix.test` + Infisical/`QA_PASSWORD` — never commit secrets.
 
+**Full standard:** [`docs/process/04-testing-qa-playbook.md`](../04-testing-qa-playbook.md) · evidence: [`qa-evidence-template.md`](./qa-evidence-template.md)
+
 ## 11. Risks & rollback
 
 | Risk | Failure point | Rollback |
