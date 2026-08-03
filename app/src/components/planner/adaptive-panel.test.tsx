@@ -18,6 +18,7 @@ vi.mock("next/navigation", () => ({
 
 vi.mock("@/app/(operator)/app/planner/[instanceId]/actions", () => ({
   updateTaskAction: vi.fn(),
+  shiftTaskAction: vi.fn(),
 }));
 
 const deselect = vi.fn();
