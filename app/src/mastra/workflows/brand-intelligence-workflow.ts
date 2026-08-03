@@ -20,7 +20,12 @@ const IDEMPOTENT_DRAFT_STATE_ERROR = "Brand is not in draft_ready state";
 function adminClient() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!url || !key) throw new Error("Supabase service-role env vars not set");
+  if (!url) throw new Error("NEXT_PUBLIC_SUPABASE_URL is not set");
+  if (!key) {
+    throw new Error(
+      "SUPABASE_SERVICE_ROLE_KEY is not set — brand-intelligence start-crawl requires the service-role key after IPI-817 (operator JWTs are no longer passed into the workflow)",
+    );
+  }
   return createClient(url, key, { auth: { persistSession: false } });
 }
 
@@ -148,10 +153,15 @@ export const startCrawl = createStep({
   execute: async ({ inputData, runId, getInitData }) => {
     const { actorId } = getInitData<{ actorId: string }>();
     const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-    if (!serviceKey) throw new Error("SUPABASE_SERVICE_ROLE_KEY not set");
+    if (!serviceKey) {
+      throw new Error(
+        "SUPABASE_SERVICE_ROLE_KEY is not set — start-crawl calls start-brand-crawl with the service-role credential + actorId after IPI-817",
+      );
+    }
     try {
       // Mirror extract-profile: Bearer service key only — do not send anon apikey
       // alongside it (gateway rejects conflicting API keys on this project).
+      // adminClient() is the local helper above (not @/lib/supabase/admin).
       const res = await fetch(edgeFnUrl("start-brand-crawl"), {
         method: "POST",
         signal: AbortSignal.timeout(30_000),

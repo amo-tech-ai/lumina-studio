@@ -593,6 +593,17 @@ describe("start-crawl (IPI-817 service-role + actorId)", () => {
     });
     expect(body).not.toHaveProperty("accessToken");
   });
+
+  it("throws a descriptive error when SUPABASE_SERVICE_ROLE_KEY is missing", async () => {
+    vi.stubEnv("SUPABASE_SERVICE_ROLE_KEY", "");
+    await expect(
+      startCrawl.execute({
+        inputData: { brandId: BRAND, brandUrl: "https://brand.example", brandName: "Brand" },
+        runId: "run-1",
+        getInitData: () => ({ actorId: ACTOR }),
+      } as never),
+    ).rejects.toThrow(/SUPABASE_SERVICE_ROLE_KEY is not set.*IPI-817/);
+  });
 });
 
 describe("workflow input schema", () => {
