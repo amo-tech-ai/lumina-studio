@@ -25,6 +25,14 @@ Operators can preview a ±N day schedule shift from the task detail panel and on
 
 Touched: `planner-selection-detail.tsx`, `mutations.ts` (`shiftTask`), focused Vitest (CAS / keyboard / unsaved draft / date picker).
 
+### 2026-08-03 — Merge record for Sign-out E2E evidence (#791)
+
+**Docs-only.** **IPI-915 · AUTH-FIX** post-merge record + follow-ups (PR [#800](https://github.com/amo-tech-ai/lumina-studio/pull/800)).
+
+Records squash merge `fe1826dc` for the IPI-724 preview journey evidence PR, corrects overstated 13f / #764 coverage claims, and keeps QA credential-rotation as an open cleanup item. Also narrows IPI-938 to scheduled/fork gaps because `verify-copilot-preview` already runs this runner on same-repo PRs.
+
+Touched: `docs/pr-reviews/PR-791-MERGE-RECORD-2026-08-03.md`, `tasks/pr/pr-791-follow-up.md`.
+
 ### 2026-08-03 — Onboarding's analysis-to-ready arc lands; Planner gains five views and its first safe edit; the CopilotKit runtime gets a CI verifier
 
 **21 commits across `4c02d744..b2e0eb7b`.** Written 2026-08-03 to clear `changelog-staleness`,
