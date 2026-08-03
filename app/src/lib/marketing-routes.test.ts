@@ -77,8 +77,10 @@ function mountsOperatorShell(source: string): boolean {
   return (
     /^import\s+.*\bCopilotKit\b/m.test(source) ||
     /^import\s+.*\bOperatorPanel\b/m.test(source) ||
+    /^import\s+.*\bAuthenticatedCopilotProvider\b/m.test(source) ||
     /<CopilotKit[\s>]/.test(source) ||
-    /<OperatorPanel[\s>]/.test(source)
+    /<OperatorPanel[\s>]/.test(source) ||
+    /<AuthenticatedCopilotProvider[\s>]/.test(source)
   );
 }
 
@@ -93,9 +95,10 @@ describe("route group isolation (no CopilotKit on marketing)", () => {
     expect(mountsOperatorShell(src)).toBe(false);
   });
 
-  it("operator layout mounts CopilotKit + OperatorPanel", () => {
+  it("operator layout mounts session-aware AuthenticatedCopilotProvider", () => {
     const src = readFileSync(join(APP_DIR, "(operator)/layout.tsx"), "utf8");
     expect(mountsOperatorShell(src)).toBe(true);
+    expect(src).toMatch(/AuthenticatedCopilotProvider/);
   });
 
   it("not-found is root-scoped (no operator shell, marketing tokens only)", () => {

@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { useRef, useState, useTransition, type ReactNode } from "react";
 import { GanttChart, LayoutGrid, CalendarRange, List as ListIcon } from "lucide-react";
 
+import { setViewConfigAction } from "@/app/(operator)/app/planner/[instanceId]/actions";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import type { PlannerTask, ViewType } from "@/lib/planner/types";
+import type { PersistedViewType, PlannerTask, ViewType } from "@/lib/planner/types";
 
 import { AdaptivePanel } from "./adaptive-panel";
 import { NowNextBar } from "./now-next-bar";
@@ -19,6 +20,10 @@ const VIEWS: { key: ViewType; label: string; Icon: typeof GanttChart }[] = [
   { key: "calendar", label: "Calendar", Icon: CalendarRange },
   { key: "list", label: "List", Icon: ListIcon },
 ];
+
+function isPersistedView(view: ViewType): view is PersistedViewType {
+  return view !== "list";
+}
 
 function WorkspacePlaceholder({ view, label }: { view: ViewType; label: string }) {
   return (
@@ -43,10 +48,16 @@ export type PlannerWorkspaceShellProps = {
   phaseNames?: Record<string, string>;
   /** YYYY-MM-DD — pass the same today string used for Timeline. */
   today?: string;
+  /**
+   * IPI-582 — user preference from getViewConfig (never "list"; List is
+   * session-only). Defaults to Timeline when unset / missing preference.
+   */
+  initialView?: ViewType;
 };
 
 // IPI-579 / IPI-580 / IPI-581 — page passes server-built view nodes.
 // IPI-588 · PLN-S1G — Now & Next mounts once between toolbar and view content.
+// IPI-582 · PLN-S1E — view tabs persist via setViewConfig (user-scoped).
 export function PlannerWorkspaceShell({
   instanceId,
   timeline,
@@ -57,8 +68,68 @@ export function PlannerWorkspaceShell({
   viewerId,
   phaseNames = {},
   today,
+  initialView = "timeline",
 }: PlannerWorkspaceShellProps) {
-  const [view, setView] = useState<ViewType>("timeline");
+  const [view, setView] = useState<ViewType>(initialView);
+  const [persistWarning, setPersistWarning] = useState<string | null>(null);
+  const [, startTransition] = useTransition();
+  // Last successfully persisted default_view — used to no-op re-select and
+  // List→same-persisted-view bounces without a redundant write.
+  const lastPersistedRef = useRef<PersistedViewType | null>(
+    isPersistedView(initialView) ? initialView : null,
+  );
+  // Monotonic write generation — late responses for an abandoned tab must not
+  // update lastPersistedRef or win over a newer selection.
+  const persistGenerationRef = useRef(0);
+  // In-flight target (if any). Blocks the lastPersisted no-op while a different
+  // view's write is still outstanding (Timeline→Kanban→Timeline race).
+  const pendingPersistedViewRef = useRef<PersistedViewType | null>(null);
+
+  function handleViewChange(next: string) {
+    const nextView = next as ViewType;
+    if (nextView === view) return;
+
+    // Session view always updates immediately — preference write is best-effort.
+    setView(nextView);
+    setPersistWarning(null);
+
+    // "list" is never a persisted default_view (DB CHECK + adapter contract).
+    if (!isPersistedView(nextView)) return;
+
+    // No-op when an in-flight write already targets this view, or when it is
+    // already persisted and nothing else is pending. Do not no-op when
+    // lastPersisted matches but a different view is still pending
+    // (Timeline→Kanban→Timeline must re-issue Timeline).
+    if (
+      pendingPersistedViewRef.current === nextView ||
+      (lastPersistedRef.current === nextView &&
+        pendingPersistedViewRef.current === null)
+    ) {
+      return;
+    }
+
+    const generation = ++persistGenerationRef.current;
+    pendingPersistedViewRef.current = nextView;
+
+    startTransition(async () => {
+      try {
+        const result = await setViewConfigAction(instanceId, { defaultView: nextView });
+        if (generation !== persistGenerationRef.current) return;
+        pendingPersistedViewRef.current = null;
+        if (!result.ok) {
+          // Keep the session tab the operator just chose; do not roll back.
+          setPersistWarning("Could not save your view preference for next time.");
+          return;
+        }
+        lastPersistedRef.current = nextView;
+      } catch {
+        if (generation !== persistGenerationRef.current) return;
+        pendingPersistedViewRef.current = null;
+        // Transport / unexpected throw — same best-effort warning as { ok: false }.
+        setPersistWarning("Could not save your view preference for next time.");
+      }
+    });
+  }
 
   const contentFor = (key: ViewType, label: string): ReactNode => {
     if (key === "timeline") return timeline ?? <WorkspacePlaceholder view={key} label={label} />;
@@ -77,7 +148,7 @@ export function PlannerWorkspaceShell({
 
       <h1>Planner Workspace</h1>
 
-      <Tabs value={view} onValueChange={(next) => setView(next as ViewType)}>
+      <Tabs value={view} onValueChange={handleViewChange}>
         <div className={styles.toolbar}>
           <TabsList className={styles.tabsList} aria-label="Planner view">
             {VIEWS.map(({ key, label, Icon }) => (
@@ -88,6 +159,16 @@ export function PlannerWorkspaceShell({
             ))}
           </TabsList>
         </div>
+
+        {persistWarning ? (
+          <p
+            role="status"
+            style={{ color: "var(--color-text-muted)", fontSize: 13, margin: "0.5rem 0 0" }}
+            data-testid="planner-view-persist-warning"
+          >
+            {persistWarning}
+          </p>
+        ) : null}
 
         {tasks && viewerId && today ? (
           <NowNextBar

@@ -1,8 +1,14 @@
 import { createHash } from "node:crypto";
 
+import { normalizeBrandUrl } from "./brand-url.ssot";
+
 /**
  * IPI-905 · ONB2-INT-001d — pure stage detection + URL identity for failed
  * brand analysis restart. No I/O — table-tested in restart-stage.test.ts.
+ *
+ * IPI-920 · ONB2-INT-001g — URL identity now comes from the shared SSOT
+ * (`supabase/functions/_shared/brand-url.ts`) that brand-intelligence uses too,
+ * so both runtimes recognise the same website.
  */
 
 export type CrawlEvidence = {
@@ -20,59 +26,12 @@ export type RestartStageDecision =
 const LOCKED_INTAKE = new Set(["crawl_running", "analysis_running", "draft_ready"]);
 const ACTIVE_CRAWL = new Set(["queued", "running"]);
 
-/** Mirror supabase/functions/brand-intelligence private-host SSRF guard. */
-const PRIVATE_HOST_PATTERNS = [
-  /^localhost$/i,
-  /^127\./,
-  /^10\./,
-  /^172\.(1[6-9]|2\d|3[01])\./,
-  /^192\.168\./,
-  /^169\.254\./,
-  // Carrier-grade NAT (RFC 6598) 100.64.0.0/10
-  /^100\.(6[4-9]|[7-9]\d|1[01]\d|12[0-7])\./,
-  /^0\.0\.0\.0$/i,
-  /^0\./,
-  /^::$/,
-  /^::1$/,
-  /^::ffff:/i,
-  /^fc00:/i,
-  /^fd[0-9a-f]{2}:/i,
-  /^fe[89ab][0-9a-f]:/i,
-  /\.local$/i,
-  /\.internal$/i,
-];
-
-function normalizeHostname(host: string): string {
-  const h = host.toLowerCase();
-  if (h.startsWith("[") && h.endsWith("]")) return h.slice(1, -1);
-  return h;
-}
-
-function isPrivateOrInternalHost(hostname: string): boolean {
-  return PRIVATE_HOST_PATTERNS.some((p) => p.test(normalizeHostname(hostname)));
-}
-
 /**
- * Normalize a website URL for restart identity.
- * Origin-only — matches brand-intelligence `normalizeBrandUrl` so path/query
- * variants reuse the same crawl and do not leak tokens into attempt keys.
- * Requires http(s); rejects private/internal hosts and embedded credentials.
+ * Normalize a website URL for restart identity — the shared brand-URL rule.
+ * Origin-only, so path/query variants reuse the same crawl and never leak
+ * tokens or credentials into attempt keys / `ai_agent_logs`.
  */
-export function normalizeAnalysisUrl(raw: string): string | null {
-  const trimmed = raw.trim();
-  if (!trimmed || /\s/.test(trimmed)) return null;
-
-  try {
-    const parsed = new URL(trimmed);
-    if (parsed.protocol !== "http:" && parsed.protocol !== "https:") return null;
-    if (isPrivateOrInternalHost(parsed.hostname)) return null;
-    // Never persist credentials into attempt keys / ai_agent_logs.
-    if (parsed.username || parsed.password) return null;
-    return parsed.origin.toLowerCase();
-  } catch {
-    return null;
-  }
-}
+export const normalizeAnalysisUrl = normalizeBrandUrl;
 
 /** Short stable fingerprint for attempt / idempotency keys. */
 export function urlFingerprint(normalizedUrl: string): string {
