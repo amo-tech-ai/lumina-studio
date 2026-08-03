@@ -1,18 +1,28 @@
 // @vitest-environment jsdom
+<<<<<<< HEAD
+import { describe, expect, it, afterEach, vi } from "vitest";
+import { render, screen, cleanup } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+
+=======
 import { describe, expect, it, afterEach, beforeEach, vi } from "vitest";
 import { render, screen, cleanup, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 import type { PlannerTask } from "@/lib/planner/types";
 
+>>>>>>> origin/main
 vi.mock("./planner-workspace-shell.module.css", () => ({
   default: new Proxy({}, { get: (_, k) => String(k) }),
 }));
 
+<<<<<<< HEAD
+=======
 vi.mock("./now-next-bar.module.css", () => ({
   default: new Proxy({}, { get: (_, k) => String(k) }),
 }));
 
+>>>>>>> origin/main
 // IPI-551 — the shell now mounts AdaptivePanel. Its own behavior (URL
 // resolution, Escape handling, context publishing) is fully covered by
 // adaptive-panel.test.tsx; stubbed here so this file stays focused on tab
@@ -21,6 +31,13 @@ vi.mock("./adaptive-panel", () => ({
   AdaptivePanel: () => null,
 }));
 
+<<<<<<< HEAD
+import { PlannerWorkspaceShell } from "./planner-workspace-shell";
+
+afterEach(() => cleanup());
+
+const INSTANCE_ID = "i1";
+=======
 const setViewConfigAction = vi.fn();
 vi.mock("@/app/(operator)/app/planner/[instanceId]/actions", () => ({
   setViewConfigAction: (...args: unknown[]) => setViewConfigAction(...args),
@@ -72,6 +89,7 @@ function makeTask(overrides: Partial<PlannerTask> = {}): PlannerTask {
     ...overrides,
   };
 }
+>>>>>>> origin/main
 
 describe("PlannerWorkspaceShell", () => {
   it("renders all 4 views in the correct order with real tab semantics", () => {
@@ -135,6 +153,8 @@ describe("PlannerWorkspaceShell", () => {
     expect(screen.getByTestId("planner-workspace-placeholder-calendar")).toBeDefined();
     expect(container.querySelector("h1")).toBe(headingBefore);
   });
+<<<<<<< HEAD
+=======
 
   it("renders the server-built Timeline node in the Timeline tab when provided — IPI-579", async () => {
     const user = userEvent.setup();
@@ -371,4 +391,5 @@ describe("PlannerWorkspaceShell", () => {
       expect(screen.getByRole("tab", { name: /Calendar/ }).getAttribute("aria-selected")).toBe("true");
     });
   });
+>>>>>>> origin/main
 });

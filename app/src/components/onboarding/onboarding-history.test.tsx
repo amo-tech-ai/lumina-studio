@@ -9,6 +9,8 @@ vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }),
 }));
 
+<<<<<<< HEAD
+=======
 // Slice C: progress screen unit-tested separately — auto-complete when brandId set.
 vi.mock("./analysis-progress-screen", async () => {
   const React = await import("react");
@@ -60,6 +62,7 @@ vi.mock("./brand-dna-payoff-screen", async () => {
   };
 });
 
+>>>>>>> origin/main
 import { OnboardingFlow } from "./onboarding-flow";
 
 /**
@@ -190,6 +193,10 @@ describe("mixed in-page and browser navigation", () => {
     expect(window.location.hash).toBe("#6");
   });
 
+<<<<<<< HEAD
+  it("deep-linked #13 Back skips the transient analysis screen", () => {
+    mount("#13", <OnboardingFlow />);
+=======
   it("deep-linked #13 without a brand bounces before analysis (IPI-903)", () => {
     mount("#13", <OnboardingFlow />);
     expect(currentScreen()).toBe("11");
@@ -198,6 +205,7 @@ describe("mixed in-page and browser navigation", () => {
 
   it("deep-linked #13 with a brand Back skips the transient analysis screen", () => {
     mount("#13", <OnboardingFlow initialBrandId="brand-test" />);
+>>>>>>> origin/main
     clickVisibleBack();
 
     expect(currentScreen()).toBe("11");
@@ -205,6 +213,19 @@ describe("mixed in-page and browser navigation", () => {
     expect(screen.queryByTestId("analysis-status")).toBeNull();
   });
 
+<<<<<<< HEAD
+  it("deep-linked #12 completion does not restart analysis when Back is pressed", () => {
+    vi.useFakeTimers();
+    try {
+      mount("#12", <OnboardingFlow />);
+      expect(currentScreen()).toBe("12");
+
+      act(() => {
+        vi.advanceTimersByTime(40 * 110);
+      });
+      act(() => {
+        vi.advanceTimersByTime(700);
+=======
   it("deep-linked #12 without a brand never starts analysis (IPI-903)", () => {
     mount("#12", <OnboardingFlow />);
     expect(currentScreen()).toBe("11");
@@ -219,6 +240,7 @@ describe("mixed in-page and browser navigation", () => {
 
       act(() => {
         vi.advanceTimersByTime(20);
+>>>>>>> origin/main
       });
       expect(currentScreen()).toBe("13");
 

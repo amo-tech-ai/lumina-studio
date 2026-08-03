@@ -18,7 +18,10 @@ import {
   extractProfile,
   fanOutEnrichment,
   saveDraftAndWait,
+<<<<<<< HEAD
+=======
   startCrawl,
+>>>>>>> origin/main
   validateBrand,
 } from "./brand-intelligence-workflow";
 
@@ -543,6 +546,8 @@ describe("validate-brand authorization", () => {
 
 // The old schema was `userId: z.string()`, which happily accepted the operator-gate
 // fallback string. Requiring a UUID makes that class of bug unrepresentable.
+<<<<<<< HEAD
+=======
 describe("start-crawl (IPI-817 service-role + actorId)", () => {
   const ACTOR = "55555555-5555-4555-8555-555555555555";
   const BRAND = "00000000-0000-0000-0000-000000000202";
@@ -606,15 +611,29 @@ describe("start-crawl (IPI-817 service-role + actorId)", () => {
   });
 });
 
+>>>>>>> origin/main
 describe("workflow input schema", () => {
   it("rejects the dev-unauthenticated fallback as actorId", () => {
     const parsed = brandIntelligenceWorkflow.inputSchema.safeParse({
       brandId: "00000000-0000-0000-0000-000000000202",
       actorId: "dev-unauthenticated",
+<<<<<<< HEAD
+      accessToken: "jwt",
+=======
+>>>>>>> origin/main
     });
     expect(parsed.success).toBe(false);
   });
 
+<<<<<<< HEAD
+  it("accepts a real UUID actorId", () => {
+    const parsed = brandIntelligenceWorkflow.inputSchema.safeParse({
+      brandId: "00000000-0000-0000-0000-000000000202",
+      actorId: "55555555-5555-4555-8555-555555555555",
+      accessToken: "jwt",
+    });
+    expect(parsed.success).toBe(true);
+=======
   it("accepts a real UUID actorId without accessToken (IPI-817)", () => {
     const parsed = brandIntelligenceWorkflow.inputSchema.safeParse({
       brandId: "00000000-0000-0000-0000-000000000202",
@@ -631,5 +650,6 @@ describe("workflow input schema", () => {
     expect(shape).not.toHaveProperty("accessToken");
     expect(shape).toHaveProperty("brandId");
     expect(shape).toHaveProperty("actorId");
+>>>>>>> origin/main
   });
 });

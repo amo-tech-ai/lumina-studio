@@ -1,23 +1,46 @@
 {
+<<<<<<< HEAD
+  "count": 169,
+  "entries": [
+    {
+=======
   "count": 258,
   "entries": [
     {
       "host": "ipix-operator-preview.sk-498.workers.dev",
       "path": "/login",
+>>>>>>> origin/main
       "method": "GET",
       "status": 200,
       "resourceType": "document",
       "latencyMs": null,
+<<<<<<< HEAD
+      "cfRay": "a1df76b3380db25a-MIA",
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/login"
+    },
+    {
+=======
       "cfRay": "a25827c06e3ba4d4-MIA",
       "retries": 0
     },
     {
       "host": "ipix-operator-preview.sk-498.workers.dev",
       "path": "/_next/static/chunks/27r4_-uasjdmo.css",
+>>>>>>> origin/main
       "method": "GET",
       "status": 200,
       "resourceType": "stylesheet",
       "latencyMs": null,
+<<<<<<< HEAD
+      "cfRay": "a1df76b51b6cb25a-MIA",
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/_next/static/chunks/3cxyt25-owzvw.css"
+    },
+    {
+=======
       "cfRay": "a25827d57870a4d4-MIA",
       "retries": 0
     },
@@ -54,40 +77,76 @@
     {
       "host": "ipix-operator-preview.sk-498.workers.dev",
       "path": "/_next/static/chunks/3cxyt25-owzvw.css",
+>>>>>>> origin/main
       "method": "GET",
       "status": 200,
       "resourceType": "stylesheet",
       "latencyMs": null,
+<<<<<<< HEAD
+      "cfRay": "a1df76b51b6bb25a-MIA",
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/_next/static/chunks/004dyyd1j1zqp.css"
+    },
+    {
+=======
       "cfRay": "a25827d57873a4d4-MIA",
       "retries": 0
     },
     {
       "host": "ipix-operator-preview.sk-498.workers.dev",
       "path": "/_next/static/media/01e4147cff8141ee-s.p.3huc2loe0ie8a.woff2",
+>>>>>>> origin/main
       "method": "GET",
       "status": 200,
       "resourceType": "font",
       "latencyMs": null,
+<<<<<<< HEAD
+      "cfRay": "a1df76b51b6db25a-MIA",
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/_next/static/media/01e4147cff8141ee-s.p.3huc2loe0ie8a.woff2"
+    },
+    {
+=======
       "cfRay": "a25827d57877a4d4-MIA",
       "retries": 0
     },
     {
       "host": "ipix-operator-preview.sk-498.workers.dev",
       "path": "/_next/static/media/1b99372b3eaef0c8-s.p.1gsd1jahc5dg_.woff2",
+>>>>>>> origin/main
       "method": "GET",
       "status": 200,
       "resourceType": "font",
       "latencyMs": null,
+<<<<<<< HEAD
+      "cfRay": "a1df76b51b6eb25a-MIA",
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/_next/static/media/1b99372b3eaef0c8-s.p.1gsd1jahc5dg_.woff2"
+    },
+    {
+=======
       "cfRay": "a25827d5787fa4d4-MIA",
       "retries": 0
     },
     {
       "host": "ipix-operator-preview.sk-498.workers.dev",
       "path": "/_next/static/media/797e433ab948586e-s.p.0r6juujl39pe6.woff2",
+>>>>>>> origin/main
       "method": "GET",
       "status": 200,
       "resourceType": "font",
       "latencyMs": null,
+<<<<<<< HEAD
+      "cfRay": "a1df76b51b6fb25a-MIA",
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/_next/static/media/797e433ab948586e-s.p.0r6juujl39pe6.woff2"
+    },
+    {
+=======
       "cfRay": "a25827d57880a4d4-MIA",
       "retries": 0
     },
@@ -114,111 +173,259 @@
     {
       "host": "ipix-operator-preview.sk-498.workers.dev",
       "path": "/_next/static/media/caa3a2e1cccd8315-s.p.0wgildi0cnwt9.woff2",
+>>>>>>> origin/main
       "method": "GET",
       "status": 200,
       "resourceType": "font",
       "latencyMs": null,
+<<<<<<< HEAD
+      "cfRay": "a1df76b51b70b25a-MIA",
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/_next/static/media/caa3a2e1cccd8315-s.p.0wgildi0cnwt9.woff2"
+    },
+    {
+=======
       "cfRay": "a25827d57884a4d4-MIA",
       "retries": 0
     },
     {
       "host": "ipix-operator-preview.sk-498.workers.dev",
       "path": "/_next/static/chunks/0ykiigrl9zyl_.js",
+>>>>>>> origin/main
       "method": "GET",
       "status": 200,
       "resourceType": "script",
       "latencyMs": null,
+<<<<<<< HEAD
+      "cfRay": "a1df76b51b73b25a-MIA",
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/_next/static/chunks/3p3z9p0_oadw6.js"
+    },
+    {
+=======
       "cfRay": "a25827d5888da4d4-MIA",
       "retries": 0
     },
     {
       "host": "ipix-operator-preview.sk-498.workers.dev",
       "path": "/_next/static/chunks/2-7fz-9b1mwbt.js",
+>>>>>>> origin/main
       "method": "GET",
       "status": 200,
       "resourceType": "script",
       "latencyMs": null,
+<<<<<<< HEAD
+      "cfRay": "a1df76b51b74b25a-MIA",
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/_next/static/chunks/178-rgcgy50q5.js"
+    },
+    {
+=======
       "cfRay": "a25827d5888ea4d4-MIA",
       "retries": 0
     },
     {
       "host": "ipix-operator-preview.sk-498.workers.dev",
       "path": "/_next/static/chunks/3s32ya5v8lkhs.js",
+>>>>>>> origin/main
       "method": "GET",
       "status": 200,
       "resourceType": "script",
       "latencyMs": null,
+<<<<<<< HEAD
+      "cfRay": "a1df76b51b75b25a-MIA",
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/_next/static/chunks/1tsb2lmii3g5i.js"
+    },
+    {
+=======
       "cfRay": "a25827d5888ba4d4-MIA",
       "retries": 0
     },
     {
       "host": "ipix-operator-preview.sk-498.workers.dev",
       "path": "/_next/static/chunks/3t3pihpq3c5wi.js",
+>>>>>>> origin/main
       "method": "GET",
       "status": 200,
       "resourceType": "script",
       "latencyMs": null,
+<<<<<<< HEAD
+      "cfRay": "a1df76b51b77b25a-MIA",
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/_next/static/chunks/29zjozoolug-7.js"
+    },
+    {
+=======
       "cfRay": "a25827d58892a4d4-MIA",
       "retries": 0
     },
     {
       "host": "ipix-operator-preview.sk-498.workers.dev",
       "path": "/_next/static/chunks/3jm796h_31c0l.js",
+>>>>>>> origin/main
       "method": "GET",
       "status": 200,
       "resourceType": "script",
       "latencyMs": null,
+<<<<<<< HEAD
+      "cfRay": "a1df76b51b78b25a-MIA",
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/_next/static/chunks/2rx9uw4fuec9m.js"
+    },
+    {
+=======
       "cfRay": "a25827d58893a4d4-MIA",
       "retries": 0
     },
     {
       "host": "ipix-operator-preview.sk-498.workers.dev",
       "path": "/_next/static/chunks/2dz3faeo-551s.js",
+>>>>>>> origin/main
       "method": "GET",
       "status": 200,
       "resourceType": "script",
       "latencyMs": null,
+<<<<<<< HEAD
+      "cfRay": "a1df76b51b79b25a-MIA",
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/_next/static/chunks/2lj_w-73pkpyx.js"
+    },
+    {
+=======
       "cfRay": "a25827d58894a4d4-MIA",
       "retries": 0
     },
     {
       "host": "ipix-operator-preview.sk-498.workers.dev",
       "path": "/_next/static/chunks/0nu3c090mxuc5.js",
+>>>>>>> origin/main
       "method": "GET",
       "status": 200,
       "resourceType": "script",
       "latencyMs": null,
+<<<<<<< HEAD
+      "cfRay": "a1df76b51b7bb25a-MIA",
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/_next/static/chunks/2kvz3dzuua9g7.js"
+    },
+    {
+=======
       "cfRay": "a25827d5889ba4d4-MIA",
       "retries": 0
     },
     {
       "host": "ipix-operator-preview.sk-498.workers.dev",
       "path": "/_next/static/chunks/3--mysv3hflw5.js",
+>>>>>>> origin/main
       "method": "GET",
       "status": 200,
       "resourceType": "script",
       "latencyMs": null,
+<<<<<<< HEAD
+      "cfRay": "a1df76b51b7cb25a-MIA",
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/_next/static/chunks/turbopack-2zar6gw9bch5s.js"
+    },
+    {
+=======
       "cfRay": "a25827d58898a4d4-MIA",
       "retries": 0
     },
     {
       "host": "ipix-operator-preview.sk-498.workers.dev",
       "path": "/_next/static/chunks/0gyq8kdkmugx1.js",
+>>>>>>> origin/main
       "method": "GET",
       "status": 200,
       "resourceType": "script",
       "latencyMs": null,
+<<<<<<< HEAD
+      "cfRay": "a1df76b51b7db25a-MIA",
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/_next/static/chunks/3t3pihpq3c5wi.js"
+    },
+    {
+      "method": "GET",
+      "status": 200,
+      "resourceType": "script",
+      "latencyMs": null,
+      "cfRay": "a1df76b51b7fb25a-MIA",
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/_next/static/chunks/2lcsr6r7vughq.js"
+    },
+    {
+      "method": "GET",
+      "status": 200,
+      "resourceType": "script",
+      "latencyMs": null,
+      "cfRay": "a1df76b51b81b25a-MIA",
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/_next/static/chunks/19fowf26op6n4.js"
+    },
+    {
+      "method": "GET",
+      "status": 200,
+      "resourceType": "script",
+      "latencyMs": null,
+      "cfRay": "a1df76b51b7eb25a-MIA",
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/_next/static/chunks/3jm796h_31c0l.js"
+    },
+    {
+      "method": "GET",
+      "status": 200,
+      "resourceType": "script",
+      "latencyMs": null,
+      "cfRay": "a1df76b51b80b25a-MIA",
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/_next/static/chunks/3--mysv3hflw5.js"
+    },
+    {
+      "method": "GET",
+      "status": 200,
+      "resourceType": "script",
+      "latencyMs": null,
+      "cfRay": "a1df76b51b82b25a-MIA",
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/_next/static/chunks/2xrq5_gqvb77l.js"
+    },
+    {
+=======
       "cfRay": "a25827d5889ca4d4-MIA",
       "retries": 0
     },
     {
       "host": "ipix-operator-preview.sk-498.workers.dev",
       "path": "/895b6bda-3c8b-4b4d-95ef-20b8d2766151",
+>>>>>>> origin/main
       "method": "GET",
       "status": 200,
       "resourceType": "script",
       "latencyMs": null,
       "cfRay": null,
+<<<<<<< HEAD
+      "retries": 0,
+      "host": null,
+      "path": "https://ipix-operator-preview.sk-498.workers.dev/d2f2dfb1-5b34-460f-a46f-7b472ad56afb"
+    },
+    {
+=======
       "retries": 0
     },
     {
@@ -264,50 +471,95 @@
     {
       "host": "ipix-operator-preview.sk-498.workers.dev",
       "path": "/monitoring",
+>>>>>>> origin/main
       "method": "POST",
       "status": 200,
       "resourceType": "fetch",
       "latencyMs": null,
+<<<<<<< HEAD
+      "cfRay": "a1df76b91f4e0c83-MIA",
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/monitoring"
+    },
+    {
+=======
       "cfRay": "a25827d93f4345f2-MIA",
       "retries": 0
     },
     {
       "host": "ipix-operator-preview.sk-498.workers.dev",
       "path": "/monitoring",
+>>>>>>> origin/main
       "method": "POST",
       "status": 200,
       "resourceType": "fetch",
       "latencyMs": null,
+<<<<<<< HEAD
+      "cfRay": "a1df76b91f4f0c83-MIA",
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/monitoring"
+    },
+    {
+=======
       "cfRay": "a25827d93f4445f2-MIA",
       "retries": 0
     },
     {
       "host": "ipix-operator-preview.sk-498.workers.dev",
       "path": "/services/jewellery",
+>>>>>>> origin/main
       "method": "GET",
       "status": 200,
       "resourceType": "fetch",
       "latencyMs": null,
+<<<<<<< HEAD
+      "cfRay": "a1df76b95f520c83-MIA",
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/"
+    },
+    {
+=======
       "cfRay": "a25827e5ea9d45f2-MIA",
       "retries": 0
     },
     {
       "host": "ipix-operator-preview.sk-498.workers.dev",
       "path": "/services/amazon",
+>>>>>>> origin/main
       "method": "GET",
       "status": 200,
       "resourceType": "fetch",
       "latencyMs": null,
+<<<<<<< HEAD
+      "cfRay": "a1df76b95f550c83-MIA",
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/services/instagram"
+    },
+    {
+=======
       "cfRay": "a25827e60aa545f2-MIA",
       "retries": 0
     },
     {
       "host": "ipix-operator-preview.sk-498.workers.dev",
       "path": "/services/clothing",
+>>>>>>> origin/main
       "method": "GET",
       "status": 200,
       "resourceType": "fetch",
       "latencyMs": null,
+<<<<<<< HEAD
+      "cfRay": "a1df76b95f540c83-MIA",
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/services/video"
+    },
+    {
+=======
       "cfRay": "a25827e62aad45f2-MIA",
       "retries": 0
     },
@@ -784,20 +1036,68 @@
     {
       "host": "ipix-operator-preview.sk-498.workers.dev",
       "path": "/_next/static/chunks/2y9ciwk4ebiun.css",
+>>>>>>> origin/main
       "method": "GET",
       "status": 200,
       "resourceType": "stylesheet",
       "latencyMs": null,
+<<<<<<< HEAD
+      "cfRay": "a1df76c3f8a10c83-MIA",
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/_next/static/chunks/1n4q24k2zx0tm.css"
+    },
+    {
+      "method": "GET",
+      "status": 200,
+      "resourceType": "fetch",
+      "latencyMs": null,
+      "cfRay": "a1df76b95f530c83-MIA",
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/services/shopify"
+    },
+    {
+      "method": "GET",
+      "status": 200,
+      "resourceType": "fetch",
+      "latencyMs": null,
+      "cfRay": "a1df76beafe20c83-MIA",
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/app"
+    },
+    {
+      "method": "GET",
+      "status": 200,
+      "resourceType": "script",
+      "latencyMs": null,
+      "cfRay": "a1df76c578f60c83-MIA",
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/_next/static/chunks/3b5b9jbmp6lar.js"
+    },
+    {
+=======
       "cfRay": "a2582808fa1745f2-MIA",
       "retries": 0
     },
     {
       "host": "ipix-operator-preview.sk-498.workers.dev",
       "path": "/_next/static/chunks/0j0-k39yksgxg.css",
+>>>>>>> origin/main
       "method": "GET",
       "status": 200,
       "resourceType": "stylesheet",
       "latencyMs": null,
+<<<<<<< HEAD
+      "cfRay": "a1df76c578f90c83-MIA",
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/_next/static/chunks/2y9ciwk4ebiun.css"
+    },
+    {
+=======
       "cfRay": "a2582808ea1545f2-MIA",
       "retries": 0
     },
@@ -814,80 +1114,182 @@
     {
       "host": "ipix-operator-preview.sk-498.workers.dev",
       "path": "/_next/static/chunks/2cipn5yt0-iwo.js",
+>>>>>>> origin/main
       "method": "GET",
       "status": 200,
       "resourceType": "script",
       "latencyMs": null,
+<<<<<<< HEAD
+      "cfRay": "a1df76c578fa0c83-MIA",
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/_next/static/chunks/2nvg7koy6pc54.js"
+    },
+    {
+=======
       "cfRay": "a2582808ea1345f2-MIA",
       "retries": 0
     },
     {
       "host": "ipix-operator-preview.sk-498.workers.dev",
       "path": "/_next/static/chunks/3a6b4-3oq1w7r.js",
+>>>>>>> origin/main
       "method": "GET",
       "status": 200,
       "resourceType": "script",
       "latencyMs": null,
+<<<<<<< HEAD
+      "cfRay": "a1df76c578f80c83-MIA",
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/_next/static/chunks/2wq8ip7ji7a72.js"
+    },
+    {
+=======
       "cfRay": "a25828091a2445f2-MIA",
       "retries": 0
     },
     {
       "host": "ipix-operator-preview.sk-498.workers.dev",
       "path": "/_next/static/chunks/16i-47gky8sjn.js",
+>>>>>>> origin/main
       "method": "GET",
       "status": 200,
       "resourceType": "script",
       "latencyMs": null,
+<<<<<<< HEAD
+      "cfRay": "a1df76c578fc0c83-MIA",
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/_next/static/chunks/2vg-5x3ya_d9_.js"
+    },
+    {
+=======
       "cfRay": "a25828091a2545f2-MIA",
       "retries": 0
     },
     {
       "host": "ipix-operator-preview.sk-498.workers.dev",
       "path": "/_next/static/chunks/1389v80rr46n3.js",
+>>>>>>> origin/main
       "method": "GET",
       "status": 200,
       "resourceType": "script",
       "latencyMs": null,
+<<<<<<< HEAD
+      "cfRay": "a1df76c589050c83-MIA",
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/_next/static/chunks/3a6b4-3oq1w7r.js"
+    },
+    {
+=======
       "cfRay": "a2582808ea1245f2-MIA",
       "retries": 0
     },
     {
       "host": "ipix-operator-preview.sk-498.workers.dev",
       "path": "/_next/static/chunks/2p49-_2ffykrr.js",
+>>>>>>> origin/main
       "method": "GET",
       "status": 200,
       "resourceType": "script",
       "latencyMs": null,
+<<<<<<< HEAD
+      "cfRay": "a1df76c589060c83-MIA",
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/_next/static/chunks/0htc4fg07vcjn.js"
+    },
+    {
+=======
       "cfRay": "a2582808fa1a45f2-MIA",
       "retries": 0
     },
     {
       "host": "ipix-operator-preview.sk-498.workers.dev",
       "path": "/_next/static/chunks/2vg-5x3ya_d9_.js",
+>>>>>>> origin/main
       "method": "GET",
       "status": 200,
       "resourceType": "script",
       "latencyMs": null,
+<<<<<<< HEAD
+      "cfRay": "a1df76c578fd0c83-MIA",
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/_next/static/chunks/1w6iqym24ba6k.js"
+    },
+    {
+=======
       "cfRay": "a2582808fa1845f2-MIA",
       "retries": 0
     },
     {
       "host": "ipix-operator-preview.sk-498.workers.dev",
       "path": "/_next/static/chunks/2cikxbac29hle.js",
+>>>>>>> origin/main
       "method": "GET",
       "status": 200,
       "resourceType": "script",
       "latencyMs": null,
+<<<<<<< HEAD
+      "cfRay": "a1df76c578fb0c83-MIA",
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/_next/static/chunks/0-xlt1cx89a6b.js"
+    },
+    {
+      "method": "GET",
+      "status": 200,
+      "resourceType": "script",
+      "latencyMs": null,
+      "cfRay": "a1df76c589010c83-MIA",
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/_next/static/chunks/0jkc536qkhc7w.js"
+    },
+    {
+      "method": "GET",
+      "status": 200,
+      "resourceType": "script",
+      "latencyMs": null,
+      "cfRay": "a1df76c589030c83-MIA",
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/_next/static/chunks/2y7ui2a3kc2t8.js"
+    },
+    {
+      "method": "GET",
+      "status": 200,
+      "resourceType": "script",
+      "latencyMs": null,
+      "cfRay": "a1df76c588ff0c83-MIA",
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/_next/static/chunks/3_whfq0aov2t3.js"
+    },
+    {
+=======
       "cfRay": "a2582808fa1945f2-MIA",
       "retries": 0
     },
     {
       "host": "ipix-operator-preview.sk-498.workers.dev",
       "path": "/",
+>>>>>>> origin/main
       "method": "GET",
       "status": 200,
       "resourceType": "fetch",
       "latencyMs": null,
+<<<<<<< HEAD
+      "cfRay": "a1df76beafe10c83-MIA",
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/login"
+    },
+    {
+=======
       "cfRay": "a25828093a3045f2-MIA",
       "retries": 0
     },
@@ -904,20 +1306,38 @@
     {
       "host": "ipix-operator-preview.sk-498.workers.dev",
       "path": "/_next/static/chunks/2df90thwx9uuw.js",
+>>>>>>> origin/main
       "method": "GET",
       "status": 200,
       "resourceType": "script",
       "latencyMs": null,
+<<<<<<< HEAD
+      "cfRay": "a1df76c589040c83-MIA",
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/_next/static/chunks/1l-1czb-lwgmr.js"
+    },
+    {
+=======
       "cfRay": "a25828090a2345f2-MIA",
       "retries": 0
     },
     {
       "host": "ipix-operator-preview.sk-498.workers.dev",
       "path": "/_next/static/chunks/0jkc536qkhc7w.js",
+>>>>>>> origin/main
       "method": "GET",
       "status": 200,
       "resourceType": "script",
       "latencyMs": null,
+<<<<<<< HEAD
+      "cfRay": "a1df76c578fe0c83-MIA",
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/_next/static/chunks/3svghpp3596o9.js"
+    },
+    {
+=======
       "cfRay": "a25828090a2045f2-MIA",
       "retries": 0
     },
@@ -944,10 +1364,19 @@
     {
       "host": "ipix-operator-preview.sk-498.workers.dev",
       "path": "/_next/static/chunks/2leiinfzl2-j5.js",
+>>>>>>> origin/main
       "method": "GET",
       "status": 200,
       "resourceType": "script",
       "latencyMs": null,
+<<<<<<< HEAD
+      "cfRay": "a1df76c589000c83-MIA",
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/_next/static/chunks/1n83fsw_e162n.js"
+    },
+    {
+=======
       "cfRay": "a2582808fa1b45f2-MIA",
       "retries": 0
     },
@@ -984,40 +1413,76 @@
     {
       "host": "ipix-operator-preview.sk-498.workers.dev",
       "path": "/services/shopify",
+>>>>>>> origin/main
       "method": "GET",
       "status": 200,
       "resourceType": "fetch",
       "latencyMs": null,
+<<<<<<< HEAD
+      "cfRay": "a1df76c3f8a00c83-MIA",
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/services/jewellery"
+    },
+    {
+=======
       "cfRay": "a258280aba5745f2-MIA",
       "retries": 0
     },
     {
       "host": "ipix-operator-preview.sk-498.workers.dev",
       "path": "/services/shopify",
+>>>>>>> origin/main
       "method": "GET",
       "status": 200,
       "resourceType": "fetch",
       "latencyMs": null,
+<<<<<<< HEAD
+      "cfRay": "a1df76c468d90c83-MIA",
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/services/ecommerce-photography"
+    },
+    {
+=======
       "cfRay": "a258280afa5b45f2-MIA",
       "retries": 0
     },
     {
       "host": "ipix-operator-preview.sk-498.workers.dev",
       "path": "/services/video",
+>>>>>>> origin/main
       "method": "GET",
       "status": 200,
       "resourceType": "fetch",
       "latencyMs": null,
+<<<<<<< HEAD
+      "cfRay": "a1df76c458d40c83-MIA",
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/services/clothing"
+    },
+    {
+=======
       "cfRay": "a258280afa5d45f2-MIA",
       "retries": 0
     },
     {
       "host": "ipix-operator-preview.sk-498.workers.dev",
       "path": "/services/video",
+>>>>>>> origin/main
       "method": "GET",
       "status": 200,
       "resourceType": "fetch",
       "latencyMs": null,
+<<<<<<< HEAD
+      "cfRay": "a1df76c448d20c83-MIA",
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/services/amazon"
+    },
+    {
+=======
       "cfRay": "a258280afa5c45f2-MIA",
       "retries": 0
     },
@@ -1054,70 +1519,163 @@
     {
       "host": "ipix-operator-preview.sk-498.workers.dev",
       "path": "/monitoring",
+>>>>>>> origin/main
       "method": "POST",
       "status": 200,
       "resourceType": "fetch",
       "latencyMs": null,
+<<<<<<< HEAD
+      "cfRay": "a1df76c889910c83-MIA",
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/monitoring"
+    },
+    {
+=======
       "cfRay": "a258280cbaa445f2-MIA",
       "retries": 0
     },
     {
       "host": "ipix-operator-preview.sk-498.workers.dev",
       "path": "/monitoring",
+>>>>>>> origin/main
       "method": "POST",
       "status": 200,
       "resourceType": "fetch",
       "latencyMs": null,
+<<<<<<< HEAD
+      "cfRay": "a1df76c889920c83-MIA",
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/monitoring"
+    },
+    {
+=======
       "cfRay": "a258280cbaa345f2-MIA",
       "retries": 0
     },
     {
       "host": "ipix-operator-preview.sk-498.workers.dev",
       "path": "/api/copilotkit/info",
+>>>>>>> origin/main
       "method": "GET",
       "status": 200,
       "resourceType": "fetch",
       "latencyMs": null,
+<<<<<<< HEAD
+      "cfRay": "a1df76c7f9750c83-MIA",
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/api/copilotkit/info"
+    },
+    {
+=======
       "cfRay": "a258280c7a8f45f2-MIA",
       "retries": 0
     },
     {
       "host": "ipix-operator-preview.sk-498.workers.dev",
       "path": "/api/notifications",
+>>>>>>> origin/main
       "method": "GET",
       "status": 200,
       "resourceType": "fetch",
       "latencyMs": null,
+<<<<<<< HEAD
+      "cfRay": "a1df76c7f9780c83-MIA",
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/login"
+    },
+    {
+=======
       "cfRay": "a258280edaf445f2-MIA",
       "retries": 0
     },
     {
       "host": "ipix-operator-preview.sk-498.workers.dev",
       "path": "/services/video",
+>>>>>>> origin/main
       "method": "GET",
       "status": 200,
       "resourceType": "fetch",
       "latencyMs": null,
+<<<<<<< HEAD
+      "cfRay": "a1df76c7f9770c83-MIA",
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/login"
+    },
+    {
+=======
       "cfRay": "a258280c8a9045f2-MIA",
       "retries": 0
     },
     {
       "host": "ipix-operator-preview.sk-498.workers.dev",
       "path": "/services/instagram",
+>>>>>>> origin/main
       "method": "GET",
       "status": 200,
       "resourceType": "fetch",
       "latencyMs": null,
+<<<<<<< HEAD
+      "cfRay": "a1df76c819820c83-MIA",
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/login"
+    },
+    {
+      "method": "GET",
+      "status": 200,
+      "resourceType": "fetch",
+      "latencyMs": null,
+      "cfRay": "a1df76c7f9760c83-MIA",
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/services/fashion-photography"
+    },
+    {
+      "method": "GET",
+      "status": 200,
+      "resourceType": "fetch",
+      "latencyMs": null,
+      "cfRay": "a1df76cb0a4d0c83-MIA",
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/api/brands"
+    },
+    {
+      "method": "GET",
+      "status": 200,
+      "resourceType": "fetch",
+      "latencyMs": null,
+      "cfRay": "a1df76cb0a4e0c83-MIA",
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/api/notifications"
+    },
+    {
+=======
       "cfRay": "a258280c8a9245f2-MIA",
       "retries": 0
     },
     {
       "host": "ipix-operator-preview.sk-498.workers.dev",
       "path": "/_next/image",
+>>>>>>> origin/main
       "method": "GET",
       "status": 200,
       "resourceType": "image",
       "latencyMs": null,
+<<<<<<< HEAD
+      "cfRay": "a1df76d14b2e0c83-MIA",
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/_next/image"
+    },
+    {
+=======
       "cfRay": "a258280ceab745f2-MIA",
       "retries": 0
     },
@@ -1164,20 +1722,38 @@
     {
       "host": "ipix-operator-preview.sk-498.workers.dev",
       "path": "/_next/image",
+>>>>>>> origin/main
       "method": "GET",
       "status": 200,
       "resourceType": "image",
       "latencyMs": null,
+<<<<<<< HEAD
+      "cfRay": "a1df76d16b360c83-MIA",
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/_next/image"
+    },
+    {
+=======
       "cfRay": "a258281c7d0645f2-MIA",
       "retries": 0
     },
     {
       "host": "ipix-operator-preview.sk-498.workers.dev",
       "path": "/_next/image",
+>>>>>>> origin/main
       "method": "GET",
       "status": 200,
       "resourceType": "image",
       "latencyMs": null,
+<<<<<<< HEAD
+      "cfRay": "a1df76d16b340c83-MIA",
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/_next/image"
+    },
+    {
+=======
       "cfRay": "a2582810ab4f45f2-MIA",
       "retries": 0
     },
@@ -1194,150 +1770,305 @@
     {
       "host": "ipix-operator-preview.sk-498.workers.dev",
       "path": "/_next/image",
+>>>>>>> origin/main
       "method": "GET",
       "status": 200,
       "resourceType": "image",
       "latencyMs": null,
+<<<<<<< HEAD
+      "cfRay": "a1df76d16b370c83-MIA",
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/_next/image"
+    },
+    {
+=======
       "cfRay": "a2582810ab5145f2-MIA",
       "retries": 0
     },
     {
       "host": "ipix-operator-preview.sk-498.workers.dev",
       "path": "/_next/image",
+>>>>>>> origin/main
       "method": "GET",
       "status": 200,
       "resourceType": "image",
       "latencyMs": null,
+<<<<<<< HEAD
+      "cfRay": "a1df76d16b350c83-MIA",
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/_next/image"
+    },
+    {
+=======
       "cfRay": "a2582810ab5245f2-MIA",
       "retries": 0
     },
     {
       "host": "ipix-operator-preview.sk-498.workers.dev",
       "path": "/app/brand",
+>>>>>>> origin/main
       "method": "GET",
       "status": 200,
       "resourceType": "fetch",
       "latencyMs": null,
+<<<<<<< HEAD
+      "cfRay": "a1df76d1bb410c83-MIA",
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/app/assets"
+    },
+    {
+=======
       "cfRay": "a258281b8ce645f2-MIA",
       "retries": 0
     },
     {
       "host": "ipix-operator-preview.sk-498.workers.dev",
       "path": "/app/shoots/fa2ac2be-6399-405b-bd7f-ceb8a0e82ec9",
+>>>>>>> origin/main
       "method": "GET",
       "status": 200,
       "resourceType": "fetch",
       "latencyMs": null,
+<<<<<<< HEAD
+      "cfRay": "a1df76d19b3f0c83-MIA",
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/app/brand"
+    },
+    {
+=======
       "cfRay": "a258281b7ce245f2-MIA",
       "retries": 0
     },
     {
       "host": "ipix-operator-preview.sk-498.workers.dev",
       "path": "/app/brand/ca3de93d-b47b-4e4a-813b-087fbfe2be3c",
+>>>>>>> origin/main
       "method": "GET",
       "status": 200,
       "resourceType": "fetch",
       "latencyMs": null,
+<<<<<<< HEAD
+      "cfRay": "a1df76d19b3e0c83-MIA",
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/app/shoots"
+    },
+    {
+=======
       "cfRay": "a25828207dc445f2-MIA",
       "retries": 0
     },
     {
       "host": "ipix-operator-preview.sk-498.workers.dev",
       "path": "/app/assets",
+>>>>>>> origin/main
       "method": "GET",
       "status": 200,
       "resourceType": "fetch",
       "latencyMs": null,
+<<<<<<< HEAD
+      "cfRay": "a1df76d19b400c83-MIA",
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/app/shoots/new"
+    },
+    {
+=======
       "cfRay": "a258281efd9745f2-MIA",
       "retries": 0
     },
     {
       "host": "ipix-operator-preview.sk-498.workers.dev",
       "path": "/app/matching",
+>>>>>>> origin/main
       "method": "GET",
       "status": 200,
       "resourceType": "fetch",
       "latencyMs": null,
+<<<<<<< HEAD
+      "cfRay": "a1df76db3cf10c83-MIA",
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/app/brand/db1f728d-bee1-430e-a3e7-0c601da74ce7"
+    },
+    {
+=======
       "cfRay": "a25828223e2045f2-MIA",
       "retries": 0
     },
     {
       "host": "ipix-operator-preview.sk-498.workers.dev",
       "path": "/app/inbox",
+>>>>>>> origin/main
       "method": "GET",
       "status": 200,
       "resourceType": "fetch",
       "latencyMs": null,
+<<<<<<< HEAD
+      "cfRay": "a1df76db4cf50c83-MIA",
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/app/inbox"
+    },
+    {
+=======
       "cfRay": "a2582821ce0845f2-MIA",
       "retries": 0
     },
     {
       "host": "ipix-operator-preview.sk-498.workers.dev",
       "path": "/app/campaigns",
+>>>>>>> origin/main
       "method": "GET",
       "status": 200,
       "resourceType": "fetch",
       "latencyMs": null,
+<<<<<<< HEAD
+      "cfRay": "a1df76dbad0c0c83-MIA",
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/app/matching"
+    },
+    {
+=======
       "cfRay": "a2582822ce3845f2-MIA",
       "retries": 0
     },
     {
       "host": "ipix-operator-preview.sk-498.workers.dev",
       "path": "/app/assets",
+>>>>>>> origin/main
       "method": "GET",
       "status": 200,
       "resourceType": "fetch",
       "latencyMs": null,
+<<<<<<< HEAD
+      "cfRay": "a1df76dbbd0e0c83-MIA",
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/app/campaigns"
+    },
+    {
+=======
       "cfRay": "a25828234e5545f2-MIA",
       "retries": 0
     },
     {
       "host": "ipix-operator-preview.sk-498.workers.dev",
       "path": "/app/crm",
+>>>>>>> origin/main
       "method": "GET",
       "status": 200,
       "resourceType": "fetch",
       "latencyMs": null,
+<<<<<<< HEAD
+      "cfRay": "a1df76d16b3a0c83-MIA",
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/api/intelligence/panel"
+    },
+    {
+=======
       "cfRay": "a2582823fe7b45f2-MIA",
       "retries": 0
     },
     {
       "host": "ipix-operator-preview.sk-498.workers.dev",
       "path": "/app/shoots",
+>>>>>>> origin/main
       "method": "GET",
       "status": 200,
       "resourceType": "fetch",
       "latencyMs": null,
+<<<<<<< HEAD
+      "cfRay": "a1df76dc2d2f0c83-MIA",
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/app/assets"
+    },
+    {
+=======
       "cfRay": "a258281b7ce445f2-MIA",
       "retries": 0
     },
     {
       "host": "ipix-operator-preview.sk-498.workers.dev",
       "path": "/app/planner",
+>>>>>>> origin/main
       "method": "GET",
       "status": 200,
       "resourceType": "fetch",
       "latencyMs": null,
+<<<<<<< HEAD
+      "cfRay": "a1df76dc3d3f0c83-MIA",
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/app/crm"
+    },
+    {
+=======
       "cfRay": "a25828243e8245f2-MIA",
       "retries": 0
     },
     {
       "host": "ipix-operator-preview.sk-498.workers.dev",
       "path": "/app/brand",
+>>>>>>> origin/main
       "method": "GET",
       "status": 200,
       "resourceType": "fetch",
       "latencyMs": null,
+<<<<<<< HEAD
+      "cfRay": "a1df76dc5d4d0c83-MIA",
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/app/planner"
+    },
+    {
+      "method": "GET",
+      "status": 200,
+      "resourceType": "fetch",
+      "latencyMs": null,
+      "cfRay": "a1df76dc7d4f0c83-MIA",
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/app/shoots"
+    },
+    {
+      "method": "GET",
+      "status": 200,
+      "resourceType": "image",
+      "latencyMs": null,
+      "cfRay": "a1df76dd1d710c83-MIA",
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/_next/image"
+    },
+    {
+=======
       "cfRay": "a25828255eaf45f2-MIA",
       "retries": 0
     },
     {
       "host": "ipix-operator-preview.sk-498.workers.dev",
       "path": "/_next/static/chunks/3sxlj80lri2ao.css",
+>>>>>>> origin/main
       "method": "GET",
       "status": 200,
       "resourceType": "stylesheet",
       "latencyMs": null,
+<<<<<<< HEAD
+      "cfRay": "a1df76dd3d7b0c83-MIA",
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/_next/static/chunks/0kmscp_oa3z40.css"
+    },
+    {
+=======
       "cfRay": "a25828267ed545f2-MIA",
       "retries": 0
     },
@@ -1354,30 +2085,107 @@
     {
       "host": "ipix-operator-preview.sk-498.workers.dev",
       "path": "/_next/static/chunks/01lhyayh1illb.js",
+>>>>>>> origin/main
       "method": "GET",
       "status": 200,
       "resourceType": "script",
       "latencyMs": null,
+<<<<<<< HEAD
+      "cfRay": "a1df76dd3d7c0c83-MIA",
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/_next/static/chunks/2mvu8n8ct2de5.js"
+    },
+    {
+      "method": "GET",
+      "status": 200,
+      "resourceType": "fetch",
+      "latencyMs": null,
+      "cfRay": "a1df76dcdd630c83-MIA",
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/app/shoots/new"
+    },
+    {
+      "method": "GET",
+      "status": 200,
+      "resourceType": "fetch",
+      "latencyMs": null,
+      "cfRay": "a1df76dd1d770c83-MIA",
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/app/assets"
+    },
+    {
+      "method": "GET",
+      "status": 200,
+      "resourceType": "fetch",
+      "latencyMs": null,
+      "cfRay": "a1df76dd1d720c83-MIA",
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/app/brand"
+    },
+    {
+      "method": "GET",
+      "status": 200,
+      "resourceType": "fetch",
+      "latencyMs": null,
+      "cfRay": "a1df76dd3d7d0c83-MIA",
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/app/brand/db1f728d-bee1-430e-a3e7-0c601da74ce7"
+    },
+    {
+      "method": "GET",
+      "status": 200,
+      "resourceType": "script",
+      "latencyMs": null,
+      "cfRay": "a1df76ddcd970c83-MIA",
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/_next/static/chunks/2id12fn_9cxav.js"
+    },
+    {
+=======
       "cfRay": "a2582826eee945f2-MIA",
       "retries": 0
     },
     {
       "host": "ipix-operator-preview.sk-498.workers.dev",
       "path": "/_next/static/chunks/05e6oow5on-up.css",
+>>>>>>> origin/main
       "method": "GET",
       "status": 200,
       "resourceType": "stylesheet",
       "latencyMs": null,
+<<<<<<< HEAD
+      "cfRay": "a1df76ddcd980c83-MIA",
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/_next/static/chunks/2qkja8167xnh6.css"
+    },
+    {
+=======
       "cfRay": "a25828276f0445f2-MIA",
       "retries": 0
     },
     {
       "host": "ipix-operator-preview.sk-498.workers.dev",
       "path": "/_next/static/chunks/2lutxk7rrkthj.js",
+>>>>>>> origin/main
       "method": "GET",
       "status": 200,
       "resourceType": "script",
       "latencyMs": null,
+<<<<<<< HEAD
+      "cfRay": "a1df76ddeda00c83-MIA",
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/_next/static/chunks/3zp9fw-k6x6qh.js"
+    },
+    {
+=======
       "cfRay": "a25828276f0545f2-MIA",
       "retries": 0
     },
@@ -1534,50 +2342,235 @@
     {
       "host": "ipix-operator-preview.sk-498.workers.dev",
       "path": "/_next/static/chunks/0kmscp_oa3z40.css",
+>>>>>>> origin/main
       "method": "GET",
       "status": 200,
       "resourceType": "stylesheet",
       "latencyMs": null,
+<<<<<<< HEAD
+      "cfRay": "a1df76ddeda20c83-MIA",
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/_next/static/chunks/3sxlj80lri2ao.css"
+    },
+    {
+      "method": "GET",
+      "status": 200,
+      "resourceType": "fetch",
+      "latencyMs": null,
+      "cfRay": "a1df76dd9d8c0c83-MIA",
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/app/inbox"
+    },
+    {
+=======
       "cfRay": "a2582831c8e645f2-MIA",
       "retries": 0
     },
     {
       "host": "ipix-operator-preview.sk-498.workers.dev",
       "path": "/_next/static/chunks/2mvu8n8ct2de5.js",
+>>>>>>> origin/main
       "method": "GET",
       "status": 200,
       "resourceType": "script",
       "latencyMs": null,
+<<<<<<< HEAD
+      "cfRay": "a1df76de0da50c83-MIA",
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/_next/static/chunks/262216z641131.js"
+    },
+    {
+      "method": "GET",
+      "status": 200,
+      "resourceType": "stylesheet",
+      "latencyMs": null,
+      "cfRay": "a1df76de0da70c83-MIA",
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/_next/static/chunks/3of3sflk2w8o7.css"
+    },
+    {
+      "method": "GET",
+      "status": 200,
+      "resourceType": "script",
+      "latencyMs": null,
+      "cfRay": "a1df76de0da90c83-MIA",
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/_next/static/chunks/3dsmswplm-59j.js"
+    },
+    {
+      "method": "GET",
+      "status": 200,
+      "resourceType": "script",
+      "latencyMs": null,
+      "cfRay": "a1df76de0da80c83-MIA",
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/_next/static/chunks/03_ts3o-99s47.js"
+    },
+    {
+=======
       "cfRay": "a2582831c8e545f2-MIA",
       "retries": 0
     },
     {
       "host": "ipix-operator-preview.sk-498.workers.dev",
       "path": "/api/ai/health",
+>>>>>>> origin/main
       "method": "GET",
       "status": 200,
       "resourceType": "fetch",
       "latencyMs": null,
+<<<<<<< HEAD
+      "cfRay": "a1df76ddcd990c83-MIA",
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/app/matching"
+    },
+    {
+      "method": "GET",
+      "status": 200,
+      "resourceType": "script",
+      "latencyMs": null,
+      "cfRay": "a1df76de4db90c83-MIA",
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/_next/static/chunks/02f5_z62xamub.js"
+    },
+    {
+      "method": "GET",
+      "status": 200,
+      "resourceType": "fetch",
+      "latencyMs": null,
+      "cfRay": "a1df76ddfda30c83-MIA",
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/app/campaigns"
+    },
+    {
+      "method": "GET",
+      "status": 200,
+      "resourceType": "fetch",
+      "latencyMs": null,
+      "cfRay": "a1df76de0dab0c83-MIA",
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/app/assets"
+    },
+    {
+      "method": "GET",
+      "status": 200,
+      "resourceType": "fetch",
+      "latencyMs": null,
+      "cfRay": "a1df76de4dba0c83-MIA",
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/app/crm"
+    },
+    {
+      "method": "GET",
+      "status": 200,
+      "resourceType": "fetch",
+      "latencyMs": null,
+      "cfRay": "a1df76de7dc80c83-MIA",
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/app/planner"
+    },
+    {
+      "method": "GET",
+      "status": 200,
+      "resourceType": "script",
+      "latencyMs": null,
+      "cfRay": "a1df76df1de70c83-MIA",
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/_next/static/chunks/0zkx-kats_zle.js"
+    },
+    {
+      "method": "GET",
+      "status": 200,
+      "resourceType": "script",
+      "latencyMs": null,
+      "cfRay": "a1df76df1de80c83-MIA",
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/_next/static/chunks/1hmv4_almoh4l.js"
+    },
+    {
+      "method": "GET",
+      "status": 200,
+      "resourceType": "fetch",
+      "latencyMs": null,
+      "cfRay": "a1df76e36ed40c83-MIA",
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/api/copilotkit/info"
+    },
+    {
+      "method": "GET",
+      "status": 200,
+      "resourceType": "fetch",
+      "latencyMs": null,
+      "cfRay": "a1df76eb1ffe0c83-MIA",
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/api/ai/health"
+    },
+    {
+=======
       "cfRay": "a258283258fd45f2-MIA",
       "retries": 0
     },
     {
       "host": "ipix-operator-preview.sk-498.workers.dev",
       "path": "/api/copilotkit/agent/production-planner/run",
+>>>>>>> origin/main
       "method": "POST",
       "status": 200,
       "resourceType": "fetch",
       "latencyMs": null,
+<<<<<<< HEAD
+      "cfRay": "a1df76f3e9380c83-MIA",
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/api/copilotkit/agent/production-planner/run"
+    },
+    {
+=======
       "cfRay": "a2582834193c45f2-MIA",
       "retries": 0
     },
     {
       "host": "ipix-operator-preview.sk-498.workers.dev",
       "path": "/_next/static/chunks/1z7by85hjkskg.css",
+>>>>>>> origin/main
       "method": "GET",
       "status": 200,
       "resourceType": "stylesheet",
       "latencyMs": null,
+<<<<<<< HEAD
+      "cfRay": "a1df76ff2ac80c83-MIA",
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/_next/static/chunks/1z7by85hjkskg.css"
+    },
+    {
+      "method": "POST",
+      "status": 200,
+      "resourceType": "fetch",
+      "latencyMs": null,
+      "cfRay": "a1df7706abcd0c83-MIA",
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/monitoring"
+    },
+    {
+=======
       "cfRay": "a25828489d7a45f2-MIA",
       "retries": 0
     },
@@ -1624,231 +2617,457 @@
     {
       "host": "ipix-operator-preview.sk-498.workers.dev",
       "path": "/login",
+>>>>>>> origin/main
       "method": "GET",
       "status": 200,
       "resourceType": "fetch",
       "latencyMs": null,
+<<<<<<< HEAD
+      "cfRay": "a1df778cfcef0c83-MIA",
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/api/intelligence/panel"
+    },
+    {
+      "method": "GET",
+      "status": 200,
+      "resourceType": "fetch",
+      "latencyMs": null,
+      "cfRay": "a1df784dbc1eb25a-MIA",
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/api/intelligence/panel"
+    },
+    {
+      "method": "GET",
+      "status": 200,
+      "resourceType": "fetch",
+      "latencyMs": null,
+      "cfRay": "a1df790c6e7ab25a-MIA",
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/api/intelligence/panel"
+    },
+    {
+=======
       "cfRay": "a2582a7f2ee8c14d-MIA",
       "retries": 0
     },
     {
       "host": "ipix-operator-preview.sk-498.workers.dev",
       "path": "/login",
+>>>>>>> origin/main
       "method": "GET",
       "status": 200,
       "resourceType": "document",
       "latencyMs": null,
+<<<<<<< HEAD
+      "cfRay": "a1df79346d15c288-MIA",
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/login"
+    },
+    {
+=======
       "cfRay": "a2582a801f1fc14d-MIA",
       "retries": 0
     },
     {
       "host": "ipix-operator-preview.sk-498.workers.dev",
       "path": "/_next/static/media/01e4147cff8141ee-s.p.3huc2loe0ie8a.woff2",
+>>>>>>> origin/main
       "method": "GET",
       "status": 200,
       "resourceType": "font",
       "latencyMs": null,
+<<<<<<< HEAD
+      "cfRay": "a1df76b51b6db25a-MIA",
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/_next/static/media/01e4147cff8141ee-s.p.3huc2loe0ie8a.woff2"
+    },
+    {
+=======
       "cfRay": "a25827d57877a4d4-MIA",
       "retries": 0
     },
     {
       "host": "ipix-operator-preview.sk-498.workers.dev",
       "path": "/_next/static/media/1b99372b3eaef0c8-s.p.1gsd1jahc5dg_.woff2",
+>>>>>>> origin/main
       "method": "GET",
       "status": 200,
       "resourceType": "font",
       "latencyMs": null,
+<<<<<<< HEAD
+      "cfRay": "a1df76b51b6eb25a-MIA",
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/_next/static/media/1b99372b3eaef0c8-s.p.1gsd1jahc5dg_.woff2"
+    },
+    {
+=======
       "cfRay": "a25827d5787fa4d4-MIA",
       "retries": 0
     },
     {
       "host": "ipix-operator-preview.sk-498.workers.dev",
       "path": "/_next/static/media/797e433ab948586e-s.p.0r6juujl39pe6.woff2",
+>>>>>>> origin/main
       "method": "GET",
       "status": 200,
       "resourceType": "font",
       "latencyMs": null,
+<<<<<<< HEAD
+      "cfRay": "a1df76b51b6fb25a-MIA",
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/_next/static/media/797e433ab948586e-s.p.0r6juujl39pe6.woff2"
+    },
+    {
+=======
       "cfRay": "a25827d57880a4d4-MIA",
       "retries": 0
     },
     {
       "host": "ipix-operator-preview.sk-498.workers.dev",
       "path": "/_next/static/media/caa3a2e1cccd8315-s.p.0wgildi0cnwt9.woff2",
+>>>>>>> origin/main
       "method": "GET",
       "status": 200,
       "resourceType": "font",
       "latencyMs": null,
+<<<<<<< HEAD
+      "cfRay": "a1df76b51b70b25a-MIA",
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/_next/static/media/caa3a2e1cccd8315-s.p.0wgildi0cnwt9.woff2"
+    },
+    {
+=======
       "cfRay": "a25827d57884a4d4-MIA",
       "retries": 0
     },
     {
       "host": "ipix-operator-preview.sk-498.workers.dev",
       "path": "/_next/static/chunks/27r4_-uasjdmo.css",
+>>>>>>> origin/main
       "method": "GET",
       "status": 200,
       "resourceType": "stylesheet",
       "latencyMs": null,
+<<<<<<< HEAD
+      "cfRay": "a1df76b51b6bb25a-MIA",
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/_next/static/chunks/004dyyd1j1zqp.css"
+    },
+    {
+=======
       "cfRay": "a25827d57870a4d4-MIA",
       "retries": 0
     },
     {
       "host": "ipix-operator-preview.sk-498.workers.dev",
       "path": "/_next/static/chunks/3cxyt25-owzvw.css",
+>>>>>>> origin/main
       "method": "GET",
       "status": 200,
       "resourceType": "stylesheet",
       "latencyMs": null,
+<<<<<<< HEAD
+      "cfRay": "a1df76b51b6cb25a-MIA",
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/_next/static/chunks/3cxyt25-owzvw.css"
+    },
+    {
+=======
       "cfRay": "a25827d57873a4d4-MIA",
       "retries": 0
     },
     {
       "host": "ipix-operator-preview.sk-498.workers.dev",
       "path": "/_next/static/chunks/3s5uiq-_vj6on.js",
+>>>>>>> origin/main
       "method": "GET",
       "status": 200,
       "resourceType": "script",
       "latencyMs": null,
+<<<<<<< HEAD
+      "cfRay": "a1df76b51b73b25a-MIA",
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/_next/static/chunks/3p3z9p0_oadw6.js"
+    },
+    {
+=======
       "cfRay": "a25827d58885a4d4-MIA",
       "retries": 0
     },
     {
       "host": "ipix-operator-preview.sk-498.workers.dev",
       "path": "/_next/static/chunks/3286t_g6ww818.js",
+>>>>>>> origin/main
       "method": "GET",
       "status": 200,
       "resourceType": "script",
       "latencyMs": null,
+<<<<<<< HEAD
+      "cfRay": "a1df76b51b74b25a-MIA",
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/_next/static/chunks/178-rgcgy50q5.js"
+    },
+    {
+=======
       "cfRay": "a25827d58887a4d4-MIA",
       "retries": 0
     },
     {
       "host": "ipix-operator-preview.sk-498.workers.dev",
       "path": "/_next/static/chunks/1tsb2lmii3g5i.js",
+>>>>>>> origin/main
       "method": "GET",
       "status": 200,
       "resourceType": "script",
       "latencyMs": null,
+<<<<<<< HEAD
+      "cfRay": "a1df76b51b75b25a-MIA",
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/_next/static/chunks/1tsb2lmii3g5i.js"
+    },
+    {
+=======
       "cfRay": "a25827d58889a4d4-MIA",
       "retries": 0
     },
     {
       "host": "ipix-operator-preview.sk-498.workers.dev",
       "path": "/_next/static/chunks/3s32ya5v8lkhs.js",
+>>>>>>> origin/main
       "method": "GET",
       "status": 200,
       "resourceType": "script",
       "latencyMs": null,
+<<<<<<< HEAD
+      "cfRay": "a1df76b51b77b25a-MIA",
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/_next/static/chunks/29zjozoolug-7.js"
+    },
+    {
+=======
       "cfRay": "a25827d5888ba4d4-MIA",
       "retries": 0
     },
     {
       "host": "ipix-operator-preview.sk-498.workers.dev",
       "path": "/_next/static/chunks/0ykiigrl9zyl_.js",
+>>>>>>> origin/main
       "method": "GET",
       "status": 200,
       "resourceType": "script",
       "latencyMs": null,
+<<<<<<< HEAD
+      "cfRay": "a1df76b51b78b25a-MIA",
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/_next/static/chunks/2rx9uw4fuec9m.js"
+    },
+    {
+=======
       "cfRay": "a25827d5888da4d4-MIA",
       "retries": 0
     },
     {
       "host": "ipix-operator-preview.sk-498.workers.dev",
       "path": "/_next/static/chunks/2-7fz-9b1mwbt.js",
+>>>>>>> origin/main
       "method": "GET",
       "status": 200,
       "resourceType": "script",
       "latencyMs": null,
+<<<<<<< HEAD
+      "cfRay": "a1df76b51b79b25a-MIA",
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/_next/static/chunks/2lj_w-73pkpyx.js"
+    },
+    {
+=======
       "cfRay": "a25827d5888ea4d4-MIA",
       "retries": 0
     },
     {
       "host": "ipix-operator-preview.sk-498.workers.dev",
       "path": "/_next/static/chunks/3haeq0zudt46q.js",
+>>>>>>> origin/main
       "method": "GET",
       "status": 200,
       "resourceType": "script",
       "latencyMs": null,
+<<<<<<< HEAD
+      "cfRay": "a1df76b51b7bb25a-MIA",
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/_next/static/chunks/2kvz3dzuua9g7.js"
+    },
+    {
+=======
       "cfRay": "a25827d5888fa4d4-MIA",
       "retries": 0
     },
     {
       "host": "ipix-operator-preview.sk-498.workers.dev",
       "path": "/_next/static/chunks/turbopack-33tacbsp03ijz.js",
+>>>>>>> origin/main
       "method": "GET",
       "status": 200,
       "resourceType": "script",
       "latencyMs": null,
+<<<<<<< HEAD
+      "cfRay": "a1df76b51b7cb25a-MIA",
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/_next/static/chunks/turbopack-2zar6gw9bch5s.js"
+    },
+    {
+=======
       "cfRay": "a25827d58891a4d4-MIA",
       "retries": 0
     },
     {
       "host": "ipix-operator-preview.sk-498.workers.dev",
       "path": "/_next/static/chunks/3t3pihpq3c5wi.js",
+>>>>>>> origin/main
       "method": "GET",
       "status": 200,
       "resourceType": "script",
       "latencyMs": null,
+<<<<<<< HEAD
+      "cfRay": "a1df76b51b7db25a-MIA",
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/_next/static/chunks/3t3pihpq3c5wi.js"
+    },
+    {
+=======
       "cfRay": "a25827d58892a4d4-MIA",
       "retries": 0
     },
     {
       "host": "ipix-operator-preview.sk-498.workers.dev",
       "path": "/_next/static/chunks/3jm796h_31c0l.js",
+>>>>>>> origin/main
       "method": "GET",
       "status": 200,
       "resourceType": "script",
       "latencyMs": null,
+<<<<<<< HEAD
+      "cfRay": "a1df76b51b7eb25a-MIA",
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/_next/static/chunks/3jm796h_31c0l.js"
+    },
+    {
+=======
       "cfRay": "a25827d58893a4d4-MIA",
       "retries": 0
     },
     {
       "host": "ipix-operator-preview.sk-498.workers.dev",
       "path": "/_next/static/chunks/2dz3faeo-551s.js",
+>>>>>>> origin/main
       "method": "GET",
       "status": 200,
       "resourceType": "script",
       "latencyMs": null,
+<<<<<<< HEAD
+      "cfRay": "a1df76b51b7fb25a-MIA",
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/_next/static/chunks/2lcsr6r7vughq.js"
+    },
+    {
+=======
       "cfRay": "a25827d58894a4d4-MIA",
       "retries": 0
     },
     {
       "host": "ipix-operator-preview.sk-498.workers.dev",
       "path": "/_next/static/chunks/3--mysv3hflw5.js",
+>>>>>>> origin/main
       "method": "GET",
       "status": 200,
       "resourceType": "script",
       "latencyMs": null,
+<<<<<<< HEAD
+      "cfRay": "a1df76b51b80b25a-MIA",
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/_next/static/chunks/3--mysv3hflw5.js"
+    },
+    {
+=======
       "cfRay": "a25827d58898a4d4-MIA",
       "retries": 0
     },
     {
       "host": "ipix-operator-preview.sk-498.workers.dev",
       "path": "/_next/static/chunks/0nu3c090mxuc5.js",
+>>>>>>> origin/main
       "method": "GET",
       "status": 200,
       "resourceType": "script",
       "latencyMs": null,
+<<<<<<< HEAD
+      "cfRay": "a1df76b51b81b25a-MIA",
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/_next/static/chunks/19fowf26op6n4.js"
+    },
+    {
+=======
       "cfRay": "a25827d5889ba4d4-MIA",
       "retries": 0
     },
     {
       "host": "ipix-operator-preview.sk-498.workers.dev",
       "path": "/_next/static/chunks/0gyq8kdkmugx1.js",
+>>>>>>> origin/main
       "method": "GET",
       "status": 200,
       "resourceType": "script",
       "latencyMs": null,
+<<<<<<< HEAD
+      "cfRay": "a1df76b51b82b25a-MIA",
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/_next/static/chunks/2xrq5_gqvb77l.js"
+    },
+    {
+=======
       "cfRay": "a25827d5889ca4d4-MIA",
       "retries": 0
     },
     {
       "host": "ipix-operator-preview.sk-498.workers.dev",
       "path": "/43d85b76-c728-4391-82c8-2971234a623a",
+>>>>>>> origin/main
       "method": "GET",
       "status": 200,
       "resourceType": "script",
       "latencyMs": null,
       "cfRay": null,
+<<<<<<< HEAD
+      "retries": 0,
+      "host": null,
+      "path": "https://ipix-operator-preview.sk-498.workers.dev/74284d54-7d58-4bb8-aa35-75d407a79ff3"
+    },
+    {
+=======
       "retries": 0
     },
     {
@@ -1914,271 +3133,553 @@
     {
       "host": "ipix-operator-preview.sk-498.workers.dev",
       "path": "/api/copilotkit/info",
+>>>>>>> origin/main
       "method": "GET",
       "status": 401,
       "resourceType": "fetch",
       "latencyMs": null,
+<<<<<<< HEAD
+      "cfRay": "a1df793c9dd4c288-MIA",
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/api/copilotkit/info"
+    },
+    {
+      "method": "GET",
+      "status": 307,
+      "resourceType": "document",
+      "latencyMs": null,
+      "cfRay": "a1df7945aedac288-MIA",
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/app"
+    },
+    {
+      "method": "POST",
+      "status": 200,
+      "resourceType": "fetch",
+      "latencyMs": null,
+      "cfRay": "a1df793cedd8c288-MIA",
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/monitoring"
+    },
+    {
+      "method": "POST",
+      "status": 200,
+      "resourceType": "fetch",
+      "latencyMs": null,
+      "cfRay": "a1df793cedd7c288-MIA",
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/monitoring"
+    },
+    {
+=======
       "cfRay": "a2582a83efb2c14d-MIA",
       "retries": 0
     },
     {
       "host": "ipix-operator-preview.sk-498.workers.dev",
       "path": "/services/jewellery",
+>>>>>>> origin/main
       "method": "GET",
       "status": 200,
       "resourceType": "fetch",
       "latencyMs": null,
+<<<<<<< HEAD
+      "cfRay": "a1df793d8de4c288-MIA",
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/"
+    },
+    {
+      "method": "GET",
+      "status": 200,
+      "resourceType": "stylesheet",
+      "latencyMs": null,
+      "cfRay": "a1df76c3f8a10c83-MIA",
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/_next/static/chunks/1n4q24k2zx0tm.css"
+    },
+    {
+=======
       "cfRay": "a2582a8f899fc14d-MIA",
       "retries": 0
     },
     {
       "host": "ipix-operator-preview.sk-498.workers.dev",
       "path": "/services/amazon",
+>>>>>>> origin/main
       "method": "GET",
       "status": 200,
       "resourceType": "fetch",
       "latencyMs": null,
+<<<<<<< HEAD
+      "cfRay": "a1df793d9de8c288-MIA",
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/services/shopify"
+    },
+    {
+=======
       "cfRay": "a2582a8fb9a4c14d-MIA",
       "retries": 0
     },
     {
       "host": "ipix-operator-preview.sk-498.workers.dev",
       "path": "/services/clothing",
+>>>>>>> origin/main
       "method": "GET",
       "status": 200,
       "resourceType": "fetch",
       "latencyMs": null,
+<<<<<<< HEAD
+      "cfRay": "a1df793d9de9c288-MIA",
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/services/video"
+    },
+    {
+=======
       "cfRay": "a2582a8fc9a6c14d-MIA",
       "retries": 0
     },
     {
       "host": "ipix-operator-preview.sk-498.workers.dev",
       "path": "/services/ecommerce-photography",
+>>>>>>> origin/main
       "method": "GET",
       "status": 200,
       "resourceType": "fetch",
       "latencyMs": null,
+<<<<<<< HEAD
+      "cfRay": "a1df793d9deec288-MIA",
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/services/instagram"
+    },
+    {
+=======
       "cfRay": "a2582a8fc9a7c14d-MIA",
       "retries": 0
     },
     {
       "host": "ipix-operator-preview.sk-498.workers.dev",
       "path": "/login",
+>>>>>>> origin/main
       "method": "GET",
       "status": 200,
       "resourceType": "document",
       "latencyMs": null,
+<<<<<<< HEAD
+      "cfRay": "a1df79477ef1c288-MIA",
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/login"
+    },
+    {
+=======
       "cfRay": "a2582a9149d5c14d-MIA",
       "retries": 0
     },
     {
       "host": "ipix-operator-preview.sk-498.workers.dev",
       "path": "/_next/static/media/01e4147cff8141ee-s.p.3huc2loe0ie8a.woff2",
+>>>>>>> origin/main
       "method": "GET",
       "status": 200,
       "resourceType": "font",
       "latencyMs": null,
+<<<<<<< HEAD
+      "cfRay": "a1df76b51b6db25a-MIA",
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/_next/static/media/01e4147cff8141ee-s.p.3huc2loe0ie8a.woff2"
+    },
+    {
+=======
       "cfRay": "a25827d57877a4d4-MIA",
       "retries": 0
     },
     {
       "host": "ipix-operator-preview.sk-498.workers.dev",
       "path": "/_next/static/media/1b99372b3eaef0c8-s.p.1gsd1jahc5dg_.woff2",
+>>>>>>> origin/main
       "method": "GET",
       "status": 200,
       "resourceType": "font",
       "latencyMs": null,
+<<<<<<< HEAD
+      "cfRay": "a1df76b51b6eb25a-MIA",
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/_next/static/media/1b99372b3eaef0c8-s.p.1gsd1jahc5dg_.woff2"
+    },
+    {
+=======
       "cfRay": "a25827d5787fa4d4-MIA",
       "retries": 0
     },
     {
       "host": "ipix-operator-preview.sk-498.workers.dev",
       "path": "/_next/static/media/797e433ab948586e-s.p.0r6juujl39pe6.woff2",
+>>>>>>> origin/main
       "method": "GET",
       "status": 200,
       "resourceType": "font",
       "latencyMs": null,
+<<<<<<< HEAD
+      "cfRay": "a1df76b51b6fb25a-MIA",
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/_next/static/media/797e433ab948586e-s.p.0r6juujl39pe6.woff2"
+    },
+    {
+=======
       "cfRay": "a25827d57880a4d4-MIA",
       "retries": 0
     },
     {
       "host": "ipix-operator-preview.sk-498.workers.dev",
       "path": "/_next/static/media/caa3a2e1cccd8315-s.p.0wgildi0cnwt9.woff2",
+>>>>>>> origin/main
       "method": "GET",
       "status": 200,
       "resourceType": "font",
       "latencyMs": null,
+<<<<<<< HEAD
+      "cfRay": "a1df76b51b70b25a-MIA",
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/_next/static/media/caa3a2e1cccd8315-s.p.0wgildi0cnwt9.woff2"
+    },
+    {
+=======
       "cfRay": "a25827d57884a4d4-MIA",
       "retries": 0
     },
     {
       "host": "ipix-operator-preview.sk-498.workers.dev",
       "path": "/_next/static/chunks/27r4_-uasjdmo.css",
+>>>>>>> origin/main
       "method": "GET",
       "status": 200,
       "resourceType": "stylesheet",
       "latencyMs": null,
+<<<<<<< HEAD
+      "cfRay": "a1df76b51b6bb25a-MIA",
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/_next/static/chunks/004dyyd1j1zqp.css"
+    },
+    {
+=======
       "cfRay": "a25827d57870a4d4-MIA",
       "retries": 0
     },
     {
       "host": "ipix-operator-preview.sk-498.workers.dev",
       "path": "/_next/static/chunks/3cxyt25-owzvw.css",
+>>>>>>> origin/main
       "method": "GET",
       "status": 200,
       "resourceType": "stylesheet",
       "latencyMs": null,
+<<<<<<< HEAD
+      "cfRay": "a1df76b51b6cb25a-MIA",
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/_next/static/chunks/3cxyt25-owzvw.css"
+    },
+    {
+=======
       "cfRay": "a25827d57873a4d4-MIA",
       "retries": 0
     },
     {
       "host": "ipix-operator-preview.sk-498.workers.dev",
       "path": "/_next/static/chunks/3s5uiq-_vj6on.js",
+>>>>>>> origin/main
       "method": "GET",
       "status": 200,
       "resourceType": "script",
       "latencyMs": null,
+<<<<<<< HEAD
+      "cfRay": "a1df76b51b73b25a-MIA",
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/_next/static/chunks/3p3z9p0_oadw6.js"
+    },
+    {
+=======
       "cfRay": "a25827d58885a4d4-MIA",
       "retries": 0
     },
     {
       "host": "ipix-operator-preview.sk-498.workers.dev",
       "path": "/_next/static/chunks/3286t_g6ww818.js",
+>>>>>>> origin/main
       "method": "GET",
       "status": 200,
       "resourceType": "script",
       "latencyMs": null,
+<<<<<<< HEAD
+      "cfRay": "a1df76b51b74b25a-MIA",
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/_next/static/chunks/178-rgcgy50q5.js"
+    },
+    {
+=======
       "cfRay": "a25827d58887a4d4-MIA",
       "retries": 0
     },
     {
       "host": "ipix-operator-preview.sk-498.workers.dev",
       "path": "/_next/static/chunks/1tsb2lmii3g5i.js",
+>>>>>>> origin/main
       "method": "GET",
       "status": 200,
       "resourceType": "script",
       "latencyMs": null,
+<<<<<<< HEAD
+      "cfRay": "a1df76b51b75b25a-MIA",
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/_next/static/chunks/1tsb2lmii3g5i.js"
+    },
+    {
+=======
       "cfRay": "a25827d58889a4d4-MIA",
       "retries": 0
     },
     {
       "host": "ipix-operator-preview.sk-498.workers.dev",
       "path": "/_next/static/chunks/3s32ya5v8lkhs.js",
+>>>>>>> origin/main
       "method": "GET",
       "status": 200,
       "resourceType": "script",
       "latencyMs": null,
+<<<<<<< HEAD
+      "cfRay": "a1df76b51b77b25a-MIA",
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/_next/static/chunks/29zjozoolug-7.js"
+    },
+    {
+=======
       "cfRay": "a25827d5888ba4d4-MIA",
       "retries": 0
     },
     {
       "host": "ipix-operator-preview.sk-498.workers.dev",
       "path": "/_next/static/chunks/0ykiigrl9zyl_.js",
+>>>>>>> origin/main
       "method": "GET",
       "status": 200,
       "resourceType": "script",
       "latencyMs": null,
+<<<<<<< HEAD
+      "cfRay": "a1df76b51b78b25a-MIA",
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/_next/static/chunks/2rx9uw4fuec9m.js"
+    },
+    {
+=======
       "cfRay": "a25827d5888da4d4-MIA",
       "retries": 0
     },
     {
       "host": "ipix-operator-preview.sk-498.workers.dev",
       "path": "/_next/static/chunks/2-7fz-9b1mwbt.js",
+>>>>>>> origin/main
       "method": "GET",
       "status": 200,
       "resourceType": "script",
       "latencyMs": null,
+<<<<<<< HEAD
+      "cfRay": "a1df76b51b79b25a-MIA",
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/_next/static/chunks/2lj_w-73pkpyx.js"
+    },
+    {
+=======
       "cfRay": "a25827d5888ea4d4-MIA",
       "retries": 0
     },
     {
       "host": "ipix-operator-preview.sk-498.workers.dev",
       "path": "/_next/static/chunks/3haeq0zudt46q.js",
+>>>>>>> origin/main
       "method": "GET",
       "status": 200,
       "resourceType": "script",
       "latencyMs": null,
+<<<<<<< HEAD
+      "cfRay": "a1df76b51b7bb25a-MIA",
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/_next/static/chunks/2kvz3dzuua9g7.js"
+    },
+    {
+=======
       "cfRay": "a25827d5888fa4d4-MIA",
       "retries": 0
     },
     {
       "host": "ipix-operator-preview.sk-498.workers.dev",
       "path": "/_next/static/chunks/turbopack-33tacbsp03ijz.js",
+>>>>>>> origin/main
       "method": "GET",
       "status": 200,
       "resourceType": "script",
       "latencyMs": null,
+<<<<<<< HEAD
+      "cfRay": "a1df76b51b7cb25a-MIA",
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/_next/static/chunks/turbopack-2zar6gw9bch5s.js"
+    },
+    {
+=======
       "cfRay": "a25827d58891a4d4-MIA",
       "retries": 0
     },
     {
       "host": "ipix-operator-preview.sk-498.workers.dev",
       "path": "/_next/static/chunks/3t3pihpq3c5wi.js",
+>>>>>>> origin/main
       "method": "GET",
       "status": 200,
       "resourceType": "script",
       "latencyMs": null,
+<<<<<<< HEAD
+      "cfRay": "a1df76b51b7db25a-MIA",
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/_next/static/chunks/3t3pihpq3c5wi.js"
+    },
+    {
+=======
       "cfRay": "a25827d58892a4d4-MIA",
       "retries": 0
     },
     {
       "host": "ipix-operator-preview.sk-498.workers.dev",
       "path": "/_next/static/chunks/3jm796h_31c0l.js",
+>>>>>>> origin/main
       "method": "GET",
       "status": 200,
       "resourceType": "script",
       "latencyMs": null,
+<<<<<<< HEAD
+      "cfRay": "a1df76b51b7eb25a-MIA",
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/_next/static/chunks/3jm796h_31c0l.js"
+    },
+    {
+=======
       "cfRay": "a25827d58893a4d4-MIA",
       "retries": 0
     },
     {
       "host": "ipix-operator-preview.sk-498.workers.dev",
       "path": "/_next/static/chunks/2dz3faeo-551s.js",
+>>>>>>> origin/main
       "method": "GET",
       "status": 200,
       "resourceType": "script",
       "latencyMs": null,
+<<<<<<< HEAD
+      "cfRay": "a1df76b51b7fb25a-MIA",
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/_next/static/chunks/2lcsr6r7vughq.js"
+    },
+    {
+=======
       "cfRay": "a25827d58894a4d4-MIA",
       "retries": 0
     },
     {
       "host": "ipix-operator-preview.sk-498.workers.dev",
       "path": "/_next/static/chunks/3--mysv3hflw5.js",
+>>>>>>> origin/main
       "method": "GET",
       "status": 200,
       "resourceType": "script",
       "latencyMs": null,
+<<<<<<< HEAD
+      "cfRay": "a1df76b51b80b25a-MIA",
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/_next/static/chunks/3--mysv3hflw5.js"
+    },
+    {
+=======
       "cfRay": "a25827d58898a4d4-MIA",
       "retries": 0
     },
     {
       "host": "ipix-operator-preview.sk-498.workers.dev",
       "path": "/_next/static/chunks/0nu3c090mxuc5.js",
+>>>>>>> origin/main
       "method": "GET",
       "status": 200,
       "resourceType": "script",
       "latencyMs": null,
+<<<<<<< HEAD
+      "cfRay": "a1df76b51b81b25a-MIA",
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/_next/static/chunks/19fowf26op6n4.js"
+    },
+    {
+=======
       "cfRay": "a25827d5889ba4d4-MIA",
       "retries": 0
     },
     {
       "host": "ipix-operator-preview.sk-498.workers.dev",
       "path": "/_next/static/chunks/0gyq8kdkmugx1.js",
+>>>>>>> origin/main
       "method": "GET",
       "status": 200,
       "resourceType": "script",
       "latencyMs": null,
+<<<<<<< HEAD
+      "cfRay": "a1df76b51b82b25a-MIA",
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/_next/static/chunks/2xrq5_gqvb77l.js"
+    },
+    {
+=======
       "cfRay": "a25827d5889ca4d4-MIA",
       "retries": 0
     },
     {
       "host": "ipix-operator-preview.sk-498.workers.dev",
       "path": "/0ca4503f-6710-4d85-9de1-3355d2ab6fff",
+>>>>>>> origin/main
       "method": "GET",
       "status": 200,
       "resourceType": "script",
       "latencyMs": null,
       "cfRay": null,
+<<<<<<< HEAD
+      "retries": 0,
+      "host": null,
+      "path": "https://ipix-operator-preview.sk-498.workers.dev/93f7e23b-3e2f-44fb-ab6f-b31d555a5dac"
+    },
+    {
+=======
       "retries": 0
     },
     {
@@ -2194,30 +3695,57 @@
     {
       "host": "ipix-operator-preview.sk-498.workers.dev",
       "path": "/monitoring",
+>>>>>>> origin/main
       "method": "POST",
       "status": 200,
       "resourceType": "fetch",
       "latencyMs": null,
+<<<<<<< HEAD
+      "cfRay": "a1df794d9f6ec288-MIA",
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/monitoring"
+    },
+    {
+=======
       "cfRay": "a2582a94aa93c14d-MIA",
       "retries": 0
     },
     {
       "host": "ipix-operator-preview.sk-498.workers.dev",
       "path": "/monitoring",
+>>>>>>> origin/main
       "method": "POST",
       "status": 200,
       "resourceType": "fetch",
       "latencyMs": null,
+<<<<<<< HEAD
+      "cfRay": "a1df794d9f6fc288-MIA",
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/monitoring"
+    },
+    {
+=======
       "cfRay": "a2582a94aa94c14d-MIA",
       "retries": 0
     },
     {
       "host": "ipix-operator-preview.sk-498.workers.dev",
       "path": "/",
+>>>>>>> origin/main
       "method": "GET",
       "status": 200,
       "resourceType": "fetch",
       "latencyMs": null,
+<<<<<<< HEAD
+      "cfRay": "a1df794e1f78c288-MIA",
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/"
+    },
+    {
+=======
       "cfRay": "a2582a94da9cc14d-MIA",
       "retries": 0
     },
@@ -2424,10 +3952,47 @@
     {
       "host": "ipix-operator-preview.sk-498.workers.dev",
       "path": "/_next/static/chunks/27r4_-uasjdmo.css",
+>>>>>>> origin/main
       "method": "GET",
       "status": 200,
       "resourceType": "stylesheet",
       "latencyMs": null,
+<<<<<<< HEAD
+      "cfRay": "a1df76c3f8a10c83-MIA",
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/_next/static/chunks/1n4q24k2zx0tm.css"
+    },
+    {
+      "method": "GET",
+      "status": 200,
+      "resourceType": "fetch",
+      "latencyMs": null,
+      "cfRay": "a1df794dff77c288-MIA",
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/login"
+    },
+    {
+      "method": "GET",
+      "status": 200,
+      "resourceType": "fetch",
+      "latencyMs": null,
+      "cfRay": "a1df794e1f79c288-MIA",
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/services/shopify"
+    },
+    {
+      "method": "GET",
+      "status": 200,
+      "resourceType": "fetch",
+      "latencyMs": null,
+      "cfRay": "a1df794e1f7ac288-MIA",
+      "retries": 0,
+      "host": "ipix-operator-preview.sk-498.workers.dev",
+      "path": "/services/video"
+=======
       "cfRay": "a25827d57870a4d4-MIA",
       "retries": 0
     },
@@ -2580,6 +4145,7 @@
       "latencyMs": null,
       "cfRay": "a25827d5889ca4d4-MIA",
       "retries": 0
+>>>>>>> origin/main
     }
   ],
   "critical_failures": []

@@ -1,14 +1,20 @@
 import { createSupabaseAdminClient } from "@/app/api/_lib/supabase-admin";
+<<<<<<< HEAD
+=======
 import {
   DRAFT_ACTION_DOMAIN,
   DRAFT_ACTION_MESSAGES,
 } from "@/lib/brand/draft-action-errors";
+>>>>>>> origin/main
 import { discardBrandDraft } from "@/lib/brand/discard-draft";
 import { promoteBrandDraft } from "@/lib/brand/promote-draft";
 
 export const PENDING_DRAFT_STATUS = "pending_approval";
 
 /** Brand already promoted/discarded — safe to continue without rolling back draft row. */
+<<<<<<< HEAD
+const IDEMPOTENT_DRAFT_STATE_ERROR = "Brand is not in draft_ready state";
+=======
 const IDEMPOTENT_DRAFT_STATE_ERROR = DRAFT_ACTION_DOMAIN.NOT_DRAFT_READY;
 
 /** Intentional product / already-sanitized helper messages — never raw PostgREST. */
@@ -20,11 +26,14 @@ const SAFE_DRAFT_ACTION_ERRORS = new Set<string>([
   DRAFT_ACTION_MESSAGES.FORBIDDEN,
   DRAFT_ACTION_MESSAGES.CONFLICT,
 ]);
+>>>>>>> origin/main
 
 export type ProcessDraftApprovalResult =
   | { ok: true; approved: boolean; brandId: string }
   | { ok: false; error: string };
 
+<<<<<<< HEAD
+=======
 /**
  * Never forward raw Supabase/PostgREST strings to API / Server Action / UI callers.
  * Known domain messages pass through; everything else becomes a generic product error.
@@ -46,6 +55,7 @@ export function sanitizeDraftActionError(
     : "Unable to reject Brand DNA right now";
 }
 
+>>>>>>> origin/main
 async function rollbackDraftRow(draftId: string) {
   const { error } = await createSupabaseAdminClient()
     .from("brand_intake_drafts")
@@ -62,6 +72,8 @@ async function rollbackDraftRow(draftId: string) {
   }
 }
 
+<<<<<<< HEAD
+=======
 /** Same outcome as a successful first approve/reject when the draft was already processed. */
 async function resolveIdempotentApproval(params: {
   sb: ReturnType<typeof createSupabaseAdminClient>;
@@ -147,6 +159,7 @@ async function resolveIdempotentApproval(params: {
   };
 }
 
+>>>>>>> origin/main
 /** Shared HITL approve/reject — used by API route, server actions, and Mastra tool. */
 export async function processBrandIntelligenceDraftApproval(params: {
   runId: string;
@@ -166,6 +179,10 @@ export async function processBrandIntelligenceDraftApproval(params: {
     draftQuery = draftQuery.eq("brand_id", expectedBrandId);
   }
   const { data: draft, error: lookupErr } = await draftQuery.single();
+<<<<<<< HEAD
+  if (lookupErr || !draft) {
+    return { ok: false, error: "No pending draft found for this workflow run" };
+=======
   if (lookupErr) {
     // PGRST116 = no pending row — only then try the already-processed path.
     if (lookupErr.code === "PGRST116") {
@@ -188,6 +205,7 @@ export async function processBrandIntelligenceDraftApproval(params: {
       operatorId,
       expectedBrandId,
     });
+>>>>>>> origin/main
   }
   if (draft.user_id !== operatorId) {
     return { ok: false, error: "Forbidden" };
@@ -209,6 +227,9 @@ export async function processBrandIntelligenceDraftApproval(params: {
     .select("id")
     .single();
   if (updateErr || !updatedDraft) {
+<<<<<<< HEAD
+    return { ok: false, error: "Draft already processed — possible duplicate approve request" };
+=======
     // Concurrent CAS miss (PGRST116 / no row) — check durable brand outcome.
     if (updateErr && updateErr.code !== "PGRST116") {
       console.error("[process-draft-approval] draft status update", updateErr);
@@ -221,25 +242,34 @@ export async function processBrandIntelligenceDraftApproval(params: {
       operatorId,
       expectedBrandId: expectedBrandId ?? draft.brand_id,
     });
+>>>>>>> origin/main
   }
 
   if (approved) {
     const promoteResult = await promoteBrandDraft(sb, draft.brand_id);
     if (!promoteResult.ok && promoteResult.error !== IDEMPOTENT_DRAFT_STATE_ERROR) {
       await rollbackDraftRow(draft.id);
+<<<<<<< HEAD
+      return { ok: false, error: promoteResult.error };
+=======
       return {
         ok: false,
         error: sanitizeDraftActionError("promote", draft.brand_id, promoteResult.error),
       };
+>>>>>>> origin/main
     }
   } else {
     const discardResult = await discardBrandDraft(sb, draft.brand_id);
     if (!discardResult.ok && discardResult.error !== IDEMPOTENT_DRAFT_STATE_ERROR) {
       await rollbackDraftRow(draft.id);
+<<<<<<< HEAD
+      return { ok: false, error: discardResult.error };
+=======
       return {
         ok: false,
         error: sanitizeDraftActionError("discard", draft.brand_id, discardResult.error),
       };
+>>>>>>> origin/main
     }
   }
 

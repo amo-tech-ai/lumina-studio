@@ -81,7 +81,10 @@ describe("clearOperatorClientStorage — IPI-725", () => {
 
   it("exports the IPI-634 thread prefix for shared use", () => {
     expect(OPERATOR_CLIENT_STORAGE_PREFIXES).toContain("ipix:copilot:");
+<<<<<<< HEAD
+=======
     expect(OPERATOR_CLIENT_STORAGE_PREFIXES).toContain("ipix:onboarding:");
+>>>>>>> origin/main
   });
 
   it("no-ops when storages are null", () => {

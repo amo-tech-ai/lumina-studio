@@ -1,5 +1,14 @@
 "use client";
 
+<<<<<<< HEAD
+import { useState } from "react";
+import { GanttChart, LayoutGrid, CalendarRange, List as ListIcon } from "lucide-react";
+
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import type { ViewType } from "@/lib/planner/types";
+
+import { AdaptivePanel } from "./adaptive-panel";
+=======
 import { useRef, useState, useTransition, type ReactNode } from "react";
 import { GanttChart, LayoutGrid, CalendarRange, List as ListIcon } from "lucide-react";
 
@@ -9,6 +18,7 @@ import type { PersistedViewType, PlannerTask, ViewType } from "@/lib/planner/typ
 
 import { AdaptivePanel } from "./adaptive-panel";
 import { NowNextBar } from "./now-next-bar";
+>>>>>>> origin/main
 import styles from "./planner-workspace-shell.module.css";
 
 // Order/labels/icons match SCR-32-Planner-Workspace.dc.html's VIEWS array
@@ -21,10 +31,13 @@ const VIEWS: { key: ViewType; label: string; Icon: typeof GanttChart }[] = [
   { key: "list", label: "List", Icon: ListIcon },
 ];
 
+<<<<<<< HEAD
+=======
 function isPersistedView(view: ViewType): view is PersistedViewType {
   return view !== "list";
 }
 
+>>>>>>> origin/main
 function WorkspacePlaceholder({ view, label }: { view: ViewType; label: string }) {
   return (
     <div className={styles.placeholder} data-testid={`planner-workspace-placeholder-${view}`}>
@@ -33,6 +46,10 @@ function WorkspacePlaceholder({ view, label }: { view: ViewType; label: string }
   );
 }
 
+<<<<<<< HEAD
+export function PlannerWorkspaceShell({ instanceId }: { instanceId: string }) {
+  const [view, setView] = useState<ViewType>("timeline");
+=======
 export type PlannerWorkspaceShellProps = {
   instanceId: string;
   timeline?: ReactNode;
@@ -138,6 +155,7 @@ export function PlannerWorkspaceShell({
     if (key === "list") return list ?? <WorkspacePlaceholder view={key} label={label} />;
     return <WorkspacePlaceholder view={key} label={label} />;
   };
+>>>>>>> origin/main
 
   return (
     <div style={{ padding: "2rem" }}>
@@ -148,7 +166,11 @@ export function PlannerWorkspaceShell({
 
       <h1>Planner Workspace</h1>
 
+<<<<<<< HEAD
+      <Tabs value={view} onValueChange={(next) => setView(next as ViewType)}>
+=======
       <Tabs value={view} onValueChange={handleViewChange}>
+>>>>>>> origin/main
         <div className={styles.toolbar}>
           <TabsList className={styles.tabsList} aria-label="Planner view">
             {VIEWS.map(({ key, label, Icon }) => (
@@ -160,6 +182,11 @@ export function PlannerWorkspaceShell({
           </TabsList>
         </div>
 
+<<<<<<< HEAD
+        {VIEWS.map(({ key, label }) => (
+          <TabsContent key={key} value={key} style={{ marginTop: "1rem", width: "100%" }}>
+            <WorkspacePlaceholder view={key} label={label} />
+=======
         {persistWarning ? (
           <p
             role="status"
@@ -182,6 +209,7 @@ export function PlannerWorkspaceShell({
         {VIEWS.map(({ key, label }) => (
           <TabsContent key={key} value={key} style={{ marginTop: "1rem", width: "100%" }}>
             {contentFor(key, label)}
+>>>>>>> origin/main
           </TabsContent>
         ))}
       </Tabs>

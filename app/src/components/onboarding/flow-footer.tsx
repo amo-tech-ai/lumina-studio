@@ -14,7 +14,10 @@ export function FlowFooter({
   screen,
   continueDisabled,
   continueLabel = "Continue",
+<<<<<<< HEAD
+=======
   navigationDisabled = false,
+>>>>>>> origin/main
   onBack,
   onSkip,
   onContinue,
@@ -22,8 +25,11 @@ export function FlowFooter({
   screen: number;
   continueDisabled: boolean;
   continueLabel?: string;
+<<<<<<< HEAD
+=======
   /** Disables Back/Skip while a commit (e.g. materialize) is in flight. */
   navigationDisabled?: boolean;
+>>>>>>> origin/main
   onBack: () => void;
   onSkip: () => void;
   onContinue: () => void;
@@ -34,9 +40,14 @@ export function FlowFooter({
         <button
           type="button"
           onClick={onBack}
+<<<<<<< HEAD
+          aria-label="Go back to the previous step"
+          className="rounded-[var(--radius-pill)] border border-[var(--onboarding-hair)]/30 px-4 py-3 text-sm font-semibold text-[var(--onboarding-card)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--onboarding-accent)]"
+=======
           disabled={navigationDisabled}
           aria-label="Go back to the previous step"
           className="rounded-[var(--radius-pill)] border border-[var(--onboarding-hair)]/30 px-4 py-3 text-sm font-semibold text-[var(--onboarding-card)] disabled:cursor-not-allowed disabled:opacity-40 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--onboarding-accent)]"
+>>>>>>> origin/main
         >
           Back
         </button>
@@ -55,9 +66,14 @@ export function FlowFooter({
         <button
           type="button"
           onClick={onSkip}
+<<<<<<< HEAD
+          aria-label="Skip this question"
+          className="rounded-[var(--radius-pill)] px-4 py-3 text-sm font-semibold text-[var(--onboarding-card)]/70 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--onboarding-accent)]"
+=======
           disabled={navigationDisabled}
           aria-label="Skip this question"
           className="rounded-[var(--radius-pill)] px-4 py-3 text-sm font-semibold text-[var(--onboarding-card)]/70 disabled:cursor-not-allowed disabled:opacity-40 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--onboarding-accent)]"
+>>>>>>> origin/main
         >
           Skip
         </button>

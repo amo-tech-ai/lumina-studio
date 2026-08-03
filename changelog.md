@@ -17,6 +17,8 @@ For the plain-language weekly digest, see [`SHIPPED.md`](./SHIPPED.md).
 
 ## [Unreleased]
 
+<<<<<<< HEAD
+=======
 ### 2026-08-03 — Onboarding's analysis-to-ready arc lands; Planner gains five views and its first safe edit; the CopilotKit runtime gets a CI verifier
 
 **21 commits across `4c02d744..b2e0eb7b`.** Written 2026-08-03 to clear `changelog-staleness`,
@@ -143,6 +145,7 @@ Switching Calendar / Board / Timeline on a shoot used to reset on every reload b
 
 Touched: `planner-workspace-shell.tsx`, `planner/[instanceId]/page.tsx`, plus focused Vitest coverage.
 
+>>>>>>> origin/main
 ### 2026-08-02 — changelog: catch up 1 commit
 
 **Docs-only.** Clearing the changelog-staleness gate to unblock PRs #720 and #721. Recent commit:

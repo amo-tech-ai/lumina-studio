@@ -4,6 +4,11 @@
 // PlannerSelection (from selection.ts) into the entity it points at. Thin
 // wrapper, same authenticatedClient() shape as settings/actions.ts and this
 // directory's own actions.ts: authenticate first, then delegate to the
+<<<<<<< HEAD
+// existing typed reads (getInstanceDetail/listMembers) — never a duplicate
+// access check, since both already fail closed for cross-org/inaccessible/
+// deleted ids.
+=======
 // existing typed reads (getInstanceDetail/listMembers/listWorkflowPhases) —
 // never a duplicate access check, since both already fail closed for
 // cross-org/inaccessible/deleted ids.
@@ -19,11 +24,22 @@
 // for the AdaptivePanel edit form. Permissions come from the existing
 // getEffectivePermissions wrapper; assignee names from
 // planner_get_member_names (viewer+ assigned). No second permission model.
+>>>>>>> origin/main
 //
 // Never throws: the caller's job on any failure here is "fall back to
 // Intelligence mode," not surface a broken Detail panel, so every branch —
 // including an unexpected error — resolves to `{ ok: false }`.
 
+<<<<<<< HEAD
+import { getInstanceDetail, listMembers } from "@/lib/planner/queries";
+import type { PlannerSelectionType } from "@/lib/planner/selection";
+import type { PlannerMember, PlannerTask } from "@/lib/planner/types";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
+
+export type ResolvedPlannerSelection =
+  | { kind: "task"; task: PlannerTask }
+  | { kind: "member"; member: PlannerMember };
+=======
 import { getEffectivePermissions } from "@/lib/planner/permissions";
 import { getInstanceDetail, listMembers, listWorkflowPhases } from "@/lib/planner/queries";
 import { resolvePhaseSelection } from "@/lib/planner/planner-phase-selection";
@@ -47,19 +63,28 @@ export type ResolvedPlannerSelection =
     }
   | { kind: "member"; member: PlannerMember }
   | { kind: "phase"; phase: PlannerPhase; tasks: PlannerTask[] };
+>>>>>>> origin/main
 
 type ActionResult =
   | { ok: true; data: ResolvedPlannerSelection }
   | { ok: false };
 
+<<<<<<< HEAD
+async function isAuthenticated(): Promise<boolean> {
+=======
 async function authenticatedClient() {
+>>>>>>> origin/main
   const supabase = await createSupabaseServerClient();
   const {
     data: { user },
     error,
   } = await supabase.auth.getUser();
+<<<<<<< HEAD
+  return !error && Boolean(user);
+=======
   if (error || !user) return null;
   return supabase;
+>>>>>>> origin/main
 }
 
 export async function resolvePlannerSelectionAction(
@@ -67,14 +92,21 @@ export async function resolvePlannerSelectionAction(
   selection: { type: PlannerSelectionType; id: string },
 ): Promise<ActionResult> {
   try {
+<<<<<<< HEAD
+    if (!(await isAuthenticated())) return { ok: false };
+=======
     const supabase = await authenticatedClient();
     if (!supabase) return { ok: false };
+>>>>>>> origin/main
 
     if (selection.type === "task") {
       const result = await getInstanceDetail(instanceId);
       if (!result.ok) return { ok: false };
       const task = result.data.tasks.find((t) => t.id === selection.id);
       if (!task) return { ok: false };
+<<<<<<< HEAD
+      return { ok: true, data: { kind: "task", task } };
+=======
 
       // Fail closed to read-only if the permission RPC throws — never unlock
       // the edit form on an uncertain answer.
@@ -110,6 +142,7 @@ export async function resolvePlannerSelectionAction(
         ok: true,
         data: { kind: "task", task, canUpdateTasks, assignees, assigneesUnavailable },
       };
+>>>>>>> origin/main
     }
 
     if (selection.type === "member") {
@@ -123,6 +156,14 @@ export async function resolvePlannerSelectionAction(
       return { ok: true, data: { kind: "member", member } };
     }
 
+<<<<<<< HEAD
+    // "phase" — always fails closed. There is no per-instance
+    // phase-progress/gate-status data contract yet (out of scope for
+    // IPI-551; owned by a future ticket), so a phase selection can never
+    // resolve. `phase` stays a legal PlannerSelectionType for parsing/
+    // serialization only — resolving one always falls back to Intelligence,
+    // same code path as any other invalid selection.
+=======
     if (selection.type === "phase") {
       const instanceResult = await getInstanceDetail(instanceId);
       if (!instanceResult.ok) return { ok: false };
@@ -139,6 +180,7 @@ export async function resolvePlannerSelectionAction(
 
     // Any other type — always fails closed, same code path as any other
     // invalid selection: falls back to Intelligence mode.
+>>>>>>> origin/main
     return { ok: false };
   } catch {
     return { ok: false };

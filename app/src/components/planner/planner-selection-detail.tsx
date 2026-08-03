@@ -1,6 +1,15 @@
 "use client";
 
 // IPI-551 · PLN-S4b — presentational Detail views AdaptivePanel publishes
+<<<<<<< HEAD
+// into the shared IntelligencePanel via useSetIntelligenceDetail. Plain
+// legibility only, no pixel-parity work: the real design pass lands with
+// the ticket that wires an actual trigger (IPI-579/580/581/582).
+
+import type { CSSProperties } from "react";
+
+import type { PlannerMember, PlannerRole, PlannerTask } from "@/lib/planner/types";
+=======
 // into the shared IntelligencePanel via useSetIntelligenceDetail.
 //
 // IPI-582 · PLN-S1E Stage 1 — PlannerTaskDetail gains an editable form for
@@ -36,6 +45,7 @@ import type {
   PlannerTask,
   PlannerTaskStatus,
 } from "@/lib/planner/types";
+>>>>>>> origin/main
 
 // Duplicated from member-table.tsx's ACCESS_LABEL (not exported there, and
 // this component shouldn't widen that file's public surface just to reuse
@@ -47,6 +57,10 @@ const ACCESS_LABEL: Record<PlannerRole, string> = {
   viewer: "View only",
 };
 
+<<<<<<< HEAD
+const rowStyle: CSSProperties = { margin: "0.25rem 0" };
+const labelStyle: CSSProperties = { fontWeight: 600 };
+=======
 const TASK_STATUSES: PlannerTaskStatus[] = [
   "todo",
   "in_progress",
@@ -86,6 +100,7 @@ function formatTaskDateSpan(task: Pick<PlannerTask, "startDate" | "endDate">): s
   if (task.endDate) return ` (${task.endDate})`;
   return " (no dates)";
 }
+>>>>>>> origin/main
 
 function DetailHeader({ title, onClose }: { title: string; onClose: () => void }) {
   return (
@@ -122,6 +137,16 @@ function DetailHeader({ title, onClose }: { title: string; onClose: () => void }
   );
 }
 
+<<<<<<< HEAD
+export function PlannerTaskDetail({ task, onClose }: { task: PlannerTask; onClose: () => void }) {
+  return (
+    <div data-testid="planner-detail-task">
+      <DetailHeader title="Task" onClose={onClose} />
+      <h3 style={{ margin: "0 0 0.5rem" }}>{task.title}</h3>
+      <div style={rowStyle}>
+        <span style={labelStyle}>Status: </span>
+        {task.status}
+=======
 function formatTaskAssigneeLabel(
   task: Pick<PlannerTask, "assigneeUserId" | "assigneeRole">,
   assignees: PlannerAssigneeOption[],
@@ -150,15 +175,19 @@ function TaskReadOnlyBody({
       <div style={rowStyle}>
         <span style={labelStyle}>Status: </span>
         {STATUS_LABEL[task.status] ?? task.status}
+>>>>>>> origin/main
       </div>
       <div style={rowStyle}>
         <span style={labelStyle}>Priority: </span>
         {task.priority}
       </div>
+<<<<<<< HEAD
+=======
       <div style={rowStyle}>
         <span style={labelStyle}>Assignee: </span>
         {formatTaskAssigneeLabel(task, assignees)}
       </div>
+>>>>>>> origin/main
       {task.startDate ? (
         <div style={rowStyle}>
           <span style={labelStyle}>Start: </span>
@@ -171,6 +200,8 @@ function TaskReadOnlyBody({
           {task.endDate}
         </div>
       ) : null}
+<<<<<<< HEAD
+=======
     </>
   );
 }
@@ -517,6 +548,7 @@ export function PlannerTaskDetail({
           {isPending ? "Saving task…" : null}
         </p>
       </form>
+>>>>>>> origin/main
     </div>
   );
 }
@@ -537,6 +569,8 @@ export function PlannerMemberDetail({ member, onClose }: { member: PlannerMember
     </div>
   );
 }
+<<<<<<< HEAD
+=======
 
 const GATE_LABEL: Record<GateVisualState, string> = {
   approved: "Approved",
@@ -626,3 +660,4 @@ export function PlannerPhaseDetail({
     </div>
   );
 }
+>>>>>>> origin/main

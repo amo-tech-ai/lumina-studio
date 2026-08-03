@@ -3,6 +3,15 @@
 // resolves all relative OG image paths against it, so pages carry no domain literals.
 const DEFAULT_SITE_URL = "https://www.ipix.co";
 
+<<<<<<< HEAD
+// Normalize defensively: a malformed NEXT_PUBLIC_SITE_URL would otherwise throw at
+// module-eval time inside every `new URL(SITE_URL)` (metadataBase) and break the app.
+function normalizeSiteUrl(raw: string | undefined): string {
+  if (!raw) return DEFAULT_SITE_URL;
+  const candidate = /^https?:\/\//.test(raw) ? raw : `https://${raw}`;
+  try {
+    return new URL(candidate).origin;
+=======
 // Deployment-preview hosts must never become canonical (IPI-902 · CF-MKT-002):
 // an accidental NEXT_PUBLIC_SITE_URL pointing at a preview Worker or Vercel
 // deployment would leak into canonical/OG URLs and split search signals.
@@ -24,12 +33,15 @@ export function normalizeSiteUrl(raw: string | undefined): string {
       return DEFAULT_SITE_URL;
     }
     return parsed;
+>>>>>>> origin/main
   } catch {
     return DEFAULT_SITE_URL;
   }
 }
 
 export const SITE_URL = normalizeSiteUrl(process.env.NEXT_PUBLIC_SITE_URL);
+<<<<<<< HEAD
+=======
 
 // Immutable production origin for all SEO outputs (IPI-902 · CF-MKT-002):
 // canonical tags, sitemap entries, and the robots sitemap reference must always
@@ -44,3 +56,4 @@ export const PRODUCTION_SITE_URL = DEFAULT_SITE_URL;
 export function canonicalUrl(path = "/"): string {
   return new URL(path, PRODUCTION_SITE_URL).toString();
 }
+>>>>>>> origin/main

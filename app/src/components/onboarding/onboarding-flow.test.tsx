@@ -15,6 +15,8 @@ vi.mock("next/navigation", () => ({
   useRouter: () => ({ push, refresh: vi.fn() }),
 }));
 
+<<<<<<< HEAD
+=======
 // Slice C: Realtime screen is unit-tested separately. Flow tests only need
 // replace-vs-push + a11y shell behaviour — mock auto-completes when brandId is set.
 vi.mock("./analysis-progress-screen", async () => {
@@ -67,6 +69,7 @@ vi.mock("./brand-dna-payoff-screen", async () => {
   };
 });
 
+>>>>>>> origin/main
 import { OnboardingFlow } from "./onboarding-flow";
 import { LAST_SCREEN, MARKETING_SCREENS, ctaLabel } from "@/lib/onboarding/navigation";
 import type { OnboardingHistoryState } from "@/lib/onboarding/use-screen-history";
@@ -117,6 +120,9 @@ beforeEach(() => {
 describe("every screen renders", () => {
   it("renders all 13 screens without throwing", () => {
     for (let s = 1; s <= LAST_SCREEN; s += 1) {
+<<<<<<< HEAD
+      const { unmount } = renderAt(<OnboardingFlow initialScreen={s} />);
+=======
       const { unmount } = renderAt(
         <OnboardingFlow
           initialScreen={s}
@@ -124,6 +130,7 @@ describe("every screen renders", () => {
           initialBrandId={s >= 12 ? "brand-test" : null}
         />,
       );
+>>>>>>> origin/main
       expect(screen.getByTestId(`onboarding-screen-${s}`), `screen ${s}`).toBeTruthy();
       expect(screen.getByTestId("onboarding-card")).toBeTruthy();
       unmount();
@@ -272,8 +279,12 @@ describe("browser history", () => {
 
   it("clamps a hostile hash instead of rendering an invalid screen", () => {
     window.history.replaceState(null, "", "/onboarding#999");
+<<<<<<< HEAD
+    render(<OnboardingFlow />);
+=======
     // Brand required so clamp-to-13 is not bounced by the deep-link materialize gate.
     render(<OnboardingFlow initialBrandId="brand-test" />);
+>>>>>>> origin/main
     expect(screen.getByTestId("onboarding-screen-13")).toBeTruthy();
   });
 });
@@ -347,17 +358,27 @@ describe("accessibility", () => {
   });
 
   it("announces setup status politely on the analysis screen", () => {
+<<<<<<< HEAD
+    render(<OnboardingFlow initialScreen={12} />);
+=======
     render(<OnboardingFlow initialScreen={12} initialBrandId="brand-test" />);
+>>>>>>> origin/main
     const status = screen.getByTestId("analysis-status");
     expect(status.getAttribute("aria-live")).toBe("polite");
   });
 
   it("hides Back while setup is running", () => {
+<<<<<<< HEAD
+    render(<OnboardingFlow initialScreen={12} />);
+=======
     render(<OnboardingFlow initialScreen={12} initialBrandId="brand-test" />);
+>>>>>>> origin/main
     expect(screen.queryByRole("button", { name: /go back/i })).toBeNull();
   });
 });
 
+<<<<<<< HEAD
+=======
 describe("IPI-903 materialization safety", () => {
   it("bounces deep-linked analysis without a brand to the pre-analysis screen", () => {
     renderAt(<OnboardingFlow initialScreen={12} />);
@@ -484,16 +505,28 @@ describe("IPI-903 materialization safety", () => {
   });
 });
 
+>>>>>>> origin/main
 describe("automatic completion does not trap the user", () => {
   it("replaces rather than pushes when the analysis screen completes", () => {
     vi.useFakeTimers();
     try {
+<<<<<<< HEAD
+      renderAt(<OnboardingFlow initialScreen={12} />);
+=======
       renderAt(<OnboardingFlow initialScreen={12} initialBrandId="brand-test" />);
+>>>>>>> origin/main
       const pushSpy = vi.spyOn(window.history, "pushState");
       const replaceSpy = vi.spyOn(window.history, "replaceState");
 
       act(() => {
+<<<<<<< HEAD
+        vi.advanceTimersByTime(40 * 110);
+      });
+      act(() => {
+        vi.advanceTimersByTime(700);
+=======
         vi.advanceTimersByTime(20);
+>>>>>>> origin/main
       });
 
       expect(screen.getByTestId("onboarding-screen-13")).toBeTruthy();
@@ -506,6 +539,14 @@ describe("automatic completion does not trap the user", () => {
     }
   });
 
+<<<<<<< HEAD
+  it("leaves the loader out of history so Back skips past it", () => {
+    vi.useFakeTimers();
+    try {
+      renderAt(<OnboardingFlow initialScreen={11} />);
+      act(() => {
+        fireEvent.click(screen.getByRole("button", { name: "Continue" }));
+=======
   it("leaves the loader out of history so Back skips past it", async () => {
     vi.useFakeTimers();
     try {
@@ -525,11 +566,19 @@ describe("automatic completion does not trap the user", () => {
       await act(async () => {
         fireEvent.click(screen.getByRole("button", { name: "Continue" }));
         await Promise.resolve();
+>>>>>>> origin/main
       });
       expect(screen.getByTestId("onboarding-screen-12")).toBeTruthy();
 
       act(() => {
+<<<<<<< HEAD
+        vi.advanceTimersByTime(40 * 110);
+      });
+      act(() => {
+        vi.advanceTimersByTime(700);
+=======
         vi.advanceTimersByTime(20);
+>>>>>>> origin/main
       });
       expect(screen.getByTestId("onboarding-screen-13")).toBeTruthy();
 

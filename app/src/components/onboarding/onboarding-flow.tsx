@@ -12,7 +12,10 @@ import { BuildTypeQuestion } from "@/components/onboarding/questions/build-type-
 import { GrowthPreferenceQuestion } from "@/components/onboarding/questions/growth-preference-question";
 import { SalesChannelsQuestion } from "@/components/onboarding/questions/sales-channels-question";
 import { StepIndicator } from "@/components/onboarding/step-indicator";
+<<<<<<< HEAD
+=======
 import { toUserFacingOnboardingError } from "@/lib/onboarding/onboarding-errors";
+>>>>>>> origin/main
 import {
   ANALYSIS_SCREEN,
   EMPTY_ANSWERS,
@@ -22,7 +25,10 @@ import {
   ctaDisabled,
   ctaLabel,
   nextScreen,
+<<<<<<< HEAD
+=======
   previousScreen,
+>>>>>>> origin/main
 } from "@/lib/onboarding/navigation";
 import { useScreenHistory } from "@/lib/onboarding/use-screen-history";
 
@@ -30,6 +36,24 @@ import { useScreenHistory } from "@/lib/onboarding/use-screen-history";
  * IPI-833 · ONB2-UI-001 — Standalone Onboarding Route, Screens, and Deterministic State Machine
  * the 13-screen onboarding flow.
  *
+<<<<<<< HEAD
+ * Local state only: no network, no Supabase, no AI, no persistence.
+ * IPI-835 · ONB2-INT-001 — Real Session, Crawl, Realtime Progress, and Approval
+ * Integration With Recovery replaces the answer store with a real onboarding
+ * session and the screen-12 placeholder with live crawl progress.
+ *
+ * `initialScreen` exists so tests can mount any screen directly without walking
+ * twelve clicks to reach it.
+ */
+export function OnboardingFlow({
+  initialScreen = FIRST_SCREEN,
+}: {
+  initialScreen?: number;
+}) {
+  const router = useRouter();
+  const { screen, goToScreen, replaceScreen, goBack } = useScreenHistory(initialScreen);
+  const [answers, setAnswers] = useState<OnboardingAnswers>(EMPTY_ANSWERS);
+=======
  * Persistence (IPI-835 · B1 / IPI-903) is optional via callbacks so unit tests stay offline.
  * Production mounts this through `OnboardingSessionGate`.
  *
@@ -65,15 +89,19 @@ export function OnboardingFlow({
   draftRef.current = onDraftChange;
   const screenRef = useRef(screen);
   screenRef.current = screen;
+>>>>>>> origin/main
 
   const screenRegionRef = useRef<HTMLDivElement>(null);
   const previousScreenRef = useRef(screen);
 
+<<<<<<< HEAD
+=======
   // Avoid stale readiness when brandId changes (resume / rematerialize).
   useEffect(() => {
     setDnaReady(false);
   }, [brandId]);
 
+>>>>>>> origin/main
   // Move focus only when the screen value actually changes. Tracking the prior
   // value avoids focusing on initial mount and during StrictMode's repeated
   // effect invocation while preserving the screen-reader transition cue.
@@ -87,6 +115,8 @@ export function OnboardingFlow({
     heading.focus();
   }, [screen]);
 
+<<<<<<< HEAD
+=======
   // Autosave whenever screen or answers change (gate no-ops when unset).
   useEffect(() => {
     draftRef.current?.(screen, answers);
@@ -100,6 +130,7 @@ export function OnboardingFlow({
     replaceScreen(previousScreen(ANALYSIS_SCREEN));
   }, [brandId, screen, replaceScreen]);
 
+>>>>>>> origin/main
   const update = useCallback(
     <K extends keyof OnboardingAnswers>(key: K, value: OnboardingAnswers[K]) => {
       setAnswers((current) => ({ ...current, [key]: value }));
@@ -119,11 +150,21 @@ export function OnboardingFlow({
     });
   }, []);
 
+<<<<<<< HEAD
+  const goNext = useCallback(() => {
+=======
   const goNext = useCallback(async () => {
+>>>>>>> origin/main
     if (screen === LAST_SCREEN) {
       router.push("/app");
       return;
     }
+<<<<<<< HEAD
+    goToScreen(nextScreen(screen));
+  }, [goToScreen, router, screen]);
+
+  const skipCurrentScreen = useCallback(() => {
+=======
     const target = nextScreen(screen);
     if (target === ANALYSIS_SCREEN && onCommitAnalysis) {
       const startedFrom = screen;
@@ -153,6 +194,7 @@ export function OnboardingFlow({
 
   const skipCurrentScreen = useCallback(() => {
     if (committing) return;
+>>>>>>> origin/main
     setAnswers((current) => {
       switch (screen) {
         case 4:
@@ -165,8 +207,13 @@ export function OnboardingFlow({
           return current;
       }
     });
+<<<<<<< HEAD
+    goNext();
+  }, [goNext, screen]);
+=======
     void goNext();
   }, [committing, goNext, screen]);
+>>>>>>> origin/main
 
   const renderScreen = () => {
     switch (screen) {
@@ -191,6 +238,12 @@ export function OnboardingFlow({
         );
       case ANALYSIS_SCREEN:
         // replace, not push: the loader must not stay in history, or Back from
+<<<<<<< HEAD
+        // the payoff screen restarts the timer and bounces the user forward again.
+        return <AnalysisProgressScreen onComplete={() => replaceScreen(LAST_SCREEN)} />;
+      case LAST_SCREEN:
+        return <BrandDnaPayoffScreen />;
+=======
         // the payoff screen restarts analysis and bounces the user forward again.
         return (
           <AnalysisProgressScreen
@@ -204,6 +257,7 @@ export function OnboardingFlow({
         return (
           <BrandDnaPayoffScreen brandId={brandId} onReadyChange={setDnaReady} />
         );
+>>>>>>> origin/main
       default:
         return <MarketingScreen screen={screen} />;
     }
@@ -222,12 +276,15 @@ export function OnboardingFlow({
         {renderScreen()}
       </div>
 
+<<<<<<< HEAD
+=======
       {commitError ? (
         <p className="font-sans text-sm text-destructive" role="alert">
           {commitError}
         </p>
       ) : null}
 
+>>>>>>> origin/main
       {screen === ANALYSIS_SCREEN ? (
         // No footer while setup runs — there is nothing useful to press, and a
         // Back button here would strand the flow mid-run.
@@ -235,6 +292,13 @@ export function OnboardingFlow({
       ) : (
         <FlowFooter
           screen={screen}
+<<<<<<< HEAD
+          continueDisabled={ctaDisabled(screen, answers)}
+          continueLabel={ctaLabel(screen)}
+          onBack={goBack}
+          onSkip={skipCurrentScreen}
+          onContinue={goNext}
+=======
           continueDisabled={
             committing ||
             ctaDisabled(screen, answers) ||
@@ -252,6 +316,7 @@ export function OnboardingFlow({
           onContinue={() => {
             void goNext();
           }}
+>>>>>>> origin/main
         />
       )}
     </div>

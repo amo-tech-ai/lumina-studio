@@ -4,7 +4,10 @@ import { useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import { formatCrawlProgressShort } from "@/lib/brand-hub/format-crawl-progress";
 import { useBrandAnalysisProgress } from "@/lib/brand-hub/use-brand-analysis-progress";
+<<<<<<< HEAD
+=======
 import { RestartAnalysisButton } from "@/components/brand-hub/restart-analysis-button";
+>>>>>>> origin/main
 
 type CrawlInfo = { pages_crawled: number | null; pages_found: number | null } | null;
 
@@ -15,8 +18,11 @@ export type AnalysisProgressBannerProps = {
   errorMessage?: string;
   /** Forwarded to the shared hook; `0` disables still-working (tests). */
   quietGapMs?: number;
+<<<<<<< HEAD
+=======
   /** IPI-918 — owner/editor only; viewers never see the recovery control. */
   canRestart?: boolean;
+>>>>>>> origin/main
 };
 
 const PROGRESS_MESSAGES: Record<string, string> = {
@@ -33,7 +39,10 @@ export const AnalysisProgressBanner = ({
   initialCrawlPages,
   errorMessage,
   quietGapMs,
+<<<<<<< HEAD
+=======
   canRestart = false,
+>>>>>>> origin/main
 }: AnalysisProgressBannerProps) => {
   const router = useRouter();
   const { intakeStatus, crawl, phase, reconnect } = useBrandAnalysisProgress({
@@ -56,12 +65,17 @@ export const AnalysisProgressBanner = ({
       >
         <p className="font-sans text-sm font-medium text-[#DC2626]">Analysis failed</p>
         <p className="mt-1 font-sans text-xs text-[#991B1B]">
+<<<<<<< HEAD
+          {errorMessage ?? "Use Re-analyze to retry. If this persists, contact support."}
+        </p>
+=======
           {errorMessage ??
             (canRestart
               ? "Restart analysis to pick up where it stopped — you don't need to redo onboarding."
               : "Use Re-analyze to retry. If this persists, contact support.")}
         </p>
         {canRestart ? <RestartAnalysisButton brandId={brandId} /> : null}
+>>>>>>> origin/main
       </div>
     );
   }

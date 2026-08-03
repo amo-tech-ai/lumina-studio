@@ -10,7 +10,11 @@
  */
 import { chromium } from "playwright";
 import { mkdirSync, writeFileSync, readFileSync, existsSync, unlinkSync } from "node:fs";
+<<<<<<< HEAD
+import { dirname, join, resolve } from "node:path";
+=======
 import { dirname, join, relative, resolve } from "node:path";
+>>>>>>> origin/main
 import { fileURLToPath } from "node:url";
 import { createRequire } from "node:module";
 import { execFileSync, execSync } from "node:child_process";
@@ -189,6 +193,11 @@ function resolvePreviewDeploymentIdentity(targetUrl = PREVIEW) {
 
 function sanitizeNetworkUrl(url) {
   try {
+<<<<<<< HEAD
+    const u = new URL(url);
+    return {
+      host: u.host,
+=======
     let u = new URL(url);
     // blob:https://host/uuid → host "" and pathname is the inner absolute URL.
     if (u.protocol === "blob:" && /^https?:\/\//i.test(u.pathname)) {
@@ -196,11 +205,16 @@ function sanitizeNetworkUrl(url) {
     }
     return {
       host: u.host || null,
+>>>>>>> origin/main
       path: u.pathname,
       // Never retain query — login/auth leaks have appeared in automation URLs.
     };
   } catch {
+<<<<<<< HEAD
+    return { host: null, path: url.split("?")[0] };
+=======
     return { host: null, path: String(url).split("?")[0] };
+>>>>>>> origin/main
   }
 }
 
@@ -337,10 +351,13 @@ async function main() {
       page.goto(`${PREVIEW}/login`, { waitUntil: "domcontentloaded", timeout: 45000 }),
     );
     await page.waitForSelector("#email", { timeout: 20000 });
+<<<<<<< HEAD
+=======
     // IPI-915: let the JS bundle settle before interacting — a click before
     // React hydrates performs a native GET form submit (credentials land in
     // the URL query and the Supabase sign-in never runs); seen on slow networks.
     await page.waitForLoadState("networkidle", { timeout: 15000 }).catch(() => {});
+>>>>>>> origin/main
     await page.fill("#email", email);
     await page.fill("#password", password);
     await Promise.all([
@@ -624,6 +641,21 @@ async function main() {
       page.getByText(/sign out|log out/i),
     ];
     let uiSignOut = false;
+<<<<<<< HEAD
+    for (const loc of signOutCandidates) {
+      if (await loc.first().isVisible().catch(() => false)) {
+        await loc.first().click();
+        uiSignOut = true;
+        break;
+      }
+    }
+    mark(
+      "12_signout_ui",
+      uiSignOut,
+      uiSignOut
+        ? "clicked Sign out control"
+        : "NO Sign out / Log out control in operator UI — product gap; using cookie clear for anonymous check",
+=======
     let signoutStatus = null;
     let signoutLocation = null;
     let signoutSetCookie = false;
@@ -677,6 +709,7 @@ async function main() {
         : signoutCandidatesProbed > 0
           ? `visible Sign out / Log out control clicked but NO /auth/signout request fired (probed ${signoutCandidatesProbed} candidate(s)) — session left intact; anonymous checks below will fail`
           : "NO Sign out / Log out control in operator UI — product gap; using cookie clear for anonymous check",
+>>>>>>> origin/main
     );
 
     // 13. Anonymous /info 401 (session clear if no UI)
@@ -691,6 +724,11 @@ async function main() {
         }
       });
     }
+<<<<<<< HEAD
+    await withTransientRetry("post-logout navigate", () =>
+      page.goto(`${PREVIEW}/login`, { waitUntil: "domcontentloaded", timeout: 45000 }),
+    );
+=======
     // The app navigates to /login itself once the logout POST completes
     // (window.location.assign on the 303) — wait for that navigation instead of
     // racing it: a competing goto aborts the app's own navigation (ERR_ABORTED)
@@ -713,6 +751,7 @@ async function main() {
       await new Promise((r) => setTimeout(r, 100));
     } while (Date.now() < finalDeadline);
     sbCookiesAfter = sbCookieNamesAfter.length;
+>>>>>>> origin/main
     const anonInfo = await page.evaluate(async (base) => {
       const r = await fetch(`${base}/api/copilotkit/info`, {
         credentials: "include",
@@ -726,6 +765,10 @@ async function main() {
       `status=${anonInfo.status}`,
       { status: anonInfo.status },
     );
+<<<<<<< HEAD
+    await page.screenshot({ path: join(SHOTS, "04-signout.png"), fullPage: false });
+
+=======
     if (uiSignOut) {
       // CodeRabbit P1: accept ONLY the documented success path. The route
       // signals a failed remote revoke via 303 -> /app?signoutError=1 (local
@@ -851,6 +894,7 @@ async function main() {
       criteria["13_anon_info_401"].storage_after_signout = storageAfter;
     }
 
+>>>>>>> origin/main
     // Protected route redirect check (bonus evidence)
     const appRes = await page.goto(`${PREVIEW}/app`, {
       waitUntil: "domcontentloaded",
@@ -896,8 +940,12 @@ async function main() {
     worker:
       targetHost === defaultPreviewHost ? "ipix-operator-preview" : `host:${targetHost}`,
     verify_readonly: READONLY,
+<<<<<<< HEAD
+    evidence_out: OUT,
+=======
     // Repo-relative so artifacts do not embed machine/user absolute paths.
     evidence_out: relative(REPO_ROOT, OUT) || ".",
+>>>>>>> origin/main
     ...deploymentIdentity,
     cf_ray_health: healthCfRay,
     region_guess: region,

@@ -1,3 +1,10 @@
+<<<<<<< HEAD
+import { describe, expect, it, vi } from "vitest";
+import { promoteBrandDraft } from "./promote-draft";
+
+function mockSupabase(brand: Record<string, unknown> | null, selectErr?: { message: string }) {
+  const updateCalls: Record<string, unknown>[] = [];
+=======
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { DRAFT_ACTION_MESSAGES } from "./draft-action-errors";
 import { promoteBrandDraft, resolvePromoteScoreRows } from "./promote-draft";
@@ -9,11 +16,17 @@ function mockSupabase(
 ) {
   const updateCalls: Record<string, unknown>[] = [];
   let selectCount = 0;
+>>>>>>> origin/main
   return {
     sb: {
       from: vi.fn(() => ({
         select: vi.fn(() => ({
           eq: vi.fn(() => ({
+<<<<<<< HEAD
+            maybeSingle: vi.fn(async () =>
+              selectErr ? { data: null, error: selectErr } : { data: brand, error: null },
+            ),
+=======
             maybeSingle: vi.fn(async () => {
               selectCount += 1;
               if (selectCount === 1 && selectErr) {
@@ -21,6 +34,7 @@ function mockSupabase(
               }
               return { data: brand, error: null };
             }),
+>>>>>>> origin/main
           })),
         })),
         update: vi.fn((patch: Record<string, unknown>) => {
@@ -29,10 +43,14 @@ function mockSupabase(
             eq: () => ({
               eq: () => ({
                 select: () => ({
+<<<<<<< HEAD
+                  maybeSingle: async () => ({ data: { id: "b1" }, error: null }),
+=======
                   maybeSingle: async () =>
                     updateErr
                       ? { data: null, error: updateErr }
                       : { data: { id: "b1" }, error: null },
+>>>>>>> origin/main
                 }),
               }),
             }),
@@ -45,36 +63,55 @@ function mockSupabase(
   };
 }
 
+<<<<<<< HEAD
+=======
 afterEach(() => {
   vi.restoreAllMocks();
 });
 
+>>>>>>> origin/main
 describe("promoteBrandDraft", () => {
   it("returns ok when draft already promoted (HITL ran before workflow resume)", async () => {
     const { sb } = mockSupabase({ id: "b1", ai_profile_draft: null, intake_status: "ready" });
     const result = await promoteBrandDraft(sb, "b1");
+<<<<<<< HEAD
+    expect(result).toEqual({ ok: true });
+=======
     expect(result).toEqual({ ok: true, status: "already_completed" });
+>>>>>>> origin/main
   });
 
   it("returns error when no draft and brand is not ready", async () => {
     const { sb } = mockSupabase({ id: "b1", ai_profile_draft: null, intake_status: "draft_ready" });
     const result = await promoteBrandDraft(sb, "b1");
+<<<<<<< HEAD
+    expect(result).toEqual({ ok: false, error: "No draft to apply" });
+=======
     expect(result).toEqual({
       ok: false,
       code: "NOT_FOUND",
       error: "No draft to apply",
     });
+>>>>>>> origin/main
   });
 
   it("IPI-744 — clears analysis_lock_token/analysis_locked_at on approval, so a delayed reanalyzeBrand restore can't later overwrite 'ready'", async () => {
     const { sb, updateCalls } = mockSupabase({
       id: "b1",
+<<<<<<< HEAD
+      ai_profile_draft: { headline: "Nike" },
+=======
       ai_profile_draft: validDraft(),
+>>>>>>> origin/main
       intake_status: "draft_ready",
     });
     const result = await promoteBrandDraft(sb, "b1");
 
+<<<<<<< HEAD
+    expect(result).toEqual({ ok: true });
+=======
     expect(result).toEqual({ ok: true, status: "completed" });
+>>>>>>> origin/main
     expect(updateCalls).toHaveLength(1);
     expect(updateCalls[0]).toMatchObject({
       intake_status: "ready",
@@ -82,6 +119,9 @@ describe("promoteBrandDraft", () => {
       analysis_locked_at: null,
     });
   });
+<<<<<<< HEAD
+});
+=======
 
   it("IPI-835 · D — refuses promote when Brand DNA fails the IPI-834 contract", async () => {
     const { sb, updateCalls } = mockSupabase({
@@ -226,3 +266,4 @@ function validDraft() {
     scores: { visual: 80, audience: 80, consistency: 80, commerce_readiness: 70 },
   };
 }
+>>>>>>> origin/main

@@ -5,13 +5,19 @@ import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { IntelligenceDetailProvider, useIntelligenceDetail } from "@/context/intelligence-detail-context";
+<<<<<<< HEAD
+import type { PlannerMember, PlannerTask } from "@/lib/planner/types";
+=======
 import type { PlannerMember, PlannerPhase, PlannerTask } from "@/lib/planner/types";
+>>>>>>> origin/main
 
 const resolvePlannerSelectionAction = vi.fn();
 vi.mock("@/app/(operator)/app/planner/[instanceId]/selection-actions", () => ({
   resolvePlannerSelectionAction: (...args: unknown[]) => resolvePlannerSelectionAction(...args),
 }));
 
+<<<<<<< HEAD
+=======
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ refresh: vi.fn(), push: vi.fn() }),
 }));
@@ -20,6 +26,7 @@ vi.mock("@/app/(operator)/app/planner/[instanceId]/actions", () => ({
   updateTaskAction: vi.fn(),
 }));
 
+>>>>>>> origin/main
 const deselect = vi.fn();
 let mockSelection: { type: string; id: string } | null = null;
 vi.mock("@/lib/planner/use-planner-selection", () => ({
@@ -56,6 +63,10 @@ const TASK_FIXTURE: PlannerTask = {
   assigneeUserId: null,
   assigneeRole: null,
   sortOrder: 0,
+<<<<<<< HEAD
+};
+
+=======
   updatedAt: "2026-07-01T00:00:00.000Z",
 };
 
@@ -71,6 +82,7 @@ function taskSelection(overrides: { canUpdateTasks?: boolean } = {}) {
   };
 }
 
+>>>>>>> origin/main
 const MEMBER_FIXTURE: PlannerMember = {
   id: MEMBER_ID,
   instanceId: "i1",
@@ -80,6 +92,8 @@ const MEMBER_FIXTURE: PlannerMember = {
   displayName: "Maya",
 };
 
+<<<<<<< HEAD
+=======
 const PHASE_FIXTURE: PlannerPhase = {
   id: PHASE_ID,
   workflowId: "wf1",
@@ -91,6 +105,7 @@ const PHASE_FIXTURE: PlannerPhase = {
   requiredRole: "manager",
 };
 
+>>>>>>> origin/main
 /** Small probe rendering the real IntelligenceDetailContext value, so tests
  * assert against exactly what AdaptivePanel publishes — no mocking of the
  * context this ticket is explicitly told not to touch. */
@@ -132,7 +147,11 @@ describe("AdaptivePanel — renders null itself (no DOM presence)", () => {
 describe("AdaptivePanel — task selection", () => {
   it("resolves a valid task selection and publishes planner-detail-task", async () => {
     mockSelection = { type: "task", id: TASK_ID };
+<<<<<<< HEAD
+    resolvePlannerSelectionAction.mockResolvedValue({ ok: true, data: { kind: "task", task: TASK_FIXTURE } });
+=======
     resolvePlannerSelectionAction.mockResolvedValue(taskSelection());
+>>>>>>> origin/main
 
     renderPanel();
 
@@ -156,6 +175,8 @@ describe("AdaptivePanel — member selection", () => {
   });
 });
 
+<<<<<<< HEAD
+=======
 describe("AdaptivePanel — phase selection", () => {
   it("resolves a valid phase selection and publishes planner-detail-phase with its tasks", async () => {
     mockSelection = { type: "phase", id: PHASE_ID };
@@ -175,6 +196,7 @@ describe("AdaptivePanel — phase selection", () => {
   });
 });
 
+>>>>>>> origin/main
 describe("AdaptivePanel — fails closed to Intelligence mode", () => {
   it("unknown type: falls back, auto-corrects the URL with replace, no detail rendered", async () => {
     mockSelection = { type: "brand", id: TASK_ID };
@@ -187,7 +209,11 @@ describe("AdaptivePanel — fails closed to Intelligence mode", () => {
     expect(screen.queryByTestId("planner-detail-member")).toBeNull();
   });
 
+<<<<<<< HEAD
+  it("malformed/not-found id: falls back, auto-corrects the URL with replace, no detail rendered", async () => {
+=======
   it("not-found id: falls back, auto-corrects the URL with replace, no detail rendered", async () => {
+>>>>>>> origin/main
     mockSelection = { type: "task", id: "does-not-exist" };
     resolvePlannerSelectionAction.mockResolvedValue({ ok: false });
 
@@ -197,14 +223,23 @@ describe("AdaptivePanel — fails closed to Intelligence mode", () => {
     expect(screen.queryByTestId("planner-detail-task")).toBeNull();
   });
 
+<<<<<<< HEAD
+  it("phase selection always fails closed (no per-instance phase contract exists yet)", async () => {
+=======
   it("unknown phase id: falls back, auto-corrects the URL with replace, no detail rendered", async () => {
+>>>>>>> origin/main
     mockSelection = { type: "phase", id: PHASE_ID };
     resolvePlannerSelectionAction.mockResolvedValue({ ok: false });
 
     renderPanel();
 
     await vi.waitFor(() => expect(deselect).toHaveBeenCalledWith({ replace: true }));
+<<<<<<< HEAD
+    expect(screen.queryByTestId("planner-detail-task")).toBeNull();
+    expect(screen.queryByTestId("planner-detail-member")).toBeNull();
+=======
     expect(screen.queryByTestId("planner-detail-phase")).toBeNull();
+>>>>>>> origin/main
   });
 
   it("null selection: publishes null immediately, no resolve call at all", () => {
@@ -221,7 +256,11 @@ describe("AdaptivePanel — fails closed to Intelligence mode", () => {
 describe("AdaptivePanel — exactly one tree at a time", () => {
   it("never has both a task testid and a member testid present simultaneously", async () => {
     mockSelection = { type: "task", id: TASK_ID };
+<<<<<<< HEAD
+    resolvePlannerSelectionAction.mockResolvedValue({ ok: true, data: { kind: "task", task: TASK_FIXTURE } });
+=======
     resolvePlannerSelectionAction.mockResolvedValue(taskSelection());
+>>>>>>> origin/main
 
     renderPanel();
     await screen.findByTestId("planner-detail-task");
@@ -231,6 +270,8 @@ describe("AdaptivePanel — exactly one tree at a time", () => {
     expect(hasTask && hasMember).toBe(false);
     expect(hasTask).toBe(true);
   });
+<<<<<<< HEAD
+=======
 
   it("passes canUpdateTasks so authorized users see the edit form", async () => {
     mockSelection = { type: "task", id: TASK_ID };
@@ -241,12 +282,17 @@ describe("AdaptivePanel — exactly one tree at a time", () => {
     expect(await screen.findByTestId("planner-task-save")).toBeDefined();
     expect(screen.getByTestId("planner-detail-task").getAttribute("data-readonly")).toBe("false");
   });
+>>>>>>> origin/main
 });
 
 describe("AdaptivePanel — Escape key handling", () => {
   it("does NOT call deselect when a nested overlay owns Escape", () => {
     mockSelection = { type: "task", id: TASK_ID };
+<<<<<<< HEAD
+    resolvePlannerSelectionAction.mockResolvedValue({ ok: true, data: { kind: "task", task: TASK_FIXTURE } });
+=======
     resolvePlannerSelectionAction.mockResolvedValue(taskSelection());
+>>>>>>> origin/main
     escapeOwned = true;
 
     renderPanel();
@@ -257,7 +303,11 @@ describe("AdaptivePanel — Escape key handling", () => {
 
   it("calls deselect on Escape when no overlay owns it and a selection is present", () => {
     mockSelection = { type: "task", id: TASK_ID };
+<<<<<<< HEAD
+    resolvePlannerSelectionAction.mockResolvedValue({ ok: true, data: { kind: "task", task: TASK_FIXTURE } });
+=======
     resolvePlannerSelectionAction.mockResolvedValue(taskSelection());
+>>>>>>> origin/main
     escapeOwned = false;
 
     renderPanel();

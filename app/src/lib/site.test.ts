@@ -30,6 +30,8 @@ describe("SITE_URL (WEB-014 SEO)", () => {
     expect(SITE_URL).toBe("https://www.ipix.co");
   });
 });
+<<<<<<< HEAD
+=======
 
 describe("normalizeSiteUrl preview-host guard (IPI-902 · CF-MKT-002)", () => {
   it("rejects a workers.dev preview host — falls back to the canonical domain", async () => {
@@ -83,3 +85,4 @@ describe("canonicalUrl (IPI-902 · CF-MKT-002)", () => {
     expect(SITE_URL).toBe("https://preview.fashionos.co");
   });
 });
+>>>>>>> origin/main

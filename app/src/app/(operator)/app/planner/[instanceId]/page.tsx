@@ -1,6 +1,12 @@
 // IPI-578 — Workspace route. Existence/UUID guard lives in the sibling
 // layout.tsx (shared with settings/page.tsx). Server Component with zero
 // view-switching logic — all interactive behavior lives in
+<<<<<<< HEAD
+// PlannerWorkspaceShell. Real view content (Timeline/Kanban/Calendar/List)
+// ships in PLN-S1B–D (IPI-579/580/581); mutations ship in PLN-S1E (IPI-582).
+
+import { PlannerWorkspaceShell } from "@/components/planner/planner-workspace-shell";
+=======
 // PlannerWorkspaceShell.
 //
 // IPI-579 · PLN-S1B — Timeline ships here from one getInstanceDetail() read.
@@ -31,6 +37,7 @@ import {
 import { getInstanceDetail, getViewConfig, listWorkflowPhases } from "@/lib/planner/queries";
 import type { ViewType } from "@/lib/planner/types";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+>>>>>>> origin/main
 
 export default async function PlannerWorkspacePage({
   params,
@@ -38,6 +45,9 @@ export default async function PlannerWorkspacePage({
   params: Promise<{ instanceId: string }>;
 }) {
   const { instanceId } = await params;
+<<<<<<< HEAD
+  return <PlannerWorkspaceShell instanceId={instanceId} />;
+=======
 
   const instanceResult = await getInstanceDetail(instanceId);
   if (!instanceResult.ok) {
@@ -95,4 +105,5 @@ export default async function PlannerWorkspacePage({
       today={todayIso}
     />
   );
+>>>>>>> origin/main
 }

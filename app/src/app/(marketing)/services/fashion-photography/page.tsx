@@ -1,7 +1,10 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
+<<<<<<< HEAD
+=======
 import { canonicalUrl } from "@/lib/site";
+>>>>>>> origin/main
 import {
   Brain, BarChart3, TrendingUp, Eye, CheckCircle, ArrowRight,
   Sliders, ShoppingBag, Instagram, Megaphone, Building,
@@ -13,7 +16,10 @@ import { FashionPackages } from "@/components/marketing/fashion-packages";
 export const metadata: Metadata = {
   title: "Fashion Photography",
   description: "AI-planned fashion photography. Data-backed shot lists, platform-optimized deliverables.",
+<<<<<<< HEAD
+=======
   alternates: { canonical: canonicalUrl("/services/fashion-photography") },
+>>>>>>> origin/main
   openGraph: {
     title: "Fashion Photography | iPix — AI-Planned Content Studio",
     description: "AI-planned fashion photography. Data-backed shot lists, platform-optimized deliverables.",

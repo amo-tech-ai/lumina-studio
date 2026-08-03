@@ -589,6 +589,8 @@ jobs:
           name: channel-preview-e2e-failure
           path: test-results/
           retention-days: 7
+<<<<<<< HEAD
+=======
 
   # IPI-850 · CF-SMOKE-002 — Worker preview runtime smoke via verify:copilot (IPI-734).
   # Reuses IPI-724 Playwright journey — no second suite / no e2e/cf-worker-smoke.spec.ts.
@@ -699,3 +701,4 @@ jobs:
           name: verify-copilot-preview-failure
           path: tasks/copilotkit/verify/evidence-ci/
           retention-days: 7
+>>>>>>> origin/main

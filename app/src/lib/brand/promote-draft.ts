@@ -1,5 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+<<<<<<< HEAD
+=======
 import {
   stripBrandProfileMeta,
   validateBrandProfilePayload,
@@ -103,17 +105,35 @@ async function resolvePromoteUniqueOrCas(
   return failure("CONFLICT", DRAFT_ACTION_DOMAIN.NOT_DRAFT_READY);
 }
 
+>>>>>>> origin/main
 /** Promote ai_profile_draft → ai_profile and upsert draft scores. Caller must enforce auth. */
 export async function promoteBrandDraft(
   supabase: SupabaseClient,
   brandId: string,
+<<<<<<< HEAD
+): Promise<{ ok: true } | { ok: false; error: string }> {
+=======
 ): Promise<DraftActionResult> {
+>>>>>>> origin/main
   const { data: brand, error: selectErr } = await supabase
     .from("brands")
     .select("id, ai_profile_draft, intake_status")
     .eq("id", brandId)
     .maybeSingle();
 
+<<<<<<< HEAD
+  if (selectErr) return { ok: false, error: selectErr.message };
+  if (!brand?.ai_profile_draft) {
+    // HITL handler (processBrandIntelligenceDraftApproval) may promote before workflow resume.
+    if (brand?.intake_status === "ready") return { ok: true };
+    return { ok: false, error: "No draft to apply" };
+  }
+
+  const draft = brand.ai_profile_draft as Record<string, unknown>;
+  const draftScores = Array.isArray(draft._draft_scores)
+    ? (draft._draft_scores as Array<Record<string, unknown>>)
+    : [];
+=======
   if (selectErr) {
     const mapped = mapDraftActionDbError("promote", brandId, selectErr);
     if (isUniqueViolationSignal(mapped)) {
@@ -142,6 +162,7 @@ export async function promoteBrandDraft(
     return failure("CONFLICT", DRAFT_ACTION_DOMAIN.INVALID_DNA);
   }
 
+>>>>>>> origin/main
   const { _draft_scores: _removed, ...cleanDraft } = draft;
 
   const { data: updated, error } = await supabase
@@ -164,6 +185,10 @@ export async function promoteBrandDraft(
     .select("id")
     .maybeSingle();
 
+<<<<<<< HEAD
+  if (error) return { ok: false, error: error.message };
+  if (!updated) return { ok: false, error: "Brand is not in draft_ready state" };
+=======
   if (error) {
     const mapped = mapDraftActionDbError("promote", brandId, error);
     if (isUniqueViolationSignal(mapped)) {
@@ -174,6 +199,7 @@ export async function promoteBrandDraft(
   if (!updated) {
     return resolvePromoteUniqueOrCas(supabase, brandId);
   }
+>>>>>>> origin/main
 
   if (draftScores.length > 0) {
     const scoreRows = draftScores.map((r) => ({ ...r, brand_id: brandId }));
@@ -183,9 +209,17 @@ export async function promoteBrandDraft(
     if (scoresErr) {
       // Profile is already committed — do not fail the approval path (rollback would
       // leave draft pending_approval while brand is ready). Scores can be re-synced.
+<<<<<<< HEAD
+      console.error("[promoteBrandDraft] score upsert failed after profile commit:", scoresErr);
+    }
+  }
+
+  return { ok: true };
+=======
       logDraftActionError("promote", brandId, scoresErr);
     }
   }
 
   return { ok: true, status: "completed" };
+>>>>>>> origin/main
 }

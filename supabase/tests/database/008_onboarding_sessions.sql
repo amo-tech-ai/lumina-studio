@@ -4,10 +4,17 @@
 -- Same pre-merge pattern as 007_org_tenant_isolation.sql: apply the migration DDL
 -- inside begin…rollback so CI passes before supabase:push lands the real objects.
 --
+<<<<<<< HEAD
+-- Plan math: 17 asserts
+--   unique(2) + check(1) + RLS shape(1) + stranger deny(1) + owner allow(1)
+--   + null-auth(1) + invoker(1) + grants(3) + success/replay/status/org/brand(5)
+--   + atomic fail(2)
+=======
 -- Plan math: 22 asserts
 --   unique(2) + check(1) + RLS shape(1) + stranger deny(1) + owner allow(1)
 --   + null-auth(1) + invoker(1) + grants(3) + success/replay/status/screen/org/brand(6)
 --   + atomic fail(3) + heal stuck screen on replay(1) + heal tenant deny(2)
+>>>>>>> origin/main
 
 set search_path to public, extensions;
 
@@ -107,12 +114,15 @@ begin
   end if;
 
   if v_session.status = 'materialized' then
+<<<<<<< HEAD
+=======
     if v_session.current_screen < 12 then
       perform set_config('app.onboarding_materializing', 'on', true);
       update public.onboarding_sessions
          set current_screen = 12
        where id = v_session.id;
     end if;
+>>>>>>> origin/main
     return jsonb_build_object('organization_id', v_session.organization_id,
                               'brand_id',        v_session.brand_id);
   end if;
@@ -133,8 +143,12 @@ begin
   update public.onboarding_sessions
      set status = 'materialized',
          organization_id = v_org_id,
+<<<<<<< HEAD
+         brand_id = v_brand_id
+=======
          brand_id = v_brand_id,
          current_screen = 12
+>>>>>>> origin/main
    where id = v_session.id;
 
   return jsonb_build_object('organization_id', v_org_id, 'brand_id', v_brand_id);
@@ -143,7 +157,11 @@ end $$;
 revoke execute on function public.materialize_onboarding_session(text, text, text) from public, anon;
 grant  execute on function public.materialize_onboarding_session(text, text, text) to authenticated;
 
+<<<<<<< HEAD
+select plan(17);
+=======
 select plan(22);
+>>>>>>> origin/main
 
 insert into auth.users (id, email) values
   ('00000000-0000-4000-8000-000000000c01', 'ipi832-owner@test.local'),
@@ -316,6 +334,8 @@ select is(
   'successful materialize sets status = materialized'
 );
 
+<<<<<<< HEAD
+=======
 select is(
   (select current_screen from public.onboarding_sessions
      where user_id = '00000000-0000-4000-8000-000000000c01'
@@ -324,6 +344,7 @@ select is(
   'successful materialize persists analysis screen (12)'
 );
 
+>>>>>>> origin/main
 reset role;
 
 select is(
@@ -379,6 +400,11 @@ select is(
   'forced brand-insert failure leaves 0 organizations (RPC is atomic)'
 );
 
+<<<<<<< HEAD
+drop trigger if exists _ipi832_fail_brand_insert on public.brands;
+drop function if exists public._ipi832_fail_brand_insert();
+
+=======
 select is(
   (select current_screen from public.onboarding_sessions
      where user_id = '00000000-0000-4000-8000-000000000c01'
@@ -449,5 +475,6 @@ select is(
   'replay heals materialized session stuck at screen 11 to analysis screen 12'
 );
 
+>>>>>>> origin/main
 select * from finish();
 rollback;

@@ -187,6 +187,8 @@ describe("AnalysisProgressBanner", () => {
     });
     expect(screen.getByText(/Connection lost/)).toBeTruthy();
   });
+<<<<<<< HEAD
+=======
 
   // IPI-918 — recovery control is owner/editor only.
   it("offers Restart analysis on failed when the operator may restart", () => {
@@ -209,4 +211,5 @@ describe("AnalysisProgressBanner", () => {
     );
     expect(screen.queryByRole("button", { name: /Restart analysis/i })).toBeNull();
   });
+>>>>>>> origin/main
 });

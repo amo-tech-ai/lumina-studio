@@ -1,11 +1,15 @@
 # Phase 2 — Research
 
+<<<<<<< HEAD
+Coordinator for question → source → decision before non-trivial edits. Detailed checks: [references/audit-checklist.md](references/audit-checklist.md).
+=======
 Coordinator for question → source → decision before non-trivial edits.
 
 **Primary skill:** [`ai-research`](../ai-research/SKILL.md) · **Playbook:** [`docs/process/03-ai-research-playbook.md`](../../../docs/process/03-ai-research-playbook.md) · **Command:** `/research`  
 **Detailed checks:** [references/audit-checklist.md](references/audit-checklist.md) · **Rank approaches:** `/efficient`
 
 For IPI work, run **`ai-research`** (or `/research IPI-NNN`) and paste the report into the issue `## Research notes` (or `docs/audits/`) before Phase 3.
+>>>>>>> origin/main
 
 ---
 
@@ -16,6 +20,9 @@ For IPI work, run **`ai-research`** (or `/research IPI-NNN`) and paste the repor
 | **Entry** | Spec or issue exists AND ≥1 of: unfamiliar module, external API unknown, RLS/migration impact, dependency drift, security unclear. |
 | **Exit** | Audit note saved (spec md `## Research notes` or `docs/audits/<date>-<topic>.md`). Risks ranked. Decision: **green-light** / **blocked** / **replan**. |
 
+<<<<<<< HEAD
+Skip when: ≤3 file edits, no Supabase/RLS, wiring plan fully concrete.
+=======
 Skip when **all** of: ≤3 file edits **and** known pattern **and** no Supabase/RLS/edge/Mastra/new vendor **and** concrete wiring plan exists.
 
 ---
@@ -33,6 +40,7 @@ The **`ai-research`** report (User outcome, MVP stage, Verdict, evidence table) 
 | Verdict + Next | **Decision** |
 
 Do not duplicate prose — migrate once, then implement from the folded note.
+>>>>>>> origin/main
 
 ---
 

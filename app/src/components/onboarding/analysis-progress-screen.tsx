@@ -4,6 +4,51 @@ import { useEffect, useRef, useState } from "react";
 
 import { OnboardingCard } from "@/components/onboarding/onboarding-card";
 import { Progress } from "@/components/ui/progress";
+<<<<<<< HEAD
+
+/**
+ * IPI-833 — screen 12.
+ *
+ * ponytail: ⚠️ This bar is a PLACEHOLDER, and deliberately so. The design comp
+ * advances it on a timer (line 438: setInterval 110ms, +2.5% a tick), which is
+ * not progress — it is an animation that would keep filling while the backend
+ * was on fire.
+ *
+ * IPI-835 replaces this entirely with real `brand_crawls` page counts and a
+ * server-owned terminal state. Nothing here may survive that: no client timer
+ * can be allowed to decide a run succeeded or failed.
+ *
+ * Until then it advertises what it is ("Setting things up"), never claims a
+ * measured result, and hands control back through onComplete.
+ */
+const TICK_MS = 110;
+const STEP_PERCENT = 2.5;
+const SETTLE_MS = 650;
+
+export function AnalysisProgressScreen({ onComplete }: { onComplete: () => void }) {
+  const [percent, setPercent] = useState(0);
+  const onCompleteRef = useRef(onComplete);
+  onCompleteRef.current = onComplete;
+
+  // Started once, here. The design comp starts it from both goScreen() and
+  // componentDidUpdate and relies on clearInterval to paper over the double
+  // start — that bug is not ported.
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setPercent((current) => Math.min(100, current + STEP_PERCENT));
+    }, TICK_MS);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Completion is its own effect rather than a branch inside the updater above.
+  // State updaters must be pure — React may call them more than once, which
+  // would schedule the settle timer twice and fire onComplete twice.
+  useEffect(() => {
+    if (percent < 100) return;
+    const settleTimer = setTimeout(() => onCompleteRef.current(), SETTLE_MS);
+    return () => clearTimeout(settleTimer);
+  }, [percent]);
+=======
 import { formatCrawlProgressLabel } from "@/lib/brand-hub/format-crawl-progress";
 import { useBrandAnalysisProgress } from "@/lib/brand-hub/use-brand-analysis-progress";
 import {
@@ -374,6 +419,7 @@ function AnalysisProgressLive({
     phase === "still_working"
       ? "Still working — this is taking longer than usual…"
       : (STATUS_COPY[intakeStatus] ?? "Preparing your workspace…");
+>>>>>>> origin/main
 
   return (
     <OnboardingCard>
@@ -388,7 +434,11 @@ function AnalysisProgressLive({
         <Progress
           value={percent}
           aria-label="Setup progress"
+<<<<<<< HEAD
+          className="h-2 bg-[var(--onboarding-hair)]"
+=======
           className="h-2 bg-[var(--onboarding-hair)] [&>*]:bg-[var(--onboarding-accent)]"
+>>>>>>> origin/main
         />
         <p
           role="status"
@@ -396,6 +446,10 @@ function AnalysisProgressLive({
           data-testid="analysis-status"
           className="mt-3 text-xs font-medium tabular-nums text-[var(--onboarding-muted)]"
         >
+<<<<<<< HEAD
+          {percent < 100 ? "Preparing your workspace…" : "Ready"}
+        </p>
+=======
           {statusText}
           {showCrawlCount ? (
             <span className="ml-1 text-[var(--onboarding-accent-ink)]">
@@ -408,6 +462,7 @@ function AnalysisProgressLive({
             Crawl warning: {crawlWarning}. Analysis may still continue.
           </p>
         ) : null}
+>>>>>>> origin/main
       </div>
     </OnboardingCard>
   );
