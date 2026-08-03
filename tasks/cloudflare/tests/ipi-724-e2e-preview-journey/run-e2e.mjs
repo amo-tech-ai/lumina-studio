@@ -333,6 +333,10 @@ async function main() {
       page.goto(`${PREVIEW}/login`, { waitUntil: "domcontentloaded", timeout: 45000 }),
     );
     await page.waitForSelector("#email", { timeout: 20000 });
+    // IPI-915: let the JS bundle settle before interacting — a click before
+    // React hydrates performs a native GET form submit (credentials land in
+    // the URL query and the Supabase sign-in never runs); seen on slow networks.
+    await page.waitForLoadState("networkidle", { timeout: 15000 }).catch(() => {});
     await page.fill("#email", email);
     await page.fill("#password", password);
     await Promise.all([
@@ -616,19 +620,68 @@ async function main() {
       page.getByText(/sign out|log out/i),
     ];
     let uiSignOut = false;
+    let signoutStatus = null;
+    let signoutLocation = null;
+    let signoutSetCookie = false;
+    let signoutRequestObserved = false;
+    let signoutCandidatesProbed = 0;
+    let sbCookiesBefore = 0;
+    let sbCookiesAfter = 0;
+    let sbCookieNamesAfter = [];
     for (const loc of signOutCandidates) {
       if (await loc.first().isVisible().catch(() => false)) {
+        // IPI-915: register the response listener BEFORE the click so the logout
+        // POST cannot be missed, then wait for the response BEFORE any page
+        // navigation — a goto issued right after the click aborts the in-flight
+        // fetch, the Set-Cookie session deletions never reach the browser, and
+        // the anonymous /info check below then sees 200 instead of 401 (CI flake).
+        sbCookiesBefore = (await context.cookies()).filter((c) => c.name.startsWith("sb-")).length;
+        const signoutResponsePromise = page
+          .waitForResponse(
+            (res) => res.request().method() === "POST" && res.url().includes("/auth/signout"),
+            { timeout: 15000 },
+          )
+          .catch(() => null);
         await loc.first().click();
+        const signoutResponse = await signoutResponsePromise;
         uiSignOut = true;
+        signoutCandidatesProbed++;
+        if (!signoutResponse) {
+          // CodeRabbit: a visible control may not fire a logout request (e.g.
+          // decorative "sign out" text or an inert element). Do not declare a
+          // successful click — try the next candidate instead.
+          continue;
+        }
+        signoutRequestObserved = true;
+        signoutStatus = signoutResponse.status();
+        signoutLocation = signoutResponse.headers()["location"] ?? null;
+        // CodeRabbit: Response.headers() intentionally omits Set-Cookie —
+        // read it via headerValues() to actually detect the deletion header.
+        signoutSetCookie = (await signoutResponse.headerValues("set-cookie")).length > 0;
+        // Cookie deletions land with the response — poll briefly for them to apply.
+        // The AUTHORITATIVE check runs again after the /login navigation below
+        // (the app only navigates once the logout POST has completed, so the
+        // deletion headers have been processed by then).
+        const deadline = Date.now() + 3000;
+        do {
+          sbCookieNamesAfter = (await context.cookies())
+            .filter((c) => c.name.startsWith("sb-"))
+            .map((c) => c.name);
+          if (sbCookieNamesAfter.length === 0) break;
+          await new Promise((r) => setTimeout(r, 100));
+        } while (Date.now() < deadline);
+        sbCookiesAfter = sbCookieNamesAfter.length;
         break;
       }
     }
     mark(
       "12_signout_ui",
-      uiSignOut,
-      uiSignOut
-        ? "clicked Sign out control"
-        : "NO Sign out / Log out control in operator UI — product gap; using cookie clear for anonymous check",
+      uiSignOut && signoutRequestObserved,
+      uiSignOut && signoutRequestObserved
+        ? "clicked Sign out control; /auth/signout request observed"
+        : uiSignOut
+          ? `visible Sign out control clicked but NO /auth/signout request fired (probed ${signoutCandidatesProbed} candidate(s)) — session left intact; anonymous checks below will fail`
+          : "NO Sign out / Log out control in operator UI — product gap; using cookie clear for anonymous check",
     );
 
     // 13. Anonymous /info 401 (session clear if no UI)
@@ -643,9 +696,28 @@ async function main() {
         }
       });
     }
-    await withTransientRetry("post-logout navigate", () =>
-      page.goto(`${PREVIEW}/login`, { waitUntil: "domcontentloaded", timeout: 45000 }),
-    );
+    // The app navigates to /login itself once the logout POST completes
+    // (window.location.assign on the 303) — wait for that navigation instead of
+    // racing it: a competing goto aborts the app's own navigation (ERR_ABORTED)
+    // and, pre-fix, aborted the in-flight logout POST entirely.
+    await page.waitForURL(/\/login/, { timeout: 20000 }).catch(() => null);
+    if (!page.url().includes("/login")) {
+      await withTransientRetry("post-logout navigate", () =>
+        page.goto(`${PREVIEW}/login`, { waitUntil: "domcontentloaded", timeout: 45000 }),
+      );
+    }
+    // CodeRabbit P1: authoritative cookie check. The app only navigated to
+    // /login after the logout POST completed, so the Set-Cookie deletion
+    // headers have been processed by now — no race with the early poll above.
+    const finalDeadline = Date.now() + 2000;
+    do {
+      sbCookieNamesAfter = (await context.cookies())
+        .filter((c) => c.name.startsWith("sb-"))
+        .map((c) => c.name);
+      if (sbCookieNamesAfter.length === 0) break;
+      await new Promise((r) => setTimeout(r, 100));
+    } while (Date.now() < finalDeadline);
+    sbCookiesAfter = sbCookieNamesAfter.length;
     const anonInfo = await page.evaluate(async (base) => {
       const r = await fetch(`${base}/api/copilotkit/info`, {
         credentials: "include",
@@ -659,7 +731,115 @@ async function main() {
       `status=${anonInfo.status}`,
       { status: anonInfo.status },
     );
+    if (uiSignOut) {
+      // CodeRabbit P1: accept ONLY the documented success path. The route
+      // signals a failed remote revoke via 303 -> /app?signoutError=1 (local
+      // session still cleared, remote not); a bare status<400 would mask it.
+      let signoutRedirectToLogin = false;
+      if (signoutLocation) {
+        try {
+          const loc = new URL(signoutLocation, PREVIEW);
+          signoutRedirectToLogin =
+            loc.pathname === "/login" && loc.searchParams.get("signoutError") !== "1";
+        } catch {
+          signoutRedirectToLogin = false;
+        }
+      }
+      mark(
+        "13c_signout_request",
+        signoutStatus !== null &&
+          signoutStatus >= 300 &&
+          signoutStatus < 400 &&
+          signoutRedirectToLogin,
+        signoutStatus === null
+          ? "NO POST /auth/signout response within 15s — logout request never completed"
+          : `POST /auth/signout -> ${signoutStatus}${signoutLocation ? ` location=${signoutLocation}` : " (no Location)"} — requires 3xx redirect to /login without signoutError`,
+        {
+          status: signoutStatus,
+          location: signoutLocation,
+          redirect_to_login: signoutRedirectToLogin,
+          cookie_deletion_headers_present: signoutSetCookie,
+          sb_cookies_before: sbCookiesBefore,
+          sb_cookies_after: sbCookiesAfter,
+          sb_cookie_names_after: sbCookieNamesAfter,
+        },
+      );
+      mark(
+        "13d_sb_cookies_cleared",
+        sbCookiesAfter === 0,
+        sbCookiesAfter === 0
+          ? "no sb-* session cookies remain after sign-out"
+          : `sb-* cookies remain: ${sbCookieNamesAfter.join(", ")}`,
+        { sb_cookies_before: sbCookiesBefore, sb_cookies_after: sbCookiesAfter },
+      );
+    }
     await page.screenshot({ path: join(SHOTS, "04-signout.png"), fullPage: false });
+
+    if (uiSignOut) {
+      // 13e. Refresh stays logged out — a reload must not resurrect the session
+      // (no middleware re-auth, no client-side re-hydration from storage).
+      try {
+        await page.reload({ waitUntil: "domcontentloaded", timeout: 45000 });
+        const anonInfoAfterReload = await page.evaluate(async (base) => {
+          const r = await fetch(`${base}/api/copilotkit/info`, {
+            credentials: "include",
+            headers: { Accept: "application/json" },
+          });
+          return { status: r.status };
+        }, PREVIEW);
+        mark(
+          "13e_refresh_logged_out",
+          anonInfoAfterReload.status === 401,
+          `status after reload=${anonInfoAfterReload.status}`,
+          { status_after_reload: anonInfoAfterReload.status },
+        );
+      } catch (e) {
+        mark("13e_refresh_logged_out", false, `reload error: ${String(e?.message || e)}`);
+      }
+
+      // 13f. Logout is idempotent — a second POST /auth/signout while already
+      // logged out must still redirect to /login and not error.
+      // CodeRabbit (Major): guard against page.evaluate() throwing (network
+      // error) or an opaque/empty Response.url() failing URL parsing — either
+      // would previously abort main() before writeEvidence() ever ran.
+      try {
+        const idempotent = await page.evaluate(async () => {
+          const r = await fetch("/auth/signout", {
+            method: "POST",
+            credentials: "same-origin",
+            redirect: "follow",
+          });
+          return { status: r.status, finalUrl: r.url, ok: r.ok };
+        });
+        let finalPath = null;
+        try {
+          finalPath = new URL(idempotent.finalUrl, PREVIEW).pathname;
+        } catch {
+          finalPath = null;
+        }
+        mark(
+          "13f_signout_idempotent",
+          idempotent.ok && finalPath === "/login",
+          `status=${idempotent.status} final=${finalPath ?? "unparseable"}`,
+          { status: idempotent.status, final_path: finalPath },
+        );
+      } catch (e) {
+        mark(
+          "13f_signout_idempotent",
+          false,
+          `second signout error: ${String(e?.message || e)}`,
+        );
+      }
+
+      // Browser storage state after sign-out — evidence only; the anonymous 401
+      // contract depends on cookies, so Supabase localStorage session keys are
+      // reported here rather than gated as a hard AC.
+      const storageAfter = await page.evaluate(() => {
+        const keys = Object.keys(localStorage);
+        return { keys, supabase_session_keys: keys.filter((k) => k.startsWith("sb-")) };
+      });
+      criteria["13_anon_info_401"].storage_after_signout = storageAfter;
+    }
 
     // Protected route redirect check (bonus evidence)
     const appRes = await page.goto(`${PREVIEW}/app`, {
