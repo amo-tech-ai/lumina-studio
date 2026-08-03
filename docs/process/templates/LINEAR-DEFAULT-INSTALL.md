@@ -13,9 +13,14 @@
 1. Open [IPI team templates](https://linear.app/amo100/settings/teams/IPI/templates) (Team **IPI** → Settings → Templates).
 2. **New template** → name: `iPix executable task`.
 3. Title placeholder: `IPI-NNN · TASK-ID — Real-world operator title`
-4. Description: paste entire contents of [`linear-issue-body.md`](./linear-issue-body.md) (from `# IPI-NNN` through PR evidence).
+4. Description (top → bottom):
+   - Paste the fenced XML from [`task-execution-prompt.md`](./task-execution-prompt.md) (inside the code fence only, or the whole `<task_execution>` block).
+   - Then a markdown `---`.
+   - Then paste [`linear-issue-body.md`](./linear-issue-body.md) (from `# IPI-NNN` through PR evidence).
 5. Set **Default for team members** ([docs](https://linear.app/docs/issue-templates)).
 6. Optional labels: leave unset (per-issue).
+
+**Cursor agents:** `linear-governance.mdc` requires the same prepend on MCP `save_issue` create/rewrite — SSOT is `task-execution-prompt.md`, not a second alwaysApply rule.
 
 ## After MCP / API works
 

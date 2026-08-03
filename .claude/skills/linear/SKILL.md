@@ -113,7 +113,9 @@ Use the actual tool names available in the current session. Do not assume a tool
 | Implementation from issue to branch/PR | [implementation-workflow](references/implementation-workflow.md) |
 | Linear Method issue/project planning | [methodology](references/methodology.md) |
 | iPix-specific contract | [ipix](references/ipix.md) |
+| AlwaysApply rule detail (milestones, HOLD, tool map) | [governance-detail](references/governance-detail.md) |
 | Templates (issues, projects, status updates) | [templates](references/templates.md) |
+| Agent task_execution prepend SSOT | `docs/process/templates/task-execution-prompt.md` |
 | Security and secret handling | [security](references/security.md) |
 | Skill structure and maintenance | [skill-maintenance](references/skill-maintenance.md) |
 | Iron laws, anti-patterns, tool catalog | [pm](references/pm/SKILL.md) (enterprise skill scaffold) |
