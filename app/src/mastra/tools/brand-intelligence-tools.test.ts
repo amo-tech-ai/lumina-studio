@@ -34,6 +34,7 @@ import {
   getBrandProfile,
   getBrandScores,
   normalizePillar,
+  searchSimilarBrands,
   startBrandAnalysis,
 } from "./brand-intelligence-tools";
 
@@ -73,6 +74,21 @@ const MOCK_PILLAR = {
   source: "brand-intelligence",
 };
 
+const MOCK_SIMILAR = [
+  {
+    brand_id: "22222222-2222-2222-2222-222222222222",
+    brand_name: "Reformation",
+    similarity: 0.87,
+    shared_nodes: [{ node_type: "category", label: "sustainable fashion" }],
+  },
+  {
+    brand_id: "33333333-3333-3333-3333-333333333333",
+    brand_name: "Patagonia",
+    similarity: 0.79,
+    shared_nodes: null,
+  },
+];
+
 function makeMockClient(overrides: Partial<ReturnType<typeof makeMockClient>> = {}) {
   const client = {
     from: vi.fn((table: string) => {
@@ -80,7 +96,10 @@ function makeMockClient(overrides: Partial<ReturnType<typeof makeMockClient>> = 
         return {
           select: vi.fn().mockReturnThis(),
           eq: vi.fn().mockReturnThis(),
-          single: vi.fn().mockResolvedValue({ data: MOCK_BRAND, error: null }),
+          single: vi.fn().mockResolvedValue({
+            data: { ...MOCK_BRAND, embedding: "[0.1,0.2,0.3]" },
+            error: null,
+          }),
         };
       }
       if (table === "brand_intake_drafts") {
@@ -104,6 +123,7 @@ function makeMockClient(overrides: Partial<ReturnType<typeof makeMockClient>> = 
       }
       return {};
     }),
+    rpc: vi.fn().mockResolvedValue({ data: MOCK_SIMILAR, error: null }),
     ...overrides,
   };
   return client;
@@ -198,6 +218,66 @@ describe("explainPillarTool", () => {
   });
 });
 
+describe("searchSimilarBrands", () => {
+  it("returns neighbors from search_brands RPC with asOf timestamp", async () => {
+    const result = await searchSimilarBrands.execute!(
+      { brandId: BRAND_ID, limit: 5 },
+      {} as never,
+    );
+    const r = result as Awaited<ReturnType<typeof searchSimilarBrands.execute>>;
+    expect(r!.sourceBrandId).toBe(BRAND_ID);
+    expect(r!.sourceBrandName).toBe("Everlane");
+    expect(r!.asOf).toMatch(/^\d{4}-\d{2}-\d{2}T/);
+    expect(r!.neighbors).toHaveLength(2);
+    expect(r!.neighbors[0]).toEqual({
+      brandId: "22222222-2222-2222-2222-222222222222",
+      brandName: "Reformation",
+      similarity: 0.87,
+      sharedNodes: [{ node_type: "category", label: "sustainable fashion" }],
+    });
+    expect(r!.neighbors[1].sharedNodes).toBeNull();
+
+    const client = vi.mocked(createClient).mock.results.at(-1)?.value as {
+      rpc: ReturnType<typeof vi.fn>;
+    };
+    expect(client.rpc).toHaveBeenCalledWith("search_brands", {
+      p_embedding: "[0.1,0.2,0.3]",
+      p_limit: 5,
+      p_exclude_brand_id: BRAND_ID,
+    });
+  });
+
+  it("returns empty neighbors when brand has no embedding", async () => {
+    vi.mocked(createClient).mockReturnValue({
+      from: vi.fn(() => ({
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        single: vi.fn().mockResolvedValue({
+          data: { ...MOCK_BRAND, embedding: null },
+          error: null,
+        }),
+      })),
+      rpc: vi.fn(),
+    } as never);
+
+    const result = await searchSimilarBrands.execute!({ brandId: BRAND_ID }, {} as never);
+    const r = result as Awaited<ReturnType<typeof searchSimilarBrands.execute>>;
+    expect(r!.neighbors).toEqual([]);
+    expect(r!.message).toContain("no embedding");
+  });
+
+  it("throws when search_brands RPC fails", async () => {
+    vi.mocked(createClient).mockReturnValue({
+      ...makeMockClient(),
+      rpc: vi.fn().mockResolvedValue({ data: null, error: { message: "rpc denied" } }),
+    } as never);
+
+    await expect(
+      searchSimilarBrands.execute!({ brandId: BRAND_ID }, {} as never),
+    ).rejects.toThrow(/search_brands failed/);
+  });
+});
+
 describe("approveDraftTool", () => {
   it("calls shared draft approval with workflow run id from pending draft", async () => {
     vi.mocked(createClient).mockImplementation(((url: string, key: string) => {
@@ -288,10 +368,12 @@ describe("brandIntelligenceTools registry", () => {
     const { brandIntelligenceTools } = await import("./brand-intelligence-tools");
     expect(brandIntelligenceTools).toHaveProperty("explainPillar");
     expect(brandIntelligenceTools).toHaveProperty("approveDraft");
+    expect(brandIntelligenceTools).toHaveProperty("searchSimilarBrands");
     expect(Object.keys(brandIntelligenceTools)).toEqual([
       "getBrandProfile",
       "getBrandScores",
       "explainPillar",
+      "searchSimilarBrands",
       "approveDraft",
       "startBrandAnalysis",
     ]);
