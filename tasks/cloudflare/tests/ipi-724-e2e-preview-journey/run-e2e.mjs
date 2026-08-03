@@ -644,7 +644,6 @@ async function main() {
           .catch(() => null);
         await loc.first().click();
         const signoutResponse = await signoutResponsePromise;
-        uiSignOut = true;
         signoutCandidatesProbed++;
         if (!signoutResponse) {
           // CodeRabbit: a visible control may not fire a logout request (e.g.
@@ -652,6 +651,8 @@ async function main() {
           // successful click — try the next candidate instead.
           continue;
         }
+        // Only mark UI sign-out success after POST /auth/signout is observed.
+        uiSignOut = true;
         signoutRequestObserved = true;
         signoutStatus = signoutResponse.status();
         signoutLocation = signoutResponse.headers()["location"] ?? null;
