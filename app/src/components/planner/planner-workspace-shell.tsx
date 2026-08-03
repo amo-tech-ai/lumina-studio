@@ -78,6 +78,12 @@ export function PlannerWorkspaceShell({
   const lastPersistedRef = useRef<PersistedViewType | null>(
     isPersistedView(initialView) ? initialView : null,
   );
+  // Monotonic write generation — late responses for an abandoned tab must not
+  // update lastPersistedRef or win over a newer selection.
+  const persistGenerationRef = useRef(0);
+  // In-flight target (if any). Blocks the lastPersisted no-op while a different
+  // view's write is still outstanding (Timeline→Kanban→Timeline race).
+  const pendingPersistedViewRef = useRef<PersistedViewType | null>(null);
 
   function handleViewChange(next: string) {
     const nextView = next as ViewType;
@@ -90,16 +96,37 @@ export function PlannerWorkspaceShell({
     // "list" is never a persisted default_view (DB CHECK + adapter contract).
     if (!isPersistedView(nextView)) return;
 
-    if (lastPersistedRef.current === nextView) return;
+    // No-op when this view is already persisted, or an in-flight write already
+    // targets it. Do not no-op when lastPersisted matches but a different view
+    // is still pending (Timeline→Kanban→Timeline must re-issue Timeline).
+    if (
+      lastPersistedRef.current === nextView &&
+      (pendingPersistedViewRef.current === null ||
+        pendingPersistedViewRef.current === nextView)
+    ) {
+      return;
+    }
+
+    const generation = ++persistGenerationRef.current;
+    pendingPersistedViewRef.current = nextView;
 
     startTransition(async () => {
-      const result = await setViewConfigAction(instanceId, { defaultView: nextView });
-      if (!result.ok) {
-        // Keep the session tab the operator just chose; do not roll back.
+      try {
+        const result = await setViewConfigAction(instanceId, { defaultView: nextView });
+        if (generation !== persistGenerationRef.current) return;
+        pendingPersistedViewRef.current = null;
+        if (!result.ok) {
+          // Keep the session tab the operator just chose; do not roll back.
+          setPersistWarning("Could not save your view preference for next time.");
+          return;
+        }
+        lastPersistedRef.current = nextView;
+      } catch {
+        if (generation !== persistGenerationRef.current) return;
+        pendingPersistedViewRef.current = null;
+        // Transport / unexpected throw — same best-effort warning as { ok: false }.
         setPersistWarning("Could not save your view preference for next time.");
-        return;
       }
-      lastPersistedRef.current = nextView;
     });
   }
 
