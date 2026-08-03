@@ -98,6 +98,8 @@ export function useOnboardingSession(deps: Deps = {}): OnboardingSessionState {
         const user = await resolveOnboardingAuthUser(supabase, {
           hydrateTimeoutMs: depsRef.current.authHydrateTimeoutMs,
         });
+        // Auth wait can take up to hydrateTimeoutMs — bail if the effect cleaned up.
+        if (cancelled) return;
         const key = getIdempotencyKey();
         const session = await getOrCreateOnboardingSession(supabase, user.id, key);
         if (cancelled) return;
