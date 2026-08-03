@@ -1,0 +1,50 @@
+---
+description: >-
+  iPix process playbooks under docs/process/ — harness standards, task template,
+  research-first, QA evidence, stack/agents/arch reviews. Use when the user mentions
+  process, playbooks, harness audit, platform-first process, or docs/process.
+globs: docs/process/**
+alwaysApply: false
+---
+
+# Process playbooks (on demand)
+
+**Index:** `docs/process/README.md`  
+**Harness audit:** `docs/process/01-harness-audit-results.md`  
+**Standards:** `docs/process/01-development-standards.md`
+
+## What goes where
+
+| Primitive | Use for |
+|-----------|---------|
+| **CLAUDE.md / AGENTS.md** | Always-on facts (stack, hard rules) |
+| **`.cursor/rules/*.mdc`** | Hard gates only (ponytail, naming, PR plain English) |
+| **`.claude/skills/`** | Procedural workflows (lifecycle, research, verify) |
+| **Hooks** | Deterministic must-never-skip checks |
+| **`docs/process/`** | Playbooks — run one at a time |
+
+Do **not** dump playbook text into always-on CLAUDE.md or fat new alwaysApply rules.
+
+## How to run
+
+1. Pick **one** playbook from the README table.
+2. Run its multistep prompt → produce artifacts.
+3. Open a **one-concern** PR (docs-only vs code-only split).
+
+## Platform-first (every task)
+
+```text
+Dashboard → CLI → Official docs → GitHub examples → Templates
+  → SDK/API → Reuse iPix → Small custom → Tests → PR
+```
+
+Enforced day-to-day by `ponytail.mdc`; full research flow: skill `ai-research` / `/research`.
+
+## Sibling rules (do not duplicate here)
+
+| Topic | Rule / skill |
+|-------|----------------|
+| Smallest change | `ponytail.mdc` |
+| Lifecycle gates | `lean.mdc` (slim) · `ipix-task-lifecycle` |
+| Evidence / Done | `task-accuracy.mdc` · `task-verifier` |
+| Linear mutations | `linear-governance.mdc` · `linear` skill |
