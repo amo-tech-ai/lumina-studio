@@ -17,6 +17,14 @@ For the plain-language weekly digest, see [`SHIPPED.md`](./SHIPPED.md).
 
 ## [Unreleased]
 
+### 2026-08-03 — Keyboard schedule shift via shiftTask
+
+**IPI-582 · PLN-S1E — Keyboard schedule shift via shiftTask** (PR [#772](https://github.com/amo-tech-ai/lumina-studio/pull/772)).
+
+Operators can preview a ±N day schedule shift from the task detail panel and only commit on Confirm. Preview uses the shared engine; confirm binds to the previewed CAS/`expectedUpdatedAt` so a stale root cannot overwrite newer edits. Unsaved draft field edits survive schedule refresh; the date picker resyncs after a successful shift.
+
+Touched: `planner-selection-detail.tsx`, `mutations.ts` (`shiftTask`), focused Vitest (CAS / keyboard / unsaved draft / date picker).
+
 ### 2026-08-03 — Onboarding's analysis-to-ready arc lands; Planner gains five views and its first safe edit; the CopilotKit runtime gets a CI verifier
 
 **21 commits across `4c02d744..b2e0eb7b`.** Written 2026-08-03 to clear `changelog-staleness`,
