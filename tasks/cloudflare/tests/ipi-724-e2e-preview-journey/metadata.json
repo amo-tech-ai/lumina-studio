@@ -9,24 +9,24 @@
   "worker_version_created_on": "2026-08-02T04:46:48.574511Z",
   "identity_source": "wrangler deployments list --env preview --json (latest by created_on)",
   "identity_error": null,
-  "evidence_runner_git_sha": "13f207f929d4428c18e0461dafbf1a1aa2849dc3",
+  "evidence_runner_git_sha": "5a708fa52bb848ec88b29c1556900e492c99bc89",
   "deployment_git_sha": null,
   "deployment_git_sha_note": "Cloudflare Workers versions API does not expose git SHA; do not invent origin/main tip.",
-  "cf_ray_health": "a2575076dd3e20a7-MIA",
+  "cf_ray_health": "a258283258fd45f2-MIA",
   "region_guess": "MIA",
   "browser": {
     "name": "chromium",
     "version": "149.0.7827.55"
   },
   "playwright_version": "1.61.1",
-  "started_at": "2026-08-03T18:16:20.741Z",
-  "finished_at": "2026-08-03T18:18:27.828Z",
+  "started_at": "2026-08-03T20:43:31.526Z",
+  "finished_at": "2026-08-03T20:45:34.103Z",
   "performance": {
-    "command_center_ms": 10438,
+    "command_center_ms": 14064,
     "command_center_budget_ms": 5000,
-    "copilot_init_ms": 16,
+    "copilot_init_ms": 29,
     "copilot_init_budget_ms": 3000,
-    "first_stream_token_ms": 2737,
+    "first_stream_token_ms": 2589,
     "first_stream_token_budget_ms": 5000
   },
   "ai_health": {
@@ -51,23 +51,23 @@
     },
     "03_widgets": {
       "pass": true,
-      "note": "navLinks=9 chatDock=true mainChars=226"
+      "note": "navLinks=9 chatDock=true mainChars=639"
     },
     "perf_command_center": {
       "pass": false,
-      "note": "10438ms (budget 5000ms soft)",
-      "ms": 10438,
+      "note": "14064ms (budget 5000ms soft)",
+      "ms": 14064,
       "budgetMs": 5000,
       "soft": true
     },
     "04_copilot_init": {
       "pass": true,
-      "note": "dock=true composer=true 16ms"
+      "note": "dock=true composer=true 29ms"
     },
     "perf_copilot_init": {
       "pass": true,
-      "note": "16ms (budget 3000ms soft)",
-      "ms": 16,
+      "note": "29ms (budget 3000ms soft)",
+      "ms": 29,
       "budgetMs": 3000,
       "soft": true
     },
@@ -145,11 +145,11 @@
           "service": "ai-gateway"
         }
       },
-      "cfRay": "a2575076dd3e20a7-MIA"
+      "cfRay": "a258283258fd45f2-MIA"
     },
     "07_chat_send": {
       "pass": true,
-      "note": "POST status=200 ct=text/event-stream firstByte~2737ms"
+      "note": "POST status=200 ct=text/event-stream firstByte~2589ms"
     },
     "08_stream": {
       "pass": true,
@@ -161,14 +161,14 @@
     },
     "perf_first_token": {
       "pass": true,
-      "note": "2737ms (budget 5000ms soft)",
-      "ms": 2737,
+      "note": "2589ms (budget 5000ms soft)",
+      "ms": 2589,
       "budgetMs": 5000,
       "soft": true
     },
     "09_console_network": {
       "pass": true,
-      "note": "blockingConsole=0 criticalFailedApis=0 warnings=16",
+      "note": "blockingConsole=0 criticalFailedApis=0 warnings=15",
       "blockingConsole": [],
       "criticalFailed": []
     },
