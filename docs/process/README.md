@@ -22,7 +22,7 @@
 |---|-----|-------------|-----------|
 | 1 | [Development Standards](./01-development-standards.md) · [Audit results](./01-harness-audit-results.md) | First — how agents are steered | Alone (foundation) |
 | 2 | [Task Template](./02-task-template.md) · [templates/](./templates/) | Before rewriting Linear issues | After #1 |
-| 3 | [AI Research Playbook](./03-ai-research-playbook.md) | Every task, before code | With #4 templates |
+| 3 | [AI Research Playbook](./03-ai-research-playbook.md) · skill `ai-research` · `/research` | Every task, before code | With #4 templates |
 | 4 | [Testing & QA Playbook](./04-testing-qa-playbook.md) | Every task, before merge | With #3 |
 | 5 | [UI & User Journey](./05-ui-user-journey.md) | UX / screen work | Parallel with #7, #8 |
 | 6 | [Tech Stack Playbook](./06-tech-stack-playbook.md) | Stack gaps / upgrades | One tool at a time |

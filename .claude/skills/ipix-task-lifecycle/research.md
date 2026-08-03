@@ -1,6 +1,11 @@
 # Phase 2 — Research
 
-Coordinator for question → source → decision before non-trivial edits. Detailed checks: [references/audit-checklist.md](references/audit-checklist.md).
+Coordinator for question → source → decision before non-trivial edits.
+
+**Primary skill:** [`ai-research`](../ai-research/SKILL.md) · **Playbook:** [`docs/process/03-ai-research-playbook.md`](../../../docs/process/03-ai-research-playbook.md) · **Command:** `/research`  
+**Detailed checks:** [references/audit-checklist.md](references/audit-checklist.md) · **Rank approaches:** `/efficient`
+
+For IPI work, run **`ai-research`** (or `/research IPI-NNN`) and paste the report into the issue `## Research notes` (or `docs/audits/`) before Phase 3.
 
 ---
 
