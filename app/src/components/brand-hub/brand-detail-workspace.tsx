@@ -194,7 +194,7 @@ export function BrandDetailWorkspace({
           />
         ) : null}
 
-        {status === "failed" ? (
+        {analysing || status === "failed" ? (
           <AnalysisProgressBanner
             brandId={brandId}
             initialStatus={status}

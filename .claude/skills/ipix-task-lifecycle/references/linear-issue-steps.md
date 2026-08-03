@@ -8,6 +8,8 @@ tags: ipix-task-lifecycle, linear, mermaid, gantt, IPI
 
 Use when creating or updating **any executable** issue on [linear.app/ipix](https://linear.app/ipix) (team **IPI**). Pair with **`ipix-task-lifecycle`**, **`mermaid-diagrams`**, and **[linear-prompt-engineering.md](linear-prompt-engineering.md)** (issues as agent prompts).
 
+**Reusable full template (purpose, MVP, platform-first, tests, PR evidence):** [`docs/process/templates/linear-issue-body.md`](../../../../docs/process/templates/linear-issue-body.md) · [linear-spec-template.md](linear-spec-template.md)
+
 **Living examples:** [IPI-14](https://linear.app/ipix/issue/IPI-14) PLT-001 · [IPI-16](https://linear.app/ipix/issue/IPI-16) PLT-003 · [IPI-17](https://linear.app/ipix/issue/IPI-17) PLT-004
 
 ---

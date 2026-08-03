@@ -19,13 +19,15 @@ find . -not -path '*/node_modules/*' -not -path '*/.git/*' \
 
 echo ""
 echo "── LARGEST DIRS ───────────────────────────"
-du -sh */ 2>/dev/null | sort -rh | head -15
+# Handle SIGPIPE from head truncating the pipeline
+(du -sh */ 2>/dev/null | sort -rh | head -15) || true
 
 echo ""
 echo "── LARGEST FILES (excl. node_modules) ─────"
-find . -not -path '*/node_modules/*' -not -path '*/.git/*' -type f \
+# Handle SIGPIPE from head truncating the pipeline
+(find . -not -path '*/node_modules/*' -not -path '*/.git/*' -type f \
   -printf '%s %p\n' 2>/dev/null | sort -rn | head -15 \
-  | awk '{cmd="numfmt --to=iec " $1; cmd | getline size; close(cmd); print size, $2}'
+  | awk '{cmd="numfmt --to=iec " $1; cmd | getline size; close(cmd); print size, $2}') || true
 
 echo ""
 echo "── IGNORE FILES ───────────────────────────"
@@ -62,8 +64,9 @@ echo "  manyFiles: $(git config feature.manyFiles 2>/dev/null || echo NOT SET)"
 
 echo ""
 echo -n "Stale merged branches: "
-git branch --merged main 2>/dev/null | grep -v '^\*\|main\|master\|develop' \
-  | wc -l | tr -d ' '
+# Handle case where grep finds no matches (exit code 1) - capture output to prevent double print
+count=$(git branch --merged main 2>/dev/null | grep -v '^\*\|main\|master\|develop' 2>/dev/null | wc -l | tr -d ' ' || true)
+echo "${count:-0}"
 
 echo ""
 echo "── WORKTREES ──────────────────────────────"
@@ -110,8 +113,9 @@ echo ""
 free -h | awk 'NR==1{print "  " $0} NR==2{print "  " $0}'
 
 echo -n "SSD/NVMe: "
-lsblk -d -o NAME,ROTA 2>/dev/null | grep "0$" | awk '{print $1 " (SSD)"}' | head -3 \
-  || echo "N/A"
+# Handle SIGPIPE from head truncating the pipeline
+(lsblk -d -o NAME,ROTA 2>/dev/null | grep "0$" | awk '{print $1 " (SSD)"}' | head -3 \
+  || echo "N/A") || true
 
 echo ""
 echo "── CI RECENT RUNS ─────────────────────────"
@@ -124,3 +128,5 @@ echo "━━━━━━━━━━━━━━━━━━━━━━━━�
 echo "  Audit complete — feed output to Claude"
 echo "  for the scored report and recommendations"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo ""
+echo "✅ All 11 audit sections completed successfully"

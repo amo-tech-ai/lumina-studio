@@ -150,6 +150,8 @@ See `my-marketplace/AGENTS.md`. Commerce catalog, sellers, checkout, and Stripe 
 
 `.github/workflows/ci.yml`: `npm ci` → `npm run check:env` → `npm run build` → `npm run test`. Keep green.
 
+**Protect main (IPI-895):** ruleset `20153938` requires `app-build`, `supabase-web015`, `cloudflare-worker-tests`, and `supabase-verify-rls` before merge. Approving review count is **0** until a second standing human reviewer exists. Details and phase-2 holds: `CLAUDE.md` → CI → Protect main.
+
 ## Design System
 
 ### Typography
