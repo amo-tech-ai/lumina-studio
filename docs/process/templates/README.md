@@ -13,7 +13,7 @@
 | GitHub | Agent-ready tickets need: testable AC, file paths, non-goals, definition of done (e.g. [b-open-io issue-template](https://github.com/b-open-io/prompts/blob/master/skills/linear-planning/references/issue-template.md)) |
 | Platform-first | Dashboard/CLI before custom — same ladder as Cloudflare/Mastra plans in-repo |
 
-**Install in Linear:** Team **IPI** → Settings → Templates → New → paste [linear-issue-body.md](./linear-issue-body.md) → set default for members.
+**Install in Linear:** Team **IPI** → Settings → Templates → paste [linear-issue-body.md](./linear-issue-body.md) → set default. Steps: [LINEAR-DEFAULT-INSTALL.md](./LINEAR-DEFAULT-INSTALL.md).
 
 ---
 
