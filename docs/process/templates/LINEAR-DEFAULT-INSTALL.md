@@ -14,13 +14,13 @@
 2. **New template** → name: `iPix executable task`.
 3. Title placeholder: `IPI-NNN · TASK-ID — Real-world operator title`
 4. Description (top → bottom):
-   - Paste the fenced XML from [`task-execution-prompt.md`](./task-execution-prompt.md) (inside the code fence only, or the whole `<task_execution>` block).
+   - Paste the fenced XML from [`task-execution-prompt.md`](./task-execution-prompt.md) (inside the code fence only, or the whole `<task_execution>` block — keep the short SSOT; do not paste an expanded “full audit” variant).
    - Then a markdown `---`.
    - Then paste [`linear-issue-body.md`](./linear-issue-body.md) (from `# IPI-NNN` through PR evidence).
 5. Set **Default for team members** ([docs](https://linear.app/docs/issue-templates)).
 6. Optional labels: leave unset (per-issue).
 
-**Cursor agents:** `linear-governance.mdc` requires the same prepend on MCP `save_issue` create/rewrite — SSOT is `task-execution-prompt.md`, not a second alwaysApply rule.
+**Cursor agents:** `linear-governance.mdc` requires the same prepend on MCP `save_issue` create/rewrite — SSOT is `task-execution-prompt.md`, not a second alwaysApply rule. Issue AC outrank the generic prompt; mark non-applicable evidence as N/A.
 
 ## After MCP / API works
 
