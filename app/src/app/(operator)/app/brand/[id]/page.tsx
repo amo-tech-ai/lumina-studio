@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { BrandDetailWorkspace } from "@/components/brand-hub/brand-detail-workspace";
+import { canRestartBrandAnalysis } from "@/lib/brand/can-restart-brand-analysis";
 import { getBaseScores, parseAiProfile, type BrandScoreDetail } from "@/lib/brand-hub";
 import { computeDnaScore } from "@/lib/brand-scores";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
@@ -46,7 +47,7 @@ const BrandPage = async ({ params }: Props) => {
       supabase
         .from("brands")
         .select(
-          "id, name, brand_url, ai_profile, ai_profile_draft, org_id, created_at, intake_status, organizations(name, plan)",
+          "id, name, brand_url, ai_profile, ai_profile_draft, org_id, user_id, created_at, intake_status, organizations(name, plan)",
         )
         .eq("id", id)
         .maybeSingle(),
@@ -80,6 +81,12 @@ const BrandPage = async ({ params }: Props) => {
   const scoreRows = (scores ?? []) as BrandScoreDetail[];
   const baseScores = getBaseScores(scoreRows);
   const dnaScore = computeDnaScore(scores);
+  // Only a failed brand can show the restart control, so skip the role RPC on
+  // every other page load.
+  const canRestartAnalysis =
+    brand.intake_status === "failed"
+      ? await canRestartBrandAnalysis(supabase, user.id, brand)
+      : false;
 
   return (
     <BrandDetailWorkspace
@@ -94,6 +101,7 @@ const BrandPage = async ({ params }: Props) => {
       baseScores={baseScores}
       crawlPages={crawls?.[0] ?? null}
       isAuthenticated
+      canRestartAnalysis={canRestartAnalysis}
     />
   );
 };
