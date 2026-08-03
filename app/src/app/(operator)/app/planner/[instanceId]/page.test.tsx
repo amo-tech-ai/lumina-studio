@@ -11,6 +11,7 @@ vi.mock("next/navigation", () => ({
 vi.mock("@/lib/planner/queries", () => ({
   getInstanceDetail: vi.fn(),
   listWorkflowPhases: vi.fn(),
+  getViewConfig: vi.fn(),
 }));
 
 vi.mock("@/lib/planner/planner-view-model", () => ({
@@ -47,7 +48,7 @@ vi.mock("@/lib/supabase/server", () => ({
   })),
 }));
 
-import { getInstanceDetail, listWorkflowPhases } from "@/lib/planner/queries";
+import { getInstanceDetail, getViewConfig, listWorkflowPhases } from "@/lib/planner/queries";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import PlannerWorkspacePage from "./page";
 
@@ -55,6 +56,8 @@ beforeEach(() => {
   notFound.mockClear();
   vi.mocked(getInstanceDetail).mockReset();
   vi.mocked(listWorkflowPhases).mockReset();
+  vi.mocked(getViewConfig).mockReset();
+  vi.mocked(getViewConfig).mockResolvedValue({ ok: true, data: null } as never);
   vi.mocked(createSupabaseServerClient).mockReset();
   vi.mocked(createSupabaseServerClient).mockResolvedValue({
     auth: {
@@ -111,5 +114,44 @@ describe("PlannerWorkspacePage — getInstanceDetail failures", () => {
       PlannerWorkspacePage({ params: Promise.resolve({ instanceId: "i-1" }) }),
     ).rejects.toThrow("auth unavailable");
     expect(notFound).not.toHaveBeenCalled();
+  });
+});
+
+describe("PlannerWorkspacePage — IPI-582 initialView", () => {
+  it("passes getViewConfig defaultView into the shell", async () => {
+    vi.mocked(getInstanceDetail).mockResolvedValue({
+      ok: true,
+      data: { workflowId: "wf-1", tasks: [], status: "active" },
+    } as never);
+    vi.mocked(listWorkflowPhases).mockResolvedValue({ ok: true, data: [] } as never);
+    vi.mocked(getViewConfig).mockResolvedValue({
+      ok: true,
+      data: {
+        instanceId: "i-1",
+        defaultView: "kanban",
+        filters: {},
+        sortConfig: {},
+      },
+    } as never);
+
+    const el = await PlannerWorkspacePage({ params: Promise.resolve({ instanceId: "i-1" }) });
+    expect(el.props.instanceId).toBe("i-1");
+    expect(el.props.initialView).toBe("kanban");
+    expect(getViewConfig).toHaveBeenCalledWith("i-1");
+  });
+
+  it("falls back to timeline when view preference is missing or unreadable", async () => {
+    vi.mocked(getInstanceDetail).mockResolvedValue({
+      ok: true,
+      data: { workflowId: "wf-1", tasks: [], status: "active" },
+    } as never);
+    vi.mocked(listWorkflowPhases).mockResolvedValue({ ok: true, data: [] } as never);
+    vi.mocked(getViewConfig).mockResolvedValue({
+      ok: false,
+      error: { code: "QUERY_FAILED", message: "Plan view preferences could not be loaded." },
+    } as never);
+
+    const el = await PlannerWorkspacePage({ params: Promise.resolve({ instanceId: "i-1" }) });
+    expect(el.props.initialView).toBe("timeline");
   });
 });
